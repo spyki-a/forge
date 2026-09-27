@@ -452,9 +452,9 @@ describe('the footage pre-pass', () => {
     expect(slow[slow.indexOf('-vf') + 1]).toBe(`setpts=PTS/0.5,fps=30,${held6(4)},trim=start_frame=21:end_frame=25,setpts=PTS-STARTPTS,${cap},format=rgba`)
     expect(slow[slow.indexOf('-frames:v') + 1]).toBe('4')
 
-    // Smooth slow-motion looks ahead, so it too gets the render's whole input window, its tail held as the render holds it.
+    // Smooth slow-motion looks ahead, so it gets the render's whole input window and eight source frames more (the 2018 build's minterpolate does not flush), its tail held.
     const smooth = momentFrameArgs(req({ speed: 0.5, smoothSlow: true, first: 54, count: 6 }), '/out/%05d.png')
-    expect(smooth[smooth.indexOf('-t') + 1]).toBe((sourceFramesFor({ speed: 0.5, duration: 60 }) / fps).toFixed(6))
+    expect(smooth[smooth.indexOf('-t') + 1]).toBe(((sourceFramesFor({ speed: 0.5, duration: 60 }) + 8) / fps).toFixed(6))
     expect(smooth[smooth.indexOf('-vf') + 1]).toBe(`${retimeFilter({ speed: 0.5, smoothSlow: true, duration: 60 }, fps)},${held6(6)},trim=start_frame=54:end_frame=60,setpts=PTS-STARTPTS,${cap},format=rgba`)
 
     const ramped = momentFrameArgs(req({ ramp: { from: 1, to: 0.4 }, first: 30, count: 4 }), '/out/%05d.png')

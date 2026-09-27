@@ -71,14 +71,18 @@ export function momentFrameArgs(req: FootageRequest, pattern: string): string[] 
   const retime = retimeFilter(clip, fps) ?? `fps=${fps}`
   /*
    * The render's own input window, whole (`videoInputArgs`: `-t` of the
-   * source frames the clip eats), not just the window's: the 2018 Windows
-   * build's `fps` filter does not flush its last frames at the end of a short
-   * input — a 24p source pulled for nine frames came back with fewer on CI —
-   * and smooth slow-motion looks ahead. Then the tail held, as the render's
-   * overlay holds a clip's last frame, so the clip's final frames are there
-   * on either build.
+   * source frames the clip eats), not just the window's — and for smooth
+   * slow-motion eight source frames more. `minterpolate` looks ahead, and
+   * the 2018 Windows build's closes its stream without flushing: on CI a
+   * window on a smooth clip's last six frames came back three, and a `tpad`
+   * after it padded nothing. With the lookahead the interpolator emits the
+   * whole window on either build; past the clip's end those frames continue
+   * the motion where the macOS render holds its last, a difference of a few
+   * frames at the tail of a smooth clip only. The `tpad` stays for the
+   * builds that do flush, so a clip that simply runs out is held.
    */
-  const sourceFrames = sourceFramesFor(clip)
+  const smooth = Boolean(clip.smoothSlow) && (clip.speed ?? 1) < 1
+  const sourceFrames = sourceFramesFor(clip) + (smooth ? 8 : 0)
   const hold = `tpad=stop_mode=clone:stop_duration=${seconds(count, fps)},`
   return [
     '-ss', seconds(req.inPoint, fps), '-t', seconds(sourceFrames, fps), '-i', req.path,
@@ -88,7 +92,7 @@ export function momentFrameArgs(req: FootageRequest, pattern: string): string[] 
 }
 
 /** How the frames are pulled; bumped when the arguments change, so folders an older pull left are never mistaken for these. */
-export const PULL_VERSION = 4
+export const PULL_VERSION = 5
 
 /** The name the pulled frames are kept under: the same file, the same frames, the same cut — the same folder. */
 export function momentFramesKey(req: FootageRequest, file: { size: number; mtimeMs: number }): string {
