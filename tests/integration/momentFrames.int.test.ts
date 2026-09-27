@@ -207,8 +207,8 @@ describe('the frames a moment pulls from footage', () => {
         compared++
         expect(Math.abs(level - rendered), `first ${first}, frame ${k}: pulled ${level}, rendered ${rendered}`).toBeLessThan(NOISE)
       }
-      // At least half the window is compared on any build; all of it on the Mac.
-      expect(compared, `first ${first}: frames compared`).toBeGreaterThanOrEqual(3)
+      // The window's first two frames compare on any build (the Windows render shows only frames 54 and 55 of a smooth clip's last six); three on the Mac, all six from the clip's start.
+      expect(compared, `first ${first}: frames compared`).toBeGreaterThanOrEqual(first > 0 ? 2 : 6)
       // Real pictures, not clipped white: a window of six frames spans about three source frames of five.
       expect(levels[5]).toBeLessThan(250)
       lines.push(`- smooth half speed from frame 6, frames ${first}–${first + 5}: pulled ${levels.join(', ')}`)
