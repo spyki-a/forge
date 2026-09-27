@@ -82,7 +82,8 @@ const bakers = (): Bakers => ({
   textSequence: async () => null,
   title: async () => { throw new Error('no titles in this ad') },
   paper: async () => { throw new Error('no paper in this ad') },
-  carousel: async () => { throw new Error('no carousel in this ad') }
+  carousel: async () => { throw new Error('no carousel in this ad') },
+  moment: async () => { throw new Error('no moments in this ad') }
 })
 
 async function edit(): Promise<Project> {

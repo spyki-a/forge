@@ -44,7 +44,9 @@ export const LOOK_RULE = 'director.look'
 export const BACKDROP_RULE = 'director.backdrop'
 /** A sound the rhythm engine fired, as a clip on the Director's own lane (sound.ts); `clearDirector` takes the file it brought too. */
 export const SOUND_RULE = 'director.sound'
-export const DIRECTOR_RULES: readonly string[] = [SPINE_RULE, COPY_RULE, ENDING_RULE, LOOK_RULE, BACKDROP_RULE, SOUND_RULE]
+/** A moment the rhythm engine placed over a cut (render/moment.ts), drawn by the app and baked for the export. */
+export const MOMENT_RULE = 'director.moment'
+export const DIRECTOR_RULES: readonly string[] = [SPINE_RULE, COPY_RULE, ENDING_RULE, LOOK_RULE, BACKDROP_RULE, SOUND_RULE, MOMENT_RULE]
 
 /**
  * The accent on the punch word.
@@ -122,7 +124,7 @@ export function clearDirector(project: Project): Project {
   // sound was its only reference.
   const brought = new Set(project.assets.filter((a) => a.broughtBy === SOUND_RULE).map((a) => a.id))
   const cardAssets = new Set(
-    removed.filter((c) => c.text || c.solid || c.adjustment || brought.has(c.assetId)).map((c) => c.assetId)
+    removed.filter((c) => c.text || c.solid || c.adjustment || c.moment || brought.has(c.assetId)).map((c) => c.assetId)
   )
 
   // The track the Director added under the ad goes with the ad; one the user has since put a clip on stays —

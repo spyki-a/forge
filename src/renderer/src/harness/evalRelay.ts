@@ -20,10 +20,22 @@
  *
  *   window.__forgeEvalCards('<run>')         draw every card (returns a promise)
  *   window.__forgeEvalCardsProgress          { run, done, total, errors, finished }
+ *
+ * And the moments (docs/PLAN.md §7), which need a GPU: `moments.json` lists
+ * each one's spec, pictures and size (tests/eval/pipeline.ts `momentsOf`);
+ * each moving frame is drawn with the app's own three.js from the run's
+ * photos, served by the relay as pictures, and written back as the numbered
+ * PNG the render reads.
+ *
+ *   window.__forgeEvalMoments('<run>')       draw every moment's frames (returns a promise)
+ *   window.__forgeEvalMomentsProgress        { run, done, total, errors, finished }
  */
 
-import type { TextSpec } from '@shared/timeline'
+import type { MomentSpec, TextSpec } from '@shared/timeline'
+import type { MomentTextures } from '@shared/render/momentTextures'
+import { movingFrames } from '@shared/render/moment'
 import { renderTextPng } from '../textCanvas'
+import { momentFrameCanvases } from '../momentCanvas'
 
 interface RelayRequest {
   id: string
@@ -123,7 +135,61 @@ async function cards(run: string): Promise<CardsProgress> {
   return progress
 }
 
+/**
+ * A moment for the harness to draw (tests/eval/pipeline.ts `momentsOf`): the
+ * spec, the two shots' pictures as paths RELATIVE TO THE EVAL FOLDER (the
+ * relay serves nothing outside it), the size, and where the frames go.
+ */
+interface MomentRequest {
+  id: string
+  /** `moments/model/dir-moment-7.seq` — the frames land in it as `00000.png`… */
+  dir: string
+  spec: MomentSpec
+  textures: MomentTextures
+  width: number
+  height: number
+  frames: number
+  fps: number
+}
+
+/**
+ * Draw every moment of a run — three.js needs a GPU, which the harness has and
+ * node does not. Each frame is drawn from the run's own photos (served by the
+ * relay as pictures) and PUT back as the numbered PNG the render reads.
+ */
+async function moments(run: string): Promise<CardsProgress> {
+  const list = (await (await fetch(file(`${run}/moments.json`))).json()) as MomentRequest[]
+  const progress: CardsProgress = { run, done: 0, total: list.length, errors: [], finished: false }
+  ;(window as unknown as { __forgeEvalMomentsProgress: CardsProgress }).__forgeEvalMomentsProgress = progress
+  // An absolute URL, so mediaUrl passes it through untouched rather than wrapping it in forge-media://.
+  const served = (path: string): string => `${location.origin}${file(path)}`
+  const plan = <T extends { path: string; planes?: { file: string; depth: number }[] } | null>(p: T): T =>
+    p ? { ...p, path: served(p.path), ...(p.planes ? { planes: p.planes.map((l) => ({ ...l, file: served(l.file) })) } : {}) } : p
+
+  for (const m of list) {
+    try {
+      const textures: MomentTextures = { from: plan(m.textures.from), to: plan(m.textures.to)! }
+      // Only the frames that move (a depth push holds; the render holds the last PNG for the rest).
+      const frames = Array.from({ length: movingFrames(m.spec, m.fps, m.frames) }, (_, i) => i)
+      const drawn = await momentFrameCanvases(m.spec, textures, m.width, m.height, m.frames, m.fps, frames)
+      if (!drawn) throw new Error('did not draw — a picture did not load')
+      for (const [i, canvas] of drawn.entries()) {
+        const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'))
+        if (!blob) throw new Error(`frame ${i} could not be encoded`)
+        const put = await fetch(file(`${run}/${m.dir}/${String(i).padStart(5, '0')}.png`), { method: 'PUT', body: blob })
+        if (!put.ok) throw new Error(`the harness server answered ${put.status}`)
+      }
+    } catch (err) {
+      progress.errors.push(`${m.id}: ${err instanceof Error ? err.message : String(err)}`)
+    }
+    progress.done++
+  }
+  progress.finished = true
+  return progress
+}
+
 export function installEvalRelay(): void {
   ;(window as unknown as { __forgeEvalRelay: typeof relay }).__forgeEvalRelay = relay
   ;(window as unknown as { __forgeEvalCards: typeof cards }).__forgeEvalCards = cards
+  ;(window as unknown as { __forgeEvalMoments: typeof moments }).__forgeEvalMoments = moments
 }

@@ -128,7 +128,7 @@ describe('what can be keyed', () => {
     expect(isKeyable({}, { kind: 'image', hasVideo: true })).toBe(true)
   })
   it('is not what the app draws, an adjustment layer, sound, or nothing', () => {
-    for (const drawn of [{ text: {} }, { title: {} }, { paper: {} }, { carousel: {} }, { solid: {} }, { adjustment: true }]) {
+    for (const drawn of [{ text: {} }, { title: {} }, { paper: {} }, { carousel: {} }, { solid: {} }, { moment: {} }, { adjustment: true }]) {
       expect(isKeyable(drawn as Parameters<typeof isKeyable>[0], video), JSON.stringify(drawn)).toBe(false)
     }
     expect(isKeyable({}, { kind: 'audio', hasVideo: false })).toBe(false)

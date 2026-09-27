@@ -4,6 +4,7 @@ import App from '../App'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { installHarnessBridge } from './bridge'
 import { installEvalRelay } from './evalRelay'
+import { installMomentCheck } from './momentCheck'
 import { useEditor } from '../store'
 import { useCatalog } from '../catalog'
 import '../styles.css'
@@ -20,6 +21,9 @@ installHarnessBridge()
 
 /* The Director eval's relay — tests/eval/relay.ts says why the harness carries it. */
 installEvalRelay()
+
+/* The moments' shader check — the one measurement that needs a GPU (docs/PLAN.md §7.4). */
+installMomentCheck()
 
 /*
  * The store, reachable from a driving script.

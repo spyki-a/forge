@@ -29,7 +29,7 @@ describe('what can be steadied', () => {
     expect(canSteady({}, { ...video, frames: { pattern: 'f_%04d.png', count: 10 } } as MediaAsset)).toBe(false)
     expect(canSteady({}, { ...video, hasVideo: false })).toBe(false)
     expect(canSteady({}, undefined)).toBe(false)
-    for (const drawn of [{ text: {} }, { title: {} }, { paper: {} }, { carousel: {} }, { solid: {} }, { adjustment: true }]) {
+    for (const drawn of [{ text: {} }, { title: {} }, { paper: {} }, { carousel: {} }, { solid: {} }, { moment: {} }, { adjustment: true }]) {
       expect(canSteady(drawn as Parameters<typeof canSteady>[0], video), JSON.stringify(drawn)).toBe(false)
     }
   })

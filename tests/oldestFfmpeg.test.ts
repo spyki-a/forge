@@ -199,6 +199,31 @@ const SHAPES: { name: string; project: Project; range?: { start: number; end: nu
     })
   },
   {
+    // C4's moment: a drawn frame sequence on the lane above a cut — the image2
+    // input, the tpad hold and an overlay with alpha, as the card ring and the
+    // captions already use.
+    name: 'a moment’s frames over a cut',
+    project: project({
+      tracks: [
+        { id: 'v1', kind: 'video', name: 'V1', muted: false, hidden: false, locked: false },
+        { id: 'v2', kind: 'video', name: 'V2', muted: false, hidden: false, locked: false },
+        { id: 'a1', kind: 'audio', name: 'A1', muted: false, hidden: false, locked: false, duck: true }
+      ],
+      assets: [
+        asset('v'),
+        { id: 'mo', path: '/tmp/mo.seq/00000.png', name: 'Zoom punch', kind: 'image', durationFrames: 300, width: W, height: H, fps: null, hasVideo: true, hasAudio: false, size: 0, frames: { pattern: '/tmp/mo.seq/%05d.png', count: 12 } }
+      ],
+      clips: [
+        clip({ id: 'a' }),
+        clip({ id: 'b', start: 60, duration: 30, inPoint: 150 }),
+        clip({
+          id: 'mo', assetId: 'mo', trackId: 'v2', start: 54, duration: 12,
+          moment: { kind: 'zoom-punch', from: { clipId: 'a' }, to: { clipId: 'b' }, seconds: 0.4, intensity: 0.5, seed: 1, version: 1 }
+        })
+      ]
+    })
+  },
+  {
     // B2's range export trims the finished picture and the finished mix; the
     // branch only exists with a range, so without this shape nothing checks it.
     name: 'a range export, so the picture and the mix are trimmed',

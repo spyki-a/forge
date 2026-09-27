@@ -222,3 +222,37 @@ without it and a mutant that dies:
   could never fail. The sub is now read in its own band, peaks with `astats`.
 - Tests that never moved the song off frame 0, a fader assertion looser than
   any bug, and a stale-peak tolerance twelve times the measurement's step.
+
+### C4 — the first moment on the real ad (2026-09-27)
+
+The serum run re-rendered with the moments engine (docs/PLAN.md §7):
+`tests/output/eval/real-serum-e2b-moments/renders/real.model.mp4`. The
+product reveal fired ONE moment, a zoom punch into the hero at frame 171 —
+twelve frames, six either side of the cut, drawn by the app's three.js in
+the harness from the run's own photos (`__forgeEvalMoments`) and overlaid
+by the render. The recipe's second moment (a depth push at a section) had
+no section to land on in this song.
+
+What it looks like, frame by frame: the product photo grows and smears
+toward the centre over six frames; on the cut the woman pops in through a
+strong radial blur; five frames later it has settled to her picture exactly
+— the moment's last frame IS the shot's frame, so nothing pops at the
+hand-off (EFFECTS.md §34: 0.000/255 at both ends).
+
+Two things seen on the real photos, neither a bug, both worth knowing:
+
+- **The hero is a square photo, so it is a backdropped shot** — shown whole
+  over its blurred copy. The moment draws the PICTURE where the shot shows
+  it (a centred square) and its letterbox bars are transparent, so the
+  backdrop shows through beyond it. As the punch grows the picture spreads
+  into the bars (measured: the rows just above the square change by 56–71/255
+  from frame 167), and the backdrop under them hard-cuts at the cut frame
+  with the shots. Consistent with the shot beneath, but a moment that also
+  drew the backdrop would read as one picture.
+- **A moment over footage is skipped**, with a note in the result box: the
+  footage pre-pass of §7.2 is the next piece. This ad is all stills, so
+  nothing was lost here; an Energy ad on clips gets no whip yet.
+
+The bake cost is the PNG encode, not three.js: 20–61 ms a frame at
+1080×1920 on the synthetic check pictures (EFFECTS.md §34); this punch's
+frames are real-photo PNGs of 0.45–2.25 MB and were not timed.

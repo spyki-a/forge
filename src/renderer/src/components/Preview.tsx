@@ -48,6 +48,8 @@ import { forgetMask, maskedSource } from '../maskPreview'
 import { forgetTextPreview, textPreviewCanvas } from '../textCanvas'
 import { paperPreviewCanvas } from '../paperCanvas'
 import { carouselPreviewCanvas } from '../carouselCanvas'
+import { forgetMomentPreview, momentPreviewCanvas } from '../momentCanvas'
+import { momentTextures } from '@shared/render/momentTextures'
 import { clipRateAt, clipSpeed } from '@shared/render/speed'
 import { activeCaptionStyle, captionAt, drawCaptions } from '../captionPreview'
 import { captionSourceClip } from '@shared/captions/timeline'
@@ -213,6 +215,17 @@ interface SourceRect {
  * Centred, matching the renderer's zoompan, which takes `iw/2-(iw/zoom/2)`,
  * and its transitions' `crop=iw/f:ih/f`, which crops about the middle too.
  */
+/** A clear picture, for a layer that has nothing to show this frame. */
+let blank: HTMLCanvasElement | null = null
+function nothing(): HTMLCanvasElement {
+  if (!blank) {
+    blank = document.createElement('canvas')
+    blank.width = 2
+    blank.height = 2
+  }
+  return blank
+}
+
 function insetRect(rect: SourceRect, zoom: number): SourceRect {
   const z = Math.max(1, zoom)
   const sw = rect.sw / z
@@ -644,6 +657,8 @@ export function Preview(): ReactNode {
       // and a stencil, and none of them should outlive the clip.
       forgetMask(clipId)
       forgetTextPreview(clipId)
+      // A moment's scene holds two full-size textures on the one WebGL context; a re-directed ad makes new ids.
+      forgetMomentPreview(clipId)
       // And the wipe's, which is keyed `<clip>#wipe` for the same reason a
       // sticker's matte is: it belongs to the clip, not to the mask file.
       forgetWipe(`${clipId}#wipe`)
@@ -1179,7 +1194,7 @@ export function Preview(): ReactNode {
      * exactly what clippings did until this said `paper` as well as `text`.
      */
     const drawsItself = (layer: Layer): boolean =>
-      Boolean(layer.clip.text ?? layer.clip.paper ?? layer.clip.carousel)
+      Boolean(layer.clip.text ?? layer.clip.paper ?? layer.clip.carousel ?? layer.clip.moment)
 
     const ready = (layer: Layer): boolean =>
       drawsItself(layer) ? true : elementReady(layer.element)
@@ -1209,6 +1224,29 @@ export function Preview(): ReactNode {
        * the run played in the export. The preview draws the same pages the
        * bake does, from the same spec.
        */
+      if (layer.clip.moment) {
+        /*
+         * A moment is drawn live from the two shots' pictures, exactly as it
+         * bakes (momentCanvas.ts): the whole point is the movement over the
+         * cut, and its frames are the export's, not the preview's.
+         */
+        const textures = momentTextures(project, layer.clip.moment, layer.clip.start)
+        const live = textures
+          ? momentPreviewCanvas(
+              layer.clip.id,
+              layer.clip.moment,
+              textures,
+              ASPECTS[aspect].width,
+              ASPECTS[aspect].height,
+              { frame: playhead - layer.clip.start, total: layer.clip.duration, fps },
+              repaint
+            )
+          : null
+        // Not drawable yet (the pictures loading) or not at all (a shot it bridged is gone): nothing,
+        // never the baked file — those frames are of a picture that may no longer be beneath it.
+        return live ?? nothing()
+      }
+
       if (layer.clip.carousel) {
         /*
          * Drawn live like the others, and it must be: the ring's whole point

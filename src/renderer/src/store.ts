@@ -55,6 +55,7 @@ import {
   copySelection as clipsToClipboard,
   detachAudio as detachAudioFrom,
   detachRefusalMessage,
+  drawsItself,
   reattachAudio as reattachAudioTo,
   placeTake as placeTakeOn,
   pasteClipboard as placeClipboard,
@@ -151,6 +152,8 @@ import { useCatalog } from './catalog'
 import { bakeText, bakeTextSequence } from './textCanvas'
 import { bakePaperSequence, paperDuration } from './paperCanvas'
 import { bakeCarouselSequence } from './carouselCanvas'
+import { bakeMomentSequence } from './momentCanvas'
+import { momentTextures } from '@shared/render/momentTextures'
 import {
   DEFAULT_CAROUSEL,
   carouselTurnSeconds,
@@ -1300,11 +1303,12 @@ export const useEditor = create<EditorState>((set, get) => ({
          * one took a sub-rectangle of it. The words ended up cut off and shoved
          * out of frame. They get redrawn at the new size instead, below.
          */
-        // Clippings belong on this list for the same reason, and were left
+        // Clippings belonged on this list for the same reason, and were left
         // off it: a page drawn at 1920x1080 then cropped to a 9:16
         // sub-rectangle shows one corner of itself. The comment above
-        // described the bug two years before the effect existed to have it.
-        if (c.text || c.solid || c.title || c.paper || c.carousel) return { ...c, crop: undefined }
+        // described the bug two years before the effect existed to have it —
+        // so the list is now the one every self-drawing kind joins (recipes.ts).
+        if (drawsItself(c)) return { ...c, crop: undefined }
         return { ...c, crop: solveCrop(asset, aspect) }
       })
     }))
@@ -1327,7 +1331,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   rebakeGenerated: async () => {
     const { project } = get()
     const { width, height, fps } = project.settings
-    const targets = project.clips.filter((c) => c.text || c.solid || c.title || c.paper || c.carousel)
+    const targets = project.clips.filter(drawsItself)
     if (targets.length === 0) return
 
     for (const clip of targets) {
@@ -1349,6 +1353,31 @@ export const useEditor = create<EditorState>((set, get) => ({
           ),
           clips: p.clips
         })
+
+        if (clip.moment) {
+          // From the shots as they are NOW — their crops were just re-solved for the new shape.
+          const textures = momentTextures(get().project, clip.moment, clip.start)
+          const sequence = textures
+            ? await bakeMomentSequence(clip.moment, clip.id, textures, width, height, clip.duration, fps)
+            : null
+          if (sequence) {
+            get().update((p) => ({
+              ...p,
+              assets: p.assets.map((a) =>
+                a.id === clip.assetId
+                  ? {
+                      ...a,
+                      path: sequence.pattern.replace('%05d', '00000'),
+                      width,
+                      height,
+                      frames: { pattern: sequence.pattern, count: sequence.frames }
+                    }
+                  : a
+              )
+            }))
+          }
+          continue
+        }
 
         if (clip.carousel) {
           const sequence = await bakeCarouselSequence(
@@ -1897,6 +1926,33 @@ export const useEditor = create<EditorState>((set, get) => ({
           .then((path) => get().fillAssetPath(clip.assetId, { path, width: picture.width, height: picture.height }))
           .catch((err) => console.warn('A colour card did not draw', err))
       }
+      /*
+       * The moments' frames, one bake after another: they share the one WebGL
+       * renderer, and the preview draws each live from the same textures in
+       * the meantime (momentCanvas.ts). The export redraws them at its own
+       * shape (exportBake.ts), so a bake that has not landed cannot cost a frame.
+       */
+      void (async () => {
+        for (const clipId of applied.momentClipIds) {
+          const clip = applied.project.clips.find((c) => c.id === clipId)
+          if (!clip?.moment) continue
+          const textures = momentTextures(applied.project, clip.moment, clip.start)
+          if (!textures) continue
+          try {
+            const baked = await bakeMomentSequence(clip.moment, clipId, textures, width, height, clip.duration, fps)
+            if (baked) {
+              get().fillAssetPath(clip.assetId, {
+                path: baked.pattern.replace('%05d', '00000'),
+                width,
+                height,
+                frames: { pattern: baked.pattern, count: baked.frames }
+              })
+            }
+          } catch (err) {
+            console.warn('A moment did not bake', err)
+          }
+        }
+      })()
 
       const count = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`
       notify(

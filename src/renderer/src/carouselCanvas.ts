@@ -1,4 +1,3 @@
-import { mediaUrl } from '@shared/mediaUrl'
 import {
   carouselCameraZ,
   carouselCards,
@@ -7,6 +6,7 @@ import {
   type CarouselClipSpec
 } from '@shared/render/carousel'
 import { beginBake, endBake, isSuperseded } from '@shared/bakeGuard'
+import { sharedRenderer as renderer, textureFor, type Three } from './threeShared'
 
 /**
  * The card ring, drawn with three.js.
@@ -18,86 +18,12 @@ import { beginBake, endBake, isSuperseded } from '@shared/bakeGuard'
  *
  * Everything lands on the rails paper already proved: render to a canvas, bake
  * numbered PNGs with alpha, hold the last with `tpad`. Nothing in the export
- * knows three.js exists.
+ * knows three.js exists. The library, the one renderer and the downscaled
+ * textures are threeShared.ts — the moments (momentCanvas.ts) draw through
+ * the same ones.
  */
 
 export type { CarouselClipSpec }
-
-/**
- * three.js is loaded the first time a ring is drawn, and never otherwise.
- *
- * 129 KB gzipped is modest but not nothing, and the overwhelming majority of
- * projects will never contain a card ring. A static import would put it in the
- * main bundle for all of them.
- */
-type Three = typeof import('three')
-let threePromise: Promise<Three> | null = null
-function loadThree(): Promise<Three> {
-  if (!threePromise) threePromise = import('three')
-  return threePromise
-}
-
-/**
- * ONE renderer, reused for every ring and every frame.
- *
- * A browser allows a small number of live WebGL contexts — around sixteen —
- * and silently drops the oldest when you pass it. A renderer per clip, or per
- * frame of a bake, exhausts that in seconds and the symptom is earlier rings
- * going black for no visible reason. So: one context, resized as needed.
- */
-let shared: { renderer: import('three').WebGLRenderer; canvas: HTMLCanvasElement } | null = null
-
-async function renderer(
-  width: number,
-  height: number
-): Promise<{ three: Three; renderer: import('three').WebGLRenderer; canvas: HTMLCanvasElement }> {
-  const three = await loadThree()
-  if (!shared) {
-    const canvas = document.createElement('canvas')
-    const r = new three.WebGLRenderer({ canvas, alpha: true, antialias: true })
-    r.setClearColor(0x000000, 0)
-    shared = { renderer: r, canvas }
-  }
-  if (shared.canvas.width !== width || shared.canvas.height !== height) {
-    shared.renderer.setSize(width, height, false)
-  }
-  return { three, renderer: shared.renderer, canvas: shared.canvas }
-}
-
-/**
- * Photographs as textures, downscaled first.
- *
- * A 4000x3000 photograph as an RGBA texture is ~48 MB on the GPU, and twenty
- * of them is nearly a gigabyte — which is how a card ring takes a laptop down.
- * A card occupies a few hundred pixels on screen, so anything past `MAX_EDGE`
- * is memory spent on detail that cannot be seen.
- */
-const MAX_EDGE = 640
-const textures = new Map<string, HTMLCanvasElement>()
-
-async function textureFor(path: string): Promise<HTMLCanvasElement | null> {
-  const existing = textures.get(path)
-  if (existing) return existing
-
-  const image = new Image()
-  image.crossOrigin = 'anonymous'
-  const loaded = await new Promise<boolean>((resolve) => {
-    image.onload = () => resolve(true)
-    image.onerror = () => resolve(false)
-    image.src = mediaUrl(path)
-  })
-  if (!loaded || image.naturalWidth === 0) return null
-
-  const scale = Math.min(1, MAX_EDGE / Math.max(image.naturalWidth, image.naturalHeight))
-  const canvas = document.createElement('canvas')
-  canvas.width = Math.max(1, Math.round(image.naturalWidth * scale))
-  canvas.height = Math.max(1, Math.round(image.naturalHeight * scale))
-  const ctx = canvas.getContext('2d')
-  if (!ctx) return null
-  ctx.drawImage(image, 0, 0, canvas.width, canvas.height)
-  textures.set(path, canvas)
-  return canvas
-}
 
 /** Build the scene once and hand back a function that draws it at a time. */
 async function scene(

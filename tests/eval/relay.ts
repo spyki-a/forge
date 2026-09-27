@@ -1,5 +1,5 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
-import { dirname, isAbsolute, relative, resolve, sep } from 'node:path'
+import { dirname, extname, isAbsolute, relative, resolve, sep } from 'node:path'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Plugin, ProxyOptions } from 'vite'
 
@@ -15,9 +15,12 @@ import type { Plugin, ProxyOptions } from 'vite'
  *
  *   /__lm/...           a proxy to the model server (LM Studio by default), so a
  *                       page on the harness origin can call it without CORS
- *   /__eval/file?path=  read and write JSON files under tests/output/eval/ —
+ *   /__eval/file?path=  read and write files under tests/output/eval/ —
  *                       the prepared requests going out, the raw responses
- *                       coming back — and NOWHERE else
+ *                       coming back, the drawn cards and moment frames; a
+ *                       picture (png, jpg, webp) is read back AS a picture, so
+ *                       the harness can draw a run's moments from its own
+ *                       photos — and NOWHERE else
  *
  * The browser then runs the dumb loop (`harness/evalRelay.ts`): read the
  * requests, POST each body to the proxy exactly as prepared, write the raw
@@ -43,6 +46,9 @@ export function evalPath(requested: string | null | undefined, root = EVAL_ROOT)
   if (rel === '' || rel.startsWith('..') || isAbsolute(rel) || rel.split(sep).includes('..')) return null
   return full
 }
+
+/** The pictures the harness may read from a run — a directed ad's photos, for its moments to draw from. */
+const IMAGE_TYPES: Record<string, string> = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp' }
 
 /** Largest body the relay accepts: a request with a handful of 640-px images is well under this. */
 export const MAX_BODY_BYTES = 32 * 1024 * 1024
@@ -77,6 +83,15 @@ export async function handleEvalFile(req: IncomingMessage, res: ServerResponse, 
   if (!path) return send(res, 400, 'path must be relative and inside tests/output/eval')
   try {
     if (req.method === 'GET') {
+      // A picture is served as one, so the harness can draw a directed ad's moments from the run's own photos.
+      const image = IMAGE_TYPES[extname(path).toLowerCase()]
+      if (image) {
+        const bytes = await readFile(path)
+        res.statusCode = 200
+        res.setHeader('content-type', image)
+        res.end(bytes)
+        return
+      }
       const body = await readFile(path, 'utf8')
       return send(res, 200, body, 'application/json')
     }

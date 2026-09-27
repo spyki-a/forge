@@ -1203,7 +1203,7 @@ The preview shows the moment live from the same textures (nearest frame by
 |---|---|---|---|
 | `zoom-punch` | radial blur toward the centre with a scale pop on the incoming shot; the outgoing falls away | 10–14 | written here; gl-transitions' `ZoomInCircles`/`CrossZoom` as the reference |
 | `whip-blur` | directional blur along the whip axis on both shots, sliding; the blur length peaks mid-moment | 12 | written here |
-| `light-burn` | procedural leak: two moving soft gradients plus grain, additive over the cut, peaking on the cut frame | 16 | written here; `seed` chooses the drift |
+| `light-burn` | procedural leak: two moving soft gradients plus grain, additive over the cut, peaking on the cut frame | 17 (0.55 s — odd, so the peak is ON the cut frame) | written here; `seed` chooses the drift |
 | `depth-push` | a perspective camera dollying INTO a photo's depth planes (the parallax bake's layers as textured quads at their depths), with a slow ease — the 2.5D move the flat `zoompan` parallax approximates | 45–90 | written here, on `carousel.ts`'s camera arithmetic |
 | `kinetic-type` (later) | a headline set in 3D that the camera passes; one word per beat | — | after C5 shows the four above land |
 
@@ -1234,6 +1234,71 @@ final shaders are ours and short. Nothing here needs a Windows probe.
   incoming" check fails); `seed` ignored; the pre-pass pulls frames from the
   clip's start rather than its in-point; the export bakes at the project's
   shape; `moment` left out of one guard.
+
+> **Built 2026-09-27 — the four moments, over stills.** `render/moment.ts`
+> is the pure half: `momentSpan` (a bridge split evenly about the cut, the
+> odd frame after; bounds per kind), `fitSpan`, `momentPlacement`,
+> `momentParams(spec, t)` per kind with `seeded()` (mulberry32) drawn in a
+> fixed order so `t` never changes what the seed chose, and `shotPicture` —
+> a shot's picture on one of the moment's frames AS THE RENDER COMPOSES IT:
+> the part of the frame it covers (the clip's box; within it a letterbox for
+> a contained picture) and the layers drawn into it — the whole photo, or
+> each depth plane moved by its own share (`planeShare`, as plan.ts and the
+> preview draw a parallax shot) — from the shot's crop, its fit (`fitFor`,
+> so a crop within 1 % of the frame fills it as the render does), its camera
+> move read at the shot's own frame under the moment, and the punch-in of
+> the transition it entered with (the zoom family enlarges the whole clip).
+> That is what makes the hand-offs invisible under a moving shot: a bridge's
+> first and last frames are the two shots' pictures AS THEY ARE on those
+> frames, not the unmoved photos. `momentTextures.ts` finds the two shots by
+> id and then by POSITION (a split keeps the id on the left half), their
+> planes and their transitions. `renderer/momentCanvas.ts` draws: each shot
+> is composed per frame onto a frame-sized 2D canvas from the full-size
+> picture (decoded with `createImageBitmap`, no EXIF turn and no colour
+> management, as ffmpeg reads the file — so the ends match the shots at 4K
+> too), and the shaders — full-frame quads, one per kind, on the shared
+> renderer (`threeShared.ts`, pulled out of the ring) — sample those
+> composed frames raw and write premultiplied colour; the four kinds are as
+> the table above says, the depth push as layered plane quads scaled about
+> the centre (the dolly's projection) or the whole picture when there are no
+> planes. The preview draws live and in the same pass (`momentPreviewCanvas`),
+> the store bakes after the Director and on a reframe (`drawsItself` is now
+> the store's one list), the export redraws at its own shape (`Bakers.moment`)
+> and LEAVES OUT a moment it cannot draw (a bridged shot gone) rather than
+> playing stale frames.
+>
+> **What the plan had wrong, found by measuring and by review.** A depth push
+> that ran its two seconds and stopped left the shot 13 % zoomed in against
+> the photo beneath — a pop on every push. It now covers its WHOLE shot,
+> eases over its seconds and holds (`movingFrames`); the bake writes only the
+> moving frames and `tpad` holds the last, exactly as an animated caption —
+> and the rhythm engine treats a pushed shot as occupied to its end: no
+> blend out of it, no other moment within a bar of it. A bridge into a shot
+> with a move of its own would have double-moved it — the plan's "last frame
+> equals the incoming picture" was true only of a still shot; `shotPicture`
+> follows the move for bridges (per plane for a parallax) and drops it for a
+> push, which IS the move. `apply2.ts` places `layout.moments` on the lane
+> above the shots, before the look (so the grade covers them); the cards go
+> on a lane strictly ABOVE the look and every moment (a moment pushed the
+> look up a lane, and a card that did not overlap it found the lane under
+> the grade free); a whip between a picture shown whole and a filled one is
+> a cut with a note, as a blend there is; seed from the cut's frame and the
+> event's index (`momentSeed`), so the app and an eval draw the same picture.
+> **Over stills only**: a moment on footage is skipped with a note — the
+> footage pre-pass of §7.2 is the next piece. **Not followed**: a shot's own
+> colour grade, rotation, opacity, path or keyframed zoom — the Director's
+> shots have none, and the recipe's look sits above the moment; a user who
+> grades or turns a bridged shot afterwards gets a step at the hand-off.
+> Measured in `EFFECTS.md` §34 (exact at both ends, 0.000/255; the bake is
+> the PNG encode, 20–61 ms a frame). Tests: `tests/moment.test.ts`,
+> `tests/directorMoment.test.ts`, `tests/integration/moment.int.test.ts` (a
+> fake drawer keeping the timing contract, frame-exact at 9:16 and 16:9, and
+> a depth push's hold), the guard lists, the ffmpeg-floor shape; mutations
+> caught in two batches. The eval draws a run's moments in the harness
+> (`__forgeEvalMoments`) from the run's own photos — all of a moment's moving
+> frames, or the render refuses — and the real serum ad was re-rendered with
+> its zoom punch. Reviewed by six Opus lenses with two skeptics per finding:
+> 58 stood, all fixed the same day.
 
 ---
 

@@ -1,8 +1,8 @@
-import { existsSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import { dirname, join } from 'node:path'
+import { dirname, isAbsolute, join, relative } from 'node:path'
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg'
 import { emptyProject, type Clip, type MediaAsset, type Project, type TextSpec } from '@shared/timeline'
 import type { MusicAnalysis } from '@shared/automation/cutPlan'
@@ -12,7 +12,10 @@ import { SPINE2_PASS, spine2Schema, type Menu2, type SpinePlan2 } from '@shared/
 import type { Brief } from '@shared/director/schema'
 import { headlineCapacity } from '@shared/director/validate'
 import { applyRecipe } from '@shared/director/apply2'
-import { COPY_RULE, LOOK_RULE } from '@shared/director/apply'
+import { COPY_RULE, LOOK_RULE, MOMENT_RULE } from '@shared/director/apply'
+import { momentTextures, type MomentTextures } from '@shared/render/momentTextures'
+import { movingFrames } from '@shared/render/moment'
+import { EVAL_ROOT } from './relay'
 import { graphemes, type Composed } from '@shared/director/compose'
 import { gate } from '@shared/director/gate'
 import { recipeById, type Recipe, type RecipeId } from '@shared/director/recipes'
@@ -418,6 +421,62 @@ export function cardsOf(project: Project, canvas: { width: number; height: numbe
     .map((c) => ({ id: c.id, file: `${dir}/${c.id}.png`, spec: c.text, width: stills.width, height: stills.height }))
 }
 
+/** One moment for the harness to draw (`__forgeEvalMoments`, evalRelay.ts): the spec, the pictures, the size, and where its frames go. */
+export interface MomentRequest {
+  id: string
+  /** `moments/model/dir-moment-7.seq` — run-relative, forward slashes; the frames land in it as `00000.png`… */
+  dir: string
+  spec: NonNullable<Clip['moment']>
+  /** The two shots' pictures, their paths RELATIVE TO THE EVAL FOLDER — the relay serves nothing outside it. */
+  textures: MomentTextures
+  width: number
+  height: number
+  frames: number
+  fps: number
+}
+
+/**
+ * The moments an applied ad carries, each at the size the export would draw
+ * it (the stills' size, as `bakeForExport` asks), from the pictures the shots
+ * show. A moment whose picture lies outside the eval folder cannot be drawn
+ * by the harness and is left out — `skipped` names it.
+ */
+export function momentsOf(
+  project: Project,
+  canvas: { width: number; height: number },
+  dir: string
+): { moments: MomentRequest[]; skipped: string[] } {
+  const { stills } = exportBakeSizes(project.settings, canvas)
+  const skipped: string[] = []
+  const inside = (path: string): string | null => {
+    const rel = relative(EVAL_ROOT, path).split('\\').join('/')
+    return rel && !rel.startsWith('..') && !isAbsolute(rel) ? rel : null
+  }
+  const moments: MomentRequest[] = []
+  for (const c of project.clips) {
+    if (c.generatedBy?.rule !== MOMENT_RULE || !c.moment) continue
+    const textures = momentTextures(project, c.moment, c.start)
+    const paths = textures ? [textures.to.path, ...(textures.from ? [textures.from.path] : []), ...(textures.to.planes ?? []).map((p) => p.file)] : []
+    if (!textures || paths.some((p) => inside(p) === null)) {
+      skipped.push(`${c.id}: ${!textures ? 'its shot is gone or is footage' : 'its picture is outside tests/output/eval'}`)
+      continue
+    }
+    const rel = <T extends { path: string; planes?: { file: string; depth: number }[] } | null>(p: T): T =>
+      p ? { ...p, path: inside(p.path)!, ...(p.planes ? { planes: p.planes.map((l) => ({ ...l, file: inside(l.file)! })) } : {}) } : p
+    moments.push({
+      id: c.id,
+      dir: `${dir}/${c.id}.seq`,
+      spec: c.moment,
+      textures: { from: rel(textures.from), to: rel(textures.to)! },
+      width: stills.width,
+      height: stills.height,
+      frames: c.duration,
+      fps: project.settings.fps
+    })
+  }
+  return { moments, skipped }
+}
+
 /** A still of one colour, or the transparent square an adjustment layer carries — what the store draws, drawn with ffmpeg. */
 async function drawSolid(file: string, color: string, opacity: number, width: number, height: number): Promise<string> {
   await mkdir(dirname(file), { recursive: true })
@@ -444,7 +503,32 @@ export interface EvalRenderOptions {
    * with its picture there is rendered; one without is left out, as before.
    */
   cards?: string
+  /**
+   * A folder of drawn moments, one `<clip id>.seq/` of numbered PNGs each (the
+   * harness's `__forgeEvalMoments`). A moment with its frames there is
+   * rendered; one without is left out, and the shots beneath it cut.
+   */
+  moments?: string
   canvas?: { width: number; height: number }
+}
+
+/**
+ * The frames a drawn moment has on disk, counted from 00000 without a gap —
+ * a sequence the harness stopped part-way through is as good as none, since
+ * the render would hold its last frame mid-move.
+ */
+export function drawnMomentFrames(dir: string | undefined, id: string): number {
+  const seq = dir ? join(dir, `${id}.seq`) : null
+  if (!seq || !existsSync(seq)) return 0
+  const have = new Set(readdirSync(seq).filter((f) => /^\d{5}\.png$/.test(f)).map((f) => Number(f.slice(0, 5))))
+  let n = 0
+  while (have.has(n)) n++
+  return n
+}
+
+/** Whether a moment clip's frames are all on disk: as many as move (render/moment.ts movingFrames), from 00000 on. */
+function momentDrawn(dir: string | undefined, clip: Clip, fps: number): boolean {
+  return clip.moment !== undefined && drawnMomentFrames(dir, clip.id) === movingFrames(clip.moment, fps, clip.duration)
 }
 
 export async function renderEval(project: Project, out: string, options: EvalRenderOptions): Promise<void> {
@@ -461,7 +545,8 @@ export async function evalRenderPlan(project: Project, out: string, options: Eva
     return file && existsSync(file) ? file : null
   }
   const cards = new Set(project.clips.filter((c) => c.generatedBy?.rule === COPY_RULE && !drawnCard(c.id)).map((c) => c.id))
-  const without: Project = { ...project, clips: project.clips.filter((c) => !cards.has(c.id)) }
+  const undrawnMoments = new Set(project.clips.filter((c) => c.generatedBy?.rule === MOMENT_RULE && !momentDrawn(options.moments, c, project.settings.fps)).map((c) => c.id))
+  const without: Project = { ...project, clips: project.clips.filter((c) => !cards.has(c.id) && !undrawnMoments.has(c.id)) }
   const drawn = join(dirname(out), 'drawn')
   const looks = new Set(without.clips.filter((c) => c.generatedBy?.rule === LOOK_RULE).map((c) => c.assetId))
   const blank = looks.size > 0 ? await drawSolid(join(drawn, 'adjustment.png'), '#000000', 0, 16, 16) : ''
@@ -474,7 +559,13 @@ export async function evalRenderPlan(project: Project, out: string, options: Eva
     // The card the harness drew for this clip (key is `<clip id>-export`, exportBake.ts); stills only.
     text: async (_spec, key) => drawnCard(key.replace(/-export$/, '')) ?? unused(),
     textSequence: async () => null,
-    title: unused, paper: unused, carousel: unused
+    title: unused, paper: unused, carousel: unused,
+    // The frames the harness drew for this moment — every one that moves (a clip without them all was left out above).
+    moment: async (spec, key, _textures, _w, _h, frames, fps) => {
+      const id = key.replace(/-export$/, '')
+      const drawn = drawnMomentFrames(options.moments, id)
+      return drawn === movingFrames(spec, fps, frames) ? { pattern: join(options.moments!, `${id}.seq`, '%05d.png'), frames: drawn } : unused()
+    }
   }, (clip, err) => {
     throw new Error(`${clip.id} could not be drawn: ${String(err)}`)
   })
@@ -565,6 +656,8 @@ export interface RenderOptions {
   canvas?: { width: number; height: number }
   /** Folders of drawn headline cards, one for each ad (renderEval's `cards`). */
   cards?: { model?: string; baseline?: string }
+  /** Folders of drawn moments, likewise (renderEval's `moments`). */
+  moments?: { model?: string; baseline?: string }
   /** The library's sounds for the Director to fire; none, and the ad has no sound design (soundRoles.ts). */
   sounds?: SoundPack
 }
@@ -581,20 +674,21 @@ export async function scoreFixture(
 
   const renders: BriefResult['renders'] = { model: null, baseline: null }
   if (options.render) {
-    const { dir, extraTransitions, resolveAsset, canvas, cards, sounds } = options.render
-    const renderOptions = (drawn: string | undefined): Parameters<typeof renderEval>[2] => ({
+    const { dir, extraTransitions, resolveAsset, canvas, cards, moments, sounds } = options.render
+    const renderOptions = (drawn: string | undefined, drawnMoments: string | undefined): Parameters<typeof renderEval>[2] => ({
       extraTransitions,
       ...(resolveAsset ? { resolveAsset } : {}),
       ...(canvas ? { canvas } : {}),
-      ...(drawn ? { cards: drawn } : {})
+      ...(drawn ? { cards: drawn } : {}),
+      ...(drawnMoments ? { moments: drawnMoments } : {})
     })
     renders.baseline = join(dir, `${fixture.id}.baseline.mp4`)
     const standardLook = await lookFileFor(standard.composed.recipe, dir)
-    await renderEval(applied(prepared, standard.composed, menu, 'baseline', standardLook, sounds), renders.baseline, renderOptions(cards?.baseline))
+    await renderEval(applied(prepared, standard.composed, menu, 'baseline', standardLook, sounds), renders.baseline, renderOptions(cards?.baseline, moments?.baseline))
     if (settled) {
       renders.model = join(dir, `${fixture.id}.model.mp4`)
       const look = await lookFileFor(settled.composed.recipe, dir)
-      await renderEval(applied(prepared, settled.composed, menu, options.model, look, sounds), renders.model, renderOptions(cards?.model))
+      await renderEval(applied(prepared, settled.composed, menu, options.model, look, sounds), renders.model, renderOptions(cards?.model, moments?.model))
     }
   }
 

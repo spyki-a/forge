@@ -216,10 +216,10 @@ export function despillFilter(key: ChromaKey): string | null {
  * adjustment layer, which has no picture of its own at all.
  */
 export function isKeyable(
-  clip: Pick<Clip, 'adjustment' | 'text' | 'title' | 'paper' | 'carousel' | 'solid'>,
+  clip: Pick<Clip, 'adjustment' | 'text' | 'title' | 'paper' | 'carousel' | 'solid' | 'moment'>,
   asset: Pick<MediaAsset, 'kind' | 'hasVideo'> | undefined
 ): boolean {
-  if (clip.adjustment || clip.text || clip.title || clip.paper || clip.carousel || clip.solid) return false
+  if (clip.adjustment || clip.text || clip.title || clip.paper || clip.carousel || clip.solid || clip.moment) return false
   return Boolean(asset && asset.hasVideo && (asset.kind === 'video' || asset.kind === 'image'))
 }
 

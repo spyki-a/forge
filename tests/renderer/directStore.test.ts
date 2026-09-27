@@ -127,17 +127,19 @@ describe('direct() runs spine@2', () => {
     useEditor.setState({ project: { ...empty, settings: { ...empty.settings, width: 1080, height: 1920 }, assets: [{ ...photo('a'), width: 2000, height: 2000 }, photo('b'), photo('c')] } })
     await useEditor.getState().direct()
     const first = useEditor.getState().project
-    const lanes = first.tracks.filter((t) => t.director)
-    expect(lanes).toHaveLength(1)
-    expect(first.tracks[0].id).toBe(lanes[0].id)
+    // The bottom lane is the Director's, added for the backdrop. (The lanes it adds ABOVE the ad — for a
+    // moment's cards over the look — are marked its own too; what matters here is the one under it.)
+    const bottom = first.tracks[0]
+    expect(bottom.director).toBe(true)
     const backs = first.clips.filter((c) => c.generatedBy?.rule === 'director.backdrop')
     expect(backs.length).toBeGreaterThan(0)
-    expect(backs.every((b) => b.trackId === lanes[0].id && b.assetId === 'a')).toBe(true)
+    expect(backs.every((b) => b.trackId === bottom.id && b.assetId === 'a')).toBe(true)
     expect(first.clips.filter((c) => c.generatedBy?.rule === 'director.spine').every((c) => c.trackId === 'v1')).toBe(true)
 
     await useEditor.getState().direct()
     const second = useEditor.getState().project
-    expect(second.tracks.filter((t) => t.director)).toHaveLength(1)
+    // A second run adds no lane of its own: the Director's are cleared and made again, the same number.
+    expect(second.tracks.filter((t) => t.director)).toHaveLength(first.tracks.filter((t) => t.director).length)
     expect(second.tracks.length).toBe(first.tracks.length)
     expect(second.clips.filter((c) => c.generatedBy?.rule === 'director.spine').every((c) => c.trackId === 'v1')).toBe(true)
 

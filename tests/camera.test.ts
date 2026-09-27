@@ -33,7 +33,7 @@ describe('which clips take a move', () => {
     // wrong for footage.
     expect(canMoveCamera({}, { kind: 'video' })).toBe(false)
     expect(canMoveCamera({}, undefined)).toBe(false)
-    for (const drawn of [{ text: {} }, { title: {} }, { paper: {} }, { carousel: {} }, { solid: {} }, { adjustment: true }]) {
+    for (const drawn of [{ text: {} }, { title: {} }, { paper: {} }, { carousel: {} }, { solid: {} }, { moment: {} }, { adjustment: true }]) {
       expect(canMoveCamera(drawn as Parameters<typeof canMoveCamera>[0], { kind: 'image' }), JSON.stringify(drawn)).toBe(false)
     }
   })

@@ -2559,3 +2559,64 @@ Two more from the C3 review, both measured:
   a float decode first: a mix at +6 dBFS read `max_volume: 0.0 dB`. `astats`
   reads floats — `Peak level dB: 6.02` on the same file — and is what a check
   of "nothing clips" has to use (`tests/integration/output.ts` `peakLevelDb`).
+
+## 34. Moments — three.js frames over a cut (2026-09-27)
+
+The four moments (docs/PLAN.md §7) draw with three.js into the same rail the
+card ring uses: numbered PNGs with alpha, `-start_number 0`, held by `tpad`,
+overlaid with `format=yuva420p`. Nothing new reaches ffmpeg; what was
+measured is the drawing, and one thing about measuring renders.
+
+**Exact at both ends.** The harness check (`window.__forgeMomentCheck`,
+`src/renderer/src/harness/momentCheck.ts`) draws each kind over two
+synthetic pictures at 270×480 and compares pixels. Every bridge's first
+frame equals the outgoing picture and its last the incoming one with a mean
+difference of **0.000/255** — not "within 2/255": the textures are sampled
+raw (`NoColorSpace`, `flipY` off, the picture's own rectangle from
+`textureWindow`) and the shaders' blur, offset and glow are exactly zero at
+t = 0 and t = 1. A depth push's first frame equals the photo (0.000), and
+its last MOVING frame equals its final held frame (`movingFrames`), which is
+what stops the shot popping back when the push ends.
+
+| kind | moving frames (30 fps) | frames differ, first/mid/last (mean /255) | draw, 1080×1920 | PNG encode per 1080×1920 frame |
+|---|---|---|---|---|
+| zoom-punch | 12 | 19 / 77 / 79 | ~130 fps (the first, cold call) | 21 ms |
+| whip-blur | 12 | 61 / 65 / 79 | ~460 fps | 20 ms |
+| light-burn | 17 | 86 / 34 / 79 | ~520 fps | 60 ms |
+| depth-push | 60 of the shot | 2.3 / 2.4 / 4.5 | ~690 fps | 20 ms |
+
+The drawing includes composing each shot's picture onto a frame-sized 2D
+canvas per frame and uploading it (a shot that does not move composes once);
+the first call also compiles the shader. So a bake
+is the PNG encode, not the drawing: a 12-frame zoom punch at 1080×1920 is a
+quarter of a second, a two-second depth push about 1.4 s, and the light burn
+three times the others because grain does not compress. These are the
+synthetic pictures' figures (gradients with a square); a photograph's frames
+are bigger PNGs and encode slower — the serum ad's punch frames were 0.45 to
+2.25 MB each. The ring's bake is the same shape and the same cost per frame;
+a bridge writes 12–17 frames against a three-second ring's 90, a depth push
+60. Not yet measured on the Surface.
+
+On the real serum ad (`tests/output/eval/real-serum-e2b-moments2`), whose
+two shots both carry a Ken Burns push-in, the rendered frame before the zoom
+punch and its first frame differ by **1.1/255** mean, its last frame and the
+frame after by **2.0/255** — H.264's own noise — against 124/255 across the
+cut itself and 11/255 between the moment's first two frames. So the moment's
+picture follows the shots' moves to the frame, through the export.
+
+The pictures the shaders sample are composed per frame on a 2D canvas from
+the full-size photograph (`momentCanvas.ts` `Composed`), so there is no
+texture cap to starve a 4K export; the photograph is decoded once with
+`createImageBitmap(..., { imageOrientation: 'none', colorSpaceConversion:
+'none' })`, as the bundled ffmpeg reads it — a `<img>` decode would turn an
+EXIF-tagged phone JPEG upright and convert a Display P3 one to sRGB, and the
+moment's ends would then differ from the shots beneath them in the export.
+
+**`-ss` hands back the frame AT OR AFTER the seek point.** The render check
+(`tests/integration/moment.int.test.ts`) samples one frame per timeline
+frame, and every sample landed one frame late when asked for the MIDDLE of a
+frame (`(f + 0.5) / fps`): accurate seek drops frames before the point and
+returns the first at or past it, which is frame `f + 1`. Ask for a hair
+before the frame's own timestamp (`(f − 0.25) / fps`) and it is frame `f`.
+`pixelAt` in the other render checks samples the middle of a clip, where a
+frame either way is the same picture, so it never showed.

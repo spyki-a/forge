@@ -242,7 +242,9 @@ describe('the standard cut, composed and applied', () => {
     expect(clip.speed).toBeUndefined()
     expect(clip.duration, 'the ramp stretches the footage').toBeGreaterThan(60)
     expect(sourceFramesFor(clip), 'never past the footage').toBeLessThanOrEqual(60)
-    expect(a.problems.map((x) => x.message).join(' ')).not.toMatch(/not drawn yet/)
+    // The C2 placeholder ("speed ramps are not drawn yet — played at normal speed") must not come back.
+    // Named in full: a moment over this footage says "not drawn yet" too, and that one is meant (C4).
+    expect(a.problems.map((x) => x.message).join(' ')).not.toMatch(/speed ramps are not drawn yet/)
   })
 
   it('a recipe that does not ramp does not get one because the decode allowed it', () => {

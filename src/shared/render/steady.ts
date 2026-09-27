@@ -30,10 +30,10 @@ export const STEADY_SMOOTHING = 30
 
 /** Footage only: a photograph has no shake, and the app draws the rest itself. */
 export function canSteady(
-  clip: Pick<Clip, 'adjustment' | 'text' | 'title' | 'paper' | 'carousel' | 'solid'>,
+  clip: Pick<Clip, 'adjustment' | 'text' | 'title' | 'paper' | 'carousel' | 'solid' | 'moment'>,
   asset: Pick<MediaAsset, 'kind' | 'hasVideo' | 'frames'> | undefined
 ): boolean {
-  if (clip.adjustment || clip.text || clip.title || clip.paper || clip.carousel || clip.solid) return false
+  if (clip.adjustment || clip.text || clip.title || clip.paper || clip.carousel || clip.solid || clip.moment) return false
   return Boolean(asset && asset.kind === 'video' && asset.hasVideo && !asset.frames)
 }
 

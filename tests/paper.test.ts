@@ -713,15 +713,22 @@ describe('a clip that is DRAWN at the canvas size', () => {
      * "a crop solved against the new one took a sub-rectangle of it" — and it
      * was written before clippings existed to suffer it.
      */
-    expect(store).toMatch(
-      /if \(c\.text(?: \|\| c\.\w+)*? \|\| c\.paper(?: \|\| c\.\w+)*\) return \{ \.\.\.c, crop: undefined \}/
+    /*
+     * The list is `drawsItself` now (edit/recipes.ts), the one every
+     * self-drawing kind joins — so the guard is that paper is on THAT list and
+     * the store reframes by it, rather than the spelled-out expression a fourth
+     * kind used to break (CLAUDE.md: membership, not the snapshot).
+     */
+    expect(store).toContain('if (drawsItself(c)) return { ...c, crop: undefined }')
+    expect(readFileSync(resolve(__dirname, '../src/shared/edit/recipes.ts'), 'utf8')).toMatch(
+      /export function drawsItself\(clip: Clip\): boolean \{\s*return Boolean\((?:clip\.\w+ \?\? )*clip\.paper/
     )
   })
 
   it('is redrawn at the new canvas size', () => {
-    expect(store).toMatch(
-      /filter\(\(c\) => c\.text(?: \|\| c\.\w+)*? \|\| c\.paper(?: \|\| c\.\w+)*\)/
-    )
+    const at = store.indexOf('rebakeGenerated: async () => {')
+    expect(at).toBeGreaterThan(-1)
+    expect(store.slice(at, at + 600)).toContain('project.clips.filter(drawsItself)')
     // …and the rebake has to actually bake it, not just select it.
     expect(store).toContain('bakePaperSequence(')
   })

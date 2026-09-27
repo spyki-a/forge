@@ -3,7 +3,8 @@ import { existsSync } from 'node:fs'
 import { readdir, writeFile } from 'node:fs/promises'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import { join, relative, resolve } from 'node:path'
+import { dirname, join, relative, resolve } from 'node:path'
+import { movingFrames } from '@shared/render/moment'
 import { TRANSITIONS } from '@shared/transitions/registry'
 import type { MusicAnalysis } from '@shared/automation/cutPlan'
 import { emptyProject, secondsToFrames, type Clip, type MediaAsset, type Project } from '@shared/timeline'
@@ -22,8 +23,10 @@ import {
   applied,
   cardsOf,
   catalogueOf,
+  drawnMomentFrames,
   lookFileFor,
   menuOf,
+  momentsOf,
   readJson,
   requestFor,
   scoreFixture,
@@ -59,9 +62,12 @@ import { EVAL_ROOT } from './relay'
  *                → harness   window.__forgeEvalRelay('<run>')
  *   STEP=plan    the looks read back, the gate, the menu, the spine@2 request
  *                → harness   window.__forgeEvalRelay('<run>')   (only the new request is unanswered)
- *   STEP=score   the answer settled as direct() settles it; cards.json, every headline card's spec
- *                → harness   window.__forgeEvalCards('<run>')   (draws each to cards/…/<clip>.png)
- *   STEP=render  both ads rendered at 1080×1920 with the cards; README.md — what the eyes saw, what landed
+ *   STEP=score   the answer settled as direct() settles it; cards.json, every headline card's spec, and
+ *                moments.json, every moment's spec and pictures (the pictures must be inside tests/output/eval)
+ *                → harness   await window.__forgeEvalCards('<run>')     (draws each to cards/…/<clip>.png)
+ *                → harness   await window.__forgeEvalMoments('<run>')   (draws each's frames to moments/…/<clip>.seq/)
+ *   STEP=render  both ads rendered at 1080×1920 with the cards and the moments (every moving frame of each, or it
+ *                stops and says so); README.md — what the eyes saw, what landed
  *
  * Same environment as the ten-brief eval: FORGE_EVAL, FORGE_EVAL_MODEL,
  * FORGE_EVAL_RUN, FORGE_EVAL_SERVER. Everything lands in tests/output/eval/<run>.
@@ -145,6 +151,7 @@ describe.skipIf(!PROVIDER || !REAL)('a real ad from the user’s own pictures an
       const runDir = join(EVAL_ROOT, runId)
       const rendersDir = join(runDir, 'renders')
       const cardDirs = { model: join(runDir, 'cards', 'model'), baseline: join(runDir, 'cards', 'baseline') }
+      const momentDirs = { model: join(runDir, 'moments', 'model'), baseline: join(runDir, 'moments', 'baseline') }
 
       /* ------------------------------------------------------------ looks */
       if (STEP === 'looks') {
@@ -343,6 +350,11 @@ describe.skipIf(!PROVIDER || !REAL)('a real ad from the user’s own pictures an
             ...cardsOf(applied(prepared, standard.composed, menu, 'baseline', standardLook, sounds), CANVAS, 'cards/baseline')
           ]
           await writeJson(join(runDir, 'cards.json'), cards)
+          /* And every moment of both ads, drawn by the harness's GPU from the run's own photos (docs/PLAN.md §7). */
+          const modelMoments = settled ? momentsOf(applied(prepared, settled.composed, menu, config.model, modelLook, sounds), CANVAS, 'moments/model') : { moments: [], skipped: [] }
+          const standardMoments = momentsOf(applied(prepared, standard.composed, menu, 'baseline', standardLook, sounds), CANVAS, 'moments/baseline')
+          await writeJson(join(runDir, 'moments.json'), [...modelMoments.moments, ...standardMoments.moments])
+          for (const s of [...modelMoments.skipped, ...standardMoments.skipped]) console.log(`  - moment not drawable: ${s}`)
           await writeJson(join(runDir, 'settled.json'), {
             verdict, why, problems,
             recipe: landed.composed.recipe.id,
@@ -355,7 +367,7 @@ describe.skipIf(!PROVIDER || !REAL)('a real ad from the user’s own pictures an
           console.log(
             `${runId}: ${verdict}${why ? ` — ${why}` : ''}; ${landed.composed.recipe.name}, hero ${landed.composed.plan.hero}, ` +
               `${landed.composed.layout.shots.length} shots to ${(landed.composed.layout.endFrame / fps).toFixed(1)} s; ` +
-              `${cards.length} cards to draw. Now: window.__forgeEvalCards('${runId}') in the harness, then STEP=render.`
+              `${cards.length} cards and ${modelMoments.moments.length + standardMoments.moments.length} moments to draw. Now: await window.__forgeEvalCards('${runId}') and await window.__forgeEvalMoments('${runId}') in the harness, then STEP=render.`
           )
           for (const p of problems) console.log(`  - ${p}`)
         }
@@ -377,9 +389,29 @@ describe.skipIf(!PROVIDER || !REAL)('a real ad from the user’s own pictures an
           if (missing.length > 0) {
             throw new Error(`${missing.length} of ${expected.length} cards are not drawn (${missing.map((c) => c.file).join(', ')}) — run STEP=score and window.__forgeEvalCards('${runId}') again`)
           }
+          /*
+           * The moments likewise: every moving frame of each must be there, or the render would cut where the ad
+           * has a moment — or worse, hold a half-drawn one mid-move. And a moment the harness could not be asked
+           * to draw (its picture outside tests/output/eval) is not silently a cut: the run says so and stops.
+           */
+          const modelMoments = settled ? momentsOf(applied(prepared, settled.composed, menu, config.model, modelLook, sounds), CANVAS, 'moments/model') : { moments: [], skipped: [] }
+          const standardMoments = momentsOf(applied(prepared, standard.composed, menu, 'baseline', standardLook, sounds), CANVAS, 'moments/baseline')
+          const skipped = [...modelMoments.skipped, ...standardMoments.skipped]
+          if (skipped.length > 0) {
+            throw new Error(`${skipped.length} moments cannot be drawn by the harness (${skipped.join('; ')}) — FORGE_REAL has to be a folder inside tests/output/eval`)
+          }
+          const wantedMoments = [...modelMoments.moments, ...standardMoments.moments]
+          const undrawn = wantedMoments.filter((m) => drawnMomentFrames(join(runDir, dirname(m.dir)), m.id) !== movingFrames(m.spec, m.fps, m.frames))
+          if (undrawn.length > 0) {
+            throw new Error(`${undrawn.length} of ${wantedMoments.length} moments are not fully drawn (${undrawn.map((m) => m.dir).join(', ')}) — run STEP=score and await window.__forgeEvalMoments('${runId}') again`)
+          }
           const drawn = {
             model: expected.filter((c) => c.file.startsWith('cards/model/')).length,
-            baseline: expected.filter((c) => c.file.startsWith('cards/baseline/')).length
+            baseline: expected.filter((c) => c.file.startsWith('cards/baseline/')).length,
+            moments: {
+              model: wantedMoments.filter((m) => m.dir.startsWith('moments/model/')).length,
+              baseline: wantedMoments.filter((m) => m.dir.startsWith('moments/baseline/')).length
+            }
           }
           const result = await scoreFixture({ id: 'real', kind: real.draft.kind }, prepared, request, response, {
             model: config.model,
@@ -389,6 +421,7 @@ describe.skipIf(!PROVIDER || !REAL)('a real ad from the user’s own pictures an
               ...(library.resolveAsset ? { resolveAsset: library.resolveAsset } : {}),
               canvas: CANVAS,
               cards: cardDirs,
+              moments: momentDirs,
               sounds
             }
           })
@@ -413,7 +446,7 @@ describe.skipIf(!PROVIDER || !REAL)('a real ad from the user’s own pictures an
             const laid = (isModel ? landed : standard).composed.layout.endFrame / fps
             expect(Math.abs(seconds - laid), `${relative(REPO, file)} runs ${seconds.toFixed(2)} s, laid out to ${laid.toFixed(2)} s (the model's to ${want.toFixed(2)})`).toBeLessThan(0.25)
           }
-          console.log(`${runId}: ${verdict}; rendered ${files.map((f) => relative(REPO, f)).join(', ')} with ${drawn.model} + ${drawn.baseline} cards drawn. README.md written.`)
+          console.log(`${runId}: ${verdict}; rendered ${files.map((f) => relative(REPO, f)).join(', ')} with ${drawn.model} + ${drawn.baseline} cards and ${drawn.moments.model} + ${drawn.moments.baseline} moments drawn. README.md written.`)
         }
       }
     },
@@ -429,7 +462,7 @@ function readme(
   eyes: Eyes,
   result: BriefResult,
   settled: ReturnType<typeof settleAnswer>,
-  drawn: { model: number; baseline: number }
+  drawn: { model: number; baseline: number; moments?: { model: number; baseline: number } }
 ): string {
   const { brief } = { brief: result }
   const { draft, analysis } = real
@@ -503,8 +536,8 @@ function readme(
   lines.push(`- the ad ends at ${t(landed.layout.endFrame)} s`)
   if (result.problems.length) lines.push('', 'Notes and repairs:', '', ...result.problems.map((p) => `- ${p}`))
   lines.push('', '## The films', '')
-  if (result.renders.model) lines.push(`- ${relative(REPO, result.renders.model)} — the model's ad, ${CANVAS.width}×${CANVAS.height}, ${drawn.model} cards drawn by the app's type renderer`)
-  lines.push(`- ${relative(REPO, result.renders.baseline!)} — the standard cut from the same menu, ${drawn.baseline} cards drawn`)
+  if (result.renders.model) lines.push(`- ${relative(REPO, result.renders.model)} — the model's ad, ${CANVAS.width}×${CANVAS.height}, ${drawn.model} cards drawn by the app's type renderer${drawn.moments ? `, ${drawn.moments.model} moments drawn by its three.js` : ''}`)
+  lines.push(`- ${relative(REPO, result.renders.baseline!)} — the standard cut from the same menu, ${drawn.baseline} cards drawn${drawn.moments ? `, ${drawn.moments.baseline} moments` : ''}`)
   lines.push('')
   return lines.join('\n')
 }

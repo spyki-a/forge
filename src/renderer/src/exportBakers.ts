@@ -2,6 +2,7 @@ import type { Bakers } from '@shared/render/exportBake'
 import { bakeText, bakeTextSequence } from './textCanvas'
 import { bakePaperSequence } from './paperCanvas'
 import { bakeCarouselSequence } from './carouselCanvas'
+import { bakeMomentSequence } from './momentCanvas'
 
 /**
  * The canvas drawing an export's cards go through — the same functions the
@@ -10,6 +11,8 @@ import { bakeCarouselSequence } from './carouselCanvas'
  * src/shared/render/exportBake.ts.
  */
 export const liveBakers: Bakers = {
+  moment: (spec, key, textures, width, height, frames, fps) =>
+    bakeMomentSequence(spec, key, textures, width, height, frames, fps),
   text: (spec, key, width, height) => bakeText(spec, key, width, height),
   textSequence: (spec, key, width, height, fps, maxFrames) =>
     bakeTextSequence(spec, key, width, height, fps, maxFrames),

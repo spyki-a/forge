@@ -1,4 +1,4 @@
-import type { Clip, CropRect, MediaAsset, Motion, MotionMove, Project, TextSpec } from '../timeline'
+import type { Clip, CropRect, MediaAsset, MomentSpec, Motion, MotionMove, Project, TextSpec, Track } from '../timeline'
 import { DEFAULT_TEXT, addTrack, anchorTransition, clipEnd, overlapsOn, stackedSlot, trackLimitReached } from '../timeline'
 import { detachAudio } from '../edit/recipes'
 import type { DecisionRecord } from '../project'
@@ -8,6 +8,7 @@ import {
   COPY_RULE,
   ENDING_RULE,
   LOOK_RULE,
+  MOMENT_RULE,
   PUNCH_COLOR,
   PUNCH_SCALE,
   SPINE_RULE,
@@ -16,6 +17,7 @@ import {
   memberFor,
   trimMusic
 } from './apply'
+import { DRAWN_MOMENTS, MOMENT_SECONDS, bridgesCut, fitSpan, momentPlacement, momentSpan, type MomentSpan } from '../render/moment'
 import { dropPatch } from '../render/dropIntent'
 import { SOUND_LANE_NAME, placeSounds } from './sound'
 import type { SoundPack } from './soundRoles'
@@ -70,6 +72,13 @@ export interface Applied2 {
   solidClipIds: string[]
   /** The sound design's clips, on the Director's own audio lanes. */
   soundClipIds: string[]
+  /** The moments over the cuts, whose frames the store draws afterwards (momentCanvas.ts). */
+  momentClipIds: string[]
+}
+
+/** A moment's seed from where it is: the same layout draws the same picture twice, in the app and in an eval. */
+export function momentSeed(frame: number, index: number): number {
+  return (Math.imul(frame + 1, 2654435761) + Math.imul(index + 1, 40503)) >>> 0
 }
 
 const defaultId = (prefix: string): string => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
@@ -329,10 +338,99 @@ export function applyRecipe(project: Project, composed: Composed, menu: Menu2, c
     }
     next = anchorTransition(next, shot.clip.id, member, frames)
     landedTransitions.push({ frame: shot.clip.start, frames })
+    // The blend lengthened the shot before it and marked this one: the shots read what is in the project now.
+    prev.clip = next.clips.find((c) => c.id === prev.clip.id) ?? prev.clip
+    shot.clip = next.clips.find((c) => c.id === shot.clip.id) ?? shot.clip
     if (under && underPrev && under.trackId === underPrev.trackId && clipEnd(underPrev) === under.start) {
       next = anchorTransition(next, under.id, member, frames)
     }
   }
+
+  /*
+   * The moments (docs/PLAN.md §7): the engine's events over the cuts, as
+   * clips on the lane above the shots — BEFORE the look, so the grade covers
+   * them as it covers the shots they are drawn from, and under the cards. A
+   * bridge sits `[cut − before, cut + after]`, shrunk to the footage either
+   * side and said so; a depth push covers its whole shot, easing over its
+   * seconds and holding (render/moment.ts `movingFrames`), so the shot never
+   * pops back when it ends. Only over stills for now: a moment over footage
+   * would need the footage's frames pulled from the file (§7.2), and until
+   * that lands the shot enters with a plain cut.
+   */
+  const momentClipIds: string[] = []
+  const momentSpans: { start: number; end: number; kind: string; slotId: string }[] = []
+  layout.moments.forEach((m, index) => {
+    const to = shots.find((s) => s.slotId === m.to)
+    const from = bridgesCut(m.moment) ? shots.find((s) => s.slotId === m.from) : undefined
+    if (!to || (bridgesCut(m.moment) && !from)) return
+    const at = `$.shots[${to.index}]`
+    if (!DRAWN_MOMENTS.includes(m.moment)) {
+      problems.push({ path: at, message: `${to.slotId} enters with a cut — a "${m.moment}" moment is not drawn yet` })
+      return
+    }
+    if (to.video || from?.video) {
+      problems.push({ path: at, message: `${to.slotId} enters with a cut — a ${m.moment} over footage is not drawn yet` })
+      return
+    }
+    const cut = to.clip.start
+    if (from && clipEnd(from.clip) !== cut) {
+      problems.push({ path: at, message: `${to.slotId} enters with a cut — the shot before it ends early, so there is no cut to bridge` })
+      return
+    }
+    /*
+     * A whip slides one picture out and the other in, so a picture shown
+     * whole beside one that fills the frame would leave its bars uncovered as
+     * it slid — the still shot beneath showing through them. The rule the
+     * transitions already keep for a blend (above): such a boundary is a cut.
+     */
+    if (m.moment === 'whip-blur' && from && backdropOf.has(to.index) !== backdropOf.has(from.index)) {
+      problems.push({ path: at, message: `${to.slotId} enters with a cut — a whip between a picture shown whole and one that fills the frame would leave its borders behind` })
+      return
+    }
+    const spec: MomentSpec = {
+      kind: m.moment,
+      ...(from ? { from: { clipId: from.clip.id } } : {}),
+      to: { clipId: to.clip.id },
+      seconds: MOMENT_SECONDS[m.moment].default,
+      intensity,
+      seed: momentSeed(m.frame, index),
+      version: 1
+    }
+    const wanted = momentSpan(spec, fps)
+    const { span, shrank }: { span: MomentSpan; shrank: boolean } = from
+      ? fitSpan(wanted, { before: from.clip.duration, after: to.clip.duration })
+      : { span: { before: 0, after: to.clip.duration, total: to.clip.duration }, shrank: to.clip.duration < wanted.total }
+    if (shrank) problems.push({ path: at, message: `the ${m.moment} over ${to.slotId} is shorter than the recipe's — its shots have only ${(Math.min(span.total, wanted.total) / fps).toFixed(1)}s of footage for it` })
+    const placement = momentPlacement(cut, span)
+    // Two moments over the same frames would stack, the upper hiding the lower — the engine keeps them apart (rhythm.ts); this is the net.
+    const stacked = momentSpans.find((s) => placement.start < s.end && placement.start + placement.duration > s.start)
+    if (stacked) {
+      problems.push({ path: at, message: `${to.slotId} enters with a cut — its ${m.moment} would sit over the ${stacked.kind} already on ${stacked.slotId}` })
+      return
+    }
+    const lane = laneFor(placement.start, placement.duration)
+    if (!lane) {
+      problems.push({ path: at, message: `no free layer for the ${m.moment} over ${to.slotId} — dropped` })
+      return
+    }
+    momentSpans.push({ start: placement.start, end: placement.start + placement.duration, kind: m.moment, slotId: to.slotId })
+    const id = newId('dir-moment')
+    const assetId = `${id}-asset`
+    const name = m.moment.replace('-', ' ')
+    next = {
+      ...next,
+      assets: [...next.assets, drawnAsset(assetId, name[0].toUpperCase() + name.slice(1), placement.duration, width, height, fps)],
+      clips: [
+        ...next.clips,
+        {
+          id, assetId, trackId: lane.trackId, start: lane.start, duration: placement.duration, inPoint: 0, volume: 1,
+          transform: { ...TRANSFORM }, color: { ...NEUTRAL }, moment: spec,
+          generatedBy: { rule: MOMENT_RULE, reason: `${recipe.name} · ${m.moment} ${from ? `from ${from.slotId} ` : ''}into ${to.slotId} at the ${m.place.replace('-', ' ')}` }
+        }
+      ]
+    }
+    momentClipIds.push(id)
+  })
 
   /* The black and the end card, on the shots' track. */
   const solidClipIds: string[] = []
@@ -380,6 +478,19 @@ export function applyRecipe(project: Project, composed: Composed, menu: Menu2, c
     problems.push({ path: '$.look', message: `the "${recipe.look}" look is not installed — not graded` })
   }
 
+  /**
+   * A video lane the Director adds, marked its own: Clear takes it away again
+   * when it is empty (clearDirector), and nothing of the user's is built onto
+   * it (timeline.ts buildTrack).
+   */
+  function addLane(position: 'top' | 'bottom'): string {
+    next = addTrack(next, 'video', position)
+    const lanes = next.tracks.filter((t) => t.kind === 'video')
+    const added = position === 'top' ? lanes[lanes.length - 1] : lanes[0]
+    next = { ...next, tracks: next.tracks.map((t) => (t.id === added.id ? { ...t, director: true as const } : t)) }
+    return added.id
+  }
+
   /** A free lane UNDER the shots, for a backdrop: the lowest video track free over the span, else a new bottom track marked the Director's. */
   function laneBelow(start: number, duration: number): string | null {
     const lanes = next.tracks.filter((t) => t.kind === 'video')
@@ -389,24 +500,49 @@ export function applyRecipe(project: Project, composed: Composed, menu: Menu2, c
       if (!track.locked && overlapsOn(next, track.id, start, duration).length === 0) return track.id
     }
     if (trackLimitReached(next)) return null
-    next = addTrack(next, 'video', 'bottom')
-    const bottom = next.tracks[0]
-    next = { ...next, tracks: next.tracks.map((t) => (t.id === bottom.id ? { ...t, director: true as const } : t)) }
-    return bottom.id
+    return addLane('bottom')
   }
 
-  /* The cards: headlines over their shots, and the end card over its black. */
-  const cardClipIds: string[] = []
-  function laneFor(start: number, duration: number): { trackId: string; start: number } | null {
-    let slot = stackedSlot(next, ctx.videoTrackId, start, duration)
+  /**
+   * A free lane ABOVE `from` (the shots' track unless said otherwise): the
+   * lowest video track from there up that is free over the span, else a new
+   * top track.
+   */
+  function laneFor(start: number, duration: number, from: string = ctx.videoTrackId): { trackId: string; start: number } | null {
+    let slot = stackedSlot(next, from, start, duration)
     if (!slot && !trackLimitReached(next)) {
-      next = addTrack(next, 'video', 'top')
-      slot = stackedSlot(next, ctx.videoTrackId, start, duration)
+      addLane('top')
+      slot = stackedSlot(next, from, start, duration)
     }
     return slot
   }
+
+  /*
+   * The cards: headlines over their shots, and the end card over its black —
+   * on lanes ABOVE the look and above every moment, never the first free lane
+   * from the shots. A moment on the lane just above the shots pushes the look
+   * up one; a card that does not overlap the moment would otherwise find that
+   * lower lane free and land there, under the grade, and the type is not to be
+   * graded (and not to be hidden under a moment).
+   */
+  const cardClipIds: string[] = []
+  const laneIndexOf = (trackId: string): number => next.tracks.filter((t) => t.kind === 'video').findIndex((t) => t.id === trackId)
+  /** The lowest lane strictly above the shots, the look and every moment — added if there is none yet; null at the track limit. */
+  const cardsAbove = (): string | null => {
+    const used = next.clips
+      .filter((c) => c.generatedBy?.rule === MOMENT_RULE || c.generatedBy?.rule === LOOK_RULE)
+      .map((c) => laneIndexOf(c.trackId))
+    const top = Math.max(laneIndexOf(ctx.videoTrackId), ...used)
+    const lanes = (): Track[] => next.tracks.filter((t) => t.kind === 'video')
+    if (!lanes()[top + 1]) {
+      if (trackLimitReached(next)) return null
+      addLane('top')
+    }
+    return lanes()[top + 1].id
+  }
   const placeCard = (content: string, role: Role2 | 'end', start: number, duration: number, punch: number, why: string): void => {
-    const lane = laneFor(start, duration)
+    const above = cardsAbove()
+    const lane = above ? laneFor(start, duration, above) : null
     if (!lane) {
       problems.push({ path: '$.cards', message: `no free layer for the "${content.slice(0, 20)}" card — dropped` })
       return
@@ -520,7 +656,7 @@ export function applyRecipe(project: Project, composed: Composed, menu: Menu2, c
     }
   }
 
-  return { project: next, problems, clipIds: shots.map((s) => s.clip.id), cardClipIds, solidClipIds, soundClipIds }
+  return { project: next, problems, clipIds: shots.map((s) => s.clip.id), cardClipIds, solidClipIds, soundClipIds, momentClipIds }
 }
 
 /** The decision, saved whole: the plan, the recipe, and what the engine placed for C3 and C4. */

@@ -233,6 +233,29 @@ export interface CropRect {
   height: number
 }
 
+export type MomentKind = 'zoom-punch' | 'whip-blur' | 'light-burn' | 'depth-push' | 'kinetic-type'
+
+/**
+ * A moment's spec (render/moment.ts decides its frames and parameters; the
+ * renderer's momentCanvas.ts draws it).
+ */
+export interface MomentSpec {
+  kind: MomentKind
+  /** The shot it bridges FROM — absent for a single-shot moment (a depth push). Clip ids, resolved by the Director from the engine's slots. */
+  from?: { clipId: string }
+  /** The shot it lands on: its picture is the moment's last frame. */
+  to: { clipId: string }
+  /** 0.3–0.7 s over a cut; 1.5–3 s for a depth push. */
+  seconds: number
+  /** The coherence dial, 0..1. */
+  intensity: number
+  /** For the procedural ones — stored, never Math.random at draw time. */
+  seed: number
+  /** Kinetic type only. */
+  text?: string
+  version: number
+}
+
 export const DEFAULT_TRANSFORM: Transform = { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 }
 export const DEFAULT_COLOR: ColorAdjust = { brightness: 0, contrast: 1, saturation: 1 }
 
@@ -409,6 +432,14 @@ export interface Clip {
    * geometry, which imports none of it.
    */
   carousel?: CarouselClipSpec
+  /**
+   * A moment (docs/PLAN.md §7): a short three.js-drawn bridge over a cut — a
+   * zoom punch, a whip blur, a light burn — or a depth push into one photo.
+   * Drawn live in the preview and baked to frames for the export, exactly as
+   * the card ring is, so preview and export cannot disagree. Its last frame
+   * is the incoming shot's picture, so the hand-off beneath it is invisible.
+   */
+  moment?: MomentSpec
   /**
    * Set when an automation rule created this clip.
    *

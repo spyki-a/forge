@@ -35,6 +35,10 @@ function fakeBakers(fail: string[] = []): { bakers: Bakers; calls: Call[] } {
     carousel: async (_s, key, _p, w, h, frames) => {
       record('carousel', key, w, h)
       return { pattern: `/cache/${key}.seq/%05d.png`, frames }
+    },
+    moment: async (_s, key, _t, w, h, frames) => {
+      record('moment', key, w, h)
+      return { pattern: `/cache/${key}.seq/%05d.png`, frames }
     }
   }
   return { bakers, calls }

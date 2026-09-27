@@ -138,7 +138,7 @@ export function clipKind(
 ): ClipKind {
   if (clip.adjustment) return 'adjustment'
   if (clip.text ?? clip.title) return 'text'
-  if (clip.paper ?? clip.carousel ?? clip.solid) return 'graphic'
+  if (clip.paper ?? clip.carousel ?? clip.solid ?? clip.moment) return 'graphic'
 
   if (track?.kind === 'audio') {
     if (track.duck) return 'music'

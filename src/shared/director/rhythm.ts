@@ -3,6 +3,7 @@ import type { MusicAnalysis } from '../automation/cutPlan'
 import { MIN_SEGMENT_SECONDS } from './menu'
 import type { MomentKind, Place, Recipe, SoundEvent, TreatmentKind } from './recipes'
 import type { TransitionFamily } from '../transitions/registry'
+import { bridgesCut } from '../render/moment'
 
 /**
  * The rhythm engine — the recipe, realised on the music (docs/PLAN.md §5.3).
@@ -583,12 +584,23 @@ function finish(
   const boundaries = shotLayout.slice(1).map((s, k) => ({ shot: k + 1, frame: s.startFrame }))
   const bar = beatFrames * 4
 
-  /* 5. Moments, at the recipe's places, in its order. */
+  /*
+   * 5. Moments, at the recipe's places, in its order. A moment owns its cut's
+   * shot: no transition, treatment or second moment there. A depth push owns
+   * its WHOLE shot (it covers it, render/moment.ts movingFrames) and the cut
+   * out of it too — a bridge or a blend leaving a pushed shot would start under
+   * the push or pop back to the unpushed picture — so it counts as occupying
+   * the shot's full span when the next moment keeps its distance.
+   */
   const moments: MomentEvent[] = []
   const taken = new Set<number>()
-  const farFromMoments = (frame: number): boolean => moments.every((m) => Math.abs(m.frame - frame) >= bar)
-  const at = (place: Place): { shot: number; frame: number } | null => {
-    const open = boundaries.filter((b) => b.shot >= 2 && !taken.has(b.shot) && farFromMoments(b.frame))
+  const occupied: { start: number; end: number }[] = []
+  /** What a moment of `kind` at this boundary would occupy: the cut, or the whole shot for a push. */
+  const spanOf = (b: { shot: number; frame: number }, kind: MomentKind): { start: number; end: number } =>
+    bridgesCut(kind) ? { start: b.frame, end: b.frame } : { start: b.frame, end: shotLayout[b.shot].endFrame }
+  const farFromMoments = (span: { start: number; end: number }): boolean => occupied.every((o) => span.end + bar <= o.start || span.start >= o.end + bar)
+  const at = (place: Place, kind: MomentKind): { shot: number; frame: number } | null => {
+    const open = boundaries.filter((b) => b.shot >= 2 && !taken.has(b.shot) && farFromMoments(spanOf(b, kind)))
     if (place === 'hero-reveal') return open.find((b) => b.shot === heroAt) ?? null
     if (place === 'drop') {
       const drops = open.filter((b) => grid.structural.get(b.frame)?.reason === 'drop')
@@ -600,10 +612,12 @@ function finish(
   }
   for (const place of recipe.moments.at) {
     if (moments.length >= recipe.moments.budget) break
-    const spot = at(place)
-    if (!spot) continue
     const kind = recipe.moments.kinds[moments.length % recipe.moments.kinds.length]
+    const spot = at(place, kind)
+    if (!spot) continue
     taken.add(spot.shot)
+    if (!bridgesCut(kind)) taken.add(spot.shot + 1)
+    occupied.push(spanOf(spot, kind))
     moments.push({ kind: 'moment', moment: kind, frame: spot.frame, from: shots[spot.shot - 1].slotId, to: shots[spot.shot].slotId, place })
   }
 

@@ -43,7 +43,7 @@ function freshId(prefix: string): string {
  * survivor.
  */
 export function drawsItself(clip: Clip): boolean {
-  return Boolean(clip.text ?? clip.paper ?? clip.carousel ?? clip.solid ?? clip.title)
+  return Boolean(clip.text ?? clip.paper ?? clip.carousel ?? clip.solid ?? clip.title ?? clip.moment)
 }
 
 /* --------------------------------------------------------------- moving */

@@ -25,12 +25,23 @@
  */
 
 import type { Clip, MediaAsset, Project } from '../timeline'
+import { momentTextures, type MomentTextures } from './momentTextures'
 
 type Size = { width: number; height: number }
 type Sequence = { pattern: string; frames: number } | null
 
 /** The drawing functions, as the renderer has them. */
 export interface Bakers {
+  /** A moment's frames, from the pictures of the shots it bridges (render/momentTextures.ts). */
+  moment: (
+    spec: NonNullable<Clip['moment']>,
+    key: string,
+    textures: MomentTextures,
+    width: number,
+    height: number,
+    frames: number,
+    fps: number
+  ) => Promise<Sequence>
   text: (spec: NonNullable<Clip['text']>, key: string, width: number, height: number) => Promise<string>
   textSequence: (
     spec: NonNullable<Clip['text']>,
@@ -99,6 +110,8 @@ export async function bakeForExport(
   const { fps } = project.settings
   const { stills, runs } = exportBakeSizes(project.settings, exportCanvas)
   const repointed = new Map<string, MediaAsset>()
+  /** Moments that could not be drawn: left out of the export, so the shots beneath cut. */
+  const dropped = new Set<string>()
 
   for (const clip of project.clips) {
     const asset = project.assets.find((a) => a.id === clip.assetId)
@@ -114,6 +127,21 @@ export async function bakeForExport(
       } else if (clip.paper) {
         const run = await bakers.paper(clip.paper, key, runs.width, runs.height, clip.duration)
         if (run) repointed.set(asset.id, sequenceAsset(asset, run, runs))
+      } else if (clip.moment) {
+        // At the STILLS' size: a moment is the whole frame, and its edges are the picture's.
+        const textures = momentTextures(project, clip.moment, clip.start)
+        const run = textures ? await bakers.moment(clip.moment, key, textures, stills.width, stills.height, clip.duration, fps) : null
+        if (run) repointed.set(asset.id, sequenceAsset(asset, run, stills))
+        else {
+          /*
+           * Not drawable — a shot it bridged is gone, or its picture would not
+           * decode: the shots beneath simply cut. Never the edit's asset: it is
+           * either empty (the store's bake has not landed, and `-i ''` fails
+           * the whole export) or frames of a picture that is no longer there.
+           */
+          dropped.add(clip.id)
+          onError(clip, new Error(textures ? 'the moment could not be drawn' : 'a shot the moment bridges is gone or is footage'))
+        }
       } else if (clip.text) {
         const path = await bakers.text(clip.text, key, stills.width, stills.height)
         // An animated caption's frames are what the export reads; a still one
@@ -137,8 +165,12 @@ export async function bakeForExport(
     }
   }
 
-  if (repointed.size === 0) return project
-  return { ...project, assets: project.assets.map((a) => repointed.get(a.id) ?? a) }
+  if (repointed.size === 0 && dropped.size === 0) return project
+  return {
+    ...project,
+    assets: project.assets.map((a) => repointed.get(a.id) ?? a),
+    clips: dropped.size > 0 ? project.clips.filter((c) => !dropped.has(c.id)) : project.clips
+  }
 }
 
 function sequenceAsset(asset: MediaAsset, run: NonNullable<Sequence>, size: Size): MediaAsset {
