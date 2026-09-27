@@ -18,7 +18,7 @@ import { curvesFilter } from './colourCurve'
 import { whiteBalanceFilter } from './whiteBalance'
 import { chromakeyFilter, despillFilter, saneKey } from './chromaKey'
 import { isFullFrameMask, isMaskAnimated, isWholeFrameShape, maskExpression } from './mask'
-import { effectiveCrop, safeCrop, type Size } from './crop'
+import { effectiveCrop, safeCrop, scaleCrop, type Size } from './crop'
 import { atempoChain, clipRamp, clipSpeed, rampRate, rampVideoFilter, sourceFramesFor, speedVideoFilter } from './speed'
 import { audioFadeFilters, fadesWithNeighbours } from './audioFade'
 import { duckFilter } from './duck'
@@ -266,7 +266,14 @@ function motionFilter(
   overrideAmount?: number,
   /** Plane dimensions differ from the source asset's working size. */
   overrideSize?: { width: number; height: number },
-  canvas: { width: number; height: number } = { width: 1920, height: 1080 }
+  canvas: { width: number; height: number } = { width: 1920, height: 1080 },
+  /**
+   * The amount the working size is chosen for, when it is not this move's
+   * own: parallax planes each move by their own share but have to come out
+   * the SAME size, or they stack misaligned — so every plane's size is chosen
+   * for the clip's full amount, the most any plane needs.
+   */
+  sizeAmount?: number
 ): string | null {
   const motion = clip.motion
   if (!motion) return null
@@ -295,7 +302,7 @@ function motionFilter(
   const rawW = Math.max(2, overrideSize?.width ?? asset.width ?? 1920)
   const rawH = Math.max(2, overrideSize?.height ?? asset.height ?? 1080)
   const fit = Math.min(canvas.width / rawW, canvas.height / rawH)
-  const headroom = (1 + amount) * 1.05
+  const headroom = (1 + clampAmount(sizeAmount ?? amount)) * 1.05
   const factor = Math.min(1, fit * headroom)
   /*
    * ONE factor for both sides, and no fixed ceiling.
@@ -1001,23 +1008,30 @@ export function buildRenderPlan(request: RenderRequest): RenderPlan {
      * The stream, before and after the crop.
      *
      * A parallax clip arrives as its baked planes, which are the bake's size
-     * rather than the photograph's, so the crop has to be measured against
-     * whichever one the pixels actually came from. `safeCrop` is used rather
-     * than `clip.crop` directly so this agrees with the clamped rectangle
-     * `cropFilter` really emits.
+     * rather than the photograph's, so the crop — stored in the PHOTOGRAPH's
+     * pixels — is first scaled into the bake's (`scaleCrop`, as the preview
+     * does before it draws the planes and as a moment composes the shot), and
+     * then measured against the size the pixels actually came from. `safeCrop`
+     * is used rather than the crop directly so this agrees with the clamped
+     * rectangle `cropFilter` really emits.
      */
     const preCrop: Size | null = bake
       ? { width: bake.width, height: bake.height }
       : asset.width && asset.height
         ? { width: asset.width, height: asset.height }
         : null
+    const streamCrop =
+      clip.crop && bake && asset.width && asset.height
+        ? scaleCrop(clip.crop, { width: asset.width, height: asset.height }, { width: bake.width, height: bake.height })
+        : clip.crop
+    const cropped: Clip = streamCrop === clip.crop ? clip : { ...clip, crop: streamCrop }
     // What the crop filter will really output — see `effectiveCrop`. With no
     // known source size the loose rectangle is the best guess there is.
-    const streamSize: Size | null = !clip.crop
+    const streamSize: Size | null = !streamCrop
       ? preCrop
       : preCrop
-        ? effectiveCrop(clip.crop, preCrop)
-        : safeCrop(clip.crop, { width: 1e6, height: 1e6 })
+        ? effectiveCrop(streamCrop, preCrop)
+        : safeCrop(streamCrop, { width: 1e6, height: 1e6 })
 
     const turn = widestTurn(clip, box.rotation)
     const extent = turn > 0.01 ? rotatedExtent(turn, box.width, box.height) : null
@@ -1026,16 +1040,28 @@ export function buildRenderPlan(request: RenderRequest): RenderPlan {
     const grownArgs = extent ? `ow=${extent.width}:oh=${extent.height}:` : ''
 
     /*
-     * Parallax: each plane moves at its own rate, then they stack back up.
+     * Parallax: each plane is cropped, moves at its own rate, then they stack
+     * back up.
      *
-     * The planes are the same pixel size, so each zoompan outputs that size and
-     * the overlays line up at 0:0. What differs is how far each one travels —
-     * and that difference is the entire effect.
+     * The crop comes FIRST, on each plane, in the bake's pixels — as it does
+     * for a flat clip (`cropFilter` then `motionFilter` in `prepare` below):
+     * the move runs on the cut, and the planes are the same size when they
+     * stack. Cropping the stacked composite instead met a stream that was no
+     * longer the bake's size (each move pre-scales to its working size), so a
+     * Director crop of a big photo slid the whole composite in and the export
+     * showed it letterboxed (tests/integration/parallaxCrop.int.test.ts).
+     *
+     * And the same working size for every plane, chosen for the clip's full
+     * amount: a size chosen per plane from its own share came out different
+     * for each, and `overlay=0:0` stacked a 346-wide front plane on a 324-wide
+     * back one — the subject drawn 7 % too big and off its ground.
      */
     let source = `[${videoInputs[i].index}:v]`
     if (bake && planes) {
-      const size = { width: bake.width, height: bake.height }
+      const bakeSize = { width: bake.width, height: bake.height }
+      const size = streamSize ?? bakeSize
       const drawn = planesFor(clip, bake)
+      const cut = cropFilter(cropped, bakeSize)
       drawn.forEach((layer, p) => {
         const move = motionFilter(
           clip,
@@ -1044,9 +1070,10 @@ export function buildRenderPlan(request: RenderRequest): RenderPlan {
           fps,
           planeShare(clip.motion, clip.motion?.amount ?? 0, layer.depth),
           size,
-          { width, height }
+          { width, height },
+          clip.motion?.amount ?? 0
         )
-        filters.push(`[${planes[p]}:v]format=yuva420p${move ? `,${move}` : ''}[pl${i}_${p}]`)
+        filters.push(`[${planes[p]}:v]format=yuva420p${cut ? `,${cut}` : ''}${move ? `,${move}` : ''}[pl${i}_${p}]`)
       })
 
       let stack = `[pl${i}_0]`
@@ -1139,11 +1166,11 @@ export function buildRenderPlan(request: RenderRequest): RenderPlan {
       /*
        * The stream this crop actually applies to.
        *
-       * A parallax clip reaches here as its stacked depth planes, which are the
-       * bake's size rather than the photograph's — so the crop has to be
-       * measured against whichever one the pixels came from.
+       * A parallax clip reaches here as its stacked depth planes, each already
+       * cropped (above) and moved, so there is nothing left to cut; anything
+       * else is cropped here, against the size its pixels came from.
        */
-      cropFilter(clip, preCrop),
+      bake ? null : cropFilter(cropped, preCrop),
       /*
        * Motion runs before the fit so the move happens in source pixels and the
        * result is still letterboxed to the canvas exactly once. Parallax has

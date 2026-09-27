@@ -40,6 +40,25 @@ export function evenDown(n: number): number {
 }
 
 /**
+ * The same rectangle of a picture, in the pixels of a copy at another size.
+ *
+ * A crop is stored in the PHOTOGRAPH's pixels (solveCrop, the on-picture
+ * handles), but a parallax clip's stream is its depth planes at the bake's
+ * working size, which is smaller. Applied unscaled, a 9:16 crop of a
+ * 3024-wide photo asked its 1536-wide bake for pixels past its edge and the
+ * crop filter slid the whole plane composite in instead: the export showed
+ * the shot letterboxed at the photo's own shape while the preview — which
+ * scales the crop into plane space — filled the frame. Measured in
+ * tests/integration/parallaxCrop.int.test.ts.
+ */
+export function scaleCrop(crop: CropRect, from: Size, to: Size): CropRect {
+  if (from.width <= 0 || from.height <= 0 || to.width <= 0 || to.height <= 0) return crop
+  const sx = to.width / from.width
+  const sy = to.height / from.height
+  return { x: Math.round(crop.x * sx), y: Math.round(crop.y * sy), width: Math.round(crop.width * sx), height: Math.round(crop.height * sy) }
+}
+
+/**
  * A crop rectangle guaranteed to lie inside `source`.
  *
  * Returns null when there is nothing worth cropping — either the rectangle

@@ -2620,3 +2620,35 @@ returns the first at or past it, which is frame `f + 1`. Ask for a hair
 before the frame's own timestamp (`(f − 0.25) / fps`) and it is frame `f`.
 `pixelAt` in the other render checks samples the middle of a clip, where a
 frame either way is the same picture, so it never showed.
+
+## 35. A parallax shot's crop is in the photograph's pixels, its planes are not (2026-09-27)
+
+Found by the C4 review and measured in `tests/integration/parallaxCrop.int.test.ts`
+(`tests/output/parallaxCrop/`): a 1200×900 photo baked to 600×450 planes,
+cropped to the photo's middle 600×900 for a frame half that size.
+
+- **The crop was handed to the plane composite unscaled.** `clip.crop` is
+  stored in the photograph's pixels (`solveCrop`, the on-picture handles);
+  the planes are the bake's working size. `crop=w='min(600,in_w)'…` on a
+  600-wide composite took the whole bake slid to x = 0, and the export showed
+  the shot letterboxed at the photo's own shape — red at the left edge, green
+  at the right, black above — while the preview, which scales the crop into
+  plane space before it draws the planes, filled the frame. The crop is now
+  scaled into the bake's pixels (`crop.ts` `scaleCrop`) and applied to EACH
+  PLANE before its move, as a flat clip is cropped before its move; the frame
+  reads blue to every edge.
+- **Each plane's move pre-scaled to a working size of its own.** `motionFilter`
+  chooses its working size from the canvas and the move's headroom, and the
+  headroom was that plane's own share of the amount: a back plane at 0.032
+  came out 324 wide and the front plane at 0.096 came out 346, and
+  `overlay=0:0` stacked them as they were — the subject drawn 7 % too big and
+  off its ground. Every plane's size is now chosen for the clip's full amount
+  (`sizeAmount`), so they stack aligned; the white subject at the bake's
+  centre lands within a pixel of the frame's centre (measured 76.0, 113.0
+  against 75, 112.5).
+
+Neither showed in `tests/integration/parallax.int.test.ts`, whose bake is the
+photo's own size and whose canvas is nearly the bake's. The moments engine
+(`render/moment.ts` `shotPicture`) composes a parallax shot the preview's way
+— the crop in photo pixels, each plane's rectangle in 0..1 of itself — and now
+agrees with the export.
