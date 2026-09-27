@@ -187,21 +187,28 @@ describe('the frames a moment pulls from footage', () => {
       const pulled = await extractMomentFrames(request({ path: soft, ...clip, first, count: 6 }), join(dir, 'cache'))
       expect(pulled.files, `first ${first}`).toHaveLength(6)
       const levels: number[] = []
+      let compared = 0
       for (const [k, file] of pulled.files.entries()) {
         const level = await pulledLevel(file)
         levels.push(level)
-        /*
-         * The clip's last three frames are compared for presence only: the
-         * 2018 Windows build's minterpolate closes its stream without a flush
-         * (on CI a window on these frames came back three of six, a tpad
-         * after it padding nothing), so the render there is short by them,
-         * and the pull's lookahead continues the motion where the macOS
-         * render holds. What matters is that the window is whole on either.
-         */
-        if (first + k > 56) continue
         const rendered = await renderedLevel(clip, first + k, `smooth${first}`, soft)
+        /*
+         * Where the render shows nothing — the base's black — there is nothing
+         * to compare: the 2018 Windows build's minterpolate closes its stream
+         * without a flush (on CI a window on the clip's last six frames came
+         * back three of six, a tpad after it padding nothing, and the render
+         * there ended black four frames early), so a smooth clip's tail is
+         * short on that build and the pull's lookahead continues the motion
+         * past it. What matters is that the window is whole on either, and
+         * that every frame the render does show is the pulled one.
+         */
+        // …and not the clip's last three frames, where the macOS render holds its last frame and the pull's lookahead keeps moving (measured: 178 held against 183).
+        if (first > 0 && (rendered < 8 || first + k > 56)) continue
+        compared++
         expect(Math.abs(level - rendered), `first ${first}, frame ${k}: pulled ${level}, rendered ${rendered}`).toBeLessThan(NOISE)
       }
+      // At least half the window is compared on any build; all of it on the Mac.
+      expect(compared, `first ${first}: frames compared`).toBeGreaterThanOrEqual(3)
       // Real pictures, not clipped white: a window of six frames spans about three source frames of five.
       expect(levels[5]).toBeLessThan(250)
       lines.push(`- smooth half speed from frame 6, frames ${first}–${first + 5}: pulled ${levels.join(', ')}`)
