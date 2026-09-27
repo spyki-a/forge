@@ -1,6 +1,6 @@
 import { framesToSeconds, type Clip } from '../timeline'
 import { cropFilter, retimeFilter } from './plan'
-import { clipRamp, clipSpeed, sourceFramesFor } from './speed'
+import { sourceFramesFor } from './speed'
 import type { FootageRequest } from './moment'
 
 /**
@@ -67,14 +67,19 @@ export function momentFrameArgs(req: FootageRequest, pattern: string): string[] 
     return ['-ss', seconds(req.inPoint, fps), '-i', req.path, '-vf', `trim=end_frame=1,setpts=PTS-STARTPTS,${finish}`, '-frames:v', '1', '-start_number', '0', pattern]
   }
 
-  const ramp = clipRamp(clip)
-  const speed = clipSpeed(clip)
-  const smooth = Boolean(clip.smoothSlow) && speed < 1
   // The render's own retime, or at speed 1 the render's own fps step (plan.ts applies `fps=` to every clip).
   const retime = retimeFilter(clip, fps) ?? `fps=${fps}`
-  const sourceFrames = ramp || smooth ? sourceFramesFor(clip) : Math.ceil((req.first + count) * speed) + 2
-  // The tail held, as the render holds an interpolated clip's last frame beyond its input.
-  const hold = smooth ? `tpad=stop_mode=clone:stop_duration=${seconds(count, fps)},` : ''
+  /*
+   * The render's own input window, whole (`videoInputArgs`: `-t` of the
+   * source frames the clip eats), not just the window's: the 2018 Windows
+   * build's `fps` filter does not flush its last frames at the end of a short
+   * input — a 24p source pulled for nine frames came back with fewer on CI —
+   * and smooth slow-motion looks ahead. Then the tail held, as the render's
+   * overlay holds a clip's last frame, so the clip's final frames are there
+   * on either build.
+   */
+  const sourceFrames = sourceFramesFor(clip)
+  const hold = `tpad=stop_mode=clone:stop_duration=${seconds(count, fps)},`
   return [
     '-ss', seconds(req.inPoint, fps), '-t', seconds(sourceFrames, fps), '-i', req.path,
     '-vf', `${retime},${hold}trim=start_frame=${req.first}:end_frame=${req.first + count},setpts=PTS-STARTPTS,${finish}`,
@@ -83,13 +88,13 @@ export function momentFrameArgs(req: FootageRequest, pattern: string): string[] 
 }
 
 /** How the frames are pulled; bumped when the arguments change, so folders an older pull left are never mistaken for these. */
-export const PULL_VERSION = 3
+export const PULL_VERSION = 4
 
 /** The name the pulled frames are kept under: the same file, the same frames, the same cut — the same folder. */
 export function momentFramesKey(req: FootageRequest, file: { size: number; mtimeMs: number }): string {
   return JSON.stringify({
     pull: PULL_VERSION,
-    path: req.path, size: file.size, mtime: Math.round(file.mtimeMs), inPoint: req.inPoint, duration: req.ramp || req.smoothSlow ? req.duration : 0, speed: req.speed ?? 1, ramp: req.ramp ?? null,
+    path: req.path, size: file.size, mtime: Math.round(file.mtimeMs), inPoint: req.inPoint, duration: req.duration, speed: req.speed ?? 1, ramp: req.ramp ?? null,
     smooth: req.smoothSlow ?? false, hold: req.hold ?? false, first: req.first, count: req.count, fps: req.fps, crop: req.crop ?? null, max: req.maxEdge
   })
 }

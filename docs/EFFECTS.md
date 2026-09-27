@@ -2693,11 +2693,18 @@ fails, and a frame off is 9.
   the in-point through the render's own retime — `fps=<project>` at speed 1
   — and trims the window out; the check pulls 24p and 60p sources against
   the render.
-- **Smooth slow-motion looks ahead.** `minterpolate` emits a frame only once
-  it holds the two after it, so a window with one frame of slack came back
-  five of six at both ends of a clip and the moment was dropped. It is given
-  the render's whole input window (`sourceFramesFor`), and its tail is held
-  with `tpad` as the render holds an interpolated clip's last frame.
+- **Smooth slow-motion looks ahead, and the 2018 build looks less far.**
+  `minterpolate` emits a frame only once it holds the two after it, so a
+  window with one frame of slack came back five of six at both ends of a
+  clip and the moment was dropped. Every pull is now given the render's
+  whole input window (`sourceFramesFor`, exactly `videoInputArgs`'s `-t`)
+  and its tail is held with `tpad` before the trim. The Windows build needed
+  both: on CI its `minterpolate` flushed fewer frames at the end of the
+  input than the macOS one (a window on a smooth clip's last six frames came
+  back short there, "6 wanted, fewer written", after passing on the Mac), so
+  the held tail is what keeps a moment over the end of a smooth clip
+  drawable on either — and the check compares those last two frames for
+  presence only, since the render on that build is short by them too.
 - **A seek lands on the frame, not before it.** `-ss` at the in-point's
   time with the bundled build decodes from the keyframe and drops what comes
   before the point (accurate seek), so `-ss 0.4` on a 30 fps file returns

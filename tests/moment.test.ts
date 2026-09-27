@@ -435,31 +435,32 @@ describe('the footage pre-pass', () => {
   const cap = footageCapFilter(FOOTAGE_MAX_EDGE)
 
   it('every case decodes from the in-point through the render’s own retime — its fps step at speed 1 — and trims the window out; a hold is one frame', () => {
+    const held6 = (count: number): string => `tpad=stop_mode=clone:stop_duration=${(count / fps).toFixed(6)}`
     const plain = momentFrameArgs(req(), '/out/%05d.png')
-    // From the in-point (frame 30 → 1 s): first 5 + count 6 frames, plus two of slack.
-    expect(plain.slice(0, 4)).toEqual(['-ss', '1.000000', '-t', ((5 + 6 + 2) / fps).toFixed(6)])
+    // From the in-point (frame 30 → 1 s), the render's whole input window: the sixty source frames the clip eats.
+    expect(plain.slice(0, 4)).toEqual(['-ss', '1.000000', '-t', (sourceFramesFor({ duration: 60 }) / fps).toFixed(6)])
     expect(plain).toContain('/media/v.mp4')
     expect(plain[plain.indexOf('-frames:v') + 1]).toBe('6')
     expect(plain.slice(-3)).toEqual(['-start_number', '0', '/out/%05d.png'])
-    // The render's fps step, so 24p and 60p footage gives the frames the render plays, then the window.
-    expect(plain[plain.indexOf('-vf') + 1]).toBe(`fps=30,trim=start_frame=5:end_frame=11,setpts=PTS-STARTPTS,${cap},format=rgba`)
+    // The render's fps step, so 24p and 60p footage gives the frames the render plays; the tail held; then the window.
+    expect(plain[plain.indexOf('-vf') + 1]).toBe(`fps=30,${held6(6)},trim=start_frame=5:end_frame=11,setpts=PTS-STARTPTS,${cap},format=rgba`)
 
     const slow = momentFrameArgs(req({ speed: 0.5, first: 21, count: 4 }), '/out/%05d.png')
     // Through the render's own retime: a seek to 21 × 0.5 would land a frame off its phase.
     expect(slow.slice(0, 2)).toEqual(['-ss', '1.000000'])
-    expect(slow[slow.indexOf('-t') + 1]).toBe(((Math.ceil(25 * 0.5) + 2) / fps).toFixed(6))
-    expect(slow[slow.indexOf('-vf') + 1]).toBe(`setpts=PTS/0.5,fps=30,trim=start_frame=21:end_frame=25,setpts=PTS-STARTPTS,${cap},format=rgba`)
+    expect(slow[slow.indexOf('-t') + 1]).toBe((sourceFramesFor({ speed: 0.5, duration: 60 }) / fps).toFixed(6))
+    expect(slow[slow.indexOf('-vf') + 1]).toBe(`setpts=PTS/0.5,fps=30,${held6(4)},trim=start_frame=21:end_frame=25,setpts=PTS-STARTPTS,${cap},format=rgba`)
     expect(slow[slow.indexOf('-frames:v') + 1]).toBe('4')
 
-    // Smooth slow-motion looks ahead, so it gets the render's whole input window, and its tail is held as the render holds it.
+    // Smooth slow-motion looks ahead, so it too gets the render's whole input window, its tail held as the render holds it.
     const smooth = momentFrameArgs(req({ speed: 0.5, smoothSlow: true, first: 54, count: 6 }), '/out/%05d.png')
     expect(smooth[smooth.indexOf('-t') + 1]).toBe((sourceFramesFor({ speed: 0.5, duration: 60 }) / fps).toFixed(6))
-    expect(smooth[smooth.indexOf('-vf') + 1]).toBe(`${retimeFilter({ speed: 0.5, smoothSlow: true, duration: 60 }, fps)},tpad=stop_mode=clone:stop_duration=${(6 / fps).toFixed(6)},trim=start_frame=54:end_frame=60,setpts=PTS-STARTPTS,${cap},format=rgba`)
+    expect(smooth[smooth.indexOf('-vf') + 1]).toBe(`${retimeFilter({ speed: 0.5, smoothSlow: true, duration: 60 }, fps)},${held6(6)},trim=start_frame=54:end_frame=60,setpts=PTS-STARTPTS,${cap},format=rgba`)
 
     const ramped = momentFrameArgs(req({ ramp: { from: 1, to: 0.4 }, first: 30, count: 4 }), '/out/%05d.png')
     expect(ramped.slice(0, 2)).toEqual(['-ss', '1.000000'])
     // The render's own ramp over the clip's WHOLE length (sixty frames), not over the window: the curve depends on it.
-    expect(ramped[ramped.indexOf('-vf') + 1]).toBe(`${retimeFilter({ ramp: { from: 1, to: 0.4 }, duration: 60 }, fps)},trim=start_frame=30:end_frame=34,setpts=PTS-STARTPTS,${cap},format=rgba`)
+    expect(ramped[ramped.indexOf('-vf') + 1]).toBe(`${retimeFilter({ ramp: { from: 1, to: 0.4 }, duration: 60 }, fps)},${held6(4)},trim=start_frame=30:end_frame=34,setpts=PTS-STARTPTS,${cap},format=rgba`)
     expect(ramped[ramped.indexOf('-frames:v') + 1]).toBe('4')
     // And the file decoded for the whole ramp: the source frames the clip eats (speed.ts sourceFramesFor).
     expect(ramped[ramped.indexOf('-t') + 1]).toBe((sourceFramesFor({ ramp: { from: 1, to: 0.4 }, duration: 60 }) / fps).toFixed(6))
@@ -491,10 +492,8 @@ describe('the footage pre-pass', () => {
     for (const change of changes) expect(momentFramesKey(req(change), file), JSON.stringify(change)).not.toBe(a)
     expect(momentFramesKey(req(), { size: 1001, mtimeMs: 12345 })).not.toBe(a)
     expect(momentFramesKey(req(), { size: 1000, mtimeMs: 99999 })).not.toBe(a)
-    // A ramp's and a smooth slow-motion's frames depend on the clip's length; a plain speed's do not.
-    expect(momentFramesKey(req({ duration: 90 }), file)).toBe(a)
-    expect(momentFramesKey(req({ ramp: { from: 1, to: 0.4 }, duration: 90 }), file)).not.toBe(momentFramesKey(req({ ramp: { from: 1, to: 0.4 } }), file))
-    expect(momentFramesKey(req({ smoothSlow: true, speed: 0.5, duration: 90 }), file)).not.toBe(momentFramesKey(req({ smoothSlow: true, speed: 0.5 }), file))
+    // The clip's length is the input window every pull decodes, so it is part of the name.
+    expect(momentFramesKey(req({ duration: 90 }), file)).not.toBe(a)
     expect(momentFramesKey(req({ speed: 1 }), file)).toBe(a)
   })
 })
