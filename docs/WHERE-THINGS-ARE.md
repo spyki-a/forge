@@ -409,10 +409,12 @@ two seconds and holding. Where each lands is the recipe's: the hero reveal,
 a drop, a section, the climax. They are drawn by the app's own three.js from
 the two shots' pictures, live in the preview and baked to frames for the
 export, and their first and last frames ARE the two shots' pictures — with
-the shots' own moves and depth planes — so nothing pops at the hand-off.
-Only over photographs for now: a moment that would sit on footage is skipped
-with a note in the result box, and so is a whip between a picture shown whole
-and one that fills the frame. They clear with the ad, lanes and all.
+the shots' own moves and depth planes — so nothing pops at the hand-off. A
+bridge over footage draws from the footage's own frames, pulled once through
+the clip's speed or ramp and kept in the app's cache; a depth push is a
+photograph's move, so into a clip the shot cuts with a note in the result box,
+and so does a whip between a picture shown whole and one that fills the
+frame. They clear with the ad, lanes and all.
 
 **Importing AVIF or HEIC** — the file is converted to a PNG in the app's own
 cache on import (the bundled ffmpeg cannot read either), and the pool shows

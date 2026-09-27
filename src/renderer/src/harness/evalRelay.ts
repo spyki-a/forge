@@ -163,8 +163,16 @@ async function moments(run: string): Promise<CardsProgress> {
   ;(window as unknown as { __forgeEvalMomentsProgress: CardsProgress }).__forgeEvalMomentsProgress = progress
   // An absolute URL, so mediaUrl passes it through untouched rather than wrapping it in forge-media://.
   const served = (path: string): string => `${location.origin}${file(path)}`
-  const plan = <T extends { path: string; planes?: { file: string; depth: number }[] } | null>(p: T): T =>
-    p ? { ...p, path: served(p.path), ...(p.planes ? { planes: p.planes.map((l) => ({ ...l, file: served(l.file) })) } : {}) } : p
+  const plan = <T extends { path: string; planes?: { file: string; depth: number }[]; pulled?: { files: string[]; first: number } } | null>(p: T): T =>
+    p
+      ? {
+          ...p,
+          path: served(p.path),
+          ...(p.planes ? { planes: p.planes.map((l) => ({ ...l, file: served(l.file) })) } : {}),
+          // Footage frames the eval pulled in node, served as pictures like the photos.
+          ...(p.pulled ? { pulled: { ...p.pulled, files: p.pulled.files.map(served) } } : {})
+        }
+      : p
 
   for (const m of list) {
     try {

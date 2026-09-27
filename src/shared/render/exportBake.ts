@@ -161,6 +161,9 @@ export async function bakeForExport(
         repointed.set(asset.id, { ...asset, path, ...stills })
       }
     } catch (err) {
+      // A moment's asset is empty until it is drawn: a bake that threw (no WebGL, a picture that would not
+      // decode) leaves nothing an export could read, so the moment is left out and the shots beneath cut.
+      if (clip.moment) dropped.add(clip.id)
       onError(clip, err)
     }
   }

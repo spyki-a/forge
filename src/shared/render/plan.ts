@@ -165,7 +165,7 @@ export function fitFor(box: { width: number; height: number; fit: 'contain' | 'c
  * A clip's picture, re-timed: its ramp when it has one (one `setpts` over the
  * footage it plays, render/speed.ts), otherwise its constant speed.
  */
-function retimeFilter(clip: Clip, fps: number): string | null {
+export function retimeFilter(clip: Pick<Clip, 'ramp' | 'speed' | 'duration' | 'smoothSlow'>, fps: number): string | null {
   const ramp = clipRamp(clip)
   if (ramp) return rampVideoFilter(ramp.from, ramp.to, (clip.duration * rampRate(ramp.from, ramp.to)) / fps, fps)
   return speedVideoFilter(clipSpeed(clip), fps, clip.smoothSlow)
@@ -634,7 +634,7 @@ function clamp(value: number, min: number, max: number): number {
  * composite against the original photograph's size was a second way to ask for
  * pixels that were not there.
  */
-function cropFilter(clip: Clip, source: Size | null): string | null {
+export function cropFilter(clip: Pick<Clip, 'crop'>, source: Size | null): string | null {
   if (!clip.crop) return null
   const crop = safeCrop(clip.crop, source) ?? safeCrop(clip.crop, { width: 1e6, height: 1e6 })
   if (!crop) return null

@@ -10,6 +10,7 @@ import type { TransitionDef } from '@shared/transitions/registry'
 import type { EncodeSpec, EncoderId } from '@shared/render/encode'
 import type { FrameRange } from '@shared/render/exportShape'
 import type { MusicAnalysis } from '@shared/automation/cutPlan'
+import type { FootageRequest } from '@shared/render/moment'
 import type { Measure } from '@shared/director/gate'
 import type { IngestRequest } from '@shared/ingest/args'
 import type {
@@ -245,6 +246,9 @@ const api = {
     ipcRenderer.invoke('titles:frame', { clipId, frame, bytes }),
   clearTitleFrames: (clipId: string): Promise<void> =>
     ipcRenderer.invoke('titles:clearFrames', clipId),
+  /** A moment's footage frames, pulled once through the clip's own retime and kept: the files, from the clip's frame `first` on, and their size. */
+  momentFrames: (request: FootageRequest): Promise<{ dir: string; files: string[]; width: number; height: number }> =>
+    ipcRenderer.invoke('moments:frames', request),
 
   writeTitleImage: (clipId: string, bytes: ArrayBuffer): Promise<string> =>
     ipcRenderer.invoke('titles:write', { clipId, bytes }),

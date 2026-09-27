@@ -1,7 +1,7 @@
 import type { MomentSpec } from '@shared/timeline'
 import { mediaUrl } from '@shared/mediaUrl'
-import { momentParams, momentT, movingFrames, shotPicture, type TexturePlan } from '@shared/render/moment'
-import type { MomentTextures } from '@shared/render/momentTextures'
+import { footageFrameIndex, momentParams, momentT, movingFrames, shotPicture, type TexturePlan } from '@shared/render/moment'
+import { withFootageFrames, type MomentTextures } from '@shared/render/momentTextures'
 import { beginBake, endBake, isSuperseded } from '@shared/bakeGuard'
 import { sharedRenderer, sharedRendererSync, type Three } from './threeShared'
 
@@ -41,6 +41,20 @@ import { sharedRenderer, sharedRendererSync, type Three } from './threeShared'
 const PICTURE_BYTES = 512 * 1024 * 1024
 const pictures = new Map<string, { bitmap: ImageBitmap; bytes: number }>()
 let pictureBytes = 0
+/** Pictures a built scene is drawing from, by how many scenes hold them: never let go while pinned, whatever the budget says. */
+const pinned = new Map<string, number>()
+
+function pin(paths: string[]): void {
+  for (const p of paths) pinned.set(p, (pinned.get(p) ?? 0) + 1)
+}
+
+function unpin(paths: string[]): void {
+  for (const p of paths) {
+    const n = (pinned.get(p) ?? 1) - 1
+    if (n > 0) pinned.set(p, n)
+    else pinned.delete(p)
+  }
+}
 
 async function pictureFor(path: string): Promise<ImageBitmap | null> {
   const hit = pictures.get(path)
@@ -59,8 +73,10 @@ async function pictureFor(path: string): Promise<ImageBitmap | null> {
     return null
   }
   const bytes = bitmap.width * bitmap.height * 4
-  while (pictureBytes + bytes > PICTURE_BYTES && pictures.size > 0) {
-    const [oldest, entry] = pictures.entries().next().value as [string, { bitmap: ImageBitmap; bytes: number }]
+  // The oldest go first, but never a picture a scene is still drawing: closing that throws on the next draw.
+  for (const [oldest, entry] of pictures) {
+    if (pictureBytes + bytes <= PICTURE_BYTES) break
+    if (pinned.has(oldest)) continue
     entry.bitmap.close()
     pictures.delete(oldest)
     pictureBytes -= entry.bytes
@@ -74,24 +90,50 @@ async function pictureFor(path: string): Promise<ImageBitmap | null> {
 export function forgetPictures(): void {
   for (const { bitmap } of pictures.values()) bitmap.close()
   pictures.clear()
+  pinned.clear()
   pictureBytes = 0
 }
 
 /* ------------------------------------------------------------- composing */
 
-/** A shot's pictures, decoded: the photo and its planes, far to near. */
+/** A shot's pictures, decoded and pinned: the photo and its planes, far to near — or, for footage, its frames under the moment. */
 interface Sources {
   plan: TexturePlan
   photo: ImageBitmap
   planes: ImageBitmap[]
+  frames: ImageBitmap[]
+  /** What is pinned for this scene; `release` when it is disposed. */
+  paths: string[]
 }
 
-async function sourcesFor(plan: TexturePlan): Promise<Sources | null> {
+async function sourcesFor(given: TexturePlan): Promise<Sources | null> {
+  let plan = given
+  if (plan.footage) {
+    // Footage: ask the pre-pass for the shot's frames under the moment (main/render/momentFrames.ts), once and kept.
+    try {
+      plan = withFootageFrames(plan, await window.forge.momentFrames(plan.footage))
+    } catch (err) {
+      console.warn("A moment's footage frames could not be pulled", err)
+      return null
+    }
+  }
+  if (plan.pulled) {
+    const paths = plan.pulled.files
+    const frames = await Promise.all(paths.map((f) => pictureFor(f)))
+    if (frames.length === 0 || frames.some((f) => f === null)) return null
+    const loaded = frames as ImageBitmap[]
+    pin(paths)
+    return { plan, photo: loaded[0], planes: [], frames: loaded, paths }
+  }
   const photo = await pictureFor(plan.path)
   if (!photo) return null
-  const planes = plan.planes ? await Promise.all(plan.planes.map((p) => pictureFor(p.file))) : []
+  const planeFiles = plan.planes?.map((p) => p.file) ?? []
+  const planes = await Promise.all(planeFiles.map((f) => pictureFor(f)))
   // Planes that did not all load are no planes: the photo whole, as the render falls back.
-  return { plan: planes.every((p) => p !== null) ? plan : { ...plan, planes: undefined }, photo, planes: planes.filter((p): p is ImageBitmap => p !== null) }
+  const usable = planes.every((p) => p !== null)
+  const paths = [plan.path, ...(usable ? planeFiles : [])]
+  pin(paths)
+  return { plan: usable ? plan : { ...plan, planes: undefined }, photo, planes: usable ? (planes as ImageBitmap[]) : [], frames: [], paths }
 }
 
 /**
@@ -121,14 +163,16 @@ class Composed {
   at(frame: number): boolean {
     const picture = shotPicture(this.sources.plan, frame, { width: this.width, height: this.height }, this.fps)
     const layers = this.only === null ? picture.layers : picture.layers.filter((l) => l.plane === this.only)
-    const key = JSON.stringify({ box: picture.box, layers })
+    // Footage: the shot's own frame under this one.
+    const index = this.sources.frames.length > 0 ? footageFrameIndex(this.sources.plan, frame) : -1
+    const key = JSON.stringify({ box: picture.box, layers, index })
     if (key === this.key) return false
     this.key = key
     const { ctx, width, height } = this
     ctx.clearRect(0, 0, width, height)
     const box = picture.box
     for (const layer of layers) {
-      const source = layer.plane === null ? this.sources.photo : this.sources.planes[layer.plane]
+      const source = index >= 0 ? this.sources.frames[index] : layer.plane === null ? this.sources.photo : this.sources.planes[layer.plane]
       if (!source) continue
       ctx.drawImage(
         source,
@@ -309,7 +353,12 @@ async function scene(
   const to = await sourcesFor(textures.to)
   if (!to) return null
   const from = textures.from ? await sourcesFor(textures.from) : null
-  const disposables: { dispose: () => void }[] = []
+  if (textures.from && !from) {
+    // A bridge with no outgoing picture would cut to the incoming early, or ghost it in: not drawn at all.
+    unpin(to.paths)
+    return null
+  }
+  const disposables: { dispose: () => void }[] = [{ dispose: () => unpin([...to.paths, ...(from?.paths ?? [])]) }]
 
   const root = new three.Scene()
   const camera = new three.OrthographicCamera(-1, 1, 1, -1, 0, 1)

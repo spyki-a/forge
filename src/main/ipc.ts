@@ -51,6 +51,8 @@ import { loadCatalog, resolveAssetFile, assetsRootExists, assetsRoot } from './a
 import { installPack, listPacks, refreshPacksInstalled, removePack } from './assets/packs'
 import { preparePlaceableFile, placeableName } from './assets/place'
 import { readTitleSlots, renderSolid, renderText, renderTitle, writeTitleImage, writeTitleFrame, clearTitleFrames } from './titles'
+import { extractMomentFrames } from './render/momentFrames'
+import type { FootageRequest } from '@shared/render/moment'
 import { tagMasks } from './transitions/maskTags'
 import { downloadMedia, downloadsDir, type IngestHandle, type IngestOutcome } from './ingest/download'
 import { ensureYtDlp, ytDlpStatus } from './ingest/binary'
@@ -365,6 +367,17 @@ export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
   ipcMain.handle('titles:clearFrames', async (_e, clipId: unknown) => {
     if (typeof clipId !== 'string') return
     await clearTitleFrames(clipId)
+  })
+
+  /* A moment's footage frames, pulled by ffmpeg through the clip's own retime and kept (render/momentFrames.ts). */
+  ipcMain.handle('moments:frames', async (_e, payload: unknown) => {
+    const req = (payload ?? {}) as Partial<FootageRequest>
+    if (typeof req.path !== 'string' || !req.path) throw new Error("Pulling a moment's frames needs the file")
+    if (typeof req.first !== 'number' || typeof req.count !== 'number' || typeof req.fps !== 'number' || typeof req.inPoint !== 'number') {
+      throw new Error("Pulling a moment's frames needs the frames wanted")
+    }
+    if (!req.size || typeof req.size.width !== 'number' || typeof req.size.height !== 'number') throw new Error("Pulling a moment's frames needs the file's size")
+    return extractMomentFrames(req as FootageRequest, join(app.getPath('userData'), 'moments'))
   })
 
   /* Styled captions, baked in the renderer where the fonts are. */

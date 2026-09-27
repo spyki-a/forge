@@ -132,6 +132,37 @@ async function check(): Promise<MomentCheck[]> {
     if (record.differ.first_mid < 1 || record.differ.mid_last < 1) throw new Error(`${kind}: its frames do not differ — nothing was drawn`)
     out.push(record)
   }
+
+  /*
+   * Footage: the incoming shot as six pulled frames (each a picture of its
+   * own), a light burn into it. Its last frame is the last pulled frame,
+   * exactly; the frame before differs from it, since the footage moved.
+   */
+  const pulledFrames = Array.from({ length: 6 }, (_, i) => picture(width, height, 120 + i * 20, { x: 0.1 + i * 0.12, y: 0.5 }))
+  const burn: MomentSpec = { kind: 'light-burn', from: { clipId: 'from' }, to: { clipId: 'to' }, seconds: 0.55, intensity: 0.7, seed: 8, version: 1 }
+  const total = Math.max(2, Math.round(burn.seconds * fps))
+  const before = Math.floor(total / 2)
+  const footage: MomentTextures = {
+    from: plan(outgoing, 0),
+    to: { ...plan(incoming, -before), pulled: { files: pulledFrames.map((c) => c.toDataURL('image/png')), first: 0 } }
+  }
+  const drawn = await momentFrameCanvases(burn, footage, width, height, total, fps, [total - 2, total - 1])
+  if (!drawn) throw new Error('footage: did not draw')
+  const [penultimate, last] = drawn
+  const lastVsPulled = meanDiff(last, pulledFrames[5])
+  const moved = meanDiff(penultimate, last)
+  if (lastVsPulled > 2) throw new Error(`footage: the last frame is not the last pulled frame (${lastVsPulled.toFixed(2)}/255)`)
+  if (moved < 1) throw new Error('footage: consecutive frames do not differ — the pulled frames are not advancing')
+  out.push({
+    kind: 'light-burn',
+    differ: { first_mid: 0, mid_last: moved, first_last: 0 },
+    lastVsIncoming: lastVsPulled,
+    firstVsOutgoing: 0,
+    framesPerSecond: 0,
+    encodeMs: 0,
+    holdMatches: null,
+    frames: total
+  })
   return out
 }
 

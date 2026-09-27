@@ -7,6 +7,8 @@ import {
   MOMENT_SECONDS,
   bridgesCut,
   fitSpan,
+  footageFrameIndex,
+  footageWindow,
   momentAmount,
   momentParams,
   momentPlacement,
@@ -15,11 +17,14 @@ import {
   movingFrames,
   seeded,
   shotPicture,
-  texturePlanFor
+  texturePlanFor,
+  type FootageRequest
 } from '@shared/render/moment'
+import { FOOTAGE_MAX_EDGE, footageCapFilter, momentFrameArgs, momentFramesKey } from '@shared/render/momentFrames'
 import { motionSourceRect } from '@shared/render/motion'
-import { planeShare } from '@shared/render/plan'
-import { momentTextures } from '@shared/render/momentTextures'
+import { planeShare, retimeFilter } from '@shared/render/plan'
+import { sourceFramesFor } from '@shared/render/speed'
+import { momentTextures, withFootageFrames } from '@shared/render/momentTextures'
 import { bakeForExport, exportKey, type Bakers } from '@shared/render/exportBake'
 import { drawsItself } from '@shared/edit/recipes'
 import { clipKind } from '@shared/edit/clipKind'
@@ -333,8 +338,9 @@ describe('finding a moment’s pictures in the project', () => {
     // A bridge into the same shot follows its move, so its last frame is the shot's frame.
     expect(momentTextures(moving, spec(), 54)!.to.motion).toEqual({ kind: 'kenburns', direction: 'in', amount: 0.2 })
     expect(momentTextures(project, spec({ to: { clipId: 'zz' } }), 0)).toBeNull()
-    // Into the footage at 120: a zoom punch there starts at 114 and its last frame, 125, is on the footage.
-    expect(momentTextures(project, spec({ from: { clipId: 'b' }, to: { clipId: 'c' } }), 114)).toBeNull()
+    // Into the footage at 120 with a depth push — a photograph's move — is nothing; a bridge there is a request for its frames.
+    expect(momentTextures(project, spec({ kind: 'depth-push', from: undefined, to: { clipId: 'c' } }), 120)).toBeNull()
+    expect(momentTextures(project, spec({ from: { clipId: 'b' }, to: { clipId: 'c' } }), 114)!.to.footage).toBeDefined()
     // A missing "from" with a present "to" is drawn as a single shot rather than dropped.
     expect(momentTextures(project, spec({ from: { clipId: 'zz' } }), 0)!.from).toBeNull()
   })
@@ -347,7 +353,40 @@ describe('finding a moment’s pictures in the project', () => {
     expect(momentTextures(dissolved, spec(), 54)!.to.inset).toBeUndefined()
   })
 
-  it('a split shot: the picture is the clip UNDER the cut, not the half that kept the id', () => {
+  it('footage under a bridge is a request for its frames under the moment, through the clip’s own retime; under a push it is nothing', () => {
+    const footage: typeof project = {
+      ...project,
+      assets: [...project.assets, asset('vid', { kind: 'video', path: '/media/vid.mp4', width: 1920, height: 1080, fps: 30, durationFrames: 900 })],
+      clips: [
+        ...project.clips.filter((c) => c.id !== 'c'),
+        clip({ id: 'e', assetId: 'vid', start: 120, duration: 60, inPoint: 30, speed: 0.5, crop: { x: 656, y: 0, width: 608, height: 1080 } }),
+        clip({ id: 'd', assetId: 'p1', start: 180, duration: 60 })
+      ]
+    }
+    // Into the footage: the moment's last six frames are the clip's first six.
+    const into = momentTextures(footage, spec({ from: { clipId: 'b' }, to: { clipId: 'e' } }), 114)!
+    expect(into.to.footage).toEqual({
+      path: '/media/vid.mp4', inPoint: 30, duration: 60, speed: 0.5, first: 0, count: 6, fps, crop: { x: 656, y: 0, width: 608, height: 1080 }, size: { width: 1920, height: 1080 }, maxEdge: FOOTAGE_MAX_EDGE
+    })
+    expect(into.to.at).toBe(-6)
+    expect(into.from?.footage).toBeUndefined()
+    // Out of the footage: its last six frames.
+    const outOf = momentTextures(footage, spec({ from: { clipId: 'e' }, to: { clipId: 'd' } }), 174)!
+    expect(outOf.from?.footage).toMatchObject({ first: 54, count: 6 })
+    // A depth push is a photograph's move.
+    expect(momentTextures(footage, spec({ kind: 'depth-push', from: undefined, to: { clipId: 'e' } }), 120)).toBeNull()
+    // A steadied clip's frames are the stabiliser's, which the pull does not run: nothing to draw from.
+    const steadied: typeof footage = { ...footage, clips: footage.clips.map((c) => (c.id === 'e' ? { ...c, steady: true } : c)) }
+    expect(momentTextures(steadied, spec({ from: { clipId: 'b' }, to: { clipId: 'e' } }), 114)).toBeNull()
+    // Pulled: the crop is cut, the size is the frames', and the files start at `first`.
+    const pulled = withFootageFrames(into.to, { files: ['/f/00000.png', '/f/00001.png'], width: 608, height: 1080 })
+    expect(pulled.footage).toBeUndefined()
+    expect(pulled.crop).toBeUndefined()
+    expect(pulled.size).toEqual({ width: 608, height: 1080 })
+    expect(pulled.pulled).toEqual({ files: ['/f/00000.png', '/f/00001.png'], first: 0 })
+  })
+
+  it('a split shot: the picture is the clip UNDER the CUT, not the half that kept the id', () => {
     // splitClip keeps the id on the left half; the right half is what meets the cut at 60.
     const split: typeof project = {
       ...project,
@@ -356,6 +395,107 @@ describe('finding a moment’s pictures in the project', () => {
     const t = momentTextures(split, spec(), 54)!
     expect(t.from?.path).toBe('/media/p3.jpg')
     expect(t.from?.at).toBe(24)
+    // Split INSIDE the moment's span (at 57, three frames before the cut): the outgoing picture is still the half under the frame before the cut.
+    const inside: typeof project = {
+      ...project,
+      clips: [clip({ id: 'a', assetId: 'p1', start: 0, duration: 57 }), clip({ id: 'a-b', assetId: 'p3', start: 57, duration: 3 }), ...project.clips.slice(1)]
+    }
+    expect(momentTextures(inside, spec(), 54)!.from?.path).toBe('/media/p3.jpg')
+  })
+})
+
+/* -------------------------------------------------------------- footage */
+
+describe('the footage pre-pass', () => {
+  const req = (over: Partial<FootageRequest> = {}): FootageRequest => ({
+    path: '/media/v.mp4', inPoint: 30, duration: 60, first: 5, count: 6, fps, size: { width: 1920, height: 1080 }, maxEdge: FOOTAGE_MAX_EDGE, ...over
+  })
+
+  it('the window is the shot’s frames under the moment, clamped to the shot', () => {
+    expect(footageWindow(-6, 12, 60)).toEqual({ first: 0, count: 6 })
+    expect(footageWindow(54, 12, 60)).toEqual({ first: 54, count: 6 })
+    expect(footageWindow(10, 12, 60)).toEqual({ first: 10, count: 12 })
+    // A shot shorter than the moment: what there is.
+    expect(footageWindow(2, 12, 4)).toEqual({ first: 2, count: 2 })
+    expect(footageWindow(100, 12, 60)).toEqual({ first: 59, count: 1 })
+  })
+
+  it('a moment frame shows the pulled frame under it, clamped at both ends', () => {
+    const plan = { at: -6, frames: 60, pulled: { files: ['a', 'b', 'c', 'd', 'e', 'f'], first: 0 } }
+    expect(footageFrameIndex(plan, 0)).toBe(0)
+    expect(footageFrameIndex(plan, 6)).toBe(0)
+    expect(footageFrameIndex(plan, 9)).toBe(3)
+    expect(footageFrameIndex(plan, 40)).toBe(5)
+    // Pulled from the shot's frame 54 on: the moment's first frame is the FIRST file, not the fifty-fourth.
+    expect(footageFrameIndex({ ...plan, at: 54, pulled: { files: ['a', 'b'], first: 54 } }, 0)).toBe(0)
+    expect(footageFrameIndex({ ...plan, at: 54, pulled: { files: ['a', 'b'], first: 54 } }, 1)).toBe(1)
+    expect(footageFrameIndex({ ...plan, pulled: undefined }, 3)).toBe(0)
+  })
+
+  const cap = footageCapFilter(FOOTAGE_MAX_EDGE)
+
+  it('every case decodes from the in-point through the render’s own retime — its fps step at speed 1 — and trims the window out; a hold is one frame', () => {
+    const plain = momentFrameArgs(req(), '/out/%05d.png')
+    // From the in-point (frame 30 → 1 s): first 5 + count 6 frames, plus two of slack.
+    expect(plain.slice(0, 4)).toEqual(['-ss', '1.000000', '-t', ((5 + 6 + 2) / fps).toFixed(6)])
+    expect(plain).toContain('/media/v.mp4')
+    expect(plain[plain.indexOf('-frames:v') + 1]).toBe('6')
+    expect(plain.slice(-3)).toEqual(['-start_number', '0', '/out/%05d.png'])
+    // The render's fps step, so 24p and 60p footage gives the frames the render plays, then the window.
+    expect(plain[plain.indexOf('-vf') + 1]).toBe(`fps=30,trim=start_frame=5:end_frame=11,setpts=PTS-STARTPTS,${cap},format=rgba`)
+
+    const slow = momentFrameArgs(req({ speed: 0.5, first: 21, count: 4 }), '/out/%05d.png')
+    // Through the render's own retime: a seek to 21 × 0.5 would land a frame off its phase.
+    expect(slow.slice(0, 2)).toEqual(['-ss', '1.000000'])
+    expect(slow[slow.indexOf('-t') + 1]).toBe(((Math.ceil(25 * 0.5) + 2) / fps).toFixed(6))
+    expect(slow[slow.indexOf('-vf') + 1]).toBe(`setpts=PTS/0.5,fps=30,trim=start_frame=21:end_frame=25,setpts=PTS-STARTPTS,${cap},format=rgba`)
+    expect(slow[slow.indexOf('-frames:v') + 1]).toBe('4')
+
+    // Smooth slow-motion looks ahead, so it gets the render's whole input window, and its tail is held as the render holds it.
+    const smooth = momentFrameArgs(req({ speed: 0.5, smoothSlow: true, first: 54, count: 6 }), '/out/%05d.png')
+    expect(smooth[smooth.indexOf('-t') + 1]).toBe((sourceFramesFor({ speed: 0.5, duration: 60 }) / fps).toFixed(6))
+    expect(smooth[smooth.indexOf('-vf') + 1]).toBe(`${retimeFilter({ speed: 0.5, smoothSlow: true, duration: 60 }, fps)},tpad=stop_mode=clone:stop_duration=${(6 / fps).toFixed(6)},trim=start_frame=54:end_frame=60,setpts=PTS-STARTPTS,${cap},format=rgba`)
+
+    const ramped = momentFrameArgs(req({ ramp: { from: 1, to: 0.4 }, first: 30, count: 4 }), '/out/%05d.png')
+    expect(ramped.slice(0, 2)).toEqual(['-ss', '1.000000'])
+    // The render's own ramp over the clip's WHOLE length (sixty frames), not over the window: the curve depends on it.
+    expect(ramped[ramped.indexOf('-vf') + 1]).toBe(`${retimeFilter({ ramp: { from: 1, to: 0.4 }, duration: 60 }, fps)},trim=start_frame=30:end_frame=34,setpts=PTS-STARTPTS,${cap},format=rgba`)
+    expect(ramped[ramped.indexOf('-frames:v') + 1]).toBe('4')
+    // And the file decoded for the whole ramp: the source frames the clip eats (speed.ts sourceFramesFor).
+    expect(ramped[ramped.indexOf('-t') + 1]).toBe((sourceFramesFor({ ramp: { from: 1, to: 0.4 }, duration: 60 }) / fps).toFixed(6))
+
+    const held = momentFrameArgs(req({ hold: true, first: 54, count: 6 }), '/out/%05d.png')
+    // Its one frame is the in-point's, whatever the window says.
+    expect(held.slice(0, 2)).toEqual(['-ss', '1.000000'])
+    expect(held[held.indexOf('-frames:v') + 1]).toBe('1')
+    expect(held[held.indexOf('-vf') + 1]).toMatch(/^trim=end_frame=1,setpts=PTS-STARTPTS,/)
+  })
+
+  it('the crop is cut in the file’s pixels with the render’s own crop filter, and the cap is measured on the frame that arrives', () => {
+    const cropped = momentFrameArgs(req({ crop: { x: 656, y: 0, width: 608, height: 1080 } }), '/out/%05d.png')
+    const vf = cropped[cropped.indexOf('-vf') + 1]
+    expect(vf).toContain(`crop=w='min(608,in_w)':h='min(1080,in_h)':x='max(0,min(656,in_w-out_w))':y='max(0,min(0,in_h-out_h))',${cap}`)
+    // Never sized from the probe: a phone clip's probed size is its coded size, and it decodes turned.
+    expect(cap).toBe("scale=w='trunc(iw*min(1,2160/max(iw,ih))/2)*2':h='trunc(ih*min(1,2160/max(iw,ih))/2)*2':flags=bicubic")
+    expect(vf).not.toMatch(/scale=\d+:\d+/)
+  })
+
+  it('the frames are kept under a name that changes with the file, the window, the retime and the cut — each on its own — and nothing else', () => {
+    const file = { size: 1000, mtimeMs: 12345 }
+    const a = momentFramesKey(req(), file)
+    expect(momentFramesKey(req(), file)).toBe(a)
+    const changes: Partial<FootageRequest>[] = [
+      { first: 6 }, { count: 7 }, { inPoint: 31 }, { speed: 0.5 }, { ramp: { from: 1, to: 0.4 } }, { hold: true }, { smoothSlow: true }, { fps: 25 }, { maxEdge: 1080 },
+      { crop: { x: 0, y: 0, width: 10, height: 10 } }
+    ]
+    for (const change of changes) expect(momentFramesKey(req(change), file), JSON.stringify(change)).not.toBe(a)
+    expect(momentFramesKey(req(), { size: 1001, mtimeMs: 12345 })).not.toBe(a)
+    expect(momentFramesKey(req(), { size: 1000, mtimeMs: 99999 })).not.toBe(a)
+    // A ramp's and a smooth slow-motion's frames depend on the clip's length; a plain speed's do not.
+    expect(momentFramesKey(req({ duration: 90 }), file)).toBe(a)
+    expect(momentFramesKey(req({ ramp: { from: 1, to: 0.4 }, duration: 90 }), file)).not.toBe(momentFramesKey(req({ ramp: { from: 1, to: 0.4 } }), file))
+    expect(momentFramesKey(req({ smoothSlow: true, speed: 0.5, duration: 90 }), file)).not.toBe(momentFramesKey(req({ smoothSlow: true, speed: 0.5 }), file))
+    expect(momentFramesKey(req({ speed: 1 }), file)).toBe(a)
   })
 })
 
@@ -424,6 +564,16 @@ describe('an export redraws a moment', () => {
     expect(asked).toBe(1)
     expect(failed.clips.some((c) => c.id === 'm')).toBe(false)
     expect(errors[1]).toBe('m: Error: the moment could not be drawn')
+
+    // A bake that THROWS — no WebGL, a picture that will not decode — likewise: never an asset with an empty path in the export.
+    const threw = await bakeForExport(
+      project({ width: 1080, height: 1920 }),
+      { width: 1080, height: 1920 },
+      { ...bakers, moment: async () => { throw new Error('no WebGL') } },
+      (c, err) => errors.push(`${c.id}: ${String(err)}`)
+    )
+    expect(threw.clips.some((c) => c.id === 'm')).toBe(false)
+    expect(errors[2]).toBe('m: Error: no WebGL')
   })
 })
 

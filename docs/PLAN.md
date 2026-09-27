@@ -1299,6 +1299,36 @@ final shaders are ours and short. Nothing here needs a Windows probe.
 > frames, or the render refuses — and the real serum ad was re-rendered with
 > its zoom punch. Reviewed by six Opus lenses with two skeptics per finding:
 > 58 stood, all fixed the same day.
+>
+> **Built 2026-09-27, later — footage under a bridge (§7.2's pre-pass).**
+> `render/momentFrames.ts` builds the ffmpeg arguments that pull a shot's
+> frames under the moment through the clip's OWN retime: decoded from the
+> in-point as the render decodes it, then the render's `retimeFilter` (a
+> ramp's `setpts` curve across the clip's whole length, a constant speed's
+> `setpts` and `fps`, and at speed 1 the render's own `fps` step, so 24p and
+> 60p footage in a 30 fps project gives the frames the render resamples to),
+> the window trimmed out — never a seek to the window's own place, which
+> landed a frame off the retime's phase — smooth slow-motion given its whole
+> input and its tail held, a hold its one frame; cut with the render's
+> `cropFilter` in the file's pixels and capped at 2160 on the long edge of
+> the frame that arrives (not the probed size: a phone clip decodes turned).
+> `main/render/momentFrames.ts` runs them once into `userData/moments/
+> <key>/` (keyed by the file's size and mtime, the in-point, the retime, the
+> window, the crop, the cap and the pull's version; pulled into a temporary
+> folder and renamed, one pull shared by concurrent callers, a failed pull
+> cleaned up, the cache kept under 2 GB). `momentTextures` hands a footage
+> shot over as a request; the renderer resolves it through the
+> `moments:frames` IPC and composes the pulled frame under each moment frame
+> (`footageFrameIndex`), the eval resolves it in node into the run folder and
+> serves the frames. A depth push stays a photograph's move, and a steadied
+> clip is not drawn from: into either the shot cuts, with a note. Measured
+> against the render itself (`tests/integration/momentFrames.int.test.ts`,
+> a lossless clip whose frame N is luma 8·N): at speed 1 from an in-point,
+> at half speed from an odd frame, at 1.5×, through a ramp, in smooth
+> slow-motion at both ends of the clip, held, and from 24p and 60p sources
+> in a 30 fps project, every pulled frame is the render's frame under the
+> same clip frame within the encoder's noise (EFFECTS.md §36). Reviewed by
+> four Opus lenses with two skeptics per finding: 28 stood, all fixed.
 
 ---
 

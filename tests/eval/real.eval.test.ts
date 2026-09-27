@@ -351,8 +351,8 @@ describe.skipIf(!PROVIDER || !REAL)('a real ad from the user’s own pictures an
           ]
           await writeJson(join(runDir, 'cards.json'), cards)
           /* And every moment of both ads, drawn by the harness's GPU from the run's own photos (docs/PLAN.md §7). */
-          const modelMoments = settled ? momentsOf(applied(prepared, settled.composed, menu, config.model, modelLook, sounds), CANVAS, 'moments/model') : { moments: [], skipped: [] }
-          const standardMoments = momentsOf(applied(prepared, standard.composed, menu, 'baseline', standardLook, sounds), CANVAS, 'moments/baseline')
+          const modelMoments = settled ? await momentsOf(applied(prepared, settled.composed, menu, config.model, modelLook, sounds), CANVAS, 'moments/model', runDir) : { moments: [], skipped: [] }
+          const standardMoments = await momentsOf(applied(prepared, standard.composed, menu, 'baseline', standardLook, sounds), CANVAS, 'moments/baseline', runDir)
           await writeJson(join(runDir, 'moments.json'), [...modelMoments.moments, ...standardMoments.moments])
           for (const s of [...modelMoments.skipped, ...standardMoments.skipped]) console.log(`  - moment not drawable: ${s}`)
           await writeJson(join(runDir, 'settled.json'), {
@@ -394,8 +394,8 @@ describe.skipIf(!PROVIDER || !REAL)('a real ad from the user’s own pictures an
            * has a moment — or worse, hold a half-drawn one mid-move. And a moment the harness could not be asked
            * to draw (its picture outside tests/output/eval) is not silently a cut: the run says so and stops.
            */
-          const modelMoments = settled ? momentsOf(applied(prepared, settled.composed, menu, config.model, modelLook, sounds), CANVAS, 'moments/model') : { moments: [], skipped: [] }
-          const standardMoments = momentsOf(applied(prepared, standard.composed, menu, 'baseline', standardLook, sounds), CANVAS, 'moments/baseline')
+          const modelMoments = settled ? await momentsOf(applied(prepared, settled.composed, menu, config.model, modelLook, sounds), CANVAS, 'moments/model', runDir) : { moments: [], skipped: [] }
+          const standardMoments = await momentsOf(applied(prepared, standard.composed, menu, 'baseline', standardLook, sounds), CANVAS, 'moments/baseline', runDir)
           const skipped = [...modelMoments.skipped, ...standardMoments.skipped]
           if (skipped.length > 0) {
             throw new Error(`${skipped.length} moments cannot be drawn by the harness (${skipped.join('; ')}) — FORGE_REAL has to be a folder inside tests/output/eval`)

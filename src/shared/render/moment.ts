@@ -277,6 +277,56 @@ export interface TexturePlan {
    * depth push (each plane pushed by its depth). Absent, the picture alone.
    */
   planes?: { file: string; depth: number }[]
+  /**
+   * Footage: the shot's frames under the moment, one file each from the
+   * shot's frame `first` on — already cropped, at `size`, as the pre-pass
+   * pulled them through the render's own retime (momentFrames.ts). A frame
+   * of the moment shows `pulled.files[footageFrameIndex(...)]`.
+   */
+  pulled?: { files: string[]; first: number }
+  /**
+   * Footage not yet pulled: what to ask the pre-pass for. The renderer
+   * resolves it into `pulled` (and drops the crop, which the pre-pass
+   * applies) before it draws; the eval does the same in node.
+   */
+  footage?: FootageRequest
+}
+
+/** What the pre-pass pulls for one shot under a moment: the frames, cropped and capped, through the clip's own retime. */
+export interface FootageRequest {
+  path: string
+  /** The clip's in-point, speed, ramp and hold — its retime, exactly as the render plays it. */
+  inPoint: number
+  /** The clip's length on the timeline: a ramp's curve runs across the whole of it. */
+  duration: number
+  speed?: number
+  ramp?: { from: number; to: number }
+  smoothSlow?: boolean
+  hold?: boolean
+  /** The clip's frames wanted: from `first`, `count` of them. */
+  first: number
+  count: number
+  fps: number
+  /** The clip's crop, in the file's pixels, and the file's size as probed. */
+  crop?: CropRect
+  size: { width: number; height: number }
+  /** The longest edge the frames are kept at. */
+  maxEdge: number
+}
+
+/** The frames of a shot a moment shows: the shot's frame under each of the moment's `total` frames, clamped to the shot. */
+export function footageWindow(at: number, total: number, frames: number): { first: number; count: number } {
+  const last = Math.max(0, frames - 1)
+  const first = Math.max(0, Math.min(last, at))
+  const end = Math.max(0, Math.min(last, at + Math.max(1, total) - 1))
+  return { first, count: end - first + 1 }
+}
+
+/** Which of a shot's pulled frames a moment frame shows. */
+export function footageFrameIndex(plan: Pick<TexturePlan, 'pulled' | 'at' | 'frames'>, momentFrame: number): number {
+  if (!plan.pulled || plan.pulled.files.length === 0) return 0
+  const into = Math.max(0, Math.min(plan.frames - 1, plan.at + momentFrame))
+  return Math.max(0, Math.min(plan.pulled.files.length - 1, into - plan.pulled.first))
 }
 
 /**

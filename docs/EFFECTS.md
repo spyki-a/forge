@@ -2652,3 +2652,82 @@ photo's own size and whose canvas is nearly the bake's. The moments engine
 (`render/moment.ts` `shotPicture`) composes a parallax shot the preview's way
 — the crop in photo pixels, each plane's rectangle in 0..1 of itself — and now
 agrees with the export.
+
+## 36. The footage pre-pass — a moment's frames are the render's frames (2026-09-27)
+
+A bridge over footage composes the shot's own frames (docs/PLAN.md §7.2), so
+what the pre-pass pulls has to be what the render plays under the moment.
+Measured in `tests/integration/momentFrames.int.test.ts` (`tests/output/
+momentFrames/`) against the render itself: a 64×36 clip whose frame N is
+luma 8·N, encoded lossless (`-qp 0`), so every frame names itself, a step of
+9.3 levels apart; the pull and the render agree within 5 levels or the check
+fails, and a frame off is 9.
+
+- **Through the clip's own retime, the frames match.** At speed 1 from an
+  in-point of 10, the window 5–10 pulled levels 121, 130, 140, 149, 158, 168
+  — the source's frames 15–20 — and each equals the render's frame at the
+  same clip frame (the largest difference seen was 3). At half speed the
+  render's `setpts`+`fps` pair repeats each source frame twice, and so do the
+  pulled frames; at 1.5× it drops every third, and so does the pull (121,
+  130, 149, 158, 177). Through a ramp from 1× to 0.4× the pulled frames
+  30–33 read 205, 214, 214, 224 and match the render — ONLY once the request
+  carries the clip's whole length: the ramp's `setpts` curve runs across the
+  clip, and a curve built over the window alone was four source frames off
+  (measured, then fixed).
+- **Every case decodes from the in-point; a seek to the window lands off
+  the render's phase.** The first pull seeked straight to the window's place
+  in the file (`inPoint + first × speed`). At half speed with an odd first
+  frame (in-point 20, first 39: 20 + 39 × 0.5 = 39.5) the seek returned
+  source frame 40 where the render's `fps` filter, counting from the
+  in-point, was still repeating frame 39 — the moment's first frame was one
+  source frame ahead of the shot beneath it, measured on the footage demo
+  (4.7/255 against the plain render's frame 39, 1.2 against its frame 40).
+  The check's half-speed case had let it through because its first frame
+  was even and its per-frame step, three levels, sat inside a seven-level
+  tolerance; it now starts on an odd frame. And at speed 1 the seek skipped
+  the render's `fps` step altogether, so 24p and 60p footage in a 30 fps
+  project — the ordinary wedding case — pulled the file's own consecutive
+  frames: 60p played at half speed under the moment, 24p ran ahead, and a
+  24p window of nine frames came back short and the moment was dropped
+  (found by the review, measured). Every case but a hold now decodes from
+  the in-point through the render's own retime — `fps=<project>` at speed 1
+  — and trims the window out; the check pulls 24p and 60p sources against
+  the render.
+- **Smooth slow-motion looks ahead.** `minterpolate` emits a frame only once
+  it holds the two after it, so a window with one frame of slack came back
+  five of six at both ends of a clip and the moment was dropped. It is given
+  the render's whole input window (`sourceFramesFor`), and its tail is held
+  with `tpad` as the render holds an interpolated clip's last frame.
+- **A seek lands on the frame, not before it.** `-ss` at the in-point's
+  time with the bundled build decodes from the keyframe and drops what comes
+  before the point (accurate seek), so `-ss 0.4` on a 30 fps file returns
+  frame 12, not 9. The first draft of the check said otherwise and was
+  wrong: it compared RGB with luma.
+- **The file's luma is limited-range.** `geq=lum='8*N'` writes Y; the RGB
+  the render and the pull both show is `1.164 × (Y − 16)`: Y 96 (frame 12)
+  is level 93, Y 120 (frame 15) is level 121, and frames 0 and 1 are black.
+  A test that expects the luma it wrote will find a value a fifth lower.
+- **The cap is measured on the frame that arrives.** The probe records a
+  phone clip's coded size and ffmpeg decodes it turned, so a cap sized from
+  the probe squeezed a portrait clip into a landscape box at half its
+  resolution (a 64×36 clip tagged `rotate=90` pulled 20×36). The cap is an
+  expression on `iw`/`ih` now.
+- **Not followed: a steadied clip.** Its frames are the stabiliser's
+  (vidstab's transforms, deshake), which the pull does not run; a bridge
+  over a steadied clip is not drawn, and the export leaves it out.
+
+The pull itself is one ffmpeg run per shot per moment — twelve to seventeen
+PNGs, a fraction of a second on the Mac for 1080-tall crops — kept under a
+name that changes with the file, its window, its retime, its crop and the
+pull's own version, so the preview, the bake and the next export read the
+same frames, and a folder an older pull left is never reused. Two callers
+asking for the same frames at once (the store's bake and the preview, right
+after Direct) share one pull; a pull that fails takes its temporary folder
+with it; the cache is kept under 2 GB, oldest first.
+
+Through the GPU, on footage: a whip blur between two moving test pictures
+(`testsrc2` at half speed from frame 20, `testsrc` at speed 1) drawn by the
+harness from pulled frames and overlaid by the render, against the same
+project rendered without the moment — the frame before the moment 0.5/255,
+the moment's first frame 1.1, its last 1.2, the frame after 0.3; the cut
+frame itself 138. The moment's picture is the footage's, to the frame.

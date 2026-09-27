@@ -191,22 +191,29 @@ describe('what the engine asks for that cannot land', () => {
     expect(applied.problems.some((q) => q.message.includes('shorter than the recipe'))).toBe(true)
   })
 
-  it('over footage — the shot it lands on OR the shot it comes from — the cut is plain, and says so; an undrawn kind likewise', () => {
+  it('a bridge lands over footage — the shot it lands on or the one it comes from — but a depth push into footage is a cut with a note; an undrawn kind likewise', () => {
     const footage = (id: string): MediaAsset => ({ ...photo(id), path: `/media/${id}.mp4`, name: `${id}.mp4`, kind: 'video', fps: 30, durationFrames: 600, hasAudio: false })
-    // The hero (the third slot) is the footage: the hero reveal's moment lands on it.
+    // The hero (the third slot) is the footage: the hero reveal's bridge lands on it and draws from its frames.
     const onto = edit([photo('p1'), photo('p2'), footage('v'), photo('p4')])
     const { composed, menu } = compose(onto)
     const applied = direct(onto, composed, menu)
-    expect(momentsOf(applied.project)).toHaveLength(0)
-    expect(applied.problems.some((q) => q.message.includes('over footage is not drawn yet'))).toBe(true)
+    const [ontoMoment] = momentsOf(applied.project)
+    expect(ontoMoment).toBeDefined()
+    expect(applied.project.assets.find((a) => a.id === shotsOf(applied.project).find((s) => s.id === ontoMoment.moment!.to.clipId)!.assetId)!.kind).toBe('video')
+    expect(applied.problems.some((q) => q.message.includes('footage'))).toBe(false)
 
-    // The shot BEFORE the hero is the footage: the moment would come from it.
+    // The shot BEFORE the hero is the footage: the moment comes from it.
     const outOf = edit([photo('p1'), footage('v'), photo('p3'), photo('p4')])
     const from = compose(outOf)
     const fromApplied = direct(outOf, from.composed, from.menu)
     expect(from.composed.layout.moments[0]?.from).toBe(from.menu.slots[1].id)
-    expect(momentsOf(fromApplied.project)).toHaveLength(0)
-    expect(fromApplied.problems.some((q) => q.message.includes('over footage is not drawn yet'))).toBe(true)
+    expect(momentsOf(fromApplied.project)).toHaveLength(1)
+
+    // A depth push is a photograph's move: into footage the shot cuts, and the note says why.
+    const shotOnFootage = composed.layout.shots[2]
+    const pushed = direct(onto, withMoments(composed, [{ kind: 'moment', moment: 'depth-push', frame: shotOnFootage.startFrame, from: composed.layout.shots[1].slotId, to: shotOnFootage.slotId, place: 'section' }]), menu)
+    expect(momentsOf(pushed.project)).toHaveLength(0)
+    expect(pushed.problems.some((q) => q.message.includes("a photograph's move, not footage's"))).toBe(true)
 
     const stills = edit()
     const still = compose(stills)

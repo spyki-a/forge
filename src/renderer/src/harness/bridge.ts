@@ -360,6 +360,8 @@ export function installHarnessBridge(): void {
     clearTitleFrames: async (clipId: string) => {
       titleFrames.delete(clipId)
     },
+    // The eval pulls a run's footage frames in node and serves them; the app itself needs ffmpeg for this.
+    momentFrames: unsupported("A moment's footage frames"),
 
     /*
      * Baked captions, counted and kept rather than written.

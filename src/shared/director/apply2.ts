@@ -353,9 +353,10 @@ export function applyRecipe(project: Project, composed: Composed, menu: Menu2, c
    * bridge sits `[cut − before, cut + after]`, shrunk to the footage either
    * side and said so; a depth push covers its whole shot, easing over its
    * seconds and holding (render/moment.ts `movingFrames`), so the shot never
-   * pops back when it ends. Only over stills for now: a moment over footage
-   * would need the footage's frames pulled from the file (§7.2), and until
-   * that lands the shot enters with a plain cut.
+   * pops back when it ends. A bridge over footage draws from the footage's
+   * own frames, pulled by the pre-pass through the clip's retime (§7.2,
+   * render/momentFrames.ts); a depth push is a photograph's move, so into
+   * footage the shot enters with a plain cut and a note.
    */
   const momentClipIds: string[] = []
   const momentSpans: { start: number; end: number; kind: string; slotId: string }[] = []
@@ -368,8 +369,9 @@ export function applyRecipe(project: Project, composed: Composed, menu: Menu2, c
       problems.push({ path: at, message: `${to.slotId} enters with a cut — a "${m.moment}" moment is not drawn yet` })
       return
     }
-    if (to.video || from?.video) {
-      problems.push({ path: at, message: `${to.slotId} enters with a cut — a ${m.moment} over footage is not drawn yet` })
+    // A depth push is a photograph's move: into footage the shot plays as it is. A bridge over footage draws from the footage's own frames.
+    if (to.video && !bridgesCut(m.moment)) {
+      problems.push({ path: at, message: `${to.slotId} enters with a cut — a ${m.moment} is a photograph's move, not footage's` })
       return
     }
     const cut = to.clip.start

@@ -13,8 +13,9 @@ import type { Brief } from '@shared/director/schema'
 import { headlineCapacity } from '@shared/director/validate'
 import { applyRecipe } from '@shared/director/apply2'
 import { COPY_RULE, LOOK_RULE, MOMENT_RULE } from '@shared/director/apply'
-import { momentTextures, type MomentTextures } from '@shared/render/momentTextures'
-import { movingFrames } from '@shared/render/moment'
+import { momentTextures, withFootageFrames, type MomentTextures } from '@shared/render/momentTextures'
+import { movingFrames, type TexturePlan } from '@shared/render/moment'
+import { extractMomentFrames } from '../../src/main/render/momentFrames'
 import { EVAL_ROOT } from './relay'
 import { graphemes, type Composed } from '@shared/director/compose'
 import { gate } from '@shared/director/gate'
@@ -438,14 +439,18 @@ export interface MomentRequest {
 /**
  * The moments an applied ad carries, each at the size the export would draw
  * it (the stills' size, as `bakeForExport` asks), from the pictures the shots
- * show. A moment whose picture lies outside the eval folder cannot be drawn
- * by the harness and is left out — `skipped` names it.
+ * show. A shot that is footage has its frames under the moment pulled here,
+ * in node, through the clip's own retime (main/render/momentFrames.ts, the
+ * same pre-pass the app runs) into `<run dir>/moments/frames/`. A moment
+ * whose picture lies outside the eval folder cannot be drawn by the harness
+ * and is left out — `skipped` names it.
  */
-export function momentsOf(
+export async function momentsOf(
   project: Project,
   canvas: { width: number; height: number },
-  dir: string
-): { moments: MomentRequest[]; skipped: string[] } {
+  dir: string,
+  runDir?: string
+): Promise<{ moments: MomentRequest[]; skipped: string[] }> {
   const { stills } = exportBakeSizes(project.settings, canvas)
   const skipped: string[] = []
   const inside = (path: string): string | null => {
@@ -455,14 +460,37 @@ export function momentsOf(
   const moments: MomentRequest[] = []
   for (const c of project.clips) {
     if (c.generatedBy?.rule !== MOMENT_RULE || !c.moment) continue
-    const textures = momentTextures(project, c.moment, c.start)
-    const paths = textures ? [textures.to.path, ...(textures.from ? [textures.from.path] : []), ...(textures.to.planes ?? []).map((p) => p.file)] : []
-    if (!textures || paths.some((p) => inside(p) === null)) {
-      skipped.push(`${c.id}: ${!textures ? 'its shot is gone or is footage' : 'its picture is outside tests/output/eval'}`)
+    const found = momentTextures(project, c.moment, c.start)
+    if (!found) {
+      skipped.push(`${c.id}: its shot is gone, or is footage under a depth push`)
       continue
     }
-    const rel = <T extends { path: string; planes?: { file: string; depth: number }[] } | null>(p: T): T =>
-      p ? { ...p, path: inside(p.path)!, ...(p.planes ? { planes: p.planes.map((l) => ({ ...l, file: inside(l.file)! })) } : {}) } : p
+    const pull = async (plan: TexturePlan | null): Promise<TexturePlan | null> => {
+      if (!plan?.footage) return plan
+      if (!runDir) throw new Error('a moment over footage needs the run folder to pull its frames into')
+      return withFootageFrames(plan, await extractMomentFrames(plan.footage, join(runDir, 'moments', 'frames')))
+    }
+    let textures: MomentTextures
+    try {
+      textures = { from: await pull(found.from), to: (await pull(found.to))! }
+    } catch (err) {
+      skipped.push(`${c.id}: ${err instanceof Error ? err.message : String(err)}`)
+      continue
+    }
+    const filesOf = (p: TexturePlan | null): string[] => (p ? [p.path, ...(p.planes ?? []).map((l) => l.file), ...(p.pulled?.files ?? [])] : [])
+    if ([...filesOf(textures.to), ...filesOf(textures.from)].some((p) => inside(p) === null)) {
+      skipped.push(`${c.id}: its picture is outside tests/output/eval`)
+      continue
+    }
+    const rel = <T extends TexturePlan | null>(p: T): T =>
+      p
+        ? {
+            ...p,
+            path: inside(p.path)!,
+            ...(p.planes ? { planes: p.planes.map((l) => ({ ...l, file: inside(l.file)! })) } : {}),
+            ...(p.pulled ? { pulled: { ...p.pulled, files: p.pulled.files.map((f) => inside(f)!) } } : {})
+          }
+        : p
     moments.push({
       id: c.id,
       dir: `${dir}/${c.id}.seq`,
