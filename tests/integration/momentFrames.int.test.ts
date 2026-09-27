@@ -102,7 +102,7 @@ describe('the frames a moment pulls from footage', () => {
 
   it('a pull that fails leaves no folder behind, and a request past the file’s end is a failure, not a short folder', async () => {
     const root = join(dir, 'cache-fail')
-    await expect(extractMomentFrames(request({ inPoint: 0, first: 500, count: 6 }), root)).rejects.toThrow(/fewer written/)
+    await expect(extractMomentFrames(request({ inPoint: 0, first: 500, count: 6 }), root)).rejects.toThrow(/6 wanted, 0 written/)
     const left = await readdir(root).catch(() => [] as string[])
     expect(left.filter((n) => n.includes('.pulling-'))).toEqual([])
     expect(left).toEqual([])
