@@ -77,7 +77,12 @@ async function pullInto(req: FootageRequest, dir: string, wanted: number): Promi
       )
     })
     const fresh = await pulled(tmp, wanted)
-    if (!fresh) throw new Error(`The moment's frames could not be pulled: ${wanted} wanted, fewer written`)
+    if (!fresh) {
+      // Say how many, and through what: a build whose filters flush differently at the end of a stream shows up here (the 2018 Windows one did).
+      const written = (await readdir(tmp).catch(() => [] as string[])).filter((n) => /^\d{5}\.png$/.test(n)).length
+      const args = momentFrameArgs(req, pattern)
+      throw new Error(`The moment's frames could not be pulled: ${wanted} wanted, ${written} written (window ${req.first}+${req.count}, -t ${args[args.indexOf('-t') + 1]}, -vf ${args[args.indexOf('-vf') + 1]})`)
+    }
     // Another pull of the same key may have landed meanwhile: its folder is as good as ours, and someone may be reading it.
     const landed = await pulled(dir, wanted)
     if (landed) return landed
