@@ -23,9 +23,23 @@ interface CatalogState {
   /** Why the mask library is missing, when it is. Null while all is well. */
   transitionsError: string | null
 
+  /**
+   * The looks that ship with the app — .cube files the main process writes on
+   * first use. Empty until `loadLooks()` lands, and empty if it failed.
+   */
+  looks: BuiltInLook[]
+
   load: (force?: boolean) => Promise<void>
   ensureFont: (family: string) => Promise<boolean>
   loadTransitions: () => Promise<void>
+  loadLooks: () => Promise<void>
+}
+
+export interface BuiltInLook {
+  id: string
+  name: string
+  description: string
+  file: string
 }
 
 /** Members of a family, so the picker can offer a handful rather than 400. */
@@ -45,6 +59,17 @@ export function transitionsByFamily(
 /** Registrations in flight, so a family is never fetched twice. */
 const pending = new Map<string, Promise<boolean>>()
 
+/**
+ * The one looks request, shared by every caller.
+ *
+ * Asked for once, at startup, by the app shell (App.tsx) rather than by a
+ * panel: the Inspector used to fetch them on mount, which was only "at
+ * startup" because the Inspector was always on screen. StrictMode runs a
+ * mount effect twice in development, so the guard is here and not in the
+ * effect.
+ */
+let looksRequest: Promise<void> | null = null
+
 export const useCatalog = create<CatalogState>((set, get) => ({
   catalog: null,
   root: '',
@@ -55,6 +80,20 @@ export const useCatalog = create<CatalogState>((set, get) => ({
   failedFonts: new Map(),
   transitions: TRANSITIONS,
   transitionsError: null,
+  looks: [],
+
+  loadLooks: () => {
+    looksRequest ??= (async () => {
+      try {
+        set({ looks: await window.forge.builtInLooks() })
+      } catch (err) {
+        // The grid is empty rather than gone, and the reason is in the console.
+        set({ looks: [] })
+        console.warn('Built-in looks failed to load', err)
+      }
+    })()
+    return looksRequest
+  },
 
   load: async (force = false) => {
     if (get().loading) return
@@ -102,6 +141,17 @@ export const useCatalog = create<CatalogState>((set, get) => ({
     if (SYSTEM_FONT_FAMILIES.has(family)) return true
     if (get().loadedFonts.has(family)) return true
     if (get().failedFonts.has(family)) return false
+    /*
+     * No catalog YET is not "not in the catalog".
+     *
+     * Recorded as a failure, it became one for good: the Preview asks for the
+     * caption font in its first effect, before the shell has even started the
+     * catalog load (a child's effects run before its parent's), so the default
+     * caption face was marked missing at every launch and the second ask, once
+     * the catalog had landed, was answered from that mark. Measured, 2026-10-02.
+     * A real catalog without the family still records it, below.
+     */
+    if (get().catalog === null) return false
 
     const existing = pending.get(family)
     if (existing) return existing

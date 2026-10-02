@@ -105,14 +105,12 @@ export function Inspector(): ReactNode {
   const clearCaptionOverrides = useEditor((s) => s.clearCaptionOverrides)
   const [pickingFont, setPickingFont] = useLocalState(false)
   const [pickingTextFont, setPickingTextFont] = useLocalState(false)
-  /** The looks that ship with the app, written to disk on first use. */
-  const [looks, setLooks] = useLocalState<
-    { id: string; name: string; description: string; file: string }[]
-  >([])
-
-  useEffect(() => {
-    void window.forge.builtInLooks().then(setLooks).catch(() => setLooks([]))
-  }, [])
+  /**
+   * The looks that ship with the app, written to disk on first use — asked for
+   * once by the app shell (App.tsx), not by this panel, which will not always
+   * be on screen.
+   */
+  const looks = useCatalog((s) => s.looks)
   /*
    * The "check graphics engine" button used to live here.
    *
@@ -127,19 +125,13 @@ export function Inspector(): ReactNode {
   const setTitleText = useEditor((s) => s.setTitleText)
   const allTransitions = useCatalog((s) => s.transitions)
   const transitionsError = useCatalog((s) => s.transitionsError)
-  const loadTransitions = useCatalog((s) => s.loadTransitions)
   const families = useMemoLocal(() => transitionsByFamily(allTransitions), [allTransitions])
   const tags = useMemoLocal(() => availableTags(allTransitions), [allTransitions])
   const [tagFilter, setTagFilter] = useLocalState<MaskTag | null>(null)
 
-  useEffect(() => {
-    void loadTransitions()
-  }, [loadTransitions])
-
-  const loadCatalog = useCatalog((s) => s.load)
-  const ensureFont = useCatalog((s) => s.ensureFont)
+  // The transition table, the catalog and the caption face are loaded by the
+  // app shell (App.tsx); this panel only reads them.
   const loadedFonts = useCatalog((s) => s.loadedFonts)
-  const catalogLoaded = useCatalog((s) => s.catalog !== null)
 
   const style = resolveStyle(
     project.captions.styleId,
@@ -179,13 +171,6 @@ export function Inspector(): ReactNode {
     }
   }, [style])
 
-  useEffect(() => {
-    if (!catalogLoaded) void loadCatalog()
-  }, [catalogLoaded, loadCatalog])
-
-  useEffect(() => {
-    void ensureFont(style.fontFamily)
-  }, [style.fontFamily, ensureFont, catalogLoaded])
   const [exporting, setExporting] = useState(false)
   /** Export only between the in and out marks, when there are any. */
   const [useRange, setUseRange] = useState(true)

@@ -6,6 +6,8 @@ import { escapeLeavesFullScreen } from '@shared/fullScreen'
 import { projectDuration } from '@shared/timeline'
 import { AUTOSAVE_INTERVAL_MS } from '@shared/project/recovery'
 import { useEditor } from './store'
+import { useCatalog } from './catalog'
+import { activeCaptionStyle } from './captionPreview'
 import { stopVoiceOver } from './recorder'
 import { LeftPanel } from './components/LeftPanel'
 import { Preview } from './components/Preview'
@@ -190,6 +192,40 @@ export default function App(): ReactNode {
   useEffect(() => {
     void useEditor.getState().loadPresets()
   }, [])
+
+  /*
+   * The libraries the whole window draws from, loaded by the shell.
+   *
+   * These lived in the Inspector, and ran at startup only because the
+   * Inspector was always on screen. The window does not depend on that any
+   * more (docs/WINDOW.md §3.20): the Preview's wipes and the Timeline's labels
+   * read the transition table, `ensureFont` needs the catalog to find a face,
+   * and the live captions need their font whether or not a panel is open.
+   */
+  const catalogLoaded = useCatalog((s) => s.catalog !== null)
+  /**
+   * The caption face, resolved exactly as the Preview draws it — the style's
+   * preset with the project's overrides on top. Selected as a string so the
+   * shell re-renders when the family changes, not on every edit.
+   */
+  const captionFont = useEditor((s) => activeCaptionStyle(s.project).fontFamily)
+
+  useEffect(() => {
+    void useCatalog.getState().loadTransitions()
+  }, [])
+
+  useEffect(() => {
+    if (!catalogLoaded) void useCatalog.getState().load()
+  }, [catalogLoaded])
+
+  useEffect(() => {
+    void useCatalog.getState().loadLooks()
+  }, [])
+
+  // Once the catalog has landed: before it, there is nothing to find the face in.
+  useEffect(() => {
+    if (catalogLoaded) void useCatalog.getState().ensureFont(captionFont)
+  }, [captionFont, catalogLoaded])
 
   /*
    * Save, from wherever the request came from.

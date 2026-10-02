@@ -51,6 +51,8 @@ function installFallbackBridge(): void {
     onMenuOpen: () => () => undefined,
     onFullScreen: () => () => undefined,
     exitFullScreen: () => undefined,
+    // Asked for by the app shell at startup (App.tsx), no longer by a panel.
+    builtInLooks: async () => [],
     microphonePermission: async () => false,
     saveVoiceOver: unavailable
   } as unknown as Window['forge']
