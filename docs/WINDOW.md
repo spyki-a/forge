@@ -553,7 +553,9 @@ split/detach/select `283`, delete/ripple `305`.
 
 **Always mounted** (today they live in the Inspector, which is always mounted):
 the export flow and the File > Export listener (`Inspector.tsx:218-373`); the transition
-load (`135-137`); the catalog load and caption font (`182-188`); the looks list (`113-115`).
+load; the catalog load and caption font; the looks list — all four moved to `App.tsx` and
+`catalog.ts` in step 1 (the Inspector line numbers this plan quotes elsewhere are from `bd58eb5`
+and have shifted up by about eighteen since).
 **Never remounted**: the Preview (its rAF loop is the playback clock and the mixer,
 `Preview.tsx:1785-1868`); exactly one `canvas[data-forge-preview="1"]`.
 **Harness hooks**: `window.forgeStore`, `window.forgeCatalog` (`harness/main.tsx:36, 48`),
@@ -612,7 +614,7 @@ and the harness check, in the Browser pane (`preview_start` name `harness`, or
 Every new regression test is mutation-checked: put the bug back, watch it fail, restore.
 Anchors are counted with `matchAll` before being trusted.
 
-### Step 0 — Guards and a census before anything moves · DONE 2026-10-02
+### Step 0 — Guards and a census before anything moves · DONE 2026-10-02, `91971df`
 - **Files:** `tests/keyframeGraph.test.ts` (both slice anchors asserted `> -1` first; the old
   test passed on an empty slice) and `tests/chromaKey.test.ts` (the MaskPanel, KeyPanel, Colour
   Reset, key and white-balance anchors asserted; `graphOf` asserts exactly one `-filter_complex`
@@ -661,6 +663,20 @@ Anchors are counted with `matchAll` before being trusted.
   App.tsx pinned strings untouched.
 - **Check:** with the Inspector still mounted nothing visible changes; `forgeCatalog.getState().catalog`
   is non-null with Library never opened; Looks grid still shows 7 buttons on a selected photo.
+- **DONE 2026-10-02.** As planned, plus one bug the move uncovered: `ensureFont` recorded a family
+  as "not in the catalog" FOR GOOD whenever it was asked before the catalog had loaded — and the
+  default caption face (Anton, the `pop` style) was always asked that early, because `Preview.tsx`
+  runs its caption-font effect before App's effects and before the Inspector's used to. So the
+  caption font was never registered at launch, in the old code too. Fix: `ensureFont` returns
+  false without caching while `catalog === null`, and App's effect asks again once the catalog
+  lands (`catalog.ts`, pinned by `tests/startupLoads.test.ts`). The caption face is resolved with
+  `activeCaptionStyle(project)`, the same function Preview draws with. Startup loads are counted
+  as real call expressions over a TypeScript parse, so a loader in a comment or a string does not
+  count. Verified in the harness: catalog non-null before Library is opened, Looks grid intact,
+  census clean. Known soft spot, recorded by the verifier: the placement check accepts a loader
+  call nested anywhere under the effect callback (a call in the cleanup or behind `if (false)`
+  passes); the harness check is the guard for that. `ClipMenu.tsx` still fetches `builtInLooks`
+  itself and could read the catalog's `looks`; left for step 9.
 
 ### Step 2 — Layout state, and three store fixes the new layout will lean on
 - **Files:** `store.ts` — add `shelfTool`, `outputOpen`, `exportOpen`, `trayOpen`, `trayTab`,
@@ -674,6 +690,14 @@ Anchors are counted with `matchAll` before being trusted.
   windows).
 - **Check:** in the harness, Output → 9:16 then Cmd+Z: the picture goes back to landscape (today it
   stays portrait while the settings say 1920×1080).
+- **DONE 2026-10-02.** As planned, plus a fourth fix a verifier measured: `revealClip` left a
+  selected GAP selected beside the new clip (every add calls it), so a gap, then an add, then Delete
+  closed the gap and kept the clip; it now clears `selectedGap` like `select()` does, with a test
+  that fails on the old code. `ShelfToolId` (the 19 tile ids) and `TrayTab` are exported from the
+  store beside `SourceMode`. Verified in the harness: 9:16 → undo → 16:9 with the settings and the
+  picture following; redo → 9:16; `previewMode` gone; census clean. Noted, not fixed: a shape
+  switch over text, cards, paper or moments makes N+1 history entries (one per repoint), so it
+  takes N+1 undos to come back — a later step can wrap `setAspect`'s repoints in one begin/commit.
 
 ### Step 3 — Theme: light cream base, blue accent, every token defined, the tile primitives
 - **Decided (§7, 2026-10-02):** light cream background with a faint texture; the orange goes; the

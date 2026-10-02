@@ -206,6 +206,36 @@ export type PreviewTool = 'select' | 'crop' | 'mask' | 'key'
 /** Where material comes from. Only `upload` is built; see SourceBar. */
 export type SourceMode = 'upload' | 'youtube' | 'narration'
 
+/**
+ * The Shelf's tiles, in the sketch's order (docs/WINDOW.md §3.2, §6 Step 9).
+ *
+ * `shelfTool` holds one of these while that tool's panel is open, and null
+ * while the Shelf shows its home grid.
+ */
+export type ShelfToolId =
+  | 'upload'
+  | 'url'
+  | 'narration'
+  | 'library'
+  | 'transcript'
+  | 'director'
+  | 'depth-parallax'
+  | 'beat-sync'
+  | 'transitions'
+  | 'one-photo'
+  | 'grid-split'
+  | 'strip-flashes'
+  | 'film-strip'
+  | 'props-3d'
+  | 'text'
+  | 'colour-cards'
+  | 'grade'
+  | 'newspaper'
+  | 'card-ring'
+
+/** The Curve tray's two tabs: the keyframe rows, and the curves. */
+export type TrayTab = 'keys' | 'curves'
+
 /** Everything the YouTube panel holds between opening it and pressing Get. */
 export interface IngestForm {
   url: string
@@ -350,8 +380,6 @@ interface EditorState {
   /** Timeline horizontal scale, in pixels per frame. */
   zoom: number
   aspect: AspectKey
-  /** Preview shows the source frame with the crop outlined, or the final output. */
-  previewMode: 'source' | 'output'
 
   /**
    * What the pointer does on the picture.
@@ -370,6 +398,31 @@ interface EditorState {
   /** Which way material comes in. */
   sourceMode: SourceMode
   setSourceMode: (mode: SourceMode) => void
+
+  /*
+   * The window's layout (docs/WINDOW.md §2, §3.22).
+   *
+   * View state, like `zoom`: what the window shows, not what the project is.
+   * So newProject and loadProject leave all of it alone — opening a file does
+   * not close the panel you were working in — and none of it is saved.
+   */
+  /** The Shelf tool whose panel is open; null is the home grid of tiles. */
+  shelfTool: ShelfToolId | null
+  setShelfTool: (tool: ShelfToolId | null) => void
+  /** The OUTPUT strip in the left column, expanded. */
+  outputOpen: boolean
+  setOutputOpen: (open: boolean) => void
+  /** The EXPORT strip in the left column, expanded. Its listener runs either way. */
+  exportOpen: boolean
+  setExportOpen: (open: boolean) => void
+  /** The Curve tray beside the timeline, open past its rail. */
+  trayOpen: boolean
+  setTrayOpen: (open: boolean) => void
+  trayTab: TrayTab
+  setTrayTab: (tab: TrayTab) => void
+  /** The settings panel under the header's gear. */
+  settingsOpen: boolean
+  setSettingsOpen: (open: boolean) => void
 
   /** What the YouTube panel currently has in it, kept across tab switches. */
   ingest: IngestForm
@@ -899,7 +952,6 @@ interface EditorState {
    */
   revealClip: (clipId: string) => void
   setZoom: (zoom: number) => void
-  setPreviewMode: (mode: 'source' | 'output') => void
 
   setJobs: (jobs: Job[]) => void
   transcribeAsset: (assetId: string) => Promise<void>
@@ -972,7 +1024,6 @@ export const useEditor = create<EditorState>((set, get) => ({
   selectedGap: null,
   zoom: 0.6,
   aspect: '16:9',
-  previewMode: 'source',
   previewTool: 'select',
   setPreviewTool: (previewTool) => set({ previewTool }),
   showThirds: false,
@@ -981,6 +1032,19 @@ export const useEditor = create<EditorState>((set, get) => ({
     set((state) => (guide === 'thirds' ? { showThirds: !state.showThirds } : { showSafe: !state.showSafe })),
   sourceMode: 'upload',
   setSourceMode: (sourceMode) => set({ sourceMode }),
+
+  shelfTool: null,
+  setShelfTool: (shelfTool) => set({ shelfTool }),
+  outputOpen: false,
+  setOutputOpen: (outputOpen) => set({ outputOpen }),
+  exportOpen: false,
+  setExportOpen: (exportOpen) => set({ exportOpen }),
+  trayOpen: false,
+  setTrayOpen: (trayOpen) => set({ trayOpen }),
+  trayTab: 'keys',
+  setTrayTab: (trayTab) => set({ trayTab }),
+  settingsOpen: false,
+  setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
 
   ingest: {
     url: '',
@@ -1088,13 +1152,24 @@ export const useEditor = create<EditorState>((set, get) => ({
     }
   },
 
+  /*
+   * Undo and redo carry the aspect with the project.
+   *
+   * `aspect` is a slice of its own, and every reframe decision in the renderer
+   * reads `ASPECTS[aspect]` rather than `project.settings` — the trap
+   * newProject and loadProject already document. Restoring the project alone
+   * left a 9:16 switch undone with the settings back at 1920x1080 and the
+   * picture still portrait, and the next clip cropped for the wrong shape.
+   */
   undo: () => {
     const { past, project, future } = get()
     if (past.length === 0) return
+    const restored = past[past.length - 1]
     set({
-      project: past[past.length - 1],
+      project: restored,
       past: past.slice(0, -1),
       future: [project, ...future].slice(0, HISTORY_LIMIT),
+      aspect: aspectOf(restored.settings),
       dirty: true
     })
   },
@@ -1102,10 +1177,12 @@ export const useEditor = create<EditorState>((set, get) => ({
   redo: () => {
     const { future, project, past } = get()
     if (future.length === 0) return
+    const restored = future[0]
     set({
-      project: future[0],
+      project: restored,
       future: future.slice(1),
       past: [...past, project].slice(-HISTORY_LIMIT),
+      aspect: aspectOf(restored.settings),
       dirty: true
     })
   },
@@ -4511,7 +4588,12 @@ export const useEditor = create<EditorState>((set, get) => ({
     const { project, playhead } = get()
     const clip = project.clips.find((c) => c.id === clipId)
     if (!clip) return
-    set({ selectedClipId: clipId })
+    // Both halves of the selection: `selectedClipId` alone left the list — the
+    // one the timeline highlights and Delete removes — on whatever was before.
+    // And the gap goes, as in select(): Delete closes a selected gap before it
+    // looks at the clips, so a gap left behind would be what Delete removed
+    // while the new clip sat highlighted.
+    set({ selectedClipIds: [clipId], selectedClipId: clipId, selectedGap: null })
     /*
      * Move the playhead onto it, if it is not already.
      *
@@ -4529,7 +4611,6 @@ export const useEditor = create<EditorState>((set, get) => ({
     if (!clipCoversFrame(clip, playhead)) get().setPlayhead(clip.start)
   },
   setZoom: (zoom) => set({ zoom: Math.max(0.05, Math.min(12, zoom)) }),
-  setPreviewMode: (previewMode) => set({ previewMode }),
   setSplitRatio: (ratio) => {
     // Snap to the ends and the exact middle: a half-and-half compare is the
     // whole point, and hitting 0.500 by hand is fiddly.
@@ -4819,7 +4900,13 @@ export const useEditor = create<EditorState>((set, get) => ({
       decisions,
       dirty: false,
       playhead: 0,
+      // The selection and the marks belong to the project being closed, as in
+      // newProject: ids that are not in the new file, and frames on its timeline.
+      selectedClipIds: [],
       selectedClipId: null,
+      selectedGap: null,
+      rangeIn: null,
+      rangeOut: null,
       /*
        * The aspect comes back with the project.
        *
