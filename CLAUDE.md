@@ -15,7 +15,7 @@ measurements and paper sketches that do not survive a new session.
 
 | file | what it holds |
 |---|---|
-| `docs/SHEETS.md` | the eighteen planning sketches, transcribed, each with build status |
+| `docs/SHEETS.md` | the planning sketches, transcribed, each with build status: the first notebook's eighteen, and the second notebook's eleven (2026-10-02: the new layout, the "sidecar" panel — a name the code must not use, it is the Python helper — the Trimmer, URL chapters, transcript cutting, Narration, Best clips; photos under `docs/sheets/`) |
 | `docs/REFERENCES.md` | the reference recordings, what each was measured at, repo/CI facts |
 | `docs/EFFECTS.md` | ~1,900 lines: every effect, and every ffmpeg finding that cost real time |
 | `docs/WHERE-THINGS-ARE.md` | a map of the UI — read before adding a panel nobody can find |
@@ -23,6 +23,7 @@ measurements and paper sketches that do not survive a new session.
 | `docs/COMPARISON.md` | Forge against CapCut, Premiere, Resolve, Final Cut and the AI ad tools — every confirmed gap with its file:line, and what each runs on |
 | `docs/FIX.md` | the fix list that closed those gaps — Phases A and B, both DONE, each item with what was actually built — then the agreed summary of Phase C and the record of Phase D (folded into C) |
 | `docs/PLAN.md` | **the current plan: Phase C, the ad-maker** — recipes, eyes, the rhythm engine, sound design, the three.js moments engine — step by step with files, schemas, tests, render checks and an exit bar each. Read before building anything in C |
+| `docs/WINDOW.md` | **the current work (from 2026-10-02): the new window** — the "Shelf" of tool tiles on the left (the user says "sidecar"; the code never does), the Trimmer dock that appears on selection, Output and Export strips, the Curve tray on the timeline, the settings panel; every current control's new home with file:line, and the 14-step build plan. Read before touching any renderer component |
 | `docs/BETA.md` | what is left before a beta can go to users — blockers in order, the beta.2 list, the estimate; written 2026-09-27 against the code, to be ticked off as items land |
 | `docs/MARKET.md` | the later part: templates with slots, free packs, then a store — its prerequisites, rights rules, money and risks. Not current work |
 | `docs/STACK.md`, `docs/SIDECAR.md` | architecture and the optional Python capabilities |

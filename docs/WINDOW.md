@@ -1,0 +1,827 @@
+# The new window
+
+> Written 2026-10-02 from the second notebook (docs/SHEETS.md sheets 19–29) and a read of every control in the current UI by five Opus readers and a planner (573 controls, each opened at its file:line against `bd58eb5`). **Status: a plan awaiting the user's answers to §7; nothing in it is built.** Mark each step DONE here as it lands, with its commit, as PLAN.md does.
+
+
+Draft, 2026-10-02. Read-only planning pass. Sources: the eleven photos in
+`docs/sheets/2026-10-02/`, the user's eleven answers (relayed verbatim), the
+transcription in `docs/SHEETS.md` sheets 19–29 (uncommitted in the working
+tree), `docs/WHERE-THINGS-ARE.md`, and five inventories of the current UI.
+Every file:line below was opened and spot-checked against the tree at `bd58eb5`
+plus the uncommitted docs.
+
+The rule this plan is written against is the one `WHERE-THINGS-ARE.md` opens
+with: **a feature that exists but cannot be found is the same as one that does
+not exist.** So every control the app has today gets a home below, or is listed
+under "Decisions the user has to make".
+
+---
+
+## 1. Names
+
+| thing | internal name | what the user sees | why |
+|---|---|---|---|
+| The user's "side car" (left panel: tile home + open tool) | **Shelf** — `components/shelf/Shelf.tsx`, `shelf/tools.ts`, store `shelfTool` | no title on the home; an open tool shows "← Tools · Beat sync" | `sidecar` is the Python helper (`src/main/sidecar/`, `docs/SIDECAR.md`, store `sidecarReady`/`sidecarError`, tooltip "AI sidecar running"). `shelf` appears nowhere in `src/` (grep: 0 files) and only as "off the shelf" in docs. |
+| The small sidebar on the timeline for graphs and keyframes | **Curve tray** — `components/CurveTray.tsx`, store `trayOpen`, `trayTab` | rail label "Keys & curves" | `tray` is unused in `src/` and `docs/`; `rail` is already a rendering-path word (`docs/EFFECTS.md:2565`, `docs/PLAN.md:1141` "another rail"), `drawer` is a Library word, `bar` collides with SourceBar and progress bars. |
+| The bottom-of-shelf area that appears on selection | **Trimmer dock** — `components/TrimmerDock.tsx` | "Trimmer" header, then the clip's controls | the user's own word |
+| OUTPUT / EXPORT | `components/OutputStrip.tsx`, `components/ExportStrip.tsx`; store `outputOpen`, `exportOpen` | OUTPUT ▲ / EXPORT ▲ | store fields deliberately avoid a `strip…` prefix: `stripLayout`, `stripCount`, `stripPerHit`, `stripLook`, `stripBeatsPerHit`, `stripBursts`, `stripsBuilding` already mean Strip flashes |
+| Canvas shape + view switch above the preview | `components/CanvasBar.tsx` | 16:9 Landscape · 9:16 Vertical · 1:1 Square | — |
+| Settings, top right | `components/SettingsPanel.tsx`, store `settingsOpen` | ⚙ with a status dot | replaces the "AI" dot at `App.tsx:84-94` |
+
+And one user-facing rename that follows from the first row: the Python helper's
+on-screen name becomes **"AI helper"** (`App.tsx:86` "AI sidecar running/starting",
+`MediaPool.tsx:236-239` "The AI sidecar is not running"). Otherwise the screen says
+"sidecar" for one thing while the user means another. Code names stay.
+
+`Inspector.tsx` keeps its file name and becomes the clip editor inside the dock.
+That is deliberate: six tests pin per-clip JSX to that path (camera 165-169, steady
+112-115, chromaKey 219-228, audioSurface 780-783), and keeping the path keeps them
+honest without re-pointing. The component's title on screen becomes "Clip".
+
+---
+
+## 2. The new window
+
+```
+┌──────────────────────────────────────────────────────────────── ⚙• ┐  header (drag region; gear is no-drag)
+│ SHELF (left column, full height)  │ [16:9][9:16][1:1]  [Src|Split|Out] ⚠ │  CanvasBar
+│ ┌───────────────────────────────┐ │ ┌──┬────────────────────────────────┐│
+│ │ home: 19 tiles, sketch order  │ │ │T │                                ││
+│ │  — or an open tool's panel    │ │ │o │        Preview (flat)          ││
+│ │  "← Tools · Grid split"       │ │ │o │                                ││
+│ ├───────────────────────────────┤ │ │l │                                ││
+│ │ TRIMMER DOCK (only when a     │ │ └──┴────────────────────────────────┘│
+│ │ clip — or a Library sound —   │ ├──────────────────────────────────────┤
+│ │ is selected): waveform, then  │ │ Transport                       │K │
+│ │ the clip editor (Inspector)   │ │ Timeline (flat)                 │e │ ← Curve tray: a 28 px rail,
+│ ├───────────────────────────────┤ │                                 │y │   closed by default; opens
+│ │ OUTPUT ▲  30 fps · −14 · capt │ │                                 │s │   to ~320 px
+│ │ EXPORT ▲  [Export]  ▬▬▬ 42%   │ │                                 │  │
+│ └───────────────────────────────┘ │                                 │  │
+└────────────────────────────────────┴──────────────────────────────────┘
+```
+
+**Width.** Read as: the Shelf and today's Output space *together* become about
+35–40 % of what the two side panels take today (left 22 % + inspector 21 % =
+43 % of the window, `App.tsx:502, 516`), i.e. about 16–17 % of the window:
+~230 px at the default 1400 px window. Recommended Panel props:
+`defaultSize="17" minSize={240} maxSize="30"` (strings are percent, numbers
+are pixels in react-resizable-panels 4.12.4,
+`node_modules/react-resizable-panels/dist/react-resizable-panels.d.ts:198-201,
+293-295`). 240 px is the floor because the fixed chrome of a `Slider` row is
+116 px (`Slider.tsx:40,50`), a `Keyframes` row ~146 px, the Camera direction
+rows ~160 px, and `ColourCurve` is a 150 px square (`ColourCurve.tsx:26`, which
+moves to the tray anyway). **This reading is Question 1** — the other reading
+(35–40 % of the *window*) gives the preview no more room than today.
+
+**Geometry.** The left column runs full height and the timeline sits under the
+preview only (it does not run under the Shelf). The sketch draws an L (timeline
+under the sidecar, preview down to EXPORT at bottom right), but the user's
+answer moved OUTPUT and EXPORT to the left with the sidecar, and stacking
+four things in a column that is only the top 62 % tall does not fit at the
+680 px minimum window height (`src/main/index.ts:86-87`). **Question 2.**
+
+What the preview gains, at 1400×900: today 60 % − 36 px toolbox ≈ 804 px wide
+(`App.tsx:506-513`, `Toolbox.tsx:208` `w-9`); after, ≈ 1400 − 240 − 36 ≈ 1124 px.
+The timeline also gets wider (≈1160 px against ≈1008 px today), because the
+curve panel's 28 % (`App.tsx:539`) collapses to a 28 px rail.
+
+**Height budget at the minimum window (1100×680).** Header 36 px; the source
+row (`App.tsx:497`) is gone. Left column ≈ 644 px: two collapsed strip headers
+56 px, leaving ≈ 588 px for Shelf + dock. Dock default 55 % ≈ 323 px (waveform
+112 px, `LeftPanel.tsx:137` `h-28`, + ≈ 211 px of clip editor, scrolling). Shelf
+≈ 265 px: the 19 tiles at three per row in a 240 px column are seven rows; the
+home grid scrolls when the dock is open. Shelf and dock share a vertical
+react-resizable-panels Group so the split can be dragged.
+
+**Style.** Neumorphism (soft raised / pressed box-shadows) for the tiles and the
+big buttons only; timeline, waveform, preview stay flat. **Base: a LIGHT cream,
+with a faint paper-like texture** (the user, 2026-10-02, answering §7: "remove
+the orange and make the background light cream like texture") — so the app
+leaves its dark `ink` palette for a light one, which is also where neumorphism
+reads best. **The orange (`flame`) accent goes; the accent is the 3dit blue.**
+Video clips on the timeline wear blue today (`clipKind.ts:59`) and
+`tests/voiceAndKinds.test.ts:142-160` forbids a clip kind wearing the accent, so
+video clips are re-hued in the same step. The pressed state changes colour and
+icon as well as shadow, never shadow alone (user-working-preferences /
+forge-ui-relayout memory). The texture is one small tiled noise image on the
+page background only, never on controls, so it costs nothing to paint. No `transform`, `filter`
+or `backdrop-filter` on any ancestor of the three `fixed inset-0` overlays
+(`Inspector.tsx:631, 1245`, `TextStylePicker.tsx:90`): any of those would become
+their containing block and trap the font picker inside a strip.
+
+---
+
+## 3. Every control's new home
+
+Legend for **how**: *move* = same component, new parent; *restyle* = same
+behaviour, new look or new container; *build* = new code; *drop* = removed (nothing
+is lost by it); *coming-soon* = shown, disabled, labelled.
+
+### 3.1 Header and app shell
+
+| control | today | new home | how | note |
+|---|---|---|---|---|
+| Project name, unsaved dot, path | `App.tsx:64` | unchanged | — | |
+| Build stamp | `App.tsx:78` | unchanged | — | already `no-drag` |
+| "AI" sidecar status dot | `App.tsx:84` | settings panel (dot on the ⚙ gear + "AI helper (Python)" row inside) | move | the gear MUST carry `no-drag` (header is `.drag-region`, `App.tsx:72`, `styles.css:67-72`); the dot today does not |
+| Recovery banner, Recover / Discard | `App.tsx:432` | unchanged | — | |
+| Exit full screen button | `App.tsx:473` | unchanged | — | pinned, `tests/fullScreen.test.ts:58-63` |
+| Escape leaves full screen | `App.tsx:119` | unchanged | — | new overlays must mark their Escape handled |
+| Shortcuts sheet | `App.tsx:466`, `Shortcuts.tsx:82` | unchanged | — | |
+| New Project dialog (name, shape, rate, start) | `App.tsx:485`, `NewProject.tsx:35, 56, 96, 118` | unchanged | — | |
+| Toasts | `App.tsx:33` | unchanged | — | |
+| Keyboard map | `App.tsx:326` | unchanged | — | |
+| Menu router (export, zoomFit…) | `App.tsx:276` | unchanged | — | `export` still lands on the listener, which moves to ExportStrip |
+| Panel layout | `App.tsx:499-544` | rebuilt: left column \| (CanvasBar + Toolbox/Preview) over (Transport/Timeline \| Curve tray) | restyle | |
+| Divider | `App.tsx:21` | unchanged | — | |
+| Source row (Upload / YouTube / Narration) | `App.tsx:497`, `SourceBar.tsx:68` | Shelf tiles Upload / URL / Narration | move | the row goes; its MODES copy goes to the tile registry |
+| Crash screen | `ErrorBoundary.tsx:41` | unchanged, plus one boundary per tool panel inside the Shelf | restyle | today one throw in any of ~19 panels replaces the whole window (`main.tsx:67`) |
+
+### 3.2 Sidecar (Shelf) home
+
+| control | today | new home | how | note |
+|---|---|---|---|---|
+| Left-panel tab strip Media / Library / Transcript / Create | `LeftPanel.tsx:58` (tabs `11-34`) | Shelf home: tile grid | restyle | 19 tiles in the sketch's order (user: "order yes") |
+| Media tab | `LeftPanel.tsx:12` | Shelf tile Upload | move | |
+| Library tab | `LeftPanel.tsx:13` | Shelf tile Library | move | |
+| Transcript tab | `LeftPanel.tsx:24` | Shelf tile Transcript | move | |
+| Create tab ("auto") | `LeftPanel.tsx:33` | Shelf tiles Director … 3D props | move | the three names (Create / Automation / Auto) all go |
+| Automation column header | `Automation.tsx:186` | — | drop | each tool has its own header |
+| Tile busy badges | none | Shelf home | build | from `reelBuilding`, `gridBuilding`, `stripsBuilding`, `directing`, `baking`, `transcribing`, `pendingIngests` — a run started in a tile stays visible from Home |
+
+### 3.3 Upload tile ("Upload and Import are same")
+
+| control | today | new home | how | note |
+|---|---|---|---|---|
+| Upload mode | `SourceBar.tsx:26` | Shelf tile Upload | move | |
+| Add files (orange) | `SourceBar.tsx:91` | Shelf tile Upload — one **Upload** big button | move | merged with Import below |
+| + Import | `MediaPool.tsx:146` | Shelf tile Upload — the same Upload button | move | both call `pickMedia` → `importAssets` |
+| Drop zone + "Drop to import" overlay | `MediaPool.tsx:129`, overlay `261-267` | Shelf tile Upload | move | existing bug: a pool-tile drag raises the overlay (no `isAssetDrag` check, `131-141`) — fix with the grouped view in phase 2 |
+| Offline bar + Relink… | `MediaPool.tsx:160` | Shelf tile Upload | move | |
+| Empty state | `MediaPool.tsx:176` | Shelf tile Upload | move | |
+| Pool tile (drag source) | `MediaPool.tsx:190` | Shelf tile Upload | move | keep `poolPayload` (`21-29`) and `DRAG_MIME` (`shared/dragPayload.ts:10`) |
+| Pool tile double-click → timeline | `MediaPool.tsx:194` | Shelf tile Upload | move | |
+| Thumbnail | `MediaPool.tsx:39` | Shelf tile Upload | move | |
+| Name / kind icon / duration / tooltip | `MediaPool.tsx:208` | Shelf tile Upload | move | |
+| Transcribe progress / cancel chip | `MediaPool.tsx:222` | Shelf tile Upload | move | already a % chip: SHEETS.md sheet 22's "no progress bar" status is wrong |
+| Transcribe button (pool) | `MediaPool.tsx:233` | Shelf tile Upload | move | tooltip → "The AI helper (Python) is not running"; already exists for pool items (sheet 22's status line says it does not) |
+| Pool grouped by kind (images / videos / audio) | none (sheet 03) | Shelf tile Upload | build | phase 2 |
+| Image presets Warm / B&W / Shades | none (sheet 05) | Shelf tile Upload (image rows) | build | phase 2; nearest today: Looks `Inspector.tsx:1124` |
+| Audio row Speed / Voice change | none (sheet 06) | Shelf tile Upload (audio rows) | build / coming-soon | phase 2; see Decision 4 on Voice |
+
+### 3.4 URL tile
+
+| control | today | new home | how | note |
+|---|---|---|---|---|
+| YouTube mode | `SourceBar.tsx:33` | Shelf tile URL | move | label "URL"; store id `'youtube'` (`store.ts:207`) goes with `sourceMode` |
+| Link input | `IngestPanel.tsx:132` | Shelf tile URL | move | |
+| Get | `IngestPanel.tsx:143` | Shelf tile URL | move | |
+| Link-problem message | `IngestPanel.tsx:165` | Shelf tile URL | move | |
+| Video / Audio / Instrumental / Vocal | `IngestPanel.tsx:173` | Shelf tile URL | move | sheet 07's MP4/MP3/Vocal/Instrumental already exist here |
+| Quality 4K/1080p/720p/480p | `IngestPanel.tsx:191` | Shelf tile URL | move | |
+| m4a / mp3 + split note | `IngestPanel.tsx:208` | Shelf tile URL | move | |
+| Just a part of it | `IngestPanel.tsx:236` | Shelf tile URL | move | |
+| From / To fields + length | `IngestPanel.tsx:250, 263, 271` | Shelf tile URL | move | keep `MIN_RANGE_MS` (`36`) for any multi-range UI |
+| Fast cut / Exact cut | `IngestPanel.tsx:276` | Shelf tile URL | move | |
+| "N downloads running — progress is in the panel on the right" | `IngestPanel.tsx:302` | Shelf tile URL | restyle | reword: "progress is under EXPORT, bottom left" (Decision 7) |
+| First-download yt-dlp note | `IngestPanel.tsx:309` | Shelf tile URL | move | |
+| Get metadata, chapters, several ranges, Get transcript | none (sheet 07) | Shelf tile URL | build | phase 2 |
+| Best clips | none (sheet 09) | Shelf tile URL | build | phase 3 |
+
+### 3.5 Narration tile
+
+| control | today | new home | how | note |
+|---|---|---|---|---|
+| Narration mode ("soon") + not-built-yet + soon sentence | `SourceBar.tsx:38`, `84, 100, 107-111` | Shelf tile Narration | coming-soon | reword `SourceBar.tsx:43` "the only part … that needs paid services" — it will not be once keys live in Settings |
+
+### 3.6 Library tile
+
+| control | today | new home | how | note |
+|---|---|---|---|---|
+| Search + count | `Library.tsx:141` | Shelf tile Library | move | |
+| Asset packs button | `Library.tsx:150` | Shelf tile Library | move | keep the auto-open when the catalog is empty (`65-70`, WHERE-THINGS-ARE 42-47) |
+| Rescan | `Library.tsx:159` | Shelf tile Library | move | |
+| Kind chips Fonts/Props/Stickers/Transitions/Titles/SFX | `Library.tsx:168` | Shelf tile Library | move | opens on Fonts (`37`) where nothing can be clicked — Decision 9 |
+| Sticker category chips | `Library.tsx:185` | Shelf tile Library | move | |
+| Embedded PackList | `Library.tsx:231` | Shelf tile Library | move | progress only updates while mounted (`PackList.tsx:31`) |
+| Nothing here / Get {kind} → | `Library.tsx:237` | Shelf tile Library | move | |
+| Font tile | `Library.tsx:357` | Shelf tile Library | move | |
+| SFX row (audition / drag) | `Library.tsx:399` | Shelf tile Library | move | its trimmer is the dock (3.17) |
+| Prop / sticker / title / transition tile | `Library.tsx:427` | Shelf tile Library | move | also reached from Text (titles), 3D props (props), Transitions (transitions) |
+| Infinite-scroll sentinel | `Library.tsx:285` | Shelf tile Library | move | |
+| PackList: Check for newer | `PackList.tsx:41` | Shelf tile Library | move | |
+| PackList: status messages | `PackList.tsx:50` | Shelf tile Library | move | |
+| PackList: Install / Cancel / Remove | `PackList.tsx:139` | Shelf tile Library | move | |
+| PackList: progress bar | `PackList.tsx:159` | Shelf tile Library | move | |
+
+### 3.7 Transcript tile
+
+| control | today | new home | how | note |
+|---|---|---|---|---|
+| Select-a-clip empty state | `TranscriptPanel.tsx:49` | Shelf tile Transcript | move | still bound to the selected timeline clip; asset-keyed transcript is phase 3 |
+| Language · N words | `TranscriptPanel.tsx:63` | Shelf tile Transcript | move | |
+| Edit / Done | `TranscriptPanel.tsx:66` | Shelf tile Transcript | move | |
+| Segment row (seek) | `TranscriptPanel.tsx:99` | Shelf tile Transcript | move | |
+| Editable word | `TranscriptPanel.tsx:166` | Shelf tile Transcript | move | |
+| Word correction input | `TranscriptPanel.tsx:183` | Shelf tile Transcript | move | |
+| No transcript yet | `TranscriptPanel.tsx:121` | Shelf tile Transcript | restyle | its text points at "the caption button in Media" → "in Upload" |
+| Listen for (vocabulary) | `TranscriptPanel.tsx:220` | Shelf tile Transcript | move | |
+| Transcribe / again with these words | `TranscriptPanel.tsx:230` | Shelf tile Transcript | move | |
+| Row selection + Clip it | none (sheet 08) | Shelf tile Transcript | build | phase 3, first of the three |
+
+### 3.8 Director tile
+
+| control | today | new home | how | note |
+|---|---|---|---|---|
+| Director section | `Director.tsx:152`, mounted `Automation.tsx:191` | Shelf tile Director | move | |
+| Product | `Director.tsx:168` | Shelf tile Director | move | |
+| Recipe + intent line | `Director.tsx:180` | Shelf tile Director | move | |
+| More · N set | `Director.tsx:206` | Shelf tile Director | move | |
+| Benefit / Audience / Tone / CTA / Length / Language | `Director.tsx:219, 227, 235, 248, 256, 270` | Shelf tile Director | move | Field label `w-16` (`35`) is fine at 240 px |
+| Your pictures, in order + notes | `Director.tsx:282, 289` | Shelf tile Director | move | the Director's source picker; it cannot leave an item out (phase 2) |
+| Model status row | `Director.tsx:311` | Shelf tile Director | move | stays, so Direct is never pressed blind |
+| Model settings gear | `Director.tsx:326` | Shelf tile Director (opens the settings panel) | restyle | |
+| Direct / Direct again | `Director.tsx:402` | Shelf tile Director | move | |
+| Clear | `Director.tsx:410` | Shelf tile Director | move | |
+| Result box + notes | `Director.tsx:417` | Shelf tile Director | move | |
+| N clips placed | `Director.tsx:448` | Shelf tile Director | move | |
+
+### 3.9 Settings panel (top right)
+
+| control | today | new home | how | note |
+|---|---|---|---|---|
+| Provider Auto / Ollama / LM Studio-or-Hosted | `Director.tsx:334` | settings panel | move | `modelPicker` (`115-149`) moves with it |
+| Ollama Server + Model | `Director.tsx:348` | settings panel | move | |
+| OpenAI-shaped Server + Model | `Director.tsx:361` | settings panel | move | |
+| Key (write-only) + Save + Clear | `Director.tsx:370` | settings panel | move | keep write-only: only `hasKey` is read back (`375`) |
+| Check again | `Director.tsx:395` | settings panel | move | the panel calls `refreshDirector` on open; Director keeps its mount call (`66-68`) |
+| AI helper (Python) status | `App.tsx:84` (`sidecarReady`/`sidecarError`) | settings panel | move | |
+| Hosted voice (base URL, model, voice, key) | settings file only (`src/main/store.ts:25`), no UI | settings panel | coming-soon | phase 3 (Narration): needs a write-only IPC like the Director's |
+| Pexels key | none | settings panel | coming-soon | phase 3 |
+
+### 3.10 Beat sync / Cut to words tile
+
+| control | today | new home | how | note |
+|---|---|---|---|---|
+| Beat-synced reel header + photo count | `Automation.tsx:194` | Shelf tile Beat sync | move | |
+| Music: MusicRange or Add music | `Automation.tsx:207` | Shelf tile Beat sync | move | Add music only imports (`174-182`); placing it is the phase-2 source picker |
+| MusicRange name + readout | `MusicRange.tsx:175` | Shelf tile Beat sync | move | |
+| MusicRange handles | `MusicRange.tsx:194` | Shelf tile Beat sync | move | keep the callback-ref observer (`49-60`) |
+| MusicRange Use all | `MusicRange.tsx:219` | Shelf tile Beat sync | move | |
+| Motion slider | `Automation.tsx:220` | Shelf tile Beat sync | move | also read by One photo (`store.ts:2171`) |
+| Depth parallax checkbox | `Automation.tsx:236` | Shelf tile Beat sync (mirrored in Depth/Parallax) | move | same store field `reelParallax` in both |
+| Cut to the words | `Automation.tsx:256` | Shelf tile Beat sync | move | |
+| Transitions slider | `Automation.tsx:278` | Shelf tile Beat sync | move | also read by One photo |
+| Analyse & build / Rebuild | `Automation.tsx:295` | Shelf tile Beat sync | move | guard copied verbatim: `reelBuilding \|\| gridBuilding \|\| images === 0 \|\| !musicClip` (`297`) |
+| Stop | `Automation.tsx:303` | Shelf tile Beat sync | move | |
+| Clear | `Automation.tsx:311` | Shelf tile Beat sync | move | |
+| Progress block | `Automation.tsx:321` | Shelf tile Beat sync | move | |
+| Orientation mismatch banner + Switch | `Automation.tsx:342` | canvas | move | see 3.15 |
+| Notes (import photos / N placed) | `Automation.tsx:358` | Shelf tile Beat sync | move | |
+
+### 3.11 One photo tile
+
+| control | today | new home | how | note |
+|---|---|---|---|---|
+| Caption textarea | `Automation.tsx:387` | Shelf tile One photo | move | |
+| Build from one photo | `Automation.tsx:400` | Shelf tile One photo | move | guard verbatim (`402`) |
+| Clear | `Automation.tsx:408` | Shelf tile One photo | move | |
+| "Uses the selected photo, or the first one" | `Automation.tsx:418` | Shelf tile One photo | restyle | becomes the "Uses:" line; `buildOnePhotoReel(assetId?)` (`store.ts:528`) already takes an id |
+| Motion + Transitions (shared with Beat sync) | `Automation.tsx:220, 278` | Shelf tile One photo (mirror) | move | One photo reads both and has no control of its own; without a mirror it loses two options |
+| Progress + Stop (shared reel state) | `Automation.tsx:303, 321` | Shelf tile One photo (mirror) | move | shares `reelBuilding`/`reelStage`/`reelCancelled` (`store.ts:2207, 2328`) |
+
+### 3.12 Grid split tile
+
+| control | today | new home | how | note |
+|---|---|---|---|---|
+| Pieces (rows × cols) | `Automation.tsx:441` | Shelf tile Grid split | move | |
+| Square / Circle / Waves | `Automation.tsx:457` | Shelf tile Grid split | move | |
+| Order | `Automation.tsx:474` | Shelf tile Grid split | move | |
+| Landing | `Automation.tsx:489` | Shelf tile Grid split | move | |
+| Cadence | `Automation.tsx:505` | Shelf tile Grid split | move | |
+| Gutter | `Automation.tsx:520` | Shelf tile Grid split | move | |
+| Tilt | `Automation.tsx:536` | Shelf tile Grid split | move | |
+| Build grid | `Automation.tsx:553` | Shelf tile Grid split | move | guard verbatim (`558`); `buildGrid(assetId?)` (`store.ts:697`) |
+| Clear | `Automation.tsx:568` | Shelf tile Grid split | move | |
+| Music vs even cadence note | `Automation.tsx:578` | Shelf tile Grid split | move | |
+
+### 3.13 Strip flashes / Film strip / 3D props tiles
+
+| control | today | new home | how | note |
+|---|---|---|---|---|
+| Strips layout Columns/Bands/Diagonal | `Automation.tsx:602` | Shelf tile Strip flashes | move | |
+| Slices | `Automation.tsx:619` | Shelf tile Strip flashes | move | |
+| At once | `Automation.tsx:635` | Shelf tile Strip flashes | move | |
+| Rate | `Automation.tsx:651` | Shelf tile Strip flashes | move | |
+| Look | `Automation.tsx:666` | Shelf tile Strip flashes | move | |
+| Stutters | `Automation.tsx:682` | Shelf tile Strip flashes | move | |
+| Add flashes | `Automation.tsx:699` | Shelf tile Strip flashes | move | guard verbatim (`701`); its input is a timeline shot, not a pool item |
+| Clear | `Automation.tsx:707` | Shelf tile Strip flashes | move | |
+| "Uses the shot under the playhead" | `Automation.tsx:717` | Shelf tile Strip flashes | restyle | the "Uses:" line |
+| Filmstrip Panels | `Automation.tsx:737` | Shelf tile Film strip | move | |
+| Filmstrip Length | `Automation.tsx:753` | Shelf tile Film strip | move | UI 1–12 s vs store 1–15 s (`store.ts:3535`) — leave as is |
+| Build strip | `Automation.tsx:770` | Shelf tile Film strip | move | |
+| Clear | `Automation.tsx:778` | Shelf tile Film strip | move | |
+| Props On/Off | `Automation.tsx:798` | Shelf tile 3D props | move | |
+| Frequency | `Automation.tsx:815` | Shelf tile 3D props | move | |
+| Place props | `Automation.tsx:832` | Shelf tile 3D props | move | gate is "any transcript" but the rule reads video-track transcripts only (`shared/automation/apply.ts:52-57`) — note, not fixed in phase 1 |
+| Clear | `Automation.tsx:840` | Shelf tile 3D props | move | |
+| Warnings | `Automation.tsx:850` | Shelf tile 3D props | move | |
+| Why these fired | `Automation.tsx:865` | Shelf tile 3D props | move | |
+
+### 3.14 One-click tools: Text, Colour cards, Grade, Newspaper clipping, Card ring, Transitions, Depth/Parallax
+
+| control | today | new home | how | note |
+|---|---|---|---|---|
+| + Text | `LeftPanel.tsx:82` | Shelf tile Text | move | panel: + Text card, "title templates → Library · Titles", count on timeline; its editor is in the dock |
+| + Colour | `LeftPanel.tsx:88` | Shelf tile Colour cards | move | editor (colour + opacity, `Inspector.tsx:1379`) in the dock |
+| + Grade | `LeftPanel.tsx:95` | Shelf tile Grade | move | panel says: Colour, Looks, .cube are in the dock; the tone curve is in the Curve tray |
+| + Newspaper clippings | `LeftPanel.tsx:109` | Shelf tile Newspaper clipping | move | PaperPanel in the dock |
+| + Card ring | `LeftPanel.tsx:116` | Shelf tile Card ring | move | uses the first 12 pool photos (`store.ts:2638-2648`) — said in the "Uses:" line |
+| Transitions (library drawer) | `Library.tsx:168` (kind `transition`, `KINDS 13-20`) | Shelf tile Transitions | move | the tile opens Library on Transitions; Library keeps the chip too |
+| Depth/Parallax tile | none (reel checkbox `Automation.tsx:236`; Camera Depth `CameraPanel.tsx:64`) | Shelf tile Depth/Parallax | build | phase 1: a pointer panel that mirrors the reel toggle and says where Depth lives; "bake this photo" on `bakeParallax` (`store.ts:4683`) is phase 2 — Decision 5 |
+| Text on the picture (Toolbox) | `Toolbox.tsx:149` | canvas (unchanged) | — | |
+
+### 3.15 Canvas
+
+| control | today | new home | how | note |
+|---|---|---|---|---|
+| Aspect 16:9 / 9:16 / 1:1 | `Inspector.tsx:391` | canvas (CanvasBar) | move | 1:1 kept as the third, smaller option — Decision 1 |
+| "Changing this re-solves every clip's reframe" | `Inspector.tsx:409` | canvas (tooltip) | restyle | |
+| Preview Source / Split / Output | `Inspector.tsx:497` | canvas (CanvasBar) | move | view state (`splitRatio`), never the dead `previewMode` |
+| "Drag the divider…" hint | `Inspector.tsx:518` | canvas (tooltip) | restyle | |
+| Orientation mismatch + Switch | `Automation.tsx:342` (computed `148-158`) | canvas (chip beside the shape switch) | move | computed by a pure function so it is testable; serves every photo tool, not just the reel |
+| Select / Reframe / Thirds / Safe / Text / Mask / Blur / Paint | `Toolbox.tsx:114, 122, 133, 141, 149, 173, 184, 195` | canvas (unchanged) | — | |
+| Drop onto the picture | `Preview.tsx:1004, 1953` | canvas (unchanged) | — | |
+| Drop chip Fill / PiP / blurred | `Preview.tsx:2047` | canvas (unchanged) | — | |
+| Reframe rectangle | `Preview.tsx:1986` | canvas (unchanged) | — | reader-flagged misplacement at split 0 (`1327-1337`, `1753-1759`) is pre-existing; check it in the harness at step 4 |
+| Text, transform, mask, key-pick overlays | `Preview.tsx:1991, 2000, 2013, 2023` | canvas (unchanged) | — | |
+| "Not at this moment — go to it" | `Preview.tsx:2076` | canvas (unchanged) | — | |
+| Split divider + labels | `Preview.tsx:2086, 2090` | canvas (unchanged) | — | |
+| No clip under the playhead | `Preview.tsx:2107` | canvas (unchanged) | — | |
+| Empty-canvas text "or open Create and press Direct" | `Preview.tsx:1704`, text `1715` | canvas | restyle | → "or open Director and press Direct" |
+| Live captions | `Preview.tsx:1723` | canvas (unchanged) | — | its font ensure moves to the app shell (3.19) |
+| Playback / mixer loop | `Preview.tsx:1785` | canvas (unchanged) | — | the Preview must never remount on a shape switch |
+
+### 3.16 Output strip
+
+| control | today | new home | how | note |
+|---|---|---|---|---|
+| Frame rate 24/25/30/50/60 | `Inspector.tsx:420` | output strip | move | re-point `tests/frameRate.test.ts:160-161` |
+| Loudness Off / −14 / −16 / −23 | `Inspector.tsx:452` | output strip | move | keep two columns (`454-459`) |
+| Captions On/Off | `Inspector.tsx:540` | output strip | move | |
+| Captions Reset edits | `Inspector.tsx:533` | output strip | move | |
+| Caption presets | `Inspector.tsx:567` | output strip | move | |
+| Caption Style picker | `Inspector.tsx:604` | output strip | move | `captionSample` (`166-180`) moves with it |
+| Caption Animation picker | `Inspector.tsx:609` | output strip | move | |
+| Caption Font + FontPicker overlay | `Inspector.tsx:615, 628` | output strip | move | overlay stays `fixed inset-0`; strip must not use transform |
+| Caption Size / Words | `Inspector.tsx:659, 669` | output strip | move | |
+| Caption Place / Margin | `Inspector.tsx:687, 706` | output strip | move | |
+| Caption Colour (words · spoken) | `Inspector.tsx:719` | output strip | move | |
+| Drawn-captions notice | `Inspector.tsx:741` | output strip | move | |
+| Nothing transcribed yet | `Inspector.tsx:759` | output strip | move | |
+| Collapsed summary ("30 fps · −14 LUFS · captions on") | none | output strip | build | so a closed strip still tells you what the file will be |
+| 3×3 caption style grid | none (sheet 11) | Shelf tile Narration | build | phase 2/3 |
+
+### 3.17 Export strip
+
+| control | today | new home | how | note |
+|---|---|---|---|---|
+| Inspector 'Output' title | `Inspector.tsx:377` | — | drop | the strips have their own headers |
+| Export settings (Size, Codec, Quality, Mbps, Speed, Audio, File) | `Inspector.tsx:767`, `ExportSettings.tsx:82, 101, 124, 146, 170, 189, 203` | export strip | move | check the `grid-cols-4` rows (`124, 170`) at 240 px |
+| Only between the marks | `ExportSettings.tsx:219` | export strip | move | `useRange` state moves with onExport |
+| Export button | `Inspector.tsx:770` | export strip (in the header, visible when collapsed) | move | |
+| + Save current | `Inspector.tsx:793` | export strip | move | |
+| Saved preset rows | `Inspector.tsx:818` | export strip | move | |
+| Preset remove X | `Inspector.tsx:833` | export strip | move | |
+| Exports job list | `Inspector.tsx:1712` | export strip (running job's bar also in the collapsed header) | move | shows downloads too — Decision 7 |
+| onExport flow | `Inspector.tsx:218` | export strip | move | moved verbatim; re-point `tests/exportB2.test.ts:296-341` |
+| File > Export listener | `Inspector.tsx:367` | export strip (component always mounted) | move | collapse hides the body by class, never by unmount |
+
+### 3.18 Trimmer dock (shown only when a clip — or a Library sound — is selected)
+
+| control | today | new home | how | note |
+|---|---|---|---|---|
+| Waveform dock (always on) | `LeftPanel.tsx:137` | trimmer dock | move | the "always visible" comment (`134-136`) goes; shows on selection only |
+| Waveform empty states | `Waveform.tsx:252` | trimmer dock | move | |
+| Audition header / handles / Add at playhead | `Waveform.tsx:264, 284, 305` | trimmer dock | move | dock shows for `audition` too, or the only trim-before-the-timeline is lost; nothing ever calls `setAudition(null)` today — the dock's X and the Library tile closing do |
+| Clip header / source timecode | `Waveform.tsx:324` | trimmer dock | move | |
+| Clip in/out handles | `Waveform.tsx:345` | trimmer dock | move | |
+| Waveform canvas | `Waveform.tsx:121` | trimmer dock | move | |
+| 'Clip' header | `Inspector.tsx:848` | trimmer dock | move | |
+| Name / Start / End | `Inspector.tsx:854` | trimmer dock | move | |
+| Duration slider | `Inspector.tsx:859` | trimmer dock | move | 0.2–15 s only; overlaps the Trimmer later |
+| Source in / Reframe | `Inspector.tsx:874` | trimmer dock | move | |
+| Size / Opacity / X / Y / Rotate | `Inspector.tsx:886` | trimmer dock | move | |
+| Speed panel | `Inspector.tsx:937`; `SpeedPanel.tsx:30, 39, 58, 74, 84, 103` | trimmer dock | move | |
+| Steady | `Inspector.tsx:940`; `SteadyToggle.tsx:19` | trimmer dock | move | stays in `Inspector.tsx` — `tests/steady.test.ts:112-115` |
+| Camera (None/Move/Shake/Depth, rows, Amount, Rate/Settle, Hold, notes) | `Inspector.tsx:943`; `CameraPanel.tsx:64, 78, 95, 115, 128, 145, 165` | trimmer dock | move | stays in `Inspector.tsx` — `tests/camera.test.ts:165-169` |
+| Paper (word, mode, shape, typewriter, looks, pages, customise) | `Inspector.tsx:946`; `PaperPanel.tsx:49, 63, 87, 109, 125, 145, 171` | trimmer dock | move | |
+| Card ring (count, geometry, spin, tilt/roll, facing) | `Inspector.tsx:949`; `CarouselPanel.tsx:25, 32, 74, 88, 105` | trimmer dock | move | |
+| Sound: Mute | `Inspector.tsx:964` | trimmer dock | move | |
+| Sound: Level fader | `Inspector.tsx:983` | trimmer dock | move | |
+| Envelope-overrides-fader note | `Inspector.tsx:998` | trimmer dock | move | stays beside the fader — `tests/audioSurface.test.ts:780-783` |
+| Crossfade with the clip before | `Inspector.tsx:1015` | trimmer dock | move | |
+| Mask (Add, Edit on picture, Remove, Animate, prev/next, shape, mode, sliders) | `Inspector.tsx:1030`; `MaskPanel.tsx:62, 88, 119, 168, 186, 203` | trimmer dock | move | modal with the preview: the dock stays open while a clip is selected |
+| Key (Add, Remove, swatch, Pick, Range/Soften/Despill) | `Inspector.tsx:1033`; `KeyPanel.tsx:30, 53, 90` | trimmer dock | move | order Mask < Key < Colour Reset pinned — `tests/chromaKey.test.ts:219-228` |
+| Colour Reset | `Inspector.tsx:1043` | trimmer dock | move | |
+| Temp / Tint / Bright / Contrast / Saturate | `Inspector.tsx:1057` | trimmer dock | move | plus a "Tone curve…" link that opens the Curve tray on Colour |
+| LUT name + Remove + Intensity | `Inspector.tsx:1098` | trimmer dock | move | |
+| Looks grid (7) | `Inspector.tsx:1124` | trimmer dock | move | list comes from the hoisted loader |
+| or load your own .cube… | `Inspector.tsx:1147` | trimmer dock | move | |
+| Text card textarea | `Inspector.tsx:1166` | trimmer dock | move | |
+| Text layout presets | `Inspector.tsx:1181` | trimmer dock | move | |
+| Text Style picker | `Inspector.tsx:1210` | trimmer dock | move | |
+| Text Animation picker | `Inspector.tsx:1223` | trimmer dock | move | |
+| Text font + FontPicker overlay | `Inspector.tsx:1234, 1244` | trimmer dock | move | |
+| Text position / align | `Inspector.tsx:1261, 1277` | trimmer dock | move | |
+| Text Size / Tracking / Weight / Shadow | `Inspector.tsx:1292` | trimmer dock | move | |
+| Text Colour + CAPS | `Inspector.tsx:1326` | trimmer dock | move | |
+| Text Outline + edge colour | `Inspector.tsx:1354` | trimmer dock | move | |
+| Colour card colour + opacity | `Inspector.tsx:1379` | trimmer dock | move | |
+| Fill with the picture below / put it back | `Inspector.tsx:1414` | trimmer dock | move | |
+| Put behind the subject / put back together | `Inspector.tsx:1431` | trimmer dock | move | the first of the two "built but invisible" features — keep it on screen |
+| Layout (Full frame, Stacked/Side by side, PiP shapes, corners) | `Inspector.tsx:1456`; `LayoutPanel.tsx:73, 85, 102, 115` | trimmer dock | move | |
+| Reset to full frame | `Inspector.tsx:1511` | trimmer dock | move | |
+| No clip selected | `Inspector.tsx:1528` | — | drop | the dock is hidden then |
+| Title text lines | `Inspector.tsx:1532` | trimmer dock | move | |
+| Transition in header + blends-from line | `Inspector.tsx:1554` | trimmer dock | move | the second "built but invisible" feature |
+| Transition 'Select a clip' | `Inspector.tsx:1558` | — | drop | dock hidden |
+| Transition count + library-did-not-load | `Inspector.tsx:1586` | trimmer dock | move | depends on the hoisted `loadTransitions` |
+| Cut + family buttons | `Inspector.tsx:1597` | trimmer dock | move | |
+| Tag filter chips | `Inspector.tsx:1635` | trimmer dock | move | |
+| Transition select | `Inspector.tsx:1661` | trimmer dock | move | |
+| Transition Length | `Inspector.tsx:1683` | trimmer dock | move | |
+| FontPicker (search, rows) | `FontPicker.tsx:69, 106` | trimmer dock + output strip (hosts) | move | |
+| TextStylePicker (Browse, None, tiles, gallery, Hero) | `TextStylePicker.tsx:58, 64, 75, 88, 170, 214` | trimmer dock + output strip (hosts) | move | Hero reads `canvas[data-forge-preview="1"]` (`237`, `Preview.tsx:1983`) — keep exactly one |
+| TextAnimationPicker | `TextAnimationPicker.tsx:125` | trimmer dock + output strip (hosts) | move | |
+| Voice presets (Chipmunk … Radio) | `ClipMenu.tsx:226` | unchanged (right-click) | — | built and exported; Decision 4 |
+| Pool item selected → Trimmer as a source monitor | none (sheets 03, 21) | trimmer dock | build | phase 2 |
+
+### 3.19 Curve tray (timeline sidebar, closed by default)
+
+| control | today | new home | how | note |
+|---|---|---|---|---|
+| CurvePanel slot beside the timeline | `App.tsx:539` | timeline sidebar | restyle | a collapsible Panel: `collapsedSize` 28 px rail, opens to ~320 px |
+| Motion / Colour tabs | `CurvePanel.tsx:61` | timeline sidebar | move | `CurvePanel.tsx` keeps its file and header class `flex h-7 shrink-0` |
+| Property tabs (+ mask tracks) | `CurvePanel.tsx:81` | timeline sidebar | move | |
+| Tone curve | `CurvePanel.tsx:116`; `ColourCurve.tsx:105, 136` | timeline sidebar | move | Decision 3 |
+| Keyframe graph | `CurvePanel.tsx:122`; `CurveEditor.tsx:236, 264, 333` | timeline sidebar | move | |
+| Keyframes rows (diamonds, sliders, key chips, ease, clear) | `Inspector.tsx:1458`; `Keyframes.tsx:44, 74, 95, 125` | timeline sidebar | move | `Keyframes.tsx` keeps its file — `tests/audioSurface.test.ts:762` |
+| Motion path presets | `Inspector.tsx:1476` | timeline sidebar | move | extracted to `MotionPathPanel.tsx` |
+| Add point at playhead / Clear path | `Inspector.tsx:1487` | timeline sidebar | move | |
+| Rail dot "this clip is animated" | none | timeline sidebar | build | the tray never opens by itself |
+
+### 3.20 App shell, no UI (must stay mounted)
+
+| control | today | new home | how | note |
+|---|---|---|---|---|
+| Built-in looks fetch | `Inspector.tsx:113` | app shell (catalog store `looks`, loaded once from `App.tsx`) | move | add `builtInLooks` to the fallback bridge (`main.tsx:12-61`) since it becomes a startup call |
+| Transition library load | `Inspector.tsx:135` | app shell (`App.tsx` effect) | move | Preview wipes (`Preview.tsx:412`) and Timeline labels (`Timeline.tsx:83, 921`) depend on it |
+| Asset catalog load | `Inspector.tsx:182` | app shell (`App.tsx` effect) | move | `ensureFont` marks a family failed for good without it (`catalog.ts:109-114`) |
+| Caption font ensure | `Inspector.tsx:186` | app shell (`App.tsx` effect) | move | the preview's live captions need it whether or not the strip is open |
+
+### 3.21 Timeline, transport, clip menu — unchanged
+
+Transport: start `Transport.tsx:48`, play `51`, end `54`, Loop `60`, Scrub audio `83`,
+split `112`, delete `116`, master meter `126`, timecode `128`, zoom `133`.
+Timeline: legend `Timeline.tsx:498`, mark in/out `516/523`, range `530`, +V/+A `547`,
+eye `591`, mute `606`, solo `621`, record voice-over `640`, VO `675`, track meter `695`,
+remove track `702`, ruler `755`, empty lane/marquee `814`, lane drop `851`, transition
+chip `914`, clip body `971`, right-click `979`, waveform `1017`, envelope `1046`, trim
+handles `1059`, fades `1084`, playhead `1120`, Shift+Z `424`, follow `403`.
+On-clip parts: `VolumeEnvelope.tsx:170`, `FadeHandles.tsx:123`, `ClipWaveform.tsx:26`,
+`Meter.tsx:69`. ClipMenu: clipboard `180`, Speed `195`, Voice `226`, Look `256`,
+split/detach/select `283`, delete/ripple `305`.
+`tests/clipOverlays.test.ts` pins Timeline.tsx class strings and counts
+`cursor-[we]-resize` = 2: **the Curve tray must not be built inside Timeline.tsx.**
+
+### 3.22 Store state touched by the move
+
+| state | today | becomes | note |
+|---|---|---|---|
+| `sourceMode` / `SourceMode` | `store.ts:207, 371-372, 982-983` | replaced by `shelfTool: ShelfToolId \| null` (null = home) | `SourceBar.tsx` was its only reader; the "Only upload is built" comment is stale |
+| `previewMode` / `setPreviewMode` | `store.ts:354, 902, 975, 4532` | dropped | dead: no reader in `src` or `tests` |
+| `aspect` | `store.ts:352, 1288-1289` | unchanged, but undo/redo resync it | `undo`/`redo` (`1091-1111`) restore `project` and not `aspect`; a one-tap canvas switch makes that common |
+| `selectedClipId(s)` | `store.ts:341-342` | unchanged; drives the dock | `revealClip` (`4510-4514`) sets only `selectedClipId`; `loadProject` (`4815`) does not clear `selectedClipIds`/`selectedGap`/marks, `newProject` (`4788-4812`) does |
+| `audition` | `store.ts:435, 1521-1526` | unchanged; also drives the dock | |
+| `exportRequests` | `store.ts:815, 4198` | unchanged | listener moves to ExportStrip |
+| new: `outputOpen`, `exportOpen`, `trayOpen`, `trayTab`, `settingsOpen`, `shelfTool` | — | view state | not reset by newProject/loadProject; no localStorage (none in `src/renderer` today) |
+
+---
+
+## 4. Decisions the user has to make (no home in the sketches)
+
+1. **Square 1:1.** `ASPECTS` has three shapes (`shared/render/aspect.ts:9-13`) and both
+   the Output block (`Inspector.tsx:394`) and New Project (`NewProject.tsx:56`) offer
+   1:1. The sketch's canvas switch shows only 16:9 and 9:16. Recommendation: a third,
+   smaller "1:1" on the canvas switch.
+2. **Preview Source / Split / Output** (`Inspector.tsx:497`) — not drawn anywhere.
+   Recommendation: on the canvas bar beside the shape switch.
+3. **The tone curve** (`CurvePanel.tsx:115-119`) is grading, not keyframes. Recommendation:
+   it stays in the Curve tray's Colour tab (the user asked for "graphs" there) with a
+   "Tone curve…" link in the dock's Colour section.
+4. **Voice change.** Six presets already apply and export (`ClipMenu.tsx:226-254`,
+   `shared/render/voice.ts:49-67`, `setVoice` `store.ts:3897`). Sheet 06 and the user's
+   answer say "coming soon". Recommendation: keep the presets (right-click, and mirror
+   them in the dock's Sound section); show "coming soon" only for the new effect the
+   user means. SHEETS.md sheet 24's status "voice change do not [exist]" should be corrected.
+5. **Depth / Parallax tile content.** No standalone control exists: depth is baked only by
+   the reel's checkbox (`Automation.tsx:236`, `store.ts:2073-2083`) and by One photo
+   (`store.ts:2222`); the Camera panel's Depth appears only once planes exist
+   (`CameraPanel.tsx:64-66`). Recommendation: phase 1 pointer panel; phase 2 a
+   "Bake depth for this photo" button on `bakeParallax` (`store.ts:4683-4714`).
+6. **Orientation mismatch banner** (`Automation.tsx:342-356`) applies to every photo tool,
+   not only the reel. Recommendation: a chip on the canvas bar.
+7. **Download progress.** The Exports list shows downloads too, and IngestPanel points to
+   "the panel on the right" (`IngestPanel.tsx:302-307`). Recommendation: export strip for
+   now, reword; a per-tile download list in the URL tile in phase 2.
+8. **Title templates** (Library 'title' kind) — sheet 02 has a Text tile but no Titles.
+   Recommendation: Library keeps them; the Text tile links to Library · Titles.
+9. **Library opens on Fonts** (`Library.tsx:37`), the one drawer where nothing can be
+   clicked or dragged (`357-397`). As a tile that will read as broken. Recommendation:
+   open on Stickers.
+10. **Transport bar and tool strip** are not drawn on any sheet. Recommendation:
+    unchanged (transport above the timeline, tool strip left of the picture).
+11. **Asset packs** have no tile. Recommendation: stay inside Library (it auto-opens there
+    when the catalog is empty, which an installed build always is at first launch).
+
+---
+
+## 5. What must keep working at every step
+
+**Always mounted** (today they live in the Inspector, which is always mounted):
+the export flow and the File > Export listener (`Inspector.tsx:218-373`); the transition
+load (`135-137`); the catalog load and caption font (`182-188`); the looks list (`113-115`).
+**Never remounted**: the Preview (its rAF loop is the playback clock and the mixer,
+`Preview.tsx:1785-1868`); exactly one `canvas[data-forge-preview="1"]`.
+**Harness hooks**: `window.forgeStore`, `window.forgeCatalog` (`harness/main.tsx:36, 48`),
+`__forgeEvalRelay`, `__forgeEvalCards`, `__forgeEvalMoments` and their progress globals
+(`harness/evalRelay.ts:60, 122, 163, 200-202`), `__forgeMomentCheck`
+(`harness/momentCheck.ts:170`), served by `vite.harness.config.ts` on 5199 with the eval
+relay plugin. None of these reads the DOM; renaming store fields breaks ad-hoc scripts.
+Any new startup `window.forge` call must exist in `harness/bridge.ts` and in the fallback
+bridge (`main.tsx:12-61`).
+
+**Tests that pin the structure, and what happens to each**
+
+| test | pins | phase-1 action |
+|---|---|---|
+| `tests/camera.test.ts:165-169` | CameraPanel line in `Inspector.tsx`, exactly one | none — Inspector.tsx keeps it |
+| `tests/steady.test.ts:112-115` | SteadyToggle line in `Inspector.tsx` | none |
+| `tests/chromaKey.test.ts:219-228` | Mask < Key < Colour Reset order in `Inspector.tsx` | tighten first: assert the `<MaskPanel clip={clip} />` anchor exists (a −1 there passes vacuously) |
+| `tests/audioSurface.test.ts:780-783` | envelope note regex in `Inspector.tsx` | none |
+| `tests/audioSurface.test.ts:754-765, 774-778` | `CurveEditor.tsx`, `Keyframes.tsx` expressions | none — files kept |
+| `tests/audioSurface.test.ts:785-797`, `tests/fullScreen.test.ts:58-63` | App.tsx strings | keep byte-identical through every App.tsx edit |
+| `tests/fullScreen.test.ts:65-70` | Escape shape in ClipMenu, Shortcuts | add `SettingsPanel.tsx` to the list |
+| `tests/frameRate.test.ts:160-161` | `onClick={() => setFrameRate(rate)}` in Inspector.tsx | re-point to `OutputStrip.tsx` |
+| `tests/exportB2.test.ts:296-341` | onExport slice + negatives in Inspector.tsx | re-point to `ExportStrip.tsx`; negatives (`327-334`) pass vacuously otherwise |
+| `tests/keyframeGraph.test.ts:86-99` | CurvePanel header slice from `flex h-7 shrink-0` | tighten first: assert both anchors exist |
+| `tests/maskKeyframes.test.ts:230-247` | CurvePanel / CurveEditor / MaskPanel strings | none — files kept |
+| `tests/clipOverlays.test.ts:29-99` | Timeline.tsx classes and counts | none — Timeline.tsx untouched |
+| `tests/moment.test.ts:604-621` | store.ts `setAspect` (2500-char window), `rebakeGenerated` | do not add code inside those windows; the undo fix sits before them (`1091-1111`) |
+| `tests/tailwindSources.test.ts:39-47` | classes only under `src/renderer` or `@source` | tile registry lives in `src/renderer` |
+| `tests/voiceAndKinds.test.ts:142-160` | no clip kind wears the accent (`flame`) | untouched while the accent stays flame (Q on blue) |
+
+---
+
+## 6. Phase 1 build plan — the layout and the Shelf home
+
+Each step is its own commit and push, and leaves the app working and every control
+reachable. Every step ends the same way:
+
+```
+npm run typecheck
+npm test > "$TMPDIR/test.txt" 2>&1; echo "exit=$?"     # read the file; never pipe into grep
+npm run build
+git commit … && git push                                 # then read CI at github.com/spyki-a/forge/actions (Windows)
+```
+
+and the harness check, in the Browser pane (`preview_start` name `harness`, or
+`npm run harness`; http://localhost:5199):
+
+```js
+// every step
+[typeof forgeStore?.getState, typeof forgeCatalog?.getState, typeof __forgeEvalRelay,
+ typeof __forgeEvalCards, typeof __forgeEvalMoments, typeof __forgeMomentCheck]   // all 'function'
+await __forgeCensus()            // [] — nothing lost (step 0 adds it)
+// + read_console_messages onlyErrors: none; screenshots at 1400×900 and 1100×680
+```
+
+Every new regression test is mutation-checked: put the bug back, watch it fail, restore.
+Anchors are counted with `matchAll` before being trusted.
+
+### Step 0 — Guards and a census before anything moves
+- **Files:** `tests/keyframeGraph.test.ts` (assert `indexOf('flex h-7 shrink-0') > -1` and the
+  comment anchor `> -1` before slicing); `tests/chromaKey.test.ts` (assert the MaskPanel and
+  Colour-Reset anchors exist); new `tests/fixtures/ui-census.json` — one row per control in §3
+  (a unique on-screen label and its home id); new `src/renderer/src/harness/census.ts` installing
+  `window.__forgeCensus()`, which builds a scenario through `forgeStore` (photo, video with sound,
+  text, colour card, adjustment, paper, ring clips; a Library audition), walks each home (today by
+  clicking the tab buttons, since the tab is local state; later by setting `shelfTool`, selection,
+  `outputOpen`/`exportOpen`/`trayOpen`) and returns the labels it could not find in
+  `document.body.innerText`; one install line in `harness/main.tsx`. New `tests/uiCensus.test.ts`:
+  every census label appears in some `src/renderer/**/*.tsx` file (membership, not a snapshot).
+- **Tests:** the two tightened tests; the census test. Mutations: delete `flex h-7 shrink-0` in a
+  scratch copy → keyframeGraph fails; rename "Put behind the subject" in source → census test fails.
+- **Check:** `__forgeCensus()` returns `[]` on today's layout; baseline screenshots and the preview
+  canvas rect (`getBoundingClientRect()` of `canvas[data-forge-preview="1"]`) recorded in the
+  scratchpad for both window sizes and both aspects.
+
+### Step 1 — Hoist the Inspector's startup loads into the app shell
+- **Files:** `src/renderer/src/catalog.ts` (add `looks` + `loadLooks()` calling `builtInLooks` once);
+  `App.tsx` (effects: `loadTransitions()`, catalog `load()`, `loadLooks()`, and `ensureFont` of the
+  resolved caption style); `Inspector.tsx` (drop `113-115`, `135-137`, `182-188`; read `looks` from the
+  catalog); `main.tsx` fallback bridge (`builtInLooks: async () => []`).
+- **Tests:** new `tests/startupLoads.test.ts` (App.tsx contains each loader call; Inspector.tsx no longer
+  contains `window.forge.builtInLooks(`). Mutation: remove `loadTransitions()` from App.tsx → fails.
+  App.tsx pinned strings untouched.
+- **Check:** with the Inspector still mounted nothing visible changes; `forgeCatalog.getState().catalog`
+  is non-null with Library never opened; Looks grid still shows 7 buttons on a selected photo.
+
+### Step 2 — Layout state, and three store fixes the new layout will lean on
+- **Files:** `store.ts` — add `shelfTool`, `outputOpen`, `exportOpen`, `trayOpen`, `trayTab`,
+  `settingsOpen` and setters; delete dead `previewMode`/`setPreviewMode` (`354, 902, 975, 4532`);
+  `revealClip` also sets `selectedClipIds: [clipId]`; `loadProject` also clears `selectedClipIds`,
+  `selectedGap`, `rangeIn`, `rangeOut` (as `newProject` does); `undo`/`redo` also set
+  `aspect: aspectOf(project.settings)`. Keep `sourceMode` until step 9.
+- **Tests:** new `tests/renderer/layoutState.test.ts` (setAspect 9:16 → undo → aspect 16:9 → redo 9:16;
+  revealClip → selectedClipIds equals [id]; loadProject clears the selection). Each mutation-checked.
+  `tests/moment.test.ts:604-621` must still pass (nothing added inside the setAspect/rebakeGenerated
+  windows).
+- **Check:** in the harness, Output → 9:16 then Cmd+Z: the picture goes back to landscape (today it
+  stays portrait while the settings say 1920×1080).
+
+### Step 3 — Theme: light cream base, blue accent, every token defined, the tile primitives
+- **Decided (§7, 2026-10-02):** light cream background with a faint texture; the orange goes; the
+  accent is the 3dit blue; video clips re-hued so no clip kind wears the accent.
+- **Files:** `styles.css` (`@theme`: the `ink` scale becomes a LIGHT scale — the same token names, so
+  the ~149 class sites keep working, with ink-950 the darkest text and ink-50 the cream page; define
+  ink-50/100/300/500/750, which those sites already use and which render today by inheritance; the
+  `flame` tokens are re-pointed at the blue so every `flame-*` site turns blue in one move, then
+  renamed to `accent-*` across `src/renderer` and `src/shared` in the same commit; shadow tokens for
+  raised / pressed on cream; `box-shadow` added to the button transition list `186-191`; a tiled noise
+  `background-image` on `body` only; rewrite the palette comment `15-30`, which records the opposite
+  decision); `src/shared/clipKind.ts:59` video clips to a non-accent hue; new `components/ui/Tile.tsx`
+  (`Tile`, `BigButton`: `aria-pressed`, pressed = colour + icon + inset shadow, no transform/filter);
+  `src/main/index.ts:90` `backgroundColor` to the cream, so the window never flashes dark.
+- **Tests:** new `tests/themeTokens.test.ts` — every `(text|bg|border|…)-(ink|accent)-NNN` used under
+  `src/renderer` and `src/shared` (collected with `matchAll`) has a `--color-…` entry in `@theme`, and
+  no `flame-` class remains. Mutation: delete `--color-ink-300` → fails. `tailwindSources` and
+  `voiceAndKinds` stay green (the latter now against the blue accent).
+- **Check:** before/after screenshots of every panel on the cream; zoom on tertiary text for contrast
+  (text on cream needs ≥ 4.5:1 — measure the three greys); open a FontPicker → it still covers the
+  whole window; the Preview's own black letterbox and the timeline stay flat and readable on cream.
+
+### Step 4 — Canvas bar: shape switch, preview split, orientation chip
+- **Files:** new `components/CanvasBar.tsx` (16:9 Landscape / 9:16 Vertical / 1:1, Source/Split/Output,
+  mismatch chip with its Switch); new pure `src/shared/edit/orientation.ts` (`orientationMismatch(assets,
+  settings)` lifted from `Automation.tsx:148-158`); `App.tsx` (bar above the Toolbox+Preview row, inside
+  the centre Panel); `Inspector.tsx` (remove `391-413`, `497-521`); `Automation.tsx` (remove `342-356`).
+- **Tests:** new `tests/orientation.test.ts` (portrait majority on a landscape canvas → '9:16', and back;
+  no photos → null). Mutation: flip the comparison → fails.
+- **Check:** click 9:16 → the preview's output frame is portrait and the Preview did not remount
+  (playhead and playing state survive); Split shows the divider; three portrait photos in a 16:9 project
+  → chip appears; Cmd+Z restores the shape (step 2); check the Reframe rectangle position at split 0.
+
+### Step 5 — The Curve tray on the timeline
+- **Files:** new `components/CurveTray.tsx` (28 px rail with Keys / Curves buttons and an
+  "animated" dot; expanded: Keys tab = `<Keyframes clip={clip} />` + Motion path, Curves tab =
+  `<CurvePanel />` unchanged); new `components/MotionPathPanel.tsx` (`Inspector.tsx:1460-1509` moved
+  verbatim); `App.tsx` (bottom-row Panel → `collapsible`, `collapsedSize={28}`, `minSize={240}`,
+  `defaultSize={28}`, `panelRef`; `onResize` writes `trayOpen`); `Inspector.tsx` (remove `<Keyframes …>`
+  at `1458` and Motion path).
+- **Tests:** keyframeGraph / maskKeyframes / audioSurface unchanged and green (files kept). New source
+  test: `Inspector.tsx` has 0 matches of `<Keyframes ` and `CurveTray.tsx` has exactly 1 of
+  `<Keyframes clip={clip} />` and 1 of `<CurvePanel`. Mutation: leave Keyframes in both → fails.
+- **Check:** the tray is a rail on load; select a clip, open Keys, key Zoom at the playhead; Curves shows
+  the point; Colour shows the tone curve; drag the tray wider; at 1100×680 four tracks still show.
+
+### Step 6 — Settings panel top right
+- **Files:** new `components/SettingsPanel.tsx` (fixed overlay anchored top right; Escape handler in the
+  pinned shape `if (e.key === 'Escape') { // … \n e.preventDefault() \n onClose()`; Model servers block
+  moved from `Director.tsx:326-399` with `modelPicker` `115-149`; AI helper status row; Hosted voice and
+  Pexels rows disabled "coming with Narration"); `App.tsx` Header (gear replaces `84-94`, `no-drag`, dot
+  from `sidecarReady`/`sidecarError`); `Director.tsx` (status row kept; its gear sets `settingsOpen`);
+  `MediaPool.tsx:236-239` tooltip wording.
+- **Tests:** `tests/fullScreen.test.ts:67` add `SettingsPanel.tsx` to the Escape list (mutation: drop
+  `e.preventDefault()` → fails). New: `Director.tsx` no longer contains `setDirectorProvider`;
+  `SettingsPanel.tsx` reads `hasKey` and never renders an `apiKey` value back.
+- **Check:** gear opens the panel; changing the Ollama URL updates `forgeStore.getState().directorConfig`;
+  Esc closes; the Director tile's status line still resolves (refresh on open). In the real app once
+  (`npm run dev` on the Mac): the gear is clickable inside the drag region.
+
+### Step 7 — OUTPUT and EXPORT strips in the left column
+- **Files:** new `components/OutputStrip.tsx` (`Inspector.tsx:415-764` moved: frame rate, loudness,
+  captions with `captionSample` and the caption FontPicker host); new `components/ExportStrip.tsx`
+  (`Inspector.tsx:189-195, 218-373` onExport and the listener moved verbatim, `767-845`, jobs
+  `1712-1781`; collapsed header = Export button + running job's bar; body hidden by class);
+  `App.tsx` (left column = LeftPanel over the two strips; `<ExportStrip />` rendered unconditionally);
+  `Inspector.tsx` (removed blocks); `IngestPanel.tsx:302-307` wording.
+- **Tests:** `tests/frameRate.test.ts:160` → `OutputStrip.tsx`; `tests/exportB2.test.ts:297` →
+  `ExportStrip.tsx` (every slice and negative), plus `Inspector.tsx` has 0 matches of
+  `const onExport`. New: App.tsx has exactly one `<ExportStrip` and none behind `&&`; ExportStrip.tsx
+  contains `exportRequests`. Mutations: wrap it in `{exportOpen && …}` → fails; point exportB2 back at
+  Inspector.tsx → fails (proves the re-point bites).
+- **Check:** with both strips collapsed, `forgeStore.getState().requestExport()` on a timeline with a clip
+  produces the harness's "cannot export" notice — the listener is alive while collapsed; with an empty
+  timeline, "Add something to the timeline first". Caption Style gallery opens full-window from the strip.
+
+### Step 8 — The Trimmer dock; the right column goes
+- **Files:** new `components/TrimmerDock.tsx` (header with name and X; `<Waveform />`; `<Inspector />`
+  below, one scroller); new pure `src/renderer/src/dock.ts` `dockSubject(project, selectedClipId,
+  audition)` → `'clip' | 'audition' | null` (a stale id resolves to null); `App.tsx` (remove the right
+  Panel `516-518` and its Divider; left Panel `defaultSize="17" minSize={240} maxSize="30"`; inside it a
+  vertical Group LeftPanel | TrimmerDock (only when a subject) over the strips); `LeftPanel.tsx` (remove
+  `134-139`); `Inspector.tsx` (root becomes the clip editor only: Clip, Title text, Transition in);
+  `Library.tsx` (clear `audition` on unmount); the dock's X calls `select(null)` and `setAudition(null)`.
+- **Tests:** camera, steady, chromaKey, audioSurface:781 unchanged and green (still `Inspector.tsx`). New
+  `tests/dock.test.ts` (clip → 'clip'; stale id → null; audition only → 'audition'; both → 'clip').
+  Mutation: drop the audition branch → fails. New source test: App.tsx no longer renders `<Inspector`;
+  TrimmerDock.tsx renders `<Inspector` and `<Waveform` once each; LeftPanel.tsx has no `<Waveform`.
+- **Check:** nothing selected → no dock, the tabs fill the column; select a photo → Camera; a text clip →
+  Text card; a Library SFX → audition with Add at playhead; X closes it; Mask "Edit on picture" works;
+  the text FontPicker covers the window; census `[]`; preview canvas rect at 1400×900 ≥ 1.35× baseline
+  width in 16:9 and taller in 9:16.
+
+### Step 9 — The Shelf frame and the source tiles
+- **Files:** new `components/shelf/Shelf.tsx` (home grid in the sketch's order, `auto-fill` columns; an
+  open tool gets "← Tools · Name" and its own `<ErrorBoundary>`); new `components/shelf/tools.ts` (19
+  entries: id, label, icon, panel, `takesMedia`, `soon`, busy selector); `store.ts` (`shelfTool`
+  replaces `SourceMode`/`sourceMode` `207, 371-372, 982-983`); `App.tsx` (Shelf replaces LeftPanel;
+  `<SourceBar />` at `497` removed); `LeftPanel.tsx` and `SourceBar.tsx` deleted; tiles Upload
+  (`MediaPool` with one Upload button), URL (`IngestPanel`), Narration (coming-soon text reworded),
+  Library (`Library`, opening on Stickers if Decision 9 agrees), Transcript (`TranscriptPanel`, empty-text
+  reword).
+- **Tests:** new `tests/shelfRegistry.test.ts` — the registry contains each of the 19 ids (membership)
+  and in the sketch's order. Mutation: drop 'card-ring' → fails. tailwindSources green.
+- **Check:** 19 tiles at 240 px, three per row, screenshot; each source tile opens without the boundary;
+  Upload uses the harness's synthetic `pickMedia`; Back returns home; census `[]`.
+
+### Step 10 — Automation becomes one panel per tool
+- **Files:** new `components/tools/BeatSync.tsx` (`Automation.tsx:193-368`), `OnePhoto.tsx` (`370-422`
+  + mirrored Motion/Transitions sliders and progress/Stop), `GridSplit.tsx` (`424-583`), `StripFlashes.tsx`
+  (`585-722`), `FilmStrip.tsx` (`724-790`), `Props3d.tsx` (`792-878`), `tools/shared.ts` (`useMusicClip`
+  from `131-138`, bake message `162-163`); Director tile mounts `Director`; `Automation.tsx` deleted;
+  `Preview.tsx:1715` text → "or open Director and press Direct".
+- **Tests:** new `tests/toolInterlocks.test.ts` — each tool file's build button keeps its guard
+  (`reelBuilding || gridBuilding` in BeatSync and OnePhoto, `gridBuilding || reelBuilding` in GridSplit,
+  `stripsBuilding || reelBuilding || gridBuilding` in StripFlashes). Mutation each: drop one flag → fails.
+- **Check:** each tile opens; build a grid on a harness photo; start a reel, go Home, the Beat sync tile
+  shows busy; One photo shows the same Motion value as Beat sync; census `[]`.
+
+### Step 11 — One-click tools and pointer panels
+- **Files:** `components/tools/Text.tsx`, `ColourCards.tsx`, `Grade.tsx`, `Newspaper.tsx`, `CardRing.tsx`
+  (each: its Add big button from `LeftPanel.tsx:82-122`, one line on what it makes, "N on the timeline"
+  with click-to-select, "edit it in the dock"); `Transitions.tsx` (Library on Transitions + note on
+  Transition in); `DepthParallax.tsx` (mirrors `reelParallax`, says where Camera → Depth lives); tile
+  busy badges in `Shelf.tsx`; `Library.tsx` takes an optional initial kind.
+- **Tests:** census rows for the five Add labels now route to their tiles; registry test unchanged.
+- **Check:** each Add lands a clip under the playhead and opens the dock on it; Card ring with no photos
+  shows its notice; census `[]`.
+
+### Step 12 — "Uses:" — the first half of the common source picker
+- **Files:** new `components/tools/SourceLine.tsx` — every media tool's panel starts with **Upload a
+  file** (`pickMedia` → `importAssets`) and what the tool will use. Where the store already takes an id
+  (`buildOnePhotoReel(assetId?)` `store.ts:528`, `buildGrid(assetId?)` `store.ts:697`) a **Choose from
+  media** list sets it; elsewhere the rule is stated read-only (Beat sync / Filmstrip: "all N photos";
+  Card ring: "the first 12 photos"; Strip flashes: "the shot under the playhead"; Director: "your
+  pictures below"; music: "<song> on A1 — or Add music"). Placing chosen music, `assetIds` for the reel
+  and filmstrip, and pool-item selection are phase 2.
+- **Tests:** new store test: `buildGrid('b')` uses asset b even with another photo selected
+  (`tests/renderer/`), mutation-checked by ignoring the argument.
+- **Check:** with two photos, choose the second in One photo → the reel is built from it.
+
+### Step 13 — The map, the sheets, and a last census
+- **Files:** `docs/WHERE-THINGS-ARE.md` rewritten for the new window (it is already stale: "four tabs"
+  then five, a "Text" tab, "Auto"; "no copy/paste/multi-select/fades" at 370 — all exist);
+  `docs/SHEETS.md` statuses for sheets 19–20 and corrections to 22 (pool Transcribe and its % chip exist)
+  and 24 (voice presets exist); the store comment "Only upload is built".
+- **Check:** full census `[]`; screenshots at 1400×900 and 1100×680, 16:9 and 9:16, sent to the user.
+
+---
+
+## 7. Questions for the user — answered 2026-10-02
+
+1. **Width — the §2 reading.** The Shelf + Output together take about 35–40 % of what the two
+   side panels take today (≈ 240 px on a 1400 px window); the preview gains about 40 %.
+2. **Frame — the §2 diagram.** The left column runs full height; the timeline sits under the
+   preview only.
+3. **Voice change — keep the six presets**; "coming soon" marks only a new effect.
+4. **Square 1:1 — kept**, as the third, smaller option on the canvas switch.
+5. **Accent and base — "remove the orange and make the background light cream like texture."**
+   A light theme on cream with a faint texture; the 3dit blue is the accent; video clips re-hued.
+   Step 3 carries it.
+6. **Library — opens on Stickers for now.** Later, its families become their own tiles or
+   sections: stickers, transitions, effects, cards, 3D props (the user's list) — order (2) or (3),
+   to be drawn.
+7. **Source picker — the "Uses:" line plus Choose-from-media for One photo and Grid split** is
+   order (1); music placement and several photos are order (2).
+8. **Burned-in captions stay in OUTPUT**, separate from Narration's grid.
+
+Unasked and taken as the plan's recommendation: the paper, ring, text and colour-card editors
+live in the dock only (one home); the Python helper is "AI helper" on screen; the tone curve
+stays in the Curve tray's Colour tab; the orientation chip goes on the canvas bar; download
+progress shows under EXPORT for now; title templates stay in Library with a link from Text;
+asset packs stay inside Library; transport and tool strip unchanged.

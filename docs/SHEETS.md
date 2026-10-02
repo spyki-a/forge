@@ -1,14 +1,18 @@
-# The notebook — 17 sheets
+# The notebooks — 18 sheets, then 11 more
 
-A transcription of the seventeen hand-drawn planning sheets, kept here so the
-plan survives independently of any one conversation.
+A transcription of the hand-drawn planning sheets, kept here so the plan
+survives independently of any one conversation. The first notebook (sheets 1 to
+18, September 2026) planned the editor that exists; the second (sheets 19 to 29,
+drawn 2026-10-02 while looking at the running harness) plans the new layout and
+the next tools. The second part begins at "The second notebook" below.
 
-**This is a transcription, not the images.** The drawings themselves live in the
-notebook and in the photographs; what follows is what is written and drawn on
-each, close enough to work from. Where a phrase is the author's own it is
-quoted. If a sheet needs to be looked at again — a layout judgement, something
-ambiguous in a sketch — the photograph has to be re-sent; this file cannot
-substitute for that.
+**This is a transcription, not the images.** For the first notebook the
+drawings live only in the notebook and in the photographs; what follows is what
+is written and drawn on each, close enough to work from. Where a phrase is the
+author's own it is quoted. If one of those sheets needs to be looked at again —
+a layout judgement, something ambiguous in a sketch — the photograph has to be
+re-sent. The second notebook's photographs ARE kept, under
+`docs/sheets/2026-10-02/`, one JPEG per sheet, so those can be opened.
 
 Sheets are listed in the order they were photographed. Several carry their own
 circled number in the notebook, which is given where it exists; some are
@@ -464,3 +468,295 @@ fires props is built and tested — and **no prop pack ships**. Sheet ④'s "3D
 Props" is therefore a hole in the ASSETS, not in the code, which is a very
 different size of job from how it reads. The sticker pipeline
 (`scripts/build-stickers.mjs`) is the shape the answer would take.
+
+---
+---
+
+# The second notebook — 2026-10-02 — 11 sheets
+
+Drawn over four days with the harness (`npm run harness`, port 5199) open
+beside the notebook, so every page is a change to a screen that exists rather
+than a screen imagined. Photographed and kept under `docs/sheets/2026-10-02/`
+as `01-layout.jpg` … `11-caption-styles.jpg`; the numbers below are the file
+numbers. The author's answers to the questions the transcription raised (same
+day, in conversation) are folded into each sheet as **Decided**.
+
+The visual style for all of it: **neumorphism** — "Soft Extrusion & Tactile
+Controls" — for the tiles and the big buttons; the timeline, waveform and
+preview stay flat and high-contrast. Base colour a grey-blue, "dark grey blue
+… make it a little light"; the 3dit icon's blue as the single accent.
+
+**A naming note for the code.** The author calls the left panel the "side car".
+In this codebase `sidecar` already means the Python helper process
+(`src/main/sidecar/`, `docs/SIDECAR.md`), so the panel needs another internal
+name; the conversation uses the author's word, the code must not.
+
+**Agreed order.** (1) The layout and the panel's home screen — moving what
+exists, building nothing new. (2) The small additions: the Trimmer, chapters,
+the pool grouped by kind, the caption grid, the image presets. (3) The three
+real features: cutting from the transcript, Narration's script, Best clips.
+Sheets 25, 27 and 28 each say "biggest" and the author agrees they come last,
+with more to be drawn for them ("we will discuss it when the time comes after
+all the small things are done").
+
+---
+
+## 19 — 01 · The new window
+
+Top right: "Settings → ⚙". Four regions:
+
+- **Sidecar** — the whole left column, tall.
+- **Canvas / Preview** — top right, with two arrows: "16:9 ↔ Landscape" and
+  "9:16 ↕ Vertical". The canvas itself switches shape.
+- **OUTPUT** — a short strip at the bottom of the sidecar's column, with a
+  collapse triangle.
+- **Play head / Timeline** — the bottom, under sidecar and output.
+- **EXPORT** — bottom right under the canvas, with a collapse triangle.
+
+There is no right-hand inspector.
+
+**Decided.** The sidecar and today's Output space together take "about 35 or
+40 % of current", both on the LEFT, stacked. The full-height inspector goes.
+Its per-clip controls go to the Trimmer dock (sheet 21), which shows only when a
+clip is selected. "For the graph and keyframes we will add a small side bar on
+the timeline only, the user uses it when needed" — so curves and keyframes live
+in a sidebar of the timeline that is closed by default. The point of all of it:
+"bigger room to edit for both landscape and vertical".
+
+**Status — not started.** Today the window is four areas with a full-height
+inspector on the right (`docs/WHERE-THINGS-ARE.md`); the aspect ratio is chosen
+in the inspector's Output block, not on the canvas. Everything on this sheet is
+a move of things that exist.
+
+---
+
+## 20 — 02 · The sidecar's home: tiles
+
+A grid of rounded tiles, "small tiles, switches kind of", one per tool:
+
+| row | tiles |
+|---|---|
+| 1 | **Upload** · **URL** · **Narration** · **Library** |
+| 2 | **Transcript** · **Director** · **Depth / Parallax** · **Beat Sync / Cut to words** |
+| 3 | **Transitions** · **One photo** · **Grid Split** · **Strip flashes** |
+| 4 | **Film strip** · **3D props** · **Text** · **Color Cards** |
+| 5 | **Grade** · **Newspaper Clipping** · **Card ring** |
+
+Across the bottom, a wide dock: **Trimmer**.
+
+**Decided.** Every tool that exists keeps its own panel inside its tile — "film
+strip has its own, one photo shot has its own, flashes has its own, everything
+goes inside of it". And the common first step of every tool that takes media:
+**upload a file, or choose from the media** — "that way we can differentiate
+user needs while choosing some options like music sync or the Director's, all
+of them the same".
+
+**Status — not started as a home; every tile's tool exists.** Upload, URL and
+Narration are the source bar's three modes (`SourceBar.tsx`; Narration is still
+"soon", sheet 4). Library and Transcript are left-panel tabs. Director, Beat
+sync (the reel) and Cut to words (the lyric cut), One photo, Grid split, Strip
+flashes, Film strip, 3D props (the keyword rule; no prop pack ships), Newspaper
+clipping (the paper panel) and Card ring (the carousel) are the Auto tab. Text,
+Colour cards and Grade are the three buttons above the media grid. Depth /
+Parallax is today a toggle on a selected clip. Transitions are a library
+section. Twenty tiles want grouping on screen — by what they do, or by what
+they take — which the sheet leaves to the build.
+
+---
+
+## 21 — 03 · Upload: the pool by kind, and the Trimmer
+
+Top row: **Upload ▽ · [choose file] · upload ⇧**. Note top right, starred:
+"**Upload and Import are same**."
+
+Under it, **Preview**, in three groups:
+
+1. "if Images" — a grid of thumbnails, each with a small bar beneath.
+2. "if Videos" — wide tiles.
+3. "if audio" — a tile with a waveform.
+
+Across the bottom: "**Trimmer**: will work to trim anything before playhead
+trim (videos, audio)".
+
+**Decided.** The Trimmer appears only when a clip or pool item is selected,
+never as a permanent dock. It trims a clip BEFORE it reaches the timeline — the
+source monitor every other editor has (COMPARISON.md: "in / out points, range
+✗") — and, once the inspector goes, it is also where the per-clip controls
+live.
+
+**Status — pool exists, grouping and Trimmer do not.** The Media tab is one
+thumbnail grid of every kind (`MediaPool.tsx`); import is the source bar's
+Upload. The reel's music-range picker (`MusicRange.tsx`) is the nearest thing to
+a trimmer and would fold into it.
+
+---
+
+## 22 — 04 · Videos in the pool: preview and transcribe
+
+"Upload → preview → if videos". Each video is a **small preview** with a Play
+triangle (①, ②, ③ … "same"). Beside each: **Transcribe (faster-whisper)** with a
+hatched **progress bar — 100 %**.
+
+**Decided.** "For this we will install Python then I guess" — transcription
+needs the sidecar, so the installed app will set Python up rather than hope it
+is there (the full route of BETA.md R4). Until then the button has to say
+"Python is not installed" rather than spin.
+
+**Status — closer than it looks.** A pool item already has a Transcribe button
+and a percent chip while it runs (`MediaPool.tsx`, the chip is also the cancel);
+the Transcript tab reads the selected timeline clip. What the sheet adds is the
+small Play preview per video and a bar rather than a chip. The sidecar runs
+faster-whisper.
+
+---
+
+## 23 — 05 · Images in the pool: effects
+
+"Upload → preview → if images". Three stacked image tiles (①②③). To the right:
+**effects** — **Warm · Black & white · Shades** — "same" for each.
+
+**Decided.** Keep as drawn: three preset chips per image.
+
+**Status — not started.** Grades today are an adjustment layer (`+ Grade`) or a
+clip's own colour values. The presets should become ordinary per-clip colour
+values when the clip is made, so they stay editable and do not stack on the
+Director's look.
+
+---
+
+## 24 — 06 · Audio in the pool: trim, speed, voice
+
+"Upload → preview → if audio". Three waveform tiles, each with **trim handles
+at both ends** (①②③). To the right: **effects** — **Speed**, **Voice change**,
+**Voice change effect**.
+
+**Decided.** The handles are the Trimmer (sheet 21). **Speed stays** — "we
+already have it". **Voice change is "coming soon"**: shown, disabled, built
+later; the filter for it must first be measured on the 2018 Windows ffmpeg.
+
+**Status — speed exists (`SpeedPanel.tsx`, the atempo chain in the render), and
+so do six voice presets** — Chipmunk, Bright, Deep, Monster, Phone call, Radio
+(`shared/render/voice.ts`, in the clip's right-click menu, rendered and
+exported). What "coming soon" covers is a NEW voice effect beyond those; the
+presets stay. Trim handles on a pool item do not exist.
+
+---
+
+## 25 — 07 · The URL panel
+
+Top: **URL → [field] · Get Meta data**. Then **Preview** "if youtube".
+
+A long bar with marks: "**Chapter downloads** ① ② ③ ④ ⑤ ⑥".
+
+A second bar with bracket pairs and arrows: "**Clip downloads** ① ← ② → ← ③ →"
+— several in/out ranges in one job.
+
+Buttons below: **Get transcript ▽ · Best clips · MP4 · Instrumental · Vocal ·
+MP3**.
+
+**Decided.** "URL panel is the biggest one, yes, because it has best clips —
+it's a whole different concept." Best clips (sheet 27) comes in order (3);
+chapters, several ranges and Get transcript are small additions in order (2).
+
+**Status — half built.** YouTube ingest exists (`IngestPanel.tsx`,
+`docs/INGEST.md`): quality, MP4 / m4a / MP3, instrumental and vocal inside the
+job, and ONE range before download (sheet 12). Chapters, several ranges, a
+transcript from the link and Best clips are not built. Chapters are in the
+downloader's own metadata, and YouTube's timed captions can be fetched without
+transcribing, so neither needs a model.
+
+---
+
+## 26 — 08 · Transcript to clip
+
+Top: **Get transcript ▽ · URL transcript**. A panel of rows — **"time"** |
+**text** — "00 | …", "… | …". Beside it a vertical bracket: **cut ↕**, and a
+button **clip it**.
+
+Select a run of rows; Clip it cuts the download, or the clip, to those words.
+
+**Decided.** "That's the most important feature, we can say — we are already
+cutting the download size, and now with this it can be more powerful than
+blindly cutting from the duration bar." Order (3), but first among the three.
+
+**Status — not started.** The Transcript tab jumps to a word and corrects
+words (`TranscriptPanel.tsx`); it never cuts. The word timings exist, so this
+is a selection and one cut.
+
+---
+
+## 27 — 09 · Best clips
+
+**Best Clip** · **duration: 1 min, 2 min, 3 min, 4 min** · **Analyse**. Three
+tall (9:16) cards side by side, each with a few lines of text beneath.
+
+**Decided.** The largest single item. More to come when it is reached: "add 3D
+toggle, B-roll images (its own settings again — number of images, how they
+appear, top or bottom, the shapes we already have for the B-roll effects),
+transitions — we will discuss it when the time comes after all the small things
+are done."
+
+**Status — not started.** It needs a transcript (have), a model pass to score
+segments (the Director's model plumbing, `shared/director/ask.ts`, serves), and
+a 9:16 reframe that follows the speaker (new; the sidecar's subject box is a
+start). Depends on a local model being set up, as the Director does.
+
+---
+
+## 28 — 10 · Narration
+
+**Narration :—** · **topic : [field]** · **Images / videos count: 1, 2, 3, 4, 5,
+custom** · **choose voice: male / female ▽** with a list (①②③) · **Genre :—
+Energetic, Comedy, Facts** · **transitions :— Beat Sync** · **Music upload**
+→ **upload mp3 ⇧** and a waveform with a playhead · **Duration: 1 min, 2 min, 3
+min** · **Captions: Add +** (→ sheet 29).
+
+**Decided.** "Narration is also the biggest part, because we need to integrate
+the Pexels images API in the settings panel — and all the API integrations in
+the settings panel at the top right, in the place of AI." So: one settings
+panel, top right, holds every key and server — the model servers (today the
+Director's gear), the hosted voice, Pexels. Order (3).
+
+**Status — not started, pieces exist.** Sheet 4 is this sheet's first draft
+and still reads "soon" in `SourceBar.tsx`. The voice provider exists
+(`src/main/voice.ts`: Kokoro through the sidecar, or a hosted endpoint with a
+write-only key); the Director does pictures + music + brief; caption styles
+exist. Missing: the script writer (topic + genre → narration), the Pexels
+fetch, and the settings panel.
+
+---
+
+## 29 — 11 · Caption styles
+
+**Captions · styles, fonts**. A **3 × 3 grid** of style cards. Below: **Create
+video** and a **progress bar**.
+
+**Decided.** This is Narration's last step ("Add +" on sheet 28): pick a caption
+look, then Create video.
+
+**Status — the looks exist, the grid does not.** Caption styles are a dropdown
+in the inspector's Output block and a style picker (`TextStylePicker.tsx`,
+sheet 9). A visual grid is a presentation change over them.
+
+---
+
+## Where this leaves things
+
+**Order (1) is a move, not a build**: every tile's tool exists; the work is a
+new frame (sheet 19), a home screen (sheet 20), the per-clip controls into a
+dock that appears on selection, curves and keyframes into a timeline sidebar,
+Output and Export into two collapsible strips, and the Director's gear into a
+settings panel. Nothing the app can do today may be lost in the move —
+`WHERE-THINGS-ARE.md` exists because it happened twice.
+
+**Order (2)** is five small things, each hours to a day: the Trimmer, chapters
+and several ranges, the pool by kind, the caption grid, the three image presets.
+
+**Order (3)** is three features that each need their own sheets: transcript
+cutting first, then Narration (script, Pexels, settings panel), then Best clips
+(with the B-roll, 3D and transition settings still to be drawn).
+
+**Python.** Transcribe-from-the-pool, Narration's voice, depth and beats all
+need the sidecar, so the installed app sets Python up itself (R4's full route)
+rather than the TypeScript beat tracker alone; the beta plan's R4 changes
+accordingly when it is reached.
