@@ -605,29 +605,51 @@ and the harness check, in the Browser pane (`preview_start` name `harness`, or
 // every step
 [typeof forgeStore?.getState, typeof forgeCatalog?.getState, typeof __forgeEvalRelay,
  typeof __forgeEvalCards, typeof __forgeEvalMoments, typeof __forgeMomentCheck]   // all 'function'
-await __forgeCensus()            // [] — nothing lost (step 0 adds it)
+(await __forgeCensus()).missing  // [] — nothing lost (step 0 adds it; ~30 s, fronted tab only)
 // + read_console_messages onlyErrors: none; screenshots at 1400×900 and 1100×680
 ```
 
 Every new regression test is mutation-checked: put the bug back, watch it fail, restore.
 Anchors are counted with `matchAll` before being trusted.
 
-### Step 0 — Guards and a census before anything moves
-- **Files:** `tests/keyframeGraph.test.ts` (assert `indexOf('flex h-7 shrink-0') > -1` and the
-  comment anchor `> -1` before slicing); `tests/chromaKey.test.ts` (assert the MaskPanel and
-  Colour-Reset anchors exist); new `tests/fixtures/ui-census.json` — one row per control in §3
-  (a unique on-screen label and its home id); new `src/renderer/src/harness/census.ts` installing
-  `window.__forgeCensus()`, which builds a scenario through `forgeStore` (photo, video with sound,
-  text, colour card, adjustment, paper, ring clips; a Library audition), walks each home (today by
-  clicking the tab buttons, since the tab is local state; later by setting `shelfTool`, selection,
-  `outputOpen`/`exportOpen`/`trayOpen`) and returns the labels it could not find in
-  `document.body.innerText`; one install line in `harness/main.tsx`. New `tests/uiCensus.test.ts`:
-  every census label appears in some `src/renderer/**/*.tsx` file (membership, not a snapshot).
-- **Tests:** the two tightened tests; the census test. Mutations: delete `flex h-7 shrink-0` in a
-  scratch copy → keyframeGraph fails; rename "Put behind the subject" in source → census test fails.
-- **Check:** `__forgeCensus()` returns `[]` on today's layout; baseline screenshots and the preview
-  canvas rect (`getBoundingClientRect()` of `canvas[data-forge-preview="1"]`) recorded in the
-  scratchpad for both window sizes and both aspects.
+### Step 0 — Guards and a census before anything moves · DONE 2026-10-02
+- **Files:** `tests/keyframeGraph.test.ts` (both slice anchors asserted `> -1` first; the old
+  test passed on an empty slice) and `tests/chromaKey.test.ts` (the MaskPanel, KeyPanel, Colour
+  Reset, key and white-balance anchors asserted; `graphOf` asserts exactly one `-filter_complex`
+  — without it the negatives matched `args[0]`); new `tests/fixtures/ui-census.json` — 592 rows,
+  one per control: `label`, `match` (text / title / aria-label / placeholder), `home`, `needs`
+  (87 states, each a recipe), `file:line`, `newHome`, and where a label is the static half of a
+  longer text `part: true`, where several controls share it a measured `count`; new
+  `src/renderer/src/harness/census.ts` installing `window.__forgeCensus()`; harness `bridge.ts`
+  keeps the menu and full-screen listeners and adds `window.forgeMenu(cmd)` /
+  `window.forgeFullScreen(on)` so File › New and Exit full screen are reachable; new
+  `tests/uiCensus.test.ts`.
+- **How the census counts** (the first version searched `innerText` for a substring, and a
+  verifier hid fifty controls one at a time without it noticing — "Key" was found in "Keyframes",
+  "Direct" in "Director"): for every `needs` it starts from a fresh project, builds that state
+  through the store, opens the home, and counts carriers INSIDE the home's own elements — a text
+  node whose whole text is the label, or an attribute whose whole value is. What is counted is how
+  many carriers the state ADDS over an empty project, and it must equal `count`: fewer is
+  `missing`, more is `ambiguous` (something else wears the label, so the control could go
+  unnoticed). A scenario that cannot be built THROWS; so does a layout the home finders do not
+  recognise. The result is `{ missing, ambiguous, checked, skipped, ms, scenario }`; ~30 s,
+  fronted tab only. Rows the harness cannot show (the recovery banner, the crash screen, two
+  canvas texts) carry `harnessOnly: false` and are pinned to their file by the node test instead.
+- **The node test** matches labels against string literals, template pieces and JSX text from a
+  TypeScript parse (entities decoded), never comments or identifiers; whole literal, or a
+  word-bounded part when the row says so. It cannot tell two literals with the same words apart
+  (121 rows such as Cut, Clear, Key survive deleting one site); the harness census is the guard
+  for those.
+- **Mutations done:** header class → keyframeGraph fails (the old test passed); each chromaKey
+  anchor broken in turn → fails; `-filter_complex` renamed → the unkeyed-clip negative fails (the
+  old one passed); "Put behind the subject" renamed → uiCensus fails and the harness census
+  reports it absent; three more labels from three areas; an empty, a short, a duplicate and an
+  unknown-needs row each trip their own rule; in the harness: hiding controls by CSS, a no-op
+  menu, a missing drag region, unscoped roots — each reported.
+- **Check:** `(await __forgeCensus()).missing` is `[]` on today's layout (584 checked, 8
+  skipped); baseline rects of `canvas[data-forge-preview="1"]` and screenshots at 1400×900 and
+  1100×680, 16:9 and 9:16, in the scratchpad (`step0-baseline.json`): at 1400×900 the canvas is
+  778×512 px, the 16:9 frame 778×438, the 9:16 frame 288×512 — the numbers step 8 must beat.
 
 ### Step 1 — Hoist the Inspector's startup loads into the app shell
 - **Files:** `src/renderer/src/catalog.ts` (add `looks` + `loadLooks()` calling `builtInLooks` once);

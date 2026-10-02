@@ -293,6 +293,29 @@ const harnessDirector = {
   openai: { baseUrl: 'http://127.0.0.1:1234/v1', model: '', hasKey: false }
 }
 
+/*
+ * The menu and the window's full-screen state, as listeners a script can call.
+ *
+ * There is no menu bar here, so `onMenuCommand` used to drop its callback —
+ * which made File > New the one control in the app that no harness run could
+ * reach: the New Project dialog opens from that command and nothing else. The
+ * same for full screen and its Exit button. Keeping the listeners costs
+ * nothing, and `window.forgeMenu('new')` / `window.forgeFullScreen(true)` stand
+ * in for the main process sending them.
+ */
+const menuListeners = new Set<(command: string) => void>()
+const fullScreenListeners = new Set<(on: boolean) => void>()
+
+function sendMenuCommand(command: string): void {
+  if (menuListeners.size === 0) throw new Error('Nothing is listening for menu commands yet')
+  for (const listener of menuListeners) listener(command)
+}
+
+function sendFullScreen(on: boolean): void {
+  if (fullScreenListeners.size === 0) throw new Error('Nothing is listening for full screen yet')
+  for (const listener of fullScreenListeners) listener(on)
+}
+
 /** How many frames each clip has baked, for the harness to read back. */
 const titleFrames = new Map<string, number>()
 /** Byte sizes of the caption pictures baked, and the concat list naming them. */
@@ -598,11 +621,13 @@ export function installHarnessBridge(): void {
     },
 
     /*
-     * Autosave, recovery and the menu: inert, by design.
+     * Autosave and recovery: inert, by design.
      *
      * There is no main process to write a file or build a menu, and these are
      * all fire-and-forget from the renderer's side — so doing nothing is the
      * truthful answer rather than a refusal the caller would have to handle.
+     * The menu's commands and full screen are kept (see `menuListeners`), so a
+     * script can play the part of the main process.
      */
     autosaveProject: async () => null,
     recoveries: async () => [],
@@ -611,10 +636,19 @@ export function installHarnessBridge(): void {
     reportMenuState: () => undefined,
     rememberRecent: () => undefined,
     reportSaved: () => undefined,
-    onMenuCommand: () => () => undefined,
+    onMenuCommand: (cb: (command: string) => void) => {
+      menuListeners.add(cb)
+      return () => menuListeners.delete(cb)
+    },
     onMenuOpen: () => () => undefined,
-    onFullScreen: () => () => undefined,
-    exitFullScreen: () => undefined,
+    onFullScreen: (cb: (on: boolean) => void) => {
+      fullScreenListeners.add(cb)
+      return () => fullScreenListeners.delete(cb)
+    },
+    // What the main process does: leave, then tell the window it has left.
+    exitFullScreen: () => {
+      if (fullScreenListeners.size > 0) sendFullScreen(false)
+    },
 
     // The browser can open a microphone; only the main process can turn a
     // recording into a WAV, so saving a take is refused with a reason.
@@ -623,6 +657,9 @@ export function installHarnessBridge(): void {
   }
 
   window.forge = bridge as unknown as Window['forge']
+  // The main process's half of the menu and of full screen, for a driving script.
+  ;(window as unknown as { forgeMenu: (command: string) => void }).forgeMenu = sendMenuCommand
+  ;(window as unknown as { forgeFullScreen: (on: boolean) => void }).forgeFullScreen = sendFullScreen
   // Readable from a driving script, which cannot see a module-scoped Map.
   ;(window as unknown as { forgeTitleFrames: Map<string, number> }).forgeTitleFrames = titleFrames
   ;(

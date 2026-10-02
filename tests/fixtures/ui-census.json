@@ -1,0 +1,5530 @@
+[
+  {
+    "label": "Copy",
+    "match": "text",
+    "home": "clipmenu",
+    "needs": "clipmenu-open",
+    "file": "src/renderer/src/components/ClipMenu.tsx",
+    "line": 181,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Cut",
+    "match": "text",
+    "home": "clipmenu",
+    "needs": "clipmenu-open",
+    "file": "src/renderer/src/components/ClipMenu.tsx",
+    "line": 180,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Delete",
+    "match": "text",
+    "home": "clipmenu",
+    "needs": "clipmenu-open",
+    "file": "src/renderer/src/components/ClipMenu.tsx",
+    "line": 305,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Detach audio",
+    "match": "text",
+    "home": "clipmenu",
+    "needs": "clipmenu-open",
+    "file": "src/renderer/src/components/ClipMenu.tsx",
+    "line": 291,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Duplicate",
+    "match": "text",
+    "home": "clipmenu",
+    "needs": "clipmenu-open",
+    "file": "src/renderer/src/components/ClipMenu.tsx",
+    "line": 183,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Look",
+    "match": "text",
+    "home": "clipmenu",
+    "needs": "clipmenu-open",
+    "file": "src/renderer/src/components/ClipMenu.tsx",
+    "line": 257,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Paste",
+    "match": "text",
+    "home": "clipmenu",
+    "needs": "clipmenu-open",
+    "file": "src/renderer/src/components/ClipMenu.tsx",
+    "line": 188,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Restore its own sound",
+    "match": "text",
+    "home": "clipmenu",
+    "needs": "clipmenu-detached",
+    "file": "src/renderer/src/components/ClipMenu.tsx",
+    "line": 297,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Ripple delete",
+    "match": "text",
+    "home": "clipmenu",
+    "needs": "clipmenu-open",
+    "file": "src/renderer/src/components/ClipMenu.tsx",
+    "line": 307,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Select all",
+    "match": "text",
+    "home": "clipmenu",
+    "needs": "clipmenu-open",
+    "file": "src/renderer/src/components/ClipMenu.tsx",
+    "line": 301,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Speed",
+    "match": "text",
+    "home": "clipmenu",
+    "needs": "clipmenu-open",
+    "file": "src/renderer/src/components/ClipMenu.tsx",
+    "line": 196,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Split here",
+    "match": "text",
+    "home": "clipmenu",
+    "needs": "clipmenu-open",
+    "file": "src/renderer/src/components/ClipMenu.tsx",
+    "line": 283,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Voice",
+    "match": "text",
+    "home": "clipmenu",
+    "needs": "clipmenu-open",
+    "file": "src/renderer/src/components/ClipMenu.tsx",
+    "line": 228,
+    "newHome": "unchanged (right-click); mirrored in the Trimmer dock Sound section per Decision 4"
+  },
+  {
+    "label": "3D props on keywords",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 796,
+    "newHome": "Shelf tile 3D props"
+  },
+  {
+    "label": "Add flashes",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 705,
+    "newHome": "Shelf tile Strip flashes"
+  },
+  {
+    "label": "Add music",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 216,
+    "newHome": "Shelf tile Beat sync"
+  },
+  {
+    "label": "Analyse & build",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 301,
+    "newHome": "Shelf tile Beat sync"
+  },
+  {
+    "label": "Analysing",
+    "match": "text",
+    "home": "create",
+    "needs": "reel-building",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 301,
+    "newHome": "Shelf tile Beat sync (mirrored in One photo)"
+  },
+  {
+    "label": "At once",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 636,
+    "newHome": "Shelf tile Strip flashes"
+  },
+  {
+    "label": "Auto",
+    "match": "text",
+    "home": "create",
+    "needs": "director-settings",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 342,
+    "newHome": "settings panel (§3.9)"
+  },
+  {
+    "label": "Automation",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 187,
+    "newHome": "— (drop: each tool has its own header)"
+  },
+  {
+    "label": "Bands",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/shared/render/strips.ts",
+    "line": 29,
+    "newHome": "Shelf tile Strip flashes"
+  },
+  {
+    "label": "Beat-synced reel",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 197,
+    "newHome": "Shelf tile Beat sync"
+  },
+  {
+    "label": "Build from one photo",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 406,
+    "newHome": "Shelf tile One photo"
+  },
+  {
+    "label": "Build grid",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 566,
+    "newHome": "Shelf tile Grid split"
+  },
+  {
+    "label": "Build strip",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 776,
+    "newHome": "Shelf tile Film strip"
+  },
+  {
+    "label": "Cadence",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 506,
+    "newHome": "Shelf tile Grid split"
+  },
+  {
+    "label": "Check again",
+    "match": "text",
+    "home": "create",
+    "needs": "director-settings",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 396,
+    "newHome": "settings panel (§3.9)"
+  },
+  {
+    "label": "Chosen for the brief and the pictures; without a model, by the tone.",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 195,
+    "newHome": "Shelf tile Director"
+  },
+  {
+    "label": "Circle",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/shared/render/grid.ts",
+    "line": 39,
+    "newHome": "Shelf tile Grid split"
+  },
+  {
+    "label": "Clear",
+    "match": "text",
+    "home": "create",
+    "needs": "director-key",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 390,
+    "newHome": "settings panel (§3.9)",
+    "note": "Clears the saved key. Director's own Clear (412) shows only after a direction."
+  },
+  {
+    "label": "Clear",
+    "match": "text",
+    "home": "create",
+    "needs": "generated",
+    "count": 7,
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 412,
+    "newHome": "Shelf tile Director; the same label also: Shelf tile Beat sync (Automation.tsx:316); Shelf tile One photo (Automation.tsx:413); Shelf tile Grid split (Automation.tsx:573); Shelf tile Strip flashes (Automation.tsx:712); Shelf tile Film strip (Automation.tsx:783); Shelf tile 3D props (Automation.tsx:845)",
+    "note": "Count 7: one per tool that made a clip: Beat sync, One photo, Grid, Strips, Film strip, Props and Director."
+  },
+  {
+    "label": "Columns",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/shared/render/strips.ts",
+    "line": 28,
+    "newHome": "Shelf tile Strip flashes"
+  },
+  {
+    "label": "Cut to the words",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 266,
+    "newHome": "Shelf tile Beat sync"
+  },
+  {
+    "label": "Depth parallax",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 246,
+    "newHome": "Shelf tile Beat sync (mirrored in Depth/Parallax)"
+  },
+  {
+    "label": "Diagonal",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/shared/render/strips.ts",
+    "line": 30,
+    "newHome": "Shelf tile Strip flashes"
+  },
+  {
+    "label": "Direct",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 408,
+    "newHome": "Shelf tile Director"
+  },
+  {
+    "label": "Direct again",
+    "match": "text",
+    "home": "create",
+    "needs": "generated",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 408,
+    "newHome": "Shelf tile Director"
+  },
+  {
+    "label": "Director",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 156,
+    "newHome": "Shelf tile Director"
+  },
+  {
+    "label": "Drag where the reel ends",
+    "match": "title",
+    "home": "create",
+    "needs": "music-clip",
+    "file": "src/renderer/src/components/MusicRange.tsx",
+    "line": 203,
+    "newHome": "Shelf tile Beat sync"
+  },
+  {
+    "label": "Drag where the reel starts",
+    "match": "title",
+    "home": "create",
+    "needs": "music-clip",
+    "file": "src/renderer/src/components/MusicRange.tsx",
+    "line": 203,
+    "newHome": "Shelf tile Beat sync"
+  },
+  {
+    "label": "English",
+    "match": "placeholder",
+    "home": "create",
+    "needs": "director-more",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 274,
+    "newHome": "Shelf tile Director"
+  },
+  {
+    "label": "Filmstrip",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 728,
+    "newHome": "Shelf tile Film strip"
+  },
+  {
+    "label": "Frequency",
+    "match": "text",
+    "home": "create",
+    "needs": "props-on",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 816,
+    "newHome": "Shelf tile 3D props"
+  },
+  {
+    "label": "Grid split",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 428,
+    "newHome": "Shelf tile Grid split"
+  },
+  {
+    "label": "Gutter",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 521,
+    "newHome": "Shelf tile Grid split"
+  },
+  {
+    "label": "Hosted",
+    "match": "text",
+    "home": "create",
+    "needs": "director-hosted",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 342,
+    "newHome": "settings panel (§3.9)"
+  },
+  {
+    "label": "Import pictures or clips — they appear here in pool order.",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 291,
+    "newHome": "Shelf tile Director"
+  },
+  {
+    "label": "Import some photos — they are what the cuts are made of.",
+    "match": "text",
+    "home": "create",
+    "needs": "music-clip",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 360,
+    "newHome": "Shelf tile Beat sync"
+  },
+  {
+    "label": "Key",
+    "match": "text",
+    "home": "create",
+    "needs": "director-settings",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 370,
+    "newHome": "settings panel (§3.9)"
+  },
+  {
+    "label": "LM Studio",
+    "match": "text",
+    "home": "create",
+    "needs": "director-settings",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 342,
+    "newHome": "settings panel (§3.9)",
+    "note": "The third provider button's name while the OpenAI-shaped server is on this machine; Hosted otherwise."
+  },
+  {
+    "label": "Landing",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 490,
+    "newHome": "Shelf tile Grid split"
+  },
+  {
+    "label": "Length",
+    "match": "text",
+    "home": "create",
+    "needs": "director-more",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 256,
+    "newHome": "Shelf tile Director"
+  },
+  {
+    "label": "Length",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 754,
+    "newHome": "Shelf tile Film strip"
+  },
+  {
+    "label": "Look",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 667,
+    "newHome": "Shelf tile Strip flashes"
+  },
+  {
+    "label": "Model",
+    "match": "text",
+    "home": "create",
+    "needs": "director-settings",
+    "count": 2,
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 355,
+    "newHome": "settings panel (§3.9)",
+    "note": "Count 2: the Ollama and the OpenAI-shaped Model fields (355, 369)."
+  },
+  {
+    "label": "Model settings",
+    "match": "title",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 326,
+    "newHome": "Shelf tile Director (the gear opens the settings panel)"
+  },
+  {
+    "label": "More",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 210,
+    "newHome": "Shelf tile Director"
+  },
+  {
+    "label": "Motion",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 221,
+    "newHome": "Shelf tile Beat sync (mirrored in One photo)"
+  },
+  {
+    "label": "No music on the timeline — the pieces will arrive on an even cadence instead.",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 581,
+    "newHome": "Shelf tile Grid split"
+  },
+  {
+    "label": "Off",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 804,
+    "newHome": "Shelf tile 3D props"
+  },
+  {
+    "label": "Ollama",
+    "match": "text",
+    "home": "create",
+    "needs": "director-settings",
+    "count": 2,
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 342,
+    "newHome": "settings panel (§3.9)",
+    "note": "Count 2: the Ollama provider button and the OLLAMA section header (347)."
+  },
+  {
+    "label": "On",
+    "match": "text",
+    "home": "create",
+    "needs": "props-on",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 804,
+    "newHome": "Shelf tile 3D props",
+    "note": "The Props switch, turned on."
+  },
+  {
+    "label": "One photo",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 374,
+    "newHome": "Shelf tile One photo"
+  },
+  {
+    "label": "OpenAI-shaped server — LM Studio, llama.cpp, or a hosted API",
+    "match": "text",
+    "home": "create",
+    "needs": "director-settings",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 359,
+    "newHome": "settings panel (§3.9)"
+  },
+  {
+    "label": "Order",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 475,
+    "newHome": "Shelf tile Grid split"
+  },
+  {
+    "label": "Panels",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 738,
+    "newHome": "Shelf tile Film strip"
+  },
+  {
+    "label": "Pieces",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 442,
+    "newHome": "Shelf tile Grid split"
+  },
+  {
+    "label": "Place props",
+    "match": "text",
+    "home": "create",
+    "needs": "props-on",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 838,
+    "newHome": "Shelf tile 3D props"
+  },
+  {
+    "label": "Rate",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 652,
+    "newHome": "Shelf tile Strip flashes"
+  },
+  {
+    "label": "Rebuild",
+    "match": "text",
+    "home": "create",
+    "needs": "generated",
+    "count": 2,
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 301,
+    "newHome": "Shelf tile Beat sync; the same label also: Shelf tile One photo (Automation.tsx:406)",
+    "note": "Count 2: Beat sync's and One photo's (the other Rebuilds say what they rebuild)."
+  },
+  {
+    "label": "Rebuild flashes",
+    "match": "text",
+    "home": "create",
+    "needs": "generated",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 705,
+    "newHome": "Shelf tile Strip flashes"
+  },
+  {
+    "label": "Rebuild grid",
+    "match": "text",
+    "home": "create",
+    "needs": "generated",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 566,
+    "newHome": "Shelf tile Grid split"
+  },
+  {
+    "label": "Rebuild strip",
+    "match": "text",
+    "home": "create",
+    "needs": "generated",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 776,
+    "newHome": "Shelf tile Film strip"
+  },
+  {
+    "label": "Recipe",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 180,
+    "newHome": "Shelf tile Director"
+  },
+  {
+    "label": "Regenerate",
+    "match": "text",
+    "home": "create",
+    "needs": "generated",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 838,
+    "newHome": "Shelf tile 3D props"
+  },
+  {
+    "label": "Save",
+    "match": "text",
+    "home": "create",
+    "needs": "director-settings",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 386,
+    "newHome": "settings panel (§3.9)",
+    "note": "Saves the key: write-only, only hasKey is read back."
+  },
+  {
+    "label": "Server",
+    "match": "text",
+    "home": "create",
+    "needs": "director-settings",
+    "count": 2,
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 348,
+    "newHome": "settings panel (§3.9)",
+    "note": "Count 2: the Ollama and the OpenAI-shaped Server fields (348, 361)."
+  },
+  {
+    "label": "Shop now",
+    "match": "placeholder",
+    "home": "create",
+    "needs": "director-more",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 252,
+    "newHome": "Shelf tile Director"
+  },
+  {
+    "label": "Slices",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 620,
+    "newHome": "Shelf tile Strip flashes"
+  },
+  {
+    "label": "Square",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/shared/render/grid.ts",
+    "line": 38,
+    "newHome": "Shelf tile Grid split"
+  },
+  {
+    "label": "Stop",
+    "match": "text",
+    "home": "create",
+    "needs": "reel-building",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 308,
+    "newHome": "Shelf tile Beat sync (mirrored in One photo)"
+  },
+  {
+    "label": "Strip flashes",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 589,
+    "newHome": "Shelf tile Strip flashes"
+  },
+  {
+    "label": "Stutters",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 683,
+    "newHome": "Shelf tile Strip flashes"
+  },
+  {
+    "label": "Switch the canvas to",
+    "match": "text",
+    "home": "create",
+    "needs": "orientation-mismatch",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 353,
+    "newHome": "canvas (orientation chip beside the shape switch)"
+  },
+  {
+    "label": "The reel covers the highlighted part only.",
+    "match": "text",
+    "home": "create",
+    "needs": "music-clip",
+    "file": "src/renderer/src/components/MusicRange.tsx",
+    "line": 216,
+    "newHome": "Shelf tile Beat sync"
+  },
+  {
+    "label": "Tilt",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 537,
+    "newHome": "Shelf tile Grid split"
+  },
+  {
+    "label": "Tone",
+    "match": "text",
+    "home": "create",
+    "needs": "director-more",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 235,
+    "newHome": "Shelf tile Director"
+  },
+  {
+    "label": "Transcribe a clip first — props fire on spoken words.",
+    "match": "text",
+    "home": "create",
+    "needs": "props-on",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 852,
+    "newHome": "Shelf tile 3D props"
+  },
+  {
+    "label": "Transitions",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 279,
+    "newHome": "Shelf tile Beat sync (mirrored in One photo)"
+  },
+  {
+    "label": "Use all",
+    "match": "text",
+    "home": "create",
+    "needs": "music-clip",
+    "file": "src/renderer/src/components/MusicRange.tsx",
+    "line": 228,
+    "newHome": "Shelf tile Beat sync"
+  },
+  {
+    "label": "Uses the selected photo, or the first one, and lands the pieces on the track’s beats.",
+    "match": "text",
+    "home": "create",
+    "needs": "music-clip",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 580,
+    "newHome": "Shelf tile Grid split"
+  },
+  {
+    "label": "Uses the selected photo, or the first one. It bakes the subject cutout",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "part": true,
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 419,
+    "newHome": "Shelf tile One photo (becomes the \"Uses:\" line)"
+  },
+  {
+    "label": "Uses the shot under the playhead",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "part": true,
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 718,
+    "newHome": "Shelf tile Strip flashes (becomes the \"Uses:\" line)"
+  },
+  {
+    "label": "Waves",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/shared/render/grid.ts",
+    "line": 40,
+    "newHome": "Shelf tile Grid split"
+  },
+  {
+    "label": "Why these fired",
+    "match": "text",
+    "home": "create",
+    "needs": "generated",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 867,
+    "newHome": "Shelf tile 3D props"
+  },
+  {
+    "label": "Working",
+    "match": "text",
+    "home": "create",
+    "needs": "reel-building",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 406,
+    "newHome": "Shelf tile One photo (mirrors the shared reel state)"
+  },
+  {
+    "label": "Your pictures, in order",
+    "match": "text",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 287,
+    "newHome": "Shelf tile Director"
+  },
+  {
+    "label": "analysing the music",
+    "match": "text",
+    "home": "create",
+    "needs": "reel-building",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 325,
+    "newHome": "Shelf tile Beat sync (mirrored in One photo)"
+  },
+  {
+    "label": "clips placed. They are ordinary clips",
+    "match": "text",
+    "home": "create",
+    "needs": "generated",
+    "part": true,
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 450,
+    "newHome": "Shelf tile Director"
+  },
+  {
+    "label": "http://127.0.0.1:1234/v1",
+    "match": "placeholder",
+    "home": "create",
+    "needs": "director-settings",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 365,
+    "newHome": "settings panel (§3.9)"
+  },
+  {
+    "label": "model name",
+    "match": "placeholder",
+    "home": "create",
+    "needs": "director-settings",
+    "count": 2,
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 127,
+    "newHome": "settings panel (§3.9)",
+    "note": "Count 2: both Model fields, while no server has listed its models."
+  },
+  {
+    "label": "not needed locally",
+    "match": "placeholder",
+    "home": "create",
+    "needs": "director-settings",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 375,
+    "newHome": "settings panel (§3.9)"
+  },
+  {
+    "label": "panels placed.",
+    "match": "text",
+    "home": "create",
+    "needs": "generated",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 788,
+    "newHome": "Shelf tile Film strip"
+  },
+  {
+    "label": "paste your key",
+    "match": "placeholder",
+    "home": "create",
+    "needs": "director-hosted",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 375,
+    "newHome": "settings panel (§3.9)"
+  },
+  {
+    "label": "placed. They are ordinary clips — move, trim or delete any of them.",
+    "match": "text",
+    "home": "create",
+    "needs": "generated",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 858,
+    "newHome": "Shelf tile 3D props"
+  },
+  {
+    "label": "she said yes",
+    "match": "placeholder",
+    "home": "create",
+    "needs": "none",
+    "part": true,
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 391,
+    "newHome": "Shelf tile One photo"
+  },
+  {
+    "label": "shots placed. Every one is an ordinary clip.",
+    "match": "text",
+    "home": "create",
+    "needs": "generated",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 365,
+    "newHome": "Shelf tile Beat sync"
+  },
+  {
+    "label": "standard cut",
+    "match": "text",
+    "home": "create",
+    "needs": "generated",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 421,
+    "newHome": "Shelf tile Director"
+  },
+  {
+    "label": "what is in it?",
+    "match": "placeholder",
+    "home": "create",
+    "needs": "photo-clip",
+    "count": 4,
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 302,
+    "newHome": "Shelf tile Director",
+    "note": "Count 4: one per picture slot: the census imports three photos and a video."
+  },
+  {
+    "label": "what is it? (required)",
+    "match": "placeholder",
+    "home": "create",
+    "needs": "none",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 172,
+    "newHome": "Shelf tile Director"
+  },
+  {
+    "label": "what it does for them",
+    "match": "placeholder",
+    "home": "create",
+    "needs": "director-more",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 223,
+    "newHome": "Shelf tile Director"
+  },
+  {
+    "label": "who it is for",
+    "match": "placeholder",
+    "home": "create",
+    "needs": "director-more",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 231,
+    "newHome": "Shelf tile Director"
+  },
+  {
+    "label": "•••••••• (saved)",
+    "match": "placeholder",
+    "home": "create",
+    "needs": "director-key",
+    "file": "src/renderer/src/components/Director.tsx",
+    "line": 375,
+    "newHome": "settings panel (§3.9)"
+  },
+  {
+    "label": "Back to a straight line on every channel",
+    "match": "title",
+    "home": "curve",
+    "needs": "colour-curve",
+    "file": "src/renderer/src/components/ColourCurve.tsx",
+    "line": 128,
+    "newHome": "timeline sidebar (Curve tray), Curves tab, Colour"
+  },
+  {
+    "label": "Click to add, drag to shape, double-click a middle point to remove it.",
+    "match": "text",
+    "home": "curve",
+    "needs": "colour-curve",
+    "part": true,
+    "file": "src/renderer/src/components/ColourCurve.tsx",
+    "line": 174,
+    "newHome": "timeline sidebar (Curve tray), Curves tab, Colour"
+  },
+  {
+    "label": "Draw the curve by hand instead of placing points",
+    "match": "title",
+    "home": "curve",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/CurveEditor.tsx",
+    "line": 241,
+    "newHome": "timeline sidebar (Curve tray), Curves tab"
+  },
+  {
+    "label": "Select a clip to shape how it moves, or how it is graded.",
+    "match": "text",
+    "home": "curve",
+    "needs": "none",
+    "file": "src/renderer/src/components/CurvePanel.tsx",
+    "line": 113,
+    "newHome": "timeline sidebar (Curve tray), Curves tab"
+  },
+  {
+    "label": "The height of the graph runs from the bottom value to the top one",
+    "match": "title",
+    "home": "curve",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/CurveEditor.tsx",
+    "line": 335,
+    "newHome": "timeline sidebar (Curve tray), Curves tab"
+  },
+  {
+    "label": "Time runs left to right across the clip.",
+    "match": "text",
+    "home": "curve",
+    "needs": "photo-clip",
+    "part": true,
+    "file": "src/renderer/src/components/CurvePanel.tsx",
+    "line": 132,
+    "newHome": "timeline sidebar (Curve tray), Curves tab"
+  },
+  {
+    "label": "clear",
+    "match": "text",
+    "home": "curve",
+    "needs": "keyframes",
+    "file": "src/renderer/src/components/CurveEditor.tsx",
+    "line": 259,
+    "newHome": "timeline sidebar (Curve tray), Curves tab"
+  },
+  {
+    "label": "colour",
+    "match": "text",
+    "home": "curve",
+    "needs": "none",
+    "file": "src/renderer/src/components/CurvePanel.tsx",
+    "line": 61,
+    "newHome": "timeline sidebar (Curve tray), Curves tab"
+  },
+  {
+    "label": "drag to move, double-click to remove",
+    "match": "title",
+    "home": "curve",
+    "needs": "keyframes",
+    "part": true,
+    "count": 2,
+    "file": "src/renderer/src/components/CurveEditor.tsx",
+    "line": 316,
+    "newHome": "timeline sidebar (Curve tray), Curves tab",
+    "note": "Count 2: one per key: the census keys zoom twice."
+  },
+  {
+    "label": "motion",
+    "match": "text",
+    "home": "curve",
+    "needs": "none",
+    "file": "src/renderer/src/components/CurvePanel.tsx",
+    "line": 61,
+    "newHome": "timeline sidebar (Curve tray), Curves tab"
+  },
+  {
+    "label": "nothing keyed yet",
+    "match": "title",
+    "home": "curve",
+    "needs": "none",
+    "part": true,
+    "count": 4,
+    "file": "src/renderer/src/components/CurvePanel.tsx",
+    "line": 92,
+    "newHome": "timeline sidebar (Curve tray), Curves tab",
+    "note": "Count 4: one per property tab: Zoom, Rotate, Opacity, Volume."
+  },
+  {
+    "label": "— animated",
+    "match": "title",
+    "home": "curve",
+    "needs": "keyframes",
+    "part": true,
+    "file": "src/renderer/src/components/CurvePanel.tsx",
+    "line": 91,
+    "newHome": "timeline sidebar (Curve tray), Curves tab"
+  },
+  {
+    "label": "→ out",
+    "match": "title",
+    "home": "curve",
+    "needs": "colour-curve",
+    "part": true,
+    "count": 3,
+    "file": "src/renderer/src/components/ColourCurve.tsx",
+    "line": 165,
+    "newHome": "timeline sidebar (Curve tray), Curves tab, Colour",
+    "note": "Count 3: one per point on the census's three-point curve."
+  },
+  {
+    "label": "AI",
+    "match": "text",
+    "home": "header",
+    "needs": "none",
+    "file": "src/renderer/src/App.tsx",
+    "line": 93,
+    "newHome": "settings panel (dot on the ⚙ gear, §3.1)"
+  },
+  {
+    "label": "AI sidecar starting",
+    "match": "title",
+    "home": "header",
+    "needs": "sidecar-starting",
+    "file": "src/renderer/src/App.tsx",
+    "line": 86,
+    "newHome": "settings panel (status dot on the gear + \"AI helper (Python)\" row inside)"
+  },
+  {
+    "label": "Discard",
+    "match": "text",
+    "home": "header",
+    "needs": "recovery-offered",
+    "file": "src/renderer/src/App.tsx",
+    "line": 461,
+    "newHome": "unchanged (app shell)",
+    "harnessOnly": false,
+    "note": "App keeps the banner in its own state, filled once at mount from window.forge.recoveries(), and the harness bridge answers [] — there is no autosave on a disk here. The membership test still covers the words."
+  },
+  {
+    "label": "Exit full screen",
+    "match": "text",
+    "home": "header",
+    "needs": "fullscreen",
+    "file": "src/renderer/src/App.tsx",
+    "line": 480,
+    "newHome": "unchanged (app shell)"
+  },
+  {
+    "label": "Forge has unsaved work from",
+    "match": "text",
+    "home": "header",
+    "needs": "recovery-offered",
+    "file": "src/renderer/src/App.tsx",
+    "line": 435,
+    "newHome": "unchanged (app shell)",
+    "harnessOnly": false,
+    "note": "App keeps the banner in its own state, filled once at mount from window.forge.recoveries(), and the harness bridge answers [] — there is no autosave on a disk here. The membership test still covers the words."
+  },
+  {
+    "label": "Recover",
+    "match": "text",
+    "home": "header",
+    "needs": "recovery-offered",
+    "file": "src/renderer/src/App.tsx",
+    "line": 455,
+    "newHome": "unchanged (app shell)",
+    "harnessOnly": false,
+    "note": "App keeps the banner in its own state, filled once at mount from window.forge.recoveries(), and the harness bridge answers [] — there is no autosave on a disk here. The membership test still covers the words."
+  },
+  {
+    "label": "Something in the interface crashed",
+    "match": "text",
+    "home": "header",
+    "needs": "render-crash",
+    "file": "src/renderer/src/components/ErrorBoundary.tsx",
+    "line": 32,
+    "newHome": "unchanged, plus one boundary per Shelf tool panel (§3.1)",
+    "harnessOnly": false,
+    "note": "Shown only after a component throws while rendering, and React logs every caught throw as a console error — a census that crashed the window would fail its own clean-console check. A render test with a throwing child is the right guard."
+  },
+  {
+    "label": "Try again",
+    "match": "text",
+    "home": "header",
+    "needs": "render-crash",
+    "file": "src/renderer/src/components/ErrorBoundary.tsx",
+    "line": 45,
+    "newHome": "unchanged, plus one boundary per Shelf tool panel (§3.1)",
+    "harnessOnly": false,
+    "note": "Shown only after a component throws while rendering, and React logs every caught throw as a console error — a census that crashed the window would fail its own clean-console check. A render test with a throwing child is the right guard."
+  },
+  {
+    "label": "Untitled",
+    "match": "text",
+    "home": "header",
+    "needs": "none",
+    "file": "src/renderer/src/App.tsx",
+    "line": 74,
+    "newHome": "unchanged",
+    "note": "A new project's name, which the header shows; the path and the unsaved dot have no text of their own."
+  },
+  {
+    "label": "Your project is still loaded — this only reset the view.",
+    "match": "text",
+    "home": "header",
+    "needs": "render-crash",
+    "file": "src/renderer/src/components/ErrorBoundary.tsx",
+    "line": 48,
+    "newHome": "unchanged, plus one boundary per Shelf tool panel (§3.1)",
+    "harnessOnly": false,
+    "note": "Shown only after a component throws while rendering, and React logs every caught throw as a console error — a census that crashed the window would fail its own clean-console check. A render test with a throwing child is the right guard."
+  },
+  {
+    "label": "if this timestamp is old, the running app is stale",
+    "match": "title",
+    "home": "header",
+    "needs": "none",
+    "part": true,
+    "file": "src/renderer/src/App.tsx",
+    "line": 80,
+    "newHome": "unchanged (header)"
+  },
+  {
+    "label": "+ Save current",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 814,
+    "newHome": "export strip"
+  },
+  {
+    "label": "10-bit 4:2:2",
+    "match": "text",
+    "home": "inspector",
+    "needs": "encoder-prores",
+    "part": true,
+    "file": "src/renderer/src/components/ExportSettings.tsx",
+    "line": 115,
+    "newHome": "export strip"
+  },
+  {
+    "label": "1080p",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/shared/render/exportShape.ts",
+    "line": 26,
+    "newHome": "export strip"
+  },
+  {
+    "label": "4K",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/shared/render/exportShape.ts",
+    "line": 27,
+    "newHome": "export strip"
+  },
+  {
+    "label": "9:16",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/shared/render/aspect.ts",
+    "line": 11,
+    "newHome": "canvas (CanvasBar)"
+  },
+  {
+    "label": "A different stack of pages, same settings",
+    "match": "title",
+    "home": "inspector",
+    "needs": "paper-customise",
+    "file": "src/renderer/src/components/PaperPanel.tsx",
+    "line": 249,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "A fixed bitrate — what a platform means by",
+    "match": "title",
+    "home": "inspector",
+    "needs": "none",
+    "part": true,
+    "file": "src/renderer/src/components/ExportSettings.tsx",
+    "line": 139,
+    "newHome": "export strip"
+  },
+  {
+    "label": "A hardware encoder takes a bitrate, so this is about",
+    "match": "text",
+    "home": "inspector",
+    "needs": "encoder-hardware",
+    "file": "src/renderer/src/components/ExportSettings.tsx",
+    "line": 164,
+    "newHome": "export strip"
+  },
+  {
+    "label": "A hit of camera shake that settles",
+    "match": "title",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "part": true,
+    "file": "src/renderer/src/components/CameraPanel.tsx",
+    "line": 63,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "A move and Zoom keyframes both scale the picture, so choosing one takes the other off.",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/CameraPanel.tsx",
+    "line": 177,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "A shape on the picture, with a blur, a colour change or a cut-out confined to it.",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/MaskPanel.tsx",
+    "line": 73,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "A slow push, pull or pan across the photo",
+    "match": "title",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/CameraPanel.tsx",
+    "line": 62,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "A transition consumes time from both clips rather than adding any, so the timeline shortens.",
+    "match": "text",
+    "home": "inspector",
+    "needs": "two-clips",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1703,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "AAC",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "count": 3,
+    "file": "src/renderer/src/components/ExportSettings.tsx",
+    "line": 196,
+    "newHome": "export strip",
+    "note": "Count 3: the three AAC bitrates of the Audio row."
+  },
+  {
+    "label": "Add",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "count": 2,
+    "file": "src/renderer/src/components/MaskPanel.tsx",
+    "line": 69,
+    "newHome": "trimmer dock; the same label also: trimmer dock (KeyPanel.tsx:37)",
+    "note": "Count 2: the Mask section's Add and the Key section's Add."
+  },
+  {
+    "label": "Add a key at the playhead, holding the value it has now",
+    "match": "title",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "count": 3,
+    "file": "src/renderer/src/components/Keyframes.tsx",
+    "line": 84,
+    "newHome": "timeline sidebar (Curve tray), Keys tab",
+    "note": "Count 3: one per Keyframes row: Zoom, Rotate, Opacity."
+  },
+  {
+    "label": "Add point at playhead",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1493,
+    "newHome": "timeline sidebar (Curve tray), Keys tab - MotionPathPanel.tsx"
+  },
+  {
+    "label": "Amount",
+    "match": "text",
+    "home": "inspector",
+    "needs": "mask",
+    "file": "src/renderer/src/components/MaskPanel.tsx",
+    "line": 205,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Amount",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-move",
+    "file": "src/renderer/src/components/CameraPanel.tsx",
+    "line": 117,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Angle",
+    "match": "text",
+    "home": "inspector",
+    "needs": "mask",
+    "file": "src/renderer/src/components/MaskPanel.tsx",
+    "line": 243,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Animate",
+    "match": "text",
+    "home": "inspector",
+    "needs": "mask-still",
+    "file": "src/renderer/src/components/MaskPanel.tsx",
+    "line": 131,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Animate the shape: move or resize it at different moments and it follows",
+    "match": "title",
+    "home": "inspector",
+    "needs": "mask-still",
+    "file": "src/renderer/src/components/MaskPanel.tsx",
+    "line": 124,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Animated",
+    "match": "text",
+    "home": "inspector",
+    "needs": "mask",
+    "file": "src/renderer/src/components/MaskPanel.tsx",
+    "line": 131,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Animation",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/TextAnimationPicker.tsx",
+    "line": 121,
+    "newHome": "output strip (caption host, Inspector.tsx:609)"
+  },
+  {
+    "label": "Animation",
+    "match": "text",
+    "home": "inspector",
+    "needs": "text-clip",
+    "file": "src/renderer/src/components/TextAnimationPicker.tsx",
+    "line": 121,
+    "newHome": "trimmer dock (text host, Inspector.tsx:1223)"
+  },
+  {
+    "label": "Applied when you export — the preview shows the clip as it was shot.",
+    "match": "text",
+    "home": "inspector",
+    "needs": "video-steady",
+    "part": true,
+    "file": "src/renderer/src/components/SteadyToggle.tsx",
+    "line": 30,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Aspect ratio",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 392,
+    "newHome": "canvas (CanvasBar shape switch 16:9 / 9:16 / 1:1)"
+  },
+  {
+    "label": "Audio",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/ExportSettings.tsx",
+    "line": 188,
+    "newHome": "export strip"
+  },
+  {
+    "label": "BREAKING",
+    "match": "placeholder",
+    "home": "inspector",
+    "needs": "paper-clip",
+    "file": "src/renderer/src/components/PaperPanel.tsx",
+    "line": 54,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Back to normal speed",
+    "match": "text",
+    "home": "inspector",
+    "needs": "video-slow",
+    "file": "src/renderer/src/components/SpeedPanel.tsx",
+    "line": 108,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Balanced",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/ExportSettings.tsx",
+    "line": 35,
+    "newHome": "export strip"
+  },
+  {
+    "label": "Bitrate",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/ExportSettings.tsx",
+    "line": 142,
+    "newHome": "export strip"
+  },
+  {
+    "label": "Blending in from the clip before it.",
+    "match": "text",
+    "home": "inspector",
+    "needs": "two-clips",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1574,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Blurs inside the shape. Invert it for a face in focus against a soft background.",
+    "match": "text",
+    "home": "inspector",
+    "needs": "mask",
+    "file": "src/shared/render/mask.ts",
+    "line": 138,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Bold centre",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/shared/captions/style.ts",
+    "line": 113,
+    "newHome": "output strip"
+  },
+  {
+    "label": "Bottom right",
+    "match": "title",
+    "home": "inspector",
+    "needs": "video-pip",
+    "file": "src/shared/render/layout.ts",
+    "line": 83,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Bounce",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/shared/render/textAnimation.ts",
+    "line": 127,
+    "newHome": "output strip (caption host, Inspector.tsx:609)"
+  },
+  {
+    "label": "Bright",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1074,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Broadcast",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/shared/render/loudness.ts",
+    "line": 19,
+    "newHome": "output strip"
+  },
+  {
+    "label": "Browse all",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/TextStylePicker.tsx",
+    "line": 62,
+    "newHome": "output strip (caption host, Inspector.tsx:604)"
+  },
+  {
+    "label": "Browse all",
+    "match": "text",
+    "home": "inspector",
+    "needs": "text-clip",
+    "file": "src/renderer/src/components/TextStylePicker.tsx",
+    "line": 62,
+    "newHome": "trimmer dock (text host, Inspector.tsx:1210)"
+  },
+  {
+    "label": "CAPS",
+    "match": "text",
+    "home": "inspector",
+    "needs": "text-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1341,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Camera",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/CameraPanel.tsx",
+    "line": 77,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Cancel",
+    "match": "title",
+    "home": "inspector",
+    "needs": "export-jobs",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1731,
+    "newHome": "export strip"
+  },
+  {
+    "label": "Captions",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 525,
+    "newHome": "output strip"
+  },
+  {
+    "label": "Card ring",
+    "match": "text",
+    "home": "inspector",
+    "needs": "ring-clip",
+    "file": "src/renderer/src/components/CarouselPanel.tsx",
+    "line": 26,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Card size",
+    "match": "text",
+    "home": "inspector",
+    "needs": "ring-clip",
+    "file": "src/renderer/src/components/CarouselPanel.tsx",
+    "line": 49,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Cards",
+    "match": "text",
+    "home": "inspector",
+    "needs": "ring-clip",
+    "file": "src/renderer/src/components/CarouselPanel.tsx",
+    "line": 33,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Cards square to the camera instead of turned outward along the ring",
+    "match": "title",
+    "home": "inspector",
+    "needs": "ring-clip",
+    "file": "src/renderer/src/components/CarouselPanel.tsx",
+    "line": 107,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Change",
+    "match": "text",
+    "home": "inspector",
+    "needs": "text-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1241,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Changing it here makes it this clip",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-split-move",
+    "part": true,
+    "file": "src/renderer/src/components/CameraPanel.tsx",
+    "line": 171,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Changing this re-solves every clip's reframe.",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "part": true,
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 410,
+    "newHome": "canvas (tooltip on the CanvasBar shape switch)"
+  },
+  {
+    "label": "Clear",
+    "match": "text",
+    "home": "inspector",
+    "needs": "export-jobs",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1720,
+    "newHome": "export strip"
+  },
+  {
+    "label": "Clear",
+    "match": "text",
+    "home": "inspector",
+    "needs": "keyframes",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1500,
+    "newHome": "timeline sidebar (Curve tray), Keys tab - MotionPathPanel.tsx"
+  },
+  {
+    "label": "Clear",
+    "match": "text",
+    "home": "inspector",
+    "needs": "video-path",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1500,
+    "newHome": "timeline sidebar (Curve tray) (MotionPathPanel.tsx)"
+  },
+  {
+    "label": "Click the screen in the preview to take its colour",
+    "match": "title",
+    "home": "inspector",
+    "needs": "video-keyed",
+    "file": "src/renderer/src/components/KeyPanel.tsx",
+    "line": 78,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Clip",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 849,
+    "newHome": "trimmer dock (header)"
+  },
+  {
+    "label": "Clippings",
+    "match": "text",
+    "home": "inspector",
+    "needs": "paper-clip",
+    "file": "src/renderer/src/components/PaperPanel.tsx",
+    "line": 47,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Codec",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/ExportSettings.tsx",
+    "line": 98,
+    "newHome": "export strip"
+  },
+  {
+    "label": "Colour",
+    "match": "text",
+    "home": "inspector",
+    "needs": "colour-clip",
+    "count": 2,
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1382,
+    "newHome": "trimmer dock",
+    "note": "Count 2: the colour card's Colour field and the grade section's Colour header."
+  },
+  {
+    "label": "Colour",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1038,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Colour",
+    "match": "text",
+    "home": "inspector",
+    "needs": "text-clip",
+    "count": 2,
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1327,
+    "newHome": "trimmer dock",
+    "note": "Count 2: the text card's Colour field and the grade section's Colour header."
+  },
+  {
+    "label": "Constant quality, CRF",
+    "match": "title",
+    "home": "inspector",
+    "needs": "none",
+    "part": true,
+    "count": 3,
+    "file": "src/renderer/src/components/ExportSettings.tsx",
+    "line": 129,
+    "newHome": "export strip",
+    "note": "Count 3: one per Quality button."
+  },
+  {
+    "label": "Contrast",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1082,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Crossfade with the clip before",
+    "match": "text",
+    "home": "inspector",
+    "needs": "video-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1020,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Customise",
+    "match": "text",
+    "home": "inspector",
+    "needs": "paper-clip",
+    "file": "src/renderer/src/components/PaperPanel.tsx",
+    "line": 175,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Cut",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1606,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Cut-out letters",
+    "match": "text",
+    "home": "inspector",
+    "needs": "paper-clip",
+    "file": "src/renderer/src/components/PaperPanel.tsx",
+    "line": 66,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Despill",
+    "match": "text",
+    "home": "inspector",
+    "needs": "video-keyed",
+    "file": "src/renderer/src/components/KeyPanel.tsx",
+    "line": 107,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Drag the divider in the preview to compare; double-click it for an even split.",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 519,
+    "newHome": "canvas (tooltip on the CanvasBar view switch)"
+  },
+  {
+    "label": "Duration",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 860,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Each page",
+    "match": "text",
+    "home": "inspector",
+    "needs": "paper-clip",
+    "file": "src/renderer/src/components/PaperPanel.tsx",
+    "line": 159,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Edge",
+    "match": "text",
+    "home": "inspector",
+    "needs": "text-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1364,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Edit on picture",
+    "match": "text",
+    "home": "inspector",
+    "needs": "mask",
+    "file": "src/renderer/src/components/MaskPanel.tsx",
+    "line": 97,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Ellipse",
+    "match": "title",
+    "home": "inspector",
+    "needs": "mask",
+    "file": "src/renderer/src/components/MaskPanel.tsx",
+    "line": 27,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "End",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 856,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Every tile is your own words in your own font",
+    "match": "text",
+    "home": "inspector",
+    "needs": "style-gallery",
+    "part": true,
+    "file": "src/renderer/src/components/TextStylePicker.tsx",
+    "line": 194,
+    "newHome": "trimmer dock + output strip (hosts)"
+  },
+  {
+    "label": "Expected a fonts folder under the assets directory.",
+    "match": "text",
+    "home": "inspector",
+    "needs": "caption-fontpicker",
+    "file": "src/renderer/src/components/FontPicker.tsx",
+    "line": 94,
+    "newHome": "trimmer dock + output strip (hosts)"
+  },
+  {
+    "label": "Export",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 776,
+    "newHome": "export strip (header, visible when collapsed)"
+  },
+  {
+    "label": "Export at whatever level the sources happen to be",
+    "match": "title",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 471,
+    "newHome": "output strip"
+  },
+  {
+    "label": "Exports",
+    "match": "text",
+    "home": "inspector",
+    "needs": "export-jobs",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1715,
+    "newHome": "export strip"
+  },
+  {
+    "label": "Feather",
+    "match": "text",
+    "home": "inspector",
+    "needs": "mask",
+    "file": "src/renderer/src/components/MaskPanel.tsx",
+    "line": 215,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "File",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/ExportSettings.tsx",
+    "line": 202,
+    "newHome": "export strip"
+  },
+  {
+    "label": "Fill with the picture below",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1427,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Font",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 619,
+    "newHome": "output strip"
+  },
+  {
+    "label": "Forget these settings",
+    "match": "title",
+    "home": "inspector",
+    "needs": "saved-preset",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 836,
+    "newHome": "export strip"
+  },
+  {
+    "label": "Frame rate",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 421,
+    "newHome": "output strip"
+  },
+  {
+    "label": "Full frame",
+    "match": "text",
+    "home": "inspector",
+    "needs": "video-pip",
+    "file": "src/renderer/src/components/LayoutPanel.tsx",
+    "line": 78,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Full page",
+    "match": "text",
+    "home": "inspector",
+    "needs": "paper-clip",
+    "file": "src/shared/render/paper.ts",
+    "line": 342,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "H.264",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/shared/render/encode.ts",
+    "line": 71,
+    "newHome": "export strip"
+  },
+  {
+    "label": "Height",
+    "match": "text",
+    "home": "inspector",
+    "needs": "mask",
+    "file": "src/renderer/src/components/MaskPanel.tsx",
+    "line": 233,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Highlighted word",
+    "match": "text",
+    "home": "inspector",
+    "needs": "paper-clip",
+    "file": "src/renderer/src/components/PaperPanel.tsx",
+    "line": 50,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Hold",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-depth-shake",
+    "file": "src/renderer/src/components/CameraPanel.tsx",
+    "line": 147,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "How hard the encoder works: slower is smaller for the same quality",
+    "match": "title",
+    "home": "inspector",
+    "needs": "none",
+    "count": 4,
+    "file": "src/renderer/src/components/ExportSettings.tsx",
+    "line": 175,
+    "newHome": "export strip",
+    "note": "Count 4: the four Speed buttons share one tooltip."
+  },
+  {
+    "label": "How the value leaves this key",
+    "match": "title",
+    "home": "inspector",
+    "needs": "keyframes",
+    "file": "src/renderer/src/components/Keyframes.tsx",
+    "line": 146,
+    "newHome": "timeline sidebar (Curve tray), Keys tab"
+  },
+  {
+    "label": "Impact",
+    "match": "text",
+    "home": "inspector",
+    "needs": "text-clip",
+    "file": "src/shared/render/textPresets.ts",
+    "line": 61,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "In from left",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/shared/render/path.ts",
+    "line": 142,
+    "newHome": "timeline sidebar (Curve tray) (MotionPathPanel.tsx)"
+  },
+  {
+    "label": "Intensity",
+    "match": "text",
+    "home": "inspector",
+    "needs": "video-look",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1113,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Invents the in-between frames instead of repeating them",
+    "match": "title",
+    "home": "inspector",
+    "needs": "video-slow",
+    "part": true,
+    "file": "src/renderer/src/components/SpeedPanel.tsx",
+    "line": 88,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Invert",
+    "match": "text",
+    "home": "inspector",
+    "needs": "mask",
+    "file": "src/renderer/src/components/MaskPanel.tsx",
+    "line": 259,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Key",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/KeyPanel.tsx",
+    "line": 29,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Keyframes",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Keyframes.tsx",
+    "line": 45,
+    "newHome": "timeline sidebar (Curve tray), Keys tab"
+  },
+  {
+    "label": "LUFS —",
+    "match": "title",
+    "home": "inspector",
+    "needs": "none",
+    "part": true,
+    "count": 3,
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 472,
+    "newHome": "output strip",
+    "note": "Count 3: one per loudness target."
+  },
+  {
+    "label": "LUFS, so one is as loud as the next.",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "part": true,
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 493,
+    "newHome": "output strip"
+  },
+  {
+    "label": "Layout",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/LayoutPanel.tsx",
+    "line": 72,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Length",
+    "match": "text",
+    "home": "inspector",
+    "needs": "two-clips",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1684,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Level",
+    "match": "text",
+    "home": "inspector",
+    "needs": "video-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 984,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Line",
+    "match": "placeholder",
+    "home": "inspector",
+    "needs": "title-clip",
+    "part": true,
+    "count": 2,
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1543,
+    "newHome": "trimmer dock",
+    "note": "Count 2: one per line of the census title's two."
+  },
+  {
+    "label": "Linear — everything on one side of a line",
+    "match": "title",
+    "home": "inspector",
+    "needs": "mask",
+    "file": "src/renderer/src/components/MaskPanel.tsx",
+    "line": 29,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Load a .cube LUT you already own",
+    "match": "title",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "part": true,
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1149,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Looks",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1125,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Loudness",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 453,
+    "newHome": "output strip"
+  },
+  {
+    "label": "Lower 3rd",
+    "match": "text",
+    "home": "inspector",
+    "needs": "text-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1273,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Lower third",
+    "match": "title",
+    "home": "inspector",
+    "needs": "text-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1266,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Margin",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 708,
+    "newHome": "output strip"
+  },
+  {
+    "label": "Marker",
+    "match": "text",
+    "home": "inspector",
+    "needs": "paper-customise",
+    "file": "src/renderer/src/components/PaperPanel.tsx",
+    "line": 227,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Mask",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/MaskPanel.tsx",
+    "line": 61,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Masthead",
+    "match": "text",
+    "home": "inspector",
+    "needs": "paper-customise",
+    "file": "src/renderer/src/components/PaperPanel.tsx",
+    "line": 217,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Match the camera: footage at 25 in a 30 project repeats a frame in every five.",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 443,
+    "newHome": "output strip"
+  },
+  {
+    "label": "Mbps, at most",
+    "match": "text",
+    "home": "inspector",
+    "needs": "export-bitrate",
+    "file": "src/renderer/src/components/ExportSettings.tsx",
+    "line": 159,
+    "newHome": "export strip"
+  },
+  {
+    "label": "Middle",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 700,
+    "newHome": "output strip"
+  },
+  {
+    "label": "Motion path",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1469,
+    "newHome": "timeline sidebar (Curve tray), Keys tab - MotionPathPanel.tsx"
+  },
+  {
+    "label": "Move the playhead, then move or resize the shape",
+    "match": "text",
+    "home": "inspector",
+    "needs": "mask",
+    "part": true,
+    "file": "src/renderer/src/components/MaskPanel.tsx",
+    "line": 161,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Mute",
+    "match": "text",
+    "home": "inspector",
+    "needs": "video-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 973,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Mute this clip",
+    "match": "title",
+    "home": "inspector",
+    "needs": "video-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 966,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "No camera move",
+    "match": "title",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/CameraPanel.tsx",
+    "line": 61,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "No clip selected",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1528,
+    "newHome": "dropped — the dock is hidden then"
+  },
+  {
+    "label": "No font library found.",
+    "match": "text",
+    "home": "inspector",
+    "needs": "caption-fontpicker",
+    "file": "src/renderer/src/components/FontPicker.tsx",
+    "line": 91,
+    "newHome": "trimmer dock + output strip (hosts)"
+  },
+  {
+    "label": "Nobody saw %s coming",
+    "match": "placeholder",
+    "home": "inspector",
+    "needs": "paper-customise",
+    "file": "src/renderer/src/components/PaperPanel.tsx",
+    "line": 212,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "None",
+    "match": "text",
+    "home": "inspector",
+    "needs": "text-clip",
+    "count": 2,
+    "file": "src/renderer/src/components/TextStylePicker.tsx",
+    "line": 69,
+    "newHome": "trimmer dock (text host, Inspector.tsx:1210)",
+    "note": "Count 2: the text card's Style None and Animation None."
+  },
+  {
+    "label": "Nothing is underneath, so this blends in from black — a fade-in.",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1571,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Nothing moves: there is no clip before this one to overlap, so this costs no time.",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1704,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Nothing transcribed yet — captions will be skipped on export.",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 761,
+    "newHome": "output strip"
+  },
+  {
+    "label": "Off",
+    "match": "text",
+    "home": "inspector",
+    "needs": "captions-flipped",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 548,
+    "newHome": "output strip",
+    "note": "The captions switch, turned off."
+  },
+  {
+    "label": "Off",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 461,
+    "newHome": "output strip",
+    "note": "Loudness Off."
+  },
+  {
+    "label": "On",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 548,
+    "newHome": "output strip",
+    "note": "The captions switch, on in a new project."
+  },
+  {
+    "label": "One key is a value; two or more animate.",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "part": true,
+    "file": "src/renderer/src/components/Keyframes.tsx",
+    "line": 167,
+    "newHome": "timeline sidebar (Curve tray)"
+  },
+  {
+    "label": "One point is a fixed offset, not a move — add a second.",
+    "match": "text",
+    "home": "inspector",
+    "needs": "video-path",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1506,
+    "newHome": "timeline sidebar (Curve tray) (MotionPathPanel.tsx)"
+  },
+  {
+    "label": "Only between the marks",
+    "match": "text",
+    "home": "inspector",
+    "needs": "timeline-marks",
+    "file": "src/renderer/src/components/ExportSettings.tsx",
+    "line": 228,
+    "newHome": "export strip"
+  },
+  {
+    "label": "Opacity",
+    "match": "text",
+    "home": "inspector",
+    "needs": "colour-clip",
+    "count": 3,
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1392,
+    "newHome": "trimmer dock",
+    "note": "Count 3: the transform slider, the colour card's own Opacity and the Keyframes row."
+  },
+  {
+    "label": "Opacity",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "count": 2,
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 896,
+    "newHome": "trimmer dock",
+    "note": "Count 2: the transform slider and the Keyframes row."
+  },
+  {
+    "label": "Outline",
+    "match": "text",
+    "home": "inspector",
+    "needs": "text-clip",
+    "count": 2,
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1355,
+    "newHome": "trimmer dock",
+    "note": "Count 2: the text card's Outline slider and the Outline tile in its style picker."
+  },
+  {
+    "label": "Output",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "count": 2,
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 378,
+    "newHome": "header: dropped — the strips have their own (§3.17); button: canvas (CanvasBar Source / Split / Output, §3.15)",
+    "note": "Count 2: the Inspector's Output header (dropped, §3.17) and the Preview row's Output button (CanvasBar, §3.15)."
+  },
+  {
+    "label": "Overlap this clip with the one before it on its track",
+    "match": "title",
+    "home": "inspector",
+    "needs": "video-clip",
+    "part": true,
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1017,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "PAL, what cameras set up for Europe and India shoot",
+    "match": "title",
+    "home": "inspector",
+    "needs": "none",
+    "part": true,
+    "count": 2,
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 429,
+    "newHome": "output strip",
+    "note": "Count 2: the 25 and 50 fps buttons."
+  },
+  {
+    "label": "Pages",
+    "match": "text",
+    "home": "inspector",
+    "needs": "paper-clip",
+    "file": "src/renderer/src/components/PaperPanel.tsx",
+    "line": 146,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Pan left",
+    "match": "title",
+    "home": "inspector",
+    "needs": "photo-move",
+    "file": "src/renderer/src/components/CameraPanel.tsx",
+    "line": 42,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Pick from picture",
+    "match": "text",
+    "home": "inspector",
+    "needs": "video-keyed",
+    "file": "src/renderer/src/components/KeyPanel.tsx",
+    "line": 86,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Picture in picture —",
+    "match": "title",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "part": true,
+    "count": 4,
+    "file": "src/renderer/src/components/LayoutPanel.tsx",
+    "line": 107,
+    "newHome": "trimmer dock",
+    "note": "Count 4: one per picture-in-picture shape."
+  },
+  {
+    "label": "Place",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 688,
+    "newHome": "output strip"
+  },
+  {
+    "label": "Preview",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 498,
+    "newHome": "canvas (CanvasBar)"
+  },
+  {
+    "label": "Pull out, centred",
+    "match": "title",
+    "home": "inspector",
+    "needs": "photo-move",
+    "file": "src/renderer/src/components/CameraPanel.tsx",
+    "line": 34,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Push in, centred",
+    "match": "title",
+    "home": "inspector",
+    "needs": "photo-move",
+    "file": "src/renderer/src/components/CameraPanel.tsx",
+    "line": 24,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Put behind the subject",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1444,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Quality",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/ExportSettings.tsx",
+    "line": 123,
+    "newHome": "export strip"
+  },
+  {
+    "label": "Quick dissolve",
+    "match": "text",
+    "home": "inspector",
+    "needs": "two-clips",
+    "file": "src/shared/transitions/registry.ts",
+    "line": 305,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Radius",
+    "match": "text",
+    "home": "inspector",
+    "needs": "ring-clip",
+    "file": "src/renderer/src/components/CarouselPanel.tsx",
+    "line": 41,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Range",
+    "match": "text",
+    "home": "inspector",
+    "needs": "video-keyed",
+    "file": "src/renderer/src/components/KeyPanel.tsx",
+    "line": 91,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Range takes out colours near the screen",
+    "match": "text",
+    "home": "inspector",
+    "needs": "video-keyed",
+    "part": true,
+    "file": "src/renderer/src/components/KeyPanel.tsx",
+    "line": 115,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Rate",
+    "match": "text",
+    "home": "inspector",
+    "needs": "video-clip",
+    "file": "src/renderer/src/components/SpeedPanel.tsx",
+    "line": 75,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Record where this clip sits right now, at the playhead",
+    "match": "title",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1490,
+    "newHome": "timeline sidebar (Curve tray) (MotionPathPanel.tsx)"
+  },
+  {
+    "label": "Rectangle",
+    "match": "title",
+    "home": "inspector",
+    "needs": "mask",
+    "file": "src/renderer/src/components/MaskPanel.tsx",
+    "line": 28,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Reel / TikTok (9:16)",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/shared/render/presets.ts",
+    "line": 145,
+    "newHome": "export strip"
+  },
+  {
+    "label": "Reframe",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 876,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Remove",
+    "match": "text",
+    "home": "inspector",
+    "needs": "mask",
+    "file": "src/renderer/src/components/MaskPanel.tsx",
+    "line": 106,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Remove",
+    "match": "text",
+    "home": "inspector",
+    "needs": "video-keyed",
+    "file": "src/renderer/src/components/KeyPanel.tsx",
+    "line": 60,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Remove every",
+    "match": "title",
+    "home": "inspector",
+    "needs": "keyframes",
+    "part": true,
+    "file": "src/renderer/src/components/Keyframes.tsx",
+    "line": 155,
+    "newHome": "timeline sidebar (Curve tray), Keys tab"
+  },
+  {
+    "label": "Remove the key at the playhead",
+    "match": "title",
+    "home": "inspector",
+    "needs": "keyframes",
+    "file": "src/renderer/src/components/Keyframes.tsx",
+    "line": 83,
+    "newHome": "timeline sidebar (Curve tray)"
+  },
+  {
+    "label": "Remove this look",
+    "match": "title",
+    "home": "inspector",
+    "needs": "video-look",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1106,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Reset",
+    "match": "text",
+    "home": "inspector",
+    "needs": "video-look",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1048,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Reset edits",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 538,
+    "newHome": "output strip"
+  },
+  {
+    "label": "Reset to full frame",
+    "match": "text",
+    "home": "inspector",
+    "needs": "video-pip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1522,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Reveal the headline a character at a time",
+    "match": "title",
+    "home": "inspector",
+    "needs": "paper-clip",
+    "part": true,
+    "file": "src/renderer/src/components/PaperPanel.tsx",
+    "line": 114,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Revealing over the layer below.",
+    "match": "text",
+    "home": "inspector",
+    "needs": "text-clip",
+    "part": true,
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1573,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Roll",
+    "match": "text",
+    "home": "inspector",
+    "needs": "ring-clip",
+    "file": "src/renderer/src/components/CarouselPanel.tsx",
+    "line": 97,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Rotate",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "count": 2,
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 920,
+    "newHome": "trimmer dock",
+    "note": "Count 2: the transform slider and the Keyframes row."
+  },
+  {
+    "label": "Saturate",
+    "match": "text",
+    "home": "inspector",
+    "needs": "adjustment-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1090,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Saturate",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1090,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Saved settings",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 791,
+    "newHome": "export strip"
+  },
+  {
+    "label": "Screen",
+    "match": "text",
+    "home": "inspector",
+    "needs": "video-keyed",
+    "file": "src/renderer/src/components/KeyPanel.tsx",
+    "line": 65,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Select a clip",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1558,
+    "newHome": "dropped — dock hidden"
+  },
+  {
+    "label": "Settle",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-shake",
+    "file": "src/renderer/src/components/CameraPanel.tsx",
+    "line": 137,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Shadow",
+    "match": "text",
+    "home": "inspector",
+    "needs": "text-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1319,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Shake the world and hold the person still",
+    "match": "title",
+    "home": "inspector",
+    "needs": "photo-depth-shake",
+    "file": "src/renderer/src/components/CameraPanel.tsx",
+    "line": 152,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Show",
+    "match": "text",
+    "home": "inspector",
+    "needs": "mask",
+    "file": "src/shared/render/mask.ts",
+    "line": 131,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Show in folder",
+    "match": "title",
+    "home": "inspector",
+    "needs": "export-jobs",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1740,
+    "newHome": "export strip"
+  },
+  {
+    "label": "Show the shape on the picture and drag it there",
+    "match": "title",
+    "home": "inspector",
+    "needs": "mask",
+    "file": "src/renderer/src/components/MaskPanel.tsx",
+    "line": 90,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Shuffle the pages",
+    "match": "text",
+    "home": "inspector",
+    "needs": "paper-customise",
+    "file": "src/renderer/src/components/PaperPanel.tsx",
+    "line": 252,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Side by side",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/shared/render/layout.ts",
+    "line": 24,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Size",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "count": 2,
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 660,
+    "newHome": "output strip; the same label also: export strip (ExportSettings.tsx:77)",
+    "note": "Count 2: the caption Size slider and the export Size row."
+  },
+  {
+    "label": "Size",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 888,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Smooth out a handheld shake",
+    "match": "title",
+    "home": "inspector",
+    "needs": "video-clip",
+    "part": true,
+    "file": "src/renderer/src/components/SteadyToggle.tsx",
+    "line": 21,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Smooth slow motion",
+    "match": "text",
+    "home": "inspector",
+    "needs": "video-slow",
+    "file": "src/renderer/src/components/SpeedPanel.tsx",
+    "line": 98,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Soften",
+    "match": "text",
+    "home": "inspector",
+    "needs": "video-keyed",
+    "file": "src/renderer/src/components/KeyPanel.tsx",
+    "line": 99,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Sound",
+    "match": "text",
+    "home": "inspector",
+    "needs": "video-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 963,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Source",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 501,
+    "newHome": "canvas (CanvasBar Source / Split / Output)"
+  },
+  {
+    "label": "Source in",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 874,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Speed",
+    "match": "text",
+    "home": "inspector",
+    "needs": "video-clip",
+    "file": "src/renderer/src/components/SpeedPanel.tsx",
+    "line": 40,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Spin",
+    "match": "text",
+    "home": "inspector",
+    "needs": "ring-clip",
+    "file": "src/renderer/src/components/CarouselPanel.tsx",
+    "line": 75,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Split",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 502,
+    "newHome": "canvas (CanvasBar Source / Split / Output)"
+  },
+  {
+    "label": "Splits the photo beneath into background and subject",
+    "match": "title",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "part": true,
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1441,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Splits this clip with the one on the track below.",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/LayoutPanel.tsx",
+    "line": 98,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Spoken words from the transcript, timed automatically across the whole project.",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "part": true,
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 564,
+    "newHome": "output strip"
+  },
+  {
+    "label": "Standard",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/shared/render/encode.ts",
+    "line": 177,
+    "newHome": "export strip"
+  },
+  {
+    "label": "Start",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 855,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Steady",
+    "match": "text",
+    "home": "inspector",
+    "needs": "video-clip",
+    "file": "src/renderer/src/components/SteadyToggle.tsx",
+    "line": 26,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Stop animating — the shape stays as it is at the playhead",
+    "match": "title",
+    "home": "inspector",
+    "needs": "mask",
+    "file": "src/renderer/src/components/MaskPanel.tsx",
+    "line": 123,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Style",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/TextStylePicker.tsx",
+    "line": 56,
+    "newHome": "output strip (caption host, Inspector.tsx:604)"
+  },
+  {
+    "label": "Style",
+    "match": "text",
+    "home": "inspector",
+    "needs": "text-clip",
+    "file": "src/renderer/src/components/TextStylePicker.tsx",
+    "line": 56,
+    "newHome": "trimmer dock (text host, Inspector.tsx:1210)"
+  },
+  {
+    "label": "Subject still",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-depth-shake",
+    "file": "src/renderer/src/components/CameraPanel.tsx",
+    "line": 157,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "THE DAILY CHRONICLE",
+    "match": "placeholder",
+    "home": "inspector",
+    "needs": "paper-customise",
+    "file": "src/renderer/src/components/PaperPanel.tsx",
+    "line": 221,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Tabloid",
+    "match": "text",
+    "home": "inspector",
+    "needs": "paper-clip",
+    "file": "src/shared/render/paper.ts",
+    "line": 88,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Take a green or blue screen out, so the track below shows through.",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/KeyPanel.tsx",
+    "line": 41,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Temp",
+    "match": "text",
+    "home": "inspector",
+    "needs": "adjustment-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1058,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Temp",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1058,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Text card",
+    "match": "text",
+    "home": "inspector",
+    "needs": "text-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1163,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Texture",
+    "match": "text",
+    "home": "inspector",
+    "needs": "paper-customise",
+    "file": "src/renderer/src/components/PaperPanel.tsx",
+    "line": 197,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "The clip keeps the same footage and changes how long it sits on the timeline.",
+    "match": "text",
+    "home": "inspector",
+    "needs": "video-clip",
+    "part": true,
+    "file": "src/renderer/src/components/SpeedPanel.tsx",
+    "line": 113,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "The clip on the track below is shown only inside this shape",
+    "match": "title",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1424,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "The drawn envelope sets this clip's level — clear it to use the fader.",
+    "match": "text",
+    "home": "inspector",
+    "needs": "video-envelope",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1000,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "The mask's next key",
+    "match": "title",
+    "home": "inspector",
+    "needs": "mask",
+    "file": "src/renderer/src/components/MaskPanel.tsx",
+    "line": 150,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "The mask's previous key",
+    "match": "title",
+    "home": "inspector",
+    "needs": "mask",
+    "file": "src/renderer/src/components/MaskPanel.tsx",
+    "line": 142,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "The picture below shows through this — put it back",
+    "match": "text",
+    "home": "inspector",
+    "needs": "text-fill",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1419,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "The same move on the photo",
+    "match": "title",
+    "home": "inspector",
+    "needs": "photo-depth",
+    "part": true,
+    "file": "src/renderer/src/components/CameraPanel.tsx",
+    "line": 65,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "The template keeps its own typography — editing the copy re-renders it.",
+    "match": "text",
+    "home": "inspector",
+    "needs": "title-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1548,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "The word being spoken",
+    "match": "title",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 732,
+    "newHome": "output strip"
+  },
+  {
+    "label": "The words are simply there",
+    "match": "title",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/TextAnimationPicker.tsx",
+    "line": 133,
+    "newHome": "output strip (caption host, Inspector.tsx:609)"
+  },
+  {
+    "label": "The words are simply there",
+    "match": "title",
+    "home": "inspector",
+    "needs": "text-clip",
+    "file": "src/renderer/src/components/TextAnimationPicker.tsx",
+    "line": 133,
+    "newHome": "trimmer dock (text host, Inspector.tsx:1223)"
+  },
+  {
+    "label": "These captions are drawn rather than burned in.",
+    "match": "text",
+    "home": "inspector",
+    "needs": "captions-drawn",
+    "part": true,
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 752,
+    "newHome": "output strip"
+  },
+  {
+    "label": "This is a subject cutout — put the photo back together",
+    "match": "text",
+    "home": "inspector",
+    "needs": "subject-cutout",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1436,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "This photo has Zoom keyframes — choosing a move takes them off, since both scale the picture.",
+    "match": "text",
+    "home": "inspector",
+    "needs": "keyframes",
+    "file": "src/renderer/src/components/CameraPanel.tsx",
+    "line": 176,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Tilt",
+    "match": "text",
+    "home": "inspector",
+    "needs": "ring-clip",
+    "file": "src/renderer/src/components/CarouselPanel.tsx",
+    "line": 89,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Tilt & tear",
+    "match": "text",
+    "home": "inspector",
+    "needs": "paper-customise",
+    "file": "src/renderer/src/components/PaperPanel.tsx",
+    "line": 189,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Tint",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1066,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Title text",
+    "match": "text",
+    "home": "inspector",
+    "needs": "title-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1535,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Tracking",
+    "match": "text",
+    "home": "inspector",
+    "needs": "text-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1303,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Transition in",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1555,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Turned along the ring",
+    "match": "text",
+    "home": "inspector",
+    "needs": "ring-clip",
+    "file": "src/renderer/src/components/CarouselPanel.tsx",
+    "line": 114,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Two exports can land at noticeably different levels.",
+    "match": "text",
+    "home": "inspector",
+    "needs": "loudness-off",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 492,
+    "newHome": "output strip"
+  },
+  {
+    "label": "Type your text",
+    "match": "placeholder",
+    "home": "inspector",
+    "needs": "text-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1170,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Typewriter",
+    "match": "text",
+    "home": "inspector",
+    "needs": "paper-clip",
+    "file": "src/renderer/src/components/PaperPanel.tsx",
+    "line": 121,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Visible arc",
+    "match": "text",
+    "home": "inspector",
+    "needs": "ring-clip",
+    "file": "src/renderer/src/components/CarouselPanel.tsx",
+    "line": 61,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Volume",
+    "match": "text",
+    "home": "inspector",
+    "needs": "video-clip",
+    "file": "src/shared/render/keyframes.ts",
+    "line": 82,
+    "newHome": "timeline sidebar (Curve tray)"
+  },
+  {
+    "label": "Weight",
+    "match": "text",
+    "home": "inspector",
+    "needs": "text-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1311,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "White glow",
+    "match": "title",
+    "home": "inspector",
+    "needs": "none",
+    "part": true,
+    "file": "src/shared/render/textStyle.ts",
+    "line": 173,
+    "newHome": "output strip (caption host, Inspector.tsx:604)"
+  },
+  {
+    "label": "Width",
+    "match": "text",
+    "home": "inspector",
+    "needs": "mask",
+    "file": "src/renderer/src/components/MaskPanel.tsx",
+    "line": 225,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Words",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 670,
+    "newHome": "output strip"
+  },
+  {
+    "label": "Your own headline — %s is where the word goes",
+    "match": "text",
+    "home": "inspector",
+    "needs": "paper-customise",
+    "file": "src/renderer/src/components/PaperPanel.tsx",
+    "line": 207,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Zoom",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/shared/render/keyframes.ts",
+    "line": 74,
+    "newHome": "timeline sidebar (Curve tray)"
+  },
+  {
+    "label": "center",
+    "match": "text",
+    "home": "inspector",
+    "needs": "text-clip",
+    "count": 2,
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1278,
+    "newHome": "trimmer dock",
+    "note": "Count 2: the position button (1262) and the align button. Rendered through CSS capitalize; the text node is the source spelling."
+  },
+  {
+    "label": "checking this machine",
+    "match": "text",
+    "home": "inspector",
+    "needs": "encoders-unknown",
+    "part": true,
+    "file": "src/renderer/src/components/ExportSettings.tsx",
+    "line": 99,
+    "newHome": "export strip"
+  },
+  {
+    "label": "clear",
+    "match": "text",
+    "home": "inspector",
+    "needs": "keyframes",
+    "file": "src/renderer/src/components/Keyframes.tsx",
+    "line": 158,
+    "newHome": "timeline sidebar (Curve tray)"
+  },
+  {
+    "label": "click to jump, double-click to remove",
+    "match": "title",
+    "home": "inspector",
+    "needs": "keyframes",
+    "part": true,
+    "count": 2,
+    "file": "src/renderer/src/components/Keyframes.tsx",
+    "line": 130,
+    "newHome": "timeline sidebar (Curve tray), Keys tab",
+    "note": "Count 2: one per key: the census keys zoom twice."
+  },
+  {
+    "label": "fonts",
+    "match": "placeholder",
+    "home": "inspector",
+    "needs": "caption-fontpicker",
+    "part": true,
+    "file": "src/renderer/src/components/FontPicker.tsx",
+    "line": 75,
+    "newHome": "trimmer dock + output strip (hosts)"
+  },
+  {
+    "label": "fonts",
+    "match": "placeholder",
+    "home": "inspector",
+    "needs": "text-fontpicker",
+    "part": true,
+    "file": "src/renderer/src/components/FontPicker.tsx",
+    "line": 75,
+    "newHome": "trimmer dock + output strip (hosts) (text host, Inspector.tsx:1244)"
+  },
+  {
+    "label": "in this family",
+    "match": "title",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "part": true,
+    "count": 4,
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1614,
+    "newHome": "trimmer dock",
+    "note": "Count 4: one per transition family button."
+  },
+  {
+    "label": "inside the mask only",
+    "match": "text",
+    "home": "inspector",
+    "needs": "mask-grade",
+    "part": true,
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1040,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "is not working on this machine.",
+    "match": "text",
+    "home": "inspector",
+    "needs": "encoder-broken",
+    "part": true,
+    "file": "src/renderer/src/components/ExportSettings.tsx",
+    "line": 117,
+    "newHome": "export strip"
+  },
+  {
+    "label": "left",
+    "match": "text",
+    "home": "inspector",
+    "needs": "text-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1278,
+    "newHome": "trimmer dock",
+    "note": "Rendered through CSS capitalize; the text node is the source spelling."
+  },
+  {
+    "label": "library did not load",
+    "match": "text",
+    "home": "inspector",
+    "needs": "transitions-error",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1592,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "masks",
+    "match": "title",
+    "home": "inspector",
+    "needs": "transition-tags",
+    "part": true,
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1647,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "one line, placed by you",
+    "match": "text",
+    "home": "inspector",
+    "needs": "text-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1164,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "or load your own .cube",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "part": true,
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1152,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "playhead is off this clip",
+    "match": "text",
+    "home": "inspector",
+    "needs": "playhead-off-clip",
+    "file": "src/renderer/src/components/Keyframes.tsx",
+    "line": 47,
+    "newHome": "timeline sidebar (Curve tray)"
+  },
+  {
+    "label": "right",
+    "match": "text",
+    "home": "inspector",
+    "needs": "text-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1278,
+    "newHome": "trimmer dock",
+    "note": "Rendered through CSS capitalize; the text node is the source spelling."
+  },
+  {
+    "label": "styles — glow, metal, gradient",
+    "match": "placeholder",
+    "home": "inspector",
+    "needs": "style-gallery",
+    "part": true,
+    "file": "src/renderer/src/components/TextStylePicker.tsx",
+    "line": 153,
+    "newHome": "trimmer dock + output strip (hosts)"
+  },
+  {
+    "label": "the clip keeps the same footage and changes length",
+    "match": "title",
+    "home": "inspector",
+    "needs": "video-clip",
+    "part": true,
+    "count": 6,
+    "file": "src/renderer/src/components/SpeedPanel.tsx",
+    "line": 62,
+    "newHome": "trimmer dock",
+    "note": "Count 6: one per speed preset."
+  },
+  {
+    "label": "top",
+    "match": "text",
+    "home": "inspector",
+    "needs": "text-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1262,
+    "newHome": "trimmer dock",
+    "note": "The text position button. Rendered through CSS capitalize; the text node is the source spelling."
+  },
+  {
+    "label": "transition",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1588,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "words · spoken",
+    "match": "text",
+    "home": "inspector",
+    "needs": "none",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 735,
+    "newHome": "output strip"
+  },
+  {
+    "label": "All",
+    "match": "text",
+    "home": "library",
+    "needs": "library-stickers",
+    "file": "src/renderer/src/components/Library.tsx",
+    "line": 195,
+    "newHome": "Shelf tile Library"
+  },
+  {
+    "label": "Asset packs",
+    "match": "text",
+    "home": "library",
+    "needs": "none",
+    "file": "src/renderer/src/components/PackList.tsx",
+    "line": 39,
+    "newHome": "Shelf tile Library"
+  },
+  {
+    "label": "Asset packs — download more fonts, transitions and stickers",
+    "match": "title",
+    "home": "library",
+    "needs": "none",
+    "file": "src/renderer/src/components/Library.tsx",
+    "line": 152,
+    "newHome": "Shelf tile Library"
+  },
+  {
+    "label": "Cancel",
+    "match": "text",
+    "home": "library",
+    "needs": "packs-states",
+    "file": "src/shared/assets/pack.ts",
+    "line": 344,
+    "newHome": "Shelf tile Library",
+    "note": "A pack download in flight."
+  },
+  {
+    "label": "Check for newer packs",
+    "match": "title",
+    "home": "library",
+    "needs": "none",
+    "file": "src/renderer/src/components/PackList.tsx",
+    "line": 43,
+    "newHome": "Shelf tile Library"
+  },
+  {
+    "label": "Could not check for packs —",
+    "match": "text",
+    "home": "library",
+    "needs": "packs-error",
+    "file": "src/renderer/src/components/PackList.tsx",
+    "line": 52,
+    "newHome": "Shelf tile Library"
+  },
+  {
+    "label": "Fonts",
+    "match": "text",
+    "home": "library",
+    "needs": "none",
+    "file": "src/renderer/src/components/Library.tsx",
+    "line": 14,
+    "newHome": "Shelf tile Library"
+  },
+  {
+    "label": "Get",
+    "match": "text",
+    "home": "library",
+    "needs": "library-empty-drawer",
+    "file": "src/renderer/src/components/Library.tsx",
+    "line": 255,
+    "newHome": "Shelf tile Library",
+    "note": "\"Get fonts →\": an empty drawer in a library that is not empty. The kind follows as its own text."
+  },
+  {
+    "label": "Get ·",
+    "match": "text",
+    "home": "library",
+    "needs": "none",
+    "part": true,
+    "file": "src/shared/assets/pack.ts",
+    "line": 367,
+    "newHome": "Shelf tile Library"
+  },
+  {
+    "label": "Loading more…",
+    "match": "text",
+    "home": "library",
+    "needs": "library-stickers",
+    "file": "src/renderer/src/components/Library.tsx",
+    "line": 287,
+    "newHome": "Shelf tile Library"
+  },
+  {
+    "label": "Looked in",
+    "match": "text",
+    "home": "library",
+    "needs": "none",
+    "file": "src/renderer/src/components/Library.tsx",
+    "line": 249,
+    "newHome": "Shelf tile Library"
+  },
+  {
+    "label": "None have been released yet.",
+    "match": "text",
+    "home": "library",
+    "needs": "packs-unreleased",
+    "part": true,
+    "file": "src/renderer/src/components/PackList.tsx",
+    "line": 80,
+    "newHome": "Shelf tile Library"
+  },
+  {
+    "label": "Not yet released",
+    "match": "text",
+    "home": "library",
+    "needs": "none",
+    "file": "src/shared/assets/pack.ts",
+    "line": 359,
+    "newHome": "Shelf tile Library"
+  },
+  {
+    "label": "Nothing here.",
+    "match": "text",
+    "home": "library",
+    "needs": "none",
+    "file": "src/renderer/src/components/Library.tsx",
+    "line": 239,
+    "newHome": "Shelf tile Library"
+  },
+  {
+    "label": "Play and show in the trimmer",
+    "match": "title",
+    "home": "library",
+    "needs": "library-sfx",
+    "count": 3,
+    "file": "src/renderer/src/components/Library.tsx",
+    "line": 412,
+    "newHome": "Shelf tile Library (its trimmer is the dock)",
+    "note": "Count 3: one per sound: the census puts three in the catalog."
+  },
+  {
+    "label": "Props",
+    "match": "text",
+    "home": "library",
+    "needs": "none",
+    "file": "src/renderer/src/components/Library.tsx",
+    "line": 15,
+    "newHome": "Shelf tile Library"
+  },
+  {
+    "label": "Remove",
+    "match": "text",
+    "home": "library",
+    "needs": "packs-states",
+    "file": "src/shared/assets/pack.ts",
+    "line": 381,
+    "newHome": "Shelf tile Library",
+    "note": "An installed pack."
+  },
+  {
+    "label": "Rescan the asset library",
+    "match": "title",
+    "home": "library",
+    "needs": "none",
+    "file": "src/renderer/src/components/Library.tsx",
+    "line": 161,
+    "newHome": "Shelf tile Library"
+  },
+  {
+    "label": "SFX",
+    "match": "text",
+    "home": "library",
+    "needs": "none",
+    "file": "src/renderer/src/components/Library.tsx",
+    "line": 19,
+    "newHome": "Shelf tile Library"
+  },
+  {
+    "label": "Search the library",
+    "match": "placeholder",
+    "home": "library",
+    "needs": "none",
+    "file": "src/renderer/src/components/Library.tsx",
+    "line": 144,
+    "newHome": "Shelf tile Library"
+  },
+  {
+    "label": "Stickers",
+    "match": "text",
+    "home": "library",
+    "needs": "none",
+    "file": "src/renderer/src/components/Library.tsx",
+    "line": 16,
+    "newHome": "Shelf tile Library"
+  },
+  {
+    "label": "This build knows about no packs.",
+    "match": "text",
+    "home": "library",
+    "needs": "packs-none",
+    "file": "src/renderer/src/components/PackList.tsx",
+    "line": 58,
+    "newHome": "Shelf tile Library"
+  },
+  {
+    "label": "Titles",
+    "match": "text",
+    "home": "library",
+    "needs": "none",
+    "file": "src/renderer/src/components/Library.tsx",
+    "line": 18,
+    "newHome": "Shelf tile Library"
+  },
+  {
+    "label": "Transitions",
+    "match": "text",
+    "home": "library",
+    "needs": "none",
+    "file": "src/renderer/src/components/Library.tsx",
+    "line": 17,
+    "newHome": "Shelf tile Library (chip kept) and Shelf tile Transitions"
+  },
+  {
+    "label": "Try again",
+    "match": "text",
+    "home": "library",
+    "needs": "packs-states",
+    "file": "src/shared/assets/pack.ts",
+    "line": 352,
+    "newHome": "Shelf tile Library",
+    "note": "A pack whose install failed."
+  },
+  {
+    "label": "Update ·",
+    "match": "text",
+    "home": "library",
+    "needs": "packs-states",
+    "part": true,
+    "file": "src/shared/assets/pack.ts",
+    "line": 375,
+    "newHome": "Shelf tile Library",
+    "note": "A pack installed at an older version; the size follows."
+  },
+  {
+    "label": "— drag onto the timeline",
+    "match": "title",
+    "home": "library",
+    "needs": "library-stickers",
+    "part": true,
+    "count": 120,
+    "file": "src/renderer/src/components/Library.tsx",
+    "line": 434,
+    "newHome": "Shelf tile Library (also reached from Text, 3D props, Transitions)",
+    "note": "Count 120: one per sticker tile on the first page (Library PAGE = 120, of 130 census stickers)."
+  },
+  {
+    "label": "+ Card ring",
+    "match": "text",
+    "home": "media",
+    "needs": "none",
+    "file": "src/renderer/src/components/LeftPanel.tsx",
+    "line": 121,
+    "newHome": "Shelf tile Card ring"
+  },
+  {
+    "label": "+ Colour",
+    "match": "text",
+    "home": "media",
+    "needs": "none",
+    "file": "src/renderer/src/components/LeftPanel.tsx",
+    "line": 93,
+    "newHome": "Shelf tile Colour cards"
+  },
+  {
+    "label": "+ Grade",
+    "match": "text",
+    "home": "media",
+    "needs": "none",
+    "file": "src/renderer/src/components/LeftPanel.tsx",
+    "line": 100,
+    "newHome": "Shelf tile Grade"
+  },
+  {
+    "label": "+ Newspaper clippings",
+    "match": "text",
+    "home": "media",
+    "needs": "none",
+    "file": "src/renderer/src/components/LeftPanel.tsx",
+    "line": 114,
+    "newHome": "Shelf tile Newspaper clipping"
+  },
+  {
+    "label": "+ Text",
+    "match": "text",
+    "home": "media",
+    "needs": "none",
+    "file": "src/renderer/src/components/LeftPanel.tsx",
+    "line": 86,
+    "newHome": "Shelf tile Text"
+  },
+  {
+    "label": "Create",
+    "match": "text",
+    "home": "media",
+    "needs": "none",
+    "file": "src/renderer/src/components/LeftPanel.tsx",
+    "line": 33,
+    "newHome": "Shelf tiles Director … 3D props"
+  },
+  {
+    "label": "Drag onto the timeline, or double-click",
+    "match": "title",
+    "home": "media",
+    "needs": "photo-clip",
+    "part": true,
+    "count": 4,
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 195,
+    "newHome": "Shelf tile Upload",
+    "note": "Count 4: one per pool tile: three photos and a video."
+  },
+  {
+    "label": "Drop to import",
+    "match": "text",
+    "home": "media",
+    "needs": "pool-dragover",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 264,
+    "newHome": "Shelf tile Upload"
+  },
+  {
+    "label": "Drop your photos and clips here",
+    "match": "text",
+    "home": "media",
+    "needs": "none",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 178,
+    "newHome": "Shelf tile Upload"
+  },
+  {
+    "label": "Import",
+    "match": "text",
+    "home": "media",
+    "needs": "none",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 150,
+    "newHome": "Shelf tile Upload — the same Upload big button"
+  },
+  {
+    "label": "Library",
+    "match": "text",
+    "home": "media",
+    "needs": "none",
+    "file": "src/renderer/src/components/LeftPanel.tsx",
+    "line": 13,
+    "newHome": "Shelf tile Library"
+  },
+  {
+    "label": "Media",
+    "match": "text",
+    "home": "media",
+    "needs": "none",
+    "count": 2,
+    "file": "src/renderer/src/components/LeftPanel.tsx",
+    "line": 12,
+    "newHome": "Shelf tile Upload",
+    "note": "Count 2: the Media tab and the pool's own MEDIA header."
+  },
+  {
+    "label": "Offline",
+    "match": "text",
+    "home": "media",
+    "needs": "offline-asset",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 51,
+    "newHome": "Shelf tile Upload"
+  },
+  {
+    "label": "Relink…",
+    "match": "text",
+    "home": "media",
+    "needs": "offline-asset",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 170,
+    "newHome": "Shelf tile Upload"
+  },
+  {
+    "label": "The AI sidecar is not running",
+    "match": "title",
+    "home": "media",
+    "needs": "video-clip",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 239,
+    "newHome": "Shelf tile Upload (tooltip reworded to \"AI helper\" in step 6)"
+  },
+  {
+    "label": "Transcribing — click to cancel",
+    "match": "title",
+    "home": "media",
+    "needs": "transcribing",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 225,
+    "newHome": "Shelf tile Upload"
+  },
+  {
+    "label": "Transcript",
+    "match": "text",
+    "home": "media",
+    "needs": "none",
+    "file": "src/renderer/src/components/LeftPanel.tsx",
+    "line": 24,
+    "newHome": "Shelf tile Transcript"
+  },
+  {
+    "label": "Cancel",
+    "match": "text",
+    "home": "newproject",
+    "needs": "newproject-open",
+    "file": "src/renderer/src/components/NewProject.tsx",
+    "line": 129,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Frame rate",
+    "match": "text",
+    "home": "newproject",
+    "needs": "newproject-open",
+    "file": "src/renderer/src/components/NewProject.tsx",
+    "line": 93,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Name",
+    "match": "text",
+    "home": "newproject",
+    "needs": "newproject-open",
+    "file": "src/renderer/src/components/NewProject.tsx",
+    "line": 36,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "New project",
+    "match": "text",
+    "home": "newproject",
+    "needs": "newproject-open",
+    "file": "src/renderer/src/components/NewProject.tsx",
+    "line": 33,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Shape",
+    "match": "text",
+    "home": "newproject",
+    "needs": "newproject-open",
+    "file": "src/renderer/src/components/NewProject.tsx",
+    "line": 53,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Start",
+    "match": "text",
+    "home": "newproject",
+    "needs": "newproject-open",
+    "file": "src/renderer/src/components/NewProject.tsx",
+    "line": 122,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Blurred background",
+    "match": "text",
+    "home": "preview",
+    "needs": "drop-chip",
+    "file": "src/shared/render/dropIntent.ts",
+    "line": 38,
+    "newHome": "canvas (unchanged)"
+  },
+  {
+    "label": "Click the screen colour · Esc to cancel",
+    "match": "title",
+    "home": "preview",
+    "needs": "key-pick",
+    "file": "src/renderer/src/components/Preview.tsx",
+    "line": 2149,
+    "newHome": "canvas (unchanged)"
+  },
+  {
+    "label": "Click to edit, drag to move",
+    "match": "title",
+    "home": "preview",
+    "needs": "text-clip",
+    "file": "src/renderer/src/components/TextOverlay.tsx",
+    "line": 216,
+    "newHome": "canvas (unchanged)"
+  },
+  {
+    "label": "Drag to compare · double-click for an even split",
+    "match": "title",
+    "home": "preview",
+    "needs": "split-view",
+    "file": "src/renderer/src/components/Preview.tsx",
+    "line": 2227,
+    "newHome": "canvas (unchanged)"
+  },
+  {
+    "label": "Drag to move",
+    "match": "title",
+    "home": "preview",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/TransformOverlay.tsx",
+    "line": 146,
+    "newHome": "canvas (unchanged)"
+  },
+  {
+    "label": "Drag to resize",
+    "match": "title",
+    "home": "preview",
+    "needs": "text-clip",
+    "file": "src/renderer/src/components/TextOverlay.tsx",
+    "line": 233,
+    "newHome": "canvas (unchanged)"
+  },
+  {
+    "label": "Drag to rotate — hold shift for 15° steps",
+    "match": "title",
+    "home": "preview",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/TransformOverlay.tsx",
+    "line": 194,
+    "newHome": "canvas (unchanged)"
+  },
+  {
+    "label": "Drop pictures or a clip here",
+    "match": "text",
+    "home": "preview",
+    "needs": "canvas-drawn",
+    "file": "src/renderer/src/components/Preview.tsx",
+    "line": 1712,
+    "newHome": "canvas (unchanged)",
+    "harnessOnly": false,
+    "note": "Painted on the preview canvas with fillText, so no DOM query can read it; the source-membership test holds it to its file."
+  },
+  {
+    "label": "Fill the frame",
+    "match": "text",
+    "home": "preview",
+    "needs": "drop-chip",
+    "file": "src/shared/render/dropIntent.ts",
+    "line": 36,
+    "newHome": "canvas (unchanged)"
+  },
+  {
+    "label": "Keep it as it is",
+    "match": "title",
+    "home": "preview",
+    "needs": "drop-chip",
+    "file": "src/renderer/src/components/Preview.tsx",
+    "line": 2068,
+    "newHome": "canvas (unchanged)"
+  },
+  {
+    "label": "No clip under the playhead",
+    "match": "text",
+    "home": "preview",
+    "needs": "playhead-at-end",
+    "file": "src/renderer/src/components/Preview.tsx",
+    "line": 2109,
+    "newHome": "canvas (unchanged)"
+  },
+  {
+    "label": "Output",
+    "match": "text",
+    "home": "preview",
+    "needs": "split-view",
+    "file": "src/renderer/src/components/Preview.tsx",
+    "line": 2096,
+    "newHome": "canvas (unchanged)",
+    "note": "The right label of the split view."
+  },
+  {
+    "label": "Picture in picture",
+    "match": "text",
+    "home": "preview",
+    "needs": "drop-chip",
+    "file": "src/shared/render/dropIntent.ts",
+    "line": 37,
+    "newHome": "canvas (unchanged)"
+  },
+  {
+    "label": "Source",
+    "match": "text",
+    "home": "preview",
+    "needs": "split-view",
+    "file": "src/renderer/src/components/Preview.tsx",
+    "line": 2093,
+    "newHome": "canvas (unchanged)",
+    "note": "The left label of the split view."
+  },
+  {
+    "label": "The selected clip is not at this moment",
+    "match": "text",
+    "home": "preview",
+    "needs": "playhead-at-end",
+    "part": true,
+    "file": "src/renderer/src/components/Preview.tsx",
+    "line": 2081,
+    "newHome": "canvas (unchanged)"
+  },
+  {
+    "label": "go to it",
+    "match": "text",
+    "home": "preview",
+    "needs": "playhead-at-end",
+    "file": "src/renderer/src/components/Preview.tsx",
+    "line": 2082,
+    "newHome": "canvas (unchanged)"
+  },
+  {
+    "label": "or open Create and press Direct",
+    "match": "text",
+    "home": "preview",
+    "needs": "canvas-drawn",
+    "file": "src/renderer/src/components/Preview.tsx",
+    "line": 1715,
+    "newHome": "canvas — reworded to \"or open Director and press Direct\" (§3.15)",
+    "harnessOnly": false,
+    "note": "Painted on the preview canvas with fillText, so no DOM query can read it; the source-membership test holds it to its file."
+  },
+  {
+    "label": "Add to the selection",
+    "match": "text",
+    "home": "shortcuts",
+    "needs": "shortcuts-open",
+    "file": "src/renderer/src/components/Shortcuts.tsx",
+    "line": 36,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Clear the marked range",
+    "match": "text",
+    "home": "shortcuts",
+    "needs": "shortcuts-open",
+    "file": "src/renderer/src/components/Shortcuts.tsx",
+    "line": 29,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Cut / copy / paste",
+    "match": "text",
+    "home": "shortcuts",
+    "needs": "shortcuts-open",
+    "file": "src/renderer/src/components/Shortcuts.tsx",
+    "line": 48,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Delete, leaving the gap",
+    "match": "text",
+    "home": "shortcuts",
+    "needs": "shortcuts-open",
+    "file": "src/renderer/src/components/Shortcuts.tsx",
+    "line": 50,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Duplicate",
+    "match": "text",
+    "home": "shortcuts",
+    "needs": "shortcuts-open",
+    "file": "src/renderer/src/components/Shortcuts.tsx",
+    "line": 49,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Export",
+    "match": "text",
+    "home": "shortcuts",
+    "needs": "shortcuts-open",
+    "file": "src/renderer/src/components/Shortcuts.tsx",
+    "line": 62,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Fit the whole project",
+    "match": "text",
+    "home": "shortcuts",
+    "needs": "shortcuts-open",
+    "file": "src/renderer/src/components/Shortcuts.tsx",
+    "line": 63,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Keyboard shortcuts",
+    "match": "text",
+    "home": "shortcuts",
+    "needs": "shortcuts-open",
+    "file": "src/renderer/src/components/Shortcuts.tsx",
+    "line": 94,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Mark in / mark out",
+    "match": "text",
+    "home": "shortcuts",
+    "needs": "shortcuts-open",
+    "file": "src/renderer/src/components/Shortcuts.tsx",
+    "line": 28,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Marquee",
+    "match": "text",
+    "home": "shortcuts",
+    "needs": "shortcuts-open",
+    "file": "src/renderer/src/components/Shortcuts.tsx",
+    "line": 37,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Nudge one frame",
+    "match": "text",
+    "home": "shortcuts",
+    "needs": "shortcuts-open",
+    "file": "src/renderer/src/components/Shortcuts.tsx",
+    "line": 46,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Nudge ten frames",
+    "match": "text",
+    "home": "shortcuts",
+    "needs": "shortcuts-open",
+    "file": "src/renderer/src/components/Shortcuts.tsx",
+    "line": 47,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "One frame",
+    "match": "text",
+    "home": "shortcuts",
+    "needs": "shortcuts-open",
+    "file": "src/renderer/src/components/Shortcuts.tsx",
+    "line": 25,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "One second",
+    "match": "text",
+    "home": "shortcuts",
+    "needs": "shortcuts-open",
+    "file": "src/renderer/src/components/Shortcuts.tsx",
+    "line": 26,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Open",
+    "match": "text",
+    "home": "shortcuts",
+    "needs": "shortcuts-open",
+    "file": "src/renderer/src/components/Shortcuts.tsx",
+    "line": 61,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Play / pause",
+    "match": "text",
+    "home": "shortcuts",
+    "needs": "shortcuts-open",
+    "file": "src/renderer/src/components/Shortcuts.tsx",
+    "line": 24,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Ripple delete, closing it",
+    "match": "text",
+    "home": "shortcuts",
+    "needs": "shortcuts-open",
+    "file": "src/renderer/src/components/Shortcuts.tsx",
+    "line": 51,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Save",
+    "match": "text",
+    "home": "shortcuts",
+    "needs": "shortcuts-open",
+    "file": "src/renderer/src/components/Shortcuts.tsx",
+    "line": 59,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Save As",
+    "match": "text",
+    "home": "shortcuts",
+    "needs": "shortcuts-open",
+    "file": "src/renderer/src/components/Shortcuts.tsx",
+    "line": 60,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Select a clip",
+    "match": "text",
+    "home": "shortcuts",
+    "needs": "shortcuts-open",
+    "file": "src/renderer/src/components/Shortcuts.tsx",
+    "line": 35,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Select all",
+    "match": "text",
+    "home": "shortcuts",
+    "needs": "shortcuts-open",
+    "file": "src/renderer/src/components/Shortcuts.tsx",
+    "line": 38,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Select the gap",
+    "match": "text",
+    "home": "shortcuts",
+    "needs": "shortcuts-open",
+    "file": "src/renderer/src/components/Shortcuts.tsx",
+    "line": 39,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Speed, voice, look and the rest",
+    "match": "text",
+    "home": "shortcuts",
+    "needs": "shortcuts-open",
+    "file": "src/renderer/src/components/Shortcuts.tsx",
+    "line": 52,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Split at the playhead",
+    "match": "text",
+    "home": "shortcuts",
+    "needs": "shortcuts-open",
+    "file": "src/renderer/src/components/Shortcuts.tsx",
+    "line": 45,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Start / end",
+    "match": "text",
+    "home": "shortcuts",
+    "needs": "shortcuts-open",
+    "file": "src/renderer/src/components/Shortcuts.tsx",
+    "line": 27,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "This list",
+    "match": "text",
+    "home": "shortcuts",
+    "needs": "shortcuts-open",
+    "file": "src/renderer/src/components/Shortcuts.tsx",
+    "line": 64,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Undo / redo",
+    "match": "text",
+    "home": "shortcuts",
+    "needs": "shortcuts-open",
+    "file": "src/renderer/src/components/Shortcuts.tsx",
+    "line": 58,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "1080p",
+    "match": "text",
+    "home": "source",
+    "needs": "ingest-range",
+    "file": "src/shared/ingest/format.ts",
+    "line": 31,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "480p",
+    "match": "text",
+    "home": "source",
+    "needs": "ingest-range",
+    "file": "src/shared/ingest/format.ts",
+    "line": 31,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "4K",
+    "match": "text",
+    "home": "source",
+    "needs": "ingest-range",
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 202,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "720p",
+    "match": "text",
+    "home": "source",
+    "needs": "ingest-range",
+    "file": "src/shared/ingest/format.ts",
+    "line": 31,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "Add files",
+    "match": "text",
+    "home": "source",
+    "needs": "none",
+    "file": "src/renderer/src/components/SourceBar.tsx",
+    "line": 97,
+    "newHome": "Shelf tile Upload (MediaPool with one Upload button)"
+  },
+  {
+    "label": "Audio",
+    "match": "text",
+    "home": "source",
+    "needs": "ingest-range",
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 23,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "Exact cut — slower",
+    "match": "text",
+    "home": "source",
+    "needs": "ingest-range",
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 293,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "Fast cut",
+    "match": "text",
+    "home": "source",
+    "needs": "ingest-range",
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 293,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "From",
+    "match": "text",
+    "home": "source",
+    "needs": "ingest-range",
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 251,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "Get",
+    "match": "text",
+    "home": "source",
+    "needs": "ingest-range",
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 154,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "Give a topic; the edit is written and assembled for you",
+    "match": "title",
+    "home": "source",
+    "needs": "none",
+    "file": "src/renderer/src/components/SourceBar.tsx",
+    "line": 42,
+    "newHome": "Shelf tile Narration (coming-soon)"
+  },
+  {
+    "label": "Instrumental",
+    "match": "text",
+    "home": "source",
+    "needs": "ingest-range",
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 24,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "Just a part of it",
+    "match": "text",
+    "home": "source",
+    "needs": "ingest-range",
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 244,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "Just the sound, as it was stored",
+    "match": "title",
+    "home": "source",
+    "needs": "ingest-range",
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 23,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "Narration",
+    "match": "text",
+    "home": "source",
+    "needs": "none",
+    "file": "src/renderer/src/components/SourceBar.tsx",
+    "line": 40,
+    "newHome": "Shelf tile Narration"
+  },
+  {
+    "label": "Paste a link, choose the quality, take the video or just the audio",
+    "match": "title",
+    "home": "source",
+    "needs": "none",
+    "file": "src/renderer/src/components/SourceBar.tsx",
+    "line": 36,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "Paste a video link",
+    "match": "placeholder",
+    "home": "source",
+    "needs": "ingest-range",
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 138,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "Photos, video and music from this machine",
+    "match": "title",
+    "home": "source",
+    "needs": "none",
+    "file": "src/renderer/src/components/SourceBar.tsx",
+    "line": 30,
+    "newHome": "Shelf tile Upload"
+  },
+  {
+    "label": "Re-encoded to mp3, for somewhere that insists on it",
+    "match": "title",
+    "home": "source",
+    "needs": "ingest-instrumental",
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 217,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "That does not look like a link yet.",
+    "match": "text",
+    "home": "source",
+    "needs": "ingest-bad-link",
+    "file": "src/shared/ingest/url.ts",
+    "line": 240,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "The first download fetches yt-dlp (about 30MB). After that it is instant.",
+    "match": "text",
+    "home": "source",
+    "needs": "ingest-range",
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 311,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "The picture and its sound",
+    "match": "title",
+    "home": "source",
+    "needs": "ingest-range",
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 22,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "The song with the centred voice removed",
+    "match": "title",
+    "home": "source",
+    "needs": "ingest-range",
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 24,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "The voice, for cutting to the words",
+    "match": "title",
+    "home": "source",
+    "needs": "ingest-range",
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 25,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "To",
+    "match": "text",
+    "home": "source",
+    "needs": "ingest-range",
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 264,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "Topic and length in, narration and a cut out.",
+    "match": "text",
+    "home": "source",
+    "needs": "narration-mode",
+    "part": true,
+    "file": "src/renderer/src/components/SourceBar.tsx",
+    "line": 43,
+    "newHome": "Shelf tile Narration (coming-soon text reworded)"
+  },
+  {
+    "label": "Upload",
+    "match": "text",
+    "home": "source",
+    "needs": "none",
+    "file": "src/renderer/src/components/SourceBar.tsx",
+    "line": 28,
+    "newHome": "Shelf tile Upload"
+  },
+  {
+    "label": "Video",
+    "match": "text",
+    "home": "source",
+    "needs": "ingest-range",
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 22,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "Vocal",
+    "match": "text",
+    "home": "source",
+    "needs": "ingest-range",
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 25,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "What the site already stores — copied out, no re-encode",
+    "match": "title",
+    "home": "source",
+    "needs": "ingest-instrumental",
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 216,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "YouTube",
+    "match": "text",
+    "home": "source",
+    "needs": "none",
+    "file": "src/renderer/src/components/SourceBar.tsx",
+    "line": 34,
+    "newHome": "Shelf tile URL (labelled \"URL\")"
+  },
+  {
+    "label": "long",
+    "match": "text",
+    "home": "source",
+    "needs": "ingest-range",
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 271,
+    "newHome": "Shelf tile URL",
+    "note": "The length between the marks; the number before it is its own text."
+  },
+  {
+    "label": "m4a",
+    "match": "text",
+    "home": "source",
+    "needs": "ingest-instrumental",
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 208,
+    "newHome": "Shelf tile URL",
+    "note": "Rendered through CSS uppercase; the text node is the source spelling."
+  },
+  {
+    "label": "mp3",
+    "match": "text",
+    "home": "source",
+    "needs": "ingest-instrumental",
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 208,
+    "newHome": "Shelf tile URL",
+    "note": "Rendered through CSS uppercase; the text node is the source spelling."
+  },
+  {
+    "label": "not built yet",
+    "match": "text",
+    "home": "source",
+    "needs": "narration-mode",
+    "file": "src/renderer/src/components/SourceBar.tsx",
+    "line": 100,
+    "newHome": "Shelf tile Narration (coming-soon)"
+  },
+  {
+    "label": "running — progress is",
+    "match": "text",
+    "home": "source",
+    "needs": "ingest-running",
+    "part": true,
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 304,
+    "newHome": "Shelf tile URL (reworded: progress is under EXPORT, step 7)"
+  },
+  {
+    "label": "soon",
+    "match": "text",
+    "home": "source",
+    "needs": "none",
+    "file": "src/renderer/src/components/SourceBar.tsx",
+    "line": 84,
+    "newHome": "Shelf tile Narration (coming-soon)"
+  },
+  {
+    "label": "split after downloading",
+    "match": "text",
+    "home": "source",
+    "needs": "ingest-instrumental",
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 228,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "— minutes and seconds",
+    "match": "aria-label",
+    "home": "source",
+    "needs": "ingest-range",
+    "part": true,
+    "count": 2,
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 88,
+    "newHome": "Shelf tile URL",
+    "note": "Count 2: the From and To fields."
+  },
+  {
+    "label": "Add a video track",
+    "match": "title",
+    "home": "timeline",
+    "needs": "none",
+    "file": "src/renderer/src/components/Timeline.tsx",
+    "line": 550,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Add an audio track",
+    "match": "title",
+    "home": "timeline",
+    "needs": "none",
+    "file": "src/renderer/src/components/Timeline.tsx",
+    "line": 558,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Audible — click to mute",
+    "match": "title",
+    "home": "timeline",
+    "needs": "none",
+    "count": 4,
+    "file": "src/renderer/src/components/Timeline.tsx",
+    "line": 613,
+    "newHome": "unchanged",
+    "note": "Count 4: one per track of an empty project."
+  },
+  {
+    "label": "Clear the range",
+    "match": "title",
+    "home": "timeline",
+    "needs": "timeline-marks",
+    "file": "src/renderer/src/components/Timeline.tsx",
+    "line": 533,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Click the line to add a point · drag a point to shape it · double-click to remove",
+    "match": "title",
+    "home": "timeline",
+    "needs": "video-clip",
+    "file": "src/renderer/src/components/VolumeEnvelope.tsx",
+    "line": 178,
+    "newHome": "unchanged",
+    "note": "An SVG <title>, the envelope line's tooltip: match 'title' reads those too."
+  },
+  {
+    "label": "Drag in to fade the sound down",
+    "match": "title",
+    "home": "timeline",
+    "needs": "video-clip",
+    "part": true,
+    "file": "src/renderer/src/components/FadeHandles.tsx",
+    "line": 130,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Drag in to fade the sound up",
+    "match": "title",
+    "home": "timeline",
+    "needs": "video-clip",
+    "part": true,
+    "file": "src/renderer/src/components/FadeHandles.tsx",
+    "line": 129,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Drag media onto a track",
+    "match": "text",
+    "home": "timeline",
+    "needs": "none",
+    "file": "src/renderer/src/components/Timeline.tsx",
+    "line": 748,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Mark as speech, so music ducks under it",
+    "match": "title",
+    "home": "timeline",
+    "needs": "none",
+    "part": true,
+    "count": 2,
+    "file": "src/renderer/src/components/Timeline.tsx",
+    "line": 681,
+    "newHome": "unchanged",
+    "note": "Count 2: one per audio track of an empty project."
+  },
+  {
+    "label": "Mark in at the playhead (I)",
+    "match": "title",
+    "home": "timeline",
+    "needs": "none",
+    "file": "src/renderer/src/components/Timeline.tsx",
+    "line": 518,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Mark out at the playhead (O)",
+    "match": "title",
+    "home": "timeline",
+    "needs": "none",
+    "file": "src/renderer/src/components/Timeline.tsx",
+    "line": 525,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Record a voice-over here, over the edit as it plays",
+    "match": "title",
+    "home": "timeline",
+    "needs": "none",
+    "part": true,
+    "count": 2,
+    "file": "src/renderer/src/components/Timeline.tsx",
+    "line": 658,
+    "newHome": "unchanged",
+    "note": "Count 2: one per audio track of an empty project."
+  },
+  {
+    "label": "Remove track and its clips",
+    "match": "title",
+    "home": "timeline",
+    "needs": "none",
+    "count": 4,
+    "file": "src/renderer/src/components/Timeline.tsx",
+    "line": 705,
+    "newHome": "unchanged",
+    "note": "Count 4: one per track of an empty project."
+  },
+  {
+    "label": "Solo — hear only this track (and any others soloed)",
+    "match": "title",
+    "home": "timeline",
+    "needs": "none",
+    "count": 4,
+    "file": "src/renderer/src/components/Timeline.tsx",
+    "line": 626,
+    "newHome": "unchanged",
+    "note": "Count 4: one per track of an empty project."
+  },
+  {
+    "label": "Visible — click to hide this track, picture and sound",
+    "match": "title",
+    "home": "timeline",
+    "needs": "none",
+    "count": 2,
+    "file": "src/renderer/src/components/Timeline.tsx",
+    "line": 597,
+    "newHome": "unchanged",
+    "note": "Count 2: one per video track of an empty project."
+  },
+  {
+    "label": "click to edit, double-click to remove",
+    "match": "title",
+    "home": "timeline",
+    "needs": "two-clips",
+    "part": true,
+    "file": "src/renderer/src/components/Timeline.tsx",
+    "line": 933,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "drag to scrub",
+    "match": "title",
+    "home": "timeline",
+    "needs": "none",
+    "part": true,
+    "file": "src/renderer/src/components/Timeline.tsx",
+    "line": 1140,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "they stay in the export",
+    "match": "title",
+    "home": "timeline",
+    "needs": "photo-clip",
+    "part": true,
+    "file": "src/renderer/src/components/Timeline.tsx",
+    "line": 504,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Blur inside a shape — invert it for a blurred background",
+    "match": "title",
+    "home": "toolbox",
+    "needs": "photo-clip",
+    "part": true,
+    "file": "src/renderer/src/components/Toolbox.tsx",
+    "line": 188,
+    "newHome": "canvas (unchanged)"
+  },
+  {
+    "label": "Drag the crop rectangle on the picture",
+    "match": "title",
+    "home": "toolbox",
+    "needs": "photo-clip",
+    "part": true,
+    "file": "src/renderer/src/components/Toolbox.tsx",
+    "line": 126,
+    "newHome": "canvas (unchanged)"
+  },
+  {
+    "label": "Move, scale and rotate on the picture",
+    "match": "title",
+    "home": "toolbox",
+    "needs": "none",
+    "part": true,
+    "file": "src/renderer/src/components/Toolbox.tsx",
+    "line": 117,
+    "newHome": "canvas (unchanged)"
+  },
+  {
+    "label": "Put text on the picture — it lands over whatever is under the playhead",
+    "match": "title",
+    "home": "toolbox",
+    "needs": "none",
+    "part": true,
+    "file": "src/renderer/src/components/Toolbox.tsx",
+    "line": 166,
+    "newHome": "canvas (unchanged)"
+  },
+  {
+    "label": "Rule-of-thirds guides",
+    "match": "title",
+    "home": "toolbox",
+    "needs": "none",
+    "part": true,
+    "file": "src/renderer/src/components/Toolbox.tsx",
+    "line": 136,
+    "newHome": "canvas (unchanged)"
+  },
+  {
+    "label": "Show this clip only inside a shape",
+    "match": "title",
+    "home": "toolbox",
+    "needs": "photo-clip",
+    "part": true,
+    "file": "src/renderer/src/components/Toolbox.tsx",
+    "line": 177,
+    "newHome": "canvas (unchanged)"
+  },
+  {
+    "label": "Title-safe and action-safe, per SMPTE ST 2046-1",
+    "match": "title",
+    "home": "toolbox",
+    "needs": "none",
+    "part": true,
+    "file": "src/renderer/src/components/Toolbox.tsx",
+    "line": 144,
+    "newHome": "canvas (unchanged)"
+  },
+  {
+    "label": "stills only, and a long way off",
+    "match": "title",
+    "home": "toolbox",
+    "needs": "none",
+    "part": true,
+    "file": "src/renderer/src/components/Toolbox.tsx",
+    "line": 200,
+    "newHome": "canvas (unchanged)"
+  },
+  {
+    "label": "Click to correct",
+    "match": "title",
+    "home": "transcript",
+    "needs": "transcript-editing",
+    "file": "src/renderer/src/components/TranscriptPanel.tsx",
+    "line": 171,
+    "newHome": "Shelf tile Transcript"
+  },
+  {
+    "label": "Correct a misheard word: click it, type, Enter",
+    "match": "title",
+    "home": "transcript",
+    "needs": "transcript",
+    "file": "src/renderer/src/components/TranscriptPanel.tsx",
+    "line": 68,
+    "newHome": "Shelf tile Transcript"
+  },
+  {
+    "label": "Done",
+    "match": "text",
+    "home": "transcript",
+    "needs": "transcript-editing",
+    "file": "src/renderer/src/components/TranscriptPanel.tsx",
+    "line": 74,
+    "newHome": "Shelf tile Transcript"
+  },
+  {
+    "label": "Listen for — names and words, separated by commas",
+    "match": "text",
+    "home": "transcript",
+    "needs": "video-clip",
+    "file": "src/renderer/src/components/TranscriptPanel.tsx",
+    "line": 218,
+    "newHome": "Shelf tile Transcript"
+  },
+  {
+    "label": "No transcript yet — transcribe it below",
+    "match": "text",
+    "home": "transcript",
+    "needs": "video-clip",
+    "part": true,
+    "file": "src/renderer/src/components/TranscriptPanel.tsx",
+    "line": 121,
+    "newHome": "Shelf tile Transcript (text reworded \"in Media\" → \"in Upload\")"
+  },
+  {
+    "label": "Select a clip to see its transcript",
+    "match": "text",
+    "home": "transcript",
+    "needs": "none",
+    "file": "src/renderer/src/components/TranscriptPanel.tsx",
+    "line": 50,
+    "newHome": "Shelf tile Transcript"
+  },
+  {
+    "label": "Transcribe again with these words",
+    "match": "text",
+    "home": "transcript",
+    "needs": "transcript",
+    "file": "src/renderer/src/components/TranscriptPanel.tsx",
+    "line": 239,
+    "newHome": "Shelf tile Transcript"
+  },
+  {
+    "label": "Transcribe this clip, listening for these words",
+    "match": "title",
+    "home": "transcript",
+    "needs": "video-clip",
+    "file": "src/renderer/src/components/TranscriptPanel.tsx",
+    "line": 236,
+    "newHome": "Shelf tile Transcript"
+  },
+  {
+    "label": "Go to end (End)",
+    "match": "title",
+    "home": "transport",
+    "needs": "none",
+    "file": "src/renderer/src/components/Transport.tsx",
+    "line": 54,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Go to start (Home)",
+    "match": "title",
+    "home": "transport",
+    "needs": "none",
+    "file": "src/renderer/src/components/Transport.tsx",
+    "line": 48,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Loop",
+    "match": "text",
+    "home": "transport",
+    "needs": "none",
+    "file": "src/renderer/src/components/Transport.tsx",
+    "line": 78,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Master peak — red within 1 dB of full scale",
+    "match": "title",
+    "home": "transport",
+    "needs": "none",
+    "file": "src/renderer/src/components/Transport.tsx",
+    "line": 126,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Play / pause (Space)",
+    "match": "title",
+    "home": "transport",
+    "needs": "none",
+    "file": "src/renderer/src/components/Transport.tsx",
+    "line": 51,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Remove the selected clip (Delete)",
+    "match": "title",
+    "home": "transport",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Transport.tsx",
+    "line": 119,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Scrub",
+    "match": "text",
+    "home": "transport",
+    "needs": "none",
+    "file": "src/renderer/src/components/Transport.tsx",
+    "line": 106,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Split at playhead (S)",
+    "match": "title",
+    "home": "transport",
+    "needs": "none",
+    "file": "src/renderer/src/components/Transport.tsx",
+    "line": 112,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Zoom in",
+    "match": "title",
+    "home": "transport",
+    "needs": "none",
+    "file": "src/renderer/src/components/Transport.tsx",
+    "line": 137,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Zoom out",
+    "match": "title",
+    "home": "transport",
+    "needs": "none",
+    "file": "src/renderer/src/components/Transport.tsx",
+    "line": 134,
+    "newHome": "unchanged"
+  },
+  {
+    "label": "Add at playhead",
+    "match": "text",
+    "home": "waveform",
+    "needs": "audition",
+    "file": "src/renderer/src/components/Waveform.tsx",
+    "line": 309,
+    "newHome": "trimmer dock (a Library sound)"
+  },
+  {
+    "label": "Drag the end point",
+    "match": "title",
+    "home": "waveform",
+    "needs": "audition",
+    "file": "src/renderer/src/components/Waveform.tsx",
+    "line": 295,
+    "newHome": "trimmer dock (a Library sound)"
+  },
+  {
+    "label": "Drag the end point",
+    "match": "title",
+    "home": "waveform",
+    "needs": "video-clip",
+    "file": "src/renderer/src/components/Waveform.tsx",
+    "line": 295,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Drag the start point",
+    "match": "title",
+    "home": "waveform",
+    "needs": "audition",
+    "file": "src/renderer/src/components/Waveform.tsx",
+    "line": 295,
+    "newHome": "trimmer dock (a Library sound)"
+  },
+  {
+    "label": "Drag the start point",
+    "match": "title",
+    "home": "waveform",
+    "needs": "video-clip",
+    "file": "src/renderer/src/components/Waveform.tsx",
+    "line": 295,
+    "newHome": "trimmer dock"
+  },
+  {
+    "label": "Select a clip, or pick a sound in the Library, to see its waveform",
+    "match": "text",
+    "home": "waveform",
+    "needs": "none",
+    "file": "src/renderer/src/components/Waveform.tsx",
+    "line": 253,
+    "newHome": "dropped — the trimmer dock is hidden when nothing is selected"
+  },
+  {
+    "label": "has no audio track",
+    "match": "text",
+    "home": "waveform",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Waveform.tsx",
+    "line": 256,
+    "newHome": "trimmer dock"
+  }
+]

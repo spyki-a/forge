@@ -5,6 +5,7 @@ import { ErrorBoundary } from '../components/ErrorBoundary'
 import { installHarnessBridge } from './bridge'
 import { installEvalRelay } from './evalRelay'
 import { installMomentCheck } from './momentCheck'
+import { installCensus } from './census'
 import { useEditor } from '../store'
 import { useCatalog } from '../catalog'
 import '../styles.css'
@@ -24,6 +25,9 @@ installEvalRelay()
 
 /* The moments' shader check — the one measurement that needs a GPU (docs/PLAN.md §7.4). */
 installMomentCheck()
+
+/* Every control, looked for on screen — docs/WINDOW.md §6 Step 0. */
+installCensus()
 
 /*
  * The store, reachable from a driving script.

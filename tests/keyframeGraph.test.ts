@@ -88,11 +88,22 @@ describe('the graph panel', () => {
   const editor = source('src/renderer/src/components/CurveEditor.tsx')
 
   it('gives the property tabs a row of their own that wraps, not the fixed-height header', () => {
-    const header = panel.slice(panel.indexOf('flex h-7 shrink-0'), panel.indexOf('The properties on a row of their own'))
+    /*
+     * Both anchors must be found before anything is sliced from them.
+     *
+     * A missing first anchor made `slice(-1, n)` an EMPTY header, and the two
+     * `not.toContain` checks below pass on an empty string — so deleting the
+     * header class turned this test green rather than red.
+     */
+    const start = panel.indexOf('flex h-7 shrink-0')
+    const end = panel.indexOf('The properties on a row of their own')
+    expect(start, 'the header class anchor').toBeGreaterThan(-1)
+    expect(end, 'the property-row comment anchor').toBeGreaterThan(start)
+    const header = panel.slice(start, end)
     // The header maps Motion and Colour; the property list must not be in it.
     expect(header).not.toContain('offered.map')
     expect(header).not.toContain('KEYED_PROPERTIES')
-    const row = panel.slice(panel.indexOf('The properties on a row of their own'))
+    const row = panel.slice(end)
     const tabs = row.indexOf('offered.map((key) =>')
     expect(tabs).toBeGreaterThan(-1)
     expect(row.slice(0, tabs)).toContain('flex-wrap')

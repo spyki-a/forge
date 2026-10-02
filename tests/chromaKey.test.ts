@@ -175,6 +175,12 @@ function keyedProject(over: Partial<Clip> = {}): Project {
 
 const graphOf = (p: Project): string => {
   const args = buildRenderPlan({ project: p, outputPath: '/o.mp4' }).args
+  /*
+   * The flag found, once, first. A missing one is -1, and args[0] is not a
+   * graph: every not.toMatch below would then pass against "-y" whatever the
+   * plan did to the picture.
+   */
+  expect(args.filter((arg) => arg === '-filter_complex'), 'the -filter_complex argument').toHaveLength(1)
   return args[args.indexOf('-filter_complex') + 1]
 }
 
@@ -221,9 +227,19 @@ describe('the Inspector offers the key where it can work', () => {
   const panel = source('src/renderer/src/components/KeyPanel.tsx')
 
   it('shows the Key panel only for a keyable clip, between the mask and the colour', () => {
+    /*
+     * Every anchor found first. A missing MaskPanel anchor is -1, and "after
+     * -1" is true of any position at all, so the order check passed with the
+     * mask gone from the Inspector.
+     */
     const at = inspector.indexOf('{isKeyable(clip, asset ?? undefined) && <KeyPanel clip={clip} />}')
-    expect(at).toBeGreaterThan(inspector.indexOf('<MaskPanel clip={clip} />'))
-    expect(at).toBeLessThan(inspector.indexOf('onClick={() => setColor(clip.id, NEUTRAL_COLOR_PATCH)}'))
+    const mask = inspector.indexOf('<MaskPanel clip={clip} />')
+    const reset = inspector.indexOf('onClick={() => setColor(clip.id, NEUTRAL_COLOR_PATCH)}')
+    expect(at, 'the KeyPanel anchor').toBeGreaterThan(-1)
+    expect(mask, 'the MaskPanel anchor').toBeGreaterThan(-1)
+    expect(reset, 'the Colour Reset anchor').toBeGreaterThan(-1)
+    expect(at).toBeGreaterThan(mask)
+    expect(at).toBeLessThan(reset)
     expect([...inspector.matchAll(/<KeyPanel /g)]).toHaveLength(1)
   })
 
@@ -245,8 +261,10 @@ describe('the preview keys the same way', () => {
 
   it('keys before white balance, and multiplies into the picture’s own alpha', () => {
     const key = grade.indexOf('if (uKeyOn > 0.5) {')
-    expect(key).toBeGreaterThan(-1)
-    expect(key).toBeLessThan(grade.indexOf('rgb = clamp(rgb * uGains, 0.0, 1.0);'))
+    const balance = grade.indexOf('rgb = clamp(rgb * uGains, 0.0, 1.0);')
+    expect(key, 'the key anchor').toBeGreaterThan(-1)
+    expect(balance, 'the white-balance anchor').toBeGreaterThan(-1)
+    expect(key).toBeLessThan(balance)
     expect(grade).toContain('fragColor = vec4(graded, src.a * keep);')
   })
 
