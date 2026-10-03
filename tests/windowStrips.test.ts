@@ -6,6 +6,7 @@ import { emptyProject } from '@shared/timeline'
 import { outputSummary } from '@shared/project/outputSummary'
 import { exportHeadline } from '@shared/render/exportHeadline'
 import type { Job } from '@shared/types'
+import { DOCK_FLOOR, TABS_FLOOR, holderFloor } from '../src/renderer/src/dock'
 
 /**
  * OUTPUT and EXPORT, the two strips under the left panel (docs/WINDOW.md §3.16,
@@ -114,31 +115,68 @@ describe('App renders both strips, always', () => {
     expect(kids).toHaveLength(3)
     expect(kids[1]).toBe(output)
     expect(kids[2]).toBe(exporting)
-    let holder: ts.Node = left
-    while (holder.parent !== column) holder = holder.parent
-    expect(kids[0]).toBe(holder)
+    // Since step 8 the holder is LeftSplit's root (the tabs and the Trimmer
+    // dock share it), a component of App.tsx so that the dock coming and going
+    // does not re-render the window: the first child is that component, and
+    // what it returns is the holder the left panel is in.
+    const holder = leftHolder(app)
+    const first = kids[0]
+    if (first !== holder) {
+      expect(ts.isJsxSelfClosingElement(first), 'a component in the holder’s place').toBe(true)
+      const { gates: between, fn } = gates(holder, app)
+      expect(between, 'the holder is what the component returns, unconditionally').toEqual([])
+      expect(fn).toBe(opening(first).tagName.getText(app))
+    }
   })
 })
 
-describe('an open strip never squeezes the left panel over its waveform', () => {
+/**
+ * The element the left panel's Group sits in: the holder the tabs and the
+ * Trimmer dock share, over the strips (step 8; before it, the LeftPanel's own
+ * holder).
+ */
+function leftHolder(app: ts.SourceFile): ts.JsxElement {
+  const [left] = mounts(app, 'LeftPanel')
+  expect(left).toBeDefined()
+  let group: ts.Node | undefined = left.parent
+  while (group && !(ts.isJsxElement(group) && opening(group).tagName.getText(app) === 'Group')) group = group.parent
+  expect(group, 'the Group the left panel is in').toBeDefined()
+  let holder: ts.Node = group!.parent
+  while (!ts.isJsxElement(holder)) holder = holder.parent
+  return holder
+}
+
+describe('an open strip never squeezes the tabs or the Trimmer dock below their floors', () => {
   /*
    * The first build gave the left panel's holder a floor of 40 % and nothing
    * clipped, so opening a strip squeezed the tabs until their content drew
    * over the 112 px waveform dock — 6.7 px of tab content at 1100×680, at
-   * every window size (step 7's verifier). Two things hold it now, and both
-   * are read here: the holder has a floor that leaves the tabs ~120 px of
-   * content while both strip headers still fit, and the panel's tab-content
-   * box clips, so a tab squeezed below its own fixed rows is cut at its edge.
+   * every window size (step 7's verifier). Step 7 held it with a floor on the
+   * holder (16.5rem: tab row, 120 px of tab content, the waveform) and a
+   * clipped tab-content box.
    *
-   * The floor is CSS arithmetic (min, max, %, rem), evaluated here against
-   * column heights the harness measured — 375 px at the 1100×680 minimum
-   * window, 512 px at 1400×900 — so any way of writing a floor that keeps
-   * the room passes, and one that loses it does not. If the floor moves off
-   * the holder's min-height into another mechanism, move this test with it.
+   * Step 8 moved the waveform into the Trimmer dock, and the holder became a
+   * vertical Group of the tabs and, only while there is something to trim,
+   * the dock (App.tsx LeftSplit). The same guarantees, re-pinned on that
+   * shape: each panel's floor is its minimum size — the tabs' tab row and
+   * 120 px of content, the dock's header, the waveform and 120 px of editor —
+   * and the holder's min-height keeps the column's room for the panels it is
+   * showing before an open strip gets any, as long as both strip headers fit.
+   * The floors live in dock.ts so the panels and the holder cannot disagree.
+   *
+   * The holder's floor is CSS arithmetic (min, max, %, px, rem), evaluated
+   * here against column heights the harness measured — in step 7, 375 px at
+   * the 1100×680 minimum window and 512 px at 1400×900; since step 8 made the
+   * left column full height, with the source row at its head, 578 px and
+   * 798 px — so any way of writing a floor that keeps the room passes, and one
+   * that loses it does not. If the floor moves off the holder's min-height
+   * into another mechanism, move this test with it.
    */
   const TABS = 31.5 // the tab row, measured
-  const WAVEFORM = 112 // LeftPanel's `h-28` dock
+  const WAVEFORM = 112 // the waveform's `h-28` box, in the dock now
+  const DOCK_HEADER = 28 // the dock's header row (TrimmerDock.tsx `h-7`)
   const HEADERS = 56 // two closed strips, 28 px each (ui/Strip.tsx `h-7`)
+  const DIVIDER = 1 // the `h-px` separator between the tabs and the dock
 
   /** `min(max(60%,16.5rem),100%_-_3.5rem)` as a function of the column's height. */
   function cssLength(expr: string): (column: number) => number {
@@ -155,44 +193,82 @@ describe('an open strip never squeezes the left panel over its waveform', () => 
     return new Function('H', `return ${js}`) as (column: number) => number
   }
 
-  const holderClass = (): string => {
-    const app = parse('src/renderer/src/App.tsx')
-    const [left] = mounts(app, 'LeftPanel')
-    expect(left).toBeDefined()
-    // The element the panel sits in: its holder in the column.
-    let at: ts.Node = left.parent
-    while (!ts.isJsxElement(at)) at = at.parent
-    const name = opening(at).attributes.properties.find(
-      (p): p is ts.JsxAttribute => ts.isJsxAttribute(p) && p.name.getText(app) === 'className'
-    )
-    expect(name?.initializer && ts.isStringLiteral(name.initializer), 'the holder’s className, a plain string').toBe(true)
-    return (name!.initializer as ts.StringLiteral).text
+  const app = parse('src/renderer/src/App.tsx')
+  const attribute = (node: ts.JsxElement | ts.JsxSelfClosingElement, name: string): string | undefined =>
+    opening(node)
+      .attributes.properties.find((p): p is ts.JsxAttribute => ts.isJsxAttribute(p) && p.name.getText(app) === name)
+      ?.initializer?.getText(app)
+  /** The Panel a component is mounted in, in App.tsx. */
+  const panelAround = (name: string): ts.JsxElement => {
+    const [mount] = mounts(app, name)
+    expect(mount, name).toBeDefined()
+    let at: ts.Node = mount.parent
+    while (!(ts.isJsxElement(at) && opening(at).tagName.getText(app) === 'Panel')) at = at.parent
+    return at
   }
+  /** The holder's min-height, as a function of the column's height, with and without the dock. */
+  const holderFloorAt = (dock: boolean): ((column: number) => number) => cssLength(holderFloor(dock))
 
-  it('gives the left panel a floor that keeps the tabs ~120 px of content', () => {
-    const classes = holderClass().split(/\s+/)
-    const floors = classes.filter((c) => c.startsWith('min-h-['))
-    expect(floors, classes.join(' ')).toHaveLength(1)
-    const floor = cssLength(floors[0].slice('min-h-['.length, -1))
-    // The 1100×680 column, the 1400×900 one, and a tall one.
-    for (const column of [320, 375.4, 511.8, 800]) {
-      expect(floor(column) - TABS - WAVEFORM, `tab content in a ${column} px column`).toBeGreaterThanOrEqual(120)
+  it('gives the tabs and the dock their floors as minimum sizes, in pixels', () => {
+    // Numbers are pixels in react-resizable-panels 4.x; a string would be percent.
+    expect(attribute(panelAround('LeftPanel'), 'minSize')).toBe('{TABS_FLOOR}')
+    expect(attribute(panelAround('TrimmerDock'), 'minSize')).toBe('{DOCK_FLOOR}')
+    // ~120 px of tab content under the tab row; ~120 px of editor under the dock's header and the waveform.
+    expect(TABS_FLOOR - TABS, 'tab content at the tabs’ floor').toBeGreaterThanOrEqual(120)
+    expect(DOCK_FLOOR - DOCK_HEADER - WAVEFORM, 'editor at the dock’s floor').toBeGreaterThanOrEqual(120)
+  })
+
+  it('gives the holder a min-height that follows the dock: the subject that draws it, never a constant', () => {
+    const holder = leftHolder(app)
+    const style = attribute(holder, 'style') ?? ''
+    const floor = /^\{\{\s*minHeight: holderFloor\((\w+) !== null\)\s*\}\}$/.exec(style)
+    expect(floor, `the holder's style, ${style}`).not.toBeNull()
+    // The same name the dock's panel is gated by (tests/trimmerDock.test.ts reads that gate).
+    let fn: ts.Node | undefined = holder.parent
+    while (fn && !ts.isFunctionDeclaration(fn)) fn = fn.parent
+    expect(fn?.getText(app)).toContain(`const ${floor![1]} = useEditor((s) => dockSubject(s.project, s.selectedClipId, s.audition))`)
+    expect(fn?.getText(app)).toMatch(new RegExp(`\\{${floor![1]} && \\(`))
+    // And no class floor beside it that a later edit could take for the real one.
+    expect(attribute(holder, 'className') ?? '').not.toMatch(/\bmin-h-/)
+  })
+
+  it('keeps the tabs ~120 px of content with no dock, at every measured column', () => {
+    const floor = holderFloorAt(false)
+    // Step 7's 1100×680 and 1400×900 columns, step 8's, and a tall one.
+    for (const column of [320, 375.4, 511.8, 578, 798, 1000]) {
+      expect(floor(column) - TABS, `tab content in a ${column} px column`).toBeGreaterThanOrEqual(120)
     }
   })
 
-  it('leaves both strip headers room under it, however short the column', () => {
-    const [floorClass] = holderClass()
-      .split(/\s+/)
-      .filter((c) => c.startsWith('min-h-['))
-    const floor = cssLength(floorClass.slice('min-h-['.length, -1))
-    for (const column of [150, 200, 300, 320, 375.4, 511.8]) {
-      expect(column - floor(column), `room under the panel in a ${column} px column`).toBeGreaterThanOrEqual(HEADERS)
+  it('keeps the tabs AND the dock their floors with the dock open, wherever the column has the room', () => {
+    const floor = holderFloorAt(true)
+    const both = TABS_FLOOR + DIVIDER + DOCK_FLOOR
+    // In step 8's full-height column there is room for both, and both strip
+    // headers, from the 1100×680 minimum window up (578 px there, 798 px at
+    // 1400×900); in step 7's, only from 1400×900 (511.8).
+    for (const column of [511.8, 578, 798, 1000]) {
+      expect(floor(column), `the holder in a ${column} px column`).toBeGreaterThanOrEqual(both)
+    }
+    // Shorter, the strip headers win and the holder takes all the rest — it
+    // never stops short of what it could have had.
+    for (const column of [150, 320, 375.4, 449.8]) {
+      expect(floor(column), `the holder in a ${column} px column`).toBeGreaterThanOrEqual(Math.min(both, column - HEADERS) - 0.01)
+    }
+  })
+
+  it('leaves both strip headers room under it, however short the column, dock or not', () => {
+    for (const dock of [false, true]) {
+      const floor = holderFloorAt(dock)
+      for (const column of [150, 200, 300, 320, 375.4, 511.8, 578, 798]) {
+        expect(column - floor(column), `room under the holder in a ${column} px column, dock ${dock}`).toBeGreaterThanOrEqual(HEADERS)
+      }
     }
   })
 
   it('clips: the holder, and the panel’s tab-content box', () => {
-    expect(holderClass().split(/\s+/)).toContain('overflow-hidden')
-    // The box between the tab row and the waveform: the one the tabs are drawn in.
+    expect((attribute(leftHolder(app), 'className') ?? '').replace(/^"|"$/g, '').split(/\s+/)).toContain('overflow-hidden')
+    // The box under the tab row, the one the tabs are drawn in: what is under
+    // it now is the Trimmer dock, or the strips.
     const panel = parse('src/renderer/src/components/LeftPanel.tsx')
     const boxes: string[] = []
     const visit = (node: ts.Node): void => {

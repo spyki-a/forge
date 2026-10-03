@@ -144,7 +144,9 @@ describe('the canvas bar sits over the picture without moving the Preview', () =
 
   it('is rendered once, above the tool strip and the Preview, inside the centre panel', () => {
     for (const tag of ['<CanvasBar />', '<Toolbox />', '<Preview />']) expect(count(app, tag), tag).toBe(1)
-    const open = '<Panel defaultSize="60" minSize="30">'
+    // The centre panel: since step 8 the picture's share of the right column,
+    // over the timeline row (the left column runs the full height beside them).
+    const open = '<Panel defaultSize="64%" minSize="30%">'
     expect(count(app, open)).toBe(1)
     const start = app.indexOf(open)
     const end = app.indexOf('</Panel>', start)

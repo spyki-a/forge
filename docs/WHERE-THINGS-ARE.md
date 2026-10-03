@@ -118,6 +118,16 @@ the chip and the glyphs and tooltips carry them.
 
 ## Inspector — everything about the selected clip
 
+> **Since 2026-10-03 (docs/WINDOW.md step 8) there is no right-hand column.** The clip editor
+> described below now lives in the **Trimmer dock**, which appears in the LEFT column, under the
+> tabs, only while a clip is selected or a Library sound is being auditioned, with the clip's
+> waveform above it and an X that closes it. The Output block is the OUTPUT strip and the export
+> settings are the EXPORT strip, both at the bottom of the left column (step 7); the aspect ratio
+> and the Source / Split / Output view are on the canvas bar above the picture (step 4); keyframes
+> and curves are in the Curve tray beside the timeline (step 5); the model servers are in the
+> Settings panel under the gear at the top right (step 6). The section below is kept for the
+> controls themselves until the map is rewritten in step 13.
+
 Top to bottom. The panel scrolls; the export block at the bottom does not.
 
 **Output** — **frame rate** (24/25/30/50/60 — changing it with

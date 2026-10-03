@@ -1372,7 +1372,7 @@
   {
     "label": "A different stack of pages, same settings",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "paper-customise",
     "file": "src/renderer/src/components/PaperPanel.tsx",
     "line": 249,
@@ -1400,7 +1400,7 @@
   {
     "label": "A hit of camera shake that settles",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "part": true,
     "file": "src/renderer/src/components/CameraPanel.tsx",
@@ -1410,7 +1410,7 @@
   {
     "label": "A move and Zoom keyframes both scale the picture, so choosing one takes the other off.",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/CameraPanel.tsx",
     "line": 177,
@@ -1419,7 +1419,7 @@
   {
     "label": "A shape on the picture, with a blur, a colour change or a cut-out confined to it.",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/MaskPanel.tsx",
     "line": 73,
@@ -1428,7 +1428,7 @@
   {
     "label": "A slow push, pull or pan across the photo",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/CameraPanel.tsx",
     "line": 62,
@@ -1437,7 +1437,7 @@
   {
     "label": "A transition consumes time from both clips rather than adding any, so the timeline shortens.",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "two-clips",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1703,
@@ -1457,7 +1457,7 @@
   {
     "label": "Add",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "count": 2,
     "file": "src/renderer/src/components/MaskPanel.tsx",
@@ -1468,7 +1468,7 @@
   {
     "label": "Amount",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "mask",
     "file": "src/renderer/src/components/MaskPanel.tsx",
     "line": 205,
@@ -1477,7 +1477,7 @@
   {
     "label": "Amount",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-move",
     "file": "src/renderer/src/components/CameraPanel.tsx",
     "line": 117,
@@ -1486,7 +1486,7 @@
   {
     "label": "Angle",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "mask",
     "file": "src/renderer/src/components/MaskPanel.tsx",
     "line": 243,
@@ -1495,7 +1495,7 @@
   {
     "label": "Animate",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "mask-still",
     "file": "src/renderer/src/components/MaskPanel.tsx",
     "line": 131,
@@ -1504,7 +1504,7 @@
   {
     "label": "Animate the shape: move or resize it at different moments and it follows",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "mask-still",
     "file": "src/renderer/src/components/MaskPanel.tsx",
     "line": 124,
@@ -1513,7 +1513,7 @@
   {
     "label": "Animated",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "mask",
     "file": "src/renderer/src/components/MaskPanel.tsx",
     "line": 131,
@@ -1531,7 +1531,7 @@
   {
     "label": "Animation",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "text-clip",
     "file": "src/renderer/src/components/TextAnimationPicker.tsx",
     "line": 121,
@@ -1540,7 +1540,7 @@
   {
     "label": "Applied when you export — the preview shows the clip as it was shot.",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-steady",
     "part": true,
     "file": "src/renderer/src/components/SteadyToggle.tsx",
@@ -1559,7 +1559,7 @@
   {
     "label": "BREAKING",
     "match": "placeholder",
-    "home": "inspector",
+    "home": "dock",
     "needs": "paper-clip",
     "file": "src/renderer/src/components/PaperPanel.tsx",
     "line": 54,
@@ -1568,7 +1568,7 @@
   {
     "label": "Back to normal speed",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-slow",
     "file": "src/renderer/src/components/SpeedPanel.tsx",
     "line": 108,
@@ -1595,7 +1595,7 @@
   {
     "label": "Blending in from the clip before it.",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "two-clips",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1574,
@@ -1604,7 +1604,7 @@
   {
     "label": "Blurs inside the shape. Invert it for a face in focus against a soft background.",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "mask",
     "file": "src/shared/render/mask.ts",
     "line": 138,
@@ -1622,7 +1622,7 @@
   {
     "label": "Bottom right",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-pip",
     "file": "src/shared/render/layout.ts",
     "line": 83,
@@ -1640,7 +1640,7 @@
   {
     "label": "Bright",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1074,
@@ -1667,7 +1667,7 @@
   {
     "label": "Browse all",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "text-clip",
     "file": "src/renderer/src/components/TextStylePicker.tsx",
     "line": 62,
@@ -1676,7 +1676,7 @@
   {
     "label": "CAPS",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "text-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1341,
@@ -1685,7 +1685,7 @@
   {
     "label": "Camera",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/CameraPanel.tsx",
     "line": 77,
@@ -1712,7 +1712,7 @@
   {
     "label": "Card ring",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "ring-clip",
     "file": "src/renderer/src/components/CarouselPanel.tsx",
     "line": 26,
@@ -1721,7 +1721,7 @@
   {
     "label": "Card size",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "ring-clip",
     "file": "src/renderer/src/components/CarouselPanel.tsx",
     "line": 49,
@@ -1730,7 +1730,7 @@
   {
     "label": "Cards",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "ring-clip",
     "file": "src/renderer/src/components/CarouselPanel.tsx",
     "line": 33,
@@ -1739,7 +1739,7 @@
   {
     "label": "Cards square to the camera instead of turned outward along the ring",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "ring-clip",
     "file": "src/renderer/src/components/CarouselPanel.tsx",
     "line": 107,
@@ -1748,7 +1748,7 @@
   {
     "label": "Change",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "text-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1241,
@@ -1757,7 +1757,7 @@
   {
     "label": "Changing it here makes it this clip",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-split-move",
     "part": true,
     "file": "src/renderer/src/components/CameraPanel.tsx",
@@ -1776,7 +1776,7 @@
   {
     "label": "Click the screen in the preview to take its colour",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-keyed",
     "file": "src/renderer/src/components/KeyPanel.tsx",
     "line": 78,
@@ -1785,16 +1785,17 @@
   {
     "label": "Clip",
     "match": "text",
-    "home": "inspector",
-    "needs": "none",
+    "home": "dock",
+    "needs": "photo-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 849,
-    "newHome": "trimmer dock (header)"
+    "line": 121,
+    "newHome": "trimmer dock (the clip editor’s header)",
+    "note": "Step 8: needs a clip now. The Inspector was always on screen and showed this header in an empty project; inside the Trimmer dock it shows only with something to trim."
   },
   {
     "label": "Clippings",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "paper-clip",
     "file": "src/renderer/src/components/PaperPanel.tsx",
     "line": 47,
@@ -1812,7 +1813,7 @@
   {
     "label": "Colour",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "colour-clip",
     "count": 2,
     "file": "src/renderer/src/components/Inspector.tsx",
@@ -1823,7 +1824,7 @@
   {
     "label": "Colour",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1038,
@@ -1832,7 +1833,7 @@
   {
     "label": "Colour",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "text-clip",
     "count": 2,
     "file": "src/renderer/src/components/Inspector.tsx",
@@ -1855,7 +1856,7 @@
   {
     "label": "Contrast",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1082,
@@ -1864,7 +1865,7 @@
   {
     "label": "Crossfade with the clip before",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1020,
@@ -1873,7 +1874,7 @@
   {
     "label": "Customise",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "paper-clip",
     "file": "src/renderer/src/components/PaperPanel.tsx",
     "line": 175,
@@ -1882,7 +1883,7 @@
   {
     "label": "Cut",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1606,
@@ -1891,7 +1892,7 @@
   {
     "label": "Cut-out letters",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "paper-clip",
     "file": "src/renderer/src/components/PaperPanel.tsx",
     "line": 66,
@@ -1900,7 +1901,7 @@
   {
     "label": "Despill",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-keyed",
     "file": "src/renderer/src/components/KeyPanel.tsx",
     "line": 107,
@@ -1909,7 +1910,7 @@
   {
     "label": "Duration",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 860,
@@ -1918,7 +1919,7 @@
   {
     "label": "Each page",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "paper-clip",
     "file": "src/renderer/src/components/PaperPanel.tsx",
     "line": 159,
@@ -1927,7 +1928,7 @@
   {
     "label": "Edge",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "text-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1364,
@@ -1936,7 +1937,7 @@
   {
     "label": "Edit on picture",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "mask",
     "file": "src/renderer/src/components/MaskPanel.tsx",
     "line": 97,
@@ -1945,7 +1946,7 @@
   {
     "label": "Ellipse",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "mask",
     "file": "src/renderer/src/components/MaskPanel.tsx",
     "line": 27,
@@ -1954,7 +1955,7 @@
   {
     "label": "End",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 856,
@@ -2020,7 +2021,7 @@
   {
     "label": "Feather",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "mask",
     "file": "src/renderer/src/components/MaskPanel.tsx",
     "line": 215,
@@ -2038,7 +2039,7 @@
   {
     "label": "Fill with the picture below",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1427,
@@ -2074,7 +2075,7 @@
   {
     "label": "Full frame",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-pip",
     "file": "src/renderer/src/components/LayoutPanel.tsx",
     "line": 78,
@@ -2083,7 +2084,7 @@
   {
     "label": "Full page",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "paper-clip",
     "file": "src/shared/render/paper.ts",
     "line": 342,
@@ -2101,7 +2102,7 @@
   {
     "label": "Height",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "mask",
     "file": "src/renderer/src/components/MaskPanel.tsx",
     "line": 233,
@@ -2110,7 +2111,7 @@
   {
     "label": "Highlighted word",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "paper-clip",
     "file": "src/renderer/src/components/PaperPanel.tsx",
     "line": 50,
@@ -2119,7 +2120,7 @@
   {
     "label": "Hold",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-depth-shake",
     "file": "src/renderer/src/components/CameraPanel.tsx",
     "line": 147,
@@ -2139,7 +2140,7 @@
   {
     "label": "Impact",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "text-clip",
     "file": "src/shared/render/textPresets.ts",
     "line": 61,
@@ -2148,7 +2149,7 @@
   {
     "label": "Intensity",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-look",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1113,
@@ -2157,7 +2158,7 @@
   {
     "label": "Invents the in-between frames instead of repeating them",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-slow",
     "part": true,
     "file": "src/renderer/src/components/SpeedPanel.tsx",
@@ -2167,7 +2168,7 @@
   {
     "label": "Invert",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "mask",
     "file": "src/renderer/src/components/MaskPanel.tsx",
     "line": 259,
@@ -2176,7 +2177,7 @@
   {
     "label": "Key",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/KeyPanel.tsx",
     "line": 29,
@@ -2185,7 +2186,7 @@
   {
     "label": "Keys and curves are in the tray beside the timeline",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1403,
@@ -2217,7 +2218,7 @@
   {
     "label": "Layout",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/LayoutPanel.tsx",
     "line": 72,
@@ -2226,7 +2227,7 @@
   {
     "label": "Length",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "two-clips",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1684,
@@ -2235,7 +2236,7 @@
   {
     "label": "Level",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 984,
@@ -2244,7 +2245,7 @@
   {
     "label": "Line",
     "match": "placeholder",
-    "home": "inspector",
+    "home": "dock",
     "needs": "title-clip",
     "part": true,
     "count": 2,
@@ -2256,7 +2257,7 @@
   {
     "label": "Linear — everything on one side of a line",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "mask",
     "file": "src/renderer/src/components/MaskPanel.tsx",
     "line": 29,
@@ -2265,7 +2266,7 @@
   {
     "label": "Load a .cube LUT you already own",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "part": true,
     "file": "src/renderer/src/components/Inspector.tsx",
@@ -2275,7 +2276,7 @@
   {
     "label": "Looks",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1125,
@@ -2293,7 +2294,7 @@
   {
     "label": "Lower 3rd",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "text-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1273,
@@ -2302,7 +2303,7 @@
   {
     "label": "Lower third",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "text-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1266,
@@ -2320,7 +2321,7 @@
   {
     "label": "Marker",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "paper-customise",
     "file": "src/renderer/src/components/PaperPanel.tsx",
     "line": 227,
@@ -2329,7 +2330,7 @@
   {
     "label": "Mask",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/MaskPanel.tsx",
     "line": 61,
@@ -2338,7 +2339,7 @@
   {
     "label": "Masthead",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "paper-customise",
     "file": "src/renderer/src/components/PaperPanel.tsx",
     "line": 217,
@@ -2374,7 +2375,7 @@
   {
     "label": "Move the playhead, then move or resize the shape",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "mask",
     "part": true,
     "file": "src/renderer/src/components/MaskPanel.tsx",
@@ -2384,7 +2385,7 @@
   {
     "label": "Mute",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 973,
@@ -2393,7 +2394,7 @@
   {
     "label": "Mute this clip",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 966,
@@ -2402,20 +2403,11 @@
   {
     "label": "No camera move",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/CameraPanel.tsx",
     "line": 61,
     "newHome": "trimmer dock"
-  },
-  {
-    "label": "No clip selected",
-    "match": "text",
-    "home": "inspector",
-    "needs": "none",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 1528,
-    "newHome": "dropped — the dock is hidden then"
   },
   {
     "label": "No font library found.",
@@ -2429,7 +2421,7 @@
   {
     "label": "Nobody saw %s coming",
     "match": "placeholder",
-    "home": "inspector",
+    "home": "dock",
     "needs": "paper-customise",
     "file": "src/renderer/src/components/PaperPanel.tsx",
     "line": 212,
@@ -2438,7 +2430,7 @@
   {
     "label": "None",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "text-clip",
     "count": 2,
     "file": "src/renderer/src/components/TextStylePicker.tsx",
@@ -2449,7 +2441,7 @@
   {
     "label": "Nothing is underneath, so this blends in from black — a fade-in.",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1571,
@@ -2458,7 +2450,7 @@
   {
     "label": "Nothing moves: there is no clip before this one to overlap, so this costs no time.",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1704,
@@ -2515,7 +2507,7 @@
   {
     "label": "Opacity",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "colour-clip",
     "count": 2,
     "file": "src/renderer/src/components/Inspector.tsx",
@@ -2526,7 +2518,7 @@
   {
     "label": "Opacity",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 896,
@@ -2536,7 +2528,7 @@
   {
     "label": "Open keys",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1413,
@@ -2546,7 +2538,7 @@
   {
     "label": "Open the tray beside the timeline on Keys: this clip's keyframes and motion path",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1410,
@@ -2555,7 +2547,7 @@
   {
     "label": "Outline",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "text-clip",
     "count": 2,
     "file": "src/renderer/src/components/Inspector.tsx",
@@ -2586,7 +2578,7 @@
   {
     "label": "Overlap this clip with the one before it on its track",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-clip",
     "part": true,
     "file": "src/renderer/src/components/Inspector.tsx",
@@ -2608,7 +2600,7 @@
   {
     "label": "Pages",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "paper-clip",
     "file": "src/renderer/src/components/PaperPanel.tsx",
     "line": 146,
@@ -2617,7 +2609,7 @@
   {
     "label": "Pan left",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-move",
     "file": "src/renderer/src/components/CameraPanel.tsx",
     "line": 42,
@@ -2626,7 +2618,7 @@
   {
     "label": "Pick from picture",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-keyed",
     "file": "src/renderer/src/components/KeyPanel.tsx",
     "line": 86,
@@ -2635,7 +2627,7 @@
   {
     "label": "Picture in picture —",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "part": true,
     "count": 4,
@@ -2656,7 +2648,7 @@
   {
     "label": "Pull out, centred",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-move",
     "file": "src/renderer/src/components/CameraPanel.tsx",
     "line": 34,
@@ -2665,7 +2657,7 @@
   {
     "label": "Push in, centred",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-move",
     "file": "src/renderer/src/components/CameraPanel.tsx",
     "line": 24,
@@ -2674,7 +2666,7 @@
   {
     "label": "Put behind the subject",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1444,
@@ -2692,7 +2684,7 @@
   {
     "label": "Quick dissolve",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "two-clips",
     "file": "src/shared/transitions/registry.ts",
     "line": 305,
@@ -2701,7 +2693,7 @@
   {
     "label": "Radius",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "ring-clip",
     "file": "src/renderer/src/components/CarouselPanel.tsx",
     "line": 41,
@@ -2710,7 +2702,7 @@
   {
     "label": "Range",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-keyed",
     "file": "src/renderer/src/components/KeyPanel.tsx",
     "line": 91,
@@ -2719,7 +2711,7 @@
   {
     "label": "Range takes out colours near the screen",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-keyed",
     "part": true,
     "file": "src/renderer/src/components/KeyPanel.tsx",
@@ -2729,7 +2721,7 @@
   {
     "label": "Rate",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-clip",
     "file": "src/renderer/src/components/SpeedPanel.tsx",
     "line": 75,
@@ -2738,7 +2730,7 @@
   {
     "label": "Rectangle",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "mask",
     "file": "src/renderer/src/components/MaskPanel.tsx",
     "line": 28,
@@ -2756,7 +2748,7 @@
   {
     "label": "Reframe",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 876,
@@ -2765,7 +2757,7 @@
   {
     "label": "Remove",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "mask",
     "file": "src/renderer/src/components/MaskPanel.tsx",
     "line": 106,
@@ -2774,7 +2766,7 @@
   {
     "label": "Remove",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-keyed",
     "file": "src/renderer/src/components/KeyPanel.tsx",
     "line": 60,
@@ -2783,7 +2775,7 @@
   {
     "label": "Remove this look",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-look",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1106,
@@ -2792,7 +2784,7 @@
   {
     "label": "Reset",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-look",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1048,
@@ -2810,7 +2802,7 @@
   {
     "label": "Reset to full frame",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-pip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1522,
@@ -2819,7 +2811,7 @@
   {
     "label": "Reveal the headline a character at a time",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "paper-clip",
     "part": true,
     "file": "src/renderer/src/components/PaperPanel.tsx",
@@ -2829,7 +2821,7 @@
   {
     "label": "Revealing over the layer below.",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "text-clip",
     "part": true,
     "file": "src/renderer/src/components/Inspector.tsx",
@@ -2839,7 +2831,7 @@
   {
     "label": "Roll",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "ring-clip",
     "file": "src/renderer/src/components/CarouselPanel.tsx",
     "line": 97,
@@ -2848,7 +2840,7 @@
   {
     "label": "Rotate",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 920,
@@ -2858,7 +2850,7 @@
   {
     "label": "Saturate",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "adjustment-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1090,
@@ -2867,7 +2859,7 @@
   {
     "label": "Saturate",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1090,
@@ -2885,25 +2877,16 @@
   {
     "label": "Screen",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-keyed",
     "file": "src/renderer/src/components/KeyPanel.tsx",
     "line": 65,
     "newHome": "trimmer dock"
   },
   {
-    "label": "Select a clip",
-    "match": "text",
-    "home": "inspector",
-    "needs": "none",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 1558,
-    "newHome": "dropped — dock hidden"
-  },
-  {
     "label": "Settle",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-shake",
     "file": "src/renderer/src/components/CameraPanel.tsx",
     "line": 137,
@@ -2912,7 +2895,7 @@
   {
     "label": "Shadow",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "text-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1319,
@@ -2921,7 +2904,7 @@
   {
     "label": "Shake the world and hold the person still",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-depth-shake",
     "file": "src/renderer/src/components/CameraPanel.tsx",
     "line": 152,
@@ -2930,7 +2913,7 @@
   {
     "label": "Show",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "mask",
     "file": "src/shared/render/mask.ts",
     "line": 131,
@@ -2948,7 +2931,7 @@
   {
     "label": "Show the shape on the picture and drag it there",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "mask",
     "file": "src/renderer/src/components/MaskPanel.tsx",
     "line": 90,
@@ -2957,7 +2940,7 @@
   {
     "label": "Shuffle the pages",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "paper-customise",
     "file": "src/renderer/src/components/PaperPanel.tsx",
     "line": 252,
@@ -2966,7 +2949,7 @@
   {
     "label": "Side by side",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/shared/render/layout.ts",
     "line": 24,
@@ -2995,7 +2978,7 @@
   {
     "label": "Size",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 888,
@@ -3004,7 +2987,7 @@
   {
     "label": "Smooth out a handheld shake",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-clip",
     "part": true,
     "file": "src/renderer/src/components/SteadyToggle.tsx",
@@ -3014,7 +2997,7 @@
   {
     "label": "Smooth slow motion",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-slow",
     "file": "src/renderer/src/components/SpeedPanel.tsx",
     "line": 98,
@@ -3023,7 +3006,7 @@
   {
     "label": "Soften",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-keyed",
     "file": "src/renderer/src/components/KeyPanel.tsx",
     "line": 99,
@@ -3032,7 +3015,7 @@
   {
     "label": "Sound",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 963,
@@ -3041,7 +3024,7 @@
   {
     "label": "Source in",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 874,
@@ -3050,7 +3033,7 @@
   {
     "label": "Speed",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-clip",
     "file": "src/renderer/src/components/SpeedPanel.tsx",
     "line": 40,
@@ -3059,7 +3042,7 @@
   {
     "label": "Spin",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "ring-clip",
     "file": "src/renderer/src/components/CarouselPanel.tsx",
     "line": 75,
@@ -3068,7 +3051,7 @@
   {
     "label": "Splits the photo beneath into background and subject",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "part": true,
     "file": "src/renderer/src/components/Inspector.tsx",
@@ -3078,7 +3061,7 @@
   {
     "label": "Splits this clip with the one on the track below.",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/LayoutPanel.tsx",
     "line": 98,
@@ -3106,7 +3089,7 @@
   {
     "label": "Start",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 855,
@@ -3115,7 +3098,7 @@
   {
     "label": "Steady",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-clip",
     "file": "src/renderer/src/components/SteadyToggle.tsx",
     "line": 26,
@@ -3124,7 +3107,7 @@
   {
     "label": "Stop animating — the shape stays as it is at the playhead",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "mask",
     "file": "src/renderer/src/components/MaskPanel.tsx",
     "line": 123,
@@ -3142,7 +3125,7 @@
   {
     "label": "Style",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "text-clip",
     "file": "src/renderer/src/components/TextStylePicker.tsx",
     "line": 56,
@@ -3151,7 +3134,7 @@
   {
     "label": "Subject still",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-depth-shake",
     "file": "src/renderer/src/components/CameraPanel.tsx",
     "line": 157,
@@ -3160,7 +3143,7 @@
   {
     "label": "THE DAILY CHRONICLE",
     "match": "placeholder",
-    "home": "inspector",
+    "home": "dock",
     "needs": "paper-customise",
     "file": "src/renderer/src/components/PaperPanel.tsx",
     "line": 221,
@@ -3169,7 +3152,7 @@
   {
     "label": "Tabloid",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "paper-clip",
     "file": "src/shared/render/paper.ts",
     "line": 88,
@@ -3178,7 +3161,7 @@
   {
     "label": "Take a green or blue screen out, so the track below shows through.",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/KeyPanel.tsx",
     "line": 41,
@@ -3187,7 +3170,7 @@
   {
     "label": "Temp",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "adjustment-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1058,
@@ -3196,7 +3179,7 @@
   {
     "label": "Temp",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1058,
@@ -3205,7 +3188,7 @@
   {
     "label": "Text card",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "text-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1163,
@@ -3214,7 +3197,7 @@
   {
     "label": "Texture",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "paper-customise",
     "file": "src/renderer/src/components/PaperPanel.tsx",
     "line": 197,
@@ -3223,7 +3206,7 @@
   {
     "label": "The clip keeps the same footage and changes how long it sits on the timeline.",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-clip",
     "part": true,
     "file": "src/renderer/src/components/SpeedPanel.tsx",
@@ -3233,7 +3216,7 @@
   {
     "label": "The clip on the track below is shown only inside this shape",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1424,
@@ -3242,7 +3225,7 @@
   {
     "label": "The drawn envelope sets this clip's level — clear it to use the fader.",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-envelope",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1000,
@@ -3251,7 +3234,7 @@
   {
     "label": "The mask's next key",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "mask",
     "file": "src/renderer/src/components/MaskPanel.tsx",
     "line": 150,
@@ -3260,7 +3243,7 @@
   {
     "label": "The mask's previous key",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "mask",
     "file": "src/renderer/src/components/MaskPanel.tsx",
     "line": 142,
@@ -3269,7 +3252,7 @@
   {
     "label": "The picture below shows through this — put it back",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "text-fill",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1419,
@@ -3278,7 +3261,7 @@
   {
     "label": "The same move on the photo",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-depth",
     "part": true,
     "file": "src/renderer/src/components/CameraPanel.tsx",
@@ -3288,7 +3271,7 @@
   {
     "label": "The template keeps its own typography — editing the copy re-renders it.",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "title-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1548,
@@ -3315,7 +3298,7 @@
   {
     "label": "The words are simply there",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "text-clip",
     "file": "src/renderer/src/components/TextAnimationPicker.tsx",
     "line": 133,
@@ -3334,7 +3317,7 @@
   {
     "label": "This is a subject cutout — put the photo back together",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "subject-cutout",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1436,
@@ -3343,7 +3326,7 @@
   {
     "label": "This photo has Zoom keyframes — choosing a move takes them off, since both scale the picture.",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "keyframes",
     "file": "src/renderer/src/components/CameraPanel.tsx",
     "line": 176,
@@ -3352,7 +3335,7 @@
   {
     "label": "Tilt",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "ring-clip",
     "file": "src/renderer/src/components/CarouselPanel.tsx",
     "line": 89,
@@ -3361,7 +3344,7 @@
   {
     "label": "Tilt & tear",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "paper-customise",
     "file": "src/renderer/src/components/PaperPanel.tsx",
     "line": 189,
@@ -3370,7 +3353,7 @@
   {
     "label": "Tint",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1066,
@@ -3379,7 +3362,7 @@
   {
     "label": "Title text",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "title-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1535,
@@ -3388,7 +3371,7 @@
   {
     "label": "Tracking",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "text-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1303,
@@ -3397,16 +3380,17 @@
   {
     "label": "Transition in",
     "match": "text",
-    "home": "inspector",
-    "needs": "none",
+    "home": "dock",
+    "needs": "photo-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 1555,
-    "newHome": "trimmer dock"
+    "line": 796,
+    "newHome": "trimmer dock",
+    "note": "Step 8: needs a clip now. The Inspector was always on screen and showed this header in an empty project; inside the Trimmer dock it shows only with something to trim."
   },
   {
     "label": "Turned along the ring",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "ring-clip",
     "file": "src/renderer/src/components/CarouselPanel.tsx",
     "line": 114,
@@ -3424,7 +3408,7 @@
   {
     "label": "Type your text",
     "match": "placeholder",
-    "home": "inspector",
+    "home": "dock",
     "needs": "text-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1170,
@@ -3433,7 +3417,7 @@
   {
     "label": "Typewriter",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "paper-clip",
     "file": "src/renderer/src/components/PaperPanel.tsx",
     "line": 121,
@@ -3442,7 +3426,7 @@
   {
     "label": "Visible arc",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "ring-clip",
     "file": "src/renderer/src/components/CarouselPanel.tsx",
     "line": 61,
@@ -3451,7 +3435,7 @@
   {
     "label": "Weight",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "text-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1311,
@@ -3470,7 +3454,7 @@
   {
     "label": "Width",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "mask",
     "file": "src/renderer/src/components/MaskPanel.tsx",
     "line": 225,
@@ -3488,7 +3472,7 @@
   {
     "label": "Your own headline — %s is where the word goes",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "paper-customise",
     "file": "src/renderer/src/components/PaperPanel.tsx",
     "line": 207,
@@ -3497,7 +3481,7 @@
   {
     "label": "center",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "text-clip",
     "count": 2,
     "file": "src/renderer/src/components/Inspector.tsx",
@@ -3528,7 +3512,7 @@
   {
     "label": "fonts",
     "match": "placeholder",
-    "home": "inspector",
+    "home": "dock",
     "needs": "text-fontpicker",
     "part": true,
     "file": "src/renderer/src/components/FontPicker.tsx",
@@ -3538,7 +3522,7 @@
   {
     "label": "in this family",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "part": true,
     "count": 4,
@@ -3550,7 +3534,7 @@
   {
     "label": "inside the mask only",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "mask-grade",
     "part": true,
     "file": "src/renderer/src/components/Inspector.tsx",
@@ -3570,7 +3554,7 @@
   {
     "label": "left",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "text-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1278,
@@ -3580,7 +3564,7 @@
   {
     "label": "library did not load",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "transitions-error",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1592,
@@ -3589,7 +3573,7 @@
   {
     "label": "masks",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "transition-tags",
     "part": true,
     "file": "src/renderer/src/components/Inspector.tsx",
@@ -3599,7 +3583,7 @@
   {
     "label": "one line, placed by you",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "text-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1164,
@@ -3608,7 +3592,7 @@
   {
     "label": "or load your own .cube",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "part": true,
     "file": "src/renderer/src/components/Inspector.tsx",
@@ -3618,7 +3602,7 @@
   {
     "label": "right",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "text-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1278,
@@ -3638,7 +3622,7 @@
   {
     "label": "the clip keeps the same footage and changes length",
     "match": "title",
-    "home": "inspector",
+    "home": "dock",
     "needs": "video-clip",
     "part": true,
     "count": 6,
@@ -3650,7 +3634,7 @@
   {
     "label": "top",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "text-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1262,
@@ -3660,7 +3644,7 @@
   {
     "label": "transition",
     "match": "text",
-    "home": "inspector",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1588,
@@ -5108,7 +5092,7 @@
     "home": "source",
     "needs": "none",
     "file": "src/renderer/src/components/SourceBar.tsx",
-    "line": 97,
+    "line": 98,
     "newHome": "Shelf tile Upload (MediaPool with one Upload button)"
   },
   {
@@ -5382,7 +5366,7 @@
     "home": "source",
     "needs": "narration-mode",
     "file": "src/renderer/src/components/SourceBar.tsx",
-    "line": 100,
+    "line": 101,
     "newHome": "Shelf tile Narration (coming-soon)"
   },
   {
@@ -5401,7 +5385,7 @@
     "home": "source",
     "needs": "none",
     "file": "src/renderer/src/components/SourceBar.tsx",
-    "line": 84,
+    "line": 85,
     "newHome": "Shelf tile Narration (coming-soon)"
   },
   {
@@ -5853,7 +5837,7 @@
   {
     "label": "Add at playhead",
     "match": "text",
-    "home": "waveform",
+    "home": "dock",
     "needs": "audition",
     "file": "src/renderer/src/components/Waveform.tsx",
     "line": 309,
@@ -5862,7 +5846,7 @@
   {
     "label": "Drag the end point",
     "match": "title",
-    "home": "waveform",
+    "home": "dock",
     "needs": "audition",
     "file": "src/renderer/src/components/Waveform.tsx",
     "line": 295,
@@ -5871,7 +5855,7 @@
   {
     "label": "Drag the end point",
     "match": "title",
-    "home": "waveform",
+    "home": "dock",
     "needs": "video-clip",
     "file": "src/renderer/src/components/Waveform.tsx",
     "line": 295,
@@ -5880,7 +5864,7 @@
   {
     "label": "Drag the start point",
     "match": "title",
-    "home": "waveform",
+    "home": "dock",
     "needs": "audition",
     "file": "src/renderer/src/components/Waveform.tsx",
     "line": 295,
@@ -5889,25 +5873,76 @@
   {
     "label": "Drag the start point",
     "match": "title",
-    "home": "waveform",
+    "home": "dock",
     "needs": "video-clip",
     "file": "src/renderer/src/components/Waveform.tsx",
     "line": 295,
     "newHome": "trimmer dock"
   },
   {
-    "label": "Select a clip, or pick a sound in the Library, to see its waveform",
+    "label": "Trimmer",
     "match": "text",
-    "home": "waveform",
-    "needs": "none",
-    "file": "src/renderer/src/components/Waveform.tsx",
-    "line": 253,
-    "newHome": "dropped — the trimmer dock is hidden when nothing is selected"
+    "home": "dock",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/TrimmerDock.tsx",
+    "line": 54,
+    "newHome": "trimmer dock (its header)",
+    "note": "The dock’s header word, over the name of what it is showing. Written Trimmer, shown in capitals by CSS."
+  },
+  {
+    "label": "Trimmer",
+    "match": "text",
+    "home": "dock",
+    "needs": "audition",
+    "file": "src/renderer/src/components/TrimmerDock.tsx",
+    "line": 54,
+    "newHome": "trimmer dock (its header, a Library sound)"
+  },
+  {
+    "label": "Close the trimmer",
+    "match": "title",
+    "home": "dock",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/TrimmerDock.tsx",
+    "line": 31,
+    "newHome": "trimmer dock (the X in its header)",
+    "note": "The X lets go of the selection AND the audition, so the dock goes and does not come straight back for a sound still being auditioned. Step 8 dropped three rows that said \"nothing to trim\" in words — the Inspector’s \"No clip selected\" and \"Select a clip\" (under Transition in) and the waveform’s \"Select a clip, or pick a sound in the Library, to see its waveform\" — because the dock is not drawn at all then, so they have nowhere to show. Their successor is the census’s own check, noDock() in harness/census.ts: every scenario starts with nothing selected, nothing auditioned and NO [data-dock] on the page, or the census throws; and leaving the Library after the audition scenario has to end the audition and take the dock away too."
+  },
+  {
+    "label": "Close the trimmer",
+    "match": "title",
+    "home": "dock",
+    "needs": "audition",
+    "file": "src/renderer/src/components/TrimmerDock.tsx",
+    "line": 31,
+    "newHome": "trimmer dock (the X in its header, a Library sound)"
+  },
+  {
+    "label": "the selected clip",
+    "match": "title",
+    "home": "dock",
+    "needs": "photo-clip",
+    "part": true,
+    "file": "src/renderer/src/components/TrimmerDock.tsx",
+    "line": 35,
+    "newHome": "trimmer dock (the name in its header)",
+    "note": "The static half of the header name’s tooltip, \"<name> — the selected clip\". The name itself is the clip’s and is not rowed (it is data, and the waveform and the clip editor show it too)."
+  },
+  {
+    "label": "a Library sound, not on the timeline yet",
+    "match": "title",
+    "home": "dock",
+    "needs": "audition",
+    "part": true,
+    "file": "src/renderer/src/components/TrimmerDock.tsx",
+    "line": 36,
+    "newHome": "trimmer dock (the name in its header, a Library sound)",
+    "note": "The static half of the header name’s tooltip, \"<name> — a Library sound, not on the timeline yet\"."
   },
   {
     "label": "has no audio track",
     "match": "text",
-    "home": "waveform",
+    "home": "dock",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/Waveform.tsx",
     "line": 256,
@@ -6092,7 +6127,7 @@
     "newHome": "export strip (header)"
   },
   {
-    "label": "under EXPORT, on the left",
+    "label": "under EXPORT, bottom left",
     "match": "text",
     "home": "source",
     "needs": "ingest-running",
@@ -6100,6 +6135,6 @@
     "file": "src/renderer/src/components/IngestPanel.tsx",
     "line": 305,
     "newHome": "Shelf tile URL",
-    "note": "Reworded in step 7 from \"in the panel on the right\": download progress shows under EXPORT (Decision 7). Not \"bottom left\" until step 8 puts the strips at the foot of a full-height column."
+    "note": "Reworded in step 7 from \"in the panel on the right\": download progress shows under EXPORT (Decision 7). \"on the left\" became \"bottom left\" in step 8, which put the strips at the foot of a full-height left column."
   }
 ]

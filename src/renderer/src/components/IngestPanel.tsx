@@ -302,7 +302,7 @@ export function IngestPanel(): ReactNode {
       {running.length > 0 && (
         <p className="mt-2 text-[10.5px] text-ink-500">
           {running.length === 1 ? '1 download' : `${running.length} downloads`} running — progress is
-          under EXPORT, on the left.
+          under EXPORT, bottom left.
         </p>
       )}
 

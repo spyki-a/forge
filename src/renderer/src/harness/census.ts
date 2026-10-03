@@ -75,7 +75,9 @@ import { usePacks } from '../packs'
  * words) and an editable word (its tooltip is rowed); MusicRange's name and
  * seconds (its handles are rowed); dropping onto the picture, and the reframe
  * rectangle; the waveform, tone-curve and keyframe-graph canvases and the
- * Waveform clip header (name, timecodes); on the timeline the ruler, clip
+ * Waveform clip header (name, timecodes); the Trimmer dock's name in its
+ * header (its tooltip's words are rowed; the name is the clip's, data, not
+ * the interface's); on the timeline the ruler, clip
  * bodies, trim handles and ClipWaveform; and the app-shell loads (§3.20).
  */
 
@@ -110,8 +112,15 @@ const STRIP_FACES = {
   exportbar: { strip: 'export', open: false }
 } as const
 type StripFace = keyof typeof STRIP_FACES
-/** Homes that are on screen whatever the left panel shows (the tray's and the strips' once put in that face). */
-const FIXED_HOMES = ['header', 'source', 'canvasbar', 'preview', 'toolbox', 'inspector', 'rail', 'keys', 'curve', 'output', 'outputbar', 'export', 'exportbar', 'transport', 'timeline', 'waveform'] as const
+/**
+ * Homes that are on screen whatever the left panel shows (the tray's and the
+ * strips' once put in that face). `dock` is the Trimmer dock (step 8: the
+ * waveform and the clip editor that were the `waveform` and `inspector` homes),
+ * which is on screen only while a clip is selected or a Library sound is being
+ * auditioned — the scenario's own state shows it, so it needs no opening; with
+ * neither it is not there at all, and `fresh()` checks that it is not.
+ */
+const FIXED_HOMES = ['header', 'source', 'canvasbar', 'preview', 'toolbox', 'dock', 'rail', 'keys', 'curve', 'output', 'outputbar', 'export', 'exportbar', 'transport', 'timeline'] as const
 /**
  * Overlays: counted only inside the one element that appeared when the scenario
  * opened it. `settings` is the panel under the header's gear (step 6), opened
@@ -306,14 +315,52 @@ function panels(group: Element | null, n: number, what: string): Element[] {
 const positioned = (el: Element): string => getComputedStyle(el).position
 
 /**
+ * The left column's holder (step 8): one vertical Group of the left panel and,
+ * only while there is something to trim, the Trimmer dock under it.
+ *
+ * Told apart by `data-dock` on the dock's root, never by its words. Anything
+ * else throws: no Group, no panel or three, the dock first, a second panel
+ * that is not the dock, or a `data-dock` anywhere but here — a dock drawn
+ * outside its home would be counted in none.
+ */
+function leftSplit(holder: Element): { leftPanel: Element; dock: Element | null } {
+  const [group] = childrenOf(holder, 1, 'the left panel’s holder')
+  if (!group.matches('[data-group]')) {
+    throw new Error('census: the left panel’s holder holds no panel group — the layout changed; update homeRoots')
+  }
+  const n = group.querySelectorAll(':scope > [data-panel]').length
+  if (n !== 1 && n !== 2) {
+    throw new Error(`census: expected the tabs, and the dock under them at most, in the left column; found ${n} panels — the layout changed; update homeRoots`)
+  }
+  const [leftPanel, dock = null] = panels(group, n, 'the left column’s split')
+  if (leftPanel.matches('[data-dock]')) {
+    throw new Error('census: the left column’s first panel is the Trimmer dock, not the tabs — the layout changed; update homeRoots')
+  }
+  if (dock && !dock.matches('[data-dock]')) {
+    throw new Error('census: the left column’s second panel is not the Trimmer dock — the layout changed; update homeRoots')
+  }
+  const docks = document.querySelectorAll('[data-dock]').length
+  if (docks !== (dock ? 1 : 0)) {
+    throw new Error(`census: ${docks} [data-dock] on the page and ${dock ? 'one' : 'none'} in the left column — the layout changed; update homeRoots`)
+  }
+  return { leftPanel, dock }
+}
+
+/**
  * Today's window, found by its structure rather than by any label — the labels
  * are what is under examination. Every step that moves a panel has to update
  * this, and a finder that no longer recognises the layout throws.
  *
- *   header · source row · [ left | centre | inspector ] / [ transport + timeline | curve tray ]
- *   left = [ tab strip · tab content · waveform dock ] / OUTPUT strip / EXPORT strip
- *     (step 7: the left panel in a holder, the two strips under it, each told
- *     apart by its `data-strip`; `openHome` puts a strip in the face asked for)
+ *   header · [ left column | right column ], both the full height under the header
+ *   left = source row / [ holder [ tabs panel | Trimmer dock panel ] / OUTPUT strip / EXPORT strip ]
+ *     (step 7: the two strips under the holder, each told apart by its
+ *     `data-strip`; `openHome` puts a strip in the face asked for. Step 8:
+ *     the Inspector's column is gone; the holder is a vertical Group of the
+ *     left panel — [ tab strip · tab content ] — and, only while there is
+ *     something to trim, the dock, told apart by its `data-dock`; and the left
+ *     column runs full height with the source row at its head, where the row
+ *     ran across the whole window before)
+ *   right = centre / [ transport + timeline | curve tray ]
  *   centre = canvas bar / [ toolbox + preview ]   (step 4: the bar over the picture row)
  *   curve tray = the lower row's second panel, whatever its width: a 28 px
  *     rail when closed, a few hundred px open (step 5). The rail, Keys and
@@ -324,33 +371,42 @@ function layout(): Record<Exclude<Home, (typeof OVERLAY_HOMES)[number]> | 'tabs'
   const app = header.parentElement
   if (!app) throw new Error('census: the header has no parent')
   const group = only(app.querySelectorAll(':scope > [data-group]'), 'panel group under the header')
-  const source = group.previousElementSibling
-  if (!source || source === header) throw new Error('census: no source row between the header and the panels')
+  if (group.previousElementSibling !== header) {
+    throw new Error('census: something sits between the header and the panels — the source row heads the left column since step 8; update homeRoots')
+  }
 
   // The header's home: the bar, and what sits above it in the app's own flow — the
   // recovery banner, the Exit full screen pill. Not the full-window overlays.
   const kids = [...app.children]
-  const chrome = kids.slice(0, kids.indexOf(source)).filter((el) => positioned(el) !== 'fixed')
+  const chrome = kids.slice(0, kids.indexOf(group)).filter((el) => positioned(el) !== 'fixed')
 
-  // Each half of the window is itself a Group, directly inside its panel.
-  const [upper, lower] = panels(group, 2, 'the window').map((half) => (half.matches('[data-group]') ? half : null))
-  const [left, middle, inspector] = panels(upper, 3, 'the upper row')
-  const [timelineColumn, tray] = panels(lower, 2, 'the lower row')
+  // The two columns. The right one is a Group itself, directly inside its
+  // panel, of the centre over the lower row — which is a Group again.
+  const [left, right] = panels(group, 2, 'the window')
+  if (left.matches('[data-group]')) throw new Error('census: the left column is a panel group — the layout changed; update homeRoots')
+  const [middle, lower] = panels(right.matches('[data-group]') ? right : null, 2, 'the right column')
+  if (middle.matches('[data-group]')) throw new Error('census: the centre is a panel group — the layout changed; update homeRoots')
+  const [timelineColumn, tray] = panels(lower.matches('[data-group]') ? lower : null, 2, 'the lower row')
   // By what the tray says it is showing, never by its words. A second panel
   // that does not say is something else in the tray's place.
   if (!(Object.values(TRAY_FACES) as string[]).includes(tray.getAttribute('data-curve-tray') ?? '')) {
     throw new Error('census: the lower row’s second panel is not the Curve tray — the layout changed; update homeRoots')
   }
-  // The left column: the left panel's holder, then OUTPUT, then EXPORT. By what
-  // each strip says it is, never by its words — those are being counted.
-  const [holder, output, exporting] = childrenOf(left, 3, 'the left column')
+  // The left column: the source row, then the column it heads — the left
+  // panel's holder, then OUTPUT, then EXPORT. By what each strip says it is,
+  // never by its words — those are being counted.
+  const [source, column] = childrenOf(left, 2, 'the left column')
+  if (source.matches('[data-strip], [data-group]') || source.querySelector('[data-strip], [data-group], [data-dock]')) {
+    throw new Error('census: the left column’s first part is not the source row — the layout changed; update homeRoots')
+  }
+  const [holder, output, exporting] = childrenOf(column, 3, 'the left column under the source row')
   for (const [strip, id] of [[output, 'output'], [exporting, 'export']] as const) {
     if (strip.getAttribute('data-strip') !== id) {
       throw new Error(`census: the left column has no ${id.toUpperCase()} strip where it should be — the layout changed; update homeRoots`)
     }
   }
-  const [leftPanel] = childrenOf(holder, 1, 'the left panel’s holder')
-  const [tabs, leftContent, waveform] = childrenOf(leftPanel, 3, 'the left panel')
+  const { leftPanel, dock } = leftSplit(holder)
+  const [tabs, leftContent] = childrenOf(leftPanel, 2, 'the left panel')
   // The centre column: the canvas bar, then the picture row under it. By
   // position, never by the bar's words — those are what is being counted.
   const [canvasbar, pictureRow] = childrenOf(middle, 2, 'the centre column')
@@ -369,11 +425,11 @@ function layout(): Record<Exclude<Home, (typeof OVERLAY_HOMES)[number]> | 'tabs'
     library: [tabs, leftContent],
     transcript: [tabs, leftContent],
     create: [tabs, leftContent],
-    waveform: [waveform],
+    // Not on screen: no roots, so a row counted here is "absent — its home is not on screen".
+    dock: dock ? [dock] : [],
     canvasbar: [canvasbar],
     toolbox: [toolbox],
     preview: [preview],
-    inspector: [inspector],
     transport: [transport],
     timeline: [timeline],
     rail: [tray],
@@ -683,6 +739,36 @@ async function stripShows(face: StripFace): Promise<void> {
         `census: the ${strip.toUpperCase()} strip was asked to be ${open ? 'open' : 'closed'} and says data-open=${says}, its body ${body ? (shown ? 'shown' : 'hidden') : 'missing'}`
       )
     }
+  }
+}
+
+/**
+ * No Trimmer dock: nothing selected, nothing auditioned, and none on screen.
+ *
+ * Every scenario starts here (`fresh`), and the Library's audition ends here
+ * too. It stands for the rows that said "nothing to trim" in words — the
+ * Inspector's "No clip selected" and "Select a clip", the waveform's "Select a
+ * clip, or pick a sound in the Library…" — which the dock, hidden then, no
+ * longer has anywhere to say (step 8). And a dock left on screen would put its
+ * carriers into every home's empty-project count. So it throws, as a layout the
+ * finders do not recognise does, rather than count over it.
+ */
+async function noDock(): Promise<void> {
+  const deadline = performance.now() + 2000
+  for (;;) {
+    const { selectedClipId, audition } = editor()
+    const shown = layout().dock.length > 0
+    if (selectedClipId === null && !audition && !shown) return
+    if (performance.now() > deadline) {
+      throw new Error(
+        selectedClipId !== null
+          ? `census: clip ${selectedClipId} is still selected in a fresh project`
+          : audition
+            ? `census: the Library is closed and "${audition.name}" is still being auditioned — Library.tsx ends the audition when it unmounts, or the Trimmer dock never closes on its own`
+            : 'census: the Trimmer dock is on screen with nothing selected and nothing auditioned — it should not be drawn at all then (WINDOW.md §3.18)'
+      )
+    }
+    await frames()
   }
 }
 
@@ -1452,7 +1538,13 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     packsAre({ packs: [pack('unreleased', { kind: 'unpublished' })] })
     return {}
   },
-  /* a sound picked in the Library, shown in the waveform before it is placed */
+  /*
+   * A sound picked in the Library, in the Trimmer dock before it is placed —
+   * the dock shows for it with nothing selected. Its rows are all in `dock`,
+   * so `close` runs once: leaving the Library has to end the audition and take
+   * the dock away (Library.tsx), which `fresh` alone would never see, because
+   * it puts the store back first.
+   */
   audition: async () => {
     catalogWith(sfx(1))
     await openHome('library')
@@ -1461,7 +1553,12 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     if (!row) throw new Error('census: the Library shows no sound to audition')
     await click(row)
     if (!editor().audition) throw new Error('census: clicking a Library sound did not audition it')
-    return {}
+    return {
+      close: async () => {
+        await leftTab('Media')
+        await noDock()
+      }
+    }
   },
   'ingest-range': async () => {
     await youtube({ useRange: true })
@@ -1695,6 +1792,8 @@ export async function runCensus(options: CensusOptions = {}): Promise<CensusResu
     await frames()
     await leftTab('Media')
     await curveOnMotion()
+    // Nothing selected and the Library shut: no dock (the successor of "No clip selected").
+    await noDock()
   }
 
   const missing: CensusMiss[] = []

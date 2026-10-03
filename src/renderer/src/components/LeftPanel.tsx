@@ -3,7 +3,6 @@ import { useEditor } from '../store'
 import { MediaPool } from './MediaPool'
 import { Library } from './Library'
 import { TranscriptPanel } from './TranscriptPanel'
-import { Waveform } from './Waveform'
 import { Automation } from './Automation'
 
 type Tab = 'media' | 'library' | 'transcript' | 'auto'
@@ -72,9 +71,14 @@ export function LeftPanel(): ReactNode {
 
       {/*
         Clipped, so a tab squeezed shorter than its fixed rows is cut off at
-        its own edge rather than drawn over the waveform under it — which an
-        open OUTPUT or EXPORT strip below this panel does (App.tsx). Every tab
-        scrolls its own long part (the pool, the library grid, Create).
+        its own edge rather than drawn over what is under it — the Trimmer
+        dock, or the OUTPUT and EXPORT strips (App.tsx), either of which can
+        take the column's height from it. Every tab scrolls its own long part
+        (the pool, the library grid, Create).
+
+        The waveform is not here any more: it is the top of the Trimmer dock
+        (TrimmerDock.tsx), which shows only while a clip is selected or a
+        Library sound is being auditioned (WINDOW.md §3.18).
       */}
       <div className="min-h-0 flex-1 overflow-hidden">
         {tab === 'media' && (
@@ -135,13 +139,6 @@ export function LeftPanel(): ReactNode {
         {tab === 'library' && <Library />}
         {tab === 'transcript' && <TranscriptPanel />}
         {tab === 'auto' && <Automation />}
-      </div>
-
-      {/* Always visible under the tabs: trimming is a constant activity, and
-          hiding it behind a tab would mean losing sight of the thing being
-          trimmed while trimming it. */}
-      <div className="h-28 shrink-0 border-t border-ink-800 bg-ink-900">
-        <Waveform />
       </div>
     </div>
   )

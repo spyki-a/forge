@@ -64,7 +64,8 @@ export function SourceBar(): ReactNode {
 
   return (
     <div className="shrink-0 border-b border-ink-850">
-      <div className="flex items-center gap-1 px-2 py-1.5">
+      {/* Wraps: since step 8 this heads the 240 px left column, not the whole window. */}
+      <div className="flex flex-wrap items-center gap-1 px-2 py-1.5">
         {MODES.map((mode) => {
           const Icon = mode.icon
           const on = mode.id === sourceMode

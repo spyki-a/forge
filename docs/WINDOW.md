@@ -970,7 +970,7 @@ Anchors are counted with `matchAll` before being trusted.
   ("Done" is written elsewhere in the source, which that half cannot tell apart) and is caught by the
   harness census ("absent").
 
-### Step 8 — The Trimmer dock; the right column goes
+### Step 8 — The Trimmer dock; the right column goes · DONE 2026-10-03
 - **Files:** new `components/TrimmerDock.tsx` (header with name and X; `<Waveform />`; `<Inspector />`
   below, one scroller); new pure `src/renderer/src/dock.ts` `dockSubject(project, selectedClipId,
   audition)` → `'clip' | 'audition' | null` (a stale id resolves to null); `App.tsx` (remove the right
@@ -986,6 +986,41 @@ Anchors are counted with `matchAll` before being trusted.
   Text card; a Library SFX → audition with Add at playhead; X closes it; Mask "Edit on picture" works;
   the text FontPicker covers the window; census `[]`; preview canvas rect at 1400×900 ≥ 1.35× baseline
   width in 16:9 and taller in 9:16.
+- **As built (2026-10-03).** The window is now the §2 diagram. `TrimmerDock.tsx` (header "Trimmer ·
+  <name>" with its tooltip "— the selected clip" / "— a Library sound, not on the timeline yet", an X
+  "Close the trimmer" that drops the selection AND the audition, then the Waveform and the Inspector
+  in one scroller) renders only while `dock.ts` `dockSubject(project, selectedClipId, audition)` is
+  not null — a clip wins over an audition, a stale id is null; `Library.tsx` clears the audition on
+  unmount, which nothing did before. The right-hand Panel and its Divider are gone; `Inspector.tsx`
+  keeps its name and its pinned strings and is the clip editor only (`if (!clip) return null`).
+  **The left column runs full height** (the user's §7.2 answer, built here because the verifier
+  measured the tabs and the dock not fitting their floors inside the old 62 % row): the outermost
+  Group is horizontal [left column | right column] and the right column is a vertical Group,
+  picture 64 % over timeline 36 %, so the source row (Upload / YouTube / Narration) now sits at the
+  top of the left column too, wrapped to two rows at 240 px, until step 9 replaces it with tiles.
+  Inside the column a vertical Group `LeftSplit` holds the tabs Panel (floor 152 px) over the dock
+  Panel (floor 260 px: header 28 + waveform 112 + 120 of editor), with ids so the library never
+  mis-applies a layout when the dock mounts and unmounts; the holder's min-height follows the dock
+  (`holderFloor`); the strips stay under it. **One library lesson:** react-resizable-panels 4.12.4
+  takes a string size as percent but writes it to `flex-basis` RAW on the first frame, so
+  `defaultSize="17"` is invalid CSS, the panels take their content width, and the clamp against
+  `minSize={240}` landed at the 30 % max — the column opened at 420 px. Every string size now
+  carries an explicit `%`, and `tests/trimmerDock.test.ts` fails on a unitless one. Measured at
+  1400×900: left column 240 px; canvas 1123×520 against the step-0 778×512 (1.44× wide); 16:9 frame
+  925×520 (1.19×); 9:16 frame 293×520 against 288×512 — only 1.6 % taller, because the height a 9:16
+  frame gets is the picture row's, and the canvas bar (step 4) took 32 px of it since the baseline.
+  More vertical room would have to come from the timeline (already short at the minimum window,
+  step 5's note) or the bar; a room test pins the timeline at ≥ 230 px at 1100×680. The column keeps
+  the library's preserve-relative-size: opened at 1100 it is 240 px and grows to ~305 at 1400; the
+  default window opens at 240. Census: homes `inspector` and `waveform` became `dock` (191 rows;
+  found as the second Panel of the left split, `data-dock`, present only with a subject); three
+  rows whose text can no longer appear — "No clip selected", "Select a clip", "Select a clip, or
+  pick a sound in the Library, to see its waveform" — were dropped for a successor, `noDock()`, a
+  self-check `fresh()` runs before every scenario that throws unless nothing is selected, nothing is
+  auditioned and no `[data-dock]` is on the page; 652 rows, 644 checked, 0 missing. Known: in
+  YouTube mode the inline ingest form makes the source row 273 px tall and squeezes the tabs and
+  dock below their floors at 1100×680 until step 9; an audition takes the dock's full 260 px floor
+  although it has no editor.
 
 ### Step 9 — The Shelf frame and the source tiles
 - **Files:** new `components/shelf/Shelf.tsx` (home grid in the sketch's order, `auto-fill` columns; an

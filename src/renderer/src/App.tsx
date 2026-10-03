@@ -9,11 +9,12 @@ import { useEditor } from './store'
 import { useCatalog } from './catalog'
 import { activeCaptionStyle } from './captionPreview'
 import { stopVoiceOver } from './recorder'
+import { DOCK_FLOOR, TABS_FLOOR, dockSubject, holderFloor } from './dock'
 import { LeftPanel } from './components/LeftPanel'
 import { Preview } from './components/Preview'
 import { Timeline } from './components/Timeline'
 import { Transport } from './components/Transport'
-import { Inspector } from './components/Inspector'
+import { TrimmerDock } from './components/TrimmerDock'
 import { Toolbox } from './components/Toolbox'
 import { CanvasBar } from './components/CanvasBar'
 import { Shortcuts } from './components/Shortcuts'
@@ -108,6 +109,45 @@ function Header(): ReactNode {
         <Settings size={13} />
         <span className={`size-1.5 rounded-full ${helper.dot}`} />
       </button>
+    </div>
+  )
+}
+
+/**
+ * The top of the left column: the tabs, and under them the Trimmer dock while
+ * there is something to trim (WINDOW.md §3.18) — two panels of one vertical
+ * Group, so the split between them can be dragged.
+ *
+ * A component of its own so that selecting a first clip, or letting go of the
+ * last, re-renders this and not the whole window: App renders the Preview, and
+ * the Curve tray keeps App out of its toggles for the same reason. The dock's
+ * panel is in the Group only while `dockSubject` says there is something to
+ * show (a selected clip that exists, or a Library sound being auditioned).
+ * Both panels carry an id because the library remembers a layout per SET of
+ * panel ids: the split dragged with the dock open comes back when it reopens,
+ * and with it shut the tabs have the whole height, never a split left over.
+ *
+ * Clipped, with a min-height that keeps the tabs — and the dock, when it is
+ * there — their floors against an open OUTPUT or EXPORT strip, as long as the
+ * strips' two headers still fit (dock.ts; tests/windowStrips.test.ts).
+ */
+function LeftSplit(): ReactNode {
+  const subject = useEditor((s) => dockSubject(s.project, s.selectedClipId, s.audition))
+  return (
+    <div className="flex-1 overflow-hidden" style={{ minHeight: holderFloor(subject !== null) }}>
+      <Group orientation="vertical">
+        <Panel id="left-tabs" defaultSize="45%" minSize={TABS_FLOOR}>
+          <LeftPanel />
+        </Panel>
+        {subject && (
+          <>
+            <Divider vertical />
+            <Panel id="left-dock" defaultSize="55%" minSize={DOCK_FLOOR}>
+              <TrimmerDock />
+            </Panel>
+          </>
+        )}
+      </Group>
     </div>
   )
 }
@@ -549,38 +589,61 @@ export default function App(): ReactNode {
 
       <Header />
 
-      <SourceBar />
-
-      <Group orientation="vertical" className="flex-1">
-        <Panel defaultSize="62" minSize="30">
-          <Group orientation="horizontal">
-            <Panel defaultSize="22" minSize="14" maxSize="40">
-              {/*
-                The left column: the panel's tabs, and under them the OUTPUT and
-                EXPORT strips (WINDOW.md §3.16-3.17). Both strips are rendered
-                unconditionally — closing one hides its body by class — because
-                EXPORT holds the export flow and the File › Export listener,
-                which must run with the strip shut (tests/windowStrips.test.ts).
-                The left panel keeps three fifths of the column, and never less
-                than 264 px (16.5rem) — its 31.5 px tab row, 120 px of tab content
-                (the Media tab's two add rows and the pool's Import row, with a
-                line of the pool under them) and the 112 px waveform — as long
-                as the two 28 px strip headers still fit under it (the 3.5rem).
-                An open strip takes the rest and its body scrolls; the tabs do
-                not give way to it. Clipped, so a panel squeezed below its own
-                fixed rows never draws over the strips. Measured in the harness
-                and held by tests/windowStrips.test.ts.
-              */}
-              <div className="flex h-full flex-col">
-                <div className="min-h-[min(max(60%,16.5rem),100%_-_3.5rem)] flex-1 overflow-hidden">
-                  <LeftPanel />
-                </div>
-                <OutputStrip />
-                <ExportStrip />
-              </div>
-            </Panel>
-            <Divider />
-            <Panel defaultSize="60" minSize="30">
+      {/*
+        Sizes: a NUMBER is pixels and a STRING is percent in
+        react-resizable-panels 4.x — and every string here says its unit. The
+        library writes `defaultSize` straight into the panel's flex-basis for
+        the first frame, so a bare "17" is invalid CSS there: the panels take
+        their content's width, the library measures the group as the sum of
+        those, converts a pixel minSize against that short sum, and keeps the
+        percentage it got when the real width arrives. That opened the left
+        column at 30 % (420 px at 1400 px) instead of 17 % (tests/trimmerDock.test.ts).
+      */}
+      <Group orientation="horizontal" className="flex-1">
+        {/*
+          The left column, full height (the user's answers to WINDOW.md §7.1
+          and §7.2), and the only side panel: the Inspector column on the right
+          is gone, its clip editor now the Trimmer dock in here, so the picture
+          has the room. About 240 px at the 1400 px default — 17 %, and never
+          under 240 px, the width a Slider row's fixed chrome and the Camera
+          rows need.
+        */}
+        <Panel defaultSize="17%" minSize={240} maxSize="30%">
+          {/*
+            Where material comes from (SourceBar) heads the column it fills:
+            over the left column only, so the picture and the timeline have
+            the window's whole height under the header.
+          */}
+          <div className="flex h-full flex-col">
+            <SourceBar />
+            {/*
+              The tabs with the Trimmer dock under them (LeftSplit), then the
+              OUTPUT and EXPORT strips (WINDOW.md §3.16-3.17), at the foot of
+              the column. Both strips are rendered unconditionally — closing
+              one hides its body by class — because EXPORT holds the export
+              flow and the File › Export listener, which must run with the
+              strip shut (tests/windowStrips.test.ts). An open strip takes what
+              the tabs and the dock leave, and its body scrolls; they do not
+              give way to it (dock.ts holderFloor).
+            */}
+            <div className="flex min-h-0 flex-1 flex-col">
+              <LeftSplit />
+              <OutputStrip />
+              <ExportStrip />
+            </div>
+          </div>
+        </Panel>
+        <Divider />
+        <Panel defaultSize="83%" minSize="30%">
+          {/*
+            The right column: the picture over the timeline, which runs under
+            the picture only. The picture's share is 64 % — not the 62 % it had
+            when a source row ran across the whole window above it — so a 9:16
+            frame is taller than it was before the step (tests/trimmerDock.test.ts),
+            and the timeline keeps the height it had.
+          */}
+          <Group orientation="vertical">
+            <Panel defaultSize="64%" minSize="30%">
               {/*
                 The canvas bar sits over the picture it shapes, and is always
                 rendered: the Preview below it must never move or remount (its
@@ -597,49 +660,44 @@ export default function App(): ReactNode {
                 </div>
               </div>
             </Panel>
-            <Divider />
-            <Panel defaultSize="21" minSize="15" maxSize="34">
-              <Inspector />
-            </Panel>
-          </Group>
-        </Panel>
 
-        <Divider vertical />
+            <Divider vertical />
 
-        <Panel defaultSize="38" minSize="18">
-          {/*
-            The curve sits beside the timeline, on the same horizontal axis, so
-            the shape of a move and the clip it belongs to line up.
+            <Panel defaultSize="36%" minSize="18%">
+              {/*
+                The curve sits beside the timeline, on the same horizontal axis, so
+                the shape of a move and the clip it belongs to line up.
 
-            In the Curve tray (WINDOW.md §3.19): closed to a 28 px rail by
-            default, and opened only by a person — numbers here are PIXELS and
-            strings percent (react-resizable-panels 4.x). The timeline takes
-            whatever the tray leaves, so it has no default of its own; and the
-            tray keeps its width in pixels when the window is resized, so the
-            rail stays a rail. Always rendered, open or closed: CurveTray
-            draws the rail itself.
-          */}
-          <Group orientation="horizontal">
-            <Panel minSize="40">
-              <div className="flex h-full flex-col">
-                <Transport />
-                <div className="min-h-0 flex-1">
-                  <Timeline />
-                </div>
-              </div>
-            </Panel>
-            <Divider />
-            <Panel
-              collapsible
-              collapsedSize={28}
-              minSize={240}
-              defaultSize={28}
-              maxSize="45"
-              groupResizeBehavior="preserve-pixel-size"
-              panelRef={tray.panelRef}
-              onResize={tray.onResize}
-            >
-              <CurveTray />
+                In the Curve tray (WINDOW.md §3.19): closed to a 28 px rail by
+                default, and opened only by a person. The timeline takes
+                whatever the tray leaves, so it has no default of its own; and the
+                tray keeps its width in pixels when the window is resized, so the
+                rail stays a rail. Always rendered, open or closed: CurveTray
+                draws the rail itself.
+              */}
+              <Group orientation="horizontal">
+                <Panel minSize="40%">
+                  <div className="flex h-full flex-col">
+                    <Transport />
+                    <div className="min-h-0 flex-1">
+                      <Timeline />
+                    </div>
+                  </div>
+                </Panel>
+                <Divider />
+                <Panel
+                  collapsible
+                  collapsedSize={28}
+                  minSize={240}
+                  defaultSize={28}
+                  maxSize="45%"
+                  groupResizeBehavior="preserve-pixel-size"
+                  panelRef={tray.panelRef}
+                  onResize={tray.onResize}
+                >
+                  <CurveTray />
+                </Panel>
+              </Group>
             </Panel>
           </Group>
         </Panel>

@@ -96,25 +96,32 @@ export function Inspector(): ReactNode {
   const asset = clip ? project.assets.find((a) => a.id === clip.assetId) ?? null : null
   const fps = project.settings.fps
 
-  return (
-    <div className="flex h-full flex-col">
-      {/*
-        The panel body scrolls.
+  /*
+   * The clip editor, and nothing else, inside the Trimmer dock (TrimmerDock.tsx,
+   * WINDOW.md §3.18), which is drawn only while there is something to trim.
+   * So there is no "nothing selected" face any more. A Library sound being
+   * auditioned opens the dock too, with no clip in it to edit: then this is
+   * nothing, and the dock is the waveform alone.
+   */
+  if (!clip) return null
 
-        Without this the column simply overflowed its height and everything past
-        the fold was off-screen and could not be reached.
+  return (
+    <div>
+      {/*
+        No scroller of its own: the dock scrolls this and the waveform above it
+        as one, so a short dock moves the editor up past the waveform rather
+        than squeezing either.
 
         Frame rate, loudness, captions and the export are not here any more: they
         are the OUTPUT and EXPORT strips under the left panel (OutputStrip.tsx,
         ExportStrip.tsx, WINDOW.md §3.16-3.17), and the export flow and the
         File › Export listener went with them.
       */}
-      <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="border-b border-ink-800 px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-ink-400">
         Clip
       </div>
       <div className="px-3 py-2">
-        {clip && asset ? (
+        {asset && (
           <>
             <div className="mb-1 truncate text-[12px] text-ink-200">{asset.name}</div>
             <Field label="Start" value={formatTimecode(clip.start, fps)} />
@@ -760,12 +767,10 @@ export function Inspector(): ReactNode {
               )}
             </div>
           </>
-        ) : (
-          <div className="py-2 text-[11px] text-ink-600">No clip selected</div>
         )}
       </div>
 
-      {clip?.title && (
+      {clip.title && (
         <>
           <div className="border-y border-ink-800 px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-ink-400">
             Title text
@@ -790,11 +795,7 @@ export function Inspector(): ReactNode {
       <div className="border-y border-ink-800 px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-ink-400">
         Transition in
       </div>
-      {!clip && (
-        <div className="px-3 py-2 text-[11px] text-ink-600">Select a clip</div>
-      )}
-      {clip && (
-        <>
+      <>
           {/*
             What the transition blends in FROM, said plainly.
 
@@ -940,10 +941,7 @@ export function Inspector(): ReactNode {
                 : 'Nothing moves: there is no clip before this one to overlap, so this costs no time.'}
             </div>
           </div>
-        </>
-      )}
-
-      </div>
+      </>
     </div>
   )
 }

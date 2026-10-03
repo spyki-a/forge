@@ -47,6 +47,16 @@ export function Library(): ReactNode {
     if (!catalog && !loading) void load()
   }, [catalog, loading, load])
 
+  /*
+   * Leaving the Library ends the audition.
+   *
+   * A sound picked here opens the Trimmer dock (dock.ts) for as long as it is
+   * being auditioned, and before step 8 nothing ever set it back: without
+   * this, one click on an SFX would keep the dock open for the rest of the
+   * session, under every tab. The dock's own X ends it too (TrimmerDock.tsx).
+   */
+  useEffect(() => () => setAudition(null), [setAudition])
+
   const empty = (catalog?.entries.length ?? 0) === 0
 
   /*
