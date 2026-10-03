@@ -102,9 +102,10 @@ type Match = (typeof MATCHES)[number]
  * DERIVED from the registry, never written out. The table was hand-written
  * once, and a verifier swapped two of its pairs — director with beat-sync,
  * text with grade — and every test passed: each home was still there, only
- * opening the wrong tool. Between the eight automation tiles, which all open
- * the same panel until step 10 splits it, nothing on screen would have said
- * so either. tests/renderer/censusHomes.test.ts holds the rule.
+ * opening the wrong tool. Between the eight automation tiles, which all
+ * opened the same panel until step 10 split it, nothing on screen would have
+ * said so either; now each opens its own (components/tools/), and a row filed
+ * under the wrong one is missing. tests/renderer/censusHomes.test.ts holds the rule.
  */
 type Digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
 type HomeWord<Word extends string> = Word extends `${Digit}${string}` ? '' : Word
@@ -1750,7 +1751,7 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
       }
     }),
   'music-clip': async () => {
-    // A song and no photos: "Import some photos" only shows without them.
+    // A song and no photos: "Upload some photos" only shows without them.
     const fps = editor().project.settings.fps
     editor().update((p) => ({
       ...p,
@@ -1781,8 +1782,19 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     editor().setPropsEnabled(true)
     return {}
   },
+  /* a reel under way: Beat sync's progress and Stop, and One photo's mirrors of them */
   'reel-building': async () => {
     useEditor.setState({ reelBuilding: true, reelStage: null })
+    return {}
+  },
+  /*
+   * A depth bake under way, with no message yet: the Depth / Parallax tile's
+   * panel says so (tools/DepthParallax.tsx). Only the store's flag — the
+   * harness bridge cannot bake (bridge.ts bakeParallax), and nothing here
+   * needs it to.
+   */
+  'depth-baking': async () => {
+    useEditor.setState({ baking: { 'census-photo': { progress: null } } })
     return {}
   },
   /* landscape photos on a portrait canvas: the canvas bar's chip offers 16:9 */

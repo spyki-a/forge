@@ -22,10 +22,17 @@ import {
   type LucideIcon
 } from 'lucide-react'
 import type { ShelfToolId, useEditor } from '../../store'
-import { Automation } from '../Automation'
+import { Director } from '../Director'
 import { IngestPanel } from '../IngestPanel'
 import { MediaPool } from '../MediaPool'
 import { TranscriptPanel } from '../TranscriptPanel'
+import { BeatSync } from '../tools/BeatSync'
+import { DepthParallax } from '../tools/DepthParallax'
+import { FilmStrip } from '../tools/FilmStrip'
+import { GridSplit } from '../tools/GridSplit'
+import { OnePhoto } from '../tools/OnePhoto'
+import { Props3d } from '../tools/Props3d'
+import { StripFlashes } from '../tools/StripFlashes'
 import {
   CardRingPanel,
   ColourCardsPanel,
@@ -53,9 +60,10 @@ import {
  * sketch's words.
  *
  * Every tool that exists keeps its own panel inside its tile — its "inside
- * job". In step 9 the eight automation tiles all open the whole Automation
- * panel, with the Shelf's header naming the tile; step 10 splits it into one
- * panel per tool, and step 11 fills out the one-click ones.
+ * job". Step 9 had the eight automation tiles all open the whole Automation
+ * panel; step 10 split it into one panel per tool (components/tools/, and the
+ * Director tile mounts Director itself), each opening on its own header under
+ * the Shelf's. Step 11 fills out the one-click ones.
  *
  * The user calls this panel the "sidecar"; the code says Shelf, because the
  * sidecar in code and docs is the Python helper (WINDOW.md §1).
@@ -153,7 +161,7 @@ export const SHELF_TOOLS: readonly ShelfTool[] = [
     label: 'Director',
     icon: Sparkles,
     hint: 'Describe the product; a whole ad is cut from your pictures',
-    panel: Automation,
+    panel: Director,
     takesMedia: true,
     busy: (s) => s.directing
   },
@@ -162,7 +170,7 @@ export const SHELF_TOOLS: readonly ShelfTool[] = [
     label: 'Depth / Parallax',
     icon: Layers,
     hint: 'Photos cut into depth planes that move apart as the camera drifts',
-    panel: Automation,
+    panel: DepthParallax,
     takesMedia: true,
     busy: (s) => any(s.baking)
   },
@@ -171,7 +179,7 @@ export const SHELF_TOOLS: readonly ShelfTool[] = [
     label: 'Beat sync / Cut to words',
     icon: Music,
     hint: 'Your photos cut to the music’s beats — or to the words of the song',
-    panel: Automation,
+    panel: BeatSync,
     takesMedia: true,
     busy: (s) => s.reelBuilding
   },
@@ -190,7 +198,7 @@ export const SHELF_TOOLS: readonly ShelfTool[] = [
     label: 'One photo',
     icon: ImageIcon,
     hint: 'A whole reel from a single photo and a caption',
-    panel: Automation,
+    panel: OnePhoto,
     takesMedia: true,
     // The same reel machinery as Beat sync, so the same flag.
     busy: (s) => s.reelBuilding
@@ -200,7 +208,7 @@ export const SHELF_TOOLS: readonly ShelfTool[] = [
     label: 'Grid split',
     icon: Grid3x3,
     hint: 'A photo broken into pieces that land one by one',
-    panel: Automation,
+    panel: GridSplit,
     takesMedia: true,
     busy: (s) => s.gridBuilding
   },
@@ -209,7 +217,7 @@ export const SHELF_TOOLS: readonly ShelfTool[] = [
     label: 'Strip flashes',
     icon: Zap,
     hint: 'Slices of a shot that flash on the beat',
-    panel: Automation,
+    panel: StripFlashes,
     takesMedia: true,
     busy: (s) => s.stripsBuilding
   },
@@ -220,7 +228,7 @@ export const SHELF_TOOLS: readonly ShelfTool[] = [
     label: 'Film strip',
     icon: Film,
     hint: 'Your photos as frames on a running film strip',
-    panel: Automation,
+    panel: FilmStrip,
     takesMedia: true
   },
   {
@@ -228,7 +236,7 @@ export const SHELF_TOOLS: readonly ShelfTool[] = [
     label: '3D props',
     icon: Box,
     hint: '3D props that pop up on the words they are named by',
-    panel: Automation,
+    panel: Props3d,
     takesMedia: false
   },
   {

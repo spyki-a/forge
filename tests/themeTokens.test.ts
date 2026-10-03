@@ -145,8 +145,9 @@ describe('the theme tokens', () => {
     expect(classes).toEqual([])
 
     // (b) "flame" survives only as a real word, in the files that mean one:
-    // the Flames caption style, the fire keyword list, and copy about them.
-    const allowed = new Set(['keywords.ts', 'textStyle.ts', 'coherence.ts', 'TextStylePicker.tsx', 'Automation.tsx'])
+    // the Flames caption style, the fire keyword list, and copy about them
+    // (the 3D props panel's "fire on “flame”", in Automation.tsx until step 10).
+    const allowed = new Set(['keywords.ts', 'textStyle.ts', 'coherence.ts', 'TextStylePicker.tsx', 'Props3d.tsx'])
     const words = EVERYTHING.filter((file) => /flame/i.test(readFileSync(file, 'utf8'))).map((file) => basename(file))
     expect(words.length, 'the real words are still there to find').toBeGreaterThan(0)
     expect(words.filter((name) => !allowed.has(name))).toEqual([])

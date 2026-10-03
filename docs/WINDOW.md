@@ -1068,7 +1068,7 @@ Anchors are counted with `matchAll` before being trusted.
   `shelfRegistry` order test pins the sketch's order as a whole list — a 20th tile will fail it on
   purpose, and the test says so.
 
-### Step 10 — Automation becomes one panel per tool
+### Step 10 — Automation becomes one panel per tool · DONE 2026-10-03
 - **Files:** new `components/tools/BeatSync.tsx` (`Automation.tsx:193-368`), `OnePhoto.tsx` (`370-422`
   + mirrored Motion/Transitions sliders and progress/Stop), `GridSplit.tsx` (`424-583`), `StripFlashes.tsx`
   (`585-722`), `FilmStrip.tsx` (`724-790`), `Props3d.tsx` (`792-878`), `tools/shared.ts` (`useMusicClip`
@@ -1081,6 +1081,25 @@ Anchors are counted with `matchAll` before being trusted.
   `stripsBuilding || reelBuilding || gridBuilding` in StripFlashes). Mutation each: drop one flag → fails.
 - **Check:** each tile opens; build a grid on a harness photo; start a reel, go Home, the Beat sync tile
   shows busy; One photo shows the same Motion value as Beat sync; census `[]`.
+- **As built (2026-10-03).** `tools/BeatSync.tsx`, `OnePhoto.tsx`, `GridSplit.tsx`, `StripFlashes.tsx`,
+  `FilmStrip.tsx`, `Props3d.tsx` — each its Automation section moved verbatim (GridSplit, StripFlashes,
+  FilmStrip and Props3d byte-identical to their sections at 422801b, dedented), `tools/shared.ts`
+  (`useMusicClip`, `useBakeStatus`), and `tools/DepthParallax.tsx` built now (step 11's pointer
+  panel: mirrors the reel's `reelParallax` box, a bake-status line, where depth is baked and where
+  Camera → Depth lives; no buttons — baking a chosen photo is phase 2). OnePhoto gained the mirrored
+  Motion and Transitions sliders, Stop and progress, all bound to the reel's own store fields, with
+  a line saying they are one setting. The Director tile mounts Director. `Automation.tsx` is deleted.
+  The four build-button interlocks are pinned word-for-word on the button whose click builds, and
+  as store reads (a local `const gridBuilding = false` fails), by `tests/toolInterlocks.test.ts`;
+  `tests/toolPanels.test.ts` pins eight distinct panels and OnePhoto's mirrors. Wording: "Upload
+  pictures or clips…", "Upload some photos…", "Use Relink in Upload." Census: the merged "Clear" (7)
+  and "Rebuild" (2) rows became one per tool home; the "Automation" header row's successors are the
+  tools' own headers; a `depth-baking` recipe; 687 → 704 rows, none dropped without a successor;
+  696 checked, 0 missing. Verified in the harness: each tile opens only its own section; Build grid
+  made 4 clips and Clear took them; One photo's Motion follows Beat sync's; with `gridBuilding` set,
+  the reel's, One photo's and the strips' buttons disable; with `reelBuilding`, the Beat sync tile
+  shows busy; the Depth / Parallax box and the reel's box follow each other. Guards that are not
+  interlocks (Film strip `images === 0`, Props `running || !transcribed`) are pinned as anchors too.
 
 ### Step 11 — One-click tools and pointer panels
 - **Files:** `components/tools/Text.tsx`, `ColourCards.tsx`, `Grade.tsx`, `Newspaper.tsx`, `CardRing.tsx`
@@ -1091,6 +1110,21 @@ Anchors are counted with `matchAll` before being trusted.
 - **Tests:** census rows for the five Add labels now route to their tiles; registry test unchanged.
 - **Check:** each Add lands a clip under the playhead and opens the dock on it; Card ring with no photos
   shows its notice; census `[]`.
+- **Added 2026-10-03, the user's suggestion while watching step 9 land ("why not use our full space
+  and make the selected button appear below … in a light shady blue"), agreed in this form:** with a
+  tool open, the home grid FOLDS into a compact strip at the top of the Shelf — all nineteen tools as
+  small icon-only tiles, two rows, about 70 px, the name as the tooltip — the selected one PRESSED
+  (step 3's pressed look: the pale accent-900 fill, the accent-400 icon, the inset shadow; no
+  rainbow — one accent is what makes "pressed" read), and the tool's panel takes everything below.
+  Switching tools is one click; the "← Tools · name" header goes (Home is reached by pressing the
+  selected tile again, or a Home icon first in the strip). Home itself stays the full grid. The
+  tiles are now genuine toggles, so `aria-pressed` is right on them (the step 9 nit). Census: the
+  tile rows become two faces — text labels on the home grid, titles in the strip — with counts per
+  face; the "← Tools" row gets a successor note. Measure: the strip's height at 240 px and at the
+  ~305 px column; the panel's remaining height at 1400×900 and 1100×680 with and without the dock.
+- Also from step 9's known list: the one-click panels' adder wiring and Upload → `importAssets`
+  get a source test each (J1/J2/K4 in that note); "Import" wording left anywhere on screen →
+  "Upload".
 
 ### Step 12 — "Uses:" — the first half of the common source picker
 - **Files:** new `components/tools/SourceLine.tsx` — every media tool's panel starts with **Upload a

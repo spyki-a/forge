@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { orientationMismatch } from '@shared/edit/orientation'
 
@@ -7,8 +7,9 @@ import { orientationMismatch } from '@shared/edit/orientation'
  * The orientation chip on the canvas bar, and the move that put it there
  * (docs/WINDOW.md §6 Step 4).
  *
- * The rule is the one the reel's banner in Automation.tsx used, lifted into a
- * pure function unchanged — so these pin what it DID, edges included, rather
+ * The rule is the one the reel's banner in Automation.tsx used (the banner
+ * went in step 4, the panel in step 10), lifted into a pure function
+ * unchanged — so these pin what it DID, edges included, rather
  * than what a fresh reading of "most photos" might suggest. If one of them
  * reads oddly (a square photo is "landscape"), that is the old behaviour, and
  * changing it is a decision, not a refactor.
@@ -80,7 +81,11 @@ const count = (text: string, needle: string): number =>
 describe('the shape and view switches live on the canvas bar', () => {
   const bar = source('src/renderer/src/components/CanvasBar.tsx')
   const inspector = source('src/renderer/src/components/Inspector.tsx')
-  const automation = source('src/renderer/src/components/Automation.tsx')
+  // The reel's panel was Automation.tsx until step 10 split it into one panel
+  // per tool; the reel is Beat sync's now, and every tool panel is held to it.
+  const TOOLS = 'src/renderer/src/components/tools'
+  const reel = source(`${TOOLS}/BeatSync.tsx`)
+  const panels = readdirSync(resolve(__dirname, '..', TOOLS)).filter((name) => name.endsWith('.tsx'))
 
   it('the Inspector no longer switches the shape or the view', () => {
     expect(count(inspector, 'setAspect(')).toBe(0)
@@ -98,9 +103,16 @@ describe('the shape and view switches live on the canvas bar', () => {
 
   it('the chip asks the shared rule, and the reel panel no longer keeps its own', () => {
     expect(count(bar, 'orientationMismatch(assets, settings)')).toBe(1)
-    expect(count(automation, 'setAspect(')).toBe(0)
-    expect(count(automation, 'canvasPortrait')).toBe(0)
-    expect(count(automation, 'orientationMismatch')).toBe(0)
+    // Anchors first: this IS the reel's panel — it builds the reel — and the
+    // walk sees the photo tools, so the zeros below are about something.
+    expect(count(reel, 'onClick={() => void buildReel()}')).toBe(1)
+    expect(panels).toEqual(expect.arrayContaining(['BeatSync.tsx', 'OnePhoto.tsx', 'GridSplit.tsx', 'FilmStrip.tsx']))
+    for (const name of panels) {
+      const text = source(`${TOOLS}/${name}`)
+      expect(count(text, 'setAspect('), name).toBe(0)
+      expect(count(text, 'canvasPortrait'), name).toBe(0)
+      expect(count(text, 'orientationMismatch'), name).toBe(0)
+    }
   })
 })
 

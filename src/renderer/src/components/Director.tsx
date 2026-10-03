@@ -12,8 +12,10 @@ import { useEditor } from '../store'
 /**
  * The director's panel: a brief in, an ad out.
  *
- * Sits at the top of the Auto tab because ads and product demos are what the
- * product is for (docs/LLM.md). The user places the pictures — the slot list
+ * The Director tile on the Shelf opens it, whole (shelf/tools.ts); it sat at
+ * the top of the Automation panel until step 10 split that panel, because ads
+ * and product demos are what the product is for (docs/LLM.md). The user
+ * places the pictures — the slot list
  * is the media pool in order, each with a line of what it shows — types what
  * the product is, and presses Direct. Everything the director makes is an
  * ordinary clip with a reason on it, and Clear takes exactly its own work
@@ -246,7 +248,7 @@ export function Director(): ReactNode {
       </button>
       {showSlots &&
         (slots.length === 0 ? (
-          <div className="text-[10.5px] text-ink-600">Import pictures or clips — they appear here in pool order.</div>
+          <div className="text-[10.5px] text-ink-600">Upload pictures or clips — they appear here in pool order.</div>
         ) : (
           <div className="space-y-1">
             {slots.map((slot) => (

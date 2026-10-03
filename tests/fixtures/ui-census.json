@@ -307,17 +307,18 @@
     "match": "text",
     "home": "props",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 796,
-    "newHome": "Shelf tile 3D props"
+    "file": "src/renderer/src/components/tools/Props3d.tsx",
+    "line": 42,
+    "newHome": "Shelf tile 3D props",
+    "note": "Step 10: each tool opens on its own header now, under the Shelf’s “← Tools · <tile>” — the successor of the Automation panel’s “Automation” header (Automation.tsx:170 at 422801b), which went with the panel when it split into one per tool."
   },
   {
     "label": "Add flashes",
     "match": "text",
     "home": "stripflashes",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 705,
+    "file": "src/renderer/src/components/tools/StripFlashes.tsx",
+    "line": 167,
     "newHome": "Shelf tile Strip flashes"
   },
   {
@@ -325,8 +326,8 @@
     "match": "text",
     "home": "beatsync",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 216,
+    "file": "src/renderer/src/components/tools/BeatSync.tsx",
+    "line": 82,
     "newHome": "Shelf tile Beat sync"
   },
   {
@@ -334,8 +335,8 @@
     "match": "text",
     "home": "beatsync",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 301,
+    "file": "src/renderer/src/components/tools/BeatSync.tsx",
+    "line": 167,
     "newHome": "Shelf tile Beat sync"
   },
   {
@@ -343,8 +344,8 @@
     "match": "text",
     "home": "beatsync",
     "needs": "reel-building",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 301,
+    "file": "src/renderer/src/components/tools/BeatSync.tsx",
+    "line": 167,
     "newHome": "Shelf tile Beat sync (mirrored in One photo)"
   },
   {
@@ -352,19 +353,9 @@
     "match": "text",
     "home": "stripflashes",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 636,
+    "file": "src/renderer/src/components/tools/StripFlashes.tsx",
+    "line": 98,
     "newHome": "Shelf tile Strip flashes"
-  },
-  {
-    "label": "Automation",
-    "match": "text",
-    "home": "director",
-    "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 187,
-    "newHome": "— (drop: each tool has its own header)",
-    "note": "Step 9: the Automation panel’s own header, still on screen inside every automation tile until step 10 gives each tool its own panel and drops it (WINDOW.md §3.2)."
   },
   {
     "label": "Bands",
@@ -380,17 +371,18 @@
     "match": "text",
     "home": "beatsync",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 197,
-    "newHome": "Shelf tile Beat sync"
+    "file": "src/renderer/src/components/tools/BeatSync.tsx",
+    "line": 63,
+    "newHome": "Shelf tile Beat sync",
+    "note": "Step 10: each tool opens on its own header now, under the Shelf’s “← Tools · <tile>” — the successor of the Automation panel’s “Automation” header (Automation.tsx:170 at 422801b), which went with the panel when it split into one per tool."
   },
   {
     "label": "Build from one photo",
     "match": "text",
     "home": "onephoto",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 406,
+    "file": "src/renderer/src/components/tools/OnePhoto.tsx",
+    "line": 119,
     "newHome": "Shelf tile One photo"
   },
   {
@@ -398,8 +390,8 @@
     "match": "text",
     "home": "gridsplit",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 566,
+    "file": "src/renderer/src/components/tools/GridSplit.tsx",
+    "line": 202,
     "newHome": "Shelf tile Grid split"
   },
   {
@@ -407,8 +399,8 @@
     "match": "text",
     "home": "filmstrip",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 776,
+    "file": "src/renderer/src/components/tools/FilmStrip.tsx",
+    "line": 78,
     "newHome": "Shelf tile Film strip"
   },
   {
@@ -416,8 +408,8 @@
     "match": "text",
     "home": "gridsplit",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 506,
+    "file": "src/renderer/src/components/tools/GridSplit.tsx",
+    "line": 142,
     "newHome": "Shelf tile Grid split"
   },
   {
@@ -426,7 +418,7 @@
     "home": "director",
     "needs": "none",
     "file": "src/renderer/src/components/Director.tsx",
-    "line": 195,
+    "line": 155,
     "newHome": "Shelf tile Director"
   },
   {
@@ -443,11 +435,70 @@
     "match": "text",
     "home": "director",
     "needs": "generated",
-    "count": 7,
     "file": "src/renderer/src/components/Director.tsx",
-    "line": 412,
-    "newHome": "Shelf tile Director; the same label also: Shelf tile Beat sync (Automation.tsx:316); Shelf tile One photo (Automation.tsx:413); Shelf tile Grid split (Automation.tsx:573); Shelf tile Strip flashes (Automation.tsx:712); Shelf tile Film strip (Automation.tsx:783); Shelf tile 3D props (Automation.tsx:845)",
-    "note": "Count 7: one per tool that made a clip: Beat sync, One photo, Grid, Strips, Film strip, Props and Director. Step 9: every automation tile opens the whole Automation panel until step 10 splits it, so this row is counted in the tile its section will be, and the count is still what the whole panel shows. Step 10 makes it one row per tool, in each tool’s home."
+    "line": 307,
+    "newHome": "Shelf tile Director",
+    "note": "Step 10: one of the seven Clears the Automation panel showed together — one row, count 7, while every automation tile opened the whole panel — each in its own tool’s home now."
+  },
+  {
+    "label": "Clear",
+    "match": "text",
+    "home": "beatsync",
+    "needs": "generated",
+    "file": "src/renderer/src/components/tools/BeatSync.tsx",
+    "line": 182,
+    "newHome": "Shelf tile Beat sync",
+    "note": "Step 10: one of the seven Clears the Automation panel showed together — one row, count 7, while every automation tile opened the whole panel — each in its own tool’s home now."
+  },
+  {
+    "label": "Clear",
+    "match": "text",
+    "home": "onephoto",
+    "needs": "generated",
+    "file": "src/renderer/src/components/tools/OnePhoto.tsx",
+    "line": 135,
+    "newHome": "Shelf tile One photo",
+    "note": "Step 10: one of the seven Clears the Automation panel showed together — one row, count 7, while every automation tile opened the whole panel — each in its own tool’s home now."
+  },
+  {
+    "label": "Clear",
+    "match": "text",
+    "home": "gridsplit",
+    "needs": "generated",
+    "file": "src/renderer/src/components/tools/GridSplit.tsx",
+    "line": 209,
+    "newHome": "Shelf tile Grid split",
+    "note": "Step 10: one of the seven Clears the Automation panel showed together — one row, count 7, while every automation tile opened the whole panel — each in its own tool’s home now."
+  },
+  {
+    "label": "Clear",
+    "match": "text",
+    "home": "stripflashes",
+    "needs": "generated",
+    "file": "src/renderer/src/components/tools/StripFlashes.tsx",
+    "line": 174,
+    "newHome": "Shelf tile Strip flashes",
+    "note": "Step 10: one of the seven Clears the Automation panel showed together — one row, count 7, while every automation tile opened the whole panel — each in its own tool’s home now."
+  },
+  {
+    "label": "Clear",
+    "match": "text",
+    "home": "filmstrip",
+    "needs": "generated",
+    "file": "src/renderer/src/components/tools/FilmStrip.tsx",
+    "line": 85,
+    "newHome": "Shelf tile Film strip",
+    "note": "Step 10: one of the seven Clears the Automation panel showed together — one row, count 7, while every automation tile opened the whole panel — each in its own tool’s home now."
+  },
+  {
+    "label": "Clear",
+    "match": "text",
+    "home": "props",
+    "needs": "generated",
+    "file": "src/renderer/src/components/tools/Props3d.tsx",
+    "line": 91,
+    "newHome": "Shelf tile 3D props",
+    "note": "Step 10: one of the seven Clears the Automation panel showed together — one row, count 7, while every automation tile opened the whole panel — each in its own tool’s home now."
   },
   {
     "label": "Columns",
@@ -463,8 +514,8 @@
     "match": "text",
     "home": "beatsync",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 266,
+    "file": "src/renderer/src/components/tools/BeatSync.tsx",
+    "line": 132,
     "newHome": "Shelf tile Beat sync"
   },
   {
@@ -472,8 +523,8 @@
     "match": "text",
     "home": "beatsync",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 246,
+    "file": "src/renderer/src/components/tools/BeatSync.tsx",
+    "line": 112,
     "newHome": "Shelf tile Beat sync (mirrored in Depth/Parallax)"
   },
   {
@@ -491,7 +542,7 @@
     "home": "director",
     "needs": "none",
     "file": "src/renderer/src/components/Director.tsx",
-    "line": 408,
+    "line": 303,
     "newHome": "Shelf tile Director"
   },
   {
@@ -500,7 +551,7 @@
     "home": "director",
     "needs": "generated",
     "file": "src/renderer/src/components/Director.tsx",
-    "line": 408,
+    "line": 303,
     "newHome": "Shelf tile Director"
   },
   {
@@ -509,8 +560,9 @@
     "home": "director",
     "needs": "none",
     "file": "src/renderer/src/components/Director.tsx",
-    "line": 156,
-    "newHome": "Shelf tile Director"
+    "line": 116,
+    "newHome": "Shelf tile Director",
+    "note": "Step 10: each tool opens on its own header now, under the Shelf’s “← Tools · <tile>” — the successor of the Automation panel’s “Automation” header (Automation.tsx:170 at 422801b), which went with the panel when it split into one per tool."
   },
   {
     "label": "Drag where the reel ends",
@@ -536,7 +588,7 @@
     "home": "director",
     "needs": "director-more",
     "file": "src/renderer/src/components/Director.tsx",
-    "line": 274,
+    "line": 234,
     "newHome": "Shelf tile Director"
   },
   {
@@ -544,17 +596,18 @@
     "match": "text",
     "home": "filmstrip",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 728,
-    "newHome": "Shelf tile Film strip"
+    "file": "src/renderer/src/components/tools/FilmStrip.tsx",
+    "line": 30,
+    "newHome": "Shelf tile Film strip",
+    "note": "Step 10: each tool opens on its own header now, under the Shelf’s “← Tools · <tile>” — the successor of the Automation panel’s “Automation” header (Automation.tsx:170 at 422801b), which went with the panel when it split into one per tool."
   },
   {
     "label": "Frequency",
     "match": "text",
     "home": "props",
     "needs": "props-on",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 816,
+    "file": "src/renderer/src/components/tools/Props3d.tsx",
+    "line": 62,
     "newHome": "Shelf tile 3D props"
   },
   {
@@ -562,44 +615,47 @@
     "match": "text",
     "home": "gridsplit",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 428,
-    "newHome": "Shelf tile Grid split"
+    "file": "src/renderer/src/components/tools/GridSplit.tsx",
+    "line": 64,
+    "newHome": "Shelf tile Grid split",
+    "note": "Step 10: each tool opens on its own header now, under the Shelf’s “← Tools · <tile>” — the successor of the Automation panel’s “Automation” header (Automation.tsx:170 at 422801b), which went with the panel when it split into one per tool."
   },
   {
     "label": "Gutter",
     "match": "text",
     "home": "gridsplit",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 521,
+    "file": "src/renderer/src/components/tools/GridSplit.tsx",
+    "line": 157,
     "newHome": "Shelf tile Grid split"
   },
   {
-    "label": "Import pictures or clips — they appear here in pool order.",
+    "label": "Upload pictures or clips — they appear here in pool order.",
     "match": "text",
     "home": "director",
     "needs": "none",
     "file": "src/renderer/src/components/Director.tsx",
-    "line": 291,
-    "newHome": "Shelf tile Director"
+    "line": 251,
+    "newHome": "Shelf tile Director",
+    "note": "Reworded in step 10 from “Import pictures or clips — …” (step 9’s known list): the media pool is the Upload tile now."
   },
   {
-    "label": "Import some photos — they are what the cuts are made of.",
+    "label": "Upload some photos — they are what the cuts are made of.",
     "match": "text",
     "home": "beatsync",
     "needs": "music-clip",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 360,
-    "newHome": "Shelf tile Beat sync"
+    "file": "src/renderer/src/components/tools/BeatSync.tsx",
+    "line": 210,
+    "newHome": "Shelf tile Beat sync",
+    "note": "Reworded in step 10 from “Import some photos — …” (step 9’s known list): the media pool is the Upload tile now."
   },
   {
     "label": "Landing",
     "match": "text",
     "home": "gridsplit",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 490,
+    "file": "src/renderer/src/components/tools/GridSplit.tsx",
+    "line": 126,
     "newHome": "Shelf tile Grid split"
   },
   {
@@ -608,7 +664,7 @@
     "home": "director",
     "needs": "director-more",
     "file": "src/renderer/src/components/Director.tsx",
-    "line": 256,
+    "line": 216,
     "newHome": "Shelf tile Director"
   },
   {
@@ -616,8 +672,8 @@
     "match": "text",
     "home": "filmstrip",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 754,
+    "file": "src/renderer/src/components/tools/FilmStrip.tsx",
+    "line": 56,
     "newHome": "Shelf tile Film strip"
   },
   {
@@ -625,8 +681,8 @@
     "match": "text",
     "home": "stripflashes",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 667,
+    "file": "src/renderer/src/components/tools/StripFlashes.tsx",
+    "line": 129,
     "newHome": "Shelf tile Strip flashes"
   },
   {
@@ -635,7 +691,7 @@
     "home": "director",
     "needs": "none",
     "file": "src/renderer/src/components/Director.tsx",
-    "line": 288,
+    "line": 290,
     "newHome": "Shelf tile Director (the gear opens the settings panel)",
     "note": "Step 6: the gear that showed the model settings here now opens the settings panel (setSettingsOpen(true)); it was \"Model settings\"."
   },
@@ -645,7 +701,7 @@
     "home": "director",
     "needs": "none",
     "file": "src/renderer/src/components/Director.tsx",
-    "line": 210,
+    "line": 170,
     "newHome": "Shelf tile Director"
   },
   {
@@ -653,8 +709,8 @@
     "match": "text",
     "home": "beatsync",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 221,
+    "file": "src/renderer/src/components/tools/BeatSync.tsx",
+    "line": 87,
     "newHome": "Shelf tile Beat sync (mirrored in One photo)"
   },
   {
@@ -662,8 +718,8 @@
     "match": "text",
     "home": "gridsplit",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 581,
+    "file": "src/renderer/src/components/tools/GridSplit.tsx",
+    "line": 217,
     "newHome": "Shelf tile Grid split"
   },
   {
@@ -671,8 +727,8 @@
     "match": "text",
     "home": "props",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 804,
+    "file": "src/renderer/src/components/tools/Props3d.tsx",
+    "line": 50,
     "newHome": "Shelf tile 3D props"
   },
   {
@@ -680,8 +736,8 @@
     "match": "text",
     "home": "props",
     "needs": "props-on",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 804,
+    "file": "src/renderer/src/components/tools/Props3d.tsx",
+    "line": 50,
     "newHome": "Shelf tile 3D props",
     "note": "The Props switch, turned on."
   },
@@ -690,17 +746,18 @@
     "match": "text",
     "home": "onephoto",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 374,
-    "newHome": "Shelf tile One photo"
+    "file": "src/renderer/src/components/tools/OnePhoto.tsx",
+    "line": 50,
+    "newHome": "Shelf tile One photo",
+    "note": "Step 10: each tool opens on its own header now, under the Shelf’s “← Tools · <tile>” — the successor of the Automation panel’s “Automation” header (Automation.tsx:170 at 422801b), which went with the panel when it split into one per tool."
   },
   {
     "label": "Order",
     "match": "text",
     "home": "gridsplit",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 475,
+    "file": "src/renderer/src/components/tools/GridSplit.tsx",
+    "line": 111,
     "newHome": "Shelf tile Grid split"
   },
   {
@@ -708,8 +765,8 @@
     "match": "text",
     "home": "filmstrip",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 738,
+    "file": "src/renderer/src/components/tools/FilmStrip.tsx",
+    "line": 40,
     "newHome": "Shelf tile Film strip"
   },
   {
@@ -717,8 +774,8 @@
     "match": "text",
     "home": "gridsplit",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 442,
+    "file": "src/renderer/src/components/tools/GridSplit.tsx",
+    "line": 78,
     "newHome": "Shelf tile Grid split"
   },
   {
@@ -726,8 +783,8 @@
     "match": "text",
     "home": "props",
     "needs": "props-on",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 838,
+    "file": "src/renderer/src/components/tools/Props3d.tsx",
+    "line": 84,
     "newHome": "Shelf tile 3D props"
   },
   {
@@ -735,8 +792,8 @@
     "match": "text",
     "home": "stripflashes",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 652,
+    "file": "src/renderer/src/components/tools/StripFlashes.tsx",
+    "line": 114,
     "newHome": "Shelf tile Strip flashes"
   },
   {
@@ -744,19 +801,28 @@
     "match": "text",
     "home": "beatsync",
     "needs": "generated",
-    "count": 2,
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 301,
-    "newHome": "Shelf tile Beat sync; the same label also: Shelf tile One photo (Automation.tsx:406)",
-    "note": "Count 2: Beat sync's and One photo's (the other Rebuilds say what they rebuild). Step 9: every automation tile opens the whole Automation panel until step 10 splits it, so this row is counted in the tile its section will be, and the count is still what the whole panel shows. Step 10 makes it one row per tool, in each tool’s home."
+    "file": "src/renderer/src/components/tools/BeatSync.tsx",
+    "line": 167,
+    "newHome": "Shelf tile Beat sync",
+    "note": "Step 10: one of the two Rebuilds (Beat sync’s and One photo’s; the other Rebuilds say what they rebuild) — one row, count 2, while every automation tile opened the whole Automation panel — each in its own tool’s home now."
+  },
+  {
+    "label": "Rebuild",
+    "match": "text",
+    "home": "onephoto",
+    "needs": "generated",
+    "file": "src/renderer/src/components/tools/OnePhoto.tsx",
+    "line": 119,
+    "newHome": "Shelf tile One photo",
+    "note": "Step 10: one of the two Rebuilds (Beat sync’s and One photo’s; the other Rebuilds say what they rebuild) — one row, count 2, while every automation tile opened the whole Automation panel — each in its own tool’s home now."
   },
   {
     "label": "Rebuild flashes",
     "match": "text",
     "home": "stripflashes",
     "needs": "generated",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 705,
+    "file": "src/renderer/src/components/tools/StripFlashes.tsx",
+    "line": 167,
     "newHome": "Shelf tile Strip flashes"
   },
   {
@@ -764,8 +830,8 @@
     "match": "text",
     "home": "gridsplit",
     "needs": "generated",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 566,
+    "file": "src/renderer/src/components/tools/GridSplit.tsx",
+    "line": 202,
     "newHome": "Shelf tile Grid split"
   },
   {
@@ -773,8 +839,8 @@
     "match": "text",
     "home": "filmstrip",
     "needs": "generated",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 776,
+    "file": "src/renderer/src/components/tools/FilmStrip.tsx",
+    "line": 78,
     "newHome": "Shelf tile Film strip"
   },
   {
@@ -783,7 +849,7 @@
     "home": "director",
     "needs": "none",
     "file": "src/renderer/src/components/Director.tsx",
-    "line": 180,
+    "line": 140,
     "newHome": "Shelf tile Director"
   },
   {
@@ -791,8 +857,8 @@
     "match": "text",
     "home": "props",
     "needs": "generated",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 838,
+    "file": "src/renderer/src/components/tools/Props3d.tsx",
+    "line": 84,
     "newHome": "Shelf tile 3D props"
   },
   {
@@ -801,7 +867,7 @@
     "home": "director",
     "needs": "director-more",
     "file": "src/renderer/src/components/Director.tsx",
-    "line": 252,
+    "line": 212,
     "newHome": "Shelf tile Director"
   },
   {
@@ -809,8 +875,8 @@
     "match": "text",
     "home": "stripflashes",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 620,
+    "file": "src/renderer/src/components/tools/StripFlashes.tsx",
+    "line": 82,
     "newHome": "Shelf tile Strip flashes"
   },
   {
@@ -827,8 +893,8 @@
     "match": "text",
     "home": "beatsync",
     "needs": "reel-building",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 308,
+    "file": "src/renderer/src/components/tools/BeatSync.tsx",
+    "line": 174,
     "newHome": "Shelf tile Beat sync (mirrored in One photo)"
   },
   {
@@ -836,17 +902,18 @@
     "match": "text",
     "home": "stripflashes",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 589,
-    "newHome": "Shelf tile Strip flashes"
+    "file": "src/renderer/src/components/tools/StripFlashes.tsx",
+    "line": 51,
+    "newHome": "Shelf tile Strip flashes",
+    "note": "Step 10: each tool opens on its own header now, under the Shelf’s “← Tools · <tile>” — the successor of the Automation panel’s “Automation” header (Automation.tsx:170 at 422801b), which went with the panel when it split into one per tool."
   },
   {
     "label": "Stutters",
     "match": "text",
     "home": "stripflashes",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 683,
+    "file": "src/renderer/src/components/tools/StripFlashes.tsx",
+    "line": 145,
     "newHome": "Shelf tile Strip flashes"
   },
   {
@@ -863,8 +930,8 @@
     "match": "text",
     "home": "gridsplit",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 537,
+    "file": "src/renderer/src/components/tools/GridSplit.tsx",
+    "line": 173,
     "newHome": "Shelf tile Grid split"
   },
   {
@@ -873,7 +940,7 @@
     "home": "director",
     "needs": "director-more",
     "file": "src/renderer/src/components/Director.tsx",
-    "line": 235,
+    "line": 195,
     "newHome": "Shelf tile Director"
   },
   {
@@ -881,8 +948,8 @@
     "match": "text",
     "home": "props",
     "needs": "props-on",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 852,
+    "file": "src/renderer/src/components/tools/Props3d.tsx",
+    "line": 98,
     "newHome": "Shelf tile 3D props"
   },
   {
@@ -890,8 +957,8 @@
     "match": "text",
     "home": "beatsync",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 279,
+    "file": "src/renderer/src/components/tools/BeatSync.tsx",
+    "line": 145,
     "newHome": "Shelf tile Beat sync (mirrored in One photo)"
   },
   {
@@ -908,8 +975,8 @@
     "match": "text",
     "home": "gridsplit",
     "needs": "music-clip",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 580,
+    "file": "src/renderer/src/components/tools/GridSplit.tsx",
+    "line": 216,
     "newHome": "Shelf tile Grid split"
   },
   {
@@ -918,8 +985,8 @@
     "home": "onephoto",
     "needs": "none",
     "part": true,
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 419,
+    "file": "src/renderer/src/components/tools/OnePhoto.tsx",
+    "line": 163,
     "newHome": "Shelf tile One photo (becomes the \"Uses:\" line)"
   },
   {
@@ -928,8 +995,8 @@
     "home": "stripflashes",
     "needs": "none",
     "part": true,
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 718,
+    "file": "src/renderer/src/components/tools/StripFlashes.tsx",
+    "line": 180,
     "newHome": "Shelf tile Strip flashes (becomes the \"Uses:\" line)"
   },
   {
@@ -946,8 +1013,8 @@
     "match": "text",
     "home": "props",
     "needs": "generated",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 867,
+    "file": "src/renderer/src/components/tools/Props3d.tsx",
+    "line": 113,
     "newHome": "Shelf tile 3D props"
   },
   {
@@ -955,9 +1022,59 @@
     "match": "text",
     "home": "onephoto",
     "needs": "reel-building",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 406,
+    "file": "src/renderer/src/components/tools/OnePhoto.tsx",
+    "line": 119,
     "newHome": "Shelf tile One photo (mirrors the shared reel state)"
+  },
+  {
+    "label": "Motion",
+    "match": "text",
+    "home": "onephoto",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/OnePhoto.tsx",
+    "line": 77,
+    "newHome": "Shelf tile One photo (mirror of Beat sync)",
+    "note": "Step 10: a mirror of Beat sync’s — One photo reads the reel’s reelMotion (store.ts buildOnePhotoReel) and had no control of its own for it; the same store field, so either panel sets it for both."
+  },
+  {
+    "label": "Transitions",
+    "match": "text",
+    "home": "onephoto",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/OnePhoto.tsx",
+    "line": 94,
+    "newHome": "Shelf tile One photo (mirror of Beat sync)",
+    "note": "Step 10: a mirror of Beat sync’s — One photo reads the reel’s reelTransitions (store.ts buildOnePhotoReel) and had no control of its own for it; the same store field, so either panel sets it for both."
+  },
+  {
+    "label": "Motion and Transitions are Beat sync’s too — one setting, used by both.",
+    "match": "text",
+    "home": "onephoto",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/OnePhoto.tsx",
+    "line": 109,
+    "newHome": "Shelf tile One photo (mirror of Beat sync)",
+    "note": "Step 10: says the two sliders are mirrors."
+  },
+  {
+    "label": "Stop",
+    "match": "text",
+    "home": "onephoto",
+    "needs": "reel-building",
+    "file": "src/renderer/src/components/tools/OnePhoto.tsx",
+    "line": 127,
+    "newHome": "Shelf tile One photo (mirror of Beat sync)",
+    "note": "Step 10: a mirror of Beat sync’s Stop — One photo runs on the reel’s own state (reelBuilding, reelStage, reelCancelled), so cancelReel stops either."
+  },
+  {
+    "label": "analysing the music",
+    "match": "text",
+    "home": "onephoto",
+    "needs": "reel-building",
+    "file": "src/renderer/src/components/tools/OnePhoto.tsx",
+    "line": 145,
+    "newHome": "Shelf tile One photo (mirror of Beat sync)",
+    "note": "Step 10: the reel’s progress, mirrored — the shared reel state, as Stop."
   },
   {
     "label": "Your pictures, in order",
@@ -965,7 +1082,7 @@
     "home": "director",
     "needs": "none",
     "file": "src/renderer/src/components/Director.tsx",
-    "line": 287,
+    "line": 247,
     "newHome": "Shelf tile Director"
   },
   {
@@ -973,8 +1090,8 @@
     "match": "text",
     "home": "beatsync",
     "needs": "reel-building",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 325,
+    "file": "src/renderer/src/components/tools/BeatSync.tsx",
+    "line": 191,
     "newHome": "Shelf tile Beat sync (mirrored in One photo)"
   },
   {
@@ -984,7 +1101,7 @@
     "needs": "generated",
     "part": true,
     "file": "src/renderer/src/components/Director.tsx",
-    "line": 450,
+    "line": 345,
     "newHome": "Shelf tile Director"
   },
   {
@@ -992,8 +1109,8 @@
     "match": "text",
     "home": "filmstrip",
     "needs": "generated",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 788,
+    "file": "src/renderer/src/components/tools/FilmStrip.tsx",
+    "line": 90,
     "newHome": "Shelf tile Film strip"
   },
   {
@@ -1001,8 +1118,8 @@
     "match": "text",
     "home": "props",
     "needs": "generated",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 858,
+    "file": "src/renderer/src/components/tools/Props3d.tsx",
+    "line": 104,
     "newHome": "Shelf tile 3D props"
   },
   {
@@ -1011,8 +1128,8 @@
     "home": "onephoto",
     "needs": "none",
     "part": true,
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 391,
+    "file": "src/renderer/src/components/tools/OnePhoto.tsx",
+    "line": 67,
     "newHome": "Shelf tile One photo"
   },
   {
@@ -1020,8 +1137,8 @@
     "match": "text",
     "home": "beatsync",
     "needs": "generated",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 365,
+    "file": "src/renderer/src/components/tools/BeatSync.tsx",
+    "line": 215,
     "newHome": "Shelf tile Beat sync"
   },
   {
@@ -1030,7 +1147,7 @@
     "home": "director",
     "needs": "generated",
     "file": "src/renderer/src/components/Director.tsx",
-    "line": 421,
+    "line": 316,
     "newHome": "Shelf tile Director"
   },
   {
@@ -1040,7 +1157,7 @@
     "needs": "photo-clip",
     "count": 4,
     "file": "src/renderer/src/components/Director.tsx",
-    "line": 302,
+    "line": 262,
     "newHome": "Shelf tile Director",
     "note": "Count 4: one per picture slot: the census imports three photos and a video."
   },
@@ -1050,7 +1167,7 @@
     "home": "director",
     "needs": "none",
     "file": "src/renderer/src/components/Director.tsx",
-    "line": 172,
+    "line": 132,
     "newHome": "Shelf tile Director"
   },
   {
@@ -1059,7 +1176,7 @@
     "home": "director",
     "needs": "director-more",
     "file": "src/renderer/src/components/Director.tsx",
-    "line": 223,
+    "line": 183,
     "newHome": "Shelf tile Director"
   },
   {
@@ -1068,7 +1185,7 @@
     "home": "director",
     "needs": "director-more",
     "file": "src/renderer/src/components/Director.tsx",
-    "line": 231,
+    "line": 191,
     "newHome": "Shelf tile Director"
   },
   {
@@ -4140,7 +4257,7 @@
     "home": "cardring",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/panels.tsx",
-    "line": 147,
+    "line": 149,
     "newHome": "Shelf tile Card ring",
     "note": "Step 9: moved from above the media grid into its own tile’s panel, with one line on what it makes (step 11 fills it out)."
   },
@@ -4150,7 +4267,7 @@
     "home": "colourcards",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/panels.tsx",
-    "line": 114,
+    "line": 116,
     "newHome": "Shelf tile Colour cards",
     "note": "Step 9: moved from above the media grid into its own tile’s panel, with one line on what it makes (step 11 fills it out)."
   },
@@ -4160,7 +4277,7 @@
     "home": "grade",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/panels.tsx",
-    "line": 125,
+    "line": 127,
     "newHome": "Shelf tile Grade",
     "note": "Step 9: moved from above the media grid into its own tile’s panel, with one line on what it makes (step 11 fills it out)."
   },
@@ -4170,7 +4287,7 @@
     "home": "newspaper",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/panels.tsx",
-    "line": 136,
+    "line": 138,
     "newHome": "Shelf tile Newspaper clipping",
     "note": "Step 9: moved from above the media grid into its own tile’s panel, with one line on what it makes (step 11 fills it out)."
   },
@@ -4180,7 +4297,7 @@
     "home": "text",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/panels.tsx",
-    "line": 103,
+    "line": 105,
     "newHome": "Shelf tile Text",
     "note": "Step 9: moved from above the media grid into its own tile’s panel, with one line on what it makes (step 11 fills it out)."
   },
@@ -4220,7 +4337,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 134,
+    "line": 142,
     "newHome": "Shelf tile Library",
     "note": "Step 9: the Library tab is the Shelf’s Library tile, on the home grid."
   },
@@ -4276,7 +4393,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 144,
+    "line": 152,
     "newHome": "Shelf tile Transcript",
     "note": "Step 9: the Transcript tab is the Shelf’s Transcript tile, on the home grid."
   },
@@ -5132,7 +5249,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 127,
+    "line": 135,
     "newHome": "Shelf tile Narration (coming-soon)",
     "note": "Step 9: the mode’s tooltip is the Narration tile’s, on the Shelf’s home grid."
   },
@@ -5172,7 +5289,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 125,
+    "line": 133,
     "newHome": "Shelf tile Narration",
     "note": "Step 9: the Narration mode of the source row is the Shelf’s Narration tile."
   },
@@ -5182,7 +5299,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 118,
+    "line": 126,
     "newHome": "Shelf tile URL",
     "note": "Step 9: the mode’s tooltip is the URL tile’s, on the Shelf’s home grid."
   },
@@ -5202,7 +5319,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 108,
+    "line": 116,
     "newHome": "Shelf tile Upload",
     "note": "Step 9: the mode’s tooltip is the Upload tile’s, on the Shelf’s home grid."
   },
@@ -5280,7 +5397,7 @@
     "needs": "none",
     "part": true,
     "file": "src/renderer/src/components/shelf/panels.tsx",
-    "line": 25,
+    "line": 27,
     "newHome": "Shelf tile Narration (coming-soon text reworded)",
     "note": "Step 9: the Narration tile’s panel says it whenever it is open, so it needs no state of its own; reworded after this half — \"The only part of the app that needs paid services\" went, the keys live in Settings."
   },
@@ -5290,7 +5407,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 106,
+    "line": 114,
     "newHome": "Shelf tile Upload",
     "note": "Step 9: the Upload mode of the source row is the Upload tile on the Shelf’s home grid."
   },
@@ -5329,7 +5446,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 116,
+    "line": 124,
     "newHome": "Shelf tile URL (labelled \"URL\")",
     "note": "Step 9: the YouTube mode of the source row is the Shelf’s URL tile, labelled \"URL\" as WINDOW.md §3.4 planned (store id `youtube` went with `sourceMode`)."
   },
@@ -5369,7 +5486,7 @@
     "home": "narration",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/panels.tsx",
-    "line": 31,
+    "line": 33,
     "newHome": "Shelf tile Narration (coming-soon)",
     "note": "Step 9: in the Narration tile’s panel, as it was beside the Narration mode."
   },
@@ -6158,7 +6275,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 153,
+    "line": 161,
     "newHome": "Shelf tile Director",
     "note": "Step 9: the tile on the Shelf’s home grid that opens the Director section of the Create tab. With the other automation tiles, the successor of the left panel’s Create tab (LeftPanel.tsx:33), whose row went in this step."
   },
@@ -6168,7 +6285,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 162,
+    "line": 170,
     "newHome": "Shelf tile Depth / Parallax",
     "note": "Step 9: the tile on the Shelf’s home grid that opens the reel’s Depth parallax box in the Create tab (WINDOW.md §3.14). With the other automation tiles, the successor of the left panel’s Create tab (LeftPanel.tsx:33), whose row went in this step."
   },
@@ -6178,7 +6295,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 171,
+    "line": 179,
     "newHome": "Shelf tile Beat sync / Cut to words",
     "note": "Step 9: the tile on the Shelf’s home grid that opens the Beat-synced reel section of the Create tab. With the other automation tiles, the successor of the left panel’s Create tab (LeftPanel.tsx:33), whose row went in this step."
   },
@@ -6188,7 +6305,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 182,
+    "line": 190,
     "newHome": "Shelf tile Transitions",
     "note": "Step 9: the tile on the Shelf’s home grid that opens the Library’s Transitions chip, which the Library keeps (§3.14)."
   },
@@ -6198,7 +6315,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 190,
+    "line": 198,
     "newHome": "Shelf tile One photo",
     "note": "Step 9: the tile on the Shelf’s home grid that opens the One photo section of the Create tab. With the other automation tiles, the successor of the left panel’s Create tab (LeftPanel.tsx:33), whose row went in this step."
   },
@@ -6208,7 +6325,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 200,
+    "line": 208,
     "newHome": "Shelf tile Grid split",
     "note": "Step 9: the tile on the Shelf’s home grid that opens the Grid split section of the Create tab. With the other automation tiles, the successor of the left panel’s Create tab (LeftPanel.tsx:33), whose row went in this step."
   },
@@ -6218,7 +6335,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 209,
+    "line": 217,
     "newHome": "Shelf tile Strip flashes",
     "note": "Step 9: the tile on the Shelf’s home grid that opens the Strip flashes section of the Create tab. With the other automation tiles, the successor of the left panel’s Create tab (LeftPanel.tsx:33), whose row went in this step."
   },
@@ -6228,7 +6345,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 220,
+    "line": 228,
     "newHome": "Shelf tile Film strip",
     "note": "Step 9: the tile on the Shelf’s home grid that opens the Filmstrip section of the Create tab. With the other automation tiles, the successor of the left panel’s Create tab (LeftPanel.tsx:33), whose row went in this step."
   },
@@ -6238,7 +6355,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 228,
+    "line": 236,
     "newHome": "Shelf tile 3D props",
     "note": "Step 9: the tile on the Shelf’s home grid that opens the 3D props section of the Create tab. With the other automation tiles, the successor of the left panel’s Create tab (LeftPanel.tsx:33), whose row went in this step."
   },
@@ -6248,7 +6365,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 236,
+    "line": 244,
     "newHome": "Shelf tile Text",
     "note": "Step 9: the tile on the Shelf’s home grid that opens \"+ Text\" above the media grid."
   },
@@ -6258,7 +6375,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 244,
+    "line": 252,
     "newHome": "Shelf tile Colour cards",
     "note": "Step 9: the tile on the Shelf’s home grid that opens \"+ Colour\" above the media grid."
   },
@@ -6268,7 +6385,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 254,
+    "line": 262,
     "newHome": "Shelf tile Grade",
     "note": "Step 9: the tile on the Shelf’s home grid that opens \"+ Grade\" above the media grid."
   },
@@ -6278,7 +6395,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 262,
+    "line": 270,
     "newHome": "Shelf tile Newspaper clipping",
     "note": "Step 9: the tile on the Shelf’s home grid that opens \"+ Newspaper clippings\" above the media grid."
   },
@@ -6288,7 +6405,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 270,
+    "line": 278,
     "newHome": "Shelf tile Card ring",
     "note": "Step 9: the tile on the Shelf’s home grid that opens \"+ Card ring\" above the media grid."
   },
@@ -6298,7 +6415,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 136,
+    "line": 144,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -6308,7 +6425,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 146,
+    "line": 154,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -6318,7 +6435,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 155,
+    "line": 163,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -6328,7 +6445,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 164,
+    "line": 172,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -6338,7 +6455,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 173,
+    "line": 181,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -6348,7 +6465,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 184,
+    "line": 192,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -6358,7 +6475,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 192,
+    "line": 200,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -6368,7 +6485,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 202,
+    "line": 210,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -6378,7 +6495,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 211,
+    "line": 219,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -6388,7 +6505,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 222,
+    "line": 230,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -6398,7 +6515,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 230,
+    "line": 238,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -6408,7 +6525,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 238,
+    "line": 246,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -6418,7 +6535,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 246,
+    "line": 254,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -6428,7 +6545,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 256,
+    "line": 264,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -6438,7 +6555,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 264,
+    "line": 272,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -6448,7 +6565,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 272,
+    "line": 280,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -6509,10 +6626,69 @@
     "match": "text",
     "home": "depthparallax",
     "needs": "none",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 229,
+    "file": "src/renderer/src/components/tools/DepthParallax.tsx",
+    "line": 49,
     "newHome": "Shelf tile Depth / Parallax (mirrors the reel toggle, Decision 5)",
-    "note": "Step 9: the Depth / Parallax tile opens the whole Automation panel, the reel’s Depth parallax box in it; step 10 or 11 gives it a panel of its own that mirrors the same `reelParallax`."
+    "note": "Step 10: the Depth / Parallax tile’s own pointer panel (built here, planned for step 11), whose switch mirrors Beat sync’s — the same `reelParallax`. Step 9 counted the reel’s own box here, inside the whole Automation panel."
+  },
+  {
+    "label": "Depth / Parallax",
+    "match": "text",
+    "home": "depthparallax",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/DepthParallax.tsx",
+    "line": 30,
+    "newHome": "Shelf tile Depth / Parallax",
+    "note": "The panel’s own header (step 10)."
+  },
+  {
+    "label": "A photo cut into depth planes, so near things move further than far ones as the camera drifts.",
+    "match": "text",
+    "home": "depthparallax",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/DepthParallax.tsx",
+    "line": 35,
+    "newHome": "Shelf tile Depth / Parallax"
+  },
+  {
+    "label": "For the beat-synced reel: the same switch as Beat sync’s, so ticking it here ticks it there.",
+    "match": "text",
+    "home": "depthparallax",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/DepthParallax.tsx",
+    "line": 52,
+    "newHome": "Shelf tile Depth / Parallax",
+    "note": "Says the box is a mirror of Beat sync’s Depth parallax (the same `reelParallax`)."
+  },
+  {
+    "label": "Where a photo’s depth comes from: Beat sync bakes each photo the first time it builds with Depth parallax on, and One photo always bakes its photo. A few seconds a photo; the bake is kept with the project.",
+    "match": "text",
+    "home": "depthparallax",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/DepthParallax.tsx",
+    "line": 71,
+    "newHome": "Shelf tile Depth / Parallax",
+    "note": "The pointer to where depth is baked: the reel (store.ts buildReel, with reelParallax) and One photo (buildOnePhotoReel, always). Baking a chosen photo from this panel is phase 2 (Decision 5)."
+  },
+  {
+    "label": "For one clip: select a photo on the timeline, and in the Trimmer below choose Camera → Depth — offered once that photo has been baked into planes.",
+    "match": "text",
+    "home": "depthparallax",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/DepthParallax.tsx",
+    "line": 76,
+    "newHome": "Shelf tile Depth / Parallax",
+    "note": "The pointer to Camera → Depth (CameraPanel.tsx, in the Trimmer dock), which is offered only for a photo whose bake separated into planes (shared/edit/camera.ts depthFor)."
+  },
+  {
+    "label": "Baking depth",
+    "match": "text",
+    "home": "depthparallax",
+    "needs": "depth-baking",
+    "file": "src/renderer/src/components/tools/DepthParallax.tsx",
+    "line": 61,
+    "newHome": "Shelf tile Depth / Parallax",
+    "note": "A bake under way with no message yet: the tile wears its busy badge then (shelf/tools.ts), and the panel says what it is doing."
   },
   {
     "label": "— drag onto a clip to apply it",

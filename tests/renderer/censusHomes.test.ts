@@ -12,9 +12,9 @@ import { HOMES, TOOL_HOMES, toolHomeOf } from '../../src/renderer/src/harness/ce
  * verifier swapped two of its pairs — director with beat-sync, text with
  * grade — with every test passing. Each home was still there; it only opened
  * the wrong tool, so its rows would be looked for in another panel. The eight
- * automation tiles all open the same panel until step 10, so between them not
- * even the harness census would have noticed. The table is now derived from
- * the registry; this holds it to the rule.
+ * automation tiles all opened the same panel until step 10, so between them
+ * not even the harness census would have noticed then. The table is now
+ * derived from the registry; this holds it to the rule.
  *
  * Membership over the registry, never a list of the nineteen: a tool added
  * correctly must not fail this.

@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { SHELF_TOOLS, shelfToolById } from '../../src/renderer/src/components/shelf/tools'
-import { Automation } from '../../src/renderer/src/components/Automation'
+import { Director } from '../../src/renderer/src/components/Director'
 import { IngestPanel } from '../../src/renderer/src/components/IngestPanel'
 import { MediaPool } from '../../src/renderer/src/components/MediaPool'
 import { TranscriptPanel } from '../../src/renderer/src/components/TranscriptPanel'
+import { BeatSync } from '../../src/renderer/src/components/tools/BeatSync'
+import { DepthParallax } from '../../src/renderer/src/components/tools/DepthParallax'
+import { FilmStrip } from '../../src/renderer/src/components/tools/FilmStrip'
+import { GridSplit } from '../../src/renderer/src/components/tools/GridSplit'
+import { OnePhoto } from '../../src/renderer/src/components/tools/OnePhoto'
+import { Props3d } from '../../src/renderer/src/components/tools/Props3d'
+import { StripFlashes } from '../../src/renderer/src/components/tools/StripFlashes'
 import { useEditor } from '../../src/renderer/src/store'
 
 /**
@@ -32,15 +39,34 @@ describe('the Shelf registry, loaded', () => {
   })
 
   it('opens the source tiles on the panels that held them before the Shelf', () => {
-    // Step 9's "nothing is lost": the pool, the link form and the transcript,
-    // whole; and every automation tile the whole Automation panel until step 10
-    // splits it.
+    // Step 9's "nothing is lost": the pool, the link form and the transcript, whole.
     expect(shelfToolById('upload')?.panel).toBe(MediaPool)
     expect(shelfToolById('url')?.panel).toBe(IngestPanel)
     expect(shelfToolById('transcript')?.panel).toBe(TranscriptPanel)
-    for (const id of ['director', 'depth-parallax', 'beat-sync', 'one-photo', 'grid-split', 'strip-flashes', 'film-strip', 'props-3d'] as const) {
-      expect(shelfToolById(id)?.panel, id).toBe(Automation)
+  })
+
+  it('opens each automation tile on its own tool’s panel', () => {
+    // Step 10 split the Automation panel, which all eight opened in step 9:
+    // each tile its own panel, and the Director tile the Director itself.
+    // Spelled out pair by pair, so a swap names the tile it moved.
+    const own = {
+      director: Director,
+      'depth-parallax': DepthParallax,
+      'beat-sync': BeatSync,
+      'one-photo': OnePhoto,
+      'grid-split': GridSplit,
+      'strip-flashes': StripFlashes,
+      'film-strip': FilmStrip,
+      'props-3d': Props3d
+    } as const
+    for (const [id, panel] of Object.entries(own) as [keyof typeof own, (typeof own)[keyof typeof own]][]) {
+      expect(shelfToolById(id)?.panel, id).toBe(panel)
     }
+    // Eight panels for eight tiles: none shared, none another tile's.
+    const panels = Object.keys(own).map((id) => shelfToolById(id as keyof typeof own)?.panel)
+    expect(new Set(panels).size).toBe(8)
+    const elsewhere = SHELF_TOOLS.filter((tool) => !(tool.id in own)).map((tool) => tool.panel)
+    expect(panels.filter((panel) => elsewhere.includes(panel as never))).toEqual([])
   })
 
   it('marks Narration, and only Narration, as coming soon — with what it will do', () => {

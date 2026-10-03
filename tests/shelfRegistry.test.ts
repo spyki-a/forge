@@ -116,8 +116,9 @@ describe('the Shelf registry', () => {
       expect(panel, `${ids[i]}: panel`).toBeDefined()
       expect(ts.isIdentifier(panel!), `${ids[i]}: the panel is a component's name`).toBe(true)
       const name = (panel as ts.Identifier).text
-      // Imported from a component module: '../X' or './panels'.
-      expect(imports.get(name), `${ids[i]}: ${name} is imported`).toMatch(/^\.\.?\/(?:[A-Z]\w*|panels)$/)
+      // Imported from a component module: '../X', './panels', or since step 10
+      // an automation tool's own panel, '../tools/X'.
+      expect(imports.get(name), `${ids[i]}: ${name} is imported`).toMatch(/^\.\.?\/(?:[A-Z]\w*|panels|tools\/[A-Z]\w*)$/)
       // And an icon and a tooltip of its own.
       expect(tool.props.get('icon'), `${ids[i]}: icon`).toBeDefined()
       expect((tool.str('hint') ?? '').length, `${ids[i]}: hint`).toBeGreaterThan(10)

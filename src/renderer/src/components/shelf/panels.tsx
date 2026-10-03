@@ -12,7 +12,9 @@ import { BigButton } from '../ui/Tile'
  * and the source row held is lost when they go: the Narration tile its
  * coming-soon words, the Library and Transitions tiles the Library on the
  * right drawer, and each one-click tool the Add button that sat above the
- * media grid with one line on what it makes. Steps 10 and 11 fill these out.
+ * media grid with one line on what it makes. Step 11 fills these out. The
+ * automation tools' panels are components of their own (components/tools/,
+ * step 10), and the Director tile opens Director itself.
  */
 
 /**

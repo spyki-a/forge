@@ -103,7 +103,7 @@ export function ExportStrip(): ReactNode {
       notify(
         `Cannot export — ${missing.length} file${missing.length === 1 ? ' is' : 's are'} missing: ` +
           `${missing.slice(0, 3).map((a) => a.name).join(', ')}` +
-          `${missing.length > 3 ? '…' : ''}. Use Relink in the media pool.`
+          `${missing.length > 3 ? '…' : ''}. Use Relink in Upload.`
       )
       return
     }
