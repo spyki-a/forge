@@ -305,7 +305,7 @@
   {
     "label": "3D props on keywords",
     "match": "text",
-    "home": "create",
+    "home": "props",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 796,
@@ -314,7 +314,7 @@
   {
     "label": "Add flashes",
     "match": "text",
-    "home": "create",
+    "home": "stripflashes",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 705,
@@ -323,7 +323,7 @@
   {
     "label": "Add music",
     "match": "text",
-    "home": "create",
+    "home": "beatsync",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 216,
@@ -332,7 +332,7 @@
   {
     "label": "Analyse & build",
     "match": "text",
-    "home": "create",
+    "home": "beatsync",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 301,
@@ -341,7 +341,7 @@
   {
     "label": "Analysing",
     "match": "text",
-    "home": "create",
+    "home": "beatsync",
     "needs": "reel-building",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 301,
@@ -350,7 +350,7 @@
   {
     "label": "At once",
     "match": "text",
-    "home": "create",
+    "home": "stripflashes",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 636,
@@ -359,16 +359,17 @@
   {
     "label": "Automation",
     "match": "text",
-    "home": "create",
+    "home": "director",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 187,
-    "newHome": "— (drop: each tool has its own header)"
+    "newHome": "— (drop: each tool has its own header)",
+    "note": "Step 9: the Automation panel’s own header, still on screen inside every automation tile until step 10 gives each tool its own panel and drops it (WINDOW.md §3.2)."
   },
   {
     "label": "Bands",
     "match": "text",
-    "home": "create",
+    "home": "stripflashes",
     "needs": "none",
     "file": "src/shared/render/strips.ts",
     "line": 29,
@@ -377,7 +378,7 @@
   {
     "label": "Beat-synced reel",
     "match": "text",
-    "home": "create",
+    "home": "beatsync",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 197,
@@ -386,7 +387,7 @@
   {
     "label": "Build from one photo",
     "match": "text",
-    "home": "create",
+    "home": "onephoto",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 406,
@@ -395,7 +396,7 @@
   {
     "label": "Build grid",
     "match": "text",
-    "home": "create",
+    "home": "gridsplit",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 566,
@@ -404,7 +405,7 @@
   {
     "label": "Build strip",
     "match": "text",
-    "home": "create",
+    "home": "filmstrip",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 776,
@@ -413,7 +414,7 @@
   {
     "label": "Cadence",
     "match": "text",
-    "home": "create",
+    "home": "gridsplit",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 506,
@@ -422,7 +423,7 @@
   {
     "label": "Chosen for the brief and the pictures; without a model, by the tone.",
     "match": "text",
-    "home": "create",
+    "home": "director",
     "needs": "none",
     "file": "src/renderer/src/components/Director.tsx",
     "line": 195,
@@ -431,7 +432,7 @@
   {
     "label": "Circle",
     "match": "text",
-    "home": "create",
+    "home": "gridsplit",
     "needs": "none",
     "file": "src/shared/render/grid.ts",
     "line": 39,
@@ -440,18 +441,18 @@
   {
     "label": "Clear",
     "match": "text",
-    "home": "create",
+    "home": "director",
     "needs": "generated",
     "count": 7,
     "file": "src/renderer/src/components/Director.tsx",
     "line": 412,
     "newHome": "Shelf tile Director; the same label also: Shelf tile Beat sync (Automation.tsx:316); Shelf tile One photo (Automation.tsx:413); Shelf tile Grid split (Automation.tsx:573); Shelf tile Strip flashes (Automation.tsx:712); Shelf tile Film strip (Automation.tsx:783); Shelf tile 3D props (Automation.tsx:845)",
-    "note": "Count 7: one per tool that made a clip: Beat sync, One photo, Grid, Strips, Film strip, Props and Director."
+    "note": "Count 7: one per tool that made a clip: Beat sync, One photo, Grid, Strips, Film strip, Props and Director. Step 9: every automation tile opens the whole Automation panel until step 10 splits it, so this row is counted in the tile its section will be, and the count is still what the whole panel shows. Step 10 makes it one row per tool, in each tool’s home."
   },
   {
     "label": "Columns",
     "match": "text",
-    "home": "create",
+    "home": "stripflashes",
     "needs": "none",
     "file": "src/shared/render/strips.ts",
     "line": 28,
@@ -460,7 +461,7 @@
   {
     "label": "Cut to the words",
     "match": "text",
-    "home": "create",
+    "home": "beatsync",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 266,
@@ -469,7 +470,7 @@
   {
     "label": "Depth parallax",
     "match": "text",
-    "home": "create",
+    "home": "beatsync",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 246,
@@ -478,7 +479,7 @@
   {
     "label": "Diagonal",
     "match": "text",
-    "home": "create",
+    "home": "stripflashes",
     "needs": "none",
     "file": "src/shared/render/strips.ts",
     "line": 30,
@@ -487,7 +488,7 @@
   {
     "label": "Direct",
     "match": "text",
-    "home": "create",
+    "home": "director",
     "needs": "none",
     "file": "src/renderer/src/components/Director.tsx",
     "line": 408,
@@ -496,7 +497,7 @@
   {
     "label": "Direct again",
     "match": "text",
-    "home": "create",
+    "home": "director",
     "needs": "generated",
     "file": "src/renderer/src/components/Director.tsx",
     "line": 408,
@@ -505,7 +506,7 @@
   {
     "label": "Director",
     "match": "text",
-    "home": "create",
+    "home": "director",
     "needs": "none",
     "file": "src/renderer/src/components/Director.tsx",
     "line": 156,
@@ -514,7 +515,7 @@
   {
     "label": "Drag where the reel ends",
     "match": "title",
-    "home": "create",
+    "home": "beatsync",
     "needs": "music-clip",
     "file": "src/renderer/src/components/MusicRange.tsx",
     "line": 203,
@@ -523,7 +524,7 @@
   {
     "label": "Drag where the reel starts",
     "match": "title",
-    "home": "create",
+    "home": "beatsync",
     "needs": "music-clip",
     "file": "src/renderer/src/components/MusicRange.tsx",
     "line": 203,
@@ -532,7 +533,7 @@
   {
     "label": "English",
     "match": "placeholder",
-    "home": "create",
+    "home": "director",
     "needs": "director-more",
     "file": "src/renderer/src/components/Director.tsx",
     "line": 274,
@@ -541,7 +542,7 @@
   {
     "label": "Filmstrip",
     "match": "text",
-    "home": "create",
+    "home": "filmstrip",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 728,
@@ -550,7 +551,7 @@
   {
     "label": "Frequency",
     "match": "text",
-    "home": "create",
+    "home": "props",
     "needs": "props-on",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 816,
@@ -559,7 +560,7 @@
   {
     "label": "Grid split",
     "match": "text",
-    "home": "create",
+    "home": "gridsplit",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 428,
@@ -568,7 +569,7 @@
   {
     "label": "Gutter",
     "match": "text",
-    "home": "create",
+    "home": "gridsplit",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 521,
@@ -577,7 +578,7 @@
   {
     "label": "Import pictures or clips — they appear here in pool order.",
     "match": "text",
-    "home": "create",
+    "home": "director",
     "needs": "none",
     "file": "src/renderer/src/components/Director.tsx",
     "line": 291,
@@ -586,7 +587,7 @@
   {
     "label": "Import some photos — they are what the cuts are made of.",
     "match": "text",
-    "home": "create",
+    "home": "beatsync",
     "needs": "music-clip",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 360,
@@ -595,7 +596,7 @@
   {
     "label": "Landing",
     "match": "text",
-    "home": "create",
+    "home": "gridsplit",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 490,
@@ -604,7 +605,7 @@
   {
     "label": "Length",
     "match": "text",
-    "home": "create",
+    "home": "director",
     "needs": "director-more",
     "file": "src/renderer/src/components/Director.tsx",
     "line": 256,
@@ -613,7 +614,7 @@
   {
     "label": "Length",
     "match": "text",
-    "home": "create",
+    "home": "filmstrip",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 754,
@@ -622,7 +623,7 @@
   {
     "label": "Look",
     "match": "text",
-    "home": "create",
+    "home": "stripflashes",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 667,
@@ -631,7 +632,7 @@
   {
     "label": "Model servers — open Settings",
     "match": "title",
-    "home": "create",
+    "home": "director",
     "needs": "none",
     "file": "src/renderer/src/components/Director.tsx",
     "line": 288,
@@ -641,7 +642,7 @@
   {
     "label": "More",
     "match": "text",
-    "home": "create",
+    "home": "director",
     "needs": "none",
     "file": "src/renderer/src/components/Director.tsx",
     "line": 210,
@@ -650,7 +651,7 @@
   {
     "label": "Motion",
     "match": "text",
-    "home": "create",
+    "home": "beatsync",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 221,
@@ -659,7 +660,7 @@
   {
     "label": "No music on the timeline — the pieces will arrive on an even cadence instead.",
     "match": "text",
-    "home": "create",
+    "home": "gridsplit",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 581,
@@ -668,7 +669,7 @@
   {
     "label": "Off",
     "match": "text",
-    "home": "create",
+    "home": "props",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 804,
@@ -677,7 +678,7 @@
   {
     "label": "On",
     "match": "text",
-    "home": "create",
+    "home": "props",
     "needs": "props-on",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 804,
@@ -687,7 +688,7 @@
   {
     "label": "One photo",
     "match": "text",
-    "home": "create",
+    "home": "onephoto",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 374,
@@ -696,7 +697,7 @@
   {
     "label": "Order",
     "match": "text",
-    "home": "create",
+    "home": "gridsplit",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 475,
@@ -705,7 +706,7 @@
   {
     "label": "Panels",
     "match": "text",
-    "home": "create",
+    "home": "filmstrip",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 738,
@@ -714,7 +715,7 @@
   {
     "label": "Pieces",
     "match": "text",
-    "home": "create",
+    "home": "gridsplit",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 442,
@@ -723,7 +724,7 @@
   {
     "label": "Place props",
     "match": "text",
-    "home": "create",
+    "home": "props",
     "needs": "props-on",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 838,
@@ -732,7 +733,7 @@
   {
     "label": "Rate",
     "match": "text",
-    "home": "create",
+    "home": "stripflashes",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 652,
@@ -741,18 +742,18 @@
   {
     "label": "Rebuild",
     "match": "text",
-    "home": "create",
+    "home": "beatsync",
     "needs": "generated",
     "count": 2,
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 301,
     "newHome": "Shelf tile Beat sync; the same label also: Shelf tile One photo (Automation.tsx:406)",
-    "note": "Count 2: Beat sync's and One photo's (the other Rebuilds say what they rebuild)."
+    "note": "Count 2: Beat sync's and One photo's (the other Rebuilds say what they rebuild). Step 9: every automation tile opens the whole Automation panel until step 10 splits it, so this row is counted in the tile its section will be, and the count is still what the whole panel shows. Step 10 makes it one row per tool, in each tool’s home."
   },
   {
     "label": "Rebuild flashes",
     "match": "text",
-    "home": "create",
+    "home": "stripflashes",
     "needs": "generated",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 705,
@@ -761,7 +762,7 @@
   {
     "label": "Rebuild grid",
     "match": "text",
-    "home": "create",
+    "home": "gridsplit",
     "needs": "generated",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 566,
@@ -770,7 +771,7 @@
   {
     "label": "Rebuild strip",
     "match": "text",
-    "home": "create",
+    "home": "filmstrip",
     "needs": "generated",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 776,
@@ -779,7 +780,7 @@
   {
     "label": "Recipe",
     "match": "text",
-    "home": "create",
+    "home": "director",
     "needs": "none",
     "file": "src/renderer/src/components/Director.tsx",
     "line": 180,
@@ -788,7 +789,7 @@
   {
     "label": "Regenerate",
     "match": "text",
-    "home": "create",
+    "home": "props",
     "needs": "generated",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 838,
@@ -797,7 +798,7 @@
   {
     "label": "Shop now",
     "match": "placeholder",
-    "home": "create",
+    "home": "director",
     "needs": "director-more",
     "file": "src/renderer/src/components/Director.tsx",
     "line": 252,
@@ -806,7 +807,7 @@
   {
     "label": "Slices",
     "match": "text",
-    "home": "create",
+    "home": "stripflashes",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 620,
@@ -815,7 +816,7 @@
   {
     "label": "Square",
     "match": "text",
-    "home": "create",
+    "home": "gridsplit",
     "needs": "none",
     "file": "src/shared/render/grid.ts",
     "line": 38,
@@ -824,7 +825,7 @@
   {
     "label": "Stop",
     "match": "text",
-    "home": "create",
+    "home": "beatsync",
     "needs": "reel-building",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 308,
@@ -833,7 +834,7 @@
   {
     "label": "Strip flashes",
     "match": "text",
-    "home": "create",
+    "home": "stripflashes",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 589,
@@ -842,7 +843,7 @@
   {
     "label": "Stutters",
     "match": "text",
-    "home": "create",
+    "home": "stripflashes",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 683,
@@ -851,7 +852,7 @@
   {
     "label": "The reel covers the highlighted part only.",
     "match": "text",
-    "home": "create",
+    "home": "beatsync",
     "needs": "music-clip",
     "file": "src/renderer/src/components/MusicRange.tsx",
     "line": 216,
@@ -860,7 +861,7 @@
   {
     "label": "Tilt",
     "match": "text",
-    "home": "create",
+    "home": "gridsplit",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 537,
@@ -869,7 +870,7 @@
   {
     "label": "Tone",
     "match": "text",
-    "home": "create",
+    "home": "director",
     "needs": "director-more",
     "file": "src/renderer/src/components/Director.tsx",
     "line": 235,
@@ -878,7 +879,7 @@
   {
     "label": "Transcribe a clip first — props fire on spoken words.",
     "match": "text",
-    "home": "create",
+    "home": "props",
     "needs": "props-on",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 852,
@@ -887,7 +888,7 @@
   {
     "label": "Transitions",
     "match": "text",
-    "home": "create",
+    "home": "beatsync",
     "needs": "none",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 279,
@@ -896,7 +897,7 @@
   {
     "label": "Use all",
     "match": "text",
-    "home": "create",
+    "home": "beatsync",
     "needs": "music-clip",
     "file": "src/renderer/src/components/MusicRange.tsx",
     "line": 228,
@@ -905,7 +906,7 @@
   {
     "label": "Uses the selected photo, or the first one, and lands the pieces on the track’s beats.",
     "match": "text",
-    "home": "create",
+    "home": "gridsplit",
     "needs": "music-clip",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 580,
@@ -914,7 +915,7 @@
   {
     "label": "Uses the selected photo, or the first one. It bakes the subject cutout",
     "match": "text",
-    "home": "create",
+    "home": "onephoto",
     "needs": "none",
     "part": true,
     "file": "src/renderer/src/components/Automation.tsx",
@@ -924,7 +925,7 @@
   {
     "label": "Uses the shot under the playhead",
     "match": "text",
-    "home": "create",
+    "home": "stripflashes",
     "needs": "none",
     "part": true,
     "file": "src/renderer/src/components/Automation.tsx",
@@ -934,7 +935,7 @@
   {
     "label": "Waves",
     "match": "text",
-    "home": "create",
+    "home": "gridsplit",
     "needs": "none",
     "file": "src/shared/render/grid.ts",
     "line": 40,
@@ -943,7 +944,7 @@
   {
     "label": "Why these fired",
     "match": "text",
-    "home": "create",
+    "home": "props",
     "needs": "generated",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 867,
@@ -952,7 +953,7 @@
   {
     "label": "Working",
     "match": "text",
-    "home": "create",
+    "home": "onephoto",
     "needs": "reel-building",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 406,
@@ -961,7 +962,7 @@
   {
     "label": "Your pictures, in order",
     "match": "text",
-    "home": "create",
+    "home": "director",
     "needs": "none",
     "file": "src/renderer/src/components/Director.tsx",
     "line": 287,
@@ -970,7 +971,7 @@
   {
     "label": "analysing the music",
     "match": "text",
-    "home": "create",
+    "home": "beatsync",
     "needs": "reel-building",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 325,
@@ -979,7 +980,7 @@
   {
     "label": "clips placed. They are ordinary clips",
     "match": "text",
-    "home": "create",
+    "home": "director",
     "needs": "generated",
     "part": true,
     "file": "src/renderer/src/components/Director.tsx",
@@ -989,7 +990,7 @@
   {
     "label": "panels placed.",
     "match": "text",
-    "home": "create",
+    "home": "filmstrip",
     "needs": "generated",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 788,
@@ -998,7 +999,7 @@
   {
     "label": "placed. They are ordinary clips — move, trim or delete any of them.",
     "match": "text",
-    "home": "create",
+    "home": "props",
     "needs": "generated",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 858,
@@ -1007,7 +1008,7 @@
   {
     "label": "she said yes",
     "match": "placeholder",
-    "home": "create",
+    "home": "onephoto",
     "needs": "none",
     "part": true,
     "file": "src/renderer/src/components/Automation.tsx",
@@ -1017,7 +1018,7 @@
   {
     "label": "shots placed. Every one is an ordinary clip.",
     "match": "text",
-    "home": "create",
+    "home": "beatsync",
     "needs": "generated",
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 365,
@@ -1026,7 +1027,7 @@
   {
     "label": "standard cut",
     "match": "text",
-    "home": "create",
+    "home": "director",
     "needs": "generated",
     "file": "src/renderer/src/components/Director.tsx",
     "line": 421,
@@ -1035,7 +1036,7 @@
   {
     "label": "what is in it?",
     "match": "placeholder",
-    "home": "create",
+    "home": "director",
     "needs": "photo-clip",
     "count": 4,
     "file": "src/renderer/src/components/Director.tsx",
@@ -1046,7 +1047,7 @@
   {
     "label": "what is it? (required)",
     "match": "placeholder",
-    "home": "create",
+    "home": "director",
     "needs": "none",
     "file": "src/renderer/src/components/Director.tsx",
     "line": 172,
@@ -1055,7 +1056,7 @@
   {
     "label": "what it does for them",
     "match": "placeholder",
-    "home": "create",
+    "home": "director",
     "needs": "director-more",
     "file": "src/renderer/src/components/Director.tsx",
     "line": 223,
@@ -1064,7 +1065,7 @@
   {
     "label": "who it is for",
     "match": "placeholder",
-    "home": "create",
+    "home": "director",
     "needs": "director-more",
     "file": "src/renderer/src/components/Director.tsx",
     "line": 231,
@@ -3883,7 +3884,7 @@
     "home": "library",
     "needs": "library-stickers",
     "file": "src/renderer/src/components/Library.tsx",
-    "line": 195,
+    "line": 215,
     "newHome": "Shelf tile Library"
   },
   {
@@ -3901,7 +3902,7 @@
     "home": "library",
     "needs": "none",
     "file": "src/renderer/src/components/Library.tsx",
-    "line": 152,
+    "line": 172,
     "newHome": "Shelf tile Library"
   },
   {
@@ -3947,9 +3948,9 @@
     "home": "library",
     "needs": "library-empty-drawer",
     "file": "src/renderer/src/components/Library.tsx",
-    "line": 255,
+    "line": 275,
     "newHome": "Shelf tile Library",
-    "note": "\"Get fonts →\": an empty drawer in a library that is not empty. The kind follows as its own text."
+    "note": "\"Get stickers →\": an empty drawer in a library that is not empty — the Library opens on Stickers since step 9, and the census library holds only sounds. The kind follows as its own text."
   },
   {
     "label": "Get ·",
@@ -3967,7 +3968,7 @@
     "home": "library",
     "needs": "library-stickers",
     "file": "src/renderer/src/components/Library.tsx",
-    "line": 287,
+    "line": 307,
     "newHome": "Shelf tile Library"
   },
   {
@@ -3976,7 +3977,7 @@
     "home": "library",
     "needs": "none",
     "file": "src/renderer/src/components/Library.tsx",
-    "line": 249,
+    "line": 269,
     "newHome": "Shelf tile Library"
   },
   {
@@ -4004,7 +4005,7 @@
     "home": "library",
     "needs": "none",
     "file": "src/renderer/src/components/Library.tsx",
-    "line": 239,
+    "line": 259,
     "newHome": "Shelf tile Library"
   },
   {
@@ -4014,7 +4015,7 @@
     "needs": "library-sfx",
     "count": 3,
     "file": "src/renderer/src/components/Library.tsx",
-    "line": 412,
+    "line": 432,
     "newHome": "Shelf tile Library (its trimmer is the dock)",
     "note": "Count 3: one per sound: the census puts three in the catalog."
   },
@@ -4043,7 +4044,7 @@
     "home": "library",
     "needs": "none",
     "file": "src/renderer/src/components/Library.tsx",
-    "line": 161,
+    "line": 181,
     "newHome": "Shelf tile Library"
   },
   {
@@ -4061,7 +4062,7 @@
     "home": "library",
     "needs": "none",
     "file": "src/renderer/src/components/Library.tsx",
-    "line": 144,
+    "line": 164,
     "newHome": "Shelf tile Library"
   },
   {
@@ -4129,167 +4130,155 @@
     "part": true,
     "count": 120,
     "file": "src/renderer/src/components/Library.tsx",
-    "line": 434,
+    "line": 454,
     "newHome": "Shelf tile Library (also reached from Text, 3D props, Transitions)",
     "note": "Count 120: one per sticker tile on the first page (Library PAGE = 120, of 130 census stickers)."
   },
   {
     "label": "+ Card ring",
     "match": "text",
-    "home": "media",
+    "home": "cardring",
     "needs": "none",
-    "file": "src/renderer/src/components/LeftPanel.tsx",
-    "line": 121,
-    "newHome": "Shelf tile Card ring"
+    "file": "src/renderer/src/components/shelf/panels.tsx",
+    "line": 147,
+    "newHome": "Shelf tile Card ring",
+    "note": "Step 9: moved from above the media grid into its own tile’s panel, with one line on what it makes (step 11 fills it out)."
   },
   {
     "label": "+ Colour",
     "match": "text",
-    "home": "media",
+    "home": "colourcards",
     "needs": "none",
-    "file": "src/renderer/src/components/LeftPanel.tsx",
-    "line": 93,
-    "newHome": "Shelf tile Colour cards"
+    "file": "src/renderer/src/components/shelf/panels.tsx",
+    "line": 114,
+    "newHome": "Shelf tile Colour cards",
+    "note": "Step 9: moved from above the media grid into its own tile’s panel, with one line on what it makes (step 11 fills it out)."
   },
   {
     "label": "+ Grade",
     "match": "text",
-    "home": "media",
+    "home": "grade",
     "needs": "none",
-    "file": "src/renderer/src/components/LeftPanel.tsx",
-    "line": 100,
-    "newHome": "Shelf tile Grade"
+    "file": "src/renderer/src/components/shelf/panels.tsx",
+    "line": 125,
+    "newHome": "Shelf tile Grade",
+    "note": "Step 9: moved from above the media grid into its own tile’s panel, with one line on what it makes (step 11 fills it out)."
   },
   {
     "label": "+ Newspaper clippings",
     "match": "text",
-    "home": "media",
+    "home": "newspaper",
     "needs": "none",
-    "file": "src/renderer/src/components/LeftPanel.tsx",
-    "line": 114,
-    "newHome": "Shelf tile Newspaper clipping"
+    "file": "src/renderer/src/components/shelf/panels.tsx",
+    "line": 136,
+    "newHome": "Shelf tile Newspaper clipping",
+    "note": "Step 9: moved from above the media grid into its own tile’s panel, with one line on what it makes (step 11 fills it out)."
   },
   {
     "label": "+ Text",
     "match": "text",
-    "home": "media",
+    "home": "text",
     "needs": "none",
-    "file": "src/renderer/src/components/LeftPanel.tsx",
-    "line": 86,
-    "newHome": "Shelf tile Text"
-  },
-  {
-    "label": "Create",
-    "match": "text",
-    "home": "media",
-    "needs": "none",
-    "file": "src/renderer/src/components/LeftPanel.tsx",
-    "line": 33,
-    "newHome": "Shelf tiles Director … 3D props"
+    "file": "src/renderer/src/components/shelf/panels.tsx",
+    "line": 103,
+    "newHome": "Shelf tile Text",
+    "note": "Step 9: moved from above the media grid into its own tile’s panel, with one line on what it makes (step 11 fills it out)."
   },
   {
     "label": "Drag onto the timeline, or double-click",
     "match": "title",
-    "home": "media",
+    "home": "upload",
     "needs": "photo-clip",
     "part": true,
     "count": 4,
     "file": "src/renderer/src/components/MediaPool.tsx",
-    "line": 195,
+    "line": 216,
     "newHome": "Shelf tile Upload",
     "note": "Count 4: one per pool tile: three photos and a video."
   },
   {
     "label": "Drop to import",
     "match": "text",
-    "home": "media",
+    "home": "upload",
     "needs": "pool-dragover",
     "file": "src/renderer/src/components/MediaPool.tsx",
-    "line": 264,
+    "line": 285,
     "newHome": "Shelf tile Upload"
   },
   {
     "label": "Drop your photos and clips here",
     "match": "text",
-    "home": "media",
+    "home": "upload",
     "needs": "none",
     "file": "src/renderer/src/components/MediaPool.tsx",
-    "line": 178,
+    "line": 199,
     "newHome": "Shelf tile Upload"
-  },
-  {
-    "label": "Import",
-    "match": "text",
-    "home": "media",
-    "needs": "none",
-    "file": "src/renderer/src/components/MediaPool.tsx",
-    "line": 150,
-    "newHome": "Shelf tile Upload — the same Upload big button"
   },
   {
     "label": "Library",
     "match": "text",
-    "home": "media",
+    "home": "shelf",
     "needs": "none",
-    "file": "src/renderer/src/components/LeftPanel.tsx",
-    "line": 13,
-    "newHome": "Shelf tile Library"
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 134,
+    "newHome": "Shelf tile Library",
+    "note": "Step 9: the Library tab is the Shelf’s Library tile, on the home grid."
   },
   {
     "label": "Media",
     "match": "text",
-    "home": "media",
+    "home": "upload",
     "needs": "none",
-    "count": 2,
-    "file": "src/renderer/src/components/LeftPanel.tsx",
-    "line": 12,
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 172,
     "newHome": "Shelf tile Upload",
-    "note": "Count 2: the Media tab and the pool's own MEDIA header."
+    "note": "The pool’s own MEDIA header, under the Upload button. Counted 2 until step 9, with the Media tab, which is the Shelf’s Upload tile now (its row is \"Upload\" in the shelf home)."
   },
   {
     "label": "Offline",
     "match": "text",
-    "home": "media",
+    "home": "upload",
     "needs": "offline-asset",
     "file": "src/renderer/src/components/MediaPool.tsx",
-    "line": 51,
+    "line": 52,
     "newHome": "Shelf tile Upload"
   },
   {
     "label": "Relink…",
     "match": "text",
-    "home": "media",
+    "home": "upload",
     "needs": "offline-asset",
     "file": "src/renderer/src/components/MediaPool.tsx",
-    "line": 170,
+    "line": 191,
     "newHome": "Shelf tile Upload"
   },
   {
     "label": "The AI helper (Python) is not running",
     "match": "title",
-    "home": "media",
+    "home": "upload",
     "needs": "video-clip",
     "file": "src/renderer/src/components/MediaPool.tsx",
-    "line": 239,
+    "line": 260,
     "newHome": "Shelf tile Upload"
   },
   {
     "label": "Transcribing — click to cancel",
     "match": "title",
-    "home": "media",
+    "home": "upload",
     "needs": "transcribing",
     "file": "src/renderer/src/components/MediaPool.tsx",
-    "line": 225,
+    "line": 246,
     "newHome": "Shelf tile Upload"
   },
   {
     "label": "Transcript",
     "match": "text",
-    "home": "media",
+    "home": "shelf",
     "needs": "none",
-    "file": "src/renderer/src/components/LeftPanel.tsx",
-    "line": 24,
-    "newHome": "Shelf tile Transcript"
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 144,
+    "newHome": "Shelf tile Transcript",
+    "note": "Step 9: the Transcript tab is the Shelf’s Transcript tile, on the home grid."
   },
   {
     "label": "Cancel",
@@ -4495,13 +4484,13 @@
     "newHome": "canvas (unchanged)"
   },
   {
-    "label": "or open Create and press Direct",
+    "label": "or open Director and press Direct",
     "match": "text",
     "home": "preview",
     "needs": "canvas-drawn",
     "file": "src/renderer/src/components/Preview.tsx",
-    "line": 1715,
-    "newHome": "canvas — reworded to \"or open Director and press Direct\" (§3.15)",
+    "line": 1730,
+    "newHome": "canvas — reworded in step 9 (planned for step 10, §3.15): the Create tab it named went with the left panel, and the Director tile opens the Director",
     "harnessOnly": false,
     "note": "Painted on the preview canvas with fillText, so no DOM query can read it; the source-membership test holds it to its file."
   },
@@ -5053,61 +5042,57 @@
   {
     "label": "1080p",
     "match": "text",
-    "home": "source",
-    "needs": "ingest-range",
+    "home": "url",
+    "needs": "none",
     "file": "src/shared/ingest/format.ts",
     "line": 31,
-    "newHome": "Shelf tile URL"
+    "newHome": "Shelf tile URL",
+    "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
   },
   {
     "label": "480p",
     "match": "text",
-    "home": "source",
-    "needs": "ingest-range",
+    "home": "url",
+    "needs": "none",
     "file": "src/shared/ingest/format.ts",
     "line": 31,
-    "newHome": "Shelf tile URL"
+    "newHome": "Shelf tile URL",
+    "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
   },
   {
     "label": "4K",
     "match": "text",
-    "home": "source",
-    "needs": "ingest-range",
+    "home": "url",
+    "needs": "none",
     "file": "src/renderer/src/components/IngestPanel.tsx",
     "line": 202,
-    "newHome": "Shelf tile URL"
+    "newHome": "Shelf tile URL",
+    "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
   },
   {
     "label": "720p",
     "match": "text",
-    "home": "source",
-    "needs": "ingest-range",
+    "home": "url",
+    "needs": "none",
     "file": "src/shared/ingest/format.ts",
     "line": 31,
-    "newHome": "Shelf tile URL"
-  },
-  {
-    "label": "Add files",
-    "match": "text",
-    "home": "source",
-    "needs": "none",
-    "file": "src/renderer/src/components/SourceBar.tsx",
-    "line": 98,
-    "newHome": "Shelf tile Upload (MediaPool with one Upload button)"
+    "newHome": "Shelf tile URL",
+    "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
   },
   {
     "label": "Audio",
     "match": "text",
-    "home": "source",
-    "needs": "ingest-range",
+    "home": "url",
+    "needs": "none",
     "file": "src/renderer/src/components/IngestPanel.tsx",
     "line": 23,
-    "newHome": "Shelf tile URL"
+    "newHome": "Shelf tile URL",
+    "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
   },
   {
     "label": "Exact cut — slower",
     "match": "text",
-    "home": "source",
+    "home": "url",
     "needs": "ingest-range",
     "file": "src/renderer/src/components/IngestPanel.tsx",
     "line": 293,
@@ -5116,7 +5101,7 @@
   {
     "label": "Fast cut",
     "match": "text",
-    "home": "source",
+    "home": "url",
     "needs": "ingest-range",
     "file": "src/renderer/src/components/IngestPanel.tsx",
     "line": 293,
@@ -5125,7 +5110,7 @@
   {
     "label": "From",
     "match": "text",
-    "home": "source",
+    "home": "url",
     "needs": "ingest-range",
     "file": "src/renderer/src/components/IngestPanel.tsx",
     "line": 251,
@@ -5134,88 +5119,97 @@
   {
     "label": "Get",
     "match": "text",
-    "home": "source",
-    "needs": "ingest-range",
+    "home": "url",
+    "needs": "none",
     "file": "src/renderer/src/components/IngestPanel.tsx",
     "line": 154,
-    "newHome": "Shelf tile URL"
+    "newHome": "Shelf tile URL",
+    "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
   },
   {
     "label": "Give a topic; the edit is written and assembled for you",
     "match": "title",
-    "home": "source",
+    "home": "shelf",
     "needs": "none",
-    "file": "src/renderer/src/components/SourceBar.tsx",
-    "line": 42,
-    "newHome": "Shelf tile Narration (coming-soon)"
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 127,
+    "newHome": "Shelf tile Narration (coming-soon)",
+    "note": "Step 9: the mode’s tooltip is the Narration tile’s, on the Shelf’s home grid."
   },
   {
     "label": "Instrumental",
     "match": "text",
-    "home": "source",
-    "needs": "ingest-range",
+    "home": "url",
+    "needs": "none",
     "file": "src/renderer/src/components/IngestPanel.tsx",
     "line": 24,
-    "newHome": "Shelf tile URL"
+    "newHome": "Shelf tile URL",
+    "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
   },
   {
     "label": "Just a part of it",
     "match": "text",
-    "home": "source",
-    "needs": "ingest-range",
+    "home": "url",
+    "needs": "none",
     "file": "src/renderer/src/components/IngestPanel.tsx",
     "line": 244,
-    "newHome": "Shelf tile URL"
+    "newHome": "Shelf tile URL",
+    "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
   },
   {
     "label": "Just the sound, as it was stored",
     "match": "title",
-    "home": "source",
-    "needs": "ingest-range",
+    "home": "url",
+    "needs": "none",
     "file": "src/renderer/src/components/IngestPanel.tsx",
     "line": 23,
-    "newHome": "Shelf tile URL"
+    "newHome": "Shelf tile URL",
+    "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
   },
   {
     "label": "Narration",
     "match": "text",
-    "home": "source",
+    "home": "shelf",
     "needs": "none",
-    "file": "src/renderer/src/components/SourceBar.tsx",
-    "line": 40,
-    "newHome": "Shelf tile Narration"
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 125,
+    "newHome": "Shelf tile Narration",
+    "note": "Step 9: the Narration mode of the source row is the Shelf’s Narration tile."
   },
   {
     "label": "Paste a link, choose the quality, take the video or just the audio",
     "match": "title",
-    "home": "source",
+    "home": "shelf",
     "needs": "none",
-    "file": "src/renderer/src/components/SourceBar.tsx",
-    "line": 36,
-    "newHome": "Shelf tile URL"
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 118,
+    "newHome": "Shelf tile URL",
+    "note": "Step 9: the mode’s tooltip is the URL tile’s, on the Shelf’s home grid."
   },
   {
     "label": "Paste a video link",
     "match": "placeholder",
-    "home": "source",
-    "needs": "ingest-range",
+    "home": "url",
+    "needs": "none",
     "file": "src/renderer/src/components/IngestPanel.tsx",
     "line": 138,
-    "newHome": "Shelf tile URL"
+    "newHome": "Shelf tile URL",
+    "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
   },
   {
     "label": "Photos, video and music from this machine",
     "match": "title",
-    "home": "source",
+    "home": "shelf",
     "needs": "none",
-    "file": "src/renderer/src/components/SourceBar.tsx",
-    "line": 30,
-    "newHome": "Shelf tile Upload"
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 108,
+    "newHome": "Shelf tile Upload",
+    "note": "Step 9: the mode’s tooltip is the Upload tile’s, on the Shelf’s home grid."
   },
   {
     "label": "Re-encoded to mp3, for somewhere that insists on it",
     "match": "title",
-    "home": "source",
+    "home": "url",
     "needs": "ingest-instrumental",
     "file": "src/renderer/src/components/IngestPanel.tsx",
     "line": 217,
@@ -5224,7 +5218,7 @@
   {
     "label": "That does not look like a link yet.",
     "match": "text",
-    "home": "source",
+    "home": "url",
     "needs": "ingest-bad-link",
     "file": "src/shared/ingest/url.ts",
     "line": 240,
@@ -5233,43 +5227,47 @@
   {
     "label": "The first download fetches yt-dlp (about 30MB). After that it is instant.",
     "match": "text",
-    "home": "source",
-    "needs": "ingest-range",
+    "home": "url",
+    "needs": "none",
     "file": "src/renderer/src/components/IngestPanel.tsx",
     "line": 311,
-    "newHome": "Shelf tile URL"
+    "newHome": "Shelf tile URL",
+    "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
   },
   {
     "label": "The picture and its sound",
     "match": "title",
-    "home": "source",
-    "needs": "ingest-range",
+    "home": "url",
+    "needs": "none",
     "file": "src/renderer/src/components/IngestPanel.tsx",
     "line": 22,
-    "newHome": "Shelf tile URL"
+    "newHome": "Shelf tile URL",
+    "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
   },
   {
     "label": "The song with the centred voice removed",
     "match": "title",
-    "home": "source",
-    "needs": "ingest-range",
+    "home": "url",
+    "needs": "none",
     "file": "src/renderer/src/components/IngestPanel.tsx",
     "line": 24,
-    "newHome": "Shelf tile URL"
+    "newHome": "Shelf tile URL",
+    "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
   },
   {
     "label": "The voice, for cutting to the words",
     "match": "title",
-    "home": "source",
-    "needs": "ingest-range",
+    "home": "url",
+    "needs": "none",
     "file": "src/renderer/src/components/IngestPanel.tsx",
     "line": 25,
-    "newHome": "Shelf tile URL"
+    "newHome": "Shelf tile URL",
+    "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
   },
   {
     "label": "To",
     "match": "text",
-    "home": "source",
+    "home": "url",
     "needs": "ingest-range",
     "file": "src/renderer/src/components/IngestPanel.tsx",
     "line": 264,
@@ -5278,62 +5276,67 @@
   {
     "label": "Topic and length in, narration and a cut out.",
     "match": "text",
-    "home": "source",
-    "needs": "narration-mode",
+    "home": "narration",
+    "needs": "none",
     "part": true,
-    "file": "src/renderer/src/components/SourceBar.tsx",
-    "line": 43,
-    "newHome": "Shelf tile Narration (coming-soon text reworded)"
+    "file": "src/renderer/src/components/shelf/panels.tsx",
+    "line": 25,
+    "newHome": "Shelf tile Narration (coming-soon text reworded)",
+    "note": "Step 9: the Narration tile’s panel says it whenever it is open, so it needs no state of its own; reworded after this half — \"The only part of the app that needs paid services\" went, the keys live in Settings."
   },
   {
     "label": "Upload",
     "match": "text",
-    "home": "source",
+    "home": "shelf",
     "needs": "none",
-    "file": "src/renderer/src/components/SourceBar.tsx",
-    "line": 28,
-    "newHome": "Shelf tile Upload"
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 106,
+    "newHome": "Shelf tile Upload",
+    "note": "Step 9: the Upload mode of the source row is the Upload tile on the Shelf’s home grid."
   },
   {
     "label": "Video",
     "match": "text",
-    "home": "source",
-    "needs": "ingest-range",
+    "home": "url",
+    "needs": "none",
     "file": "src/renderer/src/components/IngestPanel.tsx",
     "line": 22,
-    "newHome": "Shelf tile URL"
+    "newHome": "Shelf tile URL",
+    "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
   },
   {
     "label": "Vocal",
     "match": "text",
-    "home": "source",
-    "needs": "ingest-range",
+    "home": "url",
+    "needs": "none",
     "file": "src/renderer/src/components/IngestPanel.tsx",
     "line": 25,
-    "newHome": "Shelf tile URL"
+    "newHome": "Shelf tile URL",
+    "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
   },
   {
     "label": "What the site already stores — copied out, no re-encode",
     "match": "title",
-    "home": "source",
+    "home": "url",
     "needs": "ingest-instrumental",
     "file": "src/renderer/src/components/IngestPanel.tsx",
     "line": 216,
     "newHome": "Shelf tile URL"
   },
   {
-    "label": "YouTube",
+    "label": "URL",
     "match": "text",
-    "home": "source",
+    "home": "shelf",
     "needs": "none",
-    "file": "src/renderer/src/components/SourceBar.tsx",
-    "line": 34,
-    "newHome": "Shelf tile URL (labelled \"URL\")"
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 116,
+    "newHome": "Shelf tile URL (labelled \"URL\")",
+    "note": "Step 9: the YouTube mode of the source row is the Shelf’s URL tile, labelled \"URL\" as WINDOW.md §3.4 planned (store id `youtube` went with `sourceMode`)."
   },
   {
     "label": "long",
     "match": "text",
-    "home": "source",
+    "home": "url",
     "needs": "ingest-range",
     "file": "src/renderer/src/components/IngestPanel.tsx",
     "line": 271,
@@ -5343,7 +5346,7 @@
   {
     "label": "m4a",
     "match": "text",
-    "home": "source",
+    "home": "url",
     "needs": "ingest-instrumental",
     "file": "src/renderer/src/components/IngestPanel.tsx",
     "line": 208,
@@ -5353,7 +5356,7 @@
   {
     "label": "mp3",
     "match": "text",
-    "home": "source",
+    "home": "url",
     "needs": "ingest-instrumental",
     "file": "src/renderer/src/components/IngestPanel.tsx",
     "line": 208,
@@ -5363,16 +5366,17 @@
   {
     "label": "not built yet",
     "match": "text",
-    "home": "source",
-    "needs": "narration-mode",
-    "file": "src/renderer/src/components/SourceBar.tsx",
-    "line": 101,
-    "newHome": "Shelf tile Narration (coming-soon)"
+    "home": "narration",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/panels.tsx",
+    "line": 31,
+    "newHome": "Shelf tile Narration (coming-soon)",
+    "note": "Step 9: in the Narration tile’s panel, as it was beside the Narration mode."
   },
   {
     "label": "running — progress is",
     "match": "text",
-    "home": "source",
+    "home": "url",
     "needs": "ingest-running",
     "part": true,
     "file": "src/renderer/src/components/IngestPanel.tsx",
@@ -5382,16 +5386,17 @@
   {
     "label": "soon",
     "match": "text",
-    "home": "source",
+    "home": "shelf",
     "needs": "none",
-    "file": "src/renderer/src/components/SourceBar.tsx",
-    "line": 85,
-    "newHome": "Shelf tile Narration (coming-soon)"
+    "file": "src/renderer/src/components/shelf/Shelf.tsx",
+    "line": 102,
+    "newHome": "Shelf tile Narration (coming-soon)",
+    "note": "Step 9: the note under the Narration tile’s label (its registry entry has `soon`), as it was beside the Narration mode."
   },
   {
     "label": "split after downloading",
     "match": "text",
-    "home": "source",
+    "home": "url",
     "needs": "ingest-instrumental",
     "file": "src/renderer/src/components/IngestPanel.tsx",
     "line": 228,
@@ -5400,7 +5405,7 @@
   {
     "label": "— minutes and seconds",
     "match": "aria-label",
-    "home": "source",
+    "home": "url",
     "needs": "ingest-range",
     "part": true,
     "count": 2,
@@ -5715,7 +5720,7 @@
     "part": true,
     "file": "src/renderer/src/components/TranscriptPanel.tsx",
     "line": 121,
-    "newHome": "Shelf tile Transcript (text reworded \"in Media\" → \"in Upload\")"
+    "newHome": "Shelf tile Transcript (text reworded \"in Media\" → \"in Upload\" in step 9)"
   },
   {
     "label": "Select a clip to see its transcript",
@@ -6129,12 +6134,395 @@
   {
     "label": "under EXPORT, bottom left",
     "match": "text",
-    "home": "source",
+    "home": "url",
     "needs": "ingest-running",
     "part": true,
     "file": "src/renderer/src/components/IngestPanel.tsx",
     "line": 305,
     "newHome": "Shelf tile URL",
     "note": "Reworded in step 7 from \"in the panel on the right\": download progress shows under EXPORT (Decision 7). \"on the left\" became \"bottom left\" in step 8, which put the strips at the foot of a full-height left column."
+  },
+  {
+    "label": "Upload",
+    "match": "text",
+    "home": "upload",
+    "needs": "none",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 170,
+    "newHome": "Shelf tile Upload — the one Upload big button",
+    "note": "Step 9: the successor of two rows, \"Add files\" (the source row, SourceBar.tsx:98) and \"Import\" (the Media pool, MediaPool.tsx:150) — both called pickMedia then importAssets, and the user said \"Upload and Import are same\", so they are one button at the top of the Upload tile."
+  },
+  {
+    "label": "Director",
+    "match": "text",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 153,
+    "newHome": "Shelf tile Director",
+    "note": "Step 9: the tile on the Shelf’s home grid that opens the Director section of the Create tab. With the other automation tiles, the successor of the left panel’s Create tab (LeftPanel.tsx:33), whose row went in this step."
+  },
+  {
+    "label": "Depth / Parallax",
+    "match": "text",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 162,
+    "newHome": "Shelf tile Depth / Parallax",
+    "note": "Step 9: the tile on the Shelf’s home grid that opens the reel’s Depth parallax box in the Create tab (WINDOW.md §3.14). With the other automation tiles, the successor of the left panel’s Create tab (LeftPanel.tsx:33), whose row went in this step."
+  },
+  {
+    "label": "Beat sync / Cut to words",
+    "match": "text",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 171,
+    "newHome": "Shelf tile Beat sync / Cut to words",
+    "note": "Step 9: the tile on the Shelf’s home grid that opens the Beat-synced reel section of the Create tab. With the other automation tiles, the successor of the left panel’s Create tab (LeftPanel.tsx:33), whose row went in this step."
+  },
+  {
+    "label": "Transitions",
+    "match": "text",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 182,
+    "newHome": "Shelf tile Transitions",
+    "note": "Step 9: the tile on the Shelf’s home grid that opens the Library’s Transitions chip, which the Library keeps (§3.14)."
+  },
+  {
+    "label": "One photo",
+    "match": "text",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 190,
+    "newHome": "Shelf tile One photo",
+    "note": "Step 9: the tile on the Shelf’s home grid that opens the One photo section of the Create tab. With the other automation tiles, the successor of the left panel’s Create tab (LeftPanel.tsx:33), whose row went in this step."
+  },
+  {
+    "label": "Grid split",
+    "match": "text",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 200,
+    "newHome": "Shelf tile Grid split",
+    "note": "Step 9: the tile on the Shelf’s home grid that opens the Grid split section of the Create tab. With the other automation tiles, the successor of the left panel’s Create tab (LeftPanel.tsx:33), whose row went in this step."
+  },
+  {
+    "label": "Strip flashes",
+    "match": "text",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 209,
+    "newHome": "Shelf tile Strip flashes",
+    "note": "Step 9: the tile on the Shelf’s home grid that opens the Strip flashes section of the Create tab. With the other automation tiles, the successor of the left panel’s Create tab (LeftPanel.tsx:33), whose row went in this step."
+  },
+  {
+    "label": "Film strip",
+    "match": "text",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 220,
+    "newHome": "Shelf tile Film strip",
+    "note": "Step 9: the tile on the Shelf’s home grid that opens the Filmstrip section of the Create tab. With the other automation tiles, the successor of the left panel’s Create tab (LeftPanel.tsx:33), whose row went in this step."
+  },
+  {
+    "label": "3D props",
+    "match": "text",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 228,
+    "newHome": "Shelf tile 3D props",
+    "note": "Step 9: the tile on the Shelf’s home grid that opens the 3D props section of the Create tab. With the other automation tiles, the successor of the left panel’s Create tab (LeftPanel.tsx:33), whose row went in this step."
+  },
+  {
+    "label": "Text",
+    "match": "text",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 236,
+    "newHome": "Shelf tile Text",
+    "note": "Step 9: the tile on the Shelf’s home grid that opens \"+ Text\" above the media grid."
+  },
+  {
+    "label": "Colour cards",
+    "match": "text",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 244,
+    "newHome": "Shelf tile Colour cards",
+    "note": "Step 9: the tile on the Shelf’s home grid that opens \"+ Colour\" above the media grid."
+  },
+  {
+    "label": "Grade",
+    "match": "text",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 254,
+    "newHome": "Shelf tile Grade",
+    "note": "Step 9: the tile on the Shelf’s home grid that opens \"+ Grade\" above the media grid."
+  },
+  {
+    "label": "Newspaper clipping",
+    "match": "text",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 262,
+    "newHome": "Shelf tile Newspaper clipping",
+    "note": "Step 9: the tile on the Shelf’s home grid that opens \"+ Newspaper clippings\" above the media grid."
+  },
+  {
+    "label": "Card ring",
+    "match": "text",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 270,
+    "newHome": "Shelf tile Card ring",
+    "note": "Step 9: the tile on the Shelf’s home grid that opens \"+ Card ring\" above the media grid."
+  },
+  {
+    "label": "Stickers, props, transitions, titles, sounds and fonts — and packs of more",
+    "match": "title",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 136,
+    "newHome": "Shelf home (the tile’s tooltip)",
+    "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
+  },
+  {
+    "label": "The words spoken in the selected clip — click to jump, correct a misheard one",
+    "match": "title",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 146,
+    "newHome": "Shelf home (the tile’s tooltip)",
+    "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
+  },
+  {
+    "label": "Describe the product; a whole ad is cut from your pictures",
+    "match": "title",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 155,
+    "newHome": "Shelf home (the tile’s tooltip)",
+    "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
+  },
+  {
+    "label": "Photos cut into depth planes that move apart as the camera drifts",
+    "match": "title",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 164,
+    "newHome": "Shelf home (the tile’s tooltip)",
+    "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
+  },
+  {
+    "label": "Your photos cut to the music’s beats — or to the words of the song",
+    "match": "title",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 173,
+    "newHome": "Shelf home (the tile’s tooltip)",
+    "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
+  },
+  {
+    "label": "Wipes and blends to drag onto a clip",
+    "match": "title",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 184,
+    "newHome": "Shelf home (the tile’s tooltip)",
+    "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
+  },
+  {
+    "label": "A whole reel from a single photo and a caption",
+    "match": "title",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 192,
+    "newHome": "Shelf home (the tile’s tooltip)",
+    "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
+  },
+  {
+    "label": "A photo broken into pieces that land one by one",
+    "match": "title",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 202,
+    "newHome": "Shelf home (the tile’s tooltip)",
+    "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
+  },
+  {
+    "label": "Slices of a shot that flash on the beat",
+    "match": "title",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 211,
+    "newHome": "Shelf home (the tile’s tooltip)",
+    "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
+  },
+  {
+    "label": "Your photos as frames on a running film strip",
+    "match": "title",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 222,
+    "newHome": "Shelf home (the tile’s tooltip)",
+    "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
+  },
+  {
+    "label": "3D props that pop up on the words they are named by",
+    "match": "title",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 230,
+    "newHome": "Shelf home (the tile’s tooltip)",
+    "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
+  },
+  {
+    "label": "A card of your own words over the picture",
+    "match": "title",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 238,
+    "newHome": "Shelf home (the tile’s tooltip)",
+    "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
+  },
+  {
+    "label": "A flat card of colour, to write on or wash between shots",
+    "match": "title",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 246,
+    "newHome": "Shelf home (the tile’s tooltip)",
+    "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
+  },
+  {
+    "label": "A grade over everything on the tracks below it",
+    "match": "title",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 256,
+    "newHome": "Shelf home (the tile’s tooltip)",
+    "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
+  },
+  {
+    "label": "A word highlighted across torn newspaper clippings",
+    "match": "title",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 264,
+    "newHome": "Shelf home (the tile’s tooltip)",
+    "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
+  },
+  {
+    "label": "Your photographs on a rotating ring, in 3D",
+    "match": "title",
+    "home": "shelf",
+    "needs": "none",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 272,
+    "newHome": "Shelf home (the tile’s tooltip)",
+    "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
+  },
+  {
+    "label": "Working on it",
+    "match": "title",
+    "home": "shelf",
+    "needs": "reel-building",
+    "count": 2,
+    "file": "src/renderer/src/components/ui/Tile.tsx",
+    "line": 93,
+    "newHome": "Shelf home (a tile’s busy badge)",
+    "note": "Step 9: the busy badge (WINDOW.md §3.2), so a run started inside a tool shows from the grid — here on Beat sync and One photo, which share the reel’s flag. Count 2."
+  },
+  {
+    "label": "Working on it",
+    "match": "title",
+    "home": "shelf",
+    "needs": "transcribing",
+    "count": 2,
+    "file": "src/renderer/src/components/ui/Tile.tsx",
+    "line": 93,
+    "newHome": "Shelf home (a tile’s busy badge)",
+    "note": "Step 9: the busy badge (WINDOW.md §3.2), so a run started inside a tool shows from the grid — here on Upload (its Transcribe chips) and Transcript. Count 2."
+  },
+  {
+    "label": "Working on it",
+    "match": "title",
+    "home": "shelf",
+    "needs": "ingest-running",
+    "file": "src/renderer/src/components/ui/Tile.tsx",
+    "line": 93,
+    "newHome": "Shelf home (a tile’s busy badge)",
+    "note": "Step 9: the busy badge (WINDOW.md §3.2), so a run started inside a tool shows from the grid — here on URL, with a download of this window’s under way."
+  },
+  {
+    "label": "Back to all the tools",
+    "match": "title",
+    "home": "shelf",
+    "needs": "shelf-tool-open",
+    "file": "src/renderer/src/components/shelf/Shelf.tsx",
+    "line": 10,
+    "newHome": "Shelf (an open tool’s header: ← Tools)",
+    "note": "Step 9: the way from an open tool back to the tiles."
+  },
+  {
+    "label": "Tools",
+    "match": "text",
+    "home": "shelf",
+    "needs": "shelf-tool-open",
+    "file": "src/renderer/src/components/shelf/Shelf.tsx",
+    "line": 51,
+    "newHome": "Shelf (an open tool’s header: ← Tools)",
+    "note": "Step 9: the words on the way back, \"← Tools · <the tool>\"."
+  },
+  {
+    "label": "Depth parallax",
+    "match": "text",
+    "home": "depthparallax",
+    "needs": "none",
+    "file": "src/renderer/src/components/Automation.tsx",
+    "line": 229,
+    "newHome": "Shelf tile Depth / Parallax (mirrors the reel toggle, Decision 5)",
+    "note": "Step 9: the Depth / Parallax tile opens the whole Automation panel, the reel’s Depth parallax box in it; step 10 or 11 gives it a panel of its own that mirrors the same `reelParallax`."
+  },
+  {
+    "label": "— drag onto a clip to apply it",
+    "match": "title",
+    "home": "transitions",
+    "needs": "library-transitions",
+    "part": true,
+    "file": "src/renderer/src/components/Library.tsx",
+    "line": 453,
+    "newHome": "Shelf tile Transitions (the Library, opened on its Transitions drawer)",
+    "note": "Step 9: one transition in the library; only the Transitions drawer shows its tile, so this is how the census knows the tile opens the Library there and not on Stickers."
   }
 ]

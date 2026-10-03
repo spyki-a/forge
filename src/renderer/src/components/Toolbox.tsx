@@ -166,7 +166,7 @@ export function Toolbox(): ReactNode {
        *
        * Where you reach for it is what settles that. This strip acts on the
        * frame you are looking at, so pressing T here plainly means "put words
-       * on this picture"; `+ Text` in the left panel adds a text thing to the
+       * on this picture"; `+ Text` in the Shelf's Text tile adds a text thing to the
        * timeline, which is where a standalone card belongs.
        */
       id: 'text',

@@ -96,6 +96,46 @@ describe('Tile', () => {
   })
 })
 
+describe('Tile, small (the Shelf’s home grid, step 9)', () => {
+  const idle = html(createElement(Tile, { icon: Grid3x3, label: 'Beat sync / Cut to words', size: 'sm' }))
+  const pressed = html(createElement(Tile, { icon: Grid3x3, label: 'Beat sync / Cut to words', size: 'sm', pressed: true }))
+  const busy = html(createElement(Tile, { icon: Grid3x3, label: 'Grid split', size: 'sm', busy: true, note: 'soon' }))
+
+  it('is smaller than the default, with room for a third line', () => {
+    const md = classesOf(html(createElement(Tile, { icon: Grid3x3, label: 'x' })), 'button')
+    expect(classesOf(idle, 'button')).toContain('p-1')
+    expect(md).toContain('p-1.5')
+    expect(allClasses(idle)).toContain('line-clamp-3')
+    expect(svgOf(idle)).toContain('width="16"')
+  })
+
+  it('pressed still changes colour, icon and shadow together', () => {
+    expect(added(family(classesOf(pressed, 'button'), 'bg-'), family(classesOf(idle, 'button'), 'bg-'))).not.toEqual([])
+    expect(classesOf(pressed, 'button')).toContain('shadow-pressed')
+    expect(glyphOf(pressed)).not.toBe(glyphOf(idle))
+  })
+
+  it('a busy tile wears a badge with its own tooltip, and a note is a line of its own', () => {
+    expect(busy).toContain('data-busy-badge')
+    expect(busy).toContain('title="Working on it"')
+    expect(idle).not.toContain('data-busy-badge')
+    expect(busy).toContain('>soon</span>')
+    // The label is still its own text, whole.
+    expect(busy).toContain('>Grid split</span>')
+  })
+
+  it('never transforms, filters or blurs — the spinner turns only itself', () => {
+    for (const markup of [idle, pressed, busy]) {
+      // `animate-spin` rotates the badge's own glyph, which holds nothing.
+      const traps = allClasses(markup).filter((c) => TRAPS.test(c))
+      expect(traps).toEqual([])
+      expect(markup).not.toMatch(/style="[^"]*(?:transform|filter)/)
+    }
+    const spinning = [...busy.matchAll(/<(\w+)\b[^>]*class="[^"]*\banimate-spin\b[^"]*"/g)].map((m) => m[1])
+    expect(spinning).toEqual(['svg'])
+  })
+})
+
 describe('BigButton', () => {
   for (const variant of ['primary', 'secondary'] as const) {
     it(`${variant}: pressed changes colour, icon and shadow together`, () => {

@@ -147,14 +147,18 @@ function literals(path: string, text: string): string[] {
 }
 
 /*
- * Where on-screen words are written: the interface's components, and the
- * shared constants several of them render (a loudness target's name, a mask
- * mode's hint, an encoder's label). Not the harness — its strings are not the
- * interface — and not the census itself, which would find every label in its
- * own fixture.
+ * Where on-screen words are written: the interface's components, the
+ * renderer's own tables of them (the Shelf's tool registry, shelf/tools.ts,
+ * gives every tile its label and tooltip — step 9), and the shared constants
+ * several of them render (a loudness target's name, a mask mode's hint, an
+ * encoder's label). Not the harness — its strings are not the interface — and
+ * not the census itself, which would find every label in its own fixture.
  */
 const sources = [
-  ...walk(resolve(root, 'src/renderer/src'), (p) => p.endsWith('.tsx') && !p.startsWith('src/renderer/src/harness/')),
+  ...walk(
+    resolve(root, 'src/renderer/src'),
+    (p) => (p.endsWith('.tsx') || p.endsWith('.ts')) && !p.endsWith('.d.ts') && !p.startsWith('src/renderer/src/harness/')
+  ),
   ...walk(resolve(root, 'src/shared'), (p) => p.endsWith('.ts'))
 ].map((path) => {
   const text = readFileSync(path, 'utf8')

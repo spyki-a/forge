@@ -11,7 +11,7 @@ import type { IngestWant } from '@shared/ingest/args'
  *
  * The sketch drew mp4 / mp3 / instrumental as siblings of the YouTube entry.
  * They are not alternatives to pasting a link — they are what you choose
- * afterwards, so they live here as one row and the source bar keeps three tabs.
+ * afterwards, so they live here as one row, inside the Shelf's URL tile.
  *
  * The count that matters is clicks from paste to clip. With the defaults it is
  * two: paste, Get. Everything else on this panel is optional and stays out of
@@ -126,7 +126,7 @@ export function IngestPanel(): ReactNode {
   }
 
   return (
-    <div className="border-t border-ink-850 bg-ink-900 px-3 py-2.5">
+    <div className="px-3 py-2.5">
       {/* ------------------------------------------------------------ link */}
       <div className="flex items-center gap-2">
         <input

@@ -1022,7 +1022,7 @@ Anchors are counted with `matchAll` before being trusted.
   dock below their floors at 1100×680 until step 9; an audition takes the dock's full 260 px floor
   although it has no editor.
 
-### Step 9 — The Shelf frame and the source tiles
+### Step 9 — The Shelf frame and the source tiles · DONE 2026-10-03
 - **Files:** new `components/shelf/Shelf.tsx` (home grid in the sketch's order, `auto-fill` columns; an
   open tool gets "← Tools · Name" and its own `<ErrorBoundary>`); new `components/shelf/tools.ts` (19
   entries: id, label, icon, panel, `takesMedia`, `soon`, busy selector); `store.ts` (`shelfTool`
@@ -1035,13 +1035,47 @@ Anchors are counted with `matchAll` before being trusted.
   and in the sketch's order. Mutation: drop 'card-ring' → fails. tailwindSources green.
 - **Check:** 19 tiles at 240 px, three per row, screenshot; each source tile opens without the boundary;
   Upload uses the harness's synthetic `pickMedia`; Back returns home; census `[]`.
+- **As built (2026-10-03).** `shelf/tools.ts` is the registry (19 entries in the sketch's order: id,
+  label, icon, hint, panel, takesMedia, soon, busy selector), `shelf/Shelf.tsx` the frame: HOME is the
+  tile grid (`Tile` size `sm`, 63×63 at the 240 px column, three per row, seven rows, 511 px — it
+  fits without scrolling at 1400×900 and at 1100×680, and scrolls under the dock; at ~305 px the
+  grid reflows to four per row and reads exactly as the sketch), an open tool shows "← Tools ·
+  <label>" over the panel inside its own `ErrorBoundary` keyed by tool id; `data-shelf-tool` is
+  "home" or the id. `shelf/panels.tsx` holds what each tile opens: Upload = MediaPool with ONE
+  Upload BigButton (Add files and + Import merged, busy while the picker runs); URL = IngestPanel
+  (its own border and background dropped); Narration = the soon text, reworded without "paid
+  services"; Library = Library on Stickers (`initialKind`); Transcript = TranscriptPanel ("in
+  Upload"); Transitions = Library on the Transitions drawer; the five one-click tiles each hold
+  their Add button moved from LeftPanel and one line on what it makes (planned for step 11, done
+  here so nothing was lost); the eight automation tiles all open the WHOLE Automation panel until
+  step 10 splits it. `shelfTool` replaced `sourceMode`; LeftPanel.tsx and SourceBar.tsx are deleted;
+  `TABS_FLOOR` became `SHELF_FLOOR`; the empty-canvas text says "or open Director and press Direct"
+  (step 10's line, done early because the Create tab it named is gone). Busy badges: a tile shows a
+  spinner from its tool's flags (URL only for a running or queued download, never for a failed one
+  left in `pendingIngests`). Census: the homes source / media / library / transcript / create
+  became 19 tool homes (names derived from the ids with digit-led words dropped — `props` for
+  `props-3d` — by `tests/renderer/censusHomes.test.ts`, after a hand-written table let a swapped
+  pair pass) plus `shelf` for the grid; `openHome` sets `shelfTool` through the store from the home
+  grid each time so local state resets; 652 → 687 rows, four labels replaced with successors
+  (Create, Import, Add files, YouTube); 679 checked, 0 missing. Verified in the harness: every tile
+  clicked by ref opens its panel without the boundary, Upload imports 4 then 8 assets, each Add
+  lands a clip under the playhead and the dock appears, Narration shows no "paid services". Known,
+  for step 10/11: three texts still say "Import" (Director.tsx "Import pictures or clips…",
+  Automation.tsx "Import some photos…", ExportStrip "Use Relink in the media pool"); navigation
+  tiles carry `aria-pressed="false"` and no `aria-busy`; the one-click panels' adder wiring and
+  Upload → `importAssets` are checked only in the harness (step 11's check covers them); a row filed
+  under the wrong automation home cannot be noticed until step 10 splits the panel. The
+  `shelfRegistry` order test pins the sketch's order as a whole list — a 20th tile will fail it on
+  purpose, and the test says so.
 
 ### Step 10 — Automation becomes one panel per tool
 - **Files:** new `components/tools/BeatSync.tsx` (`Automation.tsx:193-368`), `OnePhoto.tsx` (`370-422`
   + mirrored Motion/Transitions sliders and progress/Stop), `GridSplit.tsx` (`424-583`), `StripFlashes.tsx`
   (`585-722`), `FilmStrip.tsx` (`724-790`), `Props3d.tsx` (`792-878`), `tools/shared.ts` (`useMusicClip`
   from `131-138`, bake message `162-163`); Director tile mounts `Director`; `Automation.tsx` deleted;
-  `Preview.tsx:1715` text → "or open Director and press Direct".
+  `Preview.tsx:1715` text → "or open Director and press Direct" (already done in step 9). Also
+  from step 9's known list: the three "Import" texts (Director, Automation, ExportStrip) become
+  "Upload"; each tool home's rows are re-filed under the tile that now shows them.
 - **Tests:** new `tests/toolInterlocks.test.ts` — each tool file's build button keeps its guard
   (`reelBuilding || gridBuilding` in BeatSync and OnePhoto, `gridBuilding || reelBuilding` in GridSplit,
   `stripsBuilding || reelBuilding || gridBuilding` in StripFlashes). Mutation each: drop one flag → fails.

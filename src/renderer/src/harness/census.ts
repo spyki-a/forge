@@ -16,9 +16,10 @@ import { PROP_RULE } from '@shared/automation/apply'
 import { SANDWICH_RULE } from '@shared/automation/sandwich'
 import { SPINE_RULE } from '@shared/director/apply'
 import { TRAY_MIN, TRAY_RAIL } from '@shared/curveTray'
-import { useEditor } from '../store'
+import { useEditor, type ShelfToolId } from '../store'
 import { useCatalog } from '../catalog'
 import { usePacks } from '../packs'
+import { SHELF_TOOLS } from '../components/shelf/tools'
 
 /**
  * The UI census: is every control still on screen, in its own place?
@@ -86,8 +87,51 @@ import { usePacks } from '../packs'
 const MATCHES = ['text', 'title', 'aria-label', 'placeholder'] as const
 type Match = (typeof MATCHES)[number]
 
-/** Homes that need a left-panel tab opened, by the tab's label. */
-const LEFT_TABS = { media: 'Media', library: 'Library', transcript: 'Transcript', create: 'Create' } as const
+/**
+ * The Shelf's tools (step 9), each a home: the panel its tile opens, found as
+ * the open tool's `data-shelf-panel` — never its header, which names the tool
+ * in words some panels also use ("Grid split", "Director"). `openHome` opens
+ * it through the store, from the home grid. The step-8 homes they replace:
+ * `source` (the Upload / YouTube / Narration row), and the left panel's tabs
+ * `media`, `library`, `transcript` and `create`.
+ *
+ * A home's name is letters only (the fixture's rule, tests/uiCensus.test.ts),
+ * so a tool's home is its id's words run together, less any word that starts
+ * with a digit: `beat-sync` is `beatsync`, `props-3d` is `props`.
+ *
+ * DERIVED from the registry, never written out. The table was hand-written
+ * once, and a verifier swapped two of its pairs — director with beat-sync,
+ * text with grade — and every test passed: each home was still there, only
+ * opening the wrong tool. Between the eight automation tiles, which all open
+ * the same panel until step 10 splits it, nothing on screen would have said
+ * so either. tests/renderer/censusHomes.test.ts holds the rule.
+ */
+type Digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
+type HomeWord<Word extends string> = Word extends `${Digit}${string}` ? '' : Word
+/** The same rule as `toolHomeOf`, for the compiler: `'props-3d'` gives `'props'`. */
+type ToolHomeOf<Id extends string> = Id extends `${infer Word}-${infer Rest}`
+  ? `${HomeWord<Word>}${ToolHomeOf<Rest>}`
+  : HomeWord<Id>
+type ToolHome = ToolHomeOf<ShelfToolId>
+
+/** A tool's home: its id's words run together, less any that starts with a digit. */
+export function toolHomeOf(id: ShelfToolId): ToolHome {
+  return id
+    .split('-')
+    .filter((word) => !/^\d/.test(word))
+    .join('') as ToolHome
+}
+
+/** Each tool home, and the tool whose panel it is. */
+export const TOOL_HOMES = Object.fromEntries(SHELF_TOOLS.map((tool) => [toolHomeOf(tool.id), tool.id])) as Readonly<
+  Record<ToolHome, ShelfToolId>
+>
+/**
+ * The Shelf itself: its home grid of tiles, and an open tool's header (the
+ * way back) — the whole Shelf, in whatever face the scenario put it.
+ * `openHome` puts it on the home grid.
+ */
+const SHELF_HOME = 'shelf'
 /**
  * The Curve tray's three faces, each a home of its own: closed to its rail,
  * open on Keys, open on Curves. One element, but three places a person looks —
@@ -98,7 +142,7 @@ const LEFT_TABS = { media: 'Media', library: 'Library', transcript: 'Transcript'
 const TRAY_FACES = { rail: 'rail', keys: 'keys', curve: 'curves' } as const
 type TrayFace = (typeof TRAY_FACES)[keyof typeof TRAY_FACES]
 /**
- * The OUTPUT and EXPORT strips under the left panel (step 7), each a home in
+ * The OUTPUT and EXPORT strips under the Shelf (step 7), each a home in
  * two faces, as the tray is: open (`output`, `export`) — the body, the settings
  * themselves — and closed (`outputbar`, `exportbar`) — the header row, and what
  * a strip keeps in reach while shut: OUTPUT's one line, EXPORT's button and its
@@ -113,14 +157,14 @@ const STRIP_FACES = {
 } as const
 type StripFace = keyof typeof STRIP_FACES
 /**
- * Homes that are on screen whatever the left panel shows (the tray's and the
+ * Homes that are on screen whatever the Shelf shows (the tray's and the
  * strips' once put in that face). `dock` is the Trimmer dock (step 8: the
  * waveform and the clip editor that were the `waveform` and `inspector` homes),
  * which is on screen only while a clip is selected or a Library sound is being
  * auditioned — the scenario's own state shows it, so it needs no opening; with
  * neither it is not there at all, and `fresh()` checks that it is not.
  */
-const FIXED_HOMES = ['header', 'source', 'canvasbar', 'preview', 'toolbox', 'dock', 'rail', 'keys', 'curve', 'output', 'outputbar', 'export', 'exportbar', 'transport', 'timeline'] as const
+const FIXED_HOMES = ['header', 'canvasbar', 'preview', 'toolbox', 'dock', 'rail', 'keys', 'curve', 'output', 'outputbar', 'export', 'exportbar', 'transport', 'timeline'] as const
 /**
  * Overlays: counted only inside the one element that appeared when the scenario
  * opened it. `settings` is the panel under the header's gear (step 6), opened
@@ -128,8 +172,9 @@ const FIXED_HOMES = ['header', 'source', 'canvasbar', 'preview', 'toolbox', 'doc
  */
 const OVERLAY_HOMES = ['clipmenu', 'newproject', 'shortcuts', 'settings'] as const
 
-type Home = keyof typeof LEFT_TABS | (typeof FIXED_HOMES)[number] | (typeof OVERLAY_HOMES)[number]
-const HOMES: readonly string[] = [...Object.keys(LEFT_TABS), ...FIXED_HOMES, ...OVERLAY_HOMES]
+type Home = ToolHome | typeof SHELF_HOME | (typeof FIXED_HOMES)[number] | (typeof OVERLAY_HOMES)[number]
+/** Every home a row may name. Exported for tests/renderer/censusHomes.test.ts. */
+export const HOMES: readonly string[] = [...Object.keys(TOOL_HOMES), SHELF_HOME, ...FIXED_HOMES, ...OVERLAY_HOMES]
 const isOverlay = (home: string): boolean => (OVERLAY_HOMES as readonly string[]).includes(home)
 
 export interface CensusRow {
@@ -190,7 +235,29 @@ export interface CensusOptions {
   trace?: boolean
 }
 
+/**
+ * Every tool on the Shelf has a home of its own. The homes are derived from
+ * the registry, so none can be missing or stray; what a new tool's id can
+ * still do is run together into a home another tool already has (`beat-sync`
+ * beside a `beatsync`), into one that is not letters only (`3d-props` gives
+ * `props` — fine — but `3d` gives nothing), or into the name of a home that is
+ * not a tool's (`output`, `settings`) — and then its rows would be counted in
+ * the wrong place.
+ */
+function checkToolHomes(): void {
+  const homes = SHELF_TOOLS.map((tool) => toolHomeOf(tool.id))
+  const others: readonly string[] = [SHELF_HOME, ...FIXED_HOMES, ...OVERLAY_HOMES]
+  const shared = homes.filter((home, i) => homes.indexOf(home) !== i || others.includes(home))
+  const unlettered = homes.filter((home) => !/^[a-z]+$/.test(home))
+  if (shared.length > 0 || unlettered.length > 0 || Object.keys(TOOL_HOMES).length !== SHELF_TOOLS.length) {
+    throw new Error(
+      `census: the Shelf's tools do not each make a home of their own — shared [${shared.join(', ')}], not letters only [${unlettered.join(', ')}]; change the id or toolHomeOf`
+    )
+  }
+}
+
 function parseRows(): CensusRow[] {
+  checkToolHomes()
   let parsed: unknown
   try {
     parsed = JSON.parse(rowsText)
@@ -315,26 +382,27 @@ function panels(group: Element | null, n: number, what: string): Element[] {
 const positioned = (el: Element): string => getComputedStyle(el).position
 
 /**
- * The left column's holder (step 8): one vertical Group of the left panel and,
- * only while there is something to trim, the Trimmer dock under it.
+ * The left column's holder (step 8): one vertical Group of the Shelf (the left
+ * panel's tabs until step 9) and, only while there is something to trim, the
+ * Trimmer dock under it.
  *
  * Told apart by `data-dock` on the dock's root, never by its words. Anything
  * else throws: no Group, no panel or three, the dock first, a second panel
  * that is not the dock, or a `data-dock` anywhere but here — a dock drawn
  * outside its home would be counted in none.
  */
-function leftSplit(holder: Element): { leftPanel: Element; dock: Element | null } {
-  const [group] = childrenOf(holder, 1, 'the left panel’s holder')
+function leftSplit(holder: Element): { shelf: Element; dock: Element | null } {
+  const [group] = childrenOf(holder, 1, 'the left column’s holder')
   if (!group.matches('[data-group]')) {
-    throw new Error('census: the left panel’s holder holds no panel group — the layout changed; update homeRoots')
+    throw new Error('census: the left column’s holder holds no panel group — the layout changed; update homeRoots')
   }
   const n = group.querySelectorAll(':scope > [data-panel]').length
   if (n !== 1 && n !== 2) {
-    throw new Error(`census: expected the tabs, and the dock under them at most, in the left column; found ${n} panels — the layout changed; update homeRoots`)
+    throw new Error(`census: expected the Shelf, and the dock under it at most, in the left column; found ${n} panels — the layout changed; update homeRoots`)
   }
-  const [leftPanel, dock = null] = panels(group, n, 'the left column’s split')
-  if (leftPanel.matches('[data-dock]')) {
-    throw new Error('census: the left column’s first panel is the Trimmer dock, not the tabs — the layout changed; update homeRoots')
+  const [shelf, dock = null] = panels(group, n, 'the left column’s split')
+  if (shelf.matches('[data-dock]')) {
+    throw new Error('census: the left column’s first panel is the Trimmer dock, not the Shelf — the layout changed; update homeRoots')
   }
   if (dock && !dock.matches('[data-dock]')) {
     throw new Error('census: the left column’s second panel is not the Trimmer dock — the layout changed; update homeRoots')
@@ -343,7 +411,41 @@ function leftSplit(holder: Element): { leftPanel: Element; dock: Element | null 
   if (docks !== (dock ? 1 : 0)) {
     throw new Error(`census: ${docks} [data-dock] on the page and ${dock ? 'one' : 'none'} in the left column — the layout changed; update homeRoots`)
   }
-  return { leftPanel, dock }
+  return { shelf, dock }
+}
+
+/**
+ * What the Shelf is showing, by what it says: `data-shelf-tool` on its root is
+ * "home" (the grid, one child) or the open tool's id (two children: the
+ * header, then the panel, which carries `data-shelf-panel`). Never by its
+ * words — the tiles' labels and the panels' controls are what is counted.
+ * Anything else throws, and so does a second Shelf or a panel outside this
+ * one: either would be counted in no home.
+ */
+function shelfFace(shelf: Element): { showing: string; panel: Element | null } {
+  const showing = shelf.getAttribute('data-shelf-tool')
+  if (!showing) {
+    throw new Error('census: the left column’s first panel is not the Shelf (no data-shelf-tool on it) — the layout changed; update homeRoots')
+  }
+  if (document.querySelectorAll('[data-shelf-tool]').length !== 1) {
+    throw new Error(`census: ${document.querySelectorAll('[data-shelf-tool]').length} [data-shelf-tool] on the page — expected the one Shelf; update homeRoots`)
+  }
+  const panelsOnPage = document.querySelectorAll('[data-shelf-panel]').length
+  if (showing === 'home') {
+    const [grid] = childrenOf(shelf, 1, 'the Shelf’s home grid')
+    if (panelsOnPage !== 0 || grid.matches('[data-shelf-panel]')) {
+      throw new Error('census: the Shelf says it shows its home grid and a tool’s panel is on the page — the layout changed; update homeRoots')
+    }
+    return { showing, panel: null }
+  }
+  if (!SHELF_TOOLS.some((tool) => tool.id === showing)) {
+    throw new Error(`census: the Shelf says it shows ${JSON.stringify(showing)}, which is no tool in shelf/tools.ts`)
+  }
+  const [head, panel] = childrenOf(shelf, 2, `the Shelf open on ${showing}`)
+  if (head.matches('[data-shelf-panel]') || !panel.matches('[data-shelf-panel]') || panelsOnPage !== 1) {
+    throw new Error(`census: the Shelf open on ${showing} is not [header, panel] — the layout changed; update homeRoots`)
+  }
+  return { showing, panel }
 }
 
 /**
@@ -352,27 +454,28 @@ function leftSplit(holder: Element): { leftPanel: Element; dock: Element | null 
  * this, and a finder that no longer recognises the layout throws.
  *
  *   header · [ left column | right column ], both the full height under the header
- *   left = source row / [ holder [ tabs panel | Trimmer dock panel ] / OUTPUT strip / EXPORT strip ]
+ *   left = holder [ Shelf panel | Trimmer dock panel ] / OUTPUT strip / EXPORT strip
  *     (step 7: the two strips under the holder, each told apart by its
  *     `data-strip`; `openHome` puts a strip in the face asked for. Step 8:
  *     the Inspector's column is gone; the holder is a vertical Group of the
- *     left panel — [ tab strip · tab content ] — and, only while there is
- *     something to trim, the dock, told apart by its `data-dock`; and the left
- *     column runs full height with the source row at its head, where the row
- *     ran across the whole window before)
+ *     left panel and, only while there is something to trim, the dock, told
+ *     apart by its `data-dock`; the left column runs full height. Step 9: the
+ *     left panel is the Shelf — its home grid, or an open tool's header over
+ *     its panel (`shelfFace`) — and the source row that headed the column is
+ *     three of its tiles, so nothing sits above the holder)
  *   right = centre / [ transport + timeline | curve tray ]
  *   centre = canvas bar / [ toolbox + preview ]   (step 4: the bar over the picture row)
  *   curve tray = the lower row's second panel, whatever its width: a 28 px
  *     rail when closed, a few hundred px open (step 5). The rail, Keys and
  *     Curves homes are all its root; `openHome` puts it in the right face.
  */
-function layout(): Record<Exclude<Home, (typeof OVERLAY_HOMES)[number]> | 'tabs' | 'leftContent', Element[]> {
+function layout(): Record<Exclude<Home, (typeof OVERLAY_HOMES)[number]>, Element[]> {
   const header = only(document.querySelectorAll('#root .drag-region'), 'header (.drag-region)')
   const app = header.parentElement
   if (!app) throw new Error('census: the header has no parent')
   const group = only(app.querySelectorAll(':scope > [data-group]'), 'panel group under the header')
   if (group.previousElementSibling !== header) {
-    throw new Error('census: something sits between the header and the panels — the source row heads the left column since step 8; update homeRoots')
+    throw new Error('census: something sits between the header and the panels — nothing has since step 8; update homeRoots')
   }
 
   // The header's home: the bar, and what sits above it in the app's own flow — the
@@ -392,21 +495,25 @@ function layout(): Record<Exclude<Home, (typeof OVERLAY_HOMES)[number]> | 'tabs'
   if (!(Object.values(TRAY_FACES) as string[]).includes(tray.getAttribute('data-curve-tray') ?? '')) {
     throw new Error('census: the lower row’s second panel is not the Curve tray — the layout changed; update homeRoots')
   }
-  // The left column: the source row, then the column it heads — the left
-  // panel's holder, then OUTPUT, then EXPORT. By what each strip says it is,
-  // never by its words — those are being counted.
-  const [source, column] = childrenOf(left, 2, 'the left column')
-  if (source.matches('[data-strip], [data-group]') || source.querySelector('[data-strip], [data-group], [data-dock]')) {
-    throw new Error('census: the left column’s first part is not the source row — the layout changed; update homeRoots')
-  }
-  const [holder, output, exporting] = childrenOf(column, 3, 'the left column under the source row')
+  // The left column: the Shelf's and the dock's holder, then OUTPUT, then
+  // EXPORT, and nothing above them. By what each strip says it is, never by
+  // its words — those are being counted.
+  const [holder, output, exporting] = childrenOf(left, 3, 'the left column')
   for (const [strip, id] of [[output, 'output'], [exporting, 'export']] as const) {
     if (strip.getAttribute('data-strip') !== id) {
       throw new Error(`census: the left column has no ${id.toUpperCase()} strip where it should be — the layout changed; update homeRoots`)
     }
   }
-  const { leftPanel, dock } = leftSplit(holder)
-  const [tabs, leftContent] = childrenOf(leftPanel, 2, 'the left panel')
+  const { shelf, dock } = leftSplit(holder)
+  const face = shelfFace(shelf)
+  // A tool's home is its panel while that tool is the one open, and nowhere
+  // otherwise: a row counted in a tool that is not open is absent.
+  const tools = Object.fromEntries(
+    (Object.entries(TOOL_HOMES) as [ToolHome, ShelfToolId][]).map(([home, id]) => [
+      home,
+      face.showing === id && face.panel ? [face.panel] : []
+    ])
+  ) as Record<ToolHome, Element[]>
   // The centre column: the canvas bar, then the picture row under it. By
   // position, never by the bar's words — those are what is being counted.
   const [canvasbar, pictureRow] = childrenOf(middle, 2, 'the centre column')
@@ -418,13 +525,8 @@ function layout(): Record<Exclude<Home, (typeof OVERLAY_HOMES)[number]> | 'tabs'
 
   return {
     header: chrome,
-    source: [source],
-    tabs: [tabs],
-    leftContent: [leftContent],
-    media: [tabs, leftContent],
-    library: [tabs, leftContent],
-    transcript: [tabs, leftContent],
-    create: [tabs, leftContent],
+    shelf: [shelf],
+    ...tools,
     // Not on screen: no roots, so a row counted here is "absent — its home is not on screen".
     dock: dock ? [dock] : [],
     canvasbar: [canvasbar],
@@ -656,11 +758,20 @@ async function click(button: HTMLElement): Promise<void> {
   await frames()
 }
 
-/** A left-panel tab, found in the tab strip only — a Library chip or a header could carry the same word. */
-async function leftTab(label: string): Promise<void> {
-  const tab = [...layout().tabs[0].querySelectorAll('button')].find((b) => (b.textContent ?? '').trim() === label)
-  if (!tab) throw new Error(`census: no ${label} tab in the left panel`)
-  await click(tab)
+/**
+ * Put the Shelf on its home grid (null) or open one tool, through the store as
+ * a tile and the ← button do, and wait for the Shelf to say it shows it.
+ */
+async function shelfShows(tool: ShelfToolId | null): Promise<void> {
+  editor().setShelfTool(tool)
+  const want = tool ?? 'home'
+  const deadline = performance.now() + 2000
+  for (;;) {
+    await frames()
+    const says = layout().shelf[0].getAttribute('data-shelf-tool')
+    if (says === want) return
+    if (performance.now() > deadline) throw new Error(`census: the Shelf was asked for ${want} and shows ${says}`)
+  }
 }
 
 async function escape(): Promise<void> {
@@ -669,19 +780,20 @@ async function escape(): Promise<void> {
 }
 
 /**
- * Open a home, from a different tab first.
+ * Open a home. A Shelf tool is opened from the home grid, never straight from
+ * another tool or from itself.
  *
- * Switching tabs unmounts the panel, which is the only way to reset its local
- * state (the Library's drawer, Director's More) — so the same tab is never
- * clicked twice in a row and left to keep whatever the last scenario did.
+ * Going home unmounts the open panel, which is the only way to reset its local
+ * state (the Library's drawer, Director's More) — so a tool is never left open
+ * from one scenario to the next to keep whatever the last one did.
  */
 async function openHome(home: Home): Promise<void> {
   if (home in TRAY_FACES) return trayShows(TRAY_FACES[home as keyof typeof TRAY_FACES])
   if (home in STRIP_FACES) return stripShows(home as StripFace)
-  if (!(home in LEFT_TABS)) return
-  const label = LEFT_TABS[home as keyof typeof LEFT_TABS]
-  await leftTab(label === 'Media' ? 'Library' : 'Media')
-  await leftTab(label)
+  if (home === SHELF_HOME) return shelfShows(null)
+  if (!(home in TOOL_HOMES)) return
+  await shelfShows(null)
+  await shelfShows(TOOL_HOMES[home as ToolHome])
 }
 
 /**
@@ -985,6 +1097,17 @@ function stickers(n: number): CatalogEntry[] {
   }))
 }
 
+function transitions(n: number): CatalogEntry[] {
+  return Array.from({ length: n }, (_, i) => ({
+    id: `census-transition-${i}`,
+    kind: 'transition' as const,
+    name: `census transition ${i}`,
+    file: `transitions/census-${i}.png`,
+    tags: [],
+    meta: { maskType: 'image', group: 'census' } as CatalogEntry['meta']
+  }))
+}
+
 function sfx(n: number): CatalogEntry[] {
   return Array.from({ length: n }, (_, i) => ({
     id: `census-sfx-${i}`,
@@ -1015,8 +1138,8 @@ function packsAre(patch: Partial<ReturnType<typeof usePacks.getState>>): void {
   usePacks.setState({ loaded: true, loading: false, error: null, inFlight: new Map(), failed: new Map(), ...patch })
 }
 
+/** The URL tile's form, as the store holds it; opening the `url` home shows it. */
 async function youtube(patch: Parameters<ReturnType<typeof useEditor.getState>['setIngest']>[0]): Promise<void> {
-  editor().setSourceMode('youtube')
   editor().setIngest(patch)
 }
 
@@ -1474,7 +1597,7 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     close: escape
   }),
 
-  /* ---- the left panel */
+  /* ---- the Shelf's tools */
   'offline-asset': async (env) => {
     const m = await media(env)
     editor().update((p) => ({
@@ -1483,11 +1606,16 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     }))
     return {}
   },
+  /*
+   * Something dragged over the Upload tile. The drop zone is the pool's own
+   * root (MediaPool.tsx), found by structure — the first element in the open
+   * tool's panel — never by the Upload button's words, which are counted.
+   */
   'pool-dragover': async () => {
-    const pool = (): HTMLElement => {
-      const importButton = buttonByText((t) => t === 'Import', 'the Media pool Import')
-      const root = importButton.parentElement?.parentElement
-      if (!root) throw new Error('census: the Media pool has no drop zone around Import')
+    const pool = (): Element => {
+      const [panel] = homeRoots('upload')
+      const root = panel?.firstElementChild
+      if (!root) throw new Error('census: the Upload tile shows no pool to drag over')
       return root
     }
     return {
@@ -1501,18 +1629,32 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
       }
     }
   },
+  /*
+   * More than one page (Library PAGE = 120) and two categories, for the chips
+   * and "Loading more". Nothing is clicked: the Library opens on Stickers by
+   * itself (the user, WINDOW.md §7.6), and these rows are how that is checked —
+   * on any other drawer they are not there.
+   */
   'library-stickers': async () => {
-    // More than one page (Library PAGE = 120) and two categories, for the chips and "Loading more".
     catalogWith(stickers(130))
-    return { show: async () => click(buttonByText((t) => t.startsWith('Stickers'), 'the Stickers chip')) }
+    return {}
   },
   'library-sfx': async () => {
     catalogWith(sfx(3))
     return { show: async () => click(buttonByText((t) => t.startsWith('SFX'), 'the SFX chip')) }
   },
-  /* a library with stickers in it, open on Fonts: an empty DRAWER, which has its own way to get more */
+  /* a library with sounds in it, open on Stickers: an empty DRAWER, which has its own way to get more */
   'library-empty-drawer': async () => {
-    catalogWith(stickers(3))
+    catalogWith(sfx(3))
+    return {}
+  },
+  /*
+   * One transition in the library: the Transitions tile opens the Library on
+   * its Transitions drawer, where it shows — the Library tile, on Stickers,
+   * would show "Nothing here." instead.
+   */
+  'library-transitions': async () => {
+    catalogWith(transitions(1))
     return {}
   },
   /* one pack in each state the list can show a button for */
@@ -1555,7 +1697,7 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     if (!editor().audition) throw new Error('census: clicking a Library sound did not audition it')
     return {
       close: async () => {
-        await leftTab('Media')
+        await shelfShows(null)
         await noDock()
       }
     }
@@ -1573,17 +1715,17 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     return {}
   },
   'ingest-running': async () => {
-    editor().setSourceMode('youtube')
     useEditor.setState({
       jobs: [job('census-dl', 'ingest', 'running', 0.2)],
       pendingIngests: { 'census-dl': { projectPath: null } }
     })
     return {}
   },
-  'narration-mode': async () => {
-    editor().setSourceMode('narration')
-    return {}
-  },
+  /* a tool open on the Shelf, for its header: the way back to the tiles */
+  'shelf-tool-open': async () => ({
+    show: async () => shelfShows('upload'),
+    close: async () => shelfShows(null)
+  }),
   'director-more': async () => ({
     show: async () =>
       click(buttonByText((t) => t.toLowerCase().startsWith('more'), 'the Director More button'))
@@ -1790,7 +1932,9 @@ export async function runCensus(options: CensusOptions = {}): Promise<CensusResu
     editor().setSettingsOpen(false)
     editor().newProject()
     await frames()
-    await leftTab('Media')
+    // The Shelf on its tiles: whatever tool the last scenario opened is shut,
+    // the Library among them, which ends any audition (Library.tsx).
+    await shelfShows(null)
     await curveOnMotion()
     // Nothing selected and the Library shut: no dock (the successor of "No clip selected").
     await noDock()

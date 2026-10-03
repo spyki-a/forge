@@ -1,5 +1,5 @@
 import { type ButtonHTMLAttributes, type ReactNode } from 'react'
-import type { LucideIcon } from 'lucide-react'
+import { Loader2, type LucideIcon } from 'lucide-react'
 
 /**
  * The tool tile and the big button — the only raised things in the window.
@@ -89,6 +89,23 @@ function Glyph({
   )
 }
 
+/** The tooltip of a tile's busy badge (`busy`). */
+export const BUSY_TITLE = 'Working on it'
+
+/**
+ * A tile's two sizes. `sm` is the Shelf's home grid (shelf/Shelf.tsx): three
+ * tiles to a row in the 240 px column are about 62 px square, and at the
+ * default size the sketch's longer names — "Beat sync / Cut to words",
+ * "Newspaper clipping" — would be cut off, so the small one has less padding,
+ * a smaller label and room for a third line. A size rather than classes passed
+ * in, for BigButton's reason: two paddings on one element are settled by the
+ * stylesheet's order, not the class string's.
+ */
+const TILE_SIZE = {
+  md: { box: 'gap-1 p-1.5', icon: 18, label: 'line-clamp-2 text-[10.5px] leading-tight' },
+  sm: { box: 'gap-0.5 p-1', icon: 16, label: 'line-clamp-3 text-[9.5px] leading-[1.15]' }
+} as const
+
 export interface TileProps extends ButtonProps {
   icon: LucideIcon
   /** The glyph to show while pressed. Without it, the icon is drawn heavier with a dot. */
@@ -96,6 +113,15 @@ export interface TileProps extends ButtonProps {
   label: string
   /** A tile is a toggle (its tool open or not), so it always says which. */
   pressed?: boolean
+  /** A second, smaller line under the label: "soon" on a tool that is not built yet. */
+  note?: string
+  /**
+   * Something is under way in this tool — a build, a download, a transcription:
+   * a small spinning badge in the top-left corner, with its own tooltip, so a
+   * run started inside a tool stays visible from the grid.
+   */
+  busy?: boolean
+  size?: 'md' | 'sm'
 }
 
 export function Tile({
@@ -103,20 +129,30 @@ export function Tile({
   pressedIcon,
   label,
   pressed = false,
+  note,
+  busy = false,
+  size = 'md',
   className = '',
   type = 'button',
   ...rest
 }: TileProps): ReactNode {
   const look = pressed ? TILE_LOOK.pressed : TILE_LOOK.idle
+  const measure = TILE_SIZE[size]
   return (
     <button
       {...rest}
       type={type}
       aria-pressed={pressed}
-      className={`group relative flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-xl p-1.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none ${look.surface} ${className}`}
+      className={`group relative flex aspect-square w-full flex-col items-center justify-center rounded-xl ${measure.box} disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none ${look.surface} ${className}`}
     >
-      <Glyph icon={icon} pressedIcon={pressedIcon} pressed={pressed} size={18} className={look.icon} />
-      <span className={`line-clamp-2 text-center text-[10.5px] font-medium leading-tight ${look.label}`}>{label}</span>
+      <Glyph icon={icon} pressedIcon={pressedIcon} pressed={pressed} size={measure.icon} className={look.icon} />
+      <span className={`text-center font-medium ${measure.label} ${look.label}`}>{label}</span>
+      {note && <span className="text-[9px] leading-none text-ink-600">{note}</span>}
+      {busy && (
+        <span data-busy-badge title={BUSY_TITLE} className="absolute left-1 top-1 text-accent-400">
+          <Loader2 size={10} strokeWidth={2.25} className="animate-spin" aria-hidden />
+        </span>
+      )}
     </button>
   )
 }

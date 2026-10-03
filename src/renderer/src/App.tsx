@@ -9,8 +9,8 @@ import { useEditor } from './store'
 import { useCatalog } from './catalog'
 import { activeCaptionStyle } from './captionPreview'
 import { stopVoiceOver } from './recorder'
-import { DOCK_FLOOR, TABS_FLOOR, dockSubject, holderFloor } from './dock'
-import { LeftPanel } from './components/LeftPanel'
+import { DOCK_FLOOR, SHELF_FLOOR, dockSubject, holderFloor } from './dock'
+import { Shelf } from './components/shelf/Shelf'
 import { Preview } from './components/Preview'
 import { Timeline } from './components/Timeline'
 import { Transport } from './components/Transport'
@@ -19,7 +19,6 @@ import { Toolbox } from './components/Toolbox'
 import { CanvasBar } from './components/CanvasBar'
 import { Shortcuts } from './components/Shortcuts'
 import { NewProject } from './components/NewProject'
-import { SourceBar } from './components/SourceBar'
 import { CurveTray, useTrayPanel } from './components/CurveTray'
 import { SettingsPanel, helperState } from './components/SettingsPanel'
 import { OutputStrip } from './components/OutputStrip'
@@ -114,9 +113,10 @@ function Header(): ReactNode {
 }
 
 /**
- * The top of the left column: the tabs, and under them the Trimmer dock while
- * there is something to trim (WINDOW.md §3.18) — two panels of one vertical
- * Group, so the split between them can be dragged.
+ * The top of the left column: the Shelf (its tiles, or the tool one of them
+ * opened — WINDOW.md §3.2), and under it the Trimmer dock while there is
+ * something to trim (§3.18) — two panels of one vertical Group, so the split
+ * between them can be dragged.
  *
  * A component of its own so that selecting a first clip, or letting go of the
  * last, re-renders this and not the whole window: App renders the Preview, and
@@ -125,9 +125,9 @@ function Header(): ReactNode {
  * show (a selected clip that exists, or a Library sound being auditioned).
  * Both panels carry an id because the library remembers a layout per SET of
  * panel ids: the split dragged with the dock open comes back when it reopens,
- * and with it shut the tabs have the whole height, never a split left over.
+ * and with it shut the Shelf has the whole height, never a split left over.
  *
- * Clipped, with a min-height that keeps the tabs — and the dock, when it is
+ * Clipped, with a min-height that keeps the Shelf — and the dock, when it is
  * there — their floors against an open OUTPUT or EXPORT strip, as long as the
  * strips' two headers still fit (dock.ts; tests/windowStrips.test.ts).
  */
@@ -136,8 +136,8 @@ function LeftSplit(): ReactNode {
   return (
     <div className="flex-1 overflow-hidden" style={{ minHeight: holderFloor(subject !== null) }}>
       <Group orientation="vertical">
-        <Panel id="left-tabs" defaultSize="45%" minSize={TABS_FLOOR}>
-          <LeftPanel />
+        <Panel id="left-shelf" defaultSize="45%" minSize={SHELF_FLOOR}>
+          <Shelf />
         </Panel>
         {subject && (
           <>
@@ -610,27 +610,21 @@ export default function App(): ReactNode {
         */}
         <Panel defaultSize="17%" minSize={240} maxSize="30%">
           {/*
-            Where material comes from (SourceBar) heads the column it fills:
-            over the left column only, so the picture and the timeline have
-            the window's whole height under the header.
+            The Shelf with the Trimmer dock under it (LeftSplit), then the
+            OUTPUT and EXPORT strips (WINDOW.md §3.16-3.17), at the foot of
+            the column. Where material comes from is three of the Shelf's
+            tiles now (Upload, URL, Narration), so nothing heads the column
+            any more. Both strips are rendered unconditionally — closing one
+            hides its body by class — because EXPORT holds the export flow and
+            the File › Export listener, which must run with the strip shut
+            (tests/windowStrips.test.ts). An open strip takes what the Shelf
+            and the dock leave, and its body scrolls; they do not give way to
+            it (dock.ts holderFloor).
           */}
           <div className="flex h-full flex-col">
-            <SourceBar />
-            {/*
-              The tabs with the Trimmer dock under them (LeftSplit), then the
-              OUTPUT and EXPORT strips (WINDOW.md §3.16-3.17), at the foot of
-              the column. Both strips are rendered unconditionally — closing
-              one hides its body by class — because EXPORT holds the export
-              flow and the File › Export listener, which must run with the
-              strip shut (tests/windowStrips.test.ts). An open strip takes what
-              the tabs and the dock leave, and its body scrolls; they do not
-              give way to it (dock.ts holderFloor).
-            */}
-            <div className="flex min-h-0 flex-1 flex-col">
-              <LeftSplit />
-              <OutputStrip />
-              <ExportStrip />
-            </div>
+            <LeftSplit />
+            <OutputStrip />
+            <ExportStrip />
           </div>
         </Panel>
         <Divider />

@@ -22,7 +22,17 @@ const KINDS: { id: AssetKind; label: string }[] = [
 /** Rendered at once; more load as the grid is scrolled. */
 const PAGE = 120
 
-export function Library(): ReactNode {
+/**
+ * The asset library: fonts, props, stickers, transitions, titles and sounds,
+ * and the packs that bring more.
+ *
+ * It opens on Stickers (the user, WINDOW.md §7.6): it used to open on Fonts,
+ * the one drawer where nothing can be clicked or dragged, which as a Shelf
+ * tile reads as broken. `initialKind` opens it on another drawer — the
+ * Transitions tile opens it on Transitions (shelf/panels.tsx). Read once, on
+ * mount: the chips own the drawer after that.
+ */
+export function Library({ initialKind = 'sticker' }: { initialKind?: AssetKind } = {}): ReactNode {
   const catalog = useCatalog((s) => s.catalog)
   const root = useCatalog((s) => s.root)
   const loading = useCatalog((s) => s.loading)
@@ -34,7 +44,7 @@ export function Library(): ReactNode {
 
   const audition = useEditor((s) => s.audition)
   const setAudition = useEditor((s) => s.setAudition)
-  const [kind, setKind] = useState<AssetKind>('font')
+  const [kind, setKind] = useState<AssetKind>(initialKind)
   const [query, setQuery] = useState('')
   const [limit, setLimit] = useState(PAGE)
   const [category, setCategory] = useState<string | null>(null)

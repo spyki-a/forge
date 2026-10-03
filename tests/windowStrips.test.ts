@@ -6,7 +6,7 @@ import { emptyProject } from '@shared/timeline'
 import { outputSummary } from '@shared/project/outputSummary'
 import { exportHeadline } from '@shared/render/exportHeadline'
 import type { Job } from '@shared/types'
-import { DOCK_FLOOR, TABS_FLOOR, holderFloor } from '../src/renderer/src/dock'
+import { DOCK_FLOOR, SHELF_FLOOR, holderFloor } from '../src/renderer/src/dock'
 
 /**
  * OUTPUT and EXPORT, the two strips under the left panel (docs/WINDOW.md §3.16,
@@ -103,22 +103,23 @@ describe('App renders both strips, always', () => {
     }
   })
 
-  it('stacks them under the left panel, OUTPUT over EXPORT, in one column', () => {
-    const [left] = mounts(app, 'LeftPanel')
+  it('stacks them under the Shelf, OUTPUT over EXPORT, in one column', () => {
+    // The left panel was the tabs (LeftPanel) until step 9; it is the Shelf.
+    const [left] = mounts(app, 'Shelf')
     const [output] = mounts(app, 'OutputStrip')
     const [exporting] = mounts(app, 'ExportStrip')
     expect(left && output && exporting).toBeTruthy()
-    // The two strips are siblings, and the left panel's holder is the one before them.
+    // The two strips are siblings, and the Shelf's holder is the one before them.
     expect(output.parent).toBe(exporting.parent)
     const column = output.parent as ts.JsxElement
     const kids = column.children.filter((c) => ts.isJsxElement(c) || ts.isJsxSelfClosingElement(c))
     expect(kids).toHaveLength(3)
     expect(kids[1]).toBe(output)
     expect(kids[2]).toBe(exporting)
-    // Since step 8 the holder is LeftSplit's root (the tabs and the Trimmer
-    // dock share it), a component of App.tsx so that the dock coming and going
-    // does not re-render the window: the first child is that component, and
-    // what it returns is the holder the left panel is in.
+    // Since step 8 the holder is LeftSplit's root (the Shelf — the tabs until
+    // step 9 — and the Trimmer dock share it), a component of App.tsx so that
+    // the dock coming and going does not re-render the window: the first child
+    // is that component, and what it returns is the holder the Shelf is in.
     const holder = leftHolder(app)
     const first = kids[0]
     if (first !== holder) {
@@ -131,12 +132,12 @@ describe('App renders both strips, always', () => {
 })
 
 /**
- * The element the left panel's Group sits in: the holder the tabs and the
- * Trimmer dock share, over the strips (step 8; before it, the LeftPanel's own
- * holder).
+ * The element the Shelf's Group sits in: the holder the Shelf and the Trimmer
+ * dock share, over the strips (step 8, with the tabs where the Shelf is since
+ * step 9; before step 8, the LeftPanel's own holder).
  */
 function leftHolder(app: ts.SourceFile): ts.JsxElement {
-  const [left] = mounts(app, 'LeftPanel')
+  const [left] = mounts(app, 'Shelf')
   expect(left).toBeDefined()
   let group: ts.Node | undefined = left.parent
   while (group && !(ts.isJsxElement(group) && opening(group).tagName.getText(app) === 'Group')) group = group.parent
@@ -163,6 +164,8 @@ describe('an open strip never squeezes the tabs or the Trimmer dock below their 
    * and the holder's min-height keeps the column's room for the panels it is
    * showing before an open strip gets any, as long as both strip headers fit.
    * The floors live in dock.ts so the panels and the holder cannot disagree.
+   * Step 9 put the Shelf where the tabs were, on the same floor: an open
+   * tool's 28 px header where the 31.5 px tab row was, and 120 px of its panel.
    *
    * The holder's floor is CSS arithmetic (min, max, %, px, rem), evaluated
    * here against column heights the harness measured — in step 7, 375 px at
@@ -172,7 +175,7 @@ describe('an open strip never squeezes the tabs or the Trimmer dock below their 
    * that loses it does not. If the floor moves off the holder's min-height
    * into another mechanism, move this test with it.
    */
-  const TABS = 31.5 // the tab row, measured
+  const SHELF_HEADER = 28 // an open tool's header row (shelf/Shelf.tsx `h-7`, pinned below)
   const WAVEFORM = 112 // the waveform's `h-28` box, in the dock now
   const DOCK_HEADER = 28 // the dock's header row (TrimmerDock.tsx `h-7`)
   const HEADERS = 56 // two closed strips, 28 px each (ui/Strip.tsx `h-7`)
@@ -209,12 +212,14 @@ describe('an open strip never squeezes the tabs or the Trimmer dock below their 
   /** The holder's min-height, as a function of the column's height, with and without the dock. */
   const holderFloorAt = (dock: boolean): ((column: number) => number) => cssLength(holderFloor(dock))
 
-  it('gives the tabs and the dock their floors as minimum sizes, in pixels', () => {
+  it('gives the Shelf and the dock their floors as minimum sizes, in pixels', () => {
     // Numbers are pixels in react-resizable-panels 4.x; a string would be percent.
-    expect(attribute(panelAround('LeftPanel'), 'minSize')).toBe('{TABS_FLOOR}')
+    expect(attribute(panelAround('Shelf'), 'minSize')).toBe('{SHELF_FLOOR}')
     expect(attribute(panelAround('TrimmerDock'), 'minSize')).toBe('{DOCK_FLOOR}')
-    // ~120 px of tab content under the tab row; ~120 px of editor under the dock's header and the waveform.
-    expect(TABS_FLOOR - TABS, 'tab content at the tabs’ floor').toBeGreaterThanOrEqual(120)
+    // The header the floor is reckoned with: `h-7`, once, on an open tool's header row.
+    expect([...source('src/renderer/src/components/shelf/Shelf.tsx').matchAll(/className="flex h-7 shrink-0 items-center/g)]).toHaveLength(1)
+    // ~120 px of a tool's panel under its header; ~120 px of editor under the dock's header and the waveform.
+    expect(SHELF_FLOOR - SHELF_HEADER, 'panel at the Shelf’s floor').toBeGreaterThanOrEqual(120)
     expect(DOCK_FLOOR - DOCK_HEADER - WAVEFORM, 'editor at the dock’s floor').toBeGreaterThanOrEqual(120)
   })
 
@@ -232,17 +237,17 @@ describe('an open strip never squeezes the tabs or the Trimmer dock below their 
     expect(attribute(holder, 'className') ?? '').not.toMatch(/\bmin-h-/)
   })
 
-  it('keeps the tabs ~120 px of content with no dock, at every measured column', () => {
+  it('keeps the Shelf ~120 px of panel with no dock, at every measured column', () => {
     const floor = holderFloorAt(false)
     // Step 7's 1100×680 and 1400×900 columns, step 8's, and a tall one.
     for (const column of [320, 375.4, 511.8, 578, 798, 1000]) {
-      expect(floor(column) - TABS, `tab content in a ${column} px column`).toBeGreaterThanOrEqual(120)
+      expect(floor(column) - SHELF_HEADER, `panel in a ${column} px column`).toBeGreaterThanOrEqual(120)
     }
   })
 
-  it('keeps the tabs AND the dock their floors with the dock open, wherever the column has the room', () => {
+  it('keeps the Shelf AND the dock their floors with the dock open, wherever the column has the room', () => {
     const floor = holderFloorAt(true)
-    const both = TABS_FLOOR + DIVIDER + DOCK_FLOOR
+    const both = SHELF_FLOOR + DIVIDER + DOCK_FLOOR
     // In step 8's full-height column there is room for both, and both strip
     // headers, from the 1100×680 minimum window up (578 px there, 798 px at
     // 1400×900); in step 7's, only from 1400×900 (511.8).
@@ -265,24 +270,37 @@ describe('an open strip never squeezes the tabs or the Trimmer dock below their 
     }
   })
 
-  it('clips: the holder, and the panel’s tab-content box', () => {
+  it('clips: the holder, and the Shelf’s two boxes — an open tool’s panel, and the home grid', () => {
     expect((attribute(leftHolder(app), 'className') ?? '').replace(/^"|"$/g, '').split(/\s+/)).toContain('overflow-hidden')
-    // The box under the tab row, the one the tabs are drawn in: what is under
-    // it now is the Trimmer dock, or the strips.
-    const panel = parse('src/renderer/src/components/LeftPanel.tsx')
-    const boxes: string[] = []
+    /*
+     * The boxes the Shelf draws in, under which are the Trimmer dock or the
+     * strips: the one an open tool's panel is in (it was LeftPanel's tab-content
+     * box until step 9), and the home grid's. Each clips, or scrolls, so a
+     * panel squeezed shorter than its own rows is cut at its edge rather than
+     * drawn over the dock.
+     */
+    const path = 'src/renderer/src/components/shelf/Shelf.tsx'
+    const shelf = parse(path)
+    const classOf = (node: ts.JsxElement | ts.JsxSelfClosingElement): string =>
+      opening(node).attributes.properties.find(
+        (p): p is ts.JsxAttribute => ts.isJsxAttribute(p) && p.name.getText(shelf) === 'className'
+      )?.initializer?.getText(shelf) ?? ''
+    const CLIPS = /\boverflow-(?:hidden|clip|auto|y-auto|y-hidden|y-clip)\b/
+    // The element the panel's boundary sits straight in.
+    const boundaries = mounts(shelf, 'ErrorBoundary')
+    expect(boundaries).toHaveLength(1)
+    const box = boundaries[0].parent
+    expect(ts.isJsxElement(box), 'the boundary sits in an element').toBe(true)
+    expect(classOf(box as ts.JsxElement)).toMatch(CLIPS)
+    // The home grid's root: the element that says it is the home.
+    const homes: string[] = []
     const visit = (node: ts.Node): void => {
-      if (ts.isJsxElement(node) && node.children.some((c) => ts.isJsxExpression(c) && /^\{tab === 'media' &&/.test(c.getText(panel)))) {
-        const cls = opening(node).attributes.properties.find(
-          (p): p is ts.JsxAttribute => ts.isJsxAttribute(p) && p.name.getText(panel) === 'className'
-        )
-        boxes.push(cls?.initializer?.getText(panel) ?? '')
-      }
+      if (ts.isJsxElement(node) && /data-shelf-tool="home"/.test(opening(node).getText(shelf))) homes.push(classOf(node))
       ts.forEachChild(node, visit)
     }
-    visit(panel)
-    expect(boxes).toHaveLength(1)
-    expect(boxes[0]).toMatch(/\boverflow-(?:hidden|clip|auto|y-auto|y-hidden|y-clip)\b/)
+    visit(shelf)
+    expect(homes).toHaveLength(1)
+    expect(homes[0]).toMatch(CLIPS)
   })
 })
 
@@ -459,10 +477,15 @@ describe('EXPORT owns the export flow and the File › Export listener', () => {
     const frame = source('src/renderer/src/components/ui/Strip.tsx')
     expect([...frame.matchAll(/className="flex h-7 shrink-0 items-center/g)]).toHaveLength(1)
     const tile = source('src/renderer/src/components/ui/Tile.tsx')
-    const sm = tile.match(/sm: \{ box: '([^']*)'/)
-    expect(sm, 'the sm size').not.toBeNull()
-    expect(sm![1]).toMatch(/\bpy-0\.5\b/)
-    expect(sm![1]).not.toMatch(/\bpy-[1-9]/)
+    // The BIG BUTTON's sm, read inside its own size table: since step 9 the
+    // tile has an `sm: { box: … }` of its own too, written first, and an
+    // anchor on the bare `sm:` landed on the tile's.
+    const tables = [...tile.matchAll(/const BIG_BUTTON_SIZE = \{([^]*?)\n\} as const/g)]
+    expect(tables, 'the big button’s size table').toHaveLength(1)
+    const sm = [...tables[0][1].matchAll(/sm: \{ box: '([^']*)'/g)]
+    expect(sm, 'the sm size').toHaveLength(1)
+    expect(sm[0][1]).toMatch(/\bpy-0\.5\b/)
+    expect(sm[0][1]).not.toMatch(/\bpy-[1-9]/)
   })
 })
 

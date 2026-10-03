@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, type DragEvent, type ReactNode } from 'react'
-import { Captions, FileWarning, Film, Image as ImageIcon, Link2, Loader2, Music, Plus, X } from 'lucide-react'
+import { Captions, FileWarning, Film, Image as ImageIcon, Link2, Loader2, Music, Upload, X } from 'lucide-react'
 import type { MediaAsset } from '@shared/timeline'
 import { formatDuration, formatBytes } from '@shared/time'
 import { framesToSeconds } from '@shared/timeline'
@@ -7,6 +7,7 @@ import { useEditor } from '../store'
 import { mediaUrl } from '../media'
 import { setDragPayload } from '../dragPayload'
 import type { DragPayload } from '@shared/dragPayload'
+import { BigButton } from './ui/Tile'
 
 const ICON = { video: Film, audio: Music, image: ImageIcon }
 
@@ -103,7 +104,7 @@ export function MediaPool(): ReactNode {
         if (path) paths.push(path)
       }
       if (paths.length === 0) {
-        notify('Those items have no file on disk — use Import instead', 'info')
+        notify('Those items have no file on disk — use Upload instead', 'info')
         return
       }
       void importAssets(paths)
@@ -111,9 +112,25 @@ export function MediaPool(): ReactNode {
     [importAssets, notify]
   )
 
+  /*
+   * Upload: the one way in from a file dialog.
+   *
+   * There were two — the source row's "Add files" and this panel's "+ Import"
+   * — and both called pickMedia then importAssets (the user: "Upload and
+   * Import are same"). One button now, at the top of the Upload tile, and it
+   * says it is working while the dialog and the import run: a large import is
+   * seconds of probing, and a button that looks idle meanwhile gets pressed
+   * again.
+   */
+  const [picking, setPicking] = useState(false)
   const pick = useCallback(async () => {
-    const paths = await window.forge.pickMedia()
-    await importAssets(paths)
+    setPicking(true)
+    try {
+      const paths = await window.forge.pickMedia()
+      if (paths.length > 0) await importAssets(paths)
+    } finally {
+      setPicking(false)
+    }
   }, [importAssets])
 
   const details = (asset: MediaAsset): string => {
@@ -141,14 +158,18 @@ export function MediaPool(): ReactNode {
       }}
       onDrop={onDrop}
     >
-      <div className="flex items-center justify-between border-b border-ink-800 px-3 py-2">
-        <span className="text-[11px] font-medium uppercase tracking-wide text-ink-400">Media</span>
-        <button
+      <div className="shrink-0 border-b border-ink-800 px-3 pb-2 pt-3">
+        <BigButton
+          icon={Upload}
+          pressedIcon={Loader2}
+          busy={picking}
+          disabled={picking}
           onClick={() => void pick()}
-          className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-ink-400 hover:bg-ink-800 hover:text-ink-200"
+          className="w-full"
         >
-          <Plus size={12} /> Import
-        </button>
+          Upload
+        </BigButton>
+        <div className="mt-2 text-[11px] font-medium uppercase tracking-wide text-ink-400">Media</div>
       </div>
 
       {/*

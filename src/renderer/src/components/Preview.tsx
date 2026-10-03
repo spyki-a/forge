@@ -1727,7 +1727,7 @@ export function Preview(): ReactNode {
         ctx.fillText('Drop pictures or a clip here', cx, cy - 10)
         ctx.font = '12px ui-sans-serif, system-ui, sans-serif'
         ctx.fillStyle = 'rgba(148,163,184,0.7)'
-        ctx.fillText('or open Create and press Direct', cx, cy + 10)
+        ctx.fillText('or open Director and press Direct', cx, cy + 10)
         ctx.restore()
       }
 
@@ -1991,7 +1991,7 @@ export function Preview(): ReactNode {
               .map((file) => window.forge.getPathForFile(file))
               .filter((path) => path.length > 0)
             if (paths.length === 0) {
-              notify('Those items have no file on disk — use Import instead', 'info')
+              notify('Those items have no file on disk — use Upload instead', 'info')
               return
             }
             const tracks = useEditor.getState().project.tracks.filter((t) => t.kind === 'video')

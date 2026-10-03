@@ -8,7 +8,7 @@ import type { Project } from '@shared/timeline'
  * Inspector). The user's decision is that it appears ONLY when there is
  * something to trim — a clip selected on the timeline, or a sound picked in
  * the Library and being auditioned before it is placed — and that the rest of
- * the time the tabs have the whole column. Pure, so the rule is tested without
+ * the time the Shelf has the whole column. Pure, so the rule is tested without
  * a window (tests/dock.test.ts).
  */
 
@@ -42,15 +42,17 @@ export function dockSubject(
  *
  * Step 7 gave the tabs' holder a floor of 16.5rem (264 px): the 31.5 px tab
  * row, 120 px of tab content, and the 112 px waveform that sat under the tabs.
- * The waveform has moved into the dock, so the tabs keep the first two and the
- * dock takes the third, with its own header and its own 120 px of editor:
+ * The waveform has moved into the dock, so the tabs kept the first two and the
+ * dock took the third, with its own header and its own 120 px of editor:
  * they are the two panels' minimum sizes (App.tsx), and together, with the
  * 1 px divider between them, what the column keeps for them before an open
- * OUTPUT or EXPORT strip gets any (`holderFloor`).
+ * OUTPUT or EXPORT strip gets any (`holderFloor`). Step 9 put the Shelf where
+ * the tabs were, on the same floor: an open tool's 28 px header and 124 px of
+ * its panel, or two rows of the home grid's tiles.
  */
 
-/** The tabs: their 31.5 px row and 120 px of tab content (the Media tab's two add rows and the pool's Import row). */
-export const TABS_FLOOR = 152
+/** The Shelf: an open tool's 28 px header and about 120 px of its panel (the tabs' floor until step 9). */
+export const SHELF_FLOOR = 152
 
 /** The dock: its 28 px header, the 112 px waveform, and 120 px of the clip editor under it. */
 export const DOCK_FLOOR = 260
@@ -59,16 +61,16 @@ export const DOCK_FLOOR = 260
  * The min-height of the holder the tabs and the dock share, as CSS.
  *
  * Three fifths of the column, and never less than what the panels in it need
- * — the tabs, or the tabs and the dock — as long as the two 28 px strip
+ * — the Shelf, or the Shelf and the dock — as long as the two 28 px strip
  * headers under it still fit (the 3.5rem). An open strip takes what is left
- * and scrolls its body; the tabs and the dock do not give way to it. When the
+ * and scrolls its body; the Shelf and the dock do not give way to it. When the
  * column is shorter than all of that the headers win, and the two panels share
  * the holder in proportion to their floors. Since step 8 the column runs the
- * window's full height under the header and the source row, so with the dock
- * showing that takes a window under about 570 px — below the 680 px minimum —
- * or the source row grown tall on YouTube.
+ * window's full height under the header (and since step 9 nothing heads it),
+ * so with the dock showing that takes a window under about 505 px — below the
+ * 680 px minimum.
  */
 export function holderFloor(dock: boolean): string {
-  const room = dock ? TABS_FLOOR + 1 + DOCK_FLOOR : TABS_FLOOR
+  const room = dock ? SHELF_FLOOR + 1 + DOCK_FLOOR : SHELF_FLOOR
   return `min(max(60%, ${room}px), 100% - 3.5rem)`
 }

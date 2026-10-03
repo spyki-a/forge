@@ -118,7 +118,7 @@ export function TranscriptPanel(): ReactNode {
           })}
         </div>
       ) : (
-        <Empty>No transcript yet — transcribe it below, or with the caption button in Media</Empty>
+        <Empty>No transcript yet — transcribe it below, or with the caption button in Upload</Empty>
       )}
 
       <Vocabulary assetId={clip.assetId} hasTranscript={Boolean(transcript)} />

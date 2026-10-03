@@ -203,14 +203,16 @@ export { ASPECTS, aspectOf, type AspectKey } from '@shared/render/aspect'
 /** What dragging on the preview does. */
 export type PreviewTool = 'select' | 'crop' | 'mask' | 'key'
 
-/** Where material comes from. Only `upload` is built; see SourceBar. */
-export type SourceMode = 'upload' | 'youtube' | 'narration'
-
 /**
  * The Shelf's tiles, in the sketch's order (docs/WINDOW.md §3.2, §6 Step 9).
  *
  * `shelfTool` holds one of these while that tool's panel is open, and null
- * while the Shelf shows its home grid.
+ * while the Shelf shows its home grid. The registry that gives each its label,
+ * icon and panel is components/shelf/tools.ts.
+ *
+ * Where material comes from is three of these tiles — Upload, URL and
+ * Narration — and no longer a mode of its own: the `sourceMode` that picked
+ * between them went with the source row (SourceBar) in step 9.
  */
 export type ShelfToolId =
   | 'upload'
@@ -395,9 +397,6 @@ interface EditorState {
   /** Title-safe and action-safe rectangles, per SMPTE ST 2046-1. */
   showSafe: boolean
   toggleGuide: (guide: 'thirds' | 'safe') => void
-  /** Which way material comes in. */
-  sourceMode: SourceMode
-  setSourceMode: (mode: SourceMode) => void
 
   /*
    * The window's layout (docs/WINDOW.md §2, §3.22).
@@ -1030,8 +1029,6 @@ export const useEditor = create<EditorState>((set, get) => ({
   showSafe: false,
   toggleGuide: (guide) =>
     set((state) => (guide === 'thirds' ? { showThirds: !state.showThirds } : { showSafe: !state.showSafe })),
-  sourceMode: 'upload',
-  setSourceMode: (sourceMode) => set({ sourceMode }),
 
   shelfTool: null,
   setShelfTool: (shelfTool) => set({ shelfTool }),

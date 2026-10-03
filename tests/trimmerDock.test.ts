@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
-import { DOCK_FLOOR, TABS_FLOOR } from '../src/renderer/src/dock'
+import { DOCK_FLOOR, SHELF_FLOOR } from '../src/renderer/src/dock'
 
 /**
  * The Trimmer dock, and the right column it replaces (docs/WINDOW.md §3.18,
@@ -28,7 +28,7 @@ const parse = (path: string, text = source(path)): ts.SourceFile =>
 
 const APP = 'src/renderer/src/App.tsx'
 const DOCK = 'src/renderer/src/components/TrimmerDock.tsx'
-const LEFT = 'src/renderer/src/components/LeftPanel.tsx'
+const SHELF = 'src/renderer/src/components/shelf/Shelf.tsx'
 const LIBRARY = 'src/renderer/src/components/Library.tsx'
 const INSPECTOR = 'src/renderer/src/components/Inspector.tsx'
 
@@ -108,7 +108,8 @@ describe('the right column is gone; its editor is in the dock', () => {
      * 240 px, running the full height, and the timeline under the picture
      * only. Read from App's own tree: its outermost Group, straight under the
      * header with nothing between them (the source row that ran across the
-     * whole window heads the left column now), of exactly two Panels.
+     * whole window headed the left column in step 8, and is the Shelf's
+     * Upload, URL and Narration tiles since step 9), of exactly two Panels.
      */
     const inApp = (node: ts.Node): boolean => functionOf(node)?.name?.text === 'App'
     const outermost = mounts(app, 'Group').filter((g) => inApp(g) && enclosing(g, 'Group', app) === null)
@@ -132,16 +133,21 @@ describe('the right column is gone; its editor is in the dock', () => {
     const [left, right, ...more] = panelsOf(frame)
     expect(more).toHaveLength(0)
 
-    // The left column: about 240 px, and the source row, the tabs and the
-    // dock, and the strips, top to bottom.
+    // The left column: about 240 px, and the Shelf and the dock (LeftSplit),
+    // and the strips, top to bottom — and nothing above them: the source row
+    // that headed the column in step 8 is gone (step 9), so the strips'
+    // column is the left Panel's one and only child.
     expect(attr(left, 'defaultSize', app)).toBe('"17%"')
     expect(attr(left, 'minSize', app)).toBe('{240}')
     expect(attr(left, 'maxSize', app)).toBe('"30%"')
-    for (const name of ['SourceBar', 'LeftSplit', 'OutputStrip', 'ExportStrip']) expect(holds(left, name), name).toBe(true)
-    const [source] = mounts(app, 'SourceBar')
+    for (const name of ['LeftSplit', 'OutputStrip', 'ExportStrip']) expect(holds(left, name), name).toBe(true)
+    expect(written(text, 'SourceBar'), 'the source row').toBe(0)
     const [output] = mounts(app, 'OutputStrip')
-    expect(within(output.parent, source), 'the source row is above the strips’ column, not in it').toBe(false)
-    expect(source.getStart(app)).toBeLessThan(output.parent.getStart(app))
+    const column = ts.isJsxElement(left) ? left.children.filter(isTagged) : []
+    expect(column, 'the left Panel holds one column').toHaveLength(1)
+    expect(column[0], 'and it is the strips’ column').toBe(output.parent)
+    const [first] = (output.parent as ts.JsxElement).children.filter(isTagged)
+    expect(tag(first, app), 'the column starts with the Shelf and the dock').toBe('LeftSplit')
 
     // The right column: one vertical Group, the picture over the timeline row.
     expect(attr(right, 'defaultSize', app)).toBe('"83%"')
@@ -170,10 +176,10 @@ describe('the right column is gone; its editor is in the dock', () => {
      * pinned "17" itself and passed against the 420 px column.
      */
     const SIZES = ['defaultSize', 'minSize', 'maxSize', 'collapsedSize']
-    const PIXELS: Record<string, unknown> = { TABS_FLOOR, DOCK_FLOOR }
+    const PIXELS: Record<string, unknown> = { SHELF_FLOOR, DOCK_FLOOR }
     const panels = mounts(app, 'Panel')
     // The window's two columns, the picture and the timeline row, the timeline
-    // and the tray, the tabs and the dock.
+    // and the tray, the Shelf and the dock.
     expect(panels).toHaveLength(8)
     const strings: string[] = []
     for (const panel of panels) {
@@ -253,22 +259,23 @@ describe('the right column is gone; its editor is in the dock', () => {
     expect(minW).toBe(1100)
   })
 
-  it('puts the dock in the left column’s vertical Group, under the tabs', () => {
+  it('puts the dock in the left column’s vertical Group, under the Shelf', () => {
     const [dock] = mounts(app, 'TrimmerDock')
-    const [left] = mounts(app, 'LeftPanel')
+    // The tabs (LeftPanel) until step 9; the Shelf in their place.
+    const [left] = mounts(app, 'Shelf')
     const dockPanel = enclosing(dock, 'Panel', app)
-    const tabsPanel = enclosing(left, 'Panel', app)
-    expect(dockPanel && tabsPanel).toBeTruthy()
+    const shelfPanel = enclosing(left, 'Panel', app)
+    expect(dockPanel && shelfPanel).toBeTruthy()
     const group = enclosing(dockPanel!, 'Group', app)
     expect(group, 'the Group around the dock').not.toBeNull()
-    expect(enclosing(tabsPanel!, 'Group', app)).toBe(group)
+    expect(enclosing(shelfPanel!, 'Group', app)).toBe(group)
     expect(attr(group!, 'orientation', app)).toBe('"vertical"')
-    // Tabs first, dock second; each panel with an id, so the layout the library
+    // Shelf first, dock second; each panel with an id, so the layout the library
     // keeps per set of panels is never the other set's.
-    expect(tabsPanel!.getStart(app)).toBeLessThan(dockPanel!.getStart(app))
-    expect(attr(tabsPanel!, 'id', app)).toMatch(/^"[\w-]+"$/)
+    expect(shelfPanel!.getStart(app)).toBeLessThan(dockPanel!.getStart(app))
+    expect(attr(shelfPanel!, 'id', app)).toMatch(/^"[\w-]+"$/)
     expect(attr(dockPanel!, 'id', app)).toMatch(/^"[\w-]+"$/)
-    expect(attr(tabsPanel!, 'id', app)).not.toBe(attr(dockPanel!, 'id', app))
+    expect(attr(shelfPanel!, 'id', app)).not.toBe(attr(dockPanel!, 'id', app))
     // And that Group is the top of the column the strips are in: whichever
     // component renders it, it is the first thing over OUTPUT and EXPORT.
     const [output] = mounts(app, 'OutputStrip')
@@ -393,12 +400,14 @@ describe('the dock holds the waveform and the clip editor, once each, in one scr
   })
 })
 
-describe('the left panel is the tabs and their content only', () => {
-  it('has no Waveform any more', () => {
-    const text = source(LEFT)
+describe('the Shelf is its tiles and the open tool only', () => {
+  // The waveform left the tabs for the dock in step 8; the Shelf that replaced
+  // the tabs in step 9 does not bring it back.
+  it('has no Waveform', () => {
+    const text = source(SHELF)
     expect(written(text, 'Waveform')).toBe(0)
-    expect(mounts(parse(LEFT), 'Waveform')).toHaveLength(0)
-    expect(text).not.toMatch(/from '\.\/Waveform'/)
+    expect(mounts(parse(SHELF), 'Waveform')).toHaveLength(0)
+    expect(text).not.toMatch(/Waveform'/)
   })
 })
 
