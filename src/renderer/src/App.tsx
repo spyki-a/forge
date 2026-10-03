@@ -21,6 +21,8 @@ import { NewProject } from './components/NewProject'
 import { SourceBar } from './components/SourceBar'
 import { CurveTray, useTrayPanel } from './components/CurveTray'
 import { SettingsPanel, helperState } from './components/SettingsPanel'
+import { OutputStrip } from './components/OutputStrip'
+import { ExportStrip } from './components/ExportStrip'
 
 function Divider({ vertical = false }: { vertical?: boolean }): ReactNode {
   return (
@@ -553,7 +555,29 @@ export default function App(): ReactNode {
         <Panel defaultSize="62" minSize="30">
           <Group orientation="horizontal">
             <Panel defaultSize="22" minSize="14" maxSize="40">
-              <LeftPanel />
+              {/*
+                The left column: the panel's tabs, and under them the OUTPUT and
+                EXPORT strips (WINDOW.md §3.16-3.17). Both strips are rendered
+                unconditionally — closing one hides its body by class — because
+                EXPORT holds the export flow and the File › Export listener,
+                which must run with the strip shut (tests/windowStrips.test.ts).
+                The left panel keeps three fifths of the column, and never less
+                than 264 px (16.5rem) — its 31.5 px tab row, 120 px of tab content
+                (the Media tab's two add rows and the pool's Import row, with a
+                line of the pool under them) and the 112 px waveform — as long
+                as the two 28 px strip headers still fit under it (the 3.5rem).
+                An open strip takes the rest and its body scrolls; the tabs do
+                not give way to it. Clipped, so a panel squeezed below its own
+                fixed rows never draws over the strips. Measured in the harness
+                and held by tests/windowStrips.test.ts.
+              */}
+              <div className="flex h-full flex-col">
+                <div className="min-h-[min(max(60%,16.5rem),100%_-_3.5rem)] flex-1 overflow-hidden">
+                  <LeftPanel />
+                </div>
+                <OutputStrip />
+                <ExportStrip />
+              </div>
             </Panel>
             <Divider />
             <Panel defaultSize="60" minSize="30">

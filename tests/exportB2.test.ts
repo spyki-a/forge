@@ -294,20 +294,48 @@ describe('reading -encoders', () => {
 const source = (path: string): string => readFileSync(resolve(__dirname, '..', path), 'utf8')
 
 describe('the export button sends what the panel shows', () => {
+  /*
+   * The export flow lives in the EXPORT strip since the new window's step 7
+   * (docs/WINDOW.md §3.17), moved verbatim from the Inspector.
+   *
+   * Every negative below reads `onExport` or `strip`, and a negative passes on
+   * an empty string: pointed at a file the flow has left, `indexOf` is -1, the
+   * slice is '', and "contains no draft" is true of nothing. So each test that
+   * reads them asserts first that the anchors are there, once each.
+   */
+  const strip = source('src/renderer/src/components/ExportStrip.tsx')
   const inspector = source('src/renderer/src/components/Inspector.tsx')
-  const at = inspector.indexOf('const onExport = useCallback(')
-  const end = inspector.indexOf('}, [aspect, notify, useRange, style])', at)
-  const onExport = inspector.slice(at, end)
-
-  it('passes the spec, the range and the export canvas', () => {
+  const OPENS = 'const onExport = useCallback('
+  const CLOSES = '}, [aspect, notify, useRange, style])'
+  const at = strip.indexOf(OPENS)
+  const end = strip.indexOf(CLOSES, at)
+  const onExport = strip.slice(at, end)
+  const escape = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const anchored = (): void => {
+    expect([...strip.matchAll(new RegExp(escape(OPENS), 'g'))]).toHaveLength(1)
+    expect([...strip.matchAll(new RegExp(escape(CLOSES), 'g'))]).toHaveLength(1)
     expect(at).toBeGreaterThan(-1)
     expect(end).toBeGreaterThan(at)
+    // The whole flow, not a stub that happens to open and close the same way.
+    expect(onExport).toContain('await window.forge.startRender({')
+  }
+
+  it('lives in the EXPORT strip, and only there', () => {
+    anchored()
+    expect([...inspector.matchAll(/const onExport\b/g)]).toHaveLength(0)
+    expect([...inspector.matchAll(/exportRequests/g)]).toHaveLength(0)
+    expect([...inspector.matchAll(/window\.forge\.startRender\(/g)]).toHaveLength(0)
+  })
+
+  it('passes the spec, the range and the export canvas', () => {
+    anchored()
     expect(onExport).toContain('encode: spec,')
     expect(onExport).toContain('range: marked ?? undefined,')
     expect(onExport).toContain('const canvas = exportCanvas(wanted, choice.resolution)')
   })
 
   it('applies a preset’s loudness and captions to what is rendered', () => {
+    anchored()
     // Presets stored both, and the export never applied either.
     expect(onExport).toContain('loudness: preset.loudness ?? undefined')
     expect(onExport).toContain('enabled: preset.captions')
@@ -315,20 +343,24 @@ describe('the export button sends what the panel shows', () => {
   })
 
   it('falls back from an encoder the machine cannot run', () => {
+    anchored()
     expect(onExport).toContain('usableEncoder(choice.encoder,')
   })
 
   it('re-reads the range toggle when it changes', () => {
     // A toggle missing from the dependencies is a button that exports with
     // whatever it was when the edit last changed — which Draft once did.
-    expect(inspector).toContain('}, [aspect, notify, useRange, style])')
+    anchored()
+    expect(strip).toContain('}, [aspect, notify, useRange, style])')
   })
 
   it('has no half-size draft left anywhere in the export path', () => {
     // Removed on request: 720p is the quick export now. Checked by name, so a
     // half-size canvas or a forced CRF cannot come back under another label.
+    anchored()
     expect(onExport).not.toMatch(/draft/i)
     expect(onExport).not.toContain('crf: 26')
+    expect(strip).not.toContain('Export draft')
     expect(inspector).not.toContain('Export draft')
     expect(source('src/shared/render/exportShape.ts')).not.toMatch(/\* \(draft \? 0\.5/)
   })
@@ -336,6 +368,7 @@ describe('the export button sends what the panel shows', () => {
   it('draws the export’s cards into a copy, never into the edit', () => {
     // The editor's rebake wrote into the project: undo entries, a wiped redo
     // stack, an unsaved project — by pressing Export. Found by the B2 review.
+    anchored()
     expect(onExport).toContain('await bakeForExport(useEditor.getState().project, canvas, liveBakers,')
     expect(onExport).not.toContain('rebakeGenerated(')
   })

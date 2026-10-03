@@ -70,7 +70,13 @@ export function LeftPanel(): ReactNode {
         ))}
       </div>
 
-      <div className="min-h-0 flex-1">
+      {/*
+        Clipped, so a tab squeezed shorter than its fixed rows is cut off at
+        its own edge rather than drawn over the waveform under it — which an
+        open OUTPUT or EXPORT strip below this panel does (App.tsx). Every tab
+        scrolls its own long part (the pool, the library grid, Create).
+      */}
+      <div className="min-h-0 flex-1 overflow-hidden">
         {tab === 'media' && (
           <div className="flex h-full flex-col">
             {/*

@@ -157,7 +157,12 @@ describe('the rates are offered where the rate is chosen', () => {
     expect(action).toContain('rangeIn: rangeIn === null ? null : at(rangeIn),')
     expect(action).toContain('rangeOut: rangeOut === null ? null : at(rangeOut),')
     expect(action).toContain('void get().rebakeGenerated()')
-    const inspector = readFileSync(resolve(__dirname, '../src/renderer/src/components/Inspector.tsx'), 'utf8')
-    expect(inspector).toContain('onClick={() => setFrameRate(rate)}')
+    // The buttons are in the OUTPUT strip since the new window's step 7
+    // (docs/WINDOW.md §3.16) — once, and not left behind in the Inspector.
+    const component = (name: string): string =>
+      readFileSync(resolve(__dirname, `../src/renderer/src/components/${name}`), 'utf8')
+    const buttons = /onClick=\{\(\) => setFrameRate\(rate\)\}/g
+    expect([...component('OutputStrip.tsx').matchAll(buttons)]).toHaveLength(1)
+    expect([...component('Inspector.tsx').matchAll(buttons)]).toHaveLength(0)
   })
 })

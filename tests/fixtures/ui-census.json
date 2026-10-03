@@ -1335,16 +1335,16 @@
   {
     "label": "+ Save current",
     "match": "text",
-    "home": "inspector",
+    "home": "export",
     "needs": "none",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 814,
+    "file": "src/renderer/src/components/ExportStrip.tsx",
+    "line": 363,
     "newHome": "export strip"
   },
   {
     "label": "10-bit 4:2:2",
     "match": "text",
-    "home": "inspector",
+    "home": "export",
     "needs": "encoder-prores",
     "part": true,
     "file": "src/renderer/src/components/ExportSettings.tsx",
@@ -1354,7 +1354,7 @@
   {
     "label": "1080p",
     "match": "text",
-    "home": "inspector",
+    "home": "export",
     "needs": "none",
     "file": "src/shared/render/exportShape.ts",
     "line": 26,
@@ -1363,7 +1363,7 @@
   {
     "label": "4K",
     "match": "text",
-    "home": "inspector",
+    "home": "export",
     "needs": "none",
     "file": "src/shared/render/exportShape.ts",
     "line": 27,
@@ -1381,7 +1381,7 @@
   {
     "label": "A fixed bitrate — what a platform means by",
     "match": "title",
-    "home": "inspector",
+    "home": "export",
     "needs": "none",
     "part": true,
     "file": "src/renderer/src/components/ExportSettings.tsx",
@@ -1391,7 +1391,7 @@
   {
     "label": "A hardware encoder takes a bitrate, so this is about",
     "match": "text",
-    "home": "inspector",
+    "home": "export",
     "needs": "encoder-hardware",
     "file": "src/renderer/src/components/ExportSettings.tsx",
     "line": 164,
@@ -1446,7 +1446,7 @@
   {
     "label": "AAC",
     "match": "text",
-    "home": "inspector",
+    "home": "export",
     "needs": "none",
     "count": 3,
     "file": "src/renderer/src/components/ExportSettings.tsx",
@@ -1522,7 +1522,7 @@
   {
     "label": "Animation",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
     "file": "src/renderer/src/components/TextAnimationPicker.tsx",
     "line": 121,
@@ -1550,7 +1550,7 @@
   {
     "label": "Audio",
     "match": "text",
-    "home": "inspector",
+    "home": "export",
     "needs": "none",
     "file": "src/renderer/src/components/ExportSettings.tsx",
     "line": 188,
@@ -1577,7 +1577,7 @@
   {
     "label": "Balanced",
     "match": "text",
-    "home": "inspector",
+    "home": "export",
     "needs": "none",
     "file": "src/renderer/src/components/ExportSettings.tsx",
     "line": 35,
@@ -1586,7 +1586,7 @@
   {
     "label": "Bitrate",
     "match": "text",
-    "home": "inspector",
+    "home": "export",
     "needs": "none",
     "file": "src/renderer/src/components/ExportSettings.tsx",
     "line": 142,
@@ -1613,7 +1613,7 @@
   {
     "label": "Bold centre",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
     "file": "src/shared/captions/style.ts",
     "line": 113,
@@ -1631,7 +1631,7 @@
   {
     "label": "Bounce",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
     "file": "src/shared/render/textAnimation.ts",
     "line": 127,
@@ -1649,7 +1649,7 @@
   {
     "label": "Broadcast",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
     "file": "src/shared/render/loudness.ts",
     "line": 19,
@@ -1658,7 +1658,7 @@
   {
     "label": "Browse all",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
     "file": "src/renderer/src/components/TextStylePicker.tsx",
     "line": 62,
@@ -1694,19 +1694,19 @@
   {
     "label": "Cancel",
     "match": "title",
-    "home": "inspector",
+    "home": "export",
     "needs": "export-jobs",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 1731,
+    "file": "src/renderer/src/components/ExportStrip.tsx",
+    "line": 422,
     "newHome": "export strip"
   },
   {
     "label": "Captions",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 525,
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 182,
     "newHome": "output strip"
   },
   {
@@ -1767,10 +1767,10 @@
   {
     "label": "Clear",
     "match": "text",
-    "home": "inspector",
+    "home": "export",
     "needs": "export-jobs",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 1720,
+    "file": "src/renderer/src/components/ExportStrip.tsx",
+    "line": 411,
     "newHome": "export strip"
   },
   {
@@ -1803,7 +1803,7 @@
   {
     "label": "Codec",
     "match": "text",
-    "home": "inspector",
+    "home": "export",
     "needs": "none",
     "file": "src/renderer/src/components/ExportSettings.tsx",
     "line": 98,
@@ -1843,7 +1843,7 @@
   {
     "label": "Constant quality, CRF",
     "match": "title",
-    "home": "inspector",
+    "home": "export",
     "needs": "none",
     "part": true,
     "count": 3,
@@ -1963,7 +1963,7 @@
   {
     "label": "Every tile is your own words in your own font",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "style-gallery",
     "part": true,
     "file": "src/renderer/src/components/TextStylePicker.tsx",
@@ -1973,7 +1973,7 @@
   {
     "label": "Expected a fonts folder under the assets directory.",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "caption-fontpicker",
     "file": "src/renderer/src/components/FontPicker.tsx",
     "line": 94,
@@ -1982,28 +1982,39 @@
   {
     "label": "Export",
     "match": "text",
-    "home": "inspector",
+    "home": "exportbar",
     "needs": "none",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 776,
-    "newHome": "export strip (header, visible when collapsed)"
+    "file": "src/renderer/src/components/ExportStrip.tsx",
+    "line": 318,
+    "newHome": "export strip (header, visible when collapsed)",
+    "note": "The Export button, in the strip’s header: counted with the strip closed, where it has to stay in reach; its open-face row is the next one."
+  },
+  {
+    "label": "Export",
+    "match": "text",
+    "home": "export",
+    "needs": "none",
+    "file": "src/renderer/src/components/ExportStrip.tsx",
+    "line": 318,
+    "newHome": "export strip (header)",
+    "note": "The same Export button with the strip open: the header is the same in both faces."
   },
   {
     "label": "Export at whatever level the sources happen to be",
     "match": "title",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 471,
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 154,
     "newHome": "output strip"
   },
   {
     "label": "Exports",
     "match": "text",
-    "home": "inspector",
+    "home": "export",
     "needs": "export-jobs",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 1715,
+    "file": "src/renderer/src/components/ExportStrip.tsx",
+    "line": 406,
     "newHome": "export strip"
   },
   {
@@ -2018,7 +2029,7 @@
   {
     "label": "File",
     "match": "text",
-    "home": "inspector",
+    "home": "export",
     "needs": "none",
     "file": "src/renderer/src/components/ExportSettings.tsx",
     "line": 202,
@@ -2036,28 +2047,28 @@
   {
     "label": "Font",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 619,
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 276,
     "newHome": "output strip"
   },
   {
     "label": "Forget these settings",
     "match": "title",
-    "home": "inspector",
+    "home": "export",
     "needs": "saved-preset",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 836,
+    "file": "src/renderer/src/components/ExportStrip.tsx",
+    "line": 385,
     "newHome": "export strip"
   },
   {
     "label": "Frame rate",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 421,
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 104,
     "newHome": "output strip"
   },
   {
@@ -2081,7 +2092,7 @@
   {
     "label": "H.264",
     "match": "text",
-    "home": "inspector",
+    "home": "export",
     "needs": "none",
     "file": "src/shared/render/encode.ts",
     "line": 71,
@@ -2117,7 +2128,7 @@
   {
     "label": "How hard the encoder works: slower is smaller for the same quality",
     "match": "title",
-    "home": "inspector",
+    "home": "export",
     "needs": "none",
     "count": 4,
     "file": "src/renderer/src/components/ExportSettings.tsx",
@@ -2184,23 +2195,23 @@
   {
     "label": "LUFS —",
     "match": "title",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
     "part": true,
     "count": 3,
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 472,
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 155,
     "newHome": "output strip",
     "note": "Count 3: one per loudness target."
   },
   {
     "label": "LUFS, so one is as loud as the next.",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
     "part": true,
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 493,
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 176,
     "newHome": "output strip"
   },
   {
@@ -2273,10 +2284,10 @@
   {
     "label": "Loudness",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 453,
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 136,
     "newHome": "output strip"
   },
   {
@@ -2300,10 +2311,10 @@
   {
     "label": "Margin",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 708,
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 365,
     "newHome": "output strip"
   },
   {
@@ -2336,16 +2347,16 @@
   {
     "label": "Match the camera: footage at 25 in a 30 project repeats a frame in every five.",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 443,
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 126,
     "newHome": "output strip"
   },
   {
     "label": "Mbps, at most",
     "match": "text",
-    "home": "inspector",
+    "home": "export",
     "needs": "export-bitrate",
     "file": "src/renderer/src/components/ExportSettings.tsx",
     "line": 159,
@@ -2354,10 +2365,10 @@
   {
     "label": "Middle",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 700,
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 357,
     "newHome": "output strip"
   },
   {
@@ -2409,7 +2420,7 @@
   {
     "label": "No font library found.",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "caption-fontpicker",
     "file": "src/renderer/src/components/FontPicker.tsx",
     "line": 91,
@@ -2456,46 +2467,46 @@
   {
     "label": "Nothing transcribed yet — captions will be skipped on export.",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 761,
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 418,
     "newHome": "output strip"
   },
   {
     "label": "Off",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "captions-flipped",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 548,
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 205,
     "newHome": "output strip",
     "note": "The captions switch, turned off."
   },
   {
     "label": "Off",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 461,
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 144,
     "newHome": "output strip",
     "note": "Loudness Off."
   },
   {
     "label": "On",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 548,
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 205,
     "newHome": "output strip",
     "note": "The captions switch, on in a new project."
   },
   {
     "label": "Only between the marks",
     "match": "text",
-    "home": "inspector",
+    "home": "export",
     "needs": "timeline-marks",
     "file": "src/renderer/src/components/ExportSettings.tsx",
     "line": 228,
@@ -2553,14 +2564,24 @@
     "note": "Count 2: the text card's Outline slider and the Outline tile in its style picker."
   },
   {
-    "label": "Output",
+    "label": "OUTPUT",
     "match": "text",
-    "home": "inspector",
+    "home": "outputbar",
     "needs": "none",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 360,
-    "newHome": "dropped — the strips have their own headers (§3.17)",
-    "note": "The Inspector's Output header. Until step 4 this row counted 2, with the Preview view's Output button, which is on the canvas bar now (its own row there)."
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 90,
+    "newHome": "output strip (header)",
+    "note": "Succeeds the Inspector’s Output header (Inspector.tsx:357 until step 7), which the strips’ own headers replaced (§3.17). The strip’s name, counted closed."
+  },
+  {
+    "label": "OUTPUT",
+    "match": "text",
+    "home": "output",
+    "needs": "none",
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 90,
+    "newHome": "output strip (header)",
+    "note": "Succeeds the Inspector’s Output header (Inspector.tsx:357 until step 7), which the strips’ own headers replaced (§3.17). The strip’s name, counted open."
   },
   {
     "label": "Overlap this clip with the one before it on its track",
@@ -2575,12 +2596,12 @@
   {
     "label": "PAL, what cameras set up for Europe and India shoot",
     "match": "title",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
     "part": true,
     "count": 2,
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 429,
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 112,
     "newHome": "output strip",
     "note": "Count 2: the 25 and 50 fps buttons."
   },
@@ -2626,10 +2647,10 @@
   {
     "label": "Place",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 688,
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 345,
     "newHome": "output strip"
   },
   {
@@ -2662,7 +2683,7 @@
   {
     "label": "Quality",
     "match": "text",
-    "home": "inspector",
+    "home": "export",
     "needs": "none",
     "file": "src/renderer/src/components/ExportSettings.tsx",
     "line": 123,
@@ -2726,7 +2747,7 @@
   {
     "label": "Reel / TikTok (9:16)",
     "match": "text",
-    "home": "inspector",
+    "home": "export",
     "needs": "none",
     "file": "src/shared/render/presets.ts",
     "line": 145,
@@ -2780,10 +2801,10 @@
   {
     "label": "Reset edits",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 538,
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 195,
     "newHome": "output strip"
   },
   {
@@ -2855,10 +2876,10 @@
   {
     "label": "Saved settings",
     "match": "text",
-    "home": "inspector",
+    "home": "export",
     "needs": "none",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 791,
+    "file": "src/renderer/src/components/ExportStrip.tsx",
+    "line": 340,
     "newHome": "export strip"
   },
   {
@@ -2918,10 +2939,10 @@
   {
     "label": "Show in folder",
     "match": "title",
-    "home": "inspector",
+    "home": "export",
     "needs": "export-jobs",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 1740,
+    "file": "src/renderer/src/components/ExportStrip.tsx",
+    "line": 431,
     "newHome": "export strip"
   },
   {
@@ -2954,13 +2975,22 @@
   {
     "label": "Size",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
-    "count": 2,
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 660,
-    "newHome": "output strip; the same label also: export strip (ExportSettings.tsx:77)",
-    "note": "Count 2: the caption Size slider and the export Size row."
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 317,
+    "newHome": "output strip",
+    "note": "The caption Size slider. Until step 7 one row, count 2, with the export Size row, when both were in the Inspector."
+  },
+  {
+    "label": "Size",
+    "match": "text",
+    "home": "export",
+    "needs": "none",
+    "file": "src/renderer/src/components/ExportSettings.tsx",
+    "line": 77,
+    "newHome": "export strip",
+    "note": "The export Size row. Until step 7 one row, count 2, with the caption Size slider, when both were in the Inspector."
   },
   {
     "label": "Size",
@@ -3057,17 +3087,17 @@
   {
     "label": "Spoken words from the transcript, timed automatically across the whole project.",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
     "part": true,
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 564,
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 221,
     "newHome": "output strip"
   },
   {
     "label": "Standard",
     "match": "text",
-    "home": "inspector",
+    "home": "export",
     "needs": "none",
     "file": "src/shared/render/encode.ts",
     "line": 177,
@@ -3103,7 +3133,7 @@
   {
     "label": "Style",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
     "file": "src/renderer/src/components/TextStylePicker.tsx",
     "line": 56,
@@ -3267,16 +3297,16 @@
   {
     "label": "The word being spoken",
     "match": "title",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 732,
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 389,
     "newHome": "output strip"
   },
   {
     "label": "The words are simply there",
     "match": "title",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
     "file": "src/renderer/src/components/TextAnimationPicker.tsx",
     "line": 133,
@@ -3294,11 +3324,11 @@
   {
     "label": "These captions are drawn rather than burned in.",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "captions-drawn",
     "part": true,
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 752,
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 409,
     "newHome": "output strip"
   },
   {
@@ -3385,10 +3415,10 @@
   {
     "label": "Two exports can land at noticeably different levels.",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "loudness-off",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 492,
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 175,
     "newHome": "output strip"
   },
   {
@@ -3430,7 +3460,7 @@
   {
     "label": "White glow",
     "match": "title",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
     "part": true,
     "file": "src/shared/render/textStyle.ts",
@@ -3449,10 +3479,10 @@
   {
     "label": "Words",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 670,
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 327,
     "newHome": "output strip"
   },
   {
@@ -3478,7 +3508,7 @@
   {
     "label": "checking this machine",
     "match": "text",
-    "home": "inspector",
+    "home": "export",
     "needs": "encoders-unknown",
     "part": true,
     "file": "src/renderer/src/components/ExportSettings.tsx",
@@ -3488,7 +3518,7 @@
   {
     "label": "fonts",
     "match": "placeholder",
-    "home": "inspector",
+    "home": "output",
     "needs": "caption-fontpicker",
     "part": true,
     "file": "src/renderer/src/components/FontPicker.tsx",
@@ -3530,7 +3560,7 @@
   {
     "label": "is not working on this machine.",
     "match": "text",
-    "home": "inspector",
+    "home": "export",
     "needs": "encoder-broken",
     "part": true,
     "file": "src/renderer/src/components/ExportSettings.tsx",
@@ -3598,7 +3628,7 @@
   {
     "label": "styles — glow, metal, gradient",
     "match": "placeholder",
-    "home": "inspector",
+    "home": "output",
     "needs": "style-gallery",
     "part": true,
     "file": "src/renderer/src/components/TextStylePicker.tsx",
@@ -3639,10 +3669,10 @@
   {
     "label": "words · spoken",
     "match": "text",
-    "home": "inspector",
+    "home": "output",
     "needs": "none",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 735,
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 392,
     "newHome": "output strip"
   },
   {
@@ -5363,7 +5393,7 @@
     "part": true,
     "file": "src/renderer/src/components/IngestPanel.tsx",
     "line": 304,
-    "newHome": "Shelf tile URL (reworded: progress is under EXPORT, step 7)"
+    "newHome": "Shelf tile URL (reworded in step 7: progress is under EXPORT)"
   },
   {
     "label": "soon",
@@ -5882,5 +5912,194 @@
     "file": "src/renderer/src/components/Waveform.tsx",
     "line": 256,
     "newHome": "trimmer dock"
+  },
+  {
+    "label": "EXPORT",
+    "match": "text",
+    "home": "exportbar",
+    "needs": "none",
+    "file": "src/renderer/src/components/ExportStrip.tsx",
+    "line": 258,
+    "newHome": "export strip (header)",
+    "note": "The strip’s name, counted closed."
+  },
+  {
+    "label": "EXPORT",
+    "match": "text",
+    "home": "export",
+    "needs": "none",
+    "file": "src/renderer/src/components/ExportStrip.tsx",
+    "line": 258,
+    "newHome": "export strip (header)",
+    "note": "The strip’s name, counted open."
+  },
+  {
+    "label": "Show the output settings: frame rate, loudness, captions",
+    "match": "title",
+    "home": "outputbar",
+    "needs": "none",
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 93,
+    "newHome": "output strip (header)",
+    "note": "The triangle’s tooltip with the strip closed (ui/Strip.tsx draws it; aria-expanded says the same)."
+  },
+  {
+    "label": "Hide the output settings",
+    "match": "title",
+    "home": "output",
+    "needs": "none",
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 94,
+    "newHome": "output strip (header)",
+    "note": "The triangle’s tooltip with the strip open (ui/Strip.tsx draws it; aria-expanded says the same)."
+  },
+  {
+    "label": "Show the export settings and the exports",
+    "match": "title",
+    "home": "exportbar",
+    "needs": "none",
+    "file": "src/renderer/src/components/ExportStrip.tsx",
+    "line": 261,
+    "newHome": "export strip (header)",
+    "note": "The triangle’s tooltip with the strip closed (ui/Strip.tsx draws it; aria-expanded says the same)."
+  },
+  {
+    "label": "Hide the export settings",
+    "match": "title",
+    "home": "export",
+    "needs": "none",
+    "file": "src/renderer/src/components/ExportStrip.tsx",
+    "line": 262,
+    "newHome": "export strip (header)",
+    "note": "The triangle’s tooltip with the strip open (ui/Strip.tsx draws it; aria-expanded says the same)."
+  },
+  {
+    "label": "fps",
+    "match": "text",
+    "home": "outputbar",
+    "needs": "none",
+    "part": true,
+    "file": "src/shared/project/outputSummary.ts",
+    "line": 17,
+    "newHome": "output strip (header, shown while collapsed)",
+    "note": "Part of the closed strip’s one line, \"30 fps · -14 LUFS · captions on\" (§3.16)."
+  },
+  {
+    "label": "LUFS",
+    "match": "text",
+    "home": "outputbar",
+    "needs": "none",
+    "part": true,
+    "file": "src/shared/project/outputSummary.ts",
+    "line": 20,
+    "newHome": "output strip (header, shown while collapsed)",
+    "note": "Part of the closed strip’s one line, \"30 fps · -14 LUFS · captions on\" (§3.16)."
+  },
+  {
+    "label": "captions on",
+    "match": "text",
+    "home": "outputbar",
+    "needs": "none",
+    "part": true,
+    "file": "src/shared/project/outputSummary.ts",
+    "line": 21,
+    "newHome": "output strip (header, shown while collapsed)",
+    "note": "Part of the closed strip’s one line, \"30 fps · -14 LUFS · captions on\" (§3.16)."
+  },
+  {
+    "label": "captions off",
+    "match": "text",
+    "home": "outputbar",
+    "needs": "captions-flipped",
+    "part": true,
+    "file": "src/shared/project/outputSummary.ts",
+    "line": 21,
+    "newHome": "output strip (header, shown while collapsed)",
+    "note": "Part of the closed strip’s one line, \"30 fps · -14 LUFS · captions on\" (§3.16)."
+  },
+  {
+    "label": "loudness off",
+    "match": "text",
+    "home": "outputbar",
+    "needs": "loudness-off",
+    "part": true,
+    "file": "src/shared/project/outputSummary.ts",
+    "line": 20,
+    "newHome": "output strip (header, shown while collapsed)",
+    "note": "Part of the closed strip’s one line, \"30 fps · -14 LUFS · captions on\" (§3.16)."
+  },
+  {
+    "label": "Running:",
+    "match": "title",
+    "home": "exportbar",
+    "needs": "export-jobs",
+    "part": true,
+    "file": "src/renderer/src/components/ExportStrip.tsx",
+    "line": 273,
+    "newHome": "export strip (header)",
+    "note": "The running job’s bar in the header, beside the Export button: there with the strip closed (§3.17). Its tooltip names the job and its per cent."
+  },
+  {
+    "label": "Waiting:",
+    "match": "title",
+    "home": "exportbar",
+    "needs": "export-waiting",
+    "part": true,
+    "file": "src/renderer/src/components/ExportStrip.tsx",
+    "line": 274,
+    "newHome": "export strip (header)",
+    "note": "Nothing running and a job queued: the header's bar is the waiting one's (shared/render/exportHeadline.ts)."
+  },
+  {
+    "label": "Done",
+    "match": "text",
+    "home": "exportbar",
+    "needs": "export-done",
+    "file": "src/renderer/src/components/ExportStrip.tsx",
+    "line": 289,
+    "newHome": "export strip (header)",
+    "note": "How the last export ended, in the header, so it shows with the strip closed: both strips start closed and the Exports list is in the hidden body (exportHeadline.ts)."
+  },
+  {
+    "label": "Show in folder",
+    "match": "title",
+    "home": "exportbar",
+    "needs": "export-done",
+    "part": true,
+    "file": "src/renderer/src/components/ExportStrip.tsx",
+    "line": 285,
+    "newHome": "export strip (header)",
+    "note": "The header's Done reveals the file, as the list's folder button does."
+  },
+  {
+    "label": "Failed",
+    "match": "text",
+    "home": "exportbar",
+    "needs": "export-failed",
+    "file": "src/renderer/src/components/ExportStrip.tsx",
+    "line": 300,
+    "newHome": "export strip (header)",
+    "note": "A failed export, in the header: reported nowhere else (main/queue.ts only sets the status). It opens the strip on the list."
+  },
+  {
+    "label": "Open EXPORT for the details.",
+    "match": "title",
+    "home": "exportbar",
+    "needs": "export-failed",
+    "part": true,
+    "file": "src/renderer/src/components/ExportStrip.tsx",
+    "line": 296,
+    "newHome": "export strip (header)"
+  },
+  {
+    "label": "under EXPORT, on the left",
+    "match": "text",
+    "home": "source",
+    "needs": "ingest-running",
+    "part": true,
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 305,
+    "newHome": "Shelf tile URL",
+    "note": "Reworded in step 7 from \"in the panel on the right\": download progress shows under EXPORT (Decision 7). Not \"bottom left\" until step 8 puts the strips at the foot of a full-height column."
   }
 ]

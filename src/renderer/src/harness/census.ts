@@ -95,8 +95,23 @@ const LEFT_TABS = { media: 'Media', library: 'Library', transcript: 'Transcript'
  */
 const TRAY_FACES = { rail: 'rail', keys: 'keys', curve: 'curves' } as const
 type TrayFace = (typeof TRAY_FACES)[keyof typeof TRAY_FACES]
-/** Homes that are on screen whatever the left panel shows (the tray's once it is put in that face). */
-const FIXED_HOMES = ['header', 'source', 'canvasbar', 'preview', 'toolbox', 'inspector', 'rail', 'keys', 'curve', 'transport', 'timeline', 'waveform'] as const
+/**
+ * The OUTPUT and EXPORT strips under the left panel (step 7), each a home in
+ * two faces, as the tray is: open (`output`, `export`) — the body, the settings
+ * themselves — and closed (`outputbar`, `exportbar`) — the header row, and what
+ * a strip keeps in reach while shut: OUTPUT's one line, EXPORT's button and its
+ * running job. Each face is a home of its own for the tray's reason: a home's
+ * empty-project count is taken once, in one face.
+ */
+const STRIP_FACES = {
+  output: { strip: 'output', open: true },
+  outputbar: { strip: 'output', open: false },
+  export: { strip: 'export', open: true },
+  exportbar: { strip: 'export', open: false }
+} as const
+type StripFace = keyof typeof STRIP_FACES
+/** Homes that are on screen whatever the left panel shows (the tray's and the strips' once put in that face). */
+const FIXED_HOMES = ['header', 'source', 'canvasbar', 'preview', 'toolbox', 'inspector', 'rail', 'keys', 'curve', 'output', 'outputbar', 'export', 'exportbar', 'transport', 'timeline', 'waveform'] as const
 /**
  * Overlays: counted only inside the one element that appeared when the scenario
  * opened it. `settings` is the panel under the header's gear (step 6), opened
@@ -296,7 +311,9 @@ const positioned = (el: Element): string => getComputedStyle(el).position
  * this, and a finder that no longer recognises the layout throws.
  *
  *   header · source row · [ left | centre | inspector ] / [ transport + timeline | curve tray ]
- *   left = tab strip · tab content · waveform dock
+ *   left = [ tab strip · tab content · waveform dock ] / OUTPUT strip / EXPORT strip
+ *     (step 7: the left panel in a holder, the two strips under it, each told
+ *     apart by its `data-strip`; `openHome` puts a strip in the face asked for)
  *   centre = canvas bar / [ toolbox + preview ]   (step 4: the bar over the picture row)
  *   curve tray = the lower row's second panel, whatever its width: a 28 px
  *     rail when closed, a few hundred px open (step 5). The rail, Keys and
@@ -324,7 +341,16 @@ function layout(): Record<Exclude<Home, (typeof OVERLAY_HOMES)[number]> | 'tabs'
   if (!(Object.values(TRAY_FACES) as string[]).includes(tray.getAttribute('data-curve-tray') ?? '')) {
     throw new Error('census: the lower row’s second panel is not the Curve tray — the layout changed; update homeRoots')
   }
-  const [tabs, leftContent, waveform] = childrenOf(left, 3, 'the left panel')
+  // The left column: the left panel's holder, then OUTPUT, then EXPORT. By what
+  // each strip says it is, never by its words — those are being counted.
+  const [holder, output, exporting] = childrenOf(left, 3, 'the left column')
+  for (const [strip, id] of [[output, 'output'], [exporting, 'export']] as const) {
+    if (strip.getAttribute('data-strip') !== id) {
+      throw new Error(`census: the left column has no ${id.toUpperCase()} strip where it should be — the layout changed; update homeRoots`)
+    }
+  }
+  const [leftPanel] = childrenOf(holder, 1, 'the left panel’s holder')
+  const [tabs, leftContent, waveform] = childrenOf(leftPanel, 3, 'the left panel')
   // The centre column: the canvas bar, then the picture row under it. By
   // position, never by the bar's words — those are what is being counted.
   const [canvasbar, pictureRow] = childrenOf(middle, 2, 'the centre column')
@@ -352,7 +378,11 @@ function layout(): Record<Exclude<Home, (typeof OVERLAY_HOMES)[number]> | 'tabs'
     timeline: [timeline],
     rail: [tray],
     keys: [tray],
-    curve: [tray]
+    curve: [tray],
+    output: [output],
+    outputbar: [output],
+    export: [exporting],
+    exportbar: [exporting]
   }
 }
 
@@ -591,6 +621,7 @@ async function escape(): Promise<void> {
  */
 async function openHome(home: Home): Promise<void> {
   if (home in TRAY_FACES) return trayShows(TRAY_FACES[home as keyof typeof TRAY_FACES])
+  if (home in STRIP_FACES) return stripShows(home as StripFace)
   if (!(home in LEFT_TABS)) return
   const label = LEFT_TABS[home as keyof typeof LEFT_TABS]
   await leftTab(label === 'Media' ? 'Library' : 'Media')
@@ -622,6 +653,35 @@ async function trayShows(face: TrayFace): Promise<void> {
     if (shows === face && right) return
     if (performance.now() > deadline) {
       throw new Error(`census: the Curve tray was asked for ${face} and shows ${shows} in ${Math.round(width)} px`)
+    }
+  }
+}
+
+/**
+ * Put a strip in one face, through the store as its triangle does, and wait
+ * for the page to show it.
+ *
+ * Read two ways, as the tray's width is: `data-open` is what the strip says it
+ * is showing, and the body's own box is what is on screen. A body left showing
+ * under a header that says closed would put every one of its rows on screen in
+ * the closed face, and they would be counted there.
+ */
+async function stripShows(face: StripFace): Promise<void> {
+  const { strip, open } = STRIP_FACES[face]
+  if (strip === 'output') editor().setOutputOpen(open)
+  else editor().setExportOpen(open)
+  const deadline = performance.now() + 2000
+  for (;;) {
+    await frames()
+    const root = layout()[strip][0]
+    const says = root.getAttribute('data-open')
+    const body = root.querySelector('[data-strip-body]')
+    const shown = body !== null && rendered(body)
+    if (says === String(open) && shown === open) return
+    if (performance.now() > deadline) {
+      throw new Error(
+        `census: the ${strip.toUpperCase()} strip was asked to be ${open ? 'open' : 'closed'} and says data-open=${says}, its body ${body ? (shown ? 'shown' : 'hidden') : 'missing'}`
+      )
     }
   }
 }
@@ -1248,6 +1308,25 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
   },
   'export-jobs': async () => {
     editor().setJobs([job('running', 'export', 'running', 0.4), job('done', 'export', 'done', 1)])
+    return {}
+  },
+  /*
+   * How the last export ended, in EXPORT's header (shared/render/exportHeadline.ts):
+   * nothing under way, and the last RENDER — a job the export queued, whose
+   * presetId is 'render' (main/ipc.ts) — done, failed, or one waiting its turn.
+   */
+  'export-done': async () => {
+    editor().setJobs([job('census-render', 'render', 'done', 1)])
+    return {}
+  },
+  'export-failed': async () => {
+    editor().setJobs([
+      { ...job('census-render', 'render', 'failed', 0.3), finishedAt: Date.now() - 1000, error: 'census: a failed render' }
+    ])
+    return {}
+  },
+  'export-waiting': async () => {
+    editor().setJobs([job('census-render', 'render', 'queued', 0)])
     return {}
   },
   'saved-preset': async () => {

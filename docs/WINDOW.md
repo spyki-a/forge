@@ -55,7 +55,7 @@ honest without re-pointing. The component's title on screen becomes "Clip".
 │ │ is selected): waveform, then  │ │ Transport                       │K │
 │ │ the clip editor (Inspector)   │ │ Timeline (flat)                 │e │ ← Curve tray: a 28 px rail,
 │ ├───────────────────────────────┤ │                                 │y │   closed by default; opens
-│ │ OUTPUT ▲  30 fps · −14 · capt │ │                                 │s │   to ~320 px
+│ │ OUTPUT ▲  30 fps · -14 · capt │ │                                 │s │   to ~320 px
 │ │ EXPORT ▲  [Export]  ▬▬▬ 42%   │ │                                 │  │
 │ └───────────────────────────────┘ │                                 │  │
 └────────────────────────────────────┴──────────────────────────────────┘
@@ -185,7 +185,7 @@ is lost by it); *coming-soon* = shown, disabled, labelled.
 | Just a part of it | `IngestPanel.tsx:236` | Shelf tile URL | move | |
 | From / To fields + length | `IngestPanel.tsx:250, 263, 271` | Shelf tile URL | move | keep `MIN_RANGE_MS` (`36`) for any multi-range UI |
 | Fast cut / Exact cut | `IngestPanel.tsx:276` | Shelf tile URL | move | |
-| "N downloads running — progress is in the panel on the right" | `IngestPanel.tsx:302` | Shelf tile URL | restyle | reword: "progress is under EXPORT, bottom left" (Decision 7) |
+| "N downloads running — progress is in the panel on the right" | `IngestPanel.tsx:302` | Shelf tile URL | restyle | reword: "progress is under EXPORT, on the left" at step 7, "bottom left" once step 8 puts the strips at the foot of the column (Decision 7) |
 | First-download yt-dlp note | `IngestPanel.tsx:309` | Shelf tile URL | move | |
 | Get metadata, chapters, several ranges, Get transcript | none (sheet 07) | Shelf tile URL | build | phase 2 |
 | Best clips | none (sheet 09) | Shelf tile URL | build | phase 3 |
@@ -370,7 +370,7 @@ is lost by it); *coming-soon* = shown, disabled, labelled.
 | control | today | new home | how | note |
 |---|---|---|---|---|
 | Frame rate 24/25/30/50/60 | `Inspector.tsx:420` | output strip | move | re-point `tests/frameRate.test.ts:160-161` |
-| Loudness Off / −14 / −16 / −23 | `Inspector.tsx:452` | output strip | move | keep two columns (`454-459`) |
+| Loudness Off / -14 / -16 / -23 | `Inspector.tsx:452` | output strip | move | keep two columns (`454-459`) |
 | Captions On/Off | `Inspector.tsx:540` | output strip | move | |
 | Captions Reset edits | `Inspector.tsx:533` | output strip | move | |
 | Caption presets | `Inspector.tsx:567` | output strip | move | |
@@ -382,7 +382,7 @@ is lost by it); *coming-soon* = shown, disabled, labelled.
 | Caption Colour (words · spoken) | `Inspector.tsx:719` | output strip | move | |
 | Drawn-captions notice | `Inspector.tsx:741` | output strip | move | |
 | Nothing transcribed yet | `Inspector.tsx:759` | output strip | move | |
-| Collapsed summary ("30 fps · −14 LUFS · captions on") | none | output strip | build | so a closed strip still tells you what the file will be |
+| Collapsed summary ("30 fps · -14 LUFS · captions on") | none | output strip | build | so a closed strip still tells you what the file will be; the ASCII minus, as the Loudness buttons write the number (`shared/project/outputSummary.ts`) |
 | 3×3 caption style grid | none (sheet 11) | Shelf tile Narration | build | phase 2/3 |
 
 ### 3.17 Export strip
@@ -868,7 +868,7 @@ Anchors are counted with `matchAll` before being trusted.
   `main/director.ts` still say "in the Director settings"; the card at `top-10` covers the gear
   while the one-time recovery banner pushes the header down (Escape still closes it).
 
-### Step 7 — OUTPUT and EXPORT strips in the left column
+### Step 7 — OUTPUT and EXPORT strips in the left column · DONE 2026-10-03
 - **Files:** new `components/OutputStrip.tsx` (`Inspector.tsx:415-764` moved: frame rate, loudness,
   captions with `captionSample` and the caption FontPicker host); new `components/ExportStrip.tsx`
   (`Inspector.tsx:189-195, 218-373` onExport and the listener moved verbatim, `767-845`, jobs
@@ -883,6 +883,92 @@ Anchors are counted with `matchAll` before being trusted.
 - **Check:** with both strips collapsed, `forgeStore.getState().requestExport()` on a timeline with a clip
   produces the harness's "cannot export" notice — the listener is alive while collapsed; with an empty
   timeline, "Add something to the timeline first". Caption Style gallery opens full-window from the strip.
+- **How it got here.** The builder's version squeezed the left panel under its waveform when a
+  strip opened (tab content 6.7 px at 1100×680), hid a finished export's result while EXPORT was
+  closed, and spent 80 px on the two closed headers; the fixer that addressed those was cut off
+  mid-run, a finisher completed and measured them, and three last gaps a verifier left as nits were
+  closed by hand with mutation-checked assertions: an `if (!open) return` at the top of the export
+  flow (which would silently kill File › Export with the strip shut) now fails a test, so do a
+  swapped Done/Failed header click and a header row or small button that grows past 28 px.
+- **As built (2026-10-03).** `ui/Strip.tsx` is the frame both strips share: a
+  `<section data-strip data-open>` with a 28 px header (`h-7`: the triangle and the name, which toggle
+  it, then `aside`) over a body that closing HIDES BY CLASS and never unmounts (`data-strip-body`,
+  `hidden` / `min-h-0 flex-1 overflow-y-auto`); flat, and no transform, filter or backdrop-filter
+  anywhere in it (the triangle is two drawn paths, not a rotated glyph). Open, a strip is `flex-1`,
+  so two open strips split what is left. `OutputStrip.tsx` is the Inspector's Output block moved
+  unchanged (frame rate, loudness, captions with `captionSample`, the Style / Animation pickers, the
+  FontPicker host); closed, its header says `outputSummary(project)` — "30 fps · -14 LUFS · captions
+  on" (`shared/project/outputSummary.ts`, ASCII minus as the Loudness buttons write it, an older
+  file's null loudness read as off). `ExportStrip.tsx` is the Inspector's export block, `onExport`
+  and the File › Export listener moved verbatim, ExportSettings, Saved settings and the Exports list;
+  the header carries the **Export** BigButton at a new `size="sm"` (`ui/Tile.tsx`, 20 px tall, so
+  the header stays 28 px — it was 47 at the default size) and **what the jobs are doing**
+  (`shared/render/exportHeadline.ts`): the running job's bar, else the first waiting one's ("Waiting:
+  … it starts when the one before it ends"); with nothing under way, how the last RENDER ended —
+  **Done** (one click reveals the file: "Done: … — Show in folder") or **Failed** (its tooltip
+  carries the error; a click opens the strip on the list). A last export that was cancelled says
+  nothing; a download's ending is not counted (it lands in the pool, or toasts). Before this, both
+  strips starting closed meant a finished or failed export showed nowhere — failures are reported
+  nowhere else at all. `App.tsx`'s left column is a holder over the two strips, both rendered
+  unconditionally; the holder is clipped and has the floor `min(max(60%,16.5rem),100%_-_3.5rem)`:
+  three fifths of the column, never under 264 px (the 31.5 px tab row, 120 px of tab content and the
+  112 px waveform), and never so much that the two closed headers do not fit. `LeftPanel.tsx`'s
+  tab-content box clips too, so a tab squeezed below its own fixed rows is cut at its edge instead of
+  drawn over the waveform — which the first build did at every window size (tab content 6.7 px at
+  1100×680, 26.8 at 1429×761, 61 at 1400×900, all of it over the 112 px dock). The Inspector lost 753
+  lines and its 'Output' title; the URL panel says "progress is under EXPORT, on the left" ("bottom
+  left" from step 8).
+  **Measured in the harness** (tab content = the box between the tab row and the waveform; nothing
+  overlapped the waveform in any state — its box's bottom ≤ the waveform's top, and
+  `elementFromPoint` at three points just inside the waveform's top edge hit the waveform):
+
+  | window | left column | both closed: tab content / pool list | one strip open: tab content / pool list / open body | both open: each body |
+  |---|---|---|---|---|
+  | 1511×761 (the pane) | 425.6 | 226.1 / 115.1 | 120.5 / 9.5 / 105.6 | 52.8 |
+  | 1400×900 | 511.8 | 312.3 / 201.3 | 163.6 / 52.6 / 148.7 | 74.4 |
+  | 1100×680 | 375.4 | 175.9 / 49.2 | 120.5 / 0 / 55.4 | 27.7 |
+
+  Collapsed headers 28 + 28 = 56 px at every size (the budget in §2), the Export button 20 px inside
+  its header, and the header fits at the 234 px column with Done or a bar beside the button. At
+  1100×680 a strip open leaves the Media tab its two add rows and the Import row (the button whole,
+  2.8 px to spare) and the pool's list 0 px — it comes back at 49 px when the strip closes; the room
+  for both is the full-height column of steps 8–9, not this step's. The Check's "cannot export"
+  notice is not what the harness shows: its `chooseExportPath` answers `null`, so the flow stops at
+  the save dialog silently. Measured instead: with EXPORT closed, `requestExport()` bumped
+  `exportRequests` 0 → 1 and the listener called `chooseExportPath("Untitled-16x9.mp4")`; with that
+  shimmed to return a path, the render was started and the harness refused it ("Exporting needs the
+  real app — the harness has no exporting"), and no job was made, so the header showed no headline —
+  correct, as the refusal is a toast. The job states a real export goes through, fed to the store as
+  the main process does (`setJobs`), with EXPORT closed: queued → the "Waiting:" bar, running 42 % →
+  "Running: … — 42%", done → **Done**, whose click called `revealPath('/tmp/s7f-export.mp4')`,
+  failed → **Failed**, whose click opened the strip on the list with the error in it; opened, the
+  list row's "Show in folder" is in view and reveals the same path; cancelled → nothing. With an
+  empty timeline: "Add something to the timeline first". The caption Style gallery ("Browse all")
+  and the Font picker, opened from OUTPUT at 1100×680, each covered exactly the viewport (0, 0,
+  1100, 680), and Escape closed each. (The Export button's busy face is not seen in the harness: the
+  refused flow ends inside one render.)
+  **Census:** homes `output` / `outputbar` and `export` / `exportbar` — each strip in two faces, as
+  the tray is, put in its face through the store and confirmed by `data-open` AND the body's own
+  box; new scenarios `export-done`, `export-failed`, `export-waiting` (renders, `presetId: 'render'`)
+  for the header's new rows (Done, its "Show in folder", Failed, "Open EXPORT for the details.",
+  "Waiting:"). 628 → 649 rows: 63 moved from the Inspector (35 to `output`, 28 to `export`), the
+  Inspector's 'Output' title dropped as planned (§3.17), 22 added; 641 checked, 8 skipped, 0 missing.
+  **Tests:** `tests/windowStrips.test.ts` (20) and `tests/renderer/stripsRender.test.ts` (10, the
+  strips rendered closed and open, the header's states); `frameRate.test.ts` and `exportB2.test.ts`
+  re-pointed with anchor counts (exportB2's every slice asserts its anchors first: a negative passes
+  on an empty slice). The first test of the listener ("reacts whether the strip is open or not")
+  could not fail — its slice held no `open` to find — and is replaced by one read from the tree: the
+  one effect that depends on `exportRequests` is a statement of ExportStrip's own body, with no
+  return before it, calls `onExport()`, and names nothing `open`. Mutation-checked, each failing:
+  no listener; `if (!open) return` in it; the listener moved into a child rendered `{open && …}`
+  (only the new test catches this one — the old text match passes it); `{exportOpen && <ExportStrip />}`
+  in App; `{open && children}` in the frame (4 tests); the floor at 15rem, uncapped, or the first
+  build's `min-h-[40%]`; LeftPanel's tab box unclipped; the header button at its natural size;
+  exportHeadline counting downloads, going by list order, skipping cancelled, or putting waiting
+  before running; the header without Done, without Failed, or with a bar only while running; exportB2
+  pointed back at the Inspector (7 tests). Renaming the header's "Done" passes `uiCensus.test.ts`
+  ("Done" is written elsewhere in the source, which that half cannot tell apart) and is caught by the
+  harness census ("absent").
 
 ### Step 8 — The Trimmer dock; the right column goes
 - **Files:** new `components/TrimmerDock.tsx` (header with name and X; `<Waveform />`; `<Inspector />`

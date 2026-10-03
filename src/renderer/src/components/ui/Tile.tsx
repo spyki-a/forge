@@ -131,7 +131,19 @@ export interface BigButtonProps extends ButtonProps {
   pressed?: boolean
   /** Working: shown as pressed, and announced as busy. */
   busy?: boolean
+  /**
+   * `sm` fits a 28 px header row — EXPORT's, which WINDOW.md §2 budgets at
+   * 28 px closed. A size here rather than padding passed in `className`: two
+   * Tailwind paddings on one element are settled by the stylesheet's order,
+   * not the class string's.
+   */
+  size?: 'md' | 'sm'
 }
+
+const BIG_BUTTON_SIZE = {
+  md: { box: 'gap-1.5 px-3 py-2 text-[12px]', icon: 14 },
+  sm: { box: 'gap-1 px-2.5 py-0.5 text-[11px] leading-4', icon: 12 }
+} as const
 
 export function BigButton({
   icon,
@@ -140,12 +152,14 @@ export function BigButton({
   variant = 'primary',
   pressed,
   busy = false,
+  size = 'md',
   className = '',
   type = 'button',
   ...rest
 }: BigButtonProps): ReactNode {
   const down = pressed === true || busy
   const look = BIG_BUTTON_LOOK[variant]
+  const measure = BIG_BUTTON_SIZE[size]
   const iconClass = down && variant === 'secondary' ? 'text-accent-400' : ''
   return (
     <button
@@ -153,7 +167,7 @@ export function BigButton({
       type={type}
       aria-pressed={pressed}
       aria-busy={busy || undefined}
-      className={`relative flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-[12px] font-medium disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none ${
+      className={`relative flex items-center justify-center rounded-lg ${measure.box} font-medium disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none ${
         down ? look.pressed : look.idle
       } ${className}`}
     >
@@ -161,7 +175,7 @@ export function BigButton({
         icon={icon}
         pressedIcon={pressedIcon}
         pressed={down}
-        size={14}
+        size={measure.icon}
         className={iconClass}
         badge={variant === 'primary' ? 'bg-ink-950' : 'bg-accent-500'}
       />
