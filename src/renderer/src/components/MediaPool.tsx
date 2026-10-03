@@ -236,7 +236,7 @@ export function MediaPool(): ReactNode {
                         disabled={!sidecarReady}
                         title={
                           !sidecarReady
-                            ? 'The AI sidecar is not running'
+                            ? 'The AI helper (Python) is not running'
                             : hasTranscript
                               ? 'Transcribed — click to redo'
                               : 'Transcribe'

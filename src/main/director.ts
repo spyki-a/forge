@@ -323,7 +323,7 @@ async function completeOllama(
      * to read. Shown whole; there is no key on this path.
      */
     const detail = await response.text().catch(() => '')
-    throw new Error(`Ollama returned ${response.status}. ${errorSentence(detail)}`.trim())
+    throw new Error(`Ollama returned ${response.status}. ${clip(errorSentence(detail))}`.trim())
   }
 
   const answer = ollamaAnswer(await response.json())
@@ -360,8 +360,8 @@ async function completeOpenAi(
       /*
        * The body often explains the problem — a bad model name, a quota —
        * and it is worth showing. It is also the one place a key could be
-       * echoed back, so it is truncated and scanned before it reaches the
-       * user.
+       * echoed back, so the key is taken out of the whole of it, and only then
+       * is it cut short for the screen.
        */
       const detail = await response.text().catch(() => '')
       throw new Error(
@@ -381,7 +381,11 @@ async function completeOpenAi(
  *
  * Ollama says `{"error": "…"}`; the OpenAI shape says `{"error": {"message":
  * "…"}}`. Either way the sentence is what the user needs and the envelope is
- * not. Anything else is shown as it came, clipped.
+ * not. Anything else is returned as it came.
+ *
+ * NOT clipped here. On the keyed path the clip belongs to `redactKey`, after
+ * the key is taken out: cut first, and a key straddling the cut survives as a
+ * prefix nothing matches. The keyless Ollama path clips for itself.
  */
 function errorSentence(detail: string): string {
   try {
@@ -394,5 +398,10 @@ function errorSentence(detail: string): string {
   } catch {
     // Not JSON; the raw text will do.
   }
-  return detail.slice(0, 400)
+  return detail
+}
+
+/** A 4xx body can be a whole HTML page; the screen gets its first 400 characters. */
+function clip(text: string): string {
+  return text.length > 400 ? `${text.slice(0, 400)}…` : text
 }

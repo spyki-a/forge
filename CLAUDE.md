@@ -182,7 +182,7 @@ vulnerabilities, and is not finished.
 |---|---|---|
 | Electron's binary | `node_modules/electron/dist/` empty. npm 11's allow-scripts gate withholds the postinstall, and its warning names only `electron-winstaller` and `esbuild` — **never `electron`**. `esbuild` needs nothing; its platform package ships the exe | `node node_modules/electron/install.js` |
 | Visual C++ Redistributable | *Cannot find native binding … npm bug 4828*, from `@electron-internal/extract-zip`. The message is wrong — `index.win32-x64-msvc.node` is present and bundled. `vcruntime140.dll` is not, so `dlopen` fails | `winget install Microsoft.VCRedist.2015+.x64` |
-| a real Python | the twelve sidecar tests fail with `SidecarError: The sidecar stopped (code 9009)`. 9009 is Windows for *command not found* — `python3` resolves to the Store App Execution Alias stub, which is not an interpreter | `winget install Python.Python.3.12` |
+| a real Python | the twelve sidecar tests fail with `SidecarError: The AI helper stopped (code 9009)` (it said "sidecar" before 2026-10-03; on screen the Python process is now "the AI helper", because the user's "sidecar" is the left panel). 9009 is Windows for *command not found* — `python3` resolves to the Store App Execution Alias stub, which is not an interpreter | `winget install Python.Python.3.12` |
 | `FORGE_PYTHON` | still 9009 once Python is in. `client.ts` falls back to the literal `python3`, and the python.org installer creates `python.exe` and no `python3.exe`. CI passes only because `actions/setup-python` makes one | `setx FORGE_PYTHON "…\Python312\python.exe"` |
 
 The first two are independent, by elimination: a clean `npm ci` with the runtime

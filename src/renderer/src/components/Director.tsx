@@ -4,7 +4,7 @@ import { DIRECTOR_RULES } from '@shared/director/apply'
 import { RECIPES, type RecipeId } from '@shared/director/recipes'
 import { expectedRecipe } from '@shared/director/run'
 import { buildSlots } from '@shared/director/menu'
-import { isLoopback, type LlmProviderChoice, type LlmStatus } from '@shared/director/provider'
+import type { LlmStatus } from '@shared/director/provider'
 import { TONES } from '@shared/director/schema'
 import { framesToSeconds } from '@shared/timeline'
 import { useEditor } from '../store'
@@ -19,10 +19,10 @@ import { useEditor } from '../store'
  * ordinary clip with a reason on it, and Clear takes exactly its own work
  * away again, music trim included.
  *
- * The provider settings live behind a disclosure here rather than in a
- * separate settings screen, because there is no settings screen — the voice
- * key has lived in the settings file with no UI at all. A key typed here is
- * sent once and never read back; the field shows only that there is one.
+ * Which model server answers, and its key, are set in the settings panel
+ * under the header's gear (SettingsPanel.tsx, docs/WINDOW.md §3.9), with the
+ * other outside services. What stays here is the line saying who would answer
+ * now — so Direct is never pressed blind — and a gear that opens them.
  */
 
 const input =
@@ -54,14 +54,12 @@ export function Director(): ReactNode {
   const status = useEditor((s) => s.directorStatus)
   const config = useEditor((s) => s.directorConfig)
   const refresh = useEditor((s) => s.refreshDirector)
-  const setProvider = useEditor((s) => s.setDirectorProvider)
+  const setSettingsOpen = useEditor((s) => s.setSettingsOpen)
   const recipe = useEditor((s) => s.directRecipe)
   const setRecipe = useEditor((s) => s.setDirectRecipe)
 
-  const [showSettings, setShowSettings] = useState(false)
   const [showNotes, setShowNotes] = useState(false)
   const [showSlots, setShowSlots] = useState(true)
-  const [key, setKey] = useState('')
 
   useEffect(() => {
     void refresh()
@@ -107,46 +105,6 @@ export function Director(): ReactNode {
     brief.cta,
     brief.language
   ].filter((v) => v.trim().length > 0).length + (brief.seconds === null ? 0 : 1)
-
-  const ollama = status?.find((p) => p.id === 'ollama')
-  const openai = status?.find((p) => p.id === 'openai')
-  const openaiLocal = config ? isLoopback(config.openai.baseUrl) : true
-
-  const modelPicker = (
-    id: 'ollama' | 'openai',
-    models: string[] | undefined,
-    current: string
-  ): ReactNode => {
-    const options = models && models.length > 0 ? models : []
-    if (options.length === 0) {
-      return (
-        <input
-          className={input}
-          value={current}
-          placeholder="model name"
-          onChange={(e) =>
-            void setProvider({ [id]: { model: e.target.value } } as Parameters<typeof setProvider>[0])
-          }
-        />
-      )
-    }
-    return (
-      <select
-        className={input}
-        value={options.includes(current) ? current : ''}
-        onChange={(e) =>
-          void setProvider({ [id]: { model: e.target.value } } as Parameters<typeof setProvider>[0])
-        }
-      >
-        <option value="">choose a model…</option>
-        {options.map((m) => (
-          <option key={m} value={m}>
-            {m}
-          </option>
-        ))}
-      </select>
-    )
-  }
 
   return (
     <section className="space-y-2 border-b border-ink-800 p-3">
@@ -323,80 +281,15 @@ export function Director(): ReactNode {
             </>
           )}
         </span>
-        <button onClick={() => setShowSettings((v) => !v)} className={small} title="Model settings">
+        <button
+          data-settings-gear
+          onClick={() => setSettingsOpen(true)}
+          className={small}
+          title="Model servers — open Settings"
+        >
           <Settings2 size={11} />
         </button>
       </div>
-
-      {showSettings && config && (
-        <div className="space-y-1.5 rounded border border-ink-800 p-2">
-          <div className="flex gap-1">
-            {(['auto', 'ollama', 'openai'] as LlmProviderChoice[]).map((p) => (
-              <button
-                key={p}
-                onClick={() => void setProvider({ provider: p })}
-                className={`flex-1 rounded px-1.5 py-1 text-[10.5px] ${
-                  config.provider === p ? 'bg-accent-500 text-ink-950' : 'bg-ink-800 text-ink-400 hover:bg-ink-700'
-                }`}
-              >
-                {p === 'auto' ? 'Auto' : p === 'ollama' ? 'Ollama' : openaiLocal ? 'LM Studio' : 'Hosted'}
-              </button>
-            ))}
-          </div>
-
-          <div className="text-[10px] uppercase tracking-wide text-ink-600">Ollama</div>
-          <Field label="Server">
-            <input
-              className={input}
-              value={config.ollama.baseUrl}
-              onChange={(e) => void setProvider({ ollama: { baseUrl: e.target.value } })}
-            />
-          </Field>
-          <Field label="Model">{modelPicker('ollama', ollama?.models, config.ollama.model)}</Field>
-          {ollama && !ollama.ready && <div className="text-[10px] text-ink-500">{ollama.reason}</div>}
-
-          <div className="pt-1 text-[10px] uppercase tracking-wide text-ink-600">
-            OpenAI-shaped server — LM Studio, llama.cpp, or a hosted API
-          </div>
-          <Field label="Server">
-            <input
-              className={input}
-              value={config.openai.baseUrl}
-              placeholder="http://127.0.0.1:1234/v1"
-              onChange={(e) => void setProvider({ openai: { baseUrl: e.target.value } })}
-            />
-          </Field>
-          <Field label="Model">{modelPicker('openai', openai?.models, config.openai.model)}</Field>
-          <Field label="Key">
-            <input
-              className={input}
-              type="password"
-              value={key}
-              placeholder={config.openai.hasKey ? '•••••••• (saved)' : openaiLocal ? 'not needed locally' : 'paste your key'}
-              onChange={(e) => setKey(e.target.value)}
-            />
-            <button
-              className={small}
-              disabled={key.trim().length === 0}
-              onClick={() => {
-                void setProvider({ openai: { apiKey: key.trim() } })
-                setKey('')
-              }}
-            >
-              Save
-            </button>
-            {config.openai.hasKey && (
-              <button className={small} onClick={() => void setProvider({ openai: { apiKey: '' } })}>
-                Clear
-              </button>
-            )}
-          </Field>
-          {openai && !openai.ready && <div className="text-[10px] text-ink-500">{openai.reason}</div>}
-          <button onClick={() => void refresh()} className={small}>
-            Check again
-          </button>
-        </div>
-      )}
 
       <div className="flex gap-1">
         <button

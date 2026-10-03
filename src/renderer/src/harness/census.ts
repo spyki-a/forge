@@ -97,8 +97,12 @@ const TRAY_FACES = { rail: 'rail', keys: 'keys', curve: 'curves' } as const
 type TrayFace = (typeof TRAY_FACES)[keyof typeof TRAY_FACES]
 /** Homes that are on screen whatever the left panel shows (the tray's once it is put in that face). */
 const FIXED_HOMES = ['header', 'source', 'canvasbar', 'preview', 'toolbox', 'inspector', 'rail', 'keys', 'curve', 'transport', 'timeline', 'waveform'] as const
-/** Overlays: counted only inside the one element that appeared when the scenario opened it. */
-const OVERLAY_HOMES = ['clipmenu', 'newproject', 'shortcuts'] as const
+/**
+ * Overlays: counted only inside the one element that appeared when the scenario
+ * opened it. `settings` is the panel under the header's gear (step 6), opened
+ * through the store as the gear opens it.
+ */
+const OVERLAY_HOMES = ['clipmenu', 'newproject', 'shortcuts', 'settings'] as const
 
 type Home = keyof typeof LEFT_TABS | (typeof FIXED_HOMES)[number] | (typeof OVERLAY_HOMES)[number]
 const HOMES: readonly string[] = [...Object.keys(LEFT_TABS), ...FIXED_HOMES, ...OVERLAY_HOMES]
@@ -870,23 +874,36 @@ async function youtube(patch: Parameters<ReturnType<typeof useEditor.getState>['
   editor().setIngest(patch)
 }
 
-/** Director's model settings, opened from its gear — after `config` changes what they offer. */
-function modelSettings(config?: (c: NonNullable<ReturnType<typeof useEditor.getState>['directorConfig']>) => void): Built {
+/**
+ * The settings panel, opened through the store as the header's gear opens it —
+ * after `prepare` has put the state it should show, and with `config` changing
+ * what the model servers offer.
+ *
+ * The panel asks the model servers again when it opens. Its answer is let land
+ * first and then asked for once more, in order, so neither can arrive after
+ * `config` and overwrite it. Closed by Escape, which is the panel's own way out.
+ */
+function settingsPanel(
+  options: {
+    prepare?: () => void
+    config?: (c: NonNullable<ReturnType<typeof useEditor.getState>['directorConfig']>) => void
+  } = {}
+): Built {
   return {
     show: async () => {
-      // Director refreshes the config when it mounts; let that land first, so it cannot overwrite this.
+      options.prepare?.()
+      editor().setSettingsOpen(true)
+      await frames()
       await editor().refreshDirector()
       const current = editor().directorConfig
-      if (!current) throw new Error('census: the Director has no model config')
-      if (config) {
+      if (!current) throw new Error('census: the settings panel has no model config')
+      if (options.config) {
         const next = { ...current, ollama: { ...current.ollama }, openai: { ...current.openai } }
-        config(next)
+        options.config(next)
         useEditor.setState({ directorConfig: next })
       }
-      const gear = document.querySelector<HTMLElement>('[title="Model settings"]')
-      if (!gear) throw new Error('census: the Director has no Model settings button')
-      await click(gear)
-    }
+    },
+    close: escape
   }
 }
 
@@ -918,11 +935,16 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     throw new Error('this text is painted on the preview canvas, where no DOM query can read it')
   },
 
-  /* the header's status dot while the sidecar has not reported (the harness's is always failed) */
-  'sidecar-starting': async () => {
-    editor().setSidecar(false, null)
-    return {}
-  },
+  /*
+   * The settings panel, as the harness has it: the bridge's AI helper has
+   * failed by design (bridge.ts sidecarStatus), so it says "Not running"; and
+   * in the two states the harness never reaches on its own.
+   */
+  'settings-open': async () => settingsPanel(),
+  /* the AI helper has not reported yet */
+  'sidecar-starting': async () => settingsPanel({ prepare: () => editor().setSidecar(false, null) }),
+  /* the AI helper is up */
+  'sidecar-running': async () => settingsPanel({ prepare: () => editor().setSidecar(true, null) }),
   fullscreen: async () => ({ show: async () => fullScreen(true), close: async () => fullScreen(false) }),
   'newproject-open': async () => ({
     show: async () => menu('new'),
@@ -1390,17 +1412,24 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     show: async () =>
       click(buttonByText((t) => t.toLowerCase().startsWith('more'), 'the Director More button'))
   }),
-  /* the model settings under Director's gear, as the harness bridge answers: a local server, no key */
-  'director-settings': async () => modelSettings(),
+  /*
+   * The model servers in the settings panel (step 6; they were under Director's
+   * gear). As the harness bridge answers they are a local server with no key —
+   * 'settings-open' — and these two change that.
+   */
   /* the OpenAI-shaped server pointed somewhere that is not this machine, with no key yet */
   'director-hosted': async () =>
-    modelSettings((c) => {
-      c.openai.baseUrl = 'https://census.invalid/v1'
+    settingsPanel({
+      config: (c) => {
+        c.openai.baseUrl = 'https://census.invalid/v1'
+      }
     }),
   /* a key saved: the field says so, and offers to clear it */
   'director-key': async () =>
-    modelSettings((c) => {
-      c.openai.hasKey = true
+    settingsPanel({
+      config: (c) => {
+        c.openai.hasKey = true
+      }
     }),
   'music-clip': async () => {
     // A song and no photos: "Import some photos" only shows without them.
@@ -1580,6 +1609,9 @@ export async function runCensus(options: CensusOptions = {}): Promise<CensusResu
     useEditor.setState(editorBefore)
     useCatalog.setState(catalogBefore)
     usePacks.setState(packsBefore)
+    // Closed for every scenario, whatever the page had: the panel is an overlay
+    // home, found as the thing opening it ADDS, and one already open adds nothing.
+    editor().setSettingsOpen(false)
     editor().newProject()
     await frames()
     await leftTab('Media')

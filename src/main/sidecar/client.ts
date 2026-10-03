@@ -122,15 +122,20 @@ export class SidecarClient extends EventEmitter {
       if (text) this.emit('log', text)
     })
 
+    /*
+     * These messages reach the screen — the Settings panel's AI helper row
+     * shows a failed start word for word — so they say "AI helper". On screen
+     * "sidecar" is the user's left panel; here it is only the code's name.
+     */
     child.on('error', (err) => {
-      this.failAll(new SidecarError(`Could not start the sidecar: ${err.message}`, RPC_ERRORS.internalError))
+      this.failAll(new SidecarError(`Could not start the AI helper: ${err.message}`, RPC_ERRORS.internalError))
     })
 
     child.on('exit', (code, signal) => {
       this.child = null
       this.hello = null
       const reason = signal ? `signal ${signal}` : `code ${code}`
-      this.failAll(new SidecarError(`The sidecar stopped (${reason})`, RPC_ERRORS.internalError))
+      this.failAll(new SidecarError(`The AI helper stopped (${reason})`, RPC_ERRORS.internalError))
       this.emit('exit', { code, signal })
 
       if (this.stopping) return
@@ -185,7 +190,7 @@ export class SidecarClient extends EventEmitter {
     }
     const child = this.child
     if (!child) {
-      return Promise.reject(new SidecarError('The sidecar is not running', RPC_ERRORS.internalError))
+      return Promise.reject(new SidecarError('The AI helper is not running', RPC_ERRORS.internalError))
     }
 
     const id = this.nextId++
@@ -235,7 +240,7 @@ export class SidecarClient extends EventEmitter {
 
   stop(): void {
     this.stopping = true
-    this.failAll(new SidecarError('The sidecar is shutting down', RPC_ERRORS.internalError))
+    this.failAll(new SidecarError('The AI helper is shutting down', RPC_ERRORS.internalError))
     const child = this.child
     if (!child) return
     this.child = null

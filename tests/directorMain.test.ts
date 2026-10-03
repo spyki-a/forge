@@ -355,6 +355,47 @@ describe('complete — OpenAI shape', () => {
     expect(chat.headers.authorization).toBe('Bearer sk-secret-123-long')
   })
 
+  /*
+   * A body used to be cut at 400 characters before the key was looked for —
+   * by redactKey itself, and before that by errorSentence — so a key
+   * straddling character 400 reached the message as a prefix nothing matched.
+   *
+   * The key is as long as a real one (OpenAI's project keys run past 160
+   * characters). A short one hides the leak here: the outer redactKey prepends
+   * "The server returned 401. " and cuts again, which happens to drop the last
+   * 25 characters — all of a short key's prefix, and not much of a long one's.
+   * Every straddling position, as text and in the OpenAI shape's envelope, on
+   * the completion and on the status check.
+   */
+  it('strips a key that straddles where a long error body is cut', async () => {
+    const key = `sk-proj-${'Q7w9E2r4T6y8U1i3'.repeat(8)}`
+    const windows = Array.from({ length: key.length - 5 }, (_, i) => key.slice(i, i + 6))
+    configured({
+      ollama: { ...DEFAULT_DIRECTOR.ollama },
+      openai: { baseUrl: 'https://api.example.com/v1', model: 'm', apiKey: key }
+    })
+    for (let start = 400 - key.length + 1; start < 400; start++) {
+      const echoed = `${'x'.repeat(start)}${key}${'y'.repeat(50)}`
+      for (const body of [echoed, JSON.stringify({ error: { message: echoed } })]) {
+        serve({ tags: 'down', models: [{ id: 'm' }], chat: () => new Response(body, { status: 401 }) })
+        let message = ''
+        await complete(request).catch((err: Error) => {
+          message = err.message
+        })
+        expect(message, `completion, key at ${start}`).toContain('401')
+        expect(windows.filter((w) => message.includes(w)), `completion, key at ${start}`).toEqual([])
+
+        vi.stubGlobal('fetch', async (url: string) => {
+          if (url.endsWith('/models')) return new Response(body, { status: 401 })
+          throw new TypeError('fetch failed')
+        })
+        const [, openai] = await directorStatus()
+        expect(openai.reason, `status, key at ${start}`).toContain('401')
+        expect(windows.filter((w) => openai.reason!.includes(w)), `status, key at ${start}`).toEqual([])
+      }
+    }
+  })
+
   it('is what auto picks when Ollama is down and LM Studio is up', async () => {
     serve({ tags: 'down', models: [{ id: 'google/gemma-4-e2b' }], chat: () => openaiAnswer('{}') })
     expect((await complete(request)).provider).toBe('openai')
@@ -432,6 +473,21 @@ describe('settings', () => {
 
     setDirectorSettings({ openai: { apiKey: '' } })
     expect(directorSettings().openai.hasKey).toBe(false)
+  })
+
+  /*
+   * What a save RETURNS goes straight into the renderer's store
+   * (setDirectorProvider → set({ directorConfig })), so it is held to the same
+   * rule as directorSettings(): hasKey, never the key — on the save that
+   * carries the key, and on every save after it.
+   */
+  it('answers a save with hasKey, never the key it was just given', () => {
+    const saved = setDirectorSettings({ openai: { apiKey: 'sk-just-saved-0123456789' } })
+    expect(saved.openai.hasKey).toBe(true)
+    expect(JSON.stringify(saved)).not.toContain('sk-just-saved')
+    const later = setDirectorSettings({ openai: { model: 'gpt-x' } })
+    expect(later.openai).toMatchObject({ model: 'gpt-x', hasKey: true })
+    expect(JSON.stringify(later)).not.toContain('sk-just-saved')
   })
 
   it('sanitises a bad provider back to auto and a non-string model to the default', () => {

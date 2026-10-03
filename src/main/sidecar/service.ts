@@ -54,7 +54,7 @@ export function startSidecar(onStatus: (status: SidecarStatus) => void): void {
 
   sidecar.on('log', (line: string) => console.log('[sidecar]', line))
   sidecar.on('gaveUp', () =>
-    onStatus({ state: 'failed', error: 'The AI sidecar keeps crashing and has been stopped' })
+    onStatus({ state: 'failed', error: 'The AI helper keeps crashing and has been stopped' })
   )
 
   onStatus({ state: 'starting' })

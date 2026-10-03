@@ -826,7 +826,7 @@ Anchors are counted with `matchAll` before being trusted.
   (the tray's and CurvePanel's own), so the tone curve scrolls in the short lower row — CurvePanel's
   header is pinned by tests and is for a later step.
 
-### Step 6 — Settings panel top right
+### Step 6 — Settings panel top right · DONE 2026-10-03
 - **Files:** new `components/SettingsPanel.tsx` (fixed overlay anchored top right; Escape handler in the
   pinned shape `if (e.key === 'Escape') { // … \n e.preventDefault() \n onClose()`; Model servers block
   moved from `Director.tsx:326-399` with `modelPicker` `115-149`; AI helper status row; Hosted voice and
@@ -839,6 +839,34 @@ Anchors are counted with `matchAll` before being trusted.
 - **Check:** gear opens the panel; changing the Ollama URL updates `forgeStore.getState().directorConfig`;
   Esc closes; the Director tile's status line still resolves (refresh on open). In the real app once
   (`npm run dev` on the Mac): the gear is clickable inside the drag region.
+- **As built (2026-10-03).** `SettingsPanel.tsx`, a fixed card under the header's right end, opened
+  by a `no-drag` gear in the header (carrying the AI helper's status dot) and by the Director's own
+  gear ("Model servers — open Settings"): Model servers (the Director's block moved verbatim — provider,
+  servers, models, the write-only Key with Save and Clear, Check again, the status line; it refreshes
+  on open), **AI helper (Python)** with the plain-words state, **Hosted voice** and **Pexels** as
+  disabled "coming with Narration" rows. Escape closes it in the pinned shape (`fullScreen.test.ts`
+  lists it). No on-screen string says "sidecar" any more, in the renderer OR in the messages the main
+  process sends up (`sidecar/client.ts`, `sidecar/service.ts`, `voice.ts`; CLAUDE.md's 9009 row
+  updated). Measured in the harness: a typed key, once saved, is in neither the DOM nor the store
+  nor any title; Escape closed the panel without touching full screen.
+  **Two pre-existing security holes found by the verifier and closed here**, both outside the
+  step's files: (1) `settings:get` and `settings:set` returned the WHOLE of `settings.json` to the
+  renderer — hosted keys included — on every launch (`loadPresets`) and every preset save, so "the
+  renderer only ever learns `hasKey`" was not true. `main/store.ts` is now the one owner of the
+  file, in two halves: the main process's `Settings` (keys among them) and the renderer's rest
+  (export presets, the export choice); the window reads and writes only its half, is refused a
+  main-process field by name, and both halves are written together atomically (temp + rename, with
+  an in-place fallback for a Windows scanner holding the file). That also fixes a data-loss bug:
+  a Director save used to rewrite the file through `sanitize`, deleting every saved export preset.
+  (2) `redactKey` cut an error body to 400 characters BEFORE redacting, so a key that straddled the
+  cut survived as a prefix in the status reason and the toast; it redacts first now, and
+  `setDirectorSettings` is pinned to answer a save with `hasKey` only (`tests/settingsStore.test.ts`,
+  `tests/voiceProvider.test.ts`, `tests/directorMain.test.ts`; a 27-character probe key passed the
+  old code by coincidence of the 25-character prefix, so the test uses a longer one). Census: a
+  `settings` overlay home found as the one fixed element opening adds; 620 → 628 rows, none
+  dropped; 620 checked, 0 missing. Known, for later: the Director's status reasons in
+  `main/director.ts` still say "in the Director settings"; the card at `top-10` covers the gear
+  while the one-time recovery banner pushes the header down (Escape still closes it).
 
 ### Step 7 — OUTPUT and EXPORT strips in the left column
 - **Files:** new `components/OutputStrip.tsx` (`Inspector.tsx:415-764` moved: frame rate, loudness,

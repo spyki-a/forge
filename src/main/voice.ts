@@ -63,7 +63,9 @@ async function exists(path: string): Promise<number | null> {
  */
 export async function voiceStatus(): Promise<ProviderStatus[]> {
   let localReady = false
-  let localReason: string | null = 'The sidecar is not running'
+  // On screen the Python helper is the "AI helper"; "sidecar" is the user's
+  // name for the left panel, and only the code's for this.
+  let localReason: string | null = 'The AI helper is not running'
   try {
     // `start` returns the handshake it already has when the sidecar is up, so
     // this is a read rather than a launch on the common path.
@@ -194,7 +196,8 @@ async function speakHosted(
       /*
        * The body often explains the problem — a bad model name, a quota — and
        * it is worth showing. It is also the one place a key could be echoed
-       * back, so it is truncated and scanned before it reaches the user.
+       * back, so the key is taken out of the whole of it, and only then is it
+       * cut short for the screen.
        */
       const detail = await response.text().catch(() => '')
       throw new Error(

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Group, Panel, Separator } from 'react-resizable-panels'
 import { tinykeys } from 'tinykeys'
-import { AlertCircle, Info, Minimize2, X } from 'lucide-react'
+import { AlertCircle, Info, Minimize2, Settings, X } from 'lucide-react'
 import { escapeLeavesFullScreen } from '@shared/fullScreen'
 import { projectDuration } from '@shared/timeline'
 import { AUTOSAVE_INTERVAL_MS } from '@shared/project/recovery'
@@ -20,6 +20,7 @@ import { Shortcuts } from './components/Shortcuts'
 import { NewProject } from './components/NewProject'
 import { SourceBar } from './components/SourceBar'
 import { CurveTray, useTrayPanel } from './components/CurveTray'
+import { SettingsPanel, helperState } from './components/SettingsPanel'
 
 function Divider({ vertical = false }: { vertical?: boolean }): ReactNode {
   return (
@@ -70,6 +71,9 @@ function Header(): ReactNode {
   const projectPath = useEditor((s) => s.projectPath)
   const sidecarReady = useEditor((s) => s.sidecarReady)
   const sidecarError = useEditor((s) => s.sidecarError)
+  const settingsOpen = useEditor((s) => s.settingsOpen)
+  const setSettingsOpen = useEditor((s) => s.setSettingsOpen)
+  const helper = helperState(sidecarReady, sidecarError)
 
   return (
     <div className="drag-region flex h-9 shrink-0 items-center justify-center border-b border-ink-800">
@@ -84,17 +88,24 @@ function Header(): ReactNode {
       >
         {BUILD_STAMP.slice(11, 19)}
       </span>
-      <span
-        className="absolute right-3 flex items-center gap-1.5 text-[10px] text-ink-600"
-        title={sidecarError ?? (sidecarReady ? 'AI sidecar running' : 'AI sidecar starting')}
+      {/*
+        Settings: the model servers, the AI helper, and later the hosted keys
+        (SettingsPanel.tsx). The dot is the AI helper's, as the "AI" dot that
+        stood here was. The header is a drag region, so without no-drag the
+        gear would move the window instead of being pressed.
+      */}
+      <button
+        data-settings-gear
+        onClick={() => setSettingsOpen(!settingsOpen)}
+        title="Settings"
+        aria-pressed={settingsOpen}
+        className={`no-drag absolute right-2 flex items-center gap-1 rounded px-1.5 py-1 transition-colors ${
+          settingsOpen ? 'bg-ink-800 text-ink-100' : 'text-ink-500 hover:bg-ink-800 hover:text-ink-200'
+        }`}
       >
-        <span
-          className={`size-1.5 rounded-full ${
-            sidecarError ? 'bg-red-500' : sidecarReady ? 'bg-emerald-500' : 'bg-ink-600'
-          }`}
-        />
-        AI
-      </span>
+        <Settings size={13} />
+        <span className={`size-1.5 rounded-full ${helper.dot}`} />
+      </button>
     </div>
   )
 }
@@ -503,6 +514,9 @@ export default function App(): ReactNode {
       )}
 
       {shortcutsOpen && <Shortcuts onClose={() => setShortcutsOpen(false)} />}
+
+      {/* Under the header's gear; draws nothing while closed (store `settingsOpen`). */}
+      <SettingsPanel />
 
       {/*
         The way out of full screen, where anyone looks for it. On Windows full

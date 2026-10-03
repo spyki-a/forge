@@ -220,4 +220,20 @@ describe('redactKey', () => {
     const long = 'x'.repeat(5000)
     expect(redactKey(long, key).length).toBeLessThan(420)
   })
+
+  /*
+   * It used to cut at 400 and THEN look for the key. A key straddling the cut
+   * was no longer the whole key, nothing matched it, and its first characters
+   * went to the screen: 385 characters of body and then the key showed the
+   * first 15 of it in clear. Every straddling position, not one.
+   */
+  it('takes the key out before it cuts, wherever the cut falls across the key', () => {
+    const windows = Array.from({ length: key.length - 5 }, (_, i) => key.slice(i, i + 6))
+    for (let start = 400 - key.length + 1; start < 400; start++) {
+      const safe = redactKey(`${'x'.repeat(start)}${key}${'y'.repeat(50)}`, key)
+      const leaked = windows.filter((w) => safe.includes(w))
+      expect(leaked, `key at ${start}`).toEqual([])
+      expect(safe.length, `key at ${start}`).toBeLessThan(420)
+    }
+  })
 })

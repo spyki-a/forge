@@ -40,6 +40,7 @@ import { FFMPEG_PATH, FFPROBE_PATH } from './ffmpeg/paths'
 import { ensureLooks } from './looks'
 import { separateStems } from './separate'
 import { speak, voiceOptions, voiceStatus } from './voice'
+import { rendererSettings, setRendererSetting } from './store'
 import {
   complete as directorComplete,
   directorSettings,
@@ -1171,40 +1172,21 @@ export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
   /* ------------------------------------------------------------ settings */
 
   /**
-   * One JSON file in userData for everything that is the PERSON's rather than
-   * the project's — export presets today, and whatever else outlives a
-   * project later.
+   * The person's settings rather than the project's — export presets today,
+   * and whatever else outlives a project later.
    *
-   * Read fresh on every call rather than cached: it is a few hundred bytes,
-   * it is touched only when a panel opens, and a cache here would be a second
-   * copy of the truth that a second window could disagree with.
+   * The file is main/store.ts's, and so is the reading and writing of it: one
+   * owner, so a Director save cannot drop the presets and a preset save cannot
+   * race the Director. The window sees and writes only its own half. The
+   * hosted keys are in the other half and never cross here — not even on the
+   * way back from a write.
    */
-  const settingsFile = (): string => join(app.getPath('userData'), 'settings.json')
+  ipcMain.handle('settings:get', () => rendererSettings())
 
-  const readSettings = async (): Promise<Record<string, unknown>> => {
-    try {
-      const raw: unknown = JSON.parse(await readFile(settingsFile(), 'utf8'))
-      return typeof raw === 'object' && raw !== null && !Array.isArray(raw)
-        ? (raw as Record<string, unknown>)
-        : {}
-    } catch {
-      // Missing is the normal first-run case, and a corrupt file must not stop
-      // the app — defaults are a better answer than a dialog nobody can act on.
-      return {}
-    }
-  }
-
-  ipcMain.handle('settings:get', () => readSettings())
-
-  ipcMain.handle('settings:set', async (_e, payload: unknown) => {
+  ipcMain.handle('settings:set', (_e, payload: unknown) => {
     const { key, value } = (payload ?? {}) as { key?: unknown; value?: unknown }
     if (typeof key !== 'string' || !key) throw new Error('Expected a settings key')
-    const current = await readSettings()
-    const next = { ...current, [key]: value }
-    // Atomic, like the project save: a truncated settings file would lose
-    // every preset rather than the one being written.
-    await writeAtomic(settingsFile(), JSON.stringify(next, null, 2))
-    return next
+    return setRendererSetting(key, value)
   })
 
   /* ------------------------------------------------- autosave & recovery */

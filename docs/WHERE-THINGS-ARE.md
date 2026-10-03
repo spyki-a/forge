@@ -390,8 +390,11 @@ reveal, Energy, Trailer and Fashion / perfume, with the chosen one's one-line
 description beneath. **Length** under More defaults to the recipe's — sixty
 seconds for a wedding teaser, thirty otherwise — or the music, if shorter.
 Your pictures are listed in pool order with a field each
-for what is in them; the gear opens the model settings (Auto / Ollama / an
-OpenAI-shaped server such as LM Studio, with a write-only key field). Direct
+for what is in them; the gear opens the **Settings panel** at the top right of
+the window (also reached from the gear in the header), which holds the model
+servers (Auto / Ollama / an OpenAI-shaped server such as LM Studio, with a
+write-only key field), the AI helper's status, and the hosted-voice and Pexels
+rows that Narration will use. Direct
 asks the model for a plan, checks it, and the recipe times it to the beat:
 shots on V1 with the black and the end card after them, the recipe's grade as
 an adjustment layer on the lane above, headline cards above that, and the

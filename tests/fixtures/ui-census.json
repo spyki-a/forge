@@ -357,15 +357,6 @@
     "newHome": "Shelf tile Strip flashes"
   },
   {
-    "label": "Auto",
-    "match": "text",
-    "home": "create",
-    "needs": "director-settings",
-    "file": "src/renderer/src/components/Director.tsx",
-    "line": 342,
-    "newHome": "settings panel (§3.9)"
-  },
-  {
     "label": "Automation",
     "match": "text",
     "home": "create",
@@ -429,15 +420,6 @@
     "newHome": "Shelf tile Grid split"
   },
   {
-    "label": "Check again",
-    "match": "text",
-    "home": "create",
-    "needs": "director-settings",
-    "file": "src/renderer/src/components/Director.tsx",
-    "line": 396,
-    "newHome": "settings panel (§3.9)"
-  },
-  {
     "label": "Chosen for the brief and the pictures; without a model, by the tone.",
     "match": "text",
     "home": "create",
@@ -454,16 +436,6 @@
     "file": "src/shared/render/grid.ts",
     "line": 39,
     "newHome": "Shelf tile Grid split"
-  },
-  {
-    "label": "Clear",
-    "match": "text",
-    "home": "create",
-    "needs": "director-key",
-    "file": "src/renderer/src/components/Director.tsx",
-    "line": 390,
-    "newHome": "settings panel (§3.9)",
-    "note": "Clears the saved key. Director's own Clear (412) shows only after a direction."
   },
   {
     "label": "Clear",
@@ -603,15 +575,6 @@
     "newHome": "Shelf tile Grid split"
   },
   {
-    "label": "Hosted",
-    "match": "text",
-    "home": "create",
-    "needs": "director-hosted",
-    "file": "src/renderer/src/components/Director.tsx",
-    "line": 342,
-    "newHome": "settings panel (§3.9)"
-  },
-  {
     "label": "Import pictures or clips — they appear here in pool order.",
     "match": "text",
     "home": "create",
@@ -628,25 +591,6 @@
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 360,
     "newHome": "Shelf tile Beat sync"
-  },
-  {
-    "label": "Key",
-    "match": "text",
-    "home": "create",
-    "needs": "director-settings",
-    "file": "src/renderer/src/components/Director.tsx",
-    "line": 370,
-    "newHome": "settings panel (§3.9)"
-  },
-  {
-    "label": "LM Studio",
-    "match": "text",
-    "home": "create",
-    "needs": "director-settings",
-    "file": "src/renderer/src/components/Director.tsx",
-    "line": 342,
-    "newHome": "settings panel (§3.9)",
-    "note": "The third provider button's name while the OpenAI-shaped server is on this machine; Hosted otherwise."
   },
   {
     "label": "Landing",
@@ -685,24 +629,14 @@
     "newHome": "Shelf tile Strip flashes"
   },
   {
-    "label": "Model",
-    "match": "text",
-    "home": "create",
-    "needs": "director-settings",
-    "count": 2,
-    "file": "src/renderer/src/components/Director.tsx",
-    "line": 355,
-    "newHome": "settings panel (§3.9)",
-    "note": "Count 2: the Ollama and the OpenAI-shaped Model fields (355, 369)."
-  },
-  {
-    "label": "Model settings",
+    "label": "Model servers — open Settings",
     "match": "title",
     "home": "create",
     "needs": "none",
     "file": "src/renderer/src/components/Director.tsx",
-    "line": 326,
-    "newHome": "Shelf tile Director (the gear opens the settings panel)"
+    "line": 288,
+    "newHome": "Shelf tile Director (the gear opens the settings panel)",
+    "note": "Step 6: the gear that showed the model settings here now opens the settings panel (setSettingsOpen(true)); it was \"Model settings\"."
   },
   {
     "label": "More",
@@ -741,17 +675,6 @@
     "newHome": "Shelf tile 3D props"
   },
   {
-    "label": "Ollama",
-    "match": "text",
-    "home": "create",
-    "needs": "director-settings",
-    "count": 2,
-    "file": "src/renderer/src/components/Director.tsx",
-    "line": 342,
-    "newHome": "settings panel (§3.9)",
-    "note": "Count 2: the Ollama provider button and the OLLAMA section header (347)."
-  },
-  {
     "label": "On",
     "match": "text",
     "home": "create",
@@ -769,15 +692,6 @@
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 374,
     "newHome": "Shelf tile One photo"
-  },
-  {
-    "label": "OpenAI-shaped server — LM Studio, llama.cpp, or a hosted API",
-    "match": "text",
-    "home": "create",
-    "needs": "director-settings",
-    "file": "src/renderer/src/components/Director.tsx",
-    "line": 359,
-    "newHome": "settings panel (§3.9)"
   },
   {
     "label": "Order",
@@ -879,27 +793,6 @@
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 838,
     "newHome": "Shelf tile 3D props"
-  },
-  {
-    "label": "Save",
-    "match": "text",
-    "home": "create",
-    "needs": "director-settings",
-    "file": "src/renderer/src/components/Director.tsx",
-    "line": 386,
-    "newHome": "settings panel (§3.9)",
-    "note": "Saves the key: write-only, only hasKey is read back."
-  },
-  {
-    "label": "Server",
-    "match": "text",
-    "home": "create",
-    "needs": "director-settings",
-    "count": 2,
-    "file": "src/renderer/src/components/Director.tsx",
-    "line": 348,
-    "newHome": "settings panel (§3.9)",
-    "note": "Count 2: the Ollama and the OpenAI-shaped Server fields (348, 361)."
   },
   {
     "label": "Shop now",
@@ -1094,35 +987,6 @@
     "newHome": "Shelf tile Director"
   },
   {
-    "label": "http://127.0.0.1:1234/v1",
-    "match": "placeholder",
-    "home": "create",
-    "needs": "director-settings",
-    "file": "src/renderer/src/components/Director.tsx",
-    "line": 365,
-    "newHome": "settings panel (§3.9)"
-  },
-  {
-    "label": "model name",
-    "match": "placeholder",
-    "home": "create",
-    "needs": "director-settings",
-    "count": 2,
-    "file": "src/renderer/src/components/Director.tsx",
-    "line": 127,
-    "newHome": "settings panel (§3.9)",
-    "note": "Count 2: both Model fields, while no server has listed its models."
-  },
-  {
-    "label": "not needed locally",
-    "match": "placeholder",
-    "home": "create",
-    "needs": "director-settings",
-    "file": "src/renderer/src/components/Director.tsx",
-    "line": 375,
-    "newHome": "settings panel (§3.9)"
-  },
-  {
     "label": "panels placed.",
     "match": "text",
     "home": "create",
@@ -1130,15 +994,6 @@
     "file": "src/renderer/src/components/Automation.tsx",
     "line": 788,
     "newHome": "Shelf tile Film strip"
-  },
-  {
-    "label": "paste your key",
-    "match": "placeholder",
-    "home": "create",
-    "needs": "director-hosted",
-    "file": "src/renderer/src/components/Director.tsx",
-    "line": 375,
-    "newHome": "settings panel (§3.9)"
   },
   {
     "label": "placed. They are ordinary clips — move, trim or delete any of them.",
@@ -1214,15 +1069,6 @@
     "file": "src/renderer/src/components/Director.tsx",
     "line": 231,
     "newHome": "Shelf tile Director"
-  },
-  {
-    "label": "•••••••• (saved)",
-    "match": "placeholder",
-    "home": "create",
-    "needs": "director-key",
-    "file": "src/renderer/src/components/Director.tsx",
-    "line": 375,
-    "newHome": "settings panel (§3.9)"
   },
   {
     "label": "Back to a straight line on every channel",
@@ -1382,24 +1228,6 @@
     "note": "Count 3: one per point on the census's three-point curve."
   },
   {
-    "label": "AI",
-    "match": "text",
-    "home": "header",
-    "needs": "none",
-    "file": "src/renderer/src/App.tsx",
-    "line": 93,
-    "newHome": "settings panel (dot on the ⚙ gear, §3.1)"
-  },
-  {
-    "label": "AI sidecar starting",
-    "match": "title",
-    "home": "header",
-    "needs": "sidecar-starting",
-    "file": "src/renderer/src/App.tsx",
-    "line": 86,
-    "newHome": "settings panel (status dot on the gear + \"AI helper (Python)\" row inside)"
-  },
-  {
     "label": "Discard",
     "match": "text",
     "home": "header",
@@ -1440,6 +1268,16 @@
     "newHome": "unchanged (app shell)",
     "harnessOnly": false,
     "note": "App keeps the banner in its own state, filled once at mount from window.forge.recoveries(), and the harness bridge answers [] — there is no autosave on a disk here. The membership test still covers the words."
+  },
+  {
+    "label": "Settings",
+    "match": "title",
+    "home": "header",
+    "needs": "none",
+    "file": "src/renderer/src/App.tsx",
+    "line": 100,
+    "newHome": "unchanged (header gear, §3.1)",
+    "note": "Step 6: the gear that replaced the \"AI\" status dot; it carries the AI helper's dot and opens the settings panel."
   },
   {
     "label": "Something in the interface crashed",
@@ -4413,13 +4251,13 @@
     "newHome": "Shelf tile Upload"
   },
   {
-    "label": "The AI sidecar is not running",
+    "label": "The AI helper (Python) is not running",
     "match": "title",
     "home": "media",
     "needs": "video-clip",
     "file": "src/renderer/src/components/MediaPool.tsx",
     "line": 239,
-    "newHome": "Shelf tile Upload (tooltip reworded to \"AI helper\" in step 6)"
+    "newHome": "Shelf tile Upload"
   },
   {
     "label": "Transcribing — click to cancel",
@@ -4712,6 +4550,248 @@
     "line": 38,
     "newHome": "timeline sidebar (Curve tray), the closed rail",
     "note": "The rail dot for an animated mask's tracks alone."
+  },
+  {
+    "label": "AI helper (Python)",
+    "match": "text",
+    "home": "settings",
+    "needs": "settings-open",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 264,
+    "newHome": "settings panel (§3.9)"
+  },
+  {
+    "label": "Auto",
+    "match": "text",
+    "home": "settings",
+    "needs": "settings-open",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 203,
+    "newHome": "settings panel (§3.9)"
+  },
+  {
+    "label": "Check again",
+    "match": "text",
+    "home": "settings",
+    "needs": "settings-open",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 257,
+    "newHome": "settings panel (§3.9)"
+  },
+  {
+    "label": "Clear",
+    "match": "text",
+    "home": "settings",
+    "needs": "director-key",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 251,
+    "newHome": "settings panel (§3.9)",
+    "note": "Clears the saved key. Director's own Clear (412) shows only after a direction."
+  },
+  {
+    "label": "Close settings",
+    "match": "title",
+    "home": "settings",
+    "needs": "settings-open",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 177,
+    "newHome": "settings panel (§3.9)"
+  },
+  {
+    "label": "Hosted",
+    "match": "text",
+    "home": "settings",
+    "needs": "director-hosted",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 203,
+    "newHome": "settings panel (§3.9)"
+  },
+  {
+    "label": "Hosted voice",
+    "match": "text",
+    "home": "settings",
+    "needs": "settings-open",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 277,
+    "newHome": "settings panel (§3.9)",
+    "note": "Disabled until Narration (phase 3) gives it a write-only IPC like the Director's."
+  },
+  {
+    "label": "Key",
+    "match": "text",
+    "home": "settings",
+    "needs": "settings-open",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 231,
+    "newHome": "settings panel (§3.9)"
+  },
+  {
+    "label": "LM Studio",
+    "match": "text",
+    "home": "settings",
+    "needs": "settings-open",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 203,
+    "newHome": "settings panel (§3.9)",
+    "note": "The third provider button's name while the OpenAI-shaped server is on this machine; Hosted otherwise."
+  },
+  {
+    "label": "Model",
+    "match": "text",
+    "home": "settings",
+    "needs": "settings-open",
+    "count": 2,
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 230,
+    "newHome": "settings panel (§3.9)",
+    "note": "Count 2: the Ollama and the OpenAI-shaped Model fields (216, 230)."
+  },
+  {
+    "label": "Model servers",
+    "match": "text",
+    "home": "settings",
+    "needs": "settings-open",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 186,
+    "newHome": "settings panel (§3.9)"
+  },
+  {
+    "label": "Not running",
+    "match": "text",
+    "home": "settings",
+    "needs": "settings-open",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 51,
+    "newHome": "settings panel (§3.9)",
+    "note": "The harness's own state: its bridge's AI helper fails by design (bridge.ts sidecarStatus), and the reason under it is the bridge's words, not the interface's."
+  },
+  {
+    "label": "Ollama",
+    "match": "text",
+    "home": "settings",
+    "needs": "settings-open",
+    "count": 2,
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 203,
+    "newHome": "settings panel (§3.9)",
+    "note": "Count 2: the Ollama provider button and the OLLAMA section header (208)."
+  },
+  {
+    "label": "OpenAI-shaped server — LM Studio, llama.cpp, or a hosted API",
+    "match": "text",
+    "home": "settings",
+    "needs": "settings-open",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 220,
+    "newHome": "settings panel (§3.9)"
+  },
+  {
+    "label": "Pexels",
+    "match": "text",
+    "home": "settings",
+    "needs": "settings-open",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 280,
+    "newHome": "settings panel (§3.9)",
+    "note": "Disabled until Narration (phase 3)."
+  },
+  {
+    "label": "Running",
+    "match": "text",
+    "home": "settings",
+    "needs": "sidecar-running",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 52,
+    "newHome": "settings panel (§3.9)"
+  },
+  {
+    "label": "Save",
+    "match": "text",
+    "home": "settings",
+    "needs": "settings-open",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 247,
+    "newHome": "settings panel (§3.9)",
+    "note": "Saves the key: write-only, only hasKey is read back."
+  },
+  {
+    "label": "Server",
+    "match": "text",
+    "home": "settings",
+    "needs": "settings-open",
+    "count": 2,
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 209,
+    "newHome": "settings panel (§3.9)",
+    "note": "Count 2: the Ollama and the OpenAI-shaped Server fields (209, 222)."
+  },
+  {
+    "label": "Starting",
+    "match": "text",
+    "home": "settings",
+    "needs": "sidecar-starting",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 53,
+    "newHome": "settings panel (§3.9)",
+    "note": "Step 6: the AI helper's state before it reports, which the header dot's tooltip \"AI sidecar starting\" said; the gear's dot still shows it in grey."
+  },
+  {
+    "label": "coming with Narration",
+    "match": "text",
+    "home": "settings",
+    "needs": "settings-open",
+    "count": 2,
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 63,
+    "newHome": "settings panel (§3.9)",
+    "note": "Count 2: the Hosted voice and Pexels rows."
+  },
+  {
+    "label": "http://127.0.0.1:1234/v1",
+    "match": "placeholder",
+    "home": "settings",
+    "needs": "settings-open",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 226,
+    "newHome": "settings panel (§3.9)"
+  },
+  {
+    "label": "model name",
+    "match": "placeholder",
+    "home": "settings",
+    "needs": "settings-open",
+    "count": 2,
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 136,
+    "newHome": "settings panel (§3.9)",
+    "note": "Count 2: both Model fields, while no server has listed its models."
+  },
+  {
+    "label": "not needed locally",
+    "match": "placeholder",
+    "home": "settings",
+    "needs": "settings-open",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 236,
+    "newHome": "settings panel (§3.9)"
+  },
+  {
+    "label": "paste your key",
+    "match": "placeholder",
+    "home": "settings",
+    "needs": "director-hosted",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 236,
+    "newHome": "settings panel (§3.9)"
+  },
+  {
+    "label": "•••••••• (saved)",
+    "match": "placeholder",
+    "home": "settings",
+    "needs": "director-key",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 236,
+    "newHome": "settings panel (§3.9)"
   },
   {
     "label": "Add to the selection",

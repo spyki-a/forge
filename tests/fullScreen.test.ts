@@ -62,9 +62,13 @@ describe('the way out is wired', () => {
     expect(app).toContain('if (escapeLeavesFullScreen(e, true)) window.forge.exitFullScreen()')
   })
 
-  it('the menu and the shortcuts sheet mark the Escape they used as handled', () => {
-    // Otherwise closing either would also throw the window out of full screen.
-    for (const file of ['src/renderer/src/components/ClipMenu.tsx', 'src/renderer/src/components/Shortcuts.tsx']) {
+  it('the menu, the shortcuts sheet and the settings panel mark the Escape they used as handled', () => {
+    // Otherwise closing any of them would also throw the window out of full screen.
+    for (const file of [
+      'src/renderer/src/components/ClipMenu.tsx',
+      'src/renderer/src/components/Shortcuts.tsx',
+      'src/renderer/src/components/SettingsPanel.tsx'
+    ]) {
       expect(source(file), file).toMatch(/if \(e\.key === 'Escape'\) \{\s*\/\/[^\n]*\n\s*e\.preventDefault\(\)\s*\n\s*onClose\(\)/)
     }
   })

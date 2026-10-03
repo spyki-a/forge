@@ -181,14 +181,18 @@ export function chooseProvider(
  *
  * Pure, and here rather than beside the fetch, so it can be tested without a
  * network or an electron process.
+ *
+ * Redact FIRST, then cut. The other way round, a key that straddles the cut is
+ * no longer the whole key, so nothing matches it and its first characters go
+ * to the screen in clear. And nothing upstream may cut the text before it
+ * gets here, for the same reason.
  */
 export function redactKey(message: string, apiKey: string): string {
-  const short = message.length > 400 ? `${message.slice(0, 400)}…` : message
   const key = apiKey.trim()
   // A very short "key" is either empty or a placeholder, and splitting on it
   // would shred unrelated text.
-  if (key.length < 8) return short
-  return short.split(key).join('***')
+  const clean = key.length < 8 ? message : message.split(key).join('***')
+  return clean.length > 400 ? `${clean.slice(0, 400)}…` : clean
 }
 
 /**
