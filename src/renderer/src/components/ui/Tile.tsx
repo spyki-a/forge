@@ -26,12 +26,19 @@ import { Loader2, type LucideIcon } from 'lucide-react'
  *
  * The shadows reach 14 px (4 offset + 10 blur): a grid of tiles inside anything
  * overflow-hidden needs at least that much padding, and gaps of 12 px or more.
+ * The icon-only `xs` tile throws the same light at its own scale
+ * (`shadow-raised-xs`, about 6 px), or its neighbours two pixels away would be
+ * lost in its shade.
  */
 
-/** The class sets for each state, exported so a test can hold them apart. */
+/**
+ * The class sets for each state, exported so a test can hold them apart. The
+ * raised shadow is the size's (`TILE_SIZE`), the same light at each scale; the
+ * pressed one is the same inset at every size.
+ */
 export const TILE_LOOK = {
   idle: {
-    surface: 'bg-ink-950 shadow-raised active:bg-ink-850',
+    surface: 'bg-ink-950 active:bg-ink-850',
     label: 'text-ink-300 group-hover:text-ink-100',
     icon: 'text-ink-400'
   },
@@ -69,7 +76,8 @@ function Glyph({
   pressed,
   size,
   className,
-  badge = 'bg-accent-500'
+  badge = 'bg-accent-500',
+  dot = 'right-1.5 top-1.5 size-1.5'
 }: {
   icon: LucideIcon
   pressedIcon?: LucideIcon
@@ -78,13 +86,15 @@ function Glyph({
   className: string
   /** The dot's colour: blue on the pale pressed body, cream on a blue one. */
   badge?: string
+  /** Where the dot sits and how big it is: tucked into the corner on the icon-only tile. */
+  dot?: string
 }): ReactNode {
   if (!pressed) return <Icon size={size} className={className} aria-hidden />
   if (PressedIcon) return <PressedIcon size={size} className={className} aria-hidden />
   return (
     <>
       <Icon size={size} strokeWidth={PRESSED_STROKE} className={className} aria-hidden />
-      <span data-pressed-badge className={`absolute right-1.5 top-1.5 size-1.5 rounded-full ${badge}`} aria-hidden />
+      <span data-pressed-badge className={`absolute ${dot} rounded-full ${badge}`} aria-hidden />
     </>
   )
 }
@@ -93,27 +103,67 @@ function Glyph({
 export const BUSY_TITLE = 'Working on it'
 
 /**
- * A tile's two sizes. `sm` is the Shelf's home grid (shelf/Shelf.tsx): three
+ * A tile's sizes. `sm` is the Shelf's home grid (shelf/Shelf.tsx): three
  * tiles to a row in the 240 px column are about 62 px square, and at the
  * default size the sketch's longer names — "Beat sync / Cut to words",
  * "Newspaper clipping" — would be cut off, so the small one has less padding,
- * a smaller label and room for a third line. A size rather than classes passed
- * in, for BigButton's reason: two paddings on one element are settled by the
- * stylesheet's order, not the class string's.
+ * a smaller label and room for a third line.
+ *
+ * `xs` is the strip an open tool folds the home grid into (step 11): ten to a
+ * row, about 20 px square in the 240 px column and never more than 24 px
+ * (`max-w-6`), the ICON ONLY — its label is its accessible name and its
+ * tooltip, never drawn — with its own smaller shadow, rounding, pressed dot and
+ * busy badge, each scaled to a box a third the size of `sm`'s.
+ *
+ * A size rather than classes passed in, for BigButton's reason: two paddings
+ * (or two shadows) on one element are settled by the stylesheet's order, not
+ * the class string's.
  */
 const TILE_SIZE = {
-  md: { box: 'gap-1 p-1.5', icon: 18, label: 'line-clamp-2 text-[10.5px] leading-tight' },
-  sm: { box: 'gap-0.5 p-1', icon: 16, label: 'line-clamp-3 text-[9.5px] leading-[1.15]' }
+  md: {
+    box: 'aspect-square w-full flex-col gap-1 rounded-xl p-1.5',
+    raised: 'shadow-raised',
+    icon: 18,
+    iconHover: '',
+    label: 'line-clamp-2 text-[10.5px] leading-tight',
+    dot: undefined,
+    busy: { at: 'left-1 top-1', size: 10 }
+  },
+  sm: {
+    box: 'aspect-square w-full flex-col gap-0.5 rounded-xl p-1',
+    raised: 'shadow-raised',
+    icon: 16,
+    iconHover: '',
+    label: 'line-clamp-3 text-[9.5px] leading-[1.15]',
+    dot: undefined,
+    busy: { at: 'left-1 top-1', size: 10 }
+  },
+  xs: {
+    box: 'aspect-square w-full max-w-6 rounded-md',
+    raised: 'shadow-raised-xs',
+    icon: 12,
+    // With no label to darken on hover, the glyph does it.
+    iconHover: 'group-hover:text-ink-200',
+    label: null,
+    dot: 'right-[3px] top-[3px] size-1',
+    busy: { at: '-left-0.5 -top-0.5 rounded-full bg-ink-950', size: 9 }
+  }
 } as const
 
 export interface TileProps extends ButtonProps {
   icon: LucideIcon
   /** The glyph to show while pressed. Without it, the icon is drawn heavier with a dot. */
   pressedIcon?: LucideIcon
+  /** Drawn under the icon — or, on the icon-only `xs` tile, the button's accessible name. */
   label: string
-  /** A tile is a toggle (its tool open or not), so it always says which. */
+  /**
+   * For a tile that toggles — the strip's tiles, one per tool, the open one
+   * pressed — and then it always says which (`aria-pressed`). Leave it out on
+   * a tile that only goes somewhere, like the home grid's: a plain button,
+   * which says nothing about being pressed.
+   */
   pressed?: boolean
-  /** A second, smaller line under the label: "soon" on a tool that is not built yet. */
+  /** A second, smaller line under the label: "soon" on a tool that is not built yet. Not drawn at `xs`. */
   note?: string
   /**
    * Something is under way in this tool — a build, a download, a transcription:
@@ -121,14 +171,14 @@ export interface TileProps extends ButtonProps {
    * run started inside a tool stays visible from the grid.
    */
   busy?: boolean
-  size?: 'md' | 'sm'
+  size?: 'md' | 'sm' | 'xs'
 }
 
 export function Tile({
   icon,
   pressedIcon,
   label,
-  pressed = false,
+  pressed,
   note,
   busy = false,
   size = 'md',
@@ -136,21 +186,33 @@ export function Tile({
   type = 'button',
   ...rest
 }: TileProps): ReactNode {
-  const look = pressed ? TILE_LOOK.pressed : TILE_LOOK.idle
+  const down = pressed === true
+  const look = down ? TILE_LOOK.pressed : TILE_LOOK.idle
   const measure = TILE_SIZE[size]
+  // The icon-only tile: the label is what a screen reader says and, unless the
+  // caller gives one, what the tooltip says.
+  const named = measure.label === null ? { 'aria-label': label, title: rest.title ?? label } : {}
   return (
     <button
       {...rest}
+      {...named}
       type={type}
       aria-pressed={pressed}
-      className={`group relative flex aspect-square w-full flex-col items-center justify-center rounded-xl ${measure.box} disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none ${look.surface} ${className}`}
+      className={`group relative flex items-center justify-center ${measure.box} disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none ${look.surface} ${down ? '' : measure.raised} ${className}`}
     >
-      <Glyph icon={icon} pressedIcon={pressedIcon} pressed={pressed} size={measure.icon} className={look.icon} />
-      <span className={`text-center font-medium ${measure.label} ${look.label}`}>{label}</span>
-      {note && <span className="text-[9px] leading-none text-ink-600">{note}</span>}
+      <Glyph
+        icon={icon}
+        pressedIcon={pressedIcon}
+        pressed={down}
+        size={measure.icon}
+        className={down ? look.icon : `${look.icon} ${measure.iconHover}`}
+        dot={measure.dot}
+      />
+      {measure.label !== null && <span className={`text-center font-medium ${measure.label} ${look.label}`}>{label}</span>}
+      {note && measure.label !== null && <span className="text-[9px] leading-none text-ink-600">{note}</span>}
       {busy && (
-        <span data-busy-badge title={BUSY_TITLE} className="absolute left-1 top-1 text-accent-400">
-          <Loader2 size={10} strokeWidth={2.25} className="animate-spin" aria-hidden />
+        <span data-busy-badge title={BUSY_TITLE} className={`absolute ${measure.busy.at} text-accent-400`}>
+          <Loader2 size={measure.busy.size} strokeWidth={2.25} className="animate-spin" aria-hidden />
         </span>
       )}
     </button>

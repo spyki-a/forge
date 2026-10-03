@@ -1101,7 +1101,7 @@ Anchors are counted with `matchAll` before being trusted.
   shows busy; the Depth / Parallax box and the reel's box follow each other. Guards that are not
   interlocks (Film strip `images === 0`, Props `running || !transcribed`) are pinned as anchors too.
 
-### Step 11 — One-click tools and pointer panels
+### Step 11 — One-click tools and pointer panels, and the folding strip · DONE 2026-10-03
 - **Files:** `components/tools/Text.tsx`, `ColourCards.tsx`, `Grade.tsx`, `Newspaper.tsx`, `CardRing.tsx`
   (each: its Add big button from `LeftPanel.tsx:82-122`, one line on what it makes, "N on the timeline"
   with click-to-select, "edit it in the dock"); `Transitions.tsx` (Library on Transitions + note on
@@ -1125,6 +1125,36 @@ Anchors are counted with `matchAll` before being trusted.
 - Also from step 9's known list: the one-click panels' adder wiring and Upload → `importAssets`
   get a source test each (J1/J2/K4 in that note); "Import" wording left anywhere on screen →
   "Upload".
+- **As built (2026-10-03).** The one-click panels, Transitions, Depth / Parallax, the busy badges
+  and Library's `initialKind` had landed in steps 9 and 10; this step built the user's strip. With a
+  tool open the Shelf is exactly [`data-shelf-strip`, `data-shelf-panel`]: the strip is a Home tile
+  ("All the tools") then the nineteen tools from the registry as icon-only `Tile size="xs"` (ten to
+  a row, two rows, 3 px gaps, `max-w-6`: 20.1 px tiles and a 65 px strip at the 240 px column, 24 px
+  tiles and 73 px from a 279 px column), each named by its tooltip and `aria-label`, the open tool's
+  tile PRESSED (measured: fill `accent-900` #dce8ff, icon `accent-400` #1b4cd5 at stroke 2.25, the
+  inset `shadow-pressed` and no raised shadow; `aria-pressed="true"` on it alone), the others
+  `aria-pressed="false"`; a click switches tools, the pressed tile or Home goes home; busy badges
+  stay on strip tiles. The "← Tools · name" header is gone; Home itself is the step 9 grid, whose
+  tiles now carry no `aria-pressed` (Tile leaves it off when `pressed` is not given — the step 9
+  nit). A third shadow token, `shadow-raised-xs`, at a third of the reach so tiles 3 px apart do not
+  drown in each other's shade. `SHELF_FLOOR` rose from 152 to 194 so the Shelf still keeps ~120 px
+  of panel under a 73 px strip at its floor; the cost, measured at 1100×680 with the dock showing,
+  is 42 px of an open OUTPUT strip's body (133 against ~175). Measured: at 1400×900 the panel below
+  the strip is 743 px with no dock and 290 with a photo selected; at 1100×680, 523 and 199, every
+  tool's own header visible at the top. `tests/oneClickWiring.test.ts` pins each one-click panel to
+  ITS adder and Upload to pick-then-import (swapped adders and a non-importing Upload fail);
+  `tests/shelf.test.ts` and `tests/renderer/shelfRender.test.ts` pin the strip (none pressed, two
+  pressed, no Home, the header left in, home tiles with `aria-pressed` — each fails). Census: the
+  `shelf` home has two faces, the grid's labels and the strip's titles; "Tools" and "Back to all the
+  tools" → successors "All the tools" and the pressed tile; "Drop to import" → "Drop to upload";
+  704 → 723 rows; 715 checked, 0 missing. Known: five panels show no tool name at the top now that
+  the header is gone (URL, Narration, Library, Transitions, Transcript — the name is only the
+  pressed tile's tooltip, and Library and Transitions look identical at the top); the pressed dot
+  overlaps the glyph's corner by ~3 px at the 240 px column; the 23 px horizontal pitch at 240 px is
+  just under WCAG 2.5.8's 24 px target (fine from a ~250 px column); going home drops keyboard
+  focus to the body; the strip's Narration tile does not say "soon"; the store's six "Import a …
+  first" notices keep the verb. For the user to decide: a one-line tool name under the strip for
+  the panels without a header.
 
 ### Step 12 — "Uses:" — the first half of the common source picker
 - **Files:** new `components/tools/SourceLine.tsx` — every media tool's panel starts with **Upload a

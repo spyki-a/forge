@@ -89,8 +89,9 @@ type Match = (typeof MATCHES)[number]
 
 /**
  * The Shelf's tools (step 9), each a home: the panel its tile opens, found as
- * the open tool's `data-shelf-panel` — never its header, which names the tool
- * in words some panels also use ("Grid split", "Director"). `openHome` opens
+ * the open tool's `data-shelf-panel` — never the strip over it (the header
+ * until step 11), whose tiles name every tool in words some panels also use
+ * ("Grid split", "Director"). `openHome` opens
  * it through the store, from the home grid. The step-8 homes they replace:
  * `source` (the Upload / YouTube / Narration row), and the left panel's tabs
  * `media`, `library`, `transcript` and `create`.
@@ -128,9 +129,12 @@ export const TOOL_HOMES = Object.fromEntries(SHELF_TOOLS.map((tool) => [toolHome
   Record<ToolHome, ShelfToolId>
 >
 /**
- * The Shelf itself: its home grid of tiles, and an open tool's header (the
- * way back) — the whole Shelf, in whatever face the scenario put it.
- * `openHome` puts it on the home grid.
+ * The Shelf itself, in two faces: its home grid of tiles (their labels as
+ * text, their hints as titles), and — with a tool open — the strip the grid
+ * folds into (step 11: each tool's tile named by its title, the Home tile's
+ * "All the tools") over the tool's panel. The whole Shelf, in whatever face
+ * the scenario put it; `openHome` puts it on the home grid, and the
+ * 'shelf-tool-open' recipe opens a tool for the strip's rows.
  */
 const SHELF_HOME = 'shelf'
 /**
@@ -417,11 +421,13 @@ function leftSplit(holder: Element): { shelf: Element; dock: Element | null } {
 
 /**
  * What the Shelf is showing, by what it says: `data-shelf-tool` on its root is
- * "home" (the grid, one child) or the open tool's id (two children: the
- * header, then the panel, which carries `data-shelf-panel`). Never by its
- * words — the tiles' labels and the panels' controls are what is counted.
- * Anything else throws, and so does a second Shelf or a panel outside this
- * one: either would be counted in no home.
+ * "home" (the grid, one child) or the open tool's id (two children: the strip
+ * of tool tiles the grid folds into, which carries `data-shelf-strip` — the
+ * "← Tools" header until step 11 — then the panel, which carries
+ * `data-shelf-panel`). Never by its words — the tiles' labels and titles and
+ * the panels' controls are what is counted. Anything else throws, and so does
+ * a second Shelf, a second strip, or a panel outside this one: each would be
+ * counted in no home, or in two.
  */
 function shelfFace(shelf: Element): { showing: string; panel: Element | null } {
   const showing = shelf.getAttribute('data-shelf-tool')
@@ -434,17 +440,23 @@ function shelfFace(shelf: Element): { showing: string; panel: Element | null } {
   const panelsOnPage = document.querySelectorAll('[data-shelf-panel]').length
   if (showing === 'home') {
     const [grid] = childrenOf(shelf, 1, 'the Shelf’s home grid')
-    if (panelsOnPage !== 0 || grid.matches('[data-shelf-panel]')) {
-      throw new Error('census: the Shelf says it shows its home grid and a tool’s panel is on the page — the layout changed; update homeRoots')
+    if (panelsOnPage !== 0 || grid.matches('[data-shelf-panel]') || document.querySelectorAll('[data-shelf-strip]').length !== 0) {
+      throw new Error('census: the Shelf says it shows its home grid and a tool’s panel or the strip is on the page — the layout changed; update homeRoots')
     }
     return { showing, panel: null }
   }
   if (!SHELF_TOOLS.some((tool) => tool.id === showing)) {
     throw new Error(`census: the Shelf says it shows ${JSON.stringify(showing)}, which is no tool in shelf/tools.ts`)
   }
-  const [head, panel] = childrenOf(shelf, 2, `the Shelf open on ${showing}`)
-  if (head.matches('[data-shelf-panel]') || !panel.matches('[data-shelf-panel]') || panelsOnPage !== 1) {
-    throw new Error(`census: the Shelf open on ${showing} is not [header, panel] — the layout changed; update homeRoots`)
+  const [strip, panel] = childrenOf(shelf, 2, `the Shelf open on ${showing}`)
+  if (
+    !strip.matches('[data-shelf-strip]') ||
+    strip.matches('[data-shelf-panel]') ||
+    !panel.matches('[data-shelf-panel]') ||
+    panelsOnPage !== 1 ||
+    document.querySelectorAll('[data-shelf-strip]').length !== 1
+  ) {
+    throw new Error(`census: the Shelf open on ${showing} is not [strip, panel] — the layout changed; update homeRoots`)
   }
   return { showing, panel }
 }
@@ -461,9 +473,10 @@ function shelfFace(shelf: Element): { showing: string; panel: Element | null } {
  *     the Inspector's column is gone; the holder is a vertical Group of the
  *     left panel and, only while there is something to trim, the dock, told
  *     apart by its `data-dock`; the left column runs full height. Step 9: the
- *     left panel is the Shelf — its home grid, or an open tool's header over
- *     its panel (`shelfFace`) — and the source row that headed the column is
- *     three of its tiles, so nothing sits above the holder)
+ *     left panel is the Shelf — its home grid, or an open tool's strip of
+ *     tiles (step 11; a header until then) over its panel (`shelfFace`) — and
+ *     the source row that headed the column is three of its tiles, so nothing
+ *     sits above the holder)
  *   right = centre / [ transport + timeline | curve tray ]
  *   centre = canvas bar / [ toolbox + preview ]   (step 4: the bar over the picture row)
  *   curve tray = the lower row's second panel, whatever its width: a 28 px
@@ -761,7 +774,7 @@ async function click(button: HTMLElement): Promise<void> {
 
 /**
  * Put the Shelf on its home grid (null) or open one tool, through the store as
- * a tile and the ← button do, and wait for the Shelf to say it shows it.
+ * a tile and the strip's Home do, and wait for the Shelf to say it shows it.
  */
 async function shelfShows(tool: ShelfToolId | null): Promise<void> {
   editor().setShelfTool(tool)
@@ -1722,11 +1735,27 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     })
     return {}
   },
-  /* a tool open on the Shelf, for its header: the way back to the tiles */
+  /*
+   * A tool open on the Shelf, for the strip the home grid folds into (step 11;
+   * the "← Tools" header until then): Home, and every tool's tile by its
+   * title, Upload's the pressed one.
+   */
   'shelf-tool-open': async () => ({
     show: async () => shelfShows('upload'),
     close: async () => shelfShows(null)
   }),
+  /*
+   * A reel under way while ANOTHER tool is open: the strip keeps the home
+   * grid's busy badges (step 11), so Beat sync and One photo show it from
+   * Upload. 'reel-building' alone shows them on the grid.
+   */
+  'reel-building-strip': async () => {
+    useEditor.setState({ reelBuilding: true, reelStage: null })
+    return {
+      show: async () => shelfShows('upload'),
+      close: async () => shelfShows(null)
+    }
+  },
   'director-more': async () => ({
     show: async () =>
       click(buttonByText((t) => t.toLowerCase().startsWith('more'), 'the Director More button'))

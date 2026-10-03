@@ -62,8 +62,8 @@ import {
  * Every tool that exists keeps its own panel inside its tile — its "inside
  * job". Step 9 had the eight automation tiles all open the whole Automation
  * panel; step 10 split it into one panel per tool (components/tools/, and the
- * Director tile mounts Director itself), each opening on its own header under
- * the Shelf's. Step 11 fills out the one-click ones.
+ * Director tile mounts Director itself), each opening on its own header; step
+ * 11 put the strip of every tool's tile over it, in place of the Shelf's.
  *
  * The user calls this panel the "sidecar"; the code says Shelf, because the
  * sidecar in code and docs is the Python helper (WINDOW.md §1).
@@ -74,7 +74,7 @@ type Editor = ReturnType<typeof useEditor.getState>
 
 export interface ShelfTool {
   id: ShelfToolId
-  /** The sketch's words, on the tile and in the open tool's header. */
+  /** The sketch's words: on the home tile, and the strip tile's name and tooltip. */
   label: string
   icon: LucideIcon
   /** One line on what the tool is for: the tile's tooltip. */

@@ -282,7 +282,7 @@ export function MediaPool(): ReactNode {
       {over && (
         <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-ink-950/85">
           <div className="rounded-lg border-2 border-dashed border-accent-500 px-6 py-4 text-xs text-accent-400">
-            Drop to import
+            Drop to upload
           </div>
         </div>
       )}

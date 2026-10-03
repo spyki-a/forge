@@ -48,11 +48,17 @@ export function dockSubject(
  * 1 px divider between them, what the column keeps for them before an open
  * OUTPUT or EXPORT strip gets any (`holderFloor`). Step 9 put the Shelf where
  * the tabs were, on the same floor: an open tool's 28 px header and 124 px of
- * its panel, or two rows of the home grid's tiles.
+ * its panel, or two rows of the home grid's tiles. Step 11 folded that header
+ * and the grid into the strip of tool tiles over an open tool's panel — 65 px
+ * at the 240 px column, at most 73 px however wide (shelf/Shelf.tsx
+ * ShelfStrip) — so the floor rose by the difference to keep the panel its
+ * ~120 px: 73 + 121. Not more: with the dock, 194 + 1 + 260 = 455 is all the
+ * holder can keep and still leave both strip headers room in the 511.8 px
+ * column tests/windowStrips.test.ts measures from.
  */
 
-/** The Shelf: an open tool's 28 px header and about 120 px of its panel (the tabs' floor until step 9). */
-export const SHELF_FLOOR = 152
+/** The Shelf: an open tool's strip of tiles (at most 73 px) and about 120 px of its panel. */
+export const SHELF_FLOOR = 194
 
 /** The dock: its 28 px header, the 112 px waveform, and 120 px of the clip editor under it. */
 export const DOCK_FLOOR = 260

@@ -166,6 +166,8 @@ describe('an open strip never squeezes the tabs or the Trimmer dock below their 
    * The floors live in dock.ts so the panels and the holder cannot disagree.
    * Step 9 put the Shelf where the tabs were, on the same floor: an open
    * tool's 28 px header where the 31.5 px tab row was, and 120 px of its panel.
+   * Step 11 folded that header into the strip of tool tiles (shelf/Shelf.tsx
+   * ShelfStrip), at most 73 px, and the floor rose with it (dock.ts).
    *
    * The holder's floor is CSS arithmetic (min, max, %, px, rem), evaluated
    * here against column heights the harness measured — in step 7, 375 px at
@@ -175,7 +177,17 @@ describe('an open strip never squeezes the tabs or the Trimmer dock below their 
    * that loses it does not. If the floor moves off the holder's min-height
    * into another mechanism, move this test with it.
    */
-  const SHELF_HEADER = 28 // an open tool's header row (shelf/Shelf.tsx `h-7`, pinned below)
+  /*
+   * An open tool's strip of tiles, its tallest: rows of ten (`grid-cols-10`)
+   * of the registry's tools and the Home tile, each tile at most 24 px square
+   * (`max-w-6` on Tile `xs`), 8 px between rows (`gap-y-2`), 8 px above and
+   * below (`pt-2 pb-2`) and the 1 px rule (`border-b`) — every one pinned
+   * below. Counted from the registry's entries, so a 21st tool, which would
+   * make a third row, makes this taller rather than wrong.
+   */
+  const TOOL_COUNT = [...source('src/renderer/src/components/shelf/tools.ts').matchAll(/^ {4}id: '[a-z0-9-]+',$/gm)].length
+  const STRIP_ROWS = Math.ceil((TOOL_COUNT + 1) / 10)
+  const SHELF_STRIP = STRIP_ROWS * 24 + (STRIP_ROWS - 1) * 8 + 8 + 8 + 1
   const WAVEFORM = 112 // the waveform's `h-28` box, in the dock now
   const DOCK_HEADER = 28 // the dock's header row (TrimmerDock.tsx `h-7`)
   const HEADERS = 56 // two closed strips, 28 px each (ui/Strip.tsx `h-7`)
@@ -216,10 +228,29 @@ describe('an open strip never squeezes the tabs or the Trimmer dock below their 
     // Numbers are pixels in react-resizable-panels 4.x; a string would be percent.
     expect(attribute(panelAround('Shelf'), 'minSize')).toBe('{SHELF_FLOOR}')
     expect(attribute(panelAround('TrimmerDock'), 'minSize')).toBe('{DOCK_FLOOR}')
-    // The header the floor is reckoned with: `h-7`, once, on an open tool's header row.
-    expect([...source('src/renderer/src/components/shelf/Shelf.tsx').matchAll(/className="flex h-7 shrink-0 items-center/g)]).toHaveLength(1)
-    // ~120 px of a tool's panel under its header; ~120 px of editor under the dock's header and the waveform.
-    expect(SHELF_FLOOR - SHELF_HEADER, 'panel at the Shelf’s floor').toBeGreaterThanOrEqual(120)
+    // The strip the floor is reckoned with, as SHELF_STRIP counts it: the
+    // registry's nineteen, so two rows; one strip, with those classes; its
+    // tiles the capped `xs`.
+    expect(TOOL_COUNT).toBeGreaterThanOrEqual(19)
+    expect(STRIP_ROWS).toBe(2)
+    expect(SHELF_STRIP).toBe(73)
+    const shelf = parse('src/renderer/src/components/shelf/Shelf.tsx')
+    const strips = mounts(shelf, 'div').filter((d) => /\bdata-shelf-strip\b/.test(opening(d).getText(shelf)))
+    expect(strips).toHaveLength(1)
+    const stripClasses = /\bclassName="([^"]*)"/.exec(opening(strips[0]).getText(shelf))?.[1].split(/\s+/) ?? []
+    expect(stripClasses).toEqual(expect.arrayContaining(['grid', 'shrink-0', 'grid-cols-10', 'gap-y-2', 'pt-2', 'pb-2', 'border-b']))
+    // Nothing else that sets its height or its rows' spacing.
+    const counted = new Set(['gap-y-2', 'pt-2', 'pb-2'])
+    expect(
+      stripClasses.filter((c) => /^(?:h|min-h|max-h|p|py|pt|pb|gap|grid-rows)-/.test(c) && !c.startsWith('gap-x-') && !counted.has(c))
+    ).toEqual([])
+    const tiles = mounts(shelf, 'Tile').filter((t) => /\bsize="xs"/.test(opening(t).getText(shelf)))
+    // The Home tile and the one in the registry's map, both in the strip, both `xs`.
+    expect(tiles).toHaveLength(2)
+    const tile = source('src/renderer/src/components/ui/Tile.tsx')
+    expect([...tile.matchAll(/^ {4}box: 'aspect-square w-full max-w-6 rounded-md',$/gm)]).toHaveLength(1)
+    // ~120 px of a tool's panel under its strip; ~120 px of editor under the dock's header and the waveform.
+    expect(SHELF_FLOOR - SHELF_STRIP, 'panel at the Shelf’s floor').toBeGreaterThanOrEqual(120)
     expect(DOCK_FLOOR - DOCK_HEADER - WAVEFORM, 'editor at the dock’s floor').toBeGreaterThanOrEqual(120)
   })
 
@@ -241,7 +272,7 @@ describe('an open strip never squeezes the tabs or the Trimmer dock below their 
     const floor = holderFloorAt(false)
     // Step 7's 1100×680 and 1400×900 columns, step 8's, and a tall one.
     for (const column of [320, 375.4, 511.8, 578, 798, 1000]) {
-      expect(floor(column) - SHELF_HEADER, `panel in a ${column} px column`).toBeGreaterThanOrEqual(120)
+      expect(floor(column) - SHELF_STRIP, `panel in a ${column} px column`).toBeGreaterThanOrEqual(120)
     }
   })
 

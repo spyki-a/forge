@@ -3,14 +3,17 @@ import { createElement, isValidElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 /*
- * The Shelf, rendered (docs/WINDOW.md §3.2, §6 Step 9). The source half is
- * tests/shelf.test.ts.
+ * The Shelf, rendered (docs/WINDOW.md §3.2, §6 Steps 9 and 11). The source
+ * half is tests/shelf.test.ts.
  *
  * Home: the nineteen tiles, in the registry's order, each with its label and
- * its tooltip; "soon" under Narration; a busy badge on exactly the tiles whose
- * tool has a run under way. Pressing a tile opens its own tool, and the ←
- * goes back. An open tool: the "← Tools · <label>" header over the tool's
- * panel, in the census's box.
+ * its tooltip, plain buttons that say nothing about being pressed; "soon"
+ * under Narration; a busy badge on exactly the tiles whose tool has a run
+ * under way. Pressing a tile opens its own tool. An open tool (step 11): the
+ * grid folded into a strip over the tool's panel — the Home tile, then every
+ * tool icon-only, named by its tooltip, the open one pressed and no other —
+ * and no "← Tools" header. Pressing another strip tile opens it; pressing the
+ * pressed one, or Home, goes back to the grid.
  *
  * Rendered to static markup, so no effect runs. The store is a plain selector
  * over a copy of its real initial state, as in stripsRender.test.ts: on the
@@ -32,7 +35,7 @@ vi.mock('../../src/renderer/src/store', async (importOriginal) => {
   return { ...real, useEditor }
 })
 
-const { Shelf, BACK_TITLE } = await import('../../src/renderer/src/components/shelf/Shelf')
+const { Shelf, HOME_TITLE } = await import('../../src/renderer/src/components/shelf/Shelf')
 const { SHELF_TOOLS } = await import('../../src/renderer/src/components/shelf/tools')
 const { BUSY_TITLE } = await import('../../src/renderer/src/components/ui/Tile')
 
@@ -58,11 +61,14 @@ describe('the Shelf’s home', () => {
     for (const [i, tool] of SHELF_TOOLS.entries()) {
       expect(drawn[i].markup, tool.id).toContain(`title="${escape(tool.hint)}"`)
       expect(drawn[i].markup, tool.id).toContain(`>${escape(tool.label)}</span>`)
-      expect(drawn[i].markup, tool.id).toContain('aria-pressed="false"')
+      // A home tile only goes somewhere (step 11, the step 9 nit): a plain
+      // button, never a toggle announcing "not pressed".
+      expect(drawn[i].markup, tool.id).not.toContain('aria-pressed')
     }
-    // No tool open: no header, no panel.
+    // No tool open: no strip, no panel.
     expect(html).not.toContain('data-shelf-panel')
-    expect(html).not.toContain(BACK_TITLE)
+    expect(html).not.toContain('data-shelf-strip')
+    expect(html).not.toContain(HOME_TITLE)
   })
 
   it('says "soon" under Narration, and under nothing else', () => {
@@ -151,34 +157,105 @@ describe('pressing a tile', () => {
     }
   })
 
-  it('and the ← in an open tool goes back to the tiles', () => {
+  it('in the strip: another tool’s tile opens it, the pressed one goes home, and so does Home', () => {
+    // Pressed from every open tool, so a tile that only works from one place —
+    // or a Home that opens the first tool — cannot pass.
     const opened: unknown[] = []
     fake.state.setShelfTool = (tool: unknown): void => {
       opened.push(tool)
     }
-    fake.state.shelfTool = 'grid-split'
-    const backs = buttons(createElement(Shelf)).filter((b) => b.title === BACK_TITLE)
-    expect(backs).toHaveLength(1)
-    ;(backs[0].onClick as () => void)()
-    expect(opened).toEqual([null])
+    for (const open of SHELF_TOOLS) {
+      fake.state.shelfTool = open.id
+      const pressable = buttons(createElement(Shelf))
+      const homes = pressable.filter((b) => b['data-shelf-home'] !== undefined)
+      expect(homes, open.id).toHaveLength(1)
+      ;(homes[0].onClick as () => void)()
+      expect(opened, `${open.id}: Home`).toEqual([null])
+      opened.length = 0
+      const strip = pressable.filter((b) => b['data-shelf-tile'] !== undefined)
+      expect(strip.map((b) => b['data-shelf-tile']), open.id).toEqual(SHELF_TOOLS.map((tool) => tool.id))
+      for (const [i, tool] of SHELF_TOOLS.entries()) {
+        ;(strip[i].onClick as () => void)()
+        expect(opened, `${open.id} open, pressing ${tool.id}`).toEqual([tool.id === open.id ? null : tool.id])
+        opened.length = 0
+      }
+    }
   })
 })
 
+/** An open tool's markup cut where the census cuts it: the strip above the panel's box, the panel from it. */
+function openFace(id: string): { html: string; strip: string; panel: string } {
+  fake.state.shelfTool = id
+  const html = render()
+  // From the `<` of the box's own tag, so the strip's half is whole tags only.
+  const at = html.lastIndexOf('<', html.indexOf('data-shelf-panel'))
+  expect(html.indexOf('data-shelf-panel'), `${id}: the panel's box`).toBeGreaterThan(-1)
+  expect(html.slice(at)).toMatch(/^<div data-shelf-panel/)
+  expect(html.indexOf('data-shelf-strip'), `${id}: the strip, above the panel`).toBeGreaterThan(-1)
+  expect(html.indexOf('data-shelf-strip')).toBeLessThan(at)
+  return { html, strip: html.slice(0, at), panel: html.slice(at) }
+}
+
 describe('an open tool', () => {
-  it('has the header — the way back and the tool’s name — over its panel, in the census’s box', () => {
-    fake.state.shelfTool = 'grade'
-    const html = render()
-    expect(html).toContain('data-shelf-tool="grade"')
-    expect(html).not.toContain('data-shelf-tile')
-    const at = html.indexOf('data-shelf-panel')
-    expect(at).toBeGreaterThan(-1)
-    const [header, panel] = [html.slice(0, at), html.slice(at)]
-    expect(header).toContain(`title="${BACK_TITLE}"`)
-    expect(header).toMatch(/>Tools<\/button>/)
-    expect(header).toContain('>Grade</span>')
-    // The Grade tile's own panel, and only there.
+  it('folds the grid into the strip — Home, then every tool, only the open one pressed — over its panel', () => {
+    for (const open of SHELF_TOOLS) {
+      const { html, strip, panel } = openFace(open.id)
+      expect(html, open.id).toContain(`data-shelf-tool="${open.id}"`)
+      // The strip's buttons: Home first, then one per registry entry — counted
+      // from the registry, never a literal — and nothing else.
+      const pressable = [...strip.matchAll(/<button\b[^>]*>/g)].map((m) => m[0])
+      expect(pressable, open.id).toHaveLength(SHELF_TOOLS.length + 1)
+      expect(pressable[0], `${open.id}: Home first`).toContain('data-shelf-home')
+      expect(pressable[0]).toContain(`title="${HOME_TITLE}"`)
+      expect(pressable[0]).toContain(`aria-label="${HOME_TITLE}"`)
+      // Home is never the open tool, so it is no toggle.
+      expect(pressable[0]).not.toContain('aria-pressed')
+      const drawn = tiles(strip)
+      expect(drawn.map((t) => t.id), open.id).toEqual(SHELF_TOOLS.map((tool) => tool.id))
+      // Exactly one pressed, and it is the open tool; every other says it is not.
+      expect(drawn.filter((t) => t.markup.includes('aria-pressed="true"')).map((t) => t.id), open.id).toEqual([open.id])
+      expect(drawn.filter((t) => t.markup.includes('aria-pressed="false"')), open.id).toHaveLength(SHELF_TOOLS.length - 1)
+      // And it LOOKS pressed — the pale blue, inset (the step 3 look) — while the others are raised.
+      for (const t of drawn) {
+        const button = /^<button\b[^>]*class="([^"]*)"/.exec(t.markup)![1].split(/\s+/)
+        const down = t.id === open.id
+        expect(button.includes('bg-accent-900'), `${open.id}: ${t.id} blue`).toBe(down)
+        expect(button.includes('shadow-pressed'), `${open.id}: ${t.id} inset`).toBe(down)
+        expect(button.includes('shadow-raised-xs'), `${open.id}: ${t.id} raised`).toBe(!down)
+      }
+      // Icon-only: each tool's name is its tooltip and its name, and no text is drawn.
+      for (const [i, tool] of SHELF_TOOLS.entries()) {
+        expect(drawn[i].markup, tool.id).toContain(`title="${escape(tool.label)}"`)
+        expect(drawn[i].markup, tool.id).toContain(`aria-label="${escape(tool.label)}"`)
+        expect(drawn[i].markup.replace(/<[^>]*>/g, ''), tool.id).toBe('')
+      }
+      // The ← header is gone: no way back but the tiles, no "Tools" text.
+      expect(html, open.id).not.toContain('Back to all the tools')
+      expect(strip.replace(/<[^>]*>/g, ''), open.id).toBe('')
+      expect(html, open.id).not.toMatch(/>\s*Tools\s*</)
+      // The tiles are all in the strip; the panel holds the tool, not tiles.
+      expect(panel, open.id).not.toContain('data-shelf-tile')
+      expect(panel, open.id).not.toContain('data-shelf-strip')
+    }
+  })
+
+  it('shows the panel of the tool that is open, under the strip', () => {
+    const { strip, panel } = openFace('grade')
     expect(panel).toContain('<span>+ Grade</span>')
-    expect(header).not.toContain('+ Grade')
+    expect(strip).not.toContain('+ Grade')
+  })
+
+  it('keeps the busy badges on the strip, so a run shows while another tool is open', () => {
+    const badged = (): string[] =>
+      tiles(openFace('upload').strip)
+        .filter((t) => t.markup.includes(`title="${BUSY_TITLE}"`))
+        .map((t) => t.id)
+    expect(badged()).toEqual([])
+    fake.state.reelBuilding = true
+    expect(badged()).toEqual(['beat-sync', 'one-photo'])
+    fake.state.reelBuilding = false
+    fake.state.gridBuilding = true
+    expect(badged()).toEqual(['grid-split'])
   })
 
   it('Narration says what it will do and that it is not built', () => {

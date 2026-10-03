@@ -4314,13 +4314,14 @@
     "note": "Count 4: one per pool tile: three photos and a video."
   },
   {
-    "label": "Drop to import",
+    "label": "Drop to upload",
     "match": "text",
     "home": "upload",
     "needs": "pool-dragover",
     "file": "src/renderer/src/components/MediaPool.tsx",
     "line": 285,
-    "newHome": "Shelf tile Upload"
+    "newHome": "Shelf tile Upload",
+    "note": "Reworded in step 11 from “Drop to import” (step 9’s known list: “Import” wording left on screen becomes “Upload”): the media pool is the Upload tile, and the user said “Upload and Import are same”."
   },
   {
     "label": "Drop your photos and clips here",
@@ -5506,7 +5507,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/Shelf.tsx",
-    "line": 102,
+    "line": 98,
     "newHome": "Shelf tile Narration (coming-soon)",
     "note": "Step 9: the note under the Narration tile’s label (its registry entry has `soon`), as it was beside the Narration mode."
   },
@@ -6576,7 +6577,7 @@
     "needs": "reel-building",
     "count": 2,
     "file": "src/renderer/src/components/ui/Tile.tsx",
-    "line": 93,
+    "line": 103,
     "newHome": "Shelf home (a tile’s busy badge)",
     "note": "Step 9: the busy badge (WINDOW.md §3.2), so a run started inside a tool shows from the grid — here on Beat sync and One photo, which share the reel’s flag. Count 2."
   },
@@ -6587,7 +6588,7 @@
     "needs": "transcribing",
     "count": 2,
     "file": "src/renderer/src/components/ui/Tile.tsx",
-    "line": 93,
+    "line": 103,
     "newHome": "Shelf home (a tile’s busy badge)",
     "note": "Step 9: the busy badge (WINDOW.md §3.2), so a run started inside a tool shows from the grid — here on Upload (its Transcribe chips) and Transcript. Count 2."
   },
@@ -6597,29 +6598,220 @@
     "home": "shelf",
     "needs": "ingest-running",
     "file": "src/renderer/src/components/ui/Tile.tsx",
-    "line": 93,
+    "line": 103,
     "newHome": "Shelf home (a tile’s busy badge)",
     "note": "Step 9: the busy badge (WINDOW.md §3.2), so a run started inside a tool shows from the grid — here on URL, with a download of this window’s under way."
   },
   {
-    "label": "Back to all the tools",
+    "label": "Working on it",
+    "match": "title",
+    "home": "shelf",
+    "needs": "reel-building-strip",
+    "count": 2,
+    "file": "src/renderer/src/components/ui/Tile.tsx",
+    "line": 103,
+    "newHome": "Shelf strip (a tool open: a tile’s busy badge)",
+    "note": "Step 11: the strip keeps the home grid’s busy badges, so a run started in one tool shows while another is open — here a reel, on Beat sync and One photo, with Upload open. Count 2."
+  },
+  {
+    "label": "All the tools",
     "match": "title",
     "home": "shelf",
     "needs": "shelf-tool-open",
     "file": "src/renderer/src/components/shelf/Shelf.tsx",
     "line": 10,
-    "newHome": "Shelf (an open tool’s header: ← Tools)",
-    "note": "Step 9: the way from an open tool back to the tiles."
+    "newHome": "Shelf strip (a tool open): the Home tile, first",
+    "note": "Step 11: the successor of “Back to all the tools”, the ← button’s title in the open tool’s header (Shelf.tsx:10 at 7c2925b), which the strip replaced. With the open tool’s pressed tile (pressing it again goes home too), also the successor of the header’s “Tools”."
   },
   {
-    "label": "Tools",
-    "match": "text",
+    "label": "Upload",
+    "match": "title",
     "home": "shelf",
     "needs": "shelf-tool-open",
-    "file": "src/renderer/src/components/shelf/Shelf.tsx",
-    "line": 51,
-    "newHome": "Shelf (an open tool’s header: ← Tools)",
-    "note": "Step 9: the words on the way back, \"← Tools · <the tool>\"."
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 114,
+    "newHome": "Shelf strip (a tool open): the Upload tile — pressed, Upload being the tool open",
+    "note": "Step 11: the strip’s face of the Upload tile — icon only, its name its tooltip; the home grid’s face is the “Upload” text row (needs none). In this scenario Upload is the tool open, so this is the PRESSED tile, and pressing it again goes home: with “All the tools”, the successor of the header’s “Tools” (Shelf.tsx:51 at 7c2925b)."
+  },
+  {
+    "label": "URL",
+    "match": "title",
+    "home": "shelf",
+    "needs": "shelf-tool-open",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 124,
+    "newHome": "Shelf strip (a tool open): the URL tile",
+    "note": "Step 11: the strip’s face of the URL tile — icon only, its name its tooltip; the home grid’s face is the “URL” text row (needs none)."
+  },
+  {
+    "label": "Narration",
+    "match": "title",
+    "home": "shelf",
+    "needs": "shelf-tool-open",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 133,
+    "newHome": "Shelf strip (a tool open): the Narration tile",
+    "note": "Step 11: the strip’s face of the Narration tile — icon only, its name its tooltip; the home grid’s face is the “Narration” text row (needs none)."
+  },
+  {
+    "label": "Library",
+    "match": "title",
+    "home": "shelf",
+    "needs": "shelf-tool-open",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 142,
+    "newHome": "Shelf strip (a tool open): the Library tile",
+    "note": "Step 11: the strip’s face of the Library tile — icon only, its name its tooltip; the home grid’s face is the “Library” text row (needs none)."
+  },
+  {
+    "label": "Transcript",
+    "match": "title",
+    "home": "shelf",
+    "needs": "shelf-tool-open",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 152,
+    "newHome": "Shelf strip (a tool open): the Transcript tile",
+    "note": "Step 11: the strip’s face of the Transcript tile — icon only, its name its tooltip; the home grid’s face is the “Transcript” text row (needs none)."
+  },
+  {
+    "label": "Director",
+    "match": "title",
+    "home": "shelf",
+    "needs": "shelf-tool-open",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 161,
+    "newHome": "Shelf strip (a tool open): the Director tile",
+    "note": "Step 11: the strip’s face of the Director tile — icon only, its name its tooltip; the home grid’s face is the “Director” text row (needs none)."
+  },
+  {
+    "label": "Depth / Parallax",
+    "match": "title",
+    "home": "shelf",
+    "needs": "shelf-tool-open",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 170,
+    "newHome": "Shelf strip (a tool open): the Depth / Parallax tile",
+    "note": "Step 11: the strip’s face of the Depth / Parallax tile — icon only, its name its tooltip; the home grid’s face is the “Depth / Parallax” text row (needs none)."
+  },
+  {
+    "label": "Beat sync / Cut to words",
+    "match": "title",
+    "home": "shelf",
+    "needs": "shelf-tool-open",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 179,
+    "newHome": "Shelf strip (a tool open): the Beat sync / Cut to words tile",
+    "note": "Step 11: the strip’s face of the Beat sync / Cut to words tile — icon only, its name its tooltip; the home grid’s face is the “Beat sync / Cut to words” text row (needs none)."
+  },
+  {
+    "label": "Transitions",
+    "match": "title",
+    "home": "shelf",
+    "needs": "shelf-tool-open",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 190,
+    "newHome": "Shelf strip (a tool open): the Transitions tile",
+    "note": "Step 11: the strip’s face of the Transitions tile — icon only, its name its tooltip; the home grid’s face is the “Transitions” text row (needs none)."
+  },
+  {
+    "label": "One photo",
+    "match": "title",
+    "home": "shelf",
+    "needs": "shelf-tool-open",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 198,
+    "newHome": "Shelf strip (a tool open): the One photo tile",
+    "note": "Step 11: the strip’s face of the One photo tile — icon only, its name its tooltip; the home grid’s face is the “One photo” text row (needs none)."
+  },
+  {
+    "label": "Grid split",
+    "match": "title",
+    "home": "shelf",
+    "needs": "shelf-tool-open",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 208,
+    "newHome": "Shelf strip (a tool open): the Grid split tile",
+    "note": "Step 11: the strip’s face of the Grid split tile — icon only, its name its tooltip; the home grid’s face is the “Grid split” text row (needs none)."
+  },
+  {
+    "label": "Strip flashes",
+    "match": "title",
+    "home": "shelf",
+    "needs": "shelf-tool-open",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 217,
+    "newHome": "Shelf strip (a tool open): the Strip flashes tile",
+    "note": "Step 11: the strip’s face of the Strip flashes tile — icon only, its name its tooltip; the home grid’s face is the “Strip flashes” text row (needs none)."
+  },
+  {
+    "label": "Film strip",
+    "match": "title",
+    "home": "shelf",
+    "needs": "shelf-tool-open",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 228,
+    "newHome": "Shelf strip (a tool open): the Film strip tile",
+    "note": "Step 11: the strip’s face of the Film strip tile — icon only, its name its tooltip; the home grid’s face is the “Film strip” text row (needs none)."
+  },
+  {
+    "label": "3D props",
+    "match": "title",
+    "home": "shelf",
+    "needs": "shelf-tool-open",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 236,
+    "newHome": "Shelf strip (a tool open): the 3D props tile",
+    "note": "Step 11: the strip’s face of the 3D props tile — icon only, its name its tooltip; the home grid’s face is the “3D props” text row (needs none)."
+  },
+  {
+    "label": "Text",
+    "match": "title",
+    "home": "shelf",
+    "needs": "shelf-tool-open",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 244,
+    "newHome": "Shelf strip (a tool open): the Text tile",
+    "note": "Step 11: the strip’s face of the Text tile — icon only, its name its tooltip; the home grid’s face is the “Text” text row (needs none)."
+  },
+  {
+    "label": "Colour cards",
+    "match": "title",
+    "home": "shelf",
+    "needs": "shelf-tool-open",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 252,
+    "newHome": "Shelf strip (a tool open): the Colour cards tile",
+    "note": "Step 11: the strip’s face of the Colour cards tile — icon only, its name its tooltip; the home grid’s face is the “Colour cards” text row (needs none)."
+  },
+  {
+    "label": "Grade",
+    "match": "title",
+    "home": "shelf",
+    "needs": "shelf-tool-open",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 262,
+    "newHome": "Shelf strip (a tool open): the Grade tile",
+    "note": "Step 11: the strip’s face of the Grade tile — icon only, its name its tooltip; the home grid’s face is the “Grade” text row (needs none)."
+  },
+  {
+    "label": "Newspaper clipping",
+    "match": "title",
+    "home": "shelf",
+    "needs": "shelf-tool-open",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 270,
+    "newHome": "Shelf strip (a tool open): the Newspaper clipping tile",
+    "note": "Step 11: the strip’s face of the Newspaper clipping tile — icon only, its name its tooltip; the home grid’s face is the “Newspaper clipping” text row (needs none)."
+  },
+  {
+    "label": "Card ring",
+    "match": "title",
+    "home": "shelf",
+    "needs": "shelf-tool-open",
+    "file": "src/renderer/src/components/shelf/tools.ts",
+    "line": 278,
+    "newHome": "Shelf strip (a tool open): the Card ring tile",
+    "note": "Step 11: the strip’s face of the Card ring tile — icon only, its name its tooltip; the home grid’s face is the “Card ring” text row (needs none)."
   },
   {
     "label": "Depth parallax",

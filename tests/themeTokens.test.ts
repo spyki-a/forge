@@ -92,8 +92,11 @@ describe('the theme tokens', () => {
   it('defines the stage colour and the raised and pressed shadows the tiles use', () => {
     const theme = themeBlock()
     const sources = SOURCES.map((f) => readFileSync(f, 'utf8')).join('\n')
-    const shadows = new Set([...sources.matchAll(/(?<![\w-])(?:[a-z-]+:)*shadow-(raised(?:-sm)?|pressed)(?![\w-])/g)].map((m) => m[1]))
-    expect([...shadows].sort()).toEqual(['pressed', 'raised', 'raised-sm'])
+    // Every raised size, not a list of them: step 11's icon-only tile brought a
+    // third (`raised-xs`), and the next size added right must not fail this.
+    // Membership below keeps the scan from being about nothing.
+    const shadows = new Set([...sources.matchAll(/(?<![\w-])(?:[a-z-]+:)*shadow-(raised(?:-[a-z]+)?|pressed)(?![\w-])/g)].map((m) => m[1]))
+    expect([...shadows]).toEqual(expect.arrayContaining(['pressed', 'raised', 'raised-sm', 'raised-xs']))
     for (const name of shadows) expect(theme, `--shadow-${name}`).toMatch(new RegExp(`--shadow-${name}:\\s*\\S`))
     expect(sources).toMatch(/(?<![\w-])bg-stage(?![\w-])/)
     expect(theme).toMatch(/--color-stage:\s*#[0-9a-f]{6};/i)

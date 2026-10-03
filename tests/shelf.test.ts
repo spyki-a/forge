@@ -74,17 +74,6 @@ function declarations(file: ts.SourceFile): { name: string; init: string; node: 
   return out
 }
 
-/** Every call in a subtree, as `callee(args)`. */
-function calls(node: ts.Node, file: ts.SourceFile): string[] {
-  const out: string[] = []
-  const visit = (at: ts.Node): void => {
-    if (ts.isCallExpression(at)) out.push(`${at.expression.getText(file)}(${at.arguments.map((a) => a.getText(file)).join(', ')})`)
-    ts.forEachChild(at, visit)
-  }
-  visit(node)
-  return out
-}
-
 function walk(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name)
@@ -176,26 +165,94 @@ describe('the Shelf', () => {
     expect([...text.matchAll(/^import \{ ErrorBoundary \} from '\.\.\/ErrorBoundary'$/gm)]).toHaveLength(1)
   })
 
-  it('has a way back from a tool to the tiles: the ← button sets no tool', () => {
-    expect([...text.matchAll(/^export const BACK_TITLE = 'Back to all the tools'$/gm)]).toHaveLength(1)
-    const backs = mounts(shelf, 'button').filter((b) => attr(b, 'title', shelf) === '{BACK_TITLE}')
-    expect(backs).toHaveLength(1)
-    const click = attr(backs[0], 'onClick', shelf)
-    expect(click).toBeDefined()
-    const made = calls(opening(backs[0]), shelf)
-    expect(made).toContain('setShelfTool(null)')
-    // And that is the store's setter.
-    const fn = functionOf(backs[0])!
+  /*
+   * Step 11, the user's design (WINDOW.md §6 Step 11, "Added 2026-10-03"): an
+   * open tool folds the home grid into a strip of every tool over its panel —
+   * the open one pressed, one click to switch, Home first — and the
+   * "← Tools · name" header goes. The rendered half (shelfRender.test.ts)
+   * counts the tiles and the pressed one and presses each; this pins each
+   * link from the store's setter to the tiles, as the home grid's are.
+   */
+  it('folds an open tool’s header into the strip: the strip over the panel, and no ← header left', () => {
+    // The header and every word of it: its title, its "Tools", its arrow.
+    expect(text).not.toMatch(/BACK_TITLE|Back to all the tools|ArrowLeft/)
+    const jsxTexts: string[] = []
+    const visit = (node: ts.Node): void => {
+      if (ts.isJsxText(node) && node.text.trim()) jsxTexts.push(node.text.trim())
+      ts.forEachChild(node, visit)
+    }
+    visit(shelf)
+    expect(jsxTexts.filter((t) => /\bTools\b/.test(t))).toEqual([])
+    // The Shelf's open face is exactly [strip, panel]: the strip, mounted
+    // once, first; the census's panel box second (harness/census.ts shelfFace).
+    const strips = mounts(shelf, 'ShelfStrip')
+    expect(strips).toHaveLength(1)
+    expect(written(text, 'ShelfStrip')).toBe(1)
+    expect(functionOf(strips[0])?.name?.text).toBe('Shelf')
+    const face = strips[0].parent
+    expect(ts.isJsxElement(face) && /data-shelf-tool=\{tool\.id\}/.test(face.openingElement.getText(shelf))).toBe(true)
+    const kids = (face as ts.JsxElement).children.filter(isTagged)
+    expect(kids).toHaveLength(2)
+    expect(kids[0]).toBe(strips[0])
+    expect(/\bdata-shelf-panel\b/.test(opening(kids[1]).getText(shelf))).toBe(true)
+    // Told which tool is open, and given the store's setter — no other.
+    expect(attr(strips[0], 'open', shelf)).toBe('{tool.id}')
+    expect(attr(strips[0], 'onGo', shelf)).toBe('{setShelfTool}')
+    const fn = functionOf(strips[0])!
     const setter = declarations(shelf).filter((d) => d.name === 'setShelfTool' && functionOf(d.node) === fn)
     expect(setter.map((d) => d.init)).toEqual(['useEditor((s) => s.setShelfTool)'])
+  })
+
+  it('starts the strip with Home, then every tool in the registry, each a toggle of its own tool', () => {
+    expect([...text.matchAll(/^export const HOME_TITLE = 'All the tools'$/gm)]).toHaveLength(1)
+    const roots = mounts(shelf, 'div').filter((d) => /\bdata-shelf-strip\b/.test(opening(d).getText(shelf)))
+    expect(roots).toHaveLength(1)
+    expect(functionOf(roots[0])?.name?.text).toBe('ShelfStrip')
+    // What the strip holds, in order: the Home tile, then the registry's map.
+    const strip = roots[0] as ts.JsxElement
+    const [home, ...rest] = strip.children.filter((c) => isTagged(c) || ts.isJsxExpression(c))
+    expect(isTagged(home) && tag(home, shelf)).toBe('Tile')
+    expect(rest.map((c) => c.getText(shelf).replace(/\s+/g, ' '))).toEqual([
+      '{SHELF_TOOLS.map((tool) => ( <StripTile key={tool.id} tool={tool} pressed={tool.id === open} onGo={onGo} /> ))}'
+    ])
+    // Home: named and titled "All the tools", the house glyph, and it sets no tool.
+    const homeTile = home as Tagged
+    expect(attr(homeTile, 'title', shelf)).toBe('{HOME_TITLE}')
+    expect(attr(homeTile, 'label', shelf)).toBe('{HOME_TITLE}')
+    expect(attr(homeTile, 'icon', shelf)).toBe('{House}')
+    expect(attr(homeTile, 'size', shelf)).toBe('"xs"')
+    expect(attr(homeTile, 'onClick', shelf)).toBe('{() => onGo(null)}')
+    // Not a toggle: Home is never the open tool.
+    expect(attr(homeTile, 'pressed', shelf)).toBeUndefined()
+    // Each tool's strip tile: pressed while it is the open one, and pressing
+    // it then goes home; otherwise it opens its tool.
+    const stripTiles = mounts(shelf, 'StripTile')
+    expect(stripTiles).toHaveLength(1)
+    expect(written(text, 'StripTile')).toBe(1)
+    const tiles = mounts(shelf, 'Tile').filter((t) => functionOf(t)?.name?.text === 'StripTile')
+    expect(tiles).toHaveLength(1)
+    expect(attr(tiles[0], 'pressed', shelf)).toBe('{pressed}')
+    expect(attr(tiles[0], 'onClick', shelf)).toBe('{() => onGo(pressed ? null : tool.id)}')
+    expect(attr(tiles[0], 'title', shelf)).toBe('{tool.label}')
+    expect(attr(tiles[0], 'label', shelf)).toBe('{tool.label}')
+    expect(attr(tiles[0], 'size', shelf)).toBe('"xs"')
+    expect(attr(tiles[0], 'busy', shelf)).toBe('{busy}')
+    // The busy badge is the home tile's selector, so a run shows while another tool is open.
+    const busy = declarations(shelf).filter((d) => d.name === 'busy')
+    expect(busy.map((d) => [functionOf(d.node)?.name?.text, d.init])).toEqual([
+      ['ShelfTile', 'useEditor((s) => (tool.busy ? tool.busy(s) : false))'],
+      ['StripTile', 'useEditor((s) => (tool.busy ? tool.busy(s) : false))']
+    ])
   })
 
   it('opens a tool from its tile, and shows the home grid when none is open', () => {
     // Home is what the Shelf returns while the store's tool is null — or one
     // the registry does not have, which must not leave the column blank.
     expect(text).toMatch(/const tool = open === null \? null : shelfToolById\(open\)\n\s*\n\s*if \(!tool\) return <ShelfHome onOpen=\{setShelfTool\} \/>/)
-    // Every tile in the registry, in its order — no filter between them.
-    expect([...text.matchAll(/SHELF_TOOLS\.map\(\(tool\) => \(/g)]).toHaveLength(1)
+    // Every tile in the registry, in its order — no filter between them: once
+    // on the home grid, once in the strip (step 11).
+    const maps = [...text.matchAll(/SHELF_TOOLS\.map\(\(tool\) => \(/g)]
+    expect(maps).toHaveLength(2)
     expect(text).not.toMatch(/SHELF_TOOLS\.filter/)
     // Each link from the store's setter to the tile, and the middle one too:
     // ShelfHome handing its tiles a dead `onOpen` drew every tile and opened
@@ -209,12 +266,16 @@ describe('the Shelf', () => {
     expect(written(text, 'ShelfTile')).toBe(1)
     expect(functionOf(shelfTiles[0])?.name?.text).toBe('ShelfHome')
     expect(attr(shelfTiles[0], 'onOpen', shelf)).toBe('{onOpen}')
-    const tiles = mounts(shelf, 'Tile')
+    const tiles = mounts(shelf, 'Tile').filter((t) => functionOf(t)?.name?.text === 'ShelfTile')
     expect(tiles).toHaveLength(1)
-    expect(functionOf(tiles[0])?.name?.text).toBe('ShelfTile')
     expect(attr(tiles[0], 'onClick', shelf)).toBe('{() => onOpen(tool.id)}')
     expect(attr(tiles[0], 'title', shelf)).toBe('{tool.hint}')
     expect(attr(tiles[0], 'label', shelf)).toBe('{tool.label}')
+    // A home tile only goes somewhere: no `pressed`, so it is a plain button,
+    // not a toggle that is always "not pressed" (ui/Tile.tsx).
+    expect(attr(tiles[0], 'pressed', shelf)).toBeUndefined()
+    // And the Shelf mounts Tile nowhere else: the home grid's, the strip's Home and its tools'.
+    expect(mounts(shelf, 'Tile').map((t) => functionOf(t)?.name?.text).sort()).toEqual(['ShelfStrip', 'ShelfTile', 'StripTile'])
   })
 
   it('opens the Library on Stickers, and the Transitions tile on Transitions', () => {

@@ -135,6 +135,15 @@ function Swatch(): ReactNode {
           <Tile icon={Clapperboard} label="Director" pressed title="pressed, no pressedIcon (heavier glyph + dot)" />
           <Tile icon={Repeat} label="Disabled" disabled title="disabled" />
         </div>
+        <h2 className="text-[11px] font-medium uppercase tracking-wide text-ink-400">
+          The Shelf strip’s icon-only tiles (step 11: ten to a row, 3 px apart, at the 240 px column)
+        </h2>
+        <div data-swatch-strip className="grid w-[240px] grid-cols-10 justify-items-center gap-x-[3px] gap-y-2 px-1.5 pb-2 pt-2">
+          <Tile icon={Upload} label="Upload" size="xs" />
+          <Tile icon={Grid3x3} label="Grid split" size="xs" pressed />
+          <Tile icon={Clapperboard} label="Director" size="xs" pressed={false} busy />
+          <Tile icon={Repeat} label="Disabled" size="xs" pressed={false} disabled />
+        </div>
       </section>
 
       <section className="space-y-2">

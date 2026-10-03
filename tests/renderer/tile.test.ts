@@ -48,12 +48,22 @@ describe('Tile', () => {
   const pressed = html(createElement(Tile, { icon: Grid3x3, label: 'Grid split', pressed: true }))
   const swapped = html(createElement(Tile, { icon: Grid3x3, pressedIcon: Check, label: 'Grid split', pressed: true }))
 
-  it('is a real, focusable toggle button that says whether it is pressed', () => {
+  it('is a real, focusable button; as a toggle it says whether it is pressed', () => {
     expect(idle).toMatch(/^<button\b[^>]*type="button"/)
-    expect(idle).toContain('aria-pressed="false"')
+    const off = html(createElement(Tile, { icon: Grid3x3, label: 'Grid split', pressed: false }))
+    expect(off).toContain('aria-pressed="false"')
     expect(pressed).toContain('aria-pressed="true"')
     expect(idle).not.toMatch(/tabindex="-1"/)
     expect(idle).toContain('Grid split')
+  })
+
+  it('says nothing about pressed when it only goes somewhere (no `pressed` given)', () => {
+    // The Shelf's home grid (step 11, the step 9 nit): its tiles open a tool,
+    // they do not toggle one, and a screen reader read each as "not pressed".
+    expect(idle).not.toContain('aria-pressed')
+    // And looks idle: raised, not inset.
+    expect(classesOf(idle, 'button')).toContain('shadow-raised')
+    expect(classesOf(idle, 'button')).not.toContain('shadow-pressed')
   })
 
   it('pressed changes the surface colour, a text colour and the shadow together', () => {
@@ -129,6 +139,59 @@ describe('Tile, small (the Shelf’s home grid, step 9)', () => {
       // `animate-spin` rotates the badge's own glyph, which holds nothing.
       const traps = allClasses(markup).filter((c) => TRAPS.test(c))
       expect(traps).toEqual([])
+      expect(markup).not.toMatch(/style="[^"]*(?:transform|filter)/)
+    }
+    const spinning = [...busy.matchAll(/<(\w+)\b[^>]*class="[^"]*\banimate-spin\b[^"]*"/g)].map((m) => m[1])
+    expect(spinning).toEqual(['svg'])
+  })
+})
+
+describe('Tile, extra small (the strip an open tool folds the Shelf into, step 11)', () => {
+  const idle = html(createElement(Tile, { icon: Grid3x3, label: 'Grid split', size: 'xs', pressed: false }))
+  const pressed = html(createElement(Tile, { icon: Grid3x3, label: 'Grid split', size: 'xs', pressed: true }))
+  const busy = html(createElement(Tile, { icon: Grid3x3, label: 'Narration', size: 'xs', busy: true, note: 'soon' }))
+  const textOf = (markup: string): string => markup.replace(/<[^>]*>/g, '')
+
+  it('draws the icon only: the label is its name and its tooltip, never text', () => {
+    expect(textOf(idle)).toBe('')
+    expect(idle).toContain('aria-label="Grid split"')
+    expect(idle).toContain('title="Grid split"')
+    // A title of the caller's own wins over the label.
+    const titled = html(createElement(Tile, { icon: Grid3x3, label: 'Grid split', size: 'xs', title: 'Pieces' }))
+    expect(titled).toContain('title="Pieces"')
+    expect(titled).toContain('aria-label="Grid split"')
+    // No note either — "soon" has no room on a 20 px tile.
+    expect(textOf(busy)).toBe('')
+    // The bigger tiles are named by their text, not by an aria-label.
+    expect(html(createElement(Tile, { icon: Grid3x3, label: 'Grid split', size: 'sm' }))).not.toContain('aria-label')
+  })
+
+  it('is small and capped, square, with its own scale of the raised shadow', () => {
+    const button = classesOf(idle, 'button')
+    expect(button).toEqual(expect.arrayContaining(['aspect-square', 'w-full', 'max-w-6', 'shadow-raised-xs']))
+    expect(button).not.toContain('shadow-raised')
+    expect(svgOf(idle)).toContain('width="12"')
+  })
+
+  it('pressed changes colour, icon and shadow together: the pale blue, the blue glyph, inset', () => {
+    const [on, off] = [classesOf(pressed, 'button'), classesOf(idle, 'button')]
+    expect(on).toContain('bg-accent-900')
+    expect(off).not.toContain('bg-accent-900')
+    expect(on).toContain('shadow-pressed')
+    // Never inset AND raised: two shadows on one element are settled by the stylesheet.
+    expect(on.filter((c) => c.startsWith('shadow-raised'))).toEqual([])
+    expect(classesOf(svgOf(pressed), 'svg')).toContain('text-accent-400')
+    expect(classesOf(svgOf(idle), 'svg')).not.toContain('text-accent-400')
+    expect(glyphOf(pressed)).not.toBe(glyphOf(idle))
+    expect(pressed).toContain('aria-pressed="true"')
+    expect(idle).toContain('aria-pressed="false"')
+  })
+
+  it('wears the busy badge with its tooltip, and never transforms, filters or blurs', () => {
+    expect(busy).toContain('data-busy-badge')
+    expect(busy).toContain('title="Working on it"')
+    for (const markup of [idle, pressed, busy]) {
+      expect(allClasses(markup).filter((c) => TRAPS.test(c))).toEqual([])
       expect(markup).not.toMatch(/style="[^"]*(?:transform|filter)/)
     }
     const spinning = [...busy.matchAll(/<(\w+)\b[^>]*class="[^"]*\banimate-spin\b[^"]*"/g)].map((m) => m[1])
