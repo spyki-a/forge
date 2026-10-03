@@ -14,6 +14,7 @@ import {
   type StripLayout
 } from '@shared/render/strips'
 import { useEditor } from '../../store'
+import { SourceLine } from './SourceLine'
 
 /**
  * The Strip flashes tile: slices of a brightened copy flashing over the shot
@@ -54,6 +55,9 @@ export function StripFlashes(): ReactNode {
           {stripClipCount > 0 ? `${stripClipCount} flashes` : 'over the shot'}
         </span>
       </div>
+
+      {/* Upload a file, and the shot it flashes over, named (step 12). */}
+      <SourceLine tool="strip-flashes" />
 
       <p className="text-[10.5px] leading-snug text-ink-600">
         Slices of a brightened copy flashing over the shot that is already
@@ -176,10 +180,10 @@ export function StripFlashes(): ReactNode {
         )}
       </div>
 
+      {/* Which shot it uses is the "Uses:" line at the top now (step 12). */}
       <div className="text-[10px] leading-snug text-ink-600">
-        Uses the shot under the playhead and lays the flashes on the track
-        above it. Every one is an ordinary clip — delete them all and the shot
-        is exactly as it was.
+        Lays the flashes on the track above the shot. Every one is an ordinary
+        clip — delete them all and the shot is exactly as it was.
       </div>
     </section>
   )

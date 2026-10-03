@@ -971,33 +971,67 @@
     "newHome": "Shelf tile Beat sync"
   },
   {
-    "label": "Uses the selected photo, or the first one, and lands the pieces on the track’s beats.",
+    "label": "the selected photo, or the first one",
+    "match": "text",
+    "home": "gridsplit",
+    "needs": "photo-clip",
+    "part": true,
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 157,
+    "newHome": "Shelf tile Grid split — the source line at the top of its panel",
+    "note": "Step 12: the successor of the first half of “Uses the selected photo, or the first one, and lands the pieces on the track’s beats.” (GridSplit.tsx:216 at 15f1c87) — the rule moved into the \"Uses:\" line, with the photo named."
+  },
+  {
+    "label": "The pieces land on the track’s beats.",
     "match": "text",
     "home": "gridsplit",
     "needs": "music-clip",
     "file": "src/renderer/src/components/tools/GridSplit.tsx",
-    "line": 216,
-    "newHome": "Shelf tile Grid split"
+    "line": 227,
+    "newHome": "Shelf tile Grid split",
+    "note": "Step 12: the second half of that note, reworded alone; the photo it uses is the \"Uses:\" line now."
   },
   {
-    "label": "Uses the selected photo, or the first one. It bakes the subject cutout",
+    "label": "the selected photo, or the first one",
+    "match": "text",
+    "home": "onephoto",
+    "needs": "photo-clip",
+    "part": true,
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 157,
+    "newHome": "Shelf tile One photo — the source line at the top of its panel",
+    "note": "Step 12: the successor of “Uses the selected photo, or the first one.” (OnePhoto.tsx:163 at 15f1c87) — the rule moved into the \"Uses:\" line, with the photo named; it needs a photo, so it is counted with the census’s three."
+  },
+  {
+    "label": "It bakes the subject cutout first — that is what lets a close-up land on a face rather than a waist.",
     "match": "text",
     "home": "onephoto",
     "needs": "none",
-    "part": true,
     "file": "src/renderer/src/components/tools/OnePhoto.tsx",
-    "line": 163,
-    "newHome": "Shelf tile One photo (becomes the \"Uses:\" line)"
+    "line": 174,
+    "newHome": "Shelf tile One photo",
+    "note": "Step 12: the rest of the note whose first sentence became the \"Uses:\" line (OnePhoto.tsx:163 at 15f1c87)."
   },
   {
-    "label": "Uses the shot under the playhead",
+    "label": "the shot under the playhead",
+    "match": "text",
+    "home": "stripflashes",
+    "needs": "photo-clip",
+    "part": true,
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 163,
+    "newHome": "Shelf tile Strip flashes — the source line at the top of its panel",
+    "note": "Step 12: the successor of “Uses the shot under the playhead” (StripFlashes.tsx:180 at 15f1c87) — the \"Uses:\" line, naming the shot; it needs a shot, so it is counted with the census’s photo under the playhead."
+  },
+  {
+    "label": "Lays the flashes on the track above the shot. Every one is an ordinary clip — delete them all and the shot is exactly as it was.",
     "match": "text",
     "home": "stripflashes",
     "needs": "none",
-    "part": true,
     "file": "src/renderer/src/components/tools/StripFlashes.tsx",
-    "line": 180,
-    "newHome": "Shelf tile Strip flashes (becomes the \"Uses:\" line)"
+    "line": 185,
+    "newHome": "Shelf tile Strip flashes",
+    "note": "Step 12: the rest of the note whose first clause became the \"Uses:\" line (StripFlashes.tsx:180 at 15f1c87)."
   },
   {
     "label": "Waves",
@@ -6892,5 +6926,411 @@
     "line": 453,
     "newHome": "Shelf tile Transitions (the Library, opened on its Transitions drawer)",
     "note": "Step 9: one transition in the library; only the Transitions drawer shows its tile, so this is how the census knows the tile opens the Library there and not on Stickers."
+  },
+  {
+    "label": "Upload a file",
+    "match": "text",
+    "home": "beatsync",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 214,
+    "newHome": "Shelf tile Beat sync — the source line at the top of its panel",
+    "note": "Step 12 (WINDOW.md §6): every tool that takes media starts with “Upload a file” and what it will use, read from the project by its store action’s own rule (tools/SourceLine.tsx) — the user, sheet 20: “upload a file, or choose from the media”. The Upload tile’s pair, pickMedia then importAssets, busy while it runs."
+  },
+  {
+    "label": "Uses:",
+    "match": "text",
+    "home": "beatsync",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 218,
+    "newHome": "Shelf tile Beat sync — the source line at the top of its panel",
+    "note": "Step 12 (WINDOW.md §6): every tool that takes media starts with “Upload a file” and what it will use, read from the project by its store action’s own rule (tools/SourceLine.tsx) — the user, sheet 20: “upload a file, or choose from the media”."
+  },
+  {
+    "label": "Upload a file",
+    "match": "text",
+    "home": "onephoto",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 214,
+    "newHome": "Shelf tile One photo — the source line at the top of its panel",
+    "note": "Step 12 (WINDOW.md §6): every tool that takes media starts with “Upload a file” and what it will use, read from the project by its store action’s own rule (tools/SourceLine.tsx) — the user, sheet 20: “upload a file, or choose from the media”. The Upload tile’s pair, pickMedia then importAssets, busy while it runs."
+  },
+  {
+    "label": "Uses:",
+    "match": "text",
+    "home": "onephoto",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 218,
+    "newHome": "Shelf tile One photo — the source line at the top of its panel",
+    "note": "Step 12 (WINDOW.md §6): every tool that takes media starts with “Upload a file” and what it will use, read from the project by its store action’s own rule (tools/SourceLine.tsx) — the user, sheet 20: “upload a file, or choose from the media”."
+  },
+  {
+    "label": "Upload a file",
+    "match": "text",
+    "home": "gridsplit",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 214,
+    "newHome": "Shelf tile Grid split — the source line at the top of its panel",
+    "note": "Step 12 (WINDOW.md §6): every tool that takes media starts with “Upload a file” and what it will use, read from the project by its store action’s own rule (tools/SourceLine.tsx) — the user, sheet 20: “upload a file, or choose from the media”. The Upload tile’s pair, pickMedia then importAssets, busy while it runs."
+  },
+  {
+    "label": "Uses:",
+    "match": "text",
+    "home": "gridsplit",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 218,
+    "newHome": "Shelf tile Grid split — the source line at the top of its panel",
+    "note": "Step 12 (WINDOW.md §6): every tool that takes media starts with “Upload a file” and what it will use, read from the project by its store action’s own rule (tools/SourceLine.tsx) — the user, sheet 20: “upload a file, or choose from the media”."
+  },
+  {
+    "label": "Upload a file",
+    "match": "text",
+    "home": "stripflashes",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 214,
+    "newHome": "Shelf tile Strip flashes — the source line at the top of its panel",
+    "note": "Step 12 (WINDOW.md §6): every tool that takes media starts with “Upload a file” and what it will use, read from the project by its store action’s own rule (tools/SourceLine.tsx) — the user, sheet 20: “upload a file, or choose from the media”. The Upload tile’s pair, pickMedia then importAssets, busy while it runs."
+  },
+  {
+    "label": "Uses:",
+    "match": "text",
+    "home": "stripflashes",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 218,
+    "newHome": "Shelf tile Strip flashes — the source line at the top of its panel",
+    "note": "Step 12 (WINDOW.md §6): every tool that takes media starts with “Upload a file” and what it will use, read from the project by its store action’s own rule (tools/SourceLine.tsx) — the user, sheet 20: “upload a file, or choose from the media”."
+  },
+  {
+    "label": "Upload a file",
+    "match": "text",
+    "home": "filmstrip",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 214,
+    "newHome": "Shelf tile Film strip — the source line at the top of its panel",
+    "note": "Step 12 (WINDOW.md §6): every tool that takes media starts with “Upload a file” and what it will use, read from the project by its store action’s own rule (tools/SourceLine.tsx) — the user, sheet 20: “upload a file, or choose from the media”. The Upload tile’s pair, pickMedia then importAssets, busy while it runs."
+  },
+  {
+    "label": "Uses:",
+    "match": "text",
+    "home": "filmstrip",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 218,
+    "newHome": "Shelf tile Film strip — the source line at the top of its panel",
+    "note": "Step 12 (WINDOW.md §6): every tool that takes media starts with “Upload a file” and what it will use, read from the project by its store action’s own rule (tools/SourceLine.tsx) — the user, sheet 20: “upload a file, or choose from the media”."
+  },
+  {
+    "label": "Upload a file",
+    "match": "text",
+    "home": "cardring",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 214,
+    "newHome": "Shelf tile Card ring — the source line at the top of its panel",
+    "note": "Step 12 (WINDOW.md §6): every tool that takes media starts with “Upload a file” and what it will use, read from the project by its store action’s own rule (tools/SourceLine.tsx) — the user, sheet 20: “upload a file, or choose from the media”. The Upload tile’s pair, pickMedia then importAssets, busy while it runs."
+  },
+  {
+    "label": "Uses:",
+    "match": "text",
+    "home": "cardring",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 218,
+    "newHome": "Shelf tile Card ring — the source line at the top of its panel",
+    "note": "Step 12 (WINDOW.md §6): every tool that takes media starts with “Upload a file” and what it will use, read from the project by its store action’s own rule (tools/SourceLine.tsx) — the user, sheet 20: “upload a file, or choose from the media”."
+  },
+  {
+    "label": "Upload a file",
+    "match": "text",
+    "home": "director",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 214,
+    "newHome": "Shelf tile Director — the source line at the top of its panel",
+    "note": "Step 12 (WINDOW.md §6): every tool that takes media starts with “Upload a file” and what it will use, read from the project by its store action’s own rule (tools/SourceLine.tsx) — the user, sheet 20: “upload a file, or choose from the media”. The Upload tile’s pair, pickMedia then importAssets, busy while it runs."
+  },
+  {
+    "label": "Uses:",
+    "match": "text",
+    "home": "director",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 218,
+    "newHome": "Shelf tile Director — the source line at the top of its panel",
+    "note": "Step 12 (WINDOW.md §6): every tool that takes media starts with “Upload a file” and what it will use, read from the project by its store action’s own rule (tools/SourceLine.tsx) — the user, sheet 20: “upload a file, or choose from the media”."
+  },
+  {
+    "label": "no photos yet — upload some",
+    "match": "text",
+    "home": "beatsync",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 62,
+    "newHome": "Shelf tile Beat sync — the source line at the top of its panel",
+    "note": "Step 12: the \"Uses:\" line with no photo in Upload."
+  },
+  {
+    "label": "photos in Upload",
+    "match": "text",
+    "home": "beatsync",
+    "needs": "photo-clip",
+    "part": true,
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 132,
+    "newHome": "Shelf tile Beat sync — the source line at the top of its panel",
+    "note": "Step 12: the \"Uses:\" line — “all 3 photos in Upload” with the census’s three; the store takes every image (store.ts buildReel / buildFilmstrip)."
+  },
+  {
+    "label": "no photos yet — upload some",
+    "match": "text",
+    "home": "filmstrip",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 62,
+    "newHome": "Shelf tile Film strip — the source line at the top of its panel",
+    "note": "Step 12: the \"Uses:\" line with no photo in Upload."
+  },
+  {
+    "label": "photos in Upload",
+    "match": "text",
+    "home": "filmstrip",
+    "needs": "photo-clip",
+    "part": true,
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 132,
+    "newHome": "Shelf tile Film strip — the source line at the top of its panel",
+    "note": "Step 12: the \"Uses:\" line — “all 3 photos in Upload” with the census’s three; the store takes every image (store.ts buildReel / buildFilmstrip)."
+  },
+  {
+    "label": "no photos yet — upload some",
+    "match": "text",
+    "home": "cardring",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 62,
+    "newHome": "Shelf tile Card ring — the source line at the top of its panel",
+    "note": "Step 12: the \"Uses:\" line with no photo in Upload."
+  },
+  {
+    "label": "photos in Upload",
+    "match": "text",
+    "home": "cardring",
+    "needs": "photo-clip",
+    "part": true,
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 132,
+    "newHome": "Shelf tile Card ring — the source line at the top of its panel",
+    "note": "Step 12: the \"Uses:\" line — “all 3 photos in Upload” with the census’s three (the ring takes the first twelve, store.ts addCarouselClip). The Add button’s line also says “… photos in Upload.” in an empty project, which the count is taken over."
+  },
+  {
+    "label": "no photos yet — upload one",
+    "match": "text",
+    "home": "onephoto",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 63,
+    "newHome": "Shelf tile One photo — the source line at the top of its panel",
+    "note": "Step 12: the \"Uses:\" line with no photo in Upload."
+  },
+  {
+    "label": "Choose from media",
+    "match": "text",
+    "home": "onephoto",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 254,
+    "newHome": "Shelf tile One photo — the source line at the top of its panel",
+    "note": "Step 12: the list of the pool’s photos — only here and in the other of One photo / Grid split, the two whose store action takes the photo (buildOnePhotoReel(assetId?), buildGrid(assetId?))."
+  },
+  {
+    "label": "The photo it builds from",
+    "match": "title",
+    "home": "onephoto",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 70,
+    "newHome": "Shelf tile One photo — the source line at the top of its panel",
+    "note": "Step 12: the mark beside the photo the build will use — with nothing chosen, the selected photo (the census selects the first)."
+  },
+  {
+    "label": "chosen below",
+    "match": "text",
+    "home": "onephoto",
+    "needs": "source-chosen",
+    "part": true,
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 156,
+    "newHome": "Shelf tile One photo — the source line at the top of its panel",
+    "note": "Step 12: the \"Uses:\" line once a photo is chosen in the list (the census clicks the second)."
+  },
+  {
+    "label": "no photos yet — upload one",
+    "match": "text",
+    "home": "gridsplit",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 63,
+    "newHome": "Shelf tile Grid split — the source line at the top of its panel",
+    "note": "Step 12: the \"Uses:\" line with no photo in Upload."
+  },
+  {
+    "label": "Choose from media",
+    "match": "text",
+    "home": "gridsplit",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 254,
+    "newHome": "Shelf tile Grid split — the source line at the top of its panel",
+    "note": "Step 12: the list of the pool’s photos — only here and in the other of One photo / Grid split, the two whose store action takes the photo (buildOnePhotoReel(assetId?), buildGrid(assetId?))."
+  },
+  {
+    "label": "The photo it builds from",
+    "match": "title",
+    "home": "gridsplit",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 70,
+    "newHome": "Shelf tile Grid split — the source line at the top of its panel",
+    "note": "Step 12: the mark beside the photo the build will use — with nothing chosen, the selected photo (the census selects the first)."
+  },
+  {
+    "label": "chosen below",
+    "match": "text",
+    "home": "gridsplit",
+    "needs": "source-chosen",
+    "part": true,
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 156,
+    "newHome": "Shelf tile Grid split — the source line at the top of its panel",
+    "note": "Step 12: the \"Uses:\" line once a photo is chosen in the list (the census clicks the second)."
+  },
+  {
+    "label": "Music:",
+    "match": "text",
+    "home": "beatsync",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 224,
+    "newHome": "Shelf tile Beat sync — the source line at the top of its panel",
+    "note": "Step 12: which song the tool will hear."
+  },
+  {
+    "label": "no music yet — upload a song, then drag it onto an audio track",
+    "match": "text",
+    "home": "beatsync",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 66,
+    "newHome": "Shelf tile Beat sync — the source line at the top of its panel",
+    "note": "Step 12: the music line with no song on the timeline. Placing a chosen song is phase 2 (WINDOW.md §7, answer 7)."
+  },
+  {
+    "label": "The first song on an audio track — the one this tool keeps time to",
+    "match": "title",
+    "home": "beatsync",
+    "needs": "music-clip",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 68,
+    "newHome": "Shelf tile Beat sync — the source line at the top of its panel",
+    "note": "Step 12: the tooltip on the song’s name (“<song> on A1”), which is data; the store’s rule (tools/shared.ts musicOf)."
+  },
+  {
+    "label": "Music:",
+    "match": "text",
+    "home": "onephoto",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 224,
+    "newHome": "Shelf tile One photo — the source line at the top of its panel",
+    "note": "Step 12: which song the tool will hear."
+  },
+  {
+    "label": "no music yet — upload a song, then drag it onto an audio track",
+    "match": "text",
+    "home": "onephoto",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 66,
+    "newHome": "Shelf tile One photo — the source line at the top of its panel",
+    "note": "Step 12: the music line with no song on the timeline. Placing a chosen song is phase 2 (WINDOW.md §7, answer 7)."
+  },
+  {
+    "label": "The first song on an audio track — the one this tool keeps time to",
+    "match": "title",
+    "home": "onephoto",
+    "needs": "music-clip",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 68,
+    "newHome": "Shelf tile One photo — the source line at the top of its panel",
+    "note": "Step 12: the tooltip on the song’s name (“<song> on A1”), which is data; the store’s rule (tools/shared.ts musicOf)."
+  },
+  {
+    "label": "Music:",
+    "match": "text",
+    "home": "gridsplit",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 224,
+    "newHome": "Shelf tile Grid split — the source line at the top of its panel",
+    "note": "Step 12: which song the tool will hear."
+  },
+  {
+    "label": "no music yet — upload a song, then drag it onto an audio track",
+    "match": "text",
+    "home": "gridsplit",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 66,
+    "newHome": "Shelf tile Grid split — the source line at the top of its panel",
+    "note": "Step 12: the music line with no song on the timeline. Placing a chosen song is phase 2 (WINDOW.md §7, answer 7)."
+  },
+  {
+    "label": "The first song on an audio track — the one this tool keeps time to",
+    "match": "title",
+    "home": "gridsplit",
+    "needs": "music-clip",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 68,
+    "newHome": "Shelf tile Grid split — the source line at the top of its panel",
+    "note": "Step 12: the tooltip on the song’s name (“<song> on A1”), which is data; the store’s rule (tools/shared.ts musicOf)."
+  },
+  {
+    "label": "no shot on the timeline yet — put one there first",
+    "match": "text",
+    "home": "stripflashes",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 64,
+    "newHome": "Shelf tile Strip flashes — the source line at the top of its panel",
+    "note": "Step 12: the \"Uses:\" line with no shot to flash over."
+  },
+  {
+    "label": "the longest shot, as none is under the playhead",
+    "match": "text",
+    "home": "stripflashes",
+    "needs": "playhead-at-end",
+    "part": true,
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 163,
+    "newHome": "Shelf tile Strip flashes — the source line at the top of its panel",
+    "note": "Step 12: the store’s fallback, said (store.ts buildStrips): the playhead past every clip, so the longest shot."
+  },
+  {
+    "label": "your pictures below, in order",
+    "match": "text",
+    "home": "director",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/SourceLine.tsx",
+    "line": 65,
+    "newHome": "Shelf tile Director — over “Your pictures, in order”",
+    "note": "Step 12 (WINDOW.md §6): every tool that takes media starts with “Upload a file” and what it will use, read from the project by its store action’s own rule (tools/SourceLine.tsx) — the user, sheet 20: “upload a file, or choose from the media”."
   }
 ]

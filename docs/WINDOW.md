@@ -1156,7 +1156,7 @@ Anchors are counted with `matchAll` before being trusted.
   first" notices keep the verb. For the user to decide: a one-line tool name under the strip for
   the panels without a header.
 
-### Step 12 — "Uses:" — the first half of the common source picker
+### Step 12 — "Uses:" — the first half of the common source picker · DONE 2026-10-03
 - **Files:** new `components/tools/SourceLine.tsx` — every media tool's panel starts with **Upload a
   file** (`pickMedia` → `importAssets`) and what the tool will use. Where the store already takes an id
   (`buildOnePhotoReel(assetId?)` `store.ts:528`, `buildGrid(assetId?)` `store.ts:697`) a **Choose from
@@ -1167,6 +1167,37 @@ Anchors are counted with `matchAll` before being trusted.
 - **Tests:** new store test: `buildGrid('b')` uses asset b even with another photo selected
   (`tests/renderer/`), mutation-checked by ignoring the argument.
 - **Check:** with two photos, choose the second in One photo → the reel is built from it.
+- **As built (2026-10-03).** `tools/SourceLine.tsx` sits first under the tool's header in Beat sync,
+  One photo, Grid split, Strip flashes and Film strip, first in the headerless Card ring panel, and
+  straight above "Your pictures, in order" in the Director: an **Upload a file** button (pick, then
+  import — the same pair as the Upload tile; busy while the picker runs) and a **Uses:** line read
+  from the project with the store's own rules — "all N photos in Upload" (Beat sync, Film strip),
+  "the first 12 of the N photos in Upload" (Card ring, `addCarouselClip`'s slice), "<shot> — the shot
+  under the playhead" or "— the longest shot, as none is under the playhead" (Strip flashes,
+  `buildStrips`' order), "your pictures below, in order" (Director); the music line "<song> on A1"
+  with a tooltip, or "no music yet — upload a song, then drag it onto an audio track" — the plan's
+  "or Add music" was dropped on purpose: it would only import, which is what Upload a file does, and
+  placing a song is phase 2 (Beat sync keeps its own Add music below). One photo and Grid split get
+  **Choose from media**: the pool's photos with thumbnails, the chosen one marked ("The photo it
+  builds from") and sent to `buildOnePhotoReel(chosen)` / `buildGrid(chosen)`; nothing chosen means
+  "the selected photo, or the first one", the rule those builds had; the choice is panel-local and
+  resets when the tool closes. Measured in the harness: choose sample 2 in One photo → 9 reel clips
+  all from sample 2 with a different photo selected on the timeline; choose sample 3 in Grid split →
+  4 pieces of sample 3; nothing chosen → the selected photo. **A pre-existing bug the line made
+  visible, fixed in the store:** every `kind: 'image'` asset counted as a photo — the text cards,
+  colour cards, clippings, rings and the Director's cards the editor draws — so after one "+ Text"
+  Beat sync said "all 4 photos" and a reel would have cut the card in as a photo; `shared/edit/
+  photos.ts` `isPhoto` (an image with a size) now filters `buildReel`, `buildOnePhotoReel`,
+  `addCarouselClip`, `buildFilmstrip`, `buildGrid` and the four counts (`orientation.ts` still
+  counts drawn stills, as its comment says it means to). Tests: `tests/renderer/sourceChoice.test.ts`
+  holds the line's `usesOf` to the builds' own choice, order and photo rule (22 cases; a selector
+  passing `undefined` for the choice fails); `tests/sourceLine.test.ts` pins the mount in each of the
+  seven, first under the header, the Choose list only in the two, the pressed row and the
+  pick-then-import. Census: 723 → 766 rows (three "Uses the …" texts replaced with two successors
+  each); a `source-chosen` recipe clicks the second choice; 758 checked, 0 missing. Depth / Parallax
+  is `takesMedia: false` now — it is a pointer panel with no media controls. Known: Beat sync shows
+  two import-only buttons (Upload a file, its own Add music) until phase 2 places a song;
+  `SourceLine.tsx` exports helpers beside the component, so Vite cannot fast-refresh it (dev only).
 
 ### Step 13 — The map, the sheets, and a last census
 - **Files:** `docs/WHERE-THINGS-ARE.md` rewritten for the new window (it is already stale: "four tabs"

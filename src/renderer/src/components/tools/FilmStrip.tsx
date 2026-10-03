@@ -2,7 +2,9 @@ import { type ReactNode } from 'react'
 import { Film } from 'lucide-react'
 import { generatedCount } from '@shared/automation/apply'
 import { FILMSTRIP_RULE } from '@shared/automation/filmstrip'
+import { isPhoto } from '@shared/edit/photos'
 import { useEditor } from '../../store'
+import { SourceLine } from './SourceLine'
 
 /**
  * The Film strip tile: the photos as full-height panels panning across frame
@@ -20,7 +22,7 @@ export function FilmStrip(): ReactNode {
   const setFilmstripSeconds = useEditor((s) => s.setFilmstripSeconds)
 
   const strips = generatedCount(project, FILMSTRIP_RULE)
-  const images = project.assets.filter((a) => a.kind === 'image').length
+  const images = project.assets.filter(isPhoto).length
 
   return (
     <section className="space-y-2 border-b border-ink-800 p-3">
@@ -31,6 +33,10 @@ export function FilmStrip(): ReactNode {
         </span>
         <span className="text-[10px] text-ink-600">at the playhead</span>
       </div>
+
+      {/* Upload a file, and what the strip takes: every photo (step 12). */}
+      <SourceLine tool="film-strip" />
+
       <p className="text-[10.5px] leading-snug text-ink-600">
         Your photos as full-height panels in one long row, panning across frame.
         Every panel is an ordinary clip with its own path.

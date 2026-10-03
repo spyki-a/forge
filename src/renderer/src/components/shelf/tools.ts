@@ -171,7 +171,9 @@ export const SHELF_TOOLS: readonly ShelfTool[] = [
     icon: Layers,
     hint: 'Photos cut into depth planes that move apart as the camera drifts',
     panel: DepthParallax,
-    takesMedia: true,
+    // A pointer panel: it mirrors the reel's depth box and says where depth is
+    // baked; it has no media controls of its own, so no source line (step 12).
+    takesMedia: false,
     busy: (s) => any(s.baking)
   },
   {

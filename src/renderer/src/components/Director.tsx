@@ -8,6 +8,7 @@ import type { LlmStatus } from '@shared/director/provider'
 import { TONES } from '@shared/director/schema'
 import { framesToSeconds } from '@shared/timeline'
 import { useEditor } from '../store'
+import { SourceLine } from './tools/SourceLine'
 
 /**
  * The director's panel: a brief in, an ad out.
@@ -237,6 +238,14 @@ export function Director(): ReactNode {
       </Field>
         </>
       )}
+
+      {/*
+        Upload a file, and what the ad is cut from: the pictures listed under it
+        (tools/SourceLine.tsx, step 12). Over the list rather than the brief,
+        because the list is the Director's source picker; leaving an item out
+        of it is phase 2.
+      */}
+      <SourceLine tool="director" />
 
       {/* The slots: the media pool in order, with a line about each. */}
       <button

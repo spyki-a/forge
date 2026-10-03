@@ -1761,6 +1761,25 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
       click(buttonByText((t) => t.toLowerCase().startsWith('more'), 'the Director More button'))
   }),
   /*
+   * A photo chosen in One photo's or Grid split's Choose from media list
+   * (step 12): the second of the three, the first being the selected one. The
+   * choice is the open panel's own state, so it is clicked, as Director's More
+   * is — inside the open panel only, where the list is found by its
+   * `data-source-choice` buttons, never by a photo's name.
+   */
+  'source-chosen': async (env) => {
+    const { P } = await photoClip(env)
+    return {
+      ids: { P },
+      show: async () => {
+        const choices = document.querySelectorAll<HTMLElement>('[data-shelf-panel] [data-source-choice]')
+        if (choices.length !== 3) throw new Error(`census: ${choices.length} photos to choose from in the open panel, expected the three imported`)
+        await click(choices[1])
+        if (choices[1].getAttribute('aria-pressed') !== 'true') throw new Error('census: the second photo did not become the chosen one')
+      }
+    }
+  },
+  /*
    * The model servers in the settings panel (step 6; they were under Director's
    * gear). As the harness bridge answers they are a local server with no key —
    * 'settings-open' — and these two change that.

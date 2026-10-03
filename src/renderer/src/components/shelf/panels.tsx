@@ -2,6 +2,7 @@ import { type ReactNode } from 'react'
 import { Contrast, Newspaper, Orbit, Palette, Type, type LucideIcon } from 'lucide-react'
 import { useEditor } from '../../store'
 import { Library } from '../Library'
+import { SourceLine } from '../tools/SourceLine'
 import { BigButton } from '../ui/Tile'
 
 /**
@@ -141,13 +142,25 @@ export function NewspaperPanel(): ReactNode {
   )
 }
 
+/*
+ * The one one-click tool that takes media: the ring is made of the pool's
+ * photos, so it opens on where they come from and how many it will take
+ * (tools/SourceLine.tsx, step 12) — over the Add button, as every media
+ * tool's panel starts. It has no header of its own to sit under; the strip's
+ * pressed tile names it.
+ */
 export function CardRingPanel(): ReactNode {
   return (
-    <OneClick
-      icon={Orbit}
-      add="addCarouselClip"
-      label="+ Card ring"
-      what="Your photographs on a rotating ring, in 3D — the first twelve photos in Upload."
-    />
+    <>
+      <div className="px-3 pt-3">
+        <SourceLine tool="card-ring" />
+      </div>
+      <OneClick
+        icon={Orbit}
+        add="addCarouselClip"
+        label="+ Card ring"
+        what="Your photographs on a rotating ring, in 3D — the first twelve photos in Upload."
+      />
+    </>
   )
 }

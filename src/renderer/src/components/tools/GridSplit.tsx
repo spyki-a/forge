@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Grid3x3, Loader2 } from 'lucide-react'
 import { generatedCount } from '@shared/automation/apply'
 import {
@@ -9,6 +9,7 @@ import {
   GRID_RULE,
   type Arrival
 } from '@shared/automation/grid'
+import { isPhoto } from '@shared/edit/photos'
 import {
   CELL_SHAPE_HINT,
   CELL_SHAPE_LABEL,
@@ -19,13 +20,20 @@ import {
 } from '@shared/render/grid'
 import { useEditor } from '../../store'
 import { useMusicClip } from './shared'
+import { SourceLine } from './SourceLine'
 
 /**
  * The Grid split tile: one photo cut into pieces that land one per beat
  * (docs/WINDOW.md §3.12, §6 Step 10). The Grid split section of the
  * Automation panel, moved as it was.
+ *
+ * Which photo: Choose from media (SourceLine.tsx, step 12) sets `chosen`, and
+ * the build passes it to buildGrid(assetId?), which already took one. Nothing
+ * chosen builds from the selected photo, or the first one, as before.
  */
 export function GridSplit(): ReactNode {
+  // The photo chosen in the list: this panel's own, for its own build.
+  const [chosen, setChosen] = useState<string | undefined>(undefined)
   const project = useEditor((s) => s.project)
   const buildGrid = useEditor((s) => s.buildGrid)
   const clearGrid = useEditor((s) => s.clearGrid)
@@ -47,7 +55,7 @@ export function GridSplit(): ReactNode {
   const gridBeatsPerCell = useEditor((s) => s.gridBeatsPerCell)
   const setGridBeatsPerCell = useEditor((s) => s.setGridBeatsPerCell)
 
-  const images = project.assets.filter((a) => a.kind === 'image').length
+  const images = project.assets.filter(isPhoto).length
   const gridClipCount = generatedCount(project, GRID_RULE)
   // Shown before the build, so the shape of the grid is never a surprise: a
   // prime number of pieces can only be strips, and saying so up front is
@@ -67,6 +75,9 @@ export function GridSplit(): ReactNode {
           {gridClipCount > 0 ? `${gridClipCount} pieces` : `${rows} × ${cols}`}
         </span>
       </div>
+
+      {/* Upload a file, the photo it is cut from — chosen here, or the default — and the song (step 12). */}
+      <SourceLine tool="grid-split" choose={{ chosen, onChoose: setChosen }} />
 
       <p className="text-[10.5px] leading-snug text-ink-600">
         One photo cut into pieces that arrive one per beat, until the picture is
@@ -187,7 +198,7 @@ export function GridSplit(): ReactNode {
 
       <div className="flex gap-1">
         <button
-          onClick={() => void buildGrid()}
+          onClick={() => void buildGrid(chosen)}
           // Also while the reel is analysing: both rules write onto a video
           // lane anchored at the music, and letting them race meant whichever
           // finished second was silently shoved past the other's output.
@@ -211,9 +222,10 @@ export function GridSplit(): ReactNode {
         )}
       </div>
 
+      {/* Which photo it uses is the "Uses:" line at the top now (step 12). */}
       <div className="text-[10px] leading-snug text-ink-600">
         {musicClip
-          ? 'Uses the selected photo, or the first one, and lands the pieces on the track’s beats.'
+          ? 'The pieces land on the track’s beats.'
           : 'No music on the timeline — the pieces will arrive on an even cadence instead.'}
       </div>
     </section>

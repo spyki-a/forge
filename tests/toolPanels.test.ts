@@ -176,10 +176,14 @@ describe('each automation tile opens a panel of its own', () => {
 
 /* -------------------------------------------------- the panels themselves */
 
-/** A button's click: an arrow calling `build…()`, or `build…` itself. */
+/**
+ * A button's click: an arrow calling `build…()`, or `build…` itself. The call
+ * may pass one name — One photo and Grid split pass the photo chosen in their
+ * Choose from media list (`buildGrid(chosen)`, step 12).
+ */
 function buildCalled(button: Tagged, file: ts.SourceFile): string | null {
   const click = attrs(button, file).onClick ?? ''
-  const m = /^\{(?:\(\) => (?:void )?)?(build\w*)(?:\(\))?\}$/.exec(click)
+  const m = /^\{(?:\(\) => (?:void )?)?(build\w*)(?:\((?:\w+)?\))?\}$/.exec(click)
   return m ? m[1] : null
 }
 

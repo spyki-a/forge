@@ -36,8 +36,11 @@ function poolPayload(asset: MediaAsset): DragPayload {
  * because the first frame of a clip is very often black and a grid of black
  * squares identifies nothing. Audio has no picture to show, so it keeps an
  * icon and leans on its name.
+ *
+ * Exported for Choose from media (tools/SourceLine.tsx), which shows the same
+ * picture smaller beside each photo's name.
  */
-function Thumbnail({ asset }: { asset: MediaAsset }): ReactNode {
+export function Thumbnail({ asset }: { asset: MediaAsset }): ReactNode {
   /*
    * A file that is not there says so, rather than showing a broken thumbnail.
    *

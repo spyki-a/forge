@@ -46,6 +46,7 @@ import {
 } from '@shared/render/presets'
 import { defaultFadeFrames } from '@shared/render/audioFade'
 import { collapsesIntoBurst } from '@shared/edit/coalesce'
+import { isPhoto } from '@shared/edit/photos'
 import {
   closeGap,
   gapAt,
@@ -2056,7 +2057,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       return
     }
 
-    const images = project.assets.filter((a) => a.kind === 'image')
+    const images = project.assets.filter(isPhoto)
     if (images.length === 0) {
       notify('Import some photos first', 'info')
       return
@@ -2256,7 +2257,7 @@ export const useEditor = create<EditorState>((set, get) => ({
 
     // Whichever photo they meant: the one they asked for, the one selected, or
     // the only one there is.
-    const images = project.assets.filter((a) => a.kind === 'image')
+    const images = project.assets.filter(isPhoto)
     const selectedAsset = project.clips.find((c) => c.id === get().selectedClipId)?.assetId
     const photo =
       images.find((a) => a.id === assetId) ??
@@ -2709,7 +2710,7 @@ export const useEditor = create<EditorState>((set, get) => ({
      * Refusing by name beats creating an empty ring that renders nothing and
      * reads as the feature being broken.
      */
-    const images = project.assets.filter((a) => a.kind === 'image' && a.path)
+    const images = project.assets.filter((a) => isPhoto(a) && a.path)
     if (images.length === 0) {
       notify('Import a photograph first — a card ring is made of your pictures', 'info')
       return null
@@ -3610,7 +3611,7 @@ export const useEditor = create<EditorState>((set, get) => ({
 
   buildFilmstrip: () => {
     const { project, playhead, notify, filmstripPanels, filmstripSeconds } = get()
-    const images = project.assets.filter((a) => a.kind === 'image')
+    const images = project.assets.filter(isPhoto)
     if (images.length === 0) {
       notify('Import some photos first', 'info')
       return
@@ -3675,7 +3676,7 @@ export const useEditor = create<EditorState>((set, get) => ({
 
     // Whichever photo they meant: the one asked for, the one selected, or the
     // only one there is. Same rule as the one-photo reel.
-    const images = project.assets.filter((a) => a.kind === 'image')
+    const images = project.assets.filter(isPhoto)
     const selected = project.clips.find((c) => c.id === get().selectedClipId)?.assetId
     const photo =
       images.find((a) => a.id === assetId) ?? images.find((a) => a.id === selected) ?? images[0]

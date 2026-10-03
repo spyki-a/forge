@@ -97,14 +97,17 @@ const GUARDS: {
   },
   {
     tool: 'OnePhoto.tsx',
-    click: '() => void buildOnePhotoReel()',
+    // Step 12: the click passes the photo Choose from media set (tools/SourceLine.tsx;
+    // tests/sourceLine.test.ts pins that). Only the anchor moved — the guard is 422801b's.
+    click: '() => void buildOnePhotoReel(chosen)',
     guard: 'reelBuilding || gridBuilding || images === 0 || !musicClip',
     flags: ['reelBuilding', 'gridBuilding'],
     disables: 1
   },
   {
     tool: 'GridSplit.tsx',
-    click: '() => void buildGrid()',
+    // Step 12, as One photo's: the chosen photo is passed; the guard is unchanged.
+    click: '() => void buildGrid(chosen)',
     guard: 'gridBuilding || reelBuilding || images === 0',
     flags: ['gridBuilding', 'reelBuilding'],
     disables: 1

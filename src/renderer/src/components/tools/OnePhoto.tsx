@@ -1,9 +1,11 @@
-import { type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Loader2, Sparkles, Type } from 'lucide-react'
 import { generatedCount } from '@shared/automation/apply'
 import { ONE_PHOTO_RULE } from '@shared/automation/onePhoto'
+import { isPhoto } from '@shared/edit/photos'
 import { useEditor } from '../../store'
 import { useBakeStatus, useMusicClip } from './shared'
+import { SourceLine } from './SourceLine'
 
 /**
  * The One photo tile: one picture, a song and a caption become a reel
@@ -17,8 +19,14 @@ import { useBakeStatus, useMusicClip } from './shared'
  * alone, without these, One photo would lose two options and its way to stop.
  * They are MIRRORS: the same store fields as Beat sync's controls
  * (BeatSync.tsx), so a change in either panel is a change in both.
+ *
+ * Which photo: Choose from media (SourceLine.tsx, step 12) sets `chosen`, and
+ * the build passes it to buildOnePhotoReel(assetId?), which already took one.
+ * Nothing chosen builds from the selected photo, or the first one, as before.
  */
 export function OnePhoto(): ReactNode {
+  // The photo chosen in the list: this panel's own, for its own build.
+  const [chosen, setChosen] = useState<string | undefined>(undefined)
   const project = useEditor((s) => s.project)
   const reelBuilding = useEditor((s) => s.reelBuilding)
   const reelStage = useEditor((s) => s.reelStage)
@@ -35,7 +43,7 @@ export function OnePhoto(): ReactNode {
   // The grid writes onto the same lane: its run holds this build back (below).
   const gridBuilding = useEditor((s) => s.gridBuilding)
 
-  const images = project.assets.filter((a) => a.kind === 'image').length
+  const images = project.assets.filter(isPhoto).length
   const onePhotoShots = generatedCount(project, ONE_PHOTO_RULE)
   const captionLines = onePhotoCaption.split('\n').filter((l) => l.trim()).length
 
@@ -53,6 +61,9 @@ export function OnePhoto(): ReactNode {
           {onePhotoShots > 0 ? `${onePhotoShots} shots` : 'photo + song + words'}
         </span>
       </div>
+
+      {/* Upload a file, the photo it builds from — chosen here, or the default — and the song (step 12). */}
+      <SourceLine tool="one-photo" choose={{ chosen, onChoose: setChosen }} />
 
       <p className="text-[10.5px] leading-snug text-ink-600">
         One picture becomes several shots — wide, medium, close on the face — cut
@@ -111,7 +122,7 @@ export function OnePhoto(): ReactNode {
 
       <div className="flex gap-1">
         <button
-          onClick={() => void buildOnePhotoReel()}
+          onClick={() => void buildOnePhotoReel(chosen)}
           disabled={reelBuilding || gridBuilding || images === 0 || !musicClip}
           className="flex flex-1 items-center justify-center gap-1.5 rounded bg-accent-500 px-2 py-1.5 text-[11px] font-medium text-ink-950 hover:bg-accent-400 disabled:opacity-40"
         >
@@ -159,9 +170,10 @@ export function OnePhoto(): ReactNode {
         </div>
       )}
 
+      {/* Which photo it uses is the "Uses:" line at the top now (step 12). */}
       <div className="text-[10px] leading-snug text-ink-600">
-        Uses the selected photo, or the first one. It bakes the subject cutout
-        first — that is what lets a close-up land on a face rather than a waist.
+        It bakes the subject cutout first — that is what lets a close-up land
+        on a face rather than a waist.
       </div>
     </section>
   )

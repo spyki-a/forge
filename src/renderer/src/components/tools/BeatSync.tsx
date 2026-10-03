@@ -2,9 +2,11 @@ import { useState, type ReactNode } from 'react'
 import { Layers, Loader2, Mic, Music, Plus } from 'lucide-react'
 import { generatedCount } from '@shared/automation/apply'
 import { REEL_RULE } from '@shared/automation/reel'
+import { isPhoto } from '@shared/edit/photos'
 import { useEditor } from '../../store'
 import { MusicRange } from '../MusicRange'
 import { useBakeStatus, useMusicClip } from './shared'
+import { SourceLine } from './SourceLine'
 
 /**
  * The Beat sync / Cut to words tile: the beat-synced reel (docs/WINDOW.md
@@ -40,7 +42,7 @@ export function BeatSync(): ReactNode {
 
   const [adding, setAdding] = useState(false)
   const reelShots = generatedCount(project, REEL_RULE)
-  const images = project.assets.filter((a) => a.kind === 'image').length
+  const images = project.assets.filter(isPhoto).length
 
   const { musicClip, musicAsset } = useMusicClip()
   const { bakeMessage, bakeProgress } = useBakeStatus()
@@ -64,6 +66,9 @@ export function BeatSync(): ReactNode {
         </span>
         <span className="text-[10px] text-ink-600">{images} photo{images === 1 ? '' : 's'}</span>
       </div>
+
+      {/* Upload a file, and what the reel takes: every photo, and the song (step 12). */}
+      <SourceLine tool="beat-sync" />
 
       <p className="text-[10.5px] leading-snug text-ink-600">
         Cuts your photos to the music — pacing set by tempo, treatment by how loud
