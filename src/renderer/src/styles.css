@@ -98,8 +98,10 @@
    * element would recolour BOTH layers. They reach 14 px, so a grid of tiles
    * needs that much padding inside anything overflow-hidden.
    */
-  --shadow-raised: -4px -4px 10px rgb(255 255 255 / 0.85), 4px 4px 10px rgb(117 102 83 / 0.28);
-  --shadow-raised-sm: -2px -2px 5px rgb(255 255 255 / 0.8), 2px 2px 5px rgb(117 102 83 / 0.26);
+  /* Deepened 2026-10-03 at the user's word ("add some more shade behind them, looks more like a
+     button"): a stronger, wider warm shadow plus a tight contact shadow under the lower edge. */
+  --shadow-raised: -4px -4px 10px rgb(255 255 255 / 0.9), 5px 6px 14px rgb(117 102 83 / 0.4), 1px 2px 3px rgb(117 102 83 / 0.3);
+  --shadow-raised-sm: -2px -2px 5px rgb(255 255 255 / 0.85), 3px 4px 8px rgb(117 102 83 / 0.38), 1px 1px 2px rgb(117 102 83 / 0.3);
   --shadow-pressed: inset 2px 2px 5px rgb(117 102 83 / 0.3), inset -2px -2px 5px rgb(255 255 255 / 0.75);
 }
 
