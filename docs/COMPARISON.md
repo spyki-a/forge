@@ -207,13 +207,13 @@ speed-corrected window of the source (`ClipWaveform.tsx:85-87`).
 
 | | Forge | CapCut | Premiere | Resolve | Final Cut | AI tools |
 |---|---|---|---|---|---|---|
-| "template" as a front door | **✗** — nothing is called a template; automations sit under a tab named *Auto* | ✓ the front door: pick a look, fill the slots | .mogrt + Adobe Stock | Fusion macros; third-party | Motion templates; **Apple bought MotionVFX (Mar 2026)** ✓; Creator Studio content hub | styles / playbooks / brand templates |
+| "template" as a front door | **✗** — no template front door; the automations are Shelf tiles named for what they make (Beat sync, One photo, Grid split…), and "template" appears only for the Library's title templates | ✓ the front door: pick a look, fill the slots | .mogrt + Adobe Stock | Fusion macros; third-party | Motion templates; **Apple bought MotionVFX (Mar 2026)** ✓; Creator Studio content hub | styles / playbooks / brand templates |
 | transitions | 420 | very large, Pro-gated | 90+ GPU + Stock | standard + Fusion | built-in + Motion | few |
 | stickers | 636 keyed cut-outs (Telugu, Hindi, memes) | large | Stock | ✗ | ✗ | some |
 | fonts | 80+ bundled + system | free + Pro | Adobe Fonts | system | system | limited |
 | music | ✗ | ✓ | Stock | ✗ | small | AI-generated / Shutterstock (invideo, 16 M) |
 | stock footage | ✗ (Pexels API planned) | ✓ | Stock 50 M+ | ✗ | ✗ | ✓ |
-| 3D props | asset kind exists, **no pack ships**; the Props tab offers a download that does not exist | effects packs | — | Fusion 3D | — | — |
+| 3D props | asset kind exists, **no pack ships**; the Library's empty Props drawer offers "Get props →", which opens a pack list with no props pack in it | effects packs | — | Fusion 3D | — | — |
 
 ---
 

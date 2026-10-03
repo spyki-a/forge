@@ -847,7 +847,8 @@ All on filters listed in §8; each with a render check.
   director shots; `chooseMove` stays for the reel.
 - **The treatment** — the shot's frames handed to the treatment's own
   planner (`grid.ts` / `strips.ts` / `paper.ts` / `onePhoto.ts`), which
-  writes ordinary clips as its Auto-tab automation does, `generatedBy:
+  writes ordinary clips as its own Shelf tool does (the Auto tab when this was
+  written), `generatedBy:
   director.treatment`.
 - **J/L cuts** — on footage with speech, the sound leads its picture by
   `jCutFrames` (a recipe constant, ~6 frames), in two steps: `detachAudio`

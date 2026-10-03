@@ -163,13 +163,15 @@ the length.
 
 ## How to use it
 
-**Media tab → `+ Newspaper clippings`.** It lands on a track above whatever is
-there, because the alpha is the point. Select it and the Inspector has the
-word, the four looks, Pages and Frames-each, and a **Customise** section for
-size, tilt & tear, texture, your own headline and masthead, the marker colour,
-and *Shuffle the pages* for a different stack at the same settings.
+**The Shelf's Newspaper clipping tile → `+ Newspaper clippings`.** It lands at
+the playhead on a track above whatever is there, because the alpha is the
+point, and the Trimmer dock opens on it. Its **Clippings** section has the
+highlighted word, Clipping or Cut-out letters, the page shape, Typewriter, the
+four looks, **Pages** and **Each page**, and a **Customise** section for size,
+tilt & tear, texture, your own headline and masthead, the marker colour, and
+*Shuffle the pages* for a different stack at the same settings.
 
-Changing Pages or Frames-each **retimes the clip**. Otherwise asking for forty
+Changing Pages or Each page **retimes the clip**. Otherwise asking for forty
 pages plays twenty and stops, which reads as the count being ignored rather
 than the clip being too short — the failure would show up somewhere other than
 the control that caused it.

@@ -72,7 +72,7 @@ import from one either. That single fact is the reason for both mechanisms.
 the decision is still open. A CI checkout therefore has no asset library, and
 **electron-builder treats a missing `extraResources` source as nothing to copy
 rather than as an error.** The installer builds, installs, starts and works,
-with an empty Library tab and nothing anywhere saying why.
+with an empty Library (the Shelf's Library tile) and nothing anywhere saying why.
 
 Verified by unpacking the real artifact: `ffmpeg.exe`, `ffprobe.exe`, sharp's
 native binding, the sidecar and its `requirements*.txt` were all present and
@@ -147,7 +147,7 @@ answers:
    unpack, and a wrong-architecture binary.
 2. **No error dialog.** `assertBinaries()` runs at startup; if ffmpeg did not
    make it into the package, this is where it says so.
-3. **The Library tab is EMPTY, and that is expected** for a CI-built installer
+3. **The Library tile (on the Shelf) is EMPTY, and that is expected** for a CI-built installer
    — the asset library is gitignored and not in the package. What this step
    actually proves is that an empty catalog degrades rather than crashes.
    A full library needs the first-run asset download, which is unbuilt.

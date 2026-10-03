@@ -239,7 +239,7 @@ export type ShelfToolId =
 /** The Curve tray's two tabs: the keyframe rows, and the curves. */
 export type TrayTab = 'keys' | 'curves'
 
-/** Everything the YouTube panel holds between opening it and pressing Get. */
+/** Everything the URL tile's panel (IngestPanel.tsx) holds between opening it and pressing Get. */
 export interface IngestForm {
   url: string
   kind: IngestWant
@@ -424,7 +424,7 @@ interface EditorState {
   settingsOpen: boolean
   setSettingsOpen: (open: boolean) => void
 
-  /** What the YouTube panel currently has in it, kept across tab switches. */
+  /** What the URL tile's panel has in it, kept while other tools are open. */
   ingest: IngestForm
   setIngest: (patch: Partial<IngestForm>) => void
   /**

@@ -47,8 +47,9 @@ our managed copy, then a copy already on PATH.
 **Downloads have their own queue.** The render queue runs one job at a time
 because exports are CPU-bound. A download is network-bound; behind an export it
 would wait for nothing, in front of one it would hold it up for nothing. Two
-queues, one merged list — the Inspector's existing bar, speed column and cancel
-button work for downloads with **no renderer changes at all**.
+queues, one merged list — the export list's existing bar, speed column and
+cancel button (in the Inspector then; the EXPORT strip's **Exports** list now,
+`ExportStrip.tsx`) worked for downloads with **no renderer changes at all**.
 
 **The file is named from the video id, never the title.** Titles routinely
 contain `| ? " :`, every one illegal on Windows and needing escapes in a

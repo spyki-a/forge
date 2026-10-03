@@ -371,7 +371,7 @@ first live measurement is still ahead, and it is the one that matters.
 | `src/shared/director/provider.ts` | the contract, as voice: `ollama` and `openai` (LM Studio, llama-server, hosted) |
 | `src/main/director.ts` | the two HTTP clients, status, image encoding |
 | `src/renderer/src/store.ts` `direct()` | the runner; `fillAssetPath` for history-less bakes |
-| `src/renderer/src/components/Director.tsx` | the panel, first in the Auto tab |
+| `src/renderer/src/components/Director.tsx` | the panel the Shelf's Director tile opens; the model servers are in `SettingsPanel.tsx` |
 
 ### What changed from the design above, and why
 

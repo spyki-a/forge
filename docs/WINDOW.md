@@ -1,6 +1,6 @@
 # The new window
 
-> Written 2026-10-02 from the second notebook (docs/SHEETS.md sheets 19–29) and a read of every control in the current UI by five Opus readers and a planner (573 controls, each opened at its file:line against `bd58eb5`). **Status: a plan awaiting the user's answers to §7; nothing in it is built.** Mark each step DONE here as it lands, with its commit, as PLAN.md does.
+> Written 2026-10-02 from the second notebook (docs/SHEETS.md sheets 19–29) and a read of every control in the current UI by five Opus readers and a planner (573 controls, each opened at its file:line against `bd58eb5`). **Status: built.** The user answered §7 on 2026-10-02; all fourteen steps, 0–13, landed 2026-10-02 to 10-03 (`91971df` … the step 13 commit), each marked DONE in §6 with an As built note of what was measured; the last census found every one of 758 controls where the map says it is. This file is now the record of the move: §2–§5 are the plan as written, file:lines against `bd58eb5`, so "today" in them means then — where every control IS now is `docs/WHERE-THINGS-ARE.md`.
 
 
 Draft, 2026-10-02. Read-only planning pass. Sources: the eleven photos in
@@ -41,6 +41,12 @@ honest without re-pointing. The component's title on screen becomes "Clip".
 ---
 
 ## 2. The new window
+
+> **As built (2026-10-03):** the window is this diagram, the left column full height (§7.2) —
+> steps 4–12 below. One thing in this section was wrong as written: the Panel sizes need an
+> explicit `%` — `defaultSize="17"` with no unit opened the column at 420 px (step 8). The
+> numbers measured on the built window, the Shelf's and the dock's floors among them
+> (`dock.ts`), are in each step's As built note.
 
 ```
 ┌──────────────────────────────────────────────────────────────── ⚙• ┐  header (drag region; gear is no-drag)
@@ -552,18 +558,29 @@ split/detach/select `283`, delete/ripple `305`.
 
 ## 5. What must keep working at every step
 
-**Always mounted** (today they live in the Inspector, which is always mounted):
-the export flow and the File > Export listener (`Inspector.tsx:218-373`); the transition
-load; the catalog load and caption font; the looks list — all four moved to `App.tsx` and
-`catalog.ts` in step 1 (the Inspector line numbers this plan quotes elsewhere are from `bd58eb5`
-and have shifted up by about eighteen since).
+**Always mounted** (at `bd58eb5` they lived in the Inspector, which was always mounted):
+the export flow and the File > Export listener (`Inspector.tsx:218-373` then) are in
+`ExportStrip.tsx` since step 7, which `App.tsx` renders unconditionally and which hides its
+body by class; the transition load, the catalog load and caption font, and the looks list are
+in `App.tsx` and `catalog.ts` since step 1. The Inspector line numbers this plan quotes are
+from `bd58eb5`; the Inspector is now the dock's clip editor and much shorter.
 **Never remounted**: the Preview (its rAF loop is the playback clock and the mixer,
 `Preview.tsx:1785-1868`); exactly one `canvas[data-forge-preview="1"]`.
-**Harness hooks**: `window.forgeStore`, `window.forgeCatalog` (`harness/main.tsx:36, 48`),
+**Harness hooks**: `window.forgeStore`, `window.forgeCatalog` (`harness/main.tsx:44, 56`),
 `__forgeEvalRelay`, `__forgeEvalCards`, `__forgeEvalMoments` and their progress globals
 (`harness/evalRelay.ts:60, 122, 163, 200-202`), `__forgeMomentCheck`
 (`harness/momentCheck.ts:170`), served by `vite.harness.config.ts` on 5199 with the eval
-relay plugin. None of these reads the DOM; renaming store fields breaks ad-hoc scripts.
+relay plugin — and, added by this plan, `__forgeCensus` (step 0, `harness/census.ts`),
+`forgeMenu` and `forgeFullScreen` (step 0, `harness/bridge.ts`) and `__forgeSwatch` (step 3,
+`harness/swatch.tsx`). The ones from before this plan do not read the DOM, so renaming store
+fields is what breaks their ad-hoc scripts. The two added do: `__forgeCensus` finds each
+control's home by walking the panel layout (the panel library's `data-group` / `data-panel`, and
+it throws if the nesting changes) and our own `data-shelf-tool`, `data-shelf-strip`,
+`data-shelf-panel`, `data-dock`, `data-strip` / `data-open` and `data-curve-tray` attributes, then
+counts carriers by their text, `title`, `aria-label` and `placeholder` — so renaming a label,
+regrouping the panels or dropping one of those attributes breaks it as surely as a store field
+does — and `__forgeSwatch` renders the theme's own `Tile` and `BigButton` over a hidden `#root`
+and reads the computed colours of what it drew, so a renamed token class or primitive breaks it.
 Any new startup `window.forge` call must exist in `harness/bridge.ts` and in the fallback
 bridge (`main.tsx:12-61`).
 
@@ -635,7 +652,9 @@ Anchors are counted with `matchAll` before being trusted.
   many carriers the state ADDS over an empty project, and it must equal `count`: fewer is
   `missing`, more is `ambiguous` (something else wears the label, so the control could go
   unnoticed). A scenario that cannot be built THROWS; so does a layout the home finders do not
-  recognise. The result is `{ missing, ambiguous, checked, skipped, ms, scenario }`; ~30 s,
+  recognise. The result is `{ missing, checked, skipped, scenario, ms }`, plus `trace` when asked
+  for — an ambiguous row is not a key of its own but an entry in `missing` whose `why` begins
+  "ambiguous —" (`CensusResult`, `census.ts`); ~30 s (43.8 s for 766 rows on 2026-10-03),
   fronted tab only. Rows the harness cannot show (the recovery banner, the crash screen, two
   canvas texts) carry `harnessOnly: false` and are pinned to their file by the node test instead.
 - **The node test** matches labels against string literals, template pieces and JSX text from a
@@ -1199,12 +1218,42 @@ Anchors are counted with `matchAll` before being trusted.
   two import-only buttons (Upload a file, its own Add music) until phase 2 places a song;
   `SourceLine.tsx` exports helpers beside the component, so Vite cannot fast-refresh it (dev only).
 
-### Step 13 — The map, the sheets, and a last census
+### Step 13 — The map, the sheets, and a last census · DONE 2026-10-03
 - **Files:** `docs/WHERE-THINGS-ARE.md` rewritten for the new window (it is already stale: "four tabs"
   then five, a "Text" tab, "Auto"; "no copy/paste/multi-select/fades" at 370 — all exist);
   `docs/SHEETS.md` statuses for sheets 19–20 and corrections to 22 (pool Transcribe and its % chip exist)
   and 24 (voice presets exist); the store comment "Only upload is built".
 - **Check:** full census `[]`; screenshots at 1400×900 and 1100×680, 16:9 and 9:16, sent to the user.
+- **As built (2026-10-03).** The map is rewritten from the code (888 lines; every placed control
+  opened in its component, then two critics checked ~260 claims against the source and by clicking
+  through the harness, and the wrong ones were fixed: the census result's keys, "the one way in",
+  "File › New Project… (⌘N)", the saved-settings rows START an export, the Transcript header, the
+  text card's "Top / Center / Lower 3rd" labels, Key between Mask and Colour, the moments coloured as
+  graphics); the sheets' statuses updated (19 and 20 built, 21 the dock without the pool trimmer,
+  the first notebook's layout sheets 4, 15 and 16, and "Where the gaps cluster"), plus the stale
+  layout directions in PAPER, PACKAGING, INGEST, STICKERS, COMPARISON, PLAN and LLM.md; the comment
+  "Only upload is built" had already gone with `SourceMode` in step 9, and two neighbours were
+  reworded. The last census, in the fronted harness tab on the final tree: `missing` `[]`, 758
+  checked, 8 skipped, 43.9 s. Five screenshots are in `docs/sheets/2026-10-03-built/`, 800 px wide
+  (the browser pane's capture size), beside the sketches they answer: the home at 1400×900 in 16:9
+  and in 9:16 (the "Most photos are landscape · Switch to 16:9" chip showing), One photo open with
+  the Trimmer dock under it at 1400×900, and the home at 1100×680 in 16:9 and in 9:16 — sent to the
+  user. CLAUDE.md's WINDOW.md row says the steps are done and this file is the record.
+- **Known — in the code, not the docs, found while checking the map; left for the user:**
+  - **No way to lock a track.** `Track.locked` is in the model and honoured (the one-click adders,
+    the timeline's cross-track drag and the voice-over record button all refuse a locked lane), and
+    nothing on screen sets it;
+    sheet 15 drew a lock beside the eye on each track header. The map lists it under "Missing here".
+  - **The New project screen opens only from File › New Project….** The comment over `newOpen` in
+    `App.tsx` says it also opens "once at first launch on a project that has nothing in it"; the one
+    `setNewOpen(true)` is the menu router's, and it has been so since the screen came in
+    (`395862d`). Either the comment or the first-launch opening is wrong.
+  - **Two of §4's recommendations were not built:** Decision 3's "Tone curve…" link in the dock's
+    Colour section (the curve is only in the tray, Curves → Colour) and Decision 4's voice presets
+    mirrored in the dock's Sound section (they are on the right-click menu only). The map says both.
+  - **A stale comment:** `MediaPool.tsx` still calls the Upload button "the one way in from a file
+    dialog"; since step 12 every media tool's Upload a file, and Beat sync's Add music, open the
+    same `pickMedia` dialog.
 
 ---
 

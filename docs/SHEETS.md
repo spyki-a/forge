@@ -111,10 +111,11 @@ Then:
 > related topic to the Pixel stock footage. and also LLM will tell which photo is
 > first, 2nd, 3rd and edit direction."
 
-**Status — not started.** The tab exists and is labelled "soon". Its own
-description in the code reads: "Topic and length in, narration and a cut out. The
-only part of the app that needs paid services." No LLM, no text-to-speech, no
-stock-footage API.
+**Status — not started.** It is a Shelf tile marked "soon" (sheet 28 is its
+second draft). Its panel reads: "Topic and length in, narration and a cut out."
+— and no longer calls it the one part that needs paid services, since its keys
+will live in Settings like the rest. No script writer and no stock-footage API;
+the voice provider exists (sheet 28).
 
 ---
 
@@ -368,8 +369,11 @@ The full wireframe.
 - Below that: **LUT — Graph** with a curve drawn in it
 - Marginal note with an arrow: "Thick Border"
 
-**Status — built.** The app is this sheet. Every region is where it was drawn,
-LUT graph included. Only the two source-bar tabs marked "soon" are outstanding.
+**Status — built, then replaced.** The app was this sheet, every region where
+it was drawn, LUT graph included. Since 2026-10-03 the window is sheet 19's:
+the source bar and the tabs became the Shelf's tiles, the right column went into
+the Trimmer dock, the OUTPUT and EXPORT strips and the canvas bar, and the
+graph is the Curve tray (`docs/WHERE-THINGS-ARE.md`).
 
 ---
 
@@ -389,7 +393,8 @@ Two boxes drawn side by side, labelled "different" and "different".
 **Status — built.** Stacked and side-by-side splits, any number of panels, each
 filling its half rather than letterboxing. Written into the clip's ordinary
 transform, so the result stays draggable. **Still open:** the drag-a-clip-into-a-
-half drop targets — the split is applied from the Inspector, not by dropping.
+half drop targets — the split is applied from the Trimmer dock's Layout section,
+not by dropping.
 
 ---
 
@@ -446,8 +451,13 @@ is reachable in the single-pass graph. It is not built.
 
 ## Where the gaps cluster
 
-**Getting media in.** Both unfinished source-bar tabs plus the range-clip idea.
-The largest single hole, and upstream of everything that already works.
+**Getting media in.** The source bar is gone (its tabs are Shelf tiles since
+2026-10-03), and of its two unfinished tabs one is built: the URL tile, with one
+range clipped before the download (sheets 5 and 12). What is left is Narration —
+the one tile still marked "soon" (sheets 4 and 28) — and, on the URL tile,
+chapters, several ranges in one job, a transcript from the link (sheet 25) and
+Best clips (sheet 27). Still the largest hole, and upstream of everything that
+already works.
 
 **Models not yet added.** Scene detection, matting, object tracking, and the
 deciding half of auto-flip. The sidecar already hosts three models (speech,
@@ -459,7 +469,9 @@ rotation, random-every-N, opacity. The looks are finished; how captions decide
 things for themselves is not.
 
 **Small finishing.** The inert font tiles. Transcript-to-text-card conversion.
-Copy/paste/duplicate and multi-select on the timeline. *(Audio fades and
+*(Copy, paste, duplicate and multi-select on the timeline were here and are
+built — the clip's right-click menu and ⌘C / ⌘V / ⌘D, shift- and ⌘-click, a
+marquee.)* *(Audio fades and
 loudness were here and are done — fades, crossfades and LUFS normalisation all
 land in EFFECTS.md §26–28.)*
 
@@ -523,10 +535,20 @@ the timeline only, the user uses it when needed" — so curves and keyframes liv
 in a sidebar of the timeline that is closed by default. The point of all of it:
 "bigger room to edit for both landscape and vertical".
 
-**Status — not started.** Today the window is four areas with a full-height
-inspector on the right (`docs/WHERE-THINGS-ARE.md`); the aspect ratio is chosen
-in the inspector's Output block, not on the canvas. Everything on this sheet is
-a move of things that exist.
+**Status — built** (2026-10-02 to 10-03, `91971df` … `96cf8c1`: docs/WINDOW.md
+steps 0–12, with the map, `docs/WHERE-THINGS-ARE.md`, rewritten in step 13).
+The window is this sheet with the answers folded in. The left column runs the
+full height and holds the sidecar (the code's Shelf), the Trimmer dock under it
+while a clip is selected, and OUTPUT and EXPORT as two collapsible strips at its
+foot — EXPORT went left with OUTPUT, as decided, rather than under the canvas
+where it is drawn, and the timeline runs under the picture only. The canvas
+bar over the picture switches 16:9 Landscape / 9:16 Vertical, plus a smaller
+1:1; the right-hand inspector is gone; keys and curves are the Curve tray, a
+28 px rail at the timeline's right end that only a person opens; Settings is the
+gear at the top right. The base is a light cream with the 3dit blue as the one
+accent (the user's later answer, WINDOW.md §7.5, in place of the grey-blue
+above). Measured at 1400×900: the preview canvas 1123×520 px, against 778×512
+before.
 
 ---
 
@@ -551,16 +573,23 @@ goes inside of it". And the common first step of every tool that takes media:
 user needs while choosing some options like music sync or the Director's, all
 of them the same".
 
-**Status — not started as a home; every tile's tool exists.** Upload, URL and
-Narration are the source bar's three modes (`SourceBar.tsx`; Narration is still
-"soon", sheet 4). Library and Transcript are left-panel tabs. Director, Beat
-sync (the reel) and Cut to words (the lyric cut), One photo, Grid split, Strip
-flashes, Film strip, 3D props (the keyword rule; no prop pack ships), Newspaper
-clipping (the paper panel) and Card ring (the carousel) are the Auto tab. Text,
-Colour cards and Grade are the three buttons above the media grid. Depth /
-Parallax is today a toggle on a selected clip. Transitions are a library
-section. Twenty tiles want grouping on screen — by what they do, or by what
-they take — which the sheet leaves to the build.
+**Status — built** (docs/WINDOW.md steps 9–12: `422801b`, `7c2925b`,
+`15f1c87`, `96cf8c1`). The Shelf's home is these nineteen tiles in this order
+(`components/shelf/tools.ts`, the order pinned by `tests/shelfRegistry.test.ts`),
+three to a row in the 240 px column and four from about 290 px. Every tool has
+its own panel, as decided — the source tiles' panels, the Director, one per
+automation under `components/tools/`, a big button each for the one-click
+tools — and each runs inside its own error boundary. With a tool open the grid
+folds into a two-row strip of icons with that tool pressed in pale blue (the
+user's addition while step 9 landed). The common first step is built for the
+tools that take media: **Upload a file** and a **Uses:** line saying what the
+tool will take, with **Choose from media** in One photo and Grid split, the two
+whose builds already took a photo (step 12). Not yet: choosing several photos
+for the reel and the film strip, placing a chosen song, and leaving a picture
+out of the Director (order 2). Narration is a "soon" tile (sheet 28); Depth /
+Parallax is a pointer panel to the reel's switch and Camera → Depth; baking one
+chosen photo from it is order 2. The wide Trimmer across the bottom is the
+Trimmer dock (sheet 21). The tiles are in the sketch's order, not grouped.
 
 ---
 
@@ -584,10 +613,17 @@ source monitor every other editor has (COMPARISON.md: "in / out points, range
 ✗") — and, once the inspector goes, it is also where the per-clip controls
 live.
 
-**Status — pool exists, grouping and Trimmer do not.** The Media tab is one
-thumbnail grid of every kind (`MediaPool.tsx`); import is the source bar's
-Upload. The reel's music-range picker (`MusicRange.tsx`) is the nearest thing to
-a trimmer and would fold into it.
+**Status — the dock exists; trimming before the timeline and the grouping do
+not.** The Trimmer dock (`TrimmerDock.tsx`, WINDOW.md step 8, `e27f536`)
+appears under the Shelf only while a timeline clip is selected or a Library
+sound is auditioned: the waveform with its in and out handles, over the clip
+editor that was the inspector. Upload and Import are one **Upload** button, at
+the top of the Upload tile (step 9). Trimming a POOL item before it reaches the
+timeline — the source monitor — is not built: selecting a pool item does
+nothing, and only a Library sound can be trimmed before it is placed (its
+handles, then Add at playhead). The pool is still one thumbnail grid of every
+kind (`MediaPool.tsx`). The reel's music-range picker (`MusicRange.tsx`) is
+still the nearest thing to a trimmer for a song, and would fold into it.
 
 ---
 
@@ -603,8 +639,9 @@ is there (the full route of BETA.md R4). Until then the button has to say
 "Python is not installed" rather than spin.
 
 **Status — closer than it looks.** A pool item already has a Transcribe button
-and a percent chip while it runs (`MediaPool.tsx`, the chip is also the cancel);
-the Transcript tab reads the selected timeline clip. What the sheet adds is the
+and a percent chip while it runs (`MediaPool.tsx`, in the Upload tile; the chip
+is also the cancel, and without Python the button is greyed with "The AI helper
+(Python) is not running"); the Transcript tile reads the selected timeline clip. What the sheet adds is the
 small Play preview per video and a bar rather than a chip. The sidecar runs
 faster-whisper.
 
@@ -658,8 +695,8 @@ MP3**.
 it's a whole different concept." Best clips (sheet 27) comes in order (3);
 chapters, several ranges and Get transcript are small additions in order (2).
 
-**Status — half built.** YouTube ingest exists (`IngestPanel.tsx`,
-`docs/INGEST.md`): quality, MP4 / m4a / MP3, instrumental and vocal inside the
+**Status — half built.** YouTube ingest exists — the URL tile's panel
+(`IngestPanel.tsx`, `docs/INGEST.md`): quality, MP4 / m4a / MP3, instrumental and vocal inside the
 job, and ONE range before download (sheet 12). Chapters, several ranges, a
 transcript from the link and Best clips are not built. Chapters are in the
 downloader's own metadata, and YouTube's timed captions can be fetched without
@@ -679,7 +716,7 @@ Select a run of rows; Clip it cuts the download, or the clip, to those words.
 cutting the download size, and now with this it can be more powerful than
 blindly cutting from the duration bar." Order (3), but first among the three.
 
-**Status — not started.** The Transcript tab jumps to a word and corrects
+**Status — not started.** The Transcript tile jumps to a word and corrects
 words (`TranscriptPanel.tsx`); it never cuts. The word timings exist, so this
 is a selection and one cut.
 
@@ -717,12 +754,15 @@ the settings panel at the top right, in the place of AI." So: one settings
 panel, top right, holds every key and server — the model servers (today the
 Director's gear), the hosted voice, Pexels. Order (3).
 
-**Status — not started, pieces exist.** Sheet 4 is this sheet's first draft
-and still reads "soon" in `SourceBar.tsx`. The voice provider exists
-(`src/main/voice.ts`: Kokoro through the sidecar, or a hosted endpoint with a
-write-only key); the Director does pictures + music + brief; caption styles
-exist. Missing: the script writer (topic + genre → narration), the Pexels
-fetch, and the settings panel.
+**Status — not started, pieces exist.** Sheet 4 is this sheet's first draft;
+Narration is a Shelf tile marked "soon" whose panel says what it will do
+(`shelf/panels.tsx`). The voice provider exists (`src/main/voice.ts`: Kokoro
+through the sidecar, or a hosted endpoint with a write-only key); the Director
+does pictures + music + brief; caption styles exist. The settings panel exists
+too (`SettingsPanel.tsx`, WINDOW.md step 6, `12e4616`): the model servers moved
+there from the Director, and **Hosted voice** and **Pexels** are listed in it,
+marked "coming with Narration", with no fields yet. Missing: the script writer
+(topic + genre → narration), the Pexels fetch, and those two rows' settings.
 
 ---
 
@@ -734,13 +774,20 @@ video** and a **progress bar**.
 **Decided.** This is Narration's last step ("Add +" on sheet 28): pick a caption
 look, then Create video.
 
-**Status — the looks exist, the grid does not.** Caption styles are a dropdown
-in the inspector's Output block and a style picker (`TextStylePicker.tsx`,
-sheet 9). A visual grid is a presentation change over them.
+**Status — the looks exist, the grid does not.** Burned-in captions are in the
+OUTPUT strip (`OutputStrip.tsx`; the user's answer, WINDOW.md §7.8, keeps them
+there, apart from Narration's grid): four preset buttons and the style picker
+(`TextStylePicker.tsx`, sheet 9). A visual grid is a presentation change over
+them.
 
 ---
 
 ## Where this leaves things
+
+**Order (1) is built** — docs/WINDOW.md's steps 0–12, 2026-10-02 to 10-03
+(sheets 19 and 20 built, sheet 21's dock built). Step 13, the map and these
+statuses, is written and its census is clean; it is marked DONE once its last
+screenshots have gone to the user. What follows was written before it.
 
 **Order (1) is a move, not a build**: every tile's tool exists; the work is a
 new frame (sheet 19), a home screen (sheet 20), the per-clip controls into a

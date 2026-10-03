@@ -64,7 +64,8 @@ fu"* throws away the punchline.
 
 **Decided: keep the audio, muted by default.** It rides inside `colour.mp4` and
 costs **+34%** — 62 KB per sticker, 114 MB → **152 MB** for the set, about 15 MB
-per category pack. A sticker lands silent with a toggle in the inspector.
+per category pack. A sticker lands silent with a toggle in the Trimmer dock's
+Sound section (Mute / Muted).
 Muting what shipped is a checkbox; unmuting what did not means rebuilding and
 republishing every pack.
 
@@ -434,7 +435,9 @@ distinguishable by their words.
 ### The sound, and two bugs it uncovered
 
 A clip sticker lands with `volume: 0`, and the inspector grew a **Sound** row —
-a mute toggle and a level — for any clip whose asset has audio.
+a mute toggle and a level — for any clip whose asset has audio. (The inspector
+is the Trimmer dock's clip editor since 2026-10-03; the row is its **Sound**
+section.)
 
 That row had to exist, because shipping the audio without it turned out to be
 worse than not shipping it:
