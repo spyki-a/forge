@@ -102,8 +102,17 @@ stays draggable. A sound dropped here is refused: it has no appearance.
 four edge handles move one — drag a side for width, the top for height. Hold
 shift on a corner to keep the proportions.
 
-The split view (Source | Output) is in the inspector under **Preview**. Drag the
-divider in the picture to compare; double-click it for an even split.
+**The canvas bar**, over the picture (`CanvasBar.tsx`, since the new window's
+step 4): the shape — **16:9 Landscape**, **9:16 Vertical**, and a smaller
+**1:1 Square** (changing it re-solves every clip's reframe; drag the rectangle in
+the preview to correct one) — and the view, **Source / Split / Output**. Drag the
+divider in the picture to compare; double-click it for an even split. The
+reframe rectangle is drawn on the source, so pressing **Reframe** in the Output
+view opens the split. When most photos in the pool are the other way round from
+the canvas, a chip beside the shape says so — "Most photos are portrait" — with
+**Switch to 9:16** (or 16:9) on it, and its tooltip says why; the rule is
+`shared/edit/orientation.ts`. In a narrow window the shape words step aside for
+the chip and the glyphs and tooltips carry them.
 
 ---
 
@@ -111,9 +120,9 @@ divider in the picture to compare; double-click it for an even split.
 
 Top to bottom. The panel scrolls; the export block at the bottom does not.
 
-**Output** — aspect ratio, **frame rate** (24/25/30/50/60 — changing it with
+**Output** — **frame rate** (24/25/30/50/60 — changing it with
 work in the project converts every clip, and no cut moves by more than half a
-frame), loudness, preview mode, captions, then the export
+frame), loudness, captions, then the export
 itself (`ExportSettings.tsx`, above the Export button):
 **Size** 720p / 1080p / 4K on the chosen aspect; **Codec**, listing only the
 encoders this machine test-encoded with at launch; **Quality** as High /

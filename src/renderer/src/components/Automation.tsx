@@ -71,7 +71,6 @@ export function Automation(): ReactNode {
   const filmstripSeconds = useEditor((s) => s.filmstripSeconds)
   const setFilmstripSeconds = useEditor((s) => s.setFilmstripSeconds)
   const importAssets = useEditor((s) => s.importAssets)
-  const setAspect = useEditor((s) => s.setAspect)
   const clearPropRule = useEditor((s) => s.clearPropRule)
   const onePhotoCaption = useEditor((s) => s.onePhotoCaption)
   const setOnePhotoCaption = useEditor((s) => s.setOnePhotoCaption)
@@ -137,25 +136,9 @@ export function Automation(): ReactNode {
     ? project.assets.find((a) => a.id === musicClip.assetId) ?? null
     : null
 
-  /*
-   * Orientation mismatch, shown until it is fixed.
-   *
-   * This was a toast, and a toast is gone in a few seconds — two rendered reels
-   * came back using a third of the frame with black bars either side because
-   * the warning had already vanished by the time the reel was built. A standing
-   * banner with the fix on it cannot be missed.
-   */
-  const photos = project.assets.filter((a) => a.kind === 'image')
-  const portrait = photos.filter((a) => (a.height ?? 0) > (a.width ?? 1)).length
-  const canvasPortrait = project.settings.height > project.settings.width
-  const mismatch =
-    photos.length === 0
-      ? null
-      : portrait > photos.length / 2 && !canvasPortrait
-        ? ('9:16' as const)
-        : portrait < photos.length / 2 && canvasPortrait
-          ? ('16:9' as const)
-          : null
+  // The photos-against-canvas warning that stood here is a chip on the canvas
+  // bar now, where every photo tool can see it (CanvasBar.tsx, and its rule in
+  // shared/edit/orientation.ts).
 
   // What the sidecar is doing right now. A long bake with no message on screen
   // is indistinguishable from a hung app — which is exactly how it read.
@@ -336,22 +319,6 @@ export function Automation(): ReactNode {
                 style={bakeProgress === null ? undefined : { width: `${Math.round(bakeProgress * 100)}%` }}
               />
             </div>
-          </div>
-        )}
-
-        {mismatch && (
-          <div className="space-y-1 rounded border border-amber-600/40 bg-amber-500/10 p-2">
-            <div className="text-[10.5px] leading-snug text-amber-800">
-              {mismatch === '9:16'
-                ? `${portrait} of your ${photos.length} photos are portrait but the canvas is landscape — they will sit in a narrow strip with black either side.`
-                : `Most of your photos are landscape but the canvas is vertical — they will sit in a band with black above and below.`}
-            </div>
-            <button
-              onClick={() => setAspect(mismatch)}
-              className="w-full rounded bg-amber-500 px-2 py-1 text-[10.5px] font-medium text-ink-200 hover:bg-amber-400"
-            >
-              Switch the canvas to {mismatch}
-            </button>
           </div>
         )}
 

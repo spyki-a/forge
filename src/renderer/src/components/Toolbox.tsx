@@ -49,6 +49,8 @@ export function Toolbox(): ReactNode {
   const setMask = useEditor((s) => s.setMask)
   const addTextClip = useEditor((s) => s.addTextClip)
   const setCrop = useEditor((s) => s.setCrop)
+  const splitRatio = useEditor((s) => s.splitRatio)
+  const setSplitRatio = useEditor((s) => s.setSplitRatio)
   const aspect = useEditor((s) => s.aspect)
   const assets = useEditor((s) => s.project.assets)
   const playhead = useEditor((s) => s.playhead)
@@ -79,9 +81,15 @@ export function Toolbox(): ReactNode {
    *
    * A full-frame rectangle is the honest starting point. It changes no pixels
    * until it is dragged.
+   *
+   * And somewhere to drag it. The rectangle is drawn on the source, and the
+   * Output view (split 0, the default) has no source viewport — so pressing
+   * Reframe there opens the split: the source with its rectangle on the left,
+   * the result on the right. Any other view is the person's choice and is kept.
    */
   const startCrop = (): void => {
     setPreviewTool('crop')
+    if (splitRatio === 0) setSplitRatio(0.5)
     if (!selectedClipId || !selected || selected.crop) return
     const asset = assets.find((a) => a.id === selected.assetId)
     if (!asset?.width || !asset?.height) return

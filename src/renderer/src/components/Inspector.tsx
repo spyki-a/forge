@@ -76,10 +76,7 @@ function Field({ label, value }: { label: string; value: string }): ReactNode {
 export function Inspector(): ReactNode {
   const project = useEditor((s) => s.project)
   const aspect = useEditor((s) => s.aspect)
-  const setAspect = useEditor((s) => s.setAspect)
   const setFrameRate = useEditor((s) => s.setFrameRate)
-  const splitRatio = useEditor((s) => s.splitRatio)
-  const setSplitRatio = useEditor((s) => s.setSplitRatio)
   const selectedClipId = useEditor((s) => s.selectedClipId)
   const jobs = useEditor((s) => s.jobs)
   const notify = useEditor((s) => s.notify)
@@ -373,29 +370,10 @@ export function Inspector(): ReactNode {
       */}
       <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="space-y-3 border-b border-ink-800 p-3">
-        <div>
-          <div className="mb-1.5 text-[11px] text-ink-400">Aspect ratio</div>
-          <div className="grid grid-cols-3 gap-1">
-            {(Object.keys(ASPECTS) as AspectKey[]).map((key) => (
-              <button
-                key={key}
-                onClick={() => setAspect(key)}
-                title={`${ASPECTS[key].label} — ${ASPECTS[key].width}×${ASPECTS[key].height}`}
-                className={`rounded px-2 py-1.5 text-[11px] transition-colors ${
-                  aspect === key
-                    ? 'bg-accent-500 text-ink-950'
-                    : 'bg-ink-800 text-ink-400 hover:bg-ink-700 hover:text-ink-200'
-                }`}
-              >
-                {key}
-              </button>
-            ))}
-          </div>
-          <div className="mt-1.5 text-[10.5px] leading-snug text-ink-600">
-            Changing this re-solves every clip&apos;s reframe. Drag the rectangle in the
-            preview to correct it.
-          </div>
-        </div>
+        {/*
+          The canvas's shape and the preview's Source / Split / Output view are
+          on the bar above the picture now (CanvasBar.tsx, WINDOW.md §3.15).
+        */}
 
         {/*
           The project's frame rate, changeable with work in it: frames are the
@@ -476,32 +454,6 @@ export function Inspector(): ReactNode {
             {project.settings.loudness === undefined
               ? 'Two exports can land at noticeably different levels.'
               : `Every export measured to ${project.settings.loudness} LUFS, so one is as loud as the next.`}
-          </div>
-        </div>
-
-        <div>
-          <div className="mb-1.5 text-[11px] text-ink-400">Preview</div>
-          <div className="grid grid-cols-3 gap-1">
-            {([
-              ['Source', 1],
-              ['Split', 0.5],
-              ['Output', 0]
-            ] as const).map(([label, ratio]) => (
-              <button
-                key={label}
-                onClick={() => setSplitRatio(ratio)}
-                className={`rounded px-2 py-1.5 text-[11px] transition-colors ${
-                  Math.abs(splitRatio - ratio) < 0.02
-                    ? 'bg-ink-700 text-ink-200'
-                    : 'bg-ink-800 text-ink-400 hover:bg-ink-700'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <div className="mt-1.5 text-[10.5px] leading-snug text-ink-600">
-            Drag the divider in the preview to compare; double-click it for an even split.
           </div>
         </div>
 

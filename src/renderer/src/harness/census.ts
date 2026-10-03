@@ -86,7 +86,7 @@ type Match = (typeof MATCHES)[number]
 /** Homes that need a left-panel tab opened, by the tab's label. */
 const LEFT_TABS = { media: 'Media', library: 'Library', transcript: 'Transcript', create: 'Create' } as const
 /** Homes that are on screen whatever the left panel shows. */
-const FIXED_HOMES = ['header', 'source', 'preview', 'toolbox', 'inspector', 'curve', 'transport', 'timeline', 'waveform'] as const
+const FIXED_HOMES = ['header', 'source', 'canvasbar', 'preview', 'toolbox', 'inspector', 'curve', 'transport', 'timeline', 'waveform'] as const
 /** Overlays: counted only inside the one element that appeared when the scenario opened it. */
 const OVERLAY_HOMES = ['clipmenu', 'newproject', 'shortcuts'] as const
 
@@ -281,8 +281,9 @@ const positioned = (el: Element): string => getComputedStyle(el).position
  * are what is under examination. Every step that moves a panel has to update
  * this, and a finder that no longer recognises the layout throws.
  *
- *   header · source row · [ left | toolbox + preview | inspector ] / [ transport + timeline | curve ]
+ *   header · source row · [ left | centre | inspector ] / [ transport + timeline | curve ]
  *   left = tab strip · tab content · waveform dock
+ *   centre = canvas bar / [ toolbox + preview ]   (step 4: the bar over the picture row)
  */
 function layout(): Record<Exclude<Home, (typeof OVERLAY_HOMES)[number]> | 'tabs' | 'leftContent', Element[]> {
   const header = only(document.querySelectorAll('#root .drag-region'), 'header (.drag-region)')
@@ -302,7 +303,13 @@ function layout(): Record<Exclude<Home, (typeof OVERLAY_HOMES)[number]> | 'tabs'
   const [left, middle, inspector] = panels(upper, 3, 'the upper row')
   const [timelineColumn, curve] = panels(lower, 2, 'the lower row')
   const [tabs, leftContent, waveform] = childrenOf(left, 3, 'the left panel')
-  const [toolbox, preview] = childrenOf(middle, 2, 'the picture row')
+  // The centre column: the canvas bar, then the picture row under it. By
+  // position, never by the bar's words — those are what is being counted.
+  const [canvasbar, pictureRow] = childrenOf(middle, 2, 'the centre column')
+  const [toolbox, preview] = childrenOf(pictureRow, 2, 'the picture row')
+  // The bar has two or three parts of its own, so a bar moved BELOW the picture
+  // would still split as "two children" here; the preview canvas says which is which.
+  only(preview.querySelectorAll('canvas[data-forge-preview="1"]'), 'preview canvas under the canvas bar')
   const [transport, timeline] = childrenOf(timelineColumn, 2, 'the timeline column')
 
   return {
@@ -315,6 +322,7 @@ function layout(): Record<Exclude<Home, (typeof OVERLAY_HOMES)[number]> | 'tabs'
     transcript: [tabs, leftContent],
     create: [tabs, leftContent],
     waveform: [waveform],
+    canvasbar: [canvasbar],
     toolbox: [toolbox],
     preview: [preview],
     inspector: [inspector],
@@ -1380,10 +1388,32 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     useEditor.setState({ reelBuilding: true, reelStage: null })
     return {}
   },
-  /* landscape photos on a portrait canvas */
+  /* landscape photos on a portrait canvas: the canvas bar's chip offers 16:9 */
   'orientation-mismatch': async (env) => {
     await media(env)
     editor().setAspect('9:16')
+    return {}
+  },
+  /*
+   * Three portrait photos on a landscape canvas: the chip offers 9:16.
+   *
+   * The bridge only paints landscape stills (1600×1067), so the pool's records
+   * are turned on their side through the store. Only the records: the pixels
+   * stay landscape, which nothing counted here looks at — the chip reads each
+   * asset's width and height (shared/edit/orientation.ts), never the picture.
+   */
+  'orientation-portrait': async (env) => {
+    const m = await media(env)
+    const turned = new Set(m.photos.map((a) => a.id))
+    editor().update((p) => ({
+      ...p,
+      assets: p.assets.map((a) =>
+        turned.has(a.id) && a.width !== null && a.height !== null ? { ...a, width: a.height, height: a.width } : a
+      )
+    }))
+    const standing = editor().project.assets.filter((a) => turned.has(a.id) && (a.height ?? 0) > (a.width ?? 0))
+    if (standing.length !== 3) throw new Error(`census: ${standing.length} of the three photos stand up after turning them`)
+    if (editor().aspect !== '16:9') throw new Error(`census: a fresh project is ${editor().aspect}, not 16:9`)
     return {}
   },
   /* one clip from every automation and the Director, and a Director result */

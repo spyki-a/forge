@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { effectiveCrop, evenDown, safeCrop } from '@shared/render/crop'
 import { buildRenderPlan } from '@shared/render/plan'
 import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
@@ -205,5 +207,59 @@ describe('the preview crops with the export’s rectangle', () => {
     // No site left drawing the rectangle as stored.
     // (Testing for a crop before converting it is fine; using it as-is is not.)
     expect(preview).not.toMatch(/const crop(?::\s*CropRect)?\s*=\s*(?:top\?\.|layer\.)clip\.crop\b(?!\s*\?\s*effectiveCrop)/)
+  })
+})
+
+/*
+ * The reframe rectangle is drawn in SOURCE pixels, through the source
+ * viewport's fit — so it can only be drawn while there is a source viewport.
+ *
+ * The fit defaulted to scale 1 at the origin, and the Output view (split 0, the
+ * default and the canvas bar's own) draws no source viewport, so the default
+ * was what the rectangle got: a 1600×900 crop came out 1600×900 CSS px from the
+ * corner of a 706×360 picture, measured in the harness, and painted across the
+ * column beside it. At split 0.5 the same crop sat at 352×198, where it belongs.
+ *
+ * Source-level because the fit is set by the canvas draw loop, which jsdom
+ * cannot run; the harness check is pressing Reframe in the Output view.
+ */
+describe('the reframe rectangle needs the source on screen', () => {
+  const read = (path: string): string => readFileSync(resolve(__dirname, '..', path), 'utf8')
+  const count = (text: string, needle: string): number =>
+    [...text.matchAll(new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))].length
+  /** From `start` (which must occur once) to the first `end` after it. */
+  const block = (text: string, start: string, end: string): string => {
+    expect(count(text, start), start).toBe(1)
+    const at = text.indexOf(start)
+    const stop = text.indexOf(end, at + start.length)
+    expect(stop, `${end} after ${start}`).toBeGreaterThan(at)
+    return text.slice(at, stop)
+  }
+
+  const preview = read('src/renderer/src/components/Preview.tsx')
+  const toolbox = read('src/renderer/src/components/Toolbox.tsx')
+
+  it('has no fit at all until the source viewport is drawn — never a stand-in one', () => {
+    expect(count(preview, 'let sourceFit: ViewTransform | null = null')).toBe(1)
+    expect(count(preview, 'useState<ViewTransform | null>(null)')).toBe(1)
+    // The stand-in, anywhere: as the draw loop's default or as the state's.
+    expect(preview).not.toMatch(/\{\s*scale:\s*1,\s*offsetX:\s*0,\s*offsetY:\s*0\s*\}/)
+  })
+
+  it('shows the rectangle only while there is a fit to draw it through', () => {
+    const gate = block(preview, 'const showCrop =', '\n\n')
+    expect(gate).toContain("previewTool === 'crop'")
+    expect(gate).toMatch(/&&\s*transform !== null\s*$/)
+    // Every place the rectangle is mounted goes through that gate.
+    const mounts = [...preview.matchAll(/\{([^{}]*)\(\s*<CropOverlay\b/g)]
+    expect(mounts).toHaveLength(1)
+    for (const mount of mounts) expect(mount[1]).toMatch(/^showCrop &&/)
+  })
+
+  it('pressing Reframe in the Output view opens the split, so the source is there to drag on', () => {
+    const start = block(toolbox, 'const startCrop = (): void => {', '\n  }\n')
+    expect(start).toContain('if (splitRatio === 0) setSplitRatio(0.5)')
+    // Before the early return that a clip with a crop already takes: that clip needs the source too.
+    expect(start.indexOf('setSplitRatio(0.5)')).toBeLessThan(start.indexOf('return'))
   })
 })

@@ -753,7 +753,7 @@ Anchors are counted with `matchAll` before being trusted.
   Tests: `tests/themeTokens.test.ts`, `tests/renderer/tile.test.ts`, `tests/voiceAndKinds.test.ts`,
   `tests/fixedOverlays.test.ts`.
 
-### Step 4 — Canvas bar: shape switch, preview split, orientation chip
+### Step 4 — Canvas bar: shape switch, preview split, orientation chip · DONE 2026-10-02
 - **Files:** new `components/CanvasBar.tsx` (16:9 Landscape / 9:16 Vertical / 1:1, Source/Split/Output,
   mismatch chip with its Switch); new pure `src/shared/edit/orientation.ts` (`orientationMismatch(assets,
   settings)` lifted from `Automation.tsx:148-158`); `App.tsx` (bar above the Toolbox+Preview row, inside
@@ -763,6 +763,27 @@ Anchors are counted with `matchAll` before being trusted.
 - **Check:** click 9:16 → the preview's output frame is portrait and the Preview did not remount
   (playhead and playing state survive); Split shows the divider; three portrait photos in a 16:9 project
   → chip appears; Cmd+Z restores the shape (step 2); check the Reframe rectangle position at split 0.
+- **As built (2026-10-02).** `CanvasBar.tsx` is a flat bar in the centre panel above the picture
+  row (the Preview is not moved in the tree: measured in the harness, the playhead kept advancing
+  and `playing` stayed true across a click on 9:16). Shape group 16:9 Landscape / 9:16 Vertical /
+  1:1 Square with `aria-pressed`, the solid accent on the pressed one; view group Source / Split /
+  Output. The orientation chip reads "Most photos are portrait" (or landscape) with a **Switch to
+  9:16** button, its tooltip the chip's words then the reason; `shared/edit/orientation.ts` is the
+  reel's rule lifted unchanged (image assets only, strict majority, a tie or no photos → null, a
+  1:1 canvas counts as landscape — all pinned in `tests/orientation.test.ts`). The bar is a Tailwind
+  `@container`: the shape WORDS hide below 48rem while the chip is up and below 32rem otherwise, so
+  at the 1100 px minimum the chip is whole (the first container queries in the project). The
+  Inspector's Output block lost its aspect and Preview rows; Automation lost its banner. **Reframe
+  at split 0, the pre-existing misplacement §3.15 flagged, is fixed:** the rectangle was drawn in
+  raw source pixels because the source fit defaulted to scale 1; the fit now starts as null and the
+  rectangle is drawn only once there is a fit; pressing Reframe in the Output view opens Split
+  (`Toolbox.tsx`), and choosing Output while reframing hides the rectangle rather than drawing it
+  wrong (`tests/crop.test.ts`, source-level; the draw loop cannot run in jsdom). Census: a new
+  `canvasbar` home found from structure (centre panel = [bar, picture row], picture row =
+  [toolbox, preview], exactly one preview canvas) and two recipes for the chip, portrait and
+  landscape; 592 → 603 rows, none dropped; 595 checked, 0 missing. Verified on the cream in the
+  harness at 1400×900 and 1276×706; the Windows font stack is unmeasured for the breakpoints
+  (20 px of slack).
 
 ### Step 5 — The Curve tray on the timeline
 - **Files:** new `components/CurveTray.tsx` (28 px rail with Keys / Curves buttons and an

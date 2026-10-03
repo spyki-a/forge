@@ -1,5 +1,191 @@
 [
   {
+    "label": "16:9",
+    "match": "text",
+    "home": "canvasbar",
+    "needs": "none",
+    "file": "src/shared/render/aspect.ts",
+    "line": 10,
+    "newHome": "canvas (CanvasBar)"
+  },
+  {
+    "label": "1:1",
+    "match": "text",
+    "home": "canvasbar",
+    "needs": "none",
+    "file": "src/shared/render/aspect.ts",
+    "line": 12,
+    "newHome": "canvas (CanvasBar, the smaller third shape — Decision 1)"
+  },
+  {
+    "label": "9:16",
+    "match": "text",
+    "home": "canvasbar",
+    "needs": "none",
+    "file": "src/shared/render/aspect.ts",
+    "line": 11,
+    "newHome": "canvas (CanvasBar)"
+  },
+  {
+    "label": "Aspect ratio",
+    "match": "aria-label",
+    "home": "canvasbar",
+    "needs": "none",
+    "file": "src/renderer/src/components/CanvasBar.tsx",
+    "line": 63,
+    "newHome": "canvas (CanvasBar shape switch 16:9 / 9:16 / 1:1)",
+    "note": "The shape switch's group label; it was the visible heading over the Inspector's aspect buttons until step 4."
+  },
+  {
+    "label": "Changing this re-solves every clip's reframe.",
+    "match": "title",
+    "home": "canvasbar",
+    "needs": "none",
+    "part": true,
+    "file": "src/renderer/src/components/CanvasBar.tsx",
+    "line": 72,
+    "newHome": "canvas (tooltip on the CanvasBar shape switch)",
+    "count": 3,
+    "note": "Count 3: in the tooltip of each shape button (16:9, 9:16, 1:1). It was a line of text under the Inspector's aspect buttons until step 4."
+  },
+  {
+    "label": "Drag the divider in the preview to compare; double-click it for an even split.",
+    "match": "title",
+    "home": "canvasbar",
+    "needs": "none",
+    "file": "src/renderer/src/components/CanvasBar.tsx",
+    "line": 117,
+    "newHome": "canvas (tooltip on the CanvasBar view switch)",
+    "note": "The view switch group's tooltip, which its three buttons show on hover. It was a line of text under the Inspector's Preview buttons until step 4."
+  },
+  {
+    "label": "Landscape",
+    "match": "text",
+    "home": "canvasbar",
+    "needs": "none",
+    "file": "src/shared/render/aspect.ts",
+    "line": 10,
+    "newHome": "canvas (CanvasBar)"
+  },
+  {
+    "label": "Most photos are landscape",
+    "match": "text",
+    "home": "canvasbar",
+    "needs": "orientation-mismatch",
+    "file": "src/renderer/src/components/CanvasBar.tsx",
+    "line": 50,
+    "newHome": "canvas (orientation chip beside the shape switch)",
+    "note": "Shortened in step 4 from \"Most of your photos are landscape\", which the bar cut short at the default window. The words are also the start of the chip tooltip."
+  },
+  {
+    "label": "Most photos are portrait",
+    "match": "text",
+    "home": "canvasbar",
+    "needs": "orientation-portrait",
+    "file": "src/renderer/src/components/CanvasBar.tsx",
+    "line": 46,
+    "newHome": "canvas (orientation chip beside the shape switch)",
+    "note": "Shortened in step 4 from \"Most of your photos are portrait\", which the bar cut to \"Most of your photos …\" at the default window. The words are also the start of the chip tooltip."
+  },
+  {
+    "label": "On a vertical canvas they sit in a band with black above and below.",
+    "match": "title",
+    "home": "canvasbar",
+    "needs": "orientation-mismatch",
+    "part": true,
+    "file": "src/renderer/src/components/CanvasBar.tsx",
+    "line": 51,
+    "newHome": "canvas (orientation chip beside the shape switch)",
+    "note": "Part: the chip tooltip is the chip words, then this reason."
+  },
+  {
+    "label": "On this canvas they sit in a narrow strip with black either side.",
+    "match": "title",
+    "home": "canvasbar",
+    "needs": "orientation-portrait",
+    "part": true,
+    "file": "src/renderer/src/components/CanvasBar.tsx",
+    "line": 47,
+    "newHome": "canvas (orientation chip beside the shape switch)",
+    "note": "Part: the chip tooltip is the chip words, then this reason."
+  },
+  {
+    "label": "Output",
+    "match": "text",
+    "home": "canvasbar",
+    "needs": "none",
+    "file": "src/renderer/src/components/CanvasBar.tsx",
+    "line": 25,
+    "newHome": "canvas (CanvasBar Source / Split / Output)",
+    "note": "The view switch's Output button; counted with the Inspector's Output header (inspector row) until step 4."
+  },
+  {
+    "label": "Preview",
+    "match": "aria-label",
+    "home": "canvasbar",
+    "needs": "none",
+    "file": "src/renderer/src/components/CanvasBar.tsx",
+    "line": 116,
+    "newHome": "canvas (CanvasBar)",
+    "note": "The view switch's group label; it was the visible heading over the Inspector's Source / Split / Output buttons until step 4."
+  },
+  {
+    "label": "Source",
+    "match": "text",
+    "home": "canvasbar",
+    "needs": "none",
+    "file": "src/renderer/src/components/CanvasBar.tsx",
+    "line": 23,
+    "newHome": "canvas (CanvasBar Source / Split / Output)"
+  },
+  {
+    "label": "Split",
+    "match": "text",
+    "home": "canvasbar",
+    "needs": "none",
+    "file": "src/renderer/src/components/CanvasBar.tsx",
+    "line": 24,
+    "newHome": "canvas (CanvasBar Source / Split / Output)"
+  },
+  {
+    "label": "Square",
+    "match": "text",
+    "home": "canvasbar",
+    "needs": "none",
+    "file": "src/shared/render/aspect.ts",
+    "line": 12,
+    "newHome": "canvas (CanvasBar, the smaller third shape — Decision 1)"
+  },
+  {
+    "label": "Switch to",
+    "match": "text",
+    "home": "canvasbar",
+    "needs": "orientation-mismatch",
+    "file": "src/renderer/src/components/CanvasBar.tsx",
+    "line": 109,
+    "newHome": "canvas (orientation chip beside the shape switch)",
+    "note": "The orientation chip's button, here offering 16:9. Until step 4 it was \"Switch the canvas to\" on a banner in the Create tab's reel section (Automation.tsx)."
+  },
+  {
+    "label": "Switch to",
+    "match": "text",
+    "home": "canvasbar",
+    "needs": "orientation-portrait",
+    "file": "src/renderer/src/components/CanvasBar.tsx",
+    "line": 109,
+    "newHome": "canvas (orientation chip beside the shape switch)",
+    "note": "The orientation chip's button, here offering 9:16."
+  },
+  {
+    "label": "Vertical",
+    "match": "text",
+    "home": "canvasbar",
+    "needs": "none",
+    "file": "src/shared/render/aspect.ts",
+    "line": 11,
+    "newHome": "canvas (CanvasBar)"
+  },
+  {
     "label": "Copy",
     "match": "text",
     "home": "clipmenu",
@@ -770,15 +956,6 @@
     "newHome": "Shelf tile Strip flashes"
   },
   {
-    "label": "Switch the canvas to",
-    "match": "text",
-    "home": "create",
-    "needs": "orientation-mismatch",
-    "file": "src/renderer/src/components/Automation.tsx",
-    "line": 353,
-    "newHome": "canvas (orientation chip beside the shape switch)"
-  },
-  {
     "label": "The reel covers the highlighted part only.",
     "match": "text",
     "home": "create",
@@ -1327,15 +1504,6 @@
     "newHome": "export strip"
   },
   {
-    "label": "9:16",
-    "match": "text",
-    "home": "inspector",
-    "needs": "none",
-    "file": "src/shared/render/aspect.ts",
-    "line": 11,
-    "newHome": "canvas (CanvasBar)"
-  },
-  {
     "label": "A different stack of pages, same settings",
     "match": "title",
     "home": "inspector",
@@ -1532,15 +1700,6 @@
     "file": "src/renderer/src/components/SteadyToggle.tsx",
     "line": 30,
     "newHome": "trimmer dock"
-  },
-  {
-    "label": "Aspect ratio",
-    "match": "text",
-    "home": "inspector",
-    "needs": "none",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 392,
-    "newHome": "canvas (CanvasBar shape switch 16:9 / 9:16 / 1:1)"
   },
   {
     "label": "Audio",
@@ -1760,16 +1919,6 @@
     "newHome": "trimmer dock"
   },
   {
-    "label": "Changing this re-solves every clip's reframe.",
-    "match": "text",
-    "home": "inspector",
-    "needs": "none",
-    "part": true,
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 410,
-    "newHome": "canvas (tooltip on the CanvasBar shape switch)"
-  },
-  {
     "label": "Clear",
     "match": "text",
     "home": "inspector",
@@ -1928,15 +2077,6 @@
     "file": "src/renderer/src/components/KeyPanel.tsx",
     "line": 107,
     "newHome": "trimmer dock"
-  },
-  {
-    "label": "Drag the divider in the preview to compare; double-click it for an even split.",
-    "match": "text",
-    "home": "inspector",
-    "needs": "none",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 519,
-    "newHome": "canvas (tooltip on the CanvasBar view switch)"
   },
   {
     "label": "Duration",
@@ -2616,11 +2756,10 @@
     "match": "text",
     "home": "inspector",
     "needs": "none",
-    "count": 2,
     "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 378,
-    "newHome": "header: dropped — the strips have their own (§3.17); button: canvas (CanvasBar Source / Split / Output, §3.15)",
-    "note": "Count 2: the Inspector's Output header (dropped, §3.17) and the Preview row's Output button (CanvasBar, §3.15)."
+    "line": 360,
+    "newHome": "dropped — the strips have their own headers (§3.17)",
+    "note": "The Inspector's Output header. Until step 4 this row counted 2, with the Preview view's Output button, which is on the canvas bar now (its own row there)."
   },
   {
     "label": "Overlap this clip with the one before it on its track",
@@ -2691,15 +2830,6 @@
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 688,
     "newHome": "output strip"
-  },
-  {
-    "label": "Preview",
-    "match": "text",
-    "home": "inspector",
-    "needs": "none",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 498,
-    "newHome": "canvas (CanvasBar)"
   },
   {
     "label": "Pull out, centred",
@@ -3107,15 +3237,6 @@
     "newHome": "trimmer dock"
   },
   {
-    "label": "Source",
-    "match": "text",
-    "home": "inspector",
-    "needs": "none",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 501,
-    "newHome": "canvas (CanvasBar Source / Split / Output)"
-  },
-  {
     "label": "Source in",
     "match": "text",
     "home": "inspector",
@@ -3141,15 +3262,6 @@
     "file": "src/renderer/src/components/CarouselPanel.tsx",
     "line": 75,
     "newHome": "trimmer dock"
-  },
-  {
-    "label": "Split",
-    "match": "text",
-    "home": "inspector",
-    "needs": "none",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 502,
-    "newHome": "canvas (CanvasBar Source / Split / Output)"
   },
   {
     "label": "Splits the photo beneath into background and subject",

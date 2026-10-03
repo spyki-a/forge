@@ -15,6 +15,7 @@ import { Timeline } from './components/Timeline'
 import { Transport } from './components/Transport'
 import { Inspector } from './components/Inspector'
 import { Toolbox } from './components/Toolbox'
+import { CanvasBar } from './components/CanvasBar'
 import { Shortcuts } from './components/Shortcuts'
 import { NewProject } from './components/NewProject'
 import { SourceBar } from './components/SourceBar'
@@ -540,11 +541,19 @@ export default function App(): ReactNode {
             </Panel>
             <Divider />
             <Panel defaultSize="60" minSize="30">
-              {/* The tool strip belongs to the picture, so it travels with it. */}
-              <div className="flex h-full">
-                <Toolbox />
-                <div className="min-w-0 flex-1">
-                  <Preview />
+              {/*
+                The canvas bar sits over the picture it shapes, and is always
+                rendered: the Preview below it must never move or remount (its
+                rAF loop is the playback clock, WINDOW.md §5).
+              */}
+              <div className="flex h-full flex-col">
+                <CanvasBar />
+                {/* The tool strip belongs to the picture, so it travels with it. */}
+                <div className="flex min-h-0 flex-1">
+                  <Toolbox />
+                  <div className="min-w-0 flex-1">
+                    <Preview />
+                  </div>
                 </div>
               </div>
             </Panel>

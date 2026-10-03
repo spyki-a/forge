@@ -403,7 +403,13 @@ export function Preview(): ReactNode {
   }, [])
 
   const [box, setBox] = useState({ width: 0, height: 0 })
-  const [transform, setTransform] = useState<ViewTransform>({ scale: 1, offsetX: 0, offsetY: 0 })
+  /**
+   * Where the source viewport puts the source's pixels — or null while there is
+   * no source viewport (the Output view, split 0). The reframe rectangle is
+   * drawn in source pixels through this, so with no viewport there is nothing
+   * honest to draw it on.
+   */
+  const [transform, setTransform] = useState<ViewTransform | null>(null)
 
   const fps = project.settings.fps
   const ensureFont = useCatalog((s) => s.ensureFont)
@@ -1324,7 +1330,16 @@ export function Preview(): ReactNode {
         ? sourceFor(layer)
         : gradedSource(sourceFor(layer), layer.clip.color, layer.clip.id, repaint, layer.clip.key)
 
-    let sourceFit: ViewTransform = { scale: 1, offsetX: 0, offsetY: 0 }
+    /*
+     * Null unless the left viewport is drawn.
+     *
+     * It defaulted to scale 1 at the origin, so in the Output view — the
+     * default, and the canvas bar's own default — the reframe rectangle was
+     * laid out in raw source pixels: a 1600×900 crop came out 1600×900 CSS px
+     * from the box's corner, about four and a half times too big, over a
+     * picture that showed none of the source it was outlining.
+     */
+    let sourceFit: ViewTransform | null = null
 
     /* ----- left viewport: the whole source frame, reframe outlined ----- */
     if (leftBox.width > 8) {
@@ -1750,12 +1765,16 @@ export function Preview(): ReactNode {
       ctx.restore()
     }
 
+    const fitNow = sourceFit
     setTransform((prev) =>
-      prev.scale === sourceFit.scale &&
-      prev.offsetX === sourceFit.offsetX &&
-      prev.offsetY === sourceFit.offsetY
+      prev === fitNow ||
+      (prev !== null &&
+        fitNow !== null &&
+        prev.scale === fitNow.scale &&
+        prev.offsetX === fitNow.offsetX &&
+        prev.offsetY === fitNow.offsetY)
         ? prev
-        : sourceFit
+        : fitNow
     )
     // showThirds/showSafe/previewTool belong here: without them the memoised
     // draw closes over their opening values, the toolbox button lights up, and
@@ -1920,19 +1939,25 @@ export function Preview(): ReactNode {
   const pickingKey = previewTool === 'key' && selectedClip?.key !== undefined
 
   /*
-   * No `splitRatio` condition — that was the bug.
+   * The reframe rectangle needs the SOURCE on screen, and nothing else about
+   * the view.
    *
    * The Reframe BUTTON was lifted out of the split view and into the tool
-   * strip, with a note in Toolbox saying that comparing source against output
-   * has nothing to do with choosing a crop. This gate was left behind, so
-   * pressing Reframe with the split closed did nothing at all: the tool was
-   * moved and its visibility still depended on the place it moved from.
+   * strip, and a `splitRatio` gate left behind here made pressing it with the
+   * split closed do nothing at all. Dropping the gate outright swung the other
+   * way: in the Output view there is no source viewport, so the rectangle —
+   * which is in source pixels — was drawn at scale 1 from the corner, several
+   * times too big, over a picture of something else. So the gate is the
+   * viewport itself (`transform`, null while there is none), and pressing
+   * Reframe with the split shut opens it (Toolbox `startCrop`). Choosing Output
+   * mid-reframe takes the rectangle away until the source is back.
    */
   const showCrop =
     previewTool === 'crop' &&
     topLayer !== null &&
     topLayer.clip.id === selectedClipId &&
-    topLayer.clip.crop !== undefined
+    topLayer.clip.crop !== undefined &&
+    transform !== null
 
   return (
     <div className="flex h-full flex-col bg-ink-950">
@@ -1983,7 +2008,7 @@ export function Preview(): ReactNode {
         <canvas ref={canvasRef} data-forge-preview="1" className="absolute inset-0" />
         <div ref={holderRef} className="hidden" />
 
-        {showCrop && topLayer && (
+        {showCrop && topLayer && transform && (
           <CropOverlay clip={topLayer.clip} asset={topLayer.asset} transform={transform} />
         )}
 
