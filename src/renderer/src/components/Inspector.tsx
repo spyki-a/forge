@@ -358,7 +358,7 @@ export function Inspector(): ReactNode {
   }, [exportRequests, onExport])
 
   return (
-    <div className="flex h-full flex-col bg-ink-900">
+    <div className="flex h-full flex-col">
       <div className="shrink-0 border-b border-ink-800 px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-ink-400">
         Output
       </div>
@@ -383,7 +383,7 @@ export function Inspector(): ReactNode {
                 title={`${ASPECTS[key].label} — ${ASPECTS[key].width}×${ASPECTS[key].height}`}
                 className={`rounded px-2 py-1.5 text-[11px] transition-colors ${
                   aspect === key
-                    ? 'bg-flame-500 text-ink-950'
+                    ? 'bg-accent-500 text-ink-950'
                     : 'bg-ink-800 text-ink-400 hover:bg-ink-700 hover:text-ink-200'
                 }`}
               >
@@ -416,7 +416,7 @@ export function Inspector(): ReactNode {
                 }
                 className={`rounded px-1 py-1.5 text-[11px] tabular-nums transition-colors ${
                   project.settings.fps === rate
-                    ? 'bg-flame-500 text-ink-950'
+                    ? 'bg-accent-500 text-ink-950'
                     : 'bg-ink-800 text-ink-400 hover:bg-ink-700 hover:text-ink-200'
                 }`}
               >
@@ -458,13 +458,13 @@ export function Inspector(): ReactNode {
                     }
                     className={`flex items-baseline justify-center gap-1 rounded px-2 py-1.5 text-[11px] transition-colors ${
                       active
-                        ? 'bg-flame-500 text-ink-950'
+                        ? 'bg-accent-500 text-ink-950'
                         : 'bg-ink-800 text-ink-400 hover:bg-ink-700 hover:text-ink-200'
                     }`}
                   >
                     {label}
                     {lufs !== undefined && (
-                      <span className={`text-[9px] tabular-nums ${active ? 'text-ink-950/70' : 'text-ink-600'}`}>
+                      <span className={`text-[9px] tabular-nums ${active ? 'text-ink-950' : 'text-ink-600'}`}>
                         {lufs}
                       </span>
                     )}
@@ -526,7 +526,7 @@ export function Inspector(): ReactNode {
                 onClick={() => setCaptionsEnabled(!project.captions.enabled)}
                 className={`rounded px-1.5 py-0.5 text-[10px] transition-colors ${
                   project.captions.enabled
-                    ? 'bg-flame-500 text-ink-950'
+                    ? 'bg-accent-500 text-ink-950'
                     : 'bg-ink-800 text-ink-400 hover:bg-ink-700'
                 }`}
               >
@@ -566,7 +566,7 @@ export function Inspector(): ReactNode {
                   {preset.animated && (
                     <Sparkles
                       size={9}
-                      className="text-flame-400"
+                      className="text-accent-400"
                     />
                   )}
                 </span>
@@ -678,7 +678,7 @@ export function Inspector(): ReactNode {
                         onClick={() => setCaptionOverride('position', place)}
                         className={`rounded px-1.5 py-1 text-[10px] capitalize transition-colors ${
                           style.position === place
-                            ? 'bg-flame-500 text-ink-950'
+                            ? 'bg-accent-500 text-ink-950'
                             : 'bg-ink-800 text-ink-300 hover:bg-ink-700 hover:text-ink-100'
                         }`}
                       >
@@ -724,8 +724,8 @@ export function Inspector(): ReactNode {
           )}
 
           {captionNeedsCanvas(style) && project.captions.enabled && (
-            <div className="mt-1.5 rounded border border-flame-500/40 bg-flame-500/10 px-2 py-1.5">
-              <div className="text-[10.5px] leading-snug text-flame-300">
+            <div className="mt-1.5 rounded border border-accent-500/40 bg-accent-500/10 px-2 py-1.5">
+              <div className="text-[10.5px] leading-snug text-accent-300">
                 {/*
                   Which path these captions take, said plainly and accurately.
 
@@ -755,7 +755,7 @@ export function Inspector(): ReactNode {
         <button
           onClick={() => void onExport()}
           disabled={exporting}
-          className="flex w-full items-center justify-center gap-1.5 rounded bg-flame-500 px-2 py-2 text-[12px] font-medium text-ink-950 transition-colors hover:bg-flame-400 disabled:opacity-50"
+          className="flex w-full items-center justify-center gap-1.5 rounded bg-accent-500 px-2 py-2 text-[12px] font-medium text-ink-950 transition-colors hover:bg-accent-400 disabled:opacity-50"
         >
           {exporting ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
           Export
@@ -819,7 +819,7 @@ export function Inspector(): ReactNode {
                   <button
                     onClick={() => void removePreset(item.id)}
                     title="Forget these settings"
-                    className="rounded p-1 text-ink-600 opacity-0 transition-opacity hover:text-red-400 group-hover/preset:opacity-100"
+                    className="rounded p-1 text-ink-600 opacity-0 transition-opacity hover:text-red-800 group-hover/preset:opacity-100"
                   >
                     <X size={11} />
                   </button>
@@ -952,7 +952,7 @@ export function Inspector(): ReactNode {
                       className={`rounded px-1.5 py-0.5 text-[10px] transition-colors ${
                         (clip.volume ?? 1) > 0
                           ? 'bg-ink-800 text-ink-400 hover:bg-ink-700 hover:text-ink-200'
-                          : 'bg-flame-500 font-medium text-ink-950 hover:bg-flame-400'
+                          : 'bg-accent-500 font-medium text-ink-950 hover:bg-accent-400'
                       }`}
                     >
                       {(clip.volume ?? 1) > 0 ? 'Mute' : 'Muted'}
@@ -981,7 +981,7 @@ export function Inspector(): ReactNode {
                     and changed nothing, with no hint why.
                   */}
                   {(clip.keyframes?.volume?.length ?? 0) > 0 && (
-                    <div className="mt-0.5 text-[10px] leading-snug text-amber-400/80">
+                    <div className="mt-0.5 text-[10px] leading-snug text-amber-800">
                       The drawn envelope sets this clip's level — clear it to use the fader.
                     </div>
                   )}
@@ -1022,7 +1022,7 @@ export function Inspector(): ReactNode {
                   <span className="text-[10.5px] text-ink-400">
                     Colour
                     {clip.mask?.mode === 'grade' && (
-                      <span className="ml-1 text-flame-400">· inside the mask only</span>
+                      <span className="ml-1 text-accent-400">· inside the mask only</span>
                     )}
                   </span>
                   {!isNeutralGrade(clip.color) && (
@@ -1083,7 +1083,7 @@ export function Inspector(): ReactNode {
                 {clip.color?.lut ? (
                   <>
                     <div className="flex items-center gap-1.5">
-                      <span className="truncate text-[10.5px] text-flame-400" title={clip.color.lut.file}>
+                      <span className="truncate text-[10.5px] text-accent-400" title={clip.color.lut.file}>
                         {clip.color.lut.name ?? 'LUT'}
                       </span>
                       <button
@@ -1173,7 +1173,7 @@ export function Inspector(): ReactNode {
                           title={preset.description}
                           className={`truncate rounded px-1.5 py-1 text-[10px] transition-colors ${
                             on
-                              ? 'bg-flame-500 text-ink-950'
+                              ? 'bg-accent-500 text-ink-950'
                               : 'bg-ink-800 text-ink-300 hover:bg-ink-700 hover:text-ink-100'
                           }`}
                         >
@@ -1227,7 +1227,9 @@ export function Inspector(): ReactNode {
                   </button>
 
                   {pickingTextFont && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-950/70 p-10">
+                    // m-0: this sits in a space-y-1.5 column, whose margin reaches
+                    // a fixed child too and left the window's bottom 6px uncovered.
+                    <div className="fixed inset-0 z-50 m-0 flex items-center justify-center bg-ink-950/70 p-10">
                       <div
                         className="flex h-full max-h-[680px] w-full max-w-md flex-col overflow-hidden rounded-lg border border-ink-700 bg-ink-900 shadow-2xl"
                         onClick={(e) => e.stopPropagation()}
@@ -1321,7 +1323,7 @@ export function Inspector(): ReactNode {
                         type="checkbox"
                         checked={clip.text.uppercase}
                         onChange={(e) => void setText(clip.id, { uppercase: e.target.checked })}
-                        className="accent-flame-500"
+                        className="accent-accent-500"
                       />
                       CAPS
                     </label>
@@ -1453,7 +1455,7 @@ export function Inspector(): ReactNode {
                 <div className="mb-1 flex items-center justify-between">
                   <span className="text-[10.5px] text-ink-400">Motion path</span>
                   {clip.path && clip.path.length > 0 && (
-                    <span className="font-mono text-[10px] text-flame-400">
+                    <span className="font-mono text-[10px] text-accent-400">
                       {clip.path.length} point{clip.path.length === 1 ? '' : 's'}
                     </span>
                   )}
@@ -1487,7 +1489,7 @@ export function Inspector(): ReactNode {
                   )}
                 </div>
                 {clip.path && clip.path.length === 1 && (
-                  <div className="mt-1 text-[10px] leading-snug text-amber-500">
+                  <div className="mt-1 text-[10px] leading-snug text-amber-800">
                     One point is a fixed offset, not a move — add a second.
                   </div>
                 )}
@@ -1573,7 +1575,7 @@ export function Inspector(): ReactNode {
                 {allTransitions.length} transition{allTransitions.length === 1 ? '' : 's'}
               </span>
               {transitionsError && (
-                <span className="truncate pl-2 text-flame-400" title={transitionsError}>
+                <span className="truncate pl-2 text-accent-400" title={transitionsError}>
                   library did not load
                 </span>
               )}
@@ -1598,11 +1600,11 @@ export function Inspector(): ReactNode {
                     onClick={() => setTransition(clip.id, members[0].id)}
                     title={`${members.length} in this family`}
                     className={`flex items-center justify-between rounded px-2 py-1.5 text-[11px] capitalize transition-colors ${
-                      active ? 'bg-flame-500 text-ink-950' : 'bg-ink-800 text-ink-400 hover:bg-ink-700'
+                      active ? 'bg-accent-500 text-ink-950' : 'bg-ink-800 text-ink-400 hover:bg-ink-700'
                     }`}
                   >
                     <span>{family}</span>
-                    <span className={active ? 'text-ink-950/60' : 'text-ink-600'}>
+                    <span className={active ? 'text-ink-950' : 'text-ink-600'}>
                       {members.length}
                     </span>
                   </button>
@@ -1631,7 +1633,7 @@ export function Inspector(): ReactNode {
                       }}
                       title={`${members.length} masks`}
                       className={`rounded px-1.5 py-0.5 text-[10px] transition-colors ${
-                        on ? 'bg-flame-500 text-ink-950' : 'bg-ink-800 text-ink-400 hover:bg-ink-700'
+                        on ? 'bg-accent-500 text-ink-950' : 'bg-ink-800 text-ink-400 hover:bg-ink-700'
                       }`}
                     >
                       {TAG_LABELS[tag]} <span className="opacity-60">{members.length}</span>
@@ -1736,7 +1738,7 @@ export function Inspector(): ReactNode {
                         ? 'bg-red-500'
                         : job.status === 'cancelled'
                           ? 'bg-ink-600'
-                          : 'bg-flame-500'
+                          : 'bg-accent-500'
                     }`}
                     style={{ width: `${Math.round(job.progress * 100)}%` }}
                   />
@@ -1757,7 +1759,7 @@ export function Inspector(): ReactNode {
                   </span>
                 </div>
                 {job.error && (
-                  <div className="mt-1 line-clamp-3 text-[10px] leading-snug text-red-400">{job.error}</div>
+                  <div className="mt-1 line-clamp-3 text-[10px] leading-snug text-red-800">{job.error}</div>
                 )}
               </div>
             ))}

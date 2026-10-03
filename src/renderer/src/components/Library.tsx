@@ -135,7 +135,7 @@ export function Library(): ReactNode {
   const visible = matches.slice(0, limit)
 
   return (
-    <div className="flex h-full flex-col bg-ink-900">
+    <div className="flex h-full flex-col">
       <div className="flex items-center gap-1.5 border-b border-ink-800 px-2 py-1.5">
         <Search size={12} className="shrink-0 text-ink-600" />
         <input
@@ -151,7 +151,7 @@ export function Library(): ReactNode {
           onClick={() => setShowPacks((open) => !open)}
           title="Asset packs — download more fonts, transitions and stickers"
           className={`shrink-0 rounded p-0.5 hover:bg-ink-800 hover:text-ink-200 ${
-            showPacks ? 'text-flame-400' : 'text-ink-600'
+            showPacks ? 'text-accent-400' : 'text-ink-600'
           }`}
         >
           <Package size={11} />
@@ -188,7 +188,7 @@ export function Library(): ReactNode {
             onClick={() => setCategory(null)}
             className={`rounded px-1.5 py-0.5 text-[10.5px] transition-colors ${
               category === null
-                ? 'bg-flame-500 font-medium text-ink-950'
+                ? 'bg-accent-500 font-medium text-ink-950'
                 : 'bg-ink-850 text-ink-400 hover:bg-ink-800'
             }`}
           >
@@ -201,7 +201,7 @@ export function Library(): ReactNode {
               title={entry.raw.replace(/^\d+[_-]/, '').replace(/[_-]+/g, ' ')}
               className={`rounded px-1.5 py-0.5 text-[10.5px] transition-colors ${
                 category === entry.raw
-                  ? 'bg-flame-500 font-medium text-ink-950'
+                  ? 'bg-accent-500 font-medium text-ink-950'
                   : 'bg-ink-850 text-ink-400 hover:bg-ink-800'
               }`}
             >
@@ -213,7 +213,7 @@ export function Library(): ReactNode {
 
       <div ref={scrollerRef} className="flex-1 overflow-y-auto p-2">
         {error && (
-          <div className="px-2 py-4 text-center text-[11px] text-red-400">{error}</div>
+          <div className="px-2 py-4 text-center text-[11px] text-red-800">{error}</div>
         )}
         {!error && !catalog && (
           <div className="px-2 py-6 text-center text-[11px] text-ink-600">
@@ -246,7 +246,7 @@ export function Library(): ReactNode {
               would think to press.
             */}
             {showPacks ? (
-              <span className="text-ink-700">Looked in {root || 'the assets folder'}</span>
+              <span className="text-ink-600">Looked in {root || 'the assets folder'}</span>
             ) : (
               <button
                 onClick={() => setShowPacks(true)}
@@ -360,7 +360,7 @@ function Tile({
       <div
         ref={ref}
         title={meta.family}
-        className="flex h-28 flex-col overflow-hidden rounded-lg border border-ink-700 bg-white shadow-sm transition-colors hover:border-flame-500"
+        className="flex h-28 flex-col overflow-hidden rounded-lg border border-ink-700 bg-white shadow-sm transition-colors hover:border-accent-500"
       >
         <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden px-2">
           {fontReady ? (
@@ -412,11 +412,11 @@ function Tile({
         title="Play and show in the trimmer"
         className={`flex w-full items-center gap-2 rounded-md border px-2.5 py-2 text-left transition-colors ${
           auditioning
-            ? 'border-flame-500 bg-flame-500/15'
+            ? 'border-accent-500 bg-accent-500/15'
             : 'border-ink-700 bg-ink-850 hover:border-ink-600 hover:bg-ink-800'
         }`}
       >
-        <span className="shrink-0 text-[10px] text-flame-400">▶</span>
+        <span className="shrink-0 text-[10px] text-accent-400">▶</span>
         <span className="min-w-0 flex-1 truncate text-[11.5px] text-ink-200">{entry.name}</span>
       </button>
     )
@@ -433,7 +433,7 @@ function Tile({
           ? `${entry.name} — drag onto a clip to apply it`
           : `${entry.name} — drag onto the timeline${title ? ` · ${title.textSlots} text slot${title.textSlots === 1 ? '' : 's'}` : ''}`
       }
-      className="group flex cursor-grab flex-col gap-1 overflow-hidden rounded-md border border-ink-700 bg-white p-1 shadow-sm transition-colors hover:border-flame-500 active:cursor-grabbing"
+      className="group flex cursor-grab flex-col gap-1 overflow-hidden rounded-md border border-ink-700 bg-white p-1 shadow-sm transition-colors hover:border-accent-500 active:cursor-grabbing"
     >
       <div className="flex aspect-square items-center justify-center overflow-hidden rounded-sm bg-white">
         {url ? (

@@ -70,7 +70,7 @@ export function PaperPanel({ clip }: { clip: Clip }): ReactNode {
             onClick={() => setPaper(clip.id, { mode: id })}
             className={`rounded px-2 py-1.5 text-[10.5px] transition-colors ${
               (paper.mode ?? 'page') === id
-                ? 'bg-flame-500 text-ink-950'
+                ? 'bg-accent-500 text-ink-950'
                 : 'bg-ink-800 text-ink-400 hover:bg-ink-700 hover:text-ink-200'
             }`}
           >
@@ -92,7 +92,7 @@ export function PaperPanel({ clip }: { clip: Clip }): ReactNode {
             onClick={() => setPaper(clip.id, { shape: s.id })}
             className={`rounded px-1 py-1.5 text-[10px] transition-colors ${
               (paper.shape ?? 'clip') === s.id
-                ? 'bg-flame-500 text-ink-950'
+                ? 'bg-accent-500 text-ink-950'
                 : 'bg-ink-800 text-ink-400 hover:bg-ink-700 hover:text-ink-200'
             }`}
           >
@@ -114,7 +114,7 @@ export function PaperPanel({ clip }: { clip: Clip }): ReactNode {
           title="Reveal the headline a character at a time, with a caret — the marker waits until the word is actually there"
           className={`w-full rounded px-2 py-1.5 text-[10.5px] transition-colors ${
             paper.reveal === 'type'
-              ? 'bg-flame-500 text-ink-950'
+              ? 'bg-accent-500 text-ink-950'
               : 'bg-ink-800 text-ink-400 hover:bg-ink-700 hover:text-ink-200'
           }`}
         >
@@ -129,7 +129,7 @@ export function PaperPanel({ clip }: { clip: Clip }): ReactNode {
             onClick={() => setPaper(clip.id, { lookId: look.id })}
             className={`rounded px-2 py-1.5 text-[10.5px] transition-colors ${
               paper.lookId === look.id
-                ? 'bg-flame-500 text-ink-950'
+                ? 'bg-accent-500 text-ink-950'
                 : 'bg-ink-800 text-ink-400 hover:bg-ink-700 hover:text-ink-200'
             }`}
           >

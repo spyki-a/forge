@@ -282,7 +282,7 @@ function drawGuides(
       )
     }
     box(0.93, 'rgba(255,255,255,0.2)')
-    box(0.9, 'rgba(249,122,75,0.55)')
+    box(0.9, 'rgba(37,99,235,0.7)')
   }
 
   ctx.restore()
@@ -1741,7 +1741,7 @@ export function Preview(): ReactNode {
 
     if (gutter) {
       ctx.save()
-      ctx.strokeStyle = 'rgba(249,115,65,0.9)'
+      ctx.strokeStyle = 'rgba(37,99,235,0.9)'
       ctx.lineWidth = 1
       ctx.beginPath()
       ctx.moveTo(splitX + 0.5, 0)
@@ -2056,7 +2056,7 @@ export function Preview(): ReactNode {
                 }}
                 className={`rounded-full px-2.5 py-1 text-[10.5px] transition-colors ${
                   dropChip.intent === choice.id
-                    ? 'bg-flame-500 font-medium text-ink-950'
+                    ? 'bg-accent-500 font-medium text-ink-950'
                     : 'text-ink-300 hover:bg-ink-800 hover:text-ink-100'
                 }`}
               >
@@ -2079,7 +2079,7 @@ export function Preview(): ReactNode {
             className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full border border-ink-700 bg-ink-900/95 px-3 py-1.5 text-[11px] text-ink-300 shadow-lg backdrop-blur transition-colors hover:border-ink-600 hover:text-ink-100"
           >
             The selected clip is not at this moment —{' '}
-            <span className="text-flame-400">go to it</span>
+            <span className="text-accent-400">go to it</span>
           </button>
         )}
 
@@ -2226,10 +2226,10 @@ function SplitDivider({
       onDoubleClick={() => onChange(0.5)}
       title="Drag to compare · double-click for an even split"
     >
-      <div className={`mx-auto h-full w-0.5 ${dragging ? 'bg-flame-400' : 'bg-flame-500/90'}`} />
+      <div className={`mx-auto h-full w-0.5 ${dragging ? 'bg-accent-400' : 'bg-accent-500/90'}`} />
       <div
         className={`absolute left-1/2 top-1/2 flex size-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-ink-950 shadow-lg ${
-          dragging ? 'bg-flame-400' : 'bg-flame-500'
+          dragging ? 'bg-accent-400' : 'bg-accent-500'
         }`}
       >
         <span className="text-[9px] font-bold leading-none text-ink-950">||</span>

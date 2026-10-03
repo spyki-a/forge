@@ -137,7 +137,7 @@ export function Waveform(): ReactNode {
 
     if (peaks && peaks.buckets > 0) {
       const step = box.width / peaks.buckets
-      ctx.fillStyle = '#3a4552'
+      ctx.fillStyle = '#9C9385'
       for (let i = 0; i < peaks.buckets; i++) {
         const min = peaks.values[i * 2]
         const max = peaks.values[i * 2 + 1]
@@ -153,7 +153,7 @@ export function Waveform(): ReactNode {
         const outMs = audition.outMs > 0 ? audition.outMs : peaks.durationMs
         const inX = (audition.inMs / peaks.durationMs) * box.width
         const outX = (outMs / peaks.durationMs) * box.width
-        ctx.fillStyle = 'rgba(11,13,16,0.72)'
+        ctx.fillStyle = 'rgba(241,236,227,0.72)'
         ctx.fillRect(0, 0, inX, box.height)
         ctx.fillRect(outX, 0, box.width - outX, box.height)
       }
@@ -165,7 +165,7 @@ export function Waveform(): ReactNode {
     const outX = toX(clip.inPoint + clip.duration)
 
     // Dim what the clip excludes, so the kept region reads immediately.
-    ctx.fillStyle = 'rgba(11,13,16,0.72)'
+    ctx.fillStyle = 'rgba(241,236,227,0.72)'
     ctx.fillRect(0, 0, inX, box.height)
     ctx.fillRect(outX, 0, box.width - outX, box.height)
 
@@ -176,7 +176,7 @@ export function Waveform(): ReactNode {
       ctx.beginPath()
       ctx.rect(inX, 0, outX - inX, box.height)
       ctx.clip()
-      ctx.fillStyle = '#7d8b9c'
+      ctx.fillStyle = '#4A453F'
       for (let i = 0; i < peaks.buckets; i++) {
         const min = peaks.values[i * 2]
         const max = peaks.values[i * 2 + 1]
@@ -187,7 +187,7 @@ export function Waveform(): ReactNode {
       ctx.restore()
     }
 
-    ctx.strokeStyle = '#f97341'
+    ctx.strokeStyle = '#2563EB'
     ctx.lineWidth = 2
     for (const x of [inX, outX]) {
       ctx.beginPath()
@@ -199,7 +199,7 @@ export function Waveform(): ReactNode {
     // Where the playhead sits inside the source, when it is over this clip.
     if (playhead >= clip.start && playhead < clip.start + clip.duration) {
       const sourceFrame = clip.inPoint + (playhead - clip.start)
-      ctx.strokeStyle = 'rgba(255,255,255,0.65)'
+      ctx.strokeStyle = 'rgba(36,33,29,0.65)'
       ctx.lineWidth = 1
       ctx.beginPath()
       ctx.moveTo(toX(sourceFrame), 0)
@@ -275,7 +275,7 @@ export function Waveform(): ReactNode {
             </div>
           )}
           {error && (
-            <div className="absolute inset-0 flex items-center justify-center px-3 text-center text-[10.5px] text-red-400">
+            <div className="absolute inset-0 flex items-center justify-center px-3 text-center text-[10.5px] text-red-800">
               {error}
             </div>
           )}
@@ -296,15 +296,15 @@ export function Waveform(): ReactNode {
                     className="absolute top-0 h-full w-3 -translate-x-1/2 cursor-ew-resize"
                     style={{ left: `${percent}%` }}
                   >
-                    <div className="absolute left-1/2 top-0 h-full w-0.5 -translate-x-1/2 bg-flame-500" />
-                    <div className="absolute left-1/2 top-1/2 h-5 w-2 -translate-x-1/2 -translate-y-1/2 rounded-sm border border-ink-950 bg-flame-500" />
+                    <div className="absolute left-1/2 top-0 h-full w-0.5 -translate-x-1/2 bg-accent-500" />
+                    <div className="absolute left-1/2 top-1/2 h-5 w-2 -translate-x-1/2 -translate-y-1/2 rounded-sm border border-ink-950 bg-accent-500" />
                   </div>
                 )
               })}
 
               <button
                 onClick={() => void addAuditionToTimeline()}
-                className="absolute bottom-1 right-1 rounded bg-flame-500 px-2 py-0.5 text-[10px] font-medium text-ink-950 hover:bg-flame-400"
+                className="absolute bottom-1 right-1 rounded bg-accent-500 px-2 py-0.5 text-[10px] font-medium text-ink-950 hover:bg-accent-400"
               >
                 Add at playhead
               </button>
@@ -337,7 +337,7 @@ export function Waveform(): ReactNode {
           </div>
         )}
         {error && (
-          <div className="absolute inset-0 flex items-center justify-center px-3 text-center text-[10.5px] text-red-400">
+          <div className="absolute inset-0 flex items-center justify-center px-3 text-center text-[10.5px] text-red-800">
             {error}
           </div>
         )}
@@ -354,7 +354,7 @@ export function Waveform(): ReactNode {
             className="absolute top-0 h-full w-3 -translate-x-1/2 cursor-ew-resize"
             style={{ left: `${handle === 'in' ? inPercent : outPercent}%` }}
           >
-            <div className="absolute left-1/2 top-1/2 h-5 w-2 -translate-x-1/2 -translate-y-1/2 rounded-sm border border-ink-950 bg-flame-500" />
+            <div className="absolute left-1/2 top-1/2 h-5 w-2 -translate-x-1/2 -translate-y-1/2 rounded-sm border border-ink-950 bg-accent-500" />
           </div>
         ))}
       </div>

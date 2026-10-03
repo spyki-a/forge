@@ -516,14 +516,14 @@ export function Timeline(): ReactNode {
           <button
             onClick={() => setRangeIn(playhead)}
             title="Mark in at the playhead (I)"
-            className="rounded px-1.5 py-0.5 text-ink-400 transition-colors hover:bg-ink-800 hover:text-flame-400"
+            className="rounded px-1.5 py-0.5 text-ink-400 transition-colors hover:bg-ink-800 hover:text-accent-400"
           >
             Mark in
           </button>
           <button
             onClick={() => setRangeOut(playhead)}
             title="Mark out at the playhead (O)"
-            className="rounded px-1.5 py-0.5 text-ink-400 transition-colors hover:bg-ink-800 hover:text-flame-400"
+            className="rounded px-1.5 py-0.5 text-ink-400 transition-colors hover:bg-ink-800 hover:text-accent-400"
           >
             Mark out
           </button>
@@ -531,7 +531,7 @@ export function Timeline(): ReactNode {
             <button
               onClick={clearRange}
               title="Clear the range"
-              className="rounded px-1.5 py-0.5 text-flame-400 transition-colors hover:bg-ink-800"
+              className="rounded px-1.5 py-0.5 text-accent-400 transition-colors hover:bg-ink-800"
             >
               {formatTimecode(Math.max(0, (rangeOut ?? duration) - (rangeIn ?? 0)), fps)} ✕
             </button>
@@ -597,7 +597,7 @@ export function Timeline(): ReactNode {
                         : 'Visible — click to hide this track, picture and sound'
                     }
                     className={`rounded p-0.5 hover:bg-ink-800 ${
-                      track.hidden ? 'text-amber-500' : 'text-ink-600 hover:text-ink-200'
+                      track.hidden ? 'text-amber-800' : 'text-ink-600 hover:text-ink-200'
                     }`}
                   >
                     {track.hidden ? <EyeOff size={11} /> : <Eye size={11} />}
@@ -613,7 +613,7 @@ export function Timeline(): ReactNode {
                       : 'Audible — click to mute'
                   }
                   className={`rounded p-0.5 hover:bg-ink-800 ${
-                    track.muted ? 'text-amber-500' : 'text-ink-600 hover:text-ink-200'
+                    track.muted ? 'text-amber-800' : 'text-ink-600 hover:text-ink-200'
                   }`}
                 >
                   {track.muted ? <VolumeX size={11} /> : <Volume2 size={11} />}
@@ -626,7 +626,7 @@ export function Timeline(): ReactNode {
                       : 'Solo — hear only this track (and any others soloed)'
                   }
                   className={`rounded px-0.5 text-[9px] font-bold leading-none hover:bg-ink-800 ${
-                    track.solo ? 'text-emerald-400' : 'text-ink-600 hover:text-ink-200'
+                    track.solo ? 'text-emerald-800' : 'text-ink-600 hover:text-ink-200'
                   }`}
                 >
                   S
@@ -661,8 +661,8 @@ export function Timeline(): ReactNode {
                       recording?.trackId === track.id
                         ? recording.phase === 'recording'
                           ? 'animate-pulse bg-red-500 text-white'
-                          : 'bg-red-500/30 text-red-200'
-                        : 'text-red-500/70 hover:text-red-400'
+                          : 'bg-red-500/30 text-red-800'
+                        : 'text-red-800/70 hover:text-red-800'
                     }`}
                   >
                     {recording?.trackId === track.id && recording.phase === 'counting' ? (
@@ -681,7 +681,7 @@ export function Timeline(): ReactNode {
                         : 'Mark as speech, so music ducks under it (a voice-over, an interview)'
                     }
                     className={`rounded px-0.5 text-[9px] font-bold leading-none hover:bg-ink-800 ${
-                      track.dialogue ? 'text-teal-400' : 'text-ink-600 hover:text-ink-200'
+                      track.dialogue ? 'text-teal-800' : 'text-ink-600 hover:text-ink-200'
                     }`}
                   >
                     VO
@@ -695,7 +695,7 @@ export function Timeline(): ReactNode {
                 <Meter source={track.id} width={18} height={4} title={`${track.name} peak`} />
 
                 {/* The track above composites over the one below, as in Resolve. */}
-                <span className="ml-auto shrink-0 text-[9px] text-ink-700">
+                <span className="ml-auto shrink-0 text-[9px] text-ink-600">
                   {track.kind === 'video' && track.id === lanes[0]?.id ? 'top' : ''}
                 </span>
 
@@ -703,7 +703,7 @@ export function Timeline(): ReactNode {
                   onClick={() => removeTrack(track.id)}
                   disabled={isOnlyVideo}
                   title={isOnlyVideo ? 'The last video track cannot be removed' : 'Remove track and its clips'}
-                  className="shrink-0 rounded p-0.5 text-ink-700 opacity-0 transition group-hover:opacity-100 hover:bg-ink-800 hover:text-red-400 disabled:opacity-0"
+                  className="shrink-0 rounded p-0.5 text-ink-600 opacity-0 transition group-hover:opacity-100 hover:bg-ink-800 hover:text-red-800 disabled:opacity-0"
                 >
                   <Trash2 size={10} />
                 </button>
@@ -720,7 +720,7 @@ export function Timeline(): ReactNode {
           */}
           {marquee && (
             <div
-              className="pointer-events-none fixed z-40 rounded-sm border border-flame-400 bg-flame-500/15"
+              className="pointer-events-none fixed z-40 rounded-sm border border-accent-400 bg-accent-500/15"
               style={{
                 left: Math.min(marquee.x0, marquee.x1),
                 top: Math.min(marquee.y0, marquee.y1),
@@ -774,7 +774,7 @@ export function Timeline(): ReactNode {
               */}
               {(rangeIn !== null || rangeOut !== null) && (
                 <div
-                  className="pointer-events-none absolute bottom-0 h-1.5 rounded-sm bg-flame-500/70"
+                  className="pointer-events-none absolute bottom-0 h-1.5 rounded-sm bg-accent-500/70"
                   style={{
                     left: (rangeIn ?? 0) * zoom,
                     width: Math.max(2, ((rangeOut ?? duration) - (rangeIn ?? 0)) * zoom)
@@ -783,13 +783,13 @@ export function Timeline(): ReactNode {
               )}
               {rangeIn !== null && (
                 <div
-                  className="pointer-events-none absolute bottom-0 h-3 w-[3px] bg-flame-400"
+                  className="pointer-events-none absolute bottom-0 h-3 w-[3px] bg-accent-400"
                   style={{ left: rangeIn * zoom }}
                 />
               )}
               {rangeOut !== null && (
                 <div
-                  className="pointer-events-none absolute bottom-0 h-3 w-[3px] bg-flame-400"
+                  className="pointer-events-none absolute bottom-0 h-3 w-[3px] bg-accent-400"
                   style={{ left: rangeOut * zoom - 3 }}
                 />
               )}
@@ -809,7 +809,7 @@ export function Timeline(): ReactNode {
                 }}
                 className={`relative border-b border-ink-800 ${
                   track.hidden || track.muted ? 'opacity-40' : ''
-                } ${dropTarget?.trackId === track.id ? 'bg-flame-500/10' : ''}`}
+                } ${dropTarget?.trackId === track.id ? 'bg-accent-500/10' : ''}`}
                 style={{ height: TRACK_HEIGHT }}
                 onPointerDown={(e) => {
                   /*
@@ -903,7 +903,7 @@ export function Timeline(): ReactNode {
                 */}
                 {selectedGap?.trackId === track.id && (
                   <div
-                    className="pointer-events-none absolute top-1.5 bottom-1.5 rounded border border-dashed border-flame-400 bg-flame-500/15"
+                    className="pointer-events-none absolute top-1.5 bottom-1.5 rounded border border-dashed border-accent-400 bg-accent-500/15"
                     style={{
                       left: selectedGap.start * zoom,
                       width: Math.max(2, selectedGap.duration * zoom)
@@ -935,8 +935,8 @@ export function Timeline(): ReactNode {
                         // both clips, so showing it inside only one misrepresents it.
                         className={`absolute top-1 z-10 flex items-center justify-center overflow-hidden rounded border text-[9px] font-semibold transition-colors ${
                           selected
-                            ? 'border-flame-300 bg-flame-500 text-ink-950'
-                            : 'border-flame-400 bg-flame-500/85 text-ink-950 hover:bg-flame-400'
+                            ? 'border-accent-300 bg-accent-300 text-ink-950'
+                            : 'border-accent-400 bg-accent-500 text-ink-950 hover:bg-accent-400'
                         }`}
                         style={{
                           left: clip.start * zoom,
@@ -1026,10 +1026,10 @@ export function Timeline(): ReactNode {
                         )}
 
                         <div className="pointer-events-none relative">
-                          <div className="truncate px-2 pt-1 text-ink-200 [text-shadow:0_1px_2px_rgb(10_12_15/0.9)]">
+                          <div className="truncate px-2 pt-1 text-ink-200">
                             {asset?.name ?? 'missing'}
                           </div>
-                          <div className="px-2 text-[10px] text-ink-400 [text-shadow:0_1px_2px_rgb(10_12_15/0.9)]">
+                          <div className="px-2 text-[10px] text-ink-400">
                             {formatTimecode(clip.duration, fps)}
                           </div>
                         </div>
@@ -1057,14 +1057,14 @@ export function Timeline(): ReactNode {
                           the line happens to pass through still trims.
                         */}
                         <div
-                          className="absolute left-0 top-0 z-20 h-full w-2 cursor-w-resize bg-transparent hover:bg-flame-500/60"
+                          className="absolute left-0 top-0 z-20 h-full w-2 cursor-w-resize bg-transparent hover:bg-accent-500/60"
                           onPointerDown={startDrag('trim-start', clip)}
                           onPointerMove={onClipMove}
                           onPointerUp={endDrag}
                           onPointerCancel={endDrag}
                         />
                         <div
-                          className="absolute right-0 top-0 z-20 h-full w-2 cursor-e-resize bg-transparent hover:bg-flame-500/60"
+                          className="absolute right-0 top-0 z-20 h-full w-2 cursor-e-resize bg-transparent hover:bg-accent-500/60"
                           onPointerDown={startDrag('trim-end', clip)}
                           onPointerMove={onClipMove}
                           onPointerUp={endDrag}
@@ -1098,7 +1098,7 @@ export function Timeline(): ReactNode {
             {dropTarget && (
               <div
                 className={`pointer-events-none absolute top-7 z-20 ${
-                  dropTarget.cutFrame === null ? 'w-0.5 bg-flame-400' : 'w-1 bg-flame-400'
+                  dropTarget.cutFrame === null ? 'w-0.5 bg-accent-400' : 'w-1 bg-accent-400'
                 }`}
                 style={{
                   left: (dropTarget.cutFrame ?? dropTarget.frame) * zoom,
@@ -1118,7 +1118,7 @@ export function Timeline(): ReactNode {
               it is pointing at, which is the one thing it must not do.
             */}
             <div
-              className="absolute top-0 z-30 w-px bg-flame-500"
+              className="absolute top-0 z-30 w-px bg-accent-500"
               style={{ left: playhead * zoom, height: 28 + project.tracks.length * TRACK_HEIGHT }}
             >
               <div
@@ -1144,7 +1144,7 @@ export function Timeline(): ReactNode {
                   width so the POINT is on the frame, not its left edge — an
                   off-by-half-a-head is a playhead that lies about where it is.
                 */
-                className="absolute -top-px h-[15px] w-[13px] cursor-ew-resize bg-flame-500"
+                className="absolute -top-px h-[15px] w-[13px] cursor-ew-resize bg-accent-500"
                 style={{
                   left: -6,
                   clipPath: 'polygon(0 0, 100% 0, 100% 62%, 50% 100%, 0 62%)'

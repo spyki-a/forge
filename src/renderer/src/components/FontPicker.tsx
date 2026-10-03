@@ -90,7 +90,7 @@ export function FontPicker({
               <>
                 No font library found.
                 <br />
-                <span className="text-ink-700">
+                <span className="text-ink-600">
                   Expected a fonts folder under the assets directory.
                 </span>
               </>
@@ -108,7 +108,7 @@ export function FontPicker({
               data-family={font.family}
               onClick={() => onChange(font.family)}
               className={`flex w-full items-center gap-3 border-b border-ink-850 px-3 py-2.5 text-left transition-colors ${
-                selected ? 'bg-flame-500/15' : 'hover:bg-ink-850'
+                selected ? 'bg-accent-500/15' : 'hover:bg-ink-850'
               }`}
             >
               {/* Specimen on white: a typeface is judged by its shapes, and dark
@@ -129,7 +129,7 @@ export function FontPicker({
                 {font.family}
               </span>
               {font.restricted && (
-                <span title="This font's filename declares a usage restriction" className="shrink-0 text-[9px] text-amber-500">
+                <span title="This font's filename declares a usage restriction" className="shrink-0 text-[9px] text-amber-800">
                   restricted
                 </span>
               )}
@@ -138,7 +138,7 @@ export function FontPicker({
                   system
                 </span>
               )}
-              {selected && <Check size={12} className="shrink-0 text-flame-500" />}
+              {selected && <Check size={12} className="shrink-0 text-accent-500" />}
             </button>
           )
         })}

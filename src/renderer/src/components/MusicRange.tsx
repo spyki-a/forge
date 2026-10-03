@@ -125,12 +125,12 @@ export function MusicRange({ clip, asset }: { clip: Clip; asset: MediaAsset }): 
       }
     }
 
-    bars('#2f3947')
+    bars('#9C9385')
     ctx.save()
     ctx.beginPath()
     ctx.rect(inX, 0, Math.max(0, outX - inX), box.height)
     ctx.clip()
-    bars('#f97341')
+    bars('#2563EB')
     ctx.restore()
   }, [peaks, box, inPercent, outPercent])
 
@@ -175,7 +175,7 @@ export function MusicRange({ clip, asset }: { clip: Clip; asset: MediaAsset }): 
       <div className="flex items-baseline justify-between gap-2">
         <span className="truncate text-[10.5px] text-ink-300">{asset.name}</span>
         <span className="shrink-0 font-mono text-[10px] tabular-nums text-ink-500">
-          <span className={trimmed ? 'text-flame-400' : 'text-ink-300'}>
+          <span className={trimmed ? 'text-accent-400' : 'text-ink-300'}>
             {formatSeconds(selectedSeconds)}
           </span>
           <span className="text-ink-600"> / {formatSeconds(fullSeconds)}</span>
@@ -204,8 +204,8 @@ export function MusicRange({ clip, asset }: { clip: Clip; asset: MediaAsset }): 
               className="absolute top-0 h-full w-3 -translate-x-1/2 cursor-ew-resize"
               style={{ left: `${handle === 'in' ? inPercent : outPercent}%` }}
             >
-              <div className="absolute left-1/2 top-0 h-full w-0.5 -translate-x-1/2 bg-flame-300" />
-              <div className="absolute left-1/2 top-1/2 h-6 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-sm border border-ink-950 bg-flame-300" />
+              <div className="absolute left-1/2 top-0 h-full w-0.5 -translate-x-1/2 bg-accent-300" />
+              <div className="absolute left-1/2 top-1/2 h-6 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-sm border border-ink-950 bg-accent-300" />
             </div>
           ))}
       </div>

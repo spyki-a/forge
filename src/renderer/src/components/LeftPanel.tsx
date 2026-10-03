@@ -53,7 +53,7 @@ export function LeftPanel(): ReactNode {
   })
 
   return (
-    <div className="flex h-full flex-col bg-ink-900">
+    <div className="flex h-full flex-col">
       <div className="flex shrink-0 border-b border-ink-800">
         {TABS.map((entry) => (
           <button
@@ -61,7 +61,7 @@ export function LeftPanel(): ReactNode {
             onClick={() => setTab(entry.id)}
             className={`flex-1 border-b-2 px-2 py-1.5 text-[11px] transition-colors ${
               tab === entry.id
-                ? 'border-flame-500 text-ink-200'
+                ? 'border-accent-500 text-ink-200'
                 : 'border-transparent text-ink-400 hover:text-ink-200'
             }`}
           >

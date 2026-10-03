@@ -88,7 +88,7 @@ function MarkField({
         aria-label={`${label} — minutes and seconds`}
         aria-invalid={bad}
         className={`w-[72px] rounded border bg-ink-950 px-1.5 py-1 text-center text-[11px] tabular-nums outline-none ${
-          bad ? 'border-amber-500/70 text-amber-300' : 'border-ink-750 text-ink-200 focus:border-flame-500'
+          bad ? 'border-amber-500/70 text-amber-800' : 'border-ink-750 text-ink-200 focus:border-accent-500'
         }`}
       />
     </label>
@@ -138,7 +138,7 @@ export function IngestPanel(): ReactNode {
           placeholder="Paste a video link"
           spellCheck={false}
           autoComplete="off"
-          className="min-w-0 flex-1 rounded border border-ink-750 bg-ink-950 px-2 py-1.5 text-[11.5px] text-ink-200 outline-none placeholder:text-ink-600 focus:border-flame-500"
+          className="min-w-0 flex-1 rounded border border-ink-750 bg-ink-950 px-2 py-1.5 text-[11.5px] text-ink-200 outline-none placeholder:text-ink-600 focus:border-accent-500"
         />
         <button
           onClick={submit}
@@ -148,7 +148,7 @@ export function IngestPanel(): ReactNode {
               ? 'Download and put it on the timeline'
               : LINK_PROBLEM_TEXT[problem ?? 'not-a-link']
           }
-          className="flex shrink-0 items-center gap-1.5 rounded bg-flame-500 px-3 py-1.5 text-[11px] font-medium text-ink-950 transition-colors hover:bg-flame-400 disabled:opacity-40"
+          className="flex shrink-0 items-center gap-1.5 rounded bg-accent-500 px-3 py-1.5 text-[11px] font-medium text-ink-950 transition-colors hover:bg-accent-400 disabled:opacity-40"
         >
           {ingest.busy ? <Loader2 size={12} className="animate-spin" /> : <DownloadCloud size={12} />}
           Get
@@ -163,7 +163,7 @@ export function IngestPanel(): ReactNode {
        * "nothing happened" would be a terrible way to learn that.
        */}
       {problem && problem !== 'empty' && (
-        <p className="mt-1.5 text-[10.5px] leading-snug text-amber-400/90">
+        <p className="mt-1.5 text-[10.5px] leading-snug text-amber-800">
           {LINK_PROBLEM_TEXT[problem]}
         </p>
       )}
@@ -178,7 +178,7 @@ export function IngestPanel(): ReactNode {
               onClick={() => setIngest({ kind: want.id })}
               title={want.hint}
               className={`rounded px-2 py-1 text-[11px] transition-colors ${
-                on ? 'bg-flame-500 text-ink-950' : 'bg-ink-850 text-ink-400 hover:text-ink-200'
+                on ? 'bg-accent-500 text-ink-950' : 'bg-ink-850 text-ink-400 hover:text-ink-200'
               }`}
             >
               {want.label}

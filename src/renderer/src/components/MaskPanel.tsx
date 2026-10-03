@@ -124,7 +124,7 @@ export function MaskPanel({ clip }: { clip: Clip }): ReactNode {
               : 'Animate the shape: move or resize it at different moments and it follows'
           }
           className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] transition-colors ${
-            animated ? 'bg-flame-500 font-medium text-ink-950' : 'bg-ink-800 text-ink-300 hover:bg-ink-700 hover:text-ink-100'
+            animated ? 'bg-accent-500 font-medium text-ink-950' : 'bg-ink-800 text-ink-300 hover:bg-ink-700 hover:text-ink-100'
           }`}
         >
           <Diamond size={10} strokeWidth={2.2} className={onKey ? 'fill-current' : ''} />

@@ -101,7 +101,7 @@ export function CameraPanel({ clip }: { clip: Clip }): ReactNode {
                   onClick={() => setMotion(clip.id, { ...motion, direction: id })}
                   title={title}
                   className={`flex h-5 w-6 items-center justify-center rounded transition-colors ${
-                    direction === id ? 'bg-flame-500 text-ink-950' : 'text-ink-500 hover:bg-ink-850 hover:text-ink-300'
+                    direction === id ? 'bg-accent-500 text-ink-950' : 'text-ink-500 hover:bg-ink-850 hover:text-ink-300'
                   }`}
                 >
                   <Icon size={11} strokeWidth={2} />

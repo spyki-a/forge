@@ -25,8 +25,8 @@ function Divider({ vertical = false }: { vertical?: boolean }): ReactNode {
     <Separator
       className={
         vertical
-          ? 'h-px bg-ink-800 transition-colors hover:bg-flame-500 active:bg-flame-500'
-          : 'w-px bg-ink-800 transition-colors hover:bg-flame-500 active:bg-flame-500'
+          ? 'h-px bg-ink-800 transition-colors hover:bg-accent-500 active:bg-accent-500'
+          : 'w-px bg-ink-800 transition-colors hover:bg-accent-500 active:bg-accent-500'
       }
     />
   )
@@ -71,14 +71,14 @@ function Header(): ReactNode {
   const sidecarError = useEditor((s) => s.sidecarError)
 
   return (
-    <div className="drag-region flex h-9 shrink-0 items-center justify-center border-b border-ink-800 bg-ink-900">
+    <div className="drag-region flex h-9 shrink-0 items-center justify-center border-b border-ink-800">
       <span className="text-[11.5px] text-ink-400">
         <span className="font-medium text-ink-200">{project.name || 'Untitled'}</span>
-        {dirty && <span className="ml-1 text-flame-500">•</span>}
+        {dirty && <span className="ml-1 text-accent-500">•</span>}
         {projectPath && <span className="ml-2 text-ink-600">{projectPath}</span>}
       </span>
       <span
-        className="no-drag absolute right-16 font-mono text-[9px] text-ink-700"
+        className="no-drag absolute right-16 font-mono text-[9px] text-ink-600"
         title={`Build ${BUILD_STAMP} — if this timestamp is old, the running app is stale`}
       >
         {BUILD_STAMP.slice(11, 19)}
@@ -457,7 +457,7 @@ export default function App(): ReactNode {
   }, [notify, saveNow, openNow])
 
   return (
-    <div className="relative flex h-full flex-col overflow-hidden bg-ink-950 text-ink-200">
+    <div className="relative flex h-full flex-col overflow-hidden text-ink-200">
       {/*
         Work the app saved for you while you were not looking.
         
@@ -466,7 +466,7 @@ export default function App(): ReactNode {
         prompt that appeared once does not appear again at the next launch.
       */}
       {recovery && (
-        <div className="flex items-center gap-3 border-b border-flame-500/40 bg-flame-500/10 px-4 py-2 text-[12px]">
+        <div className="flex items-center gap-3 border-b border-accent-500/40 bg-accent-500/10 px-4 py-2 text-[12px]">
           <span className="text-ink-200">
             Forge has unsaved work from <strong>{recovery.name}</strong>, autosaved{' '}
             {new Date(recovery.savedAt).toLocaleString()}.
@@ -486,7 +486,7 @@ export default function App(): ReactNode {
                   notify(err instanceof Error ? err.message : String(err))
                 )
             }}
-            className="rounded bg-flame-500 px-2 py-1 font-medium text-ink-950 hover:bg-flame-400"
+            className="rounded bg-accent-500 px-2 py-1 font-medium text-ink-950 hover:bg-accent-400"
           >
             Recover
           </button>

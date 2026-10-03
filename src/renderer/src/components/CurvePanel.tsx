@@ -100,7 +100,7 @@ export function CurvePanel(): ReactNode {
                 {PROPERTY_INFO[key].label}
                 {/* A dot rather than a count: which properties move is the
                     question, not how many keys each has. */}
-                {has && <span className="ml-1 text-flame-500">•</span>}
+                {has && <span className="ml-1 text-accent-500">•</span>}
               </button>
             )
           })}

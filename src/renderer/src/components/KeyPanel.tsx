@@ -78,7 +78,7 @@ export function KeyPanel({ clip }: { clip: Clip }): ReactNode {
           title="Click the screen in the preview to take its colour"
           className={`flex flex-1 items-center justify-center gap-1 rounded px-1.5 py-0.5 text-[10px] transition-colors ${
             picking
-              ? 'bg-flame-500 font-medium text-ink-950'
+              ? 'bg-accent-500 font-medium text-ink-950'
               : 'bg-ink-800 text-ink-300 hover:bg-ink-700 hover:text-ink-100'
           }`}
         >

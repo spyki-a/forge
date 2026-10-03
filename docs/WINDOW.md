@@ -99,10 +99,11 @@ big buttons only; timeline, waveform, preview stay flat. **Base: a LIGHT cream,
 with a faint paper-like texture** (the user, 2026-10-02, answering §7: "remove
 the orange and make the background light cream like texture") — so the app
 leaves its dark `ink` palette for a light one, which is also where neumorphism
-reads best. **The orange (`flame`) accent goes; the accent is the 3dit blue.**
-Video clips on the timeline wear blue today (`clipKind.ts:59`) and
-`tests/voiceAndKinds.test.ts:142-160` forbids a clip kind wearing the accent, so
-video clips are re-hued in the same step. The pressed state changes colour and
+reads best. **The orange (`flame`) accent goes; the accent is the 3dit blue** (the
+tokens are `accent-*` since step 3). Video clips wore blue (`src/shared/edit/clipKind.ts`) and
+`tests/voiceAndKinds.test.ts` forbids a clip kind wearing the accent, so in step 3 video moved to
+violet and graphics to green (sky was tried first: its -700 border is 0.105 from accent-400 in
+OKLab). The pressed state changes colour and
 icon as well as shadow, never shadow alone (user-working-preferences /
 forge-ui-relayout memory). The texture is one small tiled noise image on the
 page background only, never on controls, so it costs nothing to paint. No `transform`, `filter`
@@ -584,7 +585,7 @@ bridge (`main.tsx:12-61`).
 | `tests/clipOverlays.test.ts:29-99` | Timeline.tsx classes and counts | none — Timeline.tsx untouched |
 | `tests/moment.test.ts:604-621` | store.ts `setAspect` (2500-char window), `rebakeGenerated` | do not add code inside those windows; the undo fix sits before them (`1091-1111`) |
 | `tests/tailwindSources.test.ts:39-47` | classes only under `src/renderer` or `@source` | tile registry lives in `src/renderer` |
-| `tests/voiceAndKinds.test.ts:142-160` | no clip kind wears the accent (`flame`) | untouched while the accent stays flame (Q on blue) |
+| `tests/voiceAndKinds.test.ts:144-249` | no clip kind wears the accent | step 3: forbids `blue` and `accent` by name, and every shade a kind's classes use (-300 body, -400 border, -700 selected border, -500 dot) ≥ 0.12 from accent-500, -400 and -300 in OKLab (indigo is a different name for nearly the same colour, and a sky -700 border passed a -500-only check) |
 
 ---
 
@@ -699,14 +700,19 @@ Anchors are counted with `matchAll` before being trusted.
   switch over text, cards, paper or moments makes N+1 history entries (one per repoint), so it
   takes N+1 undos to come back — a later step can wrap `setAspect`'s repoints in one begin/commit.
 
-### Step 3 — Theme: light cream base, blue accent, every token defined, the tile primitives
+### Step 3 — Theme: light cream base, blue accent, every token defined, the tile primitives · DONE 2026-10-02
 - **Decided (§7, 2026-10-02):** light cream background with a faint texture; the orange goes; the
   accent is the 3dit blue; video clips re-hued so no clip kind wears the accent.
 - **Files:** `styles.css` (`@theme`: the `ink` scale becomes a LIGHT scale — the same token names, so
-  the ~149 class sites keep working, with ink-950 the darkest text and ink-50 the cream page; define
-  ink-50/100/300/500/750, which those sites already use and which render today by inheritance; the
-  `flame` tokens are re-pointed at the blue so every `flame-*` site turns blue in one move, then
-  renamed to `accent-*` across `src/renderer` and `src/shared` in the same commit; shadow tokens for
+  the ~1,150 class sites keep working. **Correction:** this line first said "ink-950 the darkest text
+  and ink-50 the cream page", which is backwards — it would have meant swapping ~1,000 class sites.
+  Every ink step is used as a ROLE pair (surfaces 950 > 900 > 850 > 800 > 700, text 200 / 400 / 600 on
+  them, text-ink-950 on the accent), so the scale is inverted in LIGHTNESS and keeps its names:
+  ink-950 is the cream page and ink-50 the darkest ink; define ink-50/100/300/500/750, which those
+  sites already use and which render today by inheritance; the `flame` tokens are renamed to
+  `accent-*` across `src/renderer` and `src/shared` by a 1:1 codemod and the values re-hue them —
+  accent-400/300 are DEEPER than 500 on cream, the higher-contrast variants, as the lighter
+  flame-400/300 were on the dark page; shadow tokens for
   raised / pressed on cream; `box-shadow` added to the button transition list `186-191`; a tiled noise
   `background-image` on `body` only; rewrite the palette comment `15-30`, which records the opposite
   decision); `src/shared/clipKind.ts:59` video clips to a non-accent hue; new `components/ui/Tile.tsx`
@@ -719,6 +725,33 @@ Anchors are counted with `matchAll` before being trusted.
 - **Check:** before/after screenshots of every panel on the cream; zoom on tertiary text for contrast
   (text on cream needs ≥ 4.5:1 — measure the three greys); open a FontPicker → it still covers the
   whole window; the Preview's own black letterbox and the timeline stay flat and readable on cream.
+- **Verified in the harness:** every panel screenshotted on the cream (empty app, each left tab,
+  a photo and a text clip selected, the clip menu); an OKLCH scan of every element's computed
+  colours found no orange left; 374 text elements measured, minimum 4.75:1 (tertiary on the
+  hover surface); both full-window pickers cover the viewport exactly; census 584 checked, 0
+  missing; console clean between markers. The selected text clip's border is yellow-700, an
+  ochre, and the SFX kind's is amber-700 — yellows, not the orange, left for the user to judge.
+- **As built (2026-10-02):** tokens per the role table in the `styles.css`
+  palette comment (page #f6f2ea, primary #24211d, accent-500 #2563eb — the icon's #3b82f6 carries no
+  text on cream either way, 3.29:1 / 4.36:1 — plus accent-900 #dce8ff for pressed, `stage` #0b0d10,
+  and `shadow-raised`, `-raised-sm`, `-pressed`); 192 `-flame-NNN` strings renamed (28 classes +
+  `var(--color-flame-500)` + the 3 tokens), 15 orange literals re-pointed by hand (canvas, SVG and
+  the overlays drawn on the video), 40 status texts moved to their -800 steps (red-400 is 2.46:1 on
+  cream), cream-on-accent opacity modifiers dropped, `text-ink-700` text moved to ink-600 (700 is a
+  border tone now). The grain only shows because the page roots stopped painting: App's root and the
+  header, SourceBar, LeftPanel, MediaPool, Library, Automation, Inspector and Toolbox roots are
+  transparent; timeline, transport, curve tray, preview, waveform, sheets and controls stay opaque.
+  Clip kinds share one light recipe (`-300/50` body, `-700` selected border); graphics are green,
+  not sky, after the harness check. Also from that check: the style tiles in `TextStylePicker`
+  draw white captions on a cleared canvas, so they sit on `bg-stage` like the animation strip;
+  and the two full-window pickers that live in `space-y` columns carry `m-0`, because the
+  column's margin reaches a fixed child too and left the text-card font picker 6 px short of the
+  window's bottom (`tests/fixedOverlays.test.ts`). The focus ring's
+  4 px rounding moved into `@layer base`, because unlayered it beat every `rounded-*` utility and
+  would have squared a focused tile. `window.__forgeSwatch(true)` in the harness draws the tiles,
+  buttons, every grey on every surface with measured ratios, the accent chips and the clip colours.
+  Tests: `tests/themeTokens.test.ts`, `tests/renderer/tile.test.ts`, `tests/voiceAndKinds.test.ts`,
+  `tests/fixedOverlays.test.ts`.
 
 ### Step 4 — Canvas bar: shape switch, preview split, orientation chip
 - **Files:** new `components/CanvasBar.tsx` (16:9 Landscape / 9:16 Vertical / 1:1, Source/Split/Output,

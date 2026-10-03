@@ -63,7 +63,7 @@ export function SourceBar(): ReactNode {
   }
 
   return (
-    <div className="shrink-0 border-b border-ink-850 bg-ink-900">
+    <div className="shrink-0 border-b border-ink-850">
       <div className="flex items-center gap-1 px-2 py-1.5">
         {MODES.map((mode) => {
           const Icon = mode.icon
@@ -91,7 +91,7 @@ export function SourceBar(): ReactNode {
             <button
               onClick={() => void pick()}
               disabled={busy}
-              className="flex items-center gap-1.5 rounded-md bg-flame-500 px-3 py-1 text-[11px] font-medium text-ink-950 transition-colors hover:bg-flame-400 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-md bg-accent-500 px-3 py-1 text-[11px] font-medium text-ink-950 transition-colors hover:bg-accent-400 disabled:opacity-50"
             >
               {busy ? <Loader2 size={12} className="animate-spin" /> : <Upload size={12} />}
               Add files

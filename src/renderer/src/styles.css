@@ -15,31 +15,92 @@
 /*
  * The palette.
  *
- * Neutral greys rather than blue-tinted ones, layered the way macOS layers its
- * own: the window darkest, panels above it, controls above those. Apple's dark
- * greys are almost perfectly neutral, and the blue cast the old palette carried
- * is what made the app read as "a dark theme" rather than as a surface.
+ * A light cream page, with a faint paper grain, and dark warm text. The user
+ * asked for it on 2026-10-02 ("remove the orange and make the background light
+ * cream like texture"), and it is also where the tool tiles' soft raised and
+ * pressed shadows read at all: neumorphism needs a light surface to throw a
+ * highlight from. The greys are warm, the paper's brown at every lightness,
+ * rather than neutral, so text, borders and the grain read as one material.
+ *
+ * HOW THE SCALE COUNTS — backwards from Tailwind's habit, on purpose. In both
+ * scales a step counts TOWARD THE PAGE: ink-950 is the page, the lightest, and
+ * ink-50 the darkest ink; accent-900 is the palest tint and accent-300 the
+ * deepest blue. The dark theme counted the same way (ink-950 was its darkest
+ * page), and every one of the ~1,150 ink sites uses its step as a ROLE PAIR —
+ * surfaces 950 > 900 > 850 > 800 > 700 layered on the page, text 200 / 400 / 600
+ * on them, text-ink-950 on an accent fill — never as an absolute colour. So the
+ * theme was turned by inverting each step's lightness, and every pair kept its
+ * contrast and every layer its order without an ink class site changing. Hover
+ * still means "one step further from the page", which on a light theme darkens.
+ * What inversion cannot carry was fixed by hand: a fixed Tailwind colour beside
+ * an ink token (status text moved to its -800 step, red-400 being 2.46:1 on
+ * cream), cream text on the accent with an opacity modifier, text-ink-700 (now a
+ * border tone), and the canvas and SVG literals tuned for a dark well.
+ * tests/themeTokens.test.ts holds the order and the contrast floors.
+ *
+ *   ink-950  the page, the wells (inputs, curve editors), cream text on accent
+ *   ink-900  flat working surfaces: timeline, transport, sheets, menus
+ *   ink-850  sub-panels, ruler, track headers
+ *   ink-800  controls, dividers, hairline borders
+ *   ink-750  input borders
+ *   ink-700  hover surface, strong border, slider track — a border, NOT text
+ *   ink-600  tertiary text (4.75:1 on ink-700, the darkest surface it sits on)
+ *   ink-500  field labels
+ *   ink-400  secondary text
+ *   ink-300  control text
+ *   ink-200  primary text, the body colour
+ *   ink-100  emphasis and hover text
+ *   ink-50   the darkest ink
  *
  * Text is a small set of weights on one colour, not a set of colours — primary,
  * secondary, tertiary — which is the single biggest thing that makes an
  * interface look considered rather than assembled.
  *
- * The accent stays flame, because it is the product's, but slightly off full
- * saturation and used on almost nothing: the selected thing, and the thing you
- * are dragging. Colour means something only when it is rare.
+ * The accent is the 3dit blue, and still used on almost nothing: the selected
+ * thing, the playhead, the thing you are dragging, the one button that does the
+ * job. Colour means something only when it is rare. The icon's own #3B82F6 is
+ * not a token, because it carries no text on cream either way (3.29:1 under
+ * cream text, 4.36:1 under dark); accent-500 is its nearest deeper sibling,
+ * which carries cream text at 4.63:1. accent-400 and accent-300 are DEEPER still
+ * — the higher-contrast variants, for blue text and for "on" — which is what the
+ * old orange's LIGHTER 400/300 were on the dark page. The step names are the
+ * old accent's, so the rename to accent-* was one name swap per class. No clip
+ * kind on the timeline wears a blue (tests/voiceAndKinds.test.ts measures it).
+ *
+ * The stage is the preview's black, for a well that shows what lands on video.
  */
 @theme {
-  --color-ink-950: #0e0e10;
-  --color-ink-900: #151518;
-  --color-ink-850: #1b1b1f;
-  --color-ink-800: #232328;
-  --color-ink-700: #2f2f35;
-  --color-ink-600: #46464d;
-  --color-ink-400: #8b8b93;
-  --color-ink-200: #e9e9ec;
-  --color-flame-500: #ef7a4b;
-  --color-flame-400: #f59a75;
-  --color-flame-300: #f9bda4;
+  --color-ink-950: #f6f2ea;
+  --color-ink-900: #f1ece3;
+  --color-ink-850: #ece6dc;
+  --color-ink-800: #e6dfd4;
+  --color-ink-750: #e0d8cd;
+  --color-ink-700: #dad2c6;
+  --color-ink-600: #5d5751;
+  --color-ink-500: #544e48;
+  --color-ink-400: #4a453f;
+  --color-ink-300: #39342f;
+  --color-ink-200: #24211d;
+  --color-ink-100: #1a1713;
+  --color-ink-50: #100e0b;
+  --color-accent-900: #dce8ff;
+  --color-accent-500: #2563eb;
+  --color-accent-400: #1b4cd5;
+  --color-accent-300: #1e40af;
+  --color-stage: #0b0d10;
+
+  /*
+   * Neumorphic shadows, for the tool tiles and the big buttons ONLY — the
+   * timeline, the waveform and the preview stay flat. A white highlight top
+   * left (lighter than the page) and a warm grey shade bottom right (#756653,
+   * the ink's hue). Use the utilities (shadow-raised, aria-pressed:shadow-pressed);
+   * Tailwind inlines these values, and a shadow-<colour> utility on the same
+   * element would recolour BOTH layers. They reach 14 px, so a grid of tiles
+   * needs that much padding inside anything overflow-hidden.
+   */
+  --shadow-raised: -4px -4px 10px rgb(255 255 255 / 0.85), 4px 4px 10px rgb(117 102 83 / 0.28);
+  --shadow-raised-sm: -2px -2px 5px rgb(255 255 255 / 0.8), 2px 2px 5px rgb(117 102 83 / 0.26);
+  --shadow-pressed: inset 2px 2px 5px rgb(117 102 83 / 0.3), inset -2px -2px 5px rgb(255 255 255 / 0.75);
 }
 
 html,
@@ -48,9 +109,27 @@ body,
   height: 100%;
 }
 
+/*
+ * The paper grain, on the page and nowhere else.
+ *
+ * One 128 px tile of SVG fractal noise, coloured a warm brown (#5c4a33) whose
+ * alpha is 0.26 * noise - 0.115: measured over the tile, 2.1 % on average, 11.3 %
+ * at the darkest speck, and a third of the pixels clean — paper, not dirt
+ * (0.4-0.5 * noise read as dirt). Those last two numbers are the strength knob.
+ * The filter region is the tile itself (x/y/width/height 0 0 1 1): the default
+ * -10 %/120 % region makes stitchTiles stitch a 153.6 px tile, which seams at
+ * 128 px. An SVG filter inside a background image is not a CSS `filter`, so it
+ * makes no containing block for the app's fixed overlays.
+ *
+ * Only the page roots let it through (they paint no background); the timeline,
+ * transport, preview, sheets and every control stay opaque and flat. The export
+ * capture page (graphics.html) never imports this file.
+ */
 body {
   margin: 0;
-  background: var(--color-ink-950);
+  background-color: var(--color-ink-950);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128'%3E%3Cfilter id='g' x='0' y='0' width='1' height='1' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .36 0 0 0 0 .29 0 0 0 0 .2 0 0 0 .26 -.115'/%3E%3C/filter%3E%3Crect width='128' height='128' filter='url(%23g)'/%3E%3C/svg%3E");
+  background-size: 128px 128px;
   color: var(--color-ink-200);
   /* -apple-system first: on a Mac this is the system face, which is most of
      what makes an interface feel native before anything else is done. */
@@ -125,10 +204,11 @@ input[type="range"]::-webkit-slider-thumb {
   height: 12px;
   margin-top: -4.5px;
   border-radius: 50%;
-  background: #f2f2f4;
+  /* White on cream, held off the page by a warm shade (the tiles' #756653). */
+  background: #fff;
   box-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.5),
-    0 0 0 0.5px rgba(0, 0, 0, 0.25);
+    0 1px 2px rgba(117, 102, 83, 0.45),
+    0 0 0 0.5px rgba(36, 33, 29, 0.3);
   transition: transform 120ms ease;
 }
 input[type="range"]:hover::-webkit-slider-thumb {
@@ -141,14 +221,15 @@ input[type="range"]:disabled {
   cursor: default;
 }
 input[type="range"]:disabled::-webkit-slider-thumb {
-  background: var(--color-ink-600);
-  box-shadow: none;
+  /* Receded toward the page: on cream that is lighter, not darker. */
+  background: var(--color-ink-700);
+  box-shadow: 0 0 0 0.5px rgba(36, 33, 29, 0.25);
   transform: none;
 }
 
 /* Checkboxes and colour wells, in the same restrained register. */
 input[type="checkbox"] {
-  accent-color: var(--color-flame-500);
+  accent-color: var(--color-accent-500);
 }
 input[type="color"] {
   -webkit-appearance: none;
@@ -162,7 +243,7 @@ input[type="color"]::-webkit-color-swatch-wrapper {
   padding: 0;
 }
 input[type="color"]::-webkit-color-swatch {
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(36, 33, 29, 0.2);
   border-radius: 5px;
 }
 
@@ -171,15 +252,25 @@ input[type="color"]::-webkit-color-swatch {
  *
  * Keyboard users get a visible ring; pointer users never see it. Browsers give
  * this for free through :focus-visible, and the default ring is the wrong
- * colour in a dark interface.
+ * colour beside the accent.
  */
 :focus {
   outline: none;
 }
 :focus-visible {
-  outline: 2px solid var(--color-flame-500);
+  outline: 2px solid var(--color-accent-500);
   outline-offset: 1px;
-  border-radius: 4px;
+}
+/*
+ * The ring's rounding, in the base layer so an element's own rounded-* wins.
+ * Unlayered, it beat every utility and squared a focused tile's rounded-xl
+ * corners (and a round button's) to 4 px; the outline above stays unlayered,
+ * because it must beat the focus:outline-none on the text fields.
+ */
+@layer base {
+  :focus-visible {
+    border-radius: 4px;
+  }
 }
 
 /* Motion, kept to what confirms an action rather than decorating it. */
@@ -187,7 +278,8 @@ button {
   transition:
     background-color 120ms ease,
     color 120ms ease,
-    border-color 120ms ease;
+    border-color 120ms ease,
+    box-shadow 120ms ease;
 }
 
 @media (prefers-reduced-motion: reduce) {

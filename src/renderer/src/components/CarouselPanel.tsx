@@ -107,7 +107,7 @@ export function CarouselPanel({ clip }: { clip: Clip }): ReactNode {
         title="Cards square to the camera instead of turned outward along the ring"
         className={`w-full rounded px-2 py-1.5 text-[10.5px] transition-colors ${
           ring.facingCamera
-            ? 'bg-flame-500 text-ink-950'
+            ? 'bg-accent-500 text-ink-950'
             : 'bg-ink-800 text-ink-400 hover:bg-ink-700 hover:text-ink-200'
         }`}
       >

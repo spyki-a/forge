@@ -85,10 +85,10 @@ export function Keyframes({ clip }: { clip: Clip }): ReactNode {
                 }
                 className={`h-4 w-4 shrink-0 rotate-45 rounded-[2px] border transition-colors disabled:opacity-25 ${
                   onKey
-                    ? 'border-flame-400 bg-flame-500'
+                    ? 'border-accent-400 bg-accent-500'
                     : keys.length > 0
-                      ? 'border-flame-500/60 bg-transparent hover:bg-flame-500/30'
-                      : 'border-ink-600 bg-transparent hover:border-flame-500'
+                      ? 'border-accent-500/60 bg-transparent hover:bg-accent-500/30'
+                      : 'border-ink-600 bg-transparent hover:border-accent-500'
                 }`}
               />
               <span className="w-14 shrink-0 text-[10.5px] text-ink-400">{info.label}</span>
@@ -130,7 +130,7 @@ export function Keyframes({ clip }: { clip: Clip }): ReactNode {
                     title={`Frame ${key.frame} — click to jump, double-click to remove`}
                     className={`rounded px-1 py-0.5 font-mono text-[9px] tabular-nums ${
                       key.frame === into
-                        ? 'bg-flame-500 text-ink-950'
+                        ? 'bg-accent-500 text-ink-950'
                         : 'bg-ink-800 text-ink-500 hover:bg-ink-700 hover:text-ink-300'
                     }`}
                   >

@@ -46,9 +46,9 @@ function Thumbnail({ asset }: { asset: MediaAsset }): ReactNode {
    */
   if (asset.offline) {
     return (
-      <div className="flex size-full flex-col items-center justify-center gap-1 bg-red-950/40">
-        <FileWarning size={18} className="text-red-400" />
-        <span className="text-[9px] font-medium uppercase tracking-wide text-red-400">Offline</span>
+      <div className="flex size-full flex-col items-center justify-center gap-1 bg-red-500/10">
+        <FileWarning size={18} className="text-red-800" />
+        <span className="text-[9px] font-medium uppercase tracking-wide text-red-800">Offline</span>
       </div>
     )
   }
@@ -127,7 +127,7 @@ export function MediaPool(): ReactNode {
 
   return (
     <div
-      className="relative flex h-full flex-col bg-ink-900"
+      className="relative flex h-full flex-col"
       onDragEnter={(e) => {
         e.preventDefault()
         depth.current++
@@ -158,14 +158,14 @@ export function MediaPool(): ReactNode {
         use — so the folder case is the one the header offers.
       */}
       {offline.length > 0 && (
-        <div className="flex items-center gap-2 border-b border-red-900/50 bg-red-950/30 px-3 py-1.5">
-          <FileWarning size={13} className="shrink-0 text-red-400" />
-          <span className="min-w-0 flex-1 truncate text-[11px] text-red-200">
+        <div className="flex items-center gap-2 border-b border-red-500/30 bg-red-500/10 px-3 py-1.5">
+          <FileWarning size={13} className="shrink-0 text-red-800" />
+          <span className="min-w-0 flex-1 truncate text-[11px] text-red-800">
             {offline.length} file{offline.length === 1 ? '' : 's'} missing
           </span>
           <button
             onClick={() => void relinkMedia()}
-            className="flex shrink-0 items-center gap-1 rounded bg-red-500/20 px-1.5 py-0.5 text-[11px] text-red-200 hover:bg-red-500/30"
+            className="flex shrink-0 items-center gap-1 rounded bg-red-500/20 px-1.5 py-0.5 text-[11px] text-red-800 hover:bg-red-500/30"
           >
             <Link2 size={11} /> Relink…
           </button>
@@ -193,7 +193,7 @@ export function MediaPool(): ReactNode {
                   onDragStart={(e) => setDragPayload(e, poolPayload(asset))}
                   onDoubleClick={() => addAssetToTimeline(asset.id)}
                   title={`${asset.name}\n${details(asset)}\n\nDrag onto the timeline, or double-click`}
-                  className="group relative aspect-square cursor-grab overflow-hidden rounded-md border border-ink-700 bg-ink-850 hover:border-flame-500 active:cursor-grabbing"
+                  className="group relative aspect-square cursor-grab overflow-hidden rounded-md border border-ink-700 bg-ink-850 hover:border-accent-500 active:cursor-grabbing"
                 >
                   <Thumbnail asset={asset} />
 
@@ -223,7 +223,7 @@ export function MediaPool(): ReactNode {
                     <button
                       onClick={() => cancelTranscribe(asset.id)}
                       title={job.message ?? 'Transcribing — click to cancel'}
-                      className="absolute inset-x-1 bottom-4 flex items-center justify-center gap-1 rounded bg-flame-500/90 px-1 py-0.5 text-[9px] font-medium text-ink-950"
+                      className="absolute inset-x-1 bottom-4 flex items-center justify-center gap-1 rounded bg-accent-500/90 px-1 py-0.5 text-[9px] font-medium text-ink-950"
                     >
                       <Loader2 size={9} className="animate-spin" />
                       {job.progress === null ? 'analysing' : `${Math.round(job.progress * 100)}%`}
@@ -243,7 +243,7 @@ export function MediaPool(): ReactNode {
                         }
                         className={`absolute bottom-4 right-1 rounded p-1 transition-opacity disabled:opacity-30 ${
                           hasTranscript
-                            ? 'bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/50'
+                            ? 'bg-emerald-500/20 text-emerald-800 ring-1 ring-emerald-500/50'
                             : 'bg-ink-950/75 text-ink-300 opacity-0 group-hover:opacity-100 hover:text-ink-100'
                         }`}
                       >
@@ -260,7 +260,7 @@ export function MediaPool(): ReactNode {
 
       {over && (
         <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-ink-950/85">
-          <div className="rounded-lg border-2 border-dashed border-flame-500 px-6 py-4 text-xs text-flame-400">
+          <div className="rounded-lg border-2 border-dashed border-accent-500 px-6 py-4 text-xs text-accent-400">
             Drop to import
           </div>
         </div>

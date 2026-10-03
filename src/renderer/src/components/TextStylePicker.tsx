@@ -87,7 +87,9 @@ export function TextStylePicker({
 
       {browsing && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-ink-950/70 p-10 backdrop-blur-md"
+          // m-0: the last child of a space-y-1.5 column today, and the first
+          // line appended after it would hand it that column's bottom margin.
+          className="fixed inset-0 z-50 m-0 flex items-center justify-center bg-ink-950/70 p-10 backdrop-blur-md"
           onClick={() => setBrowsing(false)}
         >
           <div
@@ -350,16 +352,22 @@ function Tile({
       title={`${style.name} — ${style.description}`}
       // shrink-0: in a scrolling flex column a fixed height is only a hint, and
       // the tiles were squashed to a few pixels tall.
-      className={`relative w-full shrink-0 overflow-hidden rounded-md border transition-colors ${
+      //
+      // bg-stage, not a panel grey: the canvas is cleared, not filled, and the
+      // styles are drawn for video — white captions, light glows. On the cream
+      // panel those measured 1.1:1 at the median; on the stage they read as
+      // they will on the shot. The selection is the blue edge, doubled by a
+      // ring now that the fill no longer changes with it.
+      className={`relative w-full shrink-0 overflow-hidden rounded-md border bg-stage transition-colors ${
         selected
-          ? 'border-flame-500 bg-ink-850'
-          : 'border-ink-850 bg-ink-900 hover:border-ink-700 hover:bg-ink-850'
+          ? 'border-accent-500 ring-1 ring-accent-500'
+          : 'border-ink-850 hover:border-ink-600 hover:bg-stage/85'
       }`}
       style={{ height }}
     >
       <canvas ref={ref} className="pointer-events-none absolute inset-0 size-full" />
       {!hideName && (
-        <span className="pointer-events-none absolute bottom-0 left-0 right-0 truncate bg-gradient-to-t from-ink-950/85 to-transparent px-1 pb-0.5 pt-2 text-left text-[9px] text-ink-400">
+        <span className="pointer-events-none absolute bottom-0 left-0 right-0 truncate bg-gradient-to-t from-stage/85 to-transparent px-1 pb-0.5 pt-2 text-left text-[9px] text-ink-950/80">
           {style.name}
         </span>
       )}

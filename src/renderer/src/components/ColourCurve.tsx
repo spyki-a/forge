@@ -142,13 +142,13 @@ export function ColourCurve({
         <svg width={SIZE} height={SIZE} className="absolute inset-0">
           {/* Quarters, so the eye can judge where a point sits. */}
           {[0.25, 0.5, 0.75].map((t) => (
-            <g key={t} stroke="rgba(255,255,255,0.06)">
+            <g key={t} stroke="rgba(36,33,29,0.08)">
               <line x1={t * SIZE} x2={t * SIZE} y1={0} y2={SIZE} />
               <line x1={0} x2={SIZE} y1={t * SIZE} y2={t * SIZE} />
             </g>
           ))}
           {/* Do nothing, for reference. */}
-          <line x1={0} y1={SIZE} x2={SIZE} y2={0} stroke="rgba(255,255,255,0.16)" strokeDasharray="3 3" />
+          <line x1={0} y1={SIZE} x2={SIZE} y2={0} stroke="rgba(36,33,29,0.2)" strokeDasharray="3 3" />
           <polyline points={path} fill="none" stroke={dotFor(channel)} strokeWidth={1.5} />
         </svg>
 
@@ -182,12 +182,12 @@ export function ColourCurve({
 function dotFor(channel: CurveChannel): string {
   switch (channel) {
     case 'r':
-      return '#f2635f'
+      return '#c0302c'
     case 'g':
-      return '#5fd08a'
+      return '#23763f'
     case 'b':
-      return '#5f9bf2'
+      return '#2557c4'
     default:
-      return '#e9e9ec'
+      return '#24211d'
   }
 }

@@ -106,7 +106,7 @@ export function TextAnimationPicker({ spec, onPick }: Props): React.JSX.Element 
         title={title}
         className={`truncate rounded px-1.5 py-1 text-[10px] transition-colors ${
           on
-            ? 'bg-flame-500 text-ink-950'
+            ? 'bg-accent-500 text-ink-950'
             : 'bg-ink-800 text-ink-300 hover:bg-ink-700 hover:text-ink-100'
         }`}
       >
@@ -124,7 +124,7 @@ export function TextAnimationPicker({ spec, onPick }: Props): React.JSX.Element 
 
       <canvas
         ref={canvasRef}
-        className="h-14 w-full rounded bg-ink-950"
+        className="h-14 w-full rounded bg-stage"
         // The strip is a picture of the type, not a control.
         aria-hidden
       />

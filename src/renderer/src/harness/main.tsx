@@ -6,6 +6,7 @@ import { installHarnessBridge } from './bridge'
 import { installEvalRelay } from './evalRelay'
 import { installMomentCheck } from './momentCheck'
 import { installCensus } from './census'
+import { installSwatch } from './swatch'
 import { useEditor } from '../store'
 import { useCatalog } from '../catalog'
 import '../styles.css'
@@ -28,6 +29,9 @@ installMomentCheck()
 
 /* Every control, looked for on screen — docs/WINDOW.md §6 Step 0. */
 installCensus()
+
+/* The theme on one sheet — tiles, buttons, greys, accent (docs/WINDOW.md §6 Step 3). */
+installSwatch()
 
 /*
  * The store, reachable from a driving script.

@@ -180,7 +180,7 @@ export function VolumeEnvelope({
         <path
           d={path}
           fill="none"
-          stroke="rgb(245,154,117)"
+          stroke="#1B4CD5"
           strokeWidth={1.5}
           className="pointer-events-none"
         />
@@ -194,7 +194,7 @@ export function VolumeEnvelope({
           key={`${key.frame}-${index}`}
           onPointerDown={grab(index)}
           onDoubleClick={removePoint(index)}
-          className="pointer-events-auto absolute rounded-full border border-ink-950 bg-flame-400 hover:bg-flame-300"
+          className="pointer-events-auto absolute rounded-full border border-ink-950 bg-accent-400 hover:bg-accent-300"
           style={{
             width: DOT,
             height: DOT,

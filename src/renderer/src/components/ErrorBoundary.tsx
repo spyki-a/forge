@@ -28,9 +28,9 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
 
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 bg-ink-950 p-8 text-center">
-        <AlertTriangle size={22} className="text-amber-500" />
+        <AlertTriangle size={22} className="text-amber-800" />
         <div className="text-sm text-ink-200">Something in the interface crashed</div>
-        <div className="max-w-lg font-mono text-[11px] leading-relaxed text-red-400">
+        <div className="max-w-lg font-mono text-[11px] leading-relaxed text-red-800">
           {error.message}
         </div>
         {stack && (

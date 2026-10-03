@@ -44,7 +44,7 @@ export function NewProject({
             // Selected on focus so the placeholder name is replaced by typing
             // rather than appended to.
             onFocus={(e) => e.target.select()}
-            className="w-full rounded border border-ink-700 bg-ink-850 px-2 py-1.5 text-[13px] text-ink-100 outline-none focus:border-flame-500"
+            className="w-full rounded border border-ink-700 bg-ink-850 px-2 py-1.5 text-[13px] text-ink-100 outline-none focus:border-accent-500"
           />
         </label>
 
@@ -62,24 +62,24 @@ export function NewProject({
                   onClick={() => setChoice((c) => ({ ...c, aspect: key }))}
                   className={`flex flex-col items-center gap-1.5 rounded border px-2 py-2.5 transition-colors ${
                     on
-                      ? 'border-flame-500 bg-flame-500/10'
+                      ? 'border-accent-500 bg-accent-500/10'
                       : 'border-ink-700 bg-ink-850 hover:border-ink-600'
                   }`}
                 >
                   {/* The shape itself, drawn — a label alone makes someone do
                       the arithmetic to picture it. */}
                   <span
-                    className={`rounded-[2px] ${on ? 'bg-flame-500' : 'bg-ink-600'}`}
+                    className={`rounded-[2px] ${on ? 'bg-accent-500' : 'bg-ink-600'}`}
                     style={{
                       width: key === '9:16' ? 15 : key === '1:1' ? 24 : 34,
                       height: key === '9:16' ? 27 : key === '1:1' ? 24 : 19
                     }}
                   />
-                  <span className={`text-[11px] ${on ? 'text-flame-300' : 'text-ink-300'}`}>
+                  <span className={`text-[11px] ${on ? 'text-accent-300' : 'text-ink-300'}`}>
                     {key}
                   </span>
                   <span className="text-center text-[9px] leading-tight text-ink-600">{hint}</span>
-                  <span className="text-[9px] text-ink-700">
+                  <span className="text-[9px] text-ink-600">
                     {size.width}×{size.height}
                   </span>
                 </button>
@@ -102,7 +102,7 @@ export function NewProject({
                   title={hint}
                   className={`flex-1 rounded border px-2 py-1.5 text-[11px] transition-colors ${
                     on
-                      ? 'border-flame-500 bg-flame-500/10 text-flame-300'
+                      ? 'border-accent-500 bg-accent-500/10 text-accent-300'
                       : 'border-ink-700 bg-ink-850 text-ink-300 hover:border-ink-600'
                   }`}
                 >
@@ -117,7 +117,7 @@ export function NewProject({
         <div className="flex gap-2">
           <button
             onClick={() => onStart(choice)}
-            className="flex-1 rounded bg-flame-500 px-3 py-2 text-[12px] font-medium text-ink-950 hover:bg-flame-400"
+            className="flex-1 rounded bg-accent-500 px-3 py-2 text-[12px] font-medium text-ink-950 hover:bg-accent-400"
           >
             Start
           </button>

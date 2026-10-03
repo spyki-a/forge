@@ -46,66 +46,81 @@ export interface KindStyle {
  * blue — and the families turned out to be the problem: a text clip and a
  * paper clipping side by side read as one purple, a photo and a shot as one
  * blue. Colour is for FINDING a clip, so each kind gets a hue of its own, and
- * none is orange, which is the app's accent for the playhead and the selection.
+ * none is blue, which is the app's accent for the playhead and the selection
+ * (tests/voiceAndKinds.test.ts measures the distance, not just the name).
+ *
+ * On the light timeline every kind wears the same recipe: a pale body (the
+ * -300 at half strength) under dark ink-200 text, and when selected a fuller
+ * body with a DEEP -700 border. The light -300 borders the dark theme used are
+ * 1.1-1.6:1 against cream — a selected clip was nearly invisible — while the
+ * -700s are 4.2:1 at worst (yellow). Video took violet when the accent became
+ * blue (the photo beside it on the main lane is teal, well apart), so graphics
+ * moved to green.
+ *
+ * Not to sky, which was tried first: its -500 swatch is far enough from the
+ * accent, but every sky deep enough to be a border (-600 to -900) is 0.095-0.111
+ * from one of the accent's steps in OKLab, under the 0.12 floor, and the
+ * accent-400 drag box and markers sit on the same timeline. Nor cyan, whose
+ * body is closer to the teal photo (0.031) than any two picture-lane kinds
+ * already are; green's nearest picture-lane kind is that photo too, at 0.041.
  *
  * Neighbours that are close on the wheel are kinds that do not share a lane:
- * amber and yellow are SFX (audio lanes) and text (picture lanes).
+ * amber and yellow are SFX (audio lanes) and text (picture lanes), green and
+ * emerald are graphics (picture) and music (audio).
  */
 const STYLES: Record<ClipKind, KindStyle> = {
   video: {
     kind: 'video', label: 'Video',
-    idle: 'border-blue-700/70 bg-blue-800/45 hover:bg-blue-800/65',
-    selected: 'border-blue-300 bg-blue-600/45',
-    dot: 'bg-blue-500'
+    idle: 'border-violet-400 bg-violet-300/50 hover:bg-violet-300/70',
+    selected: 'border-violet-700 bg-violet-300/85',
+    dot: 'bg-violet-500'
   },
   image: {
     kind: 'image', label: 'Photo',
-    idle: 'border-teal-700/70 bg-teal-900/45 hover:bg-teal-900/65',
-    selected: 'border-teal-300 bg-teal-600/40',
+    idle: 'border-teal-400 bg-teal-300/50 hover:bg-teal-300/70',
+    selected: 'border-teal-700 bg-teal-300/85',
     dot: 'bg-teal-500'
   },
   text: {
     kind: 'text', label: 'Text',
-    // Lighter than the rest: Tailwind's dark yellows are brown, and a brown
-    // text clip read as the orange accent.
-    idle: 'border-yellow-500/60 bg-yellow-500/20 hover:bg-yellow-500/30',
-    selected: 'border-yellow-200 bg-yellow-400/40',
+    idle: 'border-yellow-400 bg-yellow-300/50 hover:bg-yellow-300/70',
+    selected: 'border-yellow-700 bg-yellow-300/85',
     dot: 'bg-yellow-500'
   },
   sticker: {
     kind: 'sticker', label: 'Sticker',
-    idle: 'border-pink-700/70 bg-pink-800/45 hover:bg-pink-800/65',
-    selected: 'border-pink-300 bg-pink-600/45',
+    idle: 'border-pink-400 bg-pink-300/50 hover:bg-pink-300/70',
+    selected: 'border-pink-700 bg-pink-300/85',
     dot: 'bg-pink-500'
   },
   graphic: {
     kind: 'graphic', label: 'Graphic',
-    idle: 'border-violet-700/70 bg-violet-800/45 hover:bg-violet-800/65',
-    selected: 'border-violet-300 bg-violet-600/45',
-    dot: 'bg-violet-500'
+    idle: 'border-green-400 bg-green-300/50 hover:bg-green-300/70',
+    selected: 'border-green-700 bg-green-300/85',
+    dot: 'bg-green-500'
   },
   music: {
     kind: 'music', label: 'Music',
-    idle: 'border-emerald-700/70 bg-emerald-800/45 hover:bg-emerald-800/65',
-    selected: 'border-emerald-300 bg-emerald-600/45',
+    idle: 'border-emerald-400 bg-emerald-300/50 hover:bg-emerald-300/70',
+    selected: 'border-emerald-700 bg-emerald-300/85',
     dot: 'bg-emerald-500'
   },
   sfx: {
     kind: 'sfx', label: 'SFX',
-    idle: 'border-amber-700/70 bg-amber-800/45 hover:bg-amber-800/65',
-    selected: 'border-amber-300 bg-amber-600/45',
+    idle: 'border-amber-400 bg-amber-300/50 hover:bg-amber-300/70',
+    selected: 'border-amber-700 bg-amber-300/85',
     dot: 'bg-amber-500'
   },
   voice: {
     kind: 'voice', label: 'Voice',
-    idle: 'border-lime-700/70 bg-lime-800/45 hover:bg-lime-800/65',
-    selected: 'border-lime-300 bg-lime-600/45',
+    idle: 'border-lime-400 bg-lime-300/50 hover:bg-lime-300/70',
+    selected: 'border-lime-700 bg-lime-300/85',
     dot: 'bg-lime-500'
   },
   adjustment: {
     kind: 'adjustment', label: 'Adjustment',
-    idle: 'border-red-700/70 bg-red-900/40 hover:bg-red-900/60',
-    selected: 'border-red-300 bg-red-600/40',
+    idle: 'border-red-400 bg-red-300/50 hover:bg-red-300/70',
+    selected: 'border-red-700 bg-red-300/85',
     dot: 'bg-red-500'
   }
 }

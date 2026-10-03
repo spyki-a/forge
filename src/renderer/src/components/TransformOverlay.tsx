@@ -122,7 +122,7 @@ export function TransformOverlay({
     width: 10,
     height: 10,
     borderRadius: 2,
-    background: 'rgb(249,115,65)',
+    background: 'rgb(37,99,235)',
     border: '1px solid rgba(10,10,12,0.6)',
     pointerEvents: 'auto',
     cursor,
@@ -147,7 +147,7 @@ export function TransformOverlay({
         style={{
           position: 'absolute',
           inset: 0,
-          border: '1px solid rgba(249,115,65,0.9)',
+          border: '1px solid rgba(37,99,235,0.9)',
           cursor: 'move',
           pointerEvents: 'auto'
         }}
@@ -185,7 +185,7 @@ export function TransformOverlay({
           top: -22,
           width: 1,
           height: 18,
-          background: 'rgba(249,115,65,0.6)',
+          background: 'rgba(37,99,235,0.6)',
           pointerEvents: 'none'
         }}
       />

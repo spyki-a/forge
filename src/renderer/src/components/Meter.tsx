@@ -50,15 +50,15 @@ export function Meter({
          * frame would be missed, which is why the hold marker carries it.
          */
         bar.current.style.backgroundColor = isClipping(level)
-          ? 'rgb(239 68 68)'
+          ? '#e7000b'
           : level > -12
-            ? 'rgb(245 158 11)'
-            : 'rgb(52 211 153)'
+            ? '#bb4d00'
+            : '#007a55'
       }
       if (hold.current) {
         hold.current.style.left = `calc(${meterFraction(held) * 100}% - 1px)`
         hold.current.style.opacity = held > -59 ? '1' : '0'
-        hold.current.style.backgroundColor = isClipping(held) ? 'rgb(239 68 68)' : 'rgb(226 232 240)'
+        hold.current.style.backgroundColor = isClipping(held) ? '#e7000b' : '#24211d'
       }
       raf = requestAnimationFrame(tick)
     }

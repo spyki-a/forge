@@ -242,7 +242,7 @@ export function CurveEditor({
           }
           className={`rounded px-1.5 py-0.5 text-[10px] transition-colors ${
             pencil
-              ? 'bg-flame-500 text-ink-950'
+              ? 'bg-accent-500 text-ink-950'
               : 'bg-ink-800 text-ink-400 hover:bg-ink-700 hover:text-ink-200'
           }`}
         >
@@ -266,7 +266,7 @@ export function CurveEditor({
         onPointerDown={onBackgroundDown}
         style={{ height: HEIGHT }}
         className={`relative w-full overflow-hidden rounded border bg-ink-950 ${
-          drawing ? 'border-flame-500' : 'border-ink-800'
+          drawing ? 'border-accent-500' : 'border-ink-800'
         } ${pencil ? 'cursor-crosshair' : 'cursor-copy'}`}
       >
         <svg
@@ -282,13 +282,13 @@ export function CurveEditor({
             x2={width - PAD}
             y1={toY(resting)}
             y2={toY(resting)}
-            stroke="rgba(255,255,255,0.10)"
+            stroke="rgba(36,33,29,0.14)"
             strokeDasharray="3 3"
           />
           <polyline
             points={outline()}
             fill="none"
-            stroke={drawing ? 'rgb(249,115,65)' : 'rgba(249,115,65,0.85)'}
+            stroke={drawing ? '#2563EB' : 'rgba(37,99,235,0.85)'}
             strokeWidth={1.5}
             vectorEffect="non-scaling-stroke"
           />
@@ -298,7 +298,7 @@ export function CurveEditor({
               x2={toX(playheadFrame)}
               y1={0}
               y2={HEIGHT}
-              stroke="rgba(255,255,255,0.45)"
+              stroke="rgba(36,33,29,0.45)"
               vectorEffect="non-scaling-stroke"
             />
           )}
@@ -319,7 +319,7 @@ export function CurveEditor({
                 top: toY(key.value),
                 transform: 'translate(-50%, -50%) rotate(45deg)'
               }}
-              className="absolute h-2.5 w-2.5 cursor-move rounded-[1px] border border-flame-300 bg-flame-500"
+              className="absolute h-2.5 w-2.5 cursor-move rounded-[1px] border border-accent-300 bg-accent-500"
             />
           ))}
       </div>
@@ -330,7 +330,7 @@ export function CurveEditor({
         limits, printed where they looked like the values at the clip's start
         and end.
       */}
-      <div className="flex justify-between gap-2 px-[7px] text-[9px] text-ink-700">
+      <div className="flex justify-between gap-2 px-[7px] text-[9px] text-ink-600">
         <span>clip start</span>
         <span className="text-ink-600" title="The height of the graph runs from the bottom value to the top one">
           {formatKeyed(property, valueAtAxis(property, view.lo))} –{' '}

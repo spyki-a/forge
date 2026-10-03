@@ -38,7 +38,7 @@ const SPEEDS: { id: SpeedPreset; label: string }[] = [
 
 const segment = (on: boolean): string =>
   `rounded px-2 py-1.5 text-[11px] transition-colors disabled:opacity-30 ${
-    on ? 'bg-flame-500 text-ink-950' : 'bg-ink-800 text-ink-400 hover:bg-ink-700 hover:text-ink-200'
+    on ? 'bg-accent-500 text-ink-950' : 'bg-ink-800 text-ink-400 hover:bg-ink-700 hover:text-ink-200'
   }`
 
 export function ExportSettings({
@@ -222,7 +222,7 @@ export function ExportSettings({
             type="checkbox"
             checked={useRange}
             onChange={(e) => setUseRange(e.target.checked)}
-            className="mt-0.5 shrink-0 accent-flame-500"
+            className="mt-0.5 shrink-0 accent-accent-500"
           />
           <span className="text-[11px] text-ink-200">
             Only between the marks

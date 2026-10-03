@@ -205,7 +205,7 @@ export function Toolbox(): ReactNode {
   const firstUnbuilt = tools.findIndex((t) => t.unbuilt)
 
   return (
-    <div className="flex h-full w-9 shrink-0 flex-col items-center gap-0.5 border-r border-ink-850 bg-ink-900 py-2">
+    <div className="flex h-full w-9 shrink-0 flex-col items-center gap-0.5 border-r border-ink-850 py-2">
       {tools.map((tool, index) => {
         const Icon = tool.icon
         const ready = tool.onClick !== undefined
@@ -227,7 +227,7 @@ export function Toolbox(): ReactNode {
               title={ready ? `${tool.label} — ${tool.hint}` : `${tool.label} — ${tool.soon}`}
               className={`flex size-7 items-center justify-center rounded-md transition-colors ${
                 tool.active
-                  ? 'bg-flame-500 text-ink-950'
+                  ? 'bg-accent-500 text-ink-950'
                   : ready
                     ? 'text-ink-400 hover:bg-ink-800 hover:text-ink-200'
                     : 'cursor-not-allowed text-ink-700'

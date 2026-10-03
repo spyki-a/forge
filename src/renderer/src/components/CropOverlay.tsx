@@ -125,7 +125,7 @@ export function CropOverlay({
 
   return (
     <div
-      className="absolute cursor-move border-2 border-flame-500"
+      className="absolute cursor-move border-2 border-accent-500"
       style={{ left, top, width, height }}
       onPointerDown={onPointerDown('move')}
       onPointerMove={onPointerMove}
@@ -143,7 +143,7 @@ export function CropOverlay({
       {HANDLES.map((handle) => (
         <div
           key={handle.id}
-          className={`absolute size-3 rounded-sm border border-ink-950 bg-flame-500 ${handle.className}`}
+          className={`absolute size-3 rounded-sm border border-ink-950 bg-accent-500 ${handle.className}`}
           style={{ cursor: handle.cursor }}
           onPointerDown={onPointerDown(handle.id)}
           onPointerMove={onPointerMove}

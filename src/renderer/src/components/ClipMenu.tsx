@@ -45,12 +45,12 @@ function Item({
     <button
       onClick={onClick}
       className={`flex w-full items-center justify-between gap-6 px-3 py-1.5 text-left text-[12px] transition-colors hover:bg-ink-700 ${
-        danger ? 'text-red-300 hover:text-red-200' : 'text-ink-200'
+        danger ? 'text-red-800 hover:text-red-900' : 'text-ink-200'
       }`}
     >
       <span className="flex items-center gap-1.5">
         {ticked !== undefined && (
-          <Check size={11} className={ticked ? 'text-flame-400' : 'opacity-0'} />
+          <Check size={11} className={ticked ? 'text-accent-400' : 'opacity-0'} />
         )}
         {label}
       </span>
@@ -242,7 +242,7 @@ export function ClipMenu({
             >
               <Check
                 size={11}
-                className={`mt-0.5 ${clip.voice?.id === voice.id ? 'text-flame-400' : 'opacity-0'}`}
+                className={`mt-0.5 ${clip.voice?.id === voice.id ? 'text-accent-400' : 'opacity-0'}`}
               />
               <span>
                 <span className="block text-[12px] text-ink-200">{voice.name}</span>

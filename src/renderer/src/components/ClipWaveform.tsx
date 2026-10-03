@@ -133,12 +133,12 @@ export function ClipWaveform({
      * Dim on purpose.
      *
      * At full strength this reads as a bar chart filling the clip — the name
-     * fights it, the selection border stops registering, and the orange volume
+     * fights it, the selection border stops registering, and the blue volume
      * line drawn on top of it competes with a wall of grey instead of sitting
      * over a texture. A waveform on a timeline is scenery you glance at to find
      * a beat, not the subject of the panel.
      */
-    ctx.fillStyle = selected ? 'rgba(255,224,209,0.38)' : 'rgba(158,183,208,0.3)'
+    ctx.fillStyle = selected ? 'rgba(36,33,29,0.30)' : 'rgba(36,33,29,0.18)'
     for (const bar of bars) ctx.fillRect(bar.x, bar.top, bar.width, bar.height)
   }, [peaks, cssWidth, band, fps, clip.inPoint, sourceFrames, selected])
 

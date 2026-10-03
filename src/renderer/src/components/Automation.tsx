@@ -182,7 +182,7 @@ export function Automation(): ReactNode {
   }
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto bg-ink-900">
+    <div className="flex h-full flex-col overflow-y-auto">
       <div className="border-b border-ink-800 px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-ink-400">
         Automation
       </div>
@@ -193,7 +193,7 @@ export function Automation(): ReactNode {
       <section className="space-y-2 border-b border-ink-800 p-3">
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-1.5 text-[11.5px] text-ink-200">
-            <Music size={12} className="text-flame-400" />
+            <Music size={12} className="text-accent-400" />
             Beat-synced reel
           </span>
           <span className="text-[10px] text-ink-600">{images} photo{images === 1 ? '' : 's'}</span>
@@ -210,7 +210,7 @@ export function Automation(): ReactNode {
           <button
             onClick={() => void addMusic()}
             disabled={adding}
-            className="flex w-full items-center justify-center gap-1.5 rounded border border-dashed border-ink-700 px-2 py-3 text-[11px] text-ink-400 hover:border-flame-500 hover:text-ink-200 disabled:opacity-40"
+            className="flex w-full items-center justify-center gap-1.5 rounded border border-dashed border-ink-700 px-2 py-3 text-[11px] text-ink-400 hover:border-accent-500 hover:text-ink-200 disabled:opacity-40"
           >
             {adding ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
             Add music
@@ -238,11 +238,11 @@ export function Automation(): ReactNode {
             type="checkbox"
             checked={reelParallax}
             onChange={(e) => setReelParallax(e.target.checked)}
-            className="mt-0.5 shrink-0 accent-flame-500"
+            className="mt-0.5 shrink-0 accent-accent-500"
           />
           <span className="min-w-0">
             <span className="flex items-center gap-1.5 text-[11px] text-ink-200">
-              <Layers size={11} className="text-flame-400" />
+              <Layers size={11} className="text-accent-400" />
               Depth parallax
             </span>
             <span className="mt-0.5 block text-[10px] leading-snug text-ink-600">
@@ -258,11 +258,11 @@ export function Automation(): ReactNode {
             type="checkbox"
             checked={reelLyrics}
             onChange={(e) => setReelLyrics(e.target.checked)}
-            className="mt-0.5 shrink-0 accent-flame-500"
+            className="mt-0.5 shrink-0 accent-accent-500"
           />
           <span className="min-w-0">
             <span className="flex items-center gap-1.5 text-[11px] text-ink-200">
-              <Mic size={11} className="text-flame-400" />
+              <Mic size={11} className="text-accent-400" />
               Cut to the words
             </span>
             <span className="mt-0.5 block text-[10px] leading-snug text-ink-600">
@@ -295,7 +295,7 @@ export function Automation(): ReactNode {
           <button
             onClick={() => void buildReel()}
             disabled={reelBuilding || gridBuilding || images === 0 || !musicClip}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded bg-flame-500 px-2 py-1.5 text-[11px] font-medium text-ink-950 hover:bg-flame-400 disabled:opacity-40"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded bg-accent-500 px-2 py-1.5 text-[11px] font-medium text-ink-950 hover:bg-accent-400 disabled:opacity-40"
           >
             {reelBuilding ? <Loader2 size={12} className="animate-spin" /> : <Music size={12} />}
             {reelBuilding ? reelStage ?? 'Analysing' : reelShots > 0 ? 'Rebuild' : 'Analyse & build'}
@@ -332,7 +332,7 @@ export function Automation(): ReactNode {
             </div>
             <div className="h-1 overflow-hidden rounded-full bg-ink-800">
               <div
-                className={`h-full bg-flame-500 ${bakeProgress === null ? 'w-1/3 animate-pulse' : ''}`}
+                className={`h-full bg-accent-500 ${bakeProgress === null ? 'w-1/3 animate-pulse' : ''}`}
                 style={bakeProgress === null ? undefined : { width: `${Math.round(bakeProgress * 100)}%` }}
               />
             </div>
@@ -341,14 +341,14 @@ export function Automation(): ReactNode {
 
         {mismatch && (
           <div className="space-y-1 rounded border border-amber-600/40 bg-amber-500/10 p-2">
-            <div className="text-[10.5px] leading-snug text-amber-400">
+            <div className="text-[10.5px] leading-snug text-amber-800">
               {mismatch === '9:16'
                 ? `${portrait} of your ${photos.length} photos are portrait but the canvas is landscape — they will sit in a narrow strip with black either side.`
                 : `Most of your photos are landscape but the canvas is vertical — they will sit in a band with black above and below.`}
             </div>
             <button
               onClick={() => setAspect(mismatch)}
-              className="w-full rounded bg-amber-500 px-2 py-1 text-[10.5px] font-medium text-ink-950 hover:bg-amber-400"
+              className="w-full rounded bg-amber-500 px-2 py-1 text-[10.5px] font-medium text-ink-200 hover:bg-amber-400"
             >
               Switch the canvas to {mismatch}
             </button>
@@ -356,12 +356,12 @@ export function Automation(): ReactNode {
         )}
 
         {musicClip && images === 0 && (
-          <div className="text-[10.5px] leading-snug text-amber-500">
+          <div className="text-[10.5px] leading-snug text-amber-800">
             Import some photos — they are what the cuts are made of.
           </div>
         )}
         {reelShots > 0 && (
-          <div className="text-[10.5px] text-emerald-400">
+          <div className="text-[10.5px] text-emerald-800">
             {reelShots} shots placed. Every one is an ordinary clip.
           </div>
         )}
@@ -370,7 +370,7 @@ export function Automation(): ReactNode {
       <section className="space-y-2 border-b border-ink-800 p-3">
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-1.5 text-[11.5px] text-ink-200">
-            <Type size={12} className="text-flame-400" />
+            <Type size={12} className="text-accent-400" />
             One photo
           </span>
           <span className="text-[10px] text-ink-600">
@@ -389,7 +389,7 @@ export function Automation(): ReactNode {
           onChange={(e) => setOnePhotoCaption(e.target.value)}
           rows={3}
           placeholder={'she said yes\nand we cried\nbest day of my life'}
-          className="w-full resize-none rounded border border-ink-700 bg-ink-950 px-2 py-1.5 text-[11px] text-ink-200 placeholder:text-ink-700 focus:border-flame-500 focus:outline-none"
+          className="w-full resize-none rounded border border-ink-700 bg-ink-950 px-2 py-1.5 text-[11px] text-ink-200 placeholder:text-ink-600 focus:border-accent-500 focus:outline-none"
         />
         <div className="flex items-center justify-between text-[10px] text-ink-600">
           <span>One line per card. Long lines split themselves.</span>
@@ -400,7 +400,7 @@ export function Automation(): ReactNode {
           <button
             onClick={() => void buildOnePhotoReel()}
             disabled={reelBuilding || gridBuilding || images === 0 || !musicClip}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded bg-flame-500 px-2 py-1.5 text-[11px] font-medium text-ink-950 hover:bg-flame-400 disabled:opacity-40"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded bg-accent-500 px-2 py-1.5 text-[11px] font-medium text-ink-950 hover:bg-accent-400 disabled:opacity-40"
           >
             {reelBuilding ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
             {reelBuilding ? reelStage ?? 'Working' : onePhotoShots > 0 ? 'Rebuild' : 'Build from one photo'}
@@ -424,7 +424,7 @@ export function Automation(): ReactNode {
       <section className="space-y-2 border-b border-ink-800 p-3">
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-1.5 text-[11.5px] text-ink-200">
-            <Grid3x3 size={12} className="text-flame-400" />
+            <Grid3x3 size={12} className="text-accent-400" />
             Grid split
           </span>
           <span className="text-[10px] text-ink-600">
@@ -462,7 +462,7 @@ export function Automation(): ReactNode {
               title={CELL_SHAPE_HINT[shape]}
               className={`rounded px-1.5 py-1 text-[10.5px] transition-colors ${
                 gridShape === shape
-                  ? 'bg-flame-500 text-ink-950'
+                  ? 'bg-accent-500 text-ink-950'
                   : 'bg-ink-800 text-ink-400 hover:bg-ink-700 hover:text-ink-200'
               }`}
             >
@@ -476,7 +476,7 @@ export function Automation(): ReactNode {
           <select
             value={gridOrder}
             onChange={(e) => setGridOrder(e.target.value as RevealOrder)}
-            className="min-w-0 flex-1 rounded border border-ink-700 bg-ink-950 px-1.5 py-1 text-[10.5px] text-ink-200 focus:border-flame-500 focus:outline-none"
+            className="min-w-0 flex-1 rounded border border-ink-700 bg-ink-950 px-1.5 py-1 text-[10.5px] text-ink-200 focus:border-accent-500 focus:outline-none"
           >
             {(Object.keys(REVEAL_ORDER_LABEL) as RevealOrder[]).map((order) => (
               <option key={order} value={order}>
@@ -492,7 +492,7 @@ export function Automation(): ReactNode {
             value={gridArrival}
             onChange={(e) => setGridArrival(e.target.value as Arrival)}
             title={ARRIVAL_HINT[gridArrival]}
-            className="min-w-0 flex-1 rounded border border-ink-700 bg-ink-950 px-1.5 py-1 text-[10.5px] text-ink-200 focus:border-flame-500 focus:outline-none"
+            className="min-w-0 flex-1 rounded border border-ink-700 bg-ink-950 px-1.5 py-1 text-[10.5px] text-ink-200 focus:border-accent-500 focus:outline-none"
           >
             {(Object.keys(ARRIVAL_LABEL) as Arrival[]).map((arrival) => (
               <option key={arrival} value={arrival}>
@@ -507,7 +507,7 @@ export function Automation(): ReactNode {
           <select
             value={gridBeatsPerCell}
             onChange={(e) => setGridBeatsPerCell(Number(e.target.value))}
-            className="min-w-0 flex-1 rounded border border-ink-700 bg-ink-950 px-1.5 py-1 text-[10.5px] text-ink-200 focus:border-flame-500 focus:outline-none"
+            className="min-w-0 flex-1 rounded border border-ink-700 bg-ink-950 px-1.5 py-1 text-[10.5px] text-ink-200 focus:border-accent-500 focus:outline-none"
           >
             {CADENCES.map((rate) => (
               <option key={rate} value={rate}>
@@ -556,7 +556,7 @@ export function Automation(): ReactNode {
             // lane anchored at the music, and letting them race meant whichever
             // finished second was silently shoved past the other's output.
             disabled={gridBuilding || reelBuilding || images === 0}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded bg-flame-500 px-2 py-1.5 text-[11px] font-medium text-ink-950 hover:bg-flame-400 disabled:opacity-40"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded bg-accent-500 px-2 py-1.5 text-[11px] font-medium text-ink-950 hover:bg-accent-400 disabled:opacity-40"
           >
             {gridBuilding ? (
               <Loader2 size={12} className="animate-spin" />
@@ -585,7 +585,7 @@ export function Automation(): ReactNode {
       <section className="space-y-2 border-b border-ink-800 p-3">
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-1.5 text-[11.5px] text-ink-200">
-            <Zap size={12} className="text-flame-400" />
+            <Zap size={12} className="text-accent-400" />
             Strip flashes
           </span>
           <span className="text-[10px] text-ink-600">
@@ -607,7 +607,7 @@ export function Automation(): ReactNode {
               title={STRIP_LAYOUT_HINT[layout]}
               className={`rounded px-1.5 py-1 text-[10.5px] transition-colors ${
                 stripLayout === layout
-                  ? 'bg-flame-500 text-ink-950'
+                  ? 'bg-accent-500 text-ink-950'
                   : 'bg-ink-800 text-ink-400 hover:bg-ink-700 hover:text-ink-200'
               }`}
             >
@@ -653,7 +653,7 @@ export function Automation(): ReactNode {
           <select
             value={stripBeatsPerHit}
             onChange={(e) => setStripBeatsPerHit(Number(e.target.value))}
-            className="min-w-0 flex-1 rounded border border-ink-700 bg-ink-950 px-1.5 py-1 text-[10.5px] text-ink-200 focus:border-flame-500 focus:outline-none"
+            className="min-w-0 flex-1 rounded border border-ink-700 bg-ink-950 px-1.5 py-1 text-[10.5px] text-ink-200 focus:border-accent-500 focus:outline-none"
           >
             {CADENCES.filter((r) => r <= 4).map((rate) => (
               <option key={rate} value={rate}>
@@ -669,7 +669,7 @@ export function Automation(): ReactNode {
             value={stripLook}
             onChange={(e) => setStripLook(e.target.value as StripLook)}
             title={STRIP_LOOK_HINT[stripLook]}
-            className="min-w-0 flex-1 rounded border border-ink-700 bg-ink-950 px-1.5 py-1 text-[10.5px] text-ink-200 focus:border-flame-500 focus:outline-none"
+            className="min-w-0 flex-1 rounded border border-ink-700 bg-ink-950 px-1.5 py-1 text-[10.5px] text-ink-200 focus:border-accent-500 focus:outline-none"
           >
             {(Object.keys(STRIP_LOOK_LABEL) as StripLook[]).map((look) => (
               <option key={look} value={look}>
@@ -699,7 +699,7 @@ export function Automation(): ReactNode {
           <button
             onClick={() => void buildStrips()}
             disabled={stripsBuilding || reelBuilding || gridBuilding}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded bg-flame-500 px-2 py-1.5 text-[11px] font-medium text-ink-950 hover:bg-flame-400 disabled:opacity-40"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded bg-accent-500 px-2 py-1.5 text-[11px] font-medium text-ink-950 hover:bg-accent-400 disabled:opacity-40"
           >
             {stripsBuilding ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
             {stripClipCount > 0 ? 'Rebuild flashes' : 'Add flashes'}
@@ -724,7 +724,7 @@ export function Automation(): ReactNode {
       <section className="space-y-2 border-b border-ink-800 p-3">
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-1.5 text-[11.5px] text-ink-200">
-            <Film size={12} className="text-flame-400" />
+            <Film size={12} className="text-accent-400" />
             Filmstrip
           </span>
           <span className="text-[10px] text-ink-600">at the playhead</span>
@@ -770,7 +770,7 @@ export function Automation(): ReactNode {
           <button
             onClick={buildFilmstrip}
             disabled={images === 0}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded bg-flame-500 px-2 py-1.5 text-[11px] font-medium text-ink-950 hover:bg-flame-400 disabled:opacity-40"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded bg-accent-500 px-2 py-1.5 text-[11px] font-medium text-ink-950 hover:bg-accent-400 disabled:opacity-40"
           >
             <Film size={12} />
             {strips > 0 ? 'Rebuild strip' : 'Build strip'}
@@ -785,20 +785,20 @@ export function Automation(): ReactNode {
           )}
         </div>
         {strips > 0 && (
-          <div className="text-[10.5px] text-emerald-400">{strips} panels placed.</div>
+          <div className="text-[10.5px] text-emerald-800">{strips} panels placed.</div>
         )}
       </section>
 
       <section className="space-y-2 border-b border-ink-800 p-3">
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-1.5 text-[11.5px] text-ink-200">
-            <Sparkles size={12} className="text-flame-400" />
+            <Sparkles size={12} className="text-accent-400" />
             3D props on keywords
           </span>
           <button
             onClick={() => setPropsEnabled(!propsEnabled)}
             className={`rounded px-1.5 py-0.5 text-[10px] transition-colors ${
-              propsEnabled ? 'bg-flame-500 text-ink-950' : 'bg-ink-800 text-ink-400 hover:bg-ink-700'
+              propsEnabled ? 'bg-accent-500 text-ink-950' : 'bg-ink-800 text-ink-400 hover:bg-ink-700'
             }`}
           >
             {propsEnabled ? 'On' : 'Off'}
@@ -832,7 +832,7 @@ export function Automation(): ReactNode {
               <button
                 onClick={() => void run()}
                 disabled={running || !transcribed}
-                className="flex flex-1 items-center justify-center gap-1.5 rounded bg-flame-500 px-2 py-1.5 text-[11px] font-medium text-ink-950 hover:bg-flame-400 disabled:opacity-40"
+                className="flex flex-1 items-center justify-center gap-1.5 rounded bg-accent-500 px-2 py-1.5 text-[11px] font-medium text-ink-950 hover:bg-accent-400 disabled:opacity-40"
               >
                 {running ? <Loader2 size={12} className="animate-spin" /> : <Wand2 size={12} />}
                 {placed > 0 ? 'Regenerate' : 'Place props'}
@@ -848,13 +848,13 @@ export function Automation(): ReactNode {
             </div>
 
             {!transcribed && (
-              <div className="text-[10.5px] leading-snug text-amber-500">
+              <div className="text-[10.5px] leading-snug text-amber-800">
                 Transcribe a clip first — props fire on spoken words.
               </div>
             )}
 
             {placed > 0 && (
-              <div className="text-[10.5px] text-emerald-400">
+              <div className="text-[10.5px] text-emerald-800">
                 {placed} placed. They are ordinary clips — move, trim or delete any of them.
               </div>
             )}

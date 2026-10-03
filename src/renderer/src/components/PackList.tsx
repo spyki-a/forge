@@ -48,7 +48,7 @@ export function PackList(): ReactNode {
       </div>
 
       {error && (
-        <p className="px-0.5 text-[10.5px] leading-relaxed text-amber-400">
+        <p className="px-0.5 text-[10.5px] leading-relaxed text-amber-800">
           Could not check for packs — {error}
         </p>
       )}
@@ -129,7 +129,7 @@ function PackRow({
           <div
             title={button.detail}
             className={`mt-0.5 text-[10px] leading-snug ${
-              error ? 'text-red-400' : 'line-clamp-2 text-ink-400'
+              error ? 'text-red-800' : 'line-clamp-2 text-ink-400'
             }`}
           >
             {button.detail}
@@ -144,7 +144,7 @@ function PackRow({
               ? 'cursor-default bg-ink-800 text-ink-600'
               : button.action === 'remove'
                 ? 'bg-ink-800 text-ink-400 hover:bg-ink-700 hover:text-ink-200'
-                : 'bg-flame-500 font-medium text-ink-950 hover:bg-flame-400'
+                : 'bg-accent-500 font-medium text-ink-950 hover:bg-accent-400'
           }`}
         >
           {button.busy ? (
@@ -165,10 +165,10 @@ function PackRow({
             is the exact moment somebody force-quits it.
           */}
           {button.progress === null ? (
-            <div className="h-full w-1/3 animate-pulse rounded-full bg-flame-500/70" />
+            <div className="h-full w-1/3 animate-pulse rounded-full bg-accent-500/70" />
           ) : (
             <div
-              className="h-full rounded-full bg-flame-500 transition-[width] duration-200"
+              className="h-full rounded-full bg-accent-500 transition-[width] duration-200"
               style={{ width: `${Math.round(button.progress * 100)}%` }}
             />
           )}

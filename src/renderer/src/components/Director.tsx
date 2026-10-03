@@ -26,7 +26,7 @@ import { useEditor } from '../store'
  */
 
 const input =
-  'min-w-0 flex-1 rounded border border-ink-800 bg-ink-950 px-1.5 py-1 text-[11px] text-ink-200 placeholder:text-ink-700 focus:border-flame-500 focus:outline-none'
+  'min-w-0 flex-1 rounded border border-ink-800 bg-ink-950 px-1.5 py-1 text-[11px] text-ink-200 placeholder:text-ink-600 focus:border-accent-500 focus:outline-none'
 const small = 'rounded bg-ink-800 px-2 py-1 text-[10.5px] text-ink-400 hover:bg-ink-700 hover:text-ink-200 disabled:opacity-40'
 
 function Field({ label, children }: { label: string; children: ReactNode }): ReactNode {
@@ -152,7 +152,7 @@ export function Director(): ReactNode {
     <section className="space-y-2 border-b border-ink-800 p-3">
       <div className="flex items-center justify-between">
         <span className="flex items-center gap-1.5 text-[11.5px] text-ink-200">
-          <Sparkles size={12} className="text-flame-400" />
+          <Sparkles size={12} className="text-accent-400" />
           Director
         </span>
         <span className="text-[10px] text-ink-600">
@@ -314,12 +314,12 @@ export function Director(): ReactNode {
             'looking for a model…'
           ) : chosen?.ready ? (
             <>
-              <span className="text-emerald-400">●</span> {chosen.label}
+              <span className="text-emerald-800">●</span> {chosen.label}
               {modelName ? ` · ${modelName}` : ''}
             </>
           ) : (
             <>
-              <span className="text-flame-400">●</span> {chosen?.reason ?? 'no model available'}
+              <span className="text-accent-400">●</span> {chosen?.reason ?? 'no model available'}
             </>
           )}
         </span>
@@ -336,7 +336,7 @@ export function Director(): ReactNode {
                 key={p}
                 onClick={() => void setProvider({ provider: p })}
                 className={`flex-1 rounded px-1.5 py-1 text-[10.5px] ${
-                  config.provider === p ? 'bg-flame-500 text-ink-950' : 'bg-ink-800 text-ink-400 hover:bg-ink-700'
+                  config.provider === p ? 'bg-accent-500 text-ink-950' : 'bg-ink-800 text-ink-400 hover:bg-ink-700'
                 }`}
               >
                 {p === 'auto' ? 'Auto' : p === 'ollama' ? 'Ollama' : openaiLocal ? 'LM Studio' : 'Hosted'}
@@ -402,7 +402,7 @@ export function Director(): ReactNode {
         <button
           onClick={() => void direct()}
           disabled={!canDirect}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded bg-flame-500 px-2 py-1.5 text-[11px] font-medium text-ink-950 hover:bg-flame-400 disabled:opacity-40"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded bg-accent-500 px-2 py-1.5 text-[11px] font-medium text-ink-950 hover:bg-accent-400 disabled:opacity-40"
         >
           {directing ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
           {directing ? stage ?? 'Working' : made > 0 ? 'Direct again' : 'Direct'}
@@ -446,7 +446,7 @@ export function Director(): ReactNode {
       )}
 
       {made > 0 && !directing && (
-        <div className="text-[10.5px] text-emerald-400">
+        <div className="text-[10.5px] text-emerald-800">
           {made} clips placed. They are ordinary clips — move, trim or delete any of them.
         </div>
       )}

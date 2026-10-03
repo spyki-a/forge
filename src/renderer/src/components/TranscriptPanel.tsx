@@ -67,7 +67,7 @@ export function TranscriptPanel(): ReactNode {
               onClick={() => setEditing((on) => !on)}
               title={editing ? 'Stop correcting' : 'Correct a misheard word: click it, type, Enter'}
               className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] transition-colors ${
-                editing ? 'bg-flame-500 font-medium text-ink-950' : 'text-ink-500 hover:bg-ink-800 hover:text-ink-200'
+                editing ? 'bg-accent-500 font-medium text-ink-950' : 'text-ink-500 hover:bg-ink-800 hover:text-ink-200'
               }`}
             >
               <Pencil size={10} />
@@ -100,12 +100,12 @@ export function TranscriptPanel(): ReactNode {
                 key={segment.id}
                 onClick={() => onSeek(segment)}
                 className={`flex w-full gap-2 border-b border-ink-850 px-3 py-1.5 text-left transition-colors ${
-                  active ? 'bg-flame-500/15' : 'hover:bg-ink-850'
+                  active ? 'bg-accent-500/15' : 'hover:bg-ink-850'
                 }`}
               >
                 <span
                   className={`shrink-0 font-mono text-[10px] tabular-nums ${
-                    active ? 'text-flame-400' : 'text-ink-600'
+                    active ? 'text-accent-400' : 'text-ink-600'
                   }`}
                 >
                   {formatTimecode(sourceMsToFrame(segment.startMs), fps)}
@@ -169,7 +169,7 @@ function EditableWord({ word, onEdit }: { word: Word; onEdit: (text: string) => 
           setOpen(true)
         }}
         title={unsure ? 'The transcriber was unsure of this word' : 'Click to correct'}
-        className={`rounded px-0.5 hover:bg-ink-800 hover:text-ink-100 ${unsure ? 'underline decoration-flame-500/60 decoration-dotted underline-offset-2' : ''}`}
+        className={`rounded px-0.5 hover:bg-ink-800 hover:text-ink-100 ${unsure ? 'underline decoration-accent-500/60 decoration-dotted underline-offset-2' : ''}`}
       >
         {word.text}
       </button>
@@ -192,7 +192,7 @@ function EditableWord({ word, onEdit }: { word: Word; onEdit: (text: string) => 
         if (e.key === 'Escape') setOpen(false)
       }}
       size={Math.max(3, draft.length + 1)}
-      className="rounded bg-ink-800 px-1 text-[11.5px] text-ink-100 outline-none ring-1 ring-flame-500/60"
+      className="rounded bg-ink-800 px-1 text-[11.5px] text-ink-100 outline-none ring-1 ring-accent-500/60"
     />
   )
 }
@@ -225,7 +225,7 @@ function Vocabulary({ assetId, hasTranscript }: { assetId: string; hasTranscript
         onKeyDown={(e) => e.stopPropagation()}
         rows={2}
         placeholder="Priya, Arjun, Taj Falaknuma, Syncpod"
-        className="w-full resize-none rounded bg-ink-850 px-2 py-1 text-[11px] text-ink-200 outline-none placeholder:text-ink-700 focus:ring-1 focus:ring-ink-600"
+        className="w-full resize-none rounded bg-ink-850 px-2 py-1 text-[11px] text-ink-200 outline-none placeholder:text-ink-600 focus:ring-1 focus:ring-ink-600"
       />
       <button
         onClick={() => {

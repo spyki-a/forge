@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { VOICES, voiceById, voiceFilters, MIN_PITCH, MAX_PITCH } from '@shared/render/voice'
 import { ATEMPO_MIN } from '@shared/render/speed'
 import { clipKind, kindsPresent, styleFor, SFX_MAX_SECONDS } from '@shared/edit/clipKind'
@@ -143,15 +145,17 @@ describe('what a clip is, for the eye', () => {
     /*
      * Text and paper clippings were violet and indigo — one purple, side by
      * side on the timeline — and a photo and a shot were cyan and sky. Colour
-     * is for finding a clip, so no two kinds share a hue; and orange is the
-     * app's accent (the playhead, the selection), so no kind wears it.
+     * is for finding a clip, so no two kinds share a hue; and blue is the
+     * app's accent (the playhead, the selection), so no kind wears it. Orange
+     * stays out too: it was the accent until the user took it away.
      */
     const kinds = ['video', 'image', 'text', 'sticker', 'graphic', 'music', 'sfx', 'voice', 'adjustment'] as const
     const hueOf = (kind: (typeof kinds)[number]): string => /^bg-([a-z]+)-\d+$/.exec(styleFor(kind).dot)?.[1] ?? ''
     const hues = kinds.map(hueOf)
     expect(new Set(hues).size, hues.join(', ')).toBe(kinds.length)
     expect(hues).not.toContain('orange')
-    expect(hues).not.toContain('flame')
+    expect(hues).not.toContain('blue')
+    expect(hues).not.toContain('accent')
     // Text and graphics, the pair that prompted this, are not neighbours either.
     expect(['violet', 'indigo', 'purple', 'fuchsia']).not.toContain(hueOf('text'))
     // And each kind's body, border and swatch are one hue, not a mix.
@@ -160,6 +164,88 @@ describe('what a clip is, for the eye', () => {
       const used = new Set([...`${style.idle} ${style.selected} ${style.dot}`.matchAll(/-(?:bg|border)?([a-z]+)-\d{2,3}/g)].map((m) => m[1]))
       expect([...used].filter((h) => h !== 'bg' && h !== 'border'), kind).toEqual([hueOf(kind)])
     }
+  })
+
+  it('keeps every shade a kind wears visibly apart from every accent step, measured, not named', () => {
+    /*
+     * The name check above forbids `blue`, but indigo is a different name for
+     * nearly the same colour: 0.070 from the accent in OKLab, against blue's
+     * 0.078. So this one measures. Each shade comes from Tailwind's own theme
+     * (OKLCH), the accent steps from the app's @theme (hex), and the distance is
+     * Euclidean in OKLab, with 0.12 as the floor.
+     *
+     * Every shade a kind's classes use, not only its swatch, and against every
+     * accent step that draws on the timeline (the 500 playhead and selection,
+     * the 400 drag box and markers, the 300 selected transition). The first
+     * version measured only each -500 against accent-500 — a shade no clip body
+     * wears, the -500 is the legend dot — and passed graphics on sky, whose
+     * -700 selected border is 0.105 from accent-400.
+     */
+    const theme = readFileSync(resolve(__dirname, '../node_modules/tailwindcss/theme.css'), 'utf8')
+    const styles = readFileSync(resolve(__dirname, '../src/renderer/src/styles.css'), 'utf8')
+    const accentHexes = [500, 400, 300].map((step) => {
+      const hex = new RegExp(`--color-accent-${step}:\\s*#([0-9a-f]{6});`, 'i').exec(styles)?.[1]
+      expect(hex, `--color-accent-${step} in styles.css`).toBeDefined()
+      return [step, hex!] as const
+    })
+
+    const linear = (c: number): number => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)
+    const fromHex = (hex: string): [number, number, number] => {
+      const [r, g, b] = [0, 2, 4].map((i) => linear(parseInt(hex.slice(i, i + 2), 16) / 255))
+      const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
+      const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
+      const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
+      return [
+        0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+        1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+        0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s
+      ]
+    }
+    /** `violet-700` → OKLab, from Tailwind's theme. */
+    const fromTheme = (shade: string): [number, number, number] => {
+      const m = new RegExp(`--color-${shade}:\\s*oklch\\(([\\d.]+)% ([\\d.]+) ([\\d.]+)\\)`).exec(theme)
+      expect(m, `--color-${shade} in tailwindcss/theme.css`).not.toBeNull()
+      const [L, C, H] = [Number(m![1]) / 100, Number(m![2]), (Number(m![3]) * Math.PI) / 180]
+      return [L, C * Math.cos(H), C * Math.sin(H)]
+    }
+    const accents = accentHexes.map(([step, hex]) => [step, fromHex(hex)] as const)
+    /** The nearest accent step to a shade, and how near. */
+    const nearest = (shade: string): { step: number; distance: number } => {
+      const lab = fromTheme(shade)
+      return accents
+        .map(([step, a]) => ({ step, distance: Math.hypot(...lab.map((v, i) => v - a[i])) }))
+        .reduce((best, next) => (next.distance < best.distance ? next : best))
+    }
+
+    // The measure is about something: what the name check cannot see fails it —
+    // indigo, and the sky border that the first version of this test let through.
+    expect(nearest('blue-500').distance).toBeLessThan(0.12)
+    expect(nearest('indigo-500').distance).toBeLessThan(0.12)
+    expect(nearest('sky-700').distance).toBeLessThan(0.12)
+
+    /** Every Tailwind colour a class string paints with: `hover:bg-teal-300/70` → `teal-300`. */
+    const shadesIn = (classes: string): string[] =>
+      [...classes.matchAll(/(?<![\w-])(?:[a-z-]+:)*(?:bg|border)-([a-z]+-\d{2,3})(?:\/\d{1,3})?(?![\w-])/g)].map((m) => m[1])
+
+    const kinds = ['video', 'image', 'text', 'sticker', 'graphic', 'music', 'sfx', 'voice', 'adjustment'] as const
+    const tooClose: string[] = []
+    for (const kind of kinds) {
+      const style = styleFor(kind)
+      // Each part is read, or the loop below measures nothing for it.
+      for (const part of ['idle', 'selected', 'dot'] as const) {
+        expect(shadesIn(style[part]).length, `${kind}.${part} paints with a colour`).toBeGreaterThan(0)
+      }
+      const worn = new Set([style.idle, style.selected, style.dot].flatMap(shadesIn))
+      // The selected border, the shade that sky failed on, is among them.
+      const border = /(?<![\w-])border-([a-z]+-\d{2,3})(?![\w-])/.exec(style.selected)?.[1]
+      expect(border, `${kind} has a selected border`).toBeDefined()
+      expect([...worn], kind).toContain(border)
+      for (const shade of worn) {
+        const { step, distance } = nearest(shade)
+        if (distance < 0.12) tooClose.push(`${kind}: ${shade} is ${distance.toFixed(3)} from accent-${step}`)
+      }
+    }
+    expect(tooClose).toEqual([])
   })
 })
 

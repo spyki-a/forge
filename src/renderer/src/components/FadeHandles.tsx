@@ -102,16 +102,16 @@ export function FadeHandles({
         {fades.in > 0 && (
           <path
             d={`M 0 ${height} L ${inX} 0 L 0 0 Z`}
-            fill="rgba(10,12,15,0.55)"
-            stroke="rgb(245,154,117)"
+            fill="rgba(36,33,29,0.22)"
+            stroke="#1B4CD5"
             strokeWidth={1}
           />
         )}
         {fades.out > 0 && (
           <path
             d={`M ${width} ${height} L ${outX} 0 L ${width} 0 Z`}
-            fill="rgba(10,12,15,0.55)"
-            stroke="rgb(245,154,117)"
+            fill="rgba(36,33,29,0.22)"
+            stroke="#1B4CD5"
             strokeWidth={1}
           />
         )}
@@ -129,7 +129,7 @@ export function FadeHandles({
                 ? 'Drag in to fade the sound up · double-click to remove'
                 : 'Drag in to fade the sound down · double-click to remove'
             }
-            className={`absolute rounded-sm border border-ink-950 bg-flame-400 transition-opacity hover:bg-flame-300 ${
+            className={`absolute rounded-sm border border-ink-950 bg-accent-400 transition-opacity hover:bg-accent-300 ${
               selected
                 ? 'pointer-events-auto opacity-100'
                 : 'pointer-events-none opacity-0 group-hover/clip:pointer-events-auto group-hover/clip:opacity-100'

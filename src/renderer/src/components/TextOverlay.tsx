@@ -202,7 +202,7 @@ export function TextOverlay({
             // Opaque enough to hide the rendered words underneath, which are
             // still the old ones until the redraw lands.
             background: 'rgba(10,10,12,0.82)',
-            border: '1px solid rgba(249,115,65,0.9)',
+            border: '1px solid rgba(37,99,235,0.9)',
             borderRadius: 2,
             outline: 'none',
             resize: 'none',
@@ -221,7 +221,7 @@ export function TextOverlay({
             cursor: 'move',
             // A dashed box on the words themselves, so it is obvious they are
             // editable without hiding what they look like.
-            outline: '1px dashed rgba(249,115,65,0.75)',
+            outline: '1px dashed rgba(37,99,235,0.75)',
             outlineOffset: `${Math.max(2, fontPx * 0.08)}px`,
             whiteSpace: 'pre-wrap',
             maxWidth: '100%'
@@ -238,7 +238,7 @@ export function TextOverlay({
               width: 12,
               height: 12,
               borderRadius: 2,
-              background: 'rgb(249,115,65)',
+              background: 'rgb(37,99,235)',
               cursor: 'ns-resize',
               pointerEvents: 'auto'
             }}

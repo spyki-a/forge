@@ -87,7 +87,8 @@ function createWindow(): void {
     minHeight: 680,
     show: false,
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
-    backgroundColor: '#0b0d10',
+    // The cream page (ink-950 in styles.css), so the window never flashes dark before the first paint.
+    backgroundColor: '#f6f2ea',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,

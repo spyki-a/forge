@@ -63,7 +63,7 @@ export function Transport(): ReactNode {
       >
         <span
           className={`flex size-3.5 items-center justify-center rounded-[3px] border transition-colors ${
-            loop ? 'border-flame-500 bg-flame-500' : 'border-ink-600 bg-transparent'
+            loop ? 'border-accent-500 bg-accent-500' : 'border-ink-600 bg-transparent'
           }`}
         >
           {loop && <Check size={10} strokeWidth={3} className="text-ink-950" />}
@@ -74,8 +74,8 @@ export function Transport(): ReactNode {
           onChange={(e) => setLoop(e.target.checked)}
           className="sr-only"
         />
-        <Repeat size={12} className={loop ? 'text-flame-400' : 'text-ink-400'} />
-        <span className={`text-[11px] ${loop ? 'text-flame-400' : 'text-ink-400'}`}>Loop</span>
+        <Repeat size={12} className={loop ? 'text-accent-400' : 'text-ink-400'} />
+        <span className={`text-[11px] ${loop ? 'text-accent-400' : 'text-ink-400'}`}>Loop</span>
       </label>
 
       {/* Scrub audio, beside Loop because both are "how playback behaves"
@@ -90,7 +90,7 @@ export function Transport(): ReactNode {
       >
         <span
           className={`flex size-3.5 items-center justify-center rounded-[3px] border transition-colors ${
-            scrubAudio ? 'border-flame-500 bg-flame-500' : 'border-ink-600 bg-transparent'
+            scrubAudio ? 'border-accent-500 bg-accent-500' : 'border-ink-600 bg-transparent'
           }`}
         >
           {scrubAudio && <Check size={10} strokeWidth={3} className="text-ink-950" />}
@@ -101,8 +101,8 @@ export function Transport(): ReactNode {
           onChange={(e) => setScrubAudio(e.target.checked)}
           className="sr-only"
         />
-        <Volume2 size={12} className={scrubAudio ? 'text-flame-400' : 'text-ink-400'} />
-        <span className={`text-[11px] ${scrubAudio ? 'text-flame-400' : 'text-ink-400'}`}>
+        <Volume2 size={12} className={scrubAudio ? 'text-accent-400' : 'text-ink-400'} />
+        <span className={`text-[11px] ${scrubAudio ? 'text-accent-400' : 'text-ink-400'}`}>
           Scrub
         </span>
       </label>
@@ -117,7 +117,7 @@ export function Transport(): ReactNode {
         onClick={() => selectedClipId && removeClip(selectedClipId)}
         disabled={!selectedClipId}
         title={selectedClipId ? 'Remove the selected clip (Delete)' : 'Select a clip to remove it'}
-        className="rounded p-1.5 text-ink-400 transition-colors hover:bg-ink-800 hover:text-red-400 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-ink-400"
+        className="rounded p-1.5 text-ink-400 transition-colors hover:bg-ink-800 hover:text-red-800 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-ink-400"
       >
         <Trash2 size={14} />
       </button>
