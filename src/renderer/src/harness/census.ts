@@ -15,6 +15,7 @@ import { FILMSTRIP_RULE } from '@shared/automation/filmstrip'
 import { PROP_RULE } from '@shared/automation/apply'
 import { SANDWICH_RULE } from '@shared/automation/sandwich'
 import { SPINE_RULE } from '@shared/director/apply'
+import { TRAY_MIN, TRAY_RAIL } from '@shared/curveTray'
 import { useEditor } from '../store'
 import { useCatalog } from '../catalog'
 import { usePacks } from '../packs'
@@ -85,8 +86,17 @@ type Match = (typeof MATCHES)[number]
 
 /** Homes that need a left-panel tab opened, by the tab's label. */
 const LEFT_TABS = { media: 'Media', library: 'Library', transcript: 'Transcript', create: 'Create' } as const
-/** Homes that are on screen whatever the left panel shows. */
-const FIXED_HOMES = ['header', 'source', 'canvasbar', 'preview', 'toolbox', 'inspector', 'curve', 'transport', 'timeline', 'waveform'] as const
+/**
+ * The Curve tray's three faces, each a home of its own: closed to its rail,
+ * open on Keys, open on Curves. One element, but three places a person looks —
+ * and they cannot share a home, because a home's empty-project count is taken
+ * once per home: on Curves an empty project already shows the property tabs
+ * Zoom … Volume, which the Keys rows would then never be able to add to.
+ */
+const TRAY_FACES = { rail: 'rail', keys: 'keys', curve: 'curves' } as const
+type TrayFace = (typeof TRAY_FACES)[keyof typeof TRAY_FACES]
+/** Homes that are on screen whatever the left panel shows (the tray's once it is put in that face). */
+const FIXED_HOMES = ['header', 'source', 'canvasbar', 'preview', 'toolbox', 'inspector', 'rail', 'keys', 'curve', 'transport', 'timeline', 'waveform'] as const
 /** Overlays: counted only inside the one element that appeared when the scenario opened it. */
 const OVERLAY_HOMES = ['clipmenu', 'newproject', 'shortcuts'] as const
 
@@ -281,9 +291,12 @@ const positioned = (el: Element): string => getComputedStyle(el).position
  * are what is under examination. Every step that moves a panel has to update
  * this, and a finder that no longer recognises the layout throws.
  *
- *   header · source row · [ left | centre | inspector ] / [ transport + timeline | curve ]
+ *   header · source row · [ left | centre | inspector ] / [ transport + timeline | curve tray ]
  *   left = tab strip · tab content · waveform dock
  *   centre = canvas bar / [ toolbox + preview ]   (step 4: the bar over the picture row)
+ *   curve tray = the lower row's second panel, whatever its width: a 28 px
+ *     rail when closed, a few hundred px open (step 5). The rail, Keys and
+ *     Curves homes are all its root; `openHome` puts it in the right face.
  */
 function layout(): Record<Exclude<Home, (typeof OVERLAY_HOMES)[number]> | 'tabs' | 'leftContent', Element[]> {
   const header = only(document.querySelectorAll('#root .drag-region'), 'header (.drag-region)')
@@ -301,7 +314,12 @@ function layout(): Record<Exclude<Home, (typeof OVERLAY_HOMES)[number]> | 'tabs'
   // Each half of the window is itself a Group, directly inside its panel.
   const [upper, lower] = panels(group, 2, 'the window').map((half) => (half.matches('[data-group]') ? half : null))
   const [left, middle, inspector] = panels(upper, 3, 'the upper row')
-  const [timelineColumn, curve] = panels(lower, 2, 'the lower row')
+  const [timelineColumn, tray] = panels(lower, 2, 'the lower row')
+  // By what the tray says it is showing, never by its words. A second panel
+  // that does not say is something else in the tray's place.
+  if (!(Object.values(TRAY_FACES) as string[]).includes(tray.getAttribute('data-curve-tray') ?? '')) {
+    throw new Error('census: the lower row’s second panel is not the Curve tray — the layout changed; update homeRoots')
+  }
   const [tabs, leftContent, waveform] = childrenOf(left, 3, 'the left panel')
   // The centre column: the canvas bar, then the picture row under it. By
   // position, never by the bar's words — those are what is being counted.
@@ -328,7 +346,9 @@ function layout(): Record<Exclude<Home, (typeof OVERLAY_HOMES)[number]> | 'tabs'
     inspector: [inspector],
     transport: [transport],
     timeline: [timeline],
-    curve: [curve]
+    rail: [tray],
+    keys: [tray],
+    curve: [tray]
   }
 }
 
@@ -566,10 +586,40 @@ async function escape(): Promise<void> {
  * clicked twice in a row and left to keep whatever the last scenario did.
  */
 async function openHome(home: Home): Promise<void> {
+  if (home in TRAY_FACES) return trayShows(TRAY_FACES[home as keyof typeof TRAY_FACES])
   if (!(home in LEFT_TABS)) return
   const label = LEFT_TABS[home as keyof typeof LEFT_TABS]
   await leftTab(label === 'Media' ? 'Library' : 'Media')
   await leftTab(label)
+}
+
+/**
+ * Put the Curve tray in one face, through the store as its own buttons do, and
+ * wait for the page to show it.
+ *
+ * The width is measured as well as the face: an open tray left inside the
+ * 28 px rail — the Panel not following the store — would still give every
+ * text node in it a box, and every row would be counted as found.
+ */
+async function trayShows(face: TrayFace): Promise<void> {
+  if (face === 'rail') {
+    editor().setTrayOpen(false)
+  } else {
+    editor().setTrayTab(face)
+    editor().setTrayOpen(true)
+  }
+  const deadline = performance.now() + 2000
+  for (;;) {
+    await frames()
+    const tray = layout().curve[0]
+    const shows = tray.getAttribute('data-curve-tray')
+    const width = tray.closest('[data-panel]')?.getBoundingClientRect().width ?? 0
+    const right = face === 'rail' ? width <= TRAY_RAIL + 2 : width >= TRAY_MIN - 2
+    if (shows === face && right) return
+    if (performance.now() > deadline) {
+      throw new Error(`census: the Curve tray was asked for ${face} and shows ${shows} in ${Math.round(width)} px`)
+    }
+  }
 }
 
 /** The curve panel keeps its Motion / Colour tab in local state; put it back on Motion. */

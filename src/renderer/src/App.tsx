@@ -19,7 +19,7 @@ import { CanvasBar } from './components/CanvasBar'
 import { Shortcuts } from './components/Shortcuts'
 import { NewProject } from './components/NewProject'
 import { SourceBar } from './components/SourceBar'
-import { CurvePanel } from './components/CurvePanel'
+import { CurveTray, useTrayPanel } from './components/CurveTray'
 
 function Divider({ vertical = false }: { vertical?: boolean }): ReactNode {
   return (
@@ -109,6 +109,8 @@ export default function App(): ReactNode {
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   /** The window is full screen — so the way out has to be on screen too. */
   const [fullScreen, setFullScreen] = useState(false)
+  /** The Curve tray's Panel, opened and closed by the store's `trayOpen` (CurveTray.tsx). */
+  const tray = useTrayPanel()
 
   /*
    * Out of full screen, by Escape or by the button below.
@@ -570,9 +572,17 @@ export default function App(): ReactNode {
           {/*
             The curve sits beside the timeline, on the same horizontal axis, so
             the shape of a move and the clip it belongs to line up.
+
+            In the Curve tray (WINDOW.md §3.19): closed to a 28 px rail by
+            default, and opened only by a person — numbers here are PIXELS and
+            strings percent (react-resizable-panels 4.x). The timeline takes
+            whatever the tray leaves, so it has no default of its own; and the
+            tray keeps its width in pixels when the window is resized, so the
+            rail stays a rail. Always rendered, open or closed: CurveTray
+            draws the rail itself.
           */}
           <Group orientation="horizontal">
-            <Panel defaultSize="72" minSize="40">
+            <Panel minSize="40">
               <div className="flex h-full flex-col">
                 <Transport />
                 <div className="min-h-0 flex-1">
@@ -581,8 +591,17 @@ export default function App(): ReactNode {
               </div>
             </Panel>
             <Divider />
-            <Panel defaultSize="28" minSize="16" maxSize="45">
-              <CurvePanel />
+            <Panel
+              collapsible
+              collapsedSize={28}
+              minSize={240}
+              defaultSize={28}
+              maxSize="45"
+              groupResizeBehavior="preserve-pixel-size"
+              panelRef={tray.panelRef}
+              onResize={tray.onResize}
+            >
+              <CurveTray />
             </Panel>
           </Group>
         </Panel>

@@ -785,7 +785,7 @@ Anchors are counted with `matchAll` before being trusted.
   harness at 1400×900 and 1276×706; the Windows font stack is unmeasured for the breakpoints
   (20 px of slack).
 
-### Step 5 — The Curve tray on the timeline
+### Step 5 — The Curve tray on the timeline · DONE 2026-10-03
 - **Files:** new `components/CurveTray.tsx` (28 px rail with Keys / Curves buttons and an
   "animated" dot; expanded: Keys tab = `<Keyframes clip={clip} />` + Motion path, Curves tab =
   `<CurvePanel />` unchanged); new `components/MotionPathPanel.tsx` (`Inspector.tsx:1460-1509` moved
@@ -793,10 +793,38 @@ Anchors are counted with `matchAll` before being trusted.
   `defaultSize={28}`, `panelRef`; `onResize` writes `trayOpen`); `Inspector.tsx` (remove `<Keyframes …>`
   at `1458` and Motion path).
 - **Tests:** keyframeGraph / maskKeyframes / audioSurface unchanged and green (files kept). New source
-  test: `Inspector.tsx` has 0 matches of `<Keyframes ` and `CurveTray.tsx` has exactly 1 of
+  test: `Inspector.tsx` has 0 matches of `/<Keyframes\b/` (not `<Keyframes ` with a space, which
+  a mount written over several lines slips past) and `CurveTray.tsx` has exactly 1 of
   `<Keyframes clip={clip} />` and 1 of `<CurvePanel`. Mutation: leave Keyframes in both → fails.
 - **Check:** the tray is a rail on load; select a clip, open Keys, key Zoom at the playhead; Curves shows
-  the point; Colour shows the tone curve; drag the tray wider; at 1100×680 four tracks still show.
+  the point; Colour shows the tone curve; drag the tray wider; at 1100×680 the closed tray costs the
+  timeline 28 px of width and no height. (First written as "four tracks still show", which this step
+  cannot give: measured at 1100×680 the lower row is 230 px, so V2 and V1 show and A1/A2 are reached by
+  scrolling the track list, 152 of 276 px. That height is the vertical split's (62/38, `App.tsx` outer
+  Group), which this step does not touch, and Step 9's removal of the source row hands the lower row
+  only its 38 % share of what it frees. Four tracks at once at the minimum window needs ≈124 px more
+  there, and no step plans it yet.)
+- **As built (2026-10-03).** `CurveTray.tsx` closed is a 28 px rail (`data-curve-tray="rail"`) with
+  Keys and Curves icon buttons, a vertical "Keys & curves" label and an accent dot when the
+  selected clip has keys, a motion path or mask tracks (`shared/curveTray.ts` `hasKeysOrPath`,
+  pinned); open (`"keys"` / `"curves"`) it shows the two tabs and a close chevron, Keys = the
+  Keyframes rows plus `MotionPathPanel.tsx` (the Inspector's block moved verbatim, its Clear button
+  gaining the tooltip "Clear path — …"), Curves = `CurvePanel` unchanged; both tab bodies stay
+  mounted while open so CurvePanel keeps its choice. The Panel is `collapsible collapsedSize={28}
+  minSize={240} maxSize="45" defaultSize={28}` with `groupResizeBehavior="preserve-pixel-size"`;
+  the store is followed with `useEditor.subscribe` (a selector in App would re-render the window
+  on every toggle), `panel.resize(lastOpenWidth)` opens (4.12.4's `expand()` only reopens to a
+  width an imperative `collapse()` recorded), `onResize` writes `trayOpen` back at the (28+240)/2
+  line so dragging it shut closes it (measured: drag to ~46 px snaps to 28 and the store says
+  false; the last open width is remembered). The tray never opens by itself — select, keying,
+  setPath, undo and redo leave it closed (`tests/renderer/curveTrayStore.test.ts`). The
+  Inspector shows "Keys and curves are in the tray beside the timeline" with an **Open keys**
+  button. Census: homes `rail`, `keys` and `curve` on the same Panel, told apart by
+  `data-curve-tray` and a width wait (an open tray squeezed into the rail would still give every
+  text node a box); 603 → 620 rows, none dropped; 612 checked, 0 missing. The timeline gained the
+  old panel's 28 %: 1118 px against ~825 at 1147 wide. Known: on Curves two 28 px headers stack
+  (the tray's and CurvePanel's own), so the tone curve scrolls in the short lower row — CurvePanel's
+  header is pinned by tests and is for a later step.
 
 ### Step 6 — Settings panel top right
 - **Files:** new `components/SettingsPanel.tsx` (fixed overlay anchored top right; Escape handler in the

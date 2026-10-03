@@ -1244,6 +1244,25 @@
     "newHome": "timeline sidebar (Curve tray), Curves tab, Colour"
   },
   {
+    "label": "Close keys & curves",
+    "match": "title",
+    "home": "curve",
+    "needs": "none",
+    "file": "src/renderer/src/components/CurveTray.tsx",
+    "line": 39,
+    "newHome": "timeline sidebar (Curve tray), the open tray's header",
+    "note": "The chevron that closes the tray back to its rail."
+  },
+  {
+    "label": "Curves",
+    "match": "text",
+    "home": "curve",
+    "needs": "none",
+    "file": "src/renderer/src/components/CurveTray.tsx",
+    "line": 43,
+    "newHome": "timeline sidebar (Curve tray), the open tray's tabs"
+  },
+  {
     "label": "Draw the curve by hand instead of placing points",
     "match": "title",
     "home": "curve",
@@ -1251,6 +1270,15 @@
     "file": "src/renderer/src/components/CurveEditor.tsx",
     "line": 241,
     "newHome": "timeline sidebar (Curve tray), Curves tab"
+  },
+  {
+    "label": "Keys",
+    "match": "text",
+    "home": "curve",
+    "needs": "none",
+    "file": "src/renderer/src/components/CurveTray.tsx",
+    "line": 42,
+    "newHome": "timeline sidebar (Curve tray), the open tray's tabs"
   },
   {
     "label": "Select a clip to shape how it moves, or how it is graded.",
@@ -1600,26 +1628,6 @@
     "note": "Count 2: the Mask section's Add and the Key section's Add."
   },
   {
-    "label": "Add a key at the playhead, holding the value it has now",
-    "match": "title",
-    "home": "inspector",
-    "needs": "photo-clip",
-    "count": 3,
-    "file": "src/renderer/src/components/Keyframes.tsx",
-    "line": 84,
-    "newHome": "timeline sidebar (Curve tray), Keys tab",
-    "note": "Count 3: one per Keyframes row: Zoom, Rotate, Opacity."
-  },
-  {
-    "label": "Add point at playhead",
-    "match": "text",
-    "home": "inspector",
-    "needs": "photo-clip",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 1493,
-    "newHome": "timeline sidebar (Curve tray), Keys tab - MotionPathPanel.tsx"
-  },
-  {
     "label": "Amount",
     "match": "text",
     "home": "inspector",
@@ -1926,24 +1934,6 @@
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1720,
     "newHome": "export strip"
-  },
-  {
-    "label": "Clear",
-    "match": "text",
-    "home": "inspector",
-    "needs": "keyframes",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 1500,
-    "newHome": "timeline sidebar (Curve tray), Keys tab - MotionPathPanel.tsx"
-  },
-  {
-    "label": "Clear",
-    "match": "text",
-    "home": "inspector",
-    "needs": "video-path",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 1500,
-    "newHome": "timeline sidebar (Curve tray) (MotionPathPanel.tsx)"
   },
   {
     "label": "Click the screen in the preview to take its colour",
@@ -2298,15 +2288,6 @@
     "note": "Count 4: the four Speed buttons share one tooltip."
   },
   {
-    "label": "How the value leaves this key",
-    "match": "title",
-    "home": "inspector",
-    "needs": "keyframes",
-    "file": "src/renderer/src/components/Keyframes.tsx",
-    "line": 146,
-    "newHome": "timeline sidebar (Curve tray), Keys tab"
-  },
-  {
     "label": "Impact",
     "match": "text",
     "home": "inspector",
@@ -2314,15 +2295,6 @@
     "file": "src/shared/render/textPresets.ts",
     "line": 61,
     "newHome": "trimmer dock"
-  },
-  {
-    "label": "In from left",
-    "match": "text",
-    "home": "inspector",
-    "needs": "photo-clip",
-    "file": "src/shared/render/path.ts",
-    "line": 142,
-    "newHome": "timeline sidebar (Curve tray) (MotionPathPanel.tsx)"
   },
   {
     "label": "Intensity",
@@ -2362,13 +2334,14 @@
     "newHome": "trimmer dock"
   },
   {
-    "label": "Keyframes",
+    "label": "Keys and curves are in the tray beside the timeline",
     "match": "text",
     "home": "inspector",
     "needs": "photo-clip",
-    "file": "src/renderer/src/components/Keyframes.tsx",
-    "line": 45,
-    "newHome": "timeline sidebar (Curve tray), Keys tab"
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1403,
+    "newHome": "trimmer dock",
+    "note": "Where the keyframe rows and the motion path were, until step 5."
   },
   {
     "label": "LUFS —",
@@ -2550,15 +2523,6 @@
     "newHome": "output strip"
   },
   {
-    "label": "Motion path",
-    "match": "text",
-    "home": "inspector",
-    "needs": "photo-clip",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 1469,
-    "newHome": "timeline sidebar (Curve tray), Keys tab - MotionPathPanel.tsx"
-  },
-  {
     "label": "Move the playhead, then move or resize the shape",
     "match": "text",
     "home": "inspector",
@@ -2691,25 +2655,6 @@
     "note": "The captions switch, on in a new project."
   },
   {
-    "label": "One key is a value; two or more animate.",
-    "match": "text",
-    "home": "inspector",
-    "needs": "photo-clip",
-    "part": true,
-    "file": "src/renderer/src/components/Keyframes.tsx",
-    "line": 167,
-    "newHome": "timeline sidebar (Curve tray)"
-  },
-  {
-    "label": "One point is a fixed offset, not a move — add a second.",
-    "match": "text",
-    "home": "inspector",
-    "needs": "video-path",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 1506,
-    "newHome": "timeline sidebar (Curve tray) (MotionPathPanel.tsx)"
-  },
-  {
     "label": "Only between the marks",
     "match": "text",
     "home": "inspector",
@@ -2723,22 +2668,40 @@
     "match": "text",
     "home": "inspector",
     "needs": "colour-clip",
-    "count": 3,
+    "count": 2,
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 1392,
     "newHome": "trimmer dock",
-    "note": "Count 3: the transform slider, the colour card's own Opacity and the Keyframes row."
+    "note": "Count 2: the transform slider and the colour card's own Opacity. The Keyframes row's Opacity (count 3 until step 5) moved to the Curve tray's Keys tab and has its own row there."
   },
   {
     "label": "Opacity",
     "match": "text",
     "home": "inspector",
     "needs": "photo-clip",
-    "count": 2,
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 896,
     "newHome": "trimmer dock",
-    "note": "Count 2: the transform slider and the Keyframes row."
+    "note": "The transform slider. Until step 5 this row was count 2 with the Keyframes row's Opacity, which moved to the Curve tray's Keys tab and has its own row there."
+  },
+  {
+    "label": "Open keys",
+    "match": "text",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1413,
+    "newHome": "trimmer dock",
+    "note": "Opens the Curve tray on Keys: from the clip to its keys in one click."
+  },
+  {
+    "label": "Open the tray beside the timeline on Keys: this clip's keyframes and motion path",
+    "match": "title",
+    "home": "inspector",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Inspector.tsx",
+    "line": 1410,
+    "newHome": "trimmer dock"
   },
   {
     "label": "Outline",
@@ -2914,15 +2877,6 @@
     "newHome": "trimmer dock"
   },
   {
-    "label": "Record where this clip sits right now, at the playhead",
-    "match": "title",
-    "home": "inspector",
-    "needs": "photo-clip",
-    "file": "src/renderer/src/components/Inspector.tsx",
-    "line": 1490,
-    "newHome": "timeline sidebar (Curve tray) (MotionPathPanel.tsx)"
-  },
-  {
     "label": "Rectangle",
     "match": "title",
     "home": "inspector",
@@ -2966,25 +2920,6 @@
     "file": "src/renderer/src/components/KeyPanel.tsx",
     "line": 60,
     "newHome": "trimmer dock"
-  },
-  {
-    "label": "Remove every",
-    "match": "title",
-    "home": "inspector",
-    "needs": "keyframes",
-    "part": true,
-    "file": "src/renderer/src/components/Keyframes.tsx",
-    "line": 155,
-    "newHome": "timeline sidebar (Curve tray), Keys tab"
-  },
-  {
-    "label": "Remove the key at the playhead",
-    "match": "title",
-    "home": "inspector",
-    "needs": "keyframes",
-    "file": "src/renderer/src/components/Keyframes.tsx",
-    "line": 83,
-    "newHome": "timeline sidebar (Curve tray)"
   },
   {
     "label": "Remove this look",
@@ -3056,11 +2991,10 @@
     "match": "text",
     "home": "inspector",
     "needs": "photo-clip",
-    "count": 2,
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 920,
     "newHome": "trimmer dock",
-    "note": "Count 2: the transform slider and the Keyframes row."
+    "note": "The transform slider. Until step 5 this row was count 2 with the Keyframes row's Rotate, which moved to the Curve tray's Keys tab and has its own row there."
   },
   {
     "label": "Saturate",
@@ -3647,15 +3581,6 @@
     "newHome": "trimmer dock"
   },
   {
-    "label": "Volume",
-    "match": "text",
-    "home": "inspector",
-    "needs": "video-clip",
-    "file": "src/shared/render/keyframes.ts",
-    "line": 82,
-    "newHome": "timeline sidebar (Curve tray)"
-  },
-  {
     "label": "Weight",
     "match": "text",
     "home": "inspector",
@@ -3702,15 +3627,6 @@
     "newHome": "trimmer dock"
   },
   {
-    "label": "Zoom",
-    "match": "text",
-    "home": "inspector",
-    "needs": "photo-clip",
-    "file": "src/shared/render/keyframes.ts",
-    "line": 74,
-    "newHome": "timeline sidebar (Curve tray)"
-  },
-  {
     "label": "center",
     "match": "text",
     "home": "inspector",
@@ -3730,27 +3646,6 @@
     "file": "src/renderer/src/components/ExportSettings.tsx",
     "line": 99,
     "newHome": "export strip"
-  },
-  {
-    "label": "clear",
-    "match": "text",
-    "home": "inspector",
-    "needs": "keyframes",
-    "file": "src/renderer/src/components/Keyframes.tsx",
-    "line": 158,
-    "newHome": "timeline sidebar (Curve tray)"
-  },
-  {
-    "label": "click to jump, double-click to remove",
-    "match": "title",
-    "home": "inspector",
-    "needs": "keyframes",
-    "part": true,
-    "count": 2,
-    "file": "src/renderer/src/components/Keyframes.tsx",
-    "line": 130,
-    "newHome": "timeline sidebar (Curve tray), Keys tab",
-    "note": "Count 2: one per key: the census keys zoom twice."
   },
   {
     "label": "fonts",
@@ -3853,15 +3748,6 @@
     "newHome": "trimmer dock"
   },
   {
-    "label": "playhead is off this clip",
-    "match": "text",
-    "home": "inspector",
-    "needs": "playhead-off-clip",
-    "file": "src/renderer/src/components/Keyframes.tsx",
-    "line": 47,
-    "newHome": "timeline sidebar (Curve tray)"
-  },
-  {
     "label": "right",
     "match": "text",
     "home": "inspector",
@@ -3920,6 +3806,224 @@
     "file": "src/renderer/src/components/Inspector.tsx",
     "line": 735,
     "newHome": "output strip"
+  },
+  {
+    "label": "Add a key at the playhead, holding the value it has now",
+    "match": "title",
+    "home": "keys",
+    "needs": "photo-clip",
+    "count": 3,
+    "file": "src/renderer/src/components/Keyframes.tsx",
+    "line": 84,
+    "newHome": "timeline sidebar (Curve tray), Keys tab",
+    "note": "Count 3: one per Keyframes row: Zoom, Rotate, Opacity."
+  },
+  {
+    "label": "Add point at playhead",
+    "match": "text",
+    "home": "keys",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/MotionPathPanel.tsx",
+    "line": 52,
+    "newHome": "timeline sidebar (Curve tray), Keys tab - MotionPathPanel.tsx"
+  },
+  {
+    "label": "Clear",
+    "match": "text",
+    "home": "keys",
+    "needs": "keyframes",
+    "file": "src/renderer/src/components/MotionPathPanel.tsx",
+    "line": 60,
+    "newHome": "timeline sidebar (Curve tray), Keys tab - MotionPathPanel.tsx"
+  },
+  {
+    "label": "Clear",
+    "match": "text",
+    "home": "keys",
+    "needs": "video-path",
+    "file": "src/renderer/src/components/MotionPathPanel.tsx",
+    "line": 60,
+    "newHome": "timeline sidebar (Curve tray) (MotionPathPanel.tsx)"
+  },
+  {
+    "label": "Clear path — remove every point of this clip's motion path",
+    "match": "title",
+    "home": "keys",
+    "needs": "video-path",
+    "file": "src/renderer/src/components/MotionPathPanel.tsx",
+    "line": 57,
+    "newHome": "timeline sidebar (Curve tray), Keys tab",
+    "note": "Added in step 5: in the tray the path's Clear sits under the keyframe rows' own clear, so its tooltip says which."
+  },
+  {
+    "label": "How the value leaves this key",
+    "match": "title",
+    "home": "keys",
+    "needs": "keyframes",
+    "file": "src/renderer/src/components/Keyframes.tsx",
+    "line": 146,
+    "newHome": "timeline sidebar (Curve tray), Keys tab"
+  },
+  {
+    "label": "In from left",
+    "match": "text",
+    "home": "keys",
+    "needs": "photo-clip",
+    "file": "src/shared/render/path.ts",
+    "line": 142,
+    "newHome": "timeline sidebar (Curve tray) (MotionPathPanel.tsx)"
+  },
+  {
+    "label": "Keyframes",
+    "match": "text",
+    "home": "keys",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/Keyframes.tsx",
+    "line": 45,
+    "newHome": "timeline sidebar (Curve tray), Keys tab"
+  },
+  {
+    "label": "Motion path",
+    "match": "text",
+    "home": "keys",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/MotionPathPanel.tsx",
+    "line": 28,
+    "newHome": "timeline sidebar (Curve tray), Keys tab - MotionPathPanel.tsx"
+  },
+  {
+    "label": "One key is a value; two or more animate.",
+    "match": "text",
+    "home": "keys",
+    "needs": "photo-clip",
+    "part": true,
+    "file": "src/renderer/src/components/Keyframes.tsx",
+    "line": 167,
+    "newHome": "timeline sidebar (Curve tray)"
+  },
+  {
+    "label": "One point is a fixed offset, not a move — add a second.",
+    "match": "text",
+    "home": "keys",
+    "needs": "video-path",
+    "file": "src/renderer/src/components/MotionPathPanel.tsx",
+    "line": 66,
+    "newHome": "timeline sidebar (Curve tray) (MotionPathPanel.tsx)"
+  },
+  {
+    "label": "Opacity",
+    "match": "text",
+    "home": "keys",
+    "needs": "photo-clip",
+    "file": "src/shared/render/keyframes.ts",
+    "line": 76,
+    "newHome": "timeline sidebar (Curve tray), Keys tab",
+    "note": "The Keyframes row's label; split out of the Inspector's Opacity row (count 2) in step 5."
+  },
+  {
+    "label": "Opacity",
+    "match": "text",
+    "home": "keys",
+    "needs": "colour-clip",
+    "file": "src/shared/render/keyframes.ts",
+    "line": 76,
+    "newHome": "timeline sidebar (Curve tray), Keys tab",
+    "note": "The Keyframes row's label on a colour card; split out of the Inspector's Opacity row (count 3) in step 5."
+  },
+  {
+    "label": "Record where this clip sits right now, at the playhead",
+    "match": "title",
+    "home": "keys",
+    "needs": "photo-clip",
+    "file": "src/renderer/src/components/MotionPathPanel.tsx",
+    "line": 49,
+    "newHome": "timeline sidebar (Curve tray) (MotionPathPanel.tsx)"
+  },
+  {
+    "label": "Remove every",
+    "match": "title",
+    "home": "keys",
+    "needs": "keyframes",
+    "part": true,
+    "file": "src/renderer/src/components/Keyframes.tsx",
+    "line": 155,
+    "newHome": "timeline sidebar (Curve tray), Keys tab"
+  },
+  {
+    "label": "Remove the key at the playhead",
+    "match": "title",
+    "home": "keys",
+    "needs": "keyframes",
+    "file": "src/renderer/src/components/Keyframes.tsx",
+    "line": 83,
+    "newHome": "timeline sidebar (Curve tray)"
+  },
+  {
+    "label": "Rotate",
+    "match": "text",
+    "home": "keys",
+    "needs": "photo-clip",
+    "file": "src/shared/render/keyframes.ts",
+    "line": 75,
+    "newHome": "timeline sidebar (Curve tray), Keys tab",
+    "note": "The Keyframes row's label; split out of the Inspector's Rotate row (count 2) in step 5."
+  },
+  {
+    "label": "Select a clip to key it",
+    "match": "text",
+    "home": "keys",
+    "needs": "none",
+    "file": "src/renderer/src/components/CurveTray.tsx",
+    "line": 131,
+    "newHome": "timeline sidebar (Curve tray), Keys tab"
+  },
+  {
+    "label": "Volume",
+    "match": "text",
+    "home": "keys",
+    "needs": "video-clip",
+    "file": "src/shared/render/keyframes.ts",
+    "line": 82,
+    "newHome": "timeline sidebar (Curve tray)"
+  },
+  {
+    "label": "Zoom",
+    "match": "text",
+    "home": "keys",
+    "needs": "photo-clip",
+    "file": "src/shared/render/keyframes.ts",
+    "line": 74,
+    "newHome": "timeline sidebar (Curve tray)"
+  },
+  {
+    "label": "clear",
+    "match": "text",
+    "home": "keys",
+    "needs": "keyframes",
+    "file": "src/renderer/src/components/Keyframes.tsx",
+    "line": 158,
+    "newHome": "timeline sidebar (Curve tray)"
+  },
+  {
+    "label": "click to jump, double-click to remove",
+    "match": "title",
+    "home": "keys",
+    "needs": "keyframes",
+    "part": true,
+    "count": 2,
+    "file": "src/renderer/src/components/Keyframes.tsx",
+    "line": 130,
+    "newHome": "timeline sidebar (Curve tray), Keys tab",
+    "note": "Count 2: one per key: the census keys zoom twice."
+  },
+  {
+    "label": "playhead is off this clip",
+    "match": "text",
+    "home": "keys",
+    "needs": "playhead-off-clip",
+    "file": "src/renderer/src/components/Keyframes.tsx",
+    "line": 47,
+    "newHome": "timeline sidebar (Curve tray)"
   },
   {
     "label": "All",
@@ -4548,6 +4652,66 @@
     "newHome": "canvas — reworded to \"or open Director and press Direct\" (§3.15)",
     "harnessOnly": false,
     "note": "Painted on the preview canvas with fillText, so no DOM query can read it; the source-membership test holds it to its file."
+  },
+  {
+    "label": "Curves — the motion graph and the tone curve",
+    "match": "title",
+    "home": "rail",
+    "needs": "none",
+    "file": "src/renderer/src/components/CurveTray.tsx",
+    "line": 37,
+    "newHome": "timeline sidebar (Curve tray), the closed rail",
+    "note": "The rail's Curves button (an icon): opens the tray on Curves."
+  },
+  {
+    "label": "Keys & curves",
+    "match": "text",
+    "home": "rail",
+    "needs": "none",
+    "file": "src/renderer/src/components/CurveTray.tsx",
+    "line": 89,
+    "newHome": "timeline sidebar (Curve tray), the closed rail",
+    "note": "The rail's name, written down it; it opens the tray on the tab it was last on."
+  },
+  {
+    "label": "Keys — keyframes and the motion path",
+    "match": "title",
+    "home": "rail",
+    "needs": "none",
+    "file": "src/renderer/src/components/CurveTray.tsx",
+    "line": 36,
+    "newHome": "timeline sidebar (Curve tray), the closed rail",
+    "note": "The rail's Keys button (an icon): opens the tray on Keys."
+  },
+  {
+    "label": "The selected clip has keys or a motion path",
+    "match": "title",
+    "home": "rail",
+    "needs": "keyframes",
+    "file": "src/renderer/src/components/CurveTray.tsx",
+    "line": 38,
+    "newHome": "timeline sidebar (Curve tray), the closed rail",
+    "note": "The dot on the rail's Keys button. The tray never opens by itself, so this says there is something in it (src/shared/curveTray.ts (hasKeysOrPath)). Keys and a path here."
+  },
+  {
+    "label": "The selected clip has keys or a motion path",
+    "match": "title",
+    "home": "rail",
+    "needs": "video-path",
+    "file": "src/renderer/src/components/CurveTray.tsx",
+    "line": 38,
+    "newHome": "timeline sidebar (Curve tray), the closed rail",
+    "note": "The rail dot for a motion path alone, no keys."
+  },
+  {
+    "label": "The selected clip has keys or a motion path",
+    "match": "title",
+    "home": "rail",
+    "needs": "mask",
+    "file": "src/renderer/src/components/CurveTray.tsx",
+    "line": 38,
+    "newHome": "timeline sidebar (Curve tray), the closed rail",
+    "note": "The rail dot for an animated mask's tracks alone."
   },
   {
     "label": "Add to the selection",

@@ -16,12 +16,10 @@ import { captionNeedsCanvas } from '@shared/graphics/fromTimeline'
 import { bakeCaptions } from '../captionBake'
 import { Sparkles } from 'lucide-react'
 import { FontPicker } from './FontPicker'
-import { Keyframes } from './Keyframes'
 import { useCatalog } from '../catalog'
 import { transitionsByFamily } from '../catalog'
 import { availableTags, transitionsWithTag } from '@shared/transitions/registry'
 import { TAG_LABELS, type MaskTag } from '@shared/transitions/classify'
-import { PATH_PRESETS } from '@shared/render/path'
 import { TEXT_PRESETS, matchingPreset } from '@shared/render/textPresets'
 import { SANDWICH_RULE } from '@shared/automation/sandwich'
 import { maxTransitionFrames, transitionBase } from '@shared/timeline'
@@ -86,8 +84,8 @@ export function Inspector(): ReactNode {
   const crossfadeWithPrevious = useEditor((s) => s.crossfadeWithPrevious)
   const setLoudness = useEditor((s) => s.setLoudness)
   const chooseLut = useEditor((s) => s.chooseLut)
-  const setPath = useEditor((s) => s.setPath)
-  const addWaypoint = useEditor((s) => s.addWaypoint)
+  const setTrayOpen = useEditor((s) => s.setTrayOpen)
+  const setTrayTab = useEditor((s) => s.setTrayTab)
   const putBehindSubject = useEditor((s) => s.putBehindSubject)
   const fillWithClipBelow = useEditor((s) => s.fillWithClipBelow)
   const releaseMatte = useEditor((s) => s.releaseMatte)
@@ -1394,57 +1392,26 @@ export function Inspector(): ReactNode {
               */}
               <LayoutPanel clip={clip} />
 
-              <Keyframes clip={clip} />
-
               {/*
-                Motion path.
-
-                Position only: `scale` with eval=frame re-evaluates but does not
-                follow its own expression, so animated size is not offered
-                rather than offered and wrong.
+                Keys and the motion path live in the Curve tray beside the
+                timeline (CurveTray.tsx, WINDOW.md §3.19), which stays closed
+                until someone opens it. So the way there from the clip is here,
+                one click, and opens it on Keys.
               */}
-              <div className="pt-1">
-                <div className="mb-1 flex items-center justify-between">
-                  <span className="text-[10.5px] text-ink-400">Motion path</span>
-                  {clip.path && clip.path.length > 0 && (
-                    <span className="font-mono text-[10px] text-accent-400">
-                      {clip.path.length} point{clip.path.length === 1 ? '' : 's'}
-                    </span>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {PATH_PRESETS.map((preset) => (
-                    <button
-                      key={preset.id}
-                      onClick={() => setPath(clip.id, preset.build(clip.duration))}
-                      className="rounded bg-ink-800 px-1.5 py-0.5 text-[10px] text-ink-400 hover:bg-ink-700 hover:text-ink-200"
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
-                <div className="mt-1 flex gap-1">
-                  <button
-                    onClick={() => addWaypoint(clip.id)}
-                    title="Record where this clip sits right now, at the playhead"
-                    className="flex-1 rounded bg-ink-800 px-2 py-1 text-[10px] text-ink-400 hover:bg-ink-700 hover:text-ink-200"
-                  >
-                    Add point at playhead
-                  </button>
-                  {clip.path && (
-                    <button
-                      onClick={() => setPath(clip.id, undefined)}
-                      className="rounded bg-ink-800 px-2 py-1 text-[10px] text-ink-400 hover:bg-ink-700 hover:text-ink-200"
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-                {clip.path && clip.path.length === 1 && (
-                  <div className="mt-1 text-[10px] leading-snug text-amber-800">
-                    One point is a fixed offset, not a move — add a second.
-                  </div>
-                )}
+              <div className="flex items-center gap-2 border-t border-ink-850 pt-2">
+                <span className="min-w-0 flex-1 text-[10.5px] leading-snug text-ink-500">
+                  Keys and curves are in the tray beside the timeline
+                </span>
+                <button
+                  onClick={() => {
+                    setTrayTab('keys')
+                    setTrayOpen(true)
+                  }}
+                  title="Open the tray beside the timeline on Keys: this clip's keyframes and motion path"
+                  className="shrink-0 rounded bg-ink-800 px-2 py-1 text-[10px] text-ink-300 hover:bg-ink-700 hover:text-ink-100"
+                >
+                  Open keys
+                </button>
               </div>
 
               {(clip.transform?.scale !== 1 ||
