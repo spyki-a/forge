@@ -259,9 +259,29 @@ export function pasteClipboard(
           start: findFreeSlot(next, source.trackId, wanted, source.duration)
         }
 
+    /*
+     * A clip that draws itself gets an asset of its OWN.
+     *
+     * A text card, a colour card, a clipping, a ring, a title or a moment has
+     * a generated asset — the PNG or frame sequence its spec is baked into,
+     * written under the CLIP's id. Copying the clip with the same `assetId`
+     * left two clips over one record: the copy's bake landed in the shared
+     * record, so editing the words on either card silently redrew the other's
+     * export picture, and the comment on the test below promised otherwise.
+     * So the asset record is copied too, under a fresh id, and the copy's
+     * bake (`toBake`, run by the store) lands there. The record keeps the
+     * source's path until that bake lands, so an export in between still
+     * finds a picture. A clip over real media keeps sharing its file, which
+     * is what a shared file means.
+     */
+    const generated = drawsItself(source)
+    const sourceAsset = generated ? next.assets.find((a) => a.id === source.assetId) : undefined
+    const ownAsset = sourceAsset ? { ...sourceAsset, id: freshId('asset') } : null
+
     const copy: Clip = {
       ...source,
       id,
+      ...(ownAsset ? { assetId: ownAsset.id } : {}),
       start: landing.start,
       trackId: landing.trackId,
       /*
@@ -274,9 +294,13 @@ export function pasteClipboard(
       transitionIn: undefined
     }
 
-    if (drawsItself(source)) toBake.push({ clipId: id, from: source })
+    if (generated) toBake.push({ clipId: id, from: source })
 
-    next = { ...next, clips: [...next.clips, copy] }
+    next = {
+      ...next,
+      assets: ownAsset ? [...next.assets, ownAsset] : next.assets,
+      clips: [...next.clips, copy]
+    }
     ids.push(id)
   }
 

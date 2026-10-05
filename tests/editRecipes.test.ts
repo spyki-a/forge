@@ -234,6 +234,47 @@ describe('copy, paste and duplicate', () => {
     expect(toBake[0].from.id).toBe('words')
   })
 
+  it('gives a pasted self-drawn clip an asset of its own — a shot keeps sharing its file', () => {
+    /*
+     * The bake alone was not enough: the copy kept the source's `assetId`, so
+     * its bake landed in the SHARED record and editing either card redrew the
+     * other's export picture. The record is copied under a fresh id, keeping
+     * the source's picture until the copy's own bake lands.
+     */
+    const asset = (id: string, path: string) => ({
+      id, path, name: id, kind: 'image' as const, durationFrames: 90, width: 1920, height: 1080,
+      fps: null, hasVideo: true, hasAudio: false, size: id === 'a' ? 10 : 0
+    })
+    const base = project([
+      clip({ id: 'plain', start: 0 }),
+      clip({
+        id: 'words', start: 60, trackId: 'v2', assetId: 'words-asset',
+        text: { ...({} as NonNullable<Clip['text']>), version: 1 }
+      })
+    ])
+    const p: Project = { ...base, assets: [asset('a', '/media/a.jpg'), asset('words-asset', '/baked/words.png')] }
+
+    for (const result of [
+      pasteClipboard(p, copySelection(p, ['plain', 'words'])!, 300),
+      duplicateSelection(p, ['plain', 'words'])
+    ]) {
+      const { project: next, ids } = result
+      const [plainCopy, wordsCopy] = ids.map((id) => at(next, id))
+
+      // The shot shares its real file; sharing is what a file is for.
+      expect(plainCopy.assetId).toBe('a')
+      // The card does not: a fresh record, with the source's picture for now.
+      expect(wordsCopy.assetId).not.toBe('words-asset')
+      const own = next.assets.find((a) => a.id === wordsCopy.assetId)
+      expect(own).toBeDefined()
+      expect(own).toMatchObject({ path: '/baked/words.png', kind: 'image', width: 1920, height: 1080 })
+      // The source is untouched, and exactly one record was added.
+      expect(at(next, 'words').assetId).toBe('words-asset')
+      expect(next.assets).toHaveLength(p.assets.length + 1)
+      expect(new Set(next.assets.map((a) => a.id)).size).toBe(next.assets.length)
+    }
+  })
+
   it('duplicates directly after the selection, not wherever there is room', () => {
     /*
      * The gesture means "one more of THESE, here". A contiguous row cannot
