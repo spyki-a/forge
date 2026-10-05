@@ -25,6 +25,12 @@
 > records, the grey-level scene scores, yt-dlp on a `file://` URL). Where
 > those changed a fact, the text below says so in place.
 >
+> **Revised again after the user ran the MediaPipe test on their own Mac**
+> (2026-10-05, §4.1, `EFFECTS.md` §37): it runs where Metal exists, the
+> full-range model is accepted and reports a face on 57 of 80 frames where
+> the short-range one reports 1 (detections, not checked against marks), and
+> the detector recommendation in §16.1 changed with it.
+>
 > **Names.** The left panel the user calls the "sidecar" is the **Shelf**. In
 > this file **the Python helper** is the process in `sidecar/` (the code's
 > name for it, and what the screen calls "the AI helper"). The app is being
@@ -129,8 +135,9 @@ code composes and checks.** In this piece that means:
   search, thumbnail and download happens in main.
 - **The development sandbox can reach neither localhost nor Electron.**
   Electron 44 aborts at start-up (`mach_port_rendezvous … Permission
-  denied`), and the macOS MediaPipe wheel aborts with no Metal device. Those
-  measurements are the user's to run, on their own machine (§15).
+  denied`), and the macOS MediaPipe wheel aborts there with no Metal device
+  (on the user's own Mac it ran: §4.1). Those measurements are the user's to
+  run, on their own machine (§15).
 
 ---
 
@@ -149,8 +156,9 @@ code composes and checks.** In this piece that means:
 | **6** | retrieved-fact cards with the Brave key and its cap; the 3D templates | 8 | 3, 5 | facts from outside, with their sources; three.js graphics |
 | **7** | creator styles and saved templates | 4.5 | 3; **`MARKET.md` Stage 0** (below) | toward `MARKET.md` Stage 1 |
 
-**About 76.5 working days, plus Step P's 5–10: 82–87 days, sixteen to
-seventeen weeks, honestly counted.** What the review added, so the number can
+**About 76.5 working days (76 on §16.1's recommended route, which drops
+YuNet's decoder), plus Step P's 5–10: 82–87 days, sixteen to seventeen
+weeks, honestly counted.** What the review added, so the number can
 be checked: step 0 +0.5 (the graph in a file, §3.7); step 1 +2 (shots' own
 runner +0.5, YuNet's hand decoder +0.5, the followed crop compiled at read
 time +0.5, releasing the helper's sessions +0.5); step 3 +1.5 (the binding
@@ -160,7 +168,10 @@ its real yt-dlp test, Clip it into its own project); step 5 +1.5 (the person
 rule from Commons' depicts and the face check, the credits' licence links and
 Done line; the Brave row moved to step 6); step 6 +1 (Brave's monthly cap and
 its key in `safeStorage`). **These dates are conditional on "your part"
-below**: step 1a cannot run until its clips and marks exist.
+below**: step 1a cannot run until its clips and marks exist. If §16.1 takes
+MediaPipe outright, step 1 is half a day shorter (no YuNet decoder) and 1a
+needs the ten clips with their cut marks and about 100 face marks for the
+sanity check (§4.1), not 300.
 
 It is achievable because each step ships on its own. What each milestone
 gives **an installed user**, with and without Step P:
@@ -217,8 +228,8 @@ speech. Asked for on **day 0**, so step 0 runs while they are collected.
 | item | roughly | gates |
 |---|---|---|
 | ten landscape clips (interview, two-person podcast, speech, product demo, wedding toast, two of each), with a `cuts.json` of hand-marked cut times | 3–4 h | 1a's threshold; step 1's exit |
-| ~300 hand-marked face frames (30 per clip) | 3–5 h | 1a's detector choice (§16.1) |
-| the detector comparison run on the Mac and on the Surface (neither MediaPipe nor Electron runs in the dev sandbox) | 1–2 h | 1a, then 1c |
+| face marks: ~300 hand-marked frames (30 per clip) **only if the YuNet comparison is run**; otherwise ~100 (10 per clip) as a sanity check of MediaPipe's boxes, counting false boxes as well as misses | 3–5 h, or ~1 h | 1a's sanity check, or its detector choice if the comparison is run (§16.1) |
+| the detector run on the Surface (the Mac MediaPipe run is done, 2026-10-05, §4.1); if §16.1 runs the YuNet comparison, it runs on the ten clips on both machines (neither MediaPipe nor Electron runs in the dev sandbox) | 30 min, or 1–2 h with the comparison | 1a, then 1c |
 | a ten-second clip of yourself as the face fixture (§16.5) | 15 min | 1c's integration tests |
 | the Florence-2 int8 download (275 MB) and its timing on the Mac and the Surface | 1 h | 1g's gate |
 | the helper's peak memory per capability on the Surface (§12.1) | 1 h | the floor-machine bar |
@@ -233,8 +244,9 @@ speech. Asked for on **day 0**, so step 0 runs while they are collected.
 | the X capture measurement under `npm run dev` on the Mac and the Surface | 1 h | 8.4 |
 | Clip it end to end on the Surface | 1 h | step 4's exit, the floor-machine bar |
 
-**About 20–28 hours in all, spread over the plan.** The first five rows are
-needed before step 1 can finish; M1's date moves with them.
+**About 19–22 hours in all on §16.1's recommended route, 22–28 with the
+YuNet comparison, spread over the plan.** The first five rows are needed
+before step 1 can finish; M1's date moves with them.
 
 Every step ends the same way: typecheck green; the full suite green (output
 written to a file, `$?` checked; `CLAUDE.md`); the render check's output in
@@ -485,7 +497,7 @@ the pack from the app and pass the twelve helper tests from inside it.
 
 ---
 
-## 4. Step 1 — The reframe engine · 16 days
+## 4. Step 1 — The reframe engine · 16 days (1a 1 · 1b 1.5 · 1c 2.5 · 1d 0.5 · 1e 2 · 1f 3.5 · 1g 3 · releasing the helper's sessions 0.5 · §4.9's checks 1.5; 15.5 without YuNet's decoder)
 
 **What is missing.** Sheet 14's deciding half. Nothing works out *where* the
 interesting part of the frame is, so a landscape video on a 9:16 canvas is
@@ -513,27 +525,62 @@ Two things the plan cannot be finished without. Both are run on the user's
 machine, outside the sandbox. Results go to `EFFECTS.md` §37.
 
 **The face detector, on real footage.** The agreed detector is MediaPipe.
-Three costs were measured since that was agreed:
+Three costs were measured in the sandbox since that was agreed (the weight,
+the `cv2` clash, a process abort) and one question was open (whether the
+full-range model is accepted). Then **the user ran the test on their own
+Mac** (2026-10-05; an Apple M1 Pro by the renderer line; the measurer's venv
+`/tmp/claude-501/mpvenv`, CPython 3.14.6 by its `pyvenv.cfg`, mediapipe
+0.10.35 installed `--no-deps`, with empty `cv2` and `matplotlib` (with
+`pyplot`) stubs on `PYTHONPATH`; the output itself prints neither version;
+`EFFECTS.md` §37):
 
+- **It runs where Metal exists.** The sandbox run had aborted the whole
+  process with SIGABRT, exit 134 (`gl_context_nsgl.cc failed to create
+  pixel format` → `Check failed: service_`), even with `Delegate.CPU` and
+  in IMAGE mode, because the sandbox has no Metal device. On the user's Mac
+  it created its GL context through Metal (`GL version: 2.1 (2.1 Metal -
+  90.5)`), ran the model on the XNNPACK CPU delegate, and finished. **Still
+  unmeasured:** the Surface (no Metal; the Windows wheel), and mediapipe
+  1.0.1 (the test ran 0.10.35, whose wheel was small enough to fetch; the
+  classifiers stop at 3.12, and 0.10.35 ran on 3.14.6). A process that
+  cannot get a Metal device, as inside the dev sandbox on this same M1 Pro,
+  loses the whole process; whether a VM or a CI runner is such a machine is
+  unmeasured, so the child-process rule in §4.3 stays.
+- **The full-range model is accepted, and on this footage it is the one
+  that detects.** On 80 frames of `capcut-grid-template.mp4` at 8–16 s
+  (source 1180×2556, analysed at 360×778, at a detection threshold of 0.5;
+  the faces run from about 15 px to about 94 px in the analysed frame),
+  `blaze_face_short_range.tflite` (229,746 B) had a detection on **1 of 80**
+  frames at 1.7 ms a frame; `blaze_face_full_range.tflite` (1,083,786 B) had
+  one on **57 of 80** at **5.0 ms a frame**. The script prints seven of the
+  57 boxes (every ninth, first detection only); the verifier drew them on
+  the same decoded frames: six sit on the face at 40–50 px, scores
+  0.66–0.88, and one (8.0 s, 38×38, score 0.58) sits on a bridge pillar
+  while that frame's ~15 px face is missed. So the counts are detections,
+  **neither recall nor precision**: nobody has marked that footage, and
+  frame-to-frame box stability was not measured. Its faces are 5–6 % of
+  the frame height; landscape interviews can have faces that small (wide
+  and two-person shots), so the plan installs the full-range model, and 1a's
+  sanity check on the ten clips, counting false boxes as well as misses, is
+  where that is confirmed on landscape footage.
+- **Speed is not the question.** 5 ms a frame on the Mac, at 360×778 only
+  (the plan's 640 px edge is unmeasured), means a 10-minute clip sampled at
+  5 fps (3,000 frames) is about 15 s of detection; decoding the same ten
+  minutes of 1080p30 is about 20–30 s by §4.2's synthetic measurement, not
+  timed in this run. The Surface is unmeasured.
 - **Weight.** `mediapipe` 1.0.1 (2026-08-14, Apache-2.0) ships `py3-none`
-  wheels (Mac arm64 33.7 MB, win_amd64 20.1 MB): one ctypes library, not a
-  CPython extension. Its package import pulls `cv2` and `matplotlib.pyplot`
-  at module top (`tasks/python/vision/__init__.py` → `drawing_utils.py:20-21`).
-  `opencv-contrib-python` (55.7 MB Mac, 53.8 MB Windows) and matplotlib
-  (~9.3 MB plus its dependencies) are therefore hard requirements: about
-  100 MB of wheels.
-- **A clash.** opencv's PyPI page says to install only one `cv2` package,
-  and mask tracking plans `opencv-python-headless` (`PLAN.md:363-366`).
-- **A process kill.** On this Mac, 0.10.35 (same Requires-Dist, same ctypes
-  design) **aborted the whole process** with SIGABRT, exit 134
-  (`gl_context_nsgl.cc failed to create pixel format` → `Check failed:
-  service_`), even with `Delegate.CPU` and in IMAGE mode, because the sandbox
-  has no Metal device. Whether it runs on a normal Mac, on the Surface, and
-  on CPython 3.14 (the classifiers stop at 3.12) is **unmeasured**.
-- **Range.** Only `blaze_face_short_range.tflite` (229,746 B) is meant for the
-  Tasks `FaceDetector`. Short range means faces within about 2 m. Whether it
-  accepts `blaze_face_full_range` (1,083,786 B, served) is **unmeasured**.
-  Landscape interviews often have small faces.
+  wheels (Mac arm64 33.7 MB, win_amd64 20.1 MB; 0.10.35 is 17.8 / 10.9 MB):
+  one ctypes library, not a CPython extension. Its package import pulls
+  `cv2` and `matplotlib.pyplot` at module top
+  (`tasks/python/vision/__init__.py` → `drawing_utils.py:20-21`), so with
+  its full dependency list `opencv-contrib-python` (55.7 MB Mac, 53.8 MB
+  Windows) and matplotlib (~9.3 MB plus its dependencies) come too: about
+  100 MB of wheels, and a `cv2` clash with mask tracking's planned
+  `opencv-python-headless` (`PLAN.md:363-366`; opencv's PyPI page says to
+  install only one `cv2` package). **The measured run used neither**: three
+  empty stub files (`cv2/__init__.py`, `matplotlib/__init__.py`,
+  `matplotlib/pyplot.py`) satisfied the import and detection ran. §4.3
+  installs it that way.
 
 Measured alongside, as evidence only: **YuNet**
 (`opencv/face_detection_yunet`, MIT, 232,589 B ONNX) loads on the venv's
@@ -545,10 +592,10 @@ free**: the reference wrapper in that repo is `cv2.FaceDetectorYN`
 model's multi-stride cls / obj / bbox / kps outputs need prior decoding and
 NMS written by hand in numpy (§4.3). The comparison below runs YuNet
 **through that hand decoder, not through cv2**; a decode bug would otherwise
-look like poor recall in the very comparison the choice rests on.
+look like poor recall in the comparison, if §16.1 runs it.
 
-The comparison runs both on the user's ten clips, at 5 fps and a 640 px long
-side (YuNet through the hand decoder, so 1a waits on its first half day from
+**If the comparison is run** (§16.1), it runs both on the user's ten clips,
+at 5 fps and a 640 px long side (YuNet through the hand decoder, so 1a waits on its first half day from
 1c), and records five things:
 
 - recall on faces ≥ 40 px and ≥ 20 px tall, against the user's hand marks
@@ -560,9 +607,21 @@ side (YuNet through the hand decoder, so 1a waits on its first half day from
 
 The measurer's script is `/tmp/claude-501/facetest.py`, run with
 `PYTHONPATH=/tmp/claude-501/stubs /tmp/claude-501/mpvenv/bin/python
-/tmp/claude-501/facetest.py`. The choice is decision §16.1. The rest of this
-step is written so that the detector is one module (`faces.py`) behind one
-contract (§4.3).
+/tmp/claude-501/facetest.py`; the user ran it on 2026-10-05, and the
+detection counts, timings and boxes above are its output (the byte and wheel
+sizes are the measurer's). That script is Mac-only: it hard-codes the darwin
+ffmpeg, the source and a scratch venv under `/tmp`, which is not kept. So
+**for the Surface run it is committed as `sidecar/scripts/facetest.py`**,
+taking the ffmpeg, the source and the two `.tflite` paths as arguments, with
+its venv recipe beside it (§4.3's two pip runs, and the stubs first on
+`PYTHONPATH`); the Surface run uses the win32-x64 ffmpeg. **If §16.1 takes
+MediaPipe's full-range model outright**, the comparison is not run: 1a keeps
+the scene-threshold measurement and a sanity check of MediaPipe's boxes on
+ten frames per clip (about 100 marks, an hour), counting false boxes as well
+as misses, YuNet's decoder is not built (1c is half a day shorter), and
+YuNet stays the fallback if the Surface run fails. The choice is decision
+§16.1. The rest of this step is written so that the detector is
+one module (`faces.py`) behind one contract (§4.3).
 
 **The scene threshold, on footage with known cuts.** No footage in the repo
 has hard cuts. The three reference recordings are continuous takes with
@@ -636,7 +695,11 @@ gains what an analysis needs and a render never did (`src/main/ffmpeg/run.ts`):
 
 Its own module and its own `OPTIONAL` row, `(("vision.faces",), "faces")`.
 **Never in `vision.py`**: a missing mediapipe must not take `vision.measure`,
-the Director's gate, down with it.
+the Director's gate, down with it. And **`faces.py` never imports mediapipe
+in the helper**: without the stubs on its path that import fails on `cv2`
+(measured). It registers when `importlib.util.find_spec('mediapipe')` finds
+the package, and the worker's own import is the real check, reported as
+`Unavailable` if it fails.
 
 ```ts
 // src/shared/sidecar/protocol.ts — SIDECAR_METHODS.faces = 'vision.faces'
@@ -652,7 +715,7 @@ interface FacesParams {
 interface FacesResult {
   width: number; height: number; durationMs: number
   sampleFps: number; frames: number; withFace: number
-  detector: string                   // 'mediapipe/blaze_face_short_range@1.0.1' | 'yunet/2023mar'
+  detector: string                   // 'mediapipe/blaze_face_full_range@0.10.35' | 'yunet/2023mar'
   track: string                      // absolute path: $FORGE_CACHE_DIR/faces/<key>-<params hash>.json
   cached: boolean
 }
@@ -664,23 +727,54 @@ The track goes to disk, not over the pipe: 10 minutes at 5 fps is 3,000
 samples (`protocol.ts:11-15`). Frames come from `media.iter_frames`, with
 progress every 10 frames (`'finding faces'`) and a cancel check per frame.
 
-**If MediaPipe is chosen:**
+**If MediaPipe is chosen** (§16.1 now recommends it):
 
 - It runs in a **child process** (`python -m forge_sidecar.workers.mp_faces`)
   that reads the ffmpeg pipe itself and writes the track. `faces.py` relays
   its progress lines and kills it on cancel. A C++ CHECK abort, which is what
-  was measured, then ends the child, not the helper, and `faces.py` reports
-  `Unavailable('the face detector stopped (exit 134)')`.
-- The `.tflite` comes from `storage.googleapis.com/mediapipe-models/…`, not
-  Hugging Face, so it goes through `media.fetch_url` with a pinned sha256
-  into `models_dir()/mediapipe/`. That is a second host for restricted
-  networks to allow, and the Settings line says so.
-- Its requirements go in `sidecar/requirements-faces.txt`
-  (`mediapipe==1.0.1`, which brings opencv-contrib-python, matplotlib and
-  sounddevice), optional in the style of `requirements-stems.txt`.
+  the sandbox measured without Metal, then ends the child, not the helper,
+  and `faces.py` reports `Unavailable('the face detector stopped')` with the
+  return code it saw (−6, SIGABRT, on macOS, which a shell prints as exit
+  134; the Windows code is unmeasured). On the user's Mac it did not abort
+  (§4.1); the child costs one process start and one mediapipe import per
+  analysis (both unmeasured, §15) and keeps a machine without Metal from
+  losing the helper.
+- **The model is `blaze_face_full_range.tflite`** (1,083,786 B): the
+  short-range one found 1 of 80 frames on the test footage (§4.1). It comes
+  from `storage.googleapis.com/mediapipe-models/…`, not Hugging Face, so it
+  goes through `media.fetch_url` with a pinned sha256 into
+  `models_dir()/mediapipe/`. That is a second host for restricted networks
+  to allow, and the Settings line says so.
+- **Its requirements are two files, installed in two pip runs, the way the
+  measured venv was built** (pip rejects `--no-deps` inside a requirements
+  file, in both forms; measured with pip 26.1.2): `sidecar/requirements-faces.txt`
+  holds `absl-py==2.5.0`, `flatbuffers==25.12.19`, `certifi==2026.7.22` and
+  `sounddevice==0.5.6`, the measured venv's versions, installed normally
+  (sounddevice brings cffi 2.1.1 and pycparser 3.0; numpy 2.5.3 is already
+  there through faster-whisper, librosa and onnxruntime); then
+  `sidecar/requirements-faces-nodeps.txt`, holding only `mediapipe==0.10.35`
+  (the version that ran on CPython 3.14.6; 1.0.1 is measured before it is
+  pinned), installed with `pip install --no-deps -r`. With `--no-deps`
+  mediapipe's own ranges (absl-py~=2.3, sounddevice~=0.5, flatbuffers~=25.9)
+  are not checked, which is why the first file pins them. Whether
+  `sounddevice` can go is unmeasured. Plus **three empty stub files,
+  `cv2/__init__.py`, `matplotlib/__init__.py` and `matplotlib/pyplot.py`**
+  (the measured ones are `/tmp/claude-501/stubs`; `drawing_utils.py:20-21`
+  imports both `cv2` and `matplotlib.pyplot`), shipped in
+  `sidecar/forge_sidecar/stubs/` and put first on `PYTHONPATH` **for the
+  worker process only**, so a real `cv2` installed later for mask tracking is
+  never shadowed in the helper. That is 17.8 MB (Mac) or 10.9 MB (Windows) of
+  mediapipe wheel plus a few small packages; with its full dependency list
+  the same 0.10.35 would be about 83 MB (Mac) or 74 MB (Windows), and 1.0.1
+  about 99 / 83 MB (33.7 MB on the stub route if 1.0.1 is pinned later). The
+  stubs remove the ~65 MB of opencv-contrib-python and matplotlib, and no
+  real `cv2` lands, so mask tracking's package has nothing to clash with.
+  The stubs are tied to the pinned version: a mediapipe upgrade re-runs the
+  import test in §4.9's `faces.int.test.ts`.
 
 **If YuNet is chosen:** no worker and no new requirement, but **half a day
-for its decoder**, built first because 1a's comparison needs it. It uses
+for its decoder**, built first if 1a's comparison is run, and otherwise only
+if the Surface run fails. It uses
 `media.download` from `opencv/face_detection_yunet` at a pinned revision, ORT
 `CPUExecutionProvider`, and threads at cpu/2, as depth does
 (`depth.py:129-151`). The 2023mar model's outputs are per-stride cls, obj,
@@ -691,9 +785,9 @@ frames, generated once in a scratch venv and committed as JSON (cv2 is never
 a dependency); the hand decoder's boxes must match them within 2 px and the
 same count per frame. Mutation: a stride's priors off by one cell.
 
-**Either way, the face finder is a download** (0.23 MB for YuNet, 229,746 B
-for the MediaPipe model): its first use is the press of a button that says
-so (§0).
+**Either way, the face finder is a download** (1,083,786 B for MediaPipe's
+full-range model, 0.23 MB for YuNet): its first use is the press of a button
+that says so (§0).
 
 Main reduces the track for the project (§4.6): **2 samples a second, the two
 largest faces**. Pans need about 0.5 s of resolution, and a 10-minute clip
@@ -1052,7 +1146,7 @@ Where it goes, per `WHERE-THINGS-ARE.md`:
 - **The dock.** A new `src/renderer/src/components/tools/ReframePanel.tsx`,
   mounted for a selected video clip (`Inspector.tsx:218-221`, home `dock`):
   **Follow the subject** (or **Unfollow**), which reads **"Follow the
-  subject · gets the face finder, 0.2 MB, first time"** while the model is
+  subject · gets the face finder, 1.1 MB, first time"** (0.2 MB if YuNet) while the model is
   not on disk, and is greyed with "needs the AI helper" without Python;
   **Follow:** with a phrase field ("a face" by default, or "the cake";
   Florence only, so greyed with its reason until 1g); the shot count; the notes ("shot 4: two people too far
@@ -1172,6 +1266,14 @@ Where it goes, per `WHERE-THINGS-ARE.md`:
     probes 640×360 coded and decodes 360×640) and assert the boxes are in
     the upright frame. Mutation: decode at the probed sides.
   - Cancellation mid-pass leaves no ffmpeg child.
+  - **If §16.1 takes MediaPipe:** the worker imports on the venv with the
+    stubs first on its `PYTHONPATH` (mutation: the stubs dropped from the
+    worker's env, and the test fails on `No module named 'cv2'`); the
+    helper's own `sys.path` holds no stub directory (mutation: the stubs
+    added to the helper's env, caught by asserting a real `cv2.__file__` is
+    not under `stubs/` when one is installed); a worker that calls
+    `os.abort()` leaves the helper answering and `faces.py` returning
+    `Unavailable` (mutation: the worker run in-process, and the helper dies).
 - `tests/integration/sidecar.int.test.ts`: on CI's bare 3.12, each of
   `vision.faces`, `vision.salient` and `vision.ground` appears in
   `capabilities` or `degraded`. Membership, not the list.
@@ -2930,7 +3032,7 @@ What each step needs:
 
 | step | without Python | with it | sizes |
 |---|---|---|---|
-| 1 reframe | shots (main), every crop centred: **today's `solveCrop`, so nothing new to see**; Follow the subject and Reframe greyed | faces, salient, ground | faces: YuNet 0.23 MB, or MediaPipe ~34 + 56 + 9 MB of wheels (Mac) and the 0.23 MB model; **BiRefNet 109 MB, a download for any user who never baked depth** (on disk only on the dev Mac); Florence-2 int8 275 MB, each its own Get press |
+| 1 reframe | shots (main), every crop centred: **today's `solveCrop`, so nothing new to see**; Follow the subject and Reframe greyed | faces, salient, ground | faces: MediaPipe 0.10.35, 17.8 MB (Mac) / 10.9 MB (Windows) of wheel installed `--no-deps` with stubs, plus the 1.1 MB full-range model (§4.3); or YuNet 0.23 MB on the installed onnxruntime; **BiRefNet 109 MB, a download for any user who never baked depth** (on disk only on the dev Mac); Florence-2 int8 275 MB, each its own Get press |
 | 2 free space | the style's position; **Smart placement greyed** | per shot | — |
 | 3 graphics | over **a link's caption track** only; **no `callout`** (it needs a face box) | over own footage (its transcript is Whisper's), and `callout` | — |
 | own-footage transcript | **none**: own footage has no captions | Whisper | faster-whisper small 464 MB on disk (measured), its own Get press |
@@ -2942,15 +3044,17 @@ adds: `requirements-faces.txt` if MediaPipe is chosen, and nothing extra for
 ground (onnxruntime, tokenizers and numpy are there). `tokenizers` becomes
 explicit.
 
-**The cv2 clash.** MediaPipe brings `opencv-contrib-python`; mask tracking
-plans `opencv-python-headless`. One environment may hold one `cv2`
-(decision §16.1).
+**The cv2 clash** exists only if MediaPipe is installed with its full
+dependency list: it brings `opencv-contrib-python`, mask tracking plans
+`opencv-python-headless`, and one environment may hold one `cv2`. The stub
+route (§4.3) installs no real `cv2`, which is how the measured run imported
+it.
 
 **The interpreter.** The dev venv is CPython 3.14.6. CI runs a bare 3.12 with
 no pip install (`.github/workflows/ci.yml:78-83`), so every new method must
 appear in `degraded` there (§4.9). R4 picks the pack's version; mediapipe
-supports 3.12–3.14 by wheel tags, and whether it runs on 3.14 is
-**unmeasured**.
+supports 3.12–3.14 by wheel tags, and 0.10.35 **ran on 3.14.6** on the
+user's Mac (§4.1); 1.0.1 is unmeasured.
 
 **A Windows-only gap.** Capability integration tests gate on
 `.venv/bin/python` and so have never run on Windows (`vision.int.test.ts:22-24`).
@@ -3037,9 +3141,12 @@ into `SHAPES`, and the analysis argv into the new `ANALYSIS_SHAPES`.
 
 Each is named in its step, and each step's first task is its own row:
 
-1. MediaPipe on a normal Mac, on the Surface and on CPython 3.14: survival,
-   recall on small faces, speed, and full-range acceptance. Against YuNet
-   **through its hand decoder** on the same frames (§4.1, §4.3).
+1. MediaPipe: **measured on the user's Mac** (it survives, the full-range
+   model is accepted, 5 ms a frame at 360×778, CPython 3.14.6; §4.1). Still
+   open: the Surface (no Metal; the Windows wheel), mediapipe 1.0.1, the
+   worker's import and start-up time, the cost at the 640 px edge, and
+   recall and false boxes against hand marks on the ten clips. The YuNet comparison through its
+   hand decoder only if §16.1 asks for it (§4.1, §4.3).
 2. The scene threshold and minimum shot on footage with hand-marked cuts;
    the per-cut scores on the 2018 build against the committed table (§4.1,
    §4.9).
@@ -3090,20 +3197,38 @@ Each is named in its step, and each step's first task is its own row:
 Each has a recommendation; nothing here reopens a settled licensing or
 sourcing question.
 
-1. **The face detector.** MediaPipe was agreed. Measured since:
-   - ~100 MB of wheels, from a hard `cv2` + `matplotlib` import;
-   - a `cv2` clash with mask tracking's planned package;
-   - a whole-process abort on a Mac without Metal;
-   - short-range faces only (full range unmeasured).
+1. **The face detector.** MediaPipe was agreed; the first draft of this
+   plan leaned to YuNet on three measured costs and one open question
+   (whether the full-range model is accepted). **You then ran the test on
+   your Mac** (2026-10-05, §4.1): the abort was the sandbox hiding Metal, and
+   the open question is answered:
+   - it **runs** where Metal exists;
+   - the **full-range model is accepted**, and had a detection on 57 of 80
+     frames where the short-range one had 1, at 5 ms a frame (six of the
+     seven printed boxes sit on the face; one is a false box on a pillar).
+
+   The other two costs are answered by how it is installed (§4.3): with
+   `--no-deps` and three empty stub files, the way the measured run imported
+   it, the ~65 MB of opencv-contrib-python and matplotlib is not installed
+   (0.10.35 is then ~18 MB of wheel on the Mac; 1.0.1 would be ~34 MB), and
+   no real `cv2` is installed, so there is no clash with mask tracking. Still
+   unmeasured: the Surface, mediapipe 1.0.1, and recall and false boxes
+   against hand marks.
 
    YuNet is 0.23 MB on the installed onnxruntime and ran at ~10 ms a frame
    on random input, with accuracy unmeasured; on onnxruntime it needs a
    hand-written prior decoder and NMS (half a day, golden-tested against
-   `cv2.FaceDetectorYN` once in a scratch venv), and 1a compares it through
-   that decoder. **Recommendation:** run 1a's comparison on your
-   ten clips (one day) and pick by recall on small faces and survival. My
-   lean is YuNet unless MediaPipe is clearly better, because it adds nothing
-   to install and cannot take the helper down.
+   `cv2.FaceDetectorYN` once in a scratch venv).
+
+   **Recommendation, changed because the measurement changed:** take
+   MediaPipe's full-range model now, in a child process, installed the stub
+   way. Skip the comparison; 1a keeps the scene-threshold measurement and
+   an hour's sanity check of the boxes on your ten clips. YuNet is the
+   fallback if the Surface run fails, with its decoder built then.
+   MediaPipe's survival and speed are measured on this Mac and YuNet's are
+   not; neither one's accuracy is, so the hour's sanity check counts false
+   boxes as well as misses, and YuNet would cost half a day before it could
+   even be compared.
 2. **Per-shot crops as one followed clip** (recommended: one decoder, a
    clean timeline, it re-solves on an aspect change) **or split at each cut**
    (works today and is measured, but 40 pieces for a podcast, +21 % export

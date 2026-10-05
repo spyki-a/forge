@@ -2741,3 +2741,70 @@ harness from pulled frames and overlaid by the render, against the same
 project rendered without the moment — the frame before the moment 0.5/255,
 the moment's first frame 1.1, its last 1.2, the frame after 0.3; the cut
 frame itself 138. The moment's picture is the footage's, to the frame.
+
+## 37. MediaPipe face detection on a real Mac — it runs, and the full-range model detects where the short-range one does not (2026-10-05)
+
+Measured by the user on their own Mac with the planning measurer's venv
+`/tmp/claude-501/mpvenv` (CPython 3.14.6 by its `pyvenv.cfg`; mediapipe
+0.10.35 installed `--no-deps`, per the planning journal; the output itself
+prints neither version) on an Apple M1 Pro (the renderer line), with three
+empty stub files first on `PYTHONPATH` (`cv2/__init__.py`,
+`matplotlib/__init__.py`, `matplotlib/pyplot.py`; the venv holds no real
+cv2, opencv or matplotlib) and the measurer's script
+`/tmp/claude-501/facetest.py`: 80 frames of
+`references/recordings/capcut-grid-template.mp4` at 8–16 s, decoded by the
+bundled ffmpeg at 10 fps, scaled from 1180×2556 to 360×778, rgb24, through
+the Tasks `FaceDetector` in VIDEO mode on the CPU delegate,
+`min_detection_confidence` 0.5, timestamps i × 100 ms. "Frames with a
+detection" counts frames with at least one detection at that threshold; the
+boxes are each frame's first detection, and the script prints every ninth
+(7 of the 57 for full range).
+
+| model | frames with a detection | ms a frame | the printed boxes (analysed frame, px) |
+|---|---|---|---|
+| `blaze_face_short_range.tflite` (229,746 B) | 1 of 80 | 1.7 | one, 94×94 at score 0.63, on the face |
+| `blaze_face_full_range.tflite` (1,083,786 B) | 57 of 80 | 5.0 | 7 printed of 57: six on the face, 40–50 px square, scores 0.66–0.88; one, at 8.0 s (38×38, 0.58), on a bridge pillar, while that frame's real face (~15 px) is missed |
+
+Where the printed boxes sit was checked by re-decoding the same window with
+the same ffmpeg arguments (frames byte-identical to the script's input) and
+drawing the boxes on the frames.
+
+- **It ran on a Mac with Metal.** The dev sandbox on this same M1 Pro, where
+  `MTLCreateSystemDefaultDevice()` returns NULL, had aborted the whole
+  process with SIGABRT, exit 134, even on the CPU delegate
+  (`gl_context_nsgl.cc failed to create pixel format`, then a C++ `Check
+  failed: service_`). With Metal visible the log reads `GL version: 2.1 (2.1
+  Metal - 90.5), renderer: Apple M1 Pro` and `Created TensorFlow Lite
+  XNNPACK delegate for CPU`, and both models ran to the end. So the macOS
+  wheel needs a GL/Metal context even for CPU inference, and, by the sandbox
+  result, a process that cannot get one dies rather than raising an
+  exception (no VM or CI runner was run): run it in a child process
+  (`docs/CLIPS.md` §4.3). A Python parent sees that death as returncode −6;
+  a shell prints 134 (measured here with `os.abort()`).
+- **The Tasks `FaceDetector` accepts the full-range model.** MediaPipe's
+  Face Detector page lists it beside the short-range one (read 2026-10-05);
+  the plan's earlier "short range only" was the planner's reading, not the
+  page. On this footage the short-range model detects on 1 frame of 80 and
+  the full-range one on 57. Those are frames with a detection at score
+  ≥ 0.5, **neither recall nor precision**: at least one printed box is not
+  a face, and nobody has marked the footage, so how many of the 23 misses
+  hold a face is unknown.
+- **5 ms a frame, at 360×778 only.** BlazeFace's input is a fixed square, so
+  the cost should depend little on the analysed size beyond the copy and the
+  resize, but only one size was run; the plan's 640 px edge is unmeasured
+  (run the script at w=640 and w=1080). At 5 ms, a 10-minute clip at 5 fps
+  (3,000 frames) is about 15 s of detection on this Mac; decoding the same
+  ten minutes of 1080p30 is about 20–30 s by `docs/CLIPS.md` §4.2's synthetic
+  decode measurement (1.97 s a minute), not timed in this run.
+- **The stubs are enough for detection, not only for the import**: the
+  planning measurement had shown `import mediapipe` passing with the empty
+  stubs; this run shows detection working the same way, so the ~65 MB of
+  `opencv-contrib-python` and matplotlib need not be installed, and no real
+  `cv2` lands in the venv. The stubs must include `matplotlib/pyplot.py`:
+  `drawing_utils.py:20-21` imports both `cv2` and `matplotlib.pyplot`. pip
+  rejects `--no-deps` inside a requirements file (pip 26.1.2), so the
+  install is two pip runs (`docs/CLIPS.md` §4.3).
+- **Unmeasured still:** the Surface (no Metal; the Windows wheel on its own
+  CPU path), mediapipe 1.0.1 (the test ran 0.10.35), the worker's import and
+  start-up time, and recall and false boxes against hand marks on footage
+  with known faces.
