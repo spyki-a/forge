@@ -2821,3 +2821,34 @@ drawing the boxes on the frames.
   CPU path), mediapipe 1.0.1 (the test ran 0.10.35), the worker's import and
   start-up time, and recall and false boxes against hand marks on footage
   with known faces.
+
+## 38. The stacked two-up — two half crops stacked are the one crop, bit for bit (2026-10-05)
+
+Measured on the Mac's bundled ffmpeg (4.4, darwin-arm64) for
+`docs/CLIPS.md` §4.7, by the plan's review and again by its fixer. The
+source: `testsrc2=s=1920x1080:r=30`, 60 frames, stored as yuv420p FFV1.
+Outputs compared frame by frame with `-f framemd5` over **rawvideo**
+(`-c:v rawvideo`).
+
+| graph | against | result |
+|---|---|---|
+| `split=2[a][b];[a]crop=608:540:656:0[t];[b]crop=608:540:656:540[u];[t][u]vstack` | `crop=608:1080:656:0` | all 60 frames identical |
+| the same graph with each crop's `x` and `y` held as `if(lt(t,0.983333),<single>,<two-up>)` (frame 30's half-frame boundary at 30 fps, `docs/CLIPS.md` §3.2) | the single crop, and a static two-up at the second positions | frames 0–29 equal the single crop, 30–59 the static two-up; the first differing frame is 30 |
+| the keyed graph inside `-vf` (one input, one output, labels inside) | the same graph in `-filter_complex` | all 60 frames identical |
+
+- **So one graph serves both layouts**: every single shot of a two-up clip
+  keys the top half at (x, 0) and the bottom at (x, 540), which reassembles
+  the one crop exactly, and a cut switches layouts on its frame with the
+  same held keys. The two crops' sizes are literal, so the stack's output
+  size is fixed.
+- **Compare over rawvideo, not FFV1 packets.** Hashed as FFV1 output
+  instead, frames 30–35 of the keyed run differ from the static two-up's,
+  though the decoded pictures are the same: FFV1 carries its coding state
+  across its default 12-frame GOP, so the frames after the switch inside
+  the GOP that began with single-crop frames (24–35) encode differently.
+  The review found they match with `-g 1` as well.
+- **Windows 2018 build: dated, not run.** `crop`, `split` and `vstack` all
+  merged long before 2018-12-17 (crop 2010s, split about 2011, vstack
+  2015, as known, not re-read in the 2018 source). `docs/CLIPS.md` §4.9's
+  two-up rows run it in CI with step 1. Other frame rates (29.97, 60, VFR)
+  and the shape inside `buildRenderPlan`'s own chain are unmeasured.

@@ -4,7 +4,9 @@
 > piece agreed with the user on 2026-10-04/05: the reframe engine, caption
 > free space, the motion-graphics engine with the Director's third pass, Best
 > clips, B-roll, retrieved-fact cards with 3D templates, and creator styles,
-> in that order. It follows `PLAN.md`'s form. Each step gives what is wrong or
+> in that order, except that M0 (§3b), the transcript → Clip it half of
+> Best clips, now comes first, after §3.3's half day (revised below). It follows
+> `PLAN.md`'s form. Each step gives what is wrong or
 > what it is, the fix, the files, the shapes, the tests with their mutations,
 > the render check, the harness check with its census rows, and an exit bar.
 >
@@ -30,6 +32,19 @@
 > full-range model is accepted and reports a face on 57 of 80 frames where
 > the short-range one reports 1 (detections, not checked against marks), and
 > the detector recommendation in §16.1 changed with it.
+>
+> **Revised 2026-10-05 (evening) with the user's answers (§16):** this plan
+> before the beta; M0 taken first and redefined as the URL transcript →
+> Clip it flow (§3b); MediaPipe full range; the stacked two-up in step 1;
+> X cards become the user's own paste-only quote card and the capture
+> window is gone; Brave is out; pyautoflip recorded as a baseline. Every
+> item in §16 now ends with its answer line, and §2's days are recomputed
+> with each delta named. The stacked two-up's filter shape was measured on
+> the Mac's 4.4 build for this revision (§4.7); nothing else new was run.
+> A review of that revision re-ran the two-up (its rawvideo-versus-FFV1
+> caveat is now in §4.7 and `EFFECTS.md` §38) and re-fetched pyautoflip's
+> PyPI metadata, which caps it below Python 3.14 and lists torch among its
+> requirements (§4.1); the fixer repeated both.
 >
 > **Names.** The left panel the user calls the "sidecar" is the **Shelf**. In
 > this file **the Python helper** is the process in `sidecar/` (the code's
@@ -73,7 +88,9 @@ code composes and checks.** In this piece that means:
   stretch of transcript it cites.** A dropped graphic costs a note, never the
   clip.
 - **The 2B model has no browsing.** The app fetches, the model extracts.
-  Every card quotes something that was fetched and carries its source.
+  Every retrieved-fact card quotes something that was fetched and carries
+  its source; a social quote card carries only what the user typed, with
+  its attribution line (§8.4).
 - **Every download is the user's click**: B-roll, and every model that is
   not on disk (the face finder, BiRefNet 109 MB, Florence-2 275 MB,
   faster-whisper small 464 MB) and a link's audio. The button that starts
@@ -107,8 +124,8 @@ code composes and checks.** In this piece that means:
 | the moments engine | `render/moment.ts` (pure, seeded, `movingFrames`), `renderer/momentCanvas.ts` (live preview, bake, dispose), `threeShared.ts` (one renderer), `render/exportBake.ts` (`Bakers`; a drawn clip that cannot be drawn is **dropped**, `:130-144`, `:164-167`) | the graphics engine's rails, 2D and 3D |
 | 2D painters | `drawTextOnto` (`render/textPaint.ts:44`), `paperPaint.ts`; the fake-context test (`tests/textPaint.test.ts:20-47`) | 2D templates, testable in node |
 | caption styles | `Project.captions {styleId, overrides}` (`timeline.ts:44-50`), `resolveStyle` (`captions/style.ts:137-176`), the OUTPUT strip's presets (`OutputStrip.tsx:225-268`) | the model for the graphic style |
-| URL ingest | `buildYtDlpArgs` (`shared/ingest/args.ts:117-226`), `downloadMedia` (`src/main/ingest/download.ts`), `section.ts` (`PAD_MS` 10 s `:52`, `offsetIntoDownload` `:97`), `collectIngest` (`store.ts:4662-4747`, one undo), `IngestPanel.tsx` | Best clips' transcript and Clip it's ranged download |
-| keys | the Director's write-only path: `setDirectorSettings` (`src/main/director.ts:61-84`), `publicConfig` → `hasKey` (`director/provider.ts:82-98`), the IPC whitelist (`ipc.ts:830-848`), `redactKey` (`shared/voice/provider.ts:190`). Settings' "coming with Narration" rows (`SettingsPanel.tsx:276-280`) | the Pexels and Brave keys |
+| URL ingest | `buildYtDlpArgs` (`shared/ingest/args.ts:117-226`), `downloadMedia` (`src/main/ingest/download.ts`), `section.ts` (`PAD_MS` 10 s `:52`, `offsetIntoDownload` `:97`), `collectIngest` (`store.ts:4662-4747`, one undo), `IngestPanel.tsx` (its "Just a part of it" From/To fields, `:234-274`) | M0's transcript and Clip it's ranged download (§3b), which Best clips reuses |
+| keys | the Director's write-only path: `setDirectorSettings` (`src/main/director.ts:61-84`), `publicConfig` → `hasKey` (`director/provider.ts:82-98`), the IPC whitelist (`ipc.ts:830-848`), `redactKey` (`shared/voice/provider.ts:190`). Settings' "coming with Narration" rows (`SettingsPanel.tsx:276-280`) | the Pexels key |
 | consent | packs: the button is the ask, `Get · 57 MB` (`shared/assets/pack.ts:367`); the renderer picks an id and main picks the URL (`ipc.ts:588-601`) | the B-roll download flow |
 | the paste fix | `ed7ff0f`: a pasted self-drawn clip gets its own asset record (`edit/recipes.ts:277-284`) | a new self-drawn kind inherits it through `drawsItself` |
 
@@ -119,7 +136,8 @@ code composes and checks.** In this piece that means:
   filter also goes into `tests/oldestFfmpeg.test.ts`.
 - **Installed users have no Python** (BETA R4; `service.ts:26-35`;
   `electron-builder.yml` excludes `.venv`). Every capability must degrade.
-  Scene cuts, Best clips over YouTube's own captions, graphics and captions
+  Scene cuts, M0's transcript → Clip it and Best clips over YouTube's own
+  captions, graphics and captions
   **over a transcript that already exists** (a link's caption track), and
   B-roll need no Python. The creator's own footage has no transcript until
   Whisper makes one, and Whisper is Python, so for own footage captions and
@@ -145,76 +163,117 @@ code composes and checks.** In this piece that means:
 
 | step | what | days | needs | proves |
 |---|---|---|---|---|
-| **M0** (offered, §7.6) | transcript rows → **Clip it** on a timeline clip: row selection, `clipToRange`, `timelineFrameAt` | ~2, **moved** from 1f and step 4, not added | — | sheet 26 on the user's own footage, with no Python wherever a transcript exists |
-| **0** | the ground: R5's rotation-aware probe, held keys landing on their frame, `adelay` in samples, zoom keys on video, **the graph in a file**, the floor list, the helper's shared media code | 4.5 | — | the measured bugs under every later step are gone |
-| **P** (§3a) | **BETA R4's full route**: the app installs its own Python pack under `userData` | 5–10 (`BETA.md`'s 1–2 weeks) | — | every Python half below reaches an installed user |
-| **1** | the reframe engine: scene cuts in main, faces, a salient box, Florence-2 grounding, the crop path, the followed crop, "Reframe to 9:16" | 16 (1g Florence is 3 of them, gated by its own measurement) | 0; P for faces on an installed machine | a landscape talk becomes a 9:16 that follows its subject, frame-exact at every cut |
+| **0** | the ground: R5's rotation-aware probe, held keys landing on their frame, `adelay` in samples, zoom keys on video, **the graph in a file**, the floor list, the helper's shared media code | 4.5 | — | the measured bugs under every later step are gone, the three shipping ones (§3.2–3.4) first |
+| **M0** (§3b) | **the URL transcript → Clip it**: the link's own captions (no media, no model), rows of time and text, a run picked by click and shift-click or by two cut handles, chapter chips, the exact ranged download of exactly that run with its words and the link's credit, Add another clip; the start/end fields kept for a video with no captions; the timeline half (`clipToRange`, `timelineFrameAt`) | 7.5, **moved** from step 4 | §3.3 only (pulled ahead of it); the rest of step 0 follows | sheets 25–26: a link becomes the clip the user picked by its words, with no Python |
+| **P** (§3a) | **BETA R4's full route**: the app installs its own Python pack under `userData` | 5–10 (`BETA.md` R4's 5 to 10 days) | — | every Python half below reaches an installed user |
+| **1** | the reframe engine: scene cuts in main, faces (MediaPipe), a salient box, Florence-2 grounding, the crop path with the stacked two-up, the followed crop, "Reframe to 9:16" | 17.5 (1g Florence is 3 of them, gated by its own measurement; 18 if the Surface run fails and YuNet's decoder is built) | 0; P for faces on an installed machine | a landscape talk becomes a 9:16 that follows its subject, frame-exact at every cut, and two people too far apart share the frame |
 | **2** | caption free space | 2.5 | 1 | captions stay off faces, stable within a shot |
 | **3** | the graphics engine (six 2D templates), the graphic style, the Director's third pass with its validator | 14.5 | 2 for placement (degrades to the style's third without it) | a spoken number becomes a counter that lands on the word, and nothing unsaid is ever drawn |
-| **4** | Best clips in the URL tile; transcript → Clip it (sheet 26) | 11 (9 if M0 was taken) | 1–3 (each optional at run time) | a link becomes three clip cards and a 9:16 clip with captions |
-| **5** | B-roll: the Pexels key, five sources, cards, the X capture, credits, the person rule | 15.5 | 3 (cards are templates) | pictures arrive licensed, credited, and only by click |
-| **6** | retrieved-fact cards with the Brave key and its cap; the 3D templates | 8 | 3, 5 | facts from outside, with their sources; three.js graphics |
+| **4** | Best clips in the URL tile: windows, signals, the model's pick, three cards, Clip it from a card | 3.5 (M0 took 7.5 of its 11) | M0; 1–3 (each optional at run time) | a link becomes three clip cards and a 9:16 clip with captions |
+| **5** | B-roll: the Pexels key, the sources, the social quote card, credits, the person rule | 14 | 3 (cards are templates) | pictures arrive licensed, credited, and only by click |
+| **6** | retrieved-fact cards (Wikipedia, page, answer-with-sources over fetched text); the 3D templates | 7 | 3, 5 | facts from outside, with their sources; three.js graphics |
 | **7** | creator styles and saved templates | 4.5 | 3; **`MARKET.md` Stage 0** (below) | toward `MARKET.md` Stage 1 |
 
-**About 76.5 working days (76 on §16.1's recommended route, which drops
-YuNet's decoder), plus Step P's 5–10: 82–87 days, sixteen to seventeen
-weeks, honestly counted.** What the review added, so the number can
-be checked: step 0 +0.5 (the graph in a file, §3.7); step 1 +2 (shots' own
-runner +0.5, YuNet's hand decoder +0.5, the followed crop compiled at read
-time +0.5, releasing the helper's sessions +0.5); step 3 +1.5 (the binding
-validator, negators, fixed titles, the painter's contract, ASR proposals);
-step 4 +1.5 (json3 word ends and segment caps, the exact-cut measurement and
-its real yt-dlp test, Clip it into its own project); step 5 +1.5 (the person
-rule from Commons' depicts and the face check, the credits' licence links and
-Done line; the Brave row moved to step 6); step 6 +1 (Brave's monthly cap and
-its key in `safeStorage`). **These dates are conditional on "your part"
-below**: step 1a cannot run until its clips and marks exist. If §16.1 takes
-MediaPipe outright, step 1 is half a day shorter (no YuNet decoder) and 1a
-needs the ten clips with their cut marks and about 100 face marks for the
-sanity check (§4.1), not 300.
+**About 75.5 working days, plus Step P's 5–10: about 80.5–85.5 days,
+sixteen to seventeen weeks, honestly counted.**
+
+The arithmetic, so it can be checked. **The first draft's total was 76.5**,
+with what the review added: step 0 +0.5 (the graph in a file, §3.7); step 1
++2 (shots' own runner +0.5, YuNet's hand decoder +0.5, the followed crop
+compiled at read time +0.5, releasing the helper's sessions +0.5); step 3
++1.5 (the binding validator, negators, fixed titles, the painter's contract,
+ASR proposals); step 4 +1.5 (json3 word ends and segment caps, the exact-cut
+measurement and its real yt-dlp test, Clip it into its own project); step 5
++1.5 (the person rule from Commons' depicts and the face check, the credits'
+licence links and Done line; the Brave row moved to step 6); step 6 +1
+(Brave's monthly cap and its key in `safeStorage`; both gone now, below).
+**The user's answers (2026-10-05, evening) then moved:**
+
+| delta | from → to | why |
+|---|---|---|
+| M0 +7.5, step 4 −7.5 | M0 ~2 (moved, never added) → 7.5; step 4 11 → 3.5 | M0 redefined as the URL half of step 4 plus the timeline half, built first (§3b, §16.26). Net 0 |
+| step 1 +2 | 16 → 18 | the stacked two-up (§4.6 rule 3, §4.7; §16.3): 1e +0.5, 1f +1, §4.9's checks +0.5 |
+| step 1 −0.5 | 18 → 17.5 | MediaPipe decided (§16.1), so YuNet's hand decoder is not built (1c 2.5 → 2) |
+| step 5 −2 +0.5 | 15.5 → 14 | the X capture window (2) removed; the social quote card and its Surprise me (0.5) added (§8.4, §16.18) |
+| step 6 −1 | 8 → 7 | Brave out: its key, cap and `safeStorage` (1) gone (§9, §16.16) |
+
+1f keeps its first-draft days although M0 now builds `timelineFrameAt`
+(§3b.6). The first draft never itemised that share, so it stays in 1f as
+slack rather than being moved.
+
+| step | 0 | M0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | **total** |
+|---|---|---|---|---|---|---|---|---|---|---|
+| before the answers | 4.5 | (2, inside 4) | 16 | 2.5 | 14.5 | 11 | 15.5 | 8 | 4.5 | **76.5** |
+| after | 4.5 | 7.5 | 17.5 | 2.5 | 14.5 | 3.5 | 14 | 7 | 4.5 | **75.5** |
+
+76.5 + (7.5 − 7.5) + 2 − 0.5 − 2 + 0.5 − 1 = 75.5. With Step P's 5–10,
+80.5–85.5 days.
+If the Surface run fails and YuNet's decoder is built after all, add 0.5.
+
+**These dates are conditional on "your part" below**: step 1a cannot run
+until its clips and marks exist. With MediaPipe decided, 1a needs the ten
+clips with their cut marks and about 100 face marks for the sanity check
+(§4.1), not 300.
 
 It is achievable because each step ships on its own. What each milestone
-gives **an installed user**, with and without Step P:
+gives **an installed user**, with and without Step P, in the order they are
+built:
 
-- **M0 (~2, if taken):** select transcript rows, Clip it. Needs a transcript:
-  a link's captions with no Python; Whisper, so Python, for own footage.
-- **M1, steps 0–2 without 1g (~20 days):** with P, "Reframe to 9:16" follows
-  the subject and captions dodge faces. **Without P it shows nothing new**:
-  the shots are found but every crop is the centre, which is today's
-  `solveCrop`, and Smart placement and Follow the subject are greyed with
-  "needs the AI helper". So M1 does not reach an installer before P.
+- **§3.3 comes first (half a day), then M0.** You asked for M0 first. The
+  one step-0 item M0 stands on is §3.3: at 30 fps, every clip appended at a
+  frame not divisible by 3 starts a third of a millisecond off (16 samples
+  at 48 kHz), the rounding §3.3 measured as a click on a split; on an
+  appended join the click is unmeasured, so that half-day fix is pulled
+  ahead of M0 as its own commit. The rest of step 0 (4 days) follows M0 and
+  comes before step 1, which stands on §3.2 and §3.7; so all three shipping
+  bugs are still fixed before the beta.
+- **M0 (~7.5): the first thing useful with no Python at all.** Paste a link,
+  Get transcript, pick a run by its words, Clip it; the clip lands with its
+  transcript and the link's credit, and Add another clip repeats it. Needs
+  the video's own caption track; a video without one keeps today's start
+  and end fields, and with P gets Listen to it. The timeline half works on
+  any clip with a transcript (a link's at once; own footage's is Whisper's,
+  so Python).
+- **M1, steps 1–2 without 1g (~17 days: 14.5 + 2.5):** with P, "Reframe to
+  9:16" follows the subject, stacks two people who will not fit one crop,
+  and captions dodge faces. **Without P it shows nothing new**: the shots
+  are found but every crop is the centre, which is today's `solveCrop`, and
+  Smart placement and Follow the subject are greyed with "needs the AI
+  helper". So M1 does not reach an installer before P.
 - **M2, step 3 (~14.5):** graphics on spoken numbers. Without P: over a
   link's caption track only, and no `callout` (it needs a face box).
-- **M3, step 4 (~11):** Best clips from a link. **The first milestone that
-  is useful without Python**: YouTube's captions, centred crops, captions,
+- **M3, step 4 (~3.5):** Best clips from a link: three cards, each clipped
+  through M0's path. Without P: YouTube's captions, centred crops, captions,
   graphics.
-- **M4, step 5 (~15.5):** B-roll. No Python needed; without the helper, the
-  face check that clears a picture of people cannot run, so every candidate
-  that might show one asks (§8.6).
-- **M5, steps 1g, 6 and 7 (~15.5).**
+- **M4, step 5 (~14):** B-roll and the social quote card. No Python needed;
+  without the helper, the face check that clears a picture of people cannot
+  run, so every candidate that might show one asks (§8.6).
+- **M5, steps 1g, 6 and 7 (~14.5: 3 + 7 + 4.5).**
 
-Florence-2 (1g) can slip behind M3 without blocking anything, because the
-salient box (1d) covers the no-face shot until then.
+4.5 + 7.5 + 17 + 14.5 + 3.5 + 14 + 14.5 = 75.5. Florence-2 (1g) can slip
+behind M3 without blocking anything, because the salient box (1d) covers the
+no-face shot until then.
 
-**Where this sits against the beta.** `BETA.md` puts a closed beta about
-three weeks away (R1–R12 are 13–15 working days, R13 and R14 after), with
-only R2.6 done. So:
+**Where this sits against the beta.** You decided (2026-10-05): "will finish
+this and will get back to the beta". **This plan comes first**, then
+`BETA.md` R1–R12, R13 and R14. So:
 
-- **§3.2–3.4 are beta blockers, not plan steps.** They are bugs in features
-  that ship today (every split clicks, zoom keys freeze or slow a video,
-  held keys land a frame late), and `BETA.md`'s "nothing embarrassing" rule
-  covers them. They belong in `BETA.md` R2 now, as R5 is already shared
-  (§3.1). That is an edit to `BETA.md`, made when you agree (decision
-  §16.25); the days are counted once, here.
-- **`BETA.md` R4 still says the full route is "Not for the beta"**
-  (`BETA.md:142-143`), while `SHEETS.md:806-809` records your decision that
-  the installed app sets Python up itself and that "the beta plan's R4
-  changes accordingly". This plan makes the full route Step P. `BETA.md` R4
-  is edited to match when you confirm (decision §16.25).
-- **The order, outright:** beta R1–R12 (with §3.2–3.4 in R2) → the rest of
-  step 0 → M0 if you take it → M1, built while Step P is built, and shipped
-  only with P → M2 → M3 → beta.2 (`BETA.md` R14) → M4 → M5. Steps 5–7
-  (about 28 days) are after the beta on any reading.
+- **§3.2–3.4 are beta blockers**, bugs in features that ship today (every
+  split clicks, zoom keys freeze or slow a video, held keys land a frame
+  late), and `BETA.md`'s "nothing embarrassing" rule covers them. They are
+  now listed in `BETA.md` R2 as items 7–9 (edited 2026-10-05, §16.25), and
+  they are built here, in step 0, so they are fixed before the beta
+  resumes; the days are counted once, here. R5 is shared the same way
+  (§3.1), so it too is done before R1 starts.
+- **`BETA.md` R4 used to say the full route was "Not for the beta"**, while
+  `SHEETS.md:806-809` records your decision that the installed app sets
+  Python up itself and that "the beta plan's R4 changes accordingly". R4 now
+  points here (edited 2026-10-05, §16.25): the full route is Step P, built
+  inside this plan.
+- **The order, outright:** §3.3 → M0 → the rest of step 0 → M1, built
+  while Step P is built, and shipped only with P → M2 → M3 → M4 → M5 →
+  `BETA.md` R1–R12 → R13 → R14 (beta.2). Steps 5–7 (about 25.5 days now) are no longer after the
+  beta: they come before it with the rest.
 - **Step 7 is gated on `MARKET.md` Stage 0** (`MARKET.md:94-103`): Phase C
   measured and finished (it is paused), and a music library with
   redistribution rights or the `filler-supplies` policy alone for paid
@@ -223,30 +282,34 @@ only R2.6 done. So:
 ### Your part — what gates the dates
 
 None of these can be done by the planner or committed from third-party
-speech. Asked for on **day 0**, so step 0 runs while they are collected.
+speech. Asked for on **day 0**, so M0 and step 0 run while they are
+collected.
 
 | item | roughly | gates |
 |---|---|---|
 | ten landscape clips (interview, two-person podcast, speech, product demo, wedding toast, two of each), with a `cuts.json` of hand-marked cut times | 3–4 h | 1a's threshold; step 1's exit |
-| face marks: ~300 hand-marked frames (30 per clip) **only if the YuNet comparison is run**; otherwise ~100 (10 per clip) as a sanity check of MediaPipe's boxes, counting false boxes as well as misses | 3–5 h, or ~1 h | 1a's sanity check, or its detector choice if the comparison is run (§16.1) |
-| the detector run on the Surface (the Mac MediaPipe run is done, 2026-10-05, §4.1); if §16.1 runs the YuNet comparison, it runs on the ten clips on both machines (neither MediaPipe nor Electron runs in the dev sandbox) | 30 min, or 1–2 h with the comparison | 1a, then 1c |
-| a ten-second clip of yourself as the face fixture (§16.5) | 15 min | 1c's integration tests |
+| face marks: ~100 hand-marked frames (10 per clip) as a sanity check of MediaPipe's boxes, counting false boxes as well as misses (the ~300 for a YuNet comparison are not needed: §16.1 is answered) | ~1 h | 1a's sanity check |
+| the detector run on the Surface (the Mac MediaPipe run is done, 2026-10-05, §4.1; neither MediaPipe nor Electron runs in the dev sandbox) | 30 min | 1a, then 1c |
+| the face fixture (§16.5): **recorded 2026-10-05**, `references/recordings/face-fixture-2026-10-05.mov`, 26.6 s (`REFERENCES.md`) | done | 1c's integration tests |
 | the Florence-2 int8 download (275 MB) and its timing on the Mac and the Surface | 1 h | 1g's gate |
+| pyautoflip run on the ten clips on your Mac (a scratch venv on Python 3.13 or older, since it refuses 3.14, with an ffmpeg on `PATH`; its MediaPipe would likely abort in the dev sandbox as the face detector did, §4.1 — unmeasured), and its output rated beside ours (§4.1) | ~1 h | step 1's exit |
 | the helper's peak memory per capability on the Surface (§12.1) | 1 h | the floor-machine bar |
 | ten graphics fixtures with truth labels (six English, two Telugu, two Hindi), your own speech or text you wrote | 4–6 h | step 3's eval and exit |
-| three YouTube videos for ASR timing against Whisper, and three with unpunctuated ASR tracks (one Hindi or Telugu) | 1 h | §7.2, before §7.3 |
+| three YouTube videos for ASR timing against Whisper, and three with unpunctuated ASR tracks (one Hindi or Telugu) | 1 h | §7.2: the unpunctuated three inside M0, the timing three by step 4's exit |
+| ten links for M0 (talks and podcasts, two in Hindi or Telugu, at least one with no caption track), each with a run you select and clip | 1 h | M0's exit (§3b) |
 | ten Best clips links, and rating their cards | 3 h | step 4's exit |
-| the exact-cut measurement on the Surface, if CI cannot run yt-dlp (§7.1) | 30 min | §16.13 |
+| the exact-cut measurement on the Surface, if CI cannot run yt-dlp (§7.1) | 30 min | §16.13, inside M0 |
 | reading Pexels' licence and API guidelines in a browser (Cloudflare blocks the sandbox) | 30 min | 8.3 |
-| reading X's developer agreement and policy beyond the display rules (the display rules are now read, §8.4) | 30 min | 8.4 |
-| reading Brave's Terms §3 | 30 min | step 6's search card |
-| signing up for Pexels (free) and Brave (a card on file) | 20 min | 8.3, step 6 |
-| the X capture measurement under `npm run dev` on the Mac and the Surface | 1 h | 8.4 |
+| signing up for Pexels (free) | 10 min | 8.3 |
 | Clip it end to end on the Surface | 1 h | step 4's exit, the floor-machine bar |
 
-**About 19–22 hours in all on §16.1's recommended route, 22–28 with the
-YuNet comparison, spread over the plan.** The first five rows are needed
-before step 1 can finish; M1's date moves with them.
+**About 19–22 hours in all, spread over the plan.** Against the first
+draft's 19–22 on the recommended route: the X developer agreement (30 min),
+Brave's Terms §3 (30 min), Brave's sign-up (10 of the 20 min) and the X
+capture measurement (1 h) are gone, −2.2 h; pyautoflip's run and rating
+(~1 h) and M0's ten links (1 h, which M0's new exit bar needs) are added,
++2 h. The first six rows are needed before step 1 can finish; M1's date
+moves with them.
 
 Every step ends the same way: typecheck green; the full suite green (output
 written to a file, `$?` checked; `CLAUDE.md`); the render check's output in
@@ -258,10 +321,14 @@ updated for every new control.
 
 ## 3. Step 0 — The ground under it · 4.5 days
 
+**Order (2026-10-05):** §3.3 is built first of all, before M0 (§3b), as its
+own commit; the other six items follow M0 and come before step 1.
+
 Six measured bugs and three pieces of plumbing that every later step stands
 on. Each is small and ships on its own commit. **§3.2–3.4 are bugs in what
-ships today, and belong in `BETA.md` R2** (§2); they are written here because
-the reframe stands on them.
+ships today, and are listed in `BETA.md` R2 as items 7–9** (§2, edited
+2026-10-05); they are written and built here, first, because the reframe
+and M0 stand on them and this plan now runs before the beta.
 
 ### 3.1 R5 — the rotation-aware probe · 1.5 days (`BETA.md` R5, pulled forward)
 
@@ -383,7 +450,8 @@ Mutations: `d=clip.duration` again (frozen frame); the leading `fps=` dropped
 - `client.ts` sets `FORGE_CACHE_DIR = userData/cache`. Today parallax bakes
   default to `~/.cache/forge/parallax` (measured: 264 MB, never evicted),
   against `SIDECAR.md`'s own rule. New caches (face tracks) must not repeat
-  that. What happens to the old 264 MB is decision §16.24.
+  that. The old 264 MB stays where it is (your decision, §16.24); nothing
+  in step 0 reads or removes it.
 
 ### 3.6 The helper's shared media code — `sidecar/forge_sidecar/media.py` · half a day
 
@@ -476,18 +544,18 @@ on Windows (that run is the measurement for §3.3, §3.4 and §3.7 there).
 packaged app spawns a bare interpreter, because `.venv` is excluded. Every
 Python half of this plan (faces, salient, ground, Whisper for own footage
 and for links without captions) reaches no installed user until this lands.
-`BETA.md` R4 calls the full route "later" and "Not for the beta"
-(`BETA.md:142-143`); you decided otherwise (`SHEETS.md:806-809`), and this
-step is that decision, scheduled.
+`BETA.md` R4 called the full route "later" and "Not for the beta"; you
+decided otherwise (`SHEETS.md:806-809`), R4 now points here (edited
+2026-10-05, §16.25), and this step is that decision, scheduled.
 
 **What it is**, as `BETA.md` R4 sketches it: a Python pack the app installs
-under `userData` (300 MB or more, 1–2 weeks by that estimate), from
+under `userData` (300 MB or more, 5 to 10 days by that estimate), from
 `requirements.txt` plus the optional files this plan adds (§12). Its own
 download button with its size (§0's click rule), its own progress, a
 version, and a repair path.
 
-**Its details are `BETA.md` R4's to write** when you confirm the edit there
-(§16.25). This plan holds only the bar: **no step's Python half is shipped
+**Its details are written here when the step begins**, since `BETA.md` R4
+now points to this section (§16.25). This plan holds the bar now: **no step's Python half is shipped
 in an installer until P is in it**, and every Python control is greyed with
 "needs the AI helper" before then, never offered as a control that changes
 nothing (§12).
@@ -497,7 +565,306 @@ the pack from the app and pass the twelve helper tests from inside it.
 
 ---
 
-## 4. Step 1 — The reframe engine · 16 days (1a 1 · 1b 1.5 · 1c 2.5 · 1d 0.5 · 1e 2 · 1f 3.5 · 1g 3 · releasing the helper's sessions 0.5 · §4.9's checks 1.5; 15.5 without YuNet's decoder)
+## 3b. M0 — Transcript → Clip it · 7.5 days (moved from step 4; built first, after §3.3's half day)
+
+**What it is.** Sheets 25 and 26 (`SHEETS.md:682-722`) as you described
+them on 2026-10-05: "get the transcript using same ytdlp transcript only and
+then the same will appear on UI so the user will select text or like a
+trimmer start and end togglers at the time stamps so we only take those time
+stamps and as usual we download those clips only". In the URL tile: paste a
+link, **Get transcript**, and the panel shows rows of `time | text`. You
+pick a run of words, by click and shift-click or by dragging a **start** and
+an **end** cut handle along the rows, and **Clip it** downloads exactly that
+run's span, with its words and the link's credit. **Add another clip** keeps
+the transcript on screen and does it again. Chapter chips pick a chapter's
+rows. The start and end fields of sheet 12 stay, for a video with no
+captions. The timeline half (sheet 26 on your own footage) is §7.6's,
+moved here unchanged.
+
+**Why first.** You called sheet 26 "the most important feature … first among
+the three" (`SHEETS.md:715-717`), and none of it needs Python: the
+transcript is YouTube's own caption track, fetched by yt-dlp with no media,
+no key and no model. It needs nothing from steps 1–3. It is built **first**,
+as you asked, with one piece of step 0 pulled ahead of it: §3.3's half day,
+because a clip appended at 30 fps on a frame not divisible by 3 starts at a
+fractional millisecond, which §3.3's rounding moves by a third of a
+millisecond (measured there as a click on a split; on an appended join,
+unmeasured). The rest of step 0 follows M0.
+
+**The days, from the sub-estimates of the step they came from:**
+
+| piece | days | written in |
+|---|---|---|
+| metadata and the captions runner in main, `ingest:meta` / `ingest:captions` with their marks, `removePartials` fixed | 1 | §7.1 |
+| json3 → `Transcript` (the word-end cap, the danda, the segment caps), `shiftTranscript`, and the three-track measurement before the parser is final | 1.5 | §7.2 |
+| the rows, the two cut handles, the run's duration, the chapter chips | 1.5 | below |
+| Clip it: the exact ranged download, collect with the shifted transcript and the link's credit in one undo, Add another clip, the time-field rule, the no-caption notice and Listen to it | 1 | below |
+| the timeline half: row selection in the Transcript tile, `clipToRange`, `placeAssetRange`, `timelineFrameAt` | 1.5 | §7.6, moved here |
+| tests and render checks, the exact cut's cross-correlation with the real yt-dlp included | 1 | §7.7 |
+| **M0** | **7.5** | step 4: 11 → 3.5 |
+
+The first draft's M0 was "~2" for the timeline half alone, row component
+included. That row component is now built once for both tiles, on the rows
+line above, so the timeline half is 1.5 here. Step 4's 11 days were never
+itemised; this is the split, and step 4 keeps Best clips proper (§7).
+
+### 3b.1 (a) Get transcript — §7.1 and §7.2, built here
+
+- **Metadata first**: `buildMetaArgs(url)` (§7.1's measured subset, 1.68 s
+  live): title, duration, language, chapters, heatmap, and `channel`,
+  `uploader` and `webpage_url`, which were **not yet printed in a
+  measurement**; that print is M0's first task (§15 row 15).
+- **Captions only**: `buildCaptionArgs(url, keys, dir, key)`, §7.1's
+  measured shape (`--skip-download --no-simulate --write-subs
+  --write-auto-subs --sub-langs <explicit keys> --sub-format json3`, the
+  `after_video` print). Keyless, no media, no model. Explicit language keys,
+  never `.*`: a regex pulls auto-translated tracks (measured).
+- **Parsed** by `parseJson3` (§7.2): word starts from `tStartMs +
+  tOffsetMs`, word ends estimated (json3 has none), confidence `null`, the
+  danda, segments capped at 30 words or 15 s. **The three unpunctuated
+  tracks are segmented before the parser is final** (§7.2).
+- **Which track**: `-orig` timing with the uploader's text where both exist
+  (§16.12, taken as recommended).
+- The URL transcript lives in the renderer's `urlSource` slice, with main's
+  caption file kept under `userData/url/<linkKey>/` as the reload cache
+  (§7.2).
+
+### 3b.2 (b) The rows, and the two ways to pick a run
+
+`src/renderer/src/components/tools/TranscriptRows.tsx`, **one component for
+both tiles** (the URL tile's transcript, and a timeline clip's in the
+Transcript tile). A row is a capped segment (`capSegments(t.segments, 30,
+15000)`, §7.2): its start as `m:ss`, then its words. A run is a **word**
+range, so both ways of picking set the same thing:
+
+- **click and shift-click**: a click picks a row's words; a shift-click on
+  another row extends the run to cover it; a shift-click on a word extends
+  the run to that word;
+- **the cut handles** (sheet 26's "cut ↕", your "trimmer start and end
+  togglers at the time stamps"): a **Start** and an **End** handle in the
+  rows' gutter, dragged along the rows. Start snaps to a word's start, End
+  to a word's end, and neither passes the other.
+
+Under the rows, the run's span and length: "0:42 selected".
+
+```ts
+// src/shared/edit/wordRun.ts — pure
+export interface WordRun { from: number; to: number }                 // word indices of one Transcript, inclusive
+export function rowsOf(t: Transcript): { startMs: number; words: [number, number]; text: string }[]   // over capSegments(t.segments, 30, 15000)
+export function runFromRows(t: Transcript, a: number, b: number): WordRun   // click a row, shift-click another
+export function extendRun(run: WordRun, word: number): WordRun             // shift-click a word
+export function snapHandle(t: Transcript, which: 'start' | 'end', ms: number, run: WordRun): WordRun   // Start → a word's start, End → a word's end, clamped so from ≤ to
+export function runOfChapter(t: Transcript, ch: { start_time: number; end_time: number }): WordRun | null   // seconds, as yt-dlp prints them; words whose START lies in [start, end)
+export function runRange(t: Transcript, run: WordRun): { startMs: number; endMs: number }
+//  first word's start → last word's end as §7.2 estimates it, which never reaches the next word's start;
+//  extended to MIN_RANGE_MS (1 s) when shorter — the media only; the collected transcript keeps exactly the run's words (§3b.4) —
+//  which moves to section.ts from IngestPanel.tsx:36; sectionPlan reads a zero-length range as the whole video
+```
+
+### 3b.3 (c) Chapter chips
+
+From the metadata's `chapters` (`[{start_time, end_time, title}]`, 12 on the
+test video, §7.1). A chip picks `runOfChapter`, the rows inside it, so a
+chapter is clipped by the same Clip it ("anyway we have the chapter
+downloader as we get the metadata of the video"). On a video with no
+captions a chip sets the start and end fields instead
+(`setIngest({useRange, startMs, endMs})`).
+
+### 3b.4 (d) Clip it, and (e) Add another clip
+
+- **The download is the existing ranged one**: `startIngest` with a request
+  override `{range: runRange(…), exact}` (`store.ts:1060-1090` takes only
+  `get().ingest` today), so `sectionPlan` (`section.ts:59`) emits
+  `--download-sections` with `--force-keyframes-at-cuts` for an exact cut
+  (`section.ts:72-74`) through our ffmpeg (`--ffmpeg-location`,
+  `args.ts:156`). The exact/fast toggle stays. Today it defaults to fast
+  (`store.ts:1055`, `exact: false`). Clip it from a run defaults to exact,
+  as §16.13 leans, through its request override, and the plain ranged
+  ingest keeps its fast default. §16.13 stays **open until the exact cut
+  is cross-correlated** (§7.1; this step's exit). If that measurement
+  refuses the exact cut on either build, Clip it's default becomes fast,
+  with `offsetIntoDownload` as its head offset.
+- **Collect** (§7.5 step 2, built here): `pendingIngests[jobId]` gains
+  `transcriptFrom: {linkKey, captionPath, range, run}`, and `collectIngest`
+  writes `project.transcripts[asset.id] = shiftTranscript(…)` (head offset 0
+  for an exact cut, `offsetIntoDownload(range)` for a fast one, `section.ts:97`),
+  and `shiftTranscript` keeps exactly words `run.from..run.to`, so a run
+  extended to `MIN_RANGE_MS` collects no neighbour; and it writes
+  `asset.credit` of source `'link'`, `"<title> — <channel>,
+  <webpage_url>"` (§8.5), inside its begin/commit (`store.ts:4691-4723`).
+  **One undo step: asset, clip, trim, transcript, credit.** If the
+  `urlSource` slice is gone (a Cmd+R mid-download), collect re-parses the
+  caption file at `captionPath` rather than landing a clip without its
+  words. `MediaAsset.credit` and the `AssetCredit` type (§8.3) arrive here,
+  with source `'link'` only; step 5 adds the rest. Until step 5's Credits
+  block, the credit shows in the pool tile's tooltip (`MediaPool.tsx:219`).
+- **Where it lands**: as today's ingest places a clip, in this project, the
+  aspect unchanged. The new-project question of §7.5 step 0 comes with step
+  4's cards, three separate shorts, where it is needed (§16.29).
+- **Add another clip** keeps the transcript on screen, clears the run, and
+  lets the next one be picked. **One job per range**: several
+  `--download-sections` in one job all write `<stem>.%(ext)s` (measured in
+  simulate, §7.1), and `takeLine` keeps only the last mark
+  (`download.ts:240`). The `downloads`
+  queue runs two at a time (`ipc.ts:207`), and each job collects with its own
+  shifted transcript.
+
+### 3b.5 (f) The start and end fields stay, and (g) captions at once
+
+- **The fields of sheet 12 are not removed** ("Just a part of it", From and
+  To, `IngestPanel.tsx:234-274`). With a caption track loaded they **mirror
+  the picked run, read-only**, with "set by the words you picked", so the
+  numbers are there for whoever wants them. With no caption track they are
+  how a range is set, exactly as today.
+- **A video with no caption track says so**: "This video has no captions".
+  It offers **Listen to it · downloads the audio (~N MB) and the speech model
+  (464 MB, first time)**, N from the metadata's duration and the audio
+  format's bitrate (§7.5's button, built here): an audio-only download that
+  is not placed, transcribed by path (the reel's `lyrics:` precedent,
+  `store.ts:2112`), whose words then fill the rows. **Without the AI helper
+  the button is greyed with "needs the AI helper"**, which is every
+  installed machine until Step P (§3a, §12).
+- **Captions at once.** The clip's transcript is YouTube's, so no Python is
+  needed: Clip it's done row offers **Captions on**, which switches the
+  project's captions on over it in the current style.
+- **No reframe and no graphics in M0.** They attach to Clip it as steps 1–3
+  land (§7.5 steps 3–5), and Best clips' cards (step 4) clip through this
+  same path.
+
+### 3b.6 (h) The timeline half — §7.6, moved here
+
+`TranscriptPanel.tsx` takes `TranscriptRows` with the same selection: click
+and shift-click, and the handles. **Clip it** on a timeline clip is
+`clipToRange(project, clipId, startMs, endMs)` in `src/shared/edit/clipIt.ts`,
+pure: the clip's in-point and duration are trimmed to the run, mapped with
+`timelineFrameAt` (built here, a binary search over the monotone
+`sourceFrameFor`; 1f reuses it, §4.7), so speed is honoured.
+TranscriptPanel's own mapping ignores speed (`:32-47`); it moves onto the
+same function. For an asset not yet on the timeline, `placeAssetRange(assetId,
+startMs, endMs)` (begin → `addAssetToTimeline` → set in-point and duration →
+commit, beside `trimToRequestedRange`, `section.ts:116-131`).
+
+### 3b.7 Files
+
+- `src/shared/ingest/args.ts`, `src/main/ingest/meta.ts`, the IPC and
+  `removePartials` (§7.1); `src/shared/ingest/captions.ts` and
+  `src/shared/transcript.ts`'s danda, optional cap and `capSegments` (§7.2).
+- New: `src/shared/edit/wordRun.ts`, `src/shared/edit/clipIt.ts`,
+  `src/renderer/src/components/tools/TranscriptRows.tsx`,
+  `src/renderer/src/harness/clipItCheck.ts`.
+- `src/shared/ingest/section.ts` gains `MIN_RANGE_MS` (from
+  `IngestPanel.tsx:36`); `src/shared/timeline.ts` gains `timelineFrameAt`
+  and `MediaAsset.credit`.
+- `IngestPanel.tsx`: Get transcript, the rows, the chips, Clip it, Add
+  another clip, the time-field rule, the notice, Listen to it.
+  `TranscriptPanel.tsx`: the rows and Clip it.
+- The store: the `urlSource` slice; `getTranscript`, `clipItFromLink(run)`,
+  `addAnotherClip()`, `listenToLink()`; `startIngest`'s request override;
+  `pendingIngests[jobId].transcriptFrom`; `collectIngest`'s transcript and
+  credit; `placeAssetRange`.
+- Preload and `harness/bridge.ts`: `ingestMeta`, `ingestCaptions`, with
+  deterministic stubs.
+
+### 3b.8 Tests, render check, harness, census
+
+- **§7.7's transcript and Clip it tests land here, with their mutations**:
+  `tests/ingestArgs.test.ts`, `tests/ingestCaptions.test.ts`,
+  `tests/integration/ingestCaptions.int.test.ts`,
+  `tests/integration/exactCut.int.test.ts` (the real yt-dlp),
+  `tests/clipIt.test.ts` (its `clipToRange` and `placeAssetRange` cases;
+  the project-question case comes with step 4), and the render check
+  `tests/integration/clipIt.int.test.ts`.
+- `tests/wordRun.test.ts`:
+  - **click and shift-click, and the handles, over the same words give the
+    same run and the same range** (a property over random runs on random
+    transcripts);
+  - Start snaps to a word's start and End to a word's end; neither passes
+    the other;
+  - a chapter picks exactly the words whose start lies in `[start, end)`:
+    the fixture has a word starting exactly at `start_time` (picked) and
+    one exactly at `end_time` (not);
+  - the range never reaches the next unpicked word's start unless the run
+    is under `MIN_RANGE_MS`; such a run is extended to it, and its
+    collected transcript still holds only the run's words.
+
+  Mutations, each failing its own case: the chapter's end inclusive (the
+  `end_time` word is picked); the range's end padded past the next word's
+  start; the handles snapping to rows instead of words (the word-level case
+  fails); `shiftTranscript` filtering by range instead of run (the one-word
+  run's clip gains its neighbour).
+- `tests/clipIt.test.ts` gains:
+  - **Add another clip starts one job per range**, each argv holding
+    exactly one `--download-sections` (counted with `filter`, not
+    `indexOf`). Mutation: two ranges batched into one job;
+  - collect with `transcriptFrom` writes the asset, clip, transcript and
+    credit **in one undo step**: one undo removes all four (membership over
+    what the undo removes). Mutation: the transcript written in a second
+    `update()`;
+  - the credit is source `'link'` with the channel and `webpage_url`.
+    Mutation: the credit dropped.
+- `tests/renderer/ingestPanel.test.tsx` (component):
+  - with a caption track, From and To are read-only and equal the run's
+    range, and stay equal when the run changes;
+  - with none, they are editable as today, "This video has no captions"
+    shows, and Listen to it is greyed with "needs the AI helper" when the
+    bridge reports no helper;
+  - Add another clip keeps the rows and clears the run;
+  - Get transcript failing (the bridge's `ingestCaptions` rejects, offline)
+    says so, and From and To stay editable as today.
+
+  Mutations: the fields left editable with a transcript (a typed value then
+  differs from the run); Add another clip clearing the transcript; Listen
+  to it enabled without the helper; the fields left read-only after a
+  failed fetch.
+- **The render check** is §7.7's `clipIt.int.test.ts`, into
+  `tests/output/clipit/`: a local lossless clip with a synthetic
+  transcript, "downloaded" as an exact range by the fake yt-dlp, collected
+  with its shifted transcript, exported with captions. **Each caption
+  line's first frame is within one frame of its word**, read by the
+  caption's appearance. Mutation: the shift off by the range's start.
+  **And the exact cut itself** is `exactCut.int.test.ts` with the real
+  yt-dlp over a localhost server, in Windows CI (§7.7).
+- **Harness check** `harness/clipItCheck.ts` (`window.__forgeClipItCheck`):
+  the bridge stubs `ingestMeta` and `ingestCaptions` (12 rows, three
+  chapters). The check picks rows 3–5 by click and shift-click and reads the
+  range; clears; drags the handles to the same words and expects the same
+  range; presses a chapter chip and expects its rows; presses Clip it and
+  sees the stubbed job's request carry exactly that range; presses Add
+  another clip and sees the rows kept and the run cleared, picks rows 8–9,
+  presses Clip it, and sees a second job whose argv holds only that range
+  (one `--download-sections`, counted with `filter`); then the no-caption stub shows the
+  editable fields, the notice and Listen to it greyed. Then the Transcript
+  tile: rows picked on a timeline clip at speed 2, Clip it, the clip's
+  in-point and duration as `clipToRange` says.
+- **Census rows** (`tests/fixtures/ui-census.json`, each with its `needs`
+  recipe): "Get transcript", "Start", "End", "selected", a chapter chip,
+  "Clip it", "Add another clip", "set by the words you picked", "This video
+  has no captions", "Listen to it", "needs the AI helper", "Captions on",
+  and the Transcript tile's row-selection hint.
+
+### 3b.9 Exit
+
+- **Ten links you choose** (talks and podcasts, two in Hindi or Telugu, at
+  least one with no caption track): on every link with captions, the run
+  you picked lands as a clip whose words begin with the run's first word and
+  end with its last, nothing outside it, with captions on; Add another clip
+  on one link gives a second clip with its own words; **the no-caption link
+  shows the start and end fields, "This video has no captions" and Listen
+  to it** (greyed without the helper).
+- The render check: captions within one frame of their word on the exact
+  cut, on both builds.
+- The exact cut's first frame cross-correlated against its source
+  (`exactCut.int.test.ts` in CI, or the Surface, §15 row 14), and §16.13
+  decided on that number.
+- The three unpunctuated tracks segmented and the grapheme estimate set
+  (§7.2, §15 row 13), and the metadata subset's `channel` and `webpage_url`
+  printed (§15 row 15).
+- Typecheck green, the suite green (written to a file, `$?` checked), the
+  mutations killed, CI read, `WHERE-THINGS-ARE.md` and the census updated.
+
+---
+
+## 4. Step 1 — The reframe engine · 17.5 days (1a 1 · 1b 1.5 · 1c 2 · 1d 0.5 · 1e 2.5 · 1f 4.5 · 1g 3 · releasing the helper's sessions 0.5 · §4.9's checks 2; the stacked two-up is +2 of it, in 1e, 1f and the checks; 18 if the Surface run fails and YuNet's decoder is built)
 
 **What is missing.** Sheet 14's deciding half. Nothing works out *where* the
 interesting part of the frame is, so a landscape video on a 9:16 canvas is
@@ -514,17 +881,25 @@ blurred copy. A 16:9 frame in a 9:16 ad keeps 31.6 % of the picture, below
    named subject such as "the product" (§4.5).
 4. **A crop path** of one box per shot that pans only when the subject leaves
    it (§4.6), applied as **ordinary clip edits through the existing crop
-   solver**: one crop size per clip, with the free axis keyed (§4.7).
+   solver**: one crop size per clip, with the free axis keyed (§4.7). Two
+   people too far apart for one box get a **stacked two-up**: two
+   half-height boxes, one face each, one above the other (§4.6 rule 3).
 
-**Not MediaPipe AutoFlip** (a C++ graph, no wheel). **Not `cropdetect`**
-(black bars only).
+**Not Google's MediaPipe AutoFlip** (a C++ graph; Google ships no wheel for
+it). **Not `pyautoflip` either**, though it exists: a community Python
+reimplementation on PyPI, which writes a rendered video file rather than a
+crop path the timeline can hold. It is run once in 1a as a baseline to
+compare ours against, never shipped (§4.1, §17). **Not `cropdetect`** (black
+bars only).
 
 ### 4.1 1a — Measure first · 1 day
 
 Two things the plan cannot be finished without. Both are run on the user's
 machine, outside the sandbox. Results go to `EFFECTS.md` §37.
 
-**The face detector, on real footage.** The agreed detector is MediaPipe.
+**The face detector, on real footage.** The agreed detector is MediaPipe,
+and your answer to §16.1 (2026-10-05, "media pipe is good") settles it:
+the full-range model, installed the stub way, with YuNet as the fallback.
 Three costs were measured in the sandbox since that was agreed (the weight,
 the `cv2` clash, a process abort) and one question was open (whether the
 full-range model is accepted). Then **the user ran the test on their own
@@ -590,13 +965,19 @@ addition and uses the same download path as depth. **But its decoder is not
 free**: the reference wrapper in that repo is `cv2.FaceDetectorYN`
 (`yunet.py:10`, `:22`, read by the review), so on onnxruntime the 2023mar
 model's multi-stride cls / obj / bbox / kps outputs need prior decoding and
-NMS written by hand in numpy (§4.3). The comparison below runs YuNet
+NMS written by hand in numpy (§4.3). A comparison would run YuNet
 **through that hand decoder, not through cv2**; a decode bug would otherwise
-look like poor recall in the comparison, if §16.1 runs it.
+look like poor recall. YuNet is OpenCV's own small DNN face model
+(published in the OpenCV Zoo as `face_detection_yunet`, not inside the
+`cv2` wheel; `cv2.FaceDetectorYN` is its wrapper), so it is "the OpenCV
+one" asked about in §16.1. The Haar cascades the `cv2` wheel does ship are
+OpenCV's older detector, not considered.
 
-**If the comparison is run** (§16.1), it runs both on the user's ten clips,
-at 5 fps and a 640 px long side (YuNet through the hand decoder, so 1a waits on its first half day from
-1c), and records five things:
+**The comparison is not run** (§16.1 answered 2026-10-05). It is kept here
+as the record of what it would have measured, and is what runs if the
+Surface run fails and YuNet becomes the detector: both on the user's ten
+clips, at 5 fps and a 640 px long side (YuNet through the hand decoder, so
+1a would wait on its first half day from 1c), recording five things:
 
 - recall on faces ≥ 40 px and ≥ 20 px tall, against the user's hand marks
   on 30 frames per clip;
@@ -614,14 +995,14 @@ ffmpeg, the source and a scratch venv under `/tmp`, which is not kept. So
 **for the Surface run it is committed as `sidecar/scripts/facetest.py`**,
 taking the ffmpeg, the source and the two `.tflite` paths as arguments, with
 its venv recipe beside it (§4.3's two pip runs, and the stubs first on
-`PYTHONPATH`); the Surface run uses the win32-x64 ffmpeg. **If §16.1 takes
-MediaPipe's full-range model outright**, the comparison is not run: 1a keeps
-the scene-threshold measurement and a sanity check of MediaPipe's boxes on
-ten frames per clip (about 100 marks, an hour), counting false boxes as well
-as misses, YuNet's decoder is not built (1c is half a day shorter), and
-YuNet stays the fallback if the Surface run fails. The choice is decision
-§16.1. The rest of this step is written so that the detector is
-one module (`faces.py`) behind one contract (§4.3).
+`PYTHONPATH`); the Surface run uses the win32-x64 ffmpeg. **§16.1 took
+MediaPipe's full-range model outright**, so the comparison is not run: 1a
+keeps the scene-threshold measurement and a sanity check of MediaPipe's
+boxes on ten frames per clip (about 100 marks, an hour), counting false
+boxes as well as misses, YuNet's decoder is not built (1c is 2 days, not
+2.5), and YuNet stays the fallback if the Surface run fails. The rest of
+this step is written so that the detector is one module (`faces.py`) behind
+one contract (§4.3).
 
 **The scene threshold, on footage with known cuts.** No footage in the repo
 has hard cuts. The three reference recordings are continuous takes with
@@ -629,6 +1010,38 @@ treatments, and the 60 s check is synthetic. The user supplies the ten clips
 with a `cuts.json` of hand-marked cut times. Precision and recall are measured
 at T = 0.2 / 0.3 / 0.4 / 0.5 on the rgb24 path (§4.2), with the minimum shot
 length at 0.3 / 0.5 / 1.0 s.
+
+**The baseline: `pyautoflip`, run once, never shipped.** Google's AutoFlip
+has no wheel, but a community Python reimplementation does exist (fetched
+2026-10-05 from PyPI's JSON and the GitHub README): `pyautoflip` 0.2.1,
+uploaded 2026-03-27 (0.1.0 on 2025-06-23), MIT, 23 stars, by AhmedHisham1
+(`github.com/AhmedHisham1/pyautoflip`). It requires Python `>=3.10,<3.14`
+(its README says only "3.10+"; PyPI's metadata and its `pyproject.toml`
+cap it below 3.14, so the dev venv's CPython 3.14.6 cannot install it).
+Its requirements are `opencv-python>=4.11.0.86`, `numpy>=1.24.0`,
+`scikit-learn>=1.6.1`, `pillow>=10.0.0`, `tqdm>=4.65.0`,
+`scenedetect>=0.6.6`, `insightface>=0.7.3`, `onnxruntime>=1.21.0`,
+`mediapipe>=0.10.21`, `tensorboardx>=2.6.4`, `tensorboard>=2.20.0`,
+`torchvision>=0.26.0`, `torch>=2.11.0`, `scipy>=1.15.3`,
+`scikit-image>=0.25.2` and `matplotlib>=3.10.7` (PyPI JSON for 0.2.1,
+re-fetched 2026-10-05 by the review and again by the fixer), and its README
+asks for a system FFmpeg. Its API is `reframe_video(input_path, output_path,
+target_aspect_ratio="9:16")`, which **writes a video file**. It detects with
+InsightFace faces plus MediaPipe objects, or a UNISAL saliency ONNX model;
+finds cuts with PySceneDetect; smooths per scene in three classes
+(STATIONARY, PANNING, TRACKING); and **splits the screen when its subjects
+are too far apart**, which is the precedent for §4.6 rule 3's stacked
+two-up. Why it is not used is in §17. What it is used for: in 1a, in a
+scratch venv on your Mac (Python 3.13 or older; its MediaPipe is expected
+to abort without Metal, as the face detector did; unmeasured), it reframes
+the same ten clips once, and at step 1's exit you rate its output beside
+ours (§4.10). Both ratings go into `EFFECTS.md`: the question is "is ours
+at least as good as the free tool". Its venv is never the helper's, and
+nothing of it ships. Its face path downloads InsightFace's pretrained
+models, which InsightFace licenses for non-commercial research only (its
+README, read 2026-10-05 by the review; the code is MIT). So the run stays a
+local one-off: none of its weights, outputs or frames enter the repo, a
+fixture or a build, only the two ratings.
 
 ### 4.2 1b — Shots, in main — `src/main/ffmpeg/shots.ts` · 1.5 days
 
@@ -691,7 +1104,7 @@ gains what an analysis needs and a render never did (`src/main/ffmpeg/run.ts`):
 `parseSceneLog` over the lines. An AbortSignal cancels through
 `killProcess`.
 
-### 4.3 1c — Faces — `sidecar/forge_sidecar/capabilities/faces.py` · 2.5 days
+### 4.3 1c — Faces — `sidecar/forge_sidecar/capabilities/faces.py` · 2 days (2.5 if the YuNet fallback's decoder is built)
 
 Its own module and its own `OPTIONAL` row, `(("vision.faces",), "faces")`.
 **Never in `vision.py`**: a missing mediapipe must not take `vision.measure`,
@@ -727,7 +1140,7 @@ The track goes to disk, not over the pipe: 10 minutes at 5 fps is 3,000
 samples (`protocol.ts:11-15`). Frames come from `media.iter_frames`, with
 progress every 10 frames (`'finding faces'`) and a cancel check per frame.
 
-**If MediaPipe is chosen** (§16.1 now recommends it):
+**MediaPipe, as decided** (§16.1, answered 2026-10-05):
 
 - It runs in a **child process** (`python -m forge_sidecar.workers.mp_faces`)
   that reads the ffmpeg pipe itself and writes the track. `faces.py` relays
@@ -772,9 +1185,9 @@ progress every 10 frames (`'finding faces'`) and a cancel check per frame.
   The stubs are tied to the pinned version: a mediapipe upgrade re-runs the
   import test in §4.9's `faces.int.test.ts`.
 
-**If YuNet is chosen:** no worker and no new requirement, but **half a day
-for its decoder**, built first if 1a's comparison is run, and otherwise only
-if the Surface run fails. It uses
+**YuNet, the fallback, only if the Surface run fails:** no worker and no new
+requirement, but **half a day for its decoder**, built only then (the
+comparison is not run, §4.1). It uses
 `media.download` from `opencv/face_detection_yunet` at a pinned revision, ORT
 `CPUExecutionProvider`, and threads at cpu/2, as depth does
 (`depth.py:129-151`). The 2023mar model's outputs are per-stride cls, obj,
@@ -881,7 +1294,7 @@ started only by the Get press above, shows byte progress through
 **unmeasured** (int8 weights are 275 MB; activations unknown) and is 1g's
 gate's second number.
 
-### 4.6 1e — The crop path — `src/shared/reframe/path.ts` · 2 days
+### 4.6 1e — The crop path — `src/shared/reframe/path.ts` · 2.5 days (+0.5 for the two-up)
 
 Pure. The rules, with constants named so tests and the eval can hold them:
 
@@ -917,21 +1330,27 @@ export const PATH_RULES = {
   maxSpeed: 1.0,        // crop lengths per second — a longer move takes longer
   minHoldMs: 1000,      // between two moves
   bothShare: 0.6,       // two faces together on ≥ 60 % of a shot's samples = a two-shot
-  staticShare: 0.9      // the subject inside the held crop on ≥ 90 % of samples = no pan at all
+  staticShare: 0.9,     // the subject inside the held crop on ≥ 90 % of samples = no pan at all
+  twoUpFaceY: 0.4       // a two-up half places its face's centre this far down the half
 } as const
 export interface ShotCrop {
   startMs: number; endMs: number
   at: number                                       // the held position on the free axis, source px
   pans: { fromMs: number; toMs: number; to: number }[]
-  why: 'face' | 'both' | 'larger' | 'ground' | 'salient' | 'centre'
+  why: 'face' | 'both' | 'two-up' | 'larger' | 'ground' | 'salient' | 'centre'
+  /** why 'two-up' only: each half's top-left in source px, `half`-sized; top = the face further left in the source */
+  halves?: { top: { x: number; y: number; pans: { fromMs: number; toMs: number; to: number }[] }; bottom: { x: number; y: number; pans: { fromMs: number; toMs: number; to: number }[] } }
 }
 export interface CropPath {
   axis: 'x' | 'y'                                  // x for landscape → portrait/square; y for portrait → landscape
   size: { width: number; height: number }          // ONE size for the clip: full height (or width) at the target aspect, even, safeCrop'd
+  half: { width: number; height: number }          // size.width × even(size.height / 2): each two-up half. 1920×1080 → 9:16: size 608×1080, half 608×540 (≈ 9:8)
   shots: ShotCrop[]
   notes: string[]
 }
-export function cropPath(track: SubjectTrack, target: Size, offsets?: Record<number, number>): CropPath
+export function cropPath(track: SubjectTrack, target: Size,
+                         follow?: { offsets?: Record<number, number>; halfOffsets?: Record<number, HalfOffsets>; twoUp?: boolean }): CropPath
+export interface HalfOffsets { top?: { x: number; y: number }; bottom?: { x: number; y: number } }   // shares of each axis the user dragged
 ```
 
 **The rules, in order, per shot:**
@@ -940,19 +1359,38 @@ export function cropPath(track: SubjectTrack, target: Size, offsets?: Record<num
    Measured: `w='608+100*t'` fails with "Error when evaluating the
    expression". So every shot shares one size, `fitRect`'s full height at the
    target aspect through `safeCrop`, and only the free axis moves. A per-shot
-   zoom is out (§17).
+   zoom is out (§17). A two-up shot (rule 3) uses `half` for both its crops,
+   also one literal size for the clip, and keys y as well as x (§4.7).
 2. **Which subject.** The faces in the shot's samples, if ≥ 20 % of samples
    hold one. Otherwise `ground` (a phrase was given and Florence answered),
    then `salient`, then the centre (`solveCrop`'s position), with `why` saying
    which.
 3. **Two people.** If the two largest faces are together on ≥ `bothShare` of
-   the samples and their union, plus the margin, fits inside the crop's
-   width, the crop centres on the union (`both`). Otherwise it frames the
-   face with the larger median area (`larger`), with a note naming the shot.
+   the samples:
+   - and their union, plus the margin, fits inside the crop's width, the
+     crop centres on the union (`both`);
+   - **otherwise the shot is a stacked two-up** (`two-up`; §16.3, answered
+     2026-10-05): the output frame is split into a top and a bottom half,
+     each a face-centred crop of the same source at the half's aspect, on
+     the grid's rails. For a 1080×1920 canvas each half is 1080×960 (9:8);
+     from a 1920×1080 source each half's crop is `half`, 608×540. The face
+     further left in the source goes on top. Each half centres its face on x
+     and puts the face's centre `twoUpFaceY` down the half, clamped; it is
+     held for the shot and pans on x by rule 5 for its own face. pyautoflip
+     splits the screen in the same case (§4.1), which is the sign that
+     clippers expect it.
+
+   If the two are together on fewer than `bothShare` of the samples (one is
+   lost for much of the shot), the crop frames the face with the larger
+   median area (`larger`), with a note naming the shot. **`larger` now
+   remains only for a face lost**, for a portrait source going to 16:9
+   (below), or when the clip's `follow.twoUp` is
+   false (the dock's **Stack two people**, on by default, §4.8). The two-up
+   runs on the x axis only (a landscape source to a portrait or square
+   canvas); a portrait source going to 16:9 keeps `larger`.
    **Cutting to whoever is speaking needs to know who is speaking, and
    nothing here measures that**: no diarization, and face landmarks do not
-   show a moving mouth. A stacked two-up (both faces, one above the other, on
-   the grid's rails) is decision §16.3.
+   show a moving mouth.
 4. **Static first.** The held position centres the smoothed subject over the
    shot's first second. If the subject's box, widened by the margin, stays
    inside that crop on ≥ `staticShare` of the samples, the shot has no pan.
@@ -969,13 +1407,15 @@ export function cropPath(track: SubjectTrack, target: Size, offsets?: Record<num
    The preview rounds to even as well, so the two never disagree by the one
    pixel that would otherwise show on a slow pan.
 8. **A hand correction survives.** `offsets[shotStartMs]` is a share of the
-   free axis that the user dragged (§4.7). It is added after the solve, so
-   switching aspect keeps the correction's intent rather than its pixels.
+   free axis that the user dragged (§4.7); on a two-up shot,
+   `halfOffsets[shotStartMs].top` or `.bottom` is a share of each axis for
+   the half that was dragged. It is added after the solve, so switching
+   aspect keeps the correction's intent rather than its pixels.
 
 For a portrait source going to 16:9 the same rules run on y, with the face
 placed at the upper third rather than centred.
 
-### 4.7 1f — Applying it: the followed crop, `setAspect`, the action · 3.5 days
+### 4.7 1f — Applying it: the followed crop, `setAspect`, the action · 4.5 days (+1 for the two-up)
 
 **Expressed as a crop that follows on one clip, not as splits** (decision
 §16.2, with the alternative). Both were measured:
@@ -1026,16 +1466,18 @@ forgets (decision §16.2).
 **The pieces:**
 
 - `src/shared/reframe/keys.ts`:
-  `followKeys(project, clip, fps): { crop: CropRect; cropX?: Keyframe[]; cropY?: Keyframe[]; notes: string[] } | null`,
+  `followKeys(project, clip, fps): { crop: CropRect; cropX?: Keyframe[]; cropY?: Keyframe[]; halves?: HalfKeys; notes: string[] } | null`,
   pure and memoised on (track key and version, `follow`, in-point, duration,
   speed, ramp, fps, canvas aspect). It runs `cropPath` (§4.6), then at each
   shot boundary inside the clip's window writes a **held** key on the cut's
   timeline frame; each pan becomes two eased keys. Source ms go to a
-  clip-relative frame through `timelineFrameAt(clip, sourceMs)`, a new
-  inverse in `timeline.ts` by binary search over the monotone
-  `sourceFrameFor`, so constant speed and ramps both work. Holds have no
-  mapping and are refused with a note. `null` when the clip has no `follow`
-  or its track is refused (§3.1's size check).
+  clip-relative frame through `timelineFrameAt(clip, sourceMs)`, the
+  inverse M0 adds to `timeline.ts` (§3b.6) by binary search over the
+  monotone `sourceFrameFor`, so constant speed and ramps both work. Holds
+  have no mapping and are refused with a note. `null` when the clip has no
+  `follow` or its track is refused (§3.1's size check). `halves`
+  (`{ top: { x: Keyframe[]; y: Keyframe[] }; bottom: { x: Keyframe[]; y: Keyframe[] } }`)
+  is present only when the clip's path holds a two-up shot (below).
 - `render/keyframes.ts:35-49`: `KeyedProperty` gains `'cropX' | 'cropY'` (in
   SOURCE pixels) **for the compiler's type only**. They stay out of
   `KEYED_PROPERTIES` (`:64`), so neither `Keyframes.tsx:59` nor
@@ -1046,14 +1488,64 @@ forgets (decision §16.2).
   `x='max(0,min(${keyframeExpression(follow.cropX, {durationFrames, fps, startSeconds: 0, fallback: crop.x, precision: 0})},in_w-out_w))'`.
   `w`/`h` stay literal, so `streamSize` (`:1030-1034`) is unaffected. The
   parallax call site (`:1064`) takes no keys: reframe is footage only.
-- `render/crop.ts`: `cropAt(project, clip, source, frame): CropRect`, the one
-  reader every consumer of a crop calls:
+- **The stacked two-up in the render** (§4.6 rule 3). For a clip whose
+  path holds any two-up shot, `cropFilter` returns, in place of the one
+  crop, one input split into two crops with their own keyed `x` **and** `y`,
+  stacked:
+  `split=2[r${i}a][r${i}b];[r${i}a]crop=w='min(${half.width},in_w)':h='min(${half.height},in_h)':x='…top x…':y='…top y…'[r${i}t];[r${i}b]crop=…bottom…[r${i}u];[r${i}t][r${i}u]vstack`.
+  Labels are clip-indexed, as the chroma key's `split=3[kp${i}]…` already is
+  (`plan.ts:1263`). **Every single shot in that clip keys the top half at
+  (x, 0) and the bottom at (x, `half.height`)**, which reassembles the
+  single crop exactly, so one graph serves both layouts and a cut switches
+  them with the same held keys. The stack's output is `size` (608×1080 from
+  1920×1080), and both crops' sizes are literal, so `streamSize` and
+  everything after the crop (the camera move, the fit, `fps=`) are
+  unchanged; for that, a two-up clip's `size.height` is evened to a multiple
+  of 4 so the two halves add up to it. A clip with no two-up shot keeps the
+  one crop. **Measured for this revision** on the Mac's 4.4 build
+  (2026-10-05; a 1920×1080 `testsrc2` source stored as yuv420p FFV1, 30
+  fps, 60 frames; outputs compared by `framemd5` over **rawvideo**. Hashed
+  as FFV1 packets instead, frames 30–35 of the keyed run differ from the
+  static two-up, because FFV1 carries its coding state across the default
+  12-frame GOP from the single-crop frames before the switch; with rawvideo
+  or `-g 1` they match. Re-measured by the review, and again by the fixer,
+  rawvideo and FFV1 both; `EFFECTS.md` §38):
+  - the split, two 608×540 crops at (656, 0) and (656, 540), and `vstack`
+    are **bit-identical, frame by frame, to `crop=608:1080:656:0`**;
+  - with both crops' `x` and `y` keyed as held `if(lt(t,0.983333),…)` (frame
+    30's half-frame boundary at 30 fps, §3.2), frames 0–29 matched the single
+    crop and frames 30–59 matched a static two-up, bit for bit;
+  - the same shape inside a `-vf` (one input, one output, labels inside)
+    ran and matched the static two-up's frames.
+
+  **Dated, not measured:** the 2018 Windows build (`crop` 2010s, `split`
+  about 2011, `vstack` merged 2015, §13), other frame rates (§4.9's check
+  runs 29.97, 60 and VFR), and the shape inside `buildRenderPlan`'s own
+  chain.
+- **The two-up in the preview**: the same `<video>` element drawn twice. On
+  a two-up frame, the Preview draws the element's top-half source rectangle
+  into the top of a `size`-shaped offscreen canvas and the bottom-half
+  rectangle into the bottom (two `drawImage` calls, as the one crop is one
+  today, `Preview.tsx:1698-1700`), then draws that canvas on through the
+  path a single crop takes, so the camera move and the fit see the stacked
+  frame the export's chain sees after `vstack`. **The Source outline shows
+  both rectangles.**
+- **The two-up in the footage pre-pass: one pull of the stacked frame**, not
+  two. The same split, crops and `vstack` go into the pull's `-vf` where the
+  one crop goes (measured above to run inside `-vf`), so a moment over a
+  two-up shot gets exactly the frame the render draws, and
+  `FootageRequest` carries the halves' keys beside `cropX`/`cropY`.
+- `render/crop.ts`: `cropAt(project, clip, source, frame): { crop: CropRect; halves?: { top: CropRect; bottom: CropRect } }`,
+  the one reader every consumer of a crop calls. A consumer that cannot draw
+  two rectangles (the strips effect) takes `crop`, the top half's position
+  at `size`, with a note. The consumers:
   - the preview's output and its Source outline (`Preview.tsx:1102-1106`,
     `:1374`, `:1435`);
   - the moments' `shotPicture` (`moment.ts:400`);
   - the strips effect (`automation/strips.ts:207`);
   - the Inspector line (`Inspector.tsx:147-148`), which says "Follows the
-    subject · N shots" instead of a rectangle.
+    subject · N shots" instead of a rectangle (and "· M stacked" when a
+    two-up is among them).
 - **The footage pre-pass does NOT follow by itself** (the first draft said
   it did). `momentFrameArgs` applies `cropFilter` after
   `trim=start_frame=${req.first}…,setpts=PTS-STARTPTS`
@@ -1065,8 +1557,9 @@ forgets (decision §16.2).
   - the crop moves **ahead of** the `tpad…,trim…,setpts` in the pull's
     `-vf`, right after the retime, which is the render's own order (crop
     after retime);
-  - `FootageRequest` gains `cropX`/`cropY` (the compiled keys) and
-    `momentFramesKey` includes them; `PULL_VERSION` 5 → 6 (`:98`);
+  - `FootageRequest` gains `cropX`/`cropY` (the compiled keys) and, for a
+    two-up clip, the halves' keys, and `momentFramesKey` includes them all;
+    `PULL_VERSION` 5 → 6 (`:98`);
   - **`reframeClip`'s update calls `rebakeGenerated`**, so moments already
     baked over the clip re-pull with the followed crop rather than keeping
     the centred one.
@@ -1075,9 +1568,9 @@ forgets (decision §16.2).
   about 5 frames (`Preview.tsx:116`), from the playhead before it is
   re-seeked, and a cut must change on the frame the element shows.
   Unmeasured in the harness until §4.9's check runs.
-- `Clip.follow?: { phrase?: string; offsets?: Record<number, number>; version: number }`
+- `Clip.follow?: { phrase?: string; offsets?: Record<number, number>; halfOffsets?: Record<number, HalfOffsets>; twoUp?: boolean; version: number }`
   (`timeline.ts`, beside `crop`). It marks a clip whose crop follows
-  `Project.subjects[assetId]`.
+  `Project.subjects[assetId]`. `twoUp` absent means on.
 - **`setAspect`** (`store.ts:1387`): a clip with `follow` and a valid track
   keeps `follow`, and its stored `crop` becomes `followKeys`' size at the new
   aspect with the first shot's position, so a consumer that does not know
@@ -1087,8 +1580,14 @@ forgets (decision §16.2).
 - **CropOverlay** (`CropOverlay.tsx:62-67`, `:107`): on a followed clip a
   drag moves the shot under the playhead. It records
   `follow.offsets[shotStartMs]` as a share of the free axis; the next read
-  re-solves. That is one undo entry (begin/commit), as today. **Unfollow**
-  (in the dock) removes `follow` and leaves the crop at the playhead static.
+  re-solves. **On a two-up shot the drag moves the half it starts in**: on
+  the Source outline, the rectangle under the pointer; on the Output view,
+  the top or bottom half of the frame. It records
+  `follow.halfOffsets[shotStartMs].top` or `.bottom`, a share of each axis,
+  and the other half stays where it is. That is one undo entry
+  (begin/commit), as today. **Unfollow** (in the dock) removes `follow` and
+  leaves the crop at the playhead static (on a two-up frame, the top half's
+  position at `size`).
 
 **The action, the job, the IPC:**
 
@@ -1115,7 +1614,7 @@ ipcMain.handle('reframe:collect', ({ jobId }) => SubjectTrack)      // PULLED, s
 - **The Director.** At `apply2.ts:179-181`, a footage slot with a subject
   track uses the followed crop instead of `BACKDROP_KEEP`'s blurred copy.
 
-### 4.8 The UI · inside the 3.5 days of 1f
+### 4.8 The UI · inside the 4.5 days of 1f
 
 Where it goes, per `WHERE-THINGS-ARE.md`:
 
@@ -1149,16 +1648,19 @@ Where it goes, per `WHERE-THINGS-ARE.md`:
   subject · gets the face finder, 1.1 MB, first time"** (0.2 MB if YuNet) while the model is
   not on disk, and is greyed with "needs the AI helper" without Python;
   **Follow:** with a phrase field ("a face" by default, or "the cake";
-  Florence only, so greyed with its reason until 1g); the shot count; the notes ("shot 4: two people too far
-  apart, framing the nearer").
+  Florence only, so greyed with its reason until 1g); **Stack two people**
+  (on by default; off sets `follow.twoUp: false`, and a two-up shot frames
+  the larger face instead, §4.6 rule 3); the shot count; the notes ("shot 4:
+  two people too far apart, stacked"; "shot 6: one face lost, framing the
+  larger").
 - **The job row** in the EXPORT strip's list: "Finding the subject · <name>",
   with its bar and its cancel.
 - **Census rows** in `tests/fixtures/ui-census.json`, each label counted on
   screen by a `needs` recipe in `harness/census.ts` (a landscape video on a
   9:16 canvas; a followed clip selected; a missing model): "Landscape video
   on a 9:16 canvas", "Reframe to 9:16", "Follow the subject", "Unfollow",
-  "Follow:", "Finding the subject", "needs the AI helper", "Get the subject
-  model", "Find subjects without faces".
+  "Follow:", "Stack two people", "Finding the subject", "needs the AI
+  helper", "Get the subject model", "Find subjects without faces".
 - `tests/reframeOffer.test.ts`: a landscape video on 9:16 fires; a followed
   one does not; a landscape video in the pool but not on the timeline does
   not; with landscape photos AND a landscape talk on 9:16, the chip shown is
@@ -1200,15 +1702,23 @@ Where it goes, per `WHERE-THINGS-ARE.md`:
   - a static subject gives no pans;
   - a 0.3 s excursion gives no pan; a 0.8 s one gives one;
   - the speed cap and the minimum hold;
-  - both faces fitting give `both`; too far apart gives `larger` with a note;
+  - both faces fitting give `both`; **too far apart gives `two-up`**, the
+    face further left on top, both halves `half`-sized, each face centred on
+    x and `twoUpFaceY` down its half; **a lost face gives `larger`** with a
+    note (two faces together on fewer than `bothShare` of the samples); with
+    `twoUp: false`, too far apart gives `larger`;
   - no faces gives `salient`, then `centre`; `ground` beats `salient`;
-  - one size, even, inside the frame;
-  - an offset survives an aspect change;
+  - one size, even, inside the frame; on a two-up clip, `size.height` a
+    multiple of 4 and `half` exactly half of it;
+  - an offset survives an aspect change; a half's offset moves only that
+    half;
   - the same input gives the same output.
 
   Mutations, each killed by a named case: dead zone 0 (static); trigger
   ignored (excursion); the union not checked against the width (too far
-  apart); a size per shot (one size).
+  apart); a size per shot (one size); **the two-up taken when one face is
+  lost** (the lost-face case); the halves' order by size instead of by side
+  (the left-on-top case, whose left face is the smaller).
 - `tests/reframeKeys.test.ts`:
   - `followKeys` puts a held key ON each cut's frame;
   - `timelineFrameAt` inverts `sourceFrameFor` at speed 1, 2 and 0.5 and
@@ -1216,10 +1726,14 @@ Where it goes, per `WHERE-THINGS-ARE.md`:
   - **after each ordinary edit, a held key is still on each cut's frame**:
     `withClipSpeed` to 2 and 0.5, a ramp edit, `convertFrameRate` 30 → 25 →
     30, a head trim, and a split (each half checked);
-  - a hold is refused.
+  - a hold is refused;
+  - on a two-up clip, every single shot keys the top half at (x, 0) and the
+    bottom at (x, `half.height`), and the halves' keys are held on each cut's
+    frame like the one crop's.
 
   Mutations: the key at cut − 1; the memo key without `speed` (the speed-2
-  case reads the speed-1 keys and fails).
+  case reads the speed-1 keys and fails); a single shot's bottom half keyed
+  at y 0.
 - `tests/integration/reframe.int.test.ts`, **the render check**, into
   `tests/output/reframe/`:
   - **The media**, made in the test: a 1920×1080 clip whose top strip
@@ -1250,11 +1764,25 @@ Where it goes, per `WHERE-THINGS-ARE.md`:
   - **A moment over the followed clip, whose window spans a cut**, is
     baked through the footage pre-pass; its frames match the render's frame
     beneath (mean difference ≤ 2/255).
+  - **A two-up shot, frame-exact at its cuts, both halves read by the
+    barcode.** For it the media's barcode strip is repeated every 270 rows,
+    and a vertical strip carrying each row band's Gray code the same way is
+    repeated every 256 columns, so every 608×540 half holds at least one of
+    each and its x **and** y are read off its own pixels.
+    The hand-built track gives shot 4 two faces at x 0.2 and 0.8. Frame
+    cut − 1 is the single crop; frame cut shows the top half at the left
+    face's crop and the bottom half at the right face's, each within ±8 px
+    on both axes, with shot 4's identity colour in both. A single shot
+    inside the two-up clip matches the same shot rendered from a clip with
+    no two-up (mean difference ≤ 1/255; the shape alone is bit-identical,
+    measured, §4.7). And a moment whose window spans the two-up's first cut
+    matches the render beneath it through the one stacked pull.
 
   Mutations: §3.2 reverted (the 30 fps cut at frame ≡ 2 mod 3 shows the old
   identity colour); keys compiled with `startSeconds` = the clip's start;
   keyed on `n`; the pre-pass's crop left after its `trim` (the moment
-  spanning the cut shows the clip's opening crop).
+  spanning the cut shows the clip's opening crop); **the bottom crop given
+  the top's keys** (the bottom half's barcode reads the left face's x).
 - `tests/integration/faces.int.test.ts` (and `salient`, `ground`):
   - Each skips without a venv. The gate becomes one helper,
     `tests/integration/venv.ts`, which also knows `.venv/Scripts/python.exe`,
@@ -1266,7 +1794,7 @@ Where it goes, per `WHERE-THINGS-ARE.md`:
     probes 640×360 coded and decodes 360×640) and assert the boxes are in
     the upright frame. Mutation: decode at the probed sides.
   - Cancellation mid-pass leaves no ffmpeg child.
-  - **If §16.1 takes MediaPipe:** the worker imports on the venv with the
+  - **MediaPipe (§16.1):** the worker imports on the venv with the
     stubs first on its `PYTHONPATH` (mutation: the stubs dropped from the
     worker's env, and the test fails on `No module named 'cv2'`); the
     helper's own `sys.path` holds no stub directory (mutation: the stubs
@@ -1281,13 +1809,18 @@ Where it goes, per `WHERE-THINGS-ARE.md`:
   (`window.__forgeReframeCheck`):
   - The bridge stub `analyseSubjects` returns, for the harness's
     640×360 webm, shots at 0–2 / 2–4 / 4–6 s: a box at x 0.25, then 0.75,
-    then two faces at 0.35 and 0.65 (too far apart for a 202 px crop).
+    then two faces at 0.35 and 0.65 (too far apart for a 202 px crop, so a
+    two-up).
   - The check reframes the clip, plays it, and at frames inside each shot
     compares the Output canvas against the source frame drawn through the
-    expected crop. Mean difference ≤ 2/255. The check also compares the
-    frame on each side of every cut.
+    expected crop, **or through the two expected halves** in the third
+    shot. Mean difference ≤ 2/255. The check also compares the frame on
+    each side of every cut, and the Source outline shows two rectangles in
+    the third shot.
   - Then it toggles 9:16 → 16:9 → 9:16 and expects the crops back, drags
-    one shot and expects the offset kept, and undoes.
+    one shot and expects the offset kept, **drags the bottom half of the
+    two-up and expects only that half to move**, turns Stack two people
+    off and expects one crop on the larger face, and undoes.
 
   It shows what the harness can (the timeline result, the Output view, the
   Source outline, drags, round trips). It cannot show detection or the
@@ -1297,13 +1830,22 @@ Where it goes, per `WHERE-THINGS-ARE.md`:
 
 - The ten user clips through the action, with frames sampled into
   `tests/output/reframe-real/` (not committed):
-  - face-inside-crop ≥ 95 % where a face was found;
+  - face-inside-crop ≥ 95 % where a face was found (on a two-up shot, each
+    face inside its own half);
   - zero crops held across a cut;
   - the user's rating ≥ 4/5 on ≥ 8 of 10.
+- pyautoflip's output on the same ten clips (§4.1) rated by you beside
+  ours, both ratings in `EFFECTS.md`. A baseline, not a bar: where it rates
+  higher, the clip and the reason are written down before the exit.
 - The render check frame-exact on both builds, on all four sources (30,
-  29.97, 60 fps and VFR).
+  29.97, 60 fps and VFR), the two-up rows included.
 - Analysis time recorded: **≤ 90 s for a 10-minute 1080p clip on the Mac,
   ≤ 3 min on the Surface**. Over that, drop to 3 fps first, then 480 px.
+  **A 4K HEVC phone clip is a separate budget**: its decode alone measured
+  about 3.3× realtime on the Mac, about 3 minutes for 10 minutes before any
+  detection (`EFFECTS.md` §37, on the face fixture), so the 4K time is
+  recorded on its own, and hardware decode (`videotoolbox`; unmeasured) is
+  the lever if it is too slow.
 - The helper's peak RSS during the analysis recorded on the Surface, and its
   sessions released when the job ends (§12.1).
 - 1g's gate measured and its decision written.
@@ -1322,7 +1864,9 @@ talking head, the default lower third often covers the mouth and chin. Sheet
 `sourceToFrame(clip, asset, canvas, frame, box): UnitRect`. A source box
 goes through `cropAt` (§4.7) and the clip's fit (`fitFor`, as `shotPicture`
 does) to output-frame coordinates. For any clip with a `SubjectTrack`, the
-face boxes at the caption line's time become frame boxes.
+face boxes at the caption line's time become frame boxes. On a two-up frame
+(§4.6 rule 3) each face maps through its own half, so both halves' faces
+count.
 
 A face box is **extended downward by half its height** before it counts, so
 the chin and mouth are covered too: the worst place for a caption is over
@@ -1460,7 +2004,8 @@ export type GraphicData =
   | { template: 'counter'; value: string /* as said: "40%", "1.2 million", "₹500" — drawn verbatim */; label: string }
   | { template: 'bars'; title: string /* grounded, or one of the template's fixed titles */; items: { label: string; value: string }[] /* 2–5; every MATCHED stretch number shares one unit */ }
   | { template: 'steps'; title: string /* grounded, or a fixed title */; items: { label: string }[] /* 2–6 */ }
-  | { template: 'quote'; text: string /* a contiguous run of the said words, clause to clause */; speaker: string /* '' | the asset's speaker as the user set it | a name the stretch says said it (§6.7) */ }
+  | { template: 'quote'; kind?: 'said'; text: string /* a contiguous run of the said words, clause to clause */; speaker: string /* '' | the asset's speaker as the user set it | a name the stretch says said it (§6.7) */ }
+  | { template: 'quote'; kind: 'social'; text: string; name: string; handle: string; date: string; link: string }   // step 5 (§8.4): every field typed or pasted by the user; link stored, never fetched; no logo, no avatar
   | { template: 'callout'; label: string; shape: 'arrow' | 'circle' }
   | { template: 'ring'; value: string /* the matched stretch number must carry '%' and be ≤ 100 */; label: string }
   | { template: 'timeline'; items: { when: string; label: string }[] }
@@ -1492,7 +2037,9 @@ export interface TemplateDef {
   id: GraphicTemplateId
   seconds: { min: number; default: number; max: number }
   /** how the validator treats each string field (§6.7). No field drawn into a frame is ever 'free' */
-  fields: Record<string, 'verbatim' | 'grounded' | 'fixed' | 'speaker'>
+  fields: Record<string, 'verbatim' | 'grounded' | 'fixed' | 'speaker' | 'user'>   // 'user': the social quote card's (§8.4), typed by the user, never offered to a model; reached through kindFields
+  /** per data.kind, overriding fields: quote's 'social' → text, name, handle, date, link all 'user' (§8.4) */
+  kindFields?: Record<string, Record<string, 'verbatim' | 'grounded' | 'fixed' | 'speaker' | 'user'>>   // GRAPHIC_TEMPLATES.quote.kindFields.social
   /** the titles a template may draw without grounding: 'By the numbers', 'Step by step', 'Compared' … */
   fixedTitles?: string[]
   /** fields that bind as label–value pairs (§6.7 rule 6) */
@@ -1515,7 +2062,7 @@ Timings are in **seconds**, as `MomentSpec.seconds` is, so
 | `counter` | a number counting up from 0 and **arriving at the value on the word that says it**, with the label beneath | 1 | 2 / 3 / 4 | value `grounded` (number), label `grounded`; **paired** (value, label) |
 | `bars` | 2–5 horizontal bars growing to their values, each on its own word, labels and values beside them | one per item | 3 / 5 / 6 | title `grounded` or fixed ('By the numbers', 'Compared'); each item **paired** (label, value), both `grounded`; every matched stretch number shares one unit, or the graphic is dropped |
 | `steps` | a numbered list, one row arriving per item as it is said | one per item | 3 / 6 / 8 | title `grounded` or fixed ('Step by step'); item label `grounded` |
-| `quote` | the said line in quotation marks, each word lit as it is spoken (the captions' highlight logic) | one per word | 2 / 4 / 6 | text `verbatim`, clause to clause; speaker `speaker` (§6.7 rule 7) |
+| `quote` | the said line in quotation marks, each word lit as it is spoken (the captions' highlight logic) | one per word | 2 / 4 / 6 | text `verbatim`, clause to clause; speaker `speaker` (§6.7 rule 7). Its `social` kind (step 5, §8.4): `kindFields.social`, every field `user`, typed by the user; nothing fetched from X, no X logo or avatar, not shaped as a post |
 | `callout` | an arrow or a ring drawn on, to the subject box, with a label | 1 | 1.5 / 2.5 / 3 | label `grounded`; `needsSubject` (a face track: Python, §12) |
 | `ring` | a ring filling to the percentage, arriving on the word | 1 | 2 / 3 / 4 | value `grounded`, and **the matched stretch number carries `%` (or "percent")** and is ≤ 100; label `grounded`; **paired** (value, label) |
 
@@ -1876,6 +2423,9 @@ The rules, in order:
    - **There is no `free` mode for anything drawn into a frame.** The 2B
      model writes no free text that lands in a picture. (Best clips' card
      titles are shown in the UI only; §7.4 holds them to their own rule.)
+     The social quote card's `user` mode (§8.4) is the user's own typing,
+     never a model's: no pass is offered that kind, so the validator never
+     sees it.
 9. **Template rules after binding:**
    - `ring` ≤ 100 and `%` on the matched number (rule 5);
    - `bars` one matched unit (rule 5);
@@ -1920,8 +2470,8 @@ export function bind(claims: Claim[], stretch: { words: Word[]; sentences: Segme
   clip are not timed yet"), as J-cuts refuse a retimed clip
   (`apply2.ts:225-227`). The captions and props mapping ignores speed today
   (`automation/apply.ts:58-65`), so a speed-aware graphic would drift from
-  its own captions. The proper inverse is §4.7's `timelineFrameAt`, applied
-  to captions and graphics together later (§17).
+  its own captions. The proper inverse is `timelineFrameAt` (built in M0,
+  §3b.6), applied to captions and graphics together later (§17).
 
 ### 6.9 Placement — `src/shared/graphics/place.ts`
 
@@ -2082,8 +2632,9 @@ template.
 **Census rows:** the Transcript tile's "Graphics", "Find graphics in this
 clip", "Keep", "Drop", "Clear graphics"; the dock's graphic panel
 (`tools/GraphicPanel.tsx`: the template's fields, re-checked by the
-validator on every edit so a typed number not in the stretch shows a
-warning, not a block, because the user may type what they like); the OUTPUT
+validator on every edit, except fields in `user` mode (a social card is
+never checked against a stretch), so a typed number not in the stretch
+shows a warning, not a block, because the user may type what they like); the OUTPUT
 strip's style tiles.
 
 ### 6.12 Exit
@@ -2100,14 +2651,28 @@ strip's style tiles.
 
 ---
 
-## 7. Step 4 — Best clips in the URL tile · 11 days
+## 7. Step 4 — Best clips in the URL tile · 3.5 days (M0, §3b, took 7.5 of its 11)
 
 **What it is.** Sheet 27: **duration 1 / 2 / 3 / 4 min · Analyse** → three
-tall cards, each with a title and why → **Clip it**. Sheet 26 falls out of it:
-a transcript's rows selected and cut. The user called the URL panel "the
-biggest one" and sheet 26 "the most important feature".
+tall cards, each with a title and why → **Clip it**. The user called the URL
+panel "the biggest one" and sheet 26 "the most important feature". **Sheet
+26 is M0 now (§3b), built first**: the link's transcript (written here, in
+§7.1 and §7.2) and its rows, handles, chapter chips, Clip it from a run and
+the timeline half (written in §3b) are all built there. Best clips proper
+stays here:
+
+| piece | days |
+|---|---|
+| windows (§7.3) | 0.5 |
+| signals and the prefilter (§7.4) | 0.5 |
+| the model's comparative pick: schema, prompt, validate, `run.ts` shared with the eval (§7.4) | 1 |
+| three cards, and Clip it from a card through M0's path, with §7.5's project question; steps 3–5 are already on that path (each attached in its own step: 1f, step 2, §6.6), step 6 arrives with §8.7 | 0.5 |
+| tests, the harness's cards half, census, the ten-links eval (§7.7, §7.8) | 1 |
+| **step 4** | **3.5** |
 
 ### 7.1 Metadata and the transcript from a link — measured with yt-dlp 2026.08.19
+
+Built in M0 (§3b.1); Best clips reads what M0 fetched.
 
 | fact | measured |
 |---|---|
@@ -2152,6 +2717,8 @@ biggest one" and sheet 26 "the most important feature".
 
 ### 7.2 json3 → Transcript, and shifting it onto a ranged download — `src/shared/ingest/captions.ts`
 
+Built in M0 (§3b.1, §3b.4), the three-track measurement below included.
+
 ```ts
 export function parseJson3(json: unknown, assetId: string, source: 'youtube-asr' | 'youtube-lines'): Transcript
 //  word.startMs = event.tStartMs + (seg.tOffsetMs ?? 0)
@@ -2161,8 +2728,9 @@ export function parseJson3(json: unknown, assetId: string, source: 'youtube-asr'
 //  '\n' segs and bracket tags ([Music]) dropped
 //  segments = segmentIntoSentences(words, PAUSE_BOUNDARY_MS, { maxWords: 30, maxMs: 15000 }), plus a break at every json3 event gap ≥ 700 ms
 //  'youtube-lines' (uploader track, line-timed): words spread within each line by grapheme count — marked approximate
-export function shiftTranscript(t: Transcript, range: { startMs: number; endMs: number }, headOffsetMs: number, assetId: string): Transcript
-//  keep words with startMs in [range.startMs, range.endMs); subtract (range.startMs − headOffsetMs); renumber; resegment
+export function shiftTranscript(t: Transcript, range: { startMs: number; endMs: number }, headOffsetMs: number, assetId: string, run?: WordRun): Transcript
+//  with run: keep words run.from..run.to; without: words with startMs in [range.startMs, range.endMs)
+//  subtract (range.startMs − headOffsetMs); renumber; resegment
 //  headOffsetMs = 0 for an exact cut (measured start_time 0), offsetIntoDownload(range) for a fast one (section.ts:97)
 ```
 
@@ -2188,7 +2756,8 @@ video only. So:
   so the Director's existing behaviour is unchanged; YouTube tracks use it at
   parse, and every menu and stretch in this plan builds from
   `capSegments(t.segments, 30, 15000)` (pure, never written back);
-- **measured before §7.3 is built**: three unpunctuated tracks, one Hindi or
+- **measured in M0, before the parser is final** (so long before §7.3 is
+  built): three unpunctuated tracks, one Hindi or
   Telugu, segmented, with the segment-length distribution written into
   `EFFECTS.md`.
 
@@ -2268,17 +2837,19 @@ shared with the eval, as the Director's is.
 
 ### 7.5 Three cards, and Clip it
 
-The URL tile panel (`IngestPanel.tsx`) gains:
+M0 (§3b) gave the URL tile panel (`IngestPanel.tsx`) **Get transcript**
+(rows of time | text, picked by click and shift-click or the cut handles),
+chapter chips, Clip it from a run, Add another clip, and Listen to it. Step
+4 adds:
 
-- **Get transcript** (rows of time | text);
-- chapter chips (each sets the range: `setIngest({useRange, startMs, endMs})`);
 - **Best clips** in `src/renderer/src/components/tools/BestClips.tsx`:
   duration 1 / 2 / 3 / 4 min, **Analyse**, then three tall 9:16 cards with
   the title, the why, the range, the word count and `scoredBy`. A frame
   thumbnail per card (yt-dlp's storyboard formats) is **unmeasured** and
   left out of v1.
 
-**Clip it**, from a card or from selected rows:
+**Clip it from a card** runs M0's Clip it (§3b.4: steps 1 and 2 below are
+M0's, built there), with step 0's question in front and steps 3–6 after it:
 
 0. **Where the result goes.** Best clips' three cards are three separate
    shorts, and the first draft would have landed all three on one timeline,
@@ -2295,18 +2866,19 @@ The URL tile panel (`IngestPanel.tsx`) gains:
      already portrait;
    - **"Make it vertical" never changes an existing project's aspect without
      saying so.**
-1. **Download.** `startIngest` with a request override `{range, exact: true}`
-   (`store.ts:1060-1090` takes only `get().ingest` today). Exact or fast is
-   decision §16.13, **open until the exact cut is cross-correlated against
-   its source** as the fast cut was (§7.1: only the container's start time
-   was measured). One job per range; several ranges are several jobs, which
-   run 2 at a time (`ipc.ts:207`).
-2. **Collect.** `pendingIngests[jobId]` gains `transcriptFrom: linkKey`, and
-   `collectIngest` writes
+1. **Download** (M0's, §3b.4). `startIngest` with a request override
+   `{range, exact: true}` (`store.ts:1060-1090` takes only `get().ingest`
+   today). Exact or fast is decision §16.13, **open until the exact cut is
+   cross-correlated against its source** as the fast cut was (§7.1: only
+   the container's start time was measured); M0's exit decides it. One job
+   per range; several ranges are several jobs, which run 2 at a time
+   (`ipc.ts:207`).
+2. **Collect** (M0's, §3b.4). `pendingIngests[jobId]` gains
+   `transcriptFrom`, and `collectIngest` writes
    `project.transcripts[asset.id] = shiftTranscript(…)` inside its
    begin/commit (`store.ts:4691-4723`), plus `asset.credit` of source
    `'link'` with the channel and the URL (§8.5). One undo step: asset, clip,
-   trim, transcript.
+   trim, transcript, credit.
 3. **Reframe.** When the Python helper is there and the face finder is on
    disk, `reframeClip` runs; a missing model is a button with its size, not
    a side effect (§0). Without the helper the crop is centred, with a note.
@@ -2322,38 +2894,35 @@ The URL tile panel (`IngestPanel.tsx`) gains:
 
 The panel lists what ran and what was skipped, and why.
 
-**A link with no caption track:** the button reads **Listen to it ·
-downloads the audio (~N MB) and the speech model (464 MB, first time)**, N
-from the metadata's duration and the audio format's bitrate. Pressed, it is
-an audio-only download that is not placed, transcribed by path (the reel's
-`lyrics:` precedent, `store.ts:2112`). Without the Python helper: "This
-video has no captions; Best clips needs the AI helper to listen to it."
-Census rows: "Listen to it", "Start a new 9:16 project for this clip", "Add
-it to this project".
+**A link with no caption track** (M0 built the button, §3b.5): it reads
+**Listen to it · downloads the audio (~N MB) and the speech model (464 MB,
+first time)**, N from the metadata's duration and the audio format's
+bitrate. Pressed, it is an audio-only download that is not placed,
+transcribed by path (the reel's `lyrics:` precedent, `store.ts:2112`).
+Without the Python helper, Best clips adds: "This video has no captions;
+Best clips needs the AI helper to listen to it." Census rows: "Start a new
+9:16 project for this clip", "Add it to this project" ("Listen to it" is
+M0's).
 
-### 7.6 Transcript → Clip it (sheet 26) — offered first, as M0
+### 7.6 Transcript → Clip it (sheet 26) — now M0, §3b
 
 You called this "the most important feature … first among the three"
-(`SHEETS.md:715-717`). **Its timeline half needs nothing from steps 1–3, and
-no Python wherever a transcript exists**, so it is offered as **M0, about two
-days, ahead of step 1** (decision §16.26): row selection, `clipToRange`,
-`placeAssetRange`, and `timelineFrameAt`, which 1f needs anyway. Best clips
-reuses it unchanged later. The agreed order stands unless you take the
-offer.
-
-`TranscriptPanel.tsx` gains row selection: click, then shift-click. That
-covers the URL transcript in the URL tile, and a timeline clip's transcript
-in the Transcript tile. **Clip it** on a URL transcript is §7.5. On a timeline
-clip it is `clipToRange(project, clipId, startMs, endMs)` in
-`src/shared/edit/clipIt.ts`, pure: the clip's in-point and duration are
-trimmed to the selection, mapped with `timelineFrameAt` (§4.7) so speed is
-honoured. TranscriptPanel's own mapping ignores speed (`:32-47`); it moves
-onto the same function. For an asset not yet on the timeline,
-`placeAssetRange(assetId, startMs, endMs)` (begin → `addAssetToTimeline` →
-set in-point and duration → commit, beside `trimToRequestedRange`,
-`section.ts:116-131`).
+(`SHEETS.md:715-717`). The first draft offered its timeline half as an M0 of
+about two days. **You took it first and redefined it** (§16.26, 2026-10-05)
+as the URL transcript → Clip it flow plus this timeline half, 7.5 days,
+moved from this step. The whole of it is §3b; the timeline half as written
+here (row selection in the Transcript tile, `clipToRange`,
+`placeAssetRange`, `timelineFrameAt`) is §3b.6, moved there unchanged.
+Best clips reuses it.
 
 ### 7.7 Tests, render check, harness, census
+
+**Which of these are M0's.** `ingestArgs`, `ingestCaptions`,
+`ingestCaptions.int`, `exactCut.int`, the `clipToRange` and
+`placeAssetRange` cases of `clipIt`, and the `clipIt.int` render check land
+with M0 (§3b.8), with their mutations. Step 4 adds `bestClips`, the
+project-question case of `clipIt`, the harness's cards half and its census
+rows.
 
 - `tests/ingestArgs.test.ts`: the new argv shapes as ordered shapes; the
   marks; explicit language keys, never `.*`.
@@ -2363,7 +2932,8 @@ set in-point and duration → commit, beside `trimToRequestedRange`,
     or the grapheme cap, whichever is first;
   - confidence null; `\n` and `[Music]` dropped; overlapping roll-up events;
   - the uploader track spread;
-  - `shiftTranscript` for exact and fast heads;
+  - `shiftTranscript` for exact and fast heads, and with a run (exactly its
+    words, §3b.8);
   - **an unpunctuated track with 1 s pauses INSIDE one roll-up event
     breaks at each pause** (the break positions asserted, not the count),
     so only the word-end estimate can make those gaps; a second fixture
@@ -2414,11 +2984,13 @@ set in-point and duration → commit, beside `trimToRequestedRange`,
   Mutation: the shift off by the range's start; every caption is then early
   by the start, and the test fails.
 - **Harness:** the bridge stubs `ingestMeta` and `ingestCaptions`
-  deterministically. The check selects rows, presses Clip it, and sees the
-  stubbed job; then Analyse with the model stub, and three cards.
-- **Census rows:** "Get transcript", "Best clips", "1 min", "2 min",
-  "3 min", "4 min", "Analyse", "Clip it", "Make it vertical", chapter chips,
-  and the Transcript tile's row selection hint.
+  deterministically. M0's check (`clipItCheck.ts`, §3b.8) selects rows,
+  presses Clip it, and sees the stubbed job; step 4's half then runs Analyse
+  with the model stub, sees three cards, and clips one.
+- **Census rows:** step 4's are "Best clips", "1 min", "2 min", "3 min",
+  "4 min", "Analyse", "Make it vertical"; "Get transcript", "Clip it",
+  chapter chips and the Transcript tile's row selection hint are M0's
+  (§3b.8).
 
 ### 7.8 Exit
 
@@ -2426,38 +2998,38 @@ set in-point and duration → commit, beside `trimToRequestedRange`,
   Telugu): on ≥ 7 of 10, at least one card the user would post, with the
   model and with signals alone, recorded separately.
 - Every window on sentence boundaries, by property.
-- Clip it's captions within one frame on the exact cut (render check), on
-  both builds.
-- The exact cut's first frame cross-correlated against its source (the real
-  yt-dlp test, or the Surface), and §16.13 decided on that number.
-- Clip it end to end on the Surface without swapping (§12.1).
+- Clip it's captions within one frame on the exact cut, and the exact cut
+  cross-correlated with §16.13 decided: **M0's exit** (§3b.9), already met.
+- Clip it from a card end to end on the Surface without swapping, with the
+  reframe and graphics attached (§12.1).
 - YouTube ASR timing against Whisper measured on three videos and written
   into `EFFECTS.md`.
 
 ---
 
-## 8. Step 5 — B-roll · 15.5 days
+## 8. Step 5 — B-roll · 14 days (the X capture window's 2 out, the social quote card's 0.5 in)
 
 **What it is.** For a moment in the transcript, the model picks a **kind**,
 the app fetches **candidates**, the user **clicks** one, and it lands
-credited. The five agreed sources:
+credited. The five agreed sources, the fourth changed by your answer to
+§16.18:
 
 - Pexels (mood);
 - Wikimedia Commons through Wikidata (the real thing);
 - fact cards from the speaker's own words;
-- X post cards from a pasted link;
+- **social quote cards**: a public statement you type or paste, drawn as
+  our own card in the graphic styles, never fetched from anywhere (§8.4);
 - headline cards.
 
-Plus Wikipedia cards, a page card from a pasted link, and the search and
-answer cards. **No Google or Perplexity screenshots.**
+Plus Wikipedia cards, a page card from a pasted link, and the
+answer-with-sources cards (step 6). **No Google or Perplexity screenshots.**
 
 ### 8.1 Keys in Settings, write-only — `src/main/web/keys.ts` · 1 day
 
-The Director's path, built once. **Step 5 adds the Pexels key only; the
-Brave key, with its monthly cap and `safeStorage`, is step 6's** (§9), the
-step that first uses it.
+The Director's path, built once, **for the Pexels key only**: it is the one
+key this plan adds now that Brave is out of v1 (§9, §16.16).
 
-- `Settings.webKeys?: { pexels: string }` (step 6 adds `brave`) and
+- `Settings.webKeys?: { pexels: string }` and
   `Settings.broll?: { allowShareAlike: boolean }` (`src/shared/types.ts:87-114`).
   `defaults()` and a strings-only sanitiser go in `src/main/store.ts:38-73`,
   modelled on `voiceHosted()` (`:105-119`). `mainKeys()` is derived from
@@ -2465,7 +3037,7 @@ step that first uses it.
   `rendererSettings()` leaves them out, automatically. Two existing tests
   loop over `Object.keys(getSettings())` and cover the new fields; each is
   mutation-checked again with them in.
-- `keyStatus(): { pexels: { hasKey } }` (step 6: `brave: { hasKey, usedThisMonth, cap }`);
+- `keyStatus(): { pexels: { hasKey } }`;
   `setServiceKey(service, key): KeyStatus` (`''` clears, absent keeps);
   `keyFor(service)`, for main's fetchers only, never over IPC.
 - IPC `keys:status` and `keys:set`, with the service checked against the
@@ -2486,8 +3058,8 @@ step that first uses it.
   and are mutation-checked again: put one field's value back to the saved
   key, and the relaxed check must fail.
 - The Pexels key stays plaintext in `settings.json`, as the Director's and
-  the voice's are; **the Brave key does not** (it is backed by a card, §9),
-  and whether every key moves to `safeStorage` together is decision §16.14.
+  the voice's are. With Brave out, no key backed by a card remains, so
+  §16.14 is moot and no `safeStorage` is built.
 - **The user signs up for each key**; the app never creates accounts.
 
 ### 8.2 One fetcher in main — `src/main/web/fetch.ts` · half a day
@@ -2504,10 +3076,13 @@ sentence), `binary.ts:148-169` (cancel and timeout kept distinct), and
   policy asks for client/version and contact. The contact is decision
   §16.23.
 
-The keys go in headers, **never in a URL**: Pexels takes a raw
-`Authorization: <key>` (measured: 401 "Invalid API key"); Brave takes
-`X-Subscription-Token` (measured: 422, not 401, for both missing and
-invalid, so the status sentence branches on `error.code`).
+The key goes in a header, **never in a URL**: Pexels takes a raw
+`Authorization: <key>` (measured: 401 "Invalid API key"). **No allowlist
+holds an X host, and the pasted-link sources refuse one**: `page.ts` (page
+and headline cards, whose allowlist is the pasted link's own host) refuses
+`x.com`, `twitter.com`, `t.co` and `twimg.com` as host suffixes, on the
+pasted URL and on every redirect hop, before any request, with "Type the
+words into a social quote card instead" (§8.4).
 
 **Node 24's global fetch ignored `HTTPS_PROXY` in this shell** (ENOTFOUND)
 unless `NODE_USE_ENV_PROXY=1`. Whether these fetchers should move to
@@ -2524,7 +3099,7 @@ a renderer that could make the app download … anything" (`ipc.ts:588-595`).
 
 ```ts
 // src/shared/broll/types.ts
-export type BrollSource = 'pexels' | 'commons' | 'x' | 'headline' | 'page' | 'wikipedia' | 'search' | 'link'   // 'link': a video ingested from a URL, credited by channel (§8.5)
+export type BrollSource = 'pexels' | 'commons' | 'headline' | 'page' | 'wikipedia' | 'link'   // 'link': a video ingested from a URL, credited by channel (§8.5; M0 adds it first, §3b.4)
 export interface Candidate {
   id: string; source: BrollSource
   title: string; author: string | null
@@ -2542,7 +3117,6 @@ export interface AssetCredit {                // MediaAsset.credit — persists 
   attributionRequired: boolean
   pageUrl: string; line: string             // the credit line as shown (§8.5)
   objectName?: string; revision?: number    // Commons ObjectName; Wikipedia revision id
-  shownWhole?: boolean                      // an X post: fit only, never cropped, masked, moved or shaped (§8.4)
   fetchedAt: string
   person?: { names: { qid?: string; name: string }[]; confirmedAt: string }
 }
@@ -2553,11 +3127,11 @@ export interface AssetCredit {                // MediaAsset.credit — persists 
 | **Pexels** (mood) | `api.pexels.com/v1/search` and `/videos/search`, with the user's key. The API host is reachable (401 without a key). **Its docs, licence page and rate limits returned a Cloudflare challenge (403) again on 2026-10-05, and are unmeasured** (not worked around). **You read them in a browser before 8.3 is built**, and their clauses on identifiable people, endorsement and attribution (including any "provided by Pexels" link the search panel must show) go into §11. Until then, **a Pexels candidate goes through the same confirmation as a Commons person** whenever the AI helper's face finder sees a face on it, or it cannot be checked (§8.6): most of Pexels' stock shows people, and it would otherwise land under any sentence, including one about fraud or illness | `pexels.ts` |
 | **Commons via Wikidata** (the real thing) | `wbsearchentities` (Eiffel Tower → Q243, plus two Delaunay *paintings*, so disambiguation runs on the description and P31); `wbgetclaims` P18 → the Commons file; `prop=imageinfo&iiprop=url\|size\|mime\|extmetadata`. `License` is machine-readable (`pd`, `cc0`, `cc-by-4.0`, `cc-by-sa-4.0`); `Artist` and `Credit` are HTML (strip tags); `AttributionRequired`; `Restrictions` (`personality` on Q42's portrait, which is CC BY-SA 2.0); `descriptionurl` is the credit's link. `iiurlwidth=1080` returned a bucketed **1280 px** thumb, so **the probe, not the API, is the size**. SVGs come back as `.svg.png`. Files are on `upload.` and `thumb.wikimedia.org`. Commons titles are free text, **never file names** | `wikidata.ts`, `commons.ts` |
 | **fact cards** | the speaker's own words, as a `quote` graphic (§6) with `verbatim` text. No fetch, no third party | — |
-| **X post cards** | the user pastes a link. Keyless `publish.x.com/oembed?url=…&omit_script=1&dnt=true` returns 200 JSON (`author_name`, `html` as a `<blockquote>` with the text and the date, `width` 550). `publish.twitter.com` 301s there. A missing post is **404 HTML**, so check content-type. `widgets.js` (94 KB, `platform.twitter.com`) styles the card inside a cross-origin iframe. Capture is §8.4 | `xpost.ts` |
+| **social quote cards** | **no fetch at all, and no X branding** (no logo, avatar, verified mark or post shape). The user types or pastes the statement, the name, the @handle and the date (and, if they like, the link, kept as text). Drawn as our `quote` template's `social` kind in the six graphic styles (§8.4). Nothing is requested from X or any other host. The embed-capture route (its oEmbed half measured, its capture never) is out (§17) | — (`graphics/social.ts`, §8.4) |
 | **headline cards** | **Google News RSS is out by its own terms**. Measured: its channel `<copyright>` restricts the feed to "a personal feed reader for personal, non-commercial use". Its links are Google redirect tokens, not the outlet's URL. So a headline card comes from **a pasted article link**: main fetches the page's `h1`, `og:title`, `og:site_name`, `article:published_time`, `article:modified_time` and `article:section`. The card is **our web-article card** (below), not a newspaper clipping. **Never the outlet's photo or logo; the app never writes or edits a headline.** A news feed with acceptable terms is decision §16.17 | `page.ts` |
 | **Wikipedia cards** | keyless REST `page/summary/<title>`: `extract`, `wikibase_item` (the Q id, linking the card to Wikidata), `content_urls`. **The summary's `thumbnail` and the page's `og:image` were an enwiki-local logo file, not Commons (Eiffel Tower), so they are never used.** Images come only through P18 → Commons with its licence | `wikipedia.ts` |
 | **page card** | a pasted link: `og:title`, `og:site_name`, `description`, the published time, drawn as our `source` graphic. Not a screenshot (decision §16.19) | `page.ts` |
-| **search / answer** (step 6) | Brave Search, user's key; terms §11 | `brave.ts` |
+| **answer** (step 6) | text fetched from Wikipedia and from links the user pasted; no search engine in v1 (Brave is out, §9, §17) | `wikipedia.ts`, `page.ts` |
 
 **The headline card is a web-article card, not a clipping** (the first
 draft drew it on the newspaper clipping; decision §16.17 records the change
@@ -2591,80 +3165,100 @@ shape, synthetic), "Opinion" from each signal, and the painter draws no
 string outside the headline, the attribution line and "Opinion". Mutation:
 draw `og:title` when it differs from the `h1` by more than a suffix.
 
-### 8.4 The capture window, for X — `src/main/capture/cardWindow.ts` · 2 days, measure first
+### 8.4 The social quote card — the user's own quotation · half a day
 
-**X's display requirements, now read**
-(`docs.x.com/developer-terms/display-requirements`, fetched by the review
-and again by the fixer on 2026-10-05). For a post shown in a broadcast or video they ask that the
-user's full name, @username, post text and profile picture be shown, with the
-X logo near the post for as long as it appears and the timestamp displayed.
-They forbid deleting, obscuring or altering the post content or the user's
-identification; leaving out the timestamp; using X content in advertising or
-to imply endorsement without the user's explicit permission; and "mock ups of
-posts that don't exist on the platform". And X says it grants no permission
-to use the content itself: the post author's rights are not X's to give.
-What follows from that:
+**The first draft's capture window for X is removed** (2 days; the facts
+measured for it are kept in one sentence in §17). In its place, **your
+idea** (§16.18, 2026-10-05): "instead what we gonna do is we will make new
+cards of kinds in our assets and the user will pick in the custom or we can
+give any card randomly if they select".
 
-- **Only X's own rendered embed is used.** The first draft's fallback, our
-  own neutral card from the oEmbed fields with no logo, breaks the logo and
-  avatar rules, and cannot comply even in principle: the keyless oEmbed
-  response carries `author_name`, `author_url`, `html`, `width` and no
-  avatar URL (measured). **If capture fails there is no X card**, only a
-  note.
-- **The captured post is shown whole.** The asset's credit carries
-  `shownWhole: true`, and a pure `shownWhole(asset)` is consulted by
-  everything that could crop, cover or move it: `setAspect`
-  (`store.ts:1386-1387`: no `solveCrop`, fit only), `canMoveCamera`
-  (`edit/camera.ts:30`), `isKeyable` (`render/chromaKey.ts:218`),
-  `CropOverlay` (`CropOverlay.tsx:23`), the mask and rounded-shape tools,
-  Fill-with-picture, and B-roll's placement shapes (§8.8). Membership tests
-  per site, as §6.4's guards are.
-- **Never in a Director ad.** `broll@1`'s `post` kind is refused inside
-  Direct, and placing an X card anywhere shows "using a post in an ad needs
-  the author's permission".
+**What it is.** A `social` kind of the `quote` template (§6.1) with five
+fields, **every one typed or pasted by the user**: `text` (the statement),
+`name`, `handle`, `date`, and an optional `link`. It is drawn in the six
+graphic styles (§6.5): you pick one from the style tiles, or press
+**Surprise me**, which picks one at random **once, at the press**: the
+chosen style is stored on the spec as `style`, with the `seed` that chose
+it, so the card draws the same on every frame, preview and export alike.
+Never `Math.random` at draw time. It has no grounding: `beats: []`, so it
+arrives on its entrance at the clip's start; `seconds` is the quote
+template's default, 4; **Add a social quote** lands it at the playhead,
+over the clip beneath, placed by §6.9.
 
-**Measure first, on the user's machine (`npm run dev`) and on the Surface;
-Electron cannot start in the sandbox:**
+**The rule that makes it your quotation, not X's content:**
 
-- does `capturePage(rect)` on a hidden window include X's cross-origin
-  iframe?
-- at what scale factor?
-- how long until the widget has rendered?
+- **The app never fetches anything from X**: no oEmbed, no embed script,
+  no capture window, no X host in any allowlist, and a pasted X link
+  refused by the page fetcher (§8.2). The `link`, if you paste one, is
+  stored as text and never requested.
+- **No X logo, no avatar, and nothing shaped like a post**: no post chrome,
+  no like or repost counts, no verified mark. It is a quote card in our own
+  styles: the statement in quotation marks, then the attribution line
+  **"<name> (@handle) · <date>"**.
+- So it is you quoting a public statement, as one quotes a speech. X's
+  display requirements bind content obtained from X (they were read on
+  2026-10-05, §17), and nothing here is obtained from X; and it is not a
+  "mock-up of a post", because it does not present itself as one.
+- **You are responsible for the quote's accuracy.** The fields' panel says
+  so beside them: "You are quoting this person; check the words and the
+  date".
+- **Quoting a person to promote something can read as their endorsement.**
+  The fields' panel says so under the accuracy line: "Using someone's words
+  in an ad needs their permission". The quoted person's rights, and any
+  endorsement a viewer may read into the card, are yours to clear. The
+  first draft refused X cards in Director ads for the same reason; no model
+  places this card (§8.7).
+- **It is a graphic like any other**: placed by free-space placement
+  (§6.9), with the same exit and guards as every graphic (§6.4).
+  The first draft's whole-post protections went with the capture window.
+- **Never offered to a model.** Its fields are mode `'user'` (§6.1, §6.7
+  rule 8); neither `graphics@1` nor `broll@1` is offered the `social` kind
+  (§8.7), so no model writes or suggests one.
+- **Recorded assumption:** this is your idea taken in its **paste-only**
+  form (the app fetches nothing). You have not yet confirmed that condition
+  in so many words (§16.18).
 
-**If it does:** a window modelled on `FrameServer`
-(`graphics/frameServer.ts:13-90`), but **never on the default session**.
-`forge-media:` serves any absolute path with `Access-Control-Allow-Origin: *`
-on the default session (`mediaProtocol.ts:64-86`, `index.ts:16-37`), so
-remote JavaScript there could read `settings.json` and the keys. The window
-uses:
+**Files.** `src/shared/graphics/social.ts` (the fields' sanitiser: trimmed,
+the handle stored without a leading `@` (any number of them stripped), and
+the attribution line adds exactly one; the date as typed); the
+`quote`/`social` branch of `graphics/paint.ts`; `tools/GraphicPanel.tsx`'s
+fields for the kind, with **Surprise me**; **Add a social quote** in the
+Transcript tile's Graphics section and in the B-roll panel (§8.8).
 
-- `session.fromPartition('capture')`, in memory, where that handler is
-  absent;
-- no preload; `sandbox: true`;
-- `webRequest.onBeforeRequest` allowing only `platform.twitter.com`,
-  `syndication.twitter.com`, `cdn.syndication.twimg.com`, `pbs.twimg.com`
-  and `abs.twimg.com` (the last two unmeasured);
-- `setPermissionRequestHandler` denying everything;
-- `setWindowOpenHandler` deny; `will-navigate` prevented.
+**Tests** (`tests/socialCard.test.ts`):
 
-**The flow:**
+- the settled frame draws every user field verbatim, the attribution line,
+  and nothing else but the style's listed fixed glyphs (the fake context
+  lists every `fillText` string), and draws no image (no `drawImage` call:
+  no logo, no avatar);
+- a handle typed as `@@name` draws `(@name)`;
+- Surprise me stores a `style` that is in `GRAPHIC_STYLES` and a `seed`,
+  and the same spec draws identically twice;
+- `graphics@1`'s graphic item has none of `name`, `handle`, `date`, `link`
+  among its properties (membership over the schema's keys),
+  `settleGraphics` never returns data with kind `social` (property), and
+  `post`/`social` are not in `broll@1`'s kind enum;
+- no source's allowlist holds an X host (`x.com`, `twitter.com`,
+  `twimg.com` as host suffixes, membership over every allowlist), and the
+  `link` field never reaches `webFetch` (a spy over the fetcher for the
+  card's whole life: created, edited, baked, exported);
+- `page.ts` refuses a pasted `https://x.com/<user>/status/<id>`, a `t.co`
+  link, and a pasted link whose server redirects to `x.com`, and the
+  fetcher's spy records no request to any X host.
 
-1. main validates the pasted URL;
-2. fetches the oEmbed;
-3. loads a local template holding `html` and `widgets.js`;
-4. waits for the widget's rendered event or a stable size;
-5. reads the element's rect and **asserts that the X logo and the
-   timestamp lie inside it**, through the widget iframe's `WebFrameMain`
-   (Electron can run script in a cross-origin subframe from main;
-   **unmeasured in Electron 44**); a rect that would cut either is refused;
-6. captures it to `userData/cards/<sha1(url)>.png`;
-7. `probeImports` → an image asset with
-   `credit {source: 'x', author: author_name, pageUrl, shownWhole: true}`.
+Mutations, each failing its own case: Surprise me calling `Math.random` at
+paint time (the two draws differ); `handle` added to `graphics@1`'s item
+schema; an X host added to the page fetcher's allowlist; the X refusal
+dropped from `page.ts` (the pasted x.com link is requested); the attribution
+line without the handle; the line adding `@` to a handle that kept its own.
 
-IPC `cards:xPost({url, fps}) → MediaAsset`.
-
-**If it does not** capture the iframe: no X card in v1, and the panel says
-so (decision §16.18).
+**Render check**: §6.11's `graphic.int.test.ts` gains a social card at
+9:16, placed and exported: its box sits in the third §6.9 chose and its
+frames are the fake baker's. **Harness**: `graphicCheck.ts` (§6.11) draws
+the social kind in each of the six styles, preview against bake within
+1/255. **Census rows**: "Add a social quote", "Surprise me", "You are
+quoting this person", "Using someone's words in an ad needs their
+permission", "Type the words into a social quote card instead".
 
 ### 8.5 Credits — `src/shared/broll/credits.ts` · 2 days
 
@@ -2672,8 +3266,11 @@ so (decision §16.18).
   assets' `credit`, dedupes, keeps first-appearance order, and returns
   `{line, required, url}[]`. **A video ingested from a link comes first**:
   `collectIngest` gives it a `credit` of source `'link'` with the channel and
-  `webpage_url` from the metadata (§7.1), the one credit a clipper always
-  needs.
+  `webpage_url` from the metadata (§7.1; built in M0, §3b.4), the one credit
+  a clipper always needs. A social quote card has no asset credit:
+  `creditsFor` also walks the clips' `graphic`, and for `data.kind ===
+  'social'` emits `{line: "<name> (@handle) · <date>", required: false,
+  url: null}` (a pasted link goes in the line as text, never as a URL).
 - Its consumers:
   - the pool tile's tooltip (`MediaPool.tsx:219`);
   - an EXPORT strip **Credits** block with **Copy** (for the video's
@@ -2702,7 +3299,10 @@ so (decision §16.18).
     files have no `LicenseUrl` and need none);
   - Pexels: `"Photo by <photographer> on Pexels"`, **to be confirmed against
     their guidelines** (§8.3);
-  - X: `"@<handle> on X, <date>"`, with the post's URL;
+  - a social quote card (§8.4): the attribution line **"<name> (@handle) ·
+    <date>"**, drawn on the card itself and listed in the Credits block, not
+    `attributionRequired`. No URL is fetched; a link you pasted into the
+    card is listed as the text you typed;
   - headline and page: `"<site_name> · <domain>, <published date>"`, with
     the URL and the fetched time;
   - Wikipedia: `"From “<title>”, Wikipedia (rev <id>), CC BY-SA 4.0
@@ -2714,8 +3314,10 @@ so (decision §16.18).
 `attributionRequired` carries a licence URL (membership over the credits,
 not a snapshot); a cropped Commons picture's line says it was changed; an
 export with a CC BY still shows the required-credit Done line; the link
-credit is first. Mutations: drop `LicenseUrl`; skip `attributionRequired`
-in the Done line; skip the modified flag.
+credit is first; a social card in range yields its attribution line with
+`required` false. Mutations: drop `LicenseUrl`; skip `attributionRequired`
+in the Done line; skip the modified flag; walk assets only (the social
+card's line is missing).
 
 ### 8.6 The person rule and the licence gate — in main
 
@@ -2764,17 +3366,19 @@ in the Done line; skip the modified flag.
 { "reasoning": "…",
   "picks": [   // maxItems 6
     { "sentence": "s12",                                   // enum
-      "kind": "entity",                                    // enum: mood | entity | fact | post | headline | none
+      "kind": "entity",                                    // enum: mood | entity | fact | headline | none
       "query": "Eiffel Tower",                             // entity: must be a contiguous run of the sentence (verbatim); mood: ≤ 4 words, free
-      "link": "",                                          // post/headline: enum of the links the user pasted for this clip (L1, L2…), '' otherwise
+      "link": "",                                          // headline: enum of the links the user pasted for this clip (L1, L2…), '' otherwise
       "why": "…" } ] }
 ```
 
 - `src/shared/broll/{schema,prompt,validate}.ts`; the menu is the
   sentences, as in §6.6.
-- **Validated:** an entity query is verbatim in its sentence; a post or
-  headline pick must name a pasted link; at most one pick per 8 s; **a
-  `post` pick is refused inside Direct** (§8.4).
+- **The first draft's `post` kind is removed**, not turned into a
+  suggestion: the social quote card is the user's own (§8.4), and no model
+  is offered it.
+- **Validated:** an entity query is verbatim in its sentence; a headline
+  pick must name a pasted link; at most one pick per 8 s.
 - The result is **suggestions**, stored as
   `Project.broll?: Record<assetId, BrollSuggestion[]>` in source ms. They
   are shown in the B-roll panel and never downloaded by themselves.
@@ -2808,8 +3412,9 @@ decision §16.6.
 - **Placement** of a picked candidate at a suggestion: an overlay clip over
   the sentence, sized by the suggestion. Its shape is one of the B-roll
   effects the app has (`picture-in-picture`, the strip, the clipping), as
-  sheet 27 says, and it uses free-space placement (§6.9). **An X post takes
-  none of them**: it is placed whole, fitted, with no camera move (§8.4).
+  sheet 27 says, and it uses free-space placement (§6.9).
+- **Add a social quote** opens the social card's fields (§8.4); it is a
+  graphic, so it lands like one, with no download and no candidate.
 
 Census rows: every label above, plus the Settings rows and the switch.
 
@@ -2845,17 +3450,13 @@ Census rows: every label above, plus the Settings rows and the switch.
 - `tests/settingsStore.test.ts`, `tests/settingsPanel.test.ts`: §8.1's
   relaxed membership checks, mutation-checked again.
 - `tests/headlineCard.test.ts`: §8.3's cases.
-- `tests/xPost.test.ts`: `shownWhole` holds at every guard (`setAspect`,
-  `canMoveCamera`, `isKeyable`, `CropOverlay`, the shapes), membership per
-  site; a failed capture yields no asset; `post` refused in Direct.
-  Mutation: leave `shownWhole` out of `setAspect` (the captured post is
-  re-cropped to 9:16).
+- `tests/socialCard.test.ts`: §8.4's cases and mutations.
 - `tests/brollPass.test.ts`: the schema is flat; an entity query must be
-  verbatim; a post needs a pasted link.
-- Fixtures: recorded API responses (Wikidata, Commons, oEmbed and Wikipedia
-  JSON, measured shapes) in `tests/fixtures/broll/`, made from PD/CC0
-  examples. No network in CI. **No Brave response is ever recorded**: its
-  Terms forbid storage beyond transient storage (§9, §11).
+  verbatim; a headline needs a pasted link; neither `post` nor `social` is
+  a member of the kind enum (membership, not the list).
+- Fixtures: recorded API responses (Wikidata, Commons and Wikipedia JSON,
+  measured shapes) in `tests/fixtures/broll/`, made from PD/CC0 examples. No
+  network in CI.
 - **Render check** `tests/integration/brollCredits.int.test.ts`, into
   `tests/output/broll-credits/`: a synthetic still with a fake CC BY credit,
   placed, exported. `<name>.credits.txt` sits beside the mp4 with the line,
@@ -2865,21 +3466,24 @@ Census rows: every label above, plus the Settings rows and the switch.
 
 ### 8.10 Exit
 
-- One real session by the user: five moments, each kind used once.
+- One real session by the user: five moments, one from each of the five
+  sources in §8 (Pexels, Commons, a fact card, a social quote card typed by
+  hand, a headline card).
 - Every asset placed carries a credit; `credits.txt` is correct; the Done
   line names the required credits.
 - A person's portrait, and a group photo with no Q5 on its entity, both
   refused without the confirm and placed with it.
 - A BY-SA file refused with the switch off.
-- The X capture measured, with the logo and timestamp inside every
-  captured rect; the Pexels licence and guidelines read, their clauses in
-  §11 and the credit line confirmed.
+- A social quote card typed, styled by Surprise me, placed and exported,
+  with its attribution line; nothing requested from any X host during it
+  (the fetcher's log). The Pexels licence and guidelines read, their
+  clauses in §11 and the credit line confirmed.
 - No key appears in any log, error or URL (a test over the redaction
   paths).
 
 ---
 
-## 9. Step 6 — Retrieved-fact cards and the 3D templates · 8 days
+## 9. Step 6 — Retrieved-fact cards and the 3D templates · 7 days (Brave's 1 out)
 
 **Retrieved-fact cards** (3 days) are the `source` template with `sources[]`:
 
@@ -2887,16 +3491,30 @@ Census rows: every label above, plus the Settings rows and the switch.
   switch (§16.15);
 - a **page card** from a pasted link;
 - an **answer-with-sources card**, titled **"From <site>"**, never "Answer".
-  The model extracts from fetched texts only (the Wikipedia extract, fetched
-  pages), and:
+  The model extracts from fetched texts only (the Wikipedia extract, and
+  pages fetched from links the user pasted), and:
   - **verbatim runs only**, never `grounded` paraphrase, so two pages'
     sentences cannot be stitched into a claim neither makes;
   - **at most 25 words per source**, with a source line under each sentence;
   - **one claim per card**;
   - each sentence validated as a verbatim run of one fetched text, with its
     index (§6.7's matcher pointed at the fetched text); a sentence that
-    grounds nowhere is dropped;
-- a **search card** only as decision §16.16 allows (the terms, §11).
+    grounds nowhere is dropped.
+
+**No search engine in v1** (§16.16, answered 2026-10-05: "the brave too I
+guess LM Studio has inbuilt the web scraping so we don't need it
+additionally"). The first draft's Brave key, its monthly cap, its
+`safeStorage` and its search card are removed (1 day). Brave is dropped on
+its own merits: a card on file, a per-use cost past the free credit, and
+terms against storing results and against evaluating models with them (the
+terms are kept in §17). **On the LM Studio point**, a web search for this
+revision (2026-10-05; read, not tried in LM Studio) found that LM Studio has
+no built-in web search: search arrives through MCP servers configured in
+LM Studio's settings and used in its own chat window, not through the
+OpenAI-compatible API the app calls, where the model has no tools unless
+the app provides them; and Ollama users have none of it. So the app's rule
+stands: **the app fetches, the model extracts** (§0), from Wikipedia and
+from links you paste.
 
 **Fetched numbers never land on the speaker's beat.** A counter whose number
 came from a page, placed on the word the speaker said, makes the page's
@@ -2912,33 +3530,6 @@ page says 31.4 %, the video contradicts or overstates them. So:
 serves without signing in, and a page whose schema.org data says
 `isAccessibleForFree: false` is refused (**unmeasured** on real pages; read
 on three news sites in the step).
-
-**The Brave key, here and not in step 5** (1 day). Measured on
-brave.com/search/api (2026-10-05, by the review and again by the fixer):
-Search costs **$5 per 1,000 requests** and includes **$5 in free credits
-every month**, applied automatically, with a card on file. Past about 1,000
-searches a month the user's card is charged: a per-use API cost, against
-`CLAUDE.md`'s "no per-use API cost". So:
-
-- **a hard monthly cap, enforced in main**: 900 requests, counted per
-  calendar month in settings, refused at the cap with a plain sentence
-  ("You've used this month's free searches; they reset on the 1st"), and
-  shown in Settings as **"N of 1,000 free searches this month"**;
-- **the Brave key is stored with Electron's `safeStorage`**, not plaintext
-  (at least this one; §16.14 asks about the rest);
-- the Settings row, its census row, and §8.1's write-only path and tests,
-  extended to the second key;
-- **Brave test fixtures are synthetic only, and no eval ever runs over Brave
-  results.** The Terms (api-dashboard.search.brave.com/terms-of-service,
-  read by the review) forbid storage beyond transient storage (i), and using
-  Search Results to create, evaluate or train AI models (xiii). A recorded
-  response or an eval of the answer card over live Brave results would do
-  both.
-
-Tests: the cap refuses the 901st request in a month, made across several
-of its days, and resets on the 1st (fake clock); the key never leaves `safeStorage` in plaintext (the settings
-file holds no key string, membership over its values). Mutations: count per
-day instead of per month; write the key to `settings.json`.
 
 **The 3D templates** (4 days): `timeline`, `before-after`, `versus`, and 3D
 variants of `counter` and `ring`, on the shared renderer:
@@ -2968,8 +3559,7 @@ templates replace the stub `kinetic-type` moment (`moment.ts:16-19`,
 **Exit:** each 3D template passes the harness contract; the flat-colour
 check is within 2/255; the answer card never ships a sentence that is not a
 verbatim run of one fetched text (property test); no fetched number lands
-on a spoken beat (a test over every template's placement); the Brave cap
-holds.
+on a spoken beat (a test over every template's placement).
 
 ---
 
@@ -3007,11 +3597,11 @@ on 2026-10-05.
 | Wikimedia Commons | `pd`, `cc0`, `cc-by-*`; `cc-by-sa-*` **only with the switch**, each BY-SA file badged and explained at its click | `<ObjectName> by <Artist>, <LicenseShortName> <LicenseUrl>, via Wikimedia Commons <descriptionurl>`, plus " — cropped/changed" when it is; required where `AttributionRequired` | every other `License` (refused with its name); **a file that may show a person** (P31 Q5, a P180 depicts of a human, a group of humans, `personality`, or a face found) **without the user's confirm**, and an undecidable one likewise; other `Restrictions` without the confirm | extmetadata measured on Q243, Q42 and Q1299; P180 on M25320209 and M176712255 |
 | Pexels | the Pexels licence, as you read it | `Photo by <name> on Pexels` written always, to be confirmed | until the licence is read: any candidate the face finder sees a face on, or cannot check, without the confirm | **the licence page, API guidelines and rate limits are unmeasured** (Cloudflare 403 again on 2026-10-05). You read them before 8.3 is built, and their people, endorsement and attribution clauses go here |
 | Wikipedia text | the extract quoted with a link, **behind the BY-SA switch** (it is CC BY-SA 4.0, and a trimmed extract is a modification) | `From “<title>”, Wikipedia (rev <id>), CC BY-SA 4.0 <licence URL> — <page URL> (excerpt)` | **the summary thumbnail and og:image, always** (measured: an enwiki-local logo) | `title`, `content_urls.page` and `revision` measured in the REST summary |
-| X posts | a post **the user pasted**, through X's own embed, **shown whole**: full name, @username, text, avatar, logo and timestamp kept, never cropped, masked, moved, shaped or retimed | `@handle on X, date`, with the URL | any post the user did not paste; **any card of our own making** (a mock-up); an X card in a Director ad; a capture that cuts the logo or the timestamp | **X's display rules read and followed** (2026-10-05); **the post author's rights are yours to clear**: X grants none. The developer agreement beyond the display rules is yours to read |
+| social quote cards (a public statement, e.g. from X) | **a quote the user typed or pasted** (text, name, @handle, date), drawn as **our own quote card** in our graphic styles, with the attribution line `<name> (@handle) · <date>` | the attribution line, on the card | **fetching anything from X** (no oEmbed, no embed script, no capture, no X host in any allowlist, and a pasted X link refused by `page.ts`, §8.2); **any X branding** (logo, avatar, verified mark); **any card shaped as a post** | nothing is obtained from X, so X's display rules (read 2026-10-05, §17) do not attach; the quote's accuracy is yours. The paste-only condition is the agreed reading of your idea, to confirm (§16.18); the quoted person's rights, and any endorsement implied by using the card in an ad, are yours to clear |
 | news headlines | the page's own headline (`h1`, or `og:title` less a trailing byline), the outlet's name in our type, the date, from **a pasted article link**, as a web-article card | `<site_name> · <domain>, <date>`, with the URL and the fetched time | the outlet's photo or logo; a print-clipping masthead; a headline the app writes or edits; **Google News RSS** (its own `<copyright>` restricts the feed to personal, non-commercial use, measured) | another feed's terms are unmeasured |
 | page cards | the page's own title, site name and date as our graphic | `site, date`, with the URL | og:image; a screenshot (decision §16.19) | — |
 | **page text** (answer and page cards) | **a short verbatim quote with its source**: at most 25 words a source, one claim a card | the page's own credit under each sentence | paraphrase; text stitched across pages; **paywalled text** (`isAccessibleForFree: false`, or anything behind a sign-in) | the paywall signal is unmeasured on real pages |
-| Brave Search | **the URLs it returns, to fetch the pages themselves**, under a hard cap of 900 searches a month | the fetched page's own credit | **a card showing Brave's snippets or result list**; storing results beyond transient storage (Terms (i)); **any eval or fixture made from Brave results** (Terms (xiii): no creating, evaluating or training AI models with them); a search past the cap | the Terms (1 Sep 2026) and prices ($5 per 1,000, $5 free a month) measured 2026-10-05; you read §3 before the search card is planned (decision §16.16) |
+| Brave Search | **not in v1** (§16.16): no search engine; the answer card quotes Wikipedia and pasted links only | — | — | its prices and Terms, measured 2026-10-05, are kept in §17 |
 | Google / Perplexity screenshots | **never** | — | — | agreed |
 | saved templates | library assets by id, the author's own design elements | per `MARKET.md` | B-roll with a credit and third-party footage (stripped on save) | `MARKET.md` §5 |
 
@@ -3022,8 +3612,8 @@ on 2026-10-05.
 The installers ship no Python (`service.ts:26-35`), and the packaged app falls
 through to a bare interpreter because `.venv` is excluded. **No step's Python
 half reaches installed users until Step P lands** (§3a: BETA R4's full
-route, the app installing a Python pack under `userData` itself, 1–2 weeks
-and 300 MB or more by `BETA.md`), as sheet 22 decided ("for this we will
+route, the app installing a Python pack under `userData` itself, 5 to 10
+days and 300 MB or more by `BETA.md`), as sheet 22 decided ("for this we will
 install Python then I guess"). Until then **every Python control is greyed
 with "needs the AI helper"**, never offered as a toggle that changes
 nothing.
@@ -3032,15 +3622,17 @@ What each step needs:
 
 | step | without Python | with it | sizes |
 |---|---|---|---|
-| 1 reframe | shots (main), every crop centred: **today's `solveCrop`, so nothing new to see**; Follow the subject and Reframe greyed | faces, salient, ground | faces: MediaPipe 0.10.35, 17.8 MB (Mac) / 10.9 MB (Windows) of wheel installed `--no-deps` with stubs, plus the 1.1 MB full-range model (§4.3); or YuNet 0.23 MB on the installed onnxruntime; **BiRefNet 109 MB, a download for any user who never baked depth** (on disk only on the dev Mac); Florence-2 int8 275 MB, each its own Get press |
+| M0 transcript → Clip it | **all of it over the link's own captions**: Get transcript, the rows and handles, chapter chips, Clip it with its words, Add another clip, captions on; a video with no captions keeps the start and end fields, and Listen to it is greyed | Listen to it (Whisper) for a video with no captions; the timeline half over own footage (its transcript is Whisper's) | faster-whisper small 464 MB, its own Get press |
+| 1 reframe | shots (main), every crop centred: **today's `solveCrop`, so nothing new to see**; Follow the subject and Reframe greyed | faces, salient, ground; the stacked two-up (it needs two face boxes) | faces: MediaPipe 0.10.35, 17.8 MB (Mac) / 10.9 MB (Windows) of wheel installed `--no-deps` with stubs, plus the 1.1 MB full-range model (§4.3); YuNet 0.23 MB on the installed onnxruntime only if the fallback is needed; **BiRefNet 109 MB, a download for any user who never baked depth** (on disk only on the dev Mac); Florence-2 int8 275 MB, each its own Get press |
 | 2 free space | the style's position; **Smart placement greyed** | per shot | — |
 | 3 graphics | over **a link's caption track** only; **no `callout`** (it needs a face box) | over own footage (its transcript is Whisper's), and `callout` | — |
 | own-footage transcript | **none**: own footage has no captions | Whisper | faster-whisper small 464 MB on disk (measured), its own Get press |
-| 4 Best clips | **all of it over YouTube's captions**; Clip it with centred crops | Whisper for links without captions and for Clip it's re-transcription; the reframe | as above |
+| 4 Best clips | **all of it over YouTube's captions**; Clip it from a card with centred crops | Whisper for links without captions and for Clip it's re-transcription; the reframe | as above |
 | 5 B-roll | **all of it**, but every picture that might show a person asks (no face check) | the face check that clears a picture of people (§8.6) | — |
 
 **The pack's contents.** `requirements.txt`, plus the optional files this plan
-adds: `requirements-faces.txt` if MediaPipe is chosen, and nothing extra for
+adds: `requirements-faces.txt` and `requirements-faces-nodeps.txt`
+(MediaPipe, decided in §16.1), and nothing extra for
 ground (onnxruntime, tokenizers and numpy are there). `tokenizers` becomes
 explicit.
 
@@ -3097,6 +3689,8 @@ the analysis loaded stays resident while the model runs.
 | `select='gt(scene,T)'` after `format=rgb24`, `metadata=print`, at **`-loglevel info`** | 1b shots | 2012 / 2012 / 2016 | **dated**; measured on the Mac. The score differs per build without `format=rgb24` (§4.2); at `-loglevel error` nothing prints (measured). **Windows parity is §4.9's committed score table, asserted in CI** |
 | `scale` before analysis; `-ss` before `-i` for one frame | 1b, 1c, 1d, 1g (in the helper) | old | measured on the Mac (30–80 ms a seek, exact shot) |
 | `crop` with a per-frame `x`/`y` expression (`if`, `lt`, eased segments), literal `w`/`h` | 1f crop keys | crop 2010s; eval functions 2011 | measured on the Mac (step and linear exact); **dated** for Windows; the reframe render check runs in CI |
+| **the stacked two-up**: `split=2`, two `crop`s each with keyed `x` and `y` and literal `w`/`h`, `vstack`, with clip-indexed labels | 1f (§4.6 rule 3, §4.7), the render and the footage pre-pass's `-vf` | crop 2010s; split about 2011; vstack 2015 (the dates as known, not re-read in the 2018 source for this revision) | **measured on the Mac's 4.4 build for this revision**: a single shot as two halves is bit-identical to the one crop (`framemd5`, 60 frames), held keys switch both halves on the exact frame, and the shape runs inside `-vf` (compared over rawvideo; `EFFECTS.md` §38). **Dated** for Windows; §4.9's two-up rows run it in CI |
+| yt-dlp's `--download-sections` with `--force-keyframes-at-cuts`, through `--ffmpeg-location` (the ffmpeg arguments are yt-dlp's, not this plan's) | M0's Clip it (§3b.4) | — | one exact cut measured on the Mac (container start only, §7.1); **the 2018 build has never run under it**: `exactCut.int.test.ts` in Windows CI, or the Surface (§7.7, §15 row 14) |
 | `adelay=<n>S\|…` (samples) | step 0, every audio clip | the `S` form is in the 2018-11-11 source read for this plan | measured exact on the Mac; **CI with step 0** |
 | `fps=${fps},zoompan=…:d=1:…:fps=${fps}` on video | step 0 (§3.4) | 2014; zoompan's restamping read in the 2018 source (`vf_zoompan.c:158`, `:225`, `:309-310`) | measured on the Mac: 60 fps and 29.97 fps sources keep their duration with the leading `fps=`, and go to half speed or drift without it; **CI with step 0** |
 | `-filter_complex_script <file>` | step 0 (§3.7), every render | in the 2018 source (`f22fcd4` `fftools/ffmpeg_opt.c:3109`, `:3478`) | measured on the Mac (re-run by the fixer); the 360-cut render check runs it in CI |
@@ -3108,7 +3702,8 @@ the analysis loaded stays resident while the model runs.
 | `cropdetect` | **not used** (black bars only) | — | — |
 
 Every new shape goes into `tests/oldestFfmpeg.test.ts`: the render shapes
-into `SHAPES`, and the analysis argv into the new `ANALYSIS_SHAPES`.
+(the two-up's included) into `SHAPES`, and the analysis argv into the new
+`ANALYSIS_SHAPES`.
 
 ---
 
@@ -3119,6 +3714,7 @@ into `SHAPES`, and the analysis argv into the new `ANALYSIS_SHAPES`.
 | the Python helper | Follow the subject, Reframe and Smart placement greyed with "needs the AI helper"; crops as they were; captions at the style's place; Best clips over YouTube captions only; graphics over caption tracks only, no `callout`; every B-roll picture that may show a person asks | `reframe.int` with the helper refused; `bestClips` without asr; census rows for each greyed control |
 | a model not on disk | its Get button with its size; nothing downloads until it is pressed | census rows; a store test that no toggle or phrase starts a download |
 | the face detector (degraded) | salient, then centre, per shot, with a note | path test "no faces" |
+| two people, one of them lost for much of the shot | no two-up: the larger face, with a note | path test "a lost face gives larger" |
 | Florence-2 (not downloaded, or over its gate) | the phrase field greyed with its reason; salient covers no-face shots | path test "ground absent" |
 | no shots found (a single take) | one shot; the path still pans | path test |
 | a rotated file whose size disagrees | the track is refused; centred crop; "the file's orientation changed — reframe again" | `faces.int` rotated case |
@@ -3127,12 +3723,10 @@ into `SHAPES`, and the analysis argv into the new `ANALYSIS_SHAPES`.
 | a prose or truncated answer | that pass only falls back; the clip stands | settle tests |
 | a graphic that cannot be baked | dropped from the export with a note; the export succeeds | `graphic.int` |
 | WebGL unavailable | 3D templates dropped with a note; 2D ones draw | graphic test |
-| no Pexels or Brave key | the source greyed: "add a key in Settings" | panel test |
-| offline | each source's search says so; nothing half-written (staging then rename) | `webFetch` test |
-| X capture fails | no X card, a note; never a card of our own making | `xPost` test |
-| the Brave cap reached | the search says so and refuses until the 1st | the cap test (§9) |
+| no Pexels key | the source greyed: "add a key in Settings" | panel test |
+| offline | each source's search says so; nothing half-written (staging then rename); Get transcript says so and the start and end fields stay | `webFetch` test; `ingestPanel` component test |
 | a number from a YouTube track | the graphic is a proposal, "check the number", until Keep | `directorGraphics` test |
-| a link with no captions and no Python | "Best clips needs the AI helper to listen to it" | panel test |
+| a link with no captions and no Python | M0: "This video has no captions", the start and end fields as today, Listen to it greyed with "needs the AI helper"; Best clips adds "Best clips needs the AI helper to listen to it" | `ingestPanel` component test (§3b.8); panel test |
 | Windows | every render check above runs in CI on the 2018 build | CI, read after every push |
 
 ---
@@ -3145,8 +3739,9 @@ Each is named in its step, and each step's first task is its own row:
    model is accepted, 5 ms a frame at 360×778, CPython 3.14.6; §4.1). Still
    open: the Surface (no Metal; the Windows wheel), mediapipe 1.0.1, the
    worker's import and start-up time, the cost at the 640 px edge, and
-   recall and false boxes against hand marks on the ten clips. The YuNet comparison through its
-   hand decoder only if §16.1 asks for it (§4.1, §4.3).
+   recall and false boxes against hand marks on the ten clips. The YuNet
+   comparison is not run (§16.1 answered); YuNet's hand decoder and its
+   golden test only if the Surface run fails (§4.1, §4.3).
 2. The scene threshold and minimum shot on footage with hand-marked cuts;
    the per-cut scores on the 2018 build against the committed table (§4.1,
    §4.9).
@@ -3171,31 +3766,37 @@ Each is named in its step, and each step's first task is its own row:
     validator's rule 7 (§6.7).
 12. Prefill time for a 3k-token Best-clips prompt on the Surface, against
     the 180 s timeout.
-13. YouTube ASR word timing against faster-whisper on three videos; **three
-    unpunctuated tracks (one Hindi or Telugu) segmented**, and the grapheme
-    estimate for word ends set from them (§7.2).
+13. YouTube ASR word timing against faster-whisper on three videos (step
+    4); **three unpunctuated tracks (one Hindi or Telugu) segmented**, and
+    the grapheme estimate for word ends set from them (§7.2; in M0, §3b.9).
 14. **The exact cut's first frame against its source**, cross-correlated as
     the fast cut was, on both builds: the real yt-dlp test in CI, or **on
     the Surface** if CI cannot run yt-dlp; the fast-cut head offset on more
-    videos (§7.1).
+    videos (§7.1; M0's exit, §3b.9).
 15. Whether low-view videos carry a heatmap (§7.4); whether the metadata
     subset's `channel`, `uploader` and `webpage_url` print as expected
-    (§7.1).
-16. Electron 44 `capturePage` of X's cross-origin iframe on a hidden window,
-    and reading the logo's and timestamp's rects through its `WebFrameMain`
-    (§8.4).
-17. Pexels' licence, guidelines and rate limits, read in a browser; X's
-    developer agreement beyond the display rules (now read) (§11).
+    (§7.1; M0's first task, §3b.1).
+16. *(Removed 2026-10-05: the X capture window is out, §8.4, §17. The
+    number is kept so no reference moves.)*
+17. Pexels' licence, guidelines and rate limits, read in a browser (§11).
 18. The schema.org paywall signal on three news sites (§9).
 19. Electron `net.fetch` against Node fetch behind a proxy (§8.2).
 20. three.js flat colour and edge alpha against the 2D painter (§9).
+21. pyautoflip on the ten clips, run once in a scratch venv on your Mac
+    (Python 3.13 or older: it refuses 3.14), and rated beside ours at step
+    1's exit (§4.1, §4.10).
+22. The stacked two-up (`split`, two keyed `crop`s, `vstack`) on the 2018
+    build, through §4.9's two-up rows in Windows CI (§4.7, §13).
 
 ---
 
 ## 16. Decisions for the user
 
 Each has a recommendation; nothing here reopens a settled licensing or
-sourcing question.
+sourcing question. **Answered 2026-10-05 (evening).** Each item now ends
+with its answer line: your own words where you answered; "taken as
+recommended unless you say otherwise" where you did not; and **OPEN**, with
+what is needed, where the answer waits on something not yet in hand.
 
 1. **The face detector.** MediaPipe was agreed; the first draft of this
    plan leaned to YuNet on three measured costs and one open question
@@ -3229,6 +3830,14 @@ sourcing question.
    not; neither one's accuracy is, so the hour's sanity check counts false
    boxes as well as misses, and YuNet would cost half a day before it could
    even be compared.
+
+   **Answer (2026-10-05):** MediaPipe — "media pipe is good". The
+   full-range model in a child process, installed the stub way; the
+   comparison is not run; YuNet is the fallback if the Surface run fails.
+   The OpenCV face model you asked about is YuNet itself (OpenCV's
+   `cv2.FaceDetectorYN` wraps it), so it is that fallback; the older Haar
+   cascades the `cv2` wheel ships are not considered (§4.1). 1c is 2 days and
+   step 1 half a day shorter (§2).
 2. **Per-shot crops as one followed clip** (recommended: one decoder, a
    clean timeline, it re-solves on an aspect change) **or split at each cut**
    (works today and is measured, but 40 pieces for a podcast, +21 % export
@@ -3237,30 +3846,69 @@ sourcing question.
    is read** (recommended: speed, ramp, frame-rate, trim and split edits are
    right by construction) or keys stored on the clip and re-derived inside
    each of those edits (a list the next edit forgets).
+
+   **Answer (2026-10-05):** taken as recommended unless you say otherwise:
+   one followed clip, its crop compiled from the track every time it is
+   read.
 3. **Two people too far apart for one crop.** v1 frames the nearer face with
    a note. A stacked two-up (both faces, one above the other, as podcast
    clips do) on the grid's rails: in step 1 (+2 days) or later?
+
+   **Answer (2026-10-05):** yes, in step 1 (+2 days): the stacked two-up of
+   §4.6 rule 3 and §4.7, with **Stack two people** on by default in the
+   dock. Framing the larger face stays only for a face lost, with the
+   toggle off, or for a portrait source going to 16:9 (the two-up runs on
+   x only).
 4. **Florence-2's route.** Python ORT with a hand-written loop
    (recommended: same process, same download path), or Transformers.js in
    main. And: is BiRefNet's salient box enough for unnamed subjects, with
    Florence only for a typed phrase (recommended until 1g's gate)?
+
+   **Answer (2026-10-05):** taken as recommended unless you say otherwise:
+   Python ORT with the hand-written loop; the salient box for unnamed
+   subjects, Florence only for a typed phrase until 1g's gate.
 5. **A face fixture for the tests.** You record ten seconds of yourself
    (recommended: rights-clean, and a real face), or a PD/CC0 Commons clip.
+
+   **Answer (2026-10-05): recorded.** `references/recordings/face-fixture-2026-10-05.mov`
+   (gitignored like the other recordings; `REFERENCES.md`): 26.6 s,
+   landscape 3840×2160 HEVC at 30 fps, no rotation tag, AAC stereo. The face
+   enters at about 7 s, moves across the frame, looks away, points, and
+   leaves at the end, which exercises the pan, lost-face and static-first
+   rules in one take. It stays on each machine that runs 1c's tests; the
+   detector run on it is `sidecar/scripts/facetest.py` (§4.1).
 6. **Homes in the window.**
    - Best clips: inside the URL tile (agreed).
    - Graphics: a section of the Transcript tile, plus Clip it and Direct
      (recommended), or a new Shelf tile, which changes sheet 20's order.
    - B-roll: the same question.
    - Sheet 13's "set 5 / set 10" placements later, or now?
+
+   **Answer (2026-10-05):** taken as recommended unless you say otherwise:
+   graphics, and by the same recommendation B-roll, as sections of the
+   Transcript tile (B-roll also in Best clips), with no new Shelf tile, so
+   sheet 20's order is unchanged; sheet 13's "set 5 / set 10" later (v1 is
+   thirds, §5.2). M0's rows live in the URL tile and the Transcript tile
+   (§3b.2).
 7. **Graphics above the look (ungraded, like cards; recommended) or under
    it.**
+
+   **Answer (2026-10-05):** taken as recommended unless you say otherwise:
+   above the look, ungraded.
 8. **Naming.** The new `GraphicSpec`, with the old `GraphicsSpec` renamed
    `CaptionLayersSpec` (recommended; it is 36 sites, mechanical).
+
+   **Answer (2026-10-05):** taken as recommended unless you say otherwise.
 9. **One `SELF_DRAWN_FIELDS` constant** that every guard reads, so the next
    kind is a one-line change, with membership tests kept per site
    (recommended, done in 3a), or the spelled-out lists as today.
+
+   **Answer (2026-10-05):** taken as recommended unless you say otherwise:
+   one constant, done in 3a.
 10. **Which graphics a Clear removes.** Direct's join `DIRECTOR_RULES`; Clip
     it's and the Transcript tile's have their own Clear (recommended).
+
+    **Answer (2026-10-05):** taken as recommended unless you say otherwise.
 11. **Validator strictness.**
     - The stretch: the cited sentence ±1 (recommended).
     - Hindi and Telugu number words: not parsed in v1, so such graphics are
@@ -3274,21 +3922,39 @@ sourcing question.
       negative ending counts as negated in v1, measured on the Telugu
       fixtures (recommended), or Telugu graphics limited to verbatim quotes
       until it is.
+
+    **Answer (2026-10-05):** taken as recommended unless you say otherwise,
+    every bullet as written.
 12. **The URL transcript.** `-orig` timing with the uploader's text where
     both exist (recommended); Whisper on the download when neither exists.
+
+    **Answer (2026-10-05):** taken as recommended unless you say otherwise;
+    M0 builds it (§3b.1), and Whisper arrives as Listen to it (§3b.5).
 13. **Clip it from a link: the exact cut or the fast one.** Open until the
     exact cut's first frame is cross-correlated against its source (§15
     row 14): only its container start (0.000) was measured, and the 2018
     Windows build has never run under yt-dlp's section cut. Lean: exact, if
     it measures frame-exact on both builds.
+
+    **Answer (2026-10-05): OPEN until measured.** Needed: the exact cut's
+    first frame against its source on both builds, which is now M0's exit
+    (§3b.9). Until then M0 keeps the exact/fast toggle (today's default is
+    fast, `store.ts:1055`), and Clip it from a run defaults to exact, the
+    lean.
 14. **Keys in settings.json.** The Brave key goes into `safeStorage`
     regardless (it is backed by your card, §9). The rest stay plaintext like
     the Director's and the voice's (recommended for now), or all move to
     `safeStorage` together.
+
+    **Answer (2026-10-05): moot.** Brave is out (§16.16), so no key backed
+    by a card remains. Every key stays plaintext in `settings.json` like the
+    Director's, as recommended for the rest, and no `safeStorage` is built.
 15. **The share-alike switch** is a main-owned setting, and **Wikipedia
     extracts sit behind it too** (recommended: they are CC BY-SA 4.0 text,
     and a trimmed extract is a modification). Each BY-SA file is badged and
     explained at its own click whatever the switch says.
+
+    **Answer (2026-10-05):** taken as recommended unless you say otherwise.
 16. **Brave Search.** Its terms forbid storing results beyond transient
     storage, deriving from and redistributing them, and using them to
     create, evaluate or train AI models. It costs $5 per 1,000 searches
@@ -3298,6 +3964,16 @@ sourcing question.
     costs you anything; no Brave fixtures and no eval over its results. No
     card shows Brave's own snippets or results unless you read the Terms' §3
     and decide otherwise.
+
+    **Answer (2026-10-05):** Brave is out of v1 — "the brave too I guess LM
+    Studio has inbuilt the web scraping so we don't need it additionally".
+    It is dropped on its own merits (a card on file, a per-use cost past
+    the free credit, the terms). On LM Studio, a web search for this
+    revision found that its web search comes through MCP servers used in
+    its own chat window, not through the API the app calls, and Ollama has
+    none; so the app keeps fetching and the model keeps extracting (§9).
+    Step 6 is a day shorter; Brave's measured prices and terms are kept in
+    §17.
 17. **News.** Google News RSS is ruled out by its own terms. Headline cards
     come from a pasted article link (recommended for v1); find a feed with
     acceptable terms later? **And a change from what was agreed**: the
@@ -3307,6 +3983,13 @@ sourcing question.
     not (measured). Recommended: a plain web-article card (headline,
     "site · domain · date", "Opinion" when it is one), and the clipping
     kept for the user's own playful headlines.
+
+    **Answer (2026-10-05):** confirmed: the plain web-article card from a
+    pasted link. In your words, the newspaper clipping is for "the
+    different purposes like a meme or something or to make fun or false
+    claims as jokes, so it's different". So the clipping stays your own
+    playful tool (`PaperSpec` untouched, §8.3) and never carries a real
+    outlet's name; a feed with acceptable terms is later.
 18. **X post cards.** X's own embed captured from a hidden window (agreed;
     capture to be measured). **X's display rules are now read**, and they
     remove the fallback: our own card would break the logo, avatar and
@@ -3315,45 +3998,101 @@ sourcing question.
     cards are refused in Director ads (X forbids using posts to promote
     without the author's permission). The post author's rights are yours to
     clear.
+
+    **Answer (2026-10-05):** your idea — "instead what we gonna do is we
+    will make new cards of kinds in our assets and the user will pick in
+    the custom or we can give any card randomly if they select" —
+    **confirmed in the paste-only form**: "it's only a normal card, like an
+    edit, not as a claim". It is the social quote card of §8.4: every field
+    typed or pasted by you, drawn in our six styles, picked by you or by
+    Surprise me; no X logo, no avatar, nothing shaped as a post, and
+    nothing fetched from X. The capture window is out (§17), and step 5 is
+    1.5 days shorter.
 19. **Page cards** as our own graphic (recommended, consistent with the
     headline rule), or a screenshot of the page (it would carry the outlet's
     photos and layout).
+
+    **Answer (2026-10-05):** taken as recommended unless you say otherwise.
 20. **How credits reach the viewer.** Copy for the description, with
     EXPORT's Done line saying "N credits required — Copy" until you copy
     them, and `credits.txt` as a record (default); an on-screen credit line
     as an option?
+
+    **Answer (2026-10-05):** taken as the default unless you say otherwise;
+    the on-screen line as the option §8.9's render check already covers.
 21. **Thumbnails.** Pressing Search is consent for the thumbnails
     (recommended); every full file is its own click.
+
+    **Answer (2026-10-05):** taken as recommended unless you say otherwise.
 22. **The network stack.** Move the new fetchers (and later the old ones)
     to Electron's `net.fetch` for the system proxy (recommended once 15 is
     measured).
+
+    **Answer (2026-10-05):** taken as recommended unless you say otherwise,
+    once its measurement (§15 row 19) is in.
 23. **The contact address** in the User-Agent Wikimedia asks for.
+
+    **Answer (2026-10-05): OPEN.** Needed: the address (an email, or a page
+    on 3dit.meme) to put in the User-Agent; §8.2's fetcher waits for it.
 24. **The old parallax bakes** in `~/.cache/forge/parallax` (264 MB):
     migrate into `userData/cache`, delete on first run, or leave them.
+
+    **Answer (2026-10-05): leave them** — "keep it for now, it's only
+    264 MB". §3.5 moves new caches under `userData/cache` and never touches
+    the old folder.
 25. **Two edits to `BETA.md`**, made when you say yes: §3.2–3.4 (the split
     click, the frozen or slowed zoom, the late held key) move into R2 as
     beta blockers, since they are bugs in what ships today; and R4's "Not
     for the beta" is replaced by the full route as Step P (§3a), matching
     `SHEETS.md:806-809`. Recommended: both.
+
+    **Answer (2026-10-05):** both — "yeah". Made the same day: `BETA.md` R2
+    lists §3.2–3.4 as items 7–9, R4's full route points to Step P (§3a),
+    and its status block says the beta now follows this plan.
 26. **M0: Transcript → Clip it first** (about 2 days, moved forward, not
     added): row selection, `clipToRange` and `timelineFrameAt`, ahead of
     step 1, since you called it the most important feature and it needs no
     Python where a transcript exists. Recommended; the agreed order stands
     if you decline.
+
+    **Answer (2026-10-05):** yes, and redefined by you: the URL transcript
+    from yt-dlp's captions, rows you pick by text or by start and end
+    handles, Clip it downloading only those words, Add another clip,
+    chapter chips, the start and end fields kept for a video with no
+    captions, and the timeline half. That is §3b: 7.5 days moved from
+    step 4, built first, after §3.3's half day.
 27. **The order against the beta**: beta R1–R12 → M0 → M1 (shipped only
     with Step P) → M2 → M3 → beta.2 → M4 → M5 (recommended), or this plan
     before the beta.
+
+    **Answer (2026-10-05):** this plan before the beta — "will finish this
+    and will get back to the beta". §3.3 → M0 → the rest of step 0 → M1
+    (shipped only with Step P) → M2 → M3 → M4 → M5 → `BETA.md` R1–R12 →
+    R13 → R14 (§2).
 28. **Step 7's saved templates** wait for `MARKET.md` Stage 0, or move to
     §17; the creator style may come forward with step 3's styles.
+
+    **Answer (2026-10-05):** taken as §10 writes it unless you say
+    otherwise: the saved template waits for Stage 0, and the creator style
+    stays in step 7 unless you ask for it with step 3's styles.
 29. **Clip it into a project that already holds an edit**: a new 9:16
     project per clip (recommended), or appended to this one with its aspect
     unchanged. Clip it asks either way and never re-crops the existing edit.
+
+    **Answer (2026-10-05):** taken as recommended unless you say otherwise,
+    for Best clips' cards (step 4). M0's Clip it from a run lands as today's
+    ingest does, in this project with its aspect unchanged (§3b.4): it
+    neither reframes nor changes the aspect, so it has nothing to ask.
 30. **Graphics from Clip it and Direct**: placed and listed with Drop, with
     only those whose number came from a YouTube track or an unsure Whisper
     word held for Keep (recommended), or every graphic held for Keep.
+
+    **Answer (2026-10-05):** taken as recommended unless you say otherwise.
 31. **The speaker's name on a quote**: a Speaker field per asset in the
     Transcript tile for your own footage, and yt-dlp's channel for a link
     (recommended), or no names on quotes in v1.
+
+    **Answer (2026-10-05):** taken as recommended unless you say otherwise.
 
 ---
 
@@ -3363,10 +4102,40 @@ sourcing question.
   video needs step 0's `fps=` fix measured on the 2018 build first).
 - Active-speaker detection and cutting to the speaker.
 - Mask tracking.
-- Speed-aware captions and props: they share §4.7's inverse later, and
+- Speed-aware captions and props: they share §3b.6's inverse later, and
   graphics refuse retimed clips until then.
 - Storyboard thumbnails on Best clips cards.
-- TransNetV2; AutoFlip; `cropdetect`; YOLO.
+- TransNetV2; Google's AutoFlip (a C++ MediaPipe graph with no wheel);
+  `cropdetect`; YOLO.
+- **`pyautoflip`** (0.2.1, MIT, fetched 2026-10-05; §4.1) as the reframe
+  engine. It outputs a rendered video file, not a crop path the timeline
+  can hold: no preview equal to the export, no dragging a shot, no re-solve
+  on an aspect change. Its dependency stack includes torch and torchvision
+  (installed size unmeasured) and brings `opencv-python` beside
+  MediaPipe's `opencv-contrib-python`, the `cv2` clash §4.3's stubs avoid;
+  and it refuses Python 3.14. And it is a 23-star project. It is used only as
+  a baseline: run once on the ten clips in a scratch venv, rated beside ours
+  (§4.10), never shipped.
+- **X embed capture** (the first draft's §8.4), replaced by the user's own
+  social quote card. Kept as measured: keyless `publish.x.com/oembed`
+  returned the post's text, author and date as JSON with no avatar
+  (`publish.twitter.com` 301s to it; a missing post answers 404 HTML, so
+  content-type must be checked; `widgets.js`, 94 KB, draws the card in a
+  cross-origin iframe), and X's display requirements (read 2026-10-05) ask
+  for the logo, avatar and timestamp and forbid mock-ups of posts; neither
+  is used now, since the app fetches nothing from X. Kept as read, for any
+  later window that loads remote content: `forge-media:` serves any
+  absolute path with `Access-Control-Allow-Origin: *` on the default
+  session (`mediaProtocol.ts:64-86`, `index.ts:16-37`), so remote
+  JavaScript there could read `settings.json` and the keys. Such a window
+  must use its own in-memory partition (`session.fromPartition`), with no
+  preload and `sandbox: true`.
+- **Brave Search** (the first draft's search card and step 6's key). Kept
+  as measured on 2026-10-05: $5 per 1,000 requests after $5 of free credit
+  a month, with a card on file. Its Terms (1 Sep 2026) forbid storing
+  results beyond transient storage and using them to create, evaluate or
+  train AI models. Its API answered 422, not 401, to a missing or an
+  invalid `X-Subscription-Token`.
 - Fine-tuning of any kind.
 - The template store (`MARKET.md` Stage 2+).
 - Two existing leaks found by reading:
@@ -3380,11 +4149,17 @@ sourcing question.
 
 ## 18. Done means
 
-- The seven bars in §0 met and recorded: the ten reframe clips, the ten
-  Best clips links, the graphics eval in `EVAL.md`, a real B-roll session,
-  Clip it on the Surface without swapping.
-- Step P's exit met before any Python half shipped in an installer, and
-  `BETA.md` R2 and R4 edited as decision §16.25 says.
+- The seven bars in §0 met and recorded: the ten reframe clips (with
+  pyautoflip's baseline beside them), the ten Best clips links, the
+  graphics eval in `EVAL.md`, a real B-roll session with a social quote
+  card, Clip it on the Surface without swapping. And M0's exit (§3b.9): its
+  ten links.
+- Step P's exit met before any Python half shipped in an installer.
+  `BETA.md` R2 and R4 were edited on 2026-10-05 as decision §16.25 says,
+  and §3.2–3.4 are fixed here in step 0, so they are done when the beta
+  resumes.
+- **Then the beta**: `BETA.md` R1–R12, R13 and R14 follow this plan (§2,
+  §16.27).
 - Every row of §14 has a rendered output in `tests/output/` and a test.
 - Every "dated" row of §13 has become "in CI" on the Windows build.
 - Every regression test above has had its bug put back and failed.

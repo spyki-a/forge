@@ -6,6 +6,13 @@
 > (186 items), a writer and a critic; each claim was checked against the code
 > at the time. The days are estimates. Mark each step DONE here as it lands,
 > with the commit, the way PLAN.md's steps carry their "Built" notes.
+>
+> **2026-10-05: the beta now follows `CLIPS.md`.** The user's decision
+> ("will finish this and will get back to the beta"): CLIPS.md's plan runs
+> first, then R1–R12, R13 and R14 here (`CLIPS.md` §2, §16.27). Two edits
+> the same day (`CLIPS.md` §16.25): R2 gained items 7–9 and R4's full route
+> is `CLIPS.md` Step P; both are built inside that plan, before the beta
+> resumes.
 
 ## 0. What "beta" means
 
@@ -33,10 +40,10 @@ more to a careful closed beta.
 | step | what | days |
 |---|---|---|
 | R1 | the even-grid fallback when there are no beats | 0.5 |
-| R2 | the first-hour bugs (six of them) | 1.5 |
+| R2 | the first-hour bugs (six of them, plus 7–9 from `CLIPS.md`) | 1.5 (7–9's 1.5 counted in `CLIPS.md` step 0) |
 | R3 | copy rules and one blind rating run | 0.5 + your 45 minutes |
-| R4 | beats without Python: a TypeScript beat tracker | 3 |
-| R5 | portrait phone media: rotation and EXIF | 1.5 |
+| R4 | beats without Python: a TypeScript beat tracker (the full route is `CLIPS.md` Step P) | 3 (Step P's 5–10 counted in `CLIPS.md`) |
+| R5 | portrait phone media: rotation and EXIF | 1.5 (built first, in `CLIPS.md` step 0, §3.1) |
 | R6 | the library pack's fonts and licences | 0.5 |
 | R7 | name, app id, icon, version | 0.5 (once you decide) |
 | R8 | macOS signing, at least ad hoc | 0.5 to days |
@@ -48,8 +55,14 @@ more to a careful closed beta.
 | R14 | the beta.2 list | 3 to 5 |
 
 R1 to R12 is 13 to 15 working days; R13 and R14 make a careful closed beta
-about three weeks away. Four things wait on you: the name (R7), whether to
+about three weeks of work once R1 starts. Four things wait on you: the name (R7), whether to
 pay Apple (R8), 45 minutes of rating (R3), and the Freesound originals (R14).
+**The total is unchanged by the 2026-10-05 edits**: R2's items 7–9 (1.5
+days) and R4's full route (Step P, 5–10 days) are counted once, in
+`CLIPS.md`, which now runs before R1; they are done when the beta resumes.
+What changed is the order: R5 is `CLIPS.md` §3.1, in its step 0, so it is
+also done by then, and R1–R12 leave 11.5 to 13.5 days when the beta
+resumes.
 
 ---
 
@@ -76,8 +89,9 @@ case per row as they land (R1 starts the file).
 
 ### R2 — The first-hour bugs · a day and a half
 
-Six things a tester meets in the first hour, each hours, each with a test
-that fails when the bug is put back:
+Six things a tester meets in the first hour, each hours, and, since
+2026-10-05, three bugs in what ships today from `CLIPS.md` (items 7–9
+below), each with a test that fails when the bug is put back:
 
 1. **Length clamps each keystroke** (`src/renderer/src/components/Director.tsx:265`):
    typing "30" gives 60. Clamp on blur, not on change.
@@ -99,9 +113,25 @@ that fails when the bug is put back:
    saying nothing autosaves.
 6. **A moment whose bake throws** — DONE 2026-09-27: `exportBake.ts` leaves
    the moment out (`tests/moment.test.ts`, mutation-checked).
+7. **Every split clicks** (`CLIPS.md` §3.3): the audio delay is rounded to
+   whole milliseconds (`plan.ts:1761`); at 30 fps frame 47 lands 16 samples
+   late at 48 kHz, a measured click. `adelay` in samples instead.
+8. **Zoom keys on a video clip export a frozen frame** (`CLIPS.md` §3.4):
+   zoompan's `d=${clip.duration}` holds frame 0. `fps=${fps},zoompan=…:d=1`
+   (`d=1` alone plays a 60 fps source at half speed, measured).
+9. **Held keyframes land one frame late at 30 fps** (`CLIPS.md` §3.2):
+   `toFixed(4)` of `frame/fps` puts a key at frame 5 on frame 6, for every
+   key on a frame ≡ 2 (mod 3). Compare against the half-frame boundary
+   instead.
+
+Items 7–9 were added on 2026-10-05 as beta blockers (bugs in what ships
+today, `CLIPS.md` §16.25). Their fixes, tests and render checks are
+written in `CLIPS.md` §3.2–3.4 and built there, in step 0, before the beta
+resumes; their 1.5 days are counted there.
 
 **Tests.** Component tests for 1 and 3 (`tests/renderer/`), unit tests for
-2, 4 and 5; each mutation-checked.
+2, 4 and 5; each mutation-checked. 7–9: the render checks of `CLIPS.md`
+§3.2–3.4.
 
 ### R3 — The copy rules, and one rating · half a day + 45 minutes
 
@@ -139,8 +169,10 @@ Measured against the reference recordings in `docs/REFERENCES.md` (the
 sidecar's beats are the oracle: within 70 ms on ≥ 80 % of beats, tempo
 within 2 BPM).
 
-**The full route**, later or if the cheap one falls short: a Python pack
-under `userData` (1 to 2 weeks, 300 MB or more). Not for the beta.
+**The full route** is `CLIPS.md` Step P (§3a): the app installs its own
+Python pack under `userData` (5 to 10 days, 300 MB or more), and no Python
+half ships in an installer before it. Decided 2026-10-05 (`SHEETS.md:806-809`,
+`CLIPS.md` §16.25); it is built inside `CLIPS.md`, before the beta resumes.
 
 **Tests.** `tests/beats.test.ts` on synthetic clicks at known tempos;
 `tests/integration/beats.int.test.ts` against the reference recordings'
