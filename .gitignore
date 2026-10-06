@@ -17,6 +17,11 @@ sidecar/.venv/
 __pycache__/
 *.py[cod]
 
+# The face-detector measurement venv (docs/CLIPS.md §4.1, §4.3): mediapipe
+# installed --no-deps beside the pinned small packages, and the two BlazeFace
+# model files under its models/. Rebuilt by hand per machine; never shipped.
+sidecar/.venv-faces/
+
 # The asset library. Currently a symlink to the existing library while
 # placement is undecided (docs/ASSETS.md §"Open decision"), so it must not be
 # committed — but only THIS one, hence the slash.
