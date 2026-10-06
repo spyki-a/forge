@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { buildRenderPlan, RenderError } from '@shared/render/plan'
-import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
+import { DEFAULT_SETTINGS, emptyProject, framesToSeconds, type Clip, type MediaAsset, type Project } from '@shared/timeline'
+import { FRAME_RATES } from '@shared/project/frameRate'
 
 function asset(over: Partial<MediaAsset> = {}): MediaAsset {
   return {
@@ -273,12 +274,92 @@ describe('audio track mixing', () => {
     expect(filters).not.toMatch(/\bnormalize=/)
   })
 
-  it('delays the clip to its timeline position', () => {
-    const filters = argString(buildRenderPlan({ project: withMusic(), outputPath: '/o.mp4' }).args)
-    // 30 frames at 30fps = 1000ms. Without adelay every clip stacks at zero.
+  /** Every `adelay=` in the filter graph, each as its list of per-channel delays. */
+  const delaysOf = (p: Project): string[][] => {
+    const args = buildRenderPlan({ project: p, outputPath: '/o.mp4' }).args
+    const at = args.indexOf('-filter_complex')
+    expect(at).toBeGreaterThan(-1)
+    return [...args[at + 1].matchAll(/adelay=([^,;[\]]*)/g)].map((m) => m[1].split('|'))
+  }
+
+  it('delays the clip to its timeline position, in samples, on every channel', () => {
+    // 30 frames at 30fps = 1 s = 48000 samples at the project's 48 kHz.
+    // Without adelay every clip stacks at zero.
+    const delays = delaysOf(withMusic())
+    // One clip off zero, so one delay — the entries below are that clip's.
+    expect(delays).toHaveLength(1)
     // Repeated per channel rather than `:all=1`, which the Windows ffmpeg does
-    // not have. A bare `adelay=1000` would delay only the left channel.
-    expect(filters).toContain('adelay=1000|1000|1000|1000|1000|1000|1000|1000')
+    // not have. A bare `adelay=…` would delay only the left channel.
+    expect(delays[0].length).toBeGreaterThanOrEqual(2)
+    // In samples (the `S` suffix), not ms: a frame is not a whole ms.
+    for (const d of delays[0]) expect(d).toBe('48000S')
+  })
+
+  it('puts a clip that starts off a whole millisecond on its exact sample', () => {
+    /*
+     * Frame 47 at 30 fps is 1566.667 ms. Rounded to whole ms it was 1567,
+     * 16 samples late, and every split there clicked (docs/CLIPS.md §3.3,
+     * tests/integration/audioSplit.int.test.ts). In samples it is 75200.
+     */
+    const at30 = delaysOf(withMusic({ start: 47 }))
+    expect(at30).toHaveLength(1)
+    for (const d of at30[0]) expect(d).toBe('75200S')
+  })
+
+  it('rounds the delay to the NEAREST sample, never down or up', () => {
+    /*
+     * start/fps × rate is floating point, and at an offered rate it lands a
+     * hair either side of the whole sample: at 30 fps frame 62 is
+     * 99200.00000000001 and frame 73 is 116799.99999999999. Floor (or `| 0`)
+     * would put 73 a sample early and ceil would put 62 a sample late — each
+     * a one-sample overlap or hole at a split, measured as a spike of 0.32
+     * (tests/integration/audioSplit.int.test.ts, EFFECTS.md §39).
+     */
+    expect(framesToSeconds(62, 30) * 48000).toBeGreaterThan(99200)
+    expect(framesToSeconds(73, 30) * 48000).toBeLessThan(116800)
+    const cases: [number, string][] = [[62, '99200S'], [73, '116800S']]
+    for (const [start, want] of cases) {
+      const delays = delaysOf(withMusic({ start }))
+      expect(delays, `start ${start}`).toHaveLength(1)
+      for (const d of delays[0]) expect(d, `start ${start}`).toBe(want)
+    }
+    /*
+     * And a frame that is not a whole number of samples, at 29.97 (1601.6):
+     * 75275.2 → 75275 and 76876.8 → 76877, the second the one floor misses.
+     * 29.97 is NOT an offered rate and NOT exact: the input's `-ss`/`-t` are
+     * rounded separately and can disagree with this by a sample (EFFECTS.md
+     * §39). This pins the rounding only.
+     */
+    const ntsc: [number, string][] = [[47, '75275S'], [48, '76877S']]
+    for (const [start, want] of ntsc) {
+      const p = withMusic({ start })
+      const delays = delaysOf({ ...p, settings: { ...p.settings, fps: 30000 / 1001 } })
+      expect(delays, `start ${start} at 29.97`).toHaveLength(1)
+      for (const d of delays[0]) expect(d, `start ${start} at 29.97`).toBe(want)
+    }
+  })
+
+  it("counts the delay at the project's own sample rate", () => {
+    // Frame 47 at 30 fps is 1.5667 s: 69090 samples at 44.1 kHz, 75200 at 48.
+    const p = withMusic({ start: 47 })
+    const delays = delaysOf({ ...p, settings: { ...p.settings, sampleRate: 44100 } })
+    expect(delays).toHaveLength(1)
+    for (const d of delays[0]) expect(d).toBe('69090S')
+  })
+
+  it('offers only frame rates that are a whole number of samples per frame', () => {
+    /*
+     * The delay is exact only then: it, the input's `-ss` and its `-t` all
+     * fall on whole samples and the halves of a split meet. At 29.97 a frame
+     * is 1601.6 samples and a split there was measured leaving a one-sample
+     * hole (spike 0.21), and 24 fps at 44.1 kHz (1837.5) put a moved clip a
+     * sample late (EFFECTS.md §39). Adding such a rate to the picker, or
+     * changing the default rate under it, fails here rather than clicking.
+     */
+    const rate = DEFAULT_SETTINGS.sampleRate
+    for (const fps of FRAME_RATES) {
+      expect(rate % fps, `${fps} fps at ${rate} Hz is ${rate / fps} samples a frame`).toBe(0)
+    }
   })
 
   it('omits adelay for a clip that starts at zero', () => {

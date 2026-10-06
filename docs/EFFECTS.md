@@ -2852,3 +2852,187 @@ Outputs compared frame by frame with `-f framemd5` over **rawvideo**
   2015, as known, not re-read in the 2018 source). `docs/CLIPS.md` §4.9's
   two-up rows run it in CI with step 1. Other frame rates (29.97, 60, VFR)
   and the shape inside `buildRenderPlan`'s own chain are unmeasured.
+
+## 39. adelay in samples — the split click, measured and fixed (2026-10-05)
+
+Measured on the Mac's bundled ffmpeg (4.4, darwin-arm64) for
+`docs/CLIPS.md` §3.3, through the real `buildRenderPlan`, by
+`tests/integration/audioSplit.int.test.ts` (artefacts, graphs and the numbers
+as JSON in `tests/output/audio-split/`). The source: a 440 Hz tone, 5 s,
+`-f lavfi -i sine=frequency=440:duration=5:sample_rate=48000 -af volume=4
+-c:a pcm_s16le` (half scale, peak 0.49988), as an audio clip on A1 under a
+grey picture, project 48 kHz, loudness off. Split with the editor's own
+`splitClip`; rendered with the plan's own arguments (AAC in mp4); decoded
+with `-map 0:a:0 -f f32le -c:a pcm_f32le pipe:1`. Two measurements per
+channel at each cut: the largest second difference |x[n+1] − 2x[n] + x[n−1]|
+within ±50 ms (±2400 samples), and the shift (searched over ±40 samples)
+that best lines up the 10–60 ms after the cut with the same tone rendered
+unsplit.
+
+The first version of the check cut at frames 47 and 95, at 30 and 29.97 fps:
+
+| fps | cut, frame (sample) | `adelay` in whole ms (before) | `adelay=<n>S` (after) | unsplit |
+|---|---|---|---|---|
+| 30 | 47 (75200) | **0.172**, shift +16 (`1567` ms = 75216) | 0.00128, shift 0 | 0.00128 |
+| 30 | 95 (152000) | 0.00128, shift +16 | 0.00129, shift 0 | 0.00129 |
+| 29.97 | 47 (75275.2 → 75275) | **0.028**, shift −11 (`1568` ms = 75264, overlapping the left half) | 0.00128, shift 0 | 0.00128 |
+| 29.97 | 95 (152152) | **0.179**, shift +8 (`3170` ms = 152160, 19 samples after the middle half ends) | 0.00129, shift 0 | 0.00129 |
+
+Both channels gave the same numbers in every row. After the fix the split
+render differs from the unsplit one by at most 1.65 × 10⁻⁵ anywhere in the
+file (about −96 dBFS), at both rates: the three-input `amix` and its
+`volume=3` against the single-source path, through the same AAC encoder.
+
+The review found that those cuts could not tell `Math.round` from
+`Math.floor` (.2 and .0 both round down), and that the 29.97 row passed by
+luck (below). The check now cuts at 30 fps only, at frames 47, 62 and 73,
+each chosen for a different wrong delay. Same method, both channels equal
+in every cell:
+
+| cut, frame (sample) | why this frame | fixed: round | whole ms | `Math.floor` | `Math.ceil` |
+|---|---|---|---|---|---|
+| 47 (75200) | 1566.667 ms | 0.00128, 0 | **0.172**, +16 | 0.00128, 0 | 0.00128, 0 |
+| 62 (99200) | 99200.00000000001 in float | 0.00130, 0 | 0.00129, +16 | 0.00130, 0 | **0.322**, +1 |
+| 73 (116800) | 116799.99999999999 in float | 0.00129, 0 | **0.165**, −16 | **0.319**, −1 | **0.314**, 0 |
+
+Each cell is the spike and the shift; unsplit is 0.00128, 0.00130 and
+0.00129. Whole ms is `1567`/`2067`/`2433` ms: 47 and 62 both 16 late (a
+gap at 47, meeting at 62), 73 on 2433 = 16 early, so the 62–73 half
+overlaps the last by 32. Under ceil the 62–73 half starts one late and
+overlaps the last by one, hence 0.314 at 73 with that half's shift 0.
+
+- **Why 30 fps clicked only at 47 in the first check.** Frame 95 is
+  3166.667 ms, also rounded up by 0.333 ms, so the middle and last halves
+  were both 16 samples late and met each other exactly; only the cut after
+  the unmoved first half had a gap. At 29.97 the two roundings go opposite
+  ways and both cuts click.
+- **The fix**: `adelay=${n}S|…` (eight entries, as before) with
+  `n = Math.round(start / fps × sampleRate)` at `project.settings.sampleRate`
+  (`src/shared/render/plan.ts`, the audio chain). The chain resamples to that
+  rate before the delay (`aresample` second in the chain; the voice effect's
+  pitch shift ends on its own `aresample`).
+- **Exact only while a frame is a whole number of samples.** Then the delay,
+  the input's `-ss` and its `-t` (both `toFixed(6)` seconds) all fall on
+  whole samples, and the halves meet. Every rate in `FRAME_RATES` is, at
+  48 kHz: 2000, 1920, 1600, 960, 800 samples a frame, and `sampleRate` is
+  always the default 48000 (`timeline.ts`, the only place it is set).
+  `tests/render.test.ts` fails if either stops being true. A clip moved off
+  its own position (start 4, inPoint 0, split at 11) at 30 fps measured
+  exact: 0.00126 against 0.00126 unsplit, shift 0.
+- **Rounded, not floored or ceiled — and at offered rates.** `start / fps ×
+  rate` is floating point and lands a hair either side of the whole sample
+  at 25, 30, 50 and 60 fps: counted over frames 0–9,999, 745/678/745/678
+  come out just under (floor would put them a sample early) and 750/684/750/
+  684 just over (ceil, a sample late); 24 fps has none. The second table
+  is that measurement: floor clicks at 73, ceil at 62, round at neither.
+  Where ffmpeg starts `-ss` was not read; that the nearest sample matches it
+  is what that table shows, at whole-sample frames.
+- **Not exact at a frame that is not a whole number of samples** (known,
+  measured, unreachable today). The delay, `-ss` and `-t` are each rounded
+  separately, and at some cuts disagree by one:
+  - 29.97 fps (1601.6 samples), the tone split at **47 and 96** with this
+    fix in: a one-sample hole at 153753, spike **0.210** against 0.00129,
+    shift 0 after the cut. The middle half's `-t 1.634967` is 78478.4 →
+    78478 samples, but `round(153753.6) − round(75275.2)` is 78479. At 47
+    and 95, and at 48 and 96, the roundings agree and the split equals the
+    unsplit tone — which is how the first check's 29.97 row passed.
+  - 29.97, a clip at start 4, inPoint 0, split at 11: **0.365** against
+    0.00127, shift +1 (`round(17617.6)` = 17618, but the left half's `-t`
+    gives 11211 samples after 6406).
+  - 24 fps at 44.1 kHz (1837.5 samples), a 44.1 kHz tone split at 47
+    (86362.5): `Math.round` gives 86363, but `-ss 1.958333` is 86362.485,
+    and the right half came out one late, as if started at 86362: **0.438**
+    against 0.0015, shift +1.
+
+  None is reachable from the UI: the picker offers only `FRAME_RATES`, and
+  nothing sets a rate other than 48 kHz. But `isFrameRate` exists and
+  nothing calls it, so a hand-edited or imported project with fps 29.97
+  loads, and clicks at some cuts. The second and
+  third were the review's, and re-ran here through the plan to the same
+  three figures; the first is new. If such rates are ever wanted, every clip's
+  sound has to span exactly R(start) to R(start + duration), with R the one
+  rounding — the delay from R(start), the length from the difference, the
+  source start anchored on the input's own rounded `-ss` — not three
+  roundings that usually agree. Render-check it with a moved clip.
+- **44.1 kHz, measured (Mac only).** A 48 kHz tone in a 44.1 kHz project at
+  30 fps (1470 samples a frame), split at 47, 62 and 69: spikes 0.00188,
+  0.00191, 0.00151 against 0.00150 unsplit, shift 0 at every cut, at most
+  8.5 × 10⁻⁴ from the unsplit render anywhere (each half is resampled on
+  its own). No click; under the check's bar. The review measured the same
+  at 47/95 (0.00187, 0.00193) and a sub-sample residual after a 29.97 cut.
+- **The click is the size of the step**, so the absolute 0.01 bar depends
+  on the level. At lavfi's own 1/8 amplitude the 30 fps frame-47 click
+  measured 0.0429 against 0.00032 unsplit, and the 29.97 frame-47 overlap
+  only **0.0070, under the bar**, though 22× the unsplit tone. Hence the
+  half-scale fixture, and the check also holds each split under twice the
+  unsplit value plus 0.001. The plan's 0.149 against 0.0012 came from a
+  fixture it did not record; the unsplit values agree, and this click is
+  about 15% larger.
+- **And on the tone's phase at the cut.** The floor-sensitive cut was first
+  frame 69 (110399.99999999999). 2.3 s is exactly 1012 cycles of 440 Hz, so
+  the tone crosses zero there and a step at the cut is a step of almost
+  nothing: floor's one-sample overlap measured only **0.0106**, a hair over
+  the bar, and whole ms's 16-sample overlap 0.016 — though the shift test
+  caught floor plainly (−1). At frame 73 (1070.67 cycles, the tone at
+  −0.87 of its peak) the same floor error is 0.319. Cuts belong away from
+  the tone's zero crossings; the shift test does not depend on it.
+- **Mutations** (each run, each restored byte-identical against a saved
+  copy, every anchor counted to one match). On the first check: whole ms
+  back, all four rows fail as above; a moved clip one sample late, spike
+  0.323 and shift 1 (a single zero sample steps down and back up on adjacent
+  samples, so its second difference is about twice the waveform's value
+  there, where the edge of a longer gap gives it once); only the first
+  entry in samples and the other seven in ms, channel 1 fails with 0.172
+  and shift 16 — so adelay takes a mixed list, and the right channel reads
+  its own entry. Every clip one sample late, the one at zero included,
+  passes, correctly: the unsplit render moves with it and nothing is split.
+  On the current check: whole ms, floor and ceil each fail both tests, with
+  the numbers in the table. On the unit tests (`tests/render.test.ts`,
+  `tests/oldestFfmpeg.test.ts`): floor fails at start 73 (`116799S`), ceil
+  at 62 (`99201S`), a literal `48000` for the project rate at 44.1 kHz
+  (`75200S` for `69090S`), lowercase `s` in every shape that delays, 29.97
+  added to `FRAME_RATES` and a 44.1 kHz default both fail the whole-samples
+  test, and audio-track clips alone left in ms fail only in the new shape
+  with two clips off zero.
+- **The 2018 build: dated, not run.** Read from GitHub for this section:
+  - The `S` suffix is `b5314333de`, 2016-08-11, "avfilter/af_adelay: make
+    it possible to delay channels by exact number of samples". The plan
+    (`docs/CLIPS.md` §3.3) cited `7748f395de`, committed 2018-11-11; that is
+    "avfilter/vf_select: use common scene sad functions", which touches only
+    `configure` and `f_select.c`. Reading `af_adelay.c` in its tree was
+    valid; the commit named is not adelay's.
+  - At the Windows build's own commit, `f22fcd4483` (committed 2018-12-17
+    06:41 UTC), each entry is read by
+    `ret = av_sscanf(arg, "%d%c", &d->delay, &type);` and is samples when
+    `ret == 2 && type == 'S'` (`av_sscanf` is `0c7fb6e4a0`, 2018-11-18;
+    the plan's quote said `sscanf`). Otherwise
+    `av_sscanf(arg, "%f", &delay); d->delay = delay * inlink->sample_rate /
+    1000.0;`. The floor holds by more than two years.
+  - **Lowercase `s` (seconds) is after the floor**: `35a8179149`,
+    2019-01-01. On the 2018 build `2s` scans as 2 and `'s'`, fails the
+    `'S'` test, falls to `%f`, and is **2 ms**, with no error. The
+    case-sensitive `/^\d+S$/` over every delay in
+    `tests/oldestFfmpeg.test.ts` is the guard.
+  - Why samples rather than fractional ms, derived, not measured: `delay`
+    is a `float`, and `delay * inlink->sample_rate` is a float product
+    before the `/ 1000.0`. A float near an hour's 3,600,000.333 ms has a
+    0.25 ms step, so it is up to 0.125 ms off, about 6 samples at 48 kHz;
+    the product (1.728 × 10¹¹, step 16384) adds up to about 8 more after
+    the division, and the truncation to `int` up to one.
+  - **The ceiling.** `ChanDelay.delay` is an `int` read with `%d`, so `n`
+    past 2³¹ − 1 (about 12.4 h at 48 kHz, 13.5 h at 44.1 kHz) overflows.
+    Measured on the Mac's 4.4 build, whose source (`n4.4`) is still `int`
+    and `%d` there — the review's "int64 on 4.4" is not what it does —
+    with a 440 Hz tone and `-t 0.05`: `2147483647S` is silence, as it
+    should be; `2147483648S` and `3000000000S` fail the graph with "Delay
+    must be non negative number"; `4294967396S` (2³² + 100) wraps, with no
+    error, to a 100-sample delay (first non-zero sample at 101). The 2018
+    source is the same `int` and `%d`; not run there.
+  - **An hour-long delay costs no memory there.** Equal delays on every
+    channel become `s->padding` (int64), each `d->delay -= padding` leaves
+    0, no `av_malloc_array` buffer is made, and the silence goes out in
+    2048-sample frames. Read at `f22fcd4`, not run.
+- **Unmeasured**: the Windows CI run of the render check on the 2018 build
+  (it runs with the next push); a clip with speed or a voice effect before
+  its delay (the order was read, not rendered here); and a delay an hour
+  long, rendered (n = 172,800,000 at 48 kHz, inside `%d`).

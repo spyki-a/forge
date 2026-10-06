@@ -1758,7 +1758,46 @@ export function buildRenderPlan(request: RenderRequest): RenderPlan {
      * the file: the shape this project keeps meeting.
      */
     if (volume === 0 && !hasEnvelope) return
-    const delayMs = Math.round(framesToSeconds(clip.start, fps) * 1000)
+    /*
+     * The clip's place on the timeline, in SAMPLES at the project's rate.
+     *
+     * This was whole milliseconds, `Math.round(start × 1000)`, and a frame is
+     * not a whole number of them: at 30 fps frame 47 is 1566.667 ms, rounded
+     * to 1567, which is 16 samples late at 48 kHz. The left half of a split
+     * ended on sample 75200 and the right began on 75216, so every split had
+     * 16 samples of silence in the middle of its sound — a click, measured at
+     * a second-difference spike of 0.172 against 0.0013 unsplit
+     * (`tests/integration/audioSplit.int.test.ts`, EFFECTS.md §39).
+     *
+     * EXACT ONLY WHILE A FRAME IS A WHOLE NUMBER OF SAMPLES. Every rate in
+     * FRAME_RATES is, at 48 kHz (2000, 1920, 1600, 960, 800 — pinned in
+     * tests/render.test.ts), so this delay, the input's `-ss` and its `-t`
+     * all fall on whole samples and the halves of a split meet. At 29.97 a
+     * frame is 1601.6 samples, the three are rounded separately, and at some
+     * cuts they disagree by one: measured, a split at frames 47 and 96 left a
+     * one-sample hole at 96 (spike 0.21), and at 24 fps / 44.1 kHz (1837.5) the
+     * right half of a split at 47 came out a sample late. Neither can be chosen
+     * today, but a hand-edited project with fps 29.97 still loads (EFFECTS.md
+     * §39).
+     *
+     * ROUNDED, not floored: start/fps × rate is floating point and lands a
+     * hair either side of the whole sample — at 30 fps frame 73 is
+     * 116799.99999999999 and frame 62 is 99200.00000000001 — so floor or trunc
+     * would put about 7 frames in 100 a sample early at 25/30/50/60 fps, and
+     * ceil as many a sample late. The render check cuts at both (measured).
+     *
+     * In the project's rate because the chain below is resampled to it before
+     * the delay (`aresample` first, and the voice effect ends on one again).
+     *
+     * Not fractional ms (`1566.667`): the 2018 Windows build reads that with
+     * `%f` into a float and truncates `delay * sample_rate / 1000.0`, the
+     * product in float too — derived, not measured: about 6 samples off from
+     * the float holding an hour's 3,600,000.333 ms, and up to about 8 more
+     * from the product. `S` is read with `%d` into an int, so it holds to
+     * 2^31 samples, about 12.4 h at 48 kHz; past that the graph fails or the
+     * delay wraps (measured on the Mac). Dated in tests/oldestFfmpeg.test.ts.
+     */
+    const delaySamples = Math.round(framesToSeconds(clip.start, fps) * project.settings.sampleRate)
     const chain = [
       'aformat=sample_fmts=fltp:channel_layouts=stereo',
       `aresample=${project.settings.sampleRate}`,
@@ -1808,7 +1847,7 @@ export function buildRenderPlan(request: RenderRequest): RenderPlan {
        * at −24dB. Eight repeats cover 5.1 and are harmless on stereo, where the
        * extras are ignored.
        */
-      delayMs > 0 ? `adelay=${Array(8).fill(delayMs).join('|')}` : null
+      delaySamples > 0 ? `adelay=${Array(8).fill(`${delaySamples}S`).join('|')}` : null
     ]
       .filter((x): x is string => x !== null)
       .join(',')

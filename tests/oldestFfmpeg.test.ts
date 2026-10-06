@@ -124,6 +124,9 @@ function graphOf(p: Project, range?: { start: number; end: number }): string {
   return args[at + 1]
 }
 
+/** The shape with more than one clip off zero, so more than one delay. */
+const SEVERAL = 'music and a second clip both off zero, so two clips are delayed'
+
 /*
  * The shapes that between them reach every branch of the audio tail — which is
  * where all three bugs were, because it is the part that only appears once a
@@ -235,6 +238,18 @@ const SHAPES: { name: string; project: Project; range?: { start: number; end: nu
       ]
     }),
     range: { start: 20, end: 80 }
+  },
+  {
+    // Every other shape delays one clip at most (b at 60); this one delays
+    // two, at different offsets and on different tracks.
+    name: SEVERAL,
+    project: project({
+      clips: [
+        clip({ id: 'a' }),
+        clip({ id: 'b', start: 60, duration: 30, inPoint: 150 }),
+        clip({ id: 'm', assetId: 'm', trackId: 'a1', start: 30, duration: 60 })
+      ]
+    })
   }
 ]
 
@@ -263,6 +278,46 @@ describe('a filter graph runs on the oldest bundled ffmpeg', () => {
     expect(graph).toMatch(/amix=inputs=2:duration=longest:dropout_transition=0,volume=2/)
     expect(graph).toContain('apad,atrim=end=')
     expect(graph).toContain('sidechaincompress')
+  })
+
+  it('reaches a delayed clip, and every delay in every shape is in samples', () => {
+    /*
+     * `adelay=<n>S|<n>S|…` places each clip on its exact sample (docs/CLIPS.md
+     * §3.3, EFFECTS.md §39); whole milliseconds put a split 16 samples apart.
+     *
+     * Dated, not run here. The `S` form is b5314333de, 2016-08-11 ("make it
+     * possible to delay channels by exact number of samples"). At the Windows
+     * build's own commit, f22fcd4 (committed 2018-12-17), each entry is read
+     *
+     *     ret = av_sscanf(arg, "%d%c", &d->delay, &type);
+     *
+     * and is samples when `ret == 2 && type == 'S'`; anything else falls to
+     * `%f` milliseconds. (The plan cited 7748f395de: a vf_select commit of
+     * 2018-11-11 whose tree it read — the right file, the wrong commit.) The
+     * render check, tests/integration/audioSplit.int.test.ts, is the run, in
+     * Windows CI.
+     *
+     * The CASE matters. Lowercase `s` is seconds, and that is 35a8179149,
+     * 2019-01-01 — after the floor. On the 2018 build `2s` scans as 2 and 's',
+     * fails the `'S'` test, falls to `%f` and is 2 ms: silently wrong, no
+     * error. The case-sensitive /^\d+S$/ below is the guard against it.
+     *
+     * Every site in every shape, not the first.
+     */
+    const sites = new Map<string, number>()
+    for (const { name, project: p, range } of SHAPES) {
+      let n = 0
+      for (const m of graphOf(p, range).matchAll(/adelay=([^,;[\]]*)/g)) {
+        n++
+        for (const entry of m[1].split('|')) expect(entry, name).toMatch(/^\d+S$/)
+      }
+      sites.set(name, n)
+    }
+    // The scan is not of graphs without a delay in them: each shape with a
+    // clip off zero reached one (five today; more is fine)…
+    expect([...sites.values()].filter((n) => n > 0).length).toBeGreaterThanOrEqual(5)
+    // …and the shape with two clips off zero reached both.
+    expect(sites.get(SEVERAL)).toBeGreaterThanOrEqual(2)
   })
 
   it('reaches the range trims, so the scan above is not of a graph without them', () => {

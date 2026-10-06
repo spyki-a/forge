@@ -375,6 +375,26 @@ restore `toFixed(4)` of `frame/fps`, and the 30 fps frame-5 row fails
 
 ### 3.3 Every split clicks — `adelay` in samples · half a day
 
+> **Built 2026-10-05** — `src/shared/render/plan.ts` (the audio chain emits
+> `adelay=${n}S|…`, n = round(start/fps × `settings.sampleRate`)), the render
+> check `tests/integration/audioSplit.int.test.ts` (into
+> `tests/output/audio-split/`, both channels, against the tone unsplit),
+> `tests/render.test.ts` and `tests/oldestFfmpeg.test.ts` (every delay in
+> every shape in samples). Measured through `buildRenderPlan` with a
+> half-scale tone: the 30 fps frame-47 spike **0.172 before, 0.00128 after**
+> (unsplit 0.00128). After review the check cuts at 30 fps frames 47, 62 and
+> 73, where whole ms, `Math.ceil` and `Math.floor` each click (0.172, 0.322,
+> 0.319: the float lands a hair either side of the sample) and round does
+> not. **Exact only while a frame is a whole number of samples**, which every
+> offered rate is at 48 kHz, pinned by a test. At 29.97 a split at frames 47
+> and 96 still leaves a one-sample hole (0.21), so that rate is out of the
+> check; it cannot be chosen today. Corrections to the text below, read from
+> the sources: the `S` form is `b5314333de` (2016-08-11) — `7748f395de` is a
+> vf_select commit whose tree was read; at the Windows build's `f22fcd4` the
+> line is `av_sscanf`; fractional ms an hour in is off by about 6 + 8
+> samples, derived. The 2018 build is the next Windows CI run. `EFFECTS.md`
+> §39.
+
 **What is wrong, measured.** `delayMs = Math.round(start × 1000)`
 (`plan.ts:1761`). At 30 fps, frame 47 is 1566.667 ms, rounded to 1567, which
 is 16 samples late at 48 kHz. Through the real `buildRenderPlan`, a 440 Hz
