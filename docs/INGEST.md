@@ -22,11 +22,15 @@ Paste a link and press Get: two clicks to a clip on the timeline.
 | shared | `ingest/release.ts` | which yt-dlp asset per platform, checksum parsing |
 | main | `ingest/binary.ts` | find or fetch yt-dlp, verified |
 | main | `ingest/download.ts` | spawn, parse, kill the tree, clean up, hand back the file |
+| main | `ingest/start.ts` | `ingest:start`'s payload re-validated: the request, and a Clip it job's words and credit, checked |
 | shared | `ingest/captions.ts` | a caption track (json3) → a `Transcript`; moving it onto a ranged download |
 | main | `ingest/meta.ts` | a link's metadata and caption tracks, no media — see below |
-| main | `ipc.ts` | a second `JobQueue`, `ingest:status` / `start` / `collect`; `ingest:meta` / `captions` |
+| shared | `ingest/wordRun.ts` | a run of words picked from the rows, and the range it downloads |
+| shared | `ingest/linkClip.ts` | what a Clip it job carries to main and back: the run's words, the credit |
+| main | `ipc.ts` | a second `JobQueue`, `ingest:status` / `start` / `collect`; `ingest:meta` / `captions` / `captionTrack` |
 | renderer | `components/IngestPanel.tsx` | the panel: link, what to take, the marks |
-| renderer | `store.ts` | `startIngest`, and collecting a finished job into a clip |
+| renderer | `components/tools/LinkTranscript.tsx`, `TranscriptRows.tsx` | Get transcript, the rows, the handles, the chips, Clip it |
+| renderer | `store.ts` | `startIngest`, the `urlSource` slice, and collecting a finished job into a clip |
 
 Everything with a decision in it is in `shared/`, where it runs in a unit test
 with no binary, no network and no electron — 39 tests over the pure layer, and
@@ -284,10 +288,20 @@ words where both tracks exist, the uploader's clock first aligned to the
 ASR's (it was 12 s off on one video). ASR words the uploader's lines do not
 cover are kept as the ASR has them.
 
-The tracks' paths go back to the renderer in `CaptionFetch.tracks`. When the
-re-parse at collect (CLIPS.md §3b.4) is built, its IPC should take the link
-key and the track key, check them, and build the path in main — not read a
-path the renderer names.
+The tracks' paths go back to the renderer in `CaptionFetch.tracks`; the
+renderer keeps only their keys. **The re-parse at collect is built**
+(CLIPS.md §3b.4, 2026-10-06): a Clip it job's run, range and track keys go to
+main with `ingest:start` (`clip`, checked field by field by `checkLinkClip`)
+and come back from `ingest:collect`, so a reload mid-download keeps them; the
+renderer then reads each track again with **`ingest:captionTrack({linkKey,
+key})`**, which checks the link key against the shape `linkCacheKey` makes
+and the track key with `isCaptionKey` — the patterns the fetch wrote the file
+under — and builds `userData/url/<linkKey>/<linkKey>.captions.<key>.json3`
+itself. No path the renderer names is ever read. The tracks are merged again
+exactly as the fetch merged them, so the run's word indices mean the same
+words; a transcript that no longer matches the run's word count and first
+and last words (a later fetch replaced the files) lands the words that start
+inside the range instead.
 
 ## Instrumental and vocal are inside the job
 

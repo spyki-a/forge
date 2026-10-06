@@ -16,7 +16,11 @@ import { PROP_RULE } from '@shared/automation/apply'
 import { SANDWICH_RULE } from '@shared/automation/sandwich'
 import { SPINE_RULE } from '@shared/director/apply'
 import { TRAY_MIN, TRAY_RAIL } from '@shared/curveTray'
-import { useEditor, type ShelfToolId } from '../store'
+import { linkCacheKey, parseLink } from '@shared/ingest/url'
+import { runFromRows } from '@shared/ingest/wordRun'
+import type { Transcript } from '@shared/transcript'
+import { useEditor, type ShelfToolId, type UrlSourceStatus } from '../store'
+import { HARNESS_LINKS } from './bridge'
 import { useCatalog } from '../catalog'
 import { usePacks } from '../packs'
 import { SHELF_TOOLS } from '../components/shelf/tools'
@@ -1158,6 +1162,50 @@ async function youtube(patch: Parameters<ReturnType<typeof useEditor.getState>['
 }
 
 /**
+ * A link in the URL tile and Get transcript pressed through the store, against
+ * the bridge's stubs (CLIPS.md §3b.8), ending in `status`. The transcript, when
+ * there is one.
+ */
+async function linkFetched(url: string, status: UrlSourceStatus): Promise<Transcript | null> {
+  await youtube({ url })
+  await editor().getTranscript()
+  const source = editor().urlSource
+  if (!source || source.status !== status) {
+    throw new Error(`census: Get transcript on ${url} came to ${source?.status ?? 'nothing'}, not ${status}`)
+  }
+  return source.transcript
+}
+
+/** The twelve-row talk's transcript, fetched. */
+async function linkWords(): Promise<Transcript> {
+  const t = await linkFetched(HARNESS_LINKS.talk, 'ready')
+  if (!t) throw new Error('census: the bridge’s talk has no transcript')
+  return t
+}
+
+/** The talk's link in the box with its fetch held at `status` — the states the stubs pass through too fast to look at. */
+async function linkAt(status: UrlSourceStatus, error: string | null = null): Promise<void> {
+  const link = parseLink(HARNESS_LINKS.talk)!
+  await youtube({ url: link.url })
+  useEditor.setState({
+    urlSource: {
+      linkKey: linkCacheKey(link),
+      url: link.url,
+      meta: null,
+      fetchedAt: null,
+      transcript: null,
+      tracks: [],
+      language: null,
+      status,
+      error,
+      run: null,
+      anchorRow: null,
+      clipped: false
+    }
+  })
+}
+
+/**
  * The settings panel, opened through the store as the header's gear opens it —
  * after `prepare` has put the state it should show, and with `config` changing
  * what the model servers offer.
@@ -1726,6 +1774,55 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
   },
   'ingest-bad-link': async () => {
     await youtube({ url: 'not a link' })
+    return {}
+  },
+  /*
+   * The URL tile's transcript (CLIPS.md §3b): the bridge's twelve-row talk
+   * with three chapters — rows, the handles resting at the ends, the chips,
+   * Clip it greyed until a run is picked.
+   */
+  'link-transcript': async () => {
+    await linkWords()
+    return {}
+  },
+  /* rows 3–6 picked: the run's length, and From and To mirroring it */
+  'link-run': async () => {
+    editor().setUrlRun(runFromRows(await linkWords(), 2, 5))
+    return {}
+  },
+  /* Clip it pressed (the bridge records the job): Add another clip */
+  'link-clipped': async () => {
+    editor().setUrlRun(runFromRows(await linkWords(), 2, 5))
+    await editor().clipItFromLink()
+    if (!editor().urlSource?.clipped) throw new Error('census: Clip it did not send the run')
+    return {}
+  },
+  /* a link with no caption track: the notice, Listen to it greyed, the chips setting From and To */
+  'link-no-captions': async () => {
+    await linkFetched(HARNESS_LINKS.noCaptions, 'none')
+    return {}
+  },
+  /* the same, with the AI helper up: Listen to it is still not built */
+  'link-no-captions-helper': async () => {
+    editor().setSidecar(true, null)
+    await linkFetched(HARNESS_LINKS.noCaptions, 'none')
+    return {}
+  },
+  /* details that name no language: the user chooses one */
+  'link-no-language': async () => {
+    await linkFetched(HARNESS_LINKS.noLanguage, 'language')
+    return {}
+  },
+  'link-reading': async () => {
+    await linkAt('meta')
+    return {}
+  },
+  'link-fetching': async () => {
+    await linkAt('captions')
+    return {}
+  },
+  'link-failed': async () => {
+    await linkAt('failed', 'census: offline')
     return {}
   },
   'ingest-running': async () => {

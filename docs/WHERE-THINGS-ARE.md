@@ -198,8 +198,55 @@ dragged, because the video's length is unknown until it is fetched — with
 many and that the progress is under EXPORT, at the bottom left. The first
 download fetches yt-dlp (about 30 MB) and says so beforehand.
 
-**Not yet:** chapters, several ranges in one job, a transcript from the link,
-and Best clips (sheets 25 and 27).
+**Get transcript** sits under Video / Audio and the quality, greyed until the
+box holds a link (`tools/LinkTranscript.tsx`; `docs/CLIPS.md` §3b). It reads
+the video's details and then its own captions — YouTube's track, no media, no
+model, no AI helper — saying **Reading the link…** and **Fetching the
+captions…** meanwhile. Then, top to bottom:
+
+- **Chapter chips**, one per chapter the video has, each named by its title;
+  pressing one picks the words that start inside that chapter.
+- **The rows** (`tools/TranscriptRows.tsx`): each is `time | text`. Click a
+  row's time or any word to pick that row; shift-click another row's time to
+  extend the pick over every row between it and the row last clicked; shift-click
+  a word to move the pick's end to it. Once the pick has been moved any other
+  way — a handle, a key, a shift-clicked word — a shift-click on a row extends
+  the pick as it stands, so a start set by hand stays. The picked words are
+  shaded blue. In the gutter on the left are the two cut handles, **Start** (an
+  arrow down to a line) and **End** (an arrow up to one): drag either up or
+  down the rows and it snaps to a word — Start to a word's start, End to a
+  word's end — and neither passes the other; with a handle focused, the arrow
+  keys move it a word, and it keeps the focus as it moves from row to row
+  (those keys stay with the handle — the window's arrows would move the
+  playhead). With nothing picked they rest at the first and last word, and a
+  line under the rows says how to pick.
+- **"0:39.6 selected"**, the picked span's length, and under it **From** and
+  **To** as read-only fields with **set by the words you picked** — sheet 12's
+  fields, mirroring the run. **Just a part of it** and its typed From and To
+  are not shown while there are words. **Get**, beside the link, then reads
+  **Whole video** and is no longer the blue button — it downloads the whole
+  video, not the pick (its tooltip says Clip it takes the pick) — and Enter in
+  the link box does not press it.
+- **Clip it** downloads exactly the picked words' span (an exact cut) — the
+  video, or with **Audio** chosen just its sound; a song's Instrumental or
+  Vocal left chosen is not what it takes — and
+  the clip lands at the end of the timeline with those words as its
+  transcript — so captions can be switched on in OUTPUT at once — and the
+  video's credit (title, channel, page) in its pool tile's tooltip. One undo
+  takes the whole clip back. After it, a line says it lands when the download
+  is done, and **Add another clip** keeps the rows and clears the pick for the
+  next one; each clip is its own download.
+
+When the details name no language, **Choose the language** offers English,
+Hindi, Telugu, Tamil and Spanish. A video with no captions says **This video
+has no captions**, its chapter chips set From and To instead, and **Listen to
+it** is greyed with **needs the AI helper** (or **soon** when the helper is
+running — transcribing a link's sound is Step P's). If the fetch fails —
+offline, say — **Could not get the transcript.** with the reason, and From
+and To stay typed fields.
+
+**Not yet:** Listen to it, Best clips (sheet 27), and picking rows of a clip
+already on the timeline (the Transcript tile, below).
 
 ### Narration
 

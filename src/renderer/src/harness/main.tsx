@@ -7,6 +7,7 @@ import { installEvalRelay } from './evalRelay'
 import { installMomentCheck } from './momentCheck'
 import { installCensus } from './census'
 import { installSwatch } from './swatch'
+import { installClipItCheck } from './clipItCheck'
 import { useEditor } from '../store'
 import { useCatalog } from '../catalog'
 import '../styles.css'
@@ -32,6 +33,9 @@ installCensus()
 
 /* The theme on one sheet — tiles, buttons, greys, accent (docs/WINDOW.md §6 Step 3). */
 installSwatch()
+
+/* Clip it from a link's transcript, pressed through on screen (docs/CLIPS.md §3b.8). */
+installClipItCheck()
 
 /*
  * The store, reachable from a driving script.

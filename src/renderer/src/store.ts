@@ -1,11 +1,23 @@
 import { create } from 'zustand'
 import type { Job } from '@shared/types'
 import { samePath } from '@shared/assetPath'
-import { linkProblem, LINK_PROBLEM_TEXT, parseLink } from '@shared/ingest/url'
-import { trimToRequestedRange } from '@shared/ingest/section'
-import type { IngestWant, AudioFormat } from '@shared/ingest/args'
+import { linkCacheKey, linkProblem, LINK_PROBLEM_TEXT, parseLink } from '@shared/ingest/url'
+import { offsetIntoDownload, trimToRequestedRange, type Range } from '@shared/ingest/section'
+import { captionKeys, type IngestRequest, type IngestWant, type AudioFormat, type LinkMeta } from '@shared/ingest/args'
+import { shiftTranscript, transcriptFromTracks, type WordRun } from '@shared/ingest/captions'
+import { clampRun, runRange } from '@shared/ingest/wordRun'
+import {
+  languageOfKeys,
+  linkCredit,
+  runIn,
+  runWords,
+  transcriptFits,
+  type LinkClip,
+  type TranscriptFrom
+} from '@shared/ingest/linkClip'
 import type { Quality } from '@shared/ingest/format'
 import type {
+  AssetCredit,
   Clip,
   ColorAdjust,
   CropRect,
@@ -255,6 +267,101 @@ export interface IngestForm {
 }
 
 /**
+ * Where the URL tile's transcript of a link has got to (docs/CLIPS.md §3b.1,
+ * §3b.5): reading the details, fetching the captions, rows to pick from, no
+ * captions at all, a language to choose, or failed.
+ */
+export type UrlSourceStatus = 'meta' | 'captions' | 'ready' | 'none' | 'language' | 'failed'
+
+/**
+ * A link's details and its transcript, before anything is downloaded.
+ *
+ * There is no asset to key the transcript on yet, so it lives here, never in
+ * `project.transcripts`; it joins the project only through `shiftTranscript`,
+ * when a clip of it is collected (§7.2). One link at a time, named by
+ * `linkKey` — the panel shows it only while the box holds that link. Main
+ * keeps the caption files under `userData/url/<linkKey>/` as the reload cache.
+ */
+export interface UrlSource {
+  linkKey: string
+  /** The canonical link. */
+  url: string
+  meta: LinkMeta | null
+  /** When `meta` was read: the credit's `fetchedAt`. */
+  fetchedAt: string | null
+  transcript: Transcript | null
+  /** The tracks the transcript was made from, by key — never a path (INGEST.md). */
+  tracks: { key: string; kind: 'asr' | 'lines' }[]
+  /** The language the captions were asked in: the video's, or the one chosen. */
+  language: string | null
+  status: UrlSourceStatus
+  error: string | null
+  /** The words picked, by index into `transcript`. */
+  run: WordRun | null
+  /** The row a shift-click on another row extends from: the row last clicked, null once the run was moved another way. */
+  anchorRow: number | null
+  /** Clip it has sent this run; Add another clip clears it. */
+  clipped: boolean
+}
+
+/**
+ * Clip it's request override (§3b.4): the link, the run's range, the cut, and
+ * the words and credit the clip lands with. A plain Get takes the form as it is.
+ */
+export interface IngestOverride {
+  url: string
+  range: Range
+  exact: boolean
+  clip: LinkClip
+}
+
+/** A download this window started, waiting to be collected. */
+export interface PendingIngest {
+  projectPath: string | null
+  /** Clip it's: where the clip's words come from (main keeps a copy, for a reload). */
+  transcriptFrom?: TranscriptFrom
+  credit?: AssetCredit | null
+}
+
+/**
+ * Clip it cuts exactly at the run (§16.13's lean, OPEN until the exact cut is
+ * cross-correlated against its source): `--force-keyframes-at-cuts`, so the
+ * file starts at the run's first word and the words shift by the range's
+ * start alone. Were it fast, the head would be `offsetIntoDownload(range)`.
+ */
+export const CLIP_IT_EXACT = true
+
+/**
+ * What Clip it downloads, from the form's choice: the video, or just its
+ * sound. Clip it lands speech with its words, so a song's split — the
+ * instrumental (the voice removed) or the vocal stem — is never what it
+ * takes; a choice left over from a song's download reads as the video.
+ */
+export function clipItKind(kind: IngestWant): 'video' | 'audio' {
+  return kind === 'audio' ? 'audio' : 'video'
+}
+
+/**
+ * The URL tile's transcript for the link in the box, or null when there is
+ * none or it belongs to another link.
+ */
+export function urlSourceFor(s: { urlSource: UrlSource | null; ingest: { url: string } }): UrlSource | null {
+  const link = parseLink(s.ingest.url)
+  if (!link || !s.urlSource || s.urlSource.linkKey !== linkCacheKey(link)) return null
+  return s.urlSource
+}
+
+/**
+ * Whether the box's link has rows to pick from. Then the From and To fields
+ * mirror the run instead of being typed (§3b.5), and a plain Get — labelled
+ * "Whole video" then — takes the whole video; the run is Clip it's.
+ */
+export function wordsShown(s: { urlSource: UrlSource | null; ingest: { url: string } }): boolean {
+  const source = urlSourceFor(s)
+  return source !== null && source.status === 'ready' && source.transcript !== null
+}
+
+/**
  * Text edits in flight, coalesced per clip.
  *
  * Redrawing the PNG is an IPC round trip through a rasteriser, so a keystroke
@@ -429,9 +536,30 @@ interface EditorState {
   setIngest: (patch: Partial<IngestForm>) => void
   /**
    * Start a download. Returns once the job is QUEUED, not once it is done —
-   * the clip arrives later, when `setJobs` sees the job reach `done`.
+   * the clip arrives later, when `setJobs` sees the job reach `done`. With an
+   * override (Clip it), its link, range and cut instead of the form's, and
+   * the words and credit the clip lands with. The job's id, or null.
    */
-  startIngest: () => Promise<void>
+  startIngest: (override?: IngestOverride) => Promise<string | null>
+
+  /** The URL tile's transcript of the link in the box (§3b.1). */
+  urlSource: UrlSource | null
+  /**
+   * Get transcript: the link's details, then its captions in the video's
+   * language — or in `language`, chosen when the details name none.
+   */
+  getTranscript: (language?: string) => Promise<void>
+  /**
+   * Pick a run of words (click, shift-click, a handle, a chapter); null clears
+   * it. `anchorRow` is the row a later row shift-click extends from — the row
+   * a click picked — and is null (the default) for every other way, so that
+   * shift-click extends the run on screen instead.
+   */
+  setUrlRun: (run: WordRun | null, anchorRow?: number | null) => void
+  /** Clip it: download exactly the run's span, to land with its words and the link's credit. */
+  clipItFromLink: () => Promise<void>
+  /** Add another clip: the rows stay, the run is cleared. Starts nothing. */
+  addAnotherClip: () => void
 
   jobs: Job[]
   /**
@@ -441,7 +569,7 @@ interface EditorState {
    * one meanwhile used to land the clip in whichever happened to be open when
    * it finished.
    */
-  pendingIngests: Record<string, { projectPath: string | null }>
+  pendingIngests: Record<string, PendingIngest>
   collectIngest: (jobId: string) => Promise<void>
   notices: Notice[]
 
@@ -983,6 +1111,31 @@ let noticeId = 0
  */
 const collecting = new Set<string>()
 const reported = new Set<string>()
+/** Each Get transcript's turn: an answer that arrives after a newer ask is dropped. */
+let urlFetchSeq = 0
+
+/**
+ * The transcript a Clip it job's run was picked from.
+ *
+ * The words on screen when they are that link's, from those tracks, and the
+ * same transcript (`transcriptFits`). Otherwise — a reload took them, or
+ * another link is on screen — the tracks main kept are read again by their
+ * keys (`ingest:captionTrack`, which builds the path itself) and merged
+ * exactly as the fetch merged them, so the run's indices mean the same words.
+ */
+async function linkTranscript(from: TranscriptFrom, source: UrlSource | null): Promise<Transcript> {
+  const sameTracks =
+    source !== null &&
+    source.tracks.length === from.keys.length &&
+    from.keys.every((key) => source.tracks.some((track) => track.key === key))
+  if (source && source.linkKey === from.linkKey && source.transcript && sameTracks && transcriptFits(source.transcript, from)) {
+    return source.transcript
+  }
+  const tracks = await Promise.all(from.keys.map((key) => window.forge.ingestCaptionTrack(from.linkKey, key)))
+  const read = transcriptFromTracks(tracks, `url:${from.linkKey}`, languageOfKeys(from.keys))
+  if (!read) throw new Error('its captions have no words')
+  return read
+}
 
 /**
  * Asset ids to file paths, keeping the ring's order and dropping what is gone.
@@ -1057,37 +1210,171 @@ export const useEditor = create<EditorState>((set, get) => ({
   },
   setIngest: (patch) => set((s) => ({ ingest: { ...s.ingest, ...patch } })),
 
-  startIngest: async () => {
+  startIngest: async (override) => {
     const { ingest, notify } = get()
-    const link = parseLink(ingest.url)
+    const typed = override?.url ?? ingest.url
+    const link = parseLink(typed)
     if (!link) {
       // One diagnosis, shared with the panel's inline hint, so the two can
       // never give contradictory answers about the same text.
-      notify(LINK_PROBLEM_TEXT[linkProblem(ingest.url) ?? 'not-a-link'])
-      return
+      notify(LINK_PROBLEM_TEXT[linkProblem(typed) ?? 'not-a-link'])
+      return null
+    }
+
+    /*
+     * The range: Clip it's own, exact by default (§16.13's lean), through the
+     * override — or the typed one, with the form's cut, which stays fast by
+     * default. While a link's words are on screen the typed fields are not
+     * (From and To mirror the run instead, §3b.5), and a plain Get takes the
+     * whole video — which the panel's button then says, as "Whole video":
+     * the run's range is Clip it's to take, not Get's.
+     */
+    const typedRange =
+      ingest.useRange && !wordsShown(get()) ? { startMs: ingest.startMs, endMs: ingest.endMs } : null
+    const request: IngestRequest = {
+      url: link.url,
+      kind: override ? clipItKind(ingest.kind) : ingest.kind,
+      quality: ingest.quality,
+      audioFormat: ingest.audioFormat,
+      range: override ? override.range : typedRange,
+      exact: override ? override.exact : ingest.exact
     }
 
     set((s) => ({ ingest: { ...s.ingest, busy: true } }))
     try {
-      const job = await window.forge.startIngest({
-        url: link.url,
-        kind: ingest.kind,
-        quality: ingest.quality,
-        audioFormat: ingest.audioFormat,
-        range: ingest.useRange ? { startMs: ingest.startMs, endMs: ingest.endMs } : null,
-        exact: ingest.exact
-      })
-      // Remember the job so `setJobs` knows this one is ours to collect, and
-      // clear the box so a second link can be pasted while this one runs.
+      const job = await window.forge.startIngest(request, override?.clip ?? null)
+      // Remember the job so `setJobs` knows this one is ours to collect. A
+      // plain Get clears the box so a second link can be pasted while this one
+      // runs; Clip it keeps it, because the rows stay for Add another clip.
       set((s) => ({
-        pendingIngests: { ...s.pendingIngests, [job.id]: { projectPath: s.projectPath } },
-        ingest: { ...s.ingest, url: '', busy: false }
+        pendingIngests: {
+          ...s.pendingIngests,
+          [job.id]: override
+            ? { projectPath: s.projectPath, transcriptFrom: override.clip.transcriptFrom, credit: override.clip.credit }
+            : { projectPath: s.projectPath }
+        },
+        ingest: { ...s.ingest, url: override ? s.ingest.url : '', busy: false }
       }))
+      return job.id
     } catch (err) {
       set((s) => ({ ingest: { ...s.ingest, busy: false } }))
       notify(err instanceof Error ? err.message : String(err))
+      return null
     }
   },
+
+  urlSource: null,
+
+  getTranscript: async (language) => {
+    const { ingest, notify } = get()
+    const link = parseLink(ingest.url)
+    if (!link) {
+      notify(LINK_PROBLEM_TEXT[linkProblem(ingest.url) ?? 'not-a-link'])
+      return
+    }
+    const linkKey = linkCacheKey(link)
+    const seq = ++urlFetchSeq
+    /** Still the ask on screen: a later Get transcript, or another link's, wins. */
+    const current = (): boolean => seq === urlFetchSeq && get().urlSource?.linkKey === linkKey
+    const patch = (next: Partial<UrlSource>): void =>
+      set((s) => (s.urlSource && s.urlSource.linkKey === linkKey ? { urlSource: { ...s.urlSource, ...next } } : {}))
+
+    // The details are read once per link: a language chosen afterwards, or a
+    // second try at the captions, reuses them.
+    const prior = get().urlSource
+    const known = prior && prior.linkKey === linkKey && prior.meta ? prior : null
+    set({
+      urlSource: {
+        linkKey,
+        url: link.url,
+        meta: known?.meta ?? null,
+        fetchedAt: known?.fetchedAt ?? null,
+        transcript: null,
+        tracks: [],
+        language: null,
+        status: known ? 'captions' : 'meta',
+        error: null,
+        run: null,
+        anchorRow: null,
+        clipped: false
+      }
+    })
+
+    try {
+      let meta = known?.meta ?? null
+      if (!known) {
+        meta = await window.forge.ingestMeta(link.url)
+        if (!current()) return
+        patch({ meta, fetchedAt: new Date().toISOString() })
+      }
+      // The video's language, or the one chosen. Main makes the track keys
+      // from it (`<l>`, `<l>-orig`); with none readable, the user picks.
+      const asked = language ?? meta?.language ?? null
+      if (!captionKeys(asked)) {
+        patch({ status: 'language' })
+        return
+      }
+      patch({ status: 'captions', language: asked })
+      const fetched = await window.forge.ingestCaptions(link.url, asked as string)
+      if (!current()) return
+      const words = fetched.transcript && fetched.transcript.words.length > 0 ? fetched.transcript : null
+      patch({
+        transcript: words,
+        tracks: fetched.tracks.map(({ key, kind }) => ({ key, kind })),
+        status: words ? 'ready' : 'none'
+      })
+    } catch (err) {
+      if (!current()) return
+      // Said in the panel, where the From and To fields stay as they were.
+      patch({ status: 'failed', error: err instanceof Error ? err.message : String(err) })
+    }
+  },
+
+  setUrlRun: (run, anchorRow) =>
+    set((s) => {
+      const source = s.urlSource
+      if (!source || !source.transcript) return {}
+      if (!run) return { urlSource: { ...source, run: null, anchorRow: null, clipped: false } }
+      const next = clampRun(source.transcript, run)
+      return {
+        urlSource: {
+          ...source,
+          run: next,
+          anchorRow: anchorRow ?? null,
+          // A new pick is a new clip: Clip it is offered again.
+          clipped: false
+        }
+      }
+    }),
+
+  clipItFromLink: async () => {
+    const source = urlSourceFor(get())
+    if (!source || source.status !== 'ready' || !source.transcript || !source.run || source.clipped) return
+    if (source.tracks.length === 0 || get().ingest.busy) return
+    const t = source.transcript
+    const run = clampRun(t, source.run)
+    const range = runRange(t, run)
+    const transcriptFrom: TranscriptFrom = {
+      linkKey: source.linkKey,
+      keys: source.tracks.map((track) => track.key),
+      range,
+      run,
+      headOffsetMs: CLIP_IT_EXACT ? 0 : offsetIntoDownload(range),
+      words: runWords(t, run)
+    }
+    const credit = linkCredit(source.meta, source.url, source.fetchedAt ?? new Date().toISOString())
+    // One job per range: several `--download-sections` in one job all write
+    // one `<stem>.%(ext)s` and only the last mark is read (CLIPS.md §7.1).
+    const id = await get().startIngest({ url: source.url, range, exact: CLIP_IT_EXACT, clip: { transcriptFrom, credit } })
+    if (id) {
+      set((s) =>
+        s.urlSource && s.urlSource.linkKey === source.linkKey ? { urlSource: { ...s.urlSource, clipped: true } } : {}
+      )
+    }
+  },
+
+  addAnotherClip: () =>
+    set((s) => (s.urlSource ? { urlSource: { ...s.urlSource, run: null, anchorRow: null, clipped: false } } : {})),
   /*
    * The preview shows the OUTPUT by default.
    *
@@ -4670,6 +4957,25 @@ export const useEditor = create<EditorState>((set, get) => ({
       const result = await window.forge.collectIngest(jobId, get().project.settings.fps)
 
       /*
+       * A Clip it job's words and credit: this window's own record, or main's
+       * copy when a reload took that (CLIPS.md §3b.4). The words are read
+       * BEFORE the undo step opens — an await inside it would let anything
+       * else that lands meanwhile join this one step.
+       */
+      const from = owner?.transcriptFrom ?? result.link?.transcriptFrom ?? null
+      const credit = owner?.credit ?? result.link?.credit ?? null
+      let picked: Transcript | null = null
+      // Said once the clip has landed, and only then: before that, nothing has.
+      let wordsLost: string | null = null
+      if (from) {
+        try {
+          picked = await linkTranscript(from, get().urlSource)
+        } catch (err) {
+          wordsLost = err instanceof Error ? err.message : String(err)
+        }
+      }
+
+      /*
        * Refuse to land it in the wrong project.
        *
        * A 4K download is minutes; opening another project meanwhile used to
@@ -4685,16 +4991,20 @@ export const useEditor = create<EditorState>((set, get) => ({
         return
       }
 
-      // One user action, one undo step. Without this the asset, the clip and
-      // the trim were three, so a single Cmd+Z left the untrimmed padded clip
-      // behind — which reads as the trim having failed rather than undo working.
+      // One user action, one undo step: the asset, the clip, the trim and — for
+      // Clip it — the words and the credit. Without this the first three were
+      // three, so a single Cmd+Z left the untrimmed padded clip behind — which
+      // reads as the trim having failed rather than undo working.
       get().begin()
 
       // The same guard `importAssets` uses, for the same reason: a second
       // download of one video must not add the asset twice.
       const known = get().project.assets.find((a) => samePath(a.path, result.asset.path))
-      const asset = known ?? result.asset
+      const asset = known ?? (credit ? { ...result.asset, credit } : result.asset)
       if (!known) get().update((p) => ({ ...p, assets: [...p.assets, asset] }))
+      else if (credit) {
+        get().update((p) => ({ ...p, assets: p.assets.map((a) => (a.id === known.id ? { ...a, credit } : a)) }))
+      }
 
       get().addAssetToTimeline(asset.id)
 
@@ -4720,7 +5030,22 @@ export const useEditor = create<EditorState>((set, get) => ({
           }))
         }
       }
+
+      /*
+       * The run's words, on the file's clock (§7.2): moved by the range's
+       * start less the head the file begins with, and EXACTLY the run's words —
+       * a run under a second is fetched a second long, and the neighbour that
+       * reaches is not one that was picked. A transcript that is no longer the
+       * one the run was picked in (a later fetch replaced its tracks) has the
+       * run found again in it (`runIn`); only when it cannot be do the words
+       * that start inside the range stand in.
+       */
+      if (from && picked) {
+        const words = shiftTranscript(picked, from.range, from.headOffsetMs, asset.id, runIn(picked, from) ?? undefined)
+        get().update((p) => ({ ...p, transcripts: { ...p.transcripts, [asset.id]: words } }))
+      }
       get().commit()
+      if (wordsLost !== null) notify(`That clip landed without its words: ${wordsLost}`, 'info')
 
       if (result.stems && result.stems.quality === 'emphasised') {
         // Not an error, and worth saying once: mid/side is an emphasis, and the

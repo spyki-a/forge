@@ -691,6 +691,76 @@ itemised; this is the split, and step 4 keeps Best clips proper (§7).
 
 ### 3b.2 (b) The rows, and the two ways to pick a run
 
+> **Built 2026-10-06** — §3b.2 to §3b.5, the URL tile's half (M0 slice 2;
+> §3b.6, the Transcript tile's, is slice 3). `src/shared/ingest/wordRun.ts`
+> (`rowsOf`, `runFromRows`, `extendRun`, `snapHandle`, `stepHandle`,
+> `runOfChapter`, `runRange`, `msAtY`; in `ingest/`, beside `WordRun` in
+> `captions.ts`, not `edit/`), `MIN_RANGE_MS` moved to `section.ts`,
+> `src/shared/ingest/linkClip.ts` (`TranscriptFrom`, `linkCredit`,
+> `checkLinkClip`, `transcriptFits`, `runIn`), `AssetCredit` and
+> `MediaAsset.credit` in `timeline.ts` (source `'link'` only, no licence yet;
+> the credit line shows in the pool tile's tooltip),
+> `components/tools/TranscriptRows.tsx` (rows, click and shift-click, the
+> Start and End handles, every handler on the rows' box) and
+> `components/tools/LinkTranscript.tsx` (Get transcript, the chips, Clip it,
+> Add another clip, the From/To mirror, the no-caption notice, Listen to it,
+> Choose the language) inside `IngestPanel.tsx`; the store's `urlSource`
+> slice, `getTranscript`, `setUrlRun`, `clipItFromLink`, `addAnotherClip`,
+> `startIngest(override)` and `collectIngest`'s words and credit in its one
+> begin/commit; `src/main/ingest/start.ts` (`ingest:start`'s payload, the clip
+> checked). **Where it differs from the text below:** `transcriptFrom`
+> carries the track KEYS, not a `captionPath` — two tracks are merged
+> (§16.12), and the re-read must merge the same two for the run's indices to
+> mean the same words — plus the run's word count and first and last words,
+> so a transcript a later fetch replaced has the run found again in it
+> (`runIn`: as many words, the same first and last, starting inside the
+> range), and only failing that lands the range's words. It also goes to MAIN
+> with `ingest:start` (`clip`, checked field by field) and comes back from
+> `ingest:collect`, because `pendingIngests` does not survive a Cmd+R either;
+> the tracks are then read again by `ingest:captionTrack({linkKey, key})`,
+> which checks both keys and builds the path in main. And Clip it's done row
+> has no **Captions on**: captions are switched on in OUTPUT as for any
+> transcript (store-tested with the shifted words); Listen to it is greyed in
+> every case in M0 ("needs the AI helper", or "soon" with the helper up), with
+> no size line, since the audio download is Step P's. With words on screen the
+> typed From and To give way to the run's, read-only, and a plain Get takes
+> the whole video — and says so: it reads **Whole video**, is no longer the
+> accent button, and Enter in the link box does not press it (the user's call
+> to confirm; the alternative was Get taking the run). After review: a row
+> shift-click extends from the row last CLICKED only while nothing else has
+> moved the run — after a drag, a key or a word shift-click it extends the run
+> on screen, keeping a start set by hand; a handle moved by a key into another
+> row keeps the focus, and the keys it takes stop at it (the window's arrows
+> step the playhead); Clip it takes the video, or the sound with Audio chosen,
+> never a song's Instrumental or Vocal stem; `formatMark` rounds to tenths
+> before splitting minutes (59 960 ms showed `0:60.0`); a chapter's bounds are
+> rounded to whole ms (`4.03 * 1000`); a credit with no title is not the link
+> twice; "landed without its words" is said only once the clip has landed.
+> Tests: `tests/wordRun.test.ts` (14, two properties over 300 random
+> transcripts), `tests/linkClip.test.ts` (7), `tests/renderer/ingestPanel.test.tsx`
+> (20; `.test.tsx` added to vitest's include), `tests/renderer/clipItCollect.test.ts`
+> (11, including a save/load/relink keeping the credit), `tests/ingestStart.test.ts`
+> (7: main's `startRequest`, the preload with a fake `ipcRenderer`, and the
+> handlers' wiring by counted anchors), a `formatMark` case in
+> `tests/ingest.test.ts`, and three `ingest:captionTrack` cases in
+> `tests/integration/ingestCaptions.int.test.ts`; 68 mutations, each killed and
+> restored byte-identical. Census: 35 rows in the `url` home under ten
+> `link-*` recipes and `none`; the full census on a fresh page gave missing
+> `[]`, 793 checked, 8 skipped. `window.__forgeClipItCheck()`
+> (`harness/clipItCheck.ts`) on a fresh page: 12 rows; rows 3–6 picked
+> `{from 18, to 53}` by click and shift-click and by the dragged handles alike
+> ("0:39.6 selected", as `formatMark` of its range); the arrow keys on Start
+> and End across a row's edge each way, a word a press, the focus kept on
+> every one and the playhead never stepped; Start dragged into row 2's middle
+> (`{14, 53}`) then row 7 shift-clicked gave `{14, 62}`; the Middle chip
+> `{39, 79}`; Get read "Whole video", not the accent, and Enter started
+> nothing; Clip it one exact job, `*25.000-64.600`, one
+> `--download-sections`; Add another clip kept 12 rows, cleared the run,
+> started nothing; rows 8–9 a second job, `*85.000-100.800`, one section; the
+> no-caption link said so, Listen to it greyed with "needs the AI helper", a
+> chip set typed From and To — no failures, 1359 ms. Still open, as before:
+> `exactCut.int.test.ts` and the `clipIt.int` render check, and so §16.13.
+
 `src/renderer/src/components/tools/TranscriptRows.tsx`, **one component for
 both tiles** (the URL tile's transcript, and a timeline clip's in the
 Transcript tile). A row is a capped segment (`capSegments(t.segments, 30,

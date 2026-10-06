@@ -7,6 +7,8 @@ import {
   LinkRuns,
   STAGING_PREFIX,
   captionStem,
+  captionTrackHandler,
+  captionTrackRequest,
   captionsHandler,
   captionsRequest,
   metaHandler,
@@ -15,6 +17,7 @@ import {
 } from '../../src/main/ingest/meta'
 import type { IngestTool } from '../../src/main/ingest/download'
 import { linkCacheKey, parseLink } from '@shared/ingest/url'
+import { transcriptFromTracks } from '@shared/ingest/captions'
 
 /*
  * `ingest:meta` and `ingest:captions`, end to end, against the fake yt-dlp.
@@ -308,5 +311,70 @@ describe('what the renderer may ask for', () => {
     expect(() => captionsRequest({ url: URL, language: 'en.*' })).toThrow(/language/)
     expect(() => captionsRequest({ url: URL, language: 42 })).toThrow(/language/)
     expect(captionsRequest({ url: URL, language: 'en-US' }).keys).toEqual(['en', 'en-orig'])
+  })
+})
+
+describe('ingest:captionTrack — a kept track read again, by its keys', () => {
+  it('reads back what a fetch kept, and the same tracks make the same transcript', async () => {
+    const got = await captionsHandler(new LinkRuns(), async () => tool())({ url: URL, language: 'en' })
+    const read = captionTrackHandler()
+    const tracks = await Promise.all(got.tracks.map((t) => read({ linkKey: got.linkKey, key: t.key })))
+    expect(tracks.map((t) => [t.key, t.kind]).sort()).toEqual([
+      ['en', 'lines'],
+      ['en-orig', 'asr']
+    ])
+    // The re-read merges exactly as the fetch did, so a run's indices mean the same words.
+    const again = transcriptFromTracks(tracks, `url:${got.linkKey}`, 'en')
+    expect(again?.words.map((w) => [w.text, w.startMs, w.endMs])).toEqual(got.transcript?.words.map((w) => [w.text, w.startMs, w.endMs]))
+  }, 60_000)
+
+  it('builds the path itself, under the link’s own folder, from the two keys', async () => {
+    const seen: string[] = []
+    const read = captionTrackHandler((linkKey) => {
+      seen.push(linkKey)
+      return join(dir, 'kept', linkKey)
+    })
+    const folder = join(dir, 'kept', LINK_KEY)
+    await mkdir(folder, { recursive: true })
+    const json = { events: [{ tStartMs: 0, dDurationMs: 900, segs: [{ utf8: 'kilo', acAsrConf: 0 }, { utf8: ' lima', tOffsetMs: 400, acAsrConf: 0 }] }] }
+    await writeFile(join(folder, `${captionStem(LINK_KEY)}.en-orig.json3`), JSON.stringify(json))
+    const back = await read({ linkKey: LINK_KEY, key: 'en-orig' })
+    expect(back).toEqual({ key: 'en-orig', kind: 'asr', json })
+    expect(seen).toEqual([LINK_KEY])
+    // A track that is not there says so.
+    await expect(read({ linkKey: LINK_KEY, key: 'fr' })).rejects.toThrow(/no longer on this machine/)
+  })
+
+  it('refuses a key that could name anything but a kept track, before reading anything', async () => {
+    const asked: string[] = []
+    const read = captionTrackHandler((linkKey) => {
+      asked.push(linkKey)
+      return join(dir, 'kept', linkKey)
+    })
+    const refused: unknown[] = [
+      null,
+      {},
+      { linkKey: LINK_KEY },
+      { key: 'en' },
+      { linkKey: '../url', key: 'en' },
+      { linkKey: `${LINK_KEY}/..`, key: 'en' },
+      { linkKey: 'C:', key: 'en' },
+      { linkKey: `${LINK_KEY}.captions`, key: 'en' },
+      { linkKey: '', key: 'en' },
+      { linkKey: 42, key: 'en' },
+      { linkKey: LINK_KEY, key: '../../etc' },
+      { linkKey: LINK_KEY, key: 'en/../x' },
+      { linkKey: LINK_KEY, key: 'en.json3' },
+      { linkKey: LINK_KEY, key: 'all' },
+      { linkKey: LINK_KEY, key: 'en.*' },
+      { linkKey: LINK_KEY, key: '' }
+    ]
+    for (const payload of refused) {
+      expect(() => captionTrackRequest(payload), JSON.stringify(payload)).toThrow(/not a link this app read|not a caption track/)
+      await expect(read(payload), JSON.stringify(payload)).rejects.toThrow(/not a link this app read|not a caption track/)
+    }
+    // Nothing was looked up for any of them.
+    expect(asked).toEqual([])
+    expect(captionTrackRequest({ linkKey: LINK_KEY, key: 'pt-BR' })).toEqual({ linkKey: LINK_KEY, key: 'pt-BR' })
   })
 })

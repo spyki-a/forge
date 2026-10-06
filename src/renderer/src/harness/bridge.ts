@@ -1,9 +1,11 @@
 import type { MediaAsset } from '@shared/timeline'
 import type { PackListing } from '@shared/assets/pack'
 import { LOOKS, cubeFor } from '@shared/render/looks'
-import { captionKeys, type LinkMeta } from '@shared/ingest/args'
+import type { Job } from '@shared/types'
+import { buildYtDlpArgs, captionKeys, outputStem, type IngestRequest, type LinkMeta } from '@shared/ingest/args'
 import { linkCacheKey, parseLink } from '@shared/ingest/url'
 import { parseJson3, type CaptionFetch } from '@shared/ingest/captions'
+import type { LinkClip } from '@shared/ingest/linkClip'
 
 /**
  * A working stand-in for the Electron bridge, so the UI runs in a browser.
@@ -96,6 +98,21 @@ function harnessJson3(): unknown {
   return { wireMagic: 'pb3', events }
 }
 
+/**
+ * The links the stubs know by name (CLIPS.md §3b.8). Any other link is the
+ * twelve-row talk too; these two are the states a check needs besides it.
+ */
+export const HARNESS_LINKS = {
+  /** Twelve rows, three chapters, English. */
+  talk: 'https://www.youtube.com/watch?v=HarnessTalk',
+  /** The same details and chapters, and no caption track in any language. */
+  noCaptions: 'https://www.youtube.com/watch?v=NoCaptions1',
+  /** Details that name no language, so the user chooses one. */
+  noLanguage: 'https://www.youtube.com/watch?v=NoLanguage1'
+} as const
+
+const isLink = (url: string, which: string): boolean => parseLink(url)?.url === parseLink(which)?.url
+
 function harnessMeta(url: string): LinkMeta {
   const link = parseLink(url)
   if (!link) throw new Error('That is not a link yt-dlp can read')
@@ -103,7 +120,7 @@ function harnessMeta(url: string): LinkMeta {
     id: link.videoId ?? link.key,
     title: 'A harness talk in twelve rows',
     duration: 150,
-    language: 'en',
+    language: isLink(url, HARNESS_LINKS.noLanguage) ? null : 'en',
     chapters: [
       { start_time: 0, end_time: 50, title: 'Opening' },
       { start_time: 50, end_time: 100, title: 'Middle' },
@@ -122,6 +139,8 @@ function harnessCaptions(url: string, language: string): CaptionFetch {
   const keys = captionKeys(language)
   if (!keys) throw new Error('Choose the video’s language to fetch its captions')
   const linkKey = linkCacheKey(link)
+  // yt-dlp's answer for a video with none of these languages: `NA`, nothing written (EFFECTS.md §40).
+  if (isLink(url, HARNESS_LINKS.noCaptions)) return { linkKey, keys, tracks: [], transcript: null }
   const asr = keys[keys.length - 1]
   return {
     linkKey,
@@ -129,6 +148,54 @@ function harnessCaptions(url: string, language: string): CaptionFetch {
     tracks: [{ key: asr, kind: 'asr', path: `harness://url/${linkKey}/${linkKey}.captions.${asr}.json3` }],
     transcript: parseJson3(harnessJson3(), `url:${linkKey}`, 'youtube-asr', keys[0])
   }
+}
+
+/**
+ * Downloads asked for, recorded rather than run: the request, a Clip it's
+ * words and credit, and the argv main would spawn yt-dlp with — built by the
+ * same `buildYtDlpArgs`, so a check can count its `--download-sections`.
+ */
+export interface HarnessIngest {
+  id: string
+  request: IngestRequest
+  clip: LinkClip | null
+  args: string[]
+}
+export const harnessIngests: HarnessIngest[] = []
+
+/**
+ * A download job that only records its request. It is queued and stays so —
+ * the harness has no yt-dlp — and nothing broadcasts it, so the export list
+ * and the store's jobs are left as they were; the clip never lands here.
+ */
+function harnessStartIngest(request: IngestRequest, clip?: LinkClip | null): Job {
+  const link = parseLink(request.url)
+  if (!link) throw new Error('That is not a link yt-dlp can read')
+  const id = `harness-dl-${harnessIngests.length + 1}`
+  const stem = outputStem(link, request)
+  const { args } = buildYtDlpArgs(request, { ffmpegPath: 'harness/ffmpeg', destDir: 'harness/downloads', stem })
+  harnessIngests.push({ id, request, clip: clip ?? null, args })
+  return {
+    id,
+    presetId: 'ingest',
+    input: link.url,
+    inputName: `harness · ${stem}`,
+    output: 'harness/downloads',
+    params: {},
+    status: 'queued',
+    progress: 0,
+    speed: null,
+    error: null,
+    startedAt: null,
+    finishedAt: null
+  }
+}
+
+/** One caption track read back by its keys, as `ingest:captionTrack` does from the reload cache. */
+function harnessCaptionTrack(linkKey: string, key: string): { key: string; kind: 'asr' | 'lines'; json: unknown } {
+  const talk = parseLink(HARNESS_LINKS.talk)!
+  if (key.endsWith('-orig') && linkKey === linkCacheKey(talk)) return { key, kind: 'asr', json: harnessJson3() }
+  throw new Error('The captions this clip was picked from are no longer on this machine')
 }
 
 const packCancels = new Set<string>()
@@ -608,12 +675,14 @@ export function installHarnessBridge(): void {
      * So status answers honestly and the two actions refuse by name.
      */
     ingestStatus: async () => ({ ready: false, tool: null, reason: 'harness: no yt-dlp' }),
-    startIngest: unsupported('Downloading'),
+    // Recorded, never run: Clip it's job and its argv are what a check reads (CLIPS.md §3b.8).
+    startIngest: async (request: IngestRequest, clip?: LinkClip | null) => harnessStartIngest(request, clip),
     collectIngest: unsupported('Downloading'),
     // Deterministic stand-ins for a link's details and caption track, so the
     // URL tile's transcript rows can be clicked through (CLIPS.md §3b.8).
     ingestMeta: async (url: string) => harnessMeta(url),
     ingestCaptions: async (url: string, language: string) => harnessCaptions(url, language),
+    ingestCaptionTrack: async (linkKey: string, key: string) => harnessCaptionTrack(linkKey, key),
 
     voiceStatus: async () => [
       { id: 'kokoro' as const, label: 'Kokoro (on this machine)', kind: 'local' as const, ready: false, reason: 'harness: no sidecar' },
@@ -738,4 +807,6 @@ export function installHarnessBridge(): void {
   ;(
     window as unknown as { forgeCaptionBake: { frames: number[]; list: { text: string } } }
   ).forgeCaptionBake = { frames: captionFrames, list: captionList }
+  // The downloads asked for, with their argv (`harnessStartIngest`).
+  ;(window as unknown as { forgeIngestLog: HarnessIngest[] }).forgeIngestLog = harnessIngests
 }

@@ -552,6 +552,20 @@ describe('marks a person types', () => {
     expect(formatMark(90_500)).toBe('1:30.5')
     expect(formatMark(3_723_000)).toBe('1:02:03.0')
   })
+
+  it('rounds into the next minute or hour, never to a sixtieth second (word times land on any millisecond)', () => {
+    expect(formatMark(59_960)).toBe('1:00.0')
+    expect(formatMark(119_960)).toBe('2:00.0')
+    expect(formatMark(599_990)).toBe('10:00.0')
+    expect(formatMark(3_599_960)).toBe('1:00:00.0')
+    expect(formatMark(59_940)).toBe('0:59.9')
+    // And every one reads back: a mirrored To is a mark the typed field could take.
+    for (const ms of [59_960, 3_599_960, 64_600, 1_250]) {
+      const shown = formatMark(ms)
+      expect(shown, String(ms)).not.toMatch(/:60\./)
+      expect(parseMark(shown), shown).toBe(Math.round(ms / 100) * 100)
+    }
+  })
 })
 
 describe('what is wrong with a pasted link', () => {

@@ -57,11 +57,12 @@ import type { FootageRequest } from '@shared/render/moment'
 import { tagMasks } from './transitions/maskTags'
 import { downloadMedia, downloadsDir, type IngestHandle, type IngestOutcome } from './ingest/download'
 import { ensureYtDlp, ytDlpStatus } from './ingest/binary'
-import { LinkRuns, captionsHandler, metaHandler } from './ingest/meta'
+import { LinkRuns, captionTrackHandler, captionsHandler, metaHandler } from './ingest/meta'
 import { CancelledError } from './ffmpeg/run'
 import { needsStems, outputStem, type IngestRequest } from '@shared/ingest/args'
 import { parseLink } from '@shared/ingest/url'
-import { QUALITIES } from '@shared/ingest/format'
+import type { LinkClip } from '@shared/ingest/linkClip'
+import { startRequest } from './ingest/start'
 
 interface ExportRequest {
   project: Project
@@ -120,7 +121,12 @@ export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
    * renderer receives a single array and draws the same bar for both, so
    * nothing over there has to learn that a job can be a download.
    */
-  const ingests = new Map<string, { request: IngestRequest; outcome: IngestOutcome | null }>()
+  /*
+   * `clip` is a Clip it job's words and credit (CLIPS.md §3b.4), kept here
+   * beside its request so a reload mid-download loses neither: the renderer's
+   * own copy goes with the reload, and collect hands this one back.
+   */
+  const ingests = new Map<string, { request: IngestRequest; outcome: IngestOutcome | null; clip: LinkClip | null }>()
   /** Stems with a download running, so a second job for one waits rather than races. */
   const inFlightStems = new Map<string, Promise<void>>()
   const downloads = new JobQueue((job, onProgress) => {
@@ -1061,34 +1067,10 @@ export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
   ipcMain.handle('ingest:status', () => ytDlpStatus())
 
   ipcMain.handle('ingest:start', (_e, payload: unknown) => {
-    const raw = (payload ?? {}) as Partial<IngestRequest> & { range?: unknown }
-    if (typeof raw.url !== 'string') throw new Error('A download needs a link')
-    const link = parseLink(raw.url)
-    if (!link) throw new Error('That is not a link yt-dlp can read')
-
-    // Everything is re-validated here: the renderer proposes, main decides
-    // what is actually spawned.
-    const range =
-      raw.range &&
-      typeof raw.range === 'object' &&
-      Number.isFinite((raw.range as { startMs?: unknown }).startMs) &&
-      Number.isFinite((raw.range as { endMs?: unknown }).endMs)
-        ? {
-            startMs: (raw.range as { startMs: number }).startMs,
-            endMs: (raw.range as { endMs: number }).endMs
-          }
-        : null
-    const request: IngestRequest = {
-      url: link.url,
-      kind:
-        raw.kind === 'audio' || raw.kind === 'instrumental' || raw.kind === 'vocal'
-          ? raw.kind
-          : 'video',
-      quality: QUALITIES.includes(raw.quality as never) ? (raw.quality as IngestRequest['quality']) : '1080p',
-      audioFormat: raw.audioFormat === 'mp3' ? 'mp3' : 'm4a',
-      range,
-      exact: raw.exact === true
-    }
+    // Everything is re-validated (ingest/start.ts): the renderer proposes,
+    // main decides what is actually spawned — and a Clip it job's words and
+    // credit are checked field by field, never a path.
+    const { link, request, clip } = startRequest(payload)
 
     return downloads.add(
       {
@@ -1100,7 +1082,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
         output: downloadsDir(),
         params: {}
       },
-      (id) => ingests.set(id, { request, outcome: null })
+      (id) => ingests.set(id, { request, outcome: null, clip })
     )
   })
 
@@ -1120,6 +1102,15 @@ export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
 
   ipcMain.handle('ingest:meta', (_e, payload: unknown) => linkMeta(payload))
   ipcMain.handle('ingest:captions', (_e, payload: unknown) => linkCaptions(payload))
+
+  /*
+   * One caption track a fetch kept, read again — for a Clip it job collected
+   * after a reload took the renderer's transcript (CLIPS.md §3b.4). The
+   * renderer names the link key and the track key; both are checked against
+   * the patterns the fetch wrote the file under, and the path is built here.
+   */
+  const captionTrack = captionTrackHandler()
+  ipcMain.handle('ingest:captionTrack', (_e, payload: unknown) => captionTrack(payload))
 
   /**
    * The finished download as an asset, named after the video rather than the
@@ -1154,7 +1145,8 @@ export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
       cached: entry.outcome.cached,
       approximateRange: entry.outcome.approximateRange,
       requestedRange: entry.outcome.requestedRange,
-      stems: entry.outcome.stems ?? null
+      stems: entry.outcome.stems ?? null,
+      link: entry.clip
     }
   })
 

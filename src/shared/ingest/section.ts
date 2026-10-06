@@ -51,6 +51,18 @@ export interface SectionPlan {
  */
 export const PAD_MS = 10_000
 
+/**
+ * The shortest range anything here asks for.
+ *
+ * Not cosmetic: `sectionPlan` reads a zero-length range as "no range at all"
+ * and downloads the WHOLE video. So a From and To typed a moment apart would
+ * be shown "0:00.0 long" and then handed an hour of footage. The marks keep a
+ * second between them, and a run of words shorter than a second is fetched a
+ * second long (`runRange`, wordRun.ts) — its collected words stay the run's.
+ * Moved here from IngestPanel.tsx (CLIPS.md §3b.2), which both now read.
+ */
+export const MIN_RANGE_MS = 1000
+
 /** yt-dlp wants plain seconds; three decimals is finer than any frame rate. */
 function stamp(ms: number): string {
   return (Math.max(0, ms) / 1000).toFixed(3)
@@ -148,13 +160,19 @@ export function parseMark(input: string): number | null {
   return Number.isFinite(seconds) ? Math.round(seconds * 1000) : null
 }
 
-/** `1:05.2`, or `1:02:03.0` once there is an hour to show. */
+/**
+ * `1:05.2`, or `1:02:03.0` once there is an hour to show.
+ *
+ * Rounded to tenths BEFORE the minutes are split off: rounding the seconds
+ * after showed the last 50 ms of every minute as `0:60.0` (59 960 ms), which
+ * parseMark cannot read back — and word times land on any millisecond.
+ */
 export function formatMark(ms: number): string {
-  const total = Math.max(0, ms) / 1000
-  const hours = Math.floor(total / 3600)
-  const minutes = Math.floor((total - hours * 3600) / 60)
-  const seconds = total - hours * 3600 - minutes * 60
+  const tenths = Math.round(Math.max(0, ms) / 100)
+  const hours = Math.floor(tenths / 36_000)
+  const minutes = Math.floor((tenths % 36_000) / 600)
+  const rest = tenths % 600
   const mm = hours > 0 ? String(minutes).padStart(2, '0') : String(minutes)
-  const ss = seconds.toFixed(1).padStart(4, '0')
+  const ss = `${String(Math.floor(rest / 10)).padStart(2, '0')}.${rest % 10}`
   return hours > 0 ? `${hours}:${mm}:${ss}` : `${mm}:${ss}`
 }

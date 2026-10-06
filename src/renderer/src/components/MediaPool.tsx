@@ -216,7 +216,9 @@ export function MediaPool(): ReactNode {
                   draggable
                   onDragStart={(e) => setDragPayload(e, poolPayload(asset))}
                   onDoubleClick={() => addAssetToTimeline(asset.id)}
-                  title={`${asset.name}\n${details(asset)}\n\nDrag onto the timeline, or double-click`}
+                  // A clip from a link carries its credit (CLIPS.md §3b.4); until step 5's
+                  // Credits block, its line is shown here.
+                  title={`${asset.name}\n${details(asset)}${asset.credit ? `\n${asset.credit.line}` : ''}\n\nDrag onto the timeline, or double-click`}
                   className="group relative aspect-square cursor-grab overflow-hidden rounded-md border border-ink-700 bg-ink-850 hover:border-accent-500 active:cursor-grabbing"
                 >
                   <Thumbnail asset={asset} />

@@ -14,6 +14,7 @@ import type { FootageRequest } from '@shared/render/moment'
 import type { Measure } from '@shared/director/gate'
 import type { IngestRequest, LinkMeta } from '@shared/ingest/args'
 import type { CaptionFetch } from '@shared/ingest/captions'
+import type { LinkClip } from '@shared/ingest/linkClip'
 import type {
   CompletionRequest,
   CompletionResult,
@@ -361,7 +362,8 @@ const api = {
    * same bar and the same cancel; watch `onJobsChanged` for it to read `done`,
    * then `collectIngest` it.
    */
-  startIngest: (request: IngestRequest): Promise<Job> => ipcRenderer.invoke('ingest:start', request),
+  startIngest: (request: IngestRequest, clip?: LinkClip | null): Promise<Job> =>
+    ipcRenderer.invoke('ingest:start', clip ? { ...request, clip } : request),
 
   /** The finished file as an asset, named after the video rather than the file. */
   collectIngest: (
@@ -381,6 +383,11 @@ const api = {
      * shows this should not promise more.
      */
     stems: { backend: string; quality: 'separated' | 'emphasised' } | null
+    /**
+     * A Clip it job's words and credit, as `startIngest` handed them to main —
+     * here so a reload mid-download does not land the clip without them.
+     */
+    link: LinkClip | null
   }> => ipcRenderer.invoke('ingest:collect', { jobId, fps }),
 
   /**
@@ -398,6 +405,17 @@ const api = {
    */
   ingestCaptions: (url: string, language: string): Promise<CaptionFetch> =>
     ipcRenderer.invoke('ingest:captions', { url, language }),
+
+  /**
+   * One caption track an earlier `ingestCaptions` kept, read again by the link
+   * key and the track's key — main checks both and builds the path. For a
+   * Clip it job collected after a reload took the transcript.
+   */
+  ingestCaptionTrack: (
+    linkKey: string,
+    key: string
+  ): Promise<{ key: string; kind: 'asr' | 'lines'; json: unknown }> =>
+    ipcRenderer.invoke('ingest:captionTrack', { linkKey, key }),
 
   /** Which speech engines are usable, and why not when they are not. */
   voiceStatus: (): Promise<

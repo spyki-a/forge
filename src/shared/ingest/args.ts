@@ -336,6 +336,14 @@ export function captionKeys(language: string | null | undefined): string[] | nul
 const FILE_KEY = /^[A-Za-z0-9_-]{1,64}$/
 
 /**
+ * A link key a renderer may name: the shape `linkCacheKey` makes, and nothing
+ * that could climb out of `userData/url/` — no dot, no separator, no colon.
+ */
+export function isLinkKey(key: unknown): key is string {
+  return typeof key === 'string' && FILE_KEY.test(key)
+}
+
+/**
  * The caption tracks only — keyless, no media, no model (CLIPS.md §7.1, measured).
  *
  *   `--skip-download` with `--no-simulate`: a `--print` with no later-stage

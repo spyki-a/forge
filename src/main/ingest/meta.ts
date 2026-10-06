@@ -8,6 +8,8 @@ import {
   buildMetaArgs,
   captionKeys,
   humanError,
+  isCaptionKey,
+  isLinkKey,
   parseMeta,
   parseRequestedSubtitles,
   readMarkedLine,
@@ -265,6 +267,50 @@ export function captionsRequest(payload: unknown): { link: ParsedLink; keys: str
   const keys = captionKeys(typeof language === 'string' ? language : null)
   if (!keys) throw new Error('Choose the video’s language to fetch its captions')
   return { link, keys }
+}
+
+/**
+ * `ingest:captionTrack`'s payload, checked: a link key of the shape
+ * `linkCacheKey` makes and a caption key of the shape `--sub-langs` took —
+ * the same two patterns the fetch wrote the file under — so neither can name
+ * anything outside `userData/url/<linkKey>/`. The renderer names the track;
+ * the path is built here (INGEST.md, "Metadata and captions").
+ */
+export function captionTrackRequest(payload: unknown): { linkKey: string; key: string } {
+  const { linkKey, key } = (payload ?? {}) as { linkKey?: unknown; key?: unknown }
+  if (!isLinkKey(linkKey)) throw new Error('That is not a link this app read')
+  if (typeof key !== 'string' || !isCaptionKey(key)) throw new Error('That is not a caption track')
+  return { linkKey, key }
+}
+
+/** One caption track as the fetch left it, read back: its key, its kind, and its json3. */
+export interface CaptionTrackRead {
+  key: string
+  kind: 'asr' | 'lines'
+  json: unknown
+}
+
+/**
+ * The body of `ingest:captionTrack`: re-read one track a fetch kept, for a
+ * clip collected after the renderer lost its transcript — a Cmd+R
+ * mid-download (CLIPS.md §3b.4). `dirFor` is `urlCacheDir` in the app.
+ */
+export function captionTrackHandler(
+  dirFor: (linkKey: string) => string = urlCacheDir
+): (payload: unknown) => Promise<CaptionTrackRead> {
+  return async (payload) => {
+    const { linkKey, key } = captionTrackRequest(payload)
+    const path = join(dirFor(linkKey), `${captionStem(linkKey)}.${key}.json3`)
+    let json: unknown
+    try {
+      json = JSON.parse(await readFile(path, 'utf8'))
+    } catch {
+      throw new Error('The captions this clip was picked from are no longer on this machine')
+    }
+    const kind = json3Kind(json)
+    if (!kind) throw new Error('The captions this clip was picked from could not be read')
+    return { key, kind, json }
+  }
 }
 
 /**

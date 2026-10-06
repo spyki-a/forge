@@ -10,7 +10,8 @@ export default defineConfig({
     }
   },
   test: {
-    include: ['tests/**/*.test.ts', 'tests/**/*.int.test.ts'],
+    // `.test.tsx` for a component's test (tests/renderer/ingestPanel.test.tsx).
+    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx', 'tests/**/*.int.test.ts'],
     environment: 'node',
     testTimeout: 120_000
   }

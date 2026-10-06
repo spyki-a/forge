@@ -131,6 +131,34 @@ export interface MediaAsset {
    * that points at another clip on the timeline.
    */
   matte?: string
+
+  /**
+   * Where the file came from, credited — a clip from a link carries its
+   * video's title, channel and page (docs/CLIPS.md §3b.4, §8.5). Written with
+   * the asset in Clip it's one undo step, and saved with it like any field.
+   */
+  credit?: AssetCredit
+}
+
+/**
+ * An asset's credit (docs/CLIPS.md §8.3). M0 brings the one a link's clip
+ * always needs, source `'link'`; step 5 widens `source` and adds the licence
+ * its outside pictures carry.
+ */
+export interface AssetCredit {
+  source: 'link'
+  /** The video's title, as the site gives it. */
+  title: string
+  /** The channel, or the uploader when there is no channel; null when neither printed. */
+  author: string | null
+  /** The video's own page (`webpage_url`). */
+  pageUrl: string
+  /** The credit line as shown: `<title> — <channel>, <url>`. */
+  line: string
+  /** A link's clip is credited by courtesy; step 5's licences set this. */
+  attributionRequired: boolean
+  /** When the details were read, ISO 8601. */
+  fetchedAt: string
 }
 
 export interface Transform {

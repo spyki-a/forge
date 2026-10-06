@@ -5567,6 +5567,345 @@
     "note": "Count 2: the From and To fields."
   },
   {
+    "label": "Get transcript",
+    "match": "text",
+    "home": "url",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 231,
+    "newHome": "Shelf tile URL",
+    "note": "M0 (CLIPS.md §3b.1): beside the link, greyed until the box holds a link, so it is on screen as soon as the URL tile opens."
+  },
+  {
+    "label": "Fetch the video’s captions as words to pick a clip from — nothing else is downloaded",
+    "match": "title",
+    "home": "url",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 28,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "Whole video",
+    "match": "text",
+    "home": "url",
+    "needs": "link-transcript",
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 149,
+    "newHome": "Shelf tile URL",
+    "note": "Get, while the link’s words are shown: it takes the whole video, not the run (Clip it does), so it says so and is no longer the accent button; Enter in the link box does not press it then."
+  },
+  {
+    "label": "Download the whole video and put it on the timeline — Clip it takes just the words you picked",
+    "match": "title",
+    "home": "url",
+    "needs": "link-transcript",
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 36,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "Reading the link…",
+    "match": "text",
+    "home": "url",
+    "needs": "link-reading",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 234,
+    "newHome": "Shelf tile URL",
+    "note": "The stubs answer at once, so the recipe holds the fetch at this state through the store."
+  },
+  {
+    "label": "Fetching the captions…",
+    "match": "text",
+    "home": "url",
+    "needs": "link-fetching",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 235,
+    "newHome": "Shelf tile URL",
+    "note": "The stubs answer at once, so the recipe holds the fetch at this state through the store."
+  },
+  {
+    "label": "Could not get the transcript.",
+    "match": "text",
+    "home": "url",
+    "needs": "link-failed",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 238,
+    "newHome": "Shelf tile URL",
+    "note": "CLIPS.md §3b.8: the fetch failed (offline); From and To stay typed fields under it."
+  },
+  {
+    "label": "Choose the language",
+    "match": "text",
+    "home": "url",
+    "needs": "link-no-language",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 192,
+    "newHome": "Shelf tile URL",
+    "note": "The details named no language (none of the eight measured videos did that, EFFECTS.md §40); the stub link NoLanguage1 gives that state."
+  },
+  {
+    "label": "English",
+    "match": "text",
+    "home": "url",
+    "needs": "link-no-language",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 37,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "Hindi",
+    "match": "text",
+    "home": "url",
+    "needs": "link-no-language",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 38,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "Telugu",
+    "match": "text",
+    "home": "url",
+    "needs": "link-no-language",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 39,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "Tamil",
+    "match": "text",
+    "home": "url",
+    "needs": "link-no-language",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 40,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "Spanish",
+    "match": "text",
+    "home": "url",
+    "needs": "link-no-language",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 41,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "This video has no captions",
+    "match": "text",
+    "home": "url",
+    "needs": "link-no-captions",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 167,
+    "newHome": "Shelf tile URL",
+    "note": "CLIPS.md §3b.5: the stub link NoCaptions1 has details and chapters and no caption track."
+  },
+  {
+    "label": "Listen to it",
+    "match": "text",
+    "home": "url",
+    "needs": "link-no-captions",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 180,
+    "newHome": "Shelf tile URL",
+    "note": "Greyed in M0: it would download the sound for the AI helper to transcribe (Step P), and never downloads anything yet."
+  },
+  {
+    "label": "Transcribe the sound with the AI helper — downloads the audio and the speech model",
+    "match": "title",
+    "home": "url",
+    "needs": "link-no-captions",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 31,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "needs the AI helper",
+    "match": "text",
+    "home": "url",
+    "needs": "link-no-captions",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 182,
+    "newHome": "Shelf tile URL",
+    "note": "The harness’s AI helper is not running (bridge.ts sidecarStatus), as on every installed machine until Step P."
+  },
+  {
+    "label": "soon",
+    "match": "text",
+    "home": "url",
+    "needs": "link-no-captions-helper",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 182,
+    "newHome": "Shelf tile URL",
+    "note": "With the AI helper up, Listen to it is still greyed: listening is not built in M0."
+  },
+  {
+    "label": "Set From and To to this chapter",
+    "match": "title",
+    "home": "url",
+    "needs": "link-no-captions",
+    "count": 3,
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 33,
+    "newHome": "Shelf tile URL",
+    "note": "A chapter chip on a video with no captions sets the From and To fields (CLIPS.md §3b.3). Count 3: the stub’s three chapters."
+  },
+  {
+    "label": "Pick this chapter’s words",
+    "match": "title",
+    "home": "url",
+    "needs": "link-transcript",
+    "count": 3,
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 32,
+    "newHome": "Shelf tile URL",
+    "note": "The chapter chip (CLIPS.md §3b.3): its text is the chapter’s title, which is data; its tooltip is the interface’s. Count 3: the stub’s three chapters."
+  },
+  {
+    "label": "Clip it",
+    "match": "text",
+    "home": "url",
+    "needs": "link-transcript",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 147,
+    "newHome": "Shelf tile URL",
+    "note": "Greyed until a run is picked (CLIPS.md §3b.4)."
+  },
+  {
+    "label": "Download exactly the picked words’ part of the video, and put it on the timeline with its words and the video’s credit",
+    "match": "title",
+    "home": "url",
+    "needs": "link-transcript",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 29,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "Click a row to pick its words; shift-click another row, or a word, to extend. Or drag Start and End.",
+    "match": "text",
+    "home": "url",
+    "needs": "link-transcript",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 119,
+    "newHome": "Shelf tile URL",
+    "note": "The rows’ selection hint, while nothing is picked."
+  },
+  {
+    "label": "Start",
+    "match": "aria-label",
+    "home": "url",
+    "needs": "link-transcript",
+    "file": "src/renderer/src/components/tools/TranscriptRows.tsx",
+    "line": 124,
+    "newHome": "Shelf tile URL",
+    "note": "The Start cut handle (CLIPS.md §3b.2), resting on the first word while nothing is picked."
+  },
+  {
+    "label": "End",
+    "match": "aria-label",
+    "home": "url",
+    "needs": "link-transcript",
+    "file": "src/renderer/src/components/tools/TranscriptRows.tsx",
+    "line": 124,
+    "newHome": "Shelf tile URL",
+    "note": "The End cut handle (CLIPS.md §3b.2), resting on the last word while nothing is picked."
+  },
+  {
+    "label": "Start — drag along the rows; it snaps to the start of a word",
+    "match": "title",
+    "home": "url",
+    "needs": "link-transcript",
+    "file": "src/renderer/src/components/tools/TranscriptRows.tsx",
+    "line": 40,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "End — drag along the rows; it snaps to the end of a word",
+    "match": "title",
+    "home": "url",
+    "needs": "link-transcript",
+    "file": "src/renderer/src/components/tools/TranscriptRows.tsx",
+    "line": 41,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "Click to pick this row’s words; shift-click to extend the pick to this row",
+    "match": "title",
+    "home": "url",
+    "needs": "link-transcript",
+    "count": 12,
+    "file": "src/renderer/src/components/tools/TranscriptRows.tsx",
+    "line": 39,
+    "newHome": "Shelf tile URL",
+    "note": "One per row’s time: the stub talk’s twelve rows."
+  },
+  {
+    "label": "selected",
+    "match": "text",
+    "home": "url",
+    "needs": "link-run",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 92,
+    "newHome": "Shelf tile URL",
+    "note": "The run’s length, \"0:39.6 selected\" — the number is its own text node."
+  },
+  {
+    "label": "From",
+    "match": "text",
+    "home": "url",
+    "needs": "link-run",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 97,
+    "newHome": "Shelf tile URL",
+    "note": "The From field mirroring the run, read-only (CLIPS.md §3b.5); the typed one is `ingest-range`’s."
+  },
+  {
+    "label": "To",
+    "match": "text",
+    "home": "url",
+    "needs": "link-run",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 106,
+    "newHome": "Shelf tile URL",
+    "note": "The To field mirroring the run, read-only (CLIPS.md §3b.5); the typed one is `ingest-range`’s."
+  },
+  {
+    "label": "set by the words you picked",
+    "match": "text",
+    "home": "url",
+    "needs": "link-run",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 115,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "Clipping — it lands on the timeline when the download is done.",
+    "match": "text",
+    "home": "url",
+    "needs": "link-clipped",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 126,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "Add another clip",
+    "match": "text",
+    "home": "url",
+    "needs": "link-clipped",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 135,
+    "newHome": "Shelf tile URL",
+    "note": "CLIPS.md §3b.4: keeps the rows, clears the run, starts nothing."
+  },
+  {
+    "label": "Keep the transcript and pick another run",
+    "match": "title",
+    "home": "url",
+    "needs": "link-clipped",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 30,
+    "newHome": "Shelf tile URL"
+  },
+  {
     "label": "Add a video track",
     "match": "title",
     "home": "timeline",
