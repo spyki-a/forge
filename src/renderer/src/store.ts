@@ -16,6 +16,7 @@ import {
   type TranscriptFrom
 } from '@shared/ingest/linkClip'
 import type { Quality } from '@shared/ingest/format'
+import { wasCollected } from '@shared/ingest/collect'
 import type {
   AssetCredit,
   Clip,
@@ -1107,7 +1108,9 @@ let noticeId = 0
  *
  * Module-level rather than store state: `setJobs` runs on every
  * `jobs:changed` — several times a second during an export — and these are
- * re-entry guards, not anything the interface draws.
+ * re-entry guards, not anything the interface draws. A reload empties them,
+ * so they are not what stops a job landing twice: main is
+ * (`alreadyCollected`, shared/ingest/collect.ts).
  */
 const collecting = new Set<string>()
 const reported = new Set<string>()
@@ -4912,8 +4915,9 @@ export const useEditor = create<EditorState>((set, get) => ({
      *
      * Pulled on the job reaching `done` rather than pushed from main, because
      * the renderer can be reloaded between the two and a pushed result would
-     * simply be lost. `pendingIngests` is what stops this firing for a job
-     * started before a reload, or twice for the same one.
+     * simply be lost. `collecting` stops it firing twice for one job in this
+     * window; after a reload, main does — it keeps the finished job in its
+     * list, and answers a second collect with `alreadyCollected`.
      */
     for (const job of jobs) {
       /*
@@ -4952,9 +4956,23 @@ export const useEditor = create<EditorState>((set, get) => ({
     // download is adopted by whatever is open — the best available answer, and
     // better than dropping a file the user waited for.
     const owner = get().pendingIngests[jobId]
+    let repeat = false
 
     try {
       const result = await window.forge.collectIngest(jobId, get().project.settings.fps)
+
+      /*
+       * Collected before — by this window before a reload (Cmd+R), which took
+       * `collecting` with it while main kept the job in its list. The clip is
+       * wherever that first answer put it, so nothing here is touched: not the
+       * project, not the undo stack, not `pendingIngests`. The claim is KEPT,
+       * so the next `jobs:changed` does not ask again. Main remembers this,
+       * not the renderer (`collectDownload`, shared/ingest/collect.ts).
+       */
+      if (wasCollected(result)) {
+        repeat = true
+        return
+      }
 
       /*
        * A Clip it job's words and credit: this window's own record, or main's
@@ -5059,15 +5077,20 @@ export const useEditor = create<EditorState>((set, get) => ({
        * The file is downloaded — the failure is in probing or placing it —
        * so dropping the claim here would strand a finished download with no
        * way to reach it. Releasing it lets the next `jobs:changed` retry.
+       * Main marks a job collected only once it has read the file, so a
+       * failed probe is retried; a failure after that answer is not — the
+       * retry is told `alreadyCollected`, and the file stays in the folder.
        */
       collecting.delete(jobId)
       notify(err instanceof Error ? err.message : String(err))
     } finally {
-      set((st) => {
-        const rest = { ...st.pendingIngests }
-        delete rest[jobId]
-        return { pendingIngests: rest }
-      })
+      if (!repeat) {
+        set((st) => {
+          const rest = { ...st.pendingIngests }
+          delete rest[jobId]
+          return { pendingIngests: rest }
+        })
+      }
     }
   },
 

@@ -27,6 +27,7 @@ Paste a link and press Get: two clicks to a clip on the timeline.
 | main | `ingest/meta.ts` | a link's metadata and caption tracks, no media — see below |
 | shared | `ingest/wordRun.ts` | a run of words picked from the rows, and the range it downloads |
 | shared | `ingest/linkClip.ts` | what a Clip it job carries to main and back: the run's words, the credit |
+| shared | `ingest/collect.ts` | `collectDownload`, `ingest:collect`'s body: the file, once — then `{ alreadyCollected: true }` (`wasCollected`) |
 | main | `ipc.ts` | a second `JobQueue`, `ingest:status` / `start` / `collect`; `ingest:meta` / `captions` / `captionTrack` |
 | renderer | `components/IngestPanel.tsx` | the panel: link, what to take, the marks |
 | renderer | `components/tools/LinkTranscript.tsx`, `TranscriptRows.tsx` | Get transcript, the rows, the handles, the chips, Clip it |
@@ -224,9 +225,6 @@ is the only place it can.
 - The tab body: URL field, the four rungs with "All formats" behind a
   disclosure (only formats we can decode; the rest greyed **with the reason**),
   video / audio / mp3, the two range handles and the preview box, exact/fast.
-- The collect step in the store: on `done`, `collectIngest` → `importAssets`
-  path, then place the clip; for a fast-path range, set in/out to the requested
-  range. Two clicks from paste to clip is the number to hit.
 - Nothing cleans `<userData>/downloads/`. It is the first cache in the app big
   enough for that to matter.
 - The first download on a packaged app fetches yt-dlp (~30MB). That step is
@@ -353,6 +351,54 @@ turned into a clip when its job reaches `done`. Gating that on renderer state
 meant a reload — Cmd+R, which the app allows — silently orphaned a download
 that was still running. `presetId === 'ingest'` comes from main and survives
 anything the renderer does.
+
+**A job is collected once, and main is what remembers it.** Main keeps a
+finished download in its list until *Clear finished*, and the renderer pulls
+every `done` ingest job it sees. Its record of what it had pulled —
+`collecting`, module memory — went with a reload, so after Cmd+R the same job
+was pulled again and its clip landed a second time, in whatever project was
+open, for a plain Get and Clip it alike (found 2026-10-06 by a reviewer of
+CLIPS.md §3b; `tests/renderer/ingestReload.test.ts` went from one clip to two
+on the code before). Now `ingest:collect` (`collectDownload`,
+`shared/ingest/collect.ts`) marks the job's entry `collected` once it has
+probed the file and built the answer — after, never before, so a probe that
+fails leaves the job collectable — and answers every later collect of that job
+`{ alreadyCollected: true }` without probing again. The renderer
+(`wasCollected`, the same file) then touches nothing — not the project, not
+the undo stack, not `pendingIngests` — and keeps its claim, so the next
+`jobs:changed` does not ask again. What a reload does now: one cheap invoke
+per finished download still in the list, and nothing already handed back
+lands again; a job that finished during the reload and was never collected
+lands once, as it should. The jobs list is as it was: `jobs:changed` and
+*Clear finished* are unchanged, and clearing drops the entry, mark and all.
+The mark lives in main's map rather than on the job row because the row is
+shared with every export and the map is where main already keeps what only a
+download has.
+
+What it leaves, because main marks a job when it **answers**, not when the
+clip has landed:
+
+- A clip that landed but was not saved before the reload is not landed again.
+  The file is in the downloads folder.
+- **A reload after main has read the file but before the clip has landed loses
+  the clip, and nothing says so.** Main's answer goes to the old page and is
+  dropped; the reloaded window is told `alreadyCollected`, lands nothing, and
+  shows no notice; the file stays in the downloads folder. The window is Clip
+  it's words being re-read (`ingest:captionTrack`, which the renderer awaits
+  after main has answered), or a probe that was running at the reload
+  finishing before the reloaded window asks. Measured 2026-10-06 in a scratch
+  store test: 0 clips, no notice, in both. If the reloaded window asks while
+  that probe is still running, both collects read the file and both are
+  answered — the mark is checked before the read and set after it — and the
+  reloaded window lands it once.
+- A failure placing a clip after main answered is reported once, not retried.
+
+Closing the silent case would take two phases: main records the job as handed
+when it answers, the renderer confirms with a one-way `ingest:collected` right
+after `commit()` (or after the different-project notice), and only a confirmed
+job answers `alreadyCollected` — a handed, unconfirmed one is handed back
+again. Landing is synchronous, so the confirm follows it closely. Not built: it
+replaces this section's "mark at answer", and that is a decision still to take.
 
 **A download remembers which project it belongs to.** A 4K fetch is minutes;
 opening another project meanwhile used to append the asset, the clip and the

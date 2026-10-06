@@ -13,7 +13,8 @@ import {
 } from '@shared/ingest/args'
 import { parseLink } from '@shared/ingest/url'
 import { createIngestProgress, formatSpeed } from '@shared/ingest/progress'
-import { sectionPlan, type Range } from '@shared/ingest/section'
+import { sectionPlan } from '@shared/ingest/section'
+import type { IngestOutcome } from '@shared/ingest/collect'
 import { ALL_EXTENSIONS } from '@shared/media'
 
 /**
@@ -44,22 +45,6 @@ import { ALL_EXTENSIONS } from '@shared/media'
 export interface IngestTool {
   command: string
   prefixArgs?: string[]
-}
-
-export interface IngestOutcome {
-  path: string
-  /** The video's title, for the asset's display name. Null if not learned. */
-  title: string | null
-  /** True when an earlier download of the same thing was reused. */
-  cached: boolean
-  /** True when the fast range path was taken and the ends want trimming. */
-  approximateRange: boolean
-  requestedRange: Range | null
-  /**
-   * Set by the job, not by this module, when the choice was instrumental or
-   * vocal: which backend answered and how honest the word "stem" is for it.
-   */
-  stems?: { backend: string; quality: 'separated' | 'emphasised' } | null
 }
 
 export interface IngestHandle {

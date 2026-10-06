@@ -15,6 +15,7 @@ import type { Measure } from '@shared/director/gate'
 import type { IngestRequest, LinkMeta } from '@shared/ingest/args'
 import type { CaptionFetch } from '@shared/ingest/captions'
 import type { LinkClip } from '@shared/ingest/linkClip'
+import type { CollectResult } from '@shared/ingest/collect'
 import type {
   CompletionRequest,
   CompletionResult,
@@ -365,30 +366,14 @@ const api = {
   startIngest: (request: IngestRequest, clip?: LinkClip | null): Promise<Job> =>
     ipcRenderer.invoke('ingest:start', clip ? { ...request, clip } : request),
 
-  /** The finished file as an asset, named after the video rather than the file. */
-  collectIngest: (
-    jobId: string,
-    fps: number
-  ): Promise<{
-    /** Where the file actually is — not always inside the downloads folder. */
-    path: string
-    asset: MediaAsset
-    cached: boolean
-    /** The fast range path was taken: the ends are loose and want trimming. */
-    approximateRange: boolean
-    requestedRange: { startMs: number; endMs: number } | null
-    /**
-     * For instrumental/vocal: which backend answered. `emphasised` is mid/side
-     * and is an emphasis, not a stem — the name already says so, and a UI that
-     * shows this should not promise more.
-     */
-    stems: { backend: string; quality: 'separated' | 'emphasised' } | null
-    /**
-     * A Clip it job's words and credit, as `startIngest` handed them to main —
-     * here so a reload mid-download does not land the clip without them.
-     */
-    link: LinkClip | null
-  }> => ipcRenderer.invoke('ingest:collect', { jobId, fps }),
+  /**
+   * The finished file as an asset, named after the video rather than the file
+   * — once. Main remembers a job it has handed back, and every later collect
+   * of it (a reload, Cmd+R, asks again) answers `{ alreadyCollected: true }`:
+   * the clip is already where the first answer put it.
+   */
+  collectIngest: (jobId: string, fps: number): Promise<CollectResult> =>
+    ipcRenderer.invoke('ingest:collect', { jobId, fps }),
 
   /**
    * A link's title, length, language, chapters, "most replayed" heatmap and

@@ -90,6 +90,8 @@ const meta: LinkMeta = {
 }
 
 let started: { request: IngestRequest; clip: LinkClip | null }[] = []
+/** Jobs main has handed back: a second collect of one answers `alreadyCollected`, as `collectDownload` does. */
+let collected = new Set<string>()
 let trackReads: unknown[][] = []
 let reread: () => unknown = () => json3()
 
@@ -112,6 +114,7 @@ function asset(range: { startMs: number; endMs: number } | null): MediaAsset {
 
 beforeEach(() => {
   started = []
+  collected = new Set()
   trackReads = []
   reread = () => json3()
   vi.stubGlobal('window', {
@@ -130,9 +133,11 @@ beforeEach(() => {
         started.push({ request, clip: clip ?? null })
         return { id: `job-${started.length}`, presetId: 'ingest', status: 'queued' }
       },
-      // Main hands back what it kept beside the job: the request's range, and the clip's words and credit.
+      // Main hands back what it kept beside the job: the request's range, and the clip's words and credit — once.
       collectIngest: async (jobId: string) => {
         const job = started[Number(jobId.split('-')[1]) - 1]
+        if (collected.has(jobId)) return { alreadyCollected: true }
+        collected.add(jobId)
         return {
           path: '/downloads/clip.mp4',
           asset: asset(job.request.range ?? null),
@@ -294,7 +299,9 @@ describe('collecting a Clip it', () => {
     expect(texts().some((t) => t.includes('finished under a different project'))).toBe(true)
     expect(texts().some((t) => t.includes('without its words'))).toBe(false)
 
-    // The same, landing here: it lands, and then says so.
+    // The same, landing here: it lands, and then says so. A job main has not
+    // handed back — the first answer above was, and a repeat lands nothing.
+    collected.delete(job)
     useEditor.setState({ notices: [] })
     const pending = state().pendingIngests
     useEditor.setState({ pendingIngests: { ...pending, [job]: { projectPath: state().projectPath } } })

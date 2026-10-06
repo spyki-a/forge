@@ -760,6 +760,9 @@ itemised; this is the split, and step 4 keeps Best clips proper (§7).
 > no-caption link said so, Listen to it greyed with "needs the AI helper", a
 > chip set typed From and To — no failures, 1359 ms. Still open, as before:
 > `exactCut.int.test.ts` and the `clipIt.int` render check, and so §16.13.
+> Clip it inherits ingest's collect-once rule (2026-10-06, `INGEST.md`, "The
+> renderer half"): main marks a job collected when `ingest:collect` hands it
+> back, so a reload no longer lands its clip, words and credit a second time.
 
 `src/renderer/src/components/tools/TranscriptRows.tsx`, **one component for
 both tiles** (the URL tile's transcript, and a timeline clip's in the

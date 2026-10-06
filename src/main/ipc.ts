@@ -2,7 +2,7 @@ import { BrowserWindow, dialog, ipcMain, shell, app, systemPreferences } from 'e
 import { access, mkdir, readdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 import type { Job } from '@shared/types'
-import type { ParallaxBake, Project } from '@shared/timeline'
+import type { MediaAsset, ParallaxBake, Project } from '@shared/timeline'
 import { ALL_EXTENSIONS } from '@shared/media'
 import { deserializeProject, serializeProject, type DecisionRecord } from '@shared/project'
 import {
@@ -55,14 +55,14 @@ import { readTitleSlots, renderSolid, renderText, renderTitle, writeTitleImage, 
 import { extractMomentFrames } from './render/momentFrames'
 import type { FootageRequest } from '@shared/render/moment'
 import { tagMasks } from './transitions/maskTags'
-import { downloadMedia, downloadsDir, type IngestHandle, type IngestOutcome } from './ingest/download'
+import { downloadMedia, downloadsDir, type IngestHandle } from './ingest/download'
 import { ensureYtDlp, ytDlpStatus } from './ingest/binary'
 import { LinkRuns, captionTrackHandler, captionsHandler, metaHandler } from './ingest/meta'
 import { CancelledError } from './ffmpeg/run'
-import { needsStems, outputStem, type IngestRequest } from '@shared/ingest/args'
+import { needsStems, outputStem } from '@shared/ingest/args'
 import { parseLink } from '@shared/ingest/url'
-import type { LinkClip } from '@shared/ingest/linkClip'
 import { startRequest } from './ingest/start'
+import { collectDownload, type IngestEntry } from '@shared/ingest/collect'
 
 interface ExportRequest {
   project: Project
@@ -125,8 +125,11 @@ export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
    * `clip` is a Clip it job's words and credit (CLIPS.md §3b.4), kept here
    * beside its request so a reload mid-download loses neither: the renderer's
    * own copy goes with the reload, and collect hands this one back.
+   * `collected` is the same rule for the clip itself: the renderer's record
+   * of what it collected goes with a reload too, so main remembers it, and a
+   * second collect of one job lands nothing (shared/ingest/collect.ts).
    */
-  const ingests = new Map<string, { request: IngestRequest; outcome: IngestOutcome | null; clip: LinkClip | null }>()
+  const ingests = new Map<string, IngestEntry>()
   /** Stems with a download running, so a second job for one waits rather than races. */
   const inFlightStems = new Map<string, Promise<void>>()
   const downloads = new JobQueue((job, onProgress) => {
@@ -1113,41 +1116,19 @@ export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
   ipcMain.handle('ingest:captionTrack', (_e, payload: unknown) => captionTrack(payload))
 
   /**
-   * The finished download as an asset, named after the video rather than the
-   * file — the same split assets:place makes, so nothing downstream learns the
-   * clip came from a link. Pulled by the renderer once the job reads `done`,
-   * rather than pushed, so a reload between the two does not lose it.
+   * The finished download as an asset. Pulled by the renderer once the job
+   * reads `done`, rather than pushed, so a reload between the two does not
+   * lose it — and handed back ONCE, so a reload after it does not land it
+   * again: the second pull answers `{ alreadyCollected: true }`
+   * (`collectDownload`, shared/ingest/collect.ts).
    */
-  ipcMain.handle('ingest:collect', async (_e, payload: unknown) => {
-    const { jobId, fps } = (payload ?? {}) as { jobId?: unknown; fps?: unknown }
-    if (typeof jobId !== 'string') throw new Error('Collecting a download needs its job id')
-    const entry = ingests.get(jobId)
-    // Three different situations that all used to say "has not finished".
-    if (!entry) throw new Error('That download was cleared from the list')
-    if (!entry.outcome) throw new Error('That download has not finished')
-
-    const projectFps = typeof fps === 'number' && fps > 0 ? fps : 30
-    const { ok, failed } = await probeMany([entry.outcome.path])
+  const readDownload = async (path: string, name: string, fps: number): Promise<MediaAsset> => {
+    const { ok, failed } = await probeMany([path])
     if (ok.length === 0) throw new Error(failed[0]?.error ?? 'Could not read the downloaded file')
-
-    // The media pool must tell the song from its instrumental at a glance, and
-    // "emphasised" must not be allowed to read as a clean stem.
-    const suffix =
-      entry.request.kind === 'instrumental'
-        ? entry.outcome.stems?.quality === 'separated' ? ' (instrumental)' : ' (instrumental, mid/side)'
-        : entry.request.kind === 'vocal'
-          ? entry.outcome.stems?.quality === 'separated' ? ' (vocals)' : ' (voice, emphasised)'
-          : ''
-    const base = entry.outcome.title ?? basename(entry.outcome.path)
-    return {
-      path: entry.outcome.path,
-      asset: toAsset({ ...ok[0], name: `${base}${suffix}` }, projectFps),
-      cached: entry.outcome.cached,
-      approximateRange: entry.outcome.approximateRange,
-      requestedRange: entry.outcome.requestedRange,
-      stems: entry.outcome.stems ?? null,
-      link: entry.clip
-    }
+    return toAsset({ ...ok[0], name }, fps)
+  }
+  ipcMain.handle('ingest:collect', (_e, payload: unknown) => {
+    return collectDownload(ingests, payload, readDownload)
   })
 
   ipcMain.handle('dialog:exportPath', async (_e, suggested: unknown) => {
