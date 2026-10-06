@@ -2804,6 +2804,19 @@ drawing the boxes on the frames.
   `drawing_utils.py:20-21` imports both `cv2` and `matplotlib.pyplot`. pip
   rejects `--no-deps` inside a requirements file (pip 26.1.2), so the
   install is two pip runs (`docs/CLIPS.md` §4.3).
+- **The decode is the cost on phone footage.** Measured in the sandbox with
+  the bundled ffmpeg on the user's face fixture
+  (`references/recordings/face-fixture-2026-10-05.mov`, 26.6 s of 3840×2160
+  HEVC at 30 fps): `-vf fps=1,scale=640:360 -f rawvideo` took **7.94 s**,
+  about 3.3× realtime, because `fps=` decodes every source frame whatever
+  it keeps. A 10-minute 4K HEVC clip is then about 3 minutes of decode on
+  this Mac before any detection, against ~15 s of detection at 5 fps; the
+  1080p30 H.264 number above (1.97 s a minute) is six times lighter. The
+  analysis budget in `docs/CLIPS.md` §4.10 is written for 1080p; 4K phone
+  clips need the decode measured on the Surface before that bar is trusted
+  there. Not measured: whether `-skip_frame nokey` or a lower `-threads`
+  setting changes it, or hardware decode (`videotoolbox`), which the
+  sandbox cannot reach.
 - **Unmeasured still:** the Surface (no Metal; the Windows wheel on its own
   CPU path), mediapipe 1.0.1 (the test ran 0.10.35), the worker's import and
   start-up time, and recall and false boxes against hand marks on footage

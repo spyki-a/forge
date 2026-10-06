@@ -21,11 +21,17 @@ findings survive even if the files do not.
 
 They were copied out of `~/Downloads`, which gets cleared.
 
+One file is the user's own: the face fixture for the reframe engine's
+detector tests (`docs/CLIPS.md` §16.5), recorded 2026-10-05. It stays
+uncommitted for the same reason, a person's face and 79 MB, and lives at the
+same path on each machine that runs those tests.
+
 | file | source | length |
 |---|---|---|
 | `capcut-grid-template.mp4` | CapCut template by `cpttmplate`, via Instagram | 19.76s |
 | `machicut-card-ring.mp4` | MachiCut app, `machicut.en` | 7.71s |
 | `after-effects-3d-camera.mp4` | After Effects, `editsbysriparna` | 30.06s |
+| `face-fixture-2026-10-05.mov` | the user, on an iPhone: 3840×2160 HEVC (`yuvj420p`, bt709) at 30 fps, no rotation tag, AAC stereo, 78,709,865 B | 26.60s |
 
 ---
 
