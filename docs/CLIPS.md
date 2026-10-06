@@ -392,8 +392,8 @@ restore `toFixed(4)` of `frame/fps`, and the 30 fps frame-5 row fails
 > the sources: the `S` form is `b5314333de` (2016-08-11) — `7748f395de` is a
 > vf_select commit whose tree was read; at the Windows build's `f22fcd4` the
 > line is `av_sscanf`; fractional ms an hour in is off by about 6 + 8
-> samples, derived. The 2018 build is the next Windows CI run. `EFFECTS.md`
-> §39.
+> samples, derived. **Windows CI run 37410645171 on `9a85d9f`: green on the
+> 2018 build.** `EFFECTS.md` §39.
 
 **What is wrong, measured.** `delayMs = Math.round(start × 1000)`
 (`plan.ts:1761`). At 30 fps, frame 47 is 1566.667 ms, rounded to 1567, which

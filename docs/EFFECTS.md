@@ -3032,10 +3032,12 @@ overlaps the last by one, hence 0.314 at 73 with that half's shift 0.
     channel become `s->padding` (int64), each `d->delay -= padding` leaves
     0, no `av_malloc_array` buffer is made, and the silence goes out in
     2048-sample frames. Read at `f22fcd4`, not run.
-- **Unmeasured**: the Windows CI run of the render check on the 2018 build
-  (it runs with the next push); a clip with speed or a voice effect before
-  its delay (the order was read, not rendered here); and a delay an hour
-  long, rendered (n = 172,800,000 at 48 kHz, inside `%d`).
+- **The 2018 build, measured in CI**: the push of this fix (`9a85d9f`) ran
+  the render check on Windows, run 37410645171, green — the `S` form is
+  read and every cut measures equal to unsplit there too.
+- **Unmeasured**: a clip with speed or a voice effect before its delay (the
+  order was read, not rendered here); and a delay an hour long, rendered
+  (n = 172,800,000 at 48 kHz, inside `%d`).
 
 ## 40. A link's captions — yt-dlp's metadata, json3, and what segments an unpunctuated track (2026-10-05)
 
