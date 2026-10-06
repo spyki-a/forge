@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from 'electron'
 import { join } from 'node:path'
-import { registerIpc } from './ipc'
+import { abortLinkRuns, registerIpc } from './ipc'
 import { applyMenu, EMPTY_MENU_STATE, mustAskBeforeClosing, type MenuState } from './menu'
 import { registerMediaProtocol } from './mediaProtocol'
 import { assertBinaries } from './ffmpeg/paths'
@@ -293,4 +293,6 @@ app.on('before-quit', (event) => {
   }
   // Closing stdin lets Python finish in-flight work and exit cleanly.
   stopSidecar()
+  // A link read's yt-dlp is a process group of its own; it would outlive us.
+  abortLinkRuns()
 })

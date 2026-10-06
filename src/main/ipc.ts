@@ -57,6 +57,7 @@ import type { FootageRequest } from '@shared/render/moment'
 import { tagMasks } from './transitions/maskTags'
 import { downloadMedia, downloadsDir, type IngestHandle, type IngestOutcome } from './ingest/download'
 import { ensureYtDlp, ytDlpStatus } from './ingest/binary'
+import { LinkRuns, captionsHandler, metaHandler } from './ingest/meta'
 import { CancelledError } from './ffmpeg/run'
 import { needsStems, outputStem, type IngestRequest } from '@shared/ingest/args'
 import { parseLink } from '@shared/ingest/url'
@@ -72,6 +73,17 @@ interface ExportRequest {
   range?: FrameRange
   /** Styled captions the renderer baked, ready to composite in the one pass. */
   captionOverlay?: { listPath: string; y: number; height: number }
+}
+
+/**
+ * The link reads in flight (`ingest:meta`, `ingest:captions`): one run per link
+ * key and kind (LinkRuns), each with its own AbortController.
+ */
+const linkRuns = new LinkRuns()
+
+/** Abort every link read, for a quit: yt-dlp runs detached and would outlive the app. */
+export function abortLinkRuns(): void {
+  linkRuns.abortAll()
 }
 
 export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
@@ -1091,6 +1103,23 @@ export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
       (id) => ingests.set(id, { request, outcome: null })
     )
   })
+
+  /*
+   * A link's metadata and its caption tracks, without the media (CLIPS.md
+   * §3b.1, §7.1). Plain invokes rather than jobs: a job with presetId
+   * 'ingest' is collected by the renderer and placed as media, and neither of
+   * these is media. One run per link key and kind at a time (`linkRuns`,
+   * above), each with its own AbortController and a time bound; yt-dlp is
+   * found or fetched first.
+   */
+  const findYtDlp = async (signal: AbortSignal): Promise<{ command: string }> => ({
+    command: (await ensureYtDlp(undefined, { signal })).path
+  })
+  const linkMeta = metaHandler(linkRuns, findYtDlp)
+  const linkCaptions = captionsHandler(linkRuns, findYtDlp)
+
+  ipcMain.handle('ingest:meta', (_e, payload: unknown) => linkMeta(payload))
+  ipcMain.handle('ingest:captions', (_e, payload: unknown) => linkCaptions(payload))
 
   /**
    * The finished download as an asset, named after the video rather than the

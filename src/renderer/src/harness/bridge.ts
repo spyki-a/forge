@@ -1,6 +1,9 @@
 import type { MediaAsset } from '@shared/timeline'
 import type { PackListing } from '@shared/assets/pack'
 import { LOOKS, cubeFor } from '@shared/render/looks'
+import { captionKeys, type LinkMeta } from '@shared/ingest/args'
+import { linkCacheKey, parseLink } from '@shared/ingest/url'
+import { parseJson3, type CaptionFetch } from '@shared/ingest/captions'
 
 /**
  * A working stand-in for the Electron bridge, so the UI runs in a browser.
@@ -61,6 +64,72 @@ const harnessPacks: PackListing[] = [
     state: { kind: 'unpublished' }
   }
 ]
+
+/* ------------------------------------------------------- link captions */
+
+const NUMBER_WORDS = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve']
+const FILLER = ['alpha', 'bravo', 'charlie', 'delta', 'echo', 'foxtrot', 'golf', 'hotel', 'india', 'juliet', 'kilo', 'lima']
+
+/**
+ * A link's caption track, made up — never anyone's speech.
+ *
+ * The measured ASR shape (docs/EFFECTS.md §40): a window event, then one
+ * roll-up event per line, its first word at `tStartMs` and the rest at
+ * `tOffsetMs`, `acAsrConf` 0, and a "\n" `aAppend` event between lines. Twelve
+ * sentences, "row <n> …" so a check can tell them apart, each ending in a full
+ * stop, one every 12 s from 1 s: twelve rows, and three chapters of 5, 4 and 3.
+ */
+function harnessJson3(): unknown {
+  const events: unknown[] = [{ tStartMs: 0, dDurationMs: 150_000, id: 1, wpWinPosId: 1, wsWinStyleId: 1 }]
+  for (let row = 0; row < 12; row++) {
+    const start = 1_000 + row * 12_000
+    const words = ['row', NUMBER_WORDS[row], ...Array.from({ length: 7 }, (_, k) => FILLER[(row + k) % FILLER.length])]
+    words[words.length - 1] += '.'
+    events.push({
+      tStartMs: start,
+      dDurationMs: 6_000,
+      wWinId: 1,
+      segs: words.map((w, k) => (k === 0 ? { utf8: w, acAsrConf: 0 } : { utf8: ` ${w}`, tOffsetMs: k * 400, acAsrConf: 0 }))
+    })
+    events.push({ tStartMs: start + 3_900, dDurationMs: 2_100, wWinId: 1, aAppend: 1, segs: [{ utf8: '\n' }] })
+  }
+  return { wireMagic: 'pb3', events }
+}
+
+function harnessMeta(url: string): LinkMeta {
+  const link = parseLink(url)
+  if (!link) throw new Error('That is not a link yt-dlp can read')
+  return {
+    id: link.videoId ?? link.key,
+    title: 'A harness talk in twelve rows',
+    duration: 150,
+    language: 'en',
+    chapters: [
+      { start_time: 0, end_time: 50, title: 'Opening' },
+      { start_time: 50, end_time: 100, title: 'Middle' },
+      { start_time: 100, end_time: 150, title: 'Close' }
+    ],
+    heatmap: null,
+    channel: 'Harness channel',
+    uploader: 'Harness channel',
+    webpage_url: link.url
+  }
+}
+
+function harnessCaptions(url: string, language: string): CaptionFetch {
+  const link = parseLink(url)
+  if (!link) throw new Error('That is not a link yt-dlp can read')
+  const keys = captionKeys(language)
+  if (!keys) throw new Error('Choose the video’s language to fetch its captions')
+  const linkKey = linkCacheKey(link)
+  const asr = keys[keys.length - 1]
+  return {
+    linkKey,
+    keys,
+    tracks: [{ key: asr, kind: 'asr', path: `harness://url/${linkKey}/${linkKey}.captions.${asr}.json3` }],
+    transcript: parseJson3(harnessJson3(), `url:${linkKey}`, 'youtube-asr', keys[0])
+  }
+}
 
 const packCancels = new Set<string>()
 const packListeners = new Set<(update: { id: string; progress: number | null; message: string }) => void>()
@@ -541,6 +610,10 @@ export function installHarnessBridge(): void {
     ingestStatus: async () => ({ ready: false, tool: null, reason: 'harness: no yt-dlp' }),
     startIngest: unsupported('Downloading'),
     collectIngest: unsupported('Downloading'),
+    // Deterministic stand-ins for a link's details and caption track, so the
+    // URL tile's transcript rows can be clicked through (CLIPS.md §3b.8).
+    ingestMeta: async (url: string) => harnessMeta(url),
+    ingestCaptions: async (url: string, language: string) => harnessCaptions(url, language),
 
     voiceStatus: async () => [
       { id: 'kokoro' as const, label: 'Kokoro (on this machine)', kind: 'local' as const, ready: false, reason: 'harness: no sidecar' },

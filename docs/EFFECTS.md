@@ -3036,3 +3036,296 @@ overlaps the last by one, hence 0.314 at 73 with that half's shift 0.
   (it runs with the next push); a clip with speed or a voice effect before
   its delay (the order was read, not rendered here); and a delay an hour
   long, rendered (n = 172,800,000 at 48 kHz, inside `%d`).
+
+## 40. A link's captions — yt-dlp's metadata, json3, and what segments an unpunctuated track (2026-10-05)
+
+Measured for `docs/CLIPS.md` §3b.1 (§7.1, §7.2; §15 rows 13 and 15) with
+**yt-dlp 2026.08.19** — the copy on the development Mac's PATH, which is what
+`ensureYtDlp` finds there (`FORGE_YTDLP` unset, no managed copy) — against
+public YouTube videos, **named by id only**. The caption tracks were read in
+a temp folder for these numbers and nothing else: no caption text is written
+in this file, the code, the tests or the fixtures (the tests build their
+json3 from made-up words). The sandbox could not write yt-dlp's cache
+(`~/.cache/yt-dlp`), so `XDG_CACHE_HOME` pointed at a temp folder; every run
+also warned that no JS challenge solver (deno) and no impersonation target
+was installed, and none of that stopped a metadata or caption fetch. The
+parser numbers come from running `src/shared/ingest/captions.ts` itself over
+the tracks (bundled with esbuild), and the runner numbers from
+`src/main/ingest/meta.ts` against the real binary. In review (2026-10-06) the
+twelve videos' tracks were fetched again with the same yt-dlp and the json3,
+punctuation and merge figures below recounted by a script that prints numbers
+only; where a figure was corrected, the recount is what stands.
+
+**The metadata subset** (`buildMetaArgs`; §15 row 15), on eight videos:
+`dQw4w9WgXcQ`, `bMXY4uRuKH4`, `NCe4xZxczz4`, `KNF_Azd5SWs`, `5MuIMqhT8DM`,
+`RcGyVTAoXEU`, `JqwfZdW4WvI`, `4XOms-HzmMY`.
+
+- `channel`, `uploader` and `webpage_url` **printed on all eight**;
+  `webpage_url` is the canonical `watch?v=` URL.
+- **A field the video lacks is omitted from the dict, not printed null**: no
+  `chapters` key on 3 of 8, no `heatmap` key on 4 of 8 (100 buckets where
+  present). `parseMeta` makes them `[]` and `null`.
+- `language`: `en` on five, `en-US`, `te`, `hi`. The `en-US` video's ASR
+  track was keyed `en-orig`, so the primary subtag is the key.
+- 1.46–1.75 s a video through `runMeta` (the very first command-line run,
+  with a cold cache, 6.9 s).
+- `--ignore-no-formats-error` (so the metadata comes back when no format can
+  be downloaded) printed byte-identical output with and without it on
+  `RcGyVTAoXEU` (one sha256).
+
+**Captions only** (`buildCaptionArgs`, exactly as built):
+
+- Under `--skip-download`, `after_video` prints the `requested_subtitles` dict
+  **with each entry's `filepath`** (an absolute path, as `-P` gave it).
+  Files: `<key>.captions.<lang>.json3`.
+- **No track in the requested languages: `@forgesubs@NA`**, exit 0, nothing
+  written (`xq,xq-orig` on `dQw4w9WgXcQ`).
+- A second fetch **re-downloads and overwrites** (both mtimes moved) and
+  prints the paths again: yt-dlp keeps no stale copy for us.
+- **Which track is which.** With an uploader track, `<l>` is the uploader's
+  (named "English", its URL without `kind=asr`) and `<l>-orig` the ASR
+  ("English (Original)", `kind=asr`). With none, `<l>` and `<l>-orig` came
+  back **byte-identical** — on all ten videos without one (three Hindi, three
+  Telugu, four English; compared byte for byte in the recount). So the key
+  cannot say which is which, and `json3Kind` reads the contents.
+- Through `runCaptions`: 1.3–3.5 s a video; a cancel 1.5 s in rejected with
+  `CancelledError` and left the folder empty.
+
+**json3, as the parser depends on it** (six ASR tracks: `bMXY4uRuKH4`,
+`NCe4xZxczz4`, `KNF_Azd5SWs`, `5MuIMqhT8DM`, `JqwfZdW4WvI`, `RcGyVTAoXEU`):
+
+- A window event first (whole-video `dDurationMs`, no segs); word events
+  `{tStartMs, dDurationMs, wWinId, segs}`, one word a seg, the first seg
+  WITHOUT `tOffsetMs`, `acAsrConf` 0 on every word; `aAppend` events whose
+  only seg is "\n" (some with no `dDurationMs`). Every word event had a
+  `dDurationMs`. An uploader track is one seg per event.
+- **Word starts never went backwards**: 0 of 5,720 word events (and 0 on the
+  other six tracks recounted).
+- **Roll-up**: consecutive word events overlapping (one ends after the next
+  begins; an event holding only a bracket tag left out) 738 of 742,
+  1,200/1,219, 819/821, 431/450, 2,091/2,122, 350/360. An event's end is a
+  display end.
+- Gaps of 700 ms or more between consecutive word events — where the
+  event-gap rule breaks — 1, 11, 0, 9, 9 and 3 a track. (`NCe4xZxczz4` has 12
+  if an event holding only a bracket tag counts as one; an earlier draft of
+  this section gave that 12.)
+- Bracket segs (`[Music]` and the like): 0–7 a track. The Hindi danda was
+  never a seg of its own (0); the parser still glues a lone one to the word
+  before.
+
+**Punctuation** (raw tokens; share ending in `. ! ? … ।`):
+
+| id | lang | tokens | sentence-final |
+|---|---|---|---|
+| `bMXY4uRuKH4` | en | 5,342 | 0 |
+| `NCe4xZxczz4` | en | 9,027 | 4 |
+| `4XOms-HzmMY` | en | 1,579 | 0 |
+| `Bipu2DyN4oo` | en | 1,626 | 1 |
+| `RcGyVTAoXEU` | en | 1,999 (ASR) / 2,012 (uploader) | 2 / 140 |
+| `5MuIMqhT8DM` | en | 2,651 (ASR) / 2,641 (uploader) | 178 (6.7%) / 143 |
+| `KNF_Azd5SWs` | te | 4,029 | 69 (67 `.`, 2 `?`) |
+| `EaWN5iFtPfc` | te | 2,208 | 25 |
+| `4AFWIYQ84-Q` | te | 1,787 | 65 |
+| `JqwfZdW4WvI` | hi | 13,872 | 1,056 (909 `।`, 147 `?`) |
+| `hxbm_arTxjY` | hi | 12,416 | 646 (595 `।`) |
+| `dObA5P5jv4s` | hi | 11,852 | 600 (566 `।`) |
+
+Every row reproduced exactly in the recount. English ASR on these uploads is
+unpunctuated but for one; Telugu nearly so;
+**Hindi ends its sentences with the danda and never with `.`** — hence `।`
+and `॥` in `SENTENCE_END`.
+
+**The three-track measurement** (§7.2, §15 row 13). Three unpunctuated
+tracks — `bMXY4uRuKH4` (en), `NCe4xZxczz4` (en), `KNF_Azd5SWs` (te) — and
+one punctuated, `5MuIMqhT8DM` (en); with `JqwfZdW4WvI` (hi, the danda) and
+`RcGyVTAoXEU` (en, unpunctuated, with an uploader track). Segments are
+count, then words p50/p95/max, then ms p50/p95/max.
+
+| track | words | ends at the next start, pause + punct | the same + event gaps + cap | 80 ms estimate, pause + punct | parser (+ event gaps + cap) |
+|---|---|---|---|---|---|
+| `bMXY4uRuKH4` en | 5,342 | **1** · 5,342 · 1,872,960 ms | 258 · 21/21/21 · 7,200/10,081/12,199 | 195 · 18/79/247 · 5,639/27,200/80,641 | 362 · 15/29/30 · 4,279/9,400/11,920 |
+| `NCe4xZxczz4` en | 9,020 | 5 · 195/4,744/4,744 | 497 · 17/26/27 · 5,680/9,480/14,800 | 245 · 15/153/272 · 4,960/42,560/80,880 | 684 · 12/29/30 · 3,320/8,520/12,520 |
+| `KNF_Azd5SWs` te | 4,029 | 70 · 34/161/382 | 208 · 20/29/30 · 8,801/13,679/14,479 | 390 · 7/33/64 · 2,721/12,080/23,840 | 428 · 8/25/30 · 2,880/9,199/13,120 |
+| `5MuIMqhT8DM` en, punct. | 2,651 | 177 · 14/33/58 | 188 | 207 · 11/29/46 · 3,720/10,400/20,480 | 217 · 11/26/30 · 4,160/8,999/12,240 |
+| `JqwfZdW4WvI` hi | 13,872 | 1,057 · 8/33/350 | 1,245 | 1,800 · 6/21/79 · 1,600/6,001/25,600 | 1,853 · 6/20/30 · 1,600/5,761/11,279 |
+| `RcGyVTAoXEU` en | 1,995 | 3 · 600/962/962 | 87 | 130 · 11/41/95 · 3,999/13,361/28,159 | 154 · 12/27/30 · 3,999/9,039/12,559 |
+
+- **Without the estimate an unpunctuated track can be one segment for the
+  whole talk**: `bMXY4uRuKH4` was (5,342 words, 31 minutes) — the failure
+  §7.2 predicted, measured. The other three unpunctuated tracks came to 5
+  (`NCe4…`), 3 (`RcGy…`) and 70 (`KNF_…`), still segments of hundreds or
+  thousands of words. The cap alone then cuts at arbitrary even points.
+- With the estimate, before the cap, segments still ran over 15 s (over 30
+  words): `bMXY…` 34 (59), `NCe4…` 64 (87), `RcGy…` 5 (11), the Telugu
+  `KNF_…` 11 (22) — up to 272 words and 81 s: **the cap is needed too**.
+  After it, none over 30 words or 15 s (the parser's longest on the six:
+  30 words, 13.1 s).
+- **The event-gap rule added no break the pause rule had not already made**,
+  on all six tracks at every estimate from 40 to 160 ms. Derived: every word
+  ends by its event's end and the next event's first word starts at that
+  event's start, so the word gap across two events is never smaller than the
+  event gap. Its use is as the backstop: with ends at the next start it is
+  the only break between events (`NCe4xZxczz4` 5 → 16 segments, `RcGy…` 3 →
+  6, the Hindi 1,057 → 1,063). Kept. With the parser's ends it is the only
+  break in one case: a word that starts past its event's end (a `tOffsetMs`
+  beyond `dDurationMs`, never seen in a measured track), whose end clamps to
+  its start. A test builds exactly that (below).
+- **The danda's share**: the Hindi track with the cap gives 1,853 segments
+  (p50 6 words) with `।` and 1,313 (p50 8) with it stripped.
+- Start-to-start between consecutive words (all), p50/p90/p95/p99 ms:
+  en 240/761/1,000/1,201, 240/681/960/1,199, 241/880/1,280/2,240,
+  280/880/1,241/2,320; te 399/880/1,120/1,600; hi 319/720/1,040/1,919.
+  Gaps of 2 s or more: 11, 35, 33, 44; 16; 124.
+- The gap the parser sees (next start − estimated end) at 80 ms, p50/p95/max:
+  en 0/641/8,839, 0/559/10,080, 0/800/9,521, 0/760/4,399; te 160/880/3,280;
+  hi 81/879/12,161.
+
+**`GRAPHEME_MS`: 80 confirmed, not changed.** Start to start inside one
+event, per grapheme of the earlier word, p25/p50/p75 ms:
+
+| | tracks | per grapheme | graphemes a word, p50 |
+|---|---|---|---|
+| en | `bMXY…`, `NCe4…`, `RcGy…`, `5MuI…` | 50/70/107, 43/64/100, 53/67/80, 53/70/96 | 4 |
+| hi | `JqwfZ…`, `hxbm_…`, `dObA5…` | 81/134/200, 107/159/187, 120/160/200 | 2 |
+| te | `KNF_…`, `EaWN…`, `4AFW…` | 120/160/200, 80/120/160, 107/140/187 | 2 |
+
+Pauses of 700 ms or more found, by the estimate:
+
+| ms a grapheme | 40 | 60 | 80 | 100 | 120 | 160 |
+|---|---|---|---|---|---|---|
+| `bMXY4uRuKH4` en | 398 | 325 | 194 | 173 | 136 | 68 |
+| `NCe4xZxczz4` en | 482 | 367 | 240 | 215 | 161 | 96 |
+| `5MuIMqhT8DM` en | 203 | 166 | 144 | 135 | 130 | 126 |
+| `RcGyVTAoXEU` en | 182 | 149 | 129 | 107 | 101 | 96 |
+| `KNF_Azd5SWs` te | 428 | 369 | 331 | 276 | 231 | 188 |
+| `JqwfZdW4WvI` hi | 1,121 | 1,000 | 952 | 833 | 773 | 687 |
+
+80 sits at English's p55–p75 per grapheme, so a fluent word's estimate mostly
+reaches the next word's start (gap p50 0), and on the English tracks the
+count flattens between 80 and 100 and climbs fast below 60. **A Hindi or
+Telugu grapheme is about a syllable and runs about twice as long** (p50
+120–160 on six tracks): at 80 those tracks find 39–76% more pauses than at
+160 (`JqwfZ…` 952 against 687, `KNF_…` 331 against 188; `hxbm_…` 469/316,
+`dObA5…` 459/290, `EaWN…` 124/79, `4AFW…` 124/78), and make 8–26% more
+segments (parser segments at 80/120/160: `KNF_…` 428/
+364/340, `EaWN…` 193/174/169, `4AFW…` 185/160/151, `JqwfZ…` 1,853/1,738/
+1,685, `hxbm_…` 1,148/1,080/1,061, `dObA5…` 1,143/1,079/1,056; English
+362/353/343, 684/656/634, 154/141/137, 217/213/211). Nobody listened, so
+which of those extra pauses are real is not known; a per-script value is
+left open rather than guessed.
+
+**Which track wins (§16.12): `-orig` timing, the uploader's text.**
+
+- `5MuIMqhT8DM`: **the uploader's lines sit about 12.0 s before the same
+  words in the ASR**, for the whole video — ASR start minus line start,
+  p10/p50/p90 11,849/11,971/12,026 ms over the 269 of 327 lines whose first
+  three words occur exactly once, in a row, in the ASR (the candidates
+  `alignCues` takes) — while 2,572 of the uploader's 2,636 words (97.6%,
+  normalised, as a multiset) are the ASR's. Matched line by line on the
+  uploader's clock, 231 of its 2,641 tokens (8.7%) found their ASR word. With
+  each line moved by the median offset of the unique-trigram matches within
+  8 lines (`alignCues`), **2,479 (93.9%)**. Five of those 2,641 tokens are
+  punctuation alone; since the merge glues them to the word before (below),
+  the same 2,479 are of 2,636 words: 94.0%.
+- `RcGyVTAoXEU`: offsets −137/12/200 ms (215 of 284 lines); 1,872 of 2,012
+  (93.0%) matched before the alignment, 1,862 (92.5%) after it; with the
+  review's merge, 1,864 of 2,012 (92.6%), two of them kept ASR words.
+- Merged segments: 211 (p50 11, max 30 words) and 185 (p50 10, max 28). The
+  uploader track alone, spread over its lines: 171 and 151.
+- **Speech the uploader did not caption** (review, 2026-10-06). The merge
+  emitted only the uploader's words, so ASR words outside every line — an
+  intro, an outro, a section left out — vanished with nothing to say so. Now
+  an ASR word that starts 700 ms or more outside every aligned line is kept,
+  with its ASR text and times, as a stretch of its own. On `5MuI…` that is
+  none (first and last merged starts equal the ASR's); on `RcGy…` two words —
+  a two-word phrase the ASR has twice, 4 s apart, whose first occurrence the
+  uploader's line matched — 2,010 uploader words plus 2 kept, one segment
+  more. A partially captioned video is unmeasured.
+- **A lone punctuation token in a line** (a danda set off by a space) is
+  glued to the word before it in the merge, as `parseJson3` already did for a
+  lone track: unglued it normalised to nothing, never matched, and marked the
+  whole merge approximate. Five such tokens on `5MuI…`, two on `RcGy…`; no
+  Hindi video measured had an uploader track.
+- **Overlapping lines.** A lone uploader track's line is now spread no
+  further than the next line's start, so two lines on screen together cannot
+  interleave word by word. Consecutive lines overlapping: 0 of 326 and 0 of
+  283, so on the two measured tracks the parse is unchanged (word for word,
+  start for start).
+- An uploader track with no ASR beside it has only its own clock, and on one
+  video in two that clock was 12 s off. Nothing can tell; how often it
+  happens is unmeasured.
+
+**The cleanup** (`removePartials`, the regex at `download.ts` before this),
+run in node against `<stem>.<lang>.json3` for eight languages: it deleted
+`fr`, `fi` and `fa` (their language starts with `f`, which the format-id
+group read as `f137`) and LEFT `en`, `en-orig`, `pt-BR`, `hi` and `te`.
+CLIPS.md §7.1 had measured the same with `.fi.vtt` and `.fa.vtt`. Fixed with
+a caption case for every language, and the format-id group barred from
+ending on a caption extension.
+
+**Mutations** (each run with the file-based exit check, each restored
+byte-identical against a saved copy, every anchor counted to one match;
+14 changed files hashed before and after: identical). `tests/ingestCaptions.test.ts`:
+confidence 0 in the parser (the "null, never 0" case fails) and in the merge
+(the merge and the end-to-end cases); word ends at the next start (the 1 s
+pauses inside one event, the end rules, the spread line); the cap not asked
+for (the 80 words); the cap ignored by `segmentIntoSentences` (the 80 words,
+the middle split); `।` out of `SENTENCE_END` (both danda cases); the run
+filter widened to the range (both run cases); the cap on by default (the
+Director's 100 words, both `capSegments` cases); `capSegments` writing back
+(the frozen-input case); equal gaps split at the front; ends ignoring the
+next start (the roll-up case); bracket tags kept; the clock alignment
+removed (the 12 s merge); `-orig` not preferred. **The event-gap rule removed
+on its own survived every test at first, as derived above** (removed together
+with ends at the next start, "breaks between events" failed). Review added
+the fixture where it is the only break — a word starting past its event's
+end — and the rule's removal now fails it, both in `captions.ts` and in
+`segmentIntoSentences`.
+`tests/ingestArgs.test.ts` and the integration tests: `after_move` for
+`after_video`; a regex key accepted; the metadata run not simulating;
+`channel` dropped; the link key the bare id (the case-only pair collides);
+the old cleanup regex (fails at `en`; `fr` passes, by accident, as
+measured); the caption case removed (fails at `fr`: the format-id group can
+no longer take it); the language's hyphenated part removed (fails at
+`en-orig`); a cancel without cleanup; a second fetch not waiting for the
+first (the supersede case's order check — the first version of that test,
+asserting only on the files left, passed with this mutation and was
+tightened).
+
+Review's mutations (2026-10-06; same procedure, 26 in all, every one failing
+its own case, all five source files hashed identical afterwards): the
+event-gap rule removed (in the parser, and `breakAfter` ignored by
+`segmentIntoSentences`); the merge's lone-punctuation glue removed; uncovered
+ASR words assigned to the nearest line as before, or kept but not emitted;
+each of the merge's three breaks removed (the uploader's line gap, a line
+against an uncaptioned stretch, the ASR's own segment ends inside one); the
+merge's `approximate` never set; `shiftTranscript` dropping `approximate`;
+the no-line merge returning the ASR un-keyed; a lone track's line spread past
+the next line; equal gaps split at the front (now asserted as bars: every
+piece 10–30 words, every word once — a correct balanced split passes); the
+merge's confidence 0 and the clock alignment removed, again; `channel`
+dropped from the subset (the template is now asserted by shape and
+membership, and `view_count` added to it correctly passes); the caption
+fetch's staging folder kept on success, not removed on a cancel or a failure,
+stale ones not swept or live ones swept; no time bound, or a timeout reported
+as a cancel; `abortAll` a no-op; a second ask not waiting; the old
+`removePartials` regex (the `ingestDownload` case still fails at `en`); and
+the whole of `meta.ts` as it was before review, against the new reload-cache
+case — a failed or cancelled fetch deleted the cached tracks.
+
+**Unmeasured**:
+
+- YouTube's ASR word timing against faster-whisper (§15 row 13's first half):
+  no Whisper here.
+- Whether the estimated pauses are real pauses; a per-script grapheme time.
+- Track keys for a `zh-Hans` or `pt-BR` video (only `en`, `en-US`, `hi` and
+  `te` were measured); a video whose `language` is null (none of the eight).
+- A caption `.part` on disk (the cleanup handles one; none was seen).
+- The Windows yt-dlp with these flags. CI runs the fake.
+- yt-dlp's fallback to another subtitle format when a site has no json3 (read
+  from its source, not run): whatever it writes lands in the run's staging
+  folder and goes with it, so nothing unreadable is kept either way.
+- The time bounds (60 s for the metadata, 120 s for the captions) are wide
+  margins over the measured 1.5–3.5 s runs; no real stall was observed.
+- A partially captioned video, for the merge's kept stretches.
+- The heatmap on low-view videos: 4 of 8 had none, view counts not recorded.

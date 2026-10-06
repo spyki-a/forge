@@ -22,7 +22,9 @@ Paste a link and press Get: two clicks to a clip on the timeline.
 | shared | `ingest/release.ts` | which yt-dlp asset per platform, checksum parsing |
 | main | `ingest/binary.ts` | find or fetch yt-dlp, verified |
 | main | `ingest/download.ts` | spawn, parse, kill the tree, clean up, hand back the file |
-| main | `ipc.ts` | a second `JobQueue`, `ingest:status` / `start` / `collect` |
+| shared | `ingest/captions.ts` | a caption track (json3) → a `Transcript`; moving it onto a ranged download |
+| main | `ingest/meta.ts` | a link's metadata and caption tracks, no media — see below |
+| main | `ipc.ts` | a second `JobQueue`, `ingest:status` / `start` / `collect`; `ingest:meta` / `captions` |
 | renderer | `components/IngestPanel.tsx` | the panel: link, what to take, the marks |
 | renderer | `store.ts` | `startIngest`, and collecting a finished job into a clip |
 
@@ -225,6 +227,67 @@ is the only place it can.
   enough for that to matter.
 - The first download on a packaged app fetches yt-dlp (~30MB). That step is
   untested on a clean Windows machine — see `docs/PACKAGING.md`.
+
+## Metadata and captions, without the media
+
+`docs/CLIPS.md` §3b.1 (M0's "Get transcript"), measured in `EFFECTS.md` §40.
+Two plain invokes, **not jobs**: a job with presetId `'ingest'` is collected
+by the renderer and placed as media, and neither of these is media.
+
+- **`ingest:meta`** → `runMeta`: `--simulate` and one marked print,
+  `@forgemeta@%(.{id,title,duration,language,chapters,heatmap,channel,uploader,webpage_url})j`.
+  A field the video lacks is omitted by yt-dlp; `parseMeta` makes it `null`
+  (or `[]` for chapters).
+- **`ingest:captions`** → `runCaptions`: `--skip-download --no-simulate
+  --write-subs --write-auto-subs --sub-langs <l>,<l>-orig --sub-format json3`
+  and `@forgesubs@%(requested_subtitles)j` at `after_video` — the whole dict,
+  parsed in TS, because a hyphenated key in a template is subtraction. The
+  renderer sends a language; main makes the keys (the primary subtag), never
+  a regex.
+- **Where the files land**: `userData/url/<linkKey>/<linkKey>.captions.<lang>.json3`,
+  kept as the reload cache for the clip collected later. `linkKey` is the
+  link's key plus a digest of its URL (`linkCacheKey`), so two YouTube ids
+  that differ only in case — two videos — are two folders on a disk that
+  ignores case. yt-dlp never writes there directly: each fetch gets a staging
+  folder of its own inside it (`.fetch-XXXXXX`, `-P` points at it), and on
+  success the json3 tracks are renamed into the cache, replacing an earlier
+  copy of the same track, and the staging folder is removed with anything
+  else in it (a fallback format the parser does not read). A staging folder
+  over ten minutes old is a quit's leftover and is swept by the next fetch.
+- **Their own spawn**, not `downloadMedia` (whose success path falls back to
+  any media file of the stem), with the same `windowsHide`, process group and
+  kill. One run per link key and kind: a second ask aborts the first and
+  waits for it to close and clean up before starting. Each run is bounded —
+  60 s for the metadata, 120 s for the captions, against 1.5–3.5 s measured —
+  and rejects with `LinkTimeoutError`, not `CancelledError`, after the same
+  cleanup; finding or fetching yt-dlp itself is outside the bound. A quit
+  aborts every run (`abortLinkRuns` in `before-quit`): yt-dlp's process
+  group would otherwise outlive the app.
+- **The cleanup rule.** A cancel, a failure or a timeout removes the run's
+  staging folder — every caption file THIS run wrote, any language — before
+  the promise settles, and touches nothing else: the cached tracks of an
+  earlier fetch stay, because a placed clip may re-read them. (The first
+  version ran `removePartials` on the link's stem, which deleted the cache
+  too.) `removePartials` itself, which downloads still use, now matches
+  `<stem>.<lang>.<subext>[.part]` deliberately; before, it deleted
+  `.fr.json3` only because `fr` starts with `f` (the format-id group took it
+  for `f137`) and left `.en.json3` and `.en-orig.json3` behind, so the rule in
+  "A cancelled download leaves nothing behind" above did not hold for
+  captions. The format-id group may no longer end on a caption extension.
+
+The json3 is parsed in `shared/ingest/captions.ts`: word starts from
+`tStartMs + tOffsetMs`, word ends estimated (80 ms a grapheme, at most
+600 ms — json3 has none, and without them an unpunctuated track can be one
+segment for the whole video; one of four measured was), confidence `null`,
+segments capped at 30 words or 15 s, and the ASR's timing with the uploader's
+words where both tracks exist, the uploader's clock first aligned to the
+ASR's (it was 12 s off on one video). ASR words the uploader's lines do not
+cover are kept as the ASR has them.
+
+The tracks' paths go back to the renderer in `CaptionFetch.tracks`. When the
+re-parse at collect (CLIPS.md §3b.4) is built, its IPC should take the link
+key and the track key, check them, and build the path in main — not read a
+path the renderer names.
 
 ## Instrumental and vocal are inside the job
 

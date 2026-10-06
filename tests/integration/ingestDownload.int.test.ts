@@ -199,4 +199,47 @@ describe('a download through the fake yt-dlp', () => {
 
     expect((await readdir(dest)).sort()).toEqual([...theirs].sort())
   })
+
+  it('removes a caption track of every language deliberately — fr, en and en-orig alike', async () => {
+    /*
+     * Measured against the regex this replaced (docs/CLIPS.md §7.1): it DELETED
+     * `<stem>.fr.json3`, `.fi.vtt` and `.fa.vtt` — `fr`, `fi` and `fa` start
+     * with `f`, so the format-id group took them for `f137`-style fragments —
+     * and LEFT `<stem>.en.json3` and `<stem>.en-orig.json3` behind. A cancelled
+     * caption fetch must leave nothing whatever its language is called.
+     */
+    const dest = join(dir, 'captions-cleanup')
+    const { mkdir } = await import('node:fs/promises')
+    await mkdir(dest, { recursive: true })
+    const stem = 'dQw4w9WgXcQ-0a1b2c3d.captions'
+    const langs = ['fr', 'en', 'en-orig']
+    const mine = [
+      ...langs.map((l) => `${stem}.${l}.json3`),
+      `${stem}.en.json3.part`,
+      `${stem}.pt-BR.vtt`,
+      `${stem}.es-419.srv3`
+    ]
+    const theirs = [
+      // Another link's captions, and this link's media: not this stem's leftovers.
+      'zzzzzzzzzzz-0a1b2c3d.captions.en.json3',
+      'dQw4w9WgXcQ.video-1080p.mp4',
+      'dQw4w9WgXcQ.video-1080p.r60000-90000.fast.mp4'
+    ]
+    for (const name of [...mine, ...theirs]) await writeFile(join(dest, name), 'x')
+
+    // One anchored pattern per language, each counted to exactly one file
+    // BEFORE the removal, so an empty match afterwards means removed — not
+    // "never matched anything".
+    const escape = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const anchored = (lang: string): RegExp => new RegExp(`^${escape(stem)}\\.${escape(lang)}\\.json3$`)
+    const before = await readdir(dest)
+    for (const lang of langs) expect(before.filter((n) => anchored(lang).test(n)), lang).toHaveLength(1)
+
+    await removePartials(dest, stem)
+
+    const left = await readdir(dest)
+    for (const lang of langs) expect(left.filter((n) => anchored(lang).test(n)), lang).toEqual([])
+    for (const name of mine) expect(left, name).not.toContain(name)
+    for (const name of theirs) expect(left, name).toContain(name)
+  })
 })

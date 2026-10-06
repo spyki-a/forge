@@ -630,6 +630,46 @@ itemised; this is the split, and step 4 keeps Best clips proper (§7).
 
 ### 3b.1 (a) Get transcript — §7.1 and §7.2, built here
 
+> **Built 2026-10-05** — the backend only, no UI. `src/shared/ingest/args.ts`
+> (`buildMetaArgs`, `buildCaptionArgs`, `META_MARK`/`SUBS_MARK` in
+> `readMarkedLine`, `captionKeys`, `parseMeta`, `parseRequestedSubtitles`),
+> `src/shared/ingest/captions.ts` (`parseJson3`, `json3Kind`, `mergeTracks`
+> for §16.12, `transcriptFromTracks`, `shiftTranscript` with the run),
+> `src/shared/transcript.ts` (`।` and `॥`, the optional cap, `capSegments`),
+> `src/shared/ingest/url.ts` (`linkCacheKey`: the id plus a digest, so two
+> ids differing only in case are two folders), `src/main/ingest/meta.ts`
+> (`runMeta`, `runCaptions`, one run per link key), IPC `ingest:meta` and
+> `ingest:captions`, preload `ingestMeta`/`ingestCaptions`, the harness
+> stubs, and `removePartials` fixed. Tests: `tests/ingestArgs.test.ts`,
+> `tests/ingestCaptions.test.ts`, `tests/integration/ingestCaptions.int.test.ts`
+> (the fake yt-dlp extended), and the fr/en/en-orig cleanup case in
+> `tests/integration/ingestDownload.int.test.ts`. Measured with yt-dlp
+> 2026.08.19 (`EFFECTS.md` §40): `channel`, `uploader`, `webpage_url` print
+> on all eight videos tried, and absent fields are omitted, not null; with no
+> uploader track `<l>` is a byte copy of `<l>-orig`. **Without the word-end
+> estimate an unpunctuated English track was one segment for 31 minutes**;
+> with it and the cap, 362 (p50 15 words, max 30, 11.9 s). 80 ms a grapheme
+> is confirmed for English (p50 64–70); Hindi and Telugu run 120–160, left
+> open. Hindi ASR ends sentences with `।`, never `.`. On one of two videos
+> the uploader's track ran **12.0 s ahead of the ASR**: matching on its clock
+> found 8.7% of its words; with the per-line clock alignment added for it,
+> 93.9%. The event-gap rule never added a break the pause rule had not
+> (derived: the word gap is never smaller than the event gap) and is kept as
+> the backstop for wrong word ends; a test builds the one case it alone
+> breaks (a word starting past its event's end). **Two signatures differ from
+> the text below:** `capSegments` takes the Transcript —
+> `capSegments(t, 30, 15000)`, not `t.segments` — because it splits at the
+> gap between words, which segments do not carry; and `segmentIntoSentences`'
+> optional third argument is `{maxWords, maxMs, breakAfter}`, `breakAfter`
+> carrying the event-gap breaks. After review (2026-10-06): a caption fetch
+> writes into a staging folder of its own and renames its tracks into
+> `userData/url/<linkKey>/`, so a failed or cancelled fetch never deletes the
+> tracks an earlier one left for a placed clip; `ingest:meta` and
+> `ingest:captions` give up after 60 s and 120 s with a timeout error, not a
+> cancel; a quit aborts both; the merge keeps ASR words the uploader's lines
+> do not cover (2 words on one video, none on the other) and glues a lone
+> punctuation token as the lone-track parse does.
+
 - **Metadata first**: `buildMetaArgs(url)` (§7.1's measured subset, 1.68 s
   live): title, duration, language, chapters, heatmap, and `channel`,
   `uploader` and `webpage_url`, which were **not yet printed in a

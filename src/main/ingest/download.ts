@@ -78,6 +78,9 @@ function escapeRegex(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+/** Every caption format yt-dlp can write for `--sub-format`. */
+const SUBTITLE_EXTENSIONS = ['json3', 'srv1', 'srv2', 'srv3', 'vtt', 'ttml', 'srt', 'ass', 'lrc']
+
 /**
  * A finished file for this stem, if one exists.
  *
@@ -129,10 +132,28 @@ export async function removePartials(destDir: string, stem: string): Promise<voi
    * a DIFFERENT finished download of the same video, and cancelling one must
    * not delete the other. Its second segment starts with `r`, not `f`, so the
    * format-id group cannot swallow it.
+   *
+   * And caption tracks, deliberately, for every language:
+   *
+   *   <stem>.<lang>.<subext>                  a written track: en, en-orig, pt-BR, es-419
+   *   <stem>.<lang>.<subext>.part             one being written
+   *
+   * The rule before this had no caption case and was measured (CLIPS.md §7.1)
+   * deleting `.fr.json3`, `.fi.vtt` and `.fa.vtt` only because their language
+   * starts with `f`, which the format-id group read as `f137`, and leaving
+   * `.en.json3` and `.en-orig.json3` as orphans. So the format-id group may no
+   * longer end on a caption extension — a stream fragment is never one — and
+   * every language goes through the caption case alone. A language is two or
+   * three letters, then hyphenated letters and digits, so `r60000-90000`
+   * (a digit second) can never read as one.
    */
+  const subtitle = `(?:${SUBTITLE_EXTENSIONS.join('|')})`
   const pattern = new RegExp(
-    `^${escapeRegex(stem)}\\.(?:f[A-Za-z0-9-]+\\.)?(?:temp\\.)?[A-Za-z0-9]+` +
-      `(?:\\.part(?:-Frag\\d+(?:\\.part)?)?|\\.ytdl)?$`
+    `^${escapeRegex(stem)}\\.(?:` +
+      `(?:f[A-Za-z0-9-]+\\.(?!${subtitle}(?:\\.|$)))?(?:temp\\.)?[A-Za-z0-9]+` +
+      `(?:\\.part(?:-Frag\\d+(?:\\.part)?)?|\\.ytdl)?` +
+      `|[A-Za-z]{2,3}(?:-[A-Za-z0-9]+)*\\.${subtitle}(?:\\.part)?` +
+      `)$`
   )
   let entries: string[]
   try {
@@ -238,7 +259,7 @@ export function downloadMedia(
         const marked = readMarkedLine(line)
         if (marked) {
           if (marked.kind === 'file') filePath = marked.value
-          else title = marked.value
+          else if (marked.kind === 'title') title = marked.value
           return
         }
         const state = progress.push(line)

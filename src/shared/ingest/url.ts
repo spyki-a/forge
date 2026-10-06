@@ -207,6 +207,27 @@ function shortDigest(text: string): string {
   return (a.toString(16).padStart(8, '0') + b.toString(16).padStart(8, '0')).slice(0, 8)
 }
 
+/**
+ * The name of a link's own folder, `userData/url/<linkKey>/`, and the stem of
+ * the caption files in it.
+ *
+ * Not the bare key. A YouTube id is case-sensitive — `abcDEF12345` and
+ * `ABCdef12345` are two videos — and the disks this ships on are not: NTFS and
+ * a default APFS volume would put both videos' captions in one folder, and the
+ * second would read the first one's words. So a YouTube id carries eight hex
+ * characters of its case-sensitive URL after it; a generic link's key already
+ * ends in that digest. Every character is from `[A-Za-z0-9_-]`, with no dot (so
+ * `<linkKey>.captions.<lang>.json3` reads back), no trailing dot or space, and
+ * never a bare reserved device name (CON, NUL, COM1…): a digest follows.
+ */
+export function linkCacheKey(link: ParsedLink): string {
+  const clean = (text: string): string => text.replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '')
+  if (link.videoId) return `${clean(link.videoId) || 'link'}-${shortDigest(link.url)}`
+  // A generic key is already `<slug ≤ 40>-<digest>`; anything else falls back to the digest alone.
+  const key = clean(link.key)
+  return key.length > 0 && key.length <= 64 ? key : `link-${shortDigest(link.url)}`
+}
+
 /** What is wrong with what has been typed so far, or null when nothing is. */
 export type LinkProblem = 'empty' | 'not-a-link' | 'collection'
 

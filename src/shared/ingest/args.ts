@@ -61,6 +61,10 @@ export interface IngestRequest {
 export const FILE_MARK = '@forgefile@'
 /** Marks the line carrying the video's title, for the asset's display name. */
 export const TITLE_MARK = '@forgetitle@'
+/** Marks the metadata subset printed by `buildMetaArgs`. */
+export const META_MARK = '@forgemeta@'
+/** Marks the `requested_subtitles` dict printed by `buildCaptionArgs`. */
+export const SUBS_MARK = '@forgesubs@'
 
 /**
  * What names the file on disk — and what makes two requests the same download.
@@ -225,12 +229,261 @@ export function buildYtDlpArgs(request: IngestRequest, context: ArgContext): Bui
   }
 }
 
-/** Read one of the two marked lines back, or null for anything else. */
-export function readMarkedLine(line: string): { kind: 'file' | 'title'; value: string } | null {
+export type MarkKind = 'file' | 'title' | 'meta' | 'subs'
+
+const MARKS: [string, MarkKind][] = [
+  [FILE_MARK, 'file'],
+  [TITLE_MARK, 'title'],
+  [META_MARK, 'meta'],
+  [SUBS_MARK, 'subs']
+]
+
+/** Read one of the marked lines back, or null for anything else. */
+export function readMarkedLine(line: string): { kind: MarkKind; value: string } | null {
   const trimmed = line.trim()
-  if (trimmed.startsWith(FILE_MARK)) return { kind: 'file', value: trimmed.slice(FILE_MARK.length) }
-  if (trimmed.startsWith(TITLE_MARK)) return { kind: 'title', value: trimmed.slice(TITLE_MARK.length) }
+  for (const [mark, kind] of MARKS) {
+    if (trimmed.startsWith(mark)) return { kind, value: trimmed.slice(mark.length) }
+  }
   return null
+}
+
+/* ------------------------------------------- metadata and captions only */
+
+/**
+ * The flags every metadata or captions run shares with a download, for the
+ * same reasons (see `buildYtDlpArgs`): a stranger's config file must not
+ * reach this command line, a collection must not be walked, Windows must pipe
+ * UTF-8 or a non-ASCII userData path comes back unreadable, and a flaky
+ * connection is the common case.
+ */
+function commonHead(url: string): string[] {
+  return ['--ignore-config', url, '--no-playlist', '--playlist-items', '1', '--encoding', 'utf-8']
+}
+const RETRIES = ['--retries', '5', '--socket-timeout', '30']
+
+/**
+ * The metadata subset, measured with yt-dlp 2026.08.19 (docs/EFFECTS.md §40).
+ *
+ * The full `-J` was 908 KB (162 caption languages × 7 URLs), so a subset is
+ * printed. `channel`, `uploader` and `webpage_url` printed on all eight
+ * videos tried. A field the video lacks is OMITTED from the dict, not null:
+ * no chapters means no `chapters` key (3 of 8), no heatmap no `heatmap`
+ * key (4 of 8).
+ */
+export const META_FIELDS = [
+  'id',
+  'title',
+  'duration',
+  'language',
+  'chapters',
+  'heatmap',
+  'channel',
+  'uploader',
+  'webpage_url'
+] as const
+
+/**
+ * The video's metadata, nothing downloaded: 1.68 s live (CLIPS.md §7.1).
+ *
+ * `--ignore-no-formats-error` because the metadata is wanted even when no
+ * format is downloadable (an upcoming premiere, a members-only video): the
+ * flag exists for exactly that, and was measured to parse and to change
+ * nothing on a downloadable video.
+ */
+export function buildMetaArgs(url: string): string[] {
+  const link = parseLink(url)
+  if (!link) throw new Error('That is not a link yt-dlp can read')
+  return [
+    ...commonHead(link.url),
+    '--ignore-no-formats-error',
+    '--simulate',
+    '--print',
+    `${META_MARK}%(.{${META_FIELDS.join(',')}})j`,
+    ...RETRIES
+  ]
+}
+
+/**
+ * A caption language key we will hand to `--sub-langs`.
+ *
+ * yt-dlp reads each comma-separated item as a REGEX (anchored by `match` and a
+ * `$`), and `all` as everything; `en.*` was measured pulling auto-TRANSLATED
+ * tracks ('English from German'). A key here is letters, then
+ * hyphen-separated letters and digits — `en`, `en-orig`, `pt-BR`, `es-419`,
+ * `zh-Hans` — so it can only ever match itself, and it is also a legal piece
+ * of a Windows filename, which it becomes (`<key>.captions.<lang>.json3`).
+ */
+const LANGUAGE_KEY = /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{1,8})*$/
+
+export function isCaptionKey(key: string): boolean {
+  return LANGUAGE_KEY.test(key) && key.toLowerCase() !== 'all'
+}
+
+/**
+ * Which caption tracks to ask for: the primary subtag of the video's language
+ * (`en-US` → `en`, measured: that video's ASR track was `en-orig`), as the
+ * uploader's track `<l>` and the ASR `<l>-orig`. Null when the language is
+ * missing or unreadable; the user then picks one.
+ */
+export function captionKeys(language: string | null | undefined): string[] | null {
+  if (typeof language !== 'string') return null
+  const primary = language.trim().split(/[-_]/)[0].toLowerCase()
+  if (!/^[a-z]{2,3}$/.test(primary) || primary === 'all') return null
+  return [primary, `${primary}-orig`]
+}
+
+/** A link key fit to start a filename: `[A-Za-z0-9_-]`, no dot, so `<key>.captions.<lang>.<ext>` reads back unambiguously. */
+const FILE_KEY = /^[A-Za-z0-9_-]{1,64}$/
+
+/**
+ * The caption tracks only — keyless, no media, no model (CLIPS.md §7.1, measured).
+ *
+ *   `--skip-download` with `--no-simulate`: a `--print` with no later-stage
+ *       print simulates and writes nothing.
+ *   `after_video`: with `--skip-download` the `after_move` and `post_process`
+ *       prints never fire; `after_video` does, and each entry carries its
+ *       `filepath` (measured).
+ *   the WHOLE `requested_subtitles` dict, parsed in TS: in a template a
+ *       hyphenated key is subtraction, so `%(requested_subtitles.en-orig.filepath)s`
+ *       printed `NA` with the track on disk. With no track it prints `NA`.
+ *   explicit keys, never a regex.
+ *
+ * Files land as `<key>.captions.<lang>.json3` in `dir`; a second fetch
+ * re-downloads and overwrites them (measured).
+ */
+export function buildCaptionArgs(url: string, keys: string[], dir: string, key: string): string[] {
+  const link = parseLink(url)
+  if (!link) throw new Error('That is not a link yt-dlp can read')
+  if (keys.length === 0) throw new Error('Captions need at least one language')
+  for (const k of keys) {
+    if (!isCaptionKey(k)) throw new Error(`"${k}" is not a caption language`)
+  }
+  if (!FILE_KEY.test(key)) throw new Error('A caption file needs a plain link key')
+  if (!dir) throw new Error('Captions need a folder to land in')
+  return [
+    ...commonHead(link.url),
+    '--ignore-no-formats-error',
+    '--skip-download',
+    '--no-simulate',
+    '--write-subs',
+    '--write-auto-subs',
+    '--sub-langs',
+    keys.join(','),
+    '--sub-format',
+    'json3',
+    '-P',
+    dir,
+    '-o',
+    `${key}.captions.%(ext)s`,
+    '--print',
+    `after_video:${SUBS_MARK}%(requested_subtitles)j`,
+    ...RETRIES
+  ]
+}
+
+/** One chapter, in seconds, as yt-dlp prints it. */
+export interface LinkChapter {
+  start_time: number
+  end_time: number
+  title: string
+}
+
+/** One "most replayed" bucket: seconds, and a value from 0 to 1. */
+export interface LinkHeat {
+  start_time: number
+  end_time: number
+  value: number
+}
+
+/** What `ingest:meta` hands the renderer — yt-dlp's names, absent fields made explicit. */
+export interface LinkMeta {
+  id: string | null
+  title: string | null
+  /** Seconds. */
+  duration: number | null
+  language: string | null
+  /** Empty when the video has none. */
+  chapters: LinkChapter[]
+  /** Null when the video has none (common: 4 of 8 measured). */
+  heatmap: LinkHeat[] | null
+  channel: string | null
+  uploader: string | null
+  webpage_url: string | null
+}
+
+const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null)
+const str = (v: unknown): string | null => (typeof v === 'string' && v.length > 0 ? v : null)
+
+/** The META_MARK line's value. Throws on anything that is not a JSON object. */
+export function parseMeta(value: string): LinkMeta {
+  let raw: unknown
+  try {
+    raw = JSON.parse(value)
+  } catch {
+    throw new Error('yt-dlp printed metadata that could not be read')
+  }
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    throw new Error('yt-dlp printed metadata that could not be read')
+  }
+  const r = raw as Record<string, unknown>
+  const chapters = Array.isArray(r.chapters)
+    ? r.chapters.flatMap((c): LinkChapter[] => {
+        const start = num((c as Record<string, unknown>)?.start_time)
+        const end = num((c as Record<string, unknown>)?.end_time)
+        if (start === null || end === null || end <= start) return []
+        return [{ start_time: start, end_time: end, title: str((c as Record<string, unknown>).title) ?? '' }]
+      })
+    : []
+  const heatmap = Array.isArray(r.heatmap)
+    ? r.heatmap.flatMap((h): LinkHeat[] => {
+        const start = num((h as Record<string, unknown>)?.start_time)
+        const end = num((h as Record<string, unknown>)?.end_time)
+        const v = num((h as Record<string, unknown>)?.value)
+        return start === null || end === null || v === null ? [] : [{ start_time: start, end_time: end, value: v }]
+      })
+    : null
+  return {
+    id: str(r.id),
+    title: str(r.title),
+    duration: num(r.duration),
+    language: str(r.language),
+    chapters,
+    heatmap: heatmap && heatmap.length > 0 ? heatmap : null,
+    channel: str(r.channel),
+    uploader: str(r.uploader),
+    webpage_url: str(r.webpage_url)
+  }
+}
+
+/** One written caption track, as the SUBS_MARK dict names it. */
+export interface WrittenSubtitle {
+  key: string
+  ext: string
+  path: string
+}
+
+/**
+ * The SUBS_MARK line's value: `NA` when no requested language existed
+ * (measured), otherwise yt-dlp's `requested_subtitles` dict. Only entries with
+ * a `filepath` were written.
+ */
+export function parseRequestedSubtitles(value: string): WrittenSubtitle[] {
+  const text = value.trim()
+  if (text === 'NA' || text === 'null' || text === '') return []
+  let raw: unknown
+  try {
+    raw = JSON.parse(text)
+  } catch {
+    throw new Error('yt-dlp printed a caption list that could not be read')
+  }
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return []
+  const out: WrittenSubtitle[] = []
+  for (const [key, entry] of Object.entries(raw as Record<string, unknown>)) {
+    const e = entry as Record<string, unknown> | null
+    const path = str(e?.filepath)
+    if (path) out.push({ key, ext: str(e?.ext) ?? '', path })
+  }
+  return out
 }
 
 /**

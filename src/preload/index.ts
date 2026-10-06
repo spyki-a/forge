@@ -12,7 +12,8 @@ import type { FrameRange } from '@shared/render/exportShape'
 import type { MusicAnalysis } from '@shared/automation/cutPlan'
 import type { FootageRequest } from '@shared/render/moment'
 import type { Measure } from '@shared/director/gate'
-import type { IngestRequest } from '@shared/ingest/args'
+import type { IngestRequest, LinkMeta } from '@shared/ingest/args'
+import type { CaptionFetch } from '@shared/ingest/captions'
 import type {
   CompletionRequest,
   CompletionResult,
@@ -381,6 +382,22 @@ const api = {
      */
     stems: { backend: string; quality: 'separated' | 'emphasised' } | null
   }> => ipcRenderer.invoke('ingest:collect', { jobId, fps }),
+
+  /**
+   * A link's title, length, language, chapters, "most replayed" heatmap and
+   * credit fields (channel, uploader, URL). Nothing is downloaded.
+   */
+  ingestMeta: (url: string): Promise<LinkMeta> => ipcRenderer.invoke('ingest:meta', { url }),
+
+  /**
+   * The link's captions as a transcript — YouTube's own tracks, no media and
+   * no model. `language` is the video's (from `ingestMeta`) or the user's pick;
+   * main turns it into the track keys. `transcript` is null when the video has
+   * no captions in that language. The files stay under `userData/url/` for the
+   * clip that is collected later.
+   */
+  ingestCaptions: (url: string, language: string): Promise<CaptionFetch> =>
+    ipcRenderer.invoke('ingest:captions', { url, language }),
 
   /** Which speech engines are usable, and why not when they are not. */
   voiceStatus: (): Promise<
