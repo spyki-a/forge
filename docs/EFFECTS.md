@@ -3345,7 +3345,8 @@ the app's own builder — `buildYtDlpArgs` and `outputStem`, bundled with
 esbuild into a driver — for the request Clip it sends, `{kind: 'video',
 quality: '1080p', range, exact}`. `XDG_CACHE_HOME` pointed at a temp folder
 (the sandbox cannot write yt-dlp's cache). **The 2018 Windows build was not
-run**; it is the test's, in CI (below).
+run here**; the test ran it in CI the next day (below: green, run
+37571739663).
 
 **The formats measured**, as the app's selector picks them. The runs did not
 log them (only `dQw4w9WgXcQ`'s `-v` run printed `137+140`), so they were
@@ -3614,9 +3615,13 @@ therefore hands yt-dlp a format table.
 
 **Unmeasured**:
 
-- **The 2018 Windows build** (`win32-x64` 4.1.0, `20181217-f22fcd4`) under
-  any section cut, exact or fast, and so §16.13 on Windows: the test runs it
-  in CI on every push (both legs, and it fails rather than skips there).
+- **The 2018 Windows build — now measured, 2026-10-07.** CI run
+  37571739663 on `d458cb0` ran `exactCut.int.test.ts` on the 2018 build
+  (`win32-x64` 4.1.0, `20181217-f22fcd4`), both legs, since under CI it
+  fails rather than skips: green. The exact and the fast cut hold there as
+  they do on the Mac, and so does §16.13 on Windows. (Listed here because it
+  was unmeasured when the section was written; it is the first 2018-build
+  run of a yt-dlp section cut.)
 - The http leg: the sandbox will not bind a port. Its transport (ffmpeg
   reading over Range) is what YouTube's cuts did above, over https.
 - **Whether that leg's ffmpeg sends a Range past byte 0 at all.** The

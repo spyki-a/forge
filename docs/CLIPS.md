@@ -766,8 +766,9 @@ itemised; this is the split, and step 4 keeps Best clips proper (§7).
 > started nothing; rows 8–9 a second job, `*85.000-100.800`, one section; the
 > no-caption link said so, Listen to it greyed with "needs the AI helper", a
 > chip set typed From and To — no failures, 1359 ms. Since then: §16.13 is
-> answered on the Mac and `exactCut.int.test.ts` exists (the 2018 build awaits
-> CI); the `clipIt.int` render check is still to write.
+> answered on the Mac and confirmed on the 2018 build by `exactCut.int.test.ts`
+> in Windows CI (run 37571739663, green); the `clipIt.int` render check is
+> still to write.
 > Clip it inherits ingest's collect-once rule (2026-10-06, `INGEST.md`, "The
 > renderer half"): main marks a job collected when `ingest:collect` hands it
 > back, so a reload no longer lands its clip, words and credit a second time.
@@ -819,7 +820,8 @@ captions a chip sets the start and end fields instead
 > within half a frame, when a start falls between frames, on those and a
 > fourth) and its sound exact to the sample (`EFFECTS.md` §41), and `tests/integration/exactCut.int.test.ts`
 > runs the real yt-dlp through the bundled ffmpeg so Windows CI measures the
-> 2018 build, which leaves exact the default (§16.13).
+> 2018 build — **run 37571739663 on `d458cb0`, 2026-10-07: green, so the
+> cut is frame-exact there too** — which leaves exact the default (§16.13).
 
 - **The download is the existing ranged one**: `startIngest` with a request
   override `{range: runRange(…), exact}` (`store.ts:1060-1090` takes only
@@ -991,8 +993,8 @@ captions a chip sets the start and end fields instead
 > measured the relabel in the 239.7 px column — "Full download" 113.5 px and
 > "Clip download" 116.9 px, one line each, the link box 94.3 px — no failures,
 > 1562 ms. Still open: the `clipIt.int` render check and Listen to it
-> (§16.13 is answered on the Mac, `exactCut.int.test.ts` written; the 2018
-> build awaits CI). Edit's overlap rule matches the
+> (§16.13 is answered on the Mac and confirmed on the 2018 build in Windows
+> CI, run 37571739663). Edit's overlap rule matches the
 > export's captions only at 1×: `captions/timeline.ts` still maps in-point and
 > length without speed or hold — §17's speed-aware captions, which will share
 > `timelineFrameAt`.
@@ -4037,10 +4039,10 @@ Each is named in its step, and each step's first task is its own row:
     Mac** (2026-10-06, `EFFECTS.md` §41) — the source's frame at the start on
     three videos, the sound to the sample, a start between frames within half
     a frame on those and a fourth; the fast cut's 10 s head on four videos.
-    Still open: **the 2018
-    build**, which `exactCut.int.test.ts` measures in Windows CI on every push
-    and fails on rather than skips; the Surface only if CI cannot (§7.1; M0's
-    exit, §3b.9).
+    **The 2018 build: measured in Windows CI** on `d458cb0` (run
+    37571739663, 2026-10-07), green — `exactCut.int.test.ts` runs there on
+    every push, both legs, and fails rather than skips (§7.1; M0's exit,
+    §3b.9). The Surface is no longer needed for this.
 15. Whether low-view videos carry a heatmap (§7.4); whether the metadata
     subset's `channel`, `uploader` and `webpage_url` print as expected
     (§7.1; M0's first task, §3b.1).
@@ -4211,13 +4213,13 @@ what is needed, where the answer waits on something not yet in hand.
     against 0.9893–0.9994 for the neighbouring frame), and its sound starts
     there to the sample; a start between frames, on these and a fourth at
     23.976 fps, gives the next frame, placed within half a frame (2.7–16.3
-    ms) by the cut's edit list — `EFFECTS.md` §41. The 2018 Windows build is
-    CI's to confirm: `exactCut.int.test.ts` runs the real yt-dlp through the
-    bundled ffmpeg there, and fails rather than skips if it cannot run. If CI
-    refuses the exact cut, Clip it's default becomes the fast cut with
-    `offsetIntoDownload` as its head offset, already built (its 10 s head
-    measured on four videos, its first frame up to a frame early between
-    frames).
+    ms) by the cut's edit list — `EFFECTS.md` §41. **The 2018 Windows build
+    confirmed it the next day:** CI run 37571739663 on `d458cb0` (2026-10-07)
+    ran `exactCut.int.test.ts` there — both legs, since under CI it fails
+    rather than skips — green. Exact is Clip it's default on both platforms.
+    The fast cut with `offsetIntoDownload` as its head offset stays built as
+    the fallback (its 10 s head measured on four videos, its first frame up
+    to a frame early between frames).
 14. **Keys in settings.json.** The Brave key goes into `safeStorage`
     regardless (it is backed by your card, §9). The rest stay plaintext like
     the Director's and the voice's (recommended for now), or all move to
