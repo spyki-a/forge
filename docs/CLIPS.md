@@ -1108,7 +1108,8 @@ commit, beside `trimToRequestedRange`, `section.ts:116-131`).
   > frame after a blank, a word that or a change in the band. Mac, exact and
   > fast alike: the first frame is source 631 (w31's); lines at 0, 47, 107, 179
   > against 0, 47, 107, 179 on both routes; libass every word +0; the bake +0
-  > but w32 and w35 −1 (its pictures start on a 40 ms grid, `EFFECTS.md` §42);
+  > as well since §44 (before it, w32 and w35 lit a frame early: its pictures
+  > started on a 40 ms grid, `EFFECTS.md` §42; the bake's tolerance is now 0);
   > a one-word run captions its word alone. Recorded, not asserted: one range,
   > two lengths — the exact file 187 frames (631…817), the fast clip 186
   > (`trimToRequestedRange` rounds the range's 186.21 frames, dropping 817);
@@ -1124,9 +1125,11 @@ commit, beside `trimToRequestedRange`, `section.ts:116-131`).
   > lit 2 frames early, caught only by the frame-for-frame comparison).
   > **Found**, measured before §43: the bake ended an export at its last
   > caption (`shortest=1`) — the one-word clip, 8 frames of 30 (§42; fixed in
-  > §43). That leg reads libass only, with an `it.todo`, until §43's fix is
-  > committed with it; beside that fix it reads both routes green (30 frames,
-  > w46 at +0).
+  > §43, committed as `0aaae32`). Since then that leg reads both routes: 30
+  > frames, w46 at +0, so it guards §43 as well. The bake's second finding,
+  > the 40 ms grid, is fixed in §44 (the list on the demuxer's own 1/25 s
+  > clock, scaled back with `settb`+`setpts` before `fps`; every rate 0 wrong
+  > frames on the Mac; the 2018 build measured by CI on the push).
 - **Harness check** `harness/clipItCheck.ts` (`window.__forgeClipItCheck`):
   the bridge stubs `ingestMeta` and `ingestCaptions` (12 rows, three
   chapters). The check picks rows 3–5 by click and shift-click and reads the

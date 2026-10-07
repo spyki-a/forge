@@ -219,7 +219,7 @@ export async function bakeCaptions(
   )
 
   const listPath = await window.forge.writeCaptionList(
-    concatList(plan, fps, (picture) => files[picture])
+    concatList(plan, (picture) => files[picture])
   )
 
   return {

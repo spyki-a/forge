@@ -112,7 +112,7 @@ beforeAll(async () => {
   }
 
   listPath = join(dir, 'captions.txt')
-  await writeFile(listPath, concatList(plan, FPS, (p) => files[p]), 'utf8')
+  await writeFile(listPath, concatList(plan, (p) => files[p]), 'utf8')
 }, 180_000)
 
 afterAll(async () => {

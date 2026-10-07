@@ -30,7 +30,8 @@ import { FFMPEG, outputDir, run, writeNote } from './output'
  * The render check for Clip it (docs/CLIPS.md §3b.8, §7.7): a link's run of
  * words, downloaded as its range, collected with its words, exported with
  * captions — and READ. Each caption line's first frame must be within one
- * frame of its word, judged against the picture.
+ * frame of its word through libass, and on it through the bake, judged
+ * against the picture.
  *
  * Nothing here is anyone's speech or footage. The "video" is made in the
  * test: 40 s at 30 fps, lossless, every frame naming itself in twelve bars
@@ -563,7 +564,7 @@ async function exportAs(name: string, project: Project, route: Route): Promise<{
     const text = picture.layer < 0 ? null : picture.word < 0 ? undefined : (layers[picture.layer].spec.content.split(' ')[picture.word] ?? '')
     files.push(await writeCaptionFrame(i, standIn(text)))
   }
-  const listPath = await writeCaptionList(concatList(plan, FPS, (p) => files[p]))
+  const listPath = await writeCaptionList(concatList(plan, (p) => files[p]))
   await copyFile(listPath, join(dir, `${name}-bake-list.txt`))
   const render = buildRenderPlan({ project: baked, outputPath: file, canvas: CANVAS, captionOverlay: { listPath, y: BAKE_Y, height: BAKE_H } })
   await run(FFMPEG, render.args, { maxBuffer: 64 * 1024 * 1024 })
@@ -572,8 +573,9 @@ async function exportAs(name: string, project: Project, route: Route): Promise<{
 
 /**
  * The whole check for one Clip it: the picture starts on the run's first word,
- * and on both routes every word's caption starts within one frame of the frame
- * showing that word — so every line's does — with no word missing or extra.
+ * and every word's caption starts on the frame showing that word through the
+ * bake, within one frame of it through libass — so every line's does — with no
+ * word missing or extra.
  */
 async function check(
   name: string,
@@ -631,15 +633,24 @@ async function check(
       `    ${rows.join('; ')}`
     )
 
-    // Every word, then every line: as many as the run has, each within a frame of its word.
+    /*
+     * Every word, then every line: as many as the run has, each within a frame
+     * of its word through libass, and ON it through the bake. The bake's slack
+     * was a frame too while the concat demuxer rounded each picture's start
+     * to 1/25 s (EFFECTS.md §42: w32 and w35 a frame early on both cuts); its
+     * list is on its own clock now, scaled in the overlay (§44), and both cuts
+     * measured +0 for all ten words. libass keeps its frame: it measured +0
+     * too, but its reading is a glyph threshold, not a picture's number.
+     */
+    const slack = route === 'bake' ? 0 : 1
     expect.soft(seen.words.length, `${name} ${route}: caption words seen (onsets ${seen.words.join(',')})`).toBe(ks.length)
     for (const [i, frame] of wordFrames.entries()) {
       expect.soft(frame, `${name}: ${wordText(ks[i])} is on screen`).toBeGreaterThanOrEqual(0)
-      expect.soft(Math.abs((seen.words[i] ?? Infinity) - frame), `${name} ${route}: ${wordText(ks[i])}'s caption at ${seen.words[i]}, its word at ${frame}`).toBeLessThanOrEqual(1)
+      expect.soft(Math.abs((seen.words[i] ?? Infinity) - frame), `${name} ${route}: ${wordText(ks[i])}'s caption at ${seen.words[i]}, its word at ${frame}`).toBeLessThanOrEqual(slack)
     }
     expect.soft(seen.lines.length, `${name} ${route}: caption lines seen (at ${seen.lines.join(',')})`).toBe(lineFrames.length)
     for (const [j, frame] of lineFrames.entries()) {
-      expect.soft(Math.abs((seen.lines[j] ?? Infinity) - frame), `${name} ${route}: line ${j + 1} first seen at ${seen.lines[j]}, its word at ${frame}`).toBeLessThanOrEqual(1)
+      expect.soft(Math.abs((seen.lines[j] ?? Infinity) - frame), `${name} ${route}: line ${j + 1} first seen at ${seen.lines[j]}, its word at ${frame}`).toBeLessThanOrEqual(slack)
     }
     // The bake says WHICH word, by its own text: the onsets show the run's words, in order, and nothing else.
     if (seen.codes) expect.soft(seen.codes, `${name} bake: the word each onset shows`).toEqual(ks)
@@ -722,8 +733,9 @@ afterAll(async () => {
     '',
     'History, not this run: this check found the bake ending an export at its last caption (EFFECTS.md §42: the one-word clip, 8 of 30',
     'frames, measured before §43); §43 is the fix and has its own check (captionBakeLength.int). This run’s one-word bake length is on that',
-    'leg’s "bake:" line above. Where the bake reads a word a frame early or late, it is §42’s 40 ms grid: the concat input is the first PNG’s',
-    'stream, image2 at its default 25 fps, so a picture starts on the nearest 1/25 s; libass, timed by each frame’s pts, is not.'
+    'leg’s "bake:" line above. The bake used to read w32 and w35 a frame early on both cuts: §42’s 40 ms grid, the concat input timing',
+    'each picture in image2’s default 1/25 s. Its list is on its own clock now, one tick a frame, scaled in the overlay (§44), and the',
+    'bake is held to its word’s own frame; libass keeps its one frame of slack.'
   ])
 })
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildRenderPlan } from '@shared/render/plan'
+import { buildRenderPlan, type RenderRequest } from '@shared/render/plan'
 import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
 
 /*
@@ -116,13 +116,19 @@ function project(over: Partial<Project>): Project {
   }
 }
 
+type Overlay = RenderRequest['captionOverlay']
+
 /** Every filter graph the plan builds for a project, as one string. */
-function graphOf(p: Project, range?: { start: number; end: number }): string {
-  const args = buildRenderPlan({ project: p, outputPath: '/tmp/out.mp4', range }).args
+function graphOf(p: Project, range?: { start: number; end: number }, captionOverlay?: Overlay): string {
+  const args = buildRenderPlan({ project: p, outputPath: '/tmp/out.mp4', range, captionOverlay }).args
   const at = args.indexOf('-filter_complex')
   expect(at).toBeGreaterThan(-1)
   return args[at + 1]
 }
+
+/** The shape with the canvas bake's captions overlaid. */
+const BAKED = 'a canvas caption bake, replayed through the concat demuxer'
+const BAKE: Overlay = { listPath: '/tmp/caption-bake/captions.txt', y: 280, height: 60 }
 
 /** The shape with more than one clip off zero, so more than one delay. */
 const SEVERAL = 'music and a second clip both off zero, so two clips are delayed'
@@ -132,7 +138,7 @@ const SEVERAL = 'music and a second clip both off zero, so two clips are delayed
  * where all three bugs were, because it is the part that only appears once a
  * project has more than one of something.
  */
-const SHAPES: { name: string; project: Project; range?: { start: number; end: number } }[] = [
+const SHAPES: { name: string; project: Project; range?: { start: number; end: number }; captionOverlay?: Overlay }[] = [
   {
     name: 'one clip, no mixing at all',
     project: project({ clips: [clip({ id: 'a' })] })
@@ -240,6 +246,23 @@ const SHAPES: { name: string; project: Project; range?: { start: number; end: nu
     range: { start: 20, end: 80 }
   },
   {
+    /*
+     * The styled captions' bake: a concat list of PNGs as one more input,
+     * its clock scaled to the project's (`settb=AVTB,setpts=PTS*25/30`)
+     * before `fps` and the band's overlay (EFFECTS.md §44). settb is
+     * 214c0d420b (2010-10-11), setpts a532bb390f (2010-11-02), fps
+     * 54c5dd89e3 (2012-05-18). The input takes no options before
+     * `-f concat`: the demuxer opens each file with none on the 2018 build.
+     * `-framerate` there is fatal on the Mac (measured, §44), and on the 2018
+     * build by its source: its concat demuxer has no framerate option (only
+     * safe, auto_convert, segment_time_metadata), and ffmpeg_opt.c exits on
+     * a format option nothing consumed (assert_avoptions, at f22fcd4).
+     */
+    name: BAKED,
+    project: project({ clips: [clip({ id: 'a' })] }),
+    captionOverlay: BAKE
+  },
+  {
     // Every other shape delays one clip at most (b at 60); this one delays
     // two, at different offsets and on different tracks.
     name: SEVERAL,
@@ -254,9 +277,9 @@ const SHAPES: { name: string; project: Project; range?: { start: number; end: nu
 ]
 
 describe('a filter graph runs on the oldest bundled ffmpeg', () => {
-  for (const { name, project: p, range } of SHAPES) {
+  for (const { name, project: p, range, captionOverlay } of SHAPES) {
     it(`uses nothing merged after 2018-12-17 — ${name}`, () => {
-      const graph = graphOf(p, range)
+      const graph = graphOf(p, range, captionOverlay)
       for (const { pattern, since, why } of TOO_NEW) {
         const hit = pattern.exec(graph)
         expect(
@@ -305,9 +328,9 @@ describe('a filter graph runs on the oldest bundled ffmpeg', () => {
      * Every site in every shape, not the first.
      */
     const sites = new Map<string, number>()
-    for (const { name, project: p, range } of SHAPES) {
+    for (const { name, project: p, range, captionOverlay } of SHAPES) {
       let n = 0
-      for (const m of graphOf(p, range).matchAll(/adelay=([^,;[\]]*)/g)) {
+      for (const m of graphOf(p, range, captionOverlay).matchAll(/adelay=([^,;[\]]*)/g)) {
         n++
         for (const entry of m[1].split('|')) expect(entry, name).toMatch(/^\d+S$/)
       }
@@ -318,6 +341,33 @@ describe('a filter graph runs on the oldest bundled ffmpeg', () => {
     expect([...sites.values()].filter((n) => n > 0).length).toBeGreaterThanOrEqual(5)
     // …and the shape with two clips off zero reached both.
     expect(sites.get(SEVERAL)).toBeGreaterThanOrEqual(2)
+  })
+
+  it('reaches the caption bake, its clock scaled once, before fps, so the scan above is not of a graph without it', () => {
+    const shape = SHAPES.find((s) => s.name === BAKED)!
+    const args = buildRenderPlan({ project: shape.project, outputPath: '/tmp/out.mp4', captionOverlay: shape.captionOverlay }).args
+    // The list is one more input, read by the concat demuxer, with no input option of its own: the
+    // token before `-f concat` is the previous input's path, after its `-i`.
+    const sites = args.flatMap((a, i) => (a === BAKE!.listPath ? [i] : []))
+    expect(sites, 'the list in the argv').toHaveLength(1)
+    const at = sites[0]
+    expect(args.slice(at - 5, at + 1)).toEqual(['-f', 'concat', '-safe', '0', '-i', BAKE!.listPath])
+    expect(args[at - 7], 'an input option before -f concat').toBe('-i')
+    // Its chain, at its one site, by filter and order only: a time base set, the clock moved once, then onto
+    // the shape's 30 fps frames. The expressions are not pinned. More than one form is frame-exact (§44
+    // measured `fps=25,settb=AVTB,setpts=N/(30*TB)` as well), and whether a form puts each picture on its
+    // frame is captionBakeTiming.int's to say, on decoded frames. This checks that the floor's three filters
+    // are what the bake reaches.
+    const graph = graphOf(shape.project, undefined, shape.captionOverlay)
+    const chains = [...graph.matchAll(/\[(\d+):v\]([^[;]*)\[cap\]/g)]
+    expect(chains, 'caption chains').toHaveLength(1)
+    const steps = chains[0][2].split(',')
+    const setpts = steps.flatMap((f, i) => (f.startsWith('setpts=') ? [i] : []))
+    expect(setpts, `${chains[0][2]}: the clock moved once`).toHaveLength(1)
+    const order = [steps.findIndex((f) => f.startsWith('settb=')), setpts[0], steps.lastIndexOf('fps=30')]
+    expect(order.every((i) => i >= 0), `${chains[0][2]} has settb, setpts and fps=30`).toBe(true)
+    expect([...order].sort((a, b) => a - b), `${chains[0][2]} in order`).toEqual(order)
+    expect(graph).toContain(`[cap]overlay=0:${BAKE!.y}:shortest=1`)
   })
 
   it('reaches the range trims, so the scan above is not of a graph without them', () => {

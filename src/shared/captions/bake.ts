@@ -150,13 +150,27 @@ export function planBakeOf(spec: GraphicsSpec): CaptionBake | null {
 }
 
 /**
- * The concat demuxer list for a bake.
+ * The clock the concat list is written on: one frame of the bake per tick of
+ * 1/25 s, whatever the project's rate.
  *
- * `duration` after each entry is how long that picture holds, which is what
- * turns eighty identical frames into one file. The final entry is repeated with
- * no duration because the demuxer ignores the last one it is given — a known
- * quirk, and without the repeat the closing run is dropped.
+ * Because 1/25 s is the only clock the demuxer can time a picture on. The
+ * concat input's stream is the first PNG's, read by image2 at its default
+ * `framerate` of 25, so its time base is 1/25 s, and the demuxer rescales every
+ * entry's start into it, to the NEAREST tick (concatdec.c, `delta =
+ * av_rescale_q(start_time, AV_TIME_BASE_Q, <the file's time base>)`). On the
+ * project's own clock a 30 fps frame is 5/6 of a tick: six frames shared five
+ * ticks, and one picture in six never reached the export (EFFECTS.md §42). The
+ * demuxer cannot be told another rate on the 2018 Windows build: it opens each
+ * file with no options, `-framerate` before `-f concat` is a fatal "Option
+ * framerate not found", and the list's `duration` takes no fractions (§44).
+ *
+ * So the list gives each frame one whole tick, which every start lands on
+ * exactly, and the overlay scales that clock back to the project's
+ * (`setpts=PTS*CONCAT_RATE/fps` in buildRenderPlan, after `settb=AVTB` so the
+ * scaled times are not rounded to ticks again). Both sides read this constant.
  */
+export const CONCAT_RATE = 25
+
 /**
  * A path the concat demuxer will read back as the path it was given.
  *
@@ -179,15 +193,30 @@ export function concatPath(path: string): string {
   return `'${forward.split("'").join("'\\''")}'`
 }
 
-export function concatList(
-  plan: CaptionBakePlan,
-  fps: number,
-  fileFor: (picture: number) => string
-): string {
+/**
+ * The concat demuxer list for a bake, on the bake's own clock (`CONCAT_RATE`).
+ *
+ * `duration` after each entry is how long that picture holds, which is what
+ * turns eighty identical frames into one file: `run.frames` ticks of 1/25 s, a
+ * multiple of 0.04 that six decimals write exactly, so every run starts on its
+ * own tick — frame N of the bake at tick N. No frame rate goes in: the list is
+ * the same at every rate, and the overlay scales it to the project's.
+ *
+ * The final entry is repeated with no duration because the demuxer ignores the
+ * last one it is given — a known quirk, and without the repeat the closing run
+ * is dropped. The repeat starts at the bake's end and holds its own one tick.
+ * On the Mac's build the overlay turns that into exactly one frame past the
+ * edit's end (measured at every rate). On the 2018 Windows build, by its source
+ * and not run, `setpts` passes the end of stream on unscaled, so the repeat
+ * comes out as none or several frames (none at 24 fps for most edits, more than
+ * one at 30 and 60; §44's floor paragraph). Either way it is past the edit,
+ * where `shortest=1` ends the export at the video's last frame (§43, §44).
+ */
+export function concatList(plan: CaptionBakePlan, fileFor: (picture: number) => string): string {
   const lines: string[] = []
   for (const run of plan.runs) {
     lines.push(`file ${concatPath(fileFor(run.picture))}`)
-    lines.push(`duration ${(run.frames / fps).toFixed(6)}`)
+    lines.push(`duration ${(run.frames / CONCAT_RATE).toFixed(6)}`)
   }
   const last = plan.runs[plan.runs.length - 1]
   if (last) lines.push(`file ${concatPath(fileFor(last.picture))}`)

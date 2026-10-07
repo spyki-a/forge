@@ -3854,3 +3854,234 @@ entries share a tick and one is dropped, one in six. This fix does not touch
 the grid. The check allows one frame at each edge of the caption for it. On
 this build the 30 fps caption landed exactly, and the 60 fps one ended one
 frame early.
+
+## 44. The caption bake's 40 ms grid — the list on its own clock, scaled in the overlay (2026-10-07)
+
+The fix for the first half of §42, chosen by measuring every candidate on the
+render. Development Mac, the bundled ffmpeg (4.1.5 package, reporting 4.4).
+The render check is `tests/integration/captionBakeTiming.int.test.ts`. It uses
+the app's path around two stand-ins (`buildGraphicsSpec` → `planBakeOf` →
+`concatList`, main's `writeCaptionFrame` / `writeCaptionList`,
+`captionOverlay` through `buildRenderPlan`). The first stand-in is the spec's
+lines: the one real "kinetic" line `buildGraphicsSpec` builds, copied onto the
+frames each fixture needs. The second is the painting: each picture is a
+band-sized PNG whose white blocks spell its line's number in eight bits, so
+every frame of the export says which picture it shows. There are two fixtures.
+**one-frame** is a kinetic line per frame for one second, to the edit's last
+frame, so bit 0 alternates on every frame. **held** is two seconds of still
+lines (the copy without its animation) held 1–7 frames, some abutting and some
+with blank gaps, then 7 blank frames. What each frame should show is worked
+out from the lines, not from the plan under test. Each export is decoded whole
+(`-vsync passthrough`).
+
+**Today's code, reproduced** (frames showing another frame's picture; every
+export had the plan's length):
+
+| fixture | 24 | 25 | 29.97 | 30 | 50 | 60 |
+| --- | --- | --- | --- | --- | --- | --- |
+| one-frame | 0 of 24 | 0 of 25 | 5 of 30 | **5 of 30** | 25 of 50 | 35 of 60 |
+| held | 0 of 55 | 0 of 57 | 6 of 67 | 6 of 67 | 27 of 107 | 34 of 127 |
+
+At 30 fps the one-frame wrong frames are 2, 8, 14, 20 and 26, each showing the
+NEXT frame's picture, and that frame's own picture never appears. That is
+§42's "one in six". At 29.97 it is 3, 9, 15, 21 and 27, each showing the
+PREVIOUS frame's picture. At 50 every other picture never appears, and at 60
+35 of 60 are wrong. (§42 counted 31 frames for thirty such pictures; through
+the render after §43, every export here has the plan's length.) Ten-second
+held edits, run through the scratch harness below, gave 0 of 247 wrong at 24
+fps, 15 of 307 at 29.97 and 167 of 607 at 60.
+
+**Why, read in the source.** `libavformat/concatdec.c` at the Windows build's
+commit (f22fcd4, 2018-12-17) has three relevant lines, and 4.4 has the same
+three. Every file is opened with no options:
+`avformat_open_input(&cat->avf, file->url, NULL, NULL)`. The stream's time
+base is copied from the first file (`copy_stream_props`). Each entry's start
+is rescaled into the CURRENT file's time base with `av_rescale_q`, which rounds
+to the nearest tick (`delta = av_rescale_q(start_time - file_inpoint,
+AV_TIME_BASE_Q, <file's time base>)`). A PNG is read by image2's pipe
+demuxer, whose `framerate` defaults to "25" (img2dec.c at f22fcd4). So every
+start is rounded to 1/25 s, and nothing the list or the command line says can
+reach the PNG reader on the 2018 build. The per-file `option` directive that
+could reach it is 0210c8fee2 (2021-08-22), after both builds.
+
+**The candidates, each on both fixtures at every rate** (frames wrong, and
+the export's length where it was short). They were measured with a scratch
+harness that runs the same path and fixtures, with each candidate patched onto
+the argv `buildRenderPlan` built or onto the list. Its "today" row agrees with
+the committed check frame for frame, and so does its row for the app's own
+fixed path, which is all zeros. 50 fps joined the check afterwards (the table
+above).
+
+| candidate | one-frame 24 / 25 / 29.97 / 30 / 60 | held 24 / 25 / 29.97 / 30 / 60 |
+| --- | --- | --- |
+| today: list in project seconds, `fps=` | 0 / 0 / 5 / 5 / 35 | 0 / 0 / 6 / 6 / 34 |
+| (a) `-framerate <fps>` before `-f concat` | ffmpeg exits: "Option framerate not found." | same |
+| (a) `-r <fps>` before `-f concat` | 0 / 0 / 0 / 0 / 0 | **26 of 55 / 26 of 57 / 31 of 67 / 31 of 67 / 56 of 127 frames**, 52 / 54 / 64 / 64 / 122 wrong |
+| (b) `settb=1/<fps>` before `fps` | 0 / 0 / 5 / 5 / 35 | 0 / 0 / 6 / 6 / 34 |
+| (b) `settb=AVTB,setpts=PTS-STARTPTS` before `fps` | 0 / 0 / 5 / 5 / 35 | 0 / 0 / 6 / 6 / 34 |
+| (c) `duration 1/30` | concat exits: "Line 2: invalid duration '1/30'" | same |
+| (c) nine decimals, `0.033333333` | 0 / 0 / 5 / 5 / 35 | 0 / 0 / 6 / 6 / 34 |
+| (d) list on the 1/25 s clock, `-itsscale 25/<fps>` | 11 / 0 / 15 / 15 / 45 | 11 / 0 / 15 / 15 / 49 |
+| (d) list on the 1/25 s clock, `setpts=PTS*25/<fps>` | 11 / 0 / 15 / 15 / 45 | 11 / 0 / 15 / 15 / 49 |
+| **(d) list on the 1/25 s clock, `settb=AVTB,setpts=PTS*25/<fps>`** | **0 / 0 / 0 / 0 / 0** | **0 / 0 / 0 / 0 / 0** |
+| (d) list on the 1/25 s clock, `fps=25,settb=AVTB,setpts=N/(<fps>*TB)` | 0 / 0 / 0 / 0 / 0 | 0 / 0 / 0 / 0 / 0 |
+
+- **(a) `-framerate` is fatal.** ffmpeg hands it only to a demuxer with its own
+  `framerate` option, and concat has none.
+- **(a) `-r` makes every decoded picture ONE frame**, stamped at the next
+  1/fps whatever its duration. That is right only when every run is one frame.
+  A held caption collapses to one frame, and `shortest=1` then cuts the export
+  short (26 of 55 frames).
+- **(b) cannot undo the rounding.** By the time any filter sees the pictures,
+  two entries already share a tick, and nothing downstream can tell them
+  apart.
+- **(c) the list cannot say it.** `duration` is `av_parse_time` (concatdec.c
+  line 422 at f22fcd4), which takes no fractions. More decimals change
+  nothing, because the rounding is to 1/25 s, not to the microsecond.
+- **(d) the bake's own clock.** The list gives each FRAME of the bake one 1/25 s
+  tick: `duration` is `run.frames / 25`, a multiple of 0.04 that six decimals
+  write exactly. So frame N of the bake starts at tick N with nothing to
+  round. `showinfo` on a 60-frame list read entries at pts 0, 1, 2 … 60
+  (1/25 time base, the 61st the repeated last entry). The overlay scales that
+  clock to the project's: `setpts=PTS*25/<fps>` puts frame N at N/fps. It needs
+  `settb=AVTB` first. Without it `setpts` computes in 1/25 s units and
+  truncates (`D2TS` is an `(int64_t)` cast), which is the "15 of 30" row above.
+  `-itsscale` truncates the same way, in ffmpeg.c. After the chain the
+  60-frame list gave 61 frames at 30 fps, the 61st (the repeat) at 2.000 s.
+
+**Chosen: (d) with `settb=AVTB,setpts=PTS*25/<fps>`**, the smaller of the two
+exact chains. The `N/(fps*TB)` one also needs an `fps=25` first. The change is
+one constant (`CONCAT_RATE = 25` in `src/shared/captions/bake.ts`) read by both
+sides. `concatList(plan, fileFor)` writes `run.frames / CONCAT_RATE` and no
+longer takes a rate, because the list is the same at every rate. The overlay's
+chain in `buildRenderPlan` is now
+`[N:v]settb=AVTB,setpts=PTS*25/<fps>,fps=<fps>,format=rgba[cap]`. The renderer
+paints exactly what it painted before, so the preview, which draws from the
+same spec, is untouched. The libass route is untouched.
+
+**Measured after the fix:** the check above at 24, 25, 29.97, 30, 50 and 60
+fps, both fixtures: **every frame its own picture, every export the plan's
+length**. Ten-second held edits at 24, 29.97 and 60 fps: 0 of 247, 0 of 307,
+0 of 607. `clipIt.int`'s bake legs went from w32 and w35 a frame early to
+**+0 for all ten words on both the exact and the fast cut**, and the one-word
+leg is +0 too. So the bake is now held to its word's own frame there. libass,
+which measured +0 as well, keeps its one frame, because its reading is a glyph
+threshold. `captionBakeLength.int` keeps every length (30 of 30, 30, 4, 16, 20,
+61 of 61, 30). Its 60 fps caption now ends on its frame, with the block on 0–14
+(it was 0–13), and its one frame of slack at each edge is gone. That slack
+hid a whole-frame shift: with every picture one frame late (mutant below),
+the old slack passed 8 of 8 tests.
+
+**The tail.** The repeated last entry now starts at tick T, the edit's end on
+the bake's clock, and holds its own one tick. On this build (the Mac's) the
+overlay turns that tick into one frame, so the tail lands exactly one frame
+past the video's last frame at every rate: measured at 24, 25, 29.97, 30, 50
+and 60 fps, at pts T/fps each time. It no longer depends on where a 40 ms tick
+happens to fall (§43's off-tick case, 61 frames at 60 fps, used to reach the
+end only by that 40 ms). On the 2018 build the tail can be no frames or
+several. That is read in the source, not run; see the floor paragraph below.
+Either way it falls past the edit, and `shortest=1` drops it, as before.
+
+**The 2018 floor.** Everything in the chain merged long before 2018-12-17, and
+all of it is in the f22fcd4 source:
+- `settb` is 214c0d420b, 2010-10-11, with `AVTB` in that first commit.
+- `setpts` is a532bb390f, 2010-11-02, with `PTS`, `N` and `TB` in it.
+- `fps` is 54c5dd89e3, 2012-05-18.
+- The list uses only `file` and `duration`, from the keywords concatdec.c
+  parses at f22fcd4: duration, exact_stream_id, ffconcat, file,
+  file_packet_metadata, inpoint, outpoint and stream.
+
+One behaviour differs between the builds, read in the source and not run:
+- **`setpts` and `settb` became `activate` filters after the floor**:
+  2a546fb7d5 (2019-10-02) and 7df808ea84 (2019-10-23). On the 2018 build both
+  are `filter_frame` filters. The end-of-stream time on their output is
+  `guess_status_pts`: the input link's last timestamp, rescaled by time base
+  only. So on Windows `setpts` passes the END on unscaled, at (T+1)/25 s rather
+  than (T+1)/fps. At 24 fps that is before the last picture once T > 24. The
+  4.4 build runs the EOF time through the expression too.
+- **Why that cannot move a frame of the edit.** `vf_fps.c` at f22fcd4 reads the
+  input's status only while it holds fewer than two frames
+  (`if (s->frames_count < 2) { ... ff_inlink_acknowledge_status ... }`). It
+  holds the last run and the repeat until it has written the last run out to
+  the repeat's time, T. So frames 0 to T−1 are written before the EOF time is
+  seen. That time decides only how many copies of the repeat follow, past the
+  edit. `fps` converts it to output frames with its default rounding, to the
+  nearest (`update_eof_pts`, `round=near`, `eof_action=round`), and writes
+  copies while its next frame is before it. That gives round((T+1)·fps/25) − T
+  copies, or none when that is not positive. So the count is none at 24 fps
+  once T ≥ 12 (and one copy below that; the EOF is before the repeat's own
+  start only once T > 24, but the rounding drops the copy sooner). It is one
+  at 25 fps, as on this build, and more than one at 30 and 60 (about T/5 + 1
+  and 1.4T + 2). The overlay never reads that time
+  anyway: `framesync_inject_status` (framesync.c at f22fcd4) replaces it with
+  the last frame's time plus one tick.
+- **Emulated here.** The caption stream was cut to exactly the edit's frames
+  (`trim=end_frame=T` after `fps`), which is what the 2018 build's `fps` emits
+  at 24 fps once T ≥ 12 (every edit here is longer). Result: 0 wrong frames and the plan's length at every rate, on
+  both fixtures, and on the ten-second edits.
+
+**Dated, not run:** the 2018 build itself. `captionBakeTiming.int`
+(including 24 fps, where that EOF arrives earliest), the tightened
+`captionBakeLength.int` (with its off-tick 60 fps case) and `clipIt.int`'s bake
+at +0 all run in Windows CI on the next push.
+`tests/oldestFfmpeg.test.ts` has the bake as a shape. At its one site it
+asserts the filters and their order, with the expressions left out: a `settb=`
+step, then exactly one `setpts=` step, then `fps=30`. It also asserts the
+overlay's `shortest=1`, and that nothing comes before `-f concat`. Its first
+version pinned `settb=AVTB,setpts=PTS*25/30`. That form would have rejected the
+other exact chain in the table, and it failed a harmless one-microsecond
+mutant (below). Whether a chain puts each picture on its frame is left to
+`captionBakeTiming.int`, which caught every real mutant on its own.
+
+**Mutations**, each run to a file and restored byte-identical (`cmp`, all ten
+changed files). Every run below used the ten-case timing check from before 50
+fps joined it, except the fix-reverted re-run, the first with all twelve
+cases. The counts are of that check, and the shape test is as first written,
+with its expressions pinned. Its relaxed form was mutation-checked afterwards
+(after this list).
+- **The fix reverted** (bake.ts and plan.ts as HEAD, the tests' calls back to
+  the old signature): 11 failures, run before 50 fps joined the check. They
+  are the six 29.97/30/60 timing cases (30 fps: frames 2, 8, 14, 20, 26), the
+  off-tick 60 fps edge (frame 14 grey), `clipIt.int` exact and fast (w32 at 14
+  for 15, w35 at 68 for 69, now outside the bake's 0), the list unit test (25
+  ticks for a 30-frame run) and the shape's order check. Re-run on the timing
+  check once 50 fps was in it: 8 failures, the two 50 fps cases among them.
+- **`settb=AVTB` removed**: 15 failures, including 24 fps (11 of 24 wrong) and
+  captionBakeLength's 30 fps cases (frame 7 grey, and 60 of 61 frames at 60).
+- **The scale removed** (list on ticks, chain back to `fps=` only): 15
+  failures, with every caption held past its end.
+- **`CONCAT_RATE` 30** (both sides move together): 15 failures. The list unit
+  test fails, because it checks against the demuxer's 25 rather than the
+  constant. So do all ten timing cases of the time, 24 and 25 fps included.
+- **The list in seconds at 30 fps** under the new chain (scaled twice): 19
+  failures, with exports cut short (26 of 30, 107 of 127).
+- **Every picture one frame late** (`+1/(fps*TB)` on the setpts): 17
+  failures. A first try, `(PTS+1)`, moved each picture by one MICROSECOND
+  after `settb=AVTB`. It passed every render check, as it should. Only the
+  shape's order check failed, in its pinned form. That is why the check was
+  relaxed.
+
+**The relaxed shape check, mutation-checked** (`oldestFfmpeg.test.ts` alone,
+each run to a file, then restored byte-identical with `cmp`):
+- These fail it, and each is a real bug:
+  - the fix reverted, which leaves no `setpts`;
+  - `settb=AVTB` removed;
+  - the scale removed (`fps=` only);
+  - `setpts` before `settb`, failed on order. On the render this is
+    `captionBakeTiming.int`'s 10 of 13 failing, at every rate but 25, where
+    the scale is 1;
+  - the scale applied twice, as a second `setpts=PTS*25/<fps>`. This one
+    fails `captionBakeTiming.int` too, 10 of 13. The "once" would also reject
+    a harmless no-op `setpts=PTS` added beside the scale. That is the one
+    place the check is stricter than the render.
+- These pass it:
+  - the other exact chain, `fps=25,settb=AVTB,setpts=N/(<fps>*TB)`.
+    `captionBakeTiming.int` passes it too, 13 of 13, so the committed check
+    agrees with the harness's row above;
+  - the one-microsecond `(PTS+1)*25/<fps>`;
+  - `CONCAT_RATE` 30. The shape check no longer catches this one, but the
+    list unit test still does (1 of 21 failing). So did all ten timing
+    cases, in the `CONCAT_RATE` 30 run in the list above.
+
+**Still open:** CLIPS.md (§3b, near line 1111) still describes the bake's
+w32 and w35 as −1. That is another agent's file, so it is left for them.

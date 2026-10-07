@@ -215,7 +215,7 @@ describe('bakeCaptions plans through planBakeOf', () => {
 
 describe('concatList', () => {
   const plan = planCaptionBake([layer('a', 0, 60, [0, 30])], FPS, 90)!
-  const text = concatList(plan, FPS, (p) => `/tmp/${p}.png`)
+  const text = concatList(plan, (p) => `/tmp/${p}.png`)
 
   it('gives every run a file and a duration', () => {
     const files = text.split('\n').filter((l) => l.startsWith('file '))
@@ -232,12 +232,35 @@ describe('concatList', () => {
     expect(files[files.length - 1]).toBe(files[files.length - 2])
   })
 
-  it('adds up to the length of the timeline', () => {
-    const total = text
+  it('gives every run a whole number of 1/25 s ticks, one a frame, adding up to the timeline', () => {
+    /*
+     * The concat demuxer times a PNG in image2's 1/25 s and rounds each
+     * entry's start to the nearest tick (EFFECTS.md §42), so a start that is
+     * not a whole tick moves. The list is on the bake's own clock — frame N
+     * at tick N — and the overlay scales it to the project's (§44). 25 here
+     * is the demuxer's, measured, not the constant under test.
+     */
+    const ticks = text
       .split('\n')
       .filter((l) => l.startsWith('duration '))
-      .reduce((sum, l) => sum + Number(l.slice(9)), 0)
-    expect(total).toBeCloseTo(90 / FPS, 4)
+      .map((l) => Number(l.slice(9)) * 25)
+    expect(ticks.filter((t) => Math.abs(t - Math.round(t)) > 1e-6), 'durations off a 1/25 s tick').toEqual([])
+    expect(ticks.map(Math.round)).toEqual(plan.runs.map((r) => r.frames))
+    expect(ticks.reduce((sum, t) => sum + t, 0)).toBeCloseTo(90, 6)
+    // The same list at every rate: there is no rate in it.
+    expect(concatList(planCaptionBake([layer('a', 0, 60, [0, 30])], 60, 90)!, (p) => `/tmp/${p}.png`)).toBe(text)
+  })
+
+  it('uses nothing the 2018 build’s concat demuxer cannot read', () => {
+    /*
+     * The keywords concatdec.c parses at the Windows build's commit, f22fcd4
+     * (2018-12-17). A per-file `option` (image2's framerate, say) is not one
+     * of them (§44), and `duration` is av_parse_time's — no fractions.
+     */
+    const FLOOR = ['duration', 'exact_stream_id', 'ffconcat', 'file', 'file_packet_metadata', 'inpoint', 'outpoint', 'stream']
+    const keywords = text.split('\n').filter(Boolean).map((l) => l.split(' ')[0])
+    expect(keywords.filter((k) => !FLOOR.includes(k)), 'keywords the 2018 demuxer does not know').toEqual([])
+    expect(text).not.toMatch(/^duration .*\//m)
   })
 })
 

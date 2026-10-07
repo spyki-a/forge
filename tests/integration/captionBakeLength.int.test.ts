@@ -35,18 +35,20 @@ import { FFMPEG, makeColour, outputDir, run, saveFrame, writeNote } from './outp
  * showing where the clip should be).
  *
  * Read whole, frame by frame (`-vsync 0`): the export's frame count must be the
- * plan's durationFrames, frames inside the caption must show the block, and
- * frames after it must show the picture and no block. One frame of slack at
- * each edge of the caption, none in the count: the concat demuxer times its
- * pictures in the PNG's own 1/25 s ticks (measured, §42), so a change can land
- * a frame off at 30 fps — it lands exact here, on this build. Artefacts in
- * tests/output/captionBakeLength/.
+ * plan's durationFrames, every frame inside the caption must show the block,
+ * and every frame after it the picture and no block — no slack at either edge.
+ * There was a frame of it while the concat demuxer rounded each picture's
+ * start to its 1/25 s ticks (§42): the 60 fps caption ended a frame early. The
+ * list is now on the bake's own clock, a tick a frame, scaled to the project's
+ * in the overlay (§44), and captionBakeTiming.int checks every frame of it.
+ * Artefacts in tests/output/captionBakeLength/.
  *
  * Every 30 fps case here ends on a 1/25 s tick (30 frames is 1.000 s), and so
- * does captionOverlay.int. One case does not: 61 frames at 60 fps is 1.0167 s,
- * which the list's repeated last entry rounds DOWN to the 1.00 s tick, so the
- * bake reaches the video's end only by that entry's own 40 ms. That is the
- * case §43 could only date for the 2018 Windows build; this runs it there.
+ * does captionOverlay.int. One case does not: 61 frames at 60 fps is 1.0167 s.
+ * Before §44 the list's repeated last entry was rounded DOWN to the 1.00 s
+ * tick, and the bake reached the video's end only by that entry's own 40 ms;
+ * on the bake's clock it starts at the edit's end, tick 61. §43 could only date
+ * that case for the 2018 Windows build; this runs it there.
  */
 
 const W = 320
@@ -139,7 +141,7 @@ async function bake(name: string, p: Project, frames?: number): Promise<{ listPa
   for (const [i, picture] of plan.pictures.entries()) {
     files.push(await writeCaptionFrame(i, await standIn(picture.layer >= 0)))
   }
-  const listPath = await writeCaptionList(concatList(plan, spec.fps, (q) => files[q]))
+  const listPath = await writeCaptionList(concatList(plan, (q) => files[q]))
   await copyFile(listPath, join(dir, `${name}-list.txt`))
   return { listPath, totalFrames: plan.totalFrames }
 }
@@ -270,7 +272,7 @@ const timeline = (name: string, exportFrame: number): number => results.get(name
 
 /**
  * Every frame inside the caption shows the block, every frame after it shows
- * the picture; one frame of slack at each of the caption's edges.
+ * the picture — to the frame, at both of the caption's edges.
  */
 function expectCaptionWhereItIs(name: string): void {
   const { reading, caption } = results.get(name)!
@@ -278,8 +280,8 @@ function expectCaptionWhereItIs(name: string): void {
   const { start, end } = caption!
   for (const [i, v] of reading.level.entries()) {
     const t = timeline(name, i)
-    if (t > start && t < end - 1) expect.soft(isBlock(v), `${name}: export frame ${i} (timeline ${t}) is inside the caption, level ${v}`).toBe(true)
-    if (t > end) expect.soft(isPicture(v), `${name}: export frame ${i} (timeline ${t}) is after the caption, level ${v}`).toBe(true)
+    if (t >= start && t < end) expect.soft(isBlock(v), `${name}: export frame ${i} (timeline ${t}) is inside the caption, level ${v}`).toBe(true)
+    if (t >= end) expect.soft(isPicture(v), `${name}: export frame ${i} (timeline ${t}) is after the caption, level ${v}`).toBe(true)
   }
 }
 
@@ -343,10 +345,13 @@ describe('a baked caption does not decide how long the export is', () => {
 
   it('an edit that ends off a 1/25 s tick (61 frames at 60 fps): every frame, the tail bare', () => {
     /*
-     * The list's repeated last entry starts on the tick BEFORE the edit's end
-     * here (1.00 s for 1.0167 s), so only its own tick carries the bake to the
-     * last frame. Ends on a tick everywhere else in this check and in
-     * captionOverlay.int; this is the one Windows CI can disagree on.
+     * Before §44 the list's repeated last entry started on the tick BEFORE
+     * the edit's end here (1.00 s for 1.0167 s), so only its own 40 ms
+     * carried the bake to the last frame, and the caption ended a frame
+     * early. On the bake's clock the entry starts at tick 61, which the
+     * overlay puts at 61/60 s, the edit's end. Every other case here, and
+     * captionOverlay.int, ends on a 1/25 s tick; this is the one where the
+     * two clocks differ at the end, so the one Windows CI can disagree on.
      */
     const r = results.get('off-tick-60')!
     expect(r.plan).toBe(CLIP_FRAMES_60)

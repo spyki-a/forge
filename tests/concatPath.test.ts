@@ -53,7 +53,7 @@ describe('concatList', () => {
   }
 
   it('writes Windows paths the demuxer can open', () => {
-    const list = concatList(plan, 30, (n) => `C:\\Users\\x\\${n}.png`)
+    const list = concatList(plan, (n) => `C:\\Users\\x\\${n}.png`)
     expect(list).not.toContain('\\')
     expect(list).toContain("file 'C:/Users/x/0.png'")
   })
@@ -61,7 +61,7 @@ describe('concatList', () => {
   it('still repeats the last picture, which the demuxer needs', () => {
     // The final `duration` is ignored, so without a repeat the last caption
     // flashes for one frame instead of being held.
-    const list = concatList(plan, 30, (n) => `/tmp/${n}.png`)
+    const list = concatList(plan, (n) => `/tmp/${n}.png`)
     const files = list.split('\n').filter((l) => l.startsWith('file '))
     expect(files).toHaveLength(3)
     expect(files[2]).toBe(files[1])
