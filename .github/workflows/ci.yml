@@ -93,7 +93,12 @@ jobs:
       # Integration tests included on purpose. They shell out to ffmpeg with
       # real paths, and a runner's Windows path — C:\a\forge\forge — is exactly
       # the shape that breaks filter arguments and concat lists.
-      - run: npm test
+      # The github-actions reporter writes each failing test — its file, line
+      # and message — as a check annotation, which is readable without a
+      # sign-in. Without it a red run says only "exit code 1", and the log
+      # behind it needs an account: run 37655072539 could not be read from
+      # the sandbox for exactly that reason.
+      - run: npm test -- --reporter=default --reporter=github-actions
 
       - run: npm run build
 
