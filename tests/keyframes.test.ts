@@ -9,6 +9,8 @@ import {
   KEYED_PROPERTIES,
   type Keyframe
 } from '@shared/render/keyframes'
+import { buildRenderPlan } from '@shared/render/plan'
+import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
 
 const key = (frame: number, value: number, ease?: Keyframe['ease']): Keyframe => ({
   frame,
@@ -109,11 +111,25 @@ describe('keyframeExpression', () => {
     expect(keyframeExpression([key(30, 2)], options)).toBe('2.0000')
   })
 
-  it('brackets every segment with the time it ends', () => {
-    const expression = keyframeExpression([key(0, 1), key(60, 2)], options)
-    expect(expression).toContain('if(lt(t,')
-    // The clip is 60 frames at 30fps, so the last segment ends at t=2.
-    expect(expression).toContain('2.0000)')
+  /*
+   * A held key steps ON its frame, at every rate the app offers.
+   *
+   * This used to pin the text — `toContain('2.0000)')` for "the last segment
+   * ends at t=2" — and that anchor matched the last key's VALUE, 2.0000, as
+   * well as the time. The time was also the bug: `(frame/fps).toFixed(4)`
+   * rounds frame 5 at 30 fps up to 0.1667, past the frame's own 0.16666…, so
+   * the step came a frame late (CLIPS.md §3.2). What is asserted now is where
+   * the curve steps, frame by frame; keyframes.int has it on rendered frames.
+   * `t` is evaluated as ffmpeg forms it, the frame's pts times the time base.
+   */
+  it('steps a held key on its own frame, for a key on every frame, at 24, 25, 30, 50 and 60 fps', () => {
+    for (const fps of [24, 25, 30, 50, 60]) {
+      for (let at = 1; at <= 2 * fps; at++) {
+        const expression = keyframeExpression([key(0, 0, 'hold'), key(at, 1)], { ...options, fps })
+        expect(evaluate(expression, (at - 1) * (1 / fps)), `${fps} fps, frame ${at - 1}`).toBe(0)
+        expect(evaluate(expression, at * (1 / fps)), `${fps} fps, frame ${at}`).toBe(1)
+      }
+    }
   })
 
   /*
@@ -121,22 +137,75 @@ describe('keyframeExpression', () => {
    *
    * They are two implementations of one animation — the renderer evaluates the
    * string, the preview calls valueAt — and a drift between them is invisible
-   * until an export comes back different from what was on screen.
+   * until an export comes back different from what was on screen. Every frame,
+   * not every third: at 30 fps every third frame from 0 is a frame ≡ 0 (mod 3),
+   * and the late step was on frames ≡ 2.
    */
-  it('agrees with valueAt at every sampled frame', () => {
-    for (const keys of [
-      [key(0, 1), key(60, 3)],
-      [key(0, 1, 'smooth'), key(60, 3)],
-      [key(0, 1, 'hold'), key(30, 3), key(60, 1)],
-      [key(10, 0), key(20, 1), key(50, 0.25)]
-    ]) {
-      const expression = keyframeExpression(keys, options)
-      for (let frame = 0; frame <= 60; frame += 3) {
-        const fromExpression = evaluate(expression, frame / 30)
-        const fromPreview = valueAt(keys, frame, 60, 1)
-        expect(fromExpression).toBeCloseTo(fromPreview, 3)
+  it('agrees with valueAt at every frame', () => {
+    for (const fps of [24, 25, 30, 60]) {
+      for (const keys of [
+        [key(0, 1), key(60, 3)],
+        [key(0, 1, 'smooth'), key(60, 3)],
+        [key(0, 1, 'hold'), key(30, 3), key(60, 1)],
+        [key(10, 0), key(20, 1), key(50, 0.25)],
+        [key(0, 0, 'hold'), key(4, 1, 'hold'), key(5, 0, 'hold'), key(8, 1), key(11, 0, 'smooth'), key(17, 1)]
+      ]) {
+        const expression = keyframeExpression(keys, { ...options, fps })
+        for (let frame = 0; frame <= 60; frame++) {
+          const fromExpression = evaluate(expression, frame * (1 / fps))
+          const fromPreview = valueAt(keys, frame, 60, 1)
+          /*
+           * To 0.005, not 0.0005: inside a segment its start and span are
+           * still written to four places, so at 60 fps the frame AT the key
+           * at 8 (start 0.1333 for 0.13333…) reads 0.99933 for 1 — a
+           * fifth of one alpha level. A frame late is a whole step.
+           */
+          expect(fromExpression, `${fps} fps, frame ${frame}`).toBeCloseTo(fromPreview, 2)
+        }
       }
     }
+  })
+
+  /*
+   * The sound's segments end on the key's own instant.
+   *
+   * `volume` evaluates once per audio frame at that frame's start, a clock
+   * that runs between video frames. Measured (EFFECTS.md §45): on the half
+   * frame a held envelope came in up to 10.7 ms BEFORE its key; on the
+   * instant it comes in at or after it, as it always has.
+   */
+  it('ends a segment on the key itself when the clock runs between frames', () => {
+    const instant = keyframeExpression([key(0, 0, 'hold'), key(8, 1)], { ...options, boundary: 'instant' })
+    expect(evaluate(instant, (8 - 0.25) / 30)).toBe(0)
+    expect(evaluate(instant, 8 / 30 + 1e-4)).toBe(1)
+    // The picture's default does step before it, on the half frame.
+    expect(evaluate(keyframeExpression([key(0, 0, 'hold'), key(8, 1)], options), (8 - 0.25) / 30)).toBe(1)
+  })
+
+  it('gives the export’s volume envelope the instant, and its picture keys the half frame', () => {
+    const asset: MediaAsset = {
+      id: 'a', path: '/tmp/a.mp4', name: 'a.mp4', kind: 'video', durationFrames: 300,
+      width: 64, height: 48, fps: 30, hasVideo: true, hasAudio: true, size: 0
+    }
+    const held = [key(0, 0, 'hold'), key(8, 1)]
+    const clip: Clip = {
+      id: 'c', assetId: 'a', trackId: 'v1', start: 0, duration: 30, inPoint: 0, volume: 1,
+      transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
+      color: { brightness: 0, contrast: 1, saturation: 1 },
+      keyframes: { volume: held, opacity: held }
+    }
+    const project: Project = { ...emptyProject(), settings: { width: 64, height: 48, fps: 30, sampleRate: 48000 }, assets: [asset], clips: [clip] }
+    const args = buildRenderPlan({ project, outputPath: '/tmp/o.mp4' }).args
+    const graph = args[args.indexOf('-filter_complex') + 1]
+    const volumes = [...graph.matchAll(/volume=volume='([^']*)':eval=frame/g)]
+    expect(volumes, 'one envelope').toHaveLength(1)
+    // A quarter frame before the key: still held, on the sound's clock.
+    expect(evaluate(volumes[0][1], (8 - 0.25) / 30)).toBe(0)
+    expect(evaluate(volumes[0][1], 8 / 30 + 1e-4)).toBe(1)
+    // The opacity on the same keys is the picture's: lit a quarter frame before.
+    const alphas = [...graph.matchAll(/a='alpha\(X,Y\)\*\(([^']*)\)\/255'/g)]
+    expect(alphas, 'one keyed opacity').toHaveLength(1)
+    expect(evaluate(alphas[0][1].replace(/\bT\b/g, 't'), (8 - 0.25) / 30)).toBe(255)
   })
 
   it('offsets by where the clip sits on the timeline', () => {

@@ -148,8 +148,11 @@ describe('the export’s expression', () => {
     const e = maskExpression(shape, motion({ ...moving, maskWidth: [{ frame: 0, value: 0.1 }, { frame: 30, value: 0.3 }] }))
     expect(e.startsWith('if(eq(X,0),st(0,')).toBe(true)
     expect(e).toContain('+st(2,max(0.002,abs(')
-    // T, from 0 at the clip's first frame — never timeline seconds.
-    expect(e).toContain('if(lt(T,0.0000)')
+    // T, the clip's own seconds — never timeline seconds, and never `t`. Where
+    // each segment ends is not pinned here: that it is the clip's own time is
+    // maskKeyframes.int's "runs on the clip's own time", on rendered frames,
+    // and that a key lands on its frame is keyframes.int's (CLIPS.md §3.2).
+    expect(e).toMatch(/if\(lt\(T,/)
     expect(e).not.toMatch(/\bt\b/)
     expect(e).toContain('(X-ld(0)*W)')
     // The size is read everywhere it is used: the half-extent, the rounded corner.

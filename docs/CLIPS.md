@@ -350,6 +350,30 @@ probe ignores the matrix.
 
 ### 3.2 Held keys land one frame late in the export · half a day
 
+> **Built 2026-10-07** — `src/shared/render/keyframes.ts` (`keyframeExpression`
+> ends each picture segment at `(start + (frame − 0.5)/fps).toFixed(6)`, the
+> opening boundary too; a new `boundary: 'instant'` keeps the old
+> `(frame/fps).toFixed(4)` for the volume envelope, passed in
+> `src/shared/render/plan.ts`), the render check in
+> `tests/integration/keyframes.int.test.ts` (into `tests/output/held-keys/`:
+> opacity held 0 → 1 at frames 4, 5 and 8 at 24, 25 and 30 fps, every frame
+> decoded, plus an eased curve held to `valueAt` at every frame), and
+> `tests/keyframes.test.ts` / `tests/maskKeyframes.test.ts` (text pins
+> replaced by evaluated steps). Measured through `buildRenderPlan`: before,
+> 30 fps keys 5 and 8 lit on **6** and **9**, and 24 fps key 4 on **5** — at
+> 24 and 60 fps every key on a frame ≡ 1 (mod 3) is late, which the plan did
+> not list; after, all nine on their key. The eased control is unchanged
+> but for frame 8 (252 → 253 mean, the old segment's p = 0.99967 there).
+> **The sound is not moved**: the envelope steps on 2048-sample audio frames
+> at or after its key (2–37 ms, sixteen keys measured), and on the half
+> frame three came in before it (to −10.7 ms), so it keeps the instant,
+> byte-identical; `tests/integration/volumeEnvelope.int.test.ts` renders
+> that (30 fps keys 4 and 8 in at +37.33 and +32.00 ms, never before the
+> key). Mutations: the four-place boundary back, 7 failures (the 30 fps
+> frame-5 row first lit on 6); the envelope's `'instant'` dropped, the plan
+> test and both held-volume renders fail (−5.33 and −10.67 ms).
+> `EFFECTS.md` §45.
+
 **What is wrong, measured.** `keyframeExpression` (`render/keyframes.ts:318-329`)
 writes each segment boundary as `lt(t, (frame/fps).toFixed(4))`. Keys
 `[{0, 0, hold}, {5, 1000}]` at 30 fps emit `if(lt(t,0.1667),0,1000)`. Frame 5

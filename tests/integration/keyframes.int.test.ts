@@ -7,7 +7,8 @@ import { join } from 'node:path'
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg'
 import { buildRenderPlan } from '@shared/render/plan'
 import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
-import type { KeyframeTracks } from '@shared/render/keyframes'
+import { valueAt, type Keyframe, type KeyframeTracks } from '@shared/render/keyframes'
+import { outputDir, writeNote } from './output'
 
 /*
  * Keyframes, rendered.
@@ -175,5 +176,129 @@ describe('keyframes', () => {
     const end = await frameAt(out, 1.8)
     expect(mean(end)).toBeGreaterThan(mean(start))
     expect(difference(start, end)).toBeGreaterThan(8)
+  }, 120_000)
+})
+
+/*
+ * A held key steps ON its frame — every frame of the export read back.
+ *
+ * Each boundary used to be `lt(t, (frame/fps).toFixed(4))`. Frame 5 at 30 fps
+ * is t = 0.16666…, still under 0.1667, so the export held the old value
+ * through frame 5 and stepped on frame 6, while the preview's `valueAt` steps
+ * on frame 5 (docs/CLIPS.md §3.2, EFFECTS.md §45). Rounding up is what makes
+ * it late, so which frames it hits depends on the rate: at 30 fps every key on
+ * a frame ≡ 2 (mod 3), at 24 and 60 every key on a frame ≡ 1 (mod 3), and at
+ * 25 none. The boundary is now the half frame, which no frame time is near.
+ *
+ * The test above sampled only 0.1 s and 1.0 s of a hold, so it could not see
+ * this. These decode the whole export and look at the frame before the key
+ * and the frame at it.
+ */
+describe('a held key steps on its own frame in the export', () => {
+  const HW = 64
+  const HH = 48
+  const LENGTH = 12
+  let heldDir = ''
+  let white = ''
+  const rows: string[] = []
+
+  beforeAll(async () => {
+    heldDir = await outputDir('held-keys')
+    white = join(heldDir, 'white.png')
+    await run(FFMPEG, ['-hide_banner', '-loglevel', 'error', '-y',
+      '-f', 'lavfi', '-i', `color=c=white:size=${HW}x${HH}:rate=1:duration=1`, '-frames:v', '1', white])
+  }, 60_000)
+
+  afterAll(async () => {
+    if (!heldDir) return
+    await writeNote(heldDir, [
+      'Opacity keys on a white still over the black canvas, rendered through buildRenderPlan.',
+      'Each row: the frame rate, the key, and the mean grey of every frame of the export, in order.',
+      'The frame at a held key must be the first one with the new value.',
+      '',
+      ...rows
+    ])
+  })
+
+  function heldProject(fps: number, keys: Keyframe[]): Project {
+    const asset: MediaAsset = {
+      id: 'w', path: white, name: 'white.png', kind: 'image', durationFrames: LENGTH,
+      width: HW, height: HH, fps: null, hasVideo: true, hasAudio: false, size: 0
+    }
+    const clip: Clip = {
+      id: 'c', assetId: 'w', trackId: 'v1', start: 0, duration: LENGTH, inPoint: 0, volume: 1,
+      transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1, fit: 'cover' },
+      color: { brightness: 0, contrast: 1, saturation: 1 },
+      keyframes: { opacity: keys }
+    }
+    return { ...emptyProject(), settings: { width: HW, height: HH, fps, sampleRate: 48000 }, assets: [asset], clips: [clip] }
+  }
+
+  /** The mean grey of every frame of an export, decoded whole and in order. */
+  async function everyFrame(name: string, fps: number, keys: Keyframe[]): Promise<number[]> {
+    const out = join(heldDir, `${name}.mp4`)
+    const plan = buildRenderPlan({ project: heldProject(fps, keys), outputPath: out })
+    await run(FFMPEG, plan.args, { maxBuffer: 32 * 1024 * 1024 })
+    const { stdout } = await run(
+      FFMPEG,
+      ['-hide_banner', '-loglevel', 'error', '-i', out, '-vsync', 'passthrough',
+       '-f', 'rawvideo', '-pix_fmt', 'gray', 'pipe:1'],
+      { encoding: 'buffer', maxBuffer: 64 * 1024 * 1024 }
+    )
+    const bytes = stdout as unknown as Buffer
+    const size = HW * HH
+    const means: number[] = []
+    for (let at = 0; at + size <= bytes.length; at += size) means.push(mean(bytes.subarray(at, at + size)))
+    rows.push(`${name}: ${means.map((m) => m.toFixed(1)).join(' ')}`)
+    return means
+  }
+
+  /*
+   * 5 and 8 are the plan's rows; at 30 fps both were late. 4 is late at 24
+   * fps (0.166666… written 0.1667, as frame 5 at 30). 25 fps was exact all
+   * along, and stays so.
+   */
+  for (const fps of [24, 25, 30]) {
+    for (const key of [4, 5, 8]) {
+      it(`${fps} fps, opacity held 0 → 1 at frame ${key}: the frame at the key is the first lit`, async () => {
+        const means = await everyFrame(`${fps}fps-key${key}`, fps, [
+          { frame: 0, value: 0, ease: 'hold' },
+          { frame: key, value: 1 }
+        ])
+        expect(means.length).toBe(LENGTH)
+        const lit = means.findIndex((m) => m > 128)
+        expect(lit, `the first lit frame (${means.map((m) => m.toFixed(0)).join(' ')})`).toBe(key)
+        // The frame before the key is still the held value, and the key's frame is the new one, whole.
+        expect(means[key - 1]).toBeLessThan(30)
+        expect(means[key]).toBeGreaterThan(200)
+      }, 120_000)
+    }
+  }
+
+  /*
+   * And a curve that does not hold is untouched.
+   *
+   * Where a segment eases or runs linearly, both sides of its boundary give
+   * the key's own value AT the key, so moving the boundary half a frame earlier
+   * changes nothing a frame can land on. Every frame is held to the preview's
+   * `valueAt`, read on the export's own scale (frame 0 at value 0, frame 8 —
+   * the key at 1 — at value 1).
+   */
+  it('a linear rise and a smooth fall land every frame where the preview has it, at 30 fps', async () => {
+    const keys: Keyframe[] = [
+      { frame: 0, value: 0 },
+      { frame: 5, value: 0.5 },
+      { frame: 8, value: 1, ease: 'smooth' },
+      { frame: 11, value: 0 }
+    ]
+    const means = await everyFrame('30fps-eased', 30, keys)
+    expect(means.length).toBe(LENGTH)
+    const lo = means[0]
+    const hi = means[8]
+    expect(hi - lo).toBeGreaterThan(150)
+    for (let frame = 0; frame < LENGTH; frame++) {
+      const read = (means[frame] - lo) / (hi - lo)
+      expect(read, `frame ${frame}`).toBeCloseTo(valueAt(keys, frame, LENGTH, 1), 1)
+    }
   }, 120_000)
 })

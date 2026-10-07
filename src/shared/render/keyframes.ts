@@ -284,6 +284,30 @@ export interface ExpressionOptions {
    * curve is written once rather than twice.
    */
   timeVar?: string
+  /**
+   * Where each segment ends: `'frame'` (the default) or `'instant'`.
+   *
+   * A picture filter sees its time only at frame times, so a segment ends
+   * HALF A FRAME before its key, `((frame − 0.5) / fps).toFixed(6)`: frame
+   * f − 1 falls below that and frame f does not, at any rate, and no frame
+   * time is near enough for the rounding to decide. It used to end at the key
+   * itself, `(frame / fps).toFixed(4)`, and rounding UP put the boundary past
+   * the frame: frame 5 at 30 fps is 0.16666…, under 0.1667, so a held key
+   * stepped on frame 6 in the export and on frame 5 in the preview. At 30 fps
+   * that was every key on a frame ≡ 2 (mod 3), at 24 and 60 every one ≡ 1,
+   * measured through the render (docs/CLIPS.md §3.2, EFFECTS.md §45). Where
+   * a segment eases, both sides agree at the key, so a frame can tell no
+   * difference.
+   *
+   * `'instant'` is the key's own time, for a clock that runs BETWEEN frames:
+   * the sound. `volume` evaluates once per audio frame (2048 samples here),
+   * at that frame's own start, so a held step lands on the first audio frame
+   * at or after the key: 2 to 37 ms after it over sixteen measured keys. On
+   * the half frame, three of those came in BEFORE their key (30 fps frame 8
+   * at −10.7 ms) — early, not fixed. The envelope keeps exactly the
+   * expression it always had (EFFECTS.md §45).
+   */
+  boundary?: 'frame' | 'instant'
 }
 
 /**
@@ -294,7 +318,7 @@ export interface ExpressionOptions {
  * animation mechanism in the renderer already known to work.
  */
 export function keyframeExpression(keys: Keyframe[], options: ExpressionOptions): string {
-  const { durationFrames, fps, startSeconds, fallback, precision = 4, timeVar = 't' } = options
+  const { durationFrames, fps, startSeconds, fallback, precision = 4, timeVar = 't', boundary = 'frame' } = options
   const map = options.transform ?? ((v: number): number => v)
   const fixed = (value: number): string => map(value).toFixed(precision)
 
@@ -303,6 +327,9 @@ export function keyframeExpression(keys: Keyframe[], options: ExpressionOptions)
   if (points.length === 1) return fixed(points[0].value)
 
   const time = (frame: number): number => startSeconds + frame / fps
+  /** Where the segment that ends at this key ends — see `boundary`. */
+  const edge = (frame: number): string =>
+    boundary === 'instant' ? time(frame).toFixed(4) : (startSeconds + (frame - 0.5) / fps).toFixed(6)
 
   let expression = fixed(points[points.length - 1].value)
   for (let i = points.length - 1; i >= 1; i--) {
@@ -323,10 +350,10 @@ export function keyframeExpression(keys: Keyframe[], options: ExpressionOptions)
       const shaped = a.ease === 'smooth' ? `(${p})*(${p})*(3-2*(${p}))` : p
       segment = `${from.toFixed(precision)}+(${(to - from).toFixed(precision)})*(${shaped})`
     }
-    expression = `if(lt(${timeVar},${t1.toFixed(4)}),${segment},${expression})`
+    expression = `if(lt(${timeVar},${edge(b.frame)}),${segment},${expression})`
   }
   // Before the first key the clip waits at its opening value.
-  return `if(lt(${timeVar},${time(points[0].frame).toFixed(4)}),${fixed(points[0].value)},${expression})`
+  return `if(lt(${timeVar},${edge(points[0].frame)}),${fixed(points[0].value)},${expression})`
 }
 
 /** Does this clip animate this property? One key is a value, not an animation. */

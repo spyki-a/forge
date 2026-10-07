@@ -1749,7 +1749,11 @@ export function buildRenderPlan(request: RenderRequest): RenderPlan {
             durationFrames: clip.duration,
             fps,
             startSeconds: 0,
-            fallback: volume
+            fallback: volume,
+            // The sound's clock runs between frames: its segments end on the
+            // key's own instant, not the picture's half frame (keyframes.ts;
+            // heard in volumeEnvelope.int's held keys).
+            boundary: 'instant'
           })}':eval=frame`
         : volume === 1
           ? null
