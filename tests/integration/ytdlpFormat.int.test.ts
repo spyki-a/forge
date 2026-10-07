@@ -25,8 +25,11 @@ import { ensureYtDlp, type YtDlpTool } from '../../src/main/ingest/binary'
  * Which yt-dlp: the app's own way of finding one, `ensureYtDlp()` —
  * FORGE_YTDLP, a managed copy, PATH, or fetched from GitHub and checked against
  * its published checksums — with userData pointed at a temp folder, so a fetch
- * never lands in the real one (as exactCut.int.test.ts). CI installs no yt-dlp
- * (ci.yml sets up Python with no pip install), so there it is fetched.
+ * never lands in the real one (as exactCut.int.test.ts); under CI, a folder in
+ * FORGE_TEST_YTDLP_CACHE. CI installs no yt-dlp (ci.yml sets up Python with no
+ * pip install), so there it is the managed copy actions/cache kept from this
+ * week's last green run, or, on a miss, the app's own fetch, retries and
+ * checksum included (ci.yml; docs/INGEST.md, "When GitHub has a bad minute").
  */
 
 const run = promisify(execFile)
@@ -88,16 +91,21 @@ const AUDIO = { format_id: 'aac', width: null, height: null, vcodec: 'none', aco
 
 beforeAll(async () => {
   dir = await mkdtemp(join(tmpdir(), 'forge-ytdlp-'))
-  // A managed copy, if one has to be fetched, lands in this temp userData — never the real one.
-  process.env.FORGE_TEST_USERDATA = join(dir, 'userData')
+  // A managed copy, if one has to be fetched, lands in this temp userData — never the real one. Under CI
+  // it lands under FORGE_TEST_YTDLP_CACHE instead, a folder ci.yml keeps between runs, so one run's
+  // fetched copy is the next run's managed copy (docs/INGEST.md, "When GitHub has a bad minute").
+  const cache = process.env.FORGE_TEST_YTDLP_CACHE
+  process.env.FORGE_TEST_USERDATA = cache ? join(cache, 'ytdlp-format') : join(dir, 'userData')
   try {
     tool = await ensureYtDlp()
   } catch (err) {
     toolReason = `no yt-dlp: ${err instanceof Error ? err.message : String(err)}`
   }
-  // Longer than ensureYtDlp can take at its worst (binary.ts: three 15 s `--version` checks, then 60 s
-  // for the checksums, 300 s for the binary and 15 s to run it), so a slow fetch reaches need()'s reason
-  // rather than a bare "Hook timed out".
+  // Longer than ensureYtDlp takes at its worst on a runner's link (binary.ts, FETCH_RETRY: three 15 s
+  // `--version` checks; the fetch's 360 s for trying — every try, wait and wait for an answer; then at
+  // most 60 s of a body gone silent, and 15 s to run it: 480 s, held to this hook by ytdlpBinary.test.ts),
+  // so a slow fetch reaches need()'s reason rather than a bare "Hook timed out". A body still arriving
+  // is not cut off at any total time — for a user's slow link — and on a runner's link is quick.
 }, 600_000)
 
 afterAll(async () => {
@@ -112,8 +120,8 @@ let told = false
  * Run, or say why not. Without a yt-dlp the case is SKIPPED, with the reason —
  * not returned from, which counted as a pass and so certified a selector
  * nothing had checked. Under CI (`CI` set, as GitHub Actions sets it) it
- * FAILS with that reason instead: there the tool is fetched, and a fetch that
- * fails must not leave this file green.
+ * FAILS with that reason instead: there the tool is the cached managed copy or
+ * a fresh fetch, and a fetch that fails must not leave this file green.
  */
 function need(ctx: TestContext): void {
   if (tool) return

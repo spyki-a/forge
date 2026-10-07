@@ -90,6 +90,53 @@ jobs:
 
       - run: npm run typecheck
 
+      # yt-dlp, kept between runs. exactCut and ytdlpFormat get it the app's
+      # own way, `ensureYtDlp()` (src/main/ingest/binary.ts), and under CI they
+      # FAIL rather than skip when it cannot be had — so every run fetching it
+      # from GitHub made every GitHub hiccup a red build: run 37655072539 went
+      # red on Windows in an hour GitHub was answering "Internal Server Error",
+      # and the same code re-run as 37655616322 was green (most likely this
+      # fetch; the red run's log could not be read). The fetch now tries
+      # again (FETCH_RETRY); this makes it about once a week instead of every
+      # push — until a green run of the week saves the cache, every push still
+      # fetches, because a red job saves nothing.
+      #
+      # What is cached is the app's MANAGED copy — `<userData>/tools/` under
+      # the userData each test points at FORGE_TEST_YTDLP_CACHE — not a file
+      # for FORGE_YTDLP. On a miss the tests run the app's real fetch, retries
+      # and checksum included, exactly as a user's first download does, and a
+      # hit is the copy that fetch verified. FORGE_YTDLP would skip that path
+      # altogether, and need a download of its own that nothing verifies.
+      # Only `tools/` is kept: exactCut downloads into the same userData.
+      #
+      # The key is:
+      #   - the OS and the ARCHITECTURE: releaseAsset decides by both. Today
+      #     both Windows arches get yt-dlp.exe and the Mac's is universal, but
+      #     the day an arch gets its own file, a runner restoring another
+      #     arch's copy would find it answering --version under emulation and
+      #     accept it without a word;
+      #   - the ISO week, so a copy is at most a week behind the release a
+      #     user would get;
+      #   - a hash of the fetch's own code (binary.ts, release.ts). A hit
+      #     skips the fetch entirely — the redirect, the real SHA2-256SUMS,
+      #     the rename over a fresh exe, its first --version — so without
+      #     this a change to that code would not meet GitHub until the next
+      #     week, and its failure would land on an unrelated commit. With it,
+      #     the push that changes the fetch runs the fetch.
+      # Deliberately no restore-keys: an older copy restored would be found as
+      # the managed copy, nothing would fetch, and the new key would save that
+      # same copy again — the cache would never refresh, and a fetch change
+      # would never be fetched. The cache saves only when the job is green.
+      - name: Name this week's yt-dlp cache
+        id: ytdlp-week
+        shell: bash
+        run: echo "week=$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/forge-ytdlp/*/userData/tools
+          key: yt-dlp-${{ runner.os }}-${{ runner.arch }}-${{ steps.ytdlp-week.outputs.week }}-${{ hashFiles('src/main/ingest/binary.ts', 'src/shared/ingest/release.ts') }}
+
       # Integration tests included on purpose. They shell out to ffmpeg with
       # real paths, and a runner's Windows path — C:\a\forge\forge — is exactly
       # the shape that breaks filter arguments and concat lists.
@@ -99,6 +146,9 @@ jobs:
       # behind it needs an account: run 37655072539 could not be read from
       # the sandbox for exactly that reason.
       - run: npm test -- --reporter=default --reporter=github-actions
+        env:
+          # Where the yt-dlp tests put their userData; cached above.
+          FORGE_TEST_YTDLP_CACHE: ${{ runner.temp }}/forge-ytdlp
 
       - run: npm run build
 

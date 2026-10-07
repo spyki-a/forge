@@ -50,7 +50,10 @@ import { FFMPEG, outputDir, run, writeNote } from './output'
  *
  * How it decides to run: yt-dlp is `ensureYtDlp()` (FORGE_YTDLP, a managed copy,
  * PATH, or fetched from GitHub and checked against its published checksums,
- * into a temp userData), and the http leg needs the port. Without either the
+ * into a temp userData — under CI one in FORGE_TEST_YTDLP_CACHE, where
+ * actions/cache keeps the managed copy from this week's last green run, so CI
+ * usually runs that and fetches only on a miss: ci.yml, docs/INGEST.md), and
+ * the http leg needs the port. Without either the
  * leg is SKIPPED with the reason printed — except under CI (`CI` set, as
  * GitHub Actions sets it), where a leg that cannot run FAILS with that reason:
  * this file is the 2018 build's only measurement, and a quiet skip there would
@@ -359,8 +362,9 @@ beforeAll(async () => {
   ])
   sourceAudio = await pcm(join(media, 'audio.m4a'))
 
-  // A managed copy, if one has to be fetched, lands in a temp userData — never the real one.
-  process.env.FORGE_TEST_USERDATA = join(tmpdir(), 'forge-exactcut-userdata')
+  // A managed copy, if one has to be fetched, lands in a temp userData — never the real one. Under CI
+  // the folder is FORGE_TEST_YTDLP_CACHE, which ci.yml keeps between runs (docs/INGEST.md).
+  process.env.FORGE_TEST_USERDATA = join(process.env.FORGE_TEST_YTDLP_CACHE || tmpdir(), 'forge-exactcut-userdata')
   try {
     tool = await ensureYtDlp()
     lines.push(`yt-dlp ${tool.version ?? '?'} (${tool.source}), ffmpeg ${FFMPEG}`)
@@ -421,10 +425,12 @@ beforeAll(async () => {
     const code = (err as NodeJS.ErrnoException).code
     portReason = `this machine will not bind a local port (listen ${code ?? String(err)}) — the dev sandbox refuses it; CI does not`
   }
-  // Longer than ensureYtDlp can take at its worst (binary.ts): three 15 s `--version` checks while
-  // locating, then a fetch of 60 s for the checksums, 300 s for the binary and 15 s to run it — about
-  // 420 s. A shorter hook would time out first and print a bare "Hook timed out" on every test
-  // instead of the reason need() gives.
+  // Longer than ensureYtDlp takes at its worst on a runner's link (binary.ts, FETCH_RETRY): three 15 s
+  // `--version` checks while locating, the fetch's 360 s for trying (every try, wait and wait for an
+  // answer), at most 60 s of a body gone silent, and 15 s to run it — 480 s, held to this hook by
+  // ytdlpBinary.test.ts. A body still arriving is not cut off at any total time, and on a runner's
+  // link it is quick. A shorter hook would time out first and print a bare "Hook timed out" on every
+  // test instead of the reason need() gives.
 }, 600_000)
 
 afterAll(async () => {

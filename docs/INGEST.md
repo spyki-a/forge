@@ -51,6 +51,58 @@ publishes, and can be refreshed without shipping anything. Same precedent as
 the depth model and Kokoro's voice files. Order of preference: `FORGE_YTDLP`,
 our managed copy, then a copy already on PATH.
 
+**When GitHub has a bad minute, the fetch tries again.** On 2026-10-07 Windows
+CI run 37655072539 went red with no readable reason, and the same code re-run as
+37655616322 was green, in an hour GitHub was answering pushes with "Internal
+Server Error" — most likely this fetch, though the red run's log could not be
+read. The fetch tried once, and `exactCut` and `ytdlpFormat` fail
+rather than skip under CI when they cannot get yt-dlp. Each network step — the
+checksums, then the binary — is now tried up to four times, 8, 16 and 32 s
+apart (`FETCH_RETRY` in `binary.ts`), on a dropped, refused, unresolved or
+stalled connection (no answer within 60 s for the checksums, 300 s for the
+binary, or a body that sends nothing for 60 s) or a 5xx, 429 or 408, and never
+on a 404 or a checksum mismatch, which are real; the verification runs once,
+outside the retry, on what the last try brought. The fetch has 360 s — the old
+60 s and 300 s added up — **for trying**: no wait starts that would end past
+it, and no try waits for an answer past it. It does not stop a body that is
+still arriving. That is a choice, and the user's to change: one version of
+this capped the whole transfer at 360 s, which made a first download on a link
+under about 0.85 Mbit/s (yt-dlp_macos measured 37,146,048 bytes, yt-dlp.exe
+17,840,399) fail every time where the old code finished slowly, so it was
+reverted to the old rule — a body is limited by silence, not by total time.
+The cost is that a body still moving has no ceiling; on a runner's link that
+never matters, and the integration hooks' arithmetic (45 s locating + 360 s +
+60 s of silence + 15 s to run = 480 s, inside 600 s) is held by a unit test.
+The silence limit was undici's own 300 s; it is 60 s now, because 300 s would
+leave a stall no time inside the 360 s for the try it should buy. A failure
+names the last try's own reason and how many tries it took, where a network
+error used to say only "fetch failed". A job that is not refreshing now stops
+waiting on its own cancel while the shared fetch carries on for anyone else;
+before, its signal was dropped, and with retries an offline cancel would have
+sat through a minute of waits. And CI keeps the managed copy between runs:
+`actions/cache`, keyed on the OS, the architecture, the ISO week and a hash of
+`binary.ts` and `release.ts`, caching only `tools/` under the userData the two
+tests put in `FORGE_TEST_YTDLP_CACHE` — so a miss runs the app's own verified
+fetch, a hit is the copy it verified, and a push that changes the fetch's code
+runs the real fetch on that push rather than the next week. No restore-keys,
+because a restored older copy would be found, nothing would fetch, and the
+cache would never refresh. The real fetch then runs about once a week per OS
+instead of on every push — every push until a green run of the week saves the
+cache, since a red one saves nothing. `tests/ytdlpBinary.test.ts` holds the
+retry against a fake GitHub and the default policy to ranges, each case
+mutation-checked. Measured here (the sandbox's proxy, `NODE_USE_ENV_PROXY=1`):
+the first version of the retry, which still read bodies with `arrayBuffer()`,
+fetched the real binary into the cache folder's managed path, `yt-dlp_macos` at
+the published `0f192b7e…`; and with a managed copy already there and Node's
+network off, both tests used it (`exactCut`'s note: `yt-dlp 2026.07.04
+(managed)`). The body is now read chunk by chunk, for the silence timer; that
+read was measured on the real `SHA2-256SUMS` (two chunks, decoded and parsed,
+`yt-dlp_macos` listed) with the binary's request answered 404 locally, so the
+37 MB binary through the new read has not been fetched here — the first CI
+miss fetches it. A connection reset's exact shape could not be measured — the
+sandbox will not listen on a socket — so its fake follows the measured
+ENOTFOUND one and undici's source.
+
 **Downloads have their own queue.** The render queue runs one job at a time
 because exports are CPU-bound. A download is network-bound; behind an export it
 would wait for nothing, in front of one it would hold it up for nothing. Two
@@ -219,6 +271,14 @@ If it prints `vp9`/`opus` or `avc1`/`mp4a` and never `av01`, the selector is
 right. `yt-dlp --version` on the Surface, after the first fetch, is the other
 one: that is where a missing Visual C++ runtime would show, and a clean machine
 is the only place it can.
+
+The CI cache of yt-dlp ("When GitHub has a bad minute") has not run yet. That
+it should work is from reading actions/cache v6's code (it turns `/` into `\`
+on Windows, and posts only on success), not from a run. The first green push of
+a week should show `Cache saved with key: yt-dlp-Windows-X64-<week>-<hash>` in
+"Post Run actions/cache"; the next push, `Cache restored from key: …`, and
+exactCut's note should then say `(managed)`. A push that touches `binary.ts` or
+`release.ts` should miss.
 
 ## Still to build
 
