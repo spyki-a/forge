@@ -18,7 +18,7 @@ import { getSidecar } from './sidecar/service'
 import { SIDECAR_METHODS } from '@shared/sidecar/protocol'
 import { VOCABULARY_MAX_CHARS, segmentIntoSentences, type Transcript, type Word } from '@shared/transcript'
 import { JobQueue } from './queue'
-import { startRender, type RenderOptions } from './render/renderJob'
+import { releasesTemporaries, startRender, sweepTemporaries, type RenderOptions } from './render/renderJob'
 import { probeEncoders } from './render/encoders'
 import { keyDistanceScale } from './render/keyScale'
 import type { EncodeSpec } from '@shared/render/encode'
@@ -93,6 +93,12 @@ export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
   const renders = new Map<string, RenderOptions>()
   /** Temp files to remove once a render reaches a terminal state. */
   const cleanups = new Map<string, () => Promise<void>>()
+  /*
+   * What failed exports kept — each one's graph script and captions, for the
+   * command it logged (renderJob.ts `releasesTemporaries`) — goes after a week.
+   * Not awaited: nothing waits on it, and a folder it cannot read is skipped.
+   */
+  void sweepTemporaries(join(app.getPath('userData'), 'tmp'), 7 * 24 * 60 * 60 * 1000)
 
   /*
    * Every export is one pass now.
@@ -238,7 +244,9 @@ export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
         const cleanup = cleanups.get(job.id)
         if (cleanup) {
           cleanups.delete(job.id)
-          void cleanup()
+          // A failed export keeps its captions beside its graph's script, for
+          // the command it logged; the launch sweep takes them (renderJob.ts).
+          if (releasesTemporaries(job.status)) void cleanup()
         }
       }
     }
@@ -1015,7 +1023,9 @@ export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
       fontsDir: captions?.fontsDir,
       captionOverlay: request.captionOverlay,
       resolveAsset: resolveAssetFile,
-      extraTransitions: await getMaskTransitions()
+      extraTransitions: await getMaskTransitions(),
+      // The graph's script goes beside the captions' .ass (captions.ts).
+      tempDir: join(app.getPath('userData'), 'tmp')
     }
 
     return queue.add(

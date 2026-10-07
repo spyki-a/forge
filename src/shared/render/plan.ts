@@ -430,12 +430,35 @@ function zoomKeyframeFilter(
   clip: Clip,
   stream: { width: number; height: number } | null,
   fps: number,
-  canvas: { width: number; height: number }
+  canvas: { width: number; height: number },
+  /**
+   * The input brings its own frames — footage, or a moment's numbered PNGs —
+   * rather than one picture to hold.
+   */
+  moving: boolean
 ): string | null {
   const keys = clip.keyframes?.zoom
   if (!hasKeys(clip.keyframes, 'zoom')) return null
 
-  const frames = Math.max(2, Math.round(clip.duration))
+  /*
+   * zoompan's `d` is output frames PER INPUT FRAME.
+   *
+   * A photograph arrives as frames of one picture, and the first of them is
+   * held for the whole clip: `d=<the clip's length>`. Footage given that held
+   * its own first frame too — the export froze on frame 0 while the same clip
+   * unkeyed moved (docs/CLIPS.md §3.4, EFFECTS.md §46), and so did a moment's
+   * drawn frames. So anything that brings its own frames gets
+   * `d=1`, and an `fps=` in front of it: zoompan stamps each frame it writes
+   * as its own output count over `fps` (vf_zoompan.c at the Windows build's
+   * f22fcd4), so it has to meet the project's frames, one in for one out —
+   * and at speed 1 nothing earlier in the chain resamples the source
+   * (speedVideoFilter is null there). Without it a 60 fps source played at
+   * half speed and a 29.97 one ran ahead of its sound, measured through the
+   * render (tests/integration/zoomVideo.int.test.ts). With it, `on` counts the
+   * clip's own frames, which is what the curve below is written against.
+   */
+  const frames = moving ? 1 : Math.max(2, Math.round(clip.duration))
+  const lead = moving ? `fps=${fps},` : ''
   // zoompan counts output frames from zero in `on`, and like the others it runs
   // before setpts — so the curve is clip-relative throughout.
   const z = keyframeExpression(keys!, {
@@ -470,7 +493,7 @@ function zoomKeyframeFilter(
   const pre = factor < 1 ? `scale=${sourceW}:${sourceH}:flags=bicubic,` : ''
 
   return (
-    `${pre}zoompan=z='${z}':d=${frames}:` +
+    `${lead}${pre}zoompan=z='${z}':d=${frames}:` +
     // Centred: the frame grows around the middle rather than drifting.
     `x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':` +
     `s=${sourceW}x${sourceH}:fps=${fps}`
@@ -1188,7 +1211,9 @@ export function buildRenderPlan(request: RenderRequest): RenderPlan {
         : motionFilter(clip, asset, clip.duration, fps, undefined, streamSize ?? undefined, {
             width,
             height
-          }) ?? zoomKeyframeFilter(clip, streamSize, fps, { width, height }),
+          }) ??
+          // Footage, and a moment's drawn frames: each brings its own frames (EFFECTS.md §46).
+          zoomKeyframeFilter(clip, streamSize, fps, { width, height }, asset.kind === 'video' || asset.frames !== undefined),
       fitFilter(box.width, box.height, fitFor(box, streamSize)),
       `fps=${fps}`,
       'setsar=1',

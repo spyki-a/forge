@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buildRenderPlan, type RenderRequest } from '@shared/render/plan'
+import { filterGraphOf, withGraphFile } from '@shared/render/graphFile'
 import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
 
 /*
@@ -132,6 +133,9 @@ const BAKE: Overlay = { listPath: '/tmp/caption-bake/captions.txt', y: 280, heig
 
 /** The shape with more than one clip off zero, so more than one delay. */
 const SEVERAL = 'music and a second clip both off zero, so two clips are delayed'
+
+/** The shape with zoom keys on footage. */
+const ZOOMED = 'zoom keys on a video clip, at speed 1'
 
 /*
  * The shapes that between them reach every branch of the audio tail — which is
@@ -273,6 +277,18 @@ const SHAPES: { name: string; project: Project; range?: { start: number; end: nu
         clip({ id: 'm', assetId: 'm', trackId: 'a1', start: 30, duration: 60 })
       ]
     })
+  },
+  {
+    /*
+     * §3.4's footage zoom: `fps=<rate>,zoompan=…:d=1:…:fps=<rate>`. zoompan is
+     * 2013 and fps 2012; zoompan's restamping (each frame its own output count
+     * over its fps, vf_zoompan.c:158/:225 at f22fcd4) is why the `fps=` must
+     * come first. zoomVideo.int is the render, in Windows CI.
+     */
+    name: ZOOMED,
+    project: project({
+      clips: [clip({ id: 'a', keyframes: { zoom: [{ frame: 0, value: 1 }, { frame: 59, value: 1.5 }] } })]
+    })
   }
 ]
 
@@ -368,6 +384,45 @@ describe('a filter graph runs on the oldest bundled ffmpeg', () => {
     expect(order.every((i) => i >= 0), `${chains[0][2]} has settb, setpts and fps=30`).toBe(true)
     expect([...order].sort((a, b) => a - b), `${chains[0][2]} in order`).toEqual(order)
     expect(graph).toContain(`[cap]overlay=0:${BAKE!.y}:shortest=1`)
+  })
+
+  it('reaches the footage zoom, one frame in for one out, at the project rate', () => {
+    /*
+     * Membership and order, not the expression. Every zoompan in the shape (one
+     * today), its chain read back to the input label: an `fps=30` before it, and
+     * `d=1`. `d=<the clip's length>` froze the clip on its first frame, and
+     * `d=1` without the `fps=` played 60 fps footage at half speed
+     * (EFFECTS.md §46); which frames each form shows is zoomVideo.int's to say.
+     */
+    const graph = graphOf(SHAPES.find((s) => s.name === ZOOMED)!.project)
+    const chains = [...graph.matchAll(/\[\d+:v\]([^;]*)/g)].map((m) => m[1]).filter((c) => c.includes('zoompan='))
+    expect(chains, 'chains with a zoompan').toHaveLength(1)
+    const steps = chains[0].split(/,(?![^']*'(?:[^']*'[^']*')*[^']*$)/)
+    const zoom = steps.findIndex((f) => f.startsWith('zoompan='))
+    expect(steps.slice(0, zoom), 'an fps= before the zoompan').toContain('fps=30')
+    expect(steps[zoom].split(':'), 'one output frame per input frame').toContain('d=1')
+  })
+
+  it('spawns every shape with its graph in a file, by an option the 2018 build has', () => {
+    /*
+     * The export does not pass the graph scanned above on its command line: it
+     * writes it to a file and passes `-filter_complex_script <file>`
+     * (docs/CLIPS.md §3.7, EFFECTS.md §47). That option is ffmpeg 2.0's (2013,
+     * Changelog), and at the Windows build's f22fcd4 it is in the option table
+     * (fftools/ffmpeg_opt.c:3478) and reads the file whole into the same
+     * graph_desc `-filter_complex` fills (:3109). The newer spelling of the
+     * same thing, `-/filter_complex <file>`, is 7.0 (2024): nothing spawned may
+     * use it. Every shape, every argument.
+     */
+    for (const { name, project: p, range, captionOverlay } of SHAPES) {
+      const args = buildRenderPlan({ project: p, outputPath: '/tmp/out.mp4', range, captionOverlay }).args
+      const spawned = withGraphFile(args, '/tmp/graph-0.txt')
+      expect(spawned.filter((a) => a === '-filter_complex_script'), name).toHaveLength(1)
+      expect(spawned.filter((a) => a === '-filter_complex'), name).toHaveLength(0)
+      expect(spawned.filter((a) => /^-\//.test(a)), `${name}: -/option is ffmpeg 7.0`).toEqual([])
+      // What goes in the file is the graph the scan above read.
+      expect(filterGraphOf(args), name).toBe(graphOf(p, range, captionOverlay))
+    }
   })
 
   it('reaches the range trims, so the scan above is not of a graph without them', () => {

@@ -445,6 +445,31 @@ returns.
 
 ### 3.4 Zoom keys on a video clip export a frozen frame · half a day
 
+> **Built 2026-10-07** — `src/shared/render/plan.ts` (`zoomKeyframeFilter`
+> takes `moving`: for footage, and for a moment's drawn frames, it emits
+> `fps=${fps},zoompan=…:d=1:…:fps=${fps}`; a photograph keeps
+> `d=<length>`), the render check `tests/integration/zoomVideo.int.test.ts`
+> (into `tests/output/zoom-video/`: 60 fps 3 s and 29.97 fps 20 s sources
+> with AAC, plus a moment's 30 fps PNGs, each frame's index drawn as bars and
+> read through the zoom, against the unkeyed export: length, stream starts,
+> every frame's source index, frames 0 / mid / last through zoompan's own
+> window), and `tests/oldestFfmpeg.test.ts` (the shape in `SHAPES`, `fps=30`
+> before its zoompan and `d=1`). Measured through `buildRenderPlan`: before,
+> all three froze on source frame 0 (**the moment's frames too**, which the
+> plan did not list; the Keys tab offers Zoom on them); after, every frame is
+> the unkeyed export's, frames 0 / mid / last within 0.55 of a level. The
+> export's length never showed the bug (the overlay gates the clip's
+> stream), so the per-frame index is the check. `d=1` alone: 60 fps at half
+> speed, 29.97 one frame ahead from frame 500; behind the trailing `fps=`
+> the 60 fps chain alone made 46,080 frames over 1,536 s (zoompan forwards
+> its input's EOF pts unrescaled, `vf_zoompan.c:310` at f22fcd4, read).
+> zoompan's window rounds x down to the chroma grid (`:183`), modelled in
+> the check. No refusal was needed on the Mac; **the 2018 build is Windows
+> CI's run of the check on the next push**, so `Keyframes.tsx` and
+> `CurvePanel.tsx` are untouched. Mutations: `d` back (all three frozen),
+> the leading `fps=` dropped (60 and 29.97 fail, the 30 fps moment passes),
+> the predicate video-only (the moment fails). `EFFECTS.md` §46.
+
 **What is wrong, measured.** `zoomKeyframeFilter` emits
 `zoompan … d=${clip.duration}` (`plan.ts:437`, `:472`), and zoompan's `d` is
 output frames *per input frame*. A video clip with zoom keys 1 → 1.5 exported
@@ -540,6 +565,40 @@ interpreter, each of `voice.speak` and `voice.voices` is in `degraded`
 method.
 
 ### 3.7 The graph goes in a file — `-filter_complex_script` · half a day
+
+> **Built 2026-10-07** — `src/shared/render/graphFile.ts` (`withGraphFile`,
+> one pair counted with `filter`; `filterGraphOf`; `commandLine` for the
+> pasteable command), `src/main/render/renderJob.ts` (writes
+> `graph-<uuid>.txt` to `RenderOptions.tempDir`, set to `userData/tmp` in
+> `src/main/ipc.ts`, spawns the swapped argv; removes the script after a
+> finished or cancelled export, keeps it after a failure and logs the
+> command with its path; a failed export keeps its captions' `.ass` too,
+> which the graph names, and a launch sweep removes both after a week —
+> `releasesTemporaries`, `sweepTemporaries`), `tests/graphFile.test.ts`,
+> `tests/integration/longGraph.int.test.ts` (through `startRender`, into
+> `tests/output/long-graph/`), `tests/fixtures/longGraph.ts`, and
+> `tests/oldestFfmpeg.test.ts` (every shape spawned through the swap; no
+> `-/option`, which is 7.0). **Two things the plan did not know, measured:**
+> (1) the limit is met TODAY by any timeline of cuts — a talk cut into
+> **55** pieces is a 33,052-character command line, so it cannot start on
+> Windows; with the script the ceiling is about 370 pieces at that path,
+> where the inputs alone reach it. (2) **The 360-cut followed clip cannot
+> render on either build in any route**: `keyframeExpression` nests one `if`
+> per key, and ffmpeg's parser stops at 100 levels (`eval.c`
+> `stack_index`), so one track of about 93 keys or more is refused
+> (`EFFECTS.md` §48; a flat sum of steps parsed 540 cuts, measured, not
+> built — the reframe needs it). So the render check and the unit test use
+> a timeline of 72 cuts (graph 35,107, line 41,894; 6,632 after the swap
+> for the unit test's Windows paths): 216 frames each on its own source
+> frame through `startRender`, the script on disk as the job starts, and
+> every decoded frame identical to the inline route's on the Mac; on
+> Windows the inline route must be refused. Mutations: the swap skipped,
+> the spawn given `plan.args`, the script removed on failure, `indexOf` for
+> the count, the `-/` spelling (and, alone, a `-/` beside the script), a
+> failed export's captions released, the sweep without its age or its name
+> check — each caught by the unit or floor tests; `longGraph.int` fails
+> today's `renderJob.ts` on the Mac (no script written) but passes the swap
+> mutations here, and is their Windows measurement. `EFFECTS.md` §47, §48.
 
 **What is wrong, measured by the review.** The whole graph is one argument
 (`plan.ts:1979`), and Windows' `CreateProcess` caps a command line at 32,767

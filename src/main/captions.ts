@@ -9,7 +9,11 @@ import { resolveStyle, type StyleOverrides } from '@shared/captions/style'
 export interface PreparedCaptions {
   subtitlesPath: string
   fontsDir: string | undefined
-  /** Remove the temp file once the render finishes, succeeds or not. */
+  /**
+   * Remove the temp file once the render is done or cancelled. A failed render
+   * keeps it with its graph's script, for the command it logged, until the
+   * launch sweep (render/renderJob.ts, `releasesTemporaries`).
+   */
   cleanup: () => Promise<void>
 }
 

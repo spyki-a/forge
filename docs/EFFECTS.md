@@ -4085,3 +4085,388 @@ each run to a file, then restored byte-identical with `cmp`):
 
 **Still open:** CLIPS.md (§3b, near line 1111) still describes the bake's
 w32 and w35 as −1. That is another agent's file, so it is left for them.
+
+## 45. A held key lands on its own frame — the half-frame boundary (2026-10-07)
+
+Measured for `docs/CLIPS.md` §3.2 on the development Mac's bundled ffmpeg
+(the 4.1.5 package, reporting 4.4), through the real `buildRenderPlan`. The
+render check is the new block in `tests/integration/keyframes.int.test.ts`
+(artefacts and every frame's mean in `tests/output/held-keys/`): a white
+64×48 still over the black canvas, opacity keyed `[{0, 0, hold}, {K, 1}]`,
+12 frames, decoded whole (`-vsync passthrough`, grey).
+
+**Today's code, reproduced.** Each boundary was `lt(t, (frame/fps).toFixed(4))`.
+The first lit frame of each export:
+
+| fps | key 4 | key 5 | key 8 |
+|---|---|---|---|
+| 24 | **5** | 5 | 8 |
+| 25 | 4 | 5 | 8 |
+| 30 | 4 | **6** | **9** |
+
+The rounding is UP that makes a key late, so which frames it hits depends on
+the rate, counted over frames 1 to fps: at 30 fps every frame ≡ 2 (mod 3)
+(5/30 = 0.16666… written 0.1667), at 24 and 60 fps every frame ≡ 1 (mod 3)
+(4/24 is the same 0.16666…), at 25 and 50 none. The plan named only the
+30 fps family; the 24 fps row at frame 4 is new, and is in the check.
+
+**The fix.** A picture's segment ends half a frame before its key,
+`lt(t, (start + (frame − 0.5)/fps).toFixed(6))`, in `keyframeExpression`
+(`src/shared/render/keyframes.ts`), the opening boundary included. Frame
+f − 1 is half a frame under it and frame f half a frame over, at any rate.
+After it, all nine rows light on their key, and the frame before stays at 0
+(mean 0.0 before, 253.0 at the key, at every rate).
+
+- **The eased control.** The same check renders a linear 0 → 0.5 → 1 rise
+  over frames 0–8 and a smooth fall to 0 at 11, at 30 fps, and holds every
+  frame to `valueAt` within 0.05. Means before the fix: 0, 24, 50, 76, 100,
+  126, 168, 210, **252**, 187, 65, 0; after: the same but **253** at frame 8.
+  Frame 8 is the key on a frame ≡ 2 (mod 3): the old boundary (0.2667) still
+  put it in the 5 → 8 segment, whose start is written 0.1667, so p was
+  0.99967 and alpha 254.96 rather than 255. Every other frame is unchanged,
+  as the plan said: where a segment does not hold, both sides give the key's
+  own value at the key.
+- **Still in four places: a segment's start and span.** Inside a segment, `p`
+  divides by `span.toFixed(4)` from `t0.toFixed(4)`. At 60 fps the frame
+  at a key at 8 (start 0.1333 for 0.13333…) evaluates 0.99933 for 1, a
+  fifth of one alpha level. Left; `tests/keyframes.test.ts` holds the
+  preview and the expression to 0.005 at every frame and says why.
+- **The sound keeps the key's own instant.** The volume envelope compiles
+  through the same function, but `volume`'s `t` runs between video frames:
+  it evaluates once per audio frame, at that frame's start. Measured with a
+  scratch render through the plan (a 440 Hz tone at half scale under a grey
+  still, the envelope held 0 → 1, first decoded sample over 0.05), at 24, 25,
+  30 and 60 fps with keys at 4, 5, 8 and 20: every step lands on a multiple
+  of 2048 samples, the first at or after the key, 2.0 to 37.3 ms after it
+  (30 fps key 4: key at sample 6400, sound at 8192). On the half frame,
+  three of the sixteen came in BEFORE their key: 30 fps keys 4 and 8 at
+  −5.33 and −10.67 ms, 60 fps key 8 at −5.33 ms. So `ExpressionOptions`
+  gained `boundary: 'frame' | 'instant'`; the envelope passes `'instant'`,
+  which writes exactly the old `time(frame).toFixed(4)`, and its sixteen
+  measurements came back identical to today's, expressions included.
+  That scratch measurement was deleted, and review found the choice guarded
+  only by a unit test reading the expression: dropping `'instant'` passed
+  every rendered volume check (audioSurface, split, audioFade,
+  volumeEnvelope). So `tests/integration/volumeEnvelope.int.test.ts` now
+  renders it — a tone on a1, held 0 → 1 at 30 fps keys 4 and 8, decoded as
+  48 kHz mono, the first sample over a quarter of peak at or after the key
+  and under 2048 samples past it: key 4 at sample 8192 for 6400
+  (+37.33 ms), key 8 at 14336 for 12800 (+32.00 ms). The loudest sample
+  before the step is 7% of peak (AAC's pre-echo). The 2048 is the wav
+  demuxer's packet, 4096 bytes of 16-bit mono: `MAX_SIZE` in
+  `libavformat/wavdec.c` at f22fcd4 (:622, :700), the `max_size` option's
+  default at n4.4 — read at both, run on the Mac; Windows CI runs the check.
+- **The text pins.** `tests/keyframes.test.ts` asserted
+  `toContain('2.0000)')` for "the last segment ends at t=2"; that anchor also
+  matched the last key's VALUE, `,2.0000)`, and still passed with the fix in.
+  It is now a step check: for a held key on every frame from 1 to 2 × fps at
+  24, 25, 30, 50 and 60 fps, the frame before evaluates the old value and the
+  frame at it the new, with `t` formed as ffmpeg forms it (`n × (1/fps)`).
+  "Agrees with valueAt" sampled every third frame from 0 — at 30 fps exactly
+  the frames ≡ 0 (mod 3), never the late ones; it now takes every frame at
+  24, 25, 30 and 60 fps, with keys at 4, 5 and 8 among them.
+  `tests/maskKeyframes.test.ts` pinned `if(lt(T,0.0000)`; it now asserts `T`
+  is the variable, and the clip's own time is left to
+  `maskKeyframes.int`'s rendered "runs on the clip's own time".
+- **Mutations** (each run to a file, restored byte-identical with `cmp`, each
+  anchor counted to one match):
+  - the boundary back to `(frame/fps).toFixed(4)`: 7 failures — the render
+    check's 30 fps key 5 (first lit **6**), key 8 (**9**) and 24 fps key 4
+    (**5**); the step check (24 fps, frame 1), "agrees with valueAt" (24 fps
+    frame 4), the instant test's picture half, and the plan test's opacity;
+  - the envelope's `boundary: 'instant'` dropped: the plan test fails (the
+    envelope a quarter frame before its key reads 1, not 0), and so do both
+    held-volume renders in `volumeEnvelope.int` — key 4 in at 6144
+    (−5.33 ms), key 8 at 12288 (−10.67 ms), before their keys.
+- **The 2018 build.** Nothing new is emitted: `lt`, `if` and decimal
+  constants, the same eval as before. The render check runs in Windows CI on
+  the next push.
+
+## 46. Zoom keys on footage — zoompan meets one frame per frame, at the project rate (2026-10-07)
+
+Measured for `docs/CLIPS.md` §3.4 on the development Mac's bundled ffmpeg
+(4.1.5 package, reporting 4.4), through the real `buildRenderPlan`. The render
+check is `tests/integration/zoomVideo.int.test.ts` (artefacts, frames 0 / mid
+/ last of each export as PNGs and a README in `tests/output/zoom-video/`).
+Fixtures: 320×180, each frame's own index drawn as ten 16 px bars across the
+middle half (`geq` on `N`), grey round them. **60 fps for 3 s** and **29.97
+fps (30000/1001) for 20 s**, each H.264 with a 440 Hz AAC track, and a
+moment's drawn frames (numbered PNGs from 0, 30 fps, 2 s, `MediaAsset.frames`).
+A 30 fps project, the clip from 0 for the whole source, zoom keyed
+1 → 1.5 linearly over the clip. Each export is held to the same clip exported
+WITHOUT keys: frame count, the streams' start and duration (@ffprobe-installer's
+ffprobe), the source index each frame shows (read through the zoom), and
+frames 0 / mid / last against the unzoomed frame put through zoompan's own
+window (below).
+
+**Today's code, reproduced** (`d=${clip.duration}`): every export had the
+plan's length and the unzoomed clip's stream times, and every one showed
+source frame **0** from its first frame to its last — 60 fps frame 1 showed 0
+for 2, 29.97 frame 1 showed 0 for 1, and the moment's frames froze the same
+way (it is the same filter, and the Keys tab offers Zoom on any clip with an
+asset). Frames mid / last against the unzoomed: 127.5 / 127.5 mean levels
+(60 fps), 127.4 / 127.5 (29.97), in the check's first version (a centred
+window; the modelled one is below).
+
+**What zoompan does, read at the Windows build's commit** (`f22fcd4483`,
+`libavfilter/vf_zoompan.c`, fetched from GitHub; the plan's line numbers
+agree): the output time base is `av_inv_q(s->framerate)` (:133); each frame
+it writes is stamped `pts = s->frame_count` and the count incremented
+(:158, :225–226), whatever the input's time; `on` is
+`outlink->frame_count_in` (:170, :278); `d` is evaluated once per input
+frame into `nb_frames` (:300), the frames written from it; and at the end
+`ff_outlink_set_status(outlink, status, pts)` (:310) forwards the input's EOF
+pts in the INPUT's time base. The chain alone on the fixtures (`-vf`, no
+plan), frames and seconds out:
+
+| chain | 60 fps, 3 s (180 frames) | 29.97 fps, 20 s (600 frames, 20.02 s) |
+|---|---|---|
+| `zoompan=…:d=1:…:fps=30` | 180 over 6.000 s — **half speed** | 600 over 20.000 s |
+| `fps=30,zoompan=…` | 90 over 3.000 s | 601 over 20.033 s |
+| `zoompan=…,fps=30` (the plan's trailing `fps=`) | **46,080 over 1,536 s** | **600,600 over 20,020 s** |
+| `fps=30,zoompan=…,fps=30` | 90 over 3.000 s | 601 over 20.033 s |
+
+The third row is the EOF pts: 3 s in the mp4's 1/15360 time base is 46,080,
+read as 1/30 s, and the trailing `fps=` fills to it (the plan's 30,720 over
+1,024 s is the same 512× for a 2 s source). In the export none of these
+lengths survives: the clip's stream is gated by the overlay
+(`enable=between(t,…)`, `eof_action=pass`) and the canvas decides the length,
+so frame counts and stream times match the unzoomed export under every form
+below. What the forms change is WHICH source frame is on screen.
+
+**The fix.** For an input that brings its own frames (`asset.kind ===
+'video'`, or `asset.frames`), `zoomKeyframeFilter` emits
+`fps=${fps},zoompan=…:d=1:…:fps=${fps}`; a photograph keeps `d=<length>`
+(`src/shared/render/plan.ts`, the new `moving` argument at the one call site).
+After it, all three exports: every frame shows the unzoomed export's source
+frame (60 fps: 2k at frame k; 29.97: k, then k − 1 from frame 500, where
+`fps=` repeats 499), the plan's length, video and audio from 0 for 3 / 20 s
+as unzoomed, and frames 0 / mid / last against the unzoomed through zoompan's
+window: 0.01 / 0.49 / 0.40 (60 fps), 0.07 / 0.55 / 0.27 (29.97), 0.05 / 0.27
+/ 0.30 (moment), in mean levels; one bar of another index is 22 at 1× and 33
+at 1.5×, so the check's bar is 3.
+
+- **zoompan's window is not the centred one.** `w = in->width * (1.0 /
+  zoom)` truncates, x is clipped and truncated, then `x &= ~((1 <<
+  log2_chroma_w) - 1)` (:176, :183, the same for y at :189) rounds it DOWN to
+  the chroma grid. On yuv420p footage at 1.5× that is x = 52 for a centred
+  53.3, and the bars landed 2–3 px right of a centred model (first check's
+  last frame: 18.3 levels off; edges at 42 … 283 for a predicted 40 … 280).
+  Modelled, it is 0.40. The moment's PNGs arrive as RGB, and zoompan's format
+  list (the same at f22fcd4 and n4.4) has planar RGB with no grid: there the
+  centred x fitted (0.30, against 7.87 with the grid). Which format a build
+  negotiates is not read, so the check takes whichever grid fits and the
+  README says which.
+- **A freeze frame** (`Clip.hold`) with zoom keys on the 60 fps fixture,
+  scratch render through the plan: 60 frames, the first bar edge moving
+  80 → 48 over 50 frames as the zoom predicts. The hold's `tpad` runs at the
+  source rate; the leading `fps=` brings it to 30.
+- **Mutations** (each run to a file, restored byte-identical with `cmp`,
+  each anchor counted to one):
+  - `d` back to the clip's length for footage: 4 failures — all three
+    exports frozen on source frame 0 from frame 1, and the floor test's
+    `d=1`;
+  - the leading `fps=` dropped (`d=1` alone): 3 failures — 60 fps frame 1
+    shows 1 for 2 (**half speed**), 29.97 frame **500** shows 500 for 499
+    (ahead of its sound from there), and the floor test's order; the
+    moment's 30 fps frames PASS, which is why a same-rate fixture is never
+    the only one;
+  - the predicate back to `asset.kind === 'video'`: the moment fails alone
+    (frozen, 0 for 1).
+- **The floor.** `tests/oldestFfmpeg.test.ts` has the shape ("zoom keys on a
+  video clip, at speed 1") in `SHAPES`, scanned by the blocklist, and asserts
+  at its one zoompan an `fps=30` before it and `d=1` on it — membership and
+  order, not the expression. zoompan merged in 2013 and fps in 2012; the
+  restamping above is the f22fcd4 source. **Dated, not run:** the render check
+  runs in Windows CI on the next push, and is the 2018 measurement.
+- **Not covered.** A clip at another speed already had `setpts,fps=` in front
+  of the zoom; the leading `fps=` is then a second one at the same rate.
+  `motionFilter`'s camera moves still use `d=<length>`, and are offered on
+  photographs only (`canMoveCamera`).
+
+## 47. The graph goes in a file — `-filter_complex_script`, and the limit a timeline of cuts meets today (2026-10-07)
+
+For `docs/CLIPS.md` §3.7. Development Mac, the bundled ffmpeg (4.1.5 package,
+reporting 4.4); the 2018 build read in its source and left to Windows CI.
+
+**The limit.** Windows' `CreateProcess` takes a command line of at most
+32,767 characters, and `buildRenderPlan` put the whole filtergraph in one
+argument. Lengths through the real plan, a 1080×1920 30 fps export of one
+talk (`C:\Users\someone\Videos\Podcast episode 41 (full).mp4`), counted as
+Windows would build the line (each argument plus a space, quotes round any
+with a space, the installed `ffmpeg.exe` path first;
+`tests/fixtures/longGraph.ts`). Each piece is 75 frames; how far apart the
+pieces start in the source changes the `-ss` digits on the inputs, so the
+lines depend on it a little (the graph does not):
+
+| pieces of the talk on V1 | source frames apart | graph | command line today | with the graph in a file |
+|---|---|---|---|---|
+| 54 | 750 | 27,450 | 32,453 | 5,066 |
+| **55** | 750 | 27,962 | **33,052** | 5,153 |
+| 72 | 750 | 36,666 | 43,235 | 6,632 |
+| 360 | 150 | 188,930 | 220,378 | 31,511 |
+| **380** | 142 | 199,530 | 232,703 | **33,236** |
+
+The first three are the unit test's spacing (`tests/graphFile.test.ts`, 25 s
+apart); 360 and 380 are spread evenly over the 30-minute talk (54,000 ÷
+pieces, rounded down), since 750 apart would run past its end. At 750, 360
+pieces are 220,555 / 31,688 and 380 are 232,895 / 33,428; spread evenly,
+the first count past the limit is 375 (32,805). Re-measured in review.
+
+Each piece is an input and a chain: about 512 characters of graph and 87 of
+inputs (`-ss … -t … -i <path>`) at this path. So **an export of 55 pieces
+of one talk cannot start on Windows today** — not only the plan's followed
+clip: any timeline of cuts, as transcript cutting and Clip it make. On the
+Mac (ARG_MAX about a megabyte) every row runs. With the graph in a file the
+ceiling moves to about 370 pieces at this path length, where the inputs
+alone reach the limit; one input per asset rather than per clip would lift
+that, and is not built.
+
+**The plan's 360-cut followed clip cannot render at all, on either build** —
+measured in §48. Its graph would be long, but it is refused by ffmpeg's
+expression parser long before its length matters, so the render check here
+is a timeline of cuts, the graph that reaches the limit today.
+
+**The option.** `-filter_complex_script <file>` is ffmpeg 2.0 (2013,
+Changelog). At the Windows build's commit `f22fcd4483`
+(`fftools/ffmpeg_opt.c`, fetched from GitHub): the option table has it
+(:3478), and `opt_filter_complex_script` (:3109) reads the file whole with
+`read_file` (:1569: `avio_open`, a NUL appended) into the same `graph_desc`
+that `opt_filter_complex` fills from its argument (`av_strdup`), with the
+same `input_stream_potentially_available = 1`. So the graph is parsed exactly
+as the argument was. The path is an option value opened by `avio_open`,
+whose protocol lookup treats a drive letter as a file path, not text inside
+the graph, so neither the drive-letter colon nor the escaping table applies.
+Measured on the Mac: a script under a folder named `Jürgen's tmp; [x]=y`
+(non-ASCII, a quote and every graph metacharacter) renders; a trailing
+newline in the script renders; a missing script fails before any input
+opens, "Error opening file …". The newer spelling of the same thing,
+`-/filter_complex <file>`, is 7.0 (2024) and is never emitted.
+
+**The fix.** `src/shared/render/graphFile.ts`: `withGraphFile(args, file)`
+swaps the one `-filter_complex <graph>` pair for `-filter_complex_script
+<file>`, counted with `filter` (it throws on none or two), keeping every
+other argument in order; `filterGraphOf(args)` returns the graph;
+`commandLine(binary, args, platform)` quotes an argv for pasting.
+`buildRenderPlan` is unchanged and still emits `-filter_complex`, so the test
+files that read it need nothing: at HEAD 19 files under `tests/` name
+`-filter_complex` (the plan said 22; counted, not assumed), 14 of them in the
+exact `args.indexOf('-filter_complex')` form, and the two this change edits
+(`maskKeyframes.test.ts` for §45, `oldestFfmpeg.test.ts` for §46 and here)
+are not edited at the read. `src/main/render/renderJob.ts` writes
+the graph (UTF-8, `graph-<uuid>.txt`, synchronously, because the queue needs
+its handle at once) to `RenderOptions.tempDir` — `userData/tmp`, beside the
+captions' `.ass`, set in `ipc.ts`; the system temp folder otherwise — and
+spawns the swapped argv. A finished or cancelled export removes the script.
+**A failed one keeps it** and logs the pasteable command, with the script's
+path where the graph was (`console.error`, `[forge] export failed — its
+graph is in …`); before this nothing reported the command at all, though
+`run.ts` says the argv is complete so that it can be pasted.
+
+- **A failed export keeps its captions too.** Review found the kept command
+  could not run as logged: for an export with libass captions the graph
+  names `captions-<uuid>.ass` in `subtitles=`, and the queue listener in
+  `ipc.ts` removed that file on every finish, failed included. It now asks
+  `releasesTemporaries(status)` (`renderJob.ts`): done or cancelled, the
+  `.ass` goes; failed, it stays beside the script. And what failed exports
+  keep no longer piles up: `registerIpc` starts `sweepTemporaries` on
+  `userData/tmp` at launch, which removes `graph-<uuid>.txt` and
+  `captions-<uuid>.ass` older than a week and nothing else (the folder is
+  shared with `graphics/tier2.ts`'s base pass). The baked-caption route's
+  concat list lives in `caption-bake/` and is replaced by the next bake;
+  that is unchanged. Tested in `tests/graphFile.test.ts`; the one line in
+  `ipc.ts` that calls the predicate is not (nothing here drives
+  `registerIpc`).
+
+**Measured after it.** `tests/integration/longGraph.int.test.ts` (into
+`tests/output/long-graph/`): a 30 s source whose frames carry their index as
+ten bars, cut into 72 pieces of 3 frames, 12 source frames apart, with AAC.
+The plan's graph is **35,107** characters and its line **41,894** here. Run
+through `startRender` itself (the export job, its temporaries in the check's
+folder): 216 frames, every one the source frame its piece should show, and no
+script left behind. The same plan spawned with the graph on the line: on the
+Mac it renders, and **all 216 decoded frames are identical** to the script
+route's (the md5 of each frame's luma plane, decoded to grey — not the
+files); on Windows the check asserts it is refused (the Windows run is the
+measurement; the error it records is not known here). Rendered in 2.2 s.
+
+- **Today's code against the new checks.** With `renderJob.ts` as at HEAD:
+  the export-job unit tests fail (the graph on the command line, no script
+  kept on failure). `longGraph.int` as first written PASSED on the Mac — its
+  "no script left behind" is empty whether a script was removed or never
+  written. Review added a read of the folder the moment `startRender` hands
+  back the job (the script is written synchronously, before the spawn):
+  exactly one `graph-<uuid>.txt`, holding the plan's graph. Against HEAD's
+  `renderJob.ts` that now fails on the Mac ("expected [] to have a length
+  of 1"). It still cannot see the spawn itself — the swap skipped, or the
+  spawn handed `plan.args`, both still write the file and render here — so
+  that half remains Windows CI's to measure.
+- **Mutations** (each run to a file, restored byte-identical with `cmp`, each
+  anchor counted to one):
+  - the swap skipped (`withGraphFile` returns the argv): 5 unit failures —
+    the pair test, the 72-cut test (43,235 not under 30,000), all three
+    export-job tests — and the floor test's spawned-argv scan;
+  - the spawn given `plan.args` (the file still written): the three export-job
+    tests;
+  - the script removed on failure too: "keeps the script when the export
+    fails";
+  - the count replaced by `indexOf`: "refuses an argv with no graph, or with
+    two";
+  - the option spelled `-/filter_complex`: the floor test, at its count of
+    `-filter_complex_script` (0), one line BEFORE its "no `-/` option"
+    check — so that check had never failed on its own. Review ran it alone:
+    the script pair kept and a `-/filter_complex` added beside it fails the
+    floor test at exactly that line ("-/option is ffmpeg 7.0: expected
+    [ '-/filter_complex' ] to deeply equal []"), 1 failure;
+  - `releasesTemporaries` true for `failed`: its test fails; the sweep
+    without its age check, or without its name check: the sweep test fails
+    (four removed for two).
+  `longGraph.int` passes the first two on the Mac (the file is still
+  written), and under them it fails on Windows, which is why it runs there.
+- **The floor.** `tests/oldestFfmpeg.test.ts` now spawns every shape through
+  `withGraphFile`: one `-filter_complex_script`, no `-filter_complex`, no
+  `-/` option, and the script's text is the graph the blocklist scanned.
+  **Dated, not run:** the 2018 build reading the script, which
+  `longGraph.int` measures in Windows CI on the next push.
+
+## 48. A keyed track of about 93 keys is refused — ffmpeg's expression parser stops at 100 levels (2026-10-07)
+
+Found by §47's first render check, which put the plan's 360-cut followed clip
+(360 held keys and 180 eased, as zoom keys on one clip) through the script
+route: ffmpeg refused the graph, "Missing ')' or too many args in 'if(lt(…'",
+"Failed to configure output pad on Parsed_zoompan". The same on the command
+line.
+
+**Why, read at both builds** (`libavutil/eval.c`, f22fcd4 and n4.4, fetched
+from GitHub): `av_expr_parse` starts the parser with `p.stack_index=100`
+(:700 at f22fcd4, :706 at n4.4), and `parse_expr` refuses when it reaches 0
+(`//protect against stack overflows`, :614–616). `keyframeExpression`
+compiles a track as nested `if(lt(t,…),segment,if(…))`, so every key is one
+more level; and since `parse_primary` ignores what the nested `parse_expr`
+returns for any function's second and third arguments (:410, :414), the
+refusal surfaces as "Missing ')'". Same code at both, so the same on Windows
+(read, not run).
+
+**Measured through the plan**, a 64×36 still, keys one frame apart,
+alternating values, bisected:
+
+| track | held keys | eased (`smooth`) keys |
+|---|---|---|
+| zoom | renders with 97, refused at 98 | 92 / 93 |
+| rotation | 98 / 99 | 93 / 94 |
+| opacity | 97 / 98 | 92 / 93 |
+
+So **today an export fails outright when one keyed track has more than about
+92 keys**, and the plan's followed crop (`CLIPS.md` §4.6–4.7: a crop
+`keyframeExpression` of 180 keys for ten minutes, 540 for a 30-minute talk)
+cannot render on either build in that shape, whatever its length.
+
+**A shape that parses, measured (not built):** a flat sum of steps.
+`parse_subexpr` reads `+` and `-` in a loop, not by recursion, so depth does
+not grow with terms. A zoom of 540 held cuts written as
+`1+(0.50000)*gte(on,2)+(-0.25000)*gte(on,4)+…` (12,205 characters, through
+`-filter_complex_script`, on the Mac) rendered 1080 frames with the edge of a
+still at 40 / 21 / 30 px exactly where zoom 1 / 1.5 / 1.25 put it, frame 0
+to 1079. An eased segment is the same kind of term, `Δ × shape(clamp((t −
+t₀)/span, 0, 1))`, which is 0 before its segment and Δ after it; not run.
+This is the reframe's prerequisite, and a fix for today's >92-key tracks.

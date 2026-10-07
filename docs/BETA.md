@@ -113,13 +113,24 @@ below), each with a test that fails when the bug is put back:
    saying nothing autosaves.
 6. **A moment whose bake throws** — DONE 2026-09-27: `exportBake.ts` leaves
    the moment out (`tests/moment.test.ts`, mutation-checked).
-7. **Every split clicks** (`CLIPS.md` §3.3): the audio delay is rounded to
+7. **Every split clicks** — DONE 2026-10-05 (`9a85d9f`): `adelay` in
+   samples (`tests/integration/audioSplit.int.test.ts`, mutation-checked,
+   green on the 2018 build in Windows CI; `CLIPS.md` §3.3, `EFFECTS.md` §39).
+   Was: (`CLIPS.md` §3.3) the audio delay is rounded to
    whole milliseconds (`plan.ts:1761`); at 30 fps frame 47 lands 16 samples
    late at 48 kHz, a measured click. `adelay` in samples instead.
-8. **Zoom keys on a video clip export a frozen frame** (`CLIPS.md` §3.4):
+8. **Zoom keys on a video clip export a frozen frame** — DONE 2026-10-07
+   (this change): footage and a moment's frames get `fps=<rate>,zoompan=…:d=1`
+   in `plan.ts` (`tests/integration/zoomVideo.int.test.ts`, 60 and 29.97 fps
+   sources, mutation-checked; the 2018 build is the next push's Windows CI;
+   `CLIPS.md` §3.4, `EFFECTS.md` §46). Was: (`CLIPS.md` §3.4)
    zoompan's `d=${clip.duration}` holds frame 0. `fps=${fps},zoompan=…:d=1`
    (`d=1` alone plays a 60 fps source at half speed, measured).
-9. **Held keyframes land one frame late at 30 fps** (`CLIPS.md` §3.2):
+9. **Held keyframes land one frame late at 30 fps** — DONE 2026-10-07 (this
+   change): picture keys end on the half frame, `keyframes.ts`
+   (`tests/integration/keyframes.int.test.ts`, every frame at 24, 25 and
+   30 fps, mutation-checked; `CLIPS.md` §3.2, `EFFECTS.md` §45). Was:
+   (`CLIPS.md` §3.2)
    `toFixed(4)` of `frame/fps` puts a key at frame 5 on frame 6, for every
    key on a frame ≡ 2 (mod 3). Compare against the half-frame boundary
    instead.
