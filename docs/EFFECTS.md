@@ -3331,3 +3331,312 @@ case — a failed or cancelled fetch deleted the cached tracks.
   margins over the measured 1.5–3.5 s runs; no real stall was observed.
 - A partially captioned video, for the merge's kept stretches.
 - The heatmap on low-view videos: 4 of 8 had none, view counts not recorded.
+
+## 41. The exact cut — does its first frame equal the source's? (2026-10-06)
+
+Measured for `docs/CLIPS.md` §16.13 (§7.1, §15 row 14; M0's exit, §3b.9)
+on the development Mac with **yt-dlp 2026.08.19** (pip, Python 3.14.6 — the
+copy on PATH, which `ensureYtDlp` finds here: `FORGE_YTDLP` unset, no managed
+copy) and **our bundled ffmpeg** (`@ffmpeg-installer/darwin-arm64` 4.1.5,
+build `92718-g092cb17983`, reporting 4.4; yt-dlp's `-v` calls it
+`ffmpeg 4.4 (setts)`), against public YouTube videos, **named by id only**;
+nothing downloaded is kept or committed. Every yt-dlp command line came from
+the app's own builder — `buildYtDlpArgs` and `outputStem`, bundled with
+esbuild into a driver — for the request Clip it sends, `{kind: 'video',
+quality: '1080p', range, exact}`. `XDG_CACHE_HOME` pointed at a temp folder
+(the sandbox cannot write yt-dlp's cache). **The 2018 Windows build was not
+run**; it is the test's, in CI (below).
+
+**The formats measured**, as the app's selector picks them. The runs did not
+log them (only `dQw4w9WgXcQ`'s `-v` run printed `137+140`), so they were
+re-read on 2026-10-07 with the same builder's argv plus `--simulate --print
+%(format_id)s…`: `dQw4w9WgXcQ` **137+140** (avc1.640028, 1080p25),
+`aqz-KE-bpKQ` **299+140** (avc1.64002A, 1080p60), `JGwWNGJdvx8` **137+140**
+(1080p; YouTube lists 24 fps, the file is 23.976), `RcGyVTAoXEU`
+**248-sr+140** (VP9 1080p25 — YouTube's `-sr` "super resolution" stream),
+`NCe4xZxczz4` **136+140** (avc1.4D401F, 720p; listed 30, the file 29.97);
+140 is the mp4a.40.2 AAC. **yt-dlp ran without a JavaScript challenge
+solver**: every `dQw4w9WgXcQ` run (13 of them, and again on 2026-10-07)
+warned `Signature solving failed` and `n challenge solving failed: Some
+formats may be missing` (yt-dlp's EJS wiki); the other four videos' runs
+wrote nothing to stderr. So a re-measurement — another yt-dlp, a solver
+installed, another day — can land on other formats: compare the itags first.
+
+**The command lines.** yt-dlp's, as its own `-v` printed it (that one run
+appended `-v`; its file was byte-identical to the plain run's, one sha256):
+`--ignore-config <url> --no-playlist --playlist-items 1 --encoding utf-8
+--ffmpeg-location <bundled ffmpeg> --newline --progress --progress-template …
+--progress-delta 0.2 --print @forgetitle@%(title)s --print
+after_move:@forgefile@%(filepath)s --no-simulate -P <dir> -o <stem>.%(ext)s
+-f bv*[vcodec!*=av01]+ba/b[vcodec!*=av01] --retries 5 --socket-timeout 30
+-S res:1080,vcodec:h264,acodec:m4a --merge-output-format mp4
+--download-sections *60.000-66.000 --force-keyframes-at-cuts`. The ffmpeg it
+ran, URLs and headers elided:
+
+- exact: `<bundled ffmpeg> -y -loglevel quiet -headers … -ss 60 -t 6 -i
+  <video> -headers … -ss 60 -t 6 -i <audio> -map 0:0 -map 1:0 -f mp4
+  file:<stem>.mp4.part`;
+- fast (`*50.000-76.000`): the same with `-ss 50 -t 26`, and **`-c copy`**.
+
+So an exact cut is an input seek (`-ss` before `-i`, ffmpeg's accurate seek)
+and a **re-encode of the whole section with ffmpeg's defaults** — there is no
+`-c` at all: libx264 (core 161, crf 23, preset medium, keyint 250) and the
+native AAC encoder (~130 kb/s). Not a re-encode "around the marks". The 6 s
+exact cut of `dQw4w9WgXcQ` was 2.89 MB (3.72 Mb/s against the source
+stream's 3.04); its padded fast cut 10.7 MB.
+
+`-loglevel quiet`, because the app's argv `--print`s and `--print` implies
+`--quiet`: **a failed cut reports only `ffmpeg exited with code 1`**, ffmpeg's
+own reason never reaching the job's error (seen once in this work, below).
+
+**How it was read.** The reference is each video's full download through the
+same builder with no range (a `-c copy` merge, both streams `start_time
+0.000`), decoded from 0 s with no seek. Reference and cut were decoded alike
+by the bundled ffmpeg: video to 160×90 grey (`scale=…:flags=area`),
+`-vsync passthrough`, each frame labelled with `showinfo`'s pts — edit lists
+honoured, as the app's renders read a file; audio to mono f32 at its own
+44.1 kHz. A cut's frame is matched by Pearson correlation over the 14,400
+pixels against every reference frame from 6 s before the start to 12 s after
+it, and then the cut's first second, frame for frame, against every
+alignment. A cut's sound: 400 ms from file t = 0 (and for a fast cut from
+t = 10 s) against every lag of the reference within ±1.5 s, by FFT; the second
+peak given is the best more than 2 ms from the first.
+
+**The exact cut** (`--force-keyframes-at-cuts`). None of these starts is a
+keyframe (the nearest: 57.04 and 61.88 s on `dQw4w9WgXcQ`, 59.10, 60.47 and
+62.20 s on `aqz-KE-bpKQ`), and only 60.000 is a whole second.
+
+| video | fps, codec | asked (s) | first frame is source (s) | at file t (s) | corr; the runner-up's | first second aligned; one frame off | sound at file 0 is source (corr; 2nd peak) |
+|---|---|---|---|---|---|---|---|
+| `dQw4w9WgXcQ` | 25, H.264 | 60.000 | **60.000** | 0.000 | 0.999988; 0.989312 | 0.999972; 0.9787 | **60.00000** (0.9886; 0.34) |
+| `dQw4w9WgXcQ` | 25 | 61.400 | **61.400** | 0.000 | 0.999948; 0.991610 | 0.999931; 0.9556 | **61.40000** (0.9935; 0.38) |
+| `dQw4w9WgXcQ` | 25 | 61.370 | 61.400 | 0.040 (belongs at 0.030) | 0.999948; 0.991610 | 0.999931; 0.9556 | **61.37000** (0.9958; 0.38) |
+| `dQw4w9WgXcQ` | 25 | 61.390 | 61.400 | 0.000 (belongs at 0.010) | 0.999948; 0.991610 | 0.999931; 0.9556 | **61.39000** (0.9965; 0.38) |
+| `aqz-KE-bpKQ` | 60, H.264 | 60.000 | **60.000** | 0.000 | 0.999965; 0.995602 | 0.999952; 0.9776 | **60.00000** (0.9995; 0.86) |
+| `aqz-KE-bpKQ` | 60 | 61.370 | 61.3833 | 0.0160 (belongs at 0.0133) | 0.999907; 0.994185 | 0.999905; 0.9883 | **61.37000** (0.9987; 0.55) |
+| `JGwWNGJdvx8` | 23.976, H.264 | 61.370 | 61.3947 | 0.041 (belongs at 0.0247) | 0.999992; 0.956609 (61.6449, six frames on: both neighbours scored lower) | 0.999950; 0.7801 | **61.37000** (0.9983; 0.61) |
+| `RcGyVTAoXEU` | 25, **VP9** | 60.000 | **60.000** | 0.000 | 0.999957; 0.999414 | 0.999947; 0.9992 | **60.00000** (0.9991; 0.47) |
+| `NCe4xZxczz4` | 29.97, H.264 720p | 61.370 | not pinned: a still slide, every frame within ±0.5 s at corr 1.000 | 0.033 | — | — | **61.37000** (0.9999; 0.50) |
+
+- **A start on the source's frame grid: the exact cut's first frame IS the
+  source's frame at that instant** — on three videos (`dQw4w9WgXcQ` at 60.0
+  and 61.4 s, `aqz-KE-bpKQ`, `RcGyVTAoXEU`; 25 and 60 fps, H.264 and VP9) —
+  and unambiguously: 0.99995–0.99999 against 0.9893–0.9994 for the runner-up,
+  a neighbouring frame on all four cuts (the one before on `dQw4w9WgXcQ` at
+  60.0 and on `RcGyVTAoXEU`, the one after on the other two), the first
+  second aligned at 0.99993–0.99997 against 0.9556–0.9992 one frame off. The
+  re-encode costs 0.00001–0.00005 of correlation; one frame off costs
+  0.0006–0.011. The fourth video, `JGwWNGJdvx8` (23.976 fps), was cut only
+  between frames (next bullet).
+- **A start between frames: the first frame is the next source frame** (the
+  first at or after the start — the accurate seek drops what is before it).
+  The encoder rounds its time to the nearer tick of a frame clock that starts
+  at the requested instant, and **the muxer writes that offset as an EMPTY
+  EDIT in the movie's 1 ms timescale**, rounded down: 10 ms late at 61.37 s
+  and 10 ms early at 61.39 s (25 fps: a 40 ms tick, so an edit of 40 ms or
+  none), 2.7 ms late at 60 fps (0.0160156 s — an edit of 16 ms, not 1/60),
+  16.3 ms late at 23.976 fps (0.041, not 0.0417) — always inside half a frame
+  of where it belongs against the sound, **but only through the edit list**.
+  Dumped (`elst`, by box) on the fixture's 12.41 s exact cut (the test,
+  below): video `[33 ms empty; 2000 ms from media time 1024/15360]`, audio
+  `[2000 ms from media time 1024/48000]` — first frame 0.0330078 s, the 33 ms
+  edit, not 1/30.
+- **Every exact cut carries small edit lists**, on the grid too: the video's
+  media time is x264's two-frame composition delay (1024/15360 at 30 fps,
+  512/15360 at 60, on the fixture's cuts), the audio's the AAC encoder's
+  1024-sample priming. A reader that ignores edit lists — the Mac ffmpeg with
+  `-ignore_editlist 1`, on the fixture's 12.4 and 12.41 s exact cuts — shows
+  the first frame at 0.0667 s on both (the delay, and the empty edit lost)
+  and the sound 1024 samples late (1024 more samples decoded, the content
+  shifted by exactly 1024: 21.3 ms at 48 kHz). So picture and sound depend
+  on the reader honouring `elst` at the scale of milliseconds, not seconds.
+- **The sound starts at the requested instant, to the sample**, on all nine:
+  0.00 ms at 44.1 kHz (22.7 µs a sample); the AAC encoder's priming is hidden
+  by the edit list ffmpeg writes. So on the frame grid sound and picture begin
+  at the same instant; between frames the picture is off by the rounding above
+  and by nothing else — as read by a demuxer that honours both edit lists.
+- A VP9 source comes out H.264 (it is re-encoded); the fast cut keeps VP9 in
+  mp4.
+
+**The fast cut** (`PAD_MS` either side, `-c copy`):
+
+| video | asked (s) | first packet (pre-roll) | first frame SHOWN is source (s) | file t = 10.000 s is source (s) | sound at file 0; at 10 s |
+|---|---|---|---|---|---|
+| `dQw4w9WgXcQ` 25 fps | 60 | −1.200 s (key 48.80) | **50.000** | **60.000** (corr 1.000000; the first second 1.000000 against 0.9787) | 50.00000; **60.00000** |
+| `dQw4w9WgXcQ` | 61.4 | −0.280 s (51.12) | **51.400** | **61.400** | 51.40000; **61.40000** |
+| `dQw4w9WgXcQ` | 61.39 | −0.280 s | 51.400, at 0 (10 ms early) | 61.400 | 51.39000; **61.39000** |
+| `dQw4w9WgXcQ` | 61.37 | −0.280 s | 51.400, at 0 (30 ms early) | 61.400 | 51.37000; **61.37000** |
+| `aqz-KE-bpKQ` 60 fps | 60 | −1.933 s (48.0667) | **50.000** | **60.000** | 50.00000; **60.00000** |
+| `RcGyVTAoXEU` 25 fps VP9 | 60 | −3.960 s | **50.000** | **60.000** | 50.00000; **60.00000** |
+| `JGwWNGJdvx8` 23.976 fps | 61.37 | −2.461 s | 51.3847, at 0 (14.7 ms early) | 61.3947, at 10.010 | 51.37000; **61.37000** |
+| `NCe4xZxczz4` 29.97 fps | 61.37 | −3.337 s | (a still) | (a still) | 51.37000; **61.37000** |
+
+- **The `PAD_MS` head holds on four videos** (23.976, 25 and 60 fps; H.264
+  and VP9): the requested start is at file t = 10.000 s, frame for frame
+  (corr 1.000000) on the three cut on the frame grid (`dQw4w9WgXcQ`,
+  `aqz-KE-bpKQ`, `RcGyVTAoXEU`), and within a frame on the fourth
+  (`JGwWNGJdvx8`, cut only at 61.37 s: its next frame, 61.3947, at 10.010 s);
+  sample for sample on all four — what `offsetIntoDownload` assumes, and
+  what §7.1 had measured on one.
+- The file carries the GOP before the padded start — 0.28 to 3.96 s of it
+  here — as packets before t = 0 that only the **edit list** hides; ffmpeg
+  honours it (these are ffmpeg's decodes). The first frame shown is the first
+  at or after the padded start, put at t = 0: **up to a frame early** against
+  the sound when the start falls between frames (30 ms of 40 at 61.37 s on a
+  25 fps source), never late.
+- The frames are the source's own bits (corr 1.000000). The sound at t = 0
+  decodes a little differently from the source (corr 0.955–0.9998: AAC
+  packets copied from mid-stream) and is the source's from the next packet on
+  (1.000000 at 10 s).
+
+**Without `--force-keyframes-at-cuts`** — the exact argv with that one flag
+filtered out, so `*60.000-66.000` unpadded and `-c copy` — on `dQw4w9WgXcQ`:
+60–66 s, first packet −2.96 s (the keyframe at 57.04), **first frame shown
+60.000** (corr 1.000000), sound 60.00000 (corr 1.0), 3.50 MB in 7.2 s against
+the re-encode's 2.89 MB in 7.5 s; 61.37 s, first packet −4.36 s, first frame
+shown 61.400 at t = 0 (30 ms early), sound 61.37000. **So on our Mac ffmpeg
+the flag is not what makes the first frame right — the edit list does that
+for a copy too.** What it buys: a file whose first packet is a keyframe at
+t = 0, with no SECONDS of pre-roll (3–4 s otherwise, which any player that
+ignores edit lists shows); and a start between frames placed within half a
+frame, not up to a whole one early. What it does NOT buy is a file free of
+edit lists: the exact cut still carries small ones (above — the two-frame
+composition delay, the 1024-sample priming, and between frames an empty edit
+in whole milliseconds), so how the 2018 demuxer and Chromium treat `elst`
+still matters, at the scale of milliseconds rather than seconds. What it
+costs: one generation at crf 23. The test pins the first two, and reads the
+second through the bundled ffmpeg — on Windows, the 2018 demuxer's reading
+of that empty edit.
+
+**Time**, one run each, network-bound (this Mac and connection; not a
+benchmark): an exact 6 s cut 4.9–31.8 s (1080p25 7.5–9.6 s over six runs;
+1080p60 30.3 and 4.9 s; 1080p23.976 31.8 s; 720p29.97 16.3 s), a padded fast
+one 14.9–21.8 s.
+
+**A link to a plain video file cannot be downloaded with the app's argv**
+(found building the test; not changed here). yt-dlp's generic extractor gives
+a direct link one format with **no vcodec** — measured on a `file://` URL with
+`--enable-file-urls`, which takes the same Content-Type branch as http — and
+the app's `-f bv*[vcodec!*=av01]+ba/b[vcodec!*=av01]` drops a format whose
+vcodec is unknown: `Requested format is not available`. With
+`[vcodec!*=?av01]` (the `?` lets an unknown through) the same link selects its
+format. An html5 page whose `<source>` names its codecs is no better: yt-dlp
+overwrites the parsed vcodec with None (`_parse_html5_media_entries`,
+`f.update(formats[0])`), measured as the same error. `format.ts` keeps AV1 out
+on purpose (the 2018 build cannot decode it, and an unknown codec could be
+AV1), so whether to let an unknown through is a decision, not a fix. The test
+therefore hands yt-dlp a format table.
+
+**The test**, `tests/integration/exactCut.int.test.ts` (CLIPS.md §7.7), into
+`tests/output/exact-cut/`:
+
+- The fixture is made in the test: 384×64, twelve bars of 32 px, bar b white
+  when bit b of the frame's index is set, lossless (libx264 `-qp 0`), 30 s at
+  30 and at 60 fps, keyframes every 2 s and nowhere else (`-keyint_min`,
+  `-sc_threshold 0`: without them x264 put keyframes at frames 48, 96, 128 …
+  at 30 fps and 64, 128, 192 … at 60, measured by the mutations below); and
+  an AAC m4a, a 2 kHz-a-second chirp
+  restarting every second from a base of 200–600 Hz that names the second
+  (five-second cycle), found in the source by FFT correlation within ±2.45 s.
+- The download is `downloadMedia` — the app's argv, `--ffmpeg-location` the
+  bundled binary — with `--load-info-json` in front: a video-only and an
+  audio-only format, as YouTube's extractor gives them, so FFmpegFD runs the
+  same two-input `-ss … -i … -ss … -i …` (the link in the argv is ignored with
+  a warning). Two legs: the streams as `file:<path>` URLs (a bare path is
+  refused: yt-dlp asks urllib for its cookies, "unknown url type"; a
+  `file://` URL reaches ffmpeg %-encoded, and on a path with a space — this
+  checkout's — failed `ffmpeg exited with code 1`), and the same streams over
+  node:http on 127.0.0.1, port 0, with Range.
+- Each leg: exact 12.4 s → the first frame is 372 and the first 60 run on
+  from it, the sound at file 0 is source 12.4 s within 1 ms, the first video
+  packet is at t ≥ 0 and a keyframe; fast 12.4 s → the first frame is
+  372 − `offsetIntoDownload`·fps, the clip's in-point by
+  `trimToRequestedRange` shows 372, the sound there is 12.4 s; exact 12.41 s →
+  373, within half a frame of its place, the sound 12.41 s; exact at 60 fps →
+  744. And the fixture itself, both sources: every frame reads back its
+  index, and the keyframes are every two seconds (60 frames at 30 fps, 120 at
+  60) — the cut checks pass whether or not 12.4 s is a keyframe, so only this
+  check sees it.
+- **Which binary reads what.** The bundled ffmpeg — the 2018 build on
+  Windows — makes the fixture and every cut, and reads back the frame
+  indices, the 12.41 s cut's first-frame time (`showinfo`'s pts_time with
+  `-copyts`: the demuxer's own reading of the empty edit) and the sound (so
+  the audio's priming edit too: ignored, it would be 21.3 ms late against a
+  1 ms tolerance). Only the first video packet (t ≥ 0, a keyframe) goes
+  through `@ffprobe-installer`'s ffprobe, which is another build everywhere —
+  n4.4.1 on this Mac (package 5.0.1), package 5.1.0 on win32-x64 — so in CI
+  that one check is a newer demuxer's reading, not the 2018 one's. The
+  README names both binaries by their `-version` line. (Until 2026-10-07 the
+  first-frame time was ffprobe's too; on the Mac the two agree, 0.0330078
+  and 0.033008.)
+- **On the Mac** (file leg; the http leg skipped, listen EPERM): exact 12.4 →
+  372 … 431, sound 12.40000 s (corr 0.9915), first packet 0 s, a keyframe;
+  fast (`*2.400-24.400`) → first frame 72, first packet −0.4 s, in-point 300
+  → 372, sound at 10 s 12.40000 (corr 1.0000); exact 12.41 → 373 at file
+  0.0330078 s, the 33 ms empty edit (belongs at 0.0233: 9.7 ms late, as on
+  YouTube), sound 12.41000; 60 fps → 744, sound 12.40000.
+- **How it decides.** yt-dlp is `ensureYtDlp()` with a temp userData
+  (FORGE_YTDLP, a managed copy, PATH, or fetched from GitHub against its
+  published checksums); the http leg needs the port. Without either, the leg
+  is skipped and says why on stderr — **except under CI (`CI` set), where it
+  fails with the reason**: this file is the 2018 build's only measurement
+  under a section cut. The setup hook allows 600 s, above `ensureYtDlp`'s
+  worst case (about 420 s: three 15 s `--version` checks while locating,
+  then 60 s for the checksums, 300 s for the binary and 15 s to run it), so a
+  slow fetch reaches `need()`'s reason rather than a bare "Hook timed out".
+- **Mutations**, in a copy of the tree (`section.ts` restored and `cmp`
+  identical after each; each anchor counted to one match): the exact section
+  a second late (`stamp(start + 1000)`) — all three exact cases fail, on the
+  index (402, 403, 804) and on the sound (13.4 s); the fast section a second
+  late — the fast case (102, in-point 402, sound 13.4 s);
+  `--force-keyframes-at-cuts` dropped — the first packet at −0.4 s fails, and
+  12.41 s lands at file 0 s, 23.3 ms early, past half a frame (the first frame
+  is still 372: the edit list, as on YouTube); `offsetIntoDownload` a second
+  short — in-point 270 shows 342, sound 11.4 s; scene-cut keyframes let back
+  into the fixture — the keyframe check. **Re-run 2026-10-07**, after the
+  first-frame time moved to the bundled ffmpeg and the fixture check to both
+  sources (same copy-of-the-tree method, every anchor one match, restored
+  and `cmp`-identical): the exact section a second late — 402, 403, 804,
+  sound 13.4 and 13.41 s; the flag dropped — first packet −0.4 s, and
+  `showinfo` puts 12.41 s's first frame at 0 s, 23.3 ms from its place
+  against a limit of 17.7; scene-cut keyframes in the 30 fps source alone —
+  its check fails (0, 48, 96, 128 …), the other five pass; in the 60 fps
+  source alone — its check fails (0, 64, 128, 192 …), the other five pass.
+  **The first version of the sound
+  check used a chirp the same every second, and it PASSED "a second late"**:
+  it found 12.4 s in 13.4 s's identical second. The base frequency now names
+  the second.
+- **A second suite run on the same checkout breaks the first**: its
+  `outputDir` empties `tests/output/exact-cut/`, media included, under a run
+  in progress, which then fails with `ffmpeg exited with code 1` (`-loglevel
+  quiet`, above). Seen once, with another session's suite in the same minute;
+  rerun alone, it passed.
+
+**Unmeasured**:
+
+- **The 2018 Windows build** (`win32-x64` 4.1.0, `20181217-f22fcd4`) under
+  any section cut, exact or fast, and so §16.13 on Windows: the test runs it
+  in CI on every push (both legs, and it fails rather than skips there).
+- The http leg: the sandbox will not bind a port. Its transport (ffmpeg
+  reading over Range) is what YouTube's cuts did above, over https.
+- **Whether that leg's ffmpeg sends a Range past byte 0 at all.** The
+  fixture's seeks are short — `video30.mp4` is 46,801 bytes with its 12 s
+  keyframe at byte 21,731 (within the file's first 32 KB), `video60.mp4`
+  89,893 at 41,170, `audio.m4a` 271,910 with 12.39 s at 115,293 — and whether
+  ffmpeg's http reader crosses a short gap by reading on or by a new ranged
+  request is its short-seek threshold, which could not be measured here. So
+  the README records the count of ranged requests and nothing asserts it: a
+  server that ignored Range could still pass the leg. CI's first run says
+  which; assert it only once that number is known on each platform.
+- The Windows yt-dlp (whichever release `ensureYtDlp` fetches in CI) and the
+  `file:D:/…` form of the file leg.
+- The app's preview — Chromium's `<video>` — on a fast cut's edit list and
+  pre-roll, or on an exact cut's small ones (the composition delay, the
+  priming, an empty edit).
+- A real player that ignores edit lists, on the exact cut. Measured only as
+  ffmpeg's `-ignore_editlist 1` on the fixture (above: the first frame at
+  0.0667 s, the sound 1024 samples late).
+- A VFR source; streams that start at different times in the source; HLS or
+  segmented DASH formats (all five videos were plain https streams).
+- The exact cut's time at 4K and over long ranges.
+- The 29.97 fps talk's picture (a still slide at the start).

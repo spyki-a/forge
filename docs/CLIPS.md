@@ -765,8 +765,9 @@ itemised; this is the split, and step 4 keeps Best clips proper (§7).
 > `--download-sections`; Add another clip kept 12 rows, cleared the run,
 > started nothing; rows 8–9 a second job, `*85.000-100.800`, one section; the
 > no-caption link said so, Listen to it greyed with "needs the AI helper", a
-> chip set typed From and To — no failures, 1359 ms. Still open, as before:
-> `exactCut.int.test.ts` and the `clipIt.int` render check, and so §16.13.
+> chip set typed From and To — no failures, 1359 ms. Since then: §16.13 is
+> answered on the Mac and `exactCut.int.test.ts` exists (the 2018 build awaits
+> CI); the `clipIt.int` render check is still to write.
 > Clip it inherits ingest's collect-once rule (2026-10-06, `INGEST.md`, "The
 > renderer half"): main marks a job collected when `ingest:collect` hands it
 > back, so a reload no longer lands its clip, words and credit a second time.
@@ -811,6 +812,14 @@ captions a chip sets the start and end fields instead
 (`setIngest({useRange, startMs, endMs})`).
 
 ### 3b.4 (d) Clip it, and (e) Add another clip
+
+> **Built 2026-10-06** — the exact cut Clip it defaults to (`CLIP_IT_EXACT`,
+> `store.ts`) was cross-correlated against its source on the Mac, its first
+> frame the source's at the requested start on three videos (the next frame,
+> within half a frame, when a start falls between frames, on those and a
+> fourth) and its sound exact to the sample (`EFFECTS.md` §41), and `tests/integration/exactCut.int.test.ts`
+> runs the real yt-dlp through the bundled ffmpeg so Windows CI measures the
+> 2018 build, which leaves exact the default (§16.13).
 
 - **The download is the existing ranged one**: `startIngest` with a request
   override `{range: runRange(…), exact}` (`store.ts:1060-1090` takes only
@@ -981,8 +990,9 @@ captions a chip sets the start and end fields instead
 > rows' basis back at 0 % the cut fell to 708 px in a 313 px tile; and 4b
 > measured the relabel in the 239.7 px column — "Full download" 113.5 px and
 > "Clip download" 116.9 px, one line each, the link box 94.3 px — no failures,
-> 1562 ms. Still open, as before: `exactCut.int.test.ts`, the `clipIt.int`
-> render check, §16.13 and Listen to it. Edit's overlap rule matches the
+> 1562 ms. Still open: the `clipIt.int` render check and Listen to it
+> (§16.13 is answered on the Mac, `exactCut.int.test.ts` written; the 2018
+> build awaits CI). Edit's overlap rule matches the
 > export's captions only at 1×: `captions/timeline.ts` still maps in-point and
 > length without speed or hold — §17's speed-aware captions, which will share
 > `timelineFrameAt`.
@@ -4023,10 +4033,14 @@ Each is named in its step, and each step's first task is its own row:
 13. YouTube ASR word timing against faster-whisper on three videos (step
     4); **three unpunctuated tracks (one Hindi or Telugu) segmented**, and
     the grapheme estimate for word ends set from them (§7.2; in M0, §3b.9).
-14. **The exact cut's first frame against its source**, cross-correlated as
-    the fast cut was, on both builds: the real yt-dlp test in CI, or **on
-    the Surface** if CI cannot run yt-dlp; the fast-cut head offset on more
-    videos (§7.1; M0's exit, §3b.9).
+14. **The exact cut's first frame against its source**: **measured on the
+    Mac** (2026-10-06, `EFFECTS.md` §41) — the source's frame at the start on
+    three videos, the sound to the sample, a start between frames within half
+    a frame on those and a fourth; the fast cut's 10 s head on four videos.
+    Still open: **the 2018
+    build**, which `exactCut.int.test.ts` measures in Windows CI on every push
+    and fails on rather than skips; the Surface only if CI cannot (§7.1; M0's
+    exit, §3b.9).
 15. Whether low-view videos carry a heatmap (§7.4); whether the metadata
     subset's `channel`, `uploader` and `webpage_url` print as expected
     (§7.1; M0's first task, §3b.1).
@@ -4190,11 +4204,20 @@ what is needed, where the answer waits on something not yet in hand.
     Windows build has never run under yt-dlp's section cut. Lean: exact, if
     it measures frame-exact on both builds.
 
-    **Answer (2026-10-05): OPEN until measured.** Needed: the exact cut's
-    first frame against its source on both builds, which is now M0's exit
-    (§3b.9). Until then M0 keeps the exact/fast toggle (today's default is
-    fast, `store.ts:1055`), and Clip it from a run defaults to exact, the
-    lean.
+    **Answer (2026-10-06, measured on the Mac): exact stays Clip it's
+    default.** Through yt-dlp 2026.08.19 and the bundled Mac ffmpeg, the
+    exact cut's first frame IS the source's frame at the requested start on
+    three videos (25 and 60 fps, H.264 and VP9; corr 0.99995–0.99999
+    against 0.9893–0.9994 for the neighbouring frame), and its sound starts
+    there to the sample; a start between frames, on these and a fourth at
+    23.976 fps, gives the next frame, placed within half a frame (2.7–16.3
+    ms) by the cut's edit list — `EFFECTS.md` §41. The 2018 Windows build is
+    CI's to confirm: `exactCut.int.test.ts` runs the real yt-dlp through the
+    bundled ffmpeg there, and fails rather than skips if it cannot run. If CI
+    refuses the exact cut, Clip it's default becomes the fast cut with
+    `offsetIntoDownload` as its head offset, already built (its 10 s head
+    measured on four videos, its first frame up to a frame early between
+    frames).
 14. **Keys in settings.json.** The Brave key goes into `safeStorage`
     regardless (it is backed by your card, §9). The rest stay plaintext like
     the Director's and the voice's (recommended for now), or all move to
