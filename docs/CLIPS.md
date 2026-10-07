@@ -726,7 +726,14 @@ itemised; this is the split, and step 4 keeps Best clips proper (§7).
 > typed From and To give way to the run's, read-only, and a plain Get takes
 > the whole video — and says so: it reads **Whole video**, is no longer the
 > accent button, and Enter in the link box does not press it (the user's call
-> to confirm; the alternative was Get taking the run). After review: a row
+> to confirm; the alternative was Get taking the run). Relabelled the same day,
+> the user's decision ("let's specify the complete full download, clip
+> download, so that way it will be clear"): Get, while words are shown, reads
+> **Full download** ("Download the whole video and put it on the timeline"),
+> and Clip it's button reads **Clip download** ("Download only the words you
+> picked and put them on the timeline"); with no words shown Get stays **Get**;
+> measured in the 240 px column, 113.5 px and 116.9 px, one line each, the link
+> box beside Full download 94.3 px. After review: a row
 > shift-click extends from the row last CLICKED only while nothing else has
 > moved the run — after a drag, a key or a word shift-click it extends the run
 > on screen, keeping a start set by hand; a handle moved by a key into another
@@ -865,6 +872,120 @@ captions a chip sets the start and end fields instead
   same path.
 
 ### 3b.6 (h) The timeline half — §7.6, moved here
+
+> **Built 2026-10-06** — the Transcript tile's half (M0 slice 3).
+> `src/shared/timeline.ts` `timelineFrameAt(clip, sourceMs, fps)`: the first
+> timeline frame showing the source frame that holds `sourceMs`, or a later
+> one — a binary search over `sourceFrameFor`, so constant speed and ramps
+> alike — clamped to `[start, clipEnd]`, null for a hold. `src/shared/edit/clipIt.ts`:
+> `clipSourceWindow`; `cutFrames` (the first word's start floored to its
+> frame, the last word's end ceiled; at a speed above 1, where the timeline
+> skips the frame holding the start, the frame before it, so a word's first
+> sound is not lost); `clipToRange(project, clipId, startMs, endMs) →
+> {project, note}` (the start kept, the in-point the source frame the clip
+> showed at the cut's first frame, the length the cut's frames; a ramp keeps
+> its part of the curve, as `splitClip` gives each half its part; the
+> animation rebased as `trimStart` does; nothing else on the track moves; at
+> a constant speed the length is counted on the cut clip's OWN frames, from
+> its whole-frame in-point, and between 1× and 1.5× a cut whose old clip
+> skipped the word's first frame opens on it, so cutting the cut clip to the
+> same run again changes nothing — measured before, of 300 runs a second press
+> shaved a frame at 0.5× in 299, 0.75× 102, 1.5× 27, and at 1.25× 107, 66 of
+> them at the head; a ramp is within one frame, not a fixed point; a hold
+> refused with `HOLD_NOTE`, "this clip has a hold; cut it by hand"; a picture
+> whose sound is on its own track, `audioDetached`, refused with
+> `DETACHED_NOTE`, "this clip’s sound is on its own track; cut both by hand"; a
+> still, a range outside what the clip plays and a cut keeping the whole clip
+> return the same project, so no undo step); `clipWords(t, window, rule)` (the
+> words whose MIDDLE the clip plays — the rows' — or, `overlap`, every word it
+> plays any part of; renumbered by position — a Whisper transcript's indices
+> have a gap once a word was emptied, `withWordText` — with the whole
+> transcript's sentences cut to them, cached per transcript and span so the
+> rows are not made again on every playhead move); `clipEditWords` (Edit's:
+> the overlap, or a hold's whole transcript). The store: `clipRun`,
+> `setClipRun`, `cutToWords` (one `update()`, one undo; the pick cleared) and
+> `placeAssetRange` (begin → `addAssetToTimeline` → `clipToRange` → commit; a
+> still, and a range wholly outside the asset, refused — null, nothing placed,
+> no undo step). `TranscriptPanel.tsx`: `TranscriptBody` (Edit's words, or the
+> rows, or the line saying why there are none) and `ClipWords` —
+> `TranscriptRows` with three new props, `stampOf` (a row's time on the
+> TIMELINE), `activeRow` (the row under the playhead, read through
+> `sourceFrameFor`) and `fill` — the hint line, "0:02.8 selected" (the cut's
+> length on the timeline), **Cut to these words**, the hold's note, the lifted
+> sound's and "No words are spoken in this clip"; picking moves the playhead
+> to the cut's first frame, so a click on a row still jumps there. **Where it
+> differs from the text below:** the button is **Cut
+> to these words**, not Clip it — on a clip already on the timeline it is a
+> cut, not a download (the URL tile's is **Clip download**, §3b.2's note);
+> `timelineFrameAt` takes `fps`, since a word is in ms and a clip in the
+> project's frames; the rows are the words the clip PLAYS, not the asset's
+> whole transcript, so every row can be cut to and nothing outside the clip is
+> offered (a cut never grows a clip: it is a trim, not a ripple); the cut
+> keeps the clip's START and slides the kept footage to it — not what a drag
+> head trim does (`trimStart` moves the start with the in-point) — so a
+> picture whose sound was lifted (Detach audio, every Director J-cut,
+> `apply2.ts`) is refused with its note rather than left out of sync with its
+> sound, and a Director backdrop (the same footage on a lane below,
+> `apply2.ts`) is NOT detected: a cut moves the picture against it the same
+> way; Edit corrects every word the clip plays ANY part of (what its captions
+> burn, ass.ts's overlap — a word its edge cuts through included), a hold's
+> whole transcript as before, sent back to the store by the whole
+> transcript's index, and is not offered when the clip plays no word; the
+> rows fill the tile with the line and the cut under them, because with a
+> clip selected the dock takes the column's lower half and in the harness the
+> cut sat below the rows' 18 rem box, out of sight — and the block's least
+> height is its own (the rows' basis 0 px, not `flex-1`'s 0 %, which made it
+> every row tall), so in a column too short for it the tile scrolls rather
+> than drawing the cut over Listen for, as the first version did (the
+> review's 240 px column: 137.5 px given of 176 needed);
+> `placeAssetRange` has no button yet — it is the store action step 4's
+> cards will call. At 1× and 2× every kept frame shows exactly the footage it
+> showed; at 0.5× and through a ramp within one source frame, because an
+> in-point is a whole frame (a split has the same property). Tests:
+> `tests/timelineFrameAt.test.ts` (11: the round trip over 200 random frames
+> at 1×, 2×, 0.5× and two ramps, the first frame showing a source, 29.97 fps,
+> a skipped source frame, the clamp, the hold), `tests/clipIt.test.ts` (28:
+> exact frames at 1×, 2× and 0.5×; 150 random runs at each of seven speeds
+> landing on the words' frames, on the old clip's frames and the cut's own;
+> the ramp's part; the animation; a second cut changing nothing at eight
+> constant speeds; what is refused, the lifted sound built with
+> `detachAudio`; `clipWords` by middle, across an index gap, and cached,
+> both rules at once; `clipEditWords` by overlap and for a hold),
+> `tests/renderer/clipItStore.test.ts` (5: the store's cut and
+> `placeAssetRange` each ONE undo step, a range outside the asset placing
+> nothing, the store being the renderer's) and
+> `tests/renderer/transcriptPanel.test.tsx` (11: the clip's rows and their
+> timeline times at 2×, the active row, no transcript, the hold with Edit
+> still listing the whole transcript, the lifted sound, nothing said with no
+> Edit, a pick moving the playhead, the cut in one undo and one undo back, a
+> stale pick not shown, Edit's correction landing on the whole transcript's
+> index past an emptied word, and a word the clip's edge cuts through listed
+> and corrected); `tests/renderer/ingestPanel.test.tsx` relabelled. 50
+> mutations, each killed and restored byte-identical, run in a copy of the
+> tree so a concurrent suite never saw them (the review's thirteen among
+> them). Census: twelve rows in the `transcript` home under `transcript`,
+> `transcript-run`, `transcript-hold`, `transcript-silent` and
+> `transcript-detached`, the URL tile's four renamed, the tile's tooltip
+> ("…click to jump, cut the clip to a run of them, correct a misheard one");
+> the full census on a fresh page gave missing `[]`, 805 checked, 8 skipped
+> (46.9 s). `window.__forgeClipItCheck()` step 9 on a fresh page: the stub talk on an
+> offline asset at 2×, 12 rows, row 3 at "0:12" (its source time 0:25), rows
+> 3–6 `{18, 53}`, the playhead on frame 375, "0:19.8 selected", Cut to these
+> words → `{start 0, inPoint 750, duration 594}`, `clipToRange`'s, every kept
+> frame the same footage, one undo step; one undo → `{0, 0, 2250}`; the cut
+> measured against Listen for with the dock open in the 239.7 px column — as
+> the tile opens its bottom 305 against Listen for's top 313, with the run
+> picked 277.4 against 285.4, on screen unscrolled both times, the tile's
+> content 336 px in 298 (it scrolls 38); against the first version's layout
+> the same check fails both ways (305 and 277.4 over 274.7), and with the
+> rows' basis back at 0 % the cut fell to 708 px in a 313 px tile; and 4b
+> measured the relabel in the 239.7 px column — "Full download" 113.5 px and
+> "Clip download" 116.9 px, one line each, the link box 94.3 px — no failures,
+> 1562 ms. Still open, as before: `exactCut.int.test.ts`, the `clipIt.int`
+> render check, §16.13 and Listen to it. Edit's overlap rule matches the
+> export's captions only at 1×: `captions/timeline.ts` still maps in-point and
+> length without speed or hold — §17's speed-aware captions, which will share
+> `timelineFrameAt`.
 
 `TranscriptPanel.tsx` takes `TranscriptRows` with the same selection: click
 and shift-click, and the handles. **Clip it** on a timeline clip is

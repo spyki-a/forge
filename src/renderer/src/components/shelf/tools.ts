@@ -151,7 +151,7 @@ export const SHELF_TOOLS: readonly ShelfTool[] = [
     id: 'transcript',
     label: 'Transcript',
     icon: ScrollText,
-    hint: 'The words spoken in the selected clip — click to jump, correct a misheard one',
+    hint: 'The words spoken in the selected clip — click to jump, cut the clip to a run of them, correct a misheard one',
     panel: TranscriptPanel,
     takesMedia: false,
     busy: (s) => any(s.transcribing)

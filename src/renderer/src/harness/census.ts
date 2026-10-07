@@ -18,6 +18,7 @@ import { SPINE_RULE } from '@shared/director/apply'
 import { TRAY_MIN, TRAY_RAIL } from '@shared/curveTray'
 import { linkCacheKey, parseLink } from '@shared/ingest/url'
 import { runFromRows } from '@shared/ingest/wordRun'
+import { clipSourceWindow, clipWords } from '@shared/edit/clipIt'
 import type { Transcript } from '@shared/transcript'
 import { useEditor, type ShelfToolId, type UrlSourceStatus } from '../store'
 import { HARNESS_LINKS } from './bridge'
@@ -1479,6 +1480,47 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
         await click(edit)
       }
     }
+  },
+  /*
+   * The Transcript tile's rows of the clip's words (CLIPS.md §3b.6): the
+   * transcript's one word picked — the cut's length on the timeline, and
+   * Cut to these words pressable.
+   */
+  'transcript-run': async (env) => {
+    const built = await RECIPES.transcript(env)
+    const V = built.ids?.V
+    if (!V) throw new Error('census: the transcript scenario made no clip')
+    const clip = clipById(V)
+    const transcript = editor().project.transcripts[clip.assetId]
+    const words = transcript ? clipWords(transcript, clipSourceWindow(clip, editor().project.settings.fps)) : null
+    if (!words) throw new Error('census: the transcript’s clip plays none of its words')
+    editor().setClipRun(V, words.transcript, { from: 0, to: words.transcript.words.length - 1 })
+    return built
+  },
+  /* the same clip made a hold: one frame for its whole length, no words of its own, and the tile says so */
+  'transcript-hold': async (env) => {
+    const built = await RECIPES.transcript(env)
+    const V = built.ids?.V
+    if (!V) throw new Error('census: the transcript scenario made no clip')
+    patchClip(V, { hold: true })
+    return built
+  },
+  /* the same clip trimmed to two seconds after its one word (0–0.5 s): nothing is said in what it plays */
+  'transcript-silent': async (env) => {
+    const built = await RECIPES.transcript(env)
+    const V = built.ids?.V
+    if (!V) throw new Error('census: the transcript scenario made no clip')
+    const fps = editor().project.settings.fps
+    patchClip(V, { inPoint: 2 * fps, duration: 2 * fps })
+    return built
+  },
+  /* the same clip with its sound lifted onto a track of its own: a cut would put the picture out of sync with it, and the tile says so */
+  'transcript-detached': async (env) => {
+    const built = await RECIPES.transcript(env)
+    const V = built.ids?.V
+    if (!V) throw new Error('census: the transcript scenario made no clip')
+    patchClip(V, { audioDetached: true })
+    return built
   },
   'clipmenu-open': async (env) => clipMenu(env, false),
   'clipmenu-detached': async (env) => clipMenu(env, true),

@@ -5586,22 +5586,22 @@
     "newHome": "Shelf tile URL"
   },
   {
-    "label": "Whole video",
+    "label": "Full download",
     "match": "text",
     "home": "url",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 149,
+    "line": 152,
     "newHome": "Shelf tile URL",
-    "note": "Get, while the link’s words are shown: it takes the whole video, not the run (Clip it does), so it says so and is no longer the accent button; Enter in the link box does not press it then."
+    "note": "Get, while the link’s words are shown — the user’s name for it (2026-10-06), beside Clip download: it downloads the whole video, not the run, so it says so and is no longer the accent button; Enter in the link box does not press it then. With no words shown it is plain Get."
   },
   {
-    "label": "Download the whole video and put it on the timeline — Clip it takes just the words you picked",
+    "label": "Download the whole video and put it on the timeline",
     "match": "title",
     "home": "url",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 36,
+    "line": 39,
     "newHome": "Shelf tile URL"
   },
   {
@@ -5761,22 +5761,22 @@
     "note": "The chapter chip (CLIPS.md §3b.3): its text is the chapter’s title, which is data; its tooltip is the interface’s. Count 3: the stub’s three chapters."
   },
   {
-    "label": "Clip it",
+    "label": "Clip download",
     "match": "text",
     "home": "url",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 147,
+    "line": 148,
     "newHome": "Shelf tile URL",
-    "note": "Greyed until a run is picked (CLIPS.md §3b.4)."
+    "note": "Clip it’s button — the user’s name for it (2026-10-06), beside Get’s Full download. Greyed until a run is picked (CLIPS.md §3b.4)."
   },
   {
-    "label": "Download exactly the picked words’ part of the video, and put it on the timeline with its words and the video’s credit",
+    "label": "Download only the words you picked and put them on the timeline",
     "match": "title",
     "home": "url",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 29,
+    "line": 30,
     "newHome": "Shelf tile URL"
   },
   {
@@ -6173,7 +6173,7 @@
     "home": "transcript",
     "needs": "transcript-editing",
     "file": "src/renderer/src/components/TranscriptPanel.tsx",
-    "line": 171,
+    "line": 281,
     "newHome": "Shelf tile Transcript"
   },
   {
@@ -6182,7 +6182,7 @@
     "home": "transcript",
     "needs": "transcript",
     "file": "src/renderer/src/components/TranscriptPanel.tsx",
-    "line": 68,
+    "line": 87,
     "newHome": "Shelf tile Transcript"
   },
   {
@@ -6191,7 +6191,7 @@
     "home": "transcript",
     "needs": "transcript-editing",
     "file": "src/renderer/src/components/TranscriptPanel.tsx",
-    "line": 74,
+    "line": 93,
     "newHome": "Shelf tile Transcript"
   },
   {
@@ -6200,7 +6200,7 @@
     "home": "transcript",
     "needs": "video-clip",
     "file": "src/renderer/src/components/TranscriptPanel.tsx",
-    "line": 218,
+    "line": 328,
     "newHome": "Shelf tile Transcript"
   },
   {
@@ -6210,7 +6210,7 @@
     "needs": "video-clip",
     "part": true,
     "file": "src/renderer/src/components/TranscriptPanel.tsx",
-    "line": 121,
+    "line": 115,
     "newHome": "Shelf tile Transcript (text reworded \"in Media\" → \"in Upload\" in step 9)"
   },
   {
@@ -6219,7 +6219,7 @@
     "home": "transcript",
     "needs": "none",
     "file": "src/renderer/src/components/TranscriptPanel.tsx",
-    "line": 50,
+    "line": 60,
     "newHome": "Shelf tile Transcript"
   },
   {
@@ -6228,7 +6228,7 @@
     "home": "transcript",
     "needs": "transcript",
     "file": "src/renderer/src/components/TranscriptPanel.tsx",
-    "line": 239,
+    "line": 349,
     "newHome": "Shelf tile Transcript"
   },
   {
@@ -6237,8 +6237,125 @@
     "home": "transcript",
     "needs": "video-clip",
     "file": "src/renderer/src/components/TranscriptPanel.tsx",
-    "line": 236,
+    "line": 346,
     "newHome": "Shelf tile Transcript"
+  },
+  {
+    "label": "Click a row to jump there and pick its words; shift-click another row, or a word, to extend. Or drag Start and End.",
+    "match": "text",
+    "home": "transcript",
+    "needs": "transcript",
+    "file": "src/renderer/src/components/TranscriptPanel.tsx",
+    "line": 47,
+    "newHome": "Shelf tile Transcript",
+    "note": "CLIPS.md §3b.6: the rows’ hint in the Transcript tile, while nothing is picked; a click on a row also moves the playhead there, as the tile always did."
+  },
+  {
+    "label": "Cut to these words",
+    "match": "text",
+    "home": "transcript",
+    "needs": "transcript",
+    "file": "src/renderer/src/components/TranscriptPanel.tsx",
+    "line": 198,
+    "newHome": "Shelf tile Transcript",
+    "note": "CLIPS.md §3b.6 (sheet 26): the clip trimmed to the picked words, one undo; greyed until a run is picked. On a clip already on the timeline Clip it is a cut, not a download."
+  },
+  {
+    "label": "Trims this clip to the words you picked",
+    "match": "title",
+    "home": "transcript",
+    "needs": "transcript",
+    "file": "src/renderer/src/components/TranscriptPanel.tsx",
+    "line": 46,
+    "newHome": "Shelf tile Transcript"
+  },
+  {
+    "label": "Start",
+    "match": "aria-label",
+    "home": "transcript",
+    "needs": "transcript",
+    "file": "src/renderer/src/components/tools/TranscriptRows.tsx",
+    "line": 167,
+    "newHome": "Shelf tile Transcript",
+    "note": "The Start cut handle, the URL tile’s own (TranscriptRows), resting on the clip’s first word while nothing is picked."
+  },
+  {
+    "label": "End",
+    "match": "aria-label",
+    "home": "transcript",
+    "needs": "transcript",
+    "file": "src/renderer/src/components/tools/TranscriptRows.tsx",
+    "line": 167,
+    "newHome": "Shelf tile Transcript",
+    "note": "The End cut handle, resting on the clip’s last word while nothing is picked."
+  },
+  {
+    "label": "Start — drag along the rows; it snaps to the start of a word",
+    "match": "title",
+    "home": "transcript",
+    "needs": "transcript",
+    "file": "src/renderer/src/components/tools/TranscriptRows.tsx",
+    "line": 55,
+    "newHome": "Shelf tile Transcript"
+  },
+  {
+    "label": "End — drag along the rows; it snaps to the end of a word",
+    "match": "title",
+    "home": "transcript",
+    "needs": "transcript",
+    "file": "src/renderer/src/components/tools/TranscriptRows.tsx",
+    "line": 56,
+    "newHome": "Shelf tile Transcript"
+  },
+  {
+    "label": "Click to pick this row’s words; shift-click to extend the pick to this row",
+    "match": "title",
+    "home": "transcript",
+    "needs": "transcript",
+    "file": "src/renderer/src/components/tools/TranscriptRows.tsx",
+    "line": 54,
+    "newHome": "Shelf tile Transcript",
+    "note": "One per row’s time: the census transcript is one word, one row. The time is where the row is on the TIMELINE, through the clip’s speed."
+  },
+  {
+    "label": "selected",
+    "match": "text",
+    "home": "transcript",
+    "needs": "transcript-run",
+    "file": "src/renderer/src/components/TranscriptPanel.tsx",
+    "line": 185,
+    "newHome": "Shelf tile Transcript",
+    "note": "The cut’s length on the timeline, \"0:00.5 selected\" — the number is its own text node; at 2× it is half the words’ span."
+  },
+  {
+    "label": "this clip has a hold; cut it by hand",
+    "match": "text",
+    "home": "transcript",
+    "needs": "transcript-hold",
+    "file": "src/shared/edit/clipIt.ts",
+    "line": 32,
+    "newHome": "Shelf tile Transcript",
+    "note": "CLIPS.md §3b.6: a hold shows one frame for its whole length, so it has no words of its own to cut to — a note in place of the rows, not a block: Edit (the whole transcript, as before §3b.6) and Listen for still work."
+  },
+  {
+    "label": "No words are spoken in this clip",
+    "match": "text",
+    "home": "transcript",
+    "needs": "transcript-silent",
+    "file": "src/renderer/src/components/TranscriptPanel.tsx",
+    "line": 48,
+    "newHome": "Shelf tile Transcript",
+    "note": "The rows are the words the clip PLAYS (clipWords); the recipe trims the clip to two seconds after its transcript’s one word. Edit is not offered here: no word overlaps what the clip plays, so it has none to correct."
+  },
+  {
+    "label": "this clip’s sound is on its own track; cut both by hand",
+    "match": "text",
+    "home": "transcript",
+    "needs": "transcript-detached",
+    "file": "src/shared/edit/clipIt.ts",
+    "line": 39,
+    "newHome": "Shelf tile Transcript",
+    "note": "CLIPS.md §3b.6: a picture whose sound was lifted onto a track of its own (Detach audio, or a Director J-cut). Cut to these words keeps the start and moves the in-point, so the picture would go out of sync with its sound — a note in place of the rows, not a block: Edit and Listen for still work."
   },
   {
     "label": "Go to end (End)",
@@ -6794,7 +6911,7 @@
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
   {
-    "label": "The words spoken in the selected clip — click to jump, correct a misheard one",
+    "label": "The words spoken in the selected clip — click to jump, cut the clip to a run of them, correct a misheard one",
     "match": "title",
     "home": "shelf",
     "needs": "none",

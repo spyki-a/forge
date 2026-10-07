@@ -11,7 +11,8 @@ import type { LinkClip } from '@shared/ingest/linkClip'
 /*
  * The URL tile's transcript, rendered and pressed (docs/CLIPS.md §3b.2–3b.5,
  * §3b.8): Get transcript shows rows; a click and a shift-click pick a run; the
- * handles snap to words; a chapter chip picks its words; Clip it starts one
+ * handles snap to words; a chapter chip picks its words; Clip it — its button
+ * "Clip download", beside Get's "Full download" — starts one
  * exact job for exactly the run's range, its argv holding one
  * `--download-sections`; Add another clip starts nothing and clears the run;
  * From and To mirror the run, read-only, while there are words, and are typed
@@ -39,8 +40,8 @@ vi.mock('../../src/renderer/src/store', async (importOriginal) => {
 })
 
 const { useEditor } = await import('../../src/renderer/src/store')
-const { IngestPanel, LinkBox, GET_WHOLE_TITLE } = await import('../../src/renderer/src/components/IngestPanel')
-const { LinkTranscript } = await import('../../src/renderer/src/components/tools/LinkTranscript')
+const { IngestPanel, LinkBox, FULL_DOWNLOAD_TITLE } = await import('../../src/renderer/src/components/IngestPanel')
+const { LinkTranscript, CLIP_DOWNLOAD_TITLE } = await import('../../src/renderer/src/components/tools/LinkTranscript')
 
 const URL = 'https://www.youtube.com/watch?v=MadeUpTalk2'
 const NO_CAPTIONS = 'https://www.youtube.com/watch?v=MadeUpTalk3'
@@ -432,13 +433,17 @@ describe('picking a run', () => {
 })
 
 describe('Clip it, and Add another clip', () => {
-  it('Clip it is greyed until a run is picked', async () => {
+  it('Clip download is greyed until a run is picked, and says it takes only the picked words', async () => {
     await getTranscript()
-    expect(buttonNamed('Clip it')?.props.disabled).toBe(true)
+    expect(buttonNamed('Clip download')?.props.disabled).toBe(true)
+    // The user's words for it (2026-10-06), and no button still called Clip it.
+    expect(buttonNamed('Clip download')?.props.title).toBe(CLIP_DOWNLOAD_TITLE)
+    expect(CLIP_DOWNLOAD_TITLE).toBe('Download only the words you picked and put them on the timeline')
+    expect(buttonNamed('Clip it')).toBeUndefined()
     pressRow(1)
-    expect(buttonNamed('Clip it')?.props.disabled).toBe(false)
+    expect(buttonNamed('Clip download')?.props.disabled).toBe(false)
     state().setUrlRun(null)
-    expect(buttonNamed('Clip it')?.props.disabled).toBe(true)
+    expect(buttonNamed('Clip download')?.props.disabled).toBe(true)
   })
 
   it('takes the video, or its sound — never a song’s split left chosen from an earlier download', async () => {
@@ -447,7 +452,7 @@ describe('Clip it, and Add another clip', () => {
     for (const kind of ['instrumental', 'vocal', 'audio', 'video'] as const) {
       state().setIngest({ kind })
       pressRow(kinds.length)
-      ;(buttonNamed('Clip it')!.props.onClick as () => void)()
+      ;(buttonNamed('Clip download')!.props.onClick as () => void)()
       await vi.waitFor(() => expect(started).toHaveLength(kinds.length + 1))
       kinds.push(started[kinds.length].request.kind)
     }
@@ -460,7 +465,7 @@ describe('Clip it, and Add another clip', () => {
     pressRow(1)
     pressRow(2, true)
     const range = runRange(t, runFromRows(t, 1, 2))
-    ;(buttonNamed('Clip it')!.props.onClick as () => void)()
+    ;(buttonNamed('Clip download')!.props.onClick as () => void)()
     await vi.waitFor(() => expect(state().urlSource?.clipped).toBe(true))
 
     expect(started).toHaveLength(1)
@@ -482,19 +487,19 @@ describe('Clip it, and Add another clip', () => {
     await getTranscript()
     const t = state().urlSource!.transcript!
     pressRow(0)
-    ;(buttonNamed('Clip it')!.props.onClick as () => void)()
+    ;(buttonNamed('Clip download')!.props.onClick as () => void)()
     await vi.waitFor(() => expect(state().urlSource?.clipped).toBe(true))
-    expect(buttonNamed('Clip it')).toBeUndefined()
+    expect(buttonNamed('Clip download')).toBeUndefined()
 
     ;(buttonNamed('Add another clip')!.props.onClick as () => void)()
     expect(started).toHaveLength(1)
     expect(state().urlSource!.run).toBeNull()
     expect(state().urlSource!.transcript).toBe(t)
     expect(transcriptHosts().filter((h) => h.props['data-row'] !== undefined)).toHaveLength(4)
-    expect(buttonNamed('Clip it')).toBeTruthy()
+    expect(buttonNamed('Clip download')).toBeTruthy()
 
     pressRow(3)
-    ;(buttonNamed('Clip it')!.props.onClick as () => void)()
+    ;(buttonNamed('Clip download')!.props.onClick as () => void)()
     await vi.waitFor(() => expect(started).toHaveLength(2))
     const sections = started.map(({ request }) => {
       const { args } = buildYtDlpArgs(request, { ffmpegPath: '/ffmpeg', destDir: '/downloads', stem: outputStem(parseLink(request.url)!, request) })
@@ -545,7 +550,7 @@ describe('the From and To fields', () => {
     expect(started[1].request.exact).toBe(false)
   })
 
-  it('while the words are shown, Get says it takes the whole video, is not the accent button, and Enter does not press it', async () => {
+  it('while the words are shown, Get reads Full download, is not the accent button, and Enter does not press it', async () => {
     // No words: "Get", the accent button, and Enter in the box presses it.
     state().setIngest({ url: URL })
     let get = getButton()
@@ -564,11 +569,12 @@ describe('the From and To fields', () => {
     await getTranscript()
     pressRow(1)
     get = getButton()
-    expect(textOf(get.props.children as ReactNode).trim()).toBe('Whole video')
-    expect(get.props.title).toBe(GET_WHOLE_TITLE)
+    expect(textOf(get.props.children as ReactNode).trim()).toBe('Full download')
+    expect(get.props.title).toBe(FULL_DOWNLOAD_TITLE)
+    expect(FULL_DOWNLOAD_TITLE).toBe('Download the whole video and put it on the timeline')
     expect(String(get.props.className)).not.toContain('bg-accent-500')
-    // Clip it is the accent button now.
-    expect(String(buttonNamed('Clip it')!.props.className)).toContain('bg-accent-500')
+    // Clip download is the accent button now.
+    expect(String(buttonNamed('Clip download')!.props.className)).toContain('bg-accent-500')
     enter()
     await Promise.resolve()
     expect(started).toHaveLength(1)

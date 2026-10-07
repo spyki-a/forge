@@ -19,21 +19,24 @@ import { LinkTranscript } from './tools/LinkTranscript'
  * the way until it is wanted.
  *
  * Get transcript (sheets 25–26, docs/CLIPS.md §3b) is `LinkTranscript`: rows
- * of the link's words, a run picked from them, and Clip it. While those words
- * are on screen the From and To fields below give way to the run's own,
- * read-only (§3b.5); with no captions, or none fetched, they are typed as
- * before.
+ * of the link's words, a run picked from them, and Clip it — its button
+ * **Clip download**. While those words are on screen the From and To fields
+ * below give way to the run's own, read-only (§3b.5); with no captions, or
+ * none fetched, they are typed as before.
  *
- * And while they are on screen, Get says what it does — **Whole video**, no
+ * And while they are on screen, Get says what it does — **Full download**, no
  * longer the accent button — because the run's range is shown right under it
- * and Get does not take it: Clip it does. Enter in the link box, which would
- * press Get unseen, does nothing then. (Measured in the 240 px panel: "Get the
- * whole video" took 145 px and left the link box 63; "Whole video" takes 106
- * and leaves it 102, against 147 beside "Get".)
+ * and Get does not take it: Clip download does. The two names are the user's
+ * (2026-10-06: "let's specify the complete full download, clip download, so
+ * that way it will be clear"). Enter in the link box, which would press Get
+ * unseen, does nothing then. (Measured in the 240 px panel: "Get the whole
+ * video" took 145 px and left the link box 63; "Whole video" took 106 and left
+ * it 102, against 147 beside "Get"; "Full download" takes 113.5 and leaves it
+ * 94, on one line — and "Clip download", alone on its row, 117, on one.)
  */
 
 const GET_TITLE = 'Download and put it on the timeline'
-export const GET_WHOLE_TITLE = 'Download the whole video and put it on the timeline — Clip it takes just the words you picked'
+export const FULL_DOWNLOAD_TITLE = 'Download the whole video and put it on the timeline'
 
 const WANTS: { id: IngestWant; label: string; hint: string }[] = [
   { id: 'video', label: 'Video', hint: 'The picture and its sound' },
@@ -110,7 +113,7 @@ export function LinkBox(): ReactNode {
   const ingest = useEditor((s) => s.ingest)
   const setIngest = useEditor((s) => s.setIngest)
   const startIngest = useEditor((s) => s.startIngest)
-  // The link's words are on screen: Get takes the whole video, and says so.
+  // The link's words are on screen: Get takes the whole video, and says so — "Full download".
   const words = useEditor((s) => wordsShown(s))
   const link = parseLink(ingest.url)
   const problem = linkProblem(ingest.url)
@@ -137,8 +140,8 @@ export function LinkBox(): ReactNode {
       <button
         onClick={submit}
         disabled={ingest.busy || !link}
-        title={link ? (words ? GET_WHOLE_TITLE : GET_TITLE) : LINK_PROBLEM_TEXT[problem ?? 'not-a-link']}
-        data-get={words ? 'whole' : 'plain'}
+        title={link ? (words ? FULL_DOWNLOAD_TITLE : GET_TITLE) : LINK_PROBLEM_TEXT[problem ?? 'not-a-link']}
+        data-get={words ? 'full' : 'plain'}
         className={`flex shrink-0 items-center gap-1.5 rounded px-3 py-1.5 text-[11px] transition-colors disabled:opacity-40 ${
           words
             ? 'bg-ink-850 text-ink-300 hover:bg-ink-800 hover:text-ink-100'
@@ -146,7 +149,7 @@ export function LinkBox(): ReactNode {
         }`}
       >
         {ingest.busy ? <Loader2 size={12} className="animate-spin" /> : <DownloadCloud size={12} />}
-        {words ? 'Whole video' : 'Get'}
+        {words ? 'Full download' : 'Get'}
       </button>
     </div>
   )

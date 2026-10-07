@@ -6,6 +6,7 @@ import { offsetIntoDownload, trimToRequestedRange, type Range } from '@shared/in
 import { captionKeys, type IngestRequest, type IngestWant, type AudioFormat, type LinkMeta } from '@shared/ingest/args'
 import { shiftTranscript, transcriptFromTracks, type WordRun } from '@shared/ingest/captions'
 import { clampRun, runRange } from '@shared/ingest/wordRun'
+import { clipSourceWindow, clipToRange, outsideWindow } from '@shared/edit/clipIt'
 import {
   languageOfKeys,
   linkCredit,
@@ -355,11 +356,30 @@ export function urlSourceFor(s: { urlSource: UrlSource | null; ingest: { url: st
 /**
  * Whether the box's link has rows to pick from. Then the From and To fields
  * mirror the run instead of being typed (§3b.5), and a plain Get — labelled
- * "Whole video" then — takes the whole video; the run is Clip it's.
+ * "Full download" then — takes the whole video; the run is Clip it's (its
+ * button: "Clip download").
  */
 export function wordsShown(s: { urlSource: UrlSource | null; ingest: { url: string } }): boolean {
   const source = urlSourceFor(s)
   return source !== null && source.status === 'ready' && source.transcript !== null
+}
+
+/**
+ * The Transcript tile's pick (docs/CLIPS.md §3b.6): a run of the words a
+ * timeline clip plays, to cut the clip to. View state, like the URL tile's
+ * run — picking is not an edit, so it has no undo step; the cut is one.
+ *
+ * `words` is the transcript the run indexes — the clip's own words
+ * (`clipWords`), cached per transcript — so a pick made over other words (the
+ * clip trimmed since, a word corrected, another clip) is simply not the
+ * tile's any more and is not shown.
+ */
+export interface ClipRun {
+  clipId: string
+  words: Transcript
+  run: WordRun | null
+  /** The row a later row shift-click extends from, as the URL tile's `anchorRow`. */
+  anchorRow: number | null
 }
 
 /**
@@ -562,6 +582,16 @@ interface EditorState {
   /** Add another clip: the rows stay, the run is cleared. Starts nothing. */
   addAnotherClip: () => void
 
+  /** The Transcript tile's pick of a clip's words (§3b.6). */
+  clipRun: ClipRun | null
+  /** Pick a run of a clip's words — `words` is `clipWords`' transcript; null clears it. */
+  setClipRun: (clipId: string, words: Transcript, run: WordRun | null, anchorRow?: number | null) => void
+  /**
+   * Cut to these words: the picked clip trimmed to the run (`clipToRange`), in
+   * ONE `update()` — one undo. The pick is cleared; the clip now is the run.
+   */
+  cutToWords: () => void
+
   jobs: Job[]
   /**
    * Downloads waiting to be collected, and which project each belongs to.
@@ -595,6 +625,15 @@ interface EditorState {
 
   importAssets: (paths: string[]) => Promise<void>
   addAssetToTimeline: (assetId: string) => void
+  /**
+   * An asset not yet on the timeline, placed as `addAssetToTimeline` places it
+   * and cut to `[startMs, endMs)` of its source (§3b.6) — in one begin/commit,
+   * so one undo. The clip's id, or null — nothing placed, no undo step — for an
+   * asset that is not there, a still (it has no time to cut), or a range wholly
+   * outside the asset (past a short download's end): placing the whole uncut
+   * asset there would look like success to the caller.
+   */
+  placeAssetRange: (assetId: string, startMs: number, endMs: number) => string | null
   removeClip: (clipId: string) => void
   moveClip: (clipId: string, start: number, trackId?: string) => void
   trimClipStart: (clipId: string, start: number) => void
@@ -1229,8 +1268,8 @@ export const useEditor = create<EditorState>((set, get) => ({
      * override — or the typed one, with the form's cut, which stays fast by
      * default. While a link's words are on screen the typed fields are not
      * (From and To mirror the run instead, §3b.5), and a plain Get takes the
-     * whole video — which the panel's button then says, as "Whole video":
-     * the run's range is Clip it's to take, not Get's.
+     * whole video — which the panel's button then says, as "Full download":
+     * the run's range is Clip it's ("Clip download") to take, not Get's.
      */
     const typedRange =
       ingest.useRange && !wordsShown(get()) ? { startMs: ingest.startMs, endMs: ingest.endMs } : null
@@ -1378,6 +1417,23 @@ export const useEditor = create<EditorState>((set, get) => ({
 
   addAnotherClip: () =>
     set((s) => (s.urlSource ? { urlSource: { ...s.urlSource, run: null, anchorRow: null, clipped: false } } : {})),
+
+  clipRun: null,
+  setClipRun: (clipId, words, run, anchorRow) =>
+    set({
+      clipRun: { clipId, words, run: run ? clampRun(words, run) : null, anchorRow: run ? (anchorRow ?? null) : null }
+    }),
+
+  cutToWords: () => {
+    const pick = get().clipRun
+    if (!pick || !pick.run || pick.words.words.length === 0) return
+    const run = clampRun(pick.words, pick.run)
+    // The run's own span, first word's start to last word's end: no second added, nothing is downloaded.
+    const startMs = pick.words.words[run.from].startMs
+    const endMs = pick.words.words[run.to].endMs
+    get().update((p) => clipToRange(p, pick.clipId, startMs, endMs).project)
+    set({ clipRun: null })
+  },
   /*
    * The preview shows the OUTPUT by default.
    *
@@ -1524,6 +1580,22 @@ export const useEditor = create<EditorState>((set, get) => ({
 
     get().update((p) => ({ ...p, clips: [...p.clips, clip] }))
     get().revealClip(clip.id)
+  },
+
+  placeAssetRange: (assetId, startMs, endMs) => {
+    const asset = get().project.assets.find((a) => a.id === assetId)
+    if (!asset || asset.kind === 'image') return null
+    // What the placed clip will play — the whole asset from its first frame, as addAssetToTimeline places it.
+    const whole = clipSourceWindow({ start: 0, inPoint: 0, duration: asset.durationFrames }, get().project.settings.fps)
+    if (outsideWindow(whole, startMs, endMs)) return null
+    // The asset, the clip and the cut: one action, one undo — as Clip it's collect is (`trimToRequestedRange` beside it).
+    get().begin()
+    const before = new Set(get().project.clips.map((c) => c.id))
+    get().addAssetToTimeline(assetId)
+    const placed = get().project.clips.find((c) => !before.has(c.id)) ?? null
+    if (placed) get().update((p) => clipToRange(p, placed.id, startMs, endMs).project)
+    get().commit()
+    return placed?.id ?? null
   },
 
   removeClip: (clipId) => {
@@ -5233,6 +5305,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       selectedGap: null,
       rangeIn: null,
       rangeOut: null,
+      clipRun: null,
       aspect: aspectOf(project.settings),
       past: [],
       future: []
@@ -5253,6 +5326,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       selectedGap: null,
       rangeIn: null,
       rangeOut: null,
+      clipRun: null,
       /*
        * The aspect comes back with the project.
        *

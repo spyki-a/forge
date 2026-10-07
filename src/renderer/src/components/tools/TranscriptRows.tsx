@@ -16,8 +16,10 @@ import {
 /**
  * A transcript as rows of `time | text`, and the two ways to pick a run of
  * its words (docs/CLIPS.md §3b.2) — one component for both tiles: the URL
- * tile's transcript of a link, and (slice 3) a timeline clip's in the
- * Transcript tile.
+ * tile's transcript of a link, and a timeline clip's in the Transcript tile
+ * (§3b.6), which passes the words the clip plays, its own `stampOf` (a row's
+ * time on the TIMELINE, through the clip's speed) and the row under the
+ * playhead as `activeRow`.
  *
  *   click a row's time or a word     that row's words
  *   shift-click another row's time   every row between it and the row last clicked — or, when the
@@ -69,6 +71,19 @@ export interface TranscriptRowsProps {
   /** The row a shift-click on another row extends from: the row last clicked, or null when the run was set another way since. */
   anchorRow: number | null
   onChange: (run: WordRun, anchorRow: number | null) => void
+  /** A source time as the rows show it: `rowStamp`, the link's own clock, unless a tile maps it (the Transcript tile: the timeline's). */
+  stampOf?: (ms: number) => string
+  /** The row under the playhead, tinted; none when absent or -1. */
+  activeRow?: number
+  /**
+   * Fill a flex column instead of stopping at 18 rem: the Transcript tile's
+   * rows take what the tile has, so the cut under them stays on screen while
+   * they scroll — the dock below it leaves the tile short when a clip is selected.
+   * Their basis is 0 px, not `flex-1`'s 0 %: a percentage of a column whose
+   * height is not yet known counts as the rows' whole content, which would make
+   * the column's least height every row there is (CSS Flexbox §9.2).
+   */
+  fill?: boolean
 }
 
 /** Where a handle stands in a row, for the row to draw it. */
@@ -106,6 +121,8 @@ const Row = memo(function Row({
   t,
   index,
   row,
+  stamp,
+  active,
   lo,
   hi,
   handles
@@ -113,6 +130,9 @@ const Row = memo(function Row({
   t: Transcript
   index: number
   row: TranscriptRow
+  /** Its start as shown — a string, so an unchanged row stays unchanged for `memo`. */
+  stamp: string
+  active: boolean
   lo: number
   hi: number
   handles: HandleAt[]
@@ -132,7 +152,11 @@ const Row = memo(function Row({
     )
   }
   return (
-    <div data-row={index} className="flex items-start gap-1 border-b border-ink-850 py-1 pr-2">
+    <div
+      data-row={index}
+      data-active={active ? '' : undefined}
+      className={`flex items-start gap-1 border-b border-ink-850 py-1 pr-2${active ? ' bg-accent-500/10' : ''}`}
+    >
       <div className="flex w-3.5 shrink-0 flex-col items-center gap-0.5 pt-0.5">
         {handles.map((h) => (
           <span
@@ -161,14 +185,22 @@ const Row = memo(function Row({
           lo >= 0 ? 'text-accent-400' : 'text-ink-600 hover:text-ink-300'
         }`}
       >
-        {rowStamp(row.startMs)}
+        {stamp}
       </button>
       <span className="min-w-0 flex-1 text-[11px] leading-snug text-ink-300">{words}</span>
     </div>
   )
 })
 
-export function TranscriptRows({ transcript: t, run, anchorRow, onChange }: TranscriptRowsProps): ReactNode {
+export function TranscriptRows({
+  transcript: t,
+  run,
+  anchorRow,
+  onChange,
+  stampOf = rowStamp,
+  activeRow = -1,
+  fill = false
+}: TranscriptRowsProps): ReactNode {
   const rows = rowsOf(t)
   const last = t.words.length - 1
   // With nothing picked the handles rest at the ends, as a trimmer's do.
@@ -246,8 +278,8 @@ export function TranscriptRows({ transcript: t, run, anchorRow, onChange }: Tran
   const handlesIn = (r: number): HandleAt[] => {
     if (r !== startRow && r !== endRow) return NO_HANDLES
     const out: HandleAt[] = []
-    if (r === startRow) out.push({ which: 'start', word: current.from, last, stamp: rowStamp(t.words[current.from].startMs) })
-    if (r === endRow) out.push({ which: 'end', word: current.to, last, stamp: rowStamp(t.words[current.to].endMs) })
+    if (r === startRow) out.push({ which: 'start', word: current.from, last, stamp: stampOf(t.words[current.from].startMs) })
+    if (r === endRow) out.push({ which: 'end', word: current.to, last, stamp: stampOf(t.words[current.to].endMs) })
     return out
   }
 
@@ -261,7 +293,7 @@ export function TranscriptRows({ transcript: t, run, anchorRow, onChange }: Tran
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
       onLostPointerCapture={endDrag}
-      className="max-h-72 overflow-y-auto rounded border border-ink-800 bg-ink-950/60 select-none"
+      className={`${fill ? 'min-h-[4.5rem] grow basis-0' : 'max-h-72'} overflow-y-auto rounded border border-ink-800 bg-ink-950/60 select-none`}
     >
       {rows.map((row, r) => {
         const inRun = run !== null && row.words[1] >= run.from && row.words[0] <= run.to
@@ -271,6 +303,8 @@ export function TranscriptRows({ transcript: t, run, anchorRow, onChange }: Tran
             t={t}
             index={r}
             row={row}
+            stamp={stampOf(row.startMs)}
+            active={r === activeRow}
             lo={inRun ? Math.max(run.from, row.words[0]) : -1}
             hi={inRun ? Math.min(run.to, row.words[1]) : -1}
             handles={handlesIn(r)}

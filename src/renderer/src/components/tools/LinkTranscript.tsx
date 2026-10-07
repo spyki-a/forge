@@ -11,9 +11,10 @@ import { TranscriptRows } from './TranscriptRows'
  * The URL tile's transcript of a link (docs/CLIPS.md §3b.1–3b.5, sheets 25
  * and 26): **Get transcript**, then rows of `time | text` to pick a run of
  * words from — by click and shift-click, by the Start and End handles, or by
- * a chapter chip — and **Clip it**, which downloads exactly that run's span
- * and lands it with its words and the link's credit. **Add another clip**
- * keeps the rows and clears the run.
+ * a chapter chip — and Clip it, whose button reads **Clip download** (the
+ * user's name, beside Get's **Full download**, sheet 25's "Clip downloads"):
+ * it downloads exactly that run's span and lands it with its words and the
+ * link's credit. **Add another clip** keeps the rows and clears the run.
  *
  * YouTube's own caption track, fetched by yt-dlp with no media and no model:
  * none of this needs the AI helper. A video with no captions says so, and its
@@ -26,7 +27,7 @@ import { TranscriptRows } from './TranscriptRows'
  */
 
 export const GET_TRANSCRIPT_TITLE = 'Fetch the video’s captions as words to pick a clip from — nothing else is downloaded'
-export const CLIP_IT_TITLE = 'Download exactly the picked words’ part of the video, and put it on the timeline with its words and the video’s credit'
+export const CLIP_DOWNLOAD_TITLE = 'Download only the words you picked and put them on the timeline'
 export const ADD_ANOTHER_TITLE = 'Keep the transcript and pick another run'
 export const LISTEN_TITLE = 'Transcribe the sound with the AI helper — downloads the audio and the speech model'
 export const PICK_CHAPTER_TITLE = 'Pick this chapter’s words'
@@ -140,11 +141,11 @@ function Words({ source }: { source: UrlSource }): ReactNode {
           type="button"
           onClick={() => void clipItFromLink()}
           disabled={!run || busy}
-          title={CLIP_IT_TITLE}
+          title={CLIP_DOWNLOAD_TITLE}
           className="mt-2 flex items-center gap-1.5 rounded bg-accent-500 px-3 py-1.5 text-[11px] font-medium text-ink-950 transition-colors hover:bg-accent-400 disabled:opacity-40"
         >
           <Scissors size={12} />
-          Clip it
+          Clip download
         </button>
       )}
     </>

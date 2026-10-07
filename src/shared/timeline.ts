@@ -1031,6 +1031,46 @@ export function sourceFrameFor(clip: Clip, frame: Frames): Frames {
   return sourceFrameAt(clip, frame)
 }
 
+/**
+ * The inverse of `sourceFrameFor`: the first timeline frame at which the clip
+ * shows the source frame holding `sourceMs`, or a later one (docs/CLIPS.md
+ * §3b.6, §4.7). Transcript words are in SOURCE ms, so this is how a word finds
+ * its frame on the timeline — a cut to words, a row's time, a seek.
+ *
+ * A binary search over the clip's own frames, because `sourceFrameFor` never
+ * goes backwards — at a constant speed, and through a ramp, whose curve has no
+ * tidy inverse once it is rounded to frames. Searching the forward mapping
+ * means the two cannot disagree: whatever speed or curve the one honours, the
+ * other does. At 0.5× two timeline frames show one source frame and the first
+ * is returned; at 2× a source frame no timeline frame shows gives the frame
+ * after it.
+ *
+ * Clamped to the clip: a source before its in-point is its first frame, and
+ * one past the last it shows is `clipEnd` — one past its last frame, which is
+ * what an exclusive end wants. A hold shows one frame for its whole length and
+ * has no inverse: null.
+ *
+ * `sourceMs` to its source frame by flooring — the frame a moment falls in —
+ * with a millionth of a frame's grace, so `s × 1000 / fps` comes back as `s`.
+ */
+export function timelineFrameAt(
+  clip: Pick<Clip, 'speed' | 'start' | 'inPoint' | 'ramp' | 'duration' | 'hold'>,
+  sourceMs: number,
+  fps: number
+): Frames | null {
+  if (clip.hold) return null
+  const target = Math.floor((sourceMs * fps) / 1000 + 1e-6)
+  let lo = clip.start
+  let hi = clip.start + Math.max(0, clip.duration)
+  if (sourceFrameAt(clip, hi) < target) return hi
+  while (lo < hi) {
+    const mid = Math.floor((lo + hi) / 2)
+    if (sourceFrameAt(clip, mid) < target) lo = mid + 1
+    else hi = mid
+  }
+  return lo
+}
+
 export function assetById(project: Project, id: string): MediaAsset | null {
   return project.assets.find((a) => a.id === id) ?? null
 }

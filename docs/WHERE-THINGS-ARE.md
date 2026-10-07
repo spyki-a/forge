@@ -224,10 +224,13 @@ captions…** meanwhile. Then, top to bottom:
   **To** as read-only fields with **set by the words you picked** — sheet 12's
   fields, mirroring the run. **Just a part of it** and its typed From and To
   are not shown while there are words. **Get**, beside the link, then reads
-  **Whole video** and is no longer the blue button — it downloads the whole
-  video, not the pick (its tooltip says Clip it takes the pick) — and Enter in
-  the link box does not press it.
-- **Clip it** downloads exactly the picked words' span (an exact cut) — the
+  **Full download** and is no longer the blue button — it downloads the whole
+  video, not the pick (its tooltip: "Download the whole video and put it on the
+  timeline") — and Enter in the link box does not press it. With no words on
+  screen it is plain **Get**, as before.
+- **Clip download** (Clip it; its tooltip: "Download only the words you picked
+  and put them on the timeline") downloads exactly the picked words' span (an
+  exact cut) — the
   video, or with **Audio** chosen just its sound; a song's Instrumental or
   Vocal left chosen is not what it takes — and
   the clip lands at the end of the timeline with those words as its
@@ -245,8 +248,8 @@ running — transcribing a link's sound is Step P's). If the fetch fails —
 offline, say — **Could not get the transcript.** with the reason, and From
 and To stay typed fields.
 
-**Not yet:** Listen to it, Best clips (sheet 27), and picking rows of a clip
-already on the timeline (the Transcript tile, below).
+**Not yet:** Listen to it and Best clips (sheet 27). Picking rows of a clip
+already on the timeline is the Transcript tile's (below).
 
 ### Narration
 
@@ -289,17 +292,50 @@ remove.
 
 ### Transcript
 
-The **selected timeline clip's** words, sentence by sentence; click one to jump
-there (`TranscriptPanel.tsx`). With no clip selected it says to select one.
-**Edit** turns every word into something to click and correct — Enter keeps
-it, Esc leaves it, an empty word is taken out — and the captions follow at
-once. A word the transcriber was unsure of is underlined. At the bottom,
-**Listen for** takes names and words (the couple, the venue, a brand) for the
-transcriber to expect, and **Transcribe again with these words** runs it again
-— which replaces any corrections. With no transcript yet, the same button says
-**Transcribe**.
+The **selected timeline clip's** words — the ones it PLAYS: a clip trimmed to
+part of a long talk lists that part — as rows of `time | text`, the URL
+tile's own rows (`TranscriptPanel.tsx`, `tools/TranscriptRows.tsx`; `docs/CLIPS.md`
+§3b.6, sheet 26). With no clip selected it says to select one. A row's time is
+where it is on the **timeline**, through the clip's speed (at 2× a word ten
+seconds into the source is five seconds into the clip), and the row under the
+playhead is tinted.
 
-**Not yet:** selecting rows and cutting the clip to them (sheet 26).
+- **Picking a run**, as in the URL tile: click a row's time or a word to pick
+  that row — and the playhead jumps there, as a click always did; shift-click
+  another row, or a word, to extend; or drag **Start** and **End** in the
+  gutter (the arrow keys move a focused one a word). With nothing picked, a
+  line says **Click a row to jump there and pick its words; shift-click another
+  row, or a word, to extend. Or drag Start and End.** With a run picked, the
+  playhead sits on the cut's first frame and the line says how long the clip
+  will be on the timeline, **"0:02.8 selected"**.
+- **Cut to these words** (greyed until a run is picked; its tooltip: "Trims
+  this clip to the words you picked") trims the clip to the run: its in-point
+  and length change, its start and everything else on the track stay, the
+  footage it keeps is the footage it showed, and a speed or a ramp is kept (a
+  ramp keeps the part of its curve the cut keeps). One undo puts it back. The
+  rows then are the run's, and cutting to all of them again changes nothing.
+  Not the Beat sync tile's **Cut to the words**, which cuts a reel on a song's
+  sung words.
+- A **hold** (a frozen frame) has no words of its own: in place of the rows it
+  says **this clip has a hold; cut it by hand**. A picture whose sound was
+  lifted onto a track of its own (**Detach audio**, or a Director J-cut) says
+  **this clip’s sound is on its own track; cut both by hand** — the cut keeps
+  the clip's start and moves its footage, so the picture would leave its sound
+  behind. A clip that plays a part where nothing is said says **No words are
+  spoken in this clip**.
+
+The rows scroll; the line and the cut stay under them, never over **Listen
+for** — in a column too short for both (the dock open under a 240 px tile) the
+tile itself scrolls a little instead. **Edit** turns the clip's words into
+something to click and correct — every word the clip plays any part of, which
+is what its captions show (a word its edge cuts through included), or, on a
+hold, the whole transcript; it is not offered when the clip plays no word.
+Enter keeps it, Esc leaves it, an empty word is taken out — and the captions
+follow at once. A word the
+transcriber was unsure of is underlined. At the bottom, **Listen for** takes
+names and words (the couple, the venue, a brand) for the transcriber to expect,
+and **Transcribe again with these words** runs it again — which replaces any
+corrections. With no transcript yet, the same button says **Transcribe**.
 
 ### Director
 
