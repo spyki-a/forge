@@ -3645,3 +3645,50 @@ therefore hands yt-dlp a format table.
   segmented DASH formats (all five videos were plain https streams).
 - The exact cut's time at 4K and over long ranges.
 - The 29.97 fps talk's picture (a still slide at the start).
+
+## 42. The caption bake's timing — a 40 ms grid, and an export cut at the last caption (2026-10-07)
+
+Found by `tests/integration/clipIt.int.test.ts` (CLIPS.md §3b.8), on the
+development Mac with the bundled ffmpeg (4.1.5 package, reporting 4.4). The
+test exports a Clip it clip through both caption routes and reads every frame:
+the picture names its own source frame, and the bake's pictures are stand-ins
+that spell which word is lit, so each caption change is located to the frame.
+The bake's plan, list and overlay are the app's (`buildGraphicsSpec` →
+`planCaptionBake` → `concatList`, main's `writeCaptionFrame` /
+`writeCaptionList`, `captionOverlay` in `buildRenderPlan`); only the canvas
+painter is stood in for.
+
+**The bake's pictures start on a 40 ms grid, not on frames.** The concat
+input's stream is the first PNG's, read by image2 at its default 25 fps: `25
+fps, 25 tbr, 25 tbn` (`-f concat -safe 0 -i captions.txt`, the exact cut's
+list). So every picture's start is rounded to the nearest 1/25 s, whatever
+`duration` the list gives it; the list's six-decimal durations (`0.033333`)
+sum a little short, so a start that falls half-way lands early. `showinfo` on
+that list: the starts 0, 0.0333, 0.0667, 0.1 … 0.5 s arrive at ticks 0, 1, 2,
+2, 3, 4, 5, 6, 7, 7, 8, 9, 10, 11, 12, 12 (0.5 s → 0.48), 2.3 s → 2.28. After
+the overlay's `fps=30`, two of ten words lit a frame EARLY on both cuts — w32
+at export frame 14 for 15, w35 at 68 for 69 — the other eight on their frame;
+libass, timed by the frame's own pts, put all ten on their frame. Derived, not
+measured: a start moves at most 20 ms, so at most one frame early or late at
+30 or 60 fps and none at 24 or 25. And an animated look's one-frame pictures
+(the kinetic preset's pop) share ticks — three pairs in the first sixteen
+above — so one of each pair never reaches the export: the arrival animation
+plays resampled to 25 pictures a second. Not fixed here; the test allows the
+one frame it is told to allow.
+
+**The bake ends the export at its last caption.** `bakeCaptions` plans the
+pictures up to `buildGraphicsSpec`'s `durationFrames` — the last caption
+line's end, not the edit's — and the overlay is `shortest=1`, which ends the
+OUTPUT when the caption input ends (plan.ts's comment says a short bake can
+"neither extend the video nor truncate it"; it truncates it). A 30-frame clip
+whose one caption covers frames 0–7 exported 8 frames through the bake (seven
+planned, plus the list's repeated last entry); the same plan with
+`eof_action=pass` in place of `shortest=1` exported 30. A Clip it run ends on
+its last word, so it shows only when a run under a second is stretched to
+`MIN_RANGE_MS` — but any edit whose talking stops before its picture does
+loses the rest with a styled caption look. The render check's one-word leg
+reads libass only until this is fixed (an `it.todo` marks it).
+
+**Unmeasured**: the 2018 Windows build on either (image2's 25 fps default
+and the overlay's `shortest` both predate it, so the same is expected; the
+test's exact and fast bake legs run there in CI).

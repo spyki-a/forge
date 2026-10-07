@@ -1015,7 +1015,7 @@ commit, beside `trimToRequestedRange`, `section.ts:116-131`).
 - `src/shared/ingest/args.ts`, `src/main/ingest/meta.ts`, the IPC and
   `removePartials` (§7.1); `src/shared/ingest/captions.ts` and
   `src/shared/transcript.ts`'s danda, optional cap and `capSegments` (§7.2).
-- New: `src/shared/edit/wordRun.ts`, `src/shared/edit/clipIt.ts`,
+- New: `src/shared/ingest/wordRun.ts`, `src/shared/edit/clipIt.ts`,
   `src/renderer/src/components/tools/TranscriptRows.tsx`,
   `src/renderer/src/harness/clipItCheck.ts`.
 - `src/shared/ingest/section.ts` gains `MIN_RANGE_MS` (from
@@ -1090,6 +1090,43 @@ commit, beside `trimToRequestedRange`, `section.ts:116-131`).
   caption's appearance. Mutation: the shift off by the range's start.
   **And the exact cut itself** is `exactCut.int.test.ts` with the real
   yt-dlp over a localhost server, in Windows CI (§7.7).
+
+  > **Built 2026-10-07** — `tests/integration/clipIt.int.test.ts` (README in
+  > `tests/output/clipit/`): a lossless 30 fps source naming each frame in
+  > bars, 57 made-up words 15–25 frames apart, irregularly (so a run's onsets
+  > are its own), served as json3 by the fake yt-dlp, which now also cuts the
+  > section with the bundled ffmpeg in yt-dlp's two-input shape (§41). Main's
+  > handlers behind the real store: Get transcript, w31–w40, `clipItFromLink`
+  > (exact) — the fast cut through `startIngest` with the same override and
+  > `offsetIntoDownload` as head — `collectIngest`, then exported through
+  > `prepareCaptions` (libass) and the bake's plan (stand-in pictures spelling
+  > the lit word). **Read by the picture**: a word's frame is the export frame
+  > whose bars show its source frame, and each captioned export must show the
+  > captionless one's frames, frame for frame; a caption is band pixels more
+  > than 40 levels from that captionless export (blank frames 0 such pixels,
+  > captioned ≥ 611; held frames 0 change, word onsets ≥ 621), a line its first
+  > frame after a blank, a word that or a change in the band. Mac, exact and
+  > fast alike: the first frame is source 631 (w31's); lines at 0, 47, 107, 179
+  > against 0, 47, 107, 179 on both routes; libass every word +0; the bake +0
+  > but w32 and w35 −1 (its pictures start on a 40 ms grid, `EFFECTS.md` §42);
+  > a one-word run captions its word alone. Recorded, not asserted: one range,
+  > two lengths — the exact file 187 frames (631…817), the fast clip 186
+  > (`trimToRequestedRange` rounds the range's 186.21 frames, dropping 817);
+  > whether it should keep the last frame starting inside the range is open.
+  > Mutations, each killed by the reading, restored `cmp`-identical: the shift
+  > early by the range's start (no caption anywhere); the fast cut's head
+  > dropped in the collect (none on the fast cut); the run filter widened to
+  > the range (w47 joins the one-word clip at frame 20); the unshifted
+  > transcript (every leg — the exact cut 8 onsets for 10; the fast cut's ten up
+  > to 11 frames off, w34 at 53 for 47, its bake showing w14–w23); the libass
+  > and the bake offsets without the in-point; ASS times 67 ms late (+2); the
+  > picture a frame late under the bake only (`tpad` before the overlay: w32
+  > lit 2 frames early, caught only by the frame-for-frame comparison).
+  > **Found**, measured before §43: the bake ended an export at its last
+  > caption (`shortest=1`) — the one-word clip, 8 frames of 30 (§42; fixed in
+  > §43). That leg reads libass only, with an `it.todo`, until §43's fix is
+  > committed with it; beside that fix it reads both routes green (30 frames,
+  > w46 at +0).
 - **Harness check** `harness/clipItCheck.ts` (`window.__forgeClipItCheck`):
   the bridge stubs `ingestMeta` and `ingestCaptions` (12 rows, three
   chapters). The check picks rows 3–5 by click and shift-click and reads the

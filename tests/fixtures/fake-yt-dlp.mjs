@@ -40,9 +40,33 @@
  *   FAKE_HOLD_MS    wait this long before printing: after writing captions
  *                   (to cancel with the files on disk), or before the
  *                   metadata (a stalled extractor, for the time bound)
+ *   FAKE_JSON3      a json3 file written, byte for byte, as EVERY track the
+ *                   video has — as YouTube writes `<l>` as a copy of
+ *                   `<l>-orig` when there is no uploader track (EFFECTS.md
+ *                   §40) — instead of the made-up word list: a test's own
+ *                   synthetic words (tests/integration/clipIt.int.test.ts)
+ *
+ * And a real cut, for `--download-sections` (docs/CLIPS.md §7.7):
+ *
+ *   FAKE_SECTION_VIDEO, FAKE_SECTION_AUDIO
+ *                   a video-only and an audio-only file, as YouTube serves
+ *                   them. Each `*S-E` section is cut from them by the ffmpeg
+ *                   named by `--ffmpeg-location` — the app's bundled one, as
+ *                   yt-dlp runs it — in the shape yt-dlp's FFmpegFD runs,
+ *                   measured with its `-v` (EFFECTS.md §41): `-ss S -t D -i
+ *                   <video> -ss S -t D -i <audio> -map 0:0 -map 1:0 -f mp4
+ *                   file:<stem>.mp4.part`, a re-encode with ffmpeg's defaults
+ *                   under `--force-keyframes-at-cuts` and `-c copy` without
+ *                   it. Two differences, neither in the file: `-loglevel
+ *                   error` rather than yt-dlp's `quiet`, so a failed cut says
+ *                   why; and S and D printed from whole milliseconds. Several
+ *                   sections all write the one `<stem>.%(ext)s`, the last
+ *                   winning, as measured in simulate (§7.1). Without these two
+ *                   knobs a download is the empty placeholder it always was.
  */
 
-import { mkdirSync, renameSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
 import { join } from 'node:path'
 
 /*
@@ -170,7 +194,8 @@ if (argv.includes('--skip-download')) {
   for (const lang of wanted) {
     if (!have.has(lang)) continue // a missing language is skipped silently
     const finalPath = join(destDir, media.replace(/\.[^.]+$/, `.${lang}.${subExt}`))
-    writeFileSync(`${finalPath}.part`, subExt === 'json3' ? JSON.stringify(json3For(lang)) : 'WEBVTT\n\n')
+    const json3 = process.env.FAKE_JSON3 ? readFileSync(process.env.FAKE_JSON3, 'utf8') : JSON.stringify(json3For(lang))
+    writeFileSync(`${finalPath}.part`, subExt === 'json3' ? json3 : 'WEBVTT\n\n')
     await sleep(delay)
     renameSync(`${finalPath}.part`, finalPath)
     written[lang] = { ext: subExt, url: 'https://example.invalid/timedtext', name: lang, filepath: finalPath }
@@ -196,6 +221,64 @@ for (const p of prints) {
 mkdirSync(destDir, { recursive: true })
 const finalName = fill(template, { ext, id: 'fake' })
 const finalPath = join(destDir, finalName)
+
+/* ------------------------------------------- a section, cut for real */
+
+const sections = every('--download-sections')
+if (sections.length > 0 && process.env.FAKE_SECTION_VIDEO && process.env.FAKE_SECTION_AUDIO) {
+  const ffmpeg = after('--ffmpeg-location')
+  if (!ffmpeg) {
+    process.stderr.write('ERROR: fake needs --ffmpeg-location to cut a section\n')
+    process.exit(2)
+  }
+  // yt-dlp cuts a section by re-encoding when it must put keyframes at the cuts, and copies otherwise.
+  const exact = argv.includes('--force-keyframes-at-cuts')
+  const part = `${finalPath}.part`
+  for (const section of sections) {
+    const m = /^\*(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)$/.exec(section)
+    if (!m) {
+      process.stderr.write(`ERROR: fake cannot read the section ${JSON.stringify(section)}\n`)
+      process.exit(2)
+    }
+    const startMs = Math.round(Number(m[1]) * 1000)
+    const endMs = Math.round(Number(m[2]) * 1000)
+    const ss = String(startMs / 1000)
+    const t = String((endMs - startMs) / 1000)
+    const cut = spawnSync(
+      ffmpeg,
+      [
+        '-y', '-loglevel', 'error',
+        '-ss', ss, '-t', t, '-i', process.env.FAKE_SECTION_VIDEO,
+        '-ss', ss, '-t', t, '-i', process.env.FAKE_SECTION_AUDIO,
+        '-map', '0:0', '-map', '1:0',
+        ...(exact ? [] : ['-c', 'copy']),
+        '-f', 'mp4', `file:${part}`
+      ],
+      { windowsHide: true, encoding: 'utf8' }
+    )
+    if (cut.status !== 0) {
+      process.stderr.write(`ERROR: ffmpeg exited with code ${cut.status}: ${(cut.stderr || String(cut.error ?? '')).trim()}\n`)
+      process.exit(1)
+    }
+  }
+  // FFmpegFD reports one `finished` line and no bytes along the way (download.ts).
+  process.stdout.write(
+    fill(progressTemplate.replace(/^download:/, ''), {
+      'progress.status': 'finished',
+      'progress.downloaded_bytes': 'NA',
+      'progress.total_bytes': 'NA',
+      'progress.total_bytes_estimate': 'NA',
+      'progress.speed': 'NA',
+      'progress.eta': 'NA'
+    }) + '\n'
+  )
+  renameSync(part, finalPath)
+  for (const p of prints) {
+    if (p.startsWith('after_move:')) process.stdout.write(fill(p.slice('after_move:'.length), { filepath: finalPath }) + '\n')
+  }
+  process.exit(0)
+}
+
 const partPath = join(destDir, finalName.replace(/\.[^.]+$/, `.f1.${ext}.part`))
 writeFileSync(partPath, '')
 

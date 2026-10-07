@@ -1,10 +1,11 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll, type TestContext } from 'vitest'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { mkdtemp, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { formatFor } from '@shared/ingest/format'
+import { ensureYtDlp, type YtDlpTool } from '../../src/main/ingest/binary'
 
 /**
  * What the REAL yt-dlp picks, given our selector.
@@ -20,13 +21,21 @@ import { formatFor } from '@shared/ingest/format'
  * Neither is visible in the string. Both are obvious the moment yt-dlp is asked
  * to choose. `--load-info-json` runs its real format selection against a format
  * table we write, so this needs no network and no actual video.
+ *
+ * Which yt-dlp: the app's own way of finding one, `ensureYtDlp()` —
+ * FORGE_YTDLP, a managed copy, PATH, or fetched from GitHub and checked against
+ * its published checksums — with userData pointed at a temp folder, so a fetch
+ * never lands in the real one (as exactCut.int.test.ts). CI installs no yt-dlp
+ * (ci.yml sets up Python with no pip install), so there it is fetched.
  */
 
 const run = promisify(execFile)
-const YTDLP = process.env.FORGE_YTDLP ?? 'yt-dlp'
 
 let dir = ''
-let available = false
+let tool: YtDlpTool | null = null
+let toolReason: string | null = null
+const savedUserData = process.env.FORGE_TEST_USERDATA
+const inCi = !!process.env.CI && process.env.CI !== 'false'
 
 /** One format table, in yt-dlp's own shape. */
 async function infoFile(
@@ -68,7 +77,7 @@ async function chosen(info: string, quality: Parameters<typeof formatFor>[1]): P
   if (format.sort) args.push('-S', format.sort)
   args.push('--simulate', '--print', '%(format_id)s %(width)sx%(height)s')
   try {
-    const { stdout } = await run(YTDLP, args)
+    const { stdout } = await run(tool!.path, args)
     return stdout.trim().split('\n').pop() ?? ''
   } catch (err) {
     return `ERROR ${(err as { stderr?: string }).stderr?.trim().split('\n').pop() ?? err}`
@@ -79,27 +88,48 @@ const AUDIO = { format_id: 'aac', width: null, height: null, vcodec: 'none', aco
 
 beforeAll(async () => {
   dir = await mkdtemp(join(tmpdir(), 'forge-ytdlp-'))
+  // A managed copy, if one has to be fetched, lands in this temp userData — never the real one.
+  process.env.FORGE_TEST_USERDATA = join(dir, 'userData')
   try {
-    await run(YTDLP, ['--version'])
-    available = true
-  } catch {
-    available = false
+    tool = await ensureYtDlp()
+  } catch (err) {
+    toolReason = `no yt-dlp: ${err instanceof Error ? err.message : String(err)}`
   }
-}, 60_000)
+  // Longer than ensureYtDlp can take at its worst (binary.ts: three 15 s `--version` checks, then 60 s
+  // for the checksums, 300 s for the binary and 15 s to run it), so a slow fetch reaches need()'s reason
+  // rather than a bare "Hook timed out".
+}, 600_000)
 
 afterAll(async () => {
+  if (savedUserData === undefined) delete process.env.FORGE_TEST_USERDATA
+  else process.env.FORGE_TEST_USERDATA = savedUserData
   await rm(dir, { recursive: true, force: true }).catch(() => undefined)
 })
 
+let told = false
+
 /*
- * Skipped rather than failed where yt-dlp is not installed.
- *
- * It is fetched at runtime on a real machine and is not a build dependency, so
- * a developer without it should not see a red suite. CI has it via pip.
+ * Run, or say why not. Without a yt-dlp the case is SKIPPED, with the reason —
+ * not returned from, which counted as a pass and so certified a selector
+ * nothing had checked. Under CI (`CI` set, as GitHub Actions sets it) it
+ * FAILS with that reason instead: there the tool is fetched, and a fetch that
+ * fails must not leave this file green.
  */
+function need(ctx: TestContext): void {
+  if (tool) return
+  const text = `ytdlpFormat: ${toolReason ?? 'no yt-dlp'}`
+  if (inCi) throw new Error(`${text} — under CI these cases must run (see the note at the top of ytdlpFormat.int.test.ts)`)
+  if (!told) {
+    told = true
+    // Written, not console.log: the default reporter shows a raw write and hides a skipped test's log.
+    process.stderr.write(`ytdlpFormat.int: SKIPPED — ${toolReason ?? 'no yt-dlp'}\n`)
+  }
+  ctx.skip(text)
+}
+
 const withYtDlp = (name: string, body: () => Promise<void>): void => {
-  it(name, async () => {
-    if (!available) return
+  it(name, async (ctx) => {
+    need(ctx)
     await body()
   }, 60_000)
 }
