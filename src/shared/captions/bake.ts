@@ -1,4 +1,4 @@
-import type { CaptionLayer } from '../graphics/spec'
+import type { CaptionLayer, GraphicsSpec } from '../graphics/spec'
 import { animationFrames, piecesOf, textAnimationById } from '../render/textAnimation'
 
 /**
@@ -123,6 +123,30 @@ export function planCaptionBake(
   }
 
   return { pictures, runs, totalFrames }
+}
+
+/** What an export bakes: a spec's caption lines, and the plan over them. */
+export interface CaptionBake {
+  /** The caption lines, in the order the plan's `picture.layer` indexes. */
+  layers: CaptionLayer[]
+  plan: CaptionBakePlan
+}
+
+/**
+ * The bake for an export: a spec's caption lines, planned over the WHOLE spec.
+ *
+ * Over `spec.durationFrames`, which is the edit's end, and never over the last
+ * line's. The bake is overlaid with `shortest=1`, so a bake that stopped with
+ * the speech stopped the export there (EFFECTS.md §43).
+ *
+ * One function, because the renderer's `bakeCaptions` cannot run outside a DOM
+ * canvas: the render checks stand in for its painting and call THIS, so the
+ * length they guard is the length the app bakes, not a copy of the expression.
+ */
+export function planBakeOf(spec: GraphicsSpec): CaptionBake | null {
+  const layers = spec.layers.filter((l): l is CaptionLayer => l.kind === 'caption')
+  const plan = planCaptionBake(layers, spec.fps, spec.durationFrames)
+  return plan ? { layers, plan } : null
 }
 
 /**

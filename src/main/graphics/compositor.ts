@@ -54,8 +54,9 @@ export function compositeGraphics(options: CompositeOptions): CompositeHandle {
       '-video_size', `${width}x${height}`,
       '-framerate', String(fps),
       '-i', 'pipe:0',
-      // shortest=1 ends on whichever runs out first, so a graphics stream that
-      // is a frame short cannot extend or truncate the picture unexpectedly.
+      // shortest=1 ends on whichever runs out first: a longer graphics stream
+      // cannot extend the picture, but a shorter one truncates it — which is
+      // why the spec's durationFrames is the edit's end (EFFECTS.md §43).
       '-filter_complex', '[0:v][1:v]overlay=0:0:shortest=1,format=yuv420p[v]',
       '-map', '[v]',
       // The base video may have no audio; '?' makes the mapping optional rather

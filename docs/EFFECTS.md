@@ -3692,3 +3692,165 @@ reads libass only until this is fixed (an `it.todo` marks it).
 **Unmeasured**: the 2018 Windows build on either (image2's 25 fps default
 and the overlay's `shortest` both predate it, so the same is expected; the
 test's exact and fast bake legs run there in CI).
+
+## 43. The caption bake covers the edit — §42's truncation, fixed and measured (2026-10-07)
+
+The fix for the second half of §42, chosen by measuring both candidates on the
+render. Development Mac, the bundled ffmpeg (4.1.5 package, reporting 4.4).
+The render check is `tests/integration/captionBakeLength.int.test.ts`. It uses
+the app's path around one stand-in (`buildGraphicsSpec` → `planBakeOf`, the
+step `bakeCaptions` takes, which plans `spec.durationFrames` → `concatList`,
+main's `writeCaptionFrame` / `writeCaptionList`, `captionOverlay` through
+`buildRenderPlan`). Its fixture is a 30-frame clip of flat grey (320×240,
+30 fps) captioned in "kinetic", with one word at 0–250 ms, so the caption
+covers timeline frames 0–7. The pictures are stand-ins: the band is
+transparent except for a white block. Each export is decoded whole
+(`-vsync 0`) and read at the block: white means the caption, grey the
+picture, black the base canvas where the clip went missing.
+
+**Today's code, reproduced.** The plain case exported **10 of 30** frames,
+with the block on frames 0–9: the caption's 8 planned frames, plus the 2 frames
+the list's repeated last entry holds. That entry keeps its picture for one
+1/25 s tick of its own (`showinfo`: an entry listed at 0.266667 s starts at
+0.28 s, and `fps=30` emits two frames from it), which lands on 1 or 2 output
+frames at 30 fps depending on where the tick falls. Measured, one caption
+`[0, N)` baked over N frames (the old length) under the 30-frame clip, through
+the render: N = 5 → 6 frames, 6 → 7, 7 → 8, **8 → 10**, 9 → 10, 10 → 11,
+11 → 12. The same single run plus its repeat, through `fps=30` alone with no
+overlay: 6, 7, 8, 10, 11, 11, 12 (N = 9 differs, 11 against 10). So §42's 8 of
+30 fits a caption of seven planned frames plus one, and this check's 10 of 30
+is eight plus two. That §42's clip had seven is derived from this table, not
+re-run (its check is another file's). A marked
+range of 4–20 exported **6 of 16**. A range of 10–30, which starts after the
+last caption, made ffmpeg **exit 0** and write a 0.67 s file that is **audio
+only, with no video stream at all**. A range of 2–6 is unaffected, because it
+ends inside the caption.
+
+**The two options, each measured on the render** (frames exported / export
+frames showing the caption; the plan's `durationFrames` in brackets):
+
+| case | today | (a) bake to the edit's end | (b) `eof_action=pass` |
+| --- | --- | --- | --- |
+| caption 0–7, clip 30 [30] | 10 / 0–9 | **30 / 0–7** | 30 / 0–9 |
+| a 60-frame bake over the 30 [30] | 30 / 0–7 | 30 / 0–7 | 30 / 0–7 |
+| range 2–6, ends before the caption does [4] | 4 / 0–3 | 4 / 0–3 | 4 / 0–3 |
+| range 4–20, ends after it [16] | 6 / 0–5 | **16 / 0–3** | 16 / 0–5 |
+| range 10–30, starts after it [20] | no video stream | **20 / none** | 20 / none |
+| no captions [30] | 30 | 30 | 30 |
+| 24 fps, caption 0–5, clip 24 [24] | 7 / 0–6 | **24 / 0–5** | 24 / 0–6 |
+| 25 fps, caption 0–5, clip 25 [25] | 7 / 0–6 | **25 / 0–5** | 25 / 0–6 |
+
+Option (b) puts `eof_action=pass` in place of `shortest=1` (one match,
+asserted before the swap) and leaves the plan as it is.
+
+- **Both give the plan's length in every case.** Only (a) also gives the
+  caption's own frames. Under (b) the repeated last entry's tick shows on
+  frames that should be bare: the caption stays up **2 frames past its end at
+  30 fps and 1 frame at 24 or 25 fps**. Under `shortest=1` that tail had been
+  the last frames of a truncated export. Under `eof_action=pass` it falls on
+  the picture. Under (a) the closing run is the blank (or a run that reaches
+  the edit's end), so the tail falls after the video, where `shortest=1`
+  drops it.
+- **A longer bake does not extend the video under `shortest=1` or
+  `eof_action=pass`**, and `-t` is not what holds it there. With the output
+  `-t` raised to 10 s, a 60-frame bake over the 30-frame video still gave 30
+  frames with either. That is those two settings, not the overlay in general:
+  with NEITHER (the default, `eof_action=repeat`) the same render gave **61 of
+  30** frames under `-t 10`, the caption still on 0–7, because the overlay ran
+  on to the bake's end. With the plan's own `-t` (1 s) it gave 30, so without
+  `shortest=1` only the output `-t` would hold the length. Keep `shortest=1`.
+  (Removing `-t` entirely is not a test. A project with no audio has an
+  endless `anullsrc`, and the render never stops.)
+- **(a) is the smaller change and leaves the graph as it was.** It is one
+  expression: `buildGraphicsSpec`'s `durationFrames` is now
+  `max(projectDuration(project), every line's end)` instead of the last
+  line's end. `bakeCaptions` passes `spec.durationFrames` as before. Nothing
+  more is drawn, because the frames after the last line are the blank, which
+  is always picture 0. The list gains one run.
+
+**Chosen: (a)**, in `buildGraphicsSpec` rather than in `bakeCaptions`, for
+three reasons. A render check can run it, while `bakeCaptions` needs a DOM
+canvas. The tier-2 compositor (not routed, kept for a future DOM layer)
+composites `durationFrames` frames with `shortest=1` too, so it had the same
+truncation and gets the same fix. Measured: `compositeGraphics` with
+`durationFrames` 8 over a 1 s, 30-frame grey video wrote **8** frames, and
+with 30 it wrote 30. And `tests/tier2.test.ts` had a test,
+"runs to the last word, not the whole timeline", that pinned the bug; it now
+asserts the edit's end, including a music outro on an audio track. It is the
+fifth test found in this project asserting the behaviour it should have
+caught.
+
+**The step from spec to plan is shared, so the check runs the app's.** As
+first written, the check copied `bakeCaptions`' call,
+`planCaptionBake(layers, fps, spec.durationFrames)`, into its own `bake()`.
+`bakeCaptions` is the one routed caller and no test runs it (it needs a DOM
+canvas, and `stripsRender.test` mocks it to null). So a review mutant that
+planned to the last line's end in `bakeCaptions` itself passed every test.
+The step is now `planBakeOf(spec)` in `src/shared/captions/bake.ts`: the
+caption lines, and their plan over `spec.durationFrames` at `spec.fps`.
+`bakeCaptions` and the check both call it. `tests/captionBake.test.ts` tests
+it, and also reads `captionBake.ts` to check that its one `planBakeOf` call
+takes the `spec` as built and that it calls `planCaptionBake` nowhere.
+`clipIt.int` still has its own copy (another agent's file at the time; it can
+adopt `planBakeOf`).
+
+**A marked range.** `ExportStrip` bakes the whole `exported` project, and
+`buildRenderPlan` runs its graph from 0 to `range.end` on the edit's own clock
+and trims the front last. The bake is planned to `projectDuration` (the
+`fullFrames` the plan starts from, and never less than `range.end`), so it
+always reaches the graph's end, and its frames are the graph's frames. That is
+measured, not only argued: range 4–20 shows the caption on export frames 0–3,
+which are timeline 4–7. A bake sized to the EXPORT (`range.end -
+range.start`) would be right only when no range is marked. Run as a mutant in
+the check, it exported 3 of 4, 13 of 16 and 12 of 20.
+
+**An edit that ends off a tick.** Every 30 fps case above ends on a 1/25 s
+tick (30 frames is 1.000 s), and so does captionOverlay.int (40 frames at
+10 fps is 4.0 s). The check has one case that does not: the same word over a
+61-frame clip at 60 fps, 1.0167 s, the caption on frames 0–14. `showinfo` on
+its list: the repeated last entry starts at **1.00 s**, rounded DOWN from the
+durations' sum. So the bake reaches the video's last frame only because that
+entry holds its own 40 ms tick. On this build the export was **61 of 61**
+frames, with the block on 0–13. The blank's start of 0.25 s landed on the
+0.24 s tick, one frame early, which is inside the check's slack. Under the old
+length the case exported 17 of 61.
+
+**Mutations**, each run to a file and restored byte-identical (`cmp`). They
+were re-run after `planBakeOf` and the off-tick case went in:
+- The old length back in `buildGraphicsSpec`: 5 failures (10 of 30, 6 of 16,
+  0 of 20, 17 of 61, and the unit test's 99 for 120).
+- `planBakeOf` planning to the last line's end: 6 failures (10 of 30, 6 of 16,
+  0 of 20, 17 of 61, the longer bake's 8 not more than 30, and the unit test's
+  60 for 120).
+- `bakeCaptions` planning for itself with `planCaptionBake(layers, fps,
+  <last line's end>)` (the review's mutant), or calling
+  `planBakeOf({ ...spec, durationFrames: <last line's end> })`: the source
+  check failed on each, and the render checks passed, as expected for a
+  function no test runs.
+- The bake sized to the export rather than the edit, at the check's `bake()`
+  call: there is no range in the bake's own code to mutate. All three range
+  cases failed (3 of 4, 13 of 16, 12 of 20), and the un-ranged cases passed.
+- Option (b) in place of (a), i.e. the old length plus `eof_action=pass`: the
+  lengths passed. The caption showed after its end on timeline frame 9 in the
+  plain case and in range 4–20, and on frame 16 at 60 fps.
+
+**Windows (dated, not run).** No new filter or option. The graph is the one
+Windows CI already runs (captionOverlay.int: a 40-frame bake over 40 frames),
+and `shortest` predates the 2018-12-17 floor. Under (a) the caption input
+never ends before the video does. Its repeated last entry starts within 20 ms
+of the edit's end, rounded to the nearest 1/25 s, and holds a 40 ms tick, so
+on this build it ends at least 20 ms after the video. The EOF that ends the
+overlay is therefore the main input's. Three things are dated, not run: what
+the 2018 build does at the caption input's own EOF (a short bake under
+`shortest=1`, or `eof_action=pass`, which merged in 2016); whether it rounds
+and holds that last entry the same way; and whether its `fps` filter flushes
+the same frames at EOF. The render check runs in Windows CI on the next push,
+including the off-tick 60 fps case, so CI measures the case that depends on
+that last tick and not only the tick-aligned ones.
+
+**Still open: §42's 40 ms grid.** Thirty one-frame pictures alternating at
+30 fps came out as 31 frames, with frames 2, 8, 14, 20 and 26 wrong: two
+entries share a tick and one is dropped, one in six. This fix does not touch
+the grid. The check allows one frame at each edge of the caption for it. On
+this build the 30 fps caption landed exactly, and the 60 fps one ended one
+frame early.

@@ -5,7 +5,7 @@ import {
   needsFrameServer
 } from '@shared/graphics/fromTimeline'
 import { segmentIntoSentences, type Word } from '@shared/transcript'
-import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
+import { emptyProject, projectDuration, type Clip, type MediaAsset, type Project } from '@shared/timeline'
 import { layersAt, type CaptionLayer } from '@shared/graphics/spec'
 import {
   transitionsFromMasks,
@@ -185,9 +185,24 @@ describe('buildGraphicsSpec', () => {
     expect(buildGraphicsSpec(project({ transcripts: {} }), CANVAS)).toBeNull()
   })
 
-  it('runs to the last word, not the whole timeline', () => {
-    const spec = buildGraphicsSpec(project(), CANVAS)!
-    expect(spec.durationFrames).toBe(Math.max(...spec.layers.map((l) => l.endFrame)))
+  it('runs to the end of the edit, not the last word', () => {
+    /*
+     * This asserted the opposite once, and so certified a bug: the caption bake
+     * is planned over `durationFrames` and overlaid `shortest=1`, so a spec that
+     * stopped at the last word stopped the whole export there (EFFECTS.md §42, §43;
+     * the render check is tests/integration/captionBakeLength.int.test.ts).
+     */
+    const p = project()
+    const spec = buildGraphicsSpec(p, CANVAS)!
+    // The fixture: the clip (120 frames) outlasts the last word (3.3 s, frame 99).
+    expect(Math.max(...spec.layers.map((l) => l.endFrame))).toBeLessThan(projectDuration(p))
+    expect(spec.durationFrames).toBe(projectDuration(p))
+    for (const layer of spec.layers) expect(spec.durationFrames).toBeGreaterThanOrEqual(layer.endFrame)
+
+    // A music outro on its own track is the edit too: the render runs to it, so must the bake.
+    const outro: Clip = { ...p.clips[0], id: 'music', trackId: 'a1', start: 100, duration: 80 }
+    const scored = { ...p, clips: [...p.clips, outro] }
+    expect(buildGraphicsSpec(scored, CANVAS)!.durationFrames).toBe(180)
   })
 })
 

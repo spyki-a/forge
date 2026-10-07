@@ -809,23 +809,15 @@ describe('Clip it, exported with its captions — each line within a frame of it
     expect.soft(wordMs(47)).toBeLessThan(request.range!.endMs)
     expect.soft(project.transcripts[asset.id].words.map((w) => w.text)).toEqual([wordText(46)])
     /*
-     * libass only, for now. Before EFFECTS.md §43 the bake ended an export
-     * where its last caption did — planned to the last line's end
-     * (`buildGraphicsSpec`'s `durationFrames`, as bakeCaptions passes it) and
-     * overlaid `shortest=1` — and this 30-frame clip came out 8 frames long
-     * through it (§42). A run that is not stretched ends on its last word, so
-     * the two legs above end on their caption and read the bake whole. §43
-     * plans the bake to the edit's end; once that fix is committed with this
-     * check, this leg reads both routes (`check('one-word', landed)`) and the
-     * it.todo below goes. Until then the bake's length here is only recorded.
+     * Both routes. This leg is the one that caught the bake ending an export
+     * where its last caption did (EFFECTS.md §42: this 30-frame clip came out
+     * 8 frames long through the bake, planned to the last line's end and
+     * overlaid `shortest=1`). §43 plans the bake to the edit's end, so the
+     * bake now keeps all 30 frames here; `check` asserts the frame count
+     * against the plan on both routes, so this leg guards §43 as well.
      */
-    const { frames } = await check('one-word', landed, ['libass'])
-    const baked = await exportAs('one-word', project, 'bake')
-    const bakedFrames = (await readFrames(baked.file, BARS_H)).index.length
-    notes.push(`  - bake: not read on this leg (an it.todo); for the record, it exported ${bakedFrames} of ${frames} frames (EFFECTS.md §42 measured 8 of 30 before §43)`)
+    await check('one-word', landed)
   })
-
-  it.todo('a one-word run through the bake keeps its 30 frames — to read once EFFECTS.md §43’s fix is committed with this check (before it: 8 of 30)')
 })
 
 /** The link as yt-dlp's metadata names it: the canonical watch URL (the fake prints it as `webpage_url`). */

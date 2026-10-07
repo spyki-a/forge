@@ -1,7 +1,7 @@
 import type { Project } from '@shared/timeline'
 import type { CaptionLayer } from '@shared/graphics/spec'
 import { buildGraphicsSpec } from '@shared/graphics/fromTimeline'
-import { concatList, planCaptionBake } from '@shared/captions/bake'
+import { concatList, planBakeOf } from '@shared/captions/bake'
 import { animationBounds, textAnimationById } from '@shared/render/textAnimation'
 import { layoutText } from '@shared/render/textLayout'
 import { drawTextOnto } from '@shared/render/textPaint'
@@ -120,8 +120,13 @@ export async function bakeCaptions(
   const spec = buildGraphicsSpec(project, canvas)
   if (!spec) return null
 
-  const layers = spec.layers.filter((l): l is CaptionLayer => l.kind === 'caption')
-  if (layers.length === 0) return null
+  // The spec's caption lines, planned over the edit's length, not the last
+  // caption's: the overlay is `shortest=1`, so a bake that ended with the
+  // speech ended the export there (EFFECTS.md §43). `planBakeOf` is shared so
+  // the render checks run this very step (tests/integration/captionBakeLength).
+  const bake = planBakeOf(spec)
+  if (!bake) return null
+  const { layers, plan } = bake
 
   // A face that is not loaded yet would bake in the fallback and look exactly
   // like the font picker doing nothing — but permanently, in the export.
@@ -131,9 +136,6 @@ export async function bakeCaptions(
   const fps = project.settings.fps
   const band = measureBand(layers, canvas.width, canvas.height)
   if (!band) return null
-
-  const plan = planCaptionBake(layers, fps, spec.durationFrames)
-  if (!plan) return null
 
   await window.forge.clearCaptionFrames()
 

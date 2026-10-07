@@ -1,5 +1,5 @@
 import type { Project } from '../timeline'
-import { clipsOnTrack, framesToSeconds, secondsToFrames } from '../timeline'
+import { clipsOnTrack, framesToSeconds, projectDuration, secondsToFrames } from '../timeline'
 import { groupWords } from '../captions/ass'
 import { captionSpec } from '../captions/line'
 import { resolveStyle, type CaptionStyle, type StyleOverrides } from '../captions/style'
@@ -141,7 +141,19 @@ export function buildGraphicsSpec(
     width: options.width,
     height: options.height,
     fps,
-    durationFrames: Math.max(...layers.map((l) => l.endFrame)),
+    /*
+     * The EDIT's end, not the last caption's.
+     *
+     * The bake is planned over this many frames and overlaid with
+     * `shortest=1`, so it has to be at least as long as the video: planned to
+     * the last line's end, it stopped the whole export where the speech did —
+     * a 30-frame clip captioned over frames 0–7 exported 10 frames, and a
+     * marked range starting after the last caption came out with no video at
+     * all. `projectDuration` is the end the render plan runs to, so the two
+     * agree with or without a range (EFFECTS.md §43). The frames after the
+     * last line are the blank, which is already a picture: nothing more drawn.
+     */
+    durationFrames: Math.max(projectDuration(project), ...layers.map((l) => l.endFrame)),
     layers
   }
 }

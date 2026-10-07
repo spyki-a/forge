@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { activeWordOf, concatList, planCaptionBake } from '@shared/captions/bake'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { activeWordOf, concatList, planBakeOf, planCaptionBake } from '@shared/captions/bake'
 import { captionSpec } from '@shared/captions/line'
 import { styleById } from '@shared/captions/style'
 import { animationBounds, TEXT_ANIMATIONS, textAnimationById } from '@shared/render/textAnimation'
-import type { CaptionLayer } from '@shared/graphics/spec'
+import type { CaptionLayer, GraphicsSpec } from '@shared/graphics/spec'
 import type { Word } from '@shared/transcript'
 
 /*
@@ -147,6 +149,67 @@ describe('planCaptionBake', () => {
     // show — the other has been read already.
     expect(layerAt(plan, 40)).toBe(1)
     expect(layerAt(plan, 80)).toBe(1)
+  })
+})
+
+describe('planBakeOf', () => {
+  /*
+   * The step between the spec and the pictures, shared by the renderer's
+   * bakeCaptions and the render checks that stand in for its painting. Its
+   * length is the export's length: the bake is overlaid `shortest=1`, so a
+   * plan that stopped at the last line stopped the export there (EFFECTS.md
+   * §42, §43; the render check is tests/integration/captionBakeLength).
+   */
+  const spec = (durationFrames: number, layers: GraphicsSpec['layers']): GraphicsSpec => ({
+    width: 1080, height: 1920, fps: FPS, durationFrames, layers
+  })
+
+  it('plans over the whole spec, not to the last line', () => {
+    // Two lines that end at frame 60, in an edit that runs to 120.
+    const lines = [layer('a', 0, 20, [0]), layer('b', 40, 60, [40])]
+    const baked = planBakeOf(spec(120, lines))!
+    expect(Math.max(...lines.map((l) => l.endFrame))).toBeLessThan(120)
+    expect(baked.plan.totalFrames).toBe(120)
+    expect(baked.plan.runs.reduce((sum, r) => sum + r.frames, 0)).toBe(120)
+    // The frames after the last line are the blank, which is already a picture.
+    expect(baked.plan.pictures[baked.plan.runs[baked.plan.runs.length - 1].picture].layer).toBe(-1)
+  })
+
+  it('hands back the caption lines the plan indexes, and only those', () => {
+    const lines = [layer('a', 0, 20, [0]), layer('b', 40, 60, [40])]
+    // A picture layer between them is not the bake's to draw.
+    const picture: GraphicsSpec['layers'][number] = {
+      id: 'logo', kind: 'image', src: 'forge-media://logo.png', startFrame: 10, endFrame: 50,
+      anchorX: 0.5, anchorY: 0.5, width: 100, height: 100,
+      transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 }
+    }
+    const baked = planBakeOf(spec(120, [lines[0], picture, lines[1]]))!
+    expect(baked.layers).toEqual(lines)
+    for (const picture of baked.plan.pictures) {
+      if (picture.layer >= 0) expect(baked.layers[picture.layer]).toBeDefined()
+    }
+  })
+
+  it('has nothing to bake without a caption line', () => {
+    expect(planBakeOf(spec(120, []))).toBeNull()
+  })
+})
+
+describe('bakeCaptions plans through planBakeOf', () => {
+  /*
+   * bakeCaptions needs a DOM canvas, so no test can run it, and the render
+   * checks stand in for it by calling planBakeOf. That guards the export's
+   * length only while the renderer gets its plan the same way, from the spec
+   * as buildGraphicsSpec built it. A bake planned to the last line in here
+   * would bring §43's truncation back with every render check green.
+   */
+  const source = readFileSync(resolve(__dirname, '../src/renderer/src/captionBake.ts'), 'utf8')
+
+  it('takes its plan from planBakeOf over the built spec, and plans nothing itself', () => {
+    expect([...source.matchAll(/const spec = buildGraphicsSpec\(project, canvas\)/g)]).toHaveLength(1)
+    const calls = [...source.matchAll(/\bplanBakeOf\(([^)]*)\)/g)].map((m) => m[1].trim())
+    expect(calls, 'planBakeOf calls in captionBake.ts, by argument').toEqual(['spec'])
+    expect([...source.matchAll(/\bplanCaptionBake\(/g)], 'planCaptionBake called directly').toHaveLength(0)
   })
 })
 

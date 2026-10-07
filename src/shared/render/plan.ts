@@ -1654,8 +1654,14 @@ export function buildRenderPlan(request: RenderRequest): RenderPlan {
      * Baked captions, over everything, in the same pass.
      *
      * `fps` normalises the demuxer's variable rate — the pictures arrive with
-     * whatever durations they are held for — and `shortest=1` means a bake that
-     * is a frame short can neither extend the video nor truncate it.
+     * whatever durations they are held for. `shortest=1` means a bake longer
+     * than the video cannot extend it, but it CAN truncate it: the export stops
+     * the moment the bake does. So the bake must cover the whole edit, and it
+     * does — `buildGraphicsSpec` plans it to `projectDuration`, the end this
+     * graph runs to, never to the last caption (EFFECTS.md §43). That also
+     * puts the concat list's repeated last entry, which holds its picture for
+     * the image demuxer's own 1/25 s, past the video's end where this cuts it
+     * off, instead of on the frames after the last caption.
      *
      * Measured at 1080x1920, on ten seconds: a full-frame overlay costs 3.4s and
      * a band 0.86s, which is why the y offset exists at all.
