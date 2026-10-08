@@ -29,9 +29,12 @@ const seconds = (frames: number, fps: number): string => framesToSeconds(frames,
 
 /**
  * The cap, as an expression on the frame that arrives — never on the probed
- * size: the probe records a phone clip's coded size and ffmpeg decodes it
+ * size: the probe recorded a phone clip's coded size while ffmpeg decodes it
  * turned, so a cap sized from the probe squeezed a portrait clip into a
- * landscape box at half its resolution (measured). Even, for the encoder.
+ * landscape box at half its resolution (measured). The probe reads the turn
+ * since 2026-10-08 (docs/CLIPS.md §3.1), but an asset imported before then
+ * still carries the coded size, and the frame that arrives is the truth
+ * either way. Even, for the encoder.
  */
 export function footageCapFilter(maxEdge: number): string {
   const shrink = `min(1,${maxEdge}/max(iw,ih))`

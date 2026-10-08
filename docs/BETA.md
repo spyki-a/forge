@@ -43,7 +43,7 @@ more to a careful closed beta.
 | R2 | the first-hour bugs (six of them, plus 7–9 from `CLIPS.md`) | 1.5 (7–9's 1.5 counted in `CLIPS.md` step 0) |
 | R3 | copy rules and one blind rating run | 0.5 + your 45 minutes |
 | R4 | beats without Python: a TypeScript beat tracker (the full route is `CLIPS.md` Step P) | 3 (Step P's 5–10 counted in `CLIPS.md`) |
-| R5 | portrait phone media: rotation and EXIF | 1.5 (built first, in `CLIPS.md` step 0, §3.1) |
+| R5 | portrait phone media: rotation and EXIF — DONE 2026-10-08 | 1.5 (built first, in `CLIPS.md` step 0, §3.1) |
 | R6 | the library pack's fonts and licences | 0.5 |
 | R7 | name, app id, icon, version | 0.5 (once you decide) |
 | R8 | macOS signing, at least ad hoc | 0.5 to days |
@@ -190,6 +190,16 @@ half ships in an installer before it. Decided 2026-10-05 (`SHEETS.md:806-809`,
 saved sidecar analyses; mutation: the period doubled.
 
 ### R5 — Portrait phone media · a day and a half
+
+**DONE 2026-10-08** (built in `CLIPS.md` §3.1): the probe reads the display
+matrix and swaps the sides (`src/shared/media.ts` `uprightSize`,
+`src/main/ffmpeg/probe.ts`), and a still tagged with an EXIF orientation is
+turned into the converted cache at import, `source` kept
+(`src/main/imports.ts`) — `tests/integration/rotation.int.test.ts`,
+mutation-checked; a 9:16 export of a 90° clip, a 4K clip tagged 270 and an
+orientation-6 photo went from 83.7 / 80.3 / 99.4 mean levels off the upright
+picture to 0.39 / 0.30 / 0.48; the 2018 build is the next push's Windows CI;
+`EFFECTS.md` §49. Was:
 
 **What is wrong.** The probe ignores the rotation matrix
 (`src/main/ffmpeg/probe.ts:70`): a rotated phone clip probes 320×180 and

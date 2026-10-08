@@ -4,7 +4,7 @@ import { basename, join } from 'node:path'
 import { app } from 'electron'
 import sharp from 'sharp'
 import type { MediaAsset } from '@shared/timeline'
-import { extOf } from '@shared/media'
+import { extOf, kindForExt } from '@shared/media'
 import { candidatePaths, type Relinked } from '@shared/project/relink'
 import { toAsset } from './assets'
 import { probeMany } from './ffmpeg/probe'
@@ -29,6 +29,18 @@ import { probeMany } from './ffmpeg/probe'
  * file, and the project travels by the file (relink.ts, `locateAsset` below).
  * `rotate()` with no argument bakes the EXIF orientation in, which a phone's
  * HEIC nearly always carries and ffmpeg would never see.
+ *
+ * A JPEG (or any still) whose EXIF says to turn it goes the same way, for the
+ * same reason: both bundled ffmpegs ignore the tag — measured, an
+ * orientation-6 640×360 JPEG probes and decodes 640×360 on the Mac's 4.4, and
+ * the 2018 build's mjpeg decoder only copies EXIF into frame metadata, which
+ * nothing turns (libavcodec/mjpegdec.c at f22fcd4) — while the preview's
+ * `<img>` shows it upright. So a portrait phone photo exported on its side.
+ * Turned at import, the asset's size is the upright one and every reader
+ * agrees (docs/CLIPS.md §3.1, BETA.md R5, EFFECTS.md §49). A JPEG's copy is a
+ * JPEG (quality 95, 4:4:4): a 12-megapixel PNG was 28 MB and 635 ms against
+ * 3.5 MB and 193 ms, and at 47 dB from the lossless turn it is closer to it
+ * than ffmpeg's own decode of the original is to sharp's (40 dB).
  */
 export const CONVERT_EXT: ReadonlySet<string> = new Set(['avif', 'heic', 'heif'])
 
@@ -44,12 +56,32 @@ export function needsConversion(path: string): boolean {
   return CONVERT_EXT.has(extOf(path))
 }
 
+/**
+ * A still's EXIF orientation as sharp reads it (1–8), or 1 when it has none,
+ * is not a still, or cannot be read. Reading it is the header alone: 1 ms on
+ * a 12-megapixel JPEG.
+ */
+export async function exifOrientation(path: string): Promise<number> {
+  if (kindForExt(extOf(path)) !== 'image') return 1
+  try {
+    const orientation = (await sharp(path).metadata()).orientation
+    return typeof orientation === 'number' && orientation >= 1 && orientation <= 8 ? orientation : 1
+  } catch {
+    return 1
+  }
+}
+
+/** Does ffmpeg need a copy of this file: a format it cannot open, or a still it would show turned? */
+export async function needsReadableCopy(path: string): Promise<boolean> {
+  return needsConversion(path) || (await exifOrientation(path)) > 1
+}
+
 export function convertedDir(): string {
   return join(app.getPath('userData'), 'converted')
 }
 
 export interface Readable {
-  /** The file ffmpeg reads: the PNG, or the file itself. */
+  /** The file ffmpeg reads: the converted or turned copy, or the file itself. */
   path: string
   /** The file's own name, for the pool. */
   name: string
@@ -60,9 +92,9 @@ export interface Readable {
 }
 
 /** Is the cached copy a picture that opens? One cut short by a quit mid-write is not. */
-async function usable(png: string): Promise<boolean> {
+async function usable(copy: string): Promise<boolean> {
   try {
-    const meta = await sharp(png).metadata()
+    const meta = await sharp(copy).metadata()
     return (meta.width ?? 0) > 0 && (meta.height ?? 0) > 0
   } catch {
     return false
@@ -74,11 +106,13 @@ export async function readableStill(path: string, dir = convertedDir()): Promise
   const name = basename(path)
   const info = await stat(path).catch(() => null)
   if (!info) throw new Error(`${name} could not be read`)
-  if (!needsConversion(path)) return { path, name, size: info.size }
+  if (!(await needsReadableCopy(path))) return { path, name, size: info.size }
   await mkdir(dir, { recursive: true })
   // `size:mtime` would carry a colon, which Windows forbids in a file name.
   const stem = name.slice(0, name.length - extOf(path).length - 1).slice(0, STEM_MAX)
-  const out = join(dir, `${info.size}-${Math.round(info.mtimeMs)}-${stem}.png`)
+  // A turned JPEG stays a JPEG; anything else (AVIF, HEIC, a tagged PNG) becomes a PNG, alpha and all.
+  const jpeg = /^jpe?g$/.test(extOf(path))
+  const out = join(dir, `${info.size}-${Math.round(info.mtimeMs)}-${stem}.${jpeg ? 'jpg' : 'png'}`)
   if (!existsSync(out) || !(await usable(out))) {
     /*
      * Written under a name of its own and moved into place whole: a quit
@@ -88,7 +122,8 @@ export async function readableStill(path: string, dir = convertedDir()): Promise
      */
     const partial = `${out}.${process.pid}-${Math.random().toString(36).slice(2, 8)}.part`
     try {
-      await sharp(path).rotate().png().toFile(partial)
+      const turned = sharp(path).rotate()
+      await (jpeg ? turned.jpeg({ quality: 95, chromaSubsampling: '4:4:4' }) : turned.png()).toFile(partial)
       await rename(partial, out)
     } catch (err) {
       await rm(partial, { force: true }).catch(() => undefined)
@@ -165,11 +200,15 @@ export async function locateAsset(
   return { ...asset, offline: true }
 }
 
-/** What a relink found, with every still ffmpeg cannot read converted first; one that will not convert is not relinked. */
+/**
+ * What a relink found, with every still ffmpeg cannot read — or would show
+ * turned — converted first, as on import; one that will not convert is not
+ * relinked.
+ */
 export async function relinkable(found: Record<string, string>, dir = convertedDir()): Promise<Record<string, Relinked>> {
   const out: Record<string, Relinked> = {}
   for (const [id, file] of Object.entries(found)) {
-    if (!needsConversion(file)) {
+    if (!(await needsReadableCopy(file))) {
       out[id] = file
       continue
     }

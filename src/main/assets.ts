@@ -32,7 +32,9 @@ export function toAsset(info: MediaInfo, projectFps: number): MediaAsset {
     fps: info.fps,
     hasVideo: info.kind !== 'audio' && info.width !== null,
     hasAudio: info.audioCodec !== null,
-    size: info.size
+    size: info.size,
+    // Recorded only when there is one, so an upright file's asset is unchanged.
+    ...(info.rotation ? { rotation: info.rotation } : {})
   }
 }
 

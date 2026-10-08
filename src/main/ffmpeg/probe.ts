@@ -2,14 +2,12 @@ import { execFile } from 'node:child_process'
 import { basename } from 'node:path'
 import { stat } from 'node:fs/promises'
 import type { MediaInfo } from '@shared/types'
-import { extOf, kindForExt } from '@shared/media'
+import { extOf, kindForExt, uprightSize, type ProbedPicture } from '@shared/media'
 import { FFPROBE_PATH } from './paths'
 
-interface FfprobeStream {
+interface FfprobeStream extends ProbedPicture {
   codec_type?: string
   codec_name?: string
-  width?: number
-  height?: number
   avg_frame_rate?: string
   duration?: string
 }
@@ -60,6 +58,15 @@ export async function probeFile(path: string): Promise<MediaInfo> {
   const durationMs =
     Number.isFinite(durationSeconds) && durationSeconds > 0 ? Math.round(durationSeconds * 1000) : null
 
+  /*
+   * The size the frames ARRIVE at, not the coded size: a phone clip's display
+   * matrix turns it on decode, so a 640×360 stream with a 90° matrix is
+   * 360×640 to the render, the preview and every layout decision
+   * (`uprightSize`, docs/CLIPS.md §3.1). A JPEG's EXIF orientation is not
+   * here — ffmpeg ignores it — and is turned at import instead (imports.ts).
+   */
+  const upright = uprightSize(video)
+
   // A still image probes as a single video stream; trust the extension for kind.
   return {
     path,
@@ -67,8 +74,9 @@ export async function probeFile(path: string): Promise<MediaInfo> {
     size: fileStat.size,
     kind: kindFromExt,
     durationMs: kindFromExt === 'image' ? null : durationMs,
-    width: video?.width ?? null,
-    height: video?.height ?? null,
+    width: upright.width,
+    height: upright.height,
+    rotation: upright.rotation,
     videoCodec: video?.codec_name ?? null,
     audioCodec: audio?.codec_name ?? null,
     fps: kindFromExt === 'image' ? null : parseFps(video?.avg_frame_rate)

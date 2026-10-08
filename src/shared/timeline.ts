@@ -95,8 +95,24 @@ export interface MediaAsset {
   kind: MediaKind
   /** Source length in project frames. Stills get a nominal length. */
   durationFrames: Frames
+  /**
+   * The picture's size as its frames ARRIVE — upright. A phone clip stored
+   * 1920×1080 with a 90° display matrix is 1080×1920 here, because both
+   * bundled ffmpegs and the preview's `<video>` turn it as they decode
+   * (src/main/ffmpeg/probe.ts, `uprightSize`; docs/CLIPS.md §3.1). A JPEG
+   * tagged with an EXIF orientation is turned into the converted cache at
+   * import, and this is the turned copy's size (src/main/imports.ts).
+   */
   width: number | null
   height: number | null
+  /**
+   * The quarter turns the decoder gives the stored picture, clockwise: 90,
+   * 180 or 270. Absent for an upright file (and for every asset imported
+   * before 2026-10-08, whose size is the coded one). A record of the file,
+   * not an instruction: `width`/`height` already account for it, and nothing
+   * in the render applies it, because ffmpeg turns the frames itself.
+   */
+  rotation?: number
   /** Source frame rate; null for audio and stills. */
   fps: number | null
   hasVideo: boolean

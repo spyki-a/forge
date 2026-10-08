@@ -4474,3 +4474,122 @@ still at 40 / 21 / 30 px exactly where zoom 1 / 1.5 / 1.25 put it, frame 0
 to 1079. An eased segment is the same kind of term, `Δ × shape(clamp((t −
 t₀)/span, 0, 1))`, which is 0 before its segment and Δ after it; not run.
 This is the reframe's prerequisite, and a fix for today's >92-key tracks.
+
+## 49. Portrait phone media — the decoder turns a clip by its matrix, never a JPEG by its EXIF (2026-10-08)
+
+For `docs/CLIPS.md` §3.1 (`BETA.md` R5). Development Mac, the bundled ffmpeg
+(4.1.5 package, reporting 4.4) and `@ffprobe-installer`'s ffprobe (n4.4.1,
+package 5.0.1); the 2018 Windows build read in its source at `f22fcd4483`
+(fetched from GitHub) and left to Windows CI, whose ffprobe is another build
+again (package 5.1.0, `20230213-2296078`).
+
+**A clip with a display matrix.** A 640×360 H.264 clip remuxed with
+`-c copy -metadata:s:v:0 rotate=90` probes `width=640, height=360`, its
+`side_data_list` a Display Matrix with `rotation: 90`, its tag `rotate: 270`.
+The bundled ffmpeg decodes it **360×640**: `scale=320:-2` came out 320×568,
+and the decoded frame is the coded one through `transpose=cclock` exactly
+(mean |difference| 0.0 on grey; 132.5 against `transpose=clock`). A 3840×2160
+clip remuxed with `rotate=270` decodes 2160×3840. So the decoder turns the
+picture, and the asset — which carried the coded size — disagreed with every
+frame a render, a moment's pre-pass or a detector is handed.
+
+- **Only the matrix turns it.** At `f22fcd4`, `get_rotation`
+  (`fftools/cmdutils.c:2175-2192`) reads the stream's `AV_PKT_DATA_DISPLAYMATRIX`
+  and nothing else, negates `av_display_rotation_get`, folds it into
+  [0, 360); `configure_input_video_filter` (`fftools/ffmpeg_filter.c:801-819`)
+  inserts `transpose=clock` within a degree of 90, `hflip,vflip` at 180,
+  `transpose=cclock` at 270, and `rotate` (size unchanged) for any other
+  angle — on every filtergraph input, so the export's `-filter_complex` inputs
+  too. The `rotate` tag is the demuxer's copy of the matrix (`mov.c:4522`); a
+  file with the tag and no matrix is not turned. So the probe reads the matrix
+  only (`displayRotation`, `src/shared/media.ts`; the helper's
+  `media.display_rotation` is the same arithmetic). The tag is *written* by the
+  2018 muxer the same way (`movenc.c:2849-2863`, behind
+  `FF_API_OLD_ROTATE_API`), so the check's fixtures are the same files there.
+- **The round trip is not symmetric**: writing `rotate=90` reads back as a
+  270° clockwise turn (side data 90, tag 270). Hence `rotation ∈ {90, 270}` in
+  the tests, never one number: what matters is the swap, and the direction is
+  checked on pixels.
+
+**A JPEG with an EXIF orientation.** sharp wrote the same 640×360 picture as
+JPEGs tagged 1, 3, 6 and 8. ffprobe prints no side data and 640×360 for every
+one, and ffmpeg decodes every one 640×360 **unturned** — the 4.4 build ignores
+EXIF orientation entirely. At `f22fcd4`, `mjpegdec.c:1928-1952` decodes the
+EXIF block into the frame's metadata dictionary (`:2729`) and nothing turns a
+frame by its metadata, so the 2018 build ignores it too (read, not run). The
+preview's `<img>` honours it, so a portrait phone photo showed upright and
+exported on its side. sharp's `rotate()` (no argument) turns it.
+
+- **The copy is a JPEG.** A synthetic 12-megapixel photograph (4032×3024,
+  noise over a fractal, 2.1 MB tagged 6): turned to PNG, **27,995,665 bytes
+  in 635 ms**; to JPEG quality 95, 4:2:0, 2,525,905 bytes in 122 ms at
+  41.3 dB from the PNG; to JPEG quality 95, **4:4:4, 3,521,680 bytes in
+  193 ms at 47.2 dB**. ffmpeg's own decode of the untouched original, turned
+  with `transpose=clock`, is 40.0 dB from sharp's — the two decoders already
+  differ by more than the re-encode loses. A wedding set of 200 portrait
+  photos is about 5.6 GB of PNG and 0.7 GB of JPEG. So a JPEG's turned copy is
+  a 4:4:4 quality-95 JPEG; anything else tagged (a PNG with `eXIf`) becomes a
+  PNG, as AVIF does (§31). Reading the tag is the header alone: 1.0 ms.
+- **`-ss` before a JPEG decodes nothing.** Found writing the check: `-ss 0`,
+  `-ss 0.000`, `-ss 0.001` and `-ss 0.02` before `-i photo.jpg` (the image2
+  demuxer) each give "Output file is empty, nothing was encoded"; a PNG
+  (`png_pipe`) gave its frame at 0, 0.000 and 0.001 and nothing at 0.02.
+  The render never seeks a still (`-loop 1 -t`, `plan.ts:851`, `:879`);
+  the helper's `media.decode_rgb` now never seeks when `at_ms` is 0 or
+  absent, which a face pass over a photograph would otherwise have met.
+
+**The fix.** `probeFile` (`src/main/ffmpeg/probe.ts`) takes `uprightSize`: the
+sides swapped for 90 and 270, `MediaInfo.rotation` the clockwise turn, and
+`MediaAsset.rotation` recorded when it is not 0 (a record of the file; nothing
+in the render applies it, because ffmpeg turns the frames itself). The
+import (`src/main/imports.ts`) turns any still whose EXIF orientation is 2–8
+into the converted cache — `needsReadableCopy`, used by `readableStill` and
+`relinkable` — so `path` is the upright copy and `source` the photo, as for
+AVIF. The render's fit was never wrong (`force_original_aspect_ratio` reads
+the frame that arrives); what read the coded size was the reframe:
+`solveCrop`, which every dropped clip and every Director shot gets, cut a
+202×360 "9:16" out of a picture it thought was landscape, from a frame that
+was already 9:16.
+
+**Measured after it** (`tests/integration/rotation.int.test.ts`, into
+`tests/output/rotation/`): the probe's size equals the decoded frame's for
+the untagged clip (640×360, no `rotation` on the asset), the 90° remux
+(360×640) and the 4K clip tagged 270 (2160×3840); JPEGs tagged 3, 6 and 8
+import as copies 640×360, 360×640 and 360×640 whose pixels are the source
+through `hflip,vflip`, `transpose=clock` and `transpose=cclock` (0.19–0.20
+mean levels), and the one tagged 1 is read where it is. A 540×960 export of
+each portrait asset, reframed as a dropped clip is, against the upright
+picture scaled to the frame:
+
+| asset | before: crop, mean \|difference\| | after |
+|---|---|---|
+| the 90° clip | 202×360 at x 219, **83.73** | no crop, 0.39 |
+| the 4K clip tagged 270 | 1214×2160 at x 1313, **80.27** | no crop, 0.30 |
+| the EXIF-6 photo | 202×360 at x 219, **99.38** | no crop, 0.48 |
+
+Before, the clip exported as a 202×360 band of its own upright frame blown
+up to fill (the crop filter's expressions clamp it inside the 360×640 that
+arrives), and the photo as a slice of itself on its side.
+
+- **Mutations** (each run to a file, restored byte-identical with `cmp`,
+  each anchor counted to one): the probe ignores the matrix (`width:
+  video?.width`) — 4 failures: both probe tests ("expected { width: 640,
+  height: 360 } to deeply equal { width: 360, height: 640 }") and both clip
+  exports; the import ignores EXIF (`needsReadableCopy` is
+  `needsConversion` alone) — 3 failures, the import, the relink and the
+  photo's export; the relink alone ignores it (`relinkable` back to
+  `needsConversion(file)`) — 1 failure, the relink case, which also has
+  `locateAsset` remake a lost copy turned;
+  `tests/integration/importAvif.int.test.ts` passes under all three. In
+  `tests/mediaRotation.test.ts`: the tag read as a turn, a half turn
+  swapping the sides, and the angle not negated each fail it.
+- **Not measured.** The preview's `<video>` in Electron: Electron exits with
+  SIGTRAP in the development sandbox, so `videoWidth` and `drawImage` of a
+  rotated clip were not read here. The preview draws the element into the
+  asset's size (`Preview.tsx:1356`), so a Chromium that turns the frame —
+  which the plan and `BETA.md` R5 take as given — now gets the box it fills;
+  R12's smoke test is where to look. Assets imported before this change keep
+  their coded size until re-imported; a relink of such a tagged photo would
+  now hand ffmpeg the turned copy under the old size (not handled).
+  **Dated, not run:** the 2018 build's autorotate on the export's inputs and
+  its muxer's `rotate` tag, which `rotation.int` measures in Windows CI.

@@ -6,8 +6,11 @@ export interface MediaInfo {
   size: number
   kind: MediaKind
   durationMs: number | null
+  /** The size the frames arrive at — upright, the sides swapped for a quarter turn. */
   width: number | null
   height: number | null
+  /** Clockwise degrees the decoder turns the coded picture: 0, 90, 180 or 270 (`displayRotation`). */
+  rotation: number
   videoCodec: string | null
   audioCodec: string | null
   fps: number | null
