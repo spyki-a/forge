@@ -22,6 +22,7 @@ import subprocess
 import threading
 from typing import Any
 
+from .. import media
 from ..rpc import Context, Server, Unavailable
 
 # Bump when the output format or the algorithm changes, so stale bakes are not
@@ -34,6 +35,11 @@ REPO = "onnx-community/depth-anything-v2-small"
 Only coarse layer boundaries are needed here, not metric depth, so the small
 checkpoint is not a compromise — see docs/PARALLAX.md §3.
 """
+
+REVISION = "4472b7362082ad9968fee890ca0f1e5aca36b93d"
+"""The commit every machine downloads (media.download refuses a branch name):
+the one the app's own cache already held on 2026-10-08, so an existing cache
+is used as it is and a new machine gets the same bytes."""
 
 VARIANTS = {
     "quantized": "onnx/model_quantized.onnx",  # ~27MB
@@ -61,6 +67,8 @@ The hard part of matting is temporal stability, and that is a *video* problem
 (docs/STACK.md §3). On a single photograph it does not exist, which is why a
 permissive, high-quality matte is available here and not for footage.
 """
+MATTE_REVISION = "de15b22ba131738a16dff04aab8bdf8dc32e3ac1"
+"""Pinned as REVISION is: the commit in the app's cache on 2026-10-08."""
 MATTE_VARIANTS = {"fp16": "onnx/model_fp16.onnx", "fp32": "onnx/model.onnx"}
 DEFAULT_MATTE_VARIANT = "fp16"
 MATTE_SIZE = 1024
@@ -98,49 +106,28 @@ _session_lock = threading.Lock()
 _sessions: dict[str, Any] = {}
 
 
-def _models_dir() -> str:
-    override = os.environ.get("FORGE_MODELS_DIR")
-    if override:
-        return override
-    return os.path.join(os.path.expanduser("~"), ".cache", "forge", "models")
-
-
 def _cache_dir() -> str:
-    override = os.environ.get("FORGE_CACHE_DIR")
-    base = override or os.path.join(os.path.expanduser("~"), ".cache", "forge")
-    return os.path.join(base, "parallax")
+    """Where bakes go: ``media.cache_dir("parallax")``, under the app's userData.
 
-
-def _is_cached(
-    variant: str,
-    repo: str = REPO,
-    variants: dict[str, str] | None = None,
-) -> bool:
-    from huggingface_hub import try_to_load_from_cache
-
-    table = variants if variants is not None else VARIANTS
-    try:
-        found = try_to_load_from_cache(repo, table[variant], cache_dir=_models_dir())
-    except Exception:  # noqa: BLE001 - a cache probe must never be fatal
-        return False
-    return isinstance(found, str) and os.path.isfile(found)
+    It defaulted to ``~/.cache/forge/parallax``, which nothing evicts (264 MB
+    measured on the development Mac) against docs/SIDECAR.md's own rule. Bakes
+    made there before stay there, untouched (docs/CLIPS.md §16.24); a project
+    whose planes are there keeps finding them, because it stores their paths.
+    """
+    return media.cache_dir("parallax")
 
 
 def _session(variant: str, context: Context | None = None) -> Any:
     import onnxruntime as ort
-    from huggingface_hub import hf_hub_download
 
     with _session_lock:
         if variant not in _sessions:
-            # Say so. The first bake on a new machine fetches ~27MB, and
-            # reporting it as "estimating depth" made a working download look
-            # exactly like a frozen app.
-            if context is not None and not _is_cached(variant):
-                context.progress(
-                    None, "downloading the depth model (~27MB, first run only)"
-                )
-            path = hf_hub_download(
-                REPO, VARIANTS[variant], cache_dir=_models_dir()
+            # Say so, with the bytes. The first bake on a new machine fetches
+            # ~27MB, and reporting it as "estimating depth" made a working
+            # download look exactly like a frozen app. Between the bake's
+            # "loading the depth model" (0.2) and "estimating depth" (0.3).
+            path = media.download(
+                REPO, VARIANTS[variant], REVISION, context, "the depth model", (0.2, 0.3)
             )
             options = ort.SessionOptions()
             # A bake competes with playback and the UI; leave the machine usable.
@@ -153,63 +140,22 @@ def _session(variant: str, context: Context | None = None) -> Any:
 
 def _matte_session(variant: str, context: Context | None = None) -> Any:
     import onnxruntime as ort
-    from huggingface_hub import hf_hub_download
 
     key = f"matte:{variant}"
     with _session_lock:
         if key not in _sessions:
-            if context is not None and not _is_cached(variant, MATTE_REPO, MATTE_VARIANTS):
-                context.progress(
-                    None, "downloading the subject model (~115MB, first run only)"
-                )
-            path = hf_hub_download(MATTE_REPO, MATTE_VARIANTS[variant], cache_dir=_models_dir())
+            # ~115MB on first use, between "finding the subject" (0.55) and
+            # the planes (0.58).
+            path = media.download(
+                MATTE_REPO, MATTE_VARIANTS[variant], MATTE_REVISION, context,
+                "the subject model", (0.55, 0.58),
+            )
             options = ort.SessionOptions()
             options.intra_op_num_threads = max(1, (os.cpu_count() or 4) // 2)
             _sessions[key] = ort.InferenceSession(
                 path, options, providers=["CPUExecutionProvider"]
             )
         return _sessions[key]
-
-
-def _probe_size(path: str, ffprobe: str) -> tuple[int, int]:
-    result = subprocess.run(
-        [ffprobe, "-v", "error", "-select_streams", "v:0",
-         "-show_entries", "stream=width,height", "-of", "json", path],
-        capture_output=True, check=False,
-    )
-    if result.returncode != 0:
-        message = result.stderr.decode("utf-8", "replace").strip()
-        raise ValueError(message or f"Could not read image dimensions: {path}")
-    streams = json.loads(result.stdout or b"{}").get("streams") or []
-    if not streams:
-        raise ValueError(f"No image stream in {path}")
-    return int(streams[0]["width"]), int(streams[0]["height"])
-
-
-def _decode_rgb(path: str, ffmpeg: str, width: int, height: int) -> "Any":
-    """Decode to an RGB array at an exact size.
-
-    Images go through the bundled ffmpeg for the same reason audio does: one
-    decoding path in the product, and no compiled Python imaging dependency.
-    """
-    import numpy as np
-
-    result = subprocess.run(
-        [ffmpeg, "-hide_banner", "-nostdin", "-loglevel", "error",
-         "-i", path, "-vf", f"scale={width}:{height}:flags=bicubic",
-         "-pix_fmt", "rgb24", "-f", "rawvideo", "pipe:1"],
-        capture_output=True, check=False,
-    )
-    if result.returncode != 0:
-        message = result.stderr.decode("utf-8", "replace").strip()
-        raise ValueError(message or "ffmpeg could not decode this image")
-    expected = width * height * 3
-    if len(result.stdout) != expected:
-        raise ValueError(
-            f"Decoded {len(result.stdout)} bytes, expected {expected} "
-            f"for {width}x{height}"
-        )
-    return np.frombuffer(result.stdout, dtype=np.uint8).reshape(height, width, 3)
 
 
 def _write_rgba(path: str, ffmpeg: str, rgba: "Any") -> None:
@@ -243,7 +189,7 @@ def _estimate_depth(
 
     # Re-decode at the model size rather than resampling in numpy: ffmpeg's
     # bicubic is better than anything written here would be.
-    small = _decode_rgb(path, ffmpeg, target_w, target_h).astype(np.float32) / 255.0
+    small = media.decode_rgb(path, ffmpeg, target_w, target_h).astype(np.float32) / 255.0
     mean = np.array(IMAGE_MEAN, dtype=np.float32)
     std = np.array(IMAGE_STD, dtype=np.float32)
     tensor = np.ascontiguousarray(
@@ -263,7 +209,7 @@ def _subject_matte(
     """Soft mask of the photograph's subject, at the model's own square size."""
     import numpy as np
 
-    small = _decode_rgb(path, ffmpeg, MATTE_SIZE, MATTE_SIZE).astype(np.float32) / 255.0
+    small = media.decode_rgb(path, ffmpeg, MATTE_SIZE, MATTE_SIZE).astype(np.float32) / 255.0
     mean = np.array(IMAGE_MEAN, dtype=np.float32)
     std = np.array(IMAGE_STD, dtype=np.float32)
     tensor = np.ascontiguousarray(((small - mean) / std).transpose(2, 0, 1)[None])
@@ -455,12 +401,13 @@ def register(server: Server) -> None:
         os.makedirs(out_dir, exist_ok=True)
 
         context.progress(0.05, "reading the photo")
-        source_w, source_h = _probe_size(path, ffprobe)
+        upright = media.probe_upright(path, ffprobe)
+        source_w, source_h = upright["width"], upright["height"]
         scale = min(1.0, MAX_WORKING_SIZE / max(source_w, source_h))
         # Even dimensions keep every downstream encoder happy.
         width = max(2, int(source_w * scale) // 2 * 2)
         height = max(2, int(source_h * scale) // 2 * 2)
-        rgb = _decode_rgb(path, ffmpeg, width, height)
+        rgb = media.decode_rgb(path, ffmpeg, width, height)
 
         context.raise_if_cancelled()
         context.progress(0.2, "loading the depth model")

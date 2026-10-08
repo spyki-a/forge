@@ -24,6 +24,7 @@ import threading
 import wave
 from typing import Any
 
+from .. import media
 from ..rpc import Context, Server, Unavailable
 
 _lock = threading.Lock()
@@ -33,13 +34,6 @@ _engine: Any = None
 # imports the file as an ordinary asset and ffmpeg handles the rest.
 SAMPLE_RATE = 24_000
 DEFAULT_VOICE = "af_heart"
-
-
-def _models_dir() -> str:
-    override = os.environ.get("FORGE_MODELS_DIR")
-    if override:
-        return override
-    return os.path.join(os.path.expanduser("~"), ".cache", "forge", "models")
 
 
 def _load() -> Any:
@@ -53,7 +47,7 @@ def _load() -> Any:
     global _engine
     with _lock:
         if _engine is None:
-            directory = _models_dir()
+            directory = media.models_dir()
             model = os.path.join(directory, "kokoro-v1.0.onnx")
             voices = os.path.join(directory, "voices-v1.0.bin")
             missing = [p for p in (model, voices) if not os.path.isfile(p)]

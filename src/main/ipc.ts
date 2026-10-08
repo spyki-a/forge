@@ -683,7 +683,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
     // The sidecar decodes through the same ffmpeg the app ships, so there is
     // one audio-decoding path in the product rather than two.
     return getSidecar().request(
-      'audio.beats',
+      SIDECAR_METHODS.beats,
       {
         path,
         ffmpeg: FFMPEG_PATH,

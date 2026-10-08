@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { resolve } from 'node:path'
 import { SidecarClient, SidecarError } from '../../src/main/sidecar/client'
-import { SIDECAR_METHODS, RPC_ERRORS, type HelloResult } from '@shared/sidecar/protocol'
+import { OPTIONAL_METHODS, SIDECAR_METHODS, RPC_ERRORS, type HelloResult } from '@shared/sidecar/protocol'
 
 const SIDECAR_DIR = resolve(__dirname, '../../sidecar')
 
@@ -41,6 +41,45 @@ describe('sidecar handshake', () => {
       expect(Object.keys(hello.degraded)).toContain(SIDECAR_METHODS.transcribe)
       expect(hello.degraded[SIDECAR_METHODS.transcribe]).toBeTruthy()
     }
+  }, 60_000)
+
+  it('answers for every optional method — a capability or degraded, never absent', async () => {
+    /*
+     * On CI's bare interpreter every one of these is degraded; in a full venv
+     * most are capabilities. Either is an answer. Absent is not: the app
+     * then gets "unknown method", which reads as a bug rather than as a
+     * missing install (docs/CLIPS.md §3.6).
+     */
+    const hello = await makeClient().start()
+    for (const method of OPTIONAL_METHODS) {
+      const answered = hello.capabilities.includes(method) || Object.keys(hello.degraded).includes(method)
+      expect(answered, `${method} is neither a capability nor degraded`).toBe(true)
+    }
+    /*
+     * And the other way: every method the helper answers for, beyond its own
+     * system.*, is on the list. A method added to a module's OPTIONAL tuple
+     * but not to OPTIONAL_METHODS would otherwise go unguarded; the tuple
+     * against the module's own `server.register` calls is
+     * tests/sidecar/test_media.py, which runs on a bare interpreter.
+     */
+    const answers = [...hello.capabilities, ...Object.keys(hello.degraded)].filter((m) => !m.startsWith('system.'))
+    for (const method of answers) expect(OPTIONAL_METHODS, `${method} is answered for but not in OPTIONAL_METHODS`).toContain(method)
+  }, 60_000)
+
+  it('degrades every method of a module that cannot load, not only the first', async () => {
+    const c = makeClient()
+    const hello = await c.start()
+    // Where kokoro IS installed both are capabilities, and there is nothing to degrade.
+    if (hello.capabilities.includes(SIDECAR_METHODS.voiceSpeak)) {
+      expect(hello.capabilities).toContain(SIDECAR_METHODS.voiceVoices)
+      return
+    }
+    for (const method of [SIDECAR_METHODS.voiceSpeak, SIDECAR_METHODS.voiceVoices]) {
+      expect(Object.keys(hello.degraded), method).toContain(method)
+      expect(hello.degraded[method], method).toMatch(/^voice unavailable: /)
+    }
+    // Asked anyway, the second says why it cannot run, not that it does not exist.
+    await expect(c.request(SIDECAR_METHODS.voiceVoices)).rejects.toMatchObject({ code: RPC_ERRORS.unavailable })
   }, 60_000)
 })
 

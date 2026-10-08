@@ -21,8 +21,8 @@ from __future__ import annotations
 import os
 from typing import Any
 
+from .. import media
 from ..rpc import Context, Server, Unavailable
-from .depth import _decode_rgb, _probe_size
 
 WORK_EDGE = 512
 """Long side EVERY photo is measured at — smaller ones scaled up too. Sharpness
@@ -124,11 +124,13 @@ def measure_rgb(rgb: "Any") -> dict[str, Any]:
 
 
 def _measure(path: str, ffmpeg: str, ffprobe: str) -> dict[str, Any]:
-    width, height = _probe_size(path, ffprobe)
+    # The upright size: a phone clip's frames arrive turned (media.probe_upright).
+    upright = media.probe_upright(path, ffprobe)
+    width, height = upright["width"], upright["height"]
     scale = WORK_EDGE / max(width, height)
     w = max(2, int(width * scale) // 2 * 2)
     h = max(2, int(height * scale) // 2 * 2)
-    rgb = _decode_rgb(path, ffmpeg, w, h)
+    rgb = media.decode_rgb(path, ffmpeg, w, h)
     return {**measure_rgb(rgb), "width": width, "height": height}
 
 

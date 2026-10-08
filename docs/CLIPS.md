@@ -332,6 +332,45 @@ and M0 stand on them and this plan now runs before the beta.
 
 ### 3.1 R5 — the rotation-aware probe · 1.5 days (`BETA.md` R5, pulled forward)
 
+> **Built 2026-10-08** — `src/shared/media.ts` (`displayRotation`,
+> `uprightSize`: the display matrix's angle negated and folded as ffmpeg's
+> `get_rotation` does, the sides swapped at 90 and 270; the `rotate` tag is
+> never read, because the 2018 build's decoder reads only the matrix,
+> `cmdutils.c:2175-2192` at f22fcd4), `src/main/ffmpeg/probe.ts` (the asset's
+> size is the upright one; `MediaInfo.rotation`, and `MediaAsset.rotation`
+> when it is not 0 — `src/shared/types.ts`, `src/shared/timeline.ts`,
+> `src/main/assets.ts`), `src/main/imports.ts` (`exifOrientation`,
+> `needsReadableCopy`: a still tagged 2–8 is turned by sharp's `rotate()`
+> into the converted cache, `source` kept, on import and on relink; a JPEG's
+> copy is a quality-95 4:4:4 JPEG — 3.5 MB in 193 ms where a PNG was 28 MB in
+> 635 ms for 12 megapixels, and 47 dB from the lossless turn), the render
+> check `tests/integration/rotation.int.test.ts` (into
+> `tests/output/rotation/`) and `tests/mediaRotation.test.ts`. Measured: the
+> 90° remux decodes as the coded frame through `transpose=cclock`, exactly;
+> neither build turns a JPEG by its EXIF (4.4 run, f22fcd4's `mjpegdec.c`
+> read). The render's fit was never wrong — the reframe was: `solveCrop` cut
+> a 202×360 "9:16" out of a frame that was already 9:16, and a 540×960 export
+> differed from the upright picture by **83.7** (the 90° clip), **80.3** (4K
+> tagged 270) and **99.4** (the EXIF-6 photo) mean levels; after, **0.39 /
+> 0.30 / 0.48**, with no crop. The probe's size equals the decoded frame's
+> for the untagged clip, both tagged clips and the turned copies of
+> orientations 3, 6 and 8, and a relink to the orientation-6 photo goes
+> through a turned copy too, as does the copy `locateAsset` remakes when the
+> cache has lost it. In the helper, `media.probe_upright` and
+> `media.require_upright` (§3.6); no capability today is sent a size by main,
+> so the refusal's first caller is faces.py (§4.3). Mutations: the probe
+> ignores the matrix (4 failures), the import ignores EXIF (3), the relink
+> alone ignores it (1), and in the unit test the tag read as a turn, a half
+> turn swapping, the angle not negated.
+> Found on the way: any `-ss` before a JPEG decodes nothing, so the helper's
+> `decode_rgb` never seeks a still. Not measured: Electron's `<video>` of a
+> rotated clip (Electron exits SIGTRAP in the sandbox; R12's smoke test).
+> Not handled: assets imported before keep their coded size until
+> re-imported, and relinking such a still to its tagged file hands ffmpeg the
+> turned copy under that old size (the relink keeps the asset's width and
+> height). **The 2018 build is Windows CI's run of the check on the next
+> push.** `EFFECTS.md` §49.
+
 **What is wrong, measured.** A 640×360 clip remuxed with `rotate=90` probes
 as `width=640, height=360` (side data rotation 90, tag rotate 270), and the
 bundled ffmpeg **autorotates on decode**: `scale=320:-2` came out 320×568.
@@ -509,6 +548,35 @@ Mutations: `d=clip.duration` again (frozen frame); the leading `fps=` dropped
 
 ### 3.5 The floor, and the caches · half a day
 
+> **Built 2026-10-08** — `tests/oldestFfmpeg.test.ts`: `/\bscdet\b/` on
+> `TOO_NEW` (the Mac build has it: 15.625 on a red → blue cut, re-measured),
+> and `ANALYSIS_SHAPES` — the chroma-key probe, the nine encoder probes, five
+> shapes of a moment's footage pre-pass, a steady clip's `vidstabdetect`
+> pass as main runs it, a voice-over's conversion, the Converter's presets,
+> and the helper's `media.frame_args` / `media.decode_args` asked of its own
+> interpreter — scanned by the same blocklist, with an `it.todo` as the hook
+> for `sceneArgs` (§4.2). Mutations: `scdet` in the chroma-key probe, and in
+> the helper's frame stream, each fails its shape; the frame stream's seek
+> dropped fails the test that the shapes reach what they say. **The caches: the text
+> below was wrong — `client.ts` did not set `FORGE_CACHE_DIR`**, only
+> `FORGE_MODELS_DIR`, which is why bakes fell to `~/.cache`. Now
+> `src/main/sidecar/client.ts` (`cacheDir`, the pure `sidecarEnv`) and
+> `service.ts` (`helperFolders`) pass `userData/helper-cache` — not
+> `userData/cache`, which on a case-insensitive disk (the APFS default, NTFS)
+> IS Chromium's own `Cache`, measured — and depth.py bakes in
+> `media.cache_dir("parallax")` (§3.6). Measured: a fresh bake through the
+> client landed in `<userData>/helper-cache/parallax/<key>/`, and
+> `~/.cache/forge/parallax` kept its 40 entries and 264 MB with nothing
+> newer; nothing reads, moves or deletes it. Tests: `tests/sidecarFolders.test.ts`,
+> which reads the env the helper is handed at `spawn` (mutations: the variable
+> dropped from `sidecarEnv`, 2 failures; `start()` building its env inline
+> again, the service passing the models folder only, the folder named
+> `cache` — 1 each) and, on the helper's side, `cache_dir` and depth's folder
+> in `tests/sidecar/test_media.py`. Not yet under it: `stems.py`'s Demucs
+> cache, still `~/.cache/forge/stems` because main sends no `outDir` (a
+> change of its own, with the same old-folder decision). `docs/SIDECAR.md`;
+> `EFFECTS.md` §50.
+
 - `tests/oldestFfmpeg.test.ts`: add `/\bscdet\b/` to `TOO_NEW`. scdet merged
   2020-05-14, and the Mac build **has** it (it ran, giving `lavfi.scd.score:
   15.625`), which is how it would ship broken, the `colortemperature` story.
@@ -523,6 +591,50 @@ Mutations: `d=clip.duration` again (frozen frame); the leading `fps=` dropped
   in step 0 reads or removes it.
 
 ### 3.6 The helper's shared media code — `sidecar/forge_sidecar/media.py` · half a day
+
+> **Built 2026-10-08** — `sidecar/forge_sidecar/media.py` as below, plus
+> `display_rotation`, `require_upright` (raises `SizeMismatch`), the pure
+> `decode_args` / `frame_args` and `progress_class`; the folders return
+> `str`, as every caller joins with `os.path`; nothing beyond the standard
+> library at module level. `depth.py`, `vision.py`, `asr.py` and `voice.py`
+> moved onto it: for sixteen stills the sizes, two decodes' bytes and every
+> measure were byte-identical before and after, and the twelve sidecar tests
+> and vision's seven passed before and after. depth's two downloads go
+> through `media.download`, pinned to the commits already in the app's cache
+> (depth `4472b73…`, BiRefNet `de15b22…`) and mapped into the bake's own
+> progress span: 138 ms from the cache against 4.9 s unpinned (a Hub round
+> trip), and a real 19 MB download forwarded its bytes in three messages
+> (huggingface_hub reads 10 MiB chunks). Streaming, measured through the
+> module: 50 frames then stop 0.089 s with the decoder killed; 20 s of 1080p
+> at 5 fps and 480×270 in 0.26 s; a seek 48–67 ms. `capabilities/__init__.py`:
+> `OPTIONAL` is `[(methods, module)]`, and a failing module is withdrawn and
+> degraded whole (`Server.unregister`, `rpc.py`) — `voice.voices` now answers
+> −32001 with the reason, where it answered −32601. `protocol.ts` gains
+> `voiceSpeak`, `voiceVoices` and `OPTIONAL_METHODS`; `ipc.ts`'s `'audio.beats'`
+> and `voice.ts`'s four voice literals use them. Tests: `sidecar.int` gains
+> two (every optional method a capability or degraded, and every method
+> answered for on the list; both voice methods degraded where kokoro is
+> missing, and `voice.voices` unavailable), fourteen now;
+> `tests/sidecar/test_media.py` (32 `unittest` cases) run by
+> `tests/integration/sidecarMedia.int.test.ts` with the venv (none may skip)
+> or the bare interpreter (only the six numpy cases may). The decodes run
+> there too: the helper's own `decode_args` / `frame_args` through the bundled
+> ffmpeg, read as bytes, and `iter_frames` with a stand-in numpy — the seek
+> (red at 0.5 s, blue at 1.5 s), ten frames for 2 s at `fps=5`, the turned
+> clip at 180×320 and counter-clockwise (1.95 against 206 the other way),
+> cancel → kill — so CI's bare 3.12 measures them on the 2018 build; on bare
+> 3.12 and 3.14 venvs here, 26 pass and `system.hello` lists every optional
+> method degraded. Each
+> module's `OPTIONAL` tuple is held to its own `server.register` calls, read
+> from the source. Downloads' guard runs offline, against a stand-in
+> `huggingface_hub`. Mutations: register-and-degrade only the first method (3
+> failures: both new `sidecar.int` tests and the Python registration case);
+> `voice.voices` left out of its tuple, and out of `OPTIONAL_METHODS` (1
+> each); in `media.py` the kill, the per-frame cancel, the stream without
+> `fps=`, the one-frame decode not seeking, `FORGE_CACHE_DIR`, the matrix, a
+> still seeked, a loose revision and a wrong hash kept, depth's own folder,
+> and a partial registration kept — each fails its case, and every decode
+> mutation fails on the bare 3.12 too. `EFFECTS.md` §50, `docs/SIDECAR.md`.
 
 `vision.py:25` imports `_decode_rgb` / `_probe_size` from `depth.py`, and
 `_models_dir()` is copied three times (`asr.py:25`, `depth.py:101`,
@@ -638,6 +750,16 @@ reports prints the script's path.
 
 **Exit.** All seven commits in, each with its render check or test, CI green
 on Windows (that run is the measurement for §3.3, §3.4 and §3.7 there).
+
+> **2026-10-08, met on the Mac:** all seven items built, each with its test
+> or render check; `npm run typecheck` and the full `npm test` exit 0 (246
+> files, 3,121 tests, 12 skipped, 1 todo — the `sceneArgs` hook). **Not yet
+> met:** §3.1, §3.5 and §3.6 committed and pushed, and one Windows CI run
+> green over all seven — which is also the 2018 measurement for §3.1's
+> render check, the helper's media tests on a bare 3.12 (its decodes and
+> frame stream included, read without numpy) and §3.5's floor
+> (§3.3 was green there in run 37410645171; §3.7's refusal was measured in
+> run 37668502747).
 
 ---
 

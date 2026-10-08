@@ -12,6 +12,7 @@ import os
 import threading
 from typing import Any
 
+from .. import media
 from ..rpc import Context, Server, Unavailable
 
 # Imported lazily: the model is ~240MB and loading it at import time would
@@ -20,15 +21,6 @@ _model_lock = threading.Lock()
 _models: dict[tuple[str, str], Any] = {}
 
 DEFAULT_MODEL = "small"
-
-
-def _models_dir() -> str:
-    override = os.environ.get("FORGE_MODELS_DIR")
-    if override:
-        return override
-    return os.path.join(
-        os.path.expanduser("~"), ".cache", "forge", "models"
-    )
 
 
 def _load_model(size: str, compute_type: str) -> Any:
@@ -41,7 +33,7 @@ def _load_model(size: str, compute_type: str) -> Any:
                 size,
                 device="cpu",
                 compute_type=compute_type,
-                download_root=_models_dir(),
+                download_root=media.models_dir(),
             )
         return _models[key]
 

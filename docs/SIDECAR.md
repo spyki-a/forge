@@ -22,6 +22,21 @@ that way; piping megabytes through stdio stalls the event loop on both sides.
 **A missing capability degrades one feature, never the process.** `system.hello` returns
 `capabilities` *and* `degraded: {method: reason}`, so the UI can say "transcription
 unavailable: faster-whisper is not installed" instead of a feature silently vanishing.
+A module that fails marks *every* method it would have registered (`OPTIONAL` lists them as a
+tuple per module): with one name per module, `voice.voices` answered "unknown method" on every
+machine without kokoro. `tests/integration/sidecar.int.test.ts` holds each of
+`OPTIONAL_METHODS` (`src/shared/sidecar/protocol.ts`) to "a capability or degraded", and every
+method the helper answers for to that list; `tests/sidecar/test_media.py` holds each module's
+tuple to the `server.register` calls in its own source, so a tuple that leaves out a method its
+module registers fails a test even on a bare interpreter, where no module loads.
+
+**Shared media code lives in `forge_sidecar/media.py`**: the upright probe, one-frame and
+streamed decodes, the model and cache folders, and pinned downloads (`docs/CLIPS.md` §3.6,
+`EFFECTS.md` §49–§50). It imports only the standard library at module level, so the helper
+still starts on a bare interpreter; its tests are `tests/sidecar/test_media.py`, run by
+`tests/integration/sidecarMedia.int.test.ts` — the decodes among them read as bytes, with no
+numpy, so CI's bare interpreter runs them against the 2018 ffmpeg. A capability sent a size by
+main checks it with `media.require_upright` and refuses a file whose upright size disagrees.
 
 Both the import and the registration are guarded — a module can import cleanly and still
 fail at register time when its heavy dependency is missing. Getting that wrong took the

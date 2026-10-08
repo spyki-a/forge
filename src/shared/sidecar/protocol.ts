@@ -157,8 +157,31 @@ export const SIDECAR_METHODS = {
    * back to mid/side in the main process, which gives a real instrumental and
    * only an emphasised voice; the result's `quality` says which one answered.
    */
-  stems: 'audio.stems'
+  stems: 'audio.stems',
+  /** Speak text with Kokoro into a wav: { text, voice, speed, out } -> { path, durationMs }. */
+  voiceSpeak: 'voice.speak',
+  /** The local voices on offer: {} -> { voices: { id, label, language }[] }. */
+  voiceVoices: 'voice.voices'
 } as const
+
+/**
+ * The methods the helper registers only when their module loads.
+ *
+ * Every one must answer from `system.hello` as either a capability or
+ * degraded with a reason, never be absent: a missing module marks EVERY
+ * method it would have registered (sidecar/forge_sidecar/capabilities/
+ * __init__.py `OPTIONAL`). `voice.voices` answered "unknown method" until
+ * 2026-10-08 because only `voice.speak` was listed there (docs/CLIPS.md §3.6).
+ */
+export const OPTIONAL_METHODS: readonly string[] = [
+  SIDECAR_METHODS.transcribe,
+  SIDECAR_METHODS.beats,
+  SIDECAR_METHODS.depthLayers,
+  SIDECAR_METHODS.visionMeasure,
+  SIDECAR_METHODS.stems,
+  SIDECAR_METHODS.voiceSpeak,
+  SIDECAR_METHODS.voiceVoices
+]
 
 export interface HelloResult {
   protocolVersion: number

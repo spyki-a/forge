@@ -17,6 +17,7 @@ import {
   type SpeakResult,
   type VoiceOption
 } from '@shared/voice/provider'
+import { SIDECAR_METHODS } from '@shared/sidecar/protocol'
 import { getSidecar } from './sidecar/service'
 import { getSettings } from './store'
 
@@ -70,8 +71,8 @@ export async function voiceStatus(): Promise<ProviderStatus[]> {
     // `start` returns the handshake it already has when the sidecar is up, so
     // this is a read rather than a launch on the common path.
     const hello = await getSidecar().start()
-    localReady = hello.capabilities.includes('voice.speak')
-    localReason = localReady ? null : hello.degraded['voice.speak'] ?? 'Not installed'
+    localReady = hello.capabilities.includes(SIDECAR_METHODS.voiceSpeak)
+    localReason = localReady ? null : hello.degraded[SIDECAR_METHODS.voiceSpeak] ?? 'Not installed'
   } catch (err) {
     localReason = err instanceof Error ? err.message : String(err)
   }
@@ -110,7 +111,7 @@ export async function voiceOptions(choice: ProviderChoice): Promise<VoiceOption[
     const hosted = hostedConfig()
     return [{ id: hosted.voice, label: hosted.voice, language: 'unknown' }]
   }
-  const result = await getSidecar().request<{ voices: VoiceOption[] }>('voice.voices', {})
+  const result = await getSidecar().request<{ voices: VoiceOption[] }>(SIDECAR_METHODS.voiceVoices, {})
   return result.voices
 }
 
@@ -145,7 +146,7 @@ export async function speak(request: SpeakRequest): Promise<SpeakResult> {
 
   if (picked.id === 'kokoro') {
     const result = await getSidecar().request<{ path: string; durationMs: number }>(
-      'voice.speak',
+      SIDECAR_METHODS.voiceSpeak,
       { text, voice, speed, out },
       { timeoutMs: 300_000 }
     )

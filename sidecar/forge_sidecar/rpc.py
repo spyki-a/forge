@@ -77,6 +77,11 @@ class Server:
     def register(self, method: str, handler: Handler) -> None:
         self._handlers[method] = handler
 
+    def unregister(self, method: str) -> None:
+        """Withdraw a handler, if there is one — a module whose registration
+        failed part-way is withdrawn whole (capabilities/__init__.py)."""
+        self._handlers.pop(method, None)
+
     def mark_degraded(self, method: str, reason: str) -> None:
         """Record a capability that loaded but cannot run, so `system.hello`
         can report *why* rather than the method simply being absent."""
