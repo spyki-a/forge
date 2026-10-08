@@ -4317,7 +4317,11 @@ Each piece is an input and a chain: about 512 characters of graph and 87 of
 inputs (`-ss … -t … -i <path>`) at this path. So **an export of 55 pieces
 of one talk cannot start on Windows today** — not only the plan's followed
 clip: any timeline of cuts, as transcript cutting and Clip it make. On the
-Mac (ARG_MAX about a megabyte) every row runs. With the graph in a file the
+Mac (ARG_MAX about a megabyte) every row runs. **Measured in Windows CI the
+same day** (run 37668502747): the 72-cut command line was refused with
+`spawn ENAMETOOLONG`, errno -4064, thrown by `spawn` itself before any
+promise exists — which is why the first version of the check, catching only
+a rejection, went red there — while the script route rendered. With the graph in a file the
 ceiling moves to about 370 pieces at this path length, where the inputs
 alone reach the limit; one input per asset rather than per clip would lift
 that, and is not built.

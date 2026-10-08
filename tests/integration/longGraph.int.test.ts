@@ -149,13 +149,24 @@ describe(`a ${CUTS}-cut export through the graph script`, () => {
   it(onWindows ? 'cannot start with the same graph on the command line (Windows)' : 'renders the same frames with the same graph on the command line', async () => {
     const inline = join(dir, 'inline.mp4')
     const plan = buildRenderPlan({ project: project(), outputPath: inline })
-    const attempt = await run(FFMPEG, plan.args, { maxBuffer: 64 * 1024 * 1024 }).then(
-      () => null,
-      (err: NodeJS.ErrnoException) => err
-    )
+    /*
+     * On Windows the refusal is thrown by `spawn` itself, synchronously, before
+     * any promise exists — `spawn ENAMETOOLONG`, errno -4064 — so a
+     * `.then(null, onError)` on the promise never sees it: CI run 37668502747
+     * failed on exactly that, which is also the measurement the test is for.
+     * A try/catch takes both the synchronous throw and a rejection.
+     */
+    let attempt: NodeJS.ErrnoException | null = null
+    try {
+      await run(FFMPEG, plan.args, { maxBuffer: 64 * 1024 * 1024 })
+    } catch (err) {
+      attempt = err as NodeJS.ErrnoException
+    }
     notes.push(`inline route on ${process.platform}: ${attempt ? `refused (${attempt.code ?? ''} ${attempt.message.split('\n')[0].slice(0, 160)})` : 'rendered'}`)
     if (onWindows) {
       expect(attempt, 'Windows started a command line past 32,767 characters').not.toBeNull()
+      // CreateProcess's limit surfaces as ENAMETOOLONG (measured, run 37668502747); E2BIG is the POSIX spelling.
+      expect(['ENAMETOOLONG', 'E2BIG'], 'the refusal is the command-line length').toContain(attempt?.code)
       return
     }
     expect(attempt).toBeNull()
