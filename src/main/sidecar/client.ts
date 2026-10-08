@@ -23,6 +23,33 @@ export interface SidecarOptions {
   maxRestarts?: number
   /** Where models are downloaded and cached. Should be under userData. */
   modelsDir?: string
+  /**
+   * Where the helper keeps what it bakes (parallax planes; step 1's face
+   * tracks), as `FORGE_CACHE_DIR`. Should be under userData: unset, the
+   * helper falls back to `~/.cache/forge`, which nothing evicts — 264 MB of
+   * parallax bakes were measured there (docs/CLIPS.md §3.5).
+   */
+  cacheDir?: string
+}
+
+/**
+ * The environment the helper is started with. Pure, so a test can hold it to
+ * passing both folders without spawning anything.
+ */
+export function sidecarEnv(options: Pick<SidecarOptions, 'modelsDir' | 'cacheDir'>, base: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  return {
+    ...base,
+    // Unbuffered, or responses sit in Python's stdout buffer until it fills.
+    PYTHONUNBUFFERED: '1',
+    PYTHONIOENCODING: 'utf-8',
+    ...(options.modelsDir ? { FORGE_MODELS_DIR: options.modelsDir } : {}),
+    ...(options.cacheDir ? { FORGE_CACHE_DIR: options.cacheDir } : {}),
+    // Hugging Face's Xet backend talks to a separate CDN host that
+    // restricted networks and corporate proxies routinely block. The plain
+    // HTTP path is slower but works everywhere.
+    HF_HUB_DISABLE_XET: '1',
+    HF_HUB_DISABLE_TELEMETRY: '1'
+  }
 }
 
 export interface RequestOptions {
@@ -93,18 +120,7 @@ export class SidecarClient extends EventEmitter {
       cwd: this.options.cwd,
       stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true,
-      env: {
-        ...process.env,
-        // Unbuffered, or responses sit in Python's stdout buffer until it fills.
-        PYTHONUNBUFFERED: '1',
-        PYTHONIOENCODING: 'utf-8',
-        ...(this.options.modelsDir ? { FORGE_MODELS_DIR: this.options.modelsDir } : {}),
-        // Hugging Face's Xet backend talks to a separate CDN host that
-        // restricted networks and corporate proxies routinely block. The plain
-        // HTTP path is slower but works everywhere.
-        HF_HUB_DISABLE_XET: '1',
-        HF_HUB_DISABLE_TELEMETRY: '1'
-      }
+      env: sidecarEnv(this.options, process.env)
     }) as ChildProcessWithoutNullStreams
 
     this.child = child

@@ -67,6 +67,29 @@ limit. Nothing in the editor may depend on the sidecar being alive.
   `HF_HUB_DISABLE_XET=1`; the plain HTTP path is slower but works everywhere.
 - **Never default the model cache to `~/.cache`.** The client passes `FORGE_MODELS_DIR`
   explicitly, pointing at `userData`.
+- **Nor the bakes.** Until 2026-10-08 nothing set `FORGE_CACHE_DIR`, so depth.py's parallax
+  bakes fell back to `~/.cache/forge/parallax` — 264 MB measured on the development Mac, never
+  evicted. The client now passes it as `userData/helper-cache` (`helperFolders`,
+  `src/main/sidecar/service.ts`), and the caches that follow it are `media.cache_dir(name)`
+  under it: parallax bakes now, step 1's face tracks next. **Not stems, yet:** `stems.py`
+  `_cache_dir` (:45-48) still falls back to `~/.cache/forge/stems` when no `outDir` is sent,
+  and main sends none (`src/main/separate.ts:40`), so with Demucs installed every separation
+  lands there, unevicted. Moving it onto `media.cache_dir("stems")` re-separates each song once
+  (minutes of CPU) and needs the same decision about the old folder as `docs/CLIPS.md`
+  §16.24, so it is a change of its own. The folder is not `userData/cache`: userData already
+  holds Chromium's own `Cache` (its HTTP disk cache), and on a
+  case-insensitive disk — the APFS default, and NTFS — `cache` is that folder (measured:
+  `ls -d …/forge/cache` resolved to it). The old parallax folder is left exactly where it is (the user's
+  decision, `docs/CLIPS.md` §16.24): with the variable set nothing reads, moves or deletes it, a
+  project whose planes are there keeps finding them by their stored paths, and a photo baked
+  there is baked once more into the new folder on its next bake. Measured: a fresh bake through
+  the client landed in `<userData>/helper-cache/parallax/<key>/`, and `~/.cache/forge/parallax`
+  kept its 40 entries and 264 MB with nothing newer than the day. Model downloads are pinned to a
+  commit (`media.download`; depth `4472b73…`, BiRefNet `de15b22…`, the revisions already in the
+  app's cache), which also skips the Hub round trip a branch name costs on the first bake of a
+  session: 138 ms from the cache against 4.9 s unpinned, measured. Bytes are forwarded as
+  progress through `tqdm_class`, in huggingface_hub's 10 MiB chunks (three messages for a 19 MB
+  file, measured).
 
 ## ASR
 

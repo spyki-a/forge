@@ -4593,3 +4593,36 @@ arrives), and the photo as a slice of itself on its side.
   now hand ffmpeg the turned copy under the old size (not handled).
   **Dated, not run:** the 2018 build's autorotate on the export's inputs and
   its muxer's `rotate` tag, which `rotation.int` measures in Windows CI.
+
+## 50. The helper's decodes, and the floor beyond the render plan (2026-10-08)
+
+For `docs/CLIPS.md` §3.5 and §3.6. Development Mac, the bundled ffmpeg (4.4),
+through `sidecar/forge_sidecar/media.py` itself, on the helper's venv
+(CPython 3.14.6).
+
+**Streaming frames.** A 20 s 640×360 30 fps clip decoded whole through
+`capture_output` (what `_decode_rgb` did with whatever it was handed) is
+**414,720,000 bytes** in memory, 0.38 s. `media.iter_frames` reads one
+frame of exactly w×h×3 bytes at a time from a `Popen` pipe, checks the
+request's cancellation before each, and kills ffmpeg in `finally`: 50 frames
+then stop, **0.089 s**, the process killed and reaped (non-zero return code).
+At `fps=5`, 480×270, 20 s of 1080p: 100 frames in 0.26 s. ffmpeg's errors go
+to a temporary file, not a pipe nobody reads. `media.decode_rgb` with `-ss`
+before `-i` on a 1080p clip whose keyframes are 250 frames apart: 48–67 ms a
+seek at 1, 7, 15 and 19 s. Moving `depth.py` and `vision.py` onto the module
+changed nothing they return: for sixteen stills (the vision check's thirteen,
+two JPEGs and a PNG) the size, two decodes' bytes and every measure were
+byte-identical before and after (`cmp` of the captured JSON).
+
+**`scdet` on the floor.** The Mac build has it (`scdet=threshold=10` on a red
+→ blue cut: `lavfi.scd.score: 15.625`); it merged 2020-05-14 and first
+shipped in 4.3 (its Changelog, read at `n4.3`), so it is on `TOO_NEW`. And `graphOf` scans only `buildRenderPlan`, so
+`tests/oldestFfmpeg.test.ts` gains `ANALYSIS_SHAPES`: the chroma-key probe,
+the nine encoder probes, five shapes of a moment's footage pre-pass (crop,
+half speed, `minterpolate`, a ramp, a freeze), a steady clip's
+`vidstabdetect` pass as main runs it, a voice-over's conversion, the
+Converter's presets, and the helper's `media.frame_args` and
+`media.decode_args` — asked of the helper's own interpreter, so the Python
+half's ffmpeg is scanned by the same blocklist. Mutations: `scdet` in the
+chroma-key probe's filter, and in the helper's frame stream — each fails its
+shape. `sceneArgs` (§4.2) is an `it.todo` until `shots.ts` exists.

@@ -34,12 +34,27 @@ function pythonPath(): string {
   return existsSync(venv) ? venv : process.platform === 'win32' ? 'python' : 'python3'
 }
 
+/**
+ * The helper's two folders under userData: models it downloads, and what it
+ * bakes.
+ *
+ * The cache is `helper-cache`, not `cache`: userData already holds Chromium's
+ * own `Cache` (its HTTP disk cache, `Cache/Cache_Data`), and on the default
+ * case-insensitive APFS and on NTFS `cache` IS that folder — measured, `ls -d
+ * …/forge/cache` resolved to it. Bakes do not belong inside a browser cache
+ * Chromium manages. Bakes made before 2026-10-08 stay in `~/.cache/forge`,
+ * untouched (docs/CLIPS.md §3.5, §16.24).
+ */
+export function helperFolders(userData: string): { modelsDir: string; cacheDir: string } {
+  return { modelsDir: join(userData, 'models'), cacheDir: join(userData, 'helper-cache') }
+}
+
 export function getSidecar(): SidecarClient {
   if (client) return client
   client = new SidecarClient({
     cwd: sidecarDir(),
     python: pythonPath(),
-    modelsDir: join(app.getPath('userData'), 'models'),
+    ...helperFolders(app.getPath('userData')),
     maxRestarts: 3
   })
   return client

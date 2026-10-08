@@ -1,6 +1,15 @@
 import { describe, it, expect } from 'vitest'
-import { buildRenderPlan, type RenderRequest } from '@shared/render/plan'
+import { execFileSync } from 'node:child_process'
+import { existsSync } from 'node:fs'
+import { join, resolve } from 'node:path'
+import { buildRenderPlan, videoInputArgs, type RenderRequest } from '@shared/render/plan'
 import { filterGraphOf, withGraphFile } from '@shared/render/graphFile'
+import { keyProbeArgs } from '@shared/render/chromaKey'
+import { ENCODERS, probeArgs } from '@shared/render/encode'
+import { momentFrameArgs } from '@shared/render/momentFrames'
+import { steadyDetectFilter } from '@shared/render/steady'
+import { voiceOverArgs } from '@shared/render/voiceover'
+import { PRESETS, defaultParams } from '@shared/presets'
 import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
 
 /*
@@ -81,7 +90,16 @@ const TOO_NEW: { pattern: RegExp; since: string; why: string }[] = [
     pattern: /curve=(losi|nofade|sinc|isinc)\b/,
     since: 'unverified on the 2018 build',
     why: 'afade — tri and qsin are curve 0 and 1, from the original commit'
-  }
+  },
+  /*
+   * Scene detection is the obvious reach for step 1's shot pass
+   * (docs/CLIPS.md §4.2), and the macOS build HAS it — it ran, giving
+   * `lavfi.scd.score: 15.625` — which is how it would ship broken, the
+   * `colortemperature` story again. It merged 2020-05-14 and is in 4.3's
+   * Changelog ("scdet filter", read at n4.3). `select`'s `scene` score
+   * (2012) is the old way to the same number.
+   */
+  { pattern: /\bscdet\b/, since: '4.3', why: "select='gt(scene,…)' with showinfo, or the scene score from metadata" }
 ]
 
 const W = 640
@@ -292,6 +310,84 @@ const SHAPES: { name: string; project: Project; range?: { start: number; end: nu
   }
 ]
 
+/*
+ * The argument builders that are NOT render plans (docs/CLIPS.md §3.5).
+ *
+ * `graphOf` scans only `buildRenderPlan`'s graph, but the bundled ffmpeg runs
+ * other commands on the same 2018 build: the probes main runs at launch, the
+ * moments' footage pre-pass, a steady clip's motion analysis, the Converter's
+ * presets, a voice-over's conversion — and the AI helper's decodes, which are
+ * Python (sidecar/forge_sidecar/media.py `frame_args` / `decode_args`, the
+ * face pass's decoder, §4.3), asked for their argv through the helper's own
+ * interpreter. Each is scanned whole by the same blocklist.
+ *
+ * Not here, because no pure builder exists: the helper's beat decode
+ * (beats.py `_decode_mono`, `-ss`/`-t`/`-ac`/`-ar` and no filter) and its
+ * plane writer (depth.py `_write_rgba`, an image encode), and main's stems
+ * split, waveform, mask-tag probe (src/main/transitions/maskTags.ts:50,
+ * `scale=…,format=gray`) and graphics compositor
+ * (src/main/graphics/compositor.ts:60, `overlay=0:0:shortest=1,
+ * format=yuv420p`), which build their argv inline. All old filters today;
+ * a new one added to any of these is NOT scanned until it gets a builder here.
+ *
+ * Step 1's scene pass, `sceneArgs` in src/main/ffmpeg/shots.ts (§4.2), joins
+ * this list when it is built — `scdet` is on the blocklist because that pass
+ * is where it would be reached for. The `it.todo` below is the hook.
+ */
+const SIDECAR = resolve(__dirname, '../sidecar')
+const VENV = join(SIDECAR, '.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python')
+const HELPER_PYTHON = existsSync(VENV) ? VENV : process.env.FORGE_PYTHON ?? 'python3'
+
+/** The helper's decode argv, from the helper itself: stdlib-only, so a bare interpreter answers. Asked once. */
+let helperOnce: { frames: string[]; frame: string[] } | null = null
+function helperArgs(): { frames: string[]; frame: string[] } {
+  if (helperOnce) return helperOnce
+  const script = [
+    'import json',
+    'from forge_sidecar import media',
+    'print(json.dumps({',
+    '  "frames": media.frame_args("/tmp/in.mp4", "ffmpeg", 5, 640, 360, 1500, 2500),',
+    '  "frame": media.decode_args("/tmp/in.mp4", "ffmpeg", 640, 360, 1500),',
+    '}))'
+  ].join('\n')
+  const out = execFileSync(HELPER_PYTHON, ['-c', script], {
+    cwd: SIDECAR,
+    env: { ...process.env, PYTHONPATH: SIDECAR, PYTHONDONTWRITEBYTECODE: '1' },
+    encoding: 'utf8',
+    windowsHide: true
+  })
+  helperOnce = JSON.parse(out) as { frames: string[]; frame: string[] }
+  return helperOnce
+}
+
+const FOOTAGE = { path: '/tmp/v.mp4', inPoint: 30, duration: 60, first: 10, count: 12, fps: 30, size: { width: W, height: H }, maxEdge: 2160 }
+
+const ANALYSIS_SHAPES: { name: string; args: () => string[] }[] = [
+  { name: 'the chroma-key scale probe (main, at launch)', args: () => keyProbeArgs() },
+  ...ENCODERS.map((e) => ({ name: `the encoder probe, ${e.id}`, args: () => probeArgs(e.id, '/tmp/probe.mp4') })),
+  { name: 'a moment’s footage pre-pass, cropped', args: () => momentFrameArgs({ ...FOOTAGE, crop: { x: 40, y: 0, width: 202, height: 360 } }, '/tmp/m/%05d.png') },
+  { name: 'a moment’s footage pre-pass, at half speed', args: () => momentFrameArgs({ ...FOOTAGE, speed: 0.5 }, '/tmp/m/%05d.png') },
+  { name: 'a moment’s footage pre-pass, smooth slow motion', args: () => momentFrameArgs({ ...FOOTAGE, speed: 0.5, smoothSlow: true }, '/tmp/m/%05d.png') },
+  { name: 'a moment’s footage pre-pass, over a ramp', args: () => momentFrameArgs({ ...FOOTAGE, ramp: { from: 1, to: 0.25 } }, '/tmp/m/%05d.png') },
+  { name: 'a moment’s footage pre-pass, on a freeze', args: () => momentFrameArgs({ ...FOOTAGE, hold: true }, '/tmp/m/%05d.png') },
+  {
+    // main/render/steady.ts runs exactly this: the clip's input, then the detect filter.
+    name: 'a steady clip’s motion analysis',
+    args: () => [...videoInputArgs(clip({ id: 'a' }), { path: '/tmp/v.mp4' }, 30), '-vf', steadyDetectFilter('steady-0.trf'), '-f', 'null', '-']
+  },
+  { name: 'a voice-over kept', args: () => voiceOverArgs('/tmp/take.webm', '/tmp/take.wav', 48000) },
+  ...PRESETS.filter((p) => p.buildArgs).map((p) => ({
+    name: `the Converter’s ${p.id}`,
+    args: () =>
+      p.buildArgs!({
+        input: '/tmp/in', output: `/tmp/out.${p.outExt(defaultParams(p))}`, params: defaultParams(p),
+        info: { path: '/tmp/in', name: 'in', size: 1, kind: p.kind, durationMs: 10_000, width: W, height: H, rotation: 0, videoCodec: 'h264', audioCodec: 'aac', fps: 30 }
+      })
+  })),
+  { name: 'the helper’s frame stream (media.frame_args — the face pass’s decoder)', args: () => helperArgs().frames },
+  { name: 'the helper’s one-frame decode (media.decode_args)', args: () => helperArgs().frame }
+]
+
 describe('a filter graph runs on the oldest bundled ffmpeg', () => {
   for (const { name, project: p, range, captionOverlay } of SHAPES) {
     it(`uses nothing merged after 2018-12-17 — ${name}`, () => {
@@ -431,4 +527,40 @@ describe('a filter graph runs on the oldest bundled ffmpeg', () => {
     expect(graph).toContain('trim=start=')
     expect(graph).toContain('atrim=start=')
   })
+})
+
+describe('every other ffmpeg command runs on the oldest bundled ffmpeg', () => {
+  for (const { name, args } of ANALYSIS_SHAPES) {
+    it(`uses nothing merged after 2018-12-17 — ${name}`, () => {
+      const argv = args()
+      expect(argv.length, name).toBeGreaterThan(0)
+      const text = argv.join('\n')
+      for (const { pattern, since, why } of TOO_NEW) {
+        const hit = pattern.exec(text)
+        expect(
+          hit,
+          `"${hit?.[0]}" first shipped in ffmpeg ${since}, and was merged after ` +
+            `the Windows build's 2018-12-17 snapshot of master — ${why}`
+        ).toBeNull()
+      }
+    })
+  }
+
+  it('reaches the filters it says it scans', () => {
+    // The scan above is satisfied by an empty argv; this pins what the shapes hold.
+    const filterOf = (argv: string[]): string => argv[argv.indexOf('-vf') + 1] ?? ''
+    const byName = new Map(ANALYSIS_SHAPES.map((s) => [s.name, s.args()]))
+    expect(filterOf(byName.get('a moment’s footage pre-pass, cropped')!)).toContain('crop=')
+    expect(filterOf(byName.get('a moment’s footage pre-pass, smooth slow motion')!)).toContain('minterpolate')
+    expect(filterOf(byName.get('a steady clip’s motion analysis')!)).toContain('vidstabdetect=')
+    expect(filterOf(byName.get('the chroma-key scale probe (main, at launch)')!)).toContain('chromakey=')
+    const helper = helperArgs()
+    expect(filterOf(helper.frames).split(','), 'the frame stream').toEqual(expect.arrayContaining(['fps=5']))
+    // indexOf is -1 for a missing -ss, which is "before" anything: present first, then before.
+    expect(helper.frames.indexOf('-ss'), 'the frame stream seeks').toBeGreaterThanOrEqual(0)
+    expect(helper.frames.indexOf('-ss'), 'the seek before the input').toBeLessThan(helper.frames.indexOf('-i'))
+    expect(filterOf(helper.frame)).toMatch(/^scale=/)
+  })
+
+  it.todo('scans step 1’s sceneArgs (docs/CLIPS.md §4.2) — add it to ANALYSIS_SHAPES when src/main/ffmpeg/shots.ts lands')
 })
