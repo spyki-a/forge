@@ -182,7 +182,7 @@ vulnerabilities, and is not finished.
 |---|---|---|
 | Electron's binary | `node_modules/electron/dist/` empty. npm 11's allow-scripts gate withholds the postinstall, and its warning names only `electron-winstaller` and `esbuild` — **never `electron`**. `esbuild` needs nothing; its platform package ships the exe | `node node_modules/electron/install.js` |
 | Visual C++ Redistributable | *Cannot find native binding … npm bug 4828*, from `@electron-internal/extract-zip`. The message is wrong — `index.win32-x64-msvc.node` is present and bundled. `vcruntime140.dll` is not, so `dlopen` fails | `winget install Microsoft.VCRedist.2015+.x64` |
-| a real Python | the twelve sidecar tests fail with `SidecarError: The AI helper stopped (code 9009)` (it said "sidecar" before 2026-10-03; on screen the Python process is now "the AI helper", because the user's "sidecar" is the left panel). 9009 is Windows for *command not found* — `python3` resolves to the Store App Execution Alias stub, which is not an interpreter | `winget install Python.Python.3.12` |
+| a real Python | the fourteen sidecar tests fail with `SidecarError: The AI helper stopped (code 9009)` — and since 2026-10-08 so do `tests/integration/sidecarMedia.int.test.ts` and three tests in `tests/oldestFfmpeg.test.ts` that fetch the helper's own ffmpeg argv through its interpreter (it said "sidecar" before 2026-10-03; on screen the Python process is now "the AI helper", because the user's "sidecar" is the left panel). 9009 is Windows for *command not found* — `python3` resolves to the Store App Execution Alias stub, which is not an interpreter | `winget install Python.Python.3.12` |
 | `FORGE_PYTHON` | still 9009 once Python is in. `client.ts` falls back to the literal `python3`, and the python.org installer creates `python.exe` and no `python3.exe`. CI passes only because `actions/setup-python` makes one | `setx FORGE_PYTHON "…\Python312\python.exe"` |
 
 The first two are independent, by elimination: a clean `npm ci` with the runtime
@@ -195,9 +195,12 @@ repo drops that binary again, silently, with a zero exit code. Check
 `npm run pack:win`, which needs it and will not tell you why it failed.
 
 **The sidecar needs only a bare interpreter**, not `requirements.txt`. CI runs
-`setup-python` with no `pip install`, and one of the twelve tests is "reports a
-missing capability as degraded rather than crashing". Install the requirements
-when you want the capabilities, not to get the suite green.
+`setup-python` with no `pip install`, and the fourteen tests include "reports a
+missing capability as degraded rather than crashing" and, since 2026-10-08,
+"every optional method is a capability or degraded" — a module that cannot
+import is withdrawn whole (`sidecar/forge_sidecar/media.py` is stdlib-only at
+import for the same reason). Install the requirements when you want the
+capabilities, not to get the suite green.
 
 Each of these reports something other than its cause. None is discoverable by
 reading the code.
