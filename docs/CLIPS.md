@@ -2520,65 +2520,258 @@ placed at the upper third rather than centred.
 
 ### 4.7 1f — Applying it: the followed crop, `setAspect`, the action · 4.5 days (+1 for the two-up)
 
-> **Built 2026-10-13 — the render half (slice A); the store, the UI, the
-> IPC, the analysis job, the harness and the Director's hook are slice B's,
-> not built.** `src/shared/reframe/expression.ts` (`flatSumExpression`,
-> `flatSumAt`, `exportPixel`, `smoothstep`, `windowSum`, `FLAT_GROUP`);
-> `src/shared/reframe/keys.ts` (`followKeys`, `followAt`, `positionAt`,
-> `exportFrameAt`, `isKeyed`); `KeyedProperty` gains `cropX`/`cropY`, kept out
-> of `KEYED_PROPERTIES`; `Clip.follow` and `Project.subjects` (`timeline.ts`);
-> `render/plan.ts` (`cropFilter` keyed and stacked, `followClock`,
-> `followedRetime`); `render/crop.ts` `cropAt`; `render/momentFrames.ts`
-> (the crop ahead of the trim, `followedFootage`, the window's keys,
-> `PULL_VERSION` 6). **Where the plan above changed, each measured
-> (`EFFECTS.md` §55):**
-> - **Not `keyframeExpression`.** Its nested `if()` as the crop's x is
->   refused past 96 held keys; the x (and y, and each half's) is a flat sum —
->   base, a `Δ*gte(t,(f−0.5)/fps)` per held step, a smoothstep term per pan —
->   frame-exact to 2,998 terms in the plan's chain, and past `FLAT_GROUP`
->   (1,000) terms written in parenthesised groups, because ffmpeg's
->   evaluator recurses down a flat sum and crashed past ~7,000 terms at a
->   1 MB stack (9,595 grouped: frame-exact there).
-> - **Not `timelineFrameAt`.** A cut's held key goes on the EXPORT's `fps=`
->   slot for it (`exportFrameAt`): exactly from pts when given, from the
->   printed ms until 1b keeps them. `timelineFrameAt` was early on a third
->   to a half of the cuts at speed 1 and on every cut at 0.5×.
-> - **The followed clock, `fps=${fps}:start_time=0`, ahead of the crop at
->   every speed** (and ahead of the two-up's split). §3.4's remedy was
->   needed (29.97 and VFR pans drifted 12 / 8 px off the grid, a VFR tie cut
->   late without it); `start_time=0` because `fps=` otherwise starts at the
->   slot the first frame after the seek rounds to, and at slot 1 every
->   reader of the clip was a frame off the export.
-> - **A followed ramp runs on `T`, not `T-STARTT`** (`followedRetime`),
->   where its keys put the cuts: from STARTT a VFR clip at in-point 7 had
->   every cut off by up to 5 frames.
-> - **The two-up is `vstack,tpad=stop_mode=clone:stop=1`**: without the
->   `tpad` the chain's trailing `fps=` drops the clip's last frame.
-> - **The pull's keys are its window's** (`windowSum`): the whole clip's put
->   a long clip's `-vf` past Windows' command-line limit.
+> **Built 2026-10-13 — the render half (slice A): the keys, their
+> compiler, the render, `cropAt` and the moments' pull. Slice B's, not
+> built: the store (`reframeClip`, `reframeAll`, `setAspect`, CropOverlay's
+> drags), the job, the IPC, the UI (§4.8), the harness check, and the
+> Director's hook.**
 >
-> Tests: `tests/reframeExpression.test.ts`, `tests/reframeKeys.test.ts`,
-> `tests/reframeRender.test.ts`, `tests/oldestFfmpeg.test.ts` (the followed
-> and two-up shapes, the pulls, `sgn`/`randomi`) and the render check
-> `tests/integration/reframe.int.test.ts`: four sources at 9:16, 1:1, 2× and
-> the two-up, each with its sound and a moment across a cut; the clock's
-> slot-1 rows at 1× and 0.5×; a followed ramp; 110 held keys; a grouped
-> 1,103-term sum; the media's ties asserted from the probed pts. Every row
-> within 1 px of `cropAt` on every frame (±2 on the Mac, ±8 elsewhere).
-> Mutations killed include: the key a frame early, the memo without each of
-> its parts, the moving axis always x, the seek floored, `start_time`
-> dropped, the clock at speed 1 only, a ramp on STARTT (render and pull),
-> the two-up's `tpad`, the bottom half on the top's keys, no grouping, a
-> flat reader of a grouped sum, the pull with the whole clip's keys, `sgn`.
-> "Keyed on `n`" is no longer a mutation: behind the clock `n/fps` is `t`.
+> Commits:
+> - the keys: `29e1dce`, `12c4eae`, `8e5c530`;
+> - the render, `cropAt`, the pull, the floor scan and the render check:
+>   `46d5ec3`, `9ca3d40`, `f49e475`, `e92d2db`, `d251755`;
+> - the fix phase, after two verifiers: `0e2f087` … `90755ab`.
 >
-> **Left:** 1b's `Shot.startPts` and `SubjectTrack.timeBase` — required for
-> 25 and 50 fps projects, where the printed-ms path keys 1 cut in 6 a frame
-> late at 2 in-points of 5 — then `exportFrameAt`'s exact path in
-> `followKeys`; `path.ts` matches a drag's offset by the exact `startMs`,
-> so a re-analysis must remap `offsets` and `halfOffsets` onto its new
-> shots (slice B); the preview at 0.5× seeks a frame before the export's
-> cut. Windows: dated, not run — CI's render check is the 2018 run.
+> Every number below is in `EFFECTS.md` §55, with its command.
+>
+> **What was built:**
+>
+> - **`src/shared/reframe/expression.ts`, the compiler.** A followed crop's
+>   x (or y, and each two-up half's x and y) is a `FlatSum` `{base,
+>   terms}`.
+>   - It is written in frame order, every constant to 6 dp:
+>     `base ± Δ*gte(t,(f−0.5)/fps) ± Δ*(P)*(P)*(3-2*(P))`, with P =
+>     `min(1,max(0,(t−t0)/span))`.
+>   - It is **never `keyframeExpression`**. That function's nested `if()`,
+>     as the crop's x, is refused at 97 held keys and at 92 smooth ones.
+>   - Frame-exact in the plan's chain to 2,998 terms.
+>   - Past `FLAT_GROUP` (1,000) terms it is written in parenthesised groups.
+>     ffmpeg's evaluator recurses down a flat sum, and it crashed past about
+>     7,000 terms at a 1 MB stack. 9,595 grouped terms were exact there.
+>   - The other exports:
+>     - `flatSumAt` is the same arithmetic on the constants as written,
+>       adding each group first.
+>     - `exportPixel(v) = Math.round(v) & ~1` is the crop's `lrint & ~1`.
+>     - `windowSum` keeps the terms that change frames [from, to).
+> - **`src/shared/reframe/keys.ts`.**
+>   - **`followKeys(project, clip, fps)`** is compiled, never stored. It is
+>     memoised per track object on every input that changes it; removing any
+>     one component fails its own test case.
+>   - It runs `cropPath` and puts each cut's held key on **the export's own
+>     frame for it**, `exportFrameAt`, and **not on `timelineFrameAt`**.
+>     That frame is:
+>     - the `fps=` slot after the seek, `floor(t·fps + ½)`;
+>     - at a constant speed, the same after `setpts`' truncation;
+>     - through a ramp, from the ramp's own `setpts`;
+>     - computed exactly from `{pts, timeBase}` when given. Until 1b keeps
+>       those, it comes from the printed ms with `TIE_SLACK`.
+>   - Pans go on the same grid and end by the next cut's frame. A pan
+>     already running at the in-point opens mid-pan.
+>   - It returns `{crop, cropX | cropY, halves?, axis, size, half, shots,
+>     notes}`.
+>   - On a two-up clip all four lanes share the cut slots, and a single shot
+>     keys (x, 0) and (x, `half.height`).
+>   - A canvas of the source's own shape gets no keys, with the note
+>     "nothing to follow". A hold gets a static crop at its frozen frame,
+>     with a note. `null` when the clip has no `follow` or its track is
+>     refused.
+>   - **`followAt(keys, frame)`** is what the export draws on a clip frame.
+>     `positionAt(path, ms)` is the path's own source clock.
+>   - `KeyedProperty` gains `cropX`/`cropY` for the type only; they stay out
+>     of `KEYED_PROPERTIES`. `Clip.follow` and `Project.subjects` are in
+>     `timeline.ts`.
+> - **`render/plan.ts`.**
+>   - **`cropFilter(clip, source, follow?, fps, index)`** writes x (and y) as
+>     `'max(0,min(<sum>,in_w-out_w))'` with `w`/`h` literal, so `streamSize`
+>     reads the follow's size.
+>   - **On a clip whose path holds a two-up** it writes
+>     `split=2[r<i>a][r<i>b];[r<i>a]crop=…[r<i>t];[r<i>b]crop=…[r<i>u];[r<i>t][r<i>u]vstack,tpad=stop_mode=clone:stop=1`.
+>   - **`followClock`** puts `fps=${fps}:start_time=0` right ahead of a crop
+>     that moves, at every speed; at speeds other than 1 it comes after the
+>     retime's own `fps=`.
+>   - **`followedRetime`** writes a followed ramp's `setpts` on `T`.
+>   - As rendered, at speed 1:
+>     `[0:v]fps=30:start_time=0,crop=…,scale=…,crop=1080:1920,fps=30,…`.
+>     At 2×: `[0:v]setpts=PTS/2,fps=30,fps=30:start_time=0,crop=…`.
+> - **`render/crop.ts` `cropAt(project, clip, source, frame)`**, the one
+>   reader. For a followed clip it calls `followAt` on the compiled keys at
+>   the clip frame, at the export's rounding. It returns `halves` only on a
+>   frame where the two halves are not one crop; otherwise it returns
+>   `effectiveCrop`.
+> - **`render/momentFrames.ts`, the pull.**
+>   - The crop (or the stack) moves ahead of `tpad…,trim…,setpts`, right
+>     after the retime and the clock: the render's own order.
+>   - Its keys are the window's (`windowSum`), so its `-vf` stays under
+>     2,000 characters at any length. The whole clip's keys came to 46,001
+>     characters for a 20-minute clip, past Windows' 32,767.
+>   - `FootageRequest` (`moment.ts`) carries `cropX`, `cropY` and `halves`;
+>     `momentFramesKey` names them; `PULL_VERSION` is 6.
+>   - `followedFootage(project, clip, fps)` is what slice B's
+>     `momentTextures` spreads in.
+>
+> **The shape per rate, as measured: one shape for every rate and speed.**
+>
+> - **30 fps:** the clock changes nothing measurable (a static crop is
+>   framemd5-identical, video and audio). It is kept so there is one shape.
+> - **29.97 and VFR:** the clock is required. Without `fps=` first, pans
+>   drifted 12 px (29.97) and 8 px (VFR) off the frame grid, and a VFR frame
+>   stamped on a half slot took the old crop.
+> - **60:** frame-exact either way on the exact slot, and 14–18 % faster
+>   with the clock.
+> - **`start_time=0`:** without it, `fps=` starts on slot 1 whenever the
+>   first frame is half a slot or more past the seek. That happens for VFR
+>   at in-point 1, 29.97 at in-points 500–1000 and from 1501, and 24 fps at
+>   three in-points of five. Every reader of such a clip was then a frame off
+>   the export: 26 of 150 frames, 960 px on a cut frame.
+> - **Ramps:** measured from STARTT, a ramp moved every cut of a VFR clip at
+>   in-point 7 (721 of 721). On `T`, 0 off.
+> - **The cut's key:** the exact slot. `timelineFrameAt` was early on 15–21
+>   of 44 cuts at speed 1 and on every cut at 0.5×. `Math.round(ms)` was
+>   early on 15 of 45 odd 60 fps cuts.
+>
+> **The render check.** `tests/integration/reframe.int.test.ts`, 34 tests,
+> 83 s on the Mac. The clip starts at timeline frame 15 from in-point 6.
+>
+> Cut frames (source frame → clip frame, at 9:16 and 1:1, then at 2×):
+>
+> - 30 fps: 29/61/165 → 23/55/159; at 2× 12/28/80.
+> - 29.97: 30/60/165 → 24/54/159; at 2× 12/27/80.
+> - 60: 61/120/331 → 25/54/160. Frames 61 and 331 are exact ties that
+>   `fps=` rounds up. At 2× 12/27/80.
+> - VFR: 30/62/169 → 25/56/163. Frame 30 is the half-stamped tie. At 2×
+>   12/28/82.
+>
+> At every cut, cut − 1 shows the old shot's chroma at the old crop, and
+> the cut frame shows the new shot's at the new crop:
+>
+> - 9:16: 176 | 1136, 1136 | 272, 848 | 656.
+> - 1:1: 0 | 840, 840 | 36, 612 | 420.
+>
+> The rest of the readings:
+>
+> - **Pans:** 272 → 848, never backwards.
+> - **The two-up:** at its cut the halves read (81, 162) on the left face
+>   and (1232, 378) on the right; the path says (80, 162) and (1232, 378).
+>   On cut − 1 they read (848, 0) and (848, 540).
+> - **A single shot in a two-up clip:** 0.000 levels from the same clip with
+>   no two-up.
+> - **The last frame** is kept.
+> - **Worst |read − model|:** 1 px on every row, 0 at 1:1.
+> - **The sound:** worst second difference 0.0053, the unreframed export's
+>   own; A/V start 0.00 ms.
+> - **The moments:** within 1 px, at 0.38–0.63 levels.
+> - **The fix phase's rows:**
+>   - VFR at in-point 1, where the clock's start matters: 30/61/168 at 1×,
+>     59/122/336 at 0.5×.
+>   - A ramp: cuts on 31/66/215, where STARTT would give 30/65/214.
+>   - 109 held keys.
+>   - A grouped sum of 1,103 terms.
+> - **The media's ties** are asserted from the probed pts.
+> - **An independent re-read**, with a different reader, found 0 frames off
+>   and every x even.
+>
+> **Where the render check differs from §4.9's text:**
+>
+> - The shot identity is in the chroma, so the luma codes survive the
+>   pull's RGBA.
+> - The cuts are near 1, 2 and 5.5 s, so shot 3 can hold its 948 ms pan.
+> - Every frame is decoded in order rather than sampled at (f − 0.25)/fps.
+> - The bar is ±2 px on the Mac and ±8 elsewhere.
+>
+> **Tests:**
+>
+> - `tests/reframeExpression.test.ts` (13).
+> - `tests/reframeKeys.test.ts` (31).
+> - `tests/reframeRender.test.ts` (19): the shapes as ordered anchors,
+>   counted (`crop=w=` twice, `fps=30` twice).
+> - `tests/oldestFfmpeg.test.ts` (50): `SHAPES` gains a followed clip and a
+>   two-up clip, `ANALYSIS_SHAPES` gains both pulls, and `TOO_NEW` gains
+>   `sgn` and `randomi`.
+> - `tests/moment.test.ts` (35).
+> - The whole suite after the fix phase: 3,379 passed.
+>
+> **Mutations killed** (each restored byte-identical with `cmp`, each
+> anchor counted at one match first):
+>
+> - the key at cut − 1 (11 tests), or through `timelineFrameAt` (10);
+> - §3.2's boundary reverted, the 30 fps cut on clip frame 23 showing the
+>   old crop;
+> - keys compiled from the clip's start;
+> - the memo without each of its parts;
+> - the moving axis always x;
+> - the seek floored, or not subtracted;
+> - `setpts` not truncated;
+> - the tie slack removed, or uncapped;
+> - `followAt` without `& ~1`;
+> - nested output, or a loosened smoothstep, in the compiler;
+> - `cropX` in `KEYED_PROPERTIES`;
+> - `fps=` first removed, or `start_time` dropped, or the clock at speed 1
+>   only;
+> - a ramp on STARTT, in the render and in the pull;
+> - the stack dropped, or its `tpad` dropped;
+> - the bottom half on the top's keys;
+> - `keyframeExpression` in place of the sum (the 110-key export is
+>   refused);
+> - no grouping, or a flat reader of a grouped sum;
+> - the pull's crop after its trim, or the pull with the whole clip's keys;
+> - `momentFramesKey` without the keys;
+> - `sgn` for a step.
+>
+> "Keyed on `n`" survives, as an equivalent: behind the clock, `n/fps` is
+> `t`.
+>
+> **Where the code differs from the text below:**
+>
+> - `cropX`/`cropY` are `FlatSum`s, not `Keyframe[]`.
+> - `cropFilter`'s arguments are `(clip, source, follow?, fps, index)`.
+> - A hold gets a static crop, not a refusal.
+> - The same-shape canvas returns keys-less `FollowKeys` with a note, not
+>   `null`.
+>
+> **Slice B's:**
+>
+> - The preview reads `cropAt(project, clip, src, clipFrame)` on the clip
+>   frame from `exportFrameAt(clip, fps, currentTime·1000)`, never from
+>   `sourceFrameFor` or `timelineFrameAt`. Draw `halves.top` and
+>   `halves.bottom` into a `size`-shaped canvas.
+> - `momentTextures` spreads `followedFootage`.
+> - `shotPicture` and the strips effect take `cropAt(…).crop`, with a note on
+>   a stacked frame.
+> - The Inspector line reads `followKeys(…)?.shots`.
+> - `setAspect` keeps `follow` and stores a copy of `followKeys(…).crop`.
+> - `reframeClip` makes one `update()`, then `rebakeGenerated`.
+> - The migration tolerates no `subjects`.
+> - A re-analysis remaps `offsets` and `halfOffsets` onto its new shots.
+>   `path.ts` matches a drag's offset by the exact `startMs`.
+> - Decide whether an export whose `request.canvas` overrides the project's
+>   should follow.
+> - The Director's `BACKDROP_KEEP` hook.
+>
+> **Windows CI on the push** is the first run on the 2018 build of:
+>
+> - the flat sum's `gte`, `min` and `max` in a crop's x;
+> - `fps=…:start_time=0` and its slots on the four sources;
+> - speed 2's truncating `setpts`;
+> - the two-up and its `tpad` keeping the last frame;
+> - the slot-1 rows and the ramp row;
+> - 110 held keys and the 1,103-term grouped sum through the graph file;
+> - the pulls' labelled `split`/`vstack` inside `-vf`.
+>
+> It does not reach sums past about 1,100 terms, the stack depth, a long
+> clip's pull, smooth slow motion or 10-bit sources.
+>
+> **Left:**
+>
+> - 1b's `Shot.startPts` and `SubjectTrack.timeBase`, then `exportFrameAt`'s
+>   exact path in `followKeys`. These are **required for 25 and 50 fps
+>   projects**, where the printed-ms path keys 1 cut in 6 a frame late at 2
+>   in-points of 5. Until then a printed near-tie (29.97 frame 499) is keyed
+>   a frame late.
+> - At 0.5× the preview's picture changes a frame before the export's.
+>   `sourceFrameFor` rounds n/2 half up, while the export shows floor(n/2).
+> - Smooth slow motion's cut frames are unmeasured.
+> - The 2018 exe's stack reserve has not been read.
+> - A 4:4:4 source's snap is unmeasured.
 
 **Expressed as a crop that follows on one clip, not as splits** (decision
 §16.2, with the alternative). Both were measured:
@@ -4894,8 +5087,12 @@ the analysis loaded stays resident while the model runs.
 | `select='gt(scene,T)'` after `scale=320:-2,format=rgb24`, on a `split` branch that ends in `nullsink`; `metadata=print` at **`-loglevel info`** | 1b shots (`sceneArgs`, built 2026-10-13) | 2012 / 2012 / 2016; `split` and `nullsink` are in `allfilters.c` at `f22fcd4` (read) | **built**; measured on the Mac (`EFFECTS.md` §52, §53). Without `format=rgb24` the score differs per build (§4.2). At `-loglevel error` nothing prints (re-measured on the built shape: 0 lines). `select` on the output path starves `-progress`, hence the split. It is on `ANALYSIS_SHAPES`, where `scdet` in its place fails the floor test. **Windows parity is §4.9's committed score table, asserted in CI: green on the 2018 build in run 38408749271 (2026-10-13)** |
 | `-ss S -t D`, both before `-i` (a window) | 1b `findShots`' window (no caller: a clip's shots come from the whole-file pass) | input `-t` is at `f22fcd4` (`ffmpeg_opt.c:3360`, `OPT_INPUT`; trimmed at the graph's input, `ffmpeg_filter.c:846`; read) | measured on the Mac: with `-t` after `-i`, a 3–7 s window printed a cut at source 8 s; with it before, only the cuts at 4 and 6 s. On MPEG-TS the window seeks wrong and finds nothing (`EFFECTS.md` §52). A camera's `.MTS` is unmeasured |
 | `scale` before analysis; `-ss` before `-i` for one frame | 1b, 1c, 1d, 1g (in the helper) | old | measured on the Mac (30–80 ms a seek, exact shot) |
-| `crop` with a per-frame `x`/`y` expression (`if`, `lt`, eased segments), literal `w`/`h` | 1f crop keys | crop 2010s; eval functions 2011 | measured on the Mac (step and linear exact); **dated** for Windows; the reframe render check runs in CI |
-| **the stacked two-up**: `split=2`, two `crop`s each with keyed `x` and `y` and literal `w`/`h`, `vstack`, with clip-indexed labels | 1f (§4.6 rule 3, §4.7), the render and the footage pre-pass's `-vf` | crop 2010s; split about 2011; vstack 2015 (the dates as known, not re-read in the 2018 source for this revision) | **measured on the Mac's 4.4 build for this revision**: a single shot as two halves is bit-identical to the one crop (`framemd5`, 60 frames), held keys switch both halves on the exact frame, and the shape runs inside `-vf` (compared over rawvideo; `EFFECTS.md` §38). **Dated** for Windows; §4.9's two-up rows run it in CI |
+| `crop` whose `x` (or `y`) is a **flat sum**, `base±Δ*gte(t,B)±Δ*(P)*(P)*(3-2*(P))` with P = `min(1,max(0,(t-t0)/span))`, every constant to 6 dp, written in parenthesised groups past 1,000 terms; inside `max(0,min(…,in_w-out_w))`, `w`/`h` literal | 1f's followed crop (`cropFilter`, built 2026-10-13): the render and the moments' pull | crop 2010s; `max`, `min` and `gte` are in `eval.c` at `f22fcd4` (:440, :441, :443, evaluated at :309–313); crop evaluates x and y per frame, `lrint`s them (:130), clamps them and clears the low bit (`vf_crop.c:263–281`) (all read) | **built**; measured on the Mac inside `buildRenderPlan`'s chain (`EFFECTS.md` §55): frame-exact to 2,998 terms written flat and to 9,595 grouped, the crop at `Math.round(x) & ~1` on every frame. **Not `keyframeExpression`**: its nested `if()` as the crop's x is refused at 97 held and 92 smooth keys. A flat sum past about 7,000 terms crashed the evaluator at a 1 MB stack, hence the groups. `sgn` (4.3) and `randomi` (7.0) are on the floor scan's `TOO_NEW`. **Dated** for Windows: reframe.int's rows (110 held keys, a 1,103-term grouped sum) run it in CI on the push |
+| `fps=${fps}:start_time=0` immediately ahead of a followed crop (or the two-up's `split`), at every speed: at speed 1 it is the clip's first filter, and at other speeds it comes after the retime's own `fps=` | 1f (`followClock`), the render and the moments' pull | `fps` 2010s; `start_time` in `vf_fps.c`'s option table at `f22fcd4` (:80, its offsets set at :159–172), rounding NEAR_INF (:81) (read) | **built**; measured on the Mac (§55). Without `fps=` first, 29.97 and VFR pans drifted 12 and 8 px off the frame grid, and a VFR frame stamped on a half slot took the old crop. Without `start_time=0`, `fps=` starts at slot 1 when the first frame is half a slot or more past the seek, and every reader was a frame off. A static crop is framemd5-identical with it (video and audio) on 30, 29.97, 60 and two VFR sources; 60 fps is 14–18 % faster. **Dated** for Windows; CI on the push |
+| a followed ramp's `setpts` written on `T` (seek-relative after `-ss`), not `T-STARTT` | 1f (`followedRetime`), the render and the pull | `setpts`' `T` and `STARTT`, old | **built**; measured on the Mac (§55): from STARTT, every cut of a VFR clip at in-point 7 moved (721 of 721, by up to 5 frames); on `T`, 0 off for four ramps on VFR, 29.97, 30 and 60 fps at in-points 0 and 7. reframe.int's ramp row runs it in CI |
+| **the stacked two-up**: `split=2[r<i>a][r<i>b]`, two `crop`s each with flat-sum `x` and `y` and literal `w`/`h`, then `vstack,tpad=stop_mode=clone:stop=1`, with clip-indexed labels | 1f (§4.6 rule 3, §4.7), the render and the moments' pull's `-vf` | in `allfilters.c` at `f22fcd4`: crop :176, split :351, tpad :372, vstack :391; `split.c:123`, `vf_stack.c:368`; tpad's `stop`, `clone` and `stop_mode` at `vf_tpad.c:54`, `:57`, `:58`; tpad merged October 2018 (all read) | **built**; measured on the Mac (§38 in `-vf`, §55 in the chain). As first specified, the chain's trailing `fps=` **dropped the clip's last frame** (59 of 60 at 30 and 29.97 fps, and at 60 fps with `fps=` first: vstack's framesync sends EOF with no pts, `framesync.c:98`); with the `tpad`, 60 of 60 bit-identical to the one crop, with captions and the baked band, at +3–6 %. reframe.int's two-up rows on four sources. **Dated** for Windows; CI on the push |
+| the moments' pull: `-vf "[retime,]fps=…:start_time=0,<crop or the stack>,tpad=stop_mode=clone:stop_duration=…,trim=start_frame=…:end_frame=…,setpts=PTS-STARTPTS,scale=<cap>,format=rgba"`, with the window's keys only (`windowSum`) | 1f (`momentFrameArgs`) | all of the above; `trim` is at `allfilters.c:376` | **built**; measured on the Mac (§55): a window across a key switch read 10 of 10 and the clip's last 5 read 5 of 5 at 30, 29.97 and 60 fps; the pull equals the render's frame beneath within 1 px on every reframe.int row. With the whole clip's keys this `-vf` was 46,001 characters for a 20-minute clip, past Windows' 32,767; with the window's, under 2,000. **Dated** for Windows; CI on the push |
+| `sgn`, `randomi` in an expression | **not used** | 4.3 / 7.0 (absent from `eval.c` at `f22fcd4`) | in `TOO_NEW`; the Mac's build accepts `sgn` and refuses `randomi` |
 | yt-dlp's `--download-sections` with `--force-keyframes-at-cuts`, through `--ffmpeg-location` (the ffmpeg arguments are yt-dlp's, not this plan's) | M0's Clip it (§3b.4) | — | one exact cut measured on the Mac (container start only, §7.1); **the 2018 build has never run under it**: `exactCut.int.test.ts` in Windows CI, or the Surface (§7.7, §15 row 14) |
 | `adelay=<n>S\|…` (samples) | step 0, every audio clip | the `S` form is in the 2018-11-11 source read for this plan | measured exact on the Mac; **CI with step 0** |
 | `fps=${fps},zoompan=…:d=1:…:fps=${fps}` on video | step 0 (§3.4) | 2014; zoompan's restamping read in the 2018 source (`vf_zoompan.c:158`, `:225`, `:309-310`) | measured on the Mac: 60 fps and 29.97 fps sources keep their duration with the leading `fps=`, and go to half speed or drift without it; **CI with step 0** |
@@ -4910,7 +5107,9 @@ the analysis loaded stays resident while the model runs.
 Every new shape goes into `tests/oldestFfmpeg.test.ts`: the render shapes
 (the two-up's included) into `SHAPES`, and the analysis argv into the new
 `ANALYSIS_SHAPES`. `sceneArgs` has been there since 2026-10-13, registered
-with a window, so `-ss` and `-t` are scanned too.
+with a window, so `-ss` and `-t` are scanned too. So have 1f's shapes since
+2026-10-13: `SHAPES` holds a followed clip at speed 1 and a two-up clip, and
+`ANALYSIS_SHAPES` holds both of their moments' pulls.
 
 ---
 
@@ -4984,12 +5183,67 @@ Each is named in its step, and each step's first task is its own row:
    the detector, ground, asr, and all of it on the Surface, where salient's
    gate is decided first.
 5. The followed crop in the preview while playing: the cut lands on the
-   element's frame (§4.9 harness).
+   element's frame (§4.9 harness). **Open, and slice B's.** The export's
+   side is settled by construction (2026-10-13, §4.7's Built note):
+   - `cropAt` reads the export's own compiled keys at the export's rounding
+     (`lrint & ~1`, even on every one of 3,000 frames read);
+   - the followed clock makes the export's clip frame k slot k.
+
+   What the preview still has to get right, measured:
+   - It must take the clip frame from the element's `currentTime` through
+     `exportFrameAt(clip, fps, ms)`, never through `sourceFrameFor` or
+     `timelineFrameAt`.
+   - At 0.5×, `sourceFrameFor` rounds n/2 half up while the export shows
+     floor(n/2). So for one frame per cut the preview's picture would show
+     the new shot under the old crop.
+
+   The harness check is unbuilt.
 6. **The followed crop at speed 1 on 29.97 fps, 60 fps and VFR sources**:
    whether `fps=`'s rounding agrees with the half-frame keys, or the crop
-   needs `fps=` ahead of it (§4.7, §4.9).
+   needs `fps=` ahead of it (§4.7, §4.9). **Measured on the Mac (2026-10-13,
+   `EFFECTS.md` §55): it needs `fps=` ahead of it.** At speed 1 the crop ran
+   on each source frame's own time:
+   - pans drifted up to 12 px off the frame grid on 209 of 1,100 frames at
+     29.97, and up to 8 px at VFR;
+   - a VFR frame stamped exactly on a half output frame took the old crop,
+     because a 6-dp boundary rounded above its time. That was 1 cut of 44,
+     or 2 with an in-point.
+
+   With `fps=` first: 0 frames off the grid on 30, 29.97, 60 and both VFR
+   sources, and a static crop framemd5-identical, video and audio.
+
+   **As built**, `fps=${fps}:start_time=0` goes ahead of every followed crop
+   at every speed. Without `start_time`, `fps=` starts at slot 1 after some
+   seeks and every reader was a frame off. Each cut's key goes on the
+   export's exact slot: `timelineFrameAt` was early on 15–21 of 44 cuts, and
+   `Math.round(ms)` on 15 of 45 odd 60 fps cuts.
+
+   reframe.int is frame-exact at every cut on all four sources, at 9:16,
+   1:1, 2× and the two-up, plus the slot-1 rows and a ramp, within 1 px on
+   every frame. Still open:
+   - the 2018 build: CI's reframe.int on the push;
+   - **25 and 50 fps projects**, which need 1b's `Shot.startPts` and the
+     track's time base. ffmpeg rounds the seek into the time base, and the
+     printed-ms path keys 1 cut in 6 a frame late at 2 in-points of 5
+     (159 of 958 measured).
 7. The 360-cut render through `-filter_complex_script` on the 2018 build,
-   and its export time (§3.7).
+   and its export time (§3.7). **The followed clip it was written for
+   renders now** (2026-10-13, `EFFECTS.md` §55).
+   - The flat sum has no parser limit where `keyframeExpression` stopped
+     (97 held keys as a crop's x).
+   - On the Mac, inside the plan's chain through the graph file, a
+     2,998-term x (220,580 characters, a 221,148 B file) rendered
+     frame-exact over 3,000 frames in 17.9–18.1 s, against 14.0–15.4 s for
+     a static crop. A 360-cut clip with a pan per shot is about 720 terms.
+   - Past 1,000 terms the sum is grouped, because written flat it crashed
+     the evaluator past about 7,000 terms at a 1 MB stack. 9,595 grouped
+     terms were exact.
+   - The 2018 build: §3.7's 72-cut `longGraph.int` ran in Windows CI with
+     the full suite, green in run 38408749271. reframe.int's 110-held-key
+     and 1,103-term rows run on the push.
+
+   Still open: a long followed clip's export time on the Surface, and the
+   2018 exe's stack reserve.
 8. The fps-prefixed zoompan on the 2018 build, at 60 and 29.97 fps (§3.4).
 9. The PNG encode of a transparent 1080×1920 graphic frame (§6.3).
 10. LM Studio's strict `json_schema` with `minItems: 0`; whether Gemma 4 E2B
@@ -5023,7 +5277,24 @@ Each is named in its step, and each step's first task is its own row:
     (Python 3.13 or older: it refuses 3.14), and rated beside ours at step
     1's exit (§4.1, §4.10).
 22. The stacked two-up (`split`, two keyed `crop`s, `vstack`) on the 2018
-    build, through §4.9's two-up rows in Windows CI (§4.7, §13).
+    build, through §4.9's two-up rows in Windows CI (§4.7, §13). **Measured
+    in the plan's chain on the Mac** (2026-10-13, `EFFECTS.md` §55).
+    - As specified, it lost the clip's last frame to the trailing `fps=`: 59
+      of 60 at 30 and 29.97 fps, and at 60 with `fps=` first, the 60th the
+      black canvas. vstack's framesync sends its EOF with no pts.
+    - Built as `vstack,tpad=stop_mode=clone:stop=1`, it gives 60 of 60,
+      bit-identical to the one crop, with an `ass` caption and the baked
+      band, at +3–6 %.
+    - In reframe.int, on 30, 29.97, 60 and VFR:
+      - each half reads its own face at the cut, (81, 162) and (1232, 378)
+        against the path's (80, 162) and (1232, 378);
+      - a single shot is 0.000 levels from a clip with no two-up;
+      - the last frame is kept;
+      - the moments' one stacked pull matches the render beneath.
+
+    Still open: the 2018 build. It is dated at `f22fcd4` (`split.c:123`,
+    `vf_stack.c:368`, `vf_tpad.c:54`/`:57`/`:58`, and `framesync.c:98`'s
+    EOF the same), and the two-up rows run it in CI on the push.
 23. The shot finder's other paths that only Windows runs, in the same CI
     run as row 2 (§4.2):
     - the `split`/`nullsink` graph inside `-vf`. It was read in the 2018

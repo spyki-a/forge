@@ -5545,144 +5545,688 @@ session, the model from the app's store:
   the build, not `session.run`, so a bake during an analysis is two of
   these at once.
 
-## 55. The followed crop — its clock, the stack's last frame, a ramp's origin, a flat sum's depth, and the pull's command line (2026-10-13)
+## 55. The followed crop — the flat sum inside the plan's chain, fps= against the half-frame keys on 29.97/60/VFR, and the two-up stack in the graph (2026-10-13)
 
-For `docs/CLIPS.md` §4.7 (1f: `src/shared/reframe/keys.ts` and
-`expression.ts`; `render/plan.ts`, `crop.ts`, `momentFrames.ts`) and its
-render check §4.9 (`tests/integration/reframe.int.test.ts`). Found by the
-slice's measure phase, its two verifiers and its fix phase, as credited.
-Development Mac, the bundled ffmpeg (4.4 build); the 2018 build read in its
-source at `f22fcd4`, not run. The media is synthetic, made by node and stored
-as lossless H.264 with AAC: 1920×1080 frames carrying the frame's own index
-in a 12-bit Gray code, each source column's 2 px unit in a 10-bit Gray code
-and its 16 px band in a 7-bit one, and a grey or a chroma pair per shot;
-29.97 as 30000/1001, VFR as `rawvideo -r 120` with `setpts` jitter stored
-`-vsync vfr`. A crop's exact x is read from a tap split off right after the
-crop and stored in the crop's own yuv420p.
+For `docs/CLIPS.md` §4.7 (1f's render half: `src/shared/reframe/expression.ts`
+and `keys.ts`; `render/plan.ts`, `crop.ts`, `momentFrames.ts`) and its render
+check §4.9 (`tests/integration/reframe.int.test.ts`). §4.7 left three
+questions open, and the slice's measure phase answered them before the build:
+whether a flat sum of a podcast's keys is frame-exact inside
+`buildRenderPlan`'s own chain (§52 ran it on a bare crop); whether the
+half-frame keys (§45) agree with `fps=`'s rounding on 29.97, 60 and VFR
+sources at speed 1 (§4.7 had measured 30 fps alone); and whether §38's
+two-up stack is still bit-identical inside the chain. Then come what the
+build, its two verifiers and the fix phase found on top, each credited, and
+the render check as built. Development Mac, the bundled ffmpeg (4.1.5
+package, reporting 4.4) and `@ffprobe-installer`'s ffprobe; the 2018 build
+read in its source at `f22fcd4`, not run. The measure phase's scripts and
+their outputs are in the session's scratchpad (`m55/`), not committed; the
+render check is committed and writes `tests/output/reframe/README.txt`.
+Every picture is synthetic.
 
-**The flat sum is frame-exact inside `buildRenderPlan`'s own chain** (the
-measure phase). One clip, 1080×1920 at 30 fps, its crop's x replaced by 150
-held steps and 150 smoothstep pans through `-filter_complex_script`: the
-tap's x is `Math.round(x) & ~1` of the same sum evaluated in JS on 3,000 of
-3,000 frames (1,346 on a fractional x, 476 distinct); the lossy export's
-frame index and 2 px code agree on all 3,000; the export with and without
-the tap is framemd5-identical. Render time over 3,000 frames: a static crop
-14.0–15.4 s; 298 terms 14.9 s; 1,198 terms 16.1–16.5 s; 2,998 terms
-(220,580 characters) 17.9–18.1 s, all frame-exact.
+**The measure phase's media** (`gen.mjs`: raw yuv420p written by node, luma
+16/235, chroma flat 128):
 
-**crop snaps x to even only on a subsampled format.** A tap that ended in
-`format=gray` made the crop itself gray (split, crop and the other common
-filters share one format list): x landed on `lrint(x)`, odd on 671 of 3,000
-frames. In the plan the fit's `scale` breaks the list and the crop keeps the
-decoder's yuv420p. A test that reads a crop must not force a format on it.
+```
+node gen.mjs <out.mp4> <frames> <rate> <cutsCsv|-> [vf]
+  → ffmpeg -f rawvideo -pix_fmt yuv420p -s 1920x1080 -r <rate> -i pipe:0
+           -f lavfi -i sine=frequency=440:sample_rate=48000 [-vf <vf> -vsync vfr]
+           -map 0:v -map 1:a -shortest -c:v libx264 -preset ultrafast -qp 0
+           -pix_fmt yuv420p -g 30 -c:a aac -b:a 128k <out.mp4>
+```
 
-**keyframeExpression cannot be a crop's x.** Its nested `if(lt(t,…))` inside
-the crop's `max(0,min(…,in_w-out_w))`: 96 held keys render and 97 are
-refused, 91 smooth keys and 92 ("Missing ')' or too many args") — one fewer
-than §48's opacity track, for the wrapper.
+| rows | what they carry |
+|---|---|
+| 0–111 | each source column's 16 px band: its index in a 7-bit Gray code, one bit per 16-row block row |
+| 128–287 | each column's 2 px unit: its index in a 10-bit Gray code, the same way |
+| 320–703 | the frame's own index (its order in the stream), in a 12-bit Gray code, in 32-row bands across the full width |
+| 704–1079 | the shot's identity grey, 40 / 100 / 160 / 220 by shot, mod 4 |
+
+| file | frames | rate | cuts |
+|---|---|---|---|
+| `src30.mp4` | 3,000 | 30 | 150, at 20s + 10 |
+| `p2-30` | 1,100 | 30 | 44, at 13 + 25i |
+| `p2-2997` | 1,100 | 30000/1001 | the same 44, at fractions 0.013–0.988 of a 30 fps slot |
+| `p2-2997t` | 1,100 | 30000/1001 | 43: 488 and 513 replaced by **500**, whose t·30 is exactly 500.5 |
+| `p2-60` | 1,200 | 60 | 39, at 30i + 15 + (i mod 2): 20 of them odd, so exact ties at 30 |
+| `p2-60t` | 1,200 | 60 | 45, at 11 + 26i: all odd, residues 1/3/5 mod 6 |
+| `p2-vfr` | 1,100 | `-r 120`, vf `setpts=4*N+round(1.2*sin(1.7*N))` | the 44; no frame on a half slot |
+| `p2-vfrt` | 1,100 | `-r 120`, vf `setpts=4*N+if(N\,floor(1.5+1.49*sin(1.7*N))\,0)` | the 44, **17** of them exactly on a half output frame; 801 of 1,099 output frames distinct |
+
+The VFR files have a time base of 1/15360. The two-up sources are
+`ffmpeg -f lavfi -i testsrc2=s=1920x1080:r=<30|60|30000/1001>:d=2.2 -f lavfi
+-i sine=frequency=440:sample_rate=48000:duration=2.2 -c:v libx264 -preset
+ultrafast -qp 0 -pix_fmt yuv420p -c:a aac -shortest p3-src<r>.mp4`. The
+probes are `ffprobe -v error -select_streams v:0 -show_entries
+frame=best_effort_timestamp -of csv=p=0 <f>` and `… stream=time_base`. The
+first probe prints an empty line after frame 0, a blank from the filter, so
+its count is checked against `-count_frames`' `nb_read_frames`. **The first
+frame must be at pts 0**: otherwise the mp4's edit list, written in ms,
+shifts every pts by −5/15360.
+
+**How a crop's x is read.** Each script is bundled and run as
+`node_modules/.bin/esbuild <x>.ts --bundle --platform=node --format=esm
+--alias:@shared=./src/shared --outfile=<x>.mjs && node <x>.mjs > <x>.txt
+2>&1`. The graph is `filterGraphOf(buildRenderPlan(…).args)`. A tap splits
+off right after the clip's crop,
+`<crop>,split=2[cm0][tp0];[tp0]crop=64:576:0:128[tapout];[cm0]scale=…`, and
+is mapped `-map [tapout] -c:v rawvideo -f rawvideo p1-tap.raw` beside the
+plan's own output, through `withGraphFile` (`-filter_complex_script`). The
+tap stays in the crop's own yuv420p. Its columns 0 and 1 carry the 2 px code
+of the crop's first column, which is the exact x. The lossy export is decoded
+with `ffmpeg -i out.mp4 -map 0:v:0 -vsync passthrough -f rawvideo -pix_fmt
+gray pipe:1` and read at block centres.
+
+**1. The flat sum is frame-exact inside the plan's chain** (the measure
+phase, `part1`). The test is one clip of `src30.mp4`, `buildRenderPlan` at
+1080×1920 and 30 fps, crop {656 → 240, 0, 608, 1080}. The clip crop's text
+occurs once in the graph (counted). Its `min(240,in_w-out_w)` was replaced by
+a flat sum, and nothing else changed. At speed 1 there is no retime, so the
+crop is the chain's first filter:
+
+```
+[0:v]crop=w='min(608,in_w)':h='min(1080,in_h)':x='max(0,min(<sum>,in_w-out_w))':y='max(0,min(0,in_h-out_h))',
+     scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30,setsar=1,format=yuva420p,
+     setpts=PTS-STARTPTS+floor(0.000000/TB+0.5)[v0]
+```
+
+The sum has 300 terms and a base:
+
+- 150 held steps `Δ*gte(t,((f−0.5)/30).toFixed(6))`, one on each cut frame f;
+- 150 smoothstep pans `Δ*(p)*(p)*(3-2*(p))`, p = `min(1,max(0,(t-t0)/span))`,
+  each running from cut + 4 to cut + 14.
+
+Its x is 22,086 characters and the graph is 22,708 bytes. It was read back
+three ways:
+
+- **(a) The tap.** On **3,000 of 3,000** frames, x equals `Math.round(x) & ~1`
+  of the same sum evaluated in JS at t = n·512/15360. 1,346 of those frames
+  sit on a fractional x, and there are 476 distinct x. The frame index equals
+  n on all 3,000.
+- **(b) The plan's own lossy output** (H.264 CRF 20 medium; the cover scale
+  ×1920/1080 makes the 608 columns 1,081 before the fit's crop):
+  - the source index equals n on 3,000 of 3,000 frames;
+  - the 2 px code read at output column 2 equals the model on 3,000 of 3,000,
+    so a lossy export does not blur the 2 px bits at block centres;
+  - the 16 px band fit is within ±1 px on every frame. Its parity cannot be
+    resolved from the bands, and ±8 is §4.9's bar;
+  - the identity grey is on its own shot on every frame. The levels 40, 100,
+    160 and 220 read 30, 100, 170 and 240 after the gray decode's range
+    expansion.
+- **(c) The tap does not perturb the picture.** The same plan with no tap
+  decodes framemd5-identical on 3,000 of 3,000 frames.
+
+At cut − 1, the cut and cut + 1, for 20 cuts (3, 10, …, 136), the tap, the
+output's fit and the model agree on all 60 frames. Examples: @70 916 | 704 |
+704; @210 640 | 286 | 286; @1050 640 | 1058 | 1058; @2730 640 | 962 | 962.
+The pans, raw → read, came out the same from the tap and from the output:
+
+| shot | frames | move | x on each frame |
+|---|---|---|---|
+| 11 | 214–224 | 286 by −134 | 286, 282.25→282, 272.06→272, 257.06→256, 238.83→238, 219.00→218, 199.17→198, 180.94→180, 165.94→166, 155.75→156, 152 |
+| 76 | 1514–1524 | 856 by +84 | 856, 858.35→858, 864.74→864, 874.14→874, 885.57→886, 898.00→898, 910.43→910, 921.86→922, 931.26→930, 937.65→938, 940 |
+| 141 | 2814–2824 | 606 by −214 | 606, 600.01→600, 583.74→584, 559.78→560, 530.67→530, 499.00→498, 467.33→466, 438.22→438, 414.26→414, 397.99→398, 392 |
+
+Where `lrint(x)` is odd, the crop cuts at `lrint − 1` (219.00 → 218), which
+is §52's `lrint(x) & ~1`. The cost over 3,000 frames, two runs each
+(`part1b`):
+
+| crop x | graph file | render | frame-exact |
+|---|---|---|---|
+| static | 571 B | 15.4 / 14.0 s | — |
+| 298 terms (x 21,930 characters) | 22,498 B | 14.9 / 14.8 s | 3,000 / 3,000 |
+| 1,198 terms (88,147) | 88,715 B | 16.1 / 16.5 s | 3,000 / 3,000 |
+| 2,998 terms (220,580) | 221,148 B | 17.9 / 18.1 s | 3,000 / 3,000 |
+
+**crop snaps x to even only on a subsampled format** (`part1g`). The first
+tap ended in `format=gray`. `split`, `crop` and the other common-format
+filters share one format list, so the crop itself became gray. x then landed
+on `lrint(x)` with no snap on 3,000 of 3,000 frames, and 671 of them were
+odd. In the plan, the fit's `scale` breaks the list and the crop keeps the
+decoder's yuv420p. So a test that reads a crop must not force a format on
+it. y snaps the same way on 4:2:0. A 4:4:4 or RGB source has no snap
+(`vf_crop.c`'s hsub; not run on one).
+
+**keyframeExpression cannot be a crop's x** (`nested.ts`). Its nested
+`if(lt(t,…))` was placed as the x inside `max(0,min(…,in_w-out_w))` in the
+plan's graph, on a 300-frame clip with keys 3 frames apart alternating
+300/900, `keyframeExpression(keys, {durationFrames: 300, fps: 30,
+startSeconds: 0, fallback: 656, precision: 0})`, bisected over 60–120 keys:
+
+- held keys render at 96 (2,212 characters) and are refused at 97 (2,235);
+- smooth keys render at 91 (12,582) and are refused at 92 (12,721).
+
+The error is `[Parsed_crop_2] [Eval] Missing ')' or too many args in
+'if(lt(t,9.483333),300,if(…'`. That is one key fewer than §48's opacity
+track (97/98 and 92/93), because of the wrapper.
+
+**The built code, re-measured** (the second verifier, on the measure's
+`src30.mp4` with its tap; the keys from `followKeys`, the graphs from
+`buildRenderPlan`, with the followed clock ahead of the crop):
+
+- 150 held steps: the tap's x equals `cropAt(project, clip, src, n).crop.x` on
+  3,000 of 3,000 frames, and the index is n on 3,000 in both the tap and the
+  lossy export.
+- 49 terms (24 held, 25 pans, 428 distinct x): 3,000 of 3,000 on both.
+- `flatSumExpression` at 2,998 terms (x 208,851 characters, graph file
+  209,382 B, no `if(`): the tap's x equals `exportPixel(flatSumAt)` on
+  3,000 of 3,000 frames, 2,997 of them on a fractional x, in 16.0 s.
 
 **Flat in parentheses is not flat on the stack** (the second verifier, then
-the fix phase). The parser builds `a+b+c…` as a left-nested chain
-(`eval.c`'s parse_subexpr loop, the same at `f22fcd4`), and evaluating,
-checking and freeing it recurse to its length. Under `ulimit -s`: at 1 MB a
-flat sum of 7,000 terms rendered and 7,300 died of SIGSEGV; at 8 MB 60,000
-died. Written as `base+(t1…t1000)+(t1001…)+…`, 60,000 terms rendered at
-1 MB. Frame-exact through the plan's chain and the tap: 9,595 terms in ten
-groups at a 1 MB stack, 3,000 of 3,000 frames (1,594 on a fractional x),
-where the same sum flat died; at 8 MB both exact, 20.4 s grouped against
-20.2 s flat. So `FLAT_GROUP` (1,000): a longer sum is grouped, and the
-preview adds each group up first, as the tree does. A Windows main thread's
-stack is 1 MB (MSVC's default) or 2 MB (MinGW's); the 2018 exe's reserve is
-not read.
+the fix phase). The parser's guard of 100 levels never sees a flat sum, but
+the tree it builds for `a+b+c…` is a left-nested chain as long as the sum
+(`eval.c`'s parse_subexpr loop, :586–598, the same at `f22fcd4`).
+Evaluating, verifying and freeing that tree each recurse to its length
+(`eval_expr` :303–304, `verify_expr` :640–675, `av_expr_free`). Measured
+under `ulimit -s` on the Mac build:
 
-**At speed 1 the crop needs `fps=` ahead of it** (the measure phase; the
-plan's §3.4 remedy). Without it the crop runs on each SOURCE frame's own
-time, and `fps=` shows on slot n the last frame whose time rounds (NEAR_INF,
-`vf_fps.c:81`) to n. A held step's 6-dp half-frame boundary can round above
-a frame stamped exactly on a half slot: on VFR media with such frames, one
-cut of 44 was late (two with an in-point). Pans drifted from the frame grid
-by up to 12 px on 209 of 1,100 frames at 29.97 and 8 px at VFR. With `fps=`
-first: 0 frames off the grid model on every row, 30/29.97/60/VFR; a static
-crop framemd5-identical, video and audio, on all five sources; 60 fps 14–18 %
-faster. A retime already ends in `fps=`.
+- **The verifier**: SIGSEGV (exit 139) past 7,156–7,210 terms at a 1 MB
+  stack, and past 58,125–58,183 at the default 8 MB, about 144 B a term on
+  arm64.
+- **The fix phase**: at 1 MB, 7,000 flat terms render and 7,300 die; at 8 MB,
+  60,000 die. Written as `base+(t1…t1000)+(t1001…)+…`, 60,000 render at
+  1 MB.
+- **In the plan's chain with the tap**: 9,595 terms in ten groups at a 1 MB
+  stack, exact on 3,000 of 3,000 frames (1,594 on a fractional x), where the
+  same sum written flat died. At 8 MB both are exact, 20.4 s grouped against
+  20.2 s flat.
 
-**A cut's frame is the export's slot, computed exactly** (the measure
-phase). `floor((2·pts_rel·fps + den)/(2·den))` on the stream's integer pts
-after the seek; at a constant speed s, `trunc(pts_rel/s)` first, because
-`setpts` truncates (pts 1001/2 → 500, `setpts.c:144`). `timelineFrameAt` on
-the shot finder's printed ms was early on 15 of 44 cuts (30 fps), 20 of 44
-(29.97), 21 of 44 (VFR), and on every cut at 0.5× even on exact ms;
-`Math.round(ms·fps/1000)` on 15 of 45 odd 60 fps cuts. The printed time is
-`%.6g`: frame 499 of a 29.97 file prints 16.65, frame 500 16.6833, and the
-same line carries `pts:499499` and `pts:500500`. **The seek is rounded into
-the time base too** (the first verifier): at a 25 fps project on a 1/15360
-file an in-point is 614.4 ticks a frame, and at two in-points of five it
-rounds up and sends an exact tie DOWN a slot. Measured: after `-ss 2.88`
-(in-point 72), `fps=25:start_time=0` shows source frame 231 (pts 118272) first
-on slot 120; the exact path says 120, the printed path 121; the verifier
-counted 159 of 958 cuts late at in-points 22 and 72. 24, 30 and 60 fps
-projects seek exactly on 1/15360, 1/30000, 1/600 and 1/90000. So 1b's
-`Shot.startPts` with the track's time base is required for 25 and 50 fps
-projects.
+Hence `FLAT_GROUP`, 1,000 terms. A sum of that length or shorter is
+byte-identical to the measured flat shape, and `flatSumAt` adds each group
+first, as the tree does. A Windows main thread's stack is 1 MB (MSVC's
+default) or 2 MB (MinGW's); the 2018 exe's reserve has not been read.
+
+**2. At speed 1 the crop needs `fps=` ahead of it** (the measure phase,
+`part2.mjs <src>`; the plan's §3.4 remedy). With no retime, the crop runs on
+each SOURCE frame's own time, pts × tb, and every plain row matched that
+source-time model on every frame. The chain's `fps=` then shows on output
+slot n the last source frame whose `round_near(t·30)` ≤ n. It rounds
+NEAR_INF, `vf_fps.c:81` at `f22fcd4`. So a held step is frame-exact only if
+its boundary falls between the frames that `fps=` shows. Each source was
+rendered at 1920×1080 → 1080×1920 with a flat sum of held steps plus a
+7-frame pan per shot, and the index and the 2 px code were read on every
+output frame. There were two chains: **plain** (the plan as it was) and
+**`fps=30,` immediately before the crop**. There were three rules for a
+cut's key:
+
+- **floor**: `timelineFrameAt` as built, on the shot finder's ms
+  (`pts_time` printed `%.6g`, through `msOf`);
+- **round**: `Math.round(ms·30/1000)`;
+- **exact**: `fps=`'s own slot, `floor((2·pts·30 + den)/(2·den))`, from the
+  integer pts.
+
+Cuts are given as on / early / late, plain | `fps=` first; a single number
+means every cut was on. "Off the grid" counts the frames whose export x
+differs from the grid model (the keys' value at n), under the exact rule:
+
+| source | cuts (ties) | floor | round | exact | off the grid, plain → `fps=` first |
+|---|---|---|---|---|---|
+| 30 | 44 (0) | 29/15/0 \| 29/15/0 | 44 \| 44 | 44 \| 44 | 0 → 0 |
+| 29.97 | 44 (0) | 24/20/0 \| 24/20/0 | 44 \| 44 | 44 \| 44 | 215 (209 mid-pan), up to 12 px → **0** |
+| 29.97t | 43 (1) | 24/19/0 \| 23/20/0 | 43 \| 42/1/0 | 43 \| 43 | 205 (199 mid-pan), up to 12 px → **0** |
+| 29.97t, in-point 7 | 43 (1) | 24/19/0 \| 23/20/0 | 43 \| 42/1/0 | 43 \| 43 | 205 → **0** |
+| 60 | 39 (20) | 19/20/0 \| 19/20/0 | 39 \| 39 | 39 \| 39 | 0 → 0 |
+| 60t | 45 (45) | 0/45/0 \| 0/45/0 | 30/15/0 \| 30/15/0 | 45 \| 45 | 0 → 0 |
+| VFR | 44 (0) | 23/21/0 \| 23/21/0 | 44 \| 44 | 44 \| 44 | 176 (all mid-pan), up to 8 px → **0** |
+| VFRt | 44 (17) | 35/9/0 \| 21/23/0 | 41/2/1 \| 38/6/0 | **43/0/1** \| 44 | 175 (149 mid-pan) → **0** |
+| VFRt, in-point 7 | 44 (17) | 35/9/0 \| 21/23/0 | 42/0/2 \| 38/6/0 | **42/0/2** \| 44 | 176 (149 mid-pan) → **0** |
+
+- **The plain chain's late cut on VFRt** is k588, at t·30 = 588.5. Its
+  boundary written to 6 dp is 19.616667, which is above the frame's own
+  time, so that frame shows the old crop. At in-point 7 the late cuts are
+  k163 (at 156.5) and k688 (at 681.5), both boundaries rounding up.
+  - The pattern: a half-frame boundary written to 6 dp rounds ABOVE a frame
+    time when (2m+1) mod 6 = 1.
+- **The round rule misses exact ties.**
+  - 29.97t with `fps=` first misses k500: slot 501, key 500.
+  - 60t misses 15 of 45. k11, for example, prints 0.183333, giving key 5
+    where the slot is 6.
+- **Time over about 1,100 frames.**
+  - At 30, 29.97 and VFR, the two chains are within ±2 % of each other
+    (5.17–5.32 s).
+  - At 60, `fps=` first is faster: 3.9–4.2 s plain against 3.2–3.3 s.
+
+**A static crop is unchanged by `fps=` first** (`static.mjs`: the plan as it
+was against `fps=30,` before its crop, each `-map [vout] -map [aout] -c:v
+rawvideo -c:a pcm_s16le -f framemd5`):
+
+| source | video frames identical | audio packets identical | time, plain / `fps=` first |
+|---|---|---|---|
+| 30 | 1,098 / 1,098 | 1,716 / 1,716 | 9.6 / 9.7 s |
+| 29.97 | 1,100 / 1,100 | 1,719 / 1,719 | 9.6 / 9.7 s |
+| 60 | 599 / 599 | 936 / 936 | 6.3 / **5.4** s |
+| VFR | 1,099 / 1,099 | 1,718 / 1,718 | 9.7 / 9.6 s |
+| VFRt | 1,099 / 1,099 | 1,718 / 1,718 | 9.6 / 9.6 s |
+
+**At other speeds** (`part2s.mjs <src> <2|0.5>`). The retime already puts
+`setpts=PTS/s,fps=30` ahead of the crop, so only the plain chain was run.
+The rules here are floor; tl-exact, which is `timelineFrameAt` on the exact
+ms; and exact, `floor((2·trunc(pts/s)·30 + den)/(2·den))`:
+
+| source | ×2 floor | ×2 tl-exact | ×2 exact | ×0.5 floor | ×0.5 tl-exact | ×0.5 exact |
+|---|---|---|---|---|---|---|
+| 30 | 36/8/0 | 44 | 44 | 0/44/0, by 1 | 0/44/0, by 1 | 44 |
+| 29.97t | 43 | 43 | 43 | 0/43/0, by 1 | 0/43/0, by 1 | 43 |
+| 60t | void | void | void | 0/45/0, by 2 | 0/45/0, by 2 | 45 |
+| VFRt | 41/3/0 | 44 | 44 | 0/44/0, by 1–3 | 0/44/0, by 1–3 | 44 |
+
+- **60t at 2× is void.** Its shots of 6.5 output frames are shorter than the
+  pans, so every rule reads 1/22/22.
+- **0.5×: `timelineFrameAt` is early on every cut, even on exact ms.** The
+  export shows source floor(n/2), while `sourceFrameAt` rounds n·0.5 half up.
+- **`setpts` truncates.** `ffmpeg -t 0.2 -i p2-2997.mp4 -vf
+  setpts=PTS/2,showinfo -f null -` prints pts 0, 500, 1001 and 1501: 1001/2 →
+  500 and 3003/2 → 1501 (`setpts.c:144`'s D2TS at `f22fcd4`).
+- **Ramps were not measured** in this phase (below, from the verifier).
+
+**The shot finder's print.** `ffmpeg -i p2-2997t.mp4 -vf
+"select='eq(n\,500)+eq(n\,499)+eq(n\,13)',metadata=mode=add:key=k:value=v,metadata=print"
+-an -f null -` prints:
+
+| frame | printed | what it means |
+|---|---|---|
+| 499 | `pts:499499 pts_time:16.65` | true 16.649967 s, slot 499; Math.round of the printed ms gives 500 |
+| 500 | `pts:500500 pts_time:16.6833` | slot 501; Math.round gives 500 |
+| 13 | `pts:13013 pts_time:0.433767` | — |
+
+On the 60 fps fixture, frame 11 prints `pts:2816 pts_time:0.183333`: slot 6,
+and Math.round gives 5. The integer `pts:` is exact; `pts_time` is not.
+
+**The arithmetic** (`arith.mjs`, re-run for this section, exit 0). Every
+frame of a 30-minute file is taken as a cut. The table counts how often the
+key from the finder's ms (`%.6g`, then µs) misses `fps=`'s exact slot on a
+30 fps project. Bands are [0, 10), [10, 100), [100, 1000) and [1000, 1800) s:
+
+| source | frames per band | `Math.round(ms·30/1000)` wrong | floor wrong | snapped with the asset's 2-dp rate, wrong |
+|---|---|---|---|---|
+| 23.976 | 239 / 2,158 / 21,579 / 19,180 | 0 / 2 / 171 / 1,591 | 120 / 1,080 / 10,702 / 8,651 | 0 / 0 / **20,961** / **19,180** |
+| 24 | 239 / 2,160 / 21,600 / 19,200 | 20 / 180 / 1,800 / 1,600 (1 in 12) | 140 / 1,260 / 12,600 / 11,200 | 0 |
+| 25 | 249 / 2,250 / 22,500 / 20,000 | 0 | 100 / 900 / 9,000 / 8,000 | 0 |
+| 29.97 | 299 / 2,698 / 26,973 / 23,976 | 0 / 2 / 222 / 1,999 | 0 / 1,498 / 13,348 / 10,795 | 0 |
+| 30 | 299 / 2,700 / 27,000 / 24,000 | 0 | 100 / 900 / 9,000 / 8,000 | 0 |
+| 59.94 | 599 / 5,395 / 53,946 / 47,952 | 0 / 4 / 443 / 3,985 | 300 / 2,695 / 26,713 / 21,595 | 0 |
+| 60 | 599 / 5,400 / 54,000 / 48,000 | 100 / 900 / 9,000 / 8,000 (1 in 6) | 400 / 3,600 / 36,000 / 32,000 | 0 |
+
+Builder K's `TIE_SLACK` in `keys.ts` takes a printed time that is within its
+own print precision of a tie as the tie. It was checked by arithmetic only,
+at in-point 0: 24, 25, 30 and 60 fps projects at 1×, 2× and 0.5×; sources at
+23.976–60 fps; and an iPhone-style VFR on 1/600. The share of frames keyed
+wrong, against plain `Math.floor(x + 0.5)`:
+
+| file length | with the slack | plain rounding |
+|---|---|---|
+| under 10 s | 0 % | 1.39 % |
+| 10–100 s | 0.068 % | 1.43 % |
+| 100–1000 s | 0.73 % | 1.86 % |
+| past 1000 s | the same as plain rounding | — |
+
+**The built rule, checked against ffmpeg** (the first verifier). Every
+source frame of the barcode sources was taken as a cut, run through the
+plan's own `-ss`/`-t` seek and `retimeFilter`, and compared with
+`exportFrameAt`.
+
+- **The exact-pts path was off on 0 frames in every row:**
+  - 29.97 at 2× and in-point 7: 997 cuts;
+  - 29.97 at 0.5×: 299 cuts;
+  - 29.97t, 60, 60t, VFR and VFRt at 1× and in-point 7: about 1,000 cuts
+    each;
+  - 30, 60t and VFRt at 2×.
+- **The printed-ms path was off on 0 or 1 cut a row.** The misses are the
+  near-ties: 29.97 frame 499, and k999 at 2×.
+  - k999 by hand: the print 33.3333 s puts its position at 496.4995 and the
+    slack adds 0.00306 frames, giving 497. The export shows 496.
+- **Without the slack, plain rounding of the printed ms was off on:**
+  - 166 of 998 cuts at 60 → 30;
+  - 166 or 167 of 998 at 2× on 30;
+  - 130 of 998 on VFRt.
+
+  The slack brought all of these to 0, at the cost of k999.
+
+**The verdict per rate** (the measure phase's; the next part says what the
+build changed):
+
+| rate | `fps=` ahead of the crop at speed 1 | the cut's key |
+|---|---|---|
+| 30 | changes nothing measurable: a static crop is bit-identical (video and audio), the times are equal, and the cuts are 44 of 44 under round or exact in both chains. Kept for one shape | exact (round agrees) |
+| 29.97, and NTSC rates generally | **required**. Without it, pans drift up to 12 px off the frame grid on 209 of 1,100 frames, and the plain chain's per-source clock disagrees with the moments' pull, which already ran `fps=` ahead of its crop | exact: round is early on the tie (k500) with `fps=` first |
+| 60 | both chains are frame-exact on the exact slot. 14–18 % faster with it (599 frames: 3.9 → 3.2 s; static 6.3 → 5.4 s) | exact: round is early on 15 of 45 odd cuts, floor on 45 of 45 |
+| VFR | **required**. With half-stamped frames, the plain chain is late on 1 cut of 44 (2 with an in-point), because a 6-dp boundary rounds above the frame's time. Pans drift up to 8 px. With `fps=` first and the exact slot: 44 of 44 on every VFR row | exact |
+| speed ≠ 1 | the retime already ends in `fps=` | `floor((2·trunc(pts_rel/s)·fps + den)/(2·den))`; `timelineFrameAt` is early on every cut at 0.5× (1 frame; 2 at 60 fps) |
+
+**3. What the build changed, each measured.**
 
 **`fps=` starts at the slot the first frame rounds to; `start_time=0`
-starts it at 0** (the second verifier, then the fix phase). At `f22fcd4`
-`fps=` sets its first output pts from its first frame (`vf_fps.c:220–222`),
-so after a seek that lands more than half a slot before the first frame the
-output starts at slot 1 — VFR at in-point 1 (t·30 = 0.5), 24 fps at three
-in-points of five, 25 fps at three of six, 29.97 footage at in-points 500–1000
-and from 1501. The clip's `setpts=PTS-STARTPTS` then made clip frame k slot
-k + 1, its crop running at t = (k+1)/30, while every model of the clip read
-frame k at k/30: `cropAt` was off the export on 26 of 150 frames, 960 px on
-each cut frame. The export itself stayed self-consistent (its keys and its
-picture both on t). `fps=30:start_time=0` (`vf_fps.c:80`, its offsets set in
-config_props :159–172) outputs slot 0 from the first frame and makes clip
-frame k slot k: reframe.int's rows at VFR in-point 1, at 1× and at 0.5×, are
-within 1 px of the model on every frame, and with `start_time` dropped they
-read "frame 29: 1136, model 176". With this clock ahead of the crop, `n`
-counts slots from 0 and n/fps is t: keying on `n` renders the same.
+starts it at 0** (the second verifier, then the fix phase). At `f22fcd4`,
+`fps=` sets its first output pts from its first frame (`vf_fps.c:220–222`).
+So after a seek that lands more than half a slot before the first frame,
+the output starts at slot 1. That happens on:
+
+- VFR at in-point 1 (t·30 = 0.5);
+- 24 fps footage at three in-points of five;
+- 25 fps footage at three of six;
+- 29.97 footage at in-points 500–1000 and from 1501.
+
+The clip's `setpts=PTS-STARTPTS` then made clip frame k slot k + 1, with its
+crop running at t = (k+1)/30, while every model of the clip read frame k at
+k/30. `cropAt` was off the export on 26 of 150 frames, by 960 px on each cut
+frame (VFR at in-point 1, and 29.97 at in-point 600; the control, VFR at
+in-point 6, was off on 0). The export itself stayed self-consistent: its
+keys and its picture were both on t.
+
+`fps=30:start_time=0` (`vf_fps.c:80`, with its offsets set in config_props
+at :159–172) outputs slot 0 from the first frame, which makes clip frame k
+slot k. So the clock is `fps=${fps}:start_time=0`, ahead of every followed
+crop at every speed. At speed 1 it stands in for `fps=`; at other speeds it
+comes after the retime's own `fps=`. reframe.int's rows at VFR in-point 1,
+at 1× and at 0.5×, are within 1 px of the model on every frame. With
+`start_time` dropped they read "frame 29: 1136, model 176".
+
+With this clock ahead of the crop, `n` counts slots from 0 and n/fps is t,
+so keying on `n` renders the same.
+
+**The seek is rounded into the time base too** (the first verifier). ffmpeg
+holds `-ss` in µs and rescales it into the stream's time base, rounding to
+nearest. At a 25 fps project on a 1/15360 file, an in-point is 614.4 ticks a
+frame. At two in-points of five it rounds up, and an exact tie (a 30 or 60
+fps source's frame k ≡ 3 mod 6) then goes DOWN a slot, where the printed
+path's slack sends it up.
+
+- **Counted against ffmpeg, the printed path:**
+  - in-points 72 and 22: 159 of 958 cuts a frame late;
+  - in-point 31, whose seek rounds down: 0;
+  - 2× at in-point 28: 80 of 958;
+  - a 60 fps source at in-point 72: 85 of 1,024.
+  - A random-clip property test agreed: 48 of 3,386 cuts on 30 fps sources
+    were wrong, every one at a 25 fps project.
+- **Re-measured by the fix phase:** after `-ss 2.88` (in-point 72),
+  `fps=25:start_time=0` first shows source frame 231 (pts 118272) on slot
+  120. The exact path says 120 and the printed path says 121.
+
+24, 30 and 60 fps projects seek exactly on 1/15360, 1/30000, 1/600 and
+1/90000 files. The exact path rounds the seek as ffmpeg does, so 1b's
+`Shot.startPts` with the track's time base is **required** for 25 and 50 fps
+projects.
 
 **A ramp's `T-STARTT` counts from the first frame kept, not the in-point**
 (the first verifier, then the fix phase). `rampVideoFilter` measures source
 time from STARTT, which is up to a source frame past the seek when the seek
-falls between frames. Every source frame taken as a cut, through the
-followed chain's head: on a VFR file at in-point 7, 721 of 721 cuts were off
-the in-point's clock (ramp 1→0.5), 869 of 972 (0.5→2), 846 of 1,008 (2→1)
-and 662 of 1,012 (0.25→4), by up to 5 frames; 29.97 footage 5–10 of about a
-thousand. Written with `T` (seek-relative after `-ss`): 0 off on every one,
-and on 30 and 60 fps sources and at in-point 0. A followed clip's ramp is
-written so; an unfollowed one keeps speed.ts' own.
+falls between frames. The test took every source frame as a cut, through
+the followed chain's head:
 
-**The stacked two-up loses the clip's last frame to the trailing `fps=`**
-(the measure phase). In `buildRenderPlan`'s chain, `split`, two half crops
-and `vstack`, then the fit and `fps=`: 59 of 60 frames, the 60th the bare
-black canvas (md5 `9b2c4088acb2c896d5d79adbe4b893ac`), at 30 and 29.97 fps
-and at 60 with `fps=` first; `vstack` alone gives 60. vstack's framesync
-signals EOF with no pts (`framesync.c:98`) and `fps=` drops the frame it was
-holding when that status pts is not past its next (`vf_fps.c:239–240`).
-`vstack,tpad=stop_mode=clone:stop=1` (`vf_tpad.c:54`, :58) gives 60 of 60,
-bit-identical to the one crop, with an `ass` caption, with the baked band,
-and with `fps=` first; keyed halves equal the single crop before the switch
-and the static two-up after it. +3–6 % on 3,000 frames. The moments' pull
-keeps its own `tpad` and lost nothing. A yuv420p10le source stays 10-bit
-through split, crop, vstack and tpad.
+| source, in-point 7 | ramp | cuts off the in-point's clock |
+|---|---|---|
+| VFR | 1 → 0.5 | 721 of 721 |
+| VFR | 0.5 → 2 | 869 of 972 |
+| VFR | 2 → 1 | 846 of 1,008 |
+| VFR | 0.25 → 4 | 662 of 1,012 |
+| 29.97 | the four ramps | 5–10 of about 1,000 |
+
+The VFR misses were by up to 5 frames.
+
+By hand, 29.97 with a ramp of 1 → 0.5 at in-point 7, duration 1000, k43:
+
+- the first kept frame is k7, 7 ticks past the seek;
+- from the in-point, T = 1.201433 s gives 36.5009 frames, slot 37;
+- ffmpeg's T − STARTT = 1.201200 gives 36.4937, slot 36, which is what was
+  measured.
+
+Written with `T`, which is seek-relative after `-ss`, every row was 0 off,
+on 30 and 60 fps sources too and at in-point 0. A followed clip's ramp is
+written that way (`followedRetime`); an unfollowed one keeps speed.ts' own
+form.
 
 **The pull's command line.** The moments' pull put the whole clip's sums in
-its `-vf`, spawned by `execFile` with no graph file: 46,001 characters for a
-20-minute clip with a cut every 4 s and a pan in each shot (the second
-verifier: 45,989; a 10-minute two-up 37,062), past the 32,767 Windows refuses
-(§47). `windowSum` keeps only the terms that change a pulled frame: under
-2,000 characters at any length, the same value on every pulled frame.
+its `-vf`, which `execFile` spawns with no graph file. For a 20-minute clip
+with a cut every 4 s and a pan in each shot, that was 46,001 characters (the
+second verifier counted 45,989, and 37,062 for a 10-minute two-up). Windows
+refuses anything past 32,767 (§47). `windowSum` keeps only the terms that
+change a pulled frame. The `-vf` is then under 2,000 characters at any
+length, the quoted argv under 4,000, and every pulled frame's value is the
+whole sum's to the last bit.
 
-**The floor.** `sgn` first ships in 4.3 (absent from `eval.c` at `f22fcd4`
-and n4.2) and the Mac's build accepts it; `randomi` in 7.0 (the Mac's
-refuses it). Both are on the floor scan's blocklist. Nothing else in
+**4. The two-up stack in the graph loses the clip's last frame** (the
+measure phase, `part3.mjs`). The plan's own crop was replaced by
+`split=2[r0a][r0b];[r0a]crop=w='min(608,in_w)':h='min(540,in_h)':x=…:y=…[r0t];[r0b]crop=…[r0u];[r0t][r0u]vstack`.
+The plan's own `scale…increase,crop=1080:1920,fps=30,setsar=1,format=yuva420p,setpts`
+and overlay followed it. Each run rendered 60 frames at 1080×1920 from the
+testsrc2 sources at 30, 29.97 and 60 fps with `-map [vout] -map [aout] -t
+2.000000 -c:v rawvideo -c:a pcm_s16le -f framemd5`, compared over dts, pts,
+duration, size and hash.
+
+There were four variants:
+
+- the single crop, 608×1080 at 656;
+- the halves at (656, 0) and (656, 540);
+- a static two-up, top (400, 100) and bottom (1000, 300);
+- keyed: each half's x and y held by `gte(t,0.983333)` steps, from the
+  halves of the single crop to the static two-up at frame 30.
+
+Each variant was run plain, with an `ass` caption (`subtitlesPath`,
+shaping=complex, one Dialogue over 0–2 s), with the baked band
+(`captionOverlay`: an ffconcat of a 1080×200 RGBA PNG at y 1500), and with
+`fps=30,` first. The keyed chain:
+
+```
+[0:v]split=2[r0a][r0b];
+[r0a]crop=w='min(608,in_w)':h='min(540,in_h)':x='max(0,min(656-256*gte(t,0.983333),in_w-out_w))':y='max(0,min(0+100*gte(t,0.983333),in_h-out_h))'[r0t];
+[r0b]crop=w='min(608,in_w)':h='min(540,in_h)':x='max(0,min(656+344*gte(t,0.983333),in_w-out_w))':y='max(0,min(540-240*gte(t,0.983333),in_h-out_h))'[r0u];
+[r0t][r0u]vstack[,tpad=stop_mode=clone:stop=1],scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30,setsar=1,format=yuva420p,setpts=…[v0]
+```
+
+| source | runs | the halves equal the single crop, as §4.7 specified it | with `,tpad=stop_mode=clone:stop=1` |
+|---|---|---|---|
+| 30 | plain, +ass, +baked band, +`fps=` first | **59 / 60** (frame 59 differs) | 60 / 60 |
+| 29.97 | the same four | **59 / 60** | 60 / 60 |
+| 60 | plain, +ass, +baked band | 60 / 60 | 60 / 60 |
+| 60 | +`fps=` first | **59 / 60** | 60 / 60 |
+
+- **The keys and the control held in every row**, with the tail and without:
+  - keyed frames 0–29 equal the single crop, 30/30;
+  - keyed frames 30–59 equal the static two-up, 30/30;
+  - the static two-up equals the single crop on 0 of 60 frames (the control).
+- **Without the tail, frame 59 is the bare black canvas.** Its md5 is
+  `9b2c4088acb2c896d5d79adbe4b893ac`, the same as `ffmpeg -f lavfi -i
+  color=c=black:s=1080x1920:r=30:d=0.034,format=yuv420p -frames:v 1 -c:v
+  rawvideo -f framemd5 -`. The clip vanishes on its last frame.
+- **Isolated** (`ffmpeg -ss 0 -t 2.000000 -i p3-src30.mp4 -filter_complex
+  "[0:v]<g>,showinfo[o]" -map "[o]" -f null -`):
+
+  | g | frames | last pts |
+  |---|---|---|
+  | `split=2[a][b];[a]crop=608:540:656:0[t];[b]crop=608:540:656:540[u];[t][u]vstack,fps=30` | 59 | 1.93333 |
+  | the same without `fps=30` | 60 | — |
+  | `crop=608:1080:656:0,fps=30` | 60 | 1.96667 |
+  | the stack with `,tpad=stop_mode=clone:stop=1` before `fps=30` | 60 | — |
+
+- **The mechanism** (measured on the Mac; read at `f22fcd4`, where the code
+  is the same): vstack's framesync signals EOF with AV_NOPTS_VALUE
+  (`framesync.c:98`). `fps=` then drops the frame it was holding, because
+  that status pts is not past its next (`vf_fps.c:239–240`). After the crop,
+  the fit and the two caption paths make no difference; the trailing `fps=`
+  does.
+- **The pull** (`prepass.mjs`: `momentFrameArgs`' `-vf` with the crop moved
+  after its `fps=30`):
+
+  ```
+  fps=30,split=2[r0a][r0b];[r0a]crop=…[r0t];[r0b]crop=…[r0u];[r0t][r0u]vstack,
+  tpad=stop_mode=clone:stop_duration=0.333333,trim=start_frame=25:end_frame=35,setpts=PTS-STARTPTS,
+  scale=w='trunc(iw*min(1,2160/max(iw,ih))/2)*2':h='trunc(ih*min(1,2160/max(iw,ih))/2)*2':flags=bicubic,format=rgba
+  ```
+
+  A 10-frame window from frame 25, across the switch, read 10 of 10 at 30,
+  29.97 and 60: the halves equal the single crop, and the keyed frames equal
+  the single crop before 30 and the two-up from 30. A 5-frame window from
+  frame 55, with the clip's last frame, read 5 of 5. The pull's own tpad
+  keeps the last frame.
+- **Cost** (`cost2up.mjs`, 3,000 frames to H.264): the single crop 13.0 /
+  13.6 s, the two-up with the tpad 13.7 / 14.0 s (+3–6 %).
+- **Formats.** A yuv420p10le source (`ffmpeg -f lavfi -i
+  testsrc2=s=1920x1080:r=30:d=0.5 -pix_fmt yuv420p10le -c:v ffv1 src10.mkv`)
+  stays yuv420p10le through split, crop, vstack and tpad (`showinfo`). At
+  `f22fcd4`, tpad's formats come from `ff_draw_supported_pixel_formats`,
+  whose `ff_draw_init` accepts depths 8–16 (`drawutils.c:198`, read).
+- **Builder R's new finding:** the render check's VFR source keeps the
+  two-up's last frame even without the tpad; 30, 29.97 and 60 lose it. So
+  the tpad stays.
+- **The built code, re-measured** (the second verifier: `followKeys` and
+  `buildRenderPlan` on the testsrc2 sources, with a four-shot track whose
+  shot 4 is two-up):
+  - before the two-up cut, the frames are bit-identical to the same clip
+    with no two-up: 40/40, 40/40 and 41/41;
+  - the last frame is a picture;
+  - with `vstack,tpad=…,` replaced by `vstack,` in the graph, the last frame
+    is the black canvas at all three rates, and 59 of 60 frames equal the
+    built output;
+  - a freeze on a two-up frame (`hold`, so static halves, the clock and the
+    split) renders 30 frames, one picture, none black.
+
+**5. The render check, as built** (`tests/integration/reframe.int.test.ts`
+→ `tests/output/reframe/`: 34 tests, 83 s on the Mac when re-run at
+`0fbf9cc` for this section, all passed).
+
+The media (`tests/fixtures/reframe/media.ts`):
+
+- 1920×1080 frames written raw by node, stored with `-c:v libx264 -preset
+  ultrafast -qp 0 -pix_fmt yuv420p -g 30`, with a 440 Hz tone as AAC in MP4.
+- The column code (16 px bands, 7-bit Gray, one bit per 16-row block row)
+  runs in strips of 112 rows every 270 rows.
+- The row code is the same, turned, in strips of 112 columns every 256
+  columns, so a 608×540 half reads its own x and y.
+- Luma codes are 48/200 on a 124 field, so no pixel clips through the pull's
+  RGBA.
+- Each shot has its own chroma (U, V): 112/112, 144/112, 112/144 and
+  144/144.
+- The VFR source is `-r 120 -vf setpts='4*N+if(N,floor(1.5+1.49*sin(1.7*N)),0)'
+  -vsync vfr`.
+
+The track is hand-built (`track.ts`):
+
+- shot 1: one face at x 0.25;
+- shot 2: one face at x 0.75;
+- shot 3: a face drifting 0.3 → 0.6, a pan of 948 ms;
+- shot 4: one face at x 0.5, or for the two-up, faces at x 0.2 (y 0.35) and
+  x 0.8 (y 0.55).
+
+The clip sits at timeline frame 15 with in-point 6, 210 frames, in a 30 fps
+project. The path is `followKeys` → `buildRenderPlan` → `withGraphFile` →
+the bundled ffmpeg. Every frame is decoded in order and read: x and y are
+fitted to the codes, and the shot comes from the chroma. The tolerance is
+±2 px on the Mac and ±8 elsewhere.
+
+| source | frames, time base | cuts (source frames) | 9:16 and 1:1 cut frames (clip) | 2× cut frames | worst \|read − model\|: 9:16 / 1:1 / 2× / two-up |
+|---|---|---|---|---|---|
+| 30 | 225, 1/15360 | 29, 61, 165 | 23, 55, 159 | 12, 28, 80 | 1 / 0 / 1 / 1 px |
+| 29.97 | 225, 1/30000 | 30, 60, 165 | 24, 54, 159 | 12, 27, 80 | 1 / 0 / 1 / 1 |
+| 60 | 450, 1/15360 | 61, 120, 331 (61 and 331 are exact ties at 30; `fps=` rounds them up) | 25, 54, 160 | 12, 27, 80 | 1 / 0 / 1 / 1 |
+| VFR | 225, 1/15360 | 30, 62, 169 (30 and the frame after it on half slots after the seek) | 25, 56, 163 | 12, 28, 82 | 1 / 0 / 1 / 1 |
+
+- **The ties are asserted from the probed pts**, not only stated in
+  comments. A test checks them in integers, with a non-tie control (30 fps
+  cut 29).
+- **Every cut on every source:** cut − 1 shows the old shot's chroma at the
+  old crop, and the cut frame shows the new shot's at the new crop:
+  - 9:16: 176 | 1136, 1136 | 272, 848 | 656;
+  - 1:1: 0 | 840, 840 | 36, 612 | 420.
+- **The pans.**
+  - At 9:16 on 30 fps, 272 → 848 over clip frames 114–143, as read: 272,
+    274, 281, 290, 305, 321, 341, 362, 387, 413, 440, 469, 498, 528, 560,
+    590, 621, 650, 680, 708, 734, 759, 780, 798, 816, 831, 840, 846, 848.
+  - At 1:1, 36 → 612: 36, 40, 56, 78, 108, 144, 184, 230, 276, 324, 372,
+    418, 462, 502, 538, 568, 592, 606, 612, the same on all four sources.
+  - At 2×, the pan is checked frame by frame too (`checkPan` since the fix
+    phase).
+- **The two-up at its cut, all four sources:** the top half reads (81, 162)
+  on the left face and the bottom half (1232, 378) on the right face, against
+  the path's (80, 162) and (1232, 378), both in shot 4's chroma.
+  - On cut − 1 the single crop holds: (848, 0) and (848, 540).
+  - Shot 2 inside the two-up clip against the same frames of a clip with no
+    two-up: **0.000** levels on frames 30–49. The bar is exactly 0 on the
+    Mac and ≤ 1 elsewhere.
+  - The last frame (209) has mean luma 115.5 / 130.0 and is shot 4: kept.
+- **The sound:** 360,448 samples. The worst second difference is 0.0053, at
+  sample 24,000, the clip's start; the unreframed export's own is the same
+  0.0053. The A/V start is 0.00 ms in both.
+- **The moments across a cut**, pulled through main's `extractMomentFrames`
+  on every source: the pulled x equals the rendered x within 1 px, and the
+  shot is the same on 10 of 10 frames a row. The mean difference from the
+  render's frame beneath:
+  - 9:16: 0.38 levels before the cut, 0.62–0.63 after;
+  - the two-up's one stacked pull: 0.59–0.60 before, 0.52–0.53 after.
+- **The fix phase's rows:**
+  - **VFR at in-point 1**, where the first frame is half a slot past the seek
+    so `fps=` alone starts on slot 1. At 1×: cuts on clip frames 30, 61 and
+    168. At 0.5×: 59, 122 and 336. Within 1 px on 210 and 420 frames.
+  - **A ramp, VFR at in-point 1, 1 → 0.5.** The first kept frame is 256 ticks
+    past the seek. The cuts read on clip frames 31, 66 and 215, which is the
+    `T` clock; `T−STARTT` would put them on 30, 65 and 214. Within 1 px over
+    291 frames, with a moment across a cut.
+  - **Many cuts:** 113 shots of 2 frames give 109 held keys, and the graph
+    is 2,768 characters through its file: 109 jumps read, 0 frames off.
+  - **A grouped sum:** 1,103 terms in 2 groups (x 23,377 characters), 210
+    frames, worst 1 px.
+- **An independent re-read** (the first verifier, by a different method: SAD
+  template matching against its own re-synthesis of the source luma, the
+  median chroma, and its own frame model from the probed pts):
+  - 0 shot mismatches on 3,000 clip frames;
+  - 0 px from the grid model on every frame, pans and both halves' x and y
+    included;
+  - every export x even;
+  - template residual ≤ 1.50 levels;
+  - all 80 pulled PNGs the same shot and position as the render's frame
+    beneath.
+  - The README's odd readings (81, 273, 849, 1137, 657) are the test
+    reader's ±1, not the crop's.
+- **The mutations that changed the picture, and what the check read**
+  (builder R and the fix phase):
+
+  | mutation | what the check read |
+  |---|---|
+  | §3.2's boundary reverted | 30 fps clip frame 23 shows shot 2 at the old x 176 |
+  | the keys compiled from the clip's start | 128 frames off |
+  | keyed on `n`, with `fps=` first also removed | the 60 fps keys at half time, 183 frames off |
+  | the pull's crop left after its trim | 176 pulled against 1136 rendered |
+  | the bottom crop given the top's keys | the bottom half reads the left face's (81, 162) |
+  | `keyframeExpression` in place of the sum | the 110-key export refused, "Missing ')' or too many args" |
+  | the stack dropped | about 200 frames off |
+  | `fps=` ahead of the crop removed | VFR's half-stamped cut shows the old crop; pans up to 30 px off |
+  | the tpad removed | frame 209 black (luma 16.0) at 30, 29.97 and 60 |
+  | `start_time` dropped | "frame 29: read x 1136, model 176" |
+  | a ramp on STARTT | "frame 30: shot 2 shown at x 177, its path is 1136" |
+  | a group missing its last term | the grouped row fails |
+
+**6. The floor.** Read at `f22fcd4`, not run:
+
+| what | where |
+|---|---|
+| `max`, `min`, `gte` | `eval.c` :440, :441, :443, evaluated at :309, :310, :313 |
+| `crop`, `fps`, `setpts`, `split`, `tpad`, `trim`, `vstack` | `allfilters.c` :176, :223, :336, :351, :372, :376, :391 |
+| `split` / `vstack` | `split.c:123`; `vf_stack.c:368` |
+| `fps`'s `start_time` / `round` (NEAR_INF) | `vf_fps.c:80` (offsets :159–172) / `:81` |
+| `tpad`'s `stop` / `clone` / `stop_mode` | `vf_tpad.c` :54 / :57 / :58 |
+| crop's per-frame x and y, `lrint`, the clamp, the low bit cleared | `vf_crop.c` :130, :263–281 |
+| framesync's EOF with no pts; `fps=`'s drop on status | `framesync.c:98`; `vf_fps.c:239–240` |
+| `setpts`' truncating D2TS | `setpts.c:144` |
+| `-filter_complex_script`, which every render's graph goes through (§47) | `fftools/ffmpeg_opt.c` :3109, :3478 |
+
+The 2018 code was diffed against n4.4, which the Mac reports. tpad is the
+same apart from `av_cold`, and fps differs by one `*again = 1` scheduling
+line. framesync's EOF is the same; its time base differs only for inputs
+whose time bases differ (both halves here are on one). crop's per-frame
+evaluation, clamp and snap are the same.
+
+`sgn` first ships in 4.3 (absent from `eval.c` at `f22fcd4` and n4.2), and
+the Mac's build accepts it. `randomi` first ships in 7.0, and the Mac's
+build refuses it. Both are on the floor scan's blocklist. Nothing else in
 `eval.c`'s function table is newer than `f22fcd4` (names diffed against
-n7.1). `fps`'s `start_time`, `tpad`'s `stop` and `stop_mode`, `vstack` and
-`split` are all present at `f22fcd4`.
+n7.1). xstack and `clip()` are both present at `f22fcd4`.
 
-Dated, not run, on the 2018 build: everything above. Windows CI's
-reframe.int is the run — the four sources, the p0 rows, a followed ramp, 110
-held keys and a 1,103-term grouped sum — and it does not reach the stack
-depth, the pull's length on a real long clip, smooth slow motion or 10-bit
-sources.
+**Dated, not run, on the 2018 build: everything above.** Windows CI's
+reframe.int is the run. It covers the four sources at 9:16, 1:1, 2× and the
+two-up; the flat sum's `gte`, `min` and `max` in a crop's x on the 2018
+parser; `fps=…:start_time=0` and its slots on media written by the 2018
+muxer; speed 2's truncating `setpts`; the two-up's tpad keeping the last
+frame; the slot-1 rows; a followed ramp; 110 held keys and a 1,103-term
+grouped sum through the graph file; and the pulls' labelled split/vstack
+inside `-vf`. It does not reach sums past about 1,100 terms (2,998 flat and
+9,595 grouped are the Mac's alone), the stack depth, the pull's length on a
+real long clip, smooth slow motion or 10-bit sources.
