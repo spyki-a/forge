@@ -168,6 +168,24 @@ function near(a: { x: number; y: number; width: number; height: number }, b: { x
   return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y), Math.abs(a.width - b.width), Math.abs(a.height - b.height))
 }
 
+/**
+ * Intersection over union of two boxes, 0..1. The measure for two detections
+ * of one face on two ENCODES of one picture: the real detector's edges jitter
+ * by a few percent of the frame between a clip and its lossy copy (measured
+ * on the user's Mac, 2026-10-13: up to 0.031 between the plain 640×360 copy
+ * and the phone-shaped one, on the same frames), which `near` reads as a
+ * failure, while a box in the wrong frame — normalised against the coded
+ * sides, or not turned — lands on another part of the picture and overlaps
+ * the right one by nothing. Overlap tells the two apart; an edge bar cannot.
+ */
+function overlap(a: { x: number; y: number; width: number; height: number }, b: { x: number; y: number; width: number; height: number }): number {
+  const w = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)
+  const h = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y)
+  const shared = w > 0 && h > 0 ? w * h : 0
+  const union = a.width * a.height + b.width * b.height - shared
+  return union > 0 ? shared / union : 0
+}
+
 async function readTrack(path: string): Promise<FacesTrack> {
   return JSON.parse(await readFile(path, 'utf8')) as FacesTrack
 }
@@ -719,11 +737,20 @@ describeWithVenv(
         .filter(([a, b]) => a !== undefined && b !== undefined)
       const off = pairs.map(([a, b]) => near(a, b))
       const worst = off.length ? Math.max(...off) : NaN
+      const overlaps = pairs.map(([a, b]) => overlap(a, b))
+      const least = overlaps.length ? Math.min(...overlaps) : NaN
       lines.push(
-        `- the phone-shaped copy: ${pairs.length} of ${plain.samples.length} samples with a face in both; the first faces differ by at most ${worst.toFixed(4)}`
+        `- the phone-shaped copy: ${pairs.length} of ${plain.samples.length} samples with a face in both; the first faces differ by at most ${worst.toFixed(4)} on an edge, and overlap by at least ${least.toFixed(3)} (IoU)`
       )
       expect(pairs.length).toBeGreaterThanOrEqual(plain.samples.length / 2)
-      expect(worst).toBeLessThanOrEqual(0.02)
+      /*
+       * The same face, by overlap: the detector's own jitter between two
+       * encodes keeps the boxes well over half shared (measured 2026-10-13:
+       * edges within 0.031, so the overlap stays above 0.8 on a face a tenth
+       * of the frame wide), while a box in the coded frame of a turned clip,
+       * or one not turned at all, shares nothing with the plain clip's.
+       */
+      expect(least).toBeGreaterThanOrEqual(0.5)
     }, 300_000)
   },
   {

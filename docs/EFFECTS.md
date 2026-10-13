@@ -5294,10 +5294,27 @@ venv made `--without-pip`. `ps` and `pgrep` are blocked in the sandbox, so
 process trees and resident sets were read through libproc
 (`proc_listchildpids`, `proc_pidinfo` with `PROC_PIDTASKINFO`) or psutil.
 Each number names who measured it: the builders, the 1c, 1d and helper-rules
-verifiers, or the fix phase. **The detection itself is not in this
-section**: it needs Metal, and is the user's run
-(`FORGE_FACES_REAL=1 npx vitest run tests/integration/faces.int.test.ts`,
-which writes to `tests/output/faces/real/README.txt`).
+verifiers, or the fix phase. **The detection itself needs Metal, so it is
+the user's run** (`FORGE_FACES_REAL=1 npx vitest run
+tests/integration/faces.int.test.ts`, which writes to
+`tests/output/faces/real/README.txt`), **run 2026-10-13 15:13 on the user's
+M1 Pro from the app's Terminal tab**, outside the sandbox, with the model
+seeded from `sidecar/.venv-faces/models/`:
+
+| clip | samples | with a face | time | note |
+|---|---|---|---|---|
+| the face fixture, 3840×2160 HEVC, 26.6 s, 5 fps, 640 edge, minScore 0.5 | 133 | **101** (76 %) | 37.8 s | 1.4× realtime; the 4K decode is the cost (the stand-in detector took 10.8–14.7 s on the same decode); track 10,046 B |
+| the same, ten seconds at 640×360, plain | 50 | 26 in both copies | — | the bar for the pair |
+| the phone-shaped copy of that (transposed, re-encoded, `rotate=90`) | 50 | 26 in both copies | — | the first faces within **0.0306** of the plain copy's on an edge; overlap (IoU) at least **0.875** |
+
+The worker there started and imported mediapipe in 0.687 s (0.81 s wall;
+the sandbox's 0.07–0.13 s import was a warm cache). The pair's first bar,
+edges within 0.02, **failed** at 0.0306: BlazeFace's box on two lossy
+encodes of one picture moves by about 3 % of the frame, which is the
+detector's own jitter, while a box in the wrong frame (the coded sides, or
+the clip not turned) lands elsewhere entirely; the test now holds the
+overlap to at least 0.5 instead (`overlap()`, its mutation below). The
+detector's own RSS is still not recorded by that run.
 
 **The install** (the 1c builder; pip 26.2.1 into `sidecar/.venv`):
 

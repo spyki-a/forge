@@ -1816,10 +1816,24 @@ from `parseSceneLog` over the lines. An AbortSignal cancels through
 > (39; on CI's bare 3.12 all 39 run but one, the registration check, which
 > skips with "numpy is not installed") and
 > `tests/integration/faces.int.test.ts` (13 in the sandbox, plus your 2).
-> The detection itself is **unmeasured here**: the sandbox has no Metal
-> device. It is one command on your Mac, which writes what it found to
+> The detection itself cannot run in the sandbox (no Metal device); it is
+> one command on your Mac, which writes what it found to
 > `tests/output/faces/real/README.txt`:
 > `FORGE_FACES_REAL=1 npx vitest run tests/integration/faces.int.test.ts`.
+> **Run on your Mac, 2026-10-13, in the app's Terminal tab (outside the
+> sandbox):** on the 4K original (3840×2160, 26.6 s, 5 fps, 640 edge,
+> minScore 0.5) **101 of 133 samples hold a face**, in 37.8 s (the decode
+> is the cost: 1.4× realtime for 4K HEVC, as §4.10 and `EFFECTS.md` §37
+> predicted), the track 10,046 B; the worker started and imported
+> mediapipe in 0.69 s there. On the phone-shaped copy (ten seconds at
+> 640×360, re-encoded sideways with a `rotate=90` matrix) 26 of 50 samples
+> hold a face in both copies, and the boxes agree with the plain copy's to
+> within 0.031 of the frame on an edge, overlapping by at least 0.875 (IoU).
+> The first bar was 0.02 on an edge, and it failed: that is the detector's
+> own jitter between two lossy encodes, not geometry, so the check now holds
+> the OVERLAP to at least 0.5 — a box in the coded frame of a turned clip,
+> or one not turned at all, shares nothing with the plain clip's
+> (`overlap()` in the test, with its reason).
 > - **The model gate is a second method**, as the scaffold chose
 >   (`protocol.ts` above `ModelParams`): the row is `(("vision.faces",
 >   "vision.facesModel"), "faces")`. `vision.faces` never fetches, and without
@@ -1965,7 +1979,13 @@ from `parseSceneLog` over the lines. An AbortSignal cancels through
 >   - the upright check skipped (unit; int);
 >   - decoded at the probed coded sides (int, by the answered size). Its
 >     effect on the BOXES needs the real detector, so it is your run's
->     mutation;
+>     mutation — **run on your Mac, 2026-10-13**, as the decoder not turning
+>     the clip (`-noautorotate` in `media.frame_args`, restored
+>     byte-identical): the phone-shaped copy then held a face on 1 sample
+>     instead of 26 (a sideways face is barely detected), and the pair-count
+>     bar failed before the overlap bar was reached, so the real check
+>     catches an unturned decode by the count; the overlap bar is what tells
+>     a box in the wrong frame from the detector's jitter;
 >   - the worker's stdin watcher put back on `sys.stdin.buffer` (unit: the
 >     real worker held open exits −6, `_enter_buffered_busy`, on the venv's
 >     3.14 and the bare 3.12).
@@ -4862,10 +4882,11 @@ Each is named in its step, and each step's first task is its own row:
    in the sandbox**, where the detector cannot run: the worker dies at
    `create_from_options` with −6, the helper answers −32001 in 0.6 s and
    keeps answering, and a cancel, a SIGKILLed helper and an app quit each
-   leave no worker, no ffmpeg and no half-track (`EFFECTS.md` §54). Still
-   open from step 1's slice: **the detection on your face fixture**, one
-   command on your Mac (`FORGE_FACES_REAL=1 npx vitest run
-   tests/integration/faces.int.test.ts`, §4.3), and the Windows code for
+   leave no worker, no ffmpeg and no half-track (`EFFECTS.md` §54). **The
+   detection on your face fixture: measured on your Mac, 2026-10-13** — 101
+   of 133 samples with a face on the 4K original at 5 fps and a 640 edge in
+   37.8 s, and the phone-shaped copy's boxes overlapping the plain copy's by
+   at least 0.875 (§4.3's Built note). Still open: the Windows code for
    the abort (3 or `0xC0000409`, both accepted until the first Windows CI
    run names it). The YuNet
    comparison is not run (§16.1 answered); YuNet's hand decoder and its
