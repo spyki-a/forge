@@ -241,7 +241,8 @@ captions…** meanwhile. Then, top to bottom:
   next one; each clip is its own download.
 
 When the details name no language, **Choose the language** offers English,
-Hindi, Telugu, Tamil and Spanish. A video with no captions says **This video
+Hindi, Telugu, Tamil and Spanish — unless the video has no caption track at
+all, which is said at once instead. A video with no captions says **This video
 has no captions**, its chapter chips set From and To instead, and **Listen to
 it** is greyed with **needs the AI helper** (or **soon** when the helper is
 running — transcribing a link's sound is Step P's). If the fetch fails —

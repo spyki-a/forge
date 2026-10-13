@@ -4712,8 +4712,10 @@ through CoreText's fallback (no Indic font is bundled). A verifier counted
 shaping-sensitive, and 4 of the 20 words in `eK71EN3P78U`'s clip. The plan
 now burns with `ass=filename=…:fontsdir=…:shaping=complex`: same escaping
 (a path with `' , [ ] = ; :` and a space opened through both filters, the
-same frames as before), same frames on English except where complex
-shaping kerns. `ass` and its option are in `n4.1`, older than the
+same frames as before). English moves a little too, as HarfBuzz kerns:
+over `bvz_zK5ZxpM`'s 110 export frames at 1280×720, 50,409 pixels differ
+by more than 40 levels between the two shapers (about 460 a frame, against
+3,000–6,000 a caption), 98,985 over `xON4Vot8j8g`'s 117. `ass` and its option are in `n4.1`, older than the
 2018-12-17 Windows build; whether that build's libass has HarfBuzz is not
 measured here — without it `ass_set_shaper` does nothing and the captions
 come out as before. `tests/integration/captions.int.test.ts` renders the
@@ -4734,3 +4736,30 @@ measured `00` on both of those, `01` on `eK71EN3P78U` (ASR only), `11` on
 `jze_5hvaVV8` (an uploader track too), in the same 1.4–1.8 s run. `00`
 makes the store go straight to "no captions", with the From and To fields
 and Listen to it, and no language offered.
+
+**The last full run** (2026-10-13, 693 s, all 42 tests green). Eight
+caption links: Get transcript 4.6–7.7 s each; `O35KGzkS4VA` and
+`3pG8Hgq3Z8M` now keep `en-orig` alone (their `en` was `de-DE→en` and
+`uk→en` again). 18 exact clips — the run at 40 % (2877 s on
+`lqOH-zxtCDE`), a second through Add another clip on `O35KGzkS4VA` and
+`eK71EN3P78U`, and a run with no pause on either side on every link — and
+their 18 fast cuts: 34 downloads in one yt-dlp run, 2 in two (a refused
+cut, landed on its retry). Every clip's sound starts at 0 and lasts the
+range to the millisecond; the placed clip is the range +0 to +2 frames;
+each collected word's start and end are the run's less the range's start.
+The original audio, read off the file: the original track's own section
+against the clip's first 500 ms, correlation 0.9836–0.9999 at 0 ms lag;
+a dub's section 0.0903–0.2996. The exact clip's first frame, against where
+its own first frame's time puts it in the padded fast cut: −31 to +10 ms
+(one source frame is 33.4–41.7 ms; `eK71EN3P78U`'s first run ambiguous at
+an 8.4 % margin); its first 500 ms of sound at 0.00 ms every time. The
+exports, through `startRender` at 1920×1080: 9 to 40 Dialogues, one per
+word of the run(s), and every onset read off the picture on the exact
+frame libass's truncated clock says it should first draw that Dialogue —
+none a frame off, none left over (held frames moved at most 223 of the
+caption's pixels; onsets at least 3,113). Shaping-sensitive words (a
+virama or a pre-base vowel sign): 12, 6 and 4 in `eK71EN3P78U`'s three
+runs, 0 and 6 in `lqOH-zxtCDE`'s two. The level either side of the cuts,
+for the ear: `eK71EN3P78U`'s second run −2.3 dB in the 40 ms before its
+head and its three tails −6 to −18 dB; `O35KGzkS4VA`'s first run −8 dB on
+both sides of its head; the rest, cut by cut, in each link's README.

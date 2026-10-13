@@ -1373,6 +1373,46 @@ commit, beside `trimToRequestedRange`, `section.ts:116-131`).
 - Typecheck green, the suite green (written to a file, `$?` checked), the
   mutations killed, CI read, `WHERE-THINGS-ARE.md` and the census updated.
 
+> **Run 2026-10-13 on your ten links** — `tests/integration/m0Exit.int.test.ts`
+> (opt-in, `FORGE_M0_EXIT=1`; never in CI), all 42 tests green on the last
+> full run; the clips, the runs' words and every reading are in
+> `tests/output/m0-exit/` (gitignored), the numbers in `EFFECTS.md` §51.
+> The run found four things in the product, each fixed: Get transcript
+> failed on `O35KGzkS4VA` and `3pG8Hgq3Z8M` (a dub's machine-translated `en`
+> answering 429; `--ignore-errors`, and a translated track is never kept);
+> about one sectioned download in ten was refused at once (a googlevideo
+> 403; a refused cut now gets three runs, and its error says why — 2 of the
+> last run's 36 needed a second); Hindi and Telugu captions were burnt
+> unshaped (the `subtitles` filter's simple shaper; now `ass` with
+> `shaping=complex`); and the two links with no caption track asked for a
+> language before saying so (now said at once). Measured on the eight
+> caption links: 18 clips (a run at 40 %, a second through Add another clip
+> on two links, and a run with no pause either side on every link) — each
+> exactly its words, each word where the run had it on the file's clock,
+> the sound exactly the range, the clip 0–2 frames past it, the original
+> audio read off the file (correlation 0.98–1.00 against the original
+> track's own section, 0.09–0.30 against a dub's), and every caption on
+> the very frame libass should draw it, one onset per word, none extra.
+> On the two no-caption links the URL tile, rendered from the state the
+> real handlers left, shows "This video has no captions", Listen to it
+> greyed with "needs the AI helper", and the start and end fields behind
+> "Just a part of it", as for any link. An exact cut's negative head offset
+> is refused by `checkLinkClip` (`linkClip.ts`), which a verifier's
+> mutation met.
+>
+> **Left to the ear** (each in the link's README with the run's words):
+> that the words heard are the run's, on every clip; the mid-row clips'
+> first and last words (`mid-exact-download.mp4`), where a neighbour's
+> sliver would be; `eK71EN3P78U`'s cuts, which land in loud sound (−2.3 dB
+> in the 40 ms before the second run's head, −6 to −18 dB across the
+> tails); and Hindi and Telugu clips' last words, which end on the 80 ms
+> grapheme estimate (§3b.1 left Hindi and Telugu unmeasured).
+> **Left to you**: whether a no-caption link should open the start and end
+> fields at once; whether to fetch an uploader's regional track
+> (`jze_5hvaVV8`'s `en-US`, 47 words against the ASR's 744 — `EFFECTS.md`
+> §51). And on the next push, Windows CI's `captions.int` line saying
+> whether its libass shapes (not measurable here).
+
 ---
 
 ## 4. Step 1 — The reframe engine · 17.5 days (1a 1 · 1b 1.5 · 1c 2 · 1d 0.5 · 1e 2.5 · 1f 4.5 · 1g 3 · releasing the helper's sessions 0.5 · §4.9's checks 2; the stacked two-up is +2 of it, in 1e, 1f and the checks; 18 if the Surface run fails and YuNet's decoder is built)
