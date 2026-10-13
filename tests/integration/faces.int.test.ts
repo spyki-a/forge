@@ -4,7 +4,7 @@ import { existsSync, readdirSync } from 'node:fs'
 import { chmod, copyFile, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises'
 import { delimiter, dirname, join, resolve, sep } from 'node:path'
 import ffprobeInstaller from '@ffprobe-installer/ffprobe'
-import { SidecarClient } from '../../src/main/sidecar/client'
+import { SidecarClient, sidecarEnv } from '../../src/main/sidecar/client'
 import {
   RPC_ERRORS,
   SIDECAR_METHODS,
@@ -310,6 +310,32 @@ describeWithVenv(
       // No real cv2 is installed; if one ever is, it must be that one the helper finds, not a stub.
       if (seen.cv2 !== null) expect(resolve(seen.cv2).startsWith(stubs + sep), seen.cv2).toBe(false)
       expect(seen.env).toBe(true)
+
+      /*
+       * And the helper exactly as main starts it: SidecarClient's environment
+       * (sidecarEnv), its cwd, and the package's own __main__ — the two places
+       * a stub folder could be added without any check above seeing it. stdin
+       * is closed, so it registers everything, serves nothing and exits; an
+       * atexit hook then prints what its interpreter ended with.
+       */
+      const probe = [
+        'import atexit, json, os, runpy, sys',
+        'def report():',
+        '    print("PROBE " + json.dumps({"path": sys.path, "modules": sorted(m for m in sys.modules if m.split(".")[0] in ("mediapipe", "cv2", "matplotlib")),',
+        '        "pythonpath": os.environ.get("PYTHONPATH")}), flush=True)',
+        'atexit.register(report)',
+        'runpy.run_module("forge_sidecar", run_name="__main__", alter_sys=True)'
+      ].join('\n')
+      const env = sidecarEnv({ modelsDir: models, cacheDir: join(dir, 'cache', 'as-main') }, process.env)
+      const asMain = spawnSync(VENV_PYTHON, ['-c', probe], { cwd: SIDECAR_DIR, env, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true, encoding: 'utf8' })
+      expect(asMain.status, asMain.stderr).toBe(0)
+      const line = asMain.stdout.split('\n').find((l) => l.startsWith('PROBE '))
+      expect(line, asMain.stdout + asMain.stderr).toBeDefined()
+      const main = JSON.parse(line!.slice('PROBE '.length)) as { path: string[]; modules: string[]; pythonpath: string | null }
+      for (const entry of main.path) expect(resolve(SIDECAR_DIR, entry || '.').startsWith(stubs), `${entry} on the helper's path`).toBe(false)
+      expect(main.pythonpath ?? '').not.toContain(stubs)
+      expect(main.modules, 'the helper imported mediapipe, cv2 or matplotlib').toEqual([])
+      notes.push(`- the helper as main starts it: ${main.path.length} sys.path entries, none under stubs/; no mediapipe, cv2 or matplotlib loaded`)
     }, 60_000)
 
     it('the stand-in pass: the track on disk, two largest first, source ms, progress relayed', async () => {
