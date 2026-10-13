@@ -376,6 +376,15 @@ def progress_class(
     its own tqdm subclass with the keyword arguments alone). The fraction is
     mapped into ``span`` so the caller's bar never runs backwards, and only a
     whole new percent is sent, so a 115 MB file is at most a hundred messages.
+
+    It is also the download's CANCEL: every report checks the request first,
+    so a cancel raises ``Cancelled`` out of ``hf_hub_download``'s own read
+    loop at the next chunk — 10 MiB in huggingface_hub 1.31
+    (``DOWNLOAD_CHUNK_SIZE``), about 9 % of the subject finder. Measured
+    through salient's Get press on the Hub, 2026-10-13: cancelled at the second
+    message (6.3 s in), the folder held only the lock file — no partial blob,
+    no snapshot link — and the next press fetched the whole 114,538,221 B
+    again (2.4 s), with the sha256 its blob is named by.
     """
     low, high = span
 
@@ -389,6 +398,7 @@ def progress_class(
         def _report(self) -> None:
             if context is None:
                 return
+            context.raise_if_cancelled()
             if self.total is None:
                 if self._sent == -1:
                     self._sent = 0
@@ -437,7 +447,7 @@ def download(
     (huggingface_hub returns a commit hash's snapshot directly). Otherwise the
     bytes are forwarded as progress — the first bake on a new machine fetches
     up to 115 MB, and a frozen-looking bar was what "estimating depth" used to
-    show for it.
+    show for it — and a cancel stops it at the next chunk (``progress_class``).
     """
     if not isinstance(revision, str) or not COMMIT.fullmatch(revision):
         raise ValueError(f"{repo}/{filename}: pin a commit hash, not {revision!r}")

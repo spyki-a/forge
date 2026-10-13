@@ -77,36 +77,13 @@ def _status() -> dict[str, Any]:
     return {"present": _model_path() is not None, "bytes": MODEL_BYTES, "label": LABEL, "host": HOST}
 
 
-class _Cancellable:
-    """The request's context, with its cancel checked at every progress message.
-
-    ``media.download`` has no cancel of its own: ``hf_hub_download`` reads the
-    body in its own loop and calls the progress class once per chunk, which is
-    10 MiB in huggingface_hub 1.31 (``DOWNLOAD_CHUNK_SIZE``), so a cancel lands
-    within about 9 % of this model. Measured on the Hub, 2026-10-13: cancelled
-    at the second message (9 %, 6.3 s after the press), the folder held only
-    the lock file — no partial blob, no snapshot link — so ``_model_path`` still
-    says absent, and the next press fetched the whole 114,538,221 B again
-    (2.4 s on that connection) with the sha256 its blob is named by.
-    """
-
-    def __init__(self, context: Context) -> None:
-        self._context = context
-
-    def progress(self, progress: float | None, message: str | None = None) -> None:
-        self._context.raise_if_cancelled()
-        self._context.progress(progress, message)
-
-    def raise_if_cancelled(self) -> None:
-        self._context.raise_if_cancelled()
-
-
 def model(params: dict[str, Any], context: Context) -> dict[str, Any]:
     """``vision.salientModel``: ModelParams -> ModelStatus."""
     if params.get("download") is True and _model_path() is None:
+        # Cancellable at each 10 MiB chunk: media.progress_class checks the request.
         media.download(
             depth.MATTE_REPO, depth.MATTE_VARIANTS[VARIANT], depth.MATTE_REVISION,
-            _Cancellable(context), LABEL,
+            context, LABEL,
         )
     return _status()
 

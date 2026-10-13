@@ -477,6 +477,20 @@ class Downloads(unittest.TestCase):
         self.assertEqual(media._megabytes(114_538_221), "115 MB")
         self.assertEqual(media._megabytes(229_746), "under 1 MB")
 
+    def test_a_cancel_stops_a_download_at_its_next_chunk(self) -> None:
+        # The bar is hf_hub_download's only call back into the request, so it
+        # is the download's cancel: depth's models and the subject finder stop
+        # within a chunk, not at the end of 115 MB.
+        context = Recorder(cancel_after=2)
+        bar = media.progress_class(context, "the subject finder")(total=10_000_000)
+        bar.update(1_000_000)
+        with self.assertRaises(Cancelled):
+            bar.update(1_000_000)
+        self.assertEqual(context.checks, 3)
+        # Without a request there is nothing to cancel, and nothing is asked.
+        quiet = media.progress_class(None, "a file")(total=10)
+        quiet.update(5)
+
     def test_no_total_is_one_message_without_a_fraction(self) -> None:
         context = Recorder()
         bar = media.progress_class(context, "a file")(total=None)
