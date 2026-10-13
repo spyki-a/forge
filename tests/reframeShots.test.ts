@@ -315,6 +315,16 @@ describe('runFfmpeg, for an analysis', () => {
     expect((err as Error).message.split('\n')).toEqual(Array.from({ length: 12 }, (_, i) => `[ffmpeg] line ${i + 8} of the error`))
   })
 
+  it('hands over a last line with no ending when ffmpeg exits, and fails with it', async () => {
+    // ffmpeg dying mid-line leaves its real error unterminated; only the
+    // splitter's end() at 'close' delivers it, to the parser and to the tail.
+    const { lines, promise } = runWith('[x] first\n[x] the real error, unterminated', 5, 1)
+    const err = await promise.catch((e: Error) => e)
+    expect(lines).toEqual(['[x] first', '[x] the real error, unterminated'])
+    expect(err).toBeInstanceOf(Error)
+    expect((err as Error).message.split('\n')).toEqual(['[x] first', '[x] the real error, unterminated'])
+  })
+
   it('unlinks nothing for an analysis (outputPath null), and still the file a render was writing', async () => {
     await expect(runWith('[x] no\n', 4, 1, null).promise).rejects.toThrow('no')
     expect(fake.unlinked).toEqual([])
