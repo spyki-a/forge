@@ -596,6 +596,15 @@ describe('exportFrameAt — the measured rows', () => {
     expect(exportFrameAt({ ...plain, inPoint: 7 }, 30, 0, { pts: 500500, timeBase: tb30000 })).toBe(494)
   })
 
+  it('a 25 fps project: the seek is ROUNDED into the time base, and a tie it moves goes down — measured', () => {
+    // 72/25 s on 1/15360 is 44236.8 ticks, rounded to 44237: source frame 231 (pts 118272, t·25 = 120.5 from the exact seek)
+    // is then a hair under the tie, on slot 120 — read off the bundled ffmpeg (fps=25:start_time=0 after -ss 2.88 on a 30 fps
+    // mp4, the frame index in the picture). A seek floored to 44236 puts it on 121.
+    expect(exportFrameAt({ inPoint: 72, duration: 800 }, 25, 0, { pts: 118272, timeBase: { num: 1, den: 15360 } })).toBe(120)
+    // The printed-time path cannot see the time base, and its tie slack sends this tie up: a frame late, until 1b keeps the pts.
+    expect(exportFrameAt({ inPoint: 72, duration: 800 }, 25, 7700)).toBe(121)
+  })
+
   it('60 fps on 30: odd frames are ties — frame 11 prints 0.183333 and is on 6', () => {
     expect(exportFrameAt(plain, 30, 183.333)).toBe(6)
     expect(exportFrameAt(plain, 30, 0, { pts: 2816, timeBase: { num: 1, den: 15360 } })).toBe(6)

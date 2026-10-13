@@ -62,12 +62,26 @@ import type { Clip, CropRect, Project } from '../timeline'
  * a printed time within its own print precision of a tie is taken as the tie
  * (`TIE_SLACK`). Measured by arithmetic over every frame of 30-minute files
  * at 24/25/30/60 fps projects, 1×/2×/0.5×, sources at 23.976–60 fps and an
- * iPhone-style VFR (tb 1/600): wrong on 0 % of frames under 10 s (plain
- * rounding: 1.39 %), 0.07 % in 10–100 s (1.43 %), 0.73 % in 100–1000 s
- * (1.86 %), and the same as plain rounding past that, where the print keeps
- * too few digits for either. A 60 fps source's odd frames on a 30 fps
- * project, and every odd cut of a same-rate clip at 2×, are exact ties, and
- * plain rounding of the printed time gets about half of them a frame early.
+ * iPhone-style VFR (tb 1/600), AT IN-POINT 0: wrong on 0 % of frames under
+ * 10 s (plain rounding: 1.39 %), 0.07 % in 10–100 s (1.43 %), 0.73 % in
+ * 100–1000 s (1.86 %), and the same as plain rounding past that, where the
+ * print keeps too few digits for either. A 60 fps source's odd frames on a
+ * 30 fps project, and every odd cut of a same-rate clip at 2×, are exact
+ * ties, and plain rounding of the printed time gets about half of them a
+ * frame early.
+ *
+ * **At other in-points the printed path is wrong on 25 and 50 fps projects.**
+ * ffmpeg rounds the seek into the stream's time base, and on ffmpeg's own
+ * 1/15360 mp4s a 25 fps in-point is 614.4 ticks a frame: at two in-points of
+ * five it rounds UP, and an exact tie (a 30 or 60 fps source's frame k ≡ 3
+ * mod 6) then goes DOWN a slot, where the slack sends it up — 159 of 958
+ * cuts a frame late at in-points 22 and 72, 80 of 958 at 2×, 85 of 1024 for
+ * a 60 fps source (verified: source frame 231 after in-point 72 shows on
+ * slot 120; the exact path says 120, the printed one 121). It cannot know
+ * the time base, so it cannot know which way the seek went. 24, 30 and 60
+ * fps projects seek exactly on 1/15360, 1/30000, 1/600 and 1/90000. The fix
+ * is the exact path: 1b's `Shot.startPts` and `SubjectTrack.timeBase` are
+ * REQUIRED for 25/50 fps projects, not only for 29.97 near-ties.
  *
  * Pans go on the frame grid the same way: each pan's start and end are the
  * export's frames for its source ms, so a pan can never still be easing on
