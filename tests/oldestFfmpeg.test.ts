@@ -349,7 +349,9 @@ const SHAPES: { name: string; project: Project; range?: { start: number; end: nu
    * the preview copies. The two-up's `split` (split.c:123), `vstack`
    * (vf_stack.c:368, merged 2015) and `tpad` with `stop` and `stop_mode=clone`
    * (vf_tpad.c:54, :57–58, merged 2018-10) are all before the floor; `fps=`
-   * ahead of the crop is 2012.
+   * ahead of the crop is 2012, and its `start_time` (the followed clock,
+   * plan.ts `followClock`) is in its option table at f22fcd4 (vf_fps.c:80),
+   * setting the first output pts in config_props (:159–172) as on the Mac.
    */
   { name: FOLLOWED, project: followed(false) },
   { name: TWO_UP, project: followed(true) }
@@ -553,11 +555,11 @@ describe('a filter graph runs on the oldest bundled ffmpeg', () => {
     // Counted, not found: each site the shape is meant to have, and no more.
     const sites = (graph: string, re: RegExp): number => [...graph.matchAll(re)].length
     const one = graphOf(SHAPES.find((s) => s.name === FOLLOWED)!.project)
-    expect(sites(one, /fps=30,crop=w='min\(202,in_w\)':h='min\(360,in_h\)':x='max\(0,min\(/g), 'fps= then the keyed crop').toBe(1)
+    expect(sites(one, /fps=30:start_time=0,crop=w='min\(202,in_w\)':h='min\(360,in_h\)':x='max\(0,min\(/g), 'the clock then the keyed crop').toBe(1)
     expect(sites(one, /\*gte\(t,\d+\.\d{6}\)/g), 'held steps').toBeGreaterThanOrEqual(3)
     expect(sites(one, /\*\(3-2\*\(min\(1,max\(0,\(t-/g), 'a smoothstep pan').toBeGreaterThanOrEqual(1)
     const two = graphOf(SHAPES.find((s) => s.name === TWO_UP)!.project)
-    expect(sites(two, /fps=30,split=2\[r0a\]\[r0b\];\[r0a\]crop=w=/g), 'fps= then the split').toBe(1)
+    expect(sites(two, /fps=30:start_time=0,split=2\[r0a\]\[r0b\];\[r0a\]crop=w=/g), 'the clock then the split').toBe(1)
     expect(sites(two, /crop=w=/g), 'two keyed crops').toBe(2)
     expect(sites(two, /\[r0t\]\[r0u\]vstack,tpad=stop_mode=clone:stop=1,/g), 'the stack and its tpad').toBe(1)
   })
@@ -615,7 +617,7 @@ describe('every other ffmpeg command runs on the oldest bundled ffmpeg', () => {
     const byName = new Map(ANALYSIS_SHAPES.map((s) => [s.name, s.args()]))
     expect(filterOf(byName.get('a moment’s footage pre-pass, cropped')!)).toContain('crop=')
     const pulledFollow = filterOf(byName.get('a moment’s footage pre-pass over a followed clip')!)
-    expect(pulledFollow, 'the pull’s keyed crop, before its trim').toMatch(/^fps=30,crop=w='[^']*':h='[^']*':x='max\(0,min\([^']*gte\(t,[^']*\),in_w-out_w\)\)'/)
+    expect(pulledFollow, 'the pull’s keyed crop, before its trim').toMatch(/^fps=30:start_time=0,crop=w='[^']*':h='[^']*':x='max\(0,min\([^']*gte\(t,[^']*\),in_w-out_w\)\)'/)
     const pulledStack = filterOf(byName.get('a moment’s footage pre-pass over a followed clip, stacked two-up')!)
     expect([...pulledStack.matchAll(/\[r0t\]\[r0u\]vstack,tpad=stop_mode=clone:stop=1,/g)], 'the pull’s stack').toHaveLength(1)
     expect(filterOf(byName.get('a moment’s footage pre-pass, smooth slow motion')!)).toContain('minterpolate')

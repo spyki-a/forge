@@ -92,28 +92,30 @@ describe('cropFilter: a followed crop', () => {
 })
 
 describe('buildRenderPlan: the followed crop in the chain', () => {
-  it('at speed 1: fps= right before the crop, which holds the keys; the fit after it as ever', () => {
+  it('at speed 1: the clock (fps= from slot 0) right before the crop, which holds the keys; the fit after it as ever', () => {
     const graph = graphOf(project())
     const chain = chainOf(graph)
-    expect(count(graph, 'fps=30,crop=w=')).toBe(1)
-    expect(chain.startsWith("fps=30,crop=w='min(608,in_w)':h='min(1080,in_h)':x='max(0,min(176+960*gte(t,")).toBe(true)
-    // Two fps=30 in the clip's chain: the one before the crop and the chain's own after the fit.
+    expect(count(graph, 'fps=30:start_time=0,crop=w=')).toBe(1)
+    expect(chain.startsWith("fps=30:start_time=0,crop=w='min(608,in_w)':h='min(1080,in_h)':x='max(0,min(176+960*gte(t,")).toBe(true)
+    // Two fps= in the clip's chain: the clock before the crop and the chain's own after the fit — only the first from slot 0.
     expect(count(chain, 'fps=30')).toBe(2)
+    expect(count(chain, 'start_time=0')).toBe(1)
     expect(chain).toMatch(/in_h-out_h\)\)',scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30,/)
     // The keys are compiled from the clip's first frame: the first cut on clip frame 23 (source 29 − in-point 6), not 23 + 15.
     expect(chain).toContain(`gte(t,${(22.5 / FPS).toFixed(6)})`)
     expect(chain).toMatch(/\*\(min\(1,max\(0,\(t-/)
   })
 
-  it('at speed 2: no fps= added — the retime already ends in one — and the crop right after it', () => {
+  it('at speed 2: the retime, then the clock — the retime’s own fps= does not start at slot 0 — then the crop', () => {
     const chain = chainOf(graphOf(project({ clip: { speed: 2, duration: 105 } })))
-    expect(chain.startsWith("setpts=PTS/2,fps=30,crop=w='min(608,in_w)'")).toBe(true)
-    expect(count(chain, 'fps=30')).toBe(2)
+    expect(chain.startsWith("setpts=PTS/2,fps=30,fps=30:start_time=0,crop=w='min(608,in_w)'")).toBe(true)
+    expect(count(chain, 'fps=30')).toBe(3)
+    expect(count(chain, 'start_time=0')).toBe(1)
   })
 
-  it('a two-up clip: fps=, the split and its two crops, the stack, its tpad, then the fit', () => {
+  it('a two-up clip: the clock, the split and its two crops, the stack, its tpad, then the fit', () => {
     const graph = graphOf(project({ twoUp: true }))
-    expect(count(graph, 'fps=30,split=2[r0a][r0b];[r0a]crop=w=')).toBe(1)
+    expect(count(graph, 'fps=30:start_time=0,split=2[r0a][r0b];[r0a]crop=w=')).toBe(1)
     expect(count(graph, 'crop=w=')).toBe(2)
     expect(count(graph, '[r0t][r0u]vstack,tpad=stop_mode=clone:stop=1,scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30')).toBe(1)
   })
@@ -135,6 +137,7 @@ describe('buildRenderPlan: the followed crop in the chain', () => {
     const same = graphOf(project({ canvas: { width: 1920, height: 1080 } }))
     for (const [name, graph] of [['no follow', plain], ['refused', refused], ['same shape', same]] as const) {
       expect(count(chainOf(graph), 'fps=30'), name).toBe(1)
+      expect(graph, name).not.toContain('start_time=')
       expect(graph, name).not.toContain('gte(t,')
       expect(graph, name).not.toContain('split=2[r0a]')
     }
@@ -219,16 +222,33 @@ describe('the moments’ pre-pass cuts with the same keys, before its trim', () 
     const vf = args[args.indexOf('-vf') + 1]
     const crop = cropFilter({}, req.size, { crop: req.crop!, cropX: req.cropX }, FPS)!
     expect(count(vf, crop)).toBe(1)
-    expect(vf.startsWith(`fps=30,${crop},tpad=stop_mode=clone:stop_duration=`)).toBe(true)
+    // The render's own clock, from slot 0, so the pull's frame k is the render's clip frame k; one fps= at speed 1.
+    expect(vf.startsWith(`fps=30:start_time=0,${crop},tpad=stop_mode=clone:stop_duration=`)).toBe(true)
+    expect(count(vf, 'fps=')).toBe(1)
     expect(vf.indexOf(crop)).toBeLessThan(vf.indexOf('trim=start_frame=50:end_frame=60'))
     expect(count(vf, 'gte(t,')).toBeGreaterThan(0)
+  })
+
+  it('at speed 2: the render’s retime, then its clock, then the crop — and a crop that does not follow gets no clock', () => {
+    const p = project({ clip: { speed: 2, duration: 105 } })
+    const vfOf = (req: FootageRequest): string => {
+      const args = momentFrameArgs(req, '/tmp/m/%05d.png')
+      return args[args.indexOf('-vf') + 1]
+    }
+    const followed = vfOf(base({ ...followedFootage(p, p.clips[0], FPS), speed: 2, duration: 105 }))
+    expect(followed.startsWith("setpts=PTS/2,fps=30,fps=30:start_time=0,crop=w='min(608,in_w)'")).toBe(true)
+    expect(count(followed, 'start_time=0')).toBe(1)
+    const still = vfOf(base({ crop: { x: 176, y: 0, width: 608, height: 1080 }, speed: 2, duration: 105 }))
+    expect(still.startsWith("setpts=PTS/2,fps=30,crop=w='min(608,in_w)'")).toBe(true)
+    expect(vfOf(base({ crop: { x: 176, y: 0, width: 608, height: 1080 } })).startsWith("fps=30,crop=w='min(608,in_w)'")).toBe(true)
+    expect(still).not.toContain('start_time=')
   })
 
   it('a two-up clip: one pull of the stacked frame — the split, both crops and the stack in the -vf', () => {
     const p = project({ twoUp: true })
     const args = momentFrameArgs(base(followedFootage(p, p.clips[0], FPS)), '/tmp/m/%05d.png')
     const vf = args[args.indexOf('-vf') + 1]
-    expect(vf).toMatch(/^fps=30,split=2\[r0a\]\[r0b\];\[r0a\]crop=w=/)
+    expect(vf).toMatch(/^fps=30:start_time=0,split=2\[r0a\]\[r0b\];\[r0a\]crop=w=/)
     expect(count(vf, 'crop=w=')).toBe(2)
     expect(count(vf, '[r0t][r0u]vstack,tpad=stop_mode=clone:stop=1,tpad=stop_mode=clone:stop_duration=')).toBe(1)
   })

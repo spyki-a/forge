@@ -725,6 +725,33 @@ export function followMoves(follow: CropFollow | null | undefined): boolean {
 }
 
 /**
+ * The clock a followed crop runs on: `fps=${fps}:start_time=0`, right ahead
+ * of it at EVERY speed — the render's chain and the moments' pull alike —
+ * or null when the crop does not move.
+ *
+ * `fps=` puts the crop on the project's frame grid (at speed 1 it would
+ * otherwise see each source frame at its own time, and pans drifted up to
+ * 12 px off the grid on 29.97, 8 px on VFR; a retime's own `fps=` does the
+ * same at other speeds). `start_time=0` makes the grid start at slot 0.
+ * Without it `fps=` starts at the slot the FIRST frame after the seek rounds
+ * to (vf_fps.c:220–222 at f22fcd4), and that is slot 1 whenever the first
+ * frame is half a slot or more past the in-point — VFR at in-point 1, a
+ * 29.97 file past 16.7 s about half the time, 24 fps at three in-points of
+ * five. The chain's `setpts=PTS-STARTPTS` then puts slot 1 on the clip's
+ * frame 0, so clip frame k was slot k + 1 and its crop ran at t = (k+1)/fps
+ * while every model of it (`exportFrameAt`'s cut frames, `followAt`,
+ * `cropAt`, the preview) reads frame k at k/fps: one frame late at every cut
+ * and up to about 24 px mid-pan. With it, `fps=` outputs slot 0 from the
+ * first frame (vf_fps.c:171, :239–254 — a copy of it, when it rounded to 1)
+ * and clip frame k IS slot k at t = k/fps, so the keys, the readers and the
+ * export agree by construction. When the first frame is on slot 0 the
+ * output is the same as without it. Measured in reframe.int's p0 rows.
+ */
+export function followClock(follow: CropFollow | null | undefined, fps: number): string | null {
+  return followMoves(follow) ? `fps=${fps}:start_time=0` : null
+}
+
+/**
  * One axis of a followed crop: the flat sum, never `keyframeExpression`.
  *
  * A nested `if()` per key is refused by ffmpeg's expression parser past a
@@ -1297,7 +1324,8 @@ export function buildRenderPlan(request: RenderRequest): RenderPlan {
        */
       retime,
       /*
-       * A followed crop runs on the project's frame grid, not the source's.
+       * A followed crop runs on the project's frame grid, not the source's,
+       * and the grid starts at the clip's frame 0 (`followClock`).
        *
        * At speed 1 nothing above re-times, so without this the crop would see
        * each SOURCE frame at its own time, and only the chain's `fps=` further
@@ -1311,12 +1339,13 @@ export function buildRenderPlan(request: RenderRequest): RenderPlan {
        * on 29.97 and 8 px on VFR. With `fps=` first the crop's `t` is n/fps on
        * every frame, so the export is the keys' value at frame n — 0 frames off
        * at 30, 29.97, 60 and VFR (this slice's measure, docs/CLIPS.md §4.9) —
-       * which is also what the moments' pre-pass already sees (its crop
-       * follows its own `fps=`). A static crop is framemd5-identical either
-       * way, video and audio, and 60 fps footage is 14–18 % faster with it.
-       * A retime already ends in `fps=` (speed.ts), so nothing is added there.
+       * which is also what the moments' pre-pass sees (it runs the same
+       * clock). A static crop is framemd5-identical either way, video and
+       * audio, and 60 fps footage is 14–18 % faster with it. A retime already
+       * ends in `fps=` (speed.ts) but not at slot 0, so the clock follows it
+       * there too: `start_time=0` is what makes clip frame k the keys' frame k.
        */
-      retime === null && followMoves(follow) ? `fps=${fps}` : null,
+      followClock(follow, fps),
       /*
        * The stream this crop actually applies to.
        *

@@ -19,13 +19,22 @@ import type { Clip, CropRect, Project } from '../timeline'
  * **Each cut's held key is on the EXPORT's frame for it** — the measure
  * phase's contract for this slice, measured on the Mac's 4.4 build:
  *
- * - At speed 1 the render puts `fps=${fps}` ahead of the followed crop
- *   (§3.4's remedy, builder R), and `fps=` shows on output slot n the last
- *   source frame whose time rounds (half up, NEAR_INF) to n. So the cut's
- *   frame is `floor(t·fps + 0.5)`, t its time after the in-point's seek —
- *   with fps= first, on every cut of every source measured: 44 of 44 at 30
- *   and 29.97 fps (43 of 43 with a tie added), 39 and 45 of 45 at 60, 44 of
- *   44 on both VFR sources, and with an in-point of 7.
+ * - The render puts the followed clock ahead of the crop at every speed
+ *   (plan.ts `followClock`: `fps=${fps}:start_time=0`, §3.4's remedy), and
+ *   `fps=` shows on output slot n the last source frame whose time rounds
+ *   (half up, NEAR_INF) to n. So the cut's frame is `floor(t·fps + 0.5)`, t
+ *   its time after the in-point's seek — with fps= first, on every cut of
+ *   every source measured: 44 of 44 at 30 and 29.97 fps (43 of 43 with a tie
+ *   added), 39 and 45 of 45 at 60, 44 of 44 on both VFR sources, and with an
+ *   in-point of 7.
+ * - **Clip frame k is slot k**, at t = k/fps, because of the clock's
+ *   `start_time=0`. Without it `fps=` starts at the slot the first frame
+ *   after the seek rounds to — slot 1 when that frame is half a slot or more
+ *   past the seek (VFR at in-point 1; 29.97 footage past 16.7 s about half
+ *   the time; 24 fps at three in-points of five) — and the clip's
+ *   `setpts=PTS-STARTPTS` made clip frame k slot k + 1: every frame here,
+ *   and `followAt`/`cropAt`, one frame early against the export (measured,
+ *   reframe.int's p0 rows; the export itself stayed self-consistent).
  * - At another constant speed the retime's `setpts=PTS/s` truncates (pts
  *   1001/2 → 500), then its own `fps=` rounds the same way: the frame is
  *   `floor(trunc(pts/s)·fps/den + 0.5)` — every cut measured at 2× and 0.5×.
@@ -184,8 +193,10 @@ function printSlack(sourceMs: number): number {
 /**
  * The clip-relative frame on which the export shows the source moment
  * `sourceMs` (or `exact`, its integer pts) first — the frame a cut's held key
- * goes on. Before the clip's first frame it is ≤ 0; past its last it is
- * ≥ `duration`. Null for a hold.
+ * goes on: its `fps=` slot after the seek, which is the clip's frame because
+ * the followed clock starts at slot 0 (plan.ts `followClock`). Before the
+ * clip's first frame it is ≤ 0; past its last it is ≥ `duration`. Null for a
+ * hold.
  */
 export function exportFrameAt(clip: RetimedClip, fps: number, sourceMs: number, exact?: ExactTime): number | null {
   const retime = retimeOf(clip, fps)

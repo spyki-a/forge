@@ -136,21 +136,37 @@ const seconds = (s: Source, n: number): number => (s.pts[n] * s.timeBase.num) / 
  * rounds to it. Independent of reframe/keys.ts: this is what the identity
  * colour is checked against.
  */
-function slotOf(s: Source, n: number, speed: number): number {
+function slotOf(s: Source, n: number, speed: number, inPoint = IN): number {
   const { num, den } = s.timeBase
-  const seek = Math.round(((IN / FPS) * den) / num)
+  // `-ss` is written to 6 dp (plan.ts `seconds`), held in µs, and rescaled into the stream's time base, rounding.
+  const seek = Math.round((Math.round(Number((inPoint / FPS).toFixed(6)) * 1e6) * den) / (num * 1e6))
   const rel = s.pts[n] - seek
   const q = speed === 1 ? rel : Math.trunc(rel / speed)
   return Math.floor((2 * q * num * FPS + den) / (2 * den))
 }
 
-/** The first timeline frame (clip-relative) that shows the shot opening at source frame `cut`. */
-function cutFrame(s: Source, cut: number, speed: number): number {
+/**
+ * The first timeline frame (clip-relative) that shows the shot opening at
+ * source frame `cut`. Clip frame k IS slot k: a followed clip's clock
+ * (plan.ts `followClock`, `fps=…:start_time=0`) starts its grid at slot 0
+ * whatever slot the first frame after the seek rounds to — the p0 rows below
+ * are the ones where that is slot 1.
+ */
+function cutFrame(s: Source, cut: number, speed: number, inPoint = IN): number {
   // The last source frame on slot k is what slot k shows: the cut shows on the first slot whose last frame is at or past it.
   const last = new Map<number, number>()
-  for (let n = 0; n < s.pts.length; n++) last.set(slotOf(s, n, speed), n)
+  for (let n = 0; n < s.pts.length; n++) last.set(slotOf(s, n, speed, inPoint), n)
   const slots = [...last.keys()].filter((k) => k >= 0).sort((a, b) => a - b)
   return slots.find((k) => last.get(k)! >= cut)!
+}
+
+/** The slot the first frame at or after the in-point's seek rounds to: 0, or 1 when it is half a slot or more past the seek. */
+function firstSlot(s: Source, speed: number, inPoint: number): number {
+  const slots = s.pts.map((_, n) => slotOf(s, n, speed, inPoint))
+  const { num, den } = s.timeBase
+  const seek = Math.round((Math.round(Number((inPoint / FPS).toFixed(6)) * 1e6) * den) / (num * 1e6))
+  const first = s.pts.findIndex((p) => p >= seek)
+  return slots[first]
 }
 
 function trackFor(s: Source, twoUp: boolean): SubjectTrack {
@@ -378,7 +394,7 @@ function rowOf(s: Source, label: string): RowResult {
 /** The cut frames, each read at cut − 1, cut and cut + 1, as README lines and as checks of the shot shown. */
 function checkCuts(s: Source, row: RowResult, label: string, speed = 1): void {
   for (const [i, cut] of s.cuts.entries()) {
-    const k = cutFrame(s, cut, speed)
+    const k = cutFrame(s, cut, speed, row.clip.inPoint)
     const before = row.readings.get(k - 1)
     const on = row.readings.get(k)
     const after = row.readings.get(k + 1)
@@ -435,7 +451,7 @@ function checkPan(s: Source, row: RowResult, label: string): void {
  * frame read off its own pixels and compared with the render's frame beneath.
  */
 async function checkMoment(s: Source, row: RowResult, label: string, cut: number, stacked: boolean): Promise<void> {
-  const k0 = cutFrame(s, cut, 1)
+  const k0 = cutFrame(s, cut, 1, row.clip.inPoint)
   const first = k0 - 5
   const count = 10
   const req: FootageRequest = {
@@ -529,7 +545,7 @@ describe('a followed crop, rendered: frame-exact at every cut, on four sources',
         const row = await followedRow(s, 'two-up', { twoUp: true })
         checkCuts(s, row, 'two-up')
         // Shot 4: the top half on the LEFT face, the bottom on the right, each on both axes, both in shot 4.
-        const k = cutFrame(s, s.cuts[2], 1)
+        const k = cutFrame(s, s.cuts[2], 1, row.clip.inPoint)
         const on = row.readings.get(k)!
         const halves = row.path.shots[3].halves!
         expect(on.top!.shot).toBe(3)
@@ -558,6 +574,35 @@ describe('a followed crop, rendered: frame-exact at every cut, on four sources',
       })
     })
   }
+})
+
+/*
+ * The followed clock's slot 0 (plan.ts `followClock`). After the seek, `fps=`
+ * starts at the slot the FIRST frame rounds to, and on this VFR file at
+ * in-point 1 that is slot 1 (frame 1 at 6/120 s, t·30 = 0.5 past the 1/30 s
+ * seek); the clip's `setpts=PTS-STARTPTS` then made clip frame k slot k + 1,
+ * its crop at t = (k+1)/30, while the keys' cut frames, `cropAt` and the
+ * preview read frame k at k/30 — one frame late at every cut, measured. The
+ * clock's `start_time=0` starts the grid at slot 0. The other rows (in-point
+ * 6) all start on slot 0, so none of them could tell.
+ */
+describe('the followed clock starts at slot 0, when the first frame after the seek rounds to slot 1', () => {
+  it('VFR at in-point 1: every frame on the model and on its shot’s crop, every cut on its frame, the pan, a moment across a cut', async () => {
+    const s = sources.get('vfr')!
+    expect(firstSlot(s, 1, 1), 'the first frame after in-point 1’s seek rounds to slot 1').toBe(1)
+    expect(firstSlot(s, 1, IN), 'the four-source rows start on slot 0').toBe(0)
+    const row = await followedRow(s, 'p0', { inPoint: 1 })
+    checkCuts(s, row, 'p0 at 1×')
+    checkPan(s, row, 'p0 at 1×')
+    await checkMoment(s, row, 'p0 at 1×', s.cuts[1], false)
+  })
+
+  it('VFR at in-point 1 at half speed: the retime’s own fps= starts on slot 1 too, and the clock after it starts the grid at 0', async () => {
+    const s = sources.get('vfr')!
+    expect(firstSlot(s, 0.5, 1), 'the first frame after the retime rounds to slot 1').toBe(1)
+    const row = await followedRow(s, 'p0-half', { inPoint: 1, speed: 0.5 })
+    checkCuts(s, row, 'p0 at 0.5×', 0.5)
+  })
 })
 
 describe('more cuts than a nested if() can hold', () => {

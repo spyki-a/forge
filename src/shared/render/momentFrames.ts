@@ -1,5 +1,5 @@
 import { assetById, framesToSeconds, type Clip, type Project } from '../timeline'
-import { cropFilter, retimeFilter, type CropFollow } from './plan'
+import { cropFilter, followClock, retimeFilter, type CropFollow } from './plan'
 import { sourceFramesFor } from './speed'
 import { followKeys } from '../reframe/keys'
 import type { FootageRequest } from './moment'
@@ -74,8 +74,15 @@ export function momentFrameArgs(req: FootageRequest, pattern: string): string[] 
     return ['-ss', seconds(req.inPoint, fps), '-i', req.path, '-vf', `trim=end_frame=1,setpts=PTS-STARTPTS,${cut ? `${cut},` : ''}${finish}`, '-frames:v', '1', '-start_number', '0', pattern]
   }
 
-  // The render's own retime, or at speed 1 the render's own fps step (plan.ts applies `fps=` to every clip).
-  const retime = retimeFilter(clip, fps) ?? `fps=${fps}`
+  /*
+   * The render's own retime, or at speed 1 the render's own fps step (plan.ts
+   * applies `fps=` to every clip) — and for a crop that moves, the render's
+   * own clock ahead of it (`followClock`, `fps=…:start_time=0`), so the
+   * pull's frame k is the render's clip frame k, slot k, whichever slot the
+   * first frame after the seek rounds to. At speed 1 the clock IS the fps step.
+   */
+  const clock = followClock(follow, fps)
+  const retime = [retimeFilter(clip, fps) ?? (clock ? null : `fps=${fps}`), clock].filter((s) => s !== null).join(',')
   /*
    * The render's own input window, whole (`videoInputArgs`: `-t` of the
    * source frames the clip eats), not just the window's — and for smooth
