@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, expect, it } from 'vitest'
 import { spawn, spawnSync } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import { chmod, copyFile, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises'
 import { delimiter, dirname, join, resolve, sep } from 'node:path'
 import ffprobeInstaller from '@ffprobe-installer/ffprobe'
@@ -458,6 +458,51 @@ describeWithVenv(
       expect(await readdir(join(cache, 'faces'))).toEqual([])
       expect((await client.request<{ pong: string }>(SIDECAR_METHODS.ping, { echo: 'after the cancel' })).pong).toBe('after the cancel')
       notes.push(`- cancel at ${seen[0]}: worker ${workers[0]} gone, its ffmpeg gone, the faces cache empty`)
+    }, 60_000)
+
+    it('a helper killed mid-pass leaves no worker, no ffmpeg and no half-track', async () => {
+      /*
+       * The helper's death reaches the worker only as the end of its stdin, and
+       * then nobody else is left to remove the partial: before the worker
+       * removed its own, `<track>.<pid>-<id>.part` stayed in the cache for
+       * good (an app quit or a helper crash during any analysis), its name
+       * carrying a pid no later helper has.
+       */
+      let decoder = FFMPEG
+      const pids = join(dir, 'ffmpeg-pids-killed.txt')
+      if (process.platform !== 'win32') {
+        decoder = join(dir, 'ffmpeg-recording-its-pid-killed.sh')
+        await writeFile(decoder, `#!/bin/sh\necho $$ >> '${pids}'\nexec '${FFMPEG}' "$@"\n`)
+        await chmod(decoder, 0o755)
+      }
+      const cache = join(dir, 'cache', 'killed')
+      const client = await helper({ models, cache, env: { FORGE_FACES_WORKER_FAKE: 'colour:80' } })
+      const exited = new Promise<{ code: number | null; signal: string | null }>((done) => client.once('exit', done))
+      let partial: string[] = []
+      const request = client.request(SIDECAR_METHODS.faces, params(clips.long, { ffmpeg: decoder }), {
+        onProgress: (p) => {
+          if (p === null || p <= 0 || p >= 1 || partial.length) return
+          partial = readdirSync(join(cache, 'faces'))
+          ;(client as unknown as { child: { kill: (signal: string) => void } | null }).child?.kill('SIGKILL')
+        }
+      })
+      await expectRejection(request, RPC_ERRORS.internalError, /The AI helper stopped \(signal SIGKILL\)/)
+      expect((await exited).signal).toBe('SIGKILL')
+      // The half-track was there when the helper died: what is checked below is its removal.
+      expect(partial.length, JSON.stringify(partial)).toBe(1)
+      expect(partial[0]).toMatch(/\.json\.\d+-\d+\.part$/)
+
+      const workers = workerPids(client)
+      expect(workers.length).toBe(1)
+      expect(await until(() => !alive(workers[0]), 4000), `worker ${workers[0]}`).toBe(true)
+      if (process.platform !== 'win32') {
+        const decoders = (await readFile(pids, 'utf8')).trim().split('\n').map(Number)
+        expect(decoders.length).toBe(1)
+        expect(await until(() => !alive(decoders[0]), 2000), `ffmpeg ${decoders[0]}`).toBe(true)
+      }
+      await until(async () => (await readdir(join(cache, 'faces'))).length === 0, 2000)
+      expect(await readdir(join(cache, 'faces'))).toEqual([])
+      notes.push(`- the helper SIGKILLed mid-pass: worker ${workers[0]} gone, its ffmpeg gone, ${partial[0]} removed by the worker`)
     }, 60_000)
 
     it('without its model the work says so and the question answers, neither touching the network', async () => {

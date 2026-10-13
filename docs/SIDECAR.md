@@ -125,7 +125,10 @@ face detector stopped (code -6): …", while the helper keeps answering `ping`.
   it; `ready` / `progress <fraction> <frames>` / `done` / `error <kind> <message>` lines on its
   stdout; the track written as it goes to a `.part` beside the cache file and renamed into place
   whole. A cancel closes stdin (the worker stops before its next frame and kills its ffmpeg) and
-  kills it after 3 s if it has not gone; any `.part` left is removed by the helper.
+  kills it after 3 s if it has not gone. A pass that stops short removes its own `.part`, because
+  the end of stdin is also how the helper's death reaches it (measured: a helper SIGKILLed
+  mid-pass left `<track>.<pid>-<id>.part` in the cache for good before the worker did this); one
+  left by a kill or an abort of the worker itself is removed by the helper.
 - **The worker's stdin watcher reads the raw descriptor** (`os.read`), never
   `sys.stdin.buffer`: a daemon thread blocked in the BufferedReader holds its lock, and the
   interpreter's shutdown then aborts with −6 after a pass that finished — measured, and the

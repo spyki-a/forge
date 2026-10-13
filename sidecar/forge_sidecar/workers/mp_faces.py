@@ -30,8 +30,13 @@ The conversation, line-based UTF-8:
   message when this process dies without saying why.
 - **the track**: written sample by sample to ``spec["partial"]`` and moved
   onto ``spec["track"]`` with ``os.replace`` only when whole, so the cache
-  never holds half a track. A partial left by a kill or an abort is the
-  helper's to remove; it is the only one that knows the process is gone.
+  never holds half a track. A pass that stops short removes its own partial
+  — a cancel, a file it cannot decode, anything raised — because the end of
+  stdin is also how the helper's DEATH reaches it, and then nobody else is
+  left to (measured: the helper SIGKILLed mid-pass left
+  ``<track>.<pid>-<id>.part`` behind for good, its name carrying a pid no
+  later helper has). A partial left by a kill or an abort, which end this
+  process before it can, is the helper's to remove.
 
 Boxes are normalised 0..1 against the analysed frame, which is the UPRIGHT
 frame scaled (``analysis_size``: long side = edge, the upright aspect, even
@@ -434,6 +439,7 @@ def run(spec: dict[str, Any], stop: _StdinEnd, environ: dict[str, str] | os._Env
     expected = expected_frames(spec)
     abort = environ.get(ABORT_ENV) == "1"
     writer = TrackWriter(spec["partial"], spec["track"])
+    whole = False
     try:
         frames = media.iter_frames(
             spec["path"], spec["ffmpeg"], spec["fps"], width, height,
@@ -447,6 +453,7 @@ def run(spec: dict[str, Any], stop: _StdinEnd, environ: dict[str, str] | os._Env
                 fraction = "-" if expected is None else f"{min(0.99, writer.frames / expected):.4f}"
                 _say("progress", fraction, writer.frames)
         writer.finish()
+        whole = True
     except Cancelled:
         return EXIT_CANCELLED
     except ValueError as exc:  # ffmpeg could not decode the file
@@ -455,6 +462,12 @@ def run(spec: dict[str, Any], stop: _StdinEnd, environ: dict[str, str] | os._Env
     finally:
         writer.close()
         close()
+        if not whole:
+            # Closed first: Windows will not delete a file that is still open.
+            try:
+                os.remove(spec["partial"])
+            except OSError:
+                pass
     _say("done", writer.frames, writer.with_face)
     return 0
 

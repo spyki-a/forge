@@ -1860,8 +1860,12 @@ from `parseSceneLog` over the lines. An AbortSignal cancels through
 >     no worker outlives the helper. Out come `ready` / `progress <fraction>
 >     <frames>` (every 10) / `done` / `error <kind> <message>` lines.
 >   - The track is streamed to a `.part` beside the cache file and renamed
->     whole; the helper removes any `.part` left after a cancel, a kill or a
->     death.
+>     whole. A pass that stops short removes its own `.part`: the end of
+>     stdin is also how the helper's death reaches the worker, and then
+>     nobody else is left to (fix phase, measured: the helper SIGKILLed
+>     mid-pass, as `client.stop()` does 1.5 s after an app quit, had left
+>     `<track>.<pid>-<id>.part` for good). The helper removes one left by a
+>     kill or an abort of the worker.
 >   - A cancel closes stdin, and the worker is killed after 3 s if it has
 >     not stopped.
 >   - Each detection is clamped to the analysed frame, then normalised with

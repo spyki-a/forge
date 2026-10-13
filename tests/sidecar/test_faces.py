@@ -234,6 +234,53 @@ class Spec(unittest.TestCase):
         self.assertIsNone(mp_faces.fake_mode("faces"))
 
 
+class WorkerStopsShort(unittest.TestCase):
+    """mp_faces.run itself, its frames and detector stood in: a pass that stops short removes its partial.
+
+    The end of the worker's stdin is a cancel, and it is also how the helper's
+    DEATH reaches the worker — after which nobody else is left to remove the
+    partial (measured: a helper SIGKILLed mid-pass left one in the cache for
+    good). tests/integration/faces.int.test.ts kills a real helper.
+    """
+
+    def setUp(self) -> None:
+        self.folder = tempfile.mkdtemp(prefix="forge-faces-run-")
+        self.addCleanup(shutil.rmtree, self.folder, True)
+        self.track = os.path.join(self.folder, "t.json")
+        self.partial = self.track + ".1-7.part"
+        self.spec = mp_faces.parse_spec(json.dumps(faces.worker_spec(settings(), 4000, "/m", self.track, self.partial)))
+
+    def run_then(self, stopped_by: BaseException) -> int:
+        written: list[bool] = []
+
+        def frames(*_args: object, **_kwargs: object):  # type: ignore[no-untyped-def]
+            yield 0, None
+            yield 200, None
+            written.append(os.path.isfile(self.partial))
+            raise stopped_by
+
+        with mock.patch.object(mp_faces.media, "iter_frames", side_effect=frames), \
+                mock.patch.object(mp_faces, "_colour_detector", return_value=lambda _frame, _ms: []), \
+                mock.patch.object(mp_faces, "_say"):
+            code = mp_faces.run(self.spec, mock.Mock(ended=False), {mp_faces.FAKE_ENV: "colour"})
+        self.assertEqual(written, [True], "the pass never wrote its partial, so this proves nothing")
+        return code
+
+    def test_a_cancel_removes_the_partial(self) -> None:
+        self.assertEqual(self.run_then(Cancelled()), mp_faces.EXIT_CANCELLED)
+        self.assertEqual(os.listdir(self.folder), [], "the cancelled half-track was kept")
+
+    def test_a_file_it_cannot_decode_removes_the_partial(self) -> None:
+        self.assertEqual(self.run_then(ValueError("moov atom not found")), mp_faces.EXIT_INPUT)
+        self.assertEqual(os.listdir(self.folder), [])
+
+    def test_anything_else_raised_removes_the_partial(self) -> None:
+        # A pipe to a dead helper: the next progress line raises BrokenPipeError.
+        with self.assertRaises(BrokenPipeError):
+            self.run_then(BrokenPipeError())
+        self.assertEqual(os.listdir(self.folder), [])
+
+
 # -------------------------------------------------------------------- stubs
 
 
