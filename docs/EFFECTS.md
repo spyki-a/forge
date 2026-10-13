@@ -2818,9 +2818,10 @@ drawing the boxes on the frames.
   setting changes it, or hardware decode (`videotoolbox`), which the
   sandbox cannot reach.
 - **Unmeasured still:** the Surface (no Metal; the Windows wheel on its own
-  CPU path), mediapipe 1.0.1 (the test ran 0.10.35), the worker's import and
-  start-up time, and recall and false boxes against hand marks on footage
-  with known faces.
+  CPU path), mediapipe 1.0.1 (the test ran 0.10.35), and recall and false
+  boxes against hand marks on footage with known faces. The worker's import
+  and start-up time is measured since (0.14–0.23 s, §54), and so is the
+  sandbox's −6 at `create_from_options` through the worker.
 
 ## 38. The stacked two-up — two half crops stacked are the one crop, bit for bit (2026-10-05)
 
@@ -5280,3 +5281,93 @@ review's runs failed four, before the default-threshold case was added).
   decoded pixels is written on the runner but not uploaded.
 - **Real footage with hand-marked cuts, and so T and the minimum shot**, are
   1a's (`CLIPS.md` §4.1).
+
+## 54. Step 1's helper slice — the subject finder's memory, the face worker's start, a quit mid-pass, and two download findings (2026-10-13)
+
+For `docs/CLIPS.md` §4.3 and §4.4 as built (1c `8052585`, 1d `8a587e7`) and
+the fix phase after their review. Development Mac (17.2 GB), the helper's
+venv `sidecar/.venv`: CPython 3.14.6, onnxruntime 1.30, numpy 2.5.3. Each
+number names who measured it: the builders, the two verifiers, or the fix
+phase.
+
+**The subject finder's memory — over the floor machine's budget.** The
+helper's resident set, read through libproc (`proc_pidinfo`,
+`PROC_PIDTASKINFO`) every 20 ms by a thread in the same process, while
+`salient.salient` ran one item through depth's BiRefNet_lite fp16 session
+(CPU provider, the fixed `[1,3,1024,1024]` input), the model from the app's
+store:
+
+| run | ORT CPU arena | peak a matte (MB) | after the call (MB) |
+|---|---|---|---|
+| 1d verifier, three mattes | on (default) | 8,638 / 9,325 / 6,846 | 8,638 / 6,845 / 6,222 |
+| 1d verifier | off | 6,573–9,707 | 1,146–1,397 |
+| 1c verifier, through the helper | on | 8,000–8,700 | 8,640–8,700 (1.5 s after the answer) |
+| fix phase, two calls on a 640×360 clip | on | 7,701 / 8,578 | 7,095 / 4,958; 4,931 1.5 s later |
+
+- **Peaks of 6.6–9.7 GB**, 7.7–8.7 GB for a session's first matte, whatever
+  the arena; the arena decides only what stays. Dropping `matte:fp16` from `depth._sessions` under
+  `depth._session_lock` took the helper to **294 MB** (1d verifier, from
+  8,643) and **155 MB** (fix phase, from 4,931).
+- On the 8 GB Surface, with Electron at 1–2 GB, one no-face shot would page.
+  The gate is a decision in `CLIPS.md` §12.1; nothing calls `vision.salient`
+  in a job yet (that is 1f).
+- The session is depth's, shared with parallax bakes; its lock covers the
+  build, not `session.run`, so a bake during an analysis is two of these at
+  once.
+- **Time**: 8.80 s and 8.87 s a call in the fix phase (the builder's
+  7.9–9.3 s; 4 or 8 threads alike), the decode included (30–74 ms at
+  640×360, 247–550 ms on the 4K HEVC face fixture, the builder's).
+
+**The face worker.** It starts and imports mediapipe 0.10.35 in 0.14–0.23 s
+wall, the import 0.07–0.13 s (the 1c builder, through `faces.int`'s import
+test). In the sandbox, with the real model, it dies at
+`create_from_options` with −6 0.3–1.3 s in, as §37 found in-process. RSS
+(the 1c verifier): the helper about 100 MB through a faces call, the worker
+45–92 MB with the stand-in detector, and its ffmpeg 455 MB decoding the 4K
+HEVC fixture to 640×360. **The detector's own RSS is unmeasured**: the
+user's `FORGE_FACES_REAL=1` run is the only one that loads it. The 1c
+verifier also timed 26.6 s of that fixture through the worker with the
+stand-in: 13.8–14.7 s, and 5 fps → 2 fps saved only 6 %, so **4K HEVC is
+decode-bound** and §4.10's first lever ("drop to 3 fps") will not rescue a
+4K budget; hardware decode or `-skip_frame nokey` (both unmeasured) would.
+
+**A quit, or a death, mid-pass.** On stdin's end the helper drains in-flight
+handlers for up to 300 s (`rpc.py serve_forever`), and `client.stop()` only
+closed stdin, so with `vision.faces` running the helper was still alive at
+1.5 s and was SIGKILLed (the 1c verifier, with libproc). Its worker and
+ffmpeg went within about 0.1 s — stdin's end reaches the worker as a cancel
+— but the worker's half-track, `<track>.<helper pid>-<id>.part`, stayed in
+the cache for good, its name carrying a pid no later helper has. Fixed
+both ways: the worker removes its own partial when a pass stops short, and
+`stop()` sends a cancel for each request in flight before closing stdin.
+Measured after (`faces.int`): a stop mid-pass ends in the helper's own exit,
+code 0, 302 ms later, no worker, an empty cache; a SIGKILLed helper leaves
+no worker, no ffmpeg and no partial.
+
+**Downloads.**
+
+- **The python.org 3.14 on the dev Mac verifies nothing by default.** Its
+  `etc/openssl` is empty until its "Install Certificates" step runs, so
+  `urlopen`'s default context failed the face finder's fetch with
+  `CERTIFICATE_VERIFY_FAILED` (0.10 s, fix phase; the 1c builder first).
+  `media.fetch_url` now adds certifi's bundle to the default context.
+  Hugging Face's downloads were never affected: huggingface_hub has its own
+  client.
+- **A body cut short reads as whole to `http.client`.** `read(amt)` returns
+  `b''` at an early end instead of raising (CPython's choice, for
+  compatibility). Through the dev sandbox's proxy, `fetch_url`'s loop got
+  1,063,248–1,073,176 of 1,083,786 B on 5 of 5 fetches (fix phase) and 4 of
+  5 before (the 1c verifier, 979,176–1,063,248), silently; read sizes of
+  16 KiB, 64 KiB and 1 MiB were each cut short 3 times in 4; a whole
+  `r.read()` raised `IncompleteRead` 3 of 5 and curl got the whole file 3 of
+  3 (the verifier). The pin refused every short body, but called it a
+  sha256 mismatch; it now says "cut short (N of M bytes); try again". The
+  proxy is the sandbox's: how often this happens on a user's network is
+  unmeasured.
+- **Hugging Face's bytes are on `*.hf.co`.** By headers only, as the client
+  fetches (Xet off): the subject finder's resolve URL on `huggingface.co`
+  answers 307 to the renamed repo `onnx-community/BiRefNet_lite-ONNX` (the
+  pinned commit still served, 114,538,221 B), and that answers 302 to
+  `us.aws.cdn.hf.co/xet-bridge-us/…`. `storage.googleapis.com` serves the
+  face finder itself (200, 1,083,786 B). `docs/SIDECAR.md` has what this
+  means for restricted networks and for `depth.MATTE_REPO`.

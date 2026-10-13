@@ -92,7 +92,7 @@ code composes and checks.** In this piece that means:
   its source; a social quote card carries only what the user typed, with
   its attribution line (§8.4).
 - **Every download is the user's click**: B-roll, and every model that is
-  not on disk (the face finder, BiRefNet 109 MB, Florence-2 275 MB,
+  not on disk (the face finder, BiRefNet 115 MB, Florence-2 275 MB,
   faster-whisper small 464 MB) and a link's audio. The button that starts
   one names its size before the press, as the packs do (`Get · 57 MB`) and
   as yt-dlp's first fetch does. **No toggle and no typed phrase ever starts
@@ -113,7 +113,7 @@ code composes and checks.** In this piece that means:
 | keyed properties | `KeyedProperty` (`render/keyframes.ts:35-49`); the mask tracks are the template for tracks kept off the clip's own rows (`MASK_PROPERTIES` `:67`, `MASK_TRACK` `render/mask.ts:420-428`); `rebaseAnimation` (`timeline.ts:1121-1138`) and `convertFrameRate` (`project/frameRate.ts:77-83`) carry any key track | crop keys ride these for free |
 | source ↔ timeline | `sourceFrameFor` (`timeline.ts:1002`), speed- and ramp-aware and monotone. **There is no inverse** | needed to put a source-time cut on a timeline frame |
 | aspect switch | `setAspect` (`renderer/store.ts:1363-1391`) **replaces every clip's crop with `solveCrop`** (`:1387`), then `rebakeGenerated` (`:1406-1455`) | must learn to re-derive a reframed clip rather than wipe it |
-| a subject box | `ParallaxBake.subjectBox` (`timeline.ts:752-777`): BiRefNet's matte bbox, normalised 0..1 to 4 dp, for stills only (`sidecar/forge_sidecar/capabilities/depth.py:291-318`); consumed by the one-photo reel (`store.ts:2297-2309`) | the box convention, the normalised→pixel conversion, and a salient-subject model (109 MB; on disk on the dev Mac, **a download for any user who never baked depth**, §4.4) |
+| a subject box | `ParallaxBake.subjectBox` (`timeline.ts:752-777`): BiRefNet's matte bbox, normalised 0..1 to 4 dp, for stills only (`sidecar/forge_sidecar/capabilities/depth.py:291-318`); consumed by the one-photo reel (`store.ts:2297-2309`) | the box convention, the normalised→pixel conversion, and a salient-subject model (115 MB; on disk on the dev Mac, **a download for any user who never baked depth**, §4.4) |
 | the Python helper | the `OPTIONAL` table (`capabilities/__init__.py:15-44`, one degraded reason per row); the degraded and unavailable rules (`rpc.py:77-91`, `:115-128`, `:143-152`); progress and cooperative cancel (`rpc.py:35-61`, `src/main/sidecar/client.ts:186-239`); models under `userData/models` in hf cache layout (`service.ts:39-44`, `client.ts:96-107`); ffmpeg decode helpers (`depth.py:174-225`) | the shape every new capability takes |
 | ffmpeg work in main | the stems handler does its mid/side in main because "the ffmpeg to do it is already here" (`src/main/ipc.ts:762-770`); `runFfmpeg` / `killProcess` (`src/main/ffmpeg/run.ts:42-74`). **`runFfmpeg` was built for renders**: unless `complete: true` it prepends `-loglevel error` (`run.ts:80-82`), it keeps only the last 12 stderr lines (`:33`, `:96-103`, split per chunk, so a line can be cut in two) and shows them only on failure, and every failure unlinks `outputPath` (`:117-121`) | the scene-cut pass lives here and needs no Python, but **not on `runFfmpeg` as it is**: `metadata=print` logs at INFO, so `-loglevel error` prints no scene line at all (measured, §4.2) |
 | long jobs | the `downloads` `JobQueue` (`ipc.ts:114-207`, concurrency 2) chains a Python-helper call with its own bar share and cancel; it shares the `jobs:changed` list with exports, so jobs show in the EXPORT strip | the analysis job's model |
@@ -2041,12 +2041,77 @@ measured in the step.
 
 ### 4.4 1d — The salient box, for a shot with no face — `capabilities/salient.py` · half a day
 
+> **Built 2026-10-13** — `capabilities/salient.py` (`vision.salient`,
+> `vision.salientModel`); tests `tests/sidecar/test_salient.py` (26 on the
+> venv; on a bare 3.12 the numpy ones skip with "numpy is not installed")
+> and `tests/integration/salient.int.test.ts` (9). **Its memory does not
+> fit the 8 GB floor machine as built**: read the memory bullet before 1f
+> calls it.
+> - **The model gate is a second method**, as for faces: the row is
+>   `(("vision.salient", "vision.salientModel"), "salient")`.
+>   `vision.salientModel` answers `{present, bytes, label, host}` and
+>   fetches only on `download: true` (exactly `true`); `vision.salient`
+>   without the model answers `unavailable`, "the subject finder is not
+>   downloaded yet (115 MB from huggingface.co)", before any session opens
+>   (depth's `_matte_session` would download as a side effect). The file is
+>   **114,538,221 B, "115 MB"**: the plan said "109 MB", du's MiB. Its bytes
+>   come from `us.aws.cdn.hf.co` after a 307 from `huggingface.co` to the
+>   renamed repo and a 302 (`docs/SIDECAR.md`), so a restricted network must
+>   allow `*.hf.co` too. A cancel stops the fetch at the next 10 MiB chunk
+>   (`media.progress_class`, since the fix phase), leaving only a lock file.
+> - **The rule is subjectBox's** (`depth.py:461-474`): the matte cut at
+>   0.5; `coverage` its share; a box only when the unrounded share is within
+>   1–92 %, drawn round the cut after `_clean_mask` (pieces under
+>   max(64, 0.0004·w·h) px, 419 at 1024² — so **scipy** is one of the row's
+>   requirements, with numpy, onnxruntime and huggingface_hub) and trimmed
+>   at 1 %, normalised by the matte's sides, which are the upright frame's.
+>   1f decides by `box !== null`, never from the rounded `coverage`.
+> - **One session with depth**: `_matte_session`'s `matte:fp16`, built under
+>   depth's lock, whichever of a parallax bake and an analysis asks first;
+>   so §12.1's release of `matte:fp16` covers both. The lock covers the
+>   build only, not `session.run`: a bake and an analysis at once run two
+>   mattes side by side, and the memory below doubles.
+> - **Cost on the Mac**: about 8–9 s of matte per item (7.9–9.3 s by the
+>   builder, 8.8–8.9 s in the fix phase; fp16 on the CPU provider, 4 or 8
+>   threads alike), plus 30–74 ms of decode at 640×360 and 247–550 ms on the
+>   4K HEVC fixture. Ten no-face shots alone are most of §4.10's 90 s.
+>   Progress is 0, then (i+1)/n, "finding the subject"; a cancel lands
+>   between items, so up to ~9 s late.
+> - **Memory — measured, and over the floor's budget.** The helper's RSS,
+>   sampled every 20 ms through libproc on the Mac (17.2 GB): a matte
+>   peaks at **6.6–9.7 GB**, a session's first 7.7–8.7 GB (the builder's
+>   verifier 8.6 and 9.3, 6.6–9.7 with the arena off; the 1c verifier
+>   8.0–8.7; the fix phase 7.7 and 8.6), and
+>   with ORT's default CPU arena the helper then **holds 4.9–8.7 GB** until
+>   the session goes. With the arena off it falls back to 1.1–1.4 GB after
+>   each call, but the peak is the same. Dropping `matte:fp16` under the
+>   lock brought it to 155–294 MB. On the 8 GB Surface, with Electron at
+>   1–2 GB, a single no-face shot would page, so **§12.1's bar cannot be met
+>   with salient as built**, and 1f must not call it there until one of
+>   these is decided and measured (§12.1): salient only on a machine with
+>   the RAM (a gate), the arena off plus a release at the job's end, a
+>   worker process of its own so the memory goes back on exit, or a
+>   smaller export (BiRefNet's input is fixed at 1024² in this ONNX file;
+>   another size needs a re-export, unmeasured).
+> - **Mutations killed** (the builder's, each restored with `cmp`): a box
+>   at 93 %; trim 0; the box in a turned clip's coded frame; a size mismatch
+>   or a decode error failing the whole call; the session built outside
+>   depth's lock; the presence check dropped (end to end, −32603 from the
+>   Hub instead of −32001); no cancel between items; no cancel in the fetch;
+>   any truthy `download` fetching. **Added in the fix phase**: the trim at
+>   1.1 %, 0.9 % and 20 % (`test_the_trim_is_one_percent_exactly`); the box
+>   drawn round the raw cut, `_clean_mask` skipped
+>   (`test_speckle_is_cleaned_before_the_box_is_drawn`, a 225 px speck at
+>   1024²); and salient keeping a BiRefNet session of its own (`OneSession`
+>   now asks for a bake's matte afterwards: two builds). The integration
+>   file's 0.05 tolerance cannot see the first two; only the unit tests do.
+
 `LLM.md:162-163` and `:282-283` both say to check depth before adding
 anything. BiRefNet already finds the subject of a still. **It is on disk on
-the dev Mac (109 MB, measured), not on a user's machine**: a user who never
+the dev Mac (114,538,221 B, "115 MB"; this said 109, du's MiB), not on a user's machine**: a user who never
 baked a parallax has to download it, so the first reframe that needs a
 salient box shows "Find subjects without faces · gets the subject finder,
-109 MB, first time" and asks, never pulling it as a side effect (§0). Without
+115 MB, first time" and asks, never pulling it as a side effect (§0). Without
 it, no-face shots fall to the centre with a note. `vision.salient` takes
 `{items: [{path, ms}], ffmpeg, ffprobe, width, height}`. It decodes one frame
 per item (`media.decode_rgb(at_ms=…)`, measured 30–80 ms a seek), runs
@@ -2714,7 +2779,11 @@ Where it goes, per `WHERE-THINGS-ARE.md`:
   - The rotated case: remux with `-c copy -metadata:s:v:0 rotate=90` (it
     probes 640×360 coded and decodes 360×640) and assert the boxes are in
     the upright frame. Mutation: decode at the probed sides.
-  - Cancellation mid-pass leaves no ffmpeg child.
+  - Cancellation mid-pass leaves no ffmpeg child. As built (fix phase),
+    so do a helper SIGKILLed mid-pass and a `client.stop()` mid-pass (the
+    stop now cancels what is in flight, and the helper exits by itself);
+    neither leaves a worker or a half-track. A windowed pass is checked for
+    SOURCE ms and the scene at each sample's time.
   - **MediaPipe (§16.1):** the worker imports on the venv with the
     stubs first on its `PYTHONPATH` (mutation: the stubs dropped from the
     worker's env, and the test fails on `No module named 'cv2'`); the
@@ -2723,9 +2792,17 @@ Where it goes, per `WHERE-THINGS-ARE.md`:
     not under `stubs/` when one is installed); a worker that calls
     `os.abort()` leaves the helper answering and `faces.py` returning
     `Unavailable` (mutation: the worker run in-process, and the helper dies).
+    As built, the path check also starts the helper exactly as main does
+    (`sidecarEnv`, its cwd, the package's `__main__`), which caught stubs
+    added in either place where nothing else did.
+  - **Salient** shares depth's `matte:fp16` session, held by
+    `test_salient.OneSession` (a bake's matte asked for after two salient
+    calls is the same one session), so §12.1's release covers both.
 - `tests/integration/sidecar.int.test.ts`: on CI's bare 3.12, each of
   `vision.faces`, `vision.salient` and `vision.ground` appears in
-  `capabilities` or `degraded`. Membership, not the list.
+  `capabilities` or `degraded`. Membership, not the list. And (fix phase)
+  `client.stop()` with a request in flight ends in the helper's own exit,
+  not the SIGKILL 1.5 s later.
 - **Harness check** `src/renderer/src/harness/reframeCheck.ts`
   (`window.__forgeReframeCheck`):
   - The bridge stub `analyseSubjects` returns, for the harness's
@@ -4544,7 +4621,7 @@ What each step needs:
 | step | without Python | with it | sizes |
 |---|---|---|---|
 | M0 transcript → Clip it | **all of it over the link's own captions**: Get transcript, the rows and handles, chapter chips, Clip it with its words, Add another clip, captions on; a video with no captions keeps the start and end fields, and Listen to it is greyed | Listen to it (Whisper) for a video with no captions; the timeline half over own footage (its transcript is Whisper's) | faster-whisper small 464 MB, its own Get press |
-| 1 reframe | shots (main), every crop centred: **today's `solveCrop`, so nothing new to see**; Follow the subject and Reframe greyed | faces, salient, ground; the stacked two-up (it needs two face boxes) | faces: MediaPipe 0.10.35, 17.8 MB (Mac) / 10.9 MB (Windows) of wheel installed `--no-deps` with stubs, plus the 1.1 MB full-range model (§4.3); YuNet 0.23 MB on the installed onnxruntime only if the fallback is needed; **BiRefNet 109 MB, a download for any user who never baked depth** (on disk only on the dev Mac); Florence-2 int8 275 MB, each its own Get press |
+| 1 reframe | shots (main), every crop centred: **today's `solveCrop`, so nothing new to see**; Follow the subject and Reframe greyed | faces, salient, ground; the stacked two-up (it needs two face boxes) | faces: MediaPipe 0.10.35, 17.8 MB (Mac) / 10.9 MB (Windows) of wheel installed `--no-deps` with stubs, plus the 1.1 MB full-range model (§4.3); YuNet 0.23 MB on the installed onnxruntime only if the fallback is needed; **BiRefNet 115 MB (114,538,221 B), a download for any user who never baked depth** (on disk only on the dev Mac; one matte peaks the helper at 6.6–9.7 GB, §4.4, §12.1); Florence-2 int8 275 MB, each its own Get press |
 | 2 free space | the style's position; **Smart placement greyed** | per shot | — |
 | 3 graphics | over **a link's caption track** only; **no `callout`** (it needs a face box) | over own footage (its transcript is Whisper's), and `callout` | — |
 | own-footage transcript | **none**: own footage has no captions | Whisper | faster-whisper small 464 MB on disk (measured), its own Get press |
@@ -4587,11 +4664,30 @@ the analysis loaded stays resident while the model runs.
 
 - **Measure first** (§15): the helper's peak RSS per capability (faces,
   salient, ground, asr) on the Mac and the Surface, written into
-  `EFFECTS.md`.
+  `EFFECTS.md`. **Salient is measured on the Mac, and it is the problem**
+  (§4.4, `EFFECTS.md` §54): one BiRefNet_lite matte peaks the helper at
+  **6.6–9.7 GB** (7.7–8.7 GB for a session's first), and with ORT's default CPU arena it then holds 4.9–8.7 GB
+  until the session is dropped (arena off: 1.1–1.4 GB after each call,
+  the same peak). On the Surface that is a page-out on the first no-face
+  shot. Faces is cheap on the helper's side (about 100 MB; the worker 45–92
+  MB without the detector, which only your run can load; its ffmpeg 455 MB
+  decoding 4K HEVC to 640×360, the 1c verifier's numbers).
+- **Decide salient's gate before 1f calls it** (open, for you): salient
+  only where the RAM allows (the Mac class), the arena off plus the release
+  below at the job's end, salient in a worker process of its own so its
+  memory goes back on exit (as faces' detector does), or a smaller matte
+  (a re-export; unmeasured). Whichever, the bar below is re-measured with
+  it. Until then the analysis job's no-face shots fall to the centre with a
+  note on a machine under the gate.
 - **Release when done.** A new helper method, `system.release({names})`,
   drops the named sessions under the session lock; the analysis job calls it
-  for everything it opened when it ends, success, failure or cancel. Depth's
-  own cache moves to the same rule: an LRU with a byte cap (set from the
+  for everything it opened when it ends, success, failure or cancel.
+  Measured for salient: dropping `matte:fp16` under the lock took the
+  helper from 4.9–8.6 GB back to 155–294 MB. **salient and depth's parallax
+  bakes share that one session** (`matte:fp16`, depth's), so one release
+  covers both — and the lock covers only the session's build, not its run,
+  so a bake must not overlap an analysis job either. Depth's own cache
+  moves to the same rule: an LRU with a byte cap (set from the
   measurement) rather than "forever".
 - **Serialise Clip it.** The model pass starts only after the analysis job
   has finished and released (§7.5 step 5); Whisper releases before the
@@ -4661,8 +4757,10 @@ Each is named in its step, and each step's first task is its own row:
 1. MediaPipe: **measured on the user's Mac** (it survives, the full-range
    model is accepted, 5 ms a frame at 360×778, CPython 3.14.6; §4.1). Still
    open: the Surface (no Metal; the Windows wheel), mediapipe 1.0.1, the
-   worker's import and start-up time, the cost at the 640 px edge, and
-   recall and false boxes against hand marks on the ten clips. The YuNet
+   cost at the 640 px edge, and recall and false boxes against hand marks
+   on the ten clips. The worker's start is measured (2026-10-13, §4.3): it
+   starts and imports mediapipe in 0.14–0.23 s wall (the import 0.07–0.13 s)
+   on the dev Mac, once per analysis. The YuNet
    comparison is not run (§16.1 answered); YuNet's hand decoder and its
    golden test only if the Surface run fails (§4.1, §4.3).
 2. The scene threshold and minimum shot on footage with hand-marked cuts
@@ -4676,7 +4774,13 @@ Each is named in its step, and each step's first task is its own row:
    Surface, the hand-written loop, box quality, **and its peak RSS** (§4.5).
 4. **The helper's peak RSS per capability** (faces, salient, ground, asr) on
    the Mac and the Surface, and Clip it end to end on the Surface without
-   swapping (§12.1).
+   swapping (§12.1). **Salient measured on the Mac** (2026-10-13, three
+   runs, `EFFECTS.md` §54): 6.6–9.7 GB peak a matte, 4.9–8.7 GB held after
+   with ORT's arena, 155–294 MB once `matte:fp16` is dropped — over the
+   floor machine's budget as built, so its gate is a decision (§12.1).
+   Faces' helper side measured (about 100 MB; the worker without the
+   detector 45–92 MB); the detector's own RSS is your run's to record.
+   Still open: ground, asr, and all of it on the Surface.
 5. The followed crop in the preview while playing: the cut lands on the
    element's frame (§4.9 harness).
 6. **The followed crop at speed 1 on 29.97 fps, 60 fps and VFR sources**:
