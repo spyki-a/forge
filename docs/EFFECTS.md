@@ -4763,3 +4763,253 @@ runs, 0 and 6 in `lqOH-zxtCDE`'s two. The level either side of the cuts,
 for the ear: `eK71EN3P78U`'s second run −2.3 dB in the 40 ms before its
 head and its three tails −6 to −18 dB; `O35KGzkS4VA`'s first run −8 dB on
 both sides of its head; the rest, cut by cut, in each link's README.
+
+**The ten links, read again** with `yt-dlp -J` on 2026-10-13 (the same
+yt-dlp, no app code), beside what the last full run kept. "ASR `-orig`" is
+the automatic tracks that transcribe an audio track rather than translate
+one; the count in brackets is every automatic key, translations included.
+
+| # | id | length | `language` | uploader tracks | ASR `-orig` (automatic keys) | audio languages | chapters | the app kept | words / rows | Get transcript (ms) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | `O35KGzkS4VA` | 63:22 | `en-US` | — | `en-orig` + 1 dub's (159) | 8 | 14 | `en-orig` asr | 10,408 / 1,226 | 5,497 |
+| 2 | `eK71EN3P78U` | 87:13 | `te` | — | `te-orig` (157) | 1 | 24 | `te`, `te-orig` asr | 11,012 / 1,162 | 4,608 |
+| 3 | `lqOH-zxtCDE` | 53:05 | `hi` | — | `hi-orig` + 2 dubs' (159) | 3 | 22 | `hi`, `hi-orig` asr | 8,924 / 1,000 | 5,320 |
+| 4 | `3pG8Hgq3Z8M` | 24:53 | `en-US` | — | `en-orig` + 19 dubs' (181) | 20 | 0 | `en-orig` asr | 4,705 / 440 | 7,697 |
+| 5 | `bvz_zK5ZxpM` | 5:47 | `en-US` | — | `en-orig` (157) | 9 | 6 | `en`, `en-orig` asr | 1,407 / 99 | 4,797 |
+| 6 | `j4aoo1qbGoE` | 10:14 | `en-US` | — | `en-orig` (157) | 21 | 9 | `en`, `en-orig` asr | 1,783 / 158 | 6,427 |
+| 7 | `xON4Vot8j8g` | 30:59 | `en-US` | — | `en-orig` (157) | 13 | 0 | `en`, `en-orig` asr | 4,979 / 988 | 5,354 |
+| 8 | `zEqLXGE_re4` | 5:04 | none | — | none (0) | 1 | 0 | — | — | 3,167 |
+| 9 | `F7Lg2yHtqRA` | 11:01 | none | — | none (0) | 1 | 0 | — | — | 2,844 |
+| 10 | `jze_5hvaVV8` | 6:58 | `en` | `en-US` | `en-orig` (158) | 1 | 0 | `en`, `en-orig` asr | 744 / 133 | 4,565 |
+
+Three things in it the app depends on:
+
+- **A dubbed audio track can carry its own ASR, keyed by its language.**
+  `3pG8Hgq3Z8M` has 20 audio languages and 20 `-orig` keys; its
+  `hi-orig`, `ta-orig`, `ml-orig`, `pa-orig` and the rest are each
+  `lang=<the dub's>` with no `tlang` — a dub's words, timed to a sound the
+  download does not carry (it carries the original, below). Not every dub
+  has one: `O35KGzkS4VA` has 8 audio languages and 2 `-orig` keys,
+  `bvz_zK5ZxpM` 9 and 1, `j4aoo1qbGoE` 21 and 1. The app asks `<l>-orig`
+  for the language the details name, the original's; a dub's is reachable
+  only through a language picked by hand, which the tile offers only when
+  the details name none or the asked one found nothing.
+- **`<l>` is a list of candidates, and yt-dlp takes the last.** Today
+  `O35KGzkS4VA`'s `en` lists the native ASR and then `de-DE→en`;
+  `3pG8Hgq3Z8M`'s lists 19 dubs' translations with the native one fourth,
+  ending on `uk→en`; `lqOH-zxtCDE`'s `hi` lists `bn→hi`, `en→hi` and then
+  the native `hi`. What the last run's `requested_subtitles` resolved —
+  `de-DE→en`, `uk→en`, `hi` — is the last of each, so the order YouTube
+  lists them decides it, and the order moves (`lqOH-zxtCDE`'s `hi` was
+  `bn→hi` in an earlier run). The `tlang` rule above keeps a translation
+  out whatever the order.
+- **Three English ASR tracks are `variant=gemini`** (`3pG8Hgq3Z8M`'s
+  `en-orig`, `j4aoo1qbGoE`'s `en` and `en-orig`), the rest plain or
+  `timing-optimized`. Parsed by the same code; nothing in their readings
+  below sets them apart.
+
+**The runs**, by a rule, not by hand (`tests/fixtures/m0Exit.ts`): the
+first row, as the URL tile shows rows, starting at or after 40 % of the
+video, extended by the next rows while the run is under 8 words, cut to 20
+from its first word — on `lqOH-zxtCDE`,
+whose link carried `&t=2877s`, at 2877 s instead. A second run at 70 %,
+through Add another clip, on `O35KGzkS4VA` (the user's choice for it) and
+`eK71EN3P78U`. And on every caption link a mid-row run near 55 % whose first
+word starts where the word before it ends and whose last ends where the next
+starts: no pause either side, where a neighbour's sound would show. Each
+through the real store — Get transcript, `setUrlRun`, `clipItFromLink`
+(exact, the default), `collectIngest`, `addAnotherClip` — behind main's own
+handlers and the real yt-dlp; then exported through `startRender` at the
+export strip's default 1920×1080, the "pop" style through libass. The same
+range's padded fast cut, through the app's fast path, is the reference.
+
+**How it was read.** The picture: the exact clip's first frame at 160×90
+grey against each frame of the fast cut within ±500 ms of where the head
+(10 s) plus the exact file's own first-frame time puts it, by mean absolute
+difference; the margin is the best's lead over the runner-up, and under
+20 % the match is called ambiguous (a still talking head). The sound: the
+exact clip's first 500 ms at 16 kHz against the fast cut's within ±1 s of the
+head, by FFT correlation; the level either side of each cut is the RMS of
+the 40 ms before and after the head and the tail, on the fast cut. The audio
+track, off the file: the picked format's own section fetched by format id,
+and a dub's beside it, each correlated with the clip's first 500 ms. The
+exports: each captioned frame against a captionless export of the same
+edit; a pixel is the caption's when it differs by more than 40 levels; an
+onset is a captioned frame after a blank one, or one where the caption's own
+pixels in the captioned picture move by 15 % of a captioned frame's median
+ink (and at least 300); onsets matched to the run's words one to one.
+
+**The 18 clips** — the last full run's files in `tests/output/m0-exit/`
+(the words are in its READMEs, none here). Pause before and after: the gap
+from the word before the run and to the word after it, in the transcript.
+Clip − range: the placed clip's frames past the range's, at the project's
+30 fps.
+
+| clip | words | range (ms) | pause before / after (ms) | exact cut, ms (yt-dlp runs) | file: frames @ fps | clip − range | audio picked (audio languages) | sound vs the picked format's / a dub's section (corr) | video |
+|---|---|---|---|---|---|---|---|---|---|
+| `O35KGzkS4VA` first | 20 | 6,320 | 0 / 80 | 6,854 (1) | 152 @ 23.98 | +0 | `140-7` en-US, pref 10 (8) | 0.9935 / 0.1346 (de-DE) | `137` 1080p |
+| `O35KGzkS4VA` second | 9 | 2,240 | 0 / 0 | 5,896 (1) | 54 @ 23.98 | +2 | `140-7` en-US, pref 10 (8) | 0.9998 | `137` 1080p |
+| `O35KGzkS4VA` mid | 8 | 4,240 | 0 / 0 | 5,474 (1) | 102 @ 23.98 | +2 | `140-7` en-US, pref 10 (8) | 0.9984 | `137` 1080p |
+| `eK71EN3P78U` first | 20 | 5,999 | 760 / 161 | 6,966 (1) | 150 @ 25 | +0 | `140` te, pref −1 (1) | — | `137` 1080p |
+| `eK71EN3P78U` second | 20 | 9,240 | 760 / 80 | 10,513 (1) | 231 @ 25 | +0 | `140` te, pref −1 (1) | — | `137` 1080p |
+| `eK71EN3P78U` mid | 10 | 4,240 | 0 / 0 | 8,364 (1) | 106 @ 25 | +0 | `140` te, pref −1 (1) | — | `137` 1080p |
+| `lqOH-zxtCDE` first | 9 | 4,560 | 561 / 1,359 | 7,248 (1) | 114 @ 25 | +0 | `140-2` hi, pref 10 (3) | 0.9999 / 0.2942 (en-US) | `137` 1080p |
+| `lqOH-zxtCDE` mid | 16 | 5,120 | 0 / 0 | 6,926 (1) | 128 @ 25 | +0 | `140-2` hi, pref 10 (3) | 0.9990 | `137` 1080p |
+| `3pG8Hgq3Z8M` first | 13 | 6,160 | 1,080 / 0 | 7,892 (1) | 148 @ 23.98 | +1 | `140-19` en-US, pref 10 (20) | 0.9998 / 0.2484 (ar) | `137` 1080p |
+| `3pG8Hgq3Z8M` mid | 8 | 4,320 | 0 / 0 | 6,329 (1) | 104 @ 23.98 | +1 | `140-19` en-US, pref 10 (20) | 0.9966 | `137` 1080p |
+| `bvz_zK5ZxpM` first | 19 | 3,640 | 160 / 720 | 6,140 (1) | 88 @ 23.98 | +1 | `140-8` en-US, pref 10 (9) | 0.9995 / 0.1405 (es-US) | `137` 1080p |
+| `bvz_zK5ZxpM` mid | 8 | 2,360 | 0 / 0 | 5,482 (1) | 57 @ 23.98 | +2 | `140-8` en-US, pref 10 (9) | 0.9917 | `137` 1080p |
+| `j4aoo1qbGoE` first | 20 | 6,359 | 760 / 41 | 8,563 (1) | 153 @ 23.98 | +2 | `140-20` en-US, pref 10 (21) | 0.9998 / 0.2996 (ar) | `137` 1080p |
+| `j4aoo1qbGoE` mid | 8 | 2,200 | 0 / 0 | 4,181 (1) | 53 @ 23.98 | +0 | `140-20` en-US, pref 10 (21) | 0.9836 | `137` 1080p |
+| `xON4Vot8j8g` first | 12 | 3,840 | 1,160 / 640 | 7,034 (1) | 116 @ 29.97 | +2 | `140-12` en-US, pref 10 (13) | 0.9994 / 0.0903 (de-DE) | `137` 1080p |
+| `xON4Vot8j8g` mid | 8 | 2,640 | 0 / 0 | 7,099 (1) | 80 @ 29.97 | +1 | `140-12` en-US, pref 10 (13) | 0.9990 | `137` 1080p |
+| `jze_5hvaVV8` first | 8 | 3,120 | 6,000 / 1,600 | 7,508 (1) | 94 @ 30 | +0 | `140` en, pref −1 (1) | — | `298` 720p |
+| `jze_5hvaVV8` mid | 8 | 1,601 | 0 / 0 | 6,966 (1) | 49 @ 30 | +1 | `140` en, pref −1 (1) | — | `298` 720p |
+
+On every clip the sound stream starts at 0 and lasts the range to the
+millisecond, and the collected words are exactly the run's, each word's
+start and end the run's less the range's start. `jze_5hvaVV8` lists nothing
+above 720p; the selector took its 720p H.264 (`298`, avc1, 30 fps). A `140`
+at preference −1 is on a video with one audio language, so there is no dub
+to tell it from.
+
+**The exact cut against the fast one** — §41's question again, now with a
+run's word times as the cut points and the same range's padded fast cut as
+the reference. "Picture" is how far the exact clip's first frame shows its
+source ahead of (+) or behind (−) its own sound.
+
+| clip | picture, ms (margin) | exact file's first video pts (ms) | sound lag, ms (corr) | dB before \| after the head | dB before \| after the tail | fast cut, ms (yt-dlp runs) |
+|---|---|---|---|---|---|---|
+| `O35KGzkS4VA` first | +10 (85.0 %) | 0 | 0 (0.9935) | −8.2 \| −8.0 | −14.7 \| −14.2 | 18,372 (1) |
+| `O35KGzkS4VA` second | −31 (44.0 %) | 41 | 0 (0.9998) | −21.4 \| −17.5 | −18.8 \| −12.2 | 18,755 (1) |
+| `O35KGzkS4VA` mid | −31 (89.9 %) | 41 | 0 (0.9984) | −12.4 \| −15.5 | −10.5 \| −18.5 | 15,443 (1) |
+| `eK71EN3P78U` first | 0 (8.4 %, ambiguous) | 0 | 0 (1.0000) | −53.3 \| −53.1 | −14.1 \| −17.6 | 16,152 (1) |
+| `eK71EN3P78U` second | 0 (95.7 %) | 0 | 0 (0.9991) | −2.3 \| −7.7 | −11.6 \| −11.2 | 22,835 (1) |
+| `eK71EN3P78U` mid | 0 (82.6 %) | 0 | 0 (0.9992) | −14.0 \| −9.3 | −6.2 \| −7.4 | 19,150 (1) |
+| `lqOH-zxtCDE` first | 0 (85.7 %) | 0 | 0 (0.9999) | −55.1 \| −37.5 | −35.1 \| −37.2 | 12,660 (1) |
+| `lqOH-zxtCDE` mid | 0 (64.1 %) | 0 | 0 (0.9990) | −29.4 \| −38.9 | −43.5 \| −28.1 | 18,131 (1) |
+| `3pG8Hgq3Z8M` first | −31 (74.8 %) | 41 | 0 (0.9998) | −68.9 \| −74.2 | −20.9 \| −39.0 | 19,629 (1) |
+| `3pG8Hgq3Z8M` mid | −31 (76.1 %) | 41 | 0 (0.9966) | −19.0 \| −19.2 | −16.3 \| −16.3 | 19,829 (2) |
+| `bvz_zK5ZxpM` first | +10 (58.4 %) | 0 | 0 (0.9995) | −36.1 \| −27.4 | −51.1 \| −52.2 | 18,265 (2) |
+| `bvz_zK5ZxpM` mid | −31 (93.3 %) | 41 | 0 (0.9917) | −20.7 \| −18.7 | −32.6 \| −39.0 | 17,708 (1) |
+| `j4aoo1qbGoE` first | −31 (95.5 %) | 41 | 0 (0.9998) | −31.0 \| −33.4 | −19.9 \| −24.4 | 18,813 (1) |
+| `j4aoo1qbGoE` mid | +10 (85.3 %) | 0 | 0 (0.9836) | −19.2 \| −11.3 | −16.1 \| −15.5 | 16,578 (1) |
+| `xON4Vot8j8g` first | −23 (89.7 %) | 33 | 0 (0.9994) | −33.9 \| −34.2 | −23.0 \| −24.9 | 18,787 (1) |
+| `xON4Vot8j8g` mid | −23.4 (96.5 %) | 0 | 0 (0.9990) | −14.7 \| −18.3 | −12.4 \| −25.6 | 15,164 (1) |
+| `jze_5hvaVV8` first | 0 (95.1 %) | 0 | 0 (0.9986) | −35.3 \| −38.7 | −44.6 \| −42.2 | 18,423 (1) |
+| `jze_5hvaVV8` mid | 0 (93.0 %) | 0 | 0 (0.9948) | −45.4 \| −50.9 | −52.5 \| −46.1 | 21,048 (1) |
+
+So on the 25 and 30 fps sources the exact clip's first frame is the
+source's frame at the head; on the 23.976 and 29.97 fps sources its picture
+runs from 10 ms ahead to 31 ms behind its sound, inside one source frame
+(41.7 and 33.4 ms) — wider than the half frame (2.7–16.3 ms) §41 measured
+for starts between frames against a full download, read here against the
+padded fast cut at 160×90. The sound is at 0 every time. The two refused
+fast cuts landed on their second run (`3pG8Hgq3Z8M` mid, `bvz_zK5ZxpM`
+first).
+
+**The exports** (1920×1080 through `startRender`; "both clips" is the
+project after Add another clip):
+
+| export | frames | Dialogues / run words | Dialogue start, at most ms before its word | onsets on libass's frame / words, extra | blank frames' most ink | captioned frames' least ink | held frames' most change | onsets' least change | the mask XOR's held most | shaping-sensitive words |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `O35KGzkS4VA` first | 190 | 20 / 20 | 9 | 20 / 20, 0 | 0 | 3,120 | 72 | 3,117 | 973 | 0 |
+| `O35KGzkS4VA` both clips | 259 | 29 / 29 | 9 | 29 / 29, 0 | 0 | 3,121 | 72 | 3,113 | 973 | 0 |
+| `eK71EN3P78U` first | 180 | 20 / 20 | 9 | 20 / 20, 0 | 1 | 11,955 | 27 | 8,112 | 908 | 12 |
+| `eK71EN3P78U` both clips | 457 | 40 / 40 | 9 | 40 / 40, 0 | 3 | 5,183 | 137 | 5,202 | 3,200 | 18 |
+| `lqOH-zxtCDE` first | 137 | 9 / 9 | 9 | 9 / 9, 0 | 0 | 8,521 | 223 | 7,494 | 1,176 | 0 |
+| `3pG8Hgq3Z8M` first | 186 | 13 / 13 | 0 | 13 / 13, 0 | 1 | 4,586 | 82 | 6,433 | 2,208 | 0 |
+| `bvz_zK5ZxpM` first | 110 | 19 / 19 | 9 | 19 / 19, 0 | — (none blank) | 1,233 | 68 | 5,550 | 4,281 | 0 |
+| `j4aoo1qbGoE` first | 193 | 20 / 20 | 9 | 20 / 20, 0 | 0 | 5,151 | 221 | 5,002 | 1,522 | 0 |
+| `xON4Vot8j8g` first | 117 | 12 / 12 | 9 | 12 / 12, 0 | 0 | 6,825 | 20 | 7,835 | 629 | 0 |
+| `jze_5hvaVV8` first | 94 | 8 / 8 | 9 | 8 / 8, 0 | 0 | 6,347 | 37 | 11,584 | 1,021 | 0 |
+
+The last column but one is why onsets are read off the caption's own
+pixels: the mask XOR of a held line over a shot change moved 4,281 pixels
+on `bvz_zK5ZxpM`, against its least onset of 5,550 there and 3,113
+elsewhere, and an earlier run measured the two overlapping (1,953 held,
+1,554 at an onset). libass is handed `(long long)(pts × (1/fps) × 1000)`,
+so a Dialogue starting exactly on a frame boundary is drawn a frame later
+(13,800 ms is frame 414 at 30 fps, handed as 13,799, first drawn on 415),
+and `toAssTime` floors starts to the centisecond, 0–9 ms early. Both stay
+inside a frame; the check predicts each onset on that clock, and every one
+landed on it.
+
+**Glyphs.** Latin is Anton, the "pop" style's bundled font. Anton has no
+Devanagari and no Telugu; of the 88 fonts in `assets/fonts` (the folder
+`fontsdir` hands libass), Poppins Black and ExtraBold (94 of the Devanagari
+block's 128 code points) and Teko Bold (93) carry Devanagari, and none
+carries Telugu (read from each file's `cmap`, 2026-10-13). On the Mac,
+libass falls back through CoreText: a verifier's `-loglevel verbose` run
+logged `Glyph 0x915 not found` → Kohinoor Devanagari, `0xC2A` → Kohinoor
+Telugu. The last run's onset frames, burnt with `shaping=complex`, have no
+boxes; the Telugu one draws its cluster with the consonant's subscript form,
+not a loose virama, and the Devanagari one its nukta and candra forms. No
+native reader has looked. By the check's rule (a word holding a virama or a
+pre-base vowel sign; a word-final virama counts too, so it is an upper
+bound), 4,853 of `eK71EN3P78U`'s 11,012 words and 2,336 of `lqOH-zxtCDE`'s
+8,924 need complex shaping.
+
+**The no-caption links.** `zEqLXGE_re4` (5:04) and `F7Lg2yHtqRA` (11:01):
+no `language`, no uploader or automatic key at all, one audio language. Through
+the store, `getTranscript()` goes to `none` at once without fetching
+captions (the track flags `00`), and `getTranscript('en')` asks `en` and
+`en-orig` and gets no track: `none` again. The URL tile rendered from that
+state shows "This video has no captions", Listen to it greyed with "needs
+the AI helper", and "Just a part of it" with the From and To fields behind
+it; no language is offered. No media was fetched from either.
+
+**The audio track.** The selector (`-f 'bv*[vcodec!*=av01]+ba/b[vcodec!*=av01]'
+-S 'res:1080,vcodec:h264,acodec:m4a'`, `src/shared/ingest/format.ts`) took
+the original on all six links that carry dubs: the format whose
+`format_note` says "original (default)", `language_preference` 10, in the
+video's own language — `140-7`, `140-2`, `140-19`, `140-8`, `140-20` and
+`140-12`, among 3 to 21 audio languages. Read off the file as well as off
+yt-dlp's choice: the clip's sound correlates 0.9836–0.9999 at 0 ms with that
+format's own section and 0.0903–0.2996 with a dub's. The file's language
+tag says nothing: `eng` on the Telugu `eK71EN3P78U` and on `xON4Vot8j8g`,
+`und` on the rest and on every export.
+
+**An uploader's regional track** (`jze_5hvaVV8`). The app asks `<l>` and
+`<l>-orig` from the primary subtag (`captionKeys`), so an uploader track
+keyed `en-US` on a video whose `language` is `en` is never fetched. Fetched
+apart through main's `runCaptions` in the last run: 47 words and 1 sentence
+end, against the ASR's 744 and 114; merged as §16.12 merges them it would be
+732 words, approximate, 130 rows instead of 133. A regional pattern in the
+one fetch is not safe: beside `--write-auto-subs`, `pt-[A-Z]{2}` on
+`3pG8Hgq3Z8M` requests `pt-PT`, which is `lang=uk&tlang=pt-PT` (a
+translation of a dub), and `pt-BR`, which is `lang=pt-BR` (the Portuguese
+dub's own ASR) — measured 2026-10-12 and again 2026-10-13 with
+`requested_subtitles` under `--simulate`. An uploader-only fetch
+(`--write-subs` without `--write-auto-subs`) reaches neither, measured
+2026-10-13: `--sub-langs 'en-[A-Za-z]+'` wrote `en-US` on `jze_5hvaVV8` in 1.7 s, and the same shape
+wrote nothing on `3pG8Hgq3Z8M` (`pt-`, `de-`, `en-`), `O35KGzkS4VA`,
+`lqOH-zxtCDE` (`hi-`), `eK71EN3P78U` (`te-`) or `bvz_zK5ZxpM`, each in
+1.7–2.5 s. **`--sub-langs` splits on commas**, so `'en-[A-Za-z]{2,4}'` is
+two patterns, `en-[A-Za-z]{2` and `4}`, and found nothing on
+`jze_5hvaVV8`; `{2}` and `+` found `en-US`. The metadata's first track flag
+says before any fetch whether one could find anything: `11` on
+`jze_5hvaVV8`, `01` on `eK71EN3P78U`, and `-J` lists no uploader track on
+the other eight. Whether to add it is `CLIPS.md` §16.32.
+
+**Smaller, recorded.** Loudness on these 3–6 s clips (a verifier's ebur128
+on an earlier run's exports): `jze_5hvaVV8` −41.0 LUFS downloaded, −14.5
+exported (a 26.5 dB lift); `eK71EN3P78U` −15.7 → −13.1 — 0.5–0.9 LU off the
+−14 target, where `loudness.ts` says single-pass loudnorm lands within
+0.04 LU; gating on short clips, not changed. And an exact clip's video
+stream can end up to a source frame past the range while its sound ends on
+it, so an export's last 0–2 frames can be silent (`j4aoo1qbGoE`: 6.362 s of
+sound under 6.433 s of picture, in that earlier run).
+
+**Not measured here.** Windows: the exit check runs on the Mac only and
+skips under CI; CI's ingest tests run the fake yt-dlp, and `exactCut.int`
+the real one against a localhost server, never YouTube — so the real-link
+path, the refused-cut rate and the selector's pick are Mac numbers, through
+the sandbox's proxy. Whether the 2018 Windows ffmpeg's libass has HarfBuzz,
+and which font it falls back to for Devanagari and Telugu without CoreText,
+waits on the next push's `captions.int` line and on a font decision
+(`BETA.md` R14). The job queue and its IPC are not on the check's path (it
+calls main's handlers and `startRender` directly), nor is any card's bake
+(the projects have none). And what only the ear can say — that the
+words heard are the run's, whole at both ends — is listed link by link in
+`CLIPS.md` §3b.9.

@@ -873,7 +873,13 @@ itemised; this is the split, and step 4 keeps Best clips proper (§7).
 > `ingest:captions` give up after 60 s and 120 s with a timeout error, not a
 > cancel; a quit aborts both; the merge keeps ASR words the uploader's lines
 > do not cover (2 words on one video, none on the other) and glues a lone
-> punctuation token as the lone-track parse does.
+> punctuation token as the lone-track parse does. **After M0's exit run
+> (2026-10-13):** the caption run passes `--ignore-errors` and drops any
+> track whose URL carries `tlang` (`debe991` — on two of your dubbed links
+> `<l>` was a dub's machine translation that answered 429 and stopped the
+> run before `<l>-orig`); so "`<l>` is a byte copy of `<l>-orig`" above holds
+> only on a video with no dubs. The metadata run also prints whether any
+> caption track exists (`de3f286`). Both in §3b.9 and `EFFECTS.md` §51.
 
 - **Metadata first**: `buildMetaArgs(url)` (§7.1's measured subset, 1.68 s
   live): title, duration, language, chapters, heatmap, and `channel`,
@@ -1027,6 +1033,12 @@ captions a chip sets the start and end fields instead
 > runs the real yt-dlp through the bundled ffmpeg so Windows CI measures the
 > 2018 build — **run 37571739663 on `d458cb0`, 2026-10-07: green, so the
 > cut is frame-exact there too** — which leaves exact the default (§16.13).
+> **After M0's exit run (2026-10-13):** a sectioned download refused at once
+> (a googlevideo 403, about one in ten on your links) runs again with fresh
+> URLs, up to three runs, and a cut that still fails says ffmpeg's reason
+> (`db75a1f`, `d71a207`). On real streams the exact clip's picture sits
+> within one source frame of its sound and its sound at 0 ms against the
+> fast cut, on 18 clips (§3b.9, `EFFECTS.md` §51).
 
 - **The download is the existing ranged one**: `startIngest` with a request
   override `{range: runRange(…), exact}` (`store.ts:1060-1090` takes only
@@ -1066,6 +1078,14 @@ captions a chip sets the start and end fields instead
   shifted transcript.
 
 ### 3b.5 (f) The start and end fields stay, and (g) captions at once
+
+> **Changed 2026-10-13, from M0's exit run (§3b.9)** — a link with no
+> caption track of any kind (the details' track flags `00`) says "This
+> video has no captions" at once instead of asking a language first, and
+> offers no language (`de3f286`); and captions burn through libass's
+> complex shaper, `ass=…:shaping=complex` in place of `subtitles=`, which
+> ran the simple one, so Hindi and Telugu conjuncts and pre-base vowel signs
+> are drawn joined and in place (`2ead680`). Both in `EFFECTS.md` §51.
 
 - **The fields of sheet 12 are not removed** ("Just a part of it", From and
   To, `IngestPanel.tsx:234-274`). With a caption track loaded they **mirror
@@ -1373,10 +1393,20 @@ commit, beside `trimToRequestedRange`, `section.ts:116-131`).
 - Typecheck green, the suite green (written to a file, `$?` checked), the
   mutations killed, CI read, `WHERE-THINGS-ARE.md` and the census updated.
 
-> **Run 2026-10-13 on your ten links** — `tests/integration/m0Exit.int.test.ts`
-> (opt-in, `FORGE_M0_EXIT=1`; never in CI), all 42 tests green on the last
-> full run; the clips, the runs' words and every reading are in
+> **Built 2026-10-12, run 2026-10-13 on your ten links** —
+> `tests/integration/m0Exit.int.test.ts` (opt-in, `FORGE_M0_EXIT=1`; never
+> in CI), the runs and readings in `tests/fixtures/m0Exit.ts` (unit tests
+> `tests/m0Exit.test.ts`), all 42 tests green on the last full run (693 s);
+> the clips, the runs' words and every reading are in
 > `tests/output/m0-exit/` (gitignored), the numbers in `EFFECTS.md` §51.
+> **Against the first bullet: 8 of the 8 links with captions landed** — each
+> clip exactly its run's words, nothing outside it, captions on; **Add
+> another clip** gave a second clip with only its own words on
+> `O35KGzkS4VA` and `eK71EN3P78U`, the first clip, asset and words
+> unchanged; and on **both no-caption links** Get transcript says `none` at
+> once (and `none` again when English is asked), with the fields, the
+> notice and Listen to it greyed. Nothing measurable in the bullet is left
+> open on the Mac; what is left is the ear's, below.
 > The run found four things in the product, each fixed: Get transcript
 > failed on `O35KGzkS4VA` and `3pG8Hgq3Z8M` (a dub's machine-translated `en`
 > answering 429; `--ignore-errors`, and a translated track is never kept);
@@ -1400,18 +1430,51 @@ commit, beside `trimToRequestedRange`, `section.ts:116-131`).
 > is refused by `checkLinkClip` (`linkClip.ts`), which a verifier's
 > mutation met.
 >
-> **Left to the ear** (each in the link's README with the run's words):
-> that the words heard are the run's, on every clip; the mid-row clips'
-> first and last words (`mid-exact-download.mp4`), where a neighbour's
-> sliver would be; `eK71EN3P78U`'s cuts, which land in loud sound (−2.3 dB
-> in the 40 ms before the second run's head, −6 to −18 dB across the
-> tails); and Hindi and Telugu clips' last words, which end on the 80 ms
-> grapheme estimate (§3b.1 left Hindi and Telugu unmeasured).
-> **Left to you**: whether a no-caption link should open the start and end
-> fields at once; whether to fetch an uploader's regional track
-> (`jze_5hvaVV8`'s `en-US`, 47 words against the ASR's 744 — `EFFECTS.md`
-> §51). And on the next push, Windows CI's `captions.int` line saying
-> whether its libass shapes (not measurable here).
+> **Left to your ear.** In `tests/output/m0-exit/<n>-<id>/`, watch
+> `clip-captions.mp4` (and `second-clip-captions.mp4` where there is one)
+> with that folder's README.txt beside it, which lists the run's words; the
+> mid-row run (no pause either side) has no export, so listen to
+> `mid-exact-download.mp4`. On every clip: are the words you hear the
+> README's, the first and last whole, and nothing of a neighbour? Times are
+> in the source video; what each link adds:
+>
+> 1. `O35KGzkS4VA` — the run at 25:23–25:29 is cut inside speech (−8 dB on
+>    both sides of its head): is its first word whole? Add another clip's
+>    run (44:22–44:24) plays after it in `second-clip-captions.mp4`.
+> 2. `eK71EN3P78U`, Telugu — the second run (61:09–61:19, from 6.0 s in
+>    `second-clip-captions.mp4`) has voice in the 40 ms before its head
+>    (−2.3 dB): does its first word lose its start? All three runs' tails
+>    sit in sound (−6 to −18 dB): are the last words whole? And the
+>    captions: 12 of the first run's 20 words need complex shaping — do
+>    they read right?
+> 3. `lqOH-zxtCDE`, Hindi, the run near 47:57 (47:58–48:03) — its last word
+>    ends on the 80 ms-a-grapheme estimate, 1.4 s before the next word: is
+>    it cut short? (A verifier's energy reading had voice going on about
+>    260 ms past the cut.) The mid run (29:13–29:18) has 6 shaping-sensitive
+>    words on screen.
+> 4. `3pG8Hgq3Z8M` — a clip now (Get transcript failed here before the
+>    fix). Its mid run (13:41–13:46) is cut in sound at both ends (−16 to
+>    −19 dB): a sliver of a neighbour?
+> 5. `bvz_zK5ZxpM` (2:22–2:26) — the clean case: both cuts in quiet, the
+>    tail at −51 dB.
+> 6. `j4aoo1qbGoE` (4:08–4:14) — the next word starts 41 ms after the end
+>    cut: none of it heard, the last word whole? Lip sync: the picture runs
+>    31 ms behind the sound.
+> 7. `xON4Vot8j8g` (12:24–12:28) — the README's first word is there twice:
+>    is it said twice? Lip sync, 23 ms behind.
+> 8. `zEqLXGE_re4` — nothing to hear. In the app, Get transcript says "This
+>    video has no captions" at once, Listen to it greyed.
+> 9. `F7Lg2yHtqRA` — the same.
+> 10. `jze_5hvaVV8` (2:48–2:51) — a quiet source (−41 LUFS) lifted about
+>     26 dB by the export's loudness step: is the background noise
+>     acceptable? A verifier's Whisper heard a different first word from
+>     the README's: which do you hear?
+>
+> **Left to you**: §16.32 (an uploader's regional track), §16.33 (where a
+> cut's edges fall — waits on 2 and 3 above), §16.34 (a no-caption link's
+> start and end fields), and the Indic caption font, `BETA.md` R14. And on
+> the next push, Windows CI's `captions.int` line saying whether its libass
+> shapes (not measurable here).
 
 ---
 
@@ -4657,6 +4720,39 @@ what is needed, where the answer waits on something not yet in hand.
     (recommended), or no names on quotes in v1.
 
     **Answer (2026-10-05):** taken as recommended unless you say otherwise.
+
+**Added 2026-10-13, from M0's exit on your ten links (§3b.9; measured in
+`EFFECTS.md` §51).** Each is **OPEN**.
+
+32. **An uploader's regional caption track.** The app asks `<l>` and
+    `<l>-orig` from the language's primary subtag, so an uploader track
+    keyed `en-US` on a video whose language is `en` is never fetched — one
+    of your ten links (`jze_5hvaVV8`; 47 words and 1 sentence end against
+    the ASR's 744 and 114, so little lost there). A regional pattern in the
+    one fetch would pull translations and dubs' ASR (measured on
+    `3pG8Hgq3Z8M`). Measured to work: a second, uploader-only fetch
+    (`--write-subs` alone, `--sub-langs '<l>-[A-Za-z]+'` — no comma, since
+    yt-dlp splits that option on commas), 1.7 s, `en-US` on `jze_5hvaVV8`
+    and nothing on five others; run only when the details' first track flag
+    says an uploader track exists, which on your ten links is that one
+    video. Recommended: **wait** until a link you care about loses an
+    uploader's text this way, then build it as measured (half a day with
+    its tests).
+33. **Where a cut's edges fall, in Hindi and Telugu and in loud sound.** A
+    word's end is estimated at 80 ms a grapheme (at most 600 ms, never past
+    the next word's start); §3b.1 measured Hindi and Telugu at 120–160 ms
+    and left them open, and a verifier found the last word of every first
+    run on your links ending on that estimate. If links 2 and 3 of §3b.9's
+    ear list sound cut short, recommended: 140 ms a grapheme for `hi` and
+    `te` (the next word's start still bounds it, so no neighbour can be
+    pulled in), re-run on those two links and heard again. A cut that lands in loud sound (`eK71EN3P78U`'s second head) could
+    also snap to the quietest 40 ms within about ±120 ms of the word edge;
+    recommended only if the first change does not settle it, since it moves
+    every cut.
+34. **A no-caption link's start and end fields** sit behind "Just a part of
+    it", as on every link (one click). Open them at once on a link with no
+    captions, or leave them (recommended: leave them — one rule for every
+    link, and your §16.26 answer kept them as they were).
 
 ---
 

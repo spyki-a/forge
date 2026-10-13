@@ -313,7 +313,21 @@ Things testers will notice but can follow the first installer:
 - HEIC through `sips` on macOS.
 - Telugu and Hindi headline capacity, and a Telugu font (the library has
   none; Poppins and Teko cover Devanagari) — a blocker if the testers are
-  Telugu studios.
+  Telugu studios. **Captions too, measured 2026-10-13 on M0's exit links**
+  (`CLIPS.md` §3b.9, `EFFECTS.md` §51): the "pop" style's Anton has no
+  Devanagari or Telugu, and of the 88 fonts in `assets/fonts` only Poppins
+  Black and ExtraBold (94 of the Devanagari block's 128 code points) and
+  Teko Bold (93) carry Devanagari, none Telugu. On the Mac libass falls back
+  through CoreText to Kohinoor Devanagari and Telugu, and since `2ead680`
+  shapes them right (conjuncts joined, the i-matra first); on Windows the
+  2018 build has no CoreText, and both its fallback font and whether its
+  libass has HarfBuzz are unmeasured — the next push's `captions.int` line
+  answers the second. **A decision for you**: bundle Noto Sans Devanagari
+  and Noto Sans Telugu (OFL, the same licence as the pack's Google fonts)
+  and have a Hindi or Telugu transcript's captions name them, so both
+  platforms draw the same letters instead of whatever each system falls
+  back to (recommended, half a day with a render check on both builds); or
+  rely on the system fallback and read Windows CI first.
 - Single-instance lock; a "new version" check against the release page.
 - Keep or drop the meme packs from the manifest.
 

@@ -129,6 +129,17 @@ seconds and the ends are placed exactly on the timeline afterwards — which thi
 app happens to be. Neither is right for every case; the UI should say which is
 which.
 
+**A refused cut runs again.** About one sectioned download in ten (more at
+some hours) failed at once with a bare "ffmpeg exited with code 1": a
+googlevideo `403 Forbidden` on a stream URL, which yt-dlp's `--retries` does
+not reach because the request is ffmpeg's (`EFFECTS.md` §51). A section now
+always carries `--downloader-args 'ffmpeg:-loglevel error'` (the file is
+byte-identical with and without it), so `humanError` can give ffmpeg's
+reason with the URL cut out, and `downloadMedia` runs a sectioned download
+that failed that way again with fresh URLs, up to `CUT_TRIES` (3) runs in
+all; any other failure is not retried. In the ten-link exit run, 34 of 36
+cuts took one run and 2 took two.
+
 **Progress is one bar, not two.** Above 720p YouTube stores video and audio
 separately, so yt-dlp downloads twice and each reports its own 0–100%. Summing
 bytes stops the visible reset; clamping stops the figure dropping when the
@@ -299,13 +310,24 @@ by the renderer and placed as media, and neither of these is media.
 - **`ingest:meta`** → `runMeta`: `--simulate` and one marked print,
   `@forgemeta@%(.{id,title,duration,language,chapters,heatmap,channel,uploader,webpage_url})j`.
   A field the video lacks is omitted by yt-dlp; `parseMeta` makes it `null`
-  (or `[]` for chapters).
-- **`ingest:captions`** → `runCaptions`: `--skip-download --no-simulate
-  --write-subs --write-auto-subs --sub-langs <l>,<l>-orig --sub-format json3`
-  and `@forgesubs@%(requested_subtitles)j` at `after_video` — the whole dict,
-  parsed in TS, because a hyphenated key in a template is subtraction. The
-  renderer sends a language; main makes the keys (the primary subtag), never
-  a regex.
+  (or `[]` for chapters). A second print,
+  `@forgetracks@%(subtitles&1|0)s%(automatic_captions&1|0)s`, says whether
+  yt-dlp listed any uploader track and any automatic one, without printing
+  the dicts (`parseTrackFlags` → `hasCaptions`): `00` on a video with no
+  caption track at all sends the store straight to "This video has no
+  captions" instead of asking a language (`EFFECTS.md` §51).
+- **`ingest:captions`** → `runCaptions`: `--ignore-errors --skip-download
+  --no-simulate --write-subs --write-auto-subs --sub-langs <l>,<l>-orig
+  --sub-format json3` and `@forgesubs@%(requested_subtitles)j` at
+  `after_video` — the whole dict, parsed in TS, because a hyphenated key in a
+  template is subtraction. The renderer sends a language; main makes the keys
+  (the primary subtag), never a regex. On a video YouTube has dubbed, `<l>`
+  can resolve to an automatic translation of a dub's ASR (`tlang` in its
+  URL), and on two of the ten exit links that request answered 429 every
+  time: `--ignore-errors` turns the failed key into a warning so `<l>-orig`
+  is still written, and `parseRequestedSubtitles` drops any entry whose URL
+  carries `tlang`, downloaded or not — a translation is never the words
+  spoken (`EFFECTS.md` §51).
 - **Where the files land**: `userData/url/<linkKey>/<linkKey>.captions.<lang>.json3`,
   kept as the reload cache for the clip collected later. `linkKey` is the
   link's key plus a digest of its URL (`linkCacheKey`), so two YouTube ids
