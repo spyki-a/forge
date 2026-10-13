@@ -300,6 +300,18 @@ class CoverageRule(unittest.TestCase):
         _coverage, box = salient._subject(soft)
         self.assertEqual(box, {"x": 0.0833, "y": 0.2, "width": 0.8333, "height": 0.3})
 
+    def test_speckle_is_cleaned_before_the_box_is_drawn(self) -> None:
+        # subjectBox's rule is drawn round the cut once _clean_mask has dropped
+        # pieces under max(64, 0.0004 x w x h) px: 419 at BiRefNet's 1024².
+        # A 15 x 15 speck (225 px) holds 15 of the busiest row's 400 px, 3.75 %
+        # — over the trim — so only the cleaning keeps it out; round the raw
+        # cut the box would be x 0.0488, y 0.0488, 0.6836 x 0.7324. The share
+        # is judged BEFORE the cleaning, as in depth.py, so it counts the speck.
+        soft = self.matte(1024, 1024, (400, 350, 400, 400), (50, 50, 15, 15))
+        coverage, box = salient._subject(soft)
+        self.assertEqual(coverage, round((160_000 + 225) / 1024**2, 4))
+        self.assertEqual(box, {"x": 0.3418, "y": 0.3906, "width": 0.3906, "height": 0.3906})
+
 
 # ---------------------------------------------------------- items and errors
 
