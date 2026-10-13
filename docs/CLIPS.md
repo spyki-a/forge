@@ -1986,6 +1986,76 @@ gate's second number.
 
 ### 4.6 1e — The crop path — `src/shared/reframe/path.ts` · 2.5 days (+0.5 for the two-up)
 
+> **Built 2026-10-13** — `src/shared/reframe/types.ts` as below
+> (`SUBJECT_TRACK_VERSION` 1); `src/shared/reframe/path.ts`: `cropPath`,
+> `PATH_RULES` as below, `FACE_SHARE` 0.2, `OPENING_MS` 1000, `HEAD_MS` 125,
+> `UPPER_THIRD`, and the types `Pan`, `HalfCrop`, `ShotWhy`, `ShotCrop`,
+> `CropPath`, `HalfOffsets`, `PathFollow`. **Read where the rules were
+> open, and fixed after review** (each measured, each a test):
+> - **The head (rule 5)** is a time, 125 ms — three frames at 24 fps, more at
+>   any faster rate; a sample that close after the cut starts no trigger
+>   clock. It was built as three of the track's samples, 1.5 s at 2 a
+>   second, and no shot under about 2.6 s could pan.
+> - **The running median** is centred, over `smoothMs` and never fewer than
+>   three of the track's samples (±1.5 of its spacing). Over `smoothMs` alone
+>   it held one sample at 2 a second, and a pan fired on a stray box aimed at
+>   it: 216 px past the face, then a second pan back.
+> - **One person** (`FACE_SHARE` is also the second-person bar: a second face
+>   on under 20 % of samples is a stray). A 'face' shot follows the face
+>   nearer the one last followed, from a sample that holds only one; it
+>   followed `faces[0]`, and a larger passer-by on three samples pulled the
+>   crop off its subject for the rest of an 8 s shot.
+> - **On y**, the subject's centre goes at the upper third, then the crop
+>   moves just enough to keep a subject that fits with its margin whole —
+>   held and panned alike (`aim`). At the upper third alone, a 500 px
+>   two-shot that passed rule 3's fit lost 48 px of its top face, and a
+>   460 px face 28 px. Centred on x this changes nothing.
+> - **Rule 6** is for a shot with no face at all in its opening second: the
+>   ladder holds it (`why` from the ladder, and a note) and the face, once it
+>   shows, earns a pan by rule 5. A face there that is not yet the subject — a
+>   two-shot's second person still to come, the larger person not yet in —
+>   starts the crop on the subject's median over the shot, as a two-up's half
+>   does, keeping its `why`. It went to the ladder with the note "no face in
+>   its first second": a two-shot opening on one face started centred with
+>   neither face in the crop.
+> - **A box that is not four finite numbers with a size** (NaN, JSON's null
+>   for it) is a sample without that face; it made a NaN position.
+> - A pan that cannot end strictly before its shot's end is not started; an
+>   offset is a share of the crop's free-axis length, added after the solve
+>   and re-clamped, and a pan it flattens goes; a two-up clip's height is
+>   floored to a multiple of 4 (1080 stays, 1078 → 1076) so its halves are
+>   exactly half; a canvas of the source's own shape gives every shot
+>   'centre' at 0 with no pans and never a two-up (1f emits no follow keys
+>   for it).
+>
+> **What 1f gets.** Per shot one held `at` (a step on the cut's frame, §45's
+> half-frame boundary) and `pans` as `{fromMs, toMs, to}` in source ms:
+> absolute targets, sequential (each starts at least `minHoldMs` after the
+> last ended), each ending before the shot does — in SOURCE ms, so after
+> `timelineFrameAt` a pan can still be easing on the cut's frame by up to
+> half a frame, which `reframeKeys` clamps or asserts. The ease is
+> smoothstep, `keyframes.ts`' `eased('smooth')`, a comment contract; a
+> `positionAt(path, ms)` for a clip's in-point mid-pan, the preview and the
+> tests is 1f's to write beside it. The fixed axis is always 0. A two-up
+> shot's `at`/`pans` mirror the top half; a single shot on a two-up clip keys
+> the top half at (x, 0) and the bottom at (x, `half.height`). `offsets` are
+> keyed by `shot.startMs` as 1b writes it (fractional, e.g. 2035.37), so a
+> re-analysis that moves a cut by a microsecond orphans a drag: match by
+> index or within a tolerance. ffmpeg puts crop's x at `lrint(x) & ~1`
+> (`EFFECTS.md` §52), so the preview of an eased frame takes `Math.round(x)
+> & ~1`; the 599-term flat sum of this shape matched a static crop on every
+> one of 3,000 frames. Tests: `tests/reframePath.test.ts`, 41 cases over
+> synthetic tracks. Mutations killed: dead zone 0; trigger ignored; the
+> union unchecked; a size per shot; the two-up on a lost face; the halves by
+> size, either order; no upper clamp; the speed cap; the minimum hold; the
+> head as samples, and none; a pan ending on its cut; an offset as a share
+> of the source; no smoothing, and `smoothMs` alone; the same-shape branch;
+> a half's offset on both halves; the static rule removed, and its margin 0;
+> the fit without its margin; `bothShare` 0.9, and `>` for `>=`; the largest
+> face followed, and the follower seeded by size; the y clamp removed, and
+> the pan target unaimed; rule 6's ladder on any absence, and on a face
+> anywhere; every box usable, null let through.
+
 Pure. The rules, with constants named so tests and the eval can hold them:
 
 ```ts
