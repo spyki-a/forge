@@ -13,6 +13,7 @@ Standard library only: unittest, no pytest.
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -29,6 +30,13 @@ from forge_sidecar.rpc import Cancelled, Server, Unavailable
 FFMPEG = os.environ.get("FORGE_TEST_FFMPEG", "")
 FFPROBE = os.environ.get("FORGE_TEST_FFPROBE", "")
 OUT = os.environ.get("FORGE_TEST_OUT") or tempfile.mkdtemp(prefix="forge-salient-")
+_MADE_OUT = OUT != os.environ.get("FORGE_TEST_OUT")
+
+
+def tearDownModule() -> None:
+    # A folder of our own (run by hand, no FORGE_TEST_OUT) goes; the runner's is its to keep.
+    if _MADE_OUT:
+        shutil.rmtree(OUT, True)
 
 try:
     import numpy  # noqa: F401
@@ -87,7 +95,10 @@ class Hub:
             for _ in range(self.chunks):
                 bar.update(1_000_000)
                 self.updates += 1
-        folder = tempfile.mkdtemp(prefix="forge-hub-")
+        # Into the cache folder it was handed, as the real one writes: the
+        # test that made that folder removes it.
+        folder = os.path.join(cache_dir or tempfile.gettempdir(), "hub-stand-in")
+        os.makedirs(folder, exist_ok=True)
         self.cached = os.path.join(folder, "model_fp16.onnx")
         with open(self.cached, "wb") as handle:
             handle.write(b"onnx")
@@ -170,6 +181,7 @@ class TheModelGate(unittest.TestCase):
 
     def setUp(self) -> None:
         self.models = tempfile.mkdtemp(prefix="forge-models-")
+        self.addCleanup(shutil.rmtree, self.models, True)
         env = mock.patch.dict(os.environ, {"FORGE_MODELS_DIR": self.models})
         env.start()
         self.addCleanup(env.stop)

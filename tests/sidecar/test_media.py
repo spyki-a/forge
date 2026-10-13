@@ -34,6 +34,13 @@ from forge_sidecar.rpc import Cancelled, Server
 FFMPEG = os.environ.get("FORGE_TEST_FFMPEG", "")
 FFPROBE = os.environ.get("FORGE_TEST_FFPROBE", "")
 OUT = os.environ.get("FORGE_TEST_OUT") or tempfile.mkdtemp(prefix="forge-media-")
+_MADE_OUT = OUT != os.environ.get("FORGE_TEST_OUT")
+
+
+def tearDownModule() -> None:
+    # A folder of our own (run by hand, no FORGE_TEST_OUT) goes; the runner's is its to keep.
+    if _MADE_OUT:
+        shutil.rmtree(OUT, True)
 
 try:
     import numpy  # noqa: F401
