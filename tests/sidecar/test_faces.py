@@ -557,6 +557,27 @@ class Pipe(unittest.TestCase):
         self.assertLess(time.monotonic() - started, 10)
         self.assertFalse(os.path.exists(self.partial))
 
+    def test_the_worker_is_started_with_no_window(self) -> None:
+        # A packaged Windows app has no console of its own, so a console
+        # python.exe started without CREATE_NO_WINDOW opens a window on every
+        # analysis (CLAUDE.md, "Spawning"). media._NO_WINDOW is {} off Windows,
+        # where Popen refuses creationflags, so the flag is put in and Popen
+        # watched: what reaches it is what the packaged app would pass.
+        seen: list[dict] = []
+        real = subprocess.Popen
+
+        def spy(*args: object, **kwargs: object) -> object:
+            seen.append(dict(kwargs))
+            if os.name != "nt":
+                kwargs.pop("creationflags", None)
+            return real(*args, **kwargs)  # type: ignore[call-overload]
+
+        with mock.patch.object(media, "_NO_WINDOW", {"creationflags": 0x08000000}), \
+                mock.patch.object(faces.subprocess, "Popen", side_effect=spy):
+            self.run_with('say("done", "0", "0")')
+        self.assertEqual(len(seen), 1)
+        self.assertEqual(seen[0].get("creationflags"), 0x08000000)
+
     def test_the_real_worker_exits_cleanly_with_its_stdin_still_open(self) -> None:
         # The worker module itself, through faces.worker_command, in its import
         # mode with the stand-in (no numpy, no mediapipe: runs on a bare
