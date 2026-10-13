@@ -1728,6 +1728,16 @@ fixture or a build, only the two ratings.
 > `end()` at `close`; a null `outputPath` unlinked; a cancel settling early,
 > or not killing; an abort that does not cancel; a window's progress against
 > the file; the later cut lost on a tie; the default threshold ignored.
+> **Still 1a's, and CI's.** `SCENE_DEFAULTS`' T 0.3 and `minShotMs` 500 are
+> placeholders until 1a's eval on your ten clips with hand-marked cuts sets
+> them (§4.1, §15 row 2). The tests read `SCENE_DEFAULTS` or name their own
+> values: every case passed with T at 0.45 and at 0.15 (the fix's check).
+> A minShot up to 1 s, the top of 1a's grid, leaves the fixture's shots
+> whole (its shortest, the window case's, are 1 s; read from the test, not
+> run). **The 2018 build's scores have never been run**: the table case runs
+> in Windows CI on the next push, and a row off the table fails with every
+> off row named in the run's annotation. The stderr lines verbatim, the table
+> beside the Y path's, the timings and the cancel are in `EFFECTS.md` §53.
 
 In main, not the Python helper: it needs only ffmpeg, so it works without
 Python (BETA R4), and the stems handler is the precedent (`ipc.ts:762-770`).
@@ -2027,6 +2037,25 @@ gate's second number.
 >   exactly half; a canvas of the source's own shape gives every shot
 >   'centre' at 0 with no pans and never a two-up (1f emits no follow keys
 >   for it).
+> - **The other open rules, as the builder read them.**
+>   - The axis is y when the target's ratio is wider than the source's by
+>     more than 0.001.
+>   - Rule 3's fit is judged on the MEDIAN union over the two-face samples,
+>     plus twice the margin. Two faces together on 20 % to under 60 % of
+>     samples is a face lost (`larger`, with its note); under 20 %, the
+>     second face is a stray (`face`).
+>   - `larger` keeps its people by side: by x order where both show, and a
+>     lone face goes to the side whose median place it is nearer. It frames
+>     the side with the larger median area, a tie going left, and a sample
+>     showing only the other person holds.
+>   - Rule 4's held position is the median smoothed centre over the opening
+>     second. The static test counts only samples that hold the subject.
+>   - A rule-5 pan starts on the sample that fires it and takes
+>     `max(panMs, ⌈1000 · distance / (len · maxSpeed)⌉)` ms. The next pan
+>     may start no sooner than `minHoldMs` after it ENDS.
+>   - A two-up half's y is held for the shot at the opening second's median
+>     face.
+>   - Rule 7 rounds to the nearest even and clamps to [0, ⌊room/2⌋ · 2].
 >
 > **What 1f gets.** Per shot one held `at` (a step on the cut's frame, §45's
 > half-frame boundary) and `pans` as `{fromMs, toMs, to}` in source ms:
@@ -4446,7 +4475,8 @@ the analysis loaded stays resident while the model runs.
 
 | filter / option | used by | merged | status |
 |---|---|---|---|
-| `select='gt(scene,T)'` after `format=rgb24`, `metadata=print`, at **`-loglevel info`** | 1b shots | 2012 / 2012 / 2016 | **dated**; measured on the Mac. The score differs per build without `format=rgb24` (§4.2); at `-loglevel error` nothing prints (measured). **Windows parity is §4.9's committed score table, asserted in CI** |
+| `select='gt(scene,T)'` after `scale=320:-2,format=rgb24`, on a `split` branch that ends in `nullsink`; `metadata=print` at **`-loglevel info`** | 1b shots (`sceneArgs`, built 2026-10-13) | 2012 / 2012 / 2016; `split` and `nullsink` are in `allfilters.c` at `f22fcd4` (read) | **built**; measured on the Mac (`EFFECTS.md` §52, §53). Without `format=rgb24` the score differs per build (§4.2). At `-loglevel error` nothing prints (re-measured on the built shape: 0 lines). `select` on the output path starves `-progress`, hence the split. It is on `ANALYSIS_SHAPES`, where `scdet` in its place fails the floor test. **Windows parity is §4.9's committed score table, asserted in CI; it has not run there yet and will on the next push** |
+| `-ss S -t D`, both before `-i` (a window) | 1b `findShots`' window (no caller: a clip's shots come from the whole-file pass) | input `-t` is at `f22fcd4` (`ffmpeg_opt.c:3360`, `OPT_INPUT`; trimmed at the graph's input, `ffmpeg_filter.c:846`; read) | measured on the Mac: with `-t` after `-i`, a 3–7 s window printed a cut at source 8 s; with it before, only the cuts at 4 and 6 s. On MPEG-TS the window seeks wrong and finds nothing (`EFFECTS.md` §52). A camera's `.MTS` is unmeasured |
 | `scale` before analysis; `-ss` before `-i` for one frame | 1b, 1c, 1d, 1g (in the helper) | old | measured on the Mac (30–80 ms a seek, exact shot) |
 | `crop` with a per-frame `x`/`y` expression (`if`, `lt`, eased segments), literal `w`/`h` | 1f crop keys | crop 2010s; eval functions 2011 | measured on the Mac (step and linear exact); **dated** for Windows; the reframe render check runs in CI |
 | **the stacked two-up**: `split=2`, two `crop`s each with keyed `x` and `y` and literal `w`/`h`, `vstack`, with clip-indexed labels | 1f (§4.6 rule 3, §4.7), the render and the footage pre-pass's `-vf` | crop 2010s; split about 2011; vstack 2015 (the dates as known, not re-read in the 2018 source for this revision) | **measured on the Mac's 4.4 build for this revision**: a single shot as two halves is bit-identical to the one crop (`framemd5`, 60 frames), held keys switch both halves on the exact frame, and the shape runs inside `-vf` (compared over rawvideo; `EFFECTS.md` §38). **Dated** for Windows; §4.9's two-up rows run it in CI |
@@ -4463,7 +4493,8 @@ the analysis loaded stays resident while the model runs.
 
 Every new shape goes into `tests/oldestFfmpeg.test.ts`: the render shapes
 (the two-up's included) into `SHAPES`, and the analysis argv into the new
-`ANALYSIS_SHAPES`.
+`ANALYSIS_SHAPES`. `sceneArgs` has been there since 2026-10-13, registered
+with a window, so `-ss` and `-t` are scanned too.
 
 ---
 
@@ -4502,9 +4533,13 @@ Each is named in its step, and each step's first task is its own row:
    recall and false boxes against hand marks on the ten clips. The YuNet
    comparison is not run (§16.1 answered); YuNet's hand decoder and its
    golden test only if the Surface run fails (§4.1, §4.3).
-2. The scene threshold and minimum shot on footage with hand-marked cuts;
-   the per-cut scores on the 2018 build against the committed table (§4.1,
-   §4.9).
+2. The scene threshold and minimum shot on footage with hand-marked cuts
+   (1a, §4.1): open. The per-cut scores against the committed table:
+   **measured on the Mac** (2026-10-13, `EFFECTS.md` §53: 1.000 / 1.000 /
+   0.400 / 0.200, beside the Y path's 0.40 / 0.61 / 0.34 / 0.17). **The 2018
+   build's scores are Windows CI's to measure on the next push**: they come
+   from `shots.int.test.ts`' table case, within 0.01, which has not run
+   there yet (§4.2, §4.9).
 3. Florence-2 int8 on the CPU: seconds per grounding on the Mac and the
    Surface, the hand-written loop, box quality, **and its peak RSS** (§4.5).
 4. **The helper's peak RSS per capability** (faces, salient, ground, asr) on
@@ -4551,6 +4586,17 @@ Each is named in its step, and each step's first task is its own row:
     1's exit (§4.1, §4.10).
 22. The stacked two-up (`split`, two keyed `crop`s, `vstack`) on the 2018
     build, through §4.9's two-up rows in Windows CI (§4.7, §13).
+23. The shot finder's other paths that only Windows runs, in the same CI
+    run as row 2 (§4.2):
+    - the `split`/`nullsink` graph inside `-vf`. It was read in the 2018
+      source (`ffmpeg_filter.c:1080`, a simple graph's one open input and
+      one open output), not run;
+    - the cancel through `taskkill /f /t`, asserted to leave ffmpeg exited
+      with a code that is not 0.
+24. A window over a camera's AVCHD `.MTS` (MPEG-TS, short GOPs). An MPEG-TS
+    copy of the fixture seeked wrong and found no cut (`EFFECTS.md` §52).
+    This is to measure before any caller passes a window; none does today
+    (§4.2).
 
 ---
 

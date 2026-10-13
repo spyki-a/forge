@@ -5105,3 +5105,165 @@ distinct x, 1,196 frames on a fractional x mid-pan, the cut frames and the
 frames before them among them (the review had sampled eleven the same way).
 0.61 s against 0.33 s for a static crop. Not run on the 2018 build, whose
 `eval.c` reads `+` in the same loop (§48).
+
+## 53. The shot finder on the bundled builds — the five-cut fixture's scores, the line shapes, and the runner's log level (2026-10-13)
+
+For `docs/CLIPS.md` §4.2 (1b), as built at `128765d` with the review's
+fixes. This section holds the numbers a run on another build is compared
+against. §52 holds the shape's two corrections, the window and where crop's
+x lands; this one holds what the built pass prints and scores. Development
+Mac, the bundled ffmpeg (4.1.5 package, reporting 4.4); each number re-run
+for this section on 2026-10-13 unless it is credited. **The 2018 build is not run here**: the
+score table below is asserted in Windows CI on the next push. Every clip is
+a lavfi source made on the spot; no third-party media.
+
+**The fixture.** Five `color` sources, `0xFF0000`, `0x0000FF`, `0x646464`,
+`0x8C8C8C` and `0x787878`, two seconds each at 640×360 and 30 fps, joined
+with `concat` and encoded lossless (`libx264 -qp 0`, yuv420p): 10,778 bytes.
+`shots.int.test.ts` makes it; only its table is committed
+(`tests/fixtures/reframe/scene-scores.json`). Five sources make **four**
+cuts, at frames 60, 120, 180 and 240. The clip is H.264 4:2:0, as a phone's
+footage is, and not an RGB `ffv1`: an RGB-stored clip scores the same with
+or without `format=rgb24` (the builder's measurement), so it could not catch
+that format being dropped.
+
+**The argv the runner spawns** (`SHOTS_GLOBALS`, then `sceneArgs`, then
+`runFfmpeg`'s appended progress flags):
+
+```
+ffmpeg -nostdin -loglevel info -hide_banner -nostats -i five.mp4 -an
+       -vf "scale=320:-2,format=rgb24,split[scored];[scored]select='gt(scene,0.1)',metadata=print,nullsink"
+       -f null - -progress pipe:1 -nostats
+```
+
+**What it writes to stderr.** At T 0.1 it writes 34 lines. First comes the
+24-line banner (`Input #0`, `Stream mapping`, `Output #0, null`). Then come
+two lines per picked frame, verbatim:
+
+```
+[Parsed_metadata_4 @ 0x15713abb0] frame:0    pts:30720   pts_time:2
+[Parsed_metadata_4 @ 0x15713abb0] lavfi.scene_score=1.000000
+[Parsed_metadata_4 @ 0x15713abb0] frame:1    pts:61440   pts_time:4
+[Parsed_metadata_4 @ 0x15713abb0] lavfi.scene_score=1.000000
+[Parsed_metadata_4 @ 0x15713abb0] frame:2    pts:92160   pts_time:6
+[Parsed_metadata_4 @ 0x15713abb0] lavfi.scene_score=0.400000
+[Parsed_metadata_4 @ 0x15713abb0] frame:3    pts:122880  pts_time:8
+[Parsed_metadata_4 @ 0x15713abb0] lavfi.scene_score=0.200000
+```
+
+Last come two closing lines. One is the final report, which `-nostats` does
+not suppress (`frame=  300 fps=0.0 q=-0.0 Lsize=N/A time=00:00:10.00
+bitrate=N/A speed=65.4x`); the other is `video:157kB audio:0kB …`. Every
+line, the report's too, ended in `\n`. What the shape says:
+
+- **Both lines carry the filter instance's prefix**, `Parsed_metadata_4`,
+  the fifth filter of the graph (scale, format, split, select, metadata).
+  Without `format=rgb24` it is `_3`. `sceneLogReader` pairs a score with
+  its time by that prefix, not by adjacency.
+- **`frame:` counts the picked frames** (0, 1, 2, 3), not the source's, so
+  the time comes from `pts_time`. `pts:` is in the stream's time base,
+  1/15360 here (30720 = 2 s). Its `%-7s` pads but never truncates, so a long
+  timestamp prints `pts:18993151 pts_time:1236.53` with one space between
+  them. `parseSceneLog` reads that line as 1,236,530 ms (checked with a
+  one-off case; there is no committed test for it).
+- **`pts_time` is six significant digits** (`%.6g`). Measured by shifting
+  the timestamps inside the graph (`setpts=PTS+1234.5333/TB` before the
+  split): the cut at 2 s printed **1236.53**, and with 12345.5333 it printed
+  **12347.5**. So from 1,000 s it is printed to 10 ms, an error of at most
+  5 ms, which is half a frame at 100 fps. From 10,000 s it is printed to
+  100 ms, an error of up to 50 ms, more than half a frame at any common
+  rate. The integer `pts:` is exact throughout.
+- **At 29.97 fps** (red for 61 frames, blue for 46, green for 60, at
+  30000/1001), the cuts on frames 61 and 107 print `pts:61061
+  pts_time:2.03537` and `pts:107107  pts_time:3.57023` (time base 1/30000).
+  `round(ms × 30000/1001 / 1000)` gives 61 and 107.
+- **After a seek, `pts_time` counts from the seek.** `-ss 3.5` before `-i`
+  printed 0.5, 2.5 and 4.5 (source 4, 6 and 8 s) over 195 frames. `-ss 3 -t
+  4`, both before `-i`, printed 1 and 3 over 120 frames. With the `-t` after
+  `-i` it printed 1, 3 **and 5**. The output still counted 120 frames, but
+  at 36.8× against 62.2×, because the scored branch kept reading (§52).
+
+**The scores.** The fixture at T 0.1, through the built pass and through the
+same graph without `format=rgb24`. The last column is each source's pixel
+through `scale=320:-2,format=rgb24`, the frame `select` scored
+(`shots.int.test.ts`' note):
+
+| cut | frame | rgb24, built | without `format=rgb24` (the Mac's Y path) | decoded rgb24 |
+|---|---|---|---|---|
+| red → blue | 60 | **1.000000** | 0.400000 | 252,0,0 → 0,0,253 |
+| blue → grey 100 | 120 | **1.000000** | 0.610000 | 0,0,253 → 98,98,98 |
+| grey 100 → grey 140 | 180 | **0.400000** | 0.340000 | 98 → 138 |
+| grey 140 → grey 120 | 240 | **0.200000** | 0.170000 | 138 → 118 |
+
+- **The grey cuts are |ΔA|/100 of the DECODED levels** (40 and 20) on
+  rgb24. The H.264 round trip moved 100/140/120 to 98/138/118 and kept the
+  steps.
+- **The first column is the committed table**, held within 0.01.
+- **The second column is the Mac's alone.** The 2018 build's `select`
+  accepts only RGB24/BGR24 for scene detection (`f_select.c` at `f22fcd4`,
+  read, not run), so it scores rgb24 with or without the format, while the
+  Mac without it scores Y. Before the format was forced, one T meant two
+  thresholds: at T 0.5 the red→blue cut is found on rgb24 and missed on Y.
+- **Through `findShots`**: T 0.3 (today's default) finds frames 60, 120 and
+  180; T 0.5 finds 60 and 120; T 0.1 finds all four at the table's scores.
+  These come from the integration note, three runs today.
+
+**Time.** The built argv, timed by wall clock from the shell, three runs
+each:
+
+| clip | runs | realtime |
+|---|---|---|
+| the fixture, 10 s at 640×360 | 0.25 / 0.18 / 0.18 s (the first cold) | ~55× |
+| 60 s of 1080p30, `testsrc2` with its hue turned 72° every 10 s, H.264 `veryfast` (39.7 MB) | 3.64 / 3.48 / 3.52 s | ~17× |
+| 20 s of flat grey 4K, `ultrafast` (84 kB, the cancel's clip) | 2.58 / 2.52 / 2.54 s | ~8× |
+
+- **The long clip's five cuts** scored 0.970533 / 0.656766 / 0.831839 /
+  0.693913 / 0.982717 at 10/20/30/40/50 s, and nothing else scored over 0.3.
+- **Other runs were faster.** The builder's 60 s clip (`testsrc2`, then
+  `mandelbrot` from 40 s) ran in 2.80–2.85 s, and §52's hue clip in
+  2.86–3.06 s. Today's machine was slower or busier.
+- **The order of cost holds** at about 3–3.6 s a minute of 1080p. So the
+  shots pass over a 10-minute 1080p clip is about 30–36 s of `CLIPS.md`
+  §4.10's 90 s
+  analysis budget (extrapolated, not run).
+- **The 4K clip's time is all scaling**: a tiny file that takes seconds.
+
+**The log level, re-confirmed on the built shape.** The same argv at
+`-loglevel error` exits 0 and writes **zero** lines of stderr: no cut and
+no error, nothing to say anything went wrong. `metadata=print` logs at INFO
+(`CLIPS.md` §4.2's table, 2026-10-05; `f_metadata.c:174` at `f22fcd4`). `runFfmpeg`'s
+own globals are `-hide_banner -nostdin -loglevel error -y` (`run.ts:130`),
+so the shot finder passes `complete: true` with its own `-nostdin -loglevel
+info`. With `error` put back in `SHOTS_GLOBALS`, four integration tests
+fail, each with zero cuts (the builder's mutation, run again by the review).
+
+**Progress and the cancel.**
+
+- **Progress reaches the end.** On the fixture, `-progress` sent two
+  reports, `out_time` 0.033333 and then 10.000000, followed by
+  `progress=end`. Every frame reaches the output, so the bar reaches the end
+  (§52 has what `select` on the output path did).
+- **The cancel lands at the first report.** The cancel test runs
+  `findShots` over the 20 s 4K clip and aborts at the first report mid-run,
+  **0.002** of the clip. `killProcess` SIGKILLs ffmpeg on POSIX, and
+  `findShots` rejects with `CancelledError` only at the child's `close`.
+- **It settled after 39 / 39 / 36 ms** in three runs today (the builder's
+  runs: 34–80 ms; the review's: 37 ms). The child is gone
+  (`process.kill(pid, 0)` throws) and its exit code is not 0.
+- **Why the test asserts the exit code.** A cancel that only set its flag
+  still rejected, but only after ffmpeg had read the whole clip: 2.3 s and
+  8.0 s in two measured runs.
+- **A signal that is already aborted spawns nothing.**
+
+**Not measured here.**
+
+- **The 2018 build, at all.** The table, the `split` graph inside `-vf`, and
+  the cancel through `taskkill /f /t` (exit code 1) are Windows CI's to run
+  on the next push.
+- **How an off row would show.** A row off the table fails `scores every cut
+  as the committed table says` with every off row named, as dropping
+  `format=rgb24` showed (`red to blue: 0.4, the table 1`, …). The run's
+  annotations show that without a sign-in. The integration note with the
+  decoded pixels is written on the runner but not uploaded.
+- **Real footage with hand-marked cuts, and so T and the minimum shot**, are
+  1a's (`CLIPS.md` §4.1).
