@@ -39,6 +39,11 @@ plan's "109 MB" is du's MiB)."""
 
 LABEL = "the subject finder"
 HOST = "huggingface.co"
+"""The host the download is asked of, as the dock names it. The bytes come from
+its CDN: the resolve URL answers 307 to the repo's current name
+(``onnx-community/BiRefNet_lite-ONNX``), then 302 to ``us.aws.cdn.hf.co``
+(measured by headers, 2026-10-13), so a restricted network must allow
+``huggingface.co`` and ``*.hf.co`` (docs/SIDECAR.md)."""
 
 CUT = 0.5
 """Where the soft matte becomes the subject: depth.py's own cut (``> 0.5``,

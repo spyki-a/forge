@@ -256,7 +256,15 @@ export interface ModelStatus {
   bytes: number
   /** The download's name on screen: 'the face finder', 'the subject finder'. */
   label: string
-  /** The one host a restricted network must allow for it: 'storage.googleapis.com', 'huggingface.co'. */
+  /**
+   * The host the download is asked of, as the dock names it:
+   * 'storage.googleapis.com' (which serves the bytes itself), 'huggingface.co'.
+   * NOT the whole of what a restricted network must allow for Hugging Face: a
+   * resolve URL there answers 307 to the repo's current name, then 302 to
+   * its CDN, `us.aws.cdn.hf.co` (measured by headers, 2026-10-13, with Xet
+   * disabled as the client sets it), so the rule is `huggingface.co` and
+   * `*.hf.co` (docs/SIDECAR.md).
+   */
   host: string
 }
 
@@ -352,9 +360,12 @@ export interface SalientParams {
 
 /**
  * One item's answer. `coverage` is the matte's share of the frame (0..1, 4 dp);
- * `box` is `_mask_box` trimmed at 1 %, present only when coverage is within
- * depth.py's MIN_SUBJECT..MAX_SUBJECT (0.01–0.92), the rule subjectBox
- * follows (depth.py:451-465), and null otherwise. An item that could not be
+ * `box` is `_mask_box` trimmed at 1 %, drawn round the matte once
+ * `_clean_mask` has dropped its speckle, present only when the share is
+ * within depth.py's MIN_SUBJECT..MAX_SUBJECT (0.01–0.92) — the rule subjectBox
+ * follows (depth.py:461-474) — and null otherwise. Decide by `box !== null`,
+ * never from `coverage`: the range is tested on the unrounded share, so a
+ * coverage reading 0.92 can come with a null box. An item that could not be
  * read carries `error` instead, for that item alone.
  */
 export type SalientItem =

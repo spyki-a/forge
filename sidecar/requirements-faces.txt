@@ -10,7 +10,9 @@
 # This first file is what mediapipe 0.10.35 needs at runtime, pinned to the
 # versions that ran on CPython 3.14.6 — pinned here because the second run's
 # --no-deps checks none of mediapipe's own ranges (absl-py~=2.3,
-# sounddevice~=0.5, flatbuffers~=25.9). numpy comes from requirements.txt.
+# sounddevice~=0.5, flatbuffers~=25.9). numpy is not pinned here: requirements.txt
+# brings it, through onnxruntime, librosa and faster-whisper's ctranslate2
+# (pip show numpy on sidecar/.venv, 2026-10-13).
 #
 # What --no-deps leaves out is opencv-contrib-python and matplotlib, ~65 MB
 # that detection never uses. mediapipe still imports them at import time

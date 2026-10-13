@@ -64,7 +64,21 @@ limit. Nothing in the editor may depend on the sidecar being alive.
   isn't needed, because audio decoding goes through the ffmpeg the app already bundles.
 - **Disable Hugging Face's Xet backend.** `hf-xet` fetches from `cas-server.xethub.hf.co`,
   a separate CDN host that restricted networks and corporate proxies block. The client sets
-  `HF_HUB_DISABLE_XET=1`; the plain HTTP path is slower but works everywhere.
+  `HF_HUB_DISABLE_XET=1`; the plain HTTP path is slower.
+- **But the plain path is not huggingface.co alone.** Measured by headers on 2026-10-13 for
+  the subject finder (BiRefNet_lite fp16 at the pinned `de15b22…`): the resolve URL on
+  `huggingface.co` answers **307** to the repo's new name, `onnx-community/BiRefNet_lite-ONNX`
+  (the pinned commit is still served: `x-repo-commit de15b22…`, `x-linked-size 114538221`), and
+  that answers **302** to `https://us.aws.cdn.hf.co/xet-bridge-us/…`, where the bytes are. So a
+  restricted network must allow `huggingface.co` **and** `*.hf.co`; the dock's `host` names only
+  the first (`ModelStatus.host`, `src/shared/sidecar/protocol.ts`). `storage.googleapis.com`, the
+  face finder's host, serves its file itself (200, no redirect).
+- **`depth.MATTE_REPO` works only through the Hub's rename redirect.** `onnx-community/BiRefNet_lite`
+  was renamed `…/BiRefNet_lite-ONNX`; huggingface_hub follows the 307 today (the 1d builder's real
+  fetch worked, and the cache keeps the old name's folder), but if the Hub ever drops the old name,
+  every machine without the model loses parallax subjects and the subject finder at once. Moving
+  the constant to the new name changes the cache folder, so it re-downloads 115 MB once per machine
+  that has it: a decision, not a tidy-up.
 - **Never default the model cache to `~/.cache`.** The client passes `FORGE_MODELS_DIR`
   explicitly, pointing at `userData`.
 - **Nor the bakes.** Until 2026-10-08 nothing set `FORGE_CACHE_DIR`, so depth.py's parallax
