@@ -418,7 +418,8 @@ const ANALYSIS_SHAPES: { name: string; args: () => string[] }[] = [
     name: `a moment’s footage pre-pass over a followed clip${twoUp ? ', stacked two-up' : ''}`,
     args: (): string[] => {
       const p = followed(twoUp)
-      return momentFrameArgs({ ...FOOTAGE, inPoint: 0, duration: 200, first: 150, ...followedFootage(p, p.clips[0], 30) }, '/tmp/m/%05d.png')
+      // A window across the cut at clip frame 165, so the pull's own keys hold a step for the scan to reach.
+      return momentFrameArgs({ ...FOOTAGE, inPoint: 0, duration: 200, first: 160, ...followedFootage(p, p.clips[0], 30) }, '/tmp/m/%05d.png')
     }
   })),
   {

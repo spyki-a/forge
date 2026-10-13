@@ -208,12 +208,7 @@ export function flatSumExpression(sum: FlatSum, options: FlatSumOptions): string
 export function flatSumAt(sum: FlatSum, frame: number, options: FlatSumOptions): number {
   const w = written(sum, options)
   const t = options.startSeconds + frame * (1 / options.fps)
-  const of = (term: Written['terms'][number]): number => {
-    const d = Number(term.delta)
-    if (term.at !== undefined) return d * (t >= Number(term.at) ? 1 : 0)
-    const p = Math.min(1, Math.max(0, (t - Number(term.t0)) / Number(term.span)))
-    return d * p * p * (3 - 2 * p)
-  }
+  const of = (term: Written['terms'][number]): number => contribution(term, t)
   let value = Number(w.base)
   if (w.terms.length <= FLAT_GROUP) {
     for (const term of w.terms) value += of(term)
@@ -225,4 +220,51 @@ export function flatSumAt(sum: FlatSum, frame: number, options: FlatSumOptions):
     value += group
   }
   return value
+}
+
+/** One written term's part of the sum at time `t`, in the expression's own order of operations. */
+function contribution(term: Written['terms'][number], t: number): number {
+  const d = Number(term.delta)
+  if (term.at !== undefined) return d * (t >= Number(term.at) ? 1 : 0)
+  const p = Math.min(1, Math.max(0, (t - Number(term.t0)) / Number(term.span)))
+  return d * p * p * (3 - 2 * p)
+}
+
+/**
+ * The same sum on frames [from, to) only, for a command that runs those
+ * frames and no others — the moments' pull (render/momentFrames.ts), whose
+ * `-vf` goes on a command line: the whole clip's sums there were 45,989
+ * characters for a 20-minute clip with a cut every 4 s, past Windows'
+ * 32,767 (`spawn ENAMETOOLONG`, EFFECTS.md §47). Every term that changes
+ * nothing on those frames is left out: one over by `from` (a step on or
+ * before it, a pan ended by it) is added into the base while it is still a
+ * prefix of the terms in written order, and one not begun by `to` is
+ * dropped. What is left is a few terms whatever the clip's length.
+ *
+ * On those frames the value is the whole sum's: bit for bit for a sum written
+ * flat (its prefix's partial sums are whole numbers, exactly the base here,
+ * and a term that adds ±0 changes nothing); a GROUPED sum (past `FLAT_GROUP`)
+ * adds the same numbers in another order, which can differ in the last bit
+ * and so in the pixel only on an exact k + ½. Pixels only: precision 0.
+ */
+export function windowSum(sum: FlatSum, from: number, to: number, options: FlatSumOptions): FlatSum {
+  if ((options.precision ?? 0) !== 0) throw new Error('A flat sum is windowed in whole pixels only')
+  const w = written(sum, options)
+  const times: number[] = []
+  for (let n = Math.floor(from); n < to; n++) times.push(options.startSeconds + n * (1 / options.fps))
+  let base = Number(w.base)
+  let prefix = true
+  const terms: Term[] = []
+  for (const written of w.terms) {
+    const d = Number(written.delta)
+    const parts = times.map((t) => contribution(written, t))
+    if (parts.every((v) => v === 0)) continue
+    if (prefix && parts.every((v) => v === d)) {
+      base += d
+      continue
+    }
+    prefix = false
+    terms.push(written.term)
+  }
+  return { base, terms }
 }

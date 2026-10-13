@@ -5,7 +5,7 @@ import { filterGraphOf } from '@shared/render/graphFile'
 import { cropAt, effectiveCrop } from '@shared/render/crop'
 import { FOOTAGE_MAX_EDGE, PULL_VERSION, followedFootage, momentFrameArgs, momentFramesKey } from '@shared/render/momentFrames'
 import type { FootageRequest } from '@shared/render/moment'
-import { exportPixel, flatSumAt, flatSumExpression, type FlatSum } from '@shared/reframe/expression'
+import { exportPixel, flatSumAt, flatSumExpression, windowSum, type FlatSum } from '@shared/reframe/expression'
 import { followKeys } from '@shared/reframe/keys'
 import { fourShotTrack, printedMs } from './fixtures/reframe/track'
 
@@ -238,7 +238,8 @@ describe('the moments’ pre-pass cuts with the same keys, before its trim', () 
     const req = base(followedFootage(p, p.clips[0], FPS))
     const args = momentFrameArgs(req, '/tmp/m/%05d.png')
     const vf = args[args.indexOf('-vf') + 1]
-    const crop = cropFilter({}, req.size, { crop: req.crop!, cropX: req.cropX }, FPS)!
+    // The keys the pull's own frames need (50–59, the cut on 55 among them), not the whole clip's.
+    const crop = cropFilter({}, req.size, { crop: req.crop!, cropX: windowSum(req.cropX!, 50, 60, { fps: FPS, startSeconds: 0 }) }, FPS)!
     expect(count(vf, crop)).toBe(1)
     // The render's own clock, from slot 0, so the pull's frame k is the render's clip frame k; one fps= at speed 1.
     expect(vf.startsWith(`fps=30:start_time=0,${crop},tpad=stop_mode=clone:stop_duration=`)).toBe(true)
@@ -269,6 +270,57 @@ describe('the moments’ pre-pass cuts with the same keys, before its trim', () 
     expect(vf).toMatch(/^fps=30:start_time=0,split=2\[r0a\]\[r0b\];\[r0a\]crop=w=/)
     expect(count(vf, 'crop=w=')).toBe(2)
     expect(count(vf, '[r0t][r0u]vstack,tpad=stop_mode=clone:stop=1,tpad=stop_mode=clone:stop_duration=')).toBe(1)
+  })
+
+  /*
+   * A long followed clip: a cut every 4 s for 20 minutes, the subject moving
+   * across each shot so each pans. The whole clip's sums in the pull's -vf
+   * were 45,989 characters, past Windows' 32,767 for a command line
+   * (`spawn ENAMETOOLONG`, EFFECTS.md §47); the pull's keys are its window's.
+   */
+  function longClip(minutes: number, twoUp: boolean): Project {
+    const every = 120
+    const frames = minutes * 60 * FPS
+    const shots = []
+    const samples = []
+    for (let f = 0, i = 0; f < frames; f += every, i++) {
+      const startMs = f === 0 ? 0 : printedMs(f / FPS)
+      const endMs = f + every < frames ? printedMs((f + every) / FPS) : (frames * 1000) / FPS
+      shots.push({ startMs, endMs, score: f === 0 ? 0 : 1 })
+      for (let ms = Math.ceil(startMs / 500) * 500; ms < endMs; ms += 500) {
+        const late = ms - startMs > 2000
+        const cx = (i % 2 ? 0.3 : 0.6) + (late ? 0.25 : 0)
+        const face = (x: number, y = 0.32) => ({ x: Number((x - 0.04).toFixed(4)), y: Number((y - 0.07).toFixed(4)), width: 0.08, height: 0.14, score: 0.9 })
+        samples.push({ ms, faces: twoUp && i % 3 === 2 ? [face(0.8, 0.55), face(0.2, 0.35)] : [face(Math.min(0.9, cx))] })
+      }
+    }
+    const track = { ...fourShotTrack({ cutMs: [1, 2, 3], durationMs: (frames * 1000) / FPS, twoUp: false }), shots, samples, perShot: shots.map(() => ({})) }
+    const p = project({ twoUp, clip: { inPoint: 0, duration: frames - 1 }, asset: { durationFrames: frames } })
+    return { ...p, subjects: { v: track } }
+  }
+
+  it('a long followed clip’s pull: a -vf of a few hundred characters, not the whole clip’s keys — and the same crop on every pulled frame', () => {
+    for (const [minutes, twoUp] of [[20, false], [10, true]] as const) {
+      const p = longClip(minutes, twoUp)
+      const c = p.clips[0]
+      const keys = followKeys(p, c, FPS)!
+      const lanes = twoUp ? [keys.halves!.top.x, keys.halves!.top.y, keys.halves!.bottom.x, keys.halves!.bottom.y] : [keys.cropX!]
+      const whole = lanes.map((l) => flatSumExpression(l, { fps: FPS, startSeconds: 0 }).length).reduce((a, b) => a + b, 0)
+      expect(whole, 'the whole clip’s keys are past the limit, or this tests nothing').toBeGreaterThan(32_767)
+      for (const first of [0, 9_000, c.duration - 40]) {
+        const req = base({ ...followedFootage(p, c, FPS), inPoint: 0, duration: c.duration, first, count: 30 })
+        const args = momentFrameArgs(req, '/tmp/m/%05d.png')
+        const vf = args[args.indexOf('-vf') + 1]
+        expect(vf.length, `${minutes} min${twoUp ? ', two-up' : ''}, window at ${first}`).toBeLessThan(2_000)
+        // The whole command line, quoted as Windows joins it, with room to spare.
+        expect(args.map((a) => `"${a}"`).join(' ').length).toBeLessThan(4_000)
+        // On every pulled frame, each lane's windowed sum is the whole sum, to the last bit.
+        for (const lane of lanes) {
+          const win = windowSum(lane, first, first + 30, { fps: FPS, startSeconds: 0 })
+          for (let n = first; n < first + 30; n++) expect(flatSumAt(win, n, { fps: FPS, startSeconds: 0 }), `frame ${n}`).toBe(flatSumAt(lane, n, { fps: FPS, startSeconds: 0 }))
+        }
+      }
+    }
   })
 
   it('the pulled frames are kept under a name that changes with the keys, not only the size', () => {

@@ -2,6 +2,7 @@ import { assetById, framesToSeconds, type Clip, type Project } from '../timeline
 import { cropFilter, followClock, followedRetime, type CropFollow } from './plan'
 import { sourceFramesFor } from './speed'
 import { followKeys } from '../reframe/keys'
+import { windowSum, type FlatSum } from '../reframe/expression'
 import type { FootageRequest } from './moment'
 
 /**
@@ -65,10 +66,16 @@ export function momentFrameArgs(req: FootageRequest, pattern: string): string[] 
     ...(req.hold ? { hold: true } : {})
   }
   const follow = footageFollow(req)
-  // One pull of the stacked frame for a two-up: the split, two crops and vstack inside the -vf (measured to run there, §4.7).
-  const cut = cropFilter(clip, req.size, follow, fps, 0)
-  const finish = [footageCapFilter(req.maxEdge), 'format=rgba'].join(',')
   const count = Math.max(1, req.count)
+  /*
+   * One pull of the stacked frame for a two-up: the split, two crops and
+   * vstack inside the -vf (measured to run there, §4.7). The keys are the
+   * window's own (`windowFollow`): this -vf goes on a command line, and the
+   * whole clip's sums put a long clip's past Windows' limit. The clock and
+   * the retime are decided on the whole follow, which is the render's.
+   */
+  const cut = cropFilter(clip, req.size, windowFollow(follow, req.hold ? 0 : req.first, req.hold ? 1 : req.first + count, fps), fps, 0)
+  const finish = [footageCapFilter(req.maxEdge), 'format=rgba'].join(',')
 
   if (req.hold) {
     return ['-ss', seconds(req.inPoint, fps), '-i', req.path, '-vf', `trim=end_frame=1,setpts=PTS-STARTPTS,${cut ? `${cut},` : ''}${finish}`, '-frames:v', '1', '-start_number', '0', pattern]
@@ -112,6 +119,26 @@ export function momentFrameArgs(req: FootageRequest, pattern: string): string[] 
     '-vf', `${retime},${cut ? `${cut},` : ''}${hold}trim=start_frame=${req.first}:end_frame=${req.first + count},setpts=PTS-STARTPTS,${finish}`,
     '-frames:v', String(count), '-start_number', '0', pattern
   ]
+}
+
+/**
+ * A followed crop's keys on the pulled frames [from, to) only (reframe/
+ * expression.ts `windowSum`): the same crop on each of them, in a -vf of a
+ * few hundred characters whatever the clip's length. A 20-minute clip with a
+ * cut every 4 s put 45,989 characters of keys on the command line, and
+ * Windows refuses a command line past 32,767 (`spawn ENAMETOOLONG`,
+ * EFFECTS.md §47); the render's graph goes in a file, this does not.
+ */
+function windowFollow(follow: CropFollow | null, from: number, to: number, fps: number): CropFollow | null {
+  if (!follow) return null
+  const win = (sum: FlatSum): FlatSum => windowSum(sum, from, to, { fps, startSeconds: 0 })
+  const half = (h: { x: FlatSum; y: FlatSum }): { x: FlatSum; y: FlatSum } => ({ x: win(h.x), y: win(h.y) })
+  return {
+    crop: follow.crop,
+    ...(follow.cropX ? { cropX: win(follow.cropX) } : {}),
+    ...(follow.cropY ? { cropY: win(follow.cropY) } : {}),
+    ...(follow.halves ? { halves: { top: half(follow.halves.top), bottom: half(follow.halves.bottom) } } : {})
+  }
 }
 
 /** A request's followed crop, for `cropFilter`; null for a crop that does not follow. */
