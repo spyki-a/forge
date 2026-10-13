@@ -2202,7 +2202,10 @@ measured in the step.
 >   the RAM (a gate), the arena off plus a release at the job's end, a
 >   worker process of its own so the memory goes back on exit, or a
 >   smaller export (BiRefNet's input is fixed at 1024² in this ONNX file;
->   another size needs a re-export, unmeasured).
+>   another size needs a re-export, unmeasured). **Decided 2026-10-13
+>   (§16.35): the analysis job does not call it for the beta; no-face shots
+>   centre with a note, and a small saliency model is measured later as its
+>   own item (§12.1, §15 row 25).** The method stays, unused by the job.
 > - **Mutations killed** (the builder's, each restored with `cmp`): a box
 >   at 93 %; trim 0; the box in a turned clip's coded frame; a size mismatch
 >   or a decode error failing the whole call; the session built outside
@@ -4792,13 +4795,18 @@ the analysis loaded stays resident while the model runs.
   decoding 4K HEVC to 640×360, the helper-rules verifier's numbers). The detector's
   own RSS is not yet recorded by that run: it writes counts, time and the
   track's size, so a line for the worker's peak is still to add (§4.3).
-- **Decide salient's gate before 1f calls it** (open, for you): salient
-  only where the RAM allows (the Mac class), the arena off plus the release
-  below at the job's end, salient in a worker process of its own so its
-  memory goes back on exit (as faces' detector does), or a smaller matte
-  (a re-export; unmeasured). Whichever, the bar below is re-measured with
-  it. Until then the analysis job's no-face shots fall to the centre with a
-  note on a machine under the gate.
+- **Salient's gate — decided (2026-10-13, §16.35): the analysis job does
+  not call `vision.salient` for the beta, on any machine.** A no-face shot
+  falls to the centre with a note, as §4.4 always allowed; `vision.salient`
+  and its model method stay in the helper, unused by the job, so the box
+  rule, the per-item errors and the gate carry over to whatever replaces
+  the model. A bounding box does not need a 1024² matte at 8 s and 8 GB a
+  frame: a small saliency model (U²-Net's small variant, about 5 MB,
+  Apache-2.0, or another measured the same way) is its own later item,
+  measured for time and RSS before it is chosen (§15 row 25). The options
+  not taken: a RAM gate (salient on the Mac class only), the arena off plus
+  the release below, a worker of its own, a smaller re-export. §12.1's bar
+  below is then measured without salient.
 - **Release when done.** A new helper method, `system.release({names})`,
   drops the named sessions under the session lock; the analysis job calls it
   for everything it opened when it ends, success, failure or cancel.
@@ -4907,7 +4915,8 @@ Each is named in its step, and each step's first task is its own row:
    swapping (§12.1). **Salient measured on the Mac** (2026-10-13, three
    runs, `EFFECTS.md` §54): 6.6–9.7 GB peak a matte, 4.9–8.7 GB held after
    with ORT's arena, 155–294 MB once `matte:fp16` is dropped — over the
-   floor machine's budget as built, so its gate is a decision (§12.1).
+   floor machine's budget as built; **decided 2026-10-13 (§16.35): not
+   called by the analysis job for the beta** (§12.1).
    Faces' helper side measured (about 100 MB at hello and through a pass;
    the worker without the detector 45–92 MB; its ffmpeg 455 MB decoding the
    4K HEVC fixture to 640×360). The detector's own RSS needs your Mac, and
@@ -4966,6 +4975,13 @@ Each is named in its step, and each step's first task is its own row:
     copy of the fixture seeked wrong and found no cut (`EFFECTS.md` §52).
     This is to measure before any caller passes a window; none does today
     (§4.2).
+25. **A small saliency model for no-face shots**, to replace BiRefNet's
+    matte there (§16.35): U²-Net's small variant (about 5 MB, Apache-2.0)
+    or another, measured for time a frame and the helper's peak RSS on the
+    Mac and the Surface, and for where its box lands against BiRefNet's on
+    the salient check's synthetic clips and the face fixture (§4.4), before
+    it is chosen. Until then the analysis job centres a no-face shot with a
+    note.
 
 ---
 
@@ -5324,6 +5340,17 @@ what is needed, where the answer waits on something not yet in hand.
     link, and your §16.26 answer kept them as they were).
 
     **Answer (2026-10-13):** leave them.
+35. **The subject finder's memory.** One BiRefNet_lite matte peaks the AI
+    helper at 6.6–9.7 GB and holds 4.9–8.7 GB after (§4.4, §12.1,
+    `EFFECTS.md` §54), which the 8 GB Surface cannot carry. The choices
+    were: not calling it for the beta (a no-face shot centres with a note,
+    as §4.4 always allowed) and measuring a small saliency model later (§15
+    row 25); a RAM gate; the arena off plus a release; a worker of its own;
+    a smaller re-export. Recommended: the first.
+
+    **Answer (2026-10-13):** the first. The analysis job does not call
+    `vision.salient`; the method stays in the helper, unused by the job;
+    the small model is its own later item.
 
 ---
 
