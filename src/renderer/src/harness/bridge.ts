@@ -6,6 +6,18 @@ import { buildYtDlpArgs, captionKeys, outputStem, type IngestRequest, type LinkM
 import { linkCacheKey, parseLink } from '@shared/ingest/url'
 import { parseJson3, type CaptionFetch } from '@shared/ingest/captions'
 import type { LinkClip } from '@shared/ingest/linkClip'
+import type { ModelStatus } from '@shared/sidecar/protocol'
+import {
+  REFRAME_FAILURES,
+  REFRAME_PRESET,
+  REFRAME_STAGES,
+  type FaceModelProgress,
+  type FaceModelRequest,
+  type ReframeAnalyseRequest,
+  type ReframeCollectResult,
+  type ReframeFailureReason
+} from '@shared/reframe/job'
+import { harnessSubjectTrack } from './reframeStub'
 
 /**
  * A working stand-in for the Electron bridge, so the UI runs in a browser.
@@ -196,6 +208,144 @@ function harnessCaptionTrack(linkKey: string, key: string): { key: string; kind:
   const talk = parseLink(HARNESS_LINKS.talk)!
   if (key.endsWith('-orig') && linkKey === linkCacheKey(talk)) return { key, kind: 'asr', json: harnessJson3() }
   throw new Error('The captions this clip was picked from are no longer on this machine')
+}
+
+/* -------------------------------------------------------------- reframe */
+
+/*
+ * The reframe's job, STUBBED deterministically (docs/CLIPS.md §4.9) — the
+ * second place this file fakes a result on purpose, for the packs' reason:
+ * what is worth looking at here is everything after the job (the store's one
+ * update, the followed crop in the Output view, the Source outline's two
+ * rectangles, the drags, the round trips), and all of that is renderer logic.
+ * The track is `harnessSubjectTrack`'s, not anything found: there is no AI
+ * helper here. Detection is the integration tests'.
+ *
+ * Unlike a download, this job IS broadcast — queued, running through the
+ * stages, done — so `setJobs` collects it the way the app's does. Only the
+ * reframe jobs are in that list; a recorded download never is.
+ */
+const jobListeners = new Set<(jobs: Job[]) => void>()
+const faceModelListeners = new Set<(update: FaceModelProgress) => void>()
+
+interface HarnessReframeJob {
+  job: Job
+  request: ReframeAnalyseRequest
+  /** Why it failed, typed, as main keeps it for collect. */
+  failure: ReframeFailureReason | null
+  collected: boolean
+}
+
+/**
+ * What a driving script reads and sets (`window.forgeReframe`): whether the
+ * face finder is "on disk" — false at first, so the dock reads its first-time
+ * label and a press goes through the fetch — and every analysis asked for.
+ */
+export const harnessReframe: {
+  modelPresent: boolean
+  /** ms each stage of a stubbed job takes; a check may raise it to watch the bar. */
+  stageMs: number
+  jobs: HarnessReframeJob[]
+} = { modelPresent: false, stageMs: 60, jobs: [] }
+
+const FACE_MODEL: Omit<ModelStatus, 'present'> = {
+  bytes: 1_083_786,
+  label: 'the face finder',
+  host: 'storage.googleapis.com'
+}
+
+function broadcastJobs(): void {
+  const jobs = harnessReframe.jobs.map((entry) => ({ ...entry.job }))
+  for (const listener of jobListeners) listener(jobs)
+}
+
+function patchJob(id: string, patch: Partial<Job>): void {
+  const entry = harnessReframe.jobs.find((e) => e.job.id === id)
+  if (!entry || entry.job.status === 'cancelled') return
+  entry.job = { ...entry.job, ...patch }
+  broadcastJobs()
+}
+
+const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
+
+function harnessAnalyse(request: ReframeAnalyseRequest): Job {
+  const id = `harness-reframe-${harnessReframe.jobs.length + 1}`
+  const job: Job = {
+    id,
+    presetId: REFRAME_PRESET,
+    input: request.path,
+    inputName: request.name,
+    output: '',
+    params: { assetId: request.assetId },
+    status: 'queued',
+    progress: 0,
+    speed: null,
+    error: null,
+    startedAt: null,
+    finishedAt: null
+  }
+  // The app's job fails fast on these; so does this one, with the same reasons.
+  const refusal: ReframeFailureReason | null = request.phrase
+    ? 'phrase-needs-ground'
+    : !harnessReframe.modelPresent
+      ? 'model-missing'
+      : null
+  harnessReframe.jobs.push({ job, request, failure: refusal, collected: false })
+  broadcastJobs()
+
+  void (async () => {
+    await wait(harnessReframe.stageMs)
+    patchJob(id, { status: 'running', startedAt: Date.now(), progress: 0, speed: REFRAME_STAGES.shots.label })
+    if (refusal) {
+      patchJob(id, { status: 'failed', error: REFRAME_FAILURES[refusal], finishedAt: Date.now(), speed: null })
+      return
+    }
+    for (const stage of ['faces', 'reduce'] as const) {
+      await wait(harnessReframe.stageMs)
+      patchJob(id, { progress: REFRAME_STAGES[stage].from, speed: REFRAME_STAGES[stage].label })
+    }
+    await wait(harnessReframe.stageMs)
+    patchJob(id, { status: 'done', progress: 1, finishedAt: Date.now(), speed: null })
+  })()
+  return { ...job }
+}
+
+function harnessCollectSubjects(jobId: string): ReframeCollectResult {
+  const entry = harnessReframe.jobs.find((e) => e.job.id === jobId)
+  if (!entry) throw new Error('That analysis was cleared from the list')
+  const { job, request } = entry
+  if (job.status === 'cancelled') return { kind: 'failed', reason: 'cancelled', message: REFRAME_FAILURES.cancelled }
+  if (job.status === 'failed') {
+    const reason = entry.failure ?? 'failed'
+    return { kind: 'failed', reason, message: REFRAME_FAILURES[reason] }
+  }
+  if (job.status !== 'done') throw new Error('That analysis has not finished')
+  if (entry.collected) return { kind: 'already' }
+  entry.collected = true
+  const size = made.get(request.path) ?? { width: request.width, height: request.height }
+  return {
+    kind: 'track',
+    assetId: request.assetId,
+    clipIds: [...request.clipIds],
+    track: harnessSubjectTrack({
+      key: `harness:${request.path}`,
+      width: size.width,
+      height: size.height,
+      durationMs: fakeDurationMs(request.path)
+    }),
+    cached: false
+  }
+}
+
+async function harnessFaceModel(request: FaceModelRequest = {}): Promise<ModelStatus> {
+  if (request.download && !harnessReframe.modelPresent) {
+    for (let step = 0; step <= 4; step++) {
+      await wait(harnessReframe.stageMs)
+      for (const listener of faceModelListeners) listener({ progress: step / 4, message: `fetching ${FACE_MODEL.label}` })
+    }
+    harnessReframe.modelPresent = true
+  }
+  return { ...FACE_MODEL, present: harnessReframe.modelPresent }
 }
 
 const packCancels = new Set<string>()
@@ -684,6 +834,15 @@ export function installHarnessBridge(): void {
     ingestCaptions: async (url: string, language: string) => harnessCaptions(url, language),
     ingestCaptionTrack: async (linkKey: string, key: string) => harnessCaptionTrack(linkKey, key),
 
+    // The reframe's job, stubbed (see `harnessReframe`): §4.9's shots and faces, broadcast like the app's.
+    analyseSubjects: async (request: ReframeAnalyseRequest) => harnessAnalyse(request),
+    collectSubjects: async (jobId: string) => harnessCollectSubjects(jobId),
+    faceModel: (request?: FaceModelRequest) => harnessFaceModel(request),
+    onFaceModelProgress: (cb: (update: FaceModelProgress) => void) => {
+      faceModelListeners.add(cb)
+      return () => faceModelListeners.delete(cb)
+    },
+
     voiceStatus: async () => [
       { id: 'kokoro' as const, label: 'Kokoro (on this machine)', kind: 'local' as const, ready: false, reason: 'harness: no sidecar' },
       { id: 'hosted' as const, label: 'Hosted API', kind: 'hosted' as const, ready: false, reason: 'harness: no network' }
@@ -729,9 +888,17 @@ export function installHarnessBridge(): void {
     startRender: unsupported('Exporting'),
     // Only the software H.264 the plan falls back to anyway.
     encoders: async () => [{ id: 'libx264' as const, ok: true }],
-    cancelRender: async () => undefined,
-    listJobs: async () => [],
-    clearFinished: async () => undefined,
+    // One X for every job, as in the app: here only a stubbed reframe job can be cancelled.
+    cancelRender: async (id: string) => {
+      const entry = harnessReframe.jobs.find((e) => e.job.id === id)
+      if (!entry || entry.job.status === 'done' || entry.job.status === 'failed') return
+      patchJob(id, { status: 'cancelled', finishedAt: Date.now(), speed: null })
+    },
+    listJobs: async () => harnessReframe.jobs.map((entry) => ({ ...entry.job })),
+    clearFinished: async () => {
+      harnessReframe.jobs = harnessReframe.jobs.filter((e) => e.job.status === 'queued' || e.job.status === 'running')
+      broadcastJobs()
+    },
     graphicsSelfTest: async () => ({
       ok: false,
       transparentFraction: 0,
@@ -743,9 +910,15 @@ export function installHarnessBridge(): void {
     chooseExportPath: async () => null,
     saveProject: async () => null,
     openProject: async () => null,
+    // Nothing is missing here — no file the harness made can move — so a relink finds nothing to repoint.
+    relinkAssets: async () => ({}),
     revealPath: async () => undefined,
     openPath: async () => undefined,
-    onJobsChanged: () => () => undefined,
+    // Kept, so a stubbed reframe job reaches the store as main's broadcast would.
+    onJobsChanged: (cb: (jobs: Job[]) => void) => {
+      jobListeners.add(cb)
+      return () => jobListeners.delete(cb)
+    },
 
     /*
      * Settings, held in memory for the session.
@@ -809,4 +982,6 @@ export function installHarnessBridge(): void {
   ).forgeCaptionBake = { frames: captionFrames, list: captionList }
   // The downloads asked for, with their argv (`harnessStartIngest`).
   ;(window as unknown as { forgeIngestLog: HarnessIngest[] }).forgeIngestLog = harnessIngests
+  // The reframe stub's switches and its record (`harnessReframe`), for a driving script.
+  ;(window as unknown as { forgeReframe: typeof harnessReframe }).forgeReframe = harnessReframe
 }

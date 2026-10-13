@@ -5,6 +5,7 @@ import { AlertCircle, Info, Minimize2, Settings, X } from 'lucide-react'
 import { escapeLeavesFullScreen } from '@shared/fullScreen'
 import { projectDuration } from '@shared/timeline'
 import { AUTOSAVE_INTERVAL_MS } from '@shared/project/recovery'
+import { reframeHelperFrom } from '@shared/reframe/job'
 import { useEditor } from './store'
 import { useCatalog } from './catalog'
 import { activeCaptionStyle } from './captionPreview'
@@ -223,6 +224,8 @@ export default function App(): ReactNode {
         if (status.state === 'ready') state.setSidecar(true, null)
         else if (status.state === 'failed') state.setSidecar(false, status.error)
         else state.setSidecar(false, null)
+        // Follow the subject's grey: decided from the capabilities, not the prose (shared/reframe/job.ts).
+        state.setReframeHelper(reframeHelperFrom(status))
       }),
     []
   )
@@ -236,6 +239,7 @@ export default function App(): ReactNode {
         const state = useEditor.getState()
         if (status.state === 'ready') state.setSidecar(true, null)
         else if (status.state === 'failed') state.setSidecar(false, status.error)
+        state.setReframeHelper(reframeHelperFrom(status))
       })
       .catch(() => undefined)
   }, [])

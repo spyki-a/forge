@@ -3,7 +3,13 @@ import type { Job } from '@shared/types'
 import type { MediaAsset, ParallaxBake, Project, TextSpec } from '@shared/timeline'
 import type { DecisionRecord } from '@shared/project'
 import type { Transcript } from '@shared/transcript'
-import type { HelloResult } from '@shared/sidecar/protocol'
+import type { HelloResult, ModelStatus } from '@shared/sidecar/protocol'
+import type {
+  FaceModelProgress,
+  FaceModelRequest,
+  ReframeAnalyseRequest,
+  ReframeCollectResult
+} from '@shared/reframe/job'
 import type { AssetCatalog } from '@shared/assets/catalog'
 import type { PackListing } from '@shared/assets/pack'
 import type { TransitionDef } from '@shared/transitions/registry'
@@ -401,6 +407,40 @@ const api = {
     key: string
   ): Promise<{ key: string; kind: 'asr' | 'lines'; json: unknown }> =>
     ipcRenderer.invoke('ingest:captionTrack', { linkKey, key }),
+
+  /* ------------------------------------------------- the reframe (§4.7) */
+
+  /**
+   * Find the subject through a file: shots, then faces, then the track main
+   * keeps under `userData/subjects/`. It appears in the job list beside the
+   * exports with presetId 'reframe' and `params.assetId`; watch
+   * `onJobsChanged` for it to read `done` (or `failed`), then
+   * `collectSubjects` it. Channels: shared/reframe/job.ts REFRAME_CHANNELS.
+   */
+  analyseSubjects: (request: ReframeAnalyseRequest): Promise<Job> =>
+    ipcRenderer.invoke('reframe:analyse', request),
+
+  /**
+   * The finished track, ONCE (`kind: 'track'`); every later collect of the
+   * job answers `kind: 'already'`. A failed or cancelled job answers
+   * `kind: 'failed'` with its typed reason, as often as it is asked.
+   */
+  collectSubjects: (jobId: string): Promise<ReframeCollectResult> =>
+    ipcRenderer.invoke('reframe:collect', { jobId }),
+
+  /**
+   * Is the face finder on disk, and what would fetching it cost — the dock's
+   * label before any press. `{ download: true }` ONLY from the press of the
+   * button that named the size; progress comes on `onFaceModelProgress`.
+   */
+  faceModel: (request: FaceModelRequest = {}): Promise<ModelStatus> =>
+    ipcRenderer.invoke('reframe:faceModel', request),
+
+  onFaceModelProgress: (cb: (update: FaceModelProgress) => void): (() => void) => {
+    const listener = (_e: unknown, update: FaceModelProgress): void => cb(update)
+    ipcRenderer.on('reframe:faceModelProgress', listener)
+    return () => ipcRenderer.removeListener('reframe:faceModelProgress', listener)
+  },
 
   /** Which speech engines are usable, and why not when they are not. */
   voiceStatus: (): Promise<

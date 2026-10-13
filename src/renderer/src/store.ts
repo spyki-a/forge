@@ -208,6 +208,7 @@ import {
 } from '@shared/director/provider'
 import type { Brief, Tone } from '@shared/director/schema'
 import { vocabularyPrompt, withWordText, type Transcript } from '@shared/transcript'
+import type { ModelStatus, ReframeHelper, ReframeStatus } from '@shared/reframe/job'
 
 /*
  * Re-exported so every existing import keeps working; the table itself moved to
@@ -602,6 +603,49 @@ interface EditorState {
    */
   pendingIngests: Record<string, PendingIngest>
   collectIngest: (jobId: string) => Promise<void>
+
+  /*
+   * The reframe — following the subject (docs/CLIPS.md §4.7, §4.8). The
+   * contract is shared/reframe/job.ts; the bodies are slice B's (S), and each
+   * stub below says so. View-and-machine state, not the project: the helper,
+   * the face finder's presence and the jobs in flight are not saved, and
+   * newProject/loadProject leave `helper` and `model` alone.
+   */
+  reframe: ReframeStatus
+  /** From the AI helper's status broadcast (App.tsx, `reframeHelperFrom`). */
+  setReframeHelper: (helper: ReframeHelper) => void
+  /** `faceModel({})`'s answer, or null to forget it (asked again on the dock's next mount). */
+  setReframeModel: (model: ModelStatus | null) => void
+  /**
+   * Follow the subject on one clip: fetches the face finder first when it is
+   * not on disk (the press named its size), then starts the analysis — or
+   * skips it when `project.subjects[assetId]` is this file's key and version.
+   * When the job lands, ONE `update()` (one undo) writes the track, the clip's
+   * `follow` and its stored crop, then `rebakeGenerated` runs. Resolves once
+   * the job is QUEUED (or the skip has landed), not once it is done.
+   */
+  reframeClip: (clipId: string, options?: { phrase?: string }) => Promise<void>
+  /** `reframeClip` for every unfollowed landscape video clip on the timeline: one job per file. The canvas chip's press. Never calls `setAspect`. */
+  reframeAll: () => Promise<void>
+  /** Stop following: removes `follow`; the crop stays where it is at the playhead (a two-up frame: the top half's position at `size`). One undo. */
+  unfollow: (clipId: string) => void
+  /** Stack two people (on by default): off writes `follow.twoUp: false`, and a two-up shot frames the larger face. One undo. */
+  setFollowTwoUp: (clipId: string, on: boolean) => void
+  /**
+   * A CropOverlay drag on a followed clip, inside the overlay's begin/commit
+   * (one undo per drag). `shotIndex` is `FollowShot.index` from
+   * `followKeys(…).shots`; the offset is written under that shot's
+   * `startMs` exactly as followKeys returns it. SETS the offset (the drag's
+   * total from where it started), never adds to it. A number is a share of
+   * the crop's free-axis length (`follow.offsets`); `{ half, x, y }` is a
+   * two-up half's, shares of `half` on each axis (`follow.halfOffsets`).
+   */
+  dragFollowOffset: (
+    clipId: string,
+    shotIndex: number,
+    share: number | { half: 'top' | 'bottom'; x: number; y: number }
+  ) => void
+
   notices: Notice[]
 
   /** Per-asset transcription progress; presence means "in flight". */
@@ -1448,6 +1492,27 @@ export const useEditor = create<EditorState>((set, get) => ({
 
   jobs: [],
   pendingIngests: {},
+
+  reframe: { helper: 'unknown', model: null, fetching: null, pending: {} },
+  setReframeHelper: (helper) => set((s) => ({ reframe: { ...s.reframe, helper } })),
+  setReframeModel: (model) => set((s) => ({ reframe: { ...s.reframe, model } })),
+  // Slice B: S builds the four below (docs/CLIPS.md §4.7). Until then they refuse by name.
+  reframeClip: async () => {
+    throw new Error('slice B: S builds reframeClip')
+  },
+  reframeAll: async () => {
+    throw new Error('slice B: S builds reframeAll')
+  },
+  unfollow: () => {
+    throw new Error('slice B: S builds unfollow')
+  },
+  setFollowTwoUp: () => {
+    throw new Error('slice B: S builds setFollowTwoUp')
+  },
+  dragFollowOffset: () => {
+    throw new Error('slice B: S builds dragFollowOffset')
+  },
+
   notices: [],
 
   transcribing: {},
