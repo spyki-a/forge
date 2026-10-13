@@ -19,7 +19,7 @@ import type { Shot, SubjectSample, SubjectTrack, UnitRect } from './types'
  */
 
 export const PATH_RULES = {
-  smoothMs: 600, // a running median of the subject's centre
+  smoothMs: 600, // a running median of the subject's centre, over never fewer than three samples
   marginShare: 0.06, // of the crop's free-axis length, each side
   deadZone: 0.5, // the centre may wander inside the middle half of the crop without a move
   triggerMs: 500, // ... and must stay outside it this long before the crop moves
@@ -126,6 +126,12 @@ interface Mark {
   box: Box
 }
 
+/** Rule 5's timing, from the track's cadence: the head it ignores, and how far either side the running median reaches. */
+interface Pace {
+  headMs: number
+  reachMs: number
+}
+
 /** One free axis: the crop's length on it, the room it can move in, and where the subject sits in it. */
 interface Rail {
   axis: 'x' | 'y'
@@ -170,7 +176,8 @@ export function cropPath(track: SubjectTrack, target: Size, follow?: PathFollow)
   }
 
   const samples = [...track.samples].sort((a, b) => a.ms - b.ms)
-  const headMs = HEAD_FRAMES * samplePeriod(samples)
+  const period = samplePeriod(samples)
+  const pace: Pace = { headMs: HEAD_FRAMES * period, reachMs: Math.max(PATH_RULES.smoothMs / 2, 1.5 * period) }
   const allowTwoUp = axis === 'x' && follow?.twoUp !== false
   const notes: string[] = []
 
@@ -198,7 +205,7 @@ export function cropPath(track: SubjectTrack, target: Size, follow?: PathFollow)
     const rung = ladder(track.perShot[i], rail, W, H)
 
     if (why === 'two-up') {
-      const crop = twoUp(own, shot, half, W, H, headMs, follow?.halfOffsets?.[shot.startMs])
+      const crop = twoUp(own, shot, half, W, H, pace, follow?.halfOffsets?.[shot.startMs])
       return { startMs: shot.startMs, endMs: shot.endMs, at: crop.top.x, pans: crop.top.pans.map((p) => ({ ...p })), why, halves: crop }
     }
 
@@ -207,7 +214,7 @@ export function cropPath(track: SubjectTrack, target: Size, follow?: PathFollow)
       solved = { at: rung.at, pans: [], why: rung.why }
       if (rung.why === 'centre') notes.push(`shot ${n}: no face or subject to follow, centred`)
     } else {
-      const f = followSubject(subjectMarks(own, why, W, H), shot, rail, headMs, rung.at)
+      const f = followSubject(subjectMarks(own, why, W, H), shot, rail, pace, rung.at)
       if (f.opened) solved = { at: f.at, pans: f.pans, why }
       else {
         // Rule 6: no face in the opening second — the ladder holds the shot
@@ -357,7 +364,7 @@ function followSubject(
   marks: Mark[],
   shot: Shot,
   rail: Rail,
-  headMs: number,
+  pace: Pace,
   fallback: number
 ): { at: number; pans: Pan[]; opened: boolean } {
   const { len, room, anchor } = rail
@@ -365,11 +372,13 @@ function followSubject(
   const hi = (b: Box): number => (rail.axis === 'x' ? b.x1 : b.y1)
   const centres = marks.map((m) => (lo(m.box) + hi(m.box)) / 2)
 
-  // A running median over a window smoothMs long, centred (marks are in ms
-  // order). At the track's 2 a second that window holds one sample, so it
-  // smooths only a denser track; at 2 a second it is the trigger that
-  // absorbs a one-sample spike.
-  const reach = PATH_RULES.smoothMs / 2
+  // A running median, centred (marks are in ms order), over smoothMs and
+  // never fewer than three of the track's samples: ±1.5 of its spacing. At
+  // the plan's 2 a second, smoothMs alone held the sample itself, and a pan
+  // fired on a stray box aimed at it (measured: 216 px past the face, then a
+  // second pan back); three samples' median drops one stray, and the pan
+  // aims where the face is.
+  const reach = pace.reachMs
   const smooth: number[] = []
   for (let j = 0, a = 0, b = 0; j < marks.length; j++) {
     while (marks[a].ms < marks[j].ms - reach) a++
@@ -399,7 +408,7 @@ function followSubject(
       since = null
       return
     }
-    if (m.ms < shot.startMs + headMs) return
+    if (m.ms < shot.startMs + pace.headMs) return
     if (since === null) since = m.ms
     if (m.ms - since < PATH_RULES.triggerMs || m.ms < free) return
     const to = place(c - anchor * len, room)
@@ -427,7 +436,7 @@ function twoUp(
   half: Size,
   W: number,
   H: number,
-  headMs: number,
+  pace: Pace,
   offsets: HalfOffsets | undefined
 ): { top: HalfCrop; bottom: HalfCrop } {
   const { left, right } = bySide(own, W, H)
@@ -436,7 +445,7 @@ function twoUp(
   const solveHalf = (marks: Mark[], off: { x: number; y: number } | undefined): HalfCrop => {
     const all = marks.map((m) => cx(m.box))
     const fallback = all.length ? place(median(all) - half.width / 2, rail.room) : place(rail.room / 2, rail.room)
-    const f = followSubject(marks, shot, rail, headMs, fallback)
+    const f = followSubject(marks, shot, rail, pace, fallback)
     const opening = marks.filter((m) => m.ms < shot.startMs + OPENING_MS)
     const ys = (opening.length ? opening : marks).map((m) => cy(m.box))
     const y = ys.length ? place(median(ys) - PATH_RULES.twoUpFaceY * half.height, yRoom) : place(yRoom / 2, yRoom)

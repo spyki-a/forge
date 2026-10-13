@@ -194,7 +194,8 @@ describe('cropPath — rules 4 and 5: static first, a pan only when the subject 
   })
 
   it('a 0.3 s excursion gives no pan', () => {
-    // One sample (2500) outside the dead zone: not outside for triggerMs.
+    // One sample (2500) outside the dead zone: the running median of three
+    // drops it, and it was not outside for triggerMs either.
     const path = cropPath(excursion(2400, 2700), PORTRAIT_CANVAS)
     expect(path.shots[0].pans).toEqual([])
   })
@@ -267,6 +268,18 @@ describe('cropPath — rules 4 and 5: static first, a pan only when the subject 
     const path = cropPath(t, PORTRAIT_CANVAS)
     const [p] = path.shots[0].pans
     expect(path.shots[0].pans).toHaveLength(1)
+    expect(Math.abs(centreOf(path, p.to) - 1400)).toBeLessThanOrEqual(2)
+  })
+
+  it('on the plan’s 2 a second the running median still keeps a stray box from aiming the pan', () => {
+    // The same move, 960 → 1400 at 2000, with the stray at 1800 on 2500 — the
+    // sample the trigger fires on. Aimed at it, the crop went to x 1312
+    // (centre 1616) and needed a second pan back.
+    const t = track({ shots: [[0, 6000]], faces: (ms) => [face(ms === 2500 ? 1800 : ms < 2000 ? 960 : 1400, 400, 120)] })
+    const path = cropPath(t, PORTRAIT_CANVAS)
+    expect(path.shots[0].pans).toHaveLength(1)
+    const [p] = path.shots[0].pans
+    expect(p.fromMs).toBe(2500)
     expect(Math.abs(centreOf(path, p.to) - 1400)).toBeLessThanOrEqual(2)
   })
 
