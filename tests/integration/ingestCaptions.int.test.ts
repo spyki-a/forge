@@ -176,6 +176,28 @@ describe('ingest:captions through the fake yt-dlp', () => {
     expect(await readdir(dest)).toEqual([])
   }, 60_000)
 
+  it('goes on past a key that fails, and builds the words from the -orig track', async () => {
+    // Measured on two of the user's ten links (EFFECTS.md §51): there `en` is
+    // a translation of a dub's ASR, and its request answered 429 on every try.
+    const dest = join(dir, 'one-fails')
+    const got = await runCaptions(URL, ['en', 'en-orig'], tool({ FAKE_SUB_FAIL: 'en' }), { dir: dest })
+    expect(got.tracks.map((t) => t.key)).toEqual(['en-orig'])
+    expect(got.transcript?.model).toBe('youtube-asr')
+    expect(got.transcript?.words).toHaveLength(36)
+    expect(await allNames(dest)).toEqual([basename(got.tracks[0].path)])
+  }, 60_000)
+
+  it('leaves out an automatic translation, even one that downloaded', async () => {
+    // `en` as a translation (its URL carries tlang) would otherwise be merged
+    // as if it were the uploader's lines: another track's words over the sound.
+    const dest = join(dir, 'translated')
+    const got = await runCaptions(URL, ['en', 'en-orig'], tool({ FAKE_SUB_TLANG: 'en' }), { dir: dest })
+    expect(got.tracks.map((t) => t.key)).toEqual(['en-orig'])
+    expect(got.transcript?.model).toBe('youtube-asr')
+    // What yt-dlp wrote for it went with the staging folder.
+    expect(await allNames(dest)).toEqual([basename(got.tracks[0].path)])
+  }, 60_000)
+
   it('reports yt-dlp’s reason on failure and leaves nothing', async () => {
     const dest = join(dir, 'fail')
     await expect(runCaptions(URL, ['en', 'en-orig'], tool({ FAKE_FAIL: '1' }), { dir: dest })).rejects.toThrow(/HTTP Error 429/)

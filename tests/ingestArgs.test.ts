@@ -365,6 +365,10 @@ describe('captions without the media', () => {
     runOf(args, ['--write-subs', '--write-auto-subs', '--sub-langs', 'en,en-orig', '--sub-format', 'json3'])
   })
 
+  it('goes on past a key that fails: a dub’s translated `en` answering 429 must not lose `en-orig` (EFFECTS.md §51)', () => {
+    expect(args).toContain('--ignore-errors')
+  })
+
   it('names the files from the link key, with the folder kept apart', () => {
     runOf(args, ['-P', dir, '-o', `${key}.captions.%(ext)s`])
   })
@@ -468,6 +472,20 @@ describe('reading the metadata and caption marks back', () => {
     expect(keys).toContain('en')
     expect(keys).not.toContain('fr')
     expect(written.find((w) => w.key === 'en-orig')?.path).toBe('/u/url/k/k.captions.en-orig.json3')
+  })
+
+  it('leaves out an automatic translation, written or not — its URL carries tlang (EFFECTS.md §51)', () => {
+    const timedtext = 'https://www.youtube.com/api/timedtext?v=x&kind=asr&fmt=json3'
+    const written = parseRequestedSubtitles(
+      JSON.stringify({
+        // A dub's ASR translated to English, as `en` came back on a dubbed video.
+        en: { ext: 'json3', url: `${timedtext}&lang=de-DE&tlang=en`, filepath: '/u/url/k/k.captions.en.json3' },
+        'en-orig': { ext: 'json3', url: `${timedtext}&lang=en`, filepath: '/u/url/k/k.captions.en-orig.json3' },
+        // The uploader's own track: no tlang, kept.
+        'en-US': { ext: 'json3', url: 'https://www.youtube.com/api/timedtext?v=x&lang=en-US&fmt=json3', filepath: '/u/url/k/k.captions.en-US.json3' }
+      })
+    )
+    expect(written.map((w) => w.key).sort()).toEqual(['en-US', 'en-orig'])
   })
 })
 

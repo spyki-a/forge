@@ -40,6 +40,11 @@
  *   FAKE_HOLD_MS    wait this long before printing: after writing captions
  *                   (to cancel with the files on disk), or before the
  *                   metadata (a stalled extractor, for the time bound)
+ *   FAKE_SUB_FAIL   keys whose download fails with yt-dlp's HTTP 429 line:
+ *                   the run stops there and exits 1, or, under
+ *                   `--ignore-errors`, warns and goes on (EFFECTS.md §51)
+ *   FAKE_SUB_TLANG  keys the video has only as an automatic translation:
+ *                   their URL carries `tlang`, as YouTube's does
  *   FAKE_JSON3      a json3 file written, byte for byte, as EVERY track the
  *                   video has — as YouTube writes `<l>` as a copy of
  *                   `<l>-orig` when there is no uploader track (EFFECTS.md
@@ -191,14 +196,32 @@ if (argv.includes('--skip-download')) {
   const media = fill(template, { ext: 'webm', id: 'fake' })
   const subExt = process.env.FAKE_SUB_EXT ?? 'json3'
   const written = {}
+  const failing = new Set((process.env.FAKE_SUB_FAIL ?? '').split(',').filter(Boolean))
+  const translated = new Set((process.env.FAKE_SUB_TLANG ?? '').split(',').filter(Boolean))
   for (const lang of wanted) {
     if (!have.has(lang)) continue // a missing language is skipped silently
+    // Measured (EFFECTS.md §51): yt-dlp writes the keys in `--sub-langs` order;
+    // one that fails stops the run at it, unless `--ignore-errors` makes it a
+    // warning — and then it stays in the dict, with no filepath.
+    const sourceUrl = translated.has(lang)
+      ? `https://example.invalid/api/timedtext?lang=de-DE&tlang=${lang}&fmt=json3`
+      : `https://example.invalid/api/timedtext?lang=${lang}&fmt=json3`
+    if (failing.has(lang)) {
+      const reason = `Unable to download video subtitles for '${lang}': HTTP Error 429: Too Many Requests`
+      if (!argv.includes('--ignore-errors')) {
+        process.stderr.write(`ERROR: ${reason}\n`)
+        process.exit(1)
+      }
+      process.stderr.write(`WARNING: ${reason}\n`)
+      written[lang] = { ext: subExt, url: sourceUrl, name: lang }
+      continue
+    }
     const finalPath = join(destDir, media.replace(/\.[^.]+$/, `.${lang}.${subExt}`))
     const json3 = process.env.FAKE_JSON3 ? readFileSync(process.env.FAKE_JSON3, 'utf8') : JSON.stringify(json3For(lang))
     writeFileSync(`${finalPath}.part`, subExt === 'json3' ? json3 : 'WEBVTT\n\n')
     await sleep(delay)
     renameSync(`${finalPath}.part`, finalPath)
-    written[lang] = { ext: subExt, url: 'https://example.invalid/timedtext', name: lang, filepath: finalPath }
+    written[lang] = { ext: subExt, url: sourceUrl, name: lang, filepath: finalPath }
   }
   await sleep(Number(process.env.FAKE_HOLD_MS ?? 0))
   if (process.env.FAKE_FAIL) {

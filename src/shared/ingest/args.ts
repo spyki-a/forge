@@ -371,6 +371,19 @@ export function buildCaptionArgs(url: string, keys: string[], dir: string, key: 
   return [
     ...commonHead(link.url),
     '--ignore-no-formats-error',
+    /*
+     * One key that fails is a WARNING, not the end of the run (EFFECTS.md
+     * §51, measured 2026-10-13). On a video YouTube has dubbed, `<l>` with no
+     * uploader track behind it is an automatic translation of a DUB's ASR —
+     * on two of the user's ten links `en` was `lang=de-DE&tlang=en` and
+     * `lang=uk&tlang=en` — and that request answered HTTP 429 on every try
+     * while `<l>-orig` downloaded. Without this flag yt-dlp stopped at the
+     * failed key, wrote nothing after it and exited 1: Get transcript failed
+     * on both links. With it, exit 0, `<l>-orig` written, and the failed key
+     * in the dict with no `filepath`, which `parseRequestedSubtitles` drops.
+     * A failed EXTRACTION still exits 1 with its ERROR line (measured).
+     */
+    '--ignore-errors',
     '--skip-download',
     '--no-simulate',
     '--write-subs',
@@ -471,9 +484,25 @@ export interface WrittenSubtitle {
 }
 
 /**
+ * Is this track YouTube's automatic TRANSLATION of another — its URL carries
+ * `tlang`? Never the words spoken in the video: on a dubbed video `<l>` was
+ * a translation of a dub's ASR (EFFECTS.md §51), so a transcript built from
+ * it would put another track's words, machine-translated, under the sound.
+ */
+function isTranslation(url: unknown): boolean {
+  if (typeof url !== 'string') return false
+  try {
+    return new URL(url).searchParams.has('tlang')
+  } catch {
+    return false
+  }
+}
+
+/**
  * The SUBS_MARK line's value: `NA` when no requested language existed
  * (measured), otherwise yt-dlp's `requested_subtitles` dict. Only entries with
- * a `filepath` were written.
+ * a `filepath` were written; an automatic translation (`isTranslation`) is
+ * left out, so what it wrote goes with the staging folder.
  */
 export function parseRequestedSubtitles(value: string): WrittenSubtitle[] {
   const text = value.trim()
@@ -489,7 +518,7 @@ export function parseRequestedSubtitles(value: string): WrittenSubtitle[] {
   for (const [key, entry] of Object.entries(raw as Record<string, unknown>)) {
     const e = entry as Record<string, unknown> | null
     const path = str(e?.filepath)
-    if (path) out.push({ key, ext: str(e?.ext) ?? '', path })
+    if (path && !isTranslation(e?.url)) out.push({ key, ext: str(e?.ext) ?? '', path })
   }
   return out
 }

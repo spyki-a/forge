@@ -4626,3 +4626,42 @@ Converter's presets, and the helper's `media.frame_args` and
 half's ffmpeg is scanned by the same blocklist. Mutations: `scdet` in the
 chroma-key probe's filter, and in the helper's frame stream — each fails its
 shape. `sceneArgs` (§4.2) is an `it.todo` until `shots.ts` exists.
+
+## 51. M0's exit on the user's ten links — what the app's own path met (2026-10-13)
+
+For `docs/CLIPS.md` §3b.9, its first bullet: the user's ten links (ids
+`O35KGzkS4VA`, `eK71EN3P78U`, `lqOH-zxtCDE`, `3pG8Hgq3Z8M`, `bvz_zK5ZxpM`,
+`j4aoo1qbGoE`, `xON4Vot8j8g`, `zEqLXGE_re4`, `F7Lg2yHtqRA`, `jze_5hvaVV8`)
+through `tests/integration/m0Exit.int.test.ts`, and by hand with the app's
+own argv. yt-dlp 2026.08.19 with deno on PATH; the bundled ffmpeg (4.4);
+`XDG_CACHE_HOME` in a temp folder; every request through the sandbox's
+proxy. Ids only: no caption text, title or word of these videos is written
+here.
+
+**A dubbed video's `<l>` is a translation of a dub, and it can fail the
+whole fetch.** With the app's caption argv (`--write-subs --write-auto-subs
+--sub-langs en,en-orig`), on `O35KGzkS4VA` and `3pG8Hgq3Z8M`, yt-dlp exited
+1 with `ERROR: Unable to download video subtitles for 'en': HTTP Error 429:
+Too Many Requests` — in every full run of the exit check (four) and by hand
+on 2026-10-13 — and wrote NOTHING: it writes the keys in `--sub-langs`
+order and stops at the first that fails, so `en-orig` was never fetched and
+Get transcript said `failed`. `requested_subtitles`' URLs say why it is
+those two: their `en` is `lang=de-DE&tlang=en` and `lang=uk&tlang=en` — an
+automatic translation of a dub's ASR (the `asr` translations of every audio
+track share the key; yt-dlp takes the last), while `en-orig` is `lang=en`.
+On the other six caption links both keys are `lang=<l>` with no `tlang`.
+`lqOH-zxtCDE`'s `hi` was `lang=bn&tlang=hi` in one earlier run and `lang=hi`
+on 2026-10-13: which candidate the key resolves to varies between requests.
+So §40's "`<l>` comes back a byte copy of `<l>-orig`" holds only on a video
+with no dubs. Two changes (`buildCaptionArgs`, `parseRequestedSubtitles`):
+
+- `--ignore-errors`: the same two links then exit **0**, `en-orig` written
+  (1,188,877 and 411,587 bytes), a `WARNING:` in place of the `ERROR:`, and
+  `en` in the dict with no `filepath`. A failed extraction still exits 1
+  with its `ERROR:` line (an unreachable link, with and without the flag);
+  an unavailable YouTube id exits 0 with `NA` either way, because of
+  `--ignore-no-formats-error`, as before.
+- an entry whose URL carries `tlang` is left out even when it downloaded: a
+  translation's words are never the words spoken. Without this, a translated
+  `<l>` that `json3Kind` read as `lines` would be merged as the uploader's
+  text (§16.12) over the ASR's timing.
