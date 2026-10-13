@@ -498,6 +498,17 @@ class FetchUrl(unittest.TestCase):
             os.remove(self.source)
             self.assertEqual(media.fetch_url(self.url, self.sha, None, "the face model"), path)
 
+    def test_fetched_path_is_where_fetch_url_keeps_it(self) -> None:
+        # Asked before any fetch, it names the file fetch_url then keeps — and
+        # asking makes nothing. faces.model_path is this.
+        with mock.patch.dict(os.environ, {"FORGE_MODELS_DIR": self.models}):
+            expected = media.fetched_path(self.url, self.sha.upper())
+            self.assertFalse(os.path.exists(os.path.dirname(expected)))
+            self.assertEqual(media.fetch_url(self.url, self.sha, None, "the face model"), expected)
+        self.assertTrue(os.path.basename(expected).startswith(self.sha[:16] + "-"))
+        with self.assertRaises(ValueError):
+            media.fetched_path(self.url, "not a hash")
+
     def test_a_wrong_hash_keeps_nothing(self) -> None:
         with mock.patch.dict(os.environ, {"FORGE_MODELS_DIR": self.models}):
             with self.assertRaises(ValueError):

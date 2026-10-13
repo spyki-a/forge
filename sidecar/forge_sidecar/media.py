@@ -476,6 +476,22 @@ def _tls_context() -> "Any":
     return tls
 
 
+def fetched_path(url: str, sha256: str) -> str:
+    """Where ``fetch_url`` keeps ``url``'s file: ``models_dir()/files/<sha256[:16]>-<leaf>``.
+
+    The leaf is the URL path's last part made Windows-safe. Public so a
+    capability can ask whether its model is on disk without fetching, and
+    without repeating the layout (faces.model_path).
+    """
+    import urllib.parse
+
+    digest = sha256.lower() if isinstance(sha256, str) else ""
+    if not re.fullmatch(r"[0-9a-f]{64}", digest):
+        raise ValueError(f"{url}: a sha256 of 64 hex digits is needed, not {sha256!r}")
+    leaf = os.path.basename(urllib.parse.urlparse(url).path)
+    return os.path.join(models_dir(), "files", f"{digest[:16]}-{_safe_name(leaf)}")
+
+
 def fetch_url(
     url: str, sha256: str, context: "Context | None", label: str,
     span: tuple[float, float] = (0.0, 1.0),
@@ -496,19 +512,14 @@ def fetch_url(
     silent, whatever the read size (16 KiB to 1 MiB), while curl through the
     same proxy got the whole file 3 of 3.
     """
-    import urllib.parse
     import urllib.request
 
-    digest = sha256.lower() if isinstance(sha256, str) else ""
-    if not re.fullmatch(r"[0-9a-f]{64}", digest):
-        raise ValueError(f"{url}: a sha256 of 64 hex digits is needed, not {sha256!r}")
-    leaf = os.path.basename(urllib.parse.urlparse(url).path)
-    folder = os.path.join(models_dir(), "files")
-    target = os.path.join(folder, f"{digest[:16]}-{_safe_name(leaf)}")
+    target = fetched_path(url, sha256)
+    digest = sha256.lower()
     if os.path.isfile(target):
         return target
 
-    os.makedirs(folder, exist_ok=True)
+    os.makedirs(os.path.dirname(target), exist_ok=True)
     partial = f"{target}.{os.getpid()}.part"
     hasher = hashlib.sha256()
     received = 0

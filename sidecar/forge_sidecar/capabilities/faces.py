@@ -52,7 +52,6 @@ import subprocess
 import sys
 import tempfile
 import threading
-import urllib.parse
 from typing import Any, Mapping
 
 from .. import media
@@ -112,13 +111,11 @@ EXIT_IMPORT = 69
 def model_path() -> str:
     """Where ``media.fetch_url`` keeps the model: ``models_dir()/files/<sha256[:16]>-<leaf>``.
 
-    The same name ``fetch_url`` builds (its folder, the hash's first 16
-    digits, the URL's leaf made Windows-safe), so asking whether the model is
-    on disk never fetches. tests/sidecar/test_faces.py holds the two equal by
-    fetching a local file through ``fetch_url``.
+    ``media.fetched_path``, the name ``fetch_url`` itself uses, so asking
+    whether the model is on disk never fetches. tests/sidecar/test_faces.py
+    holds the two equal by fetching a local file through ``fetch_url``.
     """
-    leaf = os.path.basename(urllib.parse.urlparse(MODEL_URL).path)
-    return os.path.join(media.models_dir(), "files", f"{MODEL_SHA256[:16]}-{media._safe_name(leaf)}")
+    return media.fetched_path(MODEL_URL, MODEL_SHA256)
 
 
 def model_status() -> dict[str, Any]:
