@@ -1,0 +1,10 @@
+# The face finder's second pip run — see requirements-faces.txt, which goes first:
+#
+#   pip install --no-deps -r sidecar/requirements-faces-nodeps.txt
+#
+# mediapipe alone, without its dependency list (docs/CLIPS.md §4.3). 0.10.35 is
+# the version that ran on CPython 3.14.6 (docs/EFFECTS.md §37); the stubs in
+# forge_sidecar/stubs are tied to it, and an upgrade re-runs the worker's
+# import test in tests/integration/faces.int.test.ts.
+
+mediapipe==0.10.35
