@@ -4682,9 +4682,17 @@ same section with and without the downloader args is **byte-identical**
 the framemd5 of both pairs equal. So: a section always carries those
 downloader args; `humanError` gives "ffmpeg exited with code N" the line
 before it, its URLs cut out; and `downloadMedia` runs a sectioned download
-that failed that way once more (a fresh run fetches fresh stream URLs),
-and any other failure not at all. All of it through the sandbox's proxy:
-whether the proxy adds to the rate is not known.
+that failed that way again (a fresh run fetches fresh stream URLs), and any
+other failure not at all. One more run was the first fix, and the ten-link
+exit run then had 2 of its 36 cuts refused on BOTH runs (`eK71EN3P78U` and
+`3pG8Hgq3Z8M`, each a fast cut, each saying `Server returned 403
+Forbidden`). The rate moves with the hour: the same `eK71EN3P78U` fast cut
+by hand, ten times in a row, was refused on runs 1, 4, 7 and 10 (each in
+1–2 s; each passed when run again at once, in 16 s), and seven runs later
+not once. Every format came from the same player client (the stream URLs'
+`c=VISIONOS`), so it is not one client's URLs failing. A cut now gets
+`CUT_TRIES` = 3 runs. All of it through the sandbox's proxy: whether the
+proxy adds to the rate is not known.
 
 **Hindi and Telugu captions were burnt unshaped.** `plan.ts` burnt the
 .ass with `subtitles=filename=…`. In ffmpeg 4.1's `vf_subtitles.c` (read at

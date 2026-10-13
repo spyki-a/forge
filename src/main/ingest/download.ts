@@ -56,6 +56,9 @@ export interface IngestHandle {
 /** The tail of stderr — yt-dlp's real error is always in the last few lines. */
 const MAX_STDERR_LINES = 12
 
+/** How many runs a sectioned download whose cut was refused gets in all (`downloadMedia`). */
+export const CUT_TRIES = 3
+
 export function downloadsDir(): string {
   return join(app.getPath('userData'), 'downloads')
 }
@@ -203,22 +206,27 @@ export function downloadMedia(
     const sectioned = built.args.includes('--download-sections')
 
     /*
-     * A cut that fails as "ffmpeg exited with code N" is run once more.
+     * A cut that fails as "ffmpeg exited with code N" is run again, up to
+     * CUT_TRIES runs in all.
      *
-     * Measured on the user's links (EFFECTS.md §51): about one sectioned
-     * download in ten failed so — a googlevideo `403 Forbidden` on a stream
-     * URL, at once — and each passed when run again. yt-dlp's `--retries`
-     * does not reach FFmpegFD; a fresh run fetches fresh stream URLs. Any
-     * other failure (a private video, a missing format) would fail the same
-     * way twice, so it is not retried. `discard` has removed the first try's
-     * partials before this sees its error.
+     * Measured on the user's links (EFFECTS.md §51): a googlevideo `403
+     * Forbidden` on a stream URL, at once, on one sectioned download in ten
+     * to one in four depending on the hour; each passed when run again.
+     * yt-dlp's `--retries` does not reach FFmpegFD; a fresh run fetches
+     * fresh stream URLs. One more run was not enough: in the ten-link exit
+     * run, 2 of 36 cuts were refused on both. Any other failure (a private
+     * video, a missing format) would fail the same way again, so it is not
+     * retried. `discard` has removed each try's partials before this sees
+     * its error.
      */
-    try {
-      return await attempt(built)
-    } catch (err) {
-      if (cancelled) throw new CancelledError()
-      if (!sectioned || !(err instanceof Error) || !/^ffmpeg exited with code/i.test(err.message)) throw err
-      return attempt(built)
+    for (let tries = 1; ; tries++) {
+      try {
+        return await attempt(built)
+      } catch (err) {
+        if (cancelled) throw new CancelledError()
+        const refused = sectioned && err instanceof Error && /^ffmpeg exited with code/i.test(err.message)
+        if (!refused || tries >= CUT_TRIES) throw err
+      }
     }
   })()
 

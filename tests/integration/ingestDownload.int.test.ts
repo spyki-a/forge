@@ -3,7 +3,7 @@ import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { downloadMedia, findCached, removePartials, type IngestTool } from '../../src/main/ingest/download'
+import { CUT_TRIES, downloadMedia, findCached, removePartials, type IngestTool } from '../../src/main/ingest/download'
 import type { IngestRequest } from '@shared/ingest/args'
 
 /*
@@ -164,24 +164,26 @@ describe('a download through the fake yt-dlp', () => {
   const runsOf = async (file: string): Promise<number> =>
     (await readFile(file, 'utf8').catch(() => '')).split('\n').filter(Boolean).length
 
-  it('runs a cut that was refused once more, with fresh stream URLs, and lands it', async () => {
-    const dest = join(dir, 'refused-once')
-    const runs = join(dir, 'refused-once.runs')
-    const handle = downloadMedia(ranged(), tool({ FAKE_SECTION_403: join(dir, 'refused-once.count'), FAKE_RUNS: runs }), () => undefined, { destDir: dest })
-    const outcome = await handle.promise
-    expect(basename(outcome.path)).toBe('dQw4w9WgXcQ.video-1080p.r1000-3000.fast.mp4')
-    expect(await runsOf(runs)).toBe(2)
+  it('runs a cut that was refused again, with fresh stream URLs, and lands it — refused twice too', async () => {
+    for (const times of [1, 2]) {
+      const dest = join(dir, `refused-${times}`)
+      const runs = join(dir, `refused-${times}.runs`)
+      const env = { FAKE_SECTION_403: join(dir, `refused-${times}.count`), FAKE_SECTION_403_TIMES: String(times), FAKE_RUNS: runs }
+      const outcome = await downloadMedia(ranged(), tool(env), () => undefined, { destDir: dest }).promise
+      expect(basename(outcome.path), `refused ${times}`).toBe('dQw4w9WgXcQ.video-1080p.r1000-3000.fast.mp4')
+      expect(await runsOf(runs), `refused ${times}`).toBe(times + 1)
+    }
   }, 60_000)
 
-  it('says why a cut refused twice failed — ffmpeg’s reason, not its stream URL — and cleans up', async () => {
-    const dest = join(dir, 'refused-twice')
-    const runs = join(dir, 'refused-twice.runs')
-    const env = { FAKE_SECTION_403: join(dir, 'refused-twice.count'), FAKE_SECTION_403_TIMES: '2', FAKE_RUNS: runs }
+  it('says why a cut refused on every try failed — ffmpeg’s reason, not its stream URL — and cleans up', async () => {
+    const dest = join(dir, 'refused-always')
+    const runs = join(dir, 'refused-always.runs')
+    const env = { FAKE_SECTION_403: join(dir, 'refused-always.count'), FAKE_SECTION_403_TIMES: String(CUT_TRIES), FAKE_RUNS: runs }
     const handle = downloadMedia(ranged(), tool(env), () => undefined, { destDir: dest })
     const error = await handle.promise.then(() => null, (err: unknown) => err)
     expect(error).toBeInstanceOf(Error)
     expect((error as Error).message).toBe('ffmpeg exited with code 1: Server returned 403 Forbidden (access denied)')
-    expect(await runsOf(runs)).toBe(2)
+    expect(await runsOf(runs)).toBe(CUT_TRIES)
     expect(await readdir(dest)).toEqual([])
   }, 60_000)
 
