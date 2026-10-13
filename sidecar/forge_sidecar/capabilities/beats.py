@@ -16,6 +16,7 @@ import os
 import subprocess
 from typing import Any
 
+from .. import media
 from ..rpc import Context, Server, Unavailable
 
 ANALYSIS_RATE = 22050
@@ -55,6 +56,7 @@ def _decode_mono(
         ],
         capture_output=True,
         check=False,
+        **media._NO_WINDOW,
     )
     if process.returncode != 0:
         message = process.stderr.decode("utf-8", "replace").strip()

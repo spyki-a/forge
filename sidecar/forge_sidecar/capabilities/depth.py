@@ -164,7 +164,7 @@ def _write_rgba(path: str, ffmpeg: str, rgba: "Any") -> None:
         [ffmpeg, "-hide_banner", "-nostdin", "-loglevel", "error", "-y",
          "-f", "rawvideo", "-pix_fmt", "rgba", "-s", f"{width}x{height}",
          "-i", "pipe:0", "-frames:v", "1", path],
-        input=rgba.tobytes(), capture_output=True, check=False,
+        input=rgba.tobytes(), capture_output=True, check=False, **media._NO_WINDOW,
     )
     if result.returncode != 0:
         message = result.stderr.decode("utf-8", "replace").strip()

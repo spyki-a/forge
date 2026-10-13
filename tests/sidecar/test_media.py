@@ -548,6 +548,41 @@ class FetchUrl(unittest.TestCase):
                 tls.load_verify_locations.assert_not_called()
 
 
+# ---------------------------------------------------------------- spawning
+
+
+class NoWindow(unittest.TestCase):
+    def test_every_spawn_in_the_helper_passes_the_no_window_flag(self) -> None:
+        # A packaged Windows app has no console, so every console child it
+        # starts without CREATE_NO_WINDOW opens a window (CLAUDE.md,
+        # "Spawning") — and off Windows the flag is {}, so nothing that runs
+        # here can see it missing. Read from the source instead: every
+        # subprocess call in the package, each with its own arguments up to its
+        # closing parenthesis. depth's PNG write and beats' decode went without
+        # it until 2026-10-13. test_faces holds the worker's spawn by
+        # behaviour as well.
+        root = os.path.dirname(media.__file__)
+        sites: list[tuple[str, int, str]] = []
+        for folder, _dirs, files in os.walk(root):
+            for name in sorted(files):
+                if not name.endswith(".py"):
+                    continue
+                path = os.path.join(folder, name)
+                with open(path, encoding="utf-8") as handle:
+                    source = handle.read()
+                for call in re.finditer(r"\bsubprocess\.(?:run|Popen|call|check_call|check_output)\(", source):
+                    depth, end = 1, call.end()
+                    while depth:
+                        depth += {"(": 1, ")": -1}.get(source[end], 0)
+                        end += 1
+                    where = os.path.relpath(path, root)
+                    sites.append((where, source.count("\n", 0, call.start()) + 1, source[call.end():end]))
+        # media's probe, one-frame decode and stream; the face worker; depth's PNG; beats' audio.
+        self.assertGreaterEqual(len(sites), 6, [f"{w}:{n}" for w, n, _ in sites])
+        for where, line, arguments in sites:
+            self.assertIn("_NO_WINDOW", arguments, f"{where}:{line} spawns without the no-window flag")
+
+
 # ------------------------------------------------------------- registration
 
 
