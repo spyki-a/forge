@@ -14,6 +14,7 @@ import {
   parseRequestedSubtitles,
   parseTrackFlags,
   readMarkedLine,
+  unwrittenSubtitles,
   type LinkMeta,
   type MarkKind
 } from '@shared/ingest/args'
@@ -118,6 +119,22 @@ function runTool(tool: IngestTool, args: string[], signal?: AbortSignal): Promis
 
 const lastMark = (run: ToolRun, kind: MarkKind): string | null =>
   [...run.marks].reverse().find((m) => m.kind === kind)?.value ?? null
+
+/**
+ * Why a listed track was not written: yt-dlp's own warning for it, with the
+ * `WARNING:`, the extractor tag and the id taken off as `humanError` takes
+ * them off an error — `Unable to download video subtitles for 'en': HTTP
+ * Error 429: Too Many Requests` (measured, EFFECTS.md §51).
+ */
+function captionFetchFailure(stderr: readonly string[], keys: readonly string[]): string {
+  const line = [...stderr].reverse().find((l) => /Unable to download video subtitles/i.test(l))
+  if (!line) return `The captions (${keys.join(', ')}) could not be downloaded`
+  return line
+    .replace(/^(?:WARNING|ERROR):\s*/i, '')
+    .replace(/^\[[^\]]+\]\s*/, '')
+    .replace(/^[A-Za-z0-9_-]{11}:\s*/, '')
+    .trim()
+}
 
 /** The metadata subset (args.ts `buildMetaArgs`), nothing downloaded. */
 export async function runMeta(url: string, tool: IngestTool, options: { signal?: AbortSignal } = {}): Promise<LinkMeta> {
@@ -229,6 +246,19 @@ export async function runCaptions(
     }
   }
   if (options.signal?.aborted) return discard(new CancelledError())
+  /*
+   * Nothing readable, while yt-dlp listed a track of the video's own that it
+   * could not write: the fetch FAILED. Under `--ignore-errors` a key that
+   * answers 429 is a warning and the run exits 0 (EFFECTS.md §51), so with
+   * every key refused — a rate limit — this would otherwise resolve with no
+   * tracks and the panel would say "This video has no captions" of a video
+   * that has them. A refused translation alone is not that: the video has
+   * no track of its own in that language, and "no captions" is the truth.
+   */
+  if (read.length === 0) {
+    const unwritten = unwrittenSubtitles(printed)
+    if (unwritten.length > 0) return discard(new Error(captionFetchFailure(run.stderr, unwritten)))
+  }
 
   try {
     for (const track of read) await rename(track.from, track.path)

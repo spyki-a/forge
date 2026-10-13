@@ -194,6 +194,26 @@ describe('ingest:captions through the fake yt-dlp', () => {
     expect(await allNames(dest)).toEqual([basename(got.tracks[0].path)])
   }, 60_000)
 
+  it('fails with yt-dlp’s reason when every key fails — never "no captions" over a rate limit', async () => {
+    // Under --ignore-errors a refused key is a warning and the run exits 0
+    // (EFFECTS.md §51); with every key refused that read as a video with no
+    // captions, and the panel said so of a video that has them.
+    const dest = join(dir, 'all-fail')
+    await expect(runCaptions(URL, ['en', 'en-orig'], tool({ FAKE_SUB_FAIL: 'en,en-orig' }), { dir: dest })).rejects.toThrow(
+      /HTTP Error 429/
+    )
+    expect(await readdir(dest)).toEqual([])
+  }, 60_000)
+
+  it('still says "no captions" when the only track that failed was a translation', async () => {
+    // A translation is never wanted (below), so a video whose only `en` is one
+    // has no captions of its own in English, whether or not it downloaded.
+    const dest = join(dir, 'translation-fails')
+    const got = await runCaptions(URL, ['en', 'en-orig'], tool({ FAKE_SUBS: 'en', FAKE_SUB_TLANG: 'en', FAKE_SUB_FAIL: 'en' }), { dir: dest })
+    expect(got.tracks).toEqual([])
+    expect(got.transcript).toBeNull()
+  }, 60_000)
+
   it('leaves out an automatic translation, even one that downloaded', async () => {
     // `en` as a translation (its URL carries tlang) would otherwise be merged
     // as if it were the uploader's lines: another track's words over the sound.

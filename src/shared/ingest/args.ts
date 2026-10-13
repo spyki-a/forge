@@ -547,6 +547,32 @@ function isTranslation(url: unknown): boolean {
  * left out, so what it wrote goes with the staging folder.
  */
 export function parseRequestedSubtitles(value: string): WrittenSubtitle[] {
+  const out: WrittenSubtitle[] = []
+  for (const [key, e] of subtitleEntries(value)) {
+    const path = str(e?.filepath)
+    if (path && !isTranslation(e?.url)) out.push({ key, ext: str(e?.ext) ?? '', path })
+  }
+  return out
+}
+
+/**
+ * The keys yt-dlp listed for the video but did NOT write, translations left
+ * out: under `--ignore-errors` a track whose download failed stays in the
+ * dict with no `filepath` (measured, EFFECTS.md §51). A fetch that read no
+ * track while one of these is present FAILED — it did not find a video with
+ * no captions — and `runCaptions` says so with yt-dlp's warning, instead of
+ * "This video has no captions" over a rate limit.
+ */
+export function unwrittenSubtitles(value: string): string[] {
+  const out: string[] = []
+  for (const [key, e] of subtitleEntries(value)) {
+    if (!str(e?.filepath) && !isTranslation(e?.url)) out.push(key)
+  }
+  return out
+}
+
+/** The SUBS_MARK dict's entries; none for `NA`, `null` or nothing. */
+function subtitleEntries(value: string): [string, Record<string, unknown> | null][] {
   const text = value.trim()
   if (text === 'NA' || text === 'null' || text === '') return []
   let raw: unknown
@@ -556,13 +582,7 @@ export function parseRequestedSubtitles(value: string): WrittenSubtitle[] {
     throw new Error('yt-dlp printed a caption list that could not be read')
   }
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return []
-  const out: WrittenSubtitle[] = []
-  for (const [key, entry] of Object.entries(raw as Record<string, unknown>)) {
-    const e = entry as Record<string, unknown> | null
-    const path = str(e?.filepath)
-    if (path && !isTranslation(e?.url)) out.push({ key, ext: str(e?.ext) ?? '', path })
-  }
-  return out
+  return Object.entries(raw as Record<string, unknown>).map(([key, entry]) => [key, entry as Record<string, unknown> | null])
 }
 
 /**

@@ -14,6 +14,7 @@ import {
   outputStem,
   parseMeta,
   parseRequestedSubtitles,
+  unwrittenSubtitles,
   readMarkedLine,
   SUBS_MARK,
   TITLE_MARK,
@@ -522,6 +523,22 @@ describe('reading the metadata and caption marks back', () => {
       })
     )
     expect(written.map((w) => w.key).sort()).toEqual(['en-US', 'en-orig'])
+  })
+
+  it('names the video’s own tracks yt-dlp listed and did not write — a refused key, not a translation', () => {
+    const timedtext = 'https://www.youtube.com/api/timedtext?v=x&kind=asr&fmt=json3'
+    expect(unwrittenSubtitles('NA')).toEqual([])
+    expect(
+      unwrittenSubtitles(
+        JSON.stringify({
+          // Refused under --ignore-errors: in the dict, no filepath (EFFECTS.md §51).
+          en: { ext: 'json3', url: `${timedtext}&lang=en` },
+          'en-orig': { ext: 'json3', url: `${timedtext}&lang=en`, filepath: '/u/url/k/k.captions.en-orig.json3' },
+          // A refused translation is not the video's own track.
+          fr: { ext: 'json3', url: `${timedtext}&lang=de-DE&tlang=fr` }
+        })
+      )
+    ).toEqual(['en'])
   })
 })
 

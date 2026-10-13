@@ -4660,7 +4660,12 @@ with no dubs. Two changes (`buildCaptionArgs`, `parseRequestedSubtitles`):
   `en` in the dict with no `filepath`. A failed extraction still exits 1
   with its `ERROR:` line (an unreachable link, with and without the flag);
   an unavailable YouTube id exits 0 with `NA` either way, because of
-  `--ignore-no-formats-error`, as before.
+  `--ignore-no-formats-error`, as before. The flag's flip side, found in
+  review: with every key refused the run also exits 0 and writes nothing,
+  which `runCaptions` read as a video with no captions. Now a run that read
+  no track while the dict lists one of the video's own without a `filepath`
+  (`unwrittenSubtitles`) fails with the warning's reason; a refused
+  translation alone still means no captions (both on the fake).
 - an entry whose URL carries `tlang` is left out even when it downloaded: a
   translation's words are never the words spoken. Without this, a translated
   `<l>` that `json3Kind` read as `lines` would be merged as the uploader's

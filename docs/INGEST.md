@@ -327,7 +327,11 @@ by the renderer and placed as media, and neither of these is media.
   time: `--ignore-errors` turns the failed key into a warning so `<l>-orig`
   is still written, and `parseRequestedSubtitles` drops any entry whose URL
   carries `tlang`, downloaded or not — a translation is never the words
-  spoken (`EFFECTS.md` §51).
+  spoken (`EFFECTS.md` §51). The flag has a flip side: with EVERY key
+  refused (a rate limit) yt-dlp still exits 0 with nothing written, so when
+  no track was read and the dict holds one of the video's own with no
+  `filepath` (`unwrittenSubtitles`), `runCaptions` fails with yt-dlp's
+  warning rather than resolving as a video with no captions.
 - **Where the files land**: `userData/url/<linkKey>/<linkKey>.captions.<lang>.json3`,
   kept as the reload cache for the clip collected later. `linkKey` is the
   link's key plus a digest of its URL (`linkCacheKey`), so two YouTube ids
