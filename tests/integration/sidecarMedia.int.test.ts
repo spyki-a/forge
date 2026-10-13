@@ -66,8 +66,8 @@ describe('the helper’s media module', () => {
     expect(code, text).toBe(0)
     const ran = Number(/Ran (\d+) tests?/.exec(text)?.[1] ?? 0)
     /*
-     * A hundred on 2026-10-13: test_media 35, test_faces 39, test_salient 26.
-     * Losing the smallest file would leave 74, under this floor; and each
+     * 103 on 2026-10-13: test_media 38, test_faces 39, test_salient 26.
+     * Losing the smallest file would leave 77, under this floor; and each
      * file in the folder must have run tests of its own, by name.
      */
     expect(ran, text).toBeGreaterThanOrEqual(90)
