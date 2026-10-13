@@ -395,6 +395,11 @@ describe('cropPath — rule 3: two people', () => {
     // A consumer that draws one crop gets the top half's position.
     expect(s.at).toBe(top.x)
     expectInside(path)
+    // The same with the sizes swapped, so neither size order can pass for the side.
+    const swapped = track({ shots: [[0, 4000]], faces: () => [face(LEFT.cx, LEFT.cy, RIGHT.side), face(RIGHT.cx, RIGHT.cy, LEFT.side)] })
+    const halves = cropPath(swapped, PORTRAIT_CANVAS).shots[0].halves!
+    expect(Math.abs(halves.top.x + path.half.width / 2 - LEFT.cx)).toBeLessThanOrEqual(2)
+    expect(Math.abs(halves.bottom.x + path.half.width / 2 - RIGHT.cx)).toBeLessThanOrEqual(2)
   })
 
   it('a canvas of the source’s own shape has nothing to follow, and never stacks', () => {
