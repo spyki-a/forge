@@ -483,8 +483,14 @@ class OneSession(unittest.TestCase):
                 thread.start()
             for thread in threads:
                 thread.join(10)
+            # And a parallax bake's matte, asked for afterwards, is that same
+            # session: a second BiRefNet would be a second ~8.6 GB peak.
+            bake = depth._matte_session(depth.DEFAULT_MATTE_VARIANT)
+            sessions = dict(depth._sessions)
         self.assertEqual(len(answers), 2)
         self.assertEqual(built, ["/models/model_fp16.onnx"])
+        self.assertEqual(list(sessions), [f"matte:{depth.DEFAULT_MATTE_VARIANT}"])
+        self.assertIs(sessions[f"matte:{depth.DEFAULT_MATTE_VARIANT}"], bake)
 
 
 # ---------------------------------------------------------- registration
