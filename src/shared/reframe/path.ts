@@ -385,8 +385,8 @@ function sides(a: Box, b: Box): [Box, Box] {
  * Rules 4–6 for one subject on one rail.
  *
  * The held position centres (or, on y, upper-thirds) the smoothed subject over
- * the opening second; with no subject there it is `fallback`, the ladder's
- * (`opened` false). Then: no pan at all when the margin-widened box stays in
+ * the opening second, moved as little as keeps it whole with its margin when
+ * it fits; with no subject there it is `fallback` (`opened` false). Then: no pan at all when the margin-widened box stays in
  * the held crop on ≥ staticShare of the samples; otherwise a pan whenever the
  * smoothed centre has stayed outside the dead zone for triggerMs — never in
  * the head, never within minHoldMs of the last move's end, and never one that
@@ -403,28 +403,43 @@ function followSubject(
   const lo = (b: Box): number => (rail.axis === 'x' ? b.x0 : b.y0)
   const hi = (b: Box): number => (rail.axis === 'x' ? b.x1 : b.y1)
   const centres = marks.map((m) => (lo(m.box) + hi(m.box)) / 2)
+  const spans = marks.map((m) => hi(m.box) - lo(m.box))
 
   // A running median, centred (marks are in ms order), over smoothMs and
   // never fewer than three of the track's samples: ±1.5 of its spacing. At
   // the plan's 2 a second, smoothMs alone held the sample itself, and a pan
   // fired on a stray box aimed at it (measured: 216 px past the face, then a
   // second pan back); three samples' median drops one stray, and the pan
-  // aims where the face is.
+  // aims where the face is. The subject's length is smoothed the same way.
   const reach = pace.reachMs
   const smooth: number[] = []
+  const smoothSpan: number[] = []
   for (let j = 0, a = 0, b = 0; j < marks.length; j++) {
     while (marks[a].ms < marks[j].ms - reach) a++
     while (b < marks.length && marks[b].ms <= marks[j].ms + reach) b++
     smooth.push(median(centres.slice(a, b)))
+    smoothSpan.push(median(spans.slice(a, b)))
   }
 
-  const opening = smooth.filter((_, j) => marks[j].ms < shot.startMs + OPENING_MS)
+  // Where the crop goes for a subject centred at `c`, `span` long: that
+  // centre at the rail's anchor, then — when the subject fits with its
+  // margin — moved just enough to keep all of it in. Centred on x that
+  // changes nothing; on y the upper third cut the top off a tall subject
+  // (measured: a 500 px two-shot's top face lost 48 px for the whole shot,
+  // a 460 px face 28 px), though rule 3's fit had passed it.
+  const margin = PATH_RULES.marginShare * len
+  const aim = (c: number, span: number): number => {
+    const raw = c - anchor * len
+    if (span + 2 * margin > len) return place(raw, room)
+    return place(Math.min(Math.max(raw, c + span / 2 + margin - len), c - span / 2 - margin), room)
+  }
+
+  const opening = marks.flatMap((m, j) => (m.ms < shot.startMs + OPENING_MS ? [j] : []))
   const opened = opening.length > 0
-  const at = opened ? place(median(opening) - anchor * len, room) : fallback
+  const at = opened ? aim(median(opening.map((j) => smooth[j])), median(opening.map((j) => smoothSpan[j]))) : fallback
   if (marks.length === 0) return { at, pans: [], opened }
 
   // Rule 4: static first.
-  const margin = PATH_RULES.marginShare * len
   const inside = marks.filter((m) => lo(m.box) - margin >= at && hi(m.box) + margin <= at + len).length
   if (inside >= PATH_RULES.staticShare * marks.length) return { at, pans: [], opened }
 
@@ -443,7 +458,7 @@ function followSubject(
     if (m.ms < shot.startMs + pace.headMs) return
     if (since === null) since = m.ms
     if (m.ms - since < PATH_RULES.triggerMs || m.ms < free) return
-    const to = place(c - anchor * len, room)
+    const to = aim(c, smoothSpan[j])
     if (to === pos) return
     const toMs = m.ms + Math.max(PATH_RULES.panMs, Math.ceil((1000 * Math.abs(to - pos)) / (len * PATH_RULES.maxSpeed)))
     if (toMs >= shot.endMs) return

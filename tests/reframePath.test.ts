@@ -518,6 +518,42 @@ describe('cropPath — a portrait source going to 16:9 runs on y', () => {
     expectInside(path, PORTRAIT)
   })
 
+  it('keeps a two-shot whole, margins and all: the upper third gives way to rule 3’s fit', () => {
+    // Faces at y 500 and 900, 100 px: the union is 450–950, 500 px, which
+    // fits the 608 px crop with its margins. At the upper third its centre
+    // (700) put the crop at 498, and the top face lost 48 px.
+    const t = track({
+      frame: PORTRAIT,
+      shots: [[0, 4000]],
+      faces: () => [face(540, 500, 100, PORTRAIT), face(540, 900, 100, PORTRAIT)]
+    })
+    const path = cropPath(t, WIDE)
+    const s = path.shots[0]
+    const margin = PATH_RULES.marginShare * path.size.height
+    expect(s.why).toBe('both')
+    // place() rounds to even, so a margin may be short by a pixel.
+    expect(s.at).toBeLessThanOrEqual(450 - margin + 1)
+    expect(s.at + path.size.height).toBeGreaterThanOrEqual(950 + margin - 1)
+    expectInside(path, PORTRAIT)
+  })
+
+  it('keeps a close-up that fits whole rather than at the upper third', () => {
+    // A 460 px face, 470–930: the upper third put the crop at 498 and cut 28 px off its top.
+    const t = track({ frame: PORTRAIT, shots: [[0, 4000]], faces: () => [face(540, 700, 460, PORTRAIT)] })
+    const path = cropPath(t, WIDE)
+    const s = path.shots[0]
+    const margin = PATH_RULES.marginShare * path.size.height
+    expect(s.why).toBe('face')
+    expect(s.at).toBeLessThanOrEqual(470 - margin + 1)
+    expect(s.at + path.size.height).toBeGreaterThanOrEqual(930 + margin - 1)
+    // ... and so does a pan: the face moves down to 1300 (1070–1530) at 2000.
+    const moving = track({ frame: PORTRAIT, shots: [[0, 6000]], faces: (ms) => [face(540, ms < 2000 ? 700 : 1300, 460, PORTRAIT)] })
+    const m = cropPath(moving, WIDE).shots[0]
+    expect(m.pans).toHaveLength(1)
+    expect(m.pans[0].to).toBeLessThanOrEqual(1070 - margin + 1)
+    expect(m.pans[0].to + path.size.height).toBeGreaterThanOrEqual(1530 + margin - 1)
+  })
+
   it('keeps `larger` for two people too far apart — no two-up on y', () => {
     const t = track({
       frame: PORTRAIT,
