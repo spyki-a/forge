@@ -177,7 +177,13 @@ export function cropPath(track: SubjectTrack, target: Size, follow?: PathFollow)
     }
   }
 
-  const samples = [...track.samples].sort((a, b) => a.ms - b.ms)
+  // A box that is not four finite numbers with some size — NaN, or the null a
+  // JSON round trip makes of it — is a sample without that face. Unread, a
+  // NaN box made a NaN position (measured), which 1f would key into the export.
+  const samples = track.samples
+    .filter((s) => Number.isFinite(s.ms))
+    .map((s) => ({ ms: s.ms, faces: s.faces.filter(usable) }))
+    .sort((a, b) => a.ms - b.ms)
   const period = samplePeriod(samples)
   const pace: Pace = { headMs: HEAD_MS, reachMs: Math.max(PATH_RULES.smoothMs / 2, 1.5 * period) }
   const allowTwoUp = axis === 'x' && follow?.twoUp !== false
@@ -524,8 +530,8 @@ function ladder(
   H: number
 ): { at: number; why: 'ground' | 'salient' | 'centre'; label: string } {
   const centreOf = (b: UnitRect): number => (rail.axis === 'x' ? (b.x + b.width / 2) * W : (b.y + b.height / 2) * H)
-  if (per?.ground) return { at: place(centreOf(per.ground.box) - rail.len / 2, rail.room), why: 'ground', label: `on "${per.ground.phrase}"` }
-  if (per?.salient) return { at: place(centreOf(per.salient.box) - rail.len / 2, rail.room), why: 'salient', label: 'on the salient subject' }
+  if (per?.ground && usable(per.ground.box)) return { at: place(centreOf(per.ground.box) - rail.len / 2, rail.room), why: 'ground', label: `on "${per.ground.phrase}"` }
+  if (per?.salient && usable(per.salient.box)) return { at: place(centreOf(per.salient.box) - rail.len / 2, rail.room), why: 'salient', label: 'on the salient subject' }
   return { at: place(rail.room / 2, rail.room), why: 'centre', label: 'centred' }
 }
 
@@ -551,6 +557,11 @@ function samplePeriod(samples: SubjectSample[]): number {
     if (d > 0) gaps.push(d)
   }
   return gaps.length ? median(gaps) : DEFAULT_SAMPLE_MS
+}
+
+/** Four finite numbers and a size: a box the path can place. */
+function usable<T extends UnitRect>(b: T | null | undefined): b is T {
+  return !!b && [b.x, b.y, b.width, b.height].every((v) => typeof v === 'number' && Number.isFinite(v)) && b.width > 0 && b.height > 0
 }
 
 function toBox(b: UnitRect, W: number, H: number): Box {

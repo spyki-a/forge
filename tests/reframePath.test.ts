@@ -656,6 +656,24 @@ describe('cropPath — rule 8: a hand correction survives', () => {
   })
 })
 
+describe('cropPath — a box that is not a number', () => {
+  it('is a sample without that face — NaN, or the null JSON makes of it — never a NaN position', () => {
+    // Every other sample's face has x NaN; the rest hold the face at 960.
+    const t = track({ shots: [[0, 4000], [4000, 6000]], faces: (ms) => (ms < 4000 ? [{ ...face(960, 400, 120), ...(ms % 1000 === 0 ? { x: Number.NaN } : {}) }] : []) })
+    t.perShot = [{}, { salient: { box: { x: Number.NaN, y: 0.3, width: 0.1, height: 0.2 }, ms: 4500 } }]
+    const fromJson: SubjectTrack = JSON.parse(JSON.stringify(t))
+    expect(fromJson.samples[0].faces[0].x).toBeNull()
+    for (const given of [t, fromJson]) {
+      const path = cropPath(given, PORTRAIT_CANVAS)
+      expectInside(path)
+      expect(path.shots.map((s) => s.why)).toEqual(['face', 'centre'])
+      expect(Math.abs(centreOf(path, path.shots[0].at) - 960)).toBeLessThanOrEqual(2)
+      expect(path.shots[0].pans).toEqual([])
+      expect(path.shots[1].at).toBe(solveCrop(LANDSCAPE, PORTRAIT_CANVAS)!.x)
+    }
+  })
+})
+
 describe('cropPath — the same input gives the same output', () => {
   it('twice, deep-equal, and the track untouched', () => {
     const t = track({
