@@ -286,6 +286,30 @@ describe('cropPath — rule 3: two people', () => {
     expect(s.at + path.size.width).toBeGreaterThanOrEqual(1060 + 50)
   })
 
+  it('a union that fits the crop but not with its margin is a `two-up`', () => {
+    // 100 px faces at 655 and 1125: the union is 605–1175, 570 px — inside
+    // the 608 px crop, but 570 + 2 × 36.5 is not.
+    const t = track({ shots: [[0, 4000]], faces: () => [face(655, 400, 100), face(1125, 400, 100)] })
+    const path = cropPath(t, PORTRAIT_CANVAS)
+    const margin = PATH_RULES.marginShare * 608
+    expect(570).toBeLessThanOrEqual(path.size.width)
+    expect(570 + 2 * margin).toBeGreaterThan(path.size.width)
+    expect(path.shots[0].why).toBe('two-up')
+  })
+
+  it('two faces together on exactly bothShare of the samples are a two-shot', () => {
+    // 6 of 10 together (fitting), the left one alone on the other 4.
+    const t = track({ shots: [[0, 5000]], faces: (ms) => (ms < 3000 ? [face(860, 400, 100), face(1060, 400, 100)] : [face(860, 400, 100)]) })
+    expect(t.samples.filter((s) => s.faces.length === 2).length / t.samples.length).toBe(PATH_RULES.bothShare)
+    expect(cropPath(t, PORTRAIT_CANVAS).shots[0].why).toBe('both')
+  })
+
+  it('far apart on 7 of 10 samples is still a `two-up`, not a lost face', () => {
+    const t = track({ shots: [[0, 5000]], faces: (ms) => (ms < 3500 ? farApart() : [face(LEFT.cx, LEFT.cy, LEFT.side)]) })
+    expect(t.samples.filter((s) => s.faces.length === 2).length).toBe(7)
+    expect(cropPath(t, PORTRAIT_CANVAS).shots[0].why).toBe('two-up')
+  })
+
   it('too far apart gives a stacked `two-up`: the face further LEFT on top, each half framing its own face', () => {
     const t = track({ shots: [[0, 4000]], faces: () => farApart() })
     // The fixture's point: the left face is the smaller, so it is NOT faces[0].
