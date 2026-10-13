@@ -384,6 +384,65 @@ describe('followKeys — what is refused', () => {
   })
 })
 
+describe('followKeys — the y axis: a portrait source on a 16:9 canvas', () => {
+  /*
+   * The same cuts on a 1080×1920 file, the subject's y jumping between shots:
+   * the crop is 1080×608 and moves on y. Nothing else in the suite follows on
+   * y (reframe.int is landscape → 9:16 and 1:1), so a compiler that wrote the
+   * moving axis as cropX always would leave the export's crop on its first
+   * frame's y for the whole clip, and only this would say.
+   */
+  const PW = 1080
+  const PH = 1920
+  const YS = [300, 1500, 700, 1300, 500]
+  function portraitTrack(): SubjectTrack {
+    const durationMs = (END * 1000) / FPS
+    const samples = []
+    for (let ms = 0; ms < durationMs; ms += 500) {
+      const cy = YS[shotOf(ms)]
+      samples.push({ ms, faces: [{ x: r4(440 / PW), y: r4((cy - 100) / PH), width: r4(200 / PW), height: r4(200 / PH), score: 0.9 }] })
+    }
+    const edges = [0, ...CUTS.map((k) => finderMs(k)), durationMs]
+    return {
+      ...track(),
+      key: 'portrait:1700000000000',
+      width: PW,
+      height: PH,
+      shots: edges.slice(0, -1).map((startMs, i) => ({ startMs, endMs: edges[i + 1], score: i ? 0.9 : 0 })),
+      samples,
+      perShot: edges.slice(0, -1).map(() => ({}))
+    }
+  }
+
+  it('cropY holds a key on each cut’s frame at 1×, 2× and 0.5× from in-point 13; x stays 0', () => {
+    const t = portraitTrack()
+    const canvas = { width: 1920, height: 1080 }
+    const path = cropPath(t, canvas, {})
+    expect(path.axis).toBe('y')
+    expect(new Set(path.shots.map((s) => s.at)).size, 'the shots are at distinct y').toBe(5)
+    for (const speed of [1, 2, 0.5]) {
+      const { project, clip: plain } = setup(t, { inPoint: 13, duration: Math.floor(560 / speed), ...(speed !== 1 ? { speed } : {}) }, canvas)
+      const p: Project = { ...project, assets: [{ ...project.assets[0], width: PW, height: PH }] }
+      const keys = followKeys(p, plain, FPS)!
+      expect(keys.axis).toBe('y')
+      expect(keys.cropX, `speed ${speed}: nothing moves x`).toBeUndefined()
+      expect(keys.cropY, `speed ${speed}: y moves`).toBeDefined()
+      expect(keys.size).toEqual({ width: 1080, height: 608 })
+      const drawnY = (n: number): number => drawn(keys.cropY, keys.crop.y, n, FPS, PH - keys.size.height)
+      let checked = 0
+      CUTS.forEach((k, i) => {
+        const f = exportSlot(k, plain, FPS)
+        if (f <= 0 || f >= plain.duration) return
+        expect(drawnY(f), `speed ${speed}, cut at source ${k}: frame ${f} on the new shot's y`).toBe(path.shots[i + 1].at)
+        expect(drawnY(f - 1), `speed ${speed}, cut at source ${k}: frame ${f - 1} on the old`).toBe(endOf(path.shots[i]))
+        expect(followAt(keys, f).crop, `speed ${speed}: the preview's reader`).toEqual({ x: 0, y: drawnY(f), width: 1080, height: 608 })
+        checked++
+      })
+      expect(checked, `speed ${speed}: cuts inside the clip`).toBeGreaterThanOrEqual(2)
+    }
+  })
+})
+
 describe('followKeys — the stacked two-up', () => {
   it('every single shot keys the top half at (x, 0) and the bottom at (x, half.height); the two-up shot each half at its own', () => {
     const { project, clip } = setup(TRACK_2UP)
