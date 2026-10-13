@@ -84,17 +84,33 @@ beforeAll(async () => {
 })
 
 describe('the shot finder, through src/main/ffmpeg/shots.ts', () => {
-  it('finds every cut above the default threshold on its exact frame, and nothing else', async () => {
-    const found = await findShots({ path: CUTS, durationMs: DURATION_MS, fps: TABLE.fps })
-    const expected = TABLE.cuts.filter((c) => c.score > SCENE_DEFAULTS.threshold).map((c) => c.frame)
-    expect(expected, 'the table has a cut under the default threshold, and cuts over it').toHaveLength(TABLE.cuts.length - 1)
+  it('finds every cut above its threshold on its exact frame, and nothing else', async () => {
+    // T 0.3 named here, not the default, which is 1a's to tune: this case is
+    // about the frames, and needs a T between the table's 0.2 and 0.4.
+    const found = await findShots({ path: CUTS, durationMs: DURATION_MS, fps: TABLE.fps, threshold: 0.3 })
+    const expected = TABLE.cuts.filter((c) => c.score > 0.3).map((c) => c.frame)
+    expect(expected, 'the table has a cut under 0.3, and cuts over it').toHaveLength(TABLE.cuts.length - 1)
     expect(found.cuts.map((c) => frameOf(c.ms))).toEqual(expected)
     // The 0.200 grey cut is the one left out.
     expect(found.cuts.map((c) => frameOf(c.ms))).not.toContain(TABLE.cuts.find((c) => c.score === 0.2)!.frame)
     expect(found.shots.map((s) => frameOf(s.startMs))).toEqual([0, ...expected])
     expect(found.shots[found.shots.length - 1].endMs).toBe(DURATION_MS)
-    expect(found.scene).toEqual({ threshold: SCENE_DEFAULTS.threshold, minShotMs: SCENE_DEFAULTS.minShotMs, backend: 'ffmpeg-select-rgb24' })
-    notes.push(`T ${SCENE_DEFAULTS.threshold}: cuts at frames ${found.cuts.map((c) => frameOf(c.ms)).join(', ')}`)
+    expect(found.scene).toMatchObject({ threshold: 0.3, backend: 'ffmpeg-select-rgb24' })
+    notes.push(`T 0.3: cuts at frames ${found.cuts.map((c) => frameOf(c.ms)).join(', ')}`)
+  })
+
+  it('runs at SCENE_DEFAULTS’ threshold when given none, and records it', async () => {
+    const T = SCENE_DEFAULTS.threshold
+    const found = await findShots({ path: CUTS, durationMs: DURATION_MS, fps: TABLE.fps })
+    expect(found.scene).toMatchObject({ threshold: T, minShotMs: SCENE_DEFAULTS.minShotMs, backend: 'ffmpeg-select-rgb24' })
+    // The table's cuts over T, wherever 1a puts it. A row within the table's
+    // tolerance of T may land either side, so it is left out of both lists.
+    const near = (score: number): boolean => Math.abs(score - T) <= TABLE.tolerance
+    const nearFrames = TABLE.cuts.filter((c) => near(c.score)).map((c) => c.frame)
+    expect(found.cuts.map((c) => frameOf(c.ms)).filter((f) => !nearFrames.includes(f))).toEqual(
+      TABLE.cuts.filter((c) => c.score > T && !near(c.score)).map((c) => c.frame)
+    )
+    notes.push(`T ${T} (the default): cuts at frames ${found.cuts.map((c) => frameOf(c.ms)).join(', ')}`)
   })
 
   it('finds the red→blue cut at T = 0.5, which only the rgb24 score puts over it', async () => {
