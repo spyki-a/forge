@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 // js-yaml ships no types and is used only here, so the shape is declared at
 // the point of use rather than adding a dependency for one function.
@@ -84,6 +84,23 @@ describe('the packaged app can find its resources', () => {
     const filter = (resourceFor('sidecar')?.filter ?? []).join('\n')
     expect(filter).toContain('!.venv')
     expect(filter).toMatch(/!.*__pycache__/)
+  })
+
+  it('leaves out every virtualenv in sidecar/, the face finder’s measurement venv included', () => {
+    /*
+     * `toContain('!.venv')` above is a substring of the joined filter, so it
+     * could never tell `.venv-faces` (108 MB, docs/CLIPS.md §4.3's measured
+     * mediapipe venv) from `.venv`. Each by its own entries: the two named
+     * here, and any `.venv*` folder that is on this disk.
+     */
+    const filter = resourceFor('sidecar')?.filter ?? []
+    const onDisk = readdirSync(resolve(ROOT, 'sidecar'), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && entry.name.startsWith('.venv'))
+      .map((entry) => entry.name)
+    for (const name of new Set(['.venv', '.venv-faces', ...onDisk])) {
+      expect(filter, name).toContain(`!${name}`)
+      expect(filter, name).toContain(`!${name}/**`)
+    }
   })
 
   it('leaves out the filename Windows cannot extract', () => {

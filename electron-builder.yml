@@ -66,6 +66,10 @@ extraResources:
       - '**/*'
       - '!.venv'
       - '!.venv/**'
+      # The face finder's measurement venv (docs/CLIPS.md §4.3): 108 MB of
+      # mediapipe and models, on the dev Mac only.
+      - '!.venv-faces'
+      - '!.venv-faces/**'
       - '!**/__pycache__/**'
       - '!**/*.py[cod]'
       # Illegal on Windows. Left behind by a test that was handed ':memory:' as
