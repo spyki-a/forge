@@ -146,6 +146,26 @@ function exportSlot(k: number, clip: Clip, fps: number): number {
   return Math.floor((2 * q * fps + 15360) / (2 * 15360))
 }
 
+/**
+ * The export's frame for source frame k through a followed clip's ramp: the
+ * setpts plan.ts writes for it (`followedRetime`: `T`, seek-relative — never
+ * T-STARTT, reframe.int's ramp row), evaluated in ffmpeg's integers where it
+ * has them: the pts after the seek on a 30 fps mp4's 1/15360, setpts
+ * truncating, fps= rounding half up.
+ */
+function rampSlot(clip: Clip, keys: FollowKeys, fps = FPS): (k: number) => number {
+  const filter = followedRetime(clip, fps, keys)!
+  const m = /^setpts='\((-?[\d.]+)\)\*log\(\((-?[\d.]+)\+\((-?[\d.]+)\)\*T\/(-?[\d.]+)\)\/(-?[\d.]+)\)\/TB',fps=\d+$/.exec(filter)
+  if (!m) throw new Error(`not a followed ramp: ${filter}`)
+  const [scale, from, k, D] = [1, 2, 3, 4].map((i) => Number(m[i]))
+  const seek = Math.round((Math.round(Number((clip.inPoint / fps).toFixed(6)) * 1e6) * 15360) / 1e6)
+  return (cut) => {
+    const T = (512 * cut - seek) / 15360
+    const q = Math.trunc(scale * Math.log((from + (k * T) / D) / from) * 15360)
+    return Math.floor((2 * q * fps + 15360) / (2 * 15360))
+  }
+}
+
 /** What the export draws for a lane on a clip frame: the compiled text, evaluated, clamped to the room, lrint & ~1. */
 function drawn(sum: FlatSum | undefined, fallback: number, frame: number, fps: number, room: number): number {
   if (!sum) return fallback
@@ -265,20 +285,8 @@ describe('followKeys — still on each cut’s frame after every ordinary edit',
       const ramped = withClipRamp(project, 'c', ramp)
       const clip = clipOf(ramped)
       const keys = followKeys(ramped, clip, FPS)!
-      const filter = followedRetime(clip, FPS, keys)!
-      // `T`, seek-relative — never T-STARTT, the first kept frame's clock (reframe.int's ramp row).
-      const m = /^setpts='\((-?[\d.]+)\)\*log\(\((-?[\d.]+)\+\((-?[\d.]+)\)\*T\/(-?[\d.]+)\)\/(-?[\d.]+)\)\/TB',fps=30$/.exec(filter)
-      expect(m, filter).not.toBeNull()
       expect(retimeFilter(clip, FPS), 'an unfollowed ramp keeps its own clock').toContain('*(T-STARTT)/')
-      const [scale, from, k, D] = [1, 2, 3, 4].map((i) => Number(m![i]))
-      // In integers where ffmpeg has them: the source pts after the seek, on a 30 fps mp4's 1/15360; setpts truncates; fps= rounds half up.
-      const seek = Math.round((Math.round(Number((inPoint / FPS).toFixed(6)) * 1e6) * 15360) / 1e6)
-      const slotOf = (cut: number): number => {
-        const T = (512 * cut - seek) / 15360
-        const q = Math.trunc(scale * Math.log((from + (k * T) / D) / from) * 15360)
-        return Math.floor((2 * q * FPS + 15360) / (2 * 15360))
-      }
-      expect(expectCutsOn(keys, PATH, clip, FPS, slotOf), JSON.stringify(ramp)).toBeGreaterThanOrEqual(3)
+      expect(expectCutsOn(keys, PATH, clip, FPS, rampSlot(clip, keys)), JSON.stringify(ramp)).toBeGreaterThanOrEqual(3)
       expect(keys.notes.some((n) => /ramp/.test(n)), 'measured now: no ramp note').toBe(false)
     }
   })
@@ -429,6 +437,76 @@ describe('followKeys — the memo', () => {
     const fast: Clip = { ...clip, speed: 2 }
     const two = followKeys({ ...project, clips: [fast] }, fast, FPS)!
     expect(expectCutsOn(two, PATH, fast, FPS, (k) => exportSlot(k, fast, FPS))).toBe(4)
+  })
+
+  /*
+   * Each case below: two clips of one file — one track object, fresh, since
+   * the memo is per track — equal in every memo component but one, compiled
+   * one after the other, the second checked on its own terms. A key without
+   * that component hands the second the first's keys.
+   */
+  it('includes the in-point: a split at the exact middle gives two halves of one length, each keyed on its own cuts', () => {
+    const t = track()
+    const { clip } = setup(t)
+    const [left, right] = splitClip(clip, clip.start + END / 2)!
+    expect([left.duration, right.duration]).toEqual([300, 300])
+    expect([left.inPoint, right.inPoint]).toEqual([0, 300])
+    const lk = followKeys(setup(t, left).project, left, FPS)!
+    const rk = followKeys(setup(t, right).project, right, FPS)!
+    expect(expectCutsOn(lk, PATH, left, FPS, (k) => exportSlot(k, left, FPS))).toBe(3)
+    expect(expectCutsOn(rk, PATH, right, FPS, (k) => exportSlot(k, right, FPS))).toBe(1)
+    expect(rk.crop.x, 'the right half opens on shot 4').toBe(PATH.shots[3].at)
+  })
+
+  it('includes the ramp: 1 → 0.5 and 0.5 → 1 over one length read their own cut frames', () => {
+    const t = track()
+    const base: Partial<Clip> = { duration: 400 }
+    const a = { ...setup(t, base).clip, ramp: { from: 1, to: 0.5 } }
+    const b = { ...setup(t, base).clip, ramp: { from: 0.5, to: 1 } }
+    const ka = followKeys(setup(t, a).project, a, FPS)!
+    const kb = followKeys(setup(t, b).project, b, FPS)!
+    expect(rampSlot(a, ka)(200)).not.toBe(rampSlot(b, kb)(200))
+    expect(expectCutsOn(ka, PATH, a, FPS, rampSlot(a, ka))).toBeGreaterThanOrEqual(2)
+    expect(expectCutsOn(kb, PATH, b, FPS, rampSlot(b, kb))).toBeGreaterThanOrEqual(2)
+  })
+
+  it('includes the hold: a clip and its held frame of one length — the playing one keyed, the held one not', () => {
+    const t = track()
+    const playing = setup(t, { inPoint: 280, duration: 30 }).clip
+    const held: Clip = { ...playing, hold: true }
+    expect(isKeyed(followKeys(setup(t, playing).project, playing, FPS))).toBe(true)
+    const keys = followKeys(setup(t, held).project, held, FPS)!
+    expect(isKeyed(keys)).toBe(false)
+    expect(keys.notes.some((n) => /held frame/.test(n))).toBe(true)
+  })
+
+  it('includes the rate: one clip at 30 and at 25 fps reads each rate’s cut frames', () => {
+    const t = track()
+    // In-point 0: the seek is exact at both rates (an in-point the 25 fps seek rounds is the printed-time path's known miss, below).
+    const { project, clip } = setup(t, { duration: 400 })
+    const k30 = followKeys(project, clip, 30)!
+    const k25 = followKeys(project, clip, 25)!
+    expect(k25.fps).toBe(25)
+    expect(exportSlot(200, clip, 25)).not.toBe(exportSlot(200, clip, 30))
+    // 400 frames: 13.3 s at 30 fps, before the cut at 15.3 s; 16 s at 25, past it.
+    expect(expectCutsOn(k30, PATH, clip, 30, (k) => exportSlot(k, clip, 30))).toBe(3)
+    expect(expectCutsOn(k25, PATH, clip, 25, (k) => exportSlot(k, clip, 25))).toBe(4)
+  })
+
+  it('includes the canvas, each side alone: 1080×1920 then 1080×1080, and 1080×1080 then 1440×1080', () => {
+    for (const [first, second] of [
+      [{ width: 1080, height: 1920 }, { width: 1080, height: 1080 }],
+      [{ width: 1080, height: 1080 }, { width: 1440, height: 1080 }]
+    ]) {
+      const t = track()
+      const a = setup(t, {}, first)
+      const b = setup(t, {}, second)
+      const ka = followKeys(a.project, a.clip, FPS)!
+      const kb = followKeys(b.project, b.clip, FPS)!
+      expect(ka.size, JSON.stringify(first)).toEqual(cropPath(t, first, {}).size)
+      expect(kb.size, JSON.stringify(second)).toEqual(cropPath(t, second, {}).size)
+      expect(kb.size).not.toEqual(ka.size)
+    }
   })
 
   it('a drag recorded at a shot’s own startMs moves that shot only, and every shot names its startMs as the track wrote it', () => {
