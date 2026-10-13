@@ -343,6 +343,32 @@ describeWithVenv(
       notes.push(`- the stand-in pass: ${result.frames} samples, ${size} B of track; progress ${JSON.stringify(values)}`)
     }, 60_000)
 
+    it('a window: its samples carry SOURCE ms from startMs, and each box is the scene at that source time', async () => {
+      /*
+       * 1f analyses a clip's in/out window. Window-relative ms would put every
+       * box at the wrong source time and still look plausible, so the boxes
+       * are checked against the scene at each sample's ms — the second window
+       * straddles the cut at 2 s.
+       */
+      const client = await helper({ models, cache: join(dir, 'cache', 'window'), env: { FORGE_FACES_WORKER_FAKE: 'colour' } })
+      for (const [startMs, endMs] of [
+        [1000, 3000],
+        [1900, 2900]
+      ]) {
+        const result = await client.request<FacesResult>(SIDECAR_METHODS.faces, params(clips.boxes, { startMs, endMs }))
+        const expected = Array.from({ length: (endMs - startMs) / 200 }, (_, i) => startMs + i * 200)
+        expect(result.frames, `${startMs}–${endMs}`).toBe(expected.length)
+        const track = await readTrack(result.track)
+        expect(track.samples.map((s) => s.ms)).toEqual(expected)
+        expect(new Set(track.samples.map((s) => (s.ms < 2000 ? 0 : 1))).size, 'both scenes are in the window').toBe(2)
+        for (const sample of track.samples) {
+          const scene = SCENES[sample.ms < 2000 ? 0 : 1]
+          expect(near(sample.faces[0], unit(scene.blue)), `${startMs}–${endMs} at ${sample.ms}`).toBeLessThan(0.01)
+        }
+        notes.push(`- the window ${startMs}–${endMs}: ms ${JSON.stringify(track.samples.map((s) => s.ms))}, each box its scene's`)
+      }
+    }, 60_000)
+
     it('a turned clip is answered in its UPRIGHT frame, and the wrong size is refused with both', async () => {
       const client = await helper({ models, cache: join(dir, 'cache', 'turned'), env: { FORGE_FACES_WORKER_FAKE: 'colour' } })
       // Each clip its own key, as each file has its own size and mtime: one key would be one track.
