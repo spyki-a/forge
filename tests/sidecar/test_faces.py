@@ -341,6 +341,32 @@ class Registration(unittest.TestCase):
         self.assertIn("vision.facesModel", server.capabilities)
         self.assertEqual("mediapipe" in sys.modules, had, "registration imported mediapipe")
 
+    def test_absent_mediapipe_leaves_vision_measure_registered(self) -> None:
+        # docs/CLIPS.md §4.3: never in vision.py — a missing mediapipe must not
+        # take vision.measure, the Director's gate, down with it. That holds
+        # only by register_all's structure, one module a row, so it is asked
+        # of register_all itself. vision.measure needs numpy and scipy; on an
+        # interpreter without them it is degraded anyway, and this cannot ask.
+        try:
+            import numpy  # noqa: F401
+            import scipy  # noqa: F401
+        except ImportError:
+            self.skipTest("numpy is not installed")
+        from forge_sidecar import capabilities
+
+        real = faces.importlib.util.find_spec
+
+        def find(name: str, *args: object, **kwargs: object) -> object:
+            return None if name == "mediapipe" else real(name, *args, **kwargs)  # type: ignore[arg-type]
+
+        server = Server()
+        with mock.patch.object(faces.importlib.util, "find_spec", side_effect=find):
+            capabilities.register_all(server)
+        self.assertIn("vision.measure", server.capabilities)
+        self.assertNotIn("vision.measure", server.degraded)
+        for method in ("vision.faces", "vision.facesModel"):
+            self.assertIn("mediapipe is not installed", server.degraded.get(method, ""), method)
+
 
 # -------------------------------------------------------------------- model
 
