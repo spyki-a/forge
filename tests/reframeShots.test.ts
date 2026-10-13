@@ -133,6 +133,23 @@ describe('parseSceneLog over ffmpeg’s own stderr', () => {
     expect(cuts.map((c) => Math.round((c.ms * 30000) / 1001 / 1000))).toEqual([61, 107])
   })
 
+  it('reads a long timestamp, which the %-7s padding no longer separates by three spaces', () => {
+    // Measured: past 10,000,000 in the time base the pts column overflows its
+    // width and one space is left — 'pts:18993151 pts_time:1236.53' at 20 min
+    // 36 s on a 15,360/s time base. The frame line is read by its words, not
+    // its columns.
+    const text = [
+      '[Parsed_metadata_4 @ 0x1] frame:7    pts:18993151 pts_time:1236.53',
+      '[Parsed_metadata_4 @ 0x1] lavfi.scene_score=0.731000',
+      '[Parsed_metadata_4 @ 0x1] frame:8    pts:189657600 pts_time:12347.5',
+      '[Parsed_metadata_4 @ 0x1] lavfi.scene_score=1.000000'
+    ].join('\n')
+    expect(parseSceneLog(text)).toEqual([
+      { ms: 1236530, score: 0.731 },
+      { ms: 12347500, score: 1 }
+    ])
+  })
+
   it('pairs a time with its score by the filter’s prefix, whatever lands between them', () => {
     const lines = fixture('five-cuts-t0.1.stderr.txt').split('\n')
     const between = lines.flatMap((line) =>
