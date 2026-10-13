@@ -1,7 +1,5 @@
 import { describe, it, expect } from 'vitest'
 import { execFileSync } from 'node:child_process'
-import { existsSync } from 'node:fs'
-import { join, resolve } from 'node:path'
 import { buildRenderPlan, videoInputArgs, type RenderRequest } from '@shared/render/plan'
 import { filterGraphOf, withGraphFile } from '@shared/render/graphFile'
 import { keyProbeArgs } from '@shared/render/chromaKey'
@@ -12,6 +10,7 @@ import { steadyDetectFilter } from '@shared/render/steady'
 import { voiceOverArgs } from '@shared/render/voiceover'
 import { PRESETS, defaultParams } from '@shared/presets'
 import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
+import { HELPER_PYTHON, SIDECAR_DIR as SIDECAR } from './integration/venv'
 
 /*
  * Nothing in a filter graph may be newer than the OLDEST bundled ffmpeg.
@@ -335,9 +334,6 @@ const SHAPES: { name: string; project: Project; range?: { start: number; end: nu
  * by src/main/ffmpeg/shots.ts), is on it — `scdet` is on the blocklist
  * because that pass is where it would be reached for.
  */
-const SIDECAR = resolve(__dirname, '../sidecar')
-const VENV = join(SIDECAR, '.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python')
-const HELPER_PYTHON = existsSync(VENV) ? VENV : process.env.FORGE_PYTHON ?? 'python3'
 
 /** The helper's decode argv, from the helper itself: stdlib-only, so a bare interpreter answers. Asked once. */
 let helperOnce: { frames: string[]; frame: string[] } | null = null

@@ -1,10 +1,10 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { existsSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { afterAll, beforeAll, expect, it } from 'vitest'
+import { join } from 'node:path'
 import ffprobeInstaller from '@ffprobe-installer/ffprobe'
 import { SidecarClient } from '../../src/main/sidecar/client'
 import { SIDECAR_METHODS } from '@shared/sidecar/protocol'
 import { FFMPEG, outputDir, run, writeNote } from './output'
+import { SIDECAR_DIR, VENV_PYTHON, describeWithVenv } from './venv'
 
 /**
  * The Director's objective checks, through the real sidecar (docs/PLAN.md §4.2).
@@ -18,10 +18,6 @@ import { FFMPEG, outputDir, run, writeNote } from './output'
  * Needs the sidecar's own interpreter with numpy and scipy; CI's bare Python
  * has neither, so this skips there, as the beat and depth checks do.
  */
-
-const SIDECAR_DIR = resolve(__dirname, '../../sidecar')
-const VENV_PYTHON = join(SIDECAR_DIR, '.venv/bin/python')
-const maybe = existsSync(VENV_PYTHON) ? describe : describe.skip
 
 interface Measure {
   path: string
@@ -55,7 +51,7 @@ function hamming(a: string, b: string): number {
   return n
 }
 
-maybe('vision.measure', () => {
+describeWithVenv('vision.measure', () => {
   let measures: Record<string, Measure> = {}
 
   beforeAll(async () => {

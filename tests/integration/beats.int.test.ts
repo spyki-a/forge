@@ -1,17 +1,13 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { existsSync, writeFileSync } from 'node:fs'
+import { it, expect, beforeAll, afterAll } from 'vitest'
+import { writeFileSync } from 'node:fs'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { join } from 'node:path'
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg'
 import { SidecarClient } from '../../src/main/sidecar/client'
+import { SIDECAR_DIR, VENV_PYTHON, describeWithVenv } from './venv'
 
-const SIDECAR_DIR = resolve(__dirname, '../../sidecar')
-const VENV_PYTHON = join(SIDECAR_DIR, '.venv/bin/python')
 const FFMPEG = ffmpegInstaller.path
-
-const ready = existsSync(VENV_PYTHON)
-const maybe = ready ? describe : describe.skip
 
 let dir = ''
 let click = ''
@@ -191,7 +187,7 @@ interface BeatResult {
   sections: number[]
 }
 
-maybe('audio.beats', () => {
+describeWithVenv('audio.beats', () => {
   it('advertises the capability', async () => {
     const hello = await client.start()
     expect(hello.capabilities).toContain('audio.beats')

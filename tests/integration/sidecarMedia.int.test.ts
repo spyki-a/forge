@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { execFile } from 'node:child_process'
-import { existsSync } from 'node:fs'
 import { writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import ffprobeInstaller from '@ffprobe-installer/ffprobe'
 import { FFMPEG, outputDir } from './output'
+import { HAS_VENV, HELPER_PYTHON as PYTHON, SIDECAR_DIR as SIDECAR } from './venv'
 
 /*
  * The helper's shared media code, through its own Python tests
@@ -23,9 +23,6 @@ import { FFMPEG, outputDir } from './output'
  */
 
 const ROOT = resolve(__dirname, '../..')
-const SIDECAR = join(ROOT, 'sidecar')
-const VENV = join(SIDECAR, '.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python')
-const PYTHON = existsSync(VENV) ? VENV : process.env.FORGE_PYTHON ?? 'python3'
 
 interface Outcome {
   code: number
@@ -72,6 +69,6 @@ describe('the helper’s media module', () => {
     const skipped = [...text.matchAll(/\.\.\. skipped '([^']*)'/g)].map((m) => m[1])
     for (const reason of skipped) expect(reason, 'only numpy may be missing').toBe('numpy is not installed')
     // The venv has numpy: there, nothing may skip.
-    if (PYTHON === VENV) expect(skipped, text).toEqual([])
+    if (HAS_VENV) expect(skipped, text).toEqual([])
   }, 300_000)
 })

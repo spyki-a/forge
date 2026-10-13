@@ -1,20 +1,19 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { it, expect, beforeAll, afterAll } from 'vitest'
 import { existsSync } from 'node:fs'
-import { resolve, join } from 'node:path'
+import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { SidecarClient } from '../../src/main/sidecar/client'
 import { SIDECAR_METHODS, RPC_ERRORS } from '@shared/sidecar/protocol'
 import { segmentIntoSentences, type Word } from '@shared/transcript'
+import { SIDECAR_DIR, VENV_PYTHON, describeWithVenv } from './venv'
 
-const SIDECAR_DIR = resolve(__dirname, '../../sidecar')
-const VENV_PYTHON = join(SIDECAR_DIR, '.venv/bin/python')
 const MODELS_DIR = process.env.FORGE_MODELS_DIR ?? join(tmpdir(), 'forge-models')
 const FIXTURE = join(process.env.TMPDIR ?? tmpdir(), 'asr-check/jfk.flac')
 
 // ASR needs the venv, a downloaded model, and the audio fixture. Skip rather
-// than fail when any is absent, so the suite still runs on a clean checkout.
-const ready = existsSync(VENV_PYTHON) && existsSync(FIXTURE)
-const maybe = ready ? describe : describe.skip
+// than fail when the venv or the fixture is absent, so the suite still runs on
+// a clean checkout (the gate: ./venv.ts, the `needs` at the suite's end).
+const NEEDS = { [`audio fixture at ${FIXTURE}`]: existsSync(FIXTURE) }
 
 let client: SidecarClient
 
@@ -36,7 +35,7 @@ interface TranscribeResult {
   words: Word[]
 }
 
-maybe('asr.transcribe', () => {
+describeWithVenv('asr.transcribe', () => {
   it('advertises the capability once faster-whisper is installed', async () => {
     const hello = await client.start()
     expect(hello.capabilities).toContain(SIDECAR_METHODS.transcribe)
@@ -101,4 +100,4 @@ maybe('asr.transcribe', () => {
       client.request(SIDECAR_METHODS.transcribe, { path: '/no/such/file.wav' })
     ).rejects.toMatchObject({ code: RPC_ERRORS.internalError })
   }, 120_000)
-})
+}, NEEDS)
