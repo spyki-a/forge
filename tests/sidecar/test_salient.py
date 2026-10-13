@@ -289,6 +289,17 @@ class CoverageRule(unittest.TestCase):
         # The box is the subject's alone: x 100..299, y 40..59.
         self.assertEqual(box, {"x": 0.25, "y": 0.1333, "width": 0.5, "height": 0.0667})
 
+    def test_the_trim_is_one_percent_exactly(self) -> None:
+        # The wisp above holds 0.5 % of the busiest row and its subject's
+        # columns 20 % of the busiest column, so any trim in (0.5 %, 20 %]
+        # passes it. Here the subject's rows are 2,000 px: a tail above of 20 px
+        # a row is 1.0 % (kept — the rule is >=) and a tail below of 19 px a row
+        # is 0.95 % (dropped). A trim of 1.1 % loses the tail above (y 0.3333),
+        # one of 0.9 % keeps the tail below (height 0.4667).
+        soft = self.matte(300, 2400, (100, 200, 50, 2000), (60, 1190, 40, 20), (150, 1190, 50, 19))
+        _coverage, box = salient._subject(soft)
+        self.assertEqual(box, {"x": 0.0833, "y": 0.2, "width": 0.8333, "height": 0.3})
+
 
 # ---------------------------------------------------------- items and errors
 
