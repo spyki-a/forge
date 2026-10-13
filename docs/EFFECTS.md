@@ -4708,8 +4708,10 @@ clusters (Devanagari क्ष त्र ज्ञ श्र कि, Telugu క�
 draws each conjunct as its consonants with a visible virama and the i-matra
 after its consonant; complex joins them and puts the i-matra first —
 through CoreText's fallback (no Indic font is bundled). A verifier counted
-32.4 % of the Telugu track's words and about 29 % of the Hindi one's as
-shaping-sensitive, and 4 of the 20 words in `eK71EN3P78U`'s clip. The plan
+a conjunct in 32.4 % of the Telugu track's words, a conjunct (16.5 %) or the
+pre-base i-matra (12.9 %) in the Hindi one's, and a conjunct in 4 of the 20
+words in `eK71EN3P78U`'s first clip — the exit check's wider rule (any
+virama or pre-base vowel sign, below) counts 12 of those 20. The plan
 now burns with `ass=filename=…:fontsdir=…:shaping=complex`: same escaping
 (a path with `' , [ ] = ; :` and a space opened through both filters, the
 same frames as before). English moves a little too, as HarfBuzz kerns:

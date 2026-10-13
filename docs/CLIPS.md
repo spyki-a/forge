@@ -1450,8 +1450,10 @@ commit, beside `trimToRequestedRange`, `section.ts:116-131`).
 > 3. `lqOH-zxtCDE`, Hindi, the run near 47:57 (47:58–48:03) — its last word
 >    ends on the 80 ms-a-grapheme estimate, 1.4 s before the next word: is
 >    it cut short? (A verifier's energy reading had voice going on about
->    260 ms past the cut.) The mid run (29:13–29:18) has 6 shaping-sensitive
->    words on screen.
+>    260 ms past the cut.) The mid run (29:13–29:18) holds 6
+>    shaping-sensitive words, but mid runs are not exported, and this
+>    link's exported run has none: no export here shows a Hindi conjunct
+>    or pre-base vowel sign (only `captions.int`'s made-up line does).
 > 4. `3pG8Hgq3Z8M` — a clip now (Get transcript failed here before the
 >    fix). Its mid run (13:41–13:46) is cut in sound at both ends (−16 to
 >    −19 dB): a sliver of a neighbour?
