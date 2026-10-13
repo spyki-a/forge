@@ -300,7 +300,7 @@ function classify(
 
 /** The subject each sample holds, for a shot that follows a face, a two-shot or the larger face. */
 function subjectMarks(own: SubjectSample[], why: Kind, W: number, H: number): Mark[] {
-  if (why === 'face') return own.filter((s) => s.faces.length >= 1).map((s) => ({ ms: s.ms, box: toBox(s.faces[0], W, H) }))
+  if (why === 'face') return onePerson(own, W, H)
   if (why === 'both') {
     // A one-face sample of a two-shot is someone turning away: it holds.
     return own
@@ -313,6 +313,36 @@ function subjectMarks(own: SubjectSample[], why: Kind, W: number, H: number): Ma
   const { left, right } = bySide(own, W, H)
   const areaOf = (side: Mark[]): number => (side.length ? median(side.map((m) => area(m.box))) : -1)
   return areaOf(right) > areaOf(left) ? right : left
+}
+
+/**
+ * A 'face' shot's one person, followed by identity rather than by size. A
+ * second face here is on under FACE_SHARE of the samples (rule 2's stray),
+ * and a passer-by nearer the lens is the LARGER face: following faces[0], a
+ * larger passer-by on three samples of an 8 s shot pulled the crop off its
+ * subject for the rest of the shot (measured). So a sample with two takes the
+ * one nearer the face last followed, starting from the first sample that
+ * holds only one — a 'face' shot always has one, since fewer of its samples
+ * hold two than hold any.
+ */
+function onePerson(own: SubjectSample[], W: number, H: number): Mark[] {
+  const alone = own.find((s) => s.faces.length === 1)
+  let last: Box | null = alone ? toBox(alone.faces[0], W, H) : null
+  const marks: Mark[] = []
+  for (const s of own) {
+    if (s.faces.length === 0) continue
+    const boxes = s.faces.map((f) => toBox(f, W, H))
+    const prev = last
+    const box = prev === null ? boxes[0] : boxes.reduce((a, b) => (gap(b, prev) < gap(a, prev) ? b : a))
+    marks.push({ ms: s.ms, box })
+    last = box
+  }
+  return marks
+}
+
+/** How far apart two boxes' centres are. */
+function gap(a: Box, b: Box): number {
+  return Math.hypot(cx(a) - cx(b), cy(a) - cy(b))
 }
 
 /**

@@ -154,6 +154,27 @@ describe('cropPath — rules 4 and 5: static first, a pan only when the subject 
     expect(Math.abs(centreOf(path, path.shots[0].at) - 960)).toBeLessThanOrEqual(2)
   })
 
+  it('follows the shot’s one person, not whichever face is larger: a passer-by does not steer it', () => {
+    // 8 s, a 100 px face at 960 throughout; a 160 px passer-by at 1700 on
+    // three consecutive samples (3 of 16, under FACE_SHARE), larger, so
+    // first in the track's order.
+    const passing = (ms: number): boolean => ms >= 5000 && ms <= 6000
+    const t = track({ shots: [[0, 8000]], faces: (ms) => [face(960, 400, 100), ...(passing(ms) ? [face(1700, 420, 160)] : [])] })
+    expect(t.samples.filter((s) => passing(s.ms)).every((s) => s.faces[0].width > s.faces[1].width)).toBe(true)
+    const path = cropPath(t, PORTRAIT_CANVAS)
+    const s = path.shots[0]
+    expect(s.why).toBe('face')
+    expect(Math.abs(centreOf(path, s.at) - 960)).toBeLessThanOrEqual(2)
+    expect(s.pans).toEqual([])
+    // ... nor when the passer-by is there from the cut: the person is the one
+    // a sample holds alone.
+    const early = track({ shots: [[0, 8000]], faces: (ms) => [face(960, 400, 100), ...(ms <= 1000 ? [face(1700, 420, 160)] : [])] })
+    const first = cropPath(early, PORTRAIT_CANVAS)
+    expect(first.shots[0].why).toBe('face')
+    expect(Math.abs(centreOf(first, first.shots[0].at) - 960)).toBeLessThanOrEqual(2)
+    expect(first.shots[0].pans).toEqual([])
+  })
+
   it('a still close-up too big for the static test is held by the dead zone, jitter and all', () => {
     // 600 px of face plus the margin each side is wider than the 608 px crop,
     // so rule 4 can never hold it; the ±20 px jitter stays inside the middle
