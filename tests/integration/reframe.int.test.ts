@@ -63,7 +63,13 @@ const FPS = 30
 const START = 15
 const IN = 6
 const DURATION = 210
-const TOLERANCE = 8
+/*
+ * How far a reading may be from what it is checked against, in source px. On the Mac every row reads within
+ * 1 px of the model (README's "worst |read − model|"): the reader's own fit, since the export's x is always even.
+ * ±2 there lets nothing through that a ¼-frame shift of the pan (8 px at its 32 px/frame peak) would be. Elsewhere
+ * ±8, §4.9's bar: the 2018 build's scaler on this media is not measured, and the coarse bands are the fallback.
+ */
+const TOLERANCE = process.platform === 'darwin' ? 2 : 8
 const PORTRAIT = { width: 1080, height: 1920 }
 const SQUARE = { width: 1080, height: 1080 }
 
@@ -343,6 +349,8 @@ async function followedRow(
   const stackedClip = path.shots.some((p) => p.halves)
   const readings = new Map<number, { one: Reading; top?: Reading; bottom?: Reading }>()
   const misses: string[] = []
+  // The largest distance read from the model on any frame, on either axis, for README (and the tolerance).
+  let worst = 0
   for (let k = 0; k < clip.duration; k++) {
     const f = rendered.frames.get(clip.start + k)!
     const model = cropAt(project, clip, { width: 1920, height: 1080 }, k)
@@ -360,6 +368,7 @@ async function followedRow(
       const { top, bottom } = model.halves
       if (!r.top || !r.bottom) throw new Error('a stacked frame read as one')
       for (const [name, read, want] of [['top', r.top, top], ['bottom', r.bottom, bottom]] as const) {
+        worst = Math.max(worst, Math.abs(read.x - want.x), Math.abs(read.y - want.y))
         if (Math.abs(read.x - want.x) > TOLERANCE || Math.abs(read.y - want.y) > TOLERANCE) misses.push(`frame ${k} ${name}: read (${read.x}, ${read.y}), model (${want.x}, ${want.y})`)
         // Independently of the keys: the half shows the face the path gives this shot.
         const half = shot.halves?.[name]
@@ -367,6 +376,7 @@ async function followedRow(
         if (read.shot !== r.one.shot) misses.push(`frame ${k}: the halves show shots ${r.top.shot + 1} and ${r.bottom.shot + 1}`)
       }
     } else {
+      worst = Math.max(worst, Math.abs(r.one.x - model.crop.x))
       if (Math.abs(r.one.x - model.crop.x) > TOLERANCE) misses.push(`frame ${k}: read x ${r.one.x}, model ${model.crop.x}`)
       if (stackedClip && r.bottom && (Math.abs(r.bottom.x - r.one.x) > TOLERANCE || Math.abs(r.bottom.y - (r.one.y + path.half.height)) > TOLERANCE)) {
         misses.push(`frame ${k}: a single shot's halves read (${r.one.x}, ${r.one.y}) and (${r.bottom.x}, ${r.bottom.y}) — not one crop`)
@@ -378,6 +388,7 @@ async function followedRow(
       }
     }
   }
+  say(`- ${s.name} ${label}: ${readings.size} of ${clip.duration} frames read, the worst |read − model| ${worst} px`)
   const row = { readings, rendered, path, clip, project }
   rows.set(`${s.name}/${label}`, row)
   expect(misses, `${s.name} ${label}: frames off the crop they should have`).toEqual([])
@@ -567,10 +578,11 @@ describe('a followed crop, rendered: frame-exact at every cut, on four sources',
         checkPan(s, row, '1:1')
       })
 
-      it('at speed 2: the cuts on the frames the retime shows them, the crop with them', async () => {
+      it('at speed 2: the cuts on the frames the retime shows them, the crop with them, the pan through the grid', async () => {
         const s = sources.get(name)!
         const row = await followedRow(s, 'speed2', { speed: 2 })
         checkCuts(s, row, '9:16 at 2×', 2)
+        checkPan(s, row, '9:16 at 2×')
       })
 
       it('THE TWO-UP: shot 4 stacked, each half on its own face, frame-exact at its cut, the single shots unchanged, the last frame kept', async () => {
@@ -591,7 +603,8 @@ describe('a followed crop, rendered: frame-exact at every cut, on four sources',
         const diffs: number[] = []
         for (let f = 30; f < 50; f++) diffs.push(meanDifference(row.rendered.frames.get(row.clip.start + f)!, plain.rendered.frames.get(plain.clip.start + f)!))
         say(`- ${s.name} two-up: shot 2 (clip frames 30–49) against the clip with no two-up, mean difference ${Math.min(...diffs).toFixed(3)}–${Math.max(...diffs).toFixed(3)} levels`)
-        for (const d of diffs) expect(d).toBeLessThanOrEqual(1)
+        // Bit-identical on the Mac (§38; 0.000 on all four sources here); ≤ 1 level where the 2018 build encodes it, unmeasured.
+        for (const d of diffs) expect(d, `a single shot in the two-up clip, ${d.toFixed(3)} levels from the clip with none`).toBeLessThanOrEqual(process.platform === 'darwin' ? 0 : 1)
         // The clip's last frame is the stack, not the black canvas (vstack's EOF loses it without the tpad).
         const lastK = row.clip.duration - 1
         const last = row.rendered.frames.get(row.clip.start + lastK)!
