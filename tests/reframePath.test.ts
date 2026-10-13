@@ -232,6 +232,17 @@ describe('cropPath — rules 4 and 5: static first, a pan only when the subject 
     expect(p.toMs).toBeLessThan(5000)
   })
 
+  it('a pan that would end exactly on its cut is not started: every pan settles before the cut', () => {
+    // 1f puts the next shot's held key on the cut's frame; a pan still moving
+    // there would fight it. The face steps to AWAY at 2400; the pan fires at
+    // 3000 and takes panMs, so it ends at 3600.
+    const step = (endMs: number): SubjectTrack =>
+      track({ shots: [[0, endMs]], faces: (ms) => [face(ms >= 2400 ? AWAY : 960, 400, 120)] })
+    const [p] = cropPath(step(3602), PORTRAIT_CANVAS).shots[0].pans
+    expect(p.toMs).toBe(3600)
+    expect(cropPath(step(3600), PORTRAIT_CANVAS).shots[0].pans).toEqual([])
+  })
+
   it('a long move takes longer: never faster than maxSpeed crop lengths a second', () => {
     const t = track({ shots: [[0, 8000]], faces: (ms) => [face(ms < 3000 ? 400 : 1600, 400, 120)] })
     const path = cropPath(t, PORTRAIT_CANVAS)
