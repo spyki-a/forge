@@ -1808,7 +1808,122 @@ from `parseSceneLog` over the lines. An AbortSignal cancels through
 
 ### 4.3 1c — Faces — `sidecar/forge_sidecar/capabilities/faces.py` · 2 days (2.5 if the YuNet fallback's decoder is built)
 
-Its own module and its own `OPTIONAL` row, `(("vision.faces",), "faces")`.
+> **Built 2026-10-13** — `capabilities/faces.py` (`vision.faces`,
+> `vision.facesModel`), the worker `workers/mp_faces.py`,
+> `sidecar/requirements-faces.txt` and `requirements-faces-nodeps.txt`; tests
+> `tests/sidecar/test_faces.py` (34, all of them on CI's bare interpreter)
+> and `tests/integration/faces.int.test.ts` (10 in the sandbox, plus the
+> user's 2). The detection itself is **unmeasured here**: the sandbox has no
+> Metal device. It is one command on your Mac, which writes what it found to
+> `tests/output/faces/real/README.txt`:
+> `FORGE_FACES_REAL=1 npx vitest run tests/integration/faces.int.test.ts`.
+> - **The model gate is a second method**, as the scaffold chose
+>   (`protocol.ts` above `ModelParams`): the row is `(("vision.faces",
+>   "vision.facesModel"), "faces")`. `vision.faces` never fetches, and without
+>   the model answers `unavailable`, "the face finder is not downloaded yet
+>   (1,083,786 bytes from storage.googleapis.com) …"; `vision.facesModel`
+>   answers `{present, bytes, label, host}` and fetches only on
+>   `download: true` (exactly `true`). The URL is the versioned
+>   `…/blaze_face_full_range/float16/1/blaze_face_full_range.tflite`:
+>   `float16/latest/` served the same bytes on 2026-10-13 (both 1,083,786 B,
+>   the same md5), but `latest` can move. The sha256 pinned,
+>   `3698b18f…2b181b`, is the local `.venv-faces` file's, and both URLs'.
+>   One real fetch through the handler: 0.13 s, three progress messages
+>   ("downloading the face finder (1 MB, first run only)").
+> - **`media.fetch_url` fails on this Mac as it is**: the python.org 3.14
+>   install has an empty `etc/openssl`, so `urlopen`'s default context
+>   cannot verify storage.googleapis.com (`CERTIFICATE_VERIFY_FAILED`). The
+>   fetch above worked with `SSL_CERT_FILE` set to certifi's bundle, which
+>   `requirements-faces.txt` installs. `media.py` needs a certifi context in
+>   `fetch_url`, an open item for the fix phase. Hugging Face downloads
+>   are unaffected: they go through huggingface_hub's own client.
+> - **The install, measured on `sidecar/.venv`** (pip 26.2.1, CPython
+>   3.14.6). The first file took 0.74 s and installed absl-py 2.5.0 (wheel
+>   137,410 B) and sounddevice 0.5.6 (1,009,647 B universal2); flatbuffers,
+>   certifi, cffi and pycparser were already there. The second, mediapipe
+>   0.10.35 `--no-deps`, took 1.28 s for a 17,782,605 B wheel (win_amd64:
+>   10,905,503 B), 54.5 MB on disk. In the sandbox pip needed
+>   `--use-deprecated=legacy-certs` (macOS trust store unreachable, OSStatus
+>   −26276), which is a sandbox matter. `import mediapipe` without the stubs:
+>   `ModuleNotFoundError: No module named 'cv2'` at `drawing_utils.py:20`;
+>   with them it imports 0.10.35.
+> - **The worker** starts and imports mediapipe in 0.14–0.23 s wall (the
+>   import 0.07–0.13 s) on this Mac. In the sandbox, with the model, it dies
+>   at `create_from_options` with **−6** (`gl_context_nsgl.cc failed to
+>   create pixel format`, then `graph_service.h:139] Check failed:
+>   service_`), 0.3–1.3 s in. Through the helper, the answer is
+>   `unavailable`, "the face detector stopped (code -6): …" with that
+>   `Check failed` line, and `ping` still answers.
+> - **What the plan left open, as built.**
+>   - The spec goes in as one JSON line on the worker's stdin, which stays
+>     open: its end is the cancel, and it also ends when the helper dies, so
+>     no worker outlives the helper. Out come `ready` / `progress <fraction>
+>     <frames>` (every 10) / `done` / `error <kind> <message>` lines.
+>   - The track is streamed to a `.part` beside the cache file and renamed
+>     whole; the helper removes any `.part` left after a cancel, a kill or a
+>     death.
+>   - A cancel closes stdin, and the worker is killed after 3 s if it has
+>     not stopped.
+>   - Each detection is clamped to the analysed frame, then normalised with
+>     its edges rounded to 4 dp, so `x + width` is never past 1. A sample
+>     keeps at most the two largest by area (a tie goes to the higher
+>     score), each scoring at least `minScore`.
+>   - The analysed frame's long side is `edge`, even, and the short side
+>     follows the UPRIGHT aspect, also even; a small source is scaled up.
+>   - The cache name is `<key, ':' → '-'>-<sha1[:16]>.json`. The hash covers
+>     the raw key, the size, the window, fps, edge, minScore, the detector
+>     and the model's sha256.
+>   - The cache is checked **before** the model, so a track on disk answers
+>     without it.
+>   - fps is clamped to 1–30, edge to 64–2048, minScore to 0–1.
+>   - The model reaches MediaPipe as bytes (`model_asset_buffer`), so a
+>     profile path is never read by the C++ side.
+> - **Found while building**: the worker's stdin watcher must read the raw
+>   descriptor. A daemon thread blocked in `sys.stdin.buffer` made the
+>   interpreter's shutdown abort with −6 after a pass that had written its
+>   whole track and said `done`, which is the detector's own death code.
+> - **The sandbox's stand-in**: `FORGE_FACES_WORKER_FAKE=colour` swaps in a
+>   detector that boxes each saturated colour. With it the pass, the track's
+>   shape, the two-largest rule, source ms, the relay, the cache and the
+>   cancel run without Metal; `FORGE_FACES_WORKER_ABORT=1` aborts mid-pass.
+>   The result names the stand-in as its `detector`, and the stand-in is in
+>   the cache's hash.
+> - **The rotated case** (§4.9): the plan's `-c copy` remux puts the picture
+>   on its side in the upright frame. Its geometry is checked in the sandbox
+>   with the stand-in: every box is the plain clip's turned counter-clockwise
+>   (np.rot90's way), within 0.0000. Your run uses a phone-shaped copy
+>   instead: stored on its side and turned back by its matrix, coded
+>   360×640, upright 640×360. Its boxes must equal the plain copy's within
+>   0.02, because a face lying on its side tests whether BlazeFace finds
+>   sideways faces, not where the boxes land.
+> - **Mutations killed** (each restored byte-identical, `cmp`; "unit" is
+>   test_faces.py, "int" the integration file):
+>   - the stubs dropped from the worker's env (int: the import test fails on
+>     `No module named 'cv2'`, the real run on "could not start"; unit);
+>   - the stubs put on the helper's `sys.path`, and the worker's env written
+>     into the helper's (int: the path test; unit);
+>   - the worker run in-process (int: the helper dies, "The AI helper
+>     stopped (signal SIGABRT)");
+>   - the two-largest rule off, and sorted by score (unit; int: the stand-in
+>     pass);
+>   - normalised against the frame's sides swapped, a turned clip's coded
+>     size (unit; int: the pass and the turned case);
+>   - the progress relay dropped (unit; int: the pass and the cancel);
+>   - the partial kept (unit; int: the cancel and the abort);
+>   - no kill after the grace, and stdin left open on cancel (unit);
+>   - no stop at all (unit and int; before a fix to `run_worker`'s
+>     `finally` it hung the run instead of failing it);
+>   - the cache keyed on the key alone (unit; int: the cache);
+>   - the model gate dropped (unit; int: the gate test);
+>   - any truthy `download` fetching (unit);
+>   - the key's colon kept in the name (unit; int);
+>   - the upright check skipped (unit; int);
+>   - decoded at the probed coded sides (int, by the answered size). Its
+>     effect on the BOXES needs the real detector, so it is your run's
+>     mutation.
+
+Its own module and its own `OPTIONAL` row, `(("vision.faces",), "faces")`
+(as built, `(("vision.faces", "vision.facesModel"), "faces")`: the note above).
 **Never in `vision.py`**: a missing mediapipe must not take `vision.measure`,
 the Director's gate, down with it. And **`faces.py` never imports mediapipe
 in the helper**: without the stubs on its path that import fails on `cv2`
@@ -1858,8 +1973,11 @@ progress every 10 frames (`'finding faces'`) and a cancel check per frame.
   short-range one found 1 of 80 frames on the test footage (§4.1). It comes
   from `storage.googleapis.com/mediapipe-models/…`, not Hugging Face, so it
   goes through `media.fetch_url` with a pinned sha256 into
-  `models_dir()/mediapipe/`. That is a second host for restricted networks
-  to allow, and the Settings line says so.
+  `models_dir()/files/<sha256[:16]>-blaze_face_full_range.tflite`, the
+  layout `fetch_url` keeps every URL download in (as built; this said
+  `models_dir()/mediapipe/`, which would have been a second layout). That is
+  a second host for restricted networks to allow, and the Settings line says
+  so.
 - **Its requirements are two files, installed in two pip runs, the way the
   measured venv was built** (pip rejects `--no-deps` inside a requirements
   file, in both forms; measured with pip 26.1.2): `sidecar/requirements-faces.txt`

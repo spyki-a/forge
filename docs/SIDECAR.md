@@ -105,11 +105,50 @@ is the better European option (native transducer timestamps, ±20-40ms vs Whispe
 Measured on an M-series Mac: `tiny`/int8 transcribes the 11-second JFK fixture in ~640ms,
 roughly 17× realtime, with the model cached in-process after first load.
 
+## Faces — the helper's first child process
+
+`vision.faces` (`capabilities/faces.py`, `docs/CLIPS.md` §4.3) runs MediaPipe's BlazeFace
+full-range detector **in a worker process**, `python -m forge_sidecar.workers.mp_faces`, never
+in the helper: the macOS wheel aborts the whole process where there is no Metal device, even
+on the CPU delegate (`EFFECTS.md` §37). Measured in the dev sandbox through the helper: the
+worker imports mediapipe cleanly, dies at `create_from_options` with return code **−6**
+(`graph_service.h:139] Check failed: service_`), and the request answers `unavailable`, "the
+face detector stopped (code -6): …", while the helper keeps answering `ping`.
+
+- **mediapipe is never imported in the helper.** Its import needs `cv2` and
+  `matplotlib.pyplot`, which only the three empty files in `forge_sidecar/stubs/` satisfy, and
+  those go first on the **worker's** `PYTHONPATH` alone (`faces.worker_env`, a copy of the
+  helper's environment); without them the worker's import fails on `No module named 'cv2'`
+  (measured). Registration asks only `importlib.util.find_spec('mediapipe')`.
+- **The conversation**: one JSON spec line on the worker's stdin, which then stays open — its
+  end is the cancel, and it also ends by itself if the helper dies, so a worker never outlives
+  it; `ready` / `progress <fraction> <frames>` / `done` / `error <kind> <message>` lines on its
+  stdout; the track written as it goes to a `.part` beside the cache file and renamed into place
+  whole. A cancel closes stdin (the worker stops before its next frame and kills its ffmpeg) and
+  kills it after 3 s if it has not gone; any `.part` left is removed by the helper.
+- **The worker's stdin watcher reads the raw descriptor** (`os.read`), never
+  `sys.stdin.buffer`: a daemon thread blocked in the BufferedReader holds its lock, and the
+  interpreter's shutdown then aborts with −6 after a pass that finished — measured, and the
+  same code the detector dies with.
+- **The model is a download behind a press.** `vision.faces` never fetches; with the model not on
+  disk it answers `unavailable` ("the face finder is not downloaded yet (1,083,786 bytes from
+  storage.googleapis.com) …"). `vision.facesModel` answers `{present, bytes, label, host}`, and
+  fetches only with `download: true`, through `media.fetch_url` against the pinned sha256, into
+  `models_dir()/files/3698b18f063835bc-blaze_face_full_range.tflite`.
+
 ## Setup
 
 ```bash
 python3 -m venv sidecar/.venv
 sidecar/.venv/bin/python -m pip install -r sidecar/requirements.txt
+```
+
+The face finder, optional, is two pip runs, because pip rejects `--no-deps` inside a
+requirements file:
+
+```bash
+sidecar/.venv/bin/python -m pip install -r sidecar/requirements-faces.txt
+sidecar/.venv/bin/python -m pip install --no-deps -r sidecar/requirements-faces-nodeps.txt
 ```
 
 Run it by hand to inspect the protocol:
