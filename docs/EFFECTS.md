@@ -5121,7 +5121,9 @@ against. §52 holds the shape's two corrections, the window and where crop's
 x lands; this one holds what the built pass prints and scores. Development
 Mac, the bundled ffmpeg (4.1.5 package, reporting 4.4); each number re-run
 for this section on 2026-10-13 unless it is credited. **The 2018 build is not run here**: the
-score table below is asserted in Windows CI on the next push. Every clip is
+score table below is asserted in Windows CI, and was green there in run
+38408749271 on `d8e3259` (2026-10-13), so both builds score the four cuts
+within 0.01 of the table. Every clip is
 a lavfi source made on the spot; no third-party media.
 
 **The fixture.** Five `color` sources, `0xFF0000`, `0x0000FF`, `0x646464`,
@@ -5266,9 +5268,11 @@ review's runs failed four, before the default-threshold case was added).
 
 **Not measured here.**
 
-- **The 2018 build, at all.** The table, the `split` graph inside `-vf`, and
-  the cancel through `taskkill /f /t` (exit code 1) are Windows CI's to run
-  on the next push.
+- **The 2018 build, by hand.** The table, the `split` graph inside `-vf`,
+  and the cancel through `taskkill /f /t` (exit code 1) ran in Windows CI
+  on the push: run 38408749271 on `d8e3259` (2026-10-13) was green, so all
+  three hold on the 2018 build; the per-row scores there are not printed
+  anywhere readable without a sign-in, only held within 0.01.
 - **How an off row would show.** A row off the table fails `scores every cut
   as the committed table says` with every off row named, as dropping
   `format=rgb24` showed (`red to blue: 0.4, the table 1`, …). The run's

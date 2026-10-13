@@ -1734,9 +1734,11 @@ fixture or a build, only the two ratings.
 > values: every case passed with T at 0.45 and at 0.15 (the fix's check).
 > A minShot up to 1 s, the top of 1a's grid, leaves the fixture's shots
 > whole (its shortest, the window case's, are 1 s; read from the test, not
-> run). **The 2018 build's scores have never been run**: the table case runs
-> in Windows CI on the next push, and a row off the table fails with every
-> off row named in the run's annotation. The stderr lines verbatim, the table
+> run). **The 2018 build's scores: Windows CI run 38408749271 (2026-10-13,
+> on `d8e3259`) was green**, so the table case passed there — every row
+> within 0.01 — along with the split graph inside `-vf` and the cancel
+> through `taskkill`; a row off the table would have failed with every off
+> row named in the run's annotation. The stderr lines verbatim, the table
 > beside the Y path's, the timings and the cancel are in `EFFECTS.md` §53.
 
 In main, not the Python helper: it needs only ffmpeg, so it works without
@@ -4475,7 +4477,7 @@ the analysis loaded stays resident while the model runs.
 
 | filter / option | used by | merged | status |
 |---|---|---|---|
-| `select='gt(scene,T)'` after `scale=320:-2,format=rgb24`, on a `split` branch that ends in `nullsink`; `metadata=print` at **`-loglevel info`** | 1b shots (`sceneArgs`, built 2026-10-13) | 2012 / 2012 / 2016; `split` and `nullsink` are in `allfilters.c` at `f22fcd4` (read) | **built**; measured on the Mac (`EFFECTS.md` §52, §53). Without `format=rgb24` the score differs per build (§4.2). At `-loglevel error` nothing prints (re-measured on the built shape: 0 lines). `select` on the output path starves `-progress`, hence the split. It is on `ANALYSIS_SHAPES`, where `scdet` in its place fails the floor test. **Windows parity is §4.9's committed score table, asserted in CI; it has not run there yet and will on the next push** |
+| `select='gt(scene,T)'` after `scale=320:-2,format=rgb24`, on a `split` branch that ends in `nullsink`; `metadata=print` at **`-loglevel info`** | 1b shots (`sceneArgs`, built 2026-10-13) | 2012 / 2012 / 2016; `split` and `nullsink` are in `allfilters.c` at `f22fcd4` (read) | **built**; measured on the Mac (`EFFECTS.md` §52, §53). Without `format=rgb24` the score differs per build (§4.2). At `-loglevel error` nothing prints (re-measured on the built shape: 0 lines). `select` on the output path starves `-progress`, hence the split. It is on `ANALYSIS_SHAPES`, where `scdet` in its place fails the floor test. **Windows parity is §4.9's committed score table, asserted in CI: green on the 2018 build in run 38408749271 (2026-10-13)** |
 | `-ss S -t D`, both before `-i` (a window) | 1b `findShots`' window (no caller: a clip's shots come from the whole-file pass) | input `-t` is at `f22fcd4` (`ffmpeg_opt.c:3360`, `OPT_INPUT`; trimmed at the graph's input, `ffmpeg_filter.c:846`; read) | measured on the Mac: with `-t` after `-i`, a 3–7 s window printed a cut at source 8 s; with it before, only the cuts at 4 and 6 s. On MPEG-TS the window seeks wrong and finds nothing (`EFFECTS.md` §52). A camera's `.MTS` is unmeasured |
 | `scale` before analysis; `-ss` before `-i` for one frame | 1b, 1c, 1d, 1g (in the helper) | old | measured on the Mac (30–80 ms a seek, exact shot) |
 | `crop` with a per-frame `x`/`y` expression (`if`, `lt`, eased segments), literal `w`/`h` | 1f crop keys | crop 2010s; eval functions 2011 | measured on the Mac (step and linear exact); **dated** for Windows; the reframe render check runs in CI |
@@ -4537,9 +4539,9 @@ Each is named in its step, and each step's first task is its own row:
    (1a, §4.1): open. The per-cut scores against the committed table:
    **measured on the Mac** (2026-10-13, `EFFECTS.md` §53: 1.000 / 1.000 /
    0.400 / 0.200, beside the Y path's 0.40 / 0.61 / 0.34 / 0.17). **The 2018
-   build's scores are Windows CI's to measure on the next push**: they come
-   from `shots.int.test.ts`' table case, within 0.01, which has not run
-   there yet (§4.2, §4.9).
+   build: measured in Windows CI** — `shots.int.test.ts`' table case, every
+   row within 0.01, green in run 38408749271 on `d8e3259` (2026-10-13;
+   §4.2, §4.9). Still 1a's: T and the minimum shot on hand-marked cuts.
 3. Florence-2 int8 on the CPU: seconds per grounding on the Mac and the
    Surface, the hand-written loop, box quality, **and its peak RSS** (§4.5).
 4. **The helper's peak RSS per capability** (faces, salient, ground, asr) on
