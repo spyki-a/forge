@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -153,6 +153,44 @@ describe('a download through the fake yt-dlp', () => {
     const handle = downloadMedia(request(), tool({ FAKE_FAIL: '1' }), () => undefined, { destDir: dest })
     await expect(handle.promise).rejects.toThrow(/Video unavailable\. This video is private/)
     expect(await readdir(dest)).toEqual([])
+  }, 60_000)
+
+  /*
+   * A cut refused at once — a googlevideo 403 on a stream URL, about one
+   * sectioned download in ten on the user's links (EFFECTS.md §51) — is run
+   * once more, and said with ffmpeg's own reason when it fails again.
+   */
+  const ranged = (): IngestRequest => request({ range: { startMs: 1000, endMs: 3000 } })
+  const runsOf = async (file: string): Promise<number> =>
+    (await readFile(file, 'utf8').catch(() => '')).split('\n').filter(Boolean).length
+
+  it('runs a cut that was refused once more, with fresh stream URLs, and lands it', async () => {
+    const dest = join(dir, 'refused-once')
+    const runs = join(dir, 'refused-once.runs')
+    const handle = downloadMedia(ranged(), tool({ FAKE_SECTION_403: join(dir, 'refused-once.count'), FAKE_RUNS: runs }), () => undefined, { destDir: dest })
+    const outcome = await handle.promise
+    expect(basename(outcome.path)).toBe('dQw4w9WgXcQ.video-1080p.r1000-3000.fast.mp4')
+    expect(await runsOf(runs)).toBe(2)
+  }, 60_000)
+
+  it('says why a cut refused twice failed — ffmpeg’s reason, not its stream URL — and cleans up', async () => {
+    const dest = join(dir, 'refused-twice')
+    const runs = join(dir, 'refused-twice.runs')
+    const env = { FAKE_SECTION_403: join(dir, 'refused-twice.count'), FAKE_SECTION_403_TIMES: '2', FAKE_RUNS: runs }
+    const handle = downloadMedia(ranged(), tool(env), () => undefined, { destDir: dest })
+    const error = await handle.promise.then(() => null, (err: unknown) => err)
+    expect(error).toBeInstanceOf(Error)
+    expect((error as Error).message).toBe('ffmpeg exited with code 1: Server returned 403 Forbidden (access denied)')
+    expect(await runsOf(runs)).toBe(2)
+    expect(await readdir(dest)).toEqual([])
+  }, 60_000)
+
+  it('does not run again a failure that is not the cut’s', async () => {
+    const dest = join(dir, 'private-ranged')
+    const runs = join(dir, 'private-ranged.runs')
+    const handle = downloadMedia(ranged(), tool({ FAKE_FAIL: '1', FAKE_RUNS: runs }), () => undefined, { destDir: dest })
+    await expect(handle.promise).rejects.toThrow(/Video unavailable\. This video is private/)
+    expect(await runsOf(runs)).toBe(1)
   }, 60_000)
 
   it('finds the file itself when yt-dlp does not print where it went', async () => {

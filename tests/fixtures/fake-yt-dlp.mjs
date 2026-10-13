@@ -51,6 +51,17 @@
  *                   §40) — instead of the made-up word list: a test's own
  *                   synthetic words (tests/integration/clipIt.int.test.ts)
  *
+ * And for any run:
+ *
+ *   FAKE_RUNS       a file each run appends a line to, to count the runs
+ *
+ * A cut refused, for `--download-sections`:
+ *
+ *   FAKE_SECTION_403        a counter file: while it holds fewer than
+ *                           FAKE_SECTION_403_TIMES (default 1) refusals, the
+ *                           run counts one more and fails as a stream URL's
+ *                           403 does (EFFECTS.md §51)
+ *
  * And a real cut, for `--download-sections` (docs/CLIPS.md §7.7):
  *
  *   FAKE_SECTION_VIDEO, FAKE_SECTION_AUDIO
@@ -70,7 +81,7 @@
  *                   knobs a download is the empty placeholder it always was.
  */
 
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { join } from 'node:path'
 
@@ -89,6 +100,9 @@ const after = (flag) => {
   return at === -1 ? null : argv[at + 1]
 }
 const every = (flag) => argv.flatMap((a, i) => (a === flag ? [argv[i + 1]] : []))
+
+// Every run leaves a line here, so a test can count how often it was started.
+if (process.env.FAKE_RUNS) appendFileSync(process.env.FAKE_RUNS, 'run\n')
 
 const destDir = after('-P')
 const template = after('-o') ?? '%(id)s.%(ext)s'
@@ -248,6 +262,25 @@ const finalPath = join(destDir, finalName)
 /* ------------------------------------------- a section, cut for real */
 
 const sections = every('--download-sections')
+
+/*
+ * A cut refused at once, as measured (EFFECTS.md §51): a googlevideo 403 on
+ * a stream URL. ffmpeg says so only when the downloader args let it speak;
+ * at yt-dlp's own `-loglevel quiet` there is just the ERROR line.
+ */
+if (sections.length > 0 && process.env.FAKE_SECTION_403) {
+  const counter = process.env.FAKE_SECTION_403
+  const refused = existsSync(counter) ? Number(readFileSync(counter, 'utf8')) : 0
+  if (refused < Number(process.env.FAKE_SECTION_403_TIMES ?? 1)) {
+    writeFileSync(counter, String(refused + 1))
+    if (every('--downloader-args').includes('ffmpeg:-loglevel error')) {
+      process.stderr.write('https://rr1---sn-fake.googlevideo.com/videoplayback?expire=1&ip=192.0.2.1&sig=AB:CD: Server returned 403 Forbidden (access denied)\n\n\n')
+    }
+    process.stderr.write('ERROR: ffmpeg exited with code 1\n')
+    process.exit(1)
+  }
+}
+
 if (sections.length > 0 && process.env.FAKE_SECTION_VIDEO && process.env.FAKE_SECTION_AUDIO) {
   const ffmpeg = after('--ffmpeg-location')
   if (!ffmpeg) {

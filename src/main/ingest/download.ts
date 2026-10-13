@@ -9,6 +9,7 @@ import {
   humanError,
   outputStem,
   readMarkedLine,
+  type BuiltArgs,
   type IngestRequest
 } from '@shared/ingest/args'
 import { parseLink } from '@shared/ingest/url'
@@ -199,7 +200,30 @@ export function downloadMedia(
     }
 
     const built = buildYtDlpArgs(request, { ffmpegPath: FFMPEG_PATH, destDir, stem })
+    const sectioned = built.args.includes('--download-sections')
 
+    /*
+     * A cut that fails as "ffmpeg exited with code N" is run once more.
+     *
+     * Measured on the user's links (EFFECTS.md §51): about one sectioned
+     * download in ten failed so — a googlevideo `403 Forbidden` on a stream
+     * URL, at once — and each passed when run again. yt-dlp's `--retries`
+     * does not reach FFmpegFD; a fresh run fetches fresh stream URLs. Any
+     * other failure (a private video, a missing format) would fail the same
+     * way twice, so it is not retried. `discard` has removed the first try's
+     * partials before this sees its error.
+     */
+    try {
+      return await attempt(built)
+    } catch (err) {
+      if (cancelled) throw new CancelledError()
+      if (!sectioned || !(err instanceof Error) || !/^ffmpeg exited with code/i.test(err.message)) throw err
+      return attempt(built)
+    }
+  })()
+
+  /** One run of yt-dlp: settles once it has closed and, on a failure, once its partials are gone. */
+  function attempt(built: BuiltArgs): Promise<IngestOutcome> {
     return new Promise<IngestOutcome>((resolve, reject) => {
       if (cancelled) {
         reject(new CancelledError())
@@ -330,7 +354,7 @@ export function downloadMedia(
         discard(new Error(humanError(stderrLines, code)))
       })
     })
-  })()
+  }
 
   return {
     promise,

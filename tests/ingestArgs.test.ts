@@ -171,6 +171,14 @@ describe('the yt-dlp command line', () => {
     expect(b.approximateRange).toBe(false)
   })
 
+  it('lets a section’s ffmpeg say why it failed — and only a section has one (EFFECTS.md §51)', () => {
+    for (const exact of [false, true]) {
+      const b = build({ range: { startMs: 60_000, endMs: 90_000 }, exact })
+      expect(b.after('--downloader-args'), `exact ${exact}`).toBe('ffmpeg:-loglevel error')
+    }
+    expect(build().args).not.toContain('--downloader-args')
+  })
+
   it('retries, because a flaky connection is the common case', () => {
     expect(build().after('--retries')).toBe('5')
     expect(build().after('--socket-timeout')).toBe('30')
@@ -251,6 +259,21 @@ describe('reading yt-dlp back', () => {
     expect(humanError(['WARNING: something', 'ERROR: Unsupported URL: https://x'], 1)).toBe(
       'Unsupported URL: https://x'
     )
+  })
+
+  it('gives a failed cut ffmpeg’s own reason, with its stream URL cut out', () => {
+    const stream = 'https://rr6---sn-x.googlevideo.com/videoplayback?expire=1&ip=192.0.2.1&sig=AB:CD'
+    expect(humanError([`${stream}: Server returned 403 Forbidden (access denied)`, 'ERROR: ffmpeg exited with code 1'], 1)).toBe(
+      'ffmpeg exited with code 1: Server returned 403 Forbidden (access denied)'
+    )
+    // A context prefix goes; a URL inside the reason is not shown either.
+    expect(humanError(['WARNING: x', `[https @ 0x7f8a] Failed to open ${stream}`, 'ERROR: ffmpeg exited with code 1'], 1)).toBe(
+      'ffmpeg exited with code 1: Failed to open …'
+    )
+    // ffmpeg said nothing (yt-dlp's own quiet level): the ERROR line alone.
+    expect(humanError(['WARNING: x', 'ERROR: ffmpeg exited with code 1'], 1)).toBe('ffmpeg exited with code 1')
+    // Any other ERROR keeps its own words, whatever came before it.
+    expect(humanError([`${stream}: Server returned 403`, 'ERROR: [youtube] dQw4w9WgXcQ: Video unavailable'], 1)).toBe('Video unavailable')
   })
 
   it('falls back to the last line, then to the exit code', () => {

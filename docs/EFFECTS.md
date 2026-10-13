@@ -4665,3 +4665,23 @@ with no dubs. Two changes (`buildCaptionArgs`, `parseRequestedSubtitles`):
   translation's words are never the words spoken. Without this, a translated
   `<l>` that `json3Kind` read as `lines` would be merged as the uploader's
   text (§16.12) over the ASR's timing.
+
+**About one sectioned download in ten fails at once, and passes when run
+again.** Across four full runs of the exit check, 6 of about 58 sectioned
+downloads failed with a bare `ffmpeg exited with code 1` (1 exact, 5 fast);
+a verifier's run, 1 of 11; and on 2026-10-13 by hand, the app's fast-cut
+argv on `bvz_zK5ZxpM` eight times: 7 passed in 18–23 s, the eighth failed in
+**1 s**. Every failure passed on another run. Why it was bare: `--print`
+makes yt-dlp quiet, and FFmpegFD then runs ffmpeg at `-loglevel quiet`.
+With `--downloader-args 'ffmpeg:-loglevel error'` the failed run said
+`<the stream's googlevideo URL>: Server returned 403 Forbidden (access
+denied)` before the ERROR line — a stream URL refused, which yt-dlp's
+`--retries` does not cover (it is FFmpegFD's request, not yt-dlp's). The
+same section with and without the downloader args is **byte-identical**
+(`cmp`; a fast cut of 3,608,792 bytes and an exact one of 654,133), and
+the framemd5 of both pairs equal. So: a section always carries those
+downloader args; `humanError` gives "ffmpeg exited with code N" the line
+before it, its URLs cut out; and `downloadMedia` runs a sectioned download
+that failed that way once more (a fresh run fetches fresh stream URLs),
+and any other failure not at all. All of it through the sandbox's proxy:
+whether the proxy adds to the rate is not known.

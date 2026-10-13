@@ -220,6 +220,16 @@ export function buildYtDlpArgs(request: IngestRequest, context: ArgContext): Bui
 
   args.push(...section.args)
 
+  /*
+   * A section is cut by yt-dlp's FFmpegFD, and `--print` makes yt-dlp quiet,
+   * which runs that ffmpeg at `-loglevel quiet`: a cut that failed said only
+   * "ffmpeg exited with code 1". At `error` ffmpeg says why — measured, a
+   * googlevideo `403 Forbidden` on a stream URL (EFFECTS.md §51) — and
+   * `humanError` carries the reason into the job's error. The file is
+   * byte-identical either way (a fast and an exact cut, `cmp`).
+   */
+  if (section.args.length > 0) args.push('--downloader-args', 'ffmpeg:-loglevel error')
+
   return {
     args,
     link,
@@ -532,11 +542,30 @@ export function parseRequestedSubtitles(value: string): WrittenSubtitle[] {
  */
 export function humanError(stderrTail: string[], exitCode: number | null): string {
   const lines = stderrTail.map((l) => l.trim()).filter(Boolean)
-  const error = [...lines].reverse().find((l) => /^ERROR:/i.test(l)) ?? lines.at(-1)
+  let at = lines.length - 1
+  while (at >= 0 && !/^ERROR:/i.test(lines[at])) at--
+  const error = at >= 0 ? lines[at] : lines.at(-1)
   if (!error) return `yt-dlp exited with code ${exitCode ?? 'unknown'}`
-  return error
+  const text = error
     .replace(/^ERROR:\s*/i, '')
     .replace(/^\[[^\]]+\]\s*/, '')
     .replace(/^[A-Za-z0-9_-]{11}:\s*/, '')
     .trim()
+  /*
+   * "ffmpeg exited with code 1" is all yt-dlp says of a cut that failed;
+   * ffmpeg's own reason is the line before it, once it is let speak
+   * (`buildYtDlpArgs`). That line starts with the stream's URL — long,
+   * signed, and not the reason — so URLs are cut out of what is shown.
+   */
+  if (at >= 0 && /^ffmpeg exited with code -?\d+$/i.test(text)) {
+    const before = lines.slice(0, at).reverse().find((l) => !/^(ERROR|WARNING):/i.test(l))
+    const reason = before
+      ?.replace(/^\[[^\]]*@\s*0x[0-9a-f]+\]\s*/i, '')
+      .replace(/^[a-z][a-z0-9+.-]*:\/\/\S*?:\s+/i, '')
+      .replace(/[a-z][a-z0-9+.-]*:\/\/\S+/gi, '…')
+      .trim()
+      .slice(0, 200)
+    if (reason) return `${text}: ${reason}`
+  }
+  return text
 }
