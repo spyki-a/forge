@@ -207,9 +207,18 @@ def _subject_matte(
     path: str, ffmpeg: str, variant: str, context: Context | None = None
 ) -> "Any":
     """Soft mask of the photograph's subject, at the model's own square size."""
+    return _matte_of(media.decode_rgb(path, ffmpeg, MATTE_SIZE, MATTE_SIZE), variant, context)
+
+
+def _matte_of(rgb: "Any", variant: str, context: Context | None = None) -> "Any":
+    """Soft mask of an RGB frame already decoded at MATTE_SIZE square (uint8).
+
+    The one tensor path, shared with salient.py (docs/CLIPS.md §4.4), which
+    decodes a video frame at a time rather than a photograph.
+    """
     import numpy as np
 
-    small = media.decode_rgb(path, ffmpeg, MATTE_SIZE, MATTE_SIZE).astype(np.float32) / 255.0
+    small = rgb.astype(np.float32) / 255.0
     mean = np.array(IMAGE_MEAN, dtype=np.float32)
     std = np.array(IMAGE_STD, dtype=np.float32)
     tensor = np.ascontiguousarray(((small - mean) / std).transpose(2, 0, 1)[None])
