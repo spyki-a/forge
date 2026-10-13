@@ -5372,7 +5372,8 @@ detector's own RSS is still not recorded by that run.
   builder). The watcher reads the raw descriptor now.
 - **Windows: unmeasured.** `os.abort()` there is expected as 3 or
   `0xC0000409` (3221226505); both abort tests accept either on win32
-  (`7e95fc0`) until a Windows CI run names it.
+  (`7e95fc0`) until the Surface names it — CI's bare 3.12 has no venv, so
+  the abort tests skip there (run 38453960372 on `d7244ce`, green).
 
 **Stopping it** (the 1c verifier's driver on the real helper, the stand-in
 detector `colour:80`, a 20 s 640×360 clip):

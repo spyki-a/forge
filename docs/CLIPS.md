@@ -1896,8 +1896,10 @@ from `parseSceneLog` over the lines. An AbortSignal cancels through
 >     stop, with no worker and an empty cache (fix phase).
 >   - **The Windows code for the abort is unmeasured.** `os.abort()` there
 >     is expected as 3 or `0xC0000409` (3221226505), and both tests accept
->     either on win32 (`7e95fc0`); the first Windows CI run after the push
->     names the real one, and the comment is then corrected.
+>     either on win32 (`7e95fc0`). CI cannot name it: both abort tests need
+>     the helper's venv, which CI's bare 3.12 has not, so they skip there
+>     (run 38453960372 on `d7244ce` was green with them skipped). The Surface
+>     names it, and the comment is then corrected.
 > - **What only your Mac can measure** — the command above, on your face
 >   fixture (decision §16.5; nothing of it committed). It probes as coded
 >   3840×2160 HEVC, 30 fps, 26.6 s, start time 0, no rotation, so its coded
@@ -4887,8 +4889,8 @@ Each is named in its step, and each step's first task is its own row:
    of 133 samples with a face on the 4K original at 5 fps and a 640 edge in
    37.8 s, and the phone-shaped copy's boxes overlapping the plain copy's by
    at least 0.875 (§4.3's Built note). Still open: the Windows code for
-   the abort (3 or `0xC0000409`, both accepted until the first Windows CI
-   run names it). The YuNet
+   the abort (3 or `0xC0000409`, both accepted until the Surface names it;
+   CI's bare interpreter skips those tests, run 38453960372). The YuNet
    comparison is not run (§16.1 answered); YuNet's hand decoder and its
    golden test only if the Surface run fails (§4.1, §4.3).
 2. The scene threshold and minimum shot on footage with hand-marked cuts
