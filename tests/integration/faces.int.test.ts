@@ -531,6 +531,30 @@ describeWithVenv(
       notes.push(`- the helper SIGKILLed mid-pass: worker ${workers[0]} gone, its ffmpeg gone, ${partial[0]} removed by the worker`)
     }, 60_000)
 
+    it('a stop mid-pass (an app quit) cancels the pass, and the helper exits by itself with no worker left', async () => {
+      const cache = join(dir, 'cache', 'stopped')
+      const client = await helper({ models, cache, env: { FORGE_FACES_WORKER_FAKE: 'colour:80' } })
+      const exited = new Promise<{ code: number | null; signal: string | null }>((done) => client.once('exit', done))
+      let began = 0
+      const request = client.request(SIDECAR_METHODS.faces, params(clips.long), {
+        onProgress: (p) => {
+          if (p === null || p <= 0 || p >= 1 || began) return
+          began = performance.now()
+          client.stop()
+        }
+      })
+      await expectRejection(request, RPC_ERRORS.internalError, /shutting down/)
+      // Not the SIGKILL client.stop() sends at 1.5 s: the cancel reached the pass, which stopped.
+      expect(await exited).toEqual({ code: 0, signal: null })
+      const took = performance.now() - began
+      expect(took).toBeLessThan(1500)
+      const workers = workerPids(client)
+      expect(workers.length).toBe(1)
+      expect(alive(workers[0]), `worker ${workers[0]}`).toBe(false)
+      expect(await readdir(join(cache, 'faces'))).toEqual([])
+      notes.push(`- a stop mid-pass: the helper exited by itself (code 0) ${Math.round(took)} ms after it, worker ${workers[0]} gone, the cache empty`)
+    }, 60_000)
+
     it('without its model the work says so and the question answers, neither touching the network', async () => {
       const empty = join(dir, 'models-empty')
       await mkdir(empty, { recursive: true })

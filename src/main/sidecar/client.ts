@@ -256,10 +256,21 @@ export class SidecarClient extends EventEmitter {
 
   stop(): void {
     this.stopping = true
+    const inFlight = [...this.pending.keys()]
     this.failAll(new SidecarError('The AI helper is shutting down', RPC_ERRORS.internalError))
     const child = this.child
     if (!child) return
     this.child = null
+    /*
+     * Cancel what is still running first. On stdin's end the helper drains
+     * its in-flight handlers for up to 300 s before it exits (rpc.py
+     * serve_forever), so without a cancel a quit during an analysis always
+     * ended in the SIGKILL below, and no handler's cleanup ran (measured:
+     * vision.faces' helper still alive at 1.5 s). Cancelled, each handler
+     * stops at its next check — vision.faces stops its worker and removes
+     * its half-track in about 0.22 s — and the helper exits by itself.
+     */
+    for (const id of inFlight) child.stdin.write(encode({ jsonrpc: '2.0', method: METHOD_CANCEL, params: { id } }))
     // Closing stdin ends the read loop cleanly; kill only if it ignores that.
     child.stdin.end()
     const timer = setTimeout(() => child.kill('SIGKILL'), 1500)

@@ -174,6 +174,26 @@ describe('lifecycle', () => {
     await expect(promise).rejects.toBeInstanceOf(SidecarError)
   }, 60_000)
 
+  it('a stop cancels the work in flight, so the helper exits by itself rather than being killed', async () => {
+    /*
+     * On stdin's end the helper drains in-flight handlers for up to 300 s, so
+     * a stop that only closed stdin ended in the SIGKILL 1.5 s later, and no
+     * handler's cleanup ran — an analysis' worker and half-track included.
+     */
+    const c = makeClient()
+    await c.start()
+    let running!: () => void
+    const started = new Promise<void>((done) => (running = done))
+    const promise = c.request('system.sleep', { seconds: 30 }, { onProgress: () => running() })
+    await started
+    const exited = new Promise<{ code: number | null; signal: string | null }>((done) => c.once('exit', done))
+    const began = performance.now()
+    c.stop()
+    await expect(promise).rejects.toBeInstanceOf(SidecarError)
+    expect(await exited).toEqual({ code: 0, signal: null })
+    expect(performance.now() - began).toBeLessThan(1500)
+  }, 60_000)
+
   it('restarts after an unexpected exit when configured to', async () => {
     const c = makeClient({ maxRestarts: 2 })
     await c.start()
