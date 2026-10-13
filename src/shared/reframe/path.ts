@@ -216,11 +216,17 @@ export function cropPath(track: SubjectTrack, target: Size, follow?: PathFollow)
       solved = { at: rung.at, pans: [], why: rung.why }
       if (rung.why === 'centre') notes.push(`shot ${n}: no face or subject to follow, centred`)
     } else {
-      const f = followSubject(subjectMarks(own, why, W, H), shot, rail, pace, rung.at)
-      if (f.opened) solved = { at: f.at, pans: f.pans, why }
+      // Rule 6: no face in the opening second — the ladder holds the shot
+      // until the face, once it shows, earns a pan by rule 5. A face there
+      // that is not yet the shot's subject (one of a two-shot's people, the
+      // smaller of two) is not a lost face: the crop starts where the subject
+      // is over the shot, its median, as a two-up's half does. (It went to
+      // the ladder: measured, a two-shot opening on one face at 300 started
+      // centred, 656–1264, with neither face in the crop, noted as faceless.)
+      const faceOpens = own.some((s) => s.ms < shot.startMs + OPENING_MS && s.faces.length > 0)
+      const f = followSubject(subjectMarks(own, why, W, H), shot, rail, pace, faceOpens ? null : rung.at)
+      if (f.opened || faceOpens) solved = { at: f.at, pans: f.pans, why }
       else {
-        // Rule 6: no face in the opening second — the ladder holds the shot
-        // until the face, once it shows, earns a pan by rule 5.
         solved = { at: f.at, pans: f.pans, why: rung.why }
         notes.push(`shot ${n}: no face in its first second, starts ${rung.label}`)
       }
@@ -386,7 +392,8 @@ function sides(a: Box, b: Box): [Box, Box] {
  *
  * The held position centres (or, on y, upper-thirds) the smoothed subject over
  * the opening second, moved as little as keeps it whole with its margin when
- * it fits; with no subject there it is `fallback` (`opened` false). Then: no pan at all when the margin-widened box stays in
+ * it fits. With no subject there (`opened` false) it is `fallback`, or, when
+ * that is null, the same placing of the subject over the whole shot. Then: no pan at all when the margin-widened box stays in
  * the held crop on ≥ staticShare of the samples; otherwise a pan whenever the
  * smoothed centre has stayed outside the dead zone for triggerMs — never in
  * the head, never within minHoldMs of the last move's end, and never one that
@@ -397,7 +404,7 @@ function followSubject(
   shot: Shot,
   rail: Rail,
   pace: Pace,
-  fallback: number
+  fallback: number | null
 ): { at: number; pans: Pan[]; opened: boolean } {
   const { len, room, anchor } = rail
   const lo = (b: Box): number => (rail.axis === 'x' ? b.x0 : b.y0)
@@ -436,7 +443,10 @@ function followSubject(
 
   const opening = marks.flatMap((m, j) => (m.ms < shot.startMs + OPENING_MS ? [j] : []))
   const opened = opening.length > 0
-  const at = opened ? aim(median(opening.map((j) => smooth[j])), median(opening.map((j) => smoothSpan[j]))) : fallback
+  const from = opened ? opening : fallback === null ? marks.map((_, j) => j) : []
+  const at = from.length
+    ? aim(median(from.map((j) => smooth[j])), median(from.map((j) => smoothSpan[j])))
+    : (fallback ?? place(room / 2, room))
   if (marks.length === 0) return { at, pans: [], opened }
 
   // Rule 4: static first.

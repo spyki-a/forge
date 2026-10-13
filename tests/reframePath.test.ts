@@ -504,6 +504,43 @@ describe('cropPath — rule 6: a lost face holds', () => {
   })
 })
 
+describe('cropPath — rule 6 is for a LOST face, not a subject still to arrive', () => {
+  const firstSecondNote = (path: CropPath): boolean => path.notes.some((n) => n.includes('first second'))
+
+  it('a two-shot whose second person arrives after the opening second starts on the two-shot', () => {
+    // Faces at 300 and 700 (a 500 px union that fits); only the one at 300
+    // in the first second. On the ladder it started centred, 656–1264, with
+    // neither face in the crop.
+    const t = track({ shots: [[0, 10000]], faces: (ms) => (ms < 1000 ? [face(300, 400, 100)] : [face(300, 400, 100), face(700, 400, 100)]) })
+    expect(t.samples.filter((x) => x.ms < OPENING_MS).every((x) => x.faces.length === 1)).toBe(true)
+    const path = cropPath(t, PORTRAIT_CANVAS)
+    const s = path.shots[0]
+    expect(s.why).toBe('both')
+    expect(Math.abs(centreOf(path, s.at) - 500)).toBeLessThanOrEqual(2)
+    expect(s.at).toBeLessThanOrEqual(300 - 50)
+    expect(firstSecondNote(path)).toBe(false)
+    expect(s.pans).toEqual([])
+  })
+
+  it('the larger person absent from the opening second: the crop starts on them, not on the ladder', () => {
+    // Stack two people off; the smaller (left) face alone for the first second.
+    const t = track({ shots: [[0, 10000]], faces: (ms) => (ms < 1000 ? [face(LEFT.cx, LEFT.cy, LEFT.side)] : farApart()) })
+    const path = cropPath(t, PORTRAIT_CANVAS, { twoUp: false })
+    const s = path.shots[0]
+    expect(s.why).toBe('larger')
+    expect(Math.abs(centreOf(path, s.at) - RIGHT.cx)).toBeLessThanOrEqual(2)
+    expect(firstSecondNote(path)).toBe(false)
+    expect(s.pans).toEqual([])
+  })
+
+  it('a two-shot with no face at all in the opening second still starts on the ladder, and says so', () => {
+    const t = track({ shots: [[0, 10000]], faces: (ms) => (ms < 1000 ? [] : [face(300, 400, 100), face(700, 400, 100)]) })
+    const path = cropPath(t, PORTRAIT_CANVAS)
+    expect(path.shots[0].why).toBe('centre')
+    expect(path.notes.some((n) => n.startsWith('shot 1:') && n.includes('first second'))).toBe(true)
+  })
+})
+
 describe('cropPath — a portrait source going to 16:9 runs on y', () => {
   const PORTRAIT = { width: 1080, height: 1920 }
   const WIDE = { width: 1920, height: 1080 }
