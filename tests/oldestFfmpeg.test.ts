@@ -4,7 +4,8 @@ import { buildRenderPlan, videoInputArgs, type RenderRequest } from '@shared/ren
 import { filterGraphOf, withGraphFile } from '@shared/render/graphFile'
 import { keyProbeArgs } from '@shared/render/chromaKey'
 import { ENCODERS, probeArgs } from '@shared/render/encode'
-import { momentFrameArgs } from '@shared/render/momentFrames'
+import { followedFootage, momentFrameArgs } from '@shared/render/momentFrames'
+import { fourShotTrack, printedMs } from './fixtures/reframe/track'
 import { SCENE_DEFAULTS, sceneArgs } from '@shared/reframe/shots'
 import { steadyDetectFilter } from '@shared/render/steady'
 import { voiceOverArgs } from '@shared/render/voiceover'
@@ -154,6 +155,24 @@ const SEVERAL = 'music and a second clip both off zero, so two clips are delayed
 
 /** The shape with zoom keys on footage. */
 const ZOOMED = 'zoom keys on a video clip, at speed 1'
+
+/** The shapes with a followed crop (docs/CLIPS.md §4.7): one crop, and the stacked two-up. */
+const FOLLOWED = 'a followed clip at speed 1: fps=, then a crop keyed by a flat sum'
+const TWO_UP = 'a followed clip with a stacked two-up: split, two keyed crops, vstack, tpad'
+
+/**
+ * A 640×360 file's hand-built subject track on a 360×640 canvas: a jump at
+ * each cut, a pan in shot 3, and shot 4 either one face or two too far apart
+ * for one crop (tests/fixtures/reframe/track.ts).
+ */
+function followed(twoUp: boolean): Project {
+  const track = fourShotTrack({ cutMs: [29, 61, 165].map((f) => printedMs(f / 30)), durationMs: 10_000, twoUp, size: { width: W, height: H } })
+  return project({
+    settings: { width: H, height: W, fps: 30, sampleRate: 48000 },
+    clips: [clip({ id: 'a', duration: 200, follow: { version: 1 } })],
+    subjects: { v: track }
+  })
+}
 
 /*
  * The shapes that between them reach every branch of the audio tail — which is
@@ -307,7 +326,21 @@ const SHAPES: { name: string; project: Project; range?: { start: number; end: nu
     project: project({
       clips: [clip({ id: 'a', keyframes: { zoom: [{ frame: 0, value: 1 }, { frame: 59, value: 1.5 }] } })]
     })
-  }
+  },
+  /*
+   * Step 1f's followed crop (docs/CLIPS.md §4.7). Read at the Windows build's
+   * own commit, f22fcd4, not run there (reframe.int is the run, in Windows
+   * CI): the flat sum's `gte`, `min` and `max` are in libavutil/eval.c's
+   * function table (`"max"`, `"min"` :440–441, `"gte"` :443) and evaluate as
+   * here (:309–313); crop evaluates x and y on every frame, `lrint`s them and
+   * clears the subsampled low bit (vf_crop.c:263–281), the `lrint(x) & ~1`
+   * the preview copies. The two-up's `split` (split.c:123), `vstack`
+   * (vf_stack.c:368, merged 2015) and `tpad` with `stop` and `stop_mode=clone`
+   * (vf_tpad.c:54, :57–58, merged 2018-10) are all before the floor; `fps=`
+   * ahead of the crop is 2012.
+   */
+  { name: FOLLOWED, project: followed(false) },
+  { name: TWO_UP, project: followed(true) }
 ]
 
 /*
@@ -367,6 +400,13 @@ const ANALYSIS_SHAPES: { name: string; args: () => string[] }[] = [
   { name: 'a moment’s footage pre-pass, smooth slow motion', args: () => momentFrameArgs({ ...FOOTAGE, speed: 0.5, smoothSlow: true }, '/tmp/m/%05d.png') },
   { name: 'a moment’s footage pre-pass, over a ramp', args: () => momentFrameArgs({ ...FOOTAGE, ramp: { from: 1, to: 0.25 } }, '/tmp/m/%05d.png') },
   { name: 'a moment’s footage pre-pass, on a freeze', args: () => momentFrameArgs({ ...FOOTAGE, hold: true }, '/tmp/m/%05d.png') },
+  ...[false, true].map((twoUp) => ({
+    name: `a moment’s footage pre-pass over a followed clip${twoUp ? ', stacked two-up' : ''}`,
+    args: (): string[] => {
+      const p = followed(twoUp)
+      return momentFrameArgs({ ...FOOTAGE, inPoint: 0, duration: 200, first: 150, ...followedFootage(p, p.clips[0], 30) }, '/tmp/m/%05d.png')
+    }
+  })),
   {
     // main/render/steady.ts runs exactly this: the clip's input, then the detect filter.
     name: 'a steady clip’s motion analysis',
@@ -497,6 +537,19 @@ describe('a filter graph runs on the oldest bundled ffmpeg', () => {
     expect(steps[zoom].split(':'), 'one output frame per input frame').toContain('d=1')
   })
 
+  it('reaches the followed crop and the stacked two-up, so the scan above is not of a graph without them', () => {
+    // Counted, not found: each site the shape is meant to have, and no more.
+    const sites = (graph: string, re: RegExp): number => [...graph.matchAll(re)].length
+    const one = graphOf(SHAPES.find((s) => s.name === FOLLOWED)!.project)
+    expect(sites(one, /fps=30,crop=w='min\(202,in_w\)':h='min\(360,in_h\)':x='max\(0,min\(/g), 'fps= then the keyed crop').toBe(1)
+    expect(sites(one, /\*gte\(t,\d+\.\d{6}\)/g), 'held steps').toBeGreaterThanOrEqual(3)
+    expect(sites(one, /\*\(3-2\*\(min\(1,max\(0,\(t-/g), 'a smoothstep pan').toBeGreaterThanOrEqual(1)
+    const two = graphOf(SHAPES.find((s) => s.name === TWO_UP)!.project)
+    expect(sites(two, /fps=30,split=2\[r0a\]\[r0b\];\[r0a\]crop=w=/g), 'fps= then the split').toBe(1)
+    expect(sites(two, /crop=w=/g), 'two keyed crops').toBe(2)
+    expect(sites(two, /\[r0t\]\[r0u\]vstack,tpad=stop_mode=clone:stop=1,/g), 'the stack and its tpad').toBe(1)
+  })
+
   it('spawns every shape with its graph in a file, by an option the 2018 build has', () => {
     /*
      * The export does not pass the graph scanned above on its command line: it
@@ -549,6 +602,10 @@ describe('every other ffmpeg command runs on the oldest bundled ffmpeg', () => {
     const filterOf = (argv: string[]): string => argv[argv.indexOf('-vf') + 1] ?? ''
     const byName = new Map(ANALYSIS_SHAPES.map((s) => [s.name, s.args()]))
     expect(filterOf(byName.get('a moment’s footage pre-pass, cropped')!)).toContain('crop=')
+    const pulledFollow = filterOf(byName.get('a moment’s footage pre-pass over a followed clip')!)
+    expect(pulledFollow, 'the pull’s keyed crop, before its trim').toMatch(/^fps=30,crop=w='[^']*':h='[^']*':x='max\(0,min\([^']*gte\(t,[^']*\),in_w-out_w\)\)'/)
+    const pulledStack = filterOf(byName.get('a moment’s footage pre-pass over a followed clip, stacked two-up')!)
+    expect([...pulledStack.matchAll(/\[r0t\]\[r0u\]vstack,tpad=stop_mode=clone:stop=1,/g)], 'the pull’s stack').toHaveLength(1)
     expect(filterOf(byName.get('a moment’s footage pre-pass, smooth slow motion')!)).toContain('minterpolate')
     expect(filterOf(byName.get('a steady clip’s motion analysis')!)).toContain('vidstabdetect=')
     expect(filterOf(byName.get('the chroma-key scale probe (main, at launch)')!)).toContain('chromakey=')
