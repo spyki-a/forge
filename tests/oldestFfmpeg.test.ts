@@ -7,6 +7,7 @@ import { filterGraphOf, withGraphFile } from '@shared/render/graphFile'
 import { keyProbeArgs } from '@shared/render/chromaKey'
 import { ENCODERS, probeArgs } from '@shared/render/encode'
 import { momentFrameArgs } from '@shared/render/momentFrames'
+import { SCENE_DEFAULTS, sceneArgs } from '@shared/reframe/shots'
 import { steadyDetectFilter } from '@shared/render/steady'
 import { voiceOverArgs } from '@shared/render/voiceover'
 import { PRESETS, defaultParams } from '@shared/presets'
@@ -330,9 +331,9 @@ const SHAPES: { name: string; project: Project; range?: { start: number; end: nu
  * format=yuv420p`), which build their argv inline. All old filters today;
  * a new one added to any of these is NOT scanned until it gets a builder here.
  *
- * Step 1's scene pass, `sceneArgs` in src/main/ffmpeg/shots.ts (§4.2), joins
- * this list when it is built — `scdet` is on the blocklist because that pass
- * is where it would be reached for. The `it.todo` below is the hook.
+ * Step 1's scene pass, `sceneArgs` in src/shared/reframe/shots.ts (§4.2, run
+ * by src/main/ffmpeg/shots.ts), is on it — `scdet` is on the blocklist
+ * because that pass is where it would be reached for.
  */
 const SIDECAR = resolve(__dirname, '../sidecar')
 const VENV = join(SIDECAR, '.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python')
@@ -385,7 +386,8 @@ const ANALYSIS_SHAPES: { name: string; args: () => string[] }[] = [
       })
   })),
   { name: 'the helper’s frame stream (media.frame_args — the face pass’s decoder)', args: () => helperArgs().frames },
-  { name: 'the helper’s one-frame decode (media.decode_args)', args: () => helperArgs().frame }
+  { name: 'the helper’s one-frame decode (media.decode_args)', args: () => helperArgs().frame },
+  { name: 'step 1’s scene pass (sceneArgs — the shot finder)', args: () => sceneArgs('/tmp/in.mp4', { ...SCENE_DEFAULTS, startMs: 1500, endMs: 2500 }) }
 ]
 
 describe('a filter graph runs on the oldest bundled ffmpeg', () => {
@@ -560,7 +562,9 @@ describe('every other ffmpeg command runs on the oldest bundled ffmpeg', () => {
     expect(helper.frames.indexOf('-ss'), 'the frame stream seeks').toBeGreaterThanOrEqual(0)
     expect(helper.frames.indexOf('-ss'), 'the seek before the input').toBeLessThan(helper.frames.indexOf('-i'))
     expect(filterOf(helper.frame)).toMatch(/^scale=/)
+    // The scene pass: select's scene score, printed, on rgb24, on a branch that ends in a sink.
+    const scene = filterOf(byName.get('step 1’s scene pass (sceneArgs — the shot finder)')!)
+    expect(scene.split(/[,;]/), 'the scene pass').toEqual(expect.arrayContaining(['format=rgb24', 'metadata=print', 'nullsink']))
+    expect(scene, 'the scene pass scores with select').toMatch(/(^|[,;\]])select='gt\(scene,/)
   })
-
-  it.todo('scans step 1’s sceneArgs (docs/CLIPS.md §4.2) — add it to ANALYSIS_SHAPES when src/main/ffmpeg/shots.ts lands')
 })

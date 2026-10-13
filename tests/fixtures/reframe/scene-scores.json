@@ -1,0 +1,14 @@
+{
+  "what": "The scene score of each cut in tests/integration/shots.int.test.ts's clip, on the rgb24 path (docs/CLIPS.md §4.2, §4.9). The clip is made from `sources`: 640x360, 30 fps, two seconds each, lossless H.264 (-qp 0, yuv420p). On rgb24 a uniform change of dA in every channel scores |dA|/100; the two grey cuts do not saturate, so they are what tells the RGB formula from the Mac's Y-only one (0.34 and 0.17 there). Measured 2026-10-13 on the Mac's bundled ffmpeg (4.4); the 2018 Windows build must give the same within `tolerance`.",
+  "size": { "width": 640, "height": 360 },
+  "fps": 30,
+  "secondsEach": 2,
+  "sources": ["0xFF0000", "0x0000FF", "0x646464", "0x8C8C8C", "0x787878"],
+  "tolerance": 0.01,
+  "cuts": [
+    { "frame": 60, "what": "red to blue", "score": 1.0 },
+    { "frame": 120, "what": "blue to grey 100", "score": 1.0 },
+    { "frame": 180, "what": "grey 100 to grey 140", "score": 0.4 },
+    { "frame": 240, "what": "grey 140 to grey 120", "score": 0.2 }
+  ]
+}

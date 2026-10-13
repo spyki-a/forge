@@ -8,8 +8,22 @@ export interface RunOptions {
   args: string[]
   /** Used to turn ffmpeg's out-time into a percentage. Null = indeterminate. */
   durationMs: number | null
-  outputPath: string
+  /**
+   * The file the run writes, removed when it fails or is cancelled. `null`
+   * for a run that writes none — an analysis into `-f null -` — so nothing is
+   * unlinked: given `'-'`, the unlink would remove a file called `-` from the
+   * working directory.
+   */
+  outputPath: string | null
   onProgress: (progress: number, speed: string | null) => void
+  /**
+   * Every line ffmpeg writes to stderr, whole and in order, without its line
+   * ending, before the run settles. Buffered across chunks: a pipe hands
+   * stderr over in pieces that need not end at a line, and av_log writes one
+   * line in several pieces. A parser must never see half a line. If it
+   * throws, the run is stopped and fails with that error.
+   */
+  onStderrLine?: (line: string) => void
   /**
    * When true, `args` is already a complete invocation (globals included) and only
    * the progress flags are appended. The render planner emits complete argv so that
@@ -31,6 +45,40 @@ export interface RunHandle {
 
 /** Keep the tail of stderr — ffmpeg's actual error is always in the last few lines. */
 const MAX_STDERR_LINES = 12
+
+/**
+ * A stream's text as whole lines, however it was chunked. `\n`, `\r\n` and a
+ * lone `\r` each end a line; a `\r` that ends a chunk waits for the next, in
+ * case it is the first half of `\r\n`. `end()` hands over a last line that
+ * had no ending.
+ */
+export function lineSplitter(onLine: (line: string) => void): { push: (chunk: string) => void; end: () => void } {
+  let pending = ''
+  return {
+    push: (chunk) => {
+      const text = pending + chunk
+      let from = 0
+      for (let i = 0; i < text.length; i++) {
+        const c = text.charCodeAt(i)
+        if (c === 10) {
+          onLine(text.slice(from, i))
+          from = i + 1
+        } else if (c === 13) {
+          if (i + 1 === text.length) break
+          onLine(text.slice(from, i))
+          if (text.charCodeAt(i + 1) === 10) i++
+          from = i + 1
+        }
+      }
+      pending = text.slice(from)
+    },
+    end: () => {
+      const last = pending.endsWith('\r') ? pending.slice(0, -1) : pending
+      pending = ''
+      if (last !== '') onLine(last)
+    }
+  }
+}
 
 /**
  * Kill a child and everything it spawned.
@@ -86,6 +134,8 @@ export function runFfmpeg(options: RunOptions): RunHandle {
 
     let snapshot = EMPTY_PROGRESS
     const stderrLines: string[] = []
+    // A line callback that threw: the run is stopped, and fails with it.
+    let lineError: Error | null = null
 
     child.stdout?.setEncoding('utf8')
     child.stdout?.on('data', (chunk: string) => {
@@ -93,14 +143,21 @@ export function runFfmpeg(options: RunOptions): RunHandle {
       onProgress(progressFraction(snapshot.outTimeUs, durationMs), snapshot.speed)
     })
 
-    child.stderr?.setEncoding('utf8')
-    child.stderr?.on('data', (chunk: string) => {
-      for (const line of chunk.split(/\r?\n/)) {
-        if (line.trim() === '') continue
-        stderrLines.push(line.trim())
-        if (stderrLines.length > MAX_STDERR_LINES) stderrLines.shift()
+    const stderr = lineSplitter((line) => {
+      if (options.onStderrLine && lineError === null) {
+        try {
+          options.onStderrLine(line)
+        } catch (err) {
+          lineError = err instanceof Error ? err : new Error(String(err))
+          if (child) killProcess(child)
+        }
       }
+      if (line.trim() === '') return
+      stderrLines.push(line.trim())
+      if (stderrLines.length > MAX_STDERR_LINES) stderrLines.shift()
     })
+    child.stderr?.setEncoding('utf8')
+    child.stderr?.on('data', (chunk: string) => stderr.push(chunk))
 
     child.on('error', (err) => {
       reject(new Error(`Could not start ffmpeg: ${err.message}`))
@@ -115,16 +172,26 @@ export function runFfmpeg(options: RunOptions): RunHandle {
      * "this job ended" mean "there is nothing broken left behind".
      */
     const discard = (error: Error): void => {
+      if (outputPath === null) {
+        reject(error)
+        return
+      }
       void unlink(outputPath)
         .catch(() => undefined)
         .then(() => reject(error))
     }
 
     child.on('close', (code) => {
+      // 'close' follows the last of stderr, so its last line can be handed over now.
+      stderr.end()
       if (cancelled) {
         // A cancelled job leaves a truncated output file behind. Remove it so the
         // user is never handed a half-written video that looks like a success.
         discard(new CancelledError())
+        return
+      }
+      if (lineError) {
+        discard(lineError)
         return
       }
       if (code === 0) {
