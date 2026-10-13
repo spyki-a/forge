@@ -171,6 +171,12 @@ describe('the shot finder, through src/main/ffmpeg/shots.ts', () => {
     const child = ffmpegs[0]
     expect(child.exitCode !== null || child.signalCode !== null, 'ffmpeg has exited').toBe(true)
     expect(() => process.kill(child.pid!, 0), 'and no process has its pid').toThrow()
+    // ... because the cancel stopped it. A cancel that only set its flag still
+    // rejects, but only once ffmpeg has read the whole clip (2.3 s and 8 s in
+    // two measured runs), and the analysis queue runs one job at a time.
+    // Killed, the exit code is null on POSIX (SIGKILL) and 1 on Windows
+    // (taskkill /f); run to the end, it is 0.
+    expect(child.exitCode, 'ffmpeg was stopped, not left to run to the end').not.toBe(0)
   })
 
   it('spawns nothing when the signal is already aborted', async () => {
