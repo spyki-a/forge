@@ -31,7 +31,10 @@ export interface FindShotsOptions {
 }
 
 export interface ShotsFound {
-  /** The window's shots, tiling it: [startMs, endMs) in the file's ms. */
+  /**
+   * The window's shots, tiling it: [startMs, endMs) in the file's ms. Not the
+   * file's shots cut to the window: see `findShots`.
+   */
   shots: Shot[]
   /** Every cut ffmpeg picked, in the file's ms, before the head-skip and the merge. */
   cuts: SceneCut[]
@@ -41,6 +44,17 @@ export interface ShotsFound {
 /**
  * Find the shots of `path` (or of a window of it). Rejects with
  * `CancelledError` when `signal` aborts, once ffmpeg is gone.
+ *
+ * **A clip's shots come from the WHOLE-file pass, sliced to the clip.** A
+ * window is not the file's shots restricted to it, so it is not for chunking
+ * a long file, nor for a clip's own range: `shotsFrom` runs over the window
+ * as if it were a file, so the head-skip drops a real cut in the window's
+ * first frames, and a shot the window's edge made shorter than `minShotMs`
+ * merges, taking a real cut with it. Measured on the fixture: [1867, 3867]
+ * and [1900, 3900] each list the red→blue cut at 2000 ms in `cuts` and return
+ * ONE shot across it, as does [0, 2034]; the whole file keeps it. And the
+ * window rests on input seeking: on an MPEG-TS copy of the fixture (start
+ * 1.4 s), 3–7 s decoded 60 frames from 5 s and found no cut at all.
  */
 export async function findShots(o: FindShotsOptions): Promise<ShotsFound> {
   const threshold = o.threshold ?? SCENE_DEFAULTS.threshold
