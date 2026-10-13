@@ -1670,6 +1670,65 @@ fixture or a build, only the two ratings.
 
 ### 4.2 1b — Shots, in main — `src/main/ffmpeg/shots.ts` · 1.5 days
 
+> **Built 2026-10-13** — `src/shared/reframe/shots.ts`, pure: `SCENE_DEFAULTS`,
+> `SCENE_BACKEND` (`'ffmpeg-select-rgb24'`, `SubjectTrack['scene']`'s),
+> `sceneFilter`, `sceneArgs`, `sceneLogReader` / `parseSceneLog`, `shotsFrom`;
+> `src/main/ffmpeg/shots.ts`, `findShots` on `runFfmpeg` with `complete: true`
+> and `SHOTS_GLOBALS` (`-nostdin -loglevel info`; `sceneArgs` brings
+> `-hide_banner -nostats`), `outputPath: null`, progress from ffmpeg's own
+> `-progress`, an AbortSignal through `killProcess`; `runFfmpeg` gains
+> `onStderrLine`, fed by `lineSplitter` (`\n`, `\r\n` and a lone `\r` each end
+> a line, a `\r` ending a chunk waits, `end()` at `close` hands over a last
+> unterminated line), and `outputPath: string | null`. `sceneArgs` is on
+> `tests/oldestFfmpeg.test.ts`'s `ANALYSIS_SHAPES`; `split` and `nullsink`
+> are at `f22fcd4`. **Two corrections to the shape below, both measured
+> (`EFFECTS.md` §52), and the shape now shows the built one:** with `select`
+> on the output path `-progress` stopped at the last cut (4.033 s of 10 s at
+> T 0.5), so the frames are `split` and the scored branch ends in
+> `nullsink` — same cost, 2.86–3.03 s against 2.86–3.06 s for 60 s of 1080p
+> (the builder's run: 2.81 s both); and `-t` after `-i` bounds only the
+> output, which the sink branch never meets (a 3–7 s window printed a cut at
+> source 8 s), so it goes before `-i`. **The fixture** has five sources and
+> so **four** cuts, scored 1.000 / 1.000 / 0.400 / 0.200 on rgb24 (0.40 /
+> 0.61 / 0.34 / 0.17 on the Mac's Y path), committed in
+> `tests/fixtures/reframe/scene-scores.json`; its greys decode as 98 / 138 /
+> 118 (the H.264 round trip), the same with `-cpuflags 0`, and |ΔA|/100 holds
+> on those. **The rules `shotsFrom` settled:** a cut on frame ≤
+> `skipHeadFrames` (`round(ms × fps / 1000)`) is dropped, as is one at or
+> past the end; two cuts on one frame keep the higher score; a shot under
+> `minShotMs` merges into its LONGER neighbour, shortest first; between
+> neighbours of one length the weaker cut goes, then the earlier; a merge
+> into the next shot keeps the earlier cut's ms and score. `Shot.startMs` is
+> the cut frame's own `pts_time` in ms, µs-rounded — relative to the
+> container's start (plus the seek) — and names the frame by `round(ms × fps
+> / 1000)`: `%.6g` is exact to the frame at up to 100 fps under 10,000 s, and
+> at 120 fps past 1,000 s can name its neighbour (the review). `cuts` keeps
+> every pick before the head-skip and the merge; the merge drops real cuts
+> that would open a shot under 500 ms, the file's first and last 500 ms
+> included, so §4.10's "zero crops held across a cut" counts against `shots`,
+> or counts the merged cuts on their own. **A window is not for a clip:**
+> `shotsFrom` runs over it as over a file, so its head-skip and merge act at
+> its edges — measured, [1867, 3867] and [1900, 3900] list the cut at 2000 ms
+> in `cuts` and return one shot across it — and on an MPEG-TS copy the 3–7 s
+> window found no cut at all; a clip's shots are the whole-file pass's,
+> sliced (`findShots`' doc comment). `findShots` reports 0..1 of its own
+> pass (§4.8's job scales it into its 0–15 %); a cancel rejects with
+> `CancelledError` once ffmpeg is gone, and a signal already aborted spawns
+> nothing. Tests: `tests/reframeShots.test.ts` (29: the arguments as ordered
+> shapes, the parser over three committed stderr fixtures, `shotsFrom`'s
+> merge, head-skip and both tie rules, the splitter at every offset and the
+> unterminated last line); `tests/integration/shots.int.test.ts` (10, through
+> `findShots`: exact frames at an explicit T 0.3, the default T by
+> membership, red→blue at 0.5, the table within 0.01, the window, progress to
+> the end of the clip and of a window, one shot, a cancel that stops ffmpeg
+> — exit code not 0 — and a pre-aborted signal). Mutations killed:
+> `format=rgb24` dropped; `-loglevel error`; scores paired with the next
+> frame line; merge into the shorter neighbour; head-skip off; `scdet`;
+> `-t` after `-i`; `select` on the output path; stderr split per chunk; no
+> `end()` at `close`; a null `outputPath` unlinked; a cancel settling early,
+> or not killing; an abort that does not cancel; a window's progress against
+> the file; the later cut lost on a tie; the default threshold ignored.
+
 In main, not the Python helper: it needs only ffmpeg, so it works without
 Python (BETA R4), and the stems handler is the precedent (`ipc.ts:762-770`).
 `LLM.md:184-186` names TransNetV2 for this; the agreed direction supersedes
@@ -1687,13 +1746,18 @@ that.
 | real recordings, no hard cuts | median 0.003–0.007, p95 0.06–0.08. Above 0.3 on rgb24: a CapCut grid flash (0.397), card swaps (0.35–0.40), and the first frames of a screen recording (0.56, 0.34) |
 | the floor | select's scene score 2012-06-04, as frame metadata 2012-10-21, `metadata` filter 2016-02-10: all **dated safe**. `scdet` merged 2020-05-14: OUT (§3.5) |
 
-**The shape:**
+**The shape** (as built; the planned one put `select` on the output path and
+`-t` after `-i`, both measured wrong — the note above):
 
 ```
-ffmpeg -hide_banner -nostats [-ss S] -i <file> [-t D] -an
-       -vf "scale=320:-2,format=rgb24,select='gt(scene,T)',metadata=print"
-       -f null -
+ffmpeg -nostdin -loglevel info -hide_banner -nostats [-ss S] [-t D] -i <file> -an
+       -vf "scale=320:-2,format=rgb24,split[scored];[scored]select='gt(scene,T)',metadata=print,nullsink"
+       -f null - -progress pipe:1 -nostats
 ```
+
+Every frame goes on to the output, whose time is what `-progress` reports;
+the scored branch ends in `nullsink`. `-t` before `-i` bounds what is read,
+so the sink branch never sees past the window.
 
 Parse `pts_time` and `lavfi.scene_score` from **stderr**. The filter graph
 carries no path, so the escaping rules never arise; `metadata=print:file=<path>`
@@ -1725,8 +1789,9 @@ gains what an analysis needs and a render never did (`src/main/ffmpeg/run.ts`):
   `-f null -` and, given `'-'`, an unlink of a file called `-` in the cwd.
 
 `windowsHide` and `killProcess` stay as they are. Progress comes from
-`runFfmpeg`'s own `-progress pipe:1` against the duration; the cuts from
-`parseSceneLog` over the lines. An AbortSignal cancels through
+`runFfmpeg`'s own `-progress pipe:1` against the duration — the OUTPUT's
+time, which is why every frame goes on to it (the `split` above); the cuts
+from `parseSceneLog` over the lines. An AbortSignal cancels through
 `killProcess`.
 
 ### 4.3 1c — Faces — `sidecar/forge_sidecar/capabilities/faces.py` · 2 days (2.5 if the YuNet fallback's decoder is built)
@@ -2321,7 +2386,7 @@ Where it goes, per `WHERE-THINGS-ARE.md`:
 
   Mutations: **drop `format=rgb24`** (on the Mac the red→blue cut scores
   0.40 and is missed, and the grey cuts' scores no longer match the table); **restore
-  `-loglevel error`** (the five-cut clip yields zero cuts); scores parsed
+  `-loglevel error`** (the clip's four cuts all go: zero found); scores parsed
   from the wrong line (the table fails).
 - `tests/reframePath.test.ts`: every rule in §4.6 over synthetic tracks:
   - a static subject gives no pans;
