@@ -4751,10 +4751,18 @@ what is needed, where the answer waits on something not yet in hand.
     also snap to the quietest 40 ms within about ±120 ms of the word edge;
     recommended only if the first change does not settle it, since it moves
     every cut.
+
+    **Standing (2026-10-13):** 80 ms stays until you have heard links 2 and
+    3. Note that Step P's Listen to it does not replace this estimate on the
+    captions path: it is a separate transcript, heard from the sound, for a
+    link with no captions or when you ask for it; a link clipped from its
+    YouTube captions keeps the estimate for its word ends.
 34. **A no-caption link's start and end fields** sit behind "Just a part of
     it", as on every link (one click). Open them at once on a link with no
     captions, or leave them (recommended: leave them — one rule for every
     link, and your §16.26 answer kept them as they were).
+
+    **Answer (2026-10-13):** leave them.
 
 ---
 
