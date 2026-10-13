@@ -14,6 +14,8 @@
  * the event loop on both sides.
  */
 
+import type { FaceBox, UnitRect } from '../reframe/types'
+
 export const PROTOCOL_VERSION = 1
 
 export interface RpcRequest {
@@ -161,7 +163,25 @@ export const SIDECAR_METHODS = {
   /** Speak text with Kokoro into a wav: { text, voice, speed, out } -> { path, durationMs }. */
   voiceSpeak: 'voice.speak',
   /** The local voices on offer: {} -> { voices: { id, label, language }[] }. */
-  voiceVoices: 'voice.voices'
+  voiceVoices: 'voice.voices',
+  /**
+   * Faces through a clip, for the reframe: FacesParams -> FacesResult, the
+   * track itself written to disk (docs/CLIPS.md §4.3). MediaPipe's BlazeFace
+   * full-range model, run in a CHILD process (`forge_sidecar.workers.mp_faces`)
+   * so a C++ abort ends the child and not the helper. Never downloads: a model
+   * not on disk is `unavailable`, and `facesModel` is the question and the fetch.
+   */
+  faces: 'vision.faces',
+  /** The face finder's model, 1,083,786 B from storage.googleapis.com: ModelParams -> ModelStatus. */
+  facesModel: 'vision.facesModel',
+  /**
+   * The subject of a frame with no face: SalientParams -> SalientResult
+   * (docs/CLIPS.md §4.4). One decoded frame per item through depth's BiRefNet
+   * session (`depth.py`, under its session lock). Never downloads, as `faces`.
+   */
+  salient: 'vision.salient',
+  /** The subject finder's model, BiRefNet_lite fp16, 114,538,221 B from Hugging Face: ModelParams -> ModelStatus. */
+  salientModel: 'vision.salientModel'
 } as const
 
 /**
@@ -180,7 +200,11 @@ export const OPTIONAL_METHODS: readonly string[] = [
   SIDECAR_METHODS.visionMeasure,
   SIDECAR_METHODS.stems,
   SIDECAR_METHODS.voiceSpeak,
-  SIDECAR_METHODS.voiceVoices
+  SIDECAR_METHODS.voiceVoices,
+  SIDECAR_METHODS.faces,
+  SIDECAR_METHODS.facesModel,
+  SIDECAR_METHODS.salient,
+  SIDECAR_METHODS.salientModel
 ]
 
 export interface HelloResult {
@@ -190,4 +214,154 @@ export interface HelloResult {
   capabilities: string[]
   /** Capabilities present but not usable, with the reason. */
   degraded: Record<string, string>
+}
+
+/* ------------------------------------------------------- model downloads */
+
+/*
+ * Every model download is the user's click, on a button that names its size
+ * before the press (docs/CLIPS.md §0, §14 "a model not on disk"). So a
+ * model-gated capability is two methods in one module: the work, which NEVER
+ * downloads and answers `unavailable` ("… is not downloaded yet") when its
+ * model is not on disk, as voice.speak does for Kokoro's files
+ * (capabilities/voice.py:53-59); and a `…Model` method, which is both the
+ * question the button's label needs before any press and the fetch the press
+ * starts.
+ *
+ * Why not a `download: true` flag on the work itself, the way depth.layers
+ * fetches inside its own bake (depth.py:120-158, labelled byte progress,
+ * "first run only"): a bake is always a press, but an analysis is also
+ * started by Clip it's reframe step and Reframe all, and the dock reads
+ * "Follow the subject · gets the face finder, 1.1 MB, first time" while the
+ * model is absent (§4.8) — a question no analysis call can answer without
+ * running. And `unavailable` carries only a message (rpc.py `_fail(…,
+ * str(exc))`), so a missing model on the work's own path could be told apart
+ * from "the face detector stopped" only by reading prose. The fetch keeps
+ * depth's shape: labelled byte progress through `media.progress_class`,
+ * cancellable, and main never re-derives the cache layout.
+ */
+
+export interface ModelParams {
+  /**
+   * Fetch the model when it is not on disk, then answer. Set ONLY by the press
+   * of the Get button that showed `bytes`; without it nothing is downloaded.
+   */
+  download?: boolean
+}
+
+export interface ModelStatus {
+  /** On disk and whole: fetch_url's sha256-named file, or the pinned commit's Hugging Face snapshot. */
+  present: boolean
+  /** What the button names before the press: 1,083,786 for the face finder. */
+  bytes: number
+  /** The download's name on screen: 'the face finder', 'the subject finder'. */
+  label: string
+  /** The one host a restricted network must allow for it: 'storage.googleapis.com', 'huggingface.co'. */
+  host: string
+}
+
+/* ------------------------------------------------------------------ faces */
+
+/** `vision.faces` — docs/CLIPS.md §4.3. */
+export interface FacesParams {
+  path: string
+  ffmpeg: string
+  ffprobe: string
+  /**
+   * The UPRIGHT size main believes (R5: asset.width/height, a phone clip's
+   * turn already applied); refused with media.SizeMismatch when
+   * media.probe_upright disagrees (media.require_upright).
+   */
+  width: number
+  height: number
+  /** SOURCE ms; the whole file when absent. */
+  startMs?: number
+  endMs?: number
+  /** Samples a second: default 5, clamped 1–30. */
+  fps?: number
+  /** The analysis frame's long side in px: default 640. */
+  edge?: number
+  /** A face scoring under this is not kept: default 0.5. */
+  minScore?: number
+  /**
+   * `${size}:${mtimeMs}` (src/main/assets.ts `fileKey`) — the cache key,
+   * stems-style, never a whole-file sha1. It holds a COLON, illegal in a
+   * Windows file name (CLAUDE.md), so it never reaches the track's name as it
+   * is: hash it, or turn the colon into '-', before building the path.
+   */
+  key: string
+}
+
+/** `vision.faces`' answer. The samples are on disk at `track`, not in here. */
+export interface FacesResult {
+  /** The upright frame the boxes are normalised against: the params' width and height. */
+  width: number
+  height: number
+  durationMs: number
+  /** The rate actually sampled, after the 1–30 clamp. */
+  sampleFps: number
+  /** Samples in the track. */
+  frames: number
+  /** Samples holding at least one face. */
+  withFace: number
+  /** 'mediapipe/blaze_face_full_range@0.10.35' ('yunet/2023mar' only if §4.3's fallback is ever built). */
+  detector: string
+  /**
+   * Absolute path of a FacesTrack: `$FORGE_CACHE_DIR/faces/<key>-<params hash>.json`
+   * (media.cache_dir('faces')), the key made file-safe as `key` says. On disk
+   * rather than over the pipe: ten minutes at 5 fps is 3,000 samples
+   * (this file's header).
+   */
+  track: string
+  /** True when the track for this key and these params was already on disk. */
+  cached: boolean
+}
+
+/**
+ * The track file `FacesResult.track` names. Boxes are normalised 0..1 of the
+ * UPRIGHT frame at 4 dp (depth.py `_mask_box`'s convention); `ms` is SOURCE
+ * media time with findShots' origin, ffmpeg's pts from the container's start
+ * (media.iter_frames' `start_ms + i × 1000 / fps` is that origin for MP4 and
+ * MOV, §4.2/§4.6's Built notes). Main reduces it to 2
+ * samples a second and the two largest faces (§4.6's SubjectSample) — 1f's
+ * job, not the helper's.
+ */
+export interface FacesTrack {
+  version: 1
+  samples: { ms: number; faces: FaceBox[] }[]
+}
+
+/* ---------------------------------------------------------------- salient */
+
+/**
+ * `vision.salient` — docs/CLIPS.md §4.4: one frame per item, a shot's middle
+ * frame. Depth's `_matte_session` DOWNLOADS on a cache miss (media.download),
+ * so the presence check `salientModel` makes — try_to_load_from_cache at
+ * depth.MATTE_REVISION, as media.download itself asks first — comes before
+ * any session is opened.
+ */
+export interface SalientParams {
+  /** SOURCE ms of the frame to decode (media.decode_rgb(at_ms=…)). */
+  items: { path: string; ms: number }[]
+  ffmpeg: string
+  ffprobe: string
+  /** The UPRIGHT size main believes, as FacesParams'; refused when the probe disagrees. */
+  width: number
+  height: number
+}
+
+/**
+ * One item's answer. `coverage` is the matte's share of the frame (0..1, 4 dp);
+ * `box` is `_mask_box` trimmed at 1 %, present only when coverage is within
+ * depth.py's MIN_SUBJECT..MAX_SUBJECT (0.01–0.92), the rule subjectBox
+ * follows (depth.py:451-465), and null otherwise. An item that could not be
+ * read carries `error` instead, for that item alone.
+ */
+export type SalientItem =
+  | { ms: number; box: UnitRect | null; coverage: number }
+  | { ms: number; error: string }
+
+export interface SalientResult {
+  /** Parallel to `items`, in their order (two items may share an `ms`). */
+  results: SalientItem[]
 }

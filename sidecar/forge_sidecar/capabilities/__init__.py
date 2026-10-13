@@ -35,6 +35,10 @@ OPTIONAL: list[tuple[tuple[str, ...], str]] = [
     # Speech, the local half. Absent, the app uses whatever hosted endpoint the
     # user configured — see src/shared/voice/provider.ts.
     (("voice.speak", "voice.voices"), "voice"),
+    # Faces for the reframe (docs/CLIPS.md §4.3), never in vision.py: mediapipe in a child process, never imported here.
+    (("vision.faces", "vision.facesModel"), "faces"),
+    # A no-face shot's subject (§4.4): depth's BiRefNet session, one frame per shot; degrades apart from depth.layers.
+    (("vision.salient", "vision.salientModel"), "salient"),
 ]
 
 
