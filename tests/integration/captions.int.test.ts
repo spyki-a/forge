@@ -3,7 +3,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { mkdtemp, rm, writeFile, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg'
 import ffprobeInstaller from '@ffprobe-installer/ffprobe'
 import { buildRenderPlan } from '@shared/render/plan'
@@ -13,6 +13,8 @@ import { segmentIntoSentences, type Word } from '@shared/transcript'
 import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
 
 const run = promisify(execFile)
+/** A libass burn in a plan: the `ass` filter, or the `subtitles` one it replaced. */
+const LIBASS_FILTER = /\b(?:ass|subtitles)=filename=/
 const FFMPEG = ffmpegInstaller.path
 const FFPROBE = ffprobeInstaller.path
 
@@ -182,7 +184,78 @@ describe('caption burn-in', () => {
     expect(buildTimelineCaptions(bare, DEFAULT_CAPTION_STYLE, { width: 1080, height: 1920 })).toBeNull()
 
     const args = buildRenderPlan({ project: bare, outputPath: '/o.mp4' }).args.join(' ')
-    expect(args).not.toContain('subtitles=')
+    // Either libass filter: `ass` burns them now, `subtitles` did (EFFECTS.md §51).
+    expect(args).not.toMatch(LIBASS_FILTER)
     expect(args).toContain('-map [vout]')
+    // The pattern does find the filter a captioned plan has, once.
+    const captioned = buildRenderPlan({ project: project(), outputPath: '/o.mp4', subtitlesPath: '/c.ass' }).args.join(' ')
+    expect(captioned.match(new RegExp(LIBASS_FILTER, 'g'))).toHaveLength(1)
   })
+
+  /*
+   * Hindi and Telugu, shaped (EFFECTS.md §51). The `subtitles` filter ran
+   * libass's SIMPLE shaper: a conjunct drawn as its consonants with a visible
+   * virama, the i-matra after its consonant — Telugu and Devanagari words
+   * misspelt on screen. The app's own plan is rendered, then the same plan
+   * with its caption filter swapped for `ass` at each shaping level: the
+   * app's frames must be the complex shaper's, bit for bit.
+   *
+   * The words are letter clusters made up for this, nobody's speech: in each
+   * script three conjuncts and a consonant with its i-matra. No font for
+   * either script is bundled (assets/fonts), so libass falls back to the
+   * system's; on macOS CoreText finds Kohinoor, and complex and simple must
+   * then differ — which is what proves the comparison can see shaping at
+   * all. Elsewhere that is only recorded: a libass without HarfBuzz, or no
+   * font for the script, draws the two alike, and the check cannot tell.
+   */
+  it('shapes Devanagari and Telugu as libass’s complex shaper does', async () => {
+    const indic = words([
+      ['क्ष', 0, 450], ['त्र', 450, 900], ['श्र', 900, 1350], ['कि', 1350, 1800],
+      ['క్ష', 2000, 2450], ['త్ర', 2450, 2900], ['శ్రీ', 2900, 3350], ['కి', 3350, 3800]
+    ])
+    const base = project()
+    const p: Project = {
+      ...base,
+      transcripts: { a1: { ...base.transcripts.a1, language: 'hi', words: indic, segments: segmentIntoSentences(indic) } }
+    }
+    const canvas = { width: 640, height: 360 }
+    const assPath = join(dir, 'indic.ass')
+    await writeFile(assPath, buildTimelineCaptions(p, DEFAULT_CAPTION_STYLE, canvas)!, 'utf8')
+    const fontsDir = resolve(__dirname, '../../assets/fonts')
+    const plan = buildRenderPlan({ project: p, outputPath: join(dir, 'indic-app.mp4'), canvas, subtitlesPath: assPath, fontsDir })
+
+    // The plan's caption step — the one from [vmix] to [vsub] — and the plan with it swapped.
+    const graphAt = plan.args.indexOf('-filter_complex') + 1
+    const steps = plan.args[graphAt].split(';')
+    const at = steps.flatMap((step, i) => (step.startsWith('[vmix]') && step.endsWith('[vsub]') ? [i] : []))
+    expect(at).toHaveLength(1)
+    const swapped = (shaping: 'simple' | 'complex', out: string): string[] => {
+      const graph = [...steps]
+      graph[at[0]] = `[vmix]ass=filename=${escapeFilterPath(assPath)}:fontsdir=${escapeFilterPath(fontsDir)}:shaping=${shaping}[vsub]`
+      return plan.args.map((a, i) => (i === graphAt ? graph.join(';') : i === plan.args.length - 1 ? out : a))
+    }
+    expect(plan.args.at(-1)).toBe(join(dir, 'indic-app.mp4'))
+
+    const frames = async (file: string): Promise<string[]> => {
+      const { stdout } = await run(FFMPEG, ['-hide_banner', '-loglevel', 'error', '-i', file, '-map', '0:v:0', '-f', 'framemd5', '-'], {
+        maxBuffer: 16 * 1024 * 1024
+      })
+      return stdout.split('\n').filter((l) => l && !l.startsWith('#')).map((l) => l.split(',').at(-1)!.trim())
+    }
+    await run(FFMPEG, plan.args, { maxBuffer: 16 * 1024 * 1024 })
+    const outs = { simple: join(dir, 'indic-simple.mp4'), complex: join(dir, 'indic-complex.mp4') }
+    for (const shaping of ['simple', 'complex'] as const) {
+      await run(FFMPEG, swapped(shaping, outs[shaping]), { maxBuffer: 16 * 1024 * 1024 })
+    }
+    const app = await frames(join(dir, 'indic-app.mp4'))
+    const simple = await frames(outs.simple)
+    const complex = await frames(outs.complex)
+    expect(app.length).toBe(120)
+    // Frames 0–53 carry the Devanagari, 60–113 the Telugu (30 fps).
+    const differ = (from: number, to: number): number => complex.slice(from, to).filter((h, i) => h !== simple[from + i]).length
+    const seen = { devanagari: differ(0, 54), telugu: differ(60, 114) }
+    process.stderr.write(`captions.int: complex and simple shaping differ on ${JSON.stringify(seen)} of 54 frames each (${process.platform})\n`)
+    expect(app, 'the app’s captions are the complex shaper’s').toEqual(complex)
+    if (process.platform === 'darwin') expect(seen, 'shaping is visible here: Kohinoor through CoreText').toEqual({ devanagari: 54, telugu: 54 })
+  }, 180_000)
 })

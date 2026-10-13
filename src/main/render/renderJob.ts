@@ -64,7 +64,7 @@ function writeGraph(args: readonly string[], dir: string): string {
  *
  * A failed export logs the command to run it again by hand, with its graph's
  * script where the graph was (below), and that graph names the captions'
- * `.ass` in its `subtitles=` (captions.ts). ipc.ts used to remove the `.ass`
+ * `.ass` in its `ass=` filter (captions.ts). ipc.ts used to remove the `.ass`
  * on any finish, so the logged command failed on a file that was gone. Both
  * stay now, and `sweepTemporaries` removes them once they are old.
  */

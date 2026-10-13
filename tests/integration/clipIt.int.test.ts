@@ -57,7 +57,7 @@ import { FFMPEG, outputDir, run, writeNote } from './output'
  *     a run picked, Clip it (`clipItFromLink`, exact, as the app defaults),
  *     then `collectIngest` — the asset, the clip, the run's words shifted onto
  *     the file's clock and the link's credit;
- *   - the export: main's `prepareCaptions` (the libass `subtitles` route, the
+ *   - the export: main's `prepareCaptions` (the libass `ass` route, the
  *     .ass written as render:start writes it) and the canvas bake's plan
  *     (`buildGraphicsSpec` → `planCaptionBake` → `concatList`, main's
  *     `writeCaptionFrame` / `writeCaptionList`, the band overlaid as

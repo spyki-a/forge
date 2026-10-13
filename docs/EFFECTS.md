@@ -4685,3 +4685,32 @@ before it, its URLs cut out; and `downloadMedia` runs a sectioned download
 that failed that way once more (a fresh run fetches fresh stream URLs),
 and any other failure not at all. All of it through the sandbox's proxy:
 whether the proxy adds to the rate is not known.
+
+**Hindi and Telugu captions were burnt unshaped.** `plan.ts` burnt the
+.ass with `subtitles=filename=…`. In ffmpeg 4.1's `vf_subtitles.c` (read at
+`n4.1`) the `shaping` option belongs to the `ass` filter alone (`-1` auto,
+`simple`, `complex`), and the shared init calls `ass_set_shaper(renderer,
+shaping)` whenever it is not -1 — so under `subtitles`, whose context never
+sets it, the field is 0 and libass runs its **simple** shaper. Measured on
+the six exit-check exports (`eK71EN3P78U`, `lqOH-zxtCDE`, `bvz_zK5ZxpM`,
+`j4aoo1qbGoE`, `xON4Vot8j8g`, `jze_5hvaVV8`), the framemd5 of `subtitles=`
+equals `ass=…:shaping=simple` on every one, Latin included; `ass` with no
+`shaping` equals `shaping=complex`. On a self-authored line of letter
+clusters (Devanagari क्ष त्र ज्ञ श्र कि, Telugu క్ష త్ర శ్రీ కి స్త), simple
+draws each conjunct as its consonants with a visible virama and the i-matra
+after its consonant; complex joins them and puts the i-matra first —
+through CoreText's fallback (no Indic font is bundled). A verifier counted
+32.4 % of the Telugu track's words and about 29 % of the Hindi one's as
+shaping-sensitive, and 4 of the 20 words in `eK71EN3P78U`'s clip. The plan
+now burns with `ass=filename=…:fontsdir=…:shaping=complex`: same escaping
+(a path with `' , [ ] = ; :` and a space opened through both filters, the
+same frames as before), same frames on English except where complex
+shaping kerns. `ass` and its option are in `n4.1`, older than the
+2018-12-17 Windows build; whether that build's libass has HarfBuzz is not
+measured here — without it `ass_set_shaper` does nothing and the captions
+come out as before. `tests/integration/captions.int.test.ts` renders the
+app's plan and the plan with its caption step swapped for `ass` at each
+level: the app's frames equal complex's, bit for bit (all 120), and on the
+Mac complex differs from simple on all 54 Devanagari and all 54 Telugu
+frames; the test prints that count on every platform, so Windows CI says
+whether it shapes.

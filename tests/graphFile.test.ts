@@ -202,7 +202,7 @@ describe('the export spawns with its graph in a file', () => {
 describe('a failed export keeps its temporaries, and a week later they go', () => {
   /*
    * The command a failed export logs runs its graph's script, and that graph
-   * names the captions' .ass in `subtitles=`. The queue listener in ipc.ts
+   * names the captions' .ass in its `ass=` filter. The queue listener in ipc.ts
    * used to remove the .ass on every finish, failed included, so the command
    * failed on a file that was gone. It asks `releasesTemporaries` now.
    */

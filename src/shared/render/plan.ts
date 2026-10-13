@@ -1672,7 +1672,20 @@ export function buildRenderPlan(request: RenderRequest): RenderPlan {
   if (request.subtitlesPath) {
     const file = escapeFilterPath(request.subtitlesPath)
     const fonts = request.fontsDir ? `:fontsdir=${escapeFilterPath(request.fontsDir)}` : ''
-    filters.push(`[vmix]subtitles=filename=${file}${fonts}[vsub]`)
+    /*
+     * `ass`, with `shaping=complex` — not `subtitles`, which burnt Hindi and
+     * Telugu unshaped (EFFECTS.md §51). The `subtitles` filter has no
+     * `shaping` option, so its context's field stays 0 and its init calls
+     * `ass_set_shaper(…, 0)`: libass's SIMPLE shaper, which draws a conjunct
+     * as its consonants with a visible virama and puts the i-matra after its
+     * consonant. Measured: `subtitles=` is framemd5-identical to
+     * `ass=…:shaping=simple` on six of the exit check's exports, Latin
+     * included, so swapping the filter changes the shaping and nothing else.
+     * `ass` and its `shaping` are in ffmpeg 4.1's source (`vf_subtitles.c`
+     * at `n4.1`), older than the 2018-12-17 Windows build. A libass built
+     * without HarfBuzz ignores the call and draws as before.
+     */
+    filters.push(`[vmix]ass=filename=${file}${fonts}:shaping=complex[vsub]`)
     videoOut = '[vsub]'
   }
   if (captionInput !== null) {
