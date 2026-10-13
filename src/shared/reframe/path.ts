@@ -57,7 +57,11 @@ export const UPPER_THIRD = 1 / 3
 /** The track's cadence when it has too few samples to measure (§4.3: 2 a second). */
 const DEFAULT_SAMPLE_MS = 500
 
-/** A move on one axis: from wherever the crop is at `fromMs` to `to` at `toMs`, eased in-out. */
+/**
+ * A move on one axis: from wherever the crop is at `fromMs` to `to` at
+ * `toMs`, eased in-out by smoothstep, p²(3 − 2p) — `keyframes.ts`' 'smooth',
+ * so the preview and the export's expression trace the same curve.
+ */
 export interface Pan {
   fromMs: number
   toMs: number
