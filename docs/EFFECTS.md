@@ -5061,8 +5061,15 @@ the fixture (its start 1.400 s, as the muxer wrote it): `-ss 3 -t 4 -i
 five.ts` decoded 60 frames, `pts_time` 5 to 6.967, all one grey, and printed
 no cut; the whole file printed all four. MP4 is exact. Not measured on a
 camera's AVCHD `.MTS`. `findShots` therefore says a clip's shots come from
-the whole-file pass, sliced, never from a window (the window's own head-skip
-and 500 ms merge also drop real cuts at its edges: `CLIPS.md` §4.2's note).
+the whole-file pass, sliced, never from a window. **The window's own
+head-skip and 500 ms merge also drop real cuts at its edges.** Through
+`findShots` on the fixture at T 0.3 (the critic's re-run): [1867, 3867]
+lists the cut at **2000.008** ms in `cuts` (133 ms in, frame 4, so not
+head-skipped; the seek's rounding moves it 8 µs) and returns the one shot
+[1867, 3867], the 133 ms shot before it merged away; [1900, 3900] lists it at
+2000 (frame 3 of the window, head-skipped) and returns [1900, 3900]; [0, 2034]
+lists it and returns [0, 2034], the 34 ms tail merged. The whole file keeps
+it: [0, 2000], [2000, 4000], [4000, 6000], [6000, 10000].
 
 **stderr arrives in pieces that are not lines.** Through a pipe, read with
 Node's `spawn` as `runFfmpeg` reads it, the scene pass over the long clip
@@ -5234,8 +5241,10 @@ no error, nothing to say anything went wrong. `metadata=print` logs at INFO
 (`CLIPS.md` §4.2's table, 2026-10-05; `f_metadata.c:174` at `f22fcd4`). `runFfmpeg`'s
 own globals are `-hide_banner -nostdin -loglevel error -y` (`run.ts:130`),
 so the shot finder passes `complete: true` with its own `-nostdin -loglevel
-info`. With `error` put back in `SHOTS_GLOBALS`, four integration tests
-fail, each with zero cuts (the builder's mutation, run again by the review).
+info`. With `error` put back in `SHOTS_GLOBALS`, **five** integration tests
+fail, each with zero cuts: the T 0.3 frames, the default threshold, red→blue
+at 0.5, the table and the window (the critic's re-run; the builder's and the
+review's runs failed four, before the default-threshold case was added).
 
 **Progress and the cancel.**
 
