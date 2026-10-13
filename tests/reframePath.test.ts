@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { cropPath, PATH_RULES, FACE_SHARE, OPENING_MS, type CropPath, type ShotCrop } from '@shared/reframe/path'
+import { cropPath, PATH_RULES, FACE_SHARE, HEAD_MS, OPENING_MS, type CropPath, type ShotCrop } from '@shared/reframe/path'
 import { SUBJECT_TRACK_VERSION, type FaceBox, type SubjectTrack } from '@shared/reframe/types'
 import { solveCrop } from '@shared/render/crop'
 
@@ -214,13 +214,32 @@ describe('cropPath — rules 4 and 5: static first, a pan only when the subject 
     expect(p.toMs).toBeLessThan(s.endMs)
   })
 
-  it('nothing triggers in a shot’s first three frames — three of the track’s samples, 1.5 s at 2 a second', () => {
-    // The same 1 s excursion, twice: in the head it starts no clock (its
-    // first sample, 1000, is the third), later it pans.
-    const head = cropPath(excursion(1000, 2000), PORTRAIT_CANVAS).shots[0]
-    expect(head.pans).toEqual([])
-    const later = cropPath(excursion(2000, 3000), PORTRAIT_CANVAS).shots[0]
-    expect(later.pans).toHaveLength(1)
+  it('nothing triggers in a shot’s first three frames: a sample that close after the cut starts no clock', () => {
+    // 10 a second. A face at 120 to 400 ms, then at 1000: the opening
+    // second's median sits between, so every sample is outside the dead zone
+    // from the cut on. The clock starts at the first sample past the head,
+    // and the pan fires triggerMs after it.
+    const t = track({ shots: [[0, 4000]], stepMs: 100, faces: (ms) => [face(ms < 500 ? 120 : 1000, 400, 120)] })
+    const path = cropPath(t, PORTRAIT_CANVAS)
+    const s = path.shots[0]
+    const zone = (PATH_RULES.deadZone * path.size.width) / 2
+    expect(t.samples.every((x) => Math.abs((x.faces[0].x + x.faces[0].width / 2) * W - centreOf(path, s.at)) > zone)).toBe(true)
+    const clock = t.samples.find((x) => x.ms >= HEAD_MS)!.ms
+    expect(clock, 'the head holds a sample').toBeGreaterThan(0)
+    expect(s.pans).toHaveLength(1)
+    expect(s.pans[0].fromMs).toBe(clock + PATH_RULES.triggerMs)
+  })
+
+  it('a short shot whose subject leaves early still pans: the head is frames, not samples', () => {
+    // 2.5 s at 2 a second; the face is at 600 for the first sample, at 1300
+    // from 500. A head of three SAMPLES (1.5 s) put the earliest pan's end
+    // past the cut, so no shot under about 2.6 s could pan at all.
+    const t = track({ shots: [[0, 2500]], faces: (ms) => [face(ms < 500 ? 600 : 1300, 400, 120)] })
+    const path = cropPath(t, PORTRAIT_CANVAS)
+    const s = path.shots[0]
+    expect(s.pans).toHaveLength(1)
+    expect(Math.abs(centreOf(path, s.pans[0].to) - 1300)).toBeLessThanOrEqual(2)
+    expect(s.pans[0].toMs).toBeLessThan(2500)
   })
 
   it('a pan that cannot finish inside its shot is not started', () => {

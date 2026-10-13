@@ -43,11 +43,13 @@ export const FACE_SHARE = 0.2
 export const OPENING_MS = 1000
 
 /**
- * Rule 5: nothing triggers in a shot's first three frames. The track carries
- * no frame rate, so a frame here is one of the TRACK's samples — its median
- * spacing, 500 ms at the plan's 2 a second — and the head is 1.5 s.
+ * Rule 5: nothing triggers in a shot's first three frames — a sample this
+ * close after the cut starts no trigger clock. The track carries no frame
+ * rate, so the head is a time: three frames at 24 fps, more than three at any
+ * faster rate. (It was three of the track's SAMPLES, 1.5 s at 2 a second, and
+ * no shot under about 2.6 s could pan at all.)
  */
-export const HEAD_FRAMES = 3
+export const HEAD_MS = 125
 
 /** A portrait source going to 16:9 places the face's centre a third of the way down the crop. */
 export const UPPER_THIRD = 1 / 3
@@ -177,7 +179,7 @@ export function cropPath(track: SubjectTrack, target: Size, follow?: PathFollow)
 
   const samples = [...track.samples].sort((a, b) => a.ms - b.ms)
   const period = samplePeriod(samples)
-  const pace: Pace = { headMs: HEAD_FRAMES * period, reachMs: Math.max(PATH_RULES.smoothMs / 2, 1.5 * period) }
+  const pace: Pace = { headMs: HEAD_MS, reachMs: Math.max(PATH_RULES.smoothMs / 2, 1.5 * period) }
   const allowTwoUp = axis === 'x' && follow?.twoUp !== false
   const notes: string[] = []
 
