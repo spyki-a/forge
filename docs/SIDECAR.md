@@ -1,7 +1,14 @@
 # The Python sidecar
 
-Every local AI capability — ASR now, TTS/matting/depth/LLM later — runs in a separate
-Python process that Electron supervises. This is the gate for all of Phase 2 onward.
+Every local AI capability runs in a separate Python process that Electron supervises — on
+screen, "the AI helper". This is the gate for all of Phase 2 onward.
+
+What it can answer is `capabilities/__init__.py`'s `OPTIONAL`, one row per module, each
+degrading on its own: speech to text (`asr.transcribe`), beats (`audio.beats`), parallax layers
+(`depth.layers`), the Director's photo measures (`vision.measure`), stems (`audio.stems`), the
+local voice (`voice.speak`, `voice.voices`), and since 2026-10-13 step 1's two: **the face
+finder** (`vision.faces`, `vision.facesModel`; below) and **the subject finder**
+(`vision.salient`, `vision.salientModel`; below).
 
 ## Why stdio JSON-RPC, not a local HTTP server
 
@@ -130,10 +137,9 @@ worker imports mediapipe cleanly, dies at `create_from_options` with return code
 face detector stopped (code -6): …", while the helper keeps answering `ping`.
 
 - **mediapipe is never imported in the helper.** Its import needs `cv2` and
-  `matplotlib.pyplot`, which only the three empty files in `forge_sidecar/stubs/` satisfy, and
-  those go first on the **worker's** `PYTHONPATH` alone (`faces.worker_env`, a copy of the
-  helper's environment); without them the worker's import fails on `No module named 'cv2'`
-  (measured). Registration asks only `importlib.util.find_spec('mediapipe')`.
+  `matplotlib.pyplot`, which only the stubs satisfy, on the worker's path alone (the stubs rule,
+  below); without them the worker's import fails on `No module named 'cv2'` (measured).
+  Registration asks only `importlib.util.find_spec('mediapipe')`.
 - **The conversation**: one JSON spec line on the worker's stdin, which then stays open — its
   end is the cancel, and it also ends by itself if the helper dies, so a worker never outlives
   it; `ready` / `progress <fraction> <frames>` / `done` / `error <kind> <message>` lines on its
@@ -152,6 +158,59 @@ face detector stopped (code -6): …", while the helper keeps answering `ping`.
   storage.googleapis.com) …"). `vision.facesModel` answers `{present, bytes, label, host}`, and
   fetches only with `download: true`, through `media.fetch_url` against the pinned sha256, into
   `models_dir()/files/3698b18f063835bc-blaze_face_full_range.tflite`.
+
+## The subject finder — `vision.salient`
+
+`vision.salient` (`capabilities/salient.py`, `docs/CLIPS.md` §4.4) says where the subject is in
+a shot with no face. For each `{path, ms}` item it decodes one frame at 1024² with
+`media.decode_rgb`, runs it through BiRefNet_lite's matte — **depth's own session**, `matte:fp16`,
+built under depth's lock, so a parallax bake and an analysis share one model in memory — and
+answers `{ms, box, coverage}` by a bake's `subjectBox` rule (a box only when the matte covers
+1–92 %, drawn after `_clean_mask` and trimmed at 1 %, in the upright frame), or `{ms, error}`
+for that item alone (a missing file, a size mismatch, a frame that will not decode). It is
+gated as the face finder is: `vision.salient` never fetches, and without the model answers
+`unavailable` before any session opens, because `depth._matte_session` downloads on a cache
+miss; `vision.salientModel` answers `{present, bytes, label, host}` and fetches the
+114,538,221 B only on `download: true`, cancellable at each 10 MiB chunk. It needs numpy,
+onnxruntime, scipy and huggingface_hub; on a bare interpreter both methods are degraded.
+**Its cost is memory**: measured on the dev Mac, one matte peaks the helper at 6.6–9.7 GB, and
+with ORT's default arena the helper keeps 4.9–8.7 GB until `matte:fp16` is dropped (155–294 MB
+after), which is over the 8 GB floor machine's budget (`EFFECTS.md` §54, `CLIPS.md` §12.1);
+and each item is about 8–9 s of matte on the CPU.
+
+## Workers — `forge_sidecar/workers/`
+
+A worker is a child process the helper runs, never code it imports: `python -m
+forge_sidecar.workers.<name>`, started with `media._NO_WINDOW` (a packaged Windows app has no
+console, so a child without it opens a window) and with its own environment, a copy of the
+helper's. It talks to the capability that started it only through its pipes and the files it
+writes. A library goes into a worker when loading it can kill the process that loads it, or
+when it needs import-time shims the helper must not see; today that is `mp_faces`, for both
+reasons. The helper imports nothing from the package (`-X importtime` across a face pass: 601
+import lines, none of them `forge_sidecar.workers`), so registration can only ask
+`find_spec`, and the worker's own import is the real check, made per run. The capability
+reads the worker's last `error <kind> <message>` line, not only its code: `import` (exit 69)
+answers `unavailable` ("could not start: …"); `input`, bad input or an undecodable file
+(exit 65), is a `ValueError`; a cancel exits 75; any other death is `unavailable` with its
+return code and the line of its stderr that says why — its C++ `Check failed` line when there
+is one, since an abort's log ends in a stack trace (−6 on macOS for an abort; Windows' is unmeasured,
+3 or `0xC0000409`). It costs one process start and one import per request: 0.14–0.23 s for
+`mp_faces` on the dev Mac.
+
+## The stubs — `forge_sidecar/stubs/`
+
+Three empty files, `cv2/__init__.py`, `matplotlib/__init__.py` and `matplotlib/pyplot.py`,
+satisfy mediapipe 0.10.35's import-time `import cv2` and `import matplotlib.pyplot`
+(`drawing_utils.py:20-21`), so the ~65 MB of `opencv-contrib-python` and matplotlib that its
+dependency list would bring are never installed (`--no-deps`, the second pip run below), and
+detection runs without them (`EFFECTS.md` §37). **The rule: they go first on a worker's
+`PYTHONPATH` and nowhere else** — never the helper's `sys.path`, its environment, `sidecarEnv`
+in main, or the package's `__main__`. A stub on the helper's path would answer for a real `cv2`
+installed later (mask tracking's planned `opencv-python-headless`) and break it silently.
+`faces.worker_env` builds the worker's environment as a copy; `faces.int.test.ts` starts the
+helper exactly as main does (`sidecarEnv`, cwd `sidecar/`, the package's `__main__`) and
+asserts no stub folder on its path and no `mediapipe`, `cv2` or `matplotlib` loaded. The stubs
+are tied to the pinned mediapipe: an upgrade re-runs the worker's import test in the same file.
 
 ## Setup
 

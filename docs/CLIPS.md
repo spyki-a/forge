@@ -1809,12 +1809,15 @@ from `parseSceneLog` over the lines. An AbortSignal cancels through
 ### 4.3 1c — Faces — `sidecar/forge_sidecar/capabilities/faces.py` · 2 days (2.5 if the YuNet fallback's decoder is built)
 
 > **Built 2026-10-13** — `capabilities/faces.py` (`vision.faces`,
-> `vision.facesModel`), the worker `workers/mp_faces.py`,
-> `sidecar/requirements-faces.txt` and `requirements-faces-nodeps.txt`; tests
-> `tests/sidecar/test_faces.py` (34, all of them on CI's bare interpreter)
-> and `tests/integration/faces.int.test.ts` (10 in the sandbox, plus the
-> user's 2). The detection itself is **unmeasured here**: the sandbox has no
-> Metal device. It is one command on your Mac, which writes what it found to
+> `vision.facesModel`), the worker `workers/mp_faces.py` (the new
+> `workers/` package, `docs/SIDECAR.md`), `sidecar/requirements-faces.txt`
+> and `requirements-faces-nodeps.txt` (1c `b8a54cb`, `8052585`, `1d30f84`; the fix
+> phase after review through `7cb25c4`); tests `tests/sidecar/test_faces.py`
+> (39; on CI's bare 3.12 all 39 run but one, the registration check, which
+> skips with "numpy is not installed") and
+> `tests/integration/faces.int.test.ts` (13 in the sandbox, plus your 2).
+> The detection itself is **unmeasured here**: the sandbox has no Metal
+> device. It is one command on your Mac, which writes what it found to
 > `tests/output/faces/real/README.txt`:
 > `FORGE_FACES_REAL=1 npx vitest run tests/integration/faces.int.test.ts`.
 > - **The model gate is a second method**, as the scaffold chose
@@ -1862,6 +1865,36 @@ from `parseSceneLog` over the lines. An AbortSignal cancels through
 >   service_`), 0.3–1.3 s in. Through the helper, the answer is
 >   `unavailable`, "the face detector stopped (code -6): …" with that
 >   `Check failed` line, and `ping` still answers.
+> - **The child-process rule, measured in the sandbox** (the 1c verifier's
+>   own driver on the real helper, its process tree read through libproc
+>   because `ps` is blocked there; `EFFECTS.md` §54):
+>   - the real detector's abort answered −32001 in 0.598 s; the only
+>     children seen were ffprobe and the worker, no ffmpeg (the abort is at
+>     `create_from_options`, before the first frame); afterwards no
+>     children, the helper alive, `ping` answered, the cache empty;
+>   - a cancel mid-pass (the stand-in, on a 20 s clip, tree helper → worker
+>     → ffmpeg): −32800 at 0.222 s, worker and ffmpeg both gone by then, the
+>     `.part` removed;
+>   - the helper SIGKILLed mid-pass: its ffmpeg gone in 0.090 s, the worker
+>     in 0.103 s — and, before the fix phase, the `.part` left behind;
+>   - an app quit mid-pass (`client.stop()`, which now cancels what is in
+>     flight first): the helper exits by itself, code 0, 302 ms after the
+>     stop, with no worker and an empty cache (fix phase).
+>   - **The Windows code for the abort is unmeasured.** `os.abort()` there
+>     is expected as 3 or `0xC0000409` (3221226505), and both tests accept
+>     either on win32 (`7e95fc0`); the first Windows CI run after the push
+>     names the real one, and the comment is then corrected.
+> - **What only your Mac can measure** — the command above, on your face
+>   fixture (decision §16.5; nothing of it committed). It probes as coded
+>   3840×2160 HEVC, 30 fps, 26.6 s, start time 0, no rotation, so its coded
+>   size is its upright one. Two bars, both unmeasured on this clip (§4.1's
+>   57 of 80 was `capcut-grid-template.mp4`): a face on at least half the
+>   samples of the original at 5 fps and a 640 edge, and a phone-shaped
+>   copy whose first boxes are the plain copy's within 0.02. The pass over
+>   the original is decode-bound before any detection: the stand-in took
+>   10.8–14.7 s for its 133 samples. **The detector's own RSS is not
+>   recorded by that run** (it writes counts, time and the track's size),
+>   so §12.1's faces number stays open until a line is added for it.
 > - **What the plan left open, as built.**
 >   - The spec goes in as one JSON line on the worker's stdin, which stays
 >     open: its end is the cancel, and it also ends when the helper dies, so
@@ -1932,7 +1965,36 @@ from `parseSceneLog` over the lines. An AbortSignal cancels through
 >   - the upright check skipped (unit; int);
 >   - decoded at the probed coded sides (int, by the answered size). Its
 >     effect on the BOXES needs the real detector, so it is your run's
->     mutation.
+>     mutation;
+>   - the worker's stdin watcher put back on `sys.stdin.buffer` (unit: the
+>     real worker held open exits −6, `_enter_buffered_busy`, on the venv's
+>     3.14 and the bare 3.12).
+>
+>   **Added in the fix phase**, each with its commit:
+>   - the half-track kept when a pass stops short (`ad4942b`: three
+>     `WorkerStopsShort` unit tests, and the int test that SIGKILLs the
+>     helper on its first mid-pass progress, which found the `.part`);
+>   - a window's ms made window-relative, and `media.frame_args`' `-ss`
+>     dropped (`2e88dba`: the int windows 1000–3000 and 1900–2900, on the
+>     ms list and on the box at 2000, 0.4984 off);
+>   - `run_worker`'s loop without its cancel check (`09cd96a`: the stand-in
+>     workers exit 99 after 15 s, so two Pipe tests fail by name and the
+>     file runs in 30.4 s instead of hanging);
+>   - `client.stop()` without its cancels (`114e63c`: `sidecar.int` and the
+>     int stop test, both on `{code: null, signal: 'SIGKILL'}`);
+>   - the stubs put in `sidecarEnv` or in the package's `__main__`
+>     (`10e28a0`: the int probe that starts the helper as main does; the
+>     earlier path test passed both);
+>   - faces' registration folded into `vision.register` (`97a78f2`: the
+>     unit registration check; until then a missing mediapipe took
+>     `vision.measure` down with every suite green);
+>   - the no-window flag dropped from the worker's spawn (`1420120`: a unit
+>     spy with `media._NO_WINDOW` set as on Windows; on POSIX the flag is
+>     `{}`, so nothing else could see it);
+>   - the macOS abort code reported as `abs(code)` (`7e95fc0`: both abort
+>     tests);
+>   - a second model layout in `faces.model_path` (`ffbf181`: the unit
+>     Model test, against `media.fetched_path`).
 
 Its own module and its own `OPTIONAL` row, `(("vision.faces",), "faces")`
 (as built, `(("vision.faces", "vision.facesModel"), "faces")`: the note above).
@@ -2042,11 +2104,18 @@ measured in the step.
 ### 4.4 1d — The salient box, for a shot with no face — `capabilities/salient.py` · half a day
 
 > **Built 2026-10-13** — `capabilities/salient.py` (`vision.salient`,
-> `vision.salientModel`); tests `tests/sidecar/test_salient.py` (26 on the
-> venv; on a bare 3.12 the numpy ones skip with "numpy is not installed")
-> and `tests/integration/salient.int.test.ts` (9). **Its memory does not
-> fit the 8 GB floor machine as built**: read the memory bullet before 1f
-> calls it.
+> `vision.salientModel`), and one function moved in `capabilities/depth.py`:
+> `_matte_of(rgb, variant, context)`, the tensor path `_subject_matte` now
+> calls, so salient and a bake run one matte the same way (1d `8a587e7`;
+> `depth.layers` on two stills before and after: manifests, `subjectBox`,
+> the plane PNGs' sha256 and every progress message byte-identical, `cmp`).
+> Tests `tests/sidecar/test_salient.py` (26 on the venv; on the bare 3.12, 17
+> run and 9 skip with "numpy is not installed") and
+> `tests/integration/salient.int.test.ts` (9: 7 with the model, which the
+> test clones from the app's store or `FORGE_TEST_MODELS`, skipping with
+> that reason without it; 2 without, which need only the venv). **Its
+> memory does not fit the 8 GB floor machine as built**: read the memory
+> bullet before 1f calls it.
 > - **The model gate is a second method**, as for faces: the row is
 >   `(("vision.salient", "vision.salientModel"), "salient")`.
 >   `vision.salientModel` answers `{present, bytes, label, host}` and
@@ -2059,6 +2128,10 @@ measured in the step.
 >   renamed repo and a 302 (`docs/SIDECAR.md`), so a restricted network must
 >   allow `*.hf.co` too. A cancel stops the fetch at the next 10 MiB chunk
 >   (`media.progress_class`, since the fix phase), leaving only a lock file.
+>   On the real Hub (Xet off, as the app sets it): the first progress 5.79 s
+>   after the press, a cancel landing at 9 % 6.3 s in with no blob and no
+>   snapshot left, and the second press fetching all 114,538,221 B in 2.4 s
+>   in 12 messages, sha256 `d39b897c…`, the blob's own name.
 > - **The rule is subjectBox's** (`depth.py:461-474`): the matte cut at
 >   0.5; `coverage` its share; a box only when the unrounded share is within
 >   1–92 %, drawn round the cut after `_clean_mask` (pieces under
@@ -2076,12 +2149,27 @@ measured in the step.
 >   threads alike), plus 30–74 ms of decode at 640×360 and 247–550 ms on the
 >   4K HEVC fixture. Ten no-face shots alone are most of §4.10's 90 s.
 >   Progress is 0, then (i+1)/n, "finding the subject"; a cancel lands
->   between items, so up to ~9 s late.
+>   between items, so up to ~9 s late. The session's build is 1.8–2.5 s,
+>   once; the cut, clean and box 35–49 ms (284 ms the first time, the scipy
+>   import). Whole calls: six items 34.2–37.3 s and two 16.1–17.2 s, each
+>   with the build; `salient.int` 69–75 s.
+> - **Where the boxes land** (synthetic clips made in the test): a disc of
+>   radius 60 moving across 640×360 answered x 0.2197 / 0.4697 / 0.7197
+>   where it was drawn at 0.21875 / 0.46875 / 0.71875, y 0.252 (0.25),
+>   width 0.1865–0.1875 (0.1875), height 0.332 (0.3333), coverage 0.0492
+>   against π·60² of the frame, 0.0491. A flat grey frame: coverage 0, box
+>   null. The `rotate=90` remux sent as 360×640: {0.252, 0.5928, 0.333,
+>   0.1875}, drawn upright at {0.25, 0.59375, 0.3333, 0.1875}, and the 1d
+>   verifier's box from the decoder's own upright frame was {0.25, 0.5922,
+>   0.3361, 0.1891}; sent as 640×360, that item alone answers "is 360×640
+>   upright (turned 270°), but 640×360 was sent". One still through salient
+>   and through `depth.layers`' `subjectBox` agree within 0.0006. On the 4K
+>   face fixture the boxes sit on the person, coverage 0.17–0.58.
 > - **Memory — measured, and over the floor's budget.** The helper's RSS,
->   sampled every 20 ms through libproc on the Mac (17.2 GB): a matte
->   peaks at **6.6–9.7 GB**, a session's first 7.7–8.7 GB (the builder's
->   verifier 8.6 and 9.3, 6.6–9.7 with the arena off; the 1c verifier
->   8.0–8.7; the fix phase 7.7 and 8.6), and
+>   sampled every 10–20 ms (libproc, or psutil) on the Mac (17.2 GB): a
+>   matte peaks at **6.6–9.7 GB**, a session's first 7.7–8.7 GB (the 1d
+>   verifier 8.6 and 9.3, 6.6–9.7 with the arena off; the helper-rules
+>   verifier 8.0–8.7; the fix phase 7.7 and 8.6), and
 >   with ORT's default CPU arena the helper then **holds 4.9–8.7 GB** until
 >   the session goes. With the arena off it falls back to 1.1–1.4 GB after
 >   each call, but the peak is the same. Dropping `matte:fp16` under the
@@ -2105,6 +2193,10 @@ measured in the step.
 >   1024²); and salient keeping a BiRefNet session of its own (`OneSession`
 >   now asks for a bake's matte afterwards: two builds). The integration
 >   file's 0.05 tolerance cannot see the first two; only the unit tests do.
+>   The cancel test's own eye was checked too: with an extra `ffmpeg -re`
+>   started before each decode it reports "the helper's children: ffmpeg,
+>   …", so its libproc listing (macOS; `/proc` and `Get-CimInstance` on the
+>   others, unmeasured) does see the helper's children.
 
 `LLM.md:162-163` and `:282-283` both say to check depth before adding
 anything. BiRefNet already finds the subject of a still. **It is on disk on
@@ -2843,7 +2935,11 @@ Where it goes, per `WHERE-THINGS-ARE.md`:
   about 3.3× realtime on the Mac, about 3 minutes for 10 minutes before any
   detection (`EFFECTS.md` §37, on the face fixture), so the 4K time is
   recorded on its own, and hardware decode (`videotoolbox`; unmeasured) is
-  the lever if it is too slow.
+  the lever if it is too slow. Measured since in step 1's helper slice
+  (`EFFECTS.md` §54): on that fixture 5 fps → 2 fps saved only 6 % of the
+  face pass (the decode is the cost), so "drop to 3 fps" does not rescue a
+  4K budget; and each no-face shot's salient box is about 8–9 s of matte
+  on the Mac, so ten such shots are most of the 90 s on their own.
 - The helper's peak RSS during the analysis recorded on the Surface, and its
   sessions released when the job ends (§12.1).
 - 1g's gate measured and its decision written.
@@ -4621,7 +4717,7 @@ What each step needs:
 | step | without Python | with it | sizes |
 |---|---|---|---|
 | M0 transcript → Clip it | **all of it over the link's own captions**: Get transcript, the rows and handles, chapter chips, Clip it with its words, Add another clip, captions on; a video with no captions keeps the start and end fields, and Listen to it is greyed | Listen to it (Whisper) for a video with no captions; the timeline half over own footage (its transcript is Whisper's) | faster-whisper small 464 MB, its own Get press |
-| 1 reframe | shots (main), every crop centred: **today's `solveCrop`, so nothing new to see**; Follow the subject and Reframe greyed | faces, salient, ground; the stacked two-up (it needs two face boxes) | faces: MediaPipe 0.10.35, 17.8 MB (Mac) / 10.9 MB (Windows) of wheel installed `--no-deps` with stubs, plus the 1.1 MB full-range model (§4.3); YuNet 0.23 MB on the installed onnxruntime only if the fallback is needed; **BiRefNet 115 MB (114,538,221 B), a download for any user who never baked depth** (on disk only on the dev Mac; one matte peaks the helper at 6.6–9.7 GB, §4.4, §12.1); Florence-2 int8 275 MB, each its own Get press |
+| 1 reframe | shots (main), every crop centred: **today's `solveCrop`, so nothing new to see**; Follow the subject and Reframe greyed | faces, salient, ground; the stacked two-up (it needs two face boxes) | faces: MediaPipe 0.10.35, 17.8 MB (Mac) / 10.9 MB (Windows) of wheel installed `--no-deps` with stubs, plus the 1.1 MB full-range model (§4.3); on the dev Mac the two pip runs took 0.74 s and 1.28 s and mediapipe is 54.5 MB on disk; RSS measured on the Mac without the detector, which aborts in the sandbox: the helper about 100 MB, the worker 45–92 MB, its ffmpeg 455 MB on 4K HEVC; YuNet 0.23 MB on the installed onnxruntime only if the fallback is needed; **BiRefNet 115 MB (114,538,221 B), a download for any user who never baked depth** (on disk only on the dev Mac; one matte peaks the helper at 6.6–9.7 GB, §4.4, §12.1); Florence-2 int8 275 MB, each its own Get press. **The Surface's numbers, all of them, and the detector's own RSS are unmeasured** |
 | 2 free space | the style's position; **Smart placement greyed** | per shot | — |
 | 3 graphics | over **a link's caption track** only; **no `callout`** (it needs a face box) | over own footage (its transcript is Whisper's), and `callout` | — |
 | own-footage transcript | **none**: own footage has no captions | Whisper | faster-whisper small 464 MB on disk (measured), its own Get press |
@@ -4671,7 +4767,9 @@ the analysis loaded stays resident while the model runs.
   the same peak). On the Surface that is a page-out on the first no-face
   shot. Faces is cheap on the helper's side (about 100 MB; the worker 45–92
   MB without the detector, which only your run can load; its ffmpeg 455 MB
-  decoding 4K HEVC to 640×360, the 1c verifier's numbers).
+  decoding 4K HEVC to 640×360, the helper-rules verifier's numbers). The detector's
+  own RSS is not yet recorded by that run: it writes counts, time and the
+  track's size, so a line for the worker's peak is still to add (§4.3).
 - **Decide salient's gate before 1f calls it** (open, for you): salient
   only where the RAM allows (the Mac class), the arena off plus the release
   below at the job's end, salient in a worker process of its own so its
@@ -4760,7 +4858,16 @@ Each is named in its step, and each step's first task is its own row:
    cost at the 640 px edge, and recall and false boxes against hand marks
    on the ten clips. The worker's start is measured (2026-10-13, §4.3): it
    starts and imports mediapipe in 0.14–0.23 s wall (the import 0.07–0.13 s)
-   on the dev Mac, once per analysis. The YuNet
+   on the dev Mac, once per analysis. **The child-process rule is measured
+   in the sandbox**, where the detector cannot run: the worker dies at
+   `create_from_options` with −6, the helper answers −32001 in 0.6 s and
+   keeps answering, and a cancel, a SIGKILLed helper and an app quit each
+   leave no worker, no ffmpeg and no half-track (`EFFECTS.md` §54). Still
+   open from step 1's slice: **the detection on your face fixture**, one
+   command on your Mac (`FORGE_FACES_REAL=1 npx vitest run
+   tests/integration/faces.int.test.ts`, §4.3), and the Windows code for
+   the abort (3 or `0xC0000409`, both accepted until the first Windows CI
+   run names it). The YuNet
    comparison is not run (§16.1 answered); YuNet's hand decoder and its
    golden test only if the Surface run fails (§4.1, §4.3).
 2. The scene threshold and minimum shot on footage with hand-marked cuts
@@ -4778,9 +4885,12 @@ Each is named in its step, and each step's first task is its own row:
    runs, `EFFECTS.md` §54): 6.6–9.7 GB peak a matte, 4.9–8.7 GB held after
    with ORT's arena, 155–294 MB once `matte:fp16` is dropped — over the
    floor machine's budget as built, so its gate is a decision (§12.1).
-   Faces' helper side measured (about 100 MB; the worker without the
-   detector 45–92 MB); the detector's own RSS is your run's to record.
-   Still open: ground, asr, and all of it on the Surface.
+   Faces' helper side measured (about 100 MB at hello and through a pass;
+   the worker without the detector 45–92 MB; its ffmpeg 455 MB decoding the
+   4K HEVC fixture to 640×360). The detector's own RSS needs your Mac, and
+   your `FORGE_FACES_REAL=1` run does not record it yet (§4.3). Still open:
+   the detector, ground, asr, and all of it on the Surface, where salient's
+   gate is decided first.
 5. The followed crop in the preview while playing: the cut lands on the
    element's frame (§4.9 harness).
 6. **The followed crop at speed 1 on 29.97 fps, 60 fps and VFR sources**:

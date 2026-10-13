@@ -5282,67 +5282,154 @@ review's runs failed four, before the default-threshold case was added).
 - **Real footage with hand-marked cuts, and so T and the minimum shot**, are
   1a's (`CLIPS.md` §4.1).
 
-## 54. Step 1's helper slice — the subject finder's memory, the face worker's start, a quit mid-pass, and two download findings (2026-10-13)
+## 54. The face finder's child process and the salient box — the install, the stubs, the abort without Metal, and the costs (2026-10-13)
 
-For `docs/CLIPS.md` §4.3 and §4.4 as built (1c `8052585`, 1d `8a587e7`) and
-the fix phase after their review. Development Mac (17.2 GB), the helper's
-venv `sidecar/.venv`: CPython 3.14.6, onnxruntime 1.30, numpy 2.5.3. Each
-number names who measured it: the builders, the two verifiers, or the fix
-phase.
+For `docs/CLIPS.md` §4.3 (1c: `b8a54cb`, `8052585`, `1d30f84`) and §4.4 (1d: `8a587e7`),
+and the fix phase after their review (`ad4942b` … `7cb25c4`). Development
+Mac (M1 Pro, 17.2 GB, 8 CPUs), inside the dev sandbox, which has **no Metal
+device** (§37). The helper's venv `sidecar/.venv`: CPython 3.14.6,
+onnxruntime 1.30.0, numpy 2.5.3, scipy 1.18.1, huggingface_hub 1.31.0, and
+mediapipe 0.10.35 since this slice. CI's stand-in is a bare Homebrew 3.12.13
+venv made `--without-pip`. `ps` and `pgrep` are blocked in the sandbox, so
+process trees and resident sets were read through libproc
+(`proc_listchildpids`, `proc_pidinfo` with `PROC_PIDTASKINFO`) or psutil.
+Each number names who measured it: the builders, the 1c, 1d and helper-rules
+verifiers, or the fix phase. **The detection itself is not in this
+section**: it needs Metal, and is the user's run
+(`FORGE_FACES_REAL=1 npx vitest run tests/integration/faces.int.test.ts`,
+which writes to `tests/output/faces/real/README.txt`).
 
-**The subject finder's memory — over the floor machine's budget.** The
-helper's resident set, read through libproc (`proc_pidinfo`,
-`PROC_PIDTASKINFO`) every 20 ms by a thread in the same process, while
-`salient.salient` ran one item through depth's BiRefNet_lite fp16 session
-(CPU provider, the fixed `[1,3,1024,1024]` input), the model from the app's
-store:
+**The install** (the 1c builder; pip 26.2.1 into `sidecar/.venv`):
 
-| run | ORT CPU arena | peak a matte (MB) | after the call (MB) |
+| run | time | installed | wheel |
 |---|---|---|---|
-| 1d verifier, three mattes | on (default) | 8,638 / 9,325 / 6,846 | 8,638 / 6,845 / 6,222 |
-| 1d verifier | off | 6,573–9,707 | 1,146–1,397 |
-| 1c verifier, through the helper | on | 8,000–8,700 | 8,640–8,700 (1.5 s after the answer) |
-| fix phase, two calls on a 640×360 clip | on | 7,701 / 8,578 | 7,095 / 4,958; 4,931 1.5 s later |
+| `pip install -r requirements-faces.txt` | 0.74 s | absl-py 2.5.0; sounddevice 0.5.6 (flatbuffers, certifi, cffi and pycparser already there) | 137,410 B; 1,009,647 B (universal2) |
+| `pip install --no-deps -r requirements-faces-nodeps.txt` | 1.28 s | mediapipe 0.10.35 | 17,782,605 B Mac arm64 (win_amd64: 10,905,503 B); **54.5 MB on disk** |
 
-- **Peaks of 6.6–9.7 GB**, 7.7–8.7 GB for a session's first matte, whatever
-  the arena; the arena decides only what stays. Dropping `matte:fp16` from `depth._sessions` under
-  `depth._session_lock` took the helper to **294 MB** (1d verifier, from
-  8,643) and **155 MB** (fix phase, from 4,931).
-- On the 8 GB Surface, with Electron at 1–2 GB, one no-face shot would page.
-  The gate is a decision in `CLIPS.md` §12.1; nothing calls `vision.salient`
-  in a job yet (that is 1f).
-- The session is depth's, shared with parallax bakes; its lock covers the
-  build, not `session.run`, so a bake during an analysis is two of these at
-  once.
-- **Time**: 8.80 s and 8.87 s a call in the fix phase (the builder's
-  7.9–9.3 s; 4 or 8 threads alike), the decode included (30–74 ms at
-  640×360, 247–550 ms on the 4K HEVC face fixture, the builder's).
+- In the sandbox pip needed `--use-deprecated=legacy-certs` (the macOS trust
+  store unreachable, OSStatus −26276): the sandbox's, not the install's.
+- `pip check` afterwards names only `opencv-contrib-python` and
+  `matplotlib` as missing (the helper-rules verifier): the stub route, as
+  intended.
 
-**The face worker.** It starts and imports mediapipe 0.10.35 in 0.14–0.23 s
-wall, the import 0.07–0.13 s (the 1c builder, through `faces.int`'s import
-test). In the sandbox, with the real model, it dies at
-`create_from_options` with −6 0.3–1.3 s in, as §37 found in-process. RSS
-(the 1c verifier): the helper about 100 MB through a faces call, the worker
-45–92 MB with the stand-in detector, and its ffmpeg 455 MB decoding the 4K
-HEVC fixture to 640×360. **The detector's own RSS is unmeasured**: the
-user's `FORGE_FACES_REAL=1` run is the only one that loads it. The 1c
-verifier also timed 26.6 s of that fixture through the worker with the
-stand-in: 13.8–14.7 s, and 5 fps → 2 fps saved only 6 %, so **4K HEVC is
-decode-bound** and §4.10's first lever ("drop to 3 fps") will not rescue a
-4K budget; hardware decode or `-skip_frame nokey` (both unmeasured) would.
+**The stubs.**
 
-**A quit, or a death, mid-pass.** On stdin's end the helper drains in-flight
-handlers for up to 300 s (`rpc.py serve_forever`), and `client.stop()` only
-closed stdin, so with `vision.faces` running the helper was still alive at
-1.5 s and was SIGKILLed (the 1c verifier, with libproc). Its worker and
-ffmpeg went within about 0.1 s — stdin's end reaches the worker as a cancel
-— but the worker's half-track, `<track>.<helper pid>-<id>.part`, stayed in
-the cache for good, its name carrying a pid no later helper has. Fixed
-both ways: the worker removes its own partial when a pass stops short, and
-`stop()` sends a cancel for each request in flight before closing stdin.
-Measured after (`faces.int`): a stop mid-pass ends in the helper's own exit,
-code 0, 302 ms later, no worker, an empty cache; a SIGKILLed helper leaves
-no worker, no ffmpeg and no partial.
+- `import mediapipe` with no stubs: `ModuleNotFoundError: No module named
+  'cv2'` at `drawing_utils.py:20`. The worker then exits **69** with `error
+  import ModuleNotFoundError: No module named 'cv2'`, which the helper
+  answers as "the face detector could not start: …". With
+  `forge_sidecar/stubs` first on the worker's `PYTHONPATH`, 0.10.35 imports.
+- The helper never loads them: `python -X importtime -m forge_sidecar`
+  across `system.hello`, a `vision.faces` call (the worker died −6) and
+  `vision.facesModel` printed 601 import lines, none of them `mediapipe`,
+  `cv2`, `matplotlib` or `forge_sidecar.workers` (the 1c verifier). Started
+  as main starts it (`runpy.run_module('forge_sidecar')`, `sidecarEnv`'s
+  environment, cwd `sidecar/`), its `sys.path` holds no stub entry (the
+  helper-rules verifier; a test since `10e28a0`, which fails with the stubs
+  put in either `sidecarEnv` or `__main__.main`, where the earlier
+  `python -c` check passed both).
+
+**The worker's start, and the abort without Metal.**
+
+- Start and `import mediapipe`: **0.14–0.23 s wall, the import 0.07–0.13 s**
+  (the 1c builder: three runs, and 226 ms in `faces.int`'s import test).
+  The import mode alone (`{"mode":"import"}`): `ready 0.10.35 0.126` in
+  0.19 s, 49.7 MB peak RSS (the helper-rules verifier).
+- With the real model it dies at `create_from_options`, returncode **−6**,
+  0.3–1.3 s in (the builder) — 0.23 s and 92.2 MB at the abort in the
+  helper-rules verifier's run. Its log: `gl_context_nsgl.cc failed to create
+  pixel format`, then `graph_service.h:139] Check failed: service_ Service
+  is unavailable.`, with `DrishtiMetalHelper` in the stack. The same death
+  §37 measured in-process, now in a child.
+- Through the helper: −32001 "the face detector stopped (code -6): F0000 …
+  graph_service.h:139] Check failed: service_ Service is unavailable." in
+  **0.598 s** (the 1c verifier; 191 ms in `faces.int`). Children seen during
+  the call: ffprobe (the upright check) and the worker, **no ffmpeg** — the
+  abort comes before `iter_frames`. Afterwards: no children, the helper
+  alive, `system.ping` answered, the faces cache empty.
+- **A −6 that was not the detector.** The worker's stdin watcher, a daemon
+  thread blocked in `sys.stdin.buffer.read`, held the BufferedReader's lock,
+  and the interpreter's shutdown aborted (`Fatal Python error:
+  _enter_buffered_busy`), −6, after a pass that had written its whole track
+  and printed `done` — on 3.14.6 and on the bare 3.12 alike (the 1c
+  builder). The watcher reads the raw descriptor now.
+- **Windows: unmeasured.** `os.abort()` there is expected as 3 or
+  `0xC0000409` (3221226505); both abort tests accept either on win32
+  (`7e95fc0`) until a Windows CI run names it.
+
+**Stopping it** (the 1c verifier's driver on the real helper, the stand-in
+detector `colour:80`, a 20 s 640×360 clip):
+
+| what | the worker and its ffmpeg | the `.part` | the helper |
+|---|---|---|---|
+| a cancel, after the first mid-pass progress (0.1, at 1.54 s) | tree helper → worker → ffmpeg; −32800 at 0.222 s, both pids gone by then | removed | answers `ping` |
+| the helper SIGKILLed mid-pass | ffmpeg gone in 0.090 s, the worker in 0.103 s | **left for good** before `ad4942b`; with the worker removing its own (the verifier's trial of that fix), gone in 0.072 / 0.14 s and an empty cache, and `faces.int` holds it since | — |
+| `client.stop()` as it was: stdin closed | still alive at 1.5 s (`serve_forever` drains in-flight work for up to 300 s), then SIGKILL: ffmpeg 0.050 s, worker 0.073 s | left | killed |
+| `client.stop()` since `114e63c`: a cancel per request in flight, then stdin closed | gone | none | **exits by itself, code 0, 302 ms after the stop** (the fix phase, `faces.int`) |
+
+A worker that ignores the cancel is killed after `STOP_GRACE_S` 3 s. The
+stand-in workers in the unit tests exit 99 after 15 s (`09cd96a`), so a
+helper that never stops them fails by name: the file ran in 30.4 s under
+that mutation instead of hanging.
+
+**Source ms through a window** (the 1c verifier, the stand-in on a clip
+cut at 2000 ms): startMs 1000 / endMs 3000 gave ms 1000 … 2800; 1900–2900
+gave 1900, then 2100 … 2700; the whole file 0 … 3800. Every sample's scene
+matched its ms. A test since `2e88dba`.
+
+**The face pass on 4K HEVC** (the user's face fixture, 26.6 s of
+3840×2160 HEVC at 30 fps; the stand-in detector, so this is decode and
+plumbing):
+
+| run | samples | wall |
+|---|---|---|
+| through the helper and the worker, 5 fps, edge 640 | 133 | 14.68 s (the 1c verifier); 10.84 s (the helper-rules verifier) |
+| the same at 2 fps | 53 | 13.84 s |
+| `media.iter_frames` alone, 5 fps | — | 13.43 s |
+| the bundled ffmpeg alone, the same arguments, the same session | — | 8.3–14.4 s (a noisy machine) |
+
+- **Decode-bound**: 5 fps → 2 fps saved 6 %, and the stand-in's detection
+  was 0.41 s of the 14.68 s. §4.10's "drop to 3 fps" does not rescue a 4K
+  budget; `-skip_frame nokey` and hardware decode are unmeasured.
+- 15 progress messages for 133 frames ("finding faces": 0, every 10
+  frames capped at 0.99, then 1). The track: 3,359 B for 133 samples
+  (the 1c verifier); 3,139 B for 20 samples of two faces each (the builder).
+- RSS during that pass: the helper 102.5 MB, the worker 45.0 MB, its
+  ffmpeg **455.0 MB**, the tree 597.9 MB (the helper-rules verifier). The
+  helper at `system.hello`: about 97 MB.
+
+**The gates** (the face finder's with `storage.googleapis.com` reachable:
+curl fetched the model without `allowed_domains`):
+
+- `vision.faces` with an empty models folder: −32001 "the face finder is
+  not downloaded yet (1,083,786 bytes from storage.googleapis.com);
+  vision.facesModel with download: true fetches it" in 0.352 s, ffprobe
+  included; no child, nothing written. With every proxy variable at
+  127.0.0.1:9, 0.376 s (the 1c verifier).
+- `vision.facesModel` with `{}`, `{download: false}` and `{download:
+  'true'}`: `present: false` in under 1 ms, nothing written. The press with
+  dead proxies: −32603 `<urlopen error [Errno 1] Operation not permitted>` in
+  0.35 s, `files/` empty.
+- `vision.salient` without its model: −32001 "the subject finder is not
+  downloaded yet (115 MB from huggingface.co)"; both gated tests in 478 ms
+  (the 1d verifier). With the gate removed the helper spent 23.3 s on the
+  Hub and answered −32603 "An error happened while trying to locate the
+  file on the Hub".
+- `register_all`: 0.32 s on the venv, every method a capability; 0.07 s on
+  the bare 3.12, both rows degraded (the 1d verifier). The reasons (the
+  helper-rules verifier): on the bare 3.12, "faces unavailable: mediapipe
+  is not installed (pip install -r sidecar/requirements-faces.txt, then …)"
+  and "salient unavailable: subject finder dependencies are not installed:
+  No module named 'numpy'"; on the system `python3` 3.14.6, which has numpy
+  but not onnxruntime, salient's names `onnxruntime`.
+
+**The face finder's file.** sha256
+`3698b18f063835bc609069ef052228fbe86d9c9a6dc8dcb7c7c2d69aed2b181b`,
+1,083,786 B: the `.venv-faces` seed, and both
+`…/blaze_face_full_range/float16/1/` and `…/float16/latest/` on 2026-10-13
+(curl; the same md5). The versioned URL is pinned. One fetch through
+`vision.facesModel` with certifi's bundle: 0.13 s, three progress messages
+(the 1c builder).
 
 **Downloads.**
 
@@ -5350,20 +5437,20 @@ no worker, no ffmpeg and no partial.
   `etc/openssl` is empty until its "Install Certificates" step runs, so
   `urlopen`'s default context failed the face finder's fetch with
   `CERTIFICATE_VERIFY_FAILED` (0.10 s, fix phase; the 1c builder first).
-  `media.fetch_url` now adds certifi's bundle to the default context.
-  Hugging Face's downloads were never affected: huggingface_hub has its own
-  client.
+  `media.fetch_url` now adds certifi's bundle to the default context
+  (`3544833`). Hugging Face's downloads were never affected:
+  huggingface_hub has its own client.
 - **A body cut short reads as whole to `http.client`.** `read(amt)` returns
   `b''` at an early end instead of raising (CPython's choice, for
   compatibility). Through the dev sandbox's proxy, `fetch_url`'s loop got
   1,063,248–1,073,176 of 1,083,786 B on 5 of 5 fetches (fix phase) and 4 of
   5 before (the 1c verifier, 979,176–1,063,248), silently; read sizes of
   16 KiB, 64 KiB and 1 MiB were each cut short 3 times in 4; a whole
-  `r.read()` raised `IncompleteRead` 3 of 5 and curl got the whole file 3 of
-  3 (the verifier). The pin refused every short body, but called it a
-  sha256 mismatch; it now says "cut short (N of M bytes); try again". The
-  proxy is the sandbox's: how often this happens on a user's network is
-  unmeasured.
+  `r.read()` raised `IncompleteRead` 3 of 5 (871,384 / 1,013,130 /
+  1,064,434 B) and curl got the whole file 3 of 3 (the verifier). The pin
+  refused every short body, but called it a sha256 mismatch; it now says
+  "cut short (N of M bytes); try again" (`8991694`). The proxy is the
+  sandbox's: how often this happens on a user's network is unmeasured.
 - **Hugging Face's bytes are on `*.hf.co`.** By headers only, as the client
   fetches (Xet off): the subject finder's resolve URL on `huggingface.co`
   answers 307 to the renamed repo `onnx-community/BiRefNet_lite-ONNX` (the
@@ -5371,3 +5458,67 @@ no worker, no ffmpeg and no partial.
   `us.aws.cdn.hf.co/xet-bridge-us/…`. `storage.googleapis.com` serves the
   face finder itself (200, 1,083,786 B). `docs/SIDECAR.md` has what this
   means for restricted networks and for `depth.MATTE_REPO`.
+- **The subject finder's fetch on the real Hub** (the 1d builder, Xet off):
+  the first progress 5.79 s after the press; one message per 10 MiB chunk
+  (huggingface_hub 1.31's `DOWNLOAD_CHUNK_SIZE`), so a cancel landed at 9 %,
+  6.3 s in, leaving only `.locks/…lock` and `CACHEDIR.TAG` — no blob, no
+  snapshot, `present` still false. The second press fetched all
+  114,538,221 B in 2.4 s in 12 messages, sha256 `d39b897c…`, the blob's
+  own name.
+
+**The salient box, per item** (BiRefNet_lite fp16 on the CPU provider; the
+ONNX input fixed at `[1,3,1024,1024]`, one output `[1,1,1024,1024]`):
+
+| step | time |
+|---|---|
+| the decode at 1024², 640×360 H.264 | 30–74 ms (the 1d builder) |
+| the decode, the 4K HEVC face fixture | 247–550 ms a seek (the 1d builder) |
+| the session's build, once | 1.8–2.5 s (the builder); 1.95–1.97 s (the 1d verifier) |
+| **the matte** | **7.9–9.3 s** in calls, 5.2–9.0 s standalone, 4 and 8 threads alike (the builder); 5.9–8.4 s warm (the 1d verifier); 8.80 and 8.87 s a call (the fix phase) |
+| the cut, the clean and the box | 35–49 ms; 284 ms the first time (the scipy import) |
+| six items, the build included | 34.2 s (the builder); 37.3 s, progress at 10.4 / 19.9 / 28.7 / 37.2 s (the 1d verifier) |
+| two items of the turned clip, the build included | 16.1 s; 17.2 s |
+| one good item and four failing ones, the build included | 8.1 s (the 1d verifier) |
+| `salient.int.test.ts`, 9 tests | 69 s; 75.3 s |
+
+Where the boxes land (synthetic clips made in the test; the builder, and
+the 1d verifier by hand):
+
+| case | answered | drawn, or found by hand |
+|---|---|---|
+| a disc of radius 60, centre y 150, x = 120 + 160 px a second, on 640×360 | x 0.2197 / 0.4697 / 0.7197, y 0.252, width 0.1865–0.1875, height 0.332, coverage 0.0492 | x 0.21875 / 0.46875 / 0.71875, y 0.25, width 0.1875, height 0.3333; π·60² of the frame 0.0491 |
+| a flat grey frame | coverage 0, box null | — |
+| the `rotate=90` remux (probes as turned 270°), sent as 360×640, at 500 ms | {0.252, 0.5928, 0.333, 0.1875}, coverage 0.0492 | drawn upright {0.25, 0.59375, 0.3333, 0.1875}; from the decoder's own 360×640 frame, luma > 128, {0.25, 0.5922, 0.3361, 0.1891} |
+| the same clip sent as 640×360 | that item: "is 360×640 upright (turned 270°), but 640×360 was sent"; the rest answered | — |
+| one still (1280×720) through salient and through `depth.layers`' `subjectBox` | {0.2588, 0.293, 0.2646, 0.4707} | {0.2594, 0.2931, 0.2641, 0.4708}: within 0.0006 |
+| the 4K face fixture | on the person, coverage 0.17–0.58 over 4 frames; at 5000 ms {0.0391, 0.2061, 0.4561, 0.792}, 0.1785 (the helper-rules verifier) | — |
+
+**The subject finder's memory — over the floor machine's budget.** The
+helper's resident set while `vision.salient` ran one item through depth's
+session, the model from the app's store:
+
+| run | ORT CPU arena | peak a matte (MB) | after the call (MB) |
+|---|---|---|---|
+| the 1d verifier, three mattes | on (default) | 8,638 / 9,325 / 6,846 | 8,638 / 6,845 / 6,222 |
+| the 1d verifier | off | 6,573–9,707 | 1,146–1,397 |
+| the helper-rules verifier, the 640×360 disc, two runs | on | 8,044.6 / 8,699.4 | 8,699.4 1.5 s after the answer |
+| the helper-rules verifier, the 4K face fixture at 5000 ms | on | 8,648.1 | 8,638.7 1.5 s after the answer |
+| the fix phase, two calls on a 640×360 clip | on | 7,701 / 8,578 | 7,095 / 4,958; 4,931 1.5 s later |
+
+- **Peaks of 6.6–9.7 GB**, 7.7–8.7 GB for a session's first matte,
+  whatever the arena; the arena decides only what stays. `ru_maxrss`
+  8,703 MB (arena on) and 9,812 MB (off), the 1d verifier. The session
+  alone, after its build: 396–421 MB; the helper after import: 56 MB.
+- Dropping `matte:fp16` from `depth._sessions` under
+  `depth._session_lock` took the helper to **294 MB** (the 1d verifier,
+  from 8,643) and **155 MB** (the fix phase, from 4,931).
+- The decoder beside it: ffmpeg 24.0–30.8 MB on the disc, 389.7 MB on one
+  4K HEVC frame; ffprobe 0.3–10.8 MB (the helper-rules verifier).
+- On the 8 GB Surface, with Electron at 1–2 GB, one no-face shot would page.
+  The gate is a decision in `CLIPS.md` §12.1; nothing calls `vision.salient`
+  in a job yet (that is 1f).
+- The session is depth's, shared with parallax bakes (one build of
+  `model_fp16.onnx` across two salient calls, a bake and two more calls,
+  counted by wrapping `InferenceSession`; the 1d verifier). Its lock covers
+  the build, not `session.run`, so a bake during an analysis is two of
+  these at once.
