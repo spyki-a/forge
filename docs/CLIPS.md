@@ -1477,6 +1477,15 @@ commit, beside `trimToRequestedRange`, `section.ts:116-131`).
 > start and end fields), and the Indic caption font, `BETA.md` R14. And on
 > the next push, Windows CI's `captions.int` line saying whether its libass
 > shapes (not measurable here).
+>
+> **Heard 2026-10-13** — you watched the clips: they landed well. The 80 ms
+> word end stays (§16.33), the fields stay where they are (§16.34), the
+> regional uploader track waits (§16.32), and the Indic font goes to the
+> beta list (`BETA.md` R14). Windows CI for the push was green (run
+> 38357257266), which proves the `ass` filter runs on the 2018 build and
+> the app's frames are the complex shaper's there; whether that libass
+> shapes Hindi and Telugu is printed, not asserted, on Windows, and is read
+> on the Surface. **M0's exit is met.** Next: step 1, with Step P alongside.
 
 ---
 
@@ -4740,6 +4749,8 @@ what is needed, where the answer waits on something not yet in hand.
     video. Recommended: **wait** until a link you care about loses an
     uploader's text this way, then build it as measured (half a day with
     its tests).
+
+    **Answer (2026-10-13):** taken as recommended — wait.
 33. **Where a cut's edges fall, in Hindi and Telugu and in loud sound.** A
     word's end is estimated at 80 ms a grapheme (at most 600 ms, never past
     the next word's start); §3b.1 measured Hindi and Telugu at 120–160 ms
@@ -4752,11 +4763,11 @@ what is needed, where the answer waits on something not yet in hand.
     recommended only if the first change does not settle it, since it moves
     every cut.
 
-    **Standing (2026-10-13):** 80 ms stays until you have heard links 2 and
-    3. Note that Step P's Listen to it does not replace this estimate on the
-    captions path: it is a separate transcript, heard from the sound, for a
-    link with no captions or when you ask for it; a link clipped from its
-    YouTube captions keeps the estimate for its word ends.
+    **Answer (2026-10-13):** keep 80 ms — you heard links 2 and 3 and the
+    clips landed well. Step P's Listen to it does not replace this estimate
+    on the captions path: it is a separate transcript, heard from the sound,
+    for a link with no captions or when you ask for it; a link clipped from
+    its YouTube captions keeps the estimate for its word ends.
 34. **A no-caption link's start and end fields** sit behind "Just a part of
     it", as on every link (one click). Open them at once on a link with no
     captions, or leave them (recommended: leave them — one rule for every
