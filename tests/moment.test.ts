@@ -475,7 +475,10 @@ describe('the footage pre-pass', () => {
   it('the crop is cut in the file’s pixels with the render’s own crop filter, and the cap is measured on the frame that arrives', () => {
     const cropped = momentFrameArgs(req({ crop: { x: 656, y: 0, width: 608, height: 1080 } }), '/out/%05d.png')
     const vf = cropped[cropped.indexOf('-vf') + 1]
-    expect(vf).toContain(`crop=w='min(608,in_w)':h='min(1080,in_h)':x='max(0,min(656,in_w-out_w))':y='max(0,min(0,in_h-out_h))',${cap}`)
+    // Right after the retime (here the render's fps step) and ahead of the hold and the trim — the render's own order (§4.7).
+    expect(vf).toMatch(/^fps=30,crop=/)
+    expect(vf).toContain(`fps=30,crop=w='min(608,in_w)':h='min(1080,in_h)':x='max(0,min(656,in_w-out_w))':y='max(0,min(0,in_h-out_h))',tpad=`)
+    expect(vf.endsWith(`setpts=PTS-STARTPTS,${cap},format=rgba`)).toBe(true)
     // Never sized from the probe: a phone clip's probed size is its coded size, and it decodes turned.
     expect(cap).toBe("scale=w='trunc(iw*min(1,2160/max(iw,ih))/2)*2':h='trunc(ih*min(1,2160/max(iw,ih))/2)*2':flags=bicubic")
     expect(vf).not.toMatch(/scale=\d+:\d+/)

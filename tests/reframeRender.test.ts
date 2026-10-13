@@ -3,6 +3,8 @@ import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/
 import { buildRenderPlan, cropFilter, type CropFollow } from '@shared/render/plan'
 import { filterGraphOf } from '@shared/render/graphFile'
 import { cropAt, effectiveCrop } from '@shared/render/crop'
+import { FOOTAGE_MAX_EDGE, PULL_VERSION, followedFootage, momentFrameArgs, momentFramesKey } from '@shared/render/momentFrames'
+import type { FootageRequest } from '@shared/render/moment'
 import { exportPixel, flatSumAt, flatSumExpression, type FlatSum } from '@shared/reframe/expression'
 import { followKeys } from '@shared/reframe/keys'
 import { fourShotTrack, printedMs } from './fixtures/reframe/track'
@@ -192,5 +194,56 @@ describe('cropAt: the one reader of a clip’s crop', () => {
   it('a canvas of the source’s own shape: the whole frame, nothing to follow', () => {
     const p = project({ canvas: { width: 1920, height: 1080 } })
     expect(cropAt(p, p.clips[0], source, 100)).toEqual({ crop: { x: 0, y: 0, width: 1920, height: 1080 } })
+  })
+})
+
+describe('the moments’ pre-pass cuts with the same keys, before its trim', () => {
+  const base = (over: Partial<FootageRequest> = {}): FootageRequest => ({
+    path: '/media/talk.mp4', inPoint: 6, duration: 210, first: 50, count: 10, fps: FPS, size: { width: 1920, height: 1080 }, maxEdge: FOOTAGE_MAX_EDGE, ...over
+  })
+
+  it('followedFootage fills the request from the project: the follow’s size and keys, or the stored crop', () => {
+    const p = project()
+    const keys = followKeys(p, p.clips[0], FPS)!
+    expect(followedFootage(p, p.clips[0], FPS)).toEqual({ crop: keys.crop, cropX: keys.cropX })
+    const two = project({ twoUp: true })
+    expect(followedFootage(two, two.clips[0], FPS).halves).toBe(followKeys(two, two.clips[0], FPS)!.halves)
+    const plain = project({ clip: { follow: undefined } })
+    expect(followedFootage(plain, plain.clips[0], FPS)).toEqual({ crop: plain.clips[0].crop })
+  })
+
+  it('the -vf: the retime, the keyed crop, THEN the hold, the trim and setpts — so t is the clip’s own, not the window’s', () => {
+    const p = project()
+    const req = base(followedFootage(p, p.clips[0], FPS))
+    const args = momentFrameArgs(req, '/tmp/m/%05d.png')
+    const vf = args[args.indexOf('-vf') + 1]
+    const crop = cropFilter({}, req.size, { crop: req.crop!, cropX: req.cropX }, FPS)!
+    expect(count(vf, crop)).toBe(1)
+    expect(vf.startsWith(`fps=30,${crop},tpad=stop_mode=clone:stop_duration=`)).toBe(true)
+    expect(vf.indexOf(crop)).toBeLessThan(vf.indexOf('trim=start_frame=50:end_frame=60'))
+    expect(count(vf, 'gte(t,')).toBeGreaterThan(0)
+  })
+
+  it('a two-up clip: one pull of the stacked frame — the split, both crops and the stack in the -vf', () => {
+    const p = project({ twoUp: true })
+    const args = momentFrameArgs(base(followedFootage(p, p.clips[0], FPS)), '/tmp/m/%05d.png')
+    const vf = args[args.indexOf('-vf') + 1]
+    expect(vf).toMatch(/^fps=30,split=2\[r0a\]\[r0b\];\[r0a\]crop=w=/)
+    expect(count(vf, 'crop=w=')).toBe(2)
+    expect(count(vf, '[r0t][r0u]vstack,tpad=stop_mode=clone:stop=1,tpad=stop_mode=clone:stop_duration=')).toBe(1)
+  })
+
+  it('the pulled frames are kept under a name that changes with the keys, not only the size', () => {
+    const file = { size: 1000, mtimeMs: 5 }
+    const p = project()
+    const a = base(followedFootage(p, p.clips[0], FPS))
+    const moved: FlatSum = { ...a.cropX!, base: a.cropX!.base + 2 }
+    expect(momentFramesKey({ ...a, cropX: moved }, file)).not.toBe(momentFramesKey(a, file))
+    expect(momentFramesKey({ ...a, cropY: { base: 0, terms: [{ atFrame: 3, delta: 2 }] } }, file)).not.toBe(momentFramesKey(a, file))
+    const two = project({ twoUp: true })
+    const b = base(followedFootage(two, two.clips[0], FPS))
+    const bottom = { ...b.halves!.bottom, x: { base: 0, terms: [] } }
+    expect(momentFramesKey({ ...b, halves: { ...b.halves!, bottom } }, file)).not.toBe(momentFramesKey(b, file))
+    expect(PULL_VERSION).toBe(6)
   })
 })

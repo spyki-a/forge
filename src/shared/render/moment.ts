@@ -1,7 +1,7 @@
 import type { Clip, CropRect, MomentKind, MomentSpec, Motion } from '../timeline'
 import { effectiveCrop } from './crop'
 import { motionSourceRect, moveAt, type SourceRect } from './motion'
-import { fitFor, planeShare } from './plan'
+import { fitFor, planeShare, type CropFollow } from './plan'
 
 /**
  * Moments, decided without a GPU (docs/PLAN.md §7).
@@ -309,6 +309,16 @@ export interface FootageRequest {
   fps: number
   /** The clip's crop, in the file's pixels, and the file's size as probed. */
   crop?: CropRect
+  /**
+   * A followed clip's crop over its frames (docs/CLIPS.md §4.7, plan.ts
+   * `CropFollow`): `crop` is then its size and first place, these its
+   * position frame by frame, and on a stacked two-up both halves' — so the
+   * pull cuts what the render cuts. momentFrames.ts `followedFootage` fills
+   * them from the project.
+   */
+  cropX?: CropFollow['cropX']
+  cropY?: CropFollow['cropY']
+  halves?: CropFollow['halves']
   size: { width: number; height: number }
   /** The longest edge the frames are kept at. */
   maxEdge: number

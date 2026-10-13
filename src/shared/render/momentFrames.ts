@@ -1,6 +1,7 @@
-import { framesToSeconds, type Clip } from '../timeline'
-import { cropFilter, retimeFilter } from './plan'
+import { assetById, framesToSeconds, type Clip, type Project } from '../timeline'
+import { cropFilter, retimeFilter, type CropFollow } from './plan'
 import { sourceFramesFor } from './speed'
+import { followKeys } from '../reframe/keys'
 import type { FootageRequest } from './moment'
 
 /**
@@ -10,8 +11,9 @@ import type { FootageRequest } from './moment'
  * in-point as `videoInputArgs` does, the clip's retime (`retimeFilter`: the
  * ramp's `setpts` curve, or the constant speed's `setpts` and `fps`; at
  * speed 1 the render's own `fps` step, which resamples 24p and 60p footage to
- * the project's rate), the window trimmed out of the retimed stream, then the
- * render's `cropFilter` in the file's pixels and a cap on the long edge
+ * the project's rate), the render's `cropFilter` in the file's pixels — a
+ * followed crop's keys and a stacked two-up included — then the window
+ * trimmed out of the retimed, cropped stream, and a cap on the long edge
  * measured on the frame that arrives (a rotated phone clip decodes turned).
  * So the picture a moment composes for its first and last frames is the
  * render's own frame beneath, as it is for a photograph.
@@ -62,12 +64,14 @@ export function momentFrameArgs(req: FootageRequest, pattern: string): string[] 
     ...(req.smoothSlow ? { smoothSlow: true } : {}),
     ...(req.hold ? { hold: true } : {})
   }
-  const cut = cropFilter(clip, req.size)
-  const finish = [cut, footageCapFilter(req.maxEdge), 'format=rgba'].filter((f): f is string => f !== null).join(',')
+  const follow = footageFollow(req)
+  // One pull of the stacked frame for a two-up: the split, two crops and vstack inside the -vf (measured to run there, §4.7).
+  const cut = cropFilter(clip, req.size, follow, fps, 0)
+  const finish = [footageCapFilter(req.maxEdge), 'format=rgba'].join(',')
   const count = Math.max(1, req.count)
 
   if (req.hold) {
-    return ['-ss', seconds(req.inPoint, fps), '-i', req.path, '-vf', `trim=end_frame=1,setpts=PTS-STARTPTS,${finish}`, '-frames:v', '1', '-start_number', '0', pattern]
+    return ['-ss', seconds(req.inPoint, fps), '-i', req.path, '-vf', `trim=end_frame=1,setpts=PTS-STARTPTS,${cut ? `${cut},` : ''}${finish}`, '-frames:v', '1', '-start_number', '0', pattern]
   }
 
   // The render's own retime, or at speed 1 the render's own fps step (plan.ts applies `fps=` to every clip).
@@ -87,21 +91,70 @@ export function momentFrameArgs(req: FootageRequest, pattern: string): string[] 
   const smooth = Boolean(clip.smoothSlow) && (clip.speed ?? 1) < 1
   const sourceFrames = sourceFramesFor(clip) + (smooth ? 8 : 0)
   const hold = `tpad=stop_mode=clone:stop_duration=${seconds(count, fps)},`
+  /*
+   * The crop right after the retime, ahead of the hold, the trim and the
+   * `setpts` — the render's own order (plan.ts: retime, then crop). Its `t`
+   * is then the clip's own time on the project's grid, frame n at n/fps, as
+   * the render's followed crop sees it; after the trim `t` started again at
+   * the window, and a followed crop's keys, compiled from the clip's first
+   * frame, put the clip's opening crop on a window near its end (§4.7). A
+   * static crop cuts the same pixels either side of the trim.
+   */
   return [
     '-ss', seconds(req.inPoint, fps), '-t', seconds(sourceFrames, fps), '-i', req.path,
-    '-vf', `${retime},${hold}trim=start_frame=${req.first}:end_frame=${req.first + count},setpts=PTS-STARTPTS,${finish}`,
+    '-vf', `${retime},${cut ? `${cut},` : ''}${hold}trim=start_frame=${req.first}:end_frame=${req.first + count},setpts=PTS-STARTPTS,${finish}`,
     '-frames:v', String(count), '-start_number', '0', pattern
   ]
 }
 
-/** How the frames are pulled; bumped when the arguments change, so folders an older pull left are never mistaken for these. */
-export const PULL_VERSION = 5
+/** A request's followed crop, for `cropFilter`; null for a crop that does not follow. */
+function footageFollow(req: FootageRequest): CropFollow | null {
+  if (!req.crop || (!req.cropX && !req.cropY && !req.halves)) return null
+  return {
+    crop: req.crop,
+    ...(req.cropX ? { cropX: req.cropX } : {}),
+    ...(req.cropY ? { cropY: req.cropY } : {}),
+    ...(req.halves ? { halves: req.halves } : {})
+  }
+}
+
+/**
+ * What a moment's request carries of a clip's crop: its stored `crop`, or for
+ * a followed clip the crop `followKeys` compiles — its size, and the keys the
+ * render cuts with (both halves' on a stacked two-up) — so the pull is the
+ * render's own frame beneath. momentTextures.ts spreads this into the
+ * `FootageRequest` it builds.
+ */
+export function followedFootage(
+  project: Project,
+  clip: Clip,
+  fps: number
+): Pick<FootageRequest, 'crop' | 'cropX' | 'cropY' | 'halves'> {
+  const asset = assetById(project, clip.assetId)
+  const follow = asset?.kind === 'video' ? followKeys(project, clip, fps) : null
+  if (!follow) return clip.crop ? { crop: clip.crop } : {}
+  return {
+    crop: follow.crop,
+    ...(follow.cropX ? { cropX: follow.cropX } : {}),
+    ...(follow.cropY ? { cropY: follow.cropY } : {}),
+    ...(follow.halves ? { halves: follow.halves } : {})
+  }
+}
+
+/**
+ * How the frames are pulled; bumped when the arguments change, so folders an
+ * older pull left are never mistaken for these. 6: the crop moved ahead of
+ * the trim, and a followed crop's keys.
+ */
+export const PULL_VERSION = 6
 
 /** The name the pulled frames are kept under: the same file, the same frames, the same cut — the same folder. */
 export function momentFramesKey(req: FootageRequest, file: { size: number; mtimeMs: number }): string {
   return JSON.stringify({
     pull: PULL_VERSION,
     path: req.path, size: file.size, mtime: Math.round(file.mtimeMs), inPoint: req.inPoint, duration: req.duration, speed: req.speed ?? 1, ramp: req.ramp ?? null,
-    smooth: req.smoothSlow ?? false, hold: req.hold ?? false, first: req.first, count: req.count, fps: req.fps, crop: req.crop ?? null, max: req.maxEdge
+    smooth: req.smoothSlow ?? false, hold: req.hold ?? false, first: req.first, count: req.count, fps: req.fps, crop: req.crop ?? null, max: req.maxEdge,
+    // A re-solve moves the keys and not the size: a pull named without them would be reused stale.
+    cropX: req.cropX ?? null, cropY: req.cropY ?? null, halves: req.halves ?? null
   })
 }
