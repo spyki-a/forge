@@ -47,6 +47,16 @@ export type KeyedProperty =
   | 'maskY'
   | 'maskWidth'
   | 'maskHeight'
+  /*
+   * A followed crop's position, in SOURCE pixels (docs/CLIPS.md §4.7) — for
+   * the compiler's type only. They are compiled from the file's subject track
+   * every time they are read (reframe/keys.ts) and never stored, so they are
+   * in neither KEYED_PROPERTIES nor MASK_PROPERTIES: no keyframe row or curve
+   * offers them, and nothing writes them to `clip.keyframes`, where a speed
+   * change or a frame-rate change would leave them stale.
+   */
+  | 'cropX'
+  | 'cropY'
 
 /** How the value LEAVES this key, which is the convention every NLE uses. */
 export type Ease = 'linear' | 'hold' | 'smooth'
@@ -89,7 +99,10 @@ export const PROPERTY_INFO: Record<
   maskX: { label: 'Mask X', neutral: 0.5, min: 0, max: 1, step: 0.005, suffix: '' },
   maskY: { label: 'Mask Y', neutral: 0.5, min: 0, max: 1, step: 0.005, suffix: '' },
   maskWidth: { label: 'Mask W', neutral: 0.25, min: 0.005, max: 2, step: 0.005, suffix: '' },
-  maskHeight: { label: 'Mask H', neutral: 0.25, min: 0.005, max: 2, step: 0.005, suffix: '' }
+  maskHeight: { label: 'Mask H', neutral: 0.25, min: 0.005, max: 2, step: 0.005, suffix: '' },
+  // Never offered (see KeyedProperty); here because the record covers every property. Even px, as the crop snaps.
+  cropX: { label: 'Crop X', neutral: 0, min: 0, max: 7680, step: 2, suffix: ' px' },
+  cropY: { label: 'Crop Y', neutral: 0, min: 0, max: 7680, step: 2, suffix: ' px' }
 }
 
 /** Which of these describe sound rather than picture. */

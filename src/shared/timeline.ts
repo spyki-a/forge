@@ -10,6 +10,8 @@ import type { Mask } from './render/mask'
 import type { Transcript } from './transcript'
 import type { VoiceEffect } from './render/voice'
 import type { AssetVision } from './director/eyes'
+import type { SubjectTrack } from './reframe/types'
+import type { HalfOffsets } from './reframe/path'
 /*
  * A value import, unlike every other one above, and safe: `render/speed.ts`
  * takes only TYPES from this file, so the edge is one-way at runtime. It is
@@ -355,8 +357,24 @@ export interface Clip {
   volume: number
   transform: Transform
   color: ColorAdjust
-  /** Static reframe rectangle. Keyframed crop paths arrive with the NLE. */
+  /**
+   * Static reframe rectangle. Keyframed crop paths arrive with the NLE.
+   *
+   * On a clip that FOLLOWS its subject (`follow`), this is the followed
+   * crop's one size at the position on the clip's first frame — what a
+   * consumer that knows nothing of following gets. The export and the
+   * preview read the followed crop itself, compiled every time from the
+   * file's subject track (reframe/keys.ts `followKeys`).
+   */
   crop?: CropRect
+  /**
+   * The crop follows the subject (docs/CLIPS.md §4.7): this marks a clip
+   * whose crop is derived from `Project.subjects[assetId]` every time it is
+   * read, never stored as keys, so a speed change, a ramp, a frame-rate
+   * change, a trim or a split cannot leave it stale. Footage only. Both
+   * halves of a split keep it.
+   */
+  follow?: ClipFollow
   /**
    * Playback rate. 1 is untouched; below 1 is slow motion.
    *
@@ -597,6 +615,24 @@ export interface Clip {
    * it by deleting a clip. See docs/AUTOMATION.md §6.
    */
   planes?: 'background' | 'front'
+}
+
+/** `Clip.follow` — what the user asked of a followed crop, on top of the file's measured track. */
+export interface ClipFollow {
+  /** What to look for in a shot no face leads (Florence-2's grounding, §4.5). */
+  phrase?: string
+  /**
+   * The user's drags: by a shot's `startMs` as the track writes it, a share
+   * of the crop's free-axis length, added after the solve (§4.6 rule 8), so
+   * a change of aspect keeps the drag's intent rather than its pixels.
+   */
+  offsets?: Record<number, number>
+  /** A two-up shot's drags, the same way: each half's own, shares of the half on each axis. */
+  halfOffsets?: Record<number, HalfOffsets>
+  /** Stack two people (§4.8). Absent means on. */
+  twoUp?: boolean
+  /** Bumped on every change to the above, so whatever is keyed on it re-reads. */
+  version: number
 }
 
 export interface TextSpec {
@@ -919,6 +955,15 @@ export interface Project {
    * work: `clearDirector` leaves them. Optional, so older projects open unchanged.
    */
   vision?: Record<string, AssetVision>
+  /**
+   * Each video file's subject track, by asset id — its shots, the faces in
+   * them, the salient subject where there is no face (docs/CLIPS.md §4.6).
+   * A fact about the FILE, like `vision` and `parallax`, not about any clip: a
+   * followed clip's crop is compiled from it (reframe/keys.ts), and Clear
+   * leaves it alone. Optional, and the store's project migration must
+   * tolerate its absence: every project written before it has none.
+   */
+  subjects?: Record<string, SubjectTrack>
   captions: CaptionSettings
 }
 
