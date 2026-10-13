@@ -20,7 +20,7 @@ import {
 } from '@shared/timeline'
 import { withClipRamp, withClipSpeed } from '@shared/render/speed'
 import { convertFrameRate } from '@shared/project/frameRate'
-import { retimeFilter } from '@shared/render/plan'
+import { followedRetime, retimeFilter } from '@shared/render/plan'
 import { KEYED_PROPERTIES, MASK_PROPERTIES } from '@shared/render/keyframes'
 import { evaluateFlatSum } from './fixtures/flatSum'
 
@@ -258,18 +258,29 @@ describe('followKeys — still on each cut’s frame after every ordinary edit',
     expect(expectCutsOn(keys, PATH, clip, FPS, (k) => exportSlot(k, clip, FPS))).toBe(4)
   })
 
-  it('a ramp edit: each cut on the frame its own setpts (as plan.ts writes it) and fps= put it — unmeasured, and noted', () => {
-    const { project } = setup()
-    const ramped = withClipRamp(project, 'c', { from: 1, to: 0.5 })
-    const clip = clipOf(ramped)
-    const filter = retimeFilter(clip, FPS)!
-    const m = /^setpts='\((-?[\d.]+)\)\*log\(\((-?[\d.]+)\+\((-?[\d.]+)\)\*\(T-STARTT\)\/(-?[\d.]+)\)\/(-?[\d.]+)\)\/TB',fps=30$/.exec(filter)
-    expect(m, filter).not.toBeNull()
-    const [scale, from, k, D] = [1, 2, 3, 4].map((i) => Number(m![i]))
-    const slotOf = (cut: number): number => Math.floor(scale * Math.log((from + (k * cut) / FPS / D) / from) * FPS + 0.5)
-    const keys = followKeys(ramped, clip, FPS)!
-    expect(expectCutsOn(keys, PATH, clip, FPS, slotOf)).toBe(4)
-    expect(keys.notes.some((n) => /ramp/.test(n) && /not measured/.test(n))).toBe(true)
+  it('a ramp edit: each cut on the frame its own setpts (on the seek’s clock, as plan.ts writes it for a followed clip) and fps= put it', () => {
+    // Slowing at shot 3's end, so its pan is over before the cut's frame (at 4× it is not: the cut's step wins, above).
+    for (const [ramp, inPoint] of [[{ from: 1, to: 0.5 }, 0], [{ from: 2, to: 0.5 }, 37], [{ from: 0.5, to: 1 }, 37]] as const) {
+      const { project } = setup(TRACK, { inPoint, duration: END - inPoint })
+      const ramped = withClipRamp(project, 'c', ramp)
+      const clip = clipOf(ramped)
+      const keys = followKeys(ramped, clip, FPS)!
+      const filter = followedRetime(clip, FPS, keys)!
+      // `T`, seek-relative — never T-STARTT, the first kept frame's clock (reframe.int's ramp row).
+      const m = /^setpts='\((-?[\d.]+)\)\*log\(\((-?[\d.]+)\+\((-?[\d.]+)\)\*T\/(-?[\d.]+)\)\/(-?[\d.]+)\)\/TB',fps=30$/.exec(filter)
+      expect(m, filter).not.toBeNull()
+      expect(retimeFilter(clip, FPS), 'an unfollowed ramp keeps its own clock').toContain('*(T-STARTT)/')
+      const [scale, from, k, D] = [1, 2, 3, 4].map((i) => Number(m![i]))
+      // In integers where ffmpeg has them: the source pts after the seek, on a 30 fps mp4's 1/15360; setpts truncates; fps= rounds half up.
+      const seek = Math.round((Math.round(Number((inPoint / FPS).toFixed(6)) * 1e6) * 15360) / 1e6)
+      const slotOf = (cut: number): number => {
+        const T = (512 * cut - seek) / 15360
+        const q = Math.trunc(scale * Math.log((from + (k * T) / D) / from) * 15360)
+        return Math.floor((2 * q * FPS + 15360) / (2 * 15360))
+      }
+      expect(expectCutsOn(keys, PATH, clip, FPS, slotOf), JSON.stringify(ramp)).toBeGreaterThanOrEqual(3)
+      expect(keys.notes.some((n) => /ramp/.test(n)), 'measured now: no ramp note').toBe(false)
+    }
   })
 
   it('convertFrameRate 30 → 25 → 30, with an in-point off the 25 fps grid', () => {

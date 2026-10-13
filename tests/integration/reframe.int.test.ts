@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { mkdir, writeFile } from 'node:fs/promises'
 import ffprobeInstaller from '@ffprobe-installer/ffprobe'
 import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
+import { rampRate } from '@shared/render/speed'
 import { buildRenderPlan } from '@shared/render/plan'
 import { filterGraphOf, withGraphFile } from '@shared/render/graphFile'
 import { cropAt } from '@shared/render/crop'
@@ -142,13 +143,42 @@ const seconds = (s: Source, n: number): number => (s.pts[n] * s.timeBase.num) / 
  * rounds to it. Independent of reframe/keys.ts: this is what the identity
  * colour is checked against.
  */
-function slotOf(s: Source, n: number, speed: number, inPoint = IN): number {
+function slotOf(s: Source, n: number, speed: Retime, inPoint = IN): number {
   const { num, den } = s.timeBase
-  // `-ss` is written to 6 dp (plan.ts `seconds`), held in µs, and rescaled into the stream's time base, rounding.
-  const seek = Math.round((Math.round(Number((inPoint / FPS).toFixed(6)) * 1e6) * den) / (num * 1e6))
-  const rel = s.pts[n] - seek
-  const q = speed === 1 ? rel : Math.trunc(rel / speed)
+  const rel = s.pts[n] - seekOf(s, inPoint)
+  const q = typeof speed === 'number' ? (speed === 1 ? rel : Math.trunc(rel / speed)) : speed(rel, s, inPoint)
   return Math.floor((2 * q * num * FPS + den) / (2 * den))
+}
+
+/** `-ss` is written to 6 dp (plan.ts `seconds`), held in µs, and rescaled into the stream's time base, rounding. */
+function seekOf(s: Source, inPoint: number): number {
+  const { num, den } = s.timeBase
+  return Math.round((Math.round(Number((inPoint / FPS).toFixed(6)) * 1e6) * den) / (num * 1e6))
+}
+
+/** How a clip re-times its source: a constant speed, or a map from a frame's ticks after the seek to its ticks after `setpts`. */
+type Retime = number | ((rel: number, s: Source, inPoint: number) => number)
+
+/**
+ * A ramp's `setpts` as the render WROTE it — read back from the clip's chain
+ * in the graph, so this oracle is the graph's, not reframe/keys.ts's — and
+ * evaluated as setpts does: T the frame's time after the seek (STARTT, if
+ * the graph subtracts it, the first kept frame's), the value over TB
+ * truncated (setpts.c:144).
+ */
+function rampRetime(graph: string, form?: 'T' | 'T-STARTT'): Retime {
+  const m = /\[0:v\]setpts='\((-?[\d.]+)\)\*log\(\((-?[\d.]+)\+\((-?[\d.]+)\)\*(T|\(T-STARTT\))\/(-?[\d.]+)\)\/(-?[\d.]+)\)\/TB'/.exec(graph)
+  if (!m) throw new Error('no ramp at the head of the clip’s chain')
+  const [scale, from, k, , D, by] = [1, 2, 3, 4, 5, 6].map((i) => Number(m[i]))
+  const written = m[4] === 'T' ? 'T' : 'T-STARTT'
+  return (rel, s, inPoint) => {
+    const { num, den } = s.timeBase
+    const tb = num / den
+    const firstKept = s.pts.find((p) => p >= seekOf(s, inPoint))! - seekOf(s, inPoint)
+    // As setpts forms them: T = pts·TB, STARTT the first frame's the same way.
+    const T = (form ?? written) === 'T' ? rel * tb : rel * tb - firstKept * tb
+    return Math.trunc((scale * Math.log((from + (k * T) / D) / by)) / tb)
+  }
 }
 
 /**
@@ -158,7 +188,7 @@ function slotOf(s: Source, n: number, speed: number, inPoint = IN): number {
  * whatever slot the first frame after the seek rounds to — the p0 rows below
  * are the ones where that is slot 1.
  */
-function cutFrame(s: Source, cut: number, speed: number, inPoint = IN): number {
+function cutFrame(s: Source, cut: number, speed: Retime, inPoint = IN): number {
   // The last source frame on slot k is what slot k shows: the cut shows on the first slot whose last frame is at or past it.
   const last = new Map<number, number>()
   for (let n = 0; n < s.pts.length; n++) last.set(slotOf(s, n, speed, inPoint), n)
@@ -167,11 +197,9 @@ function cutFrame(s: Source, cut: number, speed: number, inPoint = IN): number {
 }
 
 /** The slot the first frame at or after the in-point's seek rounds to: 0, or 1 when it is half a slot or more past the seek. */
-function firstSlot(s: Source, speed: number, inPoint: number): number {
+function firstSlot(s: Source, speed: Retime, inPoint: number): number {
   const slots = s.pts.map((_, n) => slotOf(s, n, speed, inPoint))
-  const { num, den } = s.timeBase
-  const seek = Math.round((Math.round(Number((inPoint / FPS).toFixed(6)) * 1e6) * den) / (num * 1e6))
-  const first = s.pts.findIndex((p) => p >= seek)
+  const first = s.pts.findIndex((p) => p >= seekOf(s, inPoint))
   return slots[first]
 }
 
@@ -182,10 +210,11 @@ function trackFor(s: Source, twoUp: boolean): SubjectTrack {
 
 function projectFor(
   s: Source,
-  o: { canvas?: { width: number; height: number }; speed?: number; twoUp?: boolean; follow?: boolean; track?: SubjectTrack; inPoint?: number; start?: number; duration?: number }
+  o: { canvas?: { width: number; height: number }; speed?: number; ramp?: { from: number; to: number }; twoUp?: boolean; follow?: boolean; track?: SubjectTrack; inPoint?: number; start?: number; duration?: number }
 ): { project: Project; clip: Clip } {
   const canvas = o.canvas ?? PORTRAIT
-  const speed = o.speed ?? 1
+  // A ramp's length is its footage over its log-mean rate (speed.ts withClipRamp), as a speed's is over the speed.
+  const speed = o.ramp ? rampRate(o.ramp.from, o.ramp.to) : (o.speed ?? 1)
   const asset: MediaAsset = {
     id: 'v', path: s.file, name: `${s.name}.mp4`, kind: 'video', durationFrames: Math.floor(seconds(s, s.pts.length - 1) * FPS),
     width: 1920, height: 1080, fps: s.assetFps, hasVideo: true, hasAudio: true, size: 0
@@ -194,7 +223,7 @@ function projectFor(
   const clip: Clip = {
     id: 'c', assetId: 'v', trackId: 'v1', start: o.start ?? START, duration: o.duration ?? Math.floor(DURATION / speed), inPoint: o.inPoint ?? IN, volume: 1,
     transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 }, color: { brightness: 0, contrast: 1, saturation: 1 },
-    ...(speed !== 1 ? { speed } : {})
+    ...(o.ramp ? { ramp: o.ramp } : speed !== 1 ? { speed } : {})
   }
   const empty = emptyProject()
   const base: Project = {
@@ -339,7 +368,7 @@ interface RowResult {
 async function followedRow(
   s: Source,
   label: string,
-  o: { canvas?: { width: number; height: number }; speed?: number; twoUp?: boolean; track?: SubjectTrack; inPoint?: number; start?: number; duration?: number }
+  o: { canvas?: { width: number; height: number }; speed?: number; ramp?: { from: number; to: number }; twoUp?: boolean; track?: SubjectTrack; inPoint?: number; start?: number; duration?: number }
 ): Promise<RowResult> {
   const { project, clip } = projectFor(s, o)
   const canvas = o.canvas ?? PORTRAIT
@@ -403,7 +432,7 @@ function rowOf(s: Source, label: string): RowResult {
 }
 
 /** The cut frames, each read at cut − 1, cut and cut + 1, as README lines and as checks of the shot shown. */
-function checkCuts(s: Source, row: RowResult, label: string, speed = 1): void {
+function checkCuts(s: Source, row: RowResult, label: string, speed: Retime = 1): void {
   for (const [i, cut] of s.cuts.entries()) {
     const k = cutFrame(s, cut, speed, row.clip.inPoint)
     const before = row.readings.get(k - 1)
@@ -461,12 +490,14 @@ function checkPan(s: Source, row: RowResult, label: string): void {
  * `extractMomentFrames`, the request `followedFootage` fills), each pulled
  * frame read off its own pixels and compared with the render's frame beneath.
  */
-async function checkMoment(s: Source, row: RowResult, label: string, cut: number, stacked: boolean): Promise<void> {
-  const k0 = cutFrame(s, cut, 1, row.clip.inPoint)
+async function checkMoment(s: Source, row: RowResult, label: string, cut: number, stacked: boolean, retime: Retime = 1): Promise<void> {
+  const k0 = cutFrame(s, cut, retime, row.clip.inPoint)
   const first = k0 - 5
   const count = 10
   const req: FootageRequest = {
     path: s.file, inPoint: row.clip.inPoint, duration: row.clip.duration, first, count, fps: FPS,
+    ...(row.clip.speed !== undefined ? { speed: row.clip.speed } : {}),
+    ...(row.clip.ramp ? { ramp: row.clip.ramp } : {}),
     size: { width: 1920, height: 1080 }, maxEdge: FOOTAGE_MAX_EDGE,
     ...followedFootage(row.project, row.clip, FPS)
   }
@@ -508,8 +539,7 @@ async function checkMoment(s: Source, row: RowResult, label: string, cut: number
 /** Is source frame `n` exactly half-way between two output slots after the in-point's seek (t·30 = m + ½)? From its probed pts, in integers. */
 function onTie(s: Source, n: number, speed = 1, inPoint = IN): boolean {
   const { num, den } = s.timeBase
-  const seek = Math.round((Math.round(Number((inPoint / FPS).toFixed(6)) * 1e6) * den) / (num * 1e6))
-  const rel = s.pts[n] - seek
+  const rel = s.pts[n] - seekOf(s, inPoint)
   const q = speed === 1 ? rel : Math.trunc(rel / speed)
   return (2 * q * FPS * num) % (2 * den) === den
 }
@@ -648,6 +678,34 @@ describe('the followed clock starts at slot 0, when the first frame after the se
     expect(firstSlot(s, 0.5, 1), 'the first frame after the retime rounds to slot 1').toBe(1)
     const row = await followedRow(s, 'p0-half', { inPoint: 1, speed: 0.5 })
     checkCuts(s, row, 'p0 at 0.5×', 0.5)
+  })
+})
+
+/*
+ * A ramp on a followed clip (plan.ts `followedRetime`). `rampVideoFilter`
+ * measures source time from STARTT, the first frame kept after the seek;
+ * the keys put each cut where the ramp maps its time from the in-point. On
+ * this VFR file at in-point 1 the first kept frame is 1/60 s past the seek,
+ * so the two disagree — the precondition below — and a crop keyed on one
+ * clock and a picture cut on the other hold the old crop across a cut. The
+ * oracle is the setpts the graph wrote, evaluated as setpts evaluates it.
+ */
+describe('a followed ramp runs on the seek’s clock', () => {
+  it('VFR at in-point 1, ramp 1 → 0.5: every frame on the model and its shot’s crop, every cut on its frame, the pan, a moment across a cut', async () => {
+    const s = sources.get('vfr')!
+    const ramp = { from: 1, to: 0.5 }
+    const { project } = projectFor(s, { inPoint: 1, ramp })
+    const graph = filterGraphOf(buildRenderPlan({ project, outputPath: join(dir, 'probe.mp4') }).args)
+    const onT = rampRetime(graph, 'T')
+    const onStartt = rampRetime(graph, 'T-STARTT')
+    const moved = s.cuts.filter((c) => cutFrame(s, c, onT, 1) !== cutFrame(s, c, onStartt, 1))
+    say(`- vfr ramp 1→0.5 at in-point 1: the first kept frame ${s.pts.find((p) => p >= seekOf(s, 1))! - seekOf(s, 1)} ticks past the seek; cut frames on T ${s.cuts.map((c) => cutFrame(s, c, onT, 1)).join('/')}, on T−STARTT ${s.cuts.map((c) => cutFrame(s, c, onStartt, 1)).join('/')}`)
+    expect(moved.length, 'cuts whose frame the two clocks disagree on (the row bites only if some do)').toBeGreaterThan(0)
+    const row = await followedRow(s, 'ramp', { inPoint: 1, ramp })
+    const retime = rampRetime(row.rendered.graph)
+    checkCuts(s, row, 'ramp 1→0.5', retime)
+    checkPan(s, row, 'ramp 1→0.5')
+    await checkMoment(s, row, 'ramp 1→0.5', s.cuts[1], false, retime)
   })
 })
 

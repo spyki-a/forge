@@ -174,6 +174,40 @@ export function retimeFilter(clip: Pick<Clip, 'ramp' | 'speed' | 'duration' | 's
   return speedVideoFilter(clipSpeed(clip), fps, clip.smoothSlow)
 }
 
+/**
+ * A FOLLOWED clip's retime — the render's and the moments' pull's: a ramp's
+ * `setpts` on the seek's clock, `T`, not `T-STARTT`; anything else as
+ * `retimeFilter` writes it.
+ *
+ * `rampVideoFilter` measures source time from STARTT, the first frame kept
+ * after the `-ss` seek, which is up to a source frame past the in-point when
+ * the seek falls between frames. The followed crop's keys put each cut where
+ * the ramp maps its time from the IN-POINT (reframe/keys.ts `exportFrameAt`,
+ * as the preview's `rampSourceAt` does), so from STARTT every cut's frame
+ * moved: measured through this chain's head with every source frame a cut,
+ * a VFR file at in-point 7 had 721 of 721 cuts off (ramp 1→0.5) and 662 of
+ * 1012 (0.25→4), by up to 5 frames, and 29.97 footage 5–10 of about a
+ * thousand. After `-ss`, T is already seek-relative, and on it the same rows
+ * were 0 off on VFR, 29.97, 30 and 60 fps sources, at in-points 0 and 7. The
+ * first frame then maps past 0 when the seek missed a frame, and the
+ * followed clock after it (`followClock`) starts the grid at slot 0 anyway.
+ * An unfollowed ramp keeps `T-STARTT` (speed.ts, its own render checks).
+ */
+export function followedRetime(
+  clip: Pick<Clip, 'ramp' | 'speed' | 'duration' | 'smoothSlow'>,
+  fps: number,
+  follow: CropFollow | null | undefined
+): string | null {
+  const retime = retimeFilter(clip, fps)
+  if (!retime || !clipRamp(clip) || !followMoves(follow)) return retime
+  // One site, or the ramp's shape changed under this: say so rather than leave a crop on the wrong clock.
+  const anchor = '*(T-STARTT)/'
+  const sites = retime.split(anchor).length - 1
+  if (sites === 0 && !retime.includes('STARTT')) return retime // a flat ramp is a constant speed
+  if (sites !== 1) throw new Error(`A followed ramp's setpts is not the shape it is rewritten from: ${retime}`)
+  return retime.replace(anchor, '*T/')
+}
+
 function fitFilter(width: number, height: number, mode: 'contain' | 'cover' = 'contain'): string {
   if (mode === 'cover') {
     // Fill the box and cut the overflow. `increase` then crop is the standard
@@ -1295,7 +1329,8 @@ export function buildRenderPlan(request: RenderRequest): RenderPlan {
      */
     // An adjustment layer grades what is below it and has no picture to key.
     const key = clip.key && !clip.adjustment ? saneKey(clip.key) : null
-    const retime = asset.kind === 'image' || clip.hold ? null : retimeFilter(clip, fps)
+    // A followed clip ramps on the seek's clock, where its keys put the cuts (`followedRetime`).
+    const retime = asset.kind === 'image' || clip.hold ? null : followedRetime(clip, fps, follow)
     const prepare = [
       /*
        * Steadied first, on the frames exactly as decoded — before speed, crop

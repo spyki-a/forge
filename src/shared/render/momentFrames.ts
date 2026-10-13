@@ -1,5 +1,5 @@
 import { assetById, framesToSeconds, type Clip, type Project } from '../timeline'
-import { cropFilter, followClock, retimeFilter, type CropFollow } from './plan'
+import { cropFilter, followClock, followedRetime, type CropFollow } from './plan'
 import { sourceFramesFor } from './speed'
 import { followKeys } from '../reframe/keys'
 import type { FootageRequest } from './moment'
@@ -8,7 +8,7 @@ import type { FootageRequest } from './moment'
  * The pre-pass for a moment over footage (docs/PLAN.md §7.2): the shot's
  * frames under the moment, pulled from the file by ffmpeg into numbered PNGs,
  * through the SAME chain the render plays the clip with — decoded from the
- * in-point as `videoInputArgs` does, the clip's retime (`retimeFilter`: the
+ * in-point as `videoInputArgs` does, the clip's retime (`followedRetime`: the
  * ramp's `setpts` curve, or the constant speed's `setpts` and `fps`; at
  * speed 1 the render's own `fps` step, which resamples 24p and 60p footage to
  * the project's rate), the render's `cropFilter` in the file's pixels — a
@@ -82,7 +82,7 @@ export function momentFrameArgs(req: FootageRequest, pattern: string): string[] 
    * first frame after the seek rounds to. At speed 1 the clock IS the fps step.
    */
   const clock = followClock(follow, fps)
-  const retime = [retimeFilter(clip, fps) ?? (clock ? null : `fps=${fps}`), clock].filter((s) => s !== null).join(',')
+  const retime = [followedRetime(clip, fps, follow) ?? (clock ? null : `fps=${fps}`), clock].filter((s) => s !== null).join(',')
   /*
    * The render's own input window, whole (`videoInputArgs`: `-t` of the
    * source frames the clip eats), not just the window's — and for smooth

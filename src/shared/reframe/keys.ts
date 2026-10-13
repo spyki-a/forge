@@ -44,9 +44,14 @@ import type { Clip, CropRect, Project } from '../timeline'
  *   every cut at 0.5× (two at 60 fps). On the shot finder's printed time it
  *   was early on 15 of 44 cuts at 30 fps, 20 of 44 at 29.97, and 21 of 44 on
  *   VFR, even at speed 1, because it floors the time to a source frame.
- * - A ramp's frame is modelled from its own `setpts` (speed.ts
- *   `rampVideoFilter`, its constants at the 4 dp it writes them). **Ramps are
- *   unmeasured**; a ramped clip's keys carry a note saying so.
+ * - A ramp's frame is its own `setpts` (speed.ts `rampVideoFilter`, its
+ *   constants at the 4 dp it writes them) on the SEEK's clock: a followed
+ *   clip's ramp is written with `T`, not `T-STARTT` (plan.ts
+ *   `followedRetime`), because STARTT is the first frame kept after the
+ *   seek, up to a source frame past the in-point, and from it every cut
+ *   moved — 721 of 721 cuts off on a VFR file at in-point 7, by up to 5
+ *   frames over four ramps. On `T`, 0 off on VFR, 29.97, 30 and 60 fps
+ *   sources, ramps 1→0.5, 0.5→2, 2→1 and 0.25→4, at in-points 0 and 7.
  *
  * **The shot finder's time is not exact.** `Shot.startMs` is ffmpeg's
  * `pts_time` printed `%.6g`: frame 500 of a 29.97 file prints 16.6833, and
@@ -165,7 +170,7 @@ function retimeOf(clip: RetimedClip, fps: number): { at: (tau: number) => number
   if (ramp) {
     const k = ramp.to - ramp.from
     if (Math.abs(k) >= 1e-9) {
-      // rampVideoFilter: setpts='(D/k)*log((from+k*(T-STARTT)/D)/from)/TB', D the footage it plays.
+      // followedRetime: setpts='(D/k)*log((from+k*T/D)/from)/TB', D the footage it plays and T seek-relative.
       const D = (clip.duration * rampRate(ramp.from, ramp.to)) / fps
       const scale = graphNumber(D / k)
       const from = graphNumber(ramp.from)
@@ -377,7 +382,6 @@ function compile(track: SubjectTrack, clip: Clip, fps: number, target: { width: 
     return held
   }
 
-  if (clipRamp(clip)) notes.push('a ramped clip’s cut frames are modelled from its setpts, not measured')
   if (clip.smoothSlow && clipSpeed(clip) < 1) notes.push('a smooth slow clip’s cut frames are interpolated: unmeasured')
 
   // Each shot's frames on the clip: [its cut's frame, the next cut's frame).

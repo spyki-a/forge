@@ -113,6 +113,24 @@ describe('buildRenderPlan: the followed crop in the chain', () => {
     expect(count(chain, 'start_time=0')).toBe(1)
   })
 
+  it('a ramp: on the seek’s clock (T, not T-STARTT), then the clock, then the crop — in the render and the pull; an unfollowed ramp keeps its own', () => {
+    const ramp = { from: 1, to: 0.5 }
+    const head = /^setpts='\(-?[\d.]+\)\*log\(\(-?[\d.]+\+\(-?[\d.]+\)\*T\/[\d.]+\)\/[\d.]+\)\/TB',fps=30,fps=30:start_time=0,crop=w='min\(608,in_w\)'/
+    const followed = project({ clip: { ramp, duration: 291 } })
+    const chain = chainOf(graphOf(followed))
+    expect(chain).toMatch(head)
+    expect(count(chain, 'STARTT')).toBe(0)
+    const req: FootageRequest = {
+      path: '/media/talk.mp4', inPoint: 6, duration: 291, ramp, first: 50, count: 10, fps: FPS, size: { width: 1920, height: 1080 }, maxEdge: FOOTAGE_MAX_EDGE,
+      ...followedFootage(followed, followed.clips[0], FPS)
+    }
+    const args = momentFrameArgs(req, '/tmp/m/%05d.png')
+    expect(args[args.indexOf('-vf') + 1]).toMatch(head)
+    const plain = chainOf(graphOf(project({ clip: { ramp, duration: 291, follow: undefined } })))
+    expect(count(plain, '*(T-STARTT)/')).toBe(1)
+    expect(plain).not.toContain('start_time=')
+  })
+
   it('a two-up clip: the clock, the split and its two crops, the stack, its tpad, then the fit', () => {
     const graph = graphOf(project({ twoUp: true }))
     expect(count(graph, 'fps=30:start_time=0,split=2[r0a][r0b];[r0a]crop=w=')).toBe(1)
