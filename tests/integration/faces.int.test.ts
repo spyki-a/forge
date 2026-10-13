@@ -432,7 +432,8 @@ describeWithVenv(
     it('a worker that aborts mid-pass is Unavailable with its code, its half-track removed, and the helper answers', async () => {
       const cache = join(dir, 'cache', 'abort')
       const client = await helper({ models, cache, env: { FORGE_FACES_WORKER_FAKE: 'colour', FORGE_FACES_WORKER_ABORT: '1' } })
-      const code = process.platform === 'win32' ? 3 : -6
+      // Windows: CPython's docs say abort() exits 3; the UCRT may fast-fail with 0xC0000409 instead. Unmeasured, so either.
+      const code = process.platform === 'win32' ? '(3|3221226505)' : '-6'
       await expectRejection(
         client.request(SIDECAR_METHODS.faces, params(clips.boxes)),
         RPC_ERRORS.unavailable,

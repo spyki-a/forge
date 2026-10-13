@@ -503,9 +503,15 @@ class Pipe(unittest.TestCase):
                 os.abort()
                 """
             )
-        # -6 (SIGABRT) on macOS and Linux; abort() exits 3 on Windows.
-        code = 3 if os.name == "nt" else -6
-        self.assertIn(f"the face detector stopped (code {code})", str(caught.exception))
+        # -6 (SIGABRT) on macOS and Linux. On Windows CPython's docs say
+        # abort() exits 3, but the UCRT's abort() fast-fails with
+        # STATUS_STACK_BUFFER_OVERRUN, 0xC0000409, when _CALL_REPORTFAULT is
+        # set. Neither is measured (docs/CLIPS.md §4.3), so either is accepted
+        # there until a Windows run says which; the message's shape is the
+        # same whatever the number.
+        codes = (3, 0xC0000409) if os.name == "nt" else (-6,)
+        message = str(caught.exception)
+        self.assertTrue(any(message.startswith(f"the face detector stopped (code {c}): ") for c in codes), message)
         self.assertIn("Check failed: service_", str(caught.exception))
         self.assertFalse(os.path.exists(self.partial), "the abort's half-track was kept")
         self.assertFalse(os.path.exists(self.track))
