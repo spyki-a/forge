@@ -404,11 +404,22 @@ class Model(unittest.TestCase):
 # ------------------------------------------------------- the worker's pipe
 
 
+STAND_IN_DEADLINE_S = 15
+"""How long a stand-in worker may live. Past it, it exits 99: a helper that never
+stops its worker (its relay loop not checking the cancel) then fails the test
+that was waiting on it, by name, rather than hanging the suite — on CI's bare
+interpreter this layer is the only one that runs."""
+STAND_IN_OVERTIME = 99
+
+
 def stand_in(body: str) -> dict:
     """A worker command running ``body`` (it gets ``spec``, ``say``) instead of mp_faces."""
     script = textwrap.dedent(
-        """
-        import json, os, sys, time
+        f"""
+        import json, os, sys, threading, time
+        _deadline = threading.Timer({STAND_IN_DEADLINE_S}, os._exit, ({STAND_IN_OVERTIME},))
+        _deadline.daemon = True
+        _deadline.start()
         spec = json.loads(sys.stdin.buffer.readline())
         def say(*words):
             sys.stdout.write(" ".join(str(w) for w in words) + "\\n"); sys.stdout.flush()
