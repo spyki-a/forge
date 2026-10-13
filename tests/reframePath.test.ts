@@ -166,6 +166,33 @@ describe('cropPath — rules 4 and 5: static first, a pan only when the subject 
     expect(path.shots[0].pans).toEqual([])
   })
 
+  it('a drift outside the dead zone that stays inside the held crop, margin and all, gives no pan', () => {
+    // Rule 4 before rule 5. A 60 px face at 960, then at 1170 from 2000: 210
+    // px from the crop's centre, past the dead zone's 152, so rule 5 alone
+    // would pan; its box plus the margin (1140 − 36.5 to 1200 + 36.5) is
+    // still inside the held 656–1264, so the shot is static.
+    const t = track({ shots: [[0, 6000]], faces: (ms) => [face(ms < 2000 ? 960 : 1170, 400, 60)] })
+    const path = cropPath(t, PORTRAIT_CANVAS)
+    const s = path.shots[0]
+    const margin = PATH_RULES.marginShare * path.size.width
+    expect(Math.abs(1170 - centreOf(path, s.at))).toBeGreaterThan((PATH_RULES.deadZone * path.size.width) / 2)
+    expect(1170 + 30 + margin).toBeLessThanOrEqual(s.at + path.size.width)
+    expect(s.pans).toEqual([])
+  })
+
+  it('the same drift to within the margin of the crop’s edge pans', () => {
+    // At 1200 the box (1170–1230) is inside the 656–1264 crop, but not with
+    // its 36.5 px margin: the static test fails, and rule 5 moves the crop.
+    const t = track({ shots: [[0, 6000]], faces: (ms) => [face(ms < 2000 ? 960 : 1200, 400, 60)] })
+    const path = cropPath(t, PORTRAIT_CANVAS)
+    const s = path.shots[0]
+    const margin = PATH_RULES.marginShare * path.size.width
+    expect(1200 + 30).toBeLessThanOrEqual(s.at + path.size.width)
+    expect(1200 + 30 + margin).toBeGreaterThan(s.at + path.size.width)
+    expect(s.pans).toHaveLength(1)
+    expect(Math.abs(centreOf(path, s.pans[0].to) - 1200)).toBeLessThanOrEqual(2)
+  })
+
   it('a 0.3 s excursion gives no pan', () => {
     // One sample (2500) outside the dead zone: not outside for triggerMs.
     const path = cropPath(excursion(2400, 2700), PORTRAIT_CANVAS)
