@@ -17,8 +17,10 @@ import {
   matchOnsets,
   noiseFloor,
   parseAss,
+  pickMidRun,
   pickRun,
   readOnsets,
+  shapingSensitive,
   type AssEvent
 } from './fixtures/m0Exit'
 
@@ -108,6 +110,48 @@ describe('pickRun — the run the check clips', () => {
     const d = pickRun(t, rows[4].startMs)!
     expect(d.run).toEqual({ from: rows[4].words[0], to: rows[4].words[1] })
     expect(pickRun(t, rows[4].startMs + 1)).toBeNull()
+  })
+})
+
+describe('pickMidRun — a run with hard edges, for "nothing outside it"', () => {
+  /*
+   * Forty words 300 ms apart, each 250 ms long, no pause, a sentence ending
+   * at 19 (two rows of twenty) — and the word before each index in TOUCH
+   * ends exactly where it starts. 20 starts a row.
+   */
+  const TOUCH = [3, 9, 12, 15, 20, 23, 28]
+  const words: Word[] = Array.from({ length: 40 }, (_, i) => ({ index: i, text: `w${i}`, startMs: 1000 + i * 300, endMs: 1250 + i * 300, confidence: null }))
+  for (const k of TOUCH) words[k - 1] = { ...words[k - 1], endMs: words[k].startMs }
+  // A sentence ends at 19, so 20 starts a row whatever the gaps.
+  words[19] = { ...words[19], text: 'w19.' }
+  // One that misses by a millisecond is not a hard edge.
+  words[35] = { ...words[35], endMs: words[36].startMs - 1 }
+  const t: Transcript = {
+    assetId: 'url:test', language: 'en', model: 'youtube-asr', durationMs: 14_000, words,
+    segments: segmentIntoSentences(words, PAUSE_BOUNDARY_MS, { maxWords: 30, maxMs: 15_000 })
+  }
+  const at = (i: number): number => words[i].startMs
+
+  it('the fixture has the rows it says', () => {
+    expect(rowsOf(t).map((r) => r.words)).toEqual([[0, 19], [20, 39]])
+  })
+
+  it('starts on a word the one before runs straight into, and ends on one the next follows at once — 8 to 20 words', () => {
+    expect(pickMidRun(t, at(0))?.run).toEqual({ from: 3, to: 11 })
+    expect(pickMidRun(t, at(4))?.run).toEqual({ from: 9, to: 19 })
+    expect(pickMidRun(t, at(13))?.run).toEqual({ from: 15, to: 22 })
+    for (const target of [0, 4, 13]) {
+      const { run } = pickMidRun(t, at(target))!
+      expect(words[run.from - 1].endMs).toBe(words[run.from].startMs)
+      expect(words[run.to].endMs).toBe(words[run.to + 1].startMs)
+      expect(run.to - run.from + 1).toBeGreaterThanOrEqual(RUN_MIN_WORDS)
+      expect(run.to - run.from + 1).toBeLessThanOrEqual(RUN_MAX_WORDS)
+    }
+  })
+
+  it('never starts on a row’s first word, and a millisecond’s gap is not an edge', () => {
+    // 20 starts a row (it would run to 27). 23: no hard end 8–20 words on. 28: it would end on 35, whose next word is a millisecond late.
+    expect(pickMidRun(t, at(16))).toBeNull()
   })
 })
 
@@ -278,19 +322,20 @@ describe('readOnsets — where captions appear and change, from the counts alone
   const ink = Array.from({ length: 50 }, (_, f) => (f < 5 ? 15 : f < 25 ? 6000 : f < 30 ? 20 : f < 35 ? 800 : 10))
   const change = Array.from({ length: 50 }, (_, f) => (f === 5 ? 6000 : f === 12 ? 1500 : f === 13 ? 4200 : f === 20 ? 3800 : f === 30 ? 800 : f === 25 || f === 35 ? 6000 : 25))
 
-  it('lines where a caption follows a blank; words where the caption’s pixels move; a smear read at its largest', () => {
+  it('lines where a caption follows a blank; words where the caption’s pixels move — two a frame apart are two', () => {
+    // 12 and 13 both moved: two words a frame apart (j4aoo1qbGoE's export, frames 136 and 137), not one smeared.
     const r = readOnsets(ink, change)
     expect(r.lines).toEqual([5, 30])
-    expect(r.onsets).toEqual([5, 13, 20, 30])
+    expect(r.onsets).toEqual([5, 12, 13, 20, 30])
   })
 
   it('a line of one short word is still a caption: 800 pixels against lines of 6000', () => {
     expect(readOnsets(ink, change).inkThreshold).toBeLessThan(800)
   })
 
-  it('a line is read at its first frame, even when the frame after it changed more', () => {
+  it('a line’s first frame is an onset however little its pixels moved, and a held frame is none', () => {
     const ink2 = [10, 10, 6000, 6000, 6000, 6000]
-    const change2 = [10, 10, 3000, 5000, 25, 25]
+    const change2 = [10, 10, 200, 25, 25, 25]
     expect(readOnsets(ink2, change2).onsets).toEqual([2])
   })
 })
@@ -301,11 +346,17 @@ describe('frameLabels and noiseFloor — what the .ass says each frame is', () =
   const events = [ev(100, 300), ev(300, 500), ev(800, 1000)]
   const labels = frameLabels(events, 36, 30)
 
-  it('frame times as libass is handed them, whole ms', () => {
+  it('frame times as libass is handed them: pts × (1/fps) × 1000 in a double, truncated', () => {
     expect([0, 1, 2, 3, 4].map((f) => frameMs(f, 30))).toEqual([0, 33, 66, 100, 133])
+    // The product falls just under the exact value here, so libass draws the frame a millisecond early.
+    expect(frameMs(414, 30)).toBe(13_799)
+    expect(frameMs(111, 30)).toBe(3_699)
     expect(firstFrameAt(100, 30)).toBe(3)
     expect(firstFrameAt(101, 30)).toBe(4)
     expect(firstFrameAt(2840, 30)).toBe(86)
+    // A Dialogue at 13.80 s is not on frame 414 (13,799 ms) but on 415 — measured on eK71EN3P78U's export.
+    expect(firstFrameAt(13_800, 30)).toBe(415)
+    expect(firstFrameAt(3_700, 30)).toBe(112)
   })
 
   it('onset, held, blank — and edge for the frame before an onset, the frame after it, and a line’s last', () => {
@@ -331,11 +382,29 @@ describe('frameLabels and noiseFloor — what the .ass says each frame is', () =
   })
 })
 
-describe('matchOnsets — each word’s onset within a frame', () => {
-  it('the nearest onset to each word, and how many are within a frame', () => {
+describe('matchOnsets — each word to an onset of its own, within a frame', () => {
+  it('matches within a frame, says which words got none and which onsets no word took', () => {
     const m = matchOnsets([0, 8, 15, 21, 105], [0, 8, 14, 23, 101])
-    expect(m.offsets).toEqual([0, 0, -1, 2, -4])
+    expect(m.offsets).toEqual([0, 0, -1, null, null])
+    expect(m.nearest).toEqual([0, 0, -1, 2, -4])
     expect(m.within).toBe(3)
+    expect(m.extra).toEqual([23, 101])
     expect(matchOnsets([5], []).offsets).toEqual([null])
+  })
+
+  it('one onset cannot answer for two words a frame apart: the second word’s caption never showed', () => {
+    expect(matchOnsets([136, 137], [137])).toMatchObject({ offsets: [1, null], within: 1, extra: [] })
+    expect(matchOnsets([136, 137], [136, 137])).toMatchObject({ offsets: [0, 0], within: 2, extra: [] })
+  })
+
+  it('a caption that flickers leaves onsets no word took', () => {
+    expect(matchOnsets([10], [9, 10, 11])).toMatchObject({ within: 1, extra: [10, 11] })
+  })
+})
+
+describe('shapingSensitive — words that need complex shaping to be spelt right', () => {
+  it('counts a conjunct (a virama) or a vowel sign drawn before its consonant, in made-up clusters', () => {
+    // क्ष and క్ష: conjuncts. कि and হি: the i-matra goes first. का, కి and Latin need neither.
+    expect(shapingSensitive(['क्ष', 'कि', 'का', 'క్ష', 'కి', 'abc', 'হি'])).toBe(4)
   })
 })

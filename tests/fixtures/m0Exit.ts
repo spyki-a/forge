@@ -1,5 +1,5 @@
 import type { WordRun } from '@shared/ingest/captions'
-import { clampRun, rowsOf } from '@shared/ingest/wordRun'
+import { clampRun, rowOfWord, rowsOf } from '@shared/ingest/wordRun'
 import type { Transcript } from '@shared/transcript'
 
 /*
@@ -12,6 +12,8 @@ import type { Transcript } from '@shared/transcript'
  *
  *   pickRun        which run of words a link is clipped at (the rule the
  *                  check records: 40 % in, 8–20 words)
+ *   pickMidRun     a run with hard edges: no pause before its first word or
+ *                  after its last, where a neighbour's sliver could show
  *   matchFrame     where the exact clip's first frame sits in the padded fast
  *                  cut of the same range — the §41 measurement, on real streams
  *   audioLag       the same for the sound, by cross-correlation
@@ -21,7 +23,7 @@ import type { Transcript } from '@shared/transcript'
  *   readOnsets     where captions appear and change, from those counts alone
  *   frameLabels    what the .ass says each frame is, for the noise floor
  *   noiseFloor     the margins the onset thresholds sit in
- *   matchOnsets    each word's onset within a frame, or not
+ *   matchOnsets    each word to an onset of its own within a frame, or not
  */
 
 /* ------------------------------------------------------------- the run */
@@ -34,6 +36,8 @@ export const RUN_MAX_WORDS = 20
 export const RUN_AT = 0.4
 /** Where the second run (Add another clip, on one link) is taken. */
 export const SECOND_RUN_AT = 0.7
+/** Where the mid-row run (`pickMidRun`) is looked for. */
+export const MID_RUN_AT = 0.55
 
 export interface PickedRun {
   run: WordRun
@@ -59,6 +63,33 @@ export function pickRun(t: Transcript, targetMs: number): PickedRun | null {
   while (rows[last].words[1] - from + 1 < RUN_MIN_WORDS && last + 1 < rows.length) last++
   const run = clampRun(t, { from, to: Math.min(rows[last].words[1], from + RUN_MAX_WORDS - 1) })
   return { run, firstRow: first, rows: last - first + 1 }
+}
+
+/**
+ * A run with HARD edges, for "nothing outside it": its first word starts
+ * exactly where the word before it ends and is not a row's first, and its
+ * last word ends exactly where the next one starts — no pause on either side.
+ * `pickRun` starts every run on a row, after a pause (160–6000 ms measured),
+ * so the cut never met a neighbour; here it meets one at each end, which is
+ * where a sliver of the next word's sound would show. Searched from the first
+ * word starting at or after `targetMs`, RUN_MIN_WORDS to RUN_MAX_WORDS words.
+ * Null when there is no such run after the target.
+ */
+export function pickMidRun(t: Transcript, targetMs: number): PickedRun | null {
+  const rows = rowsOf(t)
+  const rowStarts = new Set(rows.map((r) => r.words[0]))
+  const w = t.words
+  const from = w.findIndex((x) => x.startMs >= targetMs)
+  if (from < 0) return null
+  for (let i = Math.max(1, from); i < w.length; i++) {
+    if (rowStarts.has(i) || w[i - 1].endMs !== w[i].startMs) continue
+    for (let j = i + RUN_MIN_WORDS - 1; j <= Math.min(i + RUN_MAX_WORDS - 1, w.length - 2); j++) {
+      if (w[j].endMs !== w[j + 1].startMs) continue
+      const a = rowOfWord(rows, i)
+      return { run: { from: i, to: j }, firstRow: a, rows: rowOfWord(rows, j) - a + 1 }
+    }
+  }
+  return null
 }
 
 /* ------------------------------------------- the exact cut's first frame */
@@ -354,9 +385,13 @@ export function quantile(values: readonly number[], q: number): number {
  *   caption's own pixels move by CHANGE_SHARE of a captioned frame's median
  *   ink, and at least CHANGE_FLOOR — the lit word grows and the line
  *   re-centres, which moves most of it.
- * Consecutive such frames are one onset (the encoder can smear a change over
- * two): at the first when it is a line's first frame, else at the frame that
- * changed most.
+ * Every such frame is an onset of its own. They used to be merged when
+ * consecutive, on the guess that the encoder smears a change over two frames;
+ * measured on every export of the exit run (2026-10-12), the frame after an
+ * onset moved at most 76 of the caption's pixels against at least 2,160 at an
+ * onset — no smear — while two real words a frame apart (j4aoo1qbGoE, export
+ * frames 136 and 137) were merged into one, and a word whose caption never
+ * showed could pass on its neighbour's onset.
  */
 export const INK_FLOOR = 300
 export const INK_SHARE = 0.05
@@ -379,35 +414,34 @@ export function readOnsets(ink: readonly number[], change: readonly number[]): O
   const changeThreshold = Math.max(CHANGE_FLOOR, CHANGE_SHARE * quantile(shown, 0.5))
   const lines: number[] = []
   const onsets: number[] = []
-  let run: number[] = []
-  const close = (): void => {
-    if (run.length === 0) return
-    const first = run[0]
-    const fresh = lines.includes(first)
-    onsets.push(fresh ? first : run.reduce((a, b) => (change[b] > change[a] ? b : a)))
-    run = []
-  }
   for (let f = 0; f < ink.length; f++) {
     const fresh = on[f] && (f === 0 || !on[f - 1])
     if (fresh) lines.push(f)
-    // A line's first frame follows a blank one, so it always opens a run of its own.
-    if (on[f] && (fresh || change[f] >= changeThreshold)) run.push(f)
-    else close()
+    if (on[f] && (fresh || change[f] >= changeThreshold)) onsets.push(f)
   }
-  close()
   return { inkThreshold, changeThreshold, lines, onsets }
 }
 
 /* ------------------------------------------------ what the .ass says, per frame */
 
-/** When libass is asked to draw frame `f` at `fps`: its time in whole ms (vf_subtitles hands it a long long). */
+/**
+ * When libass is asked to draw frame `f` at `fps`: vf_subtitles computes
+ * `pts * av_q2d(time_base) * 1000` in a double and hands libass a long long,
+ * so the product is TRUNCATED — and `f * (1/30) * 1000` falls just under the
+ * exact value on 51 of the first 3,000 frames (111, 207, 222, 237, 399, 414,
+ * …): frame 414 is drawn at 13,799 ms, before a Dialogue starting at 13.80 s.
+ * The same double arithmetic here, for a time base of 1/fps.
+ */
 export function frameMs(f: number, fps: number): number {
-  return Math.floor((f * 1000) / fps + 1e-6)
+  return Math.floor(f * (1 / fps) * 1000)
 }
 
-/** The first frame on which something starting at `ms` is on screen. */
+/** The first frame on which something starting at `ms` is on screen: the first whose `frameMs` reaches it. */
 export function firstFrameAt(ms: number, fps: number): number {
-  return Math.max(0, Math.ceil((ms * fps) / 1000 - 1e-6))
+  let f = Math.max(0, Math.ceil((ms * fps) / 1000 - 1e-6))
+  while (frameMs(f, fps) < ms) f++
+  while (f > 0 && frameMs(f - 1, fps) >= ms) f--
+  return f
 }
 
 export type FrameLabel = 'blank' | 'onset' | 'held' | 'edge'
@@ -484,18 +518,50 @@ export function noiseFloor(ink: readonly number[], change: readonly number[], la
 /* ------------------------------------------------------ onsets against words */
 
 export interface OnsetMatch {
-  /** Per word: the nearest onset seen, minus the word's frame; null when none was seen at all. */
+  /** Per word: the onset it took, minus the word's frame; null when no onset within `slack` was left for it. */
   offsets: (number | null)[]
-  /** How many words have an onset within `slack` frames. */
+  /** Per word: the nearest onset at all, minus its frame, shared or not — for the record. */
+  nearest: (number | null)[]
+  /** How many words took an onset. */
   within: number
+  /** The onsets no word took: a caption that changed when no word began. */
+  extra: number[]
 }
 
-/** Each word's frame against the onsets read: the nearest, and whether it is within `slack`. */
+/**
+ * Words to onsets ONE TO ONE: each word, in order, takes the earliest onset
+ * not yet taken within `slack` frames of it (both lists in time order, so
+ * this finds a full matching whenever one exists). Nearest-onset matching let
+ * one onset answer for two words a frame apart, so a word whose caption never
+ * showed passed on its neighbour's; and an onset no word took — a caption
+ * flickering — was only written down.
+ */
 export function matchOnsets(wordFrames: readonly number[], onsets: readonly number[], slack = 1): OnsetMatch {
+  const sorted = [...onsets].sort((a, b) => a - b)
+  const extra: number[] = []
+  let j = 0
   const offsets = wordFrames.map((w) => {
+    while (j < sorted.length && sorted[j] < w - slack) extra.push(sorted[j++])
+    if (j < sorted.length && sorted[j] <= w + slack) return sorted[j++] - w
+    return null
+  })
+  while (j < sorted.length) extra.push(sorted[j++])
+  const nearest = wordFrames.map((w) => {
     let best: number | null = null
-    for (const o of onsets) if (best === null || Math.abs(o - w) < Math.abs(best)) best = o - w
+    for (const o of sorted) if (best === null || Math.abs(o - w) < Math.abs(best)) best = o - w
     return best
   })
-  return { offsets, within: offsets.filter((d) => d !== null && Math.abs(d) <= slack).length }
+  return { offsets, nearest, within: offsets.filter((d) => d !== null).length, extra }
+}
+
+/* ------------------------------------------------------- shaping, counted */
+
+/** A virama, in any of the Indic scripts the user's audience writes (Devanagari, Bengali, Gurmukhi, Gujarati, Oriya, Tamil, Telugu, Kannada, Malayalam). */
+const VIRAMA = /[\u094D\u09CD\u0A4D\u0ACD\u0B4D\u0BCD\u0C4D\u0CCD\u0D4D]/u
+/** A vowel sign drawn BEFORE its consonant: the i-matra and its kin (Devanagari, Bengali, Gurmukhi, Gujarati, Oriya, Malayalam, Tamil). */
+const PRE_BASE = /[\u093F\u09BF\u09C7\u09C8\u0A3F\u0ABF\u0B47\u0BC6-\u0BC8\u0D46-\u0D48]/u
+
+/** Words whose glyphs only come out right with complex shaping: a conjunct (a virama), or a pre-base vowel sign. */
+export function shapingSensitive(words: readonly string[]): number {
+  return words.filter((w) => VIRAMA.test(w) || PRE_BASE.test(w)).length
 }
