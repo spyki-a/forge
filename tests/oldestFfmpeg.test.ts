@@ -100,7 +100,19 @@ const TOO_NEW: { pattern: RegExp; since: string; why: string }[] = [
    * Changelog ("scdet filter", read at n4.3). `select`'s `scene` score
    * (2012) is the old way to the same number.
    */
-  { pattern: /\bscdet\b/, since: '4.3', why: "select='gt(scene,…)' with showinfo, or the scene score from metadata" }
+  { pattern: /\bscdet\b/, since: '4.3', why: "select='gt(scene,…)' with showinfo, or the scene score from metadata" },
+  /*
+   * The expression evaluator's own functions (libavutil/eval.c). Step 1f is
+   * the first code to write long per-frame expressions (the followed crop's
+   * flat sum, docs/CLIPS.md §4.7), and `sgn` is the obvious reach for a step —
+   * `(1+sgn(t-b))/2` — and the Mac's 4.4 build accepts it (run). Read in
+   * eval.c's function table at each tag: absent at f22fcd4 and n4.2, present
+   * from n4.3; `randomi` absent through n6.1, present from n7.0 (the Mac
+   * build refuses it: "Unknown function"). Nothing else in that table is
+   * newer than the floor (the names diffed, f22fcd4 against n7.1).
+   */
+  { pattern: /\bsgn\(/, since: '4.3', why: 'gte/lt for a step, or gt(x,0)-lt(x,0)' },
+  { pattern: /\brandomi\(/, since: '7.0', why: 'random(), scaled and floored' }
 ]
 
 const W = 640
