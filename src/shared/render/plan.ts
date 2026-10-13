@@ -1,4 +1,4 @@
-import type { Project, Clip, MediaAsset, ParallaxBake, Track } from '../timeline'
+import type { Project, Clip, CropRect, MediaAsset, ParallaxBake, Track } from '../timeline'
 import {
   assetById,
   clipsOnTrack,
@@ -19,7 +19,9 @@ import { curvesFilter } from './colourCurve'
 import { whiteBalanceFilter } from './whiteBalance'
 import { chromakeyFilter, despillFilter, saneKey } from './chromaKey'
 import { isFullFrameMask, isMaskAnimated, isWholeFrameShape, maskExpression } from './mask'
-import { effectiveCrop, safeCrop, scaleCrop, type Size } from './crop'
+import { effectiveCrop, evenDown, safeCrop, scaleCrop, type Size } from './crop'
+import { flatSumExpression, type FlatSum } from '../reframe/expression'
+import { followKeys } from '../reframe/keys'
 import { atempoChain, clipRamp, clipSpeed, rampRate, rampVideoFilter, sourceFramesFor, speedVideoFilter } from './speed'
 import { audioFadeFilters, fadesWithNeighbours } from './audioFade'
 import { duckFilter } from './duck'
@@ -657,11 +659,25 @@ function clamp(value: number, min: number, max: number): number {
  * depth planes and carries the bake's dimensions instead. Cropping a plane
  * composite against the original photograph's size was a second way to ask for
  * pixels that were not there.
+ *
+ * `follow` is a followed clip's crop (`CropFollow`, below): the size is its,
+ * and x (and y) the flat sums of its keys at `fps`; on a clip whose path
+ * holds a stacked two-up, the split, two crops and `vstack` in place of the
+ * one, its labels numbered by `index`, the clip's place in the graph. Footage
+ * only: the parallax call site passes none.
  */
-export function cropFilter(clip: Pick<Clip, 'crop'>, source: Size | null): string | null {
-  if (!clip.crop) return null
-  const crop = safeCrop(clip.crop, source) ?? safeCrop(clip.crop, { width: 1e6, height: 1e6 })
+export function cropFilter(
+  clip: Pick<Clip, 'crop'>,
+  source: Size | null,
+  follow?: CropFollow | null,
+  fps = 30,
+  index = 0
+): string | null {
+  const rect = follow?.crop ?? clip.crop
+  if (!rect) return null
+  const crop = safeCrop(rect, source) ?? safeCrop(rect, { width: 1e6, height: 1e6 })
   if (!crop) return null
+  if (follow?.halves) return stackedCrop(crop, follow.halves, fps, index)
 
   /*
    * Expressions, not numbers — so the filter clamps itself.
@@ -682,11 +698,93 @@ export function cropFilter(clip: Pick<Clip, 'crop'>, source: Size | null): strin
    * a filter_complex with filters either side, which is where the commas in
    * these expressions could have gone wrong and do not.
    */
-  const w = `min(${crop.width},in_w)`
-  const h = `min(${crop.height},in_h)`
-  const x = `max(0,min(${crop.x},in_w-out_w))`
-  const y = `max(0,min(${crop.y},in_h-out_h))`
-  return `crop=w='${w}':h='${h}':x='${x}':y='${y}'`
+  return cropOf(crop, followed(follow?.cropX, crop.x, fps), followed(follow?.cropY, crop.y, fps))
+}
+
+/**
+ * A followed clip's crop, as `cropFilter` compiles it (docs/CLIPS.md §4.7):
+ * `followKeys`' answer, by shape — one size for the clip, and the free axis's
+ * position over the clip as a flat sum (reframe/expression.ts), on each half
+ * of a stacked two-up when the clip's path holds one. Derived every time it is
+ * read, never stored: `Clip.follow` and `Project.subjects` are the facts.
+ */
+export interface CropFollow {
+  crop: CropRect
+  cropX?: FlatSum
+  cropY?: FlatSum
+  /** Both halves' x and y, the top's cut from `crop.y` and the bottom's below it on a single shot (§4.6 rule 3). */
+  halves?: { top: { x: FlatSum; y: FlatSum }; bottom: { x: FlatSum; y: FlatSum } }
+}
+
+/** Does this follow move the crop at all — anything for `fps=` to put on the grid first? */
+export function followMoves(follow: CropFollow | null | undefined): boolean {
+  const moves = (sum: FlatSum | undefined): boolean => sum !== undefined && sum.terms.length > 0
+  if (!follow) return false
+  if (follow.halves) return true
+  return moves(follow.cropX) || moves(follow.cropY)
+}
+
+/**
+ * One axis of a followed crop: the flat sum, never `keyframeExpression`.
+ *
+ * A nested `if()` per key is refused by ffmpeg's expression parser past a
+ * hundred levels — as the crop's x inside its `max(0,min(…))`, 96 held keys
+ * render and 97 are refused, 91 smooth keys and 92 (EFFECTS.md §48, measured
+ * again for this slice) — and a podcast has more shots than that. The sum is
+ * one level deep at any length: 2,998 terms rendered frame-exact (§52).
+ *
+ * `startSeconds` 0: after the input seek (and a speed's `setpts`, and the
+ * `fps=` a followed clip gets ahead of its crop), the crop's `t` is the
+ * clip's own time from its first frame (§4.7, measured with an in-point).
+ */
+function followed(sum: FlatSum | undefined, at: number, fps: number): string {
+  if (!sum) return String(at)
+  return flatSumExpression(sum, { fps, startSeconds: 0 })
+}
+
+/** One crop, its size literal and its position clamped by the filter itself. */
+function cropOf(size: { width: number; height: number }, x: string, y: string): string {
+  /*
+   * w and h stay literal: they cannot animate (`w='608+100*t'` fails, §4.6
+   * rule 1), and `streamSize` reads the size the filter outputs. Only x and y
+   * move, clamped inside the picture by the filter's own `max(0,min(…))`.
+   */
+  const w = `min(${size.width},in_w)`
+  const h = `min(${size.height},in_h)`
+  return `crop=w='${w}':h='${h}':x='max(0,min(${x},in_w-out_w))':y='max(0,min(${y},in_h-out_h))'`
+}
+
+/**
+ * The stacked two-up (docs/CLIPS.md §4.6 rule 3, §4.7): the one input split
+ * into two crops, each `half` of the clip's size with its own keyed x AND y,
+ * stacked top over bottom. The stack is the clip's size, so `streamSize` and
+ * everything after the crop are unchanged.
+ *
+ * On a single shot the halves are keyed at (x, 0) and (x, half.height), which
+ * reassembles the one crop exactly — measured bit-identical to it, frame by
+ * frame, at 30, 29.97 and 60 fps, in -vf and in buildRenderPlan's own chain
+ * (EFFECTS.md §38, this slice's measure) — so one graph serves both layouts
+ * and a cut switches them with the same held keys.
+ *
+ * `tpad=stop_mode=clone:stop=1` is not decoration. Without it the chain's
+ * trailing `fps=` drops the clip's LAST frame and the black canvas shows
+ * through on it (measured at 30 and 29.97, and at 60 with `fps=` first):
+ * vstack's framesync sends its EOF with no timestamp (framesync.c:98 at
+ * f22fcd4) and fps then discards the frame it was holding (vf_fps.c:239).
+ * One cloned frame past the end gives fps the timestamp it needs; with it the
+ * halves equal the single crop on 60 of 60 frames, captions and the baked
+ * band included, at a cost of 3–6 %. The labels carry the clip's index, as
+ * the chroma key's split does.
+ */
+function stackedCrop(crop: CropRect, halves: NonNullable<CropFollow['halves']>, fps: number, i: number): string {
+  // A two-up clip's height is a multiple of 4 (path.ts), so its halves are even and add up to it.
+  const half = { width: crop.width, height: evenDown(crop.height / 2) }
+  const top = cropOf(half, followed(halves.top.x, crop.x, fps), followed(halves.top.y, crop.y, fps))
+  const bottom = cropOf(half, followed(halves.bottom.x, crop.x, fps), followed(halves.bottom.y, crop.y + half.height, fps))
+  return (
+    `split=2[r${i}a][r${i}b];[r${i}a]${top}[r${i}t];[r${i}b]${bottom}[r${i}u];` +
+    `[r${i}t][r${i}u]vstack,tpad=stop_mode=clone:stop=1`
+  )
 }
 
 const seconds = (frames: number, fps: number): string => framesToSeconds(frames, fps).toFixed(6)
@@ -1044,10 +1142,20 @@ export function buildRenderPlan(request: RenderRequest): RenderPlan {
       : asset.width && asset.height
         ? { width: asset.width, height: asset.height }
         : null
+    /*
+     * A followed clip's crop (docs/CLIPS.md §4.7): compiled from the subject
+     * track every time, never read from stored keys, so a speed change, a
+     * trim or a frame-rate conversion cannot leave it stale. Its size is the
+     * clip's crop from here on — `streamSize` below and everything after the
+     * crop read it — so a stored `crop` of another size cannot disagree with
+     * the one the filter cuts. Footage only.
+     */
+    const follow = !bake && asset.kind === 'video' ? followKeys(project, clip, fps) : null
+    const ownCrop = follow?.crop ?? clip.crop
     const streamCrop =
-      clip.crop && bake && asset.width && asset.height
-        ? scaleCrop(clip.crop, { width: asset.width, height: asset.height }, { width: bake.width, height: bake.height })
-        : clip.crop
+      ownCrop && bake && asset.width && asset.height
+        ? scaleCrop(ownCrop, { width: asset.width, height: asset.height }, { width: bake.width, height: bake.height })
+        : ownCrop
     const cropped: Clip = streamCrop === clip.crop ? clip : { ...clip, crop: streamCrop }
     // What the crop filter will really output — see `effectiveCrop`. With no
     // known source size the loose rectangle is the best guess there is.
@@ -1160,6 +1268,7 @@ export function buildRenderPlan(request: RenderRequest): RenderPlan {
      */
     // An adjustment layer grades what is below it and has no picture to key.
     const key = clip.key && !clip.adjustment ? saneKey(clip.key) : null
+    const retime = asset.kind === 'image' || clip.hold ? null : retimeFilter(clip, fps)
     const prepare = [
       /*
        * Steadied first, on the frames exactly as decoded — before speed, crop
@@ -1186,7 +1295,28 @@ export function buildRenderPlan(request: RenderRequest): RenderPlan {
        * time, and any of them seeing a half-rate stream would have drifted.
        * Stills are untouched — a photograph has no rate to change.
        */
-      asset.kind === 'image' || clip.hold ? null : retimeFilter(clip, fps),
+      retime,
+      /*
+       * A followed crop runs on the project's frame grid, not the source's.
+       *
+       * At speed 1 nothing above re-times, so without this the crop would see
+       * each SOURCE frame at its own time, and only the chain's `fps=` further
+       * down decides which of them becomes timeline frame n — rounding the
+       * source's time to the nearest slot, ties away from zero (vf_fps.c:81 at
+       * f22fcd4). A held key's half-frame boundary then has to fall between
+       * the frames fps keeps, and on 29.97 and VFR sources it does not
+       * always: a VFR frame stamped on a half output frame took the old crop
+       * where fps showed it in the new shot's slot (a 6-dp boundary rounding
+       * above its time), and pans drifted from the frame grid by up to 12 px
+       * on 29.97 and 8 px on VFR. With `fps=` first the crop's `t` is n/fps on
+       * every frame, so the export is the keys' value at frame n — 0 frames off
+       * at 30, 29.97, 60 and VFR (this slice's measure, docs/CLIPS.md §4.9) —
+       * which is also what the moments' pre-pass already sees (its crop
+       * follows its own `fps=`). A static crop is framemd5-identical either
+       * way, video and audio, and 60 fps footage is 14–18 % faster with it.
+       * A retime already ends in `fps=` (speed.ts), so nothing is added there.
+       */
+      retime === null && followMoves(follow) ? `fps=${fps}` : null,
       /*
        * The stream this crop actually applies to.
        *
@@ -1194,7 +1324,7 @@ export function buildRenderPlan(request: RenderRequest): RenderPlan {
        * cropped (above) and moved, so there is nothing left to cut; anything
        * else is cropped here, against the size its pixels came from.
        */
-      bake ? null : cropFilter(cropped, preCrop),
+      bake ? null : cropFilter(cropped, preCrop, follow, fps, i),
       /*
        * Motion runs before the fit so the move happens in source pixels and the
        * result is still letterboxed to the canvas exactly once. Parallax has
