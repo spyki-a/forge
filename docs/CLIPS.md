@@ -1829,7 +1829,8 @@ from `parseSceneLog` over the lines. An AbortSignal cancels through
 >   the same md5), but `latest` can move. The sha256 pinned,
 >   `3698b18f…2b181b`, is the local `.venv-faces` file's, and both URLs'.
 >   One real fetch through the handler: 0.13 s, three progress messages
->   ("downloading the face finder (1 MB, first run only)").
+>   ("downloading the face finder (1 MB, first run only)"; "1.1 MB" since
+>   the fix phase, as the dock writes it).
 > - **`media.fetch_url` failed on this Mac as built**: the python.org 3.14
 >   install has an empty `etc/openssl`, so `urlopen`'s default context
 >   cannot verify storage.googleapis.com (`CERTIFICATE_VERIFY_FAILED`). The

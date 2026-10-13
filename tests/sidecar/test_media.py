@@ -468,6 +468,15 @@ class Downloads(unittest.TestCase):
         self.assertLessEqual(len(fractions), 101)
         self.assertEqual(context.seen[-1][1], "downloading the depth model (27 MB, first run only)")
 
+    def test_sizes_read_as_the_dock_writes_them(self) -> None:
+        # docs/CLIPS.md §4.8: "gets the face finder, 1.1 MB, first time".
+        self.assertEqual(media._megabytes(1_083_786), "1.1 MB")
+        self.assertEqual(media._megabytes(3_000_000), "3 MB")
+        self.assertEqual(media._megabytes(9_960_000), "10 MB")
+        self.assertEqual(media._megabytes(27_258_801), "27 MB")
+        self.assertEqual(media._megabytes(114_538_221), "115 MB")
+        self.assertEqual(media._megabytes(229_746), "under 1 MB")
+
     def test_no_total_is_one_message_without_a_fraction(self) -> None:
         context = Recorder()
         bar = media.progress_class(context, "a file")(total=None)

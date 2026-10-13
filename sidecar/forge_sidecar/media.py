@@ -352,7 +352,17 @@ def cache_dir(name: str) -> str:
 
 
 def _megabytes(count: float) -> str:
-    return "under 1 MB" if count < 500_000 else f"{round(count / 1_000_000)} MB"
+    """A download's size as the dock writes it: "1.1 MB", "3 MB", "115 MB".
+
+    One decimal under 10 MB, where a whole number would round the face
+    finder's 1,083,786 B to "1 MB" while its button says "1.1 MB"
+    (docs/CLIPS.md §4.8); whole megabytes above.
+    """
+    if count < 500_000:
+        return "under 1 MB"
+    if count < 9_950_000:
+        return f"{count / 1_000_000:.1f}".removesuffix(".0") + " MB"
+    return f"{round(count / 1_000_000)} MB"
 
 
 def progress_class(
