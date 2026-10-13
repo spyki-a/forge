@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
 import { buildRenderPlan, cropFilter, type CropFollow } from '@shared/render/plan'
 import { filterGraphOf } from '@shared/render/graphFile'
-import { flatSumExpression, type FlatSum } from '@shared/reframe/expression'
+import { cropAt, effectiveCrop } from '@shared/render/crop'
+import { exportPixel, flatSumAt, flatSumExpression, type FlatSum } from '@shared/reframe/expression'
+import { followKeys } from '@shared/reframe/keys'
 import { fourShotTrack, printedMs } from './fixtures/reframe/track'
 
 /*
@@ -135,5 +137,60 @@ describe('buildRenderPlan: the followed crop in the chain', () => {
       expect(graph, name).not.toContain('split=2[r0a]')
     }
     expect(chainOf(plain).startsWith("crop=w='min(608,in_w)':h='min(1080,in_h)':x='max(0,min(176,in_w-out_w))'")).toBe(true)
+  })
+})
+
+describe('cropAt: the one reader of a clip’s crop', () => {
+  const source = { width: 1920, height: 1080 }
+
+  it('an unfollowed clip: the rectangle the export’s clamped crop makes of the stored one', () => {
+    const p = project({ clip: { follow: undefined, crop: { x: 1500, y: 0, width: 608, height: 1080 } } })
+    expect(cropAt(p, p.clips[0], source, 40)).toEqual({ crop: effectiveCrop(p.clips[0].crop, source) })
+    expect(cropAt(p, p.clips[0], source, 40).crop.x).toBe(1312)
+  })
+
+  it('a followed clip: the old shot’s crop on the frame before the cut, the new one’s on it, at the export’s rounding through a pan', () => {
+    const p = project()
+    const c = p.clips[0]
+    const keys = followKeys(p, c, FPS)!
+    const step = keys.cropX!.terms.find((t) => 'atFrame' in t)!
+    const cut = (step as { atFrame: number }).atFrame
+    expect(cropAt(p, c, source, cut - 1)).toEqual({ crop: { x: 176, y: 0, width: 608, height: 1080 } })
+    expect(cropAt(p, c, source, cut)).toEqual({ crop: { x: 1136, y: 0, width: 608, height: 1080 } })
+    // Every frame of the clip: lrint(x) & ~1 of the sum the export evaluates, clamped as the filter clamps.
+    for (let f = 0; f < c.duration; f++) {
+      const raw = flatSumAt(keys.cropX!, f, { fps: FPS, startSeconds: 0 })
+      const want = exportPixel(Math.max(0, Math.min(raw, 1920 - 608)))
+      const got = cropAt(p, c, source, f).crop.x
+      if (got !== want) throw new Error(`frame ${f}: ${got}, the export's ${want}`)
+      expect(got % 2).toBe(0)
+    }
+    // A pan frame lands between its ends, on an even pixel.
+    const pan = keys.cropX!.terms.find((t) => 'fromFrame' in t) as { fromFrame: number; toFrame: number }
+    const mid = cropAt(p, c, source, Math.round((pan.fromFrame + pan.toFrame) / 2)).crop.x
+    expect(mid).toBeGreaterThan(272)
+    expect(mid).toBeLessThan(848)
+  })
+
+  it('a two-up frame: both halves, the top on the left face; a single shot in the same clip: one crop', () => {
+    const p = project({ twoUp: true })
+    const c = p.clips[0]
+    const keys = followKeys(p, c, FPS)!
+    const stackAt = keys.shots.find((s) => s.why === 'two-up')!.from
+    const stacked = cropAt(p, c, source, stackAt)
+    expect(stacked.halves).toEqual({
+      top: { x: 80, y: 162, width: 608, height: 540 },
+      bottom: { x: 1232, y: 378, width: 608, height: 540 }
+    })
+    // What a consumer that draws one rectangle gets: the top half's x at the clip's full size.
+    expect(stacked.crop).toEqual({ x: 80, y: 0, width: 608, height: 1080 })
+    const single = cropAt(p, c, source, stackAt - 1)
+    expect(single.halves).toBeUndefined()
+    expect(single.crop).toEqual({ x: 848, y: 0, width: 608, height: 1080 })
+  })
+
+  it('a canvas of the source’s own shape: the whole frame, nothing to follow', () => {
+    const p = project({ canvas: { width: 1920, height: 1080 } })
+    expect(cropAt(p, p.clips[0], source, 100)).toEqual({ crop: { x: 0, y: 0, width: 1920, height: 1080 } })
   })
 })

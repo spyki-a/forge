@@ -1,4 +1,5 @@
-import type { CropRect, MediaAsset } from '../timeline'
+import { assetById, type Clip, type CropRect, type MediaAsset, type Project } from '../timeline'
+import { followAt, followKeys, isKeyed, type FollowKeys } from '../reframe/keys'
 
 /**
  * Making a crop something ffmpeg will actually accept.
@@ -125,6 +126,62 @@ export function effectiveCrop(crop: CropRect | undefined, source: Size): CropRec
     y: Math.max(0, Math.min(loose.y, source.height - height)),
     width,
     height
+  }
+}
+
+/** A clip's crop on one of its frames: one rectangle, and on a stacked two-up frame the two halves it is drawn from. */
+export interface CropOnFrame {
+  crop: CropRect
+  /** Present only on a frame where the two halves are NOT the one crop: draw `top` over `bottom`, each half the output. */
+  halves?: { top: CropRect; bottom: CropRect }
+}
+
+/**
+ * The crop a clip's frame is cut with — THE reader every consumer of a crop
+ * calls (docs/CLIPS.md §4.7): the preview's output and its Source outline,
+ * the moments' `shotPicture`, the strips effect, the Inspector line.
+ *
+ * `frame` is the clip's own, from its first frame (as a keyframe's is), and
+ * `source` the size the picture arrives at (the asset's, when null).
+ *
+ * A followed clip's crop is read from the same compiled keys the export cuts
+ * with (`followKeys`, then `followAt` on the same constants), at the export's
+ * own rounding — `lrint(x) & ~1`, measured on 3,000 of 3,000 frames, eased
+ * ones included — so the preview and the export cannot disagree by the pixel
+ * a slow pan would show. Not the path's source-ms clock (`positionAt`): the
+ * export steps at the frame its `fps=` shows the cut on, and this is that
+ * frame. Anything else is `effectiveCrop`, the rectangle the export's clamped
+ * expressions make of the stored crop.
+ *
+ * `halves` only on a frame showing a stacked two-up. A consumer that can draw
+ * one rectangle only (the strips effect) takes `crop` on such a frame too —
+ * the top half's position at the clip's full size — which is the left-hand
+ * person's crop, not the picture the export stacks: say so where it matters.
+ */
+export function cropAt(
+  project: Project,
+  clip: Clip,
+  source: Size | null,
+  frame: number
+): CropOnFrame {
+  const asset = assetById(project, clip.assetId)
+  const size =
+    source && source.width > 0 && source.height > 0
+      ? source
+      : { width: asset?.width ?? 0, height: asset?.height ?? 0 }
+  const keys = followKeys(project, clip, project.settings.fps)
+  if (!keys) return { crop: effectiveCrop(clip.crop, size) }
+  // No keys at all (a canvas of the source's own shape): the one crop is all of it. Cast so the guard does not narrow `keys` away.
+  if (!isKeyed(keys as FollowKeys | null)) return { crop: effectiveCrop(keys.crop, size) }
+  const at = followAt(keys, Math.round(frame))
+  if (!at.halves) return { crop: at.crop }
+  const { top, bottom } = at.halves
+  // A single shot on a two-up clip keys the halves at (x, 0) and (x, half.height): one crop, drawn once.
+  const one = top.x === bottom.x && bottom.y === top.y + top.height && top.y === at.crop.y
+  if (one) return { crop: at.crop }
+  return {
+    crop: { ...at.crop, x: top.x, y: Math.max(0, Math.min(top.y, keys.source.height - at.crop.height)) },
+    halves: { top, bottom }
   }
 }
 
