@@ -225,6 +225,14 @@ describe('shotsFrom', () => {
     expect(bounds(shotsFrom([at(1000, 0.9), at(1200, 0.35)], 2200, 30, o))).toEqual([0, 1000, 2200])
   })
 
+  it('on neighbours of one length and cuts of one score, removes the earlier cut', () => {
+    // 1000 | 200 | 1000, both cuts 1: the short shot joins the first, so the cut at 1000 goes.
+    expect(shotsFrom([at(1000, 1), at(1200, 1)], 2200, 30, o)).toEqual([
+      { startMs: 0, endMs: 1200, score: 0 },
+      { startMs: 1200, endMs: 2200, score: 1 }
+    ])
+  })
+
   it('keeps one cut per frame, the higher score; ignores order and a cut at or past the end', () => {
     // 2000 and 2000.01 are both frame 60 at 30 fps.
     const shots = shotsFrom([at(6000, 0.4), at(2000, 0.5), at(2000.01, 0.8), at(10_000), at(12_000)], 10_000, 30, o)
