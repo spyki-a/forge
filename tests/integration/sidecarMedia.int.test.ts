@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { execFile } from 'node:child_process'
+import { readdirSync } from 'node:fs'
 import { writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import ffprobeInstaller from '@ffprobe-installer/ffprobe'
@@ -64,8 +65,15 @@ describe('the helper’s media module', () => {
 
     expect(code, text).toBe(0)
     const ran = Number(/Ran (\d+) tests?/.exec(text)?.[1] ?? 0)
-    // Thirty-two today; a test file that stopped being found would run none.
-    expect(ran, text).toBeGreaterThanOrEqual(32)
+    /*
+     * A hundred on 2026-10-13: test_media 35, test_faces 39, test_salient 26.
+     * Losing the smallest file would leave 74, under this floor; and each
+     * file in the folder must have run tests of its own, by name.
+     */
+    expect(ran, text).toBeGreaterThanOrEqual(90)
+    for (const file of readdirSync(join(ROOT, 'tests', 'sidecar')).filter((f) => /^test_.*\.py$/.test(f))) {
+      expect(text, `${file} ran no tests`).toContain(`(${file.replace(/\.py$/, '')}.`)
+    }
     const skipped = [...text.matchAll(/\.\.\. skipped '([^']*)'/g)].map((m) => m[1])
     for (const reason of skipped) expect(reason, 'only numpy may be missing').toBe('numpy is not installed')
     // The venv has numpy: there, nothing may skip.

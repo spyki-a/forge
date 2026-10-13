@@ -612,15 +612,6 @@ class Registration(unittest.TestCase):
         self.assertIn("partial.second", server.degraded)
         self.assertIn("the second half is missing", server.degraded["partial.second"])
 
-    # Rows whose module is still being written: the scaffold put step 1's two
-    # rows in first (docs/CLIPS.md §4.3 faces, §4.4 salient) so their builders
-    # never share a file. Such a row, while its file is absent, is held to the
-    # rule's other half below: every method it names degraded with the import
-    # error, never "unknown method". Only these names, and only while absent —
-    # a row naming any other missing file still fails, and a module that
-    # exists is read like every other. The names come off once both land.
-    NOT_YET_WRITTEN = frozenset({"faces", "salient"})
-
     def test_each_module_lists_every_method_it_registers(self) -> None:
         # The voice.voices bug: a module's OPTIONAL tuple naming fewer methods
         # than it registers, so the rest answered "unknown method" wherever the
@@ -632,17 +623,9 @@ class Registration(unittest.TestCase):
         folder = os.path.dirname(capabilities.__file__)
         for methods, name in capabilities.OPTIONAL:
             path = os.path.join(folder, f"{name}.py")
-            if name in self.NOT_YET_WRITTEN and not os.path.isfile(path):
-                server = Server()
-                with mock.patch.object(capabilities, "OPTIONAL", [(methods, name)]):
-                    capabilities.register_all(server)
-                for method in methods:
-                    self.assertNotIn(method, server.capabilities)
-                    self.assertIn(
-                        f"No module named 'forge_sidecar.capabilities.{name}'",
-                        server.degraded.get(method, ""), f"{method} is not degraded with its import error",
-                    )
-                continue
+            # Every row's module is read, faces and salient included now both
+            # are written: a row naming a missing file fails here.
+            self.assertTrue(os.path.isfile(path), f"OPTIONAL names {name}, and {path} is not there")
             with open(path, encoding="utf-8") as handle:
                 source = handle.read()
             registered = re.findall(r"""server\.register\(\s*["']([^"']+)["']""", source)
