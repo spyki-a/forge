@@ -134,6 +134,19 @@ describe('the shot finder, through src/main/ffmpeg/shots.ts', () => {
     expect(reports[reports.length - 2], 'ffmpeg’s own last report').toBeGreaterThanOrEqual(0.99)
   })
 
+  it('reports a window’s progress against the window, to its end', async () => {
+    // ffmpeg's out_time counts from the window's start: against the whole
+    // file's 10 s, the 4 s window's own last report would read 0.4.
+    const reports: number[] = []
+    await findShots({
+      path: CUTS, durationMs: DURATION_MS, fps: TABLE.fps, threshold: 0.1, startMs: 3000, endMs: 7000,
+      onProgress: (p) => reports.push(p)
+    })
+    expect(reports.length, 'ffmpeg’s reports, then the runner’s closing 1').toBeGreaterThanOrEqual(2)
+    expect(reports[reports.length - 1]).toBe(1)
+    expect(reports[reports.length - 2], 'ffmpeg’s own last report').toBeGreaterThanOrEqual(0.99)
+  })
+
   it('makes one shot of a clip with no cut', async () => {
     const still = await makeColour(join(dir, 'one-shot.mp4'), '0x336699', TABLE.size, 3, TABLE.fps)
     const found = await findShots({ path: still, durationMs: 3000, fps: TABLE.fps })
