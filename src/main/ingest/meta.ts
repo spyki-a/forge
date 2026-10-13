@@ -12,6 +12,7 @@ import {
   isLinkKey,
   parseMeta,
   parseRequestedSubtitles,
+  parseTrackFlags,
   readMarkedLine,
   type LinkMeta,
   type MarkKind
@@ -124,7 +125,7 @@ export async function runMeta(url: string, tool: IngestTool, options: { signal?:
   if (run.code !== 0) throw new Error(humanError(run.stderr, run.code))
   const value = lastMark(run, 'meta')
   if (value === null) throw new Error('yt-dlp did not print the video’s details')
-  return parseMeta(value)
+  return { ...parseMeta(value), hasCaptions: parseTrackFlags(lastMark(run, 'tracks')) }
 }
 
 /** Is `path` inside `dir`? yt-dlp writes where `-P` says; this is not taken on trust. */

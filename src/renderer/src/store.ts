@@ -1353,7 +1353,9 @@ export const useEditor = create<EditorState>((set, get) => ({
       // from it (`<l>`, `<l>-orig`); with none readable, the user picks.
       const asked = language ?? meta?.language ?? null
       if (!captionKeys(asked)) {
-        patch({ status: 'language' })
+        // A video with no caption track of any kind has none in any language:
+        // said at once, not after a language is picked (CLIPS.md §3b.9).
+        patch({ status: meta?.hasCaptions === false ? 'none' : 'language' })
         return
       }
       patch({ status: 'captions', language: asked })

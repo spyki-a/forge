@@ -99,6 +99,13 @@ describe('ingest:meta through the fake yt-dlp', () => {
     expect(meta.heatmap).toBeNull()
   }, 60_000)
 
+  it('says whether the video has any caption track at all — none of either kind is false', async () => {
+    const handler = (env: Record<string, string>) => metaHandler(new LinkRuns(), async () => tool(env))({ url: URL })
+    expect((await handler({})).hasCaptions).toBe(true)
+    expect((await handler({ FAKE_SUBS: 'en-orig' })).hasCaptions).toBe(true)
+    expect((await handler({ FAKE_SUBS: '' })).hasCaptions).toBe(false)
+  }, 60_000)
+
   it('reports yt-dlp’s reason', async () => {
     await expect(metaHandler(new LinkRuns(), async () => tool({ FAKE_FAIL: '1' }))({ url: URL })).rejects.toThrow(
       /Video unavailable\. This video is private/

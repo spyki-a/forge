@@ -45,6 +45,10 @@ const { LinkTranscript, CLIP_DOWNLOAD_TITLE } = await import('../../src/renderer
 
 const URL = 'https://www.youtube.com/watch?v=MadeUpTalk2'
 const NO_CAPTIONS = 'https://www.youtube.com/watch?v=MadeUpTalk3'
+/** No language in its details, and — as yt-dlp lists them — no caption track of any kind (EFFECTS.md §51). */
+const NO_TRACKS = 'https://www.youtube.com/watch?v=MadeUpTalk4'
+/** No language in its details, but caption tracks: the language is asked. */
+const NO_LANGUAGE = 'https://www.youtube.com/watch?v=MadeUpTalk5'
 const LINK_KEY = linkCacheKey(parseLink(URL)!)
 
 /* ------------------------------------------------------------ fixtures */
@@ -73,6 +77,20 @@ function json3(): unknown {
 }
 
 function meta(url: string): LinkMeta {
+  if (url === NO_TRACKS || url === NO_LANGUAGE) {
+    return {
+      id: parseLink(url)!.videoId,
+      title: 'A made-up walk',
+      duration: 20,
+      language: null,
+      chapters: [],
+      heatmap: null,
+      channel: 'Made-up channel',
+      uploader: 'Made-up channel',
+      webpage_url: parseLink(url)!.url,
+      hasCaptions: url === NO_LANGUAGE
+    }
+  }
   return {
     id: parseLink(url)!.videoId,
     title: 'A made-up talk',
@@ -95,7 +113,7 @@ let captions: (url: string, language: string) => Promise<unknown>
 
 function fetchCaptions(url: string, language: string): unknown {
   const linkKey = linkCacheKey(parseLink(url)!)
-  if (url === NO_CAPTIONS) return { linkKey, keys: ['en', 'en-orig'], tracks: [], transcript: null }
+  if (url === NO_CAPTIONS || url === NO_TRACKS || url === NO_LANGUAGE) return { linkKey, keys: ['en', 'en-orig'], tracks: [], transcript: null }
   const read = [{ key: 'en-orig', kind: json3Kind(json3())!, json: json3() }]
   return {
     linkKey,
@@ -615,6 +633,33 @@ describe('a video with no captions', () => {
     expect(listen?.props.onClick).toBeUndefined()
     expect(panel()).not.toContain('needs the AI helper')
     expect(started).toHaveLength(0)
+  })
+
+  it('with no language and no caption track of any kind, says so at once — no language to choose, From and To typed, Listen to it greyed', async () => {
+    state().setIngest({ useRange: true })
+    await getTranscript(NO_TRACKS)
+    expect(state().urlSource?.status).toBe('none')
+    const html = panel()
+    expect(html).toContain('This video has no captions')
+    expect(html).toMatch(/<button type="button" disabled="" title="[^"]*"[^>]*>(?:(?!<\/button>).)*Listen to it<\/button>/)
+    expect(html).toContain('needs the AI helper')
+    expect(html).toContain('aria-label="From — minutes and seconds"')
+    expect(html).toContain('aria-label="To — minutes and seconds"')
+    expect(html).not.toMatch(/readonly/i)
+    expect(html).not.toContain('Choose the language')
+    expect(html).not.toContain('data-chapter')
+    expect(started).toHaveLength(0)
+  })
+
+  it('with no language but caption tracks, asks for the language, and From and To stay typed', async () => {
+    state().setIngest({ url: NO_LANGUAGE, useRange: true })
+    ;(buttonNamed('Get transcript')!.props.onClick as () => void)()
+    await vi.waitFor(() => expect(state().urlSource?.status).toBe('language'))
+    const html = panel()
+    expect(html).toContain('Choose the language')
+    expect(html).not.toContain('This video has no captions')
+    expect(html).toContain('aria-label="From — minutes and seconds"')
+    expect(html).not.toMatch(/readonly/i)
   })
 
   it('lets a chapter chip set From and To instead', async () => {

@@ -65,6 +65,8 @@ export const TITLE_MARK = '@forgetitle@'
 export const META_MARK = '@forgemeta@'
 /** Marks the `requested_subtitles` dict printed by `buildCaptionArgs`. */
 export const SUBS_MARK = '@forgesubs@'
+/** Marks whether the metadata run saw any caption track: `buildMetaArgs`, `parseTrackFlags`. */
+export const TRACKS_MARK = '@forgetracks@'
 
 /**
  * What names the file on disk — and what makes two requests the same download.
@@ -239,13 +241,14 @@ export function buildYtDlpArgs(request: IngestRequest, context: ArgContext): Bui
   }
 }
 
-export type MarkKind = 'file' | 'title' | 'meta' | 'subs'
+export type MarkKind = 'file' | 'title' | 'meta' | 'subs' | 'tracks'
 
 const MARKS: [string, MarkKind][] = [
   [FILE_MARK, 'file'],
   [TITLE_MARK, 'title'],
   [META_MARK, 'meta'],
-  [SUBS_MARK, 'subs']
+  [SUBS_MARK, 'subs'],
+  [TRACKS_MARK, 'tracks']
 ]
 
 /** Read one of the marked lines back, or null for anything else. */
@@ -309,8 +312,30 @@ export function buildMetaArgs(url: string): string[] {
     '--simulate',
     '--print',
     `${META_MARK}%(.{${META_FIELDS.join(',')}})j`,
+    /*
+     * Whether the video has ANY caption track: the uploader's, then the
+     * automatic ones, each `1` or `0` (`&` prints its replacement for a
+     * non-empty field, `|` its default for an empty one). The dicts
+     * themselves are most of the 908 KB `-J` (EFFECTS.md §40) and are not
+     * printed. Measured (§51): `00` on the two of the user's links with no
+     * track at all, `01` on an ASR-only video, `11` with an uploader track —
+     * in the same run as the subset, no request more.
+     */
+    '--print',
+    `${TRACKS_MARK}%(subtitles&1|0)s%(automatic_captions&1|0)s`,
     ...RETRIES
   ]
+}
+
+/**
+ * The TRACKS_MARK line's value: false when yt-dlp listed no caption track
+ * of either kind, true when it listed one, null when the line is not that
+ * shape (not printed, or a site whose extractor fills neither).
+ */
+export function parseTrackFlags(value: string | null): boolean | null {
+  const flags = value?.trim() ?? ''
+  if (!/^[01]{2}$/.test(flags)) return null
+  return flags !== '00'
 }
 
 /**
@@ -440,6 +465,13 @@ export interface LinkMeta {
   channel: string | null
   uploader: string | null
   webpage_url: string | null
+  /**
+   * Whether the video has any caption track at all, uploader's or automatic
+   * (`parseTrackFlags`). False means no language would find one, so Get
+   * transcript says "no captions" rather than asking for a language; null or
+   * absent, not known.
+   */
+  hasCaptions?: boolean | null
 }
 
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null)

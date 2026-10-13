@@ -216,8 +216,9 @@ export function LinkTranscript(): ReactNode {
   // Shown only while the box holds the link it belongs to.
   const source = urlSourceFor({ urlSource, ingest })
   const fetching = source?.status === 'meta' || source?.status === 'captions'
-  // A language chosen by hand is offered again when it had nothing.
-  const chosen = source !== null && source.meta !== null && source.meta.language === null
+  // A language chosen by hand is offered again when it had nothing — unless
+  // the video has no caption track in any language.
+  const chosen = source !== null && source.meta !== null && source.meta.language === null && source.meta.hasCaptions !== false
 
   return (
     <div className="mt-2.5">

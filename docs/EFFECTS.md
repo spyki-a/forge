@@ -4714,3 +4714,15 @@ level: the app's frames equal complex's, bit for bit (all 120), and on the
 Mac complex differs from simple on all 54 Devanagari and all 54 Telugu
 frames; the test prints that count on every platform, so Windows CI says
 whether it shapes.
+
+**A link with no caption track at all asked for a language first.** On
+`zEqLXGE_re4` and `F7Lg2yHtqRA` (a concert, a vlog with nobody talking) the
+metadata has no `language`, so Get transcript showed "Choose the language",
+and only after a pick "This video has no captions" — while there was
+nothing to find in any language. The metadata run now also prints
+`%(subtitles&1|0)s%(automatic_captions&1|0)s` (yt-dlp prints `&`'s
+replacement for a non-empty field and `|`'s default for an empty one):
+measured `00` on both of those, `01` on `eK71EN3P78U` (ASR only), `11` on
+`jze_5hvaVV8` (an uploader track too), in the same 1.4–1.8 s run. `00`
+makes the store go straight to "no captions", with the From and To fields
+and Listen to it, and no language offered.

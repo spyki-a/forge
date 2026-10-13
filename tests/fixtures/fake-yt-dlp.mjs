@@ -161,11 +161,17 @@ if (argv.includes('--simulate')) {
     process.exit(1)
   }
   await sleep(Number(process.env.FAKE_HOLD_MS ?? 0))
+  // The tracks the video has (FAKE_SUBS): an uploader's is any key but `-orig`.
+  const has = (process.env.FAKE_SUBS ?? 'en,en-orig').split(',').filter(Boolean)
+  const tracks = { subtitles: has.some((k) => !k.endsWith('-orig')), automatic_captions: has.some((k) => k.endsWith('-orig')) }
   for (const p of prints) {
     // `%(.{a,b,c})j` — the subset, absent keys omitted, as yt-dlp prints it.
-    const out = p.replace(/%\(\.\{([a-z_,]+)\}\)j/g, (_, keys) =>
-      JSON.stringify(Object.fromEntries(keys.split(',').filter((k) => meta[k] !== undefined).map((k) => [k, meta[k]])))
-    )
+    const out = p
+      .replace(/%\(\.\{([a-z_,]+)\}\)j/g, (_, keys) =>
+        JSON.stringify(Object.fromEntries(keys.split(',').filter((k) => meta[k] !== undefined).map((k) => [k, meta[k]])))
+      )
+      // `%(field&1|0)s` — the replacement for a non-empty field, the default for an empty one.
+      .replace(/%\(([a-z_]+)&1\|0\)s/g, (_, k) => (tracks[k] ? '1' : '0'))
     process.stdout.write(fill(out, { title }) + '\n')
   }
   process.exit(0)

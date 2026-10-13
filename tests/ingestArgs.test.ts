@@ -17,6 +17,8 @@ import {
   readMarkedLine,
   SUBS_MARK,
   TITLE_MARK,
+  TRACKS_MARK,
+  parseTrackFlags,
   type IngestRequest
 } from '@shared/ingest/args'
 import { linkCacheKey, parseLink } from '@shared/ingest/url'
@@ -358,6 +360,16 @@ describe('metadata without a download', () => {
     expect(args).not.toContain('--write-subs')
   })
 
+  it('asks, in the same run, whether the video has any caption track — uploader’s, then automatic (EFFECTS.md §51)', () => {
+    runOf(args, ['--print', `${TRACKS_MARK}%(subtitles&1|0)s%(automatic_captions&1|0)s`])
+  })
+
+  it('reads the two flags: no track of either kind is false; anything else unreadable is not known', () => {
+    expect(parseTrackFlags('00')).toBe(false)
+    for (const some of ['01', '10', '11', ' 01 ']) expect(parseTrackFlags(some), some).toBe(true)
+    for (const unknown of [null, '', 'NA', '0', '000', '1|0', 'NANA']) expect(parseTrackFlags(unknown), String(unknown)).toBeNull()
+  })
+
   it('asks for the quote’s speaker and the credit’s fields (measured to print)', () => {
     for (const field of ['channel', 'uploader', 'webpage_url', 'chapters', 'heatmap', 'language']) {
       expect(META_FIELDS, field).toContain(field)
@@ -448,7 +460,8 @@ describe('reading the metadata and caption marks back', () => {
     expect(readMarkedLine(`${SUBS_MARK}NA`)).toEqual({ kind: 'subs', value: 'NA' })
     expect(readMarkedLine(`${FILE_MARK}/x.mp4`)?.kind).toBe('file')
     expect(readMarkedLine(`${TITLE_MARK}t`)?.kind).toBe('title')
-    const marks = [FILE_MARK, TITLE_MARK, META_MARK, SUBS_MARK]
+    expect(readMarkedLine(`${TRACKS_MARK}01`)).toEqual({ kind: 'tracks', value: '01' })
+    const marks = [FILE_MARK, TITLE_MARK, META_MARK, SUBS_MARK, TRACKS_MARK]
     for (const a of marks) for (const b of marks) if (a !== b) expect(b.startsWith(a), `${a} ${b}`).toBe(false)
     // The progress line's own prefix is not a mark.
     expect(readMarkedLine('@forge@downloading|1|2|NA|NA|NA')).toBeNull()
