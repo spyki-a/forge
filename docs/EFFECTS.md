@@ -5020,3 +5020,88 @@ calls main's handlers and `startRender` directly), nor is any card's bake
 (the projects have none). And what only the ear can say — that the
 words heard are the run's, whole at both ends — is listed link by link in
 `CLIPS.md` §3b.9.
+
+## 52. The scene pass's shape, a window, stderr in pieces, and where crop's x lands (2026-10-13)
+
+For `docs/CLIPS.md` §4.2 (1b: `src/shared/reframe/shots.ts`,
+`src/main/ffmpeg/shots.ts`) and the followed crop §4.6–4.7 will key. The
+builder found the first two; the review re-measured them and added the
+rest; each was run again for this section unless a number is credited to
+one of them. Development Mac, the bundled
+ffmpeg (4.1.5 package, reporting 4.4); the 2018 build read in its source at
+`f22fcd4`. The fixture is `tests/integration/shots.int.test.ts`'s
+`five-cuts.mp4` (five colours, two seconds each, lossless 640×360 at 30 fps,
+cuts at 2/4/6/8 s); the long clip is 60 s of 1080p30 `testsrc2` with its hue
+turned every 10 s (five cuts, H.264 `veryfast`).
+
+**`-progress` reports the OUTPUT's time, so a pass that drops frames
+starves it.** With `select` on the output path, as §4.2's planned shape had
+it, `out_time` stops at the last frame picked: **4.033 s of 10 s** on the
+fixture at T 0.5 (cuts at 2 and 4 s picked), **50.03 s of 60 s** on the long
+clip at T 0.3; the builder's 60 s clip cut only at 40 s gave no report at
+all for its first 40 s. A progress bar sits there, and a cancel waiting on a report
+never fires. The fix is `split`: one branch scored and printed into
+`nullsink`, the other on to `-f null`, whose time is the progress — 10.000 s
+and 60.000 s. **Same cost**: the long clip in 2.86 / 2.86 / 3.03 s split,
+3.04 / 2.86 / 3.06 s on the output path, the same five cuts. Any analysis
+that prints only its hits (a detector, `thumbnail`) and wants progress needs
+the same split.
+
+**An output's `-t` trims after the graph; an input's trims before it.**
+`-ss 3 -i five-cuts.mp4 -t 4` at T 0.1 printed `pts_time` 1, 3 **and 5** —
+source 8 s, a second past the window — because the scored branch ends in its
+sink and never meets the output's trim. With `-ss 3 -t 4 -i`, only 1 and 3
+(source 4 and 6 s). At `f22fcd4`, `configure_input_video_filter` inserts a
+`trim` on the input from its `recording_time` (`ffmpeg_filter.c:846`), and
+the output's is inserted after the graph (`:529`, `:658`). So a window over a
+graph with a sink puts `-t` before `-i`.
+
+**A window rests on input seeking, which MPEG-TS breaks.** An MPEG-TS copy of
+the fixture (its start 1.400 s, as the muxer wrote it): `-ss 3 -t 4 -i
+five.ts` decoded 60 frames, `pts_time` 5 to 6.967, all one grey, and printed
+no cut; the whole file printed all four. MP4 is exact. Not measured on a
+camera's AVCHD `.MTS`. `findShots` therefore says a clip's shots come from
+the whole-file pass, sliced, never from a window (the window's own head-skip
+and 500 ms merge also drop real cuts at its edges: `CLIPS.md` §4.2's note).
+
+**stderr arrives in pieces that are not lines.** Through a pipe, read with
+Node's `spawn` as `runFfmpeg` reads it, the scene pass over the long clip
+with every frame printed (T 0.001) came in 356–359 chunks, of which **3, 1
+and 0** in three runs ended mid-line — each at `[Parsed_metadata_4 @ 0x…] `,
+av_log's prefix written before its message; on the fixture, 1 of 8, in the
+banner. A parser fed per chunk would see a frame line without its time.
+Hence `lineSplitter` in `run.ts`: `\n`, `\r\n` and a lone `\r` each end a
+line, a `\r` that ends a chunk waits for the next, and `end()` at `close`
+hands over a last line with no ending. Through a pipe, `Last message
+repeated N times` ends in `\n` (a damaged H.264 stream's
+`non-existing PPS 0 referenced`), and the stats line `frame= … speed=…`
+ends in a lone `\r` (without `-nostats`; every analysis passes it).
+
+**The scores do not depend on the SIMD path.** With `-cpuflags 0` the
+fixture decodes through `scale=320:-2,format=rgb24` to 252,0,0 / 0,0,253 /
+98 / 138 / 118 — as with NEON — and its four cuts score 1.000, 1.000, 0.400,
+0.200 either way. The 2018 build's x86 paths are CI's: the committed score
+table runs there.
+
+**crop's x is `lrint(x) & ~1` on 4:2:0.** At `f22fcd4`, `vf_crop.c`
+evaluates x for every frame, rounds it with `lrint` (`normalize_double`,
+:130), and without `exact` clears the low bit by the chroma subsampling
+(:280). Measured on a yuv420p ramp whose column c carries luma c − 300,
+cropping 16 px: x **405 → column 404**, 404.5 → 404, 404.6 → 404, 405.5 →
+406, 406.5 → 406, 404.16 → 404, 425.92 → 426, 435.84 → 436, 333 → 332; with
+`exact=1`, 405 → 405 and 333 → 333. `Math.round(x) & ~1` gives every one
+(round-half-up and lrint's half-to-even differ only on a half, and the mask
+erases the difference); `Math.round(x / 2) * 2`, nearest even, gives 406
+for 405. So a preview of an eased frame takes `Math.round(x) & ~1`. The crop
+path's own positions are even already, where the two agree.
+
+**The flat sum at the reframe's scale.** §48's shape, run: one crop x of 299
+held steps `Δ*gte(t,(f−0.5)/fps)` and 299 smoothstep pans
+`40*(p)*(p)*(3-2*(p))`, p = `min(1,max(0,(t-t0)/span))` — 599 terms, 45,184
+characters — through `-filter_complex_script` over 3,000 frames of a 640×360
+`testsrc2` at 30 fps. **Every frame** is framemd5-identical to a static crop
+at `Math.round(x) & ~1` of the same sum evaluated in JS at `n/30`: twelve
+distinct x, 1,196 frames on a fractional x mid-pan, the cut frames and the
+frames before them among them (the review had sampled eleven the same way).
+0.61 s against 0.33 s for a static crop. Not run on the 2018 build, whose
+`eval.c` reads `+` in the same loop (§48).
