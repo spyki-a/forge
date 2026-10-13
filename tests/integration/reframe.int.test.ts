@@ -4,14 +4,14 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import ffprobeInstaller from '@ffprobe-installer/ffprobe'
 import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
 import { rampRate } from '@shared/render/speed'
-import { buildRenderPlan } from '@shared/render/plan'
+import { buildRenderPlan, cropFilter } from '@shared/render/plan'
 import { filterGraphOf, withGraphFile } from '@shared/render/graphFile'
 import { cropAt } from '@shared/render/crop'
 import { FOOTAGE_MAX_EDGE, followedFootage } from '@shared/render/momentFrames'
 import type { FootageRequest } from '@shared/render/moment'
 import { cropPath, type CropPath } from '@shared/reframe/path'
 import { followKeys } from '@shared/reframe/keys'
-import { isHeld } from '@shared/reframe/expression'
+import { FLAT_GROUP, exportPixel, flatSumAt, flatSumExpression, isHeld, type FlatSum, type Term } from '@shared/reframe/expression'
 import type { SubjectTrack } from '@shared/reframe/types'
 import { extractMomentFrames } from '../../src/main/render/momentFrames'
 import {
@@ -733,5 +733,57 @@ describe('more cuts than a nested if() can hold', () => {
     say(`- 30 fps, ${track.shots.length} shots of 2 frames, ${held} held keys, the graph ${rendered.graph.length} chars through its file: ${changes} jumps read, ${misses.length} frames off`)
     expect(misses).toEqual([])
     expect(changes).toBeGreaterThan(100)
+  })
+})
+
+/*
+ * A sum longer than FLAT_GROUP terms (reframe/expression.ts): written in
+ * parenthesised groups, because ffmpeg's evaluator recurses down a flat sum's
+ * chain and crashed past about 7,000 terms at a 1 MB stack (EFFECTS.md §55).
+ * The grouped text measured frame-exact on the Mac at 9,595 terms; this row
+ * is the 2018 build's run of it in CI. A synthetic sum, put in the plan's own
+ * chain where its crop was, behind the followed clock.
+ */
+describe('a sum past FLAT_GROUP terms renders in its groups', () => {
+  it('1,100 terms over 210 frames, two groups: every frame on the model', async () => {
+    const s = sources.get('30')!
+    const { project, clip } = projectFor(s, { follow: false, inPoint: 0, start: 0, duration: 210 })
+    const terms: Term[] = []
+    const at = (f: number): number => (f % 2 ? 1136 : 176) + 2 * ((f * 37) % 20)
+    let x = at(0)
+    for (let f = 1; f < clip.duration; f++) {
+      // Five steps a frame, netting the jump; a pan every seventh frame, and back.
+      const step = at(f) - x
+      terms.push({ atFrame: f, delta: step + 28 }, { atFrame: f, delta: -7 }, { atFrame: f, delta: -7 }, { atFrame: f, delta: -7 }, { atFrame: f, delta: -7 })
+      x = at(f)
+      if (f % 7 === 0) terms.push({ fromFrame: f, toFrame: f + 1, delta: 40 }, { atFrame: f + 1, delta: -40 })
+    }
+    const sum: FlatSum = { base: at(0), terms }
+    expect(terms.length).toBeGreaterThan(FLAT_GROUP)
+    const expr = flatSumExpression(sum, { fps: FPS, startSeconds: 0 })
+    expect(expr.split('+(').length - 1, 'groups').toBe(2)
+    const out = join(dir, '30-grouped.mp4')
+    const plan = buildRenderPlan({ project, outputPath: out })
+    const graph = filterGraphOf(plan.args)
+    const size = { width: 1920, height: 1080 }
+    const plain = cropFilter(clip, size)!
+    expect(graph.split(plain).length - 1, 'the clip’s crop, once').toBe(1)
+    const keyed = cropFilter(clip, size, { crop: clip.crop!, cropX: sum }, FPS, 0)!
+    expect(keyed).toContain(expr)
+    const graphFile = join(dir, '30-grouped.graph.txt')
+    await writeFile(graphFile, graph.replace(plain, `fps=${FPS}:start_time=0,${keyed}`))
+    await run(FFMPEG, withGraphFile(plan.args, graphFile), { maxBuffer: 64 * 1024 * 1024 })
+    const { frames } = await decodeFrames(FFMPEG, out, 1080, 1920, () => true)
+    const shape = { size: { width: 608, height: 1080 }, half: { width: 608, height: 540 } } as CropPath
+    const misses: string[] = []
+    let worst = 0
+    for (let k = 0; k < clip.duration; k++) {
+      const r = readFrame(frames.get(k)!, shape, false)
+      const model = exportPixel(Math.max(0, Math.min(flatSumAt(sum, k, { fps: FPS, startSeconds: 0 }), 1920 - 608)))
+      worst = Math.max(worst, Math.abs(r.one.x - model))
+      if (Math.abs(r.one.x - model) > TOLERANCE) misses.push(`frame ${k}: read ${r.one.x}, model ${model}`)
+    }
+    say(`- 30 fps, a synthetic sum of ${terms.length} terms in ${expr.split('+(').length - 1} groups (x ${expr.length} chars): ${clip.duration} frames read, the worst |read − model| ${worst} px`)
+    expect(misses).toEqual([])
   })
 })

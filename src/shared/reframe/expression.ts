@@ -22,6 +22,11 @@
  * frame f is not at any rate. The ease is smoothstep, p²(3 − 2p) —
  * `keyframes.ts`' 'smooth', the curve the path's pans promise (path.ts `Pan`).
  *
+ * Flat in parentheses is not flat on the stack: the parser's tree for
+ * `a+b+c…` is a chain as long as the sum, and a flat sum past about 7,000
+ * terms crashed ffmpeg at a 1 MB stack (measured). So a sum longer than
+ * `FLAT_GROUP` terms is written in parenthesised groups (below).
+ *
  * `flatSumAt` is the same arithmetic in JavaScript, on the constants exactly
  * as written into the expression, so the preview cannot disagree with the
  * export by a rounding. The export's crop then puts x at `lrint(x) & ~1` on a
@@ -148,47 +153,76 @@ function write(sum: FlatSum, options: FlatSumOptions): Written {
 }
 
 /**
+ * How many terms one level of the sum holds before the rest go in groups.
+ *
+ * The parser builds `a+b+c…` as a LEFT-NESTED chain of additions
+ * (libavutil/eval.c's parse_subexpr loop, the same at f22fcd4), and
+ * evaluating, checking and freeing it all recurse down that chain — so a
+ * flat sum is one level deep in parentheses but N calls deep on the stack.
+ * Measured on the Mac's build under `ulimit -s`: at a 1 MB stack a flat sum
+ * of 7,000 terms rendered and 7,300 died of SIGSEGV; at 8 MB, 60,000 died.
+ * (A Windows main thread's stack is 1 MB under MSVC's default and 2 MB under
+ * MinGW's; the 2018 build's own reserve is not read.) Past this many terms
+ * the sum is written `base+(t1…t1000)+(t1001…t2000)+…`: each group is a
+ * chain of at most this many, the groups one more, so the depth is about
+ * GROUP + N/GROUP — 60,000 terms rendered at a 1 MB stack in groups of 1,000.
+ * A sum of this many terms or fewer is written flat, exactly as measured.
+ */
+export const FLAT_GROUP = 1000
+
+/** One written term's text. */
+function termText(t: Written['terms'][number], tv: string): string {
+  const d = t.delta.startsWith('-') ? t.delta : `+${t.delta}`
+  if (t.at !== undefined) return `${d}*gte(${tv},${t.at})`
+  // A pan that began before the clip's first frame has a negative start;
+  // `t--0.5` parses (measured), `t+0.5` is plainer.
+  const since = t.t0!.startsWith('-') ? `${tv}+${t.t0!.slice(1)}` : `${tv}-${t.t0}`
+  const p = `min(1,max(0,(${since})/${t.span}))`
+  return `${d}*(${p})*(${p})*(3-2*(${p}))`
+}
+
+/**
  * The expression: the base, then each term in frame order, each `+Δ` or `-Δ`
- * on the same level — never nested, so its depth is the same for one term as
- * for three thousand, and it is built by a loop, not recursion.
+ * on the same level — never nested, and built by a loop, not recursion. Past
+ * `FLAT_GROUP` terms they are written in parenthesised groups of that many,
+ * which bounds how deep ffmpeg's evaluator recurses (above).
  */
 export function flatSumExpression(sum: FlatSum, options: FlatSumOptions): string {
   const tv = options.timeVar ?? 't'
   const w = written(sum, options)
+  const texts = w.terms.map((t) => termText(t, tv))
+  if (texts.length <= FLAT_GROUP) return w.base + texts.join('')
   const parts = [w.base]
-  for (const t of w.terms) {
-    const d = t.delta.startsWith('-') ? t.delta : `+${t.delta}`
-    if (t.at !== undefined) {
-      parts.push(`${d}*gte(${tv},${t.at})`)
-    } else {
-      // A pan that began before the clip's first frame has a negative start;
-      // `t--0.5` parses (measured), `t+0.5` is plainer.
-      const since = t.t0!.startsWith('-') ? `${tv}+${t.t0!.slice(1)}` : `${tv}-${t.t0}`
-      const p = `min(1,max(0,(${since})/${t.span}))`
-      parts.push(`${d}*(${p})*(${p})*(3-2*(${p}))`)
-    }
-  }
+  for (let i = 0; i < texts.length; i += FLAT_GROUP) parts.push(`+(${texts.slice(i, i + FLAT_GROUP).join('')})`)
   return parts.join('')
 }
 
 /**
  * The sum's value at a frame, raw (before the crop's clamp and `exportPixel`):
- * the expression's own arithmetic on its written constants, in its order.
- * `t` is formed as the crop forms it after `fps=`, the frame's pts times the
- * time base: `frame × (1/fps)`.
+ * the expression's own arithmetic on its written constants, in its order —
+ * a grouped sum adds each group up from its first term, then the group to
+ * the running value, as the parser's tree does. `t` is formed as the crop
+ * forms it after `fps=`, the frame's pts times the time base:
+ * `frame × (1/fps)`.
  */
 export function flatSumAt(sum: FlatSum, frame: number, options: FlatSumOptions): number {
   const w = written(sum, options)
   const t = options.startSeconds + frame * (1 / options.fps)
-  let value = Number(w.base)
-  for (const term of w.terms) {
+  const of = (term: Written['terms'][number]): number => {
     const d = Number(term.delta)
-    if (term.at !== undefined) {
-      value += d * (t >= Number(term.at) ? 1 : 0)
-    } else {
-      const p = Math.min(1, Math.max(0, (t - Number(term.t0)) / Number(term.span)))
-      value += d * p * p * (3 - 2 * p)
-    }
+    if (term.at !== undefined) return d * (t >= Number(term.at) ? 1 : 0)
+    const p = Math.min(1, Math.max(0, (t - Number(term.t0)) / Number(term.span)))
+    return d * p * p * (3 - 2 * p)
+  }
+  let value = Number(w.base)
+  if (w.terms.length <= FLAT_GROUP) {
+    for (const term of w.terms) value += of(term)
+    return value
+  }
+  for (let i = 0; i < w.terms.length; i += FLAT_GROUP) {
+    let group = 0
+    for (const term of w.terms.slice(i, i + FLAT_GROUP)) group += of(term)
+    value += group
   }
   return value
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { exportPixel, flatSumAt, flatSumExpression, smoothstep, type FlatSum, type Term } from '@shared/reframe/expression'
+import { FLAT_GROUP, exportPixel, flatSumAt, flatSumExpression, smoothstep, type FlatSum, type Term } from '@shared/reframe/expression'
 import { keyframeExpression, valueAt } from '@shared/render/keyframes'
-import { evaluateFlatSum, parenDepth, parseFlatSum } from './fixtures/flatSum'
+import { evaluateFlatSum, longestChain, parenDepth, parseFlatSum } from './fixtures/flatSum'
 
 /*
  * The flat sum (docs/CLIPS.md §4.7; EFFECTS.md §48, §52): the expression a
@@ -99,6 +99,47 @@ describe('flatSumExpression — never nested', () => {
     expect(parenDepth(big)).toBe(parenDepth(small))
     expect(parenDepth(big)).toBeLessThanOrEqual(5)
     expect(parseFlatSum(big).terms).toHaveLength(1000)
+  })
+
+  it('past FLAT_GROUP terms, groups of that many: the evaluator’s chain stays short, where a flat 7,300 crashed ffmpeg', () => {
+    /*
+     * ffmpeg's tree for a+b+c… is a chain as long as the sum, and evaluating
+     * it recurses down the chain: measured at a 1 MB stack, 7,000 flat terms
+     * rendered and 7,300 died of SIGSEGV; 9,595 in groups of 1,000 rendered
+     * frame-exact on 3,000 of 3,000 frames (EFFECTS.md §55).
+     */
+    const at = flatSumExpression(many(FLAT_GROUP), opts)
+    expect(count(at, '+('), 'at the limit: flat, as measured').toBe(0)
+    expect(longestChain(at)).toBe(FLAT_GROUP)
+    const long = many(7300)
+    const e = flatSumExpression(long, opts)
+    expect(count(e, '+(')).toBe(8)
+    expect(longestChain(e), 'the longest chain of additions at any one level').toBeLessThanOrEqual(FLAT_GROUP)
+    expect(parenDepth(e)).toBe(parenDepth(at) + 1)
+    expect(parseFlatSum(e).terms).toHaveLength(7300)
+    expect(e.startsWith('656+(+200*gte(t,')).toBe(true)
+  })
+
+  it('a grouped sum’s value is its text’s, evaluated group by group, to the last bit', () => {
+    const terms: Term[] = []
+    let seed = 11
+    const next = (): number => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648
+    // 2,600 terms over 3,000 frames: several on a frame, pans overlapping steps, fractional values across every group boundary.
+    for (let i = 0; i < 2600; i++) {
+      const f = 1 + Math.floor((i * 3000) / 2600)
+      const delta = 2 * Math.round((next() - 0.5) * 300)
+      terms.push(i % 3 === 0 ? { fromFrame: f, toFrame: f + 2 + Math.floor(next() * 9), delta } : { atFrame: f, delta })
+    }
+    const sum: FlatSum = { base: 640, terms }
+    const e = flatSumExpression(sum, opts)
+    expect(count(e, '+(')).toBe(3)
+    let fractional = 0
+    for (let n = 0; n < 3010; n += 3) {
+      const v = flatSumAt(sum, n, opts)
+      if (v !== Math.round(v)) fractional++
+      expect(v, `frame ${n}`).toBe(evaluateFlatSum(e, n, FPS))
+    }
+    expect(fractional, 'frames whose value is not whole: the order of the additions is really tested').toBeGreaterThan(300)
   })
 
   it('is what keyframeExpression is not: its nested shape grows a level per key', () => {
