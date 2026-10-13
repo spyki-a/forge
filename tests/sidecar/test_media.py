@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib
+import io
 import os
 import pathlib
 import re
@@ -495,6 +496,23 @@ class FetchUrl(unittest.TestCase):
                 media.fetch_url(self.url, "0" * 64, None, "the face model")
             folder = os.path.join(self.models, "files")
             self.assertEqual(os.listdir(folder) if os.path.isdir(folder) else [], [])
+
+    def test_a_body_cut_short_says_so_and_keeps_nothing(self) -> None:
+        # http.client hands back b'' at an early end instead of raising, so a
+        # dropped connection looks like a whole, short file (measured through
+        # the dev sandbox's proxy: 4 of 5 fetches of the face finder).
+        body = io.BytesIO(os.urandom(600))
+        response = mock.MagicMock()
+        response.headers = {"Content-Length": "1000"}
+        response.read.side_effect = lambda amount=-1: body.read(min(amount, 256))
+        response.__enter__.return_value = response
+        with mock.patch.dict(os.environ, {"FORGE_MODELS_DIR": self.models}), \
+                mock.patch("urllib.request.urlopen", return_value=response):
+            with self.assertRaises(ValueError) as caught:
+                media.fetch_url("https://example.invalid/m/blaze.tflite", self.sha, Recorder(), "the face finder")
+        self.assertIn("was cut short (600 of 1,000 bytes); try again", str(caught.exception))
+        self.assertNotIn("sha256", str(caught.exception))
+        self.assertEqual(os.listdir(os.path.join(self.models, "files")), [])
 
 
 # ------------------------------------------------------------- registration

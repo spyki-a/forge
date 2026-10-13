@@ -462,6 +462,15 @@ def fetch_url(
     digits, written as a ``.part`` and moved into place only once the whole
     file hashes right, so a cut connection or a changed file never leaves
     something that looks finished. A wrong hash raises and keeps nothing.
+
+    A body shorter than its ``Content-Length`` says so before the hash is
+    compared: ``http.client`` hands back ``b''`` at an early end rather than
+    raising (CPython's choice, for compatibility), so the loop saw a short
+    file as a whole one and a dropped connection read as "does not match its
+    sha256". Measured through the dev sandbox's proxy (2026-10-13): 9 of 10
+    fetches of the face finder came back 979,176–1,073,176 of 1,083,786 B and
+    silent, whatever the read size (16 KiB to 1 MiB), while curl through the
+    same proxy got the whole file 3 of 3.
     """
     import urllib.parse
     import urllib.request
@@ -478,6 +487,7 @@ def fetch_url(
     os.makedirs(folder, exist_ok=True)
     partial = f"{target}.{os.getpid()}.part"
     hasher = hashlib.sha256()
+    received = 0
     try:
         with urllib.request.urlopen(url, timeout=60) as response, open(partial, "wb") as out:
             length = response.headers.get("Content-Length") if hasattr(response, "headers") else None
@@ -491,7 +501,13 @@ def fetch_url(
                     break
                 hasher.update(chunk)
                 out.write(chunk)
+                received += len(chunk)
                 bar.update(len(chunk))
+        if total is not None and received < total:
+            raise ValueError(
+                f"{label}: the download from {url} was cut short "
+                f"({received:,} of {total:,} bytes); try again"
+            )
         if hasher.hexdigest() != digest:
             raise ValueError(
                 f"{label}: the file from {url} does not match its sha256 "
