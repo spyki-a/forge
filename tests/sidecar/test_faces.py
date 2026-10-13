@@ -45,6 +45,8 @@ def tearDownModule() -> None:
     # A folder of our own (run by hand, no FORGE_TEST_OUT) goes; the runner's is its to keep.
     if _MADE_OUT:
         shutil.rmtree(OUT, True)
+
+
 needs_ffmpeg = unittest.skipUnless(FFMPEG and FFPROBE, "FORGE_TEST_FFMPEG and FORGE_TEST_FFPROBE are not set")
 
 
@@ -421,7 +423,10 @@ class Model(unittest.TestCase):
                         "color=c=black:s=320x180:r=10:d=1", "-c:v", "libx264", "-pix_fmt", "yuv420p", clip], check=True)
         cache = tempfile.mkdtemp(prefix="forge-faces-cache-")
         self.addCleanup(shutil.rmtree, cache, True)
+        # The network refused too: a gate that fetched as a side effect fails here
+        # by name, rather than pulling the real model from Google mid-test.
         with mock.patch.dict(os.environ, {"FORGE_CACHE_DIR": cache}), \
+                mock.patch("urllib.request.urlopen", side_effect=AssertionError("the network was touched")), \
                 mock.patch.object(faces, "run_worker", side_effect=AssertionError("a worker was started")):
             with self.assertRaises(Unavailable) as caught:
                 faces.faces({"path": clip, "ffmpeg": FFMPEG, "ffprobe": FFPROBE, "width": 320, "height": 180, "key": "1:2"}, Context())
