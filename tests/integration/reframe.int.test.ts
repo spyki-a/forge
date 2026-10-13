@@ -494,6 +494,39 @@ async function checkMoment(s: Source, row: RowResult, label: string, cut: number
   for (const d of diffs) expect(d, `${label} moment: mean difference ${d.toFixed(2)} levels`).toBeLessThanOrEqual(2)
 }
 
+/** Is source frame `n` exactly half-way between two output slots after the in-point's seek (t·30 = m + ½)? From its probed pts, in integers. */
+function onTie(s: Source, n: number, speed = 1, inPoint = IN): boolean {
+  const { num, den } = s.timeBase
+  const seek = Math.round((Math.round(Number((inPoint / FPS).toFixed(6)) * 1e6) * den) / (num * 1e6))
+  const rel = s.pts[n] - seek
+  const q = speed === 1 ? rel : Math.trunc(rel / speed)
+  return (2 * q * FPS * num) % (2 * den) === den
+}
+
+describe('the media is what the rows assume', () => {
+  it('the ties the fps=-first rows are meant to meet are in the files as probed, not only in their comments', () => {
+    /*
+     * These are what made the rows bite (a crop on the source's own clock was late on the VFR tie, and
+     * rounding the printed time put the 60 fps ties a frame early). On Windows CI the 2018 build writes
+     * this media: if its muxer stamps it otherwise, the rows would still pass and no longer test the case.
+     */
+    const vfr = sources.get('vfr')!
+    const s60 = sources.get('60')!
+    const ties = {
+      'vfr cut 30': onTie(vfr, 30),
+      'vfr frame 31, after it': onTie(vfr, 31),
+      '60 cut 61': onTie(s60, 61),
+      '60 cut 331': onTie(s60, 331),
+      // The 30 fps source's cuts are on the grid; its first cut is the §3.2 case (≡ 2 mod 3 once the in-point is off).
+      '30 cut 29 is not': !onTie(sources.get('30')!, 29)
+    }
+    say(`- ties as probed: ${Object.entries(ties).map(([k, v]) => `${k} ${v ? 'yes' : 'NO'}`).join('; ')}`)
+    expect(ties).toEqual({ 'vfr cut 30': true, 'vfr frame 31, after it': true, '60 cut 61': true, '60 cut 331': true, '30 cut 29 is not': true })
+    // And the p0 rows' precondition: VFR frame 1 half a slot past in-point 1's seek, so fps= starts on slot 1.
+    expect(onTie(vfr, 1, 1, 1), 'vfr frame 1 after in-point 1').toBe(true)
+  })
+})
+
 describe('a followed crop, rendered: frame-exact at every cut, on four sources', () => {
   for (const name of ['30', '29.97', '60', 'vfr'] as const) {
     describe(name, () => {
