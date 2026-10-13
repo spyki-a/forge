@@ -2520,6 +2520,66 @@ placed at the upper third rather than centred.
 
 ### 4.7 1f — Applying it: the followed crop, `setAspect`, the action · 4.5 days (+1 for the two-up)
 
+> **Built 2026-10-13 — the render half (slice A); the store, the UI, the
+> IPC, the analysis job, the harness and the Director's hook are slice B's,
+> not built.** `src/shared/reframe/expression.ts` (`flatSumExpression`,
+> `flatSumAt`, `exportPixel`, `smoothstep`, `windowSum`, `FLAT_GROUP`);
+> `src/shared/reframe/keys.ts` (`followKeys`, `followAt`, `positionAt`,
+> `exportFrameAt`, `isKeyed`); `KeyedProperty` gains `cropX`/`cropY`, kept out
+> of `KEYED_PROPERTIES`; `Clip.follow` and `Project.subjects` (`timeline.ts`);
+> `render/plan.ts` (`cropFilter` keyed and stacked, `followClock`,
+> `followedRetime`); `render/crop.ts` `cropAt`; `render/momentFrames.ts`
+> (the crop ahead of the trim, `followedFootage`, the window's keys,
+> `PULL_VERSION` 6). **Where the plan above changed, each measured
+> (`EFFECTS.md` §55):**
+> - **Not `keyframeExpression`.** Its nested `if()` as the crop's x is
+>   refused past 96 held keys; the x (and y, and each half's) is a flat sum —
+>   base, a `Δ*gte(t,(f−0.5)/fps)` per held step, a smoothstep term per pan —
+>   frame-exact to 2,998 terms in the plan's chain, and past `FLAT_GROUP`
+>   (1,000) terms written in parenthesised groups, because ffmpeg's
+>   evaluator recurses down a flat sum and crashed past ~7,000 terms at a
+>   1 MB stack (9,595 grouped: frame-exact there).
+> - **Not `timelineFrameAt`.** A cut's held key goes on the EXPORT's `fps=`
+>   slot for it (`exportFrameAt`): exactly from pts when given, from the
+>   printed ms until 1b keeps them. `timelineFrameAt` was early on a third
+>   to a half of the cuts at speed 1 and on every cut at 0.5×.
+> - **The followed clock, `fps=${fps}:start_time=0`, ahead of the crop at
+>   every speed** (and ahead of the two-up's split). §3.4's remedy was
+>   needed (29.97 and VFR pans drifted 12 / 8 px off the grid, a VFR tie cut
+>   late without it); `start_time=0` because `fps=` otherwise starts at the
+>   slot the first frame after the seek rounds to, and at slot 1 every
+>   reader of the clip was a frame off the export.
+> - **A followed ramp runs on `T`, not `T-STARTT`** (`followedRetime`),
+>   where its keys put the cuts: from STARTT a VFR clip at in-point 7 had
+>   every cut off by up to 5 frames.
+> - **The two-up is `vstack,tpad=stop_mode=clone:stop=1`**: without the
+>   `tpad` the chain's trailing `fps=` drops the clip's last frame.
+> - **The pull's keys are its window's** (`windowSum`): the whole clip's put
+>   a long clip's `-vf` past Windows' command-line limit.
+>
+> Tests: `tests/reframeExpression.test.ts`, `tests/reframeKeys.test.ts`,
+> `tests/reframeRender.test.ts`, `tests/oldestFfmpeg.test.ts` (the followed
+> and two-up shapes, the pulls, `sgn`/`randomi`) and the render check
+> `tests/integration/reframe.int.test.ts`: four sources at 9:16, 1:1, 2× and
+> the two-up, each with its sound and a moment across a cut; the clock's
+> slot-1 rows at 1× and 0.5×; a followed ramp; 110 held keys; a grouped
+> 1,103-term sum; the media's ties asserted from the probed pts. Every row
+> within 1 px of `cropAt` on every frame (±2 on the Mac, ±8 elsewhere).
+> Mutations killed include: the key a frame early, the memo without each of
+> its parts, the moving axis always x, the seek floored, `start_time`
+> dropped, the clock at speed 1 only, a ramp on STARTT (render and pull),
+> the two-up's `tpad`, the bottom half on the top's keys, no grouping, a
+> flat reader of a grouped sum, the pull with the whole clip's keys, `sgn`.
+> "Keyed on `n`" is no longer a mutation: behind the clock `n/fps` is `t`.
+>
+> **Left:** 1b's `Shot.startPts` and `SubjectTrack.timeBase` — required for
+> 25 and 50 fps projects, where the printed-ms path keys 1 cut in 6 a frame
+> late at 2 in-points of 5 — then `exportFrameAt`'s exact path in
+> `followKeys`; `path.ts` matches a drag's offset by the exact `startMs`,
+> so a re-analysis must remap `offsets` and `halfOffsets` onto its new
+> shots (slice B); the preview at 0.5× seeks a frame before the export's
+> cut. Windows: dated, not run — CI's render check is the 2018 run.
+
 **Expressed as a crop that follows on one clip, not as splits** (decision
 §16.2, with the alternative). Both were measured:
 

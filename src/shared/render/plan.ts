@@ -824,8 +824,8 @@ function cropOf(size: { width: number; height: number }, x: string, y: string): 
  * On a single shot the halves are keyed at (x, 0) and (x, half.height), which
  * reassembles the one crop exactly — measured bit-identical to it, frame by
  * frame, at 30, 29.97 and 60 fps, in -vf and in buildRenderPlan's own chain
- * (EFFECTS.md §38, this slice's measure) — so one graph serves both layouts
- * and a cut switches them with the same held keys.
+ * (EFFECTS.md §38 in -vf, §55 in the chain, given the tpad below) — so one
+ * graph serves both layouts and a cut switches them with the same held keys.
  *
  * `tpad=stop_mode=clone:stop=1` is not decoration. Without it the chain's
  * trailing `fps=` drops the clip's LAST frame and the black canvas shows
