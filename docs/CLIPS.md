@@ -1830,13 +1830,20 @@ from `parseSceneLog` over the lines. An AbortSignal cancels through
 >   `3698b18f…2b181b`, is the local `.venv-faces` file's, and both URLs'.
 >   One real fetch through the handler: 0.13 s, three progress messages
 >   ("downloading the face finder (1 MB, first run only)").
-> - **`media.fetch_url` fails on this Mac as it is**: the python.org 3.14
+> - **`media.fetch_url` failed on this Mac as built**: the python.org 3.14
 >   install has an empty `etc/openssl`, so `urlopen`'s default context
 >   cannot verify storage.googleapis.com (`CERTIFICATE_VERIFY_FAILED`). The
 >   fetch above worked with `SSL_CERT_FILE` set to certifi's bundle, which
->   `requirements-faces.txt` installs. `media.py` needs a certifi context in
->   `fetch_url`, an open item for the fix phase. Hugging Face downloads
->   are unaffected: they go through huggingface_hub's own client.
+>   `requirements-faces.txt` installs. **Fixed in the fix phase**:
+>   `fetch_url` verifies with the platform's default context plus certifi's
+>   bundle when certifi imports (added, not swapped, so a company's own root
+>   in the system store still counts); re-measured, the same fetch without
+>   certifi is `CERTIFICATE_VERIFY_FAILED` in 0.10 s, and with it reaches the
+>   body. A body shorter than its `Content-Length` now says "cut short (N of
+>   M bytes); try again" rather than "does not match its sha256" (through
+>   the sandbox's proxy 9 of 10 fetches were cut short; curl got 3 of 3).
+>   Hugging Face downloads are unaffected: they go through huggingface_hub's
+>   own client.
 > - **The install, measured on `sidecar/.venv`** (pip 26.2.1, CPython
 >   3.14.6). The first file took 0.74 s and installed absl-py 2.5.0 (wheel
 >   137,410 B) and sounddevice 0.5.6 (1,009,647 B universal2); flatbuffers,

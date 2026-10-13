@@ -452,6 +452,30 @@ def _safe_name(name: str) -> str:
     return cleaned or "download"
 
 
+def _tls_context() -> "Any":
+    """The context ``fetch_url`` verifies https with: the platform's roots, plus certifi's.
+
+    A python.org macOS interpreter ships with an empty ``etc/openssl`` until
+    its "Install Certificates" step is run, and ``urlopen``'s default context
+    then fails every https fetch: ``CERTIFICATE_VERIFY_FAILED`` for
+    storage.googleapis.com on the dev Mac's 3.14 (measured 2026-10-13, the
+    face finder's Get press). certifi's bundle is ADDED to the default
+    context rather than replacing it, so roots a company installs in the
+    system store still count. certifi is in requirements-faces.txt — the
+    face finder is the one model fetched through here — and without it this
+    is the default context.
+    """
+    import ssl
+
+    tls = ssl.create_default_context()
+    try:
+        import certifi
+    except ImportError:
+        return tls
+    tls.load_verify_locations(cafile=certifi.where())
+    return tls
+
+
 def fetch_url(
     url: str, sha256: str, context: "Context | None", label: str,
     span: tuple[float, float] = (0.0, 1.0),
@@ -489,7 +513,7 @@ def fetch_url(
     hasher = hashlib.sha256()
     received = 0
     try:
-        with urllib.request.urlopen(url, timeout=60) as response, open(partial, "wb") as out:
+        with urllib.request.urlopen(url, timeout=60, context=_tls_context()) as response, open(partial, "wb") as out:
             length = response.headers.get("Content-Length") if hasattr(response, "headers") else None
             total = int(length) if length and str(length).isdigit() else None
             bar = progress_class(context, label, span)(total=total)

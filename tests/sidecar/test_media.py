@@ -25,6 +25,7 @@ import tempfile
 import time
 import types
 import unittest
+import urllib.error
 from unittest import mock
 
 from forge_sidecar import media
@@ -513,6 +514,31 @@ class FetchUrl(unittest.TestCase):
         self.assertIn("was cut short (600 of 1,000 bytes); try again", str(caught.exception))
         self.assertNotIn("sha256", str(caught.exception))
         self.assertEqual(os.listdir(os.path.join(self.models, "files")), [])
+
+    def test_https_is_verified_with_certifi_added_to_the_platform_roots(self) -> None:
+        # The dev Mac's python.org 3.14 has an empty etc/openssl: urllib's
+        # default context alone failed with CERTIFICATE_VERIFY_FAILED.
+        seen: list[object] = []
+
+        def opened(_url: str, timeout: float | None = None, context: object = None) -> object:
+            seen.append(context)
+            raise urllib.error.URLError("no network in this test")
+
+        for certifi, added in ((types.SimpleNamespace(where=lambda: "/certifi/cacert.pem"), True), (None, False)):
+            tls = mock.Mock()
+            with mock.patch("ssl.create_default_context", return_value=tls) as made, \
+                    mock.patch.dict(sys.modules, {"certifi": certifi}), \
+                    mock.patch("urllib.request.urlopen", side_effect=opened), \
+                    mock.patch.dict(os.environ, {"FORGE_MODELS_DIR": self.models}):
+                with self.assertRaises(urllib.error.URLError):
+                    media.fetch_url("https://storage.googleapis.com/m/blaze.tflite", self.sha, None, "the face finder")
+            # The platform's roots first, never replaced: a company's own root stays trusted.
+            made.assert_called_once_with()
+            self.assertIs(seen.pop(), tls, "urlopen was not handed the context")
+            if added:
+                tls.load_verify_locations.assert_called_once_with(cafile="/certifi/cacert.pem")
+            else:
+                tls.load_verify_locations.assert_not_called()
 
 
 # ------------------------------------------------------------- registration
