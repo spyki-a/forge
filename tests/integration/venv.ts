@@ -22,13 +22,34 @@ export const VENV_PYTHON = join(SIDECAR_DIR, '.venv', ...(process.platform === '
 /** Whether this machine has the venv. CI never does: it runs a bare 3.12 with nothing installed. */
 export const HAS_VENV = existsSync(VENV_PYTHON)
 
+/** The tests reach the pack explicitly (docs/CLIPS.md §3a.6), so the development order here never asks for it. */
+const NO_PACK = { unsupported: 'the tests reach the pack explicitly (CLIPS §3a.6)' }
+
 /**
  * For a test that runs on ANY interpreter (sidecarMedia, the floor scan): the
- * venv when there is one, else `FORGE_PYTHON`, else `python3` — the fallback
- * these Python-only tests have always used. The helper itself is started in
- * the app's own development order instead (`devHelperLaunch`).
+ * venv when there is one; otherwise what the app's development order falls
+ * back to without one, `FORGE_PYTHON` (when set and not empty, read in any
+ * case on win32), else `python` on win32 and `python3` elsewhere. That last
+ * rung is `resolveHelperPython`'s own, so these tests and the helper started
+ * by `devHelperLaunch` never disagree: a Windows machine with python.org's
+ * Python (a python.exe, no python3.exe) and no FORGE_PYTHON runs both.
  */
-export const HELPER_PYTHON = HAS_VENV ? VENV_PYTHON : process.env.FORGE_PYTHON ?? 'python3'
+export function helperPythonFor(o: { venvPython: string | null; env: NodeJS.ProcessEnv; platform: NodeJS.Platform }): string {
+  if (o.venvPython) return o.venvPython
+  const choice = resolveHelperPython({
+    packaged: false,
+    env: o.env,
+    platform: o.platform,
+    venvPython: null,
+    pack: null,
+    manifest: HELPER_PACK,
+    packPlatform: NO_PACK
+  })
+  if (choice.kind !== 'env' && choice.kind !== 'path') throw new Error(`development without a venv never resolves to ${choice.kind}`)
+  return choice.python
+}
+
+export const HELPER_PYTHON = helperPythonFor({ venvPython: HAS_VENV ? VENV_PYTHON : null, env: process.env, platform: process.platform })
 
 /**
  * The AI helper's launch in the app's own DEVELOPMENT order
@@ -49,7 +70,7 @@ export function devHelperLaunch(o: { modelsDir?: string; cacheDir?: string } = {
     venvPython: HAS_VENV ? VENV_PYTHON : null,
     pack: null,
     manifest: HELPER_PACK,
-    packPlatform: { unsupported: 'the tests reach the pack explicitly (CLIPS §3a.6)' }
+    packPlatform: NO_PACK
   })
   const launch = helperLaunch(choice, { packaged: false, platform: process.platform, base: process.env, modelsDir: o.modelsDir ?? '', cacheDir: o.cacheDir ?? '' })
   if (!launch) throw new Error(`development never resolves to ${choice.kind}`)

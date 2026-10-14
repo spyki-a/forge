@@ -14,7 +14,8 @@ import { HAS_VENV, HELPER_PYTHON as PYTHON, SIDECAR_DIR as SIDECAR } from './ven
  *
  * Run with the helper's interpreter when this machine has one — the venv,
  * which has numpy, so every test runs — and otherwise with the one the
- * sidecar tests use, `FORGE_PYTHON` or `python3`: on CI a bare 3.12 with
+ * sidecar tests use, `FORGE_PYTHON` or `python` (win32) / `python3` on PATH
+ * (venv.ts helperPythonFor, the app's development order): on CI a bare 3.12 with
  * nothing installed. There the six numpy frame tests skip, and ONLY those: a
  * skip for any other reason is a failure here, so a bare interpreter still
  * runs the probe, the decodes and the frame stream read as bytes (the helper's

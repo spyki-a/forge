@@ -8,6 +8,7 @@ import {
   type HelperPythonInput
 } from '../src/shared/sidecar/helperPython'
 import type { HelperPackManifest, PackPlatform, PackReceipt, PlatformPack } from '../src/shared/sidecar/pack'
+import { helperPythonFor } from './integration/venv'
 
 /*
  * Which interpreter runs the AI helper (docs/CLIPS.md §3a.2, §16.42 (b)).
@@ -270,5 +271,28 @@ describe('a machine with no pack for it', () => {
   it('reads no receipt as damaged, since Repair could not run there either', () => {
     const torn = macPack({ receipt: UNPARSEABLE_RECEIPT })
     expect(resolveHelperPython(packaged({ ...macos13, pack: torn }))).toEqual({ kind: 'absent' })
+  })
+})
+
+describe("the Python-only tests' interpreter (tests/integration/venv.ts helperPythonFor)", () => {
+  // sidecarMedia.int and oldestFfmpeg's helper-argv tests run on it; sidecar.int
+  // starts the helper through devHelperLaunch. With no venv the two must fall
+  // back to the same Python, or a Surface with python.org's python.exe (and no
+  // python3.exe) and no FORGE_PYTHON runs one set and fails the other with 9009.
+  it('falls back as the app’s development order does: python on win32, python3 elsewhere', () => {
+    expect(helperPythonFor({ venvPython: null, env: {}, platform: 'win32' })).toBe('python')
+    expect(helperPythonFor({ venvPython: null, env: {}, platform: 'darwin' })).toBe('python3')
+    expect(helperPythonFor({ venvPython: null, env: {}, platform: 'win32' })).toBe(
+      (resolveHelperPython(input({ platform: 'win32' })) as { python: string }).python
+    )
+  })
+
+  it('takes FORGE_PYTHON as the app does (set and not empty, any case on win32), and the venv before it', () => {
+    expect(helperPythonFor({ venvPython: null, env: { FORGE_PYTHON: '' }, platform: 'win32' })).toBe('python')
+    expect(helperPythonFor({ venvPython: null, env: { Forge_Python: 'C:\\Py312\\python.exe' }, platform: 'win32' })).toBe('C:\\Py312\\python.exe')
+    expect(helperPythonFor({ venvPython: null, env: { FORGE_PYTHON: '/opt/py/bin/python3' }, platform: 'darwin' })).toBe('/opt/py/bin/python3')
+    expect(helperPythonFor({ venvPython: '/repo/sidecar/.venv/bin/python', env: { FORGE_PYTHON: '/opt/py' }, platform: 'darwin' })).toBe(
+      '/repo/sidecar/.venv/bin/python'
+    )
   })
 })
