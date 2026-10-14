@@ -1,12 +1,12 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { spawnSync } from 'node:child_process'
-import { existsSync } from 'node:fs'
-import { isAbsolute } from 'node:path'
+import { existsSync, realpathSync } from 'node:fs'
+import { isAbsolute, relative, sep } from 'node:path'
 import { PACK_FLAGS, cleanHelperEnv } from '../../src/shared/sidecar/helperPython'
 import { SidecarClient, SidecarError } from '../../src/main/sidecar/client'
 import { OPTIONAL_METHODS, SIDECAR_METHODS, RPC_ERRORS, type HelloResult } from '@shared/sidecar/protocol'
 import { SELFTEST_GROUPS, SELFTEST_GROUP_NAMES, type SelftestResult } from '@shared/sidecar/selftest'
-import { HAS_VENV, SIDECAR_DIR, devHelperLaunch } from './venv'
+import { HAS_VENV, PACK_UNDER_TEST, SIDECAR_DIR, VENV_PYTHON, devHelperLaunch, launchFor } from './venv'
 
 let client: SidecarClient | null = null
 
@@ -45,6 +45,27 @@ describe('sidecar handshake', () => {
     expect(hello.path.length).toBeGreaterThan(0)
     for (const entry of hello.path) expect(typeof entry, JSON.stringify(entry)).toBe('string')
   }, 60_000)
+
+  it('starts through the rung asked for: under FORGE_HELPER_PACK, the pack rung’s own launch (CLIPS §3a.6)', async () => {
+    // Read from the environment here, not from venv.ts: a venv.ts that ignored the variable would start the venv or a bare Python, green.
+    const asked = process.env.FORGE_HELPER_PACK
+    const launch = devHelperLaunch()
+    if (!asked) {
+      expect(launch.source.kind).not.toBe('pack')
+      expect(launch.args).toEqual(['-m', 'forge_sidecar'])
+      return
+    }
+    expect(launch.source).toMatchObject({ kind: 'pack' })
+    expect(launch.args).toEqual([...PACK_FLAGS, '-m', 'forge_sidecar'])
+    expect(launch.command).toBe(PACK_UNDER_TEST?.python)
+    // The capability suites' own launch (vision, beats, faces, reframeJob, salient, asr) is the same one.
+    const suites = launchFor(VENV_PYTHON)
+    expect([suites.command, suites.args, suites.source]).toEqual([launch.command, launch.args, launch.source])
+    // And the interpreter that answers is the pack's own, inside its version folder.
+    const hello = await makeClient().start()
+    const rel = relative(realpathSync.native(PACK_UNDER_TEST!.versionDir), realpathSync.native(hello.executable))
+    expect(rel === '' || (!isAbsolute(rel) && rel !== '..' && !rel.startsWith(`..${sep}`)), `${hello.executable} outside ${PACK_UNDER_TEST!.versionDir}`).toBe(true)
+  }, 120_000)
 
   it('round-trips a ping', async () => {
     const c = makeClient()

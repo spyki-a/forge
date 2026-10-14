@@ -1,14 +1,17 @@
 import { describe, expect, it } from 'vitest'
+import { join } from 'node:path'
 import {
   HELPER_PYTHON_MISSING,
   HELPER_RECEIPT_UNREADABLE,
+  PACK_FLAGS,
   UNPARSEABLE_RECEIPT,
   receiptFromText,
   resolveHelperPython,
   type HelperPythonInput
 } from '../src/shared/sidecar/helperPython'
 import type { HelperPackManifest, PackPlatform, PackReceipt, PlatformPack } from '../src/shared/sidecar/pack'
-import { helperPythonFor } from './integration/venv'
+import { HELPER_PACK } from '../src/shared/sidecar/packManifest'
+import { helperPythonFor, packLaunch, packMissing, packUnderTest, venvGate } from './integration/venv'
 
 /*
  * Which interpreter runs the AI helper (docs/CLIPS.md §3a.2, §16.42 (b)).
@@ -294,5 +297,76 @@ describe("the Python-only tests' interpreter (tests/integration/venv.ts helperPy
     expect(helperPythonFor({ venvPython: '/repo/sidecar/.venv/bin/python', env: { FORGE_PYTHON: '/opt/py' }, platform: 'darwin' })).toBe(
       '/repo/sidecar/.venv/bin/python'
     )
+  })
+})
+
+describe('the helper’s suites from an installed pack (tests/integration/venv.ts, FORGE_HELPER_PACK, CLIPS §3a.6)', () => {
+  /*
+   * CI's pack job installs the pack and runs the helper suites again from it,
+   * through the pack rung's own launch. If venv.ts ignored the variable, every
+   * suite would skip for "no helper venv" on CI, green; if it skipped a pack
+   * that did not install, the same. So: the variable is read, through the app's
+   * own rule, and a pack asked for and missing FAILS the suites.
+   */
+  const mac = HELPER_PACK.platforms['darwin-arm64']
+  const matching = {
+    pack: HELPER_PACK.pack,
+    python: HELPER_PACK.python.version,
+    build: HELPER_PACK.python.build,
+    platform: 'darwin-arm64',
+    interpreterSha256: mac.interpreter.sha256,
+    lockSha256: mac.lock.sha256
+  }
+  const userData = join('/Users/someone', 'forge pack é', 'userData')
+  const versionDir = join(userData, 'python', String(HELPER_PACK.pack))
+  const python = join(versionDir, ...mac.python.split('/'))
+  const onDisk = (receipt: unknown, files: string[] = [join(versionDir, 'pack.json'), python]) => ({
+    platform: 'darwin' as const,
+    arch: 'arm64',
+    exists: (p: string) => files.includes(p),
+    receiptOf: () => receipt
+  })
+
+  it('takes the version folder FORGE_HELPER_PACK names, as the app’s pack rung runs it', () => {
+    const pack = packUnderTest({ env: { FORGE_HELPER_PACK: versionDir }, ...onDisk(matching) })
+    expect(pack).toEqual({ asked: versionDir, versionDir, python, choice: { kind: 'pack', python, pack: HELPER_PACK.pack, root: versionDir } })
+    const launch = packLaunch(pack!, { modelsDir: '/m', cacheDir: '/c' })
+    expect(launch.command).toBe(python)
+    expect(launch.args).toEqual([...PACK_FLAGS, '-m', 'forge_sidecar'])
+    expect(launch.source).toEqual({ kind: 'pack', pack: HELPER_PACK.pack, root: versionDir })
+    expect(launch.env).toMatchObject({ FORGE_MODELS_DIR: '/m', FORGE_CACHE_DIR: '/c' })
+  })
+
+  it('finds the pack under a userData too (the plan’s form), and FORGE_PYTHON never takes its place', () => {
+    const pack = packUnderTest({ env: { FORGE_HELPER_PACK: userData, FORGE_PYTHON: '/opt/py/bin/python3' }, ...onDisk(matching) })
+    expect(pack?.versionDir).toBe(versionDir)
+    expect(pack?.choice).toEqual({ kind: 'pack', python, pack: HELPER_PACK.pack, root: versionDir })
+  })
+
+  it('changes nothing when the variable is unset or empty', () => {
+    expect(packUnderTest({ env: {}, ...onDisk(matching) })).toBeNull()
+    expect(packUnderTest({ env: { FORGE_HELPER_PACK: '' }, ...onDisk(matching) })).toBeNull()
+  })
+
+  it('says why a pack that is asked for does not run here: another build’s, or its Python gone', () => {
+    const other = packUnderTest({ env: { FORGE_HELPER_PACK: versionDir }, ...onDisk({ ...matching, lockSha256: 'f'.repeat(64) }) })!
+    expect(packMissing(other)).toMatch(/^FORGE_HELPER_PACK=.* names no AI helper pack that runs here: /)
+    expect(() => packLaunch(other)).toThrow(/names no AI helper pack/)
+    const gone = packUnderTest({ env: { FORGE_HELPER_PACK: versionDir }, ...onDisk(matching, [join(versionDir, 'pack.json')]) })!
+    expect(packMissing(gone)).toContain(HELPER_PYTHON_MISSING)
+    const nothing = packUnderTest({ env: { FORGE_HELPER_PACK: '/nowhere' }, ...onDisk(matching, []) })!
+    expect(packMissing(nothing)).toMatch(/FORGE_HELPER_PACK=\/nowhere names no AI helper pack/)
+  })
+
+  it('fails a suite that needs the helper when the asked-for pack is missing, and skips it (with why) otherwise', () => {
+    const why = 'FORGE_HELPER_PACK=/nowhere names no AI helper pack that runs here: no pack.json'
+    expect(venvGate({ helper: why, packAsked: true, needs: {} })).toEqual({ fail: why })
+    expect(venvGate({ helper: why, packAsked: true, needs: { 'the jfk.flac fixture': false } })).toEqual({ fail: why })
+    expect(venvGate({ helper: 'no helper venv at /repo/sidecar/.venv/bin/python', packAsked: false, needs: {} })).toEqual({
+      skip: 'no helper venv at /repo/sidecar/.venv/bin/python'
+    })
+    // A fixture that is not there still skips, pack or no pack.
+    expect(venvGate({ helper: null, packAsked: true, needs: { 'the jfk.flac fixture': false } })).toEqual({ skip: 'no the jfk.flac fixture' })
+    expect(venvGate({ helper: null, packAsked: true, needs: { 'the jfk.flac fixture': true } })).toEqual({ run: true })
   })
 })
