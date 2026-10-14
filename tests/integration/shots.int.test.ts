@@ -1,6 +1,8 @@
 import { describe, it, expect, afterAll, beforeAll, vi } from 'vitest'
 import type { ChildProcess } from 'node:child_process'
 import { readFileSync } from 'node:fs'
+import { mkdtemp } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { SCENE_DEFAULTS } from '@shared/reframe/shots'
 import { findShots } from '../../src/main/ffmpeg/shots'
@@ -163,6 +165,37 @@ describe('the shot finder, through src/main/ffmpeg/shots.ts', () => {
     // And each is its frame exactly: pts × fps / den, where the printed ms is only %.6g.
     expect(found.shots.map((s) => ((s.startPts as number) * TABLE.fps * timeBase!.num) / timeBase!.den)).toEqual([0, ...TABLE.cuts.map((c) => c.frame)])
     notes.push(`the whole-file pass's pts (time base ${timeBase!.num}/${timeBase!.den}): ${found.shots.map((s) => s.startPts).join(', ')}`)
+  })
+
+  it('counts those pts from the file’s first timestamp, not the container’s zero: an MPEG-TS copy that starts late keys the same frames', async () => {
+    // A camera's .MTS starts past 0. ffmpeg subtracts the input's start_time before the filters (no -copyts) —
+    // the clock the export's input -ss counts on — so the printed pts are the file's from its first frame, and
+    // nothing downstream may subtract start_time again (EFFECTS.md §55; the comments once said "the container's start").
+    // Under the system's temp folder, not tests/output: tsc would read a .ts there as source (and the probe takes .ts, not .m2ts).
+    const ts = join(await mkdtemp(join(tmpdir(), 'forge-shots-')), 'five-cuts.ts')
+    await run(FFMPEG, ['-hide_banner', '-loglevel', 'error', '-y', '-i', CUTS, '-c', 'copy', '-f', 'mpegts', ts])
+    const { stdout: started } = await run(ffprobeInstaller.path, ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=start_time', '-of', 'csv=p=0', ts])
+    // MPEG-TS prints the stream twice (once under its program): every line is the same number.
+    const startTime = Number(started.split(/\r?\n/).map((l) => l.trim()).find((l) => /^[\d.]+$/.test(l)))
+    expect(startTime, 'the copy starts past 0, or this case is the mp4’s again').toBeGreaterThan(0.5)
+    const { timeBase } = await probeWithClock(ts)
+    expect(timeBase).toEqual({ num: 1, den: 90000 })
+    const { stdout } = await run(ffprobeInstaller.path, [
+      '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'frame=best_effort_timestamp', '-of', 'csv=p=0', ts
+    ], { maxBuffer: 8 << 20 })
+    const container = stdout.split(/\r?\n/).filter((l) => /^\d+$/.test(l.trim())).map(Number)
+    expect(container.length, 'every frame of the clip').toBe(DURATION_MS * TABLE.fps / 1000)
+
+    const found = await findShots({ path: ts, durationMs: DURATION_MS, fps: TABLE.fps, threshold: 0.1 })
+    // Each cut's pts is its container pts less the file's first: the frame's own, counted from the file's start.
+    expect(found.shots.map((s) => s.startPts)).toEqual([0, ...TABLE.cuts.map((c) => container[c.frame] - container[0])])
+    expect(found.shots.map((s) => ((s.startPts as number) * TABLE.fps * timeBase!.num) / timeBase!.den)).toEqual([0, ...TABLE.cuts.map((c) => c.frame)])
+    // And not the container's own clock, which would put every cut start_time late.
+    expect(found.cuts.map((c) => c.pts)).not.toContain(container[TABLE.cuts[0].frame])
+    notes.push(
+      `an MPEG-TS copy (start_time ${startTime.toFixed(6)}, 1/90000): the whole-file pass's pts ${found.shots.map((s) => s.startPts).join(', ')} — ` +
+        `the container's for the first cut is ${container[TABLE.cuts[0].frame]}; ffmpeg subtracts start_time`
+    )
   })
 
   it('reports progress to the end of the clip, not to its last cut', async () => {

@@ -35,7 +35,8 @@ export interface ShotsFound {
    * The window's shots, tiling it: [startMs, endMs) in the file's ms. Not the
    * file's shots cut to the window: see `findShots`. On the whole-file pass
    * each carries `startPts`, the cut frame's pts as printed (the first shot's
-   * 0), which IS the file's: counted from the container's start, in the
+   * 0), which IS the file's: counted from the file's first timestamp
+   * (`start_time` subtracted, as the export's input `-ss` counts), in the
    * stream's time base. A window's carry none — see `findShots`.
    */
   shots: Shot[]
@@ -60,7 +61,9 @@ export interface ShotsFound {
  * 1.4 s), 3–7 s decoded 60 frames from 5 s and found no cut at all.
  *
  * **The exact pts is the whole-file pass's only.** Its `pts:` counts from the
- * container's start in the stream's time base, the frame's own (keys.ts
+ * file's first timestamp — ffmpeg subtracts the input's `start_time`, so an
+ * MPEG-TS starting at 1.4 s prints its 2 s cut as `pts:180000`, not 306000
+ * (EFFECTS.md §55) — in the stream's time base, the frame's own (keys.ts
  * `exportFrameAt` takes it with the track's time base). A window's counts from
  * the seek, which ffmpeg rounded from µs into a time base this function does
  * not know, so turning it into the file's would be a guess: the shots and

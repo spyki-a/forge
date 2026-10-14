@@ -5832,6 +5832,28 @@ ms; and exact, `floor((2·trunc(pts/s)·30 + den)/(2·den))`:
 On the 60 fps fixture, frame 11 prints `pts:2816 pts_time:0.183333`: slot 6,
 and Math.round gives 5. The integer `pts:` is exact; `pts_time` is not.
 
+**Where the printed pts count from: the file's first timestamp, not the
+container's zero** (measured 2026-10-13 on the Mac's 4.4, for slice B's fix
+phase; the comments in `shared/reframe/shots.ts`, `types.ts` and
+`main/ffmpeg/shots.ts` had said "the container's start"). A 4 s 640×360
+clip, red then blue, cut at 2 s (libx264 `-qp 0`, 30 fps), copied two ways
+and run through the scene pass's filter
+(`-vf "scale=w=320:h=-2,format=rgb24,select='gt(scene,0.3)',metadata=print"`):
+
+| file | `start_time` (ffprobe) | the cut frame (index 60) in the container | printed |
+|---|---|---|---|
+| the mp4, 1/15360 | 0 | 30720 = 2.000000 s | `pts:30720 pts_time:2` |
+| `-c copy` to MPEG-TS, 1/90000 | 1.400000 | 306000 = 3.400000 s | `pts:180000 pts_time:2` |
+| the mp4 `-c copy -output_ts_offset 600` | 600.000000 | 9246720 = 602.000000 s | `pts:30720 pts_time:2` |
+
+The verifier's own MPEG-TS copy started at 1.466667 and printed the same
+`pts:180000`. Without `-copyts` ffmpeg subtracts the input's `start_time`
+before the filters, which is the clock the export's input `-ss` counts on —
+so `Shot.startPts` handed to `exportFrameAt` is right as it is on a `.ts`
+or `.MTS` file, and nothing downstream may subtract `start_time` a second
+time. This answers, for the whole-file pass, part of CLIPS §13's "a camera's
+`.MTS` is unmeasured" (a window's seek on MPEG-TS is still §52's problem).
+
 **The arithmetic** (`arith.mjs`, re-run for this section, exit 0). Every
 frame of a 30-minute file is taken as a cut. The table counts how often the
 key from the finder's ms (`%.6g`, then µs) misses `fps=`'s exact slot on a

@@ -109,11 +109,15 @@ export function sceneArgs(
  *
  * `pts:` is the frame's own integer pts in the stream's time base (the
  * buffer source takes the input stream's, and scale, format, split, select
- * and metadata keep it), counted from the container's start as `pts_time` is
- * — measured: on an MPEG-TS copy starting at 1.466667 s (1/90000) the cut at
- * 2 s printed `pts:180000`, and on the mp4 (1/15360) `pts:30720`. It is the
- * exact time `pts_time` rounds: frame 500 of a 29.97 file prints `pts:500500
- * pts_time:16.6833` (docs/EFFECTS.md §55).
+ * and metadata keep it), counted, as `pts_time` is, **from the file's first
+ * timestamp: ffmpeg subtracts the input's `start_time`** (no `-copyts`), the
+ * same clock the export's input `-ss` counts on. Measured (EFFECTS.md §55):
+ * an MPEG-TS copy whose `start_time` is 1.4 s (1/90000) has its cut frame at
+ * container 3.4 s (ffprobe's best_effort_timestamp 306000) and prints
+ * `pts:180000 pts_time:2`; an mp4 remuxed with `-output_ts_offset 600`
+ * prints `pts:30720 pts_time:2`, as the plain mp4 (1/15360) does. So nothing
+ * downstream subtracts `start_time` again. It is the exact time `pts_time`
+ * rounds: frame 500 of a 29.97 file prints `pts:500500 pts_time:16.6833`.
  */
 const FRAME_LINE = /^(?:\[([^\]]*)\]\s*)?frame:\s*\d+\s+pts:\s*(\S+)\s+pts_time:\s*(\S+)\s*$/
 const SCORE_LINE = /^(?:\[([^\]]*)\]\s*)?lavfi\.scene_score=\s*(\S+)\s*$/

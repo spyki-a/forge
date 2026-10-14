@@ -33,7 +33,8 @@ export interface Shot {
   score: number
   /**
    * The cut frame's own integer pts, in the video stream's time base
-   * (`SubjectTrack.timeBase`), counted from the container's start as the
+   * (`SubjectTrack.timeBase`), counted from the file's first timestamp
+   * (`start_time` subtracted, as the export's input `-ss` counts) as the
    * scene pass's `metadata=print` line prints it (`pts:92160`) — exact where
    * `startMs` is `pts_time` printed `%.6g`. 0 for the first shot. Absent on a
    * track from before 1b kept it, or a window's (not in file terms). keys.ts
