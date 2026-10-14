@@ -613,6 +613,8 @@ export async function runReframeCheck(): Promise<ReframeCheckReport> {
         )
         const misses = pass.nearCuts.filter((n) => n.drew === 'same' && n.diffElement > 4)
         expect(misses.length === 0, `${name}: ${misses.length} near-cut frames matched their crop by more than 4/255`)
+        // Scrub is on and the clip has no sound: stopping must still pause its element (scrub.ts leftToScrubBurst).
+        expect(!pass.stillPlaying, `${name}: the clip's element played on after the playhead stopped`)
       }
       // The nudge has to have made the rules disagree, or the pass proved nothing.
       expect(nudged.differing >= 2, `nudged: the element's and the playhead's crops disagreed on only ${nudged.differing} near-cut frames`)
@@ -790,11 +792,12 @@ async function playThrough(clipId: string, asset: MediaAsset, video: HTMLVideoEl
   }
   await frames(3)
   /*
-   * Measured: with Scrub on (the default) and a clip with no sound, stopping
-   * playback does NOT pause the element — Preview.tsx syncMedia skips the
-   * pause while scrubbing and leaves the stop to a scrub burst, which only an
-   * audible element gets — so it plays on to its end behind a stopped
-   * playhead. Not the reframe's; recorded here, and the element paused so
+   * With Scrub on (the default) and a clip with no sound, stopping playback
+   * used NOT to pause the element — syncMedia skipped the pause while
+   * scrubbing and left the stop to a scrub burst, which only an audible
+   * element gets — so it played on behind a stopped playhead (measured true
+   * on both passes, slice B). Fixed in the fix phase (scrub.ts
+   * leftToScrubBurst); recorded, expected false above, and paused if not so
    * the steps after this one start from a still picture.
    */
   const stillPlaying = !video.paused

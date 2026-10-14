@@ -29,7 +29,7 @@ import { PreviewMixer } from '../audioGraph'
 import { publishLevels } from '../levels'
 import { fadeGainAt, fadesWithNeighbours } from '@shared/render/audioFade'
 import { audioRole, clampGain, clipLevelAt, isAudible } from '@shared/render/audibility'
-import { NO_SCRUB, SCRUB_BURST_MS, scrubStep, type ScrubState } from '@shared/render/scrub'
+import { NO_SCRUB, SCRUB_BURST_MS, leftToScrubBurst, scrubStep, type ScrubState } from '@shared/render/scrub'
 import { motionSourceRect, moveAt } from '@shared/render/motion'
 import { cropAt, type CropOnFrame } from '@shared/render/crop'
 import { previewClipFrame } from '@shared/reframe/playback'
@@ -932,7 +932,8 @@ export function Preview(): ReactNode {
               : Math.min(1, clampGain(clip.volume ?? 1))
         }
         if (isPlaying && !clip.hold && video.paused) void video.play().catch(() => undefined)
-        if ((!isPlaying || clip.hold) && !video.paused && !scrubbing) video.pause()
+        // A silent clip gets no burst to stop it, so it is paused here, Scrub or not (scrub.ts leftToScrubBurst).
+        if ((!isPlaying || clip.hold) && !video.paused && !leftToScrubBurst(scrubbing, asset.hasAudio)) video.pause()
         if (!isPlaying && scrubbing && asset.hasAudio) burst(video)
       }
 

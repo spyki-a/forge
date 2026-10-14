@@ -75,3 +75,20 @@ export function scrubStep(
   if (nowMs - state.lastAt < SCRUB_INTERVAL_MS) return { burst: false, next: state }
   return { burst: true, next: { lastAt: nowMs, lastFrame: frame } }
 }
+
+/**
+ * Whether a video element that is playing while the playhead is NOT (stopped,
+ * or scrubbed) is left running for the scrub burst to stop — only one that
+ * SOUNDS, while Scrub is on: its burst's timer pauses every playing element
+ * `SCRUB_BURST_MS` later. Anything else is paused at once.
+ *
+ * A clip with no sound gets no burst, so nothing ever stopped it: with Scrub
+ * on, stopping playback left a silent clip's element playing to its end
+ * behind a stopped playhead, the paused preview showing a frame that was not
+ * the playhead's (measured in the harness, slice B's reframe check:
+ * `stillPlaying` on both of its play passes).
+ */
+export function leftToScrubBurst(scrubbing: boolean, hasAudio: boolean): boolean {
+  return scrubbing && hasAudio
+}
+

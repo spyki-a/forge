@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import {
+  leftToScrubBurst,
   scrubStep,
   NO_SCRUB,
   SCRUB_BURST_MS,
@@ -95,3 +98,22 @@ describe('the scrub throttle', () => {
     expect(SCRUB_BURST_MS).toBeGreaterThanOrEqual(50)
   })
 })
+
+describe('a video playing while the playhead is not', () => {
+  it('is left for the burst only when it sounds and Scrub is on; a silent clip is paused, Scrub or not', () => {
+    expect(leftToScrubBurst(true, true)).toBe(true)
+    // No sound, no burst, nothing to stop it later: paused now.
+    expect(leftToScrubBurst(true, false)).toBe(false)
+    expect(leftToScrubBurst(false, true)).toBe(false)
+    expect(leftToScrubBurst(false, false)).toBe(false)
+  })
+
+  it('is what the preview asks before pausing a stopped or held clip’s video', () => {
+    const preview = readFileSync(resolve(__dirname, '../src/renderer/src/components/Preview.tsx'), 'utf8')
+    const pause = /if \(\(!isPlaying \|\| clip\.hold\) && !video\.paused && !leftToScrubBurst\(scrubbing, asset\.hasAudio\)\) video\.pause\(\)/g
+    expect([...preview.matchAll(pause)]).toHaveLength(1)
+    // The old guard, which skipped the pause for every element while scrubbing, is gone.
+    expect(preview).not.toContain('&& !video.paused && !scrubbing) video.pause()')
+  })
+})
+
