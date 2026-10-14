@@ -227,6 +227,49 @@ describe('reframeClip', () => {
   })
 })
 
+describe('a track landing during a gesture', () => {
+  it('waits for the gesture’s commit and is an undo step of its own: one Cmd+Z takes the follow, the next the drag', async () => {
+    const collect = vi.spyOn(bridge, 'collectSubjects')
+    const before = state().project
+    // A drag in progress (CropOverlay's begin, its moves through update) when the analysis finishes.
+    state().begin()
+    state().update((p) => ({ ...p, clips: p.clips.map((c) => (c.id === 'c' ? { ...c, transform: { ...c.transform, x: 40 } } : c)) }))
+    await state().reframeClip('c')
+    await until('the collect', () => collect.mock.calls.length === 1)
+    expect(await collect.mock.results[0].value).toMatchObject({ kind: 'track' })
+    await new Promise((r) => setTimeout(r, 5))
+    // Not in the drag's entry: nothing landed while the gesture is open.
+    expect(state().project.subjects?.v).toBeUndefined()
+    expect(clipNow().follow).toBeUndefined()
+
+    state().commit()
+    expect(state().project.subjects?.v?.key).toBe(KEY)
+    expect(clipNow().follow).toBeDefined()
+    expect(clipNow().transform.x).toBe(40)
+    expect(state().past).toHaveLength(2)
+
+    state().undo()
+    expect(state().project.subjects?.v).toBeUndefined()
+    expect(clipNow().follow).toBeUndefined()
+    expect(clipNow().transform.x, 'the drag stays: it is the step before').toBe(40)
+    state().undo()
+    expect(state().project).toBe(before)
+  })
+
+  it('lands at a gesture’s end that changed nothing (a click on the overlay): one undo step, the follow’s', async () => {
+    const collect = vi.spyOn(bridge, 'collectSubjects')
+    state().begin()
+    await state().reframeClip('c')
+    await until('the collect', () => collect.mock.calls.length === 1)
+    await collect.mock.results[0].value
+    await new Promise((r) => setTimeout(r, 5))
+    expect(clipNow().follow).toBeUndefined()
+    state().commit()
+    expect(clipNow().follow).toBeDefined()
+    expect(state().past).toHaveLength(1)
+  })
+})
+
 describe('a project saved or swapped while its analysis runs', () => {
   it('a save mid-job — the first Cmd+S of an untitled project, or Save As — still lands the track: the work is the same', async () => {
     harness.stageMs = 30

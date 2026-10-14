@@ -1593,12 +1593,15 @@ export const useEditor = create<EditorState>((set, get) => ({
   commit: () => {
     const snapshot = pendingSnapshot
     pendingSnapshot = null
-    if (!snapshot || snapshot === get().project) return
-    set((s) => ({
-      past: [...s.past, snapshot].slice(-HISTORY_LIMIT),
-      future: [],
-      dirty: true
-    }))
+    if (snapshot && snapshot !== get().project) {
+      set((s) => ({
+        past: [...s.past, snapshot].slice(-HISTORY_LIMIT),
+        future: [],
+        dirty: true
+      }))
+    }
+    // What arrived during the gesture and waited for it (a reframe's track landing): its own undo step, after it.
+    for (const run of afterCommit.splice(0)) run()
   },
 
   update: (recipe) => {
@@ -5500,6 +5503,13 @@ export const useEditor = create<EditorState>((set, get) => ({
 
 /** Snapshot held between begin() and commit(); null when no transaction is open. */
 let pendingSnapshot: Project | null = null
+/**
+ * Edits that arrived while a transaction was open and must not join it, run
+ * by commit() once the gesture's own entry is on the history. update() writes
+ * without history inside a transaction, so an analysis landing mid-drag would
+ * otherwise ride in the drag's entry, and one Cmd+Z took back both.
+ */
+const afterCommit: (() => void)[] = []
 
 /**
  * Keyframes the store may write: a clip's own and its mask's. Never a
@@ -5680,6 +5690,11 @@ async function startReframe(assetId: string, clipIds: string[], phrase?: string)
  * were pulled with the centred one).
  */
 function landTrack(assetId: string, track: SubjectTrack, clipIds: readonly string[]): void {
+  // A gesture is open (a drag's begin() without its commit()): land after it, as an undo step of its own.
+  if (pendingSnapshot !== null) {
+    afterCommit.push(() => landTrack(assetId, track, clipIds))
+    return
+  }
   const state = editor()
   // Its file is not in the project that is open now: there is nothing here to follow.
   if (!state.project.assets.some((a) => a.id === assetId)) return
