@@ -341,6 +341,8 @@ function makeHarness(o: { pack?: number; platform?: PackPlatform; seed?: number;
       throw new Error(`something other than the file arrived from files.pythonhosted.org (${f.name}): its sha256 is not the one this build expects`)
     }
     await d.rename(part, target)
+    // As the real one says where a file came from after its redirects (§3a.5).
+    d.onMessage?.(`${f.name} came from ${new URL(f.url).hostname}: ${f.bytes} B, its sha256 verified`)
     return target
   }
 
@@ -516,6 +518,12 @@ describe('a fresh install', () => {
     expect(order).toEqual(['unpack', 'compile', 'pip', 'check', 'receipt:1', 'restart'])
     const compiled = (h as unknown as { compiled: { python: string; stdlib: string }[] }).compiled
     expect(compiled).toEqual([{ python: join(h.versionDir, 'python', 'bin', 'python3.14'), stdlib: join(h.versionDir, 'python', 'lib', 'python3.14') }])
+  })
+
+  it('logs the host each file came from, in the fetcher’s own words (§3a.5)', async () => {
+    const h = makeHarness()
+    expect((await installed(h)).status).toBe('done')
+    for (const f of h.files) expect(h.logs).toContain(`${f.name} came from files.pythonhosted.org: ${f.bytes} B, its sha256 verified`)
   })
 
   it('moves the bar through the check as the check reports it, the longest stage of a real install', async () => {

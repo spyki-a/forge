@@ -204,8 +204,9 @@ describe('a file that arrives broken is fetched again', () => {
     await fetchVerified(file, dir, deps(net))
 
     expect(net.calls[WHEEL_URL]).toBe(2)
-    expect(messages).toHaveLength(1)
-    expect(messages[0]).toContain('downloading numpy.whl: files.pythonhosted.org answered 503, trying again in 1s (2 of 4)')
+    const retries = messages.filter((m) => m.includes('trying again'))
+    expect(retries).toHaveLength(1)
+    expect(retries[0]).toContain('downloading numpy.whl: files.pythonhosted.org answered 503, trying again in 1s (2 of 4)')
   })
 
   it('past minute 6 across files, a later file still gets its own budget and its retry', async () => {
@@ -340,6 +341,21 @@ describe('a failure names the host that failed', () => {
 
     expect(net.calls).toEqual({ [GITHUB_URL]: 1, [ASSETS_URL]: 1 })
     expect(sha256(await readFile(join(dir, 'cpython.tar.gz')))).toBe(file.sha256)
+  })
+
+  it('a file that lands says which host it came from after its redirects, so the job’s log names it (§3a.5)', async () => {
+    const body = bytesOf(2_000)
+    const file = packFile('cpython.tar.gz', GITHUB_URL, body)
+    const net = fakeNet({ [GITHUB_URL]: [{ redirect: ASSETS_URL }], [ASSETS_URL]: [{ body, length: body.length }] })
+
+    await fetchVerified(file, dir, deps(net))
+
+    const landed = messages.filter((m) => m.startsWith('cpython.tar.gz came from '))
+    expect(landed).toEqual(['cpython.tar.gz came from release-assets.githubusercontent.com: 2000 B, its sha256 verified'])
+    // A file that was already there was not fetched, and says nothing of a host.
+    messages = []
+    await fetchVerified(file, dir, deps(net))
+    expect(messages).toEqual([])
   })
 })
 

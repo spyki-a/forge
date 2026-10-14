@@ -129,6 +129,8 @@ interface Run {
   /** `df -k`'s Avail on userData, in bytes, read right after statfs (not on win32). */
   dfAvail: number | null
   needed: number
+  /** The files the run found already verified in a kept downloads folder: not fetched, so no host to name. */
+  seeded: string[]
 }
 
 /** The manifest, and the folder the lock is read from, for this run (a mutation drops a package from both). */
@@ -206,12 +208,16 @@ async function install(): Promise<Run> {
   const pack = manifest.platforms[platform]
 
   // Seeded from a kept folder: the job finds each file verified and fetches nothing.
+  const seeded: string[] = []
   if (DOWNLOADS_KEPT && existsSync(join(DOWNLOADS_KEPT, String(manifest.pack)))) {
     const into = join(downloads, String(manifest.pack))
     mkdirSync(into, { recursive: true })
     for (const file of [pack.interpreter, ...pack.wheels]) {
       const from = join(DOWNLOADS_KEPT, String(manifest.pack), file.name)
-      if (existsSync(from)) linkSync(from, join(into, file.name))
+      if (existsSync(from)) {
+        linkSync(from, join(into, file.name))
+        seeded.push(file.name)
+      }
     }
   }
 
@@ -333,7 +339,8 @@ async function install(): Promise<Run> {
     launch: launchOf(versionDir, manifest, platform, userData, home),
     free,
     dfAvail,
-    needed
+    needed,
+    seeded
   }
 }
 
@@ -429,6 +436,18 @@ describeReal(REAL ? `${title}${MUTATION ? ` — MUTATION ${MUTATION}: this run m
     expect(run.job.status).toBe('done')
     // A fresh install stops nothing and holds nothing: it waits for idle and restarts.
     expect(run.helperEvents).toEqual(['idle', 'restart'])
+  })
+
+  it('logs the host each fetched file came from after its redirects: the interpreter from GitHub’s release assets, the wheels from PyPI’s files (§3a.5)', () => {
+    const pack = run.manifest.platforms[run.platform]
+    const fetched = [pack.interpreter, ...pack.wheels].filter((f) => !run.seeded.includes(f.name))
+    found.push(`fetched from the network: ${fetched.length} of ${pack.wheels.length + 1} files (the rest seeded)`)
+    for (const file of fetched) {
+      const host = file === pack.interpreter ? 'release-assets.githubusercontent.com' : 'files.pythonhosted.org'
+      const line = run.logs.find((l) => l.line.startsWith(`${file.name} came from `))?.line
+      expect(line, file.name).toBe(`${file.name} came from ${host}: ${file.bytes} B, its sha256 verified`)
+      if (file === pack.interpreter) found.push(`interpreter: ${line}`)
+    }
   })
 
   it('writes a receipt that parses and matches the manifest, with no problems recorded', () => {

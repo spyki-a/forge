@@ -586,10 +586,12 @@ async function tryToFile(
   answerMs: number,
   f: Fetching,
   onBytes: (n: number) => void
-): Promise<void> {
+): Promise<string> {
   const fh = await open(part, 'w')
   const hash = createHash('sha256')
   let received = 0
+  /** The host that sent the file, after its redirects: what the job's log names (§3a.5). */
+  let from = ''
   try {
     await tryInto(file.url, answerMs, f, {
       answered(response, host) {
@@ -631,6 +633,7 @@ async function tryToFile(
             'checksum'
           )
         }
+        from = host
       }
     })
   } catch (err) {
@@ -640,6 +643,7 @@ async function tryToFile(
     throw err
   }
   await fh.close()
+  return from
 }
 
 /**
@@ -688,8 +692,9 @@ export async function fetchVerified(file: PackFile, dir: string, f: FetchVerifie
     redirects: 'by hand',
     naming: 'host'
   })
+  let host: string
   try {
-    await withRetry(
+    host = await withRetry(
       `downloading ${file.name}`,
       (answerMs) => tryToFile(file, part, answerMs, fetching, f.onBytes),
       f.retry.binaryAnswerMs,
@@ -707,6 +712,8 @@ export async function fetchVerified(file: PackFile, dir: string, f: FetchVerifie
     await rm(part, { force: true }).catch(() => undefined)
     throw new Error(`${file.name} arrived whole but could not be moved into place: ${reasonOf(err)}`, { cause: err })
   }
+  // Where it came from after its redirects, so a tester's report names the host a network let through (§3a.5).
+  f.onMessage?.(`${file.name} came from ${host}: ${file.bytes} B, its sha256 verified`)
   return final
 }
 
