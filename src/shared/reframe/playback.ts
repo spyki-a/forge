@@ -106,6 +106,24 @@ export function halfAtOutput(share: number): 'top' | 'bottom' {
 }
 
 /**
+ * SOURCE pixels per screen pixel for a drag on the OUTPUT picture of a
+ * followed clip — negative: **on the Output the picture follows the pointer**
+ * (you grab the picture, as the Output's own drags move a clip), so the crop
+ * moves the other way. On the Source outline the rectangle IS the crop and
+ * follows the pointer (+1 / the view's scale). Decided 2026-10-14 (slice B's
+ * fix phase, docs/CLIPS.md §4.7): as first built, +40 px dragged in the
+ * two-up's lower half on the Output moved the bottom crop +40 source px, and
+ * the picture inside it slid against the pointer.
+ *
+ * `cropWidth` is the drawn crop's (a two-up half's on a stacked frame: the
+ * stack fills the frame at the canvas's shape), `frameWidth` the Output
+ * frame's on screen.
+ */
+export function outputDragScale(cropWidth: number, frameWidth: number): number {
+  return frameWidth > 0 && cropWidth > 0 ? -cropWidth / frameWidth : -1
+}
+
+/**
  * A drag's total, as the share `dragFollowOffset` SETS: where the shot's
  * offset was when the drag started, plus how far the pointer has moved, as a
  * share of the length it is measured in (the crop's free axis for one crop;

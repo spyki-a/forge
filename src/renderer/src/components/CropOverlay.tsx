@@ -7,7 +7,8 @@ import {
   dragShare,
   followShotAt,
   halfAtOutput,
-  halfUnderPointer
+  halfUnderPointer,
+  outputDragScale
 } from '@shared/reframe/playback'
 import type { Clip, CropRect, MediaAsset } from '@shared/timeline'
 import { useEditor } from '../store'
@@ -334,7 +335,10 @@ function FollowedCrop({ clip, asset, transform }: { clip: Clip; asset: MediaAsse
  * the shot under the playhead moves; on a stacked two-up frame, the upper half
  * of the picture is the top half and the lower the bottom
  * (`halfAtOutput`). Screen pixels become SOURCE pixels by the followed crop's
- * width over the output's — the stack fills the frame at the canvas's shape.
+ * width over the output's — the stack fills the frame at the canvas's shape —
+ * with the sign turned: here the PICTURE follows the pointer, so the crop
+ * moves against it (`outputDragScale`; on the Source outline the rectangle,
+ * the crop itself, follows the pointer).
  */
 export function FollowedOutputDrag({
   clip,
@@ -351,7 +355,8 @@ export function FollowedOutputDrag({
   if (!clip.follow) return null
   const cut = cropAt(project, clip, { width: asset.width ?? 0, height: asset.height ?? 0 }, clipFrameAtPlayhead(clip, playhead))
   const width = cut.halves ? cut.halves.top.width : cut.crop.width
-  const perPixel = frame.width > 0 ? width / frame.width : 1
+  // Negative: the picture follows the pointer here, so the crop moves against it (playback.ts outputDragScale).
+  const perPixel = outputDragScale(width, frame.width)
   return (
     <div
       data-forge-follow="output"

@@ -937,8 +937,9 @@ async function dragBottomHalf(clipId: string, asset: MediaAsset, video: HTMLVide
     topMoved,
     undoSteps: editor().past.length - pastBefore
   }
-  // The pointer moves the crop with it, as on the Source outline (playback.ts dragHalfShare).
-  expect(Math.abs(bottomMoved - dxSource) <= 3, `the bottom half moved ${bottomMoved} px for a ${dxSource} px drag`)
+  // On the Output the PICTURE follows the pointer, so the crop moves against it (playback.ts outputDragScale;
+  // on the Source outline the rectangle — the crop — follows it). Decided 2026-10-14.
+  expect(Math.abs(bottomMoved + dxSource) <= 3, `the bottom half moved ${bottomMoved} px for a ${dxSource} px drag right on the Output (want −${dxSource}: the picture with the pointer)`)
   expect(topMoved === 0, `dragging the bottom half moved the top one ${topMoved} px`)
   expect(!half?.top || (half.top.x === 0 && half.top.y === 0), `the top half got an offset too: ${JSON.stringify(half?.top)}`)
   expect(report.dragHalf.undoSteps === 1, `the half's drag took ${report.dragHalf.undoSteps} undo steps, not 1`)

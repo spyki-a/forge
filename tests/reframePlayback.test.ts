@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { emptyProject, sourceFrameFor, type Clip, type Project } from '@shared/timeline'
 import { cropAt } from '@shared/render/crop'
@@ -10,6 +12,7 @@ import {
   followShotAt,
   halfAtOutput,
   halfUnderPointer,
+  outputDragScale,
   previewClipFrame
 } from '@shared/reframe/playback'
 import { fourShotTrack, printedMs } from './fixtures/reframe/track'
@@ -133,6 +136,32 @@ describe('what a drag on the preview moves', () => {
     // On the Output view, the stack's upper half is the top.
     expect(halfAtOutput(0.2)).toBe('top')
     expect(halfAtOutput(0.7)).toBe('bottom')
+  })
+
+  it('on the Output the picture follows the pointer: a drag right moves the crop LEFT, by the crop’s width over the frame’s', () => {
+    // A 202 px half drawn 404 px wide: 0.5 source px per screen px, turned.
+    const scale = outputDragScale(202, 404)
+    expect(scale).toBe(-0.5)
+    // +40 screen px → the crop 20 source px to the left → the picture inside it 40 px to the right, with the pointer.
+    const dx = 40 * scale
+    expect(dx).toBe(-20)
+    expect(dragHalfShare(keys, { x: 0, y: 0 }, dx, 0).x).toBeLessThan(0)
+    expect(dragShare({ axis: 'x', size: { width: 202, height: 360 } }, 0, dx, 0)).toBeCloseTo(-20 / 202, 10)
+    // No frame on screen: still against the pointer, never a crop that runs with it.
+    expect(outputDragScale(202, 0)).toBeLessThan(0)
+  })
+
+  it('is the scale the Output’s followed drag hands its gesture — and the Source outline’s stays the view’s own, unturned', () => {
+    const overlay = readFileSync(resolve(__dirname, '../src/renderer/src/components/CropOverlay.tsx'), 'utf8')
+    const at = overlay.indexOf('export function FollowedOutputDrag(')
+    expect(at).toBeGreaterThan(-1)
+    const output = overlay.slice(at, overlay.indexOf('\n}\n', at))
+    expect([...output.matchAll(/outputDragScale\(width, frame\.width\)/g)]).toHaveLength(1)
+    expect(output).toContain('onPointerDown(event, cut.halves ? halfAtOutput(share) : null, perPixel)')
+    const from = overlay.indexOf('function FollowedCrop(')
+    const source = overlay.slice(from, overlay.indexOf('\n}\n', from))
+    expect([...source.matchAll(/onPointerDown\(event, half, 1 \/ transform\.scale\)/g)]).toHaveLength(1)
+    expect(source).not.toContain('outputDragScale')
   })
 
   it('a drag’s total, as a share of the crop (one crop) or of the half (each axis), from where it started', () => {
