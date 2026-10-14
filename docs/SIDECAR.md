@@ -129,8 +129,8 @@ roughly 17× realtime, with the model cached in-process after first load.
 ## Faces — the helper's first child process
 
 `vision.faces` (`capabilities/faces.py`, `docs/CLIPS.md` §4.3) runs MediaPipe's BlazeFace
-full-range detector **in a worker process**, `python -m forge_sidecar.workers.mp_faces`, never
-in the helper: the macOS wheel aborts the whole process where there is no Metal device, even
+full-range detector **in a worker process**, `forge_sidecar.workers.mp_faces` started through
+its bootstrap (below), never in the helper: the macOS wheel aborts the whole process where there is no Metal device, even
 on the CPU delegate (`EFFECTS.md` §37). Measured in the dev sandbox through the helper: the
 worker imports mediapipe cleanly, dies at `create_from_options` with return code **−6**
 (`graph_service.h:139] Check failed: service_`), and the request answers `unavailable`, "the
@@ -180,10 +180,12 @@ and each item is about 8–9 s of matte on the CPU.
 
 ## Workers — `forge_sidecar/workers/`
 
-A worker is a child process the helper runs, never code it imports: `python -m
-forge_sidecar.workers.<name>`, started with `media._NO_WINDOW` (a packaged Windows app has no
-console, so a child without it opens a window) and with its own environment, a copy of the
-helper's. It talks to the capability that started it only through its pipes and the files it
+A worker is a child process the helper runs, never code it imports: since 2026-10-14
+`mp_faces` starts as `<sys.executable> -E -s -B -c <bootstrap>` on every rung, the bootstrap
+putting what the worker needs first on its own `sys.path` and running the module as `__main__`
+with `runpy` (`faces.worker_command`, `docs/CLIPS.md` §3a.2), started with `media._NO_WINDOW` (a
+packaged Windows app has no console, so a child without it opens a window) and with its own
+environment, a copy of the helper's, which `-E` keeps from reaching its path. It talks to the capability that started it only through its pipes and the files it
 writes. A library goes into a worker when loading it can kill the process that loads it, or
 when it needs import-time shims the helper must not see; today that is `mp_faces`, for both
 reasons. The helper imports nothing from the package (`-X importtime` across a face pass: 601
@@ -204,12 +206,15 @@ satisfy mediapipe 0.10.35's import-time `import cv2` and `import matplotlib.pypl
 (`drawing_utils.py:20-21`), so the ~65 MB of `opencv-contrib-python` and matplotlib that its
 dependency list would bring are never installed (`--no-deps`, the second pip run below), and
 detection runs without them (`EFFECTS.md` §37). **The rule: they go first on a worker's
-`PYTHONPATH` and nowhere else** — never the helper's `sys.path`, its environment, `sidecarEnv`
-in main, or the package's `__main__`. A stub on the helper's path would answer for a real `cv2`
-installed later (mask tracking's planned `opencv-python-headless`) and break it silently.
-`faces.worker_env` builds the worker's environment as a copy; `faces.int.test.ts` starts the
-helper exactly as main does (`sidecarEnv`, cwd `sidecar/`, the package's `__main__`) and
-asserts no stub folder on its path and no `mediapipe`, `cv2` or `matplotlib` loaded. The stubs
+`sys.path`, put there by its bootstrap, and nowhere else** — never the helper's `sys.path`, its
+environment, the helper's launch in main (`helperLaunch`), or the package's `__main__`. (They
+were on the worker's `PYTHONPATH` until 2026-10-14; `-E` ignores that, and a user's own
+`PYTHONPATH` or the Windows registry could reach it too, `docs/CLIPS.md` §3a.2.) A stub on the
+helper's path would answer for a real `cv2` installed later (mask tracking's planned
+`opencv-python-headless`) and break it silently. `faces.worker_env` builds the worker's
+environment as a plain copy; `faces.int.test.ts` starts the helper as main does on a
+development rung (`plainHelperEnv`, cwd `sidecar/`, the package's `__main__`) and asserts no
+stub folder on its path and no `mediapipe`, `cv2` or `matplotlib` loaded. The stubs
 are tied to the pinned mediapipe: an upgrade re-runs the worker's import test in the same file.
 
 ## Setup
@@ -218,6 +223,12 @@ are tied to the pinned mediapipe: an upgrade re-runs the worker's import test in
 python3 -m venv sidecar/.venv
 sidecar/.venv/bin/python -m pip install -r sidecar/requirements.txt
 ```
+
+Which Python runs the helper is `resolveHelperPython` (`src/shared/sidecar/helperPython.ts`,
+`docs/CLIPS.md` §3a.2). In development: `FORGE_PYTHON` when set, then this venv, then a dev pack
+under `userData/python-dev/`, then `python` on Windows and `python3` elsewhere. A packaged app
+runs the pack the app installed, then `FORGE_PYTHON`, and otherwise nothing: it never starts a
+Python from PATH.
 
 The face finder, optional, is two pip runs, because pip rejects `--no-deps` inside a
 requirements file:

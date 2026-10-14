@@ -781,9 +781,11 @@ on Windows (that run is the measurement for §3.3, §3.4 and §3.7 there).
 > **Planned 2026-10-14; the user took §16.36–50 as recommended the same
 > day ("okay go ahead"), and the build began in three slices: P.1–P.2 with
 > §3a.8 row 26, then P.3 with P.5, then P.4, P.6, P.7 and P.10; P.9 is the
-> user's.** Written from three readers (the
-> interpreter sources, the wheel set, and the product side read from the
-> code). Every size, version, wheel tag and licence below was fetched that
+> user's. Slice A built 2026-10-14** (P.1, P.2 and row 26 on the Mac, with
+> row 38 measured beside them; §3a.1's and §3a.2's notes, `EFFECTS.md` §57;
+> fourteen commits, `f39a47a` … `4dae71d`, not pushed). Written from three
+> readers (the interpreter sources, the wheel set, and the product side
+> read from the code). Every size, version, wheel tag and licence below was fetched that
 > day from PyPI's JSON (`pypi.org/pypi/<name>/<version>/json`), GitHub's API
 > (`api.github.com/repos/astral-sh/python-build-standalone/releases`, the
 > `20261001` tag re-read for this text), python.org's release API and the
@@ -945,6 +947,138 @@ runtime on a clean Windows (§16.45). Either can take P past 13. With P at
 9.5–13, §2's total becomes 75.5 + 9.5–13 = **85–88.5 days**.
 
 ### 3a.1 P.1 — The sources · 0.5–1 day
+
+> **Built 2026-10-14 — slice A, with §3a.2 and §3a.8 row 26.** Not pushed
+> (the user's order).
+>
+> Commits:
+> - the sources, `pack.ts`, their two test files and row 26: `cfe25b6`;
+> - the fix phase, after three verifiers: `8329e1b` (two of the manifest
+>   test's checks), `af61545` (versions in the CI completeness check),
+>   `4dae71d` (the pre-CI `bytesOnDisk` from row 26's trees).
+>
+> Every number below is in `EFFECTS.md` §57, with its command.
+>
+> **What landed:**
+>
+> - **`scripts/pack_lock.py`**, run as `sidecar/.venv/bin/python -I
+>   scripts/pack_lock.py` (PyPI's JSON and its PEP 658 metadata only; no
+>   wheel is downloaded). It writes:
+>   - `sidecar/pack/lock-darwin-arm64.txt`, 47 wheels, and
+>     `lock-win32-x64.txt`, 48 (colorama by tqdm's Windows marker, the only
+>     line beyond the Mac's). **ASCII and LF only**, so their bytes are
+>     their sha256 on both platforms: `9932ef36…` and `6ec44386…`. The
+>     first run wrote "§" into each header; pip reads a requirements file
+>     without a BOM in the Windows code page, so the script now refuses a
+>     non-ASCII lock, and the headers cite "3a.1";
+>   - `sidecar/pack/resolved.json` (every file's name, size, upload date,
+>     URL and sha256; each distribution's raw `requiresDist` and its
+>     requirements evaluated per target; the one allowlist,
+>     `{mediapipe: matplotlib, opencv-contrib-python}`);
+>   - `sidecar/pack/history.json`, pack 1 with one pair of hashes per
+>     platform; a changed lock needs `--bump`;
+>   - `src/shared/sidecar/packManifest.ts`, `HELPER_PACK`, generated, with
+>     every wheel on `files.pythonhosted.org`, the interpreter on the
+>     `20261001` tag, `expects` as listed in §3a.2 and `minOs: '14.0'` on
+>     the Mac.
+> - **`src/shared/sidecar/pack.ts`**, pure: §3a.2's types field for field,
+>   `packPlatform`, `isUnsupported`, `parseReceipt`, `receiptMatches`
+>   (parses, then platform, then `lockSha256`, then `interpreterSha256`,
+>   never the pack number), `packBytes`, `packSizeLabel` and `packHosts`
+>   (`release-assets.githubusercontent.com` added wherever `github.com`
+>   is).
+>
+> **The button, as planned to the byte:** the Mac's 47 wheels are
+> 151,510,094 B, with the interpreter 178,190,592 B, "170 MB"; Windows' 48
+> are 191,876,652 B, with the interpreter 215,104,551 B, "205 MB". A
+> verifier asked pip 26.2.1 itself for its pick on `macosx_14_0_arm64` and
+> `win_amd64` at cp314: all 95 wheels are the manifest's, by name, URL and
+> sha256; none is yanked or `cp314t`; the pinned interpreter's own pip
+> accepts all 47 Mac tags; and the script, re-run into a scratch copy,
+> reproduced every committed file byte for byte.
+>
+> **`bytesOnDisk` before CI** (labelled PRE-CI in the manifest, from
+> `4dae71d`): 675,024,351 B on the Mac and 728,486,971 B on Windows, the
+> packages as measured above plus the pinned interpreter's tree as row 26
+> unpacked it, its standard library compiled once (87,081,292 and
+> 70,315,292 B). The first generation had added the `20261013` build's tar
+> sizes and no compile. `formatBytes` (binary GiB) prints the Mac's as
+> **"0.6 GB"** and Windows' as "0.7 GB"; "about 0.7 GB" above holds in
+> decimal GB (0.675). Which unit the Settings row means is §3a.4's to say.
+> `longestPath`/`longestDir` stay the dev venv's (161/107) and the Windows
+> wheels' indexes' (150/96), above the interpreter tree's own: 106/97 on
+> the Mac as unpacked (116/97 once compiled) and 105/86 on Windows.
+>
+> **Where it differs from the text below:**
+> - `packPlatform` refuses a macOS major of **17 to 25** as unreadable ("The
+>   AI helper could not read this Mac's version (<v>)"). Electron 44.3.0's
+>   main process on the dev Mac reads `getSystemVersion()` 26.5.2 and
+>   `os.release()` 25.5.0, so a caller passing the Darwin number would have
+>   taken macOS 13 (Darwin 22) as supported; no marketing version is in that
+>   range. 16 is left accepted.
+> - Row 26 answered the "unmeasured" in "What is inside", and corrects four
+>   sentences there: every `.pyc` either archive ships is **stale** once
+>   unpacked, so the job compiles the standard library once (§3a.3); there
+>   is **no `EXTERNALLY-MANAGED`** file and no `._pth`; on the Mac,
+>   **OpenSSL 3.5.9 is built into `python3.14` itself** (with `_hashlib`,
+>   `_sqlite3` and zlib, which is the system's 1.2.12; zlib 1.3.2 is
+>   Windows' `zlib1.dll`), not linked into a separate `_ssl`; CPython's
+>   licence is **`python/lib/python3.14/LICENSE.txt`** on the Mac (13,804 B)
+>   and `python/LICENSE.txt` on Windows (23,601 B); and the Mac's
+>   `python/bin` does hold `pip`, `pip3` and `pip3.14` (234 B sh
+>   trampolines). It is `python -m pip` on both regardless.
+> - The table's "unpacked" column is the `20261013` build's: the pinned
+>   build's tar streams are **69,373,952 B** (Mac) and **63,301,120 B**
+>   (Windows).
+> - The CI completeness check (`packLock.test.ts`) checks **versions as
+>   well as names** (`af61545`): each requirement's specifier is read from
+>   the raw `requiresDist` in `resolved.json` (all 143 evaluated
+>   requirements of pack 1 have exactly one line naming them without an
+>   extra) and must admit the locked version by a PEP 440 subset (`==`,
+>   `!=`, `<`, `<=`, `>`, `>=`, `~=`, `==N.*`, a/b/rc, `.post`, `.dev`); a
+>   shape it cannot read is a named failure. §3a.7 asked for names.
+> - The manifest test's button check compares `packBytes` with
+>   `resolved.json`'s `targets[p].packBytes`, not the literal totals, so
+>   dropping hf-xet under `--bump` does not fail it (`8329e1b`).
+>
+> **Tests** (run to a file at `4dae71d` by the recorder):
+> `tests/helperPackManifest.test.ts` (45) and `tests/packLock.test.ts`
+> (11). Mutations, each seen to fail, each anchor counted first and every
+> file restored and compared: 22 by the builder in an isolated copy (a wheel
+> dropped from the manifest; opencv added; a `latest` URL; the lock edited
+> without its sha256; the lock changed under pack 1; the Darwin guard
+> dropped; the version read as Darwin; `translated` ignored on each
+> platform; each of `receiptMatches`' checks dropped, and the number
+> compared; colorama dropped, and dropped with everything else regenerated
+> to match, where only the completeness check names "tqdm -> colorama"; the
+> allowlist widened; stems expected; a history entry with one platform;
+> each direction of the set check, and `lockHashes`' `matchAll`, weakened;
+> the requirement lookup dropped); 4 more by a verifier (the release-assets
+> host dropped, a hash upper-cased, one wheel's bytes +1, and hf-xet's
+> `cp314t` twin swapped in everywhere the generator writes, which the tag
+> test catches); and the fix phase's 10 (one wheel's bytes +1;
+> `lockShaProblems` made blind; the Mac lock's header edited;
+> `packSizeLabel` rounding by 10⁶; the version admission removed; `<` read
+> as `<=`; `~=` without its prefix; a `.dev` sorted as a final; `==N.*` not
+> read; an unreadable clause passed).
+>
+> **Left:**
+> - **hf-xet** stays in the lock (3,876,287 / 4,033,128 B) until row 35
+>   shows depth's and asr's downloads pass without it; then `--bump` drops
+>   it and the allowlist gains `huggingface-hub: hf-xet`.
+> - **CI's install (row 28)** replaces the three PRE-CI numbers per
+>   platform.
+> - **Row 26's Surface half**: `sys.winver`, and `sys.path` with a planted
+>   HKCU `PythonCore\<winver>\PythonPath`, with and without `-E`.
+> - **pip over the lock** is row 34's. A verifier's `pip install --dry-run
+>   --require-hashes --no-deps --no-index` of both locks stopped at "No
+>   matching distribution found for absl-py==2.5.0", which proves the
+>   syntax only: a malformed `--hash` is not reported before resolution
+>   (the manifest test's count of every `--hash=` is what holds that).
+> - **The history's order**: `f39a47a` (§3a.2) imports `./pack`, which
+>   first lands here in `cfe25b6`, so `f39a47a` alone does not typecheck.
+>   Reordering unpushed commits is the user's call; otherwise the push
+>   says so.
 
 #### The interpreter
 
@@ -1208,6 +1342,275 @@ platform and running the suites is the check that the lock is right
 (§3a.6).
 
 ### 3a.2 P.2 — The pack on disk · 0.5–1 day, and one helper process · 0.5 day
+
+> **Built 2026-10-14 — slice A, with §3a.1.** Nothing is on disk yet but
+> what a test plants: the install job that writes a pack is §3a.3's. What
+> landed is everything that reads one, chooses the interpreter, starts it
+> and keeps it to one process. Not pushed (the user's order).
+>
+> Commits:
+> - the two pure functions: `f39a47a`;
+> - the Python side (UTF-8 stdio, hello's three fields, the worker's
+>   bootstrap): `2700e2c`;
+> - the service, the client, the status and every caller: `451520d`;
+> - the fix phase, after three verifiers: `621bc4f` (the in-use record on
+>   the helper's exit), `95c836e` (Update after a pack-number bump),
+>   `6400037` (the Windows stop waits for `taskkill`), `890b767`
+>   (`helperRowFrom`), `2011e47` (installing reads as missing), `fd15746`
+>   (the tests' own interpreter), `c232b4a` (faces.int's stand-in scrub).
+>
+> Every measurement below is in `EFFECTS.md` §57, with its command.
+>
+> **Which interpreter runs** (`src/shared/sidecar/helperPython.ts`, pure: no
+> disk, no electron, no node import, so the renderer can use it):
+> - **development:** `FORGE_PYTHON` (when set and not empty, as `service.ts`
+>   always read it; looked up in any case on win32, where a copy of
+>   `process.env` loses Windows' case-insensitive lookup), then
+>   `sidecar/.venv`, then the dev pack, then `python` on win32 and `python3`
+>   elsewhere;
+> - **packaged:** the pack, then `FORGE_PYTHON`, then `absent`. Never a PATH
+>   Python, and a venv is not a rung there.
+> - **`damaged` wins over every later rung.** So in a packaged app it beats
+>   `FORGE_PYTHON` (§16.42 (b) as built: someone who set it and installed a
+>   pack is told the pack is broken); in development it beats only PATH.
+> - **A receipt that parses and does not match** (another platform,
+>   `lockSha256` or `interpreterSha256`) is not a pack and not damaged: it
+>   falls through, and reads as Update even with its interpreter gone.
+> - **An unsupported machine** (`packPlatform`'s reasons, §3a.1) skips the
+>   pack rung whole, its damaged check with it: Repair could not run there.
+> - **How "does not parse" is passed:** `pack: null` only when there is no
+>   `pack.json`; otherwise `receiptFromText(text)`, the JSON or the frozen
+>   `UNPARSEABLE_RECEIPT`. Anything `parseReceipt` refuses (`{}`, `null`, a
+>   bare string, an empty file) is damaged. The reasons are fixed:
+>   "Python is missing from the AI helper's folder (removed by antivirus?)"
+>   and "The AI helper's install record (pack.json) cannot be read".
+>
+> **The launch** (`helperLaunch`, now what the service starts):
+>
+> | rung | argv after the interpreter | environment |
+> |---|---|---|
+> | the pack, **in development too** | `-E -s -u -B -m forge_sidecar`, never `-I` | the parent's with every `PYTHON*` and `HF_*` key dropped (case-insensitively on win32, exactly elsewhere, where Python and huggingface_hub read the upper-case names only), then `FORGE_MODELS_DIR`, `FORGE_CACHE_DIR`, `HF_HUB_DISABLE_XET=1`, `HF_HUB_DISABLE_TELEMETRY=1`, one spelling each on win32; no `PYTHONUNBUFFERED` or `PYTHONIOENCODING` |
+> | `FORGE_PYTHON`, packaged | `-B -m forge_sidecar` | `HF_*` dropped, `PYTHON*` kept, then `PYTHONUNBUFFERED=1`, `PYTHONIOENCODING=utf-8` and the four above |
+> | `FORGE_PYTHON`, the venv and PATH, in development | `-m forge_sidecar` | `plainHelperEnv`, the old `sidecarEnv` key for key (a verifier compared them by `JSON.stringify`, key order included, on win32 and darwin) |
+> | `absent`, `damaged` | nothing is started | — |
+>
+> `helperSourceLabel` gives "installed by the app · pack N" (the receipt's
+> number), "from FORGE_PYTHON <path>", "development venv" and "python3 on
+> PATH" / "python on PATH". Nothing shows it yet (§3a.4).
+>
+> **`absent` at every caller** (`src/main/sidecar/service.ts`). The service
+> gathers the order's inputs: `app.isPackaged`, the environment, the venv
+> only if it is a file, `<packRoot>/<HELPER_PACK.pack>/pack.json` (`packRoot`
+> is `userData/python` packaged and `userData/python-dev` in development;
+> ENOENT or ENOTDIR is no receipt, any other read error, EISDIR or EACCES,
+> is the unparseable receipt, so damaged), whether the interpreter is a
+> file, `packPlatform` with `process.getSystemVersion()` (`''` when it is
+> missing, which reads "needs macOS 14") and
+> `app.runningUnderARM64Translation`. When the manifest's folder has no
+> receipt, `olderReceipt` takes the highest numbered folder below it whose
+> `pack.json` parses, for the offer only. `getSidecar()` builds a client
+> only for a choice with a launch; otherwise it throws a `SidecarError`
+> **synchronously**: "The AI helper is not installed", "The AI helper needs
+> an update" (an older pack on disk), the damaged reason, the unsupported
+> reason ("The AI helper needs macOS 14 or later", "… is not available on
+> Windows on Arm yet"), or, during a switch, "The AI helper is restarting".
+> Where each caller's throw lands:
+> - `voiceStatus`: inside its own try, so the local voice reads not ready
+>   with the sentence as its reason; `voiceOptions` and `speak` reach the
+>   helper only after the provider choice picks it, which needs it ready;
+> - `separateStems`: mid/side, as for any helper failure;
+> - `audio:beats`, `depth:layers`, `asr:transcribe`: reject with the
+>   sentence before any request;
+> - `vision:measure`: `{measures: [], unavailable}`;
+> - the reframe job and `reframe:faceModel`: `analyse.ts` `helperOf` maps
+>   the throw to `no-helper`, before the scene pass;
+> - `sidecar:status`: `sidecarStatus()`, the last broadcast, never a start.
+>
+> `tests/sidecarService.test.ts` runs ipc.ts's real `registerIpc` in a
+> packaged app with no pack, every spawn recorded: spawn is never called.
+>
+> **The status** (`src/shared/sidecar/status.ts`): `SidecarStatus` is the
+> block below, field for field. `PackOffer` is `{supported: true, kind,
+> bytes, bytesOnDisk, hosts}` or `{supported: false, reason}`, from the pure
+> `packOffer(manifest, platform, receipt, damaged, older)`: `install` with
+> no receipt, `update` for a receipt that parses and does not match or an
+> older number's, `repair` for a damaged, unreadable or matching one.
+> `helperStatusReason` is every sentence above; `helperRowFrom` is what the
+> header dot and the row take (`ready` running; `absent`, `damaged` and
+> `failed` not running with their sentence; `starting` and `installing` not
+> running with none), and App.tsx's `applyHelperStatus` makes that one
+> call. `reframeHelperFrom` reads `absent`, `damaged`, `failed` and
+> `installing` as missing and `starting` as unknown.
+>
+> **One helper process** (`src/main/sidecar/client.ts`). The client is
+> built from a launch (`{cwd, launch, maxRestarts?, helloTimeoutMs?,
+> platform?}`); the `'python3'` default and `sidecarEnv` are gone.
+> - `start()` is single flight, and spawns only when there is no child; a
+>   `request()` with no ready helper joins that start and sends after the
+>   hello (it used to write to the child at once).
+> - A hello that does not come back kills its child before it rejects with
+>   "The AI helper did not answer within N s". **The ceiling is 30 s on the
+>   development rungs and 90 s on the pack's (`PACK_HELLO_TIMEOUT_MS`), a
+>   placeholder until row 29's cold hello on the Surface sets it.**
+> - `stop()` resolves when the child has exited. After `STOP_GRACE_MS`
+>   (1.5 s) its kill is `taskkill /pid <pid> /f /t` (`windowsHide`) on
+>   win32, **awaited until taskkill itself exits** (if taskkill cannot
+>   start, a SIGKILL of the helper; after `TREE_KILL_WAIT_MS`, 10 s, it
+>   goes on regardless), and SIGKILL elsewhere. A timed-out hello takes the
+>   same kill. A stopped client never spawns again.
+> - `idle()` resolves once nothing is pending or queued behind a start.
+> - Events: `spawn` `{pid, source}`, `ready` on every start that answers (a
+>   restart's included), `exit` `{code, signal, source, pid}`, `gaveUp`.
+> - An interpreter that is not there rejects with "Could not start the AI
+>   helper: …" and restarts nothing (Node 24 gives `'error'`, then
+>   `'close'`, and no `'exit'`).
+>
+> The service broadcasts `starting`; `ready` on every `ready`, which closes
+> the restart fault above; `failed` "The AI helper stopped (code N)" on a
+> crash after ready; `failed` on `gaveUp`; and a start that fails, in its
+> own words. **`restartSidecar(signal?)`** is single flight: it waits for
+> idle or the caller's abort (an abort leaves the helper as it was), stops
+> the client and waits for its exit, resolves the order again and starts;
+> `getSidecar` throws "restarting" meanwhile. `stopSidecar()` resolves on
+> the exit.
+>
+> **The in-use record**: `<root>/in-use/<this app's process.pid>` holding
+> `{"pack": N}`, written on every spawn from a pack (a restart's included),
+> removed on the helper's exit and on a stop. Nothing reads it yet.
+>
+> **`system.hello`** gains `executable`, `prefix` and `path` (`sys.executable`,
+> `sys.prefix`, `list(sys.path)`), required in `HelloResult`.
+>
+> **The face worker** starts as `[sys.executable, '-E', '-s', '-B', '-c',
+> WORKER_BOOTSTRAP]`, cwd the folder `forge_sidecar` is in. The bootstrap
+> puts `forge_sidecar/stubs` first and that folder second on `sys.path` and
+> runs `forge_sidecar.workers.mp_faces` as `__main__` with `runpy`; the
+> worker's environment is a plain copy of the helper's, and it sets its own
+> stdout and stderr to UTF-8. Through the bootstrap mediapipe 0.10.35 was
+> ready in 143 ms wall (the import 0.076 s); with the stubs taken off its
+> path the worker exits 69, "No module named 'cv2'".
+>
+> **Row 38, measured and decided.** Under `-E -s -u -B` and
+> `LC_ALL=en_IE.ISO8859-1` the pipes were ISO 8859-1: a request carrying
+> "Bräutigam 5:30pm ಕನ್ನಡ.mp4" was read as mojibake and the reply failed
+> with "'latin-1' codec can't encode characters in position 59-63".
+> `__main__.utf8_stdio()` now sets stdin and stdout to UTF-8 strict and
+> stderr to UTF-8 `backslashreplace`, what `PYTHONIOENCODING=utf-8` gave, on
+> every rung; both directions then round-trip under the C, Latin-1 and UTF-8
+> locales. `-X utf8` round-trips too, but gives stdin and stdout
+> `surrogateescape` and changes every `open()`'s default, so it was not
+> taken.
+>
+> **Where it differs from the text below:**
+> - **The pack rung's flags apply in development too**, not only packaged:
+>   §3a.6 step 3 needs a test that reaches the pack to start it as an
+>   installed user does. "In development every rung starts as today" holds
+>   for `FORGE_PYTHON`, the venv and PATH.
+> - **The face worker's bootstrap is on every rung**, not only under the
+>   pack, and it was built before row 26's registry run on the Surface
+>   rather than decided by it. Accepted as a deliberate widening: one shape,
+>   tested (`test_faces.py`'s planted-`PYTHONPATH` case), and the venv rung
+>   is unaffected; a `FORGE_PYTHON` whose mediapipe is reachable only
+>   through `PYTHONPATH` or the user site would lose faces.
+> - **"Waits for its exit and its tree's"** holds on Windows, where the
+>   `taskkill /f /t` is awaited. On the Mac the wait is the helper's own
+>   exit after a SIGKILL to the helper alone; its face worker ends when the
+>   helper's stdin closes (§15 row 1). macOS does not lock open files, so
+>   Repair and Remove are not blocked by it. Spawning detached and killing
+>   the group was not taken: it changes how `npm run dev`'s Ctrl-C reaches
+>   the helper, and must never apply on Windows.
+> - **Update after a bump.** The offer reads an older number's receipt when
+>   the manifest's folder has none, so a pack in `python/1/` under a
+>   manifest at 2 is offered as Update, never as a fresh Install over 0.7 GB
+>   on disk; a torn older receipt is no pack, and the offer is Install. The
+>   old pack is still never run (§16.46 (a)).
+> - **`PackOffer.bytes` is the whole pack** (`packBytes`), not "bytes left
+>   to fetch": the left part needs §3a.3's `downloads/<n>`, and `packOffer`
+>   subtracts the verified files then (`helperPackJob.test`'s "N MB left").
+> - **`reframeHelperFrom`** keeps `starting` as unknown, as before this
+>   slice, for the seconds its hello takes; `installing` is missing, since
+>   an install runs for minutes and unknown would have said "the AI helper
+>   is starting" all that time.
+> - On an unsupported machine every caller is told why ("needs macOS 14 or
+>   later"), not "not installed".
+> - A `pack.json` that a scanner holds at launch (EACCES, EBUSY) reads as
+>   damaged for that launch; there is no retry.
+>
+> **Tests** (run to a file at `4dae71d` by the recorder; 171 passed in these
+> nine files): `tests/helperPython.test.ts` (23), `tests/helperLaunch.test.ts`
+> (16), `tests/sidecarClient.test.ts` (12, against
+> `tests/fixtures/fake-helper.mjs`, a Node stand-in that speaks the protocol
+> and logs its pid per start), `tests/sidecarService.test.ts` (28),
+> `tests/sidecarFolders.test.ts` (5), `tests/reframeContract.test.ts` (13),
+> `tests/integration/sidecar.int.test.ts` (18: the 15, hello's three fields,
+> and row 38 in each direction under a Latin-1 locale), with
+> §3a.1's two files. And `tests/sidecar/test_faces.py` (42, run by
+> `sidecarMedia.int`), `reframeJob.int`'s not-installed case,
+> `faces.int` (13 passed, 2 skipped, with or without the shell's
+> `FORGE_FACES_WORKER_FAKE`, which no longer reaches the tests that need
+> the real mediapipe), and `settingsPanel.test.ts`'s no-"sidecar"-on-screen
+> check, which now skips an import's module path and still fails on that
+> path written as a string anywhere else. `tests/integration/venv.ts`'s
+> `HELPER_PYTHON` falls back as the app's development order does (`python`
+> on win32), so the Python-only suites and `sidecar.int` no longer disagree
+> on the Surface.
+>
+> **Mutations killed** (each anchor counted at one match first, each file
+> restored and compared byte for byte):
+> - the order's 14: the PATH fallback put back in a packaged app; the env
+>   rung first there; the pack before `.venv` in development; the escape
+>   hatch dropped; a missing interpreter read as absent; an unparseable
+>   receipt read as none; damaged yielding to `FORGE_PYTHON` packaged; an
+>   unsupported machine given a platform, or read as damaged; exact-case
+>   `FORGE_PYTHON` on win32; the interpreter checked before
+>   `receiptMatches`; the PATH names swapped; an empty `FORGE_PYTHON` set; a
+>   damaged dev pack ignored. And `receiptMatches`' three checks, each
+>   dropped through `vi.mock` with `pack.ts` untouched (a control mock passes);
+> - the launch's 16, among them an exact-case delete (`PythonPath` survives
+>   on win32), `-E` dropped, `HF_ENDPOINT` kept, `-I` for `-E -s`, the pack
+>   launched as today in development, the development environment cleaned,
+>   and a source label saying "sidecar";
+> - the client's 11 and the fix phase's 5 (`stop()` or `kill()` not
+>   awaiting the tree kill, `killTree` resolving at once, its error path
+>   never resolving, or resolving without its SIGKILL);
+> - the service's 15 and the fix phase's 13 (the exit's own in-use removal
+>   deleted, which **survived** the builder's tests until `621bc4f`; the six
+>   of Update; the five of `helperRowFrom` (a verifier's move of App.tsx's
+>   `absent` and `damaged` beside `starting` had **survived** every renderer
+>   test before `890b767`); and installing read as unknown);
+> - the Python side's 8 (the stubs dropped from the bootstrap, `-E` dropped,
+>   the worker's and the helper's UTF-8 setup dropped, stdin and stdout each
+>   left alone, hello without `executable`, a `None` in its path) and a
+>   verifier's 3 on the bootstrap (the stubs dropped again, appended last,
+>   and a `run_name` other than `__main__`);
+> - the no-"sidecar" check's 2 (a UI string in App.tsx, and the import's
+>   path written as a string outside an import), the tests' interpreter
+>   (2) and faces.int's scrub (2).
+>
+> **Left:**
+> - `installing` is defined and never emitted, until §3a.3's job.
+> - The Settings row still reads `helperState(ready, error)`, so `absent`
+>   shows red "Not running · The AI helper is not installed", not §3a.4's
+>   grey "Not installed"; its states, the sized Install, Repair and Update
+>   buttons and the census rows are §3a.4's. The harness bridge still
+>   answers `{state: 'failed', error: 'harness: no sidecar'}`; reporting
+>   `absent` is the harness slice's.
+> - `restartSidecar` has no caller and the in-use record no reader: their
+>   first real use is §3a.3's install, Repair, Update and Remove.
+> - The pack's 90 s hello ceiling, until row 29. The reframe's `helloOf`
+>   still asks hello with its own 30 s after a start that may take 90.
+> - Row 38's Windows half (cp1252 pipes): `sidecar.int`'s two row-38 tests
+>   set no locale on win32, so CI's Windows job runs them on the ANSI code
+>   page first, then the Surface.
+> - The tree kill is proven on this Mac through a stand-in `taskkill`; the
+>   grandchild's death is asserted only on win32, so CI and the Surface
+>   are its first real runs. The 10 s ceiling has no test of its own.
+> - No integration test reaches the dev pack rung until §3a.6's
+>   `FORGE_HELPER_PACK`.
+> - `CLAUDE.md`'s fresh-Windows `FORGE_PYTHON` row is now stale: the
+>   development fallback is `python` on win32, for the app and for the
+>   tests, so `FORGE_PYTHON` is needed there only where `python` on PATH is
+>   the Store's alias stub. §3a.10 corrects it with the rest when P lands.
 
 #### Layout
 
@@ -1649,11 +2052,25 @@ dev dependency) and not the system `tar`: the reader we have is pure,
 already holds the safety rules and their tests, and Windows' `tar.exe` is
 unmeasured on the Surface. If the real archives hold member types the
 reader refuses (§3a.8 row 26), `tar` 7.5.x is the fallback, promoted to a
-production dependency. Then, only if row 26 says so:
+production dependency. **Row 26 has read the real archives (2026-10-14,
+`EFFECTS.md` §57):** they hold only regular files and, on the Mac, 9
+relative symlinks inside `python/`, so nothing the reader refuses; there are
+**no PAX and no GNU records**, every name over 100 characters is carried by
+the **ustar prefix field** alone (so `TarStream` joins prefix + `/` + name,
+as `readTar` does); there are **no directory entries**, so the reader
+creates each member's parent folders itself; and the executable bit comes
+from the mode (0775 on the Mac's 19 executables, 0777 on Windows' 14).
+Then, only if row 26 says so:
 
 - **the standard library compiled once** (`<python> -E -s -m compileall -q
   python/Lib`), if the archive ships no stdlib `.pyc`, so `-B` costs no
-  start time;
+  start time. **Row 26 says so, on both platforms**: every `.pyc` either
+  archive ships is stale once unpacked. The measured command is `<python>
+  -I -m compileall -q -j 1 <python/lib/python3.14 | python\Lib>` (2.22 s
+  on the Mac, 1,059 `.pyc`; 2.03 s for Windows' tree compiled on the Mac);
+  `-j 0` failed in the dev sandbox on `SC_SEM_NSEMS_MAX`, so it is `-j 1`
+  unless measured outside it. `--invalidation-mode unchecked-hash` would
+  free the `.pyc` from the unpacked mtimes; an option, unmeasured;
 - **on the Mac, the quarantine stripped** (`/usr/bin/xattr -dr
   com.apple.quarantine <version folder>`, allowed on files the user owns),
   if row 31 finds `com.apple.quarantine` on the unpacked files, so
@@ -2084,7 +2501,12 @@ Anchors over lock lines, job argv and launch args use `matchAll`, never
   test); a 150-character name carried only in a PAX `path` record lands
   under that name; `bin/python3 → python3.14` is accepted, `../../x` and
   `/etc/x` refused, a hard link refused. Mutations: PAX skipped as today (the
-  member lands under its truncated name); the in-root check dropped.
+  member lands under its truncated name); the in-root check dropped. **And,
+  since row 26 (2026-10-14):** the real archives carry their long names in
+  the ustar prefix field and have no directory entries, so a 106-character
+  name split across prefix and name lands whole, and a member whose folders
+  have no entry of their own is written with them. Mutations: the prefix
+  ignored; the parent folders not created.
 - `tests/fetchFile.test.ts`, `fetchVerified` with a fake fetch and a fake
   clock:
   - a body cut at 90 % is retried and succeeds. Mutation: a hash-only check
@@ -2223,6 +2645,24 @@ behind a proxy) is P's too, widened in §3a.5.
     pack: `sys.winver` and `sys.path` with a planted HKCU
     `PythonCore\<winver>\PythonPath` subkey, with and without `-E` (whether
     the face worker's bootstrap is needed, §3a.2).
+    **Measured 2026-10-14, the Mac's half** (`EFFECTS.md` §57): both
+    archives equal their pins (26,680,498 and 23,227,899 B, one redirect to
+    release-assets); POSIX ustar with no PAX or GNU records, no hard links
+    and **no directory entries**, every name over 100 characters in the
+    **ustar prefix field** (9 on the Mac, 6 on Windows); 9 relative
+    symlinks on the Mac, all inside `python/`; the interpreter is
+    `python/bin/python3.14` (a regular file, 18,952,864 B, with `python3`
+    and `python` linked to it) and `python/python.exe`, as the manifest
+    says; pip 26.2.1; no `EXTERNALLY-MANAGED` and no `._pth` in either.
+    The standard library ships 3 `.pyc` of 655 on the Mac and 168 on
+    Windows (pip's 404 too), and **every one is stale on unpack** (members
+    stamped 2024-01-01, the `.pyc` recording build-day mtimes), so the job
+    compiles once: `python3.14 -I -m compileall -q -j 1 python/lib/python3.14`
+    took 2.22 s and wrote 1,059 `.pyc` (19,043,394 B), and a 19-module
+    import under `-E -s -B` went from 0.34 s to 0.07 s. The Windows tree,
+    read on the Mac and never run, needs no `msvcp140`: its 58 PE files
+    import only `VCRUNTIME140`/`_1` (shipped) and the Universal CRT.
+    **The Surface half is open.**
 27. **Install time** on the M1 Pro and the Surface, per stage (download,
     unpack, pip with and without `--no-compile`, the self-test), Defender's
     share on the Surface (11,629 files in the Mac's site-packages), and the
@@ -2301,6 +2741,17 @@ behind a proxy) is P's too, widened in §3a.5.
     reconfigure in `__main__` and through `-X utf8`, against today's
     `PYTHONIOENCODING=utf-8`, with a non-ASCII path in a request and a reply
     (§3a.2).
+    **Measured 2026-10-14 on the Mac** (the venv's 3.14.6; `EFFECTS.md`
+    §57): under `-E -s -u -B` and `LC_ALL=en_IE.ISO8859-1` stdin and stdout
+    were `iso8859-1/strict`, a request carrying "Bräutigam 5:30pm ಕನ್ನಡ.mp4"
+    was read as `Br\xc3\xa4utigam…` and a reply holding it failed ("'latin-1'
+    codec can't encode characters in position 59-63"); `LC_ALL=C` cannot
+    show it, since Python turns UTF-8 mode on there by itself. The
+    reconfigure and `-X utf8` both round-trip under C, Latin-1 and UTF-8;
+    the reconfigure was taken (`2700e2c`: stdin and stdout UTF-8 strict,
+    stderr `backslashreplace`). **The Windows half (cp1252 pipes) is open**:
+    CI's Windows job runs `sidecar.int`'s two row-38 tests first, then the
+    Surface.
 
 ### 3a.9 P.9 — Exit · 0.5–1 day
 
@@ -7668,6 +8119,18 @@ runtime (30), the clean Mac (31), Windows' scanners and console windows
 (32), range resume (33), pip over the lock (34), hf-xet left out (35), the
 Surface itself (36), CI's first runs (37), and the protocol's encoding under
 `-E` (38).
+
+- **Row 26: the Mac's half measured 2026-10-14** (§3a.8, `EFFECTS.md` §57):
+  ustar archives whose long names ride the prefix field, with no directory
+  entries; the interpreter's names as the manifest has them; pip 26.2.1, no
+  `EXTERNALLY-MANAGED`; every shipped `.pyc` stale, so the job compiles the
+  standard library once (2.22 s on the Mac, 0.34 → 0.07 s for a 19-module
+  import). Open: the Surface's `sys.winver` and the planted HKCU
+  `PythonPath`, with and without `-E`.
+- **Row 38: the Mac's half measured 2026-10-14** (§3a.8, `EFFECTS.md` §57):
+  under `-E` a Latin-1 locale broke the protocol both ways; the helper now
+  sets its own stdio to UTF-8, and both directions round-trip. Open: the
+  Windows pipes (CI's Windows job, then the Surface).
 
 ---
 

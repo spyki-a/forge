@@ -6417,3 +6417,477 @@ nothing to follow) and then `scale…decrease,pad`, letterboxed; after,
 `fps=30:start_time=0,crop=w='min(608,in_w)'…` with the 9:16 keys
 (`+960*gte(t,0.750000)`), the text the 9:16 project's own chain has; at
 720×1280 the same crop. No new shape: §55's, at the export's canvas.
+
+## 57. The AI helper's pack — the pinned archives read (row 26), the lock and its completeness check, one helper process, and the protocol's encoding under -E (row 38) (2026-10-14)
+
+For `docs/CLIPS.md` §3a.1 and §3a.2, Step P's slice A (`f39a47a` …
+`4dae71d`, not pushed). Development Mac (M1 Pro, macOS 26.5.2), inside the
+dev sandbox: no Metal (§37, §54), and the macOS trust store unreachable
+from pip (OSStatus −26276). No filter shape is added: nothing
+here reaches a render. Each number names who measured it: the sources'
+builder (row 26 and the lock), the helper's builder (row 38, the client,
+the worker), three verifiers (the pins and the lock; the order and the one
+process; the slice against the plan), the fix phase, or the recorder (the
+test counts at `4dae71d`). The plan's own numbers, from PyPI's JSON, byte
+ranges and its reviewers, are in CLIPS §3a.1; this section is what a
+download, a run or a test measured.
+
+### Row 26: the pinned interpreter archives, read
+
+**The download** (the sources' builder; both re-hashed by a verifier):
+
+    curl -L --fail -sS -o row26/<mac|win>.tar.gz \
+      -w '%{url_effective} %{http_code} %{num_redirects} %{size_download} %{time_total}' \
+      https://github.com/astral-sh/python-build-standalone/releases/download/20261001/<asset, + as %2B>
+
+| archive | answered | bytes | time | `shasum -a 256` |
+|---|---|---|---|---|
+| Mac, `…aarch64-apple-darwin-install_only_stripped.tar.gz` | 200 after one redirect to `release-assets.githubusercontent.com/github-production-release-asset/162334160/f66ebd77-…` | 26,680,498 | 1.12 s (23.7 MB/s) | `69e48cd7f54261df5b6abbd374f69fe6e496fa781d271592aeef49cd5ffbea6c`, the pin |
+| Windows, `…x86_64-pc-windows-msvc-install_only_stripped.tar.gz` | 200 after one redirect to `…/162334160/e346795a-…` | 23,227,899 | 1.18 s (19.7 MB/s) | `b7ff8b700995379e425b39abce9b087d84a45aa265ea465c0069c2747ea5b2ea`, the pin |
+
+- `objects.githubusercontent.com` was never contacted.
+- `xattr -l` on both: `com.apple.provenance` only, no `com.apple.quarantine`
+  (a curl download; a browser's is row 31's).
+- GitHub's release API, read by a verifier through `pack_lock.py`'s own
+  `check_github()`: `20261001`, published 2026-10-01T22:37:31Z, both assets
+  equal to the pins by size, `digest` and `browser_download_url`.
+
+**The tar streams.** `python3 -I census.py <archive>` walks the gunzipped
+stream's 512-byte headers itself and cross-checks with `tarfile` (the
+builder; a verifier's own walk gave every number again):
+
+| | Mac | Windows |
+|---|---|---|
+| tar stream (= the gzip trailer's ISIZE) | 69,373,952 B | 63,301,120 B |
+| the plan's reading, the `20261013` build | 69,430,272 B (this build 56,320 B less) | 63,299,584 B (this build 1,536 B more) |
+| members | 1,698: 1,689 regular files, 9 symlinks | 2,190, all regular files |
+| sum of the members' sizes | 68,060,050 B | 61,643,159 B |
+| names over 100 characters | 9, all through the ustar prefix field: eight `pip-26.2.1.dist-info` licence files and `pip/_vendor/urllib3/contrib/emscripten/emscripten_fetch_worker.js` | 6, all through the prefix field: pip `.pyc` |
+| longest member | 106: `python/lib/python3.14/site-packages/pip-26.2.1.dist-info/licenses/src/pip/_vendor/cachecontrol/LICENSE.txt` | 105: `python/Lib/site-packages/pip/_internal/resolution/resolvelib/__pycache__/found_candidates.cpython-314.pyc` |
+| longest directory | 97 | 86 |
+| modes | 1,670 × 0664, 19 × 0775 | 2,176 × 0666, 14 × 0777 |
+
+- Both are POSIX ustar (`ustar\0` `00`) ending in two zero blocks, with **no
+  PAX** `x` or `g` record, **no GNU** `L` or `K` record, **no hard link**
+  and **no directory entry**.
+- Owner 0:0 (root); every member's mtime 1704067200 (2024-01-01T00:00:00Z).
+- No name illegal on Windows, no two names differing only by case, no
+  duplicate.
+- The Mac's 9 symlinks are all relative and resolve inside `python/`, each
+  target in the archive: `bin/python` and `bin/python3` → `python3.14`,
+  `bin/idle3` → `idle3.14`, `bin/pydoc3` → `pydoc3.14`, `bin/python3-config`
+  → `python3.14-config`, `lib/pkgconfig/python3.pc` → `python-3.14.pc`,
+  `lib/pkgconfig/python3-embed.pc` → `python-3.14-embed.pc`, and
+  `share/man/man1/python.1` and `python3.1` → `python3.14.1`.
+
+**The Mac's tree, unpacked** (`tar -xzf` into a scratch folder; every run
+from `$TMPDIR`):
+
+- `python/bin/python3.14` is a regular file, 18,952,864 B, mode 0775;
+  `python3` and `python` are relative links to it. `python/lib/libpython3.14.dylib`
+  (18,952,736 B) is there and the executable does not link it.
+- `python3.14 -I -c …`: `sys.version` `'3.14.8 (main, Oct 1 2026,
+  20:50:07) [Clang 22.1.3 ]'`; `sys.executable` and `sys.prefix` the tree;
+  `sys.path` `lib/python314.zip` (absent on disk), `lib/python3.14`,
+  `lib/python3.14/lib-dynload`, `lib/python3.14/site-packages`; flags
+  isolated 1, ignore_environment 1, no_user_site 1, dont_write_bytecode 0,
+  safe_path True. With `-E -s -B`: `''` first, then the same four, and
+  safe_path False. Through the `python3` link, `sys.executable` is
+  `…/bin/python3` with the same prefix.
+- `python3.14 -I -m pip --version`: "pip 26.2.1 from
+  …/python/lib/python3.14/site-packages/pip (python 3.14)". `python/bin`
+  also holds `pip`, `pip3` and `pip3.14`, 234 B `/bin/sh` trampolines that
+  exec the `python3.14` beside them (pip's RECORD, 886 lines, lists
+  `../../../bin/pip` at 208 B), and `idle3.14`, `pydoc3.14`,
+  `python3.14-config`. `find … -name 'EXTERNALLY-MANAGED*'`: nothing.
+- `python3.14 -I -B -c "import ssl; …"`: OpenSSL 3.5.9 29 Sep 2026;
+  `get_default_verify_paths()` names cafile `/private/etc/ssl/cert.pem`
+  (333,483 B on this Mac) and capath `/private/etc/ssl/certs`;
+  `create_default_context()` loads 128 CA certificates. `_ssl`, `_hashlib`,
+  `_sqlite3` and zlib are **built into the executable** (101 built-in
+  modules); `lib-dynload` holds only `_dbm` and `_tkinter`. `import _ssl,
+  sqlite3, zlib, lzma, bz2, ctypes, _decimal, _ctypes, hashlib` works:
+  sqlite 3.53.1, zlib 1.2.12 (the system's), tk 9.0.
+- `codesign -dv --verbose=2` on `python3.14` and on the dylib:
+  `Identifier=-`, `flags=0x20002(adhoc,linker-signed)`, `Signature=adhoc`,
+  TeamIdentifier not set; `codesign --verify --strict`: "valid on disk",
+  "satisfies its Designated Requirement". `xattr -l`: `com.apple.provenance`
+  only.
+- `otool -L python3.14`: CoreFoundation, SystemConfiguration and
+  `/usr/lib`'s `libSystem.B`, `libz.1` (1.2.12), `libedit.3`,
+  `libncurses.5.4` and `libpanel.5.4`, so only `/System` and `/usr/lib`;
+  `otool -l`: `LC_RPATH @executable_path/../lib`, minos 11.0.
+- `du -sk` of a copy nothing was run in: 70,320 KiB (apparent 67,017); 1,689
+  files, 9 symlinks, 160 directories.
+- CPython's licence is `python/lib/python3.14/LICENSE.txt`, 13,804 B. There
+  is no `python/LICENSE.txt`, no `PYTHON.json` and no `licenses/` folder.
+
+**The Windows tree** (unpacked on the Mac and read as data with a PE reader,
+`pe.py`; never run):
+
+| beside `python/python.exe` | bytes | what |
+|---|---|---|
+| `python.exe` | 91,648 | x64, console subsystem, FileVersion 3.14.8150.1013, unsigned |
+| `pythonw.exe` | 90,112 | GUI subsystem |
+| `python314.dll` | 6,592,512 | unsigned |
+| `python3.dll` | 59,392 | |
+| `vcruntime140.dll` | 124,544 | 14.44.35211.0, Authenticode-signed (20,608 B) |
+| `vcruntime140_1.dll` | 49,792 | 14.44.35211.0, Authenticode-signed (20,608 B) |
+| `LICENSE.txt` | 23,601 | CPython's licence |
+
+| in `python/DLLs/` | bytes | FileVersion |
+|---|---|---|
+| `_ssl.pyd` | 178,688 | — |
+| `_sqlite3.pyd` | 120,320 | — |
+| `libcrypto-3-x64.dll` | 7,856,640 | 3.5.9.0 |
+| `libssl-3-x64.dll` | 1,571,840 | 3.5.9.0 |
+| `sqlite3.dll` | 1,607,680 | 3.53.1.0 |
+| `zlib1.dll` | 102,912 | 1.3.2.0 |
+| `libffi-8.dll` | 28,160 | — |
+| `libtommath.dll` | 81,408 | — |
+| `tcl90.dll` | 3,369,299 | 9.0.2.4, which is Tcl 9.0.4 final |
+| `tcl9tk90.dll` | 2,138,360 | — |
+
+- `DLLs/` holds 34 `.pyd`, the `_test*` modules among them. `python/tcl`
+  holds `dde1.4`, `registry1.3` and `tk9.0`; `Lib/venv` is there, with
+  `venvlauncher.exe` and `venvwlauncher.exe`.
+- **No `._pth` and no `.pth` anywhere**, so nothing restricts `sys.path`.
+- `Scripts/` holds only a 0 B `.empty`: no `pip.exe`, though pip's RECORD
+  still lists `pip.exe`, `pip3.exe` and `pip3.14.exe` at 108,393 B each.
+  pip 26.2.1; no `EXTERNALLY-MANAGED`.
+- **The C runtime.** No `msvcp140`, `vcomp` or `concrt` DLL is in the tree,
+  and none of its 58 PE files imports one: 46 import `VCRUNTIME140`, 1
+  imports `VCRUNTIME140_1`, and the rest of the C runtime comes through
+  `api-ms-win-crt-*`, the Universal CRT that ships with Windows.
+- **Signatures.** Only the two `vcruntime` DLLs carry one; `python.exe`,
+  `python314.dll` and every other PE file are unsigned (row 32's question).
+- `du -sk` on APFS: 65,044 KiB (apparent 60,876); 2,190 files, 227
+  directories.
+
+**The `.pyc`: none usable on either platform.** Counted from each archive's
+own member list (`pyc_count.py`) and their headers read (`pyc_headers.py`).
+The builder's first runs with `-I` and no `-B` wrote 236 `.pyc` into its
+working copy, so no count comes from a tree that was run.
+
+| | Mac | Windows |
+|---|---|---|
+| the standard library's `.py` | 655 | 655 |
+| its `.pyc` shipped | 3 (`encodings/__init__`, `aliases`, `utf_8`) in 1 `__pycache__` | 168 in 26 `__pycache__` |
+| pip's `.py` / `.pyc` shipped | 404 / 0 | 404 / 404 in 52 `__pycache__` |
+| the source mtime each `.pyc` records | 1790887887 (2026-10-01T20:51:27Z) | 1790790909 (2026-09-30T17:55:09Z) for the 168, 1790888533 (2026-10-01T21:02:13Z) for pip's |
+| the member's own mtime | 1704067200 | 1704067200 |
+
+Every one is timestamp-based, and so every one is stale once unpacked:
+`python3.14 -E -s -B -v -c pass` prints "bytecode is stale" for each of the
+Mac's three. Under `-B` that means the whole standard library is compiled
+in memory at every start.
+
+**Compiling once** (each on a fresh copy):
+
+| | Mac | Windows (its tree, compiled on the Mac) |
+|---|---|---|
+| command | `python3.14 -I -m compileall -q -j 1 python/lib/python3.14` | the pinned `python3.14 -I -B -m compileall -q -j 1 -d 'C:\Users\abcdefghij\AppData\Roaming\Forge\python\1\python\Lib' <copy>/python/Lib` |
+| time | 2.22 s real, 1.47 s user; exit 0 | 2.03 s real, 1.48 s user, 0.36 s sys |
+| `.pyc` it leaves | 1,059 (655 + 404) in 104 `__pycache__`, 19,043,394 B | 1,059, 18,891,318 B |
+| the stale ones it replaced | 3, 22,152 B | 572, 10,219,185 B |
+| the tree, apparent bytes | 68,060,050 → **87,081,292 B** | 61,643,159 → **70,315,292 B** |
+| `du -sk`, files, longest path / directory | 70,320 → 91,028 KiB; 2,745 files; 116 / 97 | — |
+
+- `-j 0` failed in the sandbox with `PermissionError` on
+  `os.sysconf("SC_SEM_NSEMS_MAX")`: it needs multiprocessing's semaphores.
+  Outside the sandbox it is unmeasured.
+- A `.pyc` is CPython-version-specific, not platform-specific; `-d` gives
+  Windows' copies a Windows-length `co_filename`, the one thing that
+  differs.
+- **What it buys**, `/usr/bin/time -p python3.14 -E -s -B -c "import json,
+  asyncio, ssl, subprocess, concurrent.futures, logging, urllib.request,
+  email.parser, http.client, hashlib, sqlite3, ctypes, importlib.metadata,
+  tempfile, zipfile, shutil, argparse, dataclasses, typing"`, seven runs
+  each: **0.67 s first, then 0.34–0.37 s** on the tree as unpacked; **0.07 s
+  every run** once compiled. `-c pass` is 0.01–0.02 s either way.
+- `--invalidation-mode unchecked-hash` would free the `.pyc` from the
+  unpacked mtimes: an option, unmeasured.
+
+**What the manifest's `bytesOnDisk` carries before CI** (the fix phase,
+`4dae71d`, regenerated with the dev venv's python; the locks,
+`resolved.json` and `history.json` byte-identical, so still pack 1):
+
+| | Mac | Windows |
+|---|---|---|
+| the interpreter as it will sit on disk (above) | 87,081,292 B | 70,315,292 B |
+| the first generation added instead | 69,430,272 B (the `20261013` tar, no compile) | 63,299,584 B (likewise) |
+| `bytesOnDisk` was | 657,373,331 B | 721,471,263 B |
+| `bytesOnDisk` now | **675,024,351 B** | **728,486,971 B** |
+| `formatBytes` (binary GiB) | "0.6 GB" | "0.7 GB" |
+
+CI's install (CLIPS §3a.8 row 28) replaces both. For the packages the Mac's
+figure is the dev venv's; the builder's own count of it today was
+587,943,059 B in 10,728 files, longest path 161, longest directory 107.
+
+**Electron's two version numbers.** A throwaway main script under Electron
+44.3.0 on this Mac (`sw_vers` 25F84): `process.getSystemVersion()` `'26.5.2'`,
+`os.release()` `'25.5.0'`, `app.runningUnderARM64Translation` `false`; under
+`ELECTRON_RUN_AS_NODE`, `process.getSystemVersion` is `undefined`. So a
+caller passing the Darwin number would read macOS 13 (Darwin 22) as 22 ≥
+14, and `packPlatform` refuses a major of 17 to 25 as unreadable. Whether
+macOS 26 reports `16.0` to a binary built against an older SDK is
+unmeasured, which is why 16 is left alone.
+
+**What row 26 settles:**
+
+1. **The standard library is compiled once at install, on both
+   platforms** (CLIPS §3a.3's stage 2), with `-j 1`.
+2. **`EXTERNALLY-MANAGED` is absent from both**: pip needs no
+   `--break-system-packages`, and nothing is removed at install.
+3. **The interpreter's names are the manifest's `python` fields**,
+   `python/bin/python3.14` and `python/python.exe`; `pack_lock.py` did not
+   change.
+4. **The tar reader:** nothing in either archive is a type it refuses
+   (regular files, and relative symlinks inside the root), so `tar` 7.5.x is
+   not needed as a fallback. It must read the **ustar prefix**, which
+   carries every long name (no PAX record exists to carry one), **create
+   parent folders itself** (no directory entries), and keep the mode's
+   executable bit.
+5. **The interpreter needs no Visual C++ redistributable on Windows**: the
+   question of CLIPS §16.45 and row 30 is the wheels' alone.
+6. **The path budget:** the interpreter's own longest (106 / 97 on the Mac,
+   116 once compiled; 105 / 86 on Windows) sits well under the
+   site-packages paths the manifest already budgets (161 / 107 and 150 / 96).
+
+**Open, the Surface's half:** `sys.winver`, and `sys.path` with a planted
+HKCU `SOFTWARE\Python\PythonCore\<winver>\PythonPath` subkey, with and
+without `-E`.
+
+### The lock and its completeness check
+
+**The generator** (`sidecar/.venv/bin/python -I scripts/pack_lock.py`,
+reaching only pypi.org and files.pythonhosted.org for metadata; exit 0):
+
+| target | lines | wheel bytes | with the interpreter | the button | the lock's sha256 |
+|---|---|---|---|---|---|
+| darwin-arm64 | 47 | 151,510,094 | 178,190,592 | "170 MB" | `9932ef367815154f64b4ac4a23a00d0b5f676933727db07f87f74e1bf8ce12d7` |
+| win32-x64 | 48 | 191,876,652 | 215,104,551 | "205 MB" | `6ec443867588fb032a51a52db199506013b4b79c92d2455ba0540b42b61c931f` |
+
+- It printed every requirement met on both targets but mediapipe's two
+  (allowlisted), and win32-x64 beyond darwin-arm64 as colorama only.
+- The locks are ASCII and LF only (a verifier: no non-printable byte), and
+  `git show HEAD:<lock> | shasum -a 256` gives the same two hashes. Their
+  first generation carried "§" in the header and hashed `008c3ac4…` /
+  `1575ca29…`; pip reads a requirements file without a BOM in the Windows
+  code page, so the script now refuses a non-ASCII lock.
+
+**Independently** (a verifier, against the committed files):
+
+- **pip's own pick.** `sidecar/.venv/bin/python -I -m pip install --dry-run
+  --ignore-installed --no-deps --only-binary=:all: --platform
+  <macosx_14_0_arm64 | win_amd64> --python-version 3.14 --implementation cp
+  --abi cp314 --report …`, with
+  `--use-deprecated=legacy-certs --cert <certifi>` (truststore fails in the
+  sandbox, OSStatus −26276): exit 0 for both. For all 47 and 48 wheels the
+  pick has the manifest's filename, URL and sha256; PyPI's JSON for all 48
+  distributions gives the same sha256, size and URL, none yanked;
+  `resolved.json`'s file entries are identical; every host is
+  files.pythonhosted.org; no `cp314t` anywhere.
+
+  | sampled | picked | over |
+  |---|---|---|
+  | onnxruntime, Mac | `cp314-cp314-macosx_14_0_arm64`, 21,545,313 B | nothing: the release has no universal2 or x86_64 Mac wheel |
+  | av, Mac | `cp311-abi3-macosx_14_0_arm64`, 18,217,603 B | its `cp314t` twin |
+  | scipy, Mac | `macosx_14_0_arm64`, 20,466,839 B | `macosx_12_0_arm64`, 28,725,221 B |
+  | scipy, Windows | `cp314-cp314-win_amd64`, 37,362,755 B | `cp314t`, 37,416,961 B |
+  | hf-xet, both | `cp38-abi3`, 3,876,287 / 4,033,128 B | `cp314t` |
+  | colorama, Windows | `py2.py3-none-any`, 25,335 B | — |
+
+- **The pinned interpreter's own pip** (the untouched tree, `-I -B`;
+  `platform.mac_ver()` 26.5.2, sysconfig `macosx-11.0-arm64`, 1,412
+  `sys_tags`) accepts the tags of all 47 Mac wheels and rejects
+  `cp314t-cp314t-macosx_14_0_arm64`.
+- **Completeness from the wheels' own METADATA.** The 67 picked wheels'
+  PEP 658 METADATA, fetched with curl and evaluated with a marker
+  environment of the verifier's own (`platform_release` and
+  `platform_version` filled in): 0 unmet on darwin-arm64 (47 lines) and on
+  win32-x64 (48) beyond mediapipe's `matplotlib` and `opencv-contrib-python`;
+  tqdm requires colorama on win32 and nothing on darwin; the dependency
+  names per target equal `resolved.json`'s `targets[t].requires` for all 95
+  entries. A scratch Windows lock without colorama, numpy or
+  typing-extensions fails, naming it; so does the script's own
+  `completeness()`, fed the real METADATA: `tqdm -> colorama ("colorama;
+  platform_system == "Windows"") is not in the win32-x64 lock`; and numpy
+  pinned to 1.0.0 fails on librosa's and numba's specifiers.
+- **Reproducible.** The script copied into a scratch tree with its inputs
+  and re-run (pack_lock.py has no `--out`): `diff -r` against a copy taken
+  before the run reports them identical.
+- **pip's parse of the locks.** `pip install --dry-run --require-hashes
+  --no-deps --no-index --only-binary=:all: --ignore-installed -r <lock>` from
+  an empty folder exits 1 on both with "No matching distribution found for
+  absl-py==2.5.0", no parse error. A syntax error appended at the end is
+  reported first ("Invalid requirement", "no such option: --bogus"), so pip
+  reads the whole file before it resolves; but a `--hash=sha256:XYZ`, or an
+  unhashed line, appended is not reported before resolution. So the run
+  proves the syntax only; the hash form is held by the manifest test's
+  count of every `--hash=`.
+
+**The check CI runs** (`tests/packLock.test.ts`, from `af61545`): over
+`resolved.json`, each evaluated requirement's specifier is read from the
+distribution's raw `requiresDist`, the one line naming it without an extra
+marker; all 143 in pack 1 have exactly one. The locked version must satisfy
+it by a PEP 440 subset (`==`, `!=`, `<`, `<=`, `>`, `>=`, `~=`, `==N.*`,
+a/b/rc, `.post`, `.dev`, with a `.devN` before its pre-releases, which
+llvmlite's `>=0.49.0dev0` needs). A scratch copy with numpy at 1.0.0 in both
+the lock and `resolved.json` fails on both targets with "librosa ->
+numpy>=2.1.0, but the lock has numpy==1.0.0", the script's own wording.
+
+### One helper process
+
+**Before** (CLIPS §3a, a reviewer, with `client.ts` and a fake helper that
+answers hello after 1.5 s): `start()`, then `start()` 300 ms later, answered
+from two pids, 7087 and 7099.
+
+**After** (a verifier's scratch tests against the built `client.ts` and
+`tests/fixtures/fake-helper.mjs`, `ps -p` after each, deleted after):
+
+| case | what happened |
+|---|---|
+| 5 `start()` and 3 `request()` calls during a 400 ms hello | exactly 1 spawn |
+| SIGKILL of the helper during its hello | both waiters rejected "stopped" within 3 s; the restarts spawned one at a time; no pid alive after `stop()` |
+| a hello timeout with `maxRestarts: 2` | 3 spawns, at most 1 alive at any 20 ms sample, all dead after |
+| `stop()` during a hello that never answers, the helper ignoring stdin's end | `start()` and `request()` rejected "shutting down"; `stop()` and `idle()` resolved; the pid gone |
+| `stop()` during a hello, the helper honouring stdin's end | resolved in under 1.4 s |
+| a request after `gaveUp` | one new helper spawned |
+
+- **A missing interpreter** (Node 24.18.1, the shell's; Electron 44.3.0
+  carries 24.20.0): `spawn` emits `'error'` (ENOENT) and then `'close'` (−2,
+  null), and **no `'exit'`**. So the client reads a child's end from
+  `'close'` too: with `'exit'` alone, `stop()` on a child that never
+  started hung past its test's timeout.
+- **The Windows stop** is measured here only through a stand-in `taskkill`
+  that kills the pid and exits 300 ms later: `stop()` and a timed-out start
+  resolve only after it has exited (three mutations each fail "taskkill had
+  exited when stop() resolved"); a `taskkill` that cannot start costs a
+  SIGKILL, and the stop ends well inside the grace plus 1.5 s; with that
+  error path not resolving, the stop was held 11.5 s, to
+  `TREE_KILL_WAIT_MS` (10 s) after the grace. The real `taskkill /f /t` and
+  a worker's death under it: CI's Windows job and the Surface.
+- The sandbox prints "ERROR: failed to copy trust settings of system
+  certificate-25291" for each Node child it spawns: noise, not a failure.
+
+**The order and the launch** (the same verifier, 12 scratch cases against
+CLIPS §16.42 (b), deleted after). Development FORGE_PYTHON → venv → dev
+pack → `python` on win32 / `python3` on darwin; packaged pack → FORGE_PYTHON
+→ absent, an empty FORGE_PYTHON read as absent; damaged (unparseable,
+`null`, `{}`, the interpreter gone) beats FORGE_PYTHON when packaged and not
+the venv in development; an unsupported platform skips the pack, damaged
+included; a receipt for another platform, lock or interpreter falls through
+even with its interpreter gone. The pack's argv is exactly `['-E', '-s',
+'-u', '-B', '-m', 'forge_sidecar']` in both modes and no rung has `-I`; on
+win32 `PythonPath`, `pythonhome`, `Hf_Token`, `HF_ENDPOINT`, `PYTHONPATH`,
+`Forge_Models_Dir` and `hf_hub_disable_xet` are all gone and the app's four
+keys are present, one spelling each. **The development rungs' environment
+is byte-identical to the old `sidecarEnv`** (`git show 0875608:src/main/sidecar/client.ts`,
+lines 39-53) by `JSON.stringify`, key order included, on win32 and darwin.
+
+**`sidecar.int` on two interpreters** (a verifier): 18 of 18 on the venv;
+18 of 18 with `FORGE_PYTHON` a bare 3.14 venv made by `/opt/homebrew/bin/python3
+-m venv --without-pip` (numpy will not import), which starts as `-m
+forge_sidecar` with `plainHelperEnv`, the PATH rung's shape. CI sets no
+`FORGE_PYTHON` and makes no venv, so its Windows job resolves to `python -m
+forge_sidecar`.
+
+**The pack's launch by hand, on the venv** (a verifier): `printf
+'<hello>\n<ping>\n' | env -u PYTHONPATH -u PYTHONIOENCODING -u
+PYTHONUNBUFFERED LC_ALL=<C | en_IE.ISO8859-1> .venv/bin/python -E -s -u -B
+-m forge_sidecar` from `sidecar/`: exit 0 in both locales; hello carries
+`executable`, `prefix` and a `path` of 5 entries, `sidecar/` first; the
+ping's echo of "Bräutigam ಕನ್ನಡ.mp4" came back as its own UTF-8 bytes,
+`4272c3a4…e0b2a12e6d7034`, in both.
+
+### Row 38: the protocol's encoding under `-E`
+
+**The probe** (the helper's builder, the venv's CPython 3.14.6):
+
+    ROW38_MODE=<decode|encode> LC_ALL=<locale> LANG= node row38.mjs sidecar/.venv/bin/python "<label>" <flags…>
+
+It spawns `python <flags> -c <probe>` with cwd `sidecar/` and every `PYTHON*`
+variable removed. The probe registers an `atexit` hook that reports
+`sys.stdin`, `sys.stdout` and `sys.stderr`'s `.encoding` and `.errors` and
+`sys.flags.utf8_mode`, then runs `runpy.run_module("forge_sidecar",
+run_name="__main__")`; the driver sends `system.hello`, then `system.ping`
+echoing "Bräutigam 5:30pm ಕನ್ನಡ.mp4". **Two modes, because a plain echo is
+blind under Latin-1**: every byte maps both ways, so it round-trips even
+when both directions are wrong. `decode` sends raw UTF-8 and forces the
+replies to `ensure_ascii`, so what Python read shows; `encode` sends a
+pure-ASCII request with `\u` escapes, so only what Python wrote is tested.
+A "—" is a value the run did not record.
+
+| launch | locale | stdin, stdout | stderr | `utf8_mode` | read (decode) | written (encode) |
+|---|---|---|---|---|---|---|
+| `-E -s -u -B` | `C` | utf-8 / surrogateescape | — | 1 | right | right |
+| `-E -s -u -B` | `en_IE.ISO8859-1` | **iso8859-1 / strict** | iso8859-1 / backslashreplace | 0 | **`'Br\xc3\xa4utigam 5:30pm \xe0\xb2\x95\xe0\xb2\xa8\xe0\xb3\x8d\xe0\xb2\xa8\xe0\xb2\xa1.mp4'`** | **an error reply: "'latin-1' codec can't encode characters in position 59-63: ordinal not in range(256)"** |
+| `-X utf8 -E -s -u -B` | `C`, `en_IE.ISO8859-1`, `en_US.UTF-8` | utf-8 / surrogateescape | — | 1 | right | right |
+| today's dev launch: no flags, `PYTHONIOENCODING=utf-8` | — | utf-8 / strict | utf-8 / backslashreplace | — | right | right |
+| `-E -s -u -B` with `__main__.utf8_stdio()` (`2700e2c`) | `C`, `en_IE.ISO8859-1`, `en_US.UTF-8` | utf-8 / strict | utf-8 / backslashreplace | — | right | right |
+
+Where right, the reply's bytes for the path are its own UTF-8:
+`4272c3a475746967616d20353a3330706d20e0b295e0b2a8e0b38de0b2a8e0b2a12e6d7034`.
+
+- **`LC_ALL=C` cannot show the fault**: Python turns UTF-8 mode on by
+  itself in the C locale. The fault needs a real 8-bit locale.
+- **Decided: the reconfigure.** `utf8_stdio()` runs first in `main()` and
+  gives exactly what `PYTHONIOENCODING=utf-8` gave, strict on the protocol's
+  two streams and `backslashreplace` on the log, as the same code on every
+  rung. `-X utf8` round-trips too, but gives stdin and stdout
+  `surrogateescape`, changes every `open()`'s default encoding, and would be
+  a flag on one rung only.
+- The face worker sets its own stdout and stderr the same way
+  (`mp_faces._utf8_stdio`); its spec arrives as bytes on fd 0, written by
+  the helper as `json.dumps(…).encode('utf-8')` with `ensure_ascii`, so pure
+  ASCII, and the helper decodes the worker's lines as UTF-8 with `replace`.
+  `test_faces.py`'s "error input" line naming 'ಕನ್ನಡ Bräutigam' reaches the
+  helper as UTF-8 under Latin-1.
+- **Open: Windows.** A pipe there takes the ANSI code page (cp1252 on most
+  machines, read in CPython's behaviour, not measured here). `sidecar.int`'s
+  two row-38 tests set no locale on win32, so CI's Windows job runs them on
+  that code page first; then the Surface.
+
+### The face worker through its bootstrap
+
+`<sys.executable> -E -s -B -c <bootstrap>`, the bootstrap putting
+`forge_sidecar/stubs` first and the package's folder second on `sys.path`
+and running `forge_sidecar.workers.mp_faces` with `runpy` (from
+`tests/output/faces/README.txt`, faces.int's import test):
+
+| worker | result |
+|---|---|
+| through the bootstrap, the stubs first | `ready 0.10.35 0.076`, 143 ms wall (§54's start was 0.14–0.23 s) |
+| the stubs taken off the bootstrap's path | exit 69, `error import ModuleNotFoundError: No module named 'cv2'` |
+| the real detector, in the sandbox | −6 after a clean import (no Metal, §54) |
+| a stop mid-pass | the helper exited by itself 281 ms later, no worker left |
+
+`-E` on the worker keeps a planted `PYTHONPATH` holding a `cv2` of its own
+off the worker's path (`test_faces.py`, 42 tests, `OK` on the venv under
+`unittest`; three mutations of the bootstrap each fail it). With the
+shell's `FORGE_FACES_WORKER_FAKE=colour`, faces.int read 2 failed and 11
+passed before `c232b4a` (the import test's half predates slice A: at
+`0875608` it failed the same way); now 13 passed and 2 skipped either way.
+
+### The suites at `4dae71d`
+
+Run by the recorder to a file, exit 0: `helperPython` 23, `helperLaunch`
+16, `helperPackManifest` 45, `packLock` 11, `sidecarClient` 12,
+`sidecarService` 28, `sidecarFolders` 5, `reframeContract` 13 and
+`sidecar.int` 18: 171 passed in nine files. Typecheck green on both
+configs before every commit of the slice.
+
+### Still unmeasured, and whose
+
+- **The Surface:** row 26's `sys.winver` and the planted HKCU `PythonPath`
+  with and without `-E`; row 38 on Windows pipes; row 29's cold hello from
+  the pack after an install and after a reboot, which sets the pack's hello
+  ceiling (`PACK_HELLO_TIMEOUT_MS` is a 90 s placeholder, against 30 s on
+  the development rungs); the real tree kill, and SmartScreen or Defender
+  on the unsigned `python.exe` (row 32).
+- **CI's install** (row 28): `bytesOnDisk`, the longest path and directory
+  per platform, which replace the pre-CI numbers above.
+- **Outside the sandbox:** `compileall -j 0`; whether macOS 26 reports
+  `16.0` to a binary built against an older SDK.
+- **Not tried:** `compileall --invalidation-mode unchecked-hash`.
