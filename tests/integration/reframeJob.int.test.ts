@@ -5,7 +5,7 @@ import { chmod, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promis
 import { basename, dirname, join } from 'node:path'
 import ffprobeInstaller from '@ffprobe-installer/ffprobe'
 import { SidecarClient } from '../../src/main/sidecar/client'
-import { createReframeJobs, reframeRequest, subjectTrackPath, type ReframeDeps, type ReframeJobs } from '../../src/main/reframe/analyse'
+import { createReframeJobs, reframeRequest, subjectTrackPath, type ReframeDeps, type ReframeHelperClient, type ReframeJobs } from '../../src/main/reframe/analyse'
 import { findShots } from '../../src/main/ffmpeg/shots'
 import { probeFile, probeWithClock } from '../../src/main/ffmpeg/probe'
 import { fileKey } from '../../src/main/assets'
@@ -17,7 +17,7 @@ import {
   type ReframeCollected,
   type ReframeStage
 } from '@shared/reframe/job'
-import { SIDECAR_METHODS, type HelloResult } from '@shared/sidecar/protocol'
+import { SIDECAR_METHODS, type FacesParams, type FacesResult, type HelloResult } from '@shared/sidecar/protocol'
 import { SUBJECT_TRACK_VERSION, type SubjectTrack, type UnitRect } from '@shared/reframe/types'
 import type { Job } from '@shared/types'
 import { FFMPEG, outputDir, run, writeNote } from './output'
@@ -387,6 +387,112 @@ describe('the analysis job — what it refuses before any work', () => {
     expect(jobs.queue.list()).toEqual([])
     await expect(jobs.collect({ jobId: job.id })).rejects.toThrow('That analysis was cleared from the list')
   })
+})
+
+/* ------------------------------- a stand-in helper client, also no venv */
+
+describe('the analysis job with a stand-in helper client — the shot finder real, on any interpreter', () => {
+  /** What the job may ask the helper, ever (§16.35: no vision.salient, and 1g's vision.ground is not built). */
+  const ALLOWED = [SIDECAR_METHODS.hello, SIDECAR_METHODS.facesModel, SIDECAR_METHODS.faces]
+
+  /**
+   * A client with the face finder up and on disk, recording every method it
+   * is asked. `faces` answers by writing the colour stand-in's track for
+   * CLIP (facesOnFrame, 5 a second) and naming it, as the helper would.
+   */
+  function standIn(asked: string[], tracks: string): ReframeDeps['sidecar'] {
+    const hello: HelloResult = {
+      protocolVersion: 1,
+      python: 'stand-in',
+      platform: process.platform,
+      capabilities: [SIDECAR_METHODS.faces, SIDECAR_METHODS.facesModel],
+      degraded: {}
+    }
+    const request = async (method: string, params: unknown): Promise<unknown> => {
+      asked.push(method)
+      if (method === SIDECAR_METHODS.facesModel) return { present: true, bytes: 1_083_786, label: 'the face finder', host: 'storage.googleapis.com' }
+      if (method === SIDECAR_METHODS.faces) {
+        const p = params as FacesParams
+        const samples = []
+        for (let ms = 0; ms < 6000; ms += 200) samples.push({ ms, faces: facesOnFrame((ms * 30) / 1000).map((f) => ({ ...f, score: 0.9 })) })
+        await mkdir(tracks, { recursive: true })
+        const track = join(tracks, `faces-${asked.length}.json`)
+        await writeFile(track, JSON.stringify({ version: 1, samples }))
+        const result: FacesResult = {
+          width: p.width, height: p.height, durationMs: 6000, sampleFps: 5, frames: samples.length,
+          withFace: samples.length, detector: 'test-stand-in/client', track, cached: false
+        }
+        return result
+      }
+      throw new Error(`the stand-in helper was asked ${method}`)
+    }
+    const client = { info: hello, request } as unknown as ReframeHelperClient
+    return () => client
+  }
+
+  it('runs a whole job asking the helper nothing but the face finder’s status and its faces — no salient, no ground', async () => {
+    const asked: string[] = []
+    const jobs = createReframeJobs({
+      sidecar: standIn(asked, join(dir, 'stand-in-tracks')),
+      userData: join(dir, 'userdata-stand-in'),
+      ffmpeg: FFMPEG,
+      ffprobe: FFPROBE,
+      log: (l) => notes.push(`- ${l}`)
+    })
+    const job = jobs.analyse(request())
+    const end = await settled(jobs, job.id)
+    expect(end.status, end.error ?? '').toBe('done')
+    const answer = (await jobs.collect({ jobId: job.id })) as ReframeCollected
+    expect(answer.kind).toBe('track')
+    expect(answer.track.shots.map((s) => s.startMs)).toEqual([0, 2000, 4000])
+    expect(answer.track.detector).toBe('test-stand-in/client')
+    // Membership, every method asked: the plan's no-salient decision held by more than a grep.
+    for (const method of asked) expect(ALLOWED, `the job asked ${method}`).toContain(method)
+    expect(asked).toContain(SIDECAR_METHODS.faces)
+    expect(asked).not.toContain(SIDECAR_METHODS.salient)
+    notes.push(`- a stand-in client: the job asked ${asked.join(', ')}`)
+  }, 60_000)
+
+  it('a cancel in the shots stage stops the scene pass at once: cancelled within 1 s, its ffmpeg killed, nothing else asked', async () => {
+    // A flat 4K clip, as shots.int's cancel: a tiny file whose scene pass takes seconds (2.3 and 8 s measured).
+    const long = join(dir, 'long-4k.mp4')
+    await run(FFMPEG, [
+      '-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi', '-i', 'color=c=0x404040:size=3840x2160:rate=30:duration=20',
+      '-c:v', 'libx264', '-preset', 'ultrafast', '-pix_fmt', 'yuv420p', long
+    ])
+    const asked: string[] = []
+    const jobs = createReframeJobs({ sidecar: standIn(asked, join(dir, 'stand-in-tracks')), userData: join(dir, 'userdata-shots-cancel'), ffmpeg: FFMPEG, ffprobe: FFPROBE })
+    const seen = watch(jobs)
+    const before = spawned.children.length
+    const job = jobs.analyse(request({ path: long, name: 'long-4k.mp4', width: 3840, height: 2160 }))
+
+    // Mid-shots: the scene pass's own report, past the stage's start.
+    let cancelledAt = -1
+    const midway = await until(() => {
+      const last = seen.get(job.id)?.at(-1)
+      if (last?.status === 'running' && last.speed === REFRAME_STAGES.shots.label && last.progress > 0) {
+        cancelledAt = last.progress
+        return true
+      }
+      return false
+    }, 30_000)
+    expect(midway, 'the shots stage reported mid-pass').toBe(true)
+    const began = performance.now()
+    jobs.cancel(job.id)
+    expect((await settled(jobs, job.id, 30_000)).status).toBe('cancelled')
+    const tookMs = performance.now() - began
+    expect(tookMs, 'the cancel reached the scene pass (findShots’ signal)').toBeLessThan(1000)
+    expect(await jobs.collect({ jobId: job.id })).toEqual({ kind: 'failed', reason: 'cancelled', message: REFRAME_FAILURES.cancelled })
+
+    // The scene pass: one ffmpeg, exited — killed, not run to its end (exit 0).
+    const scene = mainFfmpegs(before)
+    expect(scene).toHaveLength(1)
+    expect(await until(() => scene[0].exitCode !== null || scene[0].signalCode !== null, 2000), 'the scene pass has exited').toBe(true)
+    expect(scene[0].exitCode, 'stopped, not left to run to the end').not.toBe(0)
+    // The gate only: the faces were never asked for.
+    expect(asked).toEqual([SIDECAR_METHODS.facesModel])
+    notes.push(`- a cancel at ${cancelledAt.toFixed(3)} of the bar (mid-shots, a 20 s 4K clip): cancelled ${Math.round(tookMs)} ms later, the scene pass killed`)
+  }, 120_000)
 })
 
 /* ------------------------------------------ the suite on the real helper */
