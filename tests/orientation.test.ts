@@ -146,8 +146,11 @@ describe('the chip keeps its meaning when the bar is narrow', () => {
     expect(go).not.toBeNull()
     expect(Number(go![1])).toBeGreaterThan(Number(go![2]))
     // Each shape's word, and only it, takes the pair — never a word hidden outright.
-    expect(count(bar, 'className={mismatch ? WORDS_GO.chip : WORDS_GO.plain}>{ASPECTS[key].label}</span>')).toBe(1)
+    expect(count(bar, 'className={chip ? WORDS_GO.chip : WORDS_GO.plain}>{ASPECTS[key].label}</span>')).toBe(1)
     expect(count(bar, 'WORDS_GO.')).toBe(2)
+    // "The chip" is either chip: the photo one, or the reframe offer that takes
+    // its slot (docs/CLIPS.md §4.8) — both want the room.
+    expect(count(bar, 'const chip = offer !== null || mismatch !== null')).toBe(1)
   })
 })
 

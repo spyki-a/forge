@@ -1,11 +1,15 @@
 import { type ReactNode } from 'react'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, ScanFace } from 'lucide-react'
 import { orientationMismatch } from '@shared/edit/orientation'
+import { reframeOffer } from '@shared/edit/reframeOffer'
+import { followCandidates } from '@shared/reframe/follow'
 import { ASPECTS, useEditor, type AspectKey } from '../store'
 
 /**
  * The bar above the picture: the canvas's shape, what the preview shows, and
- * a warning when the photos and the canvas disagree (docs/WINDOW.md §3.15).
+ * a warning when the photos and the canvas disagree (docs/WINDOW.md §3.15) —
+ * or, ahead of it, the offer to follow the subject in landscape video on a
+ * portrait canvas (docs/CLIPS.md §4.8, shared/edit/reframeOffer.ts).
  *
  * The shape and the view switch lived in the Inspector's Output column, a
  * panel away from the picture they change, and the orientation warning lived in
@@ -52,6 +56,25 @@ const CHIP = {
   }
 } as const
 
+/**
+ * The reframe offer's words (docs/CLIPS.md §4.8, shared/edit/reframeOffer.ts),
+ * by the canvas it is on. The offer fires on a portrait canvas only, and the
+ * one portrait shape the bar offers is 9:16; a project saved at some other
+ * portrait size (aspectOf names the nearest shape, which may be 1:1) gets the
+ * plain words rather than a shape it is not.
+ *
+ * Its button follows the subject in every such clip and NEVER changes the
+ * canvas: the canvas already has the shape the reel wants, and it is the
+ * clips that have to come to it. That is the whole difference from the photo
+ * chip beside it, which is why they are two chips and not one rule.
+ */
+const OFFER: Partial<Record<AspectKey, { text: string; button: string }>> = {
+  '9:16': { text: 'Landscape video on a 9:16 canvas', button: 'Reframe to 9:16' }
+}
+const OFFER_PLAIN = { text: 'Landscape video on a portrait canvas', button: 'Reframe to fit' }
+const OFFER_WHY =
+  'It sits in a band with black above and below. Reframing finds the subject in each clip and follows it — the canvas keeps its shape.'
+
 /*
  * When the shape words give way to the chip, by the bar's own width (it is the
  * `@container`, and a container query measures its content box: the bar less
@@ -74,7 +97,32 @@ export function CanvasBar(): ReactNode {
   const setSplitRatio = useEditor((s) => s.setSplitRatio)
   const assets = useEditor((s) => s.project.assets)
   const settings = useEditor((s) => s.project.settings)
-  const mismatch = orientationMismatch(assets, settings)
+  const clips = useEditor((s) => s.project.clips)
+  const tracks = useEditor((s) => s.project.tracks)
+  const reframe = useEditor((s) => s.reframe)
+  const reframeAll = useEditor((s) => s.reframeAll)
+  const notify = useEditor((s) => s.notify)
+  /*
+   * Two chips, one slot, and the reframe offer first: with landscape video on
+   * a portrait canvas the canvas has the shape the reel wants, so the photo
+   * chip's "Switch to 16:9" would be the wrong advice beside it (CLIPS.md §4.8).
+   * The photo rule itself is unchanged and still photos-only.
+   */
+  const offer = reframeOffer({ clips, assets, tracks, settings })
+  const mismatch = offer === null ? orientationMismatch(assets, settings) : null
+  /** Either chip is up: the shape words give way sooner (WORDS_GO). */
+  const chip = offer !== null || mismatch !== null
+  const offerWords = OFFER[aspect] ?? OFFER_PLAIN
+  /*
+   * Greyed without the AI helper, as Follow the subject is in the dock: with
+   * no face finder the job would find the shots and centre every crop, which
+   * is what the clips already have. Starting is said as starting.
+   */
+  const helperWhy =
+    reframe.helper === 'ready' ? null : reframe.helper === 'missing' ? 'needs the AI helper' : 'the AI helper is starting'
+  // Every file the offer is about is being analysed already: one job per file, so a second press would only wait.
+  const busy =
+    offer !== null && followCandidates({ clips, assets, tracks }).every((clip) => reframe.pending[clip.assetId] !== undefined)
 
   return (
     <div className="@container flex h-8 shrink-0 items-center gap-2 border-b border-ink-800 px-2">
@@ -92,7 +140,7 @@ export function CanvasBar(): ReactNode {
               key={key}
               onClick={() => setAspect(key)}
               aria-pressed={on}
-              title={`${ASPECTS[key].label} — ${ASPECTS[key].width}×${ASPECTS[key].height}. Changing this re-solves every clip's reframe. Drag the rectangle in the preview to correct it.`}
+              title={`${ASPECTS[key].label} — ${ASPECTS[key].width}×${ASPECTS[key].height}. Changing this re-solves every clip's reframe. Followed clips keep following their subject. Drag the rectangle in the preview to correct it.`}
               className={`flex items-center gap-1.5 rounded py-1 transition-colors ${
                 small ? 'px-1.5 text-[10px]' : 'px-2 text-[11px]'
               } ${
@@ -107,7 +155,7 @@ export function CanvasBar(): ReactNode {
                 style={GLYPH[key]}
               />
               <span className="font-medium tabular-nums">{key}</span>
-              <span className={mismatch ? WORDS_GO.chip : WORDS_GO.plain}>{ASPECTS[key].label}</span>
+              <span className={chip ? WORDS_GO.chip : WORDS_GO.plain}>{ASPECTS[key].label}</span>
             </button>
           )
         })}
@@ -131,6 +179,39 @@ export function CanvasBar(): ReactNode {
           >
             Switch to {mismatch}
           </button>
+        </div>
+      )}
+
+      {/*
+        The reframe offer: follow the subject in every unfollowed landscape
+        video clip (the store's reframeAll — one job per file, each in EXPORT's
+        list as "Finding the subject"). It never calls setAspect.
+      */}
+      {offer !== null && (
+        <div
+          data-reframe-offer=""
+          title={`${offerWords.text} — ${offer} clip${offer === 1 ? '' : 's'}. ${OFFER_WHY}`}
+          className="flex min-w-0 items-center gap-1.5 rounded border border-amber-700/40 bg-amber-500/10 py-0.5 pl-1.5 pr-0.5"
+        >
+          <ScanFace size={12} className="shrink-0 text-amber-800" />
+          <span className="truncate text-[11px] text-amber-800">{offerWords.text}</span>
+          <button
+            onClick={() =>
+              void reframeAll().catch((err) => notify(err instanceof Error ? err.message : String(err)))
+            }
+            disabled={helperWhy !== null || busy}
+            title={
+              helperWhy !== null
+                ? `Following the subject ${helperWhy}`
+                : busy
+                  ? 'Finding the subject — the analysis is in EXPORT'
+                  : 'Find the subject in each landscape clip and follow it. The canvas keeps its shape.'
+            }
+            className="shrink-0 rounded bg-amber-500 px-2 py-0.5 text-[11px] font-medium text-ink-200 hover:bg-amber-400 disabled:opacity-50 disabled:hover:bg-amber-500"
+          >
+            {offerWords.button}
+          </button>
+          {helperWhy !== null && <span className="shrink-0 pr-1 text-[10px] text-amber-800">{helperWhy}</span>}
         </div>
       )}
 
