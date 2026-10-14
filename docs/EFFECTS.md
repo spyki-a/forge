@@ -6891,3 +6891,495 @@ configs before every commit of the slice.
 - **Outside the sandbox:** `compileall -j 0`; whether macOS 26 reports
   `16.0` to a binary built against an older SDK.
 - **Not tried:** `compileall --invalidation-mode unchecked-hash`.
+
+## 58. The AI helper's install job — the real install on the dev Mac (row 27), range support on both hosts (row 33), pip's output and the dist-info clock (row 34), depth's download without hf-xet (row 35), and the offline and proxy paths (§3a.5) (2026-10-14)
+
+For `docs/CLIPS.md` §3a.3 and §3a.5, Step P's slice B (`0453abb` …
+`08984ee`, nineteen commits, not pushed, so CI has not run them).
+Development Mac (M1 Pro, macOS 26.5.2), inside the dev sandbox: no Metal,
+no port to bind, the network through a filtering proxy. No filter shape is
+added: P runs pip and the helper, never ffmpeg. Each number names who
+measured it: the fetcher's builder (the census, the unpack, the compile),
+the self-test's builder (the groups, the model, mediapipe's load), the
+job's builder (the lock, the bar's property test), the integrator (the
+real install and rows 27, 33, 34 and 35, the offline runs), three
+verifiers, the fix phase, or the recorder (the test counts at `08984ee`).
+
+### The real install (row 27, the Mac's half)
+
+**The command** (the integrator), the app's own job
+(`createHelperPackJobs`) on `installDeps.ts`' real workers, the real
+`HELPER_PACK` and the real hosts, into `mkdtemp(tmpdir)/Forge
+Bräutigam/userData`:
+
+    FORGE_PACK_REAL=1 NODE_USE_ENV_PROXY=1 FORGE_PACK_KEEP=1 \
+      FORGE_PACK_DOWNLOADS=$TMPDIR/forge-pack-downloads \
+      npx vitest run tests/integration/helperPack.int.test.ts
+
+The test writes `tests/output/helper-pack/README.txt` and overwrites it on
+every run; the first run's figures were copied from it before a seeded run
+replaced it. `FORGE_PACK_DOWNLOADS` keeps the verified files, or seeds them
+as hard links, so a rerun fetches only what is missing.
+
+| stage | first run, every file fetched (exit 0, 10 passed) | the fix phase's run, 45 of 48 seeded (exit 0, 11 passed) |
+|---|---|---|
+| Checking | 2 ms | 4 ms |
+| Downloading | 6,032 ms: 178,190,592 B, **28.17 MiB/s** through the sandbox's proxy; the interpreter through github.com's 302 to release-assets | 1,306 ms: 3 files, 26,698,907 B (the README's "130.12 MiB/s" divides all 178,190,592 B by that time; ignore it) |
+| Unpacking | 2,760 ms: unpack 467 ms (1,689 files, 68,060,050 B, longest 106 / 97), stdlib compile 2,293 ms | 2,679 ms: unpack 470 ms, compile 2,209 ms |
+| Installing the libraries | 11,396 ms | 11,353 ms |
+| Checking the AI helper | 36,992 ms | 36,582 ms |
+| **the job** | **57,183 ms** | **51,927 ms** |
+
+Two seeded reruns between them (the integrator): pip 11,044 and 11,115 ms;
+the check 39,075 and 35,749 ms.
+
+**The check is cold.** The test starts the new pack once before
+`checkPack`, to time its first hello on its own; the stage total is the
+app's, whose own check would meet that cold start.
+
+| | first run | fix phase | reruns |
+|---|---|---|---|
+| the first hello | 11,348 ms | 11,848 ms | 14,446 and 12,213 ms |
+| asr | 209 | 209 | — |
+| beats | 21,096 | 20,230 | 20,295 and 19,045 |
+| onnx | 108 | 105 | — |
+| vision | 285 | 281 | — |
+| sklearn | 1,768 | 1,768 | — |
+| faces | 1,460 | 1,455 | — |
+
+Every group exited 0 in every run; the faces group passes without Metal.
+
+- **Warm**, on the kept pack (`node scratchpad/measure/hello.mjs <pack
+  python> sidecar <userData>`, three times): hello 271, 274 and 277 ms.
+  `… selftest`: 2,310 ms, asr 208, beats 900, onnx 108, vision 248, sklearn
+  660, faces 183. A verifier, through `helperLaunch`'s pack rung and
+  `SidecarClient`: hello 275 ms, `python` 3.14.8, executable, prefix and all
+  5 `sys.path` entries inside the version folder or `sidecar/`; the
+  self-test 2,282 ms (asr 213, beats 899, onnx 108, vision 247, sklearn
+  631, faces 179).
+- **Why the first start is cold.** `cp -R` of a freshly installed pack,
+  then `<copy python> -E -s -B -X importtime -m forge_sidecar </dev/null`
+  under `/usr/bin/time -p`: **14.09 s real, 1.06 s user, 0.18 s sys**; av's
+  import is 10.78 s of it (`av._core` 3.31 s self, about 150–200 ms per
+  Cython module). The second run: 0.91 s real. So the cold start is wall
+  time on the first load of each new native file, not CPU. What that wait
+  is spent on is not established.
+- **The ceilings.** The pack's hello ceiling (`PACK_HELLO_TIMEOUT_MS`,
+  90 s) has about 6× margin on this Mac; the self-test's 60 s per group
+  about 3× over a cold beats group. The Surface, with Defender, is row
+  29's and row 30's.
+
+**The receipt and the disk** (the first run):
+
+| | |
+|---|---|
+| `bytesOnDisk`, apparent (lstat sizes over the version folder) | **675,763,387 B**; the manifest's PRE-CI figure is 675,024,351 B (+0.11 %) |
+| `du -sk` of the version folder | 706,039,808 B |
+| longest relative path / longest directory | 161 / 107, the manifest's pre-CI figures exactly |
+| files, folders | 13,525, 1,446 |
+| the walk and the receipt | about 0.37 s (progress at 49,187 → 49,559 ms in the third run) |
+| peak use | the downloads (178,190,592 B; `du` 174,984 KiB) plus the pack, about 884 MB, under `spaceNeeded`'s 938,536,438 B = ceil((178,190,592 + 675,024,351) × 1.1) |
+
+**Free space.** `statfsSync(userData)`: `bavail` = `bfree` = 6,883,127 ×
+4,096 = 28,193,288,192 B on the first run. On a seeded run 6,011,035 ×
+4,096 = 24,621,199,360 B, and `df -k`'s Avail, read right after, was
+24,621,199,360 B, equal to the byte; the fix phase's run, 6,170,097 ×
+4,096 = 25,272,717,312 B, equal to `df` again. So `bavail × bsize` is
+`df`'s figure on APFS. (`bavail` and `bfree` are equal here; `bfree` also
+counts blocks only root may write, so the job reads `bavail`.)
+
+**pip check** inside the pack (exit 1): "mediapipe 0.10.35 requires
+matplotlib, which is not installed." and "… opencv-contrib-python, which is
+not installed.", the allowlist's two and nothing else.
+
+**numba's cache.** `find <pack> -name '*.nbi' -o -name '*.nbc'`: **none**
+after the job's own self-test. After `beats.int` ran through the pack: **38
+files, 1,190,255 B**, in `librosa/__pycache__` (18), `librosa/core` (6) and
+`librosa/util` (14). So numba writes into an installed pack on its first
+real use, and the tree drifts from the receipt's `bytesOnDisk`; the
+self-test's one `librosa.stft` writes nothing. (On the dev venv the beats
+group alone took 1,010 ms and left the 38 cache files already there at
+38: that venv had them from earlier helper use.)
+
+**The bar.** The placeholders (70 / 5 / 20 / 5) held the bar at 95 % for 37
+of the first install's 57 s. `863f4f6` makes it 45 / 5 / 15 / 35, from this
+install at the plan's 4.2 MB/s example line (a 40 s download of about
+92 s), and the check now reports its progress: `CHECK_HELLO_SHARE` (0.35)
+after the hello and the ping, then each group's start, mapped onto 0–0.9 of
+stage 4. On a seeded run stage 4 went 65 % at the check's start, 76.0 %
+after the hello, then 79.4, 82.9, 86.3, 89.7, 93.1 and 96.5 % group by
+group, and 98.25 % at the receipt. The longest stands left are about 12 s
+at 65 % (the cold hello) and about 19 s at 79 % (beats).
+
+**Through the pack** (the integrator, with `FORGE_HELPER_PACK=<the kept
+version folder>`), each exit 0: `sidecar.int` 20; `sidecarMedia.int` 1,
+its `unittest.txt` naming the pack's `python3.14` and reading "Ran 132 tests
+in 15.462s OK" with no skip allowed; `vision.int` 7; `beats.int` 13;
+`faces.int` 13 and 2 skipped; `reframeJob.int` 13 and 1 skipped (the same
+opt-in skips as on the venv). `FORGE_HELPER_PACK=/nowhere npx vitest run
+tests/integration/vision.int.test.ts` exits 1, the suite failing with its
+reason rather than skipping.
+
+**The pack mutations** (the integrator), each a whole install from the
+seeded downloads through `FORGE_PACK_MUTATION`, each exit 1:
+
+| mutation | failed | what the receipt or the test said |
+|---|---|---|
+| without librosa (a scratch lock and manifest) | 3 | problems: "audio.beats is not available: beats unavailable: librosa is not installed: No module named 'librosa'"; the expects check; the beats group exit 1, ModuleNotFoundError |
+| without mediapipe | 3 | `vision.faces` and `vision.facesModel` degraded ("mediapipe is not installed …"); the faces group exit 69 |
+| without idna (for the `pip check` assertion, which none of the plan's three reached) | 3 | `pip check`: "requests 2.34.2 requires idna, which …"; depth and salient degraded |
+| `-s` dropped, `HOME` and `APPDATA` with a planted user site | 2 | problems: "The AI helper's Python path reaches outside its folder: /tmp/claude-501/forge-pack-mcTfEM/home/.local/lib/python3.14/site-packages"; the test's own `path.relative` check |
+
+The first mediapipe run also failed the `pip check` test, because "No
+broken requirements found." did not match: that assertion broke when the
+pack was right, and became membership plus the exit code before the commit.
+
+### `--no-compile` (row 27)
+
+The integrator, with `scratchpad/measure/pipcompare.sh compiled ''` and
+`… nocompile '--no-compile'`: each a fresh `tar -xzf` of the pinned
+archive, `python -I -m compileall -q -j 1 lib/python3.14`, then pip with
+`runPip`'s exact argv (plus the flag).
+
+| | pip | site-packages `du` | `.pyc` in site-packages | version folder `du` |
+|---|---|---|---|---|
+| compiled | 11.41 s | 611,488 KiB | 4,762 | 689,336 KiB |
+| `--no-compile` | 2.14 s | 504,724 KiB | 404 (pip's own, from the stdlib compile) | 582,572 KiB |
+
+- `--no-compile` saves 106,764 KiB (109.3 MB) and 9.3 s, once.
+- The first hello (`hello.mjs` four times each): 13,660 against 13,634 ms,
+  both cold.
+- Every later start: **549–551 ms with `--no-compile` against 261–266 ms
+  compiled**, +0.29 s. Under `-B` nothing is ever written, so every helper
+  start, self-test child and face worker pays it.
+
+**Decided: pip compiles.** 109 MB is not worth 0.29 s on every start.
+
+### Range requests (row 33)
+
+The integrator:
+
+    curl -sI -L -r 0-1023 <the interpreter's URL>
+    curl -sI -r 0-1023 <cffi's wheel URL>
+
+| host | answered |
+|---|---|
+| github.com | 302 to release-assets |
+| release-assets.githubusercontent.com | `HTTP/2 206`, `accept-ranges: bytes`, `content-range: bytes 0-1023/26680498` |
+| files.pythonhosted.org | `HTTP/2 206`, `content-range: bytes 0-1023/184962` |
+
+- GETs of `-r 26000000-26000999` (the interpreter) and `-r 1000-1999` (the
+  wheel) both returned 206 with 1,000 B, byte-equal (`cmp`) to the
+  verified files.
+- github.com's redirect is signed with `se=` 40 minutes after it is issued
+  (`Date` 17:22:15 GMT, `se=18:02:17Z`), so a byte-range resume after that
+  must ask github.com again.
+
+**What it settles:** resume inside a file can be built on both hosts. P
+keeps file-level resume (the largest file is 42,986,588 B); the Surface's
+download says whether more is worth it.
+
+### pip 26.2.1 over the lock, and the dist-info clock (row 34)
+
+The integrator captured the job's pip to `$TMPDIR/forge-pip-compiled.stdout`:
+**50 lines on stdout, nothing on stderr**.
+
+- `Looking in links: <downloads>`
+- 47 lines `Processing <downloads>/absl_py-2.5.0-py3-none-any.whl (from -r
+  <lock> (line 4))`, all within 0.25 s (4,305 → 4,565 ms in the fix
+  phase's run)
+- `Installing collected packages: mediapipe, flatbuffers, urllib3, …, av,
+  anyio, absl-py`
+- `Successfully installed absl-py-2.5.0 anyio-4.15.1 av-18.1.0 …`
+
+The dist-info folders appear one package at a time, in that order. The
+count at each 500 ms tick of the job's own poll:
+
+| run | ms: folders |
+|---|---|
+| the integrator's | 9296:0 9796:4 10298:11 10799:11 11300:11 11800:11 12302:11 12803:12 13304:12 13804:12 14306:15 14806:20 15307:21 15808:21 16309:21 16810:22 17310:22 17812:22 18313:23 18812:28 19313:32 19813:45 20191:47 |
+| the fix phase's | 4492:0 4993:3 5494:11 5995:11 6496:11 6998:11 7499:11 8000:12 8501:12 9002:12 9503:16 10005:20 10506:21 11008:21 11509:21 12010:22 12511:22 13012:22 13513:23 14014:28 14515:32 15016:45 15345:47 |
+
+`runPip` reported 0 until "Installing collected packages" (9,269 ms in the
+integrator's run), and the last 47 came at the exit, after "Successfully
+installed" (20,132 ms). **What it settles:** the bar's dist-info count
+works; it moves in about 12 steps over 11 s, its longest stand about 2.5 s
+at 11 of 47 in both runs. pip's lines carry no progress worth showing, so
+the speed column keeps its count.
+
+### Depth's download without hf-xet (row 35, depth's half)
+
+The integrator: `cp -R <installed pack> $TMPDIR/forge-hfxet/1`, then `<copy
+python> -E -s -m pip uninstall -y hf-xet` (`find_spec('hf_xet')` then
+None), then
+
+    node scratchpad/measure/hello.mjs <copy python> sidecar $TMPDIR/forge-hfxet \
+      request '{"method":"depth.layers","params":{"path":".../photo.jpg", …,"layers":3,"subject":false}}'
+
+on a 640×480 `testsrc2` photo, with `HF_HUB_DISABLE_XET=1` as the app sets
+it and `huggingface.co`, `*.hf.co`, `cdn-lfs.hf.co`, `cdn-lfs-us-1.hf.co`
+and `cdn-lfs.huggingface.co` allowed (`subject: false`, so only the depth
+model is fetched, not BiRefNet's).
+
+- It passed: the model blob is 27,258,801 B; the "downloading the depth
+  model" messages ran from 18,581 to 19,367 ms (about 0.8 s); the request
+  took 9,891 ms in all and returned 3 layers.
+- Hello on the copy: 12,489 ms, cold again (a `cp -R` is new files).
+
+**What it settles:** hf-xet is not needed for depth. asr's half waits for
+the speech model's press; until it passes, hf-xet stays in the lock.
+
+### Offline and proxies (§3a.5)
+
+The integrator, with a temporary test (deleted, never committed) running
+the job on the real workers, Node's fetch and a retry of `{attempts: 2,
+firstDelayMs: 100, budgetMs: 5000, …}`:
+
+| run | environment | result |
+|---|---|---|
+| A | `NODE_USE_ENV_PROXY` unset, the direct path refused by the sandbox | failed after 204 ms: "cpython-3.14.8+…tar.gz could not be downloaded: github.com could not be reached: fetch failed (getaddrinfo ENOTFOUND github.com) — gave up after 2 tries over 0s. If this machine cannot reach github.com and files.pythonhosted.org, point FORGE_PYTHON at a Python with the helper's requirements."; the retry line "the connection to github.com failed (ENOTFOUND), trying again in 1s (2 of 2)" |
+| B | `HTTPS_PROXY=http://127.0.0.1:9`, no `NODE_USE_ENV_PROXY` | identical to A: Node's fetch ignores `HTTPS_PROXY` (CLIPS §8.2 confirmed) |
+| C | `NODE_USE_ENV_PROXY=1` with that proxy | failed after 103 ms, no retry: "github.com could not be reached: fetch failed (connect EPERM 127.0.0.1:9 - Local (0.0.0.0:0))" |
+
+- In the sandbox a dead proxy gives `EPERM`, not `ECONNREFUSED`. In C the
+  proxy appears only as the address inside the raw cause; the sentence
+  blames github.com.
+- The real install needed `NODE_USE_ENV_PROXY=1` here: `node probefetch.mjs`
+  gave `ENOTFOUND` without it and 200 with it. The app does not set it, so
+  **Install fails behind a proxy** until row 19.
+- `secs()` rounds a sub-second wait up, so a 100 ms test wait reads "trying
+  again in 1s". Cosmetic: real waits are 8 s and more.
+
+**What the hosts send** (the fix phase, before refusing `text/html`): `curl
+-sI -L -r 0-15 <the interpreter's URL>`, `curl -sI -r 0-15 <absl_py's wheel
+URL>`, and the wheel again with `-H 'Accept-Encoding: gzip, deflate, br'`.
+github.com's 302 is `text/html` (a hop, never read as the file);
+release-assets answers 206 `application/octet-stream`;
+files.pythonhosted.org answers `application/octet-stream` with no
+`Content-Encoding` even when gzip is asked for (`content-length` 137410
+for absl_py). So refusing `text/html` before the body refuses nothing real.
+
+**Node's manual redirect** (a verifier): Node 24.18.1's fetch with
+`redirect: 'manual'` against the interpreter's URL (`NODE_USE_ENV_PROXY=1`,
+github.com allowed) gave status 302, type `basic`, and `Location` on
+release-assets.githubusercontent.com. undici returns the real response for
+`'manual'`, not an opaque redirect ("Not compliant on purpose",
+`node_modules/undici/lib/web/fetch/index.js:1190-1196`, read by the
+fetcher's builder). That is what following redirects by hand, to name each
+hop's host, relies on. Electron's `net.fetch` with `'manual'` is unmeasured
+(row 19).
+
+**The log line on success** (the fix phase's real run): "cpython-3.14.8+20261001-aarch64-apple-darwin-install_only_stripped.tar.gz
+came from release-assets.githubusercontent.com: 26680498 B, its sha256
+verified"; decorator (10,365 B) and lazy_loader (8,044 B) from
+files.pythonhosted.org.
+
+### The unpacker on the real archives
+
+**The census** (the fetcher's builder, a stdlib Node walker, `node
+census.mjs row26/<mac|win>.tar.gz`): all 1,698 Mac and 2,190 Windows headers
+carry POSIX magic `ustar\0` `00`; no duplicate names, none `safeMemberPath`
+refuses; names joined through the prefix 9 and 6. The Mac: 1,689 files,
+68,060,050 B, longest 106, folder 97, modes 1,670 × 0664 and 19 × 0775, tar
+69,373,952 B; Windows: 2,190 files, 61,643,159 B, longest 105, folder 86,
+2,176 × 0666 and 14 × 0777, tar 63,301,120 B. These agree with §57.
+
+**`unpackTarGz`**, `npx vitest run tests/unpack.test.ts --reporter=verbose
+--silent=false` (the builder, twice):
+
+| | Mac | Windows (unpacked on the Mac as data, never run) |
+|---|---|---|
+| result | 1,689 files, 68,060,050 B, 9 links, 160 folders, longest 106 / 97 | 2,190 files, 61,643,159 B, longest 105 / 86 |
+| time | 503 ms, then 423 ms | 438 ms |
+| against tar's tree | 1,858 paths equal: types, sizes, link targets and the 19 x bits | equal path for path and size for size |
+| after the fix phase (`-t real`) | 421 ms | 467 ms |
+
+- The interpreter it wrote answers `-I -c "import sys, ssl;
+  print(sys.version)"` with "3.14.8 (main, Oct 1 2026, 20:50:07) [Clang
+  22.1.3 ]", which answers slice A's open question of whether the tree runs
+  when the app writes it. A verifier diffed its own `find`/`stat` listing
+  of the unpack against tar's (1,859 lines with the root, `diff` exit 0)
+  and ran `import ssl, sqlite3` from it; and Windows' 2,190 size-and-name
+  lines against `tar -tzvf`'s, `diff` exit 0.
+- **The compile on that tree** (`-I -m compileall -q -j 1`): 1,811 ms, then
+  1,726 ms, 1,059 `.pyc`, **18,965,516 B**, 77,878 B less than §57's
+  19,043,394 B (`find row26/mac-compiled/python -name '*.pyc' | xargs stat
+  -f %z`). The `.pyc` carry their source's absolute path (`co_filename`):
+  §57's tree sat under a 114-character root (`echo -n "$PWD/mac-compiled" |
+  wc -c`), this one under 40, about **1,052 B per character of root**. So a
+  user's `bytesOnDisk` moves by about 100 KB per 100 characters of their
+  userData path.
+
+**An unpack outside the root** (a verifier, then the fix phase, `4b9073d`).
+An archive of three members, `X -> .`, `x/y/L -> ../..` and
+`x/y/l/evil.txt`, was accepted by `TarStream` and `unpackTarGz`, and on
+this Mac `readdir('<tmp>/root/python')` returned `['1', 'evil.txt']`: the
+file landed in the version folder's parent. `L` is inside on paper (two
+levels up from `x/y`), but APFS (and NTFS) fold case, so `x/y/l` went
+through it, and the check "no member at or under an earlier link" compared
+names exactly. The case that needs the fold is a link one level shallower
+than its name (`a/X -> ../c`, then `a/x/y/L -> ../../../other`), which a
+rule against links to an ancestor alone does not stop. Three layers now:
+names folded (NFC, then case) when judging "under a link"; no link to its
+own folder or above; and `realpath` of each folder's deepest existing part
+checked inside the root before it is made. The archive's sha256 pin had
+limited it to a bad manifest.
+
+**Renames on Windows**: `graceful-fs` 4.2.11
+(`node_modules/graceful-fs/polyfills.js:90-123`) retries `EACCES`, `EPERM`
+and `EBUSY` on win32 for up to 60 s, its backoff growing 10 ms at a time to
+100 ms, and only while the destination stats `ENOENT`; its comment names
+antivirus holding files for up to a minute. `renameWithRetry` takes 10
+tries, 50 ms doubling to a 2 s cap, 9.15 s in all, and does not copy the
+`ENOENT` rule, since the receipt's rename may replace a file. Unmeasured on
+the Surface (row 27).
+
+### The self-test
+
+**`identity.onnx`** (the self-test's builder): 80 B, sha256
+`5ec65a9b7e916737db9913eed0db9909cc08c833526715129d88e42cc14e4104`, IR 7,
+opset 13, producer "forge", one Identity node, `x` float [1, 1] → `y` float
+[1, 1]. Written by a stdlib protobuf encoder (`sidecar/.venv/bin/python -I
+make_identity_onnx.py <out>`): the onnx package could not be fetched, pip's
+TLS failing through the sandbox's proxy (`SSLCertVerificationError('OSStatus
+-26276')`, as in §57). onnxruntime 1.30.0 (CPU) reports `x` [1, 1]
+`tensor(float)` and `y` [1, 1], and returns [[0.5]] for [[0.5]]; a
+verifier's [[0.25]] came back [[0.25]].
+
+**mediapipe's library** (mediapipe 0.10.35 on the dev venv, no Metal; the
+bootstrap's path, the three imports, then the load, `.venv/bin/python -E
+-s -B -c …` from `sidecar/`): after the imports (0.119 s)
+`mediapipe_c_bindings._shared_lib` is None; `load_raw_library()` then took
+**0.068 s** and returned `CDLL '…/mediapipe/tasks/c/libmediapipe.dylib'`.
+With the load in the worker's `_mediapipe()`, `faces.int`'s ready line reads
+"ready 0.10.35 0.106", 177 ms wall (slice A: 143 ms, a 0.076 s import).
+
+**The groups on the dev venv** (CPython 3.14.6; `PYTHONPATH=sidecar
+sidecar/.venv/bin/python -B -c "from forge_sidecar import selftest;
+selftest.selftest()"`, ms, every group exit 0):
+
+| run | asr | beats | onnx | vision | sklearn | faces | total |
+|---|---|---|---|---|---|---|---|
+| 1 | 245 | 1,242 | 107 | 317 | 748 | 181 | 2.84 s |
+| 2 | 248 | 942 | 104 | 312 | 730 | 182 | 2.52 s |
+| 3 | 251 | 949 | 102 | 311 | 716 | 172 | 2.50 s |
+
+A verifier, driving the real helper by hand (`.venv/bin/python -E -s -u -B
+-m forge_sidecar`, hello then `system.selftest`): Python 3.14.6, 12
+capabilities, six progress lines "checking <g> · i of 6" and a final 1.0
+with no words; asr 292, beats 980, onnx 108, vision 315, sklearn 733, faces
+179 ms; the keys exactly `SELFTEST_GROUPS`' in order. With
+`subprocess.Popen` wrapped and each plain source ending in a pid print and
+`sys.exit(7)`: 6 calls, 6 distinct pids, each a child of the helper, and
+each plain group answered exit 7 with its own line.
+
+**What each group's child has loaded** (each group's own command with a
+probe appended):
+
+| group | `sklearn` in `sys.modules` | soxr | numba's `_typeconv` | modules |
+|---|---|---|---|---|
+| asr | no | no | no | 398 |
+| beats | no | yes | yes | 1,318 |
+| onnx | no | no | no | 189 |
+| vision | no | no | no | 556 |
+| sklearn | yes | no | no | 1,116 |
+| faces (the worker's `_mediapipe()`) | no | — | — | 340, in 0.102 s |
+
+So no group but sklearn's imports scikit-learn, whose Windows wheel
+preloads its `msvcp140.dll` on import, and beats' `stft` is what loads soxr
+and `_typeconv` (CLIPS §3a.3's reason for it).
+
+- `-m site` under `-E -s -B` puts the absolute cwd first on `sys.path`;
+  `-c` puts `''`. The base interpreter's `python314.zip` is on `sys.path`
+  and not on disk, so the check resolves a missing path through its longest
+  existing ancestor.
+
+### Races the tests and the verifiers found
+
+- **The lock, in one tick** (the job's builder, mutation J26): the
+  in-process registry was set only after `createExclusive` resolved, so a
+  sweep started in the same tick as a job made its own create, read the
+  job's lock as a stale one with its own pid, and took it over. The key is
+  now reserved before the first await.
+- **Repair's idle and stop** (a verifier, the real service's
+  `helperControl`, a real job and the fake helper as `FORGE_PYTHON`, a
+  caller looping `await getSidecar().request('fake.wait', {ms: 150})` three
+  times during a Repair): `["ok0", "err1: The AI helper is shutting down",
+  "err2: The AI helper is being repaired"]`, on 4 runs of 4. A sequential
+  caller's next request went out between `whenIdle`'s resolution and the
+  hold, and the stop cut it off. Fixed in `bcfc515` by looping
+  idle → in-use → `busy()` with the hold and the stop in the same tick.
+- **A window starting from the pack during Repair's download** (the same
+  verifier): with the download gated and `in-use/200 = {pack: 1}` written
+  for a live pid, the job ended Done with `["hold", "stop", "unlink
+  receipt:1", "rm:1"]`. The in-use records are now read again after the
+  download.
+- **A guard that certified nothing**: deleting `sweepPlan`'s `if
+  (v.receipt === 'unparseable') continue` passed every committed test (64
+  passed and 1 failed in the verifier's run, the failure its own scratch
+  case), because every fixture put the torn receipt above the current number,
+  where the older-number rule cannot reach it. Both test files now put one
+  below.
+
+### Test times
+
+The job's property test (bar never down, over 12 seeds) took 23,443 ms
+with chunks down to 1 byte (about 100,000 `appendFileSync` and
+`setImmediate` calls an install) and 225 ms with a 200-byte floor; the file
+now runs in about 0.85 s. `tests/sidecar/test_selftest.py` runs 25 in
+11.4 s, `pipStage` about 2.3 s, `packCheck` about 3.2 s; `sidecar.int`'s
+self-test case about 3.0 s on the venv. The sandbox's temp folder had
+26.3 GB free (`statfsSync`); `helperIpc`'s test runs the real `statfs`
+against the real `HELPER_PACK`, so it needs about 0.9 GB free.
+
+### The suites at `08984ee`
+
+Run by the recorder to a file (`--reporter=json`), exit 0: `fetchFile` 20,
+`tarStream` 20, `unpack` 20 (the real-archive cases ran), `pathBudget` 7,
+`pipStage` 12, `packCheck` 18, `helperPackJob` 40, `helperLock` 12,
+`installStages` 18, `sidecarService` 36, `helperIpc` 4, `installDeps` 5,
+`renderer/helperJobRow` 3, `helperPython` 28, `ytdlpBinary` 19,
+`sidecar.int` 20, `sidecarMedia.int` 1 ("Ran 132 tests", OK) and
+`helperPack.int` 11 skipped (no `FORGE_PACK_REAL`): 283 passed, 11
+skipped, 18 files. `PYTHONPATH=sidecar sidecar/.venv/bin/python -m
+unittest discover -s tests/sidecar -p test_selftest.py`: "Ran 25 tests in
+11.367s", OK. The sandbox prints "ERROR: failed to copy trust settings of
+system certificate-25291" for every Node child, onnxruntime 1.30 warns
+"Failed to persist telemetry device ID", and CFNetwork warns about
+`~/Library/Caches/python3.14/Cache.db` during the depth download: noise,
+not the pack.
+
+### What this settles
+
+1. **The bar is 45 / 5 / 15 / 35**, and the check moves it.
+2. **pip compiles** (`--no-compile` costs 0.29 s at every start for
+   109 MB).
+3. **The dist-info count is the bar's measure for pip** (row 34).
+4. **File-level resume stays**; range resume is possible on both hosts
+   (row 33).
+5. **hf-xet is not needed for depth** (row 35's first half).
+6. **`bavail × bsize` is `df`'s Avail** on APFS.
+7. **The manifest's pre-CI Mac figures hold** within 0.11 % for bytes and
+   exactly for the paths, until CI's install replaces them.
+8. **The 90 s hello and 60 s group ceilings hold on the Mac** with about 6×
+   and 3× margin.
+9. **Install fails behind a proxy on Node's fetch**: row 19 is needed
+   before testers on proxies.
+
+### Still unmeasured, and whose
+
+- **The Surface:** row 27 (Defender's share, the rename retries against
+  9.15 s, the stage weights), row 29 (the cold hello after an install and
+  after a reboot), row 30 (the faces group's ctypes line on a machine
+  without the runtime; its wording is from CPython's `callproc.c`), row 32
+  (`taskkill /f /t` on pip and the compile, Mark of the Web, SmartScreen),
+  the 8.3-name `realpath`, and the receipt's walk there (13,525 files and
+  about 0.37 s with the receipt on the Mac).
+- **CI:** row 28 (`bytesOnDisk` and the paths on both platforms), row 37,
+  and every test of this slice on Windows (nothing is pushed).
+- **Row 19:** `net.fetch`, its `'manual'` redirect, and a proxy's own
+  sentence.
+- **Row 35's other half:** asr's download without hf-xet.
+- **Not established:** what the first load of a new native file waits on.
+- **A decision, not a measurement:** numba's cache in the installed pack
+  (`NUMBA_CACHE_DIR`, or the drift accepted).

@@ -197,14 +197,18 @@ answers `unavailable` ("could not start: …"); `input`, bad input or an undecod
 return code and the line of its stderr that says why — its C++ `Check failed` line when there
 is one, since an abort's log ends in a stack trace (−6 on macOS for an abort; Windows' is unmeasured,
 3 or `0xC0000409`). It costs one process start and one import per request: 0.14–0.23 s for
-`mp_faces` on the dev Mac.
+`mp_faces` on the dev Mac. Since 2026-10-14 its `_mediapipe()` also loads mediapipe's native
+library (`mediapipe_c_bindings.load_raw_library()`, 0.068 s, no model and no Metal), which the
+three imports alone do not, so `ready` means the library is loaded; its `{"mode": "import"}` run
+is the self-test's faces group (below).
 
 ## The stubs — `forge_sidecar/stubs/`
 
 Three empty files, `cv2/__init__.py`, `matplotlib/__init__.py` and `matplotlib/pyplot.py`,
 satisfy mediapipe 0.10.35's import-time `import cv2` and `import matplotlib.pyplot`
 (`drawing_utils.py:20-21`), so the ~65 MB of `opencv-contrib-python` and matplotlib that its
-dependency list would bring are never installed (`--no-deps`, the second pip run below), and
+dependency list would bring are never installed (`--no-deps`, the second pip run below; the
+app's pack installs everything in one `--no-deps` run over a complete lock), and
 detection runs without them (`EFFECTS.md` §37). **The rule: they go first on a worker's
 `sys.path`, put there by its bootstrap, and nowhere else** — never the helper's `sys.path`, its
 environment, the helper's launch in main (`helperLaunch`), or the package's `__main__`. (They
@@ -223,6 +227,12 @@ are tied to the pinned mediapipe: an upgrade re-runs the worker's import test in
 python3 -m venv sidecar/.venv
 sidecar/.venv/bin/python -m pip install -r sidecar/requirements.txt
 ```
+
+This venv is development's route, and the only one that needs pip by hand. Since 2026-10-14
+the app installs a pack of its own: a pinned CPython 3.14.8 with the base pack's wheels,
+fetched and checked against a lock the app ships and installed offline by the pack's own pip
+(`src/main/sidecar/install.ts`, `docs/CLIPS.md` §3a; the Settings row that presses it is
+§3a.4's).
 
 Which Python runs the helper is `resolveHelperPython` (`src/shared/sidecar/helperPython.ts`,
 `docs/CLIPS.md` §3a.2). In development: `FORGE_PYTHON` when set, then this venv, then a dev pack
@@ -246,3 +256,11 @@ echo '{"jsonrpc":"2.0","id":1,"method":"system.hello"}' | (cd sidecar && .venv/b
 
 `system.sleep` exists purely so the transport's progress and cancel paths can be tested
 end to end without loading a model.
+
+`system.selftest` (`forge_sidecar/selftest.py`, since 2026-10-14) proves the native libraries
+load as a fresh helper loads them, which `hello` cannot: registration imports too little (beats'
+`import librosa` loads neither soxr nor numba), and in one process scikit-learn's Windows wheel
+preloads its own `msvcp140.dll` for everything after it. So each of six groups (asr, beats,
+onnx, vision, sklearn, faces) runs in its own `<sys.executable> -E -s -B -c` child, one after
+another, 60 s each, and answers `{exit, ms, error}`. The install job runs it after pip, and
+Check again reruns it alone (`docs/CLIPS.md` §3a.3).

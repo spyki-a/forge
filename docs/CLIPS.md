@@ -783,7 +783,11 @@ on Windows (that run is the measurement for §3.3, §3.4 and §3.7 there).
 > §3a.8 row 26, then P.3 with P.5, then P.4, P.6, P.7 and P.10; P.9 is the
 > user's. Slice A built 2026-10-14** (P.1, P.2 and row 26 on the Mac, with
 > row 38 measured beside them; §3a.1's and §3a.2's notes, `EFFECTS.md` §57;
-> fourteen commits, `f39a47a` … `4dae71d`, not pushed). Written from three
+> fourteen commits, `f39a47a` … `4dae71d`, not pushed). **Slice B built
+> 2026-10-14** (P.3 with P.5; the first real install on the Mac, and rows
+> 27's Mac half, 33, 34 and 35's depth half measured beside it; §3a.3's and
+> §3a.5's notes, `EFFECTS.md` §58; nineteen commits, `0453abb` …
+> `08984ee`, not pushed). Written from three
 > readers (the interpreter sources, the wheel set, and the product side
 > read from the code). Every size, version, wheel tag and licence below was fetched that
 > day from PyPI's JSON (`pypi.org/pypi/<name>/<version>/json`), GitHub's API
@@ -1005,6 +1009,10 @@ runtime on a clean Windows (§16.45). Either can take P past 13. With P at
 > sizes and no compile. `formatBytes` (binary GiB) prints the Mac's as
 > **"0.6 GB"** and Windows' as "0.7 GB"; "about 0.7 GB" above holds in
 > decimal GB (0.675). Which unit the Settings row means is §3a.4's to say.
+> **The first real install** (slice B, 2026-10-14, §3a.3's note) wrote
+> 675,763,387 B apparent on the Mac, 0.11 % above the PRE-CI figure, with
+> the longest path 161 and directory 107 exactly as below; the manifest
+> keeps its figures until CI's install (row 28).
 > `longestPath`/`longestDir` stay the dev venv's (161/107) and the Windows
 > wheels' indexes' (150/96), above the interpreter tree's own: 106/97 on
 > the Mac as unpacked (116/97 once compiled) and 105/86 on Windows.
@@ -1195,6 +1203,8 @@ none needs a compiler.**
   bytes. With the pinned interpreter's tree as row 26 unpacked and compiled
   it (87,081,292 B) that is **675,024,351 B, about 0.68 GB** (the manifest's
   pre-CI `bytesOnDisk`; this text first said ~69 MB of tar and 0.66 GB).
+  The first pack the app installed (2026-10-14, §3a.3's slice B note) is
+  675,763,387 B apparent and 706,039,808 B by `du`, in 13,525 files.
 - **Windows, measured from the wheels' indexes** (a reviewer, 2026-10-14;
   the first draft's 0.84 GB was an estimate from the Mac's ratios and is
   withdrawn). The central directories of all 48 Windows cp314 wheels sum to
@@ -1610,8 +1620,10 @@ platform and running the suites is the check that the lock is right
 >   `absent` is the harness slice's.
 > - `restartSidecar` has no caller and the in-use record no reader: their
 >   first real use is §3a.3's install, Repair, Update and Remove.
-> - The pack's 90 s hello ceiling, until row 29. The reframe's `helloOf`
->   still asks hello with its own 30 s after a start that may take 90.
+> - The pack's 90 s hello ceiling, until row 29 (the Mac's first start after
+>   an install took 11.3–14.4 s, slice B, §3a.3's note). The reframe's
+>   `helloOf` still asks hello with its own 30 s after a start that may
+>   take 90.
 > - Row 38's Windows half (cp1252 pipes): `sidecar.int`'s two row-38 tests
 >   set no locale on win32, so CI's Windows job runs them on the ANSI code
 >   page first, then the Surface.
@@ -1624,6 +1636,13 @@ platform and running the suites is the check that the lock is right
 >   development fallback is `python` on win32, for the app and for the
 >   tests, so `FORGE_PYTHON` is needed there only where `python` on PATH is
 >   the Store's alias stub. §3a.10 corrects it with the rest when P lands.
+>
+> **Slice B (2026-10-14) closed three of these** (§3a.3's note): the job
+> emits `installing` (broadcast only while no client is up);
+> `restartSidecar` and the in-use record have their callers (the job's
+> switch, Repair, Remove, Update and the launch sweep); and
+> `FORGE_HELPER_PACK` in `tests/integration/venv.ts` reaches the pack rung
+> through its own launch.
 
 #### Layout
 
@@ -1918,6 +1937,389 @@ Repair and Remove need the wait too.
 
 ### 3a.3 P.3 — The install job · 3.5–4.25 days
 
+> **Built 2026-10-14 — slice B, with §3a.5.** The job installs, repairs,
+> updates, removes, checks again and sweeps a pack, and the app's own job
+> has installed one on this Mac from the real hosts. Nothing on screen
+> presses it yet: the Settings row is §3a.4's. Not pushed (the user's
+> order), so CI has not run any of it.
+>
+> Commits (nineteen, `0453abb` … `08984ee`):
+> - the fetcher, the tar reader, the unpack with the path budget and the
+>   compile: `0453abb`, `a5a8b98`, `6b12896`;
+> - the self-test, pip and the check: `a6a496b`, `cf7f2ab`, `e50b992`;
+> - the job's pure half and its lock, the job, its wiring: `72d6c71`,
+>   `95f0d07`, `29c6a40`;
+> - the real workers, the real install's test, the bar: `24bc2a0`,
+>   `083fb7a`, `863f4f6`;
+> - the fix phase, after three verifiers: `4b9073d` (an unpack outside the
+>   version folder), `bcfc515` (Repair's two races, Remove refusing, the
+>   sweep's guard), `d3c5ed3` (the host each file came from, §3a.5),
+>   `d891e9c` (the Visual C++ pattern), `aa4f16b` (a web page refused, a
+>   temporary name per fetch, yt-dlp's redirect pinned), `441cf9c` (pip's
+>   cancel), `08984ee` (the bar on a retried file).
+>
+> Every number below is in `EFFECTS.md` §58, with its command.
+>
+> **The job** is `createHelperPackJobs` in `src/main/sidecar/install.ts`,
+> with its pure half (stages, wording, free space, what is left, the IPC
+> payloads, `sweepPlan`) in `src/shared/sidecar/install.ts` and its
+> contracts in `installTypes.ts`. It returns `{queue, install, remove,
+> checkAgain, sweep, cancel, clearFinished, busy, quit}`. The workers come
+> in through `src/main/sidecar/installDeps.ts`: `helperWorkers()` is
+> `fetchVerified`, `unpackTarGz`, `compileStdlib`, `runPip` and `checkPack`
+> with `FETCH_RETRY`, every rename goes through `renameWithRetry`, and
+> `index.ts` hands them to `registerIpc`.
+>
+> **Stage 0, Checking**, in this order:
+> 1. the platform (`packPlatform`'s reason refuses);
+> 2. the lock;
+> 3. for a Repair or an Update, the other windows' in-use records;
+> 4. Windows' path budget, before anything is fetched
+>    (`src/shared/sidecar/pathBudget.ts`: the root with one separator +
+>    `longestPath` + 16 ≤ 259 and root + `longestDir` ≤ 247, else a
+>    sentence naming the root, the count and the limit and pointing at
+>    `FORGE_PYTHON`), handed to the unpacker again;
+> 5. free space: `statfs` `bavail × bsize` on userData against
+>    ceil((left to fetch + `bytesOnDisk`) × 1.1), "The AI helper needs
+>    0.8 GB free on C: (0.3 GB is free)" ("this disk" off Windows);
+> 6. a folder of this number with no receipt, deleted.
+>
+> **Stage 1, Downloading** (`src/main/net/fetchFile.ts`). `binary.ts`'s
+> retry machinery is lifted out and imported back. yt-dlp's fetch is
+> unchanged word for word: its "GitHub" is now an argument (`naming: {who:
+> 'GitHub'}`), and its redirect `'follow'` is pinned by a test.
+> `fetchVerified` streams each file to `<name>.<pid>.<8 hex>.part` through
+> a sha256 and a byte count, one file at a time, the interpreter first.
+> Each file has one `Fetching` with its own budget. The job's signal goes
+> into every request, and a cancel also stops the body reader. Its table,
+> as built:
+>
+> | what arrived | what happens |
+> |---|---|
+> | a `Content-Type` of `text/html` | not the file, judged before the body, no retry: "something other than the file arrived from <host> (a sign-in page or a network filter?): <name> came back as a web page (<type>)" |
+> | a `Content-Length` other than `bytes`, with no `Content-Encoding` (or `identity`) | the same sentence ending "<name> is N B and the answer said M", no retry |
+> | a body short of `bytes` | dropped and retried |
+> | a body past `bytes` | aborted at once, no retry |
+> | exactly `bytes`, another sha256 | fails on the first fetch: "<name> from <host> did not match its published checksum (… vs …). Nothing was installed from it." |
+> | exactly `bytes`, the sha256 | renamed into place; the log gets "<name> came from <host>: N B, its sha256 verified" |
+>
+> - Redirects are followed by hand (at most 10, https only, one answer wait
+>   over every hop), so each sentence names the host that failed after
+>   them.
+> - After the retries, every failure but a checksum carries §3a.5's way out.
+> - A file already there with its hash is skipped unfetched; one with
+>   another hash is fetched again.
+> - `renameWithRetry` is win32 only, for `EPERM`, `EACCES` and `EBUSY`: 10
+>   tries, 50 ms doubling to a 2 s cap, 9.15 s in all; elsewhere, one try.
+>   graceful-fs's 60 s bounds an unattended `npm install`; this rename runs
+>   49 times under a bar someone is watching, and 10 s outlasts an
+>   on-access scan of a just-closed file. Unmeasured until the Surface
+>   (row 27).
+>
+> **Stage 2, Unpacking.** `TarStream` (`@shared/assets/tar.ts`, beside
+> `readTar`, which is unchanged) is a push parser. It reads PAX
+> `path`/`linkpath` (`x` and `g`), GNU `L` and `K`, and the ustar prefix
+> under POSIX magic only. It refuses hard links, devices, FIFOs, sparse
+> members, unknown types and records over 1 MiB. A symlink is accepted only
+> when its target, resolved from its own folder, stays inside the root, and
+> three rules go beyond the plan:
+> - `..` only as the target's leading run;
+> - never a link to its own folder or to one above it;
+> - no member at or under an earlier link, names compared folded (NFC, then
+>   case), because APFS and NTFS fold.
+>
+> `unpackTarGz` (`src/main/sidecar/unpack.ts`) streams `createGunzip` into
+> it, so neither the archive nor its tar is held. It makes each member's
+> parent folders (the archives have no folder entries), checking by
+> `realpath` that each lands inside the root before it is made; opens files
+> `wx`; restores 0755 from any x bit on POSIX; makes the Mac's links;
+> refuses a link on Windows by name; and reads the signal between members.
+> Row 26's facts are honoured: on the real archives it writes tar's tree
+> exactly (the Mac's 1,689 files, 9 links, 160 folders and 19 executables;
+> Windows', unpacked on the Mac as data, 2,190 files), and the interpreter
+> it writes runs `import ssl, sqlite3`. Then `compileStdlib`
+> (`src/main/sidecar/compile.ts`): `<python> -I -m compileall -q -j 1
+> <stdlib>`, `windowsHide`, the pack's environment, the signal killing the
+> child.
+>
+> **Stage 3, Installing the libraries** (`src/main/sidecar/pip.ts`,
+> `runPip`): the command below, flag for flag, with the downloads folder as
+> its cwd (`-m` puts the cwd first on `sys.path`).
+> - The bar is the count of `*.dist-info` folders pip added (any there
+>   before are not counted), polled every 500 ms against the lock's 47
+>   package lines and held at its high-water mark. The speed column says
+>   "installing libraries · N of 47"; pip's last line goes to the log.
+> - Cancel is `taskkill /pid <pid> /f /t` on Windows (a non-zero exit is
+>   followed by a SIGKILL) and SIGKILL elsewhere. It settles as cancelled
+>   after 10 s at the latest, whatever the kill did.
+> - A failure keeps pip's last 40 lines and is worded: the antivirus
+>   sentence below for "Failed to write executable", otherwise "pip could
+>   not install the libraries (exit N): <pip's last ERROR: line>".
+>
+> **Stage 4, Checking** (`src/main/sidecar/check.ts`, `checkPack`):
+> - one `SidecarClient` started as the service starts the pack (cwd
+>   `sidecarDir()`, `maxRestarts: 0`, the pack rung's 90 s hello read from
+>   `helloTimeoutFor`);
+> - executable, prefix and every `sys.path` entry inside the version folder
+>   or `sidecarDir()`, by `path.relative` on `realpathSync.native` paths (a
+>   path not on disk, `python314.zip`, through its longest existing
+>   ancestor; `''` is the cwd, `sidecarDir()`);
+> - `python` 3.14.8, and `expects` ⊆ capabilities;
+> - one ping, then `system.selftest` with a 390 s transport ceiling (6 ×
+>   60 s + 30 s).
+>
+> The client is stopped, and its exit awaited, before the check settles.
+> Degraded methods and failed groups are results, not rejections; only a
+> helper that does not start or answer rejects.
+>
+> **`system.selftest`** (`sidecar/forge_sidecar/selftest.py`, registered in
+> `capabilities/system.py`) takes `{groups?}` and answers `{<group>: {exit,
+> ms, error}}`.
+> - Each group runs in its own `<sys.executable> -E -s -B -c <source>`
+>   child, one after another, with `CREATE_NO_WINDOW` on Windows.
+> - 60 s each; past it the child is killed and the group answers exit −1,
+>   "timed out after 60 s". A cancel is seen every 0.1 s and kills the
+>   child.
+> - A progress line goes out per group ("checking beats · 2 of 6").
+> - The groups are the table below, each child's source on one line. onnx's
+>   model is `forge_sidecar/selftest/identity.onnx`, 80 B.
+> - The faces group is the worker's own `{"mode": "import"}` run. Its
+>   `_mediapipe()` now calls `mediapipe_c_bindings.load_raw_library()` in
+>   both modes (0.068 s, no model, no Metal), so `ready` means the library
+>   is loaded. `FORGE_FACES_WORKER_FAKE` is removed from its environment.
+> - On Windows a group's line becomes the Visual C++ sentence only for the
+>   loader's own words: "DLL load failed", "The specified module could not
+>   be found", WinError 126 and 193, and ctypes' "Could not find module …
+>   (or one of its dependencies)", which is how `libmediapipe.dll` fails. An
+>   ImportError that merely names a `.pyd` is worded as itself.
+>
+> **The receipt** is written last as `pack.json.part` and renamed through
+> `renameWithRetry`; a refused rename fails the job (no in-place write). It
+> records `hello`, the self-test record for the pack's own platform,
+> `problems` when the check found any (a field beyond §3a.2's type, which
+> `parseReceipt` ignores) and `bytesOnDisk`. That is now an apparent-bytes
+> walk of the whole version folder after pip, with the manifest's figure
+> only if the walk fails. Then older numbers go by the sweep's rules,
+> `downloads/` is removed (§16.47), the lock is released, and the switch
+> waits for idle ("waiting for the AI helper's work to finish",
+> cancellable) and restarts.
+>
+> **The lock** (`src/main/sidecar/lock.ts`) is `<root>/.lock`, created
+> `O_CREAT | O_EXCL | O_WRONLY`, holding `{pid, startedAt}`.
+> - A live other pid refuses: "The AI helper is in use by another Forge
+>   window".
+> - A dead pid, or this process's own pid when this process does not hold
+>   the lock (pid reuse), is taken over.
+> - An empty or torn lock younger than 10 s counts as held.
+> - In one process a second taker is refused ("The AI helper is already
+>   being installed, repaired or removed"). Its key is reserved before the
+>   first await, which closed a same-tick race a mutation found.
+> - `release` unlinks only a lock that still names this call;
+>   `readInUse` drops a dead pid's record. The service writes
+>   `in-use/<pid>` as slice A built it; Repair, Update and Remove read it.
+>
+> **The launch sweep** is `sweepPlan` run under the lock by `runLaunchSweep`,
+> on its own root only, just before `startSidecar` and not awaited. It
+> follows the four rules below, and removes nothing while any window, this
+> one included, holds the lock.
+>
+> **Repair**, asserted as one ordered shape: every file verified → idle →
+> hold → stop → unlink the receipt → remove the tree → unpack → compile →
+> pip → check → receipt → release → restart.
+> - Before the hold it waits for idle in a loop. On each turn it reads the
+>   other windows' in-use records again (a window may have started from the
+>   pack during the download: Repair then refuses, and the downloads stay)
+>   and asks `busy()` again, so the hold and the stop follow the last check
+>   with no await between.
+> - The hold (`helperControl.hold`) makes every `getSidecar` caller throw
+>   "The AI helper is being repaired" ("…being updated" for an Update into
+>   the same folder) and spawns nothing.
+> - A fetch that fails leaves the old receipt and folder untouched; a
+>   failure after the delete keeps the downloads, so the next Repair is
+>   offline; a helper the job stopped is restarted whatever happens.
+>
+> **Remove** (`remove({models})`) takes the lock. With no numbered folder it
+> removes the empty root (and `models/` if asked) and leaves the helper
+> alone. Otherwise it reads the in-use records, **refuses while helper work
+> runs** ("The AI helper is working; remove it once that work has
+> finished"), and then, in the same tick: hold → stop → every receipt → the
+> root → `models/` only when asked → release → restart.
+>
+> **Update** is read from disk at the press: an older number's receipt, or
+> one that parses and does not match. Into a new number it neither holds
+> nor stops, and the old folder goes by the sweep's rule after the new
+> receipt, or at the next launch if this window still runs it.
+>
+> **Check again** (`checkAgain()`) takes the lock, reads the receipt (it
+> must parse and match), runs the check alone, and rewrites `hello`,
+> `selftest` and `problems` by the rename rule (`installedAt` kept). Then
+> it restarts the helper, so the record reaches `ready` and a fresh process
+> loads whatever was installed meanwhile.
+>
+> **The service, the IPC and the row.**
+> - `service.ts` lends the job `helperControl` (`busy`, `whenIdle`, `stop`,
+>   `hold`, `restart`). `readyStatus` merges the receipt's failed groups
+>   into `hello.degraded` and carries the record as `selftest`.
+>   `installing` is broadcast only while no client is up, and
+>   `settleHelperStatus` re-broadcasts what is on disk when a job ends.
+>   Offers carry `bytesLeft`.
+> - `ipc.ts` puts the queue in the job list, `render:cancel` and
+>   `jobs:clearFinished`, beside `helper:install`, `helper:remove` and
+>   `helper:checkAgain` (the preload's `installHelper`, `removeHelper` and
+>   `checkHelperAgain`; the harness bridge has `unsupported` stubs).
+>   `before-quit` cancels and releases the lock synchronously
+>   (`quitHelperJobs`).
+> - The EXPORT row (`ExportStrip.tsx` `jobName`) reads "Installing the AI
+>   helper" (or Repairing, Updating), cancellable while queued, with no Show
+>   in folder.
+>
+> **The first real install** (2026-10-14, the M1 Pro in the dev sandbox:
+> `FORGE_PACK_REAL=1 NODE_USE_ENV_PROXY=1 … npx vitest run
+> tests/integration/helperPack.int.test.ts`, the app's own job on the real
+> workers and hosts, into a userData under "Forge Bräutigam"; every
+> assertion green):
+>
+> | stage | the first run, every file fetched | after the fix phase, 45 of 48 seeded |
+> |---|---|---|
+> | Checking | 2 ms | 4 ms |
+> | Downloading | 6,032 ms: 178,190,592 B at 28.17 MiB/s | 1,306 ms: 3 files, 26,698,907 B |
+> | Unpacking | 2,760 ms: unpack 467, compile 2,293 | 2,679 ms: unpack 470, compile 2,209 |
+> | Installing the libraries | 11,396 ms | 11,353 ms |
+> | Checking the AI helper | 36,992 ms | 36,582 ms |
+> | **the job** | **57,183 ms** | **51,927 ms** |
+>
+> - **The check is cold.** The new pack's first hello took 11,348 ms
+>   (11.3–14.4 s over four installs). The self-test took asr 209, beats
+>   21,096, onnx 108, vision 285, sklearn 1,768 and faces 1,460 ms, every
+>   group exit 0, faces without Metal. Warm, on the installed pack, hello is
+>   0.27 s and the self-test 2.3 s (beats 0.9 s). The cold time is the
+>   first load of each new native file: `-X importtime` on a fresh copy took
+>   14.09 s real against 1.06 s of CPU, av alone 10.8 s, and 0.91 s the
+>   second time. Its cause past that is not established.
+> - **The receipt**: `bytesOnDisk` 675,763,387 B apparent (the manifest's
+>   PRE-CI 675,024,351, +0.11 %), `du` 706,039,808 B; the longest path 161
+>   and directory 107, as the manifest says; 13,525 files, 1,446 folders.
+>   The peak use, about 884 MB, sat under `spaceNeeded`'s 938,536,438 B.
+> - The interpreter "came from release-assets.githubusercontent.com"; `pip
+>   check` names only mediapipe's two.
+> - Through the installed pack (`FORGE_HELPER_PACK`), §3a.9's suites passed
+>   with no new skip: `sidecar.int` 20, `sidecarMedia.int`'s 132 Python
+>   tests none skipped, `vision.int` 7, `beats.int` 13, `faces.int` 13 (+2
+>   opt-in skips), `reframeJob.int` 13 (+1).
+>
+> **Where it differs from the text below:**
+> - **The bar's weights are 45 / 5 / 15 / 35** (downloading, unpacking,
+>   installing, checking), not 70 / 5 / 20 / 5. The placeholders held the
+>   bar at 95 % for 37 of the install's 57 s. The new weights come from
+>   this install at the table's 4.2 MB/s example line (a 40 s download of
+>   about 92 s), and the check now reports its own progress (0.35 after
+>   hello and the ping, then each group). The Surface's row 27 may move
+>   them.
+> - **The module is `install.ts`, not `pack.ts`, and has no `status()`**:
+>   the status is `sidecar:status`'s. It adds `sweep`, `cancel`,
+>   `clearFinished`, `busy` and `quit`.
+> - **Remove refuses while helper work runs** and never waits, as the
+>   section's last line says ("All three refuse"). Repair keeps its own
+>   "wait until idle", since its job has an X. The text said both.
+> - **The speed column during pip** is the table's "installing libraries ·
+>   12 of 48", not pip's last line; row 34 found all 47 "Processing" lines
+>   within 0.25 s, so the line would carry little.
+> - **After a pack that does not start**, its folder is removed (receipt
+>   first) and the order reads `absent`, so the offer is Install · 0 MB
+>   left, not Repair. That press is a Repair in all but name (offline, from
+>   the kept downloads); only `Job.error` says the helper did not start.
+> - **The temporary name** is `<name>.<pid>.<8 hex>.part`, the rule of
+>   `ensureYtDlp`'s `.download`; clean-up goes by the suffix.
+> - **A `text/html` answer is a row the table lacked.** Under a
+>   `Content-Encoding` the `Content-Length` counts encoded bytes and is not
+>   compared, so a gzip-encoded filter page read as a short body and was
+>   fetched four times. Both hosts answer `application/octet-stream` with
+>   no encoding (measured).
+> - **Repair and Update refuse while another window has any pack of the
+>   root in use**, not only this one; one build runs one number.
+> - **The face worker loads mediapipe's library in both modes**, not only
+>   the import-only run, and the plan's `importOnly` is the worker's
+>   existing `mode: "import"`.
+> - **`unpackTarGz` takes `budget` and `platform`** beyond the contract;
+>   `installTypes.ts` gained `budget`, `onTry` and the check's
+>   `onProgress`, all optional.
+> - **`venv.ts`'s guard fails a suite whenever `FORGE_HELPER_PACK` names a
+>   pack that does not run**, under CI or not, and the variable takes a
+>   version folder or a userData. `helperPack.int` stays opt-in
+>   (`FORGE_PACK_REAL=1`) under CI too, until CI installs the pack (§3a.6).
+> - **The compiled `.pyc` carry their source's absolute path**, about
+>   1,052 B per character of the install root (18,965,516 B under a
+>   40-character root against §57's 19,043,394 B under 114), so
+>   `bytesOnDisk` depends on the user's userData path.
+>
+> **Tests** (run to a file at `08984ee` by the recorder, exit 0: 283 passed
+> and 11 skipped in 18 files): `fetchFile` 20, `tarStream` 20, `unpack` 20
+> (its real-archive cases ran: row 26's archives are on this Mac),
+> `pathBudget` 7, `pipStage` 12, `packCheck` 18, `helperPackJob` 40,
+> `helperLock` 12, `installStages` 18, `sidecarService` 36, `helperIpc` 4,
+> `installDeps` 5, `renderer/helperJobRow` 3, `helperPython` 28,
+> `ytdlpBinary` 19, `sidecar.int` 20, `sidecarMedia.int` 1 (its 132 Python
+> tests), and `helperPack.int`'s 11, skipped without `FORGE_PACK_REAL`
+> (all 11 passed in the fix phase's real install). And
+> `tests/sidecar/test_selftest.py`, 25, OK.
+>
+> **Mutations**, each anchor counted at one match first, each file restored
+> and compared byte for byte:
+> - the fetcher, reader and unpack lane's 38 (the fetcher 13, yt-dlp's
+>   wording 1, the reader 9, the unpack, compile and budget 15);
+> - the self-test, pip and check lane's 29 (12, 6 and 11). pip's "folders
+>   already there counted" survived until its test was given a total above
+>   what pip adds;
+> - the job lane's 73. Two survivors, Remove's own busy check and a second
+>   `.part` clean-up, were redundant layers, removed so each guard is
+>   tested alone;
+> - the integration's 16, four of them whole installs: without librosa,
+>   without mediapipe, without idna (for the `pip check` assertion), and
+>   `-s` dropped with a planted user site;
+> - the verifiers' 22. One survived every committed test (a torn receipt
+>   below the current number, in `sweepPlan`) and is now guarded;
+> - the fix phase's 33 runs. Three were checks, not kills: a second
+>   per-member `realpath` check that nothing could fail was removed; the
+>   verifier's hold-first Repair passes the race tests by design; and one
+>   race test was rebuilt so its next request is registered on the first.
+>
+> **Left:**
+> - **The UI** (§3a.4, slice C). Nothing presses Install yet. Also there:
+>   the Settings row's states and sized buttons; `helperCan`, which must
+>   read the status's merged `degraded`, not `getSidecar().info` (the
+>   reframe's `helloOf` does not see a failed group); the pointers, the
+>   census, and harness stubs that walk the states. While a `FORGE_PYTHON`
+>   or venv helper runs, `installing` is not broadcast, so the row reads the
+>   job list then.
+> - **CI's install** (§3a.6, rows 28 and 37), on Windows and `macos-14`,
+>   with the URL probe, the native-import listing and the cache.
+> - **`net.fetch`** (row 19): the job uses Node's fetch, which ignores a
+>   proxy unless `NODE_USE_ENV_PROXY=1`, and the app does not set it
+>   (§3a.5's note).
+> - **The Surface**: row 27 (Defender's share, the rename retries against
+>   9.15 s, the weights), row 29 (the cold hello against 90 s), row 30 (the
+>   faces group's ctypes line comes from CPython's source, not a clean
+>   machine), row 32 (`taskkill /f /t` on pip and the compile), and the
+>   8.3-name `realpath`.
+> - **asr's half of row 35** waits for the speech model's press (§3a.4).
+> - **A cancel during the final switch** leaves the pack installed (receipt
+>   written) and the job reading Cancelled; P-C may word it.
+>
+> **Open, for the user** (none is built; each needs a decision):
+> - An install whose check finds a `sys.path` entry outside the pack, or a
+>   Python other than 3.14.8, reads Done: the problem is only logged and
+>   kept in the receipt's `problems` (the user-site mutation reached such a
+>   receipt). Fail the job, or surface it in the ready status?
+> - numba writes 38 cache files (1,190,255 B) into the installed pack's
+>   librosa folders on the first real beats pass; the self-test writes none.
+>   Point `NUMBA_CACHE_DIR` at `helper-cache`, or accept the drift from the
+>   receipt's `bytesOnDisk`?
+> - Two windows that find the same stale lock within the same milliseconds
+>   can both take it over, and a window can still spawn from the pack in
+>   the moment between Repair's or Remove's last in-use read and the stop.
+>   Closing both needs the service to consult the lock before it spawns
+>   from a pack, or §16.50 (b).
+
 A module with its dependencies injected, in the shape of
 `createReframeJobs` (`analyse.ts:267`, `:418-446`), so the whole job runs in
 vitest outside Electron:
@@ -1996,15 +2398,18 @@ are not taken from it:
 #### The stages
 
 The bar's weights are placeholders until the first measured install sets
-them, as the reframe's 0–15 / 15–85 / 85–100 were.
+them, as the reframe's 0–15 / 15–85 / 85–100 were. **The first measured
+install set them on 2026-10-14** (`863f4f6`, the Mac's row 27, `EFFECTS.md`
+§58): the check took 37 of 57 s, and the placeholders held the bar at 95 %
+through it. The planned weight is kept in brackets.
 
 | stage | bar | the speed column says |
 |---|---|---|
 | 0. **Checking** | 0 % | "checking space": `fs.statfs` on userData covers what is left to fetch, `bytesOnDisk` and 10 %, or the job fails "needs N GB free on <drive>"; on Windows root + `longestPath` + 16 ≤ 259 and root + `longestDir` ≤ 247, or it fails naming the path; the platform is supported; the lock is taken |
-| 1. **Downloading** | 0–70 %, by bytes over every file | "downloading · 31 of 205 MB · 4.2 MB/s" |
-| 2. **Unpacking** the interpreter | 70–75 % | "unpacking Python" |
-| 3. **Installing the libraries** | 75–95 % | "installing libraries · 12 of 48" |
-| 4. **Checking** the AI helper | 95–100 % | "checking the AI helper", or "waiting for the AI helper's work to finish" |
+| 1. **Downloading** | 0–45 % (planned 0–70 %), by bytes over every file | "downloading · 31 of 205 MB · 4.2 MB/s" |
+| 2. **Unpacking** the interpreter | 45–50 % (70–75 %) | "unpacking Python" |
+| 3. **Installing the libraries** | 50–65 % (75–95 %) | "installing libraries · 12 of 48" |
+| 4. **Checking** the AI helper | 65–100 % (95–100 %), moved by the check's own progress | "checking the AI helper", or "waiting for the AI helper's work to finish" |
 
 **1. Downloading.** `src/main/net/fetchFile.ts`, lifted out of `binary.ts`
 (`tryOnce`, `withRetry`, `transient`, `FETCH_RETRY`, which `binary.ts` then
@@ -2036,8 +2441,10 @@ says what is left (§3a.4). The largest single file is llvmlite's Windows
 wheel, 42,986,588 B, so byte-range resume inside a file is not built in P;
 release-assets honoured an explicit range and files.pythonhosted.org served
 the zip-index range reads, so it can come later if the Surface's download
-says so (§3a.8 row 33). Files go one at a time in P; parallel only if the
-measured time asks for it.
+says so (§3a.8 row 33). (Row 33, measured 2026-10-14: both hosts answer
+206 with a `Content-Range`, and github.com's signed redirect expires 40
+minutes after it is issued, so a resume would ask github.com again.) Files
+go one at a time in P; parallel only if the measured time asks for it.
 
 **Renames are retried on Windows.** A scanner holding a just-closed file
 makes a rename fail with `EPERM`, `EACCES` or `EBUSY`. `renameWithRetry`
@@ -2109,10 +2516,15 @@ handling never come into it; `--only-binary=:all:` means no build step can
 run on a user's machine. The progress is the count of `*.dist-info` folders
 in site-packages, polled every 500 ms, against the lock's line count; the
 stage text is pip's last `Processing …` / `Installing …` line. Whether pip
-writes the dist-info folders one package at a time is §3a.8 row 34. Cancel
+writes the dist-info folders one package at a time is §3a.8 row 34 (it
+does, measured 2026-10-14; the speed column as built is the table's count,
+and pip's line goes to the log). Cancel
 kills pip's tree (`taskkill /f /t` on Windows, the shot finder's precedent,
 §15 row 23). `--no-compile` would save 99.3 MB and the compile time at the
 cost of the first start; measured before it is chosen (§3a.8 row 27).
+**Measured 2026-10-14 on the Mac** (`EFFECTS.md` §58): it saves 109.3 MB
+and 9.3 s of pip, once, and costs 0.29 s at every later start (550 against
+263 ms), since `-B` never writes the `.pyc`. Not taken: pip compiles.
 
 **pip writes 19 console-script `.exe` launchers into `python\Scripts\` on
 Windows** (counted by a reviewer from each wheel's `entry_points.txt`:
@@ -2138,7 +2550,9 @@ will start it (`helperLaunch` of the pack's rung, cwd `sidecarDir()`,
   (`PACK_HELLO_TIMEOUT_MS`, `client.ts`: **90 s** as a placeholder since
   slice A, the same number the service waits), to be set from row 29's
   measured cold start plus a margin once it is in (the first cold start
-  after Defender has scanned the fresh `.pyd` and `.dll` files); the
+  after Defender has scanned the fresh `.pyd` and `.dll` files; on the Mac
+  the first start after an install took 11.3–14.4 s over four installs,
+  2026-10-14, so 90 s has about 6× margin there); the
   self-test and the service must never disagree on it, so the job reads
   the constant rather than carrying its own;
 - `executable`, `prefix` and every `path` entry inside the version folder or
@@ -2329,7 +2743,9 @@ speech model" and leaves P's exit, and P is 0.5–1 day shorter.
 "Updating") with the stage in the speed column, as the reframe's label does
 (`job.ts:171-180`); `jobName` and `cancellable` (`ExportStrip.tsx:55-61`)
 learn `helper`, cancellable while queued too, and it has no Show in folder
-(`ExportStrip.tsx:443`).
+(`ExportStrip.tsx:443`). **Built in slice B** (`29c6a40`, 2026-10-14, as
+written here); nothing on screen starts the job until this section's
+Settings row.
 
 **No first-run prompt** (§16.41): the grey dot, the pointers and the tester
 guide (R10: Settings → AI helper → Install) are enough.
@@ -2340,6 +2756,42 @@ go into the preload, `harness/bridge.ts` and the fallback bridge
 (`WINDOW.md:588-589`), with stubs that walk the states.
 
 ### 3a.5 P.5 — Offline, proxies and restricted networks · inside P.3
+
+> **Built 2026-10-14 — slice B, with §3a.3** (`EFFECTS.md` §58; not
+> pushed).
+>
+> - **The host after the redirects is in the log** (`d3c5ed3`): each file
+>   that lands logs "<name> came from <host>: N B, its sha256 verified". In
+>   the real install the interpreter came from
+>   release-assets.githubusercontent.com and the wheels from
+>   files.pythonhosted.org. Every failure names the host that failed,
+>   because `fetchVerified` follows redirects by hand.
+> - **Offline**, run once with the real workers, Node's fetch and a short
+>   budget (2 tries; a temporary test, not committed): the job failed in
+>   about 0.2 s with "cpython-3.14.8+…tar.gz could not be downloaded:
+>   github.com could not be reached: fetch failed (getaddrinfo ENOTFOUND
+>   github.com) — gave up after 2 tries over 0s. If this machine cannot
+>   reach github.com and files.pythonhosted.org, point FORGE_PYTHON at a
+>   Python with the helper's requirements." Its retry line read "the
+>   connection to github.com failed (ENOTFOUND), trying again in 1s (2 of
+>   2)". A checksum mismatch carries no way out, since it is not the
+>   network's.
+> - **A sign-in page or a filter's page** answered as `text/html` is
+>   refused before its body, with the "something other than the file"
+>   sentence and the way out.
+> - **Proxies: Install fails behind one today.** `HTTPS_PROXY` alone is
+>   ignored by Node's fetch: the run failed exactly as with no proxy, as
+>   §8.2 said. With `NODE_USE_ENV_PROXY=1` and a dead proxy it failed in
+>   about 0.1 s with no retry, and the sentence blames github.com, naming
+>   the proxy only in the raw cause ("connect EPERM 127.0.0.1:9", the
+>   sandbox's refusal). The real install in the dev sandbox needed
+>   `NODE_USE_ENV_PROXY=1`, which the app does not set.
+> - **Waits for row 19**: the job's move to `net.fetch`, `net.fetch` with
+>   `redirect: 'manual'` (unmeasured; the hand-followed redirects rely on
+>   Node's fetch returning the 3xx itself, undici `index.js:1190-1196`,
+>   which a verifier saw as a 302 with `Location` against github.com on
+>   Node 24.18.1), a sentence that names a proxy, and one Hugging Face
+>   press and one `fetch_url` press behind the same proxy.
 
 **The hosts, named on the row and in the guide** (§16.40):
 
@@ -2430,7 +2882,8 @@ and every degraded check, §16.36):
    rung, and `venv.ts`'s `VENV_PYTHON`, `HAS_VENV` and `HELPER_PYTHON` and
    `sidecar.int`'s client all start through `helperLaunch` of that choice;
    `sidecar.int` gains one case that asserts the launch's argv is the pack
-   rung's. The suites: `sidecar.int` (15), `sidecarMedia.int` (32 Python
+   rung's. (Built in slice B, `083fb7a`, and rehearsed on the Mac through
+   the first installed pack: §3a.3's note.) The suites: `sidecar.int` (15), `sidecarMedia.int` (32 Python
    cases, **none may skip** with numpy present), `vision.int`, `beats.int`,
    `faces.int`'s stand-in-detector cases, `reframeJob.int`'s helper suite,
    and `asr.int` if its `jfk.flac` fixture and `tiny` model are seeded into
@@ -2689,14 +3142,29 @@ behind a proxy) is P's too, widened in §3a.5.
     share on the Surface (11,629 files in the Mac's site-packages), and the
     rename retries' count there (the bound for `renameWithRetry`). If pip is
     too slow there, uv is the reserve (§3a.1).
+    **Measured 2026-10-14, the Mac's half** (`EFFECTS.md` §58): 57.2 s in
+    all, the download 6.0 s (178,190,592 B at 28.2 MiB/s), the unpack
+    0.47 s and the compile 2.29 s, pip 11.4 s, the check 37.0 s (a cold
+    first hello of 11.3 s and a cold self-test of about 25 s, beats 21.1 s);
+    the bar's weights are now 45 / 5 / 15 / 35. `--no-compile` saves
+    109.3 MB and 9.3 s of pip and costs 0.29 s at every start, so pip
+    compiles. **The Surface half is open.**
 28. **Bytes on disk, the longest relative path and the longest directory**,
     per platform, from CI's install. Windows is measured from the wheels'
     indexes today (about 0.72 GB with the interpreter); the interpreter's
     extracted size is measured only as its tar stream.
+    **The Mac's figures from a local install, 2026-10-14** (§58): 675,763,387
+    B apparent (the manifest's PRE-CI figure +0.11 %), longest path 161 and
+    directory 107 as the manifest has them. CI's install on both platforms
+    is still owed.
 29. **The cold `system.hello`** from the pack on the Surface, **both** the
     first start after an install and the first after a reboot, against the
     client's 30 s. The client's hello timeout is set from it, plus a margin
     (§3a.2).
+    **The Mac's first start after an install, 2026-10-14** (§58):
+    11.3–14.4 s over four installs (warm 0.27 s), inside the pack's 90 s
+    placeholder. The Surface, and the first start after a reboot, are
+    open.
 30. **The Visual C++ runtime on a clean Windows**, for **soxr, numba,
     mediapipe (`libmediapipe.dll`), onnxruntime and ctranslate2**, each
     imported (and called, as the self-test's groups do) **in its own fresh
@@ -2744,11 +3212,26 @@ behind a proxy) is P's too, widened in §3a.5.
 33. **Range resume inside a file**, on release-assets and
     files.pythonhosted.org, and whether it is worth building over P's
     file-level resume.
+    **Measured 2026-10-14** (§58): both answer an explicit range with 206
+    and a `Content-Range`, and mid-file ranges return the file's own bytes;
+    github.com's signed redirect expires 40 minutes after it is issued. It
+    can be built; whether it is worth it is the Surface's download's to
+    say.
 34. **pip 26.2.1 over the lock**: `--require-hashes` with `--no-deps
     --no-index --only-binary=:all: --no-warn-script-location`, its output
     lines, and whether the dist-info folders appear one package at a time
     (the bar's measure).
+    **Measured 2026-10-14** (§58): 50 lines on stdout and none on stderr
+    ("Looking in links", 47 "Processing …" within 0.25 s, "Installing
+    collected packages: …", "Successfully installed …"); the dist-info
+    folders appear one package at a time, so the 500 ms poll moves the bar
+    in about 12 steps over 11 s.
 35. **hf-xet left out**: depth's and asr's model downloads pass without it.
+    **Depth's half measured 2026-10-14** (§58): on a copy of the installed
+    pack with hf-xet uninstalled and `HF_HUB_DISABLE_XET=1`, `depth.layers`
+    fetched its 27,258,801 B model in about 0.8 s and returned 3 layers.
+    **asr's half waits for the speech model's press** (§3a.4), and hf-xet
+    stays in the lock until it passes.
 36. **The Surface itself**, recorded where no doc has it yet (grep of
     `docs/`, 2026-10-14): Windows 10 or 11, version and build (it decides
     Smart App Control and Sandbox), edition (Windows Sandbox is not in
@@ -8152,6 +8635,20 @@ Surface itself (36), CI's first runs (37), and the protocol's encoding under
   under `-E` a Latin-1 locale broke the protocol both ways; the helper now
   sets its own stdio to UTF-8, and both directions round-trip. Open: the
   Windows pipes (CI's Windows job, then the Surface).
+- **Row 27: the Mac's half measured 2026-10-14** (§3a.8, `EFFECTS.md` §58):
+  the first real install took 57.2 s (download 6.0 s, unpack and compile
+  2.8 s, pip 11.4 s, check 37.0 s), which set the bar to 45 / 5 / 15 / 35;
+  `--no-compile` is not worth its 0.29 s at every start. Open: the Surface.
+- **Rows 28 and 29: the Mac's figures from that install** (§58):
+  675,763,387 B on disk, longest path 161 and directory 107; the first
+  hello 11.3–14.4 s. Open: CI's install (28), the Surface's cold hello
+  after an install and after a reboot (29).
+- **Row 33: measured 2026-10-14** (§58): both hosts serve byte ranges (206);
+  github.com's redirect lasts 40 minutes. Not built.
+- **Row 34: measured 2026-10-14** (§58): pip 26.2.1 writes the dist-info
+  folders one package at a time, so the bar's count works.
+- **Row 35: depth's half measured 2026-10-14** (§58): depth's download
+  passes without hf-xet. Open: asr's half, with the speech model's press.
 
 ---
 
