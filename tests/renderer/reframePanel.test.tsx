@@ -240,6 +240,29 @@ describe('the canvas bar’s reframe offer', () => {
     expect(barWords()).not.toContain('needs the AI helper')
   })
 
+  it('is disabled while every landscape file it would follow is being analysed already — and pressable while one is not', () => {
+    scene()
+    watch()
+    useEditor.setState({ reframe: { ...state().reframe, pending: { [TALK.id]: 'job-r' } } })
+    const busy = named(bar(), 'Reframe to 9:16')
+    expect(busy?.props.disabled).toBe(true)
+    expect(String(busy?.props.title)).toContain('Finding the subject')
+    // A second landscape file on the timeline, not being analysed: the press has work to start.
+    const other: MediaAsset = { ...TALK, id: 'talk-2', path: 'harness-talk-2.webm', name: 'talk-2.webm' }
+    state().update((p) => ({ ...p, assets: [...p.assets, other] }))
+    state().addAssetToTimeline(other.id)
+    expect(named(bar(), 'Reframe to 9:16')?.props.disabled).toBe(false)
+  })
+
+  it('says "the AI helper is starting" while it starts, greyed, and never "needs the AI helper" then', () => {
+    scene()
+    watch('unknown')
+    const shown = barWords()
+    expect(shown).toContain('the AI helper is starting')
+    expect(shown).not.toContain('needs the AI helper')
+    expect(named(bar(), 'Reframe to 9:16')?.props.disabled).toBe(true)
+  })
+
   it('tells the shape buttons’ tooltip that followed clips keep following', () => {
     scene()
     watch()
@@ -279,6 +302,15 @@ describe('Follow the subject, in the Trimmer dock', () => {
     expect(followButton()).toBeUndefined()
     expect(shown).not.toContain('needs the AI helper')
     expect(shown).not.toContain('the AI helper is starting')
+  })
+
+  it('says "the AI helper is starting" while it starts, with Follow greyed', () => {
+    scene()
+    watch('unknown', null)
+    const shown = dockWords()
+    expect(shown).toContain('the AI helper is starting')
+    expect(shown).not.toContain('needs the AI helper')
+    expect(followButton()?.props.disabled).toBe(true)
   })
 
   it('names the face finder’s size before the first press, and not once it is on disk', () => {
