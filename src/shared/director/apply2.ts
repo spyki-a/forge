@@ -29,6 +29,7 @@ import { DIRECTOR_RAMP, SLOW_SPEED, type Composed } from './compose'
 import { sourceFramesFor } from '../render/speed'
 import { SPINE2_PASS, type Menu2 } from './schema2'
 import { solveCrop } from '../render/crop'
+import { followKeys } from '../reframe/keys'
 
 /**
  * A composed `spine@2` ad, as ordinary clips, in one project update (docs/PLAN.md §5.6).
@@ -136,6 +137,17 @@ function drawnAsset(id: string, name: string, duration: number, width: number, h
   return { id, path: '', name, kind: 'image', durationFrames: Math.max(duration, Math.round(fps * 10)), width, height, fps: null, hasVideo: true, hasAudio: false, size: 0 }
 }
 
+/**
+ * A footage shot that follows its subject: `follow` and a COPY of the
+ * followed crop's first frame as its stored crop — or null when the file has
+ * no track `followKeys` will read.
+ */
+function followedShot(project: Project, clip: Clip, fps: number): Pick<Clip, 'follow' | 'crop'> | null {
+  const follow = clip.follow ?? { version: 1 }
+  const keys = followKeys(project, { ...clip, follow }, fps)
+  return keys ? { follow, crop: { ...keys.crop } } : null
+}
+
 export function applyRecipe(project: Project, composed: Composed, menu: Menu2, ctx: ApplyContext2): Applied2 {
   const problems: Problem[] = []
   const newId = ctx.newId ?? defaultId
@@ -178,7 +190,6 @@ export function applyRecipe(project: Project, composed: Composed, menu: Menu2, c
     // crop goes to a blurred copy underneath it (BACKDROP_KEEP; placed after the J-cuts, below).
     const crop = solveCrop(asset, { width, height })
     const kept = crop && asset.width && asset.height ? (crop.width * crop.height) / (asset.width * asset.height) : 1
-    const backdrop = crop !== undefined && kept < BACKDROP_KEEP ? crop : null
     const slow = slot.kind === 'video' && shot.speed === 'slow'
     const speaks = slot.kind === 'video' && hasSpeech(next, asset, laid.clipFrames, fps)
     if (speaks) anySpeech = true
@@ -197,8 +208,20 @@ export function applyRecipe(project: Project, composed: Composed, menu: Menu2, c
       ...(motion ? { motion } : {}),
       ...(slow ? { speed: SLOW_SPEED } : {}),
       ...(ramped ? { ramp: { ...DIRECTOR_RAMP } } : {}),
-      ...(crop && !backdrop ? { crop } : {})
     }
+    /*
+     * Footage whose file the subject finder has been through
+     * (`Project.subjects`, docs/CLIPS.md §4.7) FOLLOWS its subject instead:
+     * a landscape talk in a 9:16 ad is a person, and the followed crop keeps
+     * them in the frame shot by shot, where BACKDROP_KEEP's rule would show
+     * the whole frame small over a blurred copy. Only where there is a crop to
+     * make, and only on a track `followKeys` will read (this file's size, this
+     * version); otherwise the rule below, as before.
+     */
+    const followed = slot.kind === 'video' && crop !== undefined ? followedShot(next, clip, fps) : null
+    const backdrop = !followed && crop !== undefined && kept < BACKDROP_KEEP ? crop : null
+    if (followed) Object.assign(clip, followed)
+    else if (crop && !backdrop) clip.crop = crop
     if (laid.clipFrames < frames) problems.push({ path: `$.shots[${i}]`, message: `${slot.id} ends ${((frames - laid.clipFrames) / fps).toFixed(1)}s before its shot` })
     shots.push({ clip, slotId: slot.id, video: slot.kind === 'video', index: i, speaks, backdrop })
   })
@@ -227,7 +250,9 @@ export function applyRecipe(project: Project, composed: Composed, menu: Menu2, c
       problems.push({ path: at, message: `${s.slotId} cuts in with its sound — ${!quietBefore ? 'the shot before it has sound of its own' : !plain ? 'it is re-timed' : 'no footage to lead with'}` })
       continue
     }
-    const shifted: Clip = { ...s.clip, inPoint: s.clip.inPoint + jCut }
+    const moved: Clip = { ...s.clip, inPoint: s.clip.inPoint + jCut }
+    // A followed shot's stored crop is its first frame's place, which the J-cut just moved.
+    const shifted: Clip = moved.follow ? { ...moved, ...(followedShot(next, moved, fps) ?? {}) } : moved
     const withPicture: Project = { ...next, clips: next.clips.map((c) => (c.id === s.clip.id ? shifted : c)) }
     const detached = detachAudio(withPicture, s.clip.id)
     if (!detached.ok) {
