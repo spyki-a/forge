@@ -101,6 +101,22 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+/** The subject tracks a file carries that the follow path can read; undefined for none. */
+function subjectsOf(value: unknown): Project['subjects'] {
+  if (!isRecord(value)) return undefined
+  const kept = Object.entries(value).filter(
+    ([, track]) =>
+      isRecord(track) &&
+      typeof track.key === 'string' &&
+      typeof track.version === 'number' &&
+      Array.isArray(track.shots) &&
+      Array.isArray(track.samples) &&
+      Array.isArray(track.perShot) &&
+      track.samples.every((sample) => isRecord(sample) && Array.isArray(sample.faces))
+  )
+  return kept.length > 0 ? (Object.fromEntries(kept) as Project['subjects']) : undefined
+}
+
 /**
  * Migrate an older file forward. Each step is version-to-version so the chain stays
  * readable as the format grows; today there is only one version.
@@ -170,6 +186,19 @@ export function deserializeProject(raw: unknown): ProjectFile {
         ? { ...defaults.captions, ...(project.captions as Project['captions']) }
         : defaults.captions
   }
+
+  /*
+   * Each video file's subject track (docs/CLIPS.md §4.6). Every file written
+   * before it has none, which needs nothing: a followed clip without its
+   * track reads its stored crop. But a track the follow path cannot walk —
+   * no list of shots, of samples or of per-shot facts — would throw from the
+   * first frame the preview draws, so such an entry is dropped here, and a
+   * `subjects` that is not a table at all goes whole. The analysis makes it
+   * again.
+   */
+  const subjects = subjectsOf(project.subjects)
+  if (subjects) merged.subjects = subjects
+  else delete merged.subjects
 
   // A clip pointing at a missing asset renders as a hard error later; catching it
   // at load time lets the UI offer a relink instead of failing mid-export.

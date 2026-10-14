@@ -208,7 +208,28 @@ import {
 } from '@shared/director/provider'
 import type { Brief, Tone } from '@shared/director/schema'
 import { vocabularyPrompt, withWordText, type Transcript } from '@shared/transcript'
-import type { ModelStatus, ReframeHelper, ReframeStatus } from '@shared/reframe/job'
+import {
+  REFRAME_FAILURES,
+  REFRAME_PRESET,
+  type FaceModelProgress,
+  type ModelStatus,
+  type ReframeAnalyseRequest,
+  type ReframeFailureReason,
+  type ReframeHelper,
+  type ReframeStatus
+} from '@shared/reframe/job'
+import { SUBJECT_TRACK_VERSION, type SubjectTrack } from '@shared/reframe/types'
+import {
+  followCandidates,
+  followWithTrack,
+  storedFollowCrop,
+  unfollowClip,
+  withFollowOffset,
+  withFollowTwoUp
+} from '@shared/reframe/follow'
+import { clipFrameAtPlayhead } from '@shared/reframe/playback'
+import { cropAt } from '@shared/render/crop'
+import { KEYED_PROPERTIES, MASK_PROPERTIES } from '@shared/render/keyframes'
 
 /*
  * Re-exported so every existing import keeps working; the table itself moved to
@@ -1496,21 +1517,56 @@ export const useEditor = create<EditorState>((set, get) => ({
   reframe: { helper: 'unknown', model: null, fetching: null, pending: {} },
   setReframeHelper: (helper) => set((s) => ({ reframe: { ...s.reframe, helper } })),
   setReframeModel: (model) => set((s) => ({ reframe: { ...s.reframe, model } })),
-  // Slice B: S builds the four below (docs/CLIPS.md §4.7). Until then they refuse by name.
-  reframeClip: async () => {
-    throw new Error('slice B: S builds reframeClip')
+
+  /*
+   * The reframe's actions (docs/CLIPS.md §4.7). The edits themselves are
+   * shared/reframe/follow.ts — pure, each one `update()`, one undo — and the
+   * job's plumbing (the face finder, the analysis, the collect) is the
+   * module-level `startReframe` and `collectReframe` below the store.
+   */
+  reframeClip: async (clipId, options = {}) => {
+    const clip = get().project.clips.find((c) => c.id === clipId)
+    if (!clip) return
+    await startReframe(clip.assetId, [clipId], options.phrase)
   },
+
   reframeAll: async () => {
-    throw new Error('slice B: S builds reframeAll')
+    const { project, notify, reframe } = get()
+    const candidates = followCandidates(project)
+    if (candidates.length === 0) {
+      notify('There is no landscape video on the timeline to follow', 'info')
+      return
+    }
+    if (reframe.helper === 'missing') {
+      notify(REFRAME_FAILURES['no-helper'], 'info')
+      return
+    }
+    // One analysis per FILE, however many clips of it are on the timeline: the track is the file's.
+    const byAsset = new Map<string, string[]>()
+    for (const clip of candidates) byAsset.set(clip.assetId, [...(byAsset.get(clip.assetId) ?? []), clip.id])
+    // In turn, so the face finder is fetched once, by the first, before any job is asked for.
+    for (const [assetId, clipIds] of byAsset) await startReframe(assetId, clipIds)
   },
-  unfollow: () => {
-    throw new Error('slice B: S builds unfollow')
+
+  unfollow: (clipId) => {
+    const { project, playhead } = get()
+    const clip = project.clips.find((c) => c.id === clipId)
+    if (!clip?.follow) return
+    // Where it is at the playhead — the frame the user is looking at — static from here on.
+    const frame = clipFrameAtPlayhead(clip, playhead)
+    get().update((p) => unfollowClip(p, clipId, frame))
+    void get().rebakeGenerated()
   },
-  setFollowTwoUp: () => {
-    throw new Error('slice B: S builds setFollowTwoUp')
+
+  setFollowTwoUp: (clipId, on) => {
+    const before = get().project
+    get().update((p) => withFollowTwoUp(p, clipId, on, p.settings.fps))
+    if (get().project !== before) void get().rebakeGenerated()
   },
-  dragFollowOffset: () => {
-    throw new Error('slice B: S builds dragFollowOffset')
+
+  // Inside CropOverlay's begin/commit: every move of one drag SETS the drag's total, one undo for the gesture.
+  dragFollowOffset: (clipId, shotIndex, share) => {
+    get().update((p) => withFollowOffset(p, clipId, shotIndex, share, p.settings.fps))
   },
 
   notices: [],
@@ -1813,6 +1869,15 @@ export const useEditor = create<EditorState>((set, get) => ({
         // described the bug two years before the effect existed to have it —
         // so the list is now the one every self-drawing kind joins (recipes.ts).
         if (drawsItself(c)) return { ...c, crop: undefined }
+        /*
+         * A followed clip keeps following (docs/CLIPS.md §4.7). Its crop is
+         * compiled from the file's track at whatever shape the canvas is, so
+         * `follow` survives as it is, and the stored crop becomes the followed
+         * crop's size at the NEW shape — a copy, never followKeys' own object.
+         * Re-solved centred instead, a 9:16 → 16:9 → 9:16 round trip wiped
+         * every reframe; with no usable track, it is `solveCrop` as for any clip.
+         */
+        if (c.follow) return { ...c, crop: storedFollowCrop({ ...p, settings: { ...p.settings, width, height } }, c, p.settings.fps) }
         return { ...c, crop: solveCrop(asset, aspect) }
       })
     }))
@@ -3694,6 +3759,8 @@ export const useEditor = create<EditorState>((set, get) => ({
   },
 
   setKeyframe: (clipId, property, frame, value, ease) => {
+    // A followed crop's x and y are compiled, never stored (`storableKey`).
+    if (!storableKey(property)) return
     let droppedMotion = false
     get().update((p) => ({
       ...p,
@@ -3719,6 +3786,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   },
 
   setKeyframes: (clipId, property, keys) => {
+    if (!storableKey(property)) return
     let droppedMotion = false
     get().update((p) => ({
       ...p,
@@ -4300,8 +4368,21 @@ export const useEditor = create<EditorState>((set, get) => ({
      * The strips are cut out of what the shot is SHOWING, not out of the whole
      * file. A clip that has been reframed shows a rectangle of its source, and
      * strips measured against the file would be slices of pixels nobody can see.
+     *
+     * Read through `cropAt`, the one reader (render/crop.ts): the rectangle
+     * the export really cuts, and on a clip that FOLLOWS its subject, the
+     * crop on each flash's own frame — the followed crop moves shot by shot,
+     * one size throughout. On a stacked two-up frame that is `cropAt`'s one
+     * rectangle, the top half's position at the clip's full size (the
+     * left-hand person), not the stacked picture: a strip is one rectangle of
+     * the file and cannot be two.
      */
-    const region = base.crop ?? { x: 0, y: 0, width: asset.width, height: asset.height }
+    const sourceSize = { width: asset.width, height: asset.height }
+    const regionAt = (frame: number): CropRect =>
+      base.crop || base.follow
+        ? cropAt(project, base, sourceSize, frame - base.start).crop
+        : { x: 0, y: 0, width: asset.width!, height: asset.height! }
+    const region = regionAt(base.start)
     const { width, height, fps } = project.settings
 
     const musicClip = project.clips.find((clip) => {
@@ -4361,16 +4442,19 @@ export const useEditor = create<EditorState>((set, get) => ({
       }
 
       const cleared = clearGenerated(current, STRIP_RULE)
-      const clips = stripClips(flashes, options, overlay.id, base.assetId).map((clip) => ({
-        ...clip,
+      const clips = stripClips(flashes, options, overlay.id, base.assetId).map((clip) => {
         // Back into the file's own coordinates, since the strips were measured
-        // inside the shot's visible rectangle.
-        crop: {
-          ...clip.crop!,
-          x: clip.crop!.x + region.x,
-          y: clip.crop!.y + region.y
+        // inside the shot's visible rectangle — the one on the flash's frame.
+        const shown = regionAt(clip.start)
+        return {
+          ...clip,
+          crop: {
+            ...clip.crop!,
+            x: clip.crop!.x + shown.x,
+            y: clip.crop!.y + shown.y
+          }
         }
-      }))
+      })
       get().update(() => ({ ...cleared, clips: [...cleared.clips, ...clips] }))
       notify(
         analysis ? `${clips.length} flashes on the beat grid` : `${clips.length} flashes`,
@@ -5048,6 +5132,8 @@ export const useEditor = create<EditorState>((set, get) => ({
 
   setJobs: (jobs) => {
     set({ jobs })
+    // The reframe's analyses: collected the way downloads are, below (`syncReframeJobs`).
+    syncReframeJobs(jobs)
 
     /*
      * A finished download becomes a clip here.
@@ -5414,3 +5500,278 @@ export const useEditor = create<EditorState>((set, get) => ({
 
 /** Snapshot held between begin() and commit(); null when no transaction is open. */
 let pendingSnapshot: Project | null = null
+
+/**
+ * Keyframes the store may write: a clip's own and its mask's. Never a
+ * followed crop's x or y (`cropX`/`cropY`): those are in `KeyedProperty` for
+ * the compiler's type only, and are compiled from the file's subject track
+ * every time they are read (reframe/keys.ts) — stored, a speed change or a
+ * frame-rate change would leave them stale (docs/CLIPS.md §4.7).
+ */
+function storableKey(property: KeyedProperty): boolean {
+  return KEYED_PROPERTIES.includes(property) || MASK_PROPERTIES.includes(property)
+}
+
+/* --------------------------------------------------------------- reframe */
+
+/*
+ * The reframe's analyses (docs/CLIPS.md §4.7), plumbed the way downloads are
+ * (`collecting` above): main runs the job, `setJobs` sees it finish and PULLS
+ * the track, so a reload (Cmd+R) between the two loses nothing; main hands a
+ * track back once and answers every later collect `already`, so a reload
+ * after it does not follow again. These are module-level re-entry guards and
+ * this window's own notes, not state anything draws: a reload empties them.
+ */
+const reframeCollecting = new Set<string>()
+const reframeReported = new Set<string>()
+/** Jobs seen finished in a broadcast: `pending` is never set back to one of them. */
+const reframeFinished = new Set<string>()
+/** asset id → clips asked to follow while its analysis was being started: they ride on the request. */
+const reframeStarting = new Map<string, Set<string>>()
+/** job id → clips asked to follow that file once its job was already running: they follow when it lands. */
+const reframeAlso = new Map<string, Set<string>>()
+/** job id → the project it was asked in. Absent after a reload: the track is then adopted by its asset id, as a download is. */
+const reframeAskedIn = new Map<string, string | null>()
+
+const editor = (): EditorState => useEditor.getState()
+const errorText = (err: unknown): string => (err instanceof Error ? err.message : String(err))
+
+function setReframe(patch: (r: ReframeStatus) => Partial<ReframeStatus>): void {
+  useEditor.setState((s) => ({ reframe: { ...s.reframe, ...patch(s.reframe) } }))
+}
+
+function rememberAlso(jobId: string, clipIds: Iterable<string>): void {
+  const set = reframeAlso.get(jobId) ?? new Set<string>()
+  for (const id of clipIds) set.add(id)
+  reframeAlso.set(jobId, set)
+}
+
+/** The file's `size:mtime` key as main computes it, or null when it cannot be read. */
+async function fileKeyOf(path: string): Promise<string | null> {
+  try {
+    return (await window.forge.fileKeys([path]))[path] ?? null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * The face finder on disk before any analysis: asked when the last answer was
+ * not "present", and fetched when it is not — the press that got here named
+ * its size ("gets the face finder, 1.1 MB, first time", the dock's label), so
+ * the fetch is what was asked for. Its progress rides in `reframe.fetching`.
+ */
+async function ensureFaceModel(): Promise<boolean> {
+  try {
+    // Asked again unless it was on disk at the last answer: a fetch elsewhere changes it.
+    const known = editor().reframe.model
+    let model: ModelStatus = known?.present ? known : await window.forge.faceModel({})
+    if (!model.present) {
+      setReframe(() => ({ fetching: { progress: 0, message: `Getting ${model.label}` } }))
+      const stop = window.forge.onFaceModelProgress((update: FaceModelProgress) => setReframe(() => ({ fetching: update })))
+      try {
+        model = await window.forge.faceModel({ download: true })
+      } finally {
+        stop()
+        setReframe(() => ({ fetching: null }))
+      }
+    }
+    editor().setReframeModel(model)
+    if (!model.present) {
+      editor().notify(REFRAME_FAILURES['model-missing'])
+      return false
+    }
+    return true
+  } catch (err) {
+    setReframe(() => ({ fetching: null }))
+    editor().notify(errorText(err))
+    return false
+  }
+}
+
+/**
+ * Follow the subject on `clipIds`, all clips of one file: the track already
+ * here for this file's key and version is followed at once; otherwise the face
+ * finder is made sure of and the analysis is asked for. Resolves once the job
+ * is QUEUED, or the follow has landed.
+ */
+async function startReframe(assetId: string, clipIds: string[], phrase?: string): Promise<void> {
+  const { project, notify, reframe } = editor()
+  const asset = project.assets.find((a) => a.id === assetId)
+  if (!asset || asset.kind !== 'video') {
+    notify('Follow the subject works on video clips', 'info')
+    return
+  }
+  // 1g is not built (§4.5): a phrase is refused here, before any job, with its reason. The dock greys the field.
+  if (phrase !== undefined && phrase.trim() !== '') {
+    notify(REFRAME_FAILURES['phrase-needs-ground'], 'info')
+    return
+  }
+  // Decided from the helper's capabilities (App.tsx, reframeHelperFrom), never from its prose.
+  if (reframe.helper === 'missing') {
+    notify(REFRAME_FAILURES['no-helper'], 'info')
+    return
+  }
+  // This file is being found already: these clips follow when it lands. One job per file.
+  const running = reframe.pending[assetId]
+  if (running) {
+    rememberAlso(running, clipIds)
+    return
+  }
+  const starting = reframeStarting.get(assetId)
+  if (starting) {
+    for (const id of clipIds) starting.add(id)
+    return
+  }
+  const asking = new Set(clipIds)
+  reframeStarting.set(assetId, asking)
+  try {
+    /*
+     * The track for THIS file, at this version, is already the project's —
+     * the clip was unfollowed, or another clip of the file follows: no job.
+     * The key is main's own (`fileKey`, size and mtime), so a file replaced
+     * under the same name is analysed again.
+     */
+    const existing = project.subjects?.[assetId]
+    if (existing && existing.version === SUBJECT_TRACK_VERSION) {
+      const key = await fileKeyOf(asset.path)
+      if (key !== null && key === existing.key) {
+        landTrack(assetId, editor().project.subjects?.[assetId] ?? existing, [...asking])
+        return
+      }
+    }
+    if (!(await ensureFaceModel())) return
+    if (!asset.width || !asset.height) {
+      notify(`${asset.name} has no size on it — import it again`)
+      return
+    }
+    const request: ReframeAnalyseRequest = {
+      assetId,
+      path: asset.path,
+      width: asset.width,
+      height: asset.height,
+      name: asset.name,
+      clipIds: [...asking]
+    }
+    const job = await window.forge.analyseSubjects(request)
+    reframeAskedIn.set(job.id, editor().projectPath)
+    // Clips asked for while the request was on its way.
+    const late = [...asking].filter((id) => !request.clipIds.includes(id))
+    if (late.length > 0) rememberAlso(job.id, late)
+    // Busy until a broadcast says otherwise — unless one already has.
+    if (!reframeFinished.has(job.id)) setReframe((r) => ({ pending: { ...r.pending, [assetId]: job.id } }))
+  } catch (err) {
+    notify(errorText(err))
+  } finally {
+    reframeStarting.delete(assetId)
+  }
+}
+
+/**
+ * A track landing — ONE `update()`, one undo: `Project.subjects[assetId]`,
+ * each asked clip's `follow`, and every followed clip's stored crop (a copy
+ * of the followed crop's first frame; follow.ts). Then the moments over those
+ * clips are drawn again from the followed crop (`rebakeGenerated`, §4.7: they
+ * were pulled with the centred one).
+ */
+function landTrack(assetId: string, track: SubjectTrack, clipIds: readonly string[]): void {
+  const state = editor()
+  // Its file is not in the project that is open now: there is nothing here to follow.
+  if (!state.project.assets.some((a) => a.id === assetId)) return
+  const before = state.project
+  let dropped = 0
+  state.update((p) => {
+    const landed = followWithTrack(p, assetId, track, clipIds, p.settings.fps)
+    dropped = landed.dropped
+    return landed.project
+  })
+  if (dropped > 0) {
+    state.notify(
+      `${dropped} framing adjustment${dropped === 1 ? '' : 's'} no longer matched a shot once the file was analysed again, so ${dropped === 1 ? 'it was' : 'they were'} dropped`,
+      'info'
+    )
+  }
+  if (editor().project !== before) void editor().rebakeGenerated()
+}
+
+/**
+ * Main's reframe jobs, from every `jobs:changed`: `pending` rebuilt from
+ * them (`params.assetId`, so a reload still knows which file is busy), and a
+ * finished one — done, failed or cancelled — collected once per window.
+ * Failed ones are collected too: the collect carries the TYPED reason, where
+ * the job's `error` is prose.
+ */
+function syncReframeJobs(jobs: Job[]): void {
+  const ours = jobs.filter((j) => j.presetId === REFRAME_PRESET)
+  if (ours.length === 0) return
+  const pending = editor().reframe.pending
+  let next: Record<string, string> | null = null
+  for (const job of ours) {
+    const live = job.status === 'queued' || job.status === 'running'
+    if (!live) reframeFinished.add(job.id)
+    const assetId = typeof job.params?.assetId === 'string' ? job.params.assetId : null
+    if (!assetId) continue
+    const now: Record<string, string> = next ?? pending
+    if (live && now[assetId] !== job.id) next = { ...now, [assetId]: job.id }
+    else if (!live && now[assetId] === job.id) {
+      const rest = { ...now }
+      delete rest[assetId]
+      next = rest
+    }
+  }
+  if (next) {
+    const settled = next
+    setReframe(() => ({ pending: settled }))
+  }
+  for (const job of ours) {
+    if (job.status === 'queued' || job.status === 'running') continue
+    // Claimed synchronously, before any await, as a download is.
+    if (reframeCollecting.has(job.id)) continue
+    reframeCollecting.add(job.id)
+    void collectReframe(job.id)
+  }
+}
+
+async function collectReframe(jobId: string): Promise<void> {
+  try {
+    const result = await window.forge.collectSubjects(jobId)
+    // Handed back before — to this window before a reload: wherever that put it stands. Nothing is touched.
+    if (result.kind === 'already') return
+    if (result.kind === 'failed') {
+      reportReframeFailure(jobId, result.reason, result.message)
+      return
+    }
+    const askedIn = reframeAskedIn.get(jobId)
+    const also = reframeAlso.get(jobId) ?? []
+    reframeAlso.delete(jobId)
+    if (askedIn !== undefined && askedIn !== editor().projectPath) {
+      editor().notify('That clip’s subject was found after another project was opened: follow it again there', 'info')
+      return
+    }
+    landTrack(result.assetId, result.track, [...result.clipIds, ...also])
+  } catch (err) {
+    // Released, so the next broadcast asks again; said once.
+    reframeCollecting.delete(jobId)
+    if (!reframeReported.has(jobId)) {
+      reframeReported.add(jobId)
+      editor().notify(errorText(err))
+    }
+  }
+}
+
+/**
+ * A job that ended without a track, in §4.8's words (job.ts
+ * `REFRAME_FAILURES`), said once per window. Cancelled is the user's own
+ * doing and says nothing. A missing face finder also clears the dock's
+ * "present", so its button names the fetch again.
+ */
+function reportReframeFailure(jobId: string, reason: ReframeFailureReason, message: string): void {
+  reframeAlso.delete(jobId)
+  if (reason === 'cancelled' || reframeReported.has(jobId)) return
+  reframeReported.add(jobId)
+  const { notify, reframe, setReframeModel, setReframeHelper } = editor()
+  if (reason === 'model-missing' && reframe.model) setReframeModel({ ...reframe.model, present: false })
+  if (reason === 'no-helper') setReframeHelper('missing')
+  const words = reason === 'failed' ? message || REFRAME_FAILURES.failed : REFRAME_FAILURES[reason]
+  notify(words, reason === 'failed' || reason === 'size-mismatch' ? 'error' : 'info')
+}
