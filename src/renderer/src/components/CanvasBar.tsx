@@ -84,11 +84,20 @@ const OFFER_WHY =
  * content box is 624 at the 1100×680 minimum window, 726 at 1276×706 and 798
  * at 1400×900. The words are also in each button's tooltip, and the glyph
  * draws the shape, so they are the first thing to go — and only when the room
- * needs it: 48rem is 768, 20 px over the 748, and 32rem 38 over the 474, as
- * slack for another platform's font. Narrower than 601 the chip's words
+ * needs it: 48rem was 768, 20 px over the 748, and 32rem is 38 over the 474,
+ * as slack for another platform's font. Narrower than 601 the chip's words
  * truncate, and its tooltip still says them.
+ *
+ * The reframe offer is the wider chip (docs/CLIPS.md §4.8), measured in the
+ * harness 2026-10-13: 312 px, and 415 with "needs the AI helper" beside its
+ * button, against the photo chip's 266. With the shape words that is 794 and
+ * 897 of content (words 314, view 152, two 8 px gaps); without them 647 and
+ * 750. At 48rem the words stayed in a 843 px bar and the offer's words were
+ * cut 53 px short ("Landscape video on a 9:…"), so the words now go below
+ * 57rem, 912: 15 px over the 897. The photo chip's words go a little sooner
+ * than they need to, which the glyphs and tooltips cover.
  */
-const WORDS_GO = { chip: '@max-[48rem]:hidden', plain: '@max-[32rem]:hidden' } as const
+const WORDS_GO = { chip: '@max-[57rem]:hidden', plain: '@max-[32rem]:hidden' } as const
 
 export function CanvasBar(): ReactNode {
   const aspect = useEditor((s) => s.aspect)
