@@ -247,13 +247,25 @@ def frame_args(
     path: str, ffmpeg: str, fps: float, width: int, height: int,
     start_ms: float = 0, end_ms: float | None = None,
 ) -> list[str]:
-    """The ffmpeg argv ``iter_frames`` runs: pure, so the floor test can scan it."""
+    """The ffmpeg argv ``iter_frames`` runs: pure, so the floor test can scan it.
+
+    ``fps=…:round=up``, so sample ``i`` is the source frame ON SCREEN at its
+    label, ``start_ms + i × 1000 / fps``: the last frame whose time is at or
+    before it. ``fps``' default rounds to nearest, and its slot k then holds the
+    last frame before k/fps + half a slot — measured on a frame-numbered 30 fps
+    clip with the bundled ffmpeg, fps=5 gave source frames 2, 8, 14… (66.7 ms
+    past each label) and ``round=up`` 0, 6, 12…; from a 500 ms seek, 17 and 15
+    (docs/EFFECTS.md §54). A sample labelled within that span before a cut
+    carried the next shot's face, and the reframe assigns samples to shots by
+    their ms. ``round`` and its ``up`` are in ``vf_fps.c``'s option table at
+    the Windows build's ``f22fcd4`` (:81, :85).
+    """
     seek = ["-ss", _seconds(start_ms)] if start_ms > 0 else []
     span = ["-t", _seconds(end_ms - start_ms)] if end_ms is not None else []
     return [
         ffmpeg, "-hide_banner", "-nostdin", "-loglevel", "error",
         *seek, "-i", path, *span, "-an",
-        "-vf", f"fps={fps},scale={width}:{height}:flags=bicubic",
+        "-vf", f"fps={fps}:round=up,scale={width}:{height}:flags=bicubic",
         "-pix_fmt", "rgb24", "-f", "rawvideo", "pipe:1",
     ]
 
@@ -269,7 +281,8 @@ def iter_frames(
     the request's cancellation checked before each, and ffmpeg killed in
     ``finally`` — so a caller that stops early (a cancel, an exception, a
     ``break``) never leaves a decoder running or a video in memory. ``ms`` is
-    the frame's time in the source: ``start_ms + i × 1000 / fps``, rounded.
+    the frame's time in the source: ``start_ms + i × 1000 / fps``, rounded —
+    and the frame is the one on screen at that time (``frame_args``' ``round=up``).
     ffmpeg's errors go to a temporary file rather than a pipe nobody reads,
     which would fill and stall the decoder.
     """

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { checkSubjectTrack, cleanFace, reduceTrack } from '@shared/reframe/reduce'
 import { REDUCE } from '@shared/reframe/job'
 import { SUBJECT_TRACK_VERSION, type FaceBox, type Shot, type SubjectTrack } from '@shared/reframe/types'
-import type { FacesTrack } from '@shared/sidecar/protocol'
+import { FACES_TRACK_VERSION, type FacesTrack } from '@shared/sidecar/protocol'
 
 /*
  * The face finder's 5-a-second track down to the project's 2 a second, the
@@ -18,7 +18,7 @@ const msOfFace = (f: FaceBox): number => Math.round(f.x * 100_000)
 
 /** 5 a second over [0, durationMs), one tagged face each. */
 function fiveASecond(durationMs: number): FacesTrack {
-  return { version: 1, samples: Array.from({ length: durationMs / 200 }, (_, i) => ({ ms: i * 200, faces: [tagged(i * 200)] })) }
+  return { version: FACES_TRACK_VERSION, samples: Array.from({ length: durationMs / 200 }, (_, i) => ({ ms: i * 200, faces: [tagged(i * 200)] })) }
 }
 
 const shotsAt = (cuts: number[], durationMs: number): Shot[] => {
@@ -38,11 +38,11 @@ describe('reduceTrack — 2 a second, picked', () => {
     // Tick 500 between a face at the left (400 ms) and one at the right (600 ms).
     const left: FaceBox = { x: 0.1, y: 0.3, width: 0.1, height: 0.15, score: 0.9 }
     const right: FaceBox = { x: 0.7, y: 0.4, width: 0.12, height: 0.18, score: 0.8 }
-    const faces: FacesTrack = { version: 1, samples: [{ ms: 400, faces: [left] }, { ms: 600, faces: [right] }] }
+    const faces: FacesTrack = { version: FACES_TRACK_VERSION, samples: [{ ms: 400, faces: [left] }, { ms: 600, faces: [right] }] }
     const reduced = reduceTrack(faces, shotsAt([], 1000), REDUCE)
     expect(reduced).toEqual([{ ms: 400, faces: [left] }])
     // And with only the later frame near, it is that one's, untouched.
-    expect(reduceTrack({ version: 1, samples: [{ ms: 560, faces: [right] }] }, shotsAt([], 1000), REDUCE)).toEqual([{ ms: 560, faces: [right] }])
+    expect(reduceTrack({ version: FACES_TRACK_VERSION, samples: [{ ms: 560, faces: [right] }] }, shotsAt([], 1000), REDUCE)).toEqual([{ ms: 560, faces: [right] }])
   })
 
   it('keeps the two largest faces, largest first, a tie by area going to the higher score', () => {
@@ -50,19 +50,19 @@ describe('reduceTrack — 2 a second, picked', () => {
     const big = { x: 0.5, y: 0.1, width: 0.2, height: 0.3, score: 0.6 }
     const mid = { x: 0.3, y: 0.5, width: 0.1, height: 0.1, score: 0.7 }
     const midTwin = { x: 0.7, y: 0.5, width: 0.1, height: 0.1, score: 0.8 }
-    const one = reduceTrack({ version: 1, samples: [{ ms: 0, faces: [small, mid, big] }] }, shotsAt([], 500), REDUCE)
+    const one = reduceTrack({ version: FACES_TRACK_VERSION, samples: [{ ms: 0, faces: [small, mid, big] }] }, shotsAt([], 500), REDUCE)
     expect(one[0].faces).toEqual([big, mid])
-    const tie = reduceTrack({ version: 1, samples: [{ ms: 0, faces: [mid, small, midTwin] }] }, shotsAt([], 500), REDUCE)
+    const tie = reduceTrack({ version: FACES_TRACK_VERSION, samples: [{ ms: 0, faces: [mid, small, midTwin] }] }, shotsAt([], 500), REDUCE)
     expect(tie[0].faces).toEqual([midTwin, mid])
     // maxFaces is what is kept: 1 keeps the largest only.
-    expect(reduceTrack({ version: 1, samples: [{ ms: 0, faces: [small, big] }] }, shotsAt([], 500), { samplesPerSecond: 2, maxFaces: 1 })[0].faces).toEqual([big])
+    expect(reduceTrack({ version: FACES_TRACK_VERSION, samples: [{ ms: 0, faces: [small, big] }] }, shotsAt([], 500), { samplesPerSecond: 2, maxFaces: 1 })[0].faces).toEqual([big])
   })
 
   it('takes a tick’s sample from the tick’s own shot, never across the cut beside it', () => {
     // Cut at 1550: tick 1500 is shot 0's. The frame nearest it, 1560 (60 ms), is the NEXT shot's
     // picture; shot 0's nearest is 1300 (200 ms), and that is the one kept.
     const faces: FacesTrack = {
-      version: 1,
+      version: FACES_TRACK_VERSION,
       samples: [0, 300, 700, 1300, 1560, 1800, 2000].map((ms) => ({ ms, faces: [tagged(ms)] }))
     }
     const reduced = reduceTrack(faces, shotsAt([1550], 2500), REDUCE)
@@ -81,7 +81,7 @@ describe('reduceTrack — 2 a second, picked', () => {
 
   it('cleans every face: clamped into the frame, 4 dp, non-finite and empty boxes dropped', () => {
     const faces: FacesTrack = {
-      version: 1,
+      version: FACES_TRACK_VERSION,
       samples: [
         {
           ms: 0,
@@ -109,7 +109,7 @@ describe('reduceTrack — 2 a second, picked', () => {
 
   it('reads samples out of order, keeps one per ms, and skips one with no time', () => {
     const faces = {
-      version: 1,
+      version: FACES_TRACK_VERSION,
       samples: [
         { ms: 600, faces: [tagged(600)] },
         { ms: 0, faces: [tagged(0)] },
@@ -124,7 +124,7 @@ describe('reduceTrack — 2 a second, picked', () => {
       [600, [600]],
       [1000, [1000]]
     ])
-    expect(reduceTrack({ version: 1, samples: [] }, shotsAt([], 1500), REDUCE)).toEqual([])
+    expect(reduceTrack({ version: FACES_TRACK_VERSION, samples: [] }, shotsAt([], 1500), REDUCE)).toEqual([])
   })
 
   it('ten minutes at 5 a second is 1,200 samples: 2 a second', () => {
@@ -149,7 +149,8 @@ describe('checkSubjectTrack', () => {
       detector: 'test-stand-in/colour',
       scene: { threshold: 0.3, minShotMs: 500, backend: 'ffmpeg-select-rgb24' },
       at: '2026-10-13T00:00:00.000Z',
-      timeBase: { num: 1, den: 15360 }
+      timeBase: { num: 1, den: 15360 },
+      facesVersion: FACES_TRACK_VERSION
     }
   }
 
@@ -157,6 +158,8 @@ describe('checkSubjectTrack', () => {
     expect(checkSubjectTrack(good())).not.toBeNull()
     const { timeBase: _drop, ...older } = good()
     expect(checkSubjectTrack(older), 'a track from before 1b kept the time base').not.toBeNull()
+    const { facesVersion: _was, ...unversioned } = good()
+    expect(checkSubjectTrack(unversioned), 'one from before the face track’s version was kept (main’s cache analyses it again)').not.toBeNull()
   })
 
   it('refuses one path.ts or keys.ts would misread', () => {
@@ -173,6 +176,8 @@ describe('checkSubjectTrack', () => {
       ['samples out of order', (t) => ({ ...t, samples: [...t.samples].reverse() })],
       ['another scene backend', (t) => ({ ...t, scene: { ...t.scene, backend: 'scdet' } })],
       ['a time base of 0', (t) => ({ ...t, timeBase: { num: 1, den: 0 } })],
+      ['a face-track version that is not whole', (t) => ({ ...t, facesVersion: 1.5 })],
+      ['a face-track version of 0', (t) => ({ ...t, facesVersion: 0 })],
       ['not an object', () => 'track']
     ]
     for (const [what, make] of cases) expect(checkSubjectTrack(make(good())), what).toBeNull()

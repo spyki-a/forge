@@ -156,8 +156,8 @@ const isWhole = (v: unknown): v is number => typeof v === 'number' && Number.isS
  *   (when present) a whole number, and `perShot` parallel to them;
  * - every sample's `ms` finite, in order, and every face exactly what
  *   `cleanFace` would keep: finite, inside the frame, the score 0..1;
- * - the scene's backend the one this build writes, `timeBase` (when
- *   present) whole and positive.
+ * - the scene's backend the one this build writes, `timeBase` and
+ *   `facesVersion` (when present) whole and positive.
  */
 export function checkSubjectTrack(value: unknown): SubjectTrack | null {
   if (typeof value !== 'object' || value === null) return null
@@ -199,5 +199,6 @@ export function checkSubjectTrack(value: unknown): SubjectTrack | null {
     const tb = t.timeBase
     if (!tb || !isWhole(tb.num) || !isWhole(tb.den) || tb.num <= 0 || tb.den <= 0) return null
   }
+  if (t.facesVersion !== undefined && !(isWhole(t.facesVersion) && t.facesVersion > 0)) return null
   return t as SubjectTrack
 }

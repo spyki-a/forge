@@ -93,6 +93,9 @@ EXIT_CANCELLED = 75
 
 ABORT_ENV = "FORGE_FACES_WORKER_ABORT"
 FAKE_ENV = "FORGE_FACES_WORKER_FAKE"
+TRACK_VERSION = 2
+"""capabilities/faces.py's ``TRACK_VERSION``, a literal copy (the helper never
+imports this module): 2 = each sample the frame on screen at its ms."""
 
 Detection = tuple[float, float, float, float, float]
 """``(x, y, width, height, score)`` in analysed pixels, as MediaPipe's
@@ -245,7 +248,7 @@ def expected_frames(spec: dict[str, Any]) -> int | None:
 class TrackWriter:
     """The track file, written as the pass goes and put in place when whole.
 
-    ``{"version": 1, "samples": [{"ms", "faces": [...]}, …]}`` — the shape
+    ``{"version": TRACK_VERSION, "samples": [{"ms", "faces": [...]}, …]}`` — the shape
     src/shared/sidecar/protocol.ts ``FacesTrack`` reads. Streamed rather than
     held: memory stays flat however long the clip, and a pass that dies leaves
     only ``partial``, never ``track``.
@@ -260,7 +263,7 @@ class TrackWriter:
         if folder:
             os.makedirs(folder, exist_ok=True)
         self._out = open(partial, "w", encoding="utf-8", newline="\n")
-        self._out.write('{"version":1,"samples":[')
+        self._out.write('{"version":%d,"samples":[' % TRACK_VERSION)
 
     def add(self, ms: int, faces: Sequence[dict[str, float]]) -> None:
         sample = json.dumps({"ms": int(ms), "faces": list(faces)}, separators=(",", ":"))

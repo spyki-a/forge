@@ -80,7 +80,14 @@ MODEL_BYTES = 1_083_786
 MODEL_LABEL = "the face finder"
 MODEL_HOST = "storage.googleapis.com"
 
-TRACK_VERSION = 1
+TRACK_VERSION = 2
+"""The track file's version, and part of its cache key (``track_path``). 2
+since 2026-10-14: each sample is the frame on screen at its ms
+(media.frame_args' ``fps=…:round=up``); version 1's samples were up to half a
+slot late (66.7 ms at 5 a second on 30 fps), so a version-1 track is never
+reused. The worker writes its own copy (workers/mp_faces.py, held equal by
+tests/sidecar/test_faces.py), and src/shared/sidecar/protocol.ts
+``FACES_TRACK_VERSION`` is what main reads."""
 DEFAULT_FPS, MIN_FPS, MAX_FPS = 5.0, 1.0, 30.0
 DEFAULT_EDGE, MIN_EDGE, MAX_EDGE = 640, 64, 2048
 DEFAULT_MIN_SCORE = 0.5

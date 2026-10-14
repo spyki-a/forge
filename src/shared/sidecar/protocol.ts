@@ -326,16 +326,27 @@ export interface FacesResult {
 }
 
 /**
+ * The face track's version, the helper's `faces.TRACK_VERSION` (and its
+ * worker's copy). 2 since 2026-10-14: each sample is the source frame ON
+ * SCREEN at its `ms` (media.frame_args' `fps=…:round=up`); version 1's were
+ * the frame up to half a sampling slot later — 66.7 ms at 5 a second on 30
+ * fps, so a sample just before a cut carried the next shot's face. Main reads
+ * only this version, and records it in the subject track it reduces
+ * (`SubjectTrack.facesVersion`) so a track cut from another is analysed again.
+ */
+export const FACES_TRACK_VERSION = 2
+
+/**
  * The track file `FacesResult.track` names. Boxes are normalised 0..1 of the
  * UPRIGHT frame at 4 dp (depth.py `_mask_box`'s convention); `ms` is SOURCE
- * media time with findShots' origin, ffmpeg's pts from the container's start
- * (media.iter_frames' `start_ms + i × 1000 / fps` is that origin for MP4 and
- * MOV, §4.2/§4.6's Built notes). Main reduces it to 2
+ * media time with findShots' origin, counted from the file's first timestamp
+ * (ffmpeg subtracts `start_time`, EFFECTS.md §55; media.iter_frames' `start_ms
+ * + i × 1000 / fps`, each the frame on screen then). Main reduces it to 2
  * samples a second and the two largest faces (§4.6's SubjectSample) — 1f's
  * job, not the helper's.
  */
 export interface FacesTrack {
-  version: 1
+  version: typeof FACES_TRACK_VERSION
   samples: { ms: number; faces: FaceBox[] }[]
 }
 

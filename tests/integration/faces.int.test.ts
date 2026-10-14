@@ -6,6 +6,7 @@ import { delimiter, dirname, join, resolve, sep } from 'node:path'
 import ffprobeInstaller from '@ffprobe-installer/ffprobe'
 import { SidecarClient, sidecarEnv } from '../../src/main/sidecar/client'
 import {
+  FACES_TRACK_VERSION,
   RPC_ERRORS,
   SIDECAR_METHODS,
   type FacesParams,
@@ -368,7 +369,8 @@ describeWithVenv(
       expect(result.track.split(sep).pop()).not.toContain(':')
 
       const track = await readTrack(result.track)
-      expect(track.version).toBe(1)
+      // Version 2: each sample the frame on screen at its ms (media.frame_args' round=up), main's FACES_TRACK_VERSION.
+      expect(track.version).toBe(FACES_TRACK_VERSION)
       expect(track.samples.map((s) => s.ms)).toEqual(Array.from({ length: 20 }, (_, i) => i * 200))
       for (const sample of track.samples) {
         const scene = SCENES[sample.ms < 2000 ? 0 : 1]

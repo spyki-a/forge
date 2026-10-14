@@ -2,6 +2,7 @@ import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
 import { basename, dirname, isAbsolute, join } from 'node:path'
 import type { Job } from '@shared/types'
 import {
+  FACES_TRACK_VERSION,
   RPC_ERRORS,
   SIDECAR_METHODS,
   type FacesParams,
@@ -256,7 +257,7 @@ async function writeWhole(file: string, text: string, tag: string): Promise<void
 /** The helper's face track file, checked for the shape reduceTrack reads. */
 async function readFaces(path: string): Promise<FacesTrack> {
   const data = JSON.parse(await readFile(path, 'utf8')) as Partial<FacesTrack>
-  if (data?.version !== 1 || !Array.isArray(data.samples)) throw new Error(`the face track at ${path} is not one this build reads`)
+  if (data?.version !== FACES_TRACK_VERSION || !Array.isArray(data.samples)) throw new Error(`the face track at ${path} is not one this build reads`)
   return data as FacesTrack
 }
 
@@ -303,8 +304,10 @@ export function createReframeJobs(deps: ReframeDeps): ReframeJobs {
     timing.probeMs = performance.now() - began
     check()
 
-    // The track for this key and version, analysed before at today's scene settings: nothing to do.
-    // (1a's eval will move SCENE_DEFAULTS; a track cut at the old ones is then analysed again.)
+    // The track for this key and version, analysed before at today's scene settings from today's face
+    // track: nothing to do. (1a's eval will move SCENE_DEFAULTS; a track cut at the old ones is then
+    // analysed again — and so is one reduced from another face-track version: version 1's samples were
+    // each up to half a slot late, protocol.ts FACES_TRACK_VERSION.)
     const file = subjectTrackPath(deps.userData, key)
     const onDisk = await readTrack(file)
     if (
@@ -313,7 +316,8 @@ export function createReframeJobs(deps: ReframeDeps): ReframeJobs {
       onDisk.width === info.width &&
       onDisk.height === info.height &&
       onDisk.scene.threshold === SCENE_DEFAULTS.threshold &&
-      onDisk.scene.minShotMs === SCENE_DEFAULTS.minShotMs
+      onDisk.scene.minShotMs === SCENE_DEFAULTS.minShotMs &&
+      onDisk.facesVersion === FACES_TRACK_VERSION
     ) {
       entry.outcome = { track: onDisk, cached: true }
       timing.cached = true
@@ -396,7 +400,8 @@ export function createReframeJobs(deps: ReframeDeps): ReframeJobs {
         detector: faces.detector,
         scene: found.scene,
         at: new Date().toISOString(),
-        ...(timeBase ? { timeBase } : {})
+        ...(timeBase ? { timeBase } : {}),
+        facesVersion: FACES_TRACK_VERSION
       }
       if (!checkSubjectTrack(track)) throw new ReframeFailure('failed', `${REFRAME_FAILURES.failed}: the track came out malformed`)
       check()

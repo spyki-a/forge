@@ -232,8 +232,8 @@ class Spec(unittest.TestCase):
     def test_the_helper_and_the_worker_name_the_same_codes(self) -> None:
         # faces.py keeps literal copies so it never imports the worker module.
         self.assertEqual(
-            (faces.FAKE_ENV, faces.EXIT_INPUT, faces.EXIT_IMPORT),
-            (mp_faces.FAKE_ENV, mp_faces.EXIT_INPUT, mp_faces.EXIT_IMPORT),
+            (faces.FAKE_ENV, faces.EXIT_INPUT, faces.EXIT_IMPORT, faces.TRACK_VERSION),
+            (mp_faces.FAKE_ENV, mp_faces.EXIT_INPUT, mp_faces.EXIT_IMPORT, mp_faces.TRACK_VERSION),
         )
 
     def test_the_fake_mode_is_read_strictly(self) -> None:

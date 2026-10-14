@@ -5399,6 +5399,32 @@ cut at 2000 ms): startMs 1000 / endMs 3000 gave ms 1000 … 2800; 1900–2900
 gave 1900, then 2100 … 2700; the whole file 0 … 3800. Every sample's scene
 matched its ms. A test since `2e88dba`.
 
+**Which frame a sample is: `fps=5` showed one 66.7 ms past its label;
+`fps=5:round=up` shows the one on screen at it** (slice B's verifiers, then
+the fix phase, 2026-10-14, on the bundled 4.4). A 2 s 30 fps clip whose
+frame n is grey 16 + 3n (`geq=lum='16+3*N'`, libx264 `-qp 0`), read at
+`fps=5` through `media.frame_args`' own chain:
+
+| filter | source frames, whole file | from a 500 ms seek |
+|---|---|---|
+| `fps=5` (rounds to nearest) | 2, 8, 14 … 56 (6k + 2) | 17, 23, 29, 35, 41 |
+| `fps=5:round=up` | 0, 6, 12 … 54 (6k) | 15, 21, 27, 33, 39 |
+
+`fps=` puts an input frame at t on slot round(t·5) and gives slot k the
+last frame put there or before; rounding up, that is the last frame with
+t ≤ k/5 — the one on screen at the label `start_ms + k·200`. Rounding to
+nearest, a sample labelled within 100 ms before a cut carried the next
+shot's face, and the reframe assigns samples to shots by their ms
+(`reduce.ts`). `round` and its `up` are in `vf_fps.c`'s option table at
+`f22fcd4` (:81, :85; read). The helper's face track is **version 2** since
+(`faces.TRACK_VERSION`, the worker's copy, protocol.ts
+`FACES_TRACK_VERSION`): the helper's cache key changes with it, and main's
+subject track records it (`facesVersion`), so a track reduced from
+version 1 is analysed again rather than handed back from
+`userData/subjects`. Tests: `test_media.py` (on CI's bare interpreter and
+the 2018 build too), the floor scan, and reframeJob.int's stand-in pass,
+every sample its label's own frame (offset 0; it was +2).
+
 **The face pass on 4K HEVC** (the user's face fixture, 26.6 s of
 3840×2160 HEVC at 30 fps; the stand-in detector, so this is decode and
 plumbing):

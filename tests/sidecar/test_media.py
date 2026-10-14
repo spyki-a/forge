@@ -80,6 +80,10 @@ def fixture(name: str) -> str:
         ffmpeg("-i", fixture("pattern.mp4"), "-c", "copy", "-metadata:s:v:0", "rotate=90", path)
     elif name == "rot180.mp4":
         ffmpeg("-i", fixture("pattern.mp4"), "-c", "copy", "-metadata:s:v:0", "rotate=180", path)
+    elif name == "numbered.mp4":
+        # 2 s at 30 fps, each frame its own grey (16 + 3n): which source frame a sample is, read off its pixels.
+        ffmpeg("-f", "lavfi", "-i", "color=c=black:s=64x36:r=30:d=2,format=yuv420p,geq=lum='16+3*N':cb=128:cr=128",
+               "-c:v", "libx264", "-qp", "0", "-pix_fmt", "yuv420p", path)
     elif name == "long.mp4":
         ffmpeg("-f", "lavfi", "-i", "testsrc=size=640x360:rate=30:duration=20", *encode, path)
     else:
@@ -343,6 +347,32 @@ class DecodeWithoutNumpy(unittest.TestCase):
         self.assertGreater(rgb_at(window, self.W, 32, 18, 2, self.H)[0], 200)
         self.assertGreater(rgb_at(window, self.W, 32, 18, 3, self.H)[2], 200)
         self.assertGreater(rgb_at(window, self.W, 32, 18, 4, self.H)[2], 200)
+
+    def test_each_sample_is_the_frame_on_screen_at_its_label(self) -> None:
+        """``fps=5:round=up``: sample i is source frame 6i on 30 fps, the one on screen at i × 200 ms.
+
+        ``fps``' default rounds to nearest, and gave frames 2, 8, 14… — 66.7 ms
+        past each label (measured on the Mac's 4.4, docs/EFFECTS.md §54), so a
+        sample labelled just before a cut carried the next shot's face. Each
+        frame's grey is read off the stream at 30 a second first, so the
+        colour conversion is the same on both sides; on CI this runs on the
+        2018 Windows build.
+        """
+        path = fixture("numbered.mp4")
+        grey = lambda data, i: data[i * self.W * self.H * 3 + (18 * self.W + 32) * 3]  # noqa: E731
+        every = self.bytes_of(media.frame_args(path, FFMPEG, 30, self.W, self.H))
+        frames = len(every) // (self.W * self.H * 3)
+        self.assertEqual(frames, 60)
+        levels = [grey(every, n) for n in range(frames)]
+        self.assertEqual(len(set(levels)), 60, f"every frame its own grey: {levels}")
+
+        def shown(data: bytes) -> list[int]:
+            count = len(data) // (self.W * self.H * 3)
+            return [min(range(frames), key=lambda n: abs(levels[n] - grey(data, i))) for i in range(count)]
+
+        self.assertEqual(shown(self.bytes_of(media.frame_args(path, FFMPEG, 5, self.W, self.H))), [0, 6, 12, 18, 24, 30, 36, 42, 48, 54])
+        # From a seek: 500 ms is frame 15, and each sample after it its own label's frame.
+        self.assertEqual(shown(self.bytes_of(media.frame_args(path, FFMPEG, 5, self.W, self.H, 500, 1500))), [15, 21, 27, 33, 39])
 
     def test_iter_frames_streams_with_nothing_installed(self) -> None:
         path = fixture("plain.mp4")

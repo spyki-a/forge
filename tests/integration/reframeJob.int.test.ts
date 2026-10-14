@@ -17,7 +17,7 @@ import {
   type ReframeCollected,
   type ReframeStage
 } from '@shared/reframe/job'
-import { SIDECAR_METHODS, type FacesParams, type FacesResult, type HelloResult } from '@shared/sidecar/protocol'
+import { FACES_TRACK_VERSION, SIDECAR_METHODS, type FacesParams, type FacesResult, type HelloResult } from '@shared/sidecar/protocol'
 import { SUBJECT_TRACK_VERSION, type SubjectTrack, type UnitRect } from '@shared/reframe/types'
 import type { Job } from '@shared/types'
 import { SCENE_DEFAULTS } from '@shared/reframe/shots'
@@ -94,12 +94,12 @@ function facesOnFrame(f: number): UnitRect[] {
 }
 
 /**
- * The source frames a sample labelled `ms` may show: the helper decodes at
- * `fps=5` (media.frame_args), whose slot k holds the last source frame before
- * k/5 + 100 ms (fps='s rounding to nearest) — measured on this clip, frame
- * 6k + 2, 66.7 ms past the label; with `round=up` it would be frame 6k, the
- * label's own. Both are in this window, so the check holds either way and the
- * offset found is written down rather than pinned.
+ * The source frames a sample labelled `ms` could show, from its label to half
+ * a slot past it. The helper decodes at `fps=5:round=up` (media.frame_args),
+ * whose slot k holds the frame on screen at k/5 — frame 6k on this 30 fps
+ * clip, the label's own. Before 2026-10-14 it was `fps=5`, rounding to
+ * nearest: frame 6k + 2, 66.7 ms late (faces track version 1). The window
+ * lets the check name the frame it found; the offset is then pinned at 0.
  */
 const framesFor = (ms: number): number[] => {
   const out: number[] = []
@@ -418,7 +418,7 @@ describe('the analysis job with a stand-in helper client — the shot finder rea
         for (let ms = 0; ms < 6000; ms += 200) samples.push({ ms, faces: facesOnFrame((ms * 30) / 1000).map((f) => ({ ...f, score: 0.9 })) })
         await mkdir(tracks, { recursive: true })
         const track = join(tracks, `faces-${asked.length}.json`)
-        await writeFile(track, JSON.stringify({ version: 1, samples }))
+        await writeFile(track, JSON.stringify({ version: FACES_TRACK_VERSION, samples }))
         const result: FacesResult = {
           width: p.width, height: p.height, durationMs: 6000, sampleFps: 5, frames: samples.length,
           withFace: samples.length, detector: 'test-stand-in/client', track, cached: false
@@ -454,7 +454,7 @@ describe('the analysis job with a stand-in helper client — the shot finder rea
     notes.push(`- a stand-in client: the job asked ${asked.join(', ')}`)
   }, 60_000)
 
-  it('a track on disk cut at other scene settings is analysed again — a re-tune of SCENE_DEFAULTS never hands back the old cuts', async () => {
+  it('a track on disk cut at other scene settings, or from another face-track version, is analysed again — never handed back', async () => {
     const userData = join(dir, 'userdata-scene-settings')
     const asked: string[] = []
     const jobs = createReframeJobs({ sidecar: standIn(asked, join(dir, 'stand-in-tracks')), userData, ffmpeg: FFMPEG, ffprobe: FFPROBE })
@@ -472,15 +472,20 @@ describe('the analysis job with a stand-in helper client — the shot finder rea
     const file = subjectTrackPath(userData, (await fileKey(CLIP))!)
     for (const [what, change] of [
       ['the threshold', (t: SubjectTrack) => ({ ...t, scene: { ...t.scene, threshold: SCENE_DEFAULTS.threshold + 0.05 } })],
-      ['the shortest shot', (t: SubjectTrack) => ({ ...t, scene: { ...t.scene, minShotMs: SCENE_DEFAULTS.minShotMs + 250 } })]
+      ['the shortest shot', (t: SubjectTrack) => ({ ...t, scene: { ...t.scene, minShotMs: SCENE_DEFAULTS.minShotMs + 250 } })],
+      // The helper's sampling: version 1's samples were each up to half a slot late (media.frame_args' round=up).
+      ['the face track’s version', (t: SubjectTrack) => ({ ...t, facesVersion: FACES_TRACK_VERSION - 1 })],
+      ['a track from before the face track’s version was kept', ({ facesVersion: _, ...t }: SubjectTrack) => t]
     ] as const) {
       const onDisk = JSON.parse(await readFile(file, 'utf8')) as SubjectTrack
       await writeFile(file, JSON.stringify(change(onDisk)))
       expect(await pass(), `${what} on disk is not today's: analysed again, one scene pass`).toEqual({ cached: false, scenePasses: 1 })
       // And written back at today's settings: the next is from disk.
-      expect((JSON.parse(await readFile(file, 'utf8')) as SubjectTrack).scene).toMatchObject({ threshold: SCENE_DEFAULTS.threshold, minShotMs: SCENE_DEFAULTS.minShotMs })
+      const written = JSON.parse(await readFile(file, 'utf8')) as SubjectTrack
+      expect(written.scene).toMatchObject({ threshold: SCENE_DEFAULTS.threshold, minShotMs: SCENE_DEFAULTS.minShotMs })
+      expect(written.facesVersion).toBe(FACES_TRACK_VERSION)
     }
-    notes.push('- a track on disk at another threshold, or another shortest shot: analysed again (one scene pass each), then from disk')
+    notes.push('- a track on disk at another threshold, another shortest shot, another face-track version or none: analysed again (one scene pass each), then from disk')
   }, 60_000)
 
   it('a cancel in the shots stage stops the scene pass at once: cancelled within 1 s, its ffmpeg killed, nothing else asked', async () => {
@@ -594,6 +599,8 @@ describeWithVenv(
         expect(match, `${sample.ms} ms: ${JSON.stringify(sample.faces)} is no frame's in ${framesFor(sample.ms).join(', ')}`).toBeDefined()
         offsets.add(match! - (sample.ms * 30) / 1000)
       }
+      // Every sample is the frame on screen at its label: round=up, not the old rounding to nearest (+2 frames).
+      expect([...offsets], 'source frames between each sample’s label and the frame it shows').toEqual([0])
       // The third shot: the larger (blue, 0.7) first, then the red (0.9).
       expect(track.samples.filter((s) => s.ms >= 4000).every((s) => s.faces.map((f) => f.score).join() === '0.7,0.9')).toBe(true)
 
@@ -627,7 +634,7 @@ describeWithVenv(
       notes.push(
         `- the pass: probe ${s(t.probeMs)}, gate ${s(t.gateMs)}, shots ${s(t.shotsMs)}, faces ${s(t.facesMs)}, reduce and write ${s(t.reduceMs)}; total ${s(t.totalMs)}`,
         `- the track: ${track.shots.length} shots (pts ${track.shots.map((x) => x.startPts).join(', ')} on ${track.timeBase!.num}/${track.timeBase!.den}), ${track.samples.length} samples, each box a source frame's within 1 px; ${size} B at ${name}`,
-        `- the frame each sample shows, against its label: +${[...offsets].join(', +')} source frame(s) — the helper's fps=5 rounds to nearest, so a sample labelled k·200 ms is the last frame before k·200 + 100 ms (66.7 ms late on 30 fps); fps=5:round=up shows the label's own frame`,
+        `- the frame each sample shows, against its label: +${[...offsets].join(', +')} source frame(s) — the helper's fps=5:round=up shows the frame on screen at the label (face track version ${FACES_TRACK_VERSION}); fps=5 rounding to nearest showed frame 6k + 2, 66.7 ms late`,
         `- the bar's stages, in order: ${order.join(' → ')}`
       )
     }, 120_000)

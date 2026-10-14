@@ -625,7 +625,9 @@ describe('every other ffmpeg command runs on the oldest bundled ffmpeg', () => {
     expect(filterOf(byName.get('a steady clip’s motion analysis')!)).toContain('vidstabdetect=')
     expect(filterOf(byName.get('the chroma-key scale probe (main, at launch)')!)).toContain('chromakey=')
     const helper = helperArgs()
-    expect(filterOf(helper.frames).split(','), 'the frame stream').toEqual(expect.arrayContaining(['fps=5']))
+    // fps's `round` and its `up` are in vf_fps.c's option table at f22fcd4 (:81, :85; read): each sample the frame
+    // on screen at its ms (media.frame_args, EFFECTS.md §54), where the default rounding showed one 66.7 ms later.
+    expect(filterOf(helper.frames).split(','), 'the frame stream').toEqual(expect.arrayContaining(['fps=5:round=up']))
     // indexOf is -1 for a missing -ss, which is "before" anything: present first, then before.
     expect(helper.frames.indexOf('-ss'), 'the frame stream seeks').toBeGreaterThanOrEqual(0)
     expect(helper.frames.indexOf('-ss'), 'the seek before the input').toBeLessThan(helper.frames.indexOf('-i'))

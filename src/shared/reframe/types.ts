@@ -78,4 +78,12 @@ export interface SubjectTrack {
    * it: keys.ts then keys each cut from its printed ms.
    */
   timeBase?: { num: number; den: number }
+  /**
+   * The helper's face-track version these samples were reduced from
+   * (protocol.ts `FACES_TRACK_VERSION`). Main's cache analyses a file again
+   * when it is not today's: the helper's sampling changed under version 2
+   * (each sample the frame on screen at its ms). Absent on a track from
+   * before it was kept.
+   */
+  facesVersion?: number
 }
