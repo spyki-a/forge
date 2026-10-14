@@ -4,7 +4,9 @@
 > step 0 (§3.1–§3.7); M0 (§3b, run on your ten links, §3b.9); and step 1's
 > 1b to 1f with the UI, the harness check and the render check (§4.2–§4.9;
 > 1d's salient box is in the helper, but no job calls it, §16.35). Not built:
-> 1g, step P (§3a), and everything from step 2 on. Step 1's exit waits on
+> 1g, step P, and everything from step 2 on. **Step P is planned, not
+> built** (2026-10-14): §3a is written in full, revised after two reviews,
+> at 9.5–13 days, with §16.36–50 open for you. Step 1's exit waits on
 > runs only you can make (§4.10). Nothing after `d7244ce` is pushed: all
 > of 1f, its render half and its action half, waits for your push and
 > Windows CI.
@@ -174,7 +176,7 @@ code composes and checks.** In this piece that means:
 |---|---|---|---|---|
 | **0** | the ground: R5's rotation-aware probe, held keys landing on their frame, `adelay` in samples, zoom keys on video, **the graph in a file**, the floor list, the helper's shared media code | 4.5 | — | the measured bugs under every later step are gone, the three shipping ones (§3.2–3.4) first |
 | **M0** (§3b) | **the URL transcript → Clip it**: the link's own captions (no media, no model), rows of time and text, a run picked by click and shift-click or by two cut handles, chapter chips, the exact ranged download of exactly that run with its words and the link's credit, Add another clip; the start/end fields kept for a video with no captions; the timeline half (`clipToRange`, `timelineFrameAt`) | 7.5, **moved** from step 4 | §3.3 only (pulled ahead of it); the rest of step 0 follows | sheets 25–26: a link becomes the clip the user picked by its words, with no Python |
-| **P** (§3a) | **BETA R4's full route**: the app installs its own Python pack under `userData` | 5–10 (`BETA.md` R4's 5 to 10 days) | — | every Python half below reaches an installed user |
+| **P** (§3a) | **BETA R4's full route**: the app installs its own Python pack under `userData` | 9.5–13 (planned 2026-10-14, §3a; `BETA.md` R4 had 5 to 10; 9–12 if the speech model's press waits, §16.49) | — | every Python half below reaches an installed user |
 | **1** | the reframe engine: scene cuts in main, faces (MediaPipe), a salient box, Florence-2 grounding, the crop path with the stacked two-up, the followed crop, "Reframe to 9:16" | 17.5 (1g Florence is 3 of them, gated by its own measurement; 18 if the Surface run fails and YuNet's decoder is built) | 0; P for faces on an installed machine | a landscape talk becomes a 9:16 that follows its subject, frame-exact at every cut, and two people too far apart share the frame |
 | **2** | caption free space | 2.5 | 1 | captions stay off faces, stable within a shot |
 | **3** | the graphics engine (six 2D templates), the graphic style, the Director's third pass with its validator | 14.5 | 2 for placement (degrades to the style's third without it) | a spoken number becomes a counter that lands on the word, and nothing unsaid is ever drawn |
@@ -183,8 +185,10 @@ code composes and checks.** In this piece that means:
 | **6** | retrieved-fact cards (Wikipedia, page, answer-with-sources over fetched text); the 3D templates | 7 | 3, 5 | facts from outside, with their sources; three.js graphics |
 | **7** | creator styles and saved templates | 4.5 | 3; **`MARKET.md` Stage 0** (below) | toward `MARKET.md` Stage 1 |
 
-**About 75.5 working days, plus Step P's 5–10: about 80.5–85.5 days,
-sixteen to seventeen weeks, honestly counted.**
+**About 75.5 working days, plus Step P's 9.5–13: about 85–88.5 days,
+seventeen to eighteen weeks, honestly counted.** (P was held at `BETA.md`
+R4's 5–10 until it was planned in full on 2026-10-14, §3a; the plan and its
+two reviews put it at 9.5–13, with two open-ended risks left uncounted.)
 
 The arithmetic, so it can be checked. **The first draft's total was 76.5**,
 with what the review added: step 0 +0.5 (the graph in a file, §3.7); step 1
@@ -215,8 +219,8 @@ slack rather than being moved.
 | before the answers | 4.5 | (2, inside 4) | 16 | 2.5 | 14.5 | 11 | 15.5 | 8 | 4.5 | **76.5** |
 | after | 4.5 | 7.5 | 17.5 | 2.5 | 14.5 | 3.5 | 14 | 7 | 4.5 | **75.5** |
 
-76.5 + (7.5 − 7.5) + 2 − 0.5 − 2 + 0.5 − 1 = 75.5. With Step P's 5–10,
-80.5–85.5 days.
+76.5 + (7.5 − 7.5) + 2 − 0.5 − 2 + 0.5 − 1 = 75.5. With Step P's 9.5–13
+(§3a's table, 2026-10-14), 85–88.5 days.
 If the Surface run fails and YuNet's decoder is built after all, add 0.5.
 
 **These dates are conditional on "your part" below**: step 1a cannot run
@@ -772,30 +776,1662 @@ on Windows (that run is the measurement for §3.3, §3.4 and §3.7 there).
 
 ---
 
-## 3a. Step P — Python on an installed machine · 5–10 days (`BETA.md` R4's full route)
+## 3a. Step P — Python on an installed machine · 9.5–13 days (`BETA.md` R4's full route; R4 had 5–10)
 
-**What is wrong.** The installers ship no Python (`service.ts:26-35`); the
-packaged app spawns a bare interpreter, because `.venv` is excluded. Every
-Python half of this plan (faces, salient, ground, Whisper for own footage
-and for links without captions) reaches no installed user until this lands.
-`BETA.md` R4 called the full route "later" and "Not for the beta"; you
-decided otherwise (`SHEETS.md:806-809`), R4 now points here (edited
-2026-10-05, §16.25), and this step is that decision, scheduled.
+> **Planned 2026-10-14, not built.** Written from three readers (the
+> interpreter sources, the wheel set, and the product side read from the
+> code). Every size, version, wheel tag and licence below was fetched that
+> day from PyPI's JSON (`pypi.org/pypi/<name>/<version>/json`), GitHub's API
+> (`api.github.com/repos/astral-sh/python-build-standalone/releases`, the
+> `20261001` tag re-read for this text), python.org's release API and the
+> projects' own sources on `raw.githubusercontent.com`, or measured on the
+> dev Mac (the venv's CPython 3.14.6, Electron 44.3.0's Node 24.20.0).
+> Nothing was downloaded but JSON and text, plus 4-byte gzip trailers and
+> zip indexes read by byte range, so sizes and DLL lists could be measured
+> without fetching an interpreter or a wheel. What was not measured says
+> **unmeasured**. Nothing in `src/` or `sidecar/` changed for this plan. The
+> URLs are in §3a.11.
+>
+> **Revised the same day after two reviews**: forty findings, seven of them
+> high, several found by both. The reviewers measured more: the PE import
+> tables of the Windows wheels' native files, the CPython 3.14 path
+> calculation's registry read, the client with a slow fake helper, the
+> central directories of all 48 Windows wheels, and `huggingface_hub`'s and
+> `httpx`'s network code. Their numbers are cited as theirs, dated
+> 2026-10-14. The writer re-fetched the release's asset list, scikit-learn's
+> Windows wheel index and CPython 3.14's `getpath.py`, and re-read the code
+> each finding names (`client.ts`, `service.ts`, `ipc.ts`, `voice.ts`,
+> `separate.ts`, `store.ts`, `binary.ts`, `asr.py`, mediapipe's
+> `mediapipe_c_bindings.py`). Each fix is written in place. The two places
+> this text goes another way than a review (the days, and development's own
+> pack root beside the review's lock) say why where they fall.
 
-**What it is**, as `BETA.md` R4 sketches it: a Python pack the app installs
-under `userData` (300 MB or more, 5 to 10 days by that estimate), from
-`requirements.txt` plus the optional files this plan adds (§12). Its own
-download button with its size (§0's click rule), its own progress, a
-version, and a repair path.
+**What is wrong.** The installers ship no Python, and a packaged app walks
+`service.ts:26-35` to a PATH interpreter: `FORGE_PYTHON`, then
+`sidecar/.venv` (which `electron-builder.yml:63-77` filters out, so it never
+matches once packaged), then the literal `python` on Windows and `python3`
+elsewhere. On a Windows with no Python, `python` is the Store's alias stub:
+it exits 9009, the client restarts it three times with backoff
+(`client.ts:158-168`) and then says "The AI helper keeps crashing and has
+been stopped" (`service.ts:71-73`). On a clean Mac, `python3` may raise
+Apple's Command Line Tools dialog (R4, unverified). So every Python half of
+this plan (faces for the reframe, Whisper for own footage and for links
+without captions, depth, beats) reaches no installed user. Seven smaller
+faults sit in the same path:
 
-**Its details are written here when the step begins**, since `BETA.md` R4
-now points to this section (§16.25). This plan holds the bar now: **no step's Python half is shipped
-in an installer until P is in it**, and every Python control is greyed with
-"needs the AI helper" before then, never offered as a control that changes
-nothing (§12).
+- **Every helper call can spawn, not only the status ask.** `voiceStatus`
+  calls `getSidecar().start()` each time the voice providers are listed
+  (`voice.ts:73`). Beats, depth, measure and transcribe (`ipc.ts:718`, `:752`,
+  `:799`, `:958`), stems (`separate.ts:38`) and the voice calls (`voice.ts:114`,
+  `:148`) call `request()`, which spawns when there is no child
+  (`client.ts:203-206`) with `options.python ?? FORGE_PYTHON ?? 'python3'`
+  (`client.ts:117`). A fix at the status ask alone leaves the 9009 loop in
+  place.
+- **A second ask before the first hello spawns a second helper.** `start()`
+  returns early only when `running && hello` (`client.ts:108-109`). While a
+  hello is out it calls `spawnChild()` again, which overwrites `this.child`
+  and resets the decoder both children's stdout feed. At every launch
+  `startSidecar` starts one child (`index.ts:244`), and `App.tsx:234-244`
+  asks `sidecar:status` on mount, which calls `start()` (`ipc.ts:1005-1012`).
+  A reviewer measured it with `client.ts` and a fake helper that answers
+  hello after 1.5 s: `start()`, then `start()` 300 ms later, got answers from
+  two pids (7087 and 7099); after `stop()`, 7087 was still alive 2.5 s
+  later. The window is the hello's duration: tiny on a bare interpreter,
+  seconds with the pack's registration imports on a cold Surface. A 30 s
+  hello timeout rejects without killing its child (`client.ts:111`,
+  `:221-226`), so the next ask spawns yet another. And `stop()`'s SIGKILL
+  after 1.5 s (`client.ts:276`) kills only `python.exe` on Windows, so a face
+  worker or its ffmpeg survives.
+- **A restart that works is never told to the window.** `client.ts:112`
+  emits `ready`, but `startSidecar` listens only for `log` and `gaveUp`
+  (`service.ts:70-73`), and a crash after `ready` is not told until the
+  client gives up. A switch to a newly installed pack depends on that
+  broadcast.
+- **Two Python controls gate on the process, not the method.** MediaPool's
+  Transcribe (`MediaPool.tsx:262-265`) and LinkTranscript's reason
+  (`LinkTranscript.tsx:157`, `:183`) read `sidecarReady`. On a bare
+  interpreter, where every optional method is degraded, Transcribe is
+  offered and fails when pressed. The reframe already gates on its methods
+  (`reframeHelperFrom`, `job.ts:247-256`).
+- **Transcribe would fetch 464 MB that no button names.** MediaPool's
+  Transcribe calls `transcribeAsset`; `ipc.ts:942-970` passes `model` as
+  undefined; `asr.py:26-37` builds `WhisperModel(size,
+  download_root=models_dir())` with no revision and no local-only flag, and
+  faster-whisper 1.2.1's `download_model` calls
+  `huggingface_hub.snapshot_download(repo_id, revision=None,
+  local_files_only=False)` (read by a reviewer, 2026-10-14). Once P makes
+  `asr.transcribe` available, the first press fetches
+  `Systran/faster-whisper-small` (464 MB on disk, §12) with no size on any
+  button, which breaks §0's click rule; it fetches at `main`, so an upstream
+  push changes the model with no press; and every session's first load asks
+  `huggingface.co`. Behind a proxy that is set but unreachable,
+  `httpx.ProxyError` is re-raised (`_snapshot_download.py:277-279`), so a
+  model already on disk will not load. Nothing in `src/renderer` offers the
+  speech model, and LinkTranscript's Listen is a disabled button that says
+  "soon".
+- **The Settings row shows green "Running" for a bare interpreter**
+  (`helperState`, `SettingsPanel.tsx:50-54`), which is CI's state and any
+  user's own `python`.
+- **Neither of today's fetchers can carry the pack.** Both hold a whole body
+  in memory (`binary.ts:385-400`, `packs.ts:258-275`), the packs then
+  `gunzipSync` the archive (`packs.ts:166`), and `readTar` refuses every
+  symlink and skips PAX records (`tar.ts:135-141`), so a member whose name is
+  only in a PAX `path` record would be written under its truncated ustar
+  name.
 
-**Exit.** A clean Mac and the Surface, with no Python of their own, install
-the pack from the app and pass the twelve helper tests from inside it.
+**What it is.** A pinned CPython 3.14.8 from python-build-standalone,
+unpacked under `userData/python/<pack>/`, with the base pack's wheels (47 on
+the Mac, 48 on Windows) installed into its own site-packages by its own pip,
+**offline**, from files the app fetched itself and checked against a lock
+the app ships. It is started with its own flags and a cleaned environment,
+so nothing of a user's own Python reaches it. One press in Settings,
+**Install the AI helper · 170 MB** on the Mac and **· 205 MB** on Windows
+(§0's click rule: the size is on the button before the press); a row in the
+EXPORT strip with its bar and its X; a receipt that is the version; Repair
+and Remove, each with its size. A packaged app never spawns a PATH Python
+again: with no pack it says **Not installed**, and **no caller starts
+anything**. The speech model gets its own sized press (§16.49).
+
+**The bar, unchanged.** No step's Python half ships in an installer until P
+is in it, and every Python control stays greyed "needs the AI helper" until
+then, never offered as a control that changes nothing (§12).
+
+**Exit** (in full in §3a.9). A clean Mac and the Surface, with no Python of
+their own, install the pack from the app and pass the helper's tests from
+inside it: `sidecar.int`'s 15, `sidecarMedia.int`'s Python cases with none
+skipped, and the capability suites, started **through the pack's own
+launch** (its flags and environment), with hello's `sys.prefix` and every
+`sys.path` entry inside the pack or the app's `sidecar` folder. CI does the
+same on every push on Windows, and on a macOS 14 runner if §16.48 is
+answered (b). (The old text said
+"the twelve helper tests"; `sidecar.int.test.ts` has 15.)
+
+**The days**, against the 5–10 R4 held:
+
+| piece | days | written in |
+|---|---|---|
+| row 26 (the pinned archives fetched into a scratch folder and read) and row 19 widened (`net.fetch`, one Hugging Face press and one `fetch_url` press, behind one proxy) | 0.5 | §3a.8 |
+| the lock script with its completeness check, the `pack.ts` manifest, the interpreter pins, hf-xet's measurement | 0.5–1 | §3a.1 |
+| the interpreter order, `absent` at every caller, the launch with its flags and clean environment, `restartSidecar` with `ready` and `exit` broadcast, `executable`, `prefix` and `path` in hello | 0.5–1 | §3a.2 |
+| one helper process: `start()` single flight, a hello timeout that kills, the status ask answered from the broadcast, the Windows tree kill, no `'python3'` default | 0.5 | §3a.2 |
+| the fetcher: many files, sha256 and a byte count while streaming, a retry budget per file, the job's own signal, file-level resume, renames retried on Windows, `binary.ts`'s retry lifted with host-named reasons, an injected fetch | 1–1.25 | §3a.3 |
+| the streaming tar reader (PAX names, in-root symlinks) and the Windows path check | 0.5 | §3a.3 |
+| the pip stage with its progress and cancel; `system.selftest` in fresh processes, mediapipe's library load among them | 1–1.25 | §3a.3 |
+| the job on its own queue: stages, Repair that fetches first, Remove, Update, quit, the launch sweep, the lock across app instances | 1–1.25 | §3a.3 |
+| the speech model's own press, pinned and loaded local-only (§16.49) | 0.5–1 | §3a.4 |
+| the UI: the Settings row in its states, the sized buttons, the pointers, gating by method, the harness bridge and the census | 1–1.5 | §3a.4 |
+| tests with their mutations; CI's real install on Windows and macOS 14, its cache, the URL probe, the PE import listing, `pip check`, the suites through the pack's launch | 1.5–1.75 | §3a.6, §3a.7 |
+| the clean Mac and the Surface, and what they find | 0.5–1 | §3a.9 |
+| docs | 0.5 | §3a.10 |
+| **P** | **9.5–13** | |
+
+**Where it lands: 9.5–13, above the 5–10 R4 held.** The first draft of this
+plan counted 7.5–10; the reviews added work the plan itself assigns to P
+and had left out of the table: rows 19 and 26, the speech model's press
+(0.5–1), `absent` at every caller and one helper process (0.5), the PE
+import listing and the lock's completeness check, the job's hardening, and
+macOS back in the push matrix. *A note on the disagreement:* the review put
+P at about 9.5–12.5. This text counts half a day more at the top, because
+Repair fetching first, the lock across instances, the receipt removed
+first, retried renames, byte counting and a budget per file each come with
+a test and a mutation, and the review left them inside the first draft's
+rows. If the speech model's press waits (§16.49 (b)), P is 9–12. **Not
+counted, and open-ended:** what the capability suites find on their first
+Windows run (they have never run there, §12), and a missing Visual C++
+runtime on a clean Windows (§16.45). Either can take P past 13. With P at
+9.5–13, §2's total becomes 75.5 + 9.5–13 = **85–88.5 days**.
+
+### 3a.1 P.1 — The sources · 0.5–1 day
+
+#### The interpreter
+
+python-build-standalone (astral-sh), the `install_only_stripped` flavour,
+the normal (GIL) build, not `freethreaded` (its wheels would have to be
+`cp314t`) and not the `debug`, `pgo` or `lto` archives. It is the only
+source that puts a working interpreter under a user folder **with no admin
+and no installer on both platforms**, and it is what `uv python install`
+fetches by default (`uv`'s `fetch-download-metadata.py` lists
+`install_only_stripped` first; its `download-metadata.json` carries the same
+sha256 GitHub does).
+
+| platform | asset (release `20261001`, published 2026-10-01T22:37:31Z) | bytes | sha256 | unpacked |
+|---|---|---|---|---|
+| macOS arm64 | `cpython-3.14.8+20261001-aarch64-apple-darwin-install_only_stripped.tar.gz` | 26,680,498 | `69e48cd7f54261df5b6abbd374f69fe6e496fa781d271592aeef49cd5ffbea6c` | 69,430,272 B of tar (the `20261013` build's, from its gzip trailer; `20261001`'s within 3 KB compressed) |
+| Windows x64 | `cpython-3.14.8+20261001-x86_64-pc-windows-msvc-install_only_stripped.tar.gz` | 23,227,899 | `b7ff8b700995379e425b39abce9b087d84a45aa265ea465c0069c2747ea5b2ea` | 63,299,584 B of tar (likewise) |
+
+Both from GitHub's per-asset `digest` field (re-read 2026-10-14); the
+release's `SHA256SUMS` (142,015 B) agreed on every row read, so the app
+needs only the pin, never the sums file. The download URL is
+`https://github.com/astral-sh/python-build-standalone/releases/download/20261001/<asset>`
+with the `+` as `%2B`; it answers with a redirect to
+`release-assets.githubusercontent.com`, which honoured an explicit byte
+range (206) and refused a suffix range (`bytes=-4`, 501).
+
+- **Pin a tag, never `latest`.** Twelve releases came between 2026-08-04 and
+  2026-10-13, about one every six days, and the newest (`20261013`) was
+  hours old with its notes still "TBD". `20261001` is the first with 3.14.8
+  and is two weeks old from 2026-10-15; P pins the newest tag that has stood
+  two weeks on the day it starts.
+- **Stripped, not plain, on Windows.** The plain Windows archive at
+  `20261001` is **50,181,000 B** because it carries the PDBs (the first
+  draft's 50,245,204 B is `20261013`'s); stripping (`release.rs`
+  `convert_to_stripped`) more than halves it. On the Mac the two differ by
+  under 0.5 % (26,815,246 against 26,680,498 B).
+- **Windows on Arm, for later.** The same release publishes a native
+  `cpython-3.14.8+20261001-aarch64-pc-windows-msvc-install_only_stripped.tar.gz`,
+  22,228,934 B. The app ships x64 only (`electron-builder.yml:84-85`), so P
+  does not use it (§16.44).
+- **What is inside** (read in the build scripts, confirmed on first unpack,
+  §3a.8 row 26): pip 26.2.1 pre-installed (`build-cpython.sh:1031`, Windows
+  `build.py:1792-1817`); no `ensurepip` run; on Windows no `pip.exe`
+  (`build.py:1829-1838`), so it is always `python -m pip`; `vcruntime140.dll`
+  and `vcruntime140_1.dll` beside `python.exe` (`PC/layout/main.py:164-169`;
+  issue #855 kept their signatures through stripping); OpenSSL linked into
+  `_ssl` on the Mac with `--openssldir=/private/etc/ssl`
+  (`build-openssl-3.5.sh:46`), and `/private/etc/ssl/cert.pem` exists on this
+  Mac (333,483 B). **Unmeasured, and row 26's:** whether the archive ships
+  the standard library's `__pycache__` (the pack starts with
+  `-B`, §3a.2, so a missing `.pyc` would be compiled in memory at every
+  start), and whether an `EXTERNALLY-MANAGED` file is present.
+- **Signatures.** The arm64 binaries are ad-hoc linker-signed (issue #749);
+  Developer ID signing is only being rehearsed (PR #1255, opened
+  2026-09-09). Apple Silicon needs a valid signature, and ad hoc counts.
+  Gatekeeper assesses quarantined code, and a file written by Electron
+  44.3.0's Node (`ELECTRON_RUN_AS_NODE`) carried no `com.apple.quarantine`,
+  only `com.apple.provenance` (measured). Chromium's download pipeline is
+  what quarantines (`base_file.cc` → `quarantine_mac.mm`), so the pack is
+  **never** fetched through `session.downloadURL` or `will-download`. The
+  dev Mac has never run the helper on an ad-hoc-signed interpreter (its venv
+  is python.org's Developer ID build): the clean Mac is the first test
+  (§3a.8 row 31), and its fallback is named there.
+- **Why not the others** (each fetched 2026-10-14):
+
+  | source | why not |
+  |---|---|
+  | python.org macOS `.pkg` (3.14.8, 75,240,265 B) | `IFPkgFlagAuthorizationAction = RootAuthorization`, installs to `/Library/Frameworks`: an admin password (`build-installer.py:1494-1503`) |
+  | python.org Windows installer `/quiet` per-user (3.14.8, 33,387,464 B) | registers with Windows and shares the user's own per-minor slot; the 3.14 manual has moved to the Install Manager; no 3.12 binaries since 3.12.10 (2025-04-08) |
+  | python.org Windows embeddable zip (3.14.8, 12,601,679 B) | no pip, a `._pth` that restricts the path, and the C runtime left out (the manual says so); Windows only, so two sources |
+  | Microsoft Store / Install Manager | needs its own UI; the alias stub exits 9009 (`CLAUDE.md`) |
+  | uv 0.13.1 (Mac tar 14,280,170 B; Windows zip 15,308,685 B, `uv.exe` 32,095,024 B) | the same archives plus a 28–32 MB binary to keep current; its value is a resolver this route does not need. Kept in reserve if pip proves slow on the Surface (§3a.8 row 27) |
+  | winget, Homebrew | system tooling a user runs, not an app |
+
+- **Licence.** CPython is PSF-2.0 / CNRI-Python; the build scripts are
+  MPL-2.0 (the build system, not the interpreter). The components at
+  `20261013`: OpenSSL 3.5.9 Apache-2.0, zlib 1.3.2 and zlib-ng 2.2.4 Zlib,
+  libffi 3.8.0 MIT, expat 2.9.0 MIT, xz 5.8.4 0BSD, mpdecimal 4.0.0 BSD-2,
+  libedit BSD-3 (built instead of readline, and `_gdbm` disabled, both to
+  avoid GPL, `docs/running.md`), Tcl/Tk 9.0.4 TCL, SQLite public domain. The
+  third-party licence texts are only in the **full** archive
+  (`python/licenses/`); `install_only` keeps CPython's `LICENSE.txt`. So the
+  credits page carries the components' texts.
+
+#### The wheels
+
+The roots are the pins already in `requirements.txt`,
+`requirements-faces.txt` and `requirements-faces-nodeps.txt`; every
+transitive package is pinned to what `sidecar/.venv` runs (48
+distributions, pip among them). Markers were evaluated per target and each
+wheel picked by pip's ranking (`packaging.tags` 26.3). **Every package has a
+binary wheel for cp312 and cp314 on both platforms; none is sdist-only and
+none needs a compiler.**
+
+| target | wheels | wheel bytes | with the interpreter (`20261001`) | the button (`pack.ts` `formatBytes`) |
+|---|---|---|---|---|
+| macOS arm64, cp314 | 47 | 151,510,094 | 178,190,592 | **170 MB** |
+| Windows x64, cp314 | 48 (colorama, by tqdm's Windows marker) | 191,876,652 | 215,104,551 | **205 MB** |
+| macOS arm64, cp312 | 47 | 151,530,925 | (3.12.15: 25,023,573) | — |
+| Windows x64, cp312 | 48 | 189,174,743 | (3.12.15: 22,013,771) | — |
+
+**On disk, about 0.7 GB on both.**
+
+- **The Mac, measured.** The 47 distributions' RECORD sizes in the dev venv
+  are **587.9 MB** (11,629 files, 99.3 MB of them `.pyc`), 3.88× the wheel
+  bytes. With the interpreter's ~69 MB of tar that is **about 0.66 GB**.
+- **Windows, measured from the wheels' indexes** (a reviewer, 2026-10-14;
+  the first draft's 0.84 GB was an estimate from the Mac's ratios and is
+  withdrawn). The central directories of all 48 Windows cp314 wheels sum to
+  556,756,305 B in 6,528 files, of which 4,373 are `.py` (77,229,712 B). At
+  the dev venv's measured `.pyc`-to-`.py` byte ratio (1.313: 105,047,119 /
+  79,995,354 B), pip's compile adds about 101 MB. That gives **about 0.66 GB
+  of packages and about 0.72 GB** with the interpreter's 63.3 MB of tar.
+  NTFS slack on about 15,000 files adds roughly 30 MB (an estimate).
+- **The peak during an install** is the download plus the tree: about
+  0.84 GB on the Mac and about 0.94 GB on Windows, until the downloads are
+  deleted (§16.47).
+
+R4's "300 MB or more" was right for the download only. CI's install measures
+both platforms (§3a.6), and the manifest carries the measured numbers.
+
+The heavy ones (cp314; Mac / Windows wheel bytes):
+
+| package | version | wheels | on disk (Mac) | why it is there |
+|---|---|---|---|---|
+| llvmlite | 0.49.0 | 40,479,230 / 42,986,588 | 130.96 MB | numba, for librosa |
+| scipy | 1.18.1 | 20,466,839 / 37,362,755 | 98.26 MB | librosa; depth's clustering; vision |
+| onnxruntime | 1.30.0 | 21,545,313 / 14,675,319 | 82.72 MB | depth, salient, ground |
+| av | 18.1.0 (abi3) | 18,217,603 / 27,595,679 | 46.01 MB | **faster-whisper decodes with it** (`transcribe.py:387` → `audio.py:46 av.open`), and imports it on `import faster_whisper` |
+| mediapipe | 0.10.35 (`py3-none`) | 17,782,605 / 10,905,503 | 55.21 MB | the face finder, installed `--no-deps` (the stub route, unchanged) |
+| ctranslate2 | 4.8.2 | 1,272,406 / 19,478,465 | — | faster-whisper |
+| numpy | 2.5.3 | 5,449,793 / 12,698,179 | — | everything |
+
+What each capability brings alone: Whisper (av, ctranslate2,
+faster-whisper, tokenizers) 23.7 / 51.1 MB of download, 63.0 MB on the
+Mac's disk; faces (mediapipe, absl-py, sounddevice) 18.9 / 12.1 MB,
+58.6 MB; **librosa's chain (18 packages) 54.6 / 57.1 MB, 222.7 MB on disk,
+38 % of the Mac's packages, for `audio.beats` alone** (beats.py's
+`librosa.segment.agglomerative` and `chroma_cqt` run the whole chain, read).
+Depth, `vision.measure` and salient bring nothing of their own.
+
+**The version: 3.14.8** (§16.36). The wheels do not decide it; what does is
+that every package-level run so far, the stub route included, was on
+3.14.6, and 3.14 is supported to 2030-10 where 3.12 is security-only to
+2028-10. 3.11 is out (numpy 2.5.3, scipy 1.18.1 and librosa 1.0.0 require
+≥ 3.12). 3.15.0 (2026-10-09) is out: no cp315 wheel for onnxruntime 1.30.0,
+ctranslate2 4.8.2, numba 0.67.0, llvmlite 0.49.0 or pyyaml 6.0.3. **What
+3.14 costs:** no voice (below), and **no pack below macOS 14**: onnxruntime
+1.30.0 and av 18.1.0 publish arm64 wheels only as `macosx_14_0`, while
+Electron 44.3.0's `LSMinimumSystemVersion` is 13.0 (read from its
+`Info.plist`) (§16.44).
+
+#### The base pack, and what is not in it
+
+- **The base pack** is `requirements.txt` plus both faces files, as §12
+  said, in **one hash-pinned lock per platform**, installed in **one** pip
+  run with `--no-deps`. With a complete lock nothing is resolved on the
+  user's machine, so faces' second `--no-deps` run folds into it. The lock
+  holds mediapipe and not `opencv-contrib-python` or matplotlib: the stub
+  route is exactly as it is (§4.3, `SIDECAR.md`).
+- **The lock is checked complete**, since with `--no-deps` a missing
+  transitive package (most likely one behind a Windows-only marker) would
+  show up only as a degraded capability on a user's machine. `pack_lock.py`
+  fails unless every `Requires-Dist` of every lock line, with that target's
+  markers and no extras, is in that target's lock, against one allowlist:
+  `{mediapipe: matplotlib, opencv-contrib-python}`. Measured by a reviewer
+  over the dev venv's 48 distributions, per target: Windows needs exactly
+  tqdm → colorama beyond the Mac set, and the only unmet requirements on
+  both targets are mediapipe's two. So the check is cheap and passes today.
+  CI then runs `pip check` from inside the installed pack and asserts that
+  every problem it reports is one of those two (membership, not a
+  snapshot). (The first draft said `pip check` is never run, since it would
+  report those two; with the allowlist it can run.)
+- **hf-xet** (1.6.0; 3,876,287 / 4,033,128 B, 8.2 MB on disk) comes in by
+  huggingface-hub's marker and is never used: the client sets
+  `HF_HUB_DISABLE_XET=1`, and huggingface_hub imports it only through
+  `is_xet_available()` (`utils/_runtime.py:157-162`). The lock leaves it out
+  once depth's and asr's downloads pass without it (§3a.8 row 35); the
+  allowlist then gains `huggingface-hub: hf-xet`.
+- **Stems is not in it.** demucs and torch are their own press, after P and
+  not in its days (§16.39). Facts for when it comes:
+  `requirements-stems.txt` pins demucs **4.0.1, which is sdist-only and has
+  no `demucs/api.py`** at its tag (`facebookresearch/demucs` `v4.0.1`), so
+  `stems.py`'s `import demucs.api` degrades even with it installed; demucs
+  4.1.0 (2026-07-11, `adefossez/demucs`, `py3-none-any`, 100,567 B) has it.
+  With torch 2.14.1 from PyPI (its Windows wheel is the CPU build: every CUDA
+  package is marked Linux-only), the stems set is 13 wheels,
+  **139,876,993 B on the Mac and 136,363,381 B on Windows** (torch alone
+  127,325,330 / 124,110,781 B); installed size unmeasured, plus the htdemucs
+  model. **And a second OpenMP runtime:** ctranslate2 ships Intel's
+  `libiomp5md.dll` and scikit-learn Microsoft's `vcomp140.dll`; torch would
+  add its own, and faster-whisper #967 shows a Windows process aborting with
+  "OMP: Error #15" when two OpenMP runtimes meet (§3a.8 row 37).
+- **Voice is in no pack.** Every kokoro-onnx release since 0.4.8, the
+  pinned 0.4.9 and the newest 0.6.1 (2026-08-19) included, declares
+  `Requires-Python <3.14,>=3.10` (0.6.1 re-read 2026-10-14), so it cannot
+  install on the pack; and its chain ships espeak-ng, GPL-3.0, which
+  `STACK.md` §9 rules out as bundled. That verdict is not reopened. Voice
+  stays on the hosted provider, and in the pack `voice.speak` and
+  `voice.voices` are degraded with their reason.
+- **Salient registers** (its dependencies are depth's) and the analysis job
+  still does not call it (§16.35).
+
+#### Licences
+
+From PyPI's `license`, `license_expression` and classifiers, and GitHub's
+licence endpoint where PyPI is empty. Most of the base pack is MIT, BSD,
+Apache-2.0, ISC or PSF-2.0 (the full list goes into §11's credits). These
+are recorded for the credits and for §16.37's route; no settled licensing
+decision is reopened. **Flagged:**
+
+- **av 18.1.0's FFmpeg is GPL by linkage.** Its wheel bundles libx264 (.165)
+  and libx265 (.216), GPL-2.0 (the licence endpoints of `mirror/x264` and
+  `videolan/x265`; the pyav-ffmpeg README lists both for every platform).
+  In the dev venv, `otool -L` on `libavcodec.62.28.102.dylib` lists
+  `@loader_path/libx264.165.dylib` and `libx265.216.dylib`, and its
+  embedded configure line has `--enable-libx264 --enable-libx265
+  --enable-version3` and no `--enable-gpl` (a reviewer, 2026-10-14). Its
+  banner says "LGPL version 3 or later", but stock configure refuses x264
+  without `--enable-gpl`, so the banner does not describe the combined work:
+  as shipped, that libavcodec is GPL-2.0-or-later. It also links libmp3lame
+  and opencore-amr. PyAV's own code is BSD-3-Clause. It is a third FFmpeg in
+  the app.
+- **ctranslate2 4.8.2's Windows wheel carries NVIDIA's `cudnn64_9.dll`**
+  (266,288 B, under NVIDIA's cuDNN licence, not open source) and **Intel's
+  `libiomp5md.dll`** (1,614,192 B) (a reviewer's read of its index,
+  2026-10-14).
+- **scikit-learn 1.9.1's Windows wheel carries Microsoft's `msvcp140.dll`
+  (643,512 B) and `vcomp140.dll` (212,920 B)** under `sklearn/.libs/`,
+  under the Visual C++ redistribution terms (its index re-read 2026-10-14).
+- **soxr 1.1.0 is LGPL-2.1-or-later** (re-read 2026-10-14); **soundfile
+  bundles libsndfile, LGPL-2.1**.
+- **MPL-2.0**: certifi; tqdm (MPL-2.0 AND MIT).
+- Not fetched: the licences of scipy's bundled libgfortran, libquadmath and
+  libgcc_s, scikit-learn's libomp on the Mac, and the ASIO SDK in
+  sounddevice's PortAudio DLLs.
+
+**Who distributes them is the route's question (§16.37).** Fetched from
+PyPI's own file URLs at the user's press, nothing is re-hosted by the
+project. A project-hosted wheelhouse or environment archive would make the
+project the distributor of av's GPL-2.0 encoders, the LGPL libraries,
+NVIDIA's cuDNN DLL and Microsoft's runtime DLLs.
+
+#### The lock
+
+```
+sidecar/pack/lock-darwin-arm64.txt     # pip's format: one `name==version --hash=sha256:<64 hex>` per line
+sidecar/pack/lock-win32-x64.txt
+sidecar/pack/resolved.json             # every file's name, size, upload date, URL and sha256, and each distribution's
+                                       # Requires-Dist evaluated per target; committed
+sidecar/pack/history.json              # each pack number → its lock and interpreter sha256 per platform (§3a.2)
+scripts/pack_lock.py                   # run with the dev venv's python: PyPI JSON → both locks, the completeness check, pack.ts's file list
+```
+
+`pack_lock.py` evaluates each target's markers itself (pip's `--platform`
+changes wheel tags but evaluates markers for the HOST, so a Windows lock
+made on the Mac would miss colorama) and picks each wheel by
+`packaging.tags`, as the measurement did. It fetches PyPI's JSON itself and
+writes `resolved.json` beside the locks, so the lock can be rebuilt from
+the repo and a change shows in a diff. CI installing each lock on its own
+platform and running the suites is the check that the lock is right
+(§3a.6).
+
+### 3a.2 P.2 — The pack on disk · 0.5–1 day, and one helper process · 0.5 day
+
+#### Layout
+
+```
+userData/python/
+  .lock                      held while an install, Repair, Remove or Update runs: {pid, startedAt}, created with O_EXCL
+  in-use/<pid>               one per app instance whose helper runs from a pack: {pack}; removed on the helper's exit
+  1/                         the pack number from the manifest
+    python/                  the archive's own tree (`install_only` → `python/…`)
+      bin/python3.14         macOS (and its `python3` link; names confirmed on first unpack, §3a.8 row 26)
+      python.exe             Windows
+    pack.json                the receipt: WRITTEN LAST and REMOVED FIRST (temp + a retried rename; never an in-place write)
+  downloads/1/               the verified files of an install in progress; deleted after a success (§16.47)
+```
+
+- **No venv.** Packages go into the tree's own site-packages. A venv's
+  `pyvenv.cfg` holds an absolute `home`, which a renamed userData (R7) would
+  break; `pip --target` with `PYTHONPATH` skips `.pth` files and leaks into
+  every child Python. The standalone tree is relocatable ("can be installed
+  into any path", its README); the `_sysconfigdata` build paths it keeps
+  matter only for compiling, and nothing here compiles.
+- **In place, at the versioned path, with the receipt last** (the packs
+  rule, `packs.ts:170-175`), **and removed first.** A folder with no
+  receipt is a partial; the next install into that number deletes it first,
+  and the launch sweep removes it. Every delete of a version folder (Repair,
+  Remove, an old version after Update) unlinks `pack.json` before the tree,
+  then removes the tree with `fs.rm`'s `maxRetries`, so a delete that stops
+  part-way (a scanner, `EBUSY`) leaves a partial the order ignores, never a
+  receipt over half a site-packages. No staging rename of 11,000 files under
+  a scanner.
+- **Development has its own root**, `userData/python-dev/`. The dev app and
+  the installed one share a userData folder: `package.json`'s name is
+  `forge` and `productName` is `Forge`, the same folder on case-insensitive
+  APFS and NTFS (`service.ts`'s comment records `…/forge/cache` resolving to
+  Chromium's `Cache`). Without a root of its own, `npm run dev` with a newer
+  manifest would sweep the installed app's downloads and, as an old version,
+  its pack. The review proposed the lock alone; the lock keeps two
+  instances off one job, but not a newer manifest off an older pack, which
+  is why development gets a root of its own.
+- **The path budget on Windows.** MAX_PATH's 260 includes the terminating
+  NUL, so a file path can be at most 259 characters and a directory at most
+  247 (`CreateDirectoryW`'s MAX_PATH − 12). pip compiles each `.py` through
+  `py_compile`, whose `_write_atomic` writes `f'{path}.{id(path)}'` first
+  (`_bootstrap_external.py:205` in the dev venv's 3.14.6): up to 16
+  characters past the final `.pyc` (a dot and up to 15 digits). Measured
+  from the 48 Windows wheels' indexes (a reviewer, 2026-10-14): the longest
+  final `.pyc` is 125 characters
+  (`onnxruntime/tools/ort_format_model/ort_flatbuffers_py/fbs/__pycache__/RuntimeOptimizationRecordContainerEntry.cpython-314.pyc`),
+  its temporary name up to 141, the longest wheel file 100, the longest
+  directory 71. Under
+  `C:\Users\<10 characters>\AppData\Roaming\Forge\python\1\python\Lib\site-packages\`
+  (76 characters) that is **217 of 259** for the temporary name, computed;
+  a 20-character user name gives 227, and the longest directory 147 of 247.
+  So the budget holds, and the check is **root + longestPath + 16 ≤ 259 and
+  root + longestDir ≤ 247**, before the unpack (§3a.3 stage 0). Node
+  prefixes paths with `\\?\` and can write past MAX_PATH; pip and Python
+  cannot without the admin-only `LongPathsEnabled`, so an unpack would
+  succeed and the failure come later, in pip. CI's install measures
+  `longestPath` and `longestDir` over the whole version folder into the
+  manifest.
+
+#### The receipt and the manifest
+
+```ts
+// src/shared/sidecar/pack.ts — pure, in the shape of shared/assets/pack.ts and shared/ingest/release.ts
+export type PackPlatform = 'darwin-arm64' | 'win32-x64'
+
+export interface PackFile { name: string; url: string; bytes: number; sha256: string }
+
+export interface PlatformPack {
+  interpreter: PackFile               // github.com/astral-sh/python-build-standalone/releases/download/<tag>/…, never `latest`
+  wheels: PackFile[]                  // one per lock line, PyPI's own files.pythonhosted.org URL
+  lock: { file: string; sha256: string }
+  python: string                      // the interpreter, relative to the version folder
+  expects: string[]                   // what the self-test must see: asr.transcribe, audio.beats, depth.layers,
+                                      // vision.measure, vision.faces, vision.facesModel, vision.salient, vision.salientModel
+  bytesOnDisk: number                 // measured by CI's install
+  longestPath: number                 // likewise, over the whole version folder
+  longestDir: number                  // likewise
+  minOs?: string                      // '14.0' on darwin (§16.44)
+}
+
+export interface HelperPackManifest {
+  pack: number                        // names the folder; goes up whenever a lock or the interpreter changes
+  python: { version: string; build: string }   // '3.14.8', '20261001'
+  platforms: Record<PackPlatform, PlatformPack>
+}
+
+export interface PackReceipt {
+  pack: number; python: string; build: string; platform: PackPlatform
+  interpreterSha256: string; lockSha256: string
+  bytesOnDisk: number; installedAt: string; appVersion: string
+  hello: { capabilities: string[]; degraded: Record<string, string> }   // what the helper registered
+  selftest: Record<string, 'ok' | string>                              // per group: ok, or its reason (§3a.3 stage 4)
+}
+
+export function packPlatform(m: {
+  platform: NodeJS.Platform; arch: string
+  osVersion: string                   // process.getSystemVersion(): '14.6.1', never os.release()'s Darwin number
+  translated: boolean                 // app.runningUnderARM64Translation: Rosetta, or Windows' x64 emulation
+}): PackPlatform | { unsupported: string }
+export function receiptMatches(receipt: unknown, manifest: HelperPackManifest, platform: PackPlatform): boolean
+```
+
+**An unsupported machine gets a reason instead of a platform**: macOS 13
+("needs macOS 14", §16.44), and Windows on Arm. The app ships an x64 NSIS
+build only, which runs under emulation there, where `process.arch` reports
+`'x64'`; so `packPlatform` takes Electron's `app.runningUnderARM64Translation`
+(true under Rosetta and under Windows' x64 emulation, `electron.d.ts:1995`),
+and what that machine gets is §16.44's answer. An Intel Mac cannot reach the
+row at all, since the DMG is arm64 only (`electron-builder.yml:101`); its
+branch stays in `packPlatform` as a defence, with no row and no census entry.
+
+**`receiptMatches`** is true only when `pack.json` parses, its `platform` is
+this machine's, and its `lockSha256` and `interpreterSha256` equal the
+manifest's for this platform. The `pack` number then only names the folder,
+so a lock or interpreter change that ships without a bump still reads as
+"Update". Each check is mutation-checked on its own. And the bump itself is
+held: a committed `sidecar/pack/history.json` maps each pack number to its
+pair of hashes per platform, and `helperPackManifest.test.ts` fails a push
+whose lock or interpreter changed under a number already in it. If such a
+pack reaches a machine anyway, Update runs as Repair does, into the same
+folder, fetching first.
+
+#### Which interpreter runs
+
+One pure function, unit-tested a rung at a time:
+
+```ts
+export type HelperChoice =
+  | { kind: 'env'; python: string }                 // FORGE_PYTHON
+  | { kind: 'pack'; python: string; pack: number; root: string }
+  | { kind: 'venv'; python: string }                // development only
+  | { kind: 'path'; python: 'python' | 'python3' }  // development only
+  | { kind: 'damaged'; reason: string }             // a receipt that does not parse, or one whose interpreter is gone: nothing is spawned
+  | { kind: 'absent' }                              // a packaged app with nothing to run: nothing is spawned
+
+export function resolveHelperPython(input: {
+  packaged: boolean; env: NodeJS.ProcessEnv; platform: NodeJS.Platform
+  venvPython: string | null
+  pack: { receipt: unknown; interpreterExists: boolean; python: string; root: string } | null
+  manifest: HelperPackManifest; packPlatform: PackPlatform | { unsupported: string }
+}): HelperChoice
+```
+
+- **Development and tests:** `FORGE_PYTHON`, then `sidecar/.venv`, then the
+  dev pack (`python-dev/`) if one is installed, then `python`/`python3`. (The
+  first draft put the pack before `.venv`, which would have quietly run the
+  pack under `npm run dev`.) Tests reach the pack rung explicitly (§3a.6).
+- **A packaged app:** the pack, then `FORGE_PYTHON` (the escape hatch for a
+  machine that cannot download the pack, as `FORGE_YTDLP` is for yt-dlp,
+  `release.ts:71-83`), then **`absent`. Never a PATH Python.** That is
+  §16.42's recommendation; its other options are written there.
+- **A receipt is never ignored silently.** One that matches but whose
+  interpreter file is gone (Defender quarantined `python.exe` or a DLL, or a
+  delete stopped part-way) is `damaged`: the row reads red "Not running ·
+  Python is missing from the AI helper's folder (removed by antivirus?)" and
+  offers Repair, never a 205 MB Install over 0.7 GB already on disk. One that
+  does not parse is `damaged` too, and the sweep never removes it (§3a.3).
+  The tree is not re-hashed at launch; Repair is the integrity path.
+
+#### The launch: flags and a clean environment
+
+`resolveHelperPython` chooses; a second pure function says how to start the
+choice, so every caller (the service, the install's self-test, the tests)
+starts it the same way:
+
+```ts
+export interface HelperLaunch { command: string; args: string[]; env: NodeJS.ProcessEnv; source: HelperSource }
+export function helperLaunch(choice: HelperChoice, o: {
+  packaged: boolean; platform: NodeJS.Platform; base: NodeJS.ProcessEnv; modelsDir: string; cacheDir: string
+}): HelperLaunch | null      // null for absent and damaged
+```
+
+- **The pack's rung starts `<python> -E -s -u -B -m forge_sidecar`.** `-E`
+  ignores every `PYTHON*` variable and, on Windows, also skips the
+  registry: CPython 3.14's `Modules/getpath.py` adds the value of every
+  subkey under HKCU and HKLM `SOFTWARE\Python\PythonCore\<winver>\PythonPath`
+  to `sys.path` ahead of the stdlib whenever `use_environment` is on
+  (lines 700-728, re-read 2026-10-14), and on 3.14 that key is shared with any
+  python.org 3.14 and anything that registers there. `-s` skips the user
+  site (`pip --user` packages). `-u` replaces `PYTHONUNBUFFERED`, `-B`
+  replaces `PYTHONDONTWRITEBYTECODE`. **Not `-I`**: it adds `-P`, which
+  drops the working directory from `sys.path`, and `python -m
+  forge_sidecar` from `cwd` `sidecarDir()` would not import. (A user's
+  `PYTHONSAFEPATH=1` would do the same today; `-E` ends that too.)
+- **`PYTHONIOENCODING` is ignored under `-E`**, and the protocol needs
+  UTF-8 on stdio. Two ways, measured before one is chosen (§3a.8 row 38):
+  the helper reconfigures its own streams at start (`sys.stdin` and
+  `sys.stdout` `.reconfigure(encoding='utf-8')` in `__main__`, which keeps
+  `PYTHONIOENCODING=utf-8`'s strict errors and works under every rung), or
+  `-X utf8`, whose stdio error handler differs (to read in the docs and
+  measure with a non-ASCII path in a request).
+- **The environment is still cleaned**, because the helper's children read
+  it: every key matching `/^PYTHON/` or `/^HF_/` is dropped,
+  **case-insensitively on win32** (a `PythonPath` typed that way in System
+  Properties survives `delete env.PYTHONPATH`, since Windows' names are
+  case-insensitive), then the app's own are set (`FORGE_MODELS_DIR`,
+  `FORGE_CACHE_DIR`, `HF_HUB_DISABLE_XET`, `HF_HUB_DISABLE_TELEMETRY`). A
+  user's `HF_ENDPOINT` would send every model press to another host,
+  `HF_HUB_OFFLINE` would fail every one as offline, and `HF_TOKEN` would be
+  sent with each request.
+- **The face worker gets its stubs without `PYTHONPATH`.** Today
+  `faces.worker_env` puts the stubs first on the worker's `PYTHONPATH`
+  (`faces.py:258-279`), and the worker starts as `sys.executable -m …`. Under
+  the pack it starts as `sys.executable -E -s -B -c <bootstrap>`, where the
+  bootstrap puts the stubs first on `sys.path` and runs the worker module
+  with `runpy`, so the registry and a user's variables never reach it
+  either. The stub route itself is unchanged. If row 26's registry run shows
+  the leak cannot reach the worker in practice, the bootstrap may be dropped
+  and the leak recorded as accepted; that is decided on the measurement.
+- **`FORGE_PYTHON` in a packaged app** starts with `-B` and the `HF_*`
+  clean-up, and keeps the rest of its environment: it is someone's own
+  interpreter. **In development** every rung starts as today.
+- **`-B` and the bundle.** The helper's own code runs from
+  `resources/sidecar`, inside the app bundle on the Mac (and inside a
+  read-only translocated copy when a quarantined app is first run from
+  Downloads, §3a.9). electron-builder ships no `.pyc`
+  (`electron-builder.yml:73-74`), so without `-B` Python would write
+  `__pycache__` there; whether that breaks an ad-hoc seal on a later launch
+  is **unmeasured** (row 31). site-packages' bytecode, compiled by pip at
+  install, is still read. If row 26 finds the standard library ships no
+  `.pyc`, the job compiles it once at install, before `-B` applies (§3a.3).
+- `system.hello` gains **`executable`, `prefix` and `path`** (`sys.executable`,
+  `sys.prefix`, `sys.path`), additive to the protocol, so the row and the
+  tests can show which interpreter answered and prove nothing outside the
+  pack reached it (§3a.6, §3a.9).
+
+#### `absent` at every caller
+
+`absent` (and `damaged`) is a status in which **nothing is spawned,
+anywhere**:
+
+- `getSidecar()` builds a client only for a choice with a launch. For
+  `absent` and `damaged`, every helper call rejects at once with "The AI
+  helper is not installed" (or the damaged reason): `voiceStatus` reports
+  that reason for the local voice; `separateStems` takes its mid/side
+  fallback, as it does for any helper failure; beats, depth, measure and
+  transcribe reject before any request.
+- The client's own `'python3'` default goes (`client.ts:117`): a client
+  must be given its launch.
+- `sidecar:status` answers `{state: 'absent', offer}` without building a
+  client, `startSidecar` spawns nothing, and `reframeHelperFrom` (now
+  `helperCan`, §3a.4) keeps mapping anything not `ready` to `missing`.
+
+That ends the 9009 loop on Windows and the Command Line Tools question on
+the Mac for every tester before they press Install.
+
+```ts
+export type SidecarStatus =
+  | { state: 'absent'; offer: PackOffer }        // supported, bytes left to fetch, bytesOnDisk, hosts — or the unsupported reason
+  | { state: 'damaged'; reason: string; offer: PackOffer }
+  | { state: 'installing'; stage: string }
+  | { state: 'starting'; source: HelperSource }
+  | { state: 'ready'; hello: HelloResult; source: HelperSource; selftest?: Record<string, string> }
+  | { state: 'failed'; error: string; source: HelperSource }
+```
+
+`HelperSource` names the rung, so the Settings row can say "installed by the
+app · pack 1", "from FORGE_PYTHON <path>" or "development venv".
+
+#### One helper process
+
+The pack's cold start makes the double-spawn window above seconds long, on
+the 8 GB machine, and Repair and Remove need to know that the one child they
+waited for was the only one. So, inside P:
+
+- **`start()` is single flight**: it keeps the in-flight promise, and a
+  second call before the hello joins it. It spawns only when there is no
+  child.
+- **A hello that times out kills its child** before it rejects.
+- **The status ask never spawns.** `sidecar:status` answers from the
+  service's last broadcast; the window's mount gets "starting" and then the
+  broadcast, as it gets every later change.
+- **`stop()` returns a promise that resolves on the child's exit.** Its
+  1.5 s kill (`client.ts:276`) becomes a tree kill on Windows (`taskkill /f
+  /t`, as the shot finder's cancel does, §15 row 23), so a face worker and
+  its ffmpeg go with the helper; on the Mac the helper's own cancel already
+  stops the worker (§15 row 1).
+- **The hello's timeout** is set from row 29's measured cold start (after an
+  install, and after a reboot), plus a margin, not left at 30 s.
+- **The service broadcasts** on the client's `ready` and `exit` as well as
+  `gaveUp`, which closes the restart fault above.
+
+#### The switch to a new rung
+
+`restartSidecar()` in `service.ts` waits until no helper work is in flight
+(or its caller cancels), stops the client and **waits for its exit and its
+tree's**, resolves the order again and starts a new client. On Windows a
+running `python.exe` holds `python314.dll` and the `.pyd` files open, so
+Repair and Remove need the wait too.
+
+### 3a.3 P.3 — The install job · 3.5–4.25 days
+
+A module with its dependencies injected, in the shape of
+`createReframeJobs` (`analyse.ts:267`, `:418-446`), so the whole job runs in
+vitest outside Electron:
+
+```ts
+// src/main/sidecar/pack.ts
+export function createHelperPackJobs(deps: {
+  userData: string
+  root: string                              // userData/python, or userData/python-dev in development
+  manifest: HelperPackManifest
+  platform: PackPlatform
+  fetch: typeof globalThis.fetch            // Node's in tests and CI; Electron's net.fetch once §15 row 19 says so
+  spawn: typeof import('node:child_process').spawn
+  fs: PackFs                                // rename, rm, open(O_EXCL), statfs: injected so a test can refuse a rename or hold a file
+  now(): number                             // the retry budget's clock, so a test can pass minute 6
+  helper: {
+    busy(): boolean                         // a reframe analysis, a transcription, a bake in flight
+    whenIdle(signal: AbortSignal): Promise<void>
+    stop(): Promise<void>                   // resolves on the child's exit and its tree's
+    restart(): Promise<void>
+  }
+}): {
+  queue: JobQueue                           // concurrency 1, presetId 'helper'
+  install(options?: { repair?: boolean; update?: boolean }): Job   // single flight in this process: a second press joins the first
+  remove(options: { models: boolean }): Promise<void>
+  checkAgain(): Promise<void>               // the self-test alone, no download (§3a.4)
+  status(): Promise<PackStatus>
+}
+```
+
+The queue joins `allJobs` and its broadcast (`ipc.ts:268-271`), the one X
+(`render:cancel`, `ipc.ts:1089-1096`), `jobs:clearFinished`
+(`ipc.ts:1100-1112`) and `before-quit` (`index.ts:279-300`).
+
+**Across app instances.** Nothing makes Forge single-instance
+(`requestSingleInstanceLock` appears nowhere in `src/`, grep 2026-10-14), so
+a double-clicked shortcut on Windows opens a second app on the same
+userData. Its launch sweep would delete the first one's version folder
+under its pip, and a Repair in one would delete the pack under the other's
+running helper. So install, Repair, Remove and Update hold
+`<root>/.lock` (created with `O_EXCL`, holding `{pid, startedAt}`; a lock
+whose pid is not alive is stale and is taken over), and each instance whose
+helper runs from a pack keeps `<root>/in-use/<pid>` while it does. The
+sweep does nothing while another live instance holds the lock; Repair,
+Remove and Update refuse, with the reason ("the AI helper is in use by
+another Forge window"), while another live instance holds the lock or has
+the pack in use. Whether to make the app single-instance outright is its
+own question (§16.50).
+
+**The download.** The retry rules are `ensureYtDlp`'s (`binary.ts:562-639`,
+`FETCH_RETRY`): four tries, a stall is `idleMs` of nothing, retries only for
+the network's failures (a 5xx, 429, 408, a dropped or stalled connection),
+**never for a file that is not the file**, a unique temporary name renamed
+into place, and a worded failure that names the escape hatch. Four things
+are not taken from it:
+
+- **Not its shared promise.** `ensureYtDlp`'s shared fetch carries no
+  caller's signal (`binary.ts:612-626`): a caller's cancel stops only its own
+  waiting, and the transfer carries on. The pack's job has its own
+  `AbortController`, its signal goes into every fetch, and the EXPORT
+  strip's X aborts the transfer itself. Single flight is per job.
+- **A budget per file.** In `binary.ts` one `Fetching` carries
+  `endsAt = now + budgetMs` (`:474`; `budgetMs` is 6 minutes, `:113`), each
+  try's answer wait is `min(answerMs, endsAt - now)` (`:430`), and
+  `outOfTime` (`:434`) stops the retries. Lifted with one `Fetching` for the
+  job, a 205 MB install slower than about 0.6 MB/s passes minute 6 part-way,
+  and every later file gets a 1 ms answer wait and no retry, so the install
+  fails every time on that line. `fetchVerified`'s contract is one
+  `Fetching` per file.
+- **The host by name.** `shortReason` and `reasonOf` say "GitHub answered"
+  and "GitHub did not answer" (`binary.ts:200-203`, `:404-409`). The shared
+  module names the URL's host after its redirects, so a
+  files.pythonhosted.org failure does not read as GitHub's.
+- **The body streams to disk** instead of `Buffer.concat`.
+
+#### The stages
+
+The bar's weights are placeholders until the first measured install sets
+them, as the reframe's 0–15 / 15–85 / 85–100 were.
+
+| stage | bar | the speed column says |
+|---|---|---|
+| 0. **Checking** | 0 % | "checking space": `fs.statfs` on userData covers what is left to fetch, `bytesOnDisk` and 10 %, or the job fails "needs N GB free on <drive>"; on Windows root + `longestPath` + 16 ≤ 259 and root + `longestDir` ≤ 247, or it fails naming the path; the platform is supported; the lock is taken |
+| 1. **Downloading** | 0–70 %, by bytes over every file | "downloading · 31 of 205 MB · 4.2 MB/s" |
+| 2. **Unpacking** the interpreter | 70–75 % | "unpacking Python" |
+| 3. **Installing the libraries** | 75–95 % | "installing libraries · 12 of 48" |
+| 4. **Checking** the AI helper | 95–100 % | "checking the AI helper", or "waiting for the AI helper's work to finish" |
+
+**1. Downloading.** `src/main/net/fetchFile.ts`, lifted out of `binary.ts`
+(`tryOnce`, `withRetry`, `transient`, `FETCH_RETRY`, which `binary.ts` then
+imports back):
+
+```ts
+export async function fetchVerified(file: PackFile, dir: string, f: {
+  fetch: typeof globalThis.fetch; retry: FetchRetry; signal: AbortSignal; now(): number
+  rename(from: string, to: string): Promise<void>      // renameWithRetry in the app
+  onBytes(n: number): void; onMessage?(message: string): void
+}): Promise<string>   // the verified file's path; one Fetching (its own retry budget) per call
+```
+
+Each file is streamed to `<name>.part`, hashed **and counted** while it
+streams, and renamed to its own name (pip needs the wheel's filename to read
+its tags) only when it is the file:
+
+| what arrived | what it is | what happens |
+|---|---|---|
+| a `Content-Length` other than `bytes` | not the file | no retry; "something other than the file arrived from <host> (a sign-in page or a network filter?)" |
+| the body ends short of `bytes` | a broken transfer (a proxy closing a chunked body, a CDN hiccup) | the `.part` is dropped and the file retried |
+| the body runs past `bytes` | not the file | aborted at once, dropped, no retry |
+| exactly `bytes`, another sha256 | the hard checksum failure | no retry; the job fails naming the file and its host |
+| exactly `bytes`, the sha256 | the file | renamed into place |
+
+A file already in `downloads/<pack>/` with its hash is skipped, so **a
+cancelled or failed install resumes file by file**, and the Install button
+says what is left (§3a.4). The largest single file is llvmlite's Windows
+wheel, 42,986,588 B, so byte-range resume inside a file is not built in P;
+release-assets honoured an explicit range and files.pythonhosted.org served
+the zip-index range reads, so it can come later if the Surface's download
+says so (§3a.8 row 33). Files go one at a time in P; parallel only if the
+measured time asks for it.
+
+**Renames are retried on Windows.** A scanner holding a just-closed file
+makes a rename fail with `EPERM`, `EACCES` or `EBUSY`. `renameWithRetry`
+(win32 only, those three codes, bounded, with backoff; graceful-fs 4.2.11,
+already in `node_modules`, retries renames on win32 for those codes for up
+to 60 s, `polyfills.js:96-123`) serves the 49 `.part` renames and the
+receipt. The receipt has **no in-place fallback**: `store.ts:159-181`
+writes settings in place when the rename is refused, and a receipt written
+so could be torn; a receipt that cannot be renamed fails the job. CI cannot
+show this: GitHub's Windows image disables real-time monitoring and IOAV
+protection and excludes `C:\` and `D:\`
+(`actions/runner-images` `Configure-WindowsDefender.ps1`, read by a
+reviewer, 2026-10-14). The Surface can (row 27).
+
+**2. Unpacking.** A streaming gunzip (`zlib.createGunzip`) into a
+**streaming tar reader**: `@shared/assets/tar.ts` gains `TarStream`, a push
+parser over chunks, beside `readTar`, which the library packs keep. It
+honours PAX `path` and `linkpath` records and GNU long names (the ustar
+prefix it already reads); it accepts a **symlink only when its target,
+resolved from the link's own folder, stays inside the root**, and still
+refuses absolute targets, hard links, devices and sparse files; it keeps
+`safeMemberPath` and restores only the executable bit (`packs.ts:198-202`).
+Not the `tar` npm package (7.5.22, BlueOak-1.0.0, in the lockfile tree as a
+dev dependency) and not the system `tar`: the reader we have is pure,
+already holds the safety rules and their tests, and Windows' `tar.exe` is
+unmeasured on the Surface. If the real archives hold member types the
+reader refuses (§3a.8 row 26), `tar` 7.5.x is the fallback, promoted to a
+production dependency. Then, only if row 26 says so:
+
+- **the standard library compiled once** (`<python> -E -s -m compileall -q
+  python/Lib`), if the archive ships no stdlib `.pyc`, so `-B` costs no
+  start time;
+- **on the Mac, the quarantine stripped** (`/usr/bin/xattr -dr
+  com.apple.quarantine <version folder>`, allowed on files the user owns),
+  if row 31 finds `com.apple.quarantine` on the unpacked files, so
+  Gatekeeper does not assess each of about a thousand `.so` and `.dylib`
+  files.
+
+**3. Installing the libraries.**
+
+```
+<pack python> -E -s -m pip install --isolated --no-index --find-links <downloads/1> \
+  --no-deps --require-hashes --only-binary=:all: --no-cache-dir \
+  --disable-pip-version-check --no-input --progress-bar off \
+  --no-warn-script-location -r <lock>
+```
+
+spawned with `windowsHide: true` and the pack's environment. `--isolated`
+ignores `PIP_*` variables and pip's config files; `--no-index` with a local
+folder means pip never touches the network, so its proxy and certificate
+handling never come into it; `--only-binary=:all:` means no build step can
+run on a user's machine. The progress is the count of `*.dist-info` folders
+in site-packages, polled every 500 ms, against the lock's line count; the
+stage text is pip's last `Processing …` / `Installing …` line. Whether pip
+writes the dist-info folders one package at a time is §3a.8 row 34. Cancel
+kills pip's tree (`taskkill /f /t` on Windows, the shot finder's precedent,
+§15 row 23). `--no-compile` would save 99.3 MB and the compile time at the
+cost of the first start; measured before it is chosen (§3a.8 row 27).
+
+**pip writes 19 console-script `.exe` launchers into `python\Scripts\` on
+Windows** (counted by a reviewer from each wheel's `entry_points.txt`:
+ctranslate2 7, huggingface-hub 3, numpy 2, and onnxruntime, av, tqdm, httpx,
+cffi, idna and charset-normalizer 1 each). They are unsigned distlib
+launchers made on the user's machine; nothing in the helper runs them, and
+pip has no flag to skip them. `--no-warn-script-location` keeps pip's
+"not on PATH" warning out of the stage text. Antivirus has flagged distlib
+launchers before (pypa/distlib #126, via pip #5047), and a failed launcher
+write aborts the whole install (pip #9023, open, cause not established), so
+pip's "Failed to write executable" maps to a worded reason: "Windows would
+not let pip write a small launcher file; antivirus may have blocked it.
+Repair, or allow the AI helper's folder." Row 32 records whether Defender
+touches `Scripts\*.exe` on the Surface. (Their shebangs hold the absolute
+`python.exe` path, so R7's rename breaks them; harmless, since nothing uses
+them.)
+
+**4. Checking.** A `SidecarClient` on the new pack exactly as the service
+will start it (`helperLaunch` of the pack's rung, cwd `sidecarDir()`,
+`maxRestarts: 0`):
+
+- `system.hello` within **120 s**, or row 29's measured cold start plus a
+  margin once it is in (the first cold start after Defender has scanned the
+  fresh `.pyd` and `.dll` files);
+- `executable`, `prefix` and every `path` entry inside the version folder or
+  `sidecarDir()`, by `path.relative` on real paths; `python` the manifest's
+  version;
+- `expects` ⊆ capabilities;
+- one `system.ping`;
+- a new **`system.selftest`**, which runs **each group in a fresh
+  `sys.executable -E -s -B -c` child** (`CREATE_NO_WINDOW` on Windows) and
+  returns each group's exit and its last error line. One process would not
+  do: scikit-learn 1.9.1's Windows wheel preloads its own
+  `sklearn/.libs/msvcp140.dll` and `vcomp140.dll` by name on `import
+  sklearn` (`_distributor_init.py`, read by a reviewer; the DLLs re-read in
+  its index 2026-10-14), and after that every later DLL in the same process
+  that imports `MSVCP140` resolves to sklearn's copy. A self-test in one
+  process passes as soon as sklearn comes first, on a machine where a fresh
+  helper fails. And `hello` cannot see it either: `import librosa`, all that
+  beats' `register()` does (`beats.py:313-315`), loads neither soxr nor
+  numba; the first `librosa.stft` (`beats.py:124`) loads both. The groups,
+  each doing the smallest real call that loads its native code:
+
+  | group | in its own process | why |
+  |---|---|---|
+  | asr | `ctranslate2`, `av`, `faster_whisper`, `tokenizers` | ctranslate2's 59 MB DLL and av's FFmpeg |
+  | beats | `librosa`, `soxr`, `numba`, `numba.core.typeconv._typeconv`, then `librosa.stft` on one second of silence | soxr's `soxr_ext.pyd` and numba's `_typeconv` import `MSVCP140.dll` (a reviewer's read of their PE import tables, 2026-10-14); neither wheel ships it |
+  | onnx | `onnxruntime`, and a session on a 1-node Identity model shipped in `sidecar/forge_sidecar/selftest/` (under 200 B) | depth, salient, ground; a session is what loads `onnxruntime.dll` for certain |
+  | vision | `numpy`, `scipy.ndimage`, `scipy.spatial` | `vision.measure` |
+  | sklearn | `sklearn` alone | its preload must not mask anyone else's |
+  | faces | the `mp_faces` worker's import-only run, through its bootstrap, with **`mediapipe_c_bindings.load_raw_library()`** | see below |
+
+  **The faces group loads mediapipe's native library.** Registration asks
+  only `find_spec('mediapipe')` (`SIDECAR.md`), and the worker's three
+  imports (`mp_faces.py:294-296`) do not load it: measured by a reviewer in
+  `sidecar/.venv-faces` (mediapipe 0.10.35, stubs first), after them
+  `mediapipe_c_bindings._shared_lib` is still `None`. The library is loaded by
+  `ctypes.CDLL` only when `FaceDetector.create_from_options` runs
+  (`face_detector.py:236`, then `load_shared_library`; `load_raw_library`
+  re-read 2026-10-14). On Windows it is `mediapipe/tasks/c/libmediapipe.dll`,
+  28,736,000 B of C++, and the wheel's index shows no `msvcp140`. So the
+  import-only spec (`importOnly: true`) also calls `load_raw_library()`,
+  which needs no model, and returns its error line; exit 0, or 69 with its
+  `error import` line. The worker's start costs 0.14–0.23 s on the Mac.
+
+  Which DLL each group's call loads is read once on Windows (row 30); the
+  CI listing of every native file's imports (§3a.6) answers which ones
+  *need* a runtime the pack does not carry.
+
+Then the stdlib and quarantine steps if row 26 and row 31 asked for them,
+`pack.json` (with `hello` and `selftest`), older version folders removed
+(receipt first), `downloads/` removed (§16.47), the lock released, and
+`restartSidecar()`. **If helper work is in flight, the switch waits**
+("waiting for the AI helper's work to finish") and can be cancelled; it
+never kills that work.
+
+**When the check fails part of the way.** If the helper starts but an
+`expects` method is degraded, or a self-test group fails (on Windows most
+likely a missing Visual C++ runtime, §16.45), the pack is **kept**: the
+receipt records what was seen, the service adds the failed groups' methods
+to hello's `degraded` so `helperCan` greys their controls, and the row
+names what is missing, mapping "DLL load failed" to the Visual C++ sentence
+`binary.ts:529-533` already uses, with Microsoft's link and a **Check
+again** button that reruns the self-test with no download (for after the
+runtime is installed). A pack whose helper does not start at all is removed
+(receipt first), and the row offers Repair.
+
+**Cancel, quit and the sweep.**
+
+- A cancel during the download aborts the transfer, keeps the verified
+  files and removes the `.part`, so the next press fetches only what is
+  missing.
+- A cancel after the download removes the version folder (receipt first)
+  and keeps the downloads.
+- A quit cancels the job (`before-quit`) and releases the lock.
+- **The launch sweep** (each root's own, and nothing while another live
+  instance holds the lock):
+  - removes a version folder with **no** `pack.json`;
+  - never removes a folder whose `pack.json` does not parse: it reads
+    "Not running · Repair" (`damaged`), so a torn receipt cannot delete
+    0.7 GB;
+  - removes a version folder with a parseable receipt whose number is below
+    the manifest's, but only when a complete pack of the manifest's number
+    exists and no live instance has the old one in use (an Update
+    interrupted after its new receipt would otherwise leave 0.66–0.72 GB
+    behind for good);
+  - removes any `downloads/<n>` of another pack number.
+
+**Repair fetches first.** The first draft deleted the working pack and then
+downloaded again, which on a flaky or offline line leaves a user with a
+degraded pack holding none; it also dropped the staging rule the packs keep
+(`packs.ts:170-175`). Repair is the same job with `repair: true`, in this
+order, asserted as one shape: **every file fetched and verified into
+`downloads/<n>`** (with its bar and its X, while the helper keeps running;
+files already verified there are reused) → wait until idle → stop → exit
+(the tree's too) → unlink the receipt → remove the tree (`maxRetries`, for
+a scanner) → unpack → pip → check → receipt. If the fetch fails, the old
+receipt and folder are untouched. If pip fails after the delete, the
+downloads stay, so the next Repair works offline.
+
+**Remove** asks first, with both sizes, then stops the helper and waits for
+its exit, unlinks the receipt, deletes `<root>` (`maxRetries`), and resolves
+the order again (`FORGE_PYTHON` or `absent`); `userData/models` stays unless
+the confirm's box, off by default, says otherwise.
+
+**Update**: when the manifest's lock or interpreter hashes differ from the
+receipt's, the old pack is not used, its controls grey, and the row offers
+"Update the AI helper · N MB" (§16.46). It installs the new number's folder
+beside the old one (the helper is not running from it, so nothing waits),
+and the old folder goes after the new receipt is written, or at the next
+launch's sweep.
+
+All three refuse while helper work is running or another instance holds
+the lock or the pack, with the reason, so no work is lost.
+
+### 3a.4 P.4 — The UI · 1–1.5 days, and the speech model · 0.5–1 day
+
+**One home: Settings.** `WINDOW.md` §3.9 already homes "AI helper (Python)
+status" in the settings panel, and §3's legend gives each control one home.
+The row, by state:
+
+| state | dot | the row |
+|---|---|---|
+| **Not installed** | grey, never red: it is every tester's first state, not a fault | **Install the AI helper · 170 MB** (205 MB on Windows), and under it: "Uses about 0.7 GB on disk. Downloads from github.com (and the host it redirects to, today release-assets.githubusercontent.com) and files.pythonhosted.org. Its own Python; any Python on this machine is left alone." Sheet 22's "the button has to say Python is not installed rather than spin" (`SHEETS.md:636-639`) |
+| **Not installed**, part fetched | grey | **Install the AI helper · 120 MB left**: the manifest's bytes minus the verified files in `downloads/` |
+| **Installing · <stage>** | grey | "its bar and its X are in EXPORT"; no second cancel |
+| **Running · Python 3.14.8 · pack 1 · 0.7 GB** | green, only with every `expects` method a capability and every self-test group ok | what is on this machine, from hello; **Repair · 170 MB** (205 MB on Windows) and **Remove**, small, in the Key row's Save and Clear style (`SettingsPanel.tsx:239-253`). Repair's number is the manifest's bytes minus the verified files present (all of it after a success, §16.47) |
+| **Running · 6 of 8 helper features · <reason>** | grey | a pack with a degraded `expects` method or a failed self-test group; for the Visual C++ runtime, its sentence and Microsoft's link; **Check again** and Repair |
+| **Running · from FORGE_PYTHON <path> · N of 8 helper features** | green only when N is 8; otherwise grey | the dot comes from hello, not from the process being up (CLAUDE.md's Surface setup points `FORGE_PYTHON` at a bare python.org 3.12 with `setx`, which an Explorer-started packaged app inherits); Install stays, with "used instead of FORGE_PYTHON once installed" (§16.42) |
+| **Update the AI helper · N MB** | grey | the old pack unused until pressed (§16.46) |
+| **Not running · <reason>** | red | an installed pack that will not start; "Python is missing from the AI helper's folder (removed by antivirus?)"; a receipt that does not parse; a spawn refused by Group Policy (below); **Repair · N MB** first |
+| **Not available on this computer · <reason>** | grey | macOS 13; Windows on Arm, unless §16.44 allows the x64 pack there; no button |
+
+The on-disk number is the manifest's `bytesOnDisk` from CI's install; the
+download numbers go through `pack.ts`'s `formatBytes`, which the packs'
+`Get · 57 MB` uses. `helperState` gains `absent`, `damaged`, `installing`,
+`partial` and `unavailable`, and takes hello and the manifest's `expects`,
+so the header's dot (`App.tsx:79`, `:110`) and the row cannot disagree, as
+its comment promises, and a bare interpreter is never green.
+
+**Group Policy.** Some managed machines refuse executables under user
+folders (astral-sh/uv #6584: a venv's `python.exe` refused with "This
+program is blocked by group policy", os error 1260). This is not new with P
+(yt-dlp's exe already lives in userData), but the helper's spawn error maps
+to a worded reason ("Windows' policy on this computer blocks programs in
+your user folder; ask whoever manages it, or point FORGE_PYTHON at an
+allowed Python"), not "The AI helper keeps crashing".
+
+**Everywhere else is a pointer, not a second Install** (§16.41). Each
+"needs the AI helper" becomes a small button that opens Settings with the AI
+helper row in view, as the Director's gear opens the same card
+(`WHERE-THINGS-ARE.md`, Settings). Its text stays, so `ui-census.json`'s
+three `needs the AI helper` rows (lines 5722, 7825, 7884) still match it;
+its title gains "install it in Settings". MediaPool's disabled Transcribe has
+no room for a link, so its title becomes "needs the AI helper — install it
+in Settings" (the census row at line 4408 changes with it).
+
+**Grey every Python control by its own method.** `reframeHelperFrom`
+becomes `helperCan(status, method)` in `src/shared/sidecar/`, true only for
+`ready` with the method in `hello.capabilities` and not failed by the
+receipt's self-test; MediaPool and LinkTranscript move to `asr.transcribe`,
+the reframe stays on `vision.faces` and `vision.facesModel`. LinkTranscript's
+Listen stays the disabled "soon" it is: P makes its reason honest, not the
+button live.
+
+**The speech model's own press** (§16.49, recommended (a)). Once P makes
+`asr.transcribe` available, Transcribe must not fetch 464 MB unnamed and
+unpinned (What is wrong, above). So, in P:
+
+- **Get the speech model · 464 MB**, beside a greyed Transcribe ("needs the
+  speech model") and on the Settings row's model list, fetches
+  `Systran/faster-whisper-small` through `media.download` at a **pinned
+  commit** into `FORGE_MODELS_DIR`, through the job list, as the face
+  finder's press does. Its commit and file hashes are read from
+  huggingface.co when the press is built (outside this plan's hosts, not
+  fetched for it).
+- `_load_model` loads that local snapshot by its path with
+  `local_files_only=True`, so a session's first load asks no host, and a
+  set-but-unreachable proxy cannot stop a model on disk from loading.
+- Test: with the model present, a transcription makes no request
+  (`huggingface_hub.snapshot_download` replaced by one that raises); it
+  fails with the size name passed as today. Census rows for the press and
+  the greyed reason.
+
+If §16.49 is answered (b) instead, Transcribe stays greyed "needs the
+speech model" and leaves P's exit, and P is 0.5–1 day shorter.
+
+**The EXPORT row** reads "Installing the AI helper" (or "Repairing",
+"Updating") with the stage in the speed column, as the reframe's label does
+(`job.ts:171-180`); `jobName` and `cancellable` (`ExportStrip.tsx:55-61`)
+learn `helper`, cancellable while queued too, and it has no Show in folder
+(`ExportStrip.tsx:443`).
+
+**No first-run prompt** (§16.41): the grey dot, the pointers and the tester
+guide (R10: Settings → AI helper → Install) are enough.
+
+**The bridge.** The new `window.forge` calls (`helperPack.status`,
+`install`, `repair`, `remove`, `checkAgain`, and the speech model's `get`)
+go into the preload, `harness/bridge.ts` and the fallback bridge
+(`WINDOW.md:588-589`), with stubs that walk the states.
+
+### 3a.5 P.5 — Offline, proxies and restricted networks · inside P.3
+
+**The hosts, named on the row and in the guide** (§16.40):
+
+| what | host | measured |
+|---|---|---|
+| the interpreter | `github.com`, which redirects to `release-assets.githubusercontent.com` (GitHub has changed that host before: `objects.githubusercontent.com`) | the redirect and its 206 to an explicit range, 2026-10-14 |
+| the wheels | `files.pythonhosted.org` | served the zip-index range reads, 2026-10-14 |
+| models, each its own press later | `huggingface.co` and `*.hf.co` (Whisper, depth, BiRefNet: `SIDECAR.md`); `storage.googleapis.com` (the face finder) | 2026-10-13 |
+
+pip contacts nothing, and `pypi.org`'s index is not used: the URLs are in
+the manifest. The job's log records the host each file came from after its
+redirects, so a tester's report names it.
+
+**Three network stacks, not one.** The pack's own files come through main's
+fetcher; the models come through the helper, which has two:
+
+| fetcher | used by | trust | proxy |
+|---|---|---|---|
+| main's `fetchVerified` | the interpreter and the wheels | Node's (CI, vitest) or Chromium's (`net.fetch`, once row 19 says so) | Node's fetch ignored `HTTPS_PROXY` without `NODE_USE_ENV_PROXY=1` (§8.2); `net.fetch` uses the system's |
+| the helper's `media.fetch_url` (urllib) | the face finder | certifi added to the default context (`media.py:489-508`) | urllib reads the system proxy settings on macOS and Windows |
+| huggingface_hub 1.31.0 over httpx 0.28.1 | Whisper, depth, BiRefNet | `create_ssl_context` loads only `certifi.where()` (or `SSL_CERT_FILE`), no system roots | environment variables only (a reviewer's read, 2026-10-14) |
+
+So on a network with a company root certificate or a system-set proxy,
+Install can succeed through `net.fetch` and then every Hugging Face model
+press fail. **Row 19 is part of P and is widened**: `net.fetch`, one
+Hugging Face model press and one `fetch_url` press, behind the same proxy.
+For the beta, the row and the guide say that model presses need direct
+access (or a proxy in `HTTPS_PROXY`), and model fetches move to main's
+fetcher with §16.22's one network stack (§16.40 (d)). Neither of main's
+paths quarantines on the Mac (both write with `fs`); Mark of the Web on
+Windows is §3a.8 row 32.
+
+**Offline.** The download stage fails with the lifted worded reasons after
+its retries ("files.pythonhosted.org did not answer · gave up after 4 tries
+over 61s"), with the way out: "If this machine cannot reach github.com and
+files.pythonhosted.org, point FORGE_PYTHON at a Python with the helper's
+requirements." "Install from a file…" is later (§16.40). A model on disk
+loads with no network (the speech model by `local_files_only`, §3a.4;
+depth's and BiRefNet's loads are read for the same fault when P is built).
+
+**TLS.** Our fetcher uses Node's or Chromium's trust; pip is offline; the
+standalone OpenSSL's default bundle path exists on macOS. A model download
+from inside the pack is part of the clean Mac's run (§3a.9).
+
+### 3a.6 P.6 — Packaging and CI · with P.7's 1.5–1.75 days
+
+**The installer still ships no Python.** The sidecar filter becomes
+`!.venv*` and `!.venv*/**` (it names `.venv` and `.venv-faces` today,
+`electron-builder.yml:66-72`; `tests/packaging.test.ts:89-104` holds every
+`.venv*` folder on the packing machine to it). The two locks and
+`resolved.json` ship in `sidecar/pack/`; their sha256 is in the manifest,
+so a lock edited without `pack.ts` fails a test.
+
+**The NSIS uninstaller removes the pack.** It leaves userData today
+(`deleteAppDataOnUninstall` is not set), so every uninstall would leave
+0.7 GB behind. An `nsis.include` with a `customUnInstall` macro removes
+`$APPDATA\${PRODUCT_NAME}\python` (not the models, not the projects),
+guarded by `${ifNot} ${isUpdated}` so an app update's silent uninstall of
+the old version keeps the pack. That guard's behaviour is **unmeasured**
+and is checked on the Surface with an update (§3a.9);
+`packaging.test.ts` pins the include and the guard. On the Mac there is no
+uninstaller; the guide says Remove first.
+
+**CI installs the pack for real**, on the Windows push job and, by
+§16.48 (b), on a **`macos-14` arm64 runner** pushed too, which is free for a
+public repo and is the only place the pack's macOS 14 floor runs (the dev
+Mac runs macOS 26). After the existing `npm test` (which keeps its bare 3.12
+and every degraded check, §16.36):
+
+1. **The URL probe, on every push**, cache or not: each manifest URL (about
+   49) gets a HEAD or a 1-byte range request, asserting 200 or 206 and the
+   manifest's length. Without it, a pinned file deleted from PyPI or GitHub,
+   or a changed redirect host, breaks every tester's Install while CI stays
+   green on the cached pack.
+2. `tests/integration/helperPack.int.test.ts` runs the app's own job
+   module, Node's fetch, into `${runner.temp}/forge pack é/userData` (**a
+   space and a non-ASCII character**, as a user's profile name can have;
+   non-ASCII model paths for CTranslate2 and mediapipe on Windows are
+   unmeasured, CTranslate2 #1227). Under CI it **fails rather than skips**,
+   as `exactCut.int` does.
+3. **The helper's suites run again from inside the pack, through the pack's
+   launch** (its flags and environment), not through the env rung. The
+   first draft reached the pack through `FORGE_HELPER_PYTHON` and
+   `FORGE_PYTHON`, which is `sidecarEnv(process.env)` with no flags
+   (`client.ts:39-53`, `:123`): CI would have certified an environment no
+   installed user gets. So `FORGE_HELPER_PACK=<userData>` (new in
+   `tests/integration/venv.ts`) makes `resolveHelperPython` take the pack
+   rung, and `venv.ts`'s `VENV_PYTHON`, `HAS_VENV` and `HELPER_PYTHON` and
+   `sidecar.int`'s client all start through `helperLaunch` of that choice;
+   `sidecar.int` gains one case that asserts the launch's argv is the pack
+   rung's. The suites: `sidecar.int` (15), `sidecarMedia.int` (32 Python
+   cases, **none may skip** with numpy present), `vision.int`, `beats.int`,
+   `faces.int`'s stand-in-detector cases, `reframeJob.int`'s helper suite,
+   and `asr.int` if its `jfk.flac` fixture and `tiny` model are seeded into
+   the cached userData (decided when the step is written; the model's bytes
+   are unmeasured).
+4. **`pip check` from inside the pack**: every problem it reports is one of
+   mediapipe's two (membership).
+5. **The native imports, listed** (Windows job): a reader of every `.pyd`
+   and `.dll` in the installed pack (`dumpbin /dependents` on the runner, or
+   a PE import reader of about 60 lines) lists each import that is neither
+   beside it in the pack nor part of Windows, by name, with
+   `MSVCP140*`, `VCOMP140*`, `VCRUNTIME140*` and `CONCRT140*` always listed
+   with where in the pack (if anywhere) a copy sits. The list is asserted by
+   membership against a committed expected list, so a new need for a
+   runtime shows as a failing diff on the push that brings it. That answers
+   "whether they need it" for every native file on every push; whether a
+   clean Windows *has* it stays row 30's.
+
+**The cache**, built like yt-dlp's (`ci.yml:130-138`): the installed
+`userData/python`, keyed on the OS, the architecture, **the ISO week** (as
+yt-dlp's is), and a hash of `src/shared/sidecar/pack.ts`,
+`sidecar/pack/lock-*.txt`, `src/main/sidecar/pack.ts`,
+`src/main/net/fetchFile.ts` and `src/shared/assets/tar.ts`, with no
+restore-keys. So the push that changes the installer or the lock runs a real
+install, a real install runs at least weekly, and every other push runs the
+suites from the cached pack. A red job saves nothing.
+
+**What this closes and what it risks.** It runs the capability suites on
+Windows for the first time (§12's "never run on Windows"), on the 2018
+ffmpeg and a Windows CPU. That is also the step's open-ended risk, not
+counted in its days. Salient's suite stays off the push path (a 115 MB model
+and a 6.6–9.7 GB peak; the job does not call it, §16.35). GitHub's Windows
+runners carry the Visual C++ runtime and run with Defender's real-time
+scanning off, so CI cannot prove §16.45 or the rename retries.
+
+**No new ffmpeg shape.** P runs pip and the helper, not ffmpeg: nothing
+for §13 or `tests/oldestFfmpeg.test.ts`, and no render check.
+
+### 3a.7 P.7 — Tests, harness, census
+
+Every test is mutation-checked: the bug put back, the test seen to fail.
+Anchors over lock lines, job argv and launch args use `matchAll`, never
+`indexOf`.
+
+**Unit tests (every push):**
+
+- `tests/helperPython.test.ts`, `resolveHelperPython`. In development,
+  `FORGE_PYTHON` beats `.venv`, and `.venv` beats the dev pack; in a
+  packaged app the pack beats `FORGE_PYTHON`; `FORGE_PYTHON` with no pack in
+  a packaged app is the escape hatch; a packaged app with neither is
+  `absent`; a receipt with another `platform`, another `lockSha256` or
+  another `interpreterSha256` is not a pack; a matching receipt with no
+  interpreter file is `damaged`, and so is one that does not parse;
+  development's `python` on win32 and `python3` elsewhere. Mutations, one per
+  rung and one per receipt check: the PATH fallback restored in a packaged
+  app; the env rung first in a packaged app; the pack before `.venv` in
+  development; the escape hatch dropped; each hash check dropped; a missing
+  interpreter read as `absent`.
+- `tests/helperLaunch.test.ts`, `helperLaunch`: the pack rung's args hold
+  `-E`, `-s`, `-u` and `-B` before `-m forge_sidecar` and never `-I`; on
+  win32, `{PythonPath: 'x', pythonhome: 'y'}` comes out without either; no
+  `PYTHON*` or `HF_*` key survives outside the set the app writes
+  (membership), so `HF_ENDPOINT`, `HF_HUB_OFFLINE`, `HF_TOKEN` and
+  `PYTHONSAFEPATH` are gone and `FORGE_MODELS_DIR` and the app's two `HF_`
+  flags are there; `FORGE_PYTHON` in a packaged app gets `-B`; development
+  is unchanged. Mutations: an exact-case delete (the `PythonPath` survives);
+  `-E` dropped; `HF_ENDPOINT` kept; `-I` for `-E -s`.
+- `tests/helperPackManifest.test.ts`: every file a 64-hex sha256 and
+  positive bytes; every wheel URL on `https://files.pythonhosted.org/packages/`;
+  the interpreter URL on an exact tag, never `latest`; **the lock's hashes,
+  read with `matchAll` over every line, equal the manifest's wheel hashes
+  as a set**; the lock file's sha256 equals the manifest's; the lock holds
+  mediapipe and neither `opencv-contrib-python` nor matplotlib; `expects` ⊆
+  `OPTIONAL_METHODS` and holds no stems or voice method; the button's
+  number is the files' sum; `packPlatform` greys macOS 13 by
+  `getSystemVersion`'s '13.x' (not a Darwin '22.x'), and reports Windows on
+  Arm when `translated` is true on win32; each pack number in
+  `history.json` carries one pair of hashes per platform. Mutations: a wheel
+  dropped from the manifest but kept in the lock; opencv added to the lock;
+  a `latest` URL; the lock edited without its sha256; the lock changed with
+  the number kept; `os.release()` for the version; `translated` ignored.
+- `tests/packLock.test.ts`, in TypeScript over the committed
+  `resolved.json` (CI's bare Python has no `packaging`): every requirement
+  of every lock line is in that target's lock or on the allowlist. It
+  passes on the committed locks and fails with colorama dropped from the
+  Windows lock.
+- `tests/tarStream.test.ts`: `TarStream` gives `readTar`'s entries for any
+  chunking (a property over random split points of an archive built in the
+  test); a 150-character name carried only in a PAX `path` record lands
+  under that name; `bin/python3 → python3.14` is accepted, `../../x` and
+  `/etc/x` refused, a hard link refused. Mutations: PAX skipped as today (the
+  member lands under its truncated name); the in-root check dropped.
+- `tests/fetchFile.test.ts`, `fetchVerified` with a fake fetch and a fake
+  clock:
+  - a body cut at 90 % is retried and succeeds. Mutation: a hash-only check
+    (it fails as tampered);
+  - a `Content-Length` other than `bytes` fails at once with the "something
+    other than the file" sentence and one fetch;
+  - exactly `bytes` with a wrong sha256 fails on the **first** fetch.
+    Mutation: the mismatch made transient (four fetches);
+  - a 503 then a 200 is retried. Mutation: no retry;
+  - past minute 6 across files, a later file's 503 is still retried.
+    Mutation: one `Fetching` for all files;
+  - after the job's abort, the fake body is read no further. Mutation: a
+    shared fetch with no signal;
+  - a files.pythonhosted.org failure names that host. Mutation: the
+    hard-coded "GitHub";
+  - an injected rename that fails with `EPERM` twice still succeeds on
+    win32. Mutation: no retry.
+- `tests/helperPackJob.test.ts`, the job with a fake fetch, a fake pip and a
+  fake helper over a temp userData:
+  - progress never goes down across the stages (a property over the fake's
+    random chunk sizes);
+  - a file that is not the file fails the job with no version folder and no
+    receipt;
+  - a cancel mid-download keeps the verified files and no `.part`, and the
+    next press fetches only the missing ones (counted), with the offer's
+    "N MB left" equal to the manifest's bytes minus the files present.
+    Mutation: the cancel clears `downloads/`;
+  - pip failing leaves no receipt, and `resolveHelperPython` does not pick
+    the folder. Mutation: the receipt written before pip;
+  - the receipt's rename refused past its retries fails the job and leaves
+    no `pack.json`. Mutation: an in-place fallback;
+  - a degraded `expects` method or a failed self-test group keeps the pack,
+    with the receipt's reason, the method greyed by `helperCan`, and "DLL
+    load failed" mapped to the Visual C++ sentence;
+  - helper work in flight holds the switch. Mutation: restart at once (the
+    fake's in-flight request is rejected);
+  - **Repair's order is one ordered shape**: [all files verified, idle,
+    stop, exit, unlink receipt, rm tree, unpack, pip, check, receipt]; with
+    a fetch that fails, the old receipt and folder are untouched. Mutations:
+    delete before the fetch; the receipt removed last;
+  - Remove refuses while a helper job runs, and keeps `models/` unless
+    asked;
+  - the launch sweep removes a receipt-less folder and another pack's
+    downloads, keeps a complete pack and an unparseable receipt, removes an
+    old number only beside a complete current one, and **removes nothing
+    while another live instance holds the lock**. Mutations: the sweep
+    ignores receipts; the sweep ignores the lock; old numbers removed with no
+    current pack;
+  - Repair refuses while another live instance has the pack in use;
+  - a stale lock (its pid dead) is taken over;
+  - an install into a number whose folder exists without a receipt deletes
+    it first;
+  - two presses, one job. Mutation: no single flight.
+- `tests/sidecarClient.test.ts`: two `start()` calls before hello spawn once
+  (mutation: today's `running && hello` check); a hello timeout kills its
+  child; `stop()` resolves on exit and leaves no pid alive, its tree included
+  on win32 (a fake `taskkill`).
+- `tests/sidecarService.test.ts`: a packaged build with no pack answers
+  `sidecar:status` with `absent`, and `voiceStatus`, `separateStems` (which
+  takes mid/side), and the beats, depth, measure and transcribe handlers
+  each reject or degrade with **spawn never called** (mutation: `getSidecar`
+  building a client as today); the status ask never calls `start()`; a
+  restart's `ready` reaches `onStatus` (mutation: the service listening
+  only for `log` and `gaveUp`).
+- `tests/sidecar/test_selftest.py` (beside `test_media.py`): the self-test's import list holds
+  soxr, numba, onnxruntime, ctranslate2, av and sklearn (membership;
+  mutation: soxr dropped); each group runs in its own process (a stand-in
+  that records its pid; mutation: one process); a stand-in mediapipe on the
+  worker's path whose `load_raw_library` raises turns the faces group red
+  (mutation: the call dropped).
+- `tests/sidecar/test_asr.py`: with the speech model on disk, a
+  transcription makes no request (§3a.4).
+- `tests/reframeContract.test.ts` and the component tests: `helperCan` is
+  false for `absent`, `damaged`, `installing`, `starting`, `failed`, a
+  degraded method and a failed self-test group; MediaPool's Transcribe and
+  LinkTranscript are greyed for a ready hello without `asr.transcribe`
+  (mutation: back to `sidecarReady`, and Transcribe is enabled on a bare
+  interpreter); `tests/renderer/settingsPanel.test.tsx` renders every state,
+  the Install and Repair labels carry the offer's size, `absent` is grey
+  (mutation: drawn as red "Not running"), a bare hello on the env rung is
+  not green (mutation: green on the process alone), and a damaged receipt
+  offers Repair, not Install.
+- `tests/packaging.test.ts`: the `.venv*` filter, the shipped locks, and the
+  NSIS include with its `isUpdated` guard.
+
+**Integration, `tests/integration/helperPack.int.test.ts`** (opt-in on the
+Mac with `FORGE_PACK_REAL=1`; always in CI). It installs the pinned pack
+from the real hosts into a userData path with a space and a non-ASCII
+character, then asserts: the receipt; hello's `executable`, `prefix` and
+**every `sys.path` entry contained in** the version folder or
+`sidecarDir()` (by `path.relative`, on real paths, never a string prefix);
+`python` is `3.14.8`; `expects` ⊆ capabilities; every self-test group ok;
+`audio.stems`, `voice.speak` and `voice.voices` degraded, each with its
+reason; `pip check`'s problems ⊆ mediapipe's two. It prints `bytesOnDisk`,
+the longest relative path and the longest directory, which go into
+`pack.ts`. Mutations, each on a scratch copy of the lock or the launch:
+without librosa (`audio.beats` degraded, `expects` fails); without
+mediapipe (`vision.faces` degraded by `find_spec`, fails); `-s` dropped
+with a user site planted in the test's own `HOME` / `APPDATA` (a `sys.path`
+entry outside the pack, fails). And a guard in `venv.ts`: under CI with
+`FORGE_HELPER_PACK` set, a `describeWithVenv` suite that would skip for "no
+helper venv" fails instead (mutation: `venv.ts` ignoring the variable, so
+every suite skips green).
+
+**Harness check** `harness/helperPackCheck.ts`
+(`window.__forgeHelperPackCheck`): the bridge reports `absent`; Follow the
+subject's "needs the AI helper" pointer opens Settings with the row in view,
+and the row shows the sized Install; the press puts "Installing the AI
+helper" in the EXPORT strip with a stage; a cancel leaves "· N MB left"; the
+stub reaches `ready` with the full capabilities, the row reads "Running ·
+Python 3.14.8 · pack 1" with "Repair · N MB", and Follow the subject is
+enabled; Transcribe is greyed "needs the speech model" with its sized press;
+a stub with a failed beats group shows "6 of 8 helper features" and Check
+again; Remove asks with both sizes and returns to Not installed.
+
+**Census rows** (`tests/fixtures/ui-census.json`, each with its `needs`
+recipe): "Install the AI helper", "Install the AI helper · N MB left", "Not
+installed", "Installing", "Repair · N MB", "Remove", "Check again", "N of 8
+helper features", "Update the AI helper", "Not available on this computer",
+"Python is missing from the AI helper's folder", the hosts line, the
+pointer's title, Transcribe's new title, "Get the speech model · 464 MB" and
+"needs the speech model".
+
+### 3a.8 P.8 — Measure before relying
+
+These are §15 rows 26–38. Row 26 is P's first task; row 19 (`net.fetch`
+behind a proxy) is P's too, widened in §3a.5.
+
+26. **The pinned archives' members**, from a real download into a scratch
+    folder: the interpreter's names (`python/bin/python3.14`, its `python3`
+    link, `python/python.exe`), every member type (symlinks, PAX and GNU
+    records, hard links), pip's version, whether an `EXTERNALLY-MANAGED`
+    file (PEP 668) is present (which would refuse `pip install` into the
+    tree), and **the count of `.pyc` under `python/Lib`** (none means the job
+    compiles the stdlib once, §3a.3). On the Surface, from the unpacked
+    pack: `sys.winver` and `sys.path` with a planted HKCU
+    `PythonCore\<winver>\PythonPath` subkey, with and without `-E` (whether
+    the face worker's bootstrap is needed, §3a.2).
+27. **Install time** on the M1 Pro and the Surface, per stage (download,
+    unpack, pip with and without `--no-compile`, the self-test), Defender's
+    share on the Surface (11,629 files in the Mac's site-packages), and the
+    rename retries' count there (the bound for `renameWithRetry`). If pip is
+    too slow there, uv is the reserve (§3a.1).
+28. **Bytes on disk, the longest relative path and the longest directory**,
+    per platform, from CI's install. Windows is measured from the wheels'
+    indexes today (about 0.72 GB with the interpreter); the interpreter's
+    extracted size is measured only as its tar stream.
+29. **The cold `system.hello`** from the pack on the Surface, **both** the
+    first start after an install and the first after a reboot, against the
+    client's 30 s. The client's hello timeout is set from it, plus a margin
+    (§3a.2).
+30. **The Visual C++ runtime on a clean Windows**, for **soxr, numba,
+    mediapipe (`libmediapipe.dll`), onnxruntime and ctranslate2**, each
+    imported (and called, as the self-test's groups do) **in its own fresh
+    process**, and once more in the helper's own order (asr first,
+    `capabilities/__init__.py:23-24`, and librosa loading sklearn lazily). Read
+    by reviewers from the wheels by byte range, 2026-10-14: soxr's
+    `soxr_ext.pyd` and numba's `_typeconv` import `MSVCP140.dll`, and numba's
+    `omppool.pyd` imports `MSVCP140` and `VCOMP140`, and neither wheel ships
+    either; onnxruntime 1.30.0's `onnxruntime.dll` (18,446,136 B) and
+    ctranslate2 4.8.2's `ctranslate2.dll` (59,296,256 B, beside
+    `libiomp5md.dll` 1,614,192 B and `cudnn64_9.dll` 266,288 B) ship no
+    `msvcp140`; mediapipe's `libmediapipe.dll` is 28,736,000 B with no
+    `msvcp140` in the wheel; numpy and llvmlite carry private, name-mangled
+    copies (llvmlite's `msvcp140-8f141b….dll`, 557,648 B); av ships its own
+    MinGW runtime; scipy's `_nd_image`, `_ckdtree` and `_uarray` import no
+    `MSVCP140`. Whether onnxruntime's and ctranslate2's DLLs import it is
+    CI's listing (§3a.6) to answer. Here also: the file version of every
+    `msvcp140*.dll` in the pack (sklearn's reads FileVersion 14.51.36247.0,
+    a reviewer). **Known, not measured here:** a System32 `msvcp140` older
+    than 14.40 is a crash class for binaries built with VS 2022 17.10 or
+    later (the `std::mutex` constexpr change), and the first `msvcp140`
+    loaded serves the whole process. The Surface has the redistributable
+    (`CLAUDE.md`) and so do GitHub's runners: Windows Sandbox or a fresh VM
+    answers, and only after `Test-Path C:\Windows\System32\msvcp140.dll`
+    inside it says it is absent (that is assumed, not known), and with its
+    version read if present. The Sandbox's memory is not the floor's, so its
+    run is not the memory measurement.
+31. **The packaged, unsigned app on a clean Mac**, the DMG fetched through a
+    browser in that account (so quarantined) and launched once from
+    Downloads (so translocated, a read-only bundle) before it is moved:
+    `xattr -l` on the pack's interpreter (no `com.apple.quarantine`; if
+    there is one, §3a.3's `xattr -dr` step is turned on and run on the same
+    account), `codesign -dv` on it (`adhoc,linker-signed`), the helper
+    starting, a model download verifying TLS, and `codesign --verify
+    --deep` on the app after a session (the helper must leave the bundle as
+    it was). Apple's `LSFileQuarantineEnabled` page was not read (outside
+    the hosts this measurement could reach).
+32. **On Windows**: Mark of the Web on the fetched files; SmartScreen or
+    Defender on the pack's `python.exe` and on `Scripts\*.exe` (§3a.3); a
+    window flashing from the helper, a face worker or its ffmpeg in a
+    packaged app (`python.exe` is a console exe,
+    `PCbuild/python.vcxproj:96`; the client spawns it with `windowsHide:
+    true`, `client.ts:122`, and workers with `CREATE_NO_WINDOW`,
+    `media.py:51`); and the tree kill leaving no worker or ffmpeg.
+33. **Range resume inside a file**, on release-assets and
+    files.pythonhosted.org, and whether it is worth building over P's
+    file-level resume.
+34. **pip 26.2.1 over the lock**: `--require-hashes` with `--no-deps
+    --no-index --only-binary=:all: --no-warn-script-location`, its output
+    lines, and whether the dist-info folders appear one package at a time
+    (the bar's measure).
+35. **hf-xet left out**: depth's and asr's model downloads pass without it.
+36. **The Surface itself**, recorded where no doc has it yet (grep of
+    `docs/`, 2026-10-14): Windows 10 or 11, version and build (it decides
+    Smart App Control and Sandbox), edition (Windows Sandbox is not in
+    Home), free disk, CPU, the installed redistributable's `msvcp140`
+    version, and the Smart App Control and Defender states.
+37. **CI**: the install's minutes on a cache miss, the cache's size, what
+    the capability suites' first Windows run finds, and **one Windows helper
+    process running asr and then beats** (two OpenMP runtimes meeting would
+    abort it; CI runs asr only if its model is seeded, §3a.6).
+38. **The protocol's encoding under `-E`**: the helper's stdio through a
+    reconfigure in `__main__` and through `-X utf8`, against today's
+    `PYTHONIOENCODING=utf-8`, with a non-ASCII path in a request and a reply
+    (§3a.2).
+
+### 3a.9 P.9 — Exit · 0.5–1 day
+
+- **CI**: on the Windows push job and the `macos-14` one (§16.48),
+  `helperPack.int` installs the pinned pack into a temp userData with a
+  space and a non-ASCII character in its path, and the helper's suites run
+  green from inside it through the pack's launch, `sidecarMedia.int`'s Python
+  cases with none skipped; hello's `executable`, `prefix` and every
+  `sys.path` entry are inside the pack or `sidecarDir()`; the URL probe, the
+  native-import listing and `pip check` are green.
+- **A clean Mac**: a fresh macOS user account, no `FORGE_PYTHON`; the DMG
+  from CI, **fetched through a browser in that account** and launched once
+  from Downloads, as a tester's copy is (quarantined and translocated), then
+  from Applications. Settings shows "Not installed" with **Install the AI
+  helper · 170 MB**; the press puts its bar and X in EXPORT; one cancel during
+  the download and a second press that shows "· N MB left" and fetches only
+  what was missing; the self-test passes and the row reads "Running · Python
+  3.14.8 · pack 1"; **Get the speech model · 464 MB** (§16.49 (a)) and one Transcribe on a
+  pool clip; one **Follow the subject** (the face finder by its own 1.1 MB
+  press); Repair once (its size shown); Remove once, both sizes shown,
+  models kept; and row 31's checks. The dev Mac's python.org framework
+  install stays visible to a fresh account, which is why hello's `prefix`
+  and `sys.path` are the proof, not the absence of a Python.
+- **The Surface**, two runs:
+  - **the app**: Windows Sandbox if its edition has it (no Python, no
+    `FORGE_PYTHON`; the Visual C++ runtime's absence checked, not assumed,
+    row 30), otherwise a new local account **with a non-ASCII name** (so
+    every pack path carries one), with no `FORGE_PYTHON`; the installer from
+    CI; the same presses as the Mac at **· 205 MB**; row 32's checks; then an
+    app update from CI's next installer, with the pack still there after it
+    (the uninstaller's `isUpdated` guard), and an uninstall, with
+    `%APPDATA%\Forge\python` gone after it;
+  - **the bar's tests on the floor machine**: on the Surface's dev checkout,
+    `FORGE_PACK_REAL=1` `helperPack.int` and then the suites from that pack
+    (`FORGE_HELPER_PACK`), which tests the 8 GB machine's CPU and memory that
+    CI's runner does not have. The full suite's output written to a file and
+    `$?` checked.
+- Typecheck green; the full suite green, written to a file and `$?` checked;
+  every mutation above killed; CI read at github.com/spyki-a/forge/actions;
+  `WHERE-THINGS-ARE.md`'s Settings and the census updated.
+
+**Your part:** the clean-account run on the Mac and the Sandbox (or new
+account) run on the Surface, about 2 hours with the downloads; the
+Surface's dev-checkout run, about 1 hour; row 36's facts about the Surface,
+10 minutes (the sandbox here can run neither Electron nor an installer);
+and §16.36–50.
+
+### 3a.10 Docs this step corrects · 0.5 day
+
+Found stale on the way, each corrected when P lands:
+
+- `requirements.txt:1-5` and `SIDECAR.md:69-71` say soundfile is sdist-only
+  and that audio decoding goes through the bundled ffmpeg. soundfile 0.14.0
+  (2026-06-06) ships `py2.py3-none` wheels for both platforms, and librosa
+  1.0.0 requires it; beats decodes with our ffmpeg (`beats.py:59-64`), but
+  **asr decodes with PyAV**.
+- §12's "mediapipe supports 3.12–3.14 by wheel tags": 0.10.35's two wheels
+  are `py3-none`, with no Requires-Python.
+- `requirements-stems.txt`'s demucs 4.0.1 has no `demucs.api` (§3a.1).
+- `PACKAGING.md:58` and `electron-builder.yml:19` say the venv is 542 MB;
+  `du -sh sidecar/.venv` says 598 MB. `PACKAGING.md:61-62` says the
+  requirements ship "so the setup step is available"; the pack replaces that.
+- This section's old exit counted "twelve helper tests" and `CLAUDE.md`
+  says fourteen; `sidecar.int.test.ts` has 15. `CLAUDE.md` says `client.ts`
+  falls back to `python3`; the app's fallback is `service.ts:34` (`python` on
+  Windows), and after P a packaged app has none.
+- Then `SIDECAR.md` Setup (the pack, and the venv for development),
+  `PACKAGING.md` ("What is deliberately left out", the first-run list, the
+  uninstaller's macro), `CLAUDE.md`'s fresh-Windows table (`FORGE_PYTHON`'s
+  new place; the dev pack's own root), `WHERE-THINGS-ARE.md` Settings,
+  `BETA.md` R4 (the full route built) and R12 (the `python3` dialog question
+  gone), and §14 below.
+
+**§14 gains six rows**, written into §14 on 2026-10-14 with the plan: the
+pack missing on an installed app; an install stopped part-way; a module
+degraded inside the pack; a damaged pack; the machines with no pack; and
+another app instance holding the pack.
+
+### 3a.11 Sources · fetched or read 2026-10-14
+
+- python-build-standalone: `https://api.github.com/repos/astral-sh/python-build-standalone/releases`
+  and `…/releases/tags/20261001` (re-read by the writer for this text:
+  every asset's size and digest, among them the plain Windows archive's
+  50,181,000 B and the Windows arm64 stripped archive's 22,228,934 B) and
+  `…/tags/20261013`; the asset URLs under
+  `https://github.com/astral-sh/python-build-standalone/releases/download/20261001/`
+  (the redirect, a 206 and a 501, and 4-byte gzip trailers by range); the
+  build sources on `https://raw.githubusercontent.com/astral-sh/python-build-standalone/`
+  (`cpython-unix/build-cpython.sh`, `cpython-windows/build.py`,
+  `cpython-unix/build-openssl-3.5.sh`, `src/release.rs`, `docs/running.md`);
+  issues #749 and #855 and PR #1255 on `https://github.com/astral-sh/python-build-standalone/`.
+- uv: `https://raw.githubusercontent.com/astral-sh/uv/` (`fetch-download-metadata.py`,
+  `download-metadata.json`); `https://api.github.com/repos/astral-sh/uv/releases`
+  (0.13.1's assets); issue #6584 on `https://github.com/astral-sh/uv/`.
+- python.org: `https://www.python.org/api/v2/downloads/release/` and the
+  3.14.8 release files (the `.pkg`, the Windows installer, the embeddable
+  zip); CPython's `Mac/BuildScript/build-installer.py`, `PC/layout/main.py`
+  and `PCbuild/python.vcxproj` on `https://raw.githubusercontent.com/python/cpython/`;
+  `https://raw.githubusercontent.com/python/cpython/3.14/Modules/getpath.py`
+  (lines 700-728, re-read by the writer).
+- PyPI: `https://pypi.org/pypi/<name>/<version>/json` for every one of the
+  48 distributions in both locks and for kokoro-onnx (every release since
+  0.4.8; 0.6.1 re-read by the writer), demucs 4.1.0, torch 2.14.1 and its
+  stems set, onnxruntime 1.23.2, av 15.1.0, and the cp312 and cp315 checks;
+  scikit-learn 1.9.1, ctranslate2 4.8.2, soxr 1.1.0, numba 0.67.0 and
+  onnxruntime 1.30.0 re-read by the writer.
+- The wheels' zip indexes and members by byte range on
+  `https://files.pythonhosted.org/packages/…`: the 48 Windows cp314 wheels'
+  central directories (sizes, file counts, the longest paths and directory,
+  the DLL lists, `entry_points.txt`), and the PE import tables of soxr's
+  `soxr_ext.pyd` and numba's `_typeconv` and `omppool` (reviewers);
+  scikit-learn 1.9.1's Windows index re-read by the writer
+  (`sklearn/.libs/msvcp140.dll` 643,512 B, `vcomp140.dll` 212,920 B).
+- Licences: `https://api.github.com/repos/mirror/x264/license`,
+  `https://api.github.com/repos/videolan/x265/license`, the pyav-ffmpeg
+  README on `raw.githubusercontent.com`; `facebookresearch/demucs` at
+  `v4.0.1` and `adefossez/demucs` on `api.github.com`.
+- `https://raw.githubusercontent.com/actions/runner-images/…/Configure-WindowsDefender.ps1`
+  (a reviewer).
+- `https://api.github.com/repos/spyki-a/forge` (`private: false`).
+- Issues: pypa/distlib #126, pypa/pip #5047 and #9023,
+  OpenNMT/CTranslate2 #1227, SYSTRAN/faster-whisper #967 (on `github.com`).
+- Electron 44.3.0: `docs/api/app.md` at `v44.3.0` on
+  `raw.githubusercontent.com/electron/electron`, and `electron.d.ts:1995`
+  in `node_modules`.
+- On the dev Mac: the venv's RECORD sizes and `du`; `xattr` on a file
+  written by Electron's Node; `/private/etc/ssl/cert.pem`; Electron's
+  `Info.plist`; `otool -L` on av's libavcodec (a reviewer); mediapipe's
+  `_shared_lib` after the worker's imports in `.venv-faces` (a reviewer);
+  `client.ts` with a slow fake helper (a reviewer: pids 7087 and 7099);
+  `graceful-fs` 4.2.11's `polyfills.js` and `tar` 7.5.22 in `node_modules`;
+  `_bootstrap_external.py:205`; huggingface_hub 1.31.0's
+  `_snapshot_download.py`, httpx 0.28.1's `create_ssl_context` and
+  faster-whisper 1.2.1's `download_model` (reviewers).
 
 ---
 
@@ -5812,6 +7448,12 @@ with a window, so `-ss` and `-t` are scanned too. So have 1f's shapes since
 | offline | each source's search says so; nothing half-written (staging then rename); Get transcript says so and the start and end fields stay | `webFetch` test; `ingestPanel` component test |
 | a number from a YouTube track | the graphic is a proposal, "check the number", until Keep | `directorGraphics` test |
 | a link with no captions and no Python | M0: "This video has no captions", the start and end fields as today, Listen to it greyed with "needs the AI helper"; Best clips adds "Best clips needs the AI helper to listen to it" | `ingestPanel` component test (§3b.8); panel test |
+| the AI helper's pack, on an installed app (Step P, §3a) | nothing spawned at any caller; a grey "Not installed" with the sized Install; every Python control greyed "needs the AI helper", each a pointer to Settings; the local voice says why; stems split by mid/side | `sidecarService` (spawn never called); the harness check; census rows |
+| a pack install stopped part-way (cancel, quit, offline) | verified downloads kept, no receipt, the folder ignored by the order and swept at launch; the next press says "· N MB left" and fetches only that | `helperPackJob`; `fetchFile` |
+| a module degraded inside the pack (most likely the Visual C++ runtime) | the pack kept; its controls greyed by method; the row grey, "N of 8 helper features", naming what is missing, with Check again | `helperPackJob`; `test_selftest`; §15 row 30's run |
+| a damaged pack (its interpreter gone, its receipt torn) | red "Not running" naming it, Repair with its size; never swept, never offered as a fresh Install | `helperPython`; `helperPackJob`'s sweep; `settingsPanel` |
+| macOS 13, Windows on Arm | "Not available on this computer" with the reason, no button | `helperPackManifest`; `settingsPanel` |
+| another app instance holding the pack | the sweep does nothing; Repair, Remove and Update refuse, with the reason | `helperPackJob` |
 | Windows | every render check above runs in CI on the 2018 build | CI, read after every push |
 
 ---
@@ -5971,7 +7613,9 @@ Each is named in its step, and each step's first task is its own row:
     number is kept so no reference moves.)*
 17. Pexels' licence, guidelines and rate limits, read in a browser (§11).
 18. The schema.org paywall signal on three news sites (§9).
-19. Electron `net.fetch` against Node fetch behind a proxy (§8.2).
+19. Electron `net.fetch` against Node fetch behind a proxy (§8.2); for
+    Step P, also one Hugging Face model press and one `fetch_url` press
+    behind the same proxy (§3a.5).
 20. three.js flat colour and edge alpha against the 2D painter (§9).
 21. pyautoflip on the ten clips, run once in a scratch venv on your Mac
     (Python 3.13 or older: it refuses 3.14), and rated beside ours at step
@@ -6013,6 +7657,14 @@ Each is named in its step, and each step's first task is its own row:
     the salient check's synthetic clips and the face fixture (§4.4), before
     it is chosen. Until then the analysis job centres a no-face shot with a
     note.
+
+**Rows 26–38 are Step P's**, written in full in §3a.8 (2026-10-14): the
+pinned archives' members (26, P's first task), install time (27), bytes on
+disk and the longest paths (28), the cold hello (29), the Visual C++
+runtime (30), the clean Mac (31), Windows' scanners and console windows
+(32), range resume (33), pip over the lock (34), hf-xet left out (35), the
+Surface itself (36), CI's first runs (37), and the protocol's encoding under
+`-E` (38).
 
 ---
 
@@ -6388,6 +8040,308 @@ what is needed, where the answer waits on something not yet in hand.
     `reframeJob.int` on any interpreter (the mutation that adds a
     `vision.salient` request fails it); no salient control exists, and
     `censusHomes.test.ts` pins that no census row names one (§4.7, §4.8).
+
+**Added 2026-10-14, from Step P's plan (§3a) and its two reviews.** Each is
+**OPEN**.
+
+36. **The AI helper's Python.** python-build-standalone's
+    `install_only_stripped` CPython: relocatable, no admin, no installer UI,
+    and the build uv installs by default. The version:
+    - **3.14.8** (Mac 26,680,498 B, Windows 23,227,899 B at `20261001`):
+      every base wheel exists (47 / 48); the whole stack has only ever run
+      on 3.14 (the dev venv's 3.14.6, the stub route included); supported
+      to 2030-10. It costs voice (kokoro-onnx caps below 3.14) and any pack
+      below macOS 14 (§16.44).
+    - **3.12.15** (25,023,573 / 22,013,771 B): the same wheels exist; never
+      run with the stack; security-only to 2028-10; python.org stopped
+      building 3.12 binaries at 3.12.10.
+    - **3.15.0** (2026-10-09): no cp315 wheels for onnxruntime,
+      ctranslate2, numba, llvmlite or pyyaml at these pins.
+    - Other sources fail on admin (python.org's Mac `.pkg`), on registering
+      with Windows (its silent installer), on pip and the C runtime (the
+      embeddable zip), on a UI (the Store), or add a 28–32 MB binary (uv).
+
+    **Recommended: 3.14.8**, pinned to `20261001` (or the newest tag that
+    has stood two weeks when P starts), its URL, bytes and sha256 in
+    `pack.ts`. CI keeps its bare 3.12 run as the floor for the degraded
+    checks; the pack's 3.14 runs the full suites.
+
+    **Answer:** OPEN.
+37. **Where the wheels come from.** The bytes are the same either way (Mac
+    151,510,094 B, Windows 191,876,652 B):
+    - **(a) PyPI's own files at the press.** The app ships a hash-pinned
+      lock with every file's files.pythonhosted.org URL, fetches each with
+      its own bar, retries, byte count and sha256, and pip installs
+      offline. Two host families (GitHub, PyPI); nothing re-hosted; no
+      release step per pack version.
+    - **(b) A project-hosted wheelhouse**, one archive per platform on the
+      project's release, as the asset packs are (`spyki-a/forge-assets`).
+      One host family and one file; but the project becomes the
+      distributor of av's FFmpeg (GPL-2.0-or-later as linked, with x264 and
+      x265), the LGPL soxr and libsndfile, NVIDIA's cuDNN DLL in
+      ctranslate2's Windows wheel, and Microsoft's runtime DLLs in
+      scikit-learn's; and each pack version needs a build and a publish.
+    - **(c) pip online** on the user's machine: no bar of ours, pip's own
+      proxy and certificate handling, and the index host too.
+    - **(d) A CI-built environment archive**: no pip on the user's machine;
+      the same redistribution as (b); its size unmeasured.
+
+    **Recommended: (a).** Revisit only if a tester's network blocks
+    files.pythonhosted.org, and then read the redistribution terms of every
+    binary above before (b) or (d). This records who distributes; it does
+    not reopen a settled licensing decision.
+
+    **Answer:** OPEN.
+38. **The base pack's contents and size.** `requirements.txt` plus both
+    faces files, one lock checked complete, one `--no-deps` pip run, the
+    stub route unchanged: **170 MB on the Mac's button and 205 MB on
+    Windows'** (178,190,592 and 215,104,551 B); **about 0.7 GB on disk on
+    both**: 0.66 GB on the Mac (587.9 MB of packages measured, plus the
+    interpreter) and 0.72 GB on Windows (measured from the wheels' indexes;
+    the first draft's 0.84 GB estimate is withdrawn), with a peak of about
+    0.84 / 0.94 GB while the downloads are still there. Within it: Whisper
+    23.7 / 51.1 MB (63.0 MB on the Mac's disk), faces 18.9 / 12.1 MB
+    (58.6 MB), librosa's chain 54.6 / 57.1 MB (**222.7 MB, 38 % of the
+    Mac's packages, for `audio.beats` alone**).
+    - (a) one pack, all of it;
+    - (b) without librosa's chain until `BETA.md` R4's TypeScript beat
+      tracker: −54.6 / −57.1 MB to download, −222.7 MB on disk,
+      `audio.beats` degraded meanwhile;
+    - (c) a press per capability (a core, then Whisper, faces, beats): more
+      states and tests, about a day more.
+
+    Either way hf-xet leaves the lock once the downloads pass without it
+    (−3.9 / −4.0 MB, −8.2 MB on disk), and av stays: asr decodes with it,
+    and a stub would need decode parity measured first. **Recommended:
+    (a)**; revisit (b) when R4's tracker matches the helper's beats on the
+    reference recordings.
+
+    **Answer:** OPEN.
+39. **Stems (torch) for the beta, and voice.**
+    - (a) **Not offered**: `audio.stems` stays degraded with its reason and
+      mid/side (29 dB of rejection, `requirements-stems.txt`) stays the
+      app's split;
+    - (b) **its own press after P**: demucs 4.1.0 plus torch 2.14.1 CPU
+      from PyPI, 13 wheels, 139,876,993 B on the Mac and 136,363,381 B on
+      Windows (torch alone 127.3 / 124.1 MB), installed size unmeasured,
+      plus the htdemucs model. The pin must first move off 4.0.1, which has
+      no `demucs.api`, so stems degrades today even where it is installed.
+      And torch brings its own OpenMP runtime into a process that already
+      holds ctranslate2's Intel one and scikit-learn's `vcomp140`;
+      faster-whisper #967 shows a Windows process aborting with "OMP: Error
+      #15" when two meet, so (b) is measured for that first (§3a.8 row 37).
+
+    Voice has no option on 3.14: every kokoro-onnx release since 0.4.8
+    requires Python below 3.14, and its chain ships espeak-ng (GPL-3.0),
+    which `STACK.md` §9 rules out as bundled. That stands; voice stays on
+    the hosted provider. **Recommended: (a)** for the beta, with the demucs
+    pin fixed as its own half day when stems comes back.
+
+    **Answer:** OPEN.
+40. **The hosts a restricted network must allow, and the model presses.**
+    For the pack: github.com (it redirects to
+    release-assets.githubusercontent.com, measured, and GitHub has moved
+    that host before) and files.pythonhosted.org; pip itself contacts
+    nothing. For models, each its own press: huggingface.co and *.hf.co, and
+    storage.googleapis.com. The model presses go through the helper's own
+    two fetchers (§3a.5): huggingface_hub over httpx trusts only certifi and
+    reads proxies only from the environment, so behind a company root
+    certificate or a system-set proxy the pack can install and every
+    Hugging Face press still fail.
+    - (a) name the hosts on the row, under the button (the redirect host
+      included), and in the tester guide;
+    - (b) also an "Install from a file…" route, taking files fetched
+      elsewhere against the same pins (half a day or more);
+    - (c) a mirror setting (no: a pin's host is part of the pin);
+    - (d) for the models: move their fetches to main's fetcher with
+      §16.22's one network stack, or say on the row and in the guide that a
+      model press needs direct access (or a proxy in `HTTPS_PROXY`).
+
+    **Recommended: (a) now, (b) when a tester needs it**, `FORGE_PYTHON`
+    the escape hatch meanwhile; **for (d), the sentence for the beta**, and
+    the move with §16.22 once row 19 is measured with one Hugging Face press
+    behind a proxy.
+
+    **Answer:** OPEN.
+41. **Where the Install press lives.**
+    - (a) **Settings only**: one row, one button with its size; every
+      "needs the AI helper" becomes a pointer that opens Settings at the
+      row, its text unchanged so the census rows keep matching. One home, as
+      `WINDOW.md` §3's legend asks, and the Director's gear's precedent;
+    - (b) **on every greyed control**, "Install the AI helper · 205 MB",
+      then the control's own action. The face finder's press on Follow the
+      subject is 1.1 MB; this would be a 205 MB side effect of a dock button;
+    - (c) **a first-run prompt**: a 205 MB offer before any work reads as
+      bloat.
+
+    **Recommended: (a)**, with no first-run prompt.
+
+    **Answer:** OPEN.
+42. **FORGE_PYTHON's place.** Today it beats everything (`service.ts:27`),
+    and the Surface sets it with `setx`, so every app started from Explorer
+    there inherits it.
+    - (a) **first everywhere**, the row naming the source. An installed app
+      on the Surface keeps using the dev Python after Install, and the
+      Install button is pointless there;
+    - (b) **first in development and tests; after the pack in a packaged
+      app**, where it is also the escape hatch when no pack is installed.
+      Development's order is `FORGE_PYTHON` → `.venv` → the dev pack →
+      PATH, so `npm run dev` never quietly runs a pack; an installed app
+      uses the pack the user installed;
+    - (c) **never in a packaged app**: no offline escape hatch.
+
+    **Recommended: (b).** The row always names the source, and takes its dot
+    from hello: a bare `FORGE_PYTHON` reads grey "N of 8 helper features",
+    never green. The exit runs on a fresh account either way.
+
+    **Answer:** OPEN.
+43. **Where the pack lives on Windows.**
+    - (a) **userData** (`%APPDATA%`, Roaming), beside the models (Whisper
+      small's 464 MB already lives there), yt-dlp and the packs. The
+      deepest file pip writes, its temporary `.pyc` name, is 217 of 259
+      characters for a 10-character user name and 227 for a 20-character
+      one (computed from the wheels' measured paths). One root for Remove,
+      the uninstaller and the guide;
+    - (b) **`%LOCALAPPDATA%`**: Electron's `app.md` (v44.3.0) advises
+      against large files in userData, and roaming profiles on domain
+      machines copy Roaming at logon. It saves 2 characters, and gives two
+      folders to remove.
+
+    Either way, R7's name lands before any tester installs a pack, because
+    userData follows `productName`. **Recommended: (a)** for the beta; if a
+    tester's profile roams, move pack and models together to (b).
+
+    **Answer:** OPEN.
+44. **The machines with no pack: macOS 13 and Windows on Arm.**
+    - **macOS 13.** The pack's floor is macOS 14: onnxruntime 1.30.0 and av
+      18.1.0 publish arm64 wheels only as `macosx_14_0`. Electron 44.3.0's
+      own floor is 13.0. (a) Install greyed "needs macOS 14"; (b) a second,
+      cp312 lock for 13 (onnxruntime 1.23.2 and av 15.1.0 have
+      `macosx_13_0_arm64` wheels; never run).
+    - **Windows on Arm.** The app ships x64 only and runs emulated there,
+      where `process.arch` says `'x64'`; `packPlatform` sees it through
+      `app.runningUnderARM64Translation`. (a) Install greyed "not available
+      on Windows on Arm yet"; (b) the x64 pack under emulation, never run
+      (onnxruntime and ctranslate2 emulated are unmeasured); (c) later, an
+      arm64 build of the app with the native
+      `aarch64-pc-windows-msvc` interpreter (22,228,934 B at `20261001`) and
+      arm64 wheels, which is its own step.
+    - An Intel Mac cannot open the arm64-only DMG, so it needs no row.
+
+    **Recommended: (a) for both**; macOS's (b) or Windows on Arm's (b) only
+    if a tester needs it, measured on that machine first.
+
+    **Answer:** OPEN.
+45. **The Visual C++ runtime on a clean Windows.** The interpreter carries
+    `vcruntime140.dll` and `vcruntime140_1.dll`. Measured by reviewers from
+    the wheels (2026-10-14): soxr's and numba's native files import
+    `MSVCP140.dll` (numba's `omppool` also `VCOMP140`) and their wheels ship
+    neither; onnxruntime's, ctranslate2's and mediapipe's DLLs ship no
+    `msvcp140`, whether they import it is CI's listing to answer (§3a.6);
+    scikit-learn ships its own `msvcp140.dll` and `vcomp140.dll` and
+    preloads them on import, so in one process whatever it loaded first
+    serves the rest. So the question reaches **audio.beats** too (soxr,
+    numba), not only Whisper and depth, and `hello` cannot see it (the
+    imports that need it happen at the first call). First: CI's listing on
+    every push, then row 30 in Windows Sandbox with each import in its own
+    process. If imports fail on a clean machine:
+    - (a) the self-test names it, "needs Microsoft's Visual C++ runtime",
+      with Microsoft's download link and Check again: the sentence yt-dlp's
+      check already uses;
+    - (b) app-local `msvcp140` DLLs beside `python.exe`, the folder Python
+      already loads `vcruntime140.dll` from (Microsoft's redistribution
+      terms to read first; the project would host the DLLs);
+    - (c) the NSIS installer runs `vc_redist` (a UAC prompt, from an
+      installer that is per-user today);
+    - (d) the helper preloads scikit-learn's own `msvcp140.dll` at start,
+      which needs no DLL hosted by the project, once its version is read
+      against the toolsets onnxruntime and ctranslate2 were built with (an
+      older copy bound first could itself be the crash, row 30).
+
+    **Recommended: measure (CI's listing, then row 30); then (a) for the
+    beta, and (d) or (b) after**, chosen on the versions read.
+
+    **Answer:** OPEN.
+46. **When a release changes the lock.**
+    - (a) the old pack is not used until "Update the AI helper · N MB" is
+      pressed, and its controls grey meanwhile; lock changes are batched so
+      testers meet one or two pack versions;
+    - (b) the old pack keeps running under a compatibility number (more
+      states, more tests).
+
+    **Recommended: (a)** for the beta; (b) if testers meet updates often.
+
+    **Answer:** OPEN.
+47. **Repair, Remove, the downloads and the uninstaller.** Repair fetches
+    and verifies every file first, while the helper keeps running, and only
+    then stops it, waits for its exit, removes the receipt, then the tree,
+    and reinstalls; its button shows what it will fetch ("Repair · 170 MB" on
+    the Mac, 205 MB on Windows, less what is already verified).
+    Remove deletes the pack only, with a box, off by default, for
+    `userData/models`, both sizes shown. The downloads are deleted after a
+    successful install, so Repair downloads again (a failed attempt's
+    verified files are reused, and an Install after a cancel says "· N MB
+    left"); keeping them costs 170 / 205 MB and makes Repair work offline.
+    The NSIS uninstaller removes `%APPDATA%\<productName>\python` but not
+    the models, guarded so an app update keeps it (the guard to be measured
+    on the Surface); on the Mac the guide says Remove first. **Recommended
+    as written.**
+
+    **Answer:** OPEN.
+48. **CI on the push.** The repo is public
+    (`api.github.com/repos/spyki-a/forge`: `private: false`, 2026-10-14),
+    which `ci.yml:31-32` names as the condition for putting macOS back on
+    push.
+    - (a) the Windows push job installs the pack (cached on the OS, the
+      architecture, the ISO week and a hash of `pack.ts`, the locks and the
+      installer's code) and runs the helper's suites from inside it through
+      the pack's launch; macOS stays on dispatch or a tag;
+    - (b) the same on both, with macOS back in the push matrix as `ci.yml`'s
+      header says, **on a `macos-14` arm64 runner**, the only place the
+      pack's macOS 14 floor runs (the dev Mac is on macOS 26); installers
+      stay on dispatch or a tag.
+
+    Either way, every push probes each pinned URL (about 49 requests), so a
+    file gone from PyPI or GitHub fails CI rather than a tester.
+    **Recommended: (b).** Salient's suite stays off the push path either
+    way.
+
+    **Answer:** OPEN.
+49. **The speech model on Transcribe.** Once P makes `asr.transcribe`
+    available, MediaPool's Transcribe fetches `Systran/faster-whisper-small`
+    (464 MB) unnamed, at `main` with no pin, and asks huggingface.co at each
+    session's first load (`asr.py:26-37`, faster-whisper 1.2.1's
+    `download_model`; §3a, What is wrong).
+    - (a) **its own press in P**: "Get the speech model · 464 MB" beside a
+      greyed Transcribe and in Settings, through `media.download` at a
+      pinned commit; `_load_model` loads that snapshot by path with
+      `local_files_only=True`. 0.5–1 day, counted in P's 9.5–13;
+    - (b) **Transcribe greyed "needs the speech model"** until a later step
+      builds the press, and out of P's exit: P is 9–12.
+
+    **Recommended: (a).** §0's click rule already promised the press ("its
+    own Get press", §12), and the exit is the first real Transcribe on a
+    clean machine.
+
+    **Answer:** OPEN.
+50. **One app at a time.** Nothing makes Forge single-instance, so a
+    second window shares userData with the first (and the dev app shares
+    it with the installed one, which P answers with a dev root of its own,
+    §3a.2).
+    - (a) **P's own lock**: `userData/python/.lock` held by install, Repair,
+      Remove and Update, and an in-use record per instance whose helper runs
+      from the pack; the sweep and the destructive jobs honour both. Built
+      and tested in P (§3a.3);
+    - (b) **(a) plus `app.requestSingleInstanceLock()`**: a second launch
+      focuses the first window. It ends the case for every userData file
+      (settings, caches, the fetched yt-dlp), not only the pack's, but it is
+      a product decision with its own measurement (whether the dev app and
+      the installed one would then exclude each other);
+    - (c) nothing: a double-clicked shortcut can delete a pack under pip.
+
+    **Recommended: (a) in P**; (b) as its own decision, not inside P.
+
+    **Answer:** OPEN.
 
 ---
 

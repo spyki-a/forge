@@ -42,7 +42,7 @@ more to a careful closed beta.
 | R1 | the even-grid fallback when there are no beats | 0.5 |
 | R2 | the first-hour bugs (six of them, plus 7–9 from `CLIPS.md`) | 1.5 (7–9's 1.5 counted in `CLIPS.md` step 0) |
 | R3 | copy rules and one blind rating run | 0.5 + your 45 minutes |
-| R4 | beats without Python: a TypeScript beat tracker (the full route is `CLIPS.md` Step P) | 3 (Step P's 5–10 counted in `CLIPS.md`) |
+| R4 | beats without Python: a TypeScript beat tracker (the full route is `CLIPS.md` Step P, planned in full in its §3a on 2026-10-14, not built) | 3 (Step P's 9.5–13 counted in `CLIPS.md`) |
 | R5 | portrait phone media: rotation and EXIF — DONE 2026-10-08 | 1.5 (built first, in `CLIPS.md` step 0, §3.1) |
 | R6 | the library pack's fonts and licences | 0.5 |
 | R7 | name, app id, icon, version | 0.5 (once you decide) |
@@ -58,7 +58,7 @@ R1 to R12 is 13 to 15 working days; R13 and R14 make a careful closed beta
 about three weeks of work once R1 starts. Four things wait on you: the name (R7), whether to
 pay Apple (R8), 45 minutes of rating (R3), and the Freesound originals (R14).
 **The total is unchanged by the 2026-10-05 edits**: R2's items 7–9 (1.5
-days) and R4's full route (Step P, 5–10 days) are counted once, in
+days) and R4's full route (Step P, 9.5–13 days as planned on 2026-10-14) are counted once, in
 `CLIPS.md`, which now runs before R1; they are done when the beta resumes.
 What changed is the order: R5 is `CLIPS.md` §3.1, in its step 0, so it is
 also done by then, and R1–R12 leave 11.5 to 13.5 days when the beta
@@ -181,9 +181,14 @@ sidecar's beats are the oracle: within 70 ms on ≥ 80 % of beats, tempo
 within 2 BPM).
 
 **The full route** is `CLIPS.md` Step P (§3a): the app installs its own
-Python pack under `userData` (5 to 10 days, 300 MB or more), and no Python
+Python pack under `userData` (estimated here at 5 to 10 days, 300 MB or more), and no Python
 half ships in an installer before it. Decided 2026-10-05 (`SHEETS.md:806-809`,
 `CLIPS.md` §16.25); it is built inside `CLIPS.md`, before the beta resumes.
+Its plan is written in full in `CLIPS.md` §3a (2026-10-14, not built): a
+pinned CPython 3.14.8 and a hash-pinned wheel lock installed offline under
+`userData/python/`, 170 MB to download on the Mac and 205 MB on Windows,
+about 0.7 GB on disk, 9.5–13 days, with its decisions open in
+`CLIPS.md` §16.36–50.
 
 **Tests.** `tests/beats.test.ts` on synthetic clicks at known tempos;
 `tests/integration/beats.int.test.ts` against the reference recordings'
