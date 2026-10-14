@@ -386,6 +386,30 @@ describe.skipIf(!MACHINE)('the in-use record', () => {
     expect(existsSync(record)).toBe(false)
   })
 
+  it('the record goes with the helper’s own exit, before any stop, and the restart’s spawn writes it again', async () => {
+    const { python } = installPack()
+    FAKE.packPython = python
+    const pids = join(electron.userData, 'pids.txt')
+    process.env.FAKE_PIDS = pids
+    const { startSidecar, getSidecar } = await service()
+    startSidecar(() => undefined)
+    const helper = getSidecar()
+    await helper.start()
+    const record = join(electron.userData, 'python', 'in-use', String(process.pid))
+    expect(existsSync(record)).toBe(true)
+    // The service's own 'exit' listener was added first, when it built the
+    // client: by the time this one runs, the record must already be gone.
+    const atExit: boolean[] = []
+    helper.on('exit', () => atExit.push(existsSync(record)))
+    await helper.request('fake.crash').catch(() => undefined)
+    expect(await until(() => atExit.length === 1, 5000), 'the crash was seen').toBe(true)
+    expect(atExit, 'the record when the helper exited, before any stop').toEqual([false])
+    expect(helper.stopped).toBe(false)
+    // The restart (400 ms later) runs from the pack again, and is recorded again.
+    expect(await until(() => pidsIn(pids).length === 2 && existsSync(record), 10_000), 'the restart’s record').toBe(true)
+    expect(JSON.parse(readFileSync(record, 'utf8'))).toEqual({ pack: HELPER_PACK.pack })
+  })
+
   it('development keeps a root of its own: python-dev, never the installed app’s', async () => {
     const { packRoot } = await service()
     expect(packRoot('/u', true)).toBe(join('/u', 'python'))
