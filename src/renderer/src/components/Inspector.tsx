@@ -29,6 +29,8 @@ import { TextStylePicker } from './TextStylePicker'
 import { TextAnimationPicker } from './TextAnimationPicker'
 import { Slider } from './Slider'
 import { faderPosition, formatDb, gainAtPosition } from '@shared/render/audibility'
+import { followKeys } from '@shared/reframe/keys'
+import { followSummary } from '@shared/reframe/follow'
 
 function Field({ label, value }: { label: string; value: string }): ReactNode {
   return (
@@ -95,6 +97,7 @@ export function Inspector(): ReactNode {
   const previousClip = base?.kind === 'cut' ? base.clip : null
   const asset = clip ? project.assets.find((a) => a.id === clip.assetId) ?? null : null
   const fps = project.settings.fps
+  const followed = clip?.follow ? followKeys(project, clip, fps) : null
 
   /*
    * The clip editor, and nothing else, inside the Trimmer dock (TrimmerDock.tsx,
@@ -144,8 +147,17 @@ export function Inspector(): ReactNode {
               </span>
             </div>
             <Field label="Source in" value={formatTimecode(clip.inPoint, fps)} />
-            {clip.crop && (
-              <Field label="Reframe" value={`${clip.crop.width}×${clip.crop.height} @ ${clip.crop.x},${clip.crop.y}`} />
+            {/*
+              A clip that follows its subject has no one rectangle to report:
+              its crop is compiled from the file's track, shot by shot
+              (docs/CLIPS.md §4.7), so the line says that, and how many shots.
+            */}
+            {followed ? (
+              <Field label="Reframe" value={followSummary(followed)} />
+            ) : (
+              clip.crop && (
+                <Field label="Reframe" value={`${clip.crop.width}×${clip.crop.height} @ ${clip.crop.x},${clip.crop.y}`} />
+              )
             )}
 
             {/*

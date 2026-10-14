@@ -198,12 +198,23 @@ describe('the camera move is sized from the stream the crop really makes', () =>
 })
 
 describe('the preview crops with the export’s rectangle', () => {
-  it('draws both viewports through effectiveCrop, never the raw clip.crop', async () => {
+  /*
+   * Both viewports read the crop through `cropAt` (render/crop.ts), which is
+   * `effectiveCrop` of the stored crop for a clip that does not follow, and the
+   * followed crop on the frame for one that does (docs/CLIPS.md §4.7). Each
+   * anchor is counted: one reader, one call per viewport.
+   */
+  it('draws both viewports through cropAt — effectiveCrop for a stored crop — never the raw clip.crop', async () => {
     const { readFileSync } = await import('node:fs')
     const { resolve } = await import('node:path')
     const preview = readFileSync(resolve(__dirname, '../src/renderer/src/components/Preview.tsx'), 'utf8')
-    expect(preview).toContain('const crop: CropRect = effectiveCrop(layer.clip.crop, { width: w, height: h })')
-    expect(preview).toContain('effectiveCrop(top.clip.crop, { width: naturalW, height: naturalH })')
+    const count = (needle: string): number => preview.split(needle).length - 1
+    // The one reader, at the clip's own frame.
+    expect(count('return cropAt(project, layer.clip, size, previewClipFrame(layer.clip, fps, playhead, mediaTime))')).toBe(1)
+    // The Output view's crop, and the Source outline's, both through it.
+    expect(count('const cut = cutOf(layer, { width: w, height: h })')).toBe(1)
+    expect(count('cutOf(top, { width: naturalW, height: naturalH })')).toBe(1)
+    expect(preview).not.toContain('effectiveCrop(')
     // No site left drawing the rectangle as stored.
     // (Testing for a crop before converting it is fine; using it as-is is not.)
     expect(preview).not.toMatch(/const crop(?::\s*CropRect)?\s*=\s*(?:top\?\.|layer\.)clip\.crop\b(?!\s*\?\s*effectiveCrop)/)

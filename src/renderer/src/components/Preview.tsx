@@ -31,14 +31,16 @@ import { fadeGainAt, fadesWithNeighbours } from '@shared/render/audioFade'
 import { audioRole, clampGain, clipLevelAt, isAudible } from '@shared/render/audibility'
 import { NO_SCRUB, SCRUB_BURST_MS, scrubStep, type ScrubState } from '@shared/render/scrub'
 import { motionSourceRect, moveAt } from '@shared/render/motion'
-import { effectiveCrop } from '@shared/render/crop'
+import { cropAt, type CropOnFrame } from '@shared/render/crop'
+import { previewClipFrame } from '@shared/reframe/playback'
+import { forgetStacks, stackedCrop } from '../stackedCrop'
 import { pickRegion, pickedColor, saneKey } from '@shared/render/chromaKey'
 import { maskAt } from '@shared/render/mask'
 import { clipBox, parallaxBakeFor, planeShare } from '@shared/render/plan'
 import { pathAt } from '@shared/render/path'
 import { clockStep, needsReanchor, type ClockAnchor } from '@shared/render/clock'
 import { valueAt } from '@shared/render/keyframes'
-import { CropOverlay } from './CropOverlay'
+import { CropOverlay, FollowedOutputDrag } from './CropOverlay'
 import { TextOverlay } from './TextOverlay'
 import { TransformOverlay } from './TransformOverlay'
 import { MaskOverlay } from './MaskOverlay'
@@ -123,6 +125,25 @@ const DRIFT_TOLERANCE = 0.18
  * wander between a wall clock and an audio device.
  */
 const AUDIO_RESYNC = 0.75
+
+/**
+ * The media time of the frame each playing `<video>` last PRESENTED, from
+ * `requestVideoFrameCallback` — what a followed crop is read at while playing
+ * (docs/CLIPS.md §4.7; shared/reframe/playback.ts). `currentTime` is the
+ * playback position, which runs ahead of the frame on screen by up to a frame;
+ * the callback's `mediaTime` is that frame's own time. Per element, so it
+ * goes with the element.
+ */
+const presented = new WeakMap<HTMLVideoElement, number>()
+
+function watchPresentedFrames(video: HTMLVideoElement): void {
+  if (typeof video.requestVideoFrameCallback !== 'function') return
+  const onFrame: VideoFrameRequestCallback = (_now, metadata) => {
+    presented.set(video, metadata.mediaTime)
+    video.requestVideoFrameCallback(onFrame)
+  }
+  video.requestVideoFrameCallback(onFrame)
+}
 
 type MediaElement = HTMLVideoElement | HTMLImageElement
 
@@ -629,6 +650,7 @@ export function Preview(): ReactNode {
       element.addEventListener('loadeddata', repaint)
       element.addEventListener('seeked', repaint)
       element.addEventListener('canplay', repaint)
+      watchPresentedFrames(element)
     } else {
       element.addEventListener('load', repaint)
     }
@@ -669,6 +691,8 @@ export function Preview(): ReactNode {
       // sticker's matte is: it belongs to the clip, not to the mask file.
       forgetWipe(`${clipId}#wipe`)
     }
+    // A two-up's stacked frames, keyed `<clip>#stack…` (stackedCrop.ts).
+    forgetStacks(new Set(project.clips.map((c) => c.id)))
 
     // Plane images outlive individual clips, so they are evicted against the
     // bakes the project still holds rather than against the clip list.
@@ -1331,6 +1355,23 @@ export function Preview(): ReactNode {
         : gradedSource(sourceFor(layer), layer.clip.color, layer.clip.id, repaint, layer.clip.key)
 
     /*
+     * The crop a layer is cut with on THIS frame: `cropAt`, the one reader
+     * (shared/render/crop.ts) — the rectangle the export really cuts, and on
+     * a clip that follows its subject the followed crop — at the clip's own
+     * frame (`previewClipFrame`). Paused, that is the playhead's frame of the
+     * clip; playing, the frame the element is SHOWING (its presented media
+     * time through the export's own mapping), so a cut in the crop lands on
+     * the cut in the picture however far the element has drifted from the
+     * playhead. Never `sourceFrameFor`: at 0.5× its rounding is a frame ahead
+     * of the export's (docs/CLIPS.md §4.7).
+     */
+    const cutOf = (layer: Layer, size: { width: number; height: number }): CropOnFrame => {
+      const video = playing && layer.clip.follow && layer.element instanceof HTMLVideoElement ? layer.element : null
+      const mediaTime = video ? (presented.get(video) ?? video.currentTime) : null
+      return cropAt(project, layer.clip, size, previewClipFrame(layer.clip, fps, playhead, mediaTime))
+    }
+
+    /*
      * Null unless the left viewport is drawn.
      *
      * It defaulted to scale 1 at the origin, so in the Output view — the
@@ -1370,19 +1411,44 @@ export function Preview(): ReactNode {
       ctx.globalAlpha = 1
 
       // The rectangle the export really cuts, not the raw one — they differ for
-      // a crop hanging off an edge (shared/render/crop.ts effectiveCrop).
-      const crop = top?.clip.crop ? effectiveCrop(top.clip.crop, { width: naturalW, height: naturalH }) : undefined
-      if (crop) {
+      // a crop hanging off an edge (shared/render/crop.ts effectiveCrop) — and
+      // for a clip that follows its subject, where it is on this frame.
+      const cut = top && (top.clip.crop || top.clip.follow) ? cutOf(top, { width: naturalW, height: naturalH }) : null
+      if (cut) {
+        const fit = sourceFit
+        const whole = (): void => ctx.rect(fit.offsetX, fit.offsetY, naturalW * fit.scale, naturalH * fit.scale)
+        const hole = (r: CropRect): void =>
+          ctx.rect(fit.offsetX + r.x * fit.scale, fit.offsetY + r.y * fit.scale, r.width * fit.scale, r.height * fit.scale)
         ctx.fillStyle = 'rgba(8,10,13,0.66)'
-        ctx.beginPath()
-        ctx.rect(sourceFit.offsetX, sourceFit.offsetY, naturalW * sourceFit.scale, naturalH * sourceFit.scale)
-        ctx.rect(
-          sourceFit.offsetX + crop.x * sourceFit.scale,
-          sourceFit.offsetY + crop.y * sourceFit.scale,
-          crop.width * sourceFit.scale,
-          crop.height * sourceFit.scale
-        )
-        ctx.fill('evenodd')
+        if (!cut.halves) {
+          ctx.beginPath()
+          whole()
+          hole(cut.crop)
+          ctx.fill('evenodd')
+        } else {
+          /*
+           * A stacked two-up: BOTH rectangles, each the half it cuts. They can
+           * overlap — two people just too far apart for one crop — so the dim
+           * is clipped to outside the top one and filled outside the bottom
+           * one: an even-odd fill of both at once would dim their overlap again.
+           */
+          const { top: upper, bottom: lower } = cut.halves
+          ctx.save()
+          ctx.beginPath()
+          whole()
+          hole(upper)
+          ctx.clip('evenodd')
+          ctx.beginPath()
+          whole()
+          hole(lower)
+          ctx.fill('evenodd')
+          ctx.restore()
+          ctx.strokeStyle = 'rgba(255,255,255,0.7)'
+          ctx.lineWidth = 1
+          for (const r of [upper, lower]) {
+            ctx.strokeRect(fit.offsetX + r.x * fit.scale + 0.5, fit.offsetY + r.y * fit.scale + 0.5, r.width * fit.scale - 1, r.height * fit.scale - 1)
+          }
+        }
       }
       ctx.restore()
     }
@@ -1430,9 +1496,25 @@ export function Preview(): ReactNode {
         flushGradesBelow(trackOrder.get(layer.clip.trackId) ?? 0)
         const w = layer.asset.width ?? naturalW
         const h = layer.asset.height ?? naturalH
-        // Exactly what the export crops to, so the finished frame on screen is
-        // the finished frame in the file.
-        const crop: CropRect = effectiveCrop(layer.clip.crop, { width: w, height: h })
+        /*
+         * Exactly what the export crops to, so the finished frame on screen is
+         * the finished frame in the file (`cutOf`, above). On a stacked two-up
+         * frame the picture becomes the two halves stacked into one canvas the
+         * followed crop's size, and the crop is all of that canvas: from here
+         * on the move, the punch-in, the fit and the mask treat it as the
+         * cropped picture, as the export's chain takes the `vstack`'s output.
+         */
+        const cut = cutOf(layer, { width: w, height: h })
+        const twoUp = cut.halves
+        const crop: CropRect = twoUp
+          ? { x: 0, y: 0, width: twoUp.top.width, height: twoUp.top.height + twoUp.bottom.height }
+          : cut.crop
+        let stack: HTMLCanvasElement | null = null
+        const shown = (): CanvasImageSource =>
+          twoUp ? (stack ??= stackedCrop(`${layer.clip.id}#stack`, picture(layer), twoUp)) : picture(layer)
+        // A grade mask's plain picture underneath, stacked the same way.
+        const plain = (): CanvasImageSource =>
+          twoUp ? stackedCrop(`${layer.clip.id}#stack-plain`, layer.element, twoUp) : layer.element
         const motion = layer.clip.motion
 
         /*
@@ -1621,7 +1703,7 @@ export function Preview(): ReactNode {
           matteShape
             ? mattedSource(
                 layer.clip.id,
-                picture(layer),
+                shown(),
                 matteShape,
                 { sx: crop.x + rect.sx, sy: crop.y + rect.sy, sw: rect.sw, sh: rect.sh },
                 destination[2],
@@ -1647,14 +1729,14 @@ export function Preview(): ReactNode {
         const masked = mask
           ? maskedSource(
               layer.clip.id,
-              mask.mode === 'grade' ? layer.element : (overMatte ? shaped! : picture(layer)),
+              mask.mode === 'grade' ? plain() : (overMatte ? shaped! : shown()),
               mask,
               overMatte
                 ? null
                 : { sx: crop.x + rect.sx, sy: crop.y + rect.sy, sw: rect.sw, sh: rect.sh },
               destination[2],
               destination[3],
-              mask.mode === 'grade' ? picture(layer) : undefined
+              mask.mode === 'grade' ? shown() : undefined
             )
           : null
 
@@ -1675,7 +1757,7 @@ export function Preview(): ReactNode {
           layer.wipe && !pending && !raw
             ? wipedSource(
                 `${layer.clip.id}#wipe`,
-                finished ?? picture(layer),
+                finished ?? shown(),
                 layer.wipe.mask,
                 finished
                   ? { sx: 0, sy: 0, sw: destination[2], sh: destination[3] }
@@ -1696,7 +1778,7 @@ export function Preview(): ReactNode {
           ctx.drawImage(shaped, destination[0], destination[1], destination[2], destination[3])
         } else {
           ctx.drawImage(
-            picture(layer),
+            shown(),
             crop.x + rect.sx, crop.y + rect.sy, rect.sw, rect.sh,
             ...destination
           )
@@ -1792,7 +1874,9 @@ export function Preview(): ReactNode {
     previewTool,
     // Picking draws the selected clip alone, so which clip that is matters.
     selectedClipId,
-    repaint
+    repaint,
+    // A followed crop is read at the element's frame while playing, the playhead's while paused.
+    playing
   ])
 
   // Any change `draw` can see — a new project, a moved playhead, a toggled
@@ -2010,6 +2094,10 @@ export function Preview(): ReactNode {
 
         {showCrop && topLayer && transform && (
           <CropOverlay clip={topLayer.clip} asset={topLayer.asset} transform={transform} />
+        )}
+        {/* A followed clip's crop is corrected on the Output too: the shot under the playhead, or the half under the pointer. */}
+        {showCrop && topLayer?.clip.follow && outputRect && (
+          <FollowedOutputDrag clip={topLayer.clip} asset={topLayer.asset} frame={outputRect} />
         )}
 
         {/* Edit the words on the picture, not in a panel two columns away. */}
