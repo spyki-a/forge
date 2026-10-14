@@ -27,6 +27,8 @@ import { bakeForExport } from '@shared/render/exportBake'
 import { liveBakers } from '../exportBakers'
 import { offlineAssets } from '@shared/project/relink'
 import { BigButton } from './ui/Tile'
+import { REFRAME_PRESET, reframeJobLabel } from '@shared/reframe/job'
+import type { Job } from '@shared/types'
 import { Strip } from './ui/Strip'
 
 /**
@@ -45,6 +47,19 @@ import { Strip } from './ui/Strip'
  * (ui/Strip.tsx), so the menu's export runs whether or not anyone has opened
  * the strip — tests/windowStrips.test.ts holds both.
  */
+/**
+ * A job's name in the list and the header: its file, or — for the reframe's
+ * analysis (docs/CLIPS.md §4.8) — "Finding the subject · <file>", since the
+ * file alone would read as an export of it.
+ */
+export function jobName(job: Pick<Job, 'presetId' | 'inputName'>): string {
+  return job.presetId === REFRAME_PRESET ? reframeJobLabel(job) : job.inputName
+}
+
+/** A reframe analysis writes no file to show, and waits its turn on a queue of one: its X is there while it waits too. */
+const cancellable = (job: Pick<Job, 'presetId' | 'status'>): boolean =>
+  job.status === 'running' || (job.status === 'queued' && job.presetId === REFRAME_PRESET)
+
 export function ExportStrip(): ReactNode {
   const project = useEditor((s) => s.project)
   const aspect = useEditor((s) => s.aspect)
@@ -270,8 +285,8 @@ export function ExportStrip(): ReactNode {
               aria-valuenow={percent}
               title={
                 headline?.kind === 'running'
-                  ? `Running: ${active.inputName} — ${percent}%`
-                  : `Waiting: ${active.inputName} — it starts when the one before it ends`
+                  ? `Running: ${jobName(active)} — ${percent}%`
+                  : `Waiting: ${jobName(active)} — it starts when the one before it ends`
               }
               className="h-1 w-14 shrink-0 overflow-hidden rounded-full bg-ink-800"
             >
@@ -415,8 +430,8 @@ export function ExportStrip(): ReactNode {
             {jobs.map((job) => (
               <div key={job.id} className="border-b border-ink-850 px-3 py-2">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="truncate text-[11px] text-ink-200">{job.inputName}</span>
-                  {job.status === 'running' && (
+                  <span className="truncate text-[11px] text-ink-200">{jobName(job)}</span>
+                  {cancellable(job) && (
                     <button
                       onClick={() => void window.forge.cancelRender(job.id)}
                       title="Cancel"
@@ -425,7 +440,7 @@ export function ExportStrip(): ReactNode {
                       <X size={11} />
                     </button>
                   )}
-                  {job.status === 'done' && (
+                  {job.status === 'done' && job.presetId !== REFRAME_PRESET && (
                     <button
                       onClick={() => void window.forge.revealPath(job.output)}
                       title="Show in folder"

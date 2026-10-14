@@ -19,6 +19,7 @@ import { MaskPanel } from './MaskPanel'
 import { KeyPanel } from './KeyPanel'
 import { CameraPanel } from './CameraPanel'
 import { SteadyToggle } from './SteadyToggle'
+import { ReframePanel } from './tools/ReframePanel'
 import { canSteady } from '@shared/render/steady'
 import { canMoveCamera } from '@shared/edit/camera'
 import { isKeyable } from '@shared/render/chromaKey'
@@ -222,6 +223,9 @@ export function Inspector(): ReactNode {
 
               {/* Footage's steadiness, under its speed. */}
               {canSteady(clip, asset ?? undefined) && <SteadyToggle clip={clip} />}
+
+              {/* Following the subject, for footage (docs/CLIPS.md §4.8): under Steady, the other thing about how it is framed. */}
+              {asset?.kind === 'video' && <ReframePanel clipId={clip.id} />}
 
               {/* A photo's camera move — where Speed would be, which a still has none of. */}
               {canMoveCamera(clip, asset ?? undefined) && <CameraPanel clip={clip} />}
