@@ -643,6 +643,60 @@ describe('exportFrameAt — the measured rows', () => {
   })
 })
 
+describe('followKeys — the cut’s exact pts, when the track kept it (1b)', () => {
+  /*
+   * EFFECTS.md §55's measured row (the fix phase, re-measured on the bundled
+   * ffmpeg): after `-ss 2.88` (in-point 72 at 25 fps) on a 30 fps mp4 of
+   * 1/15360, `fps=25:start_time=0` first shows source frame 231 (pts 118272)
+   * on slot 120. ffmpeg rounds the seek's 44236.8 ticks UP to 44237, so the
+   * tie (t·25 = 120.5 from the exact seek) falls a hair under it. The printed
+   * time, 7.7 s, cannot know the time base, and its tie slack sends it to 121.
+   */
+  const CUT_MS = finderMs(231)
+  const tb = { num: 1, den: 15360 }
+  function cutTrack(o: { startPts?: number; timeBase?: { num: number; den: number } }): SubjectTrack {
+    const durationMs = 20_000
+    const samples = []
+    for (let ms = 0; ms < durationMs; ms += 500) samples.push({ ms, faces: [face(ms < CUT_MS ? 500 : 1500, 400)] })
+    return {
+      ...TRACK,
+      key: '1:1',
+      durationMs,
+      shots: [
+        { startMs: 0, endMs: CUT_MS, score: 0, ...(o.startPts !== undefined ? { startPts: 0 } : {}) },
+        { startMs: CUT_MS, endMs: durationMs, score: 0.9, ...(o.startPts !== undefined ? { startPts: o.startPts } : {}) }
+      ],
+      samples,
+      perShot: [{}, {}],
+      ...(o.timeBase ? { timeBase: o.timeBase } : {})
+    }
+  }
+  /** The frame the held key for the cut is on, and the crop either side of it. */
+  function cutFrame(t: SubjectTrack): { frame: number; before: number; on: number; path: CropPath } {
+    const { project, clip } = setup(t, { inPoint: 72, duration: 400 })
+    const keys = followKeys(project, clip, 25)!
+    const held = keys.cropX!.terms.filter((term) => 'atFrame' in term)
+    expect(held, 'one held key: the one cut').toHaveLength(1)
+    const frame = (held[0] as { atFrame: number }).atFrame
+    return { frame, before: followAt(keys, frame - 1).crop.x, on: followAt(keys, frame).crop.x, path: cropPath(t, CANVAS, {}) }
+  }
+
+  it('a 25 fps project at in-point 72: the cut at source frame 231 is keyed on slot 120 from its pts on 1/15360 — the printed ms keys 121', () => {
+    expect(CUT_MS).toBe(7700)
+    expect(exportSlot(231, setup(TRACK, { inPoint: 72 }).clip, 25), 'the integer oracle agrees with the measured row').toBe(120)
+
+    const exact = cutFrame(cutTrack({ startPts: 231 * 512, timeBase: tb }))
+    expect(exact.frame).toBe(120)
+    expect(exact.before, 'frame 119 still shows the first shot').toBe(exact.path.shots[0].at)
+    expect(exact.on, 'frame 120 shows the second').toBe(exact.path.shots[1].at)
+    expect(exact.path.shots[0].at).not.toBe(exact.path.shots[1].at)
+
+    // Either half missing, and the printed ms is all there is: a frame late, as measured.
+    expect(cutFrame(cutTrack({ startPts: 231 * 512 })).frame, 'no time base').toBe(121)
+    expect(cutFrame(cutTrack({ timeBase: tb })).frame, 'no pts').toBe(121)
+  })
+})
+
 /** The `%.6g` print's half-unit at this time, in 30 fps frames. */
 function printedPrecisionFrames(ms: number): number {
   const s = ms / 1000

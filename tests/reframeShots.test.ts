@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { parseSceneLog, sceneArgs, sceneLogReader, shotsFrom, type SceneCut } from '@shared/reframe/shots'
 import type { Shot } from '@shared/reframe/types'
 import { lineSplitter, runFfmpeg } from '../src/main/ffmpeg/run'
+import { parseTimeBase } from '../src/main/ffmpeg/probe'
 
 /*
  * The shot finder's pure half (src/shared/reframe/shots.ts, docs/CLIPS.md
@@ -112,18 +113,18 @@ describe('parseSceneLog over ffmpeg’s own stderr', () => {
   // cut at frames 61 and 107), run at the runner's -loglevel info.
   it('reads each picked frame’s time and score — the five-source clip at T = 0.1', () => {
     expect(parseSceneLog(fixture('five-cuts-t0.1.stderr.txt'))).toEqual([
-      { ms: 2000, score: 1 },
-      { ms: 4000, score: 1 },
-      { ms: 6000, score: 0.4 },
-      { ms: 8000, score: 0.2 }
+      { ms: 2000, score: 1, pts: 30720 },
+      { ms: 4000, score: 1, pts: 61440 },
+      { ms: 6000, score: 0.4, pts: 92160 },
+      { ms: 8000, score: 0.2, pts: 122880 }
     ])
   })
 
   it('counts from where the pass began reading — the window 3.5 s to 8.034 s', () => {
     expect(parseSceneLog(fixture('five-cuts-window.stderr.txt'))).toEqual([
-      { ms: 500, score: 1 },
-      { ms: 2500, score: 0.4 },
-      { ms: 4500, score: 0.2 }
+      { ms: 500, score: 1, pts: 7680 },
+      { ms: 2500, score: 0.4, pts: 38400 },
+      { ms: 4500, score: 0.2, pts: 69120 }
     ])
   })
 
@@ -131,6 +132,9 @@ describe('parseSceneLog over ffmpeg’s own stderr', () => {
     const cuts = parseSceneLog(fixture('odd-frames.stderr.txt'))
     expect(cuts.map((c) => c.ms)).toEqual([2035.37, 3570.23])
     expect(cuts.map((c) => Math.round((c.ms * 30000) / 1001 / 1000))).toEqual([61, 107])
+    // The same lines' integers are the frames exactly, on 1/30000: 1001 ticks a frame.
+    expect(cuts.map((c) => c.pts)).toEqual([61061, 107107])
+    expect(cuts.map((c) => (c.pts as number) / 1001)).toEqual([61, 107])
   })
 
   it('reads a long timestamp, which the %-7s padding no longer separates by three spaces', () => {
@@ -145,8 +149,8 @@ describe('parseSceneLog over ffmpeg’s own stderr', () => {
       '[Parsed_metadata_4 @ 0x1] lavfi.scene_score=1.000000'
     ].join('\n')
     expect(parseSceneLog(text)).toEqual([
-      { ms: 1236530, score: 0.731 },
-      { ms: 12347500, score: 1 }
+      { ms: 1236530, score: 0.731, pts: 18993151 },
+      { ms: 12347500, score: 1, pts: 189657600 }
     ])
   })
 
@@ -167,12 +171,31 @@ describe('parseSceneLog over ffmpeg’s own stderr', () => {
     const nopts = text.replace('pts:61440   pts_time:4', 'pts:NOPTS   pts_time:NOPTS')
     expect(nopts).not.toBe(text)
     expect(parseSceneLog(nopts).map((c) => c.ms)).toEqual([2000, 6000, 8000])
+    // A time with no integer beside it keeps its cut, with a null pts: keys.ts then reads its printed ms.
+    const noInteger = text.replace('pts:61440   pts_time:4', 'pts:NOPTS   pts_time:4')
+    expect(noInteger).not.toBe(text)
+    expect(parseSceneLog(noInteger).map((c) => [c.ms, c.pts])).toEqual([
+      [2000, 30720],
+      [4000, null],
+      [6000, 92160],
+      [8000, 122880]
+    ])
   })
 
   it('reads the same a line at a time, as the runner feeds it', () => {
     const reader = sceneLogReader()
     for (const line of fixture('five-cuts-window.stderr.txt').split('\n')) reader.line(line)
     expect(reader.cuts()).toEqual(parseSceneLog(fixture('five-cuts-window.stderr.txt')))
+  })
+})
+
+describe('the time base the pts count in (probe.ts parseTimeBase)', () => {
+  it('reads ffprobe’s time_base as whole numbers, and nothing else', () => {
+    expect(parseTimeBase('1/15360')).toEqual({ num: 1, den: 15360 })
+    expect(parseTimeBase('1001/30000')).toEqual({ num: 1001, den: 30000 })
+    for (const bad of [undefined, '', 'N/A', '0/1', '1/0', '1.5/2', '-1/90000', '1/90000 ', '1:90000']) {
+      expect(parseTimeBase(bad), String(bad)).toBeNull()
+    }
   })
 })
 
@@ -193,16 +216,53 @@ describe('shotsFrom', () => {
   }
 
   it('makes one shot of the whole from no cuts', () => {
-    expect(shotsFrom([], 10_000, 30, o)).toEqual([{ startMs: 0, endMs: 10_000, score: 0 }])
+    expect(shotsFrom([], 10_000, 30, o)).toEqual([{ startMs: 0, endMs: 10_000, score: 0, startPts: 0 }])
   })
 
   it('opens each shot with its cut’s score, the first with 0', () => {
     const shots = shotsFrom([at(2000, 1), at(4000, 0.4)], 10_000, 30, o)
     expect(shots).toEqual([
-      { startMs: 0, endMs: 2000, score: 0 },
+      { startMs: 0, endMs: 2000, score: 0, startPts: 0 },
       { startMs: 2000, endMs: 4000, score: 1 },
       { startMs: 4000, endMs: 10_000, score: 0.4 }
     ])
+  })
+
+  it('carries each opening cut’s exact pts as startPts — from the fixture’s own lines, the first shot 0', () => {
+    // The five-source clip at T = 0.1, on 1/15360: 512 ticks a frame, cuts on frames 60/120/180/240.
+    const shots = shotsFrom(parseSceneLog(fixture('five-cuts-t0.1.stderr.txt')), 10_000, 30, o)
+    expect(shots.map((s) => [s.startMs, s.startPts])).toEqual([
+      [0, 0],
+      [2000, 30720],
+      [4000, 61440],
+      [6000, 92160],
+      [8000, 122880]
+    ])
+    expect(shots.map((s) => (s.startPts as number) / 512)).toEqual([0, 60, 120, 180, 240])
+  })
+
+  it('keeps a cut’s pts with its ms through every merge and the one-per-frame rule; a cut with none opens a shot with none', () => {
+    const cut = (ms: number, score: number, pts?: number | null): SceneCut => ({ ms, score, pts })
+    // Into the next: 2000 | 200 | 7800 — the whole opens at 2000 with 2000's cut, its pts too.
+    expect(shotsFrom([cut(2000, 0.9, 30720), cut(2200, 0.5, 33792)], 10_000, 30, o).map((s) => [s.startMs, s.startPts])).toEqual([
+      [0, 0],
+      [2000, 30720]
+    ])
+    // Into the previous: 7800 | 200 | 2000 — the cut at 8000 stays, with its own pts.
+    expect(shotsFrom([cut(7800, 0.9, 119808), cut(8000, 0.5, 122880)], 10_000, 30, o).map((s) => [s.startMs, s.startPts])).toEqual([
+      [0, 0],
+      [8000, 122880]
+    ])
+    // Two cuts on one frame: the higher score's ms AND pts.
+    expect(shotsFrom([cut(2000, 0.5, 30720), cut(2000.01, 0.8, 30721)], 10_000, 30, o)[1]).toEqual({
+      startMs: 2000.01,
+      endMs: 10_000,
+      score: 0.8,
+      startPts: 30721
+    })
+    // NOPTS (null) and a hand-made cut (absent): no startPts at all, so keys.ts reads the printed ms.
+    const shots = shotsFrom([cut(2000, 1, null), cut(4000, 1)], 10_000, 30, o)
+    expect(shots.map((s) => 'startPts' in s)).toEqual([true, false, false])
   })
 
   it('drops a cut within skipHeadFrames of 0 — a recording’s first frames — and keeps the next', () => {
@@ -216,7 +276,7 @@ describe('shotsFrom', () => {
     // 2000 | 200 | 7800: the 200 joins the 7800, which now opens at 2000 with its cut.
     const shots = shotsFrom([at(2000, 0.9), at(2200, 0.5)], 10_000, 30, o)
     expect(shots).toEqual([
-      { startMs: 0, endMs: 2000, score: 0 },
+      { startMs: 0, endMs: 2000, score: 0, startPts: 0 },
       { startMs: 2000, endMs: 10_000, score: 0.9 }
     ])
   })
@@ -225,7 +285,7 @@ describe('shotsFrom', () => {
     // 7800 | 200 | 2000: the 200 joins the 7800, and the cut at 8000 stays.
     const shots = shotsFrom([at(7800, 0.9), at(8000, 0.5)], 10_000, 30, o)
     expect(shots).toEqual([
-      { startMs: 0, endMs: 8000, score: 0 },
+      { startMs: 0, endMs: 8000, score: 0, startPts: 0 },
       { startMs: 8000, endMs: 10_000, score: 0.5 }
     ])
   })
@@ -245,7 +305,7 @@ describe('shotsFrom', () => {
   it('on neighbours of one length and cuts of one score, removes the earlier cut', () => {
     // 1000 | 200 | 1000, both cuts 1: the short shot joins the first, so the cut at 1000 goes.
     expect(shotsFrom([at(1000, 1), at(1200, 1)], 2200, 30, o)).toEqual([
-      { startMs: 0, endMs: 1200, score: 0 },
+      { startMs: 0, endMs: 1200, score: 0, startPts: 0 },
       { startMs: 1200, endMs: 2200, score: 1 }
     ])
   })
@@ -254,7 +314,7 @@ describe('shotsFrom', () => {
     // 2000 and 2000.01 are both frame 60 at 30 fps.
     const shots = shotsFrom([at(6000, 0.4), at(2000, 0.5), at(2000.01, 0.8), at(10_000), at(12_000)], 10_000, 30, o)
     expect(shots).toEqual([
-      { startMs: 0, endMs: 2000.01, score: 0 },
+      { startMs: 0, endMs: 2000.01, score: 0, startPts: 0 },
       { startMs: 2000.01, endMs: 6000, score: 0.8 },
       { startMs: 6000, endMs: 10_000, score: 0.4 }
     ])
@@ -271,7 +331,7 @@ describe('shotsFrom', () => {
       expectTiles(shots, durationMs)
       if (shots.length > 1) for (const s of shots) expect(s.endMs - s.startMs).toBeGreaterThanOrEqual(minShotMs)
     }
-    expect(shotsFrom([at(100), at(200)], 400, 30, o)).toEqual([{ startMs: 0, endMs: 400, score: 0 }])
+    expect(shotsFrom([at(100), at(200)], 400, 30, o)).toEqual([{ startMs: 0, endMs: 400, score: 0, startPts: 0 }])
   })
 
   it('merges a strobe — a cut on every frame of ten minutes — into shots of at least minShot', () => {

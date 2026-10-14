@@ -57,10 +57,11 @@ import type { Clip, CropRect, Project } from '../timeline'
  * `pts_time` printed `%.6g`: frame 500 of a 29.97 file prints 16.6833, and
  * its exact slot at 30 fps (t·30 = 500.5, a tie) needs the integer pts the
  * same line carries (`pts:500500`). `exportFrameAt` takes that exact time
- * when it is given; until 1b keeps `Shot.startPts` and the track's time base
- * (a follow-up outside this slice's files), it rounds the printed time, and
- * a printed time within its own print precision of a tie is taken as the tie
- * (`TIE_SLACK`). Measured by arithmetic over every frame of 30-minute files
+ * when it is given, and `compile` gives it for every cut whose shot carries
+ * `startPts` on a track with a `timeBase` (1b keeps both: `exactOf`). A track
+ * without them — analysed before 1b kept them, or a window's — is keyed from
+ * the printed time, rounded, where a printed time within its own print
+ * precision of a tie is taken as the tie (`TIE_SLACK`). Measured by arithmetic over every frame of 30-minute files
  * at 24/25/30/60 fps projects, 1×/2×/0.5×, sources at 23.976–60 fps and an
  * iPhone-style VFR (tb 1/600), AT IN-POINT 0: wrong on 0 % of frames under
  * 10 s (plain rounding: 1.39 %), 0.07 % in 10–100 s (1.43 %), 0.73 % in
@@ -303,6 +304,20 @@ const TOP_Y: Lane = (s) => ({ at: s.halves ? s.halves.top.y : 0, pans: [] })
 const BOTTOM_X: Lane = (s, path) => (s.halves ? { at: s.halves.bottom.x, pans: s.halves.bottom.pans } : MAIN(s, path))
 const BOTTOM_Y: Lane = (s, path) => ({ at: s.halves ? s.halves.bottom.y : path.half.height, pans: [] })
 
+/**
+ * A cut's exact time, when the track kept it: shot `index`'s `startPts` and
+ * the track's `timeBase`, both whole and positive where they must be. The
+ * path's shots are the track's, one for one and in order (path.ts maps
+ * `track.shots`), so the index is the track's.
+ */
+function exactOf(track: SubjectTrack, path: CropPath, index: number): ExactTime | undefined {
+  const tb = track.timeBase
+  const pts = track.shots[index]?.startPts
+  if (path.shots.length !== track.shots.length || track.shots[index]?.startMs !== path.shots[index]?.startMs) return undefined
+  if (!tb || !Number.isSafeInteger(tb.num) || !Number.isSafeInteger(tb.den) || tb.num <= 0 || tb.den <= 0) return undefined
+  return typeof pts === 'number' && Number.isSafeInteger(pts) ? { pts, timeBase: { num: tb.num, den: tb.den } } : undefined
+}
+
 /** Memoised per track object (a re-analysis is a new one), then on everything else the keys read. */
 const memo = new WeakMap<SubjectTrack, Map<string, FollowKeys | null>>()
 const MEMO_PER_TRACK = 64
@@ -375,7 +390,7 @@ function compile(track: SubjectTrack, clip: Clip, fps: number, target: { width: 
     const asIfPlaying = { ...clip, hold: undefined, speed: undefined, ramp: undefined }
     let index = 0
     path.shots.forEach((s, i) => {
-      if (i > 0 && (exportFrameAt(asIfPlaying, fps, s.startMs) ?? 1) <= 0) index = i
+      if (i > 0 && (exportFrameAt(asIfPlaying, fps, s.startMs, exactOf(track, path, i)) ?? 1) <= 0) index = i
     })
     const shot = path.shots[index]
     const at = positionAt(path, Math.max((clip.inPoint * 1000) / fps, shot.startMs))
@@ -400,7 +415,8 @@ function compile(track: SubjectTrack, clip: Clip, fps: number, target: { width: 
 
   // Each shot's frames on the clip: [its cut's frame, the next cut's frame).
   const D = clip.duration
-  const slots = path.shots.map((s, i) => (i === 0 ? -Infinity : (exportFrameAt(clip, fps, s.startMs) as number)))
+  // On the exact pts when the track kept it (required at 25/50 fps: the module note), else the printed ms.
+  const slots = path.shots.map((s, i) => (i === 0 ? -Infinity : (exportFrameAt(clip, fps, s.startMs, exactOf(track, path, i)) as number)))
   const visible: FollowShot[] = []
   path.shots.forEach((s, i) => {
     const from = Math.max(0, slots[i])

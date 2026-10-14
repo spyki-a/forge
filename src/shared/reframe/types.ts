@@ -31,6 +31,16 @@ export interface Shot {
   startMs: number
   endMs: number
   score: number
+  /**
+   * The cut frame's own integer pts, in the video stream's time base
+   * (`SubjectTrack.timeBase`), counted from the container's start as the
+   * scene pass's `metadata=print` line prints it (`pts:92160`) — exact where
+   * `startMs` is `pts_time` printed `%.6g`. 0 for the first shot. Absent on a
+   * track from before 1b kept it, or a window's (not in file terms). keys.ts
+   * puts the cut's held key on the export's frame from this when the track
+   * has a time base: required at 25 and 50 fps (docs/EFFECTS.md §55).
+   */
+  startPts?: number
 }
 
 /** The two largest faces, largest first. An empty list is a sample where no face was found. */
@@ -61,4 +71,10 @@ export interface SubjectTrack {
   scene: { threshold: number; minShotMs: number; backend: 'ffmpeg-select-rgb24' }
   /** ISO */
   at: string
+  /**
+   * The video stream's time base (ffprobe's `time_base`, e.g. 1/15360), which
+   * each shot's `startPts` counts in. Absent on a track from before 1b kept
+   * it: keys.ts then keys each cut from its printed ms.
+   */
+  timeBase?: { num: number; den: number }
 }

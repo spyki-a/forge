@@ -33,10 +33,13 @@ export interface FindShotsOptions {
 export interface ShotsFound {
   /**
    * The window's shots, tiling it: [startMs, endMs) in the file's ms. Not the
-   * file's shots cut to the window: see `findShots`.
+   * file's shots cut to the window: see `findShots`. On the whole-file pass
+   * each carries `startPts`, the cut frame's pts as printed (the first shot's
+   * 0), which IS the file's: counted from the container's start, in the
+   * stream's time base. A window's carry none — see `findShots`.
    */
   shots: Shot[]
-  /** Every cut ffmpeg picked, in the file's ms, before the head-skip and the merge. */
+  /** Every cut ffmpeg picked, in the file's ms, before the head-skip and the merge; `pts` as `shots`'. */
   cuts: SceneCut[]
   scene: SubjectTrack['scene']
 }
@@ -55,6 +58,14 @@ export interface ShotsFound {
  * ONE shot across it, as does [0, 2034]; the whole file keeps it. And the
  * window rests on input seeking: on an MPEG-TS copy of the fixture (start
  * 1.4 s), 3–7 s decoded 60 frames from 5 s and found no cut at all.
+ *
+ * **The exact pts is the whole-file pass's only.** Its `pts:` counts from the
+ * container's start in the stream's time base, the frame's own (keys.ts
+ * `exportFrameAt` takes it with the track's time base). A window's counts from
+ * the seek, which ffmpeg rounded from µs into a time base this function does
+ * not know, so turning it into the file's would be a guess: the shots and
+ * cuts of a window that starts past 0 carry no pts, and keys.ts falls back to
+ * their printed ms. (A window from 0 seeks nothing, so its pts are the file's.)
  */
 export async function findShots(o: FindShotsOptions): Promise<ShotsFound> {
   const threshold = o.threshold ?? SCENE_DEFAULTS.threshold
@@ -88,16 +99,22 @@ export async function findShots(o: FindShotsOptions): Promise<ShotsFound> {
   // `pts_time` counts from where the pass began reading: the window's start.
   // The window's own ends are kept exactly; the cuts inside, to the microsecond.
   const inFile = (ms: number): number => Math.round((fromMs + ms) * 1e3) / 1e3
+  // Read from the file's start (no seek), the pts are the file's as printed; past a seek they are not (above).
+  const whole = fromMs === 0
   const found = reader.cuts()
   const shots = shotsFrom(found, toMs - fromMs, o.fps, { minShotMs, skipHeadFrames: SCENE_DEFAULTS.skipHeadFrames })
   const last = shots.length - 1
   return {
-    shots: shots.map((s, i) => ({
-      startMs: i === 0 ? fromMs : inFile(s.startMs),
-      endMs: i === last ? toMs : inFile(s.endMs),
-      score: s.score
-    })),
-    cuts: found.map((c) => ({ ms: inFile(c.ms), score: c.score })),
+    shots: shots.map((s, i) => {
+      const shot: Shot = {
+        startMs: i === 0 ? fromMs : inFile(s.startMs),
+        endMs: i === last ? toMs : inFile(s.endMs),
+        score: s.score
+      }
+      if (whole && s.startPts !== undefined) shot.startPts = s.startPts
+      return shot
+    }),
+    cuts: found.map((c) => (whole ? { ms: inFile(c.ms), score: c.score, pts: c.pts ?? null } : { ms: inFile(c.ms), score: c.score })),
     scene: { threshold, minShotMs, backend: SCENE_BACKEND }
   }
 }

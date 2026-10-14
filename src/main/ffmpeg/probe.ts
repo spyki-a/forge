@@ -10,6 +10,8 @@ interface FfprobeStream extends ProbedPicture {
   codec_name?: string
   avg_frame_rate?: string
   duration?: string
+  /** `-show_streams` prints it: "1/15360" for ffmpeg's own mp4s, "1/90000" for MPEG-TS, "1/1000" for webm. */
+  time_base?: string
 }
 
 interface FfprobeOutput {
@@ -43,7 +45,30 @@ function runProbe(path: string): Promise<FfprobeOutput> {
   })
 }
 
+/**
+ * A stream's `time_base` as a fraction of positive whole numbers, or null when
+ * it is missing or anything else. The unit the scene pass's `pts:` counts in
+ * (shared/reframe/shots.ts), which keys.ts needs to put a cut on the export's
+ * own frame (docs/EFFECTS.md §55).
+ */
+export function parseTimeBase(text: string | undefined): { num: number; den: number } | null {
+  const m = /^(\d+)\/(\d+)$/.exec(text ?? '')
+  if (!m) return null
+  const num = Number(m[1])
+  const den = Number(m[2])
+  return Number.isSafeInteger(num) && Number.isSafeInteger(den) && num > 0 && den > 0 ? { num, den } : null
+}
+
 export async function probeFile(path: string): Promise<MediaInfo> {
+  return (await probeWithClock(path)).info
+}
+
+/**
+ * `probeFile`, and the video stream's time base beside it — what the reframe's
+ * analysis records as `SubjectTrack.timeBase` (main/reframe/analyse.ts). One
+ * ffprobe run: `-show_streams` already prints `time_base`.
+ */
+export async function probeWithClock(path: string): Promise<{ info: MediaInfo; timeBase: { num: number; den: number } | null }> {
   const ext = extOf(path)
   const kindFromExt = kindForExt(ext)
   if (!kindFromExt) throw new Error(`Unsupported file type: .${ext || '(none)'}`)
@@ -68,7 +93,7 @@ export async function probeFile(path: string): Promise<MediaInfo> {
   const upright = uprightSize(video)
 
   // A still image probes as a single video stream; trust the extension for kind.
-  return {
+  const info: MediaInfo = {
     path,
     name: basename(path),
     size: fileStat.size,
@@ -81,6 +106,7 @@ export async function probeFile(path: string): Promise<MediaInfo> {
     audioCodec: audio?.codec_name ?? null,
     fps: kindFromExt === 'image' ? null : parseFps(video?.avg_frame_rate)
   }
+  return { info, timeBase: parseTimeBase(video?.time_base) }
 }
 
 export async function probeMany(

@@ -4,6 +4,8 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { SCENE_DEFAULTS } from '@shared/reframe/shots'
 import { findShots } from '../../src/main/ffmpeg/shots'
+import { probeWithClock } from '../../src/main/ffmpeg/probe'
+import ffprobeInstaller from '@ffprobe-installer/ffprobe'
 import { FFMPEG, makeColour, outputDir, run, writeNote } from './output'
 
 /*
@@ -138,6 +140,29 @@ describe('the shot finder, through src/main/ffmpeg/shots.ts', () => {
     const found = await findShots({ path: CUTS, durationMs: DURATION_MS, fps: TABLE.fps, threshold: 0.1, startMs: 3000, endMs: 7000 })
     expect(found.cuts.map((c) => c.ms)).toEqual([4000, 6000])
     expect(found.shots.map((s) => [s.startMs, s.endMs])).toEqual([[3000, 4000], [4000, 6000], [6000, 7000]])
+    // Past a seek the printed pts count from the window, not the file: none is passed on (findShots' note).
+    expect(found.shots.filter((s) => 'startPts' in s)).toEqual([])
+    expect(found.cuts.filter((c) => 'pts' in c)).toEqual([])
+  })
+
+  it('carries each cut’s exact pts from the whole-file pass: the frame’s own pts, as ffprobe reads the file', async () => {
+    // T = 0.1: all four cuts. The file's own frame times and its time base. The bundled ffprobe prints
+    // frame=pts empty, so best_effort_timestamp (EFFECTS.md §55's probe); its blank lines are skipped,
+    // and the count is held to the clip's frames.
+    const found = await findShots({ path: CUTS, durationMs: DURATION_MS, fps: TABLE.fps, threshold: 0.1 })
+    const { stdout } = await run(ffprobeInstaller.path, [
+      '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'frame=best_effort_timestamp', '-of', 'csv=p=0', CUTS
+    ], { maxBuffer: 8 << 20 })
+    const framePts = stdout.split(/\r?\n/).filter((l) => /^\d+$/.test(l.trim())).map(Number)
+    expect(framePts.length, 'every frame of the clip').toBe(DURATION_MS * TABLE.fps / 1000)
+    const { timeBase } = await probeWithClock(CUTS)
+    expect(timeBase).toEqual({ num: 1, den: 15360 })
+
+    expect(found.shots.map((s) => s.startPts)).toEqual([0, ...TABLE.cuts.map((c) => framePts[c.frame])])
+    expect(found.cuts.map((c) => c.pts)).toEqual(TABLE.cuts.map((c) => framePts[c.frame]))
+    // And each is its frame exactly: pts × fps / den, where the printed ms is only %.6g.
+    expect(found.shots.map((s) => ((s.startPts as number) * TABLE.fps * timeBase!.num) / timeBase!.den)).toEqual([0, ...TABLE.cuts.map((c) => c.frame)])
+    notes.push(`the whole-file pass's pts (time base ${timeBase!.num}/${timeBase!.den}): ${found.shots.map((s) => s.startPts).join(', ')}`)
   })
 
   it('reports progress to the end of the clip, not to its last cut', async () => {
@@ -167,7 +192,7 @@ describe('the shot finder, through src/main/ffmpeg/shots.ts', () => {
     const still = await makeColour(join(dir, 'one-shot.mp4'), '0x336699', TABLE.size, 3, TABLE.fps)
     const found = await findShots({ path: still, durationMs: 3000, fps: TABLE.fps })
     expect(found.cuts).toEqual([])
-    expect(found.shots).toEqual([{ startMs: 0, endMs: 3000, score: 0 }])
+    expect(found.shots).toEqual([{ startMs: 0, endMs: 3000, score: 0, startPts: 0 }])
   })
 
   it('cancels mid-run, and settles only once ffmpeg is gone', async () => {

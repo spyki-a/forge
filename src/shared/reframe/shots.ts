@@ -49,6 +49,13 @@ export const SCENE_BACKEND = 'ffmpeg-select-rgb24' as const
 export interface SceneCut {
   ms: number
   score: number
+  /**
+   * The frame's integer pts as the same line prints it (`pts:92160`), in the
+   * stream's time base, from where the pass began reading: exact, where `ms`
+   * is `%.6g`. Null when the line printed no integer (NOPTS); absent on a cut
+   * made by hand.
+   */
+  pts?: number | null
 }
 
 /** Seconds for ffmpeg, from ms: six places, no trailing zeros. */
@@ -99,8 +106,16 @@ export function sceneArgs(
  * line in several pieces, and another thread's message (a decoder's warning)
  * can land between the pair. A frame without a timestamp prints `NOPTS`, and
  * is skipped.
+ *
+ * `pts:` is the frame's own integer pts in the stream's time base (the
+ * buffer source takes the input stream's, and scale, format, split, select
+ * and metadata keep it), counted from the container's start as `pts_time` is
+ * — measured: on an MPEG-TS copy starting at 1.466667 s (1/90000) the cut at
+ * 2 s printed `pts:180000`, and on the mp4 (1/15360) `pts:30720`. It is the
+ * exact time `pts_time` rounds: frame 500 of a 29.97 file prints `pts:500500
+ * pts_time:16.6833` (docs/EFFECTS.md §55).
  */
-const FRAME_LINE = /^(?:\[([^\]]*)\]\s*)?frame:\s*\d+\s+pts:\s*\S+\s+pts_time:\s*(\S+)\s*$/
+const FRAME_LINE = /^(?:\[([^\]]*)\]\s*)?frame:\s*\d+\s+pts:\s*(\S+)\s+pts_time:\s*(\S+)\s*$/
 const SCORE_LINE = /^(?:\[([^\]]*)\]\s*)?lavfi\.scene_score=\s*(\S+)\s*$/
 
 /** A `pts_time` in ms, to the microsecond, or null for NOPTS or anything else that is not a number. */
@@ -109,26 +124,33 @@ function msOf(ptsTime: string): number | null {
   return Number.isFinite(s) ? Math.round(s * 1e6) / 1e3 : null
 }
 
+/** A `pts:` as printed (`%PRId64`): a whole number, or null for NOPTS or anything else. */
+function ptsOf(pts: string): number | null {
+  if (!/^-?\d+$/.test(pts)) return null
+  const n = Number(pts)
+  return Number.isSafeInteger(n) ? n : null
+}
+
 /** `parseSceneLog`, a line at a time — the runner's `onStderrLine`, so a long pass keeps its cuts, not its log. */
 export function sceneLogReader(): { line: (line: string) => void; cuts: () => SceneCut[] } {
   // The frame whose metadata a filter instance is printing, by its prefix.
-  const printing = new Map<string, number | null>()
+  const printing = new Map<string, { ms: number | null; pts: number | null }>()
   const cuts: SceneCut[] = []
   return {
     line: (line) => {
       const frame = FRAME_LINE.exec(line)
       if (frame) {
-        printing.set(frame[1] ?? '', msOf(frame[2]))
+        printing.set(frame[1] ?? '', { ms: msOf(frame[3]), pts: ptsOf(frame[2]) })
         return
       }
       const score = SCORE_LINE.exec(line)
       if (!score) return
       const key = score[1] ?? ''
-      const ms = printing.get(key)
+      const at = printing.get(key)
       printing.delete(key)
       const value = Number(score[2])
-      if (ms === undefined || ms === null || !Number.isFinite(value)) return
-      cuts.push({ ms, score: value })
+      if (at === undefined || at.ms === null || !Number.isFinite(value)) return
+      cuts.push({ ms: at.ms, score: value, pts: at.pts })
     },
     cuts: () => cuts.slice()
   }
@@ -154,6 +176,8 @@ export function parseSceneLog(stderr: string): SceneCut[] {
  *   shortest first, until none is short or one shot is left, so a chain of
  *   short shots joins whichever long shot it borders more of. Neighbours of
  *   one length: the weaker cut goes, then the earlier.
+ * - `startPts` is the opening cut's `pts` (the first shot's 0), carried with
+ *   its ms through every merge; a cut with none opens a shot with none.
  */
 export function shotsFrom(
   cuts: SceneCut[],
@@ -177,16 +201,26 @@ export function shotsFrom(
 
   // A doubly-linked list of shots, and a heap of the short ones: a strobe can
   // score a cut on every frame, and a scan per merge would be quadratic.
-  interface Node { startMs: number; endMs: number; score: number; prev: Node | null; next: Node | null; gone: boolean }
+  interface Node {
+    startMs: number
+    endMs: number
+    score: number
+    pts: number | undefined
+    prev: Node | null
+    next: Node | null
+    gone: boolean
+  }
   const nodes: Node[] = []
   let start = 0
   let score = 0
-  for (const cut of [...kept, { ms: durationMs, score: 0 }]) {
-    const node: Node = { startMs: start, endMs: cut.ms, score, prev: nodes[nodes.length - 1] ?? null, next: null, gone: false }
+  let pts: number | undefined = 0
+  for (const cut of [...kept, { ms: durationMs, score: 0, pts: undefined }]) {
+    const node: Node = { startMs: start, endMs: cut.ms, score, pts, prev: nodes[nodes.length - 1] ?? null, next: null, gone: false }
     if (node.prev) node.prev.next = node
     nodes.push(node)
     start = cut.ms
     score = cut.score
+    pts = typeof cut.pts === 'number' ? cut.pts : undefined
   }
   const length = (n: Node): number => n.endMs - n.startMs
 
@@ -242,6 +276,7 @@ export function shotsFrom(
       // The cut that opened the next shot goes; this one's opening cut now opens the whole.
       next.startMs = node.startMs
       next.score = node.score
+      next.pts = node.pts
       next.prev = prev
       if (prev) prev.next = next
       node.gone = true
@@ -250,5 +285,7 @@ export function shotsFrom(
     alive--
   }
 
-  return nodes.filter((n) => !n.gone).map(({ startMs, endMs, score }) => ({ startMs, endMs, score }))
+  return nodes
+    .filter((n) => !n.gone)
+    .map(({ startMs, endMs, score, pts: startPts }) => (startPts === undefined ? { startMs, endMs, score } : { startMs, endMs, score, startPts }))
 }
