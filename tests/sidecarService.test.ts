@@ -5,7 +5,7 @@ import { dirname, join, resolve } from 'node:path'
 import { HELPER_PACK } from '../src/shared/sidecar/packManifest'
 import { packBytes, packHosts, type PackPlatform } from '../src/shared/sidecar/pack'
 import { HELPER_PYTHON_MISSING, UNPARSEABLE_RECEIPT } from '../src/shared/sidecar/helperPython'
-import { HELPER_NOT_INSTALLED, helperStatusReason, packOffer, type SidecarStatus } from '../src/shared/sidecar/status'
+import { HELPER_NEEDS_UPDATE, HELPER_NOT_INSTALLED, helperStatusReason, packOffer, type SidecarStatus } from '../src/shared/sidecar/status'
 import { REFRAME_CHANNELS, REFRAME_FAILURES } from '../src/shared/reframe/job'
 
 /*
@@ -66,6 +66,26 @@ vi.mock('electron', () => ({
   systemPreferences: {}
 }))
 
+/*
+ * A release that bumps the pack number: while `bumped` is set, HELPER_PACK
+ * reads one number up with new lock hashes, as `pack_lock.py --bump` writes
+ * it. A getter, read at each use, so the switch reaches the service's imports
+ * whichever test loaded them; the tests that do not set it see the real one.
+ */
+const MANIFEST = vi.hoisted(() => ({ bumped: false }))
+vi.mock('../src/shared/sidecar/packManifest', async (importOriginal) => {
+  const real = await importOriginal<typeof import('../src/shared/sidecar/packManifest')>()
+  const next = JSON.parse(JSON.stringify(real.HELPER_PACK)) as typeof real.HELPER_PACK
+  next.pack = real.HELPER_PACK.pack + 1
+  for (const p of Object.values(next.platforms)) p.lock.sha256 = 'f'.repeat(64)
+  return {
+    ...real,
+    get HELPER_PACK() {
+      return MANIFEST.bumped ? next : real.HELPER_PACK
+    }
+  }
+})
+
 // The cheap split, without ffmpeg: what separateStems falls back to.
 vi.mock('../src/main/stems', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../src/main/stems')>()),
@@ -96,6 +116,7 @@ beforeEach(() => {
   electron.appPath = mkdtempSync(join(tmpdir(), 'forge-app-'))
   scratch.push(electron.userData, electron.appPath)
   FAKE.packPython = ''
+  MANIFEST.bumped = false
   delete process.env.FORGE_PYTHON
   delete process.env.FAKE_PIDS
   restoreProcess = stubElectronProcess()
@@ -269,6 +290,55 @@ describe.skipIf(!MACHINE)('a damaged pack', () => {
     const { sidecarStatus, getSidecar } = await service()
     expect(sidecarStatus()).toMatchObject({ state: 'damaged', offer: { kind: 'repair' } })
     expect(() => getSidecar()).toThrow()
+    expect(spawned).toEqual([])
+  })
+})
+
+describe.skipIf(!MACHINE)('a release that bumps the pack number (§3a.3 "Update", §16.46 (a))', () => {
+  it('the pack in the older number’s folder is offered as Update, never as a fresh Install, and is not run', async () => {
+    const { python } = installPack()
+    // A spawn of the old pack would run (and be counted), not throw.
+    FAKE.packPython = python
+    MANIFEST.bumped = true
+    const { sidecarStatus, startSidecar, getSidecar } = await service()
+    const asked = sidecarStatus()
+    expect(asked).toMatchObject({ state: 'absent', offer: { supported: true, kind: 'update', bytes: packBytes(HELPER_PACK.platforms[MACHINE!]) } })
+    const told: SidecarStatus[] = []
+    startSidecar((s) => told.push(s))
+    expect(told).toEqual([asked])
+    expect(helperStatusReason(asked)).toBe(HELPER_NEEDS_UPDATE)
+    expect(() => getSidecar()).toThrow(HELPER_NEEDS_UPDATE)
+    expect(spawned, 'the old pack is unused until Update is pressed').toEqual([])
+  })
+
+  it('olderReceipt reads the highest number below the manifest’s whose receipt parses, and nothing else', async () => {
+    const { olderReceipt } = await service()
+    const root = join(electron.userData, 'python')
+    const put = (folder: string, text: string): void => {
+      mkdirSync(join(root, folder), { recursive: true })
+      writeFileSync(join(root, folder, 'pack.json'), text)
+    }
+    const receipt = (pack: number): string =>
+      JSON.stringify({ pack, python: '3.14.8', build: '20261001', platform: MACHINE, interpreterSha256: 'a'.repeat(64), lockSha256: 'b'.repeat(64) })
+    expect(olderReceipt(root, 4), 'no root at all').toBeNull()
+    put('1', receipt(1))
+    put('2', receipt(2))
+    put('3', '{"pack": 3, "torn')
+    put('4', receipt(4))
+    put('5', receipt(5))
+    mkdirSync(join(root, 'in-use'), { recursive: true })
+    mkdirSync(join(root, 'downloads', '3'), { recursive: true })
+    // 4 is the manifest's own, 5 is newer, 3 is torn: 2 it is.
+    expect(olderReceipt(root, 4)).toMatchObject({ pack: 2 })
+    expect(olderReceipt(root, 2)).toMatchObject({ pack: 1 })
+    expect(olderReceipt(root, 1)).toBeNull()
+  })
+
+  it('an older folder whose receipt is torn is no pack to update: Install', async () => {
+    installPack({ receipt: '{"pack": 1, "torn' })
+    MANIFEST.bumped = true
+    const { sidecarStatus } = await service()
+    expect(sidecarStatus()).toMatchObject({ state: 'absent', offer: { supported: true, kind: 'install' } })
     expect(spawned).toEqual([])
   })
 })
@@ -448,6 +518,15 @@ describe('packOffer', () => {
     expect(packOffer(HELPER_PACK, platform, UNPARSEABLE_RECEIPT, false)).toMatchObject({ kind: 'repair' })
   })
 
+  it('is Update for an older number’s receipt when the manifest’s folder has none, and Install for a torn one', () => {
+    const older = { ...receipt, pack: HELPER_PACK.pack, lockSha256: 'e'.repeat(64) }
+    expect(packOffer(HELPER_PACK, platform, null, false, older)).toMatchObject({ kind: 'update', bytes: packBytes(pack) })
+    expect(packOffer(HELPER_PACK, platform, null, false, UNPARSEABLE_RECEIPT)).toMatchObject({ kind: 'install' })
+    expect(packOffer(HELPER_PACK, platform, null, false, null)).toMatchObject({ kind: 'install' })
+    // The manifest's own folder decides when it has a receipt.
+    expect(packOffer(HELPER_PACK, platform, receipt, true, older)).toMatchObject({ kind: 'repair' })
+  })
+
   it('offers nothing on a machine that cannot have a pack, and says why', () => {
     expect(packOffer(HELPER_PACK, { unsupported: 'The AI helper needs macOS 14 or later' }, null, false)).toEqual({
       supported: false,
@@ -463,6 +542,7 @@ describe('packOffer', () => {
   it('the window’s sentence for each status without a helper', () => {
     const offer = packOffer(HELPER_PACK, platform, null, false)
     expect(helperStatusReason({ state: 'absent', offer })).toBe(HELPER_NOT_INSTALLED)
+    expect(helperStatusReason({ state: 'absent', offer: { ...offer, kind: 'update' } as typeof offer })).toBe(HELPER_NEEDS_UPDATE)
     expect(helperStatusReason({ state: 'absent', offer: { supported: false, reason: 'not here' } })).toBe('not here')
     expect(helperStatusReason({ state: 'damaged', reason: HELPER_PYTHON_MISSING, offer })).toBe(HELPER_PYTHON_MISSING)
     expect(helperStatusReason({ state: 'starting', source: { kind: 'path', python: 'python3' } })).toBeNull()

@@ -20,7 +20,11 @@ import type { HelloResult } from './protocol'
 export type PackOffer =
   | {
       supported: true
-      /** `install`: no receipt; `update`: a receipt for another lock or interpreter; `repair`: a damaged one. */
+      /**
+       * `install`: no receipt; `update`: a receipt for another lock or
+       * interpreter, in the manifest's folder or an older number's; `repair`:
+       * a damaged one.
+       */
       kind: 'install' | 'update' | 'repair'
       /** Every byte the press fetches: the interpreter and the wheels (`packBytes`). */
       bytes: number
@@ -45,29 +49,44 @@ export type SidecarStatus =
 export const HELPER_NOT_INSTALLED = 'The AI helper is not installed'
 
 /**
+ * What they reject with when the pack on disk is an older one this build no
+ * longer runs (§16.46 (a)): it is there, and unused until Update is pressed.
+ */
+export const HELPER_NEEDS_UPDATE = 'The AI helper needs an update'
+
+/**
  * The offer for a machine with no running pack.
  *
- * - `receipt`: `null` when there is no `pack.json`; otherwise what was read
- *   (the parsed JSON, or `UNPARSEABLE_RECEIPT`).
+ * - `receipt`: the manifest's own folder's `pack.json`: `null` when there is
+ *   none; otherwise what was read (the parsed JSON, or `UNPARSEABLE_RECEIPT`).
  * - `damaged`: `resolveHelperPython` chose `damaged` (a receipt that does not
  *   parse, or one that matches with its interpreter gone): Repair.
+ * - `older`: when the manifest's folder has no receipt, the receipt of the
+ *   highest older pack number's folder (`null` when there is none). Once a
+ *   release bumps the number (1 → 2), the installed pack sits in `1/` and the
+ *   manifest's `2/` is empty: without this, a 0.7 GB pack on disk was offered
+ *   as a fresh Install.
  *
- * A receipt that parses and does not match is an Update (§16.46 (a)). One
- * that matches is a pack, whose only offer is a Repair. An unsupported
- * machine is offered nothing, with its reason.
+ * A receipt that parses and does not match is an Update (§16.46 (a)), and so
+ * is an older number's that parses. One that matches is a pack, whose only
+ * offer is a Repair. An unsupported machine is offered nothing, with its
+ * reason.
  */
 export function packOffer(
   manifest: HelperPackManifest,
   platform: PackPlatform | PlatformUnsupported,
   receipt: unknown,
-  damaged: boolean
+  damaged: boolean,
+  older: unknown = null
 ): PackOffer {
   if (isUnsupported(platform)) return { supported: false, reason: platform.unsupported }
   const pack = manifest.platforms[platform]
   const kind: 'install' | 'update' | 'repair' = damaged
     ? 'repair'
     : receipt === null
-      ? 'install'
+      ? parseReceipt(older)
+        ? 'update'
+        : 'install'
       : !parseReceipt(receipt)
         ? 'repair'
         : receiptMatches(receipt, manifest, platform)
@@ -78,13 +97,15 @@ export function packOffer(
 
 /**
  * The sentence for a status with no running helper: the damaged reason, the
- * failure, "not installed", or why this computer cannot have one. null for a
- * helper that is starting, installing or ready.
+ * failure, "not installed", "needs an update" (an older pack on disk), or why
+ * this computer cannot have one. null for a helper that is starting,
+ * installing or ready.
  */
 export function helperStatusReason(status: SidecarStatus): string | null {
   switch (status.state) {
     case 'absent':
-      return status.offer.supported ? HELPER_NOT_INSTALLED : status.offer.reason
+      if (!status.offer.supported) return status.offer.reason
+      return status.offer.kind === 'update' ? HELPER_NEEDS_UPDATE : HELPER_NOT_INSTALLED
     case 'damaged':
       return status.reason
     case 'failed':

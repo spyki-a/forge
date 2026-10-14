@@ -1,10 +1,10 @@
-import { mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { app } from 'electron'
 import { SidecarClient, SidecarError, type HelperExit } from './client'
 import { RPC_ERRORS, type HelloResult } from '@shared/sidecar/protocol'
 import { HELPER_PACK } from '@shared/sidecar/packManifest'
-import { isUnsupported, packPlatform, type HelperPackManifest, type PackPlatform, type PlatformUnsupported } from '@shared/sidecar/pack'
+import { isUnsupported, packPlatform, parseReceipt, type HelperPackManifest, type PackPlatform, type PlatformUnsupported } from '@shared/sidecar/pack'
 import {
   UNPARSEABLE_RECEIPT,
   helperLaunch,
@@ -101,6 +101,34 @@ export function readReceipt(versionDir: string): unknown {
 }
 
 /**
+ * The receipt of the highest pack number below `current` whose `pack.json`
+ * parses, or null. After a release bumps the number, the installed pack sits
+ * in an older folder (`python/1/`) and the manifest's (`python/2/`) is empty;
+ * the row must offer Update over it, never a fresh Install (§3a.3 "Update",
+ * §16.46 (a)). Only the OFFER reads it: the old pack is never run. A folder
+ * whose receipt is missing or does not parse is not a pack to update (the
+ * sweep's business, §3a.3), and `in-use/`, `downloads/` and `.lock` are not
+ * numbers.
+ */
+export function olderReceipt(root: string, current: number): unknown {
+  let names: string[]
+  try {
+    names = readdirSync(root)
+  } catch {
+    return null
+  }
+  const older = names
+    .filter((name) => /^[1-9]\d*$/.test(name) && Number(name) < current)
+    .map(Number)
+    .sort((a, b) => b - a)
+  for (const n of older) {
+    const receipt = readReceipt(join(root, String(n)))
+    if (parseReceipt(receipt)) return receipt
+  }
+  return null
+}
+
+/**
  * `process.getSystemVersion()`: the marketing version ('14.6.1'), never
  * `os.release()`'s Darwin number (pack.ts `packPlatform`). Electron's; outside
  * Electron (a test that does not set it) there is none, and the Mac reads as
@@ -116,6 +144,8 @@ interface Resolved {
   machine: PackPlatform | PlatformUnsupported
   /** `pack.json` as read: null when there is none. */
   receipt: unknown
+  /** When there is none, an older pack number's receipt (`olderReceipt`): what makes the offer an Update. */
+  older: unknown
   manifest: HelperPackManifest
 }
 
@@ -130,8 +160,10 @@ function resolveHelper(manifest: HelperPackManifest = HELPER_PACK): Resolved {
     osVersion: systemVersion(),
     translated: app.runningUnderARM64Translation === true
   })
-  const versionDir = join(packRoot(userData, packaged), String(manifest.pack))
+  const root = packRoot(userData, packaged)
+  const versionDir = join(root, String(manifest.pack))
   const receipt = readReceipt(versionDir)
+  const older = receipt === null ? olderReceipt(root, manifest.pack) : null
   const python = isUnsupported(machine) ? null : join(versionDir, manifest.platforms[machine].python)
   const venv = packaged ? null : venvPythonOf(sidecarDir(), platform)
   const choice = resolveHelperPython({
@@ -144,12 +176,12 @@ function resolveHelper(manifest: HelperPackManifest = HELPER_PACK): Resolved {
     packPlatform: machine
   })
   const launch = helperLaunch(choice, { packaged, platform, base: process.env, ...helperFolders(userData) })
-  return { choice, launch, machine, receipt, manifest }
+  return { choice, launch, machine, receipt, older, manifest }
 }
 
 /** The status of a choice that spawns nothing: absent or damaged, with what the row can offer. null for a launch. */
 function statusWithoutHelper(r: Resolved): SidecarStatus | null {
-  if (r.choice.kind === 'absent') return { state: 'absent', offer: packOffer(r.manifest, r.machine, r.receipt, false) }
+  if (r.choice.kind === 'absent') return { state: 'absent', offer: packOffer(r.manifest, r.machine, r.receipt, false, r.older) }
   if (r.choice.kind === 'damaged') {
     return { state: 'damaged', reason: r.choice.reason, offer: packOffer(r.manifest, r.machine, r.receipt, true) }
   }
@@ -244,7 +276,7 @@ function startCurrent(): SidecarStatus {
     const resolved = resolveHelper()
     const without = statusWithoutHelper(resolved)
     if (without || !resolved.launch) {
-      const status = without ?? { state: 'absent', offer: packOffer(resolved.manifest, resolved.machine, resolved.receipt, false) }
+      const status = without ?? { state: 'absent', offer: packOffer(resolved.manifest, resolved.machine, resolved.receipt, false, resolved.older) }
       broadcast(status)
       return status
     }
@@ -289,7 +321,7 @@ export function sidecarStatus(): SidecarStatus {
   if (without) return without
   return resolved.launch
     ? { state: 'starting', source: resolved.launch.source }
-    : { state: 'absent', offer: packOffer(resolved.manifest, resolved.machine, resolved.receipt, false) }
+    : { state: 'absent', offer: packOffer(resolved.manifest, resolved.machine, resolved.receipt, false, resolved.older) }
 }
 
 function untilIdle(helper: SidecarClient, signal?: AbortSignal): Promise<void> {
