@@ -60,11 +60,27 @@ const NEEDS = { 'mediapipe in the helper venv (sidecar/requirements-faces*.txt)'
 
 /* ----------------------------------------------------------------- helpers */
 
+/**
+ * The worker's stand-in switches. A test turns one on for ONE helper, through
+ * its `env`; inherited from the shell they would reach the tests that need the
+ * real mediapipe import and the real detector too, which then read red under
+ * the sandbox's documented `FORGE_FACES_WORKER_FAKE=colour npx vitest run …`.
+ * So each process here starts without them unless its own `env` sets them.
+ */
+const STAND_INS = ['FORGE_FACES_WORKER_FAKE', 'FORGE_FACES_WORKER_ABORT']
+
+/** `process.env` without the stand-in switches, then `env` over it. */
+function withoutStandIns(env: Record<string, string> = {}): NodeJS.ProcessEnv {
+  const out: NodeJS.ProcessEnv = { ...process.env }
+  for (const name of STAND_INS) delete out[name]
+  return { ...out, ...env }
+}
+
 /** Run Python on the helper's interpreter with the package importable, and parse what it prints. */
 async function python<T>(code: string, env: Record<string, string> = {}): Promise<T> {
   const { stdout } = await run(VENV_PYTHON, ['-c', code], {
     cwd: SIDECAR_DIR,
-    env: { ...process.env, ...env },
+    env: withoutStandIns(env),
     windowsHide: true,
     maxBuffer: 8 << 20
   })
@@ -82,6 +98,12 @@ const logs = new Map<SidecarClient, string[]>()
  */
 async function helper(o: { models: string; cache: string; env?: Record<string, string>; python?: string }): Promise<SidecarClient> {
   const saved: Record<string, string | undefined> = {}
+  // A stand-in switch reaches a helper only through its own env (STAND_INS), never from the shell.
+  for (const name of STAND_INS) {
+    if (o.env && name in o.env) continue
+    saved[name] = process.env[name]
+    delete process.env[name]
+  }
   for (const [name, value] of Object.entries(o.env ?? {})) {
     saved[name] = process.env[name]
     process.env[name] = value
