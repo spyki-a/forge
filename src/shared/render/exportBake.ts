@@ -26,6 +26,7 @@
 
 import type { Clip, MediaAsset, Project } from '../timeline'
 import { momentTextures, type MomentTextures } from './momentTextures'
+import { followCanvas } from './plan'
 
 type Size = { width: number; height: number }
 type Sequence = { pattern: string; frames: number } | null
@@ -129,7 +130,8 @@ export async function bakeForExport(
         if (run) repointed.set(asset.id, sequenceAsset(asset, run, runs))
       } else if (clip.moment) {
         // At the STILLS' size: a moment is the whole frame, and its edges are the picture's.
-        const textures = momentTextures(project, clip.moment, clip.start)
+        // A followed shot's pull at the EXPORT's shape, as the render compiles its crop (plan.ts `followCanvas`).
+        const textures = momentTextures(followCanvas(project, exportCanvas), clip.moment, clip.start)
         const run = textures ? await bakers.moment(clip.moment, key, textures, stills.width, stills.height, clip.duration, fps) : null
         if (run) repointed.set(asset.id, sequenceAsset(asset, run, stills))
         else {

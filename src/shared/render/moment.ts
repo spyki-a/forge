@@ -407,6 +407,17 @@ export function shotPicture(
   fps: number
 ): { box: UnitRect; layers: ShotLayer[] } {
   const size = plan.size.width > 0 && plan.size.height > 0 ? plan.size : { width: 1, height: 1 }
+  /*
+   * The plan's crop is the clip's as `cropAt` reads it (render/crop.ts, the
+   * one reader): a photograph's stored crop, clamped as the export clamps it.
+   * Footage never reaches here with one: its frames are PULLED already cut by
+   * the render's own crop (`withFootageFrames` drops it) — a clip that follows
+   * its subject cut by its followed keys, and a stacked two-up frame pulled
+   * stacked (momentTextures.ts `followedFootage`). A plan that was not pulled
+   * would show the stored crop, which on a followed clip is the first frame's,
+   * and on a two-up frame the top half's position at the full size: one
+   * person, not the stack.
+   */
   const crop = effectiveCrop(plan.crop, size)
   const into = Math.max(0, Math.min(plan.frames - 1, plan.at + momentFrame))
   const { progress, seconds } = plan.motion ? moveAt(plan.motion, plan.frames, into, fps) : { progress: 0, seconds: 0 }

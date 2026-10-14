@@ -1,7 +1,7 @@
 import type { Clip, MomentSpec, Project } from '../timeline'
 import { previewAt, transitionById } from '../transitions/registry'
 import { bridgesCut, footageWindow, momentSpan, texturePlanFor, type TexturePlan } from './moment'
-import { FOOTAGE_MAX_EDGE } from './momentFrames'
+import { FOOTAGE_MAX_EDGE, followedFootage } from './momentFrames'
 
 /**
  * The pictures a moment draws from, found in the project: the shot it comes
@@ -26,7 +26,7 @@ export interface MomentTextures {
 }
 
 export function momentTextures(
-  project: Pick<Project, 'clips' | 'assets' | 'parallax' | 'settings'>,
+  project: Pick<Project, 'clips' | 'assets' | 'parallax' | 'settings' | 'subjects'>,
   spec: MomentSpec,
   momentStart: number
 ): MomentTextures | null {
@@ -68,7 +68,16 @@ export function momentTextures(
         first: window.first,
         count: window.count,
         fps,
-        ...(clip.crop ? { crop: clip.crop } : {}),
+        /*
+         * The crop as the RENDER cuts this clip: its stored crop, or — for a
+         * clip that follows its subject — the followed crop's size and the
+         * keys it moves by, both halves' on a stacked two-up (docs/CLIPS.md
+         * §4.7), so the pulled frames are the render's own frames beneath.
+         * The stored crop alone would pull the clip's first-frame crop for
+         * every moment over it. `followKeys` reads only the assets, the
+         * subjects and the settings, which this Pick carries.
+         */
+        ...followedFootage(project as Project, clip, fps),
         size: { width: asset.width ?? 0, height: asset.height ?? 0 },
         maxEdge: FOOTAGE_MAX_EDGE
       }

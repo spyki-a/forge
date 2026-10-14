@@ -204,6 +204,15 @@ export function stripClips(
         volume: 0,
         transform: cell.transform,
         color: { ...look },
+        /*
+         * Inside the shot's visible rectangle (`options.source`); the store
+         * moves it into the file by the crop on the flash's own frame, read
+         * through `cropAt` (render/crop.ts) — a followed clip's crop moves
+         * shot by shot. On a stacked two-up frame that is one rectangle, the
+         * top half's position at the full size (the left-hand person): a strip
+         * cannot be cut from two places, so it is a slice of that crop, not of
+         * the stack the export shows.
+         */
         crop: cell.crop,
         generatedBy: { rule: STRIP_RULE, reason: flash.reason },
         ...(cell.mask ? { mask: cell.mask } : {})

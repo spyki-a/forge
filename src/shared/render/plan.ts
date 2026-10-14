@@ -910,6 +910,18 @@ function mixFilters(labels: string[], out: string, totalSeconds: string): string
 }
 
 /**
+ * The project as a followed crop is compiled for an export at `canvas`: the
+ * same project when the canvas is its own, otherwise its settings carrying
+ * the export's size — what `followKeys` reads the target shape from. Also
+ * what the export's moments pull their footage with (exportBake.ts), so a
+ * moment's frames are the render's frames beneath at that shape too.
+ */
+export function followCanvas(project: Project, canvas: { width: number; height: number }): Project {
+  const { width, height } = project.settings
+  return canvas.width === width && canvas.height === height ? project : { ...project, settings: { ...project.settings, width: canvas.width, height: canvas.height } }
+}
+
+/**
  * The clips a range export keeps: every one that overlaps `[start, end)`, and
  * every one those use as their matte.
  *
@@ -955,6 +967,16 @@ export function buildRenderPlan(request: RenderRequest): RenderPlan {
   const width = even(canvas.width)
   const height = even(canvas.height)
   const fps = project.settings.fps
+  /*
+   * A followed clip follows on the EXPORT's canvas (docs/CLIPS.md §4.7,
+   * decided in slice B): its crop's size and its path come from the canvas's
+   * shape. Compiled against the project's, a 9:16 export of a 16:9 edit (a
+   * preset's own aspect, ExportStrip `exportCanvas`) found "nothing to
+   * follow" on a 16:9 source and letterboxed the whole frame — measured:
+   * `crop=w='min(1920,in_w)'…`, then `scale…decrease,pad`. The same shape at
+   * another resolution compiles the same keys: the path reads the shape only.
+   */
+  const followProject = followCanvas(project, canvas)
 
   const videoTracks = project.tracks.filter((t) => t.kind === 'video' && !t.hidden)
   if (videoTracks.length === 0) throw new RenderError('The project has no visible video track')
@@ -1211,7 +1233,7 @@ export function buildRenderPlan(request: RenderRequest): RenderPlan {
      * crop read it — so a stored `crop` of another size cannot disagree with
      * the one the filter cuts. Footage only.
      */
-    const follow = !bake && asset.kind === 'video' ? followKeys(project, clip, fps) : null
+    const follow = !bake && asset.kind === 'video' ? followKeys(followProject, clip, fps) : null
     const ownCrop = follow?.crop ?? clip.crop
     const streamCrop =
       ownCrop && bake && asset.width && asset.height
