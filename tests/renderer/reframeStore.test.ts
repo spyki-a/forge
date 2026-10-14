@@ -227,6 +227,38 @@ describe('reframeClip', () => {
   })
 })
 
+describe('a project saved or swapped while its analysis runs', () => {
+  it('a save mid-job — the first Cmd+S of an untitled project, or Save As — still lands the track: the work is the same', async () => {
+    harness.stageMs = 30
+    // Untitled: never saved, no path.
+    editor.setState({ projectPath: null })
+    const id = state().project.id
+    await state().reframeClip('c')
+    expect(Object.keys(state().reframe.pending)).toEqual(['v'])
+    // Saved for the first time, then saved under another name, while the file is being analysed.
+    state().markSaved('/projects/first-save.forge')
+    state().markSaved('/projects/save-as.forge')
+    expect(state().project.id).toBe(id)
+    await until('the track to land', landed)
+    expect(clipNow().follow).toBeDefined()
+    expect(state().notices.map((n) => n.text).join(' | ')).not.toContain('after another project was opened')
+  })
+
+  it('another project opened mid-job is not followed in, even holding a file of the same asset id', async () => {
+    harness.stageMs = 30
+    const collect = vi.spyOn(bridge, 'collectSubjects')
+    await state().reframeClip('c')
+    // A different project — its own id — with an asset of the same id.
+    state().loadProject(talk(), '/projects/other.forge', [])
+    const other = state().project
+    await until('the collect', () => collect.mock.calls.length === 1)
+    await collect.mock.results[0].value
+    await until('the refusal to be said', () => state().notices.some((n) => n.text.includes('after another project was opened')))
+    expect(state().project).toBe(other)
+    expect(clipNow().follow).toBeUndefined()
+  })
+})
+
 describe('reframeAll', () => {
   it('follows every unfollowed landscape VIDEO clip on the timeline, one job per file — and touches nothing else', async () => {
     const followedTrack = harnessSubjectTrack({ key: 'harness:/media/w.mp4', width: 1280, height: 720, durationMs: 12_000 })

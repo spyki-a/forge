@@ -5530,7 +5530,12 @@ const reframeFinished = new Set<string>()
 const reframeStarting = new Map<string, Set<string>>()
 /** job id → clips asked to follow that file once its job was already running: they follow when it lands. */
 const reframeAlso = new Map<string, Set<string>>()
-/** job id → the project it was asked in. Absent after a reload: the track is then adopted by its asset id, as a download is. */
+/**
+ * job id → the project it was asked in, by the project's own id: a save (the
+ * first Cmd+S of an untitled project, Save As) changes the path but not the
+ * work, and the path refused a track the user was still waiting for. Absent
+ * after a reload: the track is then adopted by its asset id, as a download is.
+ */
 const reframeAskedIn = new Map<string, string | null>()
 
 const editor = (): EditorState => useEditor.getState()
@@ -5654,7 +5659,7 @@ async function startReframe(assetId: string, clipIds: string[], phrase?: string)
       clipIds: [...asking]
     }
     const job = await window.forge.analyseSubjects(request)
-    reframeAskedIn.set(job.id, editor().projectPath)
+    reframeAskedIn.set(job.id, editor().project.id ?? null)
     // Clips asked for while the request was on its way.
     const late = [...asking].filter((id) => !request.clipIds.includes(id))
     if (late.length > 0) rememberAlso(job.id, late)
@@ -5744,7 +5749,7 @@ async function collectReframe(jobId: string): Promise<void> {
     const askedIn = reframeAskedIn.get(jobId)
     const also = reframeAlso.get(jobId) ?? []
     reframeAlso.delete(jobId)
-    if (askedIn !== undefined && askedIn !== editor().projectPath) {
+    if (askedIn !== undefined && askedIn !== (editor().project.id ?? null)) {
       editor().notify('That clip’s subject was found after another project was opened: follow it again there', 'info')
       return
     }
