@@ -25,12 +25,14 @@ export interface FetchVerifiedDeps {
   rename(from: string, to: string): Promise<void>
   /** Every chunk's length as it streams, for the bar and the speed. */
   onBytes(n: number): void
+  /** A try begins: what onBytes counts from here is this try's, the file streamed again from its start. */
+  onTry?(): void
   /** The retry's own line ("files.pythonhosted.org answered 503, trying again in 8s (2 of 4)"). */
   onMessage?(message: string): void
 }
 
 /**
- * Stream one file into `dir` as `<name>.part`, hashed and counted as it
+ * Stream one file into `dir` as a `.part` of its own, hashed and counted as it
  * arrives, renamed to `<name>` only when it is the file; resolves with that
  * path. A file already there with its hash is skipped (resume by file). One
  * `Fetching`, one retry budget, per call — never one for the whole install.

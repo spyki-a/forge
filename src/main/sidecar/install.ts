@@ -515,17 +515,23 @@ export function createHelperPackJobs(deps: HelperPackDeps): HelperPackJobs {
     report(1, 0, downloadingText(0, total, null))
     // A failure or a cancel here leaves the verified files where they are; run's catch removes any .part.
     for (const file of files) {
-      // A retried file streams again: what it counts toward the bar stops at its own size.
-      let current = 0
-      const so = (): number => done + Math.min(current, file.bytes)
+      // A retried file streams again from its start: it counts what its best try has brought, so the
+      // bar neither goes back with the new try nor runs ahead of it (the speed takes every byte).
+      let thisTry = 0
+      let best = 0
+      const so = (): number => done + Math.min(best, file.bytes)
       const path = await deps.fetchVerified(file, dlDir, {
         fetch: deps.fetch,
         retry: deps.retry,
         signal,
         now: deps.now,
         rename: fs.rename,
+        onTry: () => {
+          thisTry = 0
+        },
         onBytes: (bytes) => {
-          current += bytes
+          thisTry += bytes
+          best = Math.max(best, thisTry)
           speed.add(bytes)
           report(1, so() / total, downloadingText(so(), total, speed.rate()))
         },

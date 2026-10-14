@@ -528,6 +528,8 @@ export interface FetchVerifiedOptions {
   rename(from: string, to: string): Promise<void>
   /** Every chunk's length as it streams, for the bar and the speed. */
   onBytes(n: number): void
+  /** A try begins: what onBytes counts from here is this try's (a retried file streams again from its start). */
+  onTry?(): void
   onMessage?(message: string): void
 }
 
@@ -711,7 +713,10 @@ export async function fetchVerified(file: PackFile, dir: string, f: FetchVerifie
   try {
     host = await withRetry(
       `downloading ${file.name}`,
-      (answerMs) => tryToFile(file, part, answerMs, fetching, f.onBytes),
+      (answerMs) => {
+        f.onTry?.()
+        return tryToFile(file, part, answerMs, fetching, f.onBytes)
+      },
       f.retry.binaryAnswerMs,
       fetching
     )

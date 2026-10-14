@@ -317,6 +317,7 @@ function makeHarness(o: { pack?: number; platform?: PackPlatform; seed?: number;
     const body = h.tamper.has(f.name) ? Buffer.from(original.map((b) => b ^ 0xff)) : original
     const part = `${target}.part`
     const stream = async (upTo: number): Promise<void> => {
+      d.onTry?.()
       writeFileSync(part, '')
       let at = 0
       while (at < upTo) {
@@ -553,6 +554,31 @@ describe('a fresh install', () => {
       // The download stage's texts count bytes over every file.
       expect(h.progress.some((x) => x.text?.startsWith('downloading · '))).toBe(true)
     }
+  })
+
+  it('a retried file counts what its best try brought, not every byte that crossed the wire (P-B finding V2)', async () => {
+    const h = makeHarness({ maxChunk: 1024 })
+    const first = h.files[0]
+    h.retryOnce.add(first.name)
+    const total = packBytes(h.manifest.platforms[h.platform])
+    const seen: { tryNo: number; at: number; p: number }[] = []
+    let tryNo = 0
+    let lastAt = Infinity
+    h.hooks.onChunk = (f, at) => {
+      if (f.name !== first.name) return
+      if (at < lastAt) tryNo++
+      lastAt = at
+      seen.push({ tryNo, at, p: h.progress.at(-1)!.p })
+    }
+    expect((await installed(h)).status).toBe('done')
+    const firstTry = seen.filter((s) => s.tryNo === 1)
+    const second = seen.filter((s) => s.tryNo === 2)
+    expect(firstTry.length).toBeGreaterThan(3)
+    expect(second.length).toBeGreaterThan(3)
+    const cut = firstTry.at(-1)!.at
+    expect(cut).toBe(Math.floor(first.bytes * 0.6))
+    // The second try holds the bar where the first left it until it passes it, then carries it.
+    for (const s of second) expect({ at: s.at, p: s.p }).toEqual({ at: s.at, p: installProgress(1, Math.max(cut, s.at) / total) })
   })
 
   it('a file that is not the file fails the job, with no version folder and no receipt', async () => {

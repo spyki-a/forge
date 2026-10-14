@@ -187,11 +187,15 @@ describe('a file that arrives broken is fetched again', () => {
     const body = bytesOf(100_000)
     const file = packFile('numpy.whl', WHEEL_URL, body)
     const net = fakeNet({ [WHEEL_URL]: [{ body: body.slice(0, 90_000) }, { body }] })
+    // Each try says it begins, so the job's bar can count a retried file's best try rather than every byte.
+    const tries: number[] = []
+    let before = 0
 
-    const path = await fetchVerified(file, dir, deps(net))
+    const path = await fetchVerified(file, dir, deps(net, { onTry: () => (tries.push(transferred - before), (before = transferred)) }))
 
     expect(path).toBe(join(dir, 'numpy.whl'))
     expect(net.calls[WHEEL_URL]).toBe(2)
+    expect(tries, 'onTry before each try, the first try’s 90,000 B counted before the second').toEqual([0, 90_000])
     expect(sha256(await readFile(path))).toBe(file.sha256)
     expect(await readdir(dir)).toEqual(['numpy.whl'])
     expect(messages.filter((m) => m.includes('files.pythonhosted.org sent only part of the file, trying again'))).toHaveLength(1)
