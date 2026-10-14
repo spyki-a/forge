@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { SidecarClient } from '../../src/main/sidecar/client'
 import { SIDECAR_METHODS, RPC_ERRORS } from '@shared/sidecar/protocol'
 import { segmentIntoSentences, type Word } from '@shared/transcript'
-import { SIDECAR_DIR, VENV_PYTHON, describeWithVenv } from './venv'
+import { SIDECAR_DIR, VENV_PYTHON, describeWithVenv, launchFor } from './venv'
 
 const MODELS_DIR = process.env.FORGE_MODELS_DIR ?? join(tmpdir(), 'forge-models')
 const FIXTURE = join(process.env.TMPDIR ?? tmpdir(), 'asr-check/jfk.flac')
@@ -20,8 +20,7 @@ let client: SidecarClient
 beforeAll(() => {
   client = new SidecarClient({
     cwd: SIDECAR_DIR,
-    python: VENV_PYTHON,
-    modelsDir: MODELS_DIR,
+    launch: launchFor(VENV_PYTHON, { modelsDir: MODELS_DIR }),
     maxRestarts: 0
   })
 })

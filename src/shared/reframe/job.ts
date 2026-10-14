@@ -23,7 +23,8 @@
  * Pure and Electron-free: imported by main, the renderer and the tests.
  */
 
-import type { HelloResult, ModelStatus } from '../sidecar/protocol'
+import type { ModelStatus } from '../sidecar/protocol'
+import type { SidecarStatus } from '../sidecar/status'
 import { SIDECAR_METHODS } from '../sidecar/protocol'
 import type { SubjectTrack } from './types'
 
@@ -236,23 +237,39 @@ export interface ReframeStatus {
   pending: Record<string, string>
 }
 
+/** A status with or without its `source`: the reframe reads only the state and a ready one's hello (main's job passes a bare ready). */
+type WithoutSource<T> = T extends unknown ? Omit<T, 'source'> : never
+export type HelperStatusLike = SidecarStatus | WithoutSource<SidecarStatus>
+
 /**
- * The helper's status as main broadcasts it (preload `SidecarStatusMessage`),
+ * The helper's status as main broadcasts it (src/shared/sidecar/status.ts),
  * reduced to what the reframe needs. Decided from `hello.capabilities`, never
  * from a message's prose: ready only when both `vision.faces` and
  * `vision.facesModel` registered. Degraded (the face finder's module did not
  * import) is `missing` as much as no Python is — either way nothing can find a
- * face on this machine.
+ * face on this machine. No pack, a damaged one, or a helper that failed is
+ * `missing`; one starting or being installed is not known yet.
  */
-export function reframeHelperFrom(
-  status: { state: 'starting' } | { state: 'ready'; hello: HelloResult } | { state: 'failed'; error?: string }
-): ReframeHelper {
-  if (status.state === 'starting') return 'unknown'
-  if (status.state === 'failed') return 'missing'
-  const capabilities = status.hello?.capabilities ?? []
-  return capabilities.includes(SIDECAR_METHODS.faces) && capabilities.includes(SIDECAR_METHODS.facesModel)
-    ? 'ready'
-    : 'missing'
+export function reframeHelperFrom(status: HelperStatusLike): ReframeHelper {
+  switch (status.state) {
+    case 'starting':
+    case 'installing':
+      return 'unknown'
+    case 'absent':
+    case 'damaged':
+    case 'failed':
+      return 'missing'
+    case 'ready': {
+      const capabilities = status.hello?.capabilities ?? []
+      return capabilities.includes(SIDECAR_METHODS.faces) && capabilities.includes(SIDECAR_METHODS.facesModel)
+        ? 'ready'
+        : 'missing'
+    }
+    default: {
+      const unknown: never = status
+      return unknown
+    }
+  }
 }
 
 /** The job row's words for a reframe job. */

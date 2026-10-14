@@ -214,6 +214,16 @@ export interface HelloResult {
   capabilities: string[]
   /** Capabilities present but not usable, with the reason. */
   degraded: Record<string, string>
+  /**
+   * Which interpreter answered (docs/CLIPS.md §3a.2): `sys.executable`,
+   * `sys.prefix` and `sys.path`, so the Settings row and the tests can show
+   * it, and prove nothing outside the pack reached a pack's helper. Required:
+   * the helper ships with the app, so a hello without them is not this
+   * build's.
+   */
+  executable: string
+  prefix: string
+  path: string[]
 }
 
 /* ------------------------------------------------------- model downloads */

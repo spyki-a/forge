@@ -213,10 +213,20 @@ describe('on screen it is the AI helper, never the sidecar', () => {
       return /\.tsx?$/.test(entry.name) ? [path] : []
     })
 
-  /** What a file could put on screen: string literals, template text, JSX text — not names, not comments. */
+  /**
+   * What a file could put on screen: string literals, template text, JSX text
+   * — not names, not comments, and not a module's path in an import or export
+   * (`@shared/sidecar/status` is where a type lives, never text).
+   */
   const words = (path: string): string[] => {
     const out: string[] = []
     for (const node of everyNode(parse(path, readFileSync(path, 'utf8')))) {
+      const modulePath =
+        ts.isStringLiteral(node) &&
+        node.parent !== undefined &&
+        (ts.isImportDeclaration(node.parent) || ts.isExportDeclaration(node.parent)) &&
+        node.parent.moduleSpecifier === node
+      if (modulePath) continue
       if (ts.isJsxText(node) || ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node) || ts.isTemplateHead(node) || ts.isTemplateMiddle(node) || ts.isTemplateTail(node)) {
         out.push(node.text)
       }

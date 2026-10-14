@@ -1,19 +1,27 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { resolve } from 'node:path'
+import { spawnSync } from 'node:child_process'
+import { existsSync } from 'node:fs'
+import { isAbsolute } from 'node:path'
+import { PACK_FLAGS, cleanHelperEnv } from '../../src/shared/sidecar/helperPython'
 import { SidecarClient, SidecarError } from '../../src/main/sidecar/client'
 import { OPTIONAL_METHODS, SIDECAR_METHODS, RPC_ERRORS, type HelloResult } from '@shared/sidecar/protocol'
-
-const SIDECAR_DIR = resolve(__dirname, '../../sidecar')
+import { SIDECAR_DIR, devHelperLaunch } from './venv'
 
 let client: SidecarClient | null = null
 
+/*
+ * The helper as `npm run dev` starts it: the development order
+ * (FORGE_PYTHON, then sidecar/.venv, then python on win32 and python3
+ * elsewhere) and that rung's launch (src/shared/sidecar/helperPython.ts). On
+ * CI that is the bare interpreter setup-python puts on PATH.
+ */
 function makeClient(options: Partial<{ maxRestarts: number }> = {}): SidecarClient {
-  client = new SidecarClient({ cwd: SIDECAR_DIR, maxRestarts: options.maxRestarts ?? 0 })
+  client = new SidecarClient({ cwd: SIDECAR_DIR, launch: devHelperLaunch(), maxRestarts: options.maxRestarts ?? 0 })
   return client
 }
 
-afterEach(() => {
-  client?.stop()
+afterEach(async () => {
+  await client?.stop()
   client = null
 })
 
@@ -24,6 +32,17 @@ describe('sidecar handshake', () => {
     expect(hello.python).toMatch(/^3\./)
     expect(hello.capabilities).toContain(SIDECAR_METHODS.hello)
     expect(hello.capabilities).toContain(SIDECAR_METHODS.ping)
+  }, 60_000)
+
+  it('says which interpreter answered: its executable, prefix and path', async () => {
+    const hello = await makeClient().start()
+    expect(typeof hello.executable).toBe('string')
+    expect(isAbsolute(hello.executable), hello.executable).toBe(true)
+    expect(typeof hello.prefix).toBe('string')
+    expect(hello.prefix.length).toBeGreaterThan(0)
+    expect(Array.isArray(hello.path)).toBe(true)
+    expect(hello.path.length).toBeGreaterThan(0)
+    for (const entry of hello.path) expect(typeof entry, JSON.stringify(entry)).toBe('string')
   }, 60_000)
 
   it('round-trips a ping', async () => {
@@ -170,7 +189,7 @@ describe('lifecycle', () => {
     const c = makeClient()
     await c.start()
     const promise = c.request('system.sleep', { seconds: 10 })
-    c.stop()
+    void c.stop()
     await expect(promise).rejects.toBeInstanceOf(SidecarError)
   }, 60_000)
 
@@ -188,9 +207,9 @@ describe('lifecycle', () => {
     await started
     const exited = new Promise<{ code: number | null; signal: string | null }>((done) => c.once('exit', done))
     const began = performance.now()
-    c.stop()
+    void c.stop()
     await expect(promise).rejects.toBeInstanceOf(SidecarError)
-    expect(await exited).toEqual({ code: 0, signal: null })
+    expect(await exited).toMatchObject({ code: 0, signal: null })
     expect(performance.now() - began).toBeLessThan(1500)
   }, 60_000)
 
@@ -207,5 +226,68 @@ describe('lifecycle', () => {
     // A later request must bring it back rather than failing forever.
     const result = await c.request<{ pong: string }>(SIDECAR_METHODS.ping, { echo: 'back' })
     expect(result.pong).toBe('back')
+  }, 60_000)
+})
+
+describe('the protocol is UTF-8 under the pack’s -E (docs/CLIPS.md §3a.8 row 38)', () => {
+  /*
+   * `-E` ignores PYTHONIOENCODING, and a pipe then gets the locale's
+   * encoding: Latin-1 here, the ANSI code page (cp1252) on Windows. Measured
+   * on the Mac before __main__ set its own streams: the path below was read
+   * as mojibake, and a reply holding it failed with "'latin-1' codec can't
+   * encode characters". (LC_ALL=C cannot show it: Python turns UTF-8 mode on
+   * by itself there.) Both directions are held, each on its own: a raw UTF-8
+   * request whose reply is forced to ASCII escapes, so what the helper READ
+   * is visible exactly; and an ASCII-only request, so only what it WROTE is
+   * tested.
+   */
+  const NAME = 'Bräutigam 5:30pm ಕನ್ನಡ.mp4'
+  const LATIN1 = 'en_US.ISO8859-1'
+  const latin1 = process.platform === 'darwin' && existsSync(`/usr/share/locale/${LATIN1}`)
+  const env = { ...cleanHelperEnv(process.env, process.platform), ...(latin1 ? { LC_ALL: LATIN1, LANG: LATIN1 } : {}) }
+
+  function exchange(args: string[], request: string): { pong: unknown; error: unknown; stdout: Buffer; stderr: string } {
+    const launch = devHelperLaunch()
+    const run = spawnSync(launch.command, [...PACK_FLAGS, ...args], {
+      cwd: SIDECAR_DIR,
+      env,
+      input: Buffer.from(`${request}\n`, 'utf8'),
+      timeout: 60_000,
+      windowsHide: true
+    })
+    const replies = run.stdout
+      .toString('utf8')
+      .split('\n')
+      .filter((line) => line.startsWith('{'))
+      .map((line) => JSON.parse(line) as { id?: number; result?: { pong?: unknown }; error?: unknown })
+    const reply = replies.find((m) => m.id === 1)
+    return { pong: reply?.result?.pong, error: reply?.error, stdout: run.stdout, stderr: run.stderr.toString('utf8') }
+  }
+
+  it('reads a non-ASCII path in a request as the path it is', () => {
+    // The helper's own __main__, through runpy as `-m` runs it, with every reply written as ASCII escapes.
+    const asciiReplies = [
+      'import json, runpy',
+      '_dumps = json.dumps',
+      'json.dumps = lambda o, **k: _dumps(o, **{**k, "ensure_ascii": True})',
+      'runpy.run_module("forge_sidecar", run_name="__main__", alter_sys=True)'
+    ].join('\n')
+    const { pong, error, stdout, stderr } = exchange(['-c', asciiReplies], JSON.stringify({ jsonrpc: '2.0', id: 1, method: SIDECAR_METHODS.ping, params: { echo: NAME } }))
+    expect(error, stderr).toBeUndefined()
+    expect([...stdout].every((b) => b < 0x80), 'the replies are ASCII escapes').toBe(true)
+    expect(pong, stderr).toBe(NAME)
+  }, 60_000)
+
+  it('writes a non-ASCII path in a reply as UTF-8', () => {
+    // A request in ASCII alone (JSON escapes), so only the reply's encoding is under test.
+    const request = JSON.stringify({ jsonrpc: '2.0', id: 1, method: SIDECAR_METHODS.ping, params: { echo: NAME } }).replace(
+      /[\u0080-\uffff]/g,
+      (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`
+    )
+    expect([...Buffer.from(request, 'utf8')].every((b) => b < 0x80)).toBe(true)
+    const { pong, error, stdout, stderr } = exchange(['-m', 'forge_sidecar'], request)
+    expect(error, stderr).toBeUndefined()
+    expect(pong, stderr).toBe(NAME)
+    expect(stdout.includes(Buffer.from(NAME, 'utf8')), 'the path as UTF-8 bytes').toBe(true)
   }, 60_000)
 })

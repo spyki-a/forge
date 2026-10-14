@@ -291,8 +291,9 @@ app.on('before-quit', (event) => {
     mainWindow.close()
     return
   }
-  // Closing stdin lets Python finish in-flight work and exit cleanly.
-  stopSidecar()
+  // Closing stdin lets Python finish in-flight work and exit cleanly. Not
+  // awaited: the quit goes on, and the helper is killed if it lingers.
+  void stopSidecar()
   // A link read's yt-dlp is a process group of its own; it would outlive us.
   abortLinkRuns()
   // A reframe's scene pass is main's own ffmpeg: it would read on after we are gone.

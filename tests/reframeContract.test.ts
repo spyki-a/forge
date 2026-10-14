@@ -12,6 +12,7 @@ import {
   type ReframeStage
 } from '@shared/reframe/job'
 import { SIDECAR_METHODS, type HelloResult } from '@shared/sidecar/protocol'
+import type { PackOffer } from '@shared/sidecar/status'
 
 /*
  * The pure half of the reframe job's contract (shared/reframe/job.ts,
@@ -81,7 +82,10 @@ describe('reframeHelperFrom', () => {
     python: '3.12',
     platform: 'darwin',
     capabilities,
-    degraded
+    degraded,
+    executable: '/usr/bin/python3',
+    prefix: '/usr',
+    path: []
   })
 
   it('is ready only when both the face finder and its model method registered', () => {
@@ -98,6 +102,19 @@ describe('reframeHelperFrom', () => {
   it('is missing when the helper failed to start, and unknown while it starts', () => {
     expect(reframeHelperFrom({ state: 'failed', error: 'The AI helper stopped (code 9009)' })).toBe('missing')
     expect(reframeHelperFrom({ state: 'starting' })).toBe('unknown')
+  })
+
+  it('is missing with no pack or a damaged one, and unknown while one installs (docs/CLIPS.md §3a.2)', () => {
+    const offer: Extract<PackOffer, { supported: true }> = { supported: true, kind: 'install', bytes: 1, bytesOnDisk: 1, hosts: ['github.com'] }
+    expect(reframeHelperFrom({ state: 'absent', offer })).toBe('missing')
+    expect(reframeHelperFrom({ state: 'absent', offer: { supported: false, reason: 'The AI helper needs macOS 14 or later' } })).toBe('missing')
+    expect(reframeHelperFrom({ state: 'damaged', reason: 'gone', offer: { ...offer, kind: 'repair' } })).toBe('missing')
+    expect(reframeHelperFrom({ state: 'installing', stage: 'Fetching' })).toBe('unknown')
+    // A status as main broadcasts it, its source and all.
+    const source = { kind: 'pack', pack: 1, root: '/u/python/1' } as const
+    expect(reframeHelperFrom({ state: 'ready', hello: hello([SIDECAR_METHODS.faces, SIDECAR_METHODS.facesModel]), source })).toBe('ready')
+    expect(reframeHelperFrom({ state: 'failed', error: 'x', source })).toBe('missing')
+    expect(reframeHelperFrom({ state: 'starting', source })).toBe('unknown')
   })
 })
 

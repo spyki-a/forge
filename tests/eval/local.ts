@@ -7,6 +7,7 @@ import type { MusicAnalysis } from '@shared/automation/cutPlan'
 import type { Measure } from '@shared/director/gate'
 import { soundPackFor, type SoundPack } from '@shared/director/soundRoles'
 import { SidecarClient } from '../../src/main/sidecar/client'
+import { launchFor } from '../integration/venv'
 import { FFMPEG } from './media'
 import type { AnalyseBeats } from './pipeline'
 
@@ -52,12 +53,12 @@ export interface Sidecar {
 export async function startSidecar(): Promise<{ sidecar: Sidecar | null; note: string | null; stop: () => void }> {
   const python = existsSync(VENV_PYTHON) ? VENV_PYTHON : process.env.FORGE_PYTHON
   if (!python) return { sidecar: null, note: 'no Python for the sidecar', stop: () => undefined }
-  const client = new SidecarClient({ cwd: SIDECAR_DIR, python, maxRestarts: 0 })
+  const client = new SidecarClient({ cwd: SIDECAR_DIR, launch: launchFor(python), maxRestarts: 0 })
   try {
     const hello = await client.start()
-    return { sidecar: { client, capabilities: hello.capabilities, degraded: hello.degraded }, note: null, stop: () => client.stop() }
+    return { sidecar: { client, capabilities: hello.capabilities, degraded: hello.degraded }, note: null, stop: () => void client.stop() }
   } catch (err) {
-    client.stop()
+    void client.stop()
     return { sidecar: null, note: err instanceof Error ? err.message : String(err), stop: () => undefined }
   }
 }

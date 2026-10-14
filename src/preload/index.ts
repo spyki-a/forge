@@ -3,7 +3,8 @@ import type { Job } from '@shared/types'
 import type { MediaAsset, ParallaxBake, Project, TextSpec } from '@shared/timeline'
 import type { DecisionRecord } from '@shared/project'
 import type { Transcript } from '@shared/transcript'
-import type { HelloResult, ModelStatus } from '@shared/sidecar/protocol'
+import type { ModelStatus } from '@shared/sidecar/protocol'
+import type { SidecarStatus } from '@shared/sidecar/status'
 import type {
   FaceModelProgress,
   FaceModelRequest,
@@ -37,10 +38,8 @@ export interface ProbeResult {
   failed: { path: string; error: string }[]
 }
 
-export type SidecarStatusMessage =
-  | { state: 'starting' }
-  | { state: 'ready'; hello: HelloResult }
-  | { state: 'failed'; error: string }
+/** The AI helper's status as main broadcasts it (src/shared/sidecar/status.ts). */
+export type SidecarStatusMessage = SidecarStatus
 
 export interface OpenedProject {
   path: string

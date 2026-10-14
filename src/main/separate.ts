@@ -34,6 +34,8 @@ export interface SeparateDeps {
 const DEMUCS_TIMEOUT_MS = 900_000
 
 const live: SeparateDeps = {
+  // getSidecar throws when there is no helper to run (no pack, or a damaged
+  // one): inside separateStems' try, so mid/side answers, as for any failure.
   sidecar: (path, { signal, onProgress }) =>
     getSidecar().request<Stems>(
       SIDECAR_METHODS.stems,

@@ -6,6 +6,7 @@ import { escapeLeavesFullScreen } from '@shared/fullScreen'
 import { projectDuration } from '@shared/timeline'
 import { AUTOSAVE_INTERVAL_MS } from '@shared/project/recovery'
 import { reframeHelperFrom } from '@shared/reframe/job'
+import { helperStatusReason, type SidecarStatus } from '@shared/sidecar/status'
 import { useEditor } from './store'
 import { useCatalog } from './catalog'
 import { activeCaptionStyle } from './captionPreview'
@@ -66,6 +67,37 @@ function Notices(): ReactNode {
       ))}
     </div>
   )
+}
+
+/**
+ * The AI helper's status into the store (src/shared/sidecar/status.ts):
+ * running when ready; not running, with its sentence, when there is no pack,
+ * a damaged one, or a helper that failed; neither yet while it starts or
+ * installs. The Settings row's own states for these are a later slice
+ * (docs/CLIPS.md §3a.4).
+ */
+function applyHelperStatus(status: SidecarStatus): void {
+  const state = useEditor.getState()
+  switch (status.state) {
+    case 'ready':
+      state.setSidecar(true, null)
+      break
+    case 'absent':
+    case 'damaged':
+    case 'failed':
+      state.setSidecar(false, helperStatusReason(status))
+      break
+    case 'starting':
+    case 'installing':
+      state.setSidecar(false, null)
+      break
+    default: {
+      const unknown: never = status
+      void unknown
+    }
+  }
+  // Follow the subject's grey: decided from the capabilities, not the prose (shared/reframe/job.ts).
+  state.setReframeHelper(reframeHelperFrom(status))
 }
 
 function Header(): ReactNode {
@@ -217,30 +249,15 @@ export default function App(): ReactNode {
     []
   )
 
-  useEffect(
-    () =>
-      window.forge.onSidecarStatus((status) => {
-        const state = useEditor.getState()
-        if (status.state === 'ready') state.setSidecar(true, null)
-        else if (status.state === 'failed') state.setSidecar(false, status.error)
-        else state.setSidecar(false, null)
-        // Follow the subject's grey: decided from the capabilities, not the prose (shared/reframe/job.ts).
-        state.setReframeHelper(reframeHelperFrom(status))
-      }),
-    []
-  )
+  useEffect(() => window.forge.onSidecarStatus(applyHelperStatus), [])
 
-  // The sidecar may already be up before the window finished loading, in which
-  // case its status broadcast was missed.
+  // The helper may already be up before the window finished loading, in which
+  // case its status broadcast was missed. Main answers from its last
+  // broadcast and never starts anything for the ask.
   useEffect(() => {
     void window.forge
       .sidecarStatus()
-      .then((status) => {
-        const state = useEditor.getState()
-        if (status.state === 'ready') state.setSidecar(true, null)
-        else if (status.state === 'failed') state.setSidecar(false, status.error)
-        state.setReframeHelper(reframeHelperFrom(status))
-      })
+      .then(applyHelperStatus)
       .catch(() => undefined)
   }, [])
 

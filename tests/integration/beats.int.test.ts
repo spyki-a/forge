@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg'
 import { SidecarClient } from '../../src/main/sidecar/client'
-import { SIDECAR_DIR, VENV_PYTHON, describeWithVenv } from './venv'
+import { SIDECAR_DIR, VENV_PYTHON, describeWithVenv, launchFor } from './venv'
 
 const FFMPEG = ffmpegInstaller.path
 
@@ -162,7 +162,7 @@ beforeAll(async () => {
   writeBarPattern(offsetBars, 120, 12, 2)
   dropTrack = join(dir, 'drop.wav')
   writeDropTrack(dropTrack, 120, 16, 24)
-  client = new SidecarClient({ cwd: SIDECAR_DIR, python: VENV_PYTHON, maxRestarts: 0 })
+  client = new SidecarClient({ cwd: SIDECAR_DIR, launch: launchFor(VENV_PYTHON), maxRestarts: 0 })
 }, 120_000)
 
 afterAll(async () => {

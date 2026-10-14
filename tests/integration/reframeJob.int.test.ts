@@ -4,7 +4,8 @@ import { existsSync } from 'node:fs'
 import { chmod, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 import ffprobeInstaller from '@ffprobe-installer/ffprobe'
-import { SidecarClient } from '../../src/main/sidecar/client'
+import { SidecarClient, SidecarError } from '../../src/main/sidecar/client'
+import { HELPER_NOT_INSTALLED } from '@shared/sidecar/status'
 import { createReframeJobs, reframeRequest, subjectTrackPath, type ReframeDeps, type ReframeHelperClient, type ReframeJobs } from '../../src/main/reframe/analyse'
 import { findShots } from '../../src/main/ffmpeg/shots'
 import { probeFile, probeWithClock } from '../../src/main/ffmpeg/probe'
@@ -17,12 +18,12 @@ import {
   type ReframeCollected,
   type ReframeStage
 } from '@shared/reframe/job'
-import { FACES_TRACK_VERSION, SIDECAR_METHODS, type FacesParams, type FacesResult, type HelloResult } from '@shared/sidecar/protocol'
+import { FACES_TRACK_VERSION, RPC_ERRORS, SIDECAR_METHODS, type FacesParams, type FacesResult, type HelloResult } from '@shared/sidecar/protocol'
 import { SUBJECT_TRACK_VERSION, type SubjectTrack, type UnitRect } from '@shared/reframe/types'
 import type { Job } from '@shared/types'
 import { SCENE_DEFAULTS } from '@shared/reframe/shots'
 import { FFMPEG, outputDir, run, writeNote } from './output'
-import { HAS_VENV, HELPER_PYTHON, SIDECAR_DIR, VENV_PYTHON, describeWithVenv } from './venv'
+import { HAS_VENV, HELPER_PYTHON, SIDECAR_DIR, VENV_PYTHON, describeWithVenv, launchFor } from './venv'
 
 /*
  * The reframe's analysis job end to end (docs/CLIPS.md §4.7, §4.9):
@@ -147,9 +148,9 @@ const logs = new Map<SidecarClient, string[]>()
 
 /**
  * A helper with its own folders, an interpreter, and extra environment for
- * this one process (the worker inherits it). SidecarClient spawns inside
- * start() before its first await, so the variables are back before any
- * other helper starts (faces.int's helper()).
+ * this one process (the worker inherits it). Its launch copies process.env
+ * as it is built, so the variables are back before any other helper starts
+ * (faces.int's helper()).
  */
 async function helper(o: { models: string; cache: string; env?: Record<string, string>; python?: string }): Promise<SidecarClient> {
   const saved: Record<string, string | undefined> = {}
@@ -157,7 +158,8 @@ async function helper(o: { models: string; cache: string; env?: Record<string, s
     saved[name] = process.env[name]
     process.env[name] = value
   }
-  const client = new SidecarClient({ cwd: SIDECAR_DIR, python: o.python ?? VENV_PYTHON, modelsDir: o.models, cacheDir: o.cache, maxRestarts: 0 })
+  // The launch copies process.env as it is built, inside this window: the variables reach this helper alone.
+  const client = new SidecarClient({ cwd: SIDECAR_DIR, launch: launchFor(o.python ?? VENV_PYTHON, { modelsDir: o.models, cacheDir: o.cache }), maxRestarts: 0 })
   clients.push(client)
   const lines: string[] = []
   logs.set(client, lines)
@@ -348,7 +350,7 @@ describe('the analysis job — what it refuses before any work', () => {
 
   it('no AI helper — an interpreter that is not there, or one where the face finder is degraded — fails with no-helper before any shot is found', async () => {
     // An interpreter that is not there: the helper cannot start at all.
-    const nowhere = new SidecarClient({ cwd: SIDECAR_DIR, python: join(dir, 'no-such-python'), maxRestarts: 0 })
+    const nowhere = new SidecarClient({ cwd: SIDECAR_DIR, launch: launchFor(join(dir, 'no-such-python')), maxRestarts: 0 })
     clients.push(nowhere)
     // A bare interpreter: the helper starts, and vision.faces is degraded (no mediapipe).
     let bare = HELPER_PYTHON
@@ -375,6 +377,19 @@ describe('the analysis job — what it refuses before any work', () => {
       // The dock's question gets the same answer, in words.
       await expect(jobs.faceModel({}), what).rejects.toThrow(REFRAME_FAILURES['no-helper'])
     }
+
+    // No pack, or a damaged one: main's getSidecar throws rather than build a
+    // client (docs/CLIPS.md §3a.2), and the job reads that as no-helper too —
+    // not as a failure of its own, and before any work.
+    const notInstalled = make(() => {
+      throw new SidecarError(HELPER_NOT_INSTALLED, RPC_ERRORS.unavailable)
+    })
+    const before = spawned.children.length
+    const job = notInstalled.analyse(request())
+    expect((await settled(notInstalled, job.id)).status, 'not installed').toBe('failed')
+    expect(await notInstalled.collect({ jobId: job.id }), 'not installed').toEqual({ kind: 'failed', reason: 'no-helper', message: REFRAME_FAILURES['no-helper'] })
+    expect(mainFfmpegs(before), 'not installed: no scene pass').toEqual([])
+    await expect(notInstalled.faceModel({}), 'not installed').rejects.toThrow(REFRAME_FAILURES['no-helper'])
     notes.push(`- no helper: "${REFRAME_FAILURES['no-helper']}" from a missing interpreter, and from ${bare} (vision.faces degraded: ${hello.degraded[SIDECAR_METHODS.faces]})`)
   }, 60_000)
 
@@ -407,7 +422,10 @@ describe('the analysis job with a stand-in helper client — the shot finder rea
       python: 'stand-in',
       platform: process.platform,
       capabilities: [SIDECAR_METHODS.faces, SIDECAR_METHODS.facesModel],
-      degraded: {}
+      degraded: {},
+      executable: 'stand-in',
+      prefix: 'stand-in',
+      path: []
     }
     const request = async (method: string, params: unknown): Promise<unknown> => {
       asked.push(method)

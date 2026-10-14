@@ -15,7 +15,7 @@ import {
 } from '@shared/sidecar/protocol'
 import type { UnitRect } from '@shared/reframe/types'
 import { FFMPEG, outputDir, run, writeNote } from './output'
-import { SIDECAR_DIR, VENV_PYTHON, describeWithVenv } from './venv'
+import { SIDECAR_DIR, VENV_PYTHON, describeWithVenv, launchFor } from './venv'
 
 /*
  * vision.salient through the real helper and the real BiRefNet_lite
@@ -165,7 +165,7 @@ describeWithVenv(
         mode: fsConstants.COPYFILE_FICLONE
       })
 
-      client = new SidecarClient({ cwd: SIDECAR_DIR, python: VENV_PYTHON, maxRestarts: 0, modelsDir: models, cacheDir: join(models, 'cache') })
+      client = new SidecarClient({ cwd: SIDECAR_DIR, launch: launchFor(VENV_PYTHON, { modelsDir: models, cacheDir: join(models, 'cache') }), maxRestarts: 0 })
       await client.start()
       status = await client.request<ModelStatus>(SIDECAR_METHODS.salientModel, {})
 
@@ -322,8 +322,9 @@ describeWithVenv('vision.salient without its model', () => {
     const unreachable = 'http://127.0.0.1:9'
     const saved = { HF_ENDPOINT: process.env.HF_ENDPOINT, HTTPS_PROXY: process.env.HTTPS_PROXY, HTTP_PROXY: process.env.HTTP_PROXY, NO_PROXY: process.env.NO_PROXY }
     Object.assign(process.env, { HF_ENDPOINT: unreachable, HTTPS_PROXY: unreachable, HTTP_PROXY: unreachable, NO_PROXY: '' })
-    client = new SidecarClient({ cwd: SIDECAR_DIR, python: VENV_PYTHON, maxRestarts: 0, modelsDir: models })
-    const started = client.start() // spawned now, with the environment above
+    // Its launch copies the environment above as it is built, before the restore below.
+    client = new SidecarClient({ cwd: SIDECAR_DIR, launch: launchFor(VENV_PYTHON, { modelsDir: models }), maxRestarts: 0 })
+    const started = client.start()
     for (const [key, value] of Object.entries(saved)) {
       if (value === undefined) delete process.env[key]
       else process.env[key] = value

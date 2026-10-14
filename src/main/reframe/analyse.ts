@@ -84,7 +84,11 @@ import { SidecarError, type SidecarClient } from '../sidecar/client'
 export type ReframeHelperClient = Pick<SidecarClient, 'info' | 'request'>
 
 export interface ReframeDeps {
-  /** The AI helper, asked for each job (main's is replaced after a restart). */
+  /**
+   * The AI helper, asked for each job (main's is replaced after a restart).
+   * May throw when there is none to run (main's `getSidecar` for no pack or a
+   * damaged one): the job reads that as no-helper.
+   */
   sidecar: () => ReframeHelperClient
   /** Electron's userData: the track files go in its `subjects/`. */
   userData: string
@@ -202,7 +206,21 @@ function modelStatus(value: unknown): ModelStatus {
   return { present: v.present, bytes: v.bytes, label: v.label, host: v.host }
 }
 
-/** The helper's hello: the one it started with, or asked now (a request spawns it when it is not running). Null when it cannot answer. */
+/**
+ * `deps.sidecar()`, or null when there is no helper to ask: main's
+ * `getSidecar` throws for a machine with no pack or a damaged one (it spawns
+ * nothing there, docs/CLIPS.md §3a.2), and that is the job's no-helper, not a
+ * failure of its own.
+ */
+function helperOf(deps: ReframeDeps): ReframeHelperClient | null {
+  try {
+    return deps.sidecar()
+  } catch {
+    return null
+  }
+}
+
+/** The helper's hello: the one it started with, or asked now (a request starts it when it is not running, joining a start in flight). Null when it cannot answer. */
 async function helloOf(client: ReframeHelperClient, signal?: AbortSignal): Promise<HelloResult | null> {
   try {
     return client.info ?? (await client.request<HelloResult>(SIDECAR_METHODS.hello, {}, { timeoutMs: 30_000, signal }))
@@ -327,7 +345,8 @@ export function createReframeJobs(deps: ReframeDeps): ReframeJobs {
 
     // The helper and its face finder, before any work: either missing costs nothing.
     const gate = performance.now()
-    const client = deps.sidecar()
+    const client = helperOf(deps)
+    if (!client) throw new ReframeFailure('no-helper')
     const opened: string[] = []
     try {
       const hello = await helloOf(client, signal)
@@ -504,9 +523,9 @@ export function createReframeJobs(deps: ReframeDeps): ReframeJobs {
     async faceModel(payload: unknown): Promise<ModelStatus> {
       // Only the press that named the size fetches, and only on exactly true.
       const download = typeof payload === 'object' && payload !== null && (payload as { download?: unknown }).download === true
-      const client = deps.sidecar()
-      const hello = await helloOf(client)
-      if (!hello || reframeHelperFrom({ state: 'ready', hello }) !== 'ready') throw new Error(REFRAME_FAILURES['no-helper'])
+      const client = helperOf(deps)
+      const hello = client && (await helloOf(client))
+      if (!client || !hello || reframeHelperFrom({ state: 'ready', hello }) !== 'ready') throw new Error(REFRAME_FAILURES['no-helper'])
       if (!download) return modelStatus(await client.request<ModelStatus>(SIDECAR_METHODS.facesModel, {}, { timeoutMs: 30_000 }))
       fetching ??= client
         .request<ModelStatus>(SIDECAR_METHODS.facesModel, { download: true }, {

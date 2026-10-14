@@ -4,7 +4,8 @@ import { existsSync, readdirSync } from 'node:fs'
 import { chmod, copyFile, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve, sep } from 'node:path'
 import ffprobeInstaller from '@ffprobe-installer/ffprobe'
-import { SidecarClient, sidecarEnv } from '../../src/main/sidecar/client'
+import { SidecarClient } from '../../src/main/sidecar/client'
+import { plainHelperEnv } from '../../src/shared/sidecar/helperPython'
 import {
   FACES_TRACK_VERSION,
   RPC_ERRORS,
@@ -17,7 +18,7 @@ import {
 } from '@shared/sidecar/protocol'
 import type { FaceBox } from '@shared/reframe/types'
 import { FFMPEG, OUTPUT_ROOT, outputDir, run, writeNote } from './output'
-import { HAS_VENV, SIDECAR_DIR, VENV_PYTHON, describeWithVenv } from './venv'
+import { HAS_VENV, SIDECAR_DIR, VENV_PYTHON, describeWithVenv, launchFor } from './venv'
 
 /*
  * The face finder through the real AI helper and its real worker
@@ -75,9 +76,9 @@ const logs = new Map<SidecarClient, string[]>()
 
 /**
  * A helper with its own folders and, for this one process, extra environment
- * (the worker inherits the helper's). SidecarClient spawns synchronously
- * inside start(), before its first await, so the variables are back as they
- * were before any other helper starts.
+ * (the worker inherits the helper's). Its launch copies process.env as it is
+ * built, and start() spawns before its first await, so the variables are
+ * back as they were before any other helper starts.
  */
 async function helper(o: { models: string; cache: string; env?: Record<string, string>; python?: string }): Promise<SidecarClient> {
   const saved: Record<string, string | undefined> = {}
@@ -85,7 +86,8 @@ async function helper(o: { models: string; cache: string; env?: Record<string, s
     saved[name] = process.env[name]
     process.env[name] = value
   }
-  const client = new SidecarClient({ cwd: SIDECAR_DIR, python: o.python ?? VENV_PYTHON, modelsDir: o.models, cacheDir: o.cache, maxRestarts: 0 })
+  // The launch copies process.env as it is built, inside this window: the variables reach this helper alone.
+  const client = new SidecarClient({ cwd: SIDECAR_DIR, launch: launchFor(o.python ?? VENV_PYTHON, { modelsDir: o.models, cacheDir: o.cache }), maxRestarts: 0 })
   clients.push(client)
   const lines: string[] = []
   logs.set(client, lines)
@@ -334,8 +336,8 @@ describeWithVenv(
       expect(seen.env).toBe(true)
 
       /*
-       * And the helper exactly as main starts it: SidecarClient's environment
-       * (sidecarEnv), its cwd, and the package's own __main__ — the two places
+       * And the helper exactly as main starts it in development: the dev
+       * rungs' environment (helperPython.ts plainHelperEnv), its cwd, and the package's own __main__ — the two places
        * a stub folder could be added without any check above seeing it. stdin
        * is closed, so it registers everything, serves nothing and exits; an
        * atexit hook then prints what its interpreter ended with.
@@ -348,7 +350,7 @@ describeWithVenv(
         'atexit.register(report)',
         'runpy.run_module("forge_sidecar", run_name="__main__", alter_sys=True)'
       ].join('\n')
-      const env = sidecarEnv({ modelsDir: models, cacheDir: join(dir, 'cache', 'as-main') }, process.env)
+      const env = plainHelperEnv(process.env, { modelsDir: models, cacheDir: join(dir, 'cache', 'as-main') })
       const asMain = spawnSync(VENV_PYTHON, ['-c', probe], { cwd: SIDECAR_DIR, env, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true, encoding: 'utf8' })
       expect(asMain.status, asMain.stderr).toBe(0)
       const line = asMain.stdout.split('\n').find((l) => l.startsWith('PROBE '))
@@ -595,7 +597,7 @@ describeWithVenv(
       })
       await expectRejection(request, RPC_ERRORS.internalError, /shutting down/)
       // Not the SIGKILL client.stop() sends at 1.5 s: the cancel reached the pass, which stopped.
-      expect(await exited).toEqual({ code: 0, signal: null })
+      expect(await exited).toMatchObject({ code: 0, signal: null })
       const took = performance.now() - began
       expect(took).toBeLessThan(1500)
       const workers = workerPids(client)

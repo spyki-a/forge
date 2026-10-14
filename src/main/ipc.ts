@@ -14,7 +14,7 @@ import { dirNameOf, matchByName } from '@shared/project/relink'
 import { safeTakeBase, voiceOverArgs } from '@shared/render/voiceover'
 import { execFile } from 'node:child_process'
 import { probeMany } from './ffmpeg/probe'
-import { getSidecar } from './sidecar/service'
+import { getSidecar, sidecarStatus } from './sidecar/service'
 import { SIDECAR_METHODS } from '@shared/sidecar/protocol'
 import { VOCABULARY_MAX_CHARS, segmentIntoSentences, type Transcript, type Word } from '@shared/transcript'
 import { JobQueue } from './queue'
@@ -1002,15 +1002,13 @@ export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
     transcriptions.get(assetId)?.abort()
   })
 
-  ipcMain.handle('sidecar:status', async () => {
-    const sidecar = getSidecar()
-    if (sidecar.info) return { state: 'ready' as const, hello: sidecar.info }
-    try {
-      return { state: 'ready' as const, hello: await sidecar.start() }
-    } catch (err) {
-      return { state: 'failed' as const, error: err instanceof Error ? err.message : String(err) }
-    }
-  })
+  /*
+   * The window's ask, answered from the service's last broadcast. It never
+   * starts anything: it used to call start(), which while the first hello was
+   * still out spawned a second helper (two pids, measured), and on a machine
+   * with no pack ran a PATH Python (docs/CLIPS.md §3a.2).
+   */
+  ipcMain.handle('sidecar:status', () => sidecarStatus())
 
   /* --------------------------------------------------------------- export */
 

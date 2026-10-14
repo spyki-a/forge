@@ -4,7 +4,7 @@ import ffprobeInstaller from '@ffprobe-installer/ffprobe'
 import { SidecarClient } from '../../src/main/sidecar/client'
 import { SIDECAR_METHODS } from '@shared/sidecar/protocol'
 import { FFMPEG, outputDir, run, writeNote } from './output'
-import { SIDECAR_DIR, VENV_PYTHON, describeWithVenv } from './venv'
+import { SIDECAR_DIR, VENV_PYTHON, describeWithVenv, launchFor } from './venv'
 
 /**
  * The Director's objective checks, through the real sidecar (docs/PLAN.md §4.2).
@@ -75,7 +75,7 @@ describeWithVenv('vision.measure', () => {
     // A white sky: a band across the top, reaching both sides — backdrop.
     await lavfi('sky', 'color=c=0x808080:s=640x480', 'drawbox=x=0:y=0:w=640:h=150:c=white:t=fill')
 
-    client = new SidecarClient({ cwd: SIDECAR_DIR, python: VENV_PYTHON, maxRestarts: 0 })
+    client = new SidecarClient({ cwd: SIDECAR_DIR, launch: launchFor(VENV_PYTHON), maxRestarts: 0 })
     await client.start()
     const result = await client.request<{ measures: Measure[] }>(SIDECAR_METHODS.visionMeasure, {
       paths: [...Object.values(files), join(dir, 'missing.png')],

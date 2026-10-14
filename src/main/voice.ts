@@ -68,8 +68,11 @@ export async function voiceStatus(): Promise<ProviderStatus[]> {
   // name for the left panel, and only the code's for this.
   let localReason: string | null = 'The AI helper is not running'
   try {
-    // `start` returns the handshake it already has when the sidecar is up, so
-    // this is a read rather than a launch on the common path.
+    // `start` returns the handshake it already has when the helper is up, so
+    // this is a read rather than a launch on the common path, and it joins a
+    // start in flight rather than making a second. With no helper to run (no
+    // pack, or a damaged one) getSidecar throws before anything is spawned,
+    // and its sentence is the local voice's reason.
     const hello = await getSidecar().start()
     localReady = hello.capabilities.includes(SIDECAR_METHODS.voiceSpeak)
     localReason = localReady ? null : hello.degraded[SIDECAR_METHODS.voiceSpeak] ?? 'Not installed'
