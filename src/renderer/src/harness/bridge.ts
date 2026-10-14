@@ -432,7 +432,7 @@ function samplePhoto(index: number, width = 1600, height = 1067): Promise<string
  * A moving counter and a sweeping bar, so a frame can be identified on sight:
  * "it is showing the wrong moment" is impossible to see in a static gradient.
  */
-async function sampleVideo(seconds = 6, fps = 30): Promise<string> {
+async function sampleVideo(seconds = 6, fps = 30, pattern: 'counter' | 'columns' = 'counter'): Promise<string> {
   const width = 640
   const height = 360
   const canvas = document.createElement('canvas')
@@ -472,8 +472,11 @@ async function sampleVideo(seconds = 6, fps = 30): Promise<string> {
         resolve()
         return
       }
-      ctx.fillStyle = `hsl(${Math.round(t * 90) % 360} 45% 22%)`
-      ctx.fillRect(0, 0, width, height)
+      if (pattern === 'columns') drawColumns(ctx, width, height)
+      else {
+        ctx.fillStyle = `hsl(${Math.round(t * 90) % 360} 45% 22%)`
+        ctx.fillRect(0, 0, width, height)
+      }
       // A bar sweeping once per second: a seek landing early is visible.
       ctx.fillStyle = '#f97a4b'
       ctx.fillRect(((t % 1) * width) | 0, 0, 8, height)
@@ -494,6 +497,37 @@ async function sampleVideo(seconds = 6, fps = 30): Promise<string> {
   // What was actually recorded, asked of the file itself.
   videoFiles.set(url, await videoSeconds(url))
   return url
+}
+
+/**
+ * A picture whose every column says where it is (the reframe check's video,
+ * harness/reframeCheck.ts): 16 px columns, each its own hue and alternately
+ * light and dark, crossed by a dark rule every 45 rows. The bridge's usual
+ * video is one flat colour with a bar and a counter, and a crop moved sideways
+ * over a flat colour looks the same as one that did not move — this one does
+ * not: two crops a column apart differ over most of their area, and so do a
+ * stacked pair of halves and the one crop they replaced.
+ *
+ * The hue steps 9° a column, so it runs once across the frame and never
+ * comes round again. A first version stepped 37°, which repeats every ten
+ * columns: the two single shots' crops, 320 px apart, measured only 18.8/255
+ * apart (now 74–107).
+ */
+function drawColumns(ctx: CanvasRenderingContext2D, width: number, height: number): void {
+  for (let x = 0, k = 0; x < width; x += 16, k++) {
+    ctx.fillStyle = `hsl(${(k * 9) % 360} 70% ${k % 2 === 0 ? 38 : 62}%)`
+    ctx.fillRect(x, 0, 16, height)
+  }
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.55)'
+  for (let y = 0; y < height; y += 45) ctx.fillRect(0, y, width, 5)
+}
+
+/**
+ * The reframe check's file: six seconds of `drawColumns`, recorded and known
+ * to the bridge as a 640×360 video, as `pickMedia`'s own video is.
+ */
+export function recordColumnsVideo(): Promise<string> {
+  return sampleVideo(6, 30, 'columns')
 }
 
 /**

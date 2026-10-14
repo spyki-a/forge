@@ -8,6 +8,7 @@ import { installMomentCheck } from './momentCheck'
 import { installCensus } from './census'
 import { installSwatch } from './swatch'
 import { installClipItCheck } from './clipItCheck'
+import { installReframeCheck } from './reframeCheck'
 import { useEditor } from '../store'
 import { useCatalog } from '../catalog'
 import '../styles.css'
@@ -36,6 +37,9 @@ installSwatch()
 
 /* Clip it from a link's transcript, pressed through on screen (docs/CLIPS.md §3b.8). */
 installClipItCheck()
+
+/* Following the subject, pressed through and looked at on screen (docs/CLIPS.md §4.9). */
+installReframeCheck()
 
 /*
  * The store, reachable from a driving script.
