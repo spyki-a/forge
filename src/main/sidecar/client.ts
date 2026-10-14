@@ -58,6 +58,14 @@ export function helloTimeoutFor(source: HelperSource): number {
 /** How long `stop()` waits for the helper to exit by itself (stdin closed, work cancelled) before it kills it. */
 export const STOP_GRACE_MS = 1500
 
+/**
+ * The longest a stop waits for Windows' `taskkill /f /t` itself to finish. It
+ * normally takes well under a second; a taskkill that never exits must not
+ * hold a Repair or a quit for ever, so after this the wait gives up and a
+ * delete that still finds a file held goes to `fs.rm`'s retries.
+ */
+export const TREE_KILL_WAIT_MS = 10_000
+
 /** The `'exit'` event's payload: how the child ended, and which rung it was. */
 export interface HelperExit {
   code: number | null
@@ -449,27 +457,50 @@ export class SidecarClient extends EventEmitter {
    * alone leaves a face worker and its ffmpeg running (§3a "What is wrong").
    * Elsewhere SIGKILL: the helper's own cancel already stops the worker there,
    * and a worker whose stdin ends with the helper stops by itself (§15 row 1).
+   *
+   * Resolves once the kill is done: on Windows when taskkill itself has
+   * exited (or could not start, or `TREE_KILL_WAIT_MS` passed). python.exe can
+   * die before the rest of its tree, and a face worker or its ffmpeg killed
+   * later in the same taskkill still holds python314.dll and the .pyd files
+   * open, so "the helper exited" is not yet "its tree exited" (§3a.2 "The
+   * switch to a new rung", §3a.3 Repair's "exit (the tree's too)").
    */
-  private killTree(child: ChildProcess): void {
+  private killTree(child: ChildProcess): Promise<void> {
     const platform = this.options.platform ?? process.platform
     if (platform === 'win32' && child.pid !== undefined) {
-      const killer = spawn('taskkill', ['/pid', String(child.pid), '/f', '/t'], { windowsHide: true })
-      killer.on('error', () => child.kill('SIGKILL'))
-      return
+      const pid = String(child.pid)
+      return new Promise<void>((resolve) => {
+        let ceiling: NodeJS.Timeout | null = null
+        const done = (): void => {
+          if (ceiling) clearTimeout(ceiling)
+          ceiling = null
+          resolve()
+        }
+        const killer = spawn('taskkill', ['/pid', pid, '/f', '/t'], { windowsHide: true })
+        killer.once('exit', done)
+        killer.once('error', () => {
+          child.kill('SIGKILL')
+          done()
+        })
+        ceiling = setTimeout(done, TREE_KILL_WAIT_MS)
+      })
     }
     child.kill('SIGKILL')
+    return Promise.resolve()
   }
 
-  /** Kill a child (its tree on Windows) and wait for it to be gone. */
-  private kill(child: ChildProcessWithoutNullStreams): Promise<void> {
-    this.killTree(child)
-    return this.gone.get(child) ?? Promise.resolve()
+  /** Kill a child (its tree on Windows) and wait for it to be gone, and for the kill itself to finish. */
+  private async kill(child: ChildProcessWithoutNullStreams): Promise<void> {
+    const killed = this.killTree(child)
+    await (this.gone.get(child) ?? Promise.resolve())
+    await killed
   }
 
   /**
    * Stop the helper; resolves once it has exited (at once when there is no
-   * child). The client is spent: a later start or request rejects without
-   * spawning, and the service builds a new client.
+   * child) and, when it had to be killed, once that kill is done — on Windows
+   * once taskkill has ended its tree. The client is spent: a later start or
+   * request rejects without spawning, and the service builds a new client.
    */
   stop(): Promise<void> {
     this.stopping = true
@@ -496,7 +527,12 @@ export class SidecarClient extends EventEmitter {
     for (const id of inFlight) child.stdin.write(encode({ jsonrpc: '2.0', method: METHOD_CANCEL, params: { id } }))
     // Closing stdin ends the read loop cleanly; kill only if it ignores that.
     child.stdin.end()
-    const timer = setTimeout(() => this.killTree(child), STOP_GRACE_MS)
-    return gone.then(() => clearTimeout(timer))
+    let killed: Promise<void> | null = null
+    const timer = setTimeout(() => (killed = this.killTree(child)), STOP_GRACE_MS)
+    return gone.then(async () => {
+      clearTimeout(timer)
+      // Killed after the grace: wait for the kill too (on Windows, its tree's end).
+      if (killed) await killed
+    })
   }
 }

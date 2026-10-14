@@ -18,22 +18,43 @@ import type { HelperLaunch } from '@shared/sidecar/helperPython'
  * ends.
  */
 
-const spawned = vi.hoisted(() => [] as { command: string; args: string[]; options: Record<string, unknown> }[])
+const spawned = vi.hoisted(
+  () => [] as { command: string; args: string[]; options: Record<string, unknown>; exited?: boolean }[]
+)
+/**
+ * The stand-in taskkill: `lagMs` is how long it takes to exit after it has
+ * killed the pid (its tree's end, in miniature); `missing` makes it a
+ * taskkill that cannot start, which kills nothing and emits 'error'.
+ */
+const taskkill = vi.hoisted(() => ({ lagMs: 0, missing: false }))
 vi.mock('node:child_process', async (importOriginal) => {
   const real = await importOriginal<typeof import('node:child_process')>()
   const { EventEmitter } = await import('node:events')
   return {
     ...real,
     spawn: (command: string, args: string[], options: Record<string, unknown>) => {
-      spawned.push({ command, args: [...args], options })
-      if (command === 'taskkill' && process.platform !== 'win32') {
-        const pid = Number(args[args.indexOf('/pid') + 1])
-        try {
-          process.kill(pid, 'SIGKILL')
-        } catch {
-          // already gone
+      const record: (typeof spawned)[number] = { command, args: [...args], options, exited: false }
+      spawned.push(record)
+      if (command === 'taskkill') {
+        let killer: InstanceType<typeof EventEmitter>
+        if (taskkill.missing) {
+          killer = new EventEmitter()
+          setTimeout(() => killer.emit('error', Object.assign(new Error('spawn taskkill ENOENT'), { code: 'ENOENT' })), 0)
+        } else if (process.platform !== 'win32') {
+          const pid = Number(args[args.indexOf('/pid') + 1])
+          try {
+            process.kill(pid, 'SIGKILL')
+          } catch {
+            // already gone
+          }
+          killer = new EventEmitter()
+          setTimeout(() => killer.emit('exit', 0, null), taskkill.lagMs)
+        } else {
+          killer = real.spawn(command, args, options)
         }
-        return new EventEmitter()
+        // First listener: set before the client's own 'exit' listener runs.
+        killer.once('exit', () => (record.exited = true))
+        return killer
       }
       return real.spawn(command, args, options)
     }
@@ -118,6 +139,8 @@ afterEach(async () => {
   }
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true })
   spawned.length = 0
+  taskkill.lagMs = 0
+  taskkill.missing = false
 })
 
 describe('one helper process', () => {
@@ -179,7 +202,10 @@ describe('one helper process', () => {
     await expect(fake().client.stop()).resolves.toBeUndefined()
   })
 
-  it('on Windows the kill is a tree kill: taskkill /pid <pid> /f /t, hidden', async () => {
+  it('on Windows the kill is a tree kill: taskkill /pid <pid> /f /t, hidden, and it is waited for', async () => {
+    // The stand-in kills the pid at once and exits 300 ms later, as a taskkill
+    // whose /t is still ending the tree after python.exe is gone.
+    taskkill.lagMs = 300
     const { client } = fake({ env: { FAKE_IGNORE_STDIN_END: '1' }, platform: 'win32' })
     const hello = (await client.start()) as FakeHello
     await client.stop()
@@ -187,14 +213,27 @@ describe('one helper process', () => {
     expect(kills).toHaveLength(1)
     expect(kills[0].args).toEqual(['/pid', String(hello.pid), '/f', '/t'])
     expect(kills[0].options).toMatchObject({ windowsHide: true })
+    expect(kills[0].exited, 'taskkill had exited when stop() resolved').toBe(true)
     expect(alive(hello.pid)).toBe(false)
 
-    // A timed-out hello is killed the same way.
+    // A timed-out hello is killed the same way, and its rejection waits for the kill too.
     const slow = fake({ env: { FAKE_HELLO: 'never' }, helloTimeoutMs: 300, platform: 'win32' })
     await expect(slow.client.start()).rejects.toThrow(/did not answer/)
     const second = spawned.filter((s) => s.command === 'taskkill')
     expect(second).toHaveLength(2)
     expect(second[1].args).toEqual(['/pid', String(slow.pids()[0]), '/f', '/t'])
+    expect(second[1].exited, 'taskkill had exited when the start rejected').toBe(true)
+  })
+
+  it('a taskkill that cannot start falls back to killing the helper, and the stop still finishes', async () => {
+    taskkill.missing = true
+    const { client } = fake({ env: { FAKE_IGNORE_STDIN_END: '1' }, platform: 'win32' })
+    const hello = (await client.start()) as FakeHello
+    const began = performance.now()
+    await client.stop()
+    expect(spawned.filter((s) => s.command === 'taskkill')).toHaveLength(1)
+    expect(alive(hello.pid), `helper ${hello.pid} when stop() resolved`).toBe(false)
+    expect(performance.now() - began, 'not held until the tree kill’s ceiling').toBeLessThan(STOP_GRACE_MS + 1500)
   })
 
   it('a restart that comes back is told: exit with its code and source, then ready again', async () => {
