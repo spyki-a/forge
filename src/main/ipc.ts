@@ -63,6 +63,8 @@ import { needsStems, outputStem } from '@shared/ingest/args'
 import { parseLink } from '@shared/ingest/url'
 import { startRequest } from './ingest/start'
 import { collectDownload, type IngestEntry } from '@shared/ingest/collect'
+import { REFRAME_CHANNELS } from '@shared/reframe/job'
+import { createReframeJobs } from './reframe/analyse'
 
 interface ExportRequest {
   project: Project
@@ -233,7 +235,22 @@ export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
     }
   }, 2)
 
-  const allJobs = (): Job[] => [...queue.list(), ...downloads.list()]
+  /*
+   * The reframe's analysis gets a queue of its own too, at one at a time:
+   * it competes with an export for CPU, and two analyses at once are two
+   * decodes of two files (docs/CLIPS.md §4.7). Its jobs are in the same list
+   * (presetId 'reframe'), and the renderer collects a finished one by
+   * `reframe:collect`, as it collects a download (reframe/analyse.ts).
+   */
+  const reframe = createReframeJobs({
+    sidecar: getSidecar,
+    userData: app.getPath('userData'),
+    ffmpeg: FFMPEG_PATH,
+    ffprobe: FFPROBE_PATH,
+    onFaceModelProgress: (update) => getWindow()?.webContents.send(REFRAME_CHANNELS.faceModelProgress, update)
+  })
+
+  const allJobs = (): Job[] => [...queue.list(), ...downloads.list(), ...reframe.queue.list()]
   const broadcast = (): void => {
     getWindow()?.webContents.send('jobs:changed', allJobs())
   }
@@ -253,6 +270,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
     broadcast()
   })
   downloads.on('changed', broadcast)
+  reframe.queue.on('changed', broadcast)
 
   /* ---------------------------------------------------------------- media */
 
@@ -1059,6 +1077,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
     // hold is a no-op, so both can simply be asked.
     queue.cancel(id)
     downloads.cancel(id)
+    reframe.cancel(id)
   })
 
   ipcMain.handle('graphics:selftest', () => runGraphicsSelfTest())
@@ -1067,6 +1086,8 @@ export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
   ipcMain.handle('jobs:clearFinished', () => {
     queue.clearFinished()
     downloads.clearFinished()
+    // Its queue's finished jobs, and the requests and tracks kept beside them.
+    reframe.clearFinished()
     for (const id of renders.keys()) {
       if (!queue.list().some((j) => j.id === id)) renders.delete(id)
     }
@@ -1140,6 +1161,19 @@ export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
   ipcMain.handle('ingest:collect', (_e, payload: unknown) => {
     return collectDownload(ingests, payload, readDownload)
   })
+
+  /* -------------------------------------------------------------- reframe */
+
+  /*
+   * The reframe's analysis (docs/CLIPS.md §4.7; shared/reframe/job.ts is the
+   * contract). `analyse` re-validates and queues; `collect` is PULLED, like
+   * ingest:collect, so a reload mid-job loses nothing, and hands a track back
+   * once; `faceModel` is the dock's question before any press, and the fetch
+   * the press starts — `download: true` exactly, never otherwise.
+   */
+  ipcMain.handle(REFRAME_CHANNELS.analyse, (_e, payload: unknown) => reframe.analyse(payload))
+  ipcMain.handle(REFRAME_CHANNELS.collect, (_e, payload: unknown) => reframe.collect(payload))
+  ipcMain.handle(REFRAME_CHANNELS.faceModel, (_e, payload: unknown) => reframe.faceModel(payload))
 
   ipcMain.handle('dialog:exportPath', async (_e, suggested: unknown) => {
     const window = getWindow()
