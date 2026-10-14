@@ -19,6 +19,7 @@ import {
   HELPER_IN_USE_ELSEWHERE,
   HELPER_JOB_INPUT,
   HELPER_PRESET,
+  HELPER_WORKING,
   INSTALL_STAGES,
   UNPACKING_PYTHON,
   WAITING_FOR_THE_HELPER,
@@ -61,8 +62,11 @@ import { stdlibOf } from './compile'
  *    fetcher renames a `.part` into place only once its bytes and sha256 are
  *    the file's, and skips a file already there with its hash.
  *    **Repair** (a version folder that has a receipt) only now waits for the
- *    helper's work, holds it, stops it, and deletes the old pack, receipt
- *    first: if the fetch fails, the old receipt and folder are untouched.
+ *    helper's work, reads the other windows' in-use records again (one may
+ *    have started from the pack during the download), holds it, stops it,
+ *    and deletes the old pack, receipt first: if the fetch fails, the old
+ *    receipt and folder are untouched. The wait is asked again until nothing
+ *    is out, so the stop follows the last check with no await between.
  * 2. **Unpacking** the interpreter, then its standard library compiled once.
  * 3. **Installing the libraries**: pip, offline, from `downloads/<n>/`.
  * 4. **Checking** the AI helper: hello and the self-test from the new pack.
@@ -354,10 +358,19 @@ export function createHelperPackJobs(deps: HelperPackDeps): HelperPackJobs {
       check()
 
       if (replace) {
-        // Repair: only now, with every file verified, does the old pack go.
-        if (helper.busy()) report(1, 1, WAITING_FOR_THE_HELPER)
-        await helper.whenIdle(signal)
-        check()
+        // Repair: only now, with every file verified, does the old pack go. The download took minutes:
+        // another window may have started its helper from this pack meanwhile, so the in-use records
+        // are read again. And a caller that sends one request after another gets its next one out
+        // between the idle and this continuation, so the idle is asked again until nothing is out:
+        // the last check is synchronous with the hold and the stop, and no request is ever cut off.
+        for (;;) {
+          if (helper.busy()) report(1, 1, WAITING_FOR_THE_HELPER)
+          await helper.whenIdle(signal)
+          check()
+          if ((await others()).length > 0) throw new Error(HELPER_IN_USE_ELSEWHERE)
+          check()
+          if (!helper.busy()) break
+        }
         releaseHold = helper.hold(HOLD_REASON[entry.kind])
         await helper.stop()
         stopped = true
@@ -555,13 +568,12 @@ export function createHelperPackJobs(deps: HelperPackDeps): HelperPackJobs {
     },
 
     async remove({ models }: { models: boolean }): Promise<void> {
-      await operation(async (signal) => {
-        // The lock is the one guard: this window's own job holds it too, so Remove refuses with HELPER_BUSY
-        // while that runs, and with HELPER_IN_USE_ELSEWHERE while another window's does.
+      await operation(async () => {
+        // The lock is the one guard against the jobs: this window's own job holds it too, so Remove refuses
+        // with HELPER_BUSY while that runs, and with HELPER_IN_USE_ELSEWHERE while another window's does.
         const lock = await takeLock()
         let stopped = false
         try {
-          if ((await others()).length > 0) throw new Error(HELPER_IN_USE_ELSEWHERE)
           const packs = (await readdir(root).catch(() => [] as string[])).filter((name) => /^[1-9]\d*$/.test(name))
           if (packs.length === 0) {
             // No pack here (the lock made the folder): nothing runs from it, so the helper is left alone.
@@ -569,9 +581,14 @@ export function createHelperPackJobs(deps: HelperPackDeps): HelperPackJobs {
             if (models) await fs.rm(join(deps.userData, 'models'), { recursive: true, force: true, maxRetries: RM_RETRIES })
             return
           }
+          // Read last, after every other await, so a window that started its helper from the pack meanwhile is seen.
+          if ((await others()).length > 0) throw new Error(HELPER_IN_USE_ELSEWHERE)
+          // Remove refuses while helper work is running (§3a.3), rather than waiting under a hold that would
+          // refuse every other caller for as long as a transcription takes, with no X to end it. From this
+          // check to the stop nothing awaits, so no request can be sent in between and cut off.
+          if (helper.busy()) throw new Error(HELPER_WORKING)
           const release = helper.hold(HELPER_BEING_REMOVED)
           try {
-            await helper.whenIdle(signal)
             await helper.stop()
             stopped = true
             // Every receipt first, so a delete that stops part-way leaves partials the order ignores.

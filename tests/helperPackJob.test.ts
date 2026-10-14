@@ -14,6 +14,7 @@ import {
   HELPER_BUSY,
   HELPER_IN_USE_ELSEWHERE,
   HELPER_PRESET,
+  HELPER_WORKING,
   INSTALL_STAGES,
   CHECKING_THE_HELPER,
   installProgress,
@@ -146,10 +147,17 @@ interface Harness {
 
 class FakeHelper implements HelperControl {
   inFlight: Deferred<string> | null = null
+  /** Holds in force: a request asked during one is refused, as the service's getSidecar() refuses it. */
+  private holds = 0
   constructor(private readonly events: string[]) {}
 
   /** A request out on the helper: finished by the test, or rejected by a stop or restart that did not wait. */
   startWork(): { promise: Promise<string>; finish(value: string): void } {
+    if (this.holds > 0) {
+      const refused = Promise.reject(new Error('refused by the hold'))
+      refused.catch(() => undefined)
+      return { promise: refused, finish: () => undefined }
+    }
     const d = deferred<string>()
     this.inFlight = d
     const promise = d.promise.finally(() => {
@@ -194,10 +202,12 @@ class FakeHelper implements HelperControl {
 
   hold(_reason: string): () => void {
     this.events.push('hold')
+    this.holds++
     let done = false
     return () => {
       if (done) return
       done = true
+      this.holds--
       this.events.push('release')
     }
   }
@@ -810,6 +820,65 @@ describe('Repair', () => {
     expect(orderPicks(h)).toBe('pack')
   })
 
+  it('a request sent between the idle and the stop is waited for too, never cut off (P-B finding V2)', async () => {
+    // A caller that sends one request after another gets its next one out in the microtasks between
+    // the idle and Repair's continuation; a stop there would cut it off.
+    const h = makeHarness()
+    expect((await installed(h)).status).toBe('done')
+    h.events.length = 0
+    const first = h.helper.startWork()
+    let second: { promise: Promise<string>; finish(value: string): void } | null = null
+    // On the request itself, before the job's own wait is registered: the caller's next request goes
+    // out in the microtask before Repair's continuation, as the real service's callers' do.
+    void h.helper.inFlight!.promise.then(() => {
+      second = h.helper.startWork()
+    })
+    const id = h.jobs.install({ repair: true }).id
+    await until(() => h.progress.some((x) => x.text === WAITING_FOR_THE_HELPER))
+    first.finish('one')
+    await until(() => second !== null)
+    const outcome = second!.promise.then(
+      (value) => value,
+      (err: Error) => err.message
+    )
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    second!.finish('two')
+    // Answered (Repair waited for it), or refused by the hold before it went out: never cut off.
+    expect(['two', 'refused by the hold']).toContain(await outcome)
+    expect((await settled(h, id)).status).toBe('done')
+    expect(h.events.indexOf('stop')).toBeGreaterThan(h.events.lastIndexOf('idle'))
+  })
+
+  it('a window that starts its helper from the pack during the download stops the Repair before its hold, and the pack stays (P-B finding V2)', async () => {
+    const h = makeHarness()
+    expect((await installed(h)).status).toBe('done')
+    const before = readFileSync(join(h.versionDir, 'pack.json'), 'utf8')
+    h.events.length = 0
+    h.fetched.length = 0
+    rmSync(h.dlDir, { recursive: true, force: true })
+    const gate = deferred<void>()
+    h.hooks.onChunk = () => gate.promise
+    const id = h.jobs.install({ repair: true }).id
+    await until(() => h.fetched.length > 0)
+    // Stage 0 read no in-use record; now another window's helper starts from pack 1.
+    mkdirSync(join(h.root, 'in-use'), { recursive: true })
+    writeFileSync(join(h.root, 'in-use', '4242'), JSON.stringify({ pack: 1 }))
+    h.alive.add(4242)
+    h.hooks.onChunk = undefined
+    gate.resolve()
+    const job = await settled(h, id)
+    expect(job.status).toBe('failed')
+    expect(job.error).toBe(HELPER_IN_USE_ELSEWHERE)
+    // Refused after the download, not by stage 0's read: every file was fetched.
+    expect([...h.fetched].sort()).toEqual(h.files.map((f) => f.name).sort())
+    // The other window's helper is never stopped under it, and its pack never touched.
+    for (const e of ['stop', 'unlink receipt:1', 'rm:1']) expect(h.events).not.toContain(e)
+    expect(readFileSync(join(h.versionDir, 'pack.json'), 'utf8')).toBe(before)
+    expect(orderPicks(h)).toBe('pack')
+    // The verified downloads stay, so the next press is offline.
+    expect(Object.keys(downloadedFiles(h.dlDir, h.manifest.platforms[h.platform])).sort()).toEqual(h.files.map((f) => f.name).sort())
+  })
+
   it('holds the helper with the Repair sentence', async () => {
     const h = makeHarness()
     expect((await installed(h)).status).toBe('done')
@@ -881,7 +950,8 @@ describe('Remove', () => {
     expect(existsSync(h.root)).toBe(false)
     expect(existsSync(join(h.userData, 'models', 'blaze_face.tflite'))).toBe(true)
     const order = h.events.filter((e) => ['hold', 'idle', 'stop', 'unlink receipt:1', 'rm:.', 'release', 'restart'].includes(e))
-    expect(order).toEqual(['hold', 'idle', 'stop', 'unlink receipt:1', 'rm:.', 'release', 'restart'])
+    // No wait: Remove refuses while work is out (below), so from its check to the stop nothing awaits.
+    expect(order).toEqual(['hold', 'stop', 'unlink receipt:1', 'rm:.', 'release', 'restart'])
     // Asked: the models go too.
     expect((await installed(h)).status).toBe('done')
     await h.jobs.remove({ models: true })
@@ -897,6 +967,22 @@ describe('Remove', () => {
     await expect(h.jobs.remove({ models: false })).rejects.toThrow(HELPER_IN_USE_ELSEWHERE)
     expect(orderPicks(h)).toBe('pack')
     expect(existsSync(lockPath(h.root))).toBe(false)
+  })
+
+  it('refuses while helper work is running, with the reason, and neither holds nor stops nor waits (§3a.3)', async () => {
+    const h = makeHarness()
+    expect((await installed(h)).status).toBe('done')
+    h.events.length = 0
+    const work = h.helper.startWork()
+    await expect(h.jobs.remove({ models: false })).rejects.toThrow(HELPER_WORKING)
+    for (const e of ['hold', 'idle', 'stop', 'restart', 'unlink receipt:1']) expect(h.events).not.toContain(e)
+    expect(orderPicks(h)).toBe('pack')
+    expect(existsSync(lockPath(h.root))).toBe(false)
+    work.finish('transcribed')
+    expect(await work.promise).toBe('transcribed')
+    // Pressed again once the work is done, it removes.
+    await h.jobs.remove({ models: false })
+    expect(existsSync(h.root)).toBe(false)
   })
 })
 
@@ -947,6 +1033,17 @@ describe('the launch sweep', () => {
     // The old pack's receipt went before its tree.
     expect(h.events.indexOf('unlink receipt:1')).toBeLessThan(h.events.indexOf('rm:1'))
     expect(existsSync(lockPath(h.root))).toBe(false)
+  })
+
+  it('keeps a torn receipt below the manifest’s number beside a complete pack, where the older-pack rule would otherwise reach it', async () => {
+    const h = makeHarness({ pack: 3 })
+    plantReceipt(h, 1, { matching: false, text: '{"pack": 1, "torn' })
+    plantReceipt(h, 2, { matching: false })
+    plantReceipt(h, 3, { matching: true })
+    const removed = await h.jobs.sweep()
+    expect(removed.map((p) => relative(h.root, p).split('\\').join('/'))).toEqual(['2'])
+    expect(readFileSync(join(h.root, '1', 'pack.json'), 'utf8')).toBe('{"pack": 1, "torn')
+    expect(existsSync(join(h.root, '1', 'python', 'tree.txt'))).toBe(true)
   })
 
   it('keeps an old number while there is no complete pack of the manifest’s', async () => {

@@ -204,6 +204,13 @@ describe('the launch sweep’s rules', () => {
     for (const path of ['2', '4', '7', 'downloads/2']) expect(kept).not.toContain(path)
   })
 
+  it('never removes a torn receipt below the manifest’s number either, where the older-pack rule would otherwise reach it', () => {
+    // base's torn receipt is number 4, above current 2, where the older-pack rule cannot reach it anyway.
+    const removed = paths({ ...base, current: 5 })
+    expect(removed, 'the older-pack rule is live in this fixture').toEqual(expect.arrayContaining(['1', '2']))
+    expect(removed).not.toContain('4')
+  })
+
   it('removes the older pack’s receipt before its tree; a partial has none to remove', () => {
     const steps = sweepPlan(base)
     expect(steps.find((s) => s.path === '1')).toMatchObject({ kind: 'version', receiptFirst: true })

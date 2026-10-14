@@ -124,6 +124,9 @@ export const HELPER_IN_USE_ELSEWHERE = 'The AI helper is in use by another Forge
 /** A second install, Repair or Remove in this window while one is running. */
 export const HELPER_BUSY = 'The AI helper is already being installed, repaired or removed'
 
+/** Remove pressed while the helper has work out (§3a.3 "All three refuse while helper work is running"): nothing is cut off. */
+export const HELPER_WORKING = 'The AI helper is working; remove it once that work has finished'
+
 /** What every helper caller is told while Repair holds the helper stopped (`HelperControl.hold`). */
 export const HELPER_BEING_REPAIRED = 'The AI helper is being repaired'
 

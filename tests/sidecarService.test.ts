@@ -624,6 +624,59 @@ describe('the install job’s hold (§3a.3 Repair, Remove)', () => {
   })
 })
 
+describe.skipIf(!MACHINE)('Repair on the real service, under a caller that sends one request after another (P-B finding V2)', () => {
+  it('every request is answered or refused with the hold’s reason; none is sent and then cut off by the stop', async () => {
+    const { python } = installPack()
+    FAKE.packPython = python
+    const svc = await service()
+    const { createHelperPackJobs } = await import('../src/main/sidecar/install')
+    svc.startSidecar(() => undefined)
+    await svc.getSidecar().start()
+
+    // As voice.ts, ipc.ts and separate.ts ask: getSidecar() per call, one after another.
+    const outcomes: string[] = []
+    const caller = (async () => {
+      for (let i = 0; i < 3; i++) {
+        try {
+          await svc.getSidecar().request('fake.wait', { ms: 150 })
+          outcomes.push(`ok${i}`)
+        } catch (err) {
+          outcomes.push(`err${i}: ${(err as Error).message}`)
+        }
+      }
+    })()
+
+    const events: string[] = []
+    const refuse = (): Promise<never> => Promise.reject(new Error('the test ends the Repair here'))
+    const jobs = createHelperPackJobs({
+      ...svc.helperPackDeps(),
+      fetchVerified: async (file, dir) => join(dir, file.name),
+      unpack: refuse,
+      compileStdlib: refuse,
+      pip: refuse,
+      check: refuse,
+      retry: { attempts: 1, firstDelayMs: 0, budgetMs: 0, checksumsAnswerMs: 0, binaryAnswerMs: 0, idleMs: 0 },
+      helper: {
+        ...svc.helperControl,
+        stop: async () => {
+          events.push(`stop after ${outcomes.length} answered`)
+          await svc.helperControl.stop()
+        }
+      },
+      log: () => undefined
+    })
+    const job = jobs.install({ repair: true })
+    expect(job.params).toEqual({ kind: 'repair' })
+    expect(await until(() => jobs.queue.list().some((j) => j.id === job.id && (j.status === 'failed' || j.status === 'done')), 10_000)).toBe(true)
+    await caller
+
+    expect(jobs.queue.list().find((j) => j.id === job.id)?.error).toBe('the test ends the Repair here')
+    expect(events).toHaveLength(1)
+    expect(outcomes).toHaveLength(3)
+    for (const outcome of outcomes) expect(outcome).toMatch(new RegExp(`^(ok\\d|err\\d: ${HELPER_BEING_REPAIRED})$`))
+  })
+})
+
 describe('the install job’s status', () => {
   it('keeps saying ready while a helper runs: its controls still work, and the job’s bar is in EXPORT', async () => {
     devWithFake()
