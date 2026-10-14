@@ -20,6 +20,7 @@ import {
 import { SIDECAR_METHODS, type FacesParams, type FacesResult, type HelloResult } from '@shared/sidecar/protocol'
 import { SUBJECT_TRACK_VERSION, type SubjectTrack, type UnitRect } from '@shared/reframe/types'
 import type { Job } from '@shared/types'
+import { SCENE_DEFAULTS } from '@shared/reframe/shots'
 import { FFMPEG, outputDir, run, writeNote } from './output'
 import { HAS_VENV, HELPER_PYTHON, SIDECAR_DIR, VENV_PYTHON, describeWithVenv } from './venv'
 
@@ -451,6 +452,35 @@ describe('the analysis job with a stand-in helper client — the shot finder rea
     expect(asked).toContain(SIDECAR_METHODS.faces)
     expect(asked).not.toContain(SIDECAR_METHODS.salient)
     notes.push(`- a stand-in client: the job asked ${asked.join(', ')}`)
+  }, 60_000)
+
+  it('a track on disk cut at other scene settings is analysed again — a re-tune of SCENE_DEFAULTS never hands back the old cuts', async () => {
+    const userData = join(dir, 'userdata-scene-settings')
+    const asked: string[] = []
+    const jobs = createReframeJobs({ sidecar: standIn(asked, join(dir, 'stand-in-tracks')), userData, ffmpeg: FFMPEG, ffprobe: FFPROBE })
+    const pass = async (): Promise<{ cached: boolean; scenePasses: number }> => {
+      const before = spawned.children.length
+      const job = jobs.analyse(request())
+      const end = await settled(jobs, job.id)
+      expect(end.status, end.error ?? '').toBe('done')
+      const answer = (await jobs.collect({ jobId: job.id })) as ReframeCollected
+      return { cached: answer.cached, scenePasses: mainFfmpegs(before).length }
+    }
+    expect(await pass(), 'the first analysis').toEqual({ cached: false, scenePasses: 1 })
+    expect(await pass(), 'the same file at the same settings: from disk').toEqual({ cached: true, scenePasses: 0 })
+
+    const file = subjectTrackPath(userData, (await fileKey(CLIP))!)
+    for (const [what, change] of [
+      ['the threshold', (t: SubjectTrack) => ({ ...t, scene: { ...t.scene, threshold: SCENE_DEFAULTS.threshold + 0.05 } })],
+      ['the shortest shot', (t: SubjectTrack) => ({ ...t, scene: { ...t.scene, minShotMs: SCENE_DEFAULTS.minShotMs + 250 } })]
+    ] as const) {
+      const onDisk = JSON.parse(await readFile(file, 'utf8')) as SubjectTrack
+      await writeFile(file, JSON.stringify(change(onDisk)))
+      expect(await pass(), `${what} on disk is not today's: analysed again, one scene pass`).toEqual({ cached: false, scenePasses: 1 })
+      // And written back at today's settings: the next is from disk.
+      expect((JSON.parse(await readFile(file, 'utf8')) as SubjectTrack).scene).toMatchObject({ threshold: SCENE_DEFAULTS.threshold, minShotMs: SCENE_DEFAULTS.minShotMs })
+    }
+    notes.push('- a track on disk at another threshold, or another shortest shot: analysed again (one scene pass each), then from disk')
   }, 60_000)
 
   it('a cancel in the shots stage stops the scene pass at once: cancelled within 1 s, its ffmpeg killed, nothing else asked', async () => {
