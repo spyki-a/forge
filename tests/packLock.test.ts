@@ -16,6 +16,16 @@ import { HELPER_PACK } from '../src/shared/sidecar/packManifest'
  * resolved.json, where each lock line's Requires-Dist is already evaluated
  * per target (the target's markers, no extras, from the wheel's own
  * METADATA), because CI's bare Python has no `packaging`.
+ *
+ * Names AND versions: each requirement's specifier is read from the
+ * distribution's raw `requiresDist` (the one line naming that dependency with
+ * no `extra` marker) and must admit the version the lock has, as the script's
+ * `req.specifier.contains` does. The comparison is PEP 440's for the shapes
+ * these METADATA files use (`==`, `!=`, `<`, `<=`, `>`, `>=`, `~=`, `==N.*`,
+ * a/b/rc, .post and .dev); a specifier in any other shape is a problem named
+ * here, never passed. Where a dependency has several marker-split lines, one
+ * admitting the version is enough: choosing between them by marker is the
+ * script's.
  */
 
 const ROOT = resolve(__dirname, '..')
@@ -47,6 +57,8 @@ interface Resolved {
     string,
     {
       version: string
+      /** The wheel's own Requires-Dist lines, raw: name, specifier, marker. */
+      requiresDist: string[]
       targets: Partial<Record<PackPlatform, { file: ResolvedFile; requires: string[] }>>
     }
   >
@@ -88,21 +100,119 @@ function parseLock(text: string): { lines: LockLine[]; strays: string[] } {
   return { lines, strays }
 }
 
+/* ------------------------------------------------- PEP 440, the subset used */
+
+interface Pep440 {
+  release: number[]
+  /** [phase, n]: a = 0, b = 1, rc = 2. */
+  pre: [number, number] | null
+  post: number | null
+  dev: number | null
+}
+
+const VERSION_SHAPE = /^v?(\d+(?:\.\d+)*)(?:[-_.]?(a|b|rc)(\d*))?(?:[-_.]?post(\d*))?(?:[-_.]?dev(\d*))?$/
+
+function parseVersion(text: string): Pep440 | null {
+  const m = VERSION_SHAPE.exec(text.trim().toLowerCase())
+  if (!m) return null
+  return {
+    release: m[1].split('.').map(Number),
+    pre: m[2] ? [{ a: 0, b: 1, rc: 2 }[m[2] as 'a' | 'b' | 'rc'], Number(m[3] || 0)] : null,
+    post: m[4] !== undefined ? Number(m[4] || 0) : null,
+    dev: m[5] !== undefined ? Number(m[5] || 0) : null
+  }
+}
+
+/** PEP 440's sort key, compared field by field: a .devN with no pre or post sorts before any pre-release of its release. */
+function versionKey(v: Pep440): number[] {
+  const pre = v.pre === null && v.post === null && v.dev !== null ? [-Infinity, 0] : v.pre === null ? [Infinity, 0] : v.pre
+  return [...pre, v.post ?? -Infinity, v.dev ?? Infinity]
+}
+
+function compareVersions(a: Pep440, b: Pep440): number {
+  const n = Math.max(a.release.length, b.release.length)
+  for (let i = 0; i < n; i++) {
+    const d = (a.release[i] ?? 0) - (b.release[i] ?? 0)
+    if (d !== 0) return Math.sign(d)
+  }
+  const [ka, kb] = [versionKey(a), versionKey(b)]
+  for (let i = 0; i < ka.length; i++) if (ka[i] !== kb[i]) return ka[i] < kb[i] ? -1 : 1
+  return 0
+}
+
+/** `1.*` against a release: its leading numbers, zero-padded, are the prefix's. */
+const releasePrefix = (v: Pep440, prefix: number[]): boolean => prefix.every((p, i) => (v.release[i] ?? 0) === p)
+
+/** Whether a specifier (`<4,>=2`, `~=2.3`, `==1.*`, or none) admits a version; null when either is not in a shape read here. */
+function admits(specifier: string, version: string): boolean | null {
+  const v = parseVersion(version)
+  if (!v) return null
+  for (const raw of specifier.split(',').map((s) => s.trim()).filter(Boolean)) {
+    const m = /^(~=|==|!=|<=|>=|<|>)\s*(\S+)$/.exec(raw)
+    if (!m) return null
+    const [, op, target] = m
+    if (target.endsWith('.*')) {
+      if (op !== '==' && op !== '!=') return null
+      const prefix = target.slice(0, -2).split('.').map(Number)
+      if (prefix.some((p) => !Number.isInteger(p))) return null
+      if (releasePrefix(v, prefix) !== (op === '==')) return false
+      continue
+    }
+    const t = parseVersion(target)
+    if (!t) return null
+    const c = compareVersions(v, t)
+    const ok =
+      op === '==' ? c === 0
+      : op === '!=' ? c !== 0
+      : op === '<' ? c < 0
+      : op === '<=' ? c <= 0
+      : op === '>' ? c > 0
+      : op === '>=' ? c >= 0
+      : // ~=X.Y(.Z): at least it, and the same release but its last number
+        t.release.length >= 2 && c >= 0 && releasePrefix(v, t.release.slice(0, -1))
+    if (!ok) return false
+  }
+  return true
+}
+
+/** A Requires-Dist line: its name (PEP 503), its specifier, and whether its marker asks for an extra. */
+function requirementOf(line: string): { name: string; specifier: string; extra: boolean } | null {
+  const [head, marker = ''] = line.split(';', 2)
+  const m = /^\s*([A-Za-z0-9][A-Za-z0-9._-]*)\s*(?:\[[^\]]*\])?\s*\(?([^)]*)\)?\s*$/.exec(head)
+  if (!m) return null
+  return { name: canonical(m[1]), specifier: m[2].trim(), extra: /\bextra\b/.test(marker) }
+}
+
+/**
+ * Whether the version the lock has for `dep` is one `owner`'s Requires-Dist
+ * admits; a problem when it is not, or when its line cannot be read here.
+ */
+function admissionProblem(owner: string, dist: Resolved['distributions'][string], dep: string, locked: string): string | null {
+  const lines = dist.requiresDist.map((raw) => ({ raw, req: requirementOf(raw) })).filter(({ req }) => req?.name === dep && !req.extra)
+  if (lines.length === 0) return `${owner} -> ${dep}: no Requires-Dist line names it`
+  const verdicts = lines.map(({ req }) => admits(req!.specifier, locked))
+  if (verdicts.includes(true)) return null
+  if (verdicts.includes(null)) return `${owner} -> ${lines.map((l) => l.raw).join(' | ')}: a specifier this check cannot read`
+  return `${owner} -> ${lines.map((l) => l.raw.split(';')[0].trim()).join(' | ')}, but the lock has ${dep}==${locked}`
+}
+
 /**
  * What the completeness check finds wrong with one target's lock: every
- * requirement of every lock line must be a line of the same lock or on the
- * allowlist, and every line must be the file resolved.json records.
+ * requirement of every lock line must be a line of the same lock, at a version
+ * its specifier admits, or on the allowlist, and every line must be the file
+ * resolved.json records.
  */
 function unmet(
   target: PackPlatform,
   text: string,
-  allowlist: Record<string, readonly string[]> = ALLOWLIST
+  allowlist: Record<string, readonly string[]> = ALLOWLIST,
+  resolved: Resolved = RESOLVED
 ): string[] {
   const { lines } = parseLock(text)
-  const names = new Set(lines.map((l) => l.name))
+  const locked = new Map(lines.map((l) => [l.name, l.version]))
   const problems: string[] = []
   for (const line of lines) {
-    const dist = RESOLVED.distributions[line.name]
+    const dist = resolved.distributions[line.name]
     const entry = dist?.targets[target]
     if (!dist || !entry) {
       problems.push(`${line.name} has no ${target} entry in resolved.json`)
@@ -112,7 +222,13 @@ function unmet(
     if (entry.file.sha256 !== line.sha256) problems.push(`${line.name}: lock hash is not resolved.json's file`)
     for (const dep of entry.requires) {
       if (allowlist[line.name]?.includes(dep)) continue
-      if (!names.has(dep)) problems.push(`${line.name} -> ${dep} is not in the ${target} lock`)
+      const version = locked.get(dep)
+      if (version === undefined) {
+        problems.push(`${line.name} -> ${dep} is not in the ${target} lock`)
+        continue
+      }
+      const problem = admissionProblem(line.name, dist, dep, version)
+      if (problem) problems.push(problem)
     }
   }
   return problems
@@ -148,6 +264,50 @@ describe('the AI helper pack lock is complete', () => {
     const scratch = text.replace(/^colorama==.*\n/m, '')
     expect(scratch).not.toBe(text)
     expect(unmet('win32-x64', scratch)).toContain('tqdm -> colorama is not in the win32-x64 lock')
+  })
+
+  it.each(TARGETS)('fails a lock version a dependent does not admit, naming both (a scratch copy, %s)', (target) => {
+    // numpy at 1.0.0 in the lock and in resolved.json alike, so only the specifiers can see it.
+    const text = lockText(target)
+    const hits = [...text.matchAll(/^numpy==(\S+) /gm)]
+    expect(hits).toHaveLength(1)
+    const scratchText = text.replace(hits[0][0], 'numpy==1.0.0 ')
+    const scratchResolved = JSON.parse(JSON.stringify(RESOLVED)) as Resolved
+    scratchResolved.distributions.numpy.version = '1.0.0'
+    const problems = unmet(target, scratchText, ALLOWLIST, scratchResolved)
+    expect(problems.filter((p) => p.endsWith('but the lock has numpy==1.0.0')).length).toBeGreaterThan(0)
+    // e.g. librosa's numpy>=2.1.0 (resolved.json's own line)
+    expect(problems).toContain('librosa -> numpy>=2.1.0, but the lock has numpy==1.0.0')
+  })
+
+  it('reads the specifier shapes these METADATA files use, as PEP 440 does', () => {
+    const cases: Array<[string, string, boolean | null]> = [
+      ['', '1.0', true],
+      ['>=2023.5.7', '2026.7.22', true],
+      ['<4,>=2', '3.4.3', true],
+      ['<4,>=2', '4.0', false],
+      ['<9.0.0,>=8.4.2', '8.4.1', false],
+      ['~=2.3', '2.5.0', true],
+      ['~=2.3', '3.0', false],
+      ['~=2.3', '2.2.9', false],
+      ['~=25.9', '25.12.19', true],
+      ['~=0.5', '0.5.6', true],
+      ['==1.*', '1.0.9', true],
+      ['==1.*', '2.0', false],
+      ['!=1.2', '1.2.0', false],
+      ['!=1.2', '1.2.1', true],
+      ['==3.0', '3', true],
+      ['<0.50,>=0.49.0dev0', '0.49.0', true],
+      ['<0.50,>=0.49.0dev0', '0.50.0', false],
+      ['>=0.49.0', '0.49.0rc1', false],
+      ['>=0.49.0dev0', '0.49.0a1', true],
+      ['<0.49.0a1', '0.49.0dev0', true],
+      ['>1.0', '1.0.post1', true],
+      ['===1.0', '1.0', null],
+      ['>=1.0,@ https://example.org/x.whl', '1.0', null],
+      ['>=1.0', 'not-a-version', null]
+    ]
+    for (const [specifier, version, want] of cases) expect(admits(specifier, version), `${version} against "${specifier}"`).toBe(want)
   })
 
   it("mediapipe's two are required and pass only through the allowlist", () => {
