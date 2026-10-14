@@ -3821,9 +3821,10 @@ Where it goes, per `WHERE-THINGS-ARE.md`:
 >    canvas bar (or **Follow the subject** in the dock), a play through, a
 >    nudge in the Reframe tool where a shot needs one, and an export. Then
 >    a session reads face-inside-crop and crops held across a cut from the
->    tracks (`userData/subjects/`) against the exports, into
->    `tests/output/reframe-real/` — that reader is not written yet — and
->    you rate each export 1–5: ≥ 4 on ≥ 8 of 10.
+>    project's tracks (its copies of `userData/subjects/`) and the keys the
+>    export cuts with, into `tests/output/reframe-real/` — the reader is
+>    built, its command under the first bullet below — and you rate each
+>    export 1–5: ≥ 4 on ≥ 8 of 10.
 > 3. **pyautoflip** on the same ten (§15 row 21: a scratch venv, Python 3.13
 >    or older), rated by you beside ours.
 > 4. **Windows CI** once you allow a push: the render check on the 2018
@@ -3845,6 +3846,21 @@ Where it goes, per `WHERE-THINGS-ARE.md`:
     face inside its own half);
   - zero crops held across a cut;
   - the user's rating ≥ 4/5 on ≥ 8 of 10.
+
+  **The reader exists (2026-10-14)**: `FORGE_REFRAME_EXIT=/path/to/project.forge
+  npx vitest run tests/integration/reframeExit.int.test.ts` reads a saved
+  project through `deserializeProject`, scores every followed clip
+  (`src/shared/reframe/exit.ts`: the largest face, or each face against its
+  own half on a stacked two-up, held to `followAt` on the clip frame
+  `exportFrameAt` gives its sample; a cut held where the path moves and the
+  crop on the cut's frame is the one before it), and writes into
+  `tests/output/reframe-real/` a contact sheet per cut (frames F−1 | F | F+1)
+  and a frame per shot — the source frame the export shows there, the crop
+  drawn in red (a two-up's bottom half in blue), the faces in green — and a
+  README.txt table with both bars marked per clip and an empty rating (1–5)
+  column, which is yours to fill — clearing only its own last run there, so
+  the clips kept in that folder (`source/`) stay and a filled-in README is
+  kept as `README.<time>.txt`.
 - pyautoflip's output on the same ten clips (§4.1) rated by you beside
   ours, both ratings in `EFFECTS.md`. A baseline, not a bar: where it rates
   higher, the clip and the reason are written down before the exit.

@@ -7,6 +7,8 @@ import { ENCODERS, probeArgs } from '@shared/render/encode'
 import { followedFootage, momentFrameArgs } from '@shared/render/momentFrames'
 import { fourShotTrack, printedMs } from './fixtures/reframe/track'
 import { SCENE_DEFAULTS, sceneArgs } from '@shared/reframe/shots'
+import { EXIT_COLOURS, exitPullArgs, exitSheetArgs } from '@shared/reframe/exit'
+import { followKeys } from '@shared/reframe/keys'
 import { steadyDetectFilter } from '@shared/render/steady'
 import { voiceOverArgs } from '@shared/render/voiceover'
 import { PRESETS, defaultParams } from '@shared/presets'
@@ -438,7 +440,32 @@ const ANALYSIS_SHAPES: { name: string; args: () => string[] }[] = [
   })),
   { name: 'the helper’s frame stream (media.frame_args — the face pass’s decoder)', args: () => helperArgs().frames },
   { name: 'the helper’s one-frame decode (media.decode_args)', args: () => helperArgs().frame },
-  { name: 'step 1’s scene pass (sceneArgs — the shot finder)', args: () => sceneArgs('/tmp/in.mp4', { ...SCENE_DEFAULTS, startMs: 1500, endMs: 2500 }) }
+  { name: 'step 1’s scene pass (sceneArgs — the shot finder)', args: () => sceneArgs('/tmp/in.mp4', { ...SCENE_DEFAULTS, startMs: 1500, endMs: 2500 }) },
+  // Step 1's exit reader (docs/CLIPS.md §4.10): the source frames the export shows on chosen clip frames, then a sheet of them.
+  ...[1, 2].map((speed) => ({
+    name: `step 1’s exit reader, its frame pull over a followed two-up clip${speed === 1 ? '' : ` at ${speed}×`} (exitPullArgs)`,
+    args: (): string[] => {
+      const p = followed(true)
+      const c = { ...p.clips[0], speed, duration: p.clips[0].duration / speed }
+      return exitPullArgs(c, { path: '/tmp/v.mp4' }, 30, followKeys(p, c, 30), [22, 23, 24, 90], '/tmp/exit/%05d.png')
+    }
+  })),
+  {
+    name: 'step 1’s exit reader, a contact sheet (exitSheetArgs)',
+    args: () =>
+      exitSheetArgs(
+        [0, 1, 2].map((i) => ({
+          file: `/tmp/exit/${i}.png`,
+          size: { width: W, height: H },
+          boxes: [
+            { rect: { x: 40, y: 0, width: 202, height: 180 }, colour: EXIT_COLOURS.crop },
+            { rect: { x: 300, y: 180, width: 202, height: 180 }, colour: EXIT_COLOURS.bottom },
+            { rect: { x: 80.4, y: 60.6, width: 51.2, height: 50.4 }, colour: EXIT_COLOURS.face }
+          ]
+        })),
+        '/tmp/exit/sheet.png'
+      )
+  }
 ]
 
 describe('a filter graph runs on the oldest bundled ffmpeg', () => {
@@ -636,5 +663,17 @@ describe('every other ffmpeg command runs on the oldest bundled ffmpeg', () => {
     const scene = filterOf(byName.get('step 1’s scene pass (sceneArgs — the shot finder)')!)
     expect(scene.split(/[,;]/), 'the scene pass').toEqual(expect.arrayContaining(['format=rgb24', 'metadata=print', 'nullsink']))
     expect(scene, 'the scene pass scores with select').toMatch(/(^|[,;\]])select='gt\(scene,/)
+    // The exit reader's pull: the export's clock, then select on the slot; at 2× the retime first, as the render's chain.
+    expect(filterOf(byName.get('step 1’s exit reader, its frame pull over a followed two-up clip (exitPullArgs)')!)).toBe(
+      "fps=30:start_time=0,select='eq(n,22)+eq(n,23)+eq(n,24)+eq(n,90)'"
+    )
+    expect(filterOf(byName.get('step 1’s exit reader, its frame pull over a followed two-up clip at 2× (exitPullArgs)')!)).toMatch(
+      /^setpts=PTS\/2,fps=30,fps=30:start_time=0,select='eq\(n,22\)/
+    )
+    // Its sheet: three boxes on each of three panels, then hstack.
+    const sheet = byName.get('step 1’s exit reader, a contact sheet (exitSheetArgs)')!
+    const sheetGraph = sheet[sheet.indexOf('-filter_complex') + 1]
+    expect([...sheetGraph.matchAll(/drawbox=x=\d+:y=\d+:w=\d+:h=\d+:color=0x[0-9A-F]{6}:t=\d+/g)], 'the sheet’s boxes').toHaveLength(9)
+    expect(sheetGraph, 'the sheet’s stack').toMatch(/;\[s0\]\[s1\]\[s2\]hstack=inputs=3$/)
   })
 })
