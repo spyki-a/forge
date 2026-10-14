@@ -6306,6 +6306,7 @@ beside it in the third. The job's own timing (`jobs.timing`):
 | the builder, 2026-10-13 | 8 ms | 1 ms | 181 ms | 178 ms | 2 ms | 370 ms |
 | the fix phase, 2026-10-14 (a busy machine) | 13 ms | 1 ms | 459 ms | 982 ms | 12 ms | 1,469 ms |
 | the recorder, `d8baa57` | 8 ms | 1 ms | 177 ms | 175 ms | 1 ms | 361 ms |
+| the critic, `f73416e` | 7 ms | 0 ms | 180 ms | 173 ms | 1 ms | 362 ms |
 
 - On 6 s of 640×360 the scene pass and the face pass cost about the same, and
   the probe, the gate, the reduction and the write are noise. Nothing here
@@ -6317,7 +6318,7 @@ beside it in the third. The job's own timing (`jobs.timing`):
   at its label (offset 0; +2 frames before `round=up`, §54); 1,776 B at
   `11670-<mtime>-v1.json` (1,755 B in the builder's run, before the fix phase).
 - **From disk**: the same file again answers `cached: true` in 8 ms (27 ms in
-  the fix phase's run), with no scene pass and no worker. A track on disk cut
+  the fix phase's run, 9 ms in the critic's), with no scene pass and no worker. A track on disk cut
   at another threshold or another shortest shot, or reduced from another
   face-track version or one with no version, is analysed again, with exactly
   one scene pass.
@@ -6338,9 +6339,9 @@ beside it in the third. The job's own timing (`jobs.timing`):
 
 | where | who | the bar at the press | cancelled after | what was left |
 |---|---|---|---|---|
-| mid-faces, the real helper | the builder; the fix phase; the recorder | 0.228 | 27 ms; 28 ms; 26 ms | the worker and its ffmpeg gone (`process.kill(pid, 0)`; `ps` is blocked here), nothing written, no part file in the helper's cache, `ping` answered; a job queued behind it cancelled without running |
+| mid-faces, the real helper | the builder; the fix phase; the recorder; the critic | 0.228 | 27 ms; 28 ms; 26 ms; 26 ms | the worker and its ffmpeg gone (`process.kill(pid, 0)`; `ps` is blocked here), nothing written, no part file in the helper's cache, `ping` answered; a job queued behind it cancelled without running |
 | mid-shots, 120 s of 720p, a stand-in client | the job's verifier | 0.021 | 5 ms | the scene pass's ffmpeg ended by SIGKILL; collect answers `failed`/`cancelled` |
-| mid-shots, a 20 s 4K clip, a stand-in client | the fix phase (two runs); the recorder | 0.033, 0.014; 0.033 | 27 ms, 26 ms; 26 ms | the scene pass's ffmpeg exited non-zero |
+| mid-shots, a 20 s 4K clip, a stand-in client | the fix phase (two runs); the recorder; the critic | 0.033, 0.014; 0.033; 0.033 | 27 ms, 26 ms; 26 ms; 26 ms | the scene pass's ffmpeg exited non-zero |
 
 Without the abort signal handed to `findShots` the job read cancelled only
 when the scene pass ended on its own: 3,086 ms on the verifier's 120 s clip,
@@ -6366,6 +6367,7 @@ preview re-seeks an element more than 0.18 s from the playhead
 | the UI verifier, three runs | 176–177; 0..+1 (mean 0.51), −1..0, 0..0 | 175–177, −3..+5 | 1 as it played (element 119, playhead 120); 6 and 4 nudged | all (0.81 against 74.7; 0.79–0.92 against 74.2–107.0) |
 | the fix phase, after `e0472d9` | 0..+1 | −3..+6 | — | all |
 | the recorder, `d8baa57` | 177, 0 on every frame | 177, −3..+5 (mean −0.56) | 4 | 4 (0.65–0.68 against 74.4–107.0) |
+| the critic, `f73416e` (1482×870) | 175, 0..+1 (mean 0.78) | 175, −3..+5 (mean 1.47) | 2 as it played, 8 nudged | all (0.34–0.40 against 74.0–106.9) |
 
 - In the harness the element and the playhead keep step to within a frame,
   so playing alone the two rules almost never disagree; the nudge is what

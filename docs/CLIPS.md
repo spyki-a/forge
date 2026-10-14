@@ -3742,8 +3742,10 @@ Where it goes, per `WHERE-THINGS-ARE.md`:
   >   behind through the second, inside the 0.18 s the preview tolerates:
   >   177 frames, drift −3..+5 (−3..+6 across runs). On the 4 near-cut frames
   >   where the element's frame and the playhead's give different crops (4
-  >   to 7 a run), the preview drew the ELEMENT's every time: 0.65–0.68
-  >   against 74.4–107.0 (0.79–1.01 against 73.8–107.0 across runs). A fixed
+  >   to 8 a run), the preview drew the ELEMENT's every time: 0.65–0.68
+  >   against 74.4–107.0 (0.34–1.01 against 73.8–107.0 across runs; the
+  >   critic's run at `f73416e`, 1482×870, failures [], 21.1 s: 8 such
+  >   frames, 0.34–0.40 against 74.0–106.9). A fixed
   >   +0.1 s nudge was lost (a play can start with the element already 4
   >   frames ahead), so the nudge sets a target drift.
   >
@@ -5835,11 +5837,11 @@ Each is named in its step, and each step's first task is its own row:
    `exportFrameAt(clip, fps, mediaTime·1000)` of the frame the element
    presents (`requestVideoFrameCallback`; `shared/reframe/playback.ts`),
    never through `sourceFrameFor` or `timelineFrameAt`. As it plays, the
-   drift (playhead − element) is −1..+1 frames over 176–177 frames a pass;
+   drift (playhead − element) is −1..+1 frames over 175–177 frames a pass;
    nudged 3 frames each way through the cuts it is −3..+6, and on every
    near-cut frame where the element's frame and the playhead's give
-   different crops (4 to 7 a run) the preview drew the element's:
-   0.65–1.01/255 against 73.8–107 for the playhead's. The export's side is
+   different crops (4 to 8 a run) the preview drew the element's:
+   0.34–1.01/255 against 73.8–107 for the playhead's. The export's side is
    settled by construction (2026-10-13, §4.7's slice A note):
    - `cropAt` reads the export's own compiled keys at the export's rounding
      (`lrint & ~1`, even on every one of 3,000 frames read);
