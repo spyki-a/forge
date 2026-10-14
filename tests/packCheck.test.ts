@@ -295,4 +295,12 @@ describe('the Visual C++ sentence reaches the faces group too', () => {
     const line = "error import ModuleNotFoundError: No module named 'cv2'"
     expect(selftestRecordFrom(result(line), 'win32').faces).toBe(`faces failed: ${line}`)
   })
+
+  it('an ImportError that only names a .pyd is a version mismatch, not a missing runtime: worded as itself (P-B finding V1)', () => {
+    const line = "ImportError: cannot import name 'resample' from 'soxr.soxr_ext' (C:\\Users\\Ana\\AppData\\Roaming\\Forge\\python\\1\\python\\Lib\\site-packages\\soxr\\soxr_ext.cp314-win_amd64.pyd)"
+    expect(selftestRecordFrom(result(line), 'win32').faces).toBe(`faces failed: ${line}`)
+    // The loader's own words still are.
+    const loader = 'ImportError: DLL load failed while importing soxr_ext: The specified module could not be found.'
+    expect(selftestRecordFrom(result(loader), 'win32').faces).toBe(`faces ${VCRUNTIME_SENTENCE}`)
+  })
 })

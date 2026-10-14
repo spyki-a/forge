@@ -67,9 +67,13 @@ export const VCRUNTIME_SENTENCE =
  * FileNotFoundError: Could not find module '…\libmediapipe.dll' (or one of
  * its dependencies). Try using the full path with constructor syntax.", which
  * names neither "DLL load failed" nor a WinError.
+ *
+ * Only the loader's own words: an ImportError that merely names a `.pyd` —
+ * "cannot import name 'resample' from 'soxr.soxr_ext' (…soxr_ext.cp314-win_amd64.pyd)",
+ * a version mismatch — is no missing runtime, and installing one would not help.
  */
 const DLL_LOAD_FAILED =
-  /DLL load failed|ImportError: .*\.(pyd|dll)|The specified module could not be found|WinError 126|WinError 193|Could not find module .*\(or one of its dependencies\)/i
+  /DLL load failed|The specified module could not be found|WinError 126|WinError 193|Could not find module .*\(or one of its dependencies\)/i
 
 /**
  * One group's reason: 'ok' on exit 0; on win32, a DLL load failure is the
