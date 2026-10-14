@@ -2745,7 +2745,8 @@ placed at the upper third rather than centred.
 > - A re-analysis remaps `offsets` and `halfOffsets` onto its new shots.
 >   `path.ts` matches a drag's offset by the exact `startMs`.
 > - Decide whether an export whose `request.canvas` overrides the project's
->   should follow.
+>   should follow. **Decided in slice B: it follows on the export's canvas**
+>   (the note below).
 > - The Director's `BACKDROP_KEEP` hook.
 >
 > **Windows CI on the push** is the first run on the 2018 build of:
@@ -2764,8 +2765,8 @@ placed at the upper third rather than centred.
 > **Left:**
 >
 > - 1b's `Shot.startPts` and `SubjectTrack.timeBase`, then `exportFrameAt`'s
->   exact path in `followKeys`. These are **required for 25 and 50 fps
->   projects**, where the printed-ms path keys 1 cut in 6 a frame late at 2
+>   exact path in `followKeys` (**done in slice B, `4aafdc4`**). These are
+>   **required for 25 and 50 fps projects**, where the printed-ms path keys 1 cut in 6 a frame late at 2
 >   in-points of 5. Until then a printed near-tie (29.97 frame 499) is keyed
 >   a frame late.
 > - At 0.5× the preview's picture changes a frame before the export's.
@@ -2773,6 +2774,132 @@ placed at the upper third rather than centred.
 > - Smooth slow motion's cut frames are unmeasured.
 > - The 2018 exe's stack reserve has not been read.
 > - A 4:4:4 source's snap is unmeasured.
+
+> **Built 2026-10-13, fixed 2026-10-14 — slice B: the job, the store, the
+> consumers, the UI, the harness check and the Director's hook.** Not
+> pushed (the user's call).
+>
+> Commits:
+> - the scaffold (the contract, `shared/reframe/job.ts`): `bec28fa`;
+> - the job (J): `4aafdc4` (exact pts), `bbcb110` (the reduction), `c44cb0b`
+>   (`main/reframe/analyse.ts`, the queue, the IPC);
+> - the store and its consumers (S): `3ca53f9`, `973764a`, `9b02172`,
+>   `b5947ad`, `8f6fe73`;
+> - the UI and the harness (U): `e94511c`, `a591c83`, `bf1c315`, `7ea36c4`,
+>   `a7a9bdc`, `a5cf41f`;
+> - the fix phase, after two verifiers: `6d90e7f` … `e0472d9`, and this note.
+>
+> **The job** (`main/reframe/analyse.ts`, Electron-free; ipc.ts registers it):
+> - an `analysis` JobQueue at concurrency 1, in the same `jobs:changed`
+>   list, each job `presetId: 'reframe'`, `inputName` the file's name,
+>   `params: { assetId }`, the stage's words in `speed`;
+> - **the gate comes before any work** (a deviation from the order above):
+>   a phrase fails at once with `phrase-needs-ground`; the file's key and
+>   `probeWithClock`, the size held to the request's (`size-mismatch`);
+>   then the helper's own `hello.capabilities` (`reframeHelperFrom`,
+>   `no-helper`) and `vision.facesModel {}` (`model-missing`). A missing
+>   helper or model costs no scene pass;
+> - shots on the whole file (0–15 %), `vision.faces` (15–85 %), the
+>   reduction (85–100 %), the track written beside itself and renamed into
+>   `$userData/subjects/<key made file-safe>-v<version>.json`;
+> - **the cache**: a track on disk for this key, version and size is handed
+>   back (`cached: true`) only when it was cut at today's `SCENE_DEFAULTS`
+>   and reduced from today's face track (`facesVersion`, below);
+> - collect is pulled and hands a track back once (`already` after); a
+>   failed or cancelled job answers its typed reason as often as asked;
+> - `releaseSessions` is a commented no-op: there is no `system.release`
+>   yet, and `vision.faces` holds no session in the helper;
+> - a quit cancels every analysis (`cancelAnalyses`, fix phase): a running
+>   scene pass is main's own ffmpeg.
+>
+> **Measured and decided in the fix phase:**
+> - **Each face sample is the frame on screen at its ms.** The helper's
+>   `fps=5` rounded to nearest and showed the frame 66.7 ms past each label
+>   (frames 2, 8, 14 … of a 30 fps clip); `fps=5:round=up` shows 0, 6, 12 …
+>   (`EFFECTS.md` §54). The helper's face track is **version 2**, and main's
+>   subject track records it (`facesVersion`), so a track reduced from
+>   version 1 is analysed again rather than handed back from userData.
+> - **The scene pass's pts count from the file's first timestamp**, not the
+>   container's zero: ffmpeg subtracts `start_time` (an MPEG-TS copy starting
+>   at 1.4 s prints its 2 s cut as `pts:180000`; `EFFECTS.md` §55). Nothing
+>   downstream subtracts it again.
+> - **An export whose `request.canvas` is not the project's follows on the
+>   EXPORT's canvas** (`render/plan.ts` `followCanvas`), and its moments are
+>   pulled at that shape too (`exportBake.ts`). Measured: a 16:9 edit
+>   exported at 9:16 cut `crop=1920x1080` ("nothing to follow") and then
+>   letterboxed; it now cuts the 9:16 keys, the text the 9:16 project's chain
+>   has. Tests: `tests/reframeConsumers.test.ts` ("an export whose canvas is
+>   not the project's", and the moment pulled at the export's shape).
+> - **The preview's frame for a followed crop** (`shared/reframe/playback.ts`):
+>   paused, the playhead's own clip frame (`clipFrameAtPlayhead`); playing,
+>   the export's frame for the media time the element presents
+>   (`requestVideoFrameCallback`'s `mediaTime`, else `currentTime`, through
+>   `exportFrameAt`) — never `sourceFrameFor`, whose half-up rounding at
+>   0.5× drew the new shot a frame early. A stacked frame is drawn by
+>   `renderer/stackedCrop.ts`: `halves.top` over `halves.bottom` into a
+>   crop-sized canvas, then the single-crop path.
+> - **A re-analysis moves the drags onto the new shots** by the nearest start
+>   within `REMAP_TOLERANCE_MS` (`minShotMs / 2` = 250 ms), else the same
+>   index, else dropped with a note (`follow.ts`).
+> - **`followCandidates`** — what Reframe to 9:16 follows and its chip counts:
+>   unfollowed clips of a landscape VIDEO file, on a video lane, that are
+>   not a backdrop (`BACKDROP_RULE`) or a strip flash (`STRIP_RULE`).
+> - **One undo step for a reframe edit, kept.** A track that lands during a
+>   drag waits for its commit and is its own step; Follow, Unfollow and Stack
+>   two people re-pull only the moments over that file's clips
+>   (`rebakeFollowed`), with no history entry of their own — `rebakeGenerated`
+>   had added one per text, title and moment clip. The project an analysis was
+>   asked in is remembered by its id, so a save mid-job lands the track.
+> - **The Output view's drag moves the picture with the pointer** (the crop
+>   against it, `playback.ts` `outputDragScale`); on the Source outline the
+>   rectangle — the crop — follows the pointer. **Both drags live in the
+>   Reframe tool, which opens the split** (Toolbox `startCrop`): the Output
+>   drag mounts only beside a Source viewport, as the static crop's rectangle
+>   does; choosing Output mid-reframe takes it away until the source is back.
+> - The canvas bar's shape words give way below **57rem** (was 48rem): the
+>   offer chip with "needs the AI helper" is 415 px.
+> - The Follow: field's reason is "following something named is not built
+>   yet" (the job's own sentence), not a step number; "needs the AI helper"
+>   shows only with the Follow button it explains.
+>
+> **The harness check** (`window.__forgeReframeCheck`, 21.2 s on :5199,
+> failures [], twice on one page since the fix phase — the stub's job ids
+> no longer repeat after Clear):
+> - the press: "Follow the subject · gets the face finder, 1.1 MB, first
+>   time", the face finder fetched, one job, the track in one undo step;
+> - crops x 60 (centre 161, face 160), x 380 (481/480), and the two-up's
+>   halves at (124, 50) and (316, 50), the left face on top;
+> - paused, mean |Output − expected| ≤ 0.98/255 on every shot and both sides
+>   of each cut, the wrong picture 54.8–107 away; the Source outline lit
+>   0.92 on both halves in the third shot;
+> - 16:9 keeps `follow`; back at 9:16 every crop and the stored crop return;
+> - a −60 px drag on shot 2's rectangle: share −0.2970, one step; a +40 px
+>   drag in the two-up's lower half on the Output: the bottom crop −40 (the
+>   picture with the pointer), the top 0, one step; Stack two people off: one
+>   crop centred 225 on the left face; six undos back.
+>
+> **§15 row 5, answered: the cut lands on the element's frame.** As it
+> plays, 176–177 frames presented, drift (playhead − element) 0..+1; nudged
+> 3 frames each way through the cuts, drift −3..+6, and on every near-cut
+> frame where the element's frame and the playhead's give different crops
+> the preview drew the ELEMENT's (0.79–1.01/255 against 73.8–107). And
+> with Scrub on, stopping now pauses a clip with no sound (it played on
+> behind a stopped playhead, `scrub.ts` `leftToScrubBurst`).
+>
+> **The census:** fourteen rows in the canvas bar, the dock and EXPORT, each
+> built by one of four recipes (`harness/census.ts`); `__forgeCensus()`
+> missing [], 819 checked, 41.8 s. "Get the subject model" and "Find
+> subjects without faces" are **not** rows (§16.35), and
+> `tests/renderer/censusHomes.test.ts` pins that.
+>
+> **Left:**
+> - The real detector's run is the user's, outside the sandbox:
+>   `FORGE_REFRAME_REAL=/path/to/clip.mp4 npx vitest run tests/integration/reframeJob.int.test.ts`
+>   writes the time split into `tests/output/reframe-job/README.txt`.
+> - setAspect still repoints every drawn kind with an undo entry each (it
+>   redraws them all; older than this slice).
+> - Ingest's download still remembers its project by path (store.ts, the
+>   same pattern the reframe had).
 
 **Expressed as a crop that follows on one clip, not as splits** (decision
 §16.2, with the alternative). Both were measured:
@@ -3019,6 +3146,10 @@ Where it goes, per `WHERE-THINGS-ARE.md`:
   on a 9:16 canvas", "Reframe to 9:16", "Follow the subject", "Unfollow",
   "Follow:", "Stack two people", "Finding the subject", "needs the AI
   helper", "Get the subject model", "Find subjects without faces".
+  **As built (slice B, §16.35): the last two are NOT rows** — the analysis
+  never calls the salient finder, so neither control exists, and
+  `tests/renderer/censusHomes.test.ts` pins their absence. The Follow:
+  field's reason row reads "following something named is not built yet".
 - `tests/reframeOffer.test.ts`: a landscape video on 9:16 fires; a followed
   one does not; a landscape video in the pool but not on the timeline does
   not; with landscape photos AND a landscape talk on 9:16, the chip shown is
@@ -5087,7 +5218,7 @@ the analysis loaded stays resident while the model runs.
 | filter / option | used by | merged | status |
 |---|---|---|---|
 | `select='gt(scene,T)'` after `scale=320:-2,format=rgb24`, on a `split` branch that ends in `nullsink`; `metadata=print` at **`-loglevel info`** | 1b shots (`sceneArgs`, built 2026-10-13) | 2012 / 2012 / 2016; `split` and `nullsink` are in `allfilters.c` at `f22fcd4` (read) | **built**; measured on the Mac (`EFFECTS.md` §52, §53). Without `format=rgb24` the score differs per build (§4.2). At `-loglevel error` nothing prints (re-measured on the built shape: 0 lines). `select` on the output path starves `-progress`, hence the split. It is on `ANALYSIS_SHAPES`, where `scdet` in its place fails the floor test. **Windows parity is §4.9's committed score table, asserted in CI: green on the 2018 build in run 38408749271 (2026-10-13)** |
-| `-ss S -t D`, both before `-i` (a window) | 1b `findShots`' window (no caller: a clip's shots come from the whole-file pass) | input `-t` is at `f22fcd4` (`ffmpeg_opt.c:3360`, `OPT_INPUT`; trimmed at the graph's input, `ffmpeg_filter.c:846`; read) | measured on the Mac: with `-t` after `-i`, a 3–7 s window printed a cut at source 8 s; with it before, only the cuts at 4 and 6 s. On MPEG-TS the window seeks wrong and finds nothing (`EFFECTS.md` §52). A camera's `.MTS` is unmeasured |
+| `-ss S -t D`, both before `-i` (a window) | 1b `findShots`' window (no caller: a clip's shots come from the whole-file pass) | input `-t` is at `f22fcd4` (`ffmpeg_opt.c:3360`, `OPT_INPUT`; trimmed at the graph's input, `ffmpeg_filter.c:846`; read) | measured on the Mac: with `-t` after `-i`, a 3–7 s window printed a cut at source 8 s; with it before, only the cuts at 4 and 6 s. On MPEG-TS the window seeks wrong and finds nothing (`EFFECTS.md` §52). A camera's `.MTS` is unmeasured; **the whole-file pass on MPEG-TS is** (2026-10-14, §55): its pts count from the file's first timestamp, as the export's `-ss` does |
 | `scale` before analysis; `-ss` before `-i` for one frame | 1b, 1c, 1d, 1g (in the helper) | old | measured on the Mac (30–80 ms a seek, exact shot) |
 | `fps=${fps}:round=up` in the helper's frame stream (`media.frame_args`) | 1c's face pass | `fps` 2010s; `round` and its `up` in `vf_fps.c`'s option table at `f22fcd4` (:81, :85; read) | **built 2026-10-14** (slice B's fix phase): each sample the frame on screen at its ms, where `fps=5` showed one 66.7 ms later (`EFFECTS.md` §54); the face track is version 2. On `ANALYSIS_SHAPES`, and `test_media.py` reads the frames on CI's 2018 build |
 | `crop` whose `x` (or `y`) is a **flat sum**, `base±Δ*gte(t,B)±Δ*(P)*(P)*(3-2*(P))` with P = `min(1,max(0,(t-t0)/span))`, every time to 6 dp and every pixel an integer, written in parenthesised groups past 1,000 terms; inside `max(0,min(…,in_w-out_w))`, `w`/`h` literal | 1f's followed crop (`cropFilter`, built 2026-10-13): the render and the moments' pull | crop 2010s; `max`, `min` and `gte` are in `eval.c` at `f22fcd4` (:440, :441, :443, evaluated at :309–313); crop evaluates x and y per frame, `lrint`s them (:130), clamps them and clears the low bit (`vf_crop.c:263–281`) (all read) | **built**; measured on the Mac inside `buildRenderPlan`'s chain (`EFFECTS.md` §55): frame-exact to 2,998 terms written flat and to 9,595 grouped, the crop at `Math.round(x) & ~1` on every frame. **Not `keyframeExpression`**: its nested `if()` as the crop's x is refused at 97 held and 92 smooth keys. A flat sum past about 7,000 terms crashed the evaluator at a 1 MB stack, hence the groups. `sgn` (4.3) and `randomi` (7.0) are on the floor scan's `TOO_NEW`. **Dated** for Windows: reframe.int's rows (110 held keys, a 1,103-term grouped sum) run it in CI on the push |
@@ -5186,7 +5317,10 @@ Each is named in its step, and each step's first task is its own row:
    the detector, ground, asr, and all of it on the Surface, where salient's
    gate is decided first.
 5. The followed crop in the preview while playing: the cut lands on the
-   element's frame (§4.9 harness). **Open, and slice B's.** The export's
+   element's frame (§4.9 harness). **Answered 2026-10-13/14 (slice B, §4.7's
+   Built note): the element's crop holds the cut** — drift 0..+1 as it
+   plays, −3..+6 nudged, and every near-cut frame where the two disagree
+   drawn as the element's. The export's
    side is settled by construction (2026-10-13, §4.7's Built note):
    - `cropAt` reads the export's own compiled keys at the export's rounding
      (`lrint & ~1`, even on every one of 3,000 frames read);

@@ -359,6 +359,8 @@ is lost by it); *coming-soon* = shown, disabled, labelled.
 | Preview Source / Split / Output | `Inspector.tsx:497` | canvas (CanvasBar) | move | view state (`splitRatio`), never the dead `previewMode` |
 | "Drag the divider…" hint | `Inspector.tsx:518` | canvas (tooltip) | restyle | |
 | Orientation mismatch + Switch | `Automation.tsx:342` (computed `148-158`) | canvas (chip beside the shape switch) | move | computed by a pure function so it is testable; serves every photo tool, not just the reel |
+| Reframe offer: "Landscape video on a 9:16 canvas" + **Reframe to 9:16** | none (CLIPS §4.8, built 2026-10-13) | canvas (the chip slot, ahead of the photo chip) | build | `shared/edit/reframeOffer.ts`; calls `reframeAll`, never `setAspect`; greyed "needs the AI helper"; the shape words go below 57rem |
+| A followed clip's drags (the Source rectangles, the Output picture) | none (CLIPS §4.7) | canvas, in the Reframe tool's split | build | `CropOverlay.tsx` `FollowedCrop` / `FollowedOutputDrag`; the Output drag moves the picture with the pointer; mounts only beside a Source viewport (Reframe opens the split) |
 | Select / Reframe / Thirds / Safe / Text / Mask / Blur / Paint | `Toolbox.tsx:114, 122, 133, 141, 149, 173, 184, 195` | canvas (unchanged) | — | |
 | Drop onto the picture | `Preview.tsx:1004, 1953` | canvas (unchanged) | — | |
 | Drop chip Fill / PiP / blurred | `Preview.tsx:2047` | canvas (unchanged) | — | |
@@ -403,6 +405,7 @@ is lost by it); *coming-soon* = shown, disabled, labelled.
 | Saved preset rows | `Inspector.tsx:818` | export strip | move | |
 | Preset remove X | `Inspector.tsx:833` | export strip | move | |
 | Exports job list | `Inspector.tsx:1712` | export strip (running job's bar also in the collapsed header) | move | shows downloads too — Decision 7 |
+| "Finding the subject · <file>" job row | none (CLIPS §4.8, built 2026-10-13) | export strip (the same list) | build | `ExportStrip.tsx` `jobName`; its stage in place of a speed; cancellable while queued; no Show in folder |
 | onExport flow | `Inspector.tsx:218` | export strip | move | moved verbatim; re-point `tests/exportB2.test.ts:296-341` |
 | File > Export listener | `Inspector.tsx:367` | export strip (component always mounted) | move | collapse hides the body by class, never by unmount |
 
@@ -423,6 +426,7 @@ is lost by it); *coming-soon* = shown, disabled, labelled.
 | Size / Opacity / X / Y / Rotate | `Inspector.tsx:886` | trimmer dock | move | |
 | Speed panel | `Inspector.tsx:937`; `SpeedPanel.tsx:30, 39, 58, 74, 84, 103` | trimmer dock | move | |
 | Steady | `Inspector.tsx:940`; `SteadyToggle.tsx:19` | trimmer dock | move | stays in `Inspector.tsx` — `tests/steady.test.ts:112-115` |
+| Follow the subject / Unfollow, the first-time size, shots · stacked, Stack two people, the notes, Follow: (greyed) | none (CLIPS §4.8, built 2026-10-13) | trimmer dock (under Steady, video clips) | build | `tools/ReframePanel.tsx`, mounted in `Inspector.tsx`; "needs the AI helper" only with the Follow button; no salient controls (§16.35) |
 | Camera (None/Move/Shake/Depth, rows, Amount, Rate/Settle, Hold, notes) | `Inspector.tsx:943`; `CameraPanel.tsx:64, 78, 95, 115, 128, 145, 165` | trimmer dock | move | stays in `Inspector.tsx` — `tests/camera.test.ts:165-169` |
 | Paper (word, mode, shape, typewriter, looks, pages, customise) | `Inspector.tsx:946`; `PaperPanel.tsx:49, 63, 87, 109, 125, 145, 171` | trimmer dock | move | |
 | Card ring (count, geometry, spin, tilt/roll, facing) | `Inspector.tsx:949`; `CarouselPanel.tsx:25, 32, 74, 88, 105` | trimmer dock | move | |

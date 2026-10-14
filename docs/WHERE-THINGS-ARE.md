@@ -528,6 +528,24 @@ photograph has no rate to change.
 The export analyses the clip's motion first (the start of its progress bar);
 the preview shows the clip as it was shot.
 
+**Follow the subject** (video clips, under Steady; `tools/ReframePanel.tsx`) —
+keeps the crop on the person, shot by shot, instead of one centred rectangle:
+the clip's FILE is analysed once (its shots, then its faces, by the AI
+helper) and every clip of that file can follow it. The button reads **Follow
+the subject · gets the face finder, 1.1 MB, first time** until the face
+finder is on disk — the press fetches it, then starts the analysis, which is
+a row in EXPORT's list while it runs ("Finding the subject…" with its percent
+here). Greyed with **needs the AI helper** without Python (or "the AI helper
+is starting"); a clip that already follows keeps following without it. On a
+followed clip: **3 shots · 1 stacked** (the shots, and how many put two
+people one over the other), **Unfollow** (the crop stays where it is at the
+playhead, static), **Stack two people** (on by default; off frames the larger
+face when two people are too far apart for one crop), and the notes ("shot 3:
+two people too far apart, stacked"). Last, **Follow:** with a phrase field,
+greyed: following something named ("the cake") is not built yet. There is no
+button for a subject without a face: such a shot is centred, with a note.
+To nudge a followed shot, use **Reframe** in the tool strip (below).
+
 **Camera** (photos) — a move across the still: **Move** is a push in, a pull
 out or a pan, chosen from the In / Out / Pan rows, with **Amount**; **Shake** is
 a hit that settles, with **Rate** and **Settle** (and **Hold** subject-still
@@ -713,6 +731,12 @@ bar, its status, its speed and, after its first few seconds, the time left; a
 cancel while it runs and **Show in folder** when it is done. **Clear** takes the
 finished ones off.
 
+The subject analyses are rows here too: **Finding the subject · <file>**, with
+its bar and its stage (finding the shots, finding faces, keeping the track) in
+place of a speed. Its X cancels it while it runs **and while it waits its turn**
+(analyses run one at a time, beside the exports), and it has no Show in folder:
+the track it keeps is the app's own.
+
 ---
 
 ## The canvas bar
@@ -723,13 +747,27 @@ it re-solves every clip's reframe; drag the rectangle in the preview to correct
 one. When most photos in the pool are the other way round from the canvas, a
 chip beside the shape says so — "Most photos are portrait" — with **Switch to
 9:16** (or 16:9) on it, and its tooltip says why; the rule is
-`shared/edit/orientation.ts`. In a narrow window the shape words step aside for
-the chip and the glyphs and tooltips carry them.
+`shared/edit/orientation.ts`. In a narrow window (below 57rem) the shape words
+step aside for the chip and the glyphs and tooltips carry them. The shapes'
+tooltip says followed clips keep following their subject.
+
+The same slot holds a second chip, and it wins: with **landscape video** on the
+timeline of a 9:16 canvas, **Landscape video on a 9:16 canvas** with **Reframe
+to 9:16** — follow the subject in every landscape video clip not yet following
+(one analysis per file, each a row in EXPORT). It never changes the canvas: the
+canvas already has the shape. While it shows, the photo chip does not, since its
+"Switch to 16:9" would be the opposite advice; the rule is
+`shared/edit/reframeOffer.ts`. Greyed with "needs the AI helper" without
+Python, and while every file it would follow is already being analysed.
 
 At the right end, the view: **Source / Split / Output**. Drag the divider in
 the picture to compare; double-click it for an even split. The reframe
 rectangle is drawn on the source, so pressing **Reframe** in the Output view
-opens the split.
+opens the split. A followed clip's drags live there too: on the source, the
+rectangle (two, one per person, on a stacked shot) moves the shot under the
+playhead; on the Output side of the split, dragging the picture moves it with
+the pointer — the lower half of a stacked frame is the bottom person. Choosing
+Output alone mid-reframe takes the drags away until the source is back.
 
 ---
 
