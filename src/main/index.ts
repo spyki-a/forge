@@ -5,6 +5,7 @@ import { applyMenu, EMPTY_MENU_STATE, mustAskBeforeClosing, type MenuState } fro
 import { registerMediaProtocol } from './mediaProtocol'
 import { assertBinaries } from './ffmpeg/paths'
 import { runLaunchSweep, startSidecar, stopSidecar, type SidecarStatus } from './sidecar/service'
+import { helperInstallOptions } from './sidecar/installDeps'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -231,7 +232,8 @@ function createWindow(): void {
 
 app.whenReady().then(() => {
   registerMediaProtocol()
-  registerIpc(() => mainWindow)
+  // The AI helper's install job with its real workers: the fetcher, the unpacker, pip and the check (docs/CLIPS.md §3a.3).
+  registerIpc(() => mainWindow, helperInstallOptions())
   createWindow()
 
   const binaries = assertBinaries()

@@ -72,6 +72,13 @@ describe('the app’s wiring (src/main/index.ts, ipc.ts)', () => {
     expect([...ipc.matchAll(/^\s*helperJobs = helper$/gm)]).toHaveLength(1)
   })
 
+  it('registerIpc is handed the real workers once, so a press installs instead of saying "not part of this build yet"', () => {
+    const ready = blockAfter(source('src/main/index.ts'), 'app.whenReady().then(() =>')
+    const calls = [...ready.matchAll(/registerIpc\(([^\n]*)\)\n/g)].map((m) => m[1])
+    expect(calls).toEqual(['() => mainWindow, helperInstallOptions()'])
+    expect([...source('src/main/index.ts').matchAll(/import \{ helperInstallOptions \} from '\.\/sidecar\/installDeps'/g)]).toHaveLength(1)
+  })
+
   it('the launch sweep runs once at startup, before the helper starts', () => {
     const ready = blockAfter(source('src/main/index.ts'), 'app.whenReady().then(() =>')
     expect([...ready.matchAll(/runLaunchSweep\(\)/g)]).toHaveLength(1)

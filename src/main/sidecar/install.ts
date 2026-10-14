@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { constants as fsConstants, existsSync, readdirSync, readFileSync } from 'node:fs'
 import { lstat, mkdir, readdir, readFile, rename as fsRename, rm as fsRm, statfs, unlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { Job } from '@shared/types'
@@ -649,17 +649,21 @@ export function unbuiltWorkers(): HelperPackWorkers {
 
 /* ------------------------------------------------------- the app's fs */
 
+/** The lock's create: `O_CREAT | O_EXCL | O_WRONLY`, refused with EEXIST when the file is there, never truncating it. */
+export const EXCLUSIVE_CREATE = fsConstants.O_CREAT | fsConstants.O_EXCL | fsConstants.O_WRONLY
+
 /**
  * The file-system calls the job makes, on Node's `fs`. `rename` is the app's
- * retried rename (`renameWithRetry`, which the fetcher's lane builds) once
- * the app's deps pass it; plain `fs.rename` otherwise. `freeBytes` is
- * `statfs`'s blocks free to this user.
+ * retried rename (`renameWithRetry`, installDeps.ts `packRename`) once the
+ * app's deps pass it; plain `fs.rename` otherwise. `freeBytes` is `statfs`'s
+ * blocks available to this user (`bavail`, `df`'s "Avail"; `bfree` also
+ * counts blocks only root may write).
  */
 export function nodePackFs(rename: (from: string, to: string) => Promise<void> = fsRename): PackFs {
   return {
     rename,
     rm: (path, options) => fsRm(path, options),
-    createExclusive: (path, text) => writeFile(path, text, { flag: 'wx' }),
+    createExclusive: (path, text) => writeFile(path, text, { flag: EXCLUSIVE_CREATE }),
     freeBytes: async (path) => {
       const s = await statfs(path)
       return Number(s.bavail) * Number(s.bsize)
