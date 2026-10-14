@@ -22,6 +22,7 @@ import { clipSourceWindow, clipWords } from '@shared/edit/clipIt'
 import type { Transcript } from '@shared/transcript'
 import { useEditor, type ShelfToolId, type UrlSourceStatus } from '../store'
 import { HARNESS_LINKS } from './bridge'
+import { harnessSubjectTrack } from './reframeStub'
 import { useCatalog } from '../catalog'
 import { usePacks } from '../packs'
 import { SHELF_TOOLS } from '../components/shelf/tools'
@@ -1012,6 +1013,17 @@ async function photoClip(env: Env): Promise<{ m: Media; P: string }> {
 async function videoClip(env: Env): Promise<{ m: Media; V: string }> {
   const m = await media(env)
   const V = place(m.video.id)
+  focus(V, 0)
+  return { m, V }
+}
+
+/** The bridge's landscape video on the timeline, selected, on a 9:16 canvas: what the reframe offers to follow. */
+async function landscapeTalk(env: Env): Promise<{ m: Media; V: string }> {
+  const { m, V } = await videoClip(env)
+  if (!((m.video.width ?? 0) > (m.video.height ?? 0))) {
+    throw new Error(`census: the bridge's video is ${m.video.width}×${m.video.height}, not landscape`)
+  }
+  editor().setAspect('9:16')
   focus(V, 0)
   return { m, V }
 }
@@ -2010,6 +2022,52 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     const standing = editor().project.assets.filter((a) => turned.has(a.id) && (a.height ?? 0) > (a.width ?? 0))
     if (standing.length !== 3) throw new Error(`census: ${standing.length} of the three photos stand up after turning them`)
     if (editor().aspect !== '16:9') throw new Error(`census: a fresh project is ${editor().aspect}, not 16:9`)
+    return {}
+  },
+  /*
+   * The reframe (docs/CLIPS.md §4.8). The harness's AI helper is not running
+   * (bridge.ts sidecarStatus), so `reframe.helper` is 'missing' on this page;
+   * each recipe says which it wants. The talk is the bridge's 640×360 video on
+   * the timeline, selected, on a 9:16 canvas — landscape video on a portrait
+   * canvas, which raises the canvas bar's offer and the dock's section.
+   */
+  'reframe-offer': async (env) => {
+    const { V } = await landscapeTalk(env)
+    editor().setReframeHelper('ready')
+    // Not on disk yet: the button names what its first press will fetch.
+    editor().setReframeModel({ present: false, bytes: 1_083_786, label: 'the face finder', host: 'storage.googleapis.com' })
+    return { ids: { V } }
+  },
+  'reframe-no-helper': async (env) => {
+    const { V } = await landscapeTalk(env)
+    editor().setReframeHelper('missing')
+    return { ids: { V } }
+  },
+  /* the talk following the bridge's stub track (harness/reframeStub.ts): three shots, the third stacked */
+  'reframe-followed': async (env) => {
+    const { m, V } = await landscapeTalk(env)
+    editor().setReframeHelper('ready')
+    editor().setReframeModel({ present: true, bytes: 1_083_786, label: 'the face finder', host: 'storage.googleapis.com' })
+    const fps = editor().project.settings.fps
+    const track = harnessSubjectTrack({
+      key: `harness:${m.video.path}`,
+      width: m.video.width ?? 0,
+      height: m.video.height ?? 0,
+      durationMs: (m.video.durationFrames / fps) * 1000
+    })
+    editor().update((p) => ({
+      ...p,
+      subjects: { ...(p.subjects ?? {}), [m.video.id]: track },
+      clips: p.clips.map((c) => (c.id === V ? { ...c, follow: { version: 1 } } : c))
+    }))
+    focus(V, 0)
+    return { ids: { V } }
+  },
+  /* the analysis in EXPORT's list, as main broadcasts it: presetId 'reframe', its stage in `speed` */
+  'reframe-running': async () => {
+    editor().setJobs([
+      { ...job('census-reframe', 'reframe', 'running', 0.4), inputName: 'census video', params: { assetId: 'census-talk' }, speed: 'finding faces' }
+    ])
     return {}
   },
   /* one clip from every automation and the Director, and a Director result */

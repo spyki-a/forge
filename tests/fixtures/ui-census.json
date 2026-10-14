@@ -7788,5 +7788,147 @@
     "line": 65,
     "newHome": "Shelf tile Director — over “Your pictures, in order”",
     "note": "Step 12 (WINDOW.md §6): every tool that takes media starts with “Upload a file” and what it will use, read from the project by its store action’s own rule (tools/SourceLine.tsx) — the user, sheet 20: “upload a file, or choose from the media”."
+  },
+  {
+    "label": "Followed clips keep following their subject.",
+    "match": "title",
+    "home": "canvasbar",
+    "needs": "none",
+    "part": true,
+    "file": "src/renderer/src/components/CanvasBar.tsx",
+    "line": 141,
+    "newHome": "canvas (tooltip on the CanvasBar shape switch)",
+    "count": 3,
+    "note": "Count 3: each shape button's tooltip, beside \"Changing this re-solves every clip's reframe.\" A clip that follows its subject keeps following through a change of shape (docs/CLIPS.md §4.7, §4.8)."
+  },
+  {
+    "label": "Landscape video on a 9:16 canvas",
+    "match": "text",
+    "home": "canvasbar",
+    "needs": "reframe-offer",
+    "file": "src/renderer/src/components/CanvasBar.tsx",
+    "line": 71,
+    "newHome": "canvas (reframe chip beside the shape switch)",
+    "note": "The reframe offer (shared/edit/reframeOffer.ts, docs/CLIPS.md §4.8): unfollowed landscape video on a portrait canvas. It takes the photo chip's slot; the recipe's three landscape photos would otherwise raise \"Most photos are landscape\"."
+  },
+  {
+    "label": "Reframe to 9:16",
+    "match": "text",
+    "home": "canvasbar",
+    "needs": "reframe-offer",
+    "file": "src/renderer/src/components/CanvasBar.tsx",
+    "line": 71,
+    "newHome": "canvas (reframe chip beside the shape switch)",
+    "note": "Follows the subject in every unfollowed landscape video clip (the store's reframeAll); never changes the canvas."
+  },
+  {
+    "label": "needs the AI helper",
+    "match": "text",
+    "home": "canvasbar",
+    "needs": "reframe-no-helper",
+    "file": "src/renderer/src/components/CanvasBar.tsx",
+    "line": 120,
+    "newHome": "canvas (reframe chip beside the shape switch)",
+    "note": "Reframe to 9:16 greyed: with no AI helper there is no face finder, and the job would only centre every crop."
+  },
+  {
+    "label": "Follow the subject",
+    "match": "text",
+    "home": "dock",
+    "needs": "reframe-offer",
+    "file": "src/renderer/src/components/tools/ReframePanel.tsx",
+    "line": 140,
+    "newHome": "trimmer dock (under Steady, video clips)",
+    "note": "docs/CLIPS.md §4.8. The press is the store's reframeClip, which fetches the face finder first when it is not on disk."
+  },
+  {
+    "label": "gets the face finder",
+    "match": "text",
+    "home": "dock",
+    "needs": "reframe-offer",
+    "part": true,
+    "file": "src/renderer/src/components/tools/ReframePanel.tsx",
+    "line": 142,
+    "newHome": "trimmer dock (under Steady, video clips)",
+    "note": "\"Follow the subject · gets the face finder, 1.1 MB, first time\": the size the first press fetches, said before the press."
+  },
+  {
+    "label": "Follow:",
+    "match": "text",
+    "home": "dock",
+    "needs": "reframe-offer",
+    "file": "src/renderer/src/components/tools/ReframePanel.tsx",
+    "line": 207,
+    "newHome": "trimmer dock (under Steady, video clips)",
+    "note": "The phrase field, greyed: following something named is step 1g's grounding, not built."
+  },
+  {
+    "label": "a face",
+    "match": "placeholder",
+    "home": "dock",
+    "needs": "reframe-offer",
+    "file": "src/renderer/src/components/tools/ReframePanel.tsx",
+    "line": 213,
+    "newHome": "trimmer dock (under Steady, video clips)"
+  },
+  {
+    "label": "needs the subject model, step 1g",
+    "match": "text",
+    "home": "dock",
+    "needs": "reframe-offer",
+    "file": "src/renderer/src/components/tools/ReframePanel.tsx",
+    "line": 79,
+    "newHome": "trimmer dock (under Steady, video clips)"
+  },
+  {
+    "label": "needs the AI helper",
+    "match": "text",
+    "home": "dock",
+    "needs": "reframe-no-helper",
+    "file": "src/renderer/src/components/tools/ReframePanel.tsx",
+    "line": 75,
+    "newHome": "trimmer dock (under Steady, video clips)",
+    "note": "Follow the subject greyed, as on every machine without the AI helper."
+  },
+  {
+    "label": "Unfollow",
+    "match": "text",
+    "home": "dock",
+    "needs": "reframe-followed",
+    "file": "src/renderer/src/components/tools/ReframePanel.tsx",
+    "line": 168,
+    "newHome": "trimmer dock (under Steady, video clips)"
+  },
+  {
+    "label": "Stack two people",
+    "match": "text",
+    "home": "dock",
+    "needs": "reframe-followed",
+    "file": "src/renderer/src/components/tools/ReframePanel.tsx",
+    "line": 187,
+    "newHome": "trimmer dock (under Steady, video clips)",
+    "note": "On by default; off frames the larger face where two people are too far apart for one crop."
+  },
+  {
+    "label": "two people too far apart, stacked",
+    "match": "text",
+    "home": "dock",
+    "needs": "reframe-followed",
+    "part": true,
+    "file": "src/shared/reframe/path.ts",
+    "line": 304,
+    "newHome": "trimmer dock (under Steady, video clips)",
+    "note": "followKeys' note on the stub track's third shot, \"shot 3: two people too far apart, stacked\" — the notes are the compiled keys', never re-derived in the panel."
+  },
+  {
+    "label": "Finding the subject",
+    "match": "text",
+    "home": "export",
+    "needs": "reframe-running",
+    "part": true,
+    "file": "src/shared/reframe/job.ts",
+    "line": 59,
+    "newHome": "export strip (the Exports list)",
+    "note": "The analysis's row: \"Finding the subject · <file>\" (reframeJobLabel), with its bar, its stage and its cancel."
   }
 ]

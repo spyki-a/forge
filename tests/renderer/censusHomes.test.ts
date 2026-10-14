@@ -51,3 +51,44 @@ describe('the census’s Shelf homes', () => {
     }
   })
 })
+
+/*
+ * The reframe's rows (docs/CLIPS.md §4.8), each counted on screen by a recipe
+ * in harness/census.ts: the canvas bar's offer, the dock's Follow the subject
+ * section, and the analysis's row in EXPORT. Membership: each label in its own
+ * home — never the whole list, so a row added correctly later does not fail.
+ *
+ * And two labels the plan once listed that must NOT be rows: the analysis
+ * never calls the salient finder (decided 2026-10-13, §16.35), so there is no
+ * "Get the subject model" and no "Find subjects without faces" to find.
+ */
+describe('the census’s reframe rows', () => {
+  const rows = JSON.parse(readFileSync(resolve(__dirname, '../fixtures/ui-census.json'), 'utf8')) as {
+    label: string
+    home: string
+    needs: string
+  }[]
+  const homesOf = (label: string): string[] => rows.filter((row) => row.label === label).map((row) => row.home)
+
+  it('counts each of §4.8’s labels in its own home', () => {
+    const expected: [string, string][] = [
+      ['Landscape video on a 9:16 canvas', 'canvasbar'],
+      ['Reframe to 9:16', 'canvasbar'],
+      ['Follow the subject', 'dock'],
+      ['Unfollow', 'dock'],
+      ['Follow:', 'dock'],
+      ['Stack two people', 'dock'],
+      ['Finding the subject', 'export'],
+      ['needs the AI helper', 'canvasbar'],
+      ['needs the AI helper', 'dock']
+    ]
+    for (const [label, home] of expected) expect(homesOf(label), label).toContain(home)
+    // Every home they name is one the census can open.
+    for (const [, home] of expected) expect(HOMES).toContain(home)
+  })
+
+  it('has no row for the salient finder’s controls (§16.35)', () => {
+    expect(homesOf('Get the subject model')).toEqual([])
+    expect(homesOf('Find subjects without faces')).toEqual([])
+  })
+})
