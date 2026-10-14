@@ -5739,9 +5739,9 @@ async function startReframe(assetId: string, clipIds: string[], phrase?: string)
 /**
  * A track landing — ONE `update()`, one undo: `Project.subjects[assetId]`,
  * each asked clip's `follow`, and every followed clip's stored crop (a copy
- * of the followed crop's first frame; follow.ts). Then the moments over those
- * clips are drawn again from the followed crop (`rebakeGenerated`, §4.7: they
- * were pulled with the centred one).
+ * of the followed crop's first frame; follow.ts). Then the moments over that
+ * file's clips are pulled again with the followed crop (`rebakeFollowed`, with
+ * no history entry of its own, §4.7: they were pulled with the centred one).
  */
 function landTrack(assetId: string, track: SubjectTrack, clipIds: readonly string[]): void {
   // A gesture is open (a drag's begin() without its commit()): land after it, as an undo step of its own.
