@@ -778,7 +778,10 @@ on Windows (that run is the measurement for §3.3, §3.4 and §3.7 there).
 
 ## 3a. Step P — Python on an installed machine · 9.5–13 days (`BETA.md` R4's full route; R4 had 5–10)
 
-> **Planned 2026-10-14, not built.** Written from three readers (the
+> **Planned 2026-10-14; the user took §16.36–50 as recommended the same
+> day ("okay go ahead"), and the build began in three slices: P.1–P.2 with
+> §3a.8 row 26, then P.3 with P.5, then P.4, P.6, P.7 and P.10; P.9 is the
+> user's.** Written from three readers (the
 > interpreter sources, the wheel set, and the product side read from the
 > code). Every size, version, wheel tag and licence below was fetched that
 > day from PyPI's JSON (`pypi.org/pypi/<name>/<version>/json`), GitHub's API
@@ -8066,7 +8069,7 @@ what is needed, where the answer waits on something not yet in hand.
     `pack.ts`. CI keeps its bare 3.12 run as the floor for the degraded
     checks; the pack's 3.14 runs the full suites.
 
-    **Answer:** OPEN.
+    **Answer (2026-10-14):** as recommended ("okay go ahead").
 37. **Where the wheels come from.** The bytes are the same either way (Mac
     151,510,094 B, Windows 191,876,652 B):
     - **(a) PyPI's own files at the press.** The app ships a hash-pinned
@@ -8091,7 +8094,7 @@ what is needed, where the answer waits on something not yet in hand.
     binary above before (b) or (d). This records who distributes; it does
     not reopen a settled licensing decision.
 
-    **Answer:** OPEN.
+    **Answer (2026-10-14):** as recommended ("okay go ahead").
 38. **The base pack's contents and size.** `requirements.txt` plus both
     faces files, one lock checked complete, one `--no-deps` pip run, the
     stub route unchanged: **170 MB on the Mac's button and 205 MB on
@@ -8116,7 +8119,7 @@ what is needed, where the answer waits on something not yet in hand.
     (a)**; revisit (b) when R4's tracker matches the helper's beats on the
     reference recordings.
 
-    **Answer:** OPEN.
+    **Answer (2026-10-14):** as recommended ("okay go ahead").
 39. **Stems (torch) for the beta, and voice.**
     - (a) **Not offered**: `audio.stems` stays degraded with its reason and
       mid/side (29 dB of rejection, `requirements-stems.txt`) stays the
@@ -8137,7 +8140,7 @@ what is needed, where the answer waits on something not yet in hand.
     the hosted provider. **Recommended: (a)** for the beta, with the demucs
     pin fixed as its own half day when stems comes back.
 
-    **Answer:** OPEN.
+    **Answer (2026-10-14):** as recommended ("okay go ahead").
 40. **The hosts a restricted network must allow, and the model presses.**
     For the pack: github.com (it redirects to
     release-assets.githubusercontent.com, measured, and GitHub has moved
@@ -8162,7 +8165,7 @@ what is needed, where the answer waits on something not yet in hand.
     the move with §16.22 once row 19 is measured with one Hugging Face press
     behind a proxy.
 
-    **Answer:** OPEN.
+    **Answer (2026-10-14):** as recommended ("okay go ahead").
 41. **Where the Install press lives.**
     - (a) **Settings only**: one row, one button with its size; every
       "needs the AI helper" becomes a pointer that opens Settings at the
@@ -8176,7 +8179,7 @@ what is needed, where the answer waits on something not yet in hand.
 
     **Recommended: (a)**, with no first-run prompt.
 
-    **Answer:** OPEN.
+    **Answer (2026-10-14):** as recommended ("okay go ahead").
 42. **FORGE_PYTHON's place.** Today it beats everything (`service.ts:27`),
     and the Surface sets it with `setx`, so every app started from Explorer
     there inherits it.
@@ -8194,7 +8197,7 @@ what is needed, where the answer waits on something not yet in hand.
     from hello: a bare `FORGE_PYTHON` reads grey "N of 8 helper features",
     never green. The exit runs on a fresh account either way.
 
-    **Answer:** OPEN.
+    **Answer (2026-10-14):** as recommended ("okay go ahead").
 43. **Where the pack lives on Windows.**
     - (a) **userData** (`%APPDATA%`, Roaming), beside the models (Whisper
       small's 464 MB already lives there), yt-dlp and the packs. The
@@ -8211,7 +8214,7 @@ what is needed, where the answer waits on something not yet in hand.
     userData follows `productName`. **Recommended: (a)** for the beta; if a
     tester's profile roams, move pack and models together to (b).
 
-    **Answer:** OPEN.
+    **Answer (2026-10-14):** as recommended ("okay go ahead").
 44. **The machines with no pack: macOS 13 and Windows on Arm.**
     - **macOS 13.** The pack's floor is macOS 14: onnxruntime 1.30.0 and av
       18.1.0 publish arm64 wheels only as `macosx_14_0`. Electron 44.3.0's
@@ -8231,7 +8234,7 @@ what is needed, where the answer waits on something not yet in hand.
     **Recommended: (a) for both**; macOS's (b) or Windows on Arm's (b) only
     if a tester needs it, measured on that machine first.
 
-    **Answer:** OPEN.
+    **Answer (2026-10-14):** as recommended ("okay go ahead").
 45. **The Visual C++ runtime on a clean Windows.** The interpreter carries
     `vcruntime140.dll` and `vcruntime140_1.dll`. Measured by reviewers from
     the wheels (2026-10-14): soxr's and numba's native files import
@@ -8261,7 +8264,7 @@ what is needed, where the answer waits on something not yet in hand.
     **Recommended: measure (CI's listing, then row 30); then (a) for the
     beta, and (d) or (b) after**, chosen on the versions read.
 
-    **Answer:** OPEN.
+    **Answer (2026-10-14):** as recommended ("okay go ahead").
 46. **When a release changes the lock.**
     - (a) the old pack is not used until "Update the AI helper · N MB" is
       pressed, and its controls grey meanwhile; lock changes are batched so
@@ -8271,7 +8274,7 @@ what is needed, where the answer waits on something not yet in hand.
 
     **Recommended: (a)** for the beta; (b) if testers meet updates often.
 
-    **Answer:** OPEN.
+    **Answer (2026-10-14):** as recommended ("okay go ahead").
 47. **Repair, Remove, the downloads and the uninstaller.** Repair fetches
     and verifies every file first, while the helper keeps running, and only
     then stops it, waits for its exit, removes the receipt, then the tree,
@@ -8287,7 +8290,7 @@ what is needed, where the answer waits on something not yet in hand.
     on the Surface); on the Mac the guide says Remove first. **Recommended
     as written.**
 
-    **Answer:** OPEN.
+    **Answer (2026-10-14):** as recommended ("okay go ahead").
 48. **CI on the push.** The repo is public
     (`api.github.com/repos/spyki-a/forge`: `private: false`, 2026-10-14),
     which `ci.yml:31-32` names as the condition for putting macOS back on
@@ -8306,7 +8309,7 @@ what is needed, where the answer waits on something not yet in hand.
     **Recommended: (b).** Salient's suite stays off the push path either
     way.
 
-    **Answer:** OPEN.
+    **Answer (2026-10-14):** as recommended ("okay go ahead").
 49. **The speech model on Transcribe.** Once P makes `asr.transcribe`
     available, MediaPool's Transcribe fetches `Systran/faster-whisper-small`
     (464 MB) unnamed, at `main` with no pin, and asks huggingface.co at each
@@ -8323,7 +8326,7 @@ what is needed, where the answer waits on something not yet in hand.
     own Get press", §12), and the exit is the first real Transcribe on a
     clean machine.
 
-    **Answer:** OPEN.
+    **Answer (2026-10-14):** as recommended ("okay go ahead").
 50. **One app at a time.** Nothing makes Forge single-instance, so a
     second window shares userData with the first (and the dev app shares
     it with the installed one, which P answers with a dev root of its own,
@@ -8341,7 +8344,7 @@ what is needed, where the answer waits on something not yet in hand.
 
     **Recommended: (a) in P**; (b) as its own decision, not inside P.
 
-    **Answer:** OPEN.
+    **Answer (2026-10-14):** as recommended ("okay go ahead").
 
 ---
 
