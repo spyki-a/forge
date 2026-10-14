@@ -141,8 +141,8 @@ describe('a crop that follows its subject', () => {
     })
     // Both cuts move the crop, on the export's own frames for them.
     expect(exitCuts(project, clip, FPS)).toEqual([
-      { shot: 1, frame: 95, moves: true, held: false },
-      { shot: 2, frame: 200, moves: true, held: false }
+      { shot: 1, frame: 95, moves: true, held: false, heldLanes: [] },
+      { shot: 2, frame: 200, moves: true, held: false, heldLanes: [] }
     ])
     expect(exitBars(row)).toEqual({ inside: 'met', held: 'met' })
   })
@@ -251,6 +251,34 @@ describe('a stacked two-up', () => {
       expect(s.tests[0].crop).toEqual(followAt(keys, s.frame).crop)
       expect(LOW + 100, 'the premise: below the top half').toBeGreaterThan(followAt(keys, s.frame).halves!.top.height)
     }
+  })
+
+  it('a cut where one half steps and the other keeps the old shot’s place is held', () => {
+    const { project, clip } = setup(TWO_UP)
+    const keys = keysOf(project, clip)
+    const halves = keys.halves!
+    expect(exitCuts(project, clip, FPS)[0], 'the premise: both halves move on the cut, and land').toEqual({
+      shot: 1, frame: 95, moves: true, held: false, heldLanes: []
+    })
+    // The bottom half's x step put a frame late, on 96: on the cut's frame only the top half has moved.
+    const steps = halves.bottom.x.terms.filter((term) => 'atFrame' in term && term.atFrame === 95)
+    expect(steps, 'the premise: one bottom-x step on the cut').toHaveLength(1)
+    const late: FollowKeys = {
+      ...keys,
+      halves: {
+        ...halves,
+        bottom: { ...halves.bottom, x: { base: halves.bottom.x.base, terms: halves.bottom.x.terms.map((term) => (steps.includes(term) ? { ...term, atFrame: 96 } : term)) } }
+      }
+    }
+    const before = followAt(late, 94).halves!
+    const on = followAt(late, 95).halves!
+    expect(on.top.x, 'the premise: the top half moves on the cut').not.toBe(before.top.x)
+    expect(on.bottom.x, 'the premise: the bottom half does not').toBe(before.bottom.x)
+    expect(followAt(late, 96).halves!.bottom.x, 'the premise: it moves a frame late').not.toBe(before.bottom.x)
+    expect(exitCuts(project, clip, FPS, late)[0]).toEqual({ shot: 1, frame: 95, moves: true, held: true, heldLanes: ['bottom x'] })
+    const row = scoreFollowedClip(project, clip, FPS, late)!
+    expect(row.heldAcrossCut).toBe(1)
+    expect(exitBars(row).held).toBe('not met')
   })
 
   it('with the halves swapped, both faces of a two-face sample are outside', () => {
@@ -362,8 +390,8 @@ describe('a crop held across a cut', () => {
     expect(steps, 'the premise: one step on the cut').toHaveLength(1)
     const broken: FollowKeys = { ...keys, cropX: { base: keys.cropX!.base, terms: keys.cropX!.terms.filter((term) => !steps.includes(term)) } }
     expect(exitCuts(project, clip, FPS, broken)).toEqual([
-      { shot: 1, frame: 95, moves: true, held: true },
-      { shot: 2, frame: 200, moves: true, held: false }
+      { shot: 1, frame: 95, moves: true, held: true, heldLanes: ['crop'] },
+      { shot: 2, frame: 200, moves: true, held: false, heldLanes: [] }
     ])
     const row = scoreFollowedClip(project, clip, FPS, broken)!
     expect(row.heldAcrossCut).toBe(1)
@@ -373,7 +401,7 @@ describe('a crop held across a cut', () => {
   it('a cut where the path does not move is not held', () => {
     // Shots 1 and 2 frame the same face at the same place: no step is needed.
     const { project, clip } = setup(track({ faces: (s) => [face([500, 500, 900][s])] }))
-    expect(exitCuts(project, clip, FPS)[0]).toEqual({ shot: 1, frame: 95, moves: false, held: false })
+    expect(exitCuts(project, clip, FPS)[0]).toEqual({ shot: 1, frame: 95, moves: false, held: false, heldLanes: [] })
     expect(scoreFollowedClip(project, clip, FPS)!.heldAcrossCut).toBe(0)
   })
 
@@ -386,7 +414,7 @@ describe('a crop held across a cut', () => {
     expect(pans.length, 'the premise: shot 1 pans').toBeGreaterThan(0)
     expect(pans[pans.length - 1].to, 'the premise: onto shot 2’s place').toBe(path.shots[1].at)
     expect(path.shots[0].at).not.toBe(path.shots[1].at)
-    expect(exitCuts(project, clip, FPS)).toEqual([{ shot: 1, frame: 200, moves: false, held: false }])
+    expect(exitCuts(project, clip, FPS)).toEqual([{ shot: 1, frame: 200, moves: false, held: false, heldLanes: [] }])
   })
 })
 

@@ -43,8 +43,11 @@ import { safeTakeBase } from '../render/voiceover'
  * **A crop held across a cut** is a cut (every shot of `keys.shots` after
  * the first, on its `from` frame) where the path moves — the shot's held
  * position (and each half's, on a two-up clip) is not where the shot before
- * it ENDS, its `at` or its last pan's `to` — and yet `followAt` on the cut's
- * frame equals `followAt` on the frame before it: the key did not land.
+ * it ENDS, its `at` or its last pan's `to` — and yet, on a lane that moves,
+ * `followAt` on the cut's frame equals `followAt` on the frame before it: the
+ * key did not land. Lane by lane — the crop's free axis, and on a two-up clip
+ * each half's x and y — so one half held while the other moves is held: that
+ * half shows the old shot's place on the new shot's first frame.
  */
 
 /** §4.10's two bars a reader can measure; the third, ≥ 4 of 5 on ≥ 8 of 10, is the user's rating. */
@@ -97,10 +100,12 @@ export interface ExitCut {
   shot: number
   /** The cut's clip frame: the shot's first. */
   frame: number
-  /** The path's position changes here. */
+  /** The path's position changes here, on at least one lane. */
   moves: boolean
-  /** ... and the export's crop on `frame` is the one on `frame − 1`. */
+  /** ... and on some lane that changes, the export's crop on `frame` is the one on `frame − 1`. */
   held: boolean
+  /** Those lanes: on a two-up clip one half can be held while the other moves. */
+  heldLanes: ExitLane[]
 }
 
 /** A float's worth of room on a containment test: boxes are 4 dp shares, crops even integers. */
@@ -197,12 +202,25 @@ interface Lanes {
   bottom: { x: number; y: number }
 }
 
+/** The lanes by name, in `Lanes` order: the one crop's free axis, then each half's x and y. */
+export type ExitLane = 'crop' | 'top x' | 'top y' | 'bottom x' | 'bottom y'
+const LANES: readonly ExitLane[] = ['crop', 'top x', 'top y', 'bottom x', 'bottom y']
+const flat = (l: Lanes): number[] => [l.main, l.top.x, l.top.y, l.bottom.x, l.bottom.y]
+
 function lanesOf(shot: ShotCrop, path: CropPath, end: boolean): Lanes {
   const last = (at: number, pans: { to: number }[]): number => (end && pans.length > 0 ? pans[pans.length - 1].to : at)
   const main = last(shot.at, shot.pans)
   if (!shot.halves) return { main, top: { x: main, y: 0 }, bottom: { x: main, y: path.half.height } }
   const { top, bottom } = shot.halves
   return { main, top: { x: last(top.x, top.pans), y: top.y }, bottom: { x: last(bottom.x, bottom.pans), y: bottom.y } }
+}
+
+/** `followAt` on a frame, as lanes: the crop's free axis, and each half's position when the clip keys halves. */
+function lanesOn(keys: FollowKeys, frame: number): Lanes {
+  const at = followAt(keys, frame)
+  const main = keys.axis === 'x' ? at.crop.x : at.crop.y
+  if (!at.halves) return { main, top: { x: main, y: 0 }, bottom: { x: main, y: keys.half.height } }
+  return { main, top: { x: at.halves.top.x, y: at.halves.top.y }, bottom: { x: at.halves.bottom.x, y: at.halves.bottom.y } }
 }
 
 /**
@@ -221,27 +239,23 @@ export function exitCuts(project: Project, clip: Clip, fps: number, keys: Follow
     top: { x: pixel(l.top.x, source.width - half.width), y: pixel(l.top.y, source.height - half.height) },
     bottom: { x: pixel(l.bottom.x, source.width - half.width), y: pixel(l.bottom.y, source.height - half.height) }
   })
-  const same = (a: ReturnType<typeof followAt>, b: ReturnType<typeof followAt>): boolean =>
-    a.crop.x === b.crop.x &&
-    a.crop.y === b.crop.y &&
-    a.halves?.top.x === b.halves?.top.x &&
-    a.halves?.top.y === b.halves?.top.y &&
-    a.halves?.bottom.x === b.halves?.bottom.x &&
-    a.halves?.bottom.y === b.halves?.bottom.y
+  // The lanes the export keys: the crop's axis, and on a two-up clip each half's x and y.
+  const count = keys.halves ? LANES.length : 1
 
   const cuts: ExitCut[] = []
   for (let k = 1; k < keys.shots.length; k++) {
     const before = path.shots[keys.shots[k - 1].index]
     const after = path.shots[keys.shots[k].index]
     if (!before || !after) continue
-    const was = placed(lanesOf(before, path, true))
-    const now = placed(lanesOf(after, path, false))
-    const moves = keys.halves
-      ? was.main !== now.main || was.top.x !== now.top.x || was.top.y !== now.top.y || was.bottom.x !== now.bottom.x || was.bottom.y !== now.bottom.y
-      : was.main !== now.main
+    const was = flat(placed(lanesOf(before, path, true)))
+    const now = flat(placed(lanesOf(after, path, false)))
     const frame = keys.shots[k].from
-    const held = moves && same(followAt(keys, frame), followAt(keys, frame - 1))
-    cuts.push({ shot: keys.shots[k].index, frame, moves, held })
+    const on = flat(lanesOn(keys, frame))
+    const prior = flat(lanesOn(keys, frame - 1))
+    // Lane by lane: one half kept where the old shot had it is a crop held, whatever the other half did.
+    const moving = LANES.slice(0, count).filter((_, j) => was[j] !== now[j])
+    const heldLanes = moving.filter((lane) => on[LANES.indexOf(lane)] === prior[LANES.indexOf(lane)])
+    cuts.push({ shot: keys.shots[k].index, frame, moves: moving.length > 0, held: heldLanes.length > 0, heldLanes })
   }
   return cuts
 }
