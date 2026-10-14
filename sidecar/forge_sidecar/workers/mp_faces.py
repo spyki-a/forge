@@ -2,10 +2,11 @@
 
 docs/CLIPS.md §4.3. ``capabilities/faces.py`` starts it as
 
-    python -m forge_sidecar.workers.mp_faces
+    python -E -s -B -c <bootstrap>
 
-with ``forge_sidecar/stubs`` FIRST on this process's ``PYTHONPATH`` and never
-on the helper's: three empty files that satisfy mediapipe's import-time
+whose bootstrap puts ``forge_sidecar/stubs`` FIRST on this process's
+``sys.path`` (never the helper's) and runs this module as ``__main__``
+(docs/CLIPS.md §3a.2): three empty files that satisfy mediapipe's import-time
 ``import cv2`` and ``import matplotlib.pyplot`` (drawing_utils.py:20-21), which
 detection never calls. Without them ``import mediapipe`` fails on ``cv2``
 (measured on sidecar/.venv, 2026-10-13). A separate process because
@@ -65,6 +66,7 @@ detector (no Metal) and a test must still see the plumbing work:
 
 from __future__ import annotations
 
+import io
 import json
 import math
 import os
@@ -87,7 +89,7 @@ crop path, which frames one person or two (rule 3's two-up)."""
 EXIT_INPUT = 65
 """A spec the worker cannot use, or a file ffmpeg cannot decode."""
 EXIT_IMPORT = 69
-"""mediapipe did not import — the stubs missing from PYTHONPATH, or a broken install."""
+"""mediapipe did not import — the stubs missing from sys.path, or a broken install."""
 EXIT_CANCELLED = 75
 """Stopped because stdin ended. The helper started the cancel and ignores the code."""
 
@@ -490,7 +492,22 @@ def _spec_line(fd: int) -> bytes:
         data += byte
 
 
+def _utf8_stdio() -> None:
+    """stdout (the conversation) and stderr (the log) in UTF-8, whatever the locale.
+
+    The worker starts with ``-E``, so ``PYTHONIOENCODING`` is ignored and a
+    pipe gets the locale's encoding (the ANSI code page on Windows); an
+    ``error input`` line naming a file such as ``Bräutigam 5:30pm.mp4`` must
+    reach the helper, which decodes every line as UTF-8. stdin is read as
+    bytes from its descriptor and decoded here, so it needs nothing.
+    """
+    for stream, errors in ((sys.stdout, "strict"), (sys.stderr, "backslashreplace")):
+        if isinstance(stream, io.TextIOWrapper):
+            stream.reconfigure(encoding="utf-8", errors=errors)
+
+
 def main() -> int:
+    _utf8_stdio()
     fd = sys.stdin.fileno()
     try:
         spec = parse_spec(_spec_line(fd).decode("utf-8"))

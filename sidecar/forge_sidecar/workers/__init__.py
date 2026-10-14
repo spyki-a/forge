@@ -1,7 +1,9 @@
 """Child processes the AI helper runs, never code it imports.
 
-A worker here is started as ``python -m forge_sidecar.workers.<name>`` with
-its own environment, and talks to the capability that started it through its
+A worker here is started as ``python -E -s -B -c <bootstrap>``, the
+bootstrap setting its ``sys.path`` and running ``forge_sidecar.workers.<name>``
+as ``__main__`` (capabilities/faces.py ``worker_command``), with its own
+environment, and talks to the capability that started it through its
 pipes and the files it writes. It lives apart because something in it must
 not share the helper's process:
 
@@ -10,8 +12,8 @@ not share the helper's process:
   Metal device, even on the CPU delegate (docs/EFFECTS.md §37), and it imports
   ``cv2`` and ``matplotlib.pyplot`` that only the empty stubs in
   ``forge_sidecar/stubs`` satisfy. The stubs go first on the WORKER's
-  ``PYTHONPATH`` alone, so a real ``cv2`` installed later is never shadowed in
-  the helper, and an abort ends the worker, which ``capabilities/faces.py``
+  ``sys.path`` alone, through its bootstrap, so a real ``cv2`` installed later
+  is never shadowed in the helper, and an abort ends the worker, which ``capabilities/faces.py``
   reports as ``Unavailable`` while the helper keeps answering.
 
 Nothing in this package is imported by the helper. A worker that cannot

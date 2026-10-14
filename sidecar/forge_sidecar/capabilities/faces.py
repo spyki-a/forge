@@ -18,9 +18,9 @@ docs/CLIPS.md §4.3. Two methods, one OPTIONAL row:
 
 **mediapipe is never imported here.** Its import needs ``cv2`` and
 ``matplotlib.pyplot`` (drawing_utils.py:20-21), which only the empty stubs in
-``forge_sidecar/stubs`` satisfy, and those go on the WORKER's ``PYTHONPATH``
-alone (``worker_env``), so a real ``cv2`` installed later for mask tracking is
-never shadowed in the helper. Registration asks ``importlib.util.find_spec``
+``forge_sidecar/stubs`` satisfy, and those go first on the WORKER's
+``sys.path`` alone (``worker_command``'s bootstrap), so a real ``cv2``
+installed later for mask tracking is never shadowed in the helper. Registration asks ``importlib.util.find_spec``
 whether the package is there at all; the worker's own import is the real
 check, made per run, and a failure there is that request's ``Unavailable``.
 
@@ -98,11 +98,28 @@ STOP_GRACE_S = 3.0
 
 _PACKAGE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STUBS_DIR = os.path.join(_PACKAGE_DIR, "stubs")
-"""``forge_sidecar/stubs``: first on the worker's PYTHONPATH, never on the helper's sys.path."""
+"""``forge_sidecar/stubs``: first on the worker's sys.path, never on the helper's."""
 PACKAGE_PARENT = os.path.dirname(_PACKAGE_DIR)
-"""The folder ``forge_sidecar`` is in — the worker's cwd, and on its PYTHONPATH after the stubs."""
+"""The folder ``forge_sidecar`` is in — the worker's cwd, and second on its sys.path."""
 
 WORKER_MODULE = "forge_sidecar.workers.mp_faces"
+
+WORKER_FLAGS = ("-E", "-s", "-B")
+"""The worker's interpreter flags (docs/CLIPS.md §3a.2): ``-E`` ignores every
+``PYTHON*`` variable and, on Windows, the registry's ``PythonPath`` subkeys
+that CPython puts ahead of the stdlib, ``-s`` skips the user site, ``-B``
+writes no ``__pycache__`` into the app's own folder. Not ``-I``: the
+bootstrap sets the path itself, and ``-I``'s ``-P`` is not needed for that."""
+
+WORKER_BOOTSTRAP = (
+    "import runpy, sys\n"
+    f"sys.path[0:0] = [{STUBS_DIR!r}, {PACKAGE_PARENT!r}]\n"
+    f"runpy.run_module({WORKER_MODULE!r}, run_name='__main__', alter_sys=True)\n"
+)
+"""How the worker starts, as ``-c``: the stubs FIRST on its ``sys.path``,
+the package's folder second, then the worker module run as ``__main__``.
+It used to get both through ``PYTHONPATH``, which ``-E`` ignores — and which
+a user's own ``PYTHONPATH`` or the Windows registry could reach as well."""
 # The worker's own names for its environment variables and exit codes. Kept
 # as literals rather than imported: nothing in forge_sidecar.workers is
 # imported by the helper (workers/__init__.py). test_faces.py holds the two
@@ -256,25 +273,25 @@ def summary(track: str) -> tuple[int, int] | None:
 
 
 def worker_env(base: Mapping[str, str]) -> dict[str, str]:
-    """The worker's environment: ``base`` (FORGE_* and all) with the stubs FIRST on PYTHONPATH.
+    """The worker's environment: a copy of ``base``, FORGE_* and all.
 
-    A copy: the helper's own ``os.environ`` is never touched, so nothing it
-    starts later — and nothing it imports — sees the stubs. After the stubs,
-    the folder ``forge_sidecar`` is in (the worker runs ``-m``), then whatever
-    PYTHONPATH the helper itself was given.
+    Nothing is added: the stubs reach the worker through its bootstrap's
+    ``sys.path``, not ``PYTHONPATH`` (``-E`` ignores it), and the worker sets
+    its own stdio to UTF-8 and flushes every line, so ``PYTHONUNBUFFERED`` and
+    ``PYTHONIOENCODING`` (ignored under ``-E`` too) are not needed. A copy, so
+    the helper's own ``os.environ`` is never touched.
     """
-    env = dict(base)
-    inherited = env.get("PYTHONPATH")
-    env["PYTHONPATH"] = os.pathsep.join([STUBS_DIR, PACKAGE_PARENT, *([inherited] if inherited else [])])
-    env["PYTHONUNBUFFERED"] = "1"
-    env["PYTHONIOENCODING"] = "utf-8"
-    return env
+    return dict(base)
 
 
 def worker_command(base: Mapping[str, str] = os.environ) -> dict[str, Any]:
-    """How the worker is started: argv, cwd and environment — one place, which the tests read."""
+    """How the worker is started: argv, cwd and environment — one place, which the tests read.
+
+    One shape on every rung, the pack's and the venv's alike:
+    ``<this interpreter> -E -s -B -c <bootstrap>``.
+    """
     return {
-        "argv": [sys.executable or "python", "-m", WORKER_MODULE],
+        "argv": [sys.executable or "python", *WORKER_FLAGS, "-c", WORKER_BOOTSTRAP],
         "cwd": PACKAGE_PARENT,
         "env": worker_env(base),
     }

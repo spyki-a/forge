@@ -2,7 +2,7 @@ import { afterAll, beforeAll, expect, it } from 'vitest'
 import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, readdirSync } from 'node:fs'
 import { chmod, copyFile, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises'
-import { delimiter, dirname, join, resolve, sep } from 'node:path'
+import { dirname, join, resolve, sep } from 'node:path'
 import ffprobeInstaller from '@ffprobe-installer/ffprobe'
 import { SidecarClient, sidecarEnv } from '../../src/main/sidecar/client'
 import {
@@ -277,13 +277,13 @@ describeWithVenv(
     }, 120_000)
 
     it('the worker imports mediapipe with the stubs first on ITS path, and fails on cv2 without them', async () => {
-      const command = await python<{ argv: string[]; cwd: string; env: Record<string, string> }>(
-        'import json; from forge_sidecar.capabilities import faces; print(json.dumps(faces.worker_command()))'
+      const { command, stubs } = await python<{ command: { argv: string[]; cwd: string; env: Record<string, string> }; stubs: string }>(
+        'import json; from forge_sidecar.capabilities import faces; print(json.dumps({"command": faces.worker_command(), "stubs": repr(faces.STUBS_DIR)}))'
       )
-      const start = (env: Record<string, string>): Promise<{ code: number | null; out: string; ms: number }> =>
+      const start = (env: Record<string, string>, argv = command.argv): Promise<{ code: number | null; out: string; ms: number }> =>
         new Promise((done) => {
           const began = performance.now()
-          const child = spawn(command.argv[0], command.argv.slice(1), { cwd: command.cwd, env, windowsHide: true })
+          const child = spawn(argv[0], argv.slice(1), { cwd: command.cwd, env, windowsHide: true })
           let out = ''
           child.stdout.on('data', (d: Buffer) => (out += d.toString()))
           child.stderr.on('data', (d: Buffer) => (out += d.toString()))
@@ -295,11 +295,14 @@ describeWithVenv(
       const withStubs = await start(command.env)
       expect(withStubs.out).toMatch(/^ready 0\.10\.35 \d+\.\d{3}$/m)
       expect(withStubs.code, withStubs.out).toBe(0)
-      expect(command.env.PYTHONPATH.split(delimiter)[0]).toBe(STUBS)
+      // Started as -E -s -B -c <bootstrap>: the stubs reach it through the bootstrap's sys.path, never its environment.
+      expect(command.argv.slice(1, 5)).toEqual(['-E', '-s', '-B', '-c'])
+      expect(command.env.PYTHONPATH ?? '').not.toContain(resolve(STUBS))
 
-      // The same command with the stubs taken off its path: what the stubs are for.
-      const parts = command.env.PYTHONPATH.split(delimiter).filter((p) => resolve(p) !== resolve(STUBS))
-      const withoutStubs = await start({ ...command.env, PYTHONPATH: parts.join(delimiter) })
+      // The same command with the stubs taken off its bootstrap's path: what the stubs are for.
+      const bootstrap = command.argv[command.argv.length - 1]
+      expect(bootstrap.split(`${stubs}, `).length - 1, 'the stubs, once, first in the bootstrap').toBe(1)
+      const withoutStubs = await start(command.env, [...command.argv.slice(0, -1), bootstrap.replace(`${stubs}, `, '')])
       expect(withoutStubs.out).toMatch(/error import ModuleNotFoundError: No module named 'cv2'/)
       expect(withoutStubs.code).toBe(69)
       notes.push(

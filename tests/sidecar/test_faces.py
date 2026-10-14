@@ -310,17 +310,74 @@ class Stubs(unittest.TestCase):
                 f"{entry} is on the helper's sys.path",
             )
         self.assertEqual(dict(os.environ), before, "building the worker's environment changed the helper's")
-        # The worker's: the stubs first, then the package's folder, then what the helper had.
-        parts = command["env"]["PYTHONPATH"].split(os.pathsep)
-        self.assertEqual(parts[:2], [faces.STUBS_DIR, faces.PACKAGE_PARENT])
-        self.assertEqual(command["argv"][1:], ["-m", "forge_sidecar.workers.mp_faces"])
+        # The worker's: this interpreter, -E -s -B, and a bootstrap — never the stubs in its environment.
+        self.assertEqual(command["argv"][0], sys.executable)
+        self.assertEqual(command["argv"][1:5], ["-E", "-s", "-B", "-c"])
+        self.assertEqual(command["argv"][5], faces.WORKER_BOOTSTRAP)
+        self.assertEqual(len(command["argv"]), 6)
+        self.assertNotIn("-I", command["argv"])
+        self.assertNotIn(faces.STUBS_DIR, command["env"].get("PYTHONPATH", ""))
         self.assertTrue(os.path.isfile(os.path.join(faces.STUBS_DIR, "cv2", "__init__.py")))
         self.assertTrue(os.path.isfile(os.path.join(faces.STUBS_DIR, "matplotlib", "pyplot.py")))
 
-    def test_an_inherited_pythonpath_comes_after_the_stubs(self) -> None:
-        env = faces.worker_env({"PYTHONPATH": "/somewhere", "FORGE_CACHE_DIR": "/c"})
-        self.assertEqual(env["PYTHONPATH"].split(os.pathsep), [faces.STUBS_DIR, faces.PACKAGE_PARENT, "/somewhere"])
-        self.assertEqual(env["FORGE_CACHE_DIR"], "/c")
+    def test_the_worker_env_is_the_helpers_own_forge_settings_and_all(self) -> None:
+        env = faces.worker_env({"FORGE_CACHE_DIR": "/c", "FORGE_FACES_WORKER_FAKE": "colour", "PATH": "/bin"})
+        self.assertEqual(env, {"FORGE_CACHE_DIR": "/c", "FORGE_FACES_WORKER_FAKE": "colour", "PATH": "/bin"})
+
+    def probe(self, env: dict[str, str]) -> dict:
+        """The worker's real argv, with its bootstrap's last line — the run of the worker
+        module — swapped for a report of what the worker would start with. The path
+        line, the flags, the cwd and the environment are the real ones."""
+        command = faces.worker_command(env)
+        bootstrap = command["argv"][-1]
+        run = f"runpy.run_module({faces.WORKER_MODULE!r}, run_name='__main__', alter_sys=True)"
+        self.assertEqual(bootstrap.count(run), 1, bootstrap)
+        report = (
+            "import importlib.util, json; spec = importlib.util.find_spec('cv2'); "
+            "print(json.dumps({'path': sys.path, 'cv2': spec.origin if spec else None, "
+            "'flags': [sys.flags.ignore_environment, sys.flags.no_user_site, sys.flags.dont_write_bytecode]}))"
+        )
+        done = subprocess.run(
+            [*command["argv"][:-1], bootstrap.replace(run, report)],
+            cwd=command["cwd"], env=command["env"], capture_output=True, timeout=60,
+        )
+        self.assertEqual(done.returncode, 0, done.stderr.decode(errors="replace"))
+        return json.loads(done.stdout)
+
+    def test_the_bootstrap_puts_the_stubs_first_and_the_package_second(self) -> None:
+        seen = self.probe(dict(os.environ))
+        self.assertEqual(seen["path"][:2], [faces.STUBS_DIR, faces.PACKAGE_PARENT])
+        self.assertEqual(os.path.dirname(os.path.dirname(seen["cv2"])), faces.STUBS_DIR)
+        self.assertEqual(seen["flags"], [1, 1, 1])
+
+    def test_a_pythonpath_of_the_users_never_reaches_the_worker(self) -> None:
+        # A folder with a cv2 of its own on PYTHONPATH: -E keeps it off the worker's path.
+        planted = tempfile.mkdtemp(prefix="forge-faces-planted-")
+        self.addCleanup(shutil.rmtree, planted, True)
+        os.makedirs(os.path.join(planted, "cv2"))
+        pathlib.Path(planted, "cv2", "__init__.py").write_text("raise ImportError('the planted cv2')\n")
+        seen = self.probe({**os.environ, "PYTHONPATH": planted})
+        resolved = [os.path.realpath(entry or os.curdir) for entry in seen["path"]]
+        self.assertNotIn(os.path.realpath(planted), resolved)
+        self.assertEqual(os.path.dirname(os.path.dirname(seen["cv2"])), faces.STUBS_DIR)
+
+    def test_the_worker_speaks_utf8_whatever_the_locale(self) -> None:
+        # A spec it refuses, naming a non-ASCII value: the "error input" line must reach
+        # the helper as UTF-8. Latin-1 here (the Mac has the locale); Windows' pipes
+        # take the ANSI code page anyway. -E ignores PYTHONIOENCODING, so the worker
+        # sets its own streams.
+        command = faces.worker_command()
+        env = {k: v for k, v in command["env"].items() if not k.upper().startswith("PYTHON")}
+        latin1 = "en_US.ISO8859-1"
+        if sys.platform == "darwin" and os.path.isdir(f"/usr/share/locale/{latin1}"):
+            env.update(LC_ALL=latin1, LANG=latin1)
+        done = subprocess.run(
+            command["argv"], cwd=command["cwd"], env=env, capture_output=True, timeout=60,
+            input='{"mode": "ಕನ್ನಡ Bräutigam"}\n'.encode("utf-8"),
+        )
+        out = done.stdout.decode("utf-8")
+        self.assertIn("error input the spec's mode must be 'detect' or 'import', not 'ಕನ್ನಡ Bräutigam'", out, done.stderr.decode(errors="replace"))
+        self.assertEqual(done.returncode, faces.EXIT_INPUT)
 
 
 class Registration(unittest.TestCase):

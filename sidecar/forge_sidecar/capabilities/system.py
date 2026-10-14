@@ -18,6 +18,12 @@ def register(server: Server) -> None:
             "platform": f"{platform.system()}-{platform.machine()}",
             "capabilities": server.capabilities,
             "degraded": server.degraded,
+            # Which interpreter answered (docs/CLIPS.md §3a.2): the Settings
+            # row names it, and the pack's tests check that every path entry
+            # is inside the pack or the helper's own folder.
+            "executable": sys.executable,
+            "prefix": sys.prefix,
+            "path": list(sys.path),
         }
 
     def ping(params: dict[str, Any], _context: Context) -> dict[str, Any]:
