@@ -33,7 +33,7 @@ vi.mock('../src/main/sidecar/client', async (importOriginal) => {
   }
 })
 
-const { checkPack, isInside } = await import('../src/main/sidecar/check')
+const { CHECK_HELLO_SHARE, checkPack, isInside } = await import('../src/main/sidecar/check')
 
 const FAKE = resolve(__dirname, 'fixtures', 'fake-helper.mjs')
 const PLATFORM = 'darwin-arm64' as const
@@ -90,7 +90,7 @@ function layout() {
 
 function check(
   l: ReturnType<typeof layout>,
-  o: { hello?: Partial<HelloResult>; env?: Record<string, string>; signal?: AbortSignal; onMessage?: (m: string) => void } = {}
+  o: { hello?: Partial<HelloResult>; env?: Record<string, string>; signal?: AbortSignal; onMessage?: (m: string) => void; onProgress?: (f: number) => void } = {}
 ) {
   const pids = join(l.tmp, 'pids.txt')
   const base = { ...process.env }
@@ -109,7 +109,8 @@ function check(
     sidecarDir: l.sidecarDir,
     launch,
     signal: o.signal ?? new AbortController().signal,
-    onMessage: o.onMessage
+    onMessage: o.onMessage,
+    onProgress: o.onProgress
   })
   const started = (): number[] =>
     existsSync(pids)
@@ -126,9 +127,13 @@ describe('the check of a freshly installed pack', () => {
     const l = layout()
     const messages: string[] = []
     const before = made.options.length
-    const { run, launch, started } = check(l, { onMessage: (m) => messages.push(m) })
+    const fractions: number[] = []
+    const { run, launch, started } = check(l, { onMessage: (m) => messages.push(m), onProgress: (f) => fractions.push(f) })
     const result = await run
     expect(result.problems).toEqual([])
+    // The bar through the check (§3a.8 row 27: most of a real install): the hello's share, then each group's start as the helper counts it, then 1.
+    const n = SELFTEST_GROUP_NAMES.length
+    expect(fractions).toEqual([CHECK_HELLO_SHARE, ...SELFTEST_GROUP_NAMES.map((_, i) => CHECK_HELLO_SHARE + (1 - CHECK_HELLO_SHARE) * (i / n)), 1])
     expect(result.hello.python).toBe(HELPER_PACK.python.version)
     for (const group of SELFTEST_GROUP_NAMES) expect(result.selftest[group], group).toMatchObject({ exit: 0, error: null })
     expect(messages).toEqual(SELFTEST_GROUP_NAMES.map((g, i) => `checking ${g} · ${i + 1} of ${SELFTEST_GROUP_NAMES.length}`))

@@ -28,6 +28,9 @@
  * - `system.selftest`, each group's start passed on as a message, and every
  *   group answered for.
  *
+ * Its progress (`onProgress`, 0..1): `CHECK_HELLO_SHARE` once the hello and
+ * the ping are back, then the self-test's own count of groups, then 1.
+ *
  * What it finds is collected as `problems`, never thrown: a degraded method
  * or a failed group keeps the pack (§3a.3 "When the check fails part of the
  * way"). It rejects only when the helper does not start or answer at all
@@ -54,6 +57,14 @@ const GROUP_TIMEOUT_MS = 60_000
  * answering at all.
  */
 export const SELFTEST_TIMEOUT_MS = SELFTEST_GROUP_NAMES.length * GROUP_TIMEOUT_MS + 30_000
+
+/**
+ * The hello's share of the check's progress (`onProgress`): the first
+ * start of a freshly written pack took 11.3–14.4 s of a 37–39 s check on
+ * the M1 Pro (§3a.8 row 27), the self-test the rest, which moves the bar
+ * group by group.
+ */
+export const CHECK_HELLO_SHARE = 0.35
 
 /** The real path of `p` through its longest part that exists; the rest is joined on as it is. */
 export function realPathLoose(p: string): string {
@@ -131,18 +142,25 @@ export const checkPack: CheckPack = async (o: PackCheckOptions): Promise<PackChe
     const hello = await client.start()
     const problems = helloProblems(hello, o)
     await client.request(SIDECAR_METHODS.ping, { echo: 'check' }, { signal: o.signal })
+    let reached = CHECK_HELLO_SHARE
+    o.onProgress?.(reached)
     const selftest = await client.request<SelftestResult>(
       SIDECAR_METHODS.selftest,
       {},
       {
         signal: o.signal,
         timeoutMs: SELFTEST_TIMEOUT_MS,
-        onProgress: (_progress, message) => {
+        onProgress: (progress, message) => {
           if (message) o.onMessage?.(message)
+          if (typeof progress !== 'number' || !Number.isFinite(progress)) return
+          // Each group's start, as the helper counts them; never down.
+          reached = Math.max(reached, CHECK_HELLO_SHARE + (1 - CHECK_HELLO_SHARE) * Math.min(1, Math.max(0, progress)))
+          o.onProgress?.(reached)
         }
       }
     )
     problems.push(...selftestProblems(selftest))
+    o.onProgress?.(1)
     return { hello, selftest, problems }
   } catch (err) {
     if (o.signal.aborted) throw new CancelledError()

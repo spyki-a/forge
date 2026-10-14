@@ -15,6 +15,8 @@ import {
   HELPER_IN_USE_ELSEWHERE,
   HELPER_PRESET,
   INSTALL_STAGES,
+  CHECKING_THE_HELPER,
+  installProgress,
   WAITING_FOR_THE_HELPER,
   bytesLeft,
   spaceNeeded,
@@ -365,6 +367,8 @@ function makeHarness(o: { pack?: number; platform?: PackPlatform; seed?: number;
     h.hooks.onCheck?.()
     if (c.signal.aborted) throw abortError()
     if (h.checkRejects) throw new Error(h.checkRejects)
+    // As the real check reports it: the hello's share, then the self-test's groups, then 1.
+    for (const f of [0.35, 0.7, 1]) c.onProgress?.(f)
     return h.checkResult
   }
 
@@ -502,6 +506,16 @@ describe('a fresh install', () => {
     expect(order).toEqual(['unpack', 'compile', 'pip', 'check', 'receipt:1', 'restart'])
     const compiled = (h as unknown as { compiled: { python: string; stdlib: string }[] }).compiled
     expect(compiled).toEqual([{ python: join(h.versionDir, 'python', 'bin', 'python3.14'), stdlib: join(h.versionDir, 'python', 'lib', 'python3.14') }])
+  })
+
+  it('moves the bar through the check as the check reports it, the longest stage of a real install', async () => {
+    const h = makeHarness()
+    const job = await installed(h)
+    expect(job.status, job.error ?? '').toBe('done')
+    const checking = h.progress.filter((x) => x.text === CHECKING_THE_HELPER).map((x) => x.p)
+    const four = (f: number): number => installProgress(4, f)
+    // One ordered shape: the stage's start, the check's three reports at 0.9 of the stage, then the receipt.
+    expect(checking).toEqual([four(0), four(0.9 * 0.35), four(0.9 * 0.7), four(0.9), four(0.9), four(0.95)])
   })
 
   it('never lets the bar go down across the stages: a property over random chunk sizes, a retried file and a resumed one', async () => {

@@ -47,17 +47,23 @@ export function helperJobKind(params: Record<string, unknown> | undefined): Help
 /* -------------------------------------------------------------- the stages */
 
 /**
- * The stages and their share of the bar (§3a.3 "The stages"). Placeholders
- * until the first measured install sets them (§3a.8 row 27), as the
- * reframe's 0–15 / 15–85 / 85–100 were. Checking takes no share: it is a
- * statfs, a lock and a few stats.
+ * The stages and their share of the bar (§3a.3 "The stages"), set from the
+ * first measured install (§3a.8 row 27, the M1 Pro, 2026-10-14,
+ * tests/integration/helperPack.int.test.ts): the download 6.0 s at
+ * 28 MiB/s, the unpack and the stdlib compile 2.8 s, pip 11.4 s, and the
+ * check 37–39 s (a cold first hello of 11–14 s, then a cold self-test of
+ * about 25 s, beats alone 20–21 s). The placeholders (70 / 5 / 20 / 5) left
+ * the bar at 95–100 % for 37 of the install's 57 s. At the plan's example
+ * line of 4.2 MB/s the download is 40 s of about 92 s, so: 45 / 5 / 15 / 35.
+ * The Surface's row 27 may move them again. Checking takes no share: it is
+ * a statfs, a lock and a few stats.
  */
 export const INSTALL_STAGES = [
   { label: 'Checking', from: 0, to: 0 },
-  { label: 'Downloading', from: 0, to: 0.7 },
-  { label: 'Unpacking', from: 0.7, to: 0.75 },
-  { label: 'Installing the libraries', from: 0.75, to: 0.95 },
-  { label: 'Checking the AI helper', from: 0.95, to: 1 }
+  { label: 'Downloading', from: 0, to: 0.45 },
+  { label: 'Unpacking', from: 0.45, to: 0.5 },
+  { label: 'Installing the libraries', from: 0.5, to: 0.65 },
+  { label: 'Checking the AI helper', from: 0.65, to: 1 }
 ] as const
 
 export type InstallStage = 0 | 1 | 2 | 3 | 4

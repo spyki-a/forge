@@ -83,8 +83,8 @@ describe('the stages and the bar', () => {
   it('each stage starts exactly where the one before it ends, and fractions outside 0..1 are clamped', () => {
     for (let s = 0; s < 4; s++) expect(installProgress((s + 1) as InstallStage, 0)).toBe(installProgress(s as InstallStage, 1))
     expect(installProgress(1, -1)).toBe(0)
-    expect(installProgress(1, 2)).toBe(0.7)
-    expect(installProgress(3, Number.NaN)).toBe(0.75)
+    expect(installProgress(1, 2)).toBe(INSTALL_STAGES[1].to)
+    expect(installProgress(3, Number.NaN)).toBe(INSTALL_STAGES[3].from)
     expect(installProgress(4, 1)).toBe(1)
   })
 })

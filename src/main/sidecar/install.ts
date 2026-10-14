@@ -143,6 +143,18 @@ const HOLD_REASON: Record<HelperJobKind, string> = {
 
 const messageOf = (err: unknown): string => (err instanceof Error ? err.message : String(err))
 
+/*
+ * Where each step leaves the bar inside its stage, from the first measured
+ * install (§3a.8 row 27, the M1 Pro): the unpack 0.45–0.53 s of the
+ * stage's 2.6–2.8 s, the compile the rest; the check 37–39 s of stage 4,
+ * the receipt (a walk of 15k paths), the sweep and the switch well under a
+ * second together.
+ */
+const UNPACKED = 0.2
+const CHECKED = 0.9
+const RECEIPT_WRITTEN = 0.95
+const SWITCHING = 0.97
+
 const nodePlatformOf = (platform: PackPlatform): NodeJS.Platform => (platform === 'win32-x64' ? 'win32' : 'darwin')
 
 /** The tree's own site-packages, beside its standard library (compile.ts `stdlibOf`): where pip installs and the bar counts `*.dist-info`. */
@@ -365,7 +377,7 @@ export function createHelperPackJobs(deps: HelperPackDeps): HelperPackJobs {
       const unpacked = await deps.unpack(join(dlDir, pack.interpreter.name), versionDir, { signal, onMessage: log, budget })
       log(`[helper] unpacked ${unpacked.files} files, ${unpacked.bytes} B; longest path ${unpacked.longestPath}, longest directory ${unpacked.longestDir}`)
       check()
-      report(2, 0.6, UNPACKING_PYTHON)
+      report(2, UNPACKED, UNPACKING_PYTHON)
       await deps.compileStdlib({ python, stdlib: stdlibOf(versionDir, platform, manifest.python.version), env: launch.env, spawn: deps.spawn, signal })
       check()
 
@@ -395,14 +407,24 @@ export function createHelperPackJobs(deps: HelperPackDeps): HelperPackJobs {
       report(4, 0, CHECKING_THE_HELPER)
       let result: PackCheck
       try {
-        result = await deps.check({ versionDir, manifest, platform, sidecarDir: deps.sidecarDir, launch, signal, onMessage: log })
+        result = await deps.check({
+          versionDir,
+          manifest,
+          platform,
+          sidecarDir: deps.sidecarDir,
+          launch,
+          signal,
+          onMessage: log,
+          // The check is most of a real install's time (§3a.8 row 27): the bar moves through it.
+          onProgress: (f) => report(4, CHECKED * f, CHECKING_THE_HELPER)
+        })
       } catch (err) {
         if (signal.aborted) throw new CancelledError()
         throw new Error(`The AI helper did not start from its new folder: ${messageOf(err)}`)
       }
       check()
       for (const problem of result.problems) log(`[helper] check: ${problem}`)
-      report(4, 0.6, CHECKING_THE_HELPER)
+      report(4, CHECKED, CHECKING_THE_HELPER)
 
       // The receipt, last.
       let onDisk = pack.bytesOnDisk
@@ -427,7 +449,7 @@ export function createHelperPackJobs(deps: HelperPackDeps): HelperPackJobs {
       }
       await writeReceipt(versionDir, receipt, fs)
       receiptWritten = true
-      report(4, 0.8, CHECKING_THE_HELPER)
+      report(4, RECEIPT_WRITTEN, CHECKING_THE_HELPER)
 
       // Older numbers beside the now-complete pack (receipt first), other packs' downloads, then this one's (§16.47).
       const plan = sweepPlan(await describeRoot(root, { manifest, platform, isAlive: deps.isAlive, lockedElsewhere: false }))
@@ -444,7 +466,7 @@ export function createHelperPackJobs(deps: HelperPackDeps): HelperPackJobs {
         await helper.restart()
       } else {
         // The switch: waits for the work in flight, and can be cancelled; it never kills that work.
-        if (helper.busy()) report(4, 0.9, WAITING_FOR_THE_HELPER)
+        if (helper.busy()) report(4, SWITCHING, WAITING_FOR_THE_HELPER)
         await helper.whenIdle(signal)
         check()
         restarted = true

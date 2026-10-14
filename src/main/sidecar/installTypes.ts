@@ -105,6 +105,13 @@ export interface PackCheckOptions {
   launch: HelperLaunch
   signal: AbortSignal
   onMessage?(message: string): void
+  /**
+   * How far the check has got, 0..1, never down: its share for the hello
+   * (`CHECK_HELLO_SHARE`), then the self-test group by group. Added by the
+   * integrator: the check is the longest stage of a real install (37–39 s
+   * on the M1 Pro, §3a.8 row 27), and the bar stood still through it.
+   */
+  onProgress?(fraction: number): void
 }
 
 export interface PackCheck {
