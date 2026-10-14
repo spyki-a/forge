@@ -15,6 +15,7 @@ import { cropAt } from '@shared/render/crop'
 import { TRANSITIONS } from '@shared/transitions/registry'
 import type { Brief } from '@shared/director/schema'
 import { fourShotTrack, printedMs } from './fixtures/reframe/track'
+import { segmentIntoSentences } from '@shared/transcript'
 
 /*
  * The Director's hook for a followed crop (docs/CLIPS.md §4.7, apply2.ts):
@@ -123,6 +124,36 @@ describe('a footage slot with no track the follow path reads', () => {
       const p = direct(edit(subjects))
       expect(backdropsOf(p, 'wide').length).toBeGreaterThan(0)
       expect(shotsOf(p, 'wide').every((s) => !s.follow && s.crop === undefined)).toBe(true)
+    }
+  })
+})
+
+describe('a followed footage slot that is J-cut', () => {
+  it('stores the followed crop of its MOVED first frame: the J-cut skips into the next shot, and the crop goes with it', () => {
+    /*
+     * The wide clip speaks (a word at 0.3 s) after a still, so its picture
+     * skips J_CUT_SECONDS (6 frames) and its sound leads. Its track cuts at
+     * frame 3: in-point 0 is shot 1 (the face at 0.25), the moved in-point 6
+     * is shot 2 (0.75), so a crop left from before the J-cut is the wrong shot's.
+     */
+    const cutEarly = fourShotTrack({ cutMs: [3, 60, 90].map((f) => printedMs(f / fps)), durationMs: 4000, twoUp: false })
+    const words = [{ index: 0, text: 'Glow.', startMs: 300, endMs: 700, confidence: 1 }]
+    const base = edit({ wide: cutEarly })
+    // With a sound of its own, which the J-cut lifts onto a dialogue lane.
+    const p: Project = { ...base, assets: base.assets.map((a) => (a.id === 'wide' ? { ...a, hasAudio: true } : a)) }
+    p.transcripts = { wide: { assetId: 'wide', language: 'en', model: 'm', durationMs: 4000, words, segments: segmentIntoSentences(words) } }
+    const directed = direct(p)
+    const jCut = shotsOf(directed, 'wide').filter((s) => s.audioDetached)
+    expect(jCut.length, 'a J-cut shot of the wide clip').toBeGreaterThan(0)
+    for (const shot of jCut) {
+      expect(shot.inPoint).toBe(6)
+      expect(shot.follow).toMatchObject({ version: 1 })
+      const keys = followKeys(directed, shot, fps)!
+      expect(shot.crop, 'the followed crop at the moved in-point').toEqual(keys.crop)
+      expect(shot.crop).not.toBe(keys.crop)
+      // And not the first frame's from before the move: that is shot 1's face.
+      const unmoved = followKeys(directed, { ...shot, inPoint: 0 }, fps)!
+      expect(unmoved.crop.x).not.toBe(keys.crop.x)
     }
   })
 })
