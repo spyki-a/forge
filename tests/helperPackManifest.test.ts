@@ -16,6 +16,7 @@ import {
 } from '../src/shared/sidecar/pack'
 import { HELPER_PACK } from '../src/shared/sidecar/packManifest'
 import { OPTIONAL_METHODS, SIDECAR_METHODS } from '../src/shared/sidecar/protocol'
+import { formatBytes } from '../src/shared/assets/pack'
 
 /*
  * The AI helper's pack manifest (docs/CLIPS.md §3a.1, §3a.2, §3a.7):
@@ -101,6 +102,12 @@ function hashSetProblems(text: string, pack: PlatformPack): string[] {
   return problems
 }
 
+/** The lock's bytes hash to the manifest's `lock.sha256`: the bytes pip is given are the bytes the pack was made from. */
+function lockShaProblems(bytes: Buffer, pack: PlatformPack): string[] {
+  const actual = sha256(bytes)
+  return actual === pack.lock.sha256 ? [] : [`${pack.lock.file}: sha256 ${actual}, not the manifest's ${pack.lock.sha256}`]
+}
+
 /** Each lock line's name and version are the wheel's its hash names (wheel names normalise - to _). */
 function lineToWheelProblems(text: string, pack: PlatformPack): string[] {
   const byHash = new Map(pack.wheels.map((w) => [w.sha256, w]))
@@ -145,6 +152,14 @@ function wheelTagProblems(platform: PackPlatform, pack: PlatformPack): string[] 
     if (!platOk) problems.push(`${w.name}: ${plat} is not ${platform}`)
   }
   return problems
+}
+
+/** resolved.json's per-target totals, written by pack_lock.py from the same files as the manifest. */
+function readResolvedTargets(): Record<PackPlatform, { packBytes: number; wheelBytes: number }> {
+  const resolved = JSON.parse(readFileSync(join(SIDECAR, 'pack', 'resolved.json'), 'utf8')) as {
+    targets: Record<PackPlatform, { packBytes: number; wheelBytes: number }>
+  }
+  return resolved.targets
 }
 
 type History = Record<string, Record<string, { lockSha256: string; interpreterSha256: string }>>
@@ -280,12 +295,17 @@ describe('HELPER_PACK: the locks', () => {
   })
 
   it.each(PLATFORMS)("%s: the lock file's sha256 is the manifest's", (platform) => {
-    expect(sha256(lockBytes(platform))).toBe(HELPER_PACK.platforms[platform].lock.sha256)
+    expect(lockShaProblems(lockBytes(platform), HELPER_PACK.platforms[platform])).toEqual([])
   })
 
   it('the lock edited without its sha256 is caught (scratch copy)', () => {
+    const pack = HELPER_PACK.platforms['darwin-arm64']
     const edited = Buffer.concat([lockBytes('darwin-arm64'), Buffer.from('opencv-contrib-python==4.12.0.88\n')])
-    expect(sha256(edited)).not.toBe(HELPER_PACK.platforms['darwin-arm64'].lock.sha256)
+    const problems = lockShaProblems(edited, pack)
+    expect(problems).toHaveLength(1)
+    expect(problems[0]).toContain(`not the manifest's ${pack.lock.sha256}`)
+    // and a manifest sha256 that names other bytes, with the lock untouched
+    expect(lockShaProblems(lockBytes('darwin-arm64'), { ...pack, lock: { ...pack.lock, sha256: sha256('another lock\n') } })).toHaveLength(1)
   })
 
   it.each(PLATFORMS)('%s: the lock holds mediapipe and no opencv or matplotlib (the stub route)', (platform) => {
@@ -345,12 +365,19 @@ describe('the button: the files summed', () => {
     expect(packBytes(pack)).toBe(sum)
   })
 
-  it('reads 170 MB on the Mac and 205 MB on Windows', () => {
-    // 178,190,592 and 215,104,551 B (CLIPS §3a.1), MiB rounded.
-    expect(packBytes(HELPER_PACK.platforms['darwin-arm64'])).toBe(178_190_592)
-    expect(packBytes(HELPER_PACK.platforms['win32-x64'])).toBe(215_104_551)
-    expect(packSizeLabel(HELPER_PACK.platforms['darwin-arm64'])).toBe('170 MB')
-    expect(packSizeLabel(HELPER_PACK.platforms['win32-x64'])).toBe('205 MB')
+  it.each(PLATFORMS)("%s: the button's number is resolved.json's packBytes, written as every button writes bytes", (platform) => {
+    /*
+     * The generator sums the same files into resolved.json's targets[p].packBytes.
+     * For pack 1 that is 178,190,592 B, "170 MB", on the Mac and 215,104,551 B,
+     * "205 MB", on Windows (CLIPS §3a.1). Those numbers are not pinned here: a
+     * lock that rightly loses a wheel under --bump (hf-xet, §3a.8 row 35) would
+     * fail a pin with nothing wrong.
+     */
+    const pack = HELPER_PACK.platforms[platform]
+    const total = readResolvedTargets()[platform].packBytes
+    expect(packBytes(pack)).toBe(total)
+    expect(packSizeLabel(pack)).toBe(formatBytes(total))
+    expect(packSizeLabel(pack)).toMatch(/^\d+ MB$/)
   })
 
   it.each(PLATFORMS)('%s: the hosts are GitHub, its asset host and PyPI’s files, each named', (platform) => {
