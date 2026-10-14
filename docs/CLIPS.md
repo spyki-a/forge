@@ -1,6 +1,15 @@
 # Clips — from a landscape talk to a vertical clip that explains itself: the plan
 
-> **Status, 2026-10-05. Nothing here is built.** This is the plan for the
+> **Status, 2026-10-14.** Built since, each with its Built note in place:
+> step 0 (§3.1–§3.7); M0 (§3b, run on your ten links, §3b.9); and step 1's
+> 1b to 1f with the UI, the harness check and the render check (§4.2–§4.9;
+> 1d's salient box is in the helper, but no job calls it, §16.35). Not built:
+> 1g, step P (§3a), and everything from step 2 on. Step 1's exit waits on
+> runs only you can make (§4.10). Nothing after `d7244ce` is pushed: all
+> of 1f, its render half and its action half, waits for your push and
+> Windows CI.
+>
+> **As written, 2026-10-05, when nothing here was built.** This is the plan for the
 > piece agreed with the user on 2026-10-04/05: the reframe engine, caption
 > free space, the motion-graphics engine with the Director's third pass, Best
 > clips, B-roll, retrieved-fact cards with 3D templates, and creator styles,
