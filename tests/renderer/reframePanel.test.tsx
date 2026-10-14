@@ -269,6 +269,18 @@ describe('Follow the subject, in the Trimmer dock', () => {
     expect(dockWords()).toContain('needs the AI helper')
   })
 
+  it('says "needs the AI helper" only with the Follow button: a clip that already follows keeps following without one', () => {
+    scene()
+    followed()
+    watch('missing', null)
+    const shown = dockWords()
+    expect(shown).toContain('3 shots · 1 stacked')
+    expect(named(section(), 'Unfollow'), 'Unfollow').toBeTruthy()
+    expect(followButton()).toBeUndefined()
+    expect(shown).not.toContain('needs the AI helper')
+    expect(shown).not.toContain('the AI helper is starting')
+  })
+
   it('names the face finder’s size before the first press, and not once it is on disk', () => {
     scene()
     watch('ready', { ...FACE_FINDER, present: false })

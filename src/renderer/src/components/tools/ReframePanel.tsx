@@ -151,7 +151,12 @@ export function FollowSection({ clipId }: ReframePanelProps): ReactNode {
           )}
         </button>
       )}
-      {why !== null && <p className="text-[9.5px] leading-snug text-ink-600">{why}</p>}
+      {/*
+        Why Follow is greyed, under it — and only with it. A clip that already
+        follows keeps following without the helper (its track is the
+        project's), so the reason beside Unfollow read as if the follow broke.
+      */}
+      {!following && why !== null && <p className="text-[9.5px] leading-snug text-ink-600">{why}</p>}
 
       {clip.follow && (
         <div className="flex items-center justify-between gap-2">
