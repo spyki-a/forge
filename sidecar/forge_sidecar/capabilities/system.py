@@ -40,6 +40,19 @@ def register(server: Server) -> None:
             context.progress((step + 1) / steps, f"step {step + 1}/{steps}")
         return {"slept": seconds}
 
+    def selftest(params: dict[str, Any], context: Context) -> dict[str, Any]:
+        """Each native library loaded in a fresh process (docs/CLIPS.md §3a.3 stage 4).
+
+        ``{groups?: string[]}`` → ``{<group>: {exit, ms, error}}``, every group
+        when none are named. Cancellable before each group and while one
+        runs; a progress line as each starts. Imported here, not at the top:
+        hello must not pay for it.
+        """
+        from .. import selftest as checks
+
+        return checks.selftest(checks.checked_groups(params.get("groups")), context=context)
+
     server.register("system.hello", hello)
     server.register("system.ping", ping)
     server.register("system.sleep", sleep)
+    server.register("system.selftest", selftest)

@@ -5,7 +5,8 @@ import { isAbsolute } from 'node:path'
 import { PACK_FLAGS, cleanHelperEnv } from '../../src/shared/sidecar/helperPython'
 import { SidecarClient, SidecarError } from '../../src/main/sidecar/client'
 import { OPTIONAL_METHODS, SIDECAR_METHODS, RPC_ERRORS, type HelloResult } from '@shared/sidecar/protocol'
-import { SIDECAR_DIR, devHelperLaunch } from './venv'
+import { SELFTEST_GROUPS, SELFTEST_GROUP_NAMES, type SelftestResult } from '@shared/sidecar/selftest'
+import { HAS_VENV, SIDECAR_DIR, devHelperLaunch } from './venv'
 
 let client: SidecarClient | null = null
 
@@ -118,6 +119,47 @@ describe('errors', () => {
       code: RPC_ERRORS.invalidParams
     })
   }, 60_000)
+})
+
+describe('the self-test (docs/CLIPS.md §3a.3 stage 4)', () => {
+  it('answers for every group, in the order main names them, each with its exit, time and reason', async () => {
+    /*
+     * Each group runs in a fresh child of this interpreter
+     * (sidecar/forge_sidecar/selftest.py). On CI's bare interpreter every
+     * group fails, and that is an answer; the keys, in order, hold the
+     * helper's GROUPS and src/shared/sidecar/selftest.ts' SELFTEST_GROUPS
+     * equal. On the venv, a group whose methods hello registered must also
+     * load its native code in a fresh process: that is the whole point of it.
+     */
+    const c = makeClient()
+    const hello = await c.start()
+    expect(hello.capabilities).toContain(SIDECAR_METHODS.selftest)
+    const messages: string[] = []
+    const result = await c.request<SelftestResult>(SIDECAR_METHODS.selftest, {}, {
+      timeoutMs: 400_000,
+      onProgress: (_p, message) => {
+        if (message) messages.push(message)
+      }
+    })
+    expect(Object.keys(result)).toEqual([...SELFTEST_GROUP_NAMES])
+    expect(messages).toEqual(SELFTEST_GROUP_NAMES.map((g, i) => `checking ${g} · ${i + 1} of ${SELFTEST_GROUP_NAMES.length}`))
+    for (const group of SELFTEST_GROUP_NAMES) {
+      const one = result[group]
+      expect(Object.keys(one).sort(), group).toEqual(['error', 'exit', 'ms'])
+      expect(Number.isInteger(one.exit), group).toBe(true)
+      expect(Number.isInteger(one.ms) && one.ms >= 0, group).toBe(true)
+      if (one.exit === 0) expect(one.error, group).toBeNull()
+      else expect(one.error === null || typeof one.error === 'string', group).toBe(true)
+      const methods: readonly string[] = SELFTEST_GROUPS[group]
+      if (HAS_VENV && methods.length > 0 && methods.every((m) => hello.capabilities.includes(m))) {
+        expect(one, `${group}: hello registered ${methods.join(', ')}, and a fresh process could not load it`).toMatchObject({ exit: 0, error: null })
+      }
+    }
+    // Asked for some, it runs those alone.
+    const some = await c.request<Partial<SelftestResult>>(SIDECAR_METHODS.selftest, { groups: ['sklearn', 'vision'] }, { timeoutMs: 200_000 })
+    expect(Object.keys(some)).toEqual(['sklearn', 'vision'])
+    await expect(c.request(SIDECAR_METHODS.selftest, { groups: ['stems'] })).rejects.toThrow(/unknown self-test group: 'stems'/)
+  }, 600_000)
 })
 
 describe('progress and cancellation', () => {

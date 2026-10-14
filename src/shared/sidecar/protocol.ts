@@ -15,6 +15,8 @@
  */
 
 import type { FaceBox, UnitRect } from '../reframe/types'
+// Types only: selftest.ts imports SIDECAR_METHODS from here, so a value import back would be a cycle.
+import type { SelftestGroup, SelftestResult } from './selftest'
 
 export const PROTOCOL_VERSION = 1
 
@@ -181,7 +183,15 @@ export const SIDECAR_METHODS = {
    */
   salient: 'vision.salient',
   /** The subject finder's model, BiRefNet_lite fp16, 114,538,221 B from Hugging Face: ModelParams -> ModelStatus. */
-  salientModel: 'vision.salientModel'
+  salientModel: 'vision.salientModel',
+  /**
+   * The self-test (docs/CLIPS.md §3a.3 stage 4): each native library loaded
+   * in a FRESH child of the helper's interpreter, one group after another
+   * (sidecar/forge_sidecar/selftest.py): SelftestParams -> SelftestResult.
+   * Always registered, like hello: on an interpreter with nothing installed
+   * every group answers failed, which is itself the answer.
+   */
+  selftest: 'system.selftest'
 } as const
 
 /**
@@ -225,6 +235,21 @@ export interface HelloResult {
   prefix: string
   path: string[]
 }
+
+/* ---------------------------------------------------------------- selftest */
+
+/**
+ * `system.selftest` — docs/CLIPS.md §3a.3 stage 4. Every group when `groups`
+ * is absent; otherwise those, in their order, once each (an unknown name is
+ * refused). Cancellable before each group and while one runs; a progress
+ * notification as each starts ("checking beats · 2 of 6").
+ */
+export interface SelftestParams {
+  groups?: SelftestGroup[]
+}
+
+/** `system.selftest`'s answer: `{<group>: {exit, ms, error}}` for each group asked. */
+export type { SelftestResult }
 
 /* ------------------------------------------------------- model downloads */
 

@@ -125,8 +125,10 @@ def parse_spec(text: str) -> dict[str, Any]:
     """The spec line, checked: every field the pass reads, with its type and range.
 
     ``mode`` is ``"detect"`` (the default) or ``"import"``, which only loads
-    mediapipe, says ``ready`` and exits — the import check
-    tests/integration/faces.int.test.ts runs through faces.py's own command.
+    mediapipe and its native library (``_mediapipe``), says ``ready`` and
+    exits — the import check tests/integration/faces.int.test.ts runs through
+    faces.py's own command, and the self-test's faces group
+    (forge_sidecar/selftest.py).
     A process boundary, so nothing is trusted: a field out of range is an
     error here, not a surprise in ffmpeg.
     """
@@ -291,12 +293,28 @@ class TrackWriter:
 
 
 def _mediapipe() -> tuple[Any, Any, Any, float]:
-    """mediapipe and the two Tasks names the pass needs, with the import's seconds."""
+    """mediapipe and the two Tasks names the pass needs, its native library loaded, with the seconds.
+
+    The three imports do not load the library: after them
+    ``mediapipe_c_bindings._shared_lib`` is still None (measured in
+    sidecar/.venv-faces, mediapipe 0.10.35), and ``ctypes.CDLL`` runs only
+    inside ``FaceDetector.create_from_options``. On Windows that library is
+    ``mediapipe/tasks/c/libmediapipe.dll``, 28,736,000 B of C++ whose wheel
+    ships no ``msvcp140`` (docs/CLIPS.md §16.45), so a machine without the
+    Visual C++ runtime would pass every import and fail at the first pass.
+    ``load_raw_library()`` is that same load with no model and no Metal device
+    (0.068 s on the dev Mac, in the sandbox that has none): the import-only
+    run, which is the self-test's faces group (forge_sidecar/selftest.py),
+    fails here with its ``error import`` line, and ``ready`` comes only once
+    the library is in. ``create_from_options`` then reuses the loaded copy.
+    """
     started = time.perf_counter()
     import mediapipe as mp
     from mediapipe.tasks.python import vision
+    from mediapipe.tasks.python.core import mediapipe_c_bindings
     from mediapipe.tasks.python.core.base_options import BaseOptions
 
+    mediapipe_c_bindings.load_raw_library()
     return mp, vision, BaseOptions, time.perf_counter() - started
 
 
