@@ -315,6 +315,17 @@ describe('which samples count', () => {
     expect(row.samplesWithFace).toBe(SAMPLES - 3)
   })
 
+  it('a clip that ends inside a shot skips the samples after its last frame', () => {
+    // Out-point 150 (5000 ms), inside shot 2 (frames 95–200): its samples at 5000 … 6500 ms are past the clip's last frame.
+    const { project, clip } = setup(FOLLOWED, { duration: 150 })
+    const keys = keysOf(project, clip)
+    expect(keys.shots.map((s) => [s.index, s.from, s.to]), 'the premise: shot 2 is on screen to the clip’s end').toEqual([[0, 0, 95], [1, 95, 150]])
+    expect(exportFrameAt(clip, FPS, 5000), 'the premise: 5000 ms is the frame after the last').toBe(150)
+    const kept = exitSamples(project, clip, FPS).map((s) => s.ms)
+    expect(kept).toEqual(Array.from({ length: 10 }, (_, i) => i * 500))
+    expect(scoreFollowedClip(project, clip, FPS)!.samplesWithFace).toBe(10)
+  })
+
   it('a shot with no frame in the clip: its samples are never on screen', () => {
     // At 2×, cuts at source frames 95 and 96 both land on clip frame 48: shot 2 is one source frame, shown on none.
     const t = track({
