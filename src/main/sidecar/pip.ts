@@ -115,18 +115,45 @@ async function distInfos(dir: string): Promise<Set<string>> {
   }
 }
 
-/** pip and its tree: taskkill /f /t on Windows (through the injected spawn), SIGKILL elsewhere. */
-function killTree(child: ChildProcess, spawn: Spawn): void {
+/**
+ * How long a cancel waits for pip (and its tree) to close before it settles
+ * anyway: a tree kill that did not take, or a grandchild still holding pip's
+ * pipes, must not leave the job's cancel hanging. The job then removes what it
+ * can and logs what it could not.
+ */
+export const PIP_CANCEL_GRACE_MS = 10_000
+
+/**
+ * pip and its tree: taskkill /f /t on Windows (through the injected spawn),
+ * SIGKILL elsewhere. A taskkill that cannot start, or that runs and fails
+ * (access denied, say), falls back to pip alone (TerminateProcess).
+ */
+function killTree(child: ChildProcess, spawn: Spawn, platform: NodeJS.Platform): void {
   if (child.pid === undefined || child.exitCode !== null || child.signalCode !== null) return
-  if (process.platform === 'win32') {
+  if (platform === 'win32') {
     const killer = spawn('taskkill', ['/pid', String(child.pid), '/f', '/t'], { windowsHide: true })
     killer.once('error', () => child.kill('SIGKILL'))
+    killer.once('exit', (code: number | null) => {
+      if (code !== 0) child.kill('SIGKILL')
+    })
     return
   }
   child.kill('SIGKILL')
 }
 
-export const runPip: RunPip = async (o: PipStageOptions): Promise<void> => {
+/** What a test may set beside the contract's options: the platform the kill is for, and the cancel's grace. */
+export interface PipLimits {
+  platform?: NodeJS.Platform
+  cancelGraceMs?: number
+}
+
+/**
+ * The pip stage (installTypes.ts' RunPip: `limits` is optional, so this is
+ * still the contract's, checked below).
+ */
+export const runPip = async (o: PipStageOptions, limits: PipLimits = {}): Promise<void> => {
+  const platform = limits.platform ?? process.platform
+  const graceMs = limits.cancelGraceMs ?? PIP_CANCEL_GRACE_MS
   if (o.signal.aborted) throw new CancelledError()
   const before = await distInfos(o.sitePackages)
   if (o.signal.aborted) throw new CancelledError()
@@ -166,6 +193,8 @@ export const runPip: RunPip = async (o: PipStageOptions): Promise<void> => {
     })
 
     let cancelled = false
+    let settled = false
+    let grace: ReturnType<typeof setTimeout> | null = null
     let startError: Error | null = null
     let polling = false
     const timer = setInterval(() => {
@@ -178,9 +207,20 @@ export const runPip: RunPip = async (o: PipStageOptions): Promise<void> => {
         .finally(() => (polling = false))
     }, PIP_POLL_MS)
 
+    /** Once, by the close or by the cancel's grace, whichever comes first. */
+    const settle = (end: () => void): void => {
+      if (settled) return
+      settled = true
+      clearInterval(timer)
+      if (grace) clearTimeout(grace)
+      o.signal.removeEventListener('abort', onAbort)
+      end()
+    }
+
     const onAbort = (): void => {
       cancelled = true
-      killTree(child, o.spawn)
+      killTree(child, o.spawn, platform)
+      grace = setTimeout(() => settle(() => reject(new CancelledError())), graceMs)
     }
     o.signal.addEventListener('abort', onAbort, { once: true })
 
@@ -206,28 +246,31 @@ export const runPip: RunPip = async (o: PipStageOptions): Promise<void> => {
     child.once('close', (code: number | null, signal: NodeJS.Signals | null) => {
       out.end()
       err.end()
-      clearInterval(timer)
-      o.signal.removeEventListener('abort', onAbort)
-      if (cancelled) {
-        reject(new CancelledError())
-        return
-      }
-      if (startError && child.pid === undefined) {
-        reject(new PipError(`Could not start the AI helper's Python for pip: ${startError.message}`, null, [...tail]))
-        return
-      }
-      if (code !== 0) {
-        reject(new PipError(pipFailure(code, signal, tail), code, [...tail]))
-        return
-      }
-      // A last count, so the bar ends where pip did.
-      void count().then(
-        () => {
-          report()
-          resolve()
-        },
-        () => resolve()
-      )
+      settle(() => {
+        if (cancelled) {
+          reject(new CancelledError())
+          return
+        }
+        if (startError && child.pid === undefined) {
+          reject(new PipError(`Could not start the AI helper's Python for pip: ${startError.message}`, null, [...tail]))
+          return
+        }
+        if (code !== 0) {
+          reject(new PipError(pipFailure(code, signal, tail), code, [...tail]))
+          return
+        }
+        // A last count, so the bar ends where pip did.
+        void count().then(
+          () => {
+            report()
+            resolve()
+          },
+          () => resolve()
+        )
+      })
     })
   })
 }
+
+// Still installTypes.ts' RunPip: the job and installDeps.ts hand it on as one.
+void (runPip satisfies RunPip)

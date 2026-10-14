@@ -209,6 +209,56 @@ describe('a cancel', () => {
     expect(alive(pid), 'pip is still running after the cancel').toBe(false)
   })
 
+  /** The stage's spawn, with `taskkill` answered by a stand-in that exits `code` and kills nothing. */
+  function withTaskkill(s: ReturnType<typeof stage>, code: number): { spawn: Spawn; taskkills: string[][] } {
+    const taskkills: string[][] = []
+    const spawn = ((command: string, args: string[], options: Record<string, unknown>) => {
+      if (command !== 'taskkill') return s.options.spawn(command, args, options as never)
+      taskkills.push([...args])
+      return realSpawn(process.execPath, ['-e', `process.exit(${code})`], options)
+    }) as unknown as Spawn
+    return { spawn, taskkills }
+  }
+
+  const settledWithin = (run: Promise<void>, ms: number): Promise<unknown> =>
+    Promise.race([
+      run.then(
+        () => 'resolved',
+        (err: unknown) => err
+      ),
+      new Promise((done) => setTimeout(() => done(`still running after ${ms} ms`), ms))
+    ])
+
+  it('on Windows, a taskkill that runs and fails falls back to killing pip itself (P-B finding V1)', async () => {
+    const s = stage({ mode: 'hang' })
+    const t = withTaskkill(s, 1)
+    const run = runPip({ ...s.options, spawn: t.spawn }, { platform: 'win32' })
+    expect(await until(() => s.pids().length === 1 && s.seen.some((p) => p.line?.startsWith('Processing')), 10_000)).toBe(true)
+    const [pid] = s.pids()
+    strays.push(pid)
+    s.controller.abort()
+    // Well inside the 10 s grace: the fallback, not the grace, ends it.
+    expect(await settledWithin(run, 5000)).toMatchObject({ name: 'CancelledError' })
+    expect(t.taskkills).toEqual([['/pid', String(pid), '/f', '/t']])
+    expect(alive(pid), 'pip is still running after the cancel').toBe(false)
+  })
+
+  it('a cancel whose kill did not take still settles, after its grace, as a cancel (P-B finding V1)', async () => {
+    const s = stage({ mode: 'hang' })
+    // taskkill "succeeds" and kills nothing: only the grace can end the wait.
+    const t = withTaskkill(s, 0)
+    const run = runPip({ ...s.options, spawn: t.spawn }, { platform: 'win32', cancelGraceMs: 300 })
+    expect(await until(() => s.pids().length === 1, 10_000)).toBe(true)
+    const [pid] = s.pids()
+    strays.push(pid)
+    s.controller.abort()
+    expect(await settledWithin(run, 5000)).toMatchObject({ name: 'CancelledError' })
+    expect(alive(pid), 'the stand-in taskkill killed nothing').toBe(true)
+    // Ended here, so nothing is left behind.
+    process.kill(pid, 'SIGKILL')
+    expect(await until(() => !alive(pid), 5000)).toBe(true)
+  })
+
   it('starts nothing when the job is already cancelled', async () => {
     const controller = new AbortController()
     controller.abort()
