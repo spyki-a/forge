@@ -28,6 +28,7 @@ import { liveBakers } from '../exportBakers'
 import { offlineAssets } from '@shared/project/relink'
 import { BigButton } from './ui/Tile'
 import { REFRAME_PRESET, reframeJobLabel } from '@shared/reframe/job'
+import { HELPER_PRESET, helperJobKind, helperJobLabel } from '@shared/sidecar/install'
 import type { Job } from '@shared/types'
 import { Strip } from './ui/Strip'
 
@@ -50,15 +51,20 @@ import { Strip } from './ui/Strip'
 /**
  * A job's name in the list and the header: its file, or — for the reframe's
  * analysis (docs/CLIPS.md §4.8) — "Finding the subject · <file>", since the
- * file alone would read as an export of it.
+ * file alone would read as an export of it; and for the AI helper's job
+ * (§3a.4 "The EXPORT row") "Installing the AI helper", "Repairing …" or
+ * "Updating …", with its stage in the speed column.
  */
-export function jobName(job: Pick<Job, 'presetId' | 'inputName'>): string {
-  return job.presetId === REFRAME_PRESET ? reframeJobLabel(job) : job.inputName
+export function jobName(job: Pick<Job, 'presetId' | 'inputName'> & { params?: Job['params'] }): string {
+  if (job.presetId === REFRAME_PRESET) return reframeJobLabel(job)
+  if (job.presetId === HELPER_PRESET) return helperJobLabel(helperJobKind(job.params))
+  return job.inputName
 }
 
-/** A reframe analysis writes no file to show, and waits its turn on a queue of one: its X is there while it waits too. */
-const cancellable = (job: Pick<Job, 'presetId' | 'status'>): boolean =>
-  job.status === 'running' || (job.status === 'queued' && job.presetId === REFRAME_PRESET)
+/** Neither a reframe analysis nor the AI helper's job writes a file to show, and each waits on a queue of one: its X is there while it waits too. */
+const ownQueue = (job: Pick<Job, 'presetId'>): boolean => job.presetId === REFRAME_PRESET || job.presetId === HELPER_PRESET
+
+const cancellable = (job: Pick<Job, 'presetId' | 'status'>): boolean => job.status === 'running' || (job.status === 'queued' && ownQueue(job))
 
 export function ExportStrip(): ReactNode {
   const project = useEditor((s) => s.project)
@@ -440,7 +446,7 @@ export function ExportStrip(): ReactNode {
                       <X size={11} />
                     </button>
                   )}
-                  {job.status === 'done' && job.presetId !== REFRAME_PRESET && (
+                  {job.status === 'done' && !ownQueue(job) && (
                     <button
                       onClick={() => void window.forge.revealPath(job.output)}
                       title="Show in folder"

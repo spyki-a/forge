@@ -924,6 +924,10 @@ export function installHarnessBridge(): void {
     transcribe: unsupported('Transcription'),
     cancelTranscribe: async () => undefined,
     sidecarStatus: async () => ({ state: 'failed' as const, error: 'harness: no sidecar' }),
+    // The AI helper's presses: refused here until the harness slice gives them stubs that walk the states (§3a.4).
+    installHelper: unsupported('Installing the AI helper'),
+    removeHelper: unsupported('Removing the AI helper'),
+    checkHelperAgain: unsupported('Checking the AI helper'),
     onTranscribeProgress: () => () => undefined,
     onSidecarStatus: () => () => undefined,
 

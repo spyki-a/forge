@@ -495,6 +495,19 @@ const api = {
   cancelTranscribe: (assetId: string): Promise<void> => ipcRenderer.invoke('asr:cancel', assetId),
   sidecarStatus: (): Promise<SidecarStatusMessage> => ipcRenderer.invoke('sidecar:status'),
 
+  /*
+   * The AI helper's own presses (docs/CLIPS.md §3a.3). Install, Repair and
+   * Update are one job in the EXPORT list, presetId 'helper', `params.kind`
+   * naming which; its X is `cancelRender`. Remove and Check again resolve when
+   * done, or reject with the sentence ("… in use by another Forge window").
+   * Channels: shared/sidecar/install.ts HELPER_CHANNELS.
+   */
+  installHelper: (options: { repair?: boolean; update?: boolean } = {}): Promise<Job> => ipcRenderer.invoke('helper:install', options),
+  /** `models: true` only from the confirm's box, which is off by default (§16.47). */
+  removeHelper: (options: { models: boolean }): Promise<void> => ipcRenderer.invoke('helper:remove', options),
+  /** The self-test alone on the installed pack, no download: for after the Visual C++ runtime is installed. */
+  checkHelperAgain: (): Promise<void> => ipcRenderer.invoke('helper:checkAgain'),
+
   onTranscribeProgress: (
     cb: (update: { assetId: string; progress: number | null; message?: string }) => void
   ): (() => void) => {

@@ -1,10 +1,10 @@
 import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from 'electron'
 import { join } from 'node:path'
-import { abortLinkRuns, cancelAnalyses, registerIpc } from './ipc'
+import { abortLinkRuns, cancelAnalyses, quitHelperJobs, registerIpc } from './ipc'
 import { applyMenu, EMPTY_MENU_STATE, mustAskBeforeClosing, type MenuState } from './menu'
 import { registerMediaProtocol } from './mediaProtocol'
 import { assertBinaries } from './ffmpeg/paths'
-import { startSidecar, stopSidecar, type SidecarStatus } from './sidecar/service'
+import { runLaunchSweep, startSidecar, stopSidecar, type SidecarStatus } from './sidecar/service'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -239,6 +239,16 @@ app.whenReady().then(() => {
     dialog.showErrorBox('Forge cannot start its media engine', binaries.message)
   }
 
+  /*
+   * The AI helper's launch sweep (docs/CLIPS.md §3a.3): partial version
+   * folders, an older pack beside a complete one, another pack's downloads —
+   * in this build's root only, under the lock, nothing while another window
+   * holds it. Not awaited: it never touches the pack the order picks (that one
+   * is complete, and the sweep keeps a complete pack), so the helper can start
+   * beside it.
+   */
+  void runLaunchSweep()
+
   // Deliberately not awaited: the editor must be fully usable whether or not
   // the AI sidecar ever comes up.
   startSidecar((status: SidecarStatus) => {
@@ -298,4 +308,6 @@ app.on('before-quit', (event) => {
   abortLinkRuns()
   // A reframe's scene pass is main's own ffmpeg: it would read on after we are gone.
   cancelAnalyses()
+  // The AI helper's install: cancelled, and its lock released now, not when the job's clean-up would have run.
+  quitHelperJobs()
 })

@@ -14,7 +14,9 @@ import { dirNameOf, matchByName } from '@shared/project/relink'
 import { safeTakeBase, voiceOverArgs } from '@shared/render/voiceover'
 import { execFile } from 'node:child_process'
 import { probeMany } from './ffmpeg/probe'
-import { getSidecar, sidecarStatus } from './sidecar/service'
+import { getSidecar, helperPackDeps, settleHelperStatus, sidecarStatus } from './sidecar/service'
+import { createHelperPackJobs, unbuiltWorkers, type HelperPackJobs, type HelperPackWorkers } from './sidecar/install'
+import { HELPER_CHANNELS, helperInstallRequest, helperRemoveRequest } from '@shared/sidecar/install'
 import { SIDECAR_METHODS } from '@shared/sidecar/protocol'
 import { VOCABULARY_MAX_CHARS, segmentIntoSentences, type Transcript, type Word } from '@shared/transcript'
 import { JobQueue } from './queue'
@@ -103,7 +105,31 @@ export function cancelAnalyses(): void {
   analyses?.queue.cancelAll()
 }
 
-export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
+/** The AI helper's install, Repair and Update jobs, once registerIpc has made them. */
+let helperJobs: HelperPackJobs | null = null
+
+/**
+ * For a quit: cancel the helper's job and release `<root>/.lock` at once
+ * (docs/CLIPS.md §3a.3 "a quit cancels the job and releases the lock"), so
+ * another window, or the next launch, is not refused by a lock whose job is
+ * gone. A partial version folder is the next launch sweep's.
+ */
+export function quitHelperJobs(): void {
+  helperJobs?.quit()
+}
+
+export interface IpcOptions {
+  /**
+   * The install job's workers: the fetcher, the unpacker, the compile, pip and
+   * the check, and the retried rename (`installDeps.ts`). Without them a press
+   * fails with "not part of this build yet" after its checks.
+   */
+  helperWorkers?: HelperPackWorkers
+  /** `renameWithRetry`, for the `.part` renames and the receipt; plain `fs.rename` otherwise. */
+  helperRename?: (from: string, to: string) => Promise<void>
+}
+
+export function registerIpc(getWindow: () => BrowserWindow | null, options: IpcOptions = {}): JobQueue {
   // Render options can't live on the Job (its params are scalars), so they're
   // held alongside and cleared when the queue is cleared.
   const renders = new Map<string, RenderOptions>()
@@ -265,7 +291,18 @@ export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
   })
   analyses = reframe
 
-  const allJobs = (): Job[] => [...queue.list(), ...downloads.list(), ...reframe.queue.list()]
+  /*
+   * The AI helper's install, Repair and Update (docs/CLIPS.md §3a.3): a queue
+   * of its own at one at a time, in the same list (presetId 'helper'), with
+   * the same X and Clear. Its stage reaches the helper's status through the
+   * service; once a job ends, however it ended, what is on disk is said again
+   * (an `absent` with "· N MB left" after a cancel).
+   */
+  const helper = createHelperPackJobs({ ...helperPackDeps(options.helperRename), ...(options.helperWorkers ?? unbuiltWorkers()) })
+  helperJobs = helper
+  let helperRunning = false
+
+  const allJobs = (): Job[] => [...queue.list(), ...downloads.list(), ...reframe.queue.list(), ...helper.queue.list()]
   const broadcast = (): void => {
     getWindow()?.webContents.send('jobs:changed', allJobs())
   }
@@ -286,6 +323,12 @@ export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
   })
   downloads.on('changed', broadcast)
   reframe.queue.on('changed', broadcast)
+  helper.queue.on('changed', (jobs: Job[]) => {
+    broadcast()
+    const running = jobs.some((j) => j.status === 'queued' || j.status === 'running')
+    if (helperRunning && !running) settleHelperStatus()
+    helperRunning = running
+  })
 
   /* ---------------------------------------------------------------- media */
 
@@ -1010,6 +1053,15 @@ export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
    */
   ipcMain.handle('sidecar:status', () => sidecarStatus())
 
+  /*
+   * The AI helper's own presses (docs/CLIPS.md §3a.3, §3a.4): Install,
+   * Repair and Update are one job in EXPORT's list; Remove and Check again
+   * resolve when done. Each payload is re-validated here.
+   */
+  ipcMain.handle(HELPER_CHANNELS.install, (_e, payload: unknown) => helper.install(helperInstallRequest(payload)))
+  ipcMain.handle(HELPER_CHANNELS.remove, (_e, payload: unknown) => helper.remove(helperRemoveRequest(payload)))
+  ipcMain.handle(HELPER_CHANNELS.checkAgain, () => helper.checkAgain())
+
   /* --------------------------------------------------------------- export */
 
   ipcMain.handle('render:start', async (_e, payload: unknown) => {
@@ -1091,6 +1143,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
     queue.cancel(id)
     downloads.cancel(id)
     reframe.cancel(id)
+    helper.cancel(id)
   })
 
   ipcMain.handle('graphics:selftest', () => runGraphicsSelfTest())
@@ -1101,6 +1154,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
     downloads.clearFinished()
     // Its queue's finished jobs, and the requests and tracks kept beside them.
     reframe.clearFinished()
+    helper.clearFinished()
     for (const id of renders.keys()) {
       if (!queue.list().some((j) => j.id === id)) renders.delete(id)
     }

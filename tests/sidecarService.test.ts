@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { closeSync, existsSync, ftruncateSync, mkdirSync, mkdtempSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { HELPER_PACK } from '../src/shared/sidecar/packManifest'
@@ -7,6 +7,9 @@ import { packBytes, packHosts, type PackPlatform } from '../src/shared/sidecar/p
 import { HELPER_PYTHON_MISSING, UNPARSEABLE_RECEIPT } from '../src/shared/sidecar/helperPython'
 import { HELPER_NEEDS_UPDATE, HELPER_NOT_INSTALLED, helperRowFrom, helperStatusReason, packOffer, type SidecarStatus } from '../src/shared/sidecar/status'
 import { REFRAME_CHANNELS, REFRAME_FAILURES } from '../src/shared/reframe/job'
+import { HELPER_BEING_REPAIRED, HELPER_CHANNELS, HELPER_PRESET } from '../src/shared/sidecar/install'
+import type { Job } from '../src/shared/types'
+import type { HelperPackWorkers } from '../src/main/sidecar/install'
 
 /*
  * `absent` at every caller, the status ask, and the service's broadcasts
@@ -148,7 +151,7 @@ function stubElectronProcess(): () => void {
 }
 
 /** A pack in userData: its receipt (matching this build unless told otherwise) and, unless told not to, its interpreter file. */
-function installPack(o: { interpreter?: boolean; receipt?: string; root?: string } = {}): { version: string; python: string } {
+function installPack(o: { interpreter?: boolean; receipt?: string; root?: string; selftest?: Record<string, string> } = {}): { version: string; python: string } {
   const platform = MACHINE!
   const pack = HELPER_PACK.platforms[platform]
   const version = join(electron.userData, o.root ?? 'python', String(HELPER_PACK.pack))
@@ -164,7 +167,8 @@ function installPack(o: { interpreter?: boolean; receipt?: string; root?: string
         build: HELPER_PACK.python.build,
         platform,
         interpreterSha256: pack.interpreter.sha256,
-        lockSha256: pack.lock.sha256
+        lockSha256: pack.lock.sha256,
+        ...(o.selftest ? { selftest: o.selftest } : {})
       })
   )
   return { version, python }
@@ -576,5 +580,155 @@ describe('helperRowFrom: what the header dot and the row take from a status', ()
   it('is not running and names no fault while one starts or installs', () => {
     expect(helperRowFrom({ state: 'starting', source })).toEqual({ running: false, reason: null })
     expect(helperRowFrom({ state: 'installing', stage: 'Fetching' })).toEqual({ running: false, reason: null })
+  })
+})
+
+/* ------------------------------------------------- the install job's side */
+
+describe('the install job’s hold (§3a.3 Repair, Remove)', () => {
+  it('while held, getSidecar throws the hold’s reason, a start says installing, and nothing is spawned', async () => {
+    devWithFake()
+    const { helperControl, getSidecar, startSidecar, sidecarStatus } = await service()
+    const release = helperControl.hold(HELPER_BEING_REPAIRED)
+    expect(() => getSidecar()).toThrow(HELPER_BEING_REPAIRED)
+    const told: SidecarStatus[] = []
+    startSidecar((s) => told.push(s))
+    expect(told).toEqual([{ state: 'installing', stage: HELPER_BEING_REPAIRED }])
+    expect(sidecarStatus()).toEqual(told[0])
+    await new Promise((r) => setTimeout(r, 50))
+    expect(spawned, 'a held service builds no client').toEqual([])
+    release()
+    // Released: the order runs again.
+    await getSidecar().start()
+    expect(spawned).toHaveLength(1)
+  })
+
+  it('busy while a request is out, and whenIdle waits for it without cutting it off', async () => {
+    devWithFake()
+    const { helperControl, startSidecar, getSidecar } = await service()
+    startSidecar(() => undefined)
+    await getSidecar().start()
+    expect(helperControl.busy()).toBe(false)
+    const work = getSidecar().request<{ waited: number }>('fake.wait', { ms: 300 })
+    expect(helperControl.busy()).toBe(true)
+    await helperControl.whenIdle(new AbortController().signal)
+    expect(helperControl.busy()).toBe(false)
+    expect(await work).toEqual({ waited: 300 })
+    // A cancel ends the wait, not the work.
+    const more = getSidecar().request<{ waited: number }>('fake.wait', { ms: 300 })
+    const controller = new AbortController()
+    const waiting = helperControl.whenIdle(controller.signal)
+    controller.abort()
+    await expect(waiting).rejects.toThrow('Cancelled')
+    expect(await more).toEqual({ waited: 300 })
+  })
+})
+
+describe('the install job’s status', () => {
+  it('keeps saying ready while a helper runs: its controls still work, and the job’s bar is in EXPORT', async () => {
+    devWithFake()
+    const { startSidecar, getSidecar, reportHelperInstall, sidecarStatus } = await service()
+    const told: SidecarStatus[] = []
+    startSidecar((s) => told.push(s))
+    await getSidecar().start()
+    expect(await until(() => told.some((s) => s.state === 'ready'), 10_000)).toBe(true)
+    reportHelperInstall({ state: 'installing', stage: 'Downloading' })
+    expect(sidecarStatus().state, 'a running helper is still ready: its controls still work').toBe('ready')
+    expect(told.some((s) => s.state === 'installing')).toBe(false)
+  })
+})
+
+describe.skipIf(!MACHINE)('the install job’s status with no helper', () => {
+  it('broadcasts each stage, and the offer’s bytes left counts the verified downloads', async () => {
+    const pack = HELPER_PACK.platforms[MACHINE!]
+    // The interpreter already verified in downloads/<n>: its size is what counts (a sparse file, no bytes written).
+    const dl = join(electron.userData, 'python', 'downloads', String(HELPER_PACK.pack))
+    mkdirSync(dl, { recursive: true })
+    const fd = openSync(join(dl, pack.interpreter.name), 'w')
+    ftruncateSync(fd, pack.interpreter.bytes)
+    closeSync(fd)
+    const { startSidecar, reportHelperInstall, settleHelperStatus, sidecarStatus } = await service()
+    const told: SidecarStatus[] = []
+    startSidecar((s) => told.push(s))
+    expect(told[0]).toMatchObject({ state: 'absent', offer: { kind: 'install', bytes: packBytes(pack), bytesLeft: packBytes(pack) - pack.interpreter.bytes } })
+    reportHelperInstall({ state: 'installing', stage: 'Downloading' })
+    expect(sidecarStatus()).toEqual({ state: 'installing', stage: 'Downloading' })
+    settleHelperStatus()
+    expect(sidecarStatus()).toMatchObject({ state: 'absent' })
+    expect(spawned).toEqual([])
+  })
+
+  it('a ready from a pack carries its receipt’s failed self-test groups in degraded, with the reason', async () => {
+    const reason = "beats needs Microsoft's Visual C++ runtime"
+    const { python } = installPack({ selftest: { asr: 'ok', beats: reason, onnx: 'ok', vision: 'ok', sklearn: 'ok', faces: 'ok' } })
+    FAKE.packPython = python
+    const { startSidecar } = await service()
+    const told: SidecarStatus[] = []
+    startSidecar((s) => told.push(s))
+    expect(await until(() => told.some((s) => s.state === 'ready'), 10_000)).toBe(true)
+    const ready = told.find((s) => s.state === 'ready') as Extract<SidecarStatus, { state: 'ready' }>
+    expect(ready.hello.degraded).toEqual({ 'audio.beats': reason })
+    expect(ready.selftest).toMatchObject({ beats: reason, asr: 'ok' })
+  })
+})
+
+describe('the launch sweep at startup', () => {
+  it('sweeps this build’s own root: python-dev in development, never the installed app’s python/', async () => {
+    electron.packaged = false
+    for (const root of ['python-dev', 'python']) {
+      mkdirSync(join(electron.userData, root, '1', 'python'), { recursive: true })
+      writeFileSync(join(electron.userData, root, '1', 'python', 'partial.txt'), 'no receipt')
+    }
+    const { runLaunchSweep } = await service()
+    const removed = await runLaunchSweep()
+    expect(removed).toEqual([join(electron.userData, 'python-dev', '1')])
+    expect(existsSync(join(electron.userData, 'python-dev', '1'))).toBe(false)
+    expect(existsSync(join(electron.userData, 'python', '1', 'python', 'partial.txt'))).toBe(true)
+    expect(existsSync(join(electron.userData, 'python-dev', '.lock')), 'the sweep’s lock released').toBe(false)
+  })
+})
+
+describe.skipIf(!MACHINE)('the IPC', () => {
+  it('helper:install queues one job in the list, render:cancel stops it, and the status says what is on disk again', async () => {
+    const started: string[] = []
+    const refuse = (): Promise<never> => Promise.reject(new Error('not reached'))
+    const workers: HelperPackWorkers = {
+      fetchVerified: (file, _dir, f) => {
+        started.push(file.name)
+        return new Promise((_resolve, reject) => {
+          const abort = (): void => reject(Object.assign(new Error('This operation was aborted'), { name: 'AbortError' }))
+          if (f.signal.aborted) abort()
+          f.signal.addEventListener('abort', abort, { once: true })
+        })
+      },
+      unpack: refuse,
+      compileStdlib: refuse,
+      pip: refuse,
+      check: refuse,
+      retry: { attempts: 1, firstDelayMs: 0, budgetMs: 0, checksumsAnswerMs: 0, binaryAnswerMs: 0, idleMs: 0 }
+    }
+    const { registerIpc } = await import('../src/main/ipc')
+    const { startSidecar } = await service()
+    const told: SidecarStatus[] = []
+    startSidecar((s) => told.push(s))
+    registerIpc(() => null, { helperWorkers: workers })
+    const call = (channel: string, payload?: unknown): unknown => electron.handlers.get(channel)!({}, payload)
+
+    expect(() => call(HELPER_CHANNELS.install, { repair: 'yes' })).toThrow()
+    expect(() => call(HELPER_CHANNELS.remove, {})).toThrow()
+    const job = call(HELPER_CHANNELS.install, {}) as Job
+    expect(job).toMatchObject({ presetId: HELPER_PRESET, inputName: 'the AI helper', params: { kind: 'install' } })
+    expect((call(HELPER_CHANNELS.install, {}) as Job).id, 'a second press joins the first').toBe(job.id)
+    expect(await until(() => started.length === 1, 5000)).toBe(true)
+    expect(started).toEqual([HELPER_PACK.platforms[MACHINE!].interpreter.name])
+    expect((call('jobs:list') as Job[]).filter((j) => j.presetId === HELPER_PRESET).map((j) => j.id)).toEqual([job.id])
+    await call('render:cancel', job.id)
+    const status = (): string | undefined => (call('jobs:list') as Job[]).find((j) => j.id === job.id)?.status
+    expect(await until(() => status() === 'cancelled', 5000), String(status())).toBe(true)
+    expect(told.map((s) => (s.state === 'installing' ? s.stage : s.state))).toEqual(['absent', 'Checking', 'Downloading', 'absent'])
+    expect(existsSync(join(electron.userData, 'python', '.lock'))).toBe(false)
+    expect(spawned).toEqual([])
+    call('jobs:clearFinished')
+    expect((call('jobs:list') as Job[]).some((j) => j.presetId === HELPER_PRESET)).toBe(false)
   })
 })

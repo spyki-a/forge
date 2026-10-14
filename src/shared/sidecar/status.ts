@@ -28,6 +28,13 @@ export type PackOffer =
       kind: 'install' | 'update' | 'repair'
       /** Every byte the press fetches: the interpreter and the wheels (`packBytes`). */
       bytes: number
+      /**
+       * What is still to fetch: `bytes` less the verified files already in
+       * `downloads/<n>/` (install.ts `bytesLeft`): "Install the AI helper · 120
+       * MB left" after a cancel, and Repair's number (§3a.4, §16.47). Set by
+       * the service, which reads the folder; absent when nobody looked.
+       */
+      bytesLeft?: number
       /** The pack on disk once installed (the manifest's, measured by CI's install). */
       bytesOnDisk: number
       hosts: string[]
@@ -39,7 +46,11 @@ export type SidecarStatus =
   | { state: 'absent'; offer: PackOffer }
   /** A receipt that does not parse, or one whose interpreter is gone: nothing was spawned. */
   | { state: 'damaged'; reason: string; offer: PackOffer }
-  /** The install job's stage. Defined now; the install job (a later slice) emits it. */
+  /**
+   * The install job's stage (`INSTALL_STAGES`' label), while no helper runs:
+   * the job reports it (src/main/sidecar/install.ts), and the service
+   * broadcasts it only when there is no client to say otherwise.
+   */
   | { state: 'installing'; stage: string }
   | { state: 'starting'; source: HelperSource }
   | { state: 'ready'; hello: HelloResult; source: HelperSource; selftest?: Record<string, string> }
@@ -77,7 +88,9 @@ export function packOffer(
   platform: PackPlatform | PlatformUnsupported,
   receipt: unknown,
   damaged: boolean,
-  older: unknown = null
+  older: unknown = null,
+  /** What is left to fetch (install.ts `bytesLeft`), when the caller read `downloads/<n>/`. */
+  left?: number
 ): PackOffer {
   if (isUnsupported(platform)) return { supported: false, reason: platform.unsupported }
   const pack = manifest.platforms[platform]
@@ -92,7 +105,14 @@ export function packOffer(
         : receiptMatches(receipt, manifest, platform)
           ? 'repair'
           : 'update'
-  return { supported: true, kind, bytes: packBytes(pack), bytesOnDisk: pack.bytesOnDisk, hosts: packHosts(pack) }
+  return {
+    supported: true,
+    kind,
+    bytes: packBytes(pack),
+    ...(left === undefined ? {} : { bytesLeft: left }),
+    bytesOnDisk: pack.bytesOnDisk,
+    hosts: packHosts(pack)
+  }
 }
 
 /**

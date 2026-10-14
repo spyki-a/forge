@@ -1,7 +1,8 @@
 import { mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { spawn } from 'node:child_process'
 import { dirname, join } from 'node:path'
 import { app } from 'electron'
-import { SidecarClient, SidecarError, type HelperExit } from './client'
+import { SidecarClient, SidecarError, type HelperExit, type RequestOptions, type SidecarOptions } from './client'
 import { RPC_ERRORS, type HelloResult } from '@shared/sidecar/protocol'
 import { HELPER_PACK } from '@shared/sidecar/packManifest'
 import { isUnsupported, packPlatform, parseReceipt, type HelperPackManifest, type PackPlatform, type PlatformUnsupported } from '@shared/sidecar/pack'
@@ -15,6 +16,12 @@ import {
   type HelperSource
 } from '@shared/sidecar/helperPython'
 import { HELPER_NOT_INSTALLED, helperStatusReason, packOffer, type SidecarStatus } from '@shared/sidecar/status'
+import { degradedBySelftest, type SelftestRecord } from '@shared/sidecar/selftest'
+import { bytesLeft } from '@shared/sidecar/install'
+import type { HelperControl } from './installTypes'
+import { nodePackFs, type HelperPackDeps, type HelperPackWorkers } from './install'
+import { pidAlive } from './lock'
+import { downloadedFiles, sweepRoot } from './sweep'
 
 export type { SidecarStatus } from '@shared/sidecar/status'
 
@@ -30,11 +37,52 @@ export type { SidecarStatus } from '@shared/sidecar/status'
  * broadcast without ever starting anything.
  */
 
-let client: SidecarClient | null = null
+/**
+ * The service's client: the protocol client, counting the requests it has
+ * out (what `helperControl.busy()` answers synchronously; `idle()` is the
+ * same count as a promise), and carrying the self-test record of the pack it
+ * runs from, which every `ready` it broadcasts merges in.
+ */
+class HelperClient extends SidecarClient {
+  private out = 0
+
+  constructor(
+    options: SidecarOptions,
+    readonly selftest: SelftestRecord | null
+  ) {
+    super(options)
+  }
+
+  /** A request asked and not yet answered, failed or cancelled. */
+  get inFlight(): number {
+    return this.out
+  }
+
+  override request<T>(method: string, params: unknown = {}, options: RequestOptions = {}): Promise<T> {
+    this.out++
+    const asked = super.request<T>(method, params, options)
+    const done = (): void => {
+      this.out--
+    }
+    asked.then(done, done)
+    return asked
+  }
+}
+
+let client: HelperClient | null = null
 /** A switch in progress (`restartSidecar`): no caller gets a client until it is done. */
 let switching: Promise<SidecarStatus> | null = null
 let last: SidecarStatus | null = null
 let listener: ((status: SidecarStatus) => void) | null = null
+/**
+ * Holds (`helperControl.hold`): while any is held, the helper stays stopped,
+ * every caller is refused with the newest hold's reason, and nothing builds a
+ * client. Repair and Remove delete under a path a lazily rebuilt client
+ * would otherwise respawn from.
+ */
+const holds: string[] = []
+/** The install job's stage while it runs: what `startCurrent` says while a hold keeps the helper down. */
+let installing: string | null = null
 
 /**
  * Where the sidecar package lives. In development it sits in the repo; once
@@ -147,6 +195,18 @@ interface Resolved {
   /** When there is none, an older pack number's receipt (`olderReceipt`): what makes the offer an Update. */
   older: unknown
   manifest: HelperPackManifest
+  /** The pack root (`packRoot`). */
+  root: string
+}
+
+/** This machine's pack, or why it has none (`packPlatform` with Electron's own facts). */
+function machineNow(): PackPlatform | PlatformUnsupported {
+  return packPlatform({
+    platform: process.platform,
+    arch: process.arch,
+    osVersion: systemVersion(),
+    translated: app.runningUnderARM64Translation === true
+  })
 }
 
 /** Which Python runs, from what is on disk now, and how it is started. Reads; never spawns. */
@@ -154,12 +214,7 @@ function resolveHelper(manifest: HelperPackManifest = HELPER_PACK): Resolved {
   const packaged = app.isPackaged
   const userData = app.getPath('userData')
   const platform = process.platform
-  const machine = packPlatform({
-    platform,
-    arch: process.arch,
-    osVersion: systemVersion(),
-    translated: app.runningUnderARM64Translation === true
-  })
+  const machine = machineNow()
   const root = packRoot(userData, packaged)
   const versionDir = join(root, String(manifest.pack))
   const receipt = readReceipt(versionDir)
@@ -176,16 +231,48 @@ function resolveHelper(manifest: HelperPackManifest = HELPER_PACK): Resolved {
     packPlatform: machine
   })
   const launch = helperLaunch(choice, { packaged, platform, base: process.env, ...helperFolders(userData) })
-  return { choice, launch, machine, receipt, older, manifest }
+  return { choice, launch, machine, receipt, older, manifest, root }
+}
+
+/**
+ * What a press still fetches: the pack's bytes less the verified files already
+ * in `downloads/<n>/` (§3a.4 "· N MB left", §16.47). undefined on a machine
+ * with no pack.
+ */
+function leftToFetch(r: Resolved): number | undefined {
+  if (isUnsupported(r.machine)) return undefined
+  const dir = join(r.root, 'downloads', String(r.manifest.pack))
+  return bytesLeft(r.manifest, r.machine, downloadedFiles(dir, r.manifest.platforms[r.machine]))
+}
+
+/** The Install, Update or Repair offer for what was resolved. */
+function offerOf(r: Resolved, damaged: boolean): ReturnType<typeof packOffer> {
+  return packOffer(r.manifest, r.machine, r.receipt, damaged, damaged ? null : r.older, leftToFetch(r))
 }
 
 /** The status of a choice that spawns nothing: absent or damaged, with what the row can offer. null for a launch. */
 function statusWithoutHelper(r: Resolved): SidecarStatus | null {
-  if (r.choice.kind === 'absent') return { state: 'absent', offer: packOffer(r.manifest, r.machine, r.receipt, false, r.older) }
-  if (r.choice.kind === 'damaged') {
-    return { state: 'damaged', reason: r.choice.reason, offer: packOffer(r.manifest, r.machine, r.receipt, true) }
-  }
+  if (r.choice.kind === 'absent') return { state: 'absent', offer: offerOf(r, false) }
+  if (r.choice.kind === 'damaged') return { state: 'damaged', reason: r.choice.reason, offer: offerOf(r, true) }
   return null
+}
+
+/** The pack's self-test record, when the choice runs a pack whose receipt carries one (§3a.3 "When the check fails part of the way"). */
+function selftestOf(r: Resolved): SelftestRecord | null {
+  if (r.choice.kind !== 'pack') return null
+  const receipt = parseReceipt(r.receipt)
+  const record = receipt?.selftest
+  return record && typeof record === 'object' ? record : null
+}
+
+/**
+ * `ready`, with the receipt's failed self-test groups merged in: each failed
+ * group's methods join hello's `degraded` with the group's reason, so
+ * `helperCan` greys their controls, and the record rides along for the row.
+ */
+export function readyStatus(hello: HelloResult, source: HelperSource, selftest: SelftestRecord | null): SidecarStatus {
+  if (!selftest) return { state: 'ready', hello, source }
+  return { state: 'ready', hello: { ...hello, degraded: { ...hello.degraded, ...degradedBySelftest(selftest) } }, source, selftest }
 }
 
 function broadcast(status: SidecarStatus): void {
@@ -200,8 +287,9 @@ const messageOf = (err: unknown): string => (err instanceof Error ? err.message 
  * instance whose helper runs from a pack, holding `{pack}`; written when the
  * helper spawns, removed on its exit and on a stop. <pid> is this app's
  * process, so a record left by an instance that died names a pid that is
- * gone. Nothing reads it yet: the install job (a later slice) does, so that
- * Repair and Remove refuse while another live instance runs the pack.
+ * gone. lock.ts `readInUse` reads it (and removes a dead pid's): Repair,
+ * Update and Remove refuse while another live instance runs a pack, and the
+ * launch sweep keeps an older pack someone still runs (install.ts, sweep.ts).
  */
 function inUseFile(source: Extract<HelperSource, { kind: 'pack' }>): string {
   return join(dirname(source.root), 'in-use', String(process.pid))
@@ -226,8 +314,8 @@ function clearInUse(source: HelperSource): void {
   }
 }
 
-function makeClient(launch: HelperLaunch): SidecarClient {
-  const helper = new SidecarClient({ cwd: sidecarDir(), launch, maxRestarts: 3 })
+function makeClient(launch: HelperLaunch, selftest: SelftestRecord | null): HelperClient {
+  const helper = new HelperClient({ cwd: sidecarDir(), launch, maxRestarts: 3 }, selftest)
   const source = launch.source
   helper.on('log', (line: string) => console.log('[sidecar]', line))
   helper.on('spawn', () => {
@@ -235,7 +323,7 @@ function makeClient(launch: HelperLaunch): SidecarClient {
   })
   helper.on('ready', (hello: HelloResult) => {
     // Every ready, a restart's included: the window was never told a restart had worked.
-    if (client === helper) broadcast({ state: 'ready', hello, source })
+    if (client === helper) broadcast(readyStatus(hello, source, helper.selftest))
   })
   helper.on('exit', (exit: HelperExit) => {
     clearInUse(source)
@@ -251,13 +339,22 @@ function makeClient(launch: HelperLaunch): SidecarClient {
   return helper
 }
 
+/** The newest hold's reason, while the install job holds the helper stopped; null otherwise. */
+function heldReason(): string | null {
+  return holds.length > 0 ? holds[holds.length - 1] : null
+}
+
 /**
  * The helper's client, for a call. Throws a `SidecarError` — synchronously,
  * so it lands in each caller's own catch — when there is nothing to run:
  * "The AI helper is not installed", the damaged reason, or why this computer
- * cannot have one; and while a switch to another rung is under way.
+ * cannot have one; while a switch to another rung is under way; and while
+ * the install job holds the helper stopped ("The AI helper is being
+ * repaired"), so nothing respawns from a folder being deleted.
  */
 export function getSidecar(): SidecarClient {
+  const hold = heldReason()
+  if (hold) throw new SidecarError(hold, RPC_ERRORS.unavailable)
   if (switching) throw new SidecarError('The AI helper is restarting', RPC_ERRORS.unavailable)
   if (client) return client
   const resolved = resolveHelper()
@@ -265,27 +362,37 @@ export function getSidecar(): SidecarClient {
   if (without || !resolved.launch) {
     throw new SidecarError((without && helperStatusReason(without)) ?? HELPER_NOT_INSTALLED, RPC_ERRORS.unavailable)
   }
-  client = makeClient(resolved.launch)
+  client = makeClient(resolved.launch, selftestOf(resolved))
   return client
 }
 
-/** Start the current rung's helper, or broadcast why there is none. Spawns nothing for absent or damaged. */
+/**
+ * Start the current rung's helper, or broadcast why there is none. Spawns
+ * nothing for absent or damaged, nor while a hold keeps the helper down
+ * (then it says the job's stage).
+ */
 function startCurrent(): SidecarStatus {
   let helper = client
   if (!helper) {
-    const resolved = resolveHelper()
-    const without = statusWithoutHelper(resolved)
-    if (without || !resolved.launch) {
-      const status = without ?? { state: 'absent', offer: packOffer(resolved.manifest, resolved.machine, resolved.receipt, false, resolved.older) }
+    const hold = heldReason()
+    if (hold) {
+      const status: SidecarStatus = { state: 'installing', stage: installing ?? hold }
       broadcast(status)
       return status
     }
-    helper = client = makeClient(resolved.launch)
+    const resolved = resolveHelper()
+    const without = statusWithoutHelper(resolved)
+    if (without || !resolved.launch) {
+      const status = without ?? { state: 'absent', offer: offerOf(resolved, false) }
+      broadcast(status)
+      return status
+    }
+    helper = client = makeClient(resolved.launch, selftestOf(resolved))
   }
   const started = helper
   const hello = started.info
   if (hello) {
-    const status: SidecarStatus = { state: 'ready', hello, source: started.source }
+    const status = readyStatus(hello, started.source, started.selftest)
     broadcast(status)
     return status
   }
@@ -311,17 +418,16 @@ export function startSidecar(onStatus: (status: SidecarStatus) => void): void {
 
 /**
  * What the window's ask (`sidecar:status`) is answered with: the last
- * broadcast. Never starts anything; before the first broadcast, what is on
- * disk says absent or damaged, and anything else is about to start.
+ * broadcast (the install job's stage while it runs with no helper up). Never
+ * starts anything; before the first broadcast, what is on disk says absent or
+ * damaged, and anything else is about to start.
  */
 export function sidecarStatus(): SidecarStatus {
   if (last) return last
   const resolved = resolveHelper()
   const without = statusWithoutHelper(resolved)
   if (without) return without
-  return resolved.launch
-    ? { state: 'starting', source: resolved.launch.source }
-    : { state: 'absent', offer: packOffer(resolved.manifest, resolved.machine, resolved.receipt, false, resolved.older) }
+  return resolved.launch ? { state: 'starting', source: resolved.launch.source } : { state: 'absent', offer: offerOf(resolved, false) }
 }
 
 function untilIdle(helper: SidecarClient, signal?: AbortSignal): Promise<void> {
@@ -372,4 +478,131 @@ export async function stopSidecar(): Promise<void> {
   if (!helper) return
   clearInUse(helper.source)
   await helper.stop()
+}
+
+/* ------------------------------------------------- the install job's side */
+
+/**
+ * What the service lends the install job (docs/CLIPS.md §3a.3,
+ * `HelperControl` in installTypes.ts):
+ *
+ * - `busy()`: a request out on the client, or a switch running;
+ * - `whenIdle(signal)`: until nothing is out, or the job's cancel (which
+ *   leaves the work running: it is never killed);
+ * - `stop()`: `stopSidecar`, resolved on the helper's exit (and its tree's on
+ *   Windows);
+ * - `hold(reason)`: while held, `getSidecar()` throws `reason` synchronously
+ *   and nothing builds a client, so a lazily rebuilt helper never respawns
+ *   from a folder Repair or Remove is deleting; the returned function ends it;
+ * - `restart(signal)`: `restartSidecar`, resolving the order again.
+ */
+export const helperControl: HelperControl = {
+  busy(): boolean {
+    return switching !== null || (client !== null && client.inFlight > 0)
+  },
+  whenIdle(signal: AbortSignal): Promise<void> {
+    if (signal.aborted) return Promise.reject(new SidecarError('Cancelled', RPC_ERRORS.cancelled))
+    return client ? untilIdle(client, signal) : Promise.resolve()
+  },
+  stop(): Promise<void> {
+    return stopSidecar()
+  },
+  hold(reason: string): () => void {
+    holds.push(reason)
+    let ended = false
+    return () => {
+      if (ended) return
+      ended = true
+      const at = holds.lastIndexOf(reason)
+      if (at >= 0) holds.splice(at, 1)
+    }
+  },
+  async restart(signal?: AbortSignal): Promise<void> {
+    await restartSidecar(signal)
+  }
+}
+
+/**
+ * The install job's `onStatus`: its stage, broadcast as `installing` only
+ * while no client is up. A helper that is running (Repair before its stop, or
+ * `FORGE_PYTHON` while a pack installs beside it) keeps saying `ready`: its
+ * controls still work, and the job's bar is in EXPORT.
+ */
+export function reportHelperInstall(status: SidecarStatus): void {
+  if (status.state === 'installing') installing = status.stage
+  if (status.state !== 'installing' || !client) broadcast(status)
+}
+
+/**
+ * After a helper job has ended, however it ended: with no client up and
+ * nothing switching or held, what is on disk is said again — `absent` with
+ * its "· N MB left", or whatever the order now runs. A successful job has
+ * already restarted through `helperControl.restart`.
+ */
+export function settleHelperStatus(): void {
+  installing = null
+  if (client || switching || heldReason()) return
+  startCurrent()
+}
+
+/** The pack rung's launch for a version folder, exactly as `getSidecar` would start it: the check's and the job's. */
+export function launchForPack(versionDir: string, manifest: HelperPackManifest = HELPER_PACK): HelperLaunch {
+  const machine = machineNow()
+  const platformPack = isUnsupported(machine) ? null : manifest.platforms[machine]
+  const python = join(versionDir, platformPack ? platformPack.python : 'python')
+  const userData = app.getPath('userData')
+  const launch = helperLaunch(
+    { kind: 'pack', python, pack: manifest.pack, root: versionDir },
+    { packaged: app.isPackaged, platform: process.platform, base: process.env, ...helperFolders(userData) }
+  )
+  if (!launch) throw new Error('The AI helper pack has no launch')
+  return launch
+}
+
+/**
+ * The install job's dependencies the app owns: where, what, this machine, the
+ * clock, the processes, the helper and its status. The workers (the fetcher,
+ * the unpacker, pip, the check) come from the app's `installDeps.ts`.
+ */
+export function helperPackDeps(rename?: (from: string, to: string) => Promise<void>): Omit<HelperPackDeps, keyof HelperPackWorkers> {
+  const userData = app.getPath('userData')
+  return {
+    userData,
+    root: packRoot(userData, app.isPackaged),
+    manifest: HELPER_PACK,
+    platform: machineNow(),
+    sidecarDir: sidecarDir(),
+    appVersion: app.getVersion(),
+    fetch: globalThis.fetch,
+    spawn,
+    fs: nodePackFs(rename),
+    now: Date.now,
+    isAlive: pidAlive,
+    pid: process.pid,
+    helper: helperControl,
+    launchFor: (versionDir: string) => launchForPack(versionDir),
+    onStatus: reportHelperInstall
+  }
+}
+
+/**
+ * The launch sweep (§3a.3), once at startup: this build's root only —
+ * `python-dev/` in development, so the dev app never sweeps the installed
+ * app's packs — under the lock, and nothing while another live instance
+ * holds it. Never throws: a sweep that cannot run is tried at the next launch.
+ */
+export async function runLaunchSweep(): Promise<string[]> {
+  try {
+    return await sweepRoot(packRoot(app.getPath('userData'), app.isPackaged), {
+      fs: nodePackFs(),
+      manifest: HELPER_PACK,
+      platform: machineNow(),
+      pid: process.pid,
+      now: Date.now,
+      isAlive: pidAlive
+    })
+  } catch (err) {
+    console.warn('[helper] the launch sweep did not run', err)
+    return []
+  }
 }
