@@ -75,8 +75,14 @@ export function helperReason(helper: ReframeHelper): string | null {
   return helper === 'missing' ? 'needs the AI helper' : 'the AI helper is starting'
 }
 
-/** 1g's reason, on the Follow: field. */
-export const PHRASE_REASON = 'needs the subject model, step 1g'
+/**
+ * Why the Follow: field is greyed, in the user's words: the same sentence the
+ * job refuses a phrase with (job.ts REFRAME_FAILURES['phrase-needs-ground']).
+ * Not "the subject model, step 1g": a step number means nothing on screen,
+ * and "the subject model" was the salient finder's name (§4.8), which §16.35
+ * dropped — the field would have named a model nobody can get.
+ */
+export const PHRASE_REASON = 'following something named is not built yet'
 
 export function FollowSection({ clipId }: ReframePanelProps): ReactNode {
   const project = useEditor((s) => s.project)
@@ -203,7 +209,7 @@ export function FollowSection({ clipId }: ReframePanelProps): ReactNode {
         Florence-2's grounding (§4.5, step 1g), not built: the field is here,
         greyed, so where it will be is not a surprise, and says why.
       */}
-      <div className="flex items-center gap-2" title={`Follow something named instead of a face — ${PHRASE_REASON}`}>
+      <div className="flex items-center gap-2" title={`Follow something named instead of a face, such as “the cake” — ${PHRASE_REASON}`}>
         <span className="shrink-0 text-[10px] text-ink-500">Follow:</span>
         <input
           type="text"

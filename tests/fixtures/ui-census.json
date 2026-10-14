@@ -7860,7 +7860,7 @@
     "file": "src/renderer/src/components/tools/ReframePanel.tsx",
     "line": 207,
     "newHome": "trimmer dock (under Steady, video clips)",
-    "note": "The phrase field, greyed: following something named is step 1g's grounding, not built."
+    "note": "The phrase field, greyed: following something named is Florence-2's grounding (CLIPS §4.5), not built."
   },
   {
     "label": "a face",
@@ -7872,7 +7872,7 @@
     "newHome": "trimmer dock (under Steady, video clips)"
   },
   {
-    "label": "needs the subject model, step 1g",
+    "label": "following something named is not built yet",
     "match": "text",
     "home": "dock",
     "needs": "reframe-offer",

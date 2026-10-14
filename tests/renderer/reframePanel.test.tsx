@@ -5,7 +5,7 @@ import { createElement, isValidElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { emptyProject, type Clip, type MediaAsset } from '@shared/timeline'
 import type { Job } from '@shared/types'
-import type { ModelStatus } from '@shared/reframe/job'
+import { REFRAME_FAILURES, type ModelStatus } from '@shared/reframe/job'
 import { harnessSubjectTrack } from '../../src/renderer/src/harness/reframeStub'
 
 /*
@@ -336,7 +336,7 @@ describe('Follow the subject, in the Trimmer dock', () => {
     expect(spies.unfollow.mock.calls).toEqual([['c-talk']])
   })
 
-  it('has the Follow: field greyed with 1g’s reason', () => {
+  it('has the Follow: field greyed with its reason, in a person’s words', () => {
     scene()
     watch()
     const field = section().find((h) => h.type === 'input')
@@ -345,7 +345,10 @@ describe('Follow the subject, in the Trimmer dock', () => {
     const shown = dockWords()
     expect(shown).toContain('Follow:')
     expect(shown).toContain(PHRASE_REASON)
-    expect(PHRASE_REASON).toBe('needs the subject model, step 1g')
+    // One sentence a person reads, the job's own: no step number, and no model nobody can get (§16.35 dropped the subject model).
+    expect(PHRASE_REASON).toBe('following something named is not built yet')
+    expect(REFRAME_FAILURES['phrase-needs-ground'].toLowerCase()).toContain(PHRASE_REASON)
+    expect(shown).not.toMatch(/\b1g\b|subject model/)
   })
 
   it('is not there for a photo', () => {
