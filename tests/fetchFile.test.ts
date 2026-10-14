@@ -16,7 +16,7 @@ import type { PackFile } from '@shared/sidecar/pack'
 
 /*
  * The AI helper pack's download (docs/CLIPS.md §3a.3 stage 1, §3a.7): one file
- * at a time, streamed to `<name>.part` through a hash and a byte count, judged
+ * at a time, streamed to `<name>.<pid>.<id>.part` through a hash and a byte count, judged
  * against the manifest, renamed into place only when it is the file.
  *
  * The network is a fake `fetch`: a function, scripted per URL, whose bodies are
@@ -58,6 +58,8 @@ type Reply =
       /** The Content-Length header; omitted, none is sent (a chunked body). */
       length?: number
       encoding?: string
+      /** The Content-Type header; omitted, none is sent. */
+      type?: string
       /** Bytes per pull. */
       chunk?: number
       /** A real wait before each pull, in ms. */
@@ -100,6 +102,7 @@ function fakeNet(script: Record<string, Reply[]>): FakeNet {
     const headers: Record<string, string> = {}
     if (reply.length !== undefined) headers['content-length'] = String(reply.length)
     if (reply.encoding) headers['content-encoding'] = reply.encoding
+    if (reply.type) headers['content-type'] = reply.type
     return Promise.resolve(
       new Response(
         new ReadableStream<Uint8Array>({
@@ -244,6 +247,27 @@ describe('what is not the file is never fetched again', () => {
     expect(transferred).toBe(0)
   })
 
+  it('a filter’s page sent gzip-encoded, whose Content-Length is not compared, is still not the file: one fetch, the sentence (P-B finding V1)', async () => {
+    const body = bytesOf(10_000)
+    const file = packFile('numpy.whl', WHEEL_URL, body)
+    const page = new TextEncoder().encode('<html>Sign in to the hotel wifi</html>')
+    const net = fakeNet({ [WHEEL_URL]: [{ body: page, length: 25, encoding: 'gzip', type: 'text/html; charset=utf-8' }] })
+
+    const err = await failure(fetchVerified(file, dir, deps(net)))
+
+    expect(net.calls[WHEEL_URL]).toBe(1)
+    expect(err.message).toContain(
+      'something other than the file arrived from files.pythonhosted.org (a sign-in page or a network filter?): numpy.whl came back as a web page (text/html; charset=utf-8)'
+    )
+    expect(err.message).toContain(PACK_FETCH_WAY_OUT)
+    expect(await readdir(dir)).toEqual([])
+    expect(transferred).toBe(0)
+    // The file itself, as both hosts serve it, is taken.
+    const ok = fakeNet({ [WHEEL_URL]: [{ body, length: body.length, type: 'application/octet-stream' }] })
+    await fetchVerified(file, dir, deps(ok))
+    expect(sha256(await readFile(join(dir, 'numpy.whl')))).toBe(file.sha256)
+  })
+
   it('exactly the bytes with another sha256 fails on the first fetch, naming the file and its host', async () => {
     const body = bytesOf(8_000)
     const file = { ...packFile('numpy.whl', WHEEL_URL, body), sha256: sha256(bytesOf(8_000, 9)) }
@@ -356,6 +380,21 @@ describe('a failure names the host that failed', () => {
     messages = []
     await fetchVerified(file, dir, deps(net))
     expect(messages).toEqual([])
+  })
+})
+
+describe('a temporary name of its own', () => {
+  it('two fetches of one file into one folder at once each land it, and leave no .part (P-B finding V1)', async () => {
+    const body = bytesOf(20_000)
+    const file = packFile('numpy.whl', WHEEL_URL, body)
+    const net = fakeNet({ [WHEEL_URL]: [{ body, length: body.length, chunk: 1_000, gapMs: 1 }] })
+
+    const both = await Promise.allSettled([fetchVerified(file, dir, deps(net)), fetchVerified(file, dir, deps(net))])
+
+    expect(both.map((r) => (r.status === 'fulfilled' ? r.value : String(r.reason)))).toEqual([join(dir, 'numpy.whl'), join(dir, 'numpy.whl')])
+    expect(net.calls[WHEEL_URL]).toBe(2)
+    expect(sha256(await readFile(join(dir, 'numpy.whl')))).toBe(file.sha256)
+    expect(await readdir(dir)).toEqual(['numpy.whl'])
   })
 })
 

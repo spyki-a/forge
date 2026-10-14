@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { open, rename as fsRename, rm, stat, type FileHandle } from 'node:fs/promises'
 import { join } from 'node:path'
 import { CancelledError } from '../ffmpeg/run'
@@ -201,7 +201,7 @@ export class NotTheFileError extends Error {
   constructor(
     message: string,
     readonly host: string,
-    readonly kind: 'length' | 'overrun' | 'checksum'
+    readonly kind: 'length' | 'page' | 'overrun' | 'checksum'
   ) {
     super(message)
     this.name = 'NotTheFileError'
@@ -574,6 +574,7 @@ async function writeAll(fh: FileHandle, bytes: Uint8Array): Promise<void> {
  *
  * | what arrived                      | what happens                             |
  * |-----------------------------------|------------------------------------------|
+ * | a web page (Content-Type text/html) | not the file: no retry                 |
  * | a Content-Length other than bytes | not the file: no retry                   |
  * | a body short of bytes             | a broken transfer: dropped, tried again  |
  * | a body past bytes                 | not the file: aborted at once, no retry  |
@@ -595,6 +596,18 @@ async function tryToFile(
   try {
     await tryInto(file.url, answerMs, f, {
       answered(response, host) {
+        // A web page is never one of the pack's files (both hosts answer application/octet-stream, measured
+        // 2026-10-14; github.com's text/html is its 302, followed above). Judged here, before the body, because
+        // a filter's page sent gzip-encoded skips the Content-Length check below and would otherwise read as a
+        // short body, fetched four times and blamed on the transfer.
+        const type = response.headers.get('content-type')
+        if (type !== null && /^\s*text\/html\b/i.test(type)) {
+          throw new NotTheFileError(
+            `something other than the file arrived from ${host} (a sign-in page or a network filter?): ${file.name} came back as a web page (${type})`,
+            host,
+            'page'
+          )
+        }
         const length = response.headers.get('content-length')
         const encoding = response.headers.get('content-encoding')
         // A Content-Length under a Content-Encoding counts the encoded bytes, not the file's; the
@@ -662,7 +675,9 @@ function packFailure(file: PackFile, err: unknown): Error {
 }
 
 /**
- * Stream one of the pack's files into `dir` as `<name>.part`, hashed and
+ * Stream one of the pack's files into `dir` as `<name>.<pid>.<id>.part` (a
+ * name of its own, as `ensureYtDlp`'s is: two fetches of one file never share
+ * a temporary, whatever keeps them apart today), hashed and
  * counted as it arrives, renamed to `<name>` (pip reads a wheel's tags from its
  * filename) only when it is the file; resolves with that path.
  *
@@ -683,7 +698,7 @@ export async function fetchVerified(file: PackFile, dir: string, f: FetchVerifie
   // Whatever is there is not the file.
   await rm(final, { force: true })
 
-  const part = `${final}.part`
+  const part = `${final}.${process.pid}.${randomUUID().slice(0, 8)}.part`
   const fetching = beginFetching(f.retry, {
     signal: f.signal,
     onMessage: f.onMessage,

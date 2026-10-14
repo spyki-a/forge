@@ -57,6 +57,8 @@ const TRICKLE = { pieces: 12, gapMs: 80 }
 
 interface Fake {
   calls: { sums: number; binary: number }
+  /** The `redirect` mode each request asked for. */
+  modes: string[]
 }
 
 /**
@@ -65,10 +67,11 @@ interface Fake {
  * says the binary hashes to.
  */
 function fakeGitHub(script: { sums?: Reply[]; binary?: Reply[] }, publishedSha = sha256(standIn)): Fake {
-  const fake: Fake = { calls: { sums: 0, binary: 0 } }
+  const fake: Fake = { calls: { sums: 0, binary: 0 }, modes: [] }
   vi.stubGlobal('fetch', async (input: string, init?: RequestInit): Promise<Response> => {
     const which = input === SUMS_URL ? 'sums' : input === BINARY_URL ? 'binary' : null
     if (!which) throw new Error(`the fake GitHub was asked for ${input}`)
+    fake.modes.push(String(init?.redirect))
     const reply = script[which]?.[fake.calls[which]] ?? 'ok'
     fake.calls[which]++
     // As fetch does: a signal already stopped stops the request before it starts.
@@ -206,6 +209,13 @@ describe('the yt-dlp fetch tries again when the network fails', () => {
     expect(waits).toHaveLength(2)
     expect(waits[0]).toContain('ECONNRESET')
     expect(waits[0]).toContain('2 of 4')
+  })
+
+  it('leaves its redirects to fetch, as it always did: every request asks for follow (the pack’s fetch follows them by hand)', async () => {
+    const gh = fakeGitHub({ binary: [503] })
+    await ensureYtDlp(undefined, { refresh: true, retry: QUICK })
+    expect(gh.modes).toHaveLength(3)
+    expect(new Set(gh.modes)).toEqual(new Set(['follow']))
   })
 
   it('503 twice on the binary, then 200: three tries, and the tool', async () => {
