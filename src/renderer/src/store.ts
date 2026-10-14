@@ -169,6 +169,7 @@ import { bakePaperSequence, paperDuration } from './paperCanvas'
 import { bakeCarouselSequence } from './carouselCanvas'
 import { bakeMomentSequence } from './momentCanvas'
 import { momentTextures } from '@shared/render/momentTextures'
+import type { TexturePlan } from '@shared/render/moment'
 import {
   DEFAULT_CAROUSEL,
   carouselTurnSeconds,
@@ -642,7 +643,8 @@ interface EditorState {
    * not on disk (the press named its size), then starts the analysis — or
    * skips it when `project.subjects[assetId]` is this file's key and version.
    * When the job lands, ONE `update()` (one undo) writes the track, the clip's
-   * `follow` and its stored crop, then `rebakeGenerated` runs. Resolves once
+   * `follow` and its stored crop, then `rebakeFollowed` re-pulls the moments
+   * over that file's clips without an undo step of its own. Resolves once
    * the job is QUEUED (or the skip has landed), not once it is done.
    */
   reframeClip: (clipId: string, options?: { phrase?: string }) => Promise<void>
@@ -713,6 +715,15 @@ interface EditorState {
   setFrameRate: (fps: number) => void
   /** Redraw text, colour cards and titles at the current canvas size. */
   rebakeGenerated: () => Promise<void>
+  /**
+   * Pull again the moments whose footage is a clip of one of `assetIds` —
+   * after a reframe edit (a track landing, Unfollow, Stack two people), whose
+   * followed crop their frames were cut with (docs/CLIPS.md §4.7). Nothing
+   * else: text, titles, cards and photos do not read the follow. The repoint
+   * is history-neutral — the same per-clip frames, drawn again — so the edit
+   * that asked stays ONE undo step; `rebakeGenerated` pushed one per clip.
+   */
+  rebakeFollowed: (assetIds: readonly string[]) => Promise<void>
   /**
    * An asset being auditioned from the library, independent of the timeline.
    * The waveform shows this when no clip is selected, so an SFX can be heard and
@@ -1554,14 +1565,17 @@ export const useEditor = create<EditorState>((set, get) => ({
     if (!clip?.follow) return
     // Where it is at the playhead — the frame the user is looking at — static from here on.
     const frame = clipFrameAtPlayhead(clip, playhead)
+    const before = get().project
     get().update((p) => unfollowClip(p, clipId, frame))
-    void get().rebakeGenerated()
+    // The moments over this file's clips were pulled with the followed crop: drawn again, inside this one undo step.
+    if (get().project !== before) void get().rebakeFollowed([clip.assetId])
   },
 
   setFollowTwoUp: (clipId, on) => {
     const before = get().project
     get().update((p) => withFollowTwoUp(p, clipId, on, p.settings.fps))
-    if (get().project !== before) void get().rebakeGenerated()
+    const clip = get().project.clips.find((c) => c.id === clipId)
+    if (clip && get().project !== before) void get().rebakeFollowed([clip.assetId])
   },
 
   // Inside CropOverlay's begin/commit: every move of one drag SETS the drag's total, one undo for the gesture.
@@ -1932,22 +1946,7 @@ export const useEditor = create<EditorState>((set, get) => ({
           const sequence = textures
             ? await bakeMomentSequence(clip.moment, clip.id, textures, width, height, clip.duration, fps)
             : null
-          if (sequence) {
-            get().update((p) => ({
-              ...p,
-              assets: p.assets.map((a) =>
-                a.id === clip.assetId
-                  ? {
-                      ...a,
-                      path: sequence.pattern.replace('%05d', '00000'),
-                      width,
-                      height,
-                      frames: { pattern: sequence.pattern, count: sequence.frames }
-                    }
-                  : a
-              )
-            }))
-          }
+          if (sequence) get().update((p) => withMomentFrames(p, clip.assetId, sequence, width, height))
           continue
         }
 
@@ -2086,6 +2085,36 @@ export const useEditor = create<EditorState>((set, get) => ({
         }
       } catch {
         // One card that will not redraw must not stop the rest of them.
+      }
+    }
+  },
+
+  rebakeFollowed: async (assetIds) => {
+    const { project } = get()
+    const { width, height, fps } = project.settings
+    const paths = new Set(project.assets.filter((a) => assetIds.includes(a.id) && a.path).map((a) => a.path))
+    if (paths.size === 0) return
+    const reads = (plan: TexturePlan | null | undefined): boolean => !!plan?.footage && paths.has(plan.footage.path)
+    for (const clip of project.clips) {
+      if (!clip.moment) continue
+      try {
+        // From the shots as they are NOW: the followed crop just changed.
+        const textures = momentTextures(get().project, clip.moment, clip.start)
+        if (!textures || !(reads(textures.from) || reads(textures.to))) continue
+        const sequence = await bakeMomentSequence(clip.moment, clip.id, textures, width, height, clip.duration, fps)
+        if (!sequence) continue
+        /*
+         * History-neutral: the same clip's frames, drawn again under the crop
+         * the edit that asked already put on the history. As an entry of its
+         * own, the first Cmd+Z after Follow took back an invisible repoint, and
+         * undoing it left a followed clip's moment on the centred pull's frames.
+         */
+        set((s) => {
+          const next = withMomentFrames(s.project, clip.assetId, sequence, width, height)
+          return next === s.project ? {} : { project: next, dirty: true }
+        })
+      } catch {
+        // One moment that will not redraw must not stop the rest.
       }
     }
   },
@@ -5501,6 +5530,31 @@ export const useEditor = create<EditorState>((set, get) => ({
   markSaved: (path) => set({ projectPath: path, dirty: false })
 }))
 
+/**
+ * A moment's asset pointed at its frames drawn again: the sequence's first
+ * file, the canvas size, the pattern and count. The same project when nothing
+ * differs — the bake writes into the clip's own folder, so a redraw usually
+ * names the same files.
+ */
+function withMomentFrames(
+  p: Project,
+  assetId: string,
+  sequence: { pattern: string; frames: number },
+  width: number,
+  height: number
+): Project {
+  const path = sequence.pattern.replace('%05d', '00000')
+  const asset = p.assets.find((a) => a.id === assetId)
+  if (!asset) return p
+  if (asset.path === path && asset.width === width && asset.height === height && asset.frames?.pattern === sequence.pattern && asset.frames.count === sequence.frames) return p
+  return {
+    ...p,
+    assets: p.assets.map((a) =>
+      a.id === assetId ? { ...a, path, width, height, frames: { pattern: sequence.pattern, count: sequence.frames } } : a
+    )
+  }
+}
+
 /** Snapshot held between begin() and commit(); null when no transaction is open. */
 let pendingSnapshot: Project | null = null
 /**
@@ -5711,7 +5765,7 @@ function landTrack(assetId: string, track: SubjectTrack, clipIds: readonly strin
       'info'
     )
   }
-  if (editor().project !== before) void editor().rebakeGenerated()
+  if (editor().project !== before) void editor().rebakeFollowed([assetId])
 }
 
 /**

@@ -10,6 +10,16 @@ import { REFRAME_FAILURES, type ReframeAnalyseRequest } from '@shared/reframe/jo
 import { SUBJECT_TRACK_VERSION, type SubjectTrack } from '@shared/reframe/types'
 import { harnessSubjectTrack } from '../../src/renderer/src/harness/reframeStub'
 
+/** The moments' bake, as a spy: three.js has no WebGL here, and what is under test is WHICH moments are drawn again. */
+const bake = vi.hoisted(() => ({ calls: [] as string[], pattern: (clipId: string) => `/frames/${clipId}/%05d.png` }))
+vi.mock('../../src/renderer/src/momentCanvas', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../src/renderer/src/momentCanvas')>()),
+  bakeMomentSequence: async (_spec: unknown, clipId: string) => {
+    bake.calls.push(clipId)
+    return { pattern: bake.pattern(clipId), frames: 12 }
+  }
+}))
+
 /*
  * The reframe's store actions through their real code (docs/CLIPS.md §4.7,
  * slice B): `reframeClip`, `reframeAll`, `unfollow`, `setFollowTwoUp`,
@@ -113,6 +123,8 @@ beforeEach(async () => {
   harness = mod.harnessReframe
   harness.stageMs = 0
   harness.modelPresent = true
+  bake.calls.length = 0
+  bake.pattern = (clipId) => `/frames/${clipId}/%05d.png`
   editor = await freshStore()
   state().loadProject(talk(), PROJECT_PATH, [])
 })
@@ -224,6 +236,94 @@ describe('reframeClip', () => {
     await state().reframeClip('c', { phrase: 'the cake' })
     expect(analyse).not.toHaveBeenCalled()
     expect(state().notices.map((n) => n.text)).toContain(REFRAME_FAILURES['phrase-needs-ground'])
+  })
+})
+
+describe('the moments over a followed clip', () => {
+  /** What each reframe edit asked to be drawn again, with the store's own rebakes replaced by spies. */
+  function spyRebakes(): { followed: string[][]; generated: number } {
+    const seen = { followed: [] as string[][], generated: 0 }
+    editor.setState({
+      rebakeFollowed: async (assetIds: readonly string[]) => {
+        seen.followed.push([...assetIds])
+      },
+      rebakeGenerated: async () => {
+        seen.generated += 1
+      }
+    })
+    return seen
+  }
+
+  it('are drawn again after a landing, Unfollow and Stack two people — and not after a landing that changes nothing', async () => {
+    const seen = spyRebakes()
+    await state().reframeClip('c')
+    await until('the track to land', landed)
+    expect(seen.followed, 'after the landing').toEqual([['v']])
+
+    // The same file's track again, on a clip that already follows it: nothing changes, nothing is drawn.
+    await state().reframeClip('c')
+    expect(seen.followed, 'a landing that changed nothing').toHaveLength(1)
+
+    state().setFollowTwoUp('c', false)
+    expect(seen.followed, 'after Stack two people').toEqual([['v'], ['v']])
+    state().setFollowTwoUp('c', false)
+    expect(seen.followed, 'Stack two people already off').toHaveLength(2)
+
+    state().unfollow('c')
+    expect(seen.followed, 'after Unfollow').toEqual([['v'], ['v'], ['v']])
+    // Text, titles, cards and photos do not read the follow: the redraw of everything is never asked for.
+    expect(seen.generated).toBe(0)
+  })
+
+  /** The talk cut in two on V1 (c, c2), a whip over the cut on V2, and another file's pair with its own whip. */
+  function withMoments(): Project {
+    const tracks: Project['tracks'] = [
+      { id: 'v1', kind: 'video', name: 'V1', muted: false, hidden: false, locked: false },
+      { id: 'v2', kind: 'video', name: 'V2', muted: false, hidden: false, locked: false }
+    ]
+    const frames = (id: string): MediaAsset => ({ ...video(id, 1080, 1920), kind: 'image', path: `/frames/${id}-old/00000.png`, fps: null, hasAudio: false })
+    const whip = (id: string, assetId: string, start: number, from: string, to: string): Clip =>
+      clipOf(id, assetId, {
+        trackId: 'v2', start, duration: 12, crop: undefined,
+        moment: { kind: 'whip-blur', from: { clipId: from }, to: { clipId: to }, seconds: 0.4, intensity: 0.5, seed: 1, version: 1 }
+      })
+    return talk({
+      tracks,
+      assets: [video('v', 1920, 1080), video('w', 1920, 1080), frames('mv'), frames('mw')],
+      clips: [
+        clipOf('c', 'v'),
+        clipOf('c2', 'v', { start: 300 }),
+        clipOf('d', 'w', { start: 600 }),
+        clipOf('d2', 'w', { start: 900 }),
+        whip('m', 'mv', 294, 'c', 'c2'),
+        whip('m2', 'mw', 894, 'd', 'd2')
+      ]
+    })
+  }
+
+  it('only the moments that read the followed file are pulled again, and Follow stays ONE undo step', async () => {
+    state().loadProject(withMoments(), PROJECT_PATH, [])
+    bake.calls.length = 0
+    await state().reframeClip('c')
+    await until('the track to land', landed)
+    await until('the moment to be drawn again', () => state().project.assets.find((a) => a.id === 'mv')!.path === '/frames/m/00000.png')
+
+    expect(bake.calls, 'the whip over the followed file, and not the other file’s').toEqual(['m'])
+    expect(state().project.assets.find((a) => a.id === 'mw')!.path).toBe('/frames/mw-old/00000.png')
+    // The repoint is history-neutral: the landing is the one entry, and one Cmd+Z takes the follow back.
+    expect(state().past).toHaveLength(1)
+    state().undo()
+    expect(clipNow().follow).toBeUndefined()
+    expect(state().project.subjects?.v).toBeUndefined()
+
+    // Unfollow and Stack two people: each its one entry, the moment drawn again inside it.
+    state().redo()
+    bake.calls.length = 0
+    bake.pattern = (clipId) => `/frames/${clipId}/stacked-off/%05d.png`
+    state().setFollowTwoUp('c', false)
+    await until('the moment drawn again', () => bake.calls.length === 1)
+    await until('its repoint', () => state().project.assets.find((a) => a.id === 'mv')!.path === '/frames/m/stacked-off/00000.png')
+    expect(state().past).toHaveLength(2)
   })
 })
 
