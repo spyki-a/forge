@@ -1,4 +1,5 @@
-import { basename } from 'node:path'
+import { readFileSync } from 'node:fs'
+import { basename, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   REFRAME_FAILURES,
@@ -103,5 +104,38 @@ describe('reframeHelperFrom', () => {
 describe('the job row', () => {
   it('names the file after the title', () => {
     expect(reframeJobLabel({ inputName: 'Toast.mp4' })).toBe('Finding the subject · Toast.mp4')
+  })
+})
+
+/* ------------------------------------------------------------ a quit */
+
+const source = (file: string): string => readFileSync(resolve(__dirname, '..', file), 'utf8')
+
+/** The `{…}` block that follows `anchor`, which must occur exactly once (CLAUDE.md: count the anchor's matches). */
+function blockAfter(text: string, anchor: string): string {
+  expect(text.split(anchor).length - 1, `anchor "${anchor}"`).toBe(1)
+  const from = text.indexOf(anchor)
+  let depth = 0
+  for (let i = text.indexOf('{', from); i < text.length; i++) {
+    if (text[i] === '{') depth++
+    if (text[i] === '}' && --depth === 0) return text.slice(from, i + 1)
+  }
+  throw new Error(`unbalanced block after "${anchor}"`)
+}
+
+describe('a quit', () => {
+  it('cancels every analysis: before-quit calls cancelAnalyses, which cancels the queue registerIpc made', () => {
+    // Main's scene pass is its own ffmpeg; left alone it read the rest of its file after the app had gone.
+    const quit = blockAfter(source('src/main/index.ts'), "app.on('before-quit', (event) =>")
+    expect(quit).toContain('cancelAnalyses()')
+    // After the close guard's early return, beside the helper's stop and the link runs' abort.
+    expect(quit.indexOf('cancelAnalyses()')).toBeGreaterThan(quit.indexOf('return'))
+    const ipc = source('src/main/ipc.ts')
+    expect(blockAfter(ipc, 'export function cancelAnalyses(): void')).toContain('analyses?.queue.cancelAll()')
+    // The queue it cancels is the one registerIpc lists and broadcasts: assigned once, right after it is made.
+    expect([...ipc.matchAll(/^\s*analyses = reframe$/gm)]).toHaveLength(1)
+    const made = ipc.indexOf('const reframe = createReframeJobs(')
+    expect(made).toBeGreaterThan(-1)
+    expect(ipc.indexOf('analyses = reframe', made)).toBeGreaterThan(made)
   })
 })

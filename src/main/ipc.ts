@@ -64,7 +64,7 @@ import { parseLink } from '@shared/ingest/url'
 import { startRequest } from './ingest/start'
 import { collectDownload, type IngestEntry } from '@shared/ingest/collect'
 import { REFRAME_CHANNELS } from '@shared/reframe/job'
-import { createReframeJobs } from './reframe/analyse'
+import { createReframeJobs, type ReframeJobs } from './reframe/analyse'
 
 interface ExportRequest {
   project: Project
@@ -87,6 +87,20 @@ const linkRuns = new LinkRuns()
 /** Abort every link read, for a quit: yt-dlp runs detached and would outlive the app. */
 export function abortLinkRuns(): void {
   linkRuns.abortAll()
+}
+
+/** The reframe's analyses, once registerIpc has made them. */
+let analyses: ReframeJobs | null = null
+
+/**
+ * Cancel every analysis, for a quit: a running scene pass is main's own
+ * ffmpeg, and without this it read the rest of its file after the app had
+ * gone (read-only and bounded, but a 30-minute file is about 90 s of it,
+ * docs/CLIPS.md §4.2). The faces stage is the helper's, which `stopSidecar`
+ * ends. Queued ones are marked cancelled and never start.
+ */
+export function cancelAnalyses(): void {
+  analyses?.queue.cancelAll()
 }
 
 export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
@@ -249,6 +263,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): JobQueue {
     ffprobe: FFPROBE_PATH,
     onFaceModelProgress: (update) => getWindow()?.webContents.send(REFRAME_CHANNELS.faceModelProgress, update)
   })
+  analyses = reframe
 
   const allJobs = (): Job[] => [...queue.list(), ...downloads.list(), ...reframe.queue.list()]
   const broadcast = (): void => {

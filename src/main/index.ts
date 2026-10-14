@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from 'electron'
 import { join } from 'node:path'
-import { abortLinkRuns, registerIpc } from './ipc'
+import { abortLinkRuns, cancelAnalyses, registerIpc } from './ipc'
 import { applyMenu, EMPTY_MENU_STATE, mustAskBeforeClosing, type MenuState } from './menu'
 import { registerMediaProtocol } from './mediaProtocol'
 import { assertBinaries } from './ffmpeg/paths'
@@ -295,4 +295,6 @@ app.on('before-quit', (event) => {
   stopSidecar()
   // A link read's yt-dlp is a process group of its own; it would outlive us.
   abortLinkRuns()
+  // A reframe's scene pass is main's own ffmpeg: it would read on after we are gone.
+  cancelAnalyses()
 })
