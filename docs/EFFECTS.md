@@ -6293,6 +6293,25 @@ builder, the three verifiers, the fix phase, or the recorder re-running both
 checks at `d8baa57` on 2026-10-14. No new filter shape: the face pass's
 `fps=5:round=up` is §54's, the pts' origin §55's.
 
+**The real detector, on the user's Mac** (2026-10-14, 06:42 and 06:46,
+from the app's Terminal tab, outside the sandbox, `FORGE_REFRAME_REAL=<file>
+npx vitest run tests/integration/reframeJob.int.test.ts`; the helper on
+`sidecar/.venv` with mediapipe 0.10.35, the face finder seeded from
+`sidecar/.venv-faces/models/`; the job's own stage clock):
+
+| clip | probe | shots | faces | reduce | total | shots found | samples (2/s) | with a face | two | track |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `j4aoo1qbGoE` from the ten-link set, downloaded whole: 1920×1080 H.264, 23.98 fps, 613.8 s, time base 1/24000 | 0.02 s | 23.19 s | 20.48 s | 0.01 s | **43.71 s** | 162 | 1,228 | 893 | 153 | 114,160 B |
+| the face fixture: 3840×2160 HEVC, 30 fps, 26.6 s, time base 1/600 | 0.01 s | 8.86 s | 9.29 s | 0.00 s | **18.16 s** | 1 | 54 | 40 | 0 | 4,380 B |
+
+So a 10-minute 1080p clip is analysed in 44 s on the M1 Pro, 14× realtime,
+against CLIPS §4.10's 90 s bar; 4K HEVC runs at about 0.7× realtime, the
+scene pass and the face pass each decoding the whole file once (the 4K
+decode is the cost, as §37 and §54 measured: here 8.9 s for the scene pass's
+320-wide rgb24 scan and 9.3 s for the face pass's 640-wide stream at 5 fps,
+of 26.6 s of footage). Not measured: the helper's peak RSS in these runs,
+and the Surface.
+
 **The job on a synthetic clip** (`tests/integration/reframeJob.int.test.ts`,
 which writes `tests/output/reframe-job/README.txt`). The clip is made in the
 test: 6 s of 640×360 at 30 fps (mp4, 1/15360), lossless 4:4:4 (libx264

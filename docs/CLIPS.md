@@ -3805,7 +3805,17 @@ Where it goes, per `WHERE-THINGS-ARE.md`:
 >    The bar: ≤ 90 s for the 10-minute clip. The Surface's ≤ 3 min is the
 >    same command there, with `FORGE_PYTHON` set (`CLAUDE.md`'s
 >    fresh-checkout table) and the helper's venv built on it. It does not
->    record the helper's peak RSS yet.
+>    record the helper's peak RSS yet. **Run on your Mac, 2026-10-14, from
+>    the app's Terminal tab (outside the sandbox):** the ten-link set's
+>    `j4aoo1qbGoE` downloaded whole (1920×1080 H.264, 23.98 fps, 613.8 s)
+>    analysed in **43.7 s** — probe 0.02, shots 23.19, faces 20.48, reduce
+>    0.01 — 162 shots, 1,228 samples, 893 with a face, 153 with two, the
+>    track 114,160 B: **the Mac bar is met** with half the budget to spare.
+>    The 4K budget, on the face fixture (3840×2160 HEVC, 30 fps, 26.6 s):
+>    **18.2 s** — shots 8.86, faces 9.29 — 1 shot, 54 samples, 40 with a
+>    face, so about 0.7× realtime, or roughly 7 minutes for ten minutes of
+>    4K phone footage, split evenly between the scene pass's decode and the
+>    face pass's (`EFFECTS.md` §56). The Surface is still open.
 > 2. **Your ten clips through the action**, in the app (`npm run dev`):
 >    each landscape talk on a 9:16 timeline, **Reframe to 9:16** in the
 >    canvas bar (or **Follow the subject** in the dock), a play through, a
@@ -3842,6 +3852,8 @@ Where it goes, per `WHERE-THINGS-ARE.md`:
   29.97, 60 fps and VFR), the two-up rows included.
 - Analysis time recorded: **≤ 90 s for a 10-minute 1080p clip on the Mac,
   ≤ 3 min on the Surface**. Over that, drop to 3 fps first, then 480 px.
+  **Mac: met, 2026-10-14 — 43.7 s for a 10 min 14 s 1080p clip** (the
+  note above; `EFFECTS.md` §56); the Surface is open.
   **A 4K HEVC phone clip is a separate budget**: its decode alone measured
   about 3.3× realtime on the Mac, about 3 minutes for 10 minutes before any
   detection (`EFFECTS.md` §37, on the face fixture), so the 4K time is
