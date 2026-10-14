@@ -3822,7 +3822,8 @@ Where it goes, per `WHERE-THINGS-ARE.md`:
 >    nudge in the Reframe tool where a shot needs one, and an export. Then
 >    a session reads face-inside-crop and crops held across a cut from the
 >    project's tracks (its copies of `userData/subjects/`) and the keys the
->    export cuts with, into `tests/output/reframe-real/` — the reader is
+>    export cuts with, each cut judged against the picture the export shows
+>    there, into `tests/output/reframe-real/` — the reader is
 >    built, its command under the first bullet below — and you rate each
 >    export 1–5: ≥ 4 on ≥ 8 of 10.
 > 3. **pyautoflip** on the same ten (§15 row 21: a scratch venv, Python 3.13
@@ -3850,12 +3851,22 @@ Where it goes, per `WHERE-THINGS-ARE.md`:
   **The reader exists (2026-10-14)**: `FORGE_REFRAME_EXIT=/path/to/project.forge
   npx vitest run tests/integration/reframeExit.int.test.ts` reads a saved
   project through `deserializeProject`, scores every followed clip
-  (`src/shared/reframe/exit.ts`: the largest face, or each face against its
-  own half on a stacked two-up, held to `followAt` on the clip frame
-  `exportFrameAt` gives its sample; a cut held where the path moves and the
-  crop on the cut's frame is the one before it), and writes into
-  `tests/output/reframe-real/` a contact sheet per cut (frames F−1 | F | F+1)
-  and a frame per shot — the source frame the export shows there, the crop
+  (`src/shared/reframe/exit.ts`: the face the shot follows — a one-person
+  shot's subject by identity as path.ts follows it, so a larger passer-by is
+  not it; a two-shot's two faces both; a `larger` shot's larger face — or
+  each face against its own half on a stacked two-up, held to `followAt` on
+  the clip frame `exportFrameAt` gives its sample; a cut held where a lane of
+  the path moves — each half's x and y on a two-up clip, lane by lane — and
+  that lane does not change on the frame the PICTURE cuts on, so a track cut
+  a frame off the picture, late or early, is held too: the runner reads the
+  pulled frames F−3 … F+3 as 64×64 grey and takes the clear largest change
+  within ±2 frames, ≥ 20 and ≥ 2× the next — on j4aoo1qbGoE's first 180 s
+  all 42 of the scene pass's cuts were on their own frame, 40.7–111.6 and
+  2.6× or more, and motion inside a shot ran 10–16 — and where none is clear
+  the keys' own frame, which the README names), and writes into
+  `tests/output/reframe-real/` a contact sheet per cut (frames F−1 | F | F+1,
+  widened to take in the picture's cut P where it is not F, then named
+  `-pPPPPP`) and a frame per shot — the source frame the export shows there, the crop
   drawn in red (a two-up's bottom half in blue), the faces in green — and a
   README.txt table with both bars marked per clip and an empty rating (1–5)
   column, which is yours to fill — clearing only its own last run there, so

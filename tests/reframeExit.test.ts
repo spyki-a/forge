@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { basename } from 'node:path'
 import {
   EXIT_COLOURS,
+  PICTURE_CUT,
   PULL_BATCH,
   exitBars,
   exitCuts,
@@ -10,6 +11,9 @@ import {
   exitSamples,
   exitSheetArgs,
   exitTable,
+  meanAbsDiff,
+  pictureCut,
+  pictureFrames,
   scoreFollowedClip,
   scoreProject,
   type ExitRow
@@ -460,6 +464,66 @@ describe('a crop held across a cut', () => {
     expect(pans[pans.length - 1].to, 'the premise: onto shot 2’s place').toBe(path.shots[1].at)
     expect(path.shots[0].at).not.toBe(path.shots[1].at)
     expect(exitCuts(project, clip, FPS)).toEqual([{ shot: 1, frame: 200, moves: false, held: false, heldLanes: [] }])
+  })
+})
+
+describe('a cut judged on the picture', () => {
+  // FOLLOWED's keys step the crop on clip frames 95 and 200; `first` is where the picture cuts for the first.
+  const judge = (first: number | null) => {
+    const { project, clip } = setup(FOLLOWED)
+    return exitCuts(project, clip, FPS, keysOf(project, clip), new Map([[95, first], [200, 200]]))
+  }
+
+  it('the picture cutting where the crop steps: not held', () => {
+    expect(judge(95)).toEqual([
+      { shot: 1, frame: 95, picture: 95, moves: true, held: false, heldLanes: [] },
+      { shot: 2, frame: 200, picture: 200, moves: true, held: false, heldLanes: [] }
+    ])
+  })
+
+  it('the picture cutting a frame before the crop steps: the old crop on the new picture, held', () => {
+    // The keys agree with themselves — the step is on their own frame — so only the picture shows it.
+    const { project, clip } = setup(FOLLOWED)
+    const keys = keysOf(project, clip)
+    expect(exitCuts(project, clip, FPS, keys)[0], 'the premise: on the keys alone, not held').toMatchObject({ held: false })
+    expect(followAt(keys, 94).crop.x, 'the premise: frame 94 still has the old crop').toBe(followAt(keys, 93).crop.x)
+    expect(judge(94)[0]).toEqual({ shot: 1, frame: 95, picture: 94, moves: true, held: true, heldLanes: ['crop'] })
+    const row = scoreFollowedClip(project, clip, FPS, keys, new Map([[95, 94], [200, 200]]))!
+    expect(row.heldAcrossCut).toBe(1)
+    expect(exitBars(row).held).toBe('not met')
+    expect(exitBars(scoreFollowedClip(project, clip, FPS, keys)!).held, 'the keys alone call it met').toBe('met')
+  })
+
+  it('the picture cutting a frame after the crop steps: the new crop on the old picture, held', () => {
+    expect(judge(96)[0]).toEqual({ shot: 1, frame: 95, picture: 96, moves: true, held: true, heldLanes: ['crop'] })
+  })
+
+  it('no clear picture cut: judged on the keys’ frame, and the cut says so', () => {
+    expect(judge(null)[0]).toEqual({ shot: 1, frame: 95, picture: null, moves: true, held: false, heldLanes: [] })
+  })
+
+  it('finds the picture’s cut as the clear largest change, and nothing in motion or a flash', () => {
+    const steps = (changes: number[], from = 93) => changes.map((change, i) => ({ frame: from + i, change }))
+    // A cut one frame before the keys' 95.
+    expect(pictureCut(steps([2, 60, 3, 1, 2]))).toEqual({ frame: 94, change: 60, next: 3 })
+    // Fast motion: changes of 10–16 a frame, none a cut.
+    expect(pictureCut(steps([12, 16, 11, 14, 10])).frame).toBeNull()
+    // A flash: on and off, two changes alike.
+    expect(pictureCut(steps([2, 55, 50, 2, 1])).frame).toBeNull()
+    // The bounds, both inclusive: at least `step`, and at least `standsOut` × the next.
+    const { step, standsOut } = PICTURE_CUT
+    expect(pictureCut(steps([0, step, step / standsOut, 0, 0])).frame).toBe(94)
+    expect(pictureCut(steps([0, step - 0.01, 0, 0, 0])).frame).toBeNull()
+    expect(pictureCut(steps([0, step, step / standsOut + 0.01, 0, 0])).frame).toBeNull()
+    expect(pictureCut([])).toEqual({ frame: null, change: 0, next: 0 })
+  })
+
+  it('measures change as the mean absolute difference, and pulls the frames a window needs', () => {
+    expect(meanAbsDiff(Uint8Array.from([0, 10, 255]), Uint8Array.from([10, 0, 0]))).toBeCloseTo(275 / 3, 12)
+    expect(() => meanAbsDiff([1, 2], [1])).toThrow()
+    // Changes on F−2 … F+2 need frames F−3 … F+2, and the sheet one more each side of a change at F ± 2.
+    expect(pictureFrames(95, 300)).toEqual([92, 93, 94, 95, 96, 97, 98])
+    expect(pictureFrames(1, 3)).toEqual([0, 1, 2])
   })
 })
 

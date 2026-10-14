@@ -61,6 +61,20 @@ import { safeTakeBase } from '../render/voiceover'
  * key did not land. Lane by lane — the crop's free axis, and on a two-up clip
  * each half's x and y — so one half held while the other moves is held: that
  * half shows the old shot's place on the new shot's first frame.
+ *
+ * **Against the picture.** On the keys alone that can only find a step
+ * missing from the keys' own frame — the cut's frame is the number keys.ts
+ * put the step on. A track cut a frame off the picture, or `exportFrameAt`
+ * wrong about the user's footage, steps the crop on a frame the picture does
+ * not cut on, and the keys agree with themselves. So the runner pulls the
+ * frames around each cut as the export shows them, measures where the
+ * picture changes (`pictureCut`, on `meanAbsDiff` of small grey frames), and
+ * hands that frame in: the cut is then judged on the PICTURE's cut frame — a
+ * lane that moves and has the same value there as on the frame before is
+ * held, whether its step came late (the old crop on the new picture) or early
+ * (the new crop already on the old picture's last frame). Where no clear
+ * change is seen, the keys' frame is used and the cut says so (`picture`
+ * null).
  */
 
 /** §4.10's two bars a reader can measure; the third, ≥ 4 of 5 on ≥ 8 of 10, is the user's rating. */
@@ -80,7 +94,7 @@ export interface ExitRow {
   inside: number
   /** inside / samplesWithFace; null when no sample on screen holds a face. */
   insideShare: number | null
-  /** Cuts where the path moves and the export's crop does not. */
+  /** Cuts where the path moves and the export's crop does not move with the picture (the keys' frame, where no picture was measured). */
   heldAcrossCut: number
   /** The cuts the clip shows: shots − 1. */
   cuts: number
@@ -111,11 +125,18 @@ export interface ExitSample {
 export interface ExitCut {
   /** The track's index of the shot the cut opens. */
   shot: number
-  /** The cut's clip frame: the shot's first. */
+  /** The cut's clip frame as the keys have it: the shot's first, where the crop's step is. */
   frame: number
+  /**
+   * Where the picture cuts, when the runner measured it (the module note): the
+   * clip frame it changes on, or null when no clear change was seen near
+   * `frame`. Absent when not measured. The cut is judged on this frame when it
+   * is a number, on `frame` otherwise.
+   */
+  picture?: number | null
   /** The path's position changes here, on at least one lane. */
   moves: boolean
-  /** ... and on some lane that changes, the export's crop on `frame` is the one on `frame − 1`. */
+  /** ... and on some lane that changes, the export's crop on the judged frame is the one on the frame before. */
   held: boolean
   /** Those lanes: on a two-up clip one half can be held while the other moves. */
   heldLanes: ExitLane[]
@@ -278,9 +299,17 @@ function lanesOn(keys: FollowKeys, frame: number): Lanes {
 
 /**
  * Every cut the clip shows, with whether the path moves there and whether the
- * export's crop did (the module note). `keys` as for `exitSamples`.
+ * export's crop did (the module note). `keys` as for `exitSamples`;
+ * `picture`, when the runner measured it, maps a cut's keys frame to the clip
+ * frame its picture changes on (null: no clear change seen).
  */
-export function exitCuts(project: Project, clip: Clip, fps: number, keys: FollowKeys | null = followKeys(project, clip, fps)): ExitCut[] {
+export function exitCuts(
+  project: Project,
+  clip: Clip,
+  fps: number,
+  keys: FollowKeys | null = followKeys(project, clip, fps),
+  picture?: ReadonlyMap<number, number | null>
+): ExitCut[] {
   const path = pathOf(project, clip)
   if (!keys || !path) return []
   const { size, half, source } = keys
@@ -303,12 +332,17 @@ export function exitCuts(project: Project, clip: Clip, fps: number, keys: Follow
     const was = flat(placed(lanesOf(before, path, true)))
     const now = flat(placed(lanesOf(after, path, false)))
     const frame = keys.shots[k].from
-    const on = flat(lanesOn(keys, frame))
-    const prior = flat(lanesOn(keys, frame - 1))
+    // Judged where the picture cuts, when that was measured; on the keys' own frame otherwise.
+    const seen = picture?.get(frame)
+    const judged = typeof seen === 'number' ? seen : frame
+    const on = flat(lanesOn(keys, judged))
+    const prior = flat(lanesOn(keys, judged - 1))
     // Lane by lane: one half kept where the old shot had it is a crop held, whatever the other half did.
     const moving = LANES.slice(0, count).filter((_, j) => was[j] !== now[j])
     const heldLanes = moving.filter((lane) => on[LANES.indexOf(lane)] === prior[LANES.indexOf(lane)])
-    cuts.push({ shot: keys.shots[k].index, frame, moves: moving.length > 0, held: heldLanes.length > 0, heldLanes })
+    const cut: ExitCut = { shot: keys.shots[k].index, frame, moves: moving.length > 0, held: heldLanes.length > 0, heldLanes }
+    if (picture) cut.picture = seen ?? null
+    cuts.push(cut)
   }
   return cuts
 }
@@ -319,7 +353,13 @@ export function exitCuts(project: Project, clip: Clip, fps: number, keys: Follow
  * version, another size) is a row of zeros with a note: it shows its stored
  * crop, and that is worth saying, not hiding.
  */
-export function scoreFollowedClip(project: Project, clip: Clip, fps: number, keys: FollowKeys | null = followKeys(project, clip, fps)): ExitRow | null {
+export function scoreFollowedClip(
+  project: Project,
+  clip: Clip,
+  fps: number,
+  keys: FollowKeys | null = followKeys(project, clip, fps),
+  picture?: ReadonlyMap<number, number | null>
+): ExitRow | null {
   if (!clip.follow) return null
   const base = { clipId: clip.id, assetId: clip.assetId }
   if (!keys) {
@@ -336,7 +376,7 @@ export function scoreFollowedClip(project: Project, clip: Clip, fps: number, key
     }
   }
   const samples = exitSamples(project, clip, fps, keys)
-  const cuts = exitCuts(project, clip, fps, keys)
+  const cuts = exitCuts(project, clip, fps, keys, picture)
   const inside = samples.filter((s) => s.inside).length
   const notes = [...keys.notes]
   if (clip.hold) notes.push('a held frame: its samples are not scored')
@@ -396,6 +436,47 @@ export function exitTable(entries: { name: string; row: ExitRow }[]): string[] {
   const widths = head.map((h, c) => Math.max(h.length, ...body.map((r) => r[c].length)))
   const line = (cells: string[]): string => `| ${cells.map((cell, c) => cell.padEnd(widths[c])).join(' | ')} |`
   return [line(head), `|${widths.map((w) => '-'.repeat(w + 2)).join('|')}|`, ...body.map(line)]
+}
+
+/* ------------------------------------------------------- the picture */
+
+/** How many frames either side of a cut's keys frame the picture's change is looked for. */
+export const PICTURE_REACH = 2
+
+/**
+ * A picture cut, as frame-to-frame change of a small grey frame (`meanAbsDiff`,
+ * 0–255): the largest change near the cut must be at least `step` and at least
+ * `standsOut` times the next largest there. Measured on the ten-link set's
+ * j4aoo1qbGoE (1080p H.264, 23.98 fps), its first 180 s at 64×64 grey: at all
+ * 42 of the scene pass's cuts the largest change within ±2 frames was on the
+ * cut's own frame, 40.7–111.6, and 2.6–396× the next largest there; inside the
+ * shots, sustained motion ran 10–16 a frame.
+ */
+export const PICTURE_CUT = { step: 20, standsOut: 2 } as const
+
+/** The mean absolute difference of two grey frames of one size, 0–255. */
+export function meanAbsDiff(a: ArrayLike<number>, b: ArrayLike<number>): number {
+  if (a.length !== b.length || a.length === 0) throw new Error(`Two frames of one size, not ${a.length} and ${b.length} bytes`)
+  let sum = 0
+  for (let i = 0; i < a.length; i++) sum += Math.abs(a[i] - b[i])
+  return sum / a.length
+}
+
+/** Where the picture cuts among `steps` (each the change from `frame − 1` to `frame`): the frame of the clear largest change, or null. */
+export function pictureCut(steps: readonly { frame: number; change: number }[]): { frame: number | null; change: number; next: number } {
+  const sorted = [...steps].sort((p, q) => q.change - p.change)
+  const top = sorted[0]
+  const next = sorted[1]?.change ?? 0
+  if (!top) return { frame: null, change: 0, next: 0 }
+  const clear = top.change >= PICTURE_CUT.step && top.change >= PICTURE_CUT.standsOut * next
+  return { frame: clear ? top.frame : null, change: top.change, next }
+}
+
+/** The clip frames a cut's picture is measured on: the window ±`PICTURE_REACH` of changes, and one more each side for its sheet. */
+export function pictureFrames(cutFrame: number, duration: number): number[] {
+  const out: number[] = []
+  for (let f = cutFrame - PICTURE_REACH - 1; f <= cutFrame + PICTURE_REACH + 1; f++) if (f >= 0 && f < duration) out.push(f)
+  return out
 }
 
 /* ------------------------------------------------- the runner's ffmpeg */

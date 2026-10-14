@@ -8,6 +8,7 @@ import { cropAt } from '@shared/render/crop'
 import {
   EXIT_BARS,
   EXIT_COLOURS,
+  PICTURE_REACH,
   PULL_BATCH,
   exitBars,
   exitCuts,
@@ -17,7 +18,11 @@ import {
   exitSheetArgs,
   exitTable,
   followedClips,
+  meanAbsDiff,
+  pictureCut,
+  pictureFrames,
   scoreFollowedClip,
+  type ExitCut,
   type ExitRow,
   type ExitSample,
   type SheetPanel
@@ -36,7 +41,9 @@ import { FFMPEG, OUTPUT_ROOT, outputDir, run, writeNote } from './output'
  * clip scored, and for each a folder under the output root holding
  *
  * - `cut-NN-fFFFFF.png` per cut: the clip frames before, on and after it
- *   side by side (`hstack`), and
+ *   side by side (`hstack`) — F the frame the crop's key steps on; where the
+ *   picture cuts on another frame P, the sheet runs from the earlier of the
+ *   two less one to the later plus one, and its name ends `-pPPPPP` — and
  * - `shot-NN-fFFFFF.png` per shot: one frame inside it,
  *
  * each the SOURCE frame the export shows on that clip frame — the export's
@@ -46,6 +53,12 @@ import { FFMPEG, OUTPUT_ROOT, outputDir, run, writeNote } from './output'
  * nearest sample in the same shot in green (`exitSheetArgs`); and a
  * README.txt with the table, the two bars marked per clip and an empty
  * rating column, which is the user's.
+ *
+ * Each cut is judged against the PICTURE (exit.ts's module note): the frames
+ * F−3 … F+3 around the keys' step are pulled with the rest, read back as
+ * 64×64 grey (`greyArgs`), and the frame the picture changes on found among
+ * F−2 … F+2 (`pictureCut`); the cut is then held when a moving lane of the
+ * crop does not change on THAT frame.
  *
  * The user's run, on the project their ten clips were reframed and exported
  * in, outside the sandbox:
@@ -76,7 +89,10 @@ interface ClipReport {
   /** The sheets written, by file name. */
   files: string[]
   outside: ExitSample[]
-  heldFrames: number[]
+  /** The cuts as judged, on the picture where it was measured. */
+  cuts: ExitCut[]
+  /** Each cut's largest change near it and the next largest, by its keys frame. */
+  changes: Map<number, { change: number; next: number }>
   /** Why no frames were drawn, when none were. */
   skipped?: string
   /** A line about the file on disk, when it is not the one the track was measured on. */
@@ -84,6 +100,12 @@ interface ClipReport {
   pullMs?: number
   sheetsMs?: number
 }
+
+/** The side of the grey frames a picture's change is measured on. */
+const GREY = 64
+
+/** Every frame of an image2 sequence as GREY×GREY grey bytes on stdout, in order. */
+const greyArgs = (pattern: string): string[] => ['-hide_banner', '-loglevel', 'error', '-i', pattern, '-vf', `scale=${GREY}:${GREY},format=gray`, '-f', 'rawvideo', 'pipe:1']
 
 /** The frame inside a shot to show it by: the sample nearest its middle (its faces then drawn on their own frame), else the middle. */
 function midFrame(shot: FollowShot, samples: ExitSample[]): number {
@@ -128,7 +150,7 @@ async function writeExit(
     const name = asset?.name ?? clip.assetId
     const folder = exitFolderName(i + 1, name)
     const row = scoreFollowedClip(project, clip, fps)!
-    const report: ClipReport = { n: i + 1, name, start: clip.start / fps, folder, row, files: [], outside: [], heldFrames: [] }
+    const report: ClipReport = { n: i + 1, name, start: clip.start / fps, folder, row, files: [], outside: [], cuts: [], changes: new Map() }
     reports.push(report)
     const keys = followKeys(project, clip, fps)
     if (!asset || !keys) {
@@ -150,25 +172,17 @@ async function writeExit(
     if (track && track.key !== key) report.stale = `the file on disk (${key}) is not the one the track was measured on (${track.key})`
 
     const samples = exitSamples(project, clip, fps, keys)
-    const cuts = exitCuts(project, clip, fps, keys)
     report.outside = samples.filter((s) => !s.inside)
-    report.heldFrames = cuts.filter((c) => c.held).map((c) => c.frame)
+    // On the keys alone first: which frames each cut's picture is measured on.
+    const keyCuts = exitCuts(project, clip, fps, keys)
+    const shotFrames = keys.shots.map((shot) => midFrame(shot, samples))
 
-    const sheets: { name: string; frames: number[] }[] = [
-      ...cuts.map((c, k) => ({
-        name: `cut-${pad(k + 1, 2)}-f${pad(c.frame, 5)}`,
-        frames: [c.frame - 1, c.frame, c.frame + 1].filter((f) => f >= 0 && f < clip.duration)
-      })),
-      ...keys.shots.map((shot, k) => {
-        const f = midFrame(shot, samples)
-        return { name: `shot-${pad(k + 1, 2)}-f${pad(f, 5)}`, frames: [f] }
-      })
-    ]
     const dir = join(root, folder)
     const raw = join(dir, 'raw')
     await mkdir(raw, { recursive: true })
-    const wanted = [...new Set(sheets.flatMap((s) => s.frames))].sort((a, b) => a - b)
+    const wanted = [...new Set([...keyCuts.flatMap((c) => pictureFrames(c.frame, clip.duration)), ...shotFrames])].sort((a, b) => a - b)
     const pulled = new Map<number, string>()
+    const grey = new Map<number, Uint8Array>()
     const t0 = Date.now()
     for (let b = 0; b < wanted.length; b += PULL_BATCH) {
       const batch = wanted.slice(b, b + PULL_BATCH)
@@ -178,8 +192,40 @@ async function writeExit(
       const got = (await readdir(into)).filter((f) => f.endsWith('.png')).sort()
       if (got.length !== batch.length) throw new Error(`${name}: the pull wrote ${got.length} of ${batch.length} frames (${batch[0]}–${batch[batch.length - 1]})`)
       batch.forEach((f, j) => pulled.set(f, join(into, got[j])))
+      // The same frames, small and grey, in the same order: what the picture's change is measured on.
+      const { stdout } = await run(FFMPEG, greyArgs(join(into, '%05d.png')), { encoding: 'buffer', maxBuffer: 2 * batch.length * GREY * GREY })
+      const bytes = stdout as unknown as Buffer
+      if (bytes.length !== batch.length * GREY * GREY) throw new Error(`${name}: the grey read gave ${bytes.length} bytes for ${batch.length} frames`)
+      batch.forEach((f, j) => grey.set(f, new Uint8Array(bytes.subarray(j * GREY * GREY, (j + 1) * GREY * GREY))))
     }
     report.pullMs = Date.now() - t0
+
+    // Where each cut's picture changes, then every cut judged there.
+    const picture = new Map<number, number | null>()
+    for (const c of keyCuts) {
+      const steps: { frame: number; change: number }[] = []
+      for (let f = c.frame - PICTURE_REACH; f <= c.frame + PICTURE_REACH; f++) {
+        const a = grey.get(f - 1)
+        const b = grey.get(f)
+        if (a && b) steps.push({ frame: f, change: meanAbsDiff(a, b) })
+      }
+      const seen = pictureCut(steps)
+      picture.set(c.frame, seen.frame)
+      report.changes.set(c.frame, { change: seen.change, next: seen.next })
+    }
+    report.row = scoreFollowedClip(project, clip, fps, keys, picture)!
+    const cuts = exitCuts(project, clip, fps, keys, picture)
+    report.cuts = cuts
+
+    const sheets: { name: string; frames: number[] }[] = [
+      ...cuts.map((c, k) => {
+        const p = c.picture ?? c.frame
+        const frames: number[] = []
+        for (let f = Math.min(c.frame, p) - 1; f <= Math.max(c.frame, p) + 1; f++) if (f >= 0 && f < clip.duration) frames.push(f)
+        return { name: `cut-${pad(k + 1, 2)}-f${pad(c.frame, 5)}${p === c.frame ? '' : `-p${pad(p, 5)}`}`, frames }
+      }),
+      ...keys.shots.map((shot, k) => ({ name: `shot-${pad(k + 1, 2)}-f${pad(shotFrames[k], 5)}`, frames: [shotFrames[k]] }))
+    ]
     const t1 = Date.now()
     const height = options.sheetHeight ?? Math.min(540, keys.source.height)
     for (const sheet of sheets) {
@@ -208,8 +254,14 @@ async function writeExit(
     '',
     `Both measured bars met on ${both} of ${reports.length} clip(s).`,
     '',
+    'Each cut is judged where the PICTURE cuts: the frames around the crop’s step are read as small grey frames and',
+    'the clear largest change within two frames of it taken as the picture’s cut; a cut is held when a lane of the',
+    'crop that moves there does not change on that frame — late (the old crop on the new picture) or early (the new',
+    'crop on the old picture). Where no clear change is seen, the crop’s own frame is used, and the clip says so.',
+    '',
     'The frames. Each clip has a folder, numbered as the table is: cut-NN-fFFFFF.png for each cut (clip frames',
-    'F−1 | F | F+1, F the cut’s first frame) and shot-NN-fFFFFF.png, one frame inside each shot. Each is the',
+    'F−1 | F | F+1, F the frame the crop steps on; where the picture cuts on another frame P, from the earlier',
+    'of the two less one to the later plus one, and the name ends -pPPPPP) and shot-NN-fFFFFF.png, one frame inside each shot. Each is the',
     'SOURCE frame the export shows on that clip frame (its own seek, retime and fps clock), uncropped: the crop',
     'in red (a stacked two-up: the top half red, the bottom half blue), and the faces of the nearest sample in',
     'the same shot, within half a second, in green. The share is counted on every sample; the frames are for looking.',
@@ -220,7 +272,21 @@ async function writeExit(
     if (r.skipped) readme.push(`   ${r.skipped}`)
     if (r.stale) readme.push(`   NOTE: ${r.stale}`)
     for (const note of r.row.notes) readme.push(`   path: ${note}`)
-    if (r.heldFrames.length > 0) readme.push(`   held across a cut at clip frame(s) ${r.heldFrames.join(', ')}`)
+    const held = r.cuts.filter((c) => c.held)
+    if (held.length > 0) {
+      const at = held.map((c) => `f${c.frame}${typeof c.picture === 'number' && c.picture !== c.frame ? ` (the picture cuts on f${c.picture})` : ''}: ${c.heldLanes.join(', ')}`)
+      readme.push(`   held across a cut: ${at.join('; ')}`)
+    }
+    if (r.cuts.length > 0 && !r.skipped) {
+      const seen = r.cuts.filter((c) => typeof c.picture === 'number')
+      const off = seen.filter((c) => c.picture !== c.frame).map((c) => `f${c.frame} → f${c.picture}`)
+      const unclear = r.cuts.filter((c) => c.picture === null).map((c) => {
+        const ch = r.changes.get(c.frame)
+        return `f${c.frame}${ch ? ` (largest change ${ch.change.toFixed(1)}, next ${ch.next.toFixed(1)})` : ''}`
+      })
+      readme.push(`   the picture’s cut seen at ${seen.length} of ${r.cuts.length} cut(s)${off.length > 0 ? `; off the crop’s step: ${off.join(', ')}` : ''}`)
+      if (unclear.length > 0) readme.push(`   no clear picture cut near (judged on the crop’s frame): ${unclear.join(', ')}`)
+    }
     if (r.outside.length > 0) {
       const shown = r.outside.slice(0, 20).map((o) => `f${o.frame} (${(o.ms / 1000).toFixed(2)} s, shot ${o.shot + 1}${o.twoUp ? ', two-up' : ''})`)
       readme.push(`   outside (${r.outside.length}): ${shown.join(', ')}${r.outside.length > 20 ? ', …' : ''}`)
@@ -232,7 +298,7 @@ async function writeExit(
 }
 
 /** The last run's sheets, by name; a numbered folder holding anything else is not this reader's. */
-const OURS = /^(?:(?:cut|shot)-\d+-f\d+\.png|raw)$/
+const OURS = /^(?:(?:cut|shot)-\d+-f\d+(?:-p\d+)?\.png|raw)$/
 
 /**
  * The real run's folder, cleared of the LAST run's output only — not
@@ -283,10 +349,9 @@ const LIGHT = '0xC0C0C0'
 
 const face = (cx: number, cy = 0.32): FaceBox => ({ x: Number((cx - 0.04).toFixed(4)), y: Number((cy - 0.07).toFixed(4)), width: 0.08, height: 0.14, score: 0.9 })
 
-/** Shot 1 one face at x 0.25; shot 2 two people at 0.2 and 0.8, a stacked two-up on a 9:16 canvas. */
-function syntheticTrack(key: string): SubjectTrack {
+/** Shot 1 one face at x 0.25; shot 2 two people at 0.2 and 0.8, a stacked two-up on a 9:16 canvas. `cut` is the track's cut, the picture's by default. */
+function syntheticTrack(key: string, cut = printedMs(CUT / FPS)): SubjectTrack {
   const durationMs = 3000
-  const cut = printedMs(CUT / FPS)
   const samples: SubjectSample[] = []
   for (let ms = 0; ms < durationMs; ms += 500) samples.push({ ms, faces: ms < cut ? [face(0.25)] : [face(0.8, 0.55), face(0.2)] })
   return {
@@ -308,14 +373,27 @@ function syntheticTrack(key: string): SubjectTrack {
 }
 
 /** `key` is the made file's own `size:mtime`, as main's fileKey writes it. */
-function syntheticProject(path: string, key: string): Project {
+function syntheticProject(path: string, key: string, cutMs?: number): Project {
   const asset: MediaAsset = { id: 'a', path, name: 'two shots.mp4', kind: 'video', durationFrames: 72, width: W, height: H, fps: SOURCE_FPS, hasVideo: true, hasAudio: false, size: 1 }
   const clip: Clip = {
     id: 'c', assetId: 'a', trackId: 'v1', start: 0, duration: 80, inPoint: IN, volume: 1,
     transform: { ...DEFAULT_TRANSFORM }, color: { ...DEFAULT_COLOR }, follow: { version: 1 }
   }
   const base = emptyProject('exit check')
-  return { ...base, settings: { ...base.settings, width: 1080, height: 1920, fps: FPS }, assets: [asset], clips: [clip], subjects: { a: syntheticTrack(key) } }
+  return { ...base, settings: { ...base.settings, width: 1080, height: 1920, fps: FPS }, assets: [asset], clips: [clip], subjects: { a: syntheticTrack(key, cutMs) } }
+}
+
+/** The two-shot file: dark for 1.5 s, then light, at 24 fps; and its `size:mtime` key. */
+async function makeTwoShots(root: string): Promise<{ source: string; key: string }> {
+  const source = join(root, 'two shots.mp4')
+  await run(FFMPEG, [
+    '-hide_banner', '-loglevel', 'error', '-y',
+    '-f', 'lavfi', '-i', `color=c=${DARK}:s=${W}x${H}:r=${SOURCE_FPS}:d=1.5`,
+    '-f', 'lavfi', '-i', `color=c=${LIGHT}:s=${W}x${H}:r=${SOURCE_FPS}:d=1.5`,
+    '-filter_complex', '[0:v][1:v]concat=n=2:v=1:a=0,format=yuv420p', '-c:v', 'libx264', '-g', '30', source
+  ])
+  const made = await stat(source)
+  return { source, key: `${made.size}:${Math.round(made.mtimeMs)}` }
 }
 
 /** One pixel of a PNG, RGB. */
@@ -332,15 +410,8 @@ const isBlue = ([r, g, b]: number[]): boolean => b > 200 && r < 60 && g > 120 &&
 describe('the exit reader’s ffmpeg, on a clip made here', () => {
   it('pulls the frames the export shows and draws the crops, halves and faces on them', async () => {
     const root = await outputDir('reframe-exit')
-    const source = join(root, 'two shots.mp4')
-    await run(FFMPEG, [
-      '-hide_banner', '-loglevel', 'error', '-y',
-      '-f', 'lavfi', '-i', `color=c=${DARK}:s=${W}x${H}:r=${SOURCE_FPS}:d=1.5`,
-      '-f', 'lavfi', '-i', `color=c=${LIGHT}:s=${W}x${H}:r=${SOURCE_FPS}:d=1.5`,
-      '-filter_complex', '[0:v][1:v]concat=n=2:v=1:a=0,format=yuv420p', '-c:v', 'libx264', '-g', '30', source
-    ])
-    const made = await stat(source)
-    const project = syntheticProject(source, `${made.size}:${Math.round(made.mtimeMs)}`)
+    const { source, key } = await makeTwoShots(root)
+    const project = syntheticProject(source, key)
     const clip = project.clips[0]
     const keys = followKeys(project, clip, FPS)!
     expect(keys.shots.map((s) => [s.from, s.why]), 'the premise: one face, then a stacked two-up from clip frame 39').toEqual([[0, 'face'], [CUT - IN, 'two-up']])
@@ -349,6 +420,7 @@ describe('the exit reader’s ffmpeg, on a clip made here', () => {
     expect(reports).toHaveLength(1)
     const [r] = reports
     expect(r.row).toMatchObject({ shots: 2, twoUp: 1, cuts: 1, heldAcrossCut: 0, samplesWithFace: 5, insideShare: 1 })
+    expect(r.cuts, 'the picture cuts where the crop steps').toEqual([expect.objectContaining({ frame: CUT - IN, picture: CUT - IN, held: false })])
     expect(r.folder).toBe('1-two shots')
     expect(r.stale, 'the track is the file’s own').toBeUndefined()
     const cutSheet = `cut-01-f${pad(CUT - IN, 5)}.png`
@@ -381,6 +453,39 @@ describe('the exit reader’s ffmpeg, on a clip made here', () => {
   }, 120_000)
 })
 
+describe('a cut judged against the picture, on a clip made here', () => {
+  it('a track cut a source frame late or early steps the crop off the picture’s cut: held, and the sheet shows both', async () => {
+    const root = await outputDir('reframe-exit-picture')
+    const { source, key } = await makeTwoShots(root)
+    // The picture cuts on clip frame 39; a track a 24 fps frame late has the keys step on 40, a frame early on 38.
+    const cases = [
+      { name: 'late', cutMs: printedMs(CUT / FPS + 1 / SOURCE_FPS), keysFrame: CUT - IN + 1, dark: [true, false, false, false] },
+      { name: 'early', cutMs: printedMs(CUT / FPS - 1 / SOURCE_FPS), keysFrame: CUT - IN - 1, dark: [true, true, false, false] }
+    ]
+    for (const c of cases) {
+      const project = syntheticProject(source, key, c.cutMs)
+      const clip = project.clips[0]
+      const keys = followKeys(project, clip, FPS)!
+      expect(keys.shots.map((s) => s.from), `${c.name}: the premise, the keys' step`).toEqual([0, c.keysFrame])
+      expect(exitCuts(project, clip, FPS, keys)[0], `${c.name}: the premise, the keys agree with themselves`).toMatchObject({ moves: true, held: false })
+
+      const { reports, readme } = await writeExit(project, join(root, c.name), { projectName: `the ${c.name} track`, sheetHeight: H })
+      const [r] = reports
+      expect(r.cuts, c.name).toEqual([expect.objectContaining({ frame: c.keysFrame, picture: CUT - IN, moves: true, held: true })])
+      expect(r.row.heldAcrossCut, c.name).toBe(1)
+      expect(exitBars(r.row).held, c.name).toBe('not met')
+      expect(readme.join('\n'), c.name).toContain(`f${c.keysFrame} (the picture cuts on f${CUT - IN})`)
+
+      // The sheet runs from the earlier of the two frames less one to the later plus one: the picture's cut is on it.
+      const sheet = `cut-01-f${pad(c.keysFrame, 5)}-p${pad(CUT - IN, 5)}.png`
+      expect(r.files[0], c.name).toBe(sheet)
+      const file = join(root, c.name, r.folder, sheet)
+      const background = await Promise.all([0, 1, 2, 3].map((p) => pixel(file, p * W + W - 4, H - 4)))
+      expect(background.map((px) => px[0] < 64), `${c.name}: dark before the picture's cut, light from it`).toEqual(c.dark)
+    }
+  }, 120_000)
+})
+
 describe('the real run’s folder', () => {
   it('clears only what the reader wrote: the user’s clips beside it stay, the last README is kept', async () => {
     const name = 'reframe-exit-clear'
@@ -390,6 +495,8 @@ describe('the real run’s folder', () => {
     await mkdir(join(root, '1-talk'), { recursive: true })
     await writeFile(join(root, '1-talk', 'cut-01-f00039.png'), '')
     await writeFile(join(root, '1-talk', 'shot-02-f00054.png'), '')
+    // A cut whose picture changed on another frame: its sheet's name carries both.
+    await writeFile(join(root, '1-talk', 'cut-02-f00040-p00039.png'), '')
     await writeFile(join(root, 'README.txt'), '| 1 | talk.mp4 | … | 4 |')
     await clearedRoot(name)
     const left = await readdir(root)
