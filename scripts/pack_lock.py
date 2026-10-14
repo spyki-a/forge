@@ -152,8 +152,8 @@ EXPECTS = (
 # row 28). All relative to the version folder (userData/python/<pack>/).
 #
 # macOS: the 47 distributions' files in the dev venv, every RECORD entry
-# stat()ed on disk (587,943,059 B, .pyc included), plus the interpreter's
-# 69,430,272 B of tar. Paths: the longest is onnxruntime's
+# stat()ed on disk (587,943,059 B, .pyc included), plus the interpreter on
+# disk (below). Paths: the longest is onnxruntime's
 # RuntimeOptimizationRecordContainerEntry .pyc, 125 characters under
 # site-packages + 36 for `python/lib/python3.14/site-packages/`; the longest
 # directory numpy's dist-info/licenses/…/pythoncapi-compat, 71 + 36. The
@@ -161,23 +161,37 @@ EXPECTS = (
 #
 # Windows: the 48 cp314 wheels' central directories, 556,756,305 B, plus pip's
 # compile at the dev venv's .pyc/.py byte ratio (105,047,119 / 79,995,354)
-# over their 77,229,712 B of .py, plus 63,299,584 B of interpreter tar. Paths:
+# over their 77,229,712 B of .py, plus the interpreter on disk (below). Paths:
 # the same .pyc, 125 under site-packages + 25 for `python\Lib\site-packages\`,
 # and the longest directory 71 + 25. (§3a.2's 141 is that .pyc's temporary
 # name, 125 + 16, which the path check adds itself.)
+#
+# The interpreter on disk: the pinned 20261001 tree unpacked (row 26,
+# measured 2026-10-14) and then compiled once, as the install job must,
+# because every .pyc either archive ships is stale on unpack (they record the
+# build day's mtimes; the archive stamps every member 2024-01-01). Apparent
+# bytes, as the package figures above are.
+#   macOS: 1,689 files, 68,060,050 B; its 3 stale .pyc (22,152 B) replaced by
+#   `python3.14 -I -m compileall -q -j 1 python/lib/python3.14`'s 1,059
+#   (19,043,394 B): 87,081,292 B.
+#   Windows: 2,190 files, 61,643,159 B; its 572 stale .pyc (10,219,185 B)
+#   replaced by 1,059 (18,891,318 B), compiled on the Mac by the same 3.14.8
+#   with `-d` a Windows-length userData path: 70,315,292 B.
+# (These replaced the 20261013 build's tar sizes, 69,430,272 and 63,299,584 B,
+# which were neither this build nor what the unpack writes.)
 MAC_PACKAGES_ON_DISK = 587_943_059
-MAC_INTERPRETER_TAR = 69_430_272
+MAC_INTERPRETER_ON_DISK = 87_081_292
 WIN_WHEEL_INDEX_BYTES = 556_756_305
 WIN_PY_BYTES = 77_229_712
 VENV_PYC_BYTES = 105_047_119
 VENV_PY_BYTES = 79_995_354
-WIN_INTERPRETER_TAR = 63_299_584
+WIN_INTERPRETER_ON_DISK = 70_315_292
 LONGEST_PYC_UNDER_SITE_PACKAGES = 125
 LONGEST_DIR_UNDER_SITE_PACKAGES = 71
 
 
 def _win_bytes_on_disk() -> int:
-    return WIN_WHEEL_INDEX_BYTES + round(WIN_PY_BYTES * VENV_PYC_BYTES / VENV_PY_BYTES) + WIN_INTERPRETER_TAR
+    return WIN_WHEEL_INDEX_BYTES + round(WIN_PY_BYTES * VENV_PYC_BYTES / VENV_PY_BYTES) + WIN_INTERPRETER_ON_DISK
 
 
 TARGETS: dict[str, dict] = {
@@ -199,7 +213,7 @@ TARGETS: dict[str, dict] = {
         'platforms': lambda: list(mac_platforms((14, 0), 'arm64')),
         'python': 'python/bin/python3.14',
         'minOs': '14.0',
-        'bytesOnDisk': MAC_PACKAGES_ON_DISK + MAC_INTERPRETER_TAR,
+        'bytesOnDisk': MAC_PACKAGES_ON_DISK + MAC_INTERPRETER_ON_DISK,
         'longestPath': LONGEST_PYC_UNDER_SITE_PACKAGES + len('python/lib/python3.14/site-packages/'),
         'longestDir': LONGEST_DIR_UNDER_SITE_PACKAGES + len('python/lib/python3.14/site-packages/'),
     },
@@ -624,9 +638,9 @@ def manifest_ts(pack: int, platforms: dict[str, dict], today: str) -> str:
         ' *',
         ' * bytesOnDisk, longestPath and longestDir are PRE-CI MEASUREMENTS (CLIPS',
         ' * §3a.1, §3a.2), relative to the version folder: on the Mac, the dev venv',
-        " * on disk plus the interpreter's tar; on Windows, the wheels' indexes, pip's",
-        " * .pyc at the dev venv's ratio and the interpreter's tar. CI's install",
-        ' * replaces them (§3a.8 row 28).',
+        " * on disk; on Windows, the wheels' indexes and pip's .pyc at the dev venv's",
+        " * ratio; on both, the pinned interpreter's tree unpacked and its standard",
+        " * library compiled once (§3a.8 row 26). CI's install replaces them (row 28).",
         ' */',
         '',
         "import type { HelperPackManifest } from './pack'",

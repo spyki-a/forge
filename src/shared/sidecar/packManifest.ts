@@ -8,9 +8,9 @@
  *
  * bytesOnDisk, longestPath and longestDir are PRE-CI MEASUREMENTS (CLIPS
  * §3a.1, §3a.2), relative to the version folder: on the Mac, the dev venv
- * on disk plus the interpreter's tar; on Windows, the wheels' indexes, pip's
- * .pyc at the dev venv's ratio and the interpreter's tar. CI's install
- * replaces them (§3a.8 row 28).
+ * on disk; on Windows, the wheels' indexes and pip's .pyc at the dev venv's
+ * ratio; on both, the pinned interpreter's tree unpacked and its standard
+ * library compiled once (§3a.8 row 26). CI's install replaces them (row 28).
  */
 
 import type { HelperPackManifest } from './pack'
@@ -327,7 +327,7 @@ export const HELPER_PACK: HelperPackManifest = {
         'vision.salientModel'
       ],
       // pre-CI measurements, see the header
-      bytesOnDisk: 657_373_331,
+      bytesOnDisk: 675_024_351,
       longestPath: 161,
       longestDir: 107,
       minOs: '14.0'
@@ -646,7 +646,7 @@ export const HELPER_PACK: HelperPackManifest = {
         'vision.salientModel'
       ],
       // pre-CI measurements, see the header
-      bytesOnDisk: 721_471_263,
+      bytesOnDisk: 728_486_971,
       longestPath: 150,
       longestDir: 96
     }
