@@ -120,3 +120,29 @@ export function helperStatusReason(status: SidecarStatus): string | null {
     }
   }
 }
+
+/**
+ * What the window's header dot and helper row take from a status (App.tsx
+ * `setSidecar(running, reason)`): running only when ready; not running, with
+ * its sentence, when there is no pack, an older one, a damaged one, or a
+ * helper that failed; not running and no sentence yet while one starts or
+ * installs, so neither reads as a fault. The Settings row's own states for
+ * these are a later slice (docs/CLIPS.md §3a.4).
+ */
+export function helperRowFrom(status: SidecarStatus): { running: boolean; reason: string | null } {
+  switch (status.state) {
+    case 'ready':
+      return { running: true, reason: null }
+    case 'absent':
+    case 'damaged':
+    case 'failed':
+      return { running: false, reason: helperStatusReason(status) }
+    case 'starting':
+    case 'installing':
+      return { running: false, reason: null }
+    default: {
+      const unknown: never = status
+      return unknown
+    }
+  }
+}

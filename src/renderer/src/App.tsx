@@ -6,7 +6,7 @@ import { escapeLeavesFullScreen } from '@shared/fullScreen'
 import { projectDuration } from '@shared/timeline'
 import { AUTOSAVE_INTERVAL_MS } from '@shared/project/recovery'
 import { reframeHelperFrom } from '@shared/reframe/job'
-import { helperStatusReason, type SidecarStatus } from '@shared/sidecar/status'
+import { helperRowFrom, type SidecarStatus } from '@shared/sidecar/status'
 import { useEditor } from './store'
 import { useCatalog } from './catalog'
 import { activeCaptionStyle } from './captionPreview'
@@ -70,32 +70,14 @@ function Notices(): ReactNode {
 }
 
 /**
- * The AI helper's status into the store (src/shared/sidecar/status.ts):
- * running when ready; not running, with its sentence, when there is no pack,
- * a damaged one, or a helper that failed; neither yet while it starts or
- * installs. The Settings row's own states for these are a later slice
- * (docs/CLIPS.md §3a.4).
+ * The AI helper's status into the store: the dot and the row's sentence by
+ * `helperRowFrom` (src/shared/sidecar/status.ts, where the mapping is
+ * tested), and Follow the subject's grey by `reframeHelperFrom`.
  */
 function applyHelperStatus(status: SidecarStatus): void {
   const state = useEditor.getState()
-  switch (status.state) {
-    case 'ready':
-      state.setSidecar(true, null)
-      break
-    case 'absent':
-    case 'damaged':
-    case 'failed':
-      state.setSidecar(false, helperStatusReason(status))
-      break
-    case 'starting':
-    case 'installing':
-      state.setSidecar(false, null)
-      break
-    default: {
-      const unknown: never = status
-      void unknown
-    }
-  }
+  const row = helperRowFrom(status)
+  state.setSidecar(row.running, row.reason)
   // Follow the subject's grey: decided from the capabilities, not the prose (shared/reframe/job.ts).
   state.setReframeHelper(reframeHelperFrom(status))
 }

@@ -5,7 +5,7 @@ import { dirname, join, resolve } from 'node:path'
 import { HELPER_PACK } from '../src/shared/sidecar/packManifest'
 import { packBytes, packHosts, type PackPlatform } from '../src/shared/sidecar/pack'
 import { HELPER_PYTHON_MISSING, UNPARSEABLE_RECEIPT } from '../src/shared/sidecar/helperPython'
-import { HELPER_NEEDS_UPDATE, HELPER_NOT_INSTALLED, helperStatusReason, packOffer, type SidecarStatus } from '../src/shared/sidecar/status'
+import { HELPER_NEEDS_UPDATE, HELPER_NOT_INSTALLED, helperRowFrom, helperStatusReason, packOffer, type SidecarStatus } from '../src/shared/sidecar/status'
 import { REFRAME_CHANNELS, REFRAME_FAILURES } from '../src/shared/reframe/job'
 
 /*
@@ -547,5 +547,34 @@ describe('packOffer', () => {
     expect(helperStatusReason({ state: 'damaged', reason: HELPER_PYTHON_MISSING, offer })).toBe(HELPER_PYTHON_MISSING)
     expect(helperStatusReason({ state: 'starting', source: { kind: 'path', python: 'python3' } })).toBeNull()
     expect(helperStatusReason({ state: 'installing', stage: 'Fetching' })).toBeNull()
+  })
+})
+
+describe('helperRowFrom: what the header dot and the row take from a status', () => {
+  const offer = packOffer(HELPER_PACK, 'win32-x64', null, false)
+  const source = { kind: 'pack', pack: 1, root: '/u/python/1' } as const
+  const hello = { protocolVersion: 1, python: '3.14.8', platform: 'win32', capabilities: [], degraded: {}, executable: 'python.exe', prefix: '/p', path: [] }
+
+  it('is running only when ready', () => {
+    expect(helperRowFrom({ state: 'ready', hello, source })).toEqual({ running: true, reason: null })
+  })
+
+  it('is not running, with its sentence, with no pack, an older one, a damaged one, or a failed start', () => {
+    expect(helperRowFrom({ state: 'absent', offer })).toEqual({ running: false, reason: HELPER_NOT_INSTALLED })
+    expect(helperRowFrom({ state: 'absent', offer: { ...offer, kind: 'update' } as typeof offer })).toEqual({ running: false, reason: HELPER_NEEDS_UPDATE })
+    expect(helperRowFrom({ state: 'absent', offer: { supported: false, reason: 'The AI helper needs macOS 14 or later' } })).toEqual({
+      running: false,
+      reason: 'The AI helper needs macOS 14 or later'
+    })
+    expect(helperRowFrom({ state: 'damaged', reason: HELPER_PYTHON_MISSING, offer })).toEqual({ running: false, reason: HELPER_PYTHON_MISSING })
+    expect(helperRowFrom({ state: 'failed', error: 'The AI helper stopped (code 3)', source })).toEqual({
+      running: false,
+      reason: 'The AI helper stopped (code 3)'
+    })
+  })
+
+  it('is not running and names no fault while one starts or installs', () => {
+    expect(helperRowFrom({ state: 'starting', source })).toEqual({ running: false, reason: null })
+    expect(helperRowFrom({ state: 'installing', stage: 'Fetching' })).toEqual({ running: false, reason: null })
   })
 })

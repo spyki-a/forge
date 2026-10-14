@@ -195,6 +195,24 @@ describe('the header gear', () => {
     expect(gated.map((a) => a.getText().slice(0, 40))).toEqual([])
   })
 
+  it('the helper’s status reaches the store once, through helperRowFrom (src/shared/sidecar/status.ts, tested there)', () => {
+    // Every call of setSidecar in App.tsx, counted: a second, hand-made mapping would be a second call.
+    const calls = everyNode(file).filter(
+      (n): n is ts.CallExpression => ts.isCallExpression(n) && readName(n.expression) === 'setSidecar'
+    )
+    expect(calls.map((c) => c.getText())).toEqual(['state.setSidecar(row.running, row.reason)'])
+    const rows = everyNode(file).filter(
+      (n): n is ts.VariableDeclaration => ts.isVariableDeclaration(n) && n.name.getText() === 'row'
+    )
+    expect(rows.map((r) => r.initializer?.getText())).toEqual(['helperRowFrom(status)'])
+    // Both in the one function the broadcast and the ask are given to.
+    const owner = (n: ts.Node): string | undefined => {
+      const fn = ancestors(n).find((a): a is ts.FunctionDeclaration => ts.isFunctionDeclaration(a))
+      return fn?.name?.text
+    }
+    expect([owner(calls[0]), owner(rows[0])]).toEqual(['applyHelperStatus', 'applyHelperStatus'])
+  })
+
   it('the panel is mounted once, unconditionally, and the old AI span is gone', () => {
     const app = source(APP)
     expect(count(app, '<SettingsPanel />')).toBe(1)
