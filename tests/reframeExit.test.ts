@@ -188,7 +188,7 @@ describe('a face outside the crop', () => {
     expect(row.inside).toBe(SAMPLES - SHOT1_SAMPLES)
   })
 
-  it('tests the largest face, not a smaller one beside it', () => {
+  it('tests the face the shot follows, not a smaller one beside it', () => {
     // One sample of shot 1 (1 of 7: under FACE_SHARE, a stray) also holds a smaller face far right.
     const t = track({ faces: (s, ms) => (s === 0 && ms === 1000 ? [face(500), face(1500, 400, 100)] : [face([500, 1500, 900][s])]) })
     const { project, clip } = setup(t)
@@ -198,6 +198,51 @@ describe('a face outside the crop', () => {
     expect(1500 - 50).toBeGreaterThan(crop.x + crop.width)
     expect(stray.tests.map((x) => x.face.width)).toEqual([expect.closeTo(200, 0)])
     expect(scoreFollowedClip(project, clip, FPS)!.insideShare).toBe(1)
+  })
+
+  it('on a one-person shot, a LARGER passer-by is not the subject: the face the path follows is held', () => {
+    // One 10 s shot of a person at x 500; a passer-by nearer the lens (300 px, at 1500) on 3 of its 20 samples — under FACE_SHARE, so a 'face' shot.
+    // Mid-shot, and at the shot's opening, where the subject is the face of the first sample holding one face alone.
+    for (const at of [[4000, 4500, 5000], [0, 500, 1000]]) {
+      const passing = new Set(at)
+      const t = track({ cuts: [], faces: (_, ms) => (passing.has(ms) ? [face(1500, 400, 300), face(500)] : [face(500)]) })
+      const { project, clip } = setup(t)
+      const keys = keysOf(project, clip)
+      expect(keys.shots.map((s) => s.why), 'the premise: one person').toEqual(['face'])
+      const past = exitSamples(project, clip, FPS).filter((s) => passing.has(s.ms))
+      expect(past).toHaveLength(3)
+      for (const s of past) {
+        const crop = followAt(keys, s.frame).crop
+        // The premise: the path kept its subject, and the larger face is outside the crop.
+        expect(crop.x).toBeLessThanOrEqual(400)
+        expect(crop.x + crop.width).toBeGreaterThanOrEqual(600)
+        expect(1500 - 150).toBeGreaterThan(crop.x + crop.width)
+        expect(s.tests.map((x) => x.face.x + x.face.width / 2), `${s.ms} ms`).toEqual([expect.closeTo(500, 0)])
+      }
+      const row = scoreFollowedClip(project, clip, FPS)!
+      expect(row, `passing at ${at.join(', ')} ms`).toMatchObject({ samplesWithFace: SAMPLES, inside: SAMPLES, insideShare: 1 })
+      expect(exitBars(row).inside).toBe('met')
+    }
+  })
+
+  it('on a two-shot, both people are held: a crop that cuts the second one off is outside', () => {
+    // One 10 s shot of two people close enough for one crop: 700 (200 px) and 1000 (150 px).
+    const t = track({ cuts: [], faces: () => [face(700), face(1000, 400, 150)] })
+    const fits = setup(t)
+    expect(keysOf(fits.project, fits.clip).shots.map((s) => s.why), 'the premise: a two-shot').toEqual(['both'])
+    const framed = scoreFollowedClip(fits.project, fits.clip, FPS)!
+    expect(framed, 'both inside the crop the path solves').toMatchObject({ samplesWithFace: SAMPLES, inside: SAMPLES })
+    // A drag of a quarter of the crop to the left: the larger face stays inside, the second is cut by the crop's right edge.
+    const { project, clip } = setup(t, { follow: { version: 1, offsets: { 0: -0.25 } } })
+    const crop = followAt(keysOf(project, clip), 0).crop
+    expect(crop.x, 'the premise: the larger face (600–800) inside').toBeLessThanOrEqual(600)
+    expect(crop.x + crop.width).toBeGreaterThanOrEqual(800)
+    expect(crop.x + crop.width, 'the premise: the second face (925–1075) cut').toBeLessThan(1075)
+    const samples = exitSamples(project, clip, FPS)
+    expect(samples[0].tests.map((x) => x.inside)).toEqual([true, false])
+    const row = scoreFollowedClip(project, clip, FPS)!
+    expect(row).toMatchObject({ samplesWithFace: SAMPLES, inside: 0, insideShare: 0 })
+    expect(exitBars(row).inside).toBe('not met')
   })
 })
 

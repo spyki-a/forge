@@ -1,7 +1,7 @@
 import { exportFrameAt, followAt, followKeys, type FollowKeys } from './keys'
 import { cropPath, type CropPath, type ShotCrop } from './path'
 import { exportPixel } from './expression'
-import type { FaceBox } from './types'
+import type { FaceBox, SubjectSample } from './types'
 import type { Clip, CropRect, MediaAsset, Project } from '../timeline'
 import { followedRetime, videoInputArgs } from '../render/plan'
 import { safeTakeBase } from '../render/voiceover'
@@ -23,8 +23,21 @@ import { safeTakeBase } from '../render/voiceover'
  * clip frame the export first shows its moment on (`exportFrameAt`) and read
  * against `followAt` there:
  *
- * - on an ordinary frame, the LARGEST face (by area in source px) must lie
- *   wholly inside the crop — a face partly outside is outside;
+ * - on an ordinary frame, the face the shot follows must lie wholly inside
+ *   the crop — a face partly outside is outside. Which face is the shot's
+ *   kind (`keys.shots[].why`, path.ts rules 2–3):
+ *   - a two-shot (`both`): BOTH people — the two largest faces of a sample,
+ *     each inside, so a crop that cuts the second person off is outside (a
+ *     sample holding one face holds that one);
+ *   - one person (`face`, and a shot the ladder opens — `ground`, `salient`,
+ *     `centre` — which follows a face once it shows): the person, by
+ *     IDENTITY, not size — on a sample with two, the face nearer the one held
+ *     before it, starting from the shot's first sample with one face alone.
+ *     That is path.ts's own rule for whom to follow (`onePerson`: a passer-by
+ *     nearer the lens is the LARGER face), written out again here so that a
+ *     path following the passer-by is read as off its subject, not agreed
+ *     with;
+ *   - `larger` (two people, one framed): the larger face;
  * - on a stacked two-up frame (`followAt`'s halves, not the one crop a single
  *   shot of a two-up clip keys), the face further left by its centre must lie
  *   inside the TOP half and the other inside the BOTTOM — each its own half,
@@ -63,7 +76,7 @@ export interface ExitRow {
   twoUp: number
   /** Samples on screen in this clip that hold a face. */
   samplesWithFace: number
-  /** Of them, the ones whose face (each face, on a two-up frame) was inside its crop. */
+  /** Of them, the ones whose subject was inside its crop: the followed face, both faces of a two-shot, each face in its own half of a two-up. */
   inside: number
   /** inside / samplesWithFace; null when no sample on screen holds a face. */
   insideShare: number | null
@@ -118,6 +131,34 @@ function usable(b: FaceBox | null | undefined): b is FaceBox {
 
 const area = (r: CropRect): number => r.width * r.height
 const centreX = (r: CropRect): number => r.x + r.width / 2
+const centreY = (r: CropRect): number => r.y + r.height / 2
+/** How far apart two boxes' centres are (path.ts `gap`). */
+const gap = (a: CropRect, b: CropRect): number => Math.hypot(centreX(a) - centreX(b), centreY(a) - centreY(b))
+
+const largestOf = (faces: CropRect[]): CropRect => faces.reduce((a, b) => (area(b) > area(a) ? b : a))
+/** The two largest faces, largest first (one when the sample holds one). */
+const largestTwo = (faces: CropRect[]): CropRect[] => [...faces].sort((p, q) => area(q) - area(p)).slice(0, 2)
+
+/**
+ * A one-person shot's subject on each of its samples (in ms order), by
+ * identity — the module note. path.ts `onePerson`'s rule, on the scorer's own
+ * boxes: start from the shot's first sample holding one face alone; on each
+ * sample, the face nearest the one held before. A shot with no such sample
+ * starts from the largest face.
+ */
+function onePerson(own: { sample: SubjectSample; faces: CropRect[] }[]): Map<SubjectSample, CropRect> {
+  const alone = own.find((s) => s.faces.length === 1)
+  let last: CropRect | null = alone ? alone.faces[0] : null
+  const out = new Map<SubjectSample, CropRect>()
+  for (const { sample, faces } of own) {
+    if (faces.length === 0) continue
+    const prev = last
+    const face = prev === null ? largestOf(faces) : faces.reduce((a, b) => (gap(b, prev) < gap(a, prev) ? b : a))
+    out.set(sample, face)
+    last = face
+  }
+  return out
+}
 
 function contains(crop: CropRect, face: CropRect): boolean {
   return (
@@ -156,6 +197,18 @@ export function exitSamples(project: Project, clip: Clip, fps: number, keys: Fol
   const H = keys.source.height
   const px = (f: FaceBox): CropRect => ({ x: f.x * W, y: f.y * H, width: f.width * W, height: f.height * H })
   const D = clip.duration
+  // Each shot's subject on each of its samples, worked out over all of the shot's samples (the clip may show only some).
+  const subjects = new Map<number, Map<SubjectSample, CropRect>>()
+  const subjectOf = (shot: number, sample: SubjectSample): CropRect | undefined => {
+    let byShot = subjects.get(shot)
+    if (!byShot) {
+      const { startMs, endMs } = track.shots[shot]
+      const inShot = track.samples.filter((s) => Number.isFinite(s.ms) && s.ms >= startMs && s.ms < endMs).sort((p, q) => p.ms - q.ms)
+      byShot = onePerson(inShot.map((s) => ({ sample: s, faces: (s.faces ?? []).filter(usable).map(px) })))
+      subjects.set(shot, byShot)
+    }
+    return byShot.get(sample)
+  }
   const out: ExitSample[] = []
   for (const sample of track.samples) {
     const faces = (sample.faces ?? []).filter(usable).map(px)
@@ -174,11 +227,11 @@ export function exitSamples(project: Project, clip: Clip, fps: number, keys: Fol
     const halves = stackedOn(at)
     let tests: ExitFaceTest[]
     if (!halves) {
-      const largest = faces.reduce((a, b) => (area(b) > area(a) ? b : a))
-      tests = [{ face: largest, crop: at.crop, inside: contains(at.crop, largest) }]
+      const held = own.why === 'both' ? largestTwo(faces) : own.why === 'larger' ? [largestOf(faces)] : [subjectOf(shot, sample) ?? largestOf(faces)]
+      tests = held.map((f) => ({ face: f, crop: at.crop, inside: contains(at.crop, f) }))
     } else if (faces.length >= 2) {
       // The two largest, by side: the face further left is the top half's (path.ts rule 3).
-      const [a, b] = [...faces].sort((p, q) => area(q) - area(p))
+      const [a, b] = largestTwo(faces)
       const [left, right] = centreX(a) <= centreX(b) ? [a, b] : [b, a]
       tests = [
         { face: left, crop: halves.top, inside: contains(halves.top, left) },

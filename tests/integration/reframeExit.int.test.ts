@@ -201,7 +201,7 @@ async function writeExit(
     `Step 1's exit, read (docs/CLIPS.md §4.10) — ${new Date().toISOString()}`,
     `Project: ${options.projectName ?? project.name}, ${fps} fps, canvas ${project.settings.width}×${project.settings.height}; ${reports.length} followed clip(s).`,
     '',
-    `The bars: the face inside its crop on ≥ ${EXIT_BARS.insideShare * 100} % of the samples that hold one (on a stacked two-up, each face inside its own half);`,
+    `The bars: the followed face inside its crop on ≥ ${EXIT_BARS.insideShare * 100} % of the samples that hold one (a two-shot: both faces; a stacked two-up: each face inside its own half);`,
     `${EXIT_BARS.heldAcrossCut} crops held across a cut; and your rating ≥ 4 of 5 on ≥ 8 of 10 clips — the rating column is yours to fill in.`,
     '',
     ...exitTable(reports.map((r) => ({ name: r.name, row: r.row }))),
