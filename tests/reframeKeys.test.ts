@@ -695,6 +695,31 @@ describe('followKeys — the cut’s exact pts, when the track kept it (1b)', ()
     expect(cutFrame(cutTrack({ startPts: 231 * 512 })).frame, 'no time base').toBe(121)
     expect(cutFrame(cutTrack({ timeBase: tb })).frame, 'no pts').toBe(121)
   })
+
+  it('a hold frozen on the tied cut frame takes the shot the exact pts puts on screen — the second; the printed ms, the first', () => {
+    /*
+     * In-point 192 at 25 fps is 7.68 s: the seek's 117964.8 ticks round UP to
+     * 117965, so the cut (pts 118272) is 307 ticks on, ×25/15360 = 0.4997 of
+     * a slot: slot 0, the frozen frame itself. The printed 7.7 s is exactly
+     * half a slot on, which the tie slack sends to slot 1 — past the frozen
+     * frame, so the hold would take the first shot's crop. The hold's branch
+     * picks its shot with exportFrameAt like the cut keys do (keys.ts, the
+     * `clip.hold` branch), so it gets the exact pts too.
+     */
+    const heldAt = (t: SubjectTrack): { index: number; x: number; path: CropPath } => {
+      const { project, clip } = setup(t, { inPoint: 192, duration: 50, hold: true })
+      const keys = followKeys(project, clip, 25)!
+      expect(keys.cropX, 'a hold writes no keys').toBeUndefined()
+      return { index: keys.shots[0].index, x: keys.crop.x, path: cropPath(t, CANVAS, {}) }
+    }
+    const exact = heldAt(cutTrack({ startPts: 231 * 512, timeBase: tb }))
+    expect(exact.index, 'with pts and time base: the second shot').toBe(1)
+    expect(exact.x).toBe(exact.path.shots[1].at)
+    const printed = heldAt(cutTrack({ timeBase: tb }))
+    expect(printed.index, 'with the printed ms alone: the first').toBe(0)
+    expect(printed.x).toBe(printed.path.shots[0].at)
+    expect(exact.path.shots[0].at).not.toBe(exact.path.shots[1].at)
+  })
 })
 
 /** The `%.6g` print's half-unit at this time, in 30 fps frames. */
