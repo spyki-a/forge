@@ -2187,6 +2187,16 @@ export async function runCensus(options: CensusOptions = {}): Promise<CensusResu
     // Closed for every scenario, whatever the page had: the panel is an overlay
     // home, found as the thing opening it ADDS, and one already open adds nothing.
     editor().setSettingsOpen(false)
+    /*
+     * No jobs, whatever the page had, for the same reason: EXPORT's list is
+     * counted as what a scenario ADDS. Measured: run after the reframe check
+     * on the same page, the bridge's finished analyses were still in the list,
+     * so the empty project already showed "Exports", "Clear" and a "Finding
+     * the subject · …" row, and those three rows came out absent. Set, not
+     * `setJobs`, so nothing is collected; the page's own list comes back with
+     * the rest of its state at the end.
+     */
+    useEditor.setState({ jobs: [] })
     editor().newProject()
     await frames()
     // The Shelf on its tiles: whatever tool the last scenario opened is shut,
