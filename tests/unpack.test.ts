@@ -1,6 +1,6 @@
 import { execFile, spawn, type ChildProcess } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { lstat, mkdtemp, readdir, readFile, readlink, rm, stat, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, mkdtemp, readdir, readFile, readlink, rm, stat, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
 import { promisify } from 'node:util'
@@ -123,6 +123,63 @@ describe('unpacking an archive with no folder entries, as the real ones are', ()
     await writeFile(path, whole.subarray(0, whole.length - 40))
     const err = await failure(unpackTarGz(path, join(dir, 'v'), { signal: live() }))
     expect(err.message).toMatch(/^Python's archive could not be unpacked: /)
+  })
+})
+
+describe('nothing lands outside the folder, on a case-insensitive disk too', () => {
+  /** `<dir>/root/python/1`, with a sibling `other` beside it for an escape to land in. */
+  async function layout(): Promise<{ into: string; parent: string; other: string }> {
+    const parent = join(dir, 'root', 'python')
+    const other = join(parent, 'other')
+    await mkdir(other, { recursive: true })
+    return { into: join(parent, '1'), parent, other }
+  }
+
+  it('a link one level shallower than its name, then a case variant of it, is refused and writes nothing outside', async () => {
+    // On APFS `a/x` is `a/X` = `c`, so `a/x/y/L` sits at `c/y/L` and `../../../other` from there is
+    // `<parent>/other`: the escape the verifier wrote a file through (P-B finding V1).
+    const { into, parent, other } = await layout()
+    const err = await failure(
+      unpackTarGz(
+        await archive([
+          { name: 'c/keep.txt', body: 'x' },
+          { kind: 'symlink', name: 'a/X', target: '../c' },
+          { kind: 'symlink', name: 'a/x/y/L', target: '../../../other' },
+          { name: 'a/x/y/l/evil.txt', body: 'evil' }
+        ]),
+        into,
+        { signal: live() }
+      )
+    )
+    expect(err.message).toMatch(/^Python's archive could not be unpacked: /)
+    expect((await readdir(parent)).sort()).toEqual(['1', 'other'])
+    expect(await readdir(other)).toEqual([])
+  })
+
+  it('a link to the root, then a case variant of it, is refused and writes nothing outside', async () => {
+    const { into, parent } = await layout()
+    const err = await failure(
+      unpackTarGz(
+        await archive([
+          { kind: 'symlink', name: 'X', target: '.' },
+          { kind: 'symlink', name: 'x/y/L', target: '../..' },
+          { name: 'x/y/l/evil.txt', body: 'evil' }
+        ]),
+        into,
+        { signal: live() }
+      )
+    )
+    expect(err.message).toMatch(/^Python's archive could not be unpacked: /)
+    expect((await readdir(parent)).sort()).toEqual(['1', 'other'])
+  })
+
+  it.skipIf(!POSIX)('a link already in the folder before the unpack is not written through: the disk is asked, not the names', async () => {
+    const { into, other } = await layout()
+    await mkdir(into, { recursive: true })
+    await symlink(other, join(into, 'python'))
+    const err = await failure(unpackTarGz(await archive([{ name: 'python/os.py', body: 'x' }]), into, { signal: live() }))
+    expect(err.message).toContain('Refusing python: on disk it resolves to')
+    expect(await readdir(other)).toEqual([])
   })
 })
 

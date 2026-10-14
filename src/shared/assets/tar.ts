@@ -260,6 +260,18 @@ function linkTarget(name: string, target: string): string | null {
 }
 
 /**
+ * A name as a case-insensitive, normalization-insensitive file system compares
+ * it — APFS's default, NTFS's — so `X` and `x`, or `é` composed and decomposed,
+ * are one path, as they are on disk. Folding more than the file system does
+ * only ever refuses more: it is used to recognise a path the archive made a
+ * link, never to name a file. Upper then lower case, so `ſ` and `K` (Kelvin)
+ * fold with `s` and `k` as Unicode case folding has them.
+ */
+function folded(name: string): string {
+  return name.normalize('NFC').toUpperCase().toLowerCase().normalize('NFC')
+}
+
+/**
  * Reading a tar archive as it streams, chunk by chunk, without ever holding
  * the archive — the AI helper's interpreter (docs/CLIPS.md §3a.3 stage 2) is a
  * 69 MB tar stream, and `readTar` wants it whole. `readTar` stays for the
@@ -282,7 +294,12 @@ function linkTarget(name: string, target: string): string | null {
  * that `readTar` does not: a symlink whose target, resolved from the link's own
  * folder, stays inside the root (`linkTarget`) — the Mac interpreter has nine,
  * `bin/python3 -> python3.14` among them — and no member at or under a path an
- * earlier member made a link, so nothing is ever written through one.
+ * earlier member made a link, so nothing is ever written through one. "At or
+ * under" is judged case- and normalization-insensitively (`folded`): on APFS
+ * `x/y` is written through a link `X`, and a link `X -> .` followed by
+ * `x/y/L -> ../../q` would otherwise land `L` one level shallower than its name
+ * says and let it climb out of the root. A link to its own folder or to one
+ * above it is refused too: it makes a loop no interpreter needs.
  */
 export class TarStream {
   private readonly head = new Uint8Array(BLOCK)
@@ -297,8 +314,8 @@ export class TarStream {
   private readonly global = new Map<string, string>()
   private longName: string | null = null
   private longLink: string | null = null
-  /** Every path this archive made a symlink: nothing is written at or under one. */
-  private readonly links = new Set<string>()
+  /** Every path this archive made a symlink, by its `folded` name: nothing is written at or under one. */
+  private readonly links = new Map<string, string>()
   /** Bytes taken so far, for an error's position. */
   private offset = 0
   private current = ''
@@ -429,18 +446,25 @@ export class TarStream {
     const parts = name.split('/')
     for (let i = 1; i <= parts.length; i++) {
       const through = parts.slice(0, i).join('/')
-      if (this.links.has(through)) {
-        throw new TarError(`Refusing ${name}: it would be written through the link ${through}`)
+      const link = this.links.get(folded(through))
+      if (link !== undefined) {
+        throw new TarError(`Refusing ${name}: it would be written through the link ${link}`)
       }
     }
     const mode = octal(header, 100, 8)
 
     if (kind === 'symlink') {
       const target = pax(local, 'linkpath') ?? longLink ?? pax(this.global, 'linkpath') ?? str(header, 157, 100)
-      if (linkTarget(name, target) === null) {
+      const lands = linkTarget(name, target)
+      if (lands === null) {
         throw new TarError(`Refusing a symlink that points outside its directory: ${name} -> ${target}`)
       }
-      this.links.add(name)
+      const own = folded(parts.slice(0, -1).join('/'))
+      const at = folded(lands)
+      if (at === '' || own === at || own.startsWith(`${at}/`)) {
+        throw new TarError(`Refusing a symlink to its own folder or one above it: ${name} -> ${target}`)
+      }
+      this.links.set(folded(name), name)
       events.push({ kind: 'member', member: { name, size: 0, mode, type: 'symlink', linkname: target } })
     } else if (kind === 'directory') {
       events.push({ kind: 'member', member: { name, size: 0, mode, type: 'directory' } })

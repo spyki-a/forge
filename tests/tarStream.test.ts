@@ -213,6 +213,52 @@ describe('what is refused', () => {
     ).toContain('written through the link python/bin/python3')
   })
 
+  it('under a link, judged as a case-insensitive file system judges a name: X and x, é composed and decomposed', () => {
+    // On APFS and NTFS `python/x/os.py` is written through the link `python/X`.
+    expect(
+      refused([
+        { kind: 'symlink', name: 'python/X', target: 'other' },
+        { name: 'python/x/os.py', body: 'x' }
+      ])
+    ).toContain('written through the link python/X')
+    expect(
+      refused([
+        { kind: 'symlink', name: 'python/é', target: 'other' },
+        { name: 'python/é/os.py', body: 'x' }
+      ])
+    ).toContain('written through the link python/é')
+    expect(
+      refused([
+        { kind: 'symlink', name: 'python/lib/ÉTÉ', target: 'other' },
+        { kind: 'symlink', name: 'python/lib/été', target: 'other' }
+      ])
+    ).toContain('written through the link python/lib/ÉTÉ')
+  })
+
+  it('a link one level shallower than its name, then a case variant of it, cannot be climbed out of', () => {
+    // The real escape on APFS: `a/x` IS `a/X` = `c`, so `a/x/y/L` lands at `c/y/L`, one level
+    // shallower than its name, and its `../../..` — inside on paper — climbs out of the root.
+    expect(
+      refused([
+        { name: 'python/c/keep.txt', body: 'x' },
+        { kind: 'symlink', name: 'python/a/X', target: '../c' },
+        { kind: 'symlink', name: 'python/a/x/y/L', target: '../../../../other' },
+        { name: 'python/a/x/y/l/evil.txt', body: 'x' }
+      ])
+    ).toContain('written through the link python/a/X')
+  })
+
+  it('a link to its own folder or to one above it, which only makes a loop', () => {
+    expect(refused([{ kind: 'symlink', name: 'X', target: '.' }])).toContain('its own folder or one above it')
+    expect(refused([{ kind: 'symlink', name: 'python/x', target: '.' }])).toContain('its own folder or one above it')
+    expect(refused([{ kind: 'symlink', name: 'python/a/b/L', target: '../..' }])).toContain('its own folder or one above it')
+    expect(refused([{ kind: 'symlink', name: 'python/a/L', target: '..' }])).toContain('its own folder or one above it')
+    // A case variant of an ancestor is that ancestor.
+    expect(refused([{ kind: 'symlink', name: 'python/a/L', target: '../../PYTHON' }])).toContain('its own folder or one above it')
+    // A sibling, or a cousin, is not.
+    expect(readStream(tarOf([{ kind: 'symlink', name: 'python/a/b/L', target: '../../c' }]), []).map((m) => m.name)).toEqual(['python/a/b/L'])
+  })
+
   it('a hard link, a device, a GNU sparse member and a PAX sparse one', () => {
     expect(refused([{ kind: 'hardlink', name: 'python/bin/python3', target: 'python/bin/python3.14' }])).toContain('hard link')
     expect(refused([{ kind: 'device', name: 'python/dev/null' }])).toContain('device')

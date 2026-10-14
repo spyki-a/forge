@@ -1,6 +1,6 @@
 import { createReadStream } from 'node:fs'
-import { chmod, mkdir, open, symlink, type FileHandle } from 'node:fs/promises'
-import { join } from 'node:path'
+import { chmod, mkdir, open, realpath, symlink, type FileHandle } from 'node:fs/promises'
+import { isAbsolute, join, relative, sep } from 'node:path'
 import { pipeline } from 'node:stream'
 import { createGunzip } from 'node:zlib'
 import { CancelledError } from '../ffmpeg/run'
@@ -73,12 +73,42 @@ export async function unpackTarGz(archive: string, into: string, o: UnpackOption
   if (o.signal.aborted) throw new CancelledError()
 
   await mkdir(into, { recursive: true })
+  const realRoot = await realpath(into)
   const made = new Set<string>([''])
   const result: UnpackResult = { files: 0, bytes: 0, longestPath: 0, longestDir: 0 }
+
+  /**
+   * The deepest part of `rel` that exists, resolved through every link on
+   * disk, must be the root or under it — checked before anything is made or
+   * written there. TarStream already refuses a member under a link the archive
+   * made; this is the same rule asked of the disk, so a link it cannot see (a
+   * case or Unicode variant it failed to fold, or one left in the folder before
+   * the unpack) still cannot carry a write outside.
+   *
+   * Once per folder, when it is first made, is enough: what `mkdir` makes below
+   * a checked ancestor is a real folder, a folder once made cannot become a link
+   * (a link over it fails EEXIST, as a file over a link does with `wx`), so a
+   * member's parent resolves where it did when it was checked.
+   */
+  const within = async (rel: string): Promise<void> => {
+    for (let at = rel; ; at = parentOf(at)) {
+      let real: string
+      try {
+        real = await realpath(join(into, at))
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === 'ENOENT' && at !== '') continue
+        throw err
+      }
+      const back = relative(realRoot, real)
+      if (back === '' || (back !== '..' && !back.startsWith(`..${sep}`) && !isAbsolute(back))) return
+      throw new Error(`Refusing ${rel || '.'}: on disk it resolves to ${real}, outside ${realRoot}`)
+    }
+  }
 
   /** A relative folder, made with its parents once; its length counted. */
   const folder = async (rel: string): Promise<void> => {
     if (made.has(rel)) return
+    await within(rel)
     await mkdir(join(into, rel), { recursive: true })
     for (let at = rel; at && !made.has(at); at = at.includes('/') ? at.slice(0, at.lastIndexOf('/')) : '') made.add(at)
     result.longestDir = Math.max(result.longestDir, rel.length)
