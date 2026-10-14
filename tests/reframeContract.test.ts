@@ -104,12 +104,13 @@ describe('reframeHelperFrom', () => {
     expect(reframeHelperFrom({ state: 'starting' })).toBe('unknown')
   })
 
-  it('is missing with no pack or a damaged one, and unknown while one installs (docs/CLIPS.md §3a.2)', () => {
+  it('is missing with no pack, a damaged one, or one being installed (docs/CLIPS.md §3a.2: anything not ready)', () => {
     const offer: Extract<PackOffer, { supported: true }> = { supported: true, kind: 'install', bytes: 1, bytesOnDisk: 1, hosts: ['github.com'] }
     expect(reframeHelperFrom({ state: 'absent', offer })).toBe('missing')
     expect(reframeHelperFrom({ state: 'absent', offer: { supported: false, reason: 'The AI helper needs macOS 14 or later' } })).toBe('missing')
     expect(reframeHelperFrom({ state: 'damaged', reason: 'gone', offer: { ...offer, kind: 'repair' } })).toBe('missing')
-    expect(reframeHelperFrom({ state: 'installing', stage: 'Fetching' })).toBe('unknown')
+    // An install runs for minutes: never "the AI helper is starting" for all of them.
+    expect(reframeHelperFrom({ state: 'installing', stage: 'Fetching' })).toBe('missing')
     // A status as main broadcasts it, its source and all.
     const source = { kind: 'pack', pack: 1, root: '/u/python/1' } as const
     expect(reframeHelperFrom({ state: 'ready', hello: hello([SIDECAR_METHODS.faces, SIDECAR_METHODS.facesModel]), source })).toBe('ready')

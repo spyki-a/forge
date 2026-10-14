@@ -247,16 +247,19 @@ export type HelperStatusLike = SidecarStatus | WithoutSource<SidecarStatus>
  * from a message's prose: ready only when both `vision.faces` and
  * `vision.facesModel` registered. Degraded (the face finder's module did not
  * import) is `missing` as much as no Python is — either way nothing can find a
- * face on this machine. No pack, a damaged one, or a helper that failed is
- * `missing`; one starting or being installed is not known yet.
+ * face on this machine. No pack, a damaged one, one being installed, or a
+ * helper that failed is `missing` (§3a.2: anything not ready is missing); only
+ * a helper starting is not known yet, for the seconds its hello takes. An
+ * install runs for minutes, and `unknown` would have told Follow the subject
+ * "the AI helper is starting" for all of them.
  */
 export function reframeHelperFrom(status: HelperStatusLike): ReframeHelper {
   switch (status.state) {
     case 'starting':
-    case 'installing':
       return 'unknown'
     case 'absent':
     case 'damaged':
+    case 'installing':
     case 'failed':
       return 'missing'
     case 'ready': {
