@@ -57,9 +57,12 @@ extraResources:
   - from: assets
     to: assets
 
-  # The Python sidecar, without its virtualenv. A user's interpreter is their
-  # own; `docs/SIDECAR.md` covers setting one up, and until they do the sidecar
-  # reports every optional capability as degraded rather than failing to start.
+  # The Python sidecar's own code, without its virtualenv. A packaged app runs
+  # it on the interpreter pack it installs itself into userData (docs/CLIPS.md
+  # §3a: `sidecar/pack/` ships the hash-pinned locks, and
+  # `forge_sidecar/selftest/identity.onnx` the self-test's model, both through
+  # this filter), or on FORGE_PYTHON; it never starts a PATH Python. The venv
+  # is development's route (docs/SIDECAR.md).
   - from: sidecar
     to: sidecar
     filter:
