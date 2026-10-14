@@ -6278,3 +6278,121 @@ grouped sum through the graph file; and the pulls' labelled split/vstack
 inside `-vf`. It does not reach sums past about 1,100 terms (2,998 flat and
 9,595 grouped are the Mac's alone), the stack depth, the pull's length on a
 real long clip, smooth slow motion or 10-bit sources.
+
+## 56. The subject analysis as a job, and the followed crop on a playing element (2026-10-13/14)
+
+For `docs/CLIPS.md` §4.7's slice B (the job, `src/main/reframe/analyse.ts`;
+the preview's frame rule, `src/shared/reframe/playback.ts`) and §4.9's
+harness check (`src/renderer/src/harness/reframeCheck.ts`). Development Mac,
+inside the sandbox, which has no Metal device (§37, §54): the helper's worker
+ran its stand-in detector (`FORGE_FACES_WORKER_FAKE=colour`, which boxes
+saturated colours), so everything here is the real shot finder, the real
+helper, its worker and its ffmpeg, and not the face finder's own cost. That
+is the user's run (CLIPS §4.10). Each number names who measured it: the job's
+builder, the three verifiers, the fix phase, or the recorder re-running both
+checks at `d8baa57` on 2026-10-14. No new filter shape: the face pass's
+`fps=5:round=up` is §54's, the pts' origin §55's.
+
+**The job on a synthetic clip** (`tests/integration/reframeJob.int.test.ts`,
+which writes `tests/output/reframe-job/README.txt`). The clip is made in the
+test: 6 s of 640×360 at 30 fps (mp4, 1/15360), lossless 4:4:4 (libx264
+`-pix_fmt yuv444p -qp 0`, each square through `overlay=…:format=yuv444`, so
+the colours stay saturated), three shots cut at 2 and 4 s on their
+backgrounds, a 64 px red square moving through each and a 96 px blue one
+beside it in the third. The job's own timing (`jobs.timing`):
+
+| run | probe | gate | shots | faces | reduce and write | total |
+|---|---|---|---|---|---|---|
+| the builder, 2026-10-13 | 8 ms | 1 ms | 181 ms | 178 ms | 2 ms | 370 ms |
+| the fix phase, 2026-10-14 (a busy machine) | 13 ms | 1 ms | 459 ms | 982 ms | 12 ms | 1,469 ms |
+| the recorder, `d8baa57` | 8 ms | 1 ms | 177 ms | 175 ms | 1 ms | 361 ms |
+
+- On 6 s of 640×360 the scene pass and the face pass cost about the same, and
+  the probe, the gate, the reduction and the write are noise. Nothing here
+  says what a 10-minute 1080p file costs: the scene pass was 2.86–3.06 s for
+  60 s of 1080p (§52), and the face pass on 4K HEVC is decode-bound (§54).
+- The track: 3 shots at pts 0, 30720 and 61440 on 1/15360 (each ffprobe's
+  `best_effort_timestamp` for its frame); 12 samples at 0, 400, 1000, 1400 …
+  5400 ms, each box one source frame's within 1 px, each the frame on screen
+  at its label (offset 0; +2 frames before `round=up`, §54); 1,776 B at
+  `11670-<mtime>-v1.json` (1,755 B in the builder's run, before the fix phase).
+- **From disk**: the same file again answers `cached: true` in 8 ms (27 ms in
+  the fix phase's run), with no scene pass and no worker. A track on disk cut
+  at another threshold or another shortest shot, or reduced from another
+  face-track version or one with no version, is analysed again, with exactly
+  one scene pass.
+- **The gate first**: without the face finder on disk the job fails
+  `model-missing` with no scene pass, no worker and nothing fetched (a dead
+  proxy set, the models folder still empty after); with no helper — an
+  interpreter that is not there, or a bare venv where `vision.faces` is
+  degraded — `no-helper` before any scene pass.
+- **The methods asked** (a stand-in helper client recording them): a whole
+  job asks `vision.facesModel` and `vision.faces` and nothing else — no
+  salient, no ground (§16.35).
+- **Progress** stays inside each stage's range, never goes back, and never
+  reads 1 while running. The stages seen are "finding the shots", then
+  "finding faces": the queue drops a report within 150 ms of the last, and
+  the reduction's 1–12 ms never shows.
+
+**Cancelling it:**
+
+| where | who | the bar at the press | cancelled after | what was left |
+|---|---|---|---|---|
+| mid-faces, the real helper | the builder; the fix phase; the recorder | 0.228 | 27 ms; 28 ms; 26 ms | the worker and its ffmpeg gone (`process.kill(pid, 0)`; `ps` is blocked here), nothing written, no part file in the helper's cache, `ping` answered; a job queued behind it cancelled without running |
+| mid-shots, 120 s of 720p, a stand-in client | the job's verifier | 0.021 | 5 ms | the scene pass's ffmpeg ended by SIGKILL; collect answers `failed`/`cancelled` |
+| mid-shots, a 20 s 4K clip, a stand-in client | the fix phase (two runs); the recorder | 0.033, 0.014; 0.033 | 27 ms, 26 ms; 26 ms | the scene pass's ffmpeg exited non-zero |
+
+Without the abort signal handed to `findShots` the job read cancelled only
+when the scene pass ended on its own: 3,086 ms on the verifier's 120 s clip,
+1,758 ms in the fix phase's test against its 1 s bar. Without it on the faces
+request, 3.97 s against that test's 1 s bar (the builder's mutation). Both are
+pinned.
+
+**The followed crop on a playing element** (§4.9's harness check, the harness
+page on :5199, a fronted Chromium tab, 1510×1017 at dpr 1). The video is one
+the check records in the page with MediaRecorder: 6 s of 640×360 at 30 fps,
+webm, 16 px columns 9° of hue apart, so a crop that moved sideways reads as
+moved. Each frame the element presents is read through
+`requestVideoFrameCallback` once the preview has painted: its `mediaTime`
+through `exportFrameAt` is the element's clip frame, the store's playhead is
+the other, and near each cut the Output is compared with the source frame
+drawn through each frame's crop (mean |difference| over RGB, 0..255). The
+preview re-seeks an element more than 0.18 s from the playhead
+(`Preview.tsx` `DRIFT_TOLERANCE`).
+
+| run | as it plays: frames, drift (playhead − element) | nudged ±3 frames through the cuts: frames, drift | near-cut frames whose two crops differ | drawn at the element's frame |
+|---|---|---|---|---|
+| the builder, 2026-10-13 | 177, 0 on every frame | 174, −3..+5 | 7 | 7 (0.79–1.01 against 73.8–107.0) |
+| the UI verifier, three runs | 176–177; 0..+1 (mean 0.51), −1..0, 0..0 | 175–177, −3..+5 | 1 as it played (element 119, playhead 120); 6 and 4 nudged | all (0.81 against 74.7; 0.79–0.92 against 74.2–107.0) |
+| the fix phase, after `e0472d9` | 0..+1 | −3..+6 | — | all |
+| the recorder, `d8baa57` | 177, 0 on every frame | 177, −3..+5 (mean −0.56) | 4 | 4 (0.65–0.68 against 74.4–107.0) |
+
+- In the harness the element and the playhead keep step to within a frame,
+  so playing alone the two rules almost never disagree; the nudge is what
+  makes them. A fixed +0.1 s nudge was lost (a play can start with the
+  element already 4 frames ahead), so the check sets a target drift instead.
+- Where they disagree, the picture is the element's frame and so must the
+  crop be: reading it from the playhead would put the new shot's crop on the
+  old shot's last frames, or the reverse, for as many frames as the drift.
+  Under a real decoder's load the drift may be larger (up to the 0.18 s
+  re-seek); the rule does not depend on its size.
+- **Scrub on, a clip with no sound**: stopping playback left the element
+  playing to the end of its file behind the stopped playhead (`stillPlaying`
+  true on every pass before `e0472d9`; one compare failed by 3.4/255 until the
+  check paused the element itself). Only a sounding element got the scrub
+  burst that pauses it; `scrub.ts` `leftToScrubBurst` now leaves only those
+  to it, and `stillPlaying` is false on both passes.
+- **Paused at 0.5×, not measured on screen** (arithmetic, pinned in
+  `tests/reframePlayback.test.ts`): the cut's key is on clip frame 58 (2 ×
+  source 29); paused at 57 the crop is the old shot's (x 176) while
+  `sourceFrameFor` seeks the element to source 29, the new shot's first. One
+  frame per cut shows the new picture through the old crop. Open (CLIPS
+  §4.7's slice B Left).
+
+**An export at another canvas** (the store's builder, on `buildRenderPlan`'s
+text). A 16:9 project with a followed 1920×1080 clip, exported at 1080×1920:
+before `followCanvas`, `crop=w='min(1920,in_w)'…` (the 16:9 project has
+nothing to follow) and then `scale…decrease,pad`, letterboxed; after,
+`fps=30:start_time=0,crop=w='min(608,in_w)'…` with the 9:16 keys
+(`+960*gte(t,0.750000)`), the text the 9:16 project's own chain has; at
+720×1280 the same crop. No new shape: §55's, at the export's canvas.

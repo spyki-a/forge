@@ -533,18 +533,27 @@ keeps the crop on the person, shot by shot, instead of one centred rectangle:
 the clip's FILE is analysed once (its shots, then its faces, by the AI
 helper) and every clip of that file can follow it. The button reads **Follow
 the subject · gets the face finder, 1.1 MB, first time** until the face
-finder is on disk — the press fetches it, then starts the analysis, which is
-a row in EXPORT's list while it runs ("Finding the subject…" with its percent
-here). Greyed with **needs the AI helper** without Python (or "the AI helper
-is starting"); a clip that already follows keeps following without it. On a
-followed clip: **3 shots · 1 stacked** (the shots, and how many put two
-people one over the other), **Unfollow** (the crop stays where it is at the
-playhead, static), **Stack two people** (on by default; off frames the larger
-face when two people are too far apart for one crop), and the notes ("shot 3:
-two people too far apart, stacked"). Last, **Follow:** with a phrase field,
-greyed: following something named ("the cake") is not built yet. There is no
-button for a subject without a face: such a shot is centred, with a note.
-To nudge a followed shot, use **Reframe** in the tool strip (below).
+finder is on disk — the press fetches it ("Getting the face finder…" with
+its percent), then starts the analysis, which is a row in EXPORT's list
+while it runs ("Finding the subject…" with its percent here). Greyed with
+**needs the AI helper** without Python (or "the AI helper is starting"); a
+clip that already follows keeps following without it. On a followed clip:
+**3 shots · 1 stacked** (the shots, and how many put two people one over
+the other), **Unfollow** (the crop stays where it is at the playhead,
+static), **Stack two people** (on by default; off frames the larger face
+when two people are too far apart for one crop), and the notes ("shot 3:
+two people too far apart, stacked"; at a shape the file already has,
+"nothing to follow"). A clip that follows but whose track is missing, or no
+longer fits its file, says "No subject track for this file" and offers
+Follow again beside Unfollow. Last, **Follow:** with a phrase field,
+greyed: following something named ("the cake") is not built yet. There is
+no button for a subject without a face: such a shot is centred, with a
+note. Above, in the clip's fields, **Reframe** reads "Follows the subject ·
+3 shots · 1 stacked" in place of a rectangle. To nudge a followed shot, use
+**Reframe** in the tool strip (below). When following cannot start, a
+notice says why: "Following the subject needs the AI helper", "The face
+finder is not downloaded yet", or "This file is not the size it was when it
+was imported: import it again".
 
 **Camera** (photos) — a move across the still: **Move** is a push in, a pull
 out or a pan, chosen from the In / Out / Pan rows, with **Amount**; **Shake** is
@@ -758,7 +767,11 @@ to 9:16** — follow the subject in every landscape video clip not yet following
 canvas already has the shape. While it shows, the photo chip does not, since its
 "Switch to 16:9" would be the opposite advice; the rule is
 `shared/edit/reframeOffer.ts`. Greyed with "needs the AI helper" without
-Python, and while every file it would follow is already being analysed.
+Python (or "the AI helper is starting"), and while every file it would
+follow is already being analysed. It counts only clips ON THE TIMELINE,
+landscape by their upright size, not a Director's blurred backdrop or a
+strip flash; on a portrait canvas other than 9:16 it reads "Landscape video
+on a portrait canvas" with **Reframe to fit**.
 
 At the right end, the view: **Source / Split / Output**. Drag the divider in
 the picture to compare; double-click it for an even split. The reframe

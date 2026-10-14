@@ -2521,10 +2521,10 @@ placed at the upper third rather than centred.
 ### 4.7 1f — Applying it: the followed crop, `setAspect`, the action · 4.5 days (+1 for the two-up)
 
 > **Built 2026-10-13 — the render half (slice A): the keys, their
-> compiler, the render, `cropAt` and the moments' pull. Slice B's, not
-> built: the store (`reframeClip`, `reframeAll`, `setAspect`, CropOverlay's
-> drags), the job, the IPC, the UI (§4.8), the harness check, and the
-> Director's hook.**
+> compiler, the render, `cropAt` and the moments' pull.** The action half
+> (slice B: the job, the IPC, the store, the consumers and the Director's
+> hook) is the next note; its UI is §4.8's note and its harness check
+> §4.9's.
 >
 > Commits:
 > - the keys: `29e1dce`, `12c4eae`, `8e5c530`;
@@ -2729,18 +2729,20 @@ placed at the upper third rather than centred.
 > - The same-shape canvas returns keys-less `FollowKeys` with a note, not
 >   `null`.
 >
-> **Slice B's:**
+> **Slice B's — every item built (the next note):**
 >
 > - The preview reads `cropAt(project, clip, src, clipFrame)` on the clip
 >   frame from `exportFrameAt(clip, fps, currentTime·1000)`, never from
->   `sourceFrameFor` or `timelineFrameAt`. Draw `halves.top` and
+>   `sourceFrameFor` or `timelineFrameAt` (as built, the presented frame's
+>   `mediaTime` when the element gives one). Draw `halves.top` and
 >   `halves.bottom` into a `size`-shaped canvas.
 > - `momentTextures` spreads `followedFootage`.
 > - `shotPicture` and the strips effect take `cropAt(…).crop`, with a note on
 >   a stacked frame.
 > - The Inspector line reads `followKeys(…)?.shots`.
 > - `setAspect` keeps `follow` and stores a copy of `followKeys(…).crop`.
-> - `reframeClip` makes one `update()`, then `rebakeGenerated`.
+> - `reframeClip` makes one `update()`, then `rebakeGenerated` (as built,
+>   `rebakeFollowed`: only the moments over that file, no undo entry).
 > - The migration tolerates no `subjects`.
 > - A re-analysis remaps `offsets` and `halfOffsets` onto its new shots.
 >   `path.ts` matches a drag's offset by the exact `startMs`.
@@ -2771,46 +2773,205 @@ placed at the upper third rather than centred.
 >   a frame late.
 > - At 0.5× the preview's picture changes a frame before the export's.
 >   `sourceFrameFor` rounds n/2 half up, while the export shows floor(n/2).
+>   **Playing: fixed in slice B** (the crop is read at the presented frame,
+>   `playback.ts`). **Paused: still left** — the element is still seeked
+>   through `sourceFrameFor` (slice B's Left).
 > - Smooth slow motion's cut frames are unmeasured.
 > - The 2018 exe's stack reserve has not been read.
 > - A 4:4:4 source's snap is unmeasured.
 
-> **Built 2026-10-13, fixed 2026-10-14 — slice B: the job, the store, the
-> consumers, the UI, the harness check and the Director's hook.** Not
+> **Built 2026-10-13, fixed 2026-10-14 — slice B, the action half: the
+> job, the IPC, the store, the consumers and the Director's hook.** The UI
+> is §4.8's note, the harness check and §15 row 5's answer §4.9's. Not
 > pushed (the user's call).
 >
 > Commits:
-> - the scaffold (the contract, `shared/reframe/job.ts`): `bec28fa`;
+> - the scaffold, the shared contract (`shared/reframe/job.ts`, the
+>   preload's four methods, the store's `reframe` slice and its action
+>   signatures, the bridge's stubs, `harness/reframeStub.ts`): `bec28fa`;
 > - the job (J): `4aafdc4` (exact pts), `bbcb110` (the reduction), `c44cb0b`
 >   (`main/reframe/analyse.ts`, the queue, the IPC);
 > - the store and its consumers (S): `3ca53f9`, `973764a`, `9b02172`,
 >   `b5947ad`, `8f6fe73`;
 > - the UI and the harness (U): `e94511c`, `a591c83`, `bf1c315`, `7ea36c4`,
 >   `a7a9bdc`, `a5cf41f`;
-> - the fix phase, after two verifiers: `6d90e7f` … `e0472d9`, and this note.
+> - the fix phase, after three verifiers (the job, the store, the UI):
+>   `6d90e7f` … `e0472d9`, then `d8baa57` and this note.
 >
-> **The job** (`main/reframe/analyse.ts`, Electron-free; ipc.ts registers it):
+> **The contract** (`src/shared/reframe/job.ts`, pure, Electron-free):
+> - `REFRAME_CHANNELS`: `reframe:analyse` (`ReframeAnalyseRequest` → the
+>   queued `Job`), `reframe:collect` (`{jobId}` → `ReframeCollectResult`),
+>   `reframe:faceModel` (`{download?}` → `ModelStatus`), and
+>   `reframe:faceModelProgress`, main → renderer while the face finder
+>   downloads. `REFRAME_PRESET` `'reframe'` is the job's `presetId`.
+> - The request carries, beside the plan's `{assetId, path, width, height,
+>   phrase?}`, the asset's `name` (the job row's words, never a path) and
+>   the `clipIds` that asked, which main keeps and echoes back, so a reload
+>   mid-job still knows which clips to follow.
+> - The collect answers `{kind: 'track', assetId, clipIds, track, cached}`
+>   ONCE and `{kind: 'already'}` after, so a reload after the landing does
+>   not follow a clip the user has since unfollowed; a failed or cancelled
+>   job answers `{kind: 'failed', reason, message}` as often as asked. The
+>   reason is typed — `no-helper`, `model-missing`, `phrase-needs-ground`,
+>   `size-mismatch`, `cancelled`, `failed` — with its words in
+>   `REFRAME_FAILURES`, because `Job.error` is prose and nothing parses
+>   prose.
+> - `REFRAME_STAGES` (shots 0–0.15, faces 0.15–0.85, the reduction
+>   0.85–1; `stageProgress` clamps, NaN giving the stage's start), their
+>   words riding in `Job.speed`; `REDUCE` (2 a second, 2 faces, picked);
+>   `subjectTrackFileName`; and `reframeHelperFrom`: ready only when
+>   `hello.capabilities` holds both `vision.faces` and `vision.facesModel`,
+>   unknown while the helper starts, missing otherwise — the face finder
+>   degraded included.
+>
+> **The job** (`main/reframe/analyse.ts`, Electron-free, so ipc.ts and
+> `reframeJob.int` run the same handlers):
 > - an `analysis` JobQueue at concurrency 1, in the same `jobs:changed`
 >   list, each job `presetId: 'reframe'`, `inputName` the file's name,
->   `params: { assetId }`, the stage's words in `speed`;
+>   `params: { assetId }`, the stage's words in `speed`; the payload
+>   re-validated in main (`reframeRequest`: the ids exactly, an absolute
+>   path, a whole size above 0, each clip once, the name less any folders, a
+>   blank phrase dropped);
 > - **the gate comes before any work** (a deviation from the order above):
 >   a phrase fails at once with `phrase-needs-ground`; the file's key and
 >   `probeWithClock`, the size held to the request's (`size-mismatch`);
 >   then the helper's own `hello.capabilities` (`reframeHelperFrom`,
 >   `no-helper`) and `vision.facesModel {}` (`model-missing`). A missing
 >   helper or model costs no scene pass;
-> - shots on the whole file (0–15 %), `vision.faces` (15–85 %), the
->   reduction (85–100 %), the track written beside itself and renamed into
->   `$userData/subjects/<key made file-safe>-v<version>.json`;
+> - shots on the whole file (0–15 %), `vision.faces` at the upright size, 5
+>   fps, the 640 edge, minScore 0.5 and the key (15–85 %; an `unavailable`
+>   answer is `model-missing` only if `facesModel` now says not present),
+>   the reduction (85–100 %), the track written beside itself and renamed
+>   into `$userData/subjects/<key made file-safe>-v<version>.json`;
 > - **the cache**: a track on disk for this key, version and size is handed
 >   back (`cached: true`) only when it was cut at today's `SCENE_DEFAULTS`
 >   and reduced from today's face track (`facesVersion`, below);
-> - collect is pulled and hands a track back once (`already` after); a
->   failed or cancelled job answers its typed reason as often as asked;
+> - collect is pulled and hands a track back once (`already` after), the
+>   entry marked only after the answer is built; an unknown or cleared job
+>   is "That analysis was cleared from the list", a queued or running one
+>   "That analysis has not finished";
 > - `releaseSessions` is a commented no-op: there is no `system.release`
->   yet, and `vision.faces` holds no session in the helper;
-> - a quit cancels every analysis (`cancelAnalyses`, fix phase): a running
->   scene pass is main's own ffmpeg.
+>   yet, and `vision.faces` holds no session in the helper (§12.1);
+> - a cancel aborts `findShots` or the helper's request and removes
+>   nothing; a quit cancels every analysis (`cancelAnalyses` from
+>   `before-quit`, fix phase): a running scene pass is main's own ffmpeg;
+> - the time split on the synthetic clip, the cache and both cancels are
+>   `EFFECTS.md` §56.
+>
+> **The reduction** (`shared/reframe/reduce.ts`): a tick every 500 ms from
+> 0; each keeps the sample nearest it from the tick's OWN shot, within one
+> tick, the earlier on a tie, with its own ms and its own boxes — picked,
+> never averaged (a box is one frame's fact; the mean of two is a box no
+> frame had); a shot no tick falls in keeps the sample nearest its middle.
+> `cleanFace` clamps each box into the frame at 4 dp and drops a non-finite
+> or empty one; the two largest stay, largest first, a tie to the higher
+> score. `checkSubjectTrack` holds the result — and the cache's read-back,
+> and since the fix phase the migration — to what `path.ts` and `keys.ts`
+> can walk.
+>
+> **Exact pts** (slice A's Left, the 1b follow-up): the scene pass's
+> integer `pts:` is parsed into `SceneCut.pts` (null for NOPTS) and carried
+> into `Shot.startPts` (the first shot's 0), kept only for a pass that did
+> not seek; `probeWithClock` reads the stream's `time_base` into
+> `SubjectTrack.timeBase` (`parseTimeBase`; `probeFile` unchanged); and
+> `keys.ts` hands `{pts, timeBase}` to `exportFrameAt` whenever both are
+> there (`exactOf`, guarded on a matching shot count and start), at the cut
+> slots and in a hold's branch. The 25 fps case — in-point 72, source frame
+> 231, pts 118272 on 1/15360 — keys its cut on slot 120, where the printed
+> 7700 ms keyed it on 121.
+>
+> **The IPC** (`main/ipc.ts`): the queue is in `allJobs`, in the `changed`
+> broadcast beside the exports' and the downloads', in `render:cancel` and
+> in `jobs:clearFinished` (which drops main's kept entries too); handlers
+> on the three invoke channels; `faceModel` fetches only when `download`
+> is exactly `true`, one fetch at a time, relays the helper's progress on
+> the fourth channel, and throws the no-helper words when the helper is not
+> ready (`ModelStatus` has no such state). The preload gains
+> `analyseSubjects`, `collectSubjects`, `faceModel` and
+> `onFaceModelProgress`, their channels written as literals and held to
+> `REFRAME_CHANNELS` by `tests/renderer/bridgeMethods.test.ts`. That test
+> also loads the real preload (Electron mocked) and the harness bridge and
+> requires every preload method on the bridge; its first run found
+> `relinkAssets` missing, which the bridge's `as unknown as
+> Window['forge']` cast had hidden from typecheck.
+>
+> **The store** (`renderer/src/store.ts`; the edits are pure functions in
+> `shared/reframe/follow.ts`, each returning the same project when nothing
+> changes):
+> - `reframeClip(clipId)` and `reframeAll()` go through `startReframe`, one
+>   job per FILE: a phrase is refused at once with its reason;
+>   `reframe.helper === 'missing'` with "Following the subject needs the AI
+>   helper"; a file already being found adds the clips to that job; a file
+>   whose track the project already holds at this key (`fileKeys`, main's
+>   `size:mtime`) and version lands at once, with no job; otherwise
+>   `ensureFaceModel` (asks `faceModel({})` unless the last answer was
+>   present, then fetches with `{download: true}`, its progress in
+>   `reframe.fetching`), then `analyseSubjects`, and `pending[assetId]`.
+>   Both resolve once the job is queued. `reframeAll` follows
+>   `followCandidates` — the clips the canvas chip counts (below).
+> - `setJobs` → `syncReframeJobs`: `pending` rebuilt from each job's
+>   `params.assetId` on every broadcast (a reload still knows the busy
+>   file), and every finished reframe job — done, failed or cancelled —
+>   claimed synchronously, before any await, and collected once per window.
+>   `already` touches nothing; `failed` is said once from its reason
+>   (cancelled says nothing; `model-missing` also clears `model.present`,
+>   so the dock names the fetch again); a track lands through `landTrack`.
+> - `landTrack` → `followWithTrack`, in ONE `update()`, one undo:
+>   `subjects[assetId]`, `follow: {version: 1}` on each asked clip, and the
+>   stored crop of each followed clip of that file — a COPY of the followed
+>   crop's first frame (`storedFollowCrop`, falling back to `solveCrop`);
+>   clips that already followed get their drags remapped in the same
+>   update. During an open gesture it waits on `afterCommit` and lands as
+>   its own step (fix phase). Then `rebakeFollowed([assetId])` re-pulls only
+>   the moments that read that file's footage, with no history entry (fix
+>   phase). The project it was asked in is remembered by `project.id`.
+> - `unfollow(clipId)` makes the crop at the playhead static (`cropAt(…)
+>   .crop`: on a stacked frame the top half's position at `size`);
+>   `setFollowTwoUp(clipId, on)` writes `twoUp: false`, or takes it away;
+>   both then `rebakeFollowed`. `dragFollowOffset` SETS the drag's total
+>   under `FollowShot.startMs` exactly as `followKeys` returns it, never
+>   rounded — a share of the crop's free axis, or `{half, x, y}` of each
+>   half's axes on a two-up shot (each refused on the other kind of shot) —
+>   inside the overlay's begin/commit.
+> - `setAspect` keeps `follow` and stores `storedFollowCrop` at the new
+>   shape: 9:16 → 16:9 (the whole 1920×1080, "nothing to follow") → 1:1
+>   (1080×1080) → 9:16 gives the landing crop back exactly.
+> - `setKeyframe` and `setKeyframes` refuse any property outside
+>   `KEYED_PROPERTIES ∪ MASK_PROPERTIES` (`storableKey`), so no action
+>   stores `cropX` or `cropY`.
+> - The migration (`shared/project.ts` `subjectsOf`) opens a project with
+>   no `subjects`, drops a value that is not a table, and keeps only tracks
+>   `checkSubjectTrack` accepts. Clear leaves `subjects` alone: it is a fact
+>   about the file.
+>
+> **The consumers** — each reads `cropAt` or `followKeys`; none re-derives:
+> - the preview's Output and its Source outline (`Preview.tsx`), on the
+>   frame `previewClipFrame` gives (below); a stacked frame through
+>   `renderer/stackedCrop.ts`, and a grade mask's plain picture stacked the
+>   same way; the Source outline draws both rectangles, dimming outside the
+>   top and filling outside the bottom so their overlap is not dimmed twice;
+> - `CropOverlay.tsx`: `FollowedCrop` on the Source outline — one
+>   rectangle, or two, `data-forge-follow` `one` / `top` / `bottom`, no
+>   corner handles; on a two-up frame the half under the pointer, the nearer
+>   centre where they overlap (`halfUnderPointer`) — and
+>   `FollowedOutputDrag` (`output`) on the Output side of the split;
+> - the dock's Reframe field (`Inspector.tsx`, `followSummary`): "Follows
+>   the subject · 3 shots · 1 stacked" in place of a rectangle;
+> - `momentTextures` spreads `followedFootage` (its `Pick` gains
+>   `subjects`), and `moments:frames` passes `cropX`, `cropY` and `halves`
+>   through; `shotPicture` gets footage already pulled (a note in
+>   `moment.ts`); the strips cut each flash from `cropAt(…).crop` on ITS OWN
+>   frame (the store's `buildStrips`; a note on a stacked frame in
+>   `strips.ts`);
+> - the render compiles `followKeys` against `followCanvas(project,
+>   canvas)` and `exportBake` pulls the export's moments at the same shape
+>   (the decision below);
+> - the Director (`apply2.ts`): a video slot that needs a crop and whose
+>   file's track `followKeys` reads gets `follow` and a copy of the followed
+>   crop and no `BACKDROP_KEEP` copy (a photo keeps its rule); a J-cut that
+>   moves the in-point stores the followed crop of its moved first frame
+>   (pinned in the fix phase); no track, or a track of another size, keeps
+>   the blurred copy.
 >
 > **Measured and decided in the fix phase:**
 > - **Each face sample is the frame on screen at its ms.** The helper's
@@ -2856,50 +3017,135 @@ placed at the upper third rather than centred.
 >   Reframe tool, which opens the split** (Toolbox `startCrop`): the Output
 >   drag mounts only beside a Source viewport, as the static crop's rectangle
 >   does; choosing Output mid-reframe takes it away until the source is back.
-> - The canvas bar's shape words give way below **57rem** (was 48rem): the
->   offer chip with "needs the AI helper" is 415 px.
-> - The Follow: field's reason is "following something named is not built
->   yet" (the job's own sentence), not a step number; "needs the AI helper"
->   shows only with the Follow button it explains.
+> - The UI's decisions (the 57rem breakpoint, the Follow: field's words,
+>   where "needs the AI helper" shows) are in §4.8's note.
 >
-> **The harness check** (`window.__forgeReframeCheck`, 21.2 s on :5199,
-> failures [], twice on one page since the fix phase — the stub's job ids
-> no longer repeat after Clear):
-> - the press: "Follow the subject · gets the face finder, 1.1 MB, first
->   time", the face finder fetched, one job, the track in one undo step;
-> - crops x 60 (centre 161, face 160), x 380 (481/480), and the two-up's
->   halves at (124, 50) and (316, 50), the left face on top;
-> - paused, mean |Output − expected| ≤ 0.98/255 on every shot and both sides
->   of each cut, the wrong picture 54.8–107 away; the Source outline lit
->   0.92 on both halves in the third shot;
-> - 16:9 keeps `follow`; back at 9:16 every crop and the stored crop return;
-> - a −60 px drag on shot 2's rectangle: share −0.2970, one step; a +40 px
->   drag in the two-up's lower half on the Output: the bottom crop −40 (the
->   picture with the pointer), the top 0, one step; Stack two people off: one
->   crop centred 225 on the left face; six undos back.
+> **Where it differs from the text below:**
+> - the gate (the helper, then the face finder) runs before the shots, not
+>   after them, so a missing helper or model costs no scene pass;
+> - `reframe:collect` answers a `ReframeCollectResult`, not a bare
+>   `SubjectTrack`; the request carries `name` and `clipIds`; a fourth
+>   channel carries the face finder's download;
+> - `size-mismatch` is decided by main's own probe against the request
+>   (the helper refuses a wrong size too, but only in prose);
+> - a track on disk is handed back only at today's `SCENE_DEFAULTS` and
+>   face-track version, so 1a's re-tune runs every file again;
+> - `rebakeFollowed`, not `rebakeGenerated`, after a landing, Unfollow and
+>   Stack two people;
+> - the preview reads the presented frame's `mediaTime`
+>   (`requestVideoFrameCallback`), with `currentTime` only as the fallback;
+> - no `vision.salient` and no `vision.ground` (§16.35; 1g unbuilt), and
+>   neither has a slice of the bar.
 >
-> **§15 row 5, answered: the cut lands on the element's frame.** As it
-> plays, 176–177 frames presented, drift (playhead − element) 0..+1; nudged
-> 3 frames each way through the cuts, drift −3..+6, and on every near-cut
-> frame where the element's frame and the playhead's give different crops
-> the preview drew the ELEMENT's (0.79–1.01/255 against 73.8–107). And
-> with Scrub on, stopping now pauses a clip with no sound (it played on
-> behind a stopped playhead, `scrub.ts` `leftToScrubBurst`).
+> **Tests** (run to a file at `d8baa57` on 2026-10-14: the seventeen files
+> here and in §4.8's note, `shots.int` among them, 246 passed;
+> `reframeJob.int` 13 passed and its gated real run skipped):
+> - the job: `tests/reframeReduce.test.ts` (10), `tests/reframeShots.test.ts`
+>   (33, the pts cases among them), `tests/reframeKeys.test.ts` (33, the
+>   25 fps exact case and the hold's), `tests/integration/shots.int.test.ts`
+>   (12: the whole file's pts against ffprobe's `best_effort_timestamp`, the
+>   MPEG-TS copy), `tests/integration/reframeJob.int.test.ts` (14: six that
+>   need no venv and so run in CI — the re-validation, the phrase,
+>   size-mismatch, a file gone, no-helper from a missing interpreter and
+>   from a bare one, collect's errors; three on a stand-in helper client and
+>   the real shot finder — the methods asked, only `vision.facesModel` and
+>   `vision.faces`, the cache's conditions, the mid-shots cancel; four on the
+>   real helper with its stand-in detector — the pass, from disk,
+>   model-missing, the mid-faces cancel; and your gated run), and
+>   `tests/sidecar/test_media.py` (round=up, on CI's 2018 build);
+> - the contract: `tests/reframeContract.test.ts` (12: the file name on its
+>   basename, the stages, the reasons, `reframeHelperFrom`, the job row's
+>   words, the quit's wiring) and `tests/renderer/bridgeMethods.test.ts` (7);
+> - the store and consumers: `tests/renderer/reframeStore.test.ts` (28,
+>   through the real actions with the harness bridge as `window.forge`),
+>   `tests/reframePlayback.test.ts` (11), `tests/reframeConsumers.test.ts`
+>   (5), `tests/directorReframe.test.ts` (6), `tests/crop.test.ts` (22, its
+>   source check re-anchored on `cropAt`) and `tests/scrub.test.ts` (8);
+> - the UI's and the harness's: §4.8's and §4.9's notes;
+> - the whole suite after the fix phase: 3,513 passed and 57 skipped in 266
+>   files (189 s), typecheck green on both configs before every commit.
 >
-> **The census:** fourteen rows in the canvas bar, the dock and EXPORT, each
-> built by one of four recipes (`harness/census.ts`); `__forgeCensus()`
-> missing [], 819 checked, 41.8 s. "Get the subject model" and "Find
-> subjects without faces" are **not** rows (§16.35), and
-> `tests/renderer/censusHomes.test.ts` pins that.
+> **Mutations killed** (every anchor counted at one match first, every file
+> restored byte-identical and checked with `cmp` or `filecmp`):
+> - the scaffold's nine: `relinkAssets`, or `analyseSubjects`, gone from the
+>   bridge; the collect channel misspelt; `faceModel`'s default `{}`
+>   dropped; the file name keeping the key's colon; the helper ready on
+>   `vision.faces` alone; the stub's third shot at 0.45/0.55 (no two-up);
+>   the stages unclamped; the stub collecting twice;
+> - the job's nineteen: the exact pass-through dropped (the 25 fps cut on
+>   121); the pts not carried into the next shot on a merge; the pts read
+>   from the `pts_time` column; a window's pts kept, or the whole file's
+>   dropped; averaging; the smallest faces kept; each tick's sample from the
+>   next tick; the tick's shot ignored (tick 1500 took the next shot's
+>   1560); a window from 500 ms instead of the whole file (the track check
+>   refuses shots that do not tile it); the colon kept; collect-once
+>   dropped; main's model gate skipped (a scene pass ran before
+>   model-missing); faces' progress unscaled (the bar read 1 while finding
+>   faces); the time base not written; the helper check skipped; the size
+>   check dropped; the faces request without its abort signal (the cancel
+>   took 3.97 s); the phrase refusal dropped;
+> - the store's and consumers' nineteen: the three facts in two updates;
+>   the stored crop the memo's own object — which **survived** at first:
+>   `vi.resetModules` gives the store its own copy of `keys.ts`, and its own
+>   memo, so the test's identity check compared two memos; it is now asked
+>   of the store's own module, and three tests kill it; the Director storing
+>   the memo's object; the drag keyed by `Math.round(startMs)`; the remap by
+>   equality only, or without its index fallback; the preview's frame
+>   through `sourceFrameFor` (the 0.5× case); the Director taking the
+>   backdrop with a track; `setAspect` dropping `follow`; `cropX` keys
+>   stored; the Output view back on the stored crop; the render, or the
+>   export's moments, on the project's canvas; `momentTextures` back on the
+>   stored crop; every strip cut at the first frame's crop; the migration
+>   keeping any `subjects`; no collect claim; `pending` not rebuilt; a
+>   half's drag written to both halves;
+> - the verifiers', re-run in isolated copies of the tree: the gate
+>   removed; collect without `already`; averaging; the two largest kept
+>   smallest first; a tie to the later sample; `exactOf` reading the shot
+>   before's pts; collect on done only; `previewClipFrame` ignoring
+>   `mediaTime`. **Seven survived**, each pinned by the fix phase: the
+>   signal dropped from `findShots` (the job read cancelled 3,086 ms after
+>   the press); the exact pts dropped in the hold's branch; the cache's
+>   scene condition made `true`; the rebake after a landing removed; the
+>   Director's J-cut refresh removed; and two of the UI's (§4.8's note);
+> - the fix phase's: `round=up` dropped (`test_media.py`, the floor scan and
+>   `reframeJob.int`'s pass all fail);
+>   the cache without `facesVersion`; the worker's version left at 1;
+>   `-copyts` in `sceneArgs` (the pts become 306000 …); the seven survivors
+>   above; the quit's call removed, or its assignment in `registerIpc`; the
+>   project's path put back (a save mid-job never lands), or the comparison
+>   dropped (another project's clip follows); the landing's deferral
+>   removed, or `commit`'s early return put back; the moments' repoint
+>   through `update()` (two entries), or every moment rebaked; Unfollow or
+>   Stack two people without the rebake; the migration's old shape check;
+>   the stub's ids by length; and the UI's (§4.8's, §4.9's notes).
 >
 > **Left:**
-> - The real detector's run is the user's, outside the sandbox:
->   `FORGE_REFRAME_REAL=/path/to/clip.mp4 npx vitest run tests/integration/reframeJob.int.test.ts`
->   writes the time split into `tests/output/reframe-job/README.txt`.
-> - setAspect still repoints every drawn kind with an undo entry each (it
->   redraws them all; older than this slice).
+> - **Paused at 0.5×, one frame per cut shows the new shot through the old
+>   crop.** The crop is the export's (clip frame 57, the frame before the
+>   cut on 58, takes the old shot's x 176), but the element is still seeked
+>   through `sourceFrameFor`, which rounds 57/2 up to source 29, the new
+>   shot's first. `reframePlayback` pins both halves of that. The same is
+>   possible paused at speed 1 on 29.97 or VFR sources, where the browser's
+>   seek and `fps=`'s slot can disagree: unmeasured. The cure is the seek
+>   (floor-mapped as the export does) or the paused crop read from the
+>   presented frame. Playing is right (§4.9's note).
+> - The real detector's run and its time, on your clips: §4.10.
+> - `releaseSessions` is a no-op until the job opens a session (§12.1).
+> - `setAspect` still repoints every drawn kind with an undo entry each (it
+>   redraws them all; older than this slice, and `rebakeFollowed` is not
+>   used there).
 > - Ingest's download still remembers its project by path (store.ts, the
 >   same pattern the reframe had).
+> - The dock's Reframe field still says "Follows the subject · N shots" on
+>   a canvas of the file's own shape, where nothing is keyed (the panel's
+>   note says "nothing to follow").
+> - A Director main shot whose file gains a track later keeps its old
+>   backdrop clip under it: harmless, redundant.
+> - Windows CI on the push is the first run of `reframeJob.int`'s no-venv
+>   suite on the 2018 build — its clip is libx264 yuv444p `-qp 0` through
+>   `overlay=…:format=yuv444`, never encoded there; if that fails, the
+>   whole file fails, refusals included — and of `test_media.py`'s
+>   round=up.
 
 **Expressed as a crop that follows on one clip, not as splits** (decision
 §16.2, with the alternative). Both were measured:
@@ -3051,7 +3297,8 @@ forgets (decision §16.2).
   not the playhead, while playing. The element may drift up to 0.18 s,
   about 5 frames (`Preview.tsx:116`), from the playhead before it is
   re-seeked, and a cut must change on the frame the element shows.
-  Unmeasured in the harness until §4.9's check runs.
+  Unmeasured in the harness until §4.9's check runs. **Measured since
+  (§4.9's note, §15 row 5): it holds the cut.**
 - `Clip.follow?: { phrase?: string; offsets?: Record<number, number>; halfOffsets?: Record<number, HalfOffsets>; twoUp?: boolean; version: number }`
   (`timeline.ts`, beside `crop`). It marks a clip whose crop follows
   `Project.subjects[assetId]`. `twoUp` absent means on.
@@ -3100,6 +3347,100 @@ ipcMain.handle('reframe:collect', ({ jobId }) => SubjectTrack)      // PULLED, s
   track uses the followed crop instead of `BACKDROP_KEEP`'s blurred copy.
 
 ### 4.8 The UI · inside the 4.5 days of 1f
+
+> **Built 2026-10-13, fixed 2026-10-14** — U: `e94511c`, `a591c83`,
+> `bf1c315`, `7ea36c4`, `a7a9bdc`, `a5cf41f`; the fix phase `7ba9aa0`,
+> `a442c63`, `c8ac180`, `2c5951c`. Every control in its home, and the map
+> has each (`WHERE-THINGS-ARE.md`: the dock, EXPORT, the canvas bar;
+> `WINDOW.md` §3.15, §3.17, §3.18):
+>
+> - **The canvas bar** (`CanvasBar.tsx`). `reframeOffer(project)`
+>   (`shared/edit/reframeOffer.ts`) is a portrait canvas (height over width:
+>   1:1 is not) and a count of `followCandidates` — the very clips
+>   `reframeAll` follows, so the chip never offers a press that does
+>   nothing: on the timeline, of a landscape VIDEO by its upright size, on a
+>   video lane, not following, and not a Director backdrop or a strip flash.
+>   Its chip reads "Landscape video on a 9:16 canvas" with **Reframe to
+>   9:16** ("Landscape video on a portrait canvas" with **Reframe to fit** on
+>   a portrait size the bar has no button for), and the press is
+>   `reframeAll()`, never `setAspect`. **The precedence lives in the bar**:
+>   `orientationMismatch` is asked only when the offer is null, so the photo
+>   rule is untouched and `tests/orientation.test.ts` still pins it (its
+>   words-go anchor now reads the bar's `chip`, the offer or the mismatch).
+>   Greyed "needs the AI helper" without one and "the AI helper is
+>   starting" while it starts; disabled while every file it would follow is
+>   already being analysed. The shapes' tooltip gains "Followed clips keep
+>   following their subject." The shape words give way below **57rem**,
+>   not 48rem: measured in the harness, the offer is 312 px, 415 px with
+>   "needs the AI helper", and at 48rem its words were cut to 125 of 178 px
+>   (the cost: the photo chip's shape words also go below 912 px, not 768).
+> - **The Trimmer dock** (`tools/ReframePanel.tsx`, mounted in
+>   `Inspector.tsx` under Steady, for a video clip only). **Follow the
+>   subject** reads "Follow the subject · gets the face finder, 1.1 MB,
+>   first time" while `faceModel({})` — asked once the helper is up, and
+>   never a download — says it is not on disk; the press is `reframeClip`,
+>   which fetches it and then analyses, the button reading "Getting the face
+>   finder… N%", then "Finding the subject… N%". Greyed with "needs the AI
+>   helper" (or "the AI helper is starting"), and that line shows **only
+>   with the Follow button** (fix phase): a followed clip keeps following
+>   without the helper, and beside Unfollow it read as if the follow had
+>   broken. On a followed clip: "3 shots · 1 stacked", **Unfollow**,
+>   **Stack two people** (pressed by default) and `followKeys`' notes ("shot
+>   3: two people too far apart, stacked"; "the clip already has the
+>   canvas's shape: nothing to follow"). A clip whose `follow` has lost its
+>   file's track says "No subject track for this file" and shows Follow and
+>   Unfollow both. Last, **Follow:** with its field ("a face"), greyed, and
+>   its reason in the job's own words, "following something named is not
+>   built yet" (fix phase: it was "needs the subject model, step 1g", a
+>   step number and the name of the salient model §16.35 dropped).
+> - **The job row** (`ExportStrip.tsx` `jobName`, `reframeJobLabel`):
+>   "Finding the subject · <name>" in EXPORT's list and in its header's
+>   running bar ("Running: Finding the subject · clip 1.webm — 0%"), its
+>   stage (finding the shots, finding faces, keeping the track) where an
+>   export has its speed, its X while it runs **and while it waits** (the
+>   queue holds one), no Show in folder, and never the header's Done button
+>   (`exportHeadline` reads renders only). The queue drops a progress report
+>   within 150 ms of the last, so a short file can skip "keeping the track".
+> - **The census.** Fourteen rows in `tests/fixtures/ui-census.json` (827
+>   in all): in the canvas bar "Landscape video on a 9:16 canvas", "Reframe
+>   to 9:16", "needs the AI helper" and the shapes' tooltip (count 3); in the
+>   dock "Follow the subject", "gets the face finder", "Follow:", the "a
+>   face" placeholder, "following something named is not built yet", "needs
+>   the AI helper", "Unfollow", "Stack two people" and "two people too far
+>   apart, stacked"; in EXPORT "Finding the subject". Each is counted on
+>   screen by one of four recipes in `harness/census.ts`: `reframe-offer`
+>   (the bridge's 640×360 video on a 9:16 timeline with three landscape
+>   photos, so the offer must outrank the photo chip; the helper ready, the
+>   face finder not on disk), `reframe-no-helper`, `reframe-followed` (the
+>   stub's track in `project.subjects`) and `reframe-running`. No row for
+>   "Get the subject model" or "Find subjects without faces" (§16.35;
+>   `censusHomes.test.ts` pins their absence). `fresh()` now empties the
+>   jobs list per scenario: run after the reframe check on one page, the
+>   stub's finished analyses left "Clear", "Exports" and "Finding the
+>   subject" absent. **`__forgeCensus()` at `d8baa57`, a fresh page: missing
+>   [], 819 checked, 8 skipped, 48.0 s** (41.8–48 s across the slice's runs).
+> - **Tests:** `tests/reframeOffer.test.ts` (7, the pure rule, and that both
+>   rules would speak on the photo-and-talk project),
+>   `tests/renderer/reframePanel.test.tsx` (24: the bar, the dock and the
+>   job row rendered and pressed; here because the node tsconfig cannot
+>   render TSX), `tests/renderer/censusHomes.test.ts` (5, two new: each
+>   label in its home, no salient row), `tests/orientation.test.ts` (14)
+>   and `tests/uiCensus.test.ts` (9).
+> - **Mutations killed:** the video rule folded into `orientationMismatch`
+>   (§4.8's own: the photo-and-talk render read "Most photos are landscape
+>   Switch to 16:9", and 13 tests failed across three files); Reframe to
+>   9:16 on `setAspect(aspect)`; the precedence inverted (the photo chip up
+>   with video present); Stack two people doing nothing; the size shown once
+>   the face finder is on disk; the row named by its file only; the offer on
+>   any canvas; the shape words giving way for the photo chip only (the
+>   relaxed `orientation.test.ts` anchor still catches it); Stack two people
+>   hidden (the census names it absent); the census without its jobs reset;
+>   a "Get the subject model" row added (`censusHomes`, `uiCensus`). Two of
+>   the UI verifier's mutations **survived** — the offer's busy check
+>   dropped, and "the AI helper is starting" said as "needs" — and are
+>   killed since `c8ac180`, in the dock and the bar each. The fix phase's
+>   own two are killed as well: the old phrase reason put back (the panel
+>   test and `uiCensus`), and the helper's reason shown beside Unfollow.
 
 Where it goes, per `WHERE-THINGS-ARE.md`:
 
@@ -3327,7 +3668,155 @@ Where it goes, per `WHERE-THINGS-ARE.md`:
   Source outline, drags, round trips). It cannot show detection or the
   export; those are the integration tests.
 
+  > **Built 2026-10-13, run again 2026-10-14 at `d8baa57`** —
+  > `src/renderer/src/harness/reframeCheck.ts` (`window.__forgeReframeCheck`,
+  > registered in `harness/main.tsx`; `7ea36c4`, then the fix phase's
+  > `4cb105f`, `2c5951c` and `e0472d9`), against the bridge's stub
+  > (`harness/reframeStub.ts`: shots at 0 / 2000 / 4000 ms, 0.1 × 0.1778
+  > faces at y 0.25 centred on 0.25, 0.75, then 0.35 and 0.65, score 0.95, 2
+  > a second, detector `harness/stub`; the stub's job paced by
+  > `window.forgeReframe.stageMs`, its face finder by `.modelPresent`). The
+  > check records its own video, `recordColumnsVideo`: 640×360 in 16 px
+  > columns 9° of hue apart, because over the bridge's flat colour a crop
+  > that moved sideways looks like one that did not (a first 37° step
+  > repeated every ten columns, and shot 1 against shot 2 measured only
+  > 18.8). Fronted tab, a fresh page, 1510×1017 at dpr 1: **failures [],
+  > 21.1 s** (21.2 s in the earlier runs; twice on one page since the stub's
+  > job ids stopped repeating after Clear). Mean |Output − expected| over
+  > RGB, 0..255; in brackets the same against the picture that would be
+  > wrong there:
+  > - **the press**: "Follow the subject · gets the face finder, 1.1 MB, first
+  >   time"; the face finder fetched (`modelPresent` false → true), one job,
+  >   the track in ONE undo step, 633 ms after the press;
+  > - **the crops**: shot 1 x 60 (centre 161, face 160), shot 2 x 380
+  >   (481/480), shot 3 a two-up, top (124, 50) and bottom (316, 50), both
+  >   202×180, centres 225 and 417 on faces 224 and 416 — the left face on
+  >   top;
+  > - **paused**: frame 30 0.55 (106.9), 90 0.54 (74.4), 149 stacked 0.76
+  >   (55.0); cut 60, frames 59 and 60: 0.55 and 0.54 (106.7, 107.0); cut 120,
+  >   frame 119 0.57 and frame 120 stacked 0.73 (74.4, 74.2). The earlier
+  >   runs read 0.83–0.98;
+  > - **the Source outline in shot 3**, the preview's brightness over the
+  >   bare picture's: lit 1.03 in the top half, 1.04 in the bottom, 1.08 in
+  >   the bottom half outside the one crop; dimmed 0.39 inside the one crop
+  >   and outside both halves, 0.46 outside everything. Two rectangles;
+  > - **9:16 → 16:9 → 9:16** on the bar's own buttons: at 16:9 the clip still
+  >   follows, its note "the clip already has the canvas's shape: nothing to
+  >   follow"; back at 9:16 the three crops and the stored crop are exactly
+  >   as before;
+  > - **a −60 px drag on shot 2's rectangle** (Reframe on, the split open):
+  >   share −0.2970 under 2000, the crop moved −60, the other shots not, one
+  >   undo step;
+  > - **+40 px in the two-up's lower half on the Output side**:
+  >   `halfOffsets[4000].bottom.x` −0.1979, the bottom crop −40 (the picture
+  >   follows the pointer, so the crop moves against it: `2c5951c`), the top
+  >   0, one undo step; the dragged two-up on the Output 0.78 (24.6 against
+  >   the stack before the drag);
+  > - **Stack two people off**: `twoUp: false`, one crop centred 225 on the
+  >   left face (the faces are equal; the larger, else the left), 0.54 (53.5
+  >   against the stack it replaced);
+  > - **six undos**, each restoring its step: Stack two people on, the bottom
+  >   half where it was, the second shot where it was, 16:9, 9:16 following,
+  >   the clip before the follow.
+  >
+  > **Playing — §15 row 5, answered: the cut lands on the element's frame.**
+  > Every frame the element presents (`requestVideoFrameCallback`) is read
+  > once the preview has painted: its `mediaTime` through `exportFrameAt` (the
+  > element's clip frame) against the store's playhead, and near each cut the
+  > Output against both frames' crops. Two passes:
+  > - **as it plays**: 177 frames, drift (playhead − element) 0 on every one;
+  >   −1..+1 across the slice's runs (0..+1, −1..0, 0..0). With so little
+  >   drift the two rules rarely disagree — one frame in one run (element
+  >   119, playhead 120: the element's crop, 0.81 against 74.7) — so this
+  >   pass alone cannot say which the preview follows;
+  > - **nudged**, the element set 3 frames ahead through the first cut and 3
+  >   behind through the second, inside the 0.18 s the preview tolerates:
+  >   177 frames, drift −3..+5 (−3..+6 across runs). On the 4 near-cut frames
+  >   where the element's frame and the playhead's give different crops (4
+  >   to 7 a run), the preview drew the ELEMENT's every time: 0.65–0.68
+  >   against 74.4–107.0 (0.79–1.01 against 73.8–107.0 across runs). A fixed
+  >   +0.1 s nudge was lost (a play can start with the element already 4
+  >   frames ahead), so the nudge sets a target drift.
+  >
+  > So `exportFrameAt` on the presented `mediaTime` holds the cut on the
+  > frame the element shows. Paused at 0.5× is another matter (§4.7's slice
+  > B Left).
+  >
+  > **Found by the check, fixed:** with Scrub on, stopping playback left a
+  > video with no sound playing on to the end of its file behind the stopped
+  > playhead — only a sounding element got the scrub burst that pauses it
+  > (`Preview.tsx` `syncMedia`'s `!scrubbing` guard). `scrub.ts`
+  > `leftToScrubBurst(scrubbing, hasAudio)` leaves only a sounding element
+  > to the burst (`e0472d9`); `stillPlaying` is false on both passes (true
+  > before, and one compare failed by 3.4/255 until the check paused the
+  > element itself). And a synthetic pointer is not an active pointer, so
+  > `setPointerCapture` threw in the overlay's pointerdown and nothing moved:
+  > the check makes it a no-op during its own drags.
+  >
+  > **Mutations** (in the browser on blob copies of the check's module, so
+  > no file changed, or in `Preview.tsx`, restored with `cmp`): the preview
+  > drawing the two-up as one crop (`twoUp = undefined`) — shot 3's frame 149
+  > off by 54.96/255, cut 120 by 55.49, near-cut playing frames over 4/255
+  > in both passes, the dragged two-up by 61.19; the check's own compare
+  > without halves — then only its wrong-picture guard catches a one-crop
+  > preview ("only 0.86/255 away"), so the stacked compare is what catches
+  > it, and the guard a second line (the UI verifier's H1: 6 failures); the
+  > nudge removed — "the element's and the playhead's crops disagreed on
+  > only 1 near-cut frames", so the check will not claim the rule without a
+  > real disagreement (H2); the Scrub guard put back — the check fails on
+  > both passes.
+
 ### 4.10 Exit
+
+> **Where the exit stands, 2026-10-14, after slice B.** Met here, in the
+> sandbox: the action end to end — the press, the job on the real shot
+> finder and the real helper with its stand-in detector, the landing, the
+> preview, the drags, the round trip, undo (§4.7's slice B note, §4.9's
+> harness note); the render check frame-exact on the Mac on all four
+> sources with the two-up rows (§4.7's slice A note). Nothing here could
+> run the face finder itself (no Metal, `EFFECTS.md` §54), so the rest is
+> yours, outside the sandbox — in the app's Terminal tab, as your
+> `FORGE_FACES_REAL` run was:
+>
+> 1. **The analysis time.** A 10-minute 1080p clip on the Mac, then a 4K
+>    HEVC phone clip on its own budget:
+>
+>        FORGE_REFRAME_REAL=/path/to/clip.mp4 npx vitest run tests/integration/reframeJob.int.test.ts
+>
+>    It runs the app's own job (`createReframeJobs`, the code ipc.ts
+>    registers) on that file with the real detector, through
+>    `sidecar/.venv` with `requirements-faces*.txt` installed (as now); the
+>    face finder is copied from `sidecar/.venv-faces/models/` when it is
+>    there, otherwise fetched by the product's own `faceModel({download:
+>    true})`. It writes the probe, gate, shots, faces and reduce-and-write
+>    times, the shot count, the samples kept and how many hold one face and
+>    two, and the track's bytes into `tests/output/reframe-job/README.txt`.
+>    The bar: ≤ 90 s for the 10-minute clip. The Surface's ≤ 3 min is the
+>    same command there, with `FORGE_PYTHON` set (`CLAUDE.md`'s
+>    fresh-checkout table) and the helper's venv built on it. It does not
+>    record the helper's peak RSS yet.
+> 2. **Your ten clips through the action**, in the app (`npm run dev`):
+>    each landscape talk on a 9:16 timeline, **Reframe to 9:16** in the
+>    canvas bar (or **Follow the subject** in the dock), a play through, a
+>    nudge in the Reframe tool where a shot needs one, and an export. Then
+>    a session reads face-inside-crop and crops held across a cut from the
+>    tracks (`userData/subjects/`) against the exports, into
+>    `tests/output/reframe-real/` — that reader is not written yet — and
+>    you rate each export 1–5: ≥ 4 on ≥ 8 of 10.
+> 3. **pyautoflip** on the same ten (§15 row 21: a scratch venv, Python 3.13
+>    or older), rated by you beside ours.
+> 4. **Windows CI** once you allow a push: the render check on the 2018
+>    build, and `reframeJob.int`'s no-venv suite there for the first time.
+> 5. **The Surface**: whether MediaPipe runs there at all (§15 row 1), the
+>    time, and the helper's peak RSS (a line the gated run still lacks).
+> 6. **1g**: not built; the Follow: field stays greyed.
+>
+> Two bullets below have changed under them: no shot calls the salient box
+> any more (§16.35), so its 8–9 s a shot is out of the budget; and
+> "sessions released when the job ends" is a no-op today — the job opens
+> no session (§12.1) — so it is met trivially until one is opened, or read
+> as the helper's RSS back at its baseline after a job, measured with the
+> RSS line.
 
 - The ten user clips through the action, with frames sampled into
   `tests/output/reframe-real/` (not committed):
@@ -5203,6 +5692,12 @@ the analysis loaded stays resident while the model runs.
   so a bake must not overlap an analysis job either. Depth's own cache
   moves to the same rule: an LRU with a byte cap (set from the
   measurement) rather than "forever".
+  **As built (slice B, 2026-10-13):** the job ends, success, failure or
+  cancel, in `releaseSessions`, a commented no-op. `system.release` is not
+  built, because nothing the job calls holds a session: the face finder
+  lives and dies in its worker process, and salient is not called
+  (§16.35). The hook becomes real with the first capability the job calls
+  that keeps one (a small saliency model, §15 row 25; 1g's Florence).
 - **Serialise Clip it.** The model pass starts only after the analysis job
   has finished and released (§7.5 step 5); Whisper releases before the
   analysis starts. The analysis queue's concurrency 1 (§4.7) already keeps
@@ -5251,11 +5746,11 @@ with a window, so `-ss` and `-t` are scanned too. So have 1f's shapes since
 
 | missing | what happens | test |
 |---|---|---|
-| the Python helper | Follow the subject, Reframe and Smart placement greyed with "needs the AI helper"; crops as they were; captions at the style's place; Best clips over YouTube captions only; graphics over caption tracks only, no `callout`; every B-roll picture that may show a person asks | `reframe.int` with the helper refused; `bestClips` without asr; census rows for each greyed control |
-| a model not on disk | its Get button with its size; nothing downloads until it is pressed | census rows; a store test that no toggle or phrase starts a download |
-| the face detector (degraded) | salient, then centre, per shot, with a note | path test "no faces" |
+| the Python helper | Follow the subject, Reframe and Smart placement greyed with "needs the AI helper"; crops as they were; captions at the style's place; Best clips over YouTube captions only; graphics over caption tracks only, no `callout`; every B-roll picture that may show a person asks | `reframe.int` with the helper refused; `bestClips` without asr; census rows for each greyed control. **The reframe's, as built (slice B):** `reframeJob.int`'s no-helper case (a missing interpreter, and a bare one: `no-helper` before any scene pass, in CI too); `reframePanel` and the census's `reframe-no-helper` rows for Follow the subject and Reframe to 9:16; a followed clip keeps following |
+| a model not on disk | its Get button with its size; nothing downloads until it is pressed | census rows; a store test that no toggle or phrase starts a download. **The face finder's, as built (slice B):** no Get button of its own — Follow the subject names it, "gets the face finder, 1.1 MB, first time" (its census row), and the press fetches, then analyses; `reframeJob.int`: a job asked without it fails `model-missing` with nothing fetched and no scene pass; `reframeStore`: a phrase is refused before any job |
+| the face detector (degraded) | salient, then centre, per shot, with a note. **As built (slice B):** the helper counts as missing (`reframeHelperFrom`), so Follow the subject is greyed "needs the AI helper"; and a shot with no face centres with a note, salient never called (§16.35) | path test "no faces"; `reframeContract` (`reframeHelperFrom`); `reframeJob.int`'s bare interpreter, where `vision.faces` is degraded |
 | two people, one of them lost for much of the shot | no two-up: the larger face, with a note | path test "a lost face gives larger" |
-| Florence-2 (not downloaded, or over its gate) | the phrase field greyed with its reason; salient covers no-face shots | path test "ground absent" |
+| Florence-2 (not downloaded, or over its gate) | the phrase field greyed with its reason; salient covers no-face shots. **As built (slice B):** 1g is not built, so Follow: is always greyed, "following something named is not built yet", and a no-face shot centres (§16.35) | path test "ground absent"; `reframePanel`; the census row |
 | no shots found (a single take) | one shot; the path still pans | path test |
 | a rotated file whose size disagrees | the track is refused; centred crop; "the file's orientation changed — reframe again" | `faces.int` rotated case |
 | a retimed clip | the followed crop is recompiled from the track at read time, so its cuts move with the speed; graphics refuse with a note | `reframeKeys` after `withClipSpeed`, a ramp, `convertFrameRate`, a trim, a split; graphics test |
@@ -5293,7 +5788,14 @@ Each is named in its step, and each step's first task is its own row:
    the abort (3 or `0xC0000409`, both accepted until the Surface names it;
    CI's bare interpreter skips those tests, run 38453960372). The YuNet
    comparison is not run (§16.1 answered); YuNet's hand decoder and its
-   golden test only if the Surface run fails (§4.1, §4.3).
+   golden test only if the Surface run fails (§4.1, §4.3). **Since slice B
+   (2026-10-14)** the detector runs inside the analysis job
+   (`main/reframe/analyse.ts`), and each sample is the frame on screen at
+   its label (`fps=5:round=up`, face track version 2; with `fps=5` it was
+   the frame 66.7 ms later, `EFFECTS.md` §54). The job's cost on a real
+   clip is one command of yours, outside the sandbox (§4.10):
+   `FORGE_REFRAME_REAL=/path/to/clip.mp4 npx vitest run
+   tests/integration/reframeJob.int.test.ts`. Its pts follow-up is row 6.
 2. The scene threshold and minimum shot on footage with hand-marked cuts
    (1a, §4.1): open. The per-cut scores against the committed table:
    **measured on the Mac** (2026-10-13, `EFFECTS.md` §53: 1.000 / 1.000 /
@@ -5315,26 +5817,31 @@ Each is named in its step, and each step's first task is its own row:
    4K HEVC fixture to 640×360). The detector's own RSS needs your Mac, and
    your `FORGE_FACES_REAL=1` run does not record it yet (§4.3). Still open:
    the detector, ground, asr, and all of it on the Surface, where salient's
-   gate is decided first.
+   gate is decided first. The analysis job's release is a no-op as built
+   (slice B, §12.1): nothing it calls holds a session, and
+   `FORGE_REFRAME_REAL` does not record RSS either.
 5. The followed crop in the preview while playing: the cut lands on the
-   element's frame (§4.9 harness). **Answered 2026-10-13/14 (slice B, §4.7's
-   Built note): the element's crop holds the cut** — drift 0..+1 as it
-   plays, −3..+6 nudged, and every near-cut frame where the two disagree
-   drawn as the element's. The export's
-   side is settled by construction (2026-10-13, §4.7's Built note):
+   element's frame (§4.9 harness). **Answered 2026-10-13/14 (slice B,
+   §4.9's harness note): it does.** The preview reads the crop at
+   `exportFrameAt(clip, fps, mediaTime·1000)` of the frame the element
+   presents (`requestVideoFrameCallback`; `shared/reframe/playback.ts`),
+   never through `sourceFrameFor` or `timelineFrameAt`. As it plays, the
+   drift (playhead − element) is −1..+1 frames over 176–177 frames a pass;
+   nudged 3 frames each way through the cuts it is −3..+6, and on every
+   near-cut frame where the element's frame and the playhead's give
+   different crops (4 to 7 a run) the preview drew the element's:
+   0.65–1.01/255 against 73.8–107 for the playhead's. The export's side is
+   settled by construction (2026-10-13, §4.7's slice A note):
    - `cropAt` reads the export's own compiled keys at the export's rounding
      (`lrint & ~1`, even on every one of 3,000 frames read);
    - the followed clock makes the export's clip frame k slot k.
 
-   What the preview still has to get right, measured:
-   - It must take the clip frame from the element's `currentTime` through
-     `exportFrameAt(clip, fps, ms)`, never through `sourceFrameFor` or
-     `timelineFrameAt`.
-   - At 0.5×, `sourceFrameFor` rounds n/2 half up while the export shows
-     floor(n/2). So for one frame per cut the preview's picture would show
-     the new shot under the old crop.
-
-   The harness check is unbuilt.
+   Still open, and PAUSED, not playing: at 0.5× the element is seeked
+   through `sourceFrameFor`, which rounds n/2 half up while the export shows
+   floor(n/2), so on the frame before each cut the paused preview shows the
+   new shot's picture through the old shot's (correct) crop; the same may
+   happen paused at speed 1 on 29.97 or VFR sources, unmeasured (§4.7's
+   slice B Left).
 6. **The followed crop at speed 1 on 29.97 fps, 60 fps and VFR sources**:
    whether `fps=`'s rounding agrees with the half-frame keys, or the crop
    needs `fps=` ahead of it (§4.7, §4.9). **Measured on the Mac (2026-10-13,
@@ -5359,10 +5866,16 @@ Each is named in its step, and each step's first task is its own row:
    1:1, 2× and the two-up, plus the slot-1 rows and a ramp, within 1 px on
    every frame. Still open:
    - the 2018 build: CI's reframe.int on the push;
-   - **25 and 50 fps projects**, which need 1b's `Shot.startPts` and the
-     track's time base. ffmpeg rounds the seek into the time base, and the
-     printed-ms path keys 1 cut in 6 a frame late at 2 in-points of 5
-     (159 of 958 measured).
+   - ~~25 and 50 fps projects, which need 1b's `Shot.startPts` and the
+     track's time base~~ — **done in slice B** (`4aafdc4`, 2026-10-13). ffmpeg
+     rounds the seek into the time base, and the printed-ms path keyed 1 cut
+     in 6 a frame late at 2 in-points of 5 (159 of 958 measured). The scene
+     pass's integer `pts:` is now kept as `Shot.startPts` and the stream's
+     time base as `SubjectTrack.timeBase`, and `keys.ts` hands both to
+     `exportFrameAt` at every cut and in a hold: the measured case (25 fps,
+     in-point 72, source frame 231, pts 118272 on 1/15360) keys slot 120,
+     where the printed 7700 ms keyed 121. The pts count from the file's
+     first timestamp, as the export's `-ss` does (`EFFECTS.md` §55).
 7. The 360-cut render through `-filter_complex_script` on the 2018 build,
    and its export time (§3.7). **The followed clip it was written for
    renders now** (2026-10-13, `EFFECTS.md` §55).
@@ -5819,6 +6332,12 @@ what is needed, where the answer waits on something not yet in hand.
     **Answer (2026-10-13):** the first. The analysis job does not call
     `vision.salient`; the method stays in the helper, unused by the job;
     the small model is its own later item.
+
+    **Built so (slice B, 2026-10-13/14):** a whole job asks the helper
+    `vision.facesModel` and `vision.faces` and nothing else, pinned in
+    `reframeJob.int` on any interpreter (the mutation that adds a
+    `vision.salient` request fails it); no salient control exists, and
+    `censusHomes.test.ts` pins that no census row names one (§4.7, §4.8).
 
 ---
 
