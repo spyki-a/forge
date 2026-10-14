@@ -1093,8 +1093,8 @@ sha256 GitHub does).
 
 | platform | asset (release `20261001`, published 2026-10-01T22:37:31Z) | bytes | sha256 | unpacked |
 |---|---|---|---|---|
-| macOS arm64 | `cpython-3.14.8+20261001-aarch64-apple-darwin-install_only_stripped.tar.gz` | 26,680,498 | `69e48cd7f54261df5b6abbd374f69fe6e496fa781d271592aeef49cd5ffbea6c` | 69,430,272 B of tar (the `20261013` build's, from its gzip trailer; `20261001`'s within 3 KB compressed) |
-| Windows x64 | `cpython-3.14.8+20261001-x86_64-pc-windows-msvc-install_only_stripped.tar.gz` | 23,227,899 | `b7ff8b700995379e425b39abce9b087d84a45aa265ea465c0069c2747ea5b2ea` | 63,299,584 B of tar (likewise) |
+| macOS arm64 | `cpython-3.14.8+20261001-aarch64-apple-darwin-install_only_stripped.tar.gz` | 26,680,498 | `69e48cd7f54261df5b6abbd374f69fe6e496fa781d271592aeef49cd5ffbea6c` | 69,373,952 B of tar, measured on the pinned archive 2026-10-14 (row 26; the plan had the `20261013` build's 69,430,272 from a gzip trailer); 1,689 files, 68,060,050 B unpacked, 87,081,292 B once the standard library is compiled |
+| Windows x64 | `cpython-3.14.8+20261001-x86_64-pc-windows-msvc-install_only_stripped.tar.gz` | 23,227,899 | `b7ff8b700995379e425b39abce9b087d84a45aa265ea465c0069c2747ea5b2ea` | 63,301,120 B of tar, measured likewise (the plan had 63,299,584); 2,190 files, 61,643,159 B unpacked, 70,315,292 B compiled |
 
 Both from GitHub's per-asset `digest` field (re-read 2026-10-14); the
 release's `SHA256SUMS` (142,015 B) agreed on every row read, so the app
@@ -1123,13 +1123,19 @@ range (206) and refused a suffix range (`bytes=-4`, 501).
   `build.py:1792-1817`); no `ensurepip` run; on Windows no `pip.exe`
   (`build.py:1829-1838`), so it is always `python -m pip`; `vcruntime140.dll`
   and `vcruntime140_1.dll` beside `python.exe` (`PC/layout/main.py:164-169`;
-  issue #855 kept their signatures through stripping); OpenSSL linked into
-  `_ssl` on the Mac with `--openssldir=/private/etc/ssl`
+  issue #855 kept their signatures through stripping); OpenSSL 3.5.9 built
+  **into the `python3.14` executable itself** on the Mac (with `_hashlib`,
+  `_sqlite3` and the system's zlib 1.2.12; not a separate `_ssl`, as this
+  text first said), with `--openssldir=/private/etc/ssl`
   (`build-openssl-3.5.sh:46`), and `/private/etc/ssl/cert.pem` exists on this
-  Mac (333,483 B). **Unmeasured, and row 26's:** whether the archive ships
-  the standard library's `__pycache__` (the pack starts with
-  `-B`, §3a.2, so a missing `.pyc` would be compiled in memory at every
-  start), and whether an `EXTERNALLY-MANAGED` file is present.
+  Mac (333,483 B). **Measured by row 26 (2026-10-14, `EFFECTS.md` §57):**
+  both archives ship a few standard-library `.pyc` (3 on the Mac, 168 on
+  Windows) and **every one is stale once unpacked**, so the install job
+  compiles the standard library once (§3a.3 stage 2) and the pack's `-B`
+  then costs no start time; there is **no `EXTERNALLY-MANAGED`** file and no
+  `._pth`; and the Mac's `python/bin` does hold `pip`, `pip3` and `pip3.14`
+  (234-byte shell trampolines), though it is `python -m pip` on both
+  platforms regardless.
 - **Signatures.** The arm64 binaries are ad-hoc linker-signed (issue #749);
   Developer ID signing is only being rehearsed (PR #1255, opened
   2026-09-09). Apple Silicon needs a valid signature, and ad hoc counts.
@@ -1159,8 +1165,11 @@ range (206) and refused a suffix range (`bytes=-4`, 501).
   libedit BSD-3 (built instead of readline, and `_gdbm` disabled, both to
   avoid GPL, `docs/running.md`), Tcl/Tk 9.0.4 TCL, SQLite public domain. The
   third-party licence texts are only in the **full** archive
-  (`python/licenses/`); `install_only` keeps CPython's `LICENSE.txt`. So the
-  credits page carries the components' texts.
+  (`python/licenses/`); `install_only` keeps CPython's `LICENSE.txt`, at
+  `python/lib/python3.14/LICENSE.txt` on the Mac (13,804 B) and
+  `python/LICENSE.txt` on Windows (23,601 B) (row 26). The zlib line holds
+  for Windows (`zlib1.dll`); the Mac interpreter uses the system's 1.2.12.
+  So the credits page carries the components' texts.
 
 #### The wheels
 
@@ -1183,14 +1192,18 @@ none needs a compiler.**
 
 - **The Mac, measured.** The 47 distributions' RECORD sizes in the dev venv
   are **587.9 MB** (11,629 files, 99.3 MB of them `.pyc`), 3.88× the wheel
-  bytes. With the interpreter's ~69 MB of tar that is **about 0.66 GB**.
+  bytes. With the pinned interpreter's tree as row 26 unpacked and compiled
+  it (87,081,292 B) that is **675,024,351 B, about 0.68 GB** (the manifest's
+  pre-CI `bytesOnDisk`; this text first said ~69 MB of tar and 0.66 GB).
 - **Windows, measured from the wheels' indexes** (a reviewer, 2026-10-14;
   the first draft's 0.84 GB was an estimate from the Mac's ratios and is
   withdrawn). The central directories of all 48 Windows cp314 wheels sum to
   556,756,305 B in 6,528 files, of which 4,373 are `.py` (77,229,712 B). At
   the dev venv's measured `.pyc`-to-`.py` byte ratio (1.313: 105,047,119 /
   79,995,354 B), pip's compile adds about 101 MB. That gives **about 0.66 GB
-  of packages and about 0.72 GB** with the interpreter's 63.3 MB of tar.
+  of packages and 728,486,971 B, about 0.73 GB**, with the interpreter's
+  tree as row 26 unpacked and compiled it (70,315,292 B; this text first
+  counted 63.3 MB of tar).
   NTFS slack on about 15,000 files adds roughly 30 MB (an estimate).
 - **The peak during an install** is the download plus the tree: about
   0.84 GB on the Mac and about 0.94 GB on Windows, until the downloads are
@@ -2060,18 +2073,21 @@ the **ustar prefix field** alone (so `TarStream` joins prefix + `/` + name,
 as `readTar` does); there are **no directory entries**, so the reader
 creates each member's parent folders itself; and the executable bit comes
 from the mode (0775 on the Mac's 19 executables, 0777 on Windows' 14).
-Then, only if row 26 says so:
+Then, in this stage, right after the unpack and before pip:
 
-- **the standard library compiled once** (`<python> -E -s -m compileall -q
-  python/Lib`), if the archive ships no stdlib `.pyc`, so `-B` costs no
-  start time. **Row 26 says so, on both platforms**: every `.pyc` either
-  archive ships is stale once unpacked. The measured command is `<python>
-  -I -m compileall -q -j 1 <python/lib/python3.14 | python\Lib>` (2.22 s
-  on the Mac, 1,059 `.pyc`; 2.03 s for Windows' tree compiled on the Mac);
-  `-j 0` failed in the dev sandbox on `SC_SEM_NSEMS_MAX`, so it is `-j 1`
-  unless measured outside it. `--invalidation-mode unchecked-hash` would
-  free the `.pyc` from the unpacked mtimes; an option, unmeasured;
-- **on the Mac, the quarantine stripped** (`/usr/bin/xattr -dr
+- **the standard library compiled once**, so `-B` costs no start time.
+  Row 26 settled it (2026-10-14, `EFFECTS.md` §57): every `.pyc` either
+  archive ships is **stale** once unpacked, on both platforms, so the step
+  is unconditional. The one command, the measured one, is `<python> -I -m
+  compileall -q -j 1 <stdlib>` with `<stdlib>` = `python/lib/python3.14` on
+  the Mac and `python\Lib` on Windows (2.22 s on the Mac, 1,059 `.pyc`;
+  2.03 s for Windows' tree compiled on the Mac). `-j 0` failed in the dev
+  sandbox on `SC_SEM_NSEMS_MAX`, so it is `-j 1` unless measured outside
+  it. `--invalidation-mode unchecked-hash` would free the `.pyc` from the
+  unpacked mtimes; an option, unmeasured. The manifest's pre-CI
+  `bytesOnDisk` already counts this compile (`4dae71d`). It has no bar
+  weight of its own: two seconds inside the unpack's share;
+- **on the Mac, the quarantine stripped**, only if row 31 says so: (`/usr/bin/xattr -dr
   com.apple.quarantine <version folder>`, allowed on files the user owns),
   if row 31 finds `com.apple.quarantine` on the unpacked files, so
   Gatekeeper does not assess each of about a thousand `.so` and `.dylib`
@@ -2118,9 +2134,13 @@ them.)
 will start it (`helperLaunch` of the pack's rung, cwd `sidecarDir()`,
 `maxRestarts: 0`):
 
-- `system.hello` within **120 s**, or row 29's measured cold start plus a
-  margin once it is in (the first cold start after Defender has scanned the
-  fresh `.pyd` and `.dll` files);
+- `system.hello` within the client's own pack-rung timeout
+  (`PACK_HELLO_TIMEOUT_MS`, `client.ts`: **90 s** as a placeholder since
+  slice A, the same number the service waits), to be set from row 29's
+  measured cold start plus a margin once it is in (the first cold start
+  after Defender has scanned the fresh `.pyd` and `.dll` files); the
+  self-test and the service must never disagree on it, so the job reads
+  the constant rather than carrying its own;
 - `executable`, `prefix` and every `path` entry inside the version folder or
   `sidecarDir()`, by `path.relative` on real paths; `python` the manifest's
   version;
@@ -2166,7 +2186,8 @@ will start it (`helperLaunch` of the pack's rung, cwd `sidecarDir()`,
   CI listing of every native file's imports (§3a.6) answers which ones
   *need* a runtime the pack does not carry.
 
-Then the stdlib and quarantine steps if row 26 and row 31 asked for them,
+Then the quarantine step if row 31 asked for it (the standard library was
+compiled in stage 2, before pip),
 `pack.json` (with `hello` and `selftest`), older version folders removed
 (receipt first), `downloads/` removed (§16.47), the lock released, and
 `restartSidecar()`. **If helper work is in flight, the switch waits**
