@@ -49,6 +49,8 @@ type Bridge = Record<string, unknown> & {
   analyseSubjects: (request: ReframeAnalyseRequest) => Promise<Job>
   collectSubjects: (jobId: string) => Promise<ReframeCollectResult>
   onJobsChanged: (cb: (jobs: Job[]) => void) => () => void
+  clearFinished: () => Promise<void>
+  listJobs: () => Promise<Job[]>
 }
 
 let preload: Record<string, unknown>
@@ -156,6 +158,21 @@ describe("the bridge's reframe stub (§4.9)", () => {
     expect(first.track.key).toBe(`harness:${PATH}`)
     expect(first.track.shots.map((s) => s.startMs)).toEqual([0, 2000, 4000])
     expect(await bridge.collectSubjects(job.id)).toEqual({ kind: 'already' })
+  })
+
+  it('never gives a job id twice, though Clear empties the list: the store collects each id once', async () => {
+    harness.stageMs = 0
+    harness.modelPresent = true
+    // From an empty list, twice: an id counted from the list's length is the same both times.
+    await bridge.clearFinished()
+    const first = await bridge.analyseSubjects(ask())
+    expect((await settled(first.id)).status).toBe('done')
+    await bridge.clearFinished()
+    expect(await bridge.listJobs()).toEqual([])
+    const second = await bridge.analyseSubjects(ask())
+    expect(second.id).not.toBe(first.id)
+    expect((await settled(second.id)).status).toBe('done')
+    expect(await bridge.collectSubjects(second.id)).toMatchObject({ kind: 'track' })
   })
 
   it("gives a 9:16 canvas one face per shot, then a two-up — the check's three shots", async () => {

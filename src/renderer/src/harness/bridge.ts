@@ -268,8 +268,16 @@ function patchJob(id: string, patch: Partial<Job>): void {
 
 const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
+/**
+ * Every stub job's number, never reset: Clear empties `jobs`, and an id taken
+ * from its length came round again — the store collects each id once per
+ * window (main's are UUIDs), so a second Follow on the same page was never
+ * collected and nothing was said.
+ */
+let reframeJobCount = 0
+
 function harnessAnalyse(request: ReframeAnalyseRequest): Job {
-  const id = `harness-reframe-${harnessReframe.jobs.length + 1}`
+  const id = `harness-reframe-${++reframeJobCount}`
   const job: Job = {
     id,
     presetId: REFRAME_PRESET,

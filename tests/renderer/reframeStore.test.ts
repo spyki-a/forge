@@ -370,6 +370,19 @@ describe('a track landing during a gesture', () => {
   })
 })
 
+describe('the harness stub, after Clear', () => {
+  it('a second Follow on the same page lands: its job is not taken for the first one', async () => {
+    await state().reframeClip('c')
+    await until('the first track to land', landed)
+    await bridge.clearFinished()
+    // A project without the track, so the second press asks for a job rather than following the one it has.
+    state().loadProject(talk(), PROJECT_PATH, [])
+    await state().reframeClip('c')
+    await until('the second track to land', landed)
+    expect(clipNow().follow).toBeDefined()
+  })
+})
+
 describe('a project saved or swapped while its analysis runs', () => {
   it('a save mid-job — the first Cmd+S of an untitled project, or Save As — still lands the track: the work is the same', async () => {
     harness.stageMs = 30
