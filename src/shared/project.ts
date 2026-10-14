@@ -1,6 +1,7 @@
 import type { Project } from './timeline'
 import { emptyProject, newProjectId } from './timeline'
 import { relativeToProject } from './project/relink'
+import { checkSubjectTrack } from './reframe/reduce'
 
 /**
  * The on-disk project format.
@@ -101,19 +102,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-/** The subject tracks a file carries that the follow path can read; undefined for none. */
+/**
+ * The subject tracks a file carries that the follow path can read; undefined
+ * for none. Each is held to `checkSubjectTrack` — the same whole check main
+ * gives a track it reads back from userData/subjects — so a track a hand, a
+ * crash or another build left malformed (a null shot, a box past the frame,
+ * shots that do not tile the file) is dropped here rather than throwing at the
+ * first draw: `cropAt` read `shots[i].startMs` of a null and threw. It also
+ * drops another version's, which followKeys ignores anyway: the clip then
+ * reads its stored crop.
+ */
 function subjectsOf(value: unknown): Project['subjects'] {
   if (!isRecord(value)) return undefined
-  const kept = Object.entries(value).filter(
-    ([, track]) =>
-      isRecord(track) &&
-      typeof track.key === 'string' &&
-      typeof track.version === 'number' &&
-      Array.isArray(track.shots) &&
-      Array.isArray(track.samples) &&
-      Array.isArray(track.perShot) &&
-      track.samples.every((sample) => isRecord(sample) && Array.isArray(sample.faces))
-  )
+  const kept = Object.entries(value).filter(([, track]) => checkSubjectTrack(track) !== null)
   return kept.length > 0 ? (Object.fromEntries(kept) as Project['subjects']) : undefined
 }
 

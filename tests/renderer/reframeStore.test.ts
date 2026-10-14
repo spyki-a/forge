@@ -527,6 +527,21 @@ describe('the migration', () => {
     expect(broken.subjects).toBeUndefined()
     expect(() => cropAt(broken, broken.clips[0], null, 0)).not.toThrow()
 
+    // Whole-looking, with one shot null: the first draw read its startMs and threw. Held to checkSubjectTrack, dropped.
+    const good = stubTrack()
+    file.project.subjects = { v: { ...good, shots: [null, ...good.shots.slice(1)] } }
+    const nullShot = deserializeProject(file).project
+    expect(nullShot.subjects).toBeUndefined()
+    expect(() => cropAt(nullShot, nullShot.clips[0], null, 0)).not.toThrow()
+    // A box past the frame, or shots that stop short of the file: what main's own read-back refuses, refused here too.
+    file.project.subjects = { v: { ...good, samples: [{ ms: 0, faces: [{ x: 0.95, y: 0.1, width: 0.1, height: 0.1, score: 0.9 }] }] } }
+    expect(deserializeProject(file).project.subjects).toBeUndefined()
+    file.project.subjects = { v: { ...good, durationMs: good.durationMs + 1000 } }
+    expect(deserializeProject(file).project.subjects).toBeUndefined()
+    // One good track beside a bad one: the good one is kept.
+    file.project.subjects = { v: good, w: { ...good, shots: [null] } }
+    expect(Object.keys(deserializeProject(file).project.subjects ?? {})).toEqual(['v'])
+
     file.project.subjects = null
     expect(deserializeProject(file).project.subjects).toBeUndefined()
 
