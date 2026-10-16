@@ -8295,6 +8295,27 @@
     "note": "\"Speech model · 464 MB · on this machine\" once it is on disk."
   },
   {
+    "label": "Getting",
+    "match": "text",
+    "home": "settings",
+    "needs": "speech-model-fetching",
+    "part": true,
+    "file": "src/shared/sidecar/row.ts",
+    "line": 400,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "The speech model's line while its press fetches it: \"Getting the speech model… 42%\" (speechModelRow), the label and the percent their own pieces."
+  },
+  {
+    "label": "Stop getting the speech model",
+    "match": "title",
+    "home": "settings",
+    "needs": "speech-model-fetching",
+    "file": "src/shared/asr/speechModel.ts",
+    "line": 55,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "The fetch's X beside it: main aborts the request, the helper stops at its next chunk (asr:modelCancel)."
+  },
+  {
     "label": "needs the speech model",
     "match": "title",
     "home": "upload",
@@ -8324,6 +8345,27 @@
     "line": 50,
     "newHome": "Shelf tile Upload",
     "note": "The speech model's sized press over the pool, \"Get the speech model · 464 MB\" (speechModelLabel's one static piece at a word boundary)."
+  },
+  {
+    "label": "Getting",
+    "match": "text",
+    "home": "upload",
+    "needs": "speech-fetching-pool",
+    "part": true,
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 136,
+    "newHome": "Shelf tile Upload",
+    "note": "The pool's press while it fetches: \"Getting the speech model… 42%\"."
+  },
+  {
+    "label": "Stop getting the speech model",
+    "match": "title",
+    "home": "upload",
+    "needs": "speech-fetching-pool",
+    "file": "src/shared/asr/speechModel.ts",
+    "line": 55,
+    "newHome": "Shelf tile Upload",
+    "note": "The X beside the pool's press while it fetches."
   },
   {
     "label": "install it in Settings",

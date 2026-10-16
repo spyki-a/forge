@@ -518,6 +518,8 @@ const api = {
    */
   speechModel: (request: { download?: boolean } = {}): Promise<ModelStatus> =>
     ipcRenderer.invoke(SPEECH_MODEL_CHANNELS.model, request),
+  /** The press's X: cancels the speech model's fetch in flight; resolves at once, the fetch's own call rejects "Cancelled". */
+  cancelSpeechModel: (): Promise<void> => ipcRenderer.invoke(SPEECH_MODEL_CHANNELS.cancel),
   onSpeechModelProgress: (cb: (update: SpeechModelProgress) => void): (() => void) => {
     const listener = (_e: unknown, update: SpeechModelProgress): void => cb(update)
     ipcRenderer.on(SPEECH_MODEL_CHANNELS.progress, listener)

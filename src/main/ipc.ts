@@ -1053,24 +1053,37 @@ export function registerIpc(getWindow: () => BrowserWindow | null, options: IpcO
    * of main's on the fetch: huggingface_hub 1.31.0 reads each response with
    * its own HF_HUB_DOWNLOAD_TIMEOUT (10 s), which ends a stalled one. Two
    * presses at once share one fetch. With no helper to ask, getSidecar's
-   * sentence is the rejection and nothing is spawned.
+   * sentence is the rejection and nothing is spawned. The press's X
+   * (`SPEECH_MODEL_CHANNELS.cancel`) aborts the shared fetch: the client sends
+   * the helper a cancel, which media.download honours at its next chunk, and
+   * every press waiting on it rejects with "Cancelled".
    */
   let speechFetch: Promise<ModelStatus> | null = null
+  let speechCancel: AbortController | null = null
   ipcMain.handle(SPEECH_MODEL_CHANNELS.model, async (_e, payload: unknown) => {
     const { download } = speechModelRequest(payload)
     const helper = getSidecar()
     if (!download) return helper.request<ModelStatus>(SIDECAR_METHODS.asrModel, {}, { timeoutMs: 30_000 })
-    speechFetch ??= helper
-      .request<ModelStatus>(SIDECAR_METHODS.asrModel, { download: true }, {
-        onProgress: (progress, message) => {
-          const update: SpeechModelProgress = { progress, ...(message !== undefined ? { message } : {}) }
-          getWindow()?.webContents.send(SPEECH_MODEL_CHANNELS.progress, update)
-        }
-      })
-      .finally(() => {
-        speechFetch = null
-      })
+    if (!speechFetch) {
+      const controller = new AbortController()
+      speechCancel = controller
+      speechFetch = helper
+        .request<ModelStatus>(SIDECAR_METHODS.asrModel, { download: true }, {
+          signal: controller.signal,
+          onProgress: (progress, message) => {
+            const update: SpeechModelProgress = { progress, ...(message !== undefined ? { message } : {}) }
+            getWindow()?.webContents.send(SPEECH_MODEL_CHANNELS.progress, update)
+          }
+        })
+        .finally(() => {
+          speechFetch = null
+          if (speechCancel === controller) speechCancel = null
+        })
+    }
     return speechFetch
+  })
+  ipcMain.handle(SPEECH_MODEL_CHANNELS.cancel, () => {
+    speechCancel?.abort()
   })
 
   /*

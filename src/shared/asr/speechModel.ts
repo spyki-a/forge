@@ -46,8 +46,13 @@ export const SPEECH_MODEL_CHANNELS = {
   /** `{ download?: boolean }` → ModelStatus; `download: true` only from the press that showed the size. */
   model: 'asr:model',
   /** SpeechModelProgress while a fetch runs. */
-  progress: 'asr:modelProgress'
+  progress: 'asr:modelProgress',
+  /** The press's X: cancels the fetch in flight (the helper stops at its next chunk); nothing when none runs. */
+  cancel: 'asr:modelCancel'
 } as const
+
+/** The X beside "Getting the speech model… N%": its title. */
+export const STOP_SPEECH_MODEL = 'Stop getting the speech model'
 
 export interface SpeechModelProgress {
   /** 0–1, or null while the size is not yet known. */

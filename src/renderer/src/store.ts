@@ -712,6 +712,8 @@ interface EditorState {
   refreshSpeechModel: () => Promise<void>
   /** The sized press: fetch the speech model, its progress in `speechFetch`. */
   getSpeechModel: () => Promise<void>
+  /** The press's X while it fetches: main cancels the fetch, and the press ends without a notice. */
+  cancelSpeechModel: () => void
 
   past: Project[]
   future: Project[]
@@ -1707,11 +1709,16 @@ export const useEditor = create<EditorState>((set, get) => ({
       set({ speechModel: model })
       if (!model.present) get().notify(`${SPEECH_MODEL_LABEL[0].toUpperCase()}${SPEECH_MODEL_LABEL.slice(1)} could not be downloaded`)
     } catch (err) {
-      get().notify(helperErrorText(err))
+      const message = helperErrorText(err)
+      // Its own X: nothing to tell.
+      if (!/cancel/i.test(message)) get().notify(message)
     } finally {
       stop()
       set({ speechFetch: null })
     }
+  },
+  cancelSpeechModel: () => {
+    if (get().speechFetch) void window.forge.cancelSpeechModel().catch(() => undefined)
   },
 
   past: [],

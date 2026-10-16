@@ -117,7 +117,12 @@ function recording(o: { progress?: [number | null, string | undefined][]; gated?
       asked.push({ method, params, options })
       const onProgress = options.onProgress as ((p: number | null, m?: string) => void) | undefined
       for (const [p, m] of o.progress ?? []) onProgress?.(p, m)
-      await gate
+      // As the real client: an aborted signal sends the helper a cancel, and the request rejects "Cancelled".
+      const signal = options.signal as AbortSignal | undefined
+      await Promise.race([
+        gate,
+        new Promise<never>((_resolve, reject) => signal?.addEventListener('abort', () => reject(new Error('Cancelled')), { once: true }))
+      ])
       return { ...STATUS, present: (params as { download?: boolean }).download === true }
     }
   }
@@ -260,6 +265,35 @@ describe('asr:model in main', () => {
     expect(asked).toHaveLength(2)
   })
 
+  it('the press’s X cancels the fetch every waiting press shares; a press after it is a new fetch; an X with none running does nothing', async () => {
+    const { asked } = recording({ gated: true })
+    const call = await handler()
+    const cancel = electron.handlers.get(SPEECH_MODEL_CHANNELS.cancel)
+    expect(cancel, `no handler for ${SPEECH_MODEL_CHANNELS.cancel}`).toBeTruthy()
+    // Nothing running: nothing to cancel, nothing asked.
+    expect(() => cancel!({})).not.toThrow()
+    const first = call({ download: true })
+    const second = call({ download: true })
+    await Promise.resolve()
+    expect(asked).toHaveLength(1)
+    const signal = asked[0].options.signal as AbortSignal
+    expect(signal).toBeInstanceOf(AbortSignal)
+    expect(signal.aborted).toBe(false)
+    cancel!({})
+    expect(signal.aborted).toBe(true)
+    await expect(first).rejects.toThrow('Cancelled')
+    await expect(second).rejects.toThrow('Cancelled')
+    // The fetch is over: the next press asks the helper again, with a signal of its own.
+    const third = call({ download: true })
+    await Promise.resolve()
+    expect(asked).toHaveLength(2)
+    expect((asked[1].options.signal as AbortSignal).aborted).toBe(false)
+    cancel!({})
+    await expect(third).rejects.toThrow('Cancelled')
+    // A status ask is never cancelled by it.
+    expect(asked.filter((a) => (a.params as { download?: boolean }).download !== true)).toEqual([])
+  })
+
   it('a payload it refuses asks the helper nothing', async () => {
     const { asked } = recording()
     const call = await handler()
@@ -285,9 +319,11 @@ describe('the preload', () => {
     expect(api).toBeTruthy()
     await api.speechModel()
     await api.speechModel({ download: true })
+    await api.cancelSpeechModel()
     expect(electron.invoked).toEqual([
       { channel: SPEECH_MODEL_CHANNELS.model, args: [{}] },
-      { channel: SPEECH_MODEL_CHANNELS.model, args: [{ download: true }] }
+      { channel: SPEECH_MODEL_CHANNELS.model, args: [{ download: true }] },
+      { channel: SPEECH_MODEL_CHANNELS.cancel, args: [] }
     ])
     const stop = api.onSpeechModelProgress(() => undefined) as () => void
     stop()

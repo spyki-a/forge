@@ -71,7 +71,8 @@ export function installFallbackBridge(): void {
     removeHelper: unavailable,
     checkHelperAgain: unavailable,
     helperModelsBytes: async () => null,
-    speechModel: unavailable
+    speechModel: unavailable,
+    cancelSpeechModel: async () => undefined
   } as unknown as Window['forge']
 
   queueMicrotask(() => {

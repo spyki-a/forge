@@ -1369,8 +1369,17 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
   'speech-model-offered': async () => helperRowIn(harnessReadyHelper(), false),
   /* …and once it is on disk */
   'speech-model-present': async () => helperRowIn(harnessReadyHelper(), true),
+  /* the speech model being fetched: "Getting the speech model… 42%" in the row's model list, and its X */
+  'speech-model-fetching': async () =>
+    helperRowIn(harnessReadyHelper(), false, () => useEditor.setState({ speechFetch: { progress: 0.42 } })),
   /* the Media pool with a video in it, the helper up and no speech model: the bar over the pool with its sized press */
   'speech-model-missing': async (env) => poolWithoutSpeechModel(env),
+  /* …while the press fetches it: its progress on the button and the X beside it */
+  'speech-fetching-pool': async (env) => {
+    const built = await poolWithoutSpeechModel(env)
+    useEditor.setState({ speechFetch: { progress: 0.42 } })
+    return built
+  },
   /*
    * The same state, for the greyed Transcribe's title: a row is one label in
    * one home and state, and the bar's text and the title are both "needs the

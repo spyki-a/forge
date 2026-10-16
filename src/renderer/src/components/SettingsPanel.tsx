@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { X } from 'lucide-react'
 import { isLoopback, type LlmProviderChoice } from '@shared/director/provider'
 import { formatBytes } from '@shared/assets/pack'
+import { STOP_SPEECH_MODEL } from '@shared/asr/speechModel'
 import { SIDECAR_METHODS } from '@shared/sidecar/protocol'
 import { HELPER_PACK } from '@shared/sidecar/packManifest'
 import { helperCan } from '@shared/sidecar/helperCan'
@@ -168,6 +169,7 @@ export function HelperSection(): ReactNode {
   const speechModel = useEditor((s) => s.speechModel)
   const speechFetch = useEditor((s) => s.speechFetch)
   const getSpeechModel = useEditor((s) => s.getSpeechModel)
+  const cancelSpeechModel = useEditor((s) => s.cancelSpeechModel)
   const speech = speechModelRow(speechModel, helperCan(status, SIDECAR_METHODS.transcribe), speechFetch)
   const waiting = ui.busy !== null ? ACTION_BUSY[ui.busy] : null
   // A helper job running: every press here waits for it, with its reason (row.ts).
@@ -248,6 +250,11 @@ export function HelperSection(): ReactNode {
               onClick={() => void getSpeechModel()}
             >
               {speech.get}
+            </button>
+          )}
+          {speechFetch && (
+            <button type="button" data-speech-cancel="" className={small} title={STOP_SPEECH_MODEL} aria-label={STOP_SPEECH_MODEL} onClick={cancelSpeechModel}>
+              <X size={10} />
             </button>
           )}
         </div>

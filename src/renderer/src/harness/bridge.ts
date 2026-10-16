@@ -789,10 +789,14 @@ async function harnessCheckHelperAgain(): Promise<void> {
   publish(harnessHelperStatus('ready', harnessHelper.downloaded))
 }
 
+/** The speech model's fetch in flight, and whether its X was pressed (main's `asr:modelCancel`). */
+const speechFetch = { running: false, cancelled: false }
+
 /**
  * The speech model's status, or its fetch on `download: true` exactly
  * (main's `asr:model`): refused with the status's reason while no helper is
- * ready, as `getSidecar()` refuses; progress on `onSpeechModelProgress`.
+ * ready, as `getSidecar()` refuses; progress on `onSpeechModelProgress`; its
+ * X ends it at the next step with "Cancelled", the model not on disk.
  */
 async function harnessSpeechModel(payload?: unknown): Promise<ModelStatus> {
   const { download } = speechModelRequest(payload)
@@ -800,9 +804,17 @@ async function harnessSpeechModel(payload?: unknown): Promise<ModelStatus> {
   const status = harnessHelper.status
   if (status.state !== 'ready') throw new Error(helperStatusReason(status) ?? HELPER_NOT_INSTALLED)
   if (download && !harnessHelper.speechPresent) {
-    for (let step = 0; step <= 8; step++) {
-      await wait(harnessHelper.stepMs)
-      for (const listener of speechListeners) listener({ progress: step / 8, message: `fetching ${SPEECH_MODEL_LABEL}` })
+    speechFetch.running = true
+    speechFetch.cancelled = false
+    try {
+      for (let step = 0; step <= 8; step++) {
+        await wait(harnessHelper.stepMs)
+        if (speechFetch.cancelled) throw new Error('Cancelled')
+        for (const listener of speechListeners) listener({ progress: step / 8, message: `fetching ${SPEECH_MODEL_LABEL}` })
+      }
+    } finally {
+      speechFetch.running = false
+      speechFetch.cancelled = false
     }
     harnessHelper.speechPresent = true
   }
@@ -1383,6 +1395,9 @@ export function installHarnessBridge(): void {
     checkHelperAgain: () => harnessCheckHelperAgain(),
     helperModelsBytes: () => harnessModelsBytes(),
     speechModel: (request?: unknown) => harnessSpeechModel(request ?? {}),
+    cancelSpeechModel: async () => {
+      if (speechFetch.running) speechFetch.cancelled = true
+    },
     onSpeechModelProgress: (cb: (update: SpeechModelProgress) => void) => {
       speechListeners.add(cb)
       return () => speechListeners.delete(cb)

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createElement, isValidElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { emptyProject, type MediaAsset } from '@shared/timeline'
-import { NEEDS_SPEECH_MODEL, SPEECH_MODEL_NOT_DOWNLOADED, speechModelLabel } from '@shared/asr/speechModel'
+import { NEEDS_SPEECH_MODEL, SPEECH_MODEL_NOT_DOWNLOADED, STOP_SPEECH_MODEL, speechModelLabel } from '@shared/asr/speechModel'
 import { SIDECAR_METHODS, type HelloResult, type ModelStatus } from '@shared/sidecar/protocol'
 import type { SidecarStatus } from '@shared/sidecar/status'
 
@@ -66,6 +66,7 @@ const SPEECH: ModelStatus = { present: false, bytes: 486_539_264, label: 'the sp
 
 const forge = {
   speechModel: vi.fn(async (_request: { download?: boolean }) => ({ ...SPEECH, present: true })),
+  cancelSpeechModel: vi.fn(async () => undefined),
   onSpeechModelProgress: vi.fn((_cb: unknown) => () => undefined)
 }
 
@@ -155,6 +156,31 @@ describe('the speech model’s press', () => {
     expect(state().speechModel?.present).toBe(true)
     expect(state().speechFetch).toBeNull()
     expect(renderToStaticMarkup(createElement(SpeechModelPress))).toBe('')
+  })
+
+  it('has an X while it fetches: pressed, main cancels, and the press ends with no notice and the model still not on disk', async () => {
+    show(ready([SIDECAR_METHODS.transcribe]), { ...SPEECH })
+    forge.cancelSpeechModel.mockClear()
+    const xs = (): { type: string; props: Record<string, unknown> }[] => hostsOf(SpeechModelPress()).filter((h) => h.type === 'button' && h.props.title === STOP_SPEECH_MODEL)
+    expect(xs(), 'no X before the press').toEqual([])
+    let fail: (err: Error) => void = () => undefined
+    forge.speechModel.mockImplementationOnce(() => new Promise<ModelStatus>((_resolve, reject) => (fail = reject)))
+    const pending = state().getSpeechModel()
+    expect(xs()).toHaveLength(1)
+    ;(xs()[0].props.onClick as () => void)()
+    expect(forge.cancelSpeechModel).toHaveBeenCalledTimes(1)
+    fail(new Error("Error invoking remote method 'asr:model': SidecarError: Cancelled"))
+    await pending
+    expect(state().speechFetch).toBeNull()
+    expect(state().notices).toEqual([])
+    expect(state().speechModel?.present).toBe(false)
+    expect(xs(), 'no X once it has ended').toEqual([])
+    // Any other failure is still told.
+    forge.speechModel.mockImplementationOnce(async () => {
+      throw new Error("Error invoking remote method 'asr:model': Error: The AI helper stopped (code 1)")
+    })
+    await state().getSpeechModel()
+    expect(state().notices.map((n) => n.text)).toEqual(['The AI helper stopped (code 1)'])
   })
 
   it('is asked about again when a Transcribe finds the model gone, so the press comes back', async () => {

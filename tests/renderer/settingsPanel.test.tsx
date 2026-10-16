@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createElement, isValidElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { formatBytes } from '@shared/assets/pack'
-import { speechModelLabel } from '@shared/asr/speechModel'
+import { STOP_SPEECH_MODEL, speechModelLabel } from '@shared/asr/speechModel'
 import { HELPER_PYTHON_MISSING } from '@shared/sidecar/helperPython'
 import { HELPER_IN_USE_ELSEWHERE, HELPER_PRESET, HELPER_WORKING } from '@shared/sidecar/install'
 import { packHosts } from '@shared/sidecar/pack'
@@ -130,6 +130,7 @@ const forge = {
   checkHelperAgain: vi.fn(async () => undefined),
   helperModelsBytes: vi.fn(async (): Promise<number | null> => 0),
   speechModel: vi.fn(async (_request: { download?: boolean }) => ({ ...SPEECH })),
+  cancelSpeechModel: vi.fn(async () => undefined),
   onSpeechModelProgress: vi.fn((_cb: unknown) => () => undefined)
 }
 
@@ -339,6 +340,20 @@ describe('the speech model in the row', () => {
     await press(get, 'Get the speech model')
     expect(forge.speechModel.mock.calls.map((c) => c[0])).toEqual([{ download: true }])
     expect(words(markup())).toContain(`Speech model · ${formatBytes(SPEECH.bytes)} · on this machine`)
+  })
+
+  it('has an X while it is being fetched, which asks main to cancel; none before or after', async () => {
+    show(readyPack(), { speechModel: { ...SPEECH } })
+    const xOf = (): Host[] => section().filter((h) => h.type === 'button' && h.props.title === STOP_SPEECH_MODEL)
+    expect(xOf()).toEqual([])
+    useEditor.setState({ speechFetch: { progress: 0.42 } })
+    expect(words(markup())).toContain('Getting the speech model… 42%')
+    expect(xOf()).toHaveLength(1)
+    expect(xOf()[0].props['aria-label']).toBe(STOP_SPEECH_MODEL)
+    press(xOf()[0], 'the X')
+    expect(forge.cancelSpeechModel).toHaveBeenCalledTimes(1)
+    useEditor.setState({ speechFetch: null, speechModel: { ...SPEECH, present: true } })
+    expect(xOf()).toEqual([])
   })
 
   it('is not offered while the helper cannot transcribe', () => {

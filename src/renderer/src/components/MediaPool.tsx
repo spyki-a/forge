@@ -8,7 +8,7 @@ import { mediaUrl } from '../media'
 import { setDragPayload } from '../dragPayload'
 import type { DragPayload } from '@shared/dragPayload'
 import { BigButton } from './ui/Tile'
-import { NEEDS_SPEECH_MODEL, SPEECH_MODEL_LABEL, speechModelLabel } from '@shared/asr/speechModel'
+import { NEEDS_SPEECH_MODEL, SPEECH_MODEL_LABEL, STOP_SPEECH_MODEL, speechModelLabel } from '@shared/asr/speechModel'
 import { SIDECAR_METHODS } from '@shared/sidecar/protocol'
 import { helperCan } from '@shared/sidecar/helperCan'
 import { transcribeGate, type TranscribeGate } from '@shared/sidecar/row'
@@ -116,6 +116,7 @@ export function SpeechModelPress({ inline = false }: { inline?: boolean } = {}):
   const model = useEditor((s) => s.speechModel)
   const fetching = useEditor((s) => s.speechFetch)
   const getSpeechModel = useEditor((s) => s.getSpeechModel)
+  const cancelSpeechModel = useEditor((s) => s.cancelSpeechModel)
   if (!helperCan(status, SIDECAR_METHODS.transcribe)) return null
   if (!fetching && (!model || model.present)) return null
   const percent = fetching && typeof fetching.progress === 'number' ? ` ${Math.round(fetching.progress * 100)}%` : ''
@@ -134,6 +135,18 @@ export function SpeechModelPress({ inline = false }: { inline?: boolean } = {}):
       >
         {fetching ? `Getting ${SPEECH_MODEL_LABEL}…${percent}` : model ? speechModelLabel(model) : null}
       </button>
+      {fetching && (
+        <button
+          type="button"
+          data-speech-cancel=""
+          onClick={cancelSpeechModel}
+          title={STOP_SPEECH_MODEL}
+          aria-label={STOP_SPEECH_MODEL}
+          className="shrink-0 rounded bg-ink-800 p-1 text-ink-400 hover:bg-ink-700 hover:text-ink-100"
+        >
+          <X size={10} />
+        </button>
+      )}
     </div>
   )
 }
