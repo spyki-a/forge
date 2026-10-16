@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { spawn as realSpawn } from 'node:child_process'
+import { spawn as realSpawn, type ChildProcess } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -18,17 +18,34 @@ import type { Spawn } from '../src/main/sidecar/installTypes'
 const FAKE_PIP = resolve(__dirname, 'fixtures', 'fake-pip.mjs')
 const PYTHON = join('pack', 'python', 'bin', 'python3.14')
 const dirs: string[] = []
-const strays: number[] = []
+/** Every fake pip a stage started: each runs with its cwd in the stage's temp dir (runPip's `cwd`, the downloads folder). */
+const pips: ChildProcess[] = []
 
-afterEach(() => {
-  for (const pid of strays.splice(0)) {
-    try {
-      process.kill(pid, 'SIGKILL')
-    } catch {
-      // gone
-    }
-  }
-  for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true })
+const running = (child: ChildProcess): boolean => child.exitCode === null && child.signalCode === null
+
+/**
+ * A pip ended as its parent sees it: killed if it still runs, then its 'exit'.
+ * On Windows that is the process object signalled, its handles closed, and
+ * its cwd with them. Not `process.kill(pid, 0)` failing: that reads the exit
+ * code, which TerminateProcess sets first. Then a temp dir that was the cwd
+ * of a pip just killed by pid could not be removed: `rmSync` EPERM in this
+ * afterEach, Windows CI run 38919769393, "a cancel whose kill did not take".
+ */
+async function ended(child: ChildProcess, ms = 5000): Promise<boolean> {
+  if (!running(child)) return true
+  const exited = new Promise<boolean>((done) => child.once('exit', () => done(true)))
+  child.kill('SIGKILL')
+  return Promise.race([exited, new Promise<boolean>((done) => setTimeout(() => done(!running(child)), ms))])
+}
+
+afterEach(async () => {
+  // A test ends its own pips. One left running is ended here before its dir goes, and the test fails, naming it:
+  // on the Mac a live process's cwd can be removed, on Windows it cannot.
+  const left = pips.filter(running).map((c) => c.pid)
+  await Promise.all(pips.splice(0).map((c) => ended(c)))
+  // Node retries EPERM and EBUSY on Windows: a virus scanner's moment on a fresh file is not a failure.
+  for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+  expect(left, 'pips still running when the test ended').toEqual([])
 })
 
 /** Whether a process is still there: signal 0 asks without sending anything. */
@@ -88,8 +105,10 @@ function stage(o: { mode?: string; count?: number; total?: number; ms?: number; 
   const python = o.python ?? PYTHON
   const spawn = ((command: string, args: string[], options: Record<string, unknown>) => {
     calls.push({ command, args: [...args], options })
-    if (command === PYTHON) return realSpawn(process.execPath, [FAKE_PIP, ...args], options)
-    return realSpawn(command, args, options)
+    if (command !== PYTHON) return realSpawn(command, args, options)
+    const child = realSpawn(process.execPath, [FAKE_PIP, ...args], options)
+    pips.push(child)
+    return child
   }) as unknown as Spawn
   const seen: Seen[] = []
   const controller = new AbortController()
@@ -195,7 +214,6 @@ describe('a cancel', () => {
     const run = runPip(s.options)
     expect(await until(() => s.pids().length === 1 && s.seen.some((p) => p.line?.startsWith('Processing')), 10_000)).toBe(true)
     const [pid] = s.pids()
-    strays.push(pid)
     expect(alive(pid)).toBe(true)
     s.controller.abort()
     const outcome = await Promise.race([
@@ -235,7 +253,6 @@ describe('a cancel', () => {
     const run = runPip({ ...s.options, spawn: t.spawn }, { platform: 'win32' })
     expect(await until(() => s.pids().length === 1 && s.seen.some((p) => p.line?.startsWith('Processing')), 10_000)).toBe(true)
     const [pid] = s.pids()
-    strays.push(pid)
     s.controller.abort()
     // Well inside the 10 s grace: the fallback, not the grace, ends it.
     expect(await settledWithin(run, 5000)).toMatchObject({ name: 'CancelledError' })
@@ -250,13 +267,13 @@ describe('a cancel', () => {
     const run = runPip({ ...s.options, spawn: t.spawn }, { platform: 'win32', cancelGraceMs: 300 })
     expect(await until(() => s.pids().length === 1, 10_000)).toBe(true)
     const [pid] = s.pids()
-    strays.push(pid)
     s.controller.abort()
     expect(await settledWithin(run, 5000)).toMatchObject({ name: 'CancelledError' })
     expect(alive(pid), 'the stand-in taskkill killed nothing').toBe(true)
-    // Ended here, so nothing is left behind.
-    process.kill(pid, 'SIGKILL')
-    expect(await until(() => !alive(pid), 5000)).toBe(true)
+    // Ended here, and waited for, so nothing is left behind and its cwd can go.
+    const pip = pips.find((c) => c.pid === pid)!
+    expect(await ended(pip)).toBe(true)
+    expect(alive(pid)).toBe(false)
   })
 
   it('starts nothing when the job is already cancelled', async () => {

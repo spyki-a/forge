@@ -161,7 +161,10 @@ afterEach(async () => {
       // gone
     }
   }
-  for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true })
+  // The grandchild's cwd is its helper's temp dir, and it is not this process's child: there is no 'exit' to wait
+  // for, only its exit code, which Windows sets before the process lets go of its cwd. Node retries EPERM and
+  // EBUSY on Windows (pipStage.test.ts met that EPERM, Windows CI run 38919769393).
+  for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
   spawned.length = 0
   taskkill.lagMs = 0
   taskkill.missing = false
