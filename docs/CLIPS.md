@@ -2305,20 +2305,21 @@ Repair and Remove need the wait too.
 > - **A cancel during the final switch** leaves the pack installed (receipt
 >   written) and the job reading Cancelled; P-C may word it.
 >
-> **Open, for the user** (none is built; each needs a decision):
+> **Open, for the user** (none was built in slice B; **answered 2026-10-16
+> as §16.51–53, each as recommended, built in slice C**):
 > - An install whose check finds a `sys.path` entry outside the pack, or a
 >   Python other than 3.14.8, reads Done: the problem is only logged and
 >   kept in the receipt's `problems` (the user-site mutation reached such a
->   receipt). Fail the job, or surface it in the ready status?
+>   receipt). → §16.51: keep the pack, mark the receipt, the row shows the
+>   warning with Repair.
 > - numba writes 38 cache files (1,190,255 B) into the installed pack's
 >   librosa folders on the first real beats pass; the self-test writes none.
->   Point `NUMBA_CACHE_DIR` at `helper-cache`, or accept the drift from the
->   receipt's `bytesOnDisk`?
+>   → §16.52: `NUMBA_CACHE_DIR` under `helper-cache`.
 > - Two windows that find the same stale lock within the same milliseconds
 >   can both take it over, and a window can still spawn from the pack in
 >   the moment between Repair's or Remove's last in-use read and the stop.
->   Closing both needs the service to consult the lock before it spawns
->   from a pack, or §16.50 (b).
+>   → §16.53: every pack start consults the lock first; the takeover
+>   re-reads after writing.
 
 A module with its dependencies injected, in the shape of
 `createReframeJobs` (`analyse.ts:267`, `:418-446`), so the whole job runs in
@@ -9326,6 +9327,50 @@ what is needed, where the answer waits on something not yet in hand.
     **Recommended: (a) in P**; (b) as its own decision, not inside P.
 
     **Answer (2026-10-14):** as recommended ("okay go ahead").
+51. **A pack whose check finds a `sys.path` entry outside it, or a Python
+    other than the manifest's** (slice B, §3a.3 "Open, for the user"). Today
+    the install reads Done and the problem sits only in the receipt's
+    `problems`.
+    - (a) **keep the pack, mark the receipt, and the row shows the warning**
+      ("the AI helper's Python path reaches outside its folder: …"), with
+      Repair offered; the helper runs. The leak is the app's launch or the
+      archive, nothing the user can mend, and failing would leave that
+      machine with no helper at all;
+    - (b) fail the job and remove the pack, as for a helper that does not
+      start.
+
+    **Recommended: (a).** `PackCheck.problems` splits into the degraded
+    `expects` methods (kept as today) and these integrity problems, so the
+    row can name them apart (P-C).
+
+    **Answer (2026-10-16):** as recommended ("go ahead").
+52. **numba's cache inside the installed pack.** The first real beats pass
+    writes 38 cache files (1,190,255 B) into the pack's librosa folders
+    (measured, §3a.8 row 27), so the tree drifts from the receipt's
+    `bytesOnDisk`.
+    - (a) **`NUMBA_CACHE_DIR` set to `helper-cache/numba` in the pack rung's
+      environment**, so the pack stays as installed and Repair's `rm` and
+      the receipt's size stay true; the cache is the helper's own folder,
+      evicted with the rest;
+    - (b) accept the drift and say so in the row's size.
+
+    **Recommended: (a).**
+
+    **Answer (2026-10-16):** as recommended ("go ahead").
+53. **The last window the lock does not cover** (slice B, V2's finding):
+    another window can start the helper from the pack in the milliseconds
+    between Repair's or Remove's last in-use read and its stop, and two
+    windows that find one stale lock in the same instant can both take it.
+    - (a) **every helper start from a pack consults the lock first** in
+      `getSidecar()`: while another live instance holds it, the start is
+      refused ("the AI helper is being repaired by another Forge window")
+      and the status says so; the takeover of a stale lock re-reads the
+      file after writing and yields if another pid got there;
+    - (b) §16.50 (b), `requestSingleInstanceLock`, as its own decision.
+
+    **Recommended: (a)** in P-C; (b) stays its own question.
+
+    **Answer (2026-10-16):** as recommended ("go ahead").
 
 ---
 
