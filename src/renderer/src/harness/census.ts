@@ -21,15 +21,14 @@ import { runFromRows } from '@shared/ingest/wordRun'
 import { clipSourceWindow, clipWords } from '@shared/edit/clipIt'
 import type { Transcript } from '@shared/transcript'
 import { useEditor, type ShelfToolId, type UrlSourceStatus } from '../store'
-import { HARNESS_LINKS } from './bridge'
+import { HARNESS_HELPER_PACK, HARNESS_LINKS, HARNESS_SPEECH_MODEL_BYTES, harnessHelperStatus } from './bridge'
 import { harnessSubjectTrack } from './reframeStub'
 import { useCatalog } from '../catalog'
 import { usePacks } from '../packs'
 import { SHELF_TOOLS } from '../components/shelf/tools'
-import { THIS_PACK } from '../components/SettingsPanel'
-import { HELPER_PACK } from '@shared/sidecar/packManifest'
-import { SELFTEST_GROUP_NAMES } from '@shared/sidecar/selftest'
 import type { SidecarStatus } from '@shared/sidecar/status'
+import { HELPER_JOB_INPUT, HELPER_PRESET, INSTALL_STAGES, downloadingText } from '@shared/sidecar/install'
+import { packBytes } from '@shared/sidecar/pack'
 import { SPEECH_MODEL_HOST, SPEECH_MODEL_LABEL } from '@shared/asr/speechModel'
 
 /**
@@ -1258,25 +1257,46 @@ function settingsPanel(
 
 /**
  * A ready AI helper as an installed pack reports it: every method the
- * manifest expects, every self-test group ok. What the bridge never reaches
- * on its own (its helper fails by design, bridge.ts sidecarStatus).
+ * manifest expects, every self-test group ok. What the bridge's own page never
+ * reaches (its helper fails by design); the bridge's stub builds it, so the
+ * census and `__forgeHelperPackCheck` read one status (bridge.ts `harnessHelper`).
  */
 function harnessReadyHelper(): SidecarStatus {
+  return harnessHelperStatus('ready')
+}
+
+/** The speech model as `asr.model` answers for it, on disk or not (bridge.ts `HARNESS_SPEECH_MODEL_BYTES`). */
+const speechModelIs = (present: boolean): void =>
+  useEditor.setState({ speechModel: { present, bytes: HARNESS_SPEECH_MODEL_BYTES, label: SPEECH_MODEL_LABEL, host: SPEECH_MODEL_HOST } })
+
+/** The AI helper's install in EXPORT's list as main broadcasts it, presetId 'helper': downloading, with no helper up. */
+function helperInstalling(): Job {
+  const total = packBytes(HARNESS_HELPER_PACK)
   return {
-    state: 'ready',
-    source: { kind: 'pack', pack: HELPER_PACK.pack, root: `harness/python/${HELPER_PACK.pack}` },
-    hello: {
-      protocolVersion: 1,
-      python: HELPER_PACK.python.version,
-      platform: 'harness',
-      capabilities: [...THIS_PACK.expects],
-      degraded: {},
-      executable: 'harness/python',
-      prefix: 'harness',
-      path: []
-    },
-    selftest: Object.fromEntries(SELFTEST_GROUP_NAMES.map((group) => [group, 'ok']))
+    ...job('census-helper', HELPER_PRESET, 'running', 0.2),
+    inputName: HELPER_JOB_INPUT,
+    params: { kind: 'install' },
+    speed: downloadingText(Math.round(total * 0.4), total, 4.2 * 1024 * 1024)
   }
+}
+
+/** The Media pool with the synthetic media, the helper able to transcribe and the speech model not on disk. */
+async function poolWithoutSpeechModel(env: Env): Promise<Built> {
+  await media(env)
+  editor().setHelperStatus(harnessReadyHelper())
+  speechModelIs(false)
+  return {}
+}
+
+/** A row of the AI helper in Settings, in a state of the bridge's stub, the speech model as `speech` says (absent from the panel when null). */
+function helperRowIn(status: SidecarStatus, speech: boolean | null = null, extra?: () => void): Built {
+  return settingsPanel({
+    prepare: () => {
+      editor().setHelperStatus(status)
+      if (speech !== null) speechModelIs(speech)
+      extra?.()
+    }
+  })
 }
 
 /**
@@ -1315,8 +1335,48 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
   'settings-open': async () => settingsPanel(),
   /* the AI helper has not reported yet */
   'sidecar-starting': async () => settingsPanel({ prepare: () => editor().setHelperStatus(null) }),
-  /* the AI helper is up: an installed pack with every feature (docs/CLIPS.md §3a.4's green row) */
+  /* the AI helper is up: an installed pack with every feature (docs/CLIPS.md §3a.4's green row): Repair and Remove */
   'sidecar-running': async () => settingsPanel({ prepare: () => editor().setHelperStatus(harnessReadyHelper()) }),
+  /*
+   * The AI helper's row in each state of §3a.4's table, as the bridge's stub
+   * builds it from the manifest (bridge.ts `harnessHelperStatus`): sizes from
+   * the offer or the pack, never written here.
+   */
+  /* no pack: Install with its size, the hosts under it */
+  'helper-absent': async () => helperRowIn(harnessHelperStatus('absent')),
+  /* a cancelled install left the interpreter verified in downloads/: "· N MB left" */
+  'helper-partial': async () =>
+    helperRowIn(harnessHelperStatus('absent', { [HARNESS_HELPER_PACK.interpreter.name]: HARNESS_HELPER_PACK.interpreter.bytes })),
+  /* the install downloading with no helper up: the row says so and sends its X to EXPORT, whose row names the job */
+  'helper-installing': async () => {
+    editor().setJobs([helperInstalling()])
+    return helperRowIn({ state: 'installing', stage: INSTALL_STAGES[1].label })
+  },
+  /* a pack whose beats group failed for want of the Visual C++ runtime: N−1 of N, its sentence and link, Check again */
+  'helper-short': async () => helperRowIn(harnessHelperStatus('ready-short'), true),
+  /* an older pack's receipt: Update */
+  'helper-update': async () => helperRowIn(harnessHelperStatus('update')),
+  /* a Mac on macOS 13: nothing to press */
+  'helper-unsupported': async () => helperRowIn(harnessHelperStatus('unsupported')),
+  /* the pack's Python gone: red, Repair */
+  'helper-damaged': async () => helperRowIn(harnessHelperStatus('damaged')),
+  /* a pack Windows' policy refuses to start (§3a.4 "Group Policy") */
+  'helper-policy': async () => helperRowIn(harnessHelperStatus('policy')),
+  /* Remove pressed on a whole pack: its question, its box off */
+  'helper-remove-asked': async () =>
+    helperRowIn(harnessReadyHelper(), true, () => useEditor.setState({ helperUi: { busy: null, error: null, removing: { models: false } } })),
+  /* the helper can transcribe and the speech model is not on disk: the row's model list offers it, sized */
+  'speech-model-offered': async () => helperRowIn(harnessReadyHelper(), false),
+  /* …and once it is on disk */
+  'speech-model-present': async () => helperRowIn(harnessReadyHelper(), true),
+  /* the Media pool with a video in it, the helper up and no speech model: the bar over the pool with its sized press */
+  'speech-model-missing': async (env) => poolWithoutSpeechModel(env),
+  /*
+   * The same state, for the greyed Transcribe's title: a row is one label in
+   * one home and state, and the bar's text and the title are both "needs the
+   * speech model".
+   */
+  'transcribe-no-model': async (env) => poolWithoutSpeechModel(env),
   fullscreen: async () => ({ show: async () => fullScreen(true), close: async () => fullScreen(false) }),
   'newproject-open': async () => ({
     show: async () => menu('new'),
@@ -1887,7 +1947,7 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
   /* the same, with the AI helper up and the speech model on disk: Listen to it is still not built */
   'link-no-captions-helper': async () => {
     editor().setHelperStatus(harnessReadyHelper())
-    useEditor.setState({ speechModel: { present: true, bytes: 0, label: SPEECH_MODEL_LABEL, host: SPEECH_MODEL_HOST } })
+    speechModelIs(true)
     await linkFetched(HARNESS_LINKS.noCaptions, 'none')
     return {}
   },

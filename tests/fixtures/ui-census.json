@@ -4405,13 +4405,14 @@
     "newHome": "Shelf tile Upload"
   },
   {
-    "label": "The AI helper (Python) is not running",
+    "label": "needs the AI helper — install it in Settings",
     "match": "title",
     "home": "upload",
     "needs": "video-clip",
     "file": "src/renderer/src/components/MediaPool.tsx",
-    "line": 260,
-    "newHome": "Shelf tile Upload"
+    "line": 90,
+    "newHome": "Shelf tile Upload",
+    "note": "The greyed Transcribe's title (TRANSCRIBE_NEEDS_HELPER): the tile's caption icon has no room for a pointer, so its title says where the one Install is (docs/CLIPS.md §3a.4, §16.41). It was \"The AI helper (Python) is not running\"."
   },
   {
     "label": "Transcribing — click to cancel",
@@ -4712,7 +4713,7 @@
     "home": "settings",
     "needs": "settings-open",
     "file": "src/renderer/src/components/SettingsPanel.tsx",
-    "line": 264,
+    "line": 178,
     "newHome": "settings panel (§3.9)"
   },
   {
@@ -4855,9 +4856,10 @@
     "match": "text",
     "home": "settings",
     "needs": "sidecar-running",
-    "file": "src/renderer/src/components/SettingsPanel.tsx",
-    "line": 52,
-    "newHome": "settings panel (§3.9)"
+    "file": "src/shared/sidecar/row.ts",
+    "line": 87,
+    "newHome": "settings panel (§3.9)",
+    "note": "ROW_WORDS.running, green beside \"Python 3.14.8 · pack 2 · 636 MB\" for a whole pack (helperRow)."
   },
   {
     "label": "Save",
@@ -4885,8 +4887,8 @@
     "match": "text",
     "home": "settings",
     "needs": "sidecar-starting",
-    "file": "src/renderer/src/components/SettingsPanel.tsx",
-    "line": 53,
+    "file": "src/shared/sidecar/row.ts",
+    "line": 83,
     "newHome": "settings panel (§3.9)",
     "note": "Step 6: the AI helper's state before it reports, which the header dot's tooltip \"AI sidecar starting\" said; the gear's dot still shows it in grey."
   },
@@ -5723,10 +5725,10 @@
     "match": "text",
     "home": "url",
     "needs": "link-no-captions",
-    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 182,
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 91,
     "newHome": "Shelf tile URL",
-    "note": "The harness’s AI helper is not running (bridge.ts sidecarStatus), as on every installed machine until Step P."
+    "note": "Beside the greyed Listen to it, on a video with no captions, while the AI helper cannot transcribe (the harness page's own helper fails, bridge.ts `harnessHelper`). Since 00e431b a pointer (HelperPointer, NEEDS_THE_HELPER): a small button that opens Settings with the AI helper row in view (§3a.4, §16.41); its title is the \"install it in Settings\" row."
   },
   {
     "label": "soon",
@@ -5734,9 +5736,9 @@
     "home": "url",
     "needs": "link-no-captions-helper",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 182,
+    "line": 194,
     "newHome": "Shelf tile URL",
-    "note": "With the AI helper up, Listen to it is still greyed: listening is not built in M0."
+    "note": "With the AI helper able to transcribe AND the speech model on disk, Listen to it is still greyed: listening is not built in M0. Without the model it says \"needs the speech model\"; without the helper, the pointer."
   },
   {
     "label": "Set From and To to this chapter",
@@ -7826,10 +7828,10 @@
     "match": "text",
     "home": "canvasbar",
     "needs": "reframe-no-helper",
-    "file": "src/renderer/src/components/CanvasBar.tsx",
-    "line": 120,
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 91,
     "newHome": "canvas (reframe chip beside the shape switch)",
-    "note": "Reframe to 9:16 greyed: with no AI helper there is no face finder, and the job would only centre every crop."
+    "note": "Reframe to 9:16 greyed: with no AI helper there is no face finder, and the job would only centre every crop. Since 00e431b a pointer (HelperPointer, NEEDS_THE_HELPER): a small button that opens Settings with the AI helper row in view (§3a.4, §16.41); its title is the \"install it in Settings\" row."
   },
   {
     "label": "Follow the subject",
@@ -7885,10 +7887,10 @@
     "match": "text",
     "home": "dock",
     "needs": "reframe-no-helper",
-    "file": "src/renderer/src/components/tools/ReframePanel.tsx",
-    "line": 75,
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 91,
     "newHome": "trimmer dock (under Steady, video clips)",
-    "note": "Follow the subject greyed, as on every machine without the AI helper."
+    "note": "Follow the subject greyed, as on every machine without the AI helper. Since 00e431b a pointer (HelperPointer, NEEDS_THE_HELPER): a small button that opens Settings with the AI helper row in view (§3a.4, §16.41); its title is the \"install it in Settings\" row."
   },
   {
     "label": "Unfollow",
@@ -7930,5 +7932,345 @@
     "line": 59,
     "newHome": "export strip (the Exports list)",
     "note": "The analysis's row: \"Finding the subject · <file>\" (reframeJobLabel), with its bar, its stage and its cancel."
+  },
+  {
+    "label": "Not installed",
+    "match": "text",
+    "home": "settings",
+    "needs": "helper-absent",
+    "file": "src/shared/sidecar/row.ts",
+    "line": 88,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "Grey, never red: every tester's first state (docs/CLIPS.md §3a.4)."
+  },
+  {
+    "label": "Install the AI helper ·",
+    "match": "text",
+    "home": "settings",
+    "needs": "helper-absent",
+    "part": true,
+    "file": "src/shared/sidecar/row.ts",
+    "line": 138,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "The one Install, its size from the offer through formatBytes: \"Install the AI helper · 166 MB\" for the Mac's pack 2, \"· 201 MB\" on Windows."
+  },
+  {
+    "label": "on disk. Downloads from",
+    "match": "text",
+    "home": "settings",
+    "needs": "helper-absent",
+    "part": true,
+    "file": "src/shared/sidecar/row.ts",
+    "line": 125,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "The hosts sentence under Install (§16.40): \"Uses about 636 MB on disk. Downloads from github.com (and the host it redirects to, today release-assets.githubusercontent.com) and files.pythonhosted.org. Its own Python; any Python on this machine is left alone.\""
+  },
+  {
+    "label": "Install the AI helper ·",
+    "match": "text",
+    "home": "settings",
+    "needs": "helper-partial",
+    "part": true,
+    "file": "src/shared/sidecar/row.ts",
+    "line": 138,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "A cancelled install left the interpreter verified in downloads/: \"Install the AI helper · 141 MB left\" on the Mac's pack 2."
+  },
+  {
+    "label": "left",
+    "match": "text",
+    "home": "settings",
+    "needs": "helper-partial",
+    "part": true,
+    "count": 2,
+    "file": "src/shared/sidecar/row.ts",
+    "line": 138,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "Count 2: the Install's \"· N MB left\" (its only static piece after the size) and the hosts sentence's \"is left alone\". Without the bytesLeft reading the Install loses its \"left\" and the count is 1."
+  },
+  {
+    "label": "Installing",
+    "match": "text",
+    "home": "settings",
+    "needs": "helper-installing",
+    "file": "src/shared/sidecar/row.ts",
+    "line": 84,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "The row while the install runs: \"Installing · downloading · 66 of 166 MB · 4.2 MB/s\"."
+  },
+  {
+    "label": "Its bar and its X are in EXPORT.",
+    "match": "text",
+    "home": "settings",
+    "needs": "helper-installing",
+    "file": "src/shared/sidecar/row.ts",
+    "line": 95,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "No second cancel in Settings (§3a.4)."
+  },
+  {
+    "label": "Installing the AI helper",
+    "match": "text",
+    "home": "export",
+    "needs": "helper-installing",
+    "file": "src/shared/sidecar/install.ts",
+    "line": 29,
+    "newHome": "export strip (the Exports list)",
+    "note": "The AI helper's job row (helperJobLabel), its stage in the speed column, its X beside it (§3a.4 \"The EXPORT row\")."
+  },
+  {
+    "label": "Repair ·",
+    "match": "text",
+    "home": "settings",
+    "needs": "sidecar-running",
+    "part": true,
+    "file": "src/shared/sidecar/row.ts",
+    "line": 146,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "\"Repair · 166 MB\" on a whole pack: the manifest's bytes (all of them after a success, §16.47)."
+  },
+  {
+    "label": "Remove",
+    "match": "text",
+    "home": "settings",
+    "needs": "sidecar-running",
+    "file": "src/shared/sidecar/row.ts",
+    "line": 149,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "Asks first (helper-remove-asked)."
+  },
+  {
+    "label": "Check again",
+    "match": "text",
+    "home": "settings",
+    "needs": "helper-short",
+    "count": 2,
+    "file": "src/shared/sidecar/row.ts",
+    "line": 150,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "Count 2: the model servers' Check again (settings-open's row) and the AI helper row's, which a pack short of a feature offers (§16.45 (a))."
+  },
+  {
+    "label": "helper features",
+    "match": "text",
+    "home": "settings",
+    "needs": "helper-short",
+    "part": true,
+    "file": "src/shared/sidecar/row.ts",
+    "line": 301,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "\"8 of 9 helper features · beats needs Microsoft's Visual C++ runtime\": N of the manifest's expects (9 since asr.model joined it)."
+  },
+  {
+    "label": "needs Microsoft's Visual C++ runtime — install it from",
+    "match": "text",
+    "home": "settings",
+    "needs": "helper-short",
+    "part": true,
+    "file": "src/shared/sidecar/selftest.ts",
+    "line": 60,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "The whole Visual C++ sentence under the presses (VCRUNTIME_SENTENCE), its link a text node of its own; the row's line carries only its head."
+  },
+  {
+    "label": "https://aka.ms/vs/17/release/vc_redist.x64.exe",
+    "match": "text",
+    "home": "settings",
+    "needs": "helper-short",
+    "part": true,
+    "file": "src/shared/sidecar/selftest.ts",
+    "line": 60,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "Microsoft's link in the Visual C++ sentence, pressable (SettingsPanel `linked`)."
+  },
+  {
+    "label": "Update the AI helper ·",
+    "match": "text",
+    "home": "settings",
+    "needs": "helper-update",
+    "part": true,
+    "file": "src/shared/sidecar/row.ts",
+    "line": 142,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "An older pack's receipt (§16.46): \"Update the AI helper · 166 MB\"."
+  },
+  {
+    "label": "Needs an update",
+    "match": "text",
+    "home": "settings",
+    "needs": "helper-update",
+    "file": "src/shared/sidecar/row.ts",
+    "line": 89,
+    "newHome": "settings panel (§3.9), the AI helper row"
+  },
+  {
+    "label": "The AI helper on this computer is from an older version of the app, and is not used until it is updated.",
+    "match": "text",
+    "home": "settings",
+    "needs": "helper-update",
+    "file": "src/shared/sidecar/row.ts",
+    "line": 101,
+    "newHome": "settings panel (§3.9), the AI helper row"
+  },
+  {
+    "label": "Not available on this computer",
+    "match": "text",
+    "home": "settings",
+    "needs": "helper-unsupported",
+    "file": "src/shared/sidecar/row.ts",
+    "line": 91,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "With the reason after it (\"The AI helper needs macOS 14 or later\") and no press."
+  },
+  {
+    "label": "Python is missing from the AI helper's folder (removed by antivirus?)",
+    "match": "text",
+    "home": "settings",
+    "needs": "helper-damaged",
+    "file": "src/shared/sidecar/helperPython.ts",
+    "line": 82,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "Red \"Not running\" with this, and Repair first (§3a.4)."
+  },
+  {
+    "label": "Windows' policy on this computer blocks programs in your user folder; ask whoever manages it, or point FORGE_PYTHON at an allowed Python",
+    "match": "text",
+    "home": "settings",
+    "needs": "helper-policy",
+    "file": "src/shared/sidecar/status.ts",
+    "line": 81,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "A pack Windows' policy refuses to start (§3a.4 \"Group Policy\"), red \"Not running\" with Repair."
+  },
+  {
+    "label": "Remove the AI helper? It frees about",
+    "match": "text",
+    "home": "settings",
+    "needs": "helper-remove-asked",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 212,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "Remove's question, with the pack's size on disk (\"636 MB\" on the Mac's pack 2). The plan's \"both sizes\": main does not report the models folder's, so only the pack's is shown."
+  },
+  {
+    "label": "also remove the downloaded models",
+    "match": "text",
+    "home": "settings",
+    "needs": "helper-remove-asked",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 220,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "Remove's box, off until ticked (§16.47)."
+  },
+  {
+    "label": "Remove it",
+    "match": "text",
+    "home": "settings",
+    "needs": "helper-remove-asked",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 224,
+    "newHome": "settings panel (§3.9), the AI helper row"
+  },
+  {
+    "label": "Keep it",
+    "match": "text",
+    "home": "settings",
+    "needs": "helper-remove-asked",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 227,
+    "newHome": "settings panel (§3.9), the AI helper row"
+  },
+  {
+    "label": "Speech model",
+    "match": "text",
+    "home": "settings",
+    "needs": "speech-model-offered",
+    "file": "src/shared/sidecar/row.ts",
+    "line": 393,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "The model list's speech model line while it is not on disk, beside its sized press."
+  },
+  {
+    "label": "Get",
+    "match": "text",
+    "home": "settings",
+    "needs": "speech-model-offered",
+    "part": true,
+    "file": "src/shared/asr/speechModel.ts",
+    "line": 50,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "The speech model's sized press, \"Get the speech model · 464 MB\" on screen: speechModelLabel writes it as `Get ${SPEECH_MODEL_LABEL} · ${size}`, so \"Get\" is its one static piece at a word boundary."
+  },
+  {
+    "label": "· on this machine",
+    "match": "text",
+    "home": "settings",
+    "needs": "speech-model-present",
+    "part": true,
+    "file": "src/shared/sidecar/row.ts",
+    "line": 392,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "\"Speech model · 464 MB · on this machine\" once it is on disk."
+  },
+  {
+    "label": "needs the speech model",
+    "match": "title",
+    "home": "upload",
+    "needs": "transcribe-no-model",
+    "file": "src/shared/asr/speechModel.ts",
+    "line": 29,
+    "newHome": "Shelf tile Upload",
+    "note": "The greyed Transcribe's title (the tile's caption icon) while the helper can transcribe and the model is not on disk (§16.49)."
+  },
+  {
+    "label": "needs the speech model",
+    "match": "text",
+    "home": "upload",
+    "needs": "speech-model-missing",
+    "file": "src/shared/asr/speechModel.ts",
+    "line": 29,
+    "newHome": "Shelf tile Upload",
+    "note": "The bar over the pool (MediaPool.tsx SpeechModelPress): \"Transcribe needs the speech model\", NEEDS_SPEECH_MODEL in a span of its own, beside the sized press."
+  },
+  {
+    "label": "Get",
+    "match": "text",
+    "home": "upload",
+    "needs": "speech-model-missing",
+    "part": true,
+    "file": "src/shared/asr/speechModel.ts",
+    "line": 50,
+    "newHome": "Shelf tile Upload",
+    "note": "The speech model's sized press over the pool, \"Get the speech model · 464 MB\" (speechModelLabel's one static piece at a word boundary)."
+  },
+  {
+    "label": "install it in Settings",
+    "match": "title",
+    "home": "dock",
+    "needs": "reframe-no-helper",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 93,
+    "newHome": "trimmer dock (under Steady, video clips)",
+    "note": "The \"needs the AI helper\" pointer's title under Follow the subject (HelperPointer, §16.41)."
+  },
+  {
+    "label": "install it in Settings",
+    "match": "title",
+    "home": "canvasbar",
+    "needs": "reframe-no-helper",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 93,
+    "newHome": "canvas (reframe chip beside the shape switch)",
+    "note": "The \"needs the AI helper\" pointer's title beside Reframe to 9:16 (HelperPointer, §16.41)."
+  },
+  {
+    "label": "install it in Settings",
+    "match": "title",
+    "home": "url",
+    "needs": "link-no-captions",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 93,
+    "newHome": "Shelf tile URL",
+    "note": "The \"needs the AI helper\" pointer's title beside the greyed Listen to it (HelperPointer, §16.41)."
   }
 ]

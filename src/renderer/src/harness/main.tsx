@@ -9,6 +9,7 @@ import { installCensus } from './census'
 import { installSwatch } from './swatch'
 import { installClipItCheck } from './clipItCheck'
 import { installReframeCheck } from './reframeCheck'
+import { installHelperPackCheck } from './helperPackCheck'
 import { useEditor } from '../store'
 import { useCatalog } from '../catalog'
 import '../styles.css'
@@ -40,6 +41,9 @@ installClipItCheck()
 
 /* Following the subject, pressed through and looked at on screen (docs/CLIPS.md §4.9). */
 installReframeCheck()
+
+/* The AI helper's one Install, pressed through every state of its Settings row (docs/CLIPS.md §3a.7). */
+installHelperPackCheck()
 
 /*
  * The store, reachable from a driving script.

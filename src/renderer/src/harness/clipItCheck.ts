@@ -31,7 +31,8 @@
  *   7. Rows 8–9, Clip download → a second job, its argv holding one
  *      `--download-sections`, and that one is rows 8–9's, not the first's.
  *   8. The no-caption link → "This video has no captions", Listen to it greyed
- *      with "needs the AI helper", and a chapter chip setting From and To,
+ *      with its one "needs the AI helper" pointer titled "install it in
+ *      Settings", and a chapter chip setting From and To,
  *      which are typed fields again.
  *   9. The Transcript tile: a clip of the same talk's words on the timeline at
  *      2× (an offline asset — the tile reads only its transcript), selected →
@@ -56,7 +57,7 @@ import { rowOfWord, rowsOf, runFromRows, runOfChapter, runRange, type WordRun } 
 import { clipSourceWindow, clipToRange, clipWords, cutFrames } from '@shared/edit/clipIt'
 import { sourceFrameFor, timelineFrameAt, type Clip, type MediaAsset } from '@shared/timeline'
 import { useEditor } from '../store'
-import { THIS_PACK } from '../components/SettingsPanel'
+import { NEEDS_THE_HELPER, POINTER_TITLE, THIS_PACK } from '../components/SettingsPanel'
 import { rowStamp } from '../components/tools/TranscriptRows'
 import { HARNESS_LINKS, harnessIngests, type HarnessIngest } from './bridge'
 
@@ -490,7 +491,10 @@ export async function runClipItCheck(): Promise<ClipItReport> {
     await frames()
     const texts = [...panel().querySelectorAll('p, span')].map((el) => (el.textContent ?? '').trim())
     const listen = button('Listen to it')
-    const reason = texts.find((text) => text === 'needs the AI helper') ?? null
+    // The reason is a pointer to Settings now (00e431b), a button, not a span: one, with its words and its title.
+    const pointers = [...panel().querySelectorAll<HTMLElement>('[data-helper-pointer]')]
+    const pointer = pointers.length === 1 ? pointers[0] : null
+    const reason = pointer && (pointer.textContent ?? '').trim() === NEEDS_THE_HELPER && pointer.title === POINTER_TITLE ? NEEDS_THE_HELPER : null
     panel().querySelector<HTMLElement>('[data-chapter="0"]')?.click()
     await frames()
     const from = panel().querySelector<HTMLInputElement>('input[aria-label^="From"]')
@@ -503,7 +507,7 @@ export async function runClipItCheck(): Promise<ClipItReport> {
     report.noCaptions = noCaptions
     expect(noCaptions.notice, 'the no-caption link does not say "This video has no captions"')
     expect(noCaptions.listenDisabled, 'Listen to it is not greyed')
-    expect(reason !== null, 'Listen to it does not say it needs the AI helper')
+    expect(reason !== null, `Listen to it does not point to Settings with "${NEEDS_THE_HELPER}" titled "${POINTER_TITLE}" (${pointers.length} pointers)`)
     expect(noCaptions.fieldsEditable, 'From and To are not typed fields for the no-caption link')
     expect(rowsBox() === null, 'the no-caption link shows rows')
 

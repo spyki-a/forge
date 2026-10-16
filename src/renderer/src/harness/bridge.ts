@@ -7,6 +7,38 @@ import { linkCacheKey, parseLink } from '@shared/ingest/url'
 import { parseJson3, type CaptionFetch } from '@shared/ingest/captions'
 import type { LinkClip } from '@shared/ingest/linkClip'
 import type { ModelStatus } from '@shared/sidecar/protocol'
+import { HELPER_PACK } from '@shared/sidecar/packManifest'
+import { packBytes, packPlatform, type PackPlatform, type PlatformUnsupported } from '@shared/sidecar/pack'
+import {
+  HELPER_BLOCKED_BY_POLICY,
+  HELPER_NOT_INSTALLED,
+  helperStatusReason,
+  packOffer,
+  type PackOffer,
+  type SidecarStatus
+} from '@shared/sidecar/status'
+import { HELPER_PYTHON_MISSING, type HelperSource } from '@shared/sidecar/helperPython'
+import { SELFTEST_GROUP_NAMES, VCRUNTIME_SENTENCE, degradedBySelftest, type SelftestRecord } from '@shared/sidecar/selftest'
+import {
+  CHECKING_SPACE,
+  CHECKING_STARTING,
+  CHECKING_THE_HELPER,
+  HELPER_BUSY,
+  HELPER_JOB_INPUT,
+  HELPER_PRESET,
+  UNPACKING_PYTHON,
+  bytesLeft,
+  checkingGroupText,
+  downloadingText,
+  helperInstallRequest,
+  helperRemoveRequest,
+  installProgress,
+  installingText,
+  INSTALL_STAGES,
+  type HelperJobKind,
+  type InstallStage
+} from '@shared/sidecar/install'
+import { SPEECH_MODEL_HOST, SPEECH_MODEL_LABEL, speechModelRequest, type SpeechModelProgress } from '@shared/asr/speechModel'
 import {
   REFRAME_FAILURES,
   REFRAME_PRESET,
@@ -254,8 +286,13 @@ const FACE_MODEL: Omit<ModelStatus, 'present'> = {
   host: 'storage.googleapis.com'
 }
 
+/** Every stubbed job, as main's list would hold them: the reframe's analyses, then the AI helper's jobs. */
+function harnessJobs(): Job[] {
+  return [...harnessReframe.jobs.map((entry) => ({ ...entry.job })), ...harnessHelper.jobs.map((job) => ({ ...job }))]
+}
+
 function broadcastJobs(): void {
-  const jobs = harnessReframe.jobs.map((entry) => ({ ...entry.job }))
+  const jobs = harnessJobs()
   for (const listener of jobListeners) listener(jobs)
 }
 
@@ -354,6 +391,405 @@ async function harnessFaceModel(request: FaceModelRequest = {}): Promise<ModelSt
     harnessReframe.modelPresent = true
   }
   return { ...FACE_MODEL, present: harnessReframe.modelPresent }
+}
+
+/* -------------------------------------------------------- the AI helper */
+
+/*
+ * The AI helper's status and its presses, STUBBED (docs/CLIPS.md §3a.4 "The
+ * bridge", §3a.7's harness check): the third place this file fakes a result
+ * on purpose, for the packs' reason. What is worth looking at is the Settings
+ * row in each of its states, the pointers to it, the EXPORT row's stages, and
+ * the greys of the controls that ask for a method, and every one of those is
+ * renderer logic. Nothing is fetched, unpacked or run: the job's stages walk
+ * on a timer over the manifest's own files and numbers (packManifest.ts), so
+ * every size on screen is the one the real job would give, and the speed
+ * column's words are the job's own (shared/sidecar/install.ts). Whether a real
+ * pack installs is tests/integration/helperPack.int.test.ts's.
+ *
+ * The page starts in the harness's own state, as it always has: a helper that
+ * failed with no rung named ("harness: no sidecar"). The reframe and Clip it
+ * checks and the census's 'settings-open' rows are written against it. A
+ * check moves the stub with `harnessHelper.set(state)` and puts it back with
+ * `reset()`; every move is broadcast on `onSidecarStatus`, as main's are, so
+ * App takes it the way it takes main's (the store's status, and Follow the
+ * subject's grey through `reframeHelperFrom`).
+ */
+
+/**
+ * This window's pack, by the rule the row reads its sizes with
+ * (shared/sidecar/row.ts `packFactsFor`): 'Win…' is the Windows build,
+ * anything else the Mac's arm64 one. The check holds the two equal.
+ */
+const HARNESS_PLATFORM: PackPlatform = /^win/i.test(typeof navigator === 'undefined' ? '' : navigator.platform)
+  ? 'win32-x64'
+  : 'darwin-arm64'
+
+/** The manifest's pack for this window: its files are what the stubbed download walks. */
+export const HARNESS_HELPER_PACK = HELPER_PACK.platforms[HARNESS_PLATFORM]
+
+/**
+ * The speech model's pinned files as asr.py fetches them: config.json,
+ * vocabulary.txt, tokenizer.json and model.bin of Systran/faster-whisper-small
+ * at 536b066…, 486,212,372 B in all (measured 2026-10-16, docs/CLIPS.md §3a.4).
+ * Data for the stub's status, as FACE_MODEL's bytes are: the press's words
+ * come from it through `speechModelLabel`, never from a size written on screen.
+ */
+export const HARNESS_SPEECH_MODEL_BYTES = 486_212_372
+
+/** The machine the 'unsupported' state stands for: a Mac on macOS 13, worded by the app's own rule. */
+const UNSUPPORTED_MACHINE = packPlatform({ platform: 'darwin', arch: 'arm64', osVersion: '13.6', translated: false }) as PlatformUnsupported
+
+/** The rung an installed pack runs on. */
+const PACK_SOURCE: Extract<HelperSource, { kind: 'pack' }> = { kind: 'pack', pack: HELPER_PACK.pack, root: `harness/python/${HELPER_PACK.pack}` }
+
+/** What main's Check again refuses with when no pack this build accepts is installed (src/main/sidecar/install.ts `checkAgain`). */
+const NOTHING_TO_CHECK = 'The AI helper is not installed, so there is nothing to check'
+
+/**
+ * The states a check can put the stub in. `harness` is the page's own (no
+ * rung named); `ready-short` is a pack whose beats group failed its self-test
+ * for want of the Visual C++ runtime, as on a clean Windows (§16.45 (a));
+ * `update` an older pack's receipt (§16.46); `policy` a pack Windows' policy
+ * refuses to start (§3a.4 "Group Policy").
+ */
+export type HarnessHelperState = 'harness' | 'absent' | 'ready' | 'ready-short' | 'update' | 'damaged' | 'unsupported' | 'policy'
+
+/** The harness's own status, unchanged from before the stub: failed, no source, so the row offers nothing. */
+const HARNESS_FAILED = { state: 'failed', error: 'harness: no sidecar' } as unknown as SidecarStatus
+
+/** Every self-test group passing. */
+const allGroupsOk = (): SelftestRecord => Object.fromEntries(SELFTEST_GROUP_NAMES.map((group) => [group, 'ok']))
+
+/** The beats group failed on a machine without the Visual C++ runtime: `selftestReason`'s words for a DLL load failure on win32. */
+export const HARNESS_BEATS_FAILED = `beats ${VCRUNTIME_SENTENCE}`
+
+/**
+ * A ready pack's status as main broadcasts it (service.ts `readyStatus`):
+ * hello registers every method the manifest expects, and a failed self-test
+ * group's methods are merged into `degraded`.
+ */
+function readyStatus(selftest: SelftestRecord): SidecarStatus {
+  return {
+    state: 'ready',
+    source: PACK_SOURCE,
+    hello: {
+      protocolVersion: 1,
+      python: HELPER_PACK.python.version,
+      platform: 'harness',
+      capabilities: [...HARNESS_HELPER_PACK.expects],
+      degraded: degradedBySelftest(selftest),
+      executable: `${PACK_SOURCE.root}/${HARNESS_HELPER_PACK.python}`,
+      prefix: PACK_SOURCE.root,
+      path: []
+    },
+    selftest: { ...selftest }
+  }
+}
+
+/**
+ * The offer main makes for what is on disk (status.ts `packOffer`): every
+ * byte, less the files verified in `downloads/` (install.ts `bytesLeft`).
+ */
+function offerFor(kind: 'install' | 'update' | 'repair', downloaded: Readonly<Record<string, number>>): PackOffer {
+  const offer = packOffer(HELPER_PACK, HARNESS_PLATFORM, null, false, null, bytesLeft(HELPER_PACK, HARNESS_PLATFORM, downloaded))
+  return offer.supported ? { ...offer, kind } : offer
+}
+
+/**
+ * The status a state stands for, with `downloaded` the files a cancelled job
+ * left verified (none by default): exported, so the census builds each row's
+ * state from the same numbers the stub walks.
+ */
+export function harnessHelperStatus(state: HarnessHelperState, downloaded: Readonly<Record<string, number>> = {}): SidecarStatus {
+  switch (state) {
+    case 'harness':
+      return HARNESS_FAILED
+    case 'absent':
+      return { state: 'absent', offer: offerFor('install', downloaded) }
+    case 'update':
+      return { state: 'absent', offer: offerFor('update', downloaded) }
+    case 'unsupported':
+      return { state: 'absent', offer: packOffer(HELPER_PACK, UNSUPPORTED_MACHINE, null, false) }
+    case 'damaged':
+      return { state: 'damaged', reason: HELPER_PYTHON_MISSING, offer: offerFor('repair', downloaded) }
+    case 'policy':
+      return { state: 'failed', error: HELPER_BLOCKED_BY_POLICY, source: PACK_SOURCE }
+    case 'ready':
+      return readyStatus(allGroupsOk())
+    case 'ready-short':
+      return readyStatus({ ...allGroupsOk(), beats: HARNESS_BEATS_FAILED })
+    default: {
+      const unknown: never = state
+      return unknown
+    }
+  }
+}
+
+/** One press the stub was sent, in order, with what it was sent: what a check reads back. */
+export interface HarnessHelperPress {
+  call: 'installHelper' | 'removeHelper' | 'checkHelperAgain' | 'speechModel'
+  options?: unknown
+}
+
+const sidecarListeners = new Set<(status: SidecarStatus) => void>()
+const speechListeners = new Set<(update: SpeechModelProgress) => void>()
+const helperCancels = new Set<string>()
+let helperJobCount = 0
+const HELPER_STEP_MS = 40
+
+/** What a driving script reads and sets (`window.__forgeHelperStub`). */
+export const harnessHelper = {
+  /** ms each step of a stubbed job takes: a file of the download, a few lock lines, a self-test group. */
+  stepMs: HELPER_STEP_MS,
+  state: 'harness' as HarnessHelperState,
+  /** The last status broadcast; `sidecarStatus()` answers with it, as main answers from its last broadcast. */
+  status: HARNESS_FAILED,
+  /** The pack's files verified in `downloads/`: what a cancel leaves, and what "· N MB left" is made of. A success and a Remove empty it (§16.47). */
+  downloaded: {} as Record<string, number>,
+  /** The AI helper's jobs in the list, as main's queue holds them (presetId 'helper'). */
+  jobs: [] as Job[],
+  /** Whether the speech model is "on disk". */
+  speechPresent: false,
+  presses: [] as HarnessHelperPress[],
+
+  /** Put the stub in a state and broadcast it. */
+  set(state: HarnessHelperState): SidecarStatus {
+    harnessHelper.state = state
+    return publish(harnessHelperStatus(state, harnessHelper.downloaded))
+  },
+
+  /** The page's own state again: no job, nothing downloaded, no speech model, the harness's failed helper. */
+  reset(): void {
+    for (const job of harnessHelper.jobs) if (job.status === 'queued' || job.status === 'running') helperCancels.add(job.id)
+    harnessHelper.jobs = []
+    harnessHelper.downloaded = {}
+    harnessHelper.speechPresent = false
+    harnessHelper.presses = []
+    harnessHelper.stepMs = HELPER_STEP_MS
+    broadcastJobs()
+    harnessHelper.set('harness')
+  }
+}
+
+function publish(status: SidecarStatus): SidecarStatus {
+  harnessHelper.status = status
+  for (const listener of sidecarListeners) listener(status)
+  return status
+}
+
+class HelperCancelled extends Error {
+  constructor() {
+    super('Cancelled')
+    this.name = 'CancelledError'
+  }
+}
+
+const activeHelperJob = (): Job | undefined => harnessHelper.jobs.find((j) => j.status === 'queued' || j.status === 'running')
+
+/** A job's progress or stage, as the queue patches it; nothing lands on a job that has ended. */
+function patchHelperJob(id: string, patch: Partial<Job>): void {
+  const at = harnessHelper.jobs.findIndex((j) => j.id === id)
+  if (at === -1 || !['queued', 'running'].includes(harnessHelper.jobs[at].status)) return
+  harnessHelper.jobs[at] = { ...harnessHelper.jobs[at], ...patch }
+  broadcastJobs()
+}
+
+/** How many of the lock's lines one step of the stubbed pip installs. */
+const LINES_PER_STEP = 8
+
+/**
+ * Install, Repair or Update, walked as main's job reports itself
+ * (src/main/sidecar/install.ts `run`): checking space; downloading every file
+ * `downloads/` does not hold verified, by the manifest's sizes; unpacking
+ * Python; the lock's lines; the check, its slow first start, then each
+ * self-test group. Each stage change is broadcast as `installing` unless a
+ * helper is up (service.ts `reportHelperInstall`). A cancel ends it at the
+ * next step, and the status says what is on disk again, with what is left to
+ * fetch (`settleHelperStatus`); a success deletes the downloads and restarts
+ * the helper from the new pack.
+ */
+async function runHelperJob(id: string): Promise<void> {
+  const before = harnessHelper.status
+  const helperUp = before.state === 'ready'
+  const total = packBytes(HARNESS_HELPER_PACK)
+  const step = async (): Promise<void> => {
+    await wait(harnessHelper.stepMs)
+    if (helperCancels.has(id)) throw new HelperCancelled()
+  }
+  let stage: InstallStage | null = null
+  const report = (s: InstallStage, fraction: number, text: string): void => {
+    if (s !== stage) {
+      stage = s
+      if (!helperUp) publish({ state: 'installing', stage: INSTALL_STAGES[s].label })
+    }
+    patchHelperJob(id, { progress: installProgress(s, fraction), speed: text })
+  }
+
+  try {
+    await step()
+    patchHelperJob(id, { status: 'running', startedAt: Date.now() })
+    // 0. Checking
+    report(0, 0, CHECKING_SPACE)
+    if (harnessHelper.state === 'unsupported') throw new Error(UNSUPPORTED_MACHINE.unsupported)
+    await step()
+
+    // 1. Downloading: only what downloads/ does not hold verified.
+    let done = total - bytesLeft(HELPER_PACK, HARNESS_PLATFORM, harnessHelper.downloaded)
+    let fetched = 0
+    const started = performance.now()
+    report(1, done / total, downloadingText(done, total, null))
+    for (const file of [HARNESS_HELPER_PACK.interpreter, ...HARNESS_HELPER_PACK.wheels]) {
+      if (harnessHelper.downloaded[file.name] === file.bytes) continue
+      await step()
+      harnessHelper.downloaded[file.name] = file.bytes
+      done += file.bytes
+      fetched += file.bytes
+      // The stub's own rate, from its own clock: nothing here pretends to be a network.
+      const seconds = (performance.now() - started) / 1000
+      report(1, done / total, downloadingText(done, total, seconds > 0 ? fetched / seconds : null))
+    }
+
+    // 2. Unpacking
+    report(2, 0, UNPACKING_PYTHON)
+    await step()
+    report(2, 1, UNPACKING_PYTHON)
+
+    // 3. Installing the libraries: one lock line per wheel.
+    const lines = HARNESS_HELPER_PACK.wheels.length
+    for (let n = 0; n < lines; n += LINES_PER_STEP) {
+      report(3, n / lines, installingText(n, lines))
+      await step()
+    }
+    report(3, 1, installingText(lines, lines))
+    await step()
+
+    // 4. Checking the AI helper: the slow first start, then each self-test group as it starts.
+    report(4, 0, CHECKING_STARTING)
+    await step()
+    // The first hello is back: the column drops "starting" before the first group names itself.
+    report(4, 0.5 / (SELFTEST_GROUP_NAMES.length + 1), CHECKING_THE_HELPER)
+    await step()
+    for (const [i, group] of SELFTEST_GROUP_NAMES.entries()) {
+      report(4, (i + 1) / (SELFTEST_GROUP_NAMES.length + 1), checkingGroupText(group))
+      await step()
+    }
+
+    // Done: the downloads go (§16.47), and the helper restarts from the new pack.
+    harnessHelper.downloaded = {}
+    patchHelperJob(id, { status: 'done', progress: 1, speed: null, finishedAt: Date.now() })
+    harnessHelper.state = 'ready'
+    publish({ state: 'starting', source: PACK_SOURCE })
+    await wait(harnessHelper.stepMs)
+    publish(harnessHelperStatus('ready'))
+  } catch (err) {
+    const cancelled = err instanceof HelperCancelled
+    const at = harnessHelper.jobs.findIndex((j) => j.id === id)
+    if (at !== -1) {
+      const ended = harnessHelper.jobs[at].status === 'cancelled'
+      harnessHelper.jobs[at] = {
+        ...harnessHelper.jobs[at],
+        status: cancelled || ended ? 'cancelled' : 'failed',
+        error: cancelled || ended ? null : err instanceof Error ? err.message : String(err),
+        speed: null,
+        finishedAt: harnessHelper.jobs[at].finishedAt ?? Date.now()
+      }
+      broadcastJobs()
+    }
+    // What is on disk, said again: "· N MB left" after a cancel, or the helper that was up all along.
+    publish(helperUp ? before : harnessHelperStatus(harnessHelper.state, harnessHelper.downloaded))
+  } finally {
+    helperCancels.delete(id)
+  }
+}
+
+/** `installHelper`: a job in the list, or the one already running (main's `install`). */
+function harnessInstallHelper(options: unknown): Job {
+  const request = helperInstallRequest(options)
+  harnessHelper.presses.push({ call: 'installHelper', options: request })
+  const running = activeHelperJob()
+  if (running) return { ...running }
+  const kind: HelperJobKind = request.repair ? 'repair' : request.update ? 'update' : 'install'
+  const job: Job = {
+    id: `harness-helper-${++helperJobCount}`,
+    presetId: HELPER_PRESET,
+    input: 'harness/python',
+    inputName: HELPER_JOB_INPUT,
+    output: '',
+    params: { kind },
+    status: 'queued',
+    progress: 0,
+    speed: null,
+    error: null,
+    startedAt: null,
+    finishedAt: null
+  }
+  harnessHelper.jobs.push(job)
+  broadcastJobs()
+  void runHelperJob(job.id)
+  return { ...job }
+}
+
+/** A helper job's X: a queued one ends at once, a running one at its next step (main's queue). */
+function cancelHelperJob(id: string): boolean {
+  const job = harnessHelper.jobs.find((j) => j.id === id)
+  if (!job) return false
+  if (job.status === 'queued') {
+    helperCancels.add(id)
+    job.status = 'cancelled'
+    job.finishedAt = Date.now()
+    broadcastJobs()
+  } else if (job.status === 'running') {
+    helperCancels.add(id)
+  }
+  return true
+}
+
+/** Remove: refused while a job runs; otherwise the pack and its downloads go, and the models with the box ticked. */
+async function harnessRemoveHelper(options: unknown): Promise<void> {
+  const { models } = helperRemoveRequest(options)
+  harnessHelper.presses.push({ call: 'removeHelper', options: { models } })
+  if (activeHelperJob()) throw new Error(HELPER_BUSY)
+  await wait(harnessHelper.stepMs)
+  harnessHelper.downloaded = {}
+  if (models) harnessHelper.speechPresent = false
+  harnessHelper.set('absent')
+}
+
+/**
+ * Check again (§16.45 (a)): the self-test again, nothing downloaded — here,
+ * the runtime "now installed", so every group passes, and the helper
+ * restarts on the new record as main's does.
+ */
+async function harnessCheckHelperAgain(): Promise<void> {
+  harnessHelper.presses.push({ call: 'checkHelperAgain' })
+  if (activeHelperJob()) throw new Error(HELPER_BUSY)
+  if (harnessHelper.state !== 'ready' && harnessHelper.state !== 'ready-short') throw new Error(NOTHING_TO_CHECK)
+  await wait(harnessHelper.stepMs * SELFTEST_GROUP_NAMES.length)
+  harnessHelper.state = 'ready'
+  publish({ state: 'starting', source: PACK_SOURCE })
+  await wait(harnessHelper.stepMs)
+  publish(harnessHelperStatus('ready'))
+}
+
+/**
+ * The speech model's status, or its fetch on `download: true` exactly
+ * (main's `asr:model`): refused with the status's reason while no helper is
+ * ready, as `getSidecar()` refuses; progress on `onSpeechModelProgress`.
+ */
+async function harnessSpeechModel(payload?: unknown): Promise<ModelStatus> {
+  const { download } = speechModelRequest(payload)
+  harnessHelper.presses.push({ call: 'speechModel', options: { download } })
+  const status = harnessHelper.status
+  if (status.state !== 'ready') throw new Error(helperStatusReason(status) ?? HELPER_NOT_INSTALLED)
+  if (download && !harnessHelper.speechPresent) {
+    for (let step = 0; step <= 8; step++) {
+      await wait(harnessHelper.stepMs)
+      for (const listener of speechListeners) listener({ progress: step / 8, message: `fetching ${SPEECH_MODEL_LABEL}` })
+    }
+    harnessHelper.speechPresent = true
+  }
+  return { present: harnessHelper.speechPresent, bytes: HARNESS_SPEECH_MODEL_BYTES, label: SPEECH_MODEL_LABEL, host: SPEECH_MODEL_HOST }
 }
 
 const packCancels = new Set<string>()
@@ -923,26 +1359,36 @@ export function installHarnessBridge(): void {
 
     transcribe: unsupported('Transcription'),
     cancelTranscribe: async () => undefined,
-    sidecarStatus: async () => ({ state: 'failed' as const, error: 'harness: no sidecar' }),
-    // The AI helper's presses: refused here until the harness slice gives them stubs that walk the states (§3a.4).
-    installHelper: unsupported('Installing the AI helper'),
-    removeHelper: unsupported('Removing the AI helper'),
-    checkHelperAgain: unsupported('Checking the AI helper'),
+    // The AI helper, stubbed (see `harnessHelper`): the page's own failed helper until a check moves it.
+    sidecarStatus: async () => harnessHelper.status,
+    installHelper: async (options?: unknown) => harnessInstallHelper(options ?? {}),
+    removeHelper: (options: unknown) => harnessRemoveHelper(options),
+    checkHelperAgain: () => harnessCheckHelperAgain(),
+    speechModel: (request?: unknown) => harnessSpeechModel(request ?? {}),
+    onSpeechModelProgress: (cb: (update: SpeechModelProgress) => void) => {
+      speechListeners.add(cb)
+      return () => speechListeners.delete(cb)
+    },
     onTranscribeProgress: () => () => undefined,
-    onSidecarStatus: () => () => undefined,
+    onSidecarStatus: (cb: (status: SidecarStatus) => void) => {
+      sidecarListeners.add(cb)
+      return () => sidecarListeners.delete(cb)
+    },
 
     startRender: unsupported('Exporting'),
     // Only the software H.264 the plan falls back to anyway.
     encoders: async () => [{ id: 'libx264' as const, ok: true }],
-    // One X for every job, as in the app: here only a stubbed reframe job can be cancelled.
+    // One X for every job, as in the app: here a stubbed reframe job or the AI helper's job can be cancelled.
     cancelRender: async (id: string) => {
+      if (cancelHelperJob(id)) return
       const entry = harnessReframe.jobs.find((e) => e.job.id === id)
       if (!entry || entry.job.status === 'done' || entry.job.status === 'failed') return
       patchJob(id, { status: 'cancelled', finishedAt: Date.now(), speed: null })
     },
-    listJobs: async () => harnessReframe.jobs.map((entry) => ({ ...entry.job })),
+    listJobs: async () => harnessJobs(),
     clearFinished: async () => {
       harnessReframe.jobs = harnessReframe.jobs.filter((e) => e.job.status === 'queued' || e.job.status === 'running')
+      harnessHelper.jobs = harnessHelper.jobs.filter((job) => job.status === 'queued' || job.status === 'running')
       broadcastJobs()
     },
     graphicsSelfTest: async () => ({
@@ -1030,4 +1476,6 @@ export function installHarnessBridge(): void {
   ;(window as unknown as { forgeIngestLog: HarnessIngest[] }).forgeIngestLog = harnessIngests
   // The reframe stub's switches and its record (`harnessReframe`), for a driving script.
   ;(window as unknown as { forgeReframe: typeof harnessReframe }).forgeReframe = harnessReframe
+  // The AI helper stub's switches and its record (`harnessHelper`): set(state), reset(), presses.
+  ;(window as unknown as { __forgeHelperStub: typeof harnessHelper }).__forgeHelperStub = harnessHelper
 }
