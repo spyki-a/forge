@@ -3,7 +3,7 @@ import type { ChildProcess } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { SCENE_DEFAULTS } from '@shared/reframe/shots'
 import { findShots } from '../../src/main/ffmpeg/shots'
 import { probeWithClock } from '../../src/main/ffmpeg/probe'
@@ -66,6 +66,30 @@ async function makeCuts(file: string): Promise<string> {
     '-filter_complex', joined, '-map', '[v]', '-c:v', 'libx264', '-qp', '0', '-pix_fmt', 'yuv420p', file
   ])
   return file
+}
+
+/**
+ * Every video frame's best_effort_timestamp, read from ffprobe's JSON. The
+ * bundled ffprobe prints frame=pts empty, hence best_effort_timestamp
+ * (EFFECTS.md §55's probe). Not its csv: x264 puts an SEI on frame 0, which
+ * ffprobe shows as a side_data_list nested in that frame, and the compact
+ * writer prints the two differently by build. n4.4.1 (this Mac's package,
+ * 5.0.1) ends the frame's line and prints a blank one, `0`, ``, `512`; the
+ * win32 package (5.1.0, a 2023-02-13 build at 2296078) writes the item
+ * separator before the nested section first, so the line is `0,`
+ * (compact_print_section_header, read in ffprobe.c at both). A line filter of
+ * /^\d+$/ kept 300 frames here and 299 on Windows CI (run 38919769393):
+ * frame 0 gone, and every index after it one off. The JSON writer nests the
+ * side data on both. A frame without the field fails here, never skipped.
+ */
+async function framePts(file: string): Promise<number[]> {
+  const { stdout } = await run(ffprobeInstaller.path, [
+    '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'frame=best_effort_timestamp', '-of', 'json', file
+  ], { maxBuffer: 64 << 20 })
+  const frames = (JSON.parse(String(stdout)) as { frames: { best_effort_timestamp?: number }[] }).frames
+  const without = frames.flatMap((f, i) => (Number.isInteger(f.best_effort_timestamp) ? [] : [i]))
+  expect(without, `${basename(file)}: frames with no best_effort_timestamp`).toEqual([])
+  return frames.map((f) => f.best_effort_timestamp as number)
 }
 
 /** One pixel of the frame at `seconds`, through the pass's own scale and conversion: what select scored. */
@@ -148,20 +172,15 @@ describe('the shot finder, through src/main/ffmpeg/shots.ts', () => {
   })
 
   it('carries each cut’s exact pts from the whole-file pass: the frame’s own pts, as ffprobe reads the file', async () => {
-    // T = 0.1: all four cuts. The file's own frame times and its time base. The bundled ffprobe prints
-    // frame=pts empty, so best_effort_timestamp (EFFECTS.md §55's probe); its blank lines are skipped,
-    // and the count is held to the clip's frames.
+    // T = 0.1: all four cuts. The file's own frame times (`framePts`, held to the clip's frames) and its time base.
     const found = await findShots({ path: CUTS, durationMs: DURATION_MS, fps: TABLE.fps, threshold: 0.1 })
-    const { stdout } = await run(ffprobeInstaller.path, [
-      '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'frame=best_effort_timestamp', '-of', 'csv=p=0', CUTS
-    ], { maxBuffer: 8 << 20 })
-    const framePts = stdout.split(/\r?\n/).filter((l) => /^\d+$/.test(l.trim())).map(Number)
-    expect(framePts.length, 'every frame of the clip').toBe(DURATION_MS * TABLE.fps / 1000)
+    const pts = await framePts(CUTS)
+    expect(pts.length, 'every frame of the clip').toBe(DURATION_MS * TABLE.fps / 1000)
     const { timeBase } = await probeWithClock(CUTS)
     expect(timeBase).toEqual({ num: 1, den: 15360 })
 
-    expect(found.shots.map((s) => s.startPts)).toEqual([0, ...TABLE.cuts.map((c) => framePts[c.frame])])
-    expect(found.cuts.map((c) => c.pts)).toEqual(TABLE.cuts.map((c) => framePts[c.frame]))
+    expect(found.shots.map((s) => s.startPts)).toEqual([0, ...TABLE.cuts.map((c) => pts[c.frame])])
+    expect(found.cuts.map((c) => c.pts)).toEqual(TABLE.cuts.map((c) => pts[c.frame]))
     // And each is its frame exactly: pts × fps / den, where the printed ms is only %.6g.
     expect(found.shots.map((s) => ((s.startPts as number) * TABLE.fps * timeBase!.num) / timeBase!.den)).toEqual([0, ...TABLE.cuts.map((c) => c.frame)])
     notes.push(`the whole-file pass's pts (time base ${timeBase!.num}/${timeBase!.den}): ${found.shots.map((s) => s.startPts).join(', ')}`)
@@ -180,10 +199,7 @@ describe('the shot finder, through src/main/ffmpeg/shots.ts', () => {
     expect(startTime, 'the copy starts past 0, or this case is the mp4’s again').toBeGreaterThan(0.5)
     const { timeBase } = await probeWithClock(ts)
     expect(timeBase).toEqual({ num: 1, den: 90000 })
-    const { stdout } = await run(ffprobeInstaller.path, [
-      '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'frame=best_effort_timestamp', '-of', 'csv=p=0', ts
-    ], { maxBuffer: 8 << 20 })
-    const container = stdout.split(/\r?\n/).filter((l) => /^\d+$/.test(l.trim())).map(Number)
+    const container = await framePts(ts)
     expect(container.length, 'every frame of the clip').toBe(DURATION_MS * TABLE.fps / 1000)
 
     const found = await findShots({ path: ts, durationMs: DURATION_MS, fps: TABLE.fps, threshold: 0.1 })
