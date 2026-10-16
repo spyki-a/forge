@@ -23,7 +23,8 @@ import { SUBJECT_TRACK_VERSION, type SubjectTrack, type UnitRect } from '@shared
 import type { Job } from '@shared/types'
 import { SCENE_DEFAULTS } from '@shared/reframe/shots'
 import { FFMPEG, outputDir, run, writeNote } from './output'
-import { HAS_VENV, HELPER_PYTHON, SIDECAR_DIR, VENV_PYTHON, describeWithVenv, launchFor } from './venv'
+import { attachHelperLog, oneLine, reportFileToCi, type HelperLog } from './helperDiag'
+import { HAS_VENV, HELPER_PYTHON, PACK_UNDER_TEST, SIDECAR_DIR, VENV_PYTHON, describeWithVenv, launchFor } from './venv'
 
 /*
  * The reframe's analysis job end to end (docs/CLIPS.md §4.7, §4.9):
@@ -145,6 +146,11 @@ let CLIP = ''
 
 const clients: SidecarClient[] = []
 const logs = new Map<SidecarClient, string[]>()
+/** Each helper's stderr, pid and exit, for a job that does not settle (helperDiag.ts). */
+const helperLogs = new Map<SidecarClient, HelperLog>()
+/** This file's timings, one notice at its end. */
+const timings: string[] = []
+reportFileToCi('reframeJob.int', () => (PACK_UNDER_TEST ? timings : []))
 
 /**
  * A helper with its own folders, an interpreter, and extra environment for
@@ -164,6 +170,8 @@ async function helper(o: { models: string; cache: string; env?: Record<string, s
   const lines: string[] = []
   logs.set(client, lines)
   client.on('log', (text: string) => lines.push(...text.split('\n')))
+  const log = attachHelperLog(client, `reframe-${clients.length}`)
+  helperLogs.set(client, log)
   let started: Promise<HelloResult>
   try {
     started = client.start()
@@ -174,6 +182,7 @@ async function helper(o: { models: string; cache: string; env?: Record<string, s
     }
   }
   await started
+  timings.push(`hello ${((log.helloMs ?? 0) / 1000).toFixed(2)} s (helper ${clients.length})`)
   return client
 }
 
@@ -228,9 +237,20 @@ function watch(jobs: ReframeJobs): Map<string, Job[]> {
 
 const statusOf = (jobs: ReframeJobs, id: string): Job['status'] | undefined => jobs.queue.list().find((j) => j.id === id)?.status
 
-async function settled(jobs: ReframeJobs, id: string, ms = 60_000): Promise<Job> {
+/**
+ * The job once it is done, failed or cancelled. One that is not within `ms`
+ * fails with where it was — its status, stage, progress and error, the
+ * timing so far — and, given its helper, that helper's state and log.
+ */
+async function settled(jobs: ReframeJobs, id: string, ms = 60_000, client?: SidecarClient): Promise<Job> {
   const done = await until(() => ['done', 'failed', 'cancelled'].includes(statusOf(jobs, id) ?? ''), ms)
-  expect(done, `job ${id} settled`).toBe(true)
+  if (!done) {
+    const job = jobs.queue.list().find((j) => j.id === id)
+    const t = jobs.timing(id)
+    const at = job ? `${job.status} at ${job.progress.toFixed(3)}, stage ${JSON.stringify(job.speed)}${job.error ? `, error ${JSON.stringify(job.error)}` : ''}` : 'not in the queue'
+    const helper = client ? helperLogs.get(client)?.describe(40) ?? 'no helper log' : 'no helper given'
+    throw new Error(oneLine(`job ${id} did not settle within ${(ms / 1000).toFixed(0)} s: ${at}; timing so far ${JSON.stringify(t ?? null)}. ${helper}`))
+  }
   return jobs.queue.list().find((j) => j.id === id)!
 }
 
@@ -579,7 +599,7 @@ describeWithVenv(
 
       const job = jobs.analyse(request())
       expect(job).toMatchObject({ presetId: 'reframe', input: CLIP, inputName: 'clip.mp4', output: '', params: { assetId: 'asset-1' } })
-      const end = await settled(jobs, job.id)
+      const end = await settled(jobs, job.id, 60_000, client)
       expect(end.status, end.error ?? '').toBe('done')
       expect(end.progress).toBe(1)
 
@@ -649,6 +669,7 @@ describeWithVenv(
       const t = jobs.timing(job.id)!
       const size = (await stat(file)).size
       const s = (ms: number | null): string => (ms === null ? '—' : `${Math.round(ms)} ms`)
+      timings.push(`the stand-in job on clip.mp4 (6 s, 3 shots): probe ${s(t.probeMs)}, gate ${s(t.gateMs)}, shots ${s(t.shotsMs)}, faces ${s(t.facesMs)}, reduce ${s(t.reduceMs)}, total ${s(t.totalMs)}`)
       notes.push(
         `- the pass: probe ${s(t.probeMs)}, gate ${s(t.gateMs)}, shots ${s(t.shotsMs)}, faces ${s(t.facesMs)}, reduce and write ${s(t.reduceMs)}; total ${s(t.totalMs)}`,
         `- the track: ${track.shots.length} shots (pts ${track.shots.map((x) => x.startPts).join(', ')} on ${track.timeBase!.num}/${track.timeBase!.den}), ${track.samples.length} samples, each box a source frame's within 1 px; ${size} B at ${name}`,
@@ -663,7 +684,7 @@ describeWithVenv(
       const jobs = createReframeJobs({ sidecar: () => client, userData, ffmpeg: FFMPEG, ffprobe: FFPROBE, log: (l) => notes.push(`- ${l}`) })
       const before = spawned.children.length
       const job = jobs.analyse(request({ assetId: 'asset-2', clipIds: ['c9'] }))
-      expect((await settled(jobs, job.id)).status).toBe('done')
+      expect((await settled(jobs, job.id, 60_000, client)).status).toBe('done')
       const answer = (await jobs.collect({ jobId: job.id })) as ReframeCollected
       expect(answer).toMatchObject({ kind: 'track', assetId: 'asset-2', clipIds: ['c9'], cached: true })
       const key = (await fileKey(CLIP))!
@@ -686,7 +707,7 @@ describeWithVenv(
       const seen = watch(jobs)
       const before = spawned.children.length
       const job = jobs.analyse(request())
-      expect((await settled(jobs, job.id)).status).toBe('failed')
+      expect((await settled(jobs, job.id, 60_000, client)).status).toBe('failed')
       expect(await jobs.collect({ jobId: job.id })).toEqual({ kind: 'failed', reason: 'model-missing', message: REFRAME_FAILURES['model-missing'] })
       expect(mainFfmpegs(before), 'no scene pass').toEqual([])
       expect(workerPids(client), 'no worker').toEqual([])
@@ -736,7 +757,7 @@ describeWithVenv(
       const began = performance.now()
       jobs.cancel(job.id)
 
-      expect((await settled(jobs, job.id, 10_000)).status).toBe('cancelled')
+      expect((await settled(jobs, job.id, 10_000, client)).status).toBe('cancelled')
       const tookMs = performance.now() - began
       // At once: the request is rejected on the abort, not when the pass would have ended (about 3 s on).
       expect(tookMs, 'the cancel reached the helper’s request').toBeLessThan(1000)
@@ -787,7 +808,7 @@ describeWithVenv(
 
       const info = await probeFile(REAL)
       const job = jobs.analyse({ assetId: 'real', path: REAL, width: info.width, height: info.height, name: info.name, clipIds: [] })
-      const end = await settled(jobs, job.id, 60 * 60_000)
+      const end = await settled(jobs, job.id, 60 * 60_000, client)
       expect(end.status, end.error ?? '').toBe('done')
       const answer = (await jobs.collect({ jobId: job.id })) as ReframeCollected
       const track = answer.track

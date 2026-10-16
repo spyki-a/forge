@@ -6,6 +6,10 @@ import { join, resolve } from 'node:path'
 import ffprobeInstaller from '@ffprobe-installer/ffprobe'
 import { FFMPEG, outputDir } from './output'
 import { HELPER_PYTHON as PYTHON, PYTHON_CASES, SIDECAR_DIR as SIDECAR } from './venv'
+import { reportFileToCi } from './helperDiag'
+
+// Every failure named in one warning: a step keeps only its first ten error annotations (helperDiag.ts).
+reportFileToCi('sidecarMedia.int')
 
 /*
  * The helper's shared media code, through its own Python tests

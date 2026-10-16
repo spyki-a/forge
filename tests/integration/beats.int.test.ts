@@ -5,7 +5,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg'
 import { SidecarClient } from '../../src/main/sidecar/client'
-import { SIDECAR_DIR, VENV_PYTHON, describeWithVenv, launchFor } from './venv'
+import { attachHelperLog, reportFileToCi, withDeadline, type HelperLog } from './helperDiag'
+import { PACK_UNDER_TEST, SIDECAR_DIR, VENV_PYTHON, describeWithVenv, launchFor } from './venv'
 
 const FFMPEG = ffmpegInstaller.path
 
@@ -14,6 +15,35 @@ let click = ''
 let offsetBars = ''
 let dropTrack = ''
 let client: SidecarClient
+let helperLog: HelperLog | null = null
+
+/*
+ * The first audio.beats call is numba's first compile of librosa's beat
+ * tracker (cache=True: NUMBA_CACHE_DIR, under the cache folder). Measured
+ * through the pack on the dev Mac, 2026-10-16 (FORGE_HELPER_PACK, pack 2,
+ * this file's own calls, three cold runs and three warm): 7.2–7.8 s cold
+ * (helper-cache/numba emptied first; by its stages, onsets to beat tracking
+ * 3.1 s and beat tracking to the downbeat 3.3 s, both numba's compiles), 1.8–2.1 s
+ * warm (the cache filled by the run before), about 0.1 s for every call after
+ * the first in one helper; the hello 0.3–0.5 s. CI's Windows runner timed the
+ * first call out at 240 s (run 38972858204) and passed the twelve calls after
+ * it — thirty times the Mac's cold figure — so the call is now timed stage by
+ * stage, from its own progress messages, and published.
+ */
+const MAC_REFERENCE = 'the dev Mac through pack 2 (2026-10-16): first call 7.2–7.8 s cold (onsets→beats 3.1 s, beats→downbeat 3.3 s), 1.8–2.1 s warm, later calls ~0.1 s, hello 0.3–0.5 s'
+const timings: string[] = []
+reportFileToCi('beats.int', () => (timings.length && PACK_UNDER_TEST ? [...timings, `for comparison, ${MAC_REFERENCE}`] : []))
+
+/** Each progress message of one call with the seconds it came at, e.g. "tracking beats +0.84 s". */
+function trail(): { onProgress: (p: number | null, message?: string) => void; said: () => string; began: number } {
+  const began = performance.now()
+  const seen: string[] = []
+  return {
+    began,
+    onProgress: (_p, message) => seen.push(`${message ?? '?'} +${((performance.now() - began) / 1000).toFixed(2)} s`),
+    said: () => seen.join(', ') || 'no progress yet'
+  }
+}
 
 /**
  * A bar pattern with a loud kick on a known beat of every bar.
@@ -163,6 +193,7 @@ beforeAll(async () => {
   dropTrack = join(dir, 'drop.wav')
   writeDropTrack(dropTrack, 120, 16, 24)
   client = new SidecarClient({ cwd: SIDECAR_DIR, launch: launchFor(VENV_PYTHON), maxRestarts: 0 })
+  helperLog = attachHelperLog(client, 'beats')
 }, 120_000)
 
 afterAll(async () => {
@@ -190,15 +221,21 @@ interface BeatResult {
 describeWithVenv('audio.beats', () => {
   it('advertises the capability', async () => {
     const hello = await client.start()
+    timings.push(`hello ${((helperLog?.helloMs ?? 0) / 1000).toFixed(2)} s`)
     expect(hello.capabilities).toContain('audio.beats')
   }, 120_000)
 
   it('finds the tempo of a known click track', async () => {
     await client.start()
-    const result = await client.request<BeatResult>('audio.beats', {
-      path: click,
-      ffmpeg: FFMPEG
-    })
+    // The first call: numba compiles librosa's beat tracker unless its cache has it (see MAC_REFERENCE).
+    const stages = trail()
+    const result = await withDeadline(
+      client.request<BeatResult>('audio.beats', { path: click, ffmpeg: FFMPEG }, { onProgress: stages.onProgress }),
+      200_000,
+      'the first audio.beats call (8 s click track)',
+      () => `its stages so far: ${stages.said()}. ${helperLog?.describe(40) ?? 'no helper log'}`
+    )
+    timings.push(`first audio.beats call ${((performance.now() - stages.began) / 1000).toFixed(2)} s: ${stages.said()}`)
     // librosa's tempo estimate is within a few percent, not exact.
     expect(result.bpm).toBeGreaterThan(112)
     expect(result.bpm).toBeLessThan(128)
@@ -214,10 +251,12 @@ describeWithVenv('audio.beats', () => {
    */
   it('analyses only the requested window', async () => {
     await client.start()
+    const stages = trail()
     const whole = await client.request<BeatResult>('audio.beats', {
       path: click,
       ffmpeg: FFMPEG
-    })
+    }, { onProgress: stages.onProgress })
+    timings.push(`the next call ${((performance.now() - stages.began) / 1000).toFixed(2)} s: ${stages.said()}`)
     const window = await client.request<BeatResult>('audio.beats', {
       path: click,
       ffmpeg: FFMPEG,

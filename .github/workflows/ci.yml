@@ -236,6 +236,29 @@ jobs:
         env:
           FORGE_HELPER_PACK: ${{ runner.temp }}/forge pack é/userData
 
+      # What the pack's two steps above left in tests/output, kept whether they
+      # passed or not (and so also when the install step failed and the suites
+      # never ran): the install's record, each suite's own folder (faces' cache
+      # and its layer-by-layer probe, the reframe job's clip and notes), and
+      # helper-diag/, every helper's whole stderr and every failure's whole
+      # message (tests/integration/helperDiag.ts). The annotations carry the
+      # first 4,096 characters of the first ten errors, warnings and notices of
+      # a step; this carries the rest, for whoever can sign in. Only these
+      # folders: `npm test` leaves hundreds of MB of renders beside them.
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: test-output-${{ runner.os }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            tests/output/helper-pack/
+            tests/output/helper-diag/
+            tests/output/faces/
+            tests/output/reframe-job/
+            tests/output/vision/
+            tests/output/sidecar-media/
+
       # (5) pip check from inside the pack, after the suites have run in it:
       # every problem reported must be one the lock leaves out on purpose
       # (mediapipe's two, huggingface-hub's hf-xet once the lock drops it),
@@ -265,12 +288,14 @@ jobs:
           echo "the pack's version folder: $VERSION_DIR"
           python -I scripts/pe-imports.py "$VERSION_DIR" --expected tests/fixtures/pack-native-imports-win32.json --record "$RUNNER_TEMP/pack-native-imports-win32.json" > "$RUNNER_TEMP/pe-imports.stdout.json"
 
+      # `ignore` when the listing did not run (a red step before it): nothing
+      # to keep then, and `warn` spent one of the step's annotations saying so.
       - uses: actions/upload-artifact@v6
         if: always() && runner.os == 'Windows'
         with:
           name: helper-pack-native-imports-win32
           retention-days: 30
-          if-no-files-found: warn
+          if-no-files-found: ignore
           path: ${{ runner.temp }}/pack-native-imports-win32.json
 
       - run: npm run build

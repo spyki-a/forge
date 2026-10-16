@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, expect, it } from 'vitest'
 import { spawn, spawnSync } from 'node:child_process'
-import { existsSync, readdirSync } from 'node:fs'
+import { existsSync, readdirSync, statSync } from 'node:fs'
 import { chmod, copyFile, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve, sep } from 'node:path'
 import ffprobeInstaller from '@ffprobe-installer/ffprobe'
@@ -18,7 +18,8 @@ import {
 } from '@shared/sidecar/protocol'
 import type { FaceBox } from '@shared/reframe/types'
 import { FFMPEG, OUTPUT_ROOT, outputDir, run, writeNote } from './output'
-import { HAS_VENV, SIDECAR_DIR, VENV_PYTHON, describeWithVenv, launchFor } from './venv'
+import { DeadlineError, alive, attachHelperLog, deadlineIn, oneLine, pythonStderr, reportFileToCi, withDeadline, type HelperLog } from './helperDiag'
+import { HAS_VENV, PACK_UNDER_TEST, SIDECAR_DIR, VENV_PYTHON, describeWithVenv, launchFor } from './venv'
 
 /*
  * The face finder through the real AI helper and its real worker
@@ -89,14 +90,53 @@ async function python<T>(code: string, env: Record<string, string> = {}): Promis
 
 const clients: SidecarClient[] = []
 const logs = new Map<SidecarClient, string[]>()
+/** Each helper's stderr, pid and exit, for a missed deadline's message (helperDiag.ts). */
+const helperLogs = new Map<SidecarClient, HelperLog>()
+/** Each helper's start to its hello, ms, in order. */
+const hellos: number[] = []
+/** This file's timings, one notice at its end (helperDiag.ts reportFileToCi). */
+const timings: string[] = []
+reportFileToCi('faces.int', () => {
+  // Published from the pack's runs (FORGE_HELPER_PACK: CI's pack step), where they are measurements of the pack.
+  if (!PACK_UNDER_TEST || (!hellos.length && !timings.length)) return []
+  const s = (ms: number): string => (ms / 1000).toFixed(1)
+  return [`hellos (${hellos.length}): first ${s(hellos[0])} s, slowest ${s(Math.max(...hellos))} s, all ${hellos.map(s).join(' ')}`, ...timings]
+})
+
+/**
+ * What a missed deadline says for a face request: the workers the helper
+ * logged and their ffmpegs (from the worker's notes the helper relays while
+ * it is silent, faces.py SILENT_REPORT_S), each alive or gone, what is in the
+ * faces cache (a partial, and how far it got), then the helper's own state
+ * and log, newest last.
+ */
+function facesContext(client: SidecarClient, cache?: string): () => string {
+  return () => {
+    const log = helperLogs.get(client)
+    const lines = log?.lines ?? []
+    const pids = (re: RegExp): number[] => [...new Set(lines.flatMap((line) => [...line.matchAll(re)].map((m) => Number(m[1]))))]
+    const state = (found: number[]): string => found.map((pid) => `${pid} ${alive(pid) ? 'alive' : 'gone'}`).join(', ') || 'none logged'
+    let files = '-'
+    if (cache) {
+      try {
+        const folder = join(cache, 'faces')
+        files = readdirSync(folder).map((name) => `${name} ${statSync(join(folder, name)).size} B`).join(', ') || 'empty'
+      } catch (err) {
+        files = `not readable (${(err as NodeJS.ErrnoException).code})`
+      }
+    }
+    return `workers ${state(pids(/faces: worker (\d+) started/g))}; their ffmpegs ${state(pids(/mp_faces: ffmpeg (\d+) started/g))}; the faces cache: ${files}. ${log?.describe(40) ?? 'no helper log'}`
+  }
+}
 
 /**
  * A helper with its own folders and, for this one process, extra environment
  * (the worker inherits the helper's). Its launch copies process.env as it is
  * built, and start() spawns before its first await, so the variables are
- * back as they were before any other helper starts.
+ * back as they were before any other helper starts. With `within` (the
+ * test's deadline), a hello that does not come says where the helper was.
  */
-async function helper(o: { models: string; cache: string; env?: Record<string, string>; python?: string }): Promise<SidecarClient> {
+async function helper(o: { models: string; cache: string; env?: Record<string, string>; python?: string; within?: { left(): number } }): Promise<SidecarClient> {
   const saved: Record<string, string | undefined> = {}
   // A stand-in switch reaches a helper only through its own env (STAND_INS), never from the shell.
   for (const name of STAND_INS) {
@@ -114,6 +154,8 @@ async function helper(o: { models: string; cache: string; env?: Record<string, s
   const lines: string[] = []
   logs.set(client, lines)
   client.on('log', (text: string) => lines.push(...text.split('\n')))
+  helperLogs.set(client, attachHelperLog(client, `faces-${clients.length}`))
+  const began = performance.now()
   let started: Promise<HelloResult>
   try {
     started = client.start()
@@ -123,18 +165,9 @@ async function helper(o: { models: string; cache: string; env?: Record<string, s
       else process.env[name] = value
     }
   }
-  await started
+  await (o.within ? withDeadline(started, o.within.left(), 'the helper’s hello', facesContext(client)) : started)
+  hellos.push(performance.now() - began)
   return client
-}
-
-/** Whether a process is still there: signal 0 asks without sending anything (`ps` is not allowed in the sandbox). */
-function alive(pid: number): boolean {
-  try {
-    process.kill(pid, 0)
-    return true
-  } catch (err) {
-    return (err as NodeJS.ErrnoException).code === 'EPERM'
-  }
 }
 
 /** Poll `test` every 50 ms for up to `ms`; its last answer. */
@@ -147,6 +180,86 @@ async function until(test: () => boolean | Promise<boolean>, ms: number): Promis
   return test()
 }
 
+/** One layer of the stand-in pass, run alone (the bisect below; tests/integration/facesProbe.py). */
+interface Layer {
+  name: string
+  argv: string[]
+  env: NodeJS.ProcessEnv
+  cwd?: string
+  /** `held`: a pipe kept open (and written `input`) until `end` matches a stdout line, as the helper holds its worker's. */
+  stdin: 'ignore' | 'held'
+  input?: string
+  /** The stdout line that means it finished. */
+  end: RegExp
+}
+
+interface LayerRun {
+  name: string
+  ms: number
+  code: number | null
+  finished: boolean
+  timedOut: boolean
+  out: string[]
+  err: string
+}
+
+/** Run one layer: its stdout lines stamped with the seconds they came at, its stderr, killed at `ms`. */
+function runLayer(layer: Layer, ms: number): Promise<LayerRun> {
+  return new Promise((done) => {
+    const began = performance.now()
+    const at = (): string => ((performance.now() - began) / 1000).toFixed(2)
+    const child = spawn(layer.argv[0], layer.argv.slice(1), {
+      cwd: layer.cwd ?? SIDECAR_DIR,
+      env: layer.env,
+      windowsHide: true,
+      stdio: [layer.stdin === 'held' ? 'pipe' : 'ignore', 'pipe', 'pipe']
+    })
+    const out: string[] = []
+    let err = ''
+    let pending = ''
+    let finished = false
+    let timedOut = false
+    let settled = false
+    const settle = (code: number | null): void => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      done({ name: layer.name, ms: performance.now() - began, code, finished, timedOut, out, err })
+    }
+    child.stdout!.on('data', (chunk: Buffer) => {
+      pending += chunk.toString()
+      for (let i = pending.indexOf('\n'); i >= 0; i = pending.indexOf('\n')) {
+        const line = pending.slice(0, i).trim()
+        pending = pending.slice(i + 1)
+        if (!line) continue
+        out.push(`${line} @${at()}`)
+        if (layer.end.test(line)) {
+          finished = true
+          child.stdin?.end()
+        }
+      }
+    })
+    child.stderr!.on('data', (chunk: Buffer) => (err += chunk.toString()))
+    child.stdin?.on('error', () => undefined)
+    child.on('error', (e) => (err += `could not start: ${e.message}`))
+    if (layer.input !== undefined) child.stdin?.write(layer.input)
+    const timer = setTimeout(() => {
+      timedOut = true
+      child.stdin?.end()
+      child.kill('SIGKILL')
+      // A grandchild holding a pipe would keep 'close' away: two seconds after the kill is the end either way.
+      setTimeout(() => settle(child.exitCode), 2000)
+    }, ms)
+    child.on('close', (code) => settle(code))
+  })
+}
+
+function describeLayer(r: LayerRun): string {
+  const how = r.finished ? (r.timedOut ? 'finished but did not exit' : 'finished') : r.timedOut ? 'NO END' : 'ended early'
+  const err = r.err.trim() ? `; stderr: ${pythonStderr(r.err, 1000)}` : ''
+  return `${r.name}: ${how} in ${(r.ms / 1000).toFixed(2)} s, exit ${r.code}; stdout: ${r.out.join(' · ') || '(nothing)'}${err}`
+}
+
 /** The pids faces.py logged for its workers ("faces: worker <pid> started"). */
 function workerPids(client: SidecarClient): number[] {
   return (logs.get(client) ?? []).flatMap((line) => {
@@ -155,8 +268,20 @@ function workerPids(client: SidecarClient): number[] {
   })
 }
 
-function expectRejection(promise: Promise<unknown>, code: number, message: RegExp): Promise<void> {
-  return expect(promise).rejects.toMatchObject({ code, message: expect.stringMatching(message) })
+/** The request's rejection, held to its code and message; a missed deadline is thrown as it is, its diagnosis whole. */
+async function expectRejection(promise: Promise<unknown>, code: number, message: RegExp): Promise<void> {
+  const outcome = await promise.then(
+    (value) => ({ resolved: value }),
+    (err: unknown) => ({ rejected: err })
+  )
+  if ('rejected' in outcome && outcome.rejected instanceof DeadlineError) throw outcome.rejected
+  expect('rejected' in outcome, `the request answered instead: ${JSON.stringify(outcome)}`).toBe(true)
+  expect((outcome as { rejected: unknown }).rejected).toMatchObject({ code, message: expect.stringMatching(message) })
+}
+
+/** A face request's wait, under the test's deadline, saying on a miss where the helper, its worker and their ffmpeg were. */
+function inTime<T>(request: Promise<T>, within: { left(): number }, what: string, client: SidecarClient, cache?: string): Promise<T> {
+  return withDeadline(request, within.left(), what, facesContext(client, cache))
 }
 
 const ff = (...args: string[]): Promise<unknown> => run(FFMPEG, ['-hide_banner', '-loglevel', 'error', '-y', ...args])
@@ -384,12 +509,59 @@ describeWithVenv(
       notes.push(`- the helper as main starts it: ${main.path.length} sys.path entries, none under stubs/; no mediapipe, cv2 or matplotlib loaded`)
     }, 60_000)
 
+    it('the stand-in pass taken apart: the stream, the stream beside a held stdin read, the worker from Node, run_worker alone and in the helper’s shape — each finishes', async () => {
+      /*
+       * On Windows (CI run 38972858204) every stand-in pass through the
+       * helper hung before its tenth frame, while media.iter_frames streams
+       * there in `npm test` (test_media.py, on the bare interpreter). Each
+       * layer between the two runs here in its own process with a deadline of
+       * its own (tests/integration/facesProbe.py): the first that does not
+       * finish is where the hang is, and its stderr — faulthandler's stacks
+       * past 8 s, the worker's notes, faces.py's log — says on which line.
+       */
+      const probe = resolve(__dirname, 'facesProbe.py')
+      const scratch = join(dir, 'probe')
+      await mkdir(scratch, { recursive: true })
+      const { command } = await python<{ command: { argv: string[]; cwd: string; env: Record<string, string> } }>(
+        'import json; from forge_sidecar.capabilities import faces; print(json.dumps({"command": faces.worker_command()}))'
+      )
+      const plain = withoutStandIns()
+      const stand = withoutStandIns({ FORGE_FACES_WORKER_FAKE: 'colour' })
+      const at = (mode: string, ...more: string[]): string[] => [VENV_PYTHON, '-E', '-s', '-B', probe, SIDECAR_DIR, mode, clips.boxes, FFMPEG, ...more]
+      const spec = {
+        mode: 'detect', path: clips.boxes, ffmpeg: FFMPEG, width: 640, height: 360, fps: 5, edge: 640, minScore: 0.5, startMs: 0, endMs: null,
+        durationMs: 4000, model: 'unused by the stand-in', track: join(scratch, 'worker.json'), partial: join(scratch, 'worker.json.part')
+      }
+      const layers: Layer[] = [
+        { name: 'the stream alone', argv: at('frames'), env: plain, stdin: 'ignore', end: /^frames 20 / },
+        { name: 'the stream beside a held stdin read', argv: at('held'), env: plain, stdin: 'held', end: /^frames 20 / },
+        { name: 'the worker from Node, stdin held', argv: command.argv, cwd: command.cwd, env: { ...command.env, FORGE_FACES_WORKER_FAKE: 'colour' }, stdin: 'held', input: `${JSON.stringify(spec)}\n`, end: /^done 20 20$/ },
+        { name: 'run_worker alone', argv: at('helper', scratch), env: stand, stdin: 'ignore', end: /^done \d+ / },
+        { name: 'run_worker beside a stdin loop', argv: at('helper-held', scratch), env: stand, stdin: 'held', end: /^(done|failed) / }
+      ]
+      const results: LayerRun[] = []
+      for (const layer of layers) results.push(await runLayer(layer, 12_000))
+      const said = results.map(describeLayer)
+      notes.push('- the stand-in pass taken apart (tests/integration/facesProbe.py):', ...said.map((s) => `  - ${s}`))
+      timings.push(`the stand-in pass taken apart: ${results.map((r) => `${r.name} ${r.finished ? `${(r.ms / 1000).toFixed(2)} s` : r.timedOut ? 'NO END in 12 s' : `ended early, exit ${r.code}`}`).join(' · ')}`)
+      const unfinished = results.filter((r) => !r.finished || r.timedOut || r.code !== 0).map((r) => r.name)
+      expect(unfinished, oneLine(said.join('\n'), 3500)).toEqual([])
+    }, 120_000)
+
     it('the stand-in pass: the track on disk, two largest first, source ms, progress relayed', async () => {
-      const client = await helper({ models, cache: join(dir, 'cache', 'pass'), env: { FORGE_FACES_WORKER_FAKE: 'colour' } })
+      const within = deadlineIn(45_000)
+      const cache = join(dir, 'cache', 'pass')
+      const client = await helper({ models, cache, env: { FORGE_FACES_WORKER_FAKE: 'colour' }, within })
       const progress: [number | null, string | undefined][] = []
-      const result = await client.request<FacesResult>(SIDECAR_METHODS.faces, params(clips.boxes), {
-        onProgress: (p, m) => progress.push([p, m])
-      })
+      const began = performance.now()
+      const result = await inTime(
+        client.request<FacesResult>(SIDECAR_METHODS.faces, params(clips.boxes), { onProgress: (p, m) => progress.push([p, m]) }),
+        within,
+        'the stand-in pass (20 frames of boxes.mp4)',
+        client,
+        cache
+      )
+      timings.push(`the stand-in pass through the helper: 20 frames in ${((performance.now() - began) / 1000).toFixed(2)} s`)
       expect(result).toMatchObject({ width: 640, height: 360, durationMs: 4000, sampleFps: 5, frames: 20, withFace: 20, cached: false })
       expect(result.detector).toBe('test-stand-in/colour')
       expect(result.track.startsWith(join(dir, 'cache', 'pass', 'faces') + sep)).toBe(true)
@@ -423,12 +595,20 @@ describeWithVenv(
        * are checked against the scene at each sample's ms — the second window
        * straddles the cut at 2 s.
        */
-      const client = await helper({ models, cache: join(dir, 'cache', 'window'), env: { FORGE_FACES_WORKER_FAKE: 'colour' } })
+      const within = deadlineIn(45_000)
+      const cache = join(dir, 'cache', 'window')
+      const client = await helper({ models, cache, env: { FORGE_FACES_WORKER_FAKE: 'colour' }, within })
       for (const [startMs, endMs] of [
         [1000, 3000],
         [1900, 2900]
       ]) {
-        const result = await client.request<FacesResult>(SIDECAR_METHODS.faces, params(clips.boxes, { startMs, endMs }))
+        const result = await inTime(
+          client.request<FacesResult>(SIDECAR_METHODS.faces, params(clips.boxes, { startMs, endMs })),
+          within,
+          `the stand-in pass over ${startMs}–${endMs} ms`,
+          client,
+          cache
+        )
         const expected = Array.from({ length: (endMs - startMs) / 200 }, (_, i) => startMs + i * 200)
         expect(result.frames, `${startMs}–${endMs}`).toBe(expected.length)
         const track = await readTrack(result.track)
@@ -443,16 +623,20 @@ describeWithVenv(
     }, 60_000)
 
     it('a turned clip is answered in its UPRIGHT frame, and the wrong size is refused with both', async () => {
-      const client = await helper({ models, cache: join(dir, 'cache', 'turned'), env: { FORGE_FACES_WORKER_FAKE: 'colour' } })
+      const within = deadlineIn(45_000)
+      const cache = join(dir, 'cache', 'turned')
+      const client = await helper({ models, cache, env: { FORGE_FACES_WORKER_FAKE: 'colour' }, within })
+      const ask = (path: string, extra: Partial<FacesParams>, what: string): Promise<FacesResult> =>
+        inTime(client.request<FacesResult>(SIDECAR_METHODS.faces, params(path, extra)), within, what, client, cache)
       // Each clip its own key, as each file has its own size and mtime: one key would be one track.
-      const plain = await readTrack((await client.request<FacesResult>(SIDECAR_METHODS.faces, params(clips.boxes, { key: 'plain' }))).track)
+      const plain = await readTrack((await ask(clips.boxes, { key: 'plain' }, 'the stand-in pass, plain')).track)
 
       // The plan's remux: the decoder delivers the picture on its side, 360×640, and the boxes go with it.
-      const onSide = await client.request<FacesResult>(SIDECAR_METHODS.faces, params(clips.turned, { width: 360, height: 640, key: 'turned' }))
+      const onSide = await ask(clips.turned, { width: 360, height: 640, key: 'turned' }, 'the stand-in pass, turned')
       expect([onSide.width, onSide.height]).toEqual([360, 640])
       const side = await readTrack(onSide.track)
       // A phone clip: stored on its side, turned back upright by its matrix — the same boxes as the plain clip.
-      const upright = await client.request<FacesResult>(SIDECAR_METHODS.faces, params(clips.phone, { width: 640, height: 360, key: 'phone' }))
+      const upright = await ask(clips.phone, { width: 640, height: 360, key: 'phone' }, 'the stand-in pass, phone-shaped')
       expect(new Set([onSide.track, upright.track]).size).toBe(2)
       expect([onSide.cached, upright.cached]).toEqual([false, false])
       const phone = await readTrack(upright.track)
@@ -469,7 +653,7 @@ describeWithVenv(
       expect(worst).toBeLessThan(0.01)
 
       await expectRejection(
-        client.request(SIDECAR_METHODS.faces, params(clips.turned, { width: 640, height: 360, key: 'turned' })),
+        inTime(client.request(SIDECAR_METHODS.faces, params(clips.turned, { width: 640, height: 360, key: 'turned' })), within, 'the wrong size refused', client, cache),
         RPC_ERRORS.internalError,
         /is 360×640 upright \(turned 270°\), but 640×360 was sent/
       )
@@ -477,12 +661,13 @@ describeWithVenv(
     }, 60_000)
 
     it('a worker that aborts mid-pass is Unavailable with its code, its half-track removed, and the helper answers', async () => {
+      const within = deadlineIn(45_000)
       const cache = join(dir, 'cache', 'abort')
-      const client = await helper({ models, cache, env: { FORGE_FACES_WORKER_FAKE: 'colour', FORGE_FACES_WORKER_ABORT: '1' } })
+      const client = await helper({ models, cache, env: { FORGE_FACES_WORKER_FAKE: 'colour', FORGE_FACES_WORKER_ABORT: '1' }, within })
       // Windows: CPython's docs say abort() exits 3; the UCRT may fast-fail with 0xC0000409 instead. Unmeasured, so either.
       const code = process.platform === 'win32' ? '(3|3221226505)' : '-6'
       await expectRejection(
-        client.request(SIDECAR_METHODS.faces, params(clips.boxes)),
+        inTime(client.request(SIDECAR_METHODS.faces, params(clips.boxes)), within, 'the stand-in pass that aborts after its first frame', client, cache),
         RPC_ERRORS.unavailable,
         new RegExp(`^the face detector stopped \\(code ${code}\\)`)
       )
@@ -522,8 +707,9 @@ describeWithVenv(
         await writeFile(decoder, `#!/bin/sh\necho $$ >> '${pids}'\nexec '${FFMPEG}' "$@"\n`)
         await chmod(decoder, 0o755)
       }
+      const within = deadlineIn(45_000)
       const cache = join(dir, 'cache', 'cancel')
-      const client = await helper({ models, cache, env: { FORGE_FACES_WORKER_FAKE: 'colour:80' } })
+      const client = await helper({ models, cache, env: { FORGE_FACES_WORKER_FAKE: 'colour:80' }, within })
       const controller = new AbortController()
       const seen: number[] = []
       const request = client.request(SIDECAR_METHODS.faces, params(clips.long, { ffmpeg: decoder }), {
@@ -535,7 +721,7 @@ describeWithVenv(
           }
         }
       })
-      await expectRejection(request, RPC_ERRORS.cancelled, /Cancelled/)
+      await expectRejection(inTime(request, within, 'the first progress line (then the cancel)', client, cache), RPC_ERRORS.cancelled, /Cancelled/)
       expect(seen.length).toBeGreaterThan(0)
       expect(seen[0]).toBeLessThan(0.5)
 
@@ -575,8 +761,9 @@ describeWithVenv(
         await writeFile(decoder, `#!/bin/sh\necho $$ >> '${pids}'\nexec '${FFMPEG}' "$@"\n`)
         await chmod(decoder, 0o755)
       }
+      const within = deadlineIn(45_000)
       const cache = join(dir, 'cache', 'killed')
-      const client = await helper({ models, cache, env: { FORGE_FACES_WORKER_FAKE: 'colour:80' } })
+      const client = await helper({ models, cache, env: { FORGE_FACES_WORKER_FAKE: 'colour:80' }, within })
       const exited = new Promise<{ code: number | null; signal: string | null }>((done) => client.once('exit', done))
       let partial: string[] = []
       const request = client.request(SIDECAR_METHODS.faces, params(clips.long, { ffmpeg: decoder }), {
@@ -586,7 +773,7 @@ describeWithVenv(
           ;(client as unknown as { child: { kill: (signal: string) => void } | null }).child?.kill('SIGKILL')
         }
       })
-      await expectRejection(request, RPC_ERRORS.internalError, /The AI helper stopped \(signal SIGKILL\)/)
+      await expectRejection(inTime(request, within, 'the first progress line (then the kill)', client, cache), RPC_ERRORS.internalError, /The AI helper stopped \(signal SIGKILL\)/)
       expect((await exited).signal).toBe('SIGKILL')
       // The half-track was there when the helper died: what is checked below is its removal.
       expect(partial.length, JSON.stringify(partial)).toBe(1)
@@ -606,8 +793,9 @@ describeWithVenv(
     }, 60_000)
 
     it('a stop mid-pass (an app quit) cancels the pass, and the helper exits by itself with no worker left', async () => {
+      const within = deadlineIn(45_000)
       const cache = join(dir, 'cache', 'stopped')
-      const client = await helper({ models, cache, env: { FORGE_FACES_WORKER_FAKE: 'colour:80' } })
+      const client = await helper({ models, cache, env: { FORGE_FACES_WORKER_FAKE: 'colour:80' }, within })
       const exited = new Promise<{ code: number | null; signal: string | null }>((done) => client.once('exit', done))
       let began = 0
       const request = client.request(SIDECAR_METHODS.faces, params(clips.long), {
@@ -617,7 +805,7 @@ describeWithVenv(
           client.stop()
         }
       })
-      await expectRejection(request, RPC_ERRORS.internalError, /shutting down/)
+      await expectRejection(inTime(request, within, 'the first progress line (then the stop)', client, cache), RPC_ERRORS.internalError, /shutting down/)
       // Not the SIGKILL client.stop() sends at 1.5 s: the cancel reached the pass, which stopped.
       expect(await exited).toMatchObject({ code: 0, signal: null })
       const took = performance.now() - began
@@ -654,20 +842,25 @@ describeWithVenv(
     }, 60_000)
 
     it('the cache: the same key and settings answer from disk with no worker; any change runs one', async () => {
+      const within = deadlineIn(100_000)
       const cache = join(dir, 'cache', 'cache')
-      const first = await helper({ models, cache, env: { FORGE_FACES_WORKER_FAKE: 'colour' } })
-      const made = await first.request<FacesResult>(SIDECAR_METHODS.faces, params(clips.boxes))
+      const first = await helper({ models, cache, env: { FORGE_FACES_WORKER_FAKE: 'colour' }, within })
+      const made = await inTime(first.request<FacesResult>(SIDECAR_METHODS.faces, params(clips.boxes)), within, 'the stand-in pass that fills the cache', first, cache)
       expect(made.cached).toBe(false)
-      const again = await first.request<FacesResult>(SIDECAR_METHODS.faces, params(clips.boxes))
+      const again = await inTime(first.request<FacesResult>(SIDECAR_METHODS.faces, params(clips.boxes)), within, 'the same request, from the cache', first, cache)
       expect(again).toEqual({ ...made, cached: true })
 
       // A helper whose every worker would abort: the same request still answers, so no worker ran…
-      const aborting = await helper({ models, cache, env: { FORGE_FACES_WORKER_FAKE: 'colour', FORGE_FACES_WORKER_ABORT: '1' } })
-      expect(await aborting.request<FacesResult>(SIDECAR_METHODS.faces, params(clips.boxes))).toEqual({ ...made, cached: true })
+      const aborting = await helper({ models, cache, env: { FORGE_FACES_WORKER_FAKE: 'colour', FORGE_FACES_WORKER_ABORT: '1' }, within })
+      expect(await inTime(aborting.request<FacesResult>(SIDECAR_METHODS.faces, params(clips.boxes)), within, 'the cached answer beside an aborting worker', aborting, cache)).toEqual({ ...made, cached: true })
       expect(workerPids(aborting)).toEqual([])
       // …and each change to what the samples depend on misses the cache and runs one (which aborts).
       for (const change of [{ fps: 10 }, { edge: 480 }, { minScore: 0.75 }, { endMs: 3000 }, { key: '4000:1728912345679.5' }]) {
-        await expectRejection(aborting.request(SIDECAR_METHODS.faces, params(clips.boxes, change)), RPC_ERRORS.unavailable, /the face detector stopped/)
+        await expectRejection(
+          inTime(aborting.request(SIDECAR_METHODS.faces, params(clips.boxes, change)), within, `a cache miss (${JSON.stringify(change)}) that aborts`, aborting, cache),
+          RPC_ERRORS.unavailable,
+          /the face detector stopped/
+        )
       }
       expect(workerPids(aborting).length).toBe(5)
     }, 120_000)

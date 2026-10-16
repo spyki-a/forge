@@ -7,6 +7,10 @@ import { SidecarClient, SidecarError } from '../../src/main/sidecar/client'
 import { OPTIONAL_METHODS, SIDECAR_METHODS, RPC_ERRORS, type HelloResult } from '@shared/sidecar/protocol'
 import { SELFTEST_GROUPS, SELFTEST_GROUP_NAMES, type SelftestResult } from '@shared/sidecar/selftest'
 import { HAS_VENV, PACK_UNDER_TEST, SIDECAR_DIR, VENV_PYTHON, devHelperLaunch, launchFor } from './venv'
+import { reportFileToCi } from './helperDiag'
+
+// Every failure named in one warning: a step keeps only its first ten error annotations (helperDiag.ts).
+reportFileToCi('sidecar.int')
 
 let client: SidecarClient | null = null
 

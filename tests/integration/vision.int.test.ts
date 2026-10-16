@@ -5,6 +5,10 @@ import { SidecarClient } from '../../src/main/sidecar/client'
 import { SIDECAR_METHODS } from '@shared/sidecar/protocol'
 import { FFMPEG, outputDir, run, writeNote } from './output'
 import { SIDECAR_DIR, VENV_PYTHON, describeWithVenv, launchFor } from './venv'
+import { reportFileToCi } from './helperDiag'
+
+// Every failure named in one warning: a step keeps only its first ten error annotations (helperDiag.ts).
+reportFileToCi('vision.int')
 
 /**
  * The Director's objective checks, through the real sidecar (docs/PLAN.md §4.2).

@@ -18,6 +18,7 @@ import { lockPath, pidAlive } from '../../src/main/sidecar/lock'
 import { helperFolders, packRoot } from '../../src/main/sidecar/service'
 import { SidecarClient } from '../../src/main/sidecar/client'
 import type { HelperControl, PackCheck, PackFs } from '../../src/main/sidecar/installTypes'
+import { ciNotice } from './helperDiag'
 import type { Job } from '../../src/shared/types'
 import { outputDir } from './output'
 import { cachedPackIn, packSuiteGate, pipCheckProblems, SIDECAR_DIR } from './venv'
@@ -497,6 +498,12 @@ else
       ]
       writeFileSync(join(out, 'README.txt'), `${notes.join('\n')}\n`, 'utf8')
       console.log(notes.slice(0, 23 + found.length).join('\n'))
+      // The stage times, the first hello and the self-test (§3a.8 rows 27, 29, 37), readable without signing in: one notice (helperDiag.ts).
+      const at = notes.indexOf('stages (ms from the press):')
+      ciNotice(
+        `helperPack.int: ${run.mode === 'cached' ? 'the cached pack checked again' : 'the install'} on ${run.platform}`,
+        [notes[0], notes[3], ...notes.slice(at, at + 1 + stages.length + 9)].join('\n')
+      )
       // CI's userData is the cache's and the later steps': never removed. A scratch one goes unless kept.
       if (!KEEP) rmSync(run.scratch, { recursive: true, force: true })
     })
