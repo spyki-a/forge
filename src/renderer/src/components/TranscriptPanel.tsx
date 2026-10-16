@@ -13,8 +13,13 @@ import {
 } from '@shared/edit/clipIt'
 import { clampRun, rowsOf, type WordRun } from '@shared/ingest/wordRun'
 import { formatMark } from '@shared/ingest/section'
+import { SIDECAR_METHODS } from '@shared/sidecar/protocol'
+import { helperCan } from '@shared/sidecar/helperCan'
+import { transcribeGate } from '@shared/sidecar/row'
 import { useEditor } from '../store'
 import { rowStamp, TranscriptRows } from './tools/TranscriptRows'
+import { SpeechModelPress, transcribeWhy } from './MediaPool'
+import { HelperPointer } from './SettingsPanel'
 
 /**
  * Transcript for the selected clip — the words it plays — with click-to-seek,
@@ -308,19 +313,36 @@ function EditableWord({ word, onEdit }: { word: Word; onEdit: (text: string) => 
 }
 
 /**
- * The names and words the transcriber listens for.
+ * The names and words the transcriber listens for, and this tile's own
+ * Transcribe.
  *
  * Saved on leaving the field rather than on every keystroke, so typing a list
  * of names is one undo step, not forty. Transcribing again replaces the words,
  * corrections included — the button says so.
+ *
+ * Transcribe is greyed as the Media pool's is (docs/CLIPS.md §3a.4 "Grey
+ * every Python control by its own method"): by `asr.transcribe` and the speech
+ * model on disk, never by a process being up, its title saying why. Under it,
+ * the pointer to the one Install, or the speech model's sized press, or that
+ * the helper is starting. Exported so a test can call it as a function.
  */
-function Vocabulary({ assetId, hasTranscript }: { assetId: string; hasTranscript: boolean }): ReactNode {
+export function Vocabulary({ assetId, hasTranscript }: { assetId: string; hasTranscript: boolean }): ReactNode {
   const vocabulary = useEditor((s) => s.project.vocabulary ?? '')
   const setVocabulary = useEditor((s) => s.setVocabulary)
   const transcribeAsset = useEditor((s) => s.transcribeAsset)
   const busy = useEditor((s) => Boolean(s.transcribing[assetId]))
+  const helperStatus = useEditor((s) => s.helperStatus)
+  const speechModel = useEditor((s) => s.speechModel)
+  const refreshSpeechModel = useEditor((s) => s.refreshSpeechModel)
+  const gate = transcribeGate(helperStatus, speechModel)
+  const why = transcribeWhy(gate)
+  const canTranscribe = helperCan(helperStatus, SIDECAR_METHODS.transcribe)
   const [draft, setDraft] = useState(vocabulary)
   useEffect(() => setDraft(vocabulary), [vocabulary])
+  // Is the speech model on disk? Asked once the helper can transcribe and nobody has asked; never downloads.
+  useEffect(() => {
+    if (canTranscribe && speechModel === null) void refreshSpeechModel()
+  }, [canTranscribe, speechModel, refreshSpeechModel])
 
   return (
     <div className="space-y-1 border-t border-ink-800 px-3 py-2">
@@ -342,12 +364,30 @@ function Vocabulary({ assetId, hasTranscript }: { assetId: string; hasTranscript
           setVocabulary(draft)
           void transcribeAsset(assetId)
         }}
-        disabled={busy}
-        title={hasTranscript ? 'Transcribe this clip again with these words — corrections made here are replaced' : 'Transcribe this clip, listening for these words'}
+        disabled={busy || why !== null}
+        title={
+          !busy && why !== null
+            ? why
+            : hasTranscript
+              ? 'Transcribe this clip again with these words — corrections made here are replaced'
+              : 'Transcribe this clip, listening for these words'
+        }
         className="w-full rounded bg-ink-800 px-2 py-1 text-[10px] text-ink-300 transition-colors hover:bg-ink-700 hover:text-ink-100 disabled:opacity-40"
       >
         {busy ? 'Transcribing…' : hasTranscript ? 'Transcribe again with these words' : 'Transcribe'}
       </button>
+      {!busy && gate === 'no-helper' && (
+        <p data-transcribe-why="" className="text-[10px] text-ink-600">
+          Transcribe <HelperPointer />
+        </p>
+      )}
+      {!busy && gate === 'starting' && (
+        <p data-transcribe-why="" className="text-[10px] text-ink-600">
+          {why}
+        </p>
+      )}
+      {/* The model missing: its sized press, the Media pool's own bar. */}
+      {!busy && gate === 'no-model' && <SpeechModelPress inline />}
     </div>
   )
 }

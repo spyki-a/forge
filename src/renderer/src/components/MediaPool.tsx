@@ -108,8 +108,10 @@ export function transcribeWhy(gate: TranscribeGate): string | null {
  * (§16.49 (a)): "Get the speech model · 464 MB" from the model's own status,
  * the fetch's progress while it runs. Only once main has said how big it is:
  * the size goes on the button before the press. No hook but the store's.
+ * `inline` drops the bar's own border and padding, for a tile that already
+ * has them (the Transcript tile, under its Transcribe).
  */
-export function SpeechModelPress(): ReactNode {
+export function SpeechModelPress({ inline = false }: { inline?: boolean } = {}): ReactNode {
   const status = useEditor((s) => s.helperStatus)
   const model = useEditor((s) => s.speechModel)
   const fetching = useEditor((s) => s.speechFetch)
@@ -118,7 +120,7 @@ export function SpeechModelPress(): ReactNode {
   if (!fetching && (!model || model.present)) return null
   const percent = fetching && typeof fetching.progress === 'number' ? ` ${Math.round(fetching.progress * 100)}%` : ''
   return (
-    <div data-speech-press="" className="flex items-center gap-2 border-b border-ink-800 px-3 py-1.5">
+    <div data-speech-press="" className={`flex items-center gap-2 ${inline ? '' : 'border-b border-ink-800 px-3 py-1.5'}`}>
       <Captions size={12} className="shrink-0 text-ink-500" />
       <span className="min-w-0 flex-1 truncate text-[10.5px] text-ink-400">
         Transcribe <span>{NEEDS_SPEECH_MODEL}</span>

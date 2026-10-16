@@ -6,6 +6,9 @@ import { emptyProject, timelineFrameAt, type Clip, type MediaAsset, type Project
 import { PAUSE_BOUNDARY_MS, segmentIntoSentences, withWordText, type Transcript, type Word } from '@shared/transcript'
 import { rowsOf, runFromRows } from '@shared/ingest/wordRun'
 import { formatMark } from '@shared/ingest/section'
+import { NEEDS_SPEECH_MODEL, speechModelLabel } from '@shared/asr/speechModel'
+import { SIDECAR_METHODS, type HelloResult, type ModelStatus } from '@shared/sidecar/protocol'
+import type { SidecarStatus } from '@shared/sidecar/status'
 
 /*
  * The Transcript tile's half of §3b.6 (docs/CLIPS.md §3b.8), rendered and
@@ -39,6 +42,8 @@ const { TranscriptPanel, TranscriptBody, ClipWords, EditClipWords, CUT_TITLE, CL
   '../../src/renderer/src/components/TranscriptPanel'
 )
 const { rowStamp } = await import('../../src/renderer/src/components/tools/TranscriptRows')
+const { TRANSCRIBE_NEEDS_HELPER } = await import('../../src/renderer/src/components/MediaPool')
+const { POINTER_TITLE } = await import('../../src/renderer/src/components/SettingsPanel')
 
 const FPS = 30
 
@@ -365,5 +370,93 @@ describe('Edit', () => {
     )!
     ;(alpha.props.onEdit as (text: string) => void)('Alfa')
     expect(state().project.transcripts.talk.words.filter((w) => w.text === 'Alfa').map((w) => [w.index, w.startMs])).toEqual([[5, 20_000]])
+  })
+})
+
+/* ------------------------------------------------------ the tile's Transcribe */
+
+describe('the tile’s own Transcribe', () => {
+  /*
+   * Greyed as the Media pool's is (docs/CLIPS.md §3a.4 "Grey every Python
+   * control by its own method"): by asr.transcribe and the speech model on
+   * disk, never by a process being up. It was gated by nothing but a
+   * transcription already running, so with no helper and no model it was
+   * pressable, and ended in a notification instead of the pointer or the
+   * sized press (a verifier's finding).
+   */
+  const helloWith = (capabilities: string[]): HelloResult => ({
+    protocolVersion: 1,
+    python: '3.12.10',
+    platform: 'Windows-AMD64',
+    capabilities,
+    degraded: {},
+    executable: 'C:\\Python312\\python.exe',
+    prefix: 'C:\\Python312',
+    path: []
+  })
+  const ready = (capabilities: string[]): SidecarStatus => ({ state: 'ready', hello: helloWith(capabilities), source: { kind: 'env', python: 'C:\\Python312\\python.exe' } })
+  const SPEECH: ModelStatus = { present: false, bytes: 486_539_264, label: 'the speech model', host: 'huggingface.co' }
+
+  function withHelper(status: SidecarStatus | null, speechModel: ModelStatus | null, transcript: Transcript | null = null): void {
+    load({}, transcript)
+    useEditor.setState({ helperStatus: status, speechModel })
+  }
+
+  /** The tile's Transcribe: the one button whose words are about transcribing. */
+  function transcribeButton(html: string): string {
+    const found = [...html.matchAll(/<button[^>]*>(?:Transcribe|Transcribe again with these words|Transcribing…)<\/button>/g)].map((m) => m[0])
+    expect(found, 'one Transcribe button in the tile').toHaveLength(1)
+    return found[0]
+  }
+  const pointers = (html: string): number => [...html.matchAll(/data-helper-pointer=""/g)].length
+
+  it('is greyed with no helper installed, its title saying where the Install is, and the pointer under it', () => {
+    withHelper({ state: 'absent', offer: { supported: true, kind: 'install', bytes: 1, bytesOnDisk: 1, hosts: [] } }, null)
+    const html = panel()
+    const button = transcribeButton(html)
+    expect(button).toContain('disabled=""')
+    expect(button).toContain(`title="${TRANSCRIBE_NEEDS_HELPER}"`)
+    expect(pointers(html)).toBe(1)
+    expect(html).toContain(`title="${POINTER_TITLE}"`)
+  })
+
+  it('is greyed for a ready helper without asr.transcribe, and for a bare interpreter', () => {
+    for (const status of [ready([SIDECAR_METHODS.beats, SIDECAR_METHODS.faces]), ready([])]) {
+      withHelper(status, { ...SPEECH, present: true })
+      const html = panel()
+      expect(transcribeButton(html)).toContain('disabled=""')
+      expect(transcribeButton(html)).toContain(`title="${TRANSCRIBE_NEEDS_HELPER}"`)
+      expect(pointers(html)).toBe(1)
+    }
+  })
+
+  it('is greyed "needs the speech model" with the method and no model, the sized press under it', () => {
+    withHelper(ready([SIDECAR_METHODS.transcribe]), { ...SPEECH })
+    const html = panel()
+    const button = transcribeButton(html)
+    expect(button).toContain('disabled=""')
+    expect(button).toContain(`title="${NEEDS_SPEECH_MODEL}"`)
+    expect(html).toContain(`>${speechModelLabel(SPEECH)}</button>`)
+    expect(pointers(html)).toBe(0)
+  })
+
+  it('says the helper is starting before main has answered', () => {
+    withHelper(null, null)
+    const html = panel()
+    expect(transcribeButton(html)).toContain('disabled=""')
+    expect(transcribeButton(html)).toContain('title="the AI helper is starting"')
+    expect(pointers(html)).toBe(0)
+  })
+
+  it('can be pressed with the method and the model on disk, its title as before, and again over a transcript', () => {
+    withHelper(ready([SIDECAR_METHODS.transcribe]), { ...SPEECH, present: true })
+    const fresh = transcribeButton(panel())
+    expect(fresh).not.toContain('disabled=""')
+    expect(fresh).toContain('title="Transcribe this clip, listening for these words"')
+    withHelper(ready([SIDECAR_METHODS.transcribe]), { ...SPEECH, present: true }, TALK)
+    const again = panel()
+    expect(again).toContain('>Transcribe again with these words</button>')
+    expect(transcribeButton(again)).not.toContain('disabled=""')
+    expect(pointers(again)).toBe(0)
   })
 })

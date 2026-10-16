@@ -6237,10 +6237,92 @@
     "label": "Transcribe this clip, listening for these words",
     "match": "title",
     "home": "transcript",
-    "needs": "video-clip",
+    "needs": "transcribe-ready",
     "file": "src/renderer/src/components/TranscriptPanel.tsx",
-    "line": 346,
-    "newHome": "Shelf tile Transcript"
+    "line": 373,
+    "newHome": "Shelf tile Transcript",
+    "note": "The tile's own Transcribe, pressable only while the AI helper can asr.transcribe and the speech model is on disk (docs/CLIPS.md §3a.4); greyed, its title says why instead."
+  },
+  {
+    "label": "needs the AI helper — install it in Settings",
+    "match": "title",
+    "home": "transcript",
+    "needs": "video-clip",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 90,
+    "newHome": "Shelf tile Transcript",
+    "note": "The tile's Transcribe greyed with no AI helper able to transcribe: its title, as the Media pool's (transcribeWhy). The bridge's own helper has failed by design."
+  },
+  {
+    "label": "needs the AI helper",
+    "match": "text",
+    "home": "transcript",
+    "needs": "video-clip",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 91,
+    "newHome": "Shelf tile Transcript",
+    "note": "The pointer under the greyed Transcribe (HelperPointer): opens Settings at the AI helper row."
+  },
+  {
+    "label": "install it in Settings",
+    "match": "title",
+    "home": "transcript",
+    "needs": "video-clip",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 93,
+    "newHome": "Shelf tile Transcript",
+    "note": "The pointer's title."
+  },
+  {
+    "label": "needs the speech model",
+    "match": "title",
+    "home": "transcript",
+    "needs": "transcript-no-model",
+    "file": "src/shared/asr/speechModel.ts",
+    "line": 30,
+    "newHome": "Shelf tile Transcript",
+    "note": "The tile's Transcribe greyed while the helper can transcribe and the model is not on disk (§16.49)."
+  },
+  {
+    "label": "needs the speech model",
+    "match": "text",
+    "home": "transcript",
+    "needs": "transcript-speech-press",
+    "file": "src/shared/asr/speechModel.ts",
+    "line": 30,
+    "newHome": "Shelf tile Transcript",
+    "note": "\"Transcribe needs the speech model\" under the tile's Transcribe (MediaPool.tsx SpeechModelPress, inline), beside the sized press."
+  },
+  {
+    "label": "Get",
+    "match": "text",
+    "home": "transcript",
+    "needs": "transcript-speech-press",
+    "part": true,
+    "file": "src/shared/asr/speechModel.ts",
+    "line": 60,
+    "newHome": "Shelf tile Transcript",
+    "note": "The speech model's sized press under the tile's Transcribe, \"Get the speech model · 464 MB\"."
+  },
+  {
+    "label": "the AI helper is starting",
+    "match": "title",
+    "home": "transcript",
+    "needs": "transcript-helper-starting",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 100,
+    "newHome": "Shelf tile Transcript",
+    "note": "The tile's Transcribe before main has answered (transcribeWhy's 'starting')."
+  },
+  {
+    "label": "the AI helper is starting",
+    "match": "text",
+    "home": "transcript",
+    "needs": "transcript-starting-line",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 100,
+    "newHome": "Shelf tile Transcript",
+    "note": "The same words under the greyed Transcribe."
   },
   {
     "label": "Click a row to jump there and pick its words; shift-click another row, or a word, to extend. Or drag Start and End.",

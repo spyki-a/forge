@@ -1622,6 +1622,40 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     patchClip(V, { audioDetached: true })
     return built
   },
+  /*
+   * The Transcript tile's own Transcribe, greyed by its method and the speech
+   * model as the Media pool's is (docs/CLIPS.md §3a.4). On the bridge's own
+   * page the helper has failed, so 'video-clip' shows it greyed with the
+   * pointer; these are its other states.
+   */
+  /* pressable: a video clip selected, the helper able to transcribe, the speech model on disk */
+  'transcribe-ready': async (env) => {
+    const { V } = await videoClip(env)
+    editor().setHelperStatus(harnessReadyHelper())
+    speechModelIs(true)
+    return { ids: { V } }
+  },
+  /* the helper able to transcribe and the model not on disk: greyed "needs the speech model", the sized press under it */
+  'transcript-no-model': async (env) => {
+    const { V } = await videoClip(env)
+    editor().setHelperStatus(harnessReadyHelper())
+    speechModelIs(false)
+    return { ids: { V } }
+  },
+  /*
+   * The same state again, for the press's text under the button: a row is one
+   * label in one home and state, and the title and the text are both "needs
+   * the speech model".
+   */
+  'transcript-speech-press': async (env) => RECIPES['transcript-no-model'](env),
+  /* before main has answered: greyed, "the AI helper is starting" on its title */
+  'transcript-helper-starting': async (env) => {
+    const { V } = await videoClip(env)
+    editor().setHelperStatus(null)
+    return { ids: { V } }
+  },
+  /* …and the same words under it */
+  'transcript-starting-line': async (env) => RECIPES['transcript-helper-starting'](env),
   'clipmenu-open': async (env) => clipMenu(env, false),
   'clipmenu-detached': async (env) => clipMenu(env, true),
 
