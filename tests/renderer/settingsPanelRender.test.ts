@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { PublicDirectorConfig } from '@shared/director/provider'
-import { SettingsPanel, helperState } from '../../src/renderer/src/components/SettingsPanel'
+import { SettingsPanel, dotClass } from '../../src/renderer/src/components/SettingsPanel'
 
 /*
  * The settings panel, rendered (docs/WINDOW.md §3.9, step 6).
@@ -49,8 +49,20 @@ beforeEach(() => {
     directorConfig: null,
     refreshDirector: async () => undefined,
     setDirectorProvider: async () => undefined,
-    sidecarReady: false,
-    sidecarError: null
+    settingsFocus: null,
+    setSettingsFocus: () => undefined,
+    openSettingsAt: () => undefined,
+    helperStatus: null,
+    helperJob: null,
+    helperUi: { busy: null, error: null, removing: null },
+    pressHelper: async () => undefined,
+    setRemoveModels: () => undefined,
+    cancelRemove: () => undefined,
+    confirmRemove: async () => undefined,
+    speechModel: null,
+    speechFetch: null,
+    refreshSpeechModel: async () => undefined,
+    getSpeechModel: async () => undefined
   }
 })
 
@@ -82,20 +94,28 @@ describe('the panel, rendered', () => {
   })
 
   it('shows the AI helper in plain words, with the reason when there is one', () => {
-    fake.state.sidecarError = 'spawn python3 ENOENT'
+    fake.state.helperStatus = { state: 'failed', error: 'spawn python3 ENOENT', source: { kind: 'path', python: 'python3' } }
     const html = render()
     expect(html).toContain('AI helper (Python)')
     expect(html).toContain('>Not running<')
     expect(html).toContain('spawn python3 ENOENT')
+    expect(html).toContain(dotClass('red'))
     expect([...html.matchAll(/coming with Narration/g)]).toHaveLength(2)
+  })
+
+  it('reads Starting, grey, before the helper has answered', () => {
+    const html = render()
+    expect(html).toContain('>Starting<')
+    expect(html).toContain(dotClass('grey'))
+    expect(html).not.toContain(dotClass('red'))
   })
 })
 
-describe('the AI helper state', () => {
-  it('names each state, and an error wins over ready', () => {
-    expect(helperState(true, null)).toEqual({ word: 'Running', dot: 'bg-emerald-500' })
-    expect(helperState(false, null)).toEqual({ word: 'Starting', dot: 'bg-ink-600' })
-    expect(helperState(false, 'gone')).toEqual({ word: 'Not running', dot: 'bg-red-500' })
-    expect(helperState(true, 'gone').word).toBe('Not running')
+describe('the dot', () => {
+  it('has one colour per reading, and they differ', () => {
+    const colours = (['grey', 'green', 'red'] as const).map(dotClass)
+    expect(new Set(colours).size).toBe(3)
+    expect(dotClass('green')).toBe('bg-emerald-500')
+    expect(dotClass('red')).toBe('bg-red-500')
   })
 })

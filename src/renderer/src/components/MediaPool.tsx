@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type DragEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type DragEvent, type ReactNode } from 'react'
 import { Captions, FileWarning, Film, Image as ImageIcon, Link2, Loader2, Music, Upload, X } from 'lucide-react'
 import type { MediaAsset } from '@shared/timeline'
 import { formatDuration, formatBytes } from '@shared/time'
@@ -8,6 +8,10 @@ import { mediaUrl } from '../media'
 import { setDragPayload } from '../dragPayload'
 import type { DragPayload } from '@shared/dragPayload'
 import { BigButton } from './ui/Tile'
+import { NEEDS_SPEECH_MODEL, SPEECH_MODEL_LABEL, speechModelLabel } from '@shared/asr/speechModel'
+import { SIDECAR_METHODS } from '@shared/sidecar/protocol'
+import { helperCan } from '@shared/sidecar/helperCan'
+import { transcribeGate, type TranscribeGate } from '@shared/sidecar/row'
 
 const ICON = { video: Film, audio: Music, image: ImageIcon }
 
@@ -79,6 +83,59 @@ export function Thumbnail({ asset }: { asset: MediaAsset }): ReactNode {
   return <img src={url} alt="" loading="lazy" className="size-full object-cover" />
 }
 
+/**
+ * A greyed Transcribe's title (docs/CLIPS.md §3a.4). The tile's button has no
+ * room for a pointer, so its title says where the Install is.
+ */
+export const TRANSCRIBE_NEEDS_HELPER = 'needs the AI helper — install it in Settings'
+
+/** Why Transcribe is greyed, or null when it can be pressed: by `asr.transcribe` and the speech model, never by a process being up. */
+export function transcribeWhy(gate: TranscribeGate): string | null {
+  switch (gate) {
+    case 'ready':
+      return null
+    case 'no-model':
+      return NEEDS_SPEECH_MODEL
+    case 'starting':
+      return 'the AI helper is starting'
+    case 'no-helper':
+      return TRANSCRIBE_NEEDS_HELPER
+  }
+}
+
+/**
+ * The speech model's sized press, over the pool while Transcribe needs it
+ * (§16.49 (a)): "Get the speech model · 464 MB" from the model's own status,
+ * the fetch's progress while it runs. Only once main has said how big it is:
+ * the size goes on the button before the press. No hook but the store's.
+ */
+export function SpeechModelPress(): ReactNode {
+  const status = useEditor((s) => s.helperStatus)
+  const model = useEditor((s) => s.speechModel)
+  const fetching = useEditor((s) => s.speechFetch)
+  const getSpeechModel = useEditor((s) => s.getSpeechModel)
+  if (!helperCan(status, SIDECAR_METHODS.transcribe)) return null
+  if (!fetching && (!model || model.present)) return null
+  const percent = fetching && typeof fetching.progress === 'number' ? ` ${Math.round(fetching.progress * 100)}%` : ''
+  return (
+    <div data-speech-press="" className="flex items-center gap-2 border-b border-ink-800 px-3 py-1.5">
+      <Captions size={12} className="shrink-0 text-ink-500" />
+      <span className="min-w-0 flex-1 truncate text-[10.5px] text-ink-400">
+        Transcribe <span>{NEEDS_SPEECH_MODEL}</span>
+      </span>
+      <button
+        type="button"
+        onClick={() => void getSpeechModel()}
+        disabled={fetching !== null}
+        title={model ? `Fetched once from ${model.host}, then kept on this computer` : undefined}
+        className="shrink-0 rounded bg-ink-800 px-1.5 py-0.5 text-[10.5px] text-ink-300 hover:bg-ink-700 hover:text-ink-100 disabled:opacity-60"
+      >
+        {fetching ? `Getting ${SPEECH_MODEL_LABEL}…${percent}` : model ? speechModelLabel(model) : null}
+      </button>
+    </div>
+  )
+}
+
 export function MediaPool(): ReactNode {
   const project = useEditor((s) => s.project)
   const importAssets = useEditor((s) => s.importAssets)
@@ -87,7 +144,16 @@ export function MediaPool(): ReactNode {
   const transcribeAsset = useEditor((s) => s.transcribeAsset)
   const cancelTranscribe = useEditor((s) => s.cancelTranscribe)
   const transcribing = useEditor((s) => s.transcribing)
-  const sidecarReady = useEditor((s) => s.sidecarReady)
+  const helperStatus = useEditor((s) => s.helperStatus)
+  const speechModel = useEditor((s) => s.speechModel)
+  const refreshSpeechModel = useEditor((s) => s.refreshSpeechModel)
+  // Transcribe by its own method and the model on disk (docs/CLIPS.md §3a.4), never by the process being up.
+  const why = transcribeWhy(transcribeGate(helperStatus, speechModel))
+  const canTranscribe = helperCan(helperStatus, SIDECAR_METHODS.transcribe)
+  // Is the speech model on disk? Asked once the helper can transcribe and nobody has asked; never downloads.
+  useEffect(() => {
+    if (canTranscribe && speechModel === null) void refreshSpeechModel()
+  }, [canTranscribe, speechModel, refreshSpeechModel])
   const offline = project.assets.filter((a) => a.offline)
   const notify = useEditor((s) => s.notify)
   const [over, setOver] = useState(false)
@@ -175,6 +241,8 @@ export function MediaPool(): ReactNode {
         <div className="mt-2 text-[11px] font-medium uppercase tracking-wide text-ink-400">Media</div>
       </div>
 
+      {project.assets.some((a) => a.kind !== 'image') && <SpeechModelPress />}
+
       {/*
         One bar for everything that is missing, with one button that fixes all
         of it. A project arrives from another machine with a hundred clips
@@ -259,10 +327,10 @@ export function MediaPool(): ReactNode {
                     asset.kind !== 'image' && (
                       <button
                         onClick={() => void transcribeAsset(asset.id)}
-                        disabled={!sidecarReady}
+                        disabled={why !== null}
                         title={
-                          !sidecarReady
-                            ? 'The AI helper (Python) is not running'
+                          why !== null
+                            ? why
                             : hasTranscript
                               ? 'Transcribed — click to redo'
                               : 'Transcribe'

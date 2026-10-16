@@ -26,6 +26,11 @@ import { harnessSubjectTrack } from './reframeStub'
 import { useCatalog } from '../catalog'
 import { usePacks } from '../packs'
 import { SHELF_TOOLS } from '../components/shelf/tools'
+import { THIS_PACK } from '../components/SettingsPanel'
+import { HELPER_PACK } from '@shared/sidecar/packManifest'
+import { SELFTEST_GROUP_NAMES } from '@shared/sidecar/selftest'
+import type { SidecarStatus } from '@shared/sidecar/status'
+import { SPEECH_MODEL_HOST, SPEECH_MODEL_LABEL } from '@shared/asr/speechModel'
 
 /**
  * The UI census: is every control still on screen, in its own place?
@@ -1252,6 +1257,29 @@ function settingsPanel(
 }
 
 /**
+ * A ready AI helper as an installed pack reports it: every method the
+ * manifest expects, every self-test group ok. What the bridge never reaches
+ * on its own (its helper fails by design, bridge.ts sidecarStatus).
+ */
+function harnessReadyHelper(): SidecarStatus {
+  return {
+    state: 'ready',
+    source: { kind: 'pack', pack: HELPER_PACK.pack, root: `harness/python/${HELPER_PACK.pack}` },
+    hello: {
+      protocolVersion: 1,
+      python: HELPER_PACK.python.version,
+      platform: 'harness',
+      capabilities: [...THIS_PACK.expects],
+      degraded: {},
+      executable: 'harness/python',
+      prefix: 'harness',
+      path: []
+    },
+    selftest: Object.fromEntries(SELFTEST_GROUP_NAMES.map((group) => [group, 'ok']))
+  }
+}
+
+/**
  * One recipe per `needs` value: the state a row's control appears in.
  *
  * Every recipe starts from `fresh()` — a new project, nothing imported or
@@ -1286,9 +1314,9 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
    */
   'settings-open': async () => settingsPanel(),
   /* the AI helper has not reported yet */
-  'sidecar-starting': async () => settingsPanel({ prepare: () => editor().setSidecar(false, null) }),
-  /* the AI helper is up */
-  'sidecar-running': async () => settingsPanel({ prepare: () => editor().setSidecar(true, null) }),
+  'sidecar-starting': async () => settingsPanel({ prepare: () => editor().setHelperStatus(null) }),
+  /* the AI helper is up: an installed pack with every feature (docs/CLIPS.md §3a.4's green row) */
+  'sidecar-running': async () => settingsPanel({ prepare: () => editor().setHelperStatus(harnessReadyHelper()) }),
   fullscreen: async () => ({ show: async () => fullScreen(true), close: async () => fullScreen(false) }),
   'newproject-open': async () => ({
     show: async () => menu('new'),
@@ -1856,9 +1884,10 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     await linkFetched(HARNESS_LINKS.noCaptions, 'none')
     return {}
   },
-  /* the same, with the AI helper up: Listen to it is still not built */
+  /* the same, with the AI helper up and the speech model on disk: Listen to it is still not built */
   'link-no-captions-helper': async () => {
-    editor().setSidecar(true, null)
+    editor().setHelperStatus(harnessReadyHelper())
+    useEditor.setState({ speechModel: { present: true, bytes: 0, label: SPEECH_MODEL_LABEL, host: SPEECH_MODEL_HOST } })
     await linkFetched(HARNESS_LINKS.noCaptions, 'none')
     return {}
   },

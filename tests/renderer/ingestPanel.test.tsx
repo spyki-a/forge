@@ -7,6 +7,8 @@ import { json3Kind, transcriptFromTracks } from '@shared/ingest/captions'
 import { formatMark } from '@shared/ingest/section'
 import { rowsOf, runFromRows, runOfChapter, runRange } from '@shared/ingest/wordRun'
 import type { LinkClip } from '@shared/ingest/linkClip'
+import { SIDECAR_METHODS } from '@shared/sidecar/protocol'
+import type { SidecarStatus } from '@shared/sidecar/status'
 
 /*
  * The URL tile's transcript, rendered and pressed (docs/CLIPS.md §3b.2–3b.5,
@@ -613,8 +615,21 @@ describe('the From and To fields', () => {
   })
 })
 
+/** No AI helper on this machine: the state every tester starts in (docs/CLIPS.md §3a.4's Not installed). */
+const NO_HELPER: SidecarStatus = {
+  state: 'absent',
+  offer: { supported: true, kind: 'install', bytes: 213_456_789, bytesOnDisk: 731_234_567, hosts: ['files.pythonhosted.org', 'github.com'] }
+}
+const helloWith = (capabilities: string[]): SidecarStatus => ({
+  state: 'ready',
+  source: { kind: 'env', python: 'C:\\Python312\\python.exe' },
+  hello: { protocolVersion: 1, python: '3.12.10', platform: 'Windows-AMD64', capabilities, degraded: {}, executable: 'python.exe', prefix: '.', path: [] }
+})
+const SPEECH = { present: false, bytes: 486_539_264, label: 'the speech model', host: 'huggingface.co' }
+
 describe('a video with no captions', () => {
   it('says so, greys Listen to it with "needs the AI helper", and keeps From and To typed', async () => {
+    state().setHelperStatus(NO_HELPER)
     state().setIngest({ useRange: true })
     await getTranscript(NO_CAPTIONS)
     expect(state().urlSource?.status).toBe('none')
@@ -626,16 +641,41 @@ describe('a video with no captions', () => {
     expect(html).not.toMatch(/readonly/i)
     expect(html).not.toContain('data-transcript-rows')
 
-    // With the helper up it is still greyed: listening is not built yet, and never downloads here.
-    state().setSidecar(true, null)
+    // A helper up without the method is no helper for this: the reason is the method's, not the process's.
+    state().setHelperStatus(helloWith([SIDECAR_METHODS.beats]))
+    expect(panel()).toContain('needs the AI helper')
+
+    // With the method and no speech model, it says so.
+    state().setHelperStatus(helloWith([SIDECAR_METHODS.transcribe]))
+    useEditor.setState({ speechModel: { ...SPEECH } })
+    expect(panel()).toContain('needs the speech model')
+    expect(panel()).not.toContain('needs the AI helper')
+
+    // With both it is still greyed: listening is not built yet, and never downloads here.
+    useEditor.setState({ speechModel: { ...SPEECH, present: true } })
     const listen = transcriptHosts().find((h) => h.type === 'button' && textOf(h.props.children as ReactNode).trim() === 'Listen to it')
     expect(listen?.props.disabled).toBe(true)
     expect(listen?.props.onClick).toBeUndefined()
     expect(panel()).not.toContain('needs the AI helper')
+    expect(panel()).not.toContain('needs the speech model')
+    expect(panel()).toContain('>soon<')
     expect(started).toHaveLength(0)
   })
 
+  it('makes "needs the AI helper" a pointer that opens Settings at the AI helper row, its words unchanged', async () => {
+    state().setHelperStatus(NO_HELPER)
+    await getTranscript(NO_CAPTIONS)
+    const pointer = transcriptHosts().find((h) => h.type === 'button' && textOf(h.props.children as ReactNode).trim() === 'needs the AI helper')
+    expect(pointer, 'the pointer').toBeTruthy()
+    expect(pointer!.props.title).toBe('install it in Settings')
+    expect(state().settingsOpen).toBe(false)
+    ;(pointer!.props.onClick as () => void)()
+    expect(state().settingsOpen).toBe(true)
+    expect(state().settingsFocus).toBe('helper')
+  })
+
   it('with no language and no caption track of any kind, says so at once — no language to choose, From and To typed, Listen to it greyed', async () => {
+    state().setHelperStatus(NO_HELPER)
     state().setIngest({ useRange: true })
     await getTranscript(NO_TRACKS)
     expect(state().urlSource?.status).toBe('none')

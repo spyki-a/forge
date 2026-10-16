@@ -56,6 +56,7 @@ import { rowOfWord, rowsOf, runFromRows, runOfChapter, runRange, type WordRun } 
 import { clipSourceWindow, clipToRange, clipWords, cutFrames } from '@shared/edit/clipIt'
 import { sourceFrameFor, timelineFrameAt, type Clip, type MediaAsset } from '@shared/timeline'
 import { useEditor } from '../store'
+import { THIS_PACK } from '../components/SettingsPanel'
 import { rowStamp } from '../components/tools/TranscriptRows'
 import { HARNESS_LINKS, harnessIngests, type HarnessIngest } from './bridge'
 
@@ -266,8 +267,7 @@ export async function runClipItCheck(): Promise<ClipItReport> {
     ingest: before.ingest,
     pendingIngests: before.pendingIngests,
     shelfTool: before.shelfTool,
-    sidecarReady: before.sidecarReady,
-    sidecarError: before.sidecarError,
+    helperStatus: before.helperStatus,
     // The Transcript tile's half adds an asset and a clip, and undoes: all put back.
     project: before.project,
     past: before.past,
@@ -283,7 +283,11 @@ export async function runClipItCheck(): Promise<ClipItReport> {
   try {
     tool = 'url'
     editor().setShelfTool('url')
-    editor().setSidecar(false, null)
+    // No AI helper: Listen to it says it needs one (a pointer to Settings).
+    editor().setHelperStatus({
+      state: 'absent',
+      offer: { supported: true, kind: 'install', bytes: THIS_PACK.bytes, bytesOnDisk: THIS_PACK.bytesOnDisk, hosts: THIS_PACK.hosts }
+    })
     editor().setIngest({ url: HARNESS_LINKS.talk, useRange: false, busy: false })
     useEditor.setState({ urlSource: null })
     await frames()
@@ -523,7 +527,7 @@ export async function runClipItCheck(): Promise<ClipItReport> {
       selectedClipId: kept.selectedClipId,
       clipRun: kept.clipRun
     })
-    editor().setSidecar(kept.sidecarReady, kept.sidecarError)
+    editor().setHelperStatus(kept.helperStatus)
     editor().setShelfTool(kept.shelfTool)
     await sleep(0)
   }

@@ -1,6 +1,19 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { X } from 'lucide-react'
 import { isLoopback, type LlmProviderChoice } from '@shared/director/provider'
+import { formatBytes } from '@shared/assets/pack'
+import { SIDECAR_METHODS } from '@shared/sidecar/protocol'
+import { HELPER_PACK } from '@shared/sidecar/packManifest'
+import { helperCan } from '@shared/sidecar/helperCan'
+import {
+  helperRow,
+  packFactsFor,
+  speechModelRow,
+  type HelperActionKind,
+  type HelperDot,
+  type HelperRow,
+  type PackFacts
+} from '@shared/sidecar/row'
 import { useEditor } from '../store'
 
 /**
@@ -12,8 +25,11 @@ import { useEditor } from '../store'
  *                       Director.tsx, which keeps only the line saying who
  *                       would answer (so Direct is never pressed blind) and a
  *                       gear that opens this.
- *   AI helper (Python)  the Python helper's state, which the dot on the gear
- *                       only hints at.
+ *   AI helper (Python)  the Python helper's row (docs/CLIPS.md §3a.4): its
+ *                       state, the presses with their sizes (Install, Repair,
+ *                       Update, Remove, Check again) and the speech model.
+ *                       The ONLY Install in the app (§16.41): every other
+ *                       "needs the AI helper" is a `HelperPointer` to here.
  *   Hosted voice, Pexels  shown and disabled until Narration needs them.
  *
  * THE KEY IS WRITE-ONLY. It lives in the settings file in the main process,
@@ -43,14 +59,199 @@ function Field({ label, children }: { label: string; children: ReactNode }): Rea
 }
 
 /**
- * The AI helper's state in plain words, and the colour of its dot — the one
- * reading the header's gear and this panel's row both show, so they cannot
- * disagree.
+ * This window's pack in the manifest: the sizes the ready and failed rows
+ * name, whose statuses carry no offer, and the `expects` the feature count is
+ * out of. By the renderer's platform ('MacIntel', 'Win32'): the app ships one
+ * build per platform (row.ts `packFactsFor`).
  */
-export function helperState(ready: boolean, error: string | null): { word: string; dot: string } {
-  if (error) return { word: 'Not running', dot: 'bg-red-500' }
-  if (ready) return { word: 'Running', dot: 'bg-emerald-500' }
-  return { word: 'Starting', dot: 'bg-ink-600' }
+export const THIS_PACK: PackFacts = packFactsFor(HELPER_PACK, typeof navigator === 'undefined' ? '' : navigator.platform)
+
+/**
+ * The AI helper's row from the store: the one reading the header's gear and
+ * this panel both show, so they cannot disagree (shared/sidecar/row.ts).
+ */
+export function useHelperRow(): HelperRow {
+  const status = useEditor((s) => s.helperStatus)
+  const job = useEditor((s) => s.helperJob)
+  return helperRow({ status, pack: THIS_PACK, job })
+}
+
+const DOT_CLASS: Record<HelperDot, string> = {
+  grey: 'bg-ink-600',
+  green: 'bg-emerald-500',
+  red: 'bg-red-500'
+}
+
+/** The dot's colour class: grey, green or red. */
+export function dotClass(dot: HelperDot): string {
+  return DOT_CLASS[dot]
+}
+
+/** Every pointer's words: the census rows match them, so they stay as they were. */
+export const NEEDS_THE_HELPER = 'needs the AI helper'
+/** A pointer's title: where the one Install is. */
+export const POINTER_TITLE = 'install it in Settings'
+
+/**
+ * "needs the AI helper", as a small button that opens Settings with the AI
+ * helper row in view (docs/CLIPS.md §3a.4 "Everywhere else is a pointer, not
+ * a second Install", §16.41), as the Director's gear opens the same card.
+ * `data-settings-gear`, so a press on it while the card is open does not
+ * count as a press away from it.
+ */
+export function HelperPointer({ className = '' }: { className?: string }): ReactNode {
+  const openSettingsAt = useEditor((s) => s.openSettingsAt)
+  return (
+    <button
+      type="button"
+      data-settings-gear=""
+      data-helper-pointer=""
+      onClick={() => openSettingsAt('helper')}
+      title={POINTER_TITLE}
+      className={`underline decoration-dotted underline-offset-2 hover:text-ink-200 ${className}`}
+    >
+      {NEEDS_THE_HELPER}
+    </button>
+  )
+}
+
+/** What each press does, on its title. */
+const ACTION_TITLE: Record<HelperActionKind, string> = {
+  install: 'Download the AI helper’s own Python and libraries, install them for this app, and check them',
+  repair: 'Download the AI helper again and replace the one on this computer',
+  update: 'Install the AI helper this version of the app needs, in place of the older one',
+  remove: 'Delete the AI helper from this computer',
+  checkAgain: 'Check the installed AI helper again, downloading nothing: after installing the Visual C++ runtime, say'
+}
+
+/** Each press while it runs: what its button says, and what every other button's title says. */
+const ACTION_BUSY: Record<HelperActionKind, string> = {
+  install: 'Starting the install…',
+  repair: 'Starting the repair…',
+  update: 'Starting the update…',
+  remove: 'Removing…',
+  checkAgain: 'Checking…'
+}
+
+/** A sentence with its links pressable: they open in the browser (main's window-open handler, shell.openExternal). */
+function linked(sentence: string): ReactNode {
+  const parts = sentence.split(/(https:\/\/[^\s,]+)/)
+  return parts.map((part, i) =>
+    i % 2 === 1 ? (
+      <a key={i} href={part} target="_blank" rel="noreferrer" className="text-accent-400 underline">
+        {part}
+      </a>
+    ) : (
+      part
+    )
+  )
+}
+
+/**
+ * The AI helper's row (docs/CLIPS.md §3a.4): the dot, the state, what is on
+ * this machine or why not, the presses with their sizes in the Key row's
+ * small style, Remove's confirm, the last refusal, and the speech model.
+ *
+ * No hook but the store's, so a test can call it as a function and press
+ * what it returns. Every press goes through the store, which calls the
+ * bridge; the EXPORT strip carries a helper job's bar and X, so there is no
+ * second bar here.
+ */
+export function HelperSection(): ReactNode {
+  const row = useHelperRow()
+  const status = useEditor((s) => s.helperStatus)
+  const ui = useEditor((s) => s.helperUi)
+  const press = useEditor((s) => s.pressHelper)
+  const setRemoveModels = useEditor((s) => s.setRemoveModels)
+  const cancelRemove = useEditor((s) => s.cancelRemove)
+  const confirmRemove = useEditor((s) => s.confirmRemove)
+  const speechModel = useEditor((s) => s.speechModel)
+  const speechFetch = useEditor((s) => s.speechFetch)
+  const getSpeechModel = useEditor((s) => s.getSpeechModel)
+  const speech = speechModelRow(speechModel, helperCan(status, SIDECAR_METHODS.transcribe), speechFetch)
+  const waiting = ui.busy !== null ? ACTION_BUSY[ui.busy] : null
+  // A helper job running: every press here waits for it, with its reason (row.ts).
+  const jobReason = row.actions.find((a) => a.disabled !== undefined)?.disabled
+
+  return (
+    <section data-helper-row="" className="space-y-1">
+      <h3 className={heading}>AI helper (Python)</h3>
+      <div className="flex items-start gap-1.5 text-[11px] text-ink-300">
+        <span className={`mt-[5px] size-1.5 shrink-0 rounded-full ${dotClass(row.dot)}`} />
+        <span className="min-w-0 leading-snug">
+          <span>{row.word}</span>
+          {row.line && <span className="text-ink-500"> · {row.line}</span>}
+        </span>
+      </div>
+      {row.actions.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {row.actions.map((action) => (
+            <button
+              key={action.kind}
+              type="button"
+              data-helper-action={action.kind}
+              className={small}
+              disabled={action.disabled !== undefined || ui.busy !== null || (action.kind === 'remove' && ui.removing !== null)}
+              title={action.disabled ?? waiting ?? ACTION_TITLE[action.kind]}
+              onClick={() => void press(action.kind)}
+            >
+              {ui.busy === action.kind ? ACTION_BUSY[action.kind] : action.label}
+            </button>
+          ))}
+        </div>
+      )}
+      {/* Under the presses: the hosts under Install (§16.40 (a)), the Visual C++ runtime's sentence, each integrity problem. */}
+      {row.detail?.map((sentence, i) => (
+        <p key={i} className="break-words text-[10.5px] leading-snug text-ink-500">
+          {linked(sentence)}
+        </p>
+      ))}
+      {ui.removing && (
+        <div data-helper-remove="" className="space-y-1 rounded border border-ink-800 p-2">
+          <p className="text-[10.5px] leading-snug text-ink-300">
+            Remove the AI helper? It frees about {formatBytes(THIS_PACK.bytesOnDisk)}.
+          </p>
+          <label className="flex items-center gap-1.5 text-[10.5px] text-ink-400">
+            <input
+              type="checkbox"
+              checked={ui.removing.models}
+              onChange={(e) => setRemoveModels(e.target.checked)}
+            />
+            also remove the downloaded models
+          </label>
+          <div className="flex gap-1">
+            <button type="button" className={small} disabled={ui.busy !== null} onClick={() => void confirmRemove()}>
+              {ui.busy === 'remove' ? ACTION_BUSY.remove : 'Remove it'}
+            </button>
+            <button type="button" className={small} disabled={ui.busy !== null} onClick={cancelRemove}>
+              Keep it
+            </button>
+          </div>
+        </div>
+      )}
+      {ui.error && <p className="text-[10.5px] leading-snug text-red-800">{ui.error}</p>}
+      {speech && (
+        <div data-speech-model="" className="flex items-center justify-between gap-2 text-[10.5px] text-ink-400">
+          <span className="min-w-0">{speech.text}</span>
+          {speech.get !== undefined && (
+            <button
+              type="button"
+              className={small}
+              disabled={jobReason !== undefined}
+              title={jobReason ?? (speechModel ? `Fetched once from ${speechModel.host}, then kept on this computer: Transcribe needs it` : undefined)}
+              onClick={() => void getSpeechModel()}
+            >
+              {speech.get}
+            </button>
+          )}
+        </div>
+      )}
+      <p className="text-[10.5px] leading-snug text-ink-600">
+        On this machine: transcription, beat finding, depth, stem splitting, the local voice and
+        the Director&apos;s look at your photos. The editor works without it.
+      </p>
+    </section>
+  )
 }
 
 /** A service that has a place here and no settings yet. */
@@ -83,15 +284,32 @@ function SettingsCard({ onClose }: { onClose: () => void }): ReactNode {
   const config = useEditor((s) => s.directorConfig)
   const refresh = useEditor((s) => s.refreshDirector)
   const setProvider = useEditor((s) => s.setDirectorProvider)
-  const sidecarReady = useEditor((s) => s.sidecarReady)
-  const sidecarError = useEditor((s) => s.sidecarError)
+  const focus = useEditor((s) => s.settingsFocus)
+  const setFocus = useEditor((s) => s.setSettingsFocus)
+  const helperStatus = useEditor((s) => s.helperStatus)
+  const speechModel = useEditor((s) => s.speechModel)
+  const refreshSpeechModel = useEditor((s) => s.refreshSpeechModel)
+  const helperBox = useRef<HTMLDivElement>(null)
   const [key, setKey] = useState('')
+  const canTranscribe = helperCan(helperStatus, SIDECAR_METHODS.transcribe)
 
   // Asked on open, so the servers' lines say what is true now. The Director
   // asks on its own mount too; neither depends on the other being on screen.
   useEffect(() => {
     void refresh()
   }, [refresh])
+
+  // The speech model's line: asked once the helper can transcribe and nobody has asked. Never downloads.
+  useEffect(() => {
+    if (canTranscribe && speechModel === null) void refreshSpeechModel()
+  }, [canTranscribe, speechModel, refreshSpeechModel])
+
+  // A pointer's press ("needs the AI helper"): the row in view, once.
+  useEffect(() => {
+    if (focus !== 'helper') return
+    helperBox.current?.scrollIntoView({ block: 'nearest' })
+    setFocus(null)
+  }, [focus, setFocus])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -120,7 +338,6 @@ function SettingsCard({ onClose }: { onClose: () => void }): ReactNode {
   const ollama = status?.find((p) => p.id === 'ollama')
   const openai = status?.find((p) => p.id === 'openai')
   const openaiLocal = config ? isLoopback(config.openai.baseUrl) : true
-  const helper = helperState(sidecarReady, sidecarError)
 
   const modelPicker = (
     id: 'ollama' | 'openai',
@@ -260,18 +477,9 @@ function SettingsCard({ onClose }: { onClose: () => void }): ReactNode {
           )}
         </section>
 
-        <section className="space-y-1">
-          <h3 className={heading}>AI helper (Python)</h3>
-          <div className="flex items-center gap-1.5 text-[11px] text-ink-300">
-            <span className={`size-1.5 shrink-0 rounded-full ${helper.dot}`} />
-            <span>{helper.word}</span>
-          </div>
-          {sidecarError && <div className="text-[10.5px] leading-snug text-ink-500">{sidecarError}</div>}
-          <p className="text-[10.5px] leading-snug text-ink-600">
-            On this machine: transcription, beat finding, depth, stem splitting, the local voice and
-            the Director&apos;s look at your photos. The editor works without it.
-          </p>
-        </section>
+        <div ref={helperBox}>
+          <HelperSection />
+        </div>
 
         <ComingSoon
           name="Hosted voice"

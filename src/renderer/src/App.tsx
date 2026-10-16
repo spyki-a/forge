@@ -6,7 +6,7 @@ import { escapeLeavesFullScreen } from '@shared/fullScreen'
 import { projectDuration } from '@shared/timeline'
 import { AUTOSAVE_INTERVAL_MS } from '@shared/project/recovery'
 import { reframeHelperFrom } from '@shared/reframe/job'
-import { helperRowFrom, type SidecarStatus } from '@shared/sidecar/status'
+import type { SidecarStatus } from '@shared/sidecar/status'
 import { useEditor } from './store'
 import { useCatalog } from './catalog'
 import { activeCaptionStyle } from './captionPreview'
@@ -22,7 +22,7 @@ import { CanvasBar } from './components/CanvasBar'
 import { Shortcuts } from './components/Shortcuts'
 import { NewProject } from './components/NewProject'
 import { CurveTray, useTrayPanel } from './components/CurveTray'
-import { SettingsPanel, helperState } from './components/SettingsPanel'
+import { SettingsPanel, dotClass, useHelperRow } from './components/SettingsPanel'
 import { OutputStrip } from './components/OutputStrip'
 import { ExportStrip } from './components/ExportStrip'
 
@@ -70,14 +70,14 @@ function Notices(): ReactNode {
 }
 
 /**
- * The AI helper's status into the store: the dot and the row's sentence by
- * `helperRowFrom` (src/shared/sidecar/status.ts, where the mapping is
- * tested), and Follow the subject's grey by `reframeHelperFrom`.
+ * The AI helper's status into the store, whole: the header's dot and the
+ * Settings row both read it through `helperRow` (src/shared/sidecar/row.ts,
+ * where every state is tested), and each control greys by its own method
+ * through `helperCan`. Follow the subject's grey is `reframeHelperFrom`.
  */
 function applyHelperStatus(status: SidecarStatus): void {
   const state = useEditor.getState()
-  const row = helperRowFrom(status)
-  state.setSidecar(row.running, row.reason)
+  state.setHelperStatus(status)
   // Follow the subject's grey: decided from the capabilities, not the prose (shared/reframe/job.ts).
   state.setReframeHelper(reframeHelperFrom(status))
 }
@@ -86,11 +86,10 @@ function Header(): ReactNode {
   const project = useEditor((s) => s.project)
   const dirty = useEditor((s) => s.dirty)
   const projectPath = useEditor((s) => s.projectPath)
-  const sidecarReady = useEditor((s) => s.sidecarReady)
-  const sidecarError = useEditor((s) => s.sidecarError)
   const settingsOpen = useEditor((s) => s.settingsOpen)
   const setSettingsOpen = useEditor((s) => s.setSettingsOpen)
-  const helper = helperState(sidecarReady, sidecarError)
+  // The row's own reading, so the gear's dot and the Settings row cannot disagree.
+  const helper = useHelperRow()
 
   return (
     <div className="drag-region flex h-9 shrink-0 items-center justify-center border-b border-ink-800">
@@ -121,7 +120,7 @@ function Header(): ReactNode {
         }`}
       >
         <Settings size={13} />
-        <span className={`size-1.5 rounded-full ${helper.dot}`} />
+        <span className={`size-1.5 rounded-full ${dotClass(helper.dot)}`} />
       </button>
     </div>
   )

@@ -6,6 +6,9 @@ import { formatMark } from '@shared/ingest/section'
 import { runOfChapter, runRange } from '@shared/ingest/wordRun'
 import type { LinkChapter } from '@shared/ingest/args'
 import { TranscriptRows } from './TranscriptRows'
+import { NEEDS_SPEECH_MODEL } from '@shared/asr/speechModel'
+import { transcribeGate } from '@shared/sidecar/row'
+import { HelperPointer } from '../SettingsPanel'
 
 /**
  * The URL tile's transcript of a link (docs/CLIPS.md §3b.1–3b.5, sheets 25
@@ -19,8 +22,10 @@ import { TranscriptRows } from './TranscriptRows'
  * YouTube's own caption track, fetched by yt-dlp with no media and no model:
  * none of this needs the AI helper. A video with no captions says so, and its
  * From and To fields (IngestPanel's) stay how a range is set; **Listen to it**
- * would transcribe it with the helper, and is greyed until that is built
- * (Step P).
+ * would transcribe it with the helper, and is greyed until that is built.
+ * Its reason is honest (docs/CLIPS.md §3a.4): by `asr.transcribe` and the
+ * speech model, "needs the AI helper" (a pointer to Settings), "needs the
+ * speech model", or, with both, "soon".
  *
  * No hook but the store's, so a test can call it as a function and press what
  * it returns.
@@ -154,7 +159,9 @@ function Words({ source }: { source: UrlSource }): ReactNode {
 
 function NoCaptions({ source }: { source: UrlSource }): ReactNode {
   const setIngest = useEditor((s) => s.setIngest)
-  const helper = useEditor((s) => s.sidecarReady)
+  const helperStatus = useEditor((s) => s.helperStatus)
+  const speechModel = useEditor((s) => s.speechModel)
+  const gate = transcribeGate(helperStatus, speechModel)
   return (
     <>
       {/* With no words, a chapter sets the From and To fields instead (§3b.3). */}
@@ -180,7 +187,13 @@ function NoCaptions({ source }: { source: UrlSource }): ReactNode {
           <Ear size={12} />
           Listen to it
         </button>
-        <span className="text-[10px] text-ink-600">{helper ? 'soon' : 'needs the AI helper'}</span>
+        {gate === 'no-helper' ? (
+          <HelperPointer className="text-[10px] text-ink-600" />
+        ) : (
+          <span className="text-[10px] text-ink-600">
+            {gate === 'ready' ? 'soon' : gate === 'no-model' ? NEEDS_SPEECH_MODEL : 'the AI helper is starting'}
+          </span>
+        )}
       </div>
     </>
   )

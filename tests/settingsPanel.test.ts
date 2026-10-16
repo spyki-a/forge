@@ -96,6 +96,13 @@ describe('the model servers leave the Director for the settings panel', () => {
     expect(count(panel, "{modelPicker('openai', openai?.models, config.openai.model)}")).toBe(1)
   })
 
+  it('a pointer’s press brings the AI helper row into view, once (docs/CLIPS.md §3a.4)', () => {
+    // The harness check (helperPackCheck) sees it on screen; this pins the shape where no DOM runs.
+    expect([...panel.matchAll(/<div ref=\{helperBox\}>\s*<HelperSection \/>\s*<\/div>/g)]).toHaveLength(1)
+    expect([...panel.matchAll(/if \(focus !== 'helper'\) return\s*helperBox\.current\?\.scrollIntoView\(\{ block: 'nearest' \}\)\s*setFocus\(null\)/g)]).toHaveLength(1)
+    expect(count(panel, 'scrollIntoView(')).toBe(1)
+  })
+
   it('the panel asks the servers again when it opens', () => {
     expect([...panel.matchAll(/useEffect\(\(\) => \{\s*void refresh\(\)\s*\}, \[refresh\]\)/g)]).toHaveLength(1)
   })
@@ -195,22 +202,26 @@ describe('the header gear', () => {
     expect(gated.map((a) => a.getText().slice(0, 40))).toEqual([])
   })
 
-  it('the helper’s status reaches the store once, through helperRowFrom (src/shared/sidecar/status.ts, tested there)', () => {
-    // Every call of setSidecar in App.tsx, counted: a second, hand-made mapping would be a second call.
+  it('the helper’s status reaches the store once, whole, and the dot is the row’s (src/shared/sidecar/row.ts, tested there)', () => {
+    // Every call of setHelperStatus in App.tsx, counted: a second, hand-made mapping would be a second call.
     const calls = everyNode(file).filter(
-      (n): n is ts.CallExpression => ts.isCallExpression(n) && readName(n.expression) === 'setSidecar'
+      (n): n is ts.CallExpression => ts.isCallExpression(n) && readName(n.expression) === 'setHelperStatus'
     )
-    expect(calls.map((c) => c.getText())).toEqual(['state.setSidecar(row.running, row.reason)'])
-    const rows = everyNode(file).filter(
-      (n): n is ts.VariableDeclaration => ts.isVariableDeclaration(n) && n.name.getText() === 'row'
-    )
-    expect(rows.map((r) => r.initializer?.getText())).toEqual(['helperRowFrom(status)'])
-    // Both in the one function the broadcast and the ask are given to.
+    expect(calls.map((c) => c.getText())).toEqual(['state.setHelperStatus(status)'])
+    // In the one function the broadcast and the ask are given to.
     const owner = (n: ts.Node): string | undefined => {
       const fn = ancestors(n).find((a): a is ts.FunctionDeclaration => ts.isFunctionDeclaration(a))
       return fn?.name?.text
     }
-    expect([owner(calls[0]), owner(rows[0])]).toEqual(['applyHelperStatus', 'applyHelperStatus'])
+    expect(owner(calls[0])).toBe('applyHelperStatus')
+    // The gear's dot reads the row the Settings panel draws: one `useHelperRow()`, in the Header, and no other reading.
+    const helpers = everyNode(file).filter(
+      (n): n is ts.VariableDeclaration => ts.isVariableDeclaration(n) && n.name.getText() === 'helper'
+    )
+    expect(helpers.map((h) => h.initializer?.getText())).toEqual(['useHelperRow()'])
+    const fn = ancestors(helpers[0]).find((a): a is ts.FunctionDeclaration => ts.isFunctionDeclaration(a))
+    expect(fn?.name?.text).toBe('Header')
+    for (const gone of ['sidecarReady', 'sidecarError', 'helperState', 'helperRowFrom']) expect(count(source(APP), gone), gone).toBe(0)
   })
 
   it('the panel is mounted once, unconditionally, and the old AI span is gone', () => {
@@ -260,8 +271,8 @@ describe('on screen it is the AI helper, never the sidecar', () => {
     expect(said).toEqual([])
   })
 
-  it('the Media pool says which helper is missing', () => {
-    expect(count(source('src/renderer/src/components/MediaPool.tsx'), "'The AI helper (Python) is not running'")).toBe(1)
+  it('the Media pool says which helper is missing, and where to install it', () => {
+    expect(count(source('src/renderer/src/components/MediaPool.tsx'), "'needs the AI helper — install it in Settings'")).toBe(1)
   })
 
   /*

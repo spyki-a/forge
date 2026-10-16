@@ -231,6 +231,9 @@ import {
 import { clipFrameAtPlayhead } from '@shared/reframe/playback'
 import { cropAt } from '@shared/render/crop'
 import { KEYED_PROPERTIES, MASK_PROPERTIES } from '@shared/render/keyframes'
+import type { SidecarStatus } from '@shared/sidecar/status'
+import { helperErrorText, helperJobFrom, type HelperActionKind, type HelperJob } from '@shared/sidecar/row'
+import { NEEDS_SPEECH_MODEL, SPEECH_MODEL_LABEL, type SpeechModelProgress } from '@shared/asr/speechModel'
 
 /*
  * Re-exported so every existing import keeps working; the table itself moved to
@@ -574,6 +577,15 @@ interface EditorState {
   /** The settings panel under the header's gear. */
   settingsOpen: boolean
   setSettingsOpen: (open: boolean) => void
+  /**
+   * The section a pointer asked to see (docs/CLIPS.md §3a.4, §16.41): every
+   * "needs the AI helper" opens Settings with the AI helper row in view. The
+   * panel scrolls to it and clears this.
+   */
+  settingsFocus: 'helper' | null
+  /** Open Settings at a section: the pointers' press, as the Director's gear opens the same card. */
+  openSettingsAt: (focus: 'helper') => void
+  setSettingsFocus: (focus: 'helper' | null) => void
 
   /** What the URL tile's panel has in it, kept while other tools are open. */
   ingest: IngestForm
@@ -675,8 +687,31 @@ interface EditorState {
   transcribing: Record<string, { progress: number | null; message?: string }>
   /** Per-asset depth-bake progress; presence means "in flight". */
   baking: Record<string, { progress: number | null; message?: string }>
-  sidecarReady: boolean
-  sidecarError: string | null
+  /**
+   * The AI helper's status as main broadcasts it (App.tsx
+   * `applyHelperStatus`), null until it has answered: the Settings row, the
+   * header's dot (`helperRow`) and every control's grey (`helperCan`) read it.
+   */
+  helperStatus: SidecarStatus | null
+  setHelperStatus: (status: SidecarStatus | null) => void
+  /** The helper job in the job list (`helperJobFrom`), kept by `setJobs`: the row's "Installing · <stage>". */
+  helperJob: HelperJob | null
+  /** The Settings row's presses: the one in flight, the last refusal, and Remove's confirm with its box. */
+  helperUi: HelperUi
+  /** Install, Repair, Update or Check again; Remove opens its confirm. A refusal's sentence lands in `helperUi.error`. */
+  pressHelper: (kind: HelperActionKind) => Promise<void>
+  /** Remove's box, "also remove the downloaded models": off by default (§16.47). */
+  setRemoveModels: (models: boolean) => void
+  cancelRemove: () => void
+  confirmRemove: () => Promise<void>
+  /** `speechModel({})`'s answer (docs/CLIPS.md §16.49); null until asked, or when the ask failed. */
+  speechModel: ModelStatus | null
+  /** The speech model's download while its press is fetching it; null otherwise. */
+  speechFetch: SpeechModelProgress | null
+  /** Ask whether the speech model is on disk. Never downloads. */
+  refreshSpeechModel: () => Promise<void>
+  /** The sized press: fetch the speech model, its progress in `speechFetch`. */
+  getSpeechModel: () => Promise<void>
 
   past: Project[]
   future: Project[]
@@ -1209,10 +1244,19 @@ interface EditorState {
   setBakeProgress: (assetId: string, progress: number | null, message?: string) => void
   cancelTranscribe: (assetId: string) => void
   setTranscribeProgress: (assetId: string, progress: number | null, message?: string) => void
-  setSidecar: (ready: boolean, error?: string | null) => void
   newProject: (choice?: NewProjectChoice) => void
   loadProject: (project: Project, path: string, decisions: DecisionRecord[]) => void
   markSaved: (path: string) => void
+}
+
+/** The Settings row's presses (SettingsPanel.tsx `HelperSection`). */
+export interface HelperUi {
+  /** The press in flight: every button waits for it. */
+  busy: HelperActionKind | null
+  /** The last refusal, as main worded it (HELPER_WORKING, HELPER_BUSY, HELPER_IN_USE_ELSEWHERE…). */
+  error: string | null
+  /** Remove's confirm, open, with its box. */
+  removing: { models: boolean } | null
 }
 
 const HISTORY_LIMIT = 100
@@ -1314,6 +1358,9 @@ export const useEditor = create<EditorState>((set, get) => ({
   setTrayTab: (trayTab) => set({ trayTab }),
   settingsOpen: false,
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
+  settingsFocus: null,
+  openSettingsAt: (settingsFocus) => set({ settingsOpen: true, settingsFocus }),
+  setSettingsFocus: (settingsFocus) => set({ settingsFocus }),
 
   ingest: {
     url: '',
@@ -1587,8 +1634,72 @@ export const useEditor = create<EditorState>((set, get) => ({
 
   transcribing: {},
   baking: {},
-  sidecarReady: false,
-  sidecarError: null,
+  helperStatus: null,
+  setHelperStatus: (helperStatus) => set({ helperStatus }),
+  helperJob: null,
+  helperUi: { busy: null, error: null, removing: null },
+
+  pressHelper: async (kind) => {
+    if (get().helperUi.busy) return
+    if (kind === 'remove') {
+      set((s) => ({ helperUi: { ...s.helperUi, error: null, removing: { models: false } } }))
+      return
+    }
+    set((s) => ({ helperUi: { ...s.helperUi, busy: kind, error: null } }))
+    let error: string | null = null
+    try {
+      if (kind === 'checkAgain') await window.forge.checkHelperAgain()
+      else await window.forge.installHelper(kind === 'repair' ? { repair: true } : kind === 'update' ? { update: true } : {})
+    } catch (err) {
+      error = helperErrorText(err)
+    }
+    set((s) => ({ helperUi: { ...s.helperUi, busy: null, error } }))
+  },
+  setRemoveModels: (models) =>
+    set((s) => (s.helperUi.removing ? { helperUi: { ...s.helperUi, removing: { models } } } : {})),
+  cancelRemove: () => set((s) => ({ helperUi: { ...s.helperUi, removing: null } })),
+  confirmRemove: async () => {
+    const asked = get().helperUi.removing
+    if (!asked || get().helperUi.busy) return
+    set((s) => ({ helperUi: { ...s.helperUi, busy: 'remove', error: null } }))
+    let error: string | null = null
+    try {
+      // `models` exactly as the box was left: off unless it was ticked.
+      await window.forge.removeHelper({ models: asked.models === true })
+      // The models folder went with it: Transcribe asks again.
+      if (asked.models === true) set({ speechModel: null })
+    } catch (err) {
+      error = helperErrorText(err)
+    }
+    set({ helperUi: { busy: null, error, removing: error === null ? null : asked } })
+  },
+
+  speechModel: null,
+  speechFetch: null,
+  refreshSpeechModel: async () => {
+    try {
+      const model = await window.forge.speechModel({})
+      set({ speechModel: model })
+    } catch {
+      // Unknown stays unknown: Transcribe stays greyed, and the press is not offered without its size.
+    }
+  },
+  getSpeechModel: async () => {
+    if (get().speechFetch) return
+    set({ speechFetch: { progress: 0, message: `Getting ${SPEECH_MODEL_LABEL}` } })
+    const stop = window.forge.onSpeechModelProgress((update) => set({ speechFetch: update }))
+    try {
+      // `download: true` only here: the press that showed the size (§16.49).
+      const model = await window.forge.speechModel({ download: true })
+      set({ speechModel: model })
+      if (!model.present) get().notify(`${SPEECH_MODEL_LABEL[0].toUpperCase()}${SPEECH_MODEL_LABEL.slice(1)} could not be downloaded`)
+    } catch (err) {
+      get().notify(helperErrorText(err))
+    } finally {
+      stop()
+      set({ speechFetch: null })
+    }
+  },
 
   past: [],
   future: [],
@@ -5163,7 +5274,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   },
 
   setJobs: (jobs) => {
-    set({ jobs })
+    set({ jobs, helperJob: helperJobFrom(jobs) })
     // The reframe's analyses: collected the way downloads are, below (`syncReframeJobs`).
     syncReframeJobs(jobs)
 
@@ -5354,7 +5465,6 @@ export const useEditor = create<EditorState>((set, get) => ({
   setTranscribeProgress: (assetId, progress, message) =>
     set((s) => ({ transcribing: { ...s.transcribing, [assetId]: { progress, message } } })),
 
-  setSidecar: (ready, error = null) => set({ sidecarReady: ready, sidecarError: error }),
 
   /**
    * Cut a photo into depth planes.
@@ -5433,6 +5543,8 @@ export const useEditor = create<EditorState>((set, get) => ({
       notify(`Transcribed ${asset.name} — ${transcript.segments.length} segments`, 'info')
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
+      // The model went from disk since it was asked (Remove with its box ticked, a cleaned folder): ask again, so the press comes back.
+      if (message.includes(NEEDS_SPEECH_MODEL)) set({ speechModel: null })
       if (!/cancel/i.test(message)) notify(message)
     } finally {
       set((s) => {
