@@ -55,16 +55,69 @@ import from one either. That single fact is the reason for both mechanisms.
 
 ### What is deliberately left out
 
-- **`sidecar/.venv`** — 542MB, and built for one interpreter on one platform.
-  A user's Python is their own; `docs/SIDECAR.md` covers setting it up, and
-  until they do the sidecar reports every optional capability as degraded
-  rather than failing to start. The `requirements*.txt` files DO ship, so the
-  setup step is available on the installed app.
+**The installer ships no Python.** The AI helper's Python is a pack the app
+installs itself, into `userData/python/<pack>/`, when the user presses
+**Install the AI helper** in Settings (below, and `docs/CLIPS.md` §3a).
+
+- **Every `sidecar/.venv*`**, by `!.venv*` and `!.venv*/**` in the sidecar
+  filter (both: electron-builder adds no implied `/**` to a pattern with a
+  dot, app-builder-lib `fileMatcher.js`, so the folder alone would let its
+  contents through). `sidecar/.venv` is development's interpreter, 598 MB
+  by `du -sh` on 2026-10-14 (this said 542 MB), built for one interpreter on
+  one platform; `.venv-faces` is the face finder's measurement venv, 108 MB;
+  any other is a measurement venv too. Until 2026-10-16 the filter named
+  `.venv` and `.venv-faces`, so the next measurement venv beside them would
+  have shipped.
+- **`sidecar/.claude/` and every `.DS_Store`**, by `!.claude`, `!.claude/**`
+  and `!**/.DS_Store` (since 2026-10-16, `a943cd3`; they shipped before).
 - **`sidecar/:memory:.ses`** — a colon is illegal in a Windows filename, so an
   installer carrying this would fail to extract on the platform it is aimed at.
   It is gitignored, which is not the same as unpackaged.
 - **`__pycache__`, `.pyc`** — noise, and compiled for whatever interpreter
   happened to be here.
+
+`tests/packaging.test.ts` judges the filter through app-builder-lib's own
+`getFileMatchers`, so a `.venv-stems` nobody has made yet is refused too.
+
+**What does ship in `resources/sidecar`:** `forge_sidecar/` (the helper, its
+stubs, and `selftest/identity.onnx`, the self-test's 80 B model);
+`pack/` (`lock-darwin-arm64.txt`, `lock-win32-x64.txt`, `resolved.json`,
+`history.json`: the locks the install checks every wheel against, their
+sha256 in the manifest); `requirements*.txt`, no longer "so the setup step
+is available" but for `FORGE_PYTHON`, the escape hatch on a machine that
+cannot download the pack (`docs/SIDECAR.md`); and `scripts/`.
+
+### The AI helper's pack, and the uninstaller
+
+The pack is about 0.7 GB on disk (pack 2: 166 MB to download on the Mac,
+201 MB on Windows), under userData, so it outlives the app's own files.
+
+- **On Windows the NSIS uninstaller removes it.** `build/installer.nsh`,
+  included through `nsis.include`, defines `customUnInstall`, which
+  electron-builder inserts at the start of its uninstall section, before the
+  files go. Its whole body sits inside `${ifNot} ${isUpdated}`: an app update
+  runs the OLD version's uninstaller silently (`/S /KEEP_APP_DATA
+  --updated`), and the guard, spelled as electron-builder's own app-data
+  guard is, keeps the pack through it. Inside: the shell context set to the
+  current user for a per-machine install, then `RMDir /r
+  "$APPDATA\${PRODUCT_NAME}\python"`, and the same under
+  `${APP_PACKAGE_NAME}` when that name differs. Electron names userData
+  after the packaged `package.json`'s name (`forge`, no `productName`), which
+  on NTFS is the same folder as `Forge`; the second line covers a later
+  rename of `productName` (R7's name) without a package rename. **Never the
+  models, the projects, the settings or userData itself**;
+  `deleteAppDataOnUninstall` stays unset. `tests/packaging.test.ts` pins the
+  include, one macro, the guard as its first and last lines, every `RMDir`
+  inside it ending in `\python`, every line one of seven kinds, and the file
+  the macro alone.
+- **Unmeasured:** `makensis` has never compiled the macro (it comes with the
+  package job, which runs only by hand or on a tag), and the guard has never
+  run through a real update. Run the workflow by hand once before the
+  Surface's update run (`docs/CLIPS.md` §3a.9): install, update from the
+  next installer (the pack must still be there), then uninstall
+  (`%APPDATA%\Forge\python` must be gone, `models` kept).
+- **On the Mac there is no uninstaller**: the guide says Settings → AI helper
+  → Remove before dragging the app to the bin.
 
 ### The asset library is NOT in a CI-built installer
 
@@ -110,9 +163,11 @@ yt-dlp. Until that is built, a CI installer has no library.
 
 **From CI**, which is the supported route:
 
-1. Push. The `installer` job runs after the test matrix is green on both
-   platforms — an installer built from a red commit is a thing someone will
-   install.
+1. Run the workflow by hand (Actions → CI → Run workflow) or push a `v*`
+   tag: the `installer` job runs only then, not on every push. It runs after
+   the test matrix is green on both platforms (Windows and `macos-14`, which
+   since 2026-10-16 run on every push and install the AI helper's pack) — an
+   installer built from a red commit is a thing someone will install.
 2. Open the run on GitHub → Artifacts → `forge-windows-latest`.
 3. Unzip, run the `.exe`.
 
@@ -156,5 +211,18 @@ answers:
 5. **Paste a YouTube link.** The first download fetches yt-dlp (~30MB) — this
    is where a missing runtime or a blocked network shows itself, and where the
    fetch's checksum verification either works or says why not.
-6. **The sidecar says "degraded", not "failed".** With no Python installed the
-   app must still be completely usable; anything else is a bug.
+6. **The AI helper says "Not installed", grey, not "failed".** With no Python
+   anywhere the app must still be completely usable; anything else is a bug.
+   Settings → AI helper (Python) reads **Not installed** with **Install the AI
+   helper · 166 MB** (201 MB on Windows; the size comes from the offer, so it
+   follows the pack) and the hosts it downloads from under it, and every
+   Python control elsewhere says "needs the AI helper", a pointer back to that
+   row. A packaged app never starts a Python from PATH, so no dialog appears.
+7. **Press Install.** Its bar and its X are in EXPORT; then the row reads
+   "Running · Python 3.14.8 · pack 2 · 636 MB" (685 MB on Windows), green.
+   On Windows a missing Visual C++ runtime shows as "N of 9 helper features ·
+   … needs Microsoft's Visual C++ runtime", with the link and **Check
+   again**. `docs/CLIPS.md` §3a.9 is this run in full.
+8. **Uninstall (Windows).** `%APPDATA%\Forge\python` is gone afterwards and
+   `models` is kept; after an app update instead, the pack is still there
+   (the `isUpdated` guard, unmeasured until this run).

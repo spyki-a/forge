@@ -21,7 +21,7 @@ under "Decisions the user has to make".
 
 | thing | internal name | what the user sees | why |
 |---|---|---|---|
-| The user's "side car" (left panel: tile home + open tool) | **Shelf** — `components/shelf/Shelf.tsx`, `shelf/tools.ts`, store `shelfTool` | no title on the home; an open tool shows "← Tools · Beat sync" | `sidecar` is the Python helper (`src/main/sidecar/`, `docs/SIDECAR.md`, store `sidecarReady`/`sidecarError`, tooltip "AI sidecar running"). `shelf` appears nowhere in `src/` (grep: 0 files) and only as "off the shelf" in docs. |
+| The user's "side car" (left panel: tile home + open tool) | **Shelf** — `components/shelf/Shelf.tsx`, `shelf/tools.ts`, store `shelfTool` | no title on the home; an open tool shows "← Tools · Beat sync" | `sidecar` is the Python helper (`src/main/sidecar/`, `docs/SIDECAR.md`, store `sidecarReady`/`sidecarError`, tooltip "AI sidecar running"; since 2026-10-16 the store keeps the whole status as `helperStatus`, and the screen says "the AI helper"). `shelf` appears nowhere in `src/` (grep: 0 files) and only as "off the shelf" in docs. |
 | The small sidebar on the timeline for graphs and keyframes | **Curve tray** — `components/CurveTray.tsx`, store `trayOpen`, `trayTab` | rail label "Keys & curves" | `tray` is unused in `src/` and `docs/`; `rail` is already a rendering-path word (`docs/EFFECTS.md:2565`, `docs/PLAN.md:1141` "another rail"), `drawer` is a Library word, `bar` collides with SourceBar and progress bars. |
 | The bottom-of-shelf area that appears on selection | **Trimmer dock** — `components/TrimmerDock.tsx` | "Trimmer" header, then the clip's controls | the user's own word |
 | OUTPUT / EXPORT | `components/OutputStrip.tsx`, `components/ExportStrip.tsx`; store `outputOpen`, `exportOpen` | OUTPUT ▲ / EXPORT ▲ | store fields deliberately avoid a `strip…` prefix: `stripLayout`, `stripCount`, `stripPerHit`, `stripLook`, `stripBeatsPerHit`, `stripBursts`, `stripsBuilding` already mean Strip flashes |
@@ -263,7 +263,7 @@ is lost by it); *coming-soon* = shown, disabled, labelled.
 | OpenAI-shaped Server + Model | `Director.tsx:361` | settings panel | move | |
 | Key (write-only) + Save + Clear | `Director.tsx:370` | settings panel | move | keep write-only: only `hasKey` is read back (`375`) |
 | Check again | `Director.tsx:395` | settings panel | move | the panel calls `refreshDirector` on open; Director keeps its mount call (`66-68`) |
-| AI helper (Python) status | `App.tsx:84` (`sidecarReady`/`sidecarError`) | settings panel | move | |
+| AI helper (Python) status | `App.tsx:84` (`sidecarReady`/`sidecarError`) | settings panel | move | since 2026-10-16 the store's `helperStatus` (App.tsx `applyHelperStatus`), drawn by `SettingsPanel.tsx` `HelperSection` from `shared/sidecar/row.ts` with the Install, Repair, Update, Remove and Check again presses (`docs/CLIPS.md` §3a.4) |
 | Hosted voice (base URL, model, voice, key) | settings file only (`src/main/store.ts:25`), no UI | settings panel | coming-soon | phase 3 (Narration): needs a write-only IPC like the Director's |
 | Pexels key | none | settings panel | coming-soon | phase 3 |
 

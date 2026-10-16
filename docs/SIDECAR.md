@@ -4,11 +4,16 @@ Every local AI capability runs in a separate Python process that Electron superv
 screen, "the AI helper". This is the gate for all of Phase 2 onward.
 
 What it can answer is `capabilities/__init__.py`'s `OPTIONAL`, one row per module, each
-degrading on its own: speech to text (`asr.transcribe`), beats (`audio.beats`), parallax layers
+degrading on its own: speech to text (`asr.transcribe`, and since 2026-10-16 `asr.model`, the
+speech model's status and its press; below), beats (`audio.beats`), parallax layers
 (`depth.layers`), the Director's photo measures (`vision.measure`), stems (`audio.stems`), the
 local voice (`voice.speak`, `voice.voices`), and since 2026-10-13 step 1's two: **the face
 finder** (`vision.faces`, `vision.facesModel`; below) and **the subject finder**
-(`vision.salient`, `vision.salientModel`; below).
+(`vision.salient`, `vision.salientModel`; below). Beside them, always there: `system.hello`,
+`system.ping`, `system.sleep` and, since 2026-10-14, `system.selftest` (Setup, below). The
+installed pack's `expects`, what its check and the Settings row count as "N of 9 helper
+features", is asr's two, beats, depth, measure and the face and subject finders' four
+(`src/shared/sidecar/packManifest.ts`); stems and the voice are in no pack.
 
 ## Why stdio JSON-RPC, not a local HTTP server
 
@@ -67,11 +72,20 @@ limit. Nothing in the editor may depend on the sidecar being alive.
 ## Environment findings
 
 - **Python 3.14 is fine.** `numpy`, `onnxruntime`, `ctranslate2` and `av` all publish cp314
-  arm64 wheels; `faster-whisper` is pure Python. Only `soundfile` is sdist-only — and it
-  isn't needed, because audio decoding goes through the ffmpeg the app already bundles.
+  arm64 wheels; `faster-whisper` is pure Python. Every package of the base pack has a binary
+  wheel for cp314 on both platforms (`docs/CLIPS.md` §3a.1). `soundfile` is not sdist-only:
+  0.14.0 (2026-06-06) ships `py2.py3-none` wheels for both, and librosa 1.0.0 requires it.
+  **Decoding is not one ffmpeg**: beats decodes with the app's bundled ffmpeg
+  (`beats.py:59-64`), but asr decodes with **PyAV** (faster-whisper's `audio.py` calls
+  `av.open`), a third FFmpeg in the app (§3a.1's licences). (This said "only soundfile is
+  sdist-only" and "audio decoding goes through the ffmpeg the app already bundles" until
+  2026-10-16; `sidecar/requirements.txt`'s header still does.)
 - **Disable Hugging Face's Xet backend.** `hf-xet` fetches from `cas-server.xethub.hf.co`,
   a separate CDN host that restricted networks and corporate proxies block. The client sets
-  `HF_HUB_DISABLE_XET=1`; the plain HTTP path is slower.
+  `HF_HUB_DISABLE_XET=1`; the plain HTTP path is slower. **Since pack 2 (2026-10-16) hf-xet is
+  not in the installed pack at all**: depth's and the speech model's downloads both passed
+  without it (`docs/CLIPS.md` §3a.8 row 35), so the lock leaves it out, and `pip check` in the
+  pack names huggingface-hub's want of it beside mediapipe's two. The dev venv still has it.
 - **But the plain path is not huggingface.co alone.** Measured by headers on 2026-10-13 for
   the subject finder (BiRefNet_lite fp16 at the pinned `de15b22…`): the resolve URL on
   `huggingface.co` answers **307** to the repo's new name, `onnx-community/BiRefNet_lite-ONNX`
@@ -124,7 +138,31 @@ is the better European option (native transducer timestamps, ±20-40ms vs Whispe
 ±100-300ms DTW) and slots in beside this as a second tier — see `STACK.md` §2.
 
 Measured on an M-series Mac: `tiny`/int8 transcribes the 11-second JFK fixture in ~640ms,
-roughly 17× realtime, with the model cached in-process after first load.
+roughly 17× realtime, with the model cached in-process after first load. (Since 2026-10-16
+`tiny` is refused: see below.)
+
+**The speech model is a press of its own, pinned** (since 2026-10-16, `docs/CLIPS.md` §3a.4,
+§16.49). `WhisperModel("small", download_root=…)` used to fetch `Systran/faster-whisper-small`
+at `main` on the first Transcribe, 464 MB with nothing on screen naming it, and asked
+huggingface.co at every session's first load. Now:
+
+- `asr.py` pins commit `536b0662742c02347bc0e980a01041f333bce120` and only the four files the
+  load reads: `config.json`, `vocabulary.txt`, `tokenizer.json` and `model.bin`, 486,212,372 B
+  ("464 MB" on the press).
+- **`asr.transcribe` never downloads.** With the model not on disk it answers `unavailable`,
+  "The speech model is not downloaded yet"; it loads the snapshot folder by path with
+  `local_files_only=True`, so a session asks no host (measured: a fresh session with no host
+  allowed transcribed in 1.6 s). Any `model` but `small` is refused.
+- **`asr.model`** answers `{present, bytes, label, host}`, and fetches only with `download:
+  true`, each file through `media.download` at the pinned revision, cancellable at each chunk.
+  The window's press is "Get the speech model · 464 MB" (Settings, the Media pool, the
+  Transcript tile), with its X.
+- The download goes to `huggingface.co`, which answers `model.bin` with a 302 to
+  `us.aws.cdn.hf.co`, so the rule above (`huggingface.co` and `*.hf.co`) holds for it too. Measured
+  through the installed pack without hf-xet: 486,212,372 B in 14.7 s (`EFFECTS.md` §59).
+- `tests/sidecar/test_asr.py` (16, on a bare interpreter too) holds a transcription with the
+  model on disk to make no request (every hub call replaced by one that raises); `asr.int`
+  needs the model seeded in `FORGE_MODELS_DIR` and a `jfk.flac` for its transcription cases.
 
 ## Faces — the helper's first child process
 
@@ -228,11 +266,24 @@ python3 -m venv sidecar/.venv
 sidecar/.venv/bin/python -m pip install -r sidecar/requirements.txt
 ```
 
-This venv is development's route, and the only one that needs pip by hand. Since 2026-10-14
-the app installs a pack of its own: a pinned CPython 3.14.8 with the base pack's wheels,
-fetched and checked against a lock the app ships and installed offline by the pack's own pip
-(`src/main/sidecar/install.ts`, `docs/CLIPS.md` §3a; the Settings row that presses it is
-§3a.4's).
+This venv is development's route, and the only one that needs pip by hand. **An installed app
+uses the pack**: a pinned CPython 3.14.8 with the base pack's wheels (46 on the Mac, 47 on
+Windows since pack 2), fetched and checked against a lock the app ships, installed offline by
+the pack's own pip into `userData/python/<pack>/`, and checked by `system.selftest`
+(`src/main/sidecar/install.ts`, `docs/CLIPS.md` §3a). The user presses it in Settings → AI
+helper (Python) → **Install the AI helper · 166 MB** on the Mac, **· 201 MB** on Windows (since
+2026-10-16; the row is `src/shared/sidecar/row.ts`, with Repair, Update, Remove and Check again
+beside it). It is started as `-E -s -u -B -m forge_sidecar` with a cleaned environment, so
+nothing of a user's own Python reaches it, and `NUMBA_CACHE_DIR` under `userData/helper-cache`,
+so numba's cache never lands in the pack.
+
+The installer ships no Python and no venv (`docs/PACKAGING.md`). In development a pack can
+be installed into `userData/python-dev/` (its own root, so the dev app never touches the
+installed one's); the tests reach a pack through `FORGE_HELPER_PACK=<userData or version
+folder>` (`tests/integration/venv.ts`), started through the pack rung's own launch, and
+`FORGE_PACK_REAL=1 npx vitest run tests/integration/helperPack.int.test.ts` installs one for
+real from the pinned hosts. CI does both on every push, on Windows and `macos-14`
+(`.github/workflows/ci.yml`, CLIPS §3a.6).
 
 Which Python runs the helper is `resolveHelperPython` (`src/shared/sidecar/helperPython.ts`,
 `docs/CLIPS.md` §3a.2). In development: `FORGE_PYTHON` when set, then this venv, then a dev pack
@@ -263,4 +314,8 @@ load as a fresh helper loads them, which `hello` cannot: registration imports to
 preloads its own `msvcp140.dll` for everything after it. So each of six groups (asr, beats,
 onnx, vision, sklearn, faces) runs in its own `<sys.executable> -E -s -B -c` child, one after
 another, 60 s each, and answers `{exit, ms, error}`. The install job runs it after pip, and
-Check again reruns it alone (`docs/CLIPS.md` §3a.3).
+Check again reruns it alone (`docs/CLIPS.md` §3a.3). A failed group greys its methods
+(`SELFTEST_GROUPS`, `src/shared/sidecar/selftest.ts`: the asr group takes both
+`asr.transcribe` and `asr.model`, since 2026-10-16), and the Settings row names it; on
+Windows a loader failure reads "needs Microsoft's Visual C++ runtime" with Microsoft's link
+and Check again.

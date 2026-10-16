@@ -60,7 +60,10 @@ The project's name in the middle, a blue dot beside it while there are unsaved
 changes, and the file's path after it. On the right, the **build stamp** — a
 time of day, whose tooltip says the running app is stale if that time is old —
 and the **gear**, which opens the Settings panel (below). The small dot on the
-gear is the AI helper's: green running, grey starting, red not running.
+gear is the AI helper's, the same reading as its row in Settings: green only
+when it runs with every helper feature; grey while it starts, installs or is
+not installed, and for a pack that runs short of a feature or with a warning;
+red for one that will not start.
 
 Above the header, only when there is something to recover: a banner offering
 an autosave newer than its file, with **Recover** and **Discard**. It is
@@ -167,10 +170,16 @@ append it to the first track of the right kind. Drag one onto the **picture**
 and a chip offers what it should become — see the preview below.
 
 On a video or sound tile, a **captions** button in the bottom-right corner
-(shown on hover) transcribes it; it is green once a transcript exists, and
-greyed with "The AI helper (Python) is not running" when it cannot. While a
-transcription runs, a percent chip takes its place, and clicking the chip
-cancels it.
+(shown on hover) transcribes it; it is green once a transcript exists. When it
+cannot, it is greyed and its tooltip says why: "needs the AI helper — install
+it in Settings", "needs the speech model", or "the AI helper is starting".
+While a transcription runs, a percent chip takes its place, and clicking the
+chip cancels it.
+
+When the AI helper can transcribe but the **speech model** is not on this
+computer, and the pool holds a video or a sound, a bar over the grid reads
+**Transcribe needs the speech model** with **Get the speech model · 464 MB**;
+while it downloads, "Getting the speech model… N%" with an X that stops it.
 
 When files have gone missing, a red bar above the grid says how many, with one
 **Relink…** for all of them. A missing file's tile says Offline.
@@ -244,8 +253,10 @@ When the details name no language, **Choose the language** offers English,
 Hindi, Telugu, Tamil and Spanish — unless the video has no caption track at
 all, which is said at once instead. A video with no captions says **This video
 has no captions**, its chapter chips set From and To instead, and **Listen to
-it** is greyed with **needs the AI helper** (or **soon** when the helper is
-running — transcribing a link's sound is Step P's). If the fetch fails —
+it** is greyed. Beside it: **needs the AI helper**, a small underlined button
+that opens Settings at the AI helper's row; or "needs the speech model"; or
+"the AI helper is starting"; or **soon** when the helper can transcribe and
+the speech model is here — transcribing a link's sound is not built yet. If the fetch fails —
 offline, say — **Could not get the transcript.** with the reason, and From
 and To stay typed fields.
 
@@ -336,7 +347,10 @@ follow at once. A word the
 transcriber was unsure of is underlined. At the bottom, **Listen for** takes
 names and words (the couple, the venue, a brand) for the transcriber to expect,
 and **Transcribe again with these words** runs it again — which replaces any
-corrections. With no transcript yet, the same button says **Transcribe**.
+corrections. With no transcript yet, the same button says **Transcribe**. It
+is greyed as the Media pool's is, its tooltip saying why, and under it the
+way on: **needs the AI helper** (the button to Settings' row), the speech
+model's **Get the speech model · 464 MB**, or "the AI helper is starting".
 
 ### Director
 
@@ -535,9 +549,11 @@ helper) and every clip of that file can follow it. The button reads **Follow
 the subject · gets the face finder, 1.1 MB, first time** until the face
 finder is on disk — the press fetches it ("Getting the face finder…" with
 its percent), then starts the analysis, which is a row in EXPORT's list
-while it runs ("Finding the subject…" with its percent here). Greyed with
-**needs the AI helper** without Python (or "the AI helper is starting"); a
-clip that already follows keeps following without it. On a followed clip:
+while it runs ("Finding the subject…" with its percent here). Greyed when the
+AI helper cannot find faces, with **needs the AI helper** under it, a small
+underlined button that opens Settings with the AI helper's row in view (or
+"the AI helper is starting"); a clip that already follows keeps following
+without it. On a followed clip:
 **3 shots · 1 stacked** (the shots, and how many put two people one over
 the other), **Unfollow** (the crop stays where it is at the playhead,
 static), **Stack two people** (on by default; off frames the larger face
@@ -746,6 +762,14 @@ place of a speed. Its X cancels it while it runs **and while it waits its turn**
 (analyses run one at a time, beside the exports), and it has no Show in folder:
 the track it keeps is the app's own.
 
+The AI helper's install is a row here too: **Installing the AI helper** (or
+**Repairing**, **Updating**), its stage in place of a speed ("downloading · 31
+of 166 MB · 4.2 MB/s", "installing libraries · 12 of 46", "checking the AI
+helper · beats"), wrapping rather than clipping. Its X cancels it, waiting or
+running; a download stopped part-way keeps what it verified, so the next
+press says "· N MB left". No Show in folder. While it runs, the Settings row
+says its bar and its X are here.
+
 ---
 
 ## The canvas bar
@@ -766,8 +790,8 @@ to 9:16** — follow the subject in every landscape video clip not yet following
 (one analysis per file, each a row in EXPORT). It never changes the canvas: the
 canvas already has the shape. While it shows, the photo chip does not, since its
 "Switch to 16:9" would be the opposite advice; the rule is
-`shared/edit/reframeOffer.ts`. Greyed with "needs the AI helper" without
-Python (or "the AI helper is starting"), and while every file it would
+`shared/edit/reframeOffer.ts`. Greyed with **needs the AI helper** beside it,
+the same button to Settings' row (or "the AI helper is starting"), and while every file it would
 follow is already being analysed. It counts only clips ON THE TIMELINE,
 landscape by their upright size, not a Director's blurred backdrop or a
 strip flash; on a portrait canvas other than 9:16 it reads "Landscape video
@@ -1007,10 +1031,54 @@ OpenAI-shaped one has a **Key** that is write-only — **Save** sends it, **Clea
 forgets it, and the field only ever says it is saved. **Check again** asks the
 servers afresh, and a line under each says why it is not ready when it is not.
 
-**AI helper (Python)** — Running, Starting or Not running, with the reason when
-it failed, and what it does on this machine: transcription, beat finding,
-depth, stem splitting, the local voice and the Director's look at your photos.
-The editor works without it.
+**AI helper (Python)** — the one place it is installed (`HelperSection`; the
+reading is `shared/sidecar/row.ts`, the same one the gear's dot shows). Every
+"needs the AI helper" elsewhere in the window is a small underlined button
+that opens this card with this row in view. A dot, a word, what follows it,
+then its buttons, small in the Key row's style, each with its size, and the
+sentences under them:
+
+- **Not installed** (grey) — **Install the AI helper · 166 MB** on the Mac,
+  201 MB on Windows, or "· N MB left" after a stopped download; under it,
+  how much it uses on disk, the hosts it downloads from (github.com and the
+  host it redirects to, release-assets.githubusercontent.com, and
+  files.pythonhosted.org) and that it is its own Python, leaving any other
+  alone.
+- **Installing**, **Repairing**, **Updating** (grey) — with the stage; "Its
+  bar and its X are in EXPORT." Every button waits, its tooltip saying so.
+- **Running · Python 3.14.8 · pack 2 · 636 MB** (green) — **Repair · N MB**
+  (what it would download) and **Remove**.
+- **Running · 8 of 9 helper features · <why>** (grey) — a pack short of a
+  feature; **Check again** (no download: after installing Microsoft's Visual
+  C++ runtime, say), Repair and Remove, and each reason under them, the
+  Visual C++ one with Microsoft's link. A pack whose check found a Python
+  path outside it shows the warning the same way, with Repair.
+- **Needs an update** (grey) — **Update the AI helper · N MB**; the older pack
+  is not used until then.
+- **Not running · <why>** (red) — a pack that will not start ("Python is
+  missing from the AI helper's folder (removed by antivirus?)", Windows'
+  policy blocking programs in the user folder, …); **Repair** first, and
+  Remove. Grey with no button when another Forge window is repairing it.
+- **Not available on this computer** (grey) — macOS 13, or Windows on Arm;
+  no button.
+- **Starting** (grey) — before the helper answers.
+- From `FORGE_PYTHON` or the development venv, it names the source and is
+  green only with every feature; with `FORGE_PYTHON`, Install stays,
+  "used instead of FORGE_PYTHON once installed".
+
+**Remove** asks first: "Remove the AI helper? It frees about 636 MB.", with a
+box, off, **also remove the downloaded models · <size>**, then **Remove it**
+and **Keep it**. A refusal ("the AI helper is working…") shows in red under
+the buttons.
+
+Under a running helper: **Speech model** — "· 464 MB · on this machine", or
+**Get the speech model · 464 MB** (Transcribe needs it), or "Getting the
+speech model… N%" with an X; then a line saying each model downloads on its
+own press, from huggingface.co and *.hf.co (storage.googleapis.com for the
+face finder), and needs a direct connection or a proxy in `HTTPS_PROXY`.
+Last, what the helper does on this machine — transcription, beat finding,
+depth, stem splitting, the local voice and the Director's look at your
+photos — and that the editor works without it.
 
 **Hosted voice** and **Pexels** — listed, and marked "coming with Narration".
 

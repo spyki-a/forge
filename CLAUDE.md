@@ -146,11 +146,21 @@ npm run pack:win    # electron-builder — must run ON Windows, see below
 ```
 
 CI runs typecheck, the **full** suite including the ffmpeg integration tests,
-and the build, on **Windows** for every push — macOS joins on a `v*` tag or a
-manual run (`a2be321`, runner cost), so the Mac is covered by running the suite
-locally. **Read the result after every push**: it is at
+and the build, on **Windows and `macos-14`** for every push (macOS came back
+to the push on 2026-10-16 with the AI helper's pack: the repo is public, so
+the minutes are free). After the suite, both runners install the AI helper's
+pinned pack for real (or check the week's cached one again), probe every URL
+it pins, run the helper's suites from inside it, and run `pip check`; Windows
+also lists the pack's native imports (`docs/CLIPS.md` §3a.6). The installers
+are built only on a manual run or a `v*` tag. A commit that touches only
+docs or `*.md` starts no run (`paths-ignore`). **Read the result after every
+push**: it is at
 github.com/spyki-a/forge/actions (the `gh` CLI cannot reach GitHub from the
-sandbox), and a failure's message is in its annotations without signing in.
+sandbox), and a failure's message is in its annotations without signing in:
+`curl` `api.github.com/repos/spyki-a/forge/actions/runs?head_sha=<the FULL
+40-character sha>` (a short sha finds nothing), then
+`…/check-runs/<job id>/annotations`. The job's log needs admin rights (403),
+so a run's own test totals cannot be read that way.
 CI was red on Windows for a day in B3 before anyone looked. The integration tests are
 in CI deliberately: a runner's `D:\a\forge\forge` path is exactly the shape that
 breaks filter arguments.
@@ -183,7 +193,7 @@ vulnerabilities, and is not finished.
 | Electron's binary | `node_modules/electron/dist/` empty. npm 11's allow-scripts gate withholds the postinstall, and its warning names only `electron-winstaller` and `esbuild` — **never `electron`**. `esbuild` needs nothing; its platform package ships the exe | `node node_modules/electron/install.js` |
 | Visual C++ Redistributable | *Cannot find native binding … npm bug 4828*, from `@electron-internal/extract-zip`. The message is wrong — `index.win32-x64-msvc.node` is present and bundled. `vcruntime140.dll` is not, so `dlopen` fails | `winget install Microsoft.VCRedist.2015+.x64` |
 | a real Python | the twenty sidecar tests fail with `SidecarError: The AI helper stopped (code 9009)` — and since 2026-10-08 so do `tests/integration/sidecarMedia.int.test.ts` and three tests in `tests/oldestFfmpeg.test.ts` that fetch the helper's own ffmpeg argv through its interpreter (it said "sidecar" before 2026-10-03; on screen the Python process is now "the AI helper", because the user's "sidecar" is the left panel). 9009 is Windows for *command not found* — `python` resolves to the Store App Execution Alias stub, which is not an interpreter | `winget install Python.Python.3.12` |
-| `FORGE_PYTHON` | still 9009 if `python` on PATH is the Store stub. Since 2026-10-14 (`docs/CLIPS.md` §3a.2) the development fallback is `python` on Windows and `python3` elsewhere, chosen by `src/shared/sidecar/helperPython.ts`, and `client.ts` has no fallback of its own; a packaged app never runs a PATH Python at all. With python.org's Python installed, `python.exe` is found and nothing more is needed; set this only when `python` is the stub | `setx FORGE_PYTHON "…\Python312\python.exe"` |
+| `FORGE_PYTHON` | still 9009 if `python` on PATH is the Store stub. Since 2026-10-14 (`docs/CLIPS.md` §3a.2) the order is `src/shared/sidecar/helperPython.ts`'s, and `client.ts` has no fallback of its own. **In development** (`npm run dev`, the tests): `FORGE_PYTHON`, then `sidecar/.venv`, then a dev pack the app installed under `userData/python-dev/` (its own root, so the dev app never touches an installed app's pack), then `python` on Windows and `python3` elsewhere. **In a packaged app**: the pack the user installed from Settings (`userData/python/<n>/`), then `FORGE_PYTHON`, the escape hatch when no pack is installed, then nothing: it never runs a PATH Python. So an installed app on the Surface keeps using the `setx` interpreter only until Install is pressed there, and its row says "used instead of FORGE_PYTHON once installed". With python.org's Python installed, `python.exe` is found and nothing more is needed; set this only when `python` is the stub. The tests reach an installed pack with `FORGE_HELPER_PACK=<userData>` instead | `setx FORGE_PYTHON "…\Python312\python.exe"` |
 
 The first two are independent, by elimination: a clean `npm ci` with the runtime
 already present still produced no `electron.exe`, and the manual installer still
@@ -200,7 +210,11 @@ missing capability as degraded rather than crashing" and, since 2026-10-08,
 "every optional method is a capability or degraded" — a module that cannot
 import is withdrawn whole (`sidecar/forge_sidecar/media.py` is stdlib-only at
 import for the same reason). Install the requirements when you want the
-capabilities, not to get the suite green.
+capabilities, not to get the suite green. (CI's later steps run the
+capability suites again from inside the installed pack, where a pack that
+does not run fails them rather than letting them skip, and
+`sidecarMedia.int`'s Python cases may skip nothing; `npm test` itself stays
+on the bare interpreter.)
 
 Each of these reports something other than its cause. None is discoverable by
 reading the code.

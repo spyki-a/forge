@@ -42,7 +42,7 @@ more to a careful closed beta.
 | R1 | the even-grid fallback when there are no beats | 0.5 |
 | R2 | the first-hour bugs (six of them, plus 7–9 from `CLIPS.md`) | 1.5 (7–9's 1.5 counted in `CLIPS.md` step 0) |
 | R3 | copy rules and one blind rating run | 0.5 + your 45 minutes |
-| R4 | beats without Python: a TypeScript beat tracker (the full route is `CLIPS.md` Step P, planned in full in its §3a on 2026-10-14, not built) | 3 (Step P's 9.5–13 counted in `CLIPS.md`) |
+| R4 | beats without Python: a TypeScript beat tracker (the full route is `CLIPS.md` Step P, planned in its §3a on 2026-10-14 and **built 2026-10-14/16**; its exit, the clean Mac and the Surface, is yours) | 3 (Step P's 9.5–13 counted in `CLIPS.md`) |
 | R5 | portrait phone media: rotation and EXIF — DONE 2026-10-08 | 1.5 (built first, in `CLIPS.md` step 0, §3.1) |
 | R6 | the library pack's fonts and licences | 0.5 |
 | R7 | name, app id, icon, version | 0.5 (once you decide) |
@@ -165,7 +165,10 @@ to the brief's CTA. Then `npm run eval:rate` once on the existing runs, so
 (`src/main/sidecar/service.ts:26`), so no installed user gets beat cuts,
 captions or depth — and the app spawns a bare `python3` at launch, which on a
 Mac without the Command Line Tools may raise Apple's install dialog
-(unverified; check it in R12).
+(unverified; check it in R12). *(Both were true when written. Since
+2026-10-14 a packaged app never starts a Python from PATH (`CLIPS.md` §3a.2),
+so the dialog cannot come from the app; since 2026-10-16 the user installs
+the AI helper's own Python from Settings, below.)*
 
 **The fix, the cheap route.** A TypeScript beat tracker in
 `src/main/audio/beats.ts`: decode to mono PCM with the bundled ffmpeg
@@ -184,11 +187,30 @@ within 2 BPM).
 Python pack under `userData` (estimated here at 5 to 10 days, 300 MB or more), and no Python
 half ships in an installer before it. Decided 2026-10-05 (`SHEETS.md:806-809`,
 `CLIPS.md` §16.25); it is built inside `CLIPS.md`, before the beta resumes.
-Its plan is written in full in `CLIPS.md` §3a (2026-10-14, not built): a
+Its plan is written in full in `CLIPS.md` §3a (2026-10-14): a
 pinned CPython 3.14.8 and a hash-pinned wheel lock installed offline under
 `userData/python/`, 170 MB to download on the Mac and 205 MB on Windows,
-about 0.7 GB on disk, 9.5–13 days, with its decisions open in
-`CLIPS.md` §16.36–50.
+about 0.7 GB on disk, 9.5–13 days, with its decisions in
+`CLIPS.md` §16.36–53 (all answered as recommended).
+
+**Built 2026-10-14/16** (`CLIPS.md` §3a.1–§3a.7, three slices; `EFFECTS.md`
+§57–59). One press in Settings → AI helper (Python) → **Install the AI
+helper · 166 MB** on the Mac, **· 201 MB** on Windows (pack 2: hf-xet left
+the lock), 636 / 685 MB on disk; its bar and X in EXPORT; Repair, Update,
+Remove and Check again on the same row; every Python control greyed by its
+own method, each "needs the AI helper" a pointer to that row; the speech
+model its own press ("Get the speech model · 464 MB"); the NSIS uninstaller
+removing the pack. Installed for real on the dev Mac (53–58 s). **What the
+exit still owes** (`CLIPS.md` §3a.9): CI's first run with the pack on both
+runners (the next push); the clean Mac, from a DMG fetched through a
+browser; and the Surface, in Windows Sandbox or a new account, with an
+update and an uninstall. Those are R12's machines too.
+
+**Whether the cheap route below is still wanted is yours.** It was written
+before the pack: with the pack built it would serve only a user who has not
+pressed Install, or whose machine has no pack (macOS 13, Windows on Arm),
+where R1's even-grid fallback (not built yet) would land an ad without
+beats.
 
 **Tests.** `tests/beats.test.ts` on synthetic clicks at known tempos;
 `tests/integration/beats.int.test.ts` against the reference recordings'
@@ -270,7 +292,19 @@ text. REFERENCES.md:154 still says the repo is private; it is public.
 
 A README for testers: Gatekeeper and SmartScreen steps; Apple Silicon and
 x64 only; install the library first; LM Studio with `google/gemma-4-e2b`,
-picked by hand in the gear (the model defaults to none); how to report. The
+picked by hand in the gear (the model defaults to none); how to report.
+**The AI helper** (since 2026-10-16, `CLIPS.md` §3a.4, §16.40–41): Settings
+(the gear) → AI helper (Python) → **Install the AI helper · 166 MB** (201 MB
+on Windows), the only place it is installed; on a Mac, Remove it there before
+deleting the app. The hosts a restricted network must allow: for the
+install, github.com (which redirects to release-assets.githubusercontent.com)
+and files.pythonhosted.org, fetched through the system's own network
+settings, proxy included (Chromium's stack, `CLIPS.md` §15 row 19; not yet
+measured behind a real proxy, so say so in the guide); for each
+model press, huggingface.co and *.hf.co (storage.googleapis.com for the face
+finder), which need a direct connection or a proxy set in `HTTPS_PROXY`,
+as the Settings row says. On Windows, if the row says "needs Microsoft's
+Visual C++ runtime", install it from the link and press Check again. The
 app's own hints send people to Ollama (`src/main/director.ts:182`) and Auto
 prefers it, yet Ollama has never been run against a real model here: run it
 once and record it in `EVAL.md`, or point the hints at LM Studio.
@@ -289,8 +323,11 @@ hand or on a tag — so no installer contains any Phase C work; the only
 recorded install is Windows at a3b71bb. Build from HEAD, install on a clean
 Mac and on the Surface, add the pack, Direct with a song and a model, export,
 play. This settles the Director over IPC with a live model, the moments on
-the Surface's GPU, the Surface's look-pass wait and memory, and the Mac
-`python3` dialog. What it finds goes back into R2.
+the Surface's GPU, the Surface's look-pass wait and memory, and the AI
+helper's Install from Settings on both (`CLIPS.md` §3a.9's clean Mac and
+Surface runs are the same machines, so do them together). *(The Mac
+`python3` dialog question is gone: since 2026-10-14 a packaged app never
+starts a Python from PATH.)* What it finds goes back into R2.
 
 ### R13 — The rest of C4: glitch and liquid · two to three days
 
