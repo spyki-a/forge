@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createElement, isValidElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { emptyProject, type MediaAsset } from '@shared/timeline'
-import { NEEDS_SPEECH_MODEL, speechModelLabel } from '@shared/asr/speechModel'
+import { NEEDS_SPEECH_MODEL, SPEECH_MODEL_NOT_DOWNLOADED, speechModelLabel } from '@shared/asr/speechModel'
 import { SIDECAR_METHODS, type HelloResult, type ModelStatus } from '@shared/sidecar/protocol'
 import type { SidecarStatus } from '@shared/sidecar/status'
 
@@ -163,7 +163,8 @@ describe('the speech model’s press', () => {
       forge: {
         ...forge,
         transcribe: async () => {
-          throw new Error(`Error invoking remote method 'asr:transcribe': Error: ${NEEDS_SPEECH_MODEL}`)
+          // The helper's own Unavailable, as main passes it through and Electron wraps it.
+          throw new Error(`Error invoking remote method 'asr:transcribe': SidecarError: ${SPEECH_MODEL_NOT_DOWNLOADED}`)
         }
       }
     })

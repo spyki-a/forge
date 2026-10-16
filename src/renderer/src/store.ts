@@ -233,7 +233,7 @@ import { cropAt } from '@shared/render/crop'
 import { KEYED_PROPERTIES, MASK_PROPERTIES } from '@shared/render/keyframes'
 import type { SidecarStatus } from '@shared/sidecar/status'
 import { helperErrorText, helperJobFrom, type HelperActionKind, type HelperJob } from '@shared/sidecar/row'
-import { NEEDS_SPEECH_MODEL, SPEECH_MODEL_LABEL, type SpeechModelProgress } from '@shared/asr/speechModel'
+import { SPEECH_MODEL_LABEL, SPEECH_MODEL_NOT_DOWNLOADED, type SpeechModelProgress } from '@shared/asr/speechModel'
 
 /*
  * Re-exported so every existing import keeps working; the table itself moved to
@@ -5543,8 +5543,9 @@ export const useEditor = create<EditorState>((set, get) => ({
       notify(`Transcribed ${asset.name} — ${transcript.segments.length} segments`, 'info')
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
-      // The model went from disk since it was asked (Remove with its box ticked, a cleaned folder): ask again, so the press comes back.
-      if (message.includes(NEEDS_SPEECH_MODEL)) set({ speechModel: null })
+      // The model went from disk since it was asked (Remove with its box ticked, a cleaned folder): the helper's own
+      // sentence for it (asr.py NOT_DOWNLOADED), so ask again and the press comes back.
+      if (message.includes(SPEECH_MODEL_NOT_DOWNLOADED)) set({ speechModel: null })
       if (!/cancel/i.test(message)) notify(message)
     } finally {
       set((s) => {

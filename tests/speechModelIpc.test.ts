@@ -10,6 +10,7 @@ import {
   SPEECH_MODEL_LABEL,
   SPEECH_MODEL_METHOD,
   SPEECH_MODEL_REPO,
+  SPEECH_MODEL_NOT_DOWNLOADED,
   speechModelLabel,
   speechModelRequest
 } from '../src/shared/asr/speechModel'
@@ -182,6 +183,9 @@ describe('one name for one method', () => {
     expect(one(/^MODEL_REPO = "([^"]+)"$/gm)).toBe(SPEECH_MODEL_REPO)
     expect(one(/^MODEL_LABEL = "([^"]+)"$/gm)).toBe(SPEECH_MODEL_LABEL)
     expect(one(/^MODEL_HOST = "([^"]+)"$/gm)).toBe(SPEECH_MODEL_HOST)
+    // The sentence a Transcribe without the model rejects with, which the store listens for: written once, raised once.
+    expect(one(/^NOT_DOWNLOADED = "([^"]+)"$/gm)).toBe(SPEECH_MODEL_NOT_DOWNLOADED)
+    expect([...asr.matchAll(/raise Unavailable\(NOT_DOWNLOADED\)/g)]).toHaveLength(1)
     // Every register site in the file, not the first: the model's is one of two.
     const registered = [...asr.matchAll(/server\.register\("([^"]+)"/g)].map((m) => m[1])
     expect(registered).toContain(SPEECH_MODEL_METHOD)

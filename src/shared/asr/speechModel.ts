@@ -6,9 +6,10 @@
  * first press (asr.py as it was). So the model is a press of its own, "Get the
  * speech model · 464 MB", on the button's own label before anything is
  * fetched (§0's click rule), pinned to one commit of the repository, and
- * `asr.transcribe` answers `unavailable` with `NEEDS_SPEECH_MODEL` while it is
- * not on disk. Shared, so the Python side's label, the Settings row, the
- * MediaPool's Transcribe and the census name one thing.
+ * `asr.transcribe` answers `unavailable` with `SPEECH_MODEL_NOT_DOWNLOADED`
+ * while it is not on disk; the greyed Transcribe's title says
+ * `NEEDS_SPEECH_MODEL`. Shared, so the Python side's label, the Settings row,
+ * the MediaPool's Transcribe and the census name one thing.
  *
  * Pure: no disk, no electron, no node.
  */
@@ -27,6 +28,15 @@ export const SPEECH_MODEL_HOST = 'huggingface.co'
 
 /** The greyed Transcribe's reason while the model is not on disk, and the census row's text. */
 export const NEEDS_SPEECH_MODEL = 'needs the speech model'
+
+/**
+ * What the helper itself answers `asr.transcribe` with while the model is not
+ * on disk (asr.py `NOT_DOWNLOADED`, its `Unavailable`; main passes it through
+ * unchanged): a press that finds the model gone since it was asked rejects
+ * with it, and the store asks again on hearing it, so the sized press comes
+ * back. tests/speechModelIpc.test.ts holds it equal to asr.py's.
+ */
+export const SPEECH_MODEL_NOT_DOWNLOADED = 'The speech model is not downloaded yet'
 
 /** The helper's method for the status and the fetch (ModelParams → ModelStatus), registered beside `asr.transcribe`. */
 export const SPEECH_MODEL_METHOD = 'asr.model'
