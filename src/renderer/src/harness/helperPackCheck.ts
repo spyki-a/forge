@@ -531,6 +531,8 @@ export async function runHelperPackCheck(): Promise<HelperPackReport> {
     expect(policy.text === `Not running · ${HELPER_BLOCKED_BY_POLICY}`, `a pack Windows' policy refuses reads "${policy.text}"`)
     expect(policy.dot === 'red', `a refused pack is drawn ${policy.dot}`)
     expect(JSON.stringify(labels(policy)) === JSON.stringify([repairLabel, 'Remove']), `a refused pack offers ${JSON.stringify(labels(policy))}`)
+    const packHostsLine = hostsSentence(THIS_PACK.bytesOnDisk, THIS_PACK.hosts)
+    expect(policy.detail.includes(packHostsLine), `a refused pack's Repair has no hosts under it: ${JSON.stringify(policy.detail)}`)
 
     const unsupported = await setState('unsupported', 'Not available on this computer')
     const reason = harnessHelper.status.state === 'absent' && !harnessHelper.status.offer.supported ? harnessHelper.status.offer.reason : '?'

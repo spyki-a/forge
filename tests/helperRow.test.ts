@@ -249,6 +249,9 @@ describe('Running, from the pack', () => {
     expect(r.line).toBe(`${PACK.expects.length} of ${PACK.expects.length} helper features · ${integrity[0]}`)
     for (const problem of integrity) expect(r.detail).toContain(problem)
     expect(kinds(r)).toContain('repair')
+    // The Repair it offers downloads: its hosts under it, after the problems (§16.40 (a)).
+    expect(r.detail).toContain(PLAN_HOSTS(PACK.bytesOnDisk))
+    expect(r.detail!.indexOf(PLAN_HOSTS(PACK.bytesOnDisk))).toBeGreaterThan(r.detail!.indexOf(integrity[1]))
     // An empty list is a pack as it should be.
     expect(row(readyPack({ integrity: [] })).dot).toBe('green')
   })
@@ -306,6 +309,8 @@ describe('Update, Not running, Not available', () => {
     const pack = row({ state: 'failed', error: HELPER_BLOCKED_BY_POLICY, source: packSource })
     expect([pack.word, pack.dot, pack.line]).toEqual([ROW_WORDS.notRunning, 'red', HELPER_BLOCKED_BY_POLICY])
     expect(pack.actions[0]).toEqual({ kind: 'repair', label: `Repair · ${formatBytes(PACK.bytes)}` })
+    // Repair downloads: the hosts a restricted network must allow are under it (§16.40 (a)).
+    expect(pack.detail).toContain(PLAN_HOSTS(PACK.bytesOnDisk))
     const env = row({ state: 'failed', error: 'The AI helper stopped (code 9009)', source: envSource })
     expect(env.dot).toBe('red')
     expect(kinds(env)).toEqual(['install'])

@@ -304,7 +304,13 @@ function failedRow(error: string, source: HelperSource | undefined, pack: PackFa
   const base = { word: ROW_WORDS.notRunning, dot: 'red' as const, line: error }
   // A status with no source (the harness bridge's) names no rung: nothing to press.
   if (source?.kind === 'pack') {
-    return { ...base, actions: [{ kind: 'repair', label: repairLabel(packRepairBytes(pack, left)) }, REMOVE], hosts: pack.hosts }
+    // Repair is the way out here, and it downloads: its hosts under it (§16.40 (a)), as under a damaged pack's.
+    return {
+      ...base,
+      detail: [hostsSentence(pack.bytesOnDisk, pack.hosts)],
+      actions: [{ kind: 'repair', label: repairLabel(packRepairBytes(pack, left)) }, REMOVE],
+      hosts: pack.hosts
+    }
   }
   if (source?.kind === 'env') {
     return {
@@ -330,7 +336,15 @@ function readyRow(status: Extract<SidecarStatus, { state: 'ready' }>, pack: Pack
   if (source.kind === 'pack') {
     const repair: HelperAction = { kind: 'repair', label: repairLabel(packRepairBytes(pack, status.bytesLeft)) }
     if (integrity.length > 0) {
-      return { word: ROW_WORDS.running, dot: 'grey', line: `${features} · ${integrity[0]}`, detail: [...integrity, ...reasons], actions: [repair, REMOVE], hosts: pack.hosts }
+      // Repair is what the warning offers, and it downloads: its hosts under it (§16.40 (a)).
+      return {
+        word: ROW_WORDS.running,
+        dot: 'grey',
+        line: `${features} · ${integrity[0]}`,
+        detail: [...integrity, ...reasons, hostsSentence(pack.bytesOnDisk, pack.hosts)],
+        actions: [repair, REMOVE],
+        hosts: pack.hosts
+      }
     }
     if (!whole) {
       return {

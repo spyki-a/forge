@@ -8235,6 +8235,17 @@
     "note": "A pack Windows' policy refuses to start (§3a.4 \"Group Policy\"), red \"Not running\" with Repair."
   },
   {
+    "label": "on disk. Downloads from",
+    "match": "text",
+    "home": "settings",
+    "needs": "helper-policy",
+    "part": true,
+    "file": "src/shared/sidecar/row.ts",
+    "line": 136,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "The hosts sentence under a failed pack's Repair, which downloads (§16.40 (a)), as under a damaged pack's."
+  },
+  {
     "label": "Remove the AI helper? It frees about",
     "match": "text",
     "home": "settings",
