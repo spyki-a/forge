@@ -320,6 +320,10 @@ length would both waste a decode and run past the end of the shot.
 is the same frames spread thinner — a stream claiming 30fps while delivering 7.
 The `fps` filter immediately after restores the count, and **everything
 downstream then sees a perfectly ordinary clip of exactly `duration` frames**.
+*(2026-10-16: on the 2018 Windows build a slowed clip lost its last source
+frame here, because that `setpts` passes its EOF on un-retimed and `fps`
+drops the frame it holds; a slowing retime now starts with
+`tpad=stop_mode=clone:stop=1`, `RETIME_TAIL`, §59.)*
 That matters: motion, rotation, opacity keyframes and the transitions all read
 clip-relative time, and any of them seeing a half-rate stream would have drifted.
 
@@ -5626,7 +5630,9 @@ ultrafast -qp 0 -pix_fmt yuv420p -c:a aac -shortest p3-src<r>.mp4`. The
 probes are `ffprobe -v error -select_streams v:0 -show_entries
 frame=best_effort_timestamp -of csv=p=0 <f>` and `… stream=time_base`. The
 first probe prints an empty line after frame 0, a blank from the filter, so
-its count is checked against `-count_frames`' `nb_read_frames`. **The first
+its count is checked against `-count_frames`' `nb_read_frames`. *(That
+blank is the Mac's ffprobe; the win32 package prints frame 0 as `0,`,
+§59, so per-frame reads use `-of json`.)* **The first
 frame must be at pts 0**: otherwise the mp4's edit list, written in ms,
 shifts every pts by −5/15360.
 
@@ -7376,10 +7382,615 @@ not the pack.
   the 8.3-name `realpath`, and the receipt's walk there (13,525 files and
   about 0.37 s with the receipt on the Mac).
 - **CI:** row 28 (`bytesOnDisk` and the paths on both platforms), row 37,
-  and every test of this slice on Windows (nothing is pushed).
+  and every test of this slice on Windows (nothing is pushed). *(This
+  slice's tests first ran on Windows on 2026-10-16, red on four test
+  shapes; §59.)*
 - **Row 19:** `net.fetch`, its `'manual'` redirect, and a proxy's own
-  sentence.
-- **Row 35's other half:** asr's download without hf-xet.
+  sentence. *(Electron's half probed 2026-10-16, §59: `net.fetch` cannot
+  carry the hand-followed redirects, so the pack's fetch is `net.request`.)*
+- **Row 35's other half:** asr's download without hf-xet. *(Passed
+  2026-10-16, §59; hf-xet left the lock as pack 2.)*
 - **Not established:** what the first load of a new native file waits on.
 - **A decision, not a measurement:** numba's cache in the installed pack
-  (`NUMBA_CACHE_DIR`, or the drift accepted).
+  (`NUMBA_CACHE_DIR`, or the drift accepted). *(Decided as
+  `NUMBA_CACHE_DIR`, CLIPS §16.52, and measured, §59.)*
+
+## 59. The AI helper's last slice — the speech model's pin and its download without hf-xet (row 35), Electron's fetcher probed (row 19), numba's cache moved (§16.52), hf-xet out of the lock, the harness and census, and the first Windows CI run of the pack (row 37) (2026-10-16)
+
+For `docs/CLIPS.md` §3a.4–§3a.7 and §3a.8 rows 19, 35 and 37, Step P's
+slice C: thirty-two commits after `c7a2a86`, `aa377f9` … `1a043c9`, not
+pushed when this was written. `c7a2a86`, which carries slices A and B, was
+pushed the same day, and its Windows CI run is the last part of this
+section. Development Mac (M1 Pro, macOS 26.5.2), inside the dev sandbox: no
+Metal, no port to bind, the network through a filtering proxy that lets a
+command reach only the hosts it names. The one exception is row 19's probe,
+run as an Electron main-process script in the user's own Terminal, outside
+the sandbox. Each number names who measured it: the speech-model lane (the
+pin, row 35's asr half, pack 2), the packaging and CI lane (row 19, the URL
+probe, the PE listing, the installs in clean copies), the main-process lane
+(numba's cache, libuv's codes), the window lane and the harness lane (the
+row on screen, the harness check, the census), the CI reader, three
+verifiers, the fix phase, or the recorder (the suites at `1a043c9`).
+
+### The speech model's pin
+
+The speech-model lane, with `huggingface.co` allowed:
+
+    curl https://huggingface.co/api/models/Systran/faster-whisper-small?blobs=true
+
+`sha` **`536b0662742c02347bc0e980a01041f333bce120`**, `lastModified`
+2023-11-23T10:57:09Z. The same commit, with the same sizes, was already in
+the app's `userData/models` on the dev Mac, where Transcribe had fetched it
+at `main`. Every file:
+
+| file | bytes | fetched by the press |
+|---|---|---|
+| `.gitattributes` | 1,477 | no |
+| `README.md` | 1,998 | no |
+| `config.json` | 2,370 (blob `e5047537…`) | yes |
+| `model.bin` | 483,546,902 (LFS sha256 `3e305921506d8872816023e4c273e75d2419fb89b24da97b4fe7bce14170d671`) | yes |
+| `tokenizer.json` | 2,203,239 (blob `7818adb6…`) | yes |
+| `vocabulary.txt` | 459,861 (blob `c9074644…`) | yes |
+
+- **What the load needs is 486,212,372 B**, the four files WhisperModel
+  reads. `formatBytes` writes it "464 MB", the plan's figure, so the press
+  reads "Get the speech model · 464 MB". The helper's own progress
+  messages use `media._megabytes`, which is decimal (486 MB), so the window
+  shows the fraction and its own label, never the message's size.
+- faster-whisper 1.2.1's `allow_patterns` also list
+  `preprocessor_config.json`; this repository has none.
+- The resolve URLs (`curl -D -` with a `0-0` range): `config.json` answers
+  307 to `/api/resolve-cache/…` on `huggingface.co` itself; `model.bin`
+  answers 302 to `us.aws.cdn.hf.co/xet-bridge-us/…` with `X-Linked-Size:
+  483546902`. So the speech model needs `*.hf.co` as BiRefNet does
+  (`SIDECAR.md`).
+- A verifier fetched the API again: the same sha and the same four sizes,
+  summing to `asr.py`'s `MODEL_FILES` exactly.
+
+### Row 35, asr's half: the download without hf-xet
+
+The speech-model lane, on a copy of the installed pack 1:
+
+1. `cp -Rp <pack 1> $TMPDIR/forge-hfxet-asr/1` (689,492 KiB by `du`) took
+   7.5 s.
+2. `<copy>/python/bin/python3.14 -E -s -m pip uninstall -y hf-xet` printed
+   "Successfully uninstalled hf-xet-1.6.0" (`hf_xet` was 7,672 KiB and its
+   dist-info 316 KiB by `du`); `find_spec('hf_xet')` then returned None.
+3. `node scratchpad/measure/requests.mjs <copy python> sidecar <userData>
+   '<requests JSON>'`, a driver new for this (from `hello.mjs`) that sends
+   several requests to one helper. It starts the pack rung's `-E -s -u -B
+   -m forge_sidecar` from `sidecar/`, with `PYTHON*` and `HF_*` dropped,
+   `FORGE_MODELS_DIR` and `FORGE_CACHE_DIR` under a temp userData,
+   `HF_HUB_DISABLE_XET=1` and `HF_HUB_DISABLE_TELEMETRY=1`. Allowed:
+   `huggingface.co`, `*.hf.co`, `cdn-lfs.hf.co`, `cdn-lfs-us-1.hf.co` and
+   `cdn-lfs.huggingface.co`.
+
+The hello took 12,970 ms, cold (a copy is new files, §58), and listed
+`asr.model` and `asr.transcribe`. Then, in one session:
+
+| request | answer | time |
+|---|---|---|
+| `asr.model {}` | present false, bytes 486,212,372, label "the speech model", host `huggingface.co` | 1 ms |
+| `asr.transcribe` | −32001 "The speech model is not downloaded yet" | 0 ms |
+| `asr.model {download: true}` | present true, after 54 progress notifications | 14,681 ms |
+| `asr.model {}` | present true | 2 ms |
+| `asr.transcribe` on the speech file | 22 words, language `en` at probability 1, `durationMs` 7297 | 2,127 ms |
+
+- **The download**: "downloading the speech model (under 1 MB, first run
+  only)" at 13,172 ms, "(2.2 MB, …)" at 13,326 ms, and "(484 MB, …)" from
+  14,013 to 27,648 ms. So `model.bin` took about 13.6 s (about
+  33.8 MiB/s), and the whole 486,212,372 B 14.68 s (about 31.6 MiB/s),
+  from `huggingface.co` and `us.aws.cdn.hf.co`. No sandbox violation was
+  reported; stderr held only huggingface_hub's "You are sending
+  unauthenticated requests to the HF Hub".
+- **The transcription**: "loading small", then "analysing audio" 740 ms
+  later; the words "And so, my fellow Americans, ask not what your country
+  can do for you, ask what you can do for your country."
+- **On disk**: four blobs, 486,212,372 B (486,212,563 B with
+  `CACHEDIR.TAG`), 483,892 KiB by `du`; the snapshot folder holds 4
+  symlinks.
+- **A fresh session with NO host allowed**: hello 319 ms, `asr.model`
+  present true, the transcription 1,555 ms and the same 22 words. So a
+  session's first load asks no host (`local_files_only=True` on the
+  snapshot's path).
+- **The fixture**: `espeak-ng -v en-us -s 150 -w speech.wav "<the
+  sentence>"`, 7.297 s at 22,050 Hz mono, converted to 16 kHz FLAC by the
+  bundled ffmpeg for `asr.int` (`$TMPDIR/asr-check/jfk.flac`).
+  `tests/fixtures` has no `jfk.flac`, and macOS `say` writes empty 4,096 B
+  files in the sandbox.
+- The copy is deleted.
+
+**A verifier on pack 2, by hand** (its own `python3.14`, `-E -s -u -B -m
+forge_sidecar`, `HF_HUB_DISABLE_XET=1`, no host allowed): on an empty
+models folder `asr.model {}` gave present false and 486,212,372 B,
+`asr.transcribe` −32001 in 0 ms, and `{download: false}` and `{download:
+'true'}` fetched nothing and made no models folder. With the lane's seeded
+models: hello 275 ms, present true, `jfk.flac` transcribed in 2,439 ms to
+the same 22 words, and `model: 'tiny'` refused.
+
+**What it settles:** neither of the pack's Hugging Face downloads needs
+hf-xet (depth's passed on 2026-10-14, §58), so it leaves the lock.
+
+### hf-xet out of the lock: pack 2
+
+**Its share**, measured the two ways the PRE-CI figures were (the
+speech-model lane):
+- the Mac: hf-xet's 9 RECORD files in the dev venv, `stat()`ed,
+  **8,152,766 B**. The 47 distributions still summed to 587,943,059 B in
+  10,728 files that day; the 46 sum to 579,790,293 B in 10,719;
+- Windows: `curl -r -65536` of `hf_xet-1.6.0-cp38-abi3-win_amd64.whl`
+  (4,033,128 B) and its central directory parsed: 7 entries,
+  **9,805,289 B** uncompressed (`hf_xet.pyd` 9,499,136 B), of which `.py`
+  107 B. `pack_lock.py` takes the index bytes out, and the `.py` bytes out
+  of the sum it scales by the dev venv's `.pyc` ratio (105,047,119 /
+  79,995,354), so about 140 B more.
+
+**The bump** (`sidecar/.venv/bin/python -I scripts/pack_lock.py --bump
+--check-github`, with `pypi.org`, `files.pythonhosted.org` and
+`api.github.com` allowed). The completeness check passed on both targets
+(46 and 47 lock lines; allowlisted: huggingface-hub → hf-xet and mediapipe's
+two; colorama still Windows' only extra), and both interpreter pins matched
+GitHub's release `20261001` (26,680,498 B, `69e48cd7…`; 23,227,899 B,
+`b7ff8b70…`).
+
+| | darwin-arm64 | win32-x64 |
+|---|---|---|
+| wheels | 46, 147,633,807 B | 47, 187,843,524 B |
+| with the interpreter (the button) | 174,314,305 B, **"166 MB"** | 211,071,423 B, **"201 MB"** |
+| lock sha256 | `ed220aedbf65b240650da4c7904f8ef955ff9a2c6f8d6f008a08ce1280a2abb2` | `ecbbec7b85fbcf89f866e34140510e1e60e52db903c6f4aae62db9d03d07e3ec` |
+| lock file | 49 lines (3 of header) | 50 |
+| `bytesOnDisk`, PRE-CI | 666,871,585 B | 718,681,542 B |
+| what `formatBytes` writes for it | **"636 MB"** | **"685 MB"** |
+
+Pack 1's hashes (`9932ef36…`, `6ec44386…`) stay in `history.json`.
+`resolved.json` gains `"excluded": ["hf-xet"]`; `expects` gains `asr.model`,
+so the row counts 9 features.
+
+- **`formatBytes` writes GB only from 1 GiB**, so neither platform's pack
+  reads in GB on screen: 666,871,585 B is "636 MB", not the "0.6 GB" the
+  lane's note gave. (§3a.1's slice-A note said pack 1's 675,024,351 B
+  would print "0.6 GB"; it prints "644 MB". Corrected there.)
+- **The guards.** Before `--bump` the run exited 1, "the lock or
+  interpreter of ['darwin-arm64', 'win32-x64'] changed under pack 1; run
+  again with --bump to make it pack 2", and the five generated files'
+  sha256 were unchanged. A second `--bump` exited 1, "--bump, but nothing
+  changed since pack 2". A rerun without `--bump` reproduced every file
+  byte for byte. In a scratch copy with the allowlist entry deleted, the
+  run exited 1: "darwin-arm64 needs hf-xet (huggingface-hub: "hf-xet<2.0.0,
+  >=1.5.2; platform_machine == …"), which EXCLUDE leaves out of the pack".
+- A verifier, in a clean copy with `sidecar/.venv` linked: HEAD's history
+  and no `--bump` exited 0 and reproduced all five files; pack 1's
+  `history.json` (from `1a5051c^`) and no `--bump` exited 1 with the
+  sentence above, the other four files unchanged.
+
+### Pack 2 installed on the Mac (rows 27 and 28 again)
+
+**The speech-model lane's install** into a fresh userData under "Forge
+Bräutigam" (`FORGE_PACK_REAL=1 NODE_USE_ENV_PROXY=1 FORGE_PACK_KEEP=1 npx
+vitest run tests/integration/helperPack.int.test.ts`, with `github.com`,
+`release-assets.githubusercontent.com`, `objects.githubusercontent.com` and
+`files.pythonhosted.org` allowed), and **the packaging lane's four** in
+clean copies, into `$TMPDIR/laneC-pack é/userData`:
+
+| | speech-model lane | packaging lane (a), fresh | (c), stale receipt | (d), with `2664a63`'s fetchFile |
+|---|---|---|---|---|
+| the job | **58,312 ms** | **52,997 ms** | 54,000 ms | 50,460 ms |
+| Checking | 4 ms | 1 ms | | |
+| Downloading | 5,366 ms, 174,314,305 B at 30.98 MiB/s, 47 of 47 files | 6,317 ms at 26.32 MiB/s | 5,284 ms (31.46 MiB/s) | 5,101 ms (32.59 MiB/s) |
+| Unpacking | 3,498 ms (unpack 948, compile 2,550) | 2,668 ms (unpack 482: 1,689 files, 68,060,050 B, longest 106 / 97; compile 2,186) | | |
+| Installing the libraries | 12,893 ms | 11,504 ms | | |
+| Checking the AI helper | 36,549 ms | 32,505 ms | | |
+| the first hello | 11,357 ms | 11,089 ms | 11,060 ms | |
+| asr / beats / onnx / vision / sklearn / faces | 252 / 20,314 / 108 / 288 / 2,045 / 1,406 | 211 / 17,414 / 108 / 284 / 1,770 / 937 | beats 19,779 | |
+
+Every group exited 0. (c) is the receipt's `lockSha256` zeroed, which the
+test removes and installs fresh; (d) ran in vitest, where `packFetch`
+keeps Node's fetch, so it proves the changed `fetchFile.ts`, not
+Chromium's stack. Both (c) and (d) passed 11 of 11; (a) passed 10 of 11,
+the progress case failing on the check's new per-group texts (`a1aaf0e`),
+which would have failed CI's first push and was fixed in `446f99b`.
+
+**The receipt and the disk:**
+
+| | speech-model lane | packaging lane (a) |
+|---|---|---|
+| `bytesOnDisk`, apparent | 667,609,685 B (+0.11 % on the PRE-CI 666,871,585) | 667,495,529 B |
+| `du` | 697,860,096 B | 697,757,696 B (`du -sk`) |
+| longest path / directory | 161 / 107 | 161 / 107 |
+| files, folders | 13,515, 1,441 | 13,515, 1,441 |
+| `spaceNeeded` | 925,304,480 B | 925,304,480 B |
+
+Pack 1's first install was 675,763,387 B in 13,525 files and 1,446 folders
+(§58): pack 2 is 8.2 MB, 10 files and 5 folders less, hf-xet's share. On
+the packaging lane's run `statfs` `bavail × bsize` equalled `df`'s Avail
+again (23,880,040,448 B). 46 dist-infos; `asr.model` among hello's
+capabilities.
+
+**pip check** in pack 2 exits 1 with exactly three lines:
+"huggingface-hub 1.31.0 requires hf-xet, which is not installed.",
+"mediapipe 0.10.35 requires matplotlib, which is not installed." and
+"mediapipe 0.10.35 requires opencv-contrib-python, which is not
+installed." `venv.ts` `pipCheckProblems` allows the first only while the
+lock pins no `hf_xet` wheel.
+
+**The cached mode** (`helperPack.int` with `FORGE_PACK_USERDATA` over a pack
+this build accepts, which runs the job's Check again and every assertion):
+the packaging lane's run took 2,907 ms (hello 294 ms; asr 211, beats 873,
+onnx 108, vision 247, sklearn 630, faces 179 ms; the helper's calls
+`['restart']`), 11 of 11 in 4.2 s. A verifier on its own copy of pack 2
+under `$TMPDIR/verC2-cached é/userData`: 11 of 11, 0 of 47 files fetched,
+the check 36.2 s (a copy is cold). The fix phase's, after `3e90349`: Check
+again 2,982 ms, 12 of 12.
+
+**Through the pack** (the packaging lane, `FORGE_HELPER_PACK=<that
+userData>`): `packPipCheck.int` 1 of 1; `sidecarMedia.int` 1 of 1, "Ran 148
+tests in 15.5 s" on `…/python/2/python/bin/python3.14`, 0 skipped. With
+`FORGE_HELPER_PACK="$TMPDIR/no pack here"` both fail, "names no AI helper
+pack that runs here". The speech-model lane: `asr.int` and `sidecar.int`
+from inside pack 2 with no host allowed, 28 passed. The scratch userData
+(0.9 GB) and the clean copies are deleted; pack 2's kept folder is
+`$TMPDIR/forge-pack-RdsNTS/Forge Bräutigam/userData/python/2`, and pack 1's
+is gone.
+
+### numba's cache, moved (§16.52)
+
+**The main-process lane**, on the kept pack 1
+(`$TMPDIR/forge-pack-mhKz4Q/Forge Bräutigam/userData/python/1`):
+
+1. `find <pack> \( -name '*.nbi' -o -name '*.nbc' \)`: 38 files,
+   1,190,255 B (`stat -f %z` summed), in `librosa/__pycache__` (18),
+   `librosa/core` (6) and `librosa/util` (14), as §58 found them.
+2. Those files alone deleted (`find …/site-packages/librosa \( -name '*.nbi'
+   -o -name '*.nbc' \) -delete`): 0 left.
+3. `FORGE_HELPER_PACK=<userData> npx vitest run
+   tests/integration/beatsNumbaMeasure.tmp.int.test.ts`, a temporary copy
+   of `beats.int` whose one change passed `cacheDir` and `modelsDir` under
+   that userData (deleted afterwards): exit 0, 13 passed, 10.24 s.
+4. **After: 0 cache files in the pack; 38 in
+   `<userData>/helper-cache/numba`, 1,190,271 B**, in three folders
+   (`librosa_83e5b18f…`, `core_18491b81…`, `util_03d837dd…`). 16 B more than
+   in the pack: the index files carry the source's path.
+5. `beats.int` as committed: 13 passed, and **38 files, 1,190,239 B, in the
+   pack again**. Its launch (`venv.ts` `launchFor`) passed `cacheDir: ''`,
+   so `NUMBA_CACHE_DIR` was never set.
+
+A verifier reproduced step 5 on its own copy of pack 2 (38 files,
+1,186,879 B; 0 before, and `helperPack.int`'s cached mode wrote none), and
+saw that CI's step 4 would then save the drifted pack into its cache. **The
+fix phase** (`3e90349`): `venv.ts` `packCacheDir` gives `packLaunch`
+`<userData>/helper-cache` beside `python/<n>` (or a folder in the OS temp
+dir). On pack 2: `beats.int` 13 of 13, 0 files in the pack, 38 in
+`helper-cache`. With the old `''` put back: 38 files, 1,190,223 B, in the
+pack, and the cached `helperPack.int` failed exactly its new case ("no
+.nbi or .nbc in the version folder"), 11 of 12; restored, 12 of 12.
+
+The four byte counts (1,190,255, 1,190,239, 1,190,223, 1,186,879) are 38
+files each time; the main-process lane reads the differences as the index
+files carrying their source's path, which moves with the userData path's
+length (not measured further).
+
+### Row 19: Electron's fetcher, probed
+
+**The packaging lane**, `npx electron scripts/probe-netfetch.mjs
+<out.json>`, run twice in the user's Terminal on the dev Mac (its tabs
+closed afterwards): Electron 44.3.0, Chrome 152.0.7977.78, Node 24.20.0,
+darwin-arm64, `net.isOnline()` true, no proxy variables, and
+`session.resolveProxy` "DIRECT" for `github.com`,
+`release-assets.githubusercontent.com` and `files.pythonhosted.org`. The
+results are in `scratchpad/netfetch.json` and `netfetch2.json`; they hold
+GitHub's signed redirect URL, expired at 16:37Z.
+
+| call | what came back |
+|---|---|
+| `net.fetch(<interpreter URL>, {redirect: 'manual'})` | **rejects**: `Error` "Redirect was cancelled" (399 and 306 ms). No 302, no `Location`, not an opaque redirect |
+| `net.fetch(…, {redirect: 'follow'})`, `Range: bytes=0-1023` | 206, type `default`, **`response.url` "" (empty)**, `redirected` false; `content-range` "bytes 0-1023/26680498", `content-length` 1024, `application/octet-stream`, no `content-encoding`, `server` Windows-Azure-Blob/1.0; 1,024 B read |
+| the same, no range | 200, `content-length` 26680498; the first 4 MiB in 88 chunks of 1 to 80 KiB, the first at 0 ms, the last at 144 ms |
+| the smallest wheel (lazy_loader, 8,044 B), `'manual'` | 200 directly (no redirect), 2 chunks, sha256 the pin's, `binary/octet-stream` |
+| `net.request({redirect: 'manual'})` | emits `'redirect'` (302, GET, the release-assets URL, 15 header names, `location` among them) at 34 ms; the abort is clean |
+| `net.request` to that hop | `Range: 0-1023`: 206, `bytes 0-1023/26680498`, 1 chunk of 1,024 B; unranged: 200, 4 MiB in 83 chunks; `followRedirect()` by hand: 206 `bytes 0-15/26680498` |
+| a session's `webRequest` around `session.fetch` | `onBeforeRedirect` fires (`github.com` → release-assets, 302), `onCompleted` on release-assets (206) |
+
+**Errors**, every one a plain `Error` whose message is the code, with no
+`code` property and no `cause`, the same through `net.fetch` and
+`net.request`:
+
+| | |
+|---|---|
+| a name that does not resolve | `net::ERR_NAME_NOT_RESOLVED` (109 ms) |
+| port 9 | `net::ERR_UNSAFE_PORT`: Chromium blocks the port, so it says nothing about a refused connection |
+| closed port 59999 | `net::ERR_CONNECTION_REFUSED` |
+| dead proxies `http://127.0.0.1:9` and `:59998` | `net::ERR_PROXY_CONNECTION_FAILED` (`resolveProxy` "PROXY 127.0.0.1:9") |
+| a proxy whose name does not resolve (`forge-probe-proxy.invalid:3128`) | `net::ERR_PROXY_CONNECTION_FAILED` (183 ms) |
+| a cancel before the answer | `DOMException` AbortError "This operation was aborted" (code 20) |
+| a cancel in the body | AbortError, code `ABORT_ERR`, cause `ERR_STREAM_PREMATURE_CLOSE` |
+
+**What it settles:** `net.fetch` cannot carry the hand-followed redirects
+that name each host (`'manual'` rejects; `'follow'` leaves the URL empty),
+so the app's pack fetch is `src/main/net/chromiumFetch.ts` over
+`net.request` in its `'manual'` mode, which hands the 3xx back with its
+`Location` as undici does (§58), every request `cache: 'no-store'`.
+`installDeps.ts` `packFetch()` picks it inside a ready Electron; vitest and
+CI keep Node's fetch. `fetchFile.ts` reads Chromium's `net::ERR_` network
+codes as network failures (retried; not a certificate, a cancel, an unsafe
+port or a policy block), and a failing proxy is now a `ProxyError` that
+names it: "the proxy 127.0.0.1:59998 (this computer's proxy settings)
+could not be reached: net::ERR_PROXY_CONNECTION_FAILED" on Chromium (the
+address from `session.resolveProxy`), and "the proxy 127.0.0.1:9
+(HTTPS_PROXY) could not be reached: fetch failed (connect EPERM 127.0.0.1:9
+…)" on Node under `NODE_USE_ENV_PROXY=1` (`NO_PROXY` honoured). The retry
+line names the proxy too. Without `NODE_USE_ENV_PROXY` Node's failure stays
+the host's (§58's runs A and B).
+
+**Not measured:** a real system proxy (none was available), one Hugging
+Face press and one `fetch_url` press behind it (row 19's widened half),
+and the app itself running Install on `chromiumFetch` (the sandbox cannot
+start Electron). The clean Mac (§3a.9) is that Install's first run.
+
+### The URL probe and the native-import listing
+
+**The URL probe** (the packaging lane, `NODE_USE_ENV_PROXY=1 node
+scripts/probe-pack-urls.mjs`, with `github.com`,
+`release-assets.githubusercontent.com`, `objects.githubusercontent.com` and
+`files.pythonhosted.org` allowed): on pack 1's manifest, 69 URLs for 97
+pinned files, every one answering, in 0.6 s; on pack 2's, **67 URLs for 95
+files**, every one answering, in 0.6 s. Every answer was 206 with a
+`Content-Range` total equal to the pin; both interpreters landed on
+`release-assets.githubusercontent.com` (26,680,498 and 23,227,899 B) and
+every wheel on `files.pythonhosted.org`. The manifest is read through Node
+24.18.1's own type stripping (`tsx` is not in `node_modules`), which prints
+`MODULE_TYPELESS_PACKAGE_JSON` to stderr, cosmetic. A verifier: exit 0, 67
+URLs in 0.8 s.
+
+**The PE listing** (the packaging lane, `python3 -I scripts/pe-imports.py
+<scratchpad>/row26/win`, the Windows interpreter's tree as row 26 unpacked
+it): 48 `.pyd`/`.dll` files, 45 entries. `VCRUNTIME140.dll` resolves in
+`python.exe`'s folder for 42 and beside the file for 2; `VCRUNTIME140_1.dll`
+in `python.exe`'s folder for 1; none is "not in the pack", none unreadable.
+Every import, unfiltered (`--raw`): system DLLs and `api-ms-win-crt-*`,
+plus `python314.dll`, `libcrypto-3-x64`, `libssl-3-x64`, `libffi-8`,
+`sqlite3`, `tcl90`, `tcl9tk90`, `libtommath` and `zlib1`. This agrees with
+§57. That list is the committed bootstrap
+(`tests/fixtures/pack-native-imports-win32.json`, `"recorded": false`), with
+which the CI step lists and compares nothing; the full pack's list comes
+from CI's first Windows run with the pack.
+
+### libuv's codes for a refused spawn (the Group Policy sentence)
+
+The main-process lane: `ELECTRON_RUN_AS_NODE=1
+node_modules/electron/dist/Electron.app/Contents/MacOS/Electron -p
+process.versions` gives Electron 44.3.0, Node 24.20.0, **uv 1.52.1**.
+libuv's `src/win/error.c` at `v1.52.1`
+(`raw.githubusercontent.com/libuv/libuv`):
+
+| Windows error | libuv | Node's `code` |
+|---|---|---|
+| `ERROR_ACCESS_DENIED` | `UV_EPERM` | `EPERM` |
+| `ERROR_ELEVATION_REQUIRED` | `UV_EACCES` | `EACCES` |
+| `ERROR_BAD_EXE_FORMAT` | `UV_EFTYPE` | `EFTYPE` |
+| `ERROR_ACCESS_DISABLED_BY_POLICY` (1260) | no case: `default: return UV_UNKNOWN` | **`UNKNOWN`**, errno −4094 |
+
+So a Group Policy block (uv #6584's os error 1260) reaches Node as
+`UNKNOWN`, and `client.ts` `startFailure` matches `EACCES`, `EPERM`,
+`UNKNOWN` and errno 1260 for a spawn of the pack rung on win32. On this Mac
+(Node 24.18.1, uv 1.52.1) a spawn of a missing file gives `{code: 'ENOENT',
+errno: -2, syscall: 'spawn <file>'}` and of a 0644 file `{code: 'EACCES',
+errno: -13}`. Other unmapped `CreateProcess` failures (WDAC's 4551,
+`ERROR_VIRUS_INFECTED` 225) would also arrive as `UNKNOWN` and read as the
+policy sentence: unmeasured, the Surface or a managed machine's.
+
+### The row on screen, the harness check and the census
+
+**The harness check** (`window.__forgeHelperPackCheck()`, the harness lane,
+the preview on :5199 with the pane shown and the tab fronted; the page
+1100×785 px): it passed in 5.27–5.30 s, then 5,654 and 5,758 ms after the
+fix phase. What each step read on screen (the Mac, pack 2, the stub at
+150 ms a step for the first install and 40 ms after):
+
+| step | on screen |
+|---|---|
+| absent | the store absent and the reframe's helper missing; the offer 174,314,305 B, equal to `THIS_PACK.bytes` and `packBytes(manifest)` |
+| the pointer | Follow the subject disabled, one pointer "needs the AI helper" titled "install it in Settings"; its press asked Settings for the row (`settingsFocus` [null, "helper", null]), the row's top at 484.1 px in a scroll box of 79–768 |
+| Not installed | grey, "Install the AI helper · 166 MB", and under it "Uses about 636 MB on disk. Downloads from github.com (and the host it redirects to, today release-assets.githubusercontent.com) and files.pythonhosted.org. Its own Python; any Python on this machine is left alone." |
+| installing | EXPORT "Installing the AI helper", running, "downloading · 26 of 166 MB · 56.7 MB/s" (the stub's clock, not a network); the row "Installing · downloading · 26 of 166 MB · 56.7 MB/s", no presses, "Its bar and its X are in EXPORT." |
+| the X | 3 files verified, `bytesLeft` 147,364,318 B: "Install the AI helper · 141 MB left"; EXPORT cancelled |
+| the second press | 61 speed texts by a MutationObserver, folded in order: checking space, downloading (from "26 of 166 MB", what the X kept), unpacking Python, installing libraries (0 … 46 of 46), "checking the AI helper · starting (the first start is slow)", "checking the AI helper", then "· asr", "· beats", "· onnx", "· vision", "· sklearn", "· faces"; then green "Running · Python 3.14.8 · pack 2 · 636 MB" with [Repair · 166 MB] [Remove], the gear's dot green, and "Follow the subject · gets the face finder, 1.1 MB, first time" pressable |
+| Repair beside the running pack | EXPORT "Repairing the AI helper"; the row "Repairing · downloading · 0 of 166 MB", Repair and Remove disabled with the title "Repairing the AI helper — its bar and its X are in EXPORT"; Follow still pressable. After the fix phase it waits for 2 files, and after the X reads "Repair · 141 MB" (147,496,397 B left of 174,314,305) |
+| the speech model | Transcribe greyed "needs the speech model"; the bar "Transcribe needs the speech model" with "Get the speech model · 464 MB" (486,212,372 B); after the press Transcribe live, Settings "Speech model · 464 MB · on this machine", the bridge given `{download: true}` |
+| a failed beats group | grey "Running · 8 of 9 helper features · beats needs Microsoft's Visual C++ runtime", [Check again] [Repair · 166 MB] [Remove], the whole sentence under them with https://aka.ms/vs/17/release/vc_redist.x64.exe as a link; Check again turned the row green |
+| Remove | "Remove the AI helper? It frees about 636 MB." with the box "also remove the downloaded models" off ("· 464 MB" beside it since `dca719c`); "Remove it" sent `{models: false}`; back to "Not installed" with "Install the AI helper · 166 MB", the speech model kept |
+| damaged | red "Not running · Python is missing from the AI helper's folder (removed by antivirus?)", [Repair · 166 MB] [Remove], the hosts sentence |
+| update | grey "Needs an update", [Update the AI helper · 166 MB], "The AI helper on this computer is from an older version of the app, and is not used until it is updated." and the hosts sentence |
+| policy | red "Not running · Windows' policy on this computer blocks programs in your user folder; ask whoever manages it, or point FORGE_PYTHON at an allowed Python", [Repair · 166 MB] [Remove] (the hosts sentence under them since `0537c12`) |
+| unsupported | grey "Not available on this computer · The AI helper needs macOS 14 or later", no button |
+
+- **The check's mutations** (the harness lane, each anchor counted at one
+  match, each file restored and compared): M1–M11 and M3b each failed it.
+  M3b (Settings opened without the focus ask) **survived** the first
+  version: in a 785 px window the row is in view whether or not anything
+  scrolled, so the check now watches the store's focus go [null, "helper",
+  null]. A verifier re-ran M2 and M6 and dropped the hosts sentence; each
+  failed it. The fix phase's two (Repair back on the whole bytes: "offers
+  ["Repair · 166 MB","Remove"], not ["Repair · 141 MB","Remove"]"; the
+  models' size never drawn) failed it too.
+- **The page's own status** stays `{state: 'failed', error: 'harness: no
+  sidecar'}` with no source, which reads "Not running · harness: no
+  sidecar" with no presses: the census's settings rows and the reframe and
+  clip-it checks are written against it. The check moves the stub to
+  absent itself and resets it.
+- **What the checks need**: the Browser pane SHOWN as well as the tab
+  fronted (hidden, `requestAnimationFrame` stops and every check throws
+  "the harness tab is in the background"), and a viewport about 785 px
+  tall: `__forgeClipItCheck()` failed in an 800×388 pane with "Cut to these
+  words (bottom 305) is below the tile's visible bottom (213.2)" and
+  passed at 1100×785.
+- **The console** gains repeating triplets of `forge-media://local/`
+  errors (a CORS block, `ERR_FAILED`, `ERR_UNKNOWN_URL_SCHEME`) from the
+  offline video asset the check places, as the clip-it check's does: a
+  verifier saw 60 error entries after one check and a drive through the
+  stub's states, not the two per run the harness lane counted.
+
+**The window lane's first reading** (before pack 2 was in its tree, with a
+status set by hand to pack 1's 178,190,592 B, `bytesLeft` 125,829,120 and
+`bytesOnDisk` 675,763,387): "Install the AI helper · 120 MB left" and
+"Uses about 644 MB on disk"; `openSettingsAt('helper')` put the row's top
+at 484 px in a 768 px viewport. "Remove it" against the harness bridge got
+its refusal shown in red without Electron's "Error invoking remote method
+'<channel>': Error: " prefix, the confirm left open. That prefix's shape was
+taken from `electron.d.ts:8997`, not measured.
+
+**A verifier's own row cases** (a scratch test, deleted): 20 states with
+odd byte counts (123,456,789, 765,432,109, 55,555,555), so no hand-written
+size could pass, 20 of 20; and the stub driven through absent, ready,
+ready-short, update, damaged, unsupported, policy and the harness's own,
+the gear's dot matching the row's in each.
+
+**The census** (`await __forgeCensus()`, the fronted tab):
+
+| when | rows | checked | skipped | missing | time |
+|---|---|---|---|---|---|
+| `83373de` plus the bridge's two speech stubs | 827 | 819 | 8 | 1: "The AI helper (Python) is not running" [upload/video-clip] | 50.1 s |
+| `e3221d3` (the harness lane) | 860 | 852 | 8 | 0 | 55.5 s |
+| `1a043c9` (the fix phase) | **883** | **875** | 8 | 0 | 54.7 s |
+
+The harness lane's 20-needs subset with `trace`: 84 checked, 14.0 s, every
+new row's count less its base equal to the row's count ("left" counts 2
+under helper-partial: the Install's "· N MB left" and the hosts line's "is
+left alone"; "Check again" 2 under helper-short). Labels with a number use
+the existing `part` kind. The fix phase's 15 new or changed needs plus
+`video-clip`: 49 checked, 0 missing.
+
+### The first Windows CI run of slices A and B (row 37, its first half)
+
+**The CI reader**, without signing in (`curl` on `api.github.com`; about 14
+of the 60 unauthenticated requests an hour):
+
+- `…/actions/runs?head_sha=c7a2a86525310850fbbe10fc9aa8342921516434`: one
+  run, **38919769393**,
+  https://github.com/spyki-a/forge/actions/runs/38919769393, push on main,
+  completed, **failure**, 14:55:52Z to 15:05:05Z, 9 min 13 s. The
+  **short** sha gives `total_count` 0: the full 40 characters are needed.
+- The job `windows-latest` (117036361563) failed: checkout, setup-node,
+  setup-python, `npm ci` (24 s), `npm run typecheck` (20 s) and the yt-dlp
+  cache green; **`npm test` red after 7 min 55 s** (14:57:04 to 15:04:59);
+  `npm run build` skipped. The installer job (117040671611) was skipped
+  with no steps, since it needs the test job. No macOS job: at `c7a2a86`
+  the push matrix was Windows alone.
+- **Annotations** (`…/check-runs/<job id>/annotations`): 7, every one of
+  level failure, the six tests and the exit, under GitHub's 10 a step, so
+  the list is whole. **The job's log answers 403** ("Must have admin rights
+  to Repository."), so the suite's own totals cannot be read anonymously.
+- The last green run was `d7244ce` (38453960372, 2026-10-13); `c7a2a86` is
+  the first red one since `242c6d71a6` (2026-10-07). **All six failing
+  tests are new since `d7244ce`**: each was running on Windows for the
+  first time.
+
+| test | CI's words | cause | fix |
+|---|---|---|---|
+| `reframe.int` "a followed ramp … VFR at in-point 1, ramp 1 → 0.5" | "frames off the crop they should have: … frame 289: unreadable …, mean luma 16.0", frame 290 the same | **a product bug**, below: the 2018 `setpts`' EOF | `16af45d` |
+| `reframe.int` "the followed clock starts at slot 0 … VFR at in-point 1 at half speed" | frames 418 and 419, mean luma 16.0 | the same | `16af45d` |
+| `shots.int` "carries each cut's exact pts …" | "every frame of the clip: expected 299 to be 300" | test-only: the win32 ffprobe's csv, below | `b046c08` |
+| `shots.int` "counts those pts from the file's first timestamp … MPEG-TS" | the same, at line 187 | the same | `b046c08` |
+| `unpack.test` "writes every member with its folders made …" | "The AI helper's archive holds a symbolic link (python/bin/python3 -> python3.14), which is not made on Windows" | test-only: the case unpacked the Mac's archive, link included, on a win32 host, where `unpackTarGz` refuses a link by design | `cbce56a`: one archive per platform, the win32 half run on the Mac too |
+| `pipStage.test` "a cancel whose kill did not take still settles …" | `EPERM … syscall: 'rm'` in `afterEach`, after its assertions passed | test-only: on Windows `process.kill(pid, 0)` reads an exit code that `TerminateProcess` sets before the process lets go of its cwd, and a live cwd cannot be removed there | `cec5ac1`: each fake pip ended through its `'exit'`, `afterEach` failing on a pip left running, `rm` retried 10 × 100 ms |
+
+**A slowed clip lost its last frame on the 2018 build.** `speedVideoFilter`
+is `setpts=PTS/<speed>,fps=<fps>` (since `e536186`, 2026-09-16) and the ramp
+also ends in `fps=`. `setpts.c` at `f22fcd4` has no `activate` callback (0
+matches; 3 at `n4.4.1`, which arrived in `2a546fb7d5`, 2019-10-02, "Also
+properly handle EOF timestamps. Fixes #6833"). So the 2018 build forwards
+the EOF through `avfilter.c`'s default (`guess_status_pts`) with the pts it
+came in with: the source's time, not the re-timed one. `vf_fps.c` (the
+same at both builds) drops its last buffered frame once `status_pts <=
+next_pts`, and on a slowed clip that EOF comes early, so the last source
+frame's slots, about 1/speed of them, showed the canvas: 2 black frames at
+0.5×. `plan.ts:1917` had recorded the same EOF for the caption overlay.
+`speed.int`'s 0.35 s length tolerance let it through. **The fix**
+(`16af45d`, `RETIME_TAIL`): `tpad=stop_mode=clone:stop=1` ahead of a retime
+that slows (an average rate under 1) and ends in `fps=`, on the source's
+clock, so its clone of the last frame sits at the EOF's own pts and
+`setpts` re-times it as a frame; the last real frame then fills every slot
+on both builds. Speed-ups and smooth slow motion (`minterpolate`, no `fps=`)
+are unchanged. Emulated on the Mac with `setpts='if(isnan(POS),PTS,
+<retime>)'`, which passes the EOF on un-retimed as the 2018 build does:
+without the clone the canvas fell on clip frames [418, 419] and [289, 290],
+CI's own; with it, `framemd5` equals the plain render, and the clone in the
+plain render equals it too. `reframe.int` 36 of 36 on the Mac; the
+mutation `stop=0` gave [418, 419] and [289, 290] again (the fix phase).
+The next Windows run is the proof on the 2018 build itself.
+
+**The two ffprobes write a frame with side data differently in csv.**
+x264 puts an SEI on frame 0, which ffprobe nests as a `side_data_list`.
+With `-show_entries frame=best_effort_timestamp -of csv=p=0`, `n4.4.1` (the
+Mac's `@ffprobe-installer/darwin-arm64` 5.0.1) ends the frame's line and
+prints a blank one (`0`, ``, `512`), as §55 noted; the win32 package
+(`@ffprobe-installer/win32-x64` 5.1.0, a 2023-02-13 master build,
+`2296078`) writes the item separator before the nested section, so the
+line is **`0,`**. `compact_print_section_header` in `fftools/ffprobe.c`,
+read at `n4.4.1` (`printf("\n")`) and `n6.0` (`writer_w8(wctx,
+compact->item_sep)`). The test's `/^\d+$/` filter dropped frame 0 there:
+299 of 300. ffmpeg was never short a frame, and no app code parses
+ffprobe's csv (`probe.ts`, `media.py` and `facetest.py` read JSON). `b046c08`
+reads JSON (`framePts`), failing by index on a frame without the field.
+**Anything read per frame or per packet through `csv=p=0` has the same
+exposure on Windows**; the other csv reads in the suite (exactCut's
+`packet=pts_time,flags`, m0Exit, `speed.int`'s `format=duration`, shots'
+`stream=start_time`) passed on this run.
+
+**Not yet run in CI:** the pack's own steps (`446f99b`: `macos-14` in the
+push matrix, the URL probe, the install or its cached Check again, the
+suites from the pack, `pip check`, the PE listing). They are in the
+unpushed commits, so the next push is their first run, on both runners.
+Row 37's minutes on a cache miss, the cache's size and what the capability
+suites find on Windows are its to read; `ci.yml`'s header gives the minutes
+as an estimate (Windows about 9–14 and macOS about 6–10 a push).
+
+### The suites at `1a043c9`
+
+Run by the recorder to a file (`--reporter=json`), exit 0: 62 files, 817
+tests, **812 passed and 5 skipped** (`asr.int`'s 3 transcription cases
+without the seeded model, `helperPack.int` and `packPipCheck.int` without
+their variables). Among them: `helperRow` 32, `helperCan` 7,
+`reframeContract` 16, `settingsPanel` 15, `renderer/settingsPanel` 19,
+`renderer/mediaPool` 9, `renderer/transcriptPanel` 16,
+`renderer/fallbackBridge` 3, `renderer/ingestPanel` 23,
+`renderer/reframePanel` 26, `renderer/helperJobRow` 4, `uiCensus` 9,
+`packCheck` 20, `helperPackJob` 45, `helperLock` 15, `sidecarService` 40,
+`sidecarClient` 19, `helperLaunch` 20, `helperPython` 28, `packLock` 14,
+`helperPackManifest` 47, `packaging` 17, `probePackUrls` 14, `peImports` 6,
+`fetchFile` 35, `installDeps` 5, `helperPackCi` 13, `speechModelIpc` 12,
+`unpack` 21, `pipStage` 12, `sidecar.int` 20 and `asr.int` 5. `npm run
+typecheck` exit 0. `PYTHONPATH=sidecar sidecar/.venv/bin/python -m unittest
+discover -s tests/sidecar -p test_asr.py`: "Ran 16 tests", OK. The
+speech-model lane's whole Python discovery: 148 ran, OK, 24 skipped on the
+venv (no `FORGE_TEST_FFMPEG`) and 34 on a bare 3.12 (those and 10 for
+numpy). The fix phase's last run over 49 files: 665 passed.
+
+### What this settles
+
+1. **The speech model is pinned** (`536b066…`, 486,212,372 B, "464 MB") and
+   loads by path with no host.
+2. **hf-xet leaves the lock**: pack 2, "166 MB" and "201 MB", 9 features.
+3. **The pack's sizes on screen are MB**: 636 MB and 685 MB, until CI's
+   install (row 28) replaces the PRE-CI figures.
+4. **The pack's fetch inside the app is `net.request`**, not `net.fetch`.
+5. **numba's cache lives in `helper-cache/numba`**, in the app and in CI's
+   pack runs.
+6. **A Group Policy block reaches Node as `UNKNOWN`**, by libuv's source.
+7. **A slowed clip on the 2018 build needs `RETIME_TAIL`**, and **per-frame
+   reads use ffprobe's JSON**.
+
+### Still unmeasured, and whose
+
+- **CI's first run of the pack** (row 28 on both platforms, row 37's
+  minutes and cache, the capability suites on Windows, the PE list's first
+  recording, `actions/cache` on a path with a space and an `é` on Windows).
+  The next push.
+- **Row 19's widened half**: a real system proxy, a Hugging Face press and
+  a `fetch_url` press behind it; the app's first Install on `chromiumFetch`
+  (the clean Mac).
+- **The Surface**: rows 26's half, 27, 29, 30, 32 and 36; a real SRP or
+  AppLocker block's code; the NSIS uninstaller's `isUpdated` guard (an
+  update, then an uninstall); `makensis` has never compiled
+  `build/installer.nsh`.
+- **The 2018 build's run of `RETIME_TAIL`** and of the three Windows test
+  fixes: the next Windows CI run.

@@ -787,7 +787,15 @@ on Windows (that run is the measurement for §3.3, §3.4 and §3.7 there).
 > 2026-10-14** (P.3 with P.5; the first real install on the Mac, and rows
 > 27's Mac half, 33, 34 and 35's depth half measured beside it; §3a.3's and
 > §3a.5's notes, `EFFECTS.md` §58; nineteen commits, `0453abb` …
-> `08984ee`, not pushed). Written from three
+> `08984ee`). Slices A and B were pushed with `c7a2a86` on 2026-10-16;
+> that push's Windows CI run (38919769393) was red on six tests, all new
+> to Windows, and slice C fixes each (§3a.6's note). **Slice C built
+> 2026-10-16** (P.4, P.6, P.7 and P.10, with §16.51–53 and rows 19, 35's
+> asr half and 37's first run beside them; §3a.4's, §3a.6's and §3a.7's
+> notes, `EFFECTS.md` §59; thirty-two commits after `c7a2a86`, `aa377f9` …
+> `1a043c9`, not pushed when this was written). **P's build is complete.
+> §3a.9's exit, the clean Mac and the Surface, is the user's**, with CI's
+> first run of the pack (the next push). Written from three
 > readers (the interpreter sources, the wheel set, and the product side
 > read from the code). Every size, version, wheel tag and licence below was fetched that
 > day from PyPI's JSON (`pypi.org/pypi/<name>/<version>/json`), GitHub's API
@@ -889,13 +897,15 @@ faults sit in the same path:
   name.
 
 **What it is.** A pinned CPython 3.14.8 from python-build-standalone,
-unpacked under `userData/python/<pack>/`, with the base pack's wheels (47 on
-the Mac, 48 on Windows) installed into its own site-packages by its own pip,
+unpacked under `userData/python/<pack>/`, with the base pack's wheels (46 on
+the Mac, 47 on Windows since pack 2, 2026-10-16; pack 1 had 47 and 48 with
+hf-xet) installed into its own site-packages by its own pip,
 **offline**, from files the app fetched itself and checked against a lock
 the app ships. It is started with its own flags and a cleaned environment,
 so nothing of a user's own Python reaches it. One press in Settings,
-**Install the AI helper · 170 MB** on the Mac and **· 205 MB** on Windows
-(§0's click rule: the size is on the button before the press); a row in the
+**Install the AI helper · 166 MB** on the Mac and **· 201 MB** on Windows
+(pack 2; pack 1's were 170 and 205 MB) (§0's click rule: the size is on the
+button before the press); a row in the
 EXPORT strip with its bar and its X; a receipt that is the version; Repair
 and Remove, each with its size. A packaged app never spawns a PATH Python
 again: with no pack it says **Not installed**, and **no caller starts
@@ -907,13 +917,14 @@ then, never offered as a control that changes nothing (§12).
 
 **Exit** (in full in §3a.9). A clean Mac and the Surface, with no Python of
 their own, install the pack from the app and pass the helper's tests from
-inside it: `sidecar.int`'s 15, `sidecarMedia.int`'s Python cases with none
+inside it: `sidecar.int`'s 20, `sidecarMedia.int`'s Python cases with none
 skipped, and the capability suites, started **through the pack's own
 launch** (its flags and environment), with hello's `sys.prefix` and every
 `sys.path` entry inside the pack or the app's `sidecar` folder. CI does the
-same on every push on Windows, and on a macOS 14 runner if §16.48 is
-answered (b). (The old text said
-"the twelve helper tests"; `sidecar.int.test.ts` has 15.)
+same on every push on Windows and on a macOS 14 runner (§16.48 answered
+(b), built in slice C, §3a.6). (The old text said
+"the twelve helper tests"; `sidecar.int.test.ts` had 15 when this was
+planned and has 20 since slice B.)
 
 **The days**, against the 5–10 R4 held:
 
@@ -1006,9 +1017,11 @@ runtime on a clean Windows (§16.45). Either can take P past 13. With P at
 > packages as measured above plus the pinned interpreter's tree as row 26
 > unpacked it, its standard library compiled once (87,081,292 and
 > 70,315,292 B). The first generation had added the `20261013` build's tar
-> sizes and no compile. `formatBytes` (binary GiB) prints the Mac's as
-> **"0.6 GB"** and Windows' as "0.7 GB"; "about 0.7 GB" above holds in
-> decimal GB (0.675). Which unit the Settings row means is §3a.4's to say.
+> sizes and no compile. `formatBytes` writes GB only from 1 GiB, so it
+> prints the Mac's as **"644 MB"** and Windows' as "695 MB" (this note
+> first said "0.6 GB" and "0.7 GB"; corrected 2026-10-16, when the row
+> showed MB on screen, `EFFECTS.md` §59); "about 0.7 GB" above holds in
+> decimal GB (0.675). The Settings row shows `formatBytes` (§3a.4's note).
 > **The first real install** (slice B, 2026-10-14, §3a.3's note) wrote
 > 675,763,387 B apparent on the Mac, 0.11 % above the PRE-CI figure, with
 > the longest path 161 and directory 107 exactly as below; the manifest
@@ -1071,9 +1084,10 @@ runtime on a clean Windows (§16.45). Either can take P past 13. With P at
 > read; an unreadable clause passed).
 >
 > **Left:**
-> - **hf-xet** stays in the lock (3,876,287 / 4,033,128 B) until row 35
+> - ~~**hf-xet** stays in the lock (3,876,287 / 4,033,128 B) until row 35
 >   shows depth's and asr's downloads pass without it; then `--bump` drops
->   it and the allowlist gains `huggingface-hub: hf-xet`.
+>   it and the allowlist gains `huggingface-hub: hf-xet`.~~ **Done
+>   2026-10-16: pack 2**, below.
 > - **CI's install (row 28)** replaces the three PRE-CI numbers per
 >   platform.
 > - **Row 26's Surface half**: `sys.winver`, and `sys.path` with a planted
@@ -1086,7 +1100,43 @@ runtime on a clean Windows (§16.45). Either can take P past 13. With P at
 > - **The history's order**: `f39a47a` (§3a.2) imports `./pack`, which
 >   first lands here in `cfe25b6`, so `f39a47a` alone does not typecheck.
 >   Reordering unpushed commits is the user's call; otherwise the push
->   says so.
+>   says so. *(It was pushed as it stood, with `c7a2a86`, 2026-10-16.)*
+>
+> **Slice C (2026-10-16): hf-xet out of the lock, pack 2** (`1a5051c`;
+> `EFFECTS.md` §59). Row 35 passed on both halves: depth's on 2026-10-14,
+> and asr's the day the speech model's press was built (§3a.4's note:
+> 486,212,372 B in 14.7 s on a copy of pack 1 with hf-xet uninstalled).
+> - `pack_lock.py` gains **`EXCLUDE = {hf-xet}`**, what the dev venv has and
+>   no lock may; the allowlist gains **`huggingface-hub: hf-xet`** beside
+>   mediapipe's two, and any other requirement reaching hf-xet fails the
+>   walk by name. `resolved.json` gains `"excluded": ["hf-xet"]`. `EXPECTS`
+>   gains `asr.model`, so the row counts **9** helper features.
+> - **Its share leaves the PRE-CI figures**, measured the same two ways:
+>   the Mac's 9 RECORD files, 8,152,766 B; Windows' wheel index,
+>   9,805,289 B, and its 107 B of `.py` taken out of the `.py` total that
+>   the estimate of pip's `.pyc` is scaled from.
+> - **Pack 2**, written with `--bump --check-github` (the run without
+>   `--bump` refused and wrote nothing; a second `--bump` was refused; a
+>   rerun reproduced every file):
+>
+>   | | darwin-arm64 | win32-x64 |
+>   |---|---|---|
+>   | wheels | 46, 147,633,807 B | 47, 187,843,524 B |
+>   | with the interpreter: the button | 174,314,305 B, **"166 MB"** | 211,071,423 B, **"201 MB"** |
+>   | lock sha256 | `ed220aed…` | `ecbbec7b…` |
+>   | `bytesOnDisk`, PRE-CI | 666,871,585 B, "636 MB" on screen | 718,681,542 B, "685 MB" |
+>
+>   Pack 1's hashes stay in `history.json`; a pack 1 on disk now reads as
+>   Update.
+> - **Pack 2 installed for real on the Mac** twice (the speech-model lane,
+>   58.3 s; the packaging lane, 53.0 s): receipt `bytesOnDisk` 667,609,685
+>   and 667,495,529 B (+0.11 % and +0.09 % on the PRE-CI figure), longest
+>   path 161 and directory 107, 13,515 files, 46 dist-infos; `pip check`
+>   exactly huggingface-hub's hf-xet line and mediapipe's two. The manifest
+>   keeps its PRE-CI figures until CI's install (row 28).
+> - Tests: `packLock` 14 and `helperPackManifest` 47 (at `1a043c9`). With
+>   pack 1's five generated files put back under them, 8 fail; with
+>   `asr.model` out of both `expects`, 2.
 
 #### The interpreter
 
@@ -1196,7 +1246,14 @@ none needs a compiler.**
 | macOS arm64, cp312 | 47 | 151,530,925 | (3.12.15: 25,023,573) | — |
 | Windows x64, cp312 | 48 | 189,174,743 | (3.12.15: 22,013,771) | — |
 
-**On disk, about 0.7 GB on both.**
+These are pack 1's, with hf-xet. **Pack 2** (2026-10-16, hf-xet left out,
+§3a.1's note): 46 wheels and 147,633,807 B on the Mac, 174,314,305 B with
+the interpreter, **166 MB**; 47 and 187,843,524 B on Windows, 211,071,423 B,
+**201 MB**.
+
+**On disk, about 0.7 GB on both** (decimal GB; pack 2's PRE-CI figures,
+666,871,585 and 718,681,542 B, read "636 MB" and "685 MB" through
+`formatBytes`, which writes GB only from 1 GiB).
 
 - **The Mac, measured.** The 47 distributions' RECORD sizes in the dev venv
   are **587.9 MB** (11,629 files, 99.3 MB of them `.pyc`), 3.88× the wheel
@@ -1279,7 +1336,10 @@ Electron 44.3.0's `LSMinimumSystemVersion` is 13.0 (read from its
   `HF_HUB_DISABLE_XET=1`, and huggingface_hub imports it only through
   `is_xet_available()` (`utils/_runtime.py:157-162`). The lock leaves it out
   once depth's and asr's downloads pass without it (§3a.8 row 35); the
-  allowlist then gains `huggingface-hub: hf-xet`.
+  allowlist then gains `huggingface-hub: hf-xet`. **Left out since pack 2,
+  2026-10-16** (`1a5051c`): both downloads passed without it, and `pip
+  check` in the pack now names huggingface-hub's hf-xet beside mediapipe's
+  two.
 - **Stems is not in it.** demucs and torch are their own press, after P and
   not in its days (§16.39). Facts for when it comes:
   `requirements-stems.txt` pins demucs **4.0.1, which is sdist-only and has
@@ -1800,7 +1860,7 @@ export function resolveHelperPython(input: {
   interpreter file is gone (Defender quarantined `python.exe` or a DLL, or a
   delete stopped part-way) is `damaged`: the row reads red "Not running ·
   Python is missing from the AI helper's folder (removed by antivirus?)" and
-  offers Repair, never a 205 MB Install over 0.7 GB already on disk. One that
+  offers Repair, never a 201 MB Install over 0.7 GB already on disk. One that
   does not parse is `damaged` too, and the sweep never removes it (§3a.3).
   The tree is not re-hashed at launch; Repair is the integrity path.
 
@@ -1902,7 +1962,7 @@ export type SidecarStatus =
 ```
 
 `HelperSource` names the rung, so the Settings row can say "installed by the
-app · pack 1", "from FORGE_PYTHON <path>" or "development venv".
+app · pack 2", "from FORGE_PYTHON <path>" or "development venv".
 
 #### One helper process
 
@@ -2303,10 +2363,21 @@ Repair and Remove need the wait too.
 >   8.3-name `realpath`.
 > - **asr's half of row 35** waits for the speech model's press (§3a.4).
 > - **A cancel during the final switch** leaves the pack installed (receipt
->   written) and the job reading Cancelled; P-C may word it.
+>   written) and the job reading Cancelled; P-C may word it. *(Not worded
+>   in slice C.)*
+>
+> **Slice C (2026-10-16) closed** the UI (§3a.4's note), CI's steps (§3a.6's
+> note; their first run is the next push), row 19's Electron half (the
+> pack's fetch inside the app is `net.request`, §3a.5's note) and asr's half
+> of row 35. The check's speed column now opens on "checking the AI helper
+> · starting (the first start is slow)" and names each self-test group as
+> it starts ("checking the AI helper · beats"), through
+> `PackCheckOptions.onGroup` (`a1aaf0e`). The Surface's rows stay open.
 >
 > **Open, for the user** (none was built in slice B; **answered 2026-10-16
-> as §16.51–53, each as recommended, built in slice C**):
+> as §16.51–53, each as recommended, built in slice C**: `a3958bf`,
+> `c996f80` with `3e90349` for CI, and `a1aaf0e`; what each does is in
+> §16.51–53):
 > - An install whose check finds a `sys.path` entry outside the pack, or a
 >   Python other than 3.14.8, reads Done: the problem is only logged and
 >   kept in the receipt's `problems` (the user-site mutation reached such a
@@ -2386,7 +2457,7 @@ are not taken from it:
   `endsAt = now + budgetMs` (`:474`; `budgetMs` is 6 minutes, `:113`), each
   try's answer wait is `min(answerMs, endsAt - now)` (`:430`), and
   `outOfTime` (`:434`) stops the retries. Lifted with one `Fetching` for the
-  job, a 205 MB install slower than about 0.6 MB/s passes minute 6 part-way,
+  job, a 201 MB install slower than about 0.6 MB/s passes minute 6 part-way,
   and every later file gets a 1 ms answer wait and no retry, so the install
   fails every time on that line. `fetchVerified`'s contract is one
   `Fetching` per file.
@@ -2407,10 +2478,10 @@ through it. The planned weight is kept in brackets.
 | stage | bar | the speed column says |
 |---|---|---|
 | 0. **Checking** | 0 % | "checking space": `fs.statfs` on userData covers what is left to fetch, `bytesOnDisk` and 10 %, or the job fails "needs N GB free on <drive>"; on Windows root + `longestPath` + 16 ≤ 259 and root + `longestDir` ≤ 247, or it fails naming the path; the platform is supported; the lock is taken |
-| 1. **Downloading** | 0–45 % (planned 0–70 %), by bytes over every file | "downloading · 31 of 205 MB · 4.2 MB/s" |
+| 1. **Downloading** | 0–45 % (planned 0–70 %), by bytes over every file | "downloading · 31 of 201 MB · 4.2 MB/s" |
 | 2. **Unpacking** the interpreter | 45–50 % (70–75 %) | "unpacking Python" |
-| 3. **Installing the libraries** | 50–65 % (75–95 %) | "installing libraries · 12 of 48" |
-| 4. **Checking** the AI helper | 65–100 % (95–100 %), moved by the check's own progress | "checking the AI helper", or "waiting for the AI helper's work to finish" |
+| 3. **Installing the libraries** | 50–65 % (75–95 %) | "installing libraries · 12 of 47" |
+| 4. **Checking** the AI helper | 65–100 % (95–100 %), moved by the check's own progress | "checking the AI helper · starting (the first start is slow)", then "checking the AI helper" and "checking the AI helper · <group>" as each self-test group starts (since `a1aaf0e`), or "waiting for the AI helper's work to finish" |
 
 **1. Downloading.** `src/main/net/fetchFile.ts`, lifted out of `binary.ts`
 (`tryOnce`, `withRetry`, `transient`, `FETCH_RETRY`, which `binary.ts` then
@@ -2670,18 +2741,299 @@ the lock or the pack, with the reason, so no work is lost.
 
 ### 3a.4 P.4 — The UI · 1–1.5 days, and the speech model · 0.5–1 day
 
+> **Built 2026-10-16 — slice C, with §3a.6, §3a.7 and §16.51–53.** Not
+> pushed when this was written.
+>
+> Commits:
+> - the gate and the row: `be3ae1b` (`helperCan.ts`, `row.ts`,
+>   `reframeHelperFrom` over `helperCan`);
+> - the window: `bd2264a` (the store keeps the status whole; App's dot and
+>   Settings' row from one reading; the Media pool's and the URL tile's
+>   gates), `00e431b` (the pointers; EXPORT's speed column wraps);
+> - the speech model: `739fa55` (`asr.py` pinned, `asr.model`), `93c6bde`
+>   (main's channel and the preload);
+> - main's half: `a3958bf` (§16.51), `a1aaf0e` (§16.53, the Group Policy
+>   sentence, the check's speed column);
+> - the harness and the census: `e3221d3` (§3a.7's note);
+> - the fix phase, after three verifiers: `d8f714e` (asr's self-test group
+>   takes both its methods), `ae2be28` (a model gone from disk is asked
+>   about again), `33ee0ff` (the Transcript tile's Transcribe gated),
+>   `d2e939e` (the fallback bridge), `dca719c` (Remove's two sizes),
+>   `e43d967` (Repair's bytes left), `27aa661` (the speech press's X),
+>   `016f470` (the model presses' network sentence), `0537c12` (hosts under
+>   a failed pack's Repair), `a5b58de` (`helperRowFrom` removed), `1a043c9`
+>   (census rows).
+>
+> Every number below is in `EFFECTS.md` §59, with its command.
+>
+> **`helperCan(status, method)`** (`src/shared/sidecar/helperCan.ts`) is
+> true only for `ready`, with the method in `hello.capabilities`, not in
+> `hello.degraded` (where main merges a failed self-test group), and not
+> failed by the self-test record. `reframeHelperFrom` is a mapping over it
+> for `vision.faces` and `vision.facesModel`: `starting` is unknown, any
+> other state but ready (an install included) is missing. A pack whose
+> faces group failed its self-test used to read as able to find a face; it
+> reads missing now. `SELFTEST_GROUPS.asr` names both `asr.transcribe` and
+> `asr.model` (`d8f714e`): both stand on one faster-whisper import.
+>
+> **The row** (`src/shared/sidecar/row.ts` `helperRow({status, pack, job})`)
+> is one reading, drawn by Settings' `HelperSection` and by the header
+> gear's dot (`useHelperRow`), so they cannot disagree. The store's
+> `sidecarReady` and `sidecarError` are gone: it keeps `helperStatus`,
+> `helperJob`, `helperUi`, `speechModel`, `speechFetch` and
+> `settingsFocus`. `status.ts` `helperRowFrom` is removed (`a5b58de`). As
+> built, with the Mac's pack 2 (Windows' sizes are 201 MB and 685 MB):
+>
+> | state | dot | the row: word · line | presses | under them |
+> |---|---|---|---|---|
+> | no status yet, or `starting` | grey | Starting (· "installed by the app · pack 2" once the source is known) | — | — |
+> | `installing` | grey | Installing · <stage> | — | "Its bar and its X are in EXPORT." |
+> | a helper job in the list (wins over the status) | grey | Installing / Repairing / Updating · <the job's speed>, "waiting to start" while queued | the status's own, each disabled with the title "Repairing the AI helper — its bar and its X are in EXPORT" | "Its bar and its X are in EXPORT." |
+> | `absent`, install | grey | Not installed | Install the AI helper · 166 MB, or · 141 MB left after a cancel | the hosts sentence |
+> | `absent`, update | grey | Needs an update | Update the AI helper · 166 MB | "The AI helper on this computer is from an older version of the app, and is not used until it is updated." and the hosts sentence |
+> | `absent`, unsupported | grey | Not available on this computer · The AI helper needs macOS 14 or later | — | — |
+> | `damaged` | red | Not running · Python is missing from the AI helper's folder (removed by antivirus?) | Repair · 166 MB, Remove | the hosts sentence |
+> | `failed`, a pack (Group Policy, keeps crashing) | red | Not running · <the sentence> | Repair · <bytes left, or 166 MB>, Remove | the hosts sentence (`0537c12`) |
+> | `failed`, another window holds the lock (§16.53) | grey | Not running · The AI helper is being repaired by another Forge window | — | — |
+> | `failed`, `FORGE_PYTHON` | red | Not running · <error> | Install the AI helper · 166 MB | "used instead of FORGE_PYTHON once installed" and the hosts sentence |
+> | `failed`, the venv, PATH, or no source | red | Not running · <error> | — | — |
+> | `ready`, a whole pack | green | Running · Python 3.14.8 · pack 2 · 636 MB | Repair · <bytes left, or 166 MB>, Remove | — |
+> | `ready`, a short pack | grey | Running · 8 of 9 helper features · beats needs Microsoft's Visual C++ runtime | Check again, Repair, Remove | each reason once; the Visual C++ sentence whole, its link pressable |
+> | `ready`, integrity problems (§16.51) | grey | Running · <ok> of 9 helper features · <the first problem> | Repair, Remove | each problem, then each reason, and the hosts sentence |
+> | `ready`, `FORGE_PYTHON` | green only when whole | Running · from FORGE_PYTHON <path> · N of 9 helper features | Install the AI helper · 166 MB | the reasons, "used instead of FORGE_PYTHON once installed", the hosts sentence |
+> | `ready`, the venv or PATH | green only when whole | Running · development venv (or "python3 on PATH"), with "· N of 9 helper features" when short | — | the reasons |
+>
+> - **The hosts sentence** is "Uses about 636 MB on disk. Downloads from
+>   github.com (and the host it redirects to, today
+>   release-assets.githubusercontent.com) and files.pythonhosted.org. Its
+>   own Python; any Python on this machine is left alone." Under any
+>   running helper, also §16.40 (d)'s sentence for the beta (`016f470`):
+>   "Each model downloads on its own press, from huggingface.co and
+>   *.hf.co, or storage.googleapis.com for the face finder. Those presses
+>   need a direct connection, or a proxy set in HTTPS_PROXY."
+> - **Whole** means every `expects` method registered, none degraded or
+>   failed by the self-test, every self-test group ok and no integrity
+>   problem. The count is out of `expects.length`, 9 since pack 2. A short
+>   pack's reasons go in `expects` order (hello's degraded reason, the
+>   self-test's, or "the AI helper has no <method>"), then any failed group
+>   with no method of its own (sklearn). The line carries the Visual C++
+>   reason's head only.
+> - **Every size goes through `formatBytes`**, none is written: Install is
+>   the offer's bytes, or its `bytesLeft` with "left" when fewer; Repair
+>   beside a ready or failed pack is the status's optional `bytesLeft` when
+>   main has it (`service.ts` `withRepairLeft`, set only while verified
+>   downloads sit in `downloads/<n>/`, and said again by
+>   `settleHelperStatus` when a job ends beside a running helper,
+>   `e43d967`), else the manifest's bytes; the size on disk is the
+>   manifest's `bytesOnDisk`, still PRE-CI.
+> - **The presses** go through the store: Install is `installHelper({})`,
+>   Repair `{repair: true}`, Update `{update: true}`, Check again
+>   `checkHelperAgain()`. Each reads "Starting the install…", "Starting the
+>   repair…", "Starting the update…", "Removing…" or "Checking…" while it
+>   runs, every other press disabled. A refusal shows in red without
+>   Electron's "Error invoking remote method '<channel>': Error: " prefix
+>   (its shape read in `electron.d.ts`, not measured).
+> - **Remove asks first**: "Remove the AI helper? It frees about 636 MB.",
+>   a box, off by default, "also remove the downloaded models · 464 MB"
+>   (the size from main's `HelperPackJobs.modelsBytes()`, the apparent
+>   bytes of `userData/models`, over `helper:modelsBytes` and the preload's
+>   `helperModelsBytes()`, shown only above 0, `dca719c`), then "Remove it"
+>   and "Keep it". It sends `{models}` as the box was left.
+> - **The pointers** (§16.41): `HelperPointer` (`SettingsPanel.tsx`), a
+>   small dotted-underline button reading "needs the AI helper", titled
+>   "install it in Settings", which calls `openSettingsAt('helper')`:
+>   Settings opens with the row scrolled into view, the card the Director's
+>   gear opens. In the Trimmer dock under Follow the subject
+>   (`ReframePanel.tsx`), in the canvas bar's reframe chip (`CanvasBar.tsx`),
+>   beside a greyed Listen to it on a link with no captions
+>   (`LinkTranscript.tsx`), and under the Transcript tile's Transcribe.
+>   While the helper starts each says "the AI helper is starting" instead.
+>   The Media pool's Transcribe icon has no room: its title is "needs the AI
+>   helper — install it in Settings". The renderer's one `installHelper`
+>   call is the Settings press; there is no first-run prompt.
+> - **Transcribe and Listen to it** (`transcribeGate`): ready only with
+>   `helperCan(status, 'asr.transcribe')` and the speech model on disk.
+>   Otherwise the Media pool's Transcribe and the Transcript tile's
+>   (`33ee0ff`; it was pressable on any helper before) are greyed with
+>   "needs the AI helper — install it in Settings", "needs the speech
+>   model" or "the AI helper is starting". With the model missing, a bar
+>   over the pool (shown while it holds a video or a sound) and the
+>   Transcript tile read "Transcribe needs the speech model" with the sized
+>   press. Listen to it stays the disabled "soon", said only when both hold.
+>   A Transcribe rejected with the helper's own sentence,
+>   `SPEECH_MODEL_NOT_DOWNLOADED`, resets the store's `speechModel`, so the
+>   press comes back (`ae2be28`).
+>
+> **The speech model's own press** (§16.49 (a)):
+> - `asr.py` pins `Systran/faster-whisper-small` at commit
+>   **`536b0662742c02347bc0e980a01041f333bce120`** (read from
+>   huggingface.co's API 2026-10-16), and only the four files WhisperModel
+>   reads: `config.json` 2,370 B, `vocabulary.txt` 459,861,
+>   `tokenizer.json` 2,203,239 and `model.bin` 483,546,902 (LFS sha256
+>   `3e305921…d671`), **486,212,372 B, "464 MB"**.
+> - Presence is `try_to_load_from_cache` at the commit for every file, in
+>   one snapshot folder; the load is `WhisperModel(<snapshot folder>,
+>   device='cpu', compute_type, local_files_only=True)`.
+> - **`asr.transcribe` never downloads.** Without the model it answers
+>   Unavailable, "The speech model is not downloaded yet"; a `model` other
+>   than `small` is refused (nothing in the app sends one).
+> - **`asr.model`** answers `{present, bytes, label, host}` and fetches only
+>   when `download` is exactly `true`, each file through `media.download` at
+>   the pinned revision. `capabilities/__init__.py`'s asr tuple names both
+>   methods.
+> - Main's `asr:model` (`speechModelRequest`): the status ask has 30 s, the
+>   fetch none of its own (huggingface_hub's 10 s read timeout bounds it);
+>   two presses share one fetch; with no helper it rejects without a
+>   spawn. Progress is `asr:modelProgress`; the X is `asr:modelCancel`
+>   (`27aa661`), an abort the helper honours at its next chunk, which ends
+>   every press sharing the fetch with "Cancelled" and no notice. The
+>   preload: `speechModel()`, `onSpeechModelProgress()`,
+>   `cancelSpeechModel()`.
+> - On screen: Settings' "Speech model · 464 MB · on this machine", or
+>   "Speech model" with **Get the speech model · 464 MB**, or "Getting the
+>   speech model… N%" with an X titled "Stop getting the speech model";
+>   shown only while the helper can `asr.transcribe`. The helper's own
+>   progress messages give sizes in decimal MB ("484 MB"); the window shows
+>   the fraction and its own label.
+> - **Row 35's asr half passed** on a copy of pack 1 with hf-xet
+>   uninstalled: `asr.model {download: true}` fetched 486,212,372 B in
+>   14.7 s from huggingface.co and us.aws.cdn.hf.co, and Transcribe gave 22
+>   words; a fresh session with no host allowed transcribed too (§3a.8 row
+>   35).
+>
+> **Group Policy** (`a1aaf0e`): `client.ts` `startFailure` gives
+> `HELPER_BLOCKED_BY_POLICY` for a `spawn` error of the pack rung on win32
+> with `EACCES`, `EPERM` or `UNKNOWN`, or errno 1260. By libuv 1.52.1's
+> source (Electron 44.3.0's), 1260 has no case and reaches Node as
+> `UNKNOWN`, so `EACCES` and `EPERM` alone would never have matched it. A
+> refused spawn has no pid and is not restarted, so "keeps crashing" never
+> overwrites it. Elsewhere it stays "Could not start the AI helper:
+> <message>".
+>
+> **The EXPORT row** is slice B's; its speed column now wraps,
+> right-aligned, instead of clipping the check's longest texts (`00e431b`,
+> read from the classes, not measured on screen).
+>
+> **The bridge.** The preload has slice B's `installHelper`, `removeHelper`
+> and `checkHelperAgain`, and now `speechModel`, `onSpeechModelProgress`,
+> `cancelSpeechModel` and `helperModelsBytes`; the status is
+> `sidecarStatus`, as slice A built it. The harness bridge's stub is
+> §3a.7's. **The fallback bridge** moved to
+> `src/renderer/src/fallbackBridge.ts` (`d2e939e`) and has them all:
+> `sidecarStatus` resolves failed, "The app bridge did not load — restart
+> Forge" (a red row with no presses), the presses throw, the subscriptions
+> are inert. It had none of the helper's calls, though App subscribes to
+> `onSidecarStatus` and asks `sidecarStatus()` at mount, so a missing
+> preload threw before anything was drawn; `onTranscribeProgress` and
+> `onParallaxProgress`, older than this slice, were missing the same way.
+> `tests/renderer/fallbackBridge.test.ts` reads App's mount calls from
+> `App.tsx` with the TypeScript parser and calls each on the fallback.
+>
+> **Where it differs from the text below:**
+> - `helperRow` takes `{status, pack, job}`: a ready or failed status
+>   carries no offer, so `pack` (`packFactsFor(HELPER_PACK,
+>   navigator.platform)`) brings the manifest's `expects`, bytes,
+>   `bytesOnDisk` and hosts. The speech model is its own `speechModelRow`.
+>   "`helperState` gains absent …" is this one row instead.
+> - The older pack's word is "Needs an update"; the table named only its
+>   button. The sentences sit under the presses.
+> - **Sizes read in MB**: `formatBytes` writes GB only from 1 GiB, so the
+>   table's "0.7 GB" is 636 MB on the Mac and 685 MB on Windows (computed,
+>   not seen on a Windows screen).
+> - **The speech press forwards progress and has an X; it is not a row in
+>   EXPORT's list.** The text's "through the job list, as the face finder's
+>   press does" contradicts its own precedent: the face finder's press is
+>   progress forwarding too. Whether the speech press should also be an
+>   EXPORT row is the user's to decide.
+> - "used instead of FORGE_PYTHON once installed" shows in development
+>   too, where `FORGE_PYTHON` stays first: the renderer cannot tell a
+>   packaged app from development.
+> - A status not yet answered reads "Starting", and Transcribe and Listen
+>   to it say "the AI helper is starting" (they said "needs the AI helper").
+>   A failed status with no source (the harness page's own) has no presses.
+> - The pool's sized press is one bar over the pool, not beside each tile's
+>   Transcribe icon, which has no room.
+> - The hosts sentence is not under the Repair of a whole or short running
+>   pack: there it would be a standing paragraph. Whether it belongs there
+>   is the plan's to say.
+>
+> **Tests** (run by the recorder at `1a043c9`, exit 0, among 62 files and
+> 812 passed): `helperCan` 7, `helperRow` 32, `reframeContract` 16,
+> `settingsPanel` 15, `renderer/settingsPanel` 19, `renderer/mediaPool` 9,
+> `renderer/transcriptPanel` 16, `renderer/ingestPanel` 23,
+> `renderer/reframePanel` 26, `renderer/helperJobRow` 4,
+> `renderer/fallbackBridge` 3, `speechModelIpc` 12, `uiCensus` 9; and
+> `tests/sidecar/test_asr.py` 16 (none skipped on a bare 3.12), `asr.int` 8
+> with the seeded model and fixture (its 3 transcription cases skip without
+> them).
+>
+> **Mutations**, each anchor counted at one match first, each file restored
+> and compared byte for byte, each seen to fail:
+> - the window lane's 51: `helperCan`'s four checks each dropped (the state
+>   check **survived** until a test with a cast status carrying a hello was
+>   added) and an `in` for its own-property test; `reframeHelperFrom` back
+>   on capabilities, `facesModel` dropped, installing as unknown; the row's
+>   16 (a size written by hand, Not installed drawn red, the env rung green
+>   on the process alone, a damaged pack offered Install, the hosts line
+>   dropped, integrity ignored, a literal 8 as the count, failed groups
+>   ignored, the job ignored, `bytesLeft` ignored, Repair's size by hand, a
+>   queued job before a running one, the Visual C++ reason whole, the
+>   integrity row green, a failure with no source dereferenced, the other
+>   window's refusal dropped); the component's 13 through the store and the
+>   bridge (Remove's box on by default or ignored, Remove without asking,
+>   the refusal shown with Electron's prefix, every press sent as Install,
+>   …); the gates' 9, the pointers' 3, EXPORT's 2 and the row's scroll;
+> - the speech-model lane's 12 over `asr.py`, `ipc.ts`, the preload and the
+>   protocol (the status ask fetching, the old `WhisperModel(size,
+>   download_root)`, `local_files_only` dropped, a revision of None, the
+>   progress send dropped, two presses not sharing one fetch, the
+>   preload's `{}` default dropped, and the test's stand-in agreeing with
+>   its planted files on a layout that is not the hub's);
+> - the main-process lane's 3 for Group Policy (the generic sentence back,
+>   `UNKNOWN` left out, the sentence not limited to the pack) and 3 for the
+>   speed column;
+> - a verifier re-ran 11 of the window and harness lanes' and each failed
+>   as claimed; the fix phase's, among them the store listening for "needs the speech
+>   model" again, `asr.py`'s sentence reworded, the Transcript tile's gate
+>   dropped, a fallback missing a startup call, the models' size never
+>   drawn, Repair back on the whole bytes, the speech fetch without its
+>   signal, and the network sentence dropped.
+>
+> **A test that certified a path that never ran**, found by two verifiers:
+> `mediaPool.test.tsx` threw "needs the speech model", the greyed title,
+> where the helper answers "The speech model is not downloaded yet", so the
+> reset it guarded never fired against a real helper. It throws the
+> helper's sentence now, held equal to `asr.py`'s `NOT_DOWNLOADED` by
+> `speechModelIpc` (`ae2be28`).
+>
+> **Left:**
+> - **The clean Mac and the Surface** (§3a.9): the first Install pressed in
+>   the real app, the first on `chromiumFetch`, and the first Transcribe
+>   through the press.
+> - **The user's**: whether the speech press is also an EXPORT row; the
+>   plan's: whether a running pack's Repair carries the hosts sentence.
+> - A ready pack's "· 636 MB" and Remove's "frees about" read the
+>   manifest's PRE-CI `bytesOnDisk`, not the receipt's measured one, which
+>   the status does not carry.
+> - The window asks `sidecar:status` once, at mount: after §16.53's
+>   refusal the row heals at the next helper request or the next ask, and
+>   nothing polls.
+> - What a real SRP or AppLocker block reports (libuv's source says
+>   `UNKNOWN`; WDAC's 4551 or a virus block's 225 would read as the policy
+>   sentence too).
+
 **One home: Settings.** `WINDOW.md` §3.9 already homes "AI helper (Python)
 status" in the settings panel, and §3's legend gives each control one home.
 The row, by state:
 
 | state | dot | the row |
 |---|---|---|
-| **Not installed** | grey, never red: it is every tester's first state, not a fault | **Install the AI helper · 170 MB** (205 MB on Windows), and under it: "Uses about 0.7 GB on disk. Downloads from github.com (and the host it redirects to, today release-assets.githubusercontent.com) and files.pythonhosted.org. Its own Python; any Python on this machine is left alone." Sheet 22's "the button has to say Python is not installed rather than spin" (`SHEETS.md:636-639`) |
+| **Not installed** | grey, never red: it is every tester's first state, not a fault | **Install the AI helper · 166 MB** (201 MB on Windows; pack 1's were 170 and 205), and under it: "Uses about 636 MB on disk. Downloads from github.com (and the host it redirects to, today release-assets.githubusercontent.com) and files.pythonhosted.org. Its own Python; any Python on this machine is left alone." Sheet 22's "the button has to say Python is not installed rather than spin" (`SHEETS.md:636-639`) |
 | **Not installed**, part fetched | grey | **Install the AI helper · 120 MB left**: the manifest's bytes minus the verified files in `downloads/` |
 | **Installing · <stage>** | grey | "its bar and its X are in EXPORT"; no second cancel |
-| **Running · Python 3.14.8 · pack 1 · 0.7 GB** | green, only with every `expects` method a capability and every self-test group ok | what is on this machine, from hello; **Repair · 170 MB** (205 MB on Windows) and **Remove**, small, in the Key row's Save and Clear style (`SettingsPanel.tsx:239-253`). Repair's number is the manifest's bytes minus the verified files present (all of it after a success, §16.47) |
-| **Running · 6 of 8 helper features · <reason>** | grey | a pack with a degraded `expects` method or a failed self-test group; for the Visual C++ runtime, its sentence and Microsoft's link; **Check again** and Repair |
-| **Running · from FORGE_PYTHON <path> · N of 8 helper features** | green only when N is 8; otherwise grey | the dot comes from hello, not from the process being up (CLAUDE.md's Surface setup points `FORGE_PYTHON` at a bare python.org 3.12 with `setx`, which an Explorer-started packaged app inherits); Install stays, with "used instead of FORGE_PYTHON once installed" (§16.42) |
+| **Running · Python 3.14.8 · pack 2 · 636 MB** (685 MB on Windows) | green, only with every `expects` method a capability and every self-test group ok | what is on this machine, from hello; **Repair · 166 MB** (201 MB on Windows) and **Remove**, small, in the Key row's Save and Clear style (`SettingsPanel.tsx:239-253`). Repair's number is the manifest's bytes minus the verified files present (all of it after a success, §16.47) |
+| **Running · 8 of 9 helper features · <reason>** (9 since pack 2 added `asr.model`) | grey | a pack with a degraded `expects` method or a failed self-test group; for the Visual C++ runtime, its sentence and Microsoft's link; **Check again** and Repair |
+| **Running · from FORGE_PYTHON <path> · N of 9 helper features** | green only when N is 9; otherwise grey | the dot comes from hello, not from the process being up (CLAUDE.md's Surface setup points `FORGE_PYTHON` at a bare python.org 3.12 with `setx`, which an Explorer-started packaged app inherits); Install stays, with "used instead of FORGE_PYTHON once installed" (§16.42) |
 | **Update the AI helper · N MB** | grey | the old pack unused until pressed (§16.46) |
 | **Not running · <reason>** | red | an installed pack that will not start; "Python is missing from the AI helper's folder (removed by antivirus?)"; a receipt that does not parse; a spawn refused by Group Policy (below); **Repair · N MB** first |
 | **Not available on this computer · <reason>** | grey | macOS 13; Windows on Arm, unless §16.44 allows the x64 pack there; no button |
@@ -2793,6 +3145,36 @@ go into the preload, `harness/bridge.ts` and the fallback bridge
 >   which a verifier saw as a 302 with `Location` against github.com on
 >   Node 24.18.1), a sentence that names a proxy, and one Hugging Face
 >   press and one `fetch_url` press behind the same proxy.
+>
+> **Slice C (2026-10-16): row 19's Electron half, measured and built**
+> (`2664a63`, `EFFECTS.md` §59). `scripts/probe-netfetch.mjs`, run as an
+> Electron 44.3.0 main-process script in the user's Terminal: `net.fetch`
+> with `redirect: 'manual'` **rejects** github.com's 302 ("Redirect was
+> cancelled"), and with `'follow'` leaves `response.url` empty, so it cannot
+> carry the hand-followed redirects that name each host. `net.request` in
+> its `'manual'` mode hands the 302 back with its `Location`. So:
+> - **The pack's fetch inside the app is `src/main/net/chromiumFetch.ts`**, a
+>   fetch over `net.request` that returns a manual redirect as undici does,
+>   so `fetchVerified` follows each hop unchanged and the log still names
+>   release-assets.githubusercontent.com; every request is `cache:
+>   'no-store'`, so the pack never lands in Chromium's disk cache too; the
+>   system's proxy is Chromium's. `installDeps.ts` `packFetch()` picks it
+>   inside a ready Electron; vitest and CI keep Node's fetch.
+> - **Chromium's `net::ERR_` network codes are retried** (not a certificate,
+>   a cancel, an unsafe port or a policy block), and **a failing proxy is
+>   named as the proxy**: "the proxy 127.0.0.1:59998 (this computer's proxy
+>   settings) could not be reached: net::ERR_PROXY_CONNECTION_FAILED"
+>   (Chromium, the address from `session.resolveProxy`), or "the proxy
+>   127.0.0.1:9 (HTTPS_PROXY) could not be reached: …" (Node under
+>   `NODE_USE_ENV_PROXY=1`, `NO_PROXY` honoured), its retry line too.
+> - **§16.40 (d)'s sentence for the beta is on the row** (`016f470`, §3a.4's
+>   note): model presses need a direct connection or `HTTPS_PROXY`.
+> - **Still open**: a real system proxy (none was available), one Hugging
+>   Face press and one `fetch_url` press behind it, and the app's own
+>   Install on `chromiumFetch`, which the sandbox cannot run (the clean Mac
+>   is its first, §3a.9). `service.ts` still hands the job
+>   `globalThis.fetch`, which `packFetchVerified` swaps; passing
+>   `packFetch()` there would read better and behave the same.
 
 **The hosts, named on the row and in the guide** (§16.40):
 
@@ -2811,7 +3193,7 @@ fetcher; the models come through the helper, which has two:
 
 | fetcher | used by | trust | proxy |
 |---|---|---|---|
-| main's `fetchVerified` | the interpreter and the wheels | Node's (CI, vitest) or Chromium's (`net.fetch`, once row 19 says so) | Node's fetch ignored `HTTPS_PROXY` without `NODE_USE_ENV_PROXY=1` (§8.2); `net.fetch` uses the system's |
+| main's `fetchVerified` | the interpreter and the wheels | Node's (CI, vitest) or, inside the app since `2664a63`, Chromium's through `net.request` (`chromiumFetch.ts`; row 19 found `net.fetch` cannot carry the hand-followed redirects) | Node's fetch ignored `HTTPS_PROXY` without `NODE_USE_ENV_PROXY=1` (§8.2); Chromium's uses the system's |
 | the helper's `media.fetch_url` (urllib) | the face finder | certifi added to the default context (`media.py:489-508`) | urllib reads the system proxy settings on macOS and Windows |
 | huggingface_hub 1.31.0 over httpx 0.28.1 | Whisper, depth, BiRefNet | `create_ssl_context` loads only `certifi.where()` (or `SSL_CERT_FILE`), no system roots | environment variables only (a reviewer's read, 2026-10-14) |
 
@@ -2839,6 +3221,166 @@ from inside the pack is part of the clean Mac's run (§3a.9).
 
 ### 3a.6 P.6 — Packaging and CI · with P.7's 1.5–1.75 days
 
+> **Built 2026-10-16 — slice C, with §3a.4 and §3a.7.** Not pushed when
+> this was written, so CI has run none of it; the run of `c7a2a86` (slices
+> A and B) is below.
+>
+> Commits: `aa377f9` (the filter and the uninstaller), `446f99b` (CI's six
+> steps, the URL probe, the PE reader, `helperPack.int`'s modes),
+> `83373de` (`ci.yml`'s URL count), `a943cd3` (the macro held to its kinds
+> of line; `.claude` and `.DS_Store` out), `3e90349` (numba's cache out of
+> CI's pack); and four fixes for `c7a2a86`'s Windows run, `b046c08`,
+> `16af45d`, `cbce56a`, `cec5ac1`. Every number is in `EFFECTS.md` §59.
+>
+> **The installer** (`electron-builder.yml`). The sidecar filter leaves out
+> `!.venv*` and `!.venv*/**` (both: electron-builder gives a pattern with a
+> dot no implied `/**`, app-builder-lib `fileMatcher.js`), `!.claude`,
+> `!.claude/**` and `!**/.DS_Store` (`a943cd3`), beside `__pycache__`,
+> `*.py[cod]` and the `:memory:` file. `sidecar/.venv` is 598 MB and
+> `.venv-faces` 108 MB by `du -sh`. `packaging.test.ts` judges the filter
+> through app-builder-lib's own `getFileMatchers`, so a `.venv-stems`
+> nobody has made yet is refused too.
+>
+> **The uninstaller** (`build/installer.nsh`, through `nsis.include`):
+> `customUnInstall`, which electron-builder inserts at the start of its
+> uninstall section, before the files go. Its whole body is inside
+> `${ifNot} ${isUpdated}` (an update runs the old version's uninstaller
+> with `/S /KEEP_APP_DATA --updated`; the guard is spelled as
+> electron-builder's own app-data guard is). It sets the shell context to
+> the current user for a per-machine install, then `RMDir /r
+> "$APPDATA\${PRODUCT_NAME}\python"`, and the same under
+> `${APP_PACKAGE_NAME}` when that name differs (a compile-time `!if`).
+> Electron names userData after the packaged `package.json`'s name
+> ("forge", no `productName`), which on NTFS is the same folder as
+> `Forge`; the second line is for a later rename (3dit). Never the models,
+> projects, settings or userData itself; `deleteAppDataOnUninstall` stays
+> unset. `packaging.test.ts` pins the include, one macro, the guard as its
+> first line and its `${endif}` as its last, every `RMDir` (by `matchAll`)
+> inside it and ending in `\python`, and since `a943cd3` every line one of
+> seven kinds and the file the macro alone: a verifier's `Delete` of
+> `settings.json` inside the guard had **survived** the first version.
+> **`makensis` has never compiled it** (the package job, which brings it,
+> runs on dispatch or a tag), and the guard's behaviour is unmeasured.
+>
+> **CI** (`.github/workflows/ci.yml`): the test matrix is `[windows-latest,
+> macos-14]` on every push (the repo is public, so the minutes are free;
+> the header's 9–14 and 6–10 minutes a push are estimates until row 37);
+> the installer job stays on dispatch or a `v*` tag. After `npm test`,
+> which keeps its bare 3.12:
+> 1. **The URL probe**, `node scripts/probe-pack-urls.mjs`: a one-byte
+>    range GET of each URL (**67 for pack 2's 95 files**), asserting 200 or
+>    206, the pinned length from `Content-Range`, and a landing host the
+>    row names (`pack.ts` `packHosts`), each failure an annotation. It reads
+>    the manifest through Node's own type stripping, with a literal parser
+>    as the fallback, held equal to the import by a test.
+> 2. **The cache** of `${{ runner.temp }}/forge pack é/userData/python`,
+>    keyed on the OS, the architecture, the ISO week (the step `iso-week`,
+>    shared with yt-dlp's) and a hash of `packManifest.ts`, `pack.ts`, the
+>    locks, `install.ts`, `installDeps.ts`, `pip.ts`, `check.ts`,
+>    `unpack.ts`, `compile.ts`, `fetchFile.ts` and `tar.ts`; no
+>    restore-keys; saved only by a green job.
+> 3. **`helperPack.int`** with `FORGE_PACK_REAL=1` and `FORGE_PACK_USERDATA`
+>    at that path (without `FORGE_PACK_REAL` it fails, `venv.ts`
+>    `packSuiteGate`). Over a pack this build accepts (`cachedPackIn`: the
+>    receipt parses, its platform and both hashes are the manifest's, the
+>    interpreter is there) it runs the job's Check again and every
+>    assertion; a stale receipt or a partial folder is removed and
+>    installed fresh. Its README goes up as `helper-pack-install-<os>` for
+>    rows 28 and 37.
+> 4. **The helper's suites through the pack's launch**
+>    (`FORGE_HELPER_PACK`): `sidecar.int`, `sidecarMedia.int` (strict: its
+>    Python cases may skip nothing, `venv.ts` `pythonCasesGate`),
+>    `vision.int`, `beats.int`, `faces.int` and `reframeJob.int`. Since
+>    `3e90349`, `packLaunch` gives the helper `<userData>/helper-cache`, so
+>    numba writes nothing into the cached pack (§16.52).
+> 5. **`packPipCheck.int`**: every problem `pip check` reports is
+>    mediapipe's two, or huggingface-hub's hf-xet while the lock pins no
+>    `hf_xet` wheel.
+> 6. **Windows: `scripts/pe-imports.py`** over the version folder, which
+>    lists each import that is neither beside its file, nor in
+>    `python.exe`'s folder, nor Windows' own, with `MSVCP140*`,
+>    `VCOMP140*`, `VCRUNTIME140*` and `CONCRT140*` always listed with where
+>    each resolves and every copy in the pack, delay-load imports read and
+>    flagged. Compared by membership with
+>    `tests/fixtures/pack-native-imports-win32.json`, and the full pack's
+>    list recorded and uploaded as `helper-pack-native-imports-win32`.
+>    **The committed list is a bootstrap** (`"recorded": false`, the
+>    interpreter's tree alone, read on the Mac: 48 PE files, 45 entries),
+>    and while it says so the step compares nothing: item 5 below is
+>    **listing built, comparison pending**, until the next slice commits
+>    CI's artifact as the fixture.
+>
+> **Measured locally** (the packaging lane, in clean copies): the URL probe
+> answered for all 67 URLs (206, every length the pin's) in 0.6 s; pack 2
+> installed fresh into `$TMPDIR/laneC-pack é/userData` in 53.0 s, then
+> checked again from the cache in 2.9 s, then reinstalled over a stale
+> receipt in 54.0 s, and once more through `2664a63`'s `fetchFile.ts` in
+> 50.5 s, each 11 of 11; `pip check` and `sidecarMedia.int`'s 148 Python
+> tests from the pack, none skipped; both fail with the reason on a pack
+> that is not there. `ci.yml` parses with js-yaml and PyYAML 6.0.3.
+> `helperPack.int`'s progress case broke on `a1aaf0e`'s per-group check
+> texts and would have failed CI's first push; it folds them now.
+>
+> **`c7a2a86`'s Windows CI run** (2026-10-16, read by the CI reader,
+> https://github.com/spyki-a/forge/actions/runs/38919769393): **red**,
+> 9 min 13 s, Windows only (the push matrix before `446f99b`); `npm test`
+> failed after 7 min 55 s on six tests, each new since the last green run
+> (`d7244ce`) and running on Windows for the first time; the build and the
+> installer job were skipped. Five were the tests' own faults:
+> `shots.int` ×2 (the win32 ffprobe prints frame 0's side data as `0,` in
+> csv, so the `/^\d+$/` filter counted 299 of 300; `b046c08` reads JSON),
+> `unpack.test` (the Mac's archive with its link unpacked on a win32 host,
+> which refuses links by design; `cbce56a`) and `pipStage.test` (a killed
+> pip's cwd removed before Windows released it, EPERM; `cec5ac1`). **One was
+> a product bug**: two `reframe.int` VFR rows showed the black canvas on
+> their last two frames at 0.5×, because the 2018 build's `setpts` passes
+> its EOF on un-retimed and `fps=` drops the last frame it holds, so **every
+> slowed clip on Windows lost its last source frame** (the shape since
+> `e536186`, 2026-09-16). `16af45d` puts `tpad=stop_mode=clone:stop=1`
+> (`RETIME_TAIL`) ahead of a retime that slows and ends in `fps=`; emulated
+> on the Mac, it reproduces CI's frames without the clone and none with it.
+> The next Windows run proves all four on the runner.
+>
+> **Where it differs from the text below:**
+> - The cache key hashes `install.ts`, `installDeps.ts`, `pip.ts`,
+>   `check.ts`, `unpack.ts` and `compile.ts` (and the shared `pack.ts`):
+>   `src/main/sidecar/pack.ts` does not exist, and each of these decides
+>   what an install puts on disk.
+> - Step 1 counts 67 URLs, not about 49; step 3's `asr.int` is left out (no
+>   fixture or model seeded) and `tiny` is now refused by `asr.transcribe`.
+> - `pe-imports.py` counts `python.exe`'s folder as found (Windows searches
+>   the application directory for every DLL in the process), and reads the
+>   delay-load imports too.
+> - A stale receipt in CI is removed and installed fresh, not taken
+>   through the app's Update path, whose helper calls differ.
+> - The uninstaller's second `RMDir`, for the package name's folder.
+>
+> **Tests** (at `1a043c9`): `packaging` 17, `probePackUrls` 14, `peImports`
+> 6, `helperPackCi` 13, `fetchFile` 35, `installDeps` 5, `unpack` 21,
+> `pipStage` 12. **Mutations**, each seen to fail: the packaging lane's 5 on
+> the filter and the macro, then 2 more on the macro's kinds of line and 2
+> on `.claude` and `.DS_Store`; the URL probe's 5; the PE reader's 4 (one
+> anchor, `IMPORT_DIRECTORY = 1`, also matched inside
+> `DELAY_IMPORT_DIRECTORY = 13`, was refused and run again on a unique
+> one); `venv.ts`'s 4 and the fix phase's numba one; `fetchFile`'s 7 and
+> `installDeps`' 1 (row 19's, §3a.5's note); and the CI fixes' own (§59).
+>
+> **Left:**
+> - **CI's first run of the pack** on both runners, at the next push: read
+>   it at github.com/spyki-a/forge/actions, both jobs; the capability
+>   suites have never run on Windows (an open-ended risk on the 2018
+>   ffmpeg and a Windows CPU), and `actions/cache` on a path with a space
+>   and an `é` on Windows is unmeasured (a failure there should be a miss
+>   or a save warning, not a red job).
+> - **The PE fixture** from CI's artifact, `recorded: true`.
+> - **`makensis` on `build/installer.nsh`**: run the workflow by hand once
+>   before the Surface's update run.
+> - **Row 37**: the minutes on a miss, the cache's size, and one Windows
+>   helper process running asr and then beats, which CI does not run
+>   (`asr.int` is not seeded).
+> - `tests/sidecar/test_*.py` must skip nothing under `FORGE_HELPER_PACK`,
+>   so a skip added there later fails step 4 by design.
+
 **The installer still ships no Python.** The sidecar filter becomes
 `!.venv*` and `!.venv*/**` (it names `.venv` and `.venv-faces` today,
 `electron-builder.yml:66-72`; `tests/packaging.test.ts:89-104` holds every
@@ -2862,8 +3404,8 @@ public repo and is the only place the pack's macOS 14 floor runs (the dev
 Mac runs macOS 26). After the existing `npm test` (which keeps its bare 3.12
 and every degraded check, §16.36):
 
-1. **The URL probe, on every push**, cache or not: each manifest URL (about
-   49) gets a HEAD or a 1-byte range request, asserting 200 or 206 and the
+1. **The URL probe, on every push**, cache or not: each manifest URL (67
+   for pack 2, as built) gets a HEAD or a 1-byte range request, asserting 200 or 206 and the
    manifest's length. Without it, a pinned file deleted from PyPI or GitHub,
    or a changed redirect host, breaks every tester's Install while CI stays
    green on the cached pack.
@@ -3092,23 +3634,91 @@ subject's "needs the AI helper" pointer opens Settings with the row in view,
 and the row shows the sized Install; the press puts "Installing the AI
 helper" in the EXPORT strip with a stage; a cancel leaves "· N MB left"; the
 stub reaches `ready` with the full capabilities, the row reads "Running ·
-Python 3.14.8 · pack 1" with "Repair · N MB", and Follow the subject is
+Python 3.14.8 · pack 2" with "Repair · N MB", and Follow the subject is
 enabled; Transcribe is greyed "needs the speech model" with its sized press;
-a stub with a failed beats group shows "6 of 8 helper features" and Check
+a stub with a failed beats group shows "8 of 9 helper features" and Check
 again; Remove asks with both sizes and returns to Not installed.
+
+> **Built 2026-10-16** (`e3221d3`, with `dca719c`, `e43d967` and `0537c12`
+> in the fix phase; `EFFECTS.md` §59 has every step's text as read on
+> screen). `harness/bridge.ts` holds a stub helper, `harnessHelper` (also
+> `window.__forgeHelperStub`: `set(state)`, `reset()`, `stepMs`), whose
+> every status is built from the manifest (`packOffer`, `bytesLeft`):
+> absent, absent with files verified, ready, ready with the beats group
+> failed for the Visual C++ runtime, update, damaged, unsupported (macOS
+> 13) and the Group Policy refusal. Its install is a job in the list that
+> walks main's real stages and texts over the manifest's files on a timer,
+> fetching nothing, honours the job list's X, and ends starting → ready;
+> Remove, Check again and the speech model's press have stubs too. The
+> page's own status stays the old "failed: harness: no sidecar" (the
+> census's settings rows and the reframe and clip-it checks are written
+> against it); the check moves the stub to absent itself. It passed in
+> 5.3–5.8 s with each step as listed above, plus Repair beside a running
+> pack (its presses waiting on the job, then "Repair · 141 MB" after the
+> X), and the damaged, update, policy and unsupported rows. The Mac's
+> texts: "Install the AI helper · 166 MB", "· 141 MB left", "Running ·
+> Python 3.14.8 · pack 2 · 636 MB", "8 of 9 helper features", "Remove the
+> AI helper? It frees about 636 MB." with "also remove the downloaded
+> models · 464 MB". Twelve mutations of the code it guards each fail it;
+> one of them, Settings opened without asking for the row, **survived** the
+> first version, since in a 785 px window the row is in view either way,
+> until the check watched the store's focus. Dropping the hosts sentence
+> fails it too (a verifier), and so do the fix phase's two. **It needs the Browser pane shown, not only the tab
+> fronted, and a window about 785 px tall**; its offline video asset fills
+> the console with `forge-media://` errors, which are harmless.
+> `clipItCheck.ts` reads the no-caption link's reason as the pointer now.
 
 **Census rows** (`tests/fixtures/ui-census.json`, each with its `needs`
 recipe): "Install the AI helper", "Install the AI helper · N MB left", "Not
-installed", "Installing", "Repair · N MB", "Remove", "Check again", "N of 8
+installed", "Installing", "Repair · N MB", "Remove", "Check again", "N of 9
 helper features", "Update the AI helper", "Not available on this computer",
 "Python is missing from the AI helper's folder", the hosts line, the
 pointer's title, Transcribe's new title, "Get the speech model · 464 MB" and
 "needs the speech model".
 
+> **Built 2026-10-16** (`e3221d3`, then `33ee0ff`, `27aa661`, `016f470`,
+> `0537c12` and `1a043c9`). The fixture went from 827 rows to 860, then
+> 883; the browser census checks 875 of them with none missing (8 skipped,
+> 54.7 s). Every label above has its row, a number's label by the existing
+> `part` kind ("Install the AI helper ·", "Repair ·", "helper features",
+> "Get", …); "left" counts 2 under helper-partial and "Check again" 2 under
+> helper-short. Beyond the list: "Needs an update" and the older-pack
+> sentence, the Visual C++ sentence and its link, the Group Policy
+> sentence, Remove's question, box, "Remove it" and "Keep it", "Speech
+> model" and its X, the model presses' network sentence, "Installing",
+> "Repairing" and "Updating" in Settings and EXPORT, "Its bar and its X are
+> in EXPORT.", "used instead of FORGE_PYTHON once installed", and "the AI
+> helper is starting" in each home that says it. The pointer's title has a
+> row in the url, canvasbar and dock homes; MediaPool's "The AI helper
+> (Python) is not running" became "needs the AI helper — install it in
+> Settings". New recipes in `census.ts`: helper-absent, -partial,
+> -installing, -short, -update, -unsupported, -damaged, -policy,
+> -remove-asked, -repairing, -updating and -env; speech-model-offered,
+> -present, -missing and -fetching, and speech-fetching-pool;
+> transcribe-no-model, transcribe-ready and the Transcript tile's four
+> (transcript-no-model, -speech-press, -helper-starting, -starting-line);
+> and the starting state in the pool, the dock and the URL tile
+> (pool-helper-starting, reframe-helper-starting,
+> link-no-captions-starting). `uiCensus.test.ts` checks the fixture against the source,
+> not the source against the fixture, so a text written on screen with no
+> row goes unseen there: five such words were found by a verifier, not by
+> it.
+
 ### 3a.8 P.8 — Measure before relying
 
 These are §15 rows 26–38. Row 26 is P's first task; row 19 (`net.fetch`
 behind a proxy) is P's too, widened in §3a.5.
+
+**Row 19: Electron's half measured 2026-10-16** (`EFFECTS.md` §59): an
+Electron 44.3.0 probe in the user's Terminal found `net.fetch` rejects a
+`'manual'` redirect ("Redirect was cancelled") and leaves `response.url`
+empty after `'follow'`, while `net.request`'s `'manual'` mode hands the 302
+back with its `Location`; so the pack's fetch inside the app is
+`chromiumFetch.ts` over `net.request`, and a dead proxy reads
+`net::ERR_PROXY_CONNECTION_FAILED`, now named as the proxy (§3a.5's note).
+**Open**: a real system proxy, one Hugging Face press and one `fetch_url`
+press behind it, and the app's first Install on the new fetcher (the clean
+Mac).
 
 26. **The pinned archives' members**, from a real download into a scratch
     folder: the interpreter's names (`python/bin/python3.14`, its `python3`
@@ -3149,7 +3759,11 @@ behind a proxy) is P's too, widened in §3a.5.
     first hello of 11.3 s and a cold self-test of about 25 s, beats 21.1 s);
     the bar's weights are now 45 / 5 / 15 / 35. `--no-compile` saves
     109.3 MB and 9.3 s of pip and costs 0.29 s at every start, so pip
-    compiles. **The Surface half is open.**
+    compiles. **Pack 2 on the Mac, 2026-10-16** (`EFFECTS.md` §59):
+    53.0–58.3 s over two lanes' fresh installs (the download 5.4–6.3 s at
+    26–31 MiB/s, pip 11.5–12.9 s, the check 32.5–36.5 s with a cold hello
+    of 11.1–11.4 s), and 2.9 s for CI's cached mode, Check again on a warm
+    pack. **The Surface half is open.**
 28. **Bytes on disk, the longest relative path and the longest directory**,
     per platform, from CI's install. Windows is measured from the wheels'
     indexes today (about 0.72 GB with the interpreter); the interpreter's
@@ -3157,7 +3771,11 @@ behind a proxy) is P's too, widened in §3a.5.
     **The Mac's figures from a local install, 2026-10-14** (§58): 675,763,387
     B apparent (the manifest's PRE-CI figure +0.11 %), longest path 161 and
     directory 107 as the manifest has them. CI's install on both platforms
-    is still owed.
+    is still owed. **Pack 2 on the Mac, 2026-10-16** (§59): 667,609,685 and
+    667,495,529 B apparent over two installs (+0.11 % and +0.09 % on the
+    PRE-CI 666,871,585), `du` 697,860,096 and 697,757,696 B, longest path
+    161 and directory 107, 13,515 files. CI's install, both platforms, is
+    the next push's (`446f99b`).
 29. **The cold `system.hello`** from the pack on the Surface, **both** the
     first start after an install and the first after a reboot, against the
     client's 30 s. The client's hello timeout is set from it, plus a margin
@@ -3178,7 +3796,11 @@ behind a proxy) is P's too, widened in §3a.5.
     ctranslate2 4.8.2's `ctranslate2.dll` (59,296,256 B, beside
     `libiomp5md.dll` 1,614,192 B and `cudnn64_9.dll` 266,288 B) ship no
     `msvcp140`; mediapipe's `libmediapipe.dll` is 28,736,000 B with no
-    `msvcp140` in the wheel; numpy and llvmlite carry private, name-mangled
+    `msvcp140` in the wheel (**CI's listing, `scripts/pe-imports.py`, is
+    built, 2026-10-16**: on the interpreter's tree alone, read on the Mac,
+    its 48 `.pyd` and `.dll` files give 45 runtime entries, every one a
+    `VCRUNTIME140` or `_1` found in the pack and none an `MSVCP140`; the
+    full pack's list is CI's first Windows run's, §3a.6's note); numpy and llvmlite carry private, name-mangled
     copies (llvmlite's `msvcp140-8f141b….dll`, 557,648 B); av ships its own
     MinGW runtime; scipy's `_nd_image`, `_ckdtree` and `_uarray` import no
     `MSVCP140`. Whether onnxruntime's and ctranslate2's DLLs import it is
@@ -3233,6 +3855,13 @@ behind a proxy) is P's too, widened in §3a.5.
     fetched its 27,258,801 B model in about 0.8 s and returned 3 layers.
     **asr's half waits for the speech model's press** (§3a.4), and hf-xet
     stays in the lock until it passes.
+    **asr's half measured 2026-10-16** (`EFFECTS.md` §59): on a copy of
+    pack 1 with hf-xet uninstalled, started as the pack rung with
+    `HF_HUB_DISABLE_XET=1`, `asr.model {download: true}` fetched the pinned
+    486,212,372 B in 14.7 s (`model.bin` about 13.6 s) from huggingface.co
+    and us.aws.cdn.hf.co, and `asr.transcribe` gave 22 words in 2.1 s; a
+    fresh session with no host allowed transcribed in 1.6 s. **Row 35 is
+    closed: hf-xet left the lock as pack 2** (`1a5051c`, §3a.1's note).
 36. **The Surface itself**, recorded where no doc has it yet (grep of
     `docs/`, 2026-10-14): Windows 10 or 11, version and build (it decides
     Smart App Control and Sandbox), edition (Windows Sandbox is not in
@@ -3242,6 +3871,16 @@ behind a proxy) is P's too, widened in §3a.5.
     the capability suites' first Windows run finds, and **one Windows helper
     process running asr and then beats** (two OpenMP runtimes meeting would
     abort it; CI runs asr only if its model is seeded, §3a.6).
+    **The first push's CI measured 2026-10-16** (`EFFECTS.md` §59):
+    `c7a2a86`, slices A and B, Windows only, run 38919769393, red in
+    9 min 13 s (`npm test` 7 min 55 s) on six tests new to Windows: five
+    the tests' own (two csv reads of the win32 ffprobe, a Mac archive
+    unpacked on win32, a killed pip's cwd), one a product bug (every slowed
+    clip lost its last frame on the 2018 build), each fixed in slice C
+    (§3a.6's note). The pack's own CI steps were not in that push. **Open**:
+    their first run (the next push, both runners), its minutes on a miss,
+    the cache's size, the capability suites on Windows, and asr then beats
+    in one Windows process (not in CI: `asr.int` is not seeded).
 38. **The protocol's encoding under `-E`**: the helper's stdio through a
     reconfigure in `__main__` and through `-X utf8`, against today's
     `PYTHONIOENCODING=utf-8`, with a non-ASCII path in a request and a reply
@@ -3271,10 +3910,10 @@ behind a proxy) is P's too, widened in §3a.5.
   from CI, **fetched through a browser in that account** and launched once
   from Downloads, as a tester's copy is (quarantined and translocated), then
   from Applications. Settings shows "Not installed" with **Install the AI
-  helper · 170 MB**; the press puts its bar and X in EXPORT; one cancel during
+  helper · 166 MB** (pack 2); the press puts its bar and X in EXPORT; one cancel during
   the download and a second press that shows "· N MB left" and fetches only
   what was missing; the self-test passes and the row reads "Running · Python
-  3.14.8 · pack 1"; **Get the speech model · 464 MB** (§16.49 (a)) and one Transcribe on a
+  3.14.8 · pack 2 · 636 MB"; **Get the speech model · 464 MB** (§16.49 (a)) and one Transcribe on a
   pool clip; one **Follow the subject** (the face finder by its own 1.1 MB
   press); Repair once (its size shown); Remove once, both sizes shown,
   models kept; and row 31's checks. The dev Mac's python.org framework
@@ -3285,7 +3924,7 @@ behind a proxy) is P's too, widened in §3a.5.
     `FORGE_PYTHON`; the Visual C++ runtime's absence checked, not assumed,
     row 30), otherwise a new local account **with a non-ASCII name** (so
     every pack path carries one), with no `FORGE_PYTHON`; the installer from
-    CI; the same presses as the Mac at **· 205 MB**; row 32's checks; then an
+    CI; the same presses as the Mac at **· 201 MB**; row 32's checks; then an
     app update from CI's next installer, with the pack still there after it
     (the uninstaller's `isUpdated` guard), and an uninstall, with
     `%APPDATA%\Forge\python` gone after it;
@@ -3304,31 +3943,74 @@ Surface's dev-checkout run, about 1 hour; row 36's facts about the Surface,
 10 minutes (the sandbox here can run neither Electron nor an installer);
 and §16.36–50.
 
+> **Where the exit stands, 2026-10-16.** Every build piece is in (slices
+> A–C), and §16.36–53 are answered. What is left is this section's runs:
+> **CI's** first run with the pack, which is the next push (`446f99b`
+> onward, both runners; then commit CI's native-import artifact as the
+> fixture); **the clean Mac** (also the first Install on `chromiumFetch`
+> in the real app, and row 31); and **the Surface's two runs**, with an
+> installer from a hand-run workflow, which is also `makensis`'s first
+> compile of the uninstaller's macro. The clean Mac should read 166 MB and
+> 636 MB, the Surface 201 MB and 685 MB, where this text first said 170
+> and 205 MB and 0.7 GB.
+
 ### 3a.10 Docs this step corrects · 0.5 day
 
-Found stale on the way, each corrected when P lands:
+Found stale on the way, each corrected when P lands. **Done 2026-10-16 by
+slice C's recorder**, item by item (✓ corrected, with the file; ✗ left,
+with why):
 
 - `requirements.txt:1-5` and `SIDECAR.md:69-71` say soundfile is sdist-only
   and that audio decoding goes through the bundled ffmpeg. soundfile 0.14.0
   (2026-06-06) ships `py2.py3-none` wheels for both platforms, and librosa
   1.0.0 requires it; beats decodes with our ffmpeg (`beats.py:59-64`), but
   **asr decodes with PyAV**.
+  ✓ `docs/SIDECAR.md` "Environment findings". ✗ `sidecar/requirements.txt`'s
+  header still says it: a file under `sidecar/`, which the recorder does
+  not edit; a one-comment change for the next code commit there.
 - §12's "mediapipe supports 3.12–3.14 by wheel tags": 0.10.35's two wheels
-  are `py3-none`, with no Requires-Python.
+  are `py3-none`, with no Requires-Python. ✓ §12, "The interpreter".
 - `requirements-stems.txt`'s demucs 4.0.1 has no `demucs.api` (§3a.1).
+  §3a.1 already says so ("Stems is not in it"). ✗ the file itself, under
+  `sidecar/`, still pins 4.0.1 with no note; it goes with stems' own half
+  day (§16.39).
 - `PACKAGING.md:58` and `electron-builder.yml:19` say the venv is 542 MB;
   `du -sh sidecar/.venv` says 598 MB. `PACKAGING.md:61-62` says the
   requirements ship "so the setup step is available"; the pack replaces that.
+  ✓ `docs/PACKAGING.md` ("What is deliberately left out", rewritten);
+  `electron-builder.yml`'s comment already says 598 MB (`aa377f9`).
 - This section's old exit counted "twelve helper tests" and `CLAUDE.md`
   says fourteen; `sidecar.int.test.ts` has 15. `CLAUDE.md` says `client.ts`
   falls back to `python3`; the app's fallback is `service.ts:34` (`python` on
   Windows), and after P a packaged app has none.
+  ✓ already: `CLAUDE.md` says "the twenty sidecar tests" (`sidecar.int` had
+  18 after slice A and has 20 since slice B) and its `FORGE_PYTHON` row was
+  rewritten on 2026-10-14. ✓ §3a's "Exit" now says 20 (it said 15, the
+  count when it was planned).
 - Then `SIDECAR.md` Setup (the pack, and the venv for development),
   `PACKAGING.md` ("What is deliberately left out", the first-run list, the
   uninstaller's macro), `CLAUDE.md`'s fresh-Windows table (`FORGE_PYTHON`'s
   new place; the dev pack's own root), `WHERE-THINGS-ARE.md` Settings,
   `BETA.md` R4 (the full route built) and R12 (the `python3` dialog question
   gone), and §14 below.
+  ✓ `docs/SIDECAR.md` (the methods with `asr.model` and `system.selftest`,
+  Setup, ASR, hf-xet); ✓ `docs/PACKAGING.md` (left out, what ships, the
+  pack and the uninstaller, the first-run list, "Getting an installer");
+  ✓ `CLAUDE.md` (the `FORGE_PYTHON` row: both orders and
+  `userData/python-dev`; the CI paragraph: both runners on every push, the
+  pack's steps, reading CI without signing in); ✓
+  `docs/WHERE-THINGS-ARE.md` (the gear's dot, the Media pool, the URL tile,
+  the Transcript tile, Follow the subject, the canvas chip, EXPORT, and
+  Settings' AI helper row); ✓ `docs/BETA.md` (R4 built, with what the exit
+  owes; R10's guide line; R12's question gone); ✓ `docs/WINDOW.md` §1 and
+  §3.9 (the store's `helperStatus`); ✓ §14, already written 2026-10-14.
+- **Found while recording, and corrected:** §3a.1's slice-A note said
+  `formatBytes` prints the PRE-CI on-disk figure as "0.6 GB" and "0.7 GB";
+  it writes GB only from 1 GiB, so "644 MB" and "695 MB" (pack 2: 636 and
+  685 MB). Every current value in §3a that said 170 MB, 205 MB, pack 1 or
+  "N of 8" now says pack 2's 166 MB, 201 MB, pack 2 and "N of 9"; the Built
+  notes keep the history. `EFFECTS.md` §55's csv note and its speed section
+  point at §59.
 
 **§14 gains six rows**, written into §14 on 2026-10-14 with the plan: the
 pack missing on an installed app; an install stopped part-way; a module
@@ -8255,7 +8937,10 @@ route, the app installing a Python pack under `userData` itself, 5 to 10
 days and 300 MB or more by `BETA.md`), as sheet 22 decided ("for this we will
 install Python then I guess"). Until then **every Python control is greyed
 with "needs the AI helper"**, never offered as a toggle that changes
-nothing.
+nothing. **Step P's build is complete (2026-10-14/16, §3a):** the pack is
+166 MB to download on the Mac and 201 MB on Windows, pressed from Settings;
+each Python control is greyed by its own method, and every "needs the AI
+helper" points at that one Install. §3a.9's exit runs remain.
 
 What each step needs:
 
@@ -8283,14 +8968,22 @@ it.
 
 **The interpreter.** The dev venv is CPython 3.14.6. CI runs a bare 3.12 with
 no pip install (`.github/workflows/ci.yml:78-83`), so every new method must
-appear in `degraded` there (§4.9). R4 picks the pack's version; mediapipe
-supports 3.12–3.14 by wheel tags, and 0.10.35 **ran on 3.14.6** on the
-user's Mac (§4.1); 1.0.1 is unmeasured.
+appear in `degraded` there (§4.9). The pack's version is CPython 3.14.8
+(§16.36, §3a.1). mediapipe 0.10.35's two wheels are `py3-none`, with no
+Requires-Python, so its tags say nothing about the Python version (this
+text first said "supports 3.12–3.14 by wheel tags"; corrected 2026-10-16,
+§3a.10); 0.10.35 **ran on 3.14.6** on the user's Mac (§4.1), and its
+library loads on the pack's 3.14.8 (the self-test's faces group, every
+install since 2026-10-14); 1.0.1 is unmeasured.
 
 **A Windows-only gap.** Capability integration tests gate on
 `.venv/bin/python` and so have never run on Windows (`vision.int.test.ts:22-24`).
 §4.9's `venv.ts` fixes that; Windows still needs a venv on the Surface
 (`CLAUDE.md`'s fresh-checkout table: `FORGE_PYTHON`, the Store alias trap).
+**Since slice C (2026-10-16)** CI installs the pack on its Windows runner
+and runs `sidecar.int`, `sidecarMedia.int`, `vision.int`, `beats.int`,
+`faces.int` and `reframeJob.int` from inside it through `FORGE_HELPER_PACK`
+(§3a.6); the first such run is the next push.
 
 ### 12.1 Memory on the 8 GB floor machine
 
@@ -8516,7 +9209,12 @@ Each is named in its step, and each step's first task is its own row:
    reframe.int is frame-exact at every cut on all four sources, at 9:16,
    1:1, 2× and the two-up, plus the slot-1 rows and a ramp, within 1 px on
    every frame. Still open:
-   - the 2018 build: CI's reframe.int on the push;
+   - the 2018 build: CI's reframe.int on the push. *(It first ran there in
+     run 38919769393, 2026-10-16, on `c7a2a86`: the annotations name two
+     failing rows, both slowed VFR rows that lost their last frame to the
+     2018 `setpts`' EOF, fixed by `RETIME_TAIL`, `EFFECTS.md` §59. The
+     annotations name only failures and the log needs a sign-in, so which
+     rows passed and which skipped is the next run's to show.)*
    - ~~25 and 50 fps projects, which need 1b's `Shot.startPts` and the
      track's time base~~ — **done in slice B** (`4aafdc4`, 2026-10-13). ffmpeg
      rounds the seek into the time base, and the printed-ms path keyed 1 cut
@@ -8574,7 +9272,12 @@ Each is named in its step, and each step's first task is its own row:
 18. The schema.org paywall signal on three news sites (§9).
 19. Electron `net.fetch` against Node fetch behind a proxy (§8.2); for
     Step P, also one Hugging Face model press and one `fetch_url` press
-    behind the same proxy (§3a.5).
+    behind the same proxy (§3a.5). **Measured 2026-10-16, Electron's half**
+    (`EFFECTS.md` §59): `net.fetch` rejects a `'manual'` redirect and
+    leaves `response.url` empty after `'follow'`, so the pack's fetch
+    inside the app is `net.request` (`chromiumFetch.ts`, `2664a63`), and a
+    dead proxy is named as the proxy. Open: a real proxy, the two model
+    presses behind it, and the app's first Install on it (§3a.8).
 20. three.js flat colour and edge alpha against the 2D painter (§9).
 21. pyautoflip on the ten clips, run once in a scratch venv on your Mac
     (Python 3.13 or older: it refuses 3.14), and rated beside ours at step
@@ -8597,7 +9300,10 @@ Each is named in its step, and each step's first task is its own row:
 
     Still open: the 2018 build. It is dated at `f22fcd4` (`split.c:123`,
     `vf_stack.c:368`, `vf_tpad.c:54`/`:57`/`:58`, and `framesync.c:98`'s
-    EOF the same), and the two-up rows run it in CI on the push.
+    EOF the same), and the two-up rows run it in CI on the push. *(They
+    were in run 38919769393, 2026-10-16, whose annotations name no two-up
+    row among the failures; row 6's note says why that is not yet a
+    pass.)*
 23. The shot finder's other paths that only Windows runs, in the same CI
     run as row 2 (§4.2):
     - the `split`/`nullsink` graph inside `-vf`. It was read in the 2018
@@ -8650,6 +9356,17 @@ Surface itself (36), CI's first runs (37), and the protocol's encoding under
   folders one package at a time, so the bar's count works.
 - **Row 35: depth's half measured 2026-10-14** (§58): depth's download
   passes without hf-xet. Open: asr's half, with the speech model's press.
+- **Row 35: asr's half measured 2026-10-16** (§3a.8, `EFFECTS.md` §59): the
+  pinned speech model, 486,212,372 B, fetched in 14.7 s without hf-xet,
+  and transcribed with no host. Closed: hf-xet left the lock (pack 2).
+- **Row 28: pack 2 on the Mac, 2026-10-16** (§59): 667,495,529 and
+  667,609,685 B on disk over two installs, longest path 161 and directory
+  107. Open: CI's install, both platforms (the next push).
+- **Row 37: the first push's CI measured 2026-10-16** (§3a.8, §59):
+  `c7a2a86`'s Windows run 38919769393, red in 9 min 13 s on six tests new
+  to Windows, one of them a real loss of a slowed clip's last frame on the
+  2018 build; each fixed in slice C. Open: the first run of the pack's own
+  CI steps, its minutes and its cache.
 
 ---
 
@@ -9148,6 +9865,11 @@ what is needed, where the answer waits on something not yet in hand.
     behind a proxy.
 
     **Answer (2026-10-14):** as recommended ("okay go ahead").
+
+    **Built 2026-10-16** (§3a.4's note): (a), the hosts sentence under
+    Install, Update and a damaged or failed pack's Repair (`be3ae1b`,
+    `0537c12`); (d)'s sentence under any running helper (`016f470`). The
+    tester guide's half is `BETA.md` R10's.
 41. **Where the Install press lives.**
     - (a) **Settings only**: one row, one button with its size; every
       "needs the AI helper" becomes a pointer that opens Settings at the
@@ -9273,6 +9995,12 @@ what is needed, where the answer waits on something not yet in hand.
     as written.**
 
     **Answer (2026-10-14):** as recommended ("okay go ahead").
+
+    **Built 2026-10-16** (§3a.4's and §3a.6's notes): Repair names what it
+    still has to fetch (`e43d967`); Remove asks with both sizes, the box
+    off by default (`dca719c`); the uninstaller's macro under
+    `${ifNot} ${isUpdated}` (`aa377f9`), not yet compiled by `makensis` nor
+    run through an update.
 48. **CI on the push.** The repo is public
     (`api.github.com/repos/spyki-a/forge`: `private: false`, 2026-10-14),
     which `ci.yml:31-32` names as the condition for putting macOS back on
@@ -9309,6 +10037,17 @@ what is needed, where the answer waits on something not yet in hand.
     clean machine.
 
     **Answer (2026-10-14):** as recommended ("okay go ahead").
+
+    **Built 2026-10-16** (`739fa55`, `93c6bde`, `ae2be28`, `27aa661`;
+    §3a.4's note, `EFFECTS.md` §59): `Systran/faster-whisper-small` pinned
+    at `536b0662742c02347bc0e980a01041f333bce120`, its four files
+    486,212,372 B, "Get the speech model · 464 MB" in Settings, over the
+    pool and in the Transcript tile beside a greyed Transcribe; the load by
+    path with `local_files_only=True`; `asr.transcribe` never downloads. One
+    difference: the press forwards its progress and has an X, as the face
+    finder's does, and is not a row in EXPORT's list ("through the job
+    list" contradicted that precedent). Whether it should also be one is
+    yours.
 50. **One app at a time.** Nothing makes Forge single-instance, so a
     second window shares userData with the first (and the dev app shares
     it with the installed one, which P answers with a dev root of its own,
@@ -9344,6 +10083,25 @@ what is needed, where the answer waits on something not yet in hand.
     row can name them apart (P-C).
 
     **Answer (2026-10-16):** as recommended ("go ahead").
+
+    **Built 2026-10-16** (`a3958bf`; the row in `be3ae1b`). `check.ts`
+    returns `integrity` beside `problems`. `integrity` holds four
+    sentences: "The AI helper's interpreter is outside its folder: <path>",
+    "… Python prefix is outside its folder: <path>", "… Python path reaches
+    outside its folder: <entry>" and "The AI helper runs Python <x>, not
+    <the manifest's>"; `problems` keeps "<method> is not available: …" and
+    "The AI helper's self-test did not answer for <group>". The pack is
+    kept; the receipt gains `integrity` (and `problems`), each only when not
+    empty; the log names every finding ("[helper] check: …") and the job's
+    last speed text is "installed with a warning · <the first>" (the queue
+    clears it on done, so the receipt is the lasting record). Check again
+    replaces both lists. Every ready status from the pack carries the
+    receipt's `integrity` (`receiptIntegrity`, read defensively), and the
+    row reads it grey, "Running · N of 9 helper features · <the first
+    problem>", with Repair, Remove and each problem listed. Eight
+    mutations, each seen to fail (integrity merged back into problems
+    alone failed 7 `packCheck` cases); a verifier's string-prefix
+    `isInside` failed 3.
 52. **numba's cache inside the installed pack.** The first real beats pass
     writes 38 cache files (1,190,255 B) into the pack's librosa folders
     (measured, §3a.8 row 27), so the tree drifts from the receipt's
@@ -9357,6 +10115,21 @@ what is needed, where the answer waits on something not yet in hand.
     **Recommended: (a).**
 
     **Answer (2026-10-16):** as recommended ("go ahead").
+
+    **Built 2026-10-16** (`c996f80`; CI's half `3e90349`; `EFFECTS.md`
+    §59). `NUMBA_CACHE_DIR` is `<cacheDir>/numba` (`numbaCacheDir`, joined
+    through `assetPath`, so `…\helper-cache\numba` on win32) on every rung
+    the app gives its cache folder: the pack, a packaged `FORGE_PYTHON`, and
+    the development rungs (`plainHelperEnv` now sets seven app keys). A rung
+    with no cache folder leaves numba to the parent's environment, as with
+    `FORGE_CACHE_DIR`. Measured on pack 1: before, 38 cache files
+    (1,190,255 B) in the pack; after a beats pass with the cache folder
+    given, 0 in the pack and 38 (1,190,271 B) in `helper-cache/numba`. The
+    integration suites passed no cache folder, so under `FORGE_HELPER_PACK`
+    they still wrote the 38 into the pack, and CI would have cached that
+    drifted pack; `packLaunch` now gives `<userData>/helper-cache`, and
+    `helperPack.int` asserts no `.nbi` or `.nbc` in the version folder in
+    both its modes.
 53. **The last window the lock does not cover** (slice B, V2's finding):
     another window can start the helper from the pack in the milliseconds
     between Repair's or Remove's last in-use read and its stop, and two
@@ -9371,6 +10144,38 @@ what is needed, where the answer waits on something not yet in hand.
     **Recommended: (a)** in P-C; (b) stays its own question.
 
     **Answer (2026-10-16):** as recommended ("go ahead").
+
+    **Built 2026-10-16** (`a1aaf0e`; the row in `be3ae1b`).
+    - Every start from a pack asks `lock.ts` `lockedElsewhere(root, {pid,
+      isAlive})` first, synchronously: in `getSidecar()`, in
+      `startCurrent()`, and, through the client's new `mayStart`, before
+      every spawn, a crash restart's included (beyond the text: without it
+      the restart path left the race open). Another live pid's lock
+      refuses: `getSidecar()` throws "The AI helper is being repaired by
+      another Forge window" and builds nothing, and the status is
+      `{state: 'failed', error: <that>, source}`, which the row shows grey
+      with no presses. A young torn lock counts as another's, an unreadable
+      one as held; this window's own pid refuses nothing. The status ask
+      reads the lock again when the last status was this refusal and, once
+      the lock is gone, starts the helper: the one case where an ask starts
+      something.
+    - A stale lock is unlinked through `PackFs.rm`; a taker that took over
+      waits `TAKEOVER_SETTLE_MS` (100 ms) after its create and reads the
+      file again, and if it finds another pid's lock, or none, it gives up
+      without touching the file.
+    - Repair and Remove read the in-use records once more after the hold and
+      before the stop, and refuse with the pack as it was if a live pid has
+      appeared.
+    - Eight mutations, each seen to fail (the takeover's re-read dropped
+      failed 2 `helperLock` cases; the client built without `mayStart`, the
+      crash-restart case).
+    - **Still open:** a taker paused longer than 100 ms between its read of
+      the stale lock and its unlink; a plain create clobbered by such a
+      laggard (three windows at once); and the lock records no job, so
+      another window's launch sweep or Check again (which holds the lock
+      through its whole check, about 2 s warm to 37 s cold) also refuses a
+      start, worded "being repaired". The window asks the status once, at
+      mount, and nothing polls.
 
 ---
 
