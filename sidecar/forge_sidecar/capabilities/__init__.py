@@ -21,7 +21,8 @@ from ..rpc import Server
 # method in src/shared/sidecar/protocol.ts `OPTIONAL_METHODS` to "in
 # capabilities or in degraded" (tests/integration/sidecar.int.test.ts).
 OPTIONAL: list[tuple[tuple[str, ...], str]] = [
-    (("asr.transcribe",), "asr"),
+    # The speech model is a press of its own (docs/CLIPS.md §3a.4): both go with faster-whisper.
+    (("asr.transcribe", "asr.model"), "asr"),
     (("audio.beats",), "beats"),
     (("depth.layers",), "depth"),
     # Sharpness, exposure and near-duplicates, for the Director's quality gate
