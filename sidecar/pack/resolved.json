@@ -1,7 +1,7 @@
 {
   "generatedBy": "scripts/pack_lock.py",
-  "generatedOn": "2026-10-14",
-  "pack": 1,
+  "generatedOn": "2026-10-16",
+  "pack": 2,
   "python": {
     "version": "3.14.8",
     "build": "20261001"
@@ -24,8 +24,14 @@
     "mediapipe": [
       "matplotlib",
       "opencv-contrib-python"
+    ],
+    "huggingface-hub": [
+      "hf-xet"
     ]
   },
+  "excluded": [
+    "hf-xet"
+  ],
   "extraPins": {
     "colorama": "0.4.6"
   },
@@ -47,17 +53,17 @@
       "tags": "cp314, macosx_14_0_arm64 first",
       "lock": {
         "file": "pack/lock-darwin-arm64.txt",
-        "sha256": "9932ef367815154f64b4ac4a23a00d0b5f676933727db07f87f74e1bf8ce12d7"
+        "sha256": "ed220aedbf65b240650da4c7904f8ef955ff9a2c6f8d6f008a08ce1280a2abb2"
       },
-      "wheels": 47,
-      "wheelBytes": 151510094,
+      "wheels": 46,
+      "wheelBytes": 147633807,
       "interpreter": {
         "name": "cpython-3.14.8+20261001-aarch64-apple-darwin-install_only_stripped.tar.gz",
         "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261001/cpython-3.14.8%2B20261001-aarch64-apple-darwin-install_only_stripped.tar.gz",
         "bytes": 26680498,
         "sha256": "69e48cd7f54261df5b6abbd374f69fe6e496fa781d271592aeef49cd5ffbea6c"
       },
-      "packBytes": 178190592
+      "packBytes": 174314305
     },
     "win32-x64": {
       "markers": {
@@ -76,17 +82,17 @@
       "tags": "cp314, win_amd64 first",
       "lock": {
         "file": "pack/lock-win32-x64.txt",
-        "sha256": "6ec443867588fb032a51a52db199506013b4b79c92d2455ba0540b42b61c931f"
+        "sha256": "ecbbec7b85fbcf89f866e34140510e1e60e52db903c6f4aae62db9d03d07e3ec"
       },
-      "wheels": 48,
-      "wheelBytes": 191876652,
+      "wheels": 47,
+      "wheelBytes": 187843524,
       "interpreter": {
         "name": "cpython-3.14.8+20261001-x86_64-pc-windows-msvc-install_only_stripped.tar.gz",
         "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261001/cpython-3.14.8%2B20261001-x86_64-pc-windows-msvc-install_only_stripped.tar.gz",
         "bytes": 23227899,
         "sha256": "b7ff8b700995379e425b39abce9b087d84a45aa265ea465c0069c2747ea5b2ea"
       },
-      "packBytes": 215104551
+      "packBytes": 211071423
     }
   },
   "distributions": {
@@ -752,42 +758,6 @@
             "uploadTime": "2025-04-24T03:35:24.344199Z",
             "url": "https://files.pythonhosted.org/packages/04/4b/29cac41a4d98d144bf5f6d33995617b185d14b22401f75ca86f384e87ff1/h11-0.16.0-py3-none-any.whl",
             "sha256": "63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86"
-          },
-          "requires": []
-        }
-      }
-    },
-    "hf-xet": {
-      "name": "hf-xet",
-      "version": "1.6.0",
-      "requiresPython": ">=3.8",
-      "requiresDist": [
-        "pytest; extra == \"tests\""
-      ],
-      "licence": {
-        "expression": "Apache-2.0",
-        "classifiers": [
-          "Apache Software License"
-        ]
-      },
-      "targets": {
-        "darwin-arm64": {
-          "file": {
-            "name": "hf_xet-1.6.0-cp38-abi3-macosx_11_0_arm64.whl",
-            "size": 3876287,
-            "uploadTime": "2026-08-03T22:33:02.251904Z",
-            "url": "https://files.pythonhosted.org/packages/4b/69/55b8dcf636142ae660fec1869fcac14c4da2e8412e14d6eee1523be77e9f/hf_xet-1.6.0-cp38-abi3-macosx_11_0_arm64.whl",
-            "sha256": "f0906082d9932ae0c0057fa194041c22b4e2cdb46b2592ef3b91f020d62a081a"
-          },
-          "requires": []
-        },
-        "win32-x64": {
-          "file": {
-            "name": "hf_xet-1.6.0-cp38-abi3-win_amd64.whl",
-            "size": 4033128,
-            "uploadTime": "2026-08-03T22:33:10.171386Z",
-            "url": "https://files.pythonhosted.org/packages/98/b7/8c59a66d15205024662f1d66968136f13893f96df1ddc5087e2e281fc95f/hf_xet-1.6.0-cp38-abi3-win_amd64.whl",
-            "sha256": "fb4fadde1b2b70bf4c0c14a6dccbe7194b1c28947fefd5bbe3fed9d940676c3b"
           },
           "requires": []
         }

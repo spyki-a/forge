@@ -315,6 +315,13 @@ describe('HELPER_PACK: the locks', () => {
     expect(names).not.toContain('matplotlib')
   })
 
+  it.each(PLATFORMS)('%s: the lock and the wheels hold huggingface-hub and no hf-xet (pack 2, CLIPS §3a.8 row 35)', (platform) => {
+    const names = lockNames(lockBytes(platform).toString('utf8'))
+    expect(names).toContain('huggingface-hub')
+    expect(names).not.toContain('hf-xet')
+    expect(HELPER_PACK.platforms[platform].wheels.filter((w) => canonical(w.name.split('-')[0]) === 'hf-xet')).toEqual([])
+  })
+
   it('opencv added to the lock is caught (scratch copy)', () => {
     const text = lockBytes('win32-x64').toString('utf8') + `opencv-contrib-python==4.12.0.88 --hash=sha256:${'0'.repeat(64)}\n`
     expect(lockNames(text).filter((n) => n.startsWith('opencv'))).toEqual(['opencv-contrib-python'])
@@ -346,6 +353,8 @@ describe('HELPER_PACK: what the self-test expects', () => {
     const expects = HELPER_PACK.platforms[platform].expects
     const served: Array<[string, string]> = [
       ['faster-whisper', SIDECAR_METHODS.transcribe],
+      // The speech model's press goes with faster-whisper (CLIPS §3a.4): counted among the features.
+      ['faster-whisper', SIDECAR_METHODS.asrModel],
       ['librosa', SIDECAR_METHODS.beats],
       ['mediapipe', SIDECAR_METHODS.faces],
       ['onnxruntime', SIDECAR_METHODS.depthLayers]
@@ -368,10 +377,11 @@ describe('the button: the files summed', () => {
   it.each(PLATFORMS)("%s: the button's number is resolved.json's packBytes, written as every button writes bytes", (platform) => {
     /*
      * The generator sums the same files into resolved.json's targets[p].packBytes.
-     * For pack 1 that is 178,190,592 B, "170 MB", on the Mac and 215,104,551 B,
-     * "205 MB", on Windows (CLIPS §3a.1). Those numbers are not pinned here: a
-     * lock that rightly loses a wheel under --bump (hf-xet, §3a.8 row 35) would
-     * fail a pin with nothing wrong.
+     * For pack 1 that was 178,190,592 B, "170 MB", on the Mac and 215,104,551 B,
+     * "205 MB", on Windows (CLIPS §3a.1); pack 2, without hf-xet (§3a.8 row
+     * 35), is 174,314,305 B, "166 MB", and 211,071,423 B, "201 MB". Those
+     * numbers are not pinned here: a lock that rightly loses a wheel under
+     * --bump fails a pin with nothing wrong, as hf-xet's leaving would have.
      */
     const pack = HELPER_PACK.platforms[platform]
     const total = readResolvedTargets()[platform].packBytes

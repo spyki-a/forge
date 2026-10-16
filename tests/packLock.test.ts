@@ -34,13 +34,18 @@ const TARGETS: PackPlatform[] = ['darwin-arm64', 'win32-x64']
 
 /**
  * The ONE allowlist (CLIPS §3a.1): what mediapipe asks for and the stub route
- * stands in for (§4.3, SIDECAR.md). Written here, not read from resolved.json,
- * so the generator cannot widen it unseen. hf-xet joins it as
- * huggingface-hub's only when it leaves the lock (§3a.8 row 35).
+ * stands in for (§4.3, SIDECAR.md), and huggingface-hub's hf-xet, which the
+ * pack leaves out since pack 2 (§3a.8 row 35: depth's and the speech model's
+ * downloads pass without it). Written here, not read from resolved.json, so
+ * the generator cannot widen it unseen.
  */
 const ALLOWLIST: Record<string, readonly string[]> = {
-  mediapipe: ['matplotlib', 'opencv-contrib-python']
+  mediapipe: ['matplotlib', 'opencv-contrib-python'],
+  'huggingface-hub': ['hf-xet']
 }
+
+/** What the pack leaves out though the dev venv has it (pack_lock.py EXCLUDE): never a lock line. */
+const EXCLUDED: readonly string[] = ['hf-xet']
 
 interface ResolvedFile {
   name: string
@@ -52,6 +57,7 @@ interface ResolvedFile {
 interface Resolved {
   pack: number
   allowlist: Record<string, string[]>
+  excluded: string[]
   targets: Record<PackPlatform, { lock: { file: string; sha256: string }; packBytes: number }>
   distributions: Record<
     string,
@@ -234,6 +240,12 @@ function unmet(
   return problems
 }
 
+/** The excluded packages a lock has a line for: none, ever (pack_lock.py's walk refuses them). */
+function excludedIn(text: string): string[] {
+  const names = new Set(parseLock(text).lines.map((l) => l.name))
+  return EXCLUDED.filter((left) => names.has(left))
+}
+
 describe('the AI helper pack lock is complete', () => {
   it.each(TARGETS)('%s: every lock line parses, and every requirement of every line is in the lock or allowlisted', (target) => {
     const text = lockText(target)
@@ -318,6 +330,29 @@ describe('the AI helper pack lock is complete', () => {
       expect(withoutAllowlist).toContain(`mediapipe -> matplotlib is not in the ${target} lock`)
       expect(withoutAllowlist).toContain(`mediapipe -> opencv-contrib-python is not in the ${target} lock`)
     }
+  })
+
+  it("huggingface-hub's hf-xet is required on both targets, passes only through the allowlist, and no lock has it", () => {
+    for (const target of TARGETS) {
+      // huggingface-hub asks for it on arm64 and x86_64 alike (its marker, evaluated by the generator).
+      expect(RESOLVED.distributions['huggingface-hub'].targets[target]?.requires).toContain('hf-xet')
+      expect(parseLock(lockText(target)).lines.map((l) => l.name)).toContain('huggingface-hub')
+      expect(excludedIn(lockText(target)), target).toEqual([])
+      const withoutIt = unmet(target, lockText(target), { mediapipe: ALLOWLIST.mediapipe })
+      expect(withoutIt).toContain(`huggingface-hub -> hf-xet is not in the ${target} lock`)
+    }
+  })
+
+  it('an excluded package back in a lock is named (a scratch copy)', () => {
+    for (const target of TARGETS) expect(excludedIn(lockText(target)), target).toEqual([])
+    // pack 1's own line, as the Mac lock had it.
+    const scratch = `${lockText('darwin-arm64')}hf-xet==1.6.0 --hash=sha256:f0906082d9932ae0c0057fa194041c22b4e2cdb46b2592ef3b91f020d62a081a\n`
+    expect(excludedIn(scratch)).toEqual(['hf-xet'])
+  })
+
+  it("resolved.json's excluded list is this test's", () => {
+    expect([...RESOLVED.excluded].sort()).toEqual([...EXCLUDED].sort())
+    for (const left of EXCLUDED) expect(RESOLVED.distributions[left], left).toBeUndefined()
   })
 
   it("resolved.json's allowlist is this test's, entry for entry", () => {

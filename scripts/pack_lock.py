@@ -42,7 +42,14 @@ user's machine. The run fails unless every Requires-Dist of every lock line,
 read from that wheel's own METADATA (PEP 658, files.pythonhosted.org) with the
 target's markers and no extras, is in that target's lock and admits the locked
 version, against ONE allowlist: mediapipe's matplotlib and
-opencv-contrib-python, which the stub route stands in for (CLIPS §4.3).
+opencv-contrib-python, which the stub route stands in for (CLIPS §4.3), and
+huggingface-hub's hf-xet, which EXCLUDE leaves out (below).
+
+What the pack leaves out. EXCLUDE names the distributions the dev venv has
+and no lock may: today hf-xet, since pack 2 (CLIPS §3a.8 row 35). One is met
+only through an allowlist entry for whatever requires it; reached by any other
+requirement, the walk fails rather than lock it. Its share is taken out of the
+pre-CI on-disk figures too.
 
 The pack number. history.json maps each number to its pair of hashes per
 platform. A run whose lock or interpreter differs from the newest number's
@@ -102,10 +109,23 @@ ROOT_FILES = ('requirements.txt', 'requirements-faces.txt', 'requirements-faces-
 # The interpreter ships pip 26.2.1 pre-installed (build-cpython.sh, CLIPS §3a.1).
 NOT_LOCKED = frozenset({'pip'})
 
-# The one allowlist: what the stub route stands in for (CLIPS §4.3, SIDECAR.md).
-# hf-xet joins it as huggingface-hub's once it leaves the lock (§3a.8 row 35).
+# The one allowlist: what the stub route stands in for (CLIPS §4.3, SIDECAR.md),
+# and hf-xet, which huggingface-hub asks for on every arm64 and x86_64 machine
+# and EXCLUDE leaves out.
 ALLOWLIST: dict[str, frozenset[str]] = {
     'mediapipe': frozenset({'matplotlib', 'opencv-contrib-python'}),
+    'huggingface-hub': frozenset({'hf-xet'}),
+}
+
+# In the dev venv, never in a lock (CLIPS §3a.1 "hf-xet", §3a.8 row 35).
+# hf-xet 1.6.0 is huggingface_hub's Xet transfer backend, imported only through
+# is_xet_available(), and the app's helper runs with HF_HUB_DISABLE_XET=1. Row
+# 35 measured both of the base pack's Hugging Face downloads on a copy of pack
+# 1 with hf-xet uninstalled: depth's model (27,258,801 B, 2026-10-14) and the
+# speech model (486,212,372 B in 14.7 s, 2026-10-16), each through
+# huggingface.co and us.aws.cdn.hf.co. Leaving it out is pack 2.
+EXCLUDE: dict[str, str] = {
+    'hf-xet': "huggingface_hub's Xet backend; the helper sets HF_HUB_DISABLE_XET=1 (row 35)",
 }
 
 # Packages a target needs that the dev venv (built on the Mac) does not have.
@@ -139,6 +159,7 @@ INTERPRETERS = {
 # or voice method: neither is in the base pack (§16.39).
 EXPECTS = (
     'asr.transcribe',
+    'asr.model',
     'audio.beats',
     'depth.layers',
     'vision.measure',
@@ -179,6 +200,13 @@ EXPECTS = (
 #   with `-d` a Windows-length userData path: 70,315,292 B.
 # (These replaced the 20261013 build's tar sizes, 69,430,272 and 63,299,584 B,
 # which were neither this build nor what the unpack writes.)
+#
+# EXCLUDE's share, measured 2026-10-16 the same two ways and taken out:
+#   macOS: hf-xet's 9 RECORD files in the dev venv, stat()ed, 8,152,766 B
+#   (the 47 distributions still summed to 587,943,059 B that day).
+#   Windows: hf_xet-1.6.0-cp38-abi3-win_amd64.whl's central directory, read by
+#   a range request of its last 64 KiB: 7 entries, 9,805,289 B, of which .py
+#   107 B (its .pyd is 9,499,136).
 MAC_PACKAGES_ON_DISK = 587_943_059
 MAC_INTERPRETER_ON_DISK = 87_081_292
 WIN_WHEEL_INDEX_BYTES = 556_756_305
@@ -188,10 +216,19 @@ VENV_PY_BYTES = 79_995_354
 WIN_INTERPRETER_ON_DISK = 70_315_292
 LONGEST_PYC_UNDER_SITE_PACKAGES = 125
 LONGEST_DIR_UNDER_SITE_PACKAGES = 71
+EXCLUDED_MAC_ON_DISK = 8_152_766
+EXCLUDED_WIN_INDEX_BYTES = 9_805_289
+EXCLUDED_WIN_PY_BYTES = 107
+
+
+def _mac_packages_on_disk() -> int:
+    return MAC_PACKAGES_ON_DISK - EXCLUDED_MAC_ON_DISK
 
 
 def _win_bytes_on_disk() -> int:
-    return WIN_WHEEL_INDEX_BYTES + round(WIN_PY_BYTES * VENV_PYC_BYTES / VENV_PY_BYTES) + WIN_INTERPRETER_ON_DISK
+    index = WIN_WHEEL_INDEX_BYTES - EXCLUDED_WIN_INDEX_BYTES
+    py = WIN_PY_BYTES - EXCLUDED_WIN_PY_BYTES
+    return index + round(py * VENV_PYC_BYTES / VENV_PY_BYTES) + WIN_INTERPRETER_ON_DISK
 
 
 TARGETS: dict[str, dict] = {
@@ -213,7 +250,7 @@ TARGETS: dict[str, dict] = {
         'platforms': lambda: list(mac_platforms((14, 0), 'arm64')),
         'python': 'python/bin/python3.14',
         'minOs': '14.0',
-        'bytesOnDisk': MAC_PACKAGES_ON_DISK + MAC_INTERPRETER_ON_DISK,
+        'bytesOnDisk': _mac_packages_on_disk() + MAC_INTERPRETER_ON_DISK,
         'longestPath': LONGEST_PYC_UNDER_SITE_PACKAGES + len('python/lib/python3.14/site-packages/'),
         'longestDir': LONGEST_DIR_UNDER_SITE_PACKAGES + len('python/lib/python3.14/site-packages/'),
     },
@@ -404,6 +441,11 @@ def walk(target: str, roots: dict[str, str], venv: dict[str, dict], extra_info: 
             continue
         if name in NOT_LOCKED:
             continue
+        if name in EXCLUDE:
+            raise LockError(
+                f'{target} needs {name} ({why}), which EXCLUDE leaves out of the pack; '
+                'allowlist it for that requirer, or take it out of EXCLUDE'
+            )
         if name in venv:
             version = venv[name]['version']
             requires = venv[name]['requires']
@@ -640,7 +682,8 @@ def manifest_ts(pack: int, platforms: dict[str, dict], today: str) -> str:
         ' * §3a.1, §3a.2), relative to the version folder: on the Mac, the dev venv',
         " * on disk; on Windows, the wheels' indexes and pip's .pyc at the dev venv's",
         " * ratio; on both, the pinned interpreter's tree unpacked and its standard",
-        " * library compiled once (§3a.8 row 26). CI's install replaces them (row 28).",
+        " * library compiled once (§3a.8 row 26); less EXCLUDE's share (hf-xet, row",
+        " * 35) since pack 2. CI's install replaces them (row 28).",
         ' */',
         '',
         "import type { HelperPackManifest } from './pack'",
@@ -748,7 +791,7 @@ def venv_disk_check(lock_names: set[str]) -> str | None:
             longest_dir = max(longest_dir, len(posixpath.dirname(rel)))
     return (
         f'dev venv now: {total:,} B in {files:,} files, longest path {longest}, longest directory {longest_dir} '
-        f'(the manifest holds {MAC_PACKAGES_ON_DISK:,} B, '
+        f'(the manifest holds {_mac_packages_on_disk():,} B, '
         f'{TARGETS["darwin-arm64"]["longestPath"]}, {TARGETS["darwin-arm64"]["longestDir"]})'
     )
 
@@ -778,9 +821,9 @@ def run(args: argparse.Namespace) -> int:
     unused = set(EXTRA_PINS) - used_extra
     if unused:
         raise LockError(f'EXTRA_PINS holds {sorted(unused)}, which no target needs any more')
-    strays = sorted(set(venv) - NOT_LOCKED - {n for n, _ in union})
+    strays = sorted(set(venv) - NOT_LOCKED - set(EXCLUDE) - {n for n, _ in union})
     print(f'roots: {len(roots)} pins from {", ".join(ROOT_FILES)}')
-    print(f'dev venv: {len(venv)} distributions, {sorted(NOT_LOCKED)} never locked', end='')
+    print(f'dev venv: {len(venv)} distributions, {sorted(NOT_LOCKED)} never locked, {sorted(EXCLUDE)} left out', end='')
     print(f'; not required by any root on any target: {strays}' if strays else '; every other one is required')
 
     releases = dict(zip(union, parallel(lambda nv: fetch_json(f'https://pypi.org/pypi/{nv[0]}/{nv[1]}/json'), union)))
@@ -929,6 +972,7 @@ def run(args: argparse.Namespace) -> int:
         'roots': roots,
         'notLocked': sorted(NOT_LOCKED),
         'allowlist': {k: sorted(v) for k, v in ALLOWLIST.items()},
+        'excluded': sorted(EXCLUDE),
         'extraPins': EXTRA_PINS,
         'targets': {
             t: {

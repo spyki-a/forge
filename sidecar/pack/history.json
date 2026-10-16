@@ -8,5 +8,15 @@
       "lockSha256": "6ec443867588fb032a51a52db199506013b4b79c92d2455ba0540b42b61c931f",
       "interpreterSha256": "b7ff8b700995379e425b39abce9b087d84a45aa265ea465c0069c2747ea5b2ea"
     }
+  },
+  "2": {
+    "darwin-arm64": {
+      "lockSha256": "ed220aedbf65b240650da4c7904f8ef955ff9a2c6f8d6f008a08ce1280a2abb2",
+      "interpreterSha256": "69e48cd7f54261df5b6abbd374f69fe6e496fa781d271592aeef49cd5ffbea6c"
+    },
+    "win32-x64": {
+      "lockSha256": "ecbbec7b85fbcf89f866e34140510e1e60e52db903c6f4aae62db9d03d07e3ec",
+      "interpreterSha256": "b7ff8b700995379e425b39abce9b087d84a45aa265ea465c0069c2747ea5b2ea"
+    }
   }
 }
