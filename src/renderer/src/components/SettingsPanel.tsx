@@ -218,6 +218,12 @@ export function HelperSection(): ReactNode {
               onChange={(e) => setRemoveModels(e.target.checked)}
             />
             also remove the downloaded models
+            {typeof ui.removing.modelsBytes === 'number' && ui.removing.modelsBytes > 0 && (
+              <span data-models-bytes="" className="text-ink-500">
+                {' · '}
+                {formatBytes(ui.removing.modelsBytes)}
+              </span>
+            )}
           </label>
           <div className="flex gap-1">
             <button type="button" className={small} disabled={ui.busy !== null} onClick={() => void confirmRemove()}>

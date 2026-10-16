@@ -70,6 +70,7 @@ export function installFallbackBridge(): void {
     installHelper: unavailable,
     removeHelper: unavailable,
     checkHelperAgain: unavailable,
+    helperModelsBytes: async () => null,
     speechModel: unavailable
   } as unknown as Window['forge']
 

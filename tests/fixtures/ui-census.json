@@ -8232,7 +8232,7 @@
     "file": "src/renderer/src/components/SettingsPanel.tsx",
     "line": 212,
     "newHome": "settings panel (§3.9), the AI helper row",
-    "note": "Remove's question, with the pack's size on disk (\"636 MB\" on the Mac's pack 2). The plan's \"both sizes\": main does not report the models folder's, so only the pack's is shown."
+    "note": "Remove's question, with the pack's size on disk (\"636 MB\" on the Mac's pack 2); the downloaded models' size stands beside the box, \"· 464 MB\" with the speech model on disk, measured by main (helper:modelsBytes, §16.47 \"both sizes shown\")."
   },
   {
     "label": "also remove the downloaded models",
@@ -8242,7 +8242,7 @@
     "file": "src/renderer/src/components/SettingsPanel.tsx",
     "line": 220,
     "newHome": "settings panel (§3.9), the AI helper row",
-    "note": "Remove's box, off until ticked (§16.47)."
+    "note": "Remove's box, off until ticked (§16.47); its own text node, the models' size in a span after it."
   },
   {
     "label": "Remove it",

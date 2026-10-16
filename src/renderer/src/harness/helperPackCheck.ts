@@ -36,9 +36,10 @@
  *      Visual C++ runtime", grey, with Check again, Repair and Remove, and the
  *      whole sentence under them with Microsoft's link; Check again turns it
  *      green.
- *   8. Remove asks first, with the pack's size, its models box off; "Remove
- *      it" sends `{models: false}` and the row is back to Not installed, the
- *      whole size on its Install.
+ *   8. Remove asks first, with both sizes: the pack's in its question, the
+ *      downloaded models' beside its box (the speech model, fetched in 6),
+ *      the box off; "Remove it" sends `{models: false}` and the row is back
+ *      to Not installed, the whole size on its Install.
  *   9. The damaged, update, Group Policy and unsupported states, each as the
  *      table in §3a.4 has it.
  *
@@ -478,7 +479,7 @@ export async function runHelperPackCheck(): Promise<HelperPackReport> {
     expect(harnessHelper.presses.some((p) => p.call === 'checkHelperAgain'), 'Check again never reached the bridge')
     saw('short', { row: short, afterCheckAgain: checked })
 
-    /* 8. Remove asks, with the size, its box off; Remove it; Not installed */
+    /* 8. Remove asks, with both sizes, its box off; Remove it; Not installed */
     action('remove').click()
     const confirm = await until(() => document.querySelector('[data-helper-remove]'), 3000, "Remove's question")
     const box = one<HTMLInputElement>('input[type="checkbox"]', "Remove's box", confirm)
@@ -486,7 +487,11 @@ export async function runHelperPackCheck(): Promise<HelperPackReport> {
     const asked = `Remove the AI helper? It frees about ${formatBytes(THIS_PACK.bytesOnDisk)}.`
     expect(question === asked, `Remove asks "${question}", not "${asked}"`)
     expect(!box.checked, 'Remove’s "also remove the downloaded models" is ticked before anyone ticked it')
-    expect(norm(box.parentElement?.textContent) === 'also remove the downloaded models', `Remove's box reads "${norm(box.parentElement?.textContent)}"`)
+    // The models' size arrives from main after the question opens (store `pressHelper`): the speech model is what step 6 put there.
+    const boxText = `also remove the downloaded models · ${formatBytes(HARNESS_SPEECH_MODEL_BYTES)}`
+    await until(() => norm(box.parentElement?.textContent) === boxText, 3000, `Remove's box reading "${boxText}" (it reads "${norm(box.parentElement?.textContent)}")`).catch((err: unknown) => {
+      failures.push(err instanceof Error ? err.message : String(err))
+    })
     const removeIt = [...confirm.querySelectorAll<HTMLButtonElement>('button')].find((b) => norm(b.textContent) === 'Remove it')
     if (!removeIt) throw new Error('helper check: Remove asks with no "Remove it"')
     removeIt.click()
@@ -498,7 +503,7 @@ export async function runHelperPackCheck(): Promise<HelperPackReport> {
     expect(JSON.stringify(sent?.options) === JSON.stringify({ models: false }), `Remove sent ${JSON.stringify(sent?.options)}, not {"models":false}`)
     expect(JSON.stringify(labels(removed)) === JSON.stringify([`Install the AI helper · ${formatBytes(offerBytes())}`]), `after Remove the row offers ${JSON.stringify(labels(removed))}`)
     expect(harnessHelper.speechPresent, 'Remove with the box off took the speech model too')
-    saw('remove', { question, boxChecked: box.checked, sent: sent?.options, row: removed })
+    saw('remove', { question, box: boxText, boxChecked: box.checked, sent: sent?.options, row: removed })
 
     /* 9. the other states, as §3a.4's table has them */
     const damaged = await setState('damaged', 'Not running')

@@ -40,11 +40,13 @@ describe('the preload', () => {
     await api.installHelper({ repair: true })
     await api.removeHelper({ models: false })
     await api.checkHelperAgain()
+    await api.helperModelsBytes()
     expect(electronMock.invoked).toEqual([
       { channel: HELPER_CHANNELS.install, args: [{}] },
       { channel: HELPER_CHANNELS.install, args: [{ repair: true }] },
       { channel: HELPER_CHANNELS.remove, args: [{ models: false }] },
-      { channel: HELPER_CHANNELS.checkAgain, args: [] }
+      { channel: HELPER_CHANNELS.checkAgain, args: [] },
+      { channel: HELPER_CHANNELS.modelsBytes, args: [] }
     ])
   })
 })

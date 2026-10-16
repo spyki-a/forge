@@ -131,6 +131,13 @@ export interface HelperPackJobs {
   /** Single flight in this process: a second press while one is queued or running gets the same job. */
   install(options?: HelperInstallRequest): Job
   remove(options: { models: boolean }): Promise<void>
+  /**
+   * What `userData/models` takes on disk (apparent bytes, as the pack's own
+   * figures are counted), for Remove's box: "also remove the downloaded
+   * models · 464 MB" (§16.47 "both sizes shown"). 0 when there is no such
+   * folder; null when it could not be read. Reads only.
+   */
+  modelsBytes(): Promise<number | null>
   /** The self-test alone, on the pack that is there: no download (§3a.4 "Check again"). */
   checkAgain(): Promise<void>
   /** The launch sweep of this root, under the lock. Returns what it removed. */
@@ -647,6 +654,14 @@ export function createHelperPackJobs(deps: HelperPackDeps): HelperPackJobs {
           if (stopped) await helper.restart()
         }
       })
+    },
+
+    async modelsBytes(): Promise<number | null> {
+      try {
+        return await duBytes(join(deps.userData, 'models'))
+      } catch (err) {
+        return (err as NodeJS.ErrnoException).code === 'ENOENT' ? 0 : null
+      }
     },
 
     async checkAgain(): Promise<void> {

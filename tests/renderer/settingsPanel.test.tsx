@@ -128,6 +128,7 @@ const forge = {
   installHelper: vi.fn(async (_options: { repair?: boolean; update?: boolean }) => ({ id: 'h1', presetId: HELPER_PRESET }) as unknown as Job),
   removeHelper: vi.fn(async (_options: { models: boolean }) => undefined),
   checkHelperAgain: vi.fn(async () => undefined),
+  helperModelsBytes: vi.fn(async (): Promise<number | null> => 0),
   speechModel: vi.fn(async (_request: { download?: boolean }) => ({ ...SPEECH })),
   onSpeechModelProgress: vi.fn((_cb: unknown) => () => undefined)
 }
@@ -271,6 +272,38 @@ describe('the presses reach the bridge', () => {
     expect(words(markup())).toContain('also remove the downloaded models')
     await press(button('Remove it'), 'Remove it')
     expect(forge.removeHelper.mock.calls.map((c) => c[0])).toEqual([{ models: false }])
+  })
+
+  it('Remove names both sizes: the pack’s in its question, the downloaded models’ beside its box (§16.47)', async () => {
+    forge.helperModelsBytes.mockResolvedValueOnce(486_539_271)
+    show(readyPack())
+    await press(button('Remove'), 'Remove')
+    expect(forge.helperModelsBytes).toHaveBeenCalledTimes(1)
+    await vi.waitFor(() => expect(state().helperUi.removing?.modelsBytes).toBe(486_539_271))
+    const shown = words(markup())
+    expect(shown).toContain(`It frees about ${formatBytes(THIS_PACK.bytesOnDisk)}`)
+    expect(shown).toContain(`also remove the downloaded models · ${formatBytes(486_539_271)}`)
+    // Ticked before main answered: the box stays as it was left, and the size still lands beside it.
+    state().cancelRemove()
+    let answer: (bytes: number) => void = () => undefined
+    forge.helperModelsBytes.mockImplementationOnce(() => new Promise<number>((resolve) => (answer = resolve)))
+    await press(button('Remove'), 'Remove')
+    state().setRemoveModels(true)
+    answer(52_428_800)
+    await vi.waitFor(() => expect(state().helperUi.removing).toEqual({ models: true, modelsBytes: 52_428_800 }))
+    await press(button('Remove it'), 'Remove it')
+    expect(forge.removeHelper.mock.calls.map((c) => c[0])).toEqual([{ models: true }])
+  })
+
+  it('Remove’s box shows no size when no model is downloaded, or main could not say', async () => {
+    for (const bytes of [0, null]) {
+      forge.helperModelsBytes.mockResolvedValueOnce(bytes)
+      show(readyPack())
+      await press(button('Remove'), 'Remove')
+      await vi.waitFor(() => expect(state().helperUi.removing?.modelsBytes).toBe(bytes))
+      expect(markup()).not.toContain('data-models-bytes')
+      expect(words(markup())).toContain('also remove the downloaded models Remove it')
+    }
   })
 
   it('Remove with the box ticked takes the models too, and Keep it closes the confirm', async () => {

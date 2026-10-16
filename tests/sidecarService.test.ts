@@ -883,4 +883,15 @@ describe.skipIf(!MACHINE)('the IPC', () => {
     call('jobs:clearFinished')
     expect((call('jobs:list') as Job[]).some((j) => j.presetId === HELPER_PRESET)).toBe(false)
   })
+
+  it('helper:modelsBytes answers what userData/models takes, for Remove’s box, and 0 with none (§16.47)', async () => {
+    const { registerIpc } = await import('../src/main/ipc')
+    registerIpc(() => null)
+    const ask = (): Promise<number | null> => electron.handlers.get(HELPER_CHANNELS.modelsBytes)!({}) as Promise<number | null>
+    expect(await ask()).toBe(0)
+    mkdirSync(join(electron.userData, 'models'), { recursive: true })
+    writeFileSync(join(electron.userData, 'models', 'blaze_face.tflite'), Buffer.alloc(229_746))
+    expect(await ask()).toBeGreaterThanOrEqual(229_746)
+    expect(spawned).toEqual([])
+  })
 })

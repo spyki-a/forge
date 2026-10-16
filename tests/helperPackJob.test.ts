@@ -1078,6 +1078,22 @@ describe('Remove', () => {
     expect(existsSync(join(h.userData, 'models'))).toBe(false)
   })
 
+  it('measures what the models folder takes, for the box beside Remove’s question: 0 with none, every file counted (§16.47)', async () => {
+    const h = makeHarness()
+    expect(await h.jobs.modelsBytes()).toBe(0)
+    const models = join(h.userData, 'models')
+    mkdirSync(join(models, 'models--Systran--faster-whisper-small', 'blobs'), { recursive: true })
+    writeFileSync(join(models, 'blaze_face.tflite'), Buffer.alloc(229_746))
+    writeFileSync(join(models, 'models--Systran--faster-whisper-small', 'blobs', 'model.bin'), Buffer.alloc(1_048_583))
+    const measured = await h.jobs.modelsBytes()
+    // Both files, whatever the folders themselves take on this filesystem (a few hundred bytes each, or none).
+    expect(measured).not.toBeNull()
+    expect(measured!).toBeGreaterThanOrEqual(229_746 + 1_048_583)
+    expect(measured! - (229_746 + 1_048_583)).toBeLessThan(64 * 1024)
+    // Measuring reads only: Remove's box still has everything to remove.
+    expect(existsSync(join(models, 'blaze_face.tflite'))).toBe(true)
+  })
+
   it('refuses while another live instance has the pack in use', async () => {
     const h = makeHarness()
     expect((await installed(h)).status).toBe('done')

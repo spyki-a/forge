@@ -756,6 +756,11 @@ async function harnessRemoveHelper(options: unknown): Promise<void> {
   harnessHelper.set('absent')
 }
 
+/** What the downloaded models take (main's `modelsBytes`): the speech model's pinned files while it is "on disk", else nothing. */
+async function harnessModelsBytes(): Promise<number> {
+  return harnessHelper.speechPresent ? HARNESS_SPEECH_MODEL_BYTES : 0
+}
+
 /**
  * Check again (§16.45 (a)): the self-test again, nothing downloaded — here,
  * the runtime "now installed", so every group passes, and the helper
@@ -1364,6 +1369,7 @@ export function installHarnessBridge(): void {
     installHelper: async (options?: unknown) => harnessInstallHelper(options ?? {}),
     removeHelper: (options: unknown) => harnessRemoveHelper(options),
     checkHelperAgain: () => harnessCheckHelperAgain(),
+    helperModelsBytes: () => harnessModelsBytes(),
     speechModel: (request?: unknown) => harnessSpeechModel(request ?? {}),
     onSpeechModelProgress: (cb: (update: SpeechModelProgress) => void) => {
       speechListeners.add(cb)

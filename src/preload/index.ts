@@ -508,6 +508,8 @@ const api = {
   removeHelper: (options: { models: boolean }): Promise<void> => ipcRenderer.invoke('helper:remove', options),
   /** The self-test alone on the installed pack, no download: for after the Visual C++ runtime is installed. */
   checkHelperAgain: (): Promise<void> => ipcRenderer.invoke('helper:checkAgain'),
+  /** What the downloaded models take on disk, for Remove's box: bytes, 0 for none, null when unreadable (§16.47). */
+  helperModelsBytes: (): Promise<number | null> => ipcRenderer.invoke('helper:modelsBytes'),
 
   /**
    * The speech model's status, or its fetch on `download: true` exactly — only

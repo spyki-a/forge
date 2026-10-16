@@ -222,7 +222,9 @@ export function bytesLeft(manifest: HelperPackManifest, platform: PackPlatform, 
 export const HELPER_CHANNELS = {
   install: 'helper:install',
   remove: 'helper:remove',
-  checkAgain: 'helper:checkAgain'
+  checkAgain: 'helper:checkAgain',
+  /** What `userData/models` takes on disk, for Remove's box (§16.47 "both sizes shown"): bytes, 0 when there is none, null when it could not be read. */
+  modelsBytes: 'helper:modelsBytes'
 } as const
 
 export interface HelperInstallRequest {

@@ -1089,6 +1089,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null, options: IpcO
   ipcMain.handle(HELPER_CHANNELS.install, (_e, payload: unknown) => helper.install(helperInstallRequest(payload)))
   ipcMain.handle(HELPER_CHANNELS.remove, (_e, payload: unknown) => helper.remove(helperRemoveRequest(payload)))
   ipcMain.handle(HELPER_CHANNELS.checkAgain, () => helper.checkAgain())
+  ipcMain.handle(HELPER_CHANNELS.modelsBytes, () => helper.modelsBytes())
 
   /* --------------------------------------------------------------- export */
 

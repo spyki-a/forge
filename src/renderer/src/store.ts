@@ -1255,8 +1255,12 @@ export interface HelperUi {
   busy: HelperActionKind | null
   /** The last refusal, as main worded it (HELPER_WORKING, HELPER_BUSY, HELPER_IN_USE_ELSEWHERE…). */
   error: string | null
-  /** Remove's confirm, open, with its box. */
-  removing: { models: boolean } | null
+  /**
+   * Remove's confirm, open, with its box, and what the downloaded models take
+   * on disk beside it (§16.47 "both sizes shown"): undefined until main has
+   * answered, null when it could not say.
+   */
+  removing: { models: boolean; modelsBytes?: number | null } | null
 }
 
 const HISTORY_LIMIT = 100
@@ -1642,7 +1646,16 @@ export const useEditor = create<EditorState>((set, get) => ({
   pressHelper: async (kind) => {
     if (get().helperUi.busy) return
     if (kind === 'remove') {
-      set((s) => ({ helperUi: { ...s.helperUi, error: null, removing: { models: false } } }))
+      const asked = { models: false }
+      set((s) => ({ helperUi: { ...s.helperUi, error: null, removing: asked } }))
+      // The models' size beside the box, once main has measured it; the box keeps whatever was ticked meanwhile.
+      let modelsBytes: number | null = null
+      try {
+        modelsBytes = await window.forge.helperModelsBytes()
+      } catch {
+        // Unknown: the box is shown without a size.
+      }
+      set((s) => (s.helperUi.removing ? { helperUi: { ...s.helperUi, removing: { ...s.helperUi.removing, modelsBytes } } } : {}))
       return
     }
     set((s) => ({ helperUi: { ...s.helperUi, busy: kind, error: null } }))
@@ -1656,7 +1669,7 @@ export const useEditor = create<EditorState>((set, get) => ({
     set((s) => ({ helperUi: { ...s.helperUi, busy: null, error } }))
   },
   setRemoveModels: (models) =>
-    set((s) => (s.helperUi.removing ? { helperUi: { ...s.helperUi, removing: { models } } } : {})),
+    set((s) => (s.helperUi.removing ? { helperUi: { ...s.helperUi, removing: { ...s.helperUi.removing, models } } } : {})),
   cancelRemove: () => set((s) => ({ helperUi: { ...s.helperUi, removing: null } })),
   confirmRemove: async () => {
     const asked = get().helperUi.removing
