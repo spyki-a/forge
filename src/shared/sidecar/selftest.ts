@@ -23,7 +23,8 @@ import { SIDECAR_METHODS } from './protocol'
  * (sklearn) is run for what it would MASK, not for a feature of its own.
  */
 export const SELFTEST_GROUPS = {
-  asr: [SIDECAR_METHODS.transcribe],
+  // Both of asr's methods stand on the same import (capabilities/__init__.py): a failed group takes both.
+  asr: [SIDECAR_METHODS.transcribe, SIDECAR_METHODS.asrModel],
   beats: [SIDECAR_METHODS.beats],
   onnx: [SIDECAR_METHODS.depthLayers, SIDECAR_METHODS.salient, SIDECAR_METHODS.salientModel],
   vision: [SIDECAR_METHODS.visionMeasure],
@@ -112,8 +113,8 @@ export function degradedBySelftest(record: SelftestRecord): Record<string, strin
 }
 
 /**
- * "N of 8 helper features": how many of the pack's expected methods are both
- * registered by hello and not failed by the self-test.
+ * "N of <expects> helper features": how many of the pack's expected methods
+ * are both registered by hello and not failed by the self-test.
  */
 export function helperFeatureCount(
   expects: readonly string[],

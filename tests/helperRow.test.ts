@@ -5,7 +5,8 @@ import { HELPER_PACK } from '@shared/sidecar/packManifest'
 import { packBytes, packHosts } from '@shared/sidecar/pack'
 import { HELPER_PYTHON_MISSING, HELPER_RECEIPT_UNREADABLE } from '@shared/sidecar/helperPython'
 import { SIDECAR_METHODS, type HelloResult, type ModelStatus } from '@shared/sidecar/protocol'
-import { SELFTEST_GROUP_NAMES, VCRUNTIME_SENTENCE } from '@shared/sidecar/selftest'
+import { SELFTEST_GROUP_NAMES, VCRUNTIME_SENTENCE, degradedBySelftest, helperFeatureCount } from '@shared/sidecar/selftest'
+import { helperCan } from '@shared/sidecar/helperCan'
 import { HELPER_PRESET, HELPER_REPAIRED_ELSEWHERE } from '@shared/sidecar/install'
 import { HELPER_BLOCKED_BY_POLICY, type PackOffer, type SidecarStatus } from '@shared/sidecar/status'
 import type { Job } from '@shared/types'
@@ -204,6 +205,20 @@ describe('Running, from the pack', () => {
     expect(r.line).toBe(`${PACK.expects.length} of ${PACK.expects.length} helper features · sklearn failed: DLL load failed`)
     expect(r.dot).toBe('grey')
     expect(kinds(r)).toContain('checkAgain')
+  })
+
+  it('takes both of asr’s methods out with a failed asr group: Transcribe and the speech model’s press stand on one import', () => {
+    const reason = 'asr failed: ImportError: DLL load failed while importing _ext'
+    // As main merges it (service.ts readyStatus): every method of the failed group degraded, the record carried.
+    const merged = { ...degradedBySelftest({ ...allOk(), asr: reason }) }
+    expect(Object.keys(merged).sort()).toEqual([SIDECAR_METHODS.asrModel, SIDECAR_METHODS.transcribe].sort())
+    const status = readyPack({ hello: hello(PACK.expects, merged), selftest: { ...allOk(), asr: reason } })
+    expect(PACK.expects).toEqual(expect.arrayContaining([SIDECAR_METHODS.transcribe, SIDECAR_METHODS.asrModel]))
+    expect(row(status).line).toBe(`${PACK.expects.length - 2} of ${PACK.expects.length} helper features · ${reason}`)
+    // The record alone, before any merge, counts the same: the row and the dot never read one method as working.
+    expect(helperFeatureCount(PACK.expects, hello(PACK.expects), { ...allOk(), asr: reason })).toEqual({ ok: PACK.expects.length - 2, total: PACK.expects.length })
+    expect(helperCan(status, SIDECAR_METHODS.transcribe)).toBe(false)
+    expect(helperCan(status, SIDECAR_METHODS.asrModel)).toBe(false)
   })
 
   it('reads integrity problems as not green: the first on the line, each one under it, and Repair (§16.51)', () => {
