@@ -4,6 +4,7 @@ import { orientationMismatch } from '@shared/edit/orientation'
 import { reframeOffer } from '@shared/edit/reframeOffer'
 import { followCandidates } from '@shared/reframe/follow'
 import { ASPECTS, useEditor, type AspectKey } from '../store'
+import { HelperPointer } from './SettingsPanel'
 
 /**
  * The bar above the picture: the canvas's shape, what the preview shows, and
@@ -220,7 +221,12 @@ export function CanvasBar(): ReactNode {
           >
             {offerWords.button}
           </button>
-          {helperWhy !== null && <span className="shrink-0 pr-1 text-[10px] text-amber-800">{helperWhy}</span>}
+          {/* No helper: a pointer to the one Install, in Settings (§3a.4, §16.41). Starting is said as starting. */}
+          {reframe.helper === 'missing' ? (
+            <HelperPointer className="shrink-0 pr-1 text-[10px] text-amber-800" />
+          ) : (
+            helperWhy !== null && <span className="shrink-0 pr-1 text-[10px] text-amber-800">{helperWhy}</span>
+          )}
         </div>
       )}
 

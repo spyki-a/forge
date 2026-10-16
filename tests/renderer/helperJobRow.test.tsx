@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { Job } from '@shared/types'
-import { HELPER_PRESET, WAITING_FOR_THE_HELPER, downloadingText } from '@shared/sidecar/install'
+import { CHECKING_STARTING, HELPER_PRESET, WAITING_FOR_THE_HELPER, checkingGroupText, downloadingText } from '@shared/sidecar/install'
 
 /*
  * The AI helper's job in EXPORT's list (docs/CLIPS.md §3a.4 "The EXPORT
@@ -76,6 +76,21 @@ describe('the AI helper’s job in EXPORT', () => {
     expect(html).toContain('width:30%')
     expect([...html.matchAll(/title="Cancel"/g)]).toHaveLength(1)
     expect(words(render([job('running', 'repair', { speed: WAITING_FOR_THE_HELPER })]))).toContain("waiting for the AI helper's work to finish")
+  })
+
+  it('shows a long stage whole: the speed column wraps, it never clips (docs/CLIPS.md §3a.4)', () => {
+    // Main's own longest texts (src/shared/sidecar/install.ts), and one longer than any it sends today.
+    for (const text of [CHECKING_STARTING, checkingGroupText('sklearn')]) expect(words(render([job('running', 'install', { speed: text })]))).toContain(text)
+    const stage = `${checkingGroupText('beats')} · the first run compiles its functions, about 20 s`
+    const html = render([job('running', 'install', { speed: stage })])
+    expect(words(html)).toContain(stage)
+    // The status and the speed, one row: the status keeps its width, the speed takes the rest and wraps.
+    const row = [...html.matchAll(/<div class="mt-1 flex justify-between[^"]*"><span class="([^"]*)">running<\/span><span class="([^"]*)">/g)]
+    expect(row).toHaveLength(1)
+    const [, status, speed] = row[0]
+    expect(status.split(/\s+/)).toContain('shrink-0')
+    expect(speed.split(/\s+/)).toContain('min-w-0')
+    for (const clip of ['truncate', 'whitespace-nowrap', 'overflow-hidden', 'text-ellipsis']) expect(speed.split(/\s+/), clip).not.toContain(clip)
   })
 
   it('can be cancelled while it waits its turn, and has no folder to show when done', () => {

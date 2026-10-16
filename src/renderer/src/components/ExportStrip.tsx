@@ -468,9 +468,14 @@ export function ExportStrip(): ReactNode {
                     style={{ width: `${Math.round(job.progress * 100)}%` }}
                   />
                 </div>
-                <div className="mt-1 flex justify-between text-[10px] text-ink-600">
-                  <span className="capitalize">{job.status}</span>
-                  <span className="tabular-nums">
+                {/*
+                  The speed column wraps rather than clipping: the AI helper's
+                  job puts its stage here, and "checking the AI helper · beats
+                  · 2 of 6 · 1m left" is wider than the strip at its floor.
+                */}
+                <div className="mt-1 flex justify-between gap-2 text-[10px] text-ink-600">
+                  <span className="shrink-0 capitalize">{job.status}</span>
+                  <span className="min-w-0 text-right tabular-nums [overflow-wrap:anywhere]">
                     {job.speed ?? `${Math.round(job.progress * 100)}%`}
                     {/*
                       Time left, from the rate so far. Recomputed on every

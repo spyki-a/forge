@@ -3,6 +3,7 @@ import { ScanFace } from 'lucide-react'
 import { followKeys } from '@shared/reframe/keys'
 import type { ModelStatus, ReframeHelper } from '@shared/reframe/job'
 import { useEditor } from '../../store'
+import { HelperPointer } from '../SettingsPanel'
 
 /**
  * Follow the subject — the Trimmer dock's reframe section for a selected
@@ -156,7 +157,12 @@ export function FollowSection({ clipId }: ReframePanelProps): ReactNode {
         follows keeps following without the helper (its track is the
         project's), so the reason beside Unfollow read as if the follow broke.
       */}
-      {!following && why !== null && <p className="text-[9.5px] leading-snug text-ink-600">{why}</p>}
+      {!following && why !== null && (
+        <p className="text-[9.5px] leading-snug text-ink-600">
+          {/* No helper: a pointer to the one Install, in Settings (§3a.4, §16.41). Starting is said as starting. */}
+          {reframe.helper === 'missing' ? <HelperPointer /> : why}
+        </p>
+      )}
 
       {clip.follow && (
         <div className="flex items-center justify-between gap-2">

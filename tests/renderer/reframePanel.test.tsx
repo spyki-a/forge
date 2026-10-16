@@ -254,6 +254,20 @@ describe('the canvas bar’s reframe offer', () => {
     expect(named(bar(), 'Reframe to 9:16')?.props.disabled).toBe(false)
   })
 
+  it('makes "needs the AI helper" a pointer that opens Settings at the AI helper row, its words unchanged (§3a.4, §16.41)', () => {
+    scene()
+    watch('missing')
+    const pointers = buttons(bar()).filter((b) => textOf(b.props.children as ReactNode).trim() === 'needs the AI helper')
+    expect(pointers).toHaveLength(1)
+    expect(pointers[0].props.title).toBe('install it in Settings')
+    expect(state().settingsOpen).toBe(false)
+    press(pointers[0], 'the pointer')
+    expect(state().settingsOpen).toBe(true)
+    expect(state().settingsFocus).toBe('helper')
+    // Not a second Install: the pointer is the only new press, and it starts nothing.
+    expect(spies.reframeAll).not.toHaveBeenCalled()
+  })
+
   it('says "the AI helper is starting" while it starts, greyed, and never "needs the AI helper" then', () => {
     scene()
     watch('unknown')
@@ -290,6 +304,19 @@ describe('Follow the subject, in the Trimmer dock', () => {
     watch('missing', null)
     expect(followButton()?.props.disabled).toBe(true)
     expect(dockWords()).toContain('needs the AI helper')
+  })
+
+  it('makes "needs the AI helper" a pointer to Settings, and "starting" plain words', () => {
+    scene()
+    watch('missing', null)
+    const pointer = buttons(section()).find((b) => textOf(b.props.children as ReactNode).trim() === 'needs the AI helper')
+    expect(pointer?.props.title).toBe('install it in Settings')
+    press(pointer, 'the pointer')
+    expect([state().settingsOpen, state().settingsFocus]).toEqual([true, 'helper'])
+    expect(spies.reframeClip).not.toHaveBeenCalled()
+    scene()
+    watch('unknown', null)
+    expect(buttons(section()).some((b) => textOf(b.props.children as ReactNode).includes('the AI helper'))).toBe(false)
   })
 
   it('says "needs the AI helper" only with the Follow button: a clip that already follows keeps following without one', () => {
