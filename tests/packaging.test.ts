@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { readdirSync, readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { existsSync, readdirSync, readFileSync, type Stats } from 'node:fs'
+import { basename, join, resolve } from 'node:path'
+// electron-builder's own matcher, so the filter is judged as the build judges it.
+import { getFileMatchers } from 'app-builder-lib/out/fileMatcher'
 // js-yaml ships no types and is used only here, so the shape is declared at
 // the point of use rather than adding a dependency for one function.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -32,7 +34,8 @@ interface BuilderConfig {
   extraResources?: { from: string; to: string; filter?: string[] }[]
   win?: { target?: unknown }
   mac?: { target?: unknown; extendInfo?: Record<string, unknown> }
-  nsis?: { oneClick?: boolean }
+  nsis?: { oneClick?: boolean; include?: string; deleteAppDataOnUninstall?: boolean }
+  directories?: { buildResources?: string }
   publish?: unknown
 }
 
@@ -86,21 +89,53 @@ describe('the packaged app can find its resources', () => {
     expect(filter).toMatch(/!.*__pycache__/)
   })
 
-  it('leaves out every virtualenv in sidecar/, the face finder’s measurement venv included', () => {
+  it('leaves out every virtualenv in sidecar/, by electron-builder’s own matcher, and still ships what the helper needs', () => {
     /*
      * `toContain('!.venv')` above is a substring of the joined filter, so it
      * could never tell `.venv-faces` (108 MB, docs/CLIPS.md §4.3's measured
-     * mediapipe venv) from `.venv`. Each by its own entries: the two named
-     * here, and any `.venv*` folder that is on this disk.
+     * mediapipe venv) from `.venv`. And a list of names can only hold the
+     * venvs somebody remembered (docs/CLIPS.md §3a.6: the filter became
+     * `!.venv*`). So the config is read through app-builder-lib's
+     * `getFileMatchers`, the function the build itself calls, and every
+     * `.venv*` folder on this disk, the two named ones, and one nobody has
+     * made yet are each refused: the folder, and a file deep inside it (a
+     * pattern with a dot gets no implied `/**`, fileMatcher.js, so the folder
+     * entry alone would let its contents through).
      */
-    const filter = resourceFor('sidecar')?.filter ?? []
-    const onDisk = readdirSync(resolve(ROOT, 'sidecar'), { withFileTypes: true })
+    const sidecar = resolve(ROOT, 'sidecar')
+    const matchers = getFileMatchers(config as never, 'extraResources', resolve(ROOT, 'resources-under-test'), {
+      macroExpander: (pattern: string) => pattern,
+      customBuildOptions: {} as never,
+      globalOutDir: resolve(ROOT, 'dist'),
+      defaultSrc: ROOT
+    })
+    const matcher = (matchers ?? []).filter((m) => basename(m.to) === 'sidecar')
+    expect(matcher, 'one extraResources entry lands at sidecar/').toHaveLength(1)
+    expect(matcher[0].from).toBe(sidecar)
+    const ships = matcher[0].createFilter()
+    const stat = (dir: boolean): Stats => ({ isDirectory: () => dir, isFile: () => !dir, isSymbolicLink: () => false }) as Stats
+
+    const onDisk = readdirSync(sidecar, { withFileTypes: true })
       .filter((entry) => entry.isDirectory() && entry.name.startsWith('.venv'))
       .map((entry) => entry.name)
-    for (const name of new Set(['.venv', '.venv-faces', ...onDisk])) {
-      expect(filter, name).toContain(`!${name}`)
-      expect(filter, name).toContain(`!${name}/**`)
+    for (const name of new Set(['.venv', '.venv-faces', '.venv-stems', ...onDisk])) {
+      expect(ships(join(sidecar, name), stat(true)), `${name}/`).toBe(false)
+      expect(ships(join(sidecar, name, 'lib', 'python3.14', 'site-packages', 'numpy', '__init__.py'), stat(false)), `a file inside ${name}`).toBe(false)
+      expect(ships(join(sidecar, name, 'Scripts', 'python.exe'), stat(false)), `${name}'s python.exe`).toBe(false)
     }
+    // Not a filter that drops everything: the helper's code, both locks, resolved.json and the self-test's model ship.
+    for (const kept of [
+      'forge_sidecar/__main__.py',
+      'forge_sidecar/selftest/identity.onnx',
+      'pack/lock-darwin-arm64.txt',
+      'pack/lock-win32-x64.txt',
+      'pack/resolved.json'
+    ]) {
+      const path = join(sidecar, ...kept.split('/'))
+      expect(existsSync(path), `${kept} is on disk`).toBe(true)
+      expect(ships(path, stat(false)), kept).toBe(true)
+    }
+    expect(ships(join(sidecar, 'forge_sidecar'), stat(true)), 'forge_sidecar/').toBe(true)
   })
 
   it('leaves out the filename Windows cannot extract', () => {
@@ -115,8 +150,9 @@ describe('the packaged app can find its resources', () => {
   })
 
   it('ships the requirements files, so the sidecar can be set up after install', () => {
-    // They are not excluded by any filter, and docs/SIDECAR.md tells the user
-    // to pip install from them.
+    // They are not excluded by any filter. An installed app runs the helper on
+    // the pack it installs (from sidecar/pack/'s locks, which the matcher test
+    // above holds), or on FORGE_PYTHON, which a person sets up from these.
     const filter = (resourceFor('sidecar')?.filter ?? []).join('\n')
     expect(filter).not.toMatch(/!.*requirements/)
   })
@@ -133,6 +169,60 @@ describe('what the installer is', () => {
     // A first install on a machine nobody has tested is exactly when someone
     // wants to see where it is going and be able to undo it.
     expect(config.nsis?.oneClick).toBe(false)
+  })
+
+  it('uninstalls the AI helper’s pack, and only the pack, and not on an update (docs/CLIPS.md §3a.6)', () => {
+    /*
+     * The pack is ~0.7 GB the app put in userData itself, and electron-builder
+     * leaves userData on an uninstall. build/installer.nsh's customUnInstall
+     * removes `$APPDATA\${PRODUCT_NAME}\python`, inside `${ifNot}
+     * ${isUpdated}`: an update runs the old uninstaller silently with
+     * --updated, and the pack must survive it. One ordered shape: the include
+     * names the file; the macro is exactly one guard from its first line to
+     * its last; every RMDir in the file is inside that guard and ends in
+     * `\python` (never models, never userData itself). The guard's runtime
+     * behaviour is unmeasured until the Surface's update run (§3a.9).
+     */
+    expect(config.nsis?.include).toBe('build/installer.nsh')
+    expect(config.directories?.buildResources).toBe('build')
+    // Unset: the models, the projects and the settings are the user's.
+    expect(config.nsis?.deleteAppDataOnUninstall).toBeUndefined()
+    const text = readFileSync(resolve(ROOT, config.nsis!.include!), 'utf8')
+    // The script's lines without its comments (NSIS: `;` or `#` to the end of a line).
+    const code = text
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line !== '' && !line.startsWith(';') && !line.startsWith('#'))
+
+    expect([...text.matchAll(/^\s*!macro\s+customUnInstall\b/gim)], 'one customUnInstall').toHaveLength(1)
+    const start = code.indexOf('!macro customUnInstall')
+    const end = code.indexOf('!macroend', start)
+    expect(start).toBeGreaterThanOrEqual(0)
+    expect(end).toBeGreaterThan(start)
+    const body = code.slice(start + 1, end)
+
+    // The guard opens on the macro's first line and closes on its last, so nothing in it runs on an update.
+    expect(body[0]).toBe('${ifNot} ${isUpdated}')
+    let depth = 0
+    let closes = -1
+    body.forEach((line, i) => {
+      if (/^\$\{(if|ifNot)\}/i.test(line)) depth++
+      else if (/^\$\{endif\}$/i.test(line)) {
+        depth--
+        if (depth === 0 && closes < 0) closes = i
+      }
+    })
+    expect(closes, 'the guard’s ${endif} is the macro’s last line').toBe(body.length - 1)
+
+    // Every RMDir in the file, by matchAll: inside the guard, and only ever a `python` folder of userData.
+    const removes = [...text.matchAll(/^\s*RMDir\b.*$/gim)].map((m) => m[0].trim())
+    expect(removes.length).toBeGreaterThan(0)
+    expect(removes).toContain('RMDir /r "$APPDATA\\${PRODUCT_NAME}\\python"')
+    for (const line of removes) {
+      expect(line).toMatch(/^RMDir \/r "\$APPDATA\\\$\{[A-Z_]+\}\\python"$/)
+      expect(body.indexOf(line), `${line} is inside the guard`).toBeGreaterThan(0)
+    }
+    expect(code.join('\n')).not.toMatch(/models|projects/i)
   })
 
   it('publishes nothing as a side effect of building', () => {

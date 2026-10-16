@@ -16,10 +16,15 @@
 #                  from one, so the sidecar has to sit beside the app rather
 #                  than inside it.
 #
-#   the excludes   `sidecar/.venv` is 542MB of platform-specific interpreter,
-#                  and `sidecar/:memory:.ses` has a colon in its name — which
-#                  Windows forbids, so an installer carrying it would fail to
-#                  extract on the machine it is aimed at.
+#   the excludes   `sidecar/.venv` is 598MB of platform-specific interpreter
+#                  (`du -sh`, 2026-10-14), and every other `sidecar/.venv*`
+#                  is a measurement venv; `sidecar/:memory:.ses` has a colon
+#                  in its name — which Windows forbids, so an installer
+#                  carrying it would fail to extract on the machine it is
+#                  aimed at.
+#
+# And one thing the UNINSTALLER does: `build/installer.nsh` removes the AI
+# helper's pack from userData (below, `nsis.include`).
 #
 # BUILD EACH PLATFORM ON ITS OWN PLATFORM. `@ffmpeg-installer` ships the binary
 # as an OPTIONAL dependency per platform, so a Mac has only `darwin-arm64`
@@ -67,12 +72,17 @@ extraResources:
     to: sidecar
     filter:
       - '**/*'
-      - '!.venv'
-      - '!.venv/**'
-      # The face finder's measurement venv (docs/CLIPS.md §4.3): 108 MB of
-      # mediapipe and models, on the dev Mac only.
-      - '!.venv-faces'
-      - '!.venv-faces/**'
+      # Every virtualenv beside the helper's code, by one glob rather than by
+      # name: `.venv` (development's), `.venv-faces` (the face finder's
+      # measurement venv, docs/CLIPS.md §4.3: 108 MB of mediapipe and
+      # models), and whichever one the next measurement makes. Both entries
+      # are needed: a pattern with a dot in it gets no implied `/**` from
+      # electron-builder (app-builder-lib fileMatcher.js), so the folder
+      # alone would leave its contents in. tests/packaging.test.ts holds
+      # every `.venv*` on the packing machine to this through
+      # electron-builder's own matcher.
+      - '!.venv*'
+      - '!.venv*/**'
       - '!**/__pycache__/**'
       - '!**/*.py[cod]'
       # Illegal on Windows. Left behind by a test that was handed ':memory:' as
@@ -96,6 +106,14 @@ nsis:
   perMachine: false
   createDesktopShortcut: true
   createStartMenuShortcut: true
+  # The uninstaller removes the AI helper's pack, `%APPDATA%\<name>\python`
+  # (about 0.7 GB the app installed itself, docs/CLIPS.md §3a.6, §16.47), and
+  # nothing else of userData: not the models, not the projects, not settings.
+  # `deleteAppDataOnUninstall` stays unset for that reason. The macro is
+  # guarded so an UPDATE, which runs the old version's uninstaller silently
+  # with `--updated`, keeps the pack; that guard is unmeasured until the
+  # Surface's update run (§3a.9). tests/packaging.test.ts pins the shape.
+  include: build/installer.nsh
 
 mac:
   category: public.app-category.video
