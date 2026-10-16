@@ -22,7 +22,7 @@ import {
 } from '@shared/render/moment'
 import { FOOTAGE_MAX_EDGE, footageCapFilter, momentFrameArgs, momentFramesKey } from '@shared/render/momentFrames'
 import { motionSourceRect } from '@shared/render/motion'
-import { planeShare, retimeFilter } from '@shared/render/plan'
+import { RETIME_TAIL, planeShare, retimeFilter } from '@shared/render/plan'
 import { sourceFramesFor } from '@shared/render/speed'
 import { momentTextures, withFootageFrames } from '@shared/render/momentTextures'
 import { bakeForExport, exportKey, type Bakers } from '@shared/render/exportBake'
@@ -449,7 +449,8 @@ describe('the footage pre-pass', () => {
     // Through the render's own retime: a seek to 21 × 0.5 would land a frame off its phase.
     expect(slow.slice(0, 2)).toEqual(['-ss', '1.000000'])
     expect(slow[slow.indexOf('-t') + 1]).toBe((sourceFramesFor({ speed: 0.5, duration: 60 }) / fps).toFixed(6))
-    expect(slow[slow.indexOf('-vf') + 1]).toBe(`setpts=PTS/0.5,fps=30,${held6(4)},trim=start_frame=21:end_frame=25,setpts=PTS-STARTPTS,${cap},format=rgba`)
+    // Behind the clone of the clip's last source frame a slowed retime starts with (plan.ts RETIME_TAIL), as the render's.
+    expect(slow[slow.indexOf('-vf') + 1]).toBe(`${RETIME_TAIL},setpts=PTS/0.5,fps=30,${held6(4)},trim=start_frame=21:end_frame=25,setpts=PTS-STARTPTS,${cap},format=rgba`)
     expect(slow[slow.indexOf('-frames:v') + 1]).toBe('4')
 
     // Smooth slow-motion looks ahead, so it gets the render's whole input window and eight source frames more (the 2018 build's minterpolate does not flush), its tail held.

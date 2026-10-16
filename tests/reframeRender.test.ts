@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
-import { buildRenderPlan, cropFilter, type CropFollow } from '@shared/render/plan'
+import { RETIME_TAIL, buildRenderPlan, cropFilter, type CropFollow } from '@shared/render/plan'
 import { filterGraphOf } from '@shared/render/graphFile'
 import { cropAt, effectiveCrop } from '@shared/render/crop'
 import { FOOTAGE_MAX_EDGE, PULL_VERSION, followedFootage, momentFrameArgs, momentFramesKey } from '@shared/render/momentFrames'
@@ -115,7 +115,9 @@ describe('buildRenderPlan: the followed crop in the chain', () => {
 
   it('a ramp: on the seek’s clock (T, not T-STARTT), then the clock, then the crop — in the render and the pull; an unfollowed ramp keeps its own', () => {
     const ramp = { from: 1, to: 0.5 }
-    const head = /^setpts='\(-?[\d.]+\)\*log\(\(-?[\d.]+\+\(-?[\d.]+\)\*T\/[\d.]+\)\/[\d.]+\)\/TB',fps=30,fps=30:start_time=0,crop=w='min\(608,in_w\)'/
+    // A slowing ramp, so first the clone of its last source frame (plan.ts RETIME_TAIL): the render's and the pull's.
+    expect(RETIME_TAIL).toBe('tpad=stop_mode=clone:stop=1')
+    const head = /^tpad=stop_mode=clone:stop=1,setpts='\(-?[\d.]+\)\*log\(\(-?[\d.]+\+\(-?[\d.]+\)\*T\/[\d.]+\)\/[\d.]+\)\/TB',fps=30,fps=30:start_time=0,crop=w='min\(608,in_w\)'/
     const followed = project({ clip: { ramp, duration: 291 } })
     const chain = chainOf(graphOf(followed))
     expect(chain).toMatch(head)

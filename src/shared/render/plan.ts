@@ -165,13 +165,53 @@ export function fitFor(box: { width: number; height: number; fit: 'contain' | 'c
 }
 
 /**
+ * One clone of a clip's last source frame, ahead of a retime that slows it
+ * (`retimeFilter`), so the retime's `fps=` shows that frame on every slot it
+ * covers on both builds.
+ *
+ * The 2018 build's `setpts` has no activate callback (it gained one, with
+ * `eval_pts` on the EOF's own pts, by n4.4: setpts.c, read at f22fcd4 and
+ * n4.4). So its EOF goes on through avfilter.c's default forwarding
+ * (`guess_status_pts`) with the pts it came in with: the source's time, not
+ * the re-timed one. The retime's `fps=` drops its last buffered frame once
+ * the EOF's pts is at or before its next slot (vf_fps.c `write_frame`, the
+ * same at both). On a slowed clip the EOF arrived early, so the last source
+ * frame never came out, and its slots (about 1/speed of them) showed the
+ * canvas. Windows CI run 38919769393 had the last two frames black on a 0.5×
+ * clip and on a 1 → 0.5 ramp (reframe.int's p0-half and ramp rows).
+ *
+ * The clone is `tpad`'s, at the EOF's own pts on the source's clock
+ * (vf_tpad.c: `s->pts += pts`). `setpts` re-times it as a frame, so it lands
+ * where n4.4's re-timed EOF does, and the last real frame fills every slot
+ * up to it on both builds. The clone itself goes at 2018's early EOF, and on
+ * n4.4 it fills a few slots past the clip's end. reframe.int's 2018-EOF rows
+ * measured all of this on the Mac, with the 2018 EOF emulated by a setpts
+ * that does not re-time it:
+ * - without the clone, the same two frames were black;
+ * - with it, every frame was the plain render's;
+ * - the clone in the plain render was framemd5-identical to the render
+ *   without it.
+ *
+ * A speed-up needs nothing: there the 2018 EOF comes later than the re-timed
+ * end, and `fps=` already holds the last frame past it. Smooth slow motion's
+ * `minterpolate` has no `fps=`, and is not measured with the clone.
+ */
+export const RETIME_TAIL = 'tpad=stop_mode=clone:stop=1'
+
+/**
  * A clip's picture, re-timed: its ramp when it has one (one `setpts` over the
- * footage it plays, render/speed.ts), otherwise its constant speed.
+ * footage it plays, render/speed.ts), otherwise its constant speed — behind
+ * `RETIME_TAIL` when it slows (its average rate under 1) and ends in `fps=`.
  */
 export function retimeFilter(clip: Pick<Clip, 'ramp' | 'speed' | 'duration' | 'smoothSlow'>, fps: number): string | null {
   const ramp = clipRamp(clip)
-  if (ramp) return rampVideoFilter(ramp.from, ramp.to, (clip.duration * rampRate(ramp.from, ramp.to)) / fps, fps)
-  return speedVideoFilter(clipSpeed(clip), fps, clip.smoothSlow)
+  const rate = ramp ? rampRate(ramp.from, ramp.to) : clipSpeed(clip)
+  const retime = ramp
+    ? rampVideoFilter(ramp.from, ramp.to, (clip.duration * rate) / fps, fps)
+    : speedVideoFilter(rate, fps, clip.smoothSlow)
+  // speedVideoFilter's own test for minterpolate, which takes the place of fps=.
+  const smooth = !ramp && Boolean(clip.smoothSlow) && rate < 1
+  return retime && rate < 1 && !smooth ? `${RETIME_TAIL},${retime}` : retime
 }
 
 /**

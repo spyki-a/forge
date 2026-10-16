@@ -20,7 +20,7 @@ import {
 } from '@shared/timeline'
 import { withClipRamp, withClipSpeed } from '@shared/render/speed'
 import { convertFrameRate } from '@shared/project/frameRate'
-import { followedRetime, retimeFilter } from '@shared/render/plan'
+import { RETIME_TAIL, followedRetime, retimeFilter } from '@shared/render/plan'
 import { KEYED_PROPERTIES, MASK_PROPERTIES } from '@shared/render/keyframes'
 import { evaluateFlatSum } from './fixtures/flatSum'
 
@@ -154,7 +154,8 @@ function exportSlot(k: number, clip: Clip, fps: number): number {
  * truncating, fps= rounding half up.
  */
 function rampSlot(clip: Clip, keys: FollowKeys, fps = FPS): (k: number) => number {
-  const filter = followedRetime(clip, fps, keys)!
+  // A slowing ramp starts with its tail clone (plan.ts RETIME_TAIL), which moves no frame: past it, the setpts.
+  const filter = followedRetime(clip, fps, keys)!.replace(`${RETIME_TAIL},`, '')
   const m = /^setpts='\((-?[\d.]+)\)\*log\(\((-?[\d.]+)\+\((-?[\d.]+)\)\*T\/(-?[\d.]+)\)\/(-?[\d.]+)\)\/TB',fps=\d+$/.exec(filter)
   if (!m) throw new Error(`not a followed ramp: ${filter}`)
   const [scale, from, k, D] = [1, 2, 3, 4].map((i) => Number(m[i]))

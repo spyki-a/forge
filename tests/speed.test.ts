@@ -23,6 +23,7 @@ import {
   rampVideoFilter,
   withClipRamp
 } from '@shared/render/speed'
+import { RETIME_TAIL, retimeFilter } from '@shared/render/plan'
 import { emptyProject, type Project } from '@shared/timeline'
 
 const clip = (over: Partial<Clip> = {}): Clip => ({
@@ -136,6 +137,38 @@ describe('speedVideoFilter', () => {
     expect(speedVideoFilter(0.5, 30, true)).toContain('minterpolate')
     // Speeding up throws frames away; there is nothing to invent.
     expect(speedVideoFilter(2, 30, true)).not.toContain('minterpolate')
+  })
+})
+
+describe('retimeFilter: the slowed clip’s last source frame (plan.ts RETIME_TAIL)', () => {
+  /*
+   * The 2018 build's setpts never re-times its EOF, so a slowed clip's fps=
+   * dropped the last source frame and its last 1/speed frames were the canvas
+   * (Windows CI run 38919769393). The clone ahead of the retime is what keeps
+   * it; reframe.int's 2018-EOF rows render that. This is where it goes.
+   */
+  const at = (c: Partial<Clip>): string | null => retimeFilter({ duration: 60, ...c }, 30)
+
+  it('goes ahead of every retime that slows the clip and ends in fps=', () => {
+    expect(at({ speed: 0.5 })).toBe(`${RETIME_TAIL},setpts=PTS/0.5,fps=30`)
+    expect(at({ speed: 0.25 })).toBe(`${RETIME_TAIL},setpts=PTS/0.25,fps=30`)
+    expect(at({ speed: 0.99 })).toBe(`${RETIME_TAIL},setpts=PTS/0.99,fps=30`)
+    expect(at({ ramp: { from: 1, to: 0.5 } })!.startsWith(`${RETIME_TAIL},setpts='`)).toBe(true)
+    expect(at({ ramp: { from: 0.5, to: 1 } })!.startsWith(`${RETIME_TAIL},setpts='`)).toBe(true)
+    // A flat ramp is its constant speed.
+    expect(at({ ramp: { from: 0.5, to: 0.5 } })).toBe(`${RETIME_TAIL},setpts=PTS/0.5,fps=30`)
+  })
+
+  it('and nowhere else: a speed-up, a ramp faster than its footage on average, smooth slow motion, no retime', () => {
+    // There the 2018 EOF comes later than the re-timed end, and fps= already holds the last frame past it.
+    expect(at({ speed: 2 })).toBe('setpts=PTS/2,fps=30')
+    // 4× → 0.25× ends slow but plays its footage in less time than 1× would (rampRate 1.35).
+    expect(rampRate(4, 0.25)).toBeGreaterThan(1)
+    expect(at({ ramp: { from: 4, to: 0.25 } })!.startsWith("setpts='")).toBe(true)
+    expect(at({ ramp: { from: 0.25, to: 4 } })!.startsWith("setpts='")).toBe(true)
+    // minterpolate takes the place of fps=, and was not measured with the clone.
+    expect(at({ speed: 0.5, smoothSlow: true })).toBe(speedVideoFilter(0.5, 30, true))
+    expect(at({})).toBeNull()
   })
 })
 

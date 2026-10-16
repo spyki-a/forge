@@ -4,7 +4,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import ffprobeInstaller from '@ffprobe-installer/ffprobe'
 import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
 import { rampRate } from '@shared/render/speed'
-import { buildRenderPlan, cropFilter } from '@shared/render/plan'
+import { RETIME_TAIL, buildRenderPlan, cropFilter } from '@shared/render/plan'
 import { filterGraphOf, withGraphFile } from '@shared/render/graphFile'
 import { cropAt } from '@shared/render/crop'
 import { FOOTAGE_MAX_EDGE, followedFootage } from '@shared/render/momentFrames'
@@ -167,7 +167,9 @@ type Retime = number | ((rel: number, s: Source, inPoint: number) => number)
  * truncated (setpts.c:144).
  */
 function rampRetime(graph: string, form?: 'T' | 'T-STARTT'): Retime {
-  const m = /\[0:v\]setpts='\((-?[\d.]+)\)\*log\(\((-?[\d.]+)\+\((-?[\d.]+)\)\*(T|\(T-STARTT\))\/(-?[\d.]+)\)\/(-?[\d.]+)\)\/TB'/.exec(graph)
+  // Past the slowed clip's tail clone (plan.ts RETIME_TAIL), whose frame is re-timed like any other.
+  const head = graph.replace(`[0:v]${RETIME_TAIL},`, '[0:v]')
+  const m = /\[0:v\]setpts='\((-?[\d.]+)\)\*log\(\((-?[\d.]+)\+\((-?[\d.]+)\)\*(T|\(T-STARTT\))\/(-?[\d.]+)\)\/(-?[\d.]+)\)\/TB'/.exec(head)
   if (!m) throw new Error('no ramp at the head of the clip’s chain')
   const [scale, from, k, , D, by] = [1, 2, 3, 4, 5, 6].map((i) => Number(m[i]))
   const written = m[4] === 'T' ? 'T' : 'T-STARTT'
@@ -256,10 +258,15 @@ interface Rendered {
   height: number
 }
 
-async function render(name: string, project: Project, want: (n: number) => boolean = () => true): Promise<Rendered> {
+async function render(
+  name: string,
+  project: Project,
+  want: (n: number) => boolean = () => true,
+  rewrite: (graph: string) => string = (g) => g
+): Promise<Rendered> {
   const out = join(dir, `${name}.mp4`)
   const plan = buildRenderPlan({ project, outputPath: out })
-  const graph = filterGraphOf(plan.args)
+  const graph = rewrite(filterGraphOf(plan.args))
   const graphFile = join(dir, `${name}.graph.txt`)
   await writeFile(graphFile, graph)
   await run(FFMPEG, withGraphFile(plan.args, graphFile), { maxBuffer: 64 * 1024 * 1024 })
@@ -707,6 +714,64 @@ describe('a followed ramp runs on the seek’s clock', () => {
     checkPan(s, row, 'ramp 1→0.5')
     await checkMoment(s, row, 'ramp 1→0.5', s.cuts[1], false, retime)
   })
+})
+
+/*
+ * The 2018 build's EOF, emulated on this Mac (plan.ts `RETIME_TAIL`). At
+ * f22fcd4 `setpts` forwards its EOF with the pts it came in with, never
+ * re-timed. So a slowed clip's `fps=` dropped the last source frame:
+ * Windows CI run 38919769393 had the last two frames of the p0-half and
+ * ramp rows black (mean luma 16). The Mac's n4.4 `setpts` re-times its EOF
+ * through its own expression, and there POS is NaN, because at an EOF
+ * there is no frame (setpts.c `eval_pts`). So
+ * `if(isnan(POS),PTS,<the retime>)` re-times every frame as before and
+ * leaves the EOF as the 2018 build leaves it.
+ *
+ * Each row is rendered twice more under that emulation:
+ * - without the tail clone. This is the control, and it must show CI's
+ *   failure;
+ * - as the plan writes it. This must be the row's own render, frame for
+ *   frame.
+ *
+ * On Windows the rows above are the 2018 build's own run, so this runs on
+ * the Mac only.
+ */
+function as2018Eof(graph: string): string {
+  // The clip's input, its tail clone if the plan wrote one, then its retime's setpts and fps=: one site.
+  const tail = `${RETIME_TAIL},`
+  const sites = [...graph.matchAll(/\[0:v\](tpad=[^,;]*,)?setpts=('[^']*'|[^,;']*),fps=/g)]
+  if (sites.length !== 1 || (sites[0][1] !== undefined && sites[0][1] !== tail)) throw new Error(`not one retime at the head of a clip’s chain: ${sites.map((m) => m[0]).join(' | ')}`)
+  const [whole, before, expr] = sites[0]
+  const bare = expr.startsWith("'") ? expr.slice(1, -1) : expr
+  return graph.replace(whole, () => `[0:v]${before ?? ''}setpts='if(isnan(POS),PTS,${bare})',fps=`)
+}
+
+describe.runIf(process.platform === 'darwin')('a slowed clip keeps its last source frame where setpts does not re-time its EOF (the 2018 build, emulated)', () => {
+  for (const label of ['p0-half', 'ramp'] as const) {
+    it(`VFR ${label}: without the tail clone the last frames are the canvas, as on Windows CI; with it, the render`, async () => {
+      const s = sources.get('vfr')!
+      const row = rowOf(s, label)
+      const { clip } = row
+      const inClip = (n: number): boolean => n >= clip.start && n < clip.start + clip.duration
+      expect(row.rendered.graph, 'the plan clones the last source frame ahead of the slowing retime').toContain(`[0:v]${RETIME_TAIL},setpts=`)
+      const untailed = (g: string): string => g.replace(`[0:v]${RETIME_TAIL},`, '[0:v]')
+      const control = await render(`${s.name}-${label}-2018eof-untailed`, row.project, inClip, (g) => as2018Eof(untailed(g)))
+      const emulated = await render(`${s.name}-${label}-2018eof`, row.project, inClip, as2018Eof)
+      const canvas = (r: Rendered): number[] =>
+        [...Array(clip.duration).keys()].filter((k) => {
+          const f = r.frames.get(clip.start + k)!
+          return meanLuma(f, { top: 0, height: f.height }) < 20
+        })
+      say(`- vfr ${label} under the 2018 EOF: the canvas on clip frames [${canvas(control).join(', ')}] without the tail clone, [${canvas(emulated).join(', ')}] with it`)
+      // CI's frames: 418 and 419 of 420 at 0.5×, 289 and 290 of 291 on the ramp.
+      expect(canvas(control), 'the emulation reproduces Windows CI').toEqual([clip.duration - 2, clip.duration - 1])
+      expect(canvas(emulated)).toEqual([])
+      const off = [...Array(clip.duration).keys()].filter(
+        (k) => meanDifference(emulated.frames.get(clip.start + k)!, row.rendered.frames.get(clip.start + k)!) > 0
+      )
+      expect(off, 'clip frames that differ from the render’s').toEqual([])
+    })
+  }
 })
 
 describe('more cuts than a nested if() can hold', () => {
