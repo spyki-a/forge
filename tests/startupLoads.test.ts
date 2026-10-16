@@ -173,7 +173,7 @@ describe('the Inspector no longer loads them', () => {
 
 describe('the startup calls exist on both stand-in bridges', () => {
   it('the fallback bridge answers builtInLooks with an empty list', () => {
-    const main = parse('src/renderer/src/main.tsx')
+    const main = parse('src/renderer/src/fallbackBridge.ts')
     const found: string[] = []
     const visit = (node: ts.Node): void => {
       if (
