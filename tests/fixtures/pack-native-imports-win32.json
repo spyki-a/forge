@@ -1,0 +1,413 @@
+{
+ "files": 48,
+ "imports": [
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_asyncio.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_bz2.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_ctypes.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_ctypes_test.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_decimal.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_elementtree.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_hashlib.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_lzma.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_multiprocessing.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_overlapped.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_queue.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_remote_debugging.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_socket.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_sqlite3.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_ssl.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_testbuffer.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_testcapi.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_testclinic.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_testclinic_limited.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_testconsole.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_testimportmultiple.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_testinternalcapi.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_testlimitedcapi.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_testmultiphase.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_testsinglephase.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_tkinter.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_uuid.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_wmi.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140_1.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_wmi.pyd",
+   "imports": "VCRUNTIME140_1.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_zoneinfo.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/_zstd.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/libcrypto-3-x64.dll",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/libffi-8.dll",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/libssl-3-x64.dll",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/pyexpat.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/select.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/sqlite3.dll",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/tcl90.dll",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/tcl9tk90.dll",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/unicodedata.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/DLLs/winsound.pyd",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/python314.dll",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "beside it"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/tcl/dde1.4/tcl9dde14.dll",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/tcl/registry1.3/tcl9registry13.dll",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "python.exe's folder"
+  },
+  {
+   "copies": [
+    "python/vcruntime140.dll"
+   ],
+   "delay": false,
+   "file": "python/vcruntime140_1.dll",
+   "imports": "VCRUNTIME140.dll",
+   "resolves": "beside it"
+  }
+ ],
+ "note": "A bootstrap, not CI's list. It is the pinned interpreter's tree alone (cpython-3.14.8+20261001-x86_64-pc-windows-msvc-install_only_stripped.tar.gz, unpacked and read on the Mac, 2026-10-16), without the wheels. While 'recorded' is false, scripts/pe-imports.py --expected lists and compares nothing; CI's Windows job records the installed pack's whole list as the artifact helper-pack-native-imports-win32, and the next commit replaces this file with that list, whose 'recorded' is true.",
+ "recorded": false,
+ "unreadable": []
+}

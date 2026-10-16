@@ -5,11 +5,11 @@ import { tmpdir } from 'node:os'
 import { isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { HELPER_PACK } from '../../src/shared/sidecar/packManifest'
 import { isUnsupported, packBytes, packPlatform, parseReceipt, receiptMatches, type HelperPackManifest, type PackPlatform, type PackReceipt } from '../../src/shared/sidecar/pack'
-import { helperLaunch, type HelperLaunch } from '../../src/shared/sidecar/helperPython'
+import { helperLaunch, receiptFromText, type HelperLaunch } from '../../src/shared/sidecar/helperPython'
 import { SELFTEST_GROUP_NAMES } from '../../src/shared/sidecar/selftest'
 import { SIDECAR_METHODS, type HelloResult } from '../../src/shared/sidecar/protocol'
 import type { SidecarStatus } from '../../src/shared/sidecar/status'
-import { CHECKING_SPACE, CHECKING_THE_HELPER, INSTALL_STAGES, UNPACKING_PYTHON, bytesLeft, spaceNeeded } from '../../src/shared/sidecar/install'
+import { CHECKING_SPACE, CHECKING_STARTING, CHECKING_THE_HELPER, INSTALL_STAGES, UNPACKING_PYTHON, bytesLeft, checkingGroupText, spaceNeeded } from '../../src/shared/sidecar/install'
 import { createHelperPackJobs, lockLineCount, sitePackagesOf, type HelperPackDeps } from '../../src/main/sidecar/install'
 import { appPackFs, helperWorkers } from '../../src/main/sidecar/installDeps'
 import { checkPack } from '../../src/main/sidecar/check'
@@ -20,7 +20,7 @@ import { SidecarClient } from '../../src/main/sidecar/client'
 import type { HelperControl, PackCheck, PackFs } from '../../src/main/sidecar/installTypes'
 import type { Job } from '../../src/shared/types'
 import { outputDir } from './output'
-import { SIDECAR_DIR } from './venv'
+import { cachedPackIn, packSuiteGate, pipCheckProblems, SIDECAR_DIR } from './venv'
 
 /*
  * The AI helper's pack, installed for real (docs/CLIPS.md §3a.7
@@ -32,8 +32,22 @@ import { SIDECAR_DIR } from './venv'
  *
  * Opt-in: `FORGE_PACK_REAL=1` (about 0.9 GB of disk and 178 MB fetched on
  * the Mac). Without it the suite skips, with the reason in its name, as
- * venv.ts' describeWithVenv does; CI runs it once §3a.6 lands. Behind an
- * HTTP(S) proxy Node's fetch needs `NODE_USE_ENV_PROXY=1` (§3a.5, measured).
+ * venv.ts' describeWithVenv does. CI's pack step runs it on both push
+ * runners (.github/workflows/ci.yml, §3a.6 step 2). Behind an HTTP(S) proxy
+ * Node's fetch needs `NODE_USE_ENV_PROXY=1` (§3a.5, measured).
+ *
+ * - `FORGE_PACK_USERDATA=<dir>`: the userData to install into, and to leave
+ *   the pack in, instead of a scratch one (CI's: `<runner.temp>/forge pack
+ *   é/userData`, a space and a non-ASCII character, which its cache keeps
+ *   and its later steps run the suites from). Set, the suite never skips:
+ *   only CI's pack step sets it, so without `FORGE_PACK_REAL=1` beside it
+ *   the run FAILS rather than going green on nothing.
+ *   **The cached mode**: when that userData already holds a pack this build
+ *   accepts (the app's own rule, venv.ts `cachedPackIn`: the receipt parses
+ *   and both hashes are the manifest's, and the interpreter is there), as
+ *   CI's restored cache does, the run does not install: it runs the job's
+ *   Check again (the self-test, the receipt rewritten) and every assertion
+ *   that is not about a download. A stale receipt installs.
  *
  * - `FORGE_PACK_DOWNLOADS=<dir>`: a folder the verified downloads are kept in
  *   (hard links) before the job removes `downloads/`, and that a later run's
@@ -55,6 +69,9 @@ const REAL = process.env.FORGE_PACK_REAL === '1'
 const MUTATION = process.env.FORGE_PACK_MUTATION || null
 const KEEP = process.env.FORGE_PACK_KEEP === '1'
 const DOWNLOADS_KEPT = process.env.FORGE_PACK_DOWNLOADS || null
+/** CI's pack step's userData (never for a mutation, which installs a pack this run must fail on into its own scratch). */
+const ASKED_USERDATA = process.env.FORGE_PACK_USERDATA || null
+const USERDATA = MUTATION ? null : ASKED_USERDATA
 
 /** This machine's pack, by the app's rule (pack.ts `packPlatform`), with the marketing version the app reads from Electron. */
 function thisMachine(): PackPlatform {
@@ -107,6 +124,10 @@ const distInfoCount = (sitePackages: string): number => {
 }
 
 interface Run {
+  /** `install`: the job ran; `cached`: a pack this build accepts was already there (CI's restored cache), and Check again ran. */
+  mode: 'install' | 'cached'
+  /** Why this run installed, or which pack it found. */
+  why: string
   scratch: string
   userData: string
   root: string
@@ -114,7 +135,10 @@ interface Run {
   sidecarDir: string
   manifest: HelperPackManifest
   platform: PackPlatform
-  job: Job
+  /** The install job, as the queue ended it; null in the cached mode. */
+  job: Job | null
+  /** Check again's failure, in the cached mode; null when it passed (and always in the install mode). */
+  checkError: string | null
   started: number
   progress: { t: number; p: number; text: string | null }[]
   statuses: { t: number; stage: string }[]
@@ -129,11 +153,12 @@ interface Run {
   /** `df -k`'s Avail on userData, in bytes, read right after statfs (not on win32). */
   dfAvail: number | null
   needed: number
-  /** The files the run found already verified in a kept downloads folder: not fetched, so no host to name. */
+  /** The files the run found already verified in a kept downloads folder: not fetched, so no host to name. All of them in the cached mode. */
   seeded: string[]
+  /** When the run ended: the job's finish, or Check again's. */
+  endedAt: number
 }
 
-/** The manifest, and the folder the lock is read from, for this run (a mutation drops a package from both). */
 function inputsFor(platform: PackPlatform, scratch: string): { manifest: HelperPackManifest; sidecarDir: string } {
   const drop = MUTATION && MUTATION !== 'user-site' ? MUTATION : null
   if (!drop) return { manifest: HELPER_PACK, sidecarDir: SIDECAR_DIR }
@@ -195,21 +220,38 @@ function keepingFs(fs: PackFs, downloads: string, keepIn: string | null): PackFs
   }
 }
 
-async function install(): Promise<Run> {
+
+/** A pack.json, parsed as the app reads it (venv.ts reads FORGE_HELPER_PACK's the same way). */
+function receiptOf(versionDir: string): unknown {
+  try {
+    return receiptFromText(readFileSync(join(versionDir, 'pack.json'), 'utf8'))
+  } catch {
+    return null
+  }
+}
+
+/** Install the pack with the app's own job, or, over a pack this build accepts (CI's cache), run the job's Check again. */
+async function begin(): Promise<Run> {
   const platform = thisMachine()
   const scratch = mkdtempSync(join(tmpdir(), 'forge-pack-'))
-  // A space and a non-ASCII character, as a user's profile name can have.
-  const userData = join(scratch, 'Forge Bräutigam', 'userData')
+  // A space and a non-ASCII character, as a user's profile name can have (CI's FORGE_PACK_USERDATA has both too).
+  const userData = USERDATA ?? join(scratch, 'Forge Bräutigam', 'userData')
   mkdirSync(userData, { recursive: true })
+  const cached = cachedPackIn(USERDATA, { mutation: MUTATION, platform: process.platform, arch: process.arch, exists: existsSync, receiptOf })
+  const mode: Run['mode'] = 'cached' in cached ? 'cached' : 'install'
+  const why = 'cached' in cached ? `a pack this build accepts is already at ${cached.cached.versionDir}` : cached.install
   const { manifest, sidecarDir } = inputsFor(platform, scratch)
   const root = packRoot(userData, true)
   const versionDir = join(root, String(manifest.pack))
   const downloads = join(root, 'downloads')
   const pack = manifest.platforms[platform]
+  // A pack this build does not accept in the named userData (a stale receipt, a partial): this run is a FRESH
+  // install, as CI's is from an empty cache, never the app's Update over it (whose helper calls differ).
+  if (mode === 'install' && USERDATA && existsSync(root)) rmSync(root, { recursive: true, force: true })
 
   // Seeded from a kept folder: the job finds each file verified and fetches nothing.
-  const seeded: string[] = []
-  if (DOWNLOADS_KEPT && existsSync(join(DOWNLOADS_KEPT, String(manifest.pack)))) {
+  const seeded: string[] = mode === 'cached' ? [pack.interpreter, ...pack.wheels].map((f) => f.name) : []
+  if (mode === 'install' && DOWNLOADS_KEPT && existsSync(join(DOWNLOADS_KEPT, String(manifest.pack)))) {
     const into = join(downloads, String(manifest.pack))
     mkdirSync(into, { recursive: true })
     for (const file of [pack.interpreter, ...pack.wheels]) {
@@ -272,7 +314,7 @@ async function install(): Promise<Run> {
       }
     },
     check: async (o) => {
-      // The first start of the new pack (row 29's shape, on this Mac): timed alone, then the real check.
+      // The first start of the pack (row 29's shape: after an install, or here the first of this run): timed alone, then the real check.
       const first = new SidecarClient({ cwd: o.sidecarDir, launch: o.launch, maxRestarts: 0 })
       const at = Date.now()
       try {
@@ -307,18 +349,30 @@ async function install(): Promise<Run> {
   expect(workers.fetchVerified).toBeTypeOf('function')
 
   const jobs = createHelperPackJobs(deps)
-  const queued = jobs.install()
-  const job = await new Promise<Job>((done) => {
-    const look = (): void => {
-      const now = jobs.queue.list().find((j) => j.id === queued.id)
-      if (now && (now.status === 'done' || now.status === 'failed' || now.status === 'cancelled')) {
-        clearInterval(timer)
-        done(now)
-      }
+  let job: Job | null = null
+  let checkError: string | null = null
+  if (mode === 'cached') {
+    try {
+      await jobs.checkAgain()
+    } catch (err) {
+      checkError = err instanceof Error ? err.message : String(err)
     }
-    const timer = setInterval(look, 250)
-  })
+  } else {
+    const queued = jobs.install()
+    job = await new Promise<Job>((done) => {
+      const look = (): void => {
+        const now = jobs.queue.list().find((j) => j.id === queued.id)
+        if (now && (now.status === 'done' || now.status === 'failed' || now.status === 'cancelled')) {
+          clearInterval(timer)
+          done(now)
+        }
+      }
+      const timer = setInterval(look, 250)
+    })
+  }
   return {
+    mode,
+    why,
     scratch,
     userData,
     root,
@@ -327,6 +381,7 @@ async function install(): Promise<Run> {
     manifest,
     platform,
     job,
+    checkError,
     started,
     progress,
     statuses,
@@ -340,196 +395,238 @@ async function install(): Promise<Run> {
     free,
     dfAvail,
     needed,
-    seeded
+    seeded,
+    endedAt: job?.finishedAt ?? Date.now()
   }
 }
 
-const describeReal = REAL ? describe : describe.skip
 const title = 'the AI helper pack, installed from the real hosts by the app’s own job (CLIPS §3a.7)'
 
-describeReal(REAL ? `${title}${MUTATION ? ` — MUTATION ${MUTATION}: this run must fail` : ''}` : `${title} — skipped: FORGE_PACK_REAL is not 1`, () => {
-  let run: Run
-  let hello: HelloResult
-  let receipt: PackReceipt & { problems?: string[] }
-  /** What the tests found along the way, for the README. */
-  const found: string[] = []
-  let out: string
+const gate = packSuiteGate({ real: REAL, askedUserData: ASKED_USERDATA })
 
-  beforeAll(async () => {
-    out = await outputDir(MUTATION ? `helper-pack-${MUTATION}` : 'helper-pack')
-    run = await install()
-    if (run.job.status === 'done') {
-      receipt = JSON.parse(readFileSync(join(run.versionDir, 'pack.json'), 'utf8')) as PackReceipt & { problems?: string[] }
-      // A start of the installed pack of the test's own, as the service would make it: hello's own words.
-      const client = new SidecarClient({ cwd: run.sidecarDir, launch: run.launch, maxRestarts: 0 })
-      try {
-        hello = await client.start()
-      } finally {
-        await client.stop()
-      }
-    }
-  }, 45 * 60_000)
-
-  afterAll(() => {
-    if (!run) return
-    const stageAt = (label: string): number | undefined => run.statuses.find((s) => s.stage === label)?.t
-    const end = (run.job.finishedAt ?? Date.now()) - run.started
-    const stages = INSTALL_STAGES.map((s, i) => {
-      const from = stageAt(s.label)
-      const next = INSTALL_STAGES.slice(i + 1).map((n) => stageAt(n.label)).find((x) => x !== undefined) ?? end
-      return { label: s.label, from, ms: from === undefined ? undefined : next - from }
+if ('skip' in gate) describe.skip(`${title} — skipped: ${gate.skip}`, () => it('installs the pack', () => undefined))
+else if ('fail' in gate)
+  describe(title, () => {
+    it('runs, since CI’s pack step asked for it', () => {
+      throw new Error(gate.fail)
     })
-    const pack = run.manifest.platforms[run.platform]
-    const fetched = packBytes(pack)
-    const dl = stages[1].ms
-    const tree = existsSync(run.versionDir) ? walk(run.versionDir) : { files: [], dirs: [] }
-    const longestPath = Math.max(0, ...tree.files.map((f) => f.length))
-    const longestDir = Math.max(0, ...tree.dirs.map((d) => d.length))
-    const du = existsSync(run.versionDir) ? Number(execFileSync('du', ['-sk', run.versionDir], { encoding: 'utf8' }).split(/\s/)[0]) * 1024 : 0
-    const unpacked = run.logs.find((l) => l.line.startsWith('[helper] unpacked'))
-    const unpackFrom = stageAt(INSTALL_STAGES[2].label)
-    const pipFrom = stageAt(INSTALL_STAGES[3].label)
-    const notes = [
-      `job: ${run.job.status}${run.job.error ? ` — ${run.job.error}` : ''}`,
-      `userData: ${run.userData}`,
-      `version folder: ${run.versionDir}`,
-      `platform: ${run.platform}; python ${run.manifest.python.version}; pack ${run.manifest.pack}${MUTATION ? `; MUTATION ${MUTATION}` : ''}`,
-      `free (statfs on userData): bavail ${run.free.bavail} × ${run.free.bsize} = ${run.free.bavail * run.free.bsize} B; bfree ${run.free.bfree} × ${run.free.bsize} = ${run.free.bfree * run.free.bsize} B`,
-      `df -k "Avail" on userData, read right after: ${run.dfAvail ?? '-'} B`,
-      `space needed for a fresh install (spaceNeeded): ${run.needed} B`,
-      '',
-      'stages (ms from the press):',
-      ...stages.map((s) => `  ${s.label}: from ${s.from ?? '-'} for ${s.ms ?? '-'} ms`),
-      `  whole job: ${end} ms`,
-      `download: ${fetched} B in ${dl ?? '-'} ms = ${dl ? ((fetched / 1048576) / (dl / 1000)).toFixed(2) : '-'} MiB/s`,
-      `unpack: ${unpacked && unpackFrom !== undefined ? unpacked.t - unpackFrom : '-'} ms (${unpacked?.line ?? '-'}); the stdlib compile: ${unpacked && pipFrom !== undefined ? pipFrom - unpacked.t : '-'} ms`,
-      `first start's hello (before the check's own): ${run.firstHelloMs ?? '-'} ms`,
-      `self-test (the check's): ${run.check ? SELFTEST_GROUP_NAMES.map((g) => `${g} ${run.check!.selftest[g]?.ms} ms exit ${run.check!.selftest[g]?.exit}`).join(', ') : '-'}`,
-      `check problems: ${run.check ? JSON.stringify(run.check.problems) : '-'}`,
-      `receipt bytesOnDisk (apparent): ${receipt?.bytesOnDisk ?? '-'} B; du -sk of the version folder: ${du} B`,
-      `longest relative path: ${longestPath}; longest directory: ${longestDir}; files ${tree.files.length}, folders ${tree.dirs.length}`,
-      `helper calls: ${run.helperEvents.join(' → ')}`,
-      ...found,
-      '',
-      'pip (row 34): what runPip reported, then what a 500 ms poll saw',
-      ...run.pipReports.map((r) => `  ${r.t} ms: ${r.done} of ${r.total}${r.line ? ` · ${r.line}` : ''}`),
-      `  ticks: ${run.pipTicks.map((k) => `${k.t}:${k.count}`).join(' ')}`,
-      '',
-      'statuses:',
-      ...run.statuses.map((s) => `  ${s.t} ms: ${s.stage}`),
-      '',
-      'log:',
-      ...run.logs.map((l) => `  ${l.t} ms: ${l.line}`),
-      '',
-      'progress (each change of text kind, and every 1 %):',
-      ...run.progress
-        .filter((p, i, all) => i === 0 || kindOf(p.text) !== kindOf(all[i - 1].text) || Math.floor(p.p * 100) !== Math.floor(all[i - 1].p * 100))
-        .map((p) => `  ${p.t} ms: ${(p.p * 100).toFixed(2)} % ${p.text ?? ''}`)
-    ]
-    writeFileSync(join(out, 'README.txt'), `${notes.join('\n')}\n`, 'utf8')
-    console.log(notes.slice(0, 23 + found.length).join('\n'))
-    if (!KEEP) rmSync(run.scratch, { recursive: true, force: true })
+  })
+else
+  describe(`${title}${MUTATION ? ` — MUTATION ${MUTATION}: this run must fail` : ''}`, () => {
+    let run: Run
+    let hello: HelloResult
+    let receipt: PackReceipt & { problems?: string[]; integrity?: string[] }
+    /** What the tests found along the way, for the README. */
+    const found: string[] = []
+    let out: string
+    const cachedMode = (): boolean => run.mode === 'cached'
+
+    beforeAll(async () => {
+      out = await outputDir(MUTATION ? `helper-pack-${MUTATION}` : 'helper-pack')
+      run = await begin()
+      found.push(`mode: ${run.mode} (${run.why})`)
+      if (run.mode === 'cached' ? run.checkError === null : run.job!.status === 'done') {
+        receipt = JSON.parse(readFileSync(join(run.versionDir, 'pack.json'), 'utf8')) as typeof receipt
+        // A start of the installed pack of the test's own, as the service would make it: hello's own words.
+        const client = new SidecarClient({ cwd: run.sidecarDir, launch: run.launch, maxRestarts: 0 })
+        try {
+          hello = await client.start()
+        } finally {
+          await client.stop()
+        }
+      }
+    }, 45 * 60_000)
+
+    afterAll(() => {
+      if (!run) return
+      const stageAt = (label: string): number | undefined => run.statuses.find((s) => s.stage === label)?.t
+      const end = run.endedAt - run.started
+      const stages = INSTALL_STAGES.map((s, i) => {
+        const from = stageAt(s.label)
+        const next = INSTALL_STAGES.slice(i + 1).map((n) => stageAt(n.label)).find((x) => x !== undefined) ?? end
+        return { label: s.label, from, ms: from === undefined ? undefined : next - from }
+      })
+      const pack = run.manifest.platforms[run.platform]
+      const fetched = packBytes(pack)
+      const dl = stages[1].ms
+      const tree = existsSync(run.versionDir) ? walk(run.versionDir) : { files: [], dirs: [] }
+      const longestPath = Math.max(0, ...tree.files.map((f) => f.length))
+      const longestDir = Math.max(0, ...tree.dirs.map((d) => d.length))
+      // `du` is not on a Windows runner's PATH; the receipt's bytesOnDisk is the job's own count there.
+      const du = existsSync(run.versionDir) && process.platform !== 'win32' ? Number(execFileSync('du', ['-sk', run.versionDir], { encoding: 'utf8' }).split(/\s/)[0]) * 1024 : null
+      const unpacked = run.logs.find((l) => l.line.startsWith('[helper] unpacked'))
+      const unpackFrom = stageAt(INSTALL_STAGES[2].label)
+      const pipFrom = stageAt(INSTALL_STAGES[3].label)
+      const outcome = run.mode === 'cached' ? `check again: ${run.checkError ?? 'passed'}` : `job: ${run.job!.status}${run.job!.error ? ` — ${run.job!.error}` : ''}`
+      const notes = [
+        outcome,
+        `userData: ${run.userData}`,
+        `version folder: ${run.versionDir}`,
+        `platform: ${run.platform}; python ${run.manifest.python.version}; pack ${run.manifest.pack}${MUTATION ? `; MUTATION ${MUTATION}` : ''}`,
+        `free (statfs on userData): bavail ${run.free.bavail} × ${run.free.bsize} = ${run.free.bavail * run.free.bsize} B; bfree ${run.free.bfree} × ${run.free.bsize} = ${run.free.bfree * run.free.bsize} B`,
+        `df -k "Avail" on userData, read right after: ${run.dfAvail ?? '-'} B`,
+        `space needed for a fresh install (spaceNeeded): ${run.needed} B`,
+        '',
+        'stages (ms from the press):',
+        ...stages.map((s) => `  ${s.label}: from ${s.from ?? '-'} for ${s.ms ?? '-'} ms`),
+        `  whole ${run.mode === 'cached' ? 'check again' : 'job'}: ${end} ms`,
+        `download: ${run.mode === 'cached' ? 0 : fetched} B in ${dl ?? '-'} ms = ${dl ? ((fetched / 1048576) / (dl / 1000)).toFixed(2) : '-'} MiB/s`,
+        `unpack: ${unpacked && unpackFrom !== undefined ? unpacked.t - unpackFrom : '-'} ms (${unpacked?.line ?? '-'}); the stdlib compile: ${unpacked && pipFrom !== undefined ? pipFrom - unpacked.t : '-'} ms`,
+        `first start's hello (before the check's own): ${run.firstHelloMs ?? '-'} ms`,
+        `self-test (the check's): ${run.check ? SELFTEST_GROUP_NAMES.map((g) => `${g} ${run.check!.selftest[g]?.ms} ms exit ${run.check!.selftest[g]?.exit}`).join(', ') : '-'}`,
+        `check problems: ${run.check ? JSON.stringify(run.check.problems) : '-'}`,
+        `receipt bytesOnDisk (apparent): ${receipt?.bytesOnDisk ?? '-'} B; du -sk of the version folder: ${du ?? '-'} B`,
+        `longest relative path: ${longestPath}; longest directory: ${longestDir}; files ${tree.files.length}, folders ${tree.dirs.length}`,
+        `helper calls: ${run.helperEvents.join(' → ')}`,
+        ...found,
+        '',
+        'pip (row 34): what runPip reported, then what a 500 ms poll saw',
+        ...run.pipReports.map((r) => `  ${r.t} ms: ${r.done} of ${r.total}${r.line ? ` · ${r.line}` : ''}`),
+        `  ticks: ${run.pipTicks.map((k) => `${k.t}:${k.count}`).join(' ')}`,
+        '',
+        'statuses:',
+        ...run.statuses.map((s) => `  ${s.t} ms: ${s.stage}`),
+        '',
+        'log:',
+        ...run.logs.map((l) => `  ${l.t} ms: ${l.line}`),
+        '',
+        'progress (each change of text kind, and every 1 %):',
+        ...run.progress
+          .filter((p, i, all) => i === 0 || kindOf(p.text) !== kindOf(all[i - 1].text) || Math.floor(p.p * 100) !== Math.floor(all[i - 1].p * 100))
+          .map((p) => `  ${p.t} ms: ${(p.p * 100).toFixed(2)} % ${p.text ?? ''}`)
+      ]
+      writeFileSync(join(out, 'README.txt'), `${notes.join('\n')}\n`, 'utf8')
+      console.log(notes.slice(0, 23 + found.length).join('\n'))
+      // CI's userData is the cache's and the later steps': never removed. A scratch one goes unless kept.
+      if (!KEEP) rmSync(run.scratch, { recursive: true, force: true })
+    })
+
+    it('reaches done (or, over the cached pack, passes Check again), and asks the helper to switch only after', () => {
+      if (cachedMode()) {
+        expect(run.checkError, run.logs.map((l) => l.line).join('\n')).toBeNull()
+        // Check again stops nothing and holds nothing: it rewrites the receipt and restarts the helper.
+        expect(run.helperEvents).toEqual(['restart'])
+        return
+      }
+      expect(run.job!.error, run.logs.map((l) => l.line).join('\n')).toBeNull()
+      expect(run.job!.status).toBe('done')
+      // A fresh install stops nothing and holds nothing: it waits for idle and restarts.
+      expect(run.helperEvents).toEqual(['idle', 'restart'])
+    })
+
+    it('logs the host each fetched file came from after its redirects: the interpreter from GitHub’s release assets, the wheels from PyPI’s files (§3a.5)', () => {
+      const pack = run.manifest.platforms[run.platform]
+      const fetched = [pack.interpreter, ...pack.wheels].filter((f) => !run.seeded.includes(f.name))
+      found.push(`fetched from the network: ${fetched.length} of ${pack.wheels.length + 1} files (the rest seeded${cachedMode() ? ': the cached pack' : ''})`)
+      // Over the cached pack nothing is fetched, and nothing says it was.
+      if (cachedMode()) expect(run.logs.filter((l) => / came from /.test(l.line)).map((l) => l.line)).toEqual([])
+      for (const file of fetched) {
+        const host = file === pack.interpreter ? 'release-assets.githubusercontent.com' : 'files.pythonhosted.org'
+        const line = run.logs.find((l) => l.line.startsWith(`${file.name} came from `))?.line
+        expect(line, file.name).toBe(`${file.name} came from ${host}: ${file.bytes} B, its sha256 verified`)
+        if (file === pack.interpreter) found.push(`interpreter: ${line}`)
+      }
+    })
+
+    it('writes a receipt that parses and matches the manifest, with no problems recorded', () => {
+      expect(parseReceipt(receipt)).not.toBeNull()
+      expect(receiptMatches(receipt, run.manifest, run.platform)).toBe(true)
+      expect(receipt.problems, JSON.stringify(receipt.problems)).toBeUndefined()
+      // §16.51's integrity problems (a Python path outside the pack, another Python), once the receipt carries them: none.
+      expect(receipt.integrity ?? [], JSON.stringify(receipt.integrity)).toEqual([])
+      expect(receipt.bytesOnDisk).toBeGreaterThan(0)
+    })
+
+    it('runs from inside its own folder: executable, prefix and EVERY sys.path entry, by path.relative on real paths', () => {
+      // From the test's own start and from the job's check: both are the pack rung's launch.
+      const roots = [real(run.versionDir), real(run.sidecarDir)]
+      for (const h of [hello, run.check?.hello]) {
+        expect(h).toBeTruthy()
+        const outside = [h!.executable, h!.prefix, ...h!.path].filter((p) => !roots.some((root) => inside(root, real(resolve(run.sidecarDir, p)))))
+        expect(outside, `outside ${roots.join(' and ')}`).toEqual([])
+        expect(inside(real(run.versionDir), real(h!.executable))).toBe(true)
+      }
+    })
+
+    it('is the manifest’s Python, with every method the platform expects', () => {
+      expect(hello.python).toBe(run.manifest.python.version)
+      const expects = run.manifest.platforms[run.platform].expects
+      const missing = expects.filter((m) => !hello.capabilities.includes(m)).map((m) => `${m}: ${hello.degraded[m] ?? 'not registered'}`)
+      expect(missing).toEqual([])
+    })
+
+    it('passes every self-test group, in a fresh process each', () => {
+      const failed = SELFTEST_GROUP_NAMES.filter((g) => run.check!.selftest[g]?.exit !== 0).map((g) => `${g}: ${run.check!.selftest[g]?.exit} ${run.check!.selftest[g]?.error}`)
+      expect(failed).toEqual([])
+      expect(Object.values(receipt.selftest).every((v) => v === 'ok'), JSON.stringify(receipt.selftest)).toBe(true)
+      expect(Object.keys(receipt.selftest)).toEqual([...SELFTEST_GROUP_NAMES])
+    })
+
+    it('degrades stems and the local voice, each with its reason', () => {
+      for (const method of [SIDECAR_METHODS.stems, SIDECAR_METHODS.voiceSpeak, SIDECAR_METHODS.voiceVoices]) {
+        expect(hello.capabilities, method).not.toContain(method)
+        expect(typeof hello.degraded[method], method).toBe('string')
+        expect(hello.degraded[method].length, method).toBeGreaterThan(0)
+      }
+    })
+
+    it('pip check inside the pack reports nothing but mediapipe’s two (and hf-xet once the lock leaves it out)', () => {
+      const python = join(run.versionDir, run.manifest.platforms[run.platform].python)
+      const checked = spawnSync(python, ['-E', '-s', '-m', 'pip', 'check', '--disable-pip-version-check'], { cwd: run.scratch, env: run.launch.env, encoding: 'utf8', windowsHide: true })
+      const lines = `${checked.stdout}`.split(/\r?\n/).filter((line) => line.trim() !== '')
+      found.push(`pip check (exit ${checked.status}): ${JSON.stringify(lines)}`)
+      // Membership, not a count: none at all ("No broken requirements found.", exit 0) is right too.
+      const reported = lines.filter((line) => line.trim() !== 'No broken requirements found.')
+      expect(checked.status, `${checked.stderr}${lines.join('\n')}`).toBe(reported.length === 0 ? 0 : 1)
+      expect(pipCheckProblems(lines, run.manifest.platforms[run.platform].wheels)).toEqual([])
+    })
+
+    it('reports progress that never goes down, through the stages in order (over the cached pack: no install stage at all)', () => {
+      if (cachedMode()) {
+        expect(run.statuses).toEqual([])
+        expect(run.progress).toEqual([])
+        return
+      }
+      const values = run.progress.map((p) => p.p)
+      const down = values.findIndex((v, i) => i > 0 && v < values[i - 1])
+      expect(down, down >= 0 ? `${values[down - 1]} then ${values[down]} at ${run.progress[down].t} ms` : '').toBe(-1)
+      expect(values.at(-1)).toBe(1)
+      const kinds = run.progress.map((p) => kindOf(p.text)).filter((k): k is string => k !== null)
+      expect(kinds.filter((k, i) => i === 0 || k !== kinds[i - 1])).toEqual([CHECKING_SPACE, 'downloading', UNPACKING_PYTHON, 'installing libraries', CHECKING_THE_HELPER])
+      expect(run.statuses.map((s) => s.stage)).toEqual(INSTALL_STAGES.map((s) => s.label))
+      // The check's column names its slow first start, then each self-test group as it runs, in the self-test's order.
+      const texts = run.progress.map((p) => p.text)
+      expect(texts).toContain(CHECKING_STARTING)
+      const groups = SELFTEST_GROUP_NAMES.map((g) => texts.indexOf(checkingGroupText(g)))
+      expect(groups.every((at) => at >= 0), JSON.stringify(Object.fromEntries(SELFTEST_GROUP_NAMES.map((g, i) => [g, groups[i]])))).toBe(true)
+      expect([...groups].sort((a, b) => a - b)).toEqual(groups)
+    })
+
+    it('leaves no downloads and no lock behind', () => {
+      expect(existsSync(join(run.root, 'downloads'))).toBe(false)
+      expect(existsSync(lockPath(run.root))).toBe(false)
+      expect(readdirSync(run.root).sort()).toEqual([String(run.manifest.pack)])
+    })
+
+    it('installs one dist-info per lock line, as the bar counts them', () => {
+      const pack = run.manifest.platforms[run.platform]
+      const lines = lockLineCount(readFileSync(join(run.sidecarDir, ...pack.lock.file.split('/')), 'utf8'))
+      expect(lines).toBe(pack.wheels.length)
+      if (!cachedMode()) expect(run.pipReports.at(-1)).toMatchObject({ done: lines, total: lines })
+      expect(distInfoCount(sitePackagesOf(run.versionDir, run.manifest, run.platform))).toBeGreaterThanOrEqual(lines)
+    })
   })
 
-  it('reaches done, and asks the helper to switch only after', () => {
-    expect(run.job.error, run.logs.map((l) => l.line).join('\n')).toBeNull()
-    expect(run.job.status).toBe('done')
-    // A fresh install stops nothing and holds nothing: it waits for idle and restarts.
-    expect(run.helperEvents).toEqual(['idle', 'restart'])
-  })
-
-  it('logs the host each fetched file came from after its redirects: the interpreter from GitHub’s release assets, the wheels from PyPI’s files (§3a.5)', () => {
-    const pack = run.manifest.platforms[run.platform]
-    const fetched = [pack.interpreter, ...pack.wheels].filter((f) => !run.seeded.includes(f.name))
-    found.push(`fetched from the network: ${fetched.length} of ${pack.wheels.length + 1} files (the rest seeded)`)
-    for (const file of fetched) {
-      const host = file === pack.interpreter ? 'release-assets.githubusercontent.com' : 'files.pythonhosted.org'
-      const line = run.logs.find((l) => l.line.startsWith(`${file.name} came from `))?.line
-      expect(line, file.name).toBe(`${file.name} came from ${host}: ${file.bytes} B, its sha256 verified`)
-      if (file === pack.interpreter) found.push(`interpreter: ${line}`)
-    }
-  })
-
-  it('writes a receipt that parses and matches the manifest, with no problems recorded', () => {
-    expect(parseReceipt(receipt)).not.toBeNull()
-    expect(receiptMatches(receipt, run.manifest, run.platform)).toBe(true)
-    expect(receipt.problems, JSON.stringify(receipt.problems)).toBeUndefined()
-    expect(receipt.bytesOnDisk).toBeGreaterThan(0)
-  })
-
-  it('runs from inside its own folder: executable, prefix and EVERY sys.path entry, by path.relative on real paths', () => {
-    // From the test's own start and from the job's check: both are the pack rung's launch.
-    const roots = [real(run.versionDir), real(run.sidecarDir)]
-    for (const h of [hello, run.check?.hello]) {
-      expect(h).toBeTruthy()
-      const outside = [h!.executable, h!.prefix, ...h!.path].filter((p) => !roots.some((root) => inside(root, real(resolve(run.sidecarDir, p)))))
-      expect(outside, `outside ${roots.join(' and ')}`).toEqual([])
-      expect(inside(real(run.versionDir), real(h!.executable))).toBe(true)
-    }
-  })
-
-  it('is the manifest’s Python, with every method the platform expects', () => {
-    expect(hello.python).toBe('3.14.8')
-    const expects = run.manifest.platforms[run.platform].expects
-    const missing = expects.filter((m) => !hello.capabilities.includes(m)).map((m) => `${m}: ${hello.degraded[m] ?? 'not registered'}`)
-    expect(missing).toEqual([])
-  })
-
-  it('passes every self-test group, in a fresh process each', () => {
-    const failed = SELFTEST_GROUP_NAMES.filter((g) => run.check!.selftest[g]?.exit !== 0).map((g) => `${g}: ${run.check!.selftest[g]?.exit} ${run.check!.selftest[g]?.error}`)
-    expect(failed).toEqual([])
-    expect(Object.values(receipt.selftest).every((v) => v === 'ok'), JSON.stringify(receipt.selftest)).toBe(true)
-    expect(Object.keys(receipt.selftest)).toEqual([...SELFTEST_GROUP_NAMES])
-  })
-
-  it('degrades stems and the local voice, each with its reason', () => {
-    for (const method of [SIDECAR_METHODS.stems, SIDECAR_METHODS.voiceSpeak, SIDECAR_METHODS.voiceVoices]) {
-      expect(hello.capabilities, method).not.toContain(method)
-      expect(typeof hello.degraded[method], method).toBe('string')
-      expect(hello.degraded[method].length, method).toBeGreaterThan(0)
-    }
-  })
-
-  it('pip check inside the pack reports nothing but mediapipe’s two', () => {
-    const python = join(run.versionDir, run.manifest.platforms[run.platform].python)
-    const checked = spawnSync(python, ['-E', '-s', '-m', 'pip', 'check', '--disable-pip-version-check'], { cwd: run.scratch, env: run.launch.env, encoding: 'utf8', windowsHide: true })
-    const lines = `${checked.stdout}`.split(/\r?\n/).filter((line) => line.trim() !== '')
-    found.push(`pip check (exit ${checked.status}): ${JSON.stringify(lines)}`)
-    // Membership, not a count: none at all ("No broken requirements found.", exit 0) is right too.
-    const problems = lines.filter((line) => line !== 'No broken requirements found.')
-    expect(checked.status, `${checked.stderr}${lines.join('\n')}`).toBe(problems.length === 0 ? 0 : 1)
-    for (const line of problems) expect(line).toMatch(/^mediapipe \S+ requires (matplotlib|opencv-contrib-python), which is not installed\.$/)
-  })
-
-  it('reports progress that never goes down, through the stages in order', () => {
-    const values = run.progress.map((p) => p.p)
-    const down = values.findIndex((v, i) => i > 0 && v < values[i - 1])
-    expect(down, down >= 0 ? `${values[down - 1]} then ${values[down]} at ${run.progress[down].t} ms` : '').toBe(-1)
-    expect(values.at(-1)).toBe(1)
-    const kinds = run.progress.map((p) => kindOf(p.text)).filter((k): k is string => k !== null)
-    expect(kinds.filter((k, i) => i === 0 || k !== kinds[i - 1])).toEqual([CHECKING_SPACE, 'downloading', UNPACKING_PYTHON, 'installing libraries', CHECKING_THE_HELPER])
-    expect(run.statuses.map((s) => s.stage)).toEqual(INSTALL_STAGES.map((s) => s.label))
-  })
-
-  it('leaves no downloads and no lock behind', () => {
-    expect(existsSync(join(run.root, 'downloads'))).toBe(false)
-    expect(existsSync(lockPath(run.root))).toBe(false)
-    expect(readdirSync(run.root).sort()).toEqual([String(run.manifest.pack)])
-  })
-
-  it('installs one dist-info per lock line, as the bar counts them', () => {
-    const pack = run.manifest.platforms[run.platform]
-    const lines = lockLineCount(readFileSync(join(run.sidecarDir, ...pack.lock.file.split('/')), 'utf8'))
-    expect(lines).toBe(pack.wheels.length)
-    expect(run.pipReports.at(-1)).toMatchObject({ done: lines, total: lines })
-    expect(distInfoCount(sitePackagesOf(run.versionDir, run.manifest, run.platform))).toBeGreaterThanOrEqual(lines)
-  })
-})
-
-/** What a progress text is, without its numbers. */
+/**
+ * What a progress text is, without its numbers or its part: the check's
+ * texts ("checking the AI helper · starting (the first start is slow)",
+ * "checking the AI helper · beats", src/shared/sidecar/install.ts) are one
+ * kind, the stage's, as the downloads' and pip's are.
+ */
 function kindOf(text: string | null): string | null {
   if (text === null) return null
   if (text.startsWith('downloading')) return 'downloading'
   if (text.startsWith('installing libraries')) return 'installing libraries'
+  if (text.startsWith(CHECKING_THE_HELPER)) return CHECKING_THE_HELPER
   return text
 }

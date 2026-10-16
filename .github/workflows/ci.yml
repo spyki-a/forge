@@ -1,16 +1,18 @@
 name: CI
 
-# Windows on every push; everything else on request.
+# Both platforms on every push: Windows, and macOS 14 on arm64.
 #
-# The point of this file is that Windows gets tested when nobody is sitting at
-# a Windows machine — most of what breaks there breaks in paths, process
-# handling and line endings, and all three are invisible from a Mac until
-# someone runs the app. That job earns its keep on every commit.
+# Windows is the job that says something new on most pushes: most of what
+# breaks there breaks in paths, process handling and line endings, all three
+# invisible from a Mac until someone runs the app, and in the 2018 ffmpeg
+# (docs/EFFECTS.md §25). macOS came back to the push with the AI helper's
+# pack (docs/CLIPS.md §3a.6, §16.48 (b)): both runners install the pinned pack
+# for real and run the helper's suites from inside it, and `macos-14` is the
+# only machine anywhere that runs the pack's macOS 14 floor (onnxruntime's and
+# av's arm64 wheels are `macosx_14_0`; the dev Mac is on macOS 26).
 #
-# The macOS jobs did not, and they were 69% of the bill. GitHub charges macOS
-# runners at TEN times and rounds every job up to a whole minute, so a job that
-# really took 1.4 minutes billed as 20 — while the Windows job, at 4.3 real
-# minutes, billed 10. Measured on a real run:
+# The cost. This file used to keep macOS off the push because GitHub billed it
+# at TEN times and rounded every job up to a whole minute. Measured then:
 #
 #     windows-latest              4.3 min  x2  =  10
 #     macos-latest                1.4 min  x10 =  20
@@ -19,17 +21,19 @@ name: CI
 #                                                 --
 #                                                 58 billed minutes per push
 #
-# 2000 minutes a month is 34 pushes at that rate, and a working day can easily
-# be five. So: Windows on every push (10), and the macOS suite and both
-# installers when someone asks for them or tags a release.
+# and it named the condition for putting macOS back: the repo going public,
+# which makes Actions on standard runners free. It is public
+# (api.github.com/repos/spyki-a/forge: `private: false`, 2026-10-14). What the
+# pack adds is an ESTIMATE until a run measures it (§3a.8 row 37): about 5-9
+# minutes on Windows and 4-7 on the Mac on a cache miss (the M1 Pro's install
+# took 57 s, a runner's download and self-test are slower, and the suites
+# from the pack add a few minutes), and a few less on a hit, so roughly
+# 9-14 minutes a push on Windows and 6-10 on the Mac, in parallel. Were the
+# repo private again, that would bill about 80-130 minutes a push: take
+# `macos-14` back off the push before it does.
 #
-# Nothing is lost by moving macOS off the hot path. The full suite is run
-# locally on macOS before every push; that job was mostly confirming what the
-# developer had already seen. Windows is the only one that ever says something
-# new, because of the 2018 ffmpeg (docs/EFFECTS.md §25).
-#
-# If this ever stops mattering — the repo going public makes Actions free —
-# put `macos-latest` back in the matrix and delete the `if` on `package`.
+# The installers stay on request (Actions -> CI -> Run workflow) or a `v*`
+# tag: see the `if` on `package`.
 on:
   push:
     branches: [main]
@@ -63,9 +67,10 @@ jobs:
       # useful question is "on which platform", and that needs both answers.
       fail-fast: false
       matrix:
-        # Both platforms only when asked for or when tagging; Windows alone on
-        # an ordinary push.
-        os: ${{ (github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && fromJSON('["macos-latest","windows-latest"]') || fromJSON('["windows-latest"]') }}
+        # Both on every push (the header says why, and what it costs).
+        # `macos-14` rather than `macos-latest`: an arm64 runner on the pack's
+        # macOS floor, which macos-latest would move off without a word.
+        os: [windows-latest, macos-14]
 
     steps:
       - uses: actions/checkout@v5
@@ -76,8 +81,10 @@ jobs:
           cache: npm
 
       # The sidecar degrades every optional capability, so a bare interpreter
-      # is enough for the handshake tests. Installing torch and friends on
-      # every push would cost minutes for capabilities the suite already skips.
+      # is enough for the handshake tests, and `npm test` keeps it with every
+      # degraded check (docs/CLIPS.md §16.36). The capabilities themselves are
+      # tested from inside the AI helper's pack, after `npm test` below: the
+      # pinned interpreter and wheels the app installs, not a pip install here.
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
@@ -127,15 +134,16 @@ jobs:
       # the managed copy, nothing would fetch, and the new key would save that
       # same copy again — the cache would never refresh, and a fetch change
       # would never be fetched. The cache saves only when the job is green.
-      - name: Name this week's yt-dlp cache
-        id: ytdlp-week
+      # The ISO week, for this cache's key and the AI helper pack's below.
+      - name: Name this week's caches
+        id: iso-week
         shell: bash
         run: echo "week=$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/cache@v6
         with:
           path: ${{ runner.temp }}/forge-ytdlp/*/userData/tools
-          key: yt-dlp-${{ runner.os }}-${{ runner.arch }}-${{ steps.ytdlp-week.outputs.week }}-${{ hashFiles('src/main/ingest/binary.ts', 'src/shared/ingest/release.ts') }}
+          key: yt-dlp-${{ runner.os }}-${{ runner.arch }}-${{ steps.iso-week.outputs.week }}-${{ hashFiles('src/main/ingest/binary.ts', 'src/shared/ingest/release.ts') }}
 
       # Integration tests included on purpose. They shell out to ffmpeg with
       # real paths, and a runner's Windows path — C:\a\forge\forge — is exactly
@@ -149,6 +157,121 @@ jobs:
         env:
           # Where the yt-dlp tests put their userData; cached above.
           FORGE_TEST_YTDLP_CACHE: ${{ runner.temp }}/forge-ytdlp
+
+      # ---------------------------------------------------------------------
+      # The AI helper's pack, installed for real (docs/CLIPS.md §3a.6, §3a.9).
+      # Six steps, on both runners. The pack lives in one userData for all of
+      # them, `<runner.temp>/forge pack é/userData`: a space and a non-ASCII
+      # character, as a user's profile name can have (CTranslate2's and
+      # mediapipe's non-ASCII paths on Windows are unmeasured, CTranslate2
+      # #1227). That path is written out in full at each step that needs it:
+      # the `runner` context cannot be used in a job-level `env`.
+      # ---------------------------------------------------------------------
+
+      # (1) Every pinned URL, on EVERY push, cache or not: a one-byte range
+      # GET each (both platforms' files, 69 URLs on 2026-10-16), asserting
+      # 200 or 206, the manifest's length, and a landing host the row and the
+      # guide name. Without it a pin deleted from PyPI or GitHub, or a moved
+      # redirect host, breaks every tester's Install while CI stays green on
+      # the cached pack. Each failure is an annotation.
+      - name: Probe every URL the AI helper pack pins
+        run: node scripts/probe-pack-urls.mjs
+
+      # (2) The installed pack, kept between runs as yt-dlp's copy is (above):
+      # `userData/python`, the receipt and the version folder, nothing else of
+      # that userData. The key is the OS and the architecture (each has its
+      # own pack); the ISO week, so a real install from the real hosts runs
+      # at least weekly; and a hash of everything that decides what an
+      # install puts on disk: the manifest, the receipt's rules (pack.ts), the
+      # locks, and the job's own code (install, its workers, pip, the check,
+      # the unpacker and its tar reader, the stdlib compile, the fetcher). So
+      # the push that changes the lock or the installer runs a real install,
+      # and every other push checks the cached pack again (helperPack.int's
+      # cached mode) and runs the suites from it.
+      # Deliberately no restore-keys, for yt-dlp's reason: an older pack
+      # restored would be found by the test as a pack whose receipt does not
+      # match, reinstalled over, and saved again under the new key only if
+      # green, which is a real install with extra steps; worse, a pack whose
+      # receipt DID match after an installer change would be accepted
+      # without ever running the changed installer. The cache saves only
+      # when the job is green (actions/cache's post step runs on success).
+      - uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/forge pack é/userData/python
+          key: helper-pack-${{ runner.os }}-${{ runner.arch }}-${{ steps.iso-week.outputs.week }}-${{ hashFiles('src/shared/sidecar/packManifest.ts', 'src/shared/sidecar/pack.ts', 'sidecar/pack/lock-*.txt', 'src/main/sidecar/install.ts', 'src/main/sidecar/installDeps.ts', 'src/main/sidecar/pip.ts', 'src/main/sidecar/check.ts', 'src/main/sidecar/unpack.ts', 'src/main/sidecar/compile.ts', 'src/main/net/fetchFile.ts', 'src/shared/assets/tar.ts') }}
+
+      # (3) The app's own install job (Node's fetch, the real hosts) into that
+      # userData, or, over a restored pack this build accepts, the job's Check
+      # again; then every assertion: the receipt, hello's executable, prefix
+      # and every sys.path entry inside the pack, the self-test, pip check.
+      # FORGE_PACK_USERDATA is what makes it FAIL rather than skip here (a
+      # step with it and without FORGE_PACK_REAL=1 fails), and the pack stays
+      # in it for the steps below and for the cache.
+      - name: Install the AI helper pack with the app's own job (or check the cached one again)
+        run: npx vitest run tests/integration/helperPack.int.test.ts --reporter=default --reporter=github-actions
+        env:
+          FORGE_PACK_REAL: '1'
+          FORGE_PACK_USERDATA: ${{ runner.temp }}/forge pack é/userData
+
+      # The install's own record (stage times, bytes on disk, the longest
+      # path, the log): §3a.8 rows 28 and 37 read it from here.
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: helper-pack-install-${{ runner.os }}
+          retention-days: 30
+          if-no-files-found: warn
+          path: tests/output/helper-pack/README.txt
+
+      # (4) The helper's suites again, from inside the pack, through the pack
+      # rung's own launch (-E -s -u -B, the cleaned environment:
+      # tests/integration/venv.ts `FORGE_HELPER_PACK`), never through
+      # FORGE_PYTHON, which no installed user runs. A pack that does not run
+      # here FAILS every suite that needs it, and sidecarMedia.int's Python
+      # cases may skip nothing (venv.ts `pythonCasesGate`). Left out:
+      # asr.int, whose jfk.flac fixture and speech model are not seeded into
+      # this userData, and salient.int (a 115 MB model, §16.35).
+      - name: Run the AI helper's suites from inside the pack
+        run: npx vitest run tests/integration/sidecar.int.test.ts tests/integration/sidecarMedia.int.test.ts tests/integration/vision.int.test.ts tests/integration/beats.int.test.ts tests/integration/faces.int.test.ts tests/integration/reframeJob.int.test.ts --reporter=default --reporter=github-actions
+        env:
+          FORGE_HELPER_PACK: ${{ runner.temp }}/forge pack é/userData
+
+      # (5) pip check from inside the pack, after the suites have run in it:
+      # every problem reported must be one the lock leaves out on purpose
+      # (mediapipe's two, huggingface-hub's hf-xet once the lock drops it),
+      # by membership.
+      - name: pip check from inside the AI helper pack
+        run: npx vitest run tests/integration/packPipCheck.int.test.ts --reporter=default --reporter=github-actions
+        env:
+          FORGE_HELPER_PACK: ${{ runner.temp }}/forge pack é/userData
+
+      # (6) Windows: every .pyd and .dll in the installed pack, and each DLL
+      # it imports that is neither beside it, nor in python.exe's folder, nor
+      # Windows' own, with Microsoft's C++ runtimes always listed and where a
+      # copy sits (scripts/pe-imports.py; §16.45, §3a.8 row 30). Compared by
+      # membership with tests/fixtures/pack-native-imports-win32.json, so a
+      # new need for a runtime fails the push that brings it.
+      # THE BOOTSTRAP: the committed list is the interpreter's tree alone,
+      # read on the Mac, with `recorded: false`, and while it says so this
+      # step compares nothing. It always RECORDS the full pack's list, and
+      # the artifact below carries it: the next commit replaces the fixture
+      # with that file (`recorded: true`), and from then on it compares.
+      - name: List the AI helper pack's native imports
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          PACK_N="$(node -e "import('./src/shared/sidecar/packManifest.ts').then((m) => console.log(m.HELPER_PACK.pack))")"
+          VERSION_DIR="$RUNNER_TEMP/forge pack é/userData/python/$PACK_N"
+          echo "the pack's version folder: $VERSION_DIR"
+          python -I scripts/pe-imports.py "$VERSION_DIR" --expected tests/fixtures/pack-native-imports-win32.json --record "$RUNNER_TEMP/pack-native-imports-win32.json" > "$RUNNER_TEMP/pe-imports.stdout.json"
+
+      - uses: actions/upload-artifact@v6
+        if: always() && runner.os == 'Windows'
+        with:
+          name: helper-pack-native-imports-win32
+          retention-days: 30
+          if-no-files-found: warn
+          path: ${{ runner.temp }}/pack-native-imports-win32.json
 
       - run: npm run build
 

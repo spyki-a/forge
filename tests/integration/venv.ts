@@ -31,7 +31,7 @@ export const SIDECAR_DIR = resolve(__dirname, '../../sidecar')
  */
 
 /** The pack this machine takes, as the tests read it (no Electron here to ask for the OS version: the pack that is there was installed on it). */
-function testMachine(platform: NodeJS.Platform, arch: string): PackPlatform | PlatformUnsupported {
+export function testMachine(platform: NodeJS.Platform, arch: string): PackPlatform | PlatformUnsupported {
   if (platform === 'darwin' && arch === 'arm64') return 'darwin-arm64'
   if (platform === 'win32' && arch === 'x64') return 'win32-x64'
   return { unsupported: `no AI helper pack is built for ${platform}-${arch}` }
@@ -102,6 +102,72 @@ export const PACK_UNDER_TEST = packUnderTest({
   }
 })
 
+/**
+ * Whether `helperPack.int` finds, in the userData CI's cache restored, a pack
+ * it CHECKS AGAIN instead of installing (docs/CLIPS.md §3a.6 step 2, the
+ * cached mode). By the app's own rule, `packUnderTest` → `resolveHelperPython`:
+ * the receipt must parse, its platform and both hashes be this build's
+ * manifest's, and its interpreter be on disk. A stale receipt (a lock or an
+ * interpreter this build no longer pins) is not cached: the run installs, as
+ * the app would offer Update. A mutation run always installs its own pack.
+ */
+export function cachedPackIn(
+  userData: string | null,
+  o: { mutation: string | null; platform: NodeJS.Platform; arch: string; exists(path: string): boolean; receiptOf(versionDir: string): unknown }
+): { cached: PackUnderTest } | { install: string } {
+  if (!userData) return { install: 'no FORGE_PACK_USERDATA: a fresh userData of the run’s own' }
+  if (o.mutation) return { install: `the mutation ${o.mutation} installs a pack of its own` }
+  const pack = packUnderTest({ env: { FORGE_HELPER_PACK: userData }, platform: o.platform, arch: o.arch, exists: o.exists, receiptOf: o.receiptOf })
+  if (!pack) return { install: 'no userData named' }
+  const missing = packMissing(pack)
+  return missing === null ? { cached: pack } : { install: missing }
+}
+
+/**
+ * Whether helperPack.int runs, skips with why, or fails with why (docs/CLIPS.md
+ * §3a.6 step 2). It is opt-in (`FORGE_PACK_REAL=1`) everywhere but CI's pack
+ * step, which also sets `FORGE_PACK_USERDATA`: a step that has that and not
+ * `FORGE_PACK_REAL=1` beside it FAILS, since it would be green with nothing
+ * installed or checked. The ordinary suite (`npm test`, which sets neither)
+ * skips, with the variable named in the suite's name.
+ */
+export function packSuiteGate(o: { real: boolean; askedUserData: string | null }): { run: true } | { skip: string } | { fail: string } {
+  if (o.real) return { run: true }
+  if (o.askedUserData) {
+    return { fail: `FORGE_PACK_USERDATA is set (${o.askedUserData}), which only CI's pack step sets, and FORGE_PACK_REAL is not 1: the step would be green with nothing installed or checked` }
+  }
+  return { skip: 'FORGE_PACK_REAL is not 1' }
+}
+
+/**
+ * For a suite that runs the helper's own Python tests on `HELPER_PYTHON`
+ * (sidecarMedia.int): `fail` when a pack was asked for (`FORGE_HELPER_PACK`)
+ * and does not run here, so its cases never run on a broken pack's
+ * interpreter, lenient and green; else whether every case must run, none
+ * skipped: on the venv and on the pack, which both have numpy (§3a.6 step 3).
+ * Only a bare interpreter may skip the numpy cases.
+ */
+export function pythonCasesGate(o: { packAsked: boolean; packProblem: string | null; hasVenv: boolean }): { fail: string } | { strict: boolean } {
+  if (o.packAsked && o.packProblem) return { fail: o.packProblem }
+  return { strict: o.packAsked || o.hasVenv }
+}
+
+/**
+ * What `pip check` inside the pack may report (§3a.6 step 5), by membership:
+ * mediapipe's two requirements the lock leaves out on purpose (matplotlib,
+ * opencv-contrib-python), and huggingface-hub's hf-xet once the lock no
+ * longer pins hf-xet (§3a.8 row 35). Returns every reported line that is
+ * none of those; "No broken requirements found." is not a problem.
+ */
+export function pipCheckProblems(lines: string[], wheels: readonly { name: string }[]): string[] {
+  const allowed = [/^mediapipe \S+ requires (matplotlib|opencv-contrib-python), which is not installed\.$/]
+  if (!wheels.some((w) => /^hf_xet-/i.test(w.name))) allowed.push(/^huggingface[-_]hub \S+ requires hf[-_]xet, which is not installed\.$/i)
+  return lines
+    .map((line) => line.trim())
+    .filter((line) => line !== '' && line !== 'No broken requirements found.')
+    .filter((line) => !allowed.some((re) => re.test(line)))
+}
+
 /** The pack rung's launch for the pack under test, as the service starts it. Throws why when that pack does not run here. */
 export function packLaunch(pack: PackUnderTest, o: { modelsDir?: string; cacheDir?: string } = {}): HelperLaunch {
   const missing = packMissing(pack)
@@ -122,6 +188,13 @@ export const VENV_PYTHON = PACK_UNDER_TEST
  * first job runs a bare 3.12 with nothing installed.
  */
 export const HAS_VENV = PACK_UNDER_TEST ? packMissing(PACK_UNDER_TEST) === null : existsSync(VENV_PYTHON)
+
+/** `pythonCasesGate` for this run: what sidecarMedia.int's Python cases may do here. */
+export const PYTHON_CASES = pythonCasesGate({
+  packAsked: PACK_UNDER_TEST !== null,
+  packProblem: PACK_UNDER_TEST ? packMissing(PACK_UNDER_TEST) : null,
+  hasVenv: HAS_VENV
+})
 
 /** The tests reach the pack explicitly (docs/CLIPS.md §3a.6), so the development order here never asks for it. */
 const NO_PACK = { unsupported: 'the tests reach the pack explicitly (CLIPS §3a.6)' }

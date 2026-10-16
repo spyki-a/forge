@@ -5,7 +5,7 @@ import { writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import ffprobeInstaller from '@ffprobe-installer/ffprobe'
 import { FFMPEG, outputDir } from './output'
-import { HAS_VENV, HELPER_PYTHON as PYTHON, SIDECAR_DIR as SIDECAR } from './venv'
+import { HELPER_PYTHON as PYTHON, PYTHON_CASES, SIDECAR_DIR as SIDECAR } from './venv'
 
 /*
  * The helper's shared media code, through its own Python tests
@@ -60,6 +60,8 @@ function unittest(out: string): Promise<Outcome> {
 
 describe('the helper’s media module', () => {
   it('passes its own tests on this interpreter', async () => {
+    // A pack asked for (FORGE_HELPER_PACK, CI's pack steps) that does not run here fails, never runs lenient (venv.ts pythonCasesGate).
+    if ('fail' in PYTHON_CASES) throw new Error(PYTHON_CASES.fail)
     const dir = await outputDir('sidecar-media')
     const { code, text } = await unittest(dir)
     await writeFile(join(dir, 'unittest.txt'), `${PYTHON}\n\n${text}`, 'utf8')
@@ -77,7 +79,7 @@ describe('the helper’s media module', () => {
     }
     const skipped = [...text.matchAll(/\.\.\. skipped '([^']*)'/g)].map((m) => m[1])
     for (const reason of skipped) expect(reason, 'only numpy may be missing').toBe('numpy is not installed')
-    // The venv has numpy: there, nothing may skip.
-    if (HAS_VENV) expect(skipped, text).toEqual([])
+    // The venv and the pack have numpy: there, nothing may skip.
+    if (PYTHON_CASES.strict) expect(skipped, text).toEqual([])
   }, 300_000)
 })
