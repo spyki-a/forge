@@ -83,7 +83,18 @@ export function installProgress(stage: InstallStage, fraction: number): number {
 export const CHECKING_SPACE = 'checking space'
 export const UNPACKING_PYTHON = 'unpacking Python'
 export const CHECKING_THE_HELPER = 'checking the AI helper'
+/**
+ * Stage 4 until the new pack's first hello is back: the longest stand of a
+ * real install after beats (11.3–14.4 s cold on the M1 Pro, §3a.8 row 27),
+ * so the column says why the bar is still.
+ */
+export const CHECKING_STARTING = 'checking the AI helper · starting (the first start is slow)'
 export const WAITING_FOR_THE_HELPER = "waiting for the AI helper's work to finish"
+
+/** Stage 4 while a self-test group runs: "checking the AI helper · beats" (`PackCheckOptions.onGroup`). */
+export function checkingGroupText(group: string): string {
+  return `${CHECKING_THE_HELPER} · ${group}`
+}
 
 /**
  * The job's last speed text when the check found integrity problems
@@ -130,6 +141,14 @@ export function installingText(done: number, total: number): string {
  * app instances", §16.50 (a)).
  */
 export const HELPER_IN_USE_ELSEWHERE = 'The AI helper is in use by another Forge window'
+
+/**
+ * What a helper start from a pack is refused with while another live Forge
+ * window holds `<root>/.lock` (§16.53 (a)): its Repair or Remove may be about
+ * to delete the folder this start would run from. Broadcast as `failed`, so
+ * the row offers no Install meanwhile, and asked again at the next start.
+ */
+export const HELPER_REPAIRED_ELSEWHERE = 'The AI helper is being repaired by another Forge window'
 
 /** A second install, Repair or Remove in this window while one is running. */
 export const HELPER_BUSY = 'The AI helper is already being installed, repaired or removed'

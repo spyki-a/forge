@@ -33,7 +33,7 @@ vi.mock('../src/main/sidecar/client', async (importOriginal) => {
   }
 })
 
-const { CHECK_HELLO_SHARE, checkPack, isInside } = await import('../src/main/sidecar/check')
+const { CHECK_HELLO_SHARE, checkPack, isInside, selftestGroupOf } = await import('../src/main/sidecar/check')
 
 const FAKE = resolve(__dirname, 'fixtures', 'fake-helper.mjs')
 const PLATFORM = 'darwin-arm64' as const
@@ -96,6 +96,7 @@ function check(
     signal?: AbortSignal
     onMessage?: (m: string) => void
     onProgress?: (f: number) => void
+    onGroup?: (g: string) => void
   } = {}
 ) {
   const pids = join(l.tmp, 'pids.txt')
@@ -116,7 +117,8 @@ function check(
     launch,
     signal: o.signal ?? new AbortController().signal,
     onMessage: o.onMessage,
-    onProgress: o.onProgress
+    onProgress: o.onProgress,
+    onGroup: o.onGroup
   })
   const started = (): number[] =>
     existsSync(pids)
@@ -134,7 +136,15 @@ describe('the check of a freshly installed pack', () => {
     const messages: string[] = []
     const before = made.options.length
     const fractions: number[] = []
-    const { run, launch, started } = check(l, { onMessage: (m) => messages.push(m), onProgress: (f) => fractions.push(f) })
+    const reports: string[] = []
+    const { run, launch, started } = check(l, {
+      onMessage: (m) => messages.push(m),
+      onProgress: (f) => {
+        fractions.push(f)
+        reports.push(`at ${f}`)
+      },
+      onGroup: (g) => reports.push(g)
+    })
     const result = await run
     expect(result.problems).toEqual([])
     expect(result.integrity).toEqual([])
@@ -144,6 +154,12 @@ describe('the check of a freshly installed pack', () => {
     expect(result.hello.python).toBe(HELPER_PACK.python.version)
     for (const group of SELFTEST_GROUP_NAMES) expect(result.selftest[group], group).toMatchObject({ exit: 0, error: null })
     expect(messages).toEqual(SELFTEST_GROUP_NAMES.map((g, i) => `checking ${g} · ${i + 1} of ${SELFTEST_GROUP_NAMES.length}`))
+    // Each group by name, just before its start's fraction, so the job's report for that start names it.
+    expect(reports).toEqual([
+      `at ${CHECK_HELLO_SHARE}`,
+      ...SELFTEST_GROUP_NAMES.flatMap((g, i) => [g, `at ${CHECK_HELLO_SHARE + (1 - CHECK_HELLO_SHARE) * (i / n)}`]),
+      'at 1'
+    ])
     // One client, exactly as the service starts the pack: its launch, cwd the helper's folder, no restarts, the rung's own hello ceiling.
     expect(made.options.length).toBe(before + 1)
     expect(made.options.at(-1)).toMatchObject({ cwd: l.sidecarDir, maxRestarts: 0, helloTimeoutMs: 1500 })
@@ -232,6 +248,15 @@ describe('the check of a freshly installed pack', () => {
     const { problems, integrity } = await check(l, { env: { FAKE_SELFTEST: JSON.stringify(answer) } }).run
     expect(problems).toEqual(["The AI helper's self-test did not answer for faces"])
     expect(integrity).toEqual([])
+  })
+})
+
+describe('the self-test group a progress line names', () => {
+  it('is one of the known groups, read from the helper’s own words, and nothing else', () => {
+    expect(SELFTEST_GROUP_NAMES.map((g, i) => selftestGroupOf(`checking ${g} · ${i + 1} of ${SELFTEST_GROUP_NAMES.length}`))).toEqual([...SELFTEST_GROUP_NAMES])
+    expect(selftestGroupOf('checking beatsy · 2 of 6')).toBeNull()
+    expect(selftestGroupOf('checking evil · 1 of 6')).toBeNull()
+    expect(selftestGroupOf('beats')).toBeNull()
   })
 })
 

@@ -7,7 +7,7 @@ import { packBytes, packHosts, type PackPlatform } from '../src/shared/sidecar/p
 import { HELPER_PYTHON_MISSING, UNPARSEABLE_RECEIPT } from '../src/shared/sidecar/helperPython'
 import { HELPER_NEEDS_UPDATE, HELPER_NOT_INSTALLED, helperRowFrom, helperStatusReason, packOffer, type SidecarStatus } from '../src/shared/sidecar/status'
 import { REFRAME_CHANNELS, REFRAME_FAILURES } from '../src/shared/reframe/job'
-import { HELPER_BEING_REPAIRED, HELPER_CHANNELS, HELPER_PRESET } from '../src/shared/sidecar/install'
+import { HELPER_BEING_REPAIRED, HELPER_CHANNELS, HELPER_PRESET, HELPER_REPAIRED_ELSEWHERE } from '../src/shared/sidecar/install'
 import type { Job } from '../src/shared/types'
 import type { HelperPackWorkers } from '../src/main/sidecar/install'
 
@@ -739,6 +739,75 @@ describe.skipIf(!MACHINE)('the install job’s status with no helper', () => {
     expect(told.find((s) => s.state === 'ready')).toMatchObject({ state: 'ready', source: { kind: 'pack' }, integrity: [leak, version] })
     expect(sidecarStatus()).toMatchObject({ state: 'ready', integrity: [leak, version] })
     expect(helperRowFrom(sidecarStatus())).toEqual({ running: true, reason: null })
+  })
+})
+
+describe.skipIf(!MACHINE)('a pack another Forge window holds the lock of (§16.53 (a))', () => {
+  /** The other window: a live process that is not this one (this test's parent), holding the root's lock as its Repair would. */
+  async function otherWindowLock(pid = process.ppid): Promise<{ release(): Promise<void> }> {
+    const { acquireLock, pidAlive } = await import('../src/main/sidecar/lock')
+    const { nodePackFs } = await import('../src/main/sidecar/install')
+    expect(pidAlive(pid), `pid ${pid} stands in for a live window`).toBe(true)
+    return acquireLock(join(electron.userData, 'python'), nodePackFs(), { pid, now: Date.now, isAlive: pidAlive })
+  }
+  const packSource = (): { kind: 'pack'; pack: number; root: string } => ({ kind: 'pack', pack: HELPER_PACK.pack, root: join(electron.userData, 'python', String(HELPER_PACK.pack)) })
+
+  it('while the first window holds the lock, the second’s getSidecar throws the sentence and spawns nothing; the ask after the release starts it', async () => {
+    const { python } = installPack()
+    FAKE.packPython = python
+    const first = await otherWindowLock()
+    const { startSidecar, getSidecar, sidecarStatus } = await service()
+    const told: SidecarStatus[] = []
+    startSidecar((s) => told.push(s))
+    const refused: SidecarStatus = { state: 'failed', error: HELPER_REPAIRED_ELSEWHERE, source: packSource() }
+    expect(told).toEqual([refused])
+    expect(() => getSidecar()).toThrow(HELPER_REPAIRED_ELSEWHERE)
+    expect(() => getSidecar()).toThrow(HELPER_REPAIRED_ELSEWHERE)
+    // The row reads it as not running, with the sentence, never as Install.
+    expect(sidecarStatus()).toEqual(refused)
+    expect(helperRowFrom(refused)).toEqual({ running: false, reason: HELPER_REPAIRED_ELSEWHERE })
+    expect(told, 'said once while it stands').toEqual([refused])
+    expect(spawned, 'nothing starts from a pack another window may be deleting').toEqual([])
+    await first.release()
+    // Asked again once the lock is gone: the order is resolved again and the pack started.
+    expect(sidecarStatus()).toEqual({ state: 'starting', source: packSource() })
+    expect(await until(() => told.some((s) => s.state === 'ready'), 10_000)).toBe(true)
+    expect(spawned).toHaveLength(1)
+    expect(getSidecar()).toBeTruthy()
+  })
+
+  it('this window’s own lock (its own job, by its pid) refuses nothing', async () => {
+    const { python } = installPack()
+    FAKE.packPython = python
+    const own = await otherWindowLock(process.pid)
+    const { getSidecar } = await service()
+    await getSidecar().start()
+    expect(spawned).toHaveLength(1)
+    await own.release()
+  })
+
+  it('a helper from the pack that crashes while another window holds the lock is not restarted from it, and the status says why', async () => {
+    const { python } = installPack()
+    FAKE.packPython = python
+    const pids = join(electron.userData, 'pids.txt')
+    process.env.FAKE_PIDS = pids
+    const { startSidecar, getSidecar } = await service()
+    const told: SidecarStatus[] = []
+    startSidecar((s) => told.push(s))
+    const helper = getSidecar()
+    await helper.start()
+    const first = await otherWindowLock()
+    await helper.request('fake.crash').catch(() => undefined)
+    // The restart comes 400 ms after the crash; it asks the lock first, and is refused.
+    expect(await until(() => told.some((s) => s.state === 'failed' && s.error === HELPER_REPAIRED_ELSEWHERE), 5000), JSON.stringify(told)).toBe(true)
+    await new Promise((r) => setTimeout(r, 600))
+    expect(pidsIn(pids), 'no restart from the locked pack').toHaveLength(1)
+    // A request meanwhile is refused with the sentence, and spawns nothing.
+    await expect(getSidecar().request('system.ping', { echo: 1 })).rejects.toThrow(HELPER_REPAIRED_ELSEWHERE)
+    expect(pidsIn(pids)).toHaveLength(1)
+    await first.release()
+    expect(await getSidecar().request('system.ping', { echo: 2 })).toEqual({ pong: 2 })
+    expect(pidsIn(pids)).toHaveLength(2)
   })
 })
 

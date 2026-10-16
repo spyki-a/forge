@@ -27,14 +27,37 @@ const spawned = vi.hoisted(
  * taskkill that cannot start, which kills nothing and emits 'error'.
  */
 const taskkill = vi.hoisted(() => ({ lagMs: 0, missing: false }))
+/**
+ * A spawn the OS refuses, as Node reports one: the child's 'error' (code,
+ * errno, `syscall: 'spawn <file>'`), then 'close', no pid. Keyed by command.
+ */
+const refusedSpawns = vi.hoisted(() => new Map<string, { code: string; errno: number }>())
 vi.mock('node:child_process', async (importOriginal) => {
   const real = await importOriginal<typeof import('node:child_process')>()
   const { EventEmitter } = await import('node:events')
+  const { PassThrough } = await import('node:stream')
   return {
     ...real,
     spawn: (command: string, args: string[], options: Record<string, unknown>) => {
       const record: (typeof spawned)[number] = { command, args: [...args], options, exited: false }
       spawned.push(record)
+      const refusal = refusedSpawns.get(command)
+      if (refusal) {
+        const child = Object.assign(new EventEmitter(), {
+          stdout: new PassThrough(),
+          stderr: new PassThrough(),
+          stdin: new PassThrough(),
+          pid: undefined,
+          killed: false,
+          kill: () => true
+        })
+        setTimeout(() => {
+          const err = Object.assign(new Error(`spawn ${command} ${refusal.code}`), { ...refusal, syscall: `spawn ${command}`, path: command, spawnargs: args })
+          child.emit('error', err)
+          child.emit('close', refusal.errno, null)
+        }, 0)
+        return child
+      }
       if (command === 'taskkill') {
         let killer: InstanceType<typeof EventEmitter>
         if (taskkill.missing) {
@@ -61,9 +84,10 @@ vi.mock('node:child_process', async (importOriginal) => {
   }
 })
 
-const { SidecarClient, SidecarError, STOP_GRACE_MS, helloTimeoutFor, HELLO_TIMEOUT_MS, PACK_HELLO_TIMEOUT_MS } = await import(
+const { SidecarClient, SidecarError, STOP_GRACE_MS, helloTimeoutFor, HELLO_TIMEOUT_MS, PACK_HELLO_TIMEOUT_MS, startFailure } = await import(
   '../src/main/sidecar/client'
 )
+const { HELPER_BLOCKED_BY_POLICY } = await import('../src/shared/sidecar/status')
 type Client = InstanceType<typeof SidecarClient>
 type FakeHello = HelloResult & { pid: number; grandchild?: number }
 
@@ -141,6 +165,7 @@ afterEach(async () => {
   spawned.length = 0
   taskkill.lagMs = 0
   taskkill.missing = false
+  refusedSpawns.clear()
 })
 
 describe('one helper process', () => {
@@ -307,6 +332,83 @@ describe('one helper process', () => {
     expect(only.args).toEqual(launch.args)
     expect(only.options.env).toBe(launch.env)
     expect(only.options).toMatchObject({ cwd, windowsHide: true })
+  })
+})
+
+describe('a start the machine refuses (§3a.4 "Group Policy")', () => {
+  const PACK_PYTHON = 'C:\\Users\\Ana\\AppData\\Roaming\\Forge\\python\\1\\python\\python.exe'
+  const pack = { kind: 'pack', pack: 1, root: 'C:\\Users\\Ana\\AppData\\Roaming\\Forge\\python\\1' } as const
+
+  function refusedStart(o: { code: string; errno: number; platform: NodeJS.Platform; source?: HelperLaunch['source'] }): Promise<unknown> {
+    const command = `${PACK_PYTHON}-${o.code}-${o.platform}-${o.source?.kind ?? 'pack'}`
+    refusedSpawns.set(command, { code: o.code, errno: o.errno })
+    const client = new SidecarClient({
+      cwd: tmpdir(),
+      launch: { command, args: ['-E', '-s', '-u', '-B', '-m', 'forge_sidecar'], env: {}, source: o.source ?? pack },
+      maxRestarts: 2,
+      platform: o.platform
+    })
+    clients.push(client)
+    return client.start().then(
+      () => 'started',
+      (err: Error) => err.message
+    )
+  }
+
+  // libuv 1.52.1 (Electron 44.3.0's): ERROR_ACCESS_DISABLED_BY_POLICY (1260) has no mapping and reaches Node
+  // as UNKNOWN; ERROR_ACCESS_DENIED as EPERM; ERROR_ELEVATION_REQUIRED as EACCES. Windows' errnos for those.
+  for (const [code, errno] of [
+    ['UNKNOWN', -4094],
+    ['EPERM', -4048],
+    ['EACCES', -4092]
+  ] as const) {
+    it(`a pack Windows refuses (${code}) reads as the policy sentence, not the spawn's code, and restarts nothing`, async () => {
+      expect(await refusedStart({ code, errno, platform: 'win32' })).toBe(HELPER_BLOCKED_BY_POLICY)
+      await sleep(500)
+      expect(spawned.filter((s) => s.command.startsWith(PACK_PYTHON))).toHaveLength(1)
+    })
+  }
+
+  it('on the Mac the plain sentence stays, with the reason', async () => {
+    expect(await refusedStart({ code: 'EACCES', errno: -13, platform: 'darwin' })).toBe(`Could not start the AI helper: spawn ${PACK_PYTHON}-EACCES-darwin-pack EACCES`)
+  })
+
+  it('FORGE_PYTHON refused, or a pack that is not there, keeps the plain sentence', async () => {
+    expect(await refusedStart({ code: 'EPERM', errno: -4048, platform: 'win32', source: { kind: 'env', python: 'C:\\Python312\\python.exe' } })).toMatch(/^Could not start the AI helper: spawn .* EPERM$/)
+    expect(await refusedStart({ code: 'ENOENT', errno: -4058, platform: 'win32' })).toMatch(/^Could not start the AI helper: spawn .* ENOENT$/)
+  })
+
+  it('startFailure words only a refused spawn of the pack on Windows', () => {
+    const err = (code: string, syscall = 'spawn C:\\p\\python.exe'): NodeJS.ErrnoException =>
+      Object.assign(new Error(`${syscall} ${code}`), { code, syscall })
+    expect(startFailure(err('EPERM'), pack, 'win32')).toBe(HELPER_BLOCKED_BY_POLICY)
+    expect(startFailure(Object.assign(new Error('spawn x'), { syscall: 'spawn x', errno: 1260 }), pack, 'win32')).toBe(HELPER_BLOCKED_BY_POLICY)
+    expect(startFailure(err('EPERM', 'kill'), pack, 'win32'), 'a kill that failed is not a start').toBe('Could not start the AI helper: kill EPERM')
+    expect(startFailure(err('EPERM'), pack, 'darwin')).toBe('Could not start the AI helper: spawn C:\\p\\python.exe EPERM')
+    expect(startFailure(err('ENOENT'), pack, 'win32')).toBe('Could not start the AI helper: spawn C:\\p\\python.exe ENOENT')
+    expect(HELPER_BLOCKED_BY_POLICY).not.toMatch(/sidecar|keeps crashing/i)
+  })
+})
+
+describe('a start the service refuses (mayStart, §16.53 (a))', () => {
+  it('rejects with the sentence, spawns nothing and says so; once allowed, starts', async () => {
+    let refusal: string | null = 'The AI helper is being repaired by another Forge window'
+    const cwd = mkdtempSync(join(tmpdir(), 'forge-client-'))
+    dirs.push(cwd)
+    const client = new SidecarClient({ cwd, launch: launchOf({ FAKE_PIDS: join(cwd, 'pids.txt') }), maxRestarts: 0, mayStart: () => refusal })
+    clients.push(client)
+    const told: string[] = []
+    client.on('refused', (why: string) => told.push(why))
+    const refused = await client.start().catch((err: unknown) => err)
+    expect(refused).toBeInstanceOf(SidecarError)
+    expect((refused as Error).message).toBe(refusal)
+    await expect(client.request('system.ping', { echo: 1 })).rejects.toThrow(refusal)
+    expect(told).toEqual([refusal, refusal])
+    expect(helperSpawns(), 'nothing spawned while refused').toBe(0)
+    refusal = null
+    await client.start()
+    expect(await client.request<{ pong: number }>('system.ping', { echo: 2 })).toEqual({ pong: 2 })
+    expect(helperSpawns()).toBe(1)
   })
 })
 

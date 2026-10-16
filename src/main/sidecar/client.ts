@@ -14,6 +14,7 @@ import {
   type RpcMessage
 } from '@shared/sidecar/protocol'
 import type { HelperLaunch, HelperSource } from '@shared/sidecar/helperPython'
+import { HELPER_BLOCKED_BY_POLICY } from '@shared/sidecar/status'
 
 export interface SidecarOptions {
   /** Directory containing the forge_sidecar package: the child's cwd, which `-m forge_sidecar` imports from. */
@@ -31,10 +32,37 @@ export interface SidecarOptions {
   /** How long the first hello may take before the child is killed. By the launch's rung when unset (`helloTimeoutFor`). */
   helloTimeoutMs?: number
   /**
-   * Whose kill `stop()` and a timed-out hello use: `process.platform` when
-   * unset. A test sets 'win32' to see the tree kill's argv on any machine.
+   * Whose kill `stop()` and a timed-out hello use, and whose words a spawn
+   * that is refused gets (`startFailure`): `process.platform` when unset. A
+   * test sets 'win32' to see the tree kill's argv on any machine.
    */
   platform?: NodeJS.Platform
+  /**
+   * Asked before every spawn, the restarts' included: a sentence refuses the
+   * start (it rejects with it, spawns nothing, and emits `'refused'`), null
+   * lets it through. The service asks the pack's lock (§16.53 (a)): while
+   * another Forge window holds it, nothing starts from that pack.
+   */
+  mayStart?(): string | null
+}
+
+/**
+ * The words for a spawn that failed (the child's `'error'` before it ran).
+ * On Windows a pack the machine's policy refuses to run (Group Policy's
+ * software restriction or AppLocker, ERROR_ACCESS_DISABLED_BY_POLICY 1260,
+ * astral-sh/uv #6584) gets its own sentence, because "Could not start the AI
+ * helper: spawn … UNKNOWN" tells nobody anything (§3a.4 "Group Policy"). By
+ * the source of libuv 1.52.1, which Electron 44.3.0 bundles, 1260 has no
+ * mapping and reaches Node as `UNKNOWN` (errno -4094); an access denial
+ * (ERROR_ACCESS_DENIED, 5) as `EPERM`; elevation as `EACCES`. Only the pack,
+ * which lives in the user's folder, and only a `spawn` call; anywhere else,
+ * and on the Mac, the plain sentence with the reason.
+ */
+export function startFailure(err: NodeJS.ErrnoException, source: HelperSource, platform: NodeJS.Platform): string {
+  const spawnCall = typeof err.syscall === 'string' && err.syscall.startsWith('spawn')
+  const refused = err.code === 'EACCES' || err.code === 'EPERM' || err.code === 'UNKNOWN' || err.errno === 1260
+  if (platform === 'win32' && source.kind === 'pack' && spawnCall && refused) return HELPER_BLOCKED_BY_POLICY
+  return `Could not start the AI helper: ${err.message}`
 }
 
 /** A dev rung's hello (FORGE_PYTHON, the venv, PATH): the 30 s the client always had. */
@@ -118,7 +146,8 @@ const cancelled = (): SidecarError => new SidecarError('Cancelled', RPC_ERRORS.c
  *
  * Events: `'log'` (a stderr chunk), `'spawn'` ({pid, source}), `'ready'`
  * (the hello, on every start that answers, a restart's included), `'exit'`
- * (`HelperExit`), `'gaveUp'` (the restarts are spent).
+ * (`HelperExit`), `'gaveUp'` (the restarts are spent), `'refused'` (the
+ * sentence `mayStart` refused a start with; nothing was spawned).
  */
 export class SidecarClient extends EventEmitter {
   private child: ChildProcessWithoutNullStreams | null = null
@@ -179,6 +208,11 @@ export class SidecarClient extends EventEmitter {
   }
 
   private async handshake(): Promise<HelloResult> {
+    const refused = this.options.mayStart?.() ?? null
+    if (refused) {
+      this.emit('refused', refused)
+      throw new SidecarError(refused, RPC_ERRORS.unavailable)
+    }
     // Spawned before the first await, so `this.starting` is set before any other caller can look.
     const child = this.spawnChild()
     const timeoutMs = this.options.helloTimeoutMs ?? helloTimeoutFor(this.source)
@@ -243,7 +277,7 @@ export class SidecarClient extends EventEmitter {
      */
     child.on('error', (err) => {
       if (this.child === child) {
-        this.failAll(new SidecarError(`Could not start the AI helper: ${err.message}`, RPC_ERRORS.internalError))
+        this.failAll(new SidecarError(startFailure(err, this.source, this.options.platform ?? process.platform), RPC_ERRORS.internalError))
       }
     })
 

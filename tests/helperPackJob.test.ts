@@ -16,7 +16,9 @@ import {
   HELPER_PRESET,
   HELPER_WORKING,
   INSTALL_STAGES,
+  CHECKING_STARTING,
   CHECKING_THE_HELPER,
+  checkingGroupText,
   installProgress,
   keptWithWarningText,
   WAITING_FOR_THE_HELPER,
@@ -381,8 +383,14 @@ function makeHarness(o: { pack?: number; platform?: PackPlatform; seed?: number;
     h.hooks.onCheck?.()
     if (c.signal.aborted) throw abortError()
     if (h.checkRejects) throw new Error(h.checkRejects)
-    // As the real check reports it: the hello's share, then the self-test's groups, then 1.
-    for (const f of [0.35, 0.7, 1]) c.onProgress?.(f)
+    // As the real check reports it (tests/packCheck.test.ts): the hello's share, then each self-test group
+    // by name just before its start's fraction, then 1.
+    c.onProgress?.(0.35)
+    SELFTEST_GROUP_NAMES.forEach((group, i) => {
+      c.onGroup?.(group)
+      c.onProgress?.(0.35 + 0.65 * (i / SELFTEST_GROUP_NAMES.length))
+    })
+    c.onProgress?.(1)
     return h.checkResult
   }
 
@@ -531,14 +539,26 @@ describe('a fresh install', () => {
     for (const f of h.files) expect(h.logs).toContain(`${f.name} came from files.pythonhosted.org: ${f.bytes} B, its sha256 verified`)
   })
 
-  it('moves the bar through the check as the check reports it, the longest stage of a real install', async () => {
+  it('moves the bar through the check as the check reports it, and the speed column says the first start is slow, then names each group', async () => {
     const h = makeHarness()
     const job = await installed(h)
     expect(job.status, job.error ?? '').toBe('done')
-    const checking = h.progress.filter((x) => x.text === CHECKING_THE_HELPER).map((x) => x.p)
     const four = (f: number): number => installProgress(4, f)
-    // One ordered shape: the stage's start, the check's three reports at 0.9 of the stage, then the receipt.
-    expect(checking).toEqual([four(0), four(0.9 * 0.35), four(0.9 * 0.7), four(0.9), four(0.9), four(0.95)])
+    const n = SELFTEST_GROUP_NAMES.length
+    // One ordered shape, stage 4 to the end: the cold first hello, the hello's share, each group by name at
+    // its start (the longest stand of a real install is beats, 20–21 s cold), the check's end, the receipt.
+    const from = h.progress.findIndex((x) => x.text === CHECKING_STARTING)
+    expect(from, 'stage 4 opens on the slow first start').toBeGreaterThan(-1)
+    expect(h.progress.slice(from)).toEqual([
+      { p: four(0), text: CHECKING_STARTING },
+      { p: four(0.9 * 0.35), text: CHECKING_THE_HELPER },
+      ...SELFTEST_GROUP_NAMES.map((g, i) => ({ p: four(0.9 * (0.35 + 0.65 * (i / n))), text: checkingGroupText(g) })),
+      { p: four(0.9), text: checkingGroupText(SELFTEST_GROUP_NAMES[n - 1]) },
+      { p: four(0.9), text: CHECKING_THE_HELPER },
+      { p: four(0.95), text: CHECKING_THE_HELPER },
+      { p: 1, text: null }
+    ])
+    expect(checkingGroupText('beats')).toBe('checking the AI helper · beats')
   })
 
   it('never lets the bar go down across the stages: a property over random chunk sizes, a retried file and a resumed one', async () => {
@@ -957,6 +977,28 @@ describe('Repair', () => {
     expect(Object.keys(downloadedFiles(h.dlDir, h.manifest.platforms[h.platform])).sort()).toEqual(h.files.map((f) => f.name).sort())
   })
 
+  it('a window that starts from the pack between the last in-use read and the hold refuses the Repair under the hold: nothing stopped, the pack as it was (§16.53)', async () => {
+    const h = makeHarness()
+    expect((await installed(h)).status).toBe('done')
+    const before = readFileSync(join(h.versionDir, 'pack.json'), 'utf8')
+    h.events.length = 0
+    const hold = h.helper.hold.bind(h.helper)
+    h.helper.hold = (reason: string) => {
+      // Another window's helper started from pack 1 in the moment after Repair's read and before its hold.
+      mkdirSync(join(h.root, 'in-use'), { recursive: true })
+      writeFileSync(join(h.root, 'in-use', '4242'), JSON.stringify({ pack: 1 }))
+      h.alive.add(4242)
+      return hold(reason)
+    }
+    const job = await installed(h, { repair: true })
+    expect(job.status).toBe('failed')
+    expect(job.error).toBe(HELPER_IN_USE_ELSEWHERE)
+    expect(h.events.filter((e) => ['hold', 'release', 'stop', 'unlink receipt:1', 'rm:1', 'restart'].includes(e))).toEqual(['hold', 'release'])
+    expect(readFileSync(join(h.versionDir, 'pack.json'), 'utf8')).toBe(before)
+    expect(orderPicks(h)).toBe('pack')
+    expect(existsSync(lockPath(h.root))).toBe(false)
+  })
+
   it('holds the helper with the Repair sentence', async () => {
     const h = makeHarness()
     expect((await installed(h)).status).toBe('done')
@@ -1043,6 +1085,23 @@ describe('Remove', () => {
     writeFileSync(join(h.root, 'in-use', '4242'), JSON.stringify({ pack: 1 }))
     h.alive.add(4242)
     await expect(h.jobs.remove({ models: false })).rejects.toThrow(HELPER_IN_USE_ELSEWHERE)
+    expect(orderPicks(h)).toBe('pack')
+    expect(existsSync(lockPath(h.root))).toBe(false)
+  })
+
+  it('a window that starts from the pack between the last in-use read and the hold refuses the Remove under the hold: nothing stopped, the pack as it was (§16.53)', async () => {
+    const h = makeHarness()
+    expect((await installed(h)).status).toBe('done')
+    h.events.length = 0
+    const hold = h.helper.hold.bind(h.helper)
+    h.helper.hold = (reason: string) => {
+      mkdirSync(join(h.root, 'in-use'), { recursive: true })
+      writeFileSync(join(h.root, 'in-use', '4242'), JSON.stringify({ pack: 1 }))
+      h.alive.add(4242)
+      return hold(reason)
+    }
+    await expect(h.jobs.remove({ models: false })).rejects.toThrow(HELPER_IN_USE_ELSEWHERE)
+    expect(h.events.filter((e) => ['hold', 'release', 'stop', 'unlink receipt:1', 'rm:.', 'restart'].includes(e))).toEqual(['hold', 'release'])
     expect(orderPicks(h)).toBe('pack')
     expect(existsSync(lockPath(h.root))).toBe(false)
   })

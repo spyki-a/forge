@@ -72,6 +72,15 @@ export type SidecarStatus =
 export const HELPER_NOT_INSTALLED = 'The AI helper is not installed'
 
 /**
+ * A pack Windows refuses to start (§3a.4 "Group Policy"): some managed
+ * machines block programs under the user's folder, where the pack lives.
+ * The `failed` status carries it, so the row reads "Not running" with it,
+ * never "The AI helper keeps crashing". client.ts `startFailure` words it.
+ */
+export const HELPER_BLOCKED_BY_POLICY =
+  "Windows' policy on this computer blocks programs in your user folder; ask whoever manages it, or point FORGE_PYTHON at an allowed Python"
+
+/**
  * What they reject with when the pack on disk is an older one this build no
  * longer runs (§16.46 (a)): it is there, and unused until Update is pressed.
  */

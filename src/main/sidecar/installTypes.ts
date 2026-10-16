@@ -108,6 +108,13 @@ export interface PackCheckOptions {
   signal: AbortSignal
   onMessage?(message: string): void
   /**
+   * A self-test group starts, by its name (one of `SELFTEST_GROUP_NAMES`),
+   * just before the `onProgress` of its start: the job's speed column reads
+   * "checking the AI helper · beats" through the longest stretch of a real
+   * install (beats alone 20–21 s cold, §3a.8 row 27).
+   */
+  onGroup?(group: string): void
+  /**
    * How far the check has got, 0..1, never down: its share for the hello
    * (`CHECK_HELLO_SHARE`), then the self-test group by group. Added by the
    * integrator: the check is the longest stage of a real install (37–39 s

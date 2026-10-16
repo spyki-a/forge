@@ -25,8 +25,9 @@
  * - each of the platform's `expects` among hello's capabilities, a missing
  *   one named with hello's own reason for it;
  * - one `system.ping`;
- * - `system.selftest`, each group's start passed on as a message, and every
- *   group answered for.
+ * - `system.selftest`, each group's start passed on as a message and, by its
+ *   name, as `onGroup` (the job's speed column: "checking the AI helper ·
+ *   beats"), and every group answered for.
  *
  * Its progress (`onProgress`, 0..1): `CHECK_HELLO_SHARE` once the hello and
  * the ping are back, then the self-test's own count of groups, then 1.
@@ -123,6 +124,15 @@ export function expectsProblems(hello: HelloResult, o: Pick<HelloCheck, 'manifes
   return problems
 }
 
+/**
+ * The self-test group a progress line names ("checking beats · 2 of 6",
+ * selftest.py's words), or null: one of `SELFTEST_GROUP_NAMES`, never a word
+ * read out of the line on trust.
+ */
+export function selftestGroupOf(message: string): string | null {
+  return SELFTEST_GROUP_NAMES.find((group) => message.startsWith(`checking ${group} · `)) ?? null
+}
+
 /** A self-test answer that leaves a group out is not this build's helper. */
 export function selftestProblems(result: SelftestResult): string[] {
   const problems: string[] = []
@@ -165,7 +175,12 @@ export const checkPack: CheckPack = async (o: PackCheckOptions): Promise<PackChe
         signal: o.signal,
         timeoutMs: SELFTEST_TIMEOUT_MS,
         onProgress: (progress, message) => {
-          if (message) o.onMessage?.(message)
+          if (message) {
+            o.onMessage?.(message)
+            // Before the fraction, so the job's report for this group's start carries its name.
+            const group = selftestGroupOf(message)
+            if (group) o.onGroup?.(group)
+          }
           if (typeof progress !== 'number' || !Number.isFinite(progress)) return
           // Each group's start, as the helper counts them; never down.
           reached = Math.max(reached, CHECK_HELLO_SHARE + (1 - CHECK_HELLO_SHARE) * Math.min(1, Math.max(0, progress)))

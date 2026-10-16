@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, w
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { HELPER_BUSY, HELPER_IN_USE_ELSEWHERE } from '../src/shared/sidecar/install'
-import { LockRefused, acquireLock, lockPath, pidAlive, readInUse } from '../src/main/sidecar/lock'
+import { LockRefused, acquireLock, lockPath, lockedElsewhere, pidAlive, readInUse } from '../src/main/sidecar/lock'
 import { rename, rm, writeFile } from 'node:fs/promises'
 import type { PackFs } from '../src/main/sidecar/installTypes'
 
@@ -107,6 +107,93 @@ describe('acquireLock', () => {
     const lock = await acquireLock(root, fs, options(100, [100]))
     expect(holder().pid).toBe(100)
     await lock.release()
+  })
+})
+
+describe('two takeovers of one stale lock (§16.53 (b))', () => {
+  function gate(): { promise: Promise<void>; open(): void } {
+    let open!: () => void
+    const promise = new Promise<void>((resolve) => (open = resolve))
+    return { promise, open }
+  }
+
+  it('exactly one wins: the slower taker’s unlink removes the faster one’s new lock, and the faster one’s re-read sees it and yields', async () => {
+    plantLock(300)
+    // The interleaving the race needs, made certain: B has read the stale lock and decided to take it over
+    // before A unlinks it, and B's unlink lands after A has written its own lock.
+    const bAtUnlink = gate()
+    const aCreated = gate()
+    const bCreated = gate()
+    const fsA: PackFs = {
+      ...fs,
+      rm: async (path, o) => {
+        await bAtUnlink.promise
+        await fs.rm(path, o)
+      },
+      createExclusive: async (path, text) => {
+        await fs.createExclusive(path, text)
+        aCreated.open()
+      }
+    }
+    const fsB: PackFs = {
+      ...fs,
+      rm: async (path, o) => {
+        bAtUnlink.open()
+        await aCreated.promise
+        await fs.rm(path, o)
+      },
+      createExclusive: async (path, text) => {
+        await fs.createExclusive(path, text)
+        bCreated.open()
+      }
+    }
+    const alive = [100, 200]
+    const [a, b] = await Promise.allSettled([
+      // A re-reads once B has written: the moment the race is lost or won.
+      acquireLock(root, fsA, { ...options(100, alive), settle: () => bCreated.promise }),
+      acquireLock(root, fsB, { ...options(200, alive), settle: async () => undefined })
+    ])
+    const won = [a, b].filter((r) => r.status === 'fulfilled')
+    expect(won, 'exactly one holds the lock').toHaveLength(1)
+    expect(a.status, 'A, whose lock B removed, yields').toBe('rejected')
+    expect(((a as PromiseRejectedResult).reason as Error).message).toBe(HELPER_IN_USE_ELSEWHERE)
+    const lock = (b as PromiseFulfilledResult<Awaited<ReturnType<typeof acquireLock>>>).value
+    // The file is the winner's, and the loser left it alone.
+    expect(holder()).toEqual(lock.holder)
+    expect(holder().pid).toBe(200)
+    await lock.release()
+    expect(existsSync(lockPath(root))).toBe(false)
+  })
+
+  it('a takeover nobody races keeps the lock it wrote, after the settle', async () => {
+    plantLock(300)
+    let settled = 0
+    const lock = await acquireLock(root, fs, { ...options(100, [100]), settle: async () => void settled++ })
+    expect(settled, 'the takeover waits once before its re-read').toBe(1)
+    expect(holder()).toEqual(lock.holder)
+    await lock.release()
+    // A plain create, no takeover, does not wait.
+    const plain = await acquireLock(root, fs, { ...options(100, [100]), settle: async () => void settled++ })
+    expect(settled).toBe(1)
+    await plain.release()
+  })
+})
+
+describe('lockedElsewhere: what a helper start from a pack asks first (§16.53 (a))', () => {
+  it('is true only for another live instance’s lock, or a torn one still being written', () => {
+    const o = { pid: 100, isAlive: (p: number) => p === 100 || p === 200 }
+    expect(lockedElsewhere(root, o), 'no root at all').toBe(false)
+    plantLock(200)
+    expect(lockedElsewhere(root, o), 'another live window').toBe(true)
+    plantLock(300)
+    expect(lockedElsewhere(root, o), 'a dead holder: stale, nobody is deleting anything').toBe(false)
+    plantLock(100)
+    expect(lockedElsewhere(root, o), 'this window’s own job').toBe(false)
+    writeFileSync(lockPath(root), '')
+    expect(lockedElsewhere(root, o), 'a create still writing').toBe(true)
+    const old = new Date(Date.now() - 60_000)
+    utimesSync(lockPath(root), old, old)
+    expect(lockedElsewhere(root, o), 'a torn lock nobody finished').toBe(false)
   })
 })
 

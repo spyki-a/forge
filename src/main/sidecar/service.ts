@@ -17,10 +17,10 @@ import {
 } from '@shared/sidecar/helperPython'
 import { HELPER_NOT_INSTALLED, helperStatusReason, packOffer, type SidecarStatus } from '@shared/sidecar/status'
 import { degradedBySelftest, type SelftestRecord } from '@shared/sidecar/selftest'
-import { bytesLeft } from '@shared/sidecar/install'
+import { HELPER_REPAIRED_ELSEWHERE, bytesLeft } from '@shared/sidecar/install'
 import type { HelperControl } from './installTypes'
 import { nodePackFs, type HelperPackDeps, type HelperPackWorkers } from './install'
-import { pidAlive } from './lock'
+import { lockedElsewhere, pidAlive } from './lock'
 import { downloadedFiles, sweepRoot } from './sweep'
 
 export type { SidecarStatus } from '@shared/sidecar/status'
@@ -35,6 +35,13 @@ export type { SidecarStatus } from '@shared/sidecar/status'
  * mid/side, beats, depth, measure and transcribe reject before any request,
  * the reframe answers no-helper), and the status ask answers from the last
  * broadcast without ever starting anything.
+ *
+ * **Nothing starts from a pack another Forge window holds the lock of**
+ * (§16.53 (a)): its Repair or Remove may be about to delete that folder.
+ * `getSidecar()` throws `HELPER_REPAIRED_ELSEWHERE` and spawns nothing, the
+ * status is `failed` with that sentence (so the row offers no Install), and
+ * every client from a pack asks the lock again before each spawn, its
+ * restarts' included. The ask that finds the lock gone starts it again.
  */
 
 /**
@@ -285,6 +292,34 @@ export function readyStatus(hello: HelloResult, source: HelperSource, selftest: 
   return { state: 'ready', hello: { ...hello, degraded: { ...hello.degraded, ...degradedBySelftest(selftest) } }, source, selftest, ...warned }
 }
 
+/** The pack root a pack rung's version folder sits in: where its `.lock` and `in-use/` are. */
+function rootOf(source: Extract<HelperSource, { kind: 'pack' }>): string {
+  return dirname(source.root)
+}
+
+/**
+ * Why a start from this source is refused now (§16.53 (a)): another live
+ * window holds the pack root's lock (this window's own job, by pid, is not
+ * another's). null for every other rung, and for a pack nobody else holds.
+ */
+function packRefusal(source: HelperSource): string | null {
+  if (source.kind !== 'pack') return null
+  return lockedElsewhere(rootOf(source), { pid: process.pid, isAlive: pidAlive }) ? HELPER_REPAIRED_ELSEWHERE : null
+}
+
+/** A status that is the lock's refusal: asked again (`sidecarStatus`) rather than repeated. */
+function refusedByLock(status: SidecarStatus | null): status is Extract<SidecarStatus, { state: 'failed' }> & { source: Extract<HelperSource, { kind: 'pack' }> } {
+  return status?.state === 'failed' && status.error === HELPER_REPAIRED_ELSEWHERE && status.source.kind === 'pack'
+}
+
+/** The refusal's status, broadcast once while it stands: every refused call would otherwise repeat it. */
+function refusedStatus(source: HelperSource): SidecarStatus {
+  if (refusedByLock(last) && source.kind === 'pack' && last.source.root === source.root) return last
+  const status: SidecarStatus = { state: 'failed', error: HELPER_REPAIRED_ELSEWHERE, source }
+  broadcast(status)
+  return status
+}
+
 function broadcast(status: SidecarStatus): void {
   last = status
   listener?.(status)
@@ -302,7 +337,7 @@ const messageOf = (err: unknown): string => (err instanceof Error ? err.message 
  * launch sweep keeps an older pack someone still runs (install.ts, sweep.ts).
  */
 function inUseFile(source: Extract<HelperSource, { kind: 'pack' }>): string {
-  return join(dirname(source.root), 'in-use', String(process.pid))
+  return join(rootOf(source), 'in-use', String(process.pid))
 }
 
 function markInUse(source: Extract<HelperSource, { kind: 'pack' }>): void {
@@ -325,11 +360,16 @@ function clearInUse(source: HelperSource): void {
 }
 
 function makeClient(launch: HelperLaunch, selftest: SelftestRecord | null, integrity: string[] = []): HelperClient {
-  const helper = new HelperClient({ cwd: sidecarDir(), launch, maxRestarts: 3 }, selftest, integrity)
   const source = launch.source
+  // Every spawn from a pack, a restart's included, asks the lock first (§16.53 (a)).
+  const mayStart = source.kind === 'pack' ? () => packRefusal(source) : undefined
+  const helper = new HelperClient({ cwd: sidecarDir(), launch, maxRestarts: 3, ...(mayStart ? { mayStart } : {}) }, selftest, integrity)
   helper.on('log', (line: string) => console.log('[sidecar]', line))
   helper.on('spawn', () => {
     if (source.kind === 'pack') markInUse(source)
+  })
+  helper.on('refused', () => {
+    if (client === helper) refusedStatus(source)
   })
   helper.on('ready', (hello: HelloResult) => {
     // Every ready, a restart's included: the window was never told a restart had worked.
@@ -358,9 +398,11 @@ function heldReason(): string | null {
  * The helper's client, for a call. Throws a `SidecarError` — synchronously,
  * so it lands in each caller's own catch — when there is nothing to run:
  * "The AI helper is not installed", the damaged reason, or why this computer
- * cannot have one; while a switch to another rung is under way; and while
- * the install job holds the helper stopped ("The AI helper is being
- * repaired"), so nothing respawns from a folder being deleted.
+ * cannot have one; while a switch to another rung is under way; while the
+ * install job holds the helper stopped ("The AI helper is being repaired"),
+ * so nothing respawns from a folder being deleted; and while another Forge
+ * window holds the pack's lock (§16.53 (a)), for the same reason across
+ * windows: then nothing is built, and the status says so.
  */
 export function getSidecar(): SidecarClient {
   const hold = heldReason()
@@ -372,6 +414,11 @@ export function getSidecar(): SidecarClient {
   if (without || !resolved.launch) {
     throw new SidecarError((without && helperStatusReason(without)) ?? HELPER_NOT_INSTALLED, RPC_ERRORS.unavailable)
   }
+  const refused = packRefusal(resolved.launch.source)
+  if (refused) {
+    refusedStatus(resolved.launch.source)
+    throw new SidecarError(refused, RPC_ERRORS.unavailable)
+  }
   client = makeClient(resolved.launch, selftestOf(resolved), integrityOf(resolved))
   return client
 }
@@ -379,7 +426,8 @@ export function getSidecar(): SidecarClient {
 /**
  * Start the current rung's helper, or broadcast why there is none. Spawns
  * nothing for absent or damaged, nor while a hold keeps the helper down
- * (then it says the job's stage).
+ * (then it says the job's stage), nor from a pack another window holds the
+ * lock of (then it says so, as `failed`).
  */
 function startCurrent(): SidecarStatus {
   let helper = client
@@ -397,6 +445,7 @@ function startCurrent(): SidecarStatus {
       broadcast(status)
       return status
     }
+    if (packRefusal(resolved.launch.source)) return refusedStatus(resolved.launch.source)
     helper = client = makeClient(resolved.launch, selftestOf(resolved), integrityOf(resolved))
   }
   const started = helper
@@ -428,11 +477,20 @@ export function startSidecar(onStatus: (status: SidecarStatus) => void): void {
 
 /**
  * What the window's ask (`sidecar:status`) is answered with: the last
- * broadcast (the install job's stage while it runs with no helper up). Never
- * starts anything; before the first broadcast, what is on disk says absent or
- * damaged, and anything else is about to start.
+ * broadcast (the install job's stage while it runs with no helper up).
+ * Before the first broadcast, what is on disk says absent or damaged, and
+ * anything else is about to start; that ask never starts anything.
+ *
+ * One last broadcast is asked again instead (§16.53 (a)): another window's
+ * lock refusing the pack. While that lock stands it is the answer; once it is
+ * gone the order is resolved again and started, as the launch's start was
+ * before the lock refused it (the other window's Repair may have replaced the
+ * pack, or its Remove left nothing to run).
  */
 export function sidecarStatus(): SidecarStatus {
+  if (refusedByLock(last) && !switching && !heldReason()) {
+    return packRefusal(last.source) ? last : startCurrent()
+  }
   if (last) return last
   const resolved = resolveHelper()
   const without = statusWithoutHelper(resolved)

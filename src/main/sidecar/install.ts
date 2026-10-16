@@ -12,6 +12,7 @@ import { checkPathBudget } from '@shared/sidecar/pathBudget'
 import type { SidecarStatus } from '@shared/sidecar/status'
 import {
   CHECKING_SPACE,
+  CHECKING_STARTING,
   CHECKING_THE_HELPER,
   HELPER_BEING_REMOVED,
   HELPER_BEING_REPAIRED,
@@ -24,6 +25,7 @@ import {
   UNPACKING_PYTHON,
   WAITING_FOR_THE_HELPER,
   bytesLeft,
+  checkingGroupText,
   downloadingText,
   driveLabel,
   installProgress,
@@ -64,16 +66,20 @@ import { stdlibOf } from './compile'
  *    the file's, and skips a file already there with its hash.
  *    **Repair** (a version folder that has a receipt) only now waits for the
  *    helper's work, reads the other windows' in-use records again (one may
- *    have started from the pack during the download), holds it, stops it,
+ *    have started from the pack during the download), holds it, reads them
+ *    once more under the hold (§16.53: a window that started in the moment
+ *    before the hold refuses the Repair, the pack left as it was), stops it,
  *    and deletes the old pack, receipt first: if the fetch fails, the old
  *    receipt and folder are untouched. The wait is asked again until nothing
- *    is out, so the stop follows the last check with no await between.
+ *    is out; from the hold to the stop the only await is that read, and every
+ *    caller that asks for the helper in it is refused with the hold's reason.
  * 2. **Unpacking** the interpreter, then its standard library compiled once.
  * 3. **Installing the libraries**: pip, offline, from `downloads/<n>/`.
- * 4. **Checking** the AI helper: hello and the self-test from the new pack.
- *    Integrity problems (§16.51: a path outside the pack, another Python)
- *    keep the pack: the receipt records them, and the log and the last speed
- *    text name the first.
+ * 4. **Checking** the AI helper: hello and the self-test from the new pack,
+ *    the speed column saying the first start is slow, then each group by
+ *    name. Integrity problems (§16.51: a path outside the pack, another
+ *    Python) keep the pack: the receipt records them, and the log and the
+ *    last speed text name the first.
  *
  * Then the receipt, written LAST as `pack.json.part` and renamed (never in
  * place: a rename refused past its retries fails the job); older numbers
@@ -376,6 +382,14 @@ export function createHelperPackJobs(deps: HelperPackDeps): HelperPackJobs {
           if (!helper.busy()) break
         }
         releaseHold = helper.hold(HOLD_REASON[entry.kind])
+        // §16.53: one more read under the hold. A window that started its helper from this pack in the
+        // moment between the read above and the hold is seen here, and the Repair stops with the pack
+        // as it was; once held, no caller here can start one (getSidecar() refuses with the reason).
+        if ((await others()).length > 0) {
+          releaseHold()
+          releaseHold = null
+          throw new Error(HELPER_IN_USE_ELSEWHERE)
+        }
         await helper.stop()
         stopped = true
         touched = true
@@ -420,8 +434,10 @@ export function createHelperPackJobs(deps: HelperPackDeps): HelperPackJobs {
       })
       check()
 
-      // 4. Checking the AI helper
-      report(4, 0, CHECKING_THE_HELPER)
+      // 4. Checking the AI helper. The new pack's first hello is cold (11–14 s on the M1 Pro, §3a.8 row
+      // 27): the column says so until it is back, then names each self-test group as it starts.
+      let checkText = CHECKING_STARTING
+      report(4, 0, checkText)
       let result: PackCheck
       try {
         result = await deps.check({
@@ -432,8 +448,15 @@ export function createHelperPackJobs(deps: HelperPackDeps): HelperPackJobs {
           launch,
           signal,
           onMessage: log,
+          onGroup: (group) => {
+            checkText = checkingGroupText(group)
+          },
           // The check is most of a real install's time (§3a.8 row 27): the bar moves through it.
-          onProgress: (f) => report(4, CHECKED * f, CHECKING_THE_HELPER)
+          // Its first report is the hello's share: the start is over.
+          onProgress: (f) => {
+            if (checkText === CHECKING_STARTING) checkText = CHECKING_THE_HELPER
+            report(4, CHECKED * f, checkText)
+          }
         })
       } catch (err) {
         if (signal.aborted) throw new CancelledError()
@@ -597,14 +620,17 @@ export function createHelperPackJobs(deps: HelperPackDeps): HelperPackJobs {
             if (models) await fs.rm(join(deps.userData, 'models'), { recursive: true, force: true, maxRetries: RM_RETRIES })
             return
           }
-          // Read last, after every other await, so a window that started its helper from the pack meanwhile is seen.
+          // Read after every other await, so a window that started its helper from the pack meanwhile is seen.
           if ((await others()).length > 0) throw new Error(HELPER_IN_USE_ELSEWHERE)
           // Remove refuses while helper work is running (§3a.3), rather than waiting under a hold that would
           // refuse every other caller for as long as a transcription takes, with no X to end it. From this
-          // check to the stop nothing awaits, so no request can be sent in between and cut off.
+          // check to the hold nothing awaits, so no request can be sent in between and cut off.
           if (helper.busy()) throw new Error(HELPER_WORKING)
           const release = helper.hold(HELPER_BEING_REMOVED)
           try {
+            // §16.53: once more under the hold, which refuses every caller here meanwhile. A window that
+            // started from the pack in the moment before the hold refuses the Remove, the pack as it was.
+            if ((await others()).length > 0) throw new Error(HELPER_IN_USE_ELSEWHERE)
             await helper.stop()
             stopped = true
             // Every receipt first, so a delete that stops part-way leaves partials the order ignores.
