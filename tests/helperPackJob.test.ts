@@ -18,6 +18,7 @@ import {
   INSTALL_STAGES,
   CHECKING_THE_HELPER,
   installProgress,
+  keptWithWarningText,
   WAITING_FOR_THE_HELPER,
   bytesLeft,
   spaceNeeded,
@@ -277,7 +278,7 @@ function makeHarness(o: { pack?: number; platform?: PackPlatform; seed?: number;
     retryOnce: new Set<string>(),
     pipFails: null as string | null,
     checkRejects: null as string | null,
-    checkResult: { hello: hello(), selftest: allOk(), problems: [] } as PackCheck,
+    checkResult: { hello: hello(), selftest: allOk(), problems: [], integrity: [] } as PackCheck,
     free: 10 * 1024 ** 3,
     renameRefused: (_to: string) => false,
     alive: new Set<number>([100]),
@@ -505,6 +506,9 @@ describe('a fresh install', () => {
       hello: { capabilities: hello().capabilities, degraded: {} }
     })
     expect(Object.values(receipt.selftest).every((v) => v === 'ok')).toBe(true)
+    // A pack as it should be records neither list.
+    expect(receipt.problems).toBeUndefined()
+    expect(receipt.integrity).toBeUndefined()
     // Measured from the folder, not the manifest's placeholder.
     expect(receipt.bytesOnDisk).toBeGreaterThan(0)
     expect(receipt.bytesOnDisk).not.toBe(pack.bytesOnDisk)
@@ -758,7 +762,8 @@ describe('when a later stage fails', () => {
     h.checkResult = {
       hello: hello({ 'depth.layers': 'onnxruntime could not be imported' }),
       selftest: { ...allOk(), beats: { exit: 1, ms: 300, error: 'ImportError: DLL load failed while importing soxr_ext: The specified module could not be found.' } },
-      problems: ['vision.salient is not registered']
+      problems: ['vision.salient is not registered'],
+      integrity: []
     }
     const job = await installed(h)
     expect(job.status, job.error ?? '').toBe('done')
@@ -767,9 +772,48 @@ describe('when a later stage fails', () => {
     expect(receipt.selftest.beats).toBe(`beats ${VCRUNTIME_SENTENCE}`)
     expect(receipt.selftest.asr).toBe('ok')
     expect(receipt.problems).toEqual(['vision.salient is not registered'])
+    expect(receipt.integrity, 'no integrity problem: none recorded').toBeUndefined()
     // What the service merges into the next ready: beats' method greyed, with the sentence.
     expect(degradedBySelftest(receipt.selftest)).toEqual({ 'audio.beats': `beats ${VCRUNTIME_SENTENCE}` })
     expect(orderPicks(h)).toBe('pack')
+  })
+})
+
+describe('an integrity problem (§16.51)', () => {
+  const LEAK = "The AI helper's Python path reaches outside its folder: /Users/someone/.local/lib/python3.14/site-packages"
+  const VERSION = 'The AI helper runs Python 3.14.6, not 3.14.8'
+
+  it('keeps the pack, which runs, and records it in the receipt apart from the degraded methods; the log and the last speed text name the first', async () => {
+    const h = makeHarness()
+    h.checkResult = { hello: hello(), selftest: allOk(), problems: ['vision.salient is not available: the AI helper did not register it'], integrity: [LEAK, VERSION] }
+    const job = await installed(h)
+    expect(job.status, job.error ?? '').toBe('done')
+    const receipt = receiptOf(h.versionDir)
+    expect(receipt.integrity).toEqual([LEAK, VERSION])
+    expect(receipt.problems).toEqual(['vision.salient is not available: the AI helper did not register it'])
+    // Kept: its receipt and interpreter are there, and the order runs it.
+    expect(existsSync(join(h.versionDir, h.manifest.platforms[h.platform].python))).toBe(true)
+    expect(orderPicks(h)).toBe('pack')
+    expect(h.events.filter((e) => e === 'receipt:1' || e === 'restart')).toEqual(['receipt:1', 'restart'])
+    // Named: in the log, and in the job's last speed text.
+    expect(h.logs).toContain(`[helper] install: the pack is kept with a warning: ${LEAK}`)
+    for (const problem of [LEAK, VERSION]) expect(h.logs).toContain(`[helper] check: ${problem}`)
+    expect(h.progress.at(-1)).toEqual({ p: 1, text: keptWithWarningText([LEAK, VERSION]) })
+    expect(keptWithWarningText([LEAK, VERSION])).toBe(`installed with a warning · ${LEAK}`)
+    expect(keptWithWarningText([])).toBeNull()
+  })
+
+  it('Check again replaces the receipt’s integrity with what it finds: mended, none is left', async () => {
+    const h = makeHarness()
+    h.checkResult = { hello: hello(), selftest: allOk(), problems: [], integrity: [LEAK] }
+    expect((await installed(h)).status).toBe('done')
+    expect(receiptOf(h.versionDir).integrity).toEqual([LEAK])
+    h.checkResult = { hello: hello(), selftest: allOk(), problems: [], integrity: [] }
+    await h.jobs.checkAgain()
+    expect(receiptOf(h.versionDir).integrity).toBeUndefined()
+    h.checkResult = { hello: hello(), selftest: allOk(), problems: [], integrity: [VERSION] }
+    await h.jobs.checkAgain()
+    expect(receiptOf(h.versionDir).integrity).toEqual([VERSION])
   })
 })
 
@@ -1023,11 +1067,11 @@ describe('Remove', () => {
 describe('Check again', () => {
   it('reruns the self-test alone, rewrites the receipt’s record by rename, and restarts the helper', async () => {
     const h = makeHarness()
-    h.checkResult = { hello: hello(), selftest: { ...allOk(), beats: { exit: 1, ms: 5, error: 'OSError: cannot load library' } }, problems: [] }
+    h.checkResult = { hello: hello(), selftest: { ...allOk(), beats: { exit: 1, ms: 5, error: 'OSError: cannot load library' } }, problems: [], integrity: [] }
     expect((await installed(h)).status).toBe('done')
     const first = receiptOf(h.versionDir)
     expect(first.selftest.beats).toContain('beats failed')
-    h.checkResult = { hello: hello(), selftest: allOk(), problems: [] }
+    h.checkResult = { hello: hello(), selftest: allOk(), problems: [], integrity: [] }
     h.events.length = 0
     h.fetched.length = 0
     await h.jobs.checkAgain()

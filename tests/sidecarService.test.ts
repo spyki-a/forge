@@ -151,7 +151,7 @@ function stubElectronProcess(): () => void {
 }
 
 /** A pack in userData: its receipt (matching this build unless told otherwise) and, unless told not to, its interpreter file. */
-function installPack(o: { interpreter?: boolean; receipt?: string; root?: string; selftest?: Record<string, string> } = {}): { version: string; python: string } {
+function installPack(o: { interpreter?: boolean; receipt?: string; root?: string; selftest?: Record<string, string>; integrity?: string[] } = {}): { version: string; python: string } {
   const platform = MACHINE!
   const pack = HELPER_PACK.platforms[platform]
   const version = join(electron.userData, o.root ?? 'python', String(HELPER_PACK.pack))
@@ -168,7 +168,8 @@ function installPack(o: { interpreter?: boolean; receipt?: string; root?: string
         platform,
         interpreterSha256: pack.interpreter.sha256,
         lockSha256: pack.lock.sha256,
-        ...(o.selftest ? { selftest: o.selftest } : {})
+        ...(o.selftest ? { selftest: o.selftest } : {}),
+        ...(o.integrity ? { integrity: o.integrity } : {})
       })
   )
   return { version, python }
@@ -722,6 +723,35 @@ describe.skipIf(!MACHINE)('the install job’s status with no helper', () => {
     const ready = told.find((s) => s.state === 'ready') as Extract<SidecarStatus, { state: 'ready' }>
     expect(ready.hello.degraded).toEqual({ 'audio.beats': reason })
     expect(ready.selftest).toMatchObject({ beats: reason, asr: 'ok' })
+    expect(ready, 'a receipt with no integrity problem puts none on the status').not.toHaveProperty('integrity')
+  })
+
+  it('a ready from a pack carries its receipt’s integrity problems, for the row’s warning and its Repair (§16.51)', async () => {
+    const leak = "The AI helper's Python path reaches outside its folder: /Users/someone/.local/lib/python3.14/site-packages"
+    const version = 'The AI helper runs Python 3.14.6, not 3.14.8'
+    const { python } = installPack({ integrity: [leak, version] })
+    FAKE.packPython = python
+    const { startSidecar, sidecarStatus } = await service()
+    const told: SidecarStatus[] = []
+    startSidecar((s) => told.push(s))
+    expect(await until(() => told.some((s) => s.state === 'ready'), 10_000)).toBe(true)
+    // The pack runs, and says what is wrong with it.
+    expect(told.find((s) => s.state === 'ready')).toMatchObject({ state: 'ready', source: { kind: 'pack' }, integrity: [leak, version] })
+    expect(sidecarStatus()).toMatchObject({ state: 'ready', integrity: [leak, version] })
+    expect(helperRowFrom(sidecarStatus())).toEqual({ running: true, reason: null })
+  })
+})
+
+describe('readyStatus', () => {
+  const hello = { protocolVersion: 1, python: '3.14.8', platform: 'darwin', capabilities: [], degraded: {}, executable: '/p', prefix: '/p', path: [] }
+  const source = { kind: 'pack', pack: 1, root: '/u/python/1' } as const
+
+  it('carries the receipt’s integrity when there is any, with or without a self-test record', async () => {
+    const { readyStatus } = await service()
+    expect(readyStatus(hello, source, null, ['x'])).toEqual({ state: 'ready', hello, source, integrity: ['x'] })
+    expect(readyStatus(hello, source, { beats: 'ok' }, ['x'])).toMatchObject({ integrity: ['x'], selftest: { beats: 'ok' } })
+    expect(readyStatus(hello, source, null, [])).toEqual({ state: 'ready', hello, source })
+    expect(readyStatus(hello, source, null)).toEqual({ state: 'ready', hello, source })
   })
 })
 

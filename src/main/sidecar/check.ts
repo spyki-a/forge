@@ -31,12 +31,16 @@
  * Its progress (`onProgress`, 0..1): `CHECK_HELLO_SHARE` once the hello and
  * the ping are back, then the self-test's own count of groups, then 1.
  *
- * What it finds is collected as `problems`, never thrown: a degraded method
- * or a failed group keeps the pack (§3a.3 "When the check fails part of the
- * way"). It rejects only when the helper does not start or answer at all
- * (the job then removes the pack and offers Repair), or with a
- * `CancelledError` on the job's cancel. The client is stopped, and its exit
- * awaited, before it resolves or rejects.
+ * What it finds is collected, never thrown, in two lists (§16.51):
+ * `integrity`, the first two above (an interpreter, prefix or path entry
+ * outside the pack, or another Python: the app's launch or the archive, which
+ * nothing the user does can mend), and `problems`, an `expects` method hello
+ * did not register and a group the self-test left out. Both keep the pack
+ * (§3a.3 "When the check fails part of the way"); the row names them apart.
+ * It rejects only when the helper does not start or answer at all (the job
+ * then removes the pack and offers Repair), or with a `CancelledError` on
+ * the job's cancel. The client is stopped, and its exit awaited, before it
+ * resolves or rejects.
  */
 
 import { realpathSync } from 'node:fs'
@@ -83,12 +87,15 @@ export function isInside(root: string, p: string): boolean {
   return rel === '' || (!isAbsolute(rel) && rel !== '..' && !rel.startsWith(`..${sep}`))
 }
 
+type HelloCheck = Pick<PackCheckOptions, 'versionDir' | 'sidecarDir' | 'manifest' | 'platform'>
+
 /**
- * What hello says that the plan holds against it (everything but the
- * self-test): the interpreter, its prefix and its path inside the pack or the
- * helper's folder, the version, the expected methods.
+ * The integrity problems in hello (§16.51): the interpreter, its prefix or a
+ * `sys.path` entry outside the pack and the helper's folder, or a Python
+ * other than the manifest's. The pack is kept and runs; the receipt records
+ * them and the ready status carries them, so the row warns and offers Repair.
  */
-export function helloProblems(hello: HelloResult, o: Pick<PackCheckOptions, 'versionDir' | 'sidecarDir' | 'manifest' | 'platform'>): string[] {
+export function integrityProblems(hello: HelloResult, o: HelloCheck): string[] {
   const problems: string[] = []
   const roots = [realPathLoose(o.versionDir), realPathLoose(o.sidecarDir)]
   const outside = (p: string): boolean => {
@@ -102,6 +109,12 @@ export function helloProblems(hello: HelloResult, o: Pick<PackCheckOptions, 'ver
   }
   const version = o.manifest.python.version
   if (hello.python !== version) problems.push(`The AI helper runs Python ${hello.python}, not ${version}`)
+  return problems
+}
+
+/** Each of the platform's `expects` that hello did not register, with hello's own reason for it: a degraded method, not an integrity problem. */
+export function expectsProblems(hello: HelloResult, o: Pick<HelloCheck, 'manifest' | 'platform'>): string[] {
+  const problems: string[] = []
   for (const method of o.manifest.platforms[o.platform].expects) {
     if (hello.capabilities.includes(method)) continue
     const reason = hello.degraded[method]
@@ -140,7 +153,8 @@ export const checkPack: CheckPack = async (o: PackCheckOptions): Promise<PackChe
   o.signal.addEventListener('abort', onAbort, { once: true })
   try {
     const hello = await client.start()
-    const problems = helloProblems(hello, o)
+    const integrity = integrityProblems(hello, o)
+    const problems = expectsProblems(hello, o)
     await client.request(SIDECAR_METHODS.ping, { echo: 'check' }, { signal: o.signal })
     let reached = CHECK_HELLO_SHARE
     o.onProgress?.(reached)
@@ -161,7 +175,7 @@ export const checkPack: CheckPack = async (o: PackCheckOptions): Promise<PackChe
     )
     problems.push(...selftestProblems(selftest))
     o.onProgress?.(1)
-    return { hello, selftest, problems }
+    return { hello, selftest, problems, integrity }
   } catch (err) {
     if (o.signal.aborted) throw new CancelledError()
     throw err

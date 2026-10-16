@@ -28,6 +28,7 @@ import {
   driveLabel,
   installProgress,
   installingText,
+  keptWithWarningText,
   spaceNeeded,
   spaceSentence,
   sweepPlan,
@@ -70,6 +71,9 @@ import { stdlibOf } from './compile'
  * 2. **Unpacking** the interpreter, then its standard library compiled once.
  * 3. **Installing the libraries**: pip, offline, from `downloads/<n>/`.
  * 4. **Checking** the AI helper: hello and the self-test from the new pack.
+ *    Integrity problems (§16.51: a path outside the pack, another Python)
+ *    keep the pack: the receipt records them, and the log and the last speed
+ *    text name the first.
  *
  * Then the receipt, written LAST as `pack.json.part` and renamed (never in
  * place: a rename refused past its retries fails the job); older numbers
@@ -436,8 +440,13 @@ export function createHelperPackJobs(deps: HelperPackDeps): HelperPackJobs {
         throw new Error(`The AI helper did not start from its new folder: ${messageOf(err)}`)
       }
       check()
+      for (const problem of result.integrity) log(`[helper] check: ${problem}`)
       for (const problem of result.problems) log(`[helper] check: ${problem}`)
-      report(4, CHECKED, CHECKING_THE_HELPER)
+      // §16.51: a path outside the pack or another Python keeps the pack, which runs; the receipt records
+      // it, the row warns with Repair, and the log and the last speed text name the first problem.
+      const warning = keptWithWarningText(result.integrity)
+      if (warning) log(`[helper] ${entry.kind}: the pack is kept with a warning: ${result.integrity[0]}`)
+      report(4, CHECKED, warning ?? CHECKING_THE_HELPER)
 
       // The receipt, last.
       let onDisk = pack.bytesOnDisk
@@ -446,7 +455,7 @@ export function createHelperPackJobs(deps: HelperPackDeps): HelperPackJobs {
       } catch (err) {
         log(`[helper] could not measure the pack on disk, recording the manifest's ${onDisk} B: ${messageOf(err)}`)
       }
-      const receipt: PackReceipt & { problems?: string[] } = {
+      const receipt: PackReceipt = {
         pack: n,
         python: manifest.python.version,
         build: manifest.python.build,
@@ -458,11 +467,12 @@ export function createHelperPackJobs(deps: HelperPackDeps): HelperPackJobs {
         appVersion: deps.appVersion,
         hello: { capabilities: [...result.hello.capabilities], degraded: { ...result.hello.degraded } },
         selftest: selftestRecordFrom(result.selftest, nodePlatformOf(platform)),
-        ...(result.problems.length > 0 ? { problems: [...result.problems] } : {})
+        ...(result.problems.length > 0 ? { problems: [...result.problems] } : {}),
+        ...(result.integrity.length > 0 ? { integrity: [...result.integrity] } : {})
       }
       await writeReceipt(versionDir, receipt, fs)
       receiptWritten = true
-      report(4, RECEIPT_WRITTEN, CHECKING_THE_HELPER)
+      report(4, RECEIPT_WRITTEN, warning ?? CHECKING_THE_HELPER)
 
       // Older numbers beside the now-complete pack (receipt first), other packs' downloads, then this one's (§16.47).
       const plan = sweepPlan(await describeRoot(root, { manifest, platform, isAlive: deps.isAlive, lockedElsewhere: false }))
@@ -485,7 +495,7 @@ export function createHelperPackJobs(deps: HelperPackDeps): HelperPackJobs {
         restarted = true
         await helper.restart(signal)
       }
-      report(4, 1, null)
+      report(4, 1, warning)
     } catch (err) {
       const cancelled = signal.aborted || err instanceof CancelledError
       if (touched && !receiptWritten) {
@@ -622,18 +632,21 @@ export function createHelperPackJobs(deps: HelperPackDeps): HelperPackJobs {
           const { state, receipt } = await receiptAt(versionDir)
           if (state !== 'parses' || !receiptMatches(receipt, manifest, platform)) throw new Error('The AI helper is not installed, so there is nothing to check')
           const result = await deps.check({ versionDir, manifest, platform, sidecarDir: deps.sidecarDir, launch: deps.launchFor(versionDir), signal, onMessage: log })
+          for (const problem of result.integrity) log(`[helper] check: ${problem}`)
           for (const problem of result.problems) log(`[helper] check: ${problem}`)
-          const before = receipt as PackReceipt & { problems?: string[] }
-          const { problems: _old, ...rest } = before
-          void _old
+          // This check's findings replace the last one's, both lists: one that is mended reads clean again.
+          const { problems: _problems, integrity: _integrity, ...rest } = receipt as PackReceipt
+          void _problems
+          void _integrity
           await writeReceipt(
             versionDir,
             {
               ...rest,
               hello: { capabilities: [...result.hello.capabilities], degraded: { ...result.hello.degraded } },
               selftest: selftestRecordFrom(result.selftest, nodePlatformOf(platform)),
-              ...(result.problems.length > 0 ? { problems: [...result.problems] } : {})
-            } as PackReceipt,
+              ...(result.problems.length > 0 ? { problems: [...result.problems] } : {}),
+              ...(result.integrity.length > 0 ? { integrity: [...result.integrity] } : {})
+            },
             fs
           )
         } finally {

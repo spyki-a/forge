@@ -121,11 +121,19 @@ export interface PackCheck {
   /** `system.selftest`'s answer, every group. */
   selftest: SelftestResult
   /**
-   * What the check holds against the plan and found wrong: a `sys.path` entry
-   * outside the pack and `sidecarDir`, an `expects` method missing from hello,
-   * the wrong `python` version. Empty when the pack is as it should be.
+   * The degraded methods: an `expects` method missing from hello, with
+   * hello's reason, and a self-test group the answer left out. Empty when
+   * every method is there.
    */
   problems: string[]
+  /**
+   * §16.51: the integrity problems apart from the degraded methods — an
+   * `executable`, `prefix` or `sys.path` entry outside the version folder
+   * and `sidecarDir`, or a `python` other than the manifest's version. The
+   * pack is KEPT; the receipt records them and the ready status carries them
+   * for the row. Empty when the pack is as it should be.
+   */
+  integrity: string[]
 }
 
 /**

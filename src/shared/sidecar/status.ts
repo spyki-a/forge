@@ -53,7 +53,19 @@ export type SidecarStatus =
    */
   | { state: 'installing'; stage: string }
   | { state: 'starting'; source: HelperSource }
-  | { state: 'ready'; hello: HelloResult; source: HelperSource; selftest?: Record<string, string> }
+  | {
+      state: 'ready'
+      hello: HelloResult
+      source: HelperSource
+      selftest?: Record<string, string>
+      /**
+       * The install check's integrity problems, from the receipt (§16.51): a
+       * `sys.path` entry outside the pack, or a Python other than the
+       * manifest's. The pack is kept and runs; the row shows each sentence
+       * and offers Repair. Absent or empty when the pack is as it should be.
+       */
+      integrity?: string[]
+    }
   | { state: 'failed'; error: string; source: HelperSource }
 
 /** What every helper call rejects with when there is no helper to run, and what the window says. */

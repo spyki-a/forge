@@ -82,6 +82,20 @@ export interface PackReceipt {
   hello: { capabilities: string[]; degraded: Record<string, string> }
   /** Per self-test group: 'ok', or its reason (§3a.3 stage 4). */
   selftest: Record<string, 'ok' | string>
+  /** The check's degraded methods (`PackCheck.problems`), when it found any. */
+  problems?: string[]
+  /**
+   * The check's integrity problems (`PackCheck.integrity`, §16.51), when it
+   * found any: a path outside the pack, or another Python. The pack is kept
+   * and runs; the ready status carries these to the row, which offers Repair.
+   */
+  integrity?: string[]
+}
+
+/** A receipt's `integrity`, read defensively: its sentences, or [] for a receipt that has none or a malformed one. */
+export function receiptIntegrity(receipt: unknown): string[] {
+  const value = parseReceipt(receipt)?.integrity
+  return Array.isArray(value) ? value.filter((s): s is string => typeof s === 'string' && s !== '') : []
 }
 
 export interface PlatformUnsupported {

@@ -90,7 +90,13 @@ function layout() {
 
 function check(
   l: ReturnType<typeof layout>,
-  o: { hello?: Partial<HelloResult>; env?: Record<string, string>; signal?: AbortSignal; onMessage?: (m: string) => void; onProgress?: (f: number) => void } = {}
+  o: {
+    hello?: Partial<HelloResult>
+    env?: Record<string, string>
+    signal?: AbortSignal
+    onMessage?: (m: string) => void
+    onProgress?: (f: number) => void
+  } = {}
 ) {
   const pids = join(l.tmp, 'pids.txt')
   const base = { ...process.env }
@@ -131,6 +137,7 @@ describe('the check of a freshly installed pack', () => {
     const { run, launch, started } = check(l, { onMessage: (m) => messages.push(m), onProgress: (f) => fractions.push(f) })
     const result = await run
     expect(result.problems).toEqual([])
+    expect(result.integrity).toEqual([])
     // The bar through the check (§3a.8 row 27: most of a real install): the hello's share, then each group's start as the helper counts it, then 1.
     const n = SELFTEST_GROUP_NAMES.length
     expect(fractions).toEqual([CHECK_HELLO_SHARE, ...SELFTEST_GROUP_NAMES.map((_, i) => CHECK_HELLO_SHARE + (1 - CHECK_HELLO_SHARE) * (i / n)), 1])
@@ -147,61 +154,84 @@ describe('the check of a freshly installed pack', () => {
     expect(alive(pids[0]), 'the helper is still running after the check').toBe(false)
   })
 
-  it('names an interpreter outside the pack', async () => {
+  /*
+   * §16.51: what the check finds goes into one of two lists. `integrity` is a
+   * path outside the pack or another Python (the app's launch or the
+   * archive: the pack is kept and runs, the row warns with Repair);
+   * `problems` is a degraded method. Each case below asserts BOTH lists, so
+   * a finding in the wrong one fails as surely as a finding missed.
+   */
+  it('names an interpreter outside the pack as an integrity problem', async () => {
     const l = layout()
-    const { problems } = await check(l, { hello: { executable: join(l.elsewhere, 'python3') } }).run
-    expect(problems).toHaveLength(1)
-    expect(problems[0]).toMatch(/^The AI helper's interpreter is outside its folder: /)
+    const { problems, integrity } = await check(l, { hello: { executable: join(l.elsewhere, 'python3') } }).run
+    expect(integrity).toHaveLength(1)
+    expect(integrity[0]).toMatch(/^The AI helper's interpreter is outside its folder: /)
+    expect(problems).toEqual([])
   })
 
-  it('names a prefix outside the pack', async () => {
+  it('names a prefix outside the pack as an integrity problem', async () => {
     const l = layout()
-    const { problems } = await check(l, { hello: { prefix: l.elsewhere } }).run
-    expect(problems).toEqual([`The AI helper's Python prefix is outside its folder: ${l.elsewhere}`])
+    const { problems, integrity } = await check(l, { hello: { prefix: l.elsewhere } }).run
+    expect(integrity).toEqual([`The AI helper's Python prefix is outside its folder: ${l.elsewhere}`])
+    expect(problems).toEqual([])
   })
 
-  it('takes a sibling whose name starts the same as outside (python-evil beside python)', async () => {
+  it('takes a sibling whose name starts the same as outside (python-evil beside python), an integrity problem, not a degraded method', async () => {
     const l = layout()
     expect(l.evil.startsWith(l.versionDir), 'a string prefix check would take it as inside').toBe(true)
-    const { problems } = await check(l, { hello: { path: [...(l.hello.path ?? []), l.evil] } }).run
-    expect(problems).toEqual([`The AI helper's Python path reaches outside its folder: ${l.evil}`])
+    const { problems, integrity } = await check(l, { hello: { path: [...(l.hello.path ?? []), l.evil] } }).run
+    expect(integrity).toEqual([`The AI helper's Python path reaches outside its folder: ${l.evil}`])
+    expect(problems).toEqual([])
   })
 
   it('follows a link out of the pack, and lets one into it through', async () => {
     const l = layout()
-    const { problems } = await check(l, { hello: { path: [...(l.hello.path ?? []), l.escape, l.alias] } }).run
+    const { problems, integrity } = await check(l, { hello: { path: [...(l.hello.path ?? []), l.escape, l.alias] } }).run
     // The link INSIDE the pack that leads out is outside; the one outside that leads in is inside.
-    expect(problems).toEqual([`The AI helper's Python path reaches outside its folder: ${l.escape}`])
+    expect(integrity).toEqual([`The AI helper's Python path reaches outside its folder: ${l.escape}`])
+    expect(problems).toEqual([])
   })
 
   it('reads a relative entry from the helper’s folder: "" is inside, ".." is not', async () => {
     const l = layout()
-    const { problems } = await check(l, { hello: { path: ['', '..'] } }).run
-    expect(problems).toEqual([`The AI helper's Python path reaches outside its folder: ..`])
+    const { problems, integrity } = await check(l, { hello: { path: ['', '..'] } }).run
+    expect(integrity).toEqual([`The AI helper's Python path reaches outside its folder: ..`])
+    expect(problems).toEqual([])
   })
 
-  it('names the wrong Python', async () => {
+  it('names the wrong Python as an integrity problem', async () => {
     const l = layout()
-    const { problems } = await check(l, { hello: { python: '3.14.6' } }).run
-    expect(problems).toEqual([`The AI helper runs Python 3.14.6, not ${HELPER_PACK.python.version}`])
+    const { problems, integrity } = await check(l, { hello: { python: '3.14.6' } }).run
+    expect(integrity).toEqual([`The AI helper runs Python 3.14.6, not ${HELPER_PACK.python.version}`])
+    expect(problems).toEqual([])
   })
 
-  it('names each expected method that is missing, with the helper’s own reason', async () => {
+  it('names each expected method that is missing, with the helper’s own reason, as a degraded method and not an integrity problem', async () => {
     const l = layout()
     const capabilities = (l.hello.capabilities ?? []).filter((m) => m !== 'audio.beats' && m !== 'vision.measure')
-    const { problems } = await check(l, {
+    const { problems, integrity } = await check(l, {
       hello: { capabilities, degraded: { ...l.hello.degraded, 'audio.beats': "beats unavailable: No module named 'librosa'" } }
     }).run
     expect(problems).toHaveLength(2)
     expect(problems).toContain("audio.beats is not available: beats unavailable: No module named 'librosa'")
     expect(problems).toContain('vision.measure is not available: the AI helper did not register it')
+    expect(integrity).toEqual([])
+  })
+
+  it('keeps the two apart when a pack has both', async () => {
+    const l = layout()
+    const capabilities = (l.hello.capabilities ?? []).filter((m) => m !== 'vision.salient')
+    const { problems, integrity } = await check(l, { hello: { capabilities, path: [...(l.hello.path ?? []), l.evil], python: '3.14.6' } }).run
+    expect(integrity).toEqual([`The AI helper's Python path reaches outside its folder: ${l.evil}`, `The AI helper runs Python 3.14.6, not ${HELPER_PACK.python.version}`])
+    expect(problems).toEqual(['vision.salient is not available: the AI helper did not register it'])
   })
 
   it('names a group the self-test did not answer for', async () => {
     const l = layout()
     const answer = Object.fromEntries(SELFTEST_GROUP_NAMES.filter((g) => g !== 'faces').map((g) => [g, { exit: 0, ms: 1, error: null }]))
-    const { problems } = await check(l, { env: { FAKE_SELFTEST: JSON.stringify(answer) } }).run
+    const { problems, integrity } = await check(l, { env: { FAKE_SELFTEST: JSON.stringify(answer) } }).run
     expect(problems).toEqual(["The AI helper's self-test did not answer for faces"])
+    expect(integrity).toEqual([])
   })
 })
 

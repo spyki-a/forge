@@ -5,7 +5,7 @@ import { app } from 'electron'
 import { SidecarClient, SidecarError, type HelperExit, type RequestOptions, type SidecarOptions } from './client'
 import { RPC_ERRORS, type HelloResult } from '@shared/sidecar/protocol'
 import { HELPER_PACK } from '@shared/sidecar/packManifest'
-import { isUnsupported, packPlatform, parseReceipt, type HelperPackManifest, type PackPlatform, type PlatformUnsupported } from '@shared/sidecar/pack'
+import { isUnsupported, packPlatform, parseReceipt, receiptIntegrity, type HelperPackManifest, type PackPlatform, type PlatformUnsupported } from '@shared/sidecar/pack'
 import {
   UNPARSEABLE_RECEIPT,
   helperLaunch,
@@ -40,15 +40,17 @@ export type { SidecarStatus } from '@shared/sidecar/status'
 /**
  * The service's client: the protocol client, counting the requests it has
  * out (what `helperControl.busy()` answers synchronously; `idle()` is the
- * same count as a promise), and carrying the self-test record of the pack it
- * runs from, which every `ready` it broadcasts merges in.
+ * same count as a promise), and carrying the self-test record and the
+ * integrity problems of the pack it runs from, which every `ready` it
+ * broadcasts merges in.
  */
 class HelperClient extends SidecarClient {
   private out = 0
 
   constructor(
     options: SidecarOptions,
-    readonly selftest: SelftestRecord | null
+    readonly selftest: SelftestRecord | null,
+    readonly integrity: string[] = []
   ) {
     super(options)
   }
@@ -265,14 +267,22 @@ function selftestOf(r: Resolved): SelftestRecord | null {
   return record && typeof record === 'object' ? record : null
 }
 
+/** The receipt's integrity problems (§16.51), when the choice runs a pack whose receipt has any. */
+function integrityOf(r: Resolved): string[] {
+  return r.choice.kind === 'pack' ? receiptIntegrity(r.receipt) : []
+}
+
 /**
  * `ready`, with the receipt's failed self-test groups merged in: each failed
  * group's methods join hello's `degraded` with the group's reason, so
  * `helperCan` greys their controls, and the record rides along for the row.
+ * The receipt's integrity problems ride along too (§16.51): the pack runs,
+ * and the row shows each sentence with Repair.
  */
-export function readyStatus(hello: HelloResult, source: HelperSource, selftest: SelftestRecord | null): SidecarStatus {
-  if (!selftest) return { state: 'ready', hello, source }
-  return { state: 'ready', hello: { ...hello, degraded: { ...hello.degraded, ...degradedBySelftest(selftest) } }, source, selftest }
+export function readyStatus(hello: HelloResult, source: HelperSource, selftest: SelftestRecord | null, integrity: readonly string[] = []): SidecarStatus {
+  const warned = integrity.length > 0 ? { integrity: [...integrity] } : {}
+  if (!selftest) return { state: 'ready', hello, source, ...warned }
+  return { state: 'ready', hello: { ...hello, degraded: { ...hello.degraded, ...degradedBySelftest(selftest) } }, source, selftest, ...warned }
 }
 
 function broadcast(status: SidecarStatus): void {
@@ -314,8 +324,8 @@ function clearInUse(source: HelperSource): void {
   }
 }
 
-function makeClient(launch: HelperLaunch, selftest: SelftestRecord | null): HelperClient {
-  const helper = new HelperClient({ cwd: sidecarDir(), launch, maxRestarts: 3 }, selftest)
+function makeClient(launch: HelperLaunch, selftest: SelftestRecord | null, integrity: string[] = []): HelperClient {
+  const helper = new HelperClient({ cwd: sidecarDir(), launch, maxRestarts: 3 }, selftest, integrity)
   const source = launch.source
   helper.on('log', (line: string) => console.log('[sidecar]', line))
   helper.on('spawn', () => {
@@ -323,7 +333,7 @@ function makeClient(launch: HelperLaunch, selftest: SelftestRecord | null): Help
   })
   helper.on('ready', (hello: HelloResult) => {
     // Every ready, a restart's included: the window was never told a restart had worked.
-    if (client === helper) broadcast(readyStatus(hello, source, helper.selftest))
+    if (client === helper) broadcast(readyStatus(hello, source, helper.selftest, helper.integrity))
   })
   helper.on('exit', (exit: HelperExit) => {
     clearInUse(source)
@@ -362,7 +372,7 @@ export function getSidecar(): SidecarClient {
   if (without || !resolved.launch) {
     throw new SidecarError((without && helperStatusReason(without)) ?? HELPER_NOT_INSTALLED, RPC_ERRORS.unavailable)
   }
-  client = makeClient(resolved.launch, selftestOf(resolved))
+  client = makeClient(resolved.launch, selftestOf(resolved), integrityOf(resolved))
   return client
 }
 
@@ -387,12 +397,12 @@ function startCurrent(): SidecarStatus {
       broadcast(status)
       return status
     }
-    helper = client = makeClient(resolved.launch, selftestOf(resolved))
+    helper = client = makeClient(resolved.launch, selftestOf(resolved), integrityOf(resolved))
   }
   const started = helper
   const hello = started.info
   if (hello) {
-    const status = readyStatus(hello, started.source, started.selftest)
+    const status = readyStatus(hello, started.source, started.selftest, started.integrity)
     broadcast(status)
     return status
   }

@@ -85,6 +85,16 @@ export const UNPACKING_PYTHON = 'unpacking Python'
 export const CHECKING_THE_HELPER = 'checking the AI helper'
 export const WAITING_FOR_THE_HELPER = "waiting for the AI helper's work to finish"
 
+/**
+ * The job's last speed text when the check found integrity problems
+ * (§16.51): the pack is kept and runs, and the first problem is named. The
+ * queue clears the column once the job is done; the lasting record is the
+ * receipt's `integrity`, which the ready status carries to the row.
+ */
+export function keptWithWarningText(integrity: readonly string[]): string | null {
+  return integrity.length > 0 ? `installed with a warning · ${integrity[0]}` : null
+}
+
 const MIB = 1024 * 1024
 
 /** The unit `formatBytes` (shared/assets/pack.ts) would write `total` in, so "31 of 205 MB" never mixes two. */
