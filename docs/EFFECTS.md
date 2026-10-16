@@ -7395,11 +7395,12 @@ not the pack.
   (`NUMBA_CACHE_DIR`, or the drift accepted). *(Decided as
   `NUMBA_CACHE_DIR`, CLIPS §16.52, and measured, §59.)*
 
-## 59. The AI helper's last slice — the speech model's pin and its download without hf-xet (row 35), Electron's fetcher probed (row 19), numba's cache moved (§16.52), hf-xet out of the lock, the harness and census, and the first Windows CI run of the pack (row 37) (2026-10-16)
+## 59. The AI helper's last slice — the speech model's pin and its download without hf-xet (row 35), Electron's fetcher probed (row 19), numba's cache moved (§16.52), hf-xet out of the lock, the harness and census, and the first Windows CI run after slices A and B (row 37; the pack's own CI steps first run on the push after this one) (2026-10-16)
 
 For `docs/CLIPS.md` §3a.4–§3a.7 and §3a.8 rows 19, 35 and 37, Step P's
-slice C: thirty-two commits after `c7a2a86`, `aa377f9` … `1a043c9`, not
-pushed when this was written. `c7a2a86`, which carries slices A and B, was
+slice C: thirty-one code commits after `c7a2a86`, `aa377f9` … `1a043c9`,
+then the record's own (`69f8758`, `6d456a2` and this correction), pushed
+together on 2026-10-16. `c7a2a86`, which carries slices A and B, was
 pushed the same day, and its Windows CI run is the last part of this
 section. Development Mac (M1 Pro, macOS 26.5.2), inside the dev sandbox: no
 Metal, no port to bind, the network through a filtering proxy that lets a
@@ -7677,8 +7678,10 @@ closed afterwards): Electron 44.3.0, Chrome 152.0.7977.78, Node 24.20.0,
 darwin-arm64, `net.isOnline()` true, no proxy variables, and
 `session.resolveProxy` "DIRECT" for `github.com`,
 `release-assets.githubusercontent.com` and `files.pythonhosted.org`. The
-results are in `scratchpad/netfetch.json` and `netfetch2.json`; they hold
-GitHub's signed redirect URL, expired at 16:37Z.
+probe's raw output went to the session's scratchpad (`netfetch.json`,
+`netfetch2.json`), which does not outlive the session, so the table below
+is the record; the raw files held GitHub's signed redirect URL, expired at
+16:37Z.
 
 | call | what came back |
 |---|---|

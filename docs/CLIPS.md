@@ -792,8 +792,9 @@ on Windows (that run is the measurement for §3.3, §3.4 and §3.7 there).
 > to Windows, and slice C fixes each (§3a.6's note). **Slice C built
 > 2026-10-16** (P.4, P.6, P.7 and P.10, with §16.51–53 and rows 19, 35's
 > asr half and 37's first run beside them; §3a.4's, §3a.6's and §3a.7's
-> notes, `EFFECTS.md` §59; thirty-two commits after `c7a2a86`, `aa377f9` …
-> `1a043c9`, not pushed when this was written). **P's build is complete.
+> notes, `EFFECTS.md` §59; thirty-one code commits after `c7a2a86`,
+> `aa377f9` … `1a043c9`, then the record's own, pushed together on
+> 2026-10-16). **P's build is complete.
 > §3a.9's exit, the clean Mac and the Surface, is the user's**, with CI's
 > first run of the pack (the next push). Written from three
 > readers (the interpreter sources, the wheel set, and the product side
