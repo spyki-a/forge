@@ -1,6 +1,7 @@
 import { describe, it } from 'vitest'
 import { existsSync, readFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { tmpdir } from 'node:os'
+import { basename, dirname, join, resolve } from 'node:path'
 import { helperLaunch, receiptFromText, resolveHelperPython, type HelperChoice, type HelperLaunch } from '../../src/shared/sidecar/helperPython'
 import { HELPER_PACK } from '../../src/shared/sidecar/packManifest'
 import type { PackPlatform, PlatformUnsupported } from '../../src/shared/sidecar/pack'
@@ -168,11 +169,35 @@ export function pipCheckProblems(lines: string[], wheels: readonly { name: strin
     .filter((line) => !allowed.some((re) => re.test(line)))
 }
 
-/** The pack rung's launch for the pack under test, as the service starts it. Throws why when that pack does not run here. */
+/**
+ * The cache folder a pack under test runs with when its test names none: the
+ * app's own place for it, `<userData>/helper-cache` beside `python/<n>`
+ * (service.ts `helperFolders`), or one in the OS temp folder when the version
+ * folder is not under a userData's `python/` or `python-dev/`. Never '' and
+ * never inside the version folder (§16.52): with no cache folder,
+ * NUMBA_CACHE_DIR is unset and numba writes each cached function's .nbi and
+ * .nbc into the pack's librosa folders — measured, 38 files (1,190,239 B)
+ * from one beats.int run — and CI's actions/cache then saves that drifted
+ * pack, so every later cached run certified a tree no fresh install has.
+ */
+export function packCacheDir(versionDir: string, tmp: string): string {
+  const parent = dirname(versionDir)
+  const root = basename(parent)
+  if (root === 'python' || root === 'python-dev') return join(dirname(parent), 'helper-cache')
+  return join(tmp, 'forge-helper-cache')
+}
+
+/**
+ * The pack rung's launch for the pack under test, as the service starts it.
+ * Throws why when that pack does not run here. The models folder stays the
+ * test's or the parent environment's (asr.int seeds FORGE_MODELS_DIR); the
+ * cache folder is `packCacheDir`'s unless the test names one.
+ */
 export function packLaunch(pack: PackUnderTest, o: { modelsDir?: string; cacheDir?: string } = {}): HelperLaunch {
   const missing = packMissing(pack)
   if (missing) throw new Error(missing)
-  const launch = helperLaunch(pack.choice, { packaged: true, platform: process.platform, base: process.env, modelsDir: o.modelsDir ?? '', cacheDir: o.cacheDir ?? '' })
+  const cacheDir = o.cacheDir ?? packCacheDir(pack.versionDir, tmpdir())
+  const launch = helperLaunch(pack.choice, { packaged: true, platform: process.platform, base: process.env, modelsDir: o.modelsDir ?? '', cacheDir })
   if (!launch) throw new Error(`no launch for ${pack.choice.kind}`)
   return launch
 }

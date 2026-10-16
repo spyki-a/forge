@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { join } from 'node:path'
 import { HELPER_PACK } from '../src/shared/sidecar/packManifest'
-import { cachedPackIn, packSuiteGate, pipCheckProblems, pythonCasesGate } from './integration/venv'
+import { cachedPackIn, packCacheDir, packLaunch, packSuiteGate, pipCheckProblems, pythonCasesGate, type PackUnderTest } from './integration/venv'
 
 /*
  * The decisions CI's pack steps rest on (.github/workflows/ci.yml, docs/CLIPS.md
@@ -14,7 +14,8 @@ import { cachedPackIn, packSuiteGate, pipCheckProblems, pythonCasesGate } from '
  *     FORGE_PACK_REAL);
  *   - `pythonCasesGate`: sidecarMedia.int's Python cases on a pack that was
  *     asked for and does not run;
- *   - `pipCheckProblems`: pip check's allowed lines, by membership.
+ *   - `pipCheckProblems`: pip check's allowed lines, by membership;
+ *   - `packLaunch`: the suites' launch from the pack, its cache outside it.
  */
 
 const MAC = HELPER_PACK.platforms['darwin-arm64']
@@ -122,5 +123,32 @@ describe('pip check inside the pack (pipCheckProblems)', () => {
       const pinned = pack.wheels.some((w) => w.name.startsWith('hf_xet-'))
       expect(pipCheckProblems([HF_XET], pack.wheels)).toEqual(pinned ? [HF_XET] : [])
     }
+  })
+})
+
+describe('the suites’ launch from the pack (packLaunch)', () => {
+  /*
+   * §16.52 in CI: step 4 runs the helper's suites from the restored pack, and
+   * a launch with no cache folder leaves NUMBA_CACHE_DIR unset, so numba's
+   * cache went into the pack's site-packages and actions/cache saved it.
+   */
+  const pack = (versionDir: string): PackUnderTest => {
+    const python = join(versionDir, MAC.python)
+    return { asked: versionDir, versionDir, python, choice: { kind: 'pack', python, pack: HELPER_PACK.pack, root: versionDir } }
+  }
+  const inside = (dir: string, path: string): boolean => path === dir || path.startsWith(`${dir}/`) || path.startsWith(`${dir}\\`)
+
+  it('puts numba’s cache where the app does, beside python/<n>, never inside the version folder', () => {
+    const env = packLaunch(pack(VERSION_DIR)).env
+    expect(env.NUMBA_CACHE_DIR).toBeDefined()
+    expect(inside(VERSION_DIR, env.NUMBA_CACHE_DIR!), env.NUMBA_CACHE_DIR).toBe(false)
+    expect(env.FORGE_CACHE_DIR).toBe(join(USERDATA, 'helper-cache'))
+    expect(env.NUMBA_CACHE_DIR!.startsWith(join(USERDATA, 'helper-cache'))).toBe(true)
+  })
+
+  it('takes a temp folder for a version folder outside a userData, and the test’s own when it names one', () => {
+    expect(packCacheDir('/somewhere/2', '/tmp/x')).toBe(join('/tmp/x', 'forge-helper-cache'))
+    expect(packCacheDir(join(USERDATA, 'python-dev', '2'), '/tmp/x')).toBe(join(USERDATA, 'helper-cache'))
+    expect(packLaunch(pack(VERSION_DIR), { cacheDir: '/mine' }).env.FORGE_CACHE_DIR).toBe('/mine')
   })
 })

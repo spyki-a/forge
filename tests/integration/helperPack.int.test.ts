@@ -608,6 +608,25 @@ else
       expect(readdirSync(run.root).sort()).toEqual([String(run.manifest.pack)])
     })
 
+    it('holds no numba cache of its own: no .nbi or .nbc anywhere in the version folder (§16.52)', () => {
+      /*
+       * numba's cache belongs under helper-cache (NUMBA_CACHE_DIR, helperLaunch).
+       * Over CI's restored pack this is what catches a suite run from the pack
+       * with no cache folder (venv.ts packLaunch): numba wrote its cache into
+       * the pack's librosa folders, and actions/cache saved the drifted tree.
+       */
+      const found: string[] = []
+      const walk = (dir: string): void => {
+        for (const entry of readdirSync(dir, { withFileTypes: true })) {
+          const path = join(dir, entry.name)
+          if (entry.isDirectory()) walk(path)
+          else if (/\.nb[ic]$/.test(entry.name)) found.push(path)
+        }
+      }
+      walk(run.versionDir)
+      expect(found.length, found.slice(0, 5).join('\n')).toBe(0)
+    })
+
     it('installs one dist-info per lock line, as the bar counts them', () => {
       const pack = run.manifest.platforms[run.platform]
       const lines = lockLineCount(readFileSync(join(run.sidecarDir, ...pack.lock.file.split('/')), 'utf8'))
