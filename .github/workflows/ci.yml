@@ -169,7 +169,7 @@ jobs:
       # ---------------------------------------------------------------------
 
       # (1) Every pinned URL, on EVERY push, cache or not: a one-byte range
-      # GET each (both platforms' files, 69 URLs on 2026-10-16), asserting
+      # GET each (both platforms' files: 67 URLs for pack 2), asserting
       # 200 or 206, the manifest's length, and a landing host the row and the
       # guide name. Without it a pin deleted from PyPI or GitHub, or a moved
       # redirect host, breaks every tester's Install while CI stays green on
