@@ -3,6 +3,7 @@ import {
   cleanHelperEnv,
   helperLaunch,
   helperSourceLabel,
+  numbaCacheDir,
   type HelperChoice,
   type HelperLaunch,
   type HelperLaunchOptions
@@ -21,6 +22,8 @@ import {
 
 const MODELS = '/Users/someone/Library/Application Support/Forge/models'
 const CACHE = '/Users/someone/Library/Application Support/Forge/helper-cache'
+/** numba's cache (§16.52): under the app's cache folder, never beside librosa's sources in the pack. */
+const NUMBA = '/Users/someone/Library/Application Support/Forge/helper-cache/numba'
 
 const PACK: Extract<HelperChoice, { kind: 'pack' }> = {
   kind: 'pack',
@@ -130,6 +133,31 @@ describe('the pack’s launch', () => {
     })
   }
 
+  for (const platform of ['darwin', 'win32'] as const) {
+    it(`keeps numba's cache under the app's cache folder, not in the pack, over a user's own (${platform}, §16.52)`, () => {
+      const cacheDir = platform === 'win32' ? 'C:\\Users\\Ana\\AppData\\Roaming\\Forge\\helper-cache' : CACHE
+      const want = platform === 'win32' ? 'C:\\Users\\Ana\\AppData\\Roaming\\Forge\\helper-cache\\numba' : NUMBA
+      expect(numbaCacheDir(cacheDir)).toBe(want)
+      const base = { ...BASE, NUMBA_CACHE_DIR: '/Volumes/elsewhere/numba', ...(platform === 'win32' ? { Numba_Cache_Dir: 'D:\\numba' } : {}) }
+      const { env } = launch(PACK, { platform, base, cacheDir })
+      expect(env.NUMBA_CACHE_DIR).toBe(want)
+      // One spelling on win32, the app's: the user's other one would be the same variable to Windows.
+      if (platform === 'win32') expect(Object.keys(env).filter((k) => /^numba_cache_dir$/i.test(k))).toEqual(['NUMBA_CACHE_DIR'])
+    })
+  }
+
+  it('cleanHelperEnv leaves numba’s variable alone: it drops PYTHON* and HF_* only', () => {
+    for (const platform of ['darwin', 'win32'] as const) {
+      expect(cleanHelperEnv({ NUMBA_CACHE_DIR: '/n', PYTHONPATH: '/p', HF_HOME: '/h' }, platform)).toEqual({ NUMBA_CACHE_DIR: '/n' })
+    }
+  })
+
+  it('a pack given no cache folder leaves numba to the parent’s environment, as it leaves FORGE_CACHE_DIR', () => {
+    const { env } = launch(PACK, { cacheDir: '', base: { PATH: '/bin' } })
+    expect(env).not.toHaveProperty('NUMBA_CACHE_DIR')
+    expect(env).not.toHaveProperty('FORGE_CACHE_DIR')
+  })
+
   it('drops PythonPath and pythonhome on win32, where their case does not matter', () => {
     const base = { PythonPath: 'x', pythonhome: 'y', hf_token: 'z', Path: 'C:\\Windows', SystemRoot: 'C:\\Windows' }
     for (const env of [cleanHelperEnv(base, 'win32'), launch(PACK, { platform: 'win32', base }).env]) {
@@ -168,6 +196,7 @@ describe('FORGE_PYTHON in a packaged app', () => {
     expect(l.env.PYTHONIOENCODING).toBe('utf-8')
     expect(l.env.FORGE_MODELS_DIR).toBe(MODELS)
     expect(l.env.FORGE_CACHE_DIR).toBe(CACHE)
+    expect(l.env.NUMBA_CACHE_DIR).toBe(NUMBA)
     expect(l.env.HF_HUB_DISABLE_XET).toBe('1')
     expect(l.env.HF_HUB_DISABLE_TELEMETRY).toBe('1')
     expect(l.source).toEqual({ kind: 'env', python: OWN_PYTHON })
@@ -175,13 +204,14 @@ describe('FORGE_PYTHON in a packaged app', () => {
 })
 
 describe('development, and the venv and PATH rungs anywhere', () => {
-  /** client.ts's sidecarEnv, key for key: the parent's environment and these six. */
+  /** client.ts's sidecarEnv, key for key: the parent's environment and these six, and numba's cache since §16.52. */
   const TODAY = {
     ...BASE,
     PYTHONUNBUFFERED: '1',
     PYTHONIOENCODING: 'utf-8',
     FORGE_MODELS_DIR: MODELS,
     FORGE_CACHE_DIR: CACHE,
+    NUMBA_CACHE_DIR: NUMBA,
     HF_HUB_DISABLE_XET: '1',
     HF_HUB_DISABLE_TELEMETRY: '1'
   }
@@ -195,7 +225,7 @@ describe('development, and the venv and PATH rungs anywhere', () => {
   ]
 
   for (const [what, choice, packaged] of cases) {
-    it(`starts ${what} exactly as before: -m forge_sidecar and the six keys`, () => {
+    it(`starts ${what} as before: -m forge_sidecar and the app's seven keys`, () => {
       const l = launch(choice, { packaged })
       expect(l.command).toBe(choice.python)
       expect(l.args).toEqual(['-m', 'forge_sidecar'])
@@ -211,6 +241,7 @@ describe('development, and the venv and PATH rungs anywhere', () => {
     )
     expect(l.env.FORGE_CACHE_DIR).toBe('/dev/cache')
     expect(l.env).not.toHaveProperty('FORGE_MODELS_DIR')
+    expect(l.env).not.toHaveProperty('NUMBA_CACHE_DIR')
   })
 })
 

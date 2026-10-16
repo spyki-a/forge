@@ -47,6 +47,7 @@
  * for the Python process.
  */
 
+import { assetPath } from '../assetPath'
 import {
   isUnsupported,
   parseReceipt,
@@ -222,7 +223,8 @@ const APP_HF = { HF_HUB_DISABLE_XET: '1', HF_HUB_DISABLE_TELEMETRY: '1' } as con
  * nothing anywhere.
  *
  * - **The pack, in either mode**: `<python> -E -s -u -B -m forge_sidecar`
- *   with `cleanHelperEnv(base)` and the app's own four variables. In
+ *   with `cleanHelperEnv(base)` and the app's own five variables (the two
+ *   folders, numba's cache under the second, the two `HF_*`). In
  *   development too: tests that reach the pack rung (§3a.6's
  *   `FORGE_HELPER_PACK`) must run it as an installed user gets it, or CI
  *   certifies an environment nobody gets. No `PYTHONUNBUFFERED` or
@@ -274,10 +276,29 @@ function plainLaunch(python: string, o: HelperLaunchOptions, source: HelperSourc
 }
 
 /**
+ * Where numba keeps the functions it compiles (§16.52): `<cacheDir>/numba`.
+ * Unset, numba writes its `.nbi` and `.nbc` files beside the source of each
+ * cached function, so the first real beats pass wrote 38 files (1,190,255 B)
+ * into the installed pack's librosa folders and the tree drifted from the
+ * receipt's `bytesOnDisk` (EFFECTS §58). Under the helper's own cache folder
+ * the pack stays as it was installed, Repair's delete and the receipt's size
+ * stay true, and the cache goes with the rest of the helper's.
+ *
+ * Every rung the app hands its cache folder gets it: the pack, `FORGE_PYTHON`
+ * in a packaged app, and the development rungs. A rung with no cache folder
+ * (an empty `cacheDir`) leaves numba to the parent's environment, as it
+ * leaves `FORGE_CACHE_DIR`.
+ */
+export function numbaCacheDir(cacheDir: string): string {
+  return assetPath(cacheDir, 'numba')
+}
+
+/**
  * The environment every rung but the pack (and the packaged escape hatch) is
  * started with: client.ts's `sidecarEnv` (lines 39-53 when this was written),
- * key for key. The parent's environment, PYTHON* and HF_* included, then the
- * six the app sets; a folder that is empty is left to the parent's.
+ * key for key, and numba's cache since §16.52. The parent's environment,
+ * PYTHON* and HF_* included, then the seven the app sets; a folder that is
+ * empty is left to the parent's.
  */
 export function plainHelperEnv(
   base: NodeJS.ProcessEnv,
@@ -289,7 +310,7 @@ export function plainHelperEnv(
     PYTHONUNBUFFERED: '1',
     PYTHONIOENCODING: 'utf-8',
     ...(o.modelsDir ? { FORGE_MODELS_DIR: o.modelsDir } : {}),
-    ...(o.cacheDir ? { FORGE_CACHE_DIR: o.cacheDir } : {}),
+    ...(o.cacheDir ? { FORGE_CACHE_DIR: o.cacheDir, NUMBA_CACHE_DIR: numbaCacheDir(o.cacheDir) } : {}),
     // Hugging Face's Xet backend talks to a separate CDN host that
     // restricted networks and corporate proxies routinely block. The plain
     // HTTP path is slower but works everywhere.
@@ -345,10 +366,11 @@ function withAppKeys(
   return Object.assign(out, all)
 }
 
+/** The app's folders for the pack and the packaged `FORGE_PYTHON`: models, bakes, and numba's cache under the bakes (`numbaCacheDir`). */
 function appFolders(o: { modelsDir: string; cacheDir: string }): Record<string, string> {
   return {
     ...(o.modelsDir ? { FORGE_MODELS_DIR: o.modelsDir } : {}),
-    ...(o.cacheDir ? { FORGE_CACHE_DIR: o.cacheDir } : {})
+    ...(o.cacheDir ? { FORGE_CACHE_DIR: o.cacheDir, NUMBA_CACHE_DIR: numbaCacheDir(o.cacheDir) } : {})
   }
 }
 
