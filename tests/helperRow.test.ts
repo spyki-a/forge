@@ -174,6 +174,23 @@ describe('Running, from the pack', () => {
     expect(r.line).toBe(`Python 3.14.8 · pack 1 · ${formatBytes(1_234_567_890)}`)
   })
 
+  it('names what a Repair still fetches after one was cancelled beside it: the manifest’s bytes less the downloads it kept', () => {
+    // An odd number, so no size written into the row by hand passes by coincidence.
+    const left = 77_123_457
+    expect(labelOf(row(readyPack({ bytesLeft: left })), 'repair')).toBe(`Repair · ${formatBytes(left)}`)
+    expect(formatBytes(left)).not.toBe(formatBytes(PACK.bytes))
+    // Short of a feature, or with an integrity problem, the same number.
+    const short = readyPack({ bytesLeft: left, hello: hello(PACK.expects, { [SIDECAR_METHODS.faces]: 'x' }) })
+    expect(labelOf(row(short), 'repair')).toBe(`Repair · ${formatBytes(left)}`)
+    expect(labelOf(row(readyPack({ bytesLeft: left, integrity: ['p'] })), 'repair')).toBe(`Repair · ${formatBytes(left)}`)
+    // A pack that will not start, the same.
+    expect(labelOf(row({ state: 'failed', error: HELPER_BLOCKED_BY_POLICY, source: packSource, bytesLeft: left }), 'repair')).toBe(`Repair · ${formatBytes(left)}`)
+    // Nothing kept, or a number that is no remainder: the whole pack.
+    for (const odd of [undefined, PACK.bytes, PACK.bytes + 1, -1, Number.NaN]) {
+      expect(labelOf(row(readyPack({ bytesLeft: odd })), 'repair'), String(odd)).toBe(`Repair · ${formatBytes(PACK.bytes)}`)
+    }
+  })
+
   it('is grey with a degraded expected method: "N of <expects> helper features", the reason, Check again and Repair', () => {
     const r = row(readyPack({ hello: hello(PACK.expects, { [SIDECAR_METHODS.faces]: 'No module named mediapipe' }) }))
     expect(r.dot).toBe('grey')

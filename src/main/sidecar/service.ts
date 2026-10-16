@@ -5,7 +5,7 @@ import { app } from 'electron'
 import { SidecarClient, SidecarError, type HelperExit, type RequestOptions, type SidecarOptions } from './client'
 import { RPC_ERRORS, type HelloResult } from '@shared/sidecar/protocol'
 import { HELPER_PACK } from '@shared/sidecar/packManifest'
-import { isUnsupported, packPlatform, parseReceipt, receiptIntegrity, type HelperPackManifest, type PackPlatform, type PlatformUnsupported } from '@shared/sidecar/pack'
+import { isUnsupported, packBytes, packPlatform, parseReceipt, receiptIntegrity, type HelperPackManifest, type PackPlatform, type PlatformUnsupported } from '@shared/sidecar/pack'
 import {
   UNPARSEABLE_RECEIPT,
   helperLaunch,
@@ -315,14 +315,37 @@ function refusedByLock(status: SidecarStatus | null): status is Extract<SidecarS
 /** The refusal's status, broadcast once while it stands: every refused call would otherwise repeat it. */
 function refusedStatus(source: HelperSource): SidecarStatus {
   if (refusedByLock(last) && source.kind === 'pack' && last.source.root === source.root) return last
-  const status: SidecarStatus = { state: 'failed', error: HELPER_REPAIRED_ELSEWHERE, source }
-  broadcast(status)
-  return status
+  return broadcast({ state: 'failed', error: HELPER_REPAIRED_ELSEWHERE, source })
 }
 
-function broadcast(status: SidecarStatus): void {
-  last = status
-  listener?.(status)
+/**
+ * What a Repair of this pack would still fetch (§3a.4 "Repair's number",
+ * §16.47): the manifest's bytes less the verified files in
+ * `<root>/downloads/<n>/`, which a cancelled or failed Repair beside a running
+ * pack leaves there. undefined when none are kept, or on a machine with no
+ * pack: then the row's Repair names the whole pack.
+ */
+function repairLeft(source: Extract<HelperSource, { kind: 'pack' }>): number | undefined {
+  const machine = machineNow()
+  if (isUnsupported(machine)) return undefined
+  const pack = HELPER_PACK.platforms[machine]
+  const left = bytesLeft(HELPER_PACK, machine, downloadedFiles(join(rootOf(source), 'downloads', String(HELPER_PACK.pack)), pack))
+  return left < packBytes(pack) ? left : undefined
+}
+
+/** A pack's ready or failed status with `repairLeft` on it, read from disk now; any other status as it is. */
+function withRepairLeft(status: SidecarStatus): SidecarStatus {
+  if (status.state !== 'ready' && status.state !== 'failed') return status
+  if (status.source?.kind !== 'pack') return status
+  const { bytesLeft: _stale, ...rest } = status
+  const left = repairLeft(status.source)
+  return left === undefined ? rest : { ...rest, bytesLeft: left }
+}
+
+function broadcast(status: SidecarStatus): SidecarStatus {
+  last = withRepairLeft(status)
+  listener?.(last)
+  return last
 }
 
 const messageOf = (err: unknown): string => (err instanceof Error ? err.message : String(err))
@@ -433,30 +456,17 @@ function startCurrent(): SidecarStatus {
   let helper = client
   if (!helper) {
     const hold = heldReason()
-    if (hold) {
-      const status: SidecarStatus = { state: 'installing', stage: installing ?? hold }
-      broadcast(status)
-      return status
-    }
+    if (hold) return broadcast({ state: 'installing', stage: installing ?? hold })
     const resolved = resolveHelper()
     const without = statusWithoutHelper(resolved)
-    if (without || !resolved.launch) {
-      const status = without ?? { state: 'absent', offer: offerOf(resolved, false) }
-      broadcast(status)
-      return status
-    }
+    if (without || !resolved.launch) return broadcast(without ?? { state: 'absent', offer: offerOf(resolved, false) })
     if (packRefusal(resolved.launch.source)) return refusedStatus(resolved.launch.source)
     helper = client = makeClient(resolved.launch, selftestOf(resolved), integrityOf(resolved))
   }
   const started = helper
   const hello = started.info
-  if (hello) {
-    const status = readyStatus(hello, started.source, started.selftest, started.integrity)
-    broadcast(status)
-    return status
-  }
-  const starting: SidecarStatus = { state: 'starting', source: started.source }
-  broadcast(starting)
+  if (hello) return broadcast(readyStatus(hello, started.source, started.selftest, started.integrity))
+  const starting = broadcast({ state: 'starting', source: started.source })
   started.start().catch((err: unknown) => {
     // Told in its own words, unless a later status (the restarts' end) already said more.
     if (client === started && !started.stopped && last?.state === 'starting') {
@@ -605,11 +615,17 @@ export function reportHelperInstall(status: SidecarStatus): void {
  * After a helper job has ended, however it ended: with no client up and
  * nothing switching or held, what is on disk is said again — `absent` with
  * its "· N MB left", or whatever the order now runs. A successful job has
- * already restarted through `helperControl.restart`.
+ * already restarted through `helperControl.restart`. With a client up (a
+ * Repair cancelled or failed beside the running pack), its ready or failed
+ * status is said again, with what the kept downloads leave a Repair to fetch.
  */
 export function settleHelperStatus(): void {
   installing = null
-  if (client || switching || heldReason()) return
+  if (switching || heldReason()) return
+  if (client) {
+    if (last && (last.state === 'ready' || last.state === 'failed')) broadcast(last)
+    return
+  }
   startCurrent()
 }
 

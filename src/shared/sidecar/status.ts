@@ -65,8 +65,21 @@ export type SidecarStatus =
        * and offers Repair. Absent or empty when the pack is as it should be.
        */
       integrity?: string[]
+      /**
+       * What a Repair would still fetch, for a pack's ready: the manifest's
+       * bytes less the verified files a cancelled or failed Repair left in
+       * `downloads/<n>/` (§3a.4 "Repair's number", §16.47). Set by the service
+       * only while some are kept; absent means the whole pack.
+       */
+      bytesLeft?: number
     }
-  | { state: 'failed'; error: string; source: HelperSource }
+  | {
+      state: 'failed'
+      error: string
+      source: HelperSource
+      /** As `ready`'s: what a Repair of this pack would still fetch, while a Repair's verified downloads are kept. */
+      bytesLeft?: number
+    }
 
 /** What every helper call rejects with when there is no helper to run, and what the window says. */
 export const HELPER_NOT_INSTALLED = 'The AI helper is not installed'

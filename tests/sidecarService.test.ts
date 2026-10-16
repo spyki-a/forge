@@ -726,6 +726,35 @@ describe.skipIf(!MACHINE)('the install job’s status with no helper', () => {
     expect(ready, 'a receipt with no integrity problem puts none on the status').not.toHaveProperty('integrity')
   })
 
+  it('a ready from a pack carries what a Repair still fetches while a cancelled one’s downloads are kept, and says it again when the job ends (§3a.4, §16.47)', async () => {
+    const pack = HELPER_PACK.platforms[MACHINE!]
+    const { python } = installPack()
+    FAKE.packPython = python
+    const { startSidecar, sidecarStatus, settleHelperStatus } = await service()
+    const told: SidecarStatus[] = []
+    startSidecar((s) => told.push(s))
+    expect(await until(() => told.some((s) => s.state === 'ready'), 10_000)).toBe(true)
+    // Nothing kept: no number, the row names the whole pack.
+    expect(sidecarStatus()).not.toHaveProperty('bytesLeft')
+    // A Repair beside the running pack verified the interpreter and was cancelled (a sparse file: its size is what counts).
+    const dl = join(electron.userData, 'python', 'downloads', String(HELPER_PACK.pack))
+    mkdirSync(dl, { recursive: true })
+    const fd = openSync(join(dl, pack.interpreter.name), 'w')
+    ftruncateSync(fd, pack.interpreter.bytes)
+    closeSync(fd)
+    const before = told.length
+    settleHelperStatus()
+    expect(told.length, 'the job’s end is said again with the helper up').toBe(before + 1)
+    expect(told.at(-1)).toMatchObject({ state: 'ready', source: { kind: 'pack' }, bytesLeft: packBytes(pack) - pack.interpreter.bytes })
+    expect(sidecarStatus()).toEqual(told.at(-1))
+    // The downloads gone (a Repair that then succeeded deletes them): the number goes too.
+    rmSync(dl, { recursive: true, force: true })
+    settleHelperStatus()
+    expect(told.at(-1)).toMatchObject({ state: 'ready' })
+    expect(told.at(-1)).not.toHaveProperty('bytesLeft')
+    expect(spawned).toHaveLength(1)
+  })
+
   it('a ready from a pack carries its receipt’s integrity problems, for the row’s warning and its Repair (§16.51)', async () => {
     const leak = "The AI helper's Python path reaches outside its folder: /Users/someone/.local/lib/python3.14/site-packages"
     const version = 'The AI helper runs Python 3.14.6, not 3.14.8'

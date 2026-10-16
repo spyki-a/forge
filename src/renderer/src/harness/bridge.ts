@@ -497,6 +497,18 @@ function offerFor(kind: 'install' | 'update' | 'repair', downloaded: Readonly<Re
 }
 
 /**
+ * A pack's ready or failed status with what a Repair would still fetch, as
+ * main's service puts it there (service.ts `withRepairLeft`): only while a
+ * cancelled job's verified downloads are kept.
+ */
+function withRepairLeft(status: SidecarStatus, downloaded: Readonly<Record<string, number>>): SidecarStatus {
+  if (status.state !== 'ready' && status.state !== 'failed') return status
+  const { bytesLeft: _stale, ...rest } = status
+  const left = bytesLeft(HELPER_PACK, HARNESS_PLATFORM, downloaded)
+  return left < packBytes(HARNESS_HELPER_PACK) ? { ...rest, bytesLeft: left } : rest
+}
+
+/**
  * The status a state stands for, with `downloaded` the files a cancelled job
  * left verified (none by default): exported, so the census builds each row's
  * state from the same numbers the stub walks.
@@ -514,11 +526,11 @@ export function harnessHelperStatus(state: HarnessHelperState, downloaded: Reado
     case 'damaged':
       return { state: 'damaged', reason: HELPER_PYTHON_MISSING, offer: offerFor('repair', downloaded) }
     case 'policy':
-      return { state: 'failed', error: HELPER_BLOCKED_BY_POLICY, source: PACK_SOURCE }
+      return withRepairLeft({ state: 'failed', error: HELPER_BLOCKED_BY_POLICY, source: PACK_SOURCE }, downloaded)
     case 'ready':
-      return readyStatus(allGroupsOk())
+      return withRepairLeft(readyStatus(allGroupsOk()), downloaded)
     case 'ready-short':
-      return readyStatus({ ...allGroupsOk(), beats: HARNESS_BEATS_FAILED })
+      return withRepairLeft(readyStatus({ ...allGroupsOk(), beats: HARNESS_BEATS_FAILED }), downloaded)
     default: {
       const unknown: never = state
       return unknown
@@ -696,8 +708,8 @@ async function runHelperJob(id: string): Promise<void> {
       }
       broadcastJobs()
     }
-    // What is on disk, said again: "· N MB left" after a cancel, or the helper that was up all along.
-    publish(helperUp ? before : harnessHelperStatus(harnessHelper.state, harnessHelper.downloaded))
+    // What is on disk, said again: "· N MB left" after a cancel, or the helper that was up all along with what a Repair still fetches.
+    publish(helperUp ? withRepairLeft(before, harnessHelper.downloaded) : harnessHelperStatus(harnessHelper.state, harnessHelper.downloaded))
   } finally {
     helperCancels.delete(id)
   }
@@ -774,7 +786,7 @@ async function harnessCheckHelperAgain(): Promise<void> {
   harnessHelper.state = 'ready'
   publish({ state: 'starting', source: PACK_SOURCE })
   await wait(harnessHelper.stepMs)
-  publish(harnessHelperStatus('ready'))
+  publish(harnessHelperStatus('ready', harnessHelper.downloaded))
 }
 
 /**

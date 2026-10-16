@@ -409,15 +409,15 @@ export async function runHelperPackCheck(): Promise<HelperPackReport> {
     expect(reframePanel().querySelectorAll('[data-helper-pointer]').length === 0, 'the dock still shows its pointer beside a whole pack')
     saw('ready', { python: HELPER_PACK.python.version, pack: HELPER_PACK.pack, row: whole, gear: gearDot(), follow: { disabled: followAfter.disabled, label: norm(followAfter.textContent) } })
 
-    /* 5b. Repair beside the running pack: the helper stays up, every press waits on the job, its X leaves the pack as it was */
+    /* 5b. Repair beside the running pack: the helper stays up, every press waits on the job, its X leaves the pack running, its Repair naming what is left */
     await window.forge.clearFinished()
     harnessHelper.stepMs = 150
     action('repair').click()
     const repairName = helperJobLabel('repair')
     const repairing = await until(() => {
       const seen = jobRow(repairName)
-      return seen && seen.speed.startsWith('downloading ·') && section() && rowSeen().text.startsWith('Repairing · downloading ·') ? seen : null
-    }, 15_000, 'EXPORT showing the repair downloading')
+      return seen && seen.speed.startsWith('downloading ·') && Object.keys(harnessHelper.downloaded).length >= 2 && section() && rowSeen().text.startsWith('Repairing · downloading ·') ? seen : null
+    }, 15_000, 'EXPORT showing the repair downloading, two files in')
     const repairRow = rowSeen()
     const waits = `${repairName} — its bar and its X are in EXPORT`
     expect(JSON.stringify(labels(repairRow)) === JSON.stringify([repairLabel, 'Remove']), `while repairing the row shows ${JSON.stringify(labels(repairRow))}, not the pack's presses`)
@@ -430,8 +430,18 @@ export async function runHelperPackCheck(): Promise<HelperPackReport> {
       return row && row.text === wholeText && jobRow(repairName)?.status === 'cancelled' ? row : null
     }, 5000, "the repair's X leaving the pack as it was")
     expect(repairCancelled.buttons.every((b) => !b.disabled), `after the repair's X a press is still waiting: ${JSON.stringify(repairCancelled.buttons)}`)
+    // Repair's number is now what the X left to fetch (§3a.4, §16.47): the manifest's files less those verified, summed here from the manifest.
+    const kept = [HARNESS_HELPER_PACK.interpreter, ...HARNESS_HELPER_PACK.wheels].filter((f) => harnessHelper.downloaded[f.name] === f.bytes)
+    const repairLeft = packBytes(HARNESS_HELPER_PACK) - kept.reduce((sum, f) => sum + f.bytes, 0)
+    expect(kept.length >= 2 && repairLeft < packBytes(HARNESS_HELPER_PACK), `the repair's X kept ${kept.length} files`)
+    const leftLabel = `Repair · ${formatBytes(repairLeft)}`
+    expect(JSON.stringify(labels(repairCancelled)) === JSON.stringify([leftLabel, 'Remove']), `after the repair's X the row offers ${JSON.stringify(labels(repairCancelled))}, not ["${leftLabel}","Remove"]`)
+    // The downloads go, as a Repair that then finished would leave them: the whole pack on Repair again.
+    harnessHelper.downloaded = {}
+    harnessHelper.set('ready')
+    await until(() => section() && JSON.stringify(labels(rowSeen())) === JSON.stringify([repairLabel, 'Remove']), 3000, 'Repair naming the whole pack again')
     harnessHelper.stepMs = 40
-    saw('repair', { exportRow: { name: repairName, speed: repairing.speed }, row: repairRow, afterX: repairCancelled })
+    saw('repair', { exportRow: { name: repairName, speed: repairing.speed }, row: repairRow, afterX: repairCancelled, repairLeft, kept: kept.length })
 
     /* 6. the Media pool: Transcribe greyed for the speech model, its sized press, then pressable */
     editor().setShelfTool('upload')

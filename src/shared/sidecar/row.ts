@@ -146,6 +146,16 @@ function repairLabel(bytes: number): string {
   return `Repair · ${formatBytes(bytes)}`
 }
 
+/**
+ * Repair's number beside a pack that has no offer (ready, or failed): the
+ * manifest's bytes, less the verified files a cancelled or failed Repair
+ * left in `downloads/` when the status says so (`bytesLeft`, §3a.4 "Repair's
+ * number", §16.47).
+ */
+function packRepairBytes(pack: PackFacts, left: number | undefined): number {
+  return typeof left === 'number' && Number.isFinite(left) && left >= 0 && left < pack.bytes ? left : pack.bytes
+}
+
 const REMOVE: HelperAction = { kind: 'remove', label: 'Remove' }
 const CHECK_AGAIN: HelperAction = { kind: 'checkAgain', label: 'Check again' }
 
@@ -214,7 +224,7 @@ function statusRow(status: SidecarStatus | null, pack: PackFacts): HelperRow {
     case 'damaged':
       return damagedRow(status.reason, status.offer)
     case 'failed':
-      return failedRow(status.error, status.source, pack)
+      return failedRow(status.error, status.source, pack, status.bytesLeft)
     case 'ready':
       return readyRow(status, pack)
     default: {
@@ -277,13 +287,13 @@ function damagedRow(reason: string, offer: PackOffer): HelperRow {
  * first; someone's own FORGE_PYTHON gets the Install that replaces it; a
  * development rung, nothing.
  */
-function failedRow(error: string, source: HelperSource | undefined, pack: PackFacts): HelperRow {
+function failedRow(error: string, source: HelperSource | undefined, pack: PackFacts, left?: number): HelperRow {
   // Another Forge window holds the pack's lock (§16.53 (a)): nothing is wrong with this one, and every press would be refused.
   if (error === HELPER_REPAIRED_ELSEWHERE) return { word: ROW_WORDS.notRunning, dot: 'grey', line: error, actions: [] }
   const base = { word: ROW_WORDS.notRunning, dot: 'red' as const, line: error }
   // A status with no source (the harness bridge's) names no rung: nothing to press.
   if (source?.kind === 'pack') {
-    return { ...base, actions: [{ kind: 'repair', label: repairLabel(pack.bytes) }, REMOVE], hosts: pack.hosts }
+    return { ...base, actions: [{ kind: 'repair', label: repairLabel(packRepairBytes(pack, left)) }, REMOVE], hosts: pack.hosts }
   }
   if (source?.kind === 'env') {
     return {
@@ -307,7 +317,7 @@ function readyRow(status: Extract<SidecarStatus, { state: 'ready' }>, pack: Pack
   const source = status.source
 
   if (source.kind === 'pack') {
-    const repair: HelperAction = { kind: 'repair', label: repairLabel(pack.bytes) }
+    const repair: HelperAction = { kind: 'repair', label: repairLabel(packRepairBytes(pack, status.bytesLeft)) }
     if (integrity.length > 0) {
       return { word: ROW_WORDS.running, dot: 'grey', line: `${features} · ${integrity[0]}`, detail: [...integrity, ...reasons], actions: [repair, REMOVE], hosts: pack.hosts }
     }
