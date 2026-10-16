@@ -7,6 +7,7 @@ import { SIDECAR_METHODS } from '@shared/sidecar/protocol'
 import { HELPER_PACK } from '@shared/sidecar/packManifest'
 import { helperCan } from '@shared/sidecar/helperCan'
 import {
+  MODEL_PRESSES_NETWORK,
   helperRow,
   packFactsFor,
   speechModelRow,
@@ -258,6 +259,12 @@ export function HelperSection(): ReactNode {
             </button>
           )}
         </div>
+      )}
+      {/* Model presses go through the helper's own fetchers (§16.40 (d)): said wherever one can be pressed. */}
+      {status?.state === 'ready' && (
+        <p data-model-network="" className="break-words text-[10.5px] leading-snug text-ink-500">
+          {MODEL_PRESSES_NETWORK}
+        </p>
       )}
       <p className="text-[10.5px] leading-snug text-ink-600">
         On this machine: transcription, beat finding, depth, stem splitting, the local voice and

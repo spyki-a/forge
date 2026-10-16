@@ -100,6 +100,17 @@ export const INSTEAD_OF_FORGE_PYTHON = 'used instead of FORGE_PYTHON once instal
 /** Under Update (§16.46 (a)). */
 export const OLD_PACK_UNUSED = 'The AI helper on this computer is from an older version of the app, and is not used until it is updated.'
 
+/**
+ * Under a running helper's model list (§16.40 (d), answered "for the beta",
+ * §3a.5 "Three network stacks"): the models come through the helper's own
+ * fetchers, not main's, and huggingface_hub reads a proxy only from the
+ * environment, so behind a system-set proxy the pack can install and a model
+ * press still fail. Until those fetches move to main's network stack, the row
+ * says so.
+ */
+export const MODEL_PRESSES_NETWORK =
+  'Each model downloads on its own press, from huggingface.co and *.hf.co, or storage.googleapis.com for the face finder. Those presses need a direct connection, or a proxy set in HTTPS_PROXY.'
+
 /** The queue's words for a helper job not yet started. */
 export const JOB_WAITING = 'waiting to start'
 

@@ -8122,6 +8122,16 @@
     "note": "Asks first (helper-remove-asked)."
   },
   {
+    "label": "Each model downloads on its own press, from huggingface.co and *.hf.co, or storage.googleapis.com for the face finder. Those presses need a direct connection, or a proxy set in HTTPS_PROXY.",
+    "match": "text",
+    "home": "settings",
+    "needs": "sidecar-running",
+    "file": "src/shared/sidecar/row.ts",
+    "line": 112,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "§16.40 (d), the beta's sentence: the model presses go through the helper's own fetchers, which read a proxy only from the environment (§3a.5). Under any running helper, before the model list's closing words."
+  },
+  {
     "label": "Check again",
     "match": "text",
     "home": "settings",

@@ -356,6 +356,19 @@ describe('the speech model in the row', () => {
     expect(xOf()).toEqual([])
   })
 
+  it('says, beside a running helper, what the model presses need from the network; not before there is one (§16.40 (d))', async () => {
+    const { MODEL_PRESSES_NETWORK } = await import('@shared/sidecar/row')
+    for (const host of ['huggingface.co', '*.hf.co', 'storage.googleapis.com', 'HTTPS_PROXY']) expect(MODEL_PRESSES_NETWORK).toContain(host)
+    show(readyPack(), { speechModel: { ...SPEECH } })
+    expect(words(markup())).toContain(MODEL_PRESSES_NETWORK)
+    show({ state: 'ready', hello: hello([]), source: { kind: 'env', python: 'C:\\Python312\\python.exe' } })
+    expect(words(markup())).toContain(MODEL_PRESSES_NETWORK)
+    for (const status of [{ state: 'absent', offer: offer() } as SidecarStatus, null]) {
+      show(status)
+      expect(words(markup())).not.toContain(MODEL_PRESSES_NETWORK)
+    }
+  })
+
   it('is not offered while the helper cannot transcribe', () => {
     show(readyPack({ hello: hello(THIS_PACK.expects.filter((m) => m !== SIDECAR_METHODS.transcribe)) }), { speechModel: { ...SPEECH } })
     expect(words(markup())).not.toContain('Get the speech model')
