@@ -8101,6 +8101,96 @@
     "note": "The AI helper's job row (helperJobLabel), its stage in the speed column, its X beside it (§3a.4 \"The EXPORT row\")."
   },
   {
+    "label": "Repairing",
+    "match": "text",
+    "home": "settings",
+    "needs": "helper-repairing",
+    "file": "src/shared/sidecar/row.ts",
+    "line": 85,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "The row while a Repair runs beside the pack (helperRow's job reading): \"Repairing · <its stage>\", every press waiting on it."
+  },
+  {
+    "label": "Repairing the AI helper",
+    "match": "text",
+    "home": "export",
+    "needs": "helper-repairing",
+    "file": "src/shared/sidecar/install.ts",
+    "line": 31,
+    "newHome": "export strip (the Exports list)",
+    "note": "The Repair's job row (helperJobLabel)."
+  },
+  {
+    "label": "Updating",
+    "match": "text",
+    "home": "settings",
+    "needs": "helper-updating",
+    "file": "src/shared/sidecar/row.ts",
+    "line": 86,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "The row while an Update runs over an older pack."
+  },
+  {
+    "label": "Updating the AI helper",
+    "match": "text",
+    "home": "export",
+    "needs": "helper-updating",
+    "file": "src/shared/sidecar/install.ts",
+    "line": 33,
+    "newHome": "export strip (the Exports list)",
+    "note": "The Update's job row (helperJobLabel)."
+  },
+  {
+    "label": "used instead of FORGE_PYTHON once installed",
+    "match": "text",
+    "home": "settings",
+    "needs": "helper-env",
+    "file": "src/shared/sidecar/row.ts",
+    "line": 98,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "Under the Install a FORGE_PYTHON helper keeps (§16.42 (b)): in an installed app the pack comes first."
+  },
+  {
+    "label": "the AI helper is starting",
+    "match": "title",
+    "home": "upload",
+    "needs": "pool-helper-starting",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 100,
+    "newHome": "Shelf tile Upload",
+    "note": "The pool's Transcribe before main has answered (transcribeWhy's 'starting')."
+  },
+  {
+    "label": "the AI helper is starting",
+    "match": "text",
+    "home": "dock",
+    "needs": "reframe-helper-starting",
+    "file": "src/renderer/src/components/tools/ReframePanel.tsx",
+    "line": 76,
+    "newHome": "trimmer dock (under Steady, video clips)",
+    "note": "Under the greyed Follow the subject while the helper has not answered: said as starting, no pointer."
+  },
+  {
+    "label": "the AI helper is starting",
+    "match": "text",
+    "home": "canvasbar",
+    "needs": "reframe-helper-starting",
+    "file": "src/renderer/src/components/CanvasBar.tsx",
+    "line": 132,
+    "newHome": "canvas (reframe chip beside the shape switch)",
+    "note": "Beside the greyed Reframe to 9:16 while the helper has not answered."
+  },
+  {
+    "label": "the AI helper is starting",
+    "match": "text",
+    "home": "url",
+    "needs": "link-no-captions-starting",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 194,
+    "newHome": "Shelf tile URL",
+    "note": "Beside the greyed Listen to it while the helper has not answered."
+  },
+  {
     "label": "Repair ·",
     "match": "text",
     "home": "settings",

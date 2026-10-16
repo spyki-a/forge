@@ -1362,6 +1362,23 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
   'helper-damaged': async () => helperRowIn(harnessHelperStatus('damaged')),
   /* a pack Windows' policy refuses to start (§3a.4 "Group Policy") */
   'helper-policy': async () => helperRowIn(harnessHelperStatus('policy')),
+  /* a Repair in EXPORT's list beside the running pack: the row says Repairing, the job row names it */
+  'helper-repairing': async () => {
+    editor().setJobs([{ ...helperInstalling(), id: 'census-helper-repair', params: { kind: 'repair' } }])
+    return helperRowIn(harnessReadyHelper())
+  },
+  /* an Update over an older pack: Updating, and its job row */
+  'helper-updating': async () => {
+    editor().setJobs([{ ...helperInstalling(), id: 'census-helper-update', params: { kind: 'update' } }])
+    return helperRowIn(harnessHelperStatus('update'))
+  },
+  /* someone's own FORGE_PYTHON, a bare interpreter: not green, and the Install that replaces it in an installed app */
+  'helper-env': async () =>
+    helperRowIn({
+      state: 'ready',
+      source: { kind: 'env', python: 'C:\\Python312\\python.exe' },
+      hello: { protocolVersion: 1, python: '3.12.10', platform: 'harness', capabilities: [], degraded: {}, executable: 'C:\\Python312\\python.exe', prefix: 'C:\\Python312', path: [] }
+    }),
   /* Remove pressed on a whole pack: its question, its box off */
   'helper-remove-asked': async () =>
     helperRowIn(harnessReadyHelper(), true, () => useEditor.setState({ helperUi: { busy: null, error: null, removing: { models: false } } })),
@@ -1374,6 +1391,12 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     helperRowIn(harnessReadyHelper(), false, () => useEditor.setState({ speechFetch: { progress: 0.42 } })),
   /* the Media pool with a video in it, the helper up and no speech model: the bar over the pool with its sized press */
   'speech-model-missing': async (env) => poolWithoutSpeechModel(env),
+  /* the Media pool before main has answered: Transcribe greyed "the AI helper is starting" */
+  'pool-helper-starting': async (env) => {
+    await media(env)
+    editor().setHelperStatus(null)
+    return {}
+  },
   /* …while the press fetches it: its progress on the button and the X beside it */
   'speech-fetching-pool': async (env) => {
     const built = await poolWithoutSpeechModel(env)
@@ -1994,6 +2017,12 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     await linkFetched(HARNESS_LINKS.noCaptions, 'none')
     return {}
   },
+  /* the same link before the AI helper has answered: "the AI helper is starting" beside Listen to it */
+  'link-no-captions-starting': async () => {
+    editor().setHelperStatus(null)
+    await linkFetched(HARNESS_LINKS.noCaptions, 'none')
+    return {}
+  },
   /* details that name no language: the user chooses one */
   'link-no-language': async () => {
     await linkFetched(HARNESS_LINKS.noLanguage, 'language')
@@ -2173,6 +2202,12 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
   'reframe-no-helper': async (env) => {
     const { V } = await landscapeTalk(env)
     editor().setReframeHelper('missing')
+    return { ids: { V } }
+  },
+  /* the same before the helper has answered: "the AI helper is starting" in the dock and on the canvas chip, no pointer */
+  'reframe-helper-starting': async (env) => {
+    const { V } = await landscapeTalk(env)
+    editor().setReframeHelper('unknown')
     return { ids: { V } }
   },
   /* the talk following the bridge's stub track (harness/reframeStub.ts): three shots, the third stacked */
