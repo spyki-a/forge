@@ -385,6 +385,19 @@ class DecodeWithoutNumpy(unittest.TestCase):
         self.assertGreater(rgb_at(window[0][1].data, self.W, 32, 18)[0], 200)
         self.assertGreater(rgb_at(window[-1][1].data, self.W, 32, 18)[2], 200)
 
+    def test_started_is_told_the_decoders_pid_before_the_first_frame(self) -> None:
+        # The face worker notes ffmpeg's start through this (workers/mp_faces.py), so a
+        # pass stuck before its first frame says whether its decoder ever started.
+        made, patch = spawned()
+        seen: list[tuple[str, int]] = []
+        with patch, mock.patch.dict(sys.modules, {"numpy": BYTES_NUMPY}):
+            for ms, _ in media.iter_frames(fixture("plain.mp4"), FFMPEG, 5, self.W, self.H, started=lambda pid: seen.append(("started", pid))):
+                seen.append(("frame", ms))
+        self.assertEqual(len(made), 1)
+        self.assertEqual(seen[0], ("started", made[0].pid))
+        self.assertEqual([what for what, _ in seen].count("started"), 1)
+        self.assertEqual([at for what, at in seen if what == "frame"], list(range(0, 2000, 200)))
+
     def test_a_cancel_kills_the_decoder_with_nothing_installed(self) -> None:
         path = fixture("long.mp4")  # made before the spy, so only the decoder is counted
         made, patch = spawned()

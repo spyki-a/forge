@@ -39,7 +39,7 @@ import os
 import re
 import subprocess
 import tempfile
-from typing import TYPE_CHECKING, Any, Iterator
+from typing import TYPE_CHECKING, Any, Callable, Iterator
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from .rpc import Context
@@ -274,6 +274,7 @@ def iter_frames(
     path: str, ffmpeg: str, fps: float, width: int, height: int,
     start_ms: float = 0, end_ms: float | None = None,
     context: "Context | None" = None,
+    started: Callable[[int], None] | None = None,
 ) -> Iterator[tuple[int, "Any"]]:
     """``(ms, frame)`` at ``fps`` from ``start_ms`` to ``end_ms``, streamed.
 
@@ -284,7 +285,9 @@ def iter_frames(
     the frame's time in the source: ``start_ms + i × 1000 / fps``, rounded —
     and the frame is the one on screen at that time (``frame_args``' ``round=up``).
     ffmpeg's errors go to a temporary file rather than a pipe nobody reads,
-    which would fill and stall the decoder.
+    which would fill and stall the decoder. ``started`` is called with
+    ffmpeg's pid once it is spawned, before the first read (the face worker
+    notes it, so a pass stuck there says whether its decoder ever started).
     """
     if width <= 0 or height <= 0 or fps <= 0:
         raise ValueError(f"Cannot stream frames at {width}x{height}, {fps} fps")
@@ -300,6 +303,8 @@ def iter_frames(
             **_NO_WINDOW,
         )
         try:
+            if started is not None:
+                started(process.pid)
             index = 0
             while True:
                 if context is not None:

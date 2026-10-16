@@ -52,6 +52,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 from typing import Any, Mapping
 
 from .. import media
@@ -96,6 +97,30 @@ STOP_GRACE_S = 3.0
 """How long a cancelled worker gets to stop by itself (it checks between frames,
 5 ms apart on the user's Mac) before it is killed."""
 
+READY_TIMEOUT_S = 60.0
+"""How long a running worker may take to say ``ready`` (mediapipe imported, its
+native library loaded) before it is stopped and the request answers
+``Unavailable`` with the last lines of its stderr. Without it, a worker that
+hung before ``ready`` held the request for as long as the caller waited. The
+self-test's ceiling for the same import (selftest.GROUP_TIMEOUT_S: a cold
+Surface, Defender's first scan of the library), held equal by
+tests/sidecar/test_faces.py: an import the self-test passes, a pass never
+refuses."""
+
+SILENT_REPORT_S = 10.0
+"""After this long with no line from the worker, and again each time as long
+again passes, the helper's log (its stderr: main's console, the tests'
+diagnostics) says so: still running or not, its last line, and the tail of its
+stderr — the worker's stage notes and, past workers/mp_faces.py
+``STALL_DUMP_S``, every thread's stack. Logged only; the pass goes on."""
+
+NOTE_PREFIX = "mp_faces: "
+"""workers/mp_faces.py ``NOTE_PREFIX``, a literal copy: the worker's own stage
+notes, never the reason it died (``last_words``)."""
+
+TAIL_BYTES = 64 * 1024
+"""How much of the end of the worker's stderr is read for a message or a report."""
+
 _PACKAGE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STUBS_DIR = os.path.join(_PACKAGE_DIR, "stubs")
 """``forge_sidecar/stubs``: first on the worker's sys.path, never on the helper's."""
@@ -111,15 +136,24 @@ that CPython puts ahead of the stdlib, ``-s`` skips the user site, ``-B``
 writes no ``__pycache__`` into the app's own folder. Not ``-I``: the
 bootstrap sets the path itself, and ``-I``'s ``-P`` is not needed for that."""
 
-WORKER_BOOTSTRAP = (
-    "import runpy, sys\n"
-    f"sys.path[0:0] = [{STUBS_DIR!r}, {PACKAGE_PARENT!r}]\n"
-    f"runpy.run_module({WORKER_MODULE!r}, run_name='__main__', alter_sys=True)\n"
-)
+def worker_bootstrap(stubs: str, parent: str) -> str:
+    """``WORKER_BOOTSTRAP`` for two folders: a function so a test can build it for any path."""
+    return (
+        "import runpy, sys\n"
+        f"sys.path[0:0] = [{stubs!r}, {parent!r}]\n"
+        f"runpy.run_module({WORKER_MODULE!r}, run_name='__main__', alter_sys=True)\n"
+    )
+
+
+WORKER_BOOTSTRAP = worker_bootstrap(STUBS_DIR, PACKAGE_PARENT)
 """How the worker starts, as ``-c``: the stubs FIRST on its ``sys.path``,
 the package's folder second, then the worker module run as ``__main__``.
 It used to get both through ``PYTHONPATH``, which ``-E`` ignores — and which
-a user's own ``PYTHONPATH`` or the Windows registry could reach as well."""
+a user's own ``PYTHONPATH`` or the Windows registry could reach as well.
+Three lines: on Windows ``subprocess.list2cmdline`` quotes it whole and the C
+runtime gives it back newlines and all (a ``repr`` with a quote in it
+included), which tests/sidecar/test_faces.py checks against the C runtime's
+own rules."""
 # The worker's own names for its environment variables and exit codes. Kept
 # as literals rather than imported: nothing in forge_sidecar.workers is
 # imported by the helper (workers/__init__.py). test_faces.py holds the two
@@ -317,6 +351,15 @@ def worker_spec(s: dict[str, Any], duration_ms: float | None, model: str, track:
     }
 
 
+_NOT_WHY = ("@", "***", NOTE_PREFIX, "Timeout (", "Thread 0x", "Current thread 0x", "<no Python frame>", "...")
+"""Lines of a worker's stderr that never say why it died: an abort's stack
+frames, the worker's own stage notes, and ``faulthandler``'s stall dump (its
+``Timeout (0:00:08)!`` header, each thread's line, and its frames, whose
+``line N in f`` has no comma — a Python traceback's ``line N, in f`` does, and
+its last line, the exception, is a reason)."""
+_DUMP_FRAME = re.compile(r'File ".*", line \d+ in ')
+
+
 def last_words(text: str) -> str:
     """The line of a dead worker's stderr that says why: its C++ ``Check failed`` if there is one.
 
@@ -324,21 +367,112 @@ def last_words(text: str) -> str:
     trace: ***`` then ``@ 0x… frame`` lines, measured in the sandbox), whose
     last line is a thread entry point; the line that names the failure is the
     ``F…] Check failed: …`` above it. Otherwise the last line that is not a
-    stack frame.
+    stack frame, a stage note or a stall dump's (``_NOT_WHY``).
     """
     lines = [line.strip() for line in text.splitlines() if line.strip()]
-    lines = [line for line in lines if not line.startswith(("@", "***"))]
+    lines = [line for line in lines if not line.startswith(_NOT_WHY) and not _DUMP_FRAME.match(line)]
     checks = [line for line in lines if "Check failed" in line]
     chosen = checks[-1] if checks else (lines[-1] if lines else "")
     return chosen[:300]
 
 
-def _last_line(errors: Any) -> str:
+def worker_log(errors: Any) -> str:
+    """The end of what the worker has written to stderr so far (``TAIL_BYTES``), as text.
+
+    The worker writes through the same open file, whose offset the two
+    processes share. On POSIX it is read with ``os.pread``, which leaves the
+    offset alone; on Windows (no ``pread``) by seeking, after which the offset
+    is at the end — where the worker's next write goes anyway. It is read
+    while the worker is silent or gone, so a write landing between that seek
+    and the read, the one race, could cost a diagnostic's first bytes at most.
+    """
     try:
-        errors.seek(0)
-        return last_words(errors.read().decode("utf-8", "replace"))
+        fd = errors.fileno()
+        size = os.fstat(fd).st_size
+        start = max(0, size - TAIL_BYTES)
+        chunks: list[bytes] = []
+        if hasattr(os, "pread"):
+            offset = start
+            while True:
+                chunk = os.pread(fd, 1 << 16, offset)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+                offset += len(chunk)
+        else:  # pragma: no cover - Windows
+            os.lseek(fd, start, os.SEEK_SET)
+            while True:
+                chunk = os.read(fd, 1 << 16)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+        return b"".join(chunks).decode("utf-8", "replace")
     except (OSError, ValueError):
         return ""
+
+
+_THREAD = re.compile(r"^(?:Current thread|Thread) (0x[0-9a-fA-F]+)(?: \[(.*)\])? \(most recent call first\):$")
+
+
+def _bounded(text: str, limit: int) -> str:
+    return text if len(text) <= limit else "…" + text[-(limit - 1):]
+
+
+def compact_dump(text: str, frames: int = 4) -> str:
+    """faulthandler's LAST stall dump in ``text`` on one line: each thread's newest ``frames`` frames.
+
+    ``main: media.py:307 iter_frames < mp_faces.py:523 run < … | Thread-1: …``
+    — file names without their folders (a user's profile path stays out of the
+    log), the thread holding ``<module>`` named ``main``. "" when there is no dump.
+    """
+    lines = [line.strip() for line in text.splitlines()]
+    starts = [i for i, line in enumerate(lines) if line.startswith("Timeout (")]
+    if not starts:
+        return ""
+    threads: list[tuple[str, list[str]]] = []
+    for line in lines[starts[-1] + 1:]:
+        thread = _THREAD.match(line)
+        if thread:
+            threads.append((thread.group(2) or thread.group(1), []))
+            continue
+        frame = re.match(r'File "(.*)", line (\d+) in (.*)$', line)
+        if frame and threads:
+            leaf = re.split(r"[\\/]", frame.group(1))[-1]
+            threads[-1][1].append(f"{leaf}:{frame.group(2)} {frame.group(3)}")
+    said = []
+    for name, stack in threads:
+        label = "main" if any(f.endswith(" <module>") for f in stack) else name
+        said.append(f"{label}: {' < '.join(stack[:frames]) or '(no Python frame)'}")
+    return " | ".join(said)
+
+
+def stderr_summary(text: str, limit: int = 1500) -> str:
+    """A worker's stderr on one line: its last stage notes, its last other lines, and its last stall dump's stacks.
+
+    What a silent or stopped worker was doing, in the order it is read: where
+    it got to (``notes``), anything else it said (``other``: a library's
+    warning, an exception), and the line each thread is on (``stacks``,
+    ``compact_dump``). "" for an empty stderr.
+    """
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    notes = [line for line in lines if line.startswith(NOTE_PREFIX)]
+    other = [line for line in lines if not line.startswith(_NOT_WHY) and not _DUMP_FRAME.match(line)]
+    parts = []
+    if notes:
+        parts.append("notes: " + _bounded(" ⏎ ".join(notes[-6:]), limit // 2))
+    if other:
+        parts.append("other: " + _bounded(" ⏎ ".join(other[-3:]), limit // 4))
+    dump = compact_dump(text)
+    if dump:
+        parts.append("stacks: " + dump)
+    return _bounded("; ".join(parts), limit)
+
+
+def _report_silence(process: subprocess.Popen, quiet_s: float, last: str, said: str, before: str) -> None:
+    """One line in the helper's log: the worker silent this long, running or not, its last line, and its stderr if it changed."""
+    state = "still running" if process.poll() is None else f"exited (code {process.returncode})"
+    stderr = "its stderr unchanged" if said == before else f"its stderr: {said or '(nothing)'}"
+    print(f"faces: worker {process.pid} silent {quiet_s:.0f} s, {state}; its last line {last!r}; {stderr}", file=sys.stderr, flush=True)
 
 
 def _stop(process: subprocess.Popen) -> None:
@@ -368,24 +502,29 @@ def run_worker(spec: dict[str, Any], context: Context) -> None:
     """Run one pass in the worker, relaying its progress; return once the track is in place.
 
     Raises ``Cancelled`` (the worker stopped, its partial removed),
-    ``Unavailable`` (it could not import mediapipe, or it died — an abort
-    included — with the code it died with), or ``ValueError`` (the file could
-    not be decoded).
+    ``Unavailable`` (it could not import mediapipe, it died — an abort
+    included — with the code it died with, or it was still running without a
+    ``ready`` after ``READY_TIMEOUT_S``), or ``ValueError`` (the file could
+    not be decoded). While it is silent the helper's log says so every
+    ``SILENT_REPORT_S``, with the tail of its stderr.
     """
     command = worker_command()
     lines: "queue.Queue[str | None]" = queue.Queue()
     failure: tuple[str, str] | None = None
+    stalled = False
 
     with tempfile.TemporaryFile() as errors:
+        began = time.monotonic()
         process = subprocess.Popen(
             command["argv"], cwd=command["cwd"], env=command["env"],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=errors,
             **media._NO_WINDOW,
         )
+        pid = process.pid
         # The helper's log (stderr): which process is the worker, so a stuck
         # one can be found — and so tests/integration/faces.int.test.ts can
         # check it is gone after a cancel without listing processes.
-        print(f"faces: worker {process.pid} started", file=sys.stderr, flush=True)
+        print(f"faces: worker {pid} started", file=sys.stderr, flush=True)
 
         def read() -> None:
             try:
@@ -404,14 +543,29 @@ def run_worker(spec: dict[str, Any], context: Context) -> None:
                 process.stdin.flush()
             except OSError:
                 pass  # it died before reading: its exit code says why, below
+            ready = False
+            heard = time.monotonic()
+            last = ""
+            report_at = SILENT_REPORT_S
+            reported = ""
             while True:
                 context.raise_if_cancelled()
                 try:
                     line = lines.get(timeout=0.1)
                 except queue.Empty:
+                    now = time.monotonic()
+                    if not ready and now - began >= READY_TIMEOUT_S and process.poll() is None:
+                        stalled = True
+                        break
+                    if now - heard >= report_at:
+                        said = stderr_summary(worker_log(errors))
+                        _report_silence(process, now - heard, last, said, reported)
+                        reported = said
+                        report_at += SILENT_REPORT_S
                     continue
                 if line is None:
                     break
+                heard, last, report_at = time.monotonic(), line, SILENT_REPORT_S
                 kind, _, rest = line.partition(" ")
                 if kind == "progress":
                     fraction, _, _frames = rest.partition(" ")
@@ -421,11 +575,13 @@ def run_worker(spec: dict[str, Any], context: Context) -> None:
                         value = None
                     context.progress(value, "finding faces")
                 elif kind == "ready":
-                    print(f"faces: worker {process.pid} ready ({rest})", file=sys.stderr, flush=True)
+                    ready = True
+                    print(f"faces: worker {pid} ready ({rest})", file=sys.stderr, flush=True)
                 elif kind == "error":
                     what, _, message = rest.partition(" ")
                     failure = (what, message)
-            code = process.wait()
+            # A stalled worker is still running: the finally stops it.
+            code = None if stalled else process.wait()
         finally:
             if process.poll() is None:
                 _stop(process)
@@ -447,8 +603,16 @@ def run_worker(spec: dict[str, Any], context: Context) -> None:
             # renames it into place only when whole, so a partial still here
             # is a cancel's, a kill's or an abort's.
             _remove(spec["partial"])
-        tail = _last_line(errors)
+            took = time.monotonic() - began
+            print(f"faces: worker {pid} ended (code {process.returncode}) after {took:.1f} s", file=sys.stderr, flush=True)
+        log = worker_log(errors)
+        tail = last_words(log)
 
+    if stalled:
+        said = stderr_summary(log, 900)
+        message = f"the face detector did not start within {READY_TIMEOUT_S:g} s (stopped while still running)" + (f": {said}" if said else "")
+        print(f"faces: worker {pid}: {message}", file=sys.stderr, flush=True)
+        raise Unavailable(message)
     if code == 0:
         return
     if failure is not None and failure[0] == "import":

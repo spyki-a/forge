@@ -28,7 +28,12 @@ The conversation, line-based UTF-8:
   the track is in place; ``error <kind> <message>`` before a handled non-zero
   exit (``input`` → EXIT_INPUT, ``import`` → EXIT_IMPORT).
 - **stderr**: the library's own log. The helper keeps its last line for the
-  message when this process dies without saying why.
+  message when this process dies without saying why. Beside it, this
+  worker's own stage notes (``_note``: ``mp_faces: <what> (+<s> s)``) and,
+  past ``STALL_DUMP_S`` with no progress, every thread's stack
+  (``faulthandler``): the helper relays the tail when the worker goes silent
+  (capabilities/faces.py ``SILENT_REPORT_S``) and never takes either for the
+  reason it died (``faces.last_words``).
 - **the track**: written sample by sample to ``spec["partial"]`` and moved
   onto ``spec["track"]`` with ``os.replace`` only when whole, so the cache
   never holds half a track. A pass that stops short removes its own partial
@@ -66,6 +71,7 @@ detector (no Metal) and a test must still see the plumbing work:
 
 from __future__ import annotations
 
+import faulthandler
 import io
 import json
 import math
@@ -95,9 +101,27 @@ EXIT_CANCELLED = 75
 
 ABORT_ENV = "FORGE_FACES_WORKER_ABORT"
 FAKE_ENV = "FORGE_FACES_WORKER_FAKE"
+
+NOTE_PREFIX = "mp_faces: "
+"""The start of each of this worker's stage notes on stderr. capabilities/faces.py
+keeps a literal copy (``last_words`` skips these lines), held equal by
+tests/sidecar/test_faces.py."""
+
+STALL_DUMP_S = 8.0
+"""With no progress for this long — the import, ffmpeg's start, the first
+frame, or ten frames — every thread's stack goes to stderr, once, through
+``faulthandler.dump_traceback_later``; re-armed at each progress line and
+cancelled at the end. A stuck pass then names the line it is stuck on (the
+helper relays it, capabilities/faces.py ``SILENT_REPORT_S``). On the dev Mac
+the stand-in's whole 20-frame pass takes well under a second, and the real
+detector ten frames in about 50 ms (5 ms a frame, faces.STOP_GRACE_S)."""
+
 TRACK_VERSION = 2
 """capabilities/faces.py's ``TRACK_VERSION``, a literal copy (the helper never
 imports this module): 2 = each sample the frame on screen at its ms."""
+
+_began = time.perf_counter()
+"""When this module was imported, just before ``main``: what each stage note's ``+<s> s`` counts from."""
 
 Detection = tuple[float, float, float, float, float]
 """``(x, y, width, height, score)`` in analysed pixels, as MediaPipe's
@@ -435,6 +459,31 @@ def _say(*words: Any) -> None:
     sys.stdout.flush()
 
 
+def _note(text: str) -> None:
+    """One stage note on stderr, ``mp_faces: <text> (+<s> s)`` since ``_began``.
+
+    Only from the main thread: a daemon thread writing to ``sys.stderr`` at
+    the interpreter's shutdown is the same lock abort ``_StdinEnd`` avoids. A
+    note that cannot be written is dropped: it never stops a pass.
+    """
+    try:
+        sys.stderr.write(f"{NOTE_PREFIX}{text} (+{time.perf_counter() - _began:.3f} s)\n")
+        sys.stderr.flush()
+    except (OSError, ValueError):
+        pass
+
+
+def _arm_stall_dump() -> None:
+    """(Re)start the ``STALL_DUMP_S`` clock: past it with no call here, every thread's stack goes to stderr, once.
+
+    A stderr with no descriptor (a test's captured stream) arms nothing.
+    """
+    try:
+        faulthandler.dump_traceback_later(STALL_DUMP_S, repeat=False, file=sys.stderr)
+    except (OSError, ValueError, AttributeError, RuntimeError):
+        pass
+
+
 def run(spec: dict[str, Any], stop: _StdinEnd, environ: dict[str, str] | os._Environ[str]) -> int:
     fake = fake_mode(environ.get(FAKE_ENV))
     if fake is not None:
@@ -442,6 +491,7 @@ def run(spec: dict[str, Any], stop: _StdinEnd, environ: dict[str, str] | os._Env
         if spec["mode"] == "import":
             return 0
         detect = _colour_detector(fake[1])
+        _note("the stand-in detector made (numpy imported)")
         close: Callable[[], None] = lambda: None
     else:
         try:
@@ -457,7 +507,9 @@ def run(spec: dict[str, Any], stop: _StdinEnd, environ: dict[str, str] | os._Env
         # On a machine with no Metal device THIS is where the macOS wheel
         # aborts the process (docs/EFFECTS.md §37); nothing after it runs.
         detect, close = _blaze_face(mp, vision, base_options, spec["model"], spec["minScore"])
+        _note("the detector made")
 
+    _arm_stall_dump()
     width, height = analysis_size(spec["edge"], spec["width"], spec["height"])
     expected = expected_frames(spec)
     abort = environ.get(ABORT_ENV) == "1"
@@ -467,22 +519,30 @@ def run(spec: dict[str, Any], stop: _StdinEnd, environ: dict[str, str] | os._Env
         frames = media.iter_frames(
             spec["path"], spec["ffmpeg"], spec["fps"], width, height,
             spec["startMs"], spec["endMs"], context=stop,
+            started=lambda pid: _note(f"ffmpeg {pid} started, {width}x{height} at {spec['fps']:g} fps"),
         )
+        _note("decoding")
         for ms, frame in frames:
+            if writer.frames == 0:
+                _note("the first frame read")
             writer.add(ms, boxes_of(detect(frame, ms), width, height, spec["minScore"]))
             if abort and writer.frames == 1:
                 os.abort()
             if writer.frames % PROGRESS_EVERY == 0:
                 fraction = "-" if expected is None else f"{min(0.99, writer.frames / expected):.4f}"
                 _say("progress", fraction, writer.frames)
+                _arm_stall_dump()
         writer.finish()
         whole = True
+        _note(f"{writer.frames} frames, the track in place")
     except Cancelled:
+        _note(f"cancelled (stdin ended) after {writer.frames} frames")
         return EXIT_CANCELLED
     except ValueError as exc:  # ffmpeg could not decode the file
         _say("error", "input", str(exc).replace("\n", " "))
         return EXIT_INPUT
     finally:
+        faulthandler.cancel_dump_traceback_later()
         writer.close()
         close()
         if not whole:
@@ -532,8 +592,14 @@ def main() -> int:
     except (ValueError, UnicodeDecodeError) as exc:
         _say("error", "input", str(exc))
         return EXIT_INPUT
-    stop = _StdinEnd(fd)
-    return run(spec, stop, os.environ)
+    _arm_stall_dump()
+    try:
+        if spec["mode"] == "detect":
+            _note("the spec read")
+        stop = _StdinEnd(fd)
+        return run(spec, stop, os.environ)
+    finally:
+        faulthandler.cancel_dump_traceback_later()
 
 
 if __name__ == "__main__":

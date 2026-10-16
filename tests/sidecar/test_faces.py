@@ -15,11 +15,15 @@ Standard library only: unittest, no pytest.
 
 from __future__ import annotations
 
+import ast
+import contextlib
 import hashlib
 import importlib.machinery
+import io
 import json
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -232,9 +236,15 @@ class Spec(unittest.TestCase):
     def test_the_helper_and_the_worker_name_the_same_codes(self) -> None:
         # faces.py keeps literal copies so it never imports the worker module.
         self.assertEqual(
-            (faces.FAKE_ENV, faces.EXIT_INPUT, faces.EXIT_IMPORT, faces.TRACK_VERSION),
-            (mp_faces.FAKE_ENV, mp_faces.EXIT_INPUT, mp_faces.EXIT_IMPORT, mp_faces.TRACK_VERSION),
+            (faces.FAKE_ENV, faces.EXIT_INPUT, faces.EXIT_IMPORT, faces.TRACK_VERSION, faces.NOTE_PREFIX),
+            (mp_faces.FAKE_ENV, mp_faces.EXIT_INPUT, mp_faces.EXIT_IMPORT, mp_faces.TRACK_VERSION, mp_faces.NOTE_PREFIX),
         )
+
+    def test_a_pass_waits_for_ready_as_long_as_the_self_test_waits_for_the_import(self) -> None:
+        # The same import, in the same worker: a pass never refuses what the install's self-test passes.
+        from forge_sidecar import selftest
+
+        self.assertEqual(faces.READY_TIMEOUT_S, selftest.GROUP_TIMEOUT_S)
 
     def test_the_fake_mode_is_read_strictly(self) -> None:
         self.assertEqual(mp_faces.fake_mode("colour"), ("colour", 0.0))
@@ -378,6 +388,105 @@ class Stubs(unittest.TestCase):
         out = done.stdout.decode("utf-8")
         self.assertIn("error input the spec's mode must be 'detect' or 'import', not 'ಕನ್ನಡ Bräutigam'", out, done.stderr.decode(errors="replace"))
         self.assertEqual(done.returncode, faces.EXIT_INPUT)
+
+
+def crt_argv(line: str) -> list[str]:
+    """argv as the Microsoft C runtime builds it from one command line — what a Windows python.exe gets.
+
+    The UCRT's rules (argv_parsing.cpp; Microsoft's "Parsing C command-line
+    arguments"): the program name runs to the first space or tab outside
+    quotes, its quotes dropped and nothing escaped; then 2N backslashes and a
+    quote are N backslashes and a quote that opens or closes, 2N+1 and a quote
+    are N and a literal quote, backslashes before anything else are literal,
+    a doubled quote inside quotes is one literal quote, and only a space or a
+    tab outside quotes ends an argument — a newline is an ordinary character.
+    """
+    args: list[str] = []
+    i, n = 0, len(line)
+    name: list[str] = []
+    quoted = False
+    while i < n and (quoted or line[i] not in " \t"):
+        if line[i] == '"':
+            quoted = not quoted
+        else:
+            name.append(line[i])
+        i += 1
+    args.append("".join(name))
+    quoted = False
+    while True:
+        while i < n and line[i] in " \t":
+            i += 1
+        if i >= n:
+            return args
+        arg: list[str] = []
+        while True:
+            copy = True
+            slashes = 0
+            while i < n and line[i] == "\\":
+                slashes += 1
+                i += 1
+            if i < n and line[i] == '"':
+                if slashes % 2 == 0:
+                    if quoted and i + 1 < n and line[i + 1] == '"':
+                        i += 1
+                    else:
+                        copy = False
+                        quoted = not quoted
+                slashes //= 2
+            arg.append("\\" * slashes)
+            if i >= n or (not quoted and line[i] in " \t"):
+                break
+            if copy:
+                arg.append(line[i])
+            i += 1
+        args.append("".join(arg))
+
+
+class WindowsCommandLine(unittest.TestCase):
+    """The worker's argv through ``subprocess.list2cmdline`` and back through the C runtime.
+
+    On Windows a child gets ONE command line, which Popen builds with
+    ``list2cmdline`` and the child's C runtime splits again; the bootstrap is
+    three lines of Python with every folder in it as a ``repr`` — which turns
+    to double quotes for a folder with an apostrophe (``C:\\Users\\O'Brien``).
+    The install's self-test runs this command on Windows (CI's step 12 passed
+    with it); this holds it for the folders that run did not have.
+    """
+
+    def test_the_parser_follows_microsofts_own_examples(self) -> None:
+        for line, expected in (
+            (r'"a b c" d e', ["a b c", "d", "e"]),
+            (r'"ab\"c" "\\" d', ['ab"c', "\\", "d"]),
+            (r'a\\\b d"e f"g h', [r"a\\\b", "de fg", "h"]),
+            (r'a\\\"b c d', [r'a\"b', "c", "d"]),
+            (r'a\\\\"b c" d e', [r"a\\b c", "d", "e"]),
+            (r'a"b"" c d', ['ab" c d']),
+        ):
+            self.assertEqual(crt_argv("prog " + line)[1:], expected, line)
+        # A program name in quotes, its backslashes as they are; a newline inside an argument is kept.
+        self.assertEqual(crt_argv('"C:\\Program Files\\x.exe" -c "a\nb c"\td'), ["C:\\Program Files\\x.exe", "-c", "a\nb c", "d"])
+
+    def test_the_bootstrap_comes_back_whole_for_any_folder(self) -> None:
+        folders = [
+            (faces.STUBS_DIR, faces.PACKAGE_PARENT),
+            (r"C:\Program Files\3dit\resources\sidecar\forge_sidecar\stubs", r"C:\Program Files\3dit\resources\sidecar"),
+            (r"C:\Users\O'Brien\AppData\Local\Programs\3dit\resources\sidecar\forge_sidecar\stubs", r"C:\Users\O'Brien\AppData\Local\Programs\3dit\resources\sidecar"),
+            (r"D:\a\_temp\forge pack é\sidecar\forge_sidecar\stubs", r"D:\a\_temp\forge pack é\sidecar"),
+            ("C:\\Users\\Zoë\\stubs\\", "\\\\server\\share\\sidecar\\\\"),
+            ('C:\\a "quoted" name\\stubs', "C:\\tab\there\\and a 'quote'"),
+        ]
+        for stubs, parent in folders:
+            bootstrap = faces.worker_bootstrap(stubs, parent)
+            argv = [r"C:\Program Files\3dit\python\python.exe", *faces.WORKER_FLAGS, "-c", bootstrap]
+            line = subprocess.list2cmdline(argv)
+            self.assertEqual(crt_argv(line), argv, line)
+            # And the line the worker runs puts exactly these two folders first.
+            assign = ast.parse(bootstrap).body[1]
+            self.assertIsInstance(assign, ast.Assign)
+            self.assertEqual(ast.literal_eval(assign.value), [stubs, parent])  # type: ignore[union-attr]
+        self.assertEqual(faces.WORKER_BOOTSTRAP, faces.worker_bootstrap(faces.STUBS_DIR, faces.PACKAGE_PARENT))
+        command = faces.worker_command()
+        self.assertEqual(crt_argv(subprocess.list2cmdline(command["argv"])), command["argv"])
 
 
 class Registration(unittest.TestCase):
@@ -673,6 +782,117 @@ class Pipe(unittest.TestCase):
                     stream.close()
         self.assertEqual(out.decode().split(), ["ready", "fake/colour", "0.000"])
         self.assertEqual(code, 0, err.decode(errors="replace"))
+
+    def test_a_worker_with_no_ready_is_stopped_at_the_bound_and_answers_with_its_stderr(self) -> None:
+        # A worker hung before `ready` (the import, its native library) held the request for as
+        # long as the caller waited, and said nothing of why. Now: stopped at READY_TIMEOUT_S, and
+        # Unavailable with the last lines of its stderr, which the helper's log carries too.
+        started = time.monotonic()
+        with mock.patch.object(faces, "READY_TIMEOUT_S", 1.0), mock.patch.object(faces, "STOP_GRACE_S", 0.5), \
+                contextlib.redirect_stderr(io.StringIO()) as log, self.assertRaises(Unavailable) as caught:
+            self.run_with(
+                """
+                sys.stderr.write("loading libmediapipe.dll\\n"); sys.stderr.flush()
+                time.sleep(30)
+                """
+            )
+        took = time.monotonic() - started
+        message = str(caught.exception)
+        self.assertTrue(message.startswith("the face detector did not start within 1 s (stopped while still running): "), message)
+        self.assertIn("loading libmediapipe.dll", message)
+        self.assertLess(took, 8, "stopped at the bound, not when the stand-in gave up")
+        self.assertRegex(log.getvalue(), r"faces: worker \d+: the face detector did not start within 1 s .*loading libmediapipe\.dll")
+        self.assertFalse(os.path.exists(self.partial))
+
+    def test_a_silent_worker_is_reported_with_its_stderr_and_its_pass_goes_on(self) -> None:
+        with mock.patch.object(faces, "SILENT_REPORT_S", 0.3), contextlib.redirect_stderr(io.StringIO()) as log:
+            context = self.run_with(
+                """
+                say("ready", "0.10.35", "0.1")
+                sys.stderr.write("mp_faces: ffmpeg 4242 started (+0.010 s)\\n"); sys.stderr.flush()
+                time.sleep(1.2)
+                open(spec["partial"], "w").write('{"version":2,"samples":[]}')
+                say("progress", "0.5", "10")
+                os.replace(spec["partial"], spec["track"])
+                say("done", "10", "0")
+                """
+            )
+        said = log.getvalue()
+        # The first report carries its stderr; the next ones, the same stderr, say so in a word.
+        self.assertRegex(said, r"faces: worker \d+ silent \d+ s, still running; its last line 'ready 0\.10\.35 0\.1'; its stderr: notes: mp_faces: ffmpeg 4242 started \(\+0\.010 s\)\n")
+        self.assertRegex(said, r"faces: worker \d+ silent \d+ s, still running; its last line 'ready 0\.10\.35 0\.1'; its stderr unchanged\n")
+        self.assertRegex(said, r"faces: worker \d+ ended \(code 0\) after \d+\.\d s")
+        self.assertEqual(context.seen, [(0.5, "finding faces")])
+        self.assertTrue(os.path.isfile(self.track))
+
+    def test_the_worker_log_is_read_without_moving_where_the_worker_writes(self) -> None:
+        # The helper reads the worker's stderr while the worker may still write to it, through
+        # one open file and so one offset: what the worker writes after a read lands after
+        # what it wrote before, and the read is the end of the file.
+        with tempfile.TemporaryFile() as errors:
+            os.write(errors.fileno(), b"first\n")
+            self.assertEqual(faces.worker_log(errors), "first\n")
+            os.write(errors.fileno(), b"second\n")
+            self.assertEqual(faces.worker_log(errors), "first\nsecond\n")
+            os.write(errors.fileno(), b"x" * faces.TAIL_BYTES + b"\nlast\n")
+            tail = faces.worker_log(errors)
+            self.assertEqual(len(tail.encode()), faces.TAIL_BYTES)
+            self.assertTrue(tail.endswith("\nlast\n"))
+
+    def test_the_last_words_are_never_a_stage_note_or_a_stall_dump(self) -> None:
+        # The worker's notes and faulthandler's dump share its stderr with the reason it died.
+        dump = (
+            "mp_faces: the spec read (+0.051 s)\n"
+            "mp_faces: ffmpeg 812 started, 640x360 at 5 fps (+0.230 s)\n"
+            "Timeout (0:00:08)!\n"
+            "Thread 0x0000700001234000 (most recent call first):\n"
+            '  File "C:\\\\forge\\\\media.py", line 238 in _read_exact\n'
+            "  <no Python frame>\n"
+            "Current thread 0x00000001f2a3c0c0 (most recent call first):\n"
+            '  File "C:\\\\forge\\\\mp_faces.py", line 418 in _watch\n'
+        )
+        self.assertEqual(faces.last_words(dump), "")
+        self.assertEqual(faces.last_words(dump + "Fatal Python error: Aborted\n"), "Fatal Python error: Aborted")
+        traceback = 'Traceback (most recent call last):\n  File "x.py", line 3, in <module>\nMemoryError: out of frames\n'
+        self.assertEqual(faces.last_words(dump + traceback), "MemoryError: out of frames")
+        self.assertEqual(faces.last_words('  File "x.py", line 3, in <module>\n'), 'File "x.py", line 3, in <module>')
+
+    def test_a_stall_dump_is_read_as_each_threads_newest_frames_on_one_line(self) -> None:
+        # faulthandler's dump as Python 3.14 writes it (its format read off a worker hung on purpose,
+        # 2026-10-16), on Windows paths under a user's profile: what the silence report says of it.
+        folder = "C:\\Users\\Zoë\\AppData\\Local\\Programs\\3dit\\resources\\sidecar\\forge_sidecar"
+        dump = (
+            "Timeout (0:00:08)!\n"
+            "Thread 0x0000000170e6f000 [Thread-1 (_watch)] (most recent call first):\n"
+            f'  File "{folder}\\workers\\mp_faces.py", line 418 in _watch\n'
+            '  File "C:\\py\\Lib\\threading.py", line 1024 in run\n'
+            '  File "C:\\py\\Lib\\threading.py", line 1082 in _bootstrap_inner\n'
+            '  File "C:\\py\\Lib\\threading.py", line 1044 in _bootstrap\n'
+            "\n"
+            "Thread 0x00000001f774dd80 (most recent call first):\n"
+            f'  File "{folder}\\media.py", line 238 in _read_exact\n'
+            f'  File "{folder}\\media.py", line 310 in iter_frames\n'
+            f'  File "{folder}\\workers\\mp_faces.py", line 523 in run\n'
+            f'  File "{folder}\\workers\\mp_faces.py", line 598 in main\n'
+            f'  File "{folder}\\workers\\mp_faces.py", line 604 in <module>\n'
+            '  File "<string>", line 3 in <module>\n'
+        )
+        earlier = 'Timeout (0:00:08)!\nThread 0x01 (most recent call first):\n  File "x.py", line 1 in earlier\n'
+        notes = "mp_faces: the spec read (+0.000 s)\nmp_faces: ffmpeg 812 started, 640x360 at 5 fps (+0.034 s)\n"
+        stacks = (
+            "Thread-1 (_watch): mp_faces.py:418 _watch < threading.py:1024 run < threading.py:1082 _bootstrap_inner < threading.py:1044 _bootstrap"
+            " | main: media.py:238 _read_exact < media.py:310 iter_frames < mp_faces.py:523 run < mp_faces.py:598 main"
+        )
+        self.assertEqual(faces.compact_dump(earlier + notes + dump), stacks)
+        self.assertEqual(faces.compact_dump(notes), "")
+        said = faces.stderr_summary(earlier + notes + "W0000 gl_context.cc:80] no pixel format\n" + dump)
+        self.assertEqual(
+            said,
+            "notes: mp_faces: the spec read (+0.000 s) ⏎ mp_faces: ffmpeg 812 started, 640x360 at 5 fps (+0.034 s)"
+            f"; other: W0000 gl_context.cc:80] no pixel format; stacks: {stacks}",
+        )
+        self.assertNotIn("Zoë", said)
+        self.assertEqual(faces.stderr_summary(""), "")
 
     def test_the_last_words_of_a_measured_abort(self) -> None:
         log = (
