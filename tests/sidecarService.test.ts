@@ -5,7 +5,8 @@ import { dirname, join, resolve } from 'node:path'
 import { HELPER_PACK } from '../src/shared/sidecar/packManifest'
 import { packBytes, packHosts, type PackPlatform } from '../src/shared/sidecar/pack'
 import { HELPER_PYTHON_MISSING, UNPARSEABLE_RECEIPT } from '../src/shared/sidecar/helperPython'
-import { HELPER_NEEDS_UPDATE, HELPER_NOT_INSTALLED, helperRowFrom, helperStatusReason, packOffer, type SidecarStatus } from '../src/shared/sidecar/status'
+import { HELPER_NEEDS_UPDATE, HELPER_NOT_INSTALLED, helperStatusReason, packOffer, type SidecarStatus } from '../src/shared/sidecar/status'
+import { helperRow, packFactsFor, ROW_WORDS } from '../src/shared/sidecar/row'
 import { REFRAME_CHANNELS, REFRAME_FAILURES } from '../src/shared/reframe/job'
 import { HELPER_BEING_REPAIRED, HELPER_CHANNELS, HELPER_PRESET, HELPER_REPAIRED_ELSEWHERE } from '../src/shared/sidecar/install'
 import type { Job } from '../src/shared/types'
@@ -555,35 +556,6 @@ describe('packOffer', () => {
   })
 })
 
-describe('helperRowFrom: what the header dot and the row take from a status', () => {
-  const offer = packOffer(HELPER_PACK, 'win32-x64', null, false)
-  const source = { kind: 'pack', pack: 1, root: '/u/python/1' } as const
-  const hello = { protocolVersion: 1, python: '3.14.8', platform: 'win32', capabilities: [], degraded: {}, executable: 'python.exe', prefix: '/p', path: [] }
-
-  it('is running only when ready', () => {
-    expect(helperRowFrom({ state: 'ready', hello, source })).toEqual({ running: true, reason: null })
-  })
-
-  it('is not running, with its sentence, with no pack, an older one, a damaged one, or a failed start', () => {
-    expect(helperRowFrom({ state: 'absent', offer })).toEqual({ running: false, reason: HELPER_NOT_INSTALLED })
-    expect(helperRowFrom({ state: 'absent', offer: { ...offer, kind: 'update' } as typeof offer })).toEqual({ running: false, reason: HELPER_NEEDS_UPDATE })
-    expect(helperRowFrom({ state: 'absent', offer: { supported: false, reason: 'The AI helper needs macOS 14 or later' } })).toEqual({
-      running: false,
-      reason: 'The AI helper needs macOS 14 or later'
-    })
-    expect(helperRowFrom({ state: 'damaged', reason: HELPER_PYTHON_MISSING, offer })).toEqual({ running: false, reason: HELPER_PYTHON_MISSING })
-    expect(helperRowFrom({ state: 'failed', error: 'The AI helper stopped (code 3)', source })).toEqual({
-      running: false,
-      reason: 'The AI helper stopped (code 3)'
-    })
-  })
-
-  it('is not running and names no fault while one starts or installs', () => {
-    expect(helperRowFrom({ state: 'starting', source })).toEqual({ running: false, reason: null })
-    expect(helperRowFrom({ state: 'installing', stage: 'Fetching' })).toEqual({ running: false, reason: null })
-  })
-})
-
 /* ------------------------------------------------- the install job's side */
 
 describe('the install job’s hold (§3a.3 Repair, Remove)', () => {
@@ -767,7 +739,11 @@ describe.skipIf(!MACHINE)('the install job’s status with no helper', () => {
     // The pack runs, and says what is wrong with it.
     expect(told.find((s) => s.state === 'ready')).toMatchObject({ state: 'ready', source: { kind: 'pack' }, integrity: [leak, version] })
     expect(sidecarStatus()).toMatchObject({ state: 'ready', integrity: [leak, version] })
-    expect(helperRowFrom(sidecarStatus())).toEqual({ running: true, reason: null })
+    // The row reads it as running, not green, with the warning on its line and Repair (row.ts, §16.51).
+    const warned = helperRow({ status: sidecarStatus(), pack: packFactsFor(HELPER_PACK, MACHINE === 'win32-x64' ? 'Win32' : 'MacIntel'), job: null })
+    expect([warned.word, warned.dot]).toEqual([ROW_WORDS.running, 'grey'])
+    expect(warned.line).toContain(leak)
+    expect(warned.actions.map((a) => a.kind)).toContain('repair')
   })
 })
 
@@ -794,7 +770,11 @@ describe.skipIf(!MACHINE)('a pack another Forge window holds the lock of (§16.5
     expect(() => getSidecar()).toThrow(HELPER_REPAIRED_ELSEWHERE)
     // The row reads it as not running, with the sentence, never as Install.
     expect(sidecarStatus()).toEqual(refused)
-    expect(helperRowFrom(refused)).toEqual({ running: false, reason: HELPER_REPAIRED_ELSEWHERE })
+    expect(helperRow({ status: refused, pack: packFactsFor(HELPER_PACK, MACHINE === 'win32-x64' ? 'Win32' : 'MacIntel'), job: null })).toMatchObject({
+      word: ROW_WORDS.notRunning,
+      line: HELPER_REPAIRED_ELSEWHERE,
+      actions: []
+    })
     expect(told, 'said once while it stands').toEqual([refused])
     expect(spawned, 'nothing starts from a pack another window may be deleting').toEqual([])
     await first.release()
