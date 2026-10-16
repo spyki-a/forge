@@ -876,6 +876,15 @@ export async function fetchVerified(file: PackFile, dir: string, f: FetchVerifie
     await f.rename(part, final)
   } catch (err) {
     await rm(part, { force: true }).catch(() => undefined)
+    /*
+     * Another fetch of this file landed it first — two presses, or two jobs
+     * in one process, as a test runs them. On Windows a rename onto a
+     * destination another handle still holds is refused with EPERM, and CI
+     * run 38981524038 met exactly that: the second fetch's whole, verified
+     * copy failed "could not be moved into place". The file is there and it
+     * is the file, which is all a caller wanted; our copy is already gone.
+     */
+    if (await alreadyThere(final, file)) return final
     throw new Error(`${file.name} arrived whole but could not be moved into place: ${reasonOf(err)}`, { cause: err })
   }
   // Where it came from after its redirects, so a tester's report names the host a network let through (§3a.5).

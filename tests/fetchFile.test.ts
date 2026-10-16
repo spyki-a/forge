@@ -404,6 +404,49 @@ describe('a temporary name of its own', () => {
     expect(sha256(await readFile(join(dir, 'numpy.whl')))).toBe(file.sha256)
     expect(await readdir(dir)).toEqual(['numpy.whl'])
   })
+
+  it('a rename refused after the other fetch landed the same file resolves with that file and leaves no .part (Windows CI run 38981524038)', async () => {
+    const body = bytesOf(3_000)
+    const file = packFile('numpy.whl', WHEEL_URL, body)
+    const net = fakeNet({ [WHEEL_URL]: [{ body, length: body.length }] })
+    /*
+     * What the Windows runner did to the case above: the two fetches finished
+     * together, the first rename landed numpy.whl, and the second was refused
+     * with EPERM, since Windows will not replace a destination another handle
+     * still holds. The Mac never refuses, so the refusal is played here.
+     */
+    let refused = 0
+    const refusing = async (from: string, to: string): Promise<void> => {
+      await writeFile(to, body)
+      refused++
+      const err = new Error(`EPERM: operation not permitted, rename '${from}' -> '${to}'`) as NodeJS.ErrnoException
+      err.code = 'EPERM'
+      throw err
+    }
+
+    const path = await fetchVerified(file, dir, deps(net, { rename: refusing }))
+
+    expect(refused).toBe(1)
+    expect(path).toBe(join(dir, 'numpy.whl'))
+    expect(sha256(await readFile(join(dir, 'numpy.whl')))).toBe(file.sha256)
+    expect(await readdir(dir)).toEqual(['numpy.whl'])
+  })
+
+  it('a rename refused with nothing landed still fails, naming the file', async () => {
+    const body = bytesOf(3_000)
+    const file = packFile('numpy.whl', WHEEL_URL, body)
+    const net = fakeNet({ [WHEEL_URL]: [{ body, length: body.length }] })
+    const refusing = async (from: string, to: string): Promise<void> => {
+      const err = new Error(`EPERM: operation not permitted, rename '${from}' -> '${to}'`) as NodeJS.ErrnoException
+      err.code = 'EPERM'
+      throw err
+    }
+
+    const err = await failure(fetchVerified(file, dir, deps(net, { rename: refusing })))
+
+    expect(err.message).toMatch(/^numpy\.whl arrived whole but could not be moved into place: /)
+    expect(await readdir(dir)).toEqual([])
+  })
 })
 
 describe('resume by file', () => {
