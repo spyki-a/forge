@@ -119,6 +119,36 @@ describe('reframeHelperFrom', () => {
   })
 })
 
+describe('reframeHelperFrom, over helperCan (docs/CLIPS.md §3a.4)', () => {
+  const hello = (capabilities: string[], degraded: Record<string, string> = {}): HelloResult => ({
+    protocolVersion: 1,
+    python: '3.14.8',
+    platform: 'Windows-AMD64',
+    capabilities,
+    degraded,
+    executable: 'python.exe',
+    prefix: '.',
+    path: []
+  })
+  const both = [SIDECAR_METHODS.faces, SIDECAR_METHODS.facesModel]
+  const source = { kind: 'pack', pack: 1, root: '/u/python/1' } as const
+
+  it('is missing when the install’s self-test failed the faces group, though hello registered both', () => {
+    const selftest = { asr: 'ok', beats: 'ok', onnx: 'ok', vision: 'ok', sklearn: 'ok', faces: 'faces failed: error import FileNotFoundError' }
+    expect(reframeHelperFrom({ state: 'ready', hello: hello(both), source, selftest })).toBe('missing')
+    expect(reframeHelperFrom({ state: 'ready', hello: hello(both), source, selftest: { ...selftest, faces: 'ok' } })).toBe('ready')
+  })
+
+  it('is missing when main merged a failed group into degraded and left the method in capabilities', () => {
+    expect(reframeHelperFrom({ state: 'ready', hello: hello(both, { [SIDECAR_METHODS.faces]: 'faces failed' }), source })).toBe('missing')
+  })
+
+  it('keeps an install missing, never "starting", and a start unknown', () => {
+    expect(reframeHelperFrom({ state: 'installing', stage: 'Installing the libraries' })).toBe('missing')
+    expect(reframeHelperFrom({ state: 'starting', source })).toBe('unknown')
+  })
+})
+
 describe('the job row', () => {
   it('names the file after the title', () => {
     expect(reframeJobLabel({ inputName: 'Toast.mp4' })).toBe('Finding the subject · Toast.mp4')

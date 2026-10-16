@@ -24,7 +24,7 @@
  */
 
 import type { ModelStatus } from '../sidecar/protocol'
-import type { SidecarStatus } from '../sidecar/status'
+import { helperCan, type HelperStatusLike } from '../sidecar/helperCan'
 import { SIDECAR_METHODS } from '../sidecar/protocol'
 import type { SubjectTrack } from './types'
 
@@ -238,41 +238,25 @@ export interface ReframeStatus {
 }
 
 /** A status with or without its `source`: the reframe reads only the state and a ready one's hello (main's job passes a bare ready). */
-type WithoutSource<T> = T extends unknown ? Omit<T, 'source'> : never
-export type HelperStatusLike = SidecarStatus | WithoutSource<SidecarStatus>
+export type { HelperStatusLike }
 
 /**
  * The helper's status as main broadcasts it (src/shared/sidecar/status.ts),
- * reduced to what the reframe needs. Decided from `hello.capabilities`, never
- * from a message's prose: ready only when both `vision.faces` and
- * `vision.facesModel` registered. Degraded (the face finder's module did not
- * import) is `missing` as much as no Python is — either way nothing can find a
- * face on this machine. No pack, a damaged one, one being installed, or a
- * helper that failed is `missing` (§3a.2: anything not ready is missing); only
- * a helper starting is not known yet, for the seconds its hello takes. An
+ * reduced to what the reframe needs: `helperCan` (src/shared/sidecar/
+ * helperCan.ts) for BOTH `vision.faces` and `vision.facesModel`, so it is
+ * decided from the capabilities, never from a message's prose. Registered,
+ * not degraded, and not failed by the install's self-test (the faces group):
+ * a face finder whose module did not import, or whose mediapipe cannot load,
+ * is `missing` as much as no Python is: either way nothing can find a face
+ * on this machine. No pack, a damaged one, one being installed, or a helper
+ * that failed is `missing` (§3a.2: anything not ready is missing); only a
+ * helper starting is not known yet, for the seconds its hello takes. An
  * install runs for minutes, and `unknown` would have told Follow the subject
  * "the AI helper is starting" for all of them.
  */
 export function reframeHelperFrom(status: HelperStatusLike): ReframeHelper {
-  switch (status.state) {
-    case 'starting':
-      return 'unknown'
-    case 'absent':
-    case 'damaged':
-    case 'installing':
-    case 'failed':
-      return 'missing'
-    case 'ready': {
-      const capabilities = status.hello?.capabilities ?? []
-      return capabilities.includes(SIDECAR_METHODS.faces) && capabilities.includes(SIDECAR_METHODS.facesModel)
-        ? 'ready'
-        : 'missing'
-    }
-    default: {
-      const unknown: never = status
-      return unknown
-    }
-  }
+  if (status.state === 'starting') return 'unknown'
+  return helperCan(status, SIDECAR_METHODS.faces) && helperCan(status, SIDECAR_METHODS.facesModel) ? 'ready' : 'missing'
 }
 
 /** The job row's words for a reframe job. */
