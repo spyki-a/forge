@@ -60,20 +60,30 @@ describe('unpacking an archive with no folder entries, as the real ones are', ()
     { name: 'python/lib/python3.14/empty.py', body: '', mode: 0o664 }
   ]
 
-  it('writes every member with its folders made, its bytes, and the result’s counts', async () => {
-    const into = join(dir, 'pack', '1')
-    const result = await unpackTarGz(await archive(SPECS), into, { signal: live() })
+  /*
+   * The members a real archive for `platform` holds. The Windows archive has no symlink (row 26), and
+   * unpackTarGz refuses one there by design (the case below), so on win32 this archive is SPECS without its
+   * link. Windows CI ran it with the link and got that refusal (run 38919769393). Run here for both, the
+   * win32 case through the `platform` option, so the Mac sees the Windows shape too.
+   */
+  const membersFor = (platform: NodeJS.Platform): TarSpec[] => (platform === 'win32' ? SPECS.filter((s) => s.kind !== 'symlink') : SPECS)
 
-    expect(await readFile(join(into, 'python/lib/python3.14/site-packages/pip/_vendor/rich/console.py'))).toEqual(Buffer.from(noise(700, 2)))
-    expect(await readFile(join(into, 'python/bin/python3.14'))).toEqual(Buffer.from(noise(3000, 1)))
-    expect((await stat(join(into, 'python/lib/python3.14/empty.py'))).size).toBe(0)
-    expect(result).toEqual({
-      files: 4,
-      bytes: 3000 + 700 + 512,
-      longestPath: 'python/lib/python3.14/site-packages/pip/_vendor/rich/console.py'.length,
-      longestDir: 'python/lib/python3.14/site-packages/pip/_vendor/rich'.length
+  for (const platform of [...new Set<NodeJS.Platform>([process.platform, 'win32'])]) {
+    it(`writes every member with its folders made, its bytes, and the result’s counts (${platform}’s archive)`, async () => {
+      const into = join(dir, 'pack', '1')
+      const result = await unpackTarGz(await archive(membersFor(platform)), into, { signal: live(), platform })
+
+      expect(await readFile(join(into, 'python/lib/python3.14/site-packages/pip/_vendor/rich/console.py'))).toEqual(Buffer.from(noise(700, 2)))
+      expect(await readFile(join(into, 'python/bin/python3.14'))).toEqual(Buffer.from(noise(3000, 1)))
+      expect((await stat(join(into, 'python/lib/python3.14/empty.py'))).size).toBe(0)
+      expect(result).toEqual({
+        files: 4,
+        bytes: 3000 + 700 + 512,
+        longestPath: 'python/lib/python3.14/site-packages/pip/_vendor/rich/console.py'.length,
+        longestDir: 'python/lib/python3.14/site-packages/pip/_vendor/rich'.length
+      })
     })
-  })
+  }
 
   it.skipIf(!POSIX)('restores the executable bit from the mode, and only that', async () => {
     const into = join(dir, 'v')
