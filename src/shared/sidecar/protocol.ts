@@ -146,8 +146,19 @@ export const SIDECAR_METHODS = {
   hello: 'system.hello',
   /** Liveness probe. */
   ping: 'system.ping',
-  /** Transcribe audio: { path, language?, model? } -> word-level timestamps. */
+  /**
+   * Transcribe audio: { path, language?, model? } -> word-level timestamps.
+   * Never downloads: the speech model not on disk is `unavailable` ("The
+   * speech model is not downloaded yet"), and `asrModel` is the question and
+   * the fetch. `model`, when sent, must be 'small', the one size pinned.
+   */
   transcribe: 'asr.transcribe',
+  /**
+   * The speech model, Systran/faster-whisper-small at one pinned commit,
+   * 486,212,372 B from Hugging Face: ModelParams -> ModelStatus (docs/CLIPS.md
+   * §3a.4, §16.49). shared/asr/speechModel.ts SPEECH_MODEL_METHOD.
+   */
+  asrModel: 'asr.model',
   /** Beats and musical structure: { path, startMs?, endMs? }. */
   beats: 'audio.beats',
   /** Cut a photo into depth planes for parallax: { path, ffmpeg, ffprobe, layers? }. */
@@ -205,6 +216,7 @@ export const SIDECAR_METHODS = {
  */
 export const OPTIONAL_METHODS: readonly string[] = [
   SIDECAR_METHODS.transcribe,
+  SIDECAR_METHODS.asrModel,
   SIDECAR_METHODS.beats,
   SIDECAR_METHODS.depthLayers,
   SIDECAR_METHODS.visionMeasure,

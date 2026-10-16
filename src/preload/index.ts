@@ -5,6 +5,7 @@ import type { DecisionRecord } from '@shared/project'
 import type { Transcript } from '@shared/transcript'
 import type { ModelStatus } from '@shared/sidecar/protocol'
 import type { SidecarStatus } from '@shared/sidecar/status'
+import { SPEECH_MODEL_CHANNELS, type SpeechModelProgress } from '@shared/asr/speechModel'
 import type {
   FaceModelProgress,
   FaceModelRequest,
@@ -507,6 +508,19 @@ const api = {
   removeHelper: (options: { models: boolean }): Promise<void> => ipcRenderer.invoke('helper:remove', options),
   /** The self-test alone on the installed pack, no download: for after the Visual C++ runtime is installed. */
   checkHelperAgain: (): Promise<void> => ipcRenderer.invoke('helper:checkAgain'),
+
+  /**
+   * The speech model's status, or its fetch on `download: true` exactly — only
+   * from the press that showed its size (docs/CLIPS.md §3a.4, §16.49). Progress
+   * comes on `onSpeechModelProgress`. Channels: shared/asr/speechModel.ts.
+   */
+  speechModel: (request: { download?: boolean } = {}): Promise<ModelStatus> =>
+    ipcRenderer.invoke(SPEECH_MODEL_CHANNELS.model, request),
+  onSpeechModelProgress: (cb: (update: SpeechModelProgress) => void): (() => void) => {
+    const listener = (_e: unknown, update: SpeechModelProgress): void => cb(update)
+    ipcRenderer.on(SPEECH_MODEL_CHANNELS.progress, listener)
+    return () => ipcRenderer.removeListener(SPEECH_MODEL_CHANNELS.progress, listener)
+  },
 
   onTranscribeProgress: (
     cb: (update: { assetId: string; progress: number | null; message?: string }) => void

@@ -17,7 +17,8 @@ import { probeMany } from './ffmpeg/probe'
 import { getSidecar, helperPackDeps, settleHelperStatus, sidecarStatus } from './sidecar/service'
 import { createHelperPackJobs, unbuiltWorkers, type HelperPackJobs, type HelperPackWorkers } from './sidecar/install'
 import { HELPER_CHANNELS, helperInstallRequest, helperRemoveRequest } from '@shared/sidecar/install'
-import { SIDECAR_METHODS } from '@shared/sidecar/protocol'
+import { SIDECAR_METHODS, type ModelStatus } from '@shared/sidecar/protocol'
+import { SPEECH_MODEL_CHANNELS, speechModelRequest, type SpeechModelProgress } from '@shared/asr/speechModel'
 import { VOCABULARY_MAX_CHARS, segmentIntoSentences, type Transcript, type Word } from '@shared/transcript'
 import { JobQueue } from './queue'
 import { releasesTemporaries, startRender, sweepTemporaries, type RenderOptions } from './render/renderJob'
@@ -1043,6 +1044,33 @@ export function registerIpc(getWindow: () => BrowserWindow | null, options: IpcO
   ipcMain.handle('asr:cancel', (_e, assetId: unknown) => {
     if (typeof assetId !== 'string') return
     transcriptions.get(assetId)?.abort()
+  })
+
+  /*
+   * The speech model's own press (docs/CLIPS.md §3a.4, §16.49): its status
+   * for the button's label, or its fetch on `download: true` exactly, which
+   * only the press that showed the size sends. 486,212,372 B, so no timeout
+   * of main's on the fetch: huggingface_hub 1.31.0 reads each response with
+   * its own HF_HUB_DOWNLOAD_TIMEOUT (10 s), which ends a stalled one. Two
+   * presses at once share one fetch. With no helper to ask, getSidecar's
+   * sentence is the rejection and nothing is spawned.
+   */
+  let speechFetch: Promise<ModelStatus> | null = null
+  ipcMain.handle(SPEECH_MODEL_CHANNELS.model, async (_e, payload: unknown) => {
+    const { download } = speechModelRequest(payload)
+    const helper = getSidecar()
+    if (!download) return helper.request<ModelStatus>(SIDECAR_METHODS.asrModel, {}, { timeoutMs: 30_000 })
+    speechFetch ??= helper
+      .request<ModelStatus>(SIDECAR_METHODS.asrModel, { download: true }, {
+        onProgress: (progress, message) => {
+          const update: SpeechModelProgress = { progress, ...(message !== undefined ? { message } : {}) }
+          getWindow()?.webContents.send(SPEECH_MODEL_CHANNELS.progress, update)
+        }
+      })
+      .finally(() => {
+        speechFetch = null
+      })
+    return speechFetch
   })
 
   /*
