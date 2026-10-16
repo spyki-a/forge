@@ -1,8 +1,9 @@
 import { afterAll, describe, expect, it } from 'vitest'
+import { createHash } from 'node:crypto'
 import { mkdtempSync, readFileSync, rmSync, statfsSync, writeFileSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { FETCH_RETRY, fetchVerified } from '../src/main/net/fetchFile'
+import { FETCH_RETRY } from '../src/main/net/fetchFile'
 import { unpackTarGz } from '../src/main/sidecar/unpack'
 import { compileStdlib } from '../src/main/sidecar/compile'
 import { runPip } from '../src/main/sidecar/pip'
@@ -22,10 +23,24 @@ import { appPackFs, helperInstallOptions, helperWorkers, packRename } from '../s
 const scratch = mkdtempSync(join(tmpdir(), 'forge-install-deps-'))
 afterAll(() => rmSync(scratch, { recursive: true, force: true }))
 
+/** The fetcher a worker set carries, run once against a fake network: a refusal or a stand-in would not land the file and say where it came from. */
+async function landsAFile(verified: ReturnType<typeof helperWorkers>['fetchVerified']): Promise<string[]> {
+  const body = new TextEncoder().encode('the bytes of a wheel')
+  const file = { name: 'a.whl', url: 'https://files.pythonhosted.org/packages/a.whl', bytes: body.length, sha256: createHash('sha256').update(body).digest('hex') }
+  const said: string[] = []
+  const fetch = (async () => new Response(body, { status: 200, headers: { 'content-length': String(body.length) } })) as typeof globalThis.fetch
+  const dir = mkdtempSync(join(scratch, 'fetch-'))
+  await verified(file, dir, { fetch, retry: FETCH_RETRY, signal: new AbortController().signal, now: Date.now, rename: packRename, onBytes: () => undefined, onMessage: (m) => said.push(m) })
+  expect(readFileSync(join(dir, 'a.whl'), 'utf8')).toBe('the bytes of a wheel')
+  return said
+}
+
 describe('the real workers', () => {
-  it('are the fetcher, the unpacker, the compile, pip and the check that were built, with the shared retry', () => {
+  it('are the fetcher, the unpacker, the compile, pip and the check that were built, with the shared retry', async () => {
     const w = helperWorkers()
-    expect(w.fetchVerified).toBe(fetchVerified)
+    // The fetcher is fetchVerified on the pack's network stack (installDeps.ts packFetchVerified): Chromium's
+    // inside Electron, the fetch it is handed elsewhere. Judged by what it does, since it is a wrapper.
+    expect(await landsAFile(w.fetchVerified)).toEqual(['a.whl came from files.pythonhosted.org: 20 B, its sha256 verified'])
     expect(w.unpack).toBe(unpackTarGz)
     expect(w.compileStdlib).toBe(compileStdlib)
     expect(w.pip).toBe(runPip)
@@ -33,9 +48,13 @@ describe('the real workers', () => {
     expect(w.retry).toBe(FETCH_RETRY)
   })
 
-  it('are what the app hands registerIpc, with the retried rename', () => {
+  it('are what the app hands registerIpc, with the retried rename', async () => {
     const o = helperInstallOptions()
-    expect(o.helperWorkers).toEqual(helperWorkers())
+    const { fetchVerified: handed, ...rest } = o.helperWorkers
+    const { fetchVerified: _own, ...own } = helperWorkers()
+    void _own
+    expect(rest).toEqual(own)
+    expect(await landsAFile(handed)).toHaveLength(1)
     expect(o.helperRename).toBe(packRename)
     expect(appPackFs().rename).toBe(packRename)
   })

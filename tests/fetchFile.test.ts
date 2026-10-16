@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import { EventEmitter } from 'node:events'
 import { mkdtemp, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -7,11 +8,14 @@ import {
   FETCH_RETRY,
   fetchVerified,
   PACK_FETCH_WAY_OUT,
+  proxyFailure,
   renameWithRetry,
   RENAME_RETRY,
   type FetchRetry,
   type FetchVerifiedOptions
 } from '../src/main/net/fetchFile'
+import { chromiumFetch, firstProxy, SYSTEM_PROXY_SOURCE, type NetRequestLike, type NetRequestOptions } from '../src/main/net/chromiumFetch'
+import { packFetch, packFetchVerified } from '../src/main/sidecar/installDeps'
 import type { PackFile } from '@shared/sidecar/pack'
 
 /*
@@ -525,5 +529,322 @@ describe('the rename into place, on Windows', () => {
 
     expect(err.message).toContain('numpy.whl arrived whole but could not be moved into place')
     expect(await readdir(dir)).toEqual([])
+  })
+})
+
+/* ------------------------------------------------- Chromium's stack, and proxies */
+
+/** A fetch that fails every call with `make()`'s error, counting the calls. */
+function failingFetch(make: () => unknown): { fetch: typeof globalThis.fetch; calls: () => number } {
+  let calls = 0
+  return {
+    calls: () => calls,
+    fetch: (async () => {
+      calls++
+      throw make()
+    }) as typeof globalThis.fetch
+  }
+}
+
+describe('Chromium’s errors are the network’s, and are tried again (§15 row 19)', () => {
+  it('a plain Error whose message is net::ERR_CONNECTION_RESET is retried, and its retry line names the host and the code', async () => {
+    // As Electron 44.3.0 reports every network failure: no code, no cause, the code in the message (probe-netfetch.mjs).
+    const body = bytesOf(2_000)
+    const file = packFile('numpy.whl', WHEEL_URL, body)
+    const ok = fakeNet({ [WHEEL_URL]: [{ body, length: body.length }] })
+    let n = 0
+    const fetch = ((input: string, init?: RequestInit) => (++n <= 2 ? Promise.reject(new Error('net::ERR_CONNECTION_RESET')) : ok.fetch(input, init))) as typeof globalThis.fetch
+
+    await fetchVerified(file, dir, deps(ok, { fetch }))
+
+    expect(n).toBe(3)
+    expect(messages.filter((m) => m.includes('trying again'))).toEqual([
+      'downloading numpy.whl: the connection to files.pythonhosted.org failed (ERR_CONNECTION_RESET), trying again in 1s (2 of 4)',
+      'downloading numpy.whl: the connection to files.pythonhosted.org failed (ERR_CONNECTION_RESET), trying again in 1s (3 of 4)'
+    ])
+  })
+
+  it('a name that does not resolve is retried and named; a certificate Chromium refuses is not retried', async () => {
+    const file = packFile('numpy.whl', WHEEL_URL, bytesOf(10))
+    const nx = failingFetch(() => new Error('net::ERR_NAME_NOT_RESOLVED'))
+    const err = await failure(fetchVerified(file, dir, deps(fakeNet({}), { fetch: nx.fetch })))
+    expect(nx.calls()).toBe(4)
+    expect(err.message).toContain('numpy.whl could not be downloaded: files.pythonhosted.org could not be reached: net::ERR_NAME_NOT_RESOLVED — gave up after 4 tries')
+    expect(err.message).toContain(PACK_FETCH_WAY_OUT)
+
+    const cert = failingFetch(() => new Error('net::ERR_CERT_AUTHORITY_INVALID'))
+    await failure(fetchVerified(file, dir, deps(fakeNet({}), { fetch: cert.fetch })))
+    expect(cert.calls()).toBe(1)
+  })
+})
+
+describe('a proxy that fails is named as the proxy, never as the host behind it (§3a.5)', () => {
+  it('Chromium’s dead proxy: the proxy chromiumFetch resolved, from this computer’s settings', async () => {
+    const file = packFile('cpython.tar.gz', GITHUB_URL, bytesOf(10))
+    const dead = failingFetch(() => Object.assign(new Error('net::ERR_PROXY_CONNECTION_FAILED'), { proxy: { address: '10.0.0.5:3128', source: SYSTEM_PROXY_SOURCE } }))
+
+    const err = await failure(fetchVerified(file, dir, deps(fakeNet({}), { fetch: dead.fetch })))
+
+    expect(err.message).toContain("cpython.tar.gz could not be downloaded: the proxy 10.0.0.5:3128 (this computer's proxy settings) could not be reached: net::ERR_PROXY_CONNECTION_FAILED")
+    expect(err.message).toContain(PACK_FETCH_WAY_OUT)
+    expect(messages[0]).toBe("downloading cpython.tar.gz: the proxy 10.0.0.5:3128 (this computer's proxy settings) could not be reached (ERR_PROXY_CONNECTION_FAILED), trying again in 1s (2 of 4)")
+    // github.com is never the one blamed: not in the sentence, not in a retry line.
+    for (const line of [err.message, ...messages]) {
+      expect(line).not.toContain('github.com could not be reached')
+      expect(line).not.toContain('the connection to github.com')
+    }
+  })
+
+  it('Chromium’s proxy failure with no address read back still names a proxy', () => {
+    expect(proxyFailure(new Error('net::ERR_TUNNEL_CONNECTION_FAILED'), GITHUB_URL, {})).toEqual({ address: null, source: SYSTEM_PROXY_SOURCE })
+  })
+
+  it('Node’s fetch under NODE_USE_ENV_PROXY=1: a connect error to HTTPS_PROXY’s address names that proxy, and the sandbox’s EPERM is not retried', async () => {
+    const file = packFile('cpython.tar.gz', GITHUB_URL, bytesOf(10))
+    // As Node 24.18.1 reported it in the dev sandbox (EFFECTS §58, run C).
+    const eperm = (): Error =>
+      new TypeError('fetch failed', {
+        cause: Object.assign(new Error('connect EPERM 127.0.0.1:9 - Local (0.0.0.0:0)'), { code: 'EPERM', errno: -1, syscall: 'connect', address: '127.0.0.1', port: 9 })
+      })
+    const env = { NODE_USE_ENV_PROXY: '1', HTTPS_PROXY: 'http://127.0.0.1:9' }
+    const dead = failingFetch(eperm)
+
+    const err = await failure(fetchVerified(file, dir, deps(fakeNet({}), { fetch: dead.fetch, env })))
+
+    expect(dead.calls()).toBe(1)
+    expect(err.message).toBe(
+      `cpython.tar.gz could not be downloaded: the proxy 127.0.0.1:9 (HTTPS_PROXY) could not be reached: fetch failed (connect EPERM 127.0.0.1:9 - Local (0.0.0.0:0)). ${PACK_FETCH_WAY_OUT}`
+    )
+
+    // Without NODE_USE_ENV_PROXY Node's fetch does not use the proxy at all, so the failure is the host's (EFFECTS §58, runs A and B).
+    const direct = failingFetch(eperm)
+    const host = await failure(fetchVerified(file, dir, deps(fakeNet({}), { fetch: direct.fetch, env: { HTTPS_PROXY: 'http://127.0.0.1:9' } })))
+    expect(host.message).toContain('github.com could not be reached')
+  })
+
+  it('Node’s fetch: a refused proxy is retried and named; a proxy named by host name whose name does not resolve is named; NO_PROXY’s hosts are not', () => {
+    const refused = new TypeError('fetch failed', { cause: Object.assign(new Error('connect ECONNREFUSED 10.1.2.3:8080'), { code: 'ECONNREFUSED', address: '10.1.2.3', port: 8080 }) })
+    expect(proxyFailure(refused, GITHUB_URL, { NODE_USE_ENV_PROXY: '1', https_proxy: 'http://10.1.2.3:8080' })).toEqual({ address: '10.1.2.3:8080', source: 'https_proxy' })
+    // A proxy given by name connects to its address: the port is the proxy's, and no pack host listens on 8080.
+    expect(proxyFailure(refused, GITHUB_URL, { NODE_USE_ENV_PROXY: '1', HTTPS_PROXY: 'http://proxy.corp:8080' })).toEqual({ address: 'proxy.corp:8080', source: 'HTTPS_PROXY' })
+    const nx = new TypeError('fetch failed', { cause: Object.assign(new Error('getaddrinfo ENOTFOUND proxy.corp'), { code: 'ENOTFOUND', hostname: 'proxy.corp' }) })
+    expect(proxyFailure(nx, GITHUB_URL, { NODE_USE_ENV_PROXY: '1', HTTPS_PROXY: 'http://proxy.corp:8080' })).toEqual({ address: 'proxy.corp:8080', source: 'HTTPS_PROXY' })
+    // The host's own failure is not the proxy's, and a host NO_PROXY exempts never goes through it.
+    const github = new TypeError('fetch failed', { cause: Object.assign(new Error('connect ECONNREFUSED 140.82.121.4:443'), { code: 'ECONNREFUSED', address: '140.82.121.4', port: 443 }) })
+    expect(proxyFailure(github, GITHUB_URL, { NODE_USE_ENV_PROXY: '1', HTTPS_PROXY: 'http://10.1.2.3:8080' })).toBeNull()
+    expect(proxyFailure(refused, GITHUB_URL, { NODE_USE_ENV_PROXY: '1', HTTPS_PROXY: 'http://10.1.2.3:8080', NO_PROXY: 'localhost,.github.com' })).toBeNull()
+  })
+})
+
+/* ------------------------------------------------- chromiumFetch over a fake net.request */
+
+type NetReply =
+  | { redirect: string; status?: number }
+  | { status: number; headers?: Record<string, string>; body?: Uint8Array; chunk?: number }
+  | { error: string }
+  | 'silent'
+
+class FakeResponse extends EventEmitter {
+  statusMessage = ''
+  constructor(
+    readonly statusCode: number,
+    readonly headers: Record<string, string | string[]>
+  ) {
+    super()
+  }
+  pause(): void {}
+  resume(): void {}
+}
+
+/** Electron's ClientRequest as the probe saw it: a 'redirect' event in manual mode, then 'response' and its 'data'/'end', or 'error'. */
+function fakeNetRequest(script: Record<string, NetReply[]>): {
+  request: (options: NetRequestOptions) => NetRequestLike
+  options: NetRequestOptions[]
+  headers: Record<string, string>[]
+  calls: Record<string, number>
+  aborted: () => number
+  followed: () => number
+  chunksSent: () => number
+} {
+  const options: NetRequestOptions[] = []
+  const headers: Record<string, string>[] = []
+  const calls: Record<string, number> = {}
+  let aborted = 0
+  let followed = 0
+  let chunksSent = 0
+  const request = (o: NetRequestOptions): NetRequestLike => {
+    options.push(o)
+    const req = new EventEmitter()
+    const sent: Record<string, string> = {}
+    let url = o.url
+    let stopped = false
+    let pendingHop: string | null = null
+    const answer = (): void => {
+      const n = calls[url] ?? 0
+      calls[url] = n + 1
+      const replies = script[url]
+      if (!replies) throw new Error(`the fake net.request was asked for ${url}`)
+      const reply = replies[Math.min(n, replies.length - 1)]
+      setImmediate(() => {
+        if (stopped || reply === 'silent') return
+        if ('redirect' in reply) {
+          pendingHop = reply.redirect
+          req.emit('redirect', reply.status ?? 302, 'GET', reply.redirect, { location: [reply.redirect] })
+          return
+        }
+        if ('error' in reply) {
+          req.emit('error', new Error(reply.error))
+          return
+        }
+        const res = new FakeResponse(reply.status, reply.headers ?? {})
+        req.emit('response', res)
+        const body = reply.body ?? new Uint8Array(0)
+        const chunk = reply.chunk ?? 1024
+        let at = 0
+        const pump = (): void => {
+          if (stopped) return
+          if (at >= body.length) return void res.emit('end')
+          chunksSent++
+          res.emit('data', Buffer.from(body.slice(at, at + chunk)))
+          at += chunk
+          setTimeout(pump, 1)
+        }
+        setImmediate(pump)
+      })
+    }
+    return Object.assign(req, {
+      setHeader: (name: string, value: string) => void (sent[name.toLowerCase()] = value),
+      abort: () => {
+        stopped = true
+        aborted++
+      },
+      followRedirect: () => {
+        followed++
+        url = pendingHop!
+        answer()
+      },
+      end: () => {
+        headers.push(sent)
+        answer()
+      }
+    }) as unknown as NetRequestLike
+  }
+  return { request, options, headers, calls, aborted: () => aborted, followed: () => followed, chunksSent: () => chunksSent }
+}
+
+describe('chromiumFetch: Chromium’s stack, handing back what fetchVerified follows by hand', () => {
+  it('in manual mode hands back the 302 with its Location, stops the request, and asks with no-store', async () => {
+    const net = fakeNetRequest({ [GITHUB_URL]: [{ redirect: ASSETS_URL }] })
+    const response = await chromiumFetch({ request: net.request })(GITHUB_URL, { redirect: 'manual', headers: { Range: 'bytes=0-0' } })
+    expect(response.status).toBe(302)
+    expect(response.headers.get('location')).toBe(ASSETS_URL)
+    expect(net.aborted()).toBe(1)
+    expect(net.followed()).toBe(0)
+    expect(net.options).toEqual([{ url: GITHUB_URL, method: 'GET', redirect: 'manual', cache: 'no-store' }])
+    expect(net.headers).toEqual([{ range: 'bytes=0-0' }])
+  })
+
+  it('in follow mode follows the hop itself and says where it landed', async () => {
+    const body = bytesOf(3_000)
+    const net = fakeNetRequest({ [GITHUB_URL]: [{ redirect: ASSETS_URL }], [ASSETS_URL]: [{ status: 206, headers: { 'content-range': 'bytes 0-2999/3000' }, body }] })
+    const response = await chromiumFetch({ request: net.request })(GITHUB_URL)
+    expect(response.status).toBe(206)
+    expect(response.url).toBe(ASSETS_URL)
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(body)
+    expect(net.followed()).toBe(1)
+  })
+
+  it('carries fetchVerified through github.com’s hand-off, and the log names release-assets as the host the file came from', async () => {
+    const body = bytesOf(5_000)
+    const file = packFile('cpython.tar.gz', GITHUB_URL, body)
+    const net = fakeNetRequest({ [GITHUB_URL]: [{ redirect: ASSETS_URL }], [ASSETS_URL]: [{ status: 200, headers: { 'content-length': String(body.length), 'content-type': 'application/octet-stream' }, body }] })
+
+    await fetchVerified(file, dir, deps(fakeNet({}), { fetch: chromiumFetch({ request: net.request }) }))
+
+    expect(sha256(await readFile(join(dir, 'cpython.tar.gz')))).toBe(file.sha256)
+    expect(messages).toContain('cpython.tar.gz came from release-assets.githubusercontent.com: 5000 B, its sha256 verified')
+    expect(net.calls).toEqual({ [GITHUB_URL]: 1, [ASSETS_URL]: 1 })
+  })
+
+  it('a hop that never answers is named by its own host, and its request is stopped', async () => {
+    const file = packFile('cpython.tar.gz', GITHUB_URL, bytesOf(10))
+    const net = fakeNetRequest({ [GITHUB_URL]: [{ redirect: ASSETS_URL }], [ASSETS_URL]: ['silent'] })
+
+    const err = await failure(fetchVerified(file, dir, deps(fakeNet({}), { fetch: chromiumFetch({ request: net.request }), retry: { ...QUICK, attempts: 2, binaryAnswerMs: 30 } })))
+
+    expect(err.message).toContain('release-assets.githubusercontent.com did not answer within 30 ms — gave up after 2 tries')
+    // Each try: the 302's request stopped at its redirect, the silent hop's stopped by the answer's timer.
+    expect(net.aborted()).toBe(4)
+  })
+
+  it('a dead proxy is resolved and named, the host behind it never blamed', async () => {
+    const file = packFile('cpython.tar.gz', GITHUB_URL, bytesOf(10))
+    const net = fakeNetRequest({ [GITHUB_URL]: [{ error: 'net::ERR_PROXY_CONNECTION_FAILED' }] })
+    const asked: string[] = []
+    const fetch = chromiumFetch({ request: net.request, resolveProxy: async (url) => (asked.push(url), 'PROXY 127.0.0.1:59998') })
+
+    const err = await failure(fetchVerified(file, dir, deps(fakeNet({}), { fetch, retry: { ...QUICK, attempts: 1 } })))
+
+    expect(asked).toEqual([GITHUB_URL])
+    expect(err.message).toContain("the proxy 127.0.0.1:59998 (this computer's proxy settings) could not be reached: net::ERR_PROXY_CONNECTION_FAILED")
+    expect(err.message).not.toContain('github.com could not be reached')
+  })
+
+  it('the job’s cancel mid-body stops the request and the stream', async () => {
+    const body = bytesOf(200 * 1024)
+    const file = packFile('numpy.whl', WHEEL_URL, body)
+    const net = fakeNetRequest({ [WHEEL_URL]: [{ status: 200, headers: { 'content-length': String(body.length) }, body, chunk: 1024 }] })
+
+    const err = await failure(
+      fetchVerified(
+        file,
+        dir,
+        deps(fakeNet({}), {
+          fetch: chromiumFetch({ request: net.request }),
+          onBytes: (n) => {
+            transferred += n
+            if (transferred >= 3 * 1024) job.abort()
+          }
+        })
+      )
+    )
+    const sentAtCancel = net.chunksSent()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    expect(err.name).toBe('CancelledError')
+    expect(net.aborted()).toBeGreaterThanOrEqual(1)
+    expect(net.chunksSent()).toBe(sentAtCancel)
+    expect(await readdir(dir)).toEqual([])
+  })
+
+  it('reads the first proxy from resolveProxy’s answer, and none from DIRECT', () => {
+    expect(firstProxy('PROXY 10.0.0.5:3128; DIRECT')).toBe('10.0.0.5:3128')
+    expect(firstProxy('HTTPS proxy.corp:443')).toBe('proxy.corp:443')
+    expect(firstProxy('DIRECT')).toBeNull()
+  })
+})
+
+describe('installDeps picks the stack: Chromium’s inside a ready Electron, Node’s elsewhere', () => {
+  it('keeps Node’s fetch without Electron, and before the app is ready', () => {
+    expect(packFetch()).toBe(globalThis.fetch)
+    expect(packFetch({ electron: '44.3.0', ready: () => false })).toBe(globalThis.fetch)
+    expect(packFetch({ electron: '44.3.0', ready: () => true })).not.toBe(globalThis.fetch)
+  })
+
+  it('swaps the platform’s fetch for the pack’s, and leaves a fetch a caller handed in alone', async () => {
+    const body = bytesOf(1_000)
+    const file = packFile('numpy.whl', WHEEL_URL, body)
+    const net = fakeNet({ [WHEEL_URL]: [{ body, length: body.length }] })
+    let picked = 0
+    const verified = packFetchVerified(() => (picked++, net.fetch))
+
+    await verified(file, dir, deps(net, { fetch: globalThis.fetch }))
+    expect(picked).toBe(1)
+    expect(net.calls[WHEEL_URL]).toBe(1)
+
+    await rm(join(dir, 'numpy.whl'))
+    await verified(file, dir, deps(net))
+    expect(picked).toBe(1)
+    expect(net.calls[WHEEL_URL]).toBe(2)
   })
 })

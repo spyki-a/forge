@@ -1,7 +1,9 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { open, rename as fsRename, rm, stat, type FileHandle } from 'node:fs/promises'
 import { join } from 'node:path'
+import { isIP } from 'node:net'
 import { CancelledError } from '../ffmpeg/run'
+import { chromiumCode, CHROMIUM_PROXY_ERRORS, SYSTEM_PROXY_SOURCE } from './chromiumFetch'
 import type { PackFile } from '@shared/sidecar/pack'
 
 /**
@@ -98,6 +100,15 @@ export const FETCH_RETRY: Readonly<FetchRetry> = {
  * to listen on any socket); undici's lib/web/fetch/index.js wraps it the same
  * way. The UND_ERR_ ones are undici's own: its connect, header and body
  * timeouts and a socket closed under it.
+ *
+ * The ERR_ ones are Chromium's (the app's pack fetch, chromiumFetch.ts),
+ * which arrive as a plain Error whose MESSAGE is the code
+ * (`net::ERR_NAME_NOT_RESOLVED`), with no `code` and no cause: measured on
+ * Electron 44.3.0 for a name that does not resolve, a closed port and a dead
+ * proxy (scripts/probe-netfetch.mjs, 2026-10-16). Without them here a
+ * network failure in the app would never be tried again. Not here: a
+ * cancel (ERR_ABORTED), a certificate (ERR_CERT_*), a port Chromium refuses
+ * to use (ERR_UNSAFE_PORT), a block by policy: another try changes none.
  */
 export const NETWORK_CODES: ReadonlySet<string> = new Set([
   'ECONNRESET',
@@ -115,7 +126,29 @@ export const NETWORK_CODES: ReadonlySet<string> = new Set([
   'UND_ERR_CLOSED',
   'UND_ERR_CONNECT_TIMEOUT',
   'UND_ERR_HEADERS_TIMEOUT',
-  'UND_ERR_BODY_TIMEOUT'
+  'UND_ERR_BODY_TIMEOUT',
+  'ERR_NAME_NOT_RESOLVED',
+  'ERR_NAME_RESOLUTION_FAILED',
+  'ERR_INTERNET_DISCONNECTED',
+  'ERR_NETWORK_CHANGED',
+  'ERR_NETWORK_IO_SUSPENDED',
+  'ERR_CONNECTION_RESET',
+  'ERR_CONNECTION_REFUSED',
+  'ERR_CONNECTION_CLOSED',
+  'ERR_CONNECTION_ABORTED',
+  'ERR_CONNECTION_FAILED',
+  'ERR_CONNECTION_TIMED_OUT',
+  'ERR_TIMED_OUT',
+  'ERR_ADDRESS_UNREACHABLE',
+  'ERR_EMPTY_RESPONSE',
+  'ERR_SOCKET_NOT_CONNECTED',
+  'ERR_HTTP2_PROTOCOL_ERROR',
+  'ERR_HTTP2_PING_FAILED',
+  'ERR_QUIC_PROTOCOL_ERROR',
+  'ERR_INCOMPLETE_CHUNKED_ENCODING',
+  'ERR_CONTENT_LENGTH_MISMATCH',
+  'ERR_PROXY_CONNECTION_FAILED',
+  'ERR_TUNNEL_CONNECTION_FAILED'
 ])
 
 /** The host a URL names, for a sentence: `files.pythonhosted.org`. The URL itself when it will not parse. */
@@ -230,9 +263,106 @@ export function networkCode(err: unknown): string | null {
   for (let depth = 0; e && typeof e === 'object' && depth < 8; depth++) {
     const code = (e as { code?: unknown }).code
     if (typeof code === 'string' && NETWORK_CODES.has(code)) return code
+    // Chromium's: the code is the message (`net::ERR_CONNECTION_RESET`).
+    const chromium = chromiumCode((e as { message?: unknown }).message)
+    if (chromium && NETWORK_CODES.has(chromium)) return chromium
     e = (e as { cause?: unknown }).cause
   }
   return null
+}
+
+/** A proxy that failed, as a sentence can name it: its address when known, and where the setting came from. */
+export interface ProxyFailure {
+  /** `host:port`, or null when the setting could not be read back. */
+  address: string | null
+  /** "this computer's proxy settings", or the variable it came from (`HTTPS_PROXY`). */
+  source: string
+}
+
+/** The proxy Node's fetch uses for `url`, from the environment, when NODE_USE_ENV_PROXY turns that on (undici's EnvHttpProxyAgent: NO_PROXY honoured). */
+function envProxyFor(url: string, env: NodeJS.ProcessEnv): { url: URL; variable: string } | null {
+  if (!['1', 'true'].includes(String(env.NODE_USE_ENV_PROXY ?? '').toLowerCase())) return null
+  let target: URL
+  try {
+    target = new URL(url)
+  } catch {
+    return null
+  }
+  const names = target.protocol === 'https:' ? ['https_proxy', 'HTTPS_PROXY', 'http_proxy', 'HTTP_PROXY'] : ['http_proxy', 'HTTP_PROXY']
+  const variable = names.find((name) => env[name])
+  if (!variable) return null
+  const noProxy = String(env.no_proxy ?? env.NO_PROXY ?? '')
+    .split(/[\s,]+/)
+    .filter(Boolean)
+  const host = target.hostname.toLowerCase()
+  if (noProxy.some((entry) => entry === '*' || host === entry.replace(/^\*?\./, '').toLowerCase() || host.endsWith(`.${entry.replace(/^\*?\./, '').toLowerCase()}`))) return null
+  try {
+    return { url: new URL(env[variable]!), variable }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Whether `err` is a PROXY's failure, not the host's, and which proxy
+ * (§3a.5: behind a dead proxy the sentence used to blame github.com).
+ *
+ * - On Chromium's stack (the app): a proxy error code in the chain
+ *   (`net::ERR_PROXY_CONNECTION_FAILED`, `net::ERR_TUNNEL_CONNECTION_FAILED`,
+ *   measured for a dead proxy and for one whose name does not resolve), with
+ *   the address chromiumFetch.ts resolved for it when it could.
+ * - On Node's (vitest, CI, a dev run with NODE_USE_ENV_PROXY=1): a connect
+ *   failure whose address or name and port are the proxy's in the
+ *   environment. Measured in the dev sandbox as "fetch failed (connect EPERM
+ *   127.0.0.1:9 - Local (0.0.0.0:0))" for HTTPS_PROXY=http://127.0.0.1:9.
+ */
+export function proxyFailure(err: unknown, url: string, env: NodeJS.ProcessEnv = process.env): ProxyFailure | null {
+  const chain: Record<string, unknown>[] = []
+  for (let e: unknown = err, depth = 0; e && typeof e === 'object' && depth < 8; depth++) {
+    chain.push(e as Record<string, unknown>)
+    e = (e as { cause?: unknown }).cause
+  }
+  for (const e of chain) {
+    const told = e.proxy as ProxyFailure | undefined
+    if (told && typeof told === 'object' && typeof told.source === 'string') return { address: told.address ?? null, source: told.source }
+    const code = chromiumCode(e.message)
+    if (code && CHROMIUM_PROXY_ERRORS.has(code)) return { address: null, source: SYSTEM_PROXY_SOURCE }
+  }
+  const proxy = envProxyFor(url, env)
+  if (!proxy) return null
+  const proxyHost = proxy.url.hostname.replace(/^\[|\]$/g, '').toLowerCase()
+  const proxyPort = Number(proxy.url.port || (proxy.url.protocol === 'https:' ? 443 : 80))
+  for (const e of chain) {
+    const hostname = typeof e.hostname === 'string' ? e.hostname.toLowerCase() : null
+    const address = typeof e.address === 'string' ? e.address.toLowerCase() : null
+    const port = typeof e.port === 'number' ? e.port : typeof e.port === 'string' ? Number(e.port) : null
+    // The proxy's name did not resolve.
+    if (hostname === proxyHost) return { address: `${proxyHost}:${proxyPort}`, source: proxy.variable }
+    if (port !== proxyPort) continue
+    // A connect to the proxy's address, or to its port when it is named rather than numbered and is not 443,
+    // which every one of the pack's hosts listens on.
+    if (address === proxyHost || (isIP(proxyHost) === 0 && proxyPort !== 443)) return { address: `${proxyHost}:${proxyPort}`, source: proxy.variable }
+  }
+  return null
+}
+
+/** "the proxy 10.0.0.5:3128 (HTTPS_PROXY) could not be reached": the proxy named, never the host behind it. */
+export function proxySentence(proxy: ProxyFailure): string {
+  return `${proxy.address ? `the proxy ${proxy.address}` : 'the proxy'} (${proxy.source}) could not be reached`
+}
+
+/** The connection failed at the PROXY: its sentence names the proxy, not the host the file was asked of. */
+export class ProxyError extends Error {
+  constructor(
+    message: string,
+    readonly proxy: ProxyFailure,
+    /** The host behind the proxy, for the record. */
+    readonly host: string,
+    options: { cause: unknown }
+  ) {
+    super(message, options)
+    this.name = 'ProxyError'
+  }
 }
 
 /**
@@ -299,12 +429,19 @@ export interface Fetching {
    * follows each hop here (at most `MAX_REDIRECTS`), so a hop that never
    * answers is named by its own host — the interpreter's github.com hands off
    * to release-assets.githubusercontent.com, and a filter that blocks only the
-   * second must not read as github.com's silence. Node's fetch hands a
-   * `redirect: 'manual'` answer back with its status and Location (undici's
-   * lib/web/fetch/index.js, "Not compliant on purpose", nodejs/undici#1193).
+   * second must not read as github.com's silence. It needs a fetch that hands
+   * a `redirect: 'manual'` answer back with its status and Location: Node's
+   * does (undici's lib/web/fetch/index.js, "Not compliant on purpose",
+   * nodejs/undici#1193), and so does chromiumFetch.ts, the app's, over
+   * `net.request`. Electron's `net.fetch` does NOT: it rejects a manual
+   * redirect ("Redirect was cancelled") and leaves `response.url` empty after
+   * following one (measured on 44.3.0, §15 row 19), so it is never handed
+   * in here.
    */
   redirects: 'follow' | 'by hand'
   naming: FetchNaming
+  /** The environment a proxy is read from (`proxyFailure`, Node's NODE_USE_ENV_PROXY): `process.env`, or a test's. */
+  env?: NodeJS.ProcessEnv
 }
 
 /** Redirects followed by hand before the fetch gives up: fetch's own limit is 20; GitHub uses one. */
@@ -376,7 +513,12 @@ export async function tryInto(url: string, answerMs: number, f: Fetching, sink: 
       try {
         response = await f.fetch(at, { signal: combined, redirect: f.redirects === 'follow' ? 'follow' : 'manual' })
       } catch (err) {
-        throw stop() ?? new ConnectionError(`${label()} could not be reached: ${reasonOf(err)}`, hostOf(at), { cause: err })
+        const stopped = stop()
+        if (stopped) throw stopped
+        // A proxy that failed is named as the proxy: "github.com could not be reached" would send a tester to the wrong place.
+        const proxy = legacy ? null : proxyFailure(err, at, f.env)
+        if (proxy) throw new ProxyError(`${proxySentence(proxy)}: ${reasonOf(err)}`, proxy, hostOf(at), { cause: err })
+        throw new ConnectionError(`${label()} could not be reached: ${reasonOf(err)}`, hostOf(at), { cause: err })
       }
       const location = response.headers.get('location')
       if (f.redirects === 'follow' || response.status < 300 || response.status > 399 || !location) break
@@ -465,6 +607,7 @@ export function shortReason(err: unknown, naming: FetchNaming): string {
   }
   if (err instanceof WentQuietError) return `${who} stopped sending`
   if (err instanceof ShortBodyError) return `${who} sent only part of the file`
+  if (err instanceof ProxyError) return `${proxySentence(err.proxy)} (${networkCode(err) ?? 'network error'})`
   return `the connection to ${who} failed (${networkCode(err) ?? 'network error'})`
 }
 
@@ -531,6 +674,8 @@ export interface FetchVerifiedOptions {
   /** A try begins: what onBytes counts from here is this try's (a retried file streams again from its start). */
   onTry?(): void
   onMessage?(message: string): void
+  /** Where a proxy is read from (`proxyFailure`): `process.env` unless a test passes its own. */
+  env?: NodeJS.ProcessEnv
 }
 
 /** The sha256 of a file on disk, streamed: a 43 MB wheel is never held whole. */
@@ -707,7 +852,8 @@ export async function fetchVerified(file: PackFile, dir: string, f: FetchVerifie
     now: f.now,
     fetch: f.fetch,
     redirects: 'by hand',
-    naming: 'host'
+    naming: 'host',
+    env: f.env
   })
   let host: string
   try {
