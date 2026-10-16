@@ -136,6 +136,11 @@ describe('the packaged app can find its resources', () => {
       expect(ships(path, stat(false)), kept).toBe(true)
     }
     expect(ships(join(sidecar, 'forge_sidecar'), stat(true)), 'forge_sidecar/').toBe(true)
+    // Nor what a coding session or the Finder leaves beside it: both were on this disk and in the installer.
+    expect(ships(join(sidecar, '.claude'), stat(true)), '.claude/').toBe(false)
+    expect(ships(join(sidecar, '.claude', '.cc-writes', 'x'), stat(false)), 'a file inside .claude').toBe(false)
+    expect(ships(join(sidecar, '.DS_Store'), stat(false)), '.DS_Store').toBe(false)
+    expect(ships(join(sidecar, 'forge_sidecar', 'capabilities', '.DS_Store'), stat(false)), 'a .DS_Store deeper in').toBe(false)
   })
 
   it('leaves out the filename Windows cannot extract', () => {
@@ -223,6 +228,21 @@ describe('what the installer is', () => {
       expect(body.indexOf(line), `${line} is inside the guard`).toBeGreaterThan(0)
     }
     expect(code.join('\n')).not.toMatch(/models|projects/i)
+
+    // Every line of the macro is one of these kinds, and nothing in the file stands outside it: a Delete, an
+    // Exec or a RMDir of anything but a userData `python` folder fails here, not only an RMDir (a verifier's
+    // mutation added `Delete "$APPDATA\${PRODUCT_NAME}\settings.json"` inside the guard and this test passed).
+    const allowed = [
+      /^\$\{ifNot\} \$\{isUpdated\}$/,
+      /^\$\{if\} \$installMode == "all"$/,
+      /^SetShellVarContext (current|all)$/,
+      /^\$\{endif\}$/,
+      /^RMDir \/r "\$APPDATA\\\$\{[A-Z_]+\}\\python"$/,
+      /^!if "\$\{APP_PACKAGE_NAME\}" != "\$\{PRODUCT_NAME\}"$/,
+      /^!endif$/
+    ]
+    expect(body.filter((line) => !allowed.some((re) => re.test(line))), 'lines of a kind the uninstaller has no business running').toEqual([])
+    expect(code, 'the file is the macro and nothing else').toEqual(['!macro customUnInstall', ...body, '!macroend'])
   })
 
   it('publishes nothing as a side effect of building', () => {

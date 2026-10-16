@@ -85,6 +85,12 @@ extraResources:
       - '!.venv*/**'
       - '!**/__pycache__/**'
       - '!**/*.py[cod]'
+      # A coding session's folder and the Finder's, both on disk here and
+      # neither the helper's: both entries again for the folder, for the same
+      # reason as the venvs'.
+      - '!.claude'
+      - '!.claude/**'
+      - '!**/.DS_Store'
       # Illegal on Windows. Left behind by a test that was handed ':memory:' as
       # a database path; it is gitignored, but it is still on disk here.
       - '!**/*:memory:*'
