@@ -1,15 +1,16 @@
 # Clips — from a landscape talk to a vertical clip that explains itself: the plan
 
-> **Status, 2026-10-14.** Built since, each with its Built note in place:
-> step 0 (§3.1–§3.7); M0 (§3b, run on your ten links, §3b.9); and step 1's
-> 1b to 1f with the UI, the harness check and the render check (§4.2–§4.9;
-> 1d's salient box is in the helper, but no job calls it, §16.35). Not built:
-> 1g, step P, and everything from step 2 on. **Step P is planned, not
-> built** (2026-10-14): §3a is written in full, revised after two reviews,
-> at 9.5–13 days, with §16.36–50 open for you. Step 1's exit waits on
-> runs only you can make (§4.10). Nothing after `d7244ce` is pushed: all
-> of 1f, its render half and its action half, waits for your push and
-> Windows CI.
+> **Status, 2026-10-16.** Built since, each with its Built note in place:
+> step 0 (§3.1–§3.7); M0 (§3b, run on your ten links, §3b.9); step 1's 1b
+> to 1f with the UI, the harness check and the render check (§4.2–§4.9;
+> 1d's salient box is in the helper, but no job calls it, §16.35); Step P,
+> in three slices (§3a, 2026-10-14 to 16); and **step 2, caption free
+> space** (§5, 2026-10-16), all of it but §5.3's OCR, which waits on 1g.
+> Not built: 1g, and everything from step 3 on. The exits wait on runs
+> only you can make: step 1's (§4.10), P's (§3a.9) and step 2's ten clips
+> (§5's note), and Windows CI has yet to run step 2's last commits. Pushed
+> through `fb65a18` (2026-10-16); step 2's commits from `04b25ab` on, and
+> its record, were not pushed when this was written.
 >
 > **As written, 2026-10-05, when nothing here was built.** This is the plan for the
 > piece agreed with the user on 2026-10-04/05: the reframe engine, caption
@@ -7176,6 +7177,292 @@ Where it goes, per `WHERE-THINGS-ARE.md`:
 
 ## 5. Step 2 — Caption free space · 2.5 days
 
+> **Built 2026-10-16, all but §5.3**, which waits on 1g: 1g is not built,
+> and nothing of the OCR half is coded. Ten commits, made between 19:50
+> and 21:33 that evening among other agents' (`0436d83`, `7e72b8a`,
+> `83e7fe4`, `fb65a18`):
+> - §5.1 and §5.2, the pure half: `11a07c2` (`frameMap.ts`, `freeSpace.ts`);
+> - §5.4: `5946b86` (the three routes), `ab49b60` (the toggle and the
+>   census);
+> - §5.5's render checks: `0c08569` (`captions.int` reads a line's third by
+>   the centre of its rows, after CI's fallback face), `32b969b` and
+>   `04b25ab` (`captionsFree.int`);
+> - the fix phase, after two verifiers: `0d7dd0b` (short shots), `cf165b5`
+>   (the frame libass first draws a line on), `96ab85f` (the toggle's
+>   no-track state), `a0837ea` (the bake's band shared with the render
+>   check).
+>
+> `11a07c2` … `32b969b` reached origin with `fb65a18`; `04b25ab`, the fix
+> phase and this record were not pushed when this was written. `32b969b`'s
+> co-author line names "Claude Opus 5.5" where the others name "Claude
+> Fable 5.1"; it is pushed, so it stays. Three lanes built it (lane A the
+> pure half, lane B the routes and the toggle, lane C the render check),
+> then two verifiers and a fix phase. Every number below is in
+> `EFFECTS.md` §60, with its command and who measured it.
+>
+> **§5.1, as built** (`src/shared/reframe/frameMap.ts`):
+> - `sourceToFrame(project, clip, asset, canvas, frame, box): UnitRect |
+>   null`. The project is an argument the plan's signature lacked: the crop
+>   is `cropAt(followCanvas(project, canvas), clip, …, frame − clip.start)`,
+>   because the export compiles a followed crop for its own canvas, and
+>   `frame` is a PROJECT frame. Null when none of the box is on screen.
+> - The fit is `clipBox` and `fitFor` with `fitFilter`'s arithmetic: contain
+>   scales by the smaller ratio and centres; cover scales by the larger,
+>   centres, and is cut at the clip's box. The result is clipped to the
+>   crop (or its half), the box and the canvas.
+> - On a stacked two-up frame a box goes through the half that holds its
+>   centre (when both or neither do, the half it touches whose centre is
+>   nearer; null if it touches neither), into that half's part of the
+>   `vstack`.
+> - `subjectBoxesAt` takes the track's sample nearest the frame's source
+>   time, within `SAMPLE_REACH_MS` (500), **and only from the shot the
+>   export shows on that frame**: a nearer sample across the cut is another
+>   picture, mapped through the wrong crop. The source time (`sourceMsAt`)
+>   is the middle of the source interval `keys.ts` `exportFrameAt` puts on
+>   the frame, inverted by bisection; not the preview's `sourceFrameAt`,
+>   which rounds where the export at 0.5× floors.
+> - Each face is extended downward by `CHIN_EXTENSION`, 0.5 of its height.
+> - A track a clip may read is `followKeys`' own (`subjectTrackOf`):
+>   present, of today's version, measured on a video of the asset's size.
+> - Not modelled: a clip's rotation, an animated transform, and a camera
+>   move (Ken Burns, zoom keys) on top of the crop.
+>
+> **§5.2, as built** (`src/shared/reframe/freeSpace.ts`):
+> - `overlapByThird` is the exact area of the union, not a raster: the
+>   boxes cut to the band, the x axis cut at every box edge, each strip's y
+>   intervals merged. So two faces that overlap count once.
+> - `captionThirds(project, style, canvas)`: the canvas is a third argument
+>   (the crop and the fit are per canvas), and `style` needs only its
+>   `position`. One entry per span of a clip's shot on `captionTrack`, in
+>   project frames [start, end), in clip order. A followed clip's spans are
+>   its `followKeys(…).shots`, the frames its crop steps on; any other
+>   clip's are each cut at its `exportFrameAt`. A clip with no usable track
+>   is one entry at the style's third. A gap between clips has none, so
+>   `thirdAt` returns null there and the caller keeps the style's.
+> - Each sample of a shot sits on the frame `exportFrameAt` gives its ms,
+>   held to its own shot's frames. A span holding no sample takes the
+>   shot's sample nearest its middle frame within 500 ms, else the style's
+>   third (rule 3).
+> - The constants: `OVERLAP_LIMIT` 0.05, strict (0.05 stays, 0.0501
+>   moves); `BETTER_BY` 0.5, inclusive (0.1 against 0.2 moves, 0.1001
+>   stays); `PERCENTILE` 0.9 by nearest rank, ceil(0.9n), not interpolated;
+>   and `MIN_SAMPLES_TO_DISCOUNT` 3, from the fix phase (`0d7dd0b`).
+>   Below ten samples the nearest rank IS the highest sample, so as first
+>   built one gesture moved the caption in every shot under 5 s, against
+>   this section's own "so a gesture does not move the caption" (a
+>   verifier: 2, 3, 4 and 4.5 s shots moved, 5 s held). Now, from three
+>   samples, the highest is never taken alone (the second-highest stands
+>   in where the rank would be the top); one or two samples take the
+>   higher; at ten or more nothing changed.
+> - Among the two other thirds a tie goes to the one nearer the style's:
+>   from the top or the bottom, the middle first; from the middle, the
+>   bottom before the top. This section named no tie-break.
+> - A style's third: `bottom` the lower, `center` the middle, `top` the
+>   upper.
+>
+> **§5.4, as built.**
+> - **One decision** (`src/shared/captions/smart.ts`). `smartPlacement(project,
+>   style, canvas)` is the only reader of `Project.captions.placement`. It
+>   is null unless the value is `'smart'` (absent, `'style'` or anything
+>   else), and every route then draws exactly what it did before; with
+>   `'smart'` it runs `captionThirds` once and returns a lookup from a
+>   project frame to a third.
+> - **A moved line** (`src/shared/captions/placement.ts`, a leaf that
+>   imports none of the routes). `placedStyle` moves the position and keeps
+>   the edge distance. A centred style moved to an edge takes
+>   `CENTRE_MOVED_MARGIN_V`, the default style's 220 of 1080: a centred
+>   style's margin is neither drawn nor shown (OUTPUT hides Margin at
+>   Middle), Bold centre's is 0, and without it Bold centre moved to the
+>   bottom sat 13 px from the edge at 360 tall (measured).
+>   `captionSpec(style, words, active, placement?)` sets `position` and
+>   `offsetY` from the placed style: top, margin − `TITLE_SAFE`; middle, 0;
+>   bottom, `TITLE_SAFE` − margin.
+> - **libass.** `buildAss`'s `thirdAt(sourceMs)` is asked once per LINE,
+>   at its first word inside `rangeMs`, and every event of the line takes
+>   the answer; asked per word, a line would move part-way through. A moved
+>   line's events carry `{\an8}`, `{\an5}` or `{\an2}` at the head of their
+>   text and their own MarginV field: round(marginV × PlayResY / 1080),
+>   which for Pop's 220 is 391 at 1920 tall, 220 at 1080, 130 at 640 and 73
+>   at 360, and 0 under `\an5`, where libass ignores it. **This section
+>   said "the style's own for bottom"**: so it is when the style is a
+>   bottom one, since its line is then not moved; a top or centred style
+>   moved to the bottom gets
+>   `{\an2}` and the field, because an event MarginV of 0 means "the
+>   style's". An unmoved line is written exactly as before: MarginV 0, no
+>   tag. `main/captions.ts` hands `smartPlacement(…)` to
+>   `buildTimelineCaptions` as a fourth argument, rather than
+>   `captions/timeline.ts` computing it: that would close an import cycle
+>   (`freeSpace` → `frameMap` → `render/plan.ts` → `captions/timeline.ts`,
+>   for `escapeFilterPath`).
+> - **The canvas bake.** `buildGraphicsSpec` asks at each caption layer's
+>   `startFrame`.
+> - **The preview.** `Preview.tsx` memoises the lookup on the project and
+>   the aspect (with captions on), and asks for the line on screen through
+>   `lineThird`, the way the style's export route will (`captionNeedsCanvas`).
+> - **Each route asks at the frame it first shows the line on** (rule 4;
+>   `cf165b5`). Measured on the bundled ffmpeg, the `ass` filter draws a
+>   cue from ceil(its centisecond time × fps / 1000) (80 cues at 24, 25, 30
+>   and 60 fps), where the bake shows a line from the rounded frame. So
+>   libass asks at `libassLineFrame` (the cue's own shift and centiseconds,
+>   rounded up) and the bake at `captionLineFrame` (its layer's
+>   `startFrame`). They differ only for a line starting between half a
+>   frame and a frame before a cut. As first built, libass asked at the
+>   rounded frame too, and such a line ("Late start." at 2975 ms, rendered)
+>   took shot 1's third and sat on shot 2's face on all 18 of its frames.
+>   Both are the caption clock: start and in-point, no speed.
+> - **The project file.** `CaptionSettings.placement?: 'style' | 'smart'`;
+>   `deserializeProject` drops any other value; no schema version change.
+>   With it absent every caption output is byte-identical to the code
+>   before step 2: a verifier compared 360 outputs of
+>   `buildTimelineCaptions`, `buildGraphicsSpec`, `planBakeOf`, `buildAss`
+>   and `captionSpec` at `0436d83` and at `04b25ab` (`cmp`: identical), and
+>   lane B 90 of `buildAss` and `captionSpec`. The fix phase's `toAssTime`
+>   formats `assTimeMs`, its output unchanged.
+> - **The toggle** (`ab49b60`, `96ab85f`). In OUTPUT's caption block, under
+>   Place and Margin: a full-width row, "Smart placement", with a switch
+>   (`role="switch"`, `aria-checked`, `data-smart-placement`) and the
+>   tooltip "keeps captions off faces, one position per shot". The store's
+>   `setCaptionPlacement('smart' | 'style')`; turning it off deletes the
+>   field. Its states, from `smartPlacementState(project, helperStatus)`:
+>
+> | state | when | the switch | said |
+> |---|---|---|---|
+> | ready | a clip on the caption track has a subject track it may read | works, whatever the helper's state | the tooltip |
+> | no-track | no track yet, and the AI helper can reframe: `reframeHelperFrom`, Follow the subject's own test (`vision.faces` and `vision.facesModel`, the faces self-test passed) | works; nothing moves until a clip is reframed | the tooltip ends "— reframe a clip first" |
+> | helper-starting | no track, and the helper has not answered | greyed | "the AI helper is starting" under it |
+> | needs-helper | no track, and nothing here can make one | greyed | **needs the AI helper** under it: the shared `HelperPointer`, titled "install it in Settings", opening Settings at the AI helper's row |
+>
+> A greyed switch that is on (a project saved so) can still be turned off.
+> As first built, no-track took `vision.faces` alone and offered "reframe a
+> clip first" where the reframe itself would refuse (`96ab85f`).
+> - **The census**: six rows in the `output` home where this section named
+>   two. "Smart placement", its tooltip, "needs the AI helper" and "install
+>   it in Settings" under needs `none` (the harness page's own helper has
+>   failed by design); "reframe a clip first", part of a title, under the
+>   new recipe `captions-placement-no-track`; "the AI helper is starting"
+>   under `captions-placement-starting`. Lane B's census run in the harness:
+>   288 rows, none missing. The "reframe a clip first" row's note still
+>   reads "able to find faces"; since `96ab85f` it is "able to reframe".
+>
+> **§5.5, as built.** The step's test files at `a0837ea`, run by the
+> recorder on 2026-10-16: 11 files, 190 tests, all passed.
+> - `tests/frameMap.test.ts` (14) and `tests/freeSpace.test.ts` (14): every
+>   bullet above, the mouth case, the two-up's halves, a sample never taken
+>   across a cut, and the short shots (1.5 to 4.5 s: one lean stays at the
+>   bottom, two move it).
+> - `tests/captionPlacement.test.ts` (21): one test per route, so each can
+>   fail alone; the measured libass table pinned as `LIBASS_FIRST_FRAME`;
+>   the late line on each route; the toggle's state over nine helper
+>   statuses; main's one call and the preview's dependencies as source
+>   shapes. `tests/renderer/smartPlacement.test.tsx` (6): the toggle in
+>   every state. Cases added to `captionLine`, `captions`, `project` and
+>   the census fixture.
+> - `tests/integration/captions.int.test.ts` (8 in all): libass alone at
+>   360×640, Pop and Bold centre, smart against absent, each line's third
+>   read by the centre of its rows (`0c08569`); and the late line read on
+>   every frame (`cf165b5`).
+> - `tests/integration/captionsFree.int.test.ts` (19), into
+>   `tests/output/captions-free/`, the render check. A 1280×720, 30 fps,
+>   6 s lossless source cut at 3 s, with a white box drawn exactly where a
+>   hand-written track puts the face: the lower third in shot 1, the upper
+>   in shot 2. The clip at timeline frame 12, in-point 6; seven yellow lines
+>   of two words or one, two of them a few frames either side of the cut.
+>   9:16 at 360×640 follows its subject (a 404×720 crop); 16:9 at 640×360
+>   has a static 16:9 crop. Both routes, through the app's own code:
+>   libass from main's `prepareCaptions` to the export's `subtitlesPath`;
+>   the canvas bake (Pop with gradient-sunset) through `buildGraphicsSpec`,
+>   `planBakeOf`, main's picture and list writers and `captionOverlay`, in
+>   the band `captionBand` computes (`a0837ea`). Pop at its bottom and moved
+>   to the top, each smart and with placement absent (eight controls). Every
+>   frame of every render is read: no caption row inside the box's rows;
+>   each line's third, by the centre of its rows, the hand-derived one and
+>   never the face's; nothing between lines. The controls sit in the
+>   style's third and on the box through the face's shot.
+> - The mutations this section named are killed: no hysteresis (1 test);
+>   no downward extension (4, across `frameMap` and `freeSpace`);
+>   `placement` ignored by `buildAss`, where exactly `captionsFree.int`'s
+>   four libass smart cases fail and the four canvas cases and eight
+>   controls pass (lane C, then a verifier). Every other mutation `EFFECTS.md`
+>   §60 lists failed its tests too.
+>
+> **The rows**, Pop on this Mac with Anton, the union over each third's
+> lines, against this section's table (640×360, MarginV 20):
+>
+> | | top | middle | bottom |
+> |---|---|---|---|
+> | the plan's probe, 640×360 | 26–52 (`\an8`) | 167–191 (`\an5`) | 306–332 |
+> | libass, Pop, 640×360 (MarginV 73) | 84–99 | 174–189 | 264–279 |
+> | libass, Pop, 360×640 (MarginV 130) | 148–177 | 309–337 | 470–498 |
+> | the canvas stand-in, 640×360 | 73–105 | 163–195 | 254–286 |
+> | the canvas stand-in, 360×640 | 130–188 | 291–349 | 451–509 |
+>
+> Both `\an5` rows centre on PlayResY / 2 (179 and 181.5); under `\an8`
+> the first row is 6 below MarginV in the plan's and 11 below in Pop's; at
+> the bottom both end 8 rows above MarginV from the edge. In the smart
+> renders no frame put a caption row on the box, and the nearest any came
+> was 62 rows (16:9, the canvas, Pop at the bottom); the controls sat on it
+> for 42 frames (Pop at the bottom) and 36 (at the top).
+>
+> **Where the build reads otherwise than this section**, each said above:
+> the signatures (`project` and a null return in `sourceToFrame`; `canvas`
+> in `captionThirds`); the nearest sample from the shown shot only; the
+> discount below ten samples; a tie-break; `{\an2}` and the field for a
+> top or centred style moved down; `CENTRE_MOVED_MARGIN_V`; a fourth state
+> and six census rows; and the render check's canvas route, whose GLYPHS
+> are stood in. Each canvas line is the opaque yellow block `layoutText`
+> gives it, read by chroma (Y > 150, U < 80) rather than by luma, because
+> the painting needs a DOM canvas and the check runs in node and in CI.
+> The band over the blocks is the app's own (`captionBand`). The real
+> paint's ink, measured once in the harness, starts up to 0.32 of the font
+> size above the block and ends inside it; raised so, the canvas cases'
+> nearest approach to the box would still be 62 rows. A line spanning a
+> cut is `captions.int`'s and the route tests' case; no render-check line
+> spans one.
+>
+> **The exit**, two halves:
+> 1. **Both routes pass the render check in CI.** On the Mac: 19 of 19 at
+>    `a0837ea` (the recorder's run), and 19 of 19 with the fonts folder
+>    emptied (lane C's rehearsal on this Mac's fallback face). CI's first
+>    run of `captionsFree.int` is the push of `fb65a18`, not read when this
+>    was written; the fix phase's four commits (the late line and the
+>    shared band among them) run first on the push after this record. The runners have no Anton
+>    (`/assets` is gitignored), so libass draws a fallback face there: in
+>    run 38986994729 lane B's three-word line ran to rows 409–498 on both
+>    runners, where it is 470–498 here (wrapped into two lines, by its
+>    height), and the case failed on an UNMOVED line's reading
+>    (`0c08569`). So per-event `\an` and MarginV have been rendered on the
+>    2018 build but no reading of a moved line there is recorded: still
+>    **dated**. Read the windows-latest result and its "captionsFree:
+>    caption rows" notice.
+> 2. **The ten clips show zero sampled caption lines on a face.** Not run,
+>    and **no reader for it exists yet**: step 1's exit reader
+>    (`reframeExit.int`, §4.10) scores crops and cuts, not caption lines.
+>    The ten clips are yours, after step 1's own run through the action.
+>
+> **Open, found while building:**
+> - **The preview's cost.** It recomputes the thirds on every edit while
+>   Smart placement is on: lane B measured 4.1–9.3 ms for a 10-minute clip
+>   unfollowed and 58–70 ms followed (1,200 samples, 60 shots). Memoising on
+>   the inputs would still recompute on a drag, since a drag changes the
+>   clips; a per-clip cache is a design change.
+> - **The bake's band spans every third a line uses**: 9:16 Pop moved to
+>   the top is a band 380 rows tall where its control's is 60. `EFFECTS.md`
+>   §13 measured, per 10 s at 1080×1920, 2.61 s with a band overlay and
+>   5.15 s with a full frame, against 1.75 s with no captions; a 1080×1920
+>   export with Smart placement on is unmeasured. One band per third is
+>   the lever.
+> - **A clip at a speed other than 1**: a line is looked up on the caption
+>   clock (no speed), the thirds are on the picture clock, so a line's
+>   third can come from a shot other than the one on screen. The export's
+>   cues already ignore speed; the same cause.
+> - **libass draws Anton at about 0.57× the canvas painter's size** for the
+>   same Pop style (`EFFECTS.md` §60): a plain-style export's captions are
+>   about half the height the preview shows. Unrelated to placement; a
+>   step of its own.
+> - CI uploads no `tests/output/captions-free/`, so a red run shows only
+>   the failure lines and the one notice; and two runs of `captionsFree.int`
+>   at once clear each other's folder.
+
 **What is wrong.** Captions sit at the style's top, middle or bottom
 (`captions/line.ts:22-39`) whatever is in the frame. In a 9:16 reframe of a
 talking head, the default lower third often covers the mouth and chin. Sheet
@@ -9066,7 +9353,7 @@ the analysis loaded stays resident while the model runs.
 | `fps=${fps},zoompan=…:d=1:…:fps=${fps}` on video | step 0 (§3.4) | 2014; zoompan's restamping read in the 2018 source (`vf_zoompan.c:158`, `:225`, `:309-310`) | measured on the Mac: 60 fps and 29.97 fps sources keep their duration with the leading `fps=`, and go to half speed or drift without it; **CI with step 0** |
 | `-filter_complex_script <file>` | step 0 (§3.7), every render | in the 2018 source (`f22fcd4` `fftools/ffmpeg_opt.c:3109`, `:3478`) | measured on the Mac (re-run by the fixer); the 360-cut render check runs it in CI |
 | `-vsync vfr` (a test fixture's variable-rate source; `-fps_mode` is 2022, too new) | §4.9's render check | old | measured in CI with step 1 |
-| ASS per-event `{\anN}` and `MarginV` via `subtitles` | step 2 | core ASS / libass | measured on the Mac (rows above); **dated**, CI with step 2 |
+| ASS per-event `{\anN}` and `MarginV` via `subtitles` (as built, `buildRenderPlan`'s `ass=…:shaping=complex` burn) | step 2 (`buildAss`, built 2026-10-16) | core ASS / libass | **built**; measured on the Mac, by a bare `ass=` and through `buildRenderPlan`'s burn (`EFFECTS.md` §60): Pop moved to the top or the bottom renders on exactly the rows of Pop placed there, `\an5` ignores MarginV, and a cue is first drawn on ceil(its centisecond time × fps / 1000) at 24, 25, 30 and 60 fps. **Dated** for Windows: rendered there in run 38986994729, which failed on an unmoved line's reading under the runners' fallback face (`0c08569`); `captions.int` and `captionsFree.int` read moved lines from the run on `fb65a18`'s push |
 | `overlay` of a PNG sequence, `format=yuva420p`, `tpad=stop_mode=clone` | step 3 graphics | 2010 / Oct 2018 | in CI (moments, captions) |
 | opacity keys (`geq` on alpha) | step 3 exits | 2014 | in CI |
 | `scdet` | **not used** | 2020-05-14 | goes into `TOO_NEW` (§3.5); the Mac build has it |
@@ -9085,7 +9372,7 @@ with a window, so `-ss` and `-t` are scanned too. So have 1f's shapes since
 
 | missing | what happens | test |
 |---|---|---|
-| the Python helper | Follow the subject, Reframe and Smart placement greyed with "needs the AI helper"; crops as they were; captions at the style's place; Best clips over YouTube captions only; graphics over caption tracks only, no `callout`; every B-roll picture that may show a person asks | `reframe.int` with the helper refused; `bestClips` without asr; census rows for each greyed control. **The reframe's, as built (slice B):** `reframeJob.int`'s no-helper case (a missing interpreter, and a bare one: `no-helper` before any scene pass, in CI too); `reframePanel` and the census's `reframe-no-helper` rows for Follow the subject and Reframe to 9:16; a followed clip keeps following |
+| the Python helper | Follow the subject, Reframe and Smart placement greyed with "needs the AI helper"; crops as they were; captions at the style's place; Best clips over YouTube captions only; graphics over caption tracks only, no `callout`; every B-roll picture that may show a person asks | `reframe.int` with the helper refused; `bestClips` without asr; census rows for each greyed control. **The reframe's, as built (slice B):** `reframeJob.int`'s no-helper case (a missing interpreter, and a bare one: `no-helper` before any scene pass, in CI too); `reframePanel` and the census's `reframe-no-helper` rows for Follow the subject and Reframe to 9:16; a followed clip keeps following. **Smart placement's, as built (step 2, §5's note):** greyed with the pointer, or "the AI helper is starting", in `renderer/smartPlacement` and the census (its "needs the AI helper" row under needs `none`); with no subject track every line keeps the style's third on all three routes (`captionPlacement`); a project saved with it on can still turn it off |
 | a model not on disk | its Get button with its size; nothing downloads until it is pressed | census rows; a store test that no toggle or phrase starts a download. **The face finder's, as built (slice B):** no Get button of its own — Follow the subject names it, "gets the face finder, 1.1 MB, first time" (its census row), and the press fetches, then analyses; `reframeJob.int`: a job asked without it fails `model-missing` with nothing fetched and no scene pass; `reframeStore`: a phrase is refused before any job |
 | the face detector (degraded) | salient, then centre, per shot, with a note. **As built (slice B):** the helper counts as missing (`reframeHelperFrom`), so Follow the subject is greyed "needs the AI helper"; and a shot with no face centres with a note, salient never called (§16.35) | path test "no faces"; `reframeContract` (`reframeHelperFrom`); `reframeJob.int`'s bare interpreter, where `vision.faces` is degraded |
 | two people, one of them lost for much of the shot | no two-up: the larger face, with a note | path test "a lost face gives larger" |

@@ -7997,3 +7997,488 @@ numpy). The fix phase's last run over 49 files: 665 passed.
   `build/installer.nsh`.
 - **The 2018 build's run of `RETIME_TAIL`** and of the three Windows test
   fixes: the next Windows CI run.
+
+## 60. Captions in the free third — the subject on the output frame, the chooser, per-event \an and MarginV on both routes (2026-10-16)
+
+For `docs/CLIPS.md` §5 (step 2, caption free space): ten commits,
+`11a07c2` … `a0837ea`, made on 2026-10-16 among other agents' (CLIPS §5's
+note lists them). Development Mac, inside the dev sandbox (no Metal), the
+bundled ffmpeg (the 4.1.5 darwin-arm64 package, reporting 4.4); nothing
+here was run on the Windows 2018 build. Each number names who measured it:
+lane A (the pure half, `frameMap.ts` and `freeSpace.ts`), lane B (the three
+routes, the toggle, `captions.int`'s case), lane C (the render check,
+`captionsFree.int`), the two verifiers, the fix phase, or the recorder. The
+lanes' probe scripts (`probePlacement.ts`, `probe_libass_size.py`, the
+mutation drivers) lived in the session's scratchpad and are not kept: the
+tables here are the record. The render check is committed and writes
+`tests/output/captions-free/README.txt`. §5.3 (Florence-2's OCR) is not
+built, so nothing of it is measured.
+
+### The subject on the output frame (`frameMap.ts`)
+
+Worked by hand by lane A and pinned in `tests/frameMap.test.ts`:
+
+- **A plain crop**, 960×1080 at x 480 of a 1920×1080 file, on a 1080×1920
+  canvas. Contain: scale 1.125, the picture 1080×1215, letterboxed from y
+  352.5; the source box (600, 100, 120×120) lands at x 0.125, y 465/1920,
+  w 0.125, h 135/1920. Cover: scale 16/9, the picture from x −313.3; a box
+  at source x 500–600, inside the crop, is cut away (null) under cover and
+  shown under contain.
+- **A followed crop**, 608×1080: within 1 % of 9:16 (off by 0.0008, under
+  `NEAR_SHAPE`), so it fills, cover at 1.7778. A face centred in its shot
+  lands centred at x 0.5 (to 2 dp) at clip frames 40 and 150, and the other
+  shot's face is null on each. At project frame start + 94 the later shot's
+  face is null; at start + 95, the cut, it is shown.
+- **The two-up**, faces at x 384 and 1536 on frame 150: the top half's face
+  centres at y 0.2 and the bottom half's at y 0.7 (`path.ts` `twoUpFaceY`,
+  0.4 of each 540 px half), both at x 0.5.
+- **The mouth case**, an identity mapping (a 1080×1920 file on a 1080×1920
+  canvas): a face at y 0.5, 1/6 tall, ends exactly at 2/3, its lower-third
+  overlap under 1e-9; extended by half its height it ends at 0.75 and
+  covers 0.05 of the lower third.
+- **The clock**: `exportFrameAt(sourceMsAt(k)) === k` for every k in 0..119
+  at in-point 7, at speeds 1, 2 and 0.5 and on the ramps 1→0.5, 0.25→4 and
+  4→0.25.
+
+A verifier, on fixtures of its own (a scratch test, deleted):
+
+- A followed 1920×1080 clip on a 1080×1920 canvas, cut at 3 s: `cropAt`
+  gave {x 56, w 608, h 1080} at clip frame 40 and {x 1156, …} at 140;
+  `sourceToFrame` matched the hand-worked cover arithmetic to 5 dp, and the
+  other shot's face was null on each frame.
+- A two-up with faces at x 150 and 1650: halves {0, 264, 608×540} and
+  {1312, 264, 608×540}; each face at its hand-worked place in the stack,
+  the top one ending at y ≤ 0.5 and the bottom one starting at y ≥ 0.5.
+- 16:9, contain, a 540×960 crop at (690, 60): the box (744, 156, 108×192)
+  maps to x 717/1920, y 108/1080, w 121.5/1920, h 216/1080. Cover, a
+  1600×902 crop (0.22 % off 16:9): a box at the crop's corner maps to {0, 0,
+  240/1920, 118.8/1080}, cut at the box. A box outside the crop is null
+  under both.
+
+### The chooser (`freeSpace.ts`)
+
+Lane A's numbers, pinned in `tests/freeSpace.test.ts`:
+
+- **Overlap.** One box 0.5 wide over y 0.5–0.8 covers 0.25 of the middle
+  third and 0.2 of the bottom. Two boxes, (0.1, 0.7, 0.4×0.2) and (0.3,
+  0.8, 0.4×0.15): their union is 0.12 of the frame, 0.36 of the lower
+  third, where a sum gives 0.42. A box hanging off the frame, clipped: 0.06.
+- **The rules, end to end.** A lower-third overlap of 0.04 keeps the
+  bottom; 0.06 moves it to the middle. Hysteresis: bottom 0.06 against top
+  0.04 (middle 0.056) stays at the bottom; against top 0.02 (middle 0.076)
+  it moves to the top.
+- **One choice per shot.** Ten samples over 5 s, the face's extended box
+  over 0.2025 of the lower third, one sample raised into the middle (0.2025
+  of it): [{30, 180, middle}], the same with the gesture and without. With
+  the maximum in place of the percentile it flips to the top.
+- **A cut** at 3000 ms (clip frame 90, project frame 120): [{30, 120,
+  middle}, {120, 210, bottom}]; a line on frames 100–140 takes the middle.
+- **A followed clip**, cut at 3166.67 ms, in-point 15: the keys put the cut
+  on clip frame 80, and the spans are [{30, 110, top}, {110, 180, bottom}],
+  equal to `keys.shots`.
+
+A verifier's own: the limit is strict (0.05 stays, 0.0501 moves) and the
+margin inclusive (0.1 against 0.2 moves, 0.1001 stays); a line spanning a
+cut takes its start shot ([30, 120, middle], [120, 210, bottom];
+`thirdAt(110)` is middle); a clip with no track gives [{30, 210, bottom}].
+
+**Short shots.** The same verifier: Pop at the bottom, a calm face in the
+upper third, and one sample, at 1000 ms, leaning into the lower third (its
+extended box over 0.45 of it). `captionThirds` gave the first shot:
+
+| shot | samples | third |
+|---|---|---|
+| 2 s | 4 | middle |
+| 3 s | 6 | middle |
+| 4 s | 8 | middle |
+| 4.5 s | 9 | middle |
+| 5 s | 10 | bottom |
+
+By nearest rank, ceil(0.9n) is n for every n from 1 to 9: the 90th
+percentile of fewer than ten samples is the highest, so one gesture moved
+the caption in every shot under 5 s, and lane A's stability case sat at
+exactly ten samples, the smallest count at which the rule held. The fix
+phase (`0d7dd0b`): from `MIN_SAMPLES_TO_DISCOUNT` = 3 samples the index is
+min(ceil(0.9n), n − 1) − 1, zero-based, so one sample cannot decide a shot
+of 3 to 9 samples and two can; with one or two the higher stands. Its test,
+a lean over 0.2025 of the lower third in shots of 1.5, 2, 3, 4 and 4.5 s:
+one lean stays at the bottom, two move it to the middle. On the unfixed
+code it failed, "3 samples, one raised: expected 0.2 to be 0".
+
+**Cost** (lane B; node on the Mac, a temporary vitest probe): a 10-minute
+1920×1080 clip on a 1080×1920 canvas, 1,200 samples of two faces each, 60
+shots. The thirds took 4.1–9.3 ms unfollowed and 58–70 ms followed; 2,572
+lookups, 0.2–1.0 ms. `Preview.tsx` recomputes the thirds on each edit while
+Smart placement is on; otherwise `smartPlacement` returns before any work.
+
+### Per-event `\an` and MarginV on the bundled libass
+
+Lane B's probe: `buildAss` output for "Forge burns captions." at 0–1800 ms,
+burned with
+
+    ffmpeg -f lavfi -i color=c=black:s=<W>x<H>:r=10:d=1 \
+      -vf ass=filename=<ass>:fontsdir=assets/fonts \
+      -ss 0.5 -frames:v 1 -f rawvideo -pix_fmt gray pipe:1
+
+A text row is a row with any pixel above 128; the first event is the one
+shown. Pop's 220 reference px are MarginV 73 at 640×360 and 130 at 360×640.
+
+| style | moved to | rows at 640×360 | rows at 360×640 |
+|---|---|---|---|
+| Pop (bottom) | — | 264–280 | 469–498 |
+| Pop | top: `{\an8}`, MarginV 73 / 130 | 83–99 | 148–177 |
+| Pop | middle: `{\an5}`, MarginV 0 | 174–189 | 309–338 |
+| Pop | bottom, its own: no tag, MarginV 0 | 264–280 | 469–498 |
+| Pop at the top | — | 83–99 | 148–177 |
+| Pop at the top | middle: `{\an5}` | 174–189 | 309–338 |
+| Pop at the top | bottom: `{\an2}`, MarginV 73 / 130 | 264–280 | 469–498 |
+| Bold centre (marginV 0) | — | 171–190 | 303–338 |
+| Bold centre | top: `{\an8}`, MarginV 73 / 130 | 87–106 | 154–189 |
+| Bold centre | bottom: `{\an2}`, MarginV 73 / 130 | 254–274 | 453–488 |
+| Bold centre | bottom, the MarginV field forced to 0 | 327–347 | 583–618 |
+| Bold centre | bottom, the `{\an2}` tag removed | 171–190 | 303–338 |
+
+- A Pop line moved to the top renders on exactly the rows of Pop placed at
+  the top, and Pop at the top moved down on exactly Pop's own bottom rows.
+- `\an5` centres on PlayResY / 2 and ignores MarginV.
+- An event MarginV of 0 means "the style's", which for a centred style is
+  0: without the field, Bold centre moved down sits 13 px from the bottom
+  at 360 tall. Hence `CENTRE_MOVED_MARGIN_V` (CLIPS §5's note).
+- The tag alone moves the line; MarginV alone does not.
+
+**Through `buildRenderPlan`** (lane B; committed as `captions.int`'s "puts
+Smart placement's lines in their third on the bundled libass"): a flat
+#202830 file, 360×640, 6 s at 30 fps, captioned on a 360×640 canvas with a
+cut at 3 s, frames taken with `-ss`. The recorder's run at `a0837ea`
+printed the same rows:
+
+| case | face top, shot 1 → 2 | smart | placement absent |
+|---|---|---|---|
+| Pop, lines at 1.0, 3.25 (over the cut) and 4.0 s | y 0.7 → 0.1 | 309–338, 309–338, 470–498: middle, middle, bottom | 469–498, 470–498, 470–498 |
+| Bold centre, lines at 1.0 and 4.0 s | y 0.4 → 0.75 | 444–488, 295–338: bottom, middle | 295–338, 295–338 |
+
+The moved Bold centre line ends 151 rows above the edge, within 10 rows of
+where Pop's own bottom line ends (498).
+
+**The canvas route's offsets** (`captionSpec` with a third; margin =
+marginV / 1080): top, offsetY = margin − `TITLE_SAFE`; middle, 0; bottom,
+`TITLE_SAFE` − margin. For Pop that is ±(0.2037 − 0.05), the top value
+exactly the bottom's negation.
+
+**Placement absent changes nothing.** Lane B loaded the HEAD `ass.ts` and
+`line.ts` (`git show HEAD:`) beside the new ones and compared `buildAss`
+with no `thirdAt` and `captionSpec` with no placement: every preset, Pop at
+the top and Clean at 2 words a line, on 1080×1920, 1920×1080 and 640×360,
+with no offset, `offsetMs` 800, a `rangeMs`, and a negative offset with a
+range: 90 of 90 byte-identical. A verifier then dumped 360 outputs
+(`buildTimelineCaptions`, `buildGraphicsSpec`, `planBakeOf`, `buildAss`
+with offset and range, `captionSpec`) with placement absent, `'style'` and
+`'bogus'`, Pop, Pop at the top, Pop with gradient-sunset and Clean,
+followed and not, on the same three canvases, over a fixture whose subject
+track Smart placement would act on, at `0436d83` (before step 2) and at
+`04b25ab`: two 901,292-byte JSON files, `cmp` identical, none null.
+
+### The frame libass first draws a cue on
+
+The fix phase, through `buildRenderPlan`'s `ass=` burn: a black 640×360
+timeline at 24, 25, 30 and 60 fps, one filled box per cue
+(`{\p1\pos(x,100)}`), every cue ending at 5.50 s; every frame decoded in
+order (`-vsync passthrough -f rawvideo -pix_fmt gray`), and the first frame
+whose box centre is above 128 taken. **80 cues, each first drawn on
+ceil(T × fps / 1000)**, where T is the cue's start as written, whole
+centiseconds (`floor(round(ms) / 10) × 10`), and on no other frame. A cue
+exactly on a frame's time shows on that frame (3.00 s and 4.00 s at every
+rate). As {timeline ms: first frame}:
+
+| fps | cues |
+|---|---|
+| 30 | 2950:89, 2960:89, 2966:89, 2967:89, 2970:90, 2980:90, 2990:90, 3000:90, 3010:91, 3030:91, 3033:91, 3034:91, 3040:92, 3060:92, 3066:92, 3067:92, 3070:93, 3330:100, 3333:100, 3334:100, 3340:101, 4000:120, 4010:121 |
+| 24 | 2950:71, 2960:72, 2970:72, 2980:72, 2990:72, 3000:72, 3010:73, 3020:73, 3030:73, 3040:73, 3050:74, 3060:74, 3330:80, 3340:81, 3350:81, 4000:96, 4010:97, 4160:100, 4170:101 |
+| 25 | 2950:74, 2960:74, 2970:75, 2980:75, 2990:75, 3000:75, 3010:76, 3020:76, 3030:76, 3040:76, 3050:77, 3060:77, 3330:84, 3340:84, 3350:84, 4000:100, 4010:101, 4160:104, 4170:105 |
+| 60 | 2950:177, 2960:178, 2970:179, 2980:179, 2990:180, 3000:180, 3010:181, 3020:182, 3030:182, 3040:183, 3050:183, 3060:184, 3330:200, 3340:201, 3350:201, 4000:240, 4010:241, 4160:250, 4170:251 |
+
+The table is pinned as `LIBASS_FIRST_FRAME` in
+`tests/captionPlacement.test.ts`. The canvas bake shows the same line from
+round(ms × fps / 1000), so a line starting between half a frame and a frame
+before a cut is first drawn after the cut on libass and before it on the
+bake. Rendered (`captions.int`, "places a line libass first draws on a
+cut's frame by the shot it is drawn in"): 360×640 at 30 fps, a cut at 3 s,
+shot 1's face top at y 0.7 (its third the middle), shot 2's at y 0.40
+(extended to 0.58, inside the middle third, so Pop stays at the bottom);
+"Late start." at 2975 ms, written as cue 0:00:02.97. With `libassLineFrame`
+it is on screen on frames 90–107, rows 470–498 to frame 98 and 469–498
+after (the recorder's run), the lower third, off the face's rows 256–371.
+Asked at the rounded frame, as first built: rows 309–338 on every one of
+its 18 frames, on the face. Not measured on the 2018 build: the case renders
+it there on the next push, where the line must first show on frame 90.
+
+### The render check (`captionsFree.int`)
+
+The source (lane C, committed):
+
+    ffmpeg -hide_banner -loglevel error -y -filter_complex \
+      "color=c=0x203040:s=1280x720:r=30:d=3,drawbox=x=384:y=500:w=192:h=140:color=white:t=fill[s0];
+       color=c=0x402818:s=1280x720:r=30:d=3,drawbox=x=704:y=64:w=192:h=156:color=white:t=fill[s1];
+       [s0][s1]concat=n=2:v=1:a=0[v]" \
+      -map [v] -c:v libx264 -qp 0 -preset ultrafast -pix_fmt yuv420p faces.mp4
+
+(one line in the test). The cut is at source frame 90, 3.000 s. The
+subject track is written by hand at `SUBJECT_TRACK_VERSION`: shots [0,
+3000) and [3000, 6000) ms, 12 samples every 500 ms, each holding its shot's
+box as shares of the frame to 4 dp. Each box edge is at least 2 % of the
+output frame clear of a third's boundary at both aspects.
+
+- **The clip** sits at timeline frame 12, in-point 6, 174 frames: shot 1 is
+  timeline 12–96, shot 2 96–186. 9:16 at 360×640 follows its subject
+  (`follow`, the track in `Project.subjects`, the stored crop `followKeys`
+  gives): a 404×720 crop, its x stepping 278 → 598 at t = 2.783333 s
+  (clip frame 84). 16:9 at 640×360 has a static crop, 1152×648 at (64, 36).
+- **The lines**: seven, of two words or one, 200 ms a word, starting at
+  300, 1100, 1900, 2760, 3060, 4000 and 4800 ms; timeline frames 15–27,
+  39–51, 63–75, 89–95, 98–110, 126–138 and 150–162. The fourth and fifth
+  sit 1 to 7 frames either side of the cut; no time falls on half a frame;
+  none spans the cut. Pop with yellow words and highlight, at its own
+  bottom and moved to the top (`overrides.position: 'top'`).
+- **The routes**: libass through main's `prepareCaptions` (with
+  `FORGE_FONTS_DIR` at `assets/fonts` and `FORGE_TEST_USERDATA` a folder
+  per case), the export given `subtitlesPath`; the canvas bake with
+  `textStyleId: 'gradient-sunset'` (so `captionNeedsCanvas` holds) through
+  `buildGraphicsSpec`, `planBakeOf`, stand-in pictures, main's
+  `writeCaptionFrame` and `writeCaptionList`, and `captionOverlay`. Each
+  case asserts the route the app picks.
+- **The reading**: every frame decoded in order, `-vsync passthrough -f
+  rawvideo -pix_fmt yuv420p`, so frame n is timeline frame n (186 a
+  render), each pixel with its chroma sample. Yellow is Y > 150 and U < 80
+  (the yellow reads Y 210–219, U 16); white is Y > 200 with U and V within
+  18 of 128. A caption row has at least 3 yellow pixels; a box row at least
+  20 white ones, read from the bare render of the same aspect, since a
+  caption over the box hides some of its rows. A line is judged on its
+  frames less one at each end, its third by the centre of its rows.
+  Chroma subsampling marks the white box row just above an overlapping
+  yellow block as yellow (450 against the block's 451): only the controls
+  overlap.
+
+**The box**, from the bare renders, within 2 px of `sourceToFrame` of the
+unextended face on frames from + 2, the middle and to − 2 of each shot:
+9:16 shot 1 rows 446–569, shot 2 57–195; 16:9 shot 1 258–334, shot 2 16–101.
+
+**The rows**, with Anton (lane C, then the recorder's run at `a0837ea`, the
+same):
+
+| route | aspect | top | middle | bottom |
+|---|---|---|---|---|
+| libass | 9:16 (360×640) | 148–177 | 309–337 | 470–498 |
+| libass | 16:9 (640×360) | 84–99 | 174–189 | 264–279 |
+| canvas stand-in | 9:16 | 130–188 | 291–349 | 451–509 |
+| canvas stand-in | 16:9 | 73–105 | 163–195 | 254–286 |
+
+The hand-derived thirds (`EXPECTED`, which `captionThirds` must also
+give): Pop at the bottom takes the middle in shot 1 (the bottom third's
+overlap 0.42 at 9:16 and 0.14 at 16:9, the middle and the top both 0, the
+tie to the nearer) and its own bottom in shot 2; Pop at the top keeps the
+top in shot 1 and takes the bottom in shot 2 (the top third's overlap 0.35
+and 0.15, the bottom 0). Every smart render read so, on every line.
+
+**The nearest any caption row came to the box**, in rows, and in brackets
+the canvas cases with the block raised by the real paint's overhang (below):
+
+| aspect | route | Pop at the bottom | Pop at the top |
+|---|---|---|---|
+| 9:16 | libass | 108 | 268 |
+| 9:16 | canvas | 96 (96) | 255 (238) |
+| 16:9 | libass | 68 | 158 |
+| 16:9 | canvas | 62 (62) | 152 (142) |
+
+No smart render put a caption row on the box on any frame. The eight
+controls (placement absent) sit in the style's own third and on the box on
+42 frames (Pop at the bottom, lines 1–4) or 36 (at the top, lines 5–7).
+Each render and its decode took 0.3–0.8 s; the file ran in 10–12 s for
+lane C and in 9.3 s in the recorder's run, 19 of 19.
+
+**Against CLIPS §5.4's table** (640×360, PlayResY 360, a style with MarginV
+20, measured by the plan: bottom 306–332, `\an8` 26–52, `\an5` 167–191,
+per-event MarginV 90 236–262): `\an5` centres on PlayResY / 2 = 180 in
+both, the plan's rows on 179 and Pop's on 181.5. Under `\an8` the plan's
+first row is 6 below its MarginV of 20, Pop's 11 below its 73. At the
+bottom both end 8 rows above MarginV from the edge (332 = 360 − 20 − 8;
+279 = 360 − 73 − 8).
+
+### The stand-in against the real painter, and the band
+
+The canvas route's glyphs are stood in: each line is the opaque yellow
+block `layoutText` gives it, since `drawTextOnto` needs a DOM canvas and
+the check runs in node. Lane C measured the real paint in the harness:
+`drawTextOnto` on a canvas, Anton from `assets/fonts`, word 0 lit as the
+band's measure paints it, ink where alpha > 4, the same specs:
+
+| canvas | paint | top | middle | bottom |
+|---|---|---|---|---|
+| 360×640 (fontPx 50) | plain Pop | 115–177 | 276–338 | 436–498 |
+| 360×640 | gradient-sunset | 114–183 | 275–344 | 435–504 |
+| 360×640 | the blocks | 130–188 | 291–349 | 451–509 |
+| 640×360 (fontPx 28) | plain Pop | 65–99 | 155–189 | 246–280 |
+| 640×360 | gradient-sunset | 64–102 | 154–192 | 245–283 |
+| 640×360 | the blocks | 73–105 | 163–195 | 254–286 |
+
+So the real ink begins 15–16 rows (8–9 at 28 px), about 0.32 of the font
+size, above the block's top, and ends 3–11 rows inside its bottom. The test
+does not re-run this. Lane C dropped a canvas-only "real-paint clearance"
+assertion it had written: with 142 or more rows of headroom in this
+fixture it could fail only at an absurd overhang, so the figure is
+reported (the brackets above) instead of asserted.
+
+**The band.** As first built, the check carried its own copy of
+`measureBand`'s arithmetic; the fix phase (`a0837ea`) moved it to
+`captions/bake.ts` `captionBand`, which the renderer calls with the ink it
+paints and the check with its blocks. The bands are the copy's: 9:16 Pop at
+the bottom, smart, y 290 h 220; at the top, smart, y 130 h 380; 16:9 y 162
+h 126 and y 72 h 216; the controls y 450 h 60, y 130 h 60, y 254 h 34 and
+y 72 h 34. The harness's real `bakeCaptions` (360×640, Pop with
+gradient-sunset, lines at 0.3 s and 3.06 s, a cut at 3 s): smart with Pop
+at the top, y 122 h 224; at the bottom, y 284 h 222; the style's own, h 62
+(y 122 at the top, y 444 at the bottom). A smart band spans every third
+its lines use, where §13 measured a band overlay at 2.61 s and a full
+frame at 5.15 s per 10 s at 1080×1920 (1.75 s with no captions); a
+1080×1920 export with Smart placement on is unmeasured.
+
+### No Anton on CI
+
+`/assets` is gitignored, so neither runner has the bundled fonts and
+libass draws a fallback face. In run 38986994729 lane B's three-word Pop
+line, 470–498 of 640 here, ran to rows 409–498 on both windows-latest and
+macos-14, across the 426.7 boundary, and the case read it as "across" where
+it expected "bottom": an unmoved line, Pop at its own bottom (`0c08569`
+reads a line's third by the centre of its rows since). 90 rows is a
+height `captionsFree.int`'s header reads as the line wrapped into two.
+Lane C's rehearsal here, the fonts folder emptied, this Mac's fallback
+face: 19 of 19 passed; at 9:16 bottom 462–498/499, middle 302–338, top
+141–177, the face 36–37 rows tall against Anton's 29; at 16:9 260–280,
+170–189, 79–99. Hence two-word lines in the render check. The runners'
+fallback faces, and how they wrap, stay unmeasured until a run of
+`captionsFree.int` is read: its one notice, "captionsFree: caption rows",
+carries every case's rows.
+
+### libass draws Anton at about 0.57× the canvas painter's size
+
+Lane C, bare glyphs ("WE GO UP" in Anton, no outline, shadow or highlight):
+
+| | libass | the canvas (`drawTextOnto`) |
+|---|---|---|
+| Fontsize / fontPx 50 at 360×640 | 25 rows (311–335) × 100 px | 44 rows (288–331) × 174 px |
+| Fontsize / fontPx 28 at 640×360 | 14 rows × 56 px | 25 rows × 98 px |
+
+0.57 on both axes. ASS's Fontsize is not the canvas's em size, so for the
+same Pop style a plain-style export, which libass burns, draws its
+captions at about half the height the preview shows. Unrelated to Smart
+placement and not fixed here: `ass.ts` would scale Fontsize by the font's
+own ratio, or the canvas match libass. A step of its own.
+
+### The mutations
+
+Every anchor was counted at one match before it was changed, and every
+file restored byte for byte and checked (one verifier worked in a clean
+`git archive` copy instead).
+
+- **Lane A** (`freeSpace.test`, `frameMap.test`): no hysteresis, 1 failed
+  ("rule 2's hysteresis"); no downward extension, 4; the percentile as
+  `Math.max`, 2; the union as a sum, 1 ("two boxes that overlap count their
+  union, once": 0.42 for 0.36); the two-up's halves as one crop, 1 (the
+  right face null, the left at y 0.37 for 0.2); the nearest sample across
+  the cut, 1 (frame 86 took shot 1's sample at 3000 ms); the canvas
+  ignored, 1; always contain, 1; the project frame read as the clip frame,
+  1.
+- **Lane B, the routes** (`captionLine`, `captions`, `captionPlacement`,
+  `project`): the override ignored in `line.ts`, 4; the tag dropped, 4;
+  MarginV left 0, 1; `placement` ignored by `buildAss` (`const ask =
+  undefined`), 5, and after the agreement test was split per route only
+  the libass test and "all ask at the same frame" fail, the canvas and
+  preview tests passing; the canvas route ignoring the lookup, the canvas
+  test alone; the libass lookup on the wrong clock, the libass test and the
+  same-frame test; a line asked by its last word, 2; absent read as smart,
+  2; a centred style keeping marginV 0, 2; a bad value kept on load, 1;
+  the preview's draw losing the lookup from its dependencies, 1; the canvas
+  route asking at the line's last frame, the canvas test.
+- **Lane B, the render** (`captions.int`): the tag dropped, failed (every
+  Pop line at the bottom rows); `buildAss` ignoring placement, failed.
+  MarginV left 0 **passed at first**: Pop moves to `\an5`, where MarginV is
+  ignored. The Bold centre case was added for it, and it fails ("the moved
+  centred line is clear of the edge: expected 21 to be greater than 100").
+- **Lane B, the toggle and the census**: the pointer as plain text, 2; the
+  switch enabled with no helper, 3; the no-track tooltip lost, 1; the store
+  writing `'style'` always, 2; starting read as missing, 2; a greyed switch
+  that cannot be turned off, 1; "Smart placement" renamed, "reframe a clip
+  first" renamed, and a recipe removed, each failing `uiCensus`.
+- **Lane C** (`captionsFree.int`, twice, the same results): `buildAss`
+  ignoring placement, exactly the four libass smart cases (9:16 Pop at the
+  bottom: rows 470–498 inside the box's 446–569 from frame 15, on 42
+  frames; at the top, 148–177 inside 57–195 from frame 98; at 16:9, 264–279
+  inside 258–334 and 84–99 inside 16–101), the canvas cases and the
+  controls passing; the canvas route's third dropped, exactly the four
+  canvas smart cases (9:16 rows 450–509 inside 446–569 from frame 15);
+  main not passing the lookup, the four libass cases (which `captions.int`
+  cannot see: it calls `buildTimelineCaptions` itself); the libass lookup
+  on `round(ms × fps / 1000)`, the four libass cases (line 1 asked at frame
+  9, before the clip, so at the style's third, on the box; line 5, two
+  frames after the cut, at shot 1's); absent read as smart, all eight
+  controls ("L1 at the style's bottom: … L1 309-337 [middle]").
+- **A verifier**: lane A's first three again (1, 4, 2); the tag dropped, 4;
+  MarginV 0, 1; the switch enabled with no helper, 3; `buildAss` ignoring
+  placement and the canvas route's third, each exactly its own route's four
+  smart cases. **The other verifier**, in a clean `git archive` copy: no
+  hysteresis 1, no extension 3, `buildAss` ignoring placement 4 failed and
+  15 passed.
+- **The fix phase**: plain nearest rank put back; the discount from two
+  samples; the end-to-end half alone; libass asking at the rounded frame
+  (both unit cases and the `captions.int` render); round for ceil; the
+  centiseconds dropped; the preview ignoring the route; the preview always
+  'canvas'; `assTimeMs` rounding the centiseconds; `toAssTime` rounding on
+  its own; the faces-only gate (2); the band from the first line only (the
+  four canvas smart cases, shot 2's lines missing, the controls passing).
+  Each failed.
+
+**Two invalid passes, both caught.** Lane A and the fix phase each first
+ran their mutations with the test files in one zsh variable, `$T`: zsh does
+not split an unquoted variable, so vitest got one filter, found no test
+files and exited 1 on every mutation, which reads as a kill. Both caught it
+(no summary line) and re-ran with the paths as separate arguments; the
+results above are from those runs. And one of lane C's runs overlapped a
+parallel run of the same file, which cleared `tests/output/captions-free`
+and the bake's folder mid-render: two false failures. Each case now has its
+own userData folder; the output folder is still shared, so the file must
+not run beside itself.
+
+### The suites at `a0837ea`
+
+Run by the recorder to a file (`--reporter=json`), exit 0: 11 files, 190
+tests, all passed. `frameMap` 14, `freeSpace` 14, `captionPlacement` 21,
+`captionLine` 33, `captions` 27, `captionBake` 21, `project` 18, `uiCensus`
+9, `renderer/smartPlacement` 6, `captions.int` 8 and `captionsFree.int`
+19. Lane B's census run in the harness: 288 rows, none missing. The whole
+suite and CI are the orchestrator's.
+
+### What this settles
+
+1. **A face on the output frame is the export's own arithmetic**: the
+   crop through `cropAt` (both halves of a two-up), the fit through
+   `fitFor`, the sample from the shot the export shows.
+2. **One choice per shot holds in short shots too**: from three samples
+   one gesture never decides a shot.
+3. **Per-event `\an` and MarginV move a libass line to each third** on the
+   bundled build, with the field written so a centred style moved to an
+   edge keeps off it.
+4. **libass first draws a cue on the frame its centisecond time rounds UP
+   to**, so each route asks about a line at its own first frame.
+5. **With placement absent every caption output is byte for byte as
+   before.**
+
+### Still unmeasured, and whose
+
+- **Windows CI**: `captionsFree.int`'s first run (the push of `fb65a18`)
+  and its notice; the late-line case and the shared band (the next push);
+  per-event `\an` and MarginV read on the 2018 build; the fallback face's
+  rows there.
+- **The ten clips** (CLIPS §5's exit): zero sampled caption lines on a
+  face. No reader exists for it yet. The user's.
+- **A 1080×1920 export with Smart placement on**: the band across thirds,
+  and the preview's recompute on a long followed clip while editing.
+- **Burned-in text** (§5.3): after 1g.
