@@ -1,7 +1,7 @@
 import { captionThirds, thirdAt } from '../reframe/freeSpace'
 import { subjectTrackOf } from '../reframe/frameMap'
-import { helperCan, type HelperStatusLike } from '../sidecar/helperCan'
-import { SIDECAR_METHODS } from '../sidecar/protocol'
+import { reframeHelperFrom } from '../reframe/job'
+import type { HelperStatusLike } from '../sidecar/helperCan'
 import { assetById, clipsOnTrack, type Project } from '../timeline'
 import type { ThirdLookup } from './placement'
 import type { CaptionStyle } from './style'
@@ -64,9 +64,14 @@ export function captionsHaveSubjects(project: Project): boolean {
  * The Smart placement toggle's state (§5.4):
  *
  *   ready            a clip the captions come from has a subject track: it works;
- *   no-track         none yet, but the AI helper can find faces: enabled, and
+ *   no-track         none yet, but the AI helper can make one: enabled, and
  *                    its tooltip says "reframe a clip first" (with no track
- *                    the thirds are the style's, so nothing moves yet);
+ *                    the thirds are the style's, so nothing moves yet). "Can
+ *                    make one" is Follow the subject's own test
+ *                    (reframe/job.ts `reframeHelperFrom`: `vision.faces` AND
+ *                    `vision.facesModel`, the faces self-test passed) — the
+ *                    reframe main runs refuses with anything less, so a
+ *                    lesser helper would point at a reframe that cannot run;
  *   helper-starting  none, and the helper has not answered: greyed, said as starting;
  *   needs-helper     none, and nothing on this machine can make one: greyed,
  *                    with the pointer to Settings ("needs the AI helper").
@@ -75,7 +80,6 @@ export type SmartPlacementState = 'ready' | 'no-track' | 'helper-starting' | 'ne
 
 export function smartPlacementState(project: Project, helper: HelperStatusLike | null | undefined): SmartPlacementState {
   if (captionsHaveSubjects(project)) return 'ready'
-  if (helperCan(helper, SIDECAR_METHODS.faces)) return 'no-track'
   if (!helper || helper.state === 'starting') return 'helper-starting'
-  return 'needs-helper'
+  return reframeHelperFrom(helper) === 'ready' ? 'no-track' : 'needs-helper'
 }

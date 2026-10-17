@@ -10,6 +10,7 @@ import { captionsHaveSubjects, smartPlacement, smartPlacementState } from '@shar
 import { resolveStyle } from '@shared/captions/style'
 import { SUBJECT_TRACK_VERSION, type SubjectTrack, type UnitRect } from '@shared/reframe/types'
 import { SIDECAR_METHODS } from '@shared/sidecar/protocol'
+import { reframeHelperFrom } from '@shared/reframe/job'
 import type { SidecarStatus } from '@shared/sidecar/status'
 import { DEFAULT_COLOR, DEFAULT_TRANSFORM, emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
 import { segmentIntoSentences, type Word } from '@shared/transcript'
@@ -271,17 +272,43 @@ describe('the Smart placement toggle\'s state', () => {
     expect(captionsHaveSubjects(project('smart', {}, { size: { width: 720, height: 1280 } }).project)).toBe(false)
   })
 
-  it('is ready with a track whatever the helper, no-track with a helper that finds faces, else greyed', () => {
+  it('is ready with a track whatever the helper, no-track with a helper that can reframe, else greyed', () => {
     const withTrack = project('style').project
     const without = project('style', {}, { track: false }).project
     expect(smartPlacementState(withTrack, null)).toBe('ready')
     expect(smartPlacementState(withTrack, failed)).toBe('ready')
-    expect(smartPlacementState(without, ready([SIDECAR_METHODS.faces]))).toBe('no-track')
-    // A helper without the face finder cannot make a track.
+    expect(smartPlacementState(without, ready([SIDECAR_METHODS.faces, SIDECAR_METHODS.facesModel]))).toBe('no-track')
+    // A helper without the face finder, or without its model method, cannot make a track: the reframe main runs
+    // refuses it (reframeHelperFrom), so "reframe a clip first" would point at a reframe that cannot run.
+    expect(smartPlacementState(without, ready([SIDECAR_METHODS.faces]))).toBe('needs-helper')
+    expect(smartPlacementState(without, ready([SIDECAR_METHODS.facesModel]))).toBe('needs-helper')
     expect(smartPlacementState(without, ready(['audio.beats']))).toBe('needs-helper')
     expect(smartPlacementState(without, failed)).toBe('needs-helper')
     expect(smartPlacementState(without, { state: 'starting' } as unknown as SidecarStatus)).toBe('helper-starting')
     expect(smartPlacementState(without, null)).toBe('helper-starting')
+  })
+
+  it('offers "reframe a clip first" exactly when Follow the subject can run', () => {
+    const without = project('style', {}, { track: false }).project
+    const both = [SIDECAR_METHODS.faces, SIDECAR_METHODS.facesModel]
+    const statuses: SidecarStatus[] = [
+      ready(both),
+      ready([SIDECAR_METHODS.faces]),
+      ready([SIDECAR_METHODS.facesModel]),
+      ready([]),
+      // Both registered, but the install's self-test failed the faces group.
+      { ...ready(both), selftest: { faces: 'faces failed: error import FileNotFoundError' } } as unknown as SidecarStatus,
+      { ...ready(both), selftest: { faces: 'ok' } } as unknown as SidecarStatus,
+      failed,
+      { state: 'installing', stage: 'Fetching' } as unknown as SidecarStatus,
+      { state: 'damaged', reason: 'gone' } as unknown as SidecarStatus
+    ]
+    for (const status of statuses) {
+      const state = smartPlacementState(without, status)
+      expect(state === 'no-track', JSON.stringify(status)).toBe(reframeHelperFrom(status) === 'ready')
+      // Never "starting" for a helper that answered.
+      expect(state, JSON.stringify(status)).not.toBe('helper-starting')
+    }
   })
 })
 
