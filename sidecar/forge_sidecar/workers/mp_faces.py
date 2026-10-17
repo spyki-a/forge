@@ -20,7 +20,10 @@ The conversation, line-based UTF-8:
 - **stdin**: one line of JSON, the spec (``parse_spec``), then held OPEN. Its
   end is the cancel — the helper closes it on a cancel, and it ends by itself
   when the helper dies — and the pass stops before the next frame, its
-  ffmpeg killed by ``media.iter_frames``.
+  ffmpeg killed by ``media.iter_frames``. Read through ``stdio.LineReader``
+  alone, and watched (``_StdinEnd``) only once ``load`` has imported
+  everything the pass needs: on Windows a read of stdin left waiting held up
+  this process's ``import numpy`` for good (stdio.py).
 - **stdout**, one flushed line each:
   ``ready <mediapipe version> <import seconds>`` once the detector's library
   has loaded; ``progress <fraction, or - when the length is unknown> <frames>``
@@ -53,7 +56,8 @@ first (by area, a tie to the higher score), each scoring at least
 
 The pure parts — the spec, the size, the boxes, the writer — import only the
 standard library, so tests/sidecar/test_faces.py runs them on CI's bare
-interpreter. numpy and mediapipe are imported inside the pass.
+interpreter. numpy and mediapipe are imported by ``load``, after the spec and
+before the watch.
 
 Two environment variables exist for tests/integration/faces.int.test.ts and
 nothing else, because the sandbox the tests are built in cannot run the
@@ -79,9 +83,9 @@ import os
 import sys
 import threading
 import time
-from typing import Any, Callable, Iterable, Sequence
+from typing import Any, Callable, Iterable, Mapping, Sequence
 
-from .. import media
+from .. import media, stdio
 from ..rpc import Cancelled
 
 PROGRESS_EVERY = 10
@@ -126,6 +130,9 @@ _began = time.perf_counter()
 Detection = tuple[float, float, float, float, float]
 """``(x, y, width, height, score)`` in analysed pixels, as MediaPipe's
 ``bounding_box`` gives them: an origin and a size, possibly past the frame."""
+
+Detector = tuple[Callable[[Any, int], list[Detection]], Callable[[], None]]
+"""``(detect, close)``: one frame's detections at its ms, and the detector's release."""
 
 
 # --------------------------------------------------------------------- spec
@@ -424,22 +431,28 @@ def fake_mode(value: str | None) -> tuple[str, float] | None:
 class _StdinEnd:
     """The pass's context for ``media.iter_frames``: cancelled once stdin ends.
 
-    The watcher reads the raw descriptor with ``os.read``, never
-    ``sys.stdin.buffer``: a daemon thread blocked inside the BufferedReader
-    holds its lock, and the interpreter's shutdown then aborts the process
-    ("Fatal Python error: _enter_buffered_busy: could not acquire lock for
-    <_io.BufferedReader name='<stdin>'>", return code -6) — measured, on a
-    pass that had written its whole track and said ``done``. That is the
-    detector's own death code, so a clean pass would have read as a crash.
+    Its thread reads stdin through ``stdio.LineReader``, which reads the
+    descriptor and never ``sys.stdin.buffer``: a daemon thread blocked inside
+    the BufferedReader holds its lock, and the interpreter's shutdown then
+    aborts the process ("Fatal Python error: _enter_buffered_busy: could not
+    acquire lock for <_io.BufferedReader name='<stdin>'>", return code -6) —
+    measured, on a pass that had written its whole track and said ``done``.
+    That is the detector's own death code, so a clean pass would have read as
+    a crash. And on Windows the reader never leaves a read waiting: one did,
+    in this thread through the whole pass, and the main thread's ``import
+    numpy`` never finished (CI run 38982628323, stdio.py). Made only by
+    ``main``, after ``load``, so no import runs beside it on any platform; it
+    notes ``watching stdin`` once its thread has started.
     """
 
-    def __init__(self, fd: int) -> None:
+    def __init__(self, reader: stdio.LineReader) -> None:
         self._ended = threading.Event()
-        threading.Thread(target=self._watch, args=(fd,), daemon=True).start()
+        threading.Thread(target=self._watch, args=(reader,), daemon=True).start()
+        _note("watching stdin")
 
-    def _watch(self, fd: int) -> None:
+    def _watch(self, reader: stdio.LineReader) -> None:
         try:
-            while os.read(fd, 4096):
+            while reader.readline() is not None:
                 pass
         except OSError:
             pass
@@ -484,7 +497,19 @@ def _arm_stall_dump() -> None:
         pass
 
 
-def run(spec: dict[str, Any], stop: _StdinEnd, environ: dict[str, str] | os._Environ[str]) -> int:
+def load(spec: dict[str, Any], environ: Mapping[str, str]) -> Detector | int:
+    """The detector, everything the pass imports already imported — or the exit code to end with.
+
+    Says ``ready``. The import-only run (``mode: import``) ends there with 0;
+    a mediapipe that does not import says ``error import`` and ends with
+    EXIT_IMPORT. ``main`` calls this BEFORE ``_StdinEnd`` starts watching
+    stdin, so neither numpy nor mediapipe nor the detector's native library
+    is ever loaded beside a read of stdin: on Windows the stand-in's ``import
+    numpy`` beside the watch's read never finished (CI run 38982628323).
+    stdio.py's reader no longer leaves a read waiting there; this order is
+    the second guard, and holds on every platform. ``media.iter_frames``
+    imports numpy too, by then already loaded.
+    """
     fake = fake_mode(environ.get(FAKE_ENV))
     if fake is not None:
         _say("ready", f"fake/{fake[0]}", "0.000")
@@ -492,23 +517,29 @@ def run(spec: dict[str, Any], stop: _StdinEnd, environ: dict[str, str] | os._Env
             return 0
         detect = _colour_detector(fake[1])
         _note("the stand-in detector made (numpy imported)")
-        close: Callable[[], None] = lambda: None
-    else:
-        try:
-            mp, vision, base_options, seconds = _mediapipe()
-        except Exception as exc:  # noqa: BLE001 - any import failure is the same answer
-            _say("error", "import", f"{type(exc).__name__}: {exc}")
-            return EXIT_IMPORT
-        _say("ready", getattr(mp, "__version__", "?"), f"{seconds:.3f}")
-        if spec["mode"] == "import":
-            return 0
-        if stop.ended:
-            return EXIT_CANCELLED
-        # On a machine with no Metal device THIS is where the macOS wheel
-        # aborts the process (docs/EFFECTS.md §37); nothing after it runs.
-        detect, close = _blaze_face(mp, vision, base_options, spec["model"], spec["minScore"])
-        _note("the detector made")
+        return detect, lambda: None
+    try:
+        mp, vision, base_options, seconds = _mediapipe()
+    except Exception as exc:  # noqa: BLE001 - any import failure is the same answer
+        _say("error", "import", f"{type(exc).__name__}: {exc}")
+        return EXIT_IMPORT
+    _say("ready", getattr(mp, "__version__", "?"), f"{seconds:.3f}")
+    if spec["mode"] == "import":
+        return 0
+    # On a machine with no Metal device THIS is where the macOS wheel
+    # aborts the process (docs/EFFECTS.md §37); nothing after it runs.
+    detector = _blaze_face(mp, vision, base_options, spec["model"], spec["minScore"])
+    _note("the detector made (numpy and mediapipe imported)")
+    return detector
 
+
+def run(spec: dict[str, Any], detector: Detector, stop: _StdinEnd, environ: Mapping[str, str]) -> int:
+    """The pass: every frame through ``detector``, the track written, ``done`` said; the exit code.
+
+    A cancel that came during ``load`` is seen before the first frame is
+    read (``media.iter_frames`` asks ``stop`` before each).
+    """
+    detect, close = detector
     _arm_stall_dump()
     width, height = analysis_size(spec["edge"], spec["width"], spec["height"])
     expected = expected_frames(spec)
@@ -555,21 +586,6 @@ def run(spec: dict[str, Any], stop: _StdinEnd, environ: dict[str, str] | os._Env
     return 0
 
 
-def _spec_line(fd: int) -> bytes:
-    """The first line of stdin, read from the descriptor a byte at a time.
-
-    Unbuffered on purpose: whatever follows the line stays in the pipe for
-    ``_StdinEnd`` to read, and nothing is left inside a Python buffer (the
-    line is a few hundred bytes).
-    """
-    data = bytearray()
-    while True:
-        byte = os.read(fd, 1)
-        if not byte or byte == b"\n":
-            return bytes(data)
-        data += byte
-
-
 def _utf8_stdio() -> None:
     """stdout (the conversation) and stderr (the log) in UTF-8, whatever the locale.
 
@@ -577,7 +593,8 @@ def _utf8_stdio() -> None:
     pipe gets the locale's encoding (the ANSI code page on Windows); an
     ``error input`` line naming a file such as ``Bräutigam 5:30pm.mp4`` must
     reach the helper, which decodes every line as UTF-8. stdin is read as
-    bytes from its descriptor and decoded here, so it needs nothing.
+    bytes from its descriptor (``stdio.LineReader``) and decoded in ``main``,
+    so it needs nothing.
     """
     for stream, errors in ((sys.stdout, "strict"), (sys.stderr, "backslashreplace")):
         if isinstance(stream, io.TextIOWrapper):
@@ -585,10 +602,13 @@ def _utf8_stdio() -> None:
 
 
 def main() -> int:
+    """The spec, then ``load`` (every import), then the watch on stdin, then the pass — in that order."""
     _utf8_stdio()
-    fd = sys.stdin.fileno()
+    # One reader for the whole conversation: the spec's line, then the watch
+    # reads on from wherever it left off.
+    reader = stdio.LineReader(sys.stdin.fileno())
     try:
-        spec = parse_spec(_spec_line(fd).decode("utf-8"))
+        spec = parse_spec((reader.readline() or b"").decode("utf-8"))
     except (ValueError, UnicodeDecodeError) as exc:
         _say("error", "input", str(exc))
         return EXIT_INPUT
@@ -596,8 +616,11 @@ def main() -> int:
     try:
         if spec["mode"] == "detect":
             _note("the spec read")
-        stop = _StdinEnd(fd)
-        return run(spec, stop, os.environ)
+        loaded = load(spec, os.environ)
+        if isinstance(loaded, int):
+            return loaded
+        stop = _StdinEnd(reader)
+        return run(spec, loaded, stop, os.environ)
     finally:
         faulthandler.cancel_dump_traceback_later()
 

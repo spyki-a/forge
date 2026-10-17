@@ -278,10 +278,8 @@ class WorkerStopsShort(unittest.TestCase):
             written.append(os.path.isfile(self.partial))
             raise stopped_by
 
-        with mock.patch.object(mp_faces.media, "iter_frames", side_effect=frames), \
-                mock.patch.object(mp_faces, "_colour_detector", return_value=lambda _frame, _ms: []), \
-                mock.patch.object(mp_faces, "_say"):
-            code = mp_faces.run(self.spec, mock.Mock(ended=False), {mp_faces.FAKE_ENV: "colour"})
+        with mock.patch.object(mp_faces.media, "iter_frames", side_effect=frames), mock.patch.object(mp_faces, "_say"):
+            code = mp_faces.run(self.spec, (lambda _frame, _ms: [], lambda: None), mock.Mock(ended=False), {})
         self.assertEqual(written, [True], "the pass never wrote its partial, so this proves nothing")
         return code
 
@@ -298,6 +296,84 @@ class WorkerStopsShort(unittest.TestCase):
         with self.assertRaises(BrokenPipeError):
             self.run_then(BrokenPipeError())
         self.assertEqual(os.listdir(self.folder), [])
+
+
+class StdinOnly:
+    """``sys.stdin`` as the worker may use it: its descriptor. Read as a stream, it fails the test."""
+
+    def __init__(self, fd: int) -> None:
+        self.fd = fd
+
+    def fileno(self) -> int:
+        return self.fd
+
+    def _streamed(self, *_args: object) -> object:
+        raise AssertionError("the worker read sys.stdin as a stream, not its descriptor through stdio.LineReader")
+
+    __iter__ = __next__ = read = readline = _streamed
+
+    @property
+    def buffer(self) -> object:
+        return self._streamed()
+
+
+class WorkerOrder(unittest.TestCase):
+    """mp_faces.main: the spec, then every import (``load``), then the watch on stdin, then the pass.
+
+    On Windows a read of stdin left waiting held up the main thread's
+    ``import numpy`` for good: the stand-in imported numpy after its watch
+    had started reading, and every stand-in pass on CI run 38982628323 hung
+    there. stdio.LineReader no longer leaves a read waiting on Windows; this
+    order is the second guard, on every platform. The real main, with stdin
+    a real pipe held open as the helper holds it, the stand-in detector's
+    import stood in (no numpy needed) and two frames.
+    """
+
+    def test_everything_is_imported_before_stdin_is_watched(self) -> None:
+        folder = tempfile.mkdtemp(prefix="forge-faces-order-")
+        self.addCleanup(shutil.rmtree, folder, True)
+        track = os.path.join(folder, "t.json")
+        spec = faces.worker_spec(settings(), 4000, "/m", track, track + ".1-7.part")
+        r, w = os.pipe()
+        os.write(w, (json.dumps(spec) + "\n").encode("utf-8"))
+        watching_at_import: list[bool] = []
+
+        def watching() -> bool:
+            return any(t.name.endswith("(_watch)") and t.is_alive() for t in threading.enumerate())
+
+        def detector(_delay_ms: float) -> object:
+            watching_at_import.append(watching())
+            return lambda _frame, _ms: []
+
+        def frames(*_args: object, **_kwargs: object):  # type: ignore[no-untyped-def]
+            yield 0, None
+            yield 200, None
+
+        try:
+            with mock.patch.object(sys, "stdin", StdinOnly(r)), \
+                    mock.patch.dict(os.environ, {mp_faces.FAKE_ENV: "colour"}), \
+                    mock.patch.object(mp_faces, "_colour_detector", side_effect=detector), \
+                    mock.patch.object(mp_faces.media, "iter_frames", side_effect=frames), \
+                    contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
+                code = mp_faces.main()
+                watched = watching()
+        finally:
+            os.close(w)  # the helper's close: the watch sees the end and goes
+            for thread in threading.enumerate():
+                if thread.name.endswith("(_watch)"):
+                    thread.join(5)
+            os.close(r)
+        notes = [line.split(" (+")[0] for line in err.getvalue().splitlines() if line.startswith(mp_faces.NOTE_PREFIX)]
+        self.assertEqual(
+            notes[:3],
+            ["mp_faces: the spec read", "mp_faces: the stand-in detector made (numpy imported)", "mp_faces: watching stdin"],
+            err.getvalue(),
+        )
+        self.assertEqual(watching_at_import, [False], "the detector's import ran beside the watch's read of stdin")
+        self.assertTrue(watched, "the pass ran with nothing watching stdin for its cancel")
+        self.assertEqual(code, 0, err.getvalue())
+        self.assertEqual(out.getvalue().splitlines(), ["ready fake/colour 0.000", "done 2 0"])
+        self.assertTrue(os.path.isfile(track))
 
 
 # -------------------------------------------------------------------- stubs

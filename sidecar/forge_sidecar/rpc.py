@@ -13,6 +13,8 @@ import traceback
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
+from . import stdio
+
 PROTOCOL_VERSION = 1
 
 PARSE_ERROR = -32700
@@ -175,7 +177,7 @@ class Server:
     # ------------------------------------------------------------ main loop
 
     def serve_forever(self, drain_timeout: float = 300.0) -> None:
-        """Read until stdin closes, then let in-flight work finish.
+        """Read until stdin closes (``_read_loop``), then let in-flight work finish.
 
         Handlers run on daemon threads, so returning immediately on EOF would
         destroy them mid-request and the client would never see a response. A
@@ -195,13 +197,24 @@ class Server:
             thread.join(timeout=remaining)
 
     def _read_loop(self) -> None:
-        for line in sys.stdin:
-            line = line.strip()
-            if not line:
-                continue
+        """Each request line from stdin's descriptor, through ``stdio.LineReader``, never ``sys.stdin``.
+
+        On Windows a read of stdin left waiting held up another thread's
+        load of a native module until the next line came (stdio.py): on CI
+        run 38982628323 beats' first call stopped in its onset stage, where
+        numba first compiles, and went on only when the next request
+        arrived. The reader never leaves one waiting there. Each line is
+        decoded here as UTF-8, whatever the locale (the protocol's encoding,
+        __main__.py); a line that is not UTF-8 is a parse error like any
+        other, and the loop goes on.
+        """
+        for raw in stdio.LineReader(sys.stdin.fileno()):
             try:
+                line = raw.decode("utf-8").strip()
+                if not line:
+                    continue
                 message = json.loads(line)
-            except json.JSONDecodeError:
+            except (UnicodeDecodeError, json.JSONDecodeError):
                 self._write(
                     {"jsonrpc": "2.0", "id": None, "error": {"code": PARSE_ERROR, "message": "Parse error"}}
                 )

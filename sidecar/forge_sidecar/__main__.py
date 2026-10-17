@@ -27,6 +27,11 @@ def utf8_stdio() -> None:
     log) with ``backslashreplace``. Not ``-X utf8``: that also changes every
     ``open()``'s default and gives stdin and stdout ``surrogateescape``, and it
     would be one more flag on one rung rather than the same code on all.
+
+    The requests themselves no longer pass through ``sys.stdin``: the read
+    loop reads stdin's descriptor and decodes each line as UTF-8 itself
+    (rpc.py ``_read_loop``, stdio.py). stdin is still set here, for anything
+    else that reads it.
     """
     for stream, errors in ((sys.stdin, "strict"), (sys.stdout, "strict"), (sys.stderr, "backslashreplace")):
         if isinstance(stream, io.TextIOWrapper):
