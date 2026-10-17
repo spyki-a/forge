@@ -8,7 +8,9 @@ import { captionNeedsCanvas } from '@shared/graphics/fromTimeline'
 import { LOUDNESS_TARGETS } from '@shared/render/loudness'
 import { FRAME_RATES } from '@shared/project/frameRate'
 import { outputSummary } from '@shared/project/outputSummary'
+import { smartPlacementState } from '@shared/captions/smart'
 import { useEditor } from '../store'
+import { HelperPointer } from './SettingsPanel'
 import { useCatalog } from '../catalog'
 import { FontPicker } from './FontPicker'
 import { TextStylePicker } from './TextStylePicker'
@@ -32,6 +34,66 @@ import { Strip } from './ui/Strip'
  * filter or a backdrop-filter (ui/Strip.tsx), or the overlay would be trapped
  * inside the strip.
  */
+/** The toggle's words (docs/CLIPS.md §5.4); the census rows match them, so they stay as they are. */
+export const SMART_PLACEMENT = 'Smart placement'
+export const SMART_PLACEMENT_TIP = 'keeps captions off faces, one position per shot'
+export const SMART_PLACEMENT_NO_TRACK = 'reframe a clip first'
+export const HELPER_STARTING = 'the AI helper is starting'
+
+/**
+ * Smart placement (docs/CLIPS.md §5.4, the user's sheet 13 "dead space"):
+ * the captions take, per shot, the third the subject's face is not in.
+ *
+ * It reads the clips' subject tracks, so it is greyed when there is none and
+ * nothing on this machine can make one — "needs the AI helper", a pointer to
+ * the one Install in Settings (§3a.4, §16.41), as Follow the subject's is —
+ * rather than a switch that changes nothing. With the helper but no track
+ * yet it works and says "reframe a clip first": the thirds are the style's
+ * until a clip is reframed. While the helper has not answered, it says so.
+ * Greyed, it can still be turned OFF, so a project saved with it on is never
+ * stuck that way.
+ *
+ * Its own component, with no state of its own, so a test can call it.
+ */
+export function SmartPlacementToggle(): ReactNode {
+  const project = useEditor((s) => s.project)
+  const helper = useEditor((s) => s.helperStatus)
+  const setCaptionPlacement = useEditor((s) => s.setCaptionPlacement)
+  const state = smartPlacementState(project, helper)
+  const on = project.captions.placement === 'smart'
+  const greyed = state === 'needs-helper' || state === 'helper-starting'
+  return (
+    <div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        data-smart-placement=""
+        onClick={() => setCaptionPlacement(on ? 'style' : 'smart')}
+        disabled={greyed && !on}
+        title={state === 'no-track' ? `${SMART_PLACEMENT_TIP} — ${SMART_PLACEMENT_NO_TRACK}` : SMART_PLACEMENT_TIP}
+        className="flex w-full items-center justify-between rounded bg-ink-800 px-2 py-1.5 text-[11px] text-ink-300 transition-colors hover:bg-ink-700 hover:text-ink-100 disabled:opacity-40 disabled:hover:bg-ink-800 disabled:hover:text-ink-300"
+      >
+        <span>{SMART_PLACEMENT}</span>
+        <span
+          aria-hidden
+          className={`relative h-3 w-6 shrink-0 rounded-full transition-colors ${on ? 'bg-accent-500' : 'bg-ink-600'}`}
+        >
+          <span
+            className={`absolute top-0.5 h-2 w-2 rounded-full bg-ink-950 transition-all ${on ? 'left-3.5' : 'left-0.5'}`}
+          />
+        </span>
+      </button>
+      {greyed && (
+        <p className="mt-0.5 text-[9.5px] leading-snug text-ink-600">
+          {/* No helper: a pointer to the one Install, in Settings (§3a.4, §16.41). Starting is said as starting. */}
+          {state === 'needs-helper' ? <HelperPointer /> : HELPER_STARTING}
+        </p>
+      )}
+    </div>
+  )
+}
+
 export function OutputStrip(): ReactNode {
   const project = useEditor((s) => s.project)
   const open = useEditor((s) => s.outputOpen)
@@ -372,6 +434,8 @@ export function OutputStrip(): ReactNode {
                     }
                   />
                 )}
+
+                <SmartPlacementToggle />
 
                 <div className="flex items-center gap-2">
                   <span className="w-14 shrink-0 text-[10.5px] text-ink-400">Colour</span>

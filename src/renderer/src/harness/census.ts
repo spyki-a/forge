@@ -1832,6 +1832,21 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     editor().setCaptionsEnabled(!editor().project.captions.enabled)
     return {}
   },
+  /*
+   * Smart placement's toggle in the caption block (docs/CLIPS.md §5.4), with
+   * no subject track. The page's own AI helper has failed (bridge.ts), so an
+   * empty project already shows it greyed with the pointer; these are its
+   * other two states: a helper that can find faces ("reframe a clip first"
+   * on the tooltip), and one that has not answered yet.
+   */
+  'captions-placement-no-track': async () => {
+    editor().setHelperStatus(harnessReadyHelper())
+    return {}
+  },
+  'captions-placement-starting': async () => {
+    editor().setHelperStatus(null)
+    return {}
+  },
   'export-bitrate': async () => {
     editor().setExportChoice({ bitrateKbps: 8000 })
     return {}

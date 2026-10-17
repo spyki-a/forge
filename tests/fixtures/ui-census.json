@@ -6686,6 +6686,67 @@
     "note": "The triangle’s tooltip with the strip open (ui/Strip.tsx draws it; aria-expanded says the same)."
   },
   {
+    "label": "Smart placement",
+    "match": "text",
+    "home": "output",
+    "needs": "none",
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 38,
+    "newHome": "output strip (the caption block, under Place and Margin)",
+    "note": "The toggle (docs/CLIPS.md §5.4, the user's sheet 13 \"dead space\"): captions keep off the subject's face, one third per shot. On the harness page its AI helper has failed by design (bridge.ts) and no clip has a subject track, so an empty project shows it greyed, with the pointer under it."
+  },
+  {
+    "label": "keeps captions off faces, one position per shot",
+    "match": "title",
+    "home": "output",
+    "needs": "none",
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 39,
+    "newHome": "output strip (the caption block, under Place and Margin)",
+    "note": "The toggle's tooltip, whole while a clip has a subject track or nothing can make one."
+  },
+  {
+    "label": "needs the AI helper",
+    "match": "text",
+    "home": "output",
+    "needs": "none",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 93,
+    "newHome": "output strip (the caption block, under Place and Margin)",
+    "note": "Under the greyed Smart placement while no clip has a subject track and the AI helper cannot find faces (the harness page's own helper fails): a pointer (HelperPointer, NEEDS_THE_HELPER) that opens Settings with the AI helper row in view (§3a.4, §16.41); its title is the \"install it in Settings\" row."
+  },
+  {
+    "label": "install it in Settings",
+    "match": "title",
+    "home": "output",
+    "needs": "none",
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 95,
+    "newHome": "output strip (the caption block, under Place and Margin)",
+    "note": "The \"needs the AI helper\" pointer's title under Smart placement (HelperPointer, §16.41)."
+  },
+  {
+    "label": "reframe a clip first",
+    "match": "title",
+    "home": "output",
+    "needs": "captions-placement-no-track",
+    "part": true,
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 40,
+    "newHome": "output strip (the caption block, under Place and Margin)",
+    "note": "With the AI helper able to find faces and no subject track yet, Smart placement is enabled and its tooltip ends \"— reframe a clip first\": until a clip is reframed the thirds are the style's, so nothing moves."
+  },
+  {
+    "label": "the AI helper is starting",
+    "match": "text",
+    "home": "output",
+    "needs": "captions-placement-starting",
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 41,
+    "newHome": "output strip (the caption block, under Place and Margin)",
+    "note": "Under the greyed Smart placement before the AI helper has answered: said as starting, no pointer."
+  },
+  {
     "label": "Show the export settings and the exports",
     "match": "title",
     "home": "exportbar",

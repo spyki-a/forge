@@ -1097,6 +1097,8 @@ interface EditorState {
   toggleTrackHidden: (trackId: string) => void
   setCaptionStyle: (styleId: string) => void
   setCaptionsEnabled: (enabled: boolean) => void
+  /** Smart placement (docs/CLIPS.md §5.4): 'smart' keeps the captions off faces, one third per shot; 'style' is the style's own place. */
+  setCaptionPlacement: (placement: 'style' | 'smart') => void
   setCaptionOverride: (key: string, value: unknown) => void
   clearCaptionOverrides: () => void
   /** 0 = all output, 1 = all source, anything between splits the preview. */
@@ -4938,6 +4940,17 @@ export const useEditor = create<EditorState>((set, get) => ({
 
   setCaptionsEnabled: (enabled) =>
     get().update((p) => ({ ...p, captions: { ...p.captions, enabled } })),
+
+  /*
+   * 'style' is written as no field at all, so turning Smart placement off
+   * leaves the project as one saved before it existed (shared/timeline.ts
+   * CaptionSettings: absent is the style's).
+   */
+  setCaptionPlacement: (placement) =>
+    get().update((p) => {
+      const { placement: _was, ...captions } = p.captions
+      return { ...p, captions: placement === 'smart' ? { ...captions, placement } : captions }
+    }),
 
   setPlayhead: (frame) => {
     const max = Math.max(0, projectDuration(get().project))
