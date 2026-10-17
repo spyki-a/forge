@@ -2,6 +2,7 @@ import type { Clip, Project } from '@shared/timeline'
 import { framesToSeconds, secondsToFrames, sourceFrameFor } from '@shared/timeline'
 import { groupWords } from '@shared/captions/ass'
 import { activeWordAt, captionSpec } from '@shared/captions/line'
+import type { Third } from '@shared/captions/placement'
 import { resolveStyle, type CaptionStyle, type StyleOverrides } from '@shared/captions/style'
 import { drawTextOnto } from '@shared/render/textPaint'
 import type { Word } from '@shared/transcript'
@@ -66,14 +67,21 @@ export function captionAt(
   return null
 }
 
+/**
+ * `third` is Smart placement's for this line (docs/CLIPS.md §5.4), from the
+ * lookup the export uses (captions/smart.ts) asked the way the export asks it
+ * (placement.ts `lineThird`): Preview.tsx works it out, so the line sits
+ * where the export puts it. Null or absent: where the style puts it.
+ */
 export function drawCaptions(
   ctx: CanvasRenderingContext2D,
   target: CaptionPreviewTarget,
   style: CaptionStyle,
   caption: PreviewCaption,
-  fps: number
+  fps: number,
+  third?: Third | null
 ): void {
-  const spec = captionSpec(style, caption.words, caption.activeIndex)
+  const spec = captionSpec(style, caption.words, caption.activeIndex, third)
 
   /*
    * Drawn into the target box directly, rather than at output size and scaled.

@@ -55,6 +55,8 @@ import { momentTextures } from '@shared/render/momentTextures'
 import { clipRateAt, clipSpeed } from '@shared/render/speed'
 import { activeCaptionStyle, captionAt, drawCaptions } from '../captionPreview'
 import { captionSourceClip } from '@shared/captions/timeline'
+import { smartPlacement } from '@shared/captions/smart'
+import { lineThird } from '@shared/captions/placement'
 import { useCatalog } from '../catalog'
 import { isAssetDrag, readDragPayload, type DragPayload } from '../dragPayload'
 import { DROP_CHOICES, type DropIntent } from '@shared/render/dropIntent'
@@ -444,6 +446,17 @@ export function Preview(): ReactNode {
     if (!project.captions.enabled) return
     void ensureFont(activeCaptionStyle(project).fontFamily)
   }, [project, ensureFont])
+
+  /*
+   * Smart placement's thirds (docs/CLIPS.md §5.4), worked out once per edit
+   * and canvas rather than per painted frame — the export's own lookup
+   * (captions/smart.ts), so the preview puts each line where the export
+   * will. Null when captions are off or placement is the style's.
+   */
+  const captionPlacement = useMemo(
+    () => (project.captions.enabled ? smartPlacement(project, activeCaptionStyle(project), ASPECTS[aspect]) : null),
+    [project, aspect]
+  )
 
   /*
    * The faces the live text needs, and a repaint when they land.
@@ -1831,7 +1844,8 @@ export function Preview(): ReactNode {
         if (source) {
           const style = activeCaptionStyle(project)
           const caption = captionAt(project, source, playhead, style)
-          if (caption) drawCaptions(ctx, frame, style, caption, fps)
+          // Smart placement: the line's third as the export asks it (§5.4).
+          if (caption) drawCaptions(ctx, frame, style, caption, fps, lineThird(captionPlacement, source, fps, caption.words))
         }
       }
       ctx.restore()
@@ -1876,6 +1890,8 @@ export function Preview(): ReactNode {
     // Picking draws the selected clip alone, so which clip that is matters.
     selectedClipId,
     repaint,
+    // Smart placement's lookup: a new one is a new edit's thirds.
+    captionPlacement,
     // A followed crop is read at the element's frame while playing, the playhead's while paused.
     playing
   ])

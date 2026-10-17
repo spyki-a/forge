@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { activeWordAt, captionOffsetY, captionSpec } from '@shared/captions/line'
 import { CAPTION_MARGIN, REFERENCE_HEIGHT } from '@shared/captions/ass'
-import { styleById, resolveStyle, type CaptionStyle } from '@shared/captions/style'
+import { CAPTION_STYLES, styleById, resolveStyle, type CaptionStyle } from '@shared/captions/style'
+import { CENTRE_MOVED_MARGIN_V, placedStyle, type Third } from '@shared/captions/placement'
 import { TITLE_SAFE } from '@shared/timeline'
 import { textStyleById } from '@shared/render/textStyle'
 import { textAnimationById } from '@shared/render/textAnimation'
@@ -293,5 +294,80 @@ describe('which track captions come from, when clips move', () => {
     const p = emptyProject()
     const video = p.tracks.filter((t) => t.kind === 'video')
     expect(captionTrack(p)?.id).toBe(video[0].id)
+  })
+})
+
+/*
+ * Smart placement's override (docs/CLIPS.md §5.4): a third moves the line —
+ * its position, and its offset as captionOffsetY gives it for a style at that
+ * position — and keeps its distance from the edge. Nothing else about the
+ * line changes, and without a third (or with the style's own) nothing at all.
+ */
+describe('captionSpec with a third', () => {
+  const THIRDS: Third[] = ['top', 'middle', 'bottom']
+  const own = (style: CaptionStyle): Third => (style.position === 'top' ? 'top' : style.position === 'center' ? 'middle' : 'bottom')
+  const POP_TOP = resolveStyle('pop', { position: 'top' })
+  const CENTRE = styleById('bold-center')
+  const margin = (style: CaptionStyle): number => style.marginV / REFERENCE_HEIGHT
+
+  it('is today\'s spec, byte for byte, with no third or the style\'s own', () => {
+    for (const style of [...CAPTION_STYLES, POP_TOP]) {
+      for (const active of [-1, 1]) {
+        const today = JSON.stringify(captionSpec(style, LINE, active))
+        expect(JSON.stringify(captionSpec(style, LINE, active, undefined)), style.id).toBe(today)
+        expect(JSON.stringify(captionSpec(style, LINE, active, null)), style.id).toBe(today)
+        expect(JSON.stringify(captionSpec(style, LINE, active, own(style))), style.id).toBe(today)
+      }
+    }
+    // And today's is where the style puts it.
+    expect(captionSpec(POP, LINE, -1).position).toBe('lower')
+    expect(captionSpec(POP, LINE, -1).offsetY).toBeCloseTo(TITLE_SAFE - margin(POP), 12)
+  })
+
+  it('moves a bottom style to each third, its edge distance kept', () => {
+    const spec = (third: Third) => captionSpec(POP, LINE, 1, third)
+    expect(spec('top').position).toBe('top')
+    expect(spec('top').offsetY).toBeCloseTo(margin(POP) - TITLE_SAFE, 12)
+    expect(spec('middle').position).toBe('center')
+    expect(spec('middle').offsetY).toBe(0)
+    expect(spec('bottom').position).toBe('lower')
+    expect(spec('bottom').offsetY).toBeCloseTo(TITLE_SAFE - margin(POP), 12)
+    // 220 px up from the bottom becomes 220 px down from the top: the offset mirrors.
+    expect(spec('top').offsetY).toBeCloseTo(-(spec('bottom').offsetY ?? NaN), 12)
+    // As the style itself placed at the top would sit.
+    expect(spec('top')).toEqual(captionSpec(POP_TOP, LINE, 1))
+  })
+
+  it('moves a top style to the bottom, and a centred one to either edge at the default style\'s distance', () => {
+    expect(captionSpec(POP_TOP, LINE, 1, 'bottom').position).toBe('lower')
+    expect(captionSpec(POP_TOP, LINE, 1, 'bottom').offsetY).toBeCloseTo(TITLE_SAFE - margin(POP_TOP), 12)
+    expect(captionSpec(POP_TOP, LINE, 1, 'middle').position).toBe('center')
+    expect(captionSpec(POP_TOP, LINE, 1, 'middle').offsetY).toBe(0)
+
+    // Bold centre's marginV is 0, which no edge should get: 220 of 1080 (the default style's).
+    expect(CENTRE.marginV).toBe(0)
+    expect(CENTRE_MOVED_MARGIN_V).toBe(220)
+    const edge = CENTRE_MOVED_MARGIN_V / REFERENCE_HEIGHT
+    expect(captionSpec(CENTRE, LINE, 1, 'top').position).toBe('top')
+    expect(captionSpec(CENTRE, LINE, 1, 'top').offsetY).toBeCloseTo(edge - TITLE_SAFE, 12)
+    expect(captionSpec(CENTRE, LINE, 1, 'bottom').position).toBe('lower')
+    expect(captionSpec(CENTRE, LINE, 1, 'bottom').offsetY).toBeCloseTo(TITLE_SAFE - edge, 12)
+  })
+
+  it('changes nothing but where the line sits', () => {
+    for (const style of [POP, POP_TOP, CENTRE, styleById('clean')]) {
+      const { position: _p, offsetY: _o, ...rest } = captionSpec(style, LINE, 1)
+      for (const third of THIRDS) {
+        const { position: _p2, offsetY: _o2, ...moved } = captionSpec(style, LINE, 1, third)
+        expect(moved, `${style.id} → ${third}`).toEqual(rest)
+      }
+    }
+  })
+
+  it('placedStyle returns the very style when nothing moves', () => {
+    expect(placedStyle(POP, null)).toBe(POP)
+    expect(placedStyle(POP, 'bottom')).toBe(POP)
+    expect(placedStyle(CENTRE, 'middle')).toBe(CENTRE)
+    expect(placedStyle(POP, 'top')).toEqual({ ...POP, position: 'top' })
   })
 })

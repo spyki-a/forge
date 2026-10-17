@@ -8,9 +8,11 @@ import ffmpegInstaller from '@ffmpeg-installer/ffmpeg'
 import ffprobeInstaller from '@ffprobe-installer/ffprobe'
 import { buildRenderPlan } from '@shared/render/plan'
 import { buildTimelineCaptions, escapeFilterPath } from '@shared/captions/timeline'
-import { DEFAULT_CAPTION_STYLE } from '@shared/captions/style'
+import { DEFAULT_CAPTION_STYLE, resolveStyle } from '@shared/captions/style'
 import { segmentIntoSentences, type Word } from '@shared/transcript'
 import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
+import { smartPlacement } from '@shared/captions/smart'
+import { SUBJECT_TRACK_VERSION, type SubjectTrack } from '@shared/reframe/types'
 
 const run = promisify(execFile)
 /** A libass burn in a plan: the `ass` filter, or the `subtitles` one it replaced. */
@@ -258,4 +260,119 @@ describe('caption burn-in', () => {
     expect(app, 'the app’s captions are the complex shaper’s').toEqual(complex)
     if (process.platform === 'darwin') expect(seen, 'shaping is visible here: Kohinoor through CoreText').toEqual({ devanagari: 54, telugu: 54 })
   }, 180_000)
+
+  /*
+   * Smart placement on the libass route (docs/CLIPS.md §5.4), rendered: the
+   * alignment override and MarginV that buildAss writes on a moved line are
+   * what the bundled libass draws (per-event \\an and MarginV are core ASS,
+   * far older than the Windows floor; this runs them on the Windows build in
+   * CI). A 360×640 file on a 360×640 canvas, so the subject track's units are
+   * the frame's, with a cut at 3 s. The caption's rows are read by luma off a
+   * flat dark picture, with placement smart and with it absent — the same
+   * file, so the check can see a move.
+   *
+   * Pop (bottom) with the face in the lower third, then the upper: the first
+   * line and the one running over the cut go to the middle third, the line
+   * after the cut stays low. Bold centre (middle) with the face in the middle
+   * third, then the lower: its first line goes to the lower third at the
+   * default style's edge distance (220 of 1080: MarginV 130 here), which only
+   * the event's own MarginV gives it — the style's is 0, and libass would
+   * draw it on the frame's very edge.
+   */
+  it('puts Smart placement\'s lines in their third on the bundled libass', async () => {
+    const W = 360
+    const H = 640
+    const tall = join(dir, 'tall.mp4')
+    await run(FFMPEG, [
+      '-hide_banner', '-loglevel', 'error', '-y',
+      '-f', 'lavfi', '-i', `color=c=#202830:size=${W}x${H}:rate=30:duration=6`,
+      '-c:v', 'libx264', '-pix_fmt', 'yuv420p', tall
+    ])
+    const spoken = words([
+      ['One', 500, 800], ['two', 800, 1100], ['three.', 1100, 1500],
+      ['Seven', 2600, 2900], ['eight', 2900, 3200], ['nine.', 3200, 3400],
+      ['Four', 3500, 3800], ['five', 3800, 4100], ['six.', 4100, 4500]
+    ])
+    /** A track whose face's top is at `before` until the cut and `after` from it. */
+    const track = (before: number, after: number): SubjectTrack => ({
+      key: '123456:1700000000000', version: SUBJECT_TRACK_VERSION, width: W, height: H, durationMs: 6000,
+      shots: [{ startMs: 0, endMs: 3000, score: 0 }, { startMs: 3000, endMs: 6000, score: 0.9 }],
+      samples: Array.from({ length: 12 }, (_, i) => ({
+        ms: i * 500,
+        faces: [{ x: 0.4, y: i * 500 < 3000 ? before : after, width: 0.2, height: 0.12, score: 0.9 }]
+      })),
+      perShot: [{}, {}], detector: 'synthetic',
+      scene: { threshold: 0.3, minShotMs: 500, backend: 'ffmpeg-select-rgb24' }, at: '2026-10-16T00:00:00.000Z'
+    })
+    const base = project({ duration: 180 })
+    const canvas = { width: W, height: H }
+    const fontsDir = resolve(__dirname, '../../assets/fonts')
+
+    /** The first and last rows with a pixel brighter than the background could be, at each time. */
+    const rowsAt = async (file: string, seconds: number[]): Promise<[number, number][]> => {
+      const out: [number, number][] = []
+      for (const at of seconds) {
+        const { stdout } = await run(
+          FFMPEG,
+          ['-hide_banner', '-loglevel', 'error', '-ss', at.toFixed(3), '-i', file, '-frames:v', '1', '-f', 'rawvideo', '-pix_fmt', 'gray', 'pipe:1'],
+          { encoding: 'buffer', maxBuffer: 8 * 1024 * 1024 }
+        )
+        const luma = stdout as unknown as Buffer
+        expect(luma.length).toBe(W * H)
+        const lit: number[] = []
+        for (let y = 0; y < H; y++) {
+          for (let x = 0; x < W; x++) {
+            if (luma[y * W + x] > 128) {
+              lit.push(y)
+              break
+            }
+          }
+        }
+        expect(lit.length, `text on screen at ${at}s`).toBeGreaterThan(10)
+        out.push([lit[0], lit[lit.length - 1]])
+      }
+      return out
+    }
+    const third = ([top, bottom]: [number, number]): string =>
+      bottom < H / 3 ? 'top' : top >= H / 3 && bottom < (2 * H) / 3 ? 'middle' : top >= (2 * H) / 3 ? 'bottom' : `across (${top}-${bottom})`
+
+    const cases = [
+      // style, the face's top before and after the cut, when to look, the thirds smart and absent
+      { styleId: 'pop', faces: [0.7, 0.1], at: [1.0, 3.25, 4.0], smart: ['middle', 'middle', 'bottom'], style: ['bottom', 'bottom', 'bottom'] },
+      { styleId: 'bold-center', faces: [0.4, 0.75], at: [1.0, 4.0], smart: ['bottom', 'middle'], style: ['middle', 'middle'] }
+    ]
+    const seen: Record<string, [number, number][]> = {}
+    for (const c of cases) {
+      for (const placement of ['smart', undefined] as const) {
+        const p: Project = {
+          ...base,
+          settings: { ...base.settings, width: W, height: H },
+          assets: [{ ...base.assets[0], path: tall, durationFrames: 180, width: W, height: H, hasAudio: false }],
+          subjects: { a1: track(c.faces[0], c.faces[1]) },
+          transcripts: { a1: { ...base.transcripts.a1, durationMs: 6000, words: spoken, segments: segmentIntoSentences(spoken) } },
+          captions: { enabled: true, styleId: c.styleId, ...(placement ? { placement } : {}) }
+        }
+        const style = resolveStyle(c.styleId)
+        const name = `${c.styleId}-${placement ?? 'style'}`
+        const assPath = join(dir, `placement-${name}.ass`)
+        await writeFile(assPath, buildTimelineCaptions(p, style, canvas, smartPlacement(p, style, canvas))!, 'utf8')
+        const out = join(dir, `placement-${name}.mp4`)
+        await run(FFMPEG, buildRenderPlan({ project: p, outputPath: out, canvas, subtitlesPath: assPath, fontsDir }).args, {
+          maxBuffer: 16 * 1024 * 1024
+        })
+        seen[name] = await rowsAt(out, c.at)
+      }
+      expect(seen[`${c.styleId}-smart`].map(third), `${c.styleId}, smart`).toEqual(c.smart)
+      expect(seen[`${c.styleId}-style`].map(third), `${c.styleId}, absent`).toEqual(c.style)
+    }
+    process.stderr.write(`captions.int: Smart placement text rows on ${W}x${H}: ${JSON.stringify(seen)}\n`)
+
+    // Off the face: Pop's shot-1 face, extended by half its height, runs y 0.70–0.88 of the frame.
+    for (const [top, bottom] of seen['pop-smart'].slice(0, 2)) expect(bottom < 0.7 * H || top > 0.88 * H).toBe(true)
+    // Bold centre moved down keeps the default style's distance from the edge, as Pop's own line does.
+    const [, centreBottom] = seen['bold-center-smart'][0]
+    const [, popBottom] = seen['pop-style'][0]
+    expect(H - 1 - centreBottom, 'the moved centred line is clear of the edge').toBeGreaterThan(100)
+    expect(Math.abs(centreBottom - popBottom), 'as far up as Pop sits').toBeLessThan(20)
+  }, 240_000)
 })

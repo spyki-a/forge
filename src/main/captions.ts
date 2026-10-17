@@ -4,6 +4,7 @@ import { app } from 'electron'
 import { randomUUID } from 'node:crypto'
 import type { Project } from '@shared/timeline'
 import { buildTimelineCaptions } from '@shared/captions/timeline'
+import { smartPlacement } from '@shared/captions/smart'
 import { resolveStyle, type StyleOverrides } from '@shared/captions/style'
 
 export interface PreparedCaptions {
@@ -85,7 +86,8 @@ export async function prepareCaptions(
     project.captions.styleId,
     project.captions.overrides as StyleOverrides | undefined
   )
-  const ass = buildTimelineCaptions(project, style, canvas)
+  // Smart placement's lookup, the same one the canvas bake and the preview ask (docs/CLIPS.md §5.4).
+  const ass = buildTimelineCaptions(project, style, canvas, smartPlacement(project, style, canvas))
   if (!ass) return null
 
   const dir = join(app.getPath('userData'), 'tmp')

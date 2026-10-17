@@ -2,6 +2,7 @@ import type { Clip, Project, Track } from '../timeline'
 import { clipsOnTrack, framesToSeconds } from '../timeline'
 import type { CaptionStyle } from './style'
 import { buildAss, toAssTime } from './ass'
+import { captionLineFrame, type ThirdLookup } from './placement'
 import type { Segment, Word } from '../transcript'
 
 /**
@@ -56,10 +57,18 @@ export function captionSourceClip(project: Project, frame: number): Clip | null 
   )
 }
 
+/**
+ * `placement` is Smart placement's lookup (captions/smart.ts
+ * `smartPlacement`, which the export's caller passes): each line is asked at
+ * the project frame its cue is shown on — `captionLineFrame`, the same clock
+ * as the cue's own shift — and buildAss writes the third onto its events.
+ * Absent or null, every line is where the style puts it.
+ */
 export function buildTimelineCaptions(
   project: Project,
   style: CaptionStyle,
-  canvas: { width: number; height: number }
+  canvas: { width: number; height: number },
+  placement?: ThirdLookup | null
 ): string | null {
   const fps = project.settings.fps
   const videoTrack = captionTrack(project)
@@ -90,7 +99,8 @@ export function buildTimelineCaptions(
         height: canvas.height,
         style,
         offsetMs,
-        rangeMs: { startMs: inPointMs, endMs: inPointMs + clipDurationMs }
+        rangeMs: { startMs: inPointMs, endMs: inPointMs + clipDurationMs },
+        ...(placement ? { thirdAt: (ms: number) => placement(captionLineFrame(clip, fps, ms)) } : {})
       })
 
       const lines = ass.split('\n')

@@ -201,6 +201,18 @@ export function deserializeProject(raw: unknown): ProjectFile {
   if (subjects) merged.subjects = subjects
   else delete merged.subjects
 
+  /*
+   * Where the captions sit (docs/CLIPS.md §5.4): 'style' or 'smart', or
+   * absent, which is 'style'. Every reader asks for 'smart' and nothing else,
+   * so another value already reads as the style's; it is dropped here so a
+   * save does not carry it on.
+   */
+  const placement: unknown = merged.captions.placement
+  if (placement !== undefined && placement !== 'style' && placement !== 'smart') {
+    const { placement: _dropped, ...captions } = merged.captions
+    merged.captions = captions
+  }
+
   // A clip pointing at a missing asset renders as a hard error later; catching it
   // at load time lets the UI offer a relink instead of failing mid-export.
   const assetIds = new Set(merged.assets.map((a) => a.id))

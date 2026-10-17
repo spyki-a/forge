@@ -3,6 +3,7 @@ import { TITLE_SAFE } from '../timeline'
 import type { Word } from '../transcript'
 import type { CaptionStyle } from './style'
 import { CAPTION_MARGIN, REFERENCE_HEIGHT } from './ass'
+import { placedStyle, type Third } from './placement'
 
 /**
  * A caption line, as a text spec.
@@ -44,13 +45,21 @@ export function captionOffsetY(style: CaptionStyle): number {
  * `activeIndex` is which of `words` is being spoken, or -1 for none. Sizes come
  * out as fractions so the same style renders identically into 1080x1920 and
  * 1920x1080 — a caption style is authored against a 1080-tall reference frame.
+ *
+ * `placement` is Smart placement's third for this line (docs/CLIPS.md §5.4):
+ * it moves the line there — `position`, and `offsetY` as `captionOffsetY`
+ * gives it for a style at that position, the style's distance from the edge
+ * kept (placement.ts `placedStyle`). Absent, or the style's own third, and
+ * the spec is today's.
  */
 export function captionSpec(
   style: CaptionStyle,
   words: Word[],
-  activeIndex: number
+  activeIndex: number,
+  placement?: Third | null
 ): TextSpec {
   const size = style.fontSize / REFERENCE_HEIGHT
+  const placed = placedStyle(style, placement)
 
   return {
     content: words.map((w) => w.text).join(' '),
@@ -58,7 +67,7 @@ export function captionSpec(
     size,
     color: style.primaryColor,
     align: 'center',
-    position: positionOf(style),
+    position: positionOf(placed),
     weight: style.bold ? 700 : 400,
     // Captions are read, not admired: tracking that works on a title makes a
     // fast subtitle harder to take in at a glance.
@@ -99,7 +108,7 @@ export function captionSpec(
         : undefined,
     margin: CAPTION_MARGIN,
     offsetX: 0,
-    offsetY: captionOffsetY(style),
+    offsetY: captionOffsetY(placed),
     version: 1
   }
 }

@@ -1,5 +1,6 @@
 import type { Segment, Word } from '../transcript'
 import type { CaptionStyle } from './style'
+import { placedStyle, type Third } from './placement'
 
 /**
  * Generate an ASS subtitle file with word-level highlighting.
@@ -21,6 +22,14 @@ export interface AssOptions {
   offsetMs?: number
   /** Drop cues outside this window (clip bounds in source time). */
   rangeMs?: { startMs: number; endMs: number }
+  /**
+   * Smart placement (docs/CLIPS.md §5.4): the third a line takes, asked once
+   * per line with the SOURCE ms of its first word in `rangeMs` (§5.2 rule 4:
+   * the shot where it starts). Null, or the style's own third, leaves the
+   * line as the style places it. buildTimelineCaptions maps the ms onto the
+   * project frame the cue is shown on (placement.ts `captionLineFrame`).
+   */
+  thirdAt?: (sourceMs: number) => Third | null
 }
 
 /**
@@ -147,8 +156,31 @@ export function buildAss(segments: Segment[], words: Word[], options: AssOptions
   const highlight = toAssColor(style.highlightColor)
   const primary = toAssColor(style.primaryColor)
   const events: string[] = []
+  const range = options.rangeMs
+  // A word the clip shows: inside `rangeMs` when there is one.
+  const shown = (w: Word): boolean => !range || (w.endMs > range.startMs && w.startMs < range.endMs)
 
   for (const group of groupWords(segments, words, style.wordsPerLine)) {
+    /*
+     * Smart placement, one answer per LINE: every event of a group is the
+     * same line with another word lit, so they all sit where its first shown
+     * word puts it. A line in another third than the style's gets that
+     * third's alignment as an override at the head of its text — \an8 top,
+     * \an5 middle, \an2 bottom — and its own MarginV, the edge distance
+     * libass reads for that alignment: from the top edge under \an8, from
+     * the bottom under \an2, ignored under \an5 (so 0 there). A per-event
+     * MarginV of 0 means "the style's", which for a centred style is 0: the
+     * field is written so a centred style moved to an edge gets the edge
+     * distance `placedStyle` gives it rather than none. Measured on the
+     * bundled libass (docs/CLIPS.md §5.4's table).
+     */
+    const ask = options.thirdAt
+    const first = ask ? group.find(shown) : undefined
+    const placed = placedStyle(style, ask && first ? ask(first.startMs) : null)
+    const moved = placed.position !== style.position
+    const tag = moved ? `{\\an${alignment(placed.position)}}` : ''
+    const eventMarginV = moved && placed.position !== 'center' ? Math.round(placed.marginV * scale) : 0
+
     for (let i = 0; i < group.length; i++) {
       const active = group[i]
 
@@ -160,10 +192,7 @@ export function buildAss(segments: Segment[], words: Word[], options: AssOptions
       // not flicker out between words.
       const endMs = (group[i + 1]?.startMs ?? active.endMs) - offset
 
-      if (options.rangeMs) {
-        const { startMs: lo, endMs: hi } = options.rangeMs
-        if (active.endMs <= lo || active.startMs >= hi) continue
-      }
+      if (!shown(active)) continue
       if (endMs <= 0 || endMs <= startMs) continue
 
       const text = group
@@ -177,7 +206,7 @@ export function buildAss(segments: Segment[], words: Word[], options: AssOptions
         .join(' ')
 
       events.push(
-        `Dialogue: 0,${toAssTime(Math.max(0, startMs))},${toAssTime(endMs)},Default,,0,0,0,,${text}`
+        `Dialogue: 0,${toAssTime(Math.max(0, startMs))},${toAssTime(endMs)},Default,,0,0,${eventMarginV},,${tag}${text}`
       )
     }
   }

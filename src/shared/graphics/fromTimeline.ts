@@ -5,6 +5,7 @@ import { captionSpec } from '../captions/line'
 import { resolveStyle, type CaptionStyle, type StyleOverrides } from '../captions/style'
 import type { CaptionLayer, GraphicsSpec } from './spec'
 import { captionTrack } from '../captions/timeline'
+import { smartPlacement } from '../captions/smart'
 
 /**
  * Compile a timeline into a graphics spec for the frame server.
@@ -91,6 +92,14 @@ export function buildGraphicsSpec(
   // The same track the burned-in path builds from, so the two cannot disagree.
   const videoTrack = captionTrack(project)
   if (!videoTrack) return null
+  /*
+   * Smart placement (docs/CLIPS.md §5.4): the third each line takes, from the
+   * same lookup the libass route is handed (captions/smart.ts), asked at the
+   * layer's startFrame — the frame the line appears on, so a line spanning a
+   * cut takes the shot where it starts (§5.2 rule 4). Null when placement is
+   * the style's: every spec below is then what it always was.
+   */
+  const placement = smartPlacement(project, style, { width: options.width, height: options.height })
 
   const layers: CaptionLayer[] = []
 
@@ -128,7 +137,7 @@ export function buildGraphicsSpec(
         startFrame,
         endFrame,
         // The highlight is left off: it moves, so the page sets it per frame.
-        spec: captionSpec(style, visible, -1),
+        spec: captionSpec(style, visible, -1, placement ? placement(startFrame) : null),
         wordFrames: visible.map((w) => at(w.startMs)),
         highlight: { color: style.highlightColor, scale: style.highlightScale }
       })

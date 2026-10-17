@@ -173,4 +173,24 @@ describe('caption settings', () => {
     // enabled was absent and must not become undefined.
     expect(parsed.project.captions.enabled).toBe(true)
   })
+
+  it('keeps Smart placement through a save, and reads no placement as none (docs/CLIPS.md §5.4)', () => {
+    const load = (captions: Record<string, unknown>) => {
+      const file = serializeProject(populated())
+      return deserializeProject(JSON.parse(JSON.stringify({ ...file, project: { ...file.project, captions } }))).project.captions
+    }
+    expect(load({ enabled: true, styleId: 'pop', placement: 'smart' })).toEqual({ enabled: true, styleId: 'pop', placement: 'smart' })
+    expect(load({ enabled: true, styleId: 'pop', placement: 'style' })).toEqual({ enabled: true, styleId: 'pop', placement: 'style' })
+    // Saved before it existed: absent, which every reader takes as the style's.
+    expect('placement' in load({ enabled: true, styleId: 'pop' })).toBe(false)
+  })
+
+  it('drops a placement that is neither word, so a save does not carry it on', () => {
+    const file = serializeProject(populated())
+    for (const placement of ['Smart', 'faces', 1, null, { smart: true }]) {
+      const odd = { ...file, project: { ...file.project, captions: { enabled: true, styleId: 'pop', placement } } }
+      const captions = deserializeProject(JSON.parse(JSON.stringify(odd))).project.captions
+      expect(captions, JSON.stringify(placement)).toEqual({ enabled: true, styleId: 'pop' })
+    }
+  })
 })

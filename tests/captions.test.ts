@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { buildAss, toAssColor, toAssTime, groupWords, REFERENCE_HEIGHT } from '@shared/captions/ass'
-import { CAPTION_STYLES, styleById, resolveStyle, DEFAULT_CAPTION_STYLE } from '@shared/captions/style'
+import { CAPTION_STYLES, styleById, resolveStyle, DEFAULT_CAPTION_STYLE, type CaptionStyle } from '@shared/captions/style'
+import type { Third } from '@shared/captions/placement'
 import { segmentIntoSentences, type Word } from '@shared/transcript'
 
 function words(spec: [string, number, number][]): Word[] {
@@ -145,6 +146,89 @@ describe('buildAss', () => {
   it('produces no events for an empty transcript', () => {
     const ass = buildAss([], [], opts)
     expect(ass.split('\n').filter((l) => l.startsWith('Dialogue:'))).toHaveLength(0)
+  })
+})
+
+/*
+ * Smart placement on the libass route (docs/CLIPS.md §5.4). A line in another
+ * third than the style's gets that third's alignment as an override at the
+ * head of its text, and the MarginV libass reads for that alignment in its
+ * own field; measured on the bundled libass (640×360, Pop at MarginV 73):
+ * bottom rows 264–280, {\an8} 83–99, {\an5} 174–189.
+ */
+describe('buildAss with a third per line', () => {
+  const events = (ass: string): string[] => ass.split('\n').filter((l) => l.startsWith('Dialogue:'))
+  /** Each event's MarginV field and the head of its text: `Dialogue: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text`. */
+  const heads = (ass: string): { marginV: string; text: string }[] =>
+    events(ass).map((line) => {
+      const fields = line.slice('Dialogue: '.length).split(',')
+      return { marginV: fields[7], text: fields.slice(9).join(',') }
+    })
+  const always = (third: Third | null) => () => third
+  const POP_TOP = resolveStyle('pop', { position: 'top' })
+  const CENTRE = styleById('bold-center')
+  // 220 reference px on a 1920-tall frame.
+  const EDGE = String(Math.round((220 * 1920) / REFERENCE_HEIGHT))
+
+  it('is today\'s file with no lookup, or one that answers null or the style\'s own third', () => {
+    const today = buildAss(SEGMENTS, SAMPLE, opts)
+    expect(buildAss(SEGMENTS, SAMPLE, { ...opts, thirdAt: always(null) })).toBe(today)
+    expect(buildAss(SEGMENTS, SAMPLE, { ...opts, thirdAt: always('bottom') })).toBe(today)
+    const top = buildAss(SEGMENTS, SAMPLE, { ...opts, style: POP_TOP })
+    expect(buildAss(SEGMENTS, SAMPLE, { ...opts, style: POP_TOP, thirdAt: always('top') })).toBe(top)
+    // Today's events: no alignment tag, MarginV 0 (the style's).
+    for (const head of heads(today)) {
+      expect(head.marginV).toBe('0')
+      expect(head.text).toMatch(/^\{\\c&H/)
+    }
+  })
+
+  it('tags a moved line with its third\'s alignment and writes the MarginV libass reads for it', () => {
+    expect(EDGE).toBe('391')
+    const cases: [CaptionStyle, Third, string, string][] = [
+      // style, third, MarginV, tag
+      [DEFAULT_CAPTION_STYLE, 'top', EDGE, '{\\an8}'],
+      [DEFAULT_CAPTION_STYLE, 'middle', '0', '{\\an5}'],
+      [POP_TOP, 'bottom', EDGE, '{\\an2}'],
+      [POP_TOP, 'middle', '0', '{\\an5}'],
+      // A centred style has no edge distance; moved, it takes the default style's 220.
+      [CENTRE, 'top', EDGE, '{\\an8}'],
+      [CENTRE, 'bottom', EDGE, '{\\an2}']
+    ]
+    for (const [style, third, marginV, tag] of cases) {
+      const ass = buildAss(SEGMENTS, SAMPLE, { ...opts, style, thirdAt: always(third) })
+      const all = heads(ass)
+      expect(all.length, `${style.id} → ${third}`).toBe(SAMPLE.length)
+      for (const head of all) {
+        expect(head.marginV, `${style.id} → ${third}`).toBe(marginV)
+        expect(head.text.startsWith(`${tag}{\\c&H`), `${style.id} → ${third}: ${head.text}`).toBe(true)
+      }
+      // The style line is the style's own: only the events move.
+      expect(ass.split('\n').find((l) => l.startsWith('Style: Default'))).toBe(
+        buildAss(SEGMENTS, SAMPLE, { ...opts, style }).split('\n').find((l) => l.startsWith('Style: Default'))
+      )
+    }
+    // Scaled to PlayResY: on a 1080-tall frame the edge is 220.
+    const wide = heads(buildAss(SEGMENTS, SAMPLE, { width: 1920, height: 1080, style: DEFAULT_CAPTION_STYLE, thirdAt: always('top') }))
+    expect(wide.every((h) => h.marginV === '220')).toBe(true)
+  })
+
+  it('asks once per line, with the source ms of its first word the range shows', () => {
+    const asked: number[] = []
+    buildAss(SEGMENTS, SAMPLE, { ...opts, thirdAt: (ms) => (asked.push(ms), null) })
+    // [And so my] [fellow Americans.] [Ask not.]
+    expect(asked).toEqual([0, 1200, 2800])
+    asked.length = 0
+    // "And" (0–400) is before the range; "so" (400–800) is the first word it shows.
+    buildAss(SEGMENTS, SAMPLE, { ...opts, rangeMs: { startMs: 500, endMs: 4000 }, thirdAt: (ms) => (asked.push(ms), null) })
+    expect(asked).toEqual([400, 1200, 2800])
+  })
+
+  it('keeps every event of a line where the line starts, though later words are past a change', () => {
+    // A cut at 400 ms: "so" and "my" are after it, but their line starts at 0.
+    const ass = buildAss(SEGMENTS, SAMPLE, { ...opts, thirdAt: (ms) => (ms >= 400 ? 'top' : null) })
+    const tagged = heads(ass).map((h) => h.text.startsWith('{\\an8}'))
+    expect(tagged).toEqual([false, false, false, true, true, true, true])
   })
 })
 

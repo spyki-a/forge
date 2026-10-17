@@ -49,6 +49,14 @@ export interface CaptionSettings {
   styleId: string
   /** User edits layered over the preset; see resolveStyle. */
   overrides?: Record<string, unknown>
+  /**
+   * Where the lines sit (docs/CLIPS.md §5.4). Absent, or 'style', is the
+   * style's own position, as every project before Smart placement had it.
+   * 'smart' keeps them off the subject's face: one third per shot, chosen
+   * from the clip's subject track (reframe/freeSpace.ts), the same on every
+   * route — libass, the canvas bake and the preview (captions/smart.ts).
+   */
+  placement?: 'style' | 'smart'
 }
 
 export interface MediaAsset {
