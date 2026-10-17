@@ -7422,18 +7422,25 @@ Where it goes, per `WHERE-THINGS-ARE.md`:
 > **The exit**, two halves:
 > 1. **Both routes pass the render check in CI.** On the Mac: 19 of 19 at
 >    `a0837ea` (the recorder's run), and 19 of 19 with the fonts folder
->    emptied (lane C's rehearsal on this Mac's fallback face). CI's first
->    run of `captionsFree.int` is the push of `fb65a18`, not read when this
->    was written; the fix phase's four commits (the late line and the
->    shared band among them) run first on the push after this record. The runners have no Anton
->    (`/assets` is gitignored), so libass draws a fallback face there: in
->    run 38986994729 lane B's three-word line ran to rows 409–498 on both
->    runners, where it is 470–498 here (wrapped into two lines, by its
->    height), and the case failed on an UNMOVED line's reading
->    (`0c08569`). So per-event `\an` and MarginV have been rendered on the
->    2018 build but no reading of a moved line there is recorded: still
->    **dated**. Read the windows-latest result and its "captionsFree:
->    caption rows" notice.
+>    emptied (lane C's rehearsal on this Mac's fallback face). **In CI,
+>    met**: run 38988978219 (the push of `fb65a18`, read by the orchestrator
+>    the same night) passed `captionsFree.int` 19 of 19 on **both**
+>    windows-latest and macos-14, each with Anton absent (`/assets` is
+>    gitignored, so libass draws a fallback face on the runners). Its
+>    "captionsFree: caption rows" notice from Windows, the first reading of a
+>    MOVED line on the 2018 build: 9:16 libass, Pop at the bottom, shot 1's
+>    lines at rows 300–337 (moved to the middle; the box at 446–569) and
+>    shot 2's at 461–498 (back at the bottom; the box at 57–195); Pop at the
+>    top 140–177 then 461–498; 16:9 libass 169–189 then 260–280; the canvas
+>    cases 291–349 / 451–509 and 163–195 / 254–286; every control on the
+>    style's rows (460–498 bottom, 140–177 top). macOS 14 read 302–338 /
+>    462–498 and 170–189 / 260–280. So per-event `\an` and MarginV are
+>    **measured on the 2018 build**, no longer only dated. Earlier, run
+>    38986994729 had failed lane B's `captions.int` case on an UNMOVED line
+>    (the fallback face's three-word line wrapped to rows 409–498 across the
+>    426.7 boundary), fixed by reading a line's third from its centre
+>    (`0c08569`). The fix phase's four commits (the late line and the shared
+>    band among them) run first on the push after this record.
 > 2. **The ten clips show zero sampled caption lines on a face.** Not run,
 >    and **no reader for it exists yet**: step 1's exit reader
 >    (`reframeExit.int`, §4.10) scores crops and cuts, not caption lines.

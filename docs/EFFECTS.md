@@ -8473,10 +8473,17 @@ suite and CI are the orchestrator's.
 
 ### Still unmeasured, and whose
 
-- **Windows CI**: `captionsFree.int`'s first run (the push of `fb65a18`)
-  and its notice; the late-line case and the shared band (the next push);
-  per-event `\an` and MarginV read on the 2018 build; the fallback face's
-  rows there.
+- **Windows CI, read since**: `captionsFree.int`'s first run, the push of
+  `fb65a18` (run 38988978219), passed 19 of 19 on both runners with Anton
+  absent. The Windows notice's rows, the 2018 build drawing a MOVED line
+  through per-event `\an` and MarginV for the first time: 9:16 libass Pop
+  at the bottom 300–337 (shot 1, moved to the middle) then 461–498 (shot 2);
+  Pop at the top 140–177 then 461–498; 16:9 libass 169–189 then 260–280;
+  the canvas cases 291–349 / 451–509 and 163–195 / 254–286; the box rows
+  446–569 and 57–195 (9:16), 258–334 and 16–101 (16:9); every control on
+  the style's rows. macOS 14's fallback face read 302–338 / 462–498 and
+  170–189 / 260–280. Still to read: the late-line case and the shared band
+  (the push after `d0f92d0`).
 - **The ten clips** (CLIPS §5's exit): zero sampled caption lines on a
   face. No reader exists for it yet. The user's.
 - **A 1080×1920 export with Smart placement on**: the band across thirds,
