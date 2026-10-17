@@ -4,8 +4,8 @@ import { describe, expect, it } from 'vitest'
 import { buildTimelineCaptions } from '@shared/captions/timeline'
 import { buildGraphicsSpec } from '@shared/graphics/fromTimeline'
 import { captionSpec } from '@shared/captions/line'
-import { groupWords } from '@shared/captions/ass'
-import { captionLineFrame, firstShownWord, lineThird, type Third, type ThirdLookup } from '@shared/captions/placement'
+import { groupWords, toAssTime } from '@shared/captions/ass'
+import { assTimeMs, captionLineFrame, firstShownWord, libassLineFrame, lineThird, type Third, type ThirdLookup } from '@shared/captions/placement'
 import { captionsHaveSubjects, smartPlacement, smartPlacementState } from '@shared/captions/smart'
 import { resolveStyle } from '@shared/captions/style'
 import { SUBJECT_TRACK_VERSION, type SubjectTrack, type UnitRect } from '@shared/reframe/types'
@@ -152,16 +152,18 @@ describe('the three routes put each line in the same third', () => {
         expect(layers().map((l) => (l.kind === 'caption' ? l.spec.position : ''))).toEqual(expected.map((t) => POSITION[t]))
       })
 
-      it('the preview: each line\'s third as Preview.tsx asks it', () => {
-        expect(GROUPS.map((g) => lineThird(lookup(), clip, FPS, g))).toEqual(expected)
+      it('the preview: each line\'s third as Preview.tsx asks it, for either export route', () => {
+        expect(GROUPS.map((g) => lineThird(lookup(), clip, FPS, g, 'libass'))).toEqual(expected)
+        expect(GROUPS.map((g) => lineThird(lookup(), clip, FPS, g, 'canvas'))).toEqual(expected)
       })
 
-      it('all three ask at the frame the line appears on: the layer\'s startFrame', () => {
+      it('on whole frames all three ask at the same frame, the one the line appears on: the layer\'s startFrame', () => {
         const asked: number[] = []
         const inner = lookup()
         buildTimelineCaptions(p, STYLE, CANVAS, (frame) => (asked.push(frame), inner(frame)))
         expect(asked).toEqual(layers().map((l) => l.startFrame))
         expect(GROUPS.map((g) => captionLineFrame(clip, FPS, firstShownWord(g, clip, FPS)!.startMs))).toEqual(asked)
+        expect(GROUPS.map((g) => libassLineFrame(clip, FPS, firstShownWord(g, clip, FPS)!.startMs))).toEqual(asked)
       })
     })
   }
@@ -178,7 +180,7 @@ describe('the three routes put each line in the same third', () => {
         if (layer.kind !== 'caption') throw new Error('not a caption layer')
         expect(layer.spec).toEqual(captionSpec(STYLE, GROUPS[i], -1))
       })
-      expect(GROUPS.map((g) => lineThird(lookup, clip, FPS, g))).toEqual([null, null, null])
+      for (const route of ['libass', 'canvas'] as const) expect(GROUPS.map((g) => lineThird(lookup, clip, FPS, g, route))).toEqual([null, null, null])
     }
   })
 
@@ -189,6 +191,72 @@ describe('the three routes put each line in the same third', () => {
     const layers = buildGraphicsSpec(p, CANVAS)!.layers
     expect(layers.map((l) => (l.kind === 'caption' ? l.spec.position : ''))).toEqual(['lower', 'lower', 'lower'])
   })
+})
+
+/**
+ * Where the bundled ffmpeg's `ass` burn first drew a cue starting at each ms
+ * on the timeline, by frame rate — measured 2026-10-16 through buildRenderPlan
+ * (a black 640×360 timeline, one filled box per cue, every frame decoded in
+ * order; macOS 4.1.5 build). Every cue first shows on its centisecond time
+ * rounded UP to a frame; the canvas bake rounds to the nearest.
+ */
+const LIBASS_FIRST_FRAME: Record<number, [number, number][]> = {
+  24: [[2950, 71], [2960, 72], [2970, 72], [2980, 72], [2990, 72], [3000, 72], [3010, 73], [3020, 73], [3030, 73], [3040, 73], [3050, 74], [3060, 74], [3330, 80], [3340, 81], [3350, 81], [4000, 96], [4010, 97], [4160, 100], [4170, 101]],
+  25: [[2950, 74], [2960, 74], [2970, 75], [2980, 75], [2990, 75], [3000, 75], [3010, 76], [3020, 76], [3030, 76], [3040, 76], [3050, 77], [3060, 77], [3330, 84], [3340, 84], [3350, 84], [4000, 100], [4010, 101], [4160, 104], [4170, 105]],
+  30: [[2950, 89], [2960, 89], [2966, 89], [2967, 89], [2970, 90], [2980, 90], [2990, 90], [3000, 90], [3010, 91], [3030, 91], [3033, 91], [3034, 91], [3040, 92], [3060, 92], [3066, 92], [3067, 92], [3070, 93], [3330, 100], [3333, 100], [3334, 100], [3340, 101], [4000, 120], [4010, 121]],
+  60: [[2950, 177], [2960, 178], [2970, 179], [2980, 179], [2990, 180], [3000, 180], [3010, 181], [3020, 182], [3030, 182], [3040, 183], [3050, 183], [3060, 184], [3330, 200], [3340, 201], [3350, 201], [4000, 240], [4010, 241], [4160, 250], [4170, 251]]
+}
+
+describe('a line that starts part-way through the frame before a cut (§5.2 rule 4, per route)', () => {
+  it('libassLineFrame is the frame the bundled libass first draws a cue on, at every measured rate', () => {
+    for (const [fps, rows] of Object.entries(LIBASS_FIRST_FRAME)) {
+      // A clip from frame 0 at in-point 0: the source ms is the timeline's.
+      const clip = { start: 0, inPoint: 0, duration: 10_000 }
+      expect(rows.map(([ms]) => libassLineFrame(clip, Number(fps), ms)), `${fps} fps`).toEqual(rows.map(([, frame]) => frame))
+      // Through a clip at frame 30 that plays from in-point 24, the same source ms is 6 frames later on the timeline
+      // (6 frames is whole centiseconds at each of these rates — 250, 240, 200 and 100 ms — so the cue keeps its place in its frame).
+      const moved = { start: 30, inPoint: 24, duration: 10_000 }
+      expect(rows.map(([ms]) => libassLineFrame(moved, Number(fps), ms)), `${fps} fps, moved`).toEqual(rows.map(([, frame]) => frame + 6))
+    }
+    // The bake's rounding differs on these: 2970 and 2980 ms at 30 fps are frame 89 there, 90 on libass.
+    expect([2970, 2980].map((ms) => captionLineFrame({ start: 0, inPoint: 0, duration: 10_000 }, 30, ms))).toEqual([89, 89])
+  })
+
+  it('assTimeMs is the time toAssTime writes', () => {
+    const parse = (t: string): number => {
+      const [h, m, s] = t.split(':')
+      return (Number(h) * 3600 + Number(m) * 60) * 1000 + Math.round(Number(s) * 1000)
+    }
+    for (let ms = -20; ms < 4_000_000; ms += ms < 20_000 ? 0.25 : 997.3) expect(parse(toAssTime(ms)), `${ms}`).toBe(assTimeMs(ms))
+  })
+
+  /** The fixture's project with one line, "Late start.", whose first word is at 2975 ms: 0.75 of a frame before the cut. */
+  const late = (patch: Partial<Clip>): { project: Project; clip: Clip } => {
+    const { project: p, clip } = project('smart', patch)
+    const spoken = words([['Late', 2975, 3300], ['start.', 3300, 3600]])
+    return { clip, project: { ...p, transcripts: { a: { ...p.transcripts.a, words: spoken, segments: segmentIntoSentences(spoken) } } } }
+  }
+
+  for (const [name, patch, cut] of [
+    ['a clip at frame 30 from its first frame', {}, 120],
+    ['a clip trimmed to start half a second in', { inPoint: 15, duration: 150 }, 105]
+  ] as [string, Partial<Clip>, number][]) {
+    it(`${name}: libass first draws it on the cut's frame and takes shot 2's third; the bake shows it a frame before and takes shot 1's`, () => {
+      const { project: p, clip } = late(patch)
+      const lookup = smartPlacement(p, STYLE, CANVAS)!
+      expect([lookup(cut - 1), lookup(cut)], 'the cut').toEqual(['middle', 'bottom'])
+      const asked: number[] = []
+      const ass = buildTimelineCaptions(p, STYLE, CANVAS, (frame) => (asked.push(frame), lookup(frame)))!
+      expect(asked, 'libass asks at the frame it first draws the cue on').toEqual([cut])
+      // Shot 2's face is high: the line stays at Pop's own bottom, untagged — not \an5 over the new shot.
+      const heads = ass.split('\n').filter((l) => l.startsWith('Dialogue:')).map((l) => /,,(\{\\an\d\})?\{\\c&H/.exec(l)?.[1] ?? '')
+      expect(heads).toEqual(['', ''])
+      const layers = buildGraphicsSpec(p, CANVAS)!.layers
+      expect(layers.map((l) => [l.startFrame, l.kind === 'caption' ? l.spec.position : '']), 'the bake shows it from the frame before').toEqual([[cut - 1, 'center']])
+      const group = groupWords(p.transcripts.a.segments, p.transcripts.a.words, STYLE.wordsPerLine)[0]
+      expect([lineThird(lookup, clip, FPS, group, 'libass'), lineThird(lookup, clip, FPS, group, 'canvas')], 'the preview, as each route').toEqual(['bottom', 'middle'])
+    })
+  }
 })
 
 describe('the Smart placement toggle\'s state', () => {
@@ -231,7 +299,9 @@ describe('each route is handed the lookup', () => {
     const preview = source('src/renderer/src/components/Preview.tsx')
     const draws = [...preview.matchAll(/drawCaptions\(([^\n]*)\)\n/g)]
     expect(draws).toHaveLength(1)
-    expect(draws[0][1]).toBe('ctx, frame, style, caption, fps, lineThird(captionPlacement, source, fps, caption.words)')
+    expect(draws[0][1]).toBe('ctx, frame, style, caption, fps, lineThird(captionPlacement, source, fps, caption.words, route)')
+    // As the export's route for this style draws the line (a line starting part-way through a frame is first shown on different frames).
+    expect([...preview.matchAll(/const route = captionNeedsCanvas\(style\) \? 'canvas' : 'libass'\n/g)]).toHaveLength(1)
     expect([...preview.matchAll(/smartPlacement\(project, activeCaptionStyle\(project\), ASPECTS\[aspect\]\)/g)]).toHaveLength(1)
     // In draw's dependencies: a memoised draw would otherwise keep the first edit's thirds.
     expect([...preview.matchAll(/\n {4}captionPlacement,\n/g)]).toHaveLength(1)

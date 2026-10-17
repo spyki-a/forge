@@ -1,6 +1,6 @@
 import type { Segment, Word } from '../transcript'
 import type { CaptionStyle } from './style'
-import { placedStyle, type Third } from './placement'
+import { assTimeMs, placedStyle, type Third } from './placement'
 
 /**
  * Generate an ASS subtitle file with word-level highlighting.
@@ -27,7 +27,7 @@ export interface AssOptions {
    * per line with the SOURCE ms of its first word in `rangeMs` (§5.2 rule 4:
    * the shot where it starts). Null, or the style's own third, leaves the
    * line as the style places it. buildTimelineCaptions maps the ms onto the
-   * project frame the cue is shown on (placement.ts `captionLineFrame`).
+   * project frame libass first draws the cue on (placement.ts `libassLineFrame`).
    */
   thirdAt?: (sourceMs: number) => Third | null
 }
@@ -46,9 +46,13 @@ export function toAssColor(hex: string, alpha = 0): string {
   return `&H${a}${b}${g}${r}`.toUpperCase()
 }
 
-/** ASS timestamps are H:MM:SS.cc — centiseconds, and the hour is not padded. */
+/**
+ * ASS timestamps are H:MM:SS.cc — centiseconds, and the hour is not padded.
+ * The time written is placement.ts `assTimeMs`: the rounded ms, its last
+ * digit dropped — which libass then draws from (`libassLineFrame`).
+ */
 export function toAssTime(ms: number): string {
-  const total = Math.max(0, Math.round(ms))
+  const total = assTimeMs(ms)
   const centis = Math.floor((total % 1000) / 10)
   const seconds = Math.floor(total / 1000) % 60
   const minutes = Math.floor(total / 60_000) % 60

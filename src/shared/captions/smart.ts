@@ -13,14 +13,22 @@ import { captionTrack } from './timeline'
  * this is the only place that reads it.
  *
  *   libass        main/captions.ts hands the lookup to buildTimelineCaptions,
- *                 which asks it for each line's frame and writes \anN and
+ *                 which asks it at the frame libass first draws each line's
+ *                 cue on (placement.ts `libassLineFrame`) and writes \anN and
  *                 MarginV on the line's events (ass.ts);
  *   canvas bake   buildGraphicsSpec asks it at each caption layer's
  *                 startFrame and gives the third to captionSpec;
  *   preview       Preview.tsx memoises it per project and canvas and asks it
- *                 for the line on screen (captionPreview.ts).
+ *                 for the line on screen as the style's export route would
+ *                 (placement.ts `lineThird`, captionPreview.ts).
  *
- * So the three cannot disagree about a line: same thirds, same frame. The
+ * So the routes agree about a line: same thirds, each asked at the frame it
+ * first shows the line on (§5.2 rule 4, the shot where it starts). Those
+ * frames are the same unless a line starts part-way through a frame: libass
+ * draws a cue from the frame its centisecond time rounds UP to, the bake
+ * from the nearest, so a line starting between half a frame and a frame
+ * before a cut is in the later shot on libass and the earlier on the bake —
+ * and each takes the shot it is first shown in. The
  * libass route takes it as an argument rather than computing it inside
  * captions/timeline.ts because the thirds (reframe/freeSpace.ts) reach the
  * export planner (render/plan.ts), which imports captions/timeline.ts for

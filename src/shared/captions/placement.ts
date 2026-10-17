@@ -66,9 +66,9 @@ export function firstShownWord(group: readonly Word[], clip: Pick<Clip, 'inPoint
 }
 
 /**
- * The project frame the caption routes show a line starting at source `ms`
- * on: the caption clock, `clip.start` plus (ms − in-point) in frames — no
- * speed, as buildTimelineCaptions shifts its cues — held to the clip's own
+ * The project frame the CANVAS BAKE shows a line starting at source `ms` on:
+ * the caption clock, `clip.start` plus (ms − in-point) in frames, rounded —
+ * no speed, as buildTimelineCaptions shifts its cues — held to the clip's own
  * frames. buildGraphicsSpec's layer `startFrame` for the same line.
  */
 export function captionLineFrame(clip: Pick<Clip, 'start' | 'inPoint' | 'duration'>, fps: number, ms: number): number {
@@ -78,17 +78,65 @@ export function captionLineFrame(clip: Pick<Clip, 'start' | 'inPoint' | 'duratio
 }
 
 /**
+ * The time an ASS timestamp written for `ms` stands for, in ms: whole
+ * centiseconds of the rounded ms, the rest dropped (2975 → 0:00:02.97, 2970).
+ * ass.ts `toAssTime` formats exactly this.
+ */
+export function assTimeMs(ms: number): number {
+  return Math.floor(Math.max(0, Math.round(ms)) / 10) * 10
+}
+
+/**
+ * The project frame LIBASS first draws a line on whose first word starts at
+ * source `ms`: buildTimelineCaptions shifts the cue by (in-point −
+ * clip.start), toAssTime writes it in whole centiseconds, and the `ass`
+ * filter draws a cue from the first frame whose time is at or after its
+ * start — so the frame is the cue's time rounded UP, where the canvas bake
+ * (`captionLineFrame`) rounds to nearest. Held to the clip's own frames.
+ *
+ * Measured on the bundled ffmpeg (macOS 4.1.5) through buildRenderPlan's
+ * `ass=` burn, 2026-10-16: 80 cues at 24, 25, 30 and 60 fps, each first
+ * drawn on ceil(cue ms × fps / 1000) and none elsewhere — a cue at 2.97 s
+ * first shows on frame 90 (3.000 s) at 30 fps, where rounding says 89; one
+ * exactly on a frame's time (3.00 s and 4.00 s at every rate) shows on that
+ * frame. So a line starting between half a frame and a frame before a cut
+ * is drawn first in the shot AFTER it on this route, and §5.2 rule 4 asks
+ * that shot.
+ */
+export function libassLineFrame(clip: Pick<Clip, 'start' | 'inPoint' | 'duration'>, fps: number, ms: number): number {
+  // buildTimelineCaptions' own offset, the same expression, so the cue's ms is the one buildAss writes.
+  const offsetMs = captionWindowMs(clip, fps).startMs - framesToSeconds(clip.start, fps) * 1000
+  const at = Math.ceil((assTimeMs(ms - offsetMs) * fps) / 1000 - 1e-6)
+  return Math.min(Math.max(at, clip.start), clip.start + clip.duration - 1)
+}
+
+/**
+ * The export route that draws the captions: libass burns a style it can
+ * express, the canvas bake draws the rest (graphics/fromTimeline.ts
+ * `captionNeedsCanvas`). The two show a line from different frames when it
+ * starts part-way through one (`libassLineFrame`, `captionLineFrame`).
+ */
+export type CaptionRoute = 'libass' | 'canvas'
+
+/** The project frame `route` first shows a line starting at source `ms` on. */
+export function routeLineFrame(route: CaptionRoute, clip: Pick<Clip, 'start' | 'inPoint' | 'duration'>, fps: number, ms: number): number {
+  return route === 'libass' ? libassLineFrame(clip, fps, ms) : captionLineFrame(clip, fps, ms)
+}
+
+/**
  * Rule 4 of §5.2 on the caption clock: a line takes the shot where it STARTS
- * — the third at the frame its first shown word appears on. Null with no
- * lookup (Smart placement off) or no word shown: the style's own.
+ * — the third at the frame `route` first shows its first shown word on, so
+ * the preview asks as the export's route will draw it. Null with no lookup
+ * (Smart placement off) or no word shown: the style's own.
  */
 export function lineThird(
   lookup: ThirdLookup | null | undefined,
   clip: Pick<Clip, 'start' | 'inPoint' | 'duration'>,
   fps: number,
-  group: readonly Word[]
+  group: readonly Word[],
+  route: CaptionRoute
 ): Third | null {
   if (!lookup) return null
   const first = firstShownWord(group, clip, fps)
-  return first ? lookup(captionLineFrame(clip, fps, first.startMs)) : null
+  return first ? lookup(routeLineFrame(route, clip, fps, first.startMs)) : null
 }

@@ -57,6 +57,7 @@ import { activeCaptionStyle, captionAt, drawCaptions } from '../captionPreview'
 import { captionSourceClip } from '@shared/captions/timeline'
 import { smartPlacement } from '@shared/captions/smart'
 import { lineThird } from '@shared/captions/placement'
+import { captionNeedsCanvas } from '@shared/graphics/fromTimeline'
 import { useCatalog } from '../catalog'
 import { isAssetDrag, readDragPayload, type DragPayload } from '../dragPayload'
 import { DROP_CHOICES, type DropIntent } from '@shared/render/dropIntent'
@@ -1844,8 +1845,10 @@ export function Preview(): ReactNode {
         if (source) {
           const style = activeCaptionStyle(project)
           const caption = captionAt(project, source, playhead, style)
-          // Smart placement: the line's third as the export asks it (§5.4).
-          if (caption) drawCaptions(ctx, frame, style, caption, fps, lineThird(captionPlacement, source, fps, caption.words))
+          // Smart placement: the line's third as the export's route for this style asks it (§5.4) — libass and the
+          // bake first show a line that starts part-way through a frame on different frames (placement.ts).
+          const route = captionNeedsCanvas(style) ? 'canvas' : 'libass'
+          if (caption) drawCaptions(ctx, frame, style, caption, fps, lineThird(captionPlacement, source, fps, caption.words, route))
         }
       }
       ctx.restore()

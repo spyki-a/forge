@@ -386,4 +386,92 @@ describe('caption burn-in', () => {
     expect(H - 1 - centreBottom, 'the moved centred line is clear of the edge').toBeGreaterThan(100)
     expect(Math.abs(centreBottom - popBottom), 'as far up as Pop sits').toBeLessThan(20)
   }, 240_000)
+
+  /*
+   * A line whose first word starts part-way through the frame before a cut,
+   * on the libass route: "Late start." at 2975 ms, 0.75 of a frame before the
+   * cut on frame 90. The cue is written 0:00:02.97, and the `ass` filter draws
+   * a cue from the first frame at or after its time — frame 90, the cut's —
+   * so the line is never on screen in shot 1 (placement.ts
+   * `libassLineFrame`, measured at four frame rates). Shot 1's face is in the
+   * lower third, so its third is the middle; shot 2's is IN the middle
+   * (y 0.40, extended to 0.58), so Pop stays at its own bottom there. Asked
+   * at the rounded frame, 89, the line took shot 1's middle and was drawn,
+   * every frame of it, over shot 2's face.
+   */
+  it('places a line libass first draws on a cut\'s frame by the shot it is drawn in', async () => {
+    const W = 360
+    const H = 640
+    const file = join(dir, 'tall-late.mp4')
+    await run(FFMPEG, [
+      '-hide_banner', '-loglevel', 'error', '-y',
+      '-f', 'lavfi', '-i', `color=c=#202830:size=${W}x${H}:rate=30:duration=6`,
+      '-c:v', 'libx264', '-pix_fmt', 'yuv420p', file
+    ])
+    const spoken = words([['Late', 2975, 3300], ['start.', 3300, 3600]])
+    const FACE = { before: 0.7, after: 0.4, height: 0.12 }
+    const base = project({ duration: 180 })
+    const p: Project = {
+      ...base,
+      settings: { ...base.settings, width: W, height: H },
+      assets: [{ ...base.assets[0], path: file, durationFrames: 180, width: W, height: H, hasAudio: false }],
+      subjects: {
+        a1: {
+          key: '123456:1700000000000', version: SUBJECT_TRACK_VERSION, width: W, height: H, durationMs: 6000,
+          shots: [{ startMs: 0, endMs: 3000, score: 0 }, { startMs: 3000, endMs: 6000, score: 0.9 }],
+          samples: Array.from({ length: 12 }, (_, i) => ({
+            ms: i * 500,
+            faces: [{ x: 0.4, y: i * 500 < 3000 ? FACE.before : FACE.after, width: 0.2, height: FACE.height, score: 0.9 }]
+          })),
+          perShot: [{}, {}], detector: 'synthetic',
+          scene: { threshold: 0.3, minShotMs: 500, backend: 'ffmpeg-select-rgb24' }, at: '2026-10-16T00:00:00.000Z'
+        }
+      },
+      transcripts: { a1: { ...base.transcripts.a1, durationMs: 6000, words: spoken, segments: segmentIntoSentences(spoken) } },
+      captions: { enabled: true, styleId: 'pop', placement: 'smart' }
+    }
+    const canvas = { width: W, height: H }
+    const style = resolveStyle('pop')
+    const ass = buildTimelineCaptions(p, style, canvas, smartPlacement(p, style, canvas))!
+    expect(ass, 'the cue as written').toContain('Dialogue: 0,0:00:02.97,')
+    const assPath = join(dir, 'placement-late.ass')
+    await writeFile(assPath, ass, 'utf8')
+    const out = join(dir, 'placement-late.mp4')
+    await run(FFMPEG, buildRenderPlan({ project: p, outputPath: out, canvas, subtitlesPath: assPath, fontsDir: resolve(__dirname, '../../assets/fonts') }).args, {
+      maxBuffer: 16 * 1024 * 1024
+    })
+    // Every frame in order; per frame the first and last rows with a pixel brighter than the background could be.
+    const { stdout } = await run(
+      FFMPEG,
+      ['-hide_banner', '-loglevel', 'error', '-i', out, '-vsync', 'passthrough', '-f', 'rawvideo', '-pix_fmt', 'gray', 'pipe:1'],
+      { encoding: 'buffer', maxBuffer: 256 * 1024 * 1024 }
+    )
+    const luma = stdout as unknown as Buffer
+    const frames = luma.length / (W * H)
+    expect(frames).toBe(180)
+    const rows = Array.from({ length: frames }, (_, f) => {
+      const lit: number[] = []
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          if (luma[f * W * H + y * W + x] > 128) {
+            lit.push(y)
+            break
+          }
+        }
+      }
+      return lit.length > 10 ? ([lit[0], lit[lit.length - 1]] as [number, number]) : null
+    })
+    const shown = rows.flatMap((r, f) => (r ? [f] : []))
+    const seen = shown.map((f) => `${f}:${rows[f]![0]}-${rows[f]![1]}`).join(' ')
+    process.stderr.write(`captions.int: the late line's rows by frame (${process.platform}): ${seen}\n`)
+    // On screen from the cut's frame, and never in shot 1.
+    expect(shown[0], `first frame with the line: ${seen}`).toBe(90)
+    // Every frame of it in the lower third by its centre (the runners' fallback face is taller), and none of its rows on shot 2's face.
+    const faceRows = [FACE.after * H, (FACE.after + FACE.height * 1.5) * H]
+    for (const f of shown) {
+      const [top, bottom] = rows[f]!
+      expect((top + bottom) / 2, `frame ${f}'s centre, in the lower third: ${seen}`).toBeGreaterThan((2 * H) / 3)
+      expect(bottom < faceRows[0] || top > faceRows[1], `frame ${f} off the face (${faceRows.map((r) => r.toFixed(0)).join('-')}): ${seen}`).toBe(true)
+    }
+  }, 120_000)
 })
