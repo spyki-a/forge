@@ -15,7 +15,9 @@ import { assetById, clipsOnTrack, type Clip, type MediaAsset, type Project } fro
  * mapped onto the output frame there (frameMap.ts), and the share of each
  * third they cover is taken (`overlapByThird`). Over the shot's samples each
  * third's overlap is read at the `PERCENTILE`-th percentile, so a gesture in
- * one sample in ten does not move the caption. Then:
+ * one sample in ten does not move the caption — and in a shot of three to
+ * nine samples (1.5 s to under 5 s) the highest is never taken alone, so one
+ * gesture does not move it there either (`MIN_SAMPLES_TO_DISCOUNT`). Then:
  *
  * 1. the style's own third stands unless its overlap exceeds `OVERLAP_LIMIT`;
  * 2. if it does, the third with the least overlap is taken, provided it is at
@@ -100,15 +102,32 @@ export function overlapByThird(frameBoxes: UnitRect[]): Record<Third, number> {
   return out
 }
 
-/** The `p`-th percentile of `values` by nearest rank: the smallest value at least that share of them are at or below. */
+/**
+ * A shot of this many samples or more never has its overlap decided by its
+ * highest sample alone. Below ten samples the nearest rank of the 90th
+ * percentile IS the highest, so without this a single gesture moved the
+ * caption in every shot under 5 s (two samples a second) — short shots being
+ * the norm in a short-form edit. One or two samples say too little to call
+ * one a gesture: there the higher stands, and the caption keeps off it.
+ */
+export const MIN_SAMPLES_TO_DISCOUNT = 3
+
+/**
+ * The `p`-th percentile of `values` by nearest rank — the smallest value at
+ * least that share of them are at or below — but from
+ * `MIN_SAMPLES_TO_DISCOUNT` samples on never the highest alone: the
+ * second-highest when the rank would be the top (any count from 3 to 9 at
+ * 0.9). From ten samples on the rank is below the top anyway.
+ */
 function percentile(values: number[], p: number): number {
   if (values.length === 0) return 0
   const sorted = [...values].sort((a, b) => a - b)
-  const rank = Math.ceil(p * sorted.length - 1e-9)
-  return sorted[Math.min(sorted.length, Math.max(1, rank)) - 1]
+  const n = sorted.length
+  const rank = Math.min(n, Math.max(1, Math.ceil(p * n - 1e-9)))
+  return sorted[(n >= MIN_SAMPLES_TO_DISCOUNT ? Math.min(rank, n - 1) : rank) - 1]
 }
 
-/** Each third's overlap over a shot's samples, at `PERCENTILE`. */
+/** Each third's overlap over a shot's samples, at `PERCENTILE` (never the highest alone from `MIN_SAMPLES_TO_DISCOUNT` samples). */
 export function shotOverlap(samples: Record<Third, number>[]): Record<Third, number> {
   const out = { top: 0, middle: 0, bottom: 0 } as Record<Third, number>
   for (const t of THIRDS) out[t] = percentile(samples.map((s) => s[t]), PERCENTILE)

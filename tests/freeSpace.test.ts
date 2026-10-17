@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   BETTER_BY,
   CHIN_EXTENSION,
+  MIN_SAMPLES_TO_DISCOUNT,
   OVERLAP_LIMIT,
   PERCENTILE,
   captionThirds,
@@ -177,6 +178,34 @@ describe('captionThirds', () => {
     expect(shotOverlap(ten(1)).middle).toBe(0)
     expect(shotOverlap(ten(2)).middle).toBe(0.3)
     expect(shotOverlap(ten(1)).bottom).toBe(0.2)
+  })
+
+  it('a shot under 5 s: one gesture never decides a shot of three samples or more, and two do', () => {
+    // Below ten samples the 90th percentile by nearest rank IS the highest sample, so one lean decided every
+    // shot under 5 s — short shots being the norm in a short-form edit. From three samples the highest is never taken alone.
+    const of = (length: number, raised: number): { top: number; middle: number; bottom: number }[] =>
+      Array.from({ length }, (_, i) => ({ top: 0, middle: 0, bottom: i < raised ? 0.2 : 0 }))
+    expect(MIN_SAMPLES_TO_DISCOUNT).toBe(3)
+    for (let n = 3; n <= 9; n++) {
+      expect(shotOverlap(of(n, 1)).bottom, `${n} samples, one raised`).toBe(0)
+      expect(shotOverlap(of(n, 2)).bottom, `${n} samples, two raised`).toBe(0.2)
+    }
+    // One or two samples say too little to call one a gesture: the higher stands, and the caption keeps off it.
+    expect(shotOverlap(of(1, 1)).bottom).toBe(0.2)
+    expect(shotOverlap(of(2, 1)).bottom).toBe(0.2)
+
+    // Through the whole chooser: Pop at the bottom, the face calm in the upper third, and in one sample of a
+    // shot it leans into the lower third (extended, 0.2025 of it). 1.5 s to 4.5 s: three to nine samples.
+    const calm: UnitRect = { x: 0.35, y: 0.05, width: 0.3, height: 0.15 }
+    const lean: UnitRect = { x: 0.35, y: 0.7, width: 0.3, height: 0.15 }
+    for (const endMs of [1500, 2000, 3000, 4000, 4500]) {
+      const once = oneClip(track({ endMs, faces: (_s, ms) => [ms === 1000 ? lean : calm] }))
+      expect(once.project.subjects!.a.samples.length, `${endMs} ms`).toBe(endMs / 500)
+      expect(captionThirds(once.project, BOTTOM, PORTRAIT).map((t) => t.third), `a ${endMs} ms shot, one lean`).toEqual(['bottom'])
+      // Two leaning samples are not a gesture: the caption moves off them.
+      const twice = oneClip(track({ endMs, faces: (_s, ms) => [ms === 500 || ms === 1000 ? lean : calm] }))
+      expect(captionThirds(twice.project, BOTTOM, PORTRAIT).map((t) => t.third), `a ${endMs} ms shot, two leans`).toEqual(['middle'])
+    }
   })
 
   it('the downward extension: a face just above the lower third “fits” without it, and with it the caption moves', () => {
