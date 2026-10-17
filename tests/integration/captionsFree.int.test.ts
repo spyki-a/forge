@@ -7,10 +7,9 @@ import { deflateSync } from 'node:zlib'
 import { buildRenderPlan, type RenderRequest } from '@shared/render/plan'
 import { buildGraphicsSpec, captionNeedsCanvas } from '@shared/graphics/fromTimeline'
 import type { CaptionLayer } from '@shared/graphics/spec'
-import { concatList, planBakeOf } from '@shared/captions/bake'
+import { captionBand, concatList, planBakeOf } from '@shared/captions/bake'
 import { resolveStyle, type StyleOverrides } from '@shared/captions/style'
 import { layoutText } from '@shared/render/textLayout'
-import { animationBounds, textAnimationById } from '@shared/render/textAnimation'
 import { followKeys } from '@shared/reframe/keys'
 import { sourceToFrame } from '@shared/reframe/frameMap'
 import { captionThirds, type Third } from '@shared/reframe/freeSpace'
@@ -54,9 +53,10 @@ import { FFMPEG, outputDir, run, saveFrame, writeNote } from './output'
  *                   one thing stood in (the renderer's canvas does not exist in
  *                   node): each picture is the block `layoutText` gives the
  *                   line — the placement rule drawTextOnto paints by — filled
- *                   yellow, and the band is measureBand's arithmetic over those
- *                   blocks. So the spec's third, its position and offset, the
- *                   band and the overlay are the app's; the glyphs are not.
+ *                   yellow, and the band is the app's own `captionBand` over
+ *                   those blocks (measureBand's, shared). So the spec's third,
+ *                   its position and offset, the band and the overlay are the
+ *                   app's; the glyphs and their measured ink are not.
  *
  * Each with Pop at the bottom (its own) and Pop moved to the top, each with
  * placement 'smart' and with it absent (the CONTROL: the captions sit at the
@@ -302,22 +302,22 @@ function blockOf(spec: TextSpec, canvas: { width: number; height: number }): { t
  */
 const INK_OVERHANG = 0.33
 
-/** renderer/captionBake.ts measureBand's arithmetic, over the stand-in's ink (the blocks). */
+/**
+ * The band renderer/captionBake.ts `measureBand` overlays — the app's own
+ * `captionBand` (captions/bake.ts), over the stand-in's ink: each block's
+ * first and last rows.
+ */
 function bandOf(layers: CaptionLayer[], canvas: { width: number; height: number }): { y: number; height: number } {
-  let top = canvas.height
-  let bottom = 0
-  for (const layer of layers) {
-    const ink = blockOf(layer.spec, canvas)
-    const fontPx = layoutText(layer.spec, canvas.width, canvas.height).fontPx
-    const animation = textAnimationById(layer.spec.animationId)
-    const bounds = animation ? animationBounds(animation) : { dx: 0, dy: 0, scale: 1 }
-    const room = Math.ceil(fontPx * (bounds.dy + (bounds.scale - 1) * 0.6))
-    top = Math.min(top, ink.top - room)
-    bottom = Math.max(bottom, ink.bottom - 1 + room)
-  }
-  const y = Math.max(0, Math.floor(Math.max(0, top) / 2) * 2)
-  const end = Math.min(canvas.height, Math.ceil(Math.min(canvas.height, bottom + 1) / 2) * 2)
-  return { y, height: Math.max(2, end - y) }
+  const band = captionBand(
+    layers.map((layer) => {
+      const block = blockOf(layer.spec, canvas)
+      return { spec: layer.spec, top: block.top, bottom: block.bottom - 1 }
+    }),
+    canvas.width,
+    canvas.height
+  )
+  if (!band) throw new Error('no caption line to band')
+  return band
 }
 
 const CRC = Array.from({ length: 256 }, (_, n) => {

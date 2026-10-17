@@ -1,9 +1,7 @@
 import type { Project } from '@shared/timeline'
 import type { CaptionLayer } from '@shared/graphics/spec'
 import { buildGraphicsSpec } from '@shared/graphics/fromTimeline'
-import { concatList, planBakeOf } from '@shared/captions/bake'
-import { animationBounds, textAnimationById } from '@shared/render/textAnimation'
-import { layoutText } from '@shared/render/textLayout'
+import { captionBand, concatList, planBakeOf, type LineInk } from '@shared/captions/bake'
 import { drawTextOnto } from '@shared/render/textPaint'
 import { useCatalog } from './catalog'
 
@@ -65,8 +63,9 @@ function inkRows(
  *
  * Measured from the settled line, because only a real paint knows how many rows
  * the text wrapped into, how far a glow spreads and how deep an extrusion goes.
- * The allowance added on top is not a guess either — `animationBounds` reports
- * the furthest this particular curve throws a piece, overshoot included.
+ * The allowance on top and the even snap are `captionBand`'s (captions/bake.ts),
+ * shared so the render checks overlay the band this computes, with their own
+ * stand-in for the ink.
  */
 function measureBand(
   layers: CaptionLayer[],
@@ -79,38 +78,16 @@ function measureBand(
   const ctx = canvas.getContext('2d')
   if (!ctx) return null
 
-  let top = height
-  let bottom = 0
-  let found = false
-
+  const inks: LineInk[] = []
   for (const layer of layers) {
     ctx.clearRect(0, 0, width, height)
     // Settled, with a word lit: the highlight is the tallest the line ever gets
-    // at rest, and the animation allowance below covers the rest.
+    // at rest, and the animation allowance covers the rest.
     drawTextOnto(ctx, { ...layer.spec, highlight: layer.highlight ? { word: 0, ...layer.highlight } : undefined }, width, height)
     const ink = inkRows(ctx, width, height)
-    if (!ink) continue
-    found = true
-
-    const fontPx = layoutText(layer.spec, width, height).fontPx
-    const animation = textAnimationById(layer.spec.animationId)
-    const bounds = animation ? animationBounds(animation) : { dx: 0, dy: 0, scale: 1 }
-    // Vertical travel, plus half the growth of an oversized arrival spreading
-    // about each piece's own centre.
-    const room = Math.ceil(fontPx * (bounds.dy + (bounds.scale - 1) * 0.6))
-
-    top = Math.min(top, ink.top - room)
-    bottom = Math.max(bottom, ink.bottom + room)
+    if (ink) inks.push({ spec: layer.spec, top: ink.top, bottom: ink.bottom })
   }
-
-  if (!found) return null
-
-  // Snap outward to even numbers: an odd offset or height is invalid for the
-  // subsampled chroma planes the encoder works in.
-  const y = Math.max(0, Math.floor(Math.max(0, top) / 2) * 2)
-  const end = Math.min(height, Math.ceil(Math.min(height, bottom + 1) / 2) * 2)
-  const banded = Math.max(2, end - y)
-  return { y, height: banded }
+  return captionBand(inks, width, height)
 }
 
 export async function bakeCaptions(

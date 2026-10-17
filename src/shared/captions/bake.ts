@@ -1,5 +1,7 @@
 import type { CaptionLayer, GraphicsSpec } from '../graphics/spec'
-import { animationFrames, piecesOf, textAnimationById } from '../render/textAnimation'
+import { animationBounds, animationFrames, piecesOf, textAnimationById } from '../render/textAnimation'
+import { layoutText } from '../render/textLayout'
+import type { TextSpec } from '../timeline'
 
 /**
  * Planning a caption bake.
@@ -147,6 +149,47 @@ export function planBakeOf(spec: GraphicsSpec): CaptionBake | null {
   const layers = spec.layers.filter((l): l is CaptionLayer => l.kind === 'caption')
   const plan = planCaptionBake(layers, spec.fps, spec.durationFrames)
   return plan ? { layers, plan } : null
+}
+
+/** One caption line's ink as painted, settled with a word lit: its first and last rows with any paint in them (inclusive). */
+export interface LineInk {
+  spec: TextSpec
+  top: number
+  bottom: number
+}
+
+/**
+ * The strip of the frame the captions can touch: the bake's pictures are
+ * this tall and overlaid at `y` (renderer/captionBake.ts `measureBand`).
+ *
+ * From each line's MEASURED ink (only a real paint knows how many rows the
+ * text wrapped into, how far a glow spreads and how deep an extrusion goes),
+ * plus the room its animation may throw a piece — `animationBounds`, the
+ * furthest this curve reaches, overshoot included: vertical travel, and half
+ * the growth of an oversized arrival spreading about each piece's own
+ * centre. Snapped outward to even rows: an odd offset or height is invalid
+ * for the subsampled chroma planes the encoder works in. Null with no ink.
+ *
+ * Shared, because the painting needs a DOM canvas: the renderer measures the
+ * ink and calls this, and the render checks stand in for the ink and call
+ * THIS, so the band they overlay is the one the app computes
+ * (tests/integration/captionsFree.int.test.ts).
+ */
+export function captionBand(inks: readonly LineInk[], width: number, height: number): { y: number; height: number } | null {
+  if (inks.length === 0) return null
+  let top = height
+  let bottom = 0
+  for (const ink of inks) {
+    const fontPx = layoutText(ink.spec, width, height).fontPx
+    const animation = textAnimationById(ink.spec.animationId)
+    const bounds = animation ? animationBounds(animation) : { dx: 0, dy: 0, scale: 1 }
+    const room = Math.ceil(fontPx * (bounds.dy + (bounds.scale - 1) * 0.6))
+    top = Math.min(top, ink.top - room)
+    bottom = Math.max(bottom, ink.bottom + room)
+  }
+  const y = Math.max(0, Math.floor(Math.max(0, top) / 2) * 2)
+  const end = Math.min(height, Math.ceil(Math.min(height, bottom + 1) / 2) * 2)
+  return { y, height: Math.max(2, end - y) }
 }
 
 /**
