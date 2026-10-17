@@ -332,10 +332,21 @@ The preview box beside them is still to draw.
 Then "Smart caption =" with three grids drawn: **set 3**, **set 5**, **set 10 /
 set = all**, with "+ = Add" and "− = Remove".
 
-**Status — not started.** Captions have top / middle / bottom and a margin, and
-text cards drag freely. The depth bake the sheet points at genuinely exists —
-that reasoning is right — but it is **stills-only** today and would need
-extending to video first. No subject-aware placement, no dead-space detection.
+**Status — (B) built, thirds only** (2026-10-16, docs/CLIPS.md §5:
+`11a07c2` … `a0837ea`). **Smart placement** is a switch in OUTPUT's caption
+block: shot by shot, the captions take the third of the frame (top, middle or
+bottom) the speaker's face is not in, the face counted down to the chin and
+mouth, one position for the whole shot. It finds the subject from the face
+track a reframe makes (Follow the subject; MediaPipe in the AI helper), not
+from depth and matting as the sheet proposed, so it works on a reframed clip:
+greyed with "needs the AI helper" when nothing on the machine can make a
+track, and "reframe a clip first" when the helper can but no clip has one.
+The preview puts each line where the export will, on either export route
+(the plain burn or the painted styles). The grids are thirds only in v1:
+"set 5" and "set 10 / set = all", with + and −, are later (CLIPS §16.6).
+Text already burned into the footage is not avoided yet (CLIPS §5.3, after
+Florence-2). (A) is as it was: Place (top / middle / bottom) and a Margin
+give ↑ ↓; captions have no ← →; text cards drag freely.
 
 ---
 
@@ -464,9 +475,10 @@ deciding half of auto-flip. The sidecar already hosts three models (speech,
 beats, depth), so each is an addition rather than a new system — and none needs a
 paid service.
 
-**Caption behaviour, as opposed to caption looks.** Smart placement, style
-rotation, random-every-N, opacity. The looks are finished; how captions decide
-things for themselves is not.
+**Caption behaviour, as opposed to caption looks.** Style rotation,
+random-every-N, opacity. The looks are finished; how captions decide things for
+themselves is not. *(Smart placement was here and is built, thirds only —
+sheet 13, 2026-10-16.)*
 
 **Small finishing.** The inert font tiles. Transcript-to-text-card conversion.
 *(Copy, paste, duplicate and multi-select on the timeline were here and are

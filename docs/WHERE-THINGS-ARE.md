@@ -709,8 +709,25 @@ Kinetic, Clean, Bold centre), then the *same* **Style** and **Animation**
 libraries the text clips use: all 42 looks and all 9 animations, previewed on
 tiles showing a real caption with a word highlighted. Then the **Font**,
 **Size**, **Words** per line, **Place** (top / middle / bottom) with a
-**Margin** off the edge, and two colours — the words, and the word being
-spoken.
+**Margin** off the edge, **Smart placement**, and two colours — the words,
+and the word being spoken.
+
+**Smart placement** (`SmartPlacementToggle` in `OutputStrip.tsx`) is a
+switch under Place and Margin that keeps the captions off the speaker's
+face: shot by shot, the lines take whichever third of the frame (top,
+middle or bottom) the face is not in, counting the chin and mouth, and stay
+there for the whole shot. Its tooltip: "keeps captions off faces, one
+position per shot". It reads the subject track a reframe makes (**Follow the
+subject** in the Trimmer dock, or **Reframe to 9:16** in the canvas bar),
+so on a clip that has never been reframed nothing moves; then, if the AI
+helper can reframe, the tooltip ends "— reframe a clip first". When nothing
+on this machine can make a track, the switch is greyed with **needs the AI
+helper** under it, the small underlined button that opens Settings at the
+AI helper's row; "the AI helper is starting" while it starts. Greyed but on
+(a project saved that way), it can still be switched off. The preview puts
+each line where the export will, whether the style is burned in plain or
+painted. Text already burned into the footage (a title, a logo) is not
+avoided yet (docs/CLIPS.md §5.3).
 
 The word being spoken is lit and slightly larger, and the highlight rides on
 top of whatever style is chosen — a chrome caption keeps its chrome and only
