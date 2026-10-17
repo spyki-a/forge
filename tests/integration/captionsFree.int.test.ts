@@ -74,8 +74,8 @@ import { FFMPEG, outputDir, run, saveFrame, writeNote } from './output'
  *
  * What is asserted, on every exported frame of every smart render: no yellow
  * row inside the box's rows; each line's centre in the third worked out by
- * hand below (EXPECTED) — never the face's own; every line on screen. Artefacts, the .ass
- * files and README.txt in tests/output/captions-free/.
+ * hand below (EXPECTED) — never the face's own; every line on screen.
+ * Artefacts, the .ass files and README.txt in tests/output/captions-free/.
  *
  * On the Windows build (CI) nothing here is new to the 2018-12-17 floor:
  * per-event \an and MarginV are core ASS, and drawbox, concat, the ass filter
@@ -709,7 +709,7 @@ afterAll(async () => {
     `${JSON.stringify(FACES[0])} (lower third), shot 2 on ${BACKGROUNDS[1]} with it at ${JSON.stringify(FACES[1])} (upper third) — the track's faces exactly.`,
     `Clip at timeline frame ${START}, in-point ${IN}, ${DURATION} frames: shot 1 is timeline ${SHOT_FRAMES[0].join('–')}, shot 2 ${SHOT_FRAMES[1].join('–')} ([from, to)).`,
     `Lines (Pop, ${LINES.length} sentences of two words or one, yellow ${YELLOW}): timeline frames ${LINE_FRAMES.map(([a, b]) => `${a}–${b}`).join(', ')}.`,
-    '9x16: 360×640, the clip follows its subject (a 405×720 crop on each face). 16x9: 640×360, static crop 1152×648 at (64, 36).',
+    '9x16: 360×640, the clip follows its subject (a 404×720 crop on each face). 16x9: 640×360, static crop 1152×648 at (64, 36).',
     'libass: main prepareCaptions → the .ass (copied here as <case>.ass) → subtitlesPath. canvas: Pop + gradient-sunset → buildGraphicsSpec →',
     'planBakeOf → stand-in pictures (each line the yellow block layoutText gives it) in measureBand\'s band → captionOverlay.',
     'Read: every frame of each export in order; a row is the caption\'s with ≥ 3 yellow pixels (Y > 150, U < 80), the box\'s with ≥ 20',
