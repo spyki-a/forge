@@ -333,8 +333,19 @@ describe('caption burn-in', () => {
       }
       return out
     }
-    const third = ([top, bottom]: [number, number]): string =>
-      bottom < H / 3 ? 'top' : top >= H / 3 && bottom < (2 * H) / 3 ? 'middle' : top >= (2 * H) / 3 ? 'bottom' : `across (${top}-${bottom})`
+    /*
+     * The third a line sits in, by the CENTRE of its text rows. The whole block
+     * is not required inside one third: libass picks its font on the machine
+     * that renders, and the runners' fallback face is taller than this Mac's,
+     * so a bottom-third line that sits whole in the lower third here ran rows
+     * 409–498 of 640 on both CI runners, across the 426.7 boundary (run
+     * 38986994729). The centre moves by a whole third when the caption does,
+     * which is what the cases below assert; the row ranges are printed too.
+     */
+    const third = ([top, bottom]: [number, number]): string => {
+      const mid = (top + bottom) / 2
+      return mid < H / 3 ? 'top' : mid < (2 * H) / 3 ? 'middle' : 'bottom'
+    }
 
     const cases = [
       // style, the face's top before and after the cut, when to look, the thirds smart and absent
