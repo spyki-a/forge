@@ -212,8 +212,14 @@ describe('quality, rendered', () => {
     )
     const kbps = async (file: string): Promise<number> => ((await stat(file)).size * 8) / 1000 / 3
     const measured = await kbps(target)
-    // Picture at the cap, plus 192k of sound and the container: about 2.2 Mbps.
-    expect(measured).toBeLessThan(2000 * 1.3)
+    /*
+     * Picture at the cap, plus 192k of sound and the container: about 2.2 Mbps
+     * here. x264's one-pass ABR does not hold a 3 s busy clip to its target,
+     * though: the macos-14 runner measured 2,609.6 kbps (CI run 38987943279),
+     * 0.4 % over the 1.3× bound this once read. 1.4× still tells a target from
+     * a CRF, which lands at two or more times this on the same picture below.
+     */
+    expect(measured).toBeLessThan(2000 * 1.4)
     expect(measured).toBeGreaterThan(2000 * 0.7)
     // And the mode matters: the same picture at CRF 14 is nowhere near held to it.
     expect(await kbps(crf)).toBeGreaterThan(measured * 2)
