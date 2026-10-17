@@ -518,6 +518,17 @@ describeWithVenv(
        * its own (tests/integration/facesProbe.py): the first that does not
        * finish is where the hang is, and its stderr — faulthandler's stacks
        * past 8 s, the worker's notes, faces.py's log — says on which line.
+       * Run 38982628323 found it: every layer with a thread blocked in a read
+       * of stdin stopped in the main thread's next native import. The
+       * readers now go through stdio.LineReader (sidecar/forge_sidecar/stdio.py),
+       * and the worker imports before it watches; these five must finish.
+       *
+       * Then the diagnostics, reported in the notice and never required:
+       * the old shape (a thread in os.read(0), then numpy), and on win32 the
+       * same with ctypes' ReadFile, which takes no C runtime lock, and
+       * GetFileType beside that ReadFile. Which of them hang says what the
+       * load waits on: the kernel's lock on the synchronous handle, or the
+       * UCRT's lock on descriptor 0 (stdio.py).
        */
       const probe = resolve(__dirname, 'facesProbe.py')
       const scratch = join(dir, 'probe')
@@ -539,13 +550,55 @@ describeWithVenv(
         { name: 'run_worker alone', argv: at('helper', scratch), env: stand, stdin: 'ignore', end: /^done \d+ / },
         { name: 'run_worker beside a stdin loop', argv: at('helper-held', scratch), env: stand, stdin: 'held', end: /^(done|failed) / }
       ]
+      const diagnostics: Layer[] = [
+        { name: 'diag: os.read(0) then numpy (the old shape)', argv: at('raw-read'), env: plain, stdin: 'held', end: /^imported / },
+        ...(process.platform === 'win32'
+          ? [
+              { name: 'diag: ReadFile without the CRT then numpy', argv: at('raw-readfile'), env: plain, stdin: 'held' as const, end: /^imported / },
+              { name: 'diag: GetFileType beside ReadFile', argv: at('filetype'), env: plain, stdin: 'held' as const, end: /^filetype / }
+            ]
+          : [])
+      ]
       const results: LayerRun[] = []
       for (const layer of layers) results.push(await runLayer(layer, 12_000))
+      const diagnosed: LayerRun[] = []
+      for (const layer of diagnostics) diagnosed.push(await runLayer(layer, 6_000))
       const said = results.map(describeLayer)
       notes.push('- the stand-in pass taken apart (tests/integration/facesProbe.py):', ...said.map((s) => `  - ${s}`))
-      timings.push(`the stand-in pass taken apart: ${results.map((r) => `${r.name} ${r.finished ? `${(r.ms / 1000).toFixed(2)} s` : r.timedOut ? 'NO END in 12 s' : `ended early, exit ${r.code}`}`).join(' · ')}`)
+      // A layer released only by its stdin ending at the deadline (runLayer ends it before the kill) may say its end line then: still NO END.
+      const outcome = (r: LayerRun, limit: number): string =>
+        `${r.name} ${
+          r.timedOut
+            ? `NO END in ${limit} s${r.finished ? ' (its end line came once its stdin was ended)' : ''}`
+            : r.finished
+              ? `${(r.ms / 1000).toFixed(2)} s`
+              : `ended early, exit ${r.code}`
+        }`
+      timings.push(`the stand-in pass taken apart: ${results.map((r) => outcome(r, 12)).join(' · ')}`)
+      // A diagnostic's whole stdout would be a line per native load: its outcome, how many loads it began and the last.
+      const loads = (r: LayerRun): string => {
+        const loading = r.out.map((line) => /^loading (\S+) ([\d.]+)/.exec(line)).filter((m) => m !== null)
+        const last = loading[loading.length - 1]
+        return last ? `, ${loading.length} native loads begun, the last ${last[1]} at ${Number(last[2]).toFixed(2)} s` : ''
+      }
+      const lastSaid = (r: LayerRun): string => r.out.filter((line) => !line.startsWith('loading ')).pop() ?? '(nothing)'
+      const diagSaid = diagnosed.map((r) => `${outcome(r, 6)}${loads(r)}; last said: ${lastSaid(r)}`)
+      notes.push('- diagnostics, not required (facesProbe.py):', ...diagSaid.map((s) => `  - ${s}`))
+      timings.push(`diagnostics (not required): ${diagSaid.join(' · ')}`)
       const unfinished = results.filter((r) => !r.finished || r.timedOut || r.code !== 0).map((r) => r.name)
       expect(unfinished, oneLine(said.join('\n'), 3500)).toEqual([])
+
+      // The worker imports everything, then watches stdin, then decodes (mp_faces.py main): its notes in that order.
+      const worker = results.find((r) => r.name === 'the worker from Node, stdin held')!
+      const workerNotes = worker.err
+        .split(/\r?\n/)
+        .filter((line) => line.startsWith('mp_faces: '))
+        .map((line) => line.replace(/ \(\+[\d.]+ s\)$/, ''))
+      const noteAt = (note: string): number => workerNotes.indexOf(note)
+      const imported = noteAt('mp_faces: the stand-in detector made (numpy imported)')
+      expect(imported, workerNotes.join(' ⏎ ')).toBeGreaterThanOrEqual(0)
+      expect(imported, workerNotes.join(' ⏎ ')).toBeLessThan(noteAt('mp_faces: watching stdin'))
+      expect(noteAt('mp_faces: watching stdin'), workerNotes.join(' ⏎ ')).toBeLessThan(noteAt('mp_faces: decoding'))
     }, 120_000)
 
     it('the stand-in pass: the track on disk, two largest first, source ms, progress relayed', async () => {
