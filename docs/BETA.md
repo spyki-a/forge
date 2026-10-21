@@ -52,7 +52,7 @@ more to a careful closed beta.
 | R11 | a log file and Help › Show Logs | 1 |
 | R12 | clean-machine smoke test, both platforms | 2 + what it finds |
 | R13 | the rest of C4: glitch and liquid | 2 to 3 |
-| R14 | the beta.2 list | 3 to 5 |
+| R14 | the beta.2 list | 2.5 to 4.5 (the Indic fonts' half day is built and counted in `CLIPS.md` §6.20, decided 2026-10-21) |
 
 R1 to R12 is 13 to 15 working days; R13 and R14 make a careful closed beta
 about three weeks of work once R1 starts. Four things wait on you: the name (R7), whether to
@@ -340,7 +340,7 @@ in `render/moment.ts` that is exactly the two shots at t = 0 and t = 1, a
 harness check, a render check, and a render of the real serum ad. Then the
 Opus review, as for the four.
 
-### R14 — The beta.2 list · three to five days
+### R14 — The beta.2 list · two and a half to four and a half days
 
 Things testers will notice but can follow the first installer:
 
@@ -364,12 +364,18 @@ Things testers will notice but can follow the first installer:
   shapes them right (conjuncts joined, the i-matra first); on Windows the
   2018 build has no CoreText, and both its fallback font and whether its
   libass has HarfBuzz are unmeasured — the next push's `captions.int` line
-  answers the second. **A decision for you**: bundle Noto Sans Devanagari
-  and Noto Sans Telugu (OFL, the same licence as the pack's Google fonts)
-  and have a Hindi or Telugu transcript's captions name them, so both
-  platforms draw the same letters instead of whatever each system falls
-  back to (recommended, half a day with a render check on both builds); or
-  rely on the system fallback and read Windows CI first.
+  answers the second. **Decided 2026-10-21** (`CLIPS.md` §16.63, D10 of the
+  graphics research): bundle Noto Sans Devanagari and Noto Sans Telugu
+  (OFL, the licence of the pack's Google fonts) and have a Hindi or Telugu
+  transcript's captions and graphics name them, so both platforms draw the
+  same letters instead of whatever each system falls back to. Built in
+  `CLIPS.md` §6.20, before step 3's phase-1 Indic render check, with a
+  render check on both builds; this item's half day is counted there, once.
+  The two Regular files are committed under `assets/fonts/`, each with its
+  own OFL text beside it (`.gitignore`'s `/assets` narrowed to let exactly
+  those four files through), so CI's libass draws them too, and main's scan
+  also lists them when an asset pack's root is the one scanned (`CLIPS.md`
+  §6.20). R6's rule holds for them: a licence file beside every family.
 - Single-instance lock; a "new version" check against the release page.
 - Keep or drop the meme packs from the manifest.
 

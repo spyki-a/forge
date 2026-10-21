@@ -12,6 +12,12 @@
 > through `fb65a18` (2026-10-16); step 2's commits from `04b25ab` on, and
 > its record, were not pushed when this was written.
 >
+> **Revised 2026-10-21: step 3 re-planned** after the graphics research
+> (`docs/research/graphics-motion-research-2026-10-17.md`), with your answers
+> to its twelve decisions (§16.54-65): 30.5 days in five phases, where §6 as
+> written had 14.5, plus a gated 6 for the hand build (§6's note). Nothing
+> of it is built. §2's total is now about 100-103.5 days with Step P.
+>
 > **As written, 2026-10-05, when nothing here was built.** This is the plan for the
 > piece agreed with the user on 2026-10-04/05: the reframe engine, caption
 > free space, the motion-graphics engine with the Director's third pass, Best
@@ -180,16 +186,19 @@ code composes and checks.** In this piece that means:
 | **P** (§3a) | **BETA R4's full route**: the app installs its own Python pack under `userData` | 9.5–13 (planned 2026-10-14, §3a; `BETA.md` R4 had 5 to 10; 9–12 if the speech model's press waits, §16.49) | — | every Python half below reaches an installed user |
 | **1** | the reframe engine: scene cuts in main, faces (MediaPipe), a salient box, Florence-2 grounding, the crop path with the stacked two-up, the followed crop, "Reframe to 9:16" | 17.5 (1g Florence is 3 of them, gated by its own measurement; 18 if the Surface run fails and YuNet's decoder is built) | 0; P for faces on an installed machine | a landscape talk becomes a 9:16 that follows its subject, frame-exact at every cut, and two people too far apart share the frame |
 | **2** | caption free space | 2.5 | 1 | captions stay off faces, stable within a shot |
-| **3** | the graphics engine (six 2D templates), the graphic style, the Director's third pass with its validator | 14.5 | 2 for placement (degrades to the style's third without it) | a spoken number becomes a counter that lands on the word, and nothing unsaid is ever drawn |
+| **3** | the graphics engine, re-planned 2026-10-21 after the graphics research (§16.54-65): one draw list read by two painters (canvas 2D, and a three.js compositor for 2.5D), one motion module, one stroke primitive; eight templates in nine shapes (counter, bars, steps alone or with a connector or a tree, quote, callout, ring, keyword, lower third), and a screen recording as a 2.5D card; a dim; sound on the beats; the graphic style; the Director's third pass with its validator; the hand spike | 30.5, was 14.5 (phases 0-3 and the spike, §6; +6 for phase 4's hand build only if the spike passes its gate) | 2 for placement (degrades to the style's third without it) | a spoken number becomes a counter that lands on the word, a clip that says no number still gets graphics, and nothing unsaid is ever drawn |
 | **4** | Best clips in the URL tile: windows, signals, the model's pick, three cards, Clip it from a card | 3.5 (M0 took 7.5 of its 11) | M0; 1–3 (each optional at run time) | a link becomes three clip cards and a 9:16 clip with captions |
 | **5** | B-roll: the Pexels key, the sources, the social quote card, credits, the person rule | 14 | 3 (cards are templates) | pictures arrive licensed, credited, and only by click |
-| **6** | retrieved-fact cards (Wikipedia, page, answer-with-sources over fetched text); the 3D templates | 7 | 3, 5 | facts from outside, with their sources; three.js graphics |
+| **6** | retrieved-fact cards (Wikipedia, page, answer-with-sources over fetched text); the 3D templates `timeline`, `before-after` and `versus` on step 3's draw list | 5, was 7 (the 3D half 4 → 2: the 2.5D counter and ring moved to step 3's phase 3, §16.55) | 3, 5 | facts from outside, with their sources; three.js graphics |
 | **7** | creator styles and saved templates | 4.5 | 3; **`MARKET.md` Stage 0** (below) | toward `MARKET.md` Stage 1 |
 
-**About 75.5 working days, plus Step P's 9.5–13: about 85–88.5 days,
-seventeen to eighteen weeks, honestly counted.** (P was held at `BETA.md`
-R4's 5–10 until it was planned in full on 2026-10-14, §3a; the plan and its
-two reviews put it at 9.5–13, with two open-ended risks left uncounted.)
+**About 89.5 working days in the steps, 90.5 with the one day outside them
+(§6.20), plus Step P's 9.5–13: about 100–103.5 days, twenty to twenty-one
+weeks, honestly counted; 106–109.5 if the hand spike passes its gate.**
+(Re-planned 2026-10-21 with step 3, §16.54-65; it was 75.5, and 85–88.5
+with P. P was held at `BETA.md` R4's 5–10 until it was planned in full on
+2026-10-14, §3a; the plan and its two reviews put it at 9.5–13, with two
+open-ended risks left uncounted.)
 
 The arithmetic, so it can be checked. **The first draft's total was 76.5**,
 with what the review added: step 0 +0.5 (the graph in a file, §3.7); step 1
@@ -215,14 +224,27 @@ licence links and Done line; the Brave row moved to step 6); step 6 +1
 (§3b.6). The first draft never itemised that share, so it stays in 1f as
 slack rather than being moved.
 
+**Step 3's re-plan (2026-10-21) then moved:**
+
+| delta | from → to | why |
+|---|---|---|
+| step 3 +16 | 14.5 → 30.5 | §16.54: phases 0-2 for §6 as written, +9.5 new; §16.56: the hand spike, +1.5; §16.55: phase 3 directly after phase 2, +5, 2 of them from step 6 |
+| step 6 −2 | 7 → 5 | §16.55: its 3D half falls from 4 to 2; the 2.5D counter and ring are built in step 3's phase 3 |
+| outside the steps +1 | — → 1 | §16.61: the captions' per-word fallback for Indic scripts, 0.5, new; §16.63: the two Noto fonts, 0.5, `BETA.md` R14's own half day pulled forward and counted here once, as §3.1 counted R5 (§6.20) |
+| phase 4 | +6, gated | §16.56: the hand build only if the spike passes its gate; in no total above |
+
 | step | 0 | M0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | **total** |
 |---|---|---|---|---|---|---|---|---|---|---|
 | before the answers | 4.5 | (2, inside 4) | 16 | 2.5 | 14.5 | 11 | 15.5 | 8 | 4.5 | **76.5** |
 | after | 4.5 | 7.5 | 17.5 | 2.5 | 14.5 | 3.5 | 14 | 7 | 4.5 | **75.5** |
+| after 2026-10-21 | 4.5 | 7.5 | 17.5 | 2.5 | 30.5 | 3.5 | 14 | 5 | 4.5 | **89.5** |
 
 76.5 + (7.5 − 7.5) + 2 − 0.5 − 2 + 0.5 − 1 = 75.5. With Step P's 9.5–13
 (§3a's table, 2026-10-14), 85–88.5 days.
 If the Surface run fails and YuNet's decoder is built after all, add 0.5.
+Then, 2026-10-21: 75.5 + (30.5 − 14.5) − (7 − 5) = 89.5; plus §6.20's 1 =
+90.5. With Step P's 9.5–13, 100–103.5; with phase 4, if the spike's gate
+passes, 106–109.5.
 
 **These dates are conditional on "your part" below**: step 1a cannot run
 until its clips and marks exist. With MediaPipe decided, 1a needs the ten
@@ -254,19 +276,30 @@ built:
   are found but every crop is the centre, which is today's `solveCrop`, and
   Smart placement and Follow the subject are greyed with "needs the AI
   helper". So M1 does not reach an installer before P.
-- **M2, step 3 (~14.5):** graphics on spoken numbers. Without P: over a
-  link's caption track only, and no `callout` (it needs a face box).
+- **M2, step 3 (~30.5; was ~14.5 before the re-plan of 2026-10-21):**
+  graphics on spoken numbers, lists, quotable lines and keywords, landing on
+  their words, with sound on their beats, and 2.5D on each clip's hero
+  counter or ring (a proposal of the plan's, not one of your twelve
+  answers) or wherever you choose it in the dock (§6.16).
+  Without P: over a link's caption track only; no `callout` and no dim
+  around the speaker (both need a face box). Pointing, if phase 4 is built,
+  needs P too.
 - **M3, step 4 (~3.5):** Best clips from a link: three cards, each clipped
   through M0's path. Without P: YouTube's captions, centred crops, captions,
   graphics.
 - **M4, step 5 (~14):** B-roll and the social quote card. No Python needed;
   without the helper, the face check that clears a picture of people cannot
   run, so every candidate that might show one asks (§8.6).
-- **M5, steps 1g, 6 and 7 (~14.5: 3 + 7 + 4.5).**
+- **M5, steps 1g, 6 and 7 (~12.5: 3 + 5 + 4.5).**
 
-4.5 + 7.5 + 17 + 14.5 + 3.5 + 14 + 14.5 = 75.5. Florence-2 (1g) can slip
-behind M3 without blocking anything, because the salient box (1d) covers the
-no-face shot until then.
+4.5 + 7.5 + 17 + 30.5 + 3.5 + 14 + 12.5 = 89.5 (2026-10-21; it was 75.5
+with step 3 at 14.5 and step 6 at 7). Florence-2 (1g) can slip behind M3
+without blocking anything, because the salient box (1d) covers the no-face
+shot until then.
+
+**Step 3's re-plan moves step 4.** Best clips starts 16 days later than the
+old order had it, 5 of them the three.js compositor that §16.55 put directly
+after phase 2.
 
 **Where this sits against the beta.** You decided (2026-10-05): "will finish
 this and will get back to the beta". **This plan comes first**, then
@@ -286,7 +319,7 @@ this and will get back to the beta". **This plan comes first**, then
   inside this plan.
 - **The order, outright:** §3.3 → M0 → the rest of step 0 → M1, built
   while Step P is built, and shipped only with P → M2 → M3 → M4 → M5 →
-  `BETA.md` R1–R12 → R13 → R14 (beta.2). Steps 5–7 (about 25.5 days now) are no longer after the
+  `BETA.md` R1–R12 → R13 → R14 (beta.2). Steps 5–7 (about 23.5 days now) are no longer after the
   beta: they come before it with the rest.
 - **Step 7 is gated on `MARKET.md` Stage 0** (`MARKET.md:94-103`): Phase C
   measured and finished (it is paused), and a music library with
@@ -308,7 +341,17 @@ collected.
 | the Florence-2 int8 download (275 MB) and its timing on the Mac and the Surface | 1 h | 1g's gate |
 | pyautoflip run on the ten clips on your Mac (a scratch venv on Python 3.13 or older, since it refuses 3.14, with an ffmpeg on `PATH`; its MediaPipe would likely abort in the dev sandbox as the face detector did, §4.1 — unmeasured), and its output rated beside ours (§4.1) | ~1 h | step 1's exit |
 | the helper's peak memory per capability on the Surface (§12.1) | 1 h | the floor-machine bar |
-| ten graphics fixtures with truth labels (six English, two Telugu, two Hindi), your own speech or text you wrote | 4–6 h | step 3's eval and exit |
+| ten graphics fixtures with truth labels (six English, two Telugu, two Hindi), your own speech or text you wrote; since 2026-10-21 also the five nested-enumeration talks (three English, one Hindi, one Telugu) and the Hindi and Telugu strings of the 27 drawing fixtures (§6.10) | 6.5–8.5 h (was 4–6) | step 3's eval and exit |
+| step 3's phase 0 runs: `__forgeGraphicCheck` in the development app's console on the Mac and the Surface for M1, M2, M3, M5, M6's Indic and colour parts and M22, and M22's sheet judged by eye beside the libass one (§6.15) | 1.5–2 h | phase 0's exit; phase 1 starts on it |
+| M21: Hindi clips of yours with numbers said, through `asr.int`'s gated case | 30 min, with the clips | phase 2's counter |
+| the later harness runs on both machines: phase 1's primitives and Indic check, M8, M13, M19; phase 2's templates, Indic check and M10; phase 3's M6, M7, M12 | 1.5 h | phases 1-3's exits |
+| M14: the blind curve rating, six curves on your clips, for a counter, a keyword and a callout; then the blind look rating, whole graphics under the presets and restrained against energetic, with its questions (§6.10) | 2 h | phase 2's default curves; the rows of §6's "What waits" that wait on the look rating |
+| M15: the audible onset frame of 30 words marked in the timeline | 45 min | whether beats need an onset refinement |
+| M17: graphics, zooms and sounds per minute, counted in five clips you call pro and five from a clipper | 2 h | `GRAPHICS_PER_MINUTE` |
+| M18: graphic sounds under your speech, judged by ear | 30 min | the sounds' levels and their cap |
+| M20: a 1080p screen recording, and the card's legibility judged at 9:16 | 20 min | the screen card's scope |
+| the hand spike's footage (§6.17): at least ten marked points each on bare hands in daylight, on hennaed hands with bangles and rings, and in low light or with motion blur (a low-light reception and a fast point among them); a held microphone, phone or bouquet; three minutes or more of natural gesturing with no point in each of those three conditions; rear-camera or DSLR clips; one 16:9 talking-head clip; two clips per condition kept back for phase 4; about 30 hand boxes marked (H3), the onset frames (H8) and one fast point's path (H5) | 5–7 h, with the filming | the spike's gate (§6.12) |
+| the spike's runs (H1–H10, H12, H13) on the M1 Pro and the Surface | 2 h | the gate |
 | three YouTube videos for ASR timing against Whisper, and three with unpunctuated ASR tracks (one Hindi or Telugu) | 1 h | §7.2: the unpunctuated three inside M0, the timing three by step 4's exit |
 | ten links for M0 (talks and podcasts, two in Hindi or Telugu, at least one with no caption track), each with a run you select and clip | 1 h | M0's exit (§3b) |
 | ten Best clips links, and rating their cards | 3 h | step 4's exit |
@@ -317,8 +360,10 @@ collected.
 | signing up for Pexels (free) | 10 min | 8.3 |
 | Clip it end to end on the Surface | 1 h | step 4's exit, the floor-machine bar |
 
-**About 19–22 hours in all, spread over the plan.** Against the first
-draft's 19–22 on the recommended route: the X developer agreement (30 min),
+**About 38–43 hours in all, spread over the plan** (2026-10-21: step 3's
+re-plan adds about 16–18.5 hours of measurement, rating and spike rows, and
+2.5 to the graphics fixtures' row; it was 19–22). Against the first draft's 19–22
+on the recommended route: the X developer agreement (30 min),
 Brave's Terms §3 (30 min), Brave's sign-up (10 of the 20 min) and the X
 capture measurement (1 h) are gone, −2.2 h; pyautoflip's run and rating
 (~1 h) and M0's ten links (1 h, which M0's new exit bar needs) are added,
@@ -961,7 +1006,8 @@ rows. If the speech model's press waits (§16.49 (b)), P is 9–12. **Not
 counted, and open-ended:** what the capability suites find on their first
 Windows run (they have never run there, §12), and a missing Visual C++
 runtime on a clean Windows (§16.45). Either can take P past 13. With P at
-9.5–13, §2's total becomes 75.5 + 9.5–13 = **85–88.5 days**.
+9.5–13, §2's total becomes 75.5 + 9.5–13 = **85–88.5 days** (since step 3's
+re-plan of 2026-10-21, 90.5 + 9.5–13 = 100–103.5, §2).
 
 ### 3a.1 P.1 — The sources · 0.5–1 day
 
@@ -7583,13 +7629,58 @@ routes pass the render check in CI.
 
 ---
 
-## 6. Step 3 — The graphics engine and the Director's third pass · 14.5 days
+## 6. Step 3 — The graphics engine and the Director's third pass · 30.5 days
+
+> **Revised 2026-10-21.**
+>
+> 1. **What was planned.** This section as written on 2026-10-05: six canvas
+>    2D templates (counter, bars, steps, quote, callout, ring), the graphic
+>    style, the `graphics@1` pass and its binding validator, 14.5 days. None
+>    of it was built.
+> 2. **Why it changed.** You asked for research before the three.js graphics
+>    engine was planned. `docs/research/graphics-motion-research-2026-10-17.md`
+>    (commit `4e59965`; 197 dated sources; no video watched, nothing
+>    installed, no code) rated this section as written 4 of 10 against your
+>    bar, raw footage that "will completely modify and look like pro", and
+>    its recommended plan 6.5 (6 without the hand build). It kept the
+>    architecture and found the coverage short: graphics fired only on said
+>    numbers, lists, quotes and faces, at most three a minute, with no lines
+>    or trees, no hands, no sound and no depth (the research, §0). Every
+>    rating there is the research's inference; the first measurement of the
+>    look is phase 2's blind look rating (§6.10, §6.12), with M14's curve
+>    pick beside it.
+> 3. **The answer.** On 2026-10-21 you took all twelve of the research's
+>    decisions as recommended: "ive read you 12 recomondations as well wil go
+>    with it". They are §16.54-65 (D1 = §16.54 … D12 = §16.65).
+> 4. **What stays exactly as settled.** §16.7-11 (graphics above the look,
+>    ungraded; `GraphicSpec`, with the old `GraphicsSpec` renamed
+>    `CaptionLayersSpec`; one `SELF_DRAWN_FIELDS` constant; which graphics a
+>    Clear removes; the validator's strictness); the Director contract; the
+>    painter's contract of §6.2; the licences of everything already in use.
+>    The research's "recommended against" list stays out (below, "What waits
+>    and what is out").
+> 5. **The shape.** Five phases: 0, measure, 2 days (§6.15); 1, the engine
+>    and the motion module, 7.5; 2, the templates, the third pass, the
+>    validator and sound, 14.5; the hand spike, 1.5, run during phase 2
+>    (§6.17); 3, the three.js compositor and 2.5D, 5, two of them moved from
+>    step 6 (§6.16). Then phase 4, the hand build, 6 days, only if the spike
+>    passes its gate (§6.18, §6.12). §6.19 is the build order.
+> 6. **The sub-section numbers §6.1-§6.12 keep their topics**, so the
+>    references to them elsewhere in this file (§0's bar row, §7's day table,
+>    §7.4, §7.5, §8.4, §8.7, §8.8, §9, §11, §15 rows 9-11) stay true. The new
+>    material is §6.13-§6.21.
+> 7. **The references were re-censused** at `4e59965` on 2026-10-21: §6.3's
+>    and §6.4's had drifted since 2026-10-05 (the research's §7.1 found it).
+>    Every `file:line` in this section was read at that commit; references
+>    into this file are by section number.
 
 **What it is.** A library of **typed parametric templates** (counter,
-comparison bars, step list, quote card, callout, percentage ring) drawn by
-**pure frame functions**: live in the preview, baked to PNG frames at export
-exactly as the moments engine is. A creator-level **graphic style**. The
-Director's **third pass** over a transcript:
+comparison bars, step list, quote card, callout, percentage ring, and since
+2026-10-21 a keyword card and a lower third; a step list may carry a
+connector or a tree) drawn by **pure frame functions**: live in the preview,
+baked to PNG frames at export exactly as the moments engine is. A
+creator-level **graphic style**. The Director's **third pass** over a
+transcript:
 
 1. spot the moment;
 2. pick a template and copy its data;
@@ -7600,87 +7691,296 @@ Director's **third pass** over a transcript:
 
 **The LLM never writes code**: it fills fields of a type the app defined.
 
+**The engine, as re-planned** (§16.54-56). One pure function turns a spec, a
+style and a frame into a **draw list** (strokes, text, shapes, images, a dim,
+groups), and **two painters read it**: canvas 2D for every graphic, every
+word through `drawTextOnto` so the 42 looks and Chromium's shaping apply
+(§6.3), and a three.js compositor on the one shared renderer, only for a
+graphic that asks for depth, a camera move or a glow (§6.16). **One motion
+module** (`graphics/motion.ts`, §6.13) times every element. **One stroke
+primitive** with a riding arrowhead draws arrows, underlines, connectors and
+trees on (§6.3). **Three new shapes fire where no number is said**:
+`keyword`, `lower-third`, and `steps` with a connector or a tree whose
+parents the app computes (§6.2). A **dim** behind a graphic, holed around the
+speaker (§6.3, §6.9). The library's own **sounds on a graphic's beats**,
+under that graphic's own Clear (§6.14). **2.5D** variants of the counter and
+the ring, and a screen recording shown as a 2.5D card (§6.16). And, behind a
+measured gate, **the presenter's pointing finger**: a 1.5-day spike during
+phase 2, a 6-day build only if the gate passes (§6.17, §6.18).
+
+**The phases.** Each phase's exit is §6.12; the build order is §6.19.
+
+| phase | what | days | of which | exit, in one line |
+|---|---|---|---|---|
+| 0 | measure the forks: M1-M5, M6's Indic and colour parts, M22, and M21 before phase 2's counter (§6.15; M7, the glow, opens phase 3) | 2 | 0.5 is §6.3's own measurement as written; 1.5 new | every number in `EFFECTS.md` §61 with its command; the bake region, pool depth, Indic animation unit and blur-rise chosen; M22's verdict on the canvas painter's Indic shaping |
+| 1 | the engine and the motion module: the §16.8 rename, `SELF_DRAWN_FIELDS` and every guard, the draw list, the canvas painter, the stroke, the dim, `motion.ts`, the canvas, bake and export (§6.1, §6.3-§6.5, §6.13, §6.11) | 7.5 | about 5 of §6 as written; 2.5 new | the primitives' preview = export ≤ 1/255; the Indic render check; the render check frame-exact on both builds |
+| 2 | the templates in nine shapes, the third pass, the validator, beats, placement and the budget, sound, the baseline and the eval (§6.2, §6.5-§6.10, §6.14, §6.11) | 14.5 | about 9 of §6; 5.5 new | the exit as written for nine shapes, plus the Indic check per template, the sound Clear test and the tree |
+| spike | the hand spike, run during phase 2 (§6.17; §16.56) | 1.5 | new; mostly your runs | H1-H10, H12, H13 in `EFFECTS.md` §62; the gate passed or failed |
+| 3 | the three.js compositor and 2.5D (§6.16; §16.55) | 5 | 2 moved from step 6's 3D templates; 3 new | M7's glow route chosen first; flat colour ≤ 2/255; Indic on a texture at 0.000; preview = export; WebGL missing tested |
+| **step 3** | | **30.5** | §6's 14.5 + 2 from step 6 + 14 new | |
+| 4 | the hand build, only if the spike passes its gate (§6.18) | 6 | new; in no total | the gate's figures on held-out clips; the line's tip on the marked fingertip |
+| outside step 3 | the captions' per-word fallback (§16.61) and the two Indic fonts (§16.63), §6.20 | 1 | 0.5 new; 0.5 is `BETA.md` R14's own, pulled forward | counted in §2 beside the steps |
+
+The split of §6's 14.5 days into "about 5" and "about 9" is the research's
+estimate (its §7.3); §6 as written never itemised them.
+
+**What stays settled.**
+
+- **The Director contract**: the model never writes code, it fills typed
+  fields of templates the app drew; a pass is validated whole and fails
+  alone; grounding is checked over what the painter draws (§6.7's property
+  test, now over the draw list's text items).
+- **§16.7** graphics above the look, ungraded; **§16.8** `GraphicSpec`, and
+  `GraphicsSpec` renamed `CaptionLayersSpec` as step 3's first commit;
+  **§16.9** one `SELF_DRAWN_FIELDS` constant, done first (§16.8 and §16.9
+  call that first slice "3a", a name written before Step P took it);
+  **§16.10** Direct's graphics join `DIRECTOR_RULES`, Clip it's and the
+  Transcript tile's have their own Clear; **§16.11** the validator's
+  strictness as written.
+- **The painter's contract of §6.2**, kept word for word and extended to the
+  new shapes there.
+- **The licences of everything already in use**: three, MediaPipe and the
+  rest of the AI helper's pack, the asset library. Not reopened.
+
+**What waits and what is out.** Two of your answers draw the line:
+
+- **§16.57 (D4):** "Not in step 3. A screen recording gets the 2.5D card, a
+  dim and graphics. Revisit with a one-day cursor-from-pixels spike only if
+  users bring screen recordings; a recorder of our own is a separate
+  project."
+- **§16.64 (D11):** "Not in step 3. Vendor sources call emoji pops the cheap
+  look [60], and the CC BY attribution question is open." (`[60]` is a
+  source in the research's §8.)
+
+What no phase of step 3 builds, and what it waits for (the research, §7.4,
+one line each):
+
+| pattern | waits for |
+|---|---|
+| click zoom, cursor smoothing, click ripples, keystrokes, a magnifier lens | cursor and click data: a recorder of our own (its own project) or a cursor finder over pixels (§16.57) |
+| the product as the set, the cursor as actor | a designer's rebuild of a product's interface; not planned |
+| grade and grain | nothing: the looks carry it, and graphics sit above the look (§16.7) |
+| motion blur on fast moves | the look rating's motion-blur question answered yes (§6.10); then `tmix` (M4) or canvas subframes |
+| text behind the subject | a full-clip person matte from the AI helper, its edges measured |
+| emoji or hand stickers, Lottie accents, animated icons | an attribution decision and a player determinism check (§16.64); a check tick beside a `steps` item is the stroke primitive, a style option once the look rating's tick question asks for it (§6.10) |
+| per-letter Indic kinetic type, a per-character typewriter | M3 (§16.61) |
+| a code-terminal reveal | a source of the code's text; not researched |
+| a card pop with ripple rings; confetti or particle bursts | the energetic style (§16.58), once the look rating's energetic question asks for more (§6.10); a burst seeded, fired by a word |
+| an image or screenshot pop-up card | pictures to put in it: step 5's (§8) or yours; the draw list's `image` item is ready |
+| frosted glass behind a card | M5's blur cost; the panel is a style property in phase 2, the glow phase 3's |
+| masked or wipe text reveals, a marker sweep behind a word | a source that times them, then a look rating of them (§6.10) |
+| B-roll or a picture over the speaker | step 5 (§8) |
+| camera layouts (the speaker in a corner over a screen, a split) | a project of two sources, a layout of the reframe's kind; not planned |
+| continuous transitions and match cuts | the eight transitions and the moments serve the cut; not planned |
+| an end card with a call to action | the Director's end card for ads exists; for a talk, a `user`-mode field, not planned |
+| a line chart drawing on; a before/after wipe | step 6's `timeline` and `before-after` (§9), on the same draw list |
+| a progress bar or step counter | a timing source and a trigger beyond `steps` |
+| shape morphs | an animator's tool; not planned |
+| two-hand gestures, swipes, counted fingers, a thumbs badge, an open-palm reveal | rules on the hand track, after phase 4 passes |
+| curves shared with captions and zoom punches | M14's pick and the look rating (§6.10), then their own change (§16.62, §6.13) |
+
+**Out, never planned in step 3** (the research, §7.5): drawing flat graphics
+through three.js, or making three.js the only painter; troika-three-text and
+drei's `<Text>`; GSAP; Remotion; Theatre.js; Motion Canvas; Revideo; elkjs;
+Rive; pmndrs `postprocessing` (its peer range pins three below 0.187,
+whatever M7's scratch-branch leg records of its alpha); the canned
+Gesture Recognizer as the pointing detector; Model Maker; marketplace
+templates, CapCut materials and LottieFiles animations shipped as built-ins;
+stock B-roll, emoji pops and hook-title boilerplate; a screen recorder;
+splitting Indic text by code point; gesture reactions; a spring as the clock
+of an arrival on a word, and stateful springs anywhere. Allowed when their
+condition is met: `d3-hierarchy` and `d3-shape` (only if the tree needs more
+than a fixed one-to-n layout, phase 2), `perfect-freehand` (after M10,
+which runs it from a scratch branch, §6.15), `UnrealBloomPass` (three's own,
+M7). Nothing is installed by this plan.
+
 ### 6.1 The spec — `Clip.graphic?: GraphicSpec`
 
-`src/shared/graphics/` already holds `spec.ts`'s `GraphicsSpec` (36 uses: the
-caption-layer scene for the canvas bake and the dormant frame server).
-`GraphicSpec` would differ from it by one letter, which is exactly the trap
-`CLAUDE.md`'s anchor table records. So 3a's first commit renames the old
-type `CaptionLayersSpec` (and `buildGraphicsSpec` → `buildCaptionLayers`),
-mechanically, with typecheck as the guard (decision §16.8).
+**Phase 1 · 0.5 day.** The meaning of each template's fields is §6.2's, and
+their values (`GRAPHIC_TEMPLATES`) are built in phase 2.
 
-```ts
-// src/shared/graphics/template.ts
-export type GraphicTemplateId =
-  | 'counter' | 'bars' | 'steps' | 'quote' | 'callout' | 'ring'   // step 3
-  | 'timeline' | 'before-after' | 'versus'                         // step 6 (2D and 3D)
-  | 'source'                                                       // step 5/6: a retrieved fact with its sources
+**The rename first (§16.8).** `src/shared/graphics/` already holds
+`spec.ts`'s `GraphicsSpec` (`spec.ts:101`), the caption-layer scene for the
+canvas bake and the dormant frame server. `GraphicSpec` would differ from it
+by one letter, the trap `CLAUDE.md`'s anchor table records. So step 3's
+first commit renames `GraphicsSpec` to `CaptionLayersSpec` and
+`buildGraphicsSpec` (`fromTimeline.ts:82`) to `buildCaptionLayers`,
+mechanically, with typecheck as the guard. Counted 2026-10-21 at `4e59965`
+with `grep -rwo … src tests --exclude-dir=output`: 23 `GraphicsSpec` in 9
+files (`spec.ts`, `fromTimeline.ts`, `captions/bake.ts`,
+`main/graphics/tier2.ts`, `main/graphics/frameServer.ts`,
+`renderer/src/graphics/main.ts`, `tests/graphics.test.ts`,
+`tests/captionBake.test.ts`, `tests/integration/captionBakeTiming.int.test.ts`)
+and 53 `buildGraphicsSpec` in 13 files (56 with three READMEs under the
+gitignored `tests/output/`). §16.8 said 36 sites; whichever count was meant,
+typecheck holds the rename. Neither new name occurs anywhere before the
+commit (counted: 0). The file keeps its name and its other exports
+(`Easing`, `GraphicsLayer`, `GraphicsFont`, `applyEasing`, `popIn`).
+EFFECTS' dated records keep the old names, since they describe the code as
+it was.
 
-export type GraphicData =
-  | { template: 'counter'; value: string /* as said: "40%", "1.2 million", "₹500" — drawn verbatim */; label: string }
-  | { template: 'bars'; title: string /* grounded, or one of the template's fixed titles */; items: { label: string; value: string }[] /* 2–5; every MATCHED stretch number shares one unit */ }
-  | { template: 'steps'; title: string /* grounded, or a fixed title */; items: { label: string }[] /* 2–6 */ }
-  | { template: 'quote'; kind?: 'said'; text: string /* a contiguous run of the said words, clause to clause */; speaker: string /* '' | the asset's speaker as the user set it | a name the stretch says said it (§6.7) */ }
-  | { template: 'quote'; kind: 'social'; text: string; name: string; handle: string; date: string; link: string }   // step 5 (§8.4): every field typed or pasted by the user; link stored, never fetched; no logo, no avatar
-  | { template: 'callout'; label: string; shape: 'arrow' | 'circle' }
-  | { template: 'ring'; value: string /* the matched stretch number must carry '%' and be ≤ 100 */; label: string }
-  | { template: 'timeline'; items: { when: string; label: string }[] }
-  | { template: 'before-after'; before: { label: string; value: string }; after: { label: string; value: string } }
-  | { template: 'versus'; left: { label: string; value: string }; right: { label: string; value: string } }
-  | { template: 'source'; kind: 'wiki' | 'page' | 'headline' | 'answer'; title: string; excerpt: string; outlet: string; date: string }
+**The types**, in `src/shared/graphics/template.ts` (types only in phase 1):
 
-export interface GraphicSpec {
-  data: GraphicData                        // every string the painter draws comes from here, or from the style's fixed glyphs
-  seconds: number                          // on screen; GRAPHIC_TEMPLATES[t].seconds bounds it
-  /** when each element ARRIVES, in seconds from the clip's start — computed from word timings by the app, never by the model */
-  beats: number[]
-  /** what grounds it: the transcript's asset, the cited sentence, and the word index each beat landed on (stable under hand corrections — transcript.ts:125-133) */
-  grounding?: { assetId: string; sentence: string; words: number[] }
-  /** where it sits; `auto` is recomputed from free space on rebake (an aspect change, a reframe) */
-  place: { auto: true; third: 'top' | 'middle' | 'bottom' } | { auto: false; box: UnitRect }
-  /** a callout's target: a subject box in SOURCE units on the clip beneath, at a source ms; drawn through frameMap.ts */
-  subject?: { clipId: string; box: UnitRect; ms: number }
-  /** retrieved facts (step 5/6): what was fetched, quoted, credited */
-  sources?: { title: string; url: string; outlet: string; date: string; licence: string }[]
-  /** a graphic the user must Keep before it is placed: its number came from a YouTube track or an unsure Whisper word (§6.6) */
-  proposal?: { reason: 'check-the-number'; wordSource: 'youtube-asr' | 'youtube-lines' | 'whisper-unsure' }
-  style?: string                           // a GRAPHIC_STYLES id; absent = the project's
-  seed: number                             // stored; never Math.random at draw time
-  version: number
-}
+- `GraphicTemplateId` = `'counter' | 'bars' | 'steps' | 'quote' | 'callout'
+  | 'ring'` (as written) `| 'keyword' | 'lower-third'` (phase 2) `|
+  'screen-card'` (phase 3, §6.16) `| 'timeline' | 'before-after' | 'versus'`
+  (step 6) `| 'source'` (steps 5/6). **No ninth id (chosen 2026-10-21):**
+  phase 2's ninth shape is `steps` with a connector, because a `tree` id
+  would let the model choose a structure the app computes (the research,
+  §4.5).
+- `GraphicData`: §6.1's union as written for every member it had
+  (`counter` `{ value; label }`, `bars` `{ title; items: { label; value }[] }`,
+  `quote` with its `said` kind `{ text; speaker }` and its `social` kind
+  `{ text; name; handle; date; link }` (§8.4), `callout` `{ label; shape:
+  'arrow' | 'circle' }`, `ring` `{ value; label }`, `timeline` `{ items:
+  { when; label }[] }`, `before-after` and `versus` `{ before, after }` and
+  `{ left, right }` of `{ label; value }`, `source` `{ kind: 'wiki' | 'page'
+  | 'headline' | 'answer'; title; excerpt; outlet; date }`), every value a
+  string as said, with these changed or added:
+  - `steps`: `{ template: 'steps'; title: string; items: { label: string;
+    parent?: number }[]; connector: 'none' | 'line' | 'tree' }`. `parent` (an
+    index into `items`, −1 the title) and `connector` are set by the app,
+    never by the model (§6.2, §6.7).
+  - `keyword`: `{ template: 'keyword'; words: string; lit: number }`, one to
+    four said words in a contiguous run; `lit` an index into them.
+  - `lower-third`: `{ template: 'lower-third'; name: string; role: string }`,
+    `name` from `MediaAsset.speaker`, `role` typed by the user.
+  - `screen-card`: `{ template: 'screen-card'; clipId: string; move:
+    'tilt-in' | 'pull-back' }` (phase 3; no string field that is a claim, so
+    the validator never sees it).
+- `FieldMode` = `'verbatim' | 'grounded' | 'fixed' | 'speaker' | 'user' |
+  'index'`. `index` is the research's one extension of §6.1 (its §4.5): a
+  number pointing into another field, checked for range only (§6.7 rule 8).
+- `TemplateDef` = §6.1's as written (`id`, `seconds: { min; default; max }`,
+  `fields`, `kindFields?`, `fixedTitles?`, `pairs?`, `maxItems?`,
+  `needsSubject?`, `threeD`), with `fields: Record<string, FieldMode>`,
+  `kindFields?: Record<string, Record<string, FieldMode>>`, a new
+  `appFields?: string[]`, and `threeD: boolean` read as "this template may
+  ask for depth" (§6.16). `appFields` lists every field the app sets and no
+  model is offered: `steps.parent`, `steps.connector`, `callout.shape`,
+  `quote.speaker`, `lower-third.name`, and the screen card's `clipId` and
+  `move` (§6.2's table). `quote.speaker` and `lower-third.name` keep their
+  `speaker` mode, which the validator checks (§6.7 rule 8); the others take
+  no mode.
+- `GraphicSpec`, every field of §6.1 as written kept, `proposal?` widened,
+  and `depth?`, `hero?` and `anchor?` added (typed in phase 1, set in
+  phases 3 and 4):
 
-export interface TemplateDef {
-  id: GraphicTemplateId
-  seconds: { min: number; default: number; max: number }
-  /** how the validator treats each string field (§6.7). No field drawn into a frame is ever 'free' */
-  fields: Record<string, 'verbatim' | 'grounded' | 'fixed' | 'speaker' | 'user'>   // 'user': the social quote card's (§8.4), typed by the user, never offered to a model; reached through kindFields
-  /** per data.kind, overriding fields: quote's 'social' → text, name, handle, date, link all 'user' (§8.4) */
-  kindFields?: Record<string, Record<string, 'verbatim' | 'grounded' | 'fixed' | 'speaker' | 'user'>>   // GRAPHIC_TEMPLATES.quote.kindFields.social
-  /** the titles a template may draw without grounding: 'By the numbers', 'Step by step', 'Compared' … */
-  fixedTitles?: string[]
-  /** fields that bind as label–value pairs (§6.7 rule 6) */
-  pairs?: [label: string, value: string][]
-  maxItems?: number
-  needsSubject?: boolean                   // callout
-  threeD: boolean
-}
-export const GRAPHIC_TEMPLATES: Record<GraphicTemplateId, TemplateDef>
-```
+| field | type | set by | holds |
+|---|---|---|---|
+| `data` | `GraphicData` | the model's fields, the app's, the user's | every string the painter draws, or the template's listed fixed glyphs |
+| `seconds` | number | the app, inside `TemplateDef.seconds` | on screen |
+| `beats` | number[] | the app, from word timings (§6.8) | when each element arrives, seconds from the clip's start; never the model's |
+| `grounding?` | `{ assetId; sentence; words: number[] }` | the app | the transcript's asset, the cited sentence, the word index each beat landed on |
+| `place` | `{ auto: true; third: 'top' \| 'middle' \| 'bottom' } \| { auto: false; box: UnitRect }` | the app (§6.9), or the user's drag | where it sits; `auto` is recomputed on rebake |
+| `subject?` | `{ clipId; box: UnitRect; ms }` | the app, once, at onset (§6.9) | a callout's target and a dim's hole on the clip beneath, in source units |
+| `sources?` | `{ title; url; outlet; date; licence }[]` | steps 5/6 | retrieved facts |
+| `proposal?` | `{ reason: 'check-the-number' \| 'pointed'; wordSource?: 'youtube-asr' \| 'youtube-lines' \| 'whisper-unsure' }` | the app | a graphic the user keeps before it is placed (§6.6; `'pointed'` §6.18) |
+| `style?` | string | the user | a `GRAPHIC_STYLES` id; absent is the project's |
+| `seed` | number | the app | stored; never `Math.random` at draw time |
+| `version` | number | the app | bumped on every edit; left out of every cache key |
+| `depth?` | `'tilt' \| 'parallax' \| 'dolly' \| 'focus'` | the user, or the hero rule's `'tilt'`, phase 3 (§6.16) | only where `TemplateDef.threeD` |
+| `hero?` | `true` | the app, phase 3 (§6.16) | its footage clip's hero graphic: the hero rule's tilt, and its glow under a style with `glow`; cleared by your Depth choice |
+| `anchor?` | `{ assetId; event }` | the app, phase 4 (§6.18) | a `PointEvent.id` |
 
-Timings are in **seconds**, as `MomentSpec.seconds` is, so
-`project/frameRate.ts` needs no change. A frame-rate change already calls
-`rebakeGenerated` (`store.ts:1355-1357`).
+**Units.** Timings are in seconds, as `MomentSpec.seconds` is
+(`timeline.ts:303`), so `project/frameRate.ts` needs no change: a frame-rate
+change (`setFrameRate`, `store.ts:1970`) already calls `rebakeGenerated`
+(`:1992`), which redraws a graphic through its arm (§6.4). The grounding's
+word indices are stable under hand corrections: `withWordText`
+(`transcript.ts:245-256`) changes a word's text, keeps its timing, takes an
+emptied word out and renumbers nothing.
 
-### 6.2 The six templates
+**On the project and the clip** (`src/shared/timeline.ts`), all optional, so
+every saved project opens unchanged and the store's migration tolerates
+their absence as it does `subjects` (`timeline.ts:967-974`):
 
-| template | draws | beats | seconds (min/default/max) | fields |
+- `Clip.graphic?: GraphicSpec` (beside `moment`, `timeline.ts:512`).
+- `Project.graphics?: GraphicsSettings` = `{ styleId: string; overrides?:
+  Record<string, unknown>; sound: boolean }`, beside `captions`
+  (`timeline.ts:975`). `sound` is §6.14's, `true` when absent.
+- Owned elsewhere, typed in the same commit so the file changes once:
+  `Project.graphicProposals?: GraphicProposal[]`, `GraphicProposal` = `{ id:
+  string; clipId: string; spec: GraphicSpec; rule: string; note: string }`,
+  and `MediaAsset.speaker?: string` (§6.6; §16.31 decided the field, which
+  does not exist at `4e59965`); `Clip.forGraphic?: string`, a sound clip's
+  graphic clip id (§6.14). Not here: `Clip.pointing?: true` and
+  `Project.hands?: Record<string, HandTrack>` are added by phase 4 with
+  `src/shared/hands/types.ts` (§6.18), since `HandTrack` does not exist
+  before the spike writes that file, and phase 4 may never be built.
+- **(box)** `MediaAsset.frames.box?: { x: number; y: number; width: number;
+  height: number }` (`frames` is `timeline.ts:141-145`), written only by the
+  export's own bake and only if M1 chooses the box (§6.3, "The bake
+  region").
+
+**Every graphic clip id is app-minted**: the store's
+`graphic-<base36 time>-<5 base36>`, as the card ring's `ring-…` is
+(`store.ts:3378`), and the
+Director's through `ApplyContext.newId` (`director/apply.ts:83`, default
+`:179`), never a string from a model or a transcript, because clip ids
+become frame-cache paths unsanitised (`writeTitleFrame`,
+`src/main/titles.ts:143-150`, the `.seq` folder at `:148`).
+
+### 6.2 The templates — eight ids, nine shapes
+
+**Phase 2 · 4 days.** Phase 2 draws §6.2's six templates as written, plus
+`keyword`, `lower-third` and `steps` with a connector: eight
+`GraphicTemplateId`s, nine shapes (§6.1: no ninth id; the tree is `steps`
+with `connector: 'tree'`, set by the app). D1 (§16.54) is the scope.
+
+Each template is one pure function in `src/shared/graphics/templates/<id>.ts`
+(`lowerThird.ts` for `lower-third`): `draw<Id>(spec, style, clock: { t:
+number; fps: number }, size, measure, targets): DrawOut`, with `t` in
+seconds from the graphic clip's start, registered as its row of `DRAWERS`
+(`templates/index.ts`, §6.3). `DrawOut` = `{ items: DrawItem[]; camera?:
+Camera; glow?: GlowRequest[] }` (§6.3), typed in phase 1 so that phase 3's
+depth branches and glow (§6.16) need no change to any drawer's signature;
+in phases 1 and 2 a drawer returns `items` only. `drawListAt` (§6.3) calls
+it. A template uses only §6.3's item kinds (`stroke`, `text`, `shape`,
+`dim`, `group`; `image` waits for phase 3's screen card and step 5's
+pictures) and §6.13's motion exports. It never paints, never
+measures text except through the injected `measure`, never reads the project
+(`targets` carries what it needs of the footage), and never formats a
+string except through `graphics/numbers.ts`. Its curves come only from
+`graphics/motion.ts` (D9, §16.62); its strokes take the style's
+`strokeLook`, `clean` unless M10 has passed (D7, §16.60); and no template
+draws an emoji, a sticker or a Lottie accent (D11, §16.64).
+
+**The nine shapes.** Seconds are on screen, the lead included; they are
+proposals until M16.
+
+| shape | draws | beats (each a bound word's start, §6.8) | seconds min / default / max | fields (mode) |
 |---|---|---|---|---|
-| `counter` | a number counting up from 0 and **arriving at the value on the word that says it**, with the label beneath | 1 | 2 / 3 / 4 | value `grounded` (number), label `grounded`; **paired** (value, label) |
-| `bars` | 2–5 horizontal bars growing to their values, each on its own word, labels and values beside them | one per item | 3 / 5 / 6 | title `grounded` or fixed ('By the numbers', 'Compared'); each item **paired** (label, value), both `grounded`; every matched stretch number shares one unit, or the graphic is dropped |
-| `steps` | a numbered list, one row arriving per item as it is said | one per item | 3 / 6 / 8 | title `grounded` or fixed ('Step by step'); item label `grounded` |
-| `quote` | the said line in quotation marks, each word lit as it is spoken (the captions' highlight logic) | one per word | 2 / 4 / 6 | text `verbatim`, clause to clause; speaker `speaker` (§6.7 rule 7). Its `social` kind (step 5, §8.4): `kindFields.social`, every field `user`, typed by the user; nothing fetched from X, no X logo or avatar, not shaped as a post |
-| `callout` | an arrow or a ring drawn on, to the subject box, with a label | 1 | 1.5 / 2.5 / 3 | label `grounded`; `needsSubject` (a face track: Python, §12) |
-| `ring` | a ring filling to the percentage, arriving on the word | 1 | 2 / 3 / 4 | value `grounded`, and **the matched stretch number carries `%` (or "percent")** and is ≤ 100; label `grounded`; **paired** (value, label) |
+| `counter` | a number counting up from 0 and **arriving at the value on the word that says it**, with the label beneath | 1: the value's word | 2 / 3 / 4 | `value` grounded (a number), `label` grounded; **paired** |
+| `bars` | 2-5 horizontal bars, each growing to its value on its own word; labels and values beside them | one per item: its value's word | 3 / 5 / 6 | `title` grounded or fixed ('By the numbers', 'Compared'); each item **paired** (`label`, `value`), both grounded; every matched stretch number shares one unit |
+| `steps` (connector `none`) | a numbered list, one row arriving per item as it is said | one per item: its label's first bound word | 3 / 6 / 8 | `title` grounded or fixed ('Step by step'); item `label` grounded; `parent` and `connector` set by the app |
+| `steps` with `connector: 'line'` or `'tree'` | as `steps`, plus strokes. `line`: a rule joining the numerals, each segment drawn on into its row. `tree`: the title as the root, and an elbow edge from each item's parent drawn on into the item, ending in an arrowhead | as `steps`; each edge arrives with its item | 3 / 6 / 8 | as `steps`; `connector` and every `parent` set by the app (the tree, below) |
+| `quote` | the said line in quotation marks, each word lit as it is spoken, the speaker beneath | one per word, unspread (§6.8) | 2 / 4 / 6 | `text` verbatim, clause to clause, at most 16 words (proposal); `speaker` speaker (§6.7 rule 8). Its `social` kind (step 5, §8.4): `kindFields.social`, every field `user`, typed by the user; nothing fetched from X, no X logo or avatar, not shaped as a post |
+| `callout` | an arrow drawn on to the subject box, or a ring drawn round it, with a label | 1: the label's first bound word | 1.5 / 2.5 / 3 | `label` grounded; `shape` set by the app; `needsSubject` (a face track, §12) |
+| `ring` | a ring filling to the percentage and arriving on the word, the value inside | 1: the value's word | 2 / 3 / 4 | `value` grounded, and **the matched stretch number carries `%` (or "percent")** and is ≤ 100; `label` grounded; **paired** |
+| `keyword` | one to four of the speaker's own words on a card, one of them lit | 1: the run's first word | 1.5 / 2.5 / 3.5 | `words` verbatim (a contiguous run of 1-4 said words, §6.7 rule 9); `lit` index |
+| `lower-third` | the speaker's name and, when typed, their role, low in the frame or in the free third | 1: the speaker's first word the clip shows | 2.5 / 3.5 / 5 | `name` speaker (only `MediaAsset.speaker`); `role` user |
+
+**`GRAPHIC_TEMPLATES`**, the values of `graphics/template.ts`'s record (the
+types are §6.1's):
+
+| id | `fields` | `fixedTitles` | `pairs` | `maxItems` | `appFields` | `needsSubject` | `threeD` | offered to the model |
+|---|---|---|---|---|---|---|---|---|
+| `counter` | `value` grounded, `label` grounded | — | `[value, label]` | — | — | — | true (phase 3) | yes |
+| `bars` | `title` grounded, `items.label` grounded, `items.value` grounded | 'By the numbers', 'Compared' | `[items.label, items.value]` | 5 (at least 2) | — | — | false | yes |
+| `steps` | `title` grounded, `items.label` grounded | 'Step by step' | — | 6 (at least 2) | `parent`, `connector` | — | false | yes |
+| `quote` | `text` verbatim, `speaker` speaker; `kindFields.social`: `text`, `name`, `handle`, `date`, `link` all user | — | — | — (16 words, §6.7 rule 9) | `speaker` | — | false | yes, the `said` kind only |
+| `callout` | `label` grounded | — | — | — | `shape` | true | false | only when the clip has a subject track (§6.6) |
+| `ring` | `value` grounded, `label` grounded | — | `[value, label]` | — | — | — | true (phase 3) | yes |
+| `keyword` | `words` verbatim, `lit` index | — | — | — (4 words, §6.7 rule 9) | — | — | false | yes |
+| `lower-third` | `name` speaker, `role` user | — | — | — | `name` | — | false | never |
+| `screen-card` (phase 3, §6.16) | none (`{}`) | — | — | — | `clipId`, `move` | — | true | never |
+
+`threeD` is read as "may ask for depth" (§6.16). The screen card's seconds
+are 1 / 10 / 600 (proposal; its `seconds` is the recording clip's length)
+and its one beat is its landing (§6.16). The other ids (`timeline`,
+`before-after`, `versus`, `source`) carry the entries their own steps write
+(§9, §8); the menu never offers them, nor `screen-card` (§6.6).
 
 **The painter's contract** (the first draft contradicted itself here: it
 promised the painter draws nothing outside `data`, then had the counter draw
@@ -7699,229 +7999,1473 @@ in-between numbers and a style regroup them):
 - The style's fixed glyphs (quotation marks, step numerals, the arrow) are
   listed in the template and are not text claims.
 
-A fake-context test holds each line (§6.11).
+Extended on 2026-10-21 for the new shapes:
 
-### 6.3 Drawing: pure frame functions, preview, bake, export
+- **`keyword` draws its words verbatim**, one text item per word (`source:
+  { path: 'data.words', piece: i }`), so the pieces joined by single spaces
+  equal `data.words` with its whitespace normalised. `lit` changes the lit
+  word's colour (`palette.accent`, through its `look.accent`, §6.3) and
+  draws an underline stroke beneath it, and nothing else: never its text,
+  case or order.
+- **`lower-third` draws `name` exactly as `MediaAsset.speaker` holds it and
+  `role` as the user typed it**, and adds no glyph.
+- **`quote`** draws its words one text item per word, as `keyword` does;
+  its marks and the dash before the speaker are the style's fixed glyphs.
+- **A connector or a tree adds strokes, arrowheads and dots, never a glyph
+  that is a text claim.** The step numerals ("1" to "6", restarting under
+  each parent in a tree) stay fixed glyphs.
+- **No Hindi or Telugu string is drawn in pieces smaller than a word** (D8,
+  §16.61). A field drawn word by word is split on whitespace only; every
+  other field is one text item, drawn whole by one `drawTextOnto` call
+  (§6.3). Clusters only for a script in `CLUSTER_SCRIPTS` (§6.3), which is
+  empty until M3.
 
-The files mirror the moments engine's:
+| template | fixed glyphs |
+|---|---|
+| `counter`, `bars`, `callout`, `keyword`, `lower-third`, `screen-card` | none (an arrowhead or a bezel is a stroke, not a glyph) |
+| `ring` | `%`, appended to the value's text item only when `data.value` carries neither `%` nor a percent word; every kept ring's matched number carries one (§6.7 rule 9) |
+| `steps` (any connector) | the numerals "1" to "6" |
+| `quote` | the style's opening and closing marks, and "— " before the speaker |
 
-- `src/shared/graphics/frame.ts` (pure, node-tested):
-  `graphicMovingFrames(spec, fps)` = round((last beat + settle 0.5 s) × fps),
-  capped at the clip; `graphicParams(spec, frame, fps)` → per element
-  `{t, appear, value}` from the beats, with `seeded()` (`moment.ts:101`)
-  drawn in a fixed order; `layout(spec, w, h, style)` → element boxes as
-  pure geometry.
-- `src/shared/graphics/paint.ts` (`/// <reference lib="dom" />` scoped to the
-  file, as `textPaint.ts:1-5`): `drawGraphicOnto(ctx, spec, style, w, h,
-  {frame, fps}, measure)`. Every word goes through `drawTextOnto`
-  (`textPaint.ts:44`), so the 42 text looks apply. **In-between numbers are
-  formatted by `graphics/numbers.ts` in the value's own format (§6.2's
-  contract), never `toLocaleString()`, and the settled frame draws
-  `data.value` itself.**
-- `src/renderer/src/graphicCanvas.ts`:
-  - `graphicPreviewCanvas(clipId, spec, style, w, h, clock, onReady)`. A 2D
-    template follows `textPreviewCanvas` (`textCanvas.ts:64-123`), keyed on
-    size, the spec without its version, the **resolved style**, and the frame
-    (or `settled`). It skips the cache while a font is still loading
-    (`:113-119`).
-  - Every redraw stamps `dataset.forgeRev` (`grade.ts:465-497`).
-  - `forgetGraphicPreview` joins Preview's removed-clip sweep
-    (`Preview.tsx:665-667`). That sweep never calls `forgetPaperPreview` or
-    `forgetCarouselPreview` today; see §17.
-  - `bakeGraphicSequence(spec, style, clipId, w, h, frames, fps)` awaits every
-    face the style uses, then runs the `bakeGuard` loop (`beginBake`,
-    `isSuperseded` before each write, `writeTitleFrame`, `endBake` in a
-    `finally`) over the **moving frames only**. `tpad` holds the last
-    (`plan.ts:683-686`), so the render needs no new filter: an image asset
-    with `frames` is already `-framerate <fps> -i <pattern>` + `holdFilter`
-    (`plan.ts:839-851`), and alpha passes (`format=yuva420p`, EFFECTS §34).
-- **The exit is opacity keys** on the clip over its last 0.3 s. They already
-  render (geq on alpha, covered by an integration test), so held frames are
-  never baked just to fade.
-- **Size: the export's STILLS size**, the canvas exactly, as text is
-  (`exportBake.ts:92`), so lines and type are crisp at 4K.
-- **The export.** `Bakers.graphic(spec, style, key, w, h, frames, fps)` with
-  a branch beside `exportBake.ts:130-144`. A graphic whose bake returns null
-  or throws is **dropped** from the export with `onError`, as a moment is,
-  never left on the edit's asset, whose path is `''` until the store's bake
-  lands (`-i ''` fails the whole export). `exportBakers.ts:13-26` wires it.
-  Every test that builds a `Bakers` literal gains `graphic` (`exportB2`,
-  `exportBake`, `moment`, `integration/{exportBake,jcut,moment,spine2Render}`,
-  `renderer/stripsRender`).
-- **The store.** `addGraphicClip(trackId, startFrame, spec)` mints
-  `graphic-<base36>-<rand>`: **app-minted ids only**, because clip ids become
-  frame-cache paths unsanitised (`src/main/titles.ts:148`). It adds a drawn
-  asset `{path: '', kind: 'image', size: 0, …}` (size 0 is what keeps it out
-  of the photo tools, `edit/photos.ts:25`), stacks via `stackOverlay`
-  (`store.ts:295`), and calls `revealClip`. `setGraphic` is `update()` then a
-  rebake. `rebakeGraphic` writes through the history-less `fillAssetPath`
-  (`:1735`), as paper does, **not** through `update()` as the carousel does
-  (`:2781`).
+**The draw lists.** Every list starts, when the resolved style's `dim` is
+true, with a `dim` item fading in over `DURATIONS.dim` (§6.13) from t = 0,
+its hole round `targets.subject` (fixed at onset, §6.9), and no hole when
+that is null. The exit is never drawn: it is the clip's opacity keys over
+its last `EXIT_S` (§6.3). Item ids are stable across frames (`value`,
+`row-2`, `edge-2` …), as §6.3 requires.
 
-**Measure in the step:** the PNG encode cost of a mostly transparent
-1080×1920 frame on the Mac and the Surface. `EFFECTS.md` §34 has only opaque
-moment frames, at 20–61 ms each, and the encode, not the draw, is the cost.
+| template | items | what moves, and what arrives on the beat |
+|---|---|---|
+| `counter` | `panel` shape (rounded; drawn only when `palette.panelOpacity` > 0), `value` text, `label` text | the group enters from t = 0 with `style.motion.entrance` over `DURATIONS.entrance`; `value`'s string is `inBetween(data.value, p)` with p = `progress(t, 0, beat, style.motion.ease)`, so the count runs over the lead and lands on the beat; from the beat on it is `data.value` itself |
+| `ring` | `track` (a ring shape, `sweep` 1, `palette.muted`), `arc` (a ring shape, `start` −π/2), `value` text, `label` text | `arc.sweep` = (n ÷ 100) × p, with n from `numberOf(data.value)` and p as the counter's; `value` counts as the counter's, with the `%` glyph when due |
+| `bars` | `title` text; per item `track-i` and `bar-i` (rect shapes), `label-i` and `value-i` text | each bar's width is its `numberOf` share of the largest, times p over `DURATIONS.entrance` ending on its beat; its label enters with it; its value counts as the counter's over the same span |
+| `steps` | `title` text; per item `num-i` (a fixed glyph) and `label-i` text, grouped as `row-i` | each row enters over `DURATIONS.entrance`, ending in place on its beat |
+| `steps`, `line` | as `steps`, plus `edge-i` strokes (i ≥ 1) from the numeral above to row i's numeral, round caps, no heads | `edge-i` draws on (`from` 0, `to` p) over `DURATIONS.stroke`, ending on row i's beat |
+| `steps`, `tree` | as `steps`, the title at the top as the root, each row indented by its depth (at most two levels); `edge-i` an elbow path from its parent's numeral (or the title's marker) down and across to row i, with a rounded corner, `heads.end` an `Arrowhead` | `edge-i` draws on over `DURATIONS.stroke` ending on row i's beat; its head rides the tip, growing in over its first 0.1 s (§6.3); the row enters on the beat |
+| `quote` | `open` glyph, one `word-i` text item per word laid out in lines by `measure`, `close` glyph, `speaker` text after the "— " glyph (absent when `speaker` is '') | everything enters together, ending on the first beat; the lit word is the one whose beat is the latest at or before t, held until the next (the captions' rule, `activeWordAt`, `captions/line.ts:125`), drawn in `palette.accent` (its `look.accent`, §6.3), the rest in the text style's own fill |
+| `callout` | `stroke` (`shape: 'arrow'`: a quadratic curve from the label's nearest edge to the subject box's nearest edge, bowing away from the frame's centre, `heads.end`; `shape: 'circle'`: a closed path round the subject box, padded 12 %, proposal), `label` text | the stroke draws on over `DURATIONS.stroke` ending on the beat; the label enters from the beat. The app sets `shape`: `circle` when the label fits beside the subject in the same third, else `arrow` |
+| `keyword` | `panel` shape (rounded), one `word-i` text item per word, an `underline` stroke under the lit word (round caps, no head, `palette.accent`, 0.08 of the word's pixel size thick, its baseline plus 0.12 of that size below it; proposal) | the card scales from 0.92 (proposal) with a rise and fade (`style.motion.entrance`; `pop` with `out-back` in `energetic` only, D5, §16.58), arriving on the beat; the words stagger 0.05 s each (proposal, the research's §1.2 row 1), the last arriving on the beat; `underline` draws on left to right (`from` 0, `to` p) over `DURATIONS.stroke`, ending on the beat; the lit word in `palette.accent` throughout. The underline is the research's "underline" use of the stroke (its §7.2 item 3) |
+| `lower-third` | `bar` (a rect shape in `palette.accent`), `name` text, `role` text (absent when '') | the bar grows to full width over `DURATIONS.entrance`, ending on the beat; `name` rises from behind it with it; `role` follows 0.1 s later (proposal) |
 
-### 6.4 Every guard a new self-drawn kind joins
+From the last beat plus `SETTLE_S` the list is constant, so the moving frames
+end there (`graphicMovingFrames`, §6.3) and `tpad` holds the rest. The one
+exception in phase 2 is optional: in the `energetic` style only, a `line`
+connector may carry a **travelling beam** (a short span whose `from` and
+`to` both advance, `linear`, a 5 s loop, the research's §4.4), at most once
+per clip. Every frame of its hold then moves, so it bakes the whole hold
+(`graphicMovingFrames` returns the clip's frames for it, §6.3); it stays off
+until M1's verdict on that cost is in EFFECTS §61 (§6.15).
 
-`PLAN.md:1172-1180`'s rule, with this kind's list (from the census of the
-code, 2026-10-05):
+**The layout** (added 2026-10-21 so the eight drawers are built to one
+geometry; every figure a proposal, set against the sample tiles in phase 2
+and revised with the look rating, §6.10). Sizes are fractions of the output
+frame's short side, `s`; positions are output pixels.
 
-- `drawsItself` (`edit/recipes.ts:46`). This also feeds `setAspect`'s crop
-  clear (`store.ts:1386`), `rebakeGenerated`'s targets (`:1409`) and paste's
-  own-asset rule (`recipes.ts:277`).
-- Preview's local `drawsItself` (`Preview.tsx:1202-1203`) and a `sourceFor`
-  branch (`:1233`) that returns `live ?? nothing()`, so a stale file is never
-  shown.
-- `clipKind` → `'graphic'` (`edit/clipKind.ts:156`).
-- `isKeyable` (`render/chromaKey.ts:222`).
-- `canSteady` (`render/steady.ts:36`).
-- `canMoveCamera` (`edit/camera.ts:34`). A graphic's asset is kind `image`,
-  so without this guard the Camera panel would Ken-Burns its baked frames.
-- `clearDirector`'s drawn-asset filter (`director/apply.ts:127`). Without it,
-  every Clear orphans an asset.
-- `rebakeGenerated` (`store.ts:1432-1589`).
-- `placeCopies` (`store.ts:4577-4582`).
-- `Inspector.tsx:218-221`.
+- **The content rect.** With `place.auto`, the chosen third (the frame's
+  full width, a third of its height), inset at each side by `TITLE_SAFE`
+  (0.05, `timeline.ts:757`) of the width, and, where the third meets the
+  frame's top or bottom edge, by `TITLE_SAFE` of the height. With `auto:
+  false`, the dragged box itself. The graphic is centred in it, except the
+  lower third, which sits at its left.
+- **Wrapping.** `textItems` wraps a field at the content rect's width, never
+  wider than 0.8 of the frame's width (`measure`, §6.3).
+- **Too big.** If the laid-out graphic is taller or wider than the content
+  rect, every size below scales down together to fit, never below 0.6 of
+  the table; past that the graphic is dropped with a note ("too long to fit
+  its place").
 
-The test is `tests/graphicGuards.test.ts`, modelled on
-`tests/moment.test.ts:581-645`. It asserts **membership** (a clip with
-`.graphic` is in each set). The wiring in the store, the Preview and
-`exportBakers` is anchored on unique text with its arguments, and anchors
-are counted with `matchAll` before they are trusted. Each site is
-mutation-checked by leaving `graphic` out.
+| template | text sizes (px, of `s`) | geometry |
+|---|---|---|
+| `counter` | `value` 0.11, `label` 0.045 | value above label, 0.25 × the label's px apart; the panel round both, padded 0.6 × the label's px, corner `style.radius` |
+| `ring` | `value` 0.07, `label` 0.045 | ring 0.28 across, track and arc 0.025 thick; value centred inside; label beneath, 0.3 × its px below the ring |
+| `bars` | `title` 0.05, `label-i` and `value-i` 0.04 | a label column of 0.3 of the content width; tracks over the next 0.55, each 0.6 × the label's px tall; values at the bar's end; rows 0.5 × the label's px apart |
+| `steps` (any connector) | `title` 0.05, `num-i` and `label-i` 0.045 | a numeral column 0.07 wide; rows 0.6 × the label's px apart; a tree indents a child 0.06; edges leave the numeral's left middle |
+| `quote` | words 0.055, marks 0.09, `speaker` 0.035 | lines wrapped as above; the speaker right-aligned beneath, 0.5 × its px below |
+| `callout` | `label` 0.045 | the label with a panel as the counter's, beside the subject in the third, on the side with more room |
+| `keyword` | words 0.08 | one line where it fits; the panel padded 0.5 × the words' px |
+| `lower-third` | `name` 0.05, `role` 0.035 | left-aligned; `bar` 0.008 tall, under the name, as wide as the name plus 0.04 |
 
-Whether the spelled-out lists become one `SELF_DRAWN_FIELDS` constant is
-decision §16.9.
+**`graphics/numbers.ts`.** `inBetween(value: string, fraction: number):
+string` reads the value's own format off `value`: a leading currency sign or
+minus; the digits and their grouping (western 3-3, Indian 3-2-2, or none);
+the decimal places as written; the digit script (ASCII, Devanagari, Telugu
+and the other blocks §6.7 rule 3 lists, kept as written); and any suffix
+(`%`, `k`, `million`, `lakh`, "percent" …). It returns the value times
+`fraction`, rounded to the value's own decimals and written back in the same
+grouping, script, prefix and suffix. At `fraction` ≥ 1 it returns `value`
+itself, unchanged. A value with no digits, or with two numbers
+("1,000-2,000"), has no in-between: it appears whole on its beat.
+`numberOf(value: string): number | null` gives a bar or a ring its size.
+Nothing calls `toLocaleString`. The counter's Hindi digits follow what the
+installed speech model writes (M21, measured before the counter is built).
+
+**The tree — `graphics/tree.ts`.** The app computes the parents; the model
+never fills them (the research, §4.5).
+
+- `treeParents(items: { label: string }[], title: string, words: Word[]):
+  number[]` returns one parent per item: `-1` is the title, any other value
+  an earlier item. `words` are the stretch's words, from the first item's
+  first bound word to the last item's last. Each label's run is found in
+  spoken order with `claims.ts`'s `claimToken` (named apart from
+  `automation/keywords.ts`'s ASCII-only `normaliseToken`, `:50`, which maps
+  Hindi and Telugu to '').
+- **Rule 1.** Every parent is `-1` by default: one root, every item its
+  child, in spoken order.
+- **Rule 2, a sub-count (English, v1).** Between item j's run and item j+1's,
+  the words may say a count governed by item j: a number from two to six, in
+  digits or as an English number word, within two tokens of one of `parts`,
+  `things`, `steps`, `ways`, `kinds`, `types`, `reasons`, `points`,
+  `pieces`, `stages`, `options` (a proposal; the nested fixtures may extend
+  it). "Plan, which has two parts: budget and timeline. Second, shoot" is
+  the case. The next k items, k being that count, then take j as their
+  parent. If k is more than the items left, nothing nests. A child's own
+  count is ignored, so depth is at most two.
+- **Hindi and Telugu: flat in v1.** No cue list exists for them, as none
+  exists for their number words (§16.11). Their nested fixtures are scored,
+  not passed (§6.10).
+- `parentsValid(parents: number[]): boolean`: every parent is −1 or an
+  earlier index, and no parent's own parent is other than −1 (one root,
+  depth ≤ 2).
+- **The connector is the app's.** It is `tree` when any parent is ≥ 0 (a
+  nested enumeration), `line` for three or more items, and `none` for two.
+  The dock may change it (§6.6): `tree` on a flat list draws the title
+  fanning out to each item. A fixed one-to-n layout serves six nodes in two
+  levels, so `d3-hierarchy` is not taken; it was a "try" only beyond that
+  (the research, §4.9).
+
+**Reading holds (M16).** A graphic's seconds are the largest of three: the
+template's `seconds.min`; its last beat plus `TAIL_S`; and `LEAD_S` plus
+`readingSeconds(drawn text)` plus `EXIT_S`. That figure is held to the
+template's `seconds.max`. A graphic that needs more than the max is dropped
+with a note ("said over 9 s; a steps card holds 8").
+
+`readingSeconds(text: string): number`, in `graphics/beats.ts`, is the
+text's grapheme count ÷ 20: Netflix's 20 characters a second, the research
+[33], counted with `graphemeCount` (`ingest/captions.ts:57`, through
+`Intl.Segmenter`) so a Hindi vowel sign is not a character of its own. The
+stricter rule, twice at 200 words a minute (0.6 s a word, the research
+[34]), is printed by M16 and not enforced until its result is read into
+EFFECTS §61. A template whose seconds do not hold its longest fixture label
+gets its seconds raised in the table above or its label capped, decided in
+phase 2 (§6.15, M16).
+
+**Fixtures for drawing**, `tests/fixtures/graphics/specs.json`: one
+`GraphicSpec` per shape in English, Hindi and Telugu, 27 in all, each with
+its beats, place and seed, the longest label each template allows among
+them. The Hindi and Telugu strings are written or checked by you (§6.10's
+"Your part"). `graphicFrame`, `graphicPaint`, `graphicHolds`, the harness's
+`templates` option and phase 2's Indic render check (§6.11) all read them.
+That check draws them with the bundled Noto Sans Devanagari and Noto Sans
+Telugu (D10, §16.63; §6.20), not whatever fallback each OS resolves.
+
+**Tests** (each mutation must fail its test; §6.11 indexes them by phase):
+
+- **`tests/graphicFrame.test.ts`, phase 2's cases.** For each of the 27
+  fixtures, at the settled frame the draw list's text items are every `data`
+  string verbatim (a per-word field's pieces joined) and nothing else but
+  the template's listed fixed glyphs; each element arrives on its beat
+  frame; the counter's, ring's and bars' in-between strings are ≤ the value
+  and in its own format ("10,00,000" counts through "9,50,000", never
+  "950,000"; "₹500" through "₹250"; "४०%" stays Devanagari); the ring's `%`
+  only when the value lacks one; `keyword` draws its words as said, `lit`
+  changing a colour and no text, its `underline` stroke spanning the lit
+  word's box and reaching `to` 1 on the beat frame, not before;
+  `lower-third` draws the speaker's name and
+  the role as typed; a connector or a tree adds no text item; per template,
+  the list at the last moving frame deep-equals the list at the clip's last
+  frame. Mutations: in-between numbers formatted western always; a ring that
+  always appends `%`; the lit word upper-cased; rows one frame late; the
+  underline drawn under word 0 whatever `lit` says.
+- **`tests/graphicHolds.test.ts`** (M16). Per template and language
+  (English, Hindi, Telugu), the longest fixture label's reading time, in
+  graphemes through `graphemeCount` at 20 a second, fits its seconds; the
+  0.6 s-a-word figure is printed beside it; a template whose maximum is
+  short fails, naming the label. It pins the grapheme count of one Hindi and
+  one Telugu label. Mutations: seconds taken as `seconds.min` without the
+  reading time (the longest fixture fails); characters counted as UTF-16
+  units (the pin fails); words counted with empty strings.
+- **`tests/graphicTree.test.ts`.** On the three English nested-enumeration
+  fixtures (§6.10) `treeParents` gives the expected parent lists exactly;
+  over generated item lists every computed parent points backwards
+  (`parents[i] < i`, `-1` the title) with exactly one root and depth ≤ 2;
+  `parentsValid` refuses a forward parent and two levels below a child; the
+  connector rule. Mutations: `parentsValid` accepting a forward parent (the
+  property fails); rule 2 applied to a child's own count (depth 3); every
+  item parented to the title where the fixture nests (the exact match
+  fails).
+
+**Days: 4** (phase 2): the eight draw files (nine shapes) on §6.3's primitives
+and the layout above, `numbers.ts`, `tree.ts`, `GRAPHIC_TEMPLATES`, the
+fixtures' wiring and the three tests above.
+
+### 6.3 Drawing: one draw list, two painters, preview, bake, export
+
+**Phase 1 · 4 days.** One engine from the first commit (§16.54, D1): a pure
+function returns a draw list, and painter A (canvas 2D, here) or painter B
+(three.js, §6.16) draws it. It replaces §6.3 as written thus (the research,
+§7.2 item 1): `frame.ts`'s `graphicParams` and `layout` fold into
+`drawListAt`; `paint.ts`'s `drawGraphicOnto` becomes `paintDrawList2d`,
+which draws every text item through `drawTextOnto` verbatim and so can
+format nothing; `strokeAt` is new; `graphicCanvas.ts` keeps its name and
+its three jobs.
+
+**The files.**
+
+| file | holds | where it runs |
+|---|---|---|
+| `src/shared/graphics/drawList.ts` | `drawListAt`, `needsCompositor`, `graphicBox` | node and renderer, pure; the only importer of `templates/index.ts` |
+| `src/shared/graphics/items.ts` | the `DrawItem` types, `Drawer`, `DrawOut`, `textItems`, `textSpecOf`, `itemBounds`, `unitFor`, `CLUSTER_SCRIPTS` | pure; the templates import this, never `drawList.ts`, so no import cycle runs through `templates/index.ts` (`textItems` reads `unitFor`, so the two live together) |
+| `src/shared/graphics/templates/index.ts` | `DRAWERS: Partial<Record<GraphicTemplateId, Drawer>>`, created empty in phase 1; each template's commit adds its own row (§6.2) | pure |
+| `src/shared/graphics/stroke.ts` | `flattenPath`, `strokeAt`, the head's geometry, `STROKE_TOLERANCE` | pure |
+| `src/shared/graphics/frame.ts` | `graphicMovingFrames`, `beatFrame`, `graphicExitKeys`, `drawnGraphicAsset` | pure |
+| `src/shared/graphics/targets.ts` | `graphicTargetsAt` | pure |
+| `src/shared/graphics/paint.ts` | `paintDrawList2d`, `STROKE_MIN_PX` (`/// <reference lib="dom" />` scoped to the file, as `textPaint.ts:1-5`) | renderer |
+| `src/renderer/src/graphicCanvas.ts` | preview, bake, frames for the harness; `GRAPHIC_BAKE_REGION`, `GRAPHIC_POOL_DEPTH` | renderer |
+| `src/renderer/src/encodePool.ts` | `encodeFrames`, the `toBlob` pool | renderer |
+
+**`encodePool.ts` is extracted, `captionBake.ts` is not touched.** The pool
+is `captionBake.ts:129-196`'s pattern (four canvases, an encode in flight
+per canvas, measured 1000 ms serial to 264 ms at four for 60 pictures,
+`:119-128`), written once as `encodeFrames({ count, width, height, depth,
+draw: (ctx, index) => void, write: (index, bytes) => Promise<string>,
+cancelled: () => boolean }): Promise<string | null>`, written in phase 0
+(§6.15's piece 0.2) so that M1 and M2 measure the code that ships. The
+caption bake keeps its own loop in step 3: it writes a concat list and has
+no supersede guard, and moving it is a change to a render-checked path with
+nothing gained here.
+
+#### The draw list
+
+`drawListAt(spec: GraphicSpec, style: GraphicStyle, frame: number, fps:
+number, size: { width: number; height: number }, measure: TextMeasure,
+targets?: GraphicTargets): DrawList`, where `DrawList` = `{ width: number;
+height: number; items: DrawItem[]; camera?: Camera; glow?: GlowRequest[] }`.
+It looks up `DRAWERS[spec.data.template]` (a `Drawer` is §6.2's `draw<Id>`,
+`t = frame / fps`), calls it, and copies the `DrawOut`'s `items`, `camera`
+and `glow` onto the list; for a template with no drawer it returns an empty
+list. It is pure: no `Math.random`, no clock, `seeded()` (`moment.ts:101`)
+drawn in a fixed order from `spec.seed`, so the same arguments give a
+deep-equal list.
+
+**The drawer seam** (phase 1 has no template). `drawListAt`, `graphicBox`
+(below) and the renderer's `graphicPreviewCanvas`, `bakeGraphicSequence` and
+`graphicFrameCanvases` take an optional last argument `drawer?: Drawer`,
+which defaults to `DRAWERS[spec.data.template]`. Phase 1's tests and the
+harness's `primitives` option pass a hand-built drawer that returns fixed
+lists, so the draw list, the box, the paint and the bake are all exercised
+before phase 2 writes a template. **The primitives' spec** is
+`PRIMITIVES_SPEC` in `harness/graphicCheck.ts`: a `counter` spec with beats
+at 0.5 and 1.0 s, `seconds` 2, seed 1, drawn only through that drawer.
+`DRAWERS` is a frozen record, never mutated at run time (no `registerDrawer`),
+and no production caller passes `drawer`: the store, the Preview and the
+export reach a graphic only through its template's row.
+
+Every `DrawItem` carries `id: string` (stable per element across frames),
+`opacity: number`, `transform?: { x; y; scale; rotate }` (frame pixels and
+degrees, about the item's own centre, as `itemBounds` gives it), and `z?:
+number` (phase 3's planes). Units: `Rect` = `{ x; y; width; height }` and
+`Point` = `{ x; y }` are output-frame pixels; `UnitRect` is
+`reframe/types.ts:18`'s 0..1. The kinds:
+
+| kind | fields | drawn by painter A as |
+|---|---|---|
+| `stroke` | `d` (SVG path data, frame px), `from`, `to` (fractions of length), `width`, `color`, `cap: 'round' \| 'butt' \| 'square'`, `join: 'round' \| 'miter' \| 'bevel'`, `dash?: { pattern: number[]; offset }`, `heads?: { start?: Arrowhead; end?: Arrowhead }`, `look?: 'clean' \| 'marker'`; `Arrowhead` = `{ size; grow }` (grow 0..1) | the visible span's polyline, heads riding its ends (below) |
+| `text` | `text` (drawn whole, never split by the painter), `look: TextLook`, `box: Rect`, `source?: { path: string; piece: number }`; `TextLook` = `{ textStyleId; font; px; align: 'left' \| 'center' \| 'right'; accent?: string }` | one `drawTextOnto` call, whole |
+| `shape` | `shape: 'rect' \| 'rounded' \| 'circle' \| 'ring'`, `box`, `radius?`, `sweep?` (a ring's arc, 0..1), `start?` (radians), `fill?`, `stroke?: { color; width }`, `shadow?: { blur; dy; color; opacity }` | `rect`, `roundRect` (already used, `maskPreview.ts:139`), `ellipse`, a ring as an `arc` of `sweep × 2π` from `start` |
+| `image` | `src` (an asset path joined by `assetPath.ts`), `box`, `fit: 'contain' \| 'cover'` | `drawImage` of the bitmap `options.images` holds for `src`, which the caller decoded first (below) |
+| `dim` | `color`, `alpha`, `hole?: { box: Rect; radius; feather }` | below |
+| `group` | `children: DrawItem[]` | its children, with its opacity and transform applied to them |
+
+`Camera` = `{ tilt; yaw; dolly; fov; focus?: { z: number; px: number } }`
+(degrees; dolly 0 is flat; `focus`, added for §6.16, is the depth in focus
+and the blur in frame pixels per frame height of distance from it).
+`GlowRequest` = `{ item: string; radius; strength; color? }`. `TextMeasure`
+= `(text: string, look: TextLook) => { width; ascent; descent }`, injected.
+`camera`, `glow` and `z` are typed here and given meaning by §6.16. A
+`Drawer` emits them, through its `DrawOut` and its items' `z`, only when
+`spec.depth` is set or the spec is its clip's hero under a style with
+`glow` (§6.16's two rules, both phase 3), so in phases 1 and 2
+`needsCompositor(list)` is false for every list (a test pins it). `needsCompositor(list: DrawList): boolean`
+is true when any item carries `z`, or the list carries `camera` or a
+non-empty `glow`; painter A ignores all three.
+
+#### Text items and their units
+
+- **One line per item, drawn whole.** A field that wraps is laid out by
+  `textItems` into one item per line, or per word, using `measure`; the
+  painter never splits, joins or re-cases a string. `source.path` names the
+  `GraphicData` field it came from (`items.2.label`); `source.piece` is its
+  index when a field is drawn as more than one item, in reading order. An
+  item with no `source` must be one of its template's listed fixed glyphs
+  (§6.2), which is how the property test (§6.7) tells a claim from a glyph.
+- **The unit** is `unitFor(text: string, wanted: 'line' | 'word' |
+  'cluster'): 'line' | 'word' | 'cluster'`: `'line'` and `'word'` as asked;
+  `'cluster'` only when the text holds no shaped script (`shapedScript`,
+  §6.20) or every shaped script in it is in `CLUSTER_SCRIPTS` (Unicode
+  script names, `readonly string[]`, **empty until M3 clears one**);
+  otherwise `'word'`. Words split on whitespace; clusters through
+  `Intl.Segmenter` with `granularity: 'grapheme'`, as
+  `ingest/captions.ts:49-64` already does, and `'word'` where it is missing.
+  **Never a code point**, the defect D8 fixes in the captions (§6.20). Per
+  word is the default everywhere (D8, §16.61).
+- **A text item becomes a `TextSpec`** through `textSpecOf(text, look,
+  box)`, every required field of `TextSpec` (`timeline.ts:646-722`) set:
+  `version: 0`; `content` the text; `font` = `look.font`; `size` =
+  `look.px / box.height`; `color: '#FFFFFF'` and `weight: 700`, both read
+  only on the styleless route, which a graphic never takes (its `styleId`
+  always resolves: below); `align` from the look; `position: 'center'`;
+  `tracking: 0`; `uppercase: false`; `shadow: 0`, `stroke: 0`,
+  `strokeColor: '#000000'` (no outline or shadow of the spec's own: a
+  panel's shadow is the style's, a text's the text style's); `styleId` =
+  `look.textStyleId`; `margin: 0`; `offsetX` and `offsetY` 0; no
+  `animationId`; and `highlight` = `{ word: 0, color: look.accent }` when
+  `look.accent` is set, absent otherwise. Painter A translates to the box
+  and calls `drawTextOnto(ctx, spec, box.width, box.height)`
+  (`textPaint.ts:44`).
+- **Where a text item's colour and weight come from** (corrected
+  2026-10-21 by the review). When `spec.styleId` resolves, `drawTextOnto`
+  paints with the text style's own fill and weight: the style
+  (`textPaint.ts:58`) gives each row its `paintForLine` (`:102`),
+  `fontString` draws `paint?.weight ?? spec.weight` (`:286-291`) and the
+  fill pass sets `fillStyleFor(ctx, paint.fill, …)` (`:425-427`); `spec.color` reaches the canvas only through `plainPaint`
+  (`:274-275`) on the styleless route. All 23 text styles a graphic may use
+  set `base.weight` and a solid or gradient fill (counted with node 24
+  importing `TEXT_STYLES`). So **a graphic's ink and weight are its text
+  style's** (§6.5 picks each preset's text style for that), and `TextLook`
+  carries no `color` or `weight`. The one colour a graphic sets on text is
+  a lit word's: `look.accent`, set only on a one-word item (a `keyword` or
+  `quote` word), reaches the paint through `highlight`
+  (`textPaint.ts:159-176`), the captions' own per-word override, which
+  replaces that word's fill (and its size, when a scale is given, which a
+  graphic never gives) and keeps the style's glow, outline and shadow. The box's height is `round(px × LINE_HEIGHT)`
+  (`textLayout.ts:38`), so `layoutText` (`textLayout.ts:40-86`, which wraps
+  nothing: it splits on `\n` only, `:43`) puts the baseline where
+  `drawListAt` measured it. `textSpecOf` is pure and shared, so the
+  renderer's `TextMeasure` measures the very spec the painter draws.
+- **The measure.** In node a fake (a width per grapheme of 0.55 of the
+  pixel size, deterministic). In the renderer, `measureText` on a scratch
+  context set with the font and letter spacing the painter will use, which
+  `textPaint.ts` exports as `textSpecFont(spec): { font: string;
+  letterSpacing: string }` (the shorthand `fontString` builds at
+  `textPaint.ts:286-291`, with the face's `sizeScale` and `tracking`), so
+  measure and paint cannot read two fonts.
+- **Only text styles that keep the words as given.** A text style's face
+  can re-case (`paint.uppercase`, applied at `textPaint.ts:106`), which
+  draws a string the data does not hold (§6.2's contract), or light one word
+  of each line (`accentScope` `'firstWord'` or `'lastWord'`,
+  `textStyle.ts:93-119`), which on per-word items would light every word,
+  each being its own line. So a graphic's `textStyleId` is one of
+  `GRAPHIC_TEXT_STYLES` (§6.5), computed from the faces, not listed:
+  counted 2026-10-21 by importing `TEXT_STYLES` under node 24's type
+  stripping, 15 of the 42 re-case in their base face and 5 scope their
+  accent to a word (one does both), leaving 23. A line-scoped accent never
+  engages, since every item is one line.
+- **Shaped-script items take their script's face.** A text item whose text
+  holds Devanagari or Telugu is drawn in `INDIC_FONTS`' face for that script
+  (§6.20) as its `look.font`, not the style's face first: Poppins Black and
+  ExtraBold carry 94 of the Devanagari block's 128 code points and Teko Bold
+  93 (`BETA.md` R14), and a face that covers part of a word would draw
+  one word in two faces. Latin items keep the style's face. This holds
+  under a text style because `fontString` draws `paint?.font ?? spec.font`
+  (`textPaint.ts:286-291`) and none of the 42 text styles sets a face of its
+  own (`Face.font`, `textStyle.ts:83`, is given no value anywhere in the
+  file, read 2026-10-21); `GRAPHIC_TEXT_STYLES` refuses one that does, so
+  it stays so (§6.5).
+
+#### The stroke primitive — `src/shared/graphics/stroke.ts`
+
+One primitive serves the callout's arrow and ring, the steps connector and
+tree edges, underlines and the edge sweep of §6.16 (the research, §4.4).
+
+- `flattenPath(d: string, tolerance: number): PathGeometry`, `PathGeometry`
+  = `{ points: Point[]; lengths: number[]` (cumulative)`; total: number }`,
+  parses `M L H V C S Q T Z`, absolute and relative, and refuses `A` (a
+  template draws a circle as four cubics, κ = 0.5523), flattening curves by
+  de Casteljau subdivision until each piece is within `tolerance` of its
+  chord. `STROKE_TOLERANCE` = 0.25 frame px (proposal; M8 sets it, §6.15).
+  Painter A memoises it per `d` (64 entries).
+- `strokeAt(path, from, to): { points: Point[]; tip: Point | null; tangent:
+  number; length: number }` clamps `0 ≤ from ≤ to ≤ 1` and returns the
+  visible span: its points, with both ends interpolated; `tip`, the point at
+  `to` (null when the span is empty); `tangent`, the direction of the
+  segment arriving at the tip (the incoming one at a vertex); and `length`.
+- **Painter A strokes that polyline, not a dashed `Path2D`.** Canvas has no
+  length query (the research, §4.4), so a `setLineDash` draw-on ends where
+  Chromium's own flattening says, while the head would sit where ours says.
+  Drawing the span we computed makes the line's end and the head's tip one
+  number. M8 compares our `total` with an `SVGPathElement`'s
+  `getTotalLength()`; agreement validates the parser, it does not choose a
+  route. `dash` (marching dashes) applies `setLineDash` and `lineDashOffset`
+  to the same polyline; a travelling beam is `from` and `to` both advancing,
+  with nothing new in the primitive.
+- **The riding arrowhead.** A filled triangle of length `size × grow` and
+  half-width `0.45 × size × grow` (proposal) whose point is the span's tip,
+  turned by `tangent`. The line stops `0.6 × size × grow` short of the tip,
+  so a round cap never shows past the head's base (proposal). While the
+  visible length is under `size`, the head scales by length / size, so a
+  stroke at `to` = 0.01 shows no full-size head. A `start` head sits at the
+  span's start, turned back. `grow` runs 0 to 1 over `DURATIONS.headGrow`
+  (0.1 s, §6.13) from the stroke's own start: the head travels with the line
+  instead of waiting at the path's end (the research, §4.4, from Motion
+  Canvas's `Curve`).
+- **Widths are frame units, never preview pixels**, so a 270×480 preview and
+  a 1080×1920 export draw the same relative width. Painter A draws
+  `max(width, STROKE_MIN_PX × min(w, h) / 1080)`; `STROKE_MIN_PX` = 2
+  (proposal until M19 measures the 4:2:0 fringe through the plan's
+  `format=yuva420p`, `plan.ts:1484`).
+- **The marker look** (D7, §16.60) is perfect-freehand's outline over the
+  span's points, drawn only once M10 passes and the dependency is added in
+  phase 2; until then `resolveGraphicStyle` never yields it (§6.5), and a
+  `look: 'marker'` item is drawn clean. rough.js is not used.
+
+#### The dim
+
+A `dim` is a full-frame darkening with an optional rounded hole: painter A
+fills a frame-sized layer (a context from `options.layer`, below) with
+`color` at `alpha`, cuts the hole with
+`globalCompositeOperation = 'destination-out'` (a hard edge at `feather` 0;
+softened with `filter = blur(feather px)` otherwise), and composites the
+layer at the item's opacity. **The hole is fixed at onset** (the research,
+§4.4 and §4.6; §6.9): `subjectBoxesAt` takes the nearest of the track's two
+samples a second without interpolating (`frameMap.ts:235-245`, `:275-291`),
+so a hole that followed the face would jump every 0.5 s and make every held
+frame a moving one. With the hole fixed, the layer is cached per hole and
+size and only its opacity animates (over `DURATIONS.dim`), so a dim's cost
+is one layer, not a blur per frame. A dim makes the graphic's box the whole
+frame.
+
+#### Painter A — `paintDrawList2d(ctx: CanvasRenderingContext2D, list: DrawList, options?: PaintOptions): void`
+
+`PaintOptions` = `{ offset?: Point; layer?: (width: number, height: number)
+=> CanvasRenderingContext2D; images?: ReadonlyMap<string, ImageBitmap> }`.
+Items are drawn in list order; for each, `save`, opacity multiplied into
+`globalAlpha` down the group tree, the transform applied about the item's
+centre, the kind drawn as the table above says, `restore`. `offset`
+translates the whole list (the box bake draws at −box.x, −box.y, as the
+caption band draws at −band.y, `captionBake.ts:163`). `layer` makes the
+dim's offscreen context; it defaults to a `document.createElement('canvas')`
+in the renderer, and node's tests pass a second fake context, since the fake
+of `tests/textPaint.test.ts:24-46` cannot make a canvas. `images` holds the
+decoded bitmaps an `image` item names by `src`. A shape's `shadow` uses the
+context's `shadowBlur`, `shadowOffsetY` and `shadowColor`. An `image` whose
+bitmap is missing from `images` is skipped. Painter A reads no clock and no
+random, formats nothing, and draws every text item through `drawTextOnto`,
+so the 42 looks apply (within `GRAPHIC_TEXT_STYLES`) and Chromium shapes
+the text (an inference until M22).
+
+#### The box — `graphicBox(spec, style, fps, total, size, measure, targetsAt: (frame: number) => GraphicTargets, drawer?): Rect | null`
+
+The union of `itemBounds` over every frame of `drawListAt` from 0 to the
+last moving frame: a text item's box widened by its style's reach (shadow,
+glow, outline, extrusion, the box behind it, read from the `TextStyle`'s
+`Paint` by `textInkReach(styleId, px)` in `textStyle.ts`, a new export), a
+shape's box and stroke and shadow, a stroke's full path widened by half its
+width and its heads, the whole frame for a dim, and a group's children under
+its transform. Snapped outward to even x, y, width and height (an odd offset
+or size is invalid for the subsampled chroma, as `captionBand` snaps,
+`captions/bake.ts:170`, `:178-192`), clamped to the frame, at least 2×2;
+null when no frame has ink. In node it is geometry; the harness checks the
+real paint against it (alpha 0 outside the box, §6.11).
+
+#### Targets — `graphicTargetsAt(project, clip, spec, frame, size): GraphicTargets`
+
+`GraphicTargets` = `{ subject?: Rect | null; tip?: Point | null; screen?: {
+box: Rect; file: string | null } | null }`, output frame pixels, resolved by
+the caller and passed into `drawListAt`, so the drawing stays pure:
+
+- **`subject`** from `spec.subject` (a box in source units on its `clipId`,
+  taken once at onset by §6.9), mapped by `sourceToFrame`
+  (`frameMap.ts:86-132`) and scaled to `size`; without one, the union of
+  `subjectBoxesAt` (`frameMap.ts:275-291`) on the clip of
+  `captionTrack(project)` (`captions/timeline.ts:30`) under the frame, the
+  track whose speaker the captions follow. Null off screen or with no
+  track: an ordinary case, not an error.
+- **When**: `subject` is evaluated once, at the graphic clip's first frame,
+  for every template, the callout included (§6.9 chose it 2026-10-21), and
+  that value is what `targetsAt` returns for every frame of the clip. So a
+  callout's target, a dim's hole and a connector's target are fixed at
+  onset and add no moving frame. Following a moving crop per frame instead
+  would have baked a default 2.5 s callout over a followed clip whole (75
+  frames at 30 fps instead of the 31 its beat needs, about 0.4-1.2 s against
+  0.16-0.49 s a callout; computed from EFFECTS §34 and the caption pool, not
+  measured for transparent frames), which is the reason it is not done.
+- **`tip`** is phase 4's: `tipOnFrame` (§6.18), mapped on every frame; the
+  branch in `targets.ts` is §6.18's.
+- **`screen`** is phase 3's screen card: its box and each frame's pulled
+  file (§6.16). The pure `graphicTargetsAt` gives the box and `file: null`;
+  the file is filled in the renderer by `screenTargetsAt` in
+  `graphicCanvas.ts` (§6.16), which wraps it, since the footage pull exists
+  only there.
+
+#### Moving frames, the beat frame and the exit — `graphics/frame.ts`
+
+- `beatFrame(beat, fps)` = `ceil(beat × fps − 1e-6)`: the first frame at or
+  after the beat. An element **arrives on** its beat: its progress reaches 1
+  on that frame and not before (`progress`, §6.13, starts its curve
+  `seconds` before the beat and allows 1e-6 s, more than this 1e-6 of a
+  frame, so a frame that
+  `beatFrame` names is never a hair short of 1).
+- `graphicMovingFrames(spec: GraphicSpec, style: GraphicStyle, fps: number,
+  total: number): number` = `min(total, beatFrame(last beat + SETTLE_S, fps)
+  + 1)`, `SETTLE_S` = 0.5: the last frame baked is the first settled one, so
+  the frame `tpad` holds is the settled picture and not one a frame short of
+  it (§6.3 as written said round((last beat + 0.5) × fps); a beat at 1.0 s at
+  30 fps gives 46 moving frames, not 45). It runs past the settle in
+  exactly three cases, each a hold that moves, once per clip at most: a
+  `steps` with a `line` connector carrying the energetic style's travelling
+  beam (§6.2) and a callout with an `anchor` (its tip, §6.18), for which it
+  returns `total` (at most 8 s and 3 s); and a screen card under a style
+  with `glow`, for which it returns `min(total, L + 1 +
+  round(EDGE_SWEEP_S × fps))`, the landing plus one loop of its edge sweep
+  (§6.16), never the card's whole hold.
+- **The exit is opacity keys on the clip** over its last `EXIT_S` = 0.3 s:
+  `graphicExitKeys(durationFrames, fps): KeyframeTracks` gives two `opacity`
+  keys, 1 at `durationFrames − round(EXIT_S × fps)` and 0 on the last frame,
+  ease `'smooth'` (the keys' own vocabulary, `render/keyframes.ts:62`, not
+  the motion module's). They already render (geq on alpha, covered by an
+  integration test), so held frames are never baked to fade. Written by
+  `addGraphicClip` and the Director's apply, again by `setGraphic` when
+  `seconds` changes, and again on a trim (the store, below). A screen card
+  has no exit fade (§6.16).
+- `tpad` holds the last moving frame (`holdFilter`, `plan.ts:906-909`): an
+  image asset with `frames` is already `-start_number 0 -framerate <fps> -i
+  <pattern>` (`plan.ts:1083-1101`, `:1096`) plus the hold, and alpha passes
+  through `format=yuva420p` (`plan.ts:1484`; EFFECTS §34). The render needs
+  no new filter.
+- `drawnGraphicAsset(clipId, width, height, durationFrames, name):
+  MediaAsset` builds a graphic's drawn asset, `{ id:
+  'graphic-asset-<clipId>', path: '', name, kind: 'image', durationFrames,
+  size: 0, width, height, fps: null, hasVideo: true, hasAudio: false }`
+  (`MediaAsset` requires `name` and `durationFrames`, `timeline.ts:62-145`).
+  Its callers pass `name` = the template's id and " — graphic" ("counter —
+  graphic") and
+  `durationFrames` = `max(duration, round(fps × 10))`, as the paper asset
+  does (`store.ts:3283-3297`), so a trim can lengthen the clip (`trimEnd`
+  stops at the asset's length). It is the one helper the store's
+  `addGraphicClip` and §6.6's pure `applyGraphics` both call, so the two
+  shapes cannot differ.
+
+#### `graphicCanvas.ts` — preview, bake, frames
+
+- `graphicPreviewCanvas(clipId, spec, style, width, height, clock: { frame:
+  number; total: number; fps: number }, targets: GraphicTargets, onReady?,
+  drawer?): HTMLCanvasElement | null`, following `textPreviewCanvas`
+  (`textCanvas.ts:64-123`): cached per clip, keyed on the size, the spec
+  without its version, the resolved style, the targets, and the frame (or
+  `settled` past the moving frames, so a held frame costs nothing). It skips
+  the cache while a face is still loading (`document.fonts.check`, `:113`,
+  and the skip at `:108-119`), asking the catalogue for it. Every redraw
+  stamps `dataset.forgeRev`, which `canvasContentKey` reads (`grade.ts:478`,
+  `:495`). `targets` is an argument so that the preview draws the same
+  targets the bake does.
+  `forgetGraphicPreview(clipId)` drops the entry.
+- `bakeGraphicSequence(spec, style, clipId, width, height, frames, fps,
+  targetsAt, boxAllowed, drawer?): Promise<{ pattern: string; frames:
+  number; box?: Rect } | null>` awaits every face the list draws (the
+  style's, its text styles' faces, `INDIC_FONTS` when any item is shaped),
+  decodes each moving frame's `image` files (`createImageBitmap` on the
+  file's bytes) into the `images` map it hands painter A, computes the
+  moving frames (and extends them to the last frame
+  whose `targetsAt` differs, which in step 3 only phase 3's and phase 4's
+  per-frame targets do), then, under `@shared/bakeGuard` (`beginBake`,
+  `isSuperseded` before each write, `endBake` in a `finally`, as
+  `bakeMomentSequence` does, `momentCanvas.ts:571-614`), clears the clip's
+  frames and runs `encodeFrames` at `GRAPHIC_POOL_DEPTH` over the moving
+  frames only, writing each through `writeTitleFrame`. It returns `{
+  pattern; frames; box? }`, or null when superseded or empty. `boxAllowed`
+  is the box route's (below).
+- `graphicFrameCanvases(spec, style, width, height, total, fps, frames,
+  targetsAt, drawer?)`: chosen frames, each on its own canvas, for the
+  harness, as `momentFrameCanvases` (`momentCanvas.ts:622-646`).
+- `screenTargetsAt(footage: FootageRequest, targetsAt: (frame: number) =>
+  GraphicTargets): Promise<(frame: number) => GraphicTargets>` (phase 3):
+  pulls the screen card's moving frames through the moments' footage
+  pre-pass (`window.forge.momentFrames`, §6.16) and returns `targetsAt`
+  with `screen.file` filled per frame. The `FootageRequest` is built purely
+  by §6.16's `screenCardFootage` in shared code, as `bakeForExport` builds
+  a moment's `momentTextures` and hands them to `bakers.moment`, which
+  pulls (`exportBake.ts:131-145`). `liveBakers.graphic` and `rebakeGraphic`
+  call it for a screen card; every other template passes through
+  untouched.
+- Preview and bake call one internal `paintFrame(list, ctx, options:
+  PaintOptions)`, so they cannot paint differently. When `needsCompositor(list)` is true (phase
+  3), that seam is §6.16's: one compositor per preview entry or bake,
+  `paintDrawList3d` then `drawImage` into the entry's or bake's own 2D
+  canvas, and painter A with a note when WebGL is missing.
+
+#### The bake region (M1) and the box route
+
+`GRAPHIC_BAKE_REGION: 'canvas' | 'box'` and `GRAPHIC_POOL_DEPTH: 1 | 2 | 4`
+are set from M1's numbers on the Mac and the Surface (§6.15's outcomes);
+until then `'canvas'` and 4 (proposal). M2 decides only whether
+`encodeFrames` gains a worker back-end (`OffscreenCanvas.convertToBlob` on
+an `ImageBitmap` transferred from the drawn canvas, the drawing staying on
+the main thread, where `drawTextOnto` sees the document's fonts): built in
+phase 1, inside these days, only if M2 passes its bar (§6.15).
+
+**If M1 picks the box** (everything marked (box) is built only then):
+
+- **Only the export's bake takes the box**, and only for a clip placed at
+  the identity: transform x 0, y 0, scale 1, no `scaleY`, rotation 0, no
+  `path`, no keyframes but opacity. That predicate, `identityPlaced(clip)`,
+  sits beside `clipBox` (`plan.ts:456-482`) and both the export and the plan
+  read it. Any other placement bakes the canvas: a rotated clip turns about
+  its stream's middle (`plan.ts:1244-1251`, `:1291-1294`), which for a box
+  is not the canvas's, so a box would part from the preview. The store's
+  own bakes always take the canvas; the edit's asset never carries a box.
+- **The box reaches the overlay exactly through the asset, not the
+  transform.** The export's copy of the asset gets the box's size as its
+  width and height and `frames.box` = the box; the plan's per-clip box
+  (`plan.ts:1241`) is `frames.box` when present and `identityPlaced(clip)`,
+  else `clipBox` as today. The stream is then the box's size, so the fit
+  (`fitFilter`, `plan.ts:251-264`) scales nothing, and the overlay lands at
+  the box's even x and y, as every clip's does (`plan.ts:1921-1922`).
+  Through the transform instead (`clipBox`, as a first outline of this
+  re-plan asked), the bake would rewrite a value the Inspector shows and the user
+  drags (Size, X, Y, `Inspector.tsx:170-211`) on every rebake; the caption
+  band's own `overlay=0:<y>` (`plan.ts:1978-1982`) is a separate input,
+  which a clip on a track is not.
+- **Nothing new reaches ffmpeg for §13**: `overlay` at integer x and y, a
+  same-size `scale` and `pad`, `tpad`, all already emitted. Its render check
+  is `graphic.int`'s box case (§6.11).
+
+#### The export, the store, the preview
+
+- **The export** (`exportBake.ts`). `Bakers.graphic(spec, style, key, width,
+  height, frames, fps, targetsAt, boxAllowed, footage?: FootageRequest)`
+  (`footage` only for a screen card, from `screenCardFootage` on the
+  export's project, phase 3), required, returning as
+  `bakeGraphicSequence` does (the interface at `:35-67`), wired in
+  `exportBakers.ts:13-26`. A branch beside the moment's (`:131-145`) bakes
+  at the **stills** size (`exportBakeSizes`, `:88-96`), the canvas exactly,
+  so lines and type are crisp at 4K. The style is `graphicStyleOf(project,
+  spec)` (§6.5); `targetsAt(f)`, for a frame `f` within the clip, is
+  `graphicTargetsAt` on `followCanvas(project, exportCanvas)` (`plan.ts:959`)
+  at the stills size, as the moment's textures are read: its `subject` the
+  one taken at the clip's first frame, `clip.start`, for every `f` (the
+  onset rule above), and only phases 3 and 4's `screen` and `tip` read at
+  project frame `clip.start + f` (the store's own bakes pass the same
+  function on the project as it is); `boxAllowed` is `identityPlaced(clip)`. A graphic whose
+  bake returns null or throws is **dropped** with `onError`, as a moment is
+  (`:137-145`), never left on the edit's asset, whose path is `''` until
+  the store's bake lands (`-i ''` fails the whole export). The catch at
+  `:168` gains a line of its own, `if (clip.graphic) dropped.add(clip.id)`,
+  beside the moment's: not a joined `clip.moment || clip.graphic`, which is
+  two self-drawn fields on one receiver and so exactly what §6.4's regex
+  refuses (the two kinds share this rule because their asset is empty until
+  the store's bake lands, a reason no guard site has). `screenTargetsAt`
+  reaches the export through `liveBakers.graphic`, which receives the
+  card's `footage`, since `bakeForExport` is shared and the footage pull is
+  the renderer's. A dropped screen
+  card also strikes its two opacity keys from the export's copy of the
+  recording clip (§6.16's rule, in this branch). Every `Bakers` literal
+  gains `graphic` (the list is §6.11's).
+- **The store** (`src/renderer/src/store.ts`):
+  - `addGraphicClip(trackId, startFrame, spec): Promise<string | null>`
+    refuses a track that is not a video track or is locked ("A graphic goes
+    on a video track"), mints the id (§6.1), adds `drawnGraphicAsset` as the
+    paper clip adds its asset (`store.ts:3277-3315`; size 0 keeps it out of
+    the photo tools, `isPhoto`, `edit/photos.ts:25`), stacks it with
+    `stackOverlay` (`store.ts:449`), writes `graphicExitKeys`, calls
+    `revealClip` (`:5274`) and a background `rebakeGraphic`. The Director's
+    graphics are built by §6.6's pure apply, not through this action.
+  - `setGraphic(clipId, patch)` is `update()` then `rebakeGraphic`.
+  - **Trims and splits** (`trimClipStart`, `trimClipEnd`,
+    `store.ts:1915-1935`; `splitAtPlayhead`, `:1937-1956`). A trim of a
+    graphic clip, in the same `update()`, sets `spec.seconds` to the clip's
+    new length and rewrites its `graphicExitKeys`, so the fade stays on its
+    last 0.3 s; a start trim also takes the trimmed seconds off every beat
+    (a beat before 0 becomes 0) and leaves `inPoint` at 0, since a graphic's
+    frames start at its own first frame; then `rebakeGraphic`. A split
+    leaves a graphic clip whole: `splitAtPlayhead` skips it among its
+    candidates, with the note "a graphic is trimmed, not split", since the
+    right half would draw the entrance again.
+  - `rebakeGraphic(clipId)` bakes the canvas region at the project's size
+    and writes through the history-less `fillAssetPath` (`:2394`), as
+    `rebakePaper` does (`:3349`), not through `update()` as the carousel
+    does (`:3440`): a bake is a file, not an edit.
+  - `setGraphicsStyle(styleId)` and `setGraphicsOverride(key, value)`: §6.5.
+- **The preview** (`Preview.tsx`). A `graphic` branch in `sourceFor`
+  (`:1263`) beside the moment's (`:1272-1293`): `graphicPreviewCanvas` with
+  `{ frame: playhead - layer.clip.start, total: layer.clip.duration, fps }`
+  and the onset's `graphicTargetsAt` (the frame's own for phases 3 and 4's
+  per-frame targets), then `return live ?? nothing()` (`nothing()`,
+  `:244`), so a stale file is never shown. `forgetGraphicPreview(clipId)`
+  joins the removed-clip sweep (the effect at `:680-707`) beside
+  `forgetMomentPreview` (`:701-703`).
+
+#### Degraded modes
+
+| state | what happens |
+|---|---|
+| a face still loading | the preview draws and does not cache; the bake waits for it |
+| a face that will not load | drawn in the fallback face, as every text clip is |
+| Hindi or Telugu before §6.20's fonts land | the system's fallback face, recorded by M22; a note, "Hindi and Telugu are drawn in this computer's own font" (§14) |
+| no subject track, or the subject off screen | `subject: null`; the template draws without its target (§6.2, §6.9 say how) |
+| a bake superseded | null, nothing written, the newer bake's frames kept |
+| a bake that fails | the export drops the graphic with a note; the edit keeps its clip |
+| an `image` that will not decode | the item is skipped |
+| a list that asks for the compositor before phase 3 | not possible in phases 1-2 (pinned); from phase 3, §6.16 |
+
+#### Measure before relying (§6.15)
+
+M1 and M2 choose `GRAPHIC_BAKE_REGION`, `GRAPHIC_POOL_DEPTH` and the worker
+back-end; M3 fills `CLUSTER_SCRIPTS`; M5 decides `blur-rise` (§6.5); M8
+validates `flattenPath` and sets `STROKE_TOLERANCE`; M19 sets
+`STROKE_MIN_PX`; M22 decides whether the canvas shapes Hindi and Telugu at
+all, the premise of drawing text with painter A; M13 sets the tolerance a
+Mac frame and a Surface frame are compared at. If M22 finds a cluster
+unshaped, what phase 1 may build meanwhile is stated once, in §6.15's M22
+row.
+
+#### Tests (each mutation-checked; §6.11 indexes them by phase)
+
+- **`tests/graphicStroke.test.ts`.** A straight line's exact length, a
+  quadratic's, and a four-cubic circle's within 0.05 % of 2πr at the
+  default tolerance (proposal; the tolerance M8 sets); relative commands
+  equal absolute; `A` refused; `strokeAt(path, 0, 0.5)` ends on the point
+  at half the length on a path of one long and nine short segments, and
+  its span length is `(to − from) × total`; `tip` is the visible end
+  (`to`), not the path's end; `tangent` 0 on a horizontal line, ±90 on a
+  vertical one, the incoming segment's at a corner; `from` = `to` draws
+  nothing and carries no head; an arrowhead's `grow` runs 0 → 1 over its
+  first 0.1 s and holds at 1, and a head at a visible length under `size`
+  is scaled down; widths are in frame units (the same list at 1080 and at
+  270 wide differs in width by the same ratio, 4); the same path flattens
+  to the same points twice. Mutations: length by point count; the span by
+  point index; lengths not cumulative; the tip at the path's end; the span's
+  end snapped to a vertex; the tangent from the first segment, or the
+  outgoing one at a vertex; a width in preview pixels.
+- **`tests/graphicDrawList.test.ts`.** Every case in phase 1 draws through
+  the drawer seam with hand-built drawers (one that seeds a jitter from its
+  `seeded()` draws, one that returns `camera` and `glow`). `drawListAt`
+  deterministic (the same arguments twice give deep-equal lists; another
+  `seed` changes only the seeded items); a drawer's `DrawOut.camera` and
+  `glow` arrive on the list; with no drawer for the template, the list is
+  empty. **Units**: with `CLUSTER_SCRIPTS` empty, no text item holds
+  less than a whole word of Devanagari or Telugu, over the EFFECTS §51
+  clusters and one Hindi and one Telugu sentence (a word is a run between
+  whitespace), while Latin text asked for by `'cluster'` comes back in
+  graphemes; `unitFor` never yields a split by code point. **The onset
+  targets**: with the subject moving on every frame, the dim's hole and the
+  subject the template sees are the onset's on every frame of the hold.
+  **`needsCompositor`**: false for a flat list and for every list a phase-1
+  or phase-2 drawer returns; true for each of `z`, `camera`, `glow` alone.
+  **`graphicBox`** holds every moving frame's `itemBounds` (a property over
+  random lists, an entrance that rises from below its place included) and
+  is even on all four numbers. §6.16 adds two depth cases. Mutations:
+  `unitFor` ignoring `CLUSTER_SCRIPTS`, or a script added to it; a split by
+  `Array.from` in the cluster branch; the hole read from each frame's
+  targets; `needsCompositor` ignoring `glow`; `graphicBox` from the settled
+  or the first frame only (the entrance's frames fall outside it, as the
+  caption band built from its first line only did, EFFECTS §60); the even
+  snap removed.
+- **`tests/graphicPaint.test.ts`.** A fake context in the manner of
+  `tests/textPaint.test.ts:24-46` records every `fillText` with the
+  `fillStyle` set when it was called; a second fake is the dim's `layer`.
+  **The pin, per text item** (rewritten 2026-10-21: a style draws one
+  string several times, `shadow-pop` with two glow passes and `neon-green`
+  with three, `textStyle.ts:201`, `:342`, `textPaint.ts:370`, so joining
+  every call would read "40 40 40"): every `fillText` string between the
+  item's `save` and `restore`, whitespace normalised, equals the item's
+  `text` or, if `drawTextOnto` wrapped it, one of its laid-out rows; and
+  every row of the item is drawn at least once. Membership, never an exact
+  call list. Run under `clean`, `shadow-pop` and `neon-green`. **The ink**:
+  a lit `keyword` or `quote` word's last `fillText` (the fill pass) is made
+  with `fillStyle` `palette.accent`; an unlit word's is not. No Hindi or
+  Telugu `fillText` string is less than a word (or a cluster, for a script
+  in `CLUSTER_SCRIPTS`). Strokes, shapes and the dim reach the context (a
+  stroke or a fill per item, membership; the dim through the `layer`
+  fake); the head is a filled path whose point is the span's tip; `z`,
+  `camera` and `glow` change nothing. Mutations: the painter splitting a
+  text item by code point (`Array.from`); the painter formatting a
+  numeric-looking string (`toLocaleString`, which fails the pin under every
+  style); the head drawn at the path's end instead of the tip; `highlight`
+  left out of `textSpecOf` (the lit word draws in the style's own fill).
+- **`tests/graphicFrame.test.ts`, phase 1's cases.** `graphicMovingFrames`
+  from the beats (`SETTLE_S`, the `+ 1`, capped at the clip; a beat at
+  1.0 s at 30 fps gives 46), and past the settle in its three cases only;
+  `beatFrame` at 24, 25, 30 and 60 fps with beats on and between frames; an
+  element's progress is 1 on its beat frame and under 1 on the frame
+  before; the seed is drawn in a fixed order (a spec whose object keys were
+  inserted in another order draws the same); the exit keys. Mutations:
+  `round` for `ceil` (an arrival a frame early); `SETTLE_S` dropped; the `+
+  1` dropped (45); the moving frames run to the clip's end (the hold baked);
+  seeded draws in key-insertion order. §6.2 and §6.16 add cases.
+- **`tests/renderer/graphicStore.test.ts`, phase 1's cases.**
+  `addGraphicClip` mints `graphic-<base36>-<5 base36>`, a legal Windows
+  basename, never an id taken from a spec or a model; the drawn asset is
+  `drawnGraphicAsset`'s (`path: ''`, `kind: 'image'`, `size: 0`);
+  `rebakeGraphic` lands through `fillAssetPath` (`store.ts:2394`) with no
+  history entry, and `setGraphic` through `update()` then a rebake,
+  rewriting the exit keys when `seconds` changes; a pasted graphic gets its
+  own asset and is rebaked by `placeCopies` (`store.ts:5256-5272`); removing
+  it reaches `forgetGraphicPreview` in Preview's sweep
+  (`Preview.tsx:680-707`); a trim keeps `spec.seconds` equal to the clip's
+  length and the exit keys on its last 0.3 s, and a split leaves the
+  graphic whole with its note. Mutations: the id taken from the spec; the
+  rebake through `update()` (an undo step appears); `toBake` without
+  graphics (the paste shows the source's frames); the sweep without
+  `forgetGraphicPreview`; a trim that leaves the keys (the fade lands past
+  the clip's end). §6.14 and §6.16 add cases.
+- `tests/graphicGuards.test.ts` is §6.4's; the harness check's `primitives`
+  and Indic halves, and `graphic.int`'s phase-1 cases, are §6.11's.
+
+#### Phase 1, piece by piece
+
+| piece | section | days |
+|---|---|---|
+| the rename; the types in `template.ts` and `timeline.ts` | §6.1 | 0.5 |
+| `SELF_DRAWN_FIELDS`, every guard site, `graphicGuards.test.ts`, the three existing tests rewritten | §6.4 | 1 |
+| `motion.ts` and `graphicMotion.test.ts` (M9) | §6.13 | 1 |
+| `drawList.ts`, `items.ts`, units, `textItems`, `itemBounds`, `graphicBox`, `needsCompositor`, `templates/index.ts` | §6.3 | 1 |
+| `stroke.ts` with the riding head | §6.3 | 0.5 |
+| `paint.ts`, painter A, the dim's cached layer | §6.3 | 0.75 |
+| `frame.ts` and `targets.ts` | §6.3 | 0.25 |
+| `graphicCanvas.ts`; `encodePool.ts`'s worker back-end only if M2 asks (`encodeFrames` itself lands in phase 0, §6.15, so M1 and M2 time it) | §6.3 | 0.75 |
+| the export branch, `Bakers`, `exportBakers.ts`, the store's three actions, the preview branch and sweep, (box) `identityPlaced` and the plan's read | §6.3 | 0.5 |
+| the harness check's `primitives` and Indic halves (§6.11's table) | §6.3 | 0.25 |
+| `GraphicStyle`, `resolveGraphicStyle`, `clean`, `GRAPHIC_TEXT_STYLES`, `graphicStyleOf`, `setGraphicsStyle` and `setGraphicsOverride` | §6.5 | 0.5 |
+| the harness check's `pathLength` and `strokes` widths, `graphic.int`'s phase-1 cases, `SHAPES`' graphic overlay | §6.11 | 0.5 |
+| **phase 1** | | **7.5** |
+
+The order is §6.19's.
+
+### 6.4 Every guard a new self-drawn kind joins — `SELF_DRAWN_FIELDS`, re-censused
+
+**Phase 1 · 1 day.** §16.9: one constant every guard reads, so the next
+self-drawn kind is a one-line change, with membership tests kept per site,
+done first. It replaces `PLAN.md:1172-1180`'s rule of adding a kind to each
+spelled-out list; the commit that lands the constant points that paragraph
+here.
+
+**The constant**, in `src/shared/edit/recipes.ts` beside `drawsItself`
+(`:45-46`): `SELF_DRAWN_FIELDS = ['text', 'paper', 'carousel', 'solid',
+'title', 'moment', 'graphic'] as const`, `SelfDrawnField` its member type,
+and `LIVE_DRAWN_FIELDS`, the constant without `'solid'` and `'title'`: the
+two kinds the preview shows from their baked file (`elementFor`, keyed by
+their version, `Preview.tsx:597-603`) rather than drawing live.
+`drawsItself` becomes `drawsItself(clip: Pick<Clip, SelfDrawnField>):
+boolean`, true when any field of the constant is set, and is the one reader
+for every site that wants the whole set.
+
+**The sites, as they stand at `4e59965`** (read 2026-10-21; §6.4 as written
+cited lines from 2026-10-05, most of which had moved). They spell out
+different subsets today; each reads the constant as the last column says,
+and why.
+
+| site | today | reads | why |
+|---|---|---|---|
+| `drawsItself` (`edit/recipes.ts:45-46`) | text, paper, carousel, solid, title, moment | the whole constant | it is the definition. It also feeds `setAspect`'s crop clear (`store.ts:2021`), `rebakeGenerated`'s targets (`:2053`) and paste's own-asset rule (`recipes.ts:277`) |
+| Preview's local `drawsItself` (`Preview.tsx:1241-1242`, read by `ready` at `:1244-1245`) | text, paper, carousel, moment | `LIVE_DRAWN_FIELDS` | solid and title load as files and must wait for them; every kind drawn live is ready at once. A graphic is drawn live |
+| `clipKind` (`edit/clipKind.ts:154-156`) | `'text'` for text and title (`:155`); `'graphic'` for paper, carousel, solid, moment (`:156`) | the whole constant, after the text branch | text and title have returned at `:155`, so the whole constant gives every existing kind the answer it has today |
+| `isKeyable` (`render/chromaKey.ts:218-224`), `canSteady` (`render/steady.ts:32-38`), `canMoveCamera` (`edit/camera.ts:30-36`) | adjustment and six | `clip.adjustment \|\| drawsItself(clip)`; the parameter type becomes `Pick<Clip, 'adjustment' \| SelfDrawnField>` | the same seven today; the paths are in `src/shared/render/` and `src/shared/edit/`, not `director/`. Without `canMoveCamera`'s guard the Camera panel would Ken-Burns a graphic's baked frames, its asset being kind `image` |
+| `clearDirector`'s drawn-asset filter (`director/apply.ts:126-127`) | text, solid, adjustment, moment, and sounds brought (`:125`) | `drawsItself(c) \|\| c.adjustment \|\| brought.has(c.assetId)` | it filters only clips the Director's rules removed; no Director rule makes paper, carousel or title (its clip literals, `apply2.ts:455`, `:472`, `:594`), and an asset a survivor still uses is kept (`stillUsed`, `:121`). Without `graphic` every Clear orphans a Direct graphic's asset. The `broughtBy` sweep (`:125`) is §6.14's |
+
+**The sites that branch per kind** (no list to read; each gains a graphic
+arm, and the test anchors each):
+
+| site | today | the graphic arm |
+|---|---|---|
+| `rebakeGenerated` (`store.ts:2050-2223`) | moment `:2076`, carousel `:2086`, paper `:2110`, text `:2145`, solid `:2198`, title `:2205` | before the text arm: `await get().rebakeGraphic(clip.id)`, with `place.auto` recomputed first (§6.9) and a screen card realigned (§6.16) |
+| `placeCopies` (`store.ts:5256-5272`) | its `toBake` loop (`:5266-5271`) rebakes text, solid, paper, carousel (a pasted moment is not rebaked there, a gap outside this step) | `else if (from.graphic) await get().rebakeGraphic(clipId)` |
+| `rebakeFollowed` (`store.ts:2225-2253`) | moments whose shots read a re-followed file | a graphic whose `spec.subject.clipId`'s asset, or the caption track's clip under it, is in `assetIds` is rebaked: a callout's onset target moves when Follow re-solves the crop beneath it. Not in §6.4 as written |
+| Preview's `sourceFor` (`Preview.tsx:1263`) | the moment's branch `:1272-1293`, `live ?? nothing()` at `:1292` | §6.3's branch, also ending `return live ?? nothing()` |
+| Preview's removed-clip sweep (`Preview.tsx:680-707`) | `forgetTextPreview` `:701`, `forgetMomentPreview` `:703` | `forgetGraphicPreview(clipId)` |
+| `bakeForExport` (`exportBake.ts:117-170`) | a moment that cannot draw is dropped (`:137-145`, `:168`) | §6.3's branch, dropped the same way, the catch's graphic line apart from the moment's (§6.3) |
+| `liveBakers` (`exportBakers.ts:13-26`) | seven bakers | `graphic` |
+| the Inspector's per-kind panels (`Inspector.tsx:234-237`, `PaperPanel`, `CarouselPanel`) | — | `GraphicPanel` for a clip with `.graphic`, in phase 2 with the panel (§6.6) |
+
+`SpeedPanel` needs nothing: it returns null for an image asset
+(`SpeedPanel.tsx:30`), and a graphic's asset is one. `isPhoto` needs
+nothing: size 0. The frame-rate change needs nothing beyond
+`rebakeGenerated`'s arm: the spec is in seconds (§6.1).
+
+**The test**, `tests/graphicGuards.test.ts`, modelled on
+`tests/moment.test.ts:585-647`, asserting membership, never a whole list.
+It is written in two halves (chosen 2026-10-21 by the review, so each lane
+commits it green): **the head lane's half** (§6.19) is the behaviour over
+the constant and the regex below, with the five list sites and the
+membership rewrites of `paper.test` and `moment.test`; **lane C's half**
+adds the wiring cases and the three store arms (`rebakeGenerated`,
+`placeCopies`, `rebakeFollowed`, which call lane C's `rebakeGraphic`), the
+Preview's branch and sweep, `Bakers.graphic` and the export's branch, in
+lane C's own commits.
+
+- **Behaviour, over the constant.** For every field of `SELF_DRAWN_FIELDS`,
+  a clip carrying only that field: `drawsItself` true; `isKeyable`,
+  `canSteady`, `canMoveCamera` false; `clipKind` `'text'` for text and
+  title and `'graphic'` for the rest; `clearDirector` of a project where a
+  Director-ruled clip carries it removes its unused drawn asset. A site that
+  spells out its own list again, without `graphic`, fails on `graphic`.
+  `'graphic'` is in `SELF_DRAWN_FIELDS` and in `LIVE_DRAWN_FIELDS`; `'solid'`
+  and `'title'` are not in `LIVE_DRAWN_FIELDS`. (Lane C's half:) a failed
+  graphic bake is dropped from `bakeForExport`'s project with `onError`
+  heard (fake bakers), both for a null return and a throw.
+- **No list spelled out again.** The regex, with `F` the alternation built
+  from `SELF_DRAWN_FIELDS` itself (`text|paper|carousel|solid|title|moment|graphic`):
+  `\b(?:layer\.clip|clip|c)\.(?:F) *(?:\?\?|\|\|) *(?:layer\.clip|clip|c)\.(?:F)\b`,
+  global. It matches direct `receiver.field` members only, two self-drawn
+  fields joined by `??` or `||`; an optional chain is not a match, so the
+  version keys at `Preview.tsx:603` and `:684` (`c.title?.version ??
+  c.text?.version ?? c.solid?.version`, keys, not guards) are never seen. It
+  is run with `matchAll` over every `.ts` and `.tsx` file under `src/`;
+  every match must be the one allowed line, `clipKind.ts:155`'s `clip.text
+  ?? clip.title` (a classification into `'text'`, not a guard), anchored on
+  that whole line's text. Run at `4e59965` (2026-10-21, `grep -E` with the
+  same pattern) it finds exactly eight lines: `recipes.ts:46`,
+  `Preview.tsx:1242`, `clipKind.ts:155` and `:156`, `chromaKey.ts:222`,
+  `steady.ts:36`, `camera.ts:34` and `director/apply.ts:127`, the seven list
+  sites of the tables above and the allowed one, so it sees every site it
+  guards. §6.3's export catch is written as its own line for this reason.
+  `export const SELF_DRAWN_FIELDS` occurs once under `src/`.
+- **The wiring, anchored on unique text with its arguments**, each anchor
+  counted with `matchAll` before it is trusted (`CLAUDE.md`'s table). Each
+  store action's body is cut from its own anchor (`rebakeGenerated: async
+  () => {`, `rebakeFollowed: async (assetIds) => {`, `placeCopies: async
+  (board, frame) => {`, each counted once) to the next action's anchor, not
+  by a fixed slice length; inside each, its arm. In `Preview.tsx`: the use
+  expression `LIVE_DRAWN_FIELDS.some(` counted with `matchAll` and asserted
+  at exactly 1 (the bare name also occurs in the import, so a count of the
+  name proves nothing); the graphic branch's own slice, cut from `if
+  (layer.clip.graphic)` to the next `if (layer.clip.`, contains
+  `graphicPreviewCanvas(` with its clock and `return live ?? nothing()`;
+  `forgetGraphicPreview(clipId)` once. In `exportBakers.ts`: `graphic:`
+  handing its arguments to `bakeGraphicSequence` in order. From phase 2,
+  `Inspector.tsx`'s mount.
+- **Mutations**, each seen to fail its own case and no other: each site in
+  turn with `graphic` left out; `'graphic'` left out of `SELF_DRAWN_FIELDS`
+  (every reading site fails); `canSteady` given back its spelled-out seven
+  (a site reverted to a list without `graphic`); the Preview reading
+  `SELF_DRAWN_FIELDS` whole (solid and title shown before their file); the
+  graphic branch returning the baked file instead of `nothing()`; the
+  sweep's forget removed; the paste arm removed; the `rebakeFollowed` arm
+  removed; a failed graphic kept in the export.
+
+**Existing tests that change.** `tests/paper.test.ts:496-507` and
+`:722-725` and `tests/moment.test.ts:629` pin the spelled-out expressions
+(`drawsItself`'s `return Boolean((?:clip\.\w+ \?\? )*clip\.paper`, and
+Preview's `layer.clip.paper` and `layer.clip.moment` within 160 and 200
+characters of its `drawsItself`). Those expressions go, so the assertions
+become membership of `paper` and `moment` in `SELF_DRAWN_FIELDS` and
+`LIVE_DRAWN_FIELDS` and the readers' anchors above, each mutation-checked
+again by leaving `paper` and then `moment` out of the constant. The store
+assertions beside them (`if (drawsItself(c)) return { ...c, crop: undefined
+}`, `project.clips.filter(drawsItself)`) stand as they are.
 
 ### 6.5 The graphic style — `src/shared/graphics/style.ts`
 
-The twin of the caption styles:
+**0.5 day in phase 1, 0.5 day in phase 2.** The twin of the caption
+styles, now carrying the motion names, the stroke look and the dim.
 
-```ts
-export interface GraphicStyle {
-  id: string; name: string
-  textStyleId: string                      // one of the 42 (render/textStyle.ts:164)
-  font: string; titleWeight: number; valueWeight: number
-  palette: { ink: string; accent: string; muted: string; panel: string; panelOpacity: number }
-  radius: number; stroke: number; shadow: number
-  motion: { entrance: 'rise' | 'pop' | 'wipe'; ease: 'out-cubic' | 'out-back' | 'linear' }
-  // no number format: a style that regrouped "10,00,000" as "1,000,000" would draw a string nobody said (§6.2)
-}
-export const GRAPHIC_STYLES: GraphicStyle[]               // six: clean, bold, editorial, neon, mono, accent (from the project's accent colour)
-export function resolveGraphicStyle(styleId: string, overrides?: Record<string, unknown>): GraphicStyle   // guards every number, as resolveStyle does
-// Project.graphics?: { styleId: string; overrides?: Record<string, unknown> }   — timeline.ts, beside CaptionSettings
-```
+`GraphicStyle` = `{ id; name; textStyleId` (one of `GRAPHIC_TEXT_STYLES`,
+§6.3, within the 42 of `render/textStyle.ts:164`)`; font; palette: { ink;
+accent; muted; panel; panelOpacity; dim; dimOpacity }; radius` (a fraction
+of the frame's short side)`; stroke` (the
+same)`; shadow` (0..1, a soft shadow under panels)`; motion: { entrance:
+'rise' | 'pop' | 'wipe' | 'blur-rise'; ease: MotionEase; exit: MotionEase };
+strokeLook: 'clean' | 'marker'; dim: boolean` (whether a template may dim
+with this style)`; energy: 'restrained' | 'energetic'; glow?: { radius;
+strength } }`. `MotionEase` is §6.13's (named so, not `Ease`, because
+`render/keyframes.ts:62` already exports an `Ease`, the keys' `'linear' |
+'hold' | 'smooth'`, and two exported types of one name are the anchor trap
+`CLAUDE.md` records).
 
-The UI goes in the OUTPUT strip beside the caption presets
-(`OutputStrip.tsx:225-268`): six tiles, each a sample drawn by
-`drawGraphicOnto` (as `captionSample` is, `:71-85`). Picking a preset keeps
-`textStyleId`, as `setCaptionStyle` does (`store.ts:4234-4241`). A change
-calls `rebakeGenerated`.
+- **Text takes its text style's ink and weight** (corrected 2026-10-21; the
+  contract's `titleWeight`, `valueWeight` and a text colour in `TextLook`
+  would never have drawn, §6.3). So `palette.ink` is not a text colour: it
+  is the colour of strokes, arrowheads, bars and the ring's arc, set in
+  each preset to match its text style's fill (a gradient's last stop).
+  `palette.accent` lights a word (through `highlight`, §6.3), fills the
+  lower third's bar and draws the keyword's underline. A preset whose look
+  needs dark type takes a text style with a dark fill.
 
-Fonts must cover the transcript's script. The caption fallbacks for Telugu
-and Hindi are reused, and a missing script falls back with a note, as
-`PLAN.md` §9 records for cards.
+- **No number format**, as §6.5 as written says: a style that regrouped
+  "10,00,000" as "1,000,000" would draw a string nobody said (§6.2).
+- **The entrances** (`entrance(name, p)` in `motion.ts`, §6.13): `rise`
+  (up from half the text's height, opacity to 1), `pop` (scale from 0.92,
+  proposal, with `out-back` only in the energetic style), `blur-rise` (rise
+  with a blur falling to 0) **only if M5 allows** its cost; until then it
+  resolves to `rise`, and allowing it adds an optional `blur?: number`
+  (frame px) to `DrawItem`. `wipe` stays in the type and resolves to `rise`:
+  a masked reveal needs a clip on items, which waits for a source that times
+  it and phase 2's ratings (the research, §7.4).
+- **The stroke look** (D7, §16.60: "Clean vector by default; a marker look
+  through perfect-freehand as a style option once M10 passes; rough.js not
+  now"). Every preset is `clean`; `resolveGraphicStyle` yields `marker` only
+  while `MARKER_READY` is true, which phase 2 sets only after M10 passes and
+  perfect-freehand is added. M10 itself runs from a scratch branch with
+  perfect-freehand added there and never merged, as M7's pmndrs leg does
+  (§6.15); only on a pass does a phase-2 commit add the dependency, the
+  marker painter and `MARKER_READY`.
+- **The dim** is a style property (the research, §1.4: light type on
+  daylight footage needs a panel, a dim or a shadow): `palette.dim`,
+  `palette.dimOpacity`, and `dim`, which the templates read (§6.2, §6.9).
+  Off in every restrained preset, on in `energetic` (the presets table):
+  the research treats the dim as an option behind a graphic (its §4.4),
+  D5 makes the default restrained, and a dim makes a graphic's box the
+  whole frame (§6.3). The look rating asks whether you want it (§6.10).
+  The screen card dims whatever the style says (D4 names "a dim", §6.16).
+- **The default is restrained** (D5, §16.58: "Restrained by default …, with
+  an energetic style as an option that keeps the `pop` entrance and
+  `out-back`").
 
-Census rows: "Graphics", the six preset names.
+**`resolveGraphicStyle(styleId: string, overrides?: Record<string,
+unknown>): GraphicStyle`** starts from the preset (`clean` for an unknown
+id) and guards every override, as `resolveStyle` does for captions:
+opacities to 0..1; `radius` to 0..0.1; `stroke` to the minimum
+of §6.3 up to 0.02; a NaN or negative number to the preset's; a
+`textStyleId` outside `GRAPHIC_TEXT_STYLES`, a missing `font`, or an
+unknown ease falls back to the preset's; the entrance and stroke-look gates
+above; unknown keys ignored. **`graphicStyleOf(project, spec)`** resolves
+`spec.style ?? project.graphics?.styleId ?? 'clean'` with the project's
+overrides: the one call the store, the Preview and the export make, so
+three sites cannot resolve a style three ways.
+
+**The presets** (`GRAPHIC_STYLES: GraphicStyle[]`, seven; every value a
+proposal, chosen against the sample tiles in phase 2 and revised by the
+look rating, §6.10; the faces are in the library, `assets/fonts`). The text
+style column gives that style's base fill, read from `TEXT_STYLES` on
+2026-10-21: it is the type's ink (§6.3).
+
+| id | name | text style (its fill) | face | entrance · ease · exit | palette: ink, accent, panel at opacity | `dim` · `dimOpacity` | energy |
+|---|---|---|---|---|---|---|---|
+| `clean` | Clean | `clean` (#FFFFFF) | Montserrat | rise · M14's winner, `expo-out` until then · `accelerate` | #FFFFFF, #FFD400, #0B0D10 at 0.55 | false · 0.35 | restrained, the default |
+| `bold` | Bold | `outline` (#FFFFFF, a black edge) | Anton | rise · `expo-out` · `accelerate` | #FFFFFF, #FFD400, #000000 at 0.7 | false · 0.35 | restrained |
+| `editorial` | Editorial | `midnight` (#101014, a white rim) | Playfair Display | rise · `decelerate` · `accelerate` | #101014, #B4232A, #F2EFE7 at 0.92 | false · 0.3 | restrained |
+| `neon` | Neon | `neon-green` (a gradient, #E7FFB0 to #68D43A) | Unbounded | rise · `expo-out` · `accelerate` | #68D43A, #FFFFFF, #050608 at 0.6; `glow` (phase 3: the hero's glow and the screen card's edge sweep, §6.16) | false · 0.45 | restrained |
+| `mono` | Mono | `clean` (#FFFFFF) | Montserrat | rise · `standard` · `accelerate` | #FFFFFF, #FFFFFF, #000000 at 0.5 | false · 0.35 | restrained |
+| `accent` | Accent | `clean` (#FFFFFF) | Montserrat | rise · `expo-out` · `accelerate` | #FFFFFF, the user's colour (`overrides['palette.accent']`), #0B0D10 at 0.55 | false · 0.35 | restrained |
+| `energetic` | Energetic | `shadow-pop` (#FFE14D) | Poppins | pop · `out-back` · `accelerate` | #FFE14D, #FFFFFF, #000000 at 0.6; `glow` as `neon`'s | true · 0.5 | energetic |
+
+Changed 2026-10-21 by the review, because a text style's fill is the ink
+(§6.3): `bold` takes `outline` instead of `shadow-pop`, whose yellow fill
+would have hidden a `#FFD400` lit word; `editorial` takes `midnight`, since
+`clean` would have drawn white type on its cream panel; `neon`'s and
+`energetic`'s accents are white, against green and yellow type.
+
+`#FFD400` is the Director's punch colour (`PUNCH_COLOR`,
+`director/apply.ts:59`); `#0B0D10` the preview's stage (`styles.css:90`).
+There is no project accent colour at `4e59965` (searched `timeline.ts` and
+`project.ts`), so the `accent` preset reads your pick from `overrides`,
+defaulting to the 3dit blue `#2563EB` (`--color-accent-500`,
+`styles.css:87`). Hindi and Telugu items draw in `INDIC_FONTS` whatever the
+preset's face (§6.3, §6.20).
+
+**The UI** (phase 2). In the OUTPUT strip, under the caption presets
+(`OutputStrip.tsx:287-310`), a **Graphics** section: the seven presets as
+rows in the captions' manner (name and face; the chosen one lit), a sample
+tile drawn by `paintDrawList2d` from a fixed `counter` sample at its settled
+frame (a UI sample, not a claim; drawn as `captionSample` feeds the caption
+tiles, `:133-147`), `TextStylePicker` limited to `GRAPHIC_TEXT_STYLES` (an
+optional prop naming the ids it may show; it lists all of `TEXT_STYLES`
+today, `components/TextStylePicker.tsx:47-48`), and an **Accent colour**
+control beside the `accent` preset. Picking a preset keeps `textStyleId` and
+the accent, as `setCaptionStyle` keeps the look (`store.ts:4899`). A change
+rebakes every graphic clip through `rebakeGraphic`, not `rebakeGenerated`,
+which redraws every drawn kind. "Graphic sounds" sits in the same section
+(§6.14).
+
+**Census rows:** "Graphics", "Clean", "Bold", "Editorial", "Neon", "Mono",
+"Accent", "Energetic", "Accent colour" (with §6.14's "Graphic sounds").
+
+**Days.** Phase 1, 0.5: the type, `resolveGraphicStyle` and its guards,
+`clean`, `GRAPHIC_TEXT_STYLES`, `graphicStyleOf`, `setGraphicsStyle` and
+`setGraphicsOverride`. Phase 2, 0.5: the six other presets, the OUTPUT strip
+section and its sample, the census rows, and, if M10 passes on its scratch
+branch, the marker painter in `paint.ts` and `MARKER_READY` set
+(perfect-freehand added to `main` then, not by this plan's writing).
+
+**Tests**, `tests/graphicStyle.test.ts`. Phase 1's cases: `resolveGraphicStyle`
+guards every number (NaN, negative and out-of-range values clamped or
+replaced, as `resolveStyle` does); an unknown id resolves to `clean`;
+`strokeLook: 'marker'` resolves to `clean` while `MARKER_READY` is false,
+`entrance: 'blur-rise'` to `rise` unless M5 allowed it, and `wipe` to
+`rise`; no key of `GraphicStyle` or of any preset names a format, a locale,
+a grouping or a separator (`/format|locale|group|separator/i`, membership
+over the keys); `GRAPHIC_TEXT_STYLES` is `TEXT_STYLES` filtered by
+`graphicEligible(style: TextStyle): boolean` (a base face that does not
+re-case, sets no `font` of its own, so a shaped item's `INDIC_FONTS` face
+is the one drawn, §6.3, and has no word-scoped accent): every member passes
+it, and it refuses a synthetic style for each condition (the font one is
+synthetic only, since no style of the 42 sets a face today), and
+"Mixed Case 10,00,000"
+drawn through each by `drawTextOnto` with a fake context in the manner of
+`tests/textPaint.test.ts:24-46` comes back unchanged (the `TextSpec`
+written inline as §6.3's `textSpecOf` builds it, since `textSpecOf` is lane
+B's, §6.19); `'chrome'` (a re-casing style, by its faces) asked for
+resolves to the preset's text style. Phase 2's cases: the seven presets by id, each
+resolving to itself; `clean` the default and restrained; every preset
+`energy: 'restrained'` except `energetic`, the only one with `pop` and
+`out-back` (§16.58); `dim` false in every preset but `energetic`; each
+preset's `palette.ink` equals its text style's base fill (or a gradient's
+last stop), read from `TEXT_STYLES`. Mutations: an override's NaN passed
+through; the radius clamp removed; the re-casing filter dropped (`'chrome'` becomes eligible and
+"Mixed Case" comes back upper-cased); `marker` honoured with `MARKER_READY`
+false; a `numberFormat` key added; `clean` given `out-back`; `editorial`
+given the `clean` text style (its ink case fails); the font condition
+dropped from `graphicEligible` (the synthetic style passes).
 
 ### 6.6 The third pass — `graphics@1`: menu, schema, prompt
 
-The pure half goes in `src/shared/director/run.ts`, as `graphicsMenuFor` and
-`settleGraphics`, so the app and the eval share one copy. The files beside
-it:
+**Phase 2 · 2 days.** The pure half goes in `src/shared/director/run.ts`,
+beside `settle2` (`:229`), so the app and the eval share one copy:
 
-- **`promptGraphics.ts`.**
+- `graphicsMenuFor(project, clip, transcript): GraphicsMenu[]`
+- `settleGraphics(answer, menu, transcript, options): SettledGraphics`
+
+`GraphicsMenu` = `{ assetId: string; clipId: string; language: string;
+sentences: { id: string; startMs: number; text: string; wordStart: number;
+wordEnd: number }[]; templates: GraphicTemplateId[]; wordSource: 'whisper' |
+'youtube-asr' | 'youtube-lines' }`.
+
+- **Sentences.** The segments of the words the clip shows, capped by
+  `capSegments` (`transcript.ts:207`) at 30 words or 15 s (§7.2).
+- **Windows.** At most 24 sentences a call (`MAX_CANDIDATES`, `menu.ts:41`).
+  A clip of 1-4 minutes at the measured ~180 words a minute is 300-1,300
+  tokens and fits whole; a longer transcript is cut into 24-sentence
+  windows, one call each.
+- **Templates offered.** `counter`, `bars`, `steps`, `quote`, `ring` and
+  `keyword` always. `callout` only when the clip's asset has a subject track
+  (`subjectTrackOf`, `frameMap.ts:142`), since without one it is dropped
+  anyway. Never `lower-third`, `screen-card` or a later step's id.
+
+The files beside it:
+
+- **`promptGraphics.ts`: `GRAPHICS_SYSTEM`; `graphicsPrompt(menu, lang): {
+  system: string; user: string }`.**
   - **System**: one constant playbook, which a server caches. It says: you
     mark the moments in a talk where a simple graphic would help a viewer,
     meaning a number, a comparison, steps, a line worth quoting, a thing on
-    screen worth pointing at, or a share of a whole; you copy words; you
-    never invent a number or a name; at most four; an empty list when
-    nothing qualifies.
-  - **User**: a SENTENCES table of `s07  0:42  "…"` lines, then a TEMPLATES
-    table (id, when to use it, its fields), then the language line last.
+    screen worth pointing at, a share of a whole, or a few words worth
+    seeing; you copy words; you never invent a number or a name; you never
+    choose a look, a motion, a sound, a connector or a name, because the
+    app does; at most four; an empty list when nothing qualifies.
+  - **User**: a SENTENCES table of `s07  0:42  "…"` lines; then a TEMPLATES
+    table (id, when to use it, its fields); then the language line, last.
     That last line is what took Telugu and Hindi copy from 0/24 to 24/24 in
     the target script (`EVAL.md:60-70`).
-  - The menu is **≤ 24 sentences** per call (`MAX_CANDIDATES`,
-    `menu.ts:40-41`). A clip of 1–4 minutes at the measured ~180 words/min
-    is 300–1,300 tokens and fits whole. A longer transcript is cut into
-    24-sentence windows, one call each.
-- **`schemaGraphics.ts`.** `GRAPHICS_PASS = 'graphics@1'`. The schema is flat
-  and fits `conforms.ts`: prototyped and measured with `unsupportedKeywords
-  []` and `flatViolations []`, at 1,269 chars. One graphic object carries
-  the **union** of the templates' fields, with unused ones left as `''`:
 
-  ```jsonc
-  {
-    "reasoning": "…",                                   // ≤ 300
-    "graphics": [                                       // maxItems 4, minItems 0
-      {
-        "sentence": "s07",                              // enum: this request's sentence ids
-        "template": "counter",                          // enum: the offered templates
-        "title": "", "value": "40%", "label": "of new clients",   // decode maxLength looser than kept (title 60 → 40 kept); a title that neither grounds nor equals a fixed title is replaced by the template's first fixed title, with a note
-        "items": [ { "label": "", "value": "" } ],      // maxItems 6
-        "quote": "",                                    // decode 200
-        "why": "…"                                      // decode 100 → 60 kept
-      }
-    ]
-  }
-  ```
+The TEMPLATES table's rows:
 
-  `constrained: true` for the decoder (enums, maxLengths) and `false` for
-  the validator's shape check, so an out-of-list id is repaired rather than
-  failing the pass (`schema2.ts:88-92`). Decode limits are set looser than
-  what is kept: a grammar cut-off mid-string made Gemma 4 E2B close a whole
-  plan after one segment (`EVAL.md:84-95`). Whether LM Studio's strict
-  `json_schema` decodes `minItems: 0` cleanly is **unmeasured**; the eval's
-  first run answers it.
-- **`maxTokensForGraphics`** starts at `250 + 140 × 4`, recalibrated from the
-  eval, as `prompt2.ts:80-88` was.
-- **The ask.** Through `askStructured` (`ask.ts:29`), wrapped so a throw
-  becomes `{error}` (`store.ts:1910-1912`). **A finding to fix here:** the
-  thinking-on retry does nothing on the OpenAI shape, because
-  `openaiRequestBody` never sends `think` (`provider.ts:214-237` against
-  `:189`). On LM Studio, the configuration every eval used, the "retry" is
-  the same request. On that shape the retry instead appends one line to the
-  user prompt ("Answer with the JSON object only."), and the eval counts
-  whether prose ever came back.
+| id | when (the prompt's words) | fields |
+|---|---|---|
+| `counter` | one number, said with what it counts | `value`, `label` |
+| `bars` | two to five numbers said as a comparison, in one unit | `title`, `items` |
+| `steps` | two to six steps or reasons said in order | `title`, `items[].label` |
+| `quote` | a line worth quoting, copied word for word from clause to clause | `quote` |
+| `callout` | a thing on screen the speaker names (offered only with a subject) | `label` |
+| `ring` | a share of a whole, said as a percentage | `value`, `label` |
+| `keyword` | one to four words the speaker stresses, copied exactly; `lit` is which of them to light, counting from 0 | `words`, `lit` |
+
+- **`schemaGraphics.ts`: `GRAPHICS_PASS = 'graphics@1'`;
+  `graphicsSchema(menu, options: { constrained?: boolean }): ObjectSchema`;
+  `maxTokensForGraphics(menu): number`.**
+  - **Shape.** The schema is flat and fits `conforms.ts`
+    (`SUPPORTED_KEYWORDS`, `conforms.ts:69-82`). One graphic object carries
+    the **union** of the offered templates' fields, unused ones left as `''`.
+  - **Measured size.** The 2026-10-05 prototype measured 1,269 chars, with
+    `unsupportedKeywords []` and `flatViolations []`, without `words` and
+    `lit`. With them it is re-measured by the test.
+  - **The fields, in declaration order.** `reasoning` (≤ 300) comes first.
+    Then `graphics`: `maxItems` 4 (`MAX_GRAPHICS`), `minItems` 0. Each
+    object holds, in order: `sentence` (an enum of this request's ids);
+    `template` (an enum of the offered templates); `title` (decoded to 60,
+    kept to 40); `value` (decoded to 24, kept to 16); `label` (decoded to
+    60, kept to 40); `items` (`maxItems` 6, each `label` decoded to 48, kept
+    to 32, and `value` decoded to 24, kept to 16); `quote` (decoded to 200,
+    kept to 120 and 16 words); `words` (decoded to 60, kept to 40 and 4
+    words); `lit` (an integer, `minimum` 0 and `maximum` 3 when constrained,
+    any integer otherwise); `why` (decoded to 100, kept to 60).
+  - **Kept lengths** count grapheme clusters, so a Telugu label is not cut
+    for its vowel signs. A title that neither grounds nor equals a fixed
+    title is replaced by the template's first fixed title, with a note.
+  - **`constrained`.** `true` for the decoder (enums, maxLengths, the
+    integer's range); `false` for the validator's shape check, so an
+    out-of-list id or an out-of-range `lit` is repaired rather than failing
+    the pass (`schema2.ts:88-93`).
+  - **Decode limits are looser than what is kept.** A grammar cut-off
+    mid-string made Gemma 4 E2B close a whole plan after one segment
+    (`EVAL.md:84-95`).
+  - **`minItems: 0`.** Whether LM Studio's strict `json_schema` decodes it
+    cleanly is **unmeasured** (§15 row 10); the eval's first run answers it.
+  - **`maxTokensForGraphics`** starts at `250 + 150 × 4` (proposal: §6.6 as
+    written had 140 a graphic, before `words` and `lit`). It is recalibrated
+    from the eval, as `maxTokensFor2` was (`prompt2.ts:86`).
+- **The ask.** It goes through `askStructured` (`ask.ts:29`), wrapped so a
+  throw becomes `{error}`, as the spine's ask is (`store.ts:2559-2570`).
+  **A finding fixed here:** the retry with thinking on does nothing on the
+  OpenAI shape, because `openaiRequestBody` never sends `think`
+  (`provider.ts:214-237` against `:189`), so on LM Studio, the
+  configuration every eval used, the "retry" is the same request with more
+  room (it raises `maxTokens` by `THINKING_EXTRA_TOKENS`, `ask.ts:38-42`,
+  and nothing else reaches the server). On a first result whose `provider`
+  is `'openai'` (`provider.ts:36`), `askStructured` instead retries with one
+  line appended to the user prompt ("Answer with the JSON object only."),
+  keeping the extra room. Every pass gains it, since every pass calls the
+  one function. Its test sits in `tests/directorAsk.test.ts`, beside the
+  existing retry cases (`:39-48`). The eval counts whether prose ever came
+  back.
+
+**What the model never fills.** It never fills any field of a
+`lower-third`; `steps.parent` or `steps.connector`; `callout.shape`;
+`callout.anchor` (phase 4: the app binds the `PointEvent` that overlaps the
+beat, §6.18); the quote's `speaker`; `depth` (phase 3, §6.16); and no curve,
+duration, sound, place or beat. The schema has no field for any of them.
+This is the Director contract, unchanged: the LLM fills typed fields of a
+type the app defined.
 
 **Where it runs:**
 
-- **in Direct**, over every footage slot with speech, after the spine and
-  the look;
-- **in Clip it** (§7.5);
-- **by hand**, from the Transcript tile's new **Graphics** section: "Find
-  graphics in this clip", a list of proposals with Keep / Drop, and its
-  notes.
+- **In Direct**, after the spine, the look and the bake (`direct()`,
+  `store.ts:2469`), over every shot on the video track whose asset has a
+  transcript and whose span holds speech. Its graphics carry `GRAPHIC_RULE`.
+- **In Clip it, from step 4.** §7.5's steps 3-6 (reframe, captions,
+  graphics, B-roll) are step 4's, built after this step; M0's built Clip it
+  has no graphics step to wire. So step 3 wires Direct and the Transcript
+  tile only, and builds everything Clip it's graphics step will call
+  (`findGraphics`, `applyGraphics`, `CLIPS_GRAPHIC_RULE`); step 4 calls it
+  as its fifth step, after the analysis job has released its sessions. Its
+  graphics carry `CLIPS_GRAPHIC_RULE`.
+- **By hand**, from the Transcript tile's **Graphics** section
+  (`src/renderer/src/components/TranscriptGraphics.tsx`, mounted in
+  `TranscriptPanel.tsx` between `TranscriptBody` at `:105` and `Vocabulary`
+  at `:107`; the Shelf's `transcript` tile, `components/shelf/tools.ts:150`,
+  §16.6).
+  Its graphics carry `CLIPS_GRAPHIC_RULE`. The section holds:
+  - **"Find graphics in this clip"**;
+  - the list of every graphic over the clip, whichever rule made it: its
+    template, the words it draws and its time, **Drop** on each, and
+    **Keep** on a proposal, with **check the number** beside the words
+    heard (and, in phase 4, a `'pointed'` proposal's note beside it,
+    §6.18);
+  - the notes, each drop with its reason;
+  - **"Clear graphics"**;
+  - the **"Speaker"** field (§16.31), `MediaAsset.speaker`. For a link's
+    asset it starts empty, showing the channel (`credit.author`,
+    `timeline.ts:178`) as its placeholder. A quote takes the channel while
+    the field is empty, as §16.31 settled. A lower third waits until you
+    type a name or press to use the channel's, because a channel may be a
+    brand rather than the person speaking.
+
+  Find again replaces the clip's `'clips.graphic'` graphics, their sounds
+  and its pending proposals, in one undo step.
+- **With no model**, or a pass that is rejected, the baseline runs (§6.10)
+  through the same validator, and the notes say so.
+- **A `lower-third`** is the app's in every run: placed on the speaker's
+  first word the clip shows, at most once per clip, when the asset has a
+  Speaker (§6.8, §6.9). It is made by `lowerThirdFor(project, clip):
+  KeptGraphic | null` in `graphics/apply.ts`, which `applyGraphics` calls
+  first, so the lower third carries the run's own rule; null without a
+  Speaker, or when the clip already has one.
 
 **What is placed without review, and what is not.** The validator proves a
 graphic matches the transcript, not what was said. YouTube's ASR sets word
-confidence to nothing (`acAsrConf` is 0 on every word, §7.1), so a misheard
-"14%" for "40%" would become a confident counter. So:
+confidence to nothing (`acAsrConf` is 0 on every word, §7.1; stored as
+`null`, `ingest/captions.ts:204`), so a misheard "14%" for "40%" would
+become a confident counter. So (§16.30):
 
-- Graphics from Clip it and Direct are placed, and **every one is listed** in
-  the Transcript tile's Graphics list and in the run's notes, each with
+- Graphics from Clip it and Direct are placed, and **every one is listed**
+  in the Transcript tile's Graphics list and in the run's notes, each with
   **Drop**.
-- **A graphic whose grounded number came from a `youtube-asr` or
-  `youtube-lines` transcript, or from a Whisper word under 0.5 confidence,
-  is a proposal only** (`GraphicSpec.proposal`), marked **check the number**
-  beside the words it heard, and is not placed until the user presses Keep.
-- Census rows: "check the number", "Keep", "Drop", for a stub transcript of
-  each source.
+- **A graphic whose grounded number came from a YouTube transcript, or from
+  a Whisper word under 0.5 confidence, is a proposal only**
+  (`GraphicSpec.proposal`). It is marked **check the number** beside the
+  words it heard, and is not placed until you press Keep. Only the words
+  bound to a number claim count.
+  - **YouTube**: the transcript's `model` is `'youtube-asr'`,
+    `'youtube-lines'` (`ingest/captions.ts:336`) or `'youtube-asr+lines'`
+    (`:633`). `wordSource` is `'youtube-lines'` when the model is
+    `'youtube-lines'` or the transcript is `approximate`, else
+    `'youtube-asr'`.
+  - **Whisper**: a word whose `confidence` is non-null and under 0.5 gives
+    `'whisper-unsure'`. A `null` there is a word you corrected
+    (`withWordText`, `transcript.ts:256`), which is trusted.
+- **A `lower-third` is placed without review**: its text is your own.
+- Phase 4's pointed graphics are proposals (§6.18, D3, §16.56).
 
-Graphics made by Direct carry `GRAPHIC_RULE 'director.graphic'` in
-`DIRECTOR_RULES`, so Direct again and Clear take them. Graphics made by Clip
-it or the Transcript tile carry `'clips.graphic'`, outside the Director, with
-their own **Clear graphics** that also removes the drawn assets
-(decision §16.10). The decision record is `pass: GRAPHICS_PASS`, ops
-`[{graphics, dropped, model}]`, into `project.decisions`.
+**When something is missing** (each a degraded mode; §14 carries the rows):
+
+| missing | what happens |
+|---|---|
+| a model, or a pass rejected | the baseline, validated the same way, with a note |
+| a subject track | `callout` not offered; a dim drawn with no hole; placement takes the no-track default (§6.9) |
+| captions | no third is excluded |
+| a Speaker on the asset | no lower third; a quote's speaker is '' (or a link's channel, §16.31) |
+| the sound library | graphics land silent, with one note (§6.14) |
+| a free lane (the track limit) | the graphic is dropped, with a note (§6.9) |
+| plain speed (the clip is retimed) | refused, with a note (§6.8) |
+| a parser for Hindi or Telugu number words | a number said as a word there is dropped (§16.11), counted by the eval |
+| a cue list for Hindi or Telugu nesting | the tree is flat (§6.2) |
+
+**Proposals live in `Project.graphicProposals`** (confirmed 2026-10-21: a
+held number may wait days for your check, so it is saved with the
+project). Each is a `GraphicProposal` (§6.1).
+
+- **Keep** places it through §6.9's placement and budget at that moment. If
+  the budget would refuse it, Keep says why ("another graphic is on screen
+  then") and leaves it listed.
+- **Drop** removes it.
+- **Clear graphics** removes the `'clips.graphic'` ones.
+- **Direct's Clear** removes the `GRAPHIC_RULE` ones: `clearDirector`'s
+  return (`director/apply.ts:133-138`) filters `graphicProposals` by
+  `DIRECTOR_RULES`.
+
+**The rules** (§16.10, unchanged):
+
+- `GRAPHIC_RULE = 'director.graphic'` sits beside `director/apply.ts:37-49`
+  and joins `DIRECTOR_RULES` (`:49`), so Direct again and Direct's Clear
+  take Direct's graphics, their sounds and their files (§6.14).
+- `CLIPS_GRAPHIC_RULE = 'clips.graphic'` sits in `graphics/apply.ts`, outside
+  the Director. Its own **Clear graphics**, `clearGraphics(project):
+  Project`, removes, in one undo step: the `'clips.graphic'` graphic clips
+  and their drawn assets; their sound clips and the files the app brought
+  for them (§6.14); the `'clips.graphic'` proposals. It leaves Direct's
+  graphics, and its note says so ("Direct's graphics stay; Direct's Clear
+  takes them").
+- `applyGraphics(project: Project, kept: KeptGraphic[], covered: string[],
+  rule: string, ctx: Pick<ApplyContext, 'fps' | 'newId'>): { project:
+  Project; problems: Problem[]; clipIds: string[] }` in
+  `graphics/apply.ts`, with `KeptGraphic` = `{ clipId: string; assetId:
+  string; candidate: GraphicCandidate }` (`clipId` the footage clip,
+  `assetId` its transcript's asset), `covered` the footage clip ids the run
+  read (a lower third is offered on each, even where no graphic was kept),
+  and `ApplyContext` the Director's
+  (`director/apply.ts:69-84`, `newId` optional and injectable for tests). A
+  `GraphicCandidate` carries only menu-local ids (§6.7), so the caller
+  pairs each kept candidate with the `clipId` and `assetId` of the
+  `GraphicsMenu` its answer came from. **This is the seam between lanes T2
+  and T3** (§6.19): T3 commits the signature first as a typed stub. It
+  lands a run's graphics, in order: `lowerThirdFor` on each `covered` clip
+  (above); the beats
+  (§6.8); the seconds (§6.2); proposals set aside; the budget (§6.9);
+  placement and the subject at onset, dropping a callout with no subject
+  there (§6.9); the lane (§6.9); the sounds (§6.14). Each graphic clip gets
+  an app-minted id, `newId('graphic')`, its exit keys (`graphicExitKeys`)
+  and its asset from `drawnGraphicAsset` (§6.3), the helper the store's
+  `addGraphicClip` uses, so the two cannot differ. The store then calls
+  `rebakeGraphic` on each returned clip id.
+
+**The decision record.** There is no `Project.decisions`; the 2026-10-05
+text was wrong. A run appends a `DecisionRecord` (`src/shared/project.ts:23-37`:
+`id`, `pass`, `ops`, a top-level `model: { id; quantHash?; runtime? }`,
+`createdAt`) to the store's `decisions`, as Direct's spine record is
+appended (`store.ts:2623`). It is built by `decisionForGraphics(settled:
+SettledGraphics, model: { id: string; runtime: string } | null, options: {
+id?: string; now?: Date } = {}): DecisionRecord` in `run.ts`, mirroring
+`decisionFor2` (`director/apply2.ts:690-714`): `id` from `options.id` or a
+default id made as `apply2.ts:85`'s `defaultId` makes one (it is not
+exported); `pass: GRAPHICS_PASS`; `ops: [{ graphics, dropped,
+baseline }]`; `model` = `{ id: model.id, runtime: model.runtime }`, or `{
+id: 'baseline', runtime: 'none' }` when no model answered (no model, or a
+rejected pass whose baseline ran); `createdAt` from `options.now`. It is
+saved in the project file's `decisions` (`project.ts:45`). There is one
+record per Find or Direct run (and, from step 4, per Clip it run).
+
+**The dock's panel**, `src/renderer/src/components/GraphicPanel.tsx`
+(chosen 2026-10-21: per-kind dock panels live in `components/`, beside
+`PaperPanel.tsx` and `CarouselPanel.tsx`; §6.11 as written said `tools/`),
+is mounted beside `PaperPanel` and `CarouselPanel` (`Inspector.tsx:234-237`)
+as the panel of a clip with `.graphic`. It shows the template's fields by
+mode:
+
+- **Grounded, verbatim and index fields** are re-checked on every edit by
+  `checkGraphicData(data: GraphicData, def: TemplateDef, grounding:
+  GraphicSpec['grounding'], transcript: Transcript): Problem[]`, the core
+  `validateGraphics.ts` exports and `validateGraphics` itself calls per
+  graphic (§6.7), run against the graphic's `grounding` stretch. Each
+  problem is a warning under its field, never a block: you may type what
+  you like. No answer or menu is built for one edited graphic.
+- **`user` fields** are never checked.
+- **Speaker fields** show the asset's Speaker; editing one calls
+  `setSpeaker`, which updates every graphic of that asset that drew the old
+  name and rebakes them.
+- **App fields are choices**: the connector (none, line, tree) and the
+  callout's shape (arrow, circle).
+- **The rest**: the seconds within the template's bounds; the place (an auto
+  third, or a box you dragged); and a lower third's **Role**, pre-filled
+  from the asset's most recent lower third.
+- **From phase 3, a Depth choice** (Flat, the default; Tilt, Parallax,
+  Dolly, Focus) on templates whose `threeD` is true (§6.16), and the note
+  when WebGL is missing.
+
+Each edit is `setGraphic` (§6.3).
+
+**Store actions** (`src/renderer/src/store.ts`): `findGraphics(clipId)`,
+`keepGraphic(proposalId)`, `dropGraphic(clipId)`, `clearGraphics()`,
+`setSpeaker(assetId, name)`, `setGraphicSounds(on)`. Drop takes the graphic,
+its drawn asset when nothing else uses it, and its sounds (§6.14).
+
+**Census rows** (exact text): the Transcript tile's "Graphics", "Find
+graphics in this clip", "Keep", "Drop", "check the number" (for a stub
+transcript of each source: a YouTube ASR track, a YouTube uploader track,
+an unsure Whisper word), "Clear graphics", "Speaker"; the dock's graphic
+panel and its "Role"; the OUTPUT strip's "Graphic sounds" (§6.14).
+
+**Tests** (§6.11 indexes them by phase):
+
+- **`tests/directorGraphics.test.ts`.** The schema is flat, `reasoning`
+  first, `required` in declaration order (the
+  `tests/directorSpine2.test.ts:60-69` pattern); `unsupportedKeywords` and
+  `flatViolations` are empty, and the size is printed; the prompt's last
+  line is the language; the menu never offers `lower-third` or
+  `screen-card`, and offers `callout` only with a subject track; the schema
+  offers `keyword.words` and `keyword.lit`, and neither the template enum
+  nor any property offers `lower-third`, `parent`, `connector`, `anchor`,
+  `depth`, a curve, a duration or a sound (membership over the schema's
+  names); truncation and the wrong shape reject the pass but never the
+  clip; a wrong-template field and an out-of-range `lit` are repaired;
+  spacing; `decisionForGraphics`' shape, with `model.id` `'baseline'` when
+  no model answered. Mutations: `lower-third` in the menu or the enum; the
+  language line moved up; a `parent` accepted from the answer; the record's
+  `model` put inside `ops`.
+- **`tests/directorAsk.test.ts`**, a case beside the retry cases at
+  `:39-48`: on a first result whose `provider` is `'openai'`, the retry's
+  user prompt ends with the nudge and keeps the raised `maxTokens`; on the
+  Ollama shape the retry is unchanged (thinking on). Mutation: the nudge
+  removed (the OpenAI retry is the same request with more room).
+- **`tests/renderer/transcriptGraphics.test.tsx`.** Find graphics lists the
+  run's graphics, each with Drop; a "check the number" proposal is not
+  placed until Keep; Drop removes the clip, its drawn asset and its sound;
+  Clear graphics removes every `'clips.graphic'` clip, asset, sound, file
+  and proposal and leaves Direct's; the Speaker field writes
+  `MediaAsset.speaker` and a `lower-third` reads it. Mutations: a proposal
+  placed before Keep; Clear graphics leaving the drawn asset; Clear graphics
+  taking `GRAPHIC_RULE` graphics; the speaker not saved.
+- **`tests/renderer/graphicPanel.test.tsx`.** Every grounded, verbatim or
+  index field re-checked on each edit through `checkGraphicData`, the one
+  `validateGraphics` calls (a spy on the module's export); a typed number not
+  in the stretch shows a warning, never a block; `user` fields (Role, a
+  social card's) are never checked. Mutations: the check skipped on edit;
+  the warning made a disabled field; a `user` field checked.
+
+**Days: 2** (phase 2): the menu, prompt and schema; the ask's fix;
+`settleGraphics` and `decisionForGraphics`; Direct's and the tile's wiring
+(Clip it's is step 4's, above); the two panels; the store actions and the
+four tests (2.5 would be safer; the figure is kept).
 
 ### 6.7 The validator — `src/shared/director/validateGraphics.ts` and `claims.ts`
 
-It **rejects** only what `validate2.ts` rejects: a truncated answer and the
-wrong shape. Everything else is **one graphic at a time**: repaired, or
-dropped with a `Problem {path: '$.graphics[i].items[j].value', message}`
-that the panel shows ("graphic dropped: '45%' is not said in s07").
+**Phase 2 · 3 days.** `validateGraphics(answer, menu, transcript, options:
+{ truncated?: boolean }): { kept: GraphicCandidate[]; dropped: Problem[] } |
+{ rejected: string }`.
+
+- **Rejects only what `validate2.ts` rejects**: a truncated answer (`:37`)
+  and the wrong shape (`:40`).
+- **Everything else is one graphic at a time**: repaired, or dropped with a
+  `Problem { path: '$.graphics[i].items[j].value', message }` that the panel
+  shows ("graphic dropped: '45%' is not said in s07").
+- **A kept graphic** is a `GraphicCandidate` = `{ sentence: string; data:
+  GraphicData; bound: number[]; beatWords: number[]; why: string; source:
+  'model' | 'baseline'; proposal?: GraphicSpec['proposal'] }`. `bound` holds
+  one word index per claim, in claim order; `beatWords` the word index of
+  each beat (§6.8). The type is declared in `graphics/template.ts` with
+  §6.6's `KeptGraphic`, in phase 1's types commit (§6.19), so the lanes on
+  either side of `applyGraphics` share it from the start.
+
+`settleGraphics` (§6.6) is `settle2`'s twin. Given a rejected answer it
+validates the baseline the same way and says why. It returns `SettledGraphics`
+= `{ kept; dropped; baseline: boolean; rejected: string | null }`.
 
 **Why it binds, not just matches** (the first draft's hole, found by the
 review). Checking that each token of the spec appears *somewhere* in the
@@ -7949,10 +9493,11 @@ said in s08), never that a label in one may pair with a value in another.
 **The normaliser** is its own function. The existing ones were measured
 unsafe for this:
 
-- `validate.ts`'s `normalise` drops final combining marks: 'పెళ్లి' →
-  'పెళ్ల', 'शादी' → 'शाद', and NFD 'Café' → 'cafe' while NFC stays 'café'.
-- `keywords.ts`'s `normaliseToken` is ASCII-only and maps '1.2' → '12' and
-  Telugu or Hindi → ''.
+- `validate.ts`'s `normalise` (`director/validate.ts:102`) drops final
+  combining marks: 'పెళ్లి' → 'పెళ్ల', 'शादी' → 'शाद', and NFD 'Café' →
+  'cafe' while NFC stays 'café'.
+- `keywords.ts`'s `normaliseToken` (`automation/keywords.ts:50`) is
+  ASCII-only and maps '1.2' → '12' and Telugu or Hindi → ''.
 
 The rules, in order:
 
@@ -7975,7 +9520,7 @@ The rules, in order:
      **Hindi and Telugu number words are not parsed in v1**, so a number
      the model wrote in digits that was said as a word in those languages
      is **dropped**. That is the safe direction, and the eval counts it
-     (decision §16.11).
+     (§16.11). How often it bites is M21's.
 5. **Numbers match on value, and units are judged on the MATCHED stretch
    number**, per template:
    - values equal (relative 1e-9);
@@ -8002,268 +9547,2755 @@ The rules, in order:
    - unpaired `grounded` fields (a `steps` label, a `callout` label, a
      grounded title) bind as one run: their content tokens within one
      sentence, in spoken order, with gaps of at most 3 tokens between them.
-7. **Negation.** If the clause a claim binds in (from the previous clause
-   boundary — `, ; : —` or a sentence start — to the next) holds a negator
-   the field lacks, the graphic is **dropped**, or for a `quote` **demoted**
-   to the verbatim clause with its negator. Negators: `not`, `no`, `never`,
-   `n't`, `without`, `nor`, `neither`, `none`, `nobody`, `nothing`; Hindi
-   `नहीं`, `न`, `मत`; Telugu `కాదు`, `లేదు`. **Telugu mostly negates with a
-   verb ending, not a word**, which no list catches: in v1 a Telugu clause
-   whose verb ends in a negative suffix the eval's fixtures collect is
-   treated as negated, and the gap is measured on the Telugu fixtures
-   before step 3's exit (§15).
+7. **Negation.** The bound clause runs from the previous clause boundary
+   (`, ; : —` or a sentence start) to the next. If the clause a claim binds
+   in holds a negator the field lacks, the graphic is **dropped**, or for a
+   `quote` **demoted** to the verbatim clause with its negator.
+   - **Negators**: `not`, `no`, `never`, `n't`, `without`, `nor`,
+     `neither`, `none`, `nobody`, `nothing`; Hindi `नहीं`, `न`, `मत`; Telugu
+     `కాదు`, `లేదు`.
+   - **Telugu mostly negates with a verb ending, not a word**, which no list
+     catches. In v1 a Telugu clause whose verb ends in a negative suffix the
+     eval's fixtures collect is treated as negated, and the gap is measured
+     on the Telugu fixtures before phase 2's exit (§15 row 11).
 8. **Field modes** (`TemplateDef.fields`):
    - `verbatim`: the field's normalised tokens are a contiguous run of one
      sentence, **starting and ending on a sentence or clause boundary**. A
      run directly after a negator is refused ("I'd never tell you to quit
-     your job" cannot become "quit your job").
+     your job" cannot become "quit your job"). `keyword` relaxes the
+     boundaries only (rule 9).
    - `grounded`: every content token binds as in rule 6, after normalising
-     and folding English plurals (`s`, `es`) on both sides. The template's
-     fixed words and **an explicit English function-word list** are exempt:
-     `a an the of to in on at for from by with and or but so as is are was
-     were be been it its this that these those our my your their we i you
-     they he she have` (40 words). **Never exempt**: negators (rule 7),
-     direction words and comparatives (`up down more less fewer than before
-     after over under`). No list exists yet for Hindi or Telugu, so every
-     token there is checked.
+     and folding English plurals (`s`, `es`) on both sides.
+     - Exempt: the template's fixed words, and **an explicit English
+       function-word list**: `a an the of to in on at for from by with and
+       or but so as is are was were be been it its this that these those
+       our my your their we i you they he she have` (40 words).
+     - **Never exempt**: negators (rule 7), direction words and
+       comparatives (`up down more less fewer than before after over
+       under`).
+     - No list exists yet for Hindi or Telugu, so every token there is
+       checked.
    - `fixed`: one of the template's `fixedTitles`, or the style's own
      glyphs; never checked, never model-written.
-   - `speaker` (the `quote`'s): `''`; or the asset's speaker as the user set
-     it (`MediaAsset.speaker`, a field in the Transcript tile); or, for a
-     linked video, the channel from yt-dlp's metadata (§7.1), never the
-     model's; or a name **only when the stretch says "<name> said / says /
-     told … " directly governing the quoted run**. A run directly after a
-     reporting verb is a reported quote: kept only with that verb's subject
-     as the speaker, else refused. So "My mentor told me, and I think Elon
-     said something like it: fail fast" cannot ship "fail fast — Elon".
+   - `speaker` (the `quote`'s and the `lower-third`'s, set by the app):
+     `''`; or the asset's speaker as you set it (`MediaAsset.speaker`, the
+     Transcript tile's field); or, for a linked video, the channel from
+     yt-dlp's metadata (§7.1), never the model's; or, for a `quote` only, a
+     name **when the stretch says "<name> said / says / told …" directly
+     governing the quoted run**. A run directly after a reporting verb is a
+     reported quote: kept only with that verb's subject as the speaker, else
+     refused. So "My mentor told me, and I think Elon said something like
+     it: fail fast" cannot ship "fail fast — Elon". A `lower-third`'s `name`
+     is `MediaAsset.speaker` alone.
+   - `index` (new, 2026-10-21; the research, §4.5): a number that points
+     into another field, not a claim. `keyword.lit` must be an integer with
+     0 ≤ `lit` < the number of words in `words`. Out of range, it is
+     **repaired** to the last word with a note, since emphasis on a wrong
+     word misstates nothing the speaker said. A range check is all the
+     validator can do for it.
    - **There is no `free` mode for anything drawn into a frame.** The 2B
      model writes no free text that lands in a picture. (Best clips' card
      titles are shown in the UI only; §7.4 holds them to their own rule.)
-     The social quote card's `user` mode (§8.4) is the user's own typing,
-     never a model's: no pass is offered that kind, so the validator never
-     sees it.
+     The social quote card's `user` mode (§8.4) and the lower third's
+     `role` are your own typing, never a model's, so the validator never
+     sees them.
 9. **Template rules after binding:**
    - `ring` ≤ 100 and `%` on the matched number (rule 5);
    - `bars` one matched unit (rule 5);
    - `counter` must contain a number;
-   - `callout` needs a subject box from the clip's `SubjectTrack` at the
-     sentence's time (otherwise dropped, "no subject found to point at").
-10. **Spacing (code, not model):** graphics ≥ 6 s apart and ≤ 1 per 20 s of
-    clip; the earlier one wins.
+   - `callout`: the validator has no project or subject track in its
+     arguments, so it refuses only a `callout` the menu did not offer
+     ("not offered": the clip has no subject track, §6.6). A callout whose
+     subject is missing at its onset is dropped by `applyGraphics`'
+     placement step (§6.9 item 4), with this rule's note, "no subject found
+     to point at"; its tests are `graphicPlace`'s, not `claims`';
+   - `quote` at most 16 words;
+   - **`keyword`** (new): its `words` are a contiguous run of 1-4 said
+     words inside one sentence, and may start and end mid-clause; in
+     English, at least one token is outside `FUNCTION_WORDS_EN`; rule 7
+     applies to the clause the run sits in, so "this is not easy" cannot
+     ship "easy"; a run directly after a negator is refused, as
+     `verbatim`'s is; its one beat is its first word;
+   - **`lower-third`** never comes from the model: a graphic the answer
+     names `lower-third` is dropped ("not offered");
+   - **`steps`**: after binding, the app sets `connector` and every `parent`
+     (`treeParents`, §6.2). If `parentsValid` fails, the graphic keeps
+     `connector: 'line'` and flat parents, with a note: an invalid tree
+     never ships.
+10. **Spacing (code, not model).** Graphics are at least 6 s apart and at
+    most one per 20 s of clip; the earlier one wins (`GRAPHIC_SPACING`, kept
+    for every graphic, D12, §16.65). `settleGraphics` applies it within the
+    answer, so the eval counts what the app would place. `applyBudget`
+    applies it again across the project with the other budget rules
+    (§6.9).
+11. **The anchor (phase 4).** A callout's `anchor` must name a `PointEvent`
+    that exists in `Project.hands` for the clip's asset and overlaps the
+    graphic's beat. The rule's text is §6.18's; it is listed here so the
+    count of rules is whole. The field is reserved in phase 2 and never
+    filled there.
 
 Each bound claim records the **word index** it bound to. Those indices are
-the beats (§6.8) and are kept in `grounding.words`.
+the beats (§6.8) and are kept in `grounding.words`. §16.11's strictness is
+unchanged by any of the additions above. A screen card has no claim, so the
+validator never sees it (§6.16).
 
-```ts
-// src/shared/director/claims.ts
-export interface CanonNumber { n: number; unit: '' | '%' | 'currency'; currency?: '$' | '€' | '£' | '₹' }
-export interface Claim { path: string; text: string; kind: 'number' | 'token' | 'run'; value?: CanonNumber; pair?: number /* index into the template's pairs */ }
-export const BIND_WINDOW = 8
-export const NEGATORS: Record<'en' | 'hi' | 'te', readonly string[]>
-export const FUNCTION_WORDS_EN: readonly string[]          // the 40 above; asserted to contain no NEGATOR, direction word or comparative
-export function normaliseToken(raw: string): string
-export function numbersIn(tokens: string[]): { value: CanonNumber; at: number /* token index */ }[]
-export function claimsOf(data: GraphicData, def: TemplateDef): Claim[]
-export function bind(claims: Claim[], stretch: { words: Word[]; sentences: Segment[] }, lang: string):
-  { ok: true; at: number[] /* one word index per claim */ } | { ok: false; missing: Claim[]; reason: 'absent' | 'unpaired' | 'order' | 'negated' | 'unit' }
-```
+**`claims.ts`**, its exports as §6.7 as written:
+
+- `CanonNumber` = `{ n: number; unit: '' | '%' | 'currency'; currency?: '$'
+  | '€' | '£' | '₹' }`
+- `Claim` = `{ path: string; text: string; kind: 'number' | 'token' | 'run';
+  value?: CanonNumber; pair?: number }` (`pair` an index into the
+  template's pairs)
+- `BIND_WINDOW = 8`
+- `NEGATORS: Record<'en' | 'hi' | 'te', readonly string[]>`
+- `FUNCTION_WORDS_EN: readonly string[]`, the 40 above, asserted to contain
+  no negator, direction word or comparative
+- `claimToken(raw: string): string`, rules 1-3 on one token (renamed
+  2026-10-21 from the contract's `normaliseToken`, which
+  `automation/keywords.ts:50` already exports with an ASCII-only body that
+  maps 'शादी' to '' and '1.2' to '12': one name for two functions is the
+  trap `MotionEase` and `CaptionLayersSpec` were named to avoid)
+- `numbersIn(tokens: string[]): { value: CanonNumber; at: number }[]` (`at`
+  a token index)
+- `claimsOf(data: GraphicData, def: TemplateDef): Claim[]`
+- `bind(claims, stretch: { words: Word[]; sentences: Segment[] }, lang:
+  string): { ok: true; at: number[] } | { ok: false; missing: Claim[];
+  reason: 'absent' | 'unpaired' | 'order' | 'negated' | 'unit' }` (`at` one
+  word index per claim)
+
+`claimsOf` makes no claim of an `index`, `user`, `fixed` or app field.
+
+`validateGraphics.ts` also exports `checkGraphicData(data: GraphicData,
+def: TemplateDef, grounding: GraphicSpec['grounding'], transcript:
+Transcript): Problem[]`, the per-graphic core (rules 4-9 over one graphic's
+data against its stretch) that `validateGraphics` calls for each answer
+graphic and the dock calls on each edit (§6.6), so the two cannot check
+differently; `graphicPanel.test` pins the shared call.
+
+**Tests** (§6.11 indexes them by phase):
+
+- **`tests/claims.test.ts`**: every normaliser rule, including Telugu and
+  Hindi marks kept and NFC = NFD; `1.2 ≠ 12`; Indian grouping; 'forty
+  percent' = '40%'; '$1.2M' = '1.2 million dollars'; a unit added by the
+  model fails, and a unit dropped passes **where the template allows it**;
+  native digits; **the review's cases, each named**: "we signed 40 clients"
+  + ring 40 → dropped; "we spent $40 on ads and 40% of signups came from
+  them" + bars with **bare** values [ads 40, signups 40] → dropped (the spec
+  strings share a unit; the matched numbers do not); the
+  Instagram/referrals swap → dropped; "3 offices … 40 staff in 2019, now 12
+  offices" + bars [2019: 12, now: 3] → dropped; "It's not true that 90% of
+  startups fail" + ring → dropped; "I'd never tell you to quit your job" +
+  quote "quit your job" → refused; "…I think Elon said something like it:
+  fail fast" + speaker Elon → refused; stretch "clients happy" + label
+  "clients not happy" → dropped; a counter's label taken from the next
+  sentence, within 8 tokens across the boundary → dropped; a label 12
+  tokens from its value in one sentence → dropped; `FUNCTION_WORDS_EN`
+  contains no negator, direction word or comparative (membership over each
+  list); and **the new cases**: "this is not easy" + keyword "easy" →
+  dropped; keyword "my job" taken across two sentences → dropped; keyword
+  "of the" → dropped (no content word); `lit` 7 on a two-word keyword →
+  repaired to 1; an answer naming `lower-third` → dropped.
+
+  Mutations, **each killed by a case that no other rule also catches**
+  (checked when the case is written): `claimToken` replaced by
+  `automation/keywords.ts`'s `normaliseToken` (1.2 = 12); strip `\p{M}`; ignore units; **ring's `%` not required** (the
+  40-clients case); **units checked on the spec strings, not the matched
+  numbers** (the bare $40/40% bars); **the same-sentence rule removed** (the
+  next-sentence label); **the 8-token window removed** (the 12-token
+  label); **spoken order not checked** (the Instagram swap and the 2019
+  bars, which every other rule passes); **negators exempt as function
+  words** (the "clients not happy" label); **rule 7 removed** (the 90 %
+  ring); and, new: keyword's rule-7 check removed ("not easy"); keyword
+  allowed across a sentence boundary; `lit`'s range check removed.
+- **`tests/graphicsValidator.test.ts`, the property test.** Random specs
+  against random stretches, by a fixed-seed generator, **plus adversarial
+  generators**: swap the values of two pairs; insert a negator into the
+  bound clause; take a label from the neighbouring sentence; strip a unit
+  from the stretch but not the spec; and, new, a `keyword` run with a gap
+  in it; a keyword run stretched over a negated clause; a `lit` past the
+  run's end; a model-written `parent`. **An independent matcher**: every
+  graphic `settleGraphics` keeps is grounded by a matcher that checks
+  BINDING, not membership (one occurrence per claim, same sentence, the
+  window, spoken order, no unmatched negator). **Over what the painter
+  draws**: each kept graphic, given beats, is turned into its settled frame
+  by `drawListAt` with a fake `measure` (node, no fake context), and every
+  `text` item's string (per-word pieces joined, fixed glyphs set aside)
+  must ground. So a template that reformats a number or adds a unit fails
+  the property even when the spec is clean; `tests/graphicPaint.test.ts`
+  (§6.3) pins `paintDrawList2d`'s `fillText` strings to those items. This is
+  the bar's "by construction", node-pure. Mutations, each failing the
+  property: skip `grounded` fields; drop the order rule; let `inBetween` or
+  `drawListAt` regroup the settled value; let a template draw `data.label`
+  re-cased; accept a `keyword` run with a gap. (Let the painter regroup:
+  `graphicPaint` fails.)
+
+**Days: 3** (phase 2): `claims.ts`, `validateGraphics.ts`, `settleGraphics`'
+validation half, and both tests.
 
 ### 6.8 Beats — the words land the animation
 
-- **Beat times.** Each element's grounded word is the beat:
-  `word.startMs` → timeline seconds, through the clip, with the same offset
-  the captions use (`captions/timeline.ts:76-86`). The graphic then agrees
+**Phase 2 · 0.5 day.** `graphicBeats(project, clip, transcript,
+wordIndices: number[]): number[] | null`, in `src/shared/graphics/beats.ts`.
+`clip` is the footage clip the words show on. It returns each beat's
+**timeline** time in seconds, or null when the clip is retimed.
+`applyGraphics` then sets the graphic clip's start frame and stores
+`GraphicSpec.beats` relative to it, in seconds (§6.1). `beats.ts` also holds
+`readingSeconds` (§6.2).
+
+- **Beat times.** Each element's grounded word is its beat (`beatWords`,
+  §6.7; the per-template beats are §6.2's table): `word.startMs` → timeline
+  seconds through the clip, with the same offset the captions use
+  (`offsetMs`, `captions/timeline.ts:86-96`, `:96`). The graphic then agrees
   with the captions.
-- **Lead and settle.** The clip starts 0.5 s before the first beat (the
-  entrance) and lasts to the last beat + 0.8 s, clamped to the template's
-  bounds and to the clip beneath. An element **arrives on** its beat: the
-  counter reaches its value, a bar its length, a row its place.
-- **Spacing.** Two beats closer than 160 ms are spread to 160 ms, the
-  minimum gap from `planLyricCuts` (`lyrics.ts:211`).
-- **Punch is not used.** `punchOf` is ASCII-only (`lyrics.ts:77`), so every
+- **Lead, settle, tail.** The graphic clip starts `LEAD_S` (0.5 s) before
+  the first beat, the entrance, but never before the footage clip's start.
+  Its seconds are §6.2's rule: at least to the last beat plus `TAIL_S`
+  (0.8 s), within the template's bounds, and never past the footage clip's
+  end. If the footage clip ends too soon, the graphic is dropped ("too close
+  to the clip's end to be read"). An element **arrives on** its beat: the
+  counter reaches its value, a bar its length, a row its place, an edge its
+  child. The moving frames end at the last beat plus `SETTLE_S` (0.5 s), and
+  the last `EXIT_S` (0.3 s) is the opacity exit (§6.3).
+- **Spacing.** Two arriving beats closer than 160 ms are spread to 160 ms,
+  the later moved, the minimum gap of `planLyricCuts`
+  (`DEFAULT_MIN_GAP_MS`, `automation/lyrics.ts:192`; `planLyricCuts` at
+  `:211`). **A quote's beats are not spread**: they light words, as the
+  captions' highlight does, and spreading them would drift the lit word
+  from the speech.
+- **Punch is not used.** `punchOf` is ASCII-only (`lyrics.ts:76`), so every
   Indic word scores 0.2; word starts are script-neutral.
 - **Retimed clips are refused** with a note ("graphics on a speed-changed
   clip are not timed yet"), as J-cuts refuse a retimed clip
-  (`apply2.ts:225-227`). The captions and props mapping ignores speed today
-  (`automation/apply.ts:58-65`), so a speed-aware graphic would drift from
-  its own captions. The proper inverse is `timelineFrameAt` (built in M0,
-  §3b.6), applied to captions and graphics together later (§17).
+  (`director/apply2.ts:248`, `speed` or `ramp` set). The captions and props
+  mapping ignores speed today (`automation/apply.ts:58-65`), so a
+  speed-aware graphic would drift from its own captions. The proper inverse
+  is `timelineFrameAt` (built in M0, §3b.6), applied to captions and
+  graphics together later (§17).
+- **The onset.** A transcript's `startMs` is not the audible onset to the
+  frame. M15 (you mark 30 onsets) says whether beats need a refinement;
+  until then a beat is the word's `startMs`.
+- **A `lower-third`'s beat** is the first word of the asset's transcript
+  that the clip shows. **A `keyword`'s** is its first word. **A `quote`'s**
+  are its words.
 
-### 6.9 Placement — `src/shared/graphics/place.ts`
+**Test:** `tests/graphicBeats.test.ts`: a beat is its word's `startMs`
+through the clip with the captions' offset, on a trimmed clip and on a clip
+moved later; the lead clamped at the clip's start; the tail and the
+template's bounds; 160 ms spreading of arriving beats, but not of a quote's;
+a retimed clip refused with its note (`graphicBeats` returns null).
+Mutations: the offset dropped, or taken from `clip.start` without
+`inPoint`; `endMs` for `startMs`; 100 ms spacing, or spreading removed;
+spreading applied to a quote; a retimed clip accepted; beats one frame
+late.
 
-`placeGraphic(project, clipId, startFrame, frames, template) → place`:
+**Days: 0.5** (phase 2).
 
-- The thirds' overlap comes from §5's map, **excluding the caption's third**.
-  Captions are burned last over the whole picture
-  (`captions/timeline.ts:10-12`), so they sit over any graphic.
-- The best remaining third is taken. Templates needing height (`steps`,
-  `bars`) prefer the middle third when it is free. With no track, the
-  style's default is the middle third, or the top when captions use the
-  middle.
-- `callout` is drawn at the subject box through `frameMap.ts`, so it follows
-  a reframe and a Ken Burns (`shotPicture`'s mapping inverted,
-  `moment.ts:393-459`).
-- `place.auto` is recomputed by `rebakeGenerated` on an aspect change or a
-  reframe; a box the user dragged is kept.
+### 6.9 Placement and the budget — `src/shared/graphics/place.ts`, `budget.ts`
 
-**On the timeline**, graphics sit on lanes **above the look and every card**
-(`laneFor(start, dur, cardsAbove())`, `apply2.ts:513-520`, `:533-546`), so
-type is never graded (decision §16.7).
+**Phase 2 · 1 day.**
+
+**Placement.** `placeGraphic(project, clipId, startFrame, frames, template,
+canvas: { width: number; height: number }): GraphicSpec['place'] | null`,
+where `clipId` is the footage clip and `canvas` the output frame (as
+`captionThirds` and `subjectBoxesAt` both take one); null is "no free
+third":
+
+1. **The caption's third over the span is excluded.** Captions are burned
+   last over the whole picture (`captions/timeline.ts:9-12`), so they would
+   sit over any graphic.
+   - With captions on and `placement: 'smart'`, that is every third
+     `thirdAt` (`freeSpace.ts:227`) gives over the span, from one
+     `captionThirds` (`:199`).
+   - Otherwise it is the caption style's own third (`styleThird`, `:51`).
+   - With captions off, nothing is excluded.
+2. **The subject's overlap per third** is read as Smart placement reads it.
+   Smart placement's sample reader, `spanSamples` (`freeSpace.ts:166-191`),
+   is private: it holds each sample to its shot's frames through
+   `exportFrameAt` and falls back to the sample nearest a short shot's
+   middle. Step 3 exports a span reader beside it, `samplesOver(project,
+   clip, asset, canvas, from: number, to: number): Record<Third,
+   number>[]` (clip frames, `from` inclusive, `to` exclusive), which applies
+   `spanSamples`' rule to each shot the range crosses (each sample placed on
+   its export frame through `exportFrameAt` and held to its shot's frames)
+   and keeps the samples whose frame falls in the range; when none does, it
+   takes the sample nearest the range's middle, as `spanSamples` does for a
+   short shot. It has its own mutation-checked cases in
+   `tests/freeSpace.test.ts` (a range inside one shot reads only that
+   shot's samples inside the range; a range shorter than the sample step
+   reads the nearest; mutations: the range ignored, so the shot's every
+   sample counts; a sample clamped into the range instead of left out). `shotOverlap` (`:131`)
+   then gives the 90th percentile of `samplesOver`'s overlaps, so one
+   gesture does not move a graphic.
+3. **The best remaining third is taken.**
+   - A third is free when its overlap is at most `OVERLAP_LIMIT` (0.05,
+     `:39`). Among free thirds the template's preference decides: `steps`
+     (any connector) and `bars` take the middle first, then the top, then
+     the bottom; `lower-third` takes the bottom first, then the top; every
+     other template takes the middle, the top, then the bottom.
+   - With no free third, the least-covered remaining one is taken, and the
+     style's panel or dim keeps the type legible.
+   - With no remaining third (the caption takes all three over a span that
+     crosses two cuts), the graphic is dropped ("no free third").
+   - **With no track**: the middle, or the top when the captions use the
+     middle (§6.9 as written).
+4. **The subject at onset.** `GraphicSpec.subject` = `{ clipId, box, ms }` is
+   taken **once, at the graphic's onset frame**, from the sample
+   `subjectBoxesAt` reads on that frame (`nearestSample`,
+   `frameMap.ts:235-245`, from the shot the export shows): its largest face,
+   in SOURCE units, without the chin extension, at the sample's ms.
+   `graphicTargetsAt` (§6.3) maps it through `sourceToFrame`
+   (`frameMap.ts:86-132`) at the onset frame, and that one `GraphicTargets`
+   is what the preview and the bake pass for every frame of the clip. So in
+   phase 2 the callout's target, the dim's hole and a connector's target are
+   all fixed at onset (chosen 2026-10-21). **This departs from the
+   research as well as from §6.9 as written**: the research's §4.6 fixes
+   only the dim's hole and a connector's target at onset and maps the
+   callout through `frameMap.ts` on every frame, as §6.9 as written did.
+   - **Why, two reasons.** The sampling: re-reading the face per frame
+     through `subjectBoxesAt`, which takes the nearest of two samples a
+     second and never interpolates (`frameMap.ts:235-245`, `:275-291`),
+     would make the target jump every 0.5 s. The cost: mapping even a fixed
+     source box through a moving crop changes the target on every frame of
+     a followed clip, so every held frame becomes a moving one (§6.3 gives
+     the figures). The first reason is answered by fixing the source box at
+     onset; only the second needs the mapping fixed too, and it is the one
+     this plan weighs heavier for a 1.5-3 s callout.
+   - **What it costs.** A callout on a static crop of a speaker who moves
+     points where the face was; over a 1.5-3 s callout on a talking head
+     that is expected to be small, and it is unmeasured.
+   - **A null target.** A callout whose subject maps to null at onset (off
+     screen, or no sample there) is dropped here, in `applyGraphics`'
+     placement step, with §6.7 rule 9's note. Any other template draws its
+     dim without a hole.
+   - **A camera move or a zoom beneath.** `sourceToFrame` does not model a
+     camera move or zoom keys on top of the crop (`frameMap.ts:31-35`; step
+     2's Built note says the same). So when the footage clip beneath
+     carries a `motion` (`Clip.motion`, `timeline.ts:545`, Ken Burns or a
+     shake) or a `zoom` key other than 1 anywhere over the graphic's span
+     (`Clip.keyframes`, `:566`), the subject is not taken: a callout is
+     dropped ("the shot zooms under it, so its target would miss"), and
+     every other template draws its dim without a hole. A held zoom of 1 is
+     no zoom.
+   - Only phase 4's fingertip is mapped per frame (§6.18).
+5. **The hand.** In phase 4 the hand's box is a second obstacle in step 2
+   of this list (§6.18, `pointPlacement`).
+
+`place.auto` is recomputed, with the subject at onset, by `rebakeGenerated`
+on an aspect change or a reframe (§6.4 wires the call); a box you dragged
+is kept.
+
+**On the timeline.** Graphics sit on lanes **above the look and every card**
+(§16.7), so type is never graded and never hidden under a moment.
+
+- **The starting lane** is the lowest video track above both the footage
+  clip's track and every track holding an adjustment clip (`Clip.adjustment`:
+  the look, and a grade of yours), a moment, or a Director card
+  (`COPY_RULE`, `ENDING_RULE`). This is `cardsAbove`'s rule
+  (`director/apply2.ts:558`; `laneFor` at `:538`) widened to cards and
+  adjustments.
+- **From there**, the first lane free over the span is taken (`stackedSlot`,
+  `timeline.ts:1201`), else a new top track (`addTrack`, `:1469`). At the
+  track limit (`trackLimitReached`, `:1228`) the graphic is dropped with a
+  note.
+- **Direct's new track** is marked `director: true`, so Clear takes it when
+  empty (`clearDirector`). Clip it's is not marked.
+
+**The budget.** `applyBudget(project, candidates): { kept; dropped: { spec;
+reason }[] }` runs over every graphic already on the timeline (any rule,
+kept first: they are placed) and the run's candidates in onset order. The
+earlier one wins. A candidate is kept only when every rule holds:
+
+1. **Spacing for every graphic** (D12, §16.65): its onset is at least
+   `GRAPHIC_SPACING.minGapS` (6 s) from every kept graphic's onset, and the
+   kept graphics over its clip number at most max(1, ⌊clip seconds ÷
+   `GRAPHIC_SPACING.perS` (20)⌋). "Its clip" is the footage clip for Clip
+   it and the tile, and the whole ad for Direct, whose shots are a few
+   seconds each. **The lower third is outside the per-20 s count**, though
+   it keeps the 6 s gap and rule 2 (a reading of D12 recorded 2026-10-21
+   by the review, for you to overturn): counted, it would take the only
+   slot of every clip under 40 s whose asset has a Speaker, max(1, ⌊30 ÷
+   20⌋) = 1, so a typical 30 s short would get its name card and no
+   counter, keyword or steps, against D1's point of "three templates that
+   fire without numbers" (§16.54). Being on the clip's first word, it is
+   the earliest, so it is placed first and the next graphic starts 6 s
+   after it at the soonest.
+2. **One on screen.** Its span overlaps no kept graphic's span. A Director
+   card (`COPY_RULE`, `ENDING_RULE`) counts as one: one piece of designed
+   type at a time.
+3. **None over a zoom punch.** Its span overlaps neither a clip whose
+   `moment.kind` is `'zoom-punch'` (`timeline.ts:290`) nor, on the footage
+   clip beneath, a span between two adjacent `zoom` keys of different value
+   (`KEYED_PROPERTIES`, `render/keyframes.ts:74`). A held zoom is not a
+   punch.
+4. **The per-minute cap.** When `GRAPHICS_PER_MINUTE` is set, no 60 s window
+   of the timeline holds more than that many graphics. It is null until M17
+   gives it a value (§6.15). Rule 1 alone already allows at most three a
+   minute.
+
+**The screen card is outside the budget** (§6.16): it frames footage and
+says nothing, so it counts toward neither the spacing nor the one-on-screen
+rule, and graphics may sit over it. This is a reading of D4 against D12,
+recorded here: D12 keeps the spacing "for every graphic", and D4 gives a
+screen recording "the 2.5D card, a dim and graphics", which a card that
+held the only slot over a recording could not. While a card is on screen
+its dim is the only dim: another graphic's dim is not drawn.
+
+Dropped candidates go to the notes with their reason ("another graphic is
+on screen then", "over a zoom punch at 12.4 s"). `GRAPHIC_SOUND_CAP` is
+applied by `graphicSounds` (§6.14), not here.
+
+**Tests** (§6.11 indexes them by phase):
+
+- **`tests/graphicPlace.test.ts`**: the caption's third excluded, from the
+  style and from Smart placement (captions at the bottom, a face in the
+  middle: a counter goes to the top); the middle preferred by `steps` and
+  `bars` when free; the bottom by `lower-third`; the no-track default;
+  `callout`'s target through `sourceToFrame` on a reframed 9:16 clip, fixed
+  at onset (the held frames equal); `place.auto` recomputed on an aspect
+  change and a dragged box kept; the dim's hole and a connector's target
+  from `subjectBoxesAt` read once, at onset; a callout whose subject is
+  null at onset dropped with rule 9's note; over a footage clip with a
+  Ken Burns `motion` or a `zoom` key of 1.2, a callout dropped and a
+  counter's dim drawn without a hole, while a held zoom of 1 changes
+  nothing. Phase 4 adds a `PointEvent.hand` box as a second obstacle
+  (§6.18). Mutations: the caption's third not excluded; the callout at the
+  source box unmapped; a dragged box recomputed; the subject re-read per
+  frame (the held frames differ); the null-subject drop removed (a callout
+  points at nothing); the zoom check removed (the target misses by the
+  zoom); (phase 4) the hand's box ignored.
+- **`tests/graphicBudget.test.ts`, the no-overlap test**: §6.7's spacing for
+  every graphic (≥ 6 s apart, ≤ 1 per 20 s, the earlier wins); one graphic
+  on screen at a time (a `steps` 8 s long and a counter starting 6.5 s
+  after it: the counter is dropped although the spacing passes), a Director
+  card included; none over a zoom-punch moment or a zoom move, a held zoom
+  allowed; `GRAPHICS_PER_MINUTE` applied once it is not null; a screen card
+  outside the count; on a 30 s clip with a Speaker, the lower third and a
+  counter 8 s later both kept (the lower third outside the per-20 s count,
+  inside the 6 s gap); and a property over every fixture's settled graphics:
+  no two overlap in time and none sits over a punch (§6.12). Mutations: the
+  later graphic winning; an overlap allowed when the spacing passes (the
+  overlap check removed); punches or zoom keys ignored; the lower third
+  counted (the 30 s clip's counter is dropped).
+
+**Days: 1** (phase 2).
 
 ### 6.10 The baseline and the eval
 
-**The baseline (no model)**, `director/baselineGraphics.ts`, is
+**Phase 2 · 1.5 days.**
+
+**The baseline (no model)**, `director/baselineGraphics.ts`:
+`baselineGraphics(transcript, menu): GraphicCandidate[]`. It is
 deterministic:
 
 - a sentence with a `%` → `ring`;
 - a number with a unit or currency → `counter`;
 - two or more consecutive sentences opening with ordinals ("first",
-  "second", "step one") → `steps`;
-- validated the same way.
+  "second", "step one") → `steps`, its connector and parents from `tree.ts`
+  (§6.2);
+- (new) an English sentence of at most 8 words (proposal), not a question,
+  whose last one to three words hold a content word → `keyword` of those
+  words, `lit` the last. Hindi and Telugu get no baseline keyword in v1:
+  their sentences end on a verb or an auxiliary, and no function-word list
+  exists to see past it;
+- each validated the same way (§6.7).
 
 It is what "preferred to the standard" compares against, and what runs with
-no model.
+no model. No model and no baseline ever makes a `lower-third`: it is the
+app's, placed in every run on the speaker's first word when the asset has a
+Speaker (§6.6, §6.8).
 
 **The eval** (`tests/eval/director.eval.test.ts`) gets a
-`FORGE_EVAL_GRAPHICS` block, copied from the look-pass block (`:180-237`).
-Its requests use the `EvalRequest` shape, so `evalRelay.ts:57-63` posts them
-unchanged. Scoring goes through `settleGraphics`, into
-`results-graphics.json`. `eval-report.mjs`'s `summarise()` gains a pass
-filter, so a graphics run does not show as a broken spine row (`:30-58`).
+`FORGE_EVAL_GRAPHICS=<folder>` block, copied from the look-pass block
+(`:173-237`):
 
-**Fixtures**, `tests/fixtures/graphics/*.json`: ten transcripts (six
-English, two Telugu, two Hindi), **of the user's own speech or text the user
-wrote** (third-party speech cannot be committed), with numbers both in
-digits and spoken out ("forty percent"), names, a list of steps, a quotable
-line, **and the traps**: two numbers with two labels in one sentence, a
-negated claim, a reported quote, and a count that is not a percentage. Each
-has the user's truth: the sentence ids where a graphic belongs, and its
-template.
+- `STEP=prepare` writes the requests, built with the app's own
+  `graphicsMenuFor`, `graphicsPrompt`, `graphicsSchema` and
+  `maxTokensForGraphics`, in the `EvalRequest` shape, so the relay
+  (`src/renderer/src/harness/evalRelay.ts:57-63`) posts them unchanged;
+- `STEP=score` settles each answer through `settleGraphics` into
+  `results-graphics.json`;
+- `scripts/eval-report.mjs`'s `summarise()` (`:30`) gains a pass filter, so
+  a graphics run does not show as a broken spine row.
+
+**Fixtures**, `tests/fixtures/graphics/*.json`, all of your own speech or
+text written for this plan (third-party speech cannot be committed). Who
+writes what:
+the ten eval transcripts are your recordings and your truth; the Hindi and
+Telugu strings everywhere are yours; a lane may write the three English
+nested fixtures and the English drawing fixtures as text, for you to check
+before they are relied on. The shapes (added 2026-10-21):
+
+- `eval-*.json`: `{ language: string; transcript: Transcript; truth: {
+  sentence: string; template: GraphicTemplateId }[]; traps: string[] }`
+  (`traps` names the sentence ids that hold a trap, for the report).
+- `nested-*.json`: `{ language: string; transcript: Transcript; title:
+  string; items: string[]; parents: number[] }` (`parents` as
+  `treeParents` returns them; a text-written fixture times its words at
+  0.3 s each, since `treeParents` reads only their order).
+
+The sets:
+
+- **The eval's ten transcripts** (`eval-*.json`), six English, two Telugu,
+  two Hindi. They hold numbers both in digits and spoken out ("forty
+  percent"), names, a list of steps, a quotable line, a phrase worth a
+  keyword, **and the traps**: two numbers with two labels in one sentence,
+  a negated claim, a reported quote, a count that is not a percentage, and a
+  negated phrase a keyword might lift. Each has your truth: the sentence ids
+  where a graphic belongs and its template.
+- **The nested-enumeration set** (`nested-*.json`, new): five short talks,
+  three English, one Hindi, one Telugu, in which the speaker enumerates
+  items with sub-items ("three things; the first has two parts …"). Each
+  has the expected title, items and parent list. The English three are
+  `treeParents`' exit (exact match, §6.12). The Hindi and Telugu two are
+  scored and recorded, not passed: v1's parser is English only (§6.2).
+- **The drawing fixtures** (`specs.json`, §6.2): 27 specs, one per shape in
+  English, Hindi and Telugu.
 
 **Recorded per run:**
 
-- parsed / truncated / shape;
-- graphics proposed;
-- **the share dropped by the validator**, the hallucination rate and the key
-  number;
+- parsed / truncated / shape, and whether prose came back (§6.6's nudge);
+- graphics proposed, per template, `keyword` included;
+- **the share dropped by the validator**, by reason, the hallucination rate
+  and the key number;
+- Hindi and Telugu graphics dropped because a number was said as a word
+  (§16.11; M21 sizes it);
+- Telugu clauses with a negative ending missed (§15 row 11);
+- `lit` repairs;
 - the truth-hit rate (±1 sentence);
-- a blind 1–5 template-fit rating through `eval-rate`;
+- a blind 1–5 template-fit rating through `npm run eval:rate`
+  (`scripts/eval-rate.mjs`);
+- the nested set's exact matches;
 - model against baseline.
 
-### 6.11 Tests, harness check, render checks, mutations
+**The blind curve rating (M14)** is run in phase 2, on your clips, in the
+development app's console (`await window.__forgeGraphicCheck({ curves: {
+names: [...], clipId: '<a graphic clip of the open project>' } })`, §6.11,
+§6.15):
 
-- `tests/claims.test.ts`:
-  - every normaliser rule, including Telugu/Hindi marks kept and NFC = NFD;
-  - `1.2 ≠ 12`; Indian grouping; 'forty percent' = '40%'; '$1.2M' =
-    '1.2 million dollars';
-  - a unit added by the model fails, a unit dropped passes **where the
-    template allows it**;
-  - native digits;
-  - **the review's cases, each named**: "we signed 40 clients" + ring 40 →
-    dropped; "we spent $40 on ads and 40% of signups came from them" + bars
-    with **bare** values [ads 40, signups 40] → dropped (the spec strings
-    share a unit; the matched numbers do not); the Instagram/referrals swap
-    → dropped; "3 offices … 40 staff in 2019, now 12 offices" + bars
-    [2019: 12, now: 3] → dropped; "It's not true that 90% of startups fail"
-    + ring → dropped; "I'd never tell you to quit your job" + quote "quit
-    your job" → refused; "…I think Elon said something like it: fail fast"
-    + speaker Elon → refused; stretch "clients happy" + label "clients not
-    happy" → dropped; a counter's label taken from the next sentence, within 8 tokens across
-    the boundary → dropped; a label 12 tokens from its value in one sentence → dropped;
-  - `FUNCTION_WORDS_EN` contains no negator, direction word or comparative
-    (membership over each list).
+1. **The renders.** The named graphic clip, landing on its word, is
+   rendered under each of the six curves at 30 fps; you run it once on each
+   of three of your clips. Each render gets a letter A-F, shuffled per run
+   and shown on the page; the key is returned in the result object, not
+   shown, and you save it with DevTools' `copy()` into
+   `tests/output/graphic/curves/key-<date>.json` (gitignored) before you
+   watch: the renderer has no channel that writes into the repo.
+2. **The pick.** You watch each clip's six without the key and pick the
+   best, and a second.
+3. **The score.** The curve picked first on the most clips becomes the
+   default `ease` of `clean` and the restrained presets (§6.5). A tie, or no
+   clear pick, keeps `expo-out`, the research's default. The picks and the
+   key go to EFFECTS §61.
 
-  Mutations, **each killed by a case that no other rule also catches**
-  (checked when the case is written): reuse `keywords.normaliseToken`
-  (1.2 = 12); strip `\p{M}`; ignore units; **ring's `%` not required**
-  (the 40-clients case); **units checked on the spec strings, not the
-  matched numbers** (the bare $40/40% bars); **the same-sentence rule
-  removed** (the next-sentence label); **the 8-token window removed** (the
-  12-token label); **spoken order not checked** (the Instagram swap and the
-  2019 bars, which every other rule passes); **negators exempt as function
-  words** (the "clients not happy" label); **rule 7 removed** (the 90 %
-  ring).
-- **The property test** (`tests/graphicsValidator.test.ts`): random specs
-  against random stretches, run by a fixed-seed generator, **plus
-  adversarial generators**: swap the values of two pairs; insert a negator
-  into the bound clause; take a label from the neighbouring sentence; strip
-  a unit from the stretch but not the spec. **Every graphic `settleGraphics`
-  keeps is grounded by an independent matcher that checks BINDING, not
-  membership**: one occurrence per claim, same sentence, the window, spoken
-  order, no unmatched negator. And **the grounding runs over what the
-  painter draws**: the kept spec is painted at its settled frame into the
-  fake context, and every string in its `fillText` list is grounded, so a
-  painter that reformats a number or adds a unit fails the property even
-  when the spec is clean. This is the bar's "by construction". Mutations:
-  skip `grounded` fields; drop the order rule; let the painter regroup (each
-  fails the property).
-- `tests/directorGraphics.test.ts`:
-  - the schema is flat, `reasoning` first, required in declaration order
-    (the `directorSpine2.test.ts:63-67` pattern);
-  - the prompt's last line is the language;
-  - truncation and the wrong shape reject the pass but never the clip;
-  - a wrong-template field is repaired;
-  - spacing; the retry nudge on the OpenAI shape.
-- `tests/graphicFrame.test.ts`:
-  - moving frames from the beats;
-  - an element arrives on its beat frame;
-  - the seed draws in a fixed order;
-  - the counter's last moving frame is `data.value` exactly (a fake
-    context records `fillText`);
-  - **the settled frame draws every `data` string verbatim, and nothing else
-    but the template's listed fixed glyphs** (the fake context lists every
-    string), and a ring's `%` only when the matched number carries one;
-  - every counter frame before the last draws a digit string ≤ the value,
-    in the value's own format ("10,00,000" counts through "9,50,000", never
-    "950,000"). Mutation: format in-between numbers western always.
-- `tests/graphicGuards.test.ts`: §6.4.
-- **Harness check** `harness/graphicCheck.ts` (`__forgeGraphicCheck`,
-  installed in `harness/main.tsx:28`), for each template:
-  - frames 0, a beat, the last moving frame and the end differ as they
-    should;
-  - the last moving frame equals the held end (meanDiff 0);
-  - alpha is 0 outside the layout box;
-  - the same spec drawn twice is identical;
-  - the live preview canvas equals the baked PNG within 1/255 (preview =
-    export);
-  - 1080×1920 draw and encode are timed for `EFFECTS.md`.
-- `tests/integration/graphic.int.test.ts`, the render check, into
-  `tests/output/graphic/` (the `moment.int.test.ts:42-194` pattern):
-  - A fake `Bakers.graphic` writes a grey per frame index inside the
-    template's box and transparency outside. A red shot sits beneath on V1,
-    with a transcript whose words land on known frames.
-  - `bakeForExport` runs at 9:16 and 16:9, then `buildRenderPlan`, then the
-    bundled ffmpeg, sampled at `(f − 0.25)/fps`.
-  - **The frame of each beat's word is that beat's grey**, and the frame
-    before is not.
-  - After the last moving frame the grey holds to the clip's end, then the
-    opacity exit.
-  - Outside the box the red shot shows.
-  - The box sits in the free third §6.9 chose.
+M14's command names a counter. The same rating is run with a `keyword` (an
+entrance) and a `callout` (a draw-on) as the named clip, so "the default
+curve per template" covers the three motions phase 2 has; a
+template whose own pick differs from the overall winner records it as its
+default (§6.13). Durations are not rated in the same pass: one variable at a
+time.
 
-  Mutations: beats one frame late; the export bakes at the project's shape;
-  a null bake left on the edit's asset (the export must not fail; the clip
-  is dropped with a note).
+**The blind look rating** (added 2026-10-21 by the review: several rows of
+§6's "What waits", the presets and `DURATIONS` waited on "phase 2's
+ratings", and M14 picks curves only). Run in phase 2 after M14's winner is
+set, on your clips, in the development app's console (`await
+window.__forgeGraphicCheck({ look: { clipIds: [...] } })`, §6.11), as M14's
+is run:
 
-**Census rows:** the Transcript tile's "Graphics", "Find graphics in this
-clip", "Keep", "Drop", "Clear graphics"; the dock's graphic panel
-(`tools/GraphicPanel.tsx`: the template's fields, re-checked by the
-validator on every edit, except fields in `user` mode (a social card is
-never checked against a stretch), so a typed number not in the stretch
-shows a warning, not a block, because the user may type what they like); the OUTPUT
-strip's style tiles.
+1. **The renders.** For each named graphic clip (at least six, covering
+   the eight templates, on three of your clips), the clip rendered under
+   `clean`, `bold`, `editorial` and `energetic`, and `clean` again with
+   `dim` on; letters shuffled per clip, the key returned for you to save as
+   M14's is.
+2. **The questions**, answered per graphic without the key, 1-5 where it is
+   a rating: does it look like a pro reveal or tutorial (your bar, §0), per
+   render; restrained against energetic, which you would ship; is the dim
+   wanted; would motion blur on the fast moves help (yes or no); would a
+   check tick beside a step help (yes or no); does the energetic style
+   want more (ripples, a burst: yes or no); is any duration too quick or
+   too slow (name the template).
+3. **What it decides.** The median rating per preset goes to EFFECTS §61
+   with the key. A "yes" on at least half the graphics unlocks its row of
+   "What waits" as its own later change (outside step 3's days); a
+   template named too quick or too slow twice has its `DURATIONS` or
+   seconds revised in phase 2; a preset rated under 3 on every graphic is
+   revised or removed; the dim's answer sets `dim` in the restrained
+   presets.
 
-### 6.12 Exit
+**Your part** (§2's table): about 4 hours to record and mark the ten
+transcripts, 1.5 for the nested set, 1 to write or check the 27 drawing
+fixtures' Hindi and Telugu strings, and 2 for M14's three rating rounds and
+the look rating; about 8.5 hours in all.
 
-- The property test green and mutation-checked, over the painter's output
-  and with the adversarial generators: **zero ungrounded, mispaired or
-  de-negated graphics can ship.**
-- Every number heard from a YouTube track or an unsure Whisper word waits
-  for Keep (census rows present).
-- One local configuration: a truth hit (±1 sentence) on ≥ 6 of 10 fixtures;
-  the drop rate recorded; template fit ≥ 3/5 on ≥ 8 of 10, blind.
-- The render check frame-exact at both shapes, on both builds.
-- The harness's preview = export ≤ 1/255 for all six templates.
+**Days: 1.5** (phase 2): the baseline, the eval block, the report's filter,
+the fixtures' wiring, and M14's and the look rating's runs.
+
+### 6.11 Tests, harness check, render checks, mutations — by phase
+
+**1 day**: 0.5 in phase 1 (the harness check's `pathLength` and `strokes`
+widths, `graphic.int`'s phase-1 cases, `SHAPES`' graphic overlay), 0.5 in
+phase 2 (the harness check's `templates`, `curves` and per-template Indic
+options, `graphic.int`'s phase-2 cases, the property test's wiring): the
+pieces no single section owns. Every other test is written with its piece
+and counted in that piece's days; phase 0's are inside §6.15's, phase 3's
+and phase 4's inside §6.16's and §6.18's.
+
+Every regression test is mutation-checked: the bug put back, the test seen
+to fail, the file restored byte for byte. Every string anchor is counted
+with `matchAll` first and asserted over every match, or anchored on text
+that is unique, with its arguments. Membership is asserted, never a whole
+list (`CLAUDE.md`). A mutation is listed with the case that kills it; where
+a mutation could be killed by a rule other than the one it names, the case
+is written so that only the named rule catches it, and that is checked when
+the case is written (as §6.11 as written did for `claims.test`). Each test
+is specified once, in the section that owns its code, with its cases and
+its mutations; this section holds the index, the phase 0 cases, the
+existing tests that change, the harness check, the Indic render check, the
+render check and the census.
+
+#### Where each test is written
+
+| phase | test | specified in |
+|---|---|---|
+| 0 | `tests/oldestFfmpeg.test.ts`'s M4 case; `tests/integration/graphic.int.test.ts`'s libass reference; `tests/integration/asr.int.test.ts`'s M21 case | below |
+| 1 | `tests/graphicGuards.test.ts` | §6.4 |
+| 1 | `tests/graphicMotion.test.ts` (M9) | §6.13 |
+| 1 | `tests/graphicStroke.test.ts`, `tests/graphicDrawList.test.ts`, `tests/graphicPaint.test.ts` | §6.3 (two depth cases in `graphicDrawList`, §6.16) |
+| 1-3 | `tests/graphicFrame.test.ts` | phase 1 §6.3, phase 2 §6.2, the screen card §6.16 |
+| 1-2 | `tests/graphicStyle.test.ts` | §6.5 |
+| 1-3 | `tests/renderer/graphicStore.test.ts` | phase 1 §6.3, the sounds that follow a graphic §6.14, the screen card §6.16 |
+| 2 | `tests/claims.test.ts`, `tests/graphicsValidator.test.ts` (the property test) | §6.7 |
+| 2 | `tests/directorGraphics.test.ts`, `tests/renderer/transcriptGraphics.test.tsx`, `tests/renderer/graphicPanel.test.tsx` | §6.6 |
+| 2 | `tests/graphicHolds.test.ts` (M16), `tests/graphicTree.test.ts` | §6.2 |
+| 2 | `tests/graphicBeats.test.ts` | §6.8 |
+| 2-4 | `tests/graphicPlace.test.ts`, `tests/graphicBudget.test.ts` | §6.9 (phase 3's hero case in `graphicBudget`, §6.16; phase 4's hand case in `graphicPlace`, §6.18) |
+| 2 | `tests/graphicSound.test.ts` (the sound Clear test) | §6.14 |
+| 3 | `tests/graphicCompositor.test.ts` | §6.16 |
+| spike, 4 | `tests/handsEvents.test.ts`, `tests/handsSmooth.test.ts`, `tests/handsAnchor.test.ts`, `tests/sidecar/test_hands.py`, `tests/integration/hands.int.test.ts` | §6.18 (their first versions, §6.17) |
+| 4 | `tests/renderer/pointingToggle.test.tsx` (added 2026-10-21 by §6.18) | §6.18 |
+| 0-4 | `tests/integration/graphic.int.test.ts`, the render check | below |
+| 0-2 | the Indic render check, in the app's renderer | below |
+
+#### Phase 0's cases
+
+- `tests/oldestFfmpeg.test.ts` gains **M4's case** (§6.15): it runs the
+  bundled ffmpeg (`FFMPEG`, `tests/integration/output.ts:21`) with
+  `-hide_banner -h filter=<name>` for `tmix`, `overlay` and `perspective`,
+  and prints, through `ciNotice` (`tests/integration/helperDiag.ts:211`) as
+  one notice titled "oldestFfmpeg: M4 probes", whether each exists and
+  whether `overlay`'s help lists `alpha` with `premultiplied`. It reads
+  presence from the text, never the exit code: on the Mac's bundled 4.4
+  (measured 2026-10-21 for this plan) an existing filter's help begins
+  "Filter <name>", and `-h filter=nosuchfilter` exits 0 and prints "Unknown
+  filter 'nosuchfilter'."; `overlay`'s help lists `alpha` with `straight`
+  and `premultiplied`. It asserts only that `overlay` is found (so a probe
+  that prints nothing fails), and records the rest: a filter missing on the
+  Windows build is struck from §13's later options, not worked around.
+  Mutation: the presence read from the exit code (the unknown filter reads
+  as present).
+- `tests/integration/graphic.int.test.ts` begins, **with the libass
+  reference for M22**: a hand-written `.ass` of the EFFECTS §51 clusters
+  (क्ष त्र ज्ञ श्र कि, క్ష త్ర శ్రీ కి స్త, one per event) burnt through the bundled
+  ffmpeg with the plan's own filter, `ass=…:shaping=complex` and again
+  `shaping=simple`, into `tests/output/graphic/indic-libass/` as one contact
+  sheet per level. `captions.int`'s Indic case
+  (`tests/integration/captions.int.test.ts:213`) carries four of each
+  script's five clusters (no ज्ञ, no స్త) and renders into a temp folder it
+  deletes (`:27`, `:37-38`), so it cannot be the reference the eye compares
+  against. The case prints, per cluster, whether complex and simple differ
+  (a `ciNotice` on CI). It asserts nothing about the fallback face: in phase
+  0 `/assets` is gitignored and CI's libass draws whatever it finds, and
+  from §6.20's fonts commit on, the two Noto faces are in its `fontsdir`.
+- `tests/integration/asr.int.test.ts` gains **M21's gated case**: with the
+  models folder it already reads (`FORGE_MODELS_DIR`, `:11`) and a folder of
+  your Hindi clips (`FORGE_ASR_HINDI=<folder>`, proposal), it transcribes
+  each and writes every number-bearing word as the model wrote it
+  (Devanagari digits, ASCII digits or words) into
+  `tests/output/asr/hindi-numbers.txt`. Skipped without the folder.
+
+#### Existing tests that change
+
+- `tests/oldestFfmpeg.test.ts`: M4's case (phase 0, above); and in phase 1 a
+  graphic's PNG sequence with its opacity exit joins `SHAPES` (`:196`), so
+  the `TOO_NEW` scan (`:61`) covers the graphic overlay's shape although
+  nothing in it is new (§13).
+- **Every `Bakers` literal gains `graphic`** (phase 1; `Bakers.graphic` is
+  required): `tests/exportBake.test.ts:23`, `tests/moment.test.ts:522` and
+  `:551`, `tests/reframeConsumers.test.ts:104`,
+  `tests/integration/exportBake.int.test.ts:45`, `jcut.int.test.ts:49`,
+  `moment.int.test.ts:52`, `spine2Render.int.test.ts:75`, **and
+  `tests/eval/pipeline.ts:585-597`**, an object literal passed straight to
+  `bakeForExport` that names no `Bakers` type, so a search for the type's
+  name misses it; tests are typechecked (`tsconfig.node.json` includes
+  `tests/**/*`), so a required `graphic` fails it there.
+  `tests/exportB2.test.ts:372` only reads the call's text, and the four
+  renderer tests that mock `liveBakers: {}`
+  (`tests/renderer/stripsRender.test.ts:38` and three more) need nothing.
+- `tests/paper.test.ts:496-507`, `:722-725` and `tests/moment.test.ts:629`:
+  their spelled-out guard pins become membership (§6.4).
+- `tests/textAnimation.test.ts`, `tests/textPaint.test.ts`,
+  `tests/captions.test.ts` (the `\fn` tags),
+  `tests/integration/captions.int.test.ts` (its Windows notice with Noto
+  present) and `tests/integration/assetscan.int.test.ts` (the two fonts
+  listed on a pack root; its `toHaveLength(3)` for fonts becomes
+  membership; the catalogue's version): §6.20.
+- `tests/eval/director.eval.test.ts`: the `FORGE_EVAL_GRAPHICS` block,
+  copied from the look block (`:173-237`) (§6.10).
+- `tests/uiCensus.test.ts` with `tests/fixtures/ui-census.json`: the census
+  rows below.
+- `tests/integration/sidecar.int.test.ts`: the self-test groups held equal
+  to the helper's (`:155-178`) once `vision.handsModel` joins
+  `SELFTEST_GROUPS.faces`, and the optional methods (phase 4, §6.18).
+- `tests/integration/reframeJob.int.test.ts`: a hands ask and H12's stage
+  clock with hands on the shared decode (the spike reads H12 by the
+  worker's clock; phase 4 builds this case, §6.18).
+- `tests/helperPackManifest.test.ts`, `tests/integration/helperPack.int.test.ts`
+  and `tests/renderer/bridgeMethods.test.ts`: `vision.handsModel` in
+  `expects` and the hand model's channels (phase 4, §6.18).
+- `tests/directorAsk.test.ts`: the OpenAI retry's nudge (phase 2, §6.6).
+- `tests/freeSpace.test.ts`: `samplesOver`'s cases (phase 2, §6.9).
+
+#### The harness check — `window.__forgeGraphicCheck(options)`
+
+In `src/renderer/src/harness/graphicCheck.ts`, installed by
+`installGraphicCheck()` in `harness/main.tsx` after `installHelperPackCheck()`
+(`:46`). Its measuring half is written in phase 0 to §6.15's spec (engine's
+code), phase 1 adds the primitives, phase 2 the templates, phase 3 the
+compositor (§6.16's code). It returns its numbers, the frames it drew (as
+PNG data, and a contact sheet on the page), and `navigator.userAgent`, so a
+result names the browser that made it. `GraphicCheckOptions`' keys are the
+table's.
+
+**Where it runs.** The harness "serves the renderer as an ordinary web
+page" (`vite.harness.config.ts:7-13`), so its results belong to whichever
+browser opened it. M3 and M22 depend on Electron 44's Chromium, ICU and
+HarfBuzz, and M13 and M19 bake through the app's own writer
+(`writeTitleFrame`, `src/main/titles.ts:143-150`), which the harness bridge
+does not have. So the check is also installed in the development app's own
+renderer, behind `import.meta.env.DEV` with a dynamic import so no
+production bundle carries it (`src/renderer/src/main.tsx`, which installs
+only the fallback bridge today, `:8`), and every run below is made in
+`npm run dev`'s DevTools console where it can be; the harness page is the
+fallback for the timings, with its user agent recorded. Neither Electron nor
+the harness's localhost can be reached from the development sandbox, so
+every run is yours.
+
+| option | phase | does | measurement or bar |
+|---|---|---|---|
+| `encode: { frames, region, pool }` and `encode: { frames, workers }` | 0 | §6.15's synthetic graphic, 120 frames, encoded per region and pool depth through `encodeFrames`, and in 1, 2 and 4 module workers | M1, M2 |
+| `segments: true` | 0 | segments and paints the Indic words cluster by cluster | M3 |
+| `blur: { words, px }` | 0 | a ten-word blur-rise line at 1080×1920 | M5 |
+| `parity: true` | 0 (Indic and colour, raw three.js), 3 (whole, through `paintDrawList3d`, and each 2.5D variant's settled frame against its flat twin) | painter output through a `CanvasTexture` against the canvas | M6 |
+| `glow: ['unreal', 'quad', 'pmndrs']` | 3, first, through the compositor's glow seam with both routes built behind it (`'unreal'` and `'quad'`; `'pmndrs'` only from a scratch branch, §6.15); moved from phase 0 on 2026-10-21 | alpha outside a glowing shape | M7 |
+| `indic: true` | 0 (bare `drawTextOnto`), 1 (through a text item and `paintDrawList2d`, and through a text clip's and a caption's own bake in a Latin face, so the `INDIC_FONTS` loading at those sites, §6.20, is seen in the frames), 2 (with `templates`) | the Indic render check below | M22; phases 1 and 2's Indic bars |
+| `primitives: true` | 1 | `PRIMITIVES_SPEC` through the drawer seam (§6.3), its drawer returning hand-built lists (a cubic stroke with an end head at `to` 0, 0.5 and 1; a text entrance in Latin and in the EFFECTS §51 clusters at progress 0, 0.5 and 1; a dim with a hard and a 24 px feathered hole; a rotated, scaled group) through the preview path and through `encodeFrames`, each PNG decoded (`createImageBitmap` with `premultiplyAlpha` and `colorSpaceConversion` `'none'`): per case the mean and largest difference against the preview canvas, the last moving frame against the held end, alpha outside `graphicBox`, the same list drawn twice, and 1080×1920 draw and encode times | phase 1's exit; M13's first half |
+| `pathLength: true` | 1 | `SVGPathElement` length and points against `flattenPath` | M8 |
+| `strokes: { widths: [1, 2, 3] }` | 1 | stroke PNGs through the app's bake, for M19's overlay | M19 |
+| `templates: GraphicTemplateId[]` | 2 (and step 6, §9) | per shape, from `specs.json`: frames 0, a beat, the last moving frame and the end differ as they should; the last moving frame equals the held end (mean 0); alpha 0 outside the box; the same spec twice identical; preview against baked PNG ≤ 1/255; draw and encode timed | phase 2's exit |
+| `curves: { names: CurveName[]; clipId: string }` | 2 | the named graphic clip of the open project (a counter, then a keyword and a callout, §6.10) under each named curve, lettered and shown blind; the key in the result | M14 |
+| `look: { clipIds: string[] }` | 2 | each named graphic clip under four presets and `clean` with the dim, lettered and shown blind; the key in the result (§6.10) | the look rating |
+| `strokes: ['freehand']` | 2, from a scratch branch with perfect-freehand added there and never merged, imported by a DEV-only dynamic `import()` (§6.15) | perfect-freehand's draw-on, both ways; the `rough` half is not run in step 3 (§16.60) | M10 |
+| `readback: […], frames` | 3 | the three readbacks timed | M12 |
+| `screenCard: '<path>'` | 3 | Tilt in and Pull back at 9:16, at rest and moving; the bake cost of the moving frames and of the one-loop edge sweep; the hand-off (§6.16) | M20 |
+
+#### The Indic render check
+
+Run in the app's own renderer on the Mac and the Surface; CI cannot run it,
+since painting needs a DOM canvas and CI's canvas checks stand the glyphs in
+(EFFECTS §60, "The stand-in against the real painter"). **Phase 0** runs it
+on `drawTextOnto` alone (M22). **Phase 1** runs it again through a draw
+list's text item and `paintDrawList2d` (expected equal to `drawTextOnto`
+directly: one function, one spec), after §6.20's fonts are in (§16.63).
+**Phase 2** runs it over every template's Hindi and Telugu fixture.
+**Phase 3** runs it through a `CanvasTexture` at 1:1 (M6, 0.000).
+
+- **Media**: the EFFECTS §51 clusters (क्ष त्र ज्ञ श्र कि, క్ష త్ర శ్రీ కి స్త), each
+  drawn whole, and again one code point at a time (`Array.from`, standing in
+  for libass's `shaping=simple`), at 1080 wide in the style's own size.
+- **Reading**, per cluster: each conjunct's `measureText` advance narrower
+  than the sum of its code points' advances; the whole-drawn frame differs
+  from the per-code-point frame by more than 1/255 mean over the cluster's
+  ink box (proposal); for कि, whose i-matra goes before its consonant, the
+  two frames differ in the order of their ink (the i-matra's ink left of the
+  consonant's in the whole drawing). The whole-drawn sheet is set beside
+  `graphic.int`'s libass sheets (`tests/output/graphic/indic-libass/`) and
+  judged by your eye: a loose virama or an i-matra after its consonant is a
+  fail. The font each cluster resolved to is recorded (§6.15, M22).
+- **Tolerance**: the numeric parts exact as stated; the eye check pass or
+  fail.
+- **Mutation**, run once by you on the Mac: the painter made to draw per
+  code point (an `Array.from` split in `paintDrawList2d`) must fail it, every
+  conjunct's frame then equal to its per-code-point frame.
+
+#### The render check — `tests/integration/graphic.int.test.ts`
+
+Into `tests/output/graphic/`, the pattern of
+`tests/integration/moment.int.test.ts` (its fake drawer `:42-71`, its cases
+`:138-205`). Every case decodes every frame in order and samples a frame at
+`(f − 0.25)/fps`, which lands on frame f (EFFECTS §34). A pixel matches a
+colour within 5 levels per channel (`toBeLessThan(6)`), as `moment.int`
+reads H.264 (`:171-174`). It runs in CI on both runners, where the library
+is absent (only §6.20's two Noto faces and their licences are tracked under
+`assets/`): nothing in it may need the library's fonts or sounds.
+
+- **The fake `Bakers.graphic`**: for moving frame i it writes a PNG whose
+  place rect (`place.box`, or for `place.auto` the third's content rect of
+  §6.2's layout), scaled to the export's size, is filled with grey 20 +
+  15·(i mod 12) and is transparent outside (it draws no list, so it needs
+  no drawer and no `graphicBox`), except on an arrival frame (a frame that
+  `beatFrame` gives for one of `spec.beats`), which it fills white. Greys 15 apart, so a frame off by one reads
+  as another grey; mod 12, so a frame names itself within a short window.
+  It writes the moving frames only, as the app's bake does.
+- **Phase 0**: the libass reference (above).
+- **Phase 1** (§6.3): a red 9:16 shot, 360×640 at 30 fps, on V1; a graphic
+  clip on V2 whose spec has `place: { auto: false, box }` and beats at 0.5 s
+  and 1.0 s into the clip (set in the spec: beats from words are phase 2's).
+  `bakeForExport` at 9:16 and at a 16:9 export (640×360), then
+  `buildRenderPlan`, then the bundled ffmpeg. Read: the frame before the clip
+  is red; each moving frame i shows grey(i) inside the box; each arrival
+  frame is white and the frame before it is not; after the last moving frame
+  its grey holds to the start of the exit; over the exit's frames the box
+  falls monotonically to red, and the frame after the clip is red; outside
+  the box the red shot shows on every frame; the box sits where the spec put
+  it at both shapes. The note counts the PNGs written, which must equal
+  `graphicMovingFrames`. **(box) If M1 picks the box bake**: the grey's
+  first and last columns and rows are within 1 px of the box's edges at
+  both shapes (luma only, as 4:2:0 smears chroma), and the same graphic
+  exported by the box route and by the canvas route is `framemd5`-equal
+  (alpha 0 outside the box leaves the base untouched, and even edges keep
+  the chroma blocks aligned; proposal). Mutations: the export baking at the
+  project's shape (the 16:9 box is wrong); a null bake left on the edit's
+  asset (the export must not fail; the clip is dropped with a note); the
+  hold baked (the PNG count equals the clip's frames); (box) an odd x (an
+  edge one pixel off; the two routes differ).
+- **Phase 2** (§6.2, §6.8, §6.9, §6.14): a transcript whose words land on
+  known frames; a `counter` (one beat) and a `steps` with a tree (three
+  items, three beats), made as hand-built `KeptGraphic`s through
+  `applyGraphics` on the fixture project (no model, no settle), under
+  `clean` (dim off), at 9:16 and 16:9, with a subject track written by
+  hand (as `captionsFree.int` writes its own) that puts the face in the
+  middle third and captions at the bottom. Read: **the frame of each beat's
+  word is white, and the frame before is not**; the box's centre sits in
+  the third §6.9 chose (hand-derived, as `captionsFree.int`'s `EXPECTED`); a
+  no-track case keeps the style's third. A sound case: `graphicSounds`
+  places a stand-in tick on the counter's beat: a 20 ms 1 kHz tone the
+  test makes (CI has no library), handed in as a one-entry `SoundPack`
+  whose `SoundFile` is `{ id, name: 'clock_tick.wav', file: <the tone>,
+  role: 'tick', seconds: 0.02, peakSeconds: 0, peakDb: −10 }`, so its peak
+  is its onset; the export's audio has its onset within 1 ms of that
+  frame's time. Mutations: beats one frame late;
+  placement ignoring the caption's third; the tick placed at the clip's
+  start instead of its beat; the two earlier phases' mutations still killed.
+- **Phase 3** (§6.16), the screen card's hand-off through the real plan: a
+  3 s recording whose every frame is its own grey, a red track beneath, a
+  stand-in card baker that writes the card's moving frames (a grey card in
+  the box up to `L`, then a bezel ring with a hole). Read: the PNG count
+  equals the card's moving frames, not the clip's; before `L` the box shows
+  the card's grey and the red round it; from `L + 1` the box shows the
+  recording's own grey for that frame, changing frame to frame, and the
+  bezel round it; a null bake leaves the recording visible from its first
+  frame. Mutations: the hold baked frame by frame (the PNG count, and the
+  box's grey frozen at `L`); the opacity key one frame late (frame `L + 1`'s
+  box shows red); the keys left on a dropped card (the box red for the
+  move).
+- **Phase 4, the hand render check** (§6.18): a 640×360 source with a white
+  6×6 "fingertip" moved along a known path (an `overlay` of a `color` source
+  at x and y expressions of `t`), a `Project.hands` `HandTrack` written by
+  hand whose `PointEvent.tip` follows the same path, a followed 9:16 crop;
+  the stand-in baker draws a 4×4 magenta square at `targets.tip` (the
+  line's end) through `targetsAt` on each frame. Read: on every frame of the
+  event the magenta square's centre is within 2 px of the white dot's centre
+  in the export, on both builds; where the tip leaves the crop no square is
+  drawn. Mutations: the tip mapped through the fit but not the crop; the
+  tip taken once at onset.
+
+#### Census rows
+
+The Transcript tile's "Graphics", "Find graphics in this clip", "Keep",
+"Drop", "check the number" (one per transcript source: a stub YouTube ASR
+track, a YouTube uploader track, an unsure Whisper word), "Clear graphics"
+and "Speaker"; the dock's graphic panel (`components/GraphicPanel.tsx`) and
+its "Role"; the OUTPUT strip's "Graphics" section with its seven style
+tiles ("Clean", "Bold", "Editorial", "Neon", "Mono", "Accent",
+"Energetic"), "Accent colour" and "Graphic sounds" (§6.5, §6.14); phase 3's
+"Screen card" with "Tilt in" and "Pull back", and the dock's "Depth" choice
+(§6.16); phase 4's pointing switch, `POINTING_SWITCH` ("Callouts follow a
+point", proposal), with "needs the AI helper", "the AI helper is starting",
+"needs the hand finder", "Get the hand finder · 7.8 MB", "Get the hand and
+face finders · 8.9 MB" and "Finding where they point" (§6.18). The exact
+text is each owning section's.
+
+### 6.12 Exit — by phase
+
+Each bar below is measurable and says who reads it. Every phase also ends as
+every step does (§2): typecheck green; the full suite green, its output
+written to a file and `$?` checked; the phase's mutations (§6.11's index)
+killed; the render check's output in `tests/output/graphic/` looked at; CI
+read on both runners at github.com/spyki-a/forge/actions (annotations by the
+full sha); `WHERE-THINGS-ARE.md` and the census updated for every new
+control.
+
+**Phase 0.** Read by the phase's recorder, from your console output and CI's
+annotations.
+
+- Every measurement phase 0 owns (M1, M2, M3, M4, M5, M6's Indic and colour
+  parts, M22) is in `EFFECTS.md` §61 with its command, machine (the Mac,
+  the Surface, or the CI run's id), date and user agent. M21 is there before
+  phase 2's counter is built.
+- §6.15's "as measured" note records, and phase 1 starts from: the bake
+  region and pool depth (M1, M2); whether any Indic entrance may go below a
+  word, as `CLUSTER_SCRIPTS` (M3); whether `blur-rise` is offered (M5);
+  M22's verdict on the canvas painter's Indic shaping, with the fallback
+  font each machine resolved. (The glow route, M7, is chosen at phase 3's
+  start, §6.15.)
+- M4's three probes printed by both runners. A filter missing on the Windows
+  build is struck from §13's later options, not worked around.
+- If M22 finds a cluster unshaped, its cause is found before any phase-1
+  commit that draws text; the rename, the guards, the motion module and the
+  stroke may land meanwhile (§6.15's M22 row, the one statement of it).
+- If M6's Indic part is not 0.000, or no colour setting gives 2/255, phase 3
+  is flagged now; phases 1 and 2 do not wait on it.
+
+**Phase 1.**
+
+- `graphicGuards` green, each site mutation-checked (the suite).
+- In the development app's console on the Mac and the Surface (yours):
+  `primitives` gives preview against the baked PNG within 1/255 mean for a
+  stroke at p = 0, 0.5 and 1, a text entrance and a dim; the last moving
+  frame equal to the held end (mean 0); alpha 0 outside the box (maximum 0);
+  the same spec twice identical. M8's agreement and M19's minimum width
+  recorded; M13's first half (the primitives' spec baked twice,
+  `framemd5`-equal; the Mac against the Surface recorded).
+- **The Indic render check** (§6.11), through `paintDrawList2d`, after
+  §6.20's fonts are named first, on the Mac and the Surface; mutation-checked
+  once (a per-code-point painter fails it).
+- `graphicPaint`: no Hindi or Telugu string drawn in pieces smaller than a
+  word (or a cluster, where M3 allowed it), mutation-checked by `Array.from`.
+- `graphicMotion`: the closed-form spring within M9's tolerance of the
+  reference; M9's figures in §61.
+- `graphic.int`'s phase-1 cases frame-exact at 9:16 and 16:9 on both builds
+  (CI).
+
+**Phase 2.** §6.12 as written on 2026-10-05, for all nine shapes (§6.2):
+
+- the property test green and mutation-checked, over the draw list's text
+  items with the painter pinned to them, with the adversarial generators:
+  **zero ungrounded, mispaired or de-negated graphics can ship** (the
+  suite);
+- every number heard from a YouTube track or an unsure Whisper word waits
+  for Keep (census rows present);
+- one local configuration: a truth hit (±1 sentence) on ≥ 6 of 10 fixtures;
+  the drop rate recorded; template fit ≥ 3/5 on ≥ 8 of 10, blind (the eval,
+  your ratings);
+- the render check frame-exact at both shapes, on both builds (CI);
+- the harness's preview = export ≤ 1/255 for all nine shapes (yours, Mac and
+  Surface).
+
+And, from the research:
+
+- M14 run on your clips and its winner made each template's default curve;
+- the blind look rating run (§6.10), its medians and answers in EFFECTS
+  §61, and the presets, `DURATIONS` and the restrained presets' `dim`
+  revised by it where it says so;
+- M18's levels recorded, with speech intelligible to you under every graphic
+  sound;
+- `graphicBudget`'s no-overlap property green over every fixture (no two
+  graphics overlap in time, none sits over a zoom punch), mutation-checked;
+- M16's reading holds met by every template's longest fixture label.
+
+Three additions to the bar as written:
+
+- **the Indic render check over every template's Hindi and Telugu fixture**,
+  on the Mac and the Surface, mutation-checked the same way;
+- **the sound Clear test** (`graphicSound`), its three cases,
+  mutation-checked: with graphic sounds tagged `SOUND_RULE`, the first case
+  fails;
+- **the tree** (`graphicTree`): the computed parent lists equal the expected
+  ones on the three English nested-enumeration fixtures, and the property
+  (every parent backwards, one root) is mutation-checked by allowing a
+  forward parent. **This narrows the research's bar** (its §7.3: exact
+  parent lists "on the nested-enumeration fixtures", with no language
+  limit): v1's sub-count rule has an English cue list only, as §16.11 has
+  English number words only, so the Hindi and Telugu fixtures are scored
+  and recorded, not passed (§6.2, §6.10).
+
+Also before phase 2 is called done: §15 rows 10 and 11 measured (the eval's
+first run answers LM Studio's `minItems: 0`; the Telugu fixtures answer the
+negative endings); M15 and M17 recorded, and `GRAPHICS_PER_MINUTE` set from
+M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
+
+**The spike's gate** (§16.56; the spike is §6.17). Read from `EFFECTS.md`
+§62, which holds H1-H10, H12 and H13 with their commands, machines and
+dates. Measured in three conditions **separately**: bare hands in daylight;
+hennaed hands (with bangles and rings); low light or motion blur. It passes
+when all of these hold:
+
+1. **It runs**: H1 on the M1 Pro and on the Surface (`ready`, then a whole
+   raw track from a real clip); CI's bare interpreter answers degraded,
+   never crashes.
+2. **Per condition, on the M1 Pro** (H4, H7): at least **8 of 10** marked
+   points found, and at most **one false event a minute** over at least
+   three minutes of natural gesturing with no point, with §6.18's rules and
+   dwell. A marked point is found when an event in its shot starts within
+   0.5 s of the marked onset (proposal).
+3. **The Surface agrees**: the bare-hands condition repeated there meets the
+   same bar.
+
+Recorded beside it, not gated: H9's share of points inside a 9:16 crop;
+H2's cost; H8's onset error; H10's handedness; H12's shared decode.
+
+The three outcomes (D3's "if hennaed hands or low light fail, pointing ships
+off by default on wedding footage with a note, or the work stops at the
+spike", made exact):
+
+- **Pass**: phase 4 is built (6 days, §6.18), the switch off per clip by
+  default, every pointed graphic a proposal you keep.
+- **Partial**: conditions 1 and 3 hold and bare hands pass, but hennaed
+  hands or low light fails. Pointing is already off per clip by default;
+  whether to build phase 4 with the switch carrying the measured limits
+  ("points on hennaed hands or in low light are often missed", with the
+  figures) or to stop is put to you as a new decision (the next free §16
+  number) with §62's figures. Recommendation: build if one of the two fails, stop if
+  both do: weddings are the first niche, and a feature that misses both
+  would miss most of their footage.
+- **Fail**: condition 1 or 3 fails, or bare hands fail on the M1 Pro: the
+  work stops at the spike and phase 4's 6 days are not spent. What the
+  spike leaves behind is §6.17's.
+
+**Phase 3.**
+
+- M6 whole, through `paintDrawList3d`: flat colour through the compositor
+  within 2/255 of painter A; the EFFECTS §51 clusters through a
+  `CanvasTexture` at 1:1 at 0.000; a 1 px anti-aliased line at 10, 50 and
+  90 % alpha within 2/255 over black and over white (yours, Mac and
+  Surface).
+- Preview = export within 1/255 for the 2.5D `counter` and `ring` at rest and
+  on three moving frames, and for the screen card's moving frames; each
+  variant's settled frame equal to its flat twin.
+- The same spec baked twice, `framemd5`-equal (M13, on a 2.5D counter and a
+  screen card); the Mac against the Surface recorded in §61 as the golden
+  tolerance (no CI check compares pixels across machines).
+- M7 run first, on the compositor's glow seam on both machines: the route
+  that passes kept, the other removed; the glow's alpha 0 outside its shape
+  on that route; the hero rule's glow and tilt drawn (§6.16).
+- Disposal: after a 2.5D bake and the clip's removal, the shared renderer's
+  `info.memory` geometries and textures back to their counts before the bake
+  (harness; proposal).
+- With WebGL missing, the flat graphic drawn with the note
+  (`graphicCompositor`).
+- The screen card legible at 9:16 by your eye; its hand-off within 2/255
+  mean on both machines (proposal); its bake cost, the sweep's and the
+  readbacks (M20, M12) in §61.
+- `graphic.int`'s phase-3 case on both builds; §9 reads 5 days.
+
+**Phase 4** (only if the gate passed, or on a partial with your yes).
+
+- The gate's figures measured again on **held-out clips** (§6.17's two per
+  condition, none used to tune `DEFAULT_POINT_RULES`), on the M1 Pro, each
+  condition the gate passed meeting the gate's bars.
+- **The hand render check**: `graphic.int`'s phase-4 case within 2 px through
+  the crop on every frame of the event (CI, both builds); and in the
+  development app, on the held-out clips' marked frames, the real painter's
+  callout line ending on the marked fingertip within 2 % of the frame's
+  short side (the dead zone, proposal; yours; H4's tip error, in palm-size
+  units, says whether it is reachable).
+- `handsEvents`: an event never crosses a shot, and a re-analysis never
+  moves a placed graphic, both mutation-checked.
+- The switch off per clip by default; a pointed graphic a proposal until
+  Keep (census rows).
+- The face track unchanged by pointing (`hands.int`, byte for byte).
+- `vision.handsModel` in `SELFTEST_GROUPS.faces` and the pack's `expects`
+  (`packManifest.ts:314-324`, `:628`); `sidecar.int`'s groups held equal;
+  `helperPack.int` green with it on both runners; H13's pin in
+  `capabilities/faces.py` beside `MODEL_URL` (`:67-82`).
+
+### 6.13 The motion module — `src/shared/graphics/motion.ts`
+
+**Phase 1 · 1 day.** D9, §16.62: "One module, `graphics/motion.ts`, above
+the graphic style, read by graphics first; captions and zoom punches migrate
+after phase 2's ratings." Every template reads its curves and durations
+from here; the model never picks a curve, a duration or a sound (the
+research, §4.5).
+
+**The curves** (`CurveName` = `'expo-out' | 'decelerate' | 'accelerate' |
+'standard' | 'out-cubic' | 'out-back' | 'linear' | 'carbon-expressive'`;
+`curve(name: CurveName): (x: number) => number`, exact at 0 and 1 for every
+name):
+
+| name | definition | use | source |
+|---|---|---|---|
+| `expo-out` | `cubic-bezier(0.16, 1, 0.3, 1)` | the default entrance and a counter's arrival until M14 | the research's §1.4, [17]; the Bézier form, because it ends exactly at 1 where 1 − 2^(−10x) ends at 0.999; the two differ by under 0.01 at 10-50 % |
+| `decelerate` | `(0.05, 0.7, 0.1, 1.0)` | an alternative entrance | Material's emphasized decelerate, [23] |
+| `accelerate` | `(0.3, 0, 0.8, 0.15)` | exits | Material's emphasized accelerate, [23] |
+| `standard` | `(0.2, 0, 0, 1)` | moves within the frame | [23] |
+| `out-cubic` | 1 − (1 − x)³ | kept: it is the captions' `easeOut` (`textAnimation.ts:62`) | — |
+| `out-back` | c1 = 1.70158 | the `pop` entrance only, in the energetic style | [25]; the captions' `backOut` uses 1.7 (`textAnimation.ts:72`), 10.0 % overshoot at 58 % of the duration either way (the research, §1.4) |
+| `linear` | x | loops only: beams, marching dashes, sweeps | [27] |
+| `carbon-expressive` | `(0, 0, 0.3, 1)` | compared in M14 (chosen 2026-10-21) | IBM Carbon's expressive entrance, [26] |
+
+`MotionEase` = `CurveName | 'spring1'` (named so beside the keys' own `Ease`,
+`render/keyframes.ts:62`; §6.5). **`spring1`** is the critically damped
+response as a curve of fixed length: 1 − (1 + kx) e^(−kx) with k = 9.23, so
+the residual at x = 1 is 0.1 % (computed), divided by its value at 1 so it
+ends exactly there, spreading the residual over the move rather than leaving
+a jump on the last frame. It is a curve that ends on the beat, not a spring
+used as the clock of an arrival, which the research rejects (its §7.5).
+
+**`cubicBezier(x1, y1, x2, y2): (x: number) => number`** solves x for the
+curve parameter by Newton-Raphson (8 steps) with a bisection fallback and
+returns y, exact at the ends: about twenty lines, written here rather than
+taken as a dependency (`bezier-easing` "not needed", the research, §4.9).
+
+**`spring(t: number, p: SpringParams, from?: number, to?: number, v0?:
+number): { x: number; v: number }`** returns position and velocity in
+closed form for the under-, critically and over-damped cases, from
+`SpringParams` = `{ zeta: number; omega: number }` (ω in radians a second),
+as Motion's generator evaluates position and velocity at any t (the
+research, §4.6, [32]). Written here from the damped oscillator's solution; a
+line copied from `motion-dom` keeps its MIT notice. **Every spring is a pure
+function of t**: never stateful integration, never the clock of an arrival
+on a word. It serves settles that need velocity continuity, a content swap's
+entering element for one (the research, §4.4).
+
+**`progress(t: number, start: number, seconds: number, ease: MotionEase):
+number`** = the ease of `clamp((t − start + 1e-6) / seconds, 0, 1)`: a
+1e-6 s allowance, larger than the 1e-6 of a frame `beatFrame` subtracts
+(§6.3), so a frame whose time is a hair before the beat, which `beatFrame`
+may name, still reads exactly 1 and not 0.99999. A template that must arrive on a beat starts its curve at `beat −
+seconds`, so progress is 1 on `beatFrame` and below 1 the frame before.
+**`entrance(name, p): { dy; scale; opacity; blur }`** turns an entrance name
+and a progress into its four values (dy and blur as fractions of the text's
+pixel size), the one place the entrances of §6.5 are defined.
+
+**`DURATIONS`** (proposals from the research's §1.4; the look rating
+revises them, §6.10):
+
+| key | seconds | range read |
+|---|---|---|
+| `entrance` | 0.35 | 0.3-0.4 |
+| `exit` | 0.2 | about 0.12-0.3 |
+| `swap` | 0.12 | the old element's exit in a content swap |
+| `dim` | 0.5 | 0.3-0.7 (Carbon's background dim, 700 ms) |
+| `stroke` | 0.45 | 0.35-0.6 for a draw-on |
+| `headGrow` | 0.1 | the riding head's scale-in |
+| `loop` | 5.5 | 5-6, linear |
+
+The clip's own 0.3 s fade is not here: it is `EXIT_S`, drawn by the keys
+(§6.3).
+
+**Measurements.** M9 (node, below). M14 (phase 2, §6.10): one counter
+landing on its word under `expo-out`, `out-cubic`, `spring1`, `linear`,
+`decelerate` and `carbon-expressive`, then a keyword and a callout, shown
+blind to you; the overall pick becomes `clean`'s and the restrained presets'
+`motion.ease`, and a template whose own pick differs records it as its
+default in §6.2.
+
+**Tests**, `tests/graphicMotion.test.ts`: every `CurveName` is 0 at 0 and
+exactly 1 at 1; every curve but `out-back` is monotone over 1,000 points,
+and no curve but `out-back` passes 1; `expo-out` and `decelerate` match the
+research's table at 10, 20, 30 and 50 % within 0.01; `cubicBezier` matches
+a bisection reference within 1e-6 at 101 points; `out-cubic` equals 1 − (1
+− x)³ at 64 points; `out-back` overshoots 10.0 % at 58 %; `spring1` ends
+exactly at 1 with no overshoot; the closed-form spring at ζ = 1 never
+overshoots and at ζ = 0.5 overshoots about 16 % (computed, the research's
+§1.4); **M9**: the closed form (ζ = 1, and one under- and one over-damped
+case) against a semi-implicit Euler integration with 1,000 substeps a frame,
+sampled on each frame at 24, 25, 30 and 60 fps, the largest difference under
+10⁻⁴ of the travel (proposal), and the closed form's cost per call, both
+printed for `EFFECTS.md` §61; the spring at a time depends on the time only
+(0.2 s at 30 and at 60 fps equal, bit for bit) and two calls at one time are
+equal (no state); `progress` is 0 before its start, 1 from its end on, and
+exactly 1 on the frame its beat names, at 24, 25, 30 and 60 fps with beats
+on and between frames (`beatFrame`'s own cases). Mutations: `expo-out` as 1 − 2^(−10x)
+with no end fix (0.99902 at 1); the Bézier evaluated at t = x without
+solving, or solved on the wrong axis (the table fails); the critically
+damped case through the under-damped formula (NaN at ζ = 1); the
+under-damped branch's sine term with the wrong sign (M9 fails); the spring
+stepped by frame number instead of seconds (30 and 60 fps disagree); a
+spring that keeps state between calls; `spring1` not normalised (it ends at
+0.999); `progress` unclamped; `progress` without the 1e-6 (a beat a hair
+after a frame's time reads 0.99999 on the frame `beatFrame` names).
+
+**Later, not in step 3's days**: the captions' `easeOut` and `backOut`
+(`textAnimation.ts:62`, `:72`) and the zoom punches move onto this module
+after phase 2's ratings (M14's pick and the look rating, §6.10), as their
+own change (D9).
+
+### 6.14 Sound on the beats, under each graphic's own Clear
+
+**Phase 2 · 1.5 days.** D6 (§16.59), answered as recommended: graphics get
+sound, from the library's own sounds, capped per clip, off per project if
+wanted, levels from M18. **Each sound carries its graphic's Clear rule,
+never the Director's `SOUND_RULE`**, so each Clear removes exactly its own
+graphics' sounds. This adds to §6; §16.10 itself is unchanged. The app
+places every sound; the model never picks one (§6.6).
+
+**The sounds.** `src/shared/graphics/sound.ts`: `graphicSounds(project,
+clip, spec, rule, pack: SoundPack): { clips: Clip[]; assets: MediaAsset[] }`.
+It reads the library through `soundPackFor` (`director/soundRoles.ts:89`),
+and picks **by file name, not by role** (corrected 2026-10-21 by the
+review): `SOUND_ROLES` has two `tick` files, `clock_tick.wav` and
+`heartbeat_pulse.wav` (0.6 s, peak at 0.255 s, `soundRoles.ts:46-47`), and
+`pickSound`'s pattern sorts a role's files longest first and indexes into
+them (`sound.ts:75-80`), so a role-based pick would land a heartbeat on the
+first graphic and on every other one after it. So `GRAPHIC_SOUND_FILES` =
+`{ tick: ['clock_tick.wav'], whoosh: ['fast_whoosh.wav', 'whoosh_fast.wav',
+'sword_swish.wav', 'swoosh_heavy.wav'] }` in `graphics/sound.ts`, and the
+pack is filtered to entries whose `name` is in the list (`SoundFile.name`,
+`soundRoles.ts:70-77`):
+
+| key | files (entries of `SOUND_ROLES`, `soundRoles.ts:35-67`) | used for |
+|---|---|---|
+| `tick` | `clock_tick.wav` (0.08 s, peak at 5 ms) | a landing: where something visibly stops or appears |
+| `whoosh` | `fast_whoosh.wav`, `whoosh_fast.wav`, `sword_swish.wav`, `swoosh_heavy.wav` (0.26-0.65 s, peaks mid-file) | the fastest move of a stroke or an entrance |
+| not used | `heartbeat_pulse.wav` (a `tick` by role, a pulse by ear); `riser_climax.wav`, the table's only `hit` (`:51`), a 1.1 s swell into a boom, far too heavy for a card | — |
+
+**The "pop".** No `pop` role
+exists, and the library's only hit is a boom, so the research's "pop" is
+not a soft hit. The library does ship `pop_bubble.wav` and `ding_chime.wav`
+(`assets/sfxx/`, listed locally on 2026-10-21); `PLAN.md` §6.2 sets them
+aside as meme and UI sounds, "not for the Director" (`PLAN.md:1064`).
+
+- **Phase 2's landing is a `tick`.**
+- **`pop_bubble.wav` is a candidate for M18's listening.** If your ear picks
+  it under speech, it joins `SOUND_ROLES` as a new role `'pop'`, measured by
+  `scripts/measure-sfx.mjs` as every entry is, and the `energetic` style
+  lands with it. That is your decision after M18, not taken here.
+
+**Placement** follows the research's sound rules (its §1.4, [35]):
+
+- **A landing sound** goes only where something visibly stops or appears.
+  Its measured peak (`peakSeconds`) is placed on the beat frame, as
+  `placeSounds` lines peaks up (`director/sound.ts:112-136`).
+- **A whoosh's peak** goes on the fastest frame of its move: the frame where
+  the curve's progress changes most, computed from §6.13's curve. Never on
+  a held frame.
+- **No repeats.** Within a key of `GRAPHIC_SOUND_FILES` the file varies by
+  index, in the list's own order, so the same envelope does not repeat
+  across edits (`pickSound`'s indexing, `sound.ts:75-80`, without its
+  longest-first sort).
+- **The cap.** Every sound is under `GRAPHIC_SOUND_CAP` per footage clip, in
+  onset order.
+
+**Restrained styles** (every preset but `energetic`, D5, §16.58) get at most
+one sound per graphic; **`energetic`** adds a `tick` on every beat and a
+`whoosh` on each stroke's or entrance's fastest frame:
+
+| template | restrained |
+|---|---|
+| `counter`, `ring` | a `tick` on the arrival beat |
+| `bars`, `steps` (any connector) | a `tick` on the first item's beat |
+| `keyword` | a `tick` on its beat |
+| `callout` | a `whoosh` on its stroke's fastest frame |
+| `quote` | none: the speech is the graphic |
+| `lower-third`, `screen-card` | none |
+
+**The cap and the levels** are proposals until M18 and M17:
+
+- **`GRAPHIC_SOUND_CAP = 3`** a footage clip. With at most one graphic per
+  20 s, that is a sound on every graphic of a minute-long clip and on half
+  of a two-minute one's.
+- **`GRAPHIC_SOUND_DB`** (in `graphics/sound.ts`): `tick` −24, `whoosh` −26
+  dBFS peak. A graphic's sound sits under speech, not over the music, so it
+  is not `SOUND_LEVEL_DB`'s music-relative table
+  (`render/soundLevels.ts:17-24`).
+- **The gain** is `min(MAX_SOUND_GAIN, 10^((level − peakDb) ÷ 20))`: the
+  file's lift to its level, capped at the fader's ceiling
+  (`soundLevels.ts:35`), as `soundGain` (`:54`) computes it, without the
+  music's fader.
+- **M18** measures a tick and a whoosh (and `pop_bubble.wav`) under your
+  speech with `ebur128`; your ear judges whether the speech stays
+  intelligible. The levels and the cap move to what M18 records. Speech
+  peaks on your clips are unmeasured.
+
+**Each sound clip and its file carry the graphic's rule:**
+
+- Every sound clip has `generatedBy: { rule, reason: '<role> on "<the
+  field's text>" · <file>' }`, with `rule` being `GRAPHIC_RULE` or
+  `CLIPS_GRAPHIC_RULE`, and `forGraphic: <the graphic clip's id>`
+  (`Clip.forGraphic`, §6.1).
+- A file the app brings is a `MediaAsset` with `broughtBy: rule`
+  (`timeline.ts:93`), as the Director's sounds carry `SOUND_RULE`
+  (`sound.ts:189`).
+- A file already in the pool under the same path is reused, as
+  `placeSounds` reuses one (`sound.ts:90`, `:171`). A file you imported
+  carries no rule and stays on every Clear.
+- **Direct's graphic sounds** go on the Director's "Sound design" lane
+  (`SOUND_LANE_NAME`, `sound.ts:28`): an audio track marked `director`,
+  free over the span, else a new one, by a lane finder written as
+  `soundLaneFor` is (`director/apply2.ts:628-641`, a function inside the
+  spine's apply, not an export, so written again here).
+- **A Clip-it or Transcript-tile graphic's sounds** go on an ordinary audio
+  track named "Graphic sounds", reused when free over the span, else added;
+  never the Director's lane.
+
+**What learns the rule.** In `clearDirector` (`director/apply.ts:112`), the
+asset sweep is the `brought` set at `:125`, today `a.broughtBy ===
+SOUND_RULE`. It becomes **any asset with a `broughtBy`**: `a.broughtBy !==
+undefined`, a superset of learning `GRAPHIC_RULE`.
+
+- **Why the superset.** `placeSounds` (`sound.ts:90`) and `graphicSounds`
+  both reuse an audio asset by path whatever rule brought it. So a Director
+  whoosh can stand on a file a Clip-it graphic brought. Keyed on two rules,
+  Direct's Clear would leave that file in the pool after Clear graphics
+  took the graphic.
+- **Why it is safe.** Removal stays limited to assets of removed clips that
+  no surviving clip uses (`:126-137`). An import of yours carries no
+  `broughtBy`.
+- **The other lines.** The drawn-asset filter at `:126-127` is §6.4's: it
+  reads `drawsItself`, so it gains `graphic`. Direct's Clear removes
+  `GRAPHIC_RULE` graphics, their sounds (their rule is in `DIRECTOR_RULES`)
+  and their files; its return (`:133-138`) filters `graphicProposals` (§6.6).
+- **`clearGraphics`** (`graphics/apply.ts`) mirrors it for
+  `CLIPS_GRAPHIC_RULE`. It removes the rule's graphic clips and their sound
+  clips, then every asset of those clips that is a drawn graphic asset, or
+  has a `broughtBy`, and that no surviving clip uses.
+
+**A graphic's sounds follow it:**
+
+- `dropGraphic`, and `removeClip` on a graphic (`store.ts:1874`), take the
+  clips whose `forGraphic` is its id, with their brought files when unused.
+- `moveClip` (`store.ts:1879`) and `moveSelectionTo` (`:5173`) shift those
+  clips by the graphic's own shift when they are not in the move
+  themselves.
+- `setGraphic` and `keepGraphic` re-place them.
+- A pasted copy drops `forGraphic`: `pasteClipboard`'s `copy`
+  (`edit/recipes.ts:281-295`) sets it `undefined`, so a pasted sound is an
+  ordinary sound and Drop on the original never takes it.
+
+**Off per project.** `Project.graphics.sound` (§6.1's `GraphicsSettings`,
+`true` when absent) is the OUTPUT strip's **"Graphic sounds"** switch, beside
+the style tiles (§6.5). `setGraphicSounds(false)` removes every clip with a
+`forGraphic` and its brought files in one undo step; `true` places them
+again for every graphic. With no sound library installed, or no file for a
+role, graphics land silent with one note ("no sound library is installed —
+graphics land silent"), as the Director's sound design does
+(`sound.ts:93-95`).
+
+**Tests** (§6.11 indexes them by phase):
+
+- **`tests/graphicSound.test.ts`, the sound Clear test.** The research's
+  three cases (its §7.3), each named: (1) Direct's Clear leaves a Clip-it
+  graphic's sound clip and its file; (2) Clear graphics removes them; (3)
+  Direct's Clear removes a Direct graphic's sound and its file. And: (4) the
+  reused file: a Director whoosh on a file a Clip-it graphic brought; Clear
+  graphics, then Direct's Clear, leaves no orphan in the pool; (5) a sound
+  you imported, reused, survives both Clears; (6) Drop takes exactly its
+  graphic's sounds; (7) a pasted sound loses `forGraphic`. Placement: each
+  sound clip carries its graphic's rule and `forGraphic`; peaks on the beat
+  frame; a whoosh on the fastest frame; restrained against energetic;
+  `GRAPHIC_SOUND_CAP` per clip (a clip with more graphic beats than the cap
+  keeps the first N sounds, a second clip its own N); a Clip-it graphic's
+  sound on an ordinary audio track; with `Project.graphics.sound` false
+  none is placed; with no library sound for a role none is placed, with the
+  note.
+
+  | mutation | the case it fails |
+  |---|---|
+  | graphic sounds tagged `SOUND_RULE` | case 1 |
+  | `clearGraphics` leaving the sounds | case 2 |
+  | the sweep left on `SOUND_RULE` alone | case 3 (its file stays) |
+  | the sweep on `SOUND_RULE` and `GRAPHIC_RULE` only | case 4 |
+  | Drop matching by time instead of `forGraphic`, or leaving the sound | case 6 |
+  | the cap ignored, or counted per project | the cap cases |
+  | the tick picked by role (`heartbeat_pulse.wav` lands on a beat) | the placement case over a pack holding both tick files |
+
+- **`tests/renderer/graphicStore.test.ts`, phase 2's cases**: `removeClip`
+  on a graphic takes its `forGraphic` sounds; `moveClip` and
+  `moveSelectionTo` shift them by the graphic's own shift; a pasted copy has
+  no `forGraphic`. Mutations: the remove arm dropped (the sound stays); the
+  move arm dropped (the sound stays behind).
+
+**Days: 1.5** (phase 2): `sound.ts`, `apply.ts`'s `clearGraphics` and the
+sweep, the store's follow-on edits, the switch and the tests.
+
+### 6.15 Phase 0 — Measure before relying: M1-M22 and H1-H13
+
+**2 days**, mostly your runs. Its pieces, built in this order (§6.19):
+
+| piece | what | days |
+|---|---|---|
+| 0.1 | M4's case in `tests/oldestFfmpeg.test.ts` (§6.11), committed and pushed first, so CI's two runners answer it while the rest is written | 0.25 |
+| 0.2 | the measuring half of `harness/graphicCheck.ts`: `encode` (with `encodePool.ts`'s `encodeFrames`, §6.3, written here so M1 and M2 time the code that ships), `segments`, `blur`, `parity` (Indic and colour, one raw three.js rig: a canvas uploaded as a `CanvasTexture` under an orthographic quad and read back), `indic`; installed in the harness and, behind `import.meta.env.DEV`, in the development app (§6.11) | 1 |
+| 0.3 | `graphic.int`'s libass reference and `asr.int`'s gated M21 case (§6.11) | 0.25 |
+| 0.4 | your runs on the Mac and the Surface (your hours are §2's "Your part"); `EFFECTS.md` §61 opened; the verdicts recorded in this section's "as measured" note and the constants set | 0.5 |
+
+**Changed 2026-10-21 by the review.** Piece 0.2 at 0.75 day could not carry
+the encode pool, M3's segment painter, M5, M22's font detection, the three.js
+parity rig and two glow routes. M7 (the glow) moves to phase 3's first day
+(§6.16): it gates only phase 3, and phase 3's glow item builds both routes
+behind one seam anyway, so the raw-three.js legs would have been written
+twice. M6's colour part stays here, on the Indic part's own rig. Piece 0.2
+becomes 1 day and 0.4, the recording, 0.5; phase 0 stays 2 days.
+
+**The synthetic graphic** the timing measurements draw (M1, M2, M5), since no
+template exists yet: on a transparent 1080×1920 canvas, a 900×420 rounded
+panel at 0.85 opacity with two lines of type through `drawTextOnto` and a
+6 px stroke drawing on, the whole rising 2 px a frame (proposal), so every
+frame differs, most of the canvas is alpha 0, and the box is about a fifth of
+the frame.
+
+**Where results land.** Every M result goes into a new `EFFECTS.md` §61,
+"Graphics: the forks measured"; every H result into §62, "Hands: the spike
+measured". Each with its command, machine and date, as §54 and §56 record
+theirs, and with the user agent the check returns. Electron does not start
+in the development sandbox and the macOS MediaPipe wheel aborts there without
+Metal (§1), so every run in Electron or MediaPipe is yours, on the Mac and
+the Surface, unless the table says CI or node. **The command shapes are
+proposals**: the hook, its options and the gated cases do not exist until
+phase 0 writes them. The harness "serves the renderer as an ordinary web
+page" (`vite.harness.config.ts:7-13`), so M3 and M22 run in the development
+app's console, never the harness page (§6.11).
+
+The rows are copied from the research's §4.10 and §5.10 on 2026-10-21. The
+only changes: its section marks read "the research, §x", since a bare §4.2
+in this file is step 1's; M16's line reference into this file reads §6.2
+(the seconds column as written 2026-10-05). `[n]` marks are the research's
+sources (its §8). These are §15's rows 39-60 (M1-M22) and 61-73 (H1-H13).
+One reading of M22's row is changed in the doing, not in the row: the
+libass frames its eye check sets beside the canvas are `graphic.int`'s
+phase-0 reference sheets (§6.11), because `captions.int`'s Indic case
+carries four of each script's five clusters and deletes its frames when it
+ends.
+
+| # | measurement | command shape | where | decides |
+|---|---|---|---|---|
+| M1 | PNG encode of a mostly transparent 1080×1920 graphic frame | `await window.__forgeGraphicCheck({ encode: { frames: 120, region: ['canvas', 'box'], pool: [1, 2, 4] } })`: 120 frames of a synthetic template, full canvas against its box, an encode pool of 1, 2 and 4 (the `captionBake.ts` pattern); ms per frame at p50 and p95, and bytes per frame | Mac, Surface | the bake region and pool depth |
+| M2 | encode in workers, against the existing pool | `await window.__forgeGraphicCheck({ encode: { frames: 120, workers: [1, 2, 4] } })`: `OffscreenCanvas.convertToBlob({ type: 'image/png' })` in 1, 2 and 4 workers, against the four-deep `toBlob` pool whose encodes already run off the main thread (the research, §4.1), on the same frames; ms per frame at p50 and p95 | Mac, Surface | whether workers beat the `toBlob` pool |
+| M3 | Indic segmentation and per-segment drawing | `await window.__forgeGraphicCheck({ segments: true })`: in Electron 44's renderer, `new Intl.Segmenter(undefined, { granularity: 'grapheme' })` over स्कूल, क्षत्रिय, स्त्री, తెలుగు, క్ష, స్త్ర and the EFFECTS §51 clusters; count the segments; paint them cumulatively with `fillText` and diff the last frame against the word drawn whole | Mac, Surface | whether any Indic entrance goes below a word |
+| M4 | ffmpeg filters on both builds | `"$FFMPEG" -hide_banner -h filter=tmix`, `-h filter=overlay` (the `alpha` option) and `-h filter=perspective`, as a case in `tests/oldestFfmpeg.test.ts` so both runners print it | CI, both runners | motion blur by `tmix`; the raw RGBA path; the `perspective` screen card. Any filter used stays in `tests/oldestFfmpeg.test.ts` |
+| M5 | canvas blur cost | `await window.__forgeGraphicCheck({ blur: { words: 10, px: 8 } })`: a ten-word blur-rise line with `ctx.filter = 'blur(8px)'` per word per frame, at 1080×1920; ms per frame | Mac, Surface | whether blur-rise is offered |
+| M6 | three.js parity | `await window.__forgeGraphicCheck({ parity: true })`: the EFFECTS §51 clusters painted by `drawTextOnto`, uploaded as a `CanvasTexture` with mipmaps off under an orthographic camera at 1:1, against the canvas drawn flat (expect 0.000); brand hex squares and a 50% blend through three.js with colour management on and off, against canvas 2D (within 2/255); a 1 px anti-aliased line at 10, 50 and 90% alpha through WebGL, `drawImage` and PNG, over black and over white | Mac, Surface | phase 3's exit |
+| M7 | glow with alpha | `await window.__forgeGraphicCheck({ glow: ['unreal', 'quad', 'pmndrs'] })`: a shape with `UnrealBloomPass` (r186) and with our own quad shader over a transparent clear: alpha outside the shape 0, the glow's alpha below 1; then pmndrs Bloom | Mac, Surface | the glow route |
+| M8 | path length | `await window.__forgeGraphicCheck({ pathLength: true })`: an off-DOM `SVGPathElement`'s `getTotalLength()` and `getPointAtLength()` against our own flattening; agreement and ms | Mac | the stroke primitive |
+| M9 | spring | `npx vitest run tests/graphicMotion.test.ts`: the closed form against frame-stepped at 24, 25, 30 and 60 fps; the largest difference and the cost per frame, printed | node | the motion module |
+| M10 | stroke libraries | `await window.__forgeGraphicCheck({ strokes: ['rough', 'freehand'] })`: rough.js with one seed, its PNGs from the Mac and the Surface compared by mean difference; perfect-freehand drawn on by truncating its input points and by clipping the finished outline, whether the tapered end changes from frame to frame | Mac, Surface | the marker look |
+| M11 | raw RGBA | `ffmpeg -f rawvideo -pix_fmt rgba -s 1080x1920 -r 30 -i pipe:0 -i base.mp4 -filter_complex "[1][0]overlay=alpha=premultiplied"` against the PNG path; `-f framemd5` of both; IPC throughput at 8.3 MB a frame | Mac, Surface | only if M1-M2 fall short |
+| M12 | readback | `await window.__forgeGraphicCheck({ readback: ['drawImage', 'readPixels', 'readRenderTargetPixelsAsync'], frames: 120 })`: `drawImage(gl)` with `toBlob`, `readPixels` into a `Uint8Array`, and `readRenderTargetPixelsAsync`; ms at p50 and p95 | Mac, Surface | phase 3's bake |
+| M13 | determinism | the same template baked twice through the app, then `"$FFMPEG" -start_number 0 -i <clipId>.seq/%05d.png -f framemd5 -` on each bake (equal), and the Mac's frames against the Surface's by mean difference | Mac, Surface | the golden tolerance |
+| M14 | curves, blind | `await window.__forgeGraphicCheck({ curves: ['expo-out', 'out-cubic', 'spring1', 'linear', 'decelerate', 'carbon-expressive'] })` renders one counter landing on its word under each, on the user's clips at 30 fps; shown blind to the user, who picks | the user | the default curve per template |
+| M15 | onset error | the user marks the audible onset frame of 30 words in 3dit's timeline on their own footage; a node script subtracts the transcript's `startMs` for each, in frames | the user's clips | whether beats need an onset refinement |
+| M16 | reading holds | `npx vitest run tests/graphicHolds.test.ts`: each template's longest label at 20 characters a second [33] and twice at 200 words a minute [34], in English, Hindi and Telugu, against its seconds (§6.2) | node | the templates' seconds |
+| M17 | density | graphics, zooms and sounds per minute, counted frame by frame by the user in five clips they call pro and five from a clipper | the user | the overall cap |
+| M18 | sound levels | `"$FFMPEG" -i mix.wav -af ebur128 -f null -` for a tick, a pop and a whoosh under speech on the user's clips; intelligibility judged by the user's ear | Mac | sound levels |
+| M19 | 4:2:0 fringing | `await window.__forgeGraphicCheck({ strokes: { widths: [1, 2, 3] } })` writes the PNGs; each is overlaid through the plan's `format=yuva420p` overlay, and its chroma bleed is measured against the PNG | Mac | the minimum stroke width |
+| M20 | screen card | `await window.__forgeGraphicCheck({ screenCard: '<a 1080p screen recording>' })`: a tilted 2.5D card at 9:16; legibility at rest judged by the user, and the bake cost of its moving frames | Mac, Surface | the screen card's scope |
+| M21 | Hindi numbers | `FORGE_MODELS_DIR=<models> npx vitest run tests/integration/asr.int.test.ts`, extended with the user's Hindi clips: how the installed faster-whisper writes numbers said in Hindi (Devanagari digits, ASCII digits or words) | the user's clips | sizes how many Hindi counters survive §16.11's drop of number words in v1; decides the counter's digit format |
+| M22 | Indic shaping in the canvas painter | `await window.__forgeGraphicCheck({ indic: true })`: the EFFECTS §51 clusters (क्ष त्र ज्ञ श्र कि, క్ష త్ర శ్రీ కి స్త) painted by `drawTextOnto` whole, and again one code point at a time (`Array.from`, standing in for libass's `shaping=simple`). Per cluster: the two frames must differ, as `captions.int` requires complex ≠ simple on all 54 frames of each script (EFFECTS.md:4737-4742), and each conjunct's `measureText` advance must be narrower than the sum of its code points'. Then the whole-drawn frames are set beside `captions.int`'s `shaping=complex` and `shaping=simple` frames of the same clusters and judged by eye (two renderers, so no pixel equality is expected), so a loose virama or an i-matra after its consonant is seen. Which fallback font resolved is recorded by comparing each cluster's width against the same cluster drawn in each candidate system font named explicitly | Mac, Surface | whether "text has to be canvas 2D" holds (the research, §4.2); phase 1's and phase 2's Indic exit bars (the research, §7.3); D10 |
+
+**When each runs, who runs it, and what each outcome does.** Values marked
+(proposal) are this plan's starting rules, revised by the measurement
+itself when it shows them wrong.
+
+| # | §15 row | phase; who, where | on each outcome |
+|---|---|---|---|
+| M1 | 39 | 0; you, the development app on the Mac and the Surface | `GRAPHIC_BAKE_REGION` is `'box'` when the box's p50 encode is at least 20 % under the canvas's on the Surface, the floor machine (proposal; the box costs §6.3's exact placement), else `'canvas'`. `GRAPHIC_POOL_DEPTH` is the depth fastest on the Surface. Bytes per frame give the disk a graphic costs. A whole-hold bake (a travelling beam, an edge sweep) is allowed once per clip only if 300 frames bake in under 10 s on the Surface at the chosen region and depth (proposal); otherwise those motions are not offered. If a 60 s clip's three graphics (90-270 moving frames, the research's §4.8 estimate) would take over 10 s on the Surface even so (proposal), M1-M2 "fall short" and M11 runs |
+| M2 | 40 | 0; you, the development app | workers are taken only if their p50 beats the four-deep `toBlob` pool by 20 % or more on both machines (proposal); otherwise the bake keeps the pool and no `OffscreenCanvas` enters `src/`. A same-origin module worker file is needed (`src/renderer/src/harness/graphicEncodeWorker.ts`, proposal; moved beside `encodePool.ts` if taken): the renderer's CSP (`src/renderer/index.html:7-8`, `script-src 'self'`, no `worker-src`) admits no `blob:` worker (an inference from the policy; the run shows it) |
+| M3 | 41 | 0; you, the development app only | a script enters `CLUSTER_SCRIPTS` only if, on both machines, the cumulative per-cluster paint's last frame equals the whole word's (mean 0 over the word's box, proposal) for every word listed, and the count shows the current rule (स्कूल two clusters, not three); otherwise that script animates per word (§16.61). Empty until then |
+| M4 | 42 | 0; CI, both runners, through `ciNotice` | each filter found on both builds: §13 lists it "probed, not emitted". `tmix` missing on Windows: motion blur by `tmix` is struck (canvas subframes stay the only route). `alpha=premultiplied` missing: the raw RGBA path is struck. `perspective` missing: the screen card's ffmpeg alternative is struck (phase 3 uses painter B anyway). Never worked around |
+| M5 | 43 | 0; you, the development app | `blur-rise` is offered when a ten-word blur-rise frame's p95 draw is no more than M1's p50 encode on the Surface, so blur at most doubles a frame's bake (proposal); otherwise `resolveGraphicStyle` maps it to `rise` (§6.5) |
+| M6 | 44 | 0 for its Indic and colour parts; 3 whole; you, the development app | Indic through a texture at 0.000 and colour within 2/255 under one colour setting: that setting is phase 3's. Neither: phase 3 is flagged at phase 0's exit and re-planned before it starts; phases 1-2 go on. The 1 px line (phase 3): within 2/255 over black and white, or the compositor's alpha settings change until it is; it is phase 3's exit |
+| M7 | 45 | 3, first, on the compositor's glow seam with both routes built behind it (§6.16; moved from phase 0 on 2026-10-21, above); you | `UnrealBloomPass` is the glow route if, on both machines, alpha outside the shape is 0 and the glow's alpha below 1; else the quad shader (§6.16's two passes). The route not taken is removed. The pmndrs leg is optional, run only from a scratch branch with the package added there and never merged; its result is recorded, and it stays out whatever it shows, because its peer range pins three below 0.187 (the research, §4.9) |
+| M8 | 46 | 1; you, the Mac | `STROKE_TOLERANCE` is the coarsest at which total length agrees with `getTotalLength()` within 0.1 % and every sampled point within 0.5 px at 1080 wide (proposal); our flattening stays node-pure either way |
+| M9 | 47 | 1; node, anywhere | `graphicMotion.test.ts` asserts the closed form within 1e-4 of the travel against its reference (§6.13) and prints the figures; a larger difference means the closed form is wrong, not the tolerance |
+| M10 | 48 | 2, the perfect-freehand half only, from a scratch branch with perfect-freehand added there and never merged (as M7's pmndrs leg; the harness imports it by a DEV-only dynamic `import()`); you, Mac and Surface | only on a pass does a phase-2 commit add perfect-freehand to `main` with the marker painter and `MARKER_READY` (D7's order). `strokeLook: 'marker'` is offered (§16.60) only if one of the two draw-ons keeps the tapered end's shape from frame to frame behind the moving tip (mean 0 outside the last 5 % of length, proposal) and preview = export ≤ 1/255. The rough.js half is not run in step 3 (§16.60: "rough.js not now") |
+| M11 | 49 | only if M1-M2 fall short; you | a raw RGBA path is then planned as its own change, outside step 3's days, using `overlay`'s `alpha=premultiplied` only if M4 found it on Windows |
+| M12 | 50 | 3; you | the fastest readback at p50 on the Surface that keeps straight alpha through to the PNG is phase 3's bake; `drawImage` stays unless another is at least twice as fast (proposal, §6.16) |
+| M13 | 51 | 1 (the primitives' spec), 3 (a 2.5D counter and a screen card); you | two bakes on one machine must be `framemd5`-equal, or the bake is not deterministic and the phase does not exit. The Mac-against-Surface mean difference is recorded as the golden tolerance; no CI check compares pixels across machines |
+| M14 | 52 | 2; you, blind, on your clips, with `curves: { names, clipId }` (§6.10, §6.11; the key returned in the result for you to save) | run on a counter, then a keyword and a callout (§6.10); the overall pick becomes the restrained presets' `motion.ease` in `GRAPHIC_STYLES`, a template's own differing pick its default (§6.13). Until then `expo-out`. The look rating follows it (§6.10) |
+| M15 | 53 | 2; you mark the onset frames into `tests/fixtures/graphics/onsets.json` (`{ assetId; marks: { word: number; frame: number }[] }`, proposal), and `scripts/measure-onsets.mjs` (proposal) reads it against the transcript's `startMs` | median error within one frame at 30 fps: beats as §6.8 writes them. More: an onset refinement is planned as its own change, outside step 3's days (proposal) |
+| M16 | 54 | 2; node | a template whose seconds do not hold its longest fixture label gets its seconds raised in §6.2's table or its label capped, decided in phase 2 |
+| M17 | 55 | 2; you count | `GRAPHICS_PER_MINUTE` = the median graphics per minute of the five clips you call pro, rounded down (proposal); null until counted. Zooms and sounds per minute are recorded beside it |
+| M18 | 56 | 2; you, the Mac: `mix.wav` is the audio of an export of one of your clips with a graphic's sound on a beat, exported by the app with the sound on (`ffmpeg -i <export> -vn mix.wav`), one per sound | the row's "pop" is `pop_bubble.wav`, a candidate role (§6.14). Each role's level under speech is set where you judge speech intelligible; the integrated loudness and the momentary maximum are recorded; `GRAPHIC_SOUND_DB` and `GRAPHIC_SOUND_CAP` are revised with them |
+| M19 | 57 | 1; you write the PNGs in the development app, then a node read | `STROKE_MIN_PX` is the smallest of 1, 2 and 3 px at 1080 wide whose centre line keeps U and V within 8 levels of the PNG's after the `format=yuva420p` overlay (proposal); the research's starting value is 2 px. The read is a gated case in `graphic.int` over the folder the bake wrote (`FORGE_GRAPHIC_FRAMES=<folder>`, proposal) |
+| M20 | 58 | 3; you | legible at rest and its moving frames within M1's whole-hold budget: the card ships as §6.16 plans it. Legible but slow: tilt-in only, no pull-back. Not legible: the card is not offered, and a recording gets the dim and graphics only. The run also records the card's hand-off (frame `L` of the card against the export's frame `L` without the card), whose bar is 2/255 mean (proposal, §6.16) |
+| M21 | 59 | 0, any time before phase 2's counter; you, with your Hindi clips | the counter's Hindi digits follow what the installed model writes (Devanagari or ASCII); the share written as words, which §16.11 drops in v1, is recorded beside it |
+| M22 | 60 | 0; you, the development app on the Mac and the Surface | **Shaped on both** (every cluster's frames differ, every conjunct narrower, the eye agrees with the libass complex sheet): "text has to be canvas 2D" holds and phase 1 starts; §6.20's fonts still land before phase 1's Indic check, so both machines draw the same letters (§16.63). **A cluster unshaped, and the font that drew it lacks the script** (its width equals a missing-glyph box's, or no candidate font matches): §6.20's fonts move into phase 0, M22 runs again with them named first, and phase 1's text work starts when it passes. **Unshaped with a font that has the script**: the shaper is not running, so the research's choice of painter (its §4.2) reopens as a decision for you (the next free §16 number) before any graphic draws Indic text. While either cause is open, no phase-1 commit that draws text lands; the rename, the guards, the motion module and the stroke may (this sentence is the one statement of it; §6.3 and §6.12 point here). The font each cluster resolved to is found by drawing it in each installed candidate face named explicitly; a candidate counts as installed only if a Latin probe drawn in it differs from the same probe in a family that does not exist |
+
+The hand spike's measurements. All but H11 are your runs (MediaPipe needs
+Metal on the Mac; H13 downloads the model).
+
+| # | measurement | command shape |
+|---|---|---|
+| H1 | does it run | `FORGE_HANDS_REAL=<clip> npx vitest run tests/integration/hands.int.test.ts` on the M1 Pro with Metal, after the same run in the sandbox confirms the −6 abort, as the face finder's did; then on the Surface, and the bare-interpreter case on CI's Windows runner |
+| H2 | cost | the same test with spec `{"mode": "hands", "bench": true}` at `edge` 640 and 1080 and `fps` 5, 10, 15 and 30, for `hand_landmarker.task` and `gesture_recognizer.task`: ms per frame at p50 and p95, with palm-detector re-runs counted by per-frame time spikes; M1 Pro and Surface |
+| H3 | recall against size | the test's track against frames a person marked (a JSON of frame, hand box): recall per band of hand width as a share of frame width |
+| H4 | wedding hands, low light, blur | the same, on clips of henna, bangles and rings, a held microphone, phone or bouquet, **a low-light reception and a fast point with motion blur**, each against bare hands in daylight: recall and tip error in palm-size units |
+| H5 | jitter and lag | a node script over the test's raw track (`npx vitest run tests/handsSmooth.test.ts` once the filter exists): tip jitter at rest in palm-size units, raw and after the 1€ filter (`min_cutoff` 1, `beta` 0); lag on a fast point, causal and forward-backward, against a hand-marked path |
+| H6 | the canned class | the test with the gesture bundle on clips of a finger pointing sideways, down and at the camera: the label and score `Pointing_Up` returns |
+| H7 | false and missed events | `pointEvents(raw, rules)` over the test's tracks: false events per minute on natural gesturing with no pointing; missed events on footage with marked points |
+| H8 | onset | the same, at `fps` 5, 10 and 15: event onset against a human-marked onset frame, in frames |
+| H9 | inside the crop | the events' tips mapped through `sourceToFrame` on the user's 16:9 talking-head projects with a 9:16 reframe: the share inside the frame |
+| H10 | handedness | the label against the truth on unmirrored rear-camera or DSLR clips |
+| H11 | size | `wc -c` of the raw cache track and of the reduced event list, per minute of footage |
+| H12 | shared decode | the faces stage alone (EFFECTS §56's 9.29 s on the 4K fixture, 20.48 s on `j4aoo1qbGoE`) against faces and hands on one decode, and against two passes, by the job's own stage clock (`FORGE_REFRAME_REAL=<file> npx vitest run tests/integration/reframeJob.int.test.ts`) |
+| H13 | pin | `shasum -a 256` (macOS) and `certutil -hashfile <file> SHA256` (Windows) over the bytes fetched from the versioned `float16/1` URL, and its length against the 7,819,105 B the HEAD gave [179] |
+
+Notes beside the table: H7's `pointEvents` is called with the shots as well,
+`pointEvents(raw, rules, shots)`, since "never across a cut" needs them; the
+spike's raw track carries no shots, so `hands.int`'s real suite runs
+`findShots` (`src/main/ffmpeg/shots.ts:73`) on the clip for H7 and H8. H9
+is a gated case of the same file that reads a saved project you reframed to
+9:16 (`FORGE_HANDS_PROJECT=<the project file> FORGE_HANDS_REAL=<its 16:9
+clip> npx vitest run tests/integration/hands.int.test.ts`, proposal) and
+maps each event's tip through `tipOnFrame` on that project's followed clip,
+writing the share on screen to the README. H2's
+spec mode `hands` is the worker's, in `workers/mp_faces.py`'s `parse_spec`
+(`:155-213`), which today accepts only `detect` and `import`; the spike
+drives the worker directly through its test (§6.17), and the app's RPC is
+phase 4's (`vision.faces` gains an optional `hands` param; §6.18). All
+but H11 are your runs on the M1 Pro (with Metal, after the sandbox's run
+confirms the −6 abort as the face finder's did, EFFECTS §54) and the
+Surface; H11 is phase 4's.
+
+| # | §15 row | who, where, and the spike's run | decides | on each outcome |
+|---|---|---|---|---|
+| H1 | 61 | you: the sandbox's −6 first, then the M1 Pro (Metal) and the Surface, the real suite's `ready`, the mediapipe version and a whole raw track; CI's Windows runner, the stand-in suite's bare-interpreter case (`error import`, as the face worker's) | whether there is a spike at all | runs on both machines: the spike goes on. Fails on either: the gate fails (§6.12). CI's bare interpreter must answer degraded, never crash |
+| H2 | 62 | you, M1 Pro and Surface: `bench: true` at `edge` 640 and 1080, `fps` 5, 10, 15 and 30, both detectors; palm-detector re-runs counted as per-sample time spikes | the analysis rate and edge | the cheapest `fps` and `edge` that keep H7 and H8 within the gate; the hand bundle against the gesture bundle's cost recorded. If the hand model needs a larger edge than the faces' 640, phase 4's shared decode is struck (§6.18) |
+| H3 | 63 | you mark, the test reads: recall per band of hand width against the marked boxes | the smallest hand an event is offered for | a band of hand width under which recall falls below the gate's 8 of 10 is not offered (proposal) |
+| H4 | 64 | you, on §6.17's clips: recall and tip error in palm-size units per condition, against bare hands in daylight | the gate's per-condition bars | §6.12's gate, per condition |
+| H5 | 65 | node, over your raw tracks: `npx vitest run tests/handsSmooth.test.ts`, jitter at rest raw and filtered, lag causal and forward-backward | `OneEuroParams` and the dead zone | the 1€ starting values (1, 0, 1) kept or tuned as its authors say: lower `min_cutoff` until a still hand stops jittering, then raise `beta` until fast moves stop lagging |
+| H6 | 66 | you: the `'gesture'` detector on sideways, downward and at-camera points, the label and score returned | nothing depends on it | recorded only; the geometric rule decides (the research, §5.4) |
+| H7 | 67 | node, over your tracks: `pointEvents` with the shots, false events a minute in the no-point stretches, marked points missed | `DEFAULT_POINT_RULES` and the gate | the gate's 8 of 10 found and at most one false event a minute; rules tuned on tuning clips, re-measured on held-out ones in phase 4 |
+| H8 | 68 | node: the same at `fps` 5, 10 and 15, onset against the marked onset, in frames | the sample rate | onset within 3 frames at ten a second: the rate stays. More: the rate goes to 15 (H2 prices it); the research's ±300 ms dense re-pass round each onset (its §5.2) is not planned in step 3 (§6.18) |
+| H9 | 69 | you: the 16:9 clip analysed by main's own job (`createReframeJobs`, `src/main/reframe/analyse.ts:285`, as `reframeJob.int` drives it) in the app, followed at 9:16 (`Clip.follow`), the project saved; then the gated case above maps each event's tip through `tipOnFrame` on it | recorded beside the gate | the share on screen decides how often pointing is offered at 9:16, and is said in the switch's note if low |
+| H10 | 70 | you, on rear-camera or DSLR clips | whether handedness is used | never for the side a graphic goes (the research, §5.3); recorded |
+| H11 | 71 | node, the sandbox (phase 4) | where the track lives | the raw track in the AI helper's cache, the reduced events in the project (§6.18); confirmed or revised by size |
+| H12 | 72 | you: in the spike, the worker's own clock on one clip (faces alone, `mode: 'detect'`; hands alone; both on one decode, `faces` in the hands spec), against EFFECTS §56's faces stage (EFFECTS.md:6310-6311); in phase 4, the job's stage clock as the row's command says | one decode or two | hands on the faces worker's decode (`vision.faces` with `hands`, §6.18) unless two passes measure no slower |
+| H13 | 73 | you, the Mac and the Surface | the pin | `HAND_MODEL_URL`, `HAND_MODEL_SHA256` and `HAND_MODEL_BYTES` (7,819,105 if the length agrees) in `capabilities/faces.py`; the research read the file's HEAD [179] but did not record its path, so H13 fixes the URL before it is pinned |
+
+§6's own open measurements stay as written: §15 row 10 (LM Studio's strict
+`json_schema` with `minItems: 0` under Gemma 4 E2B, answered by phase 2's
+first eval run) and row 11 (the Telugu negative endings, on the Telugu
+fixtures before phase 2's exit).
+
+**Phase 0's exit** is §6.12's. When its runs are in, this section gains a
+"> **Phase 0, as measured**" note with each verdict and the constants'
+values, dated, as the steps above carry their Built notes.
+
+### 6.16 Phase 3 — The three.js compositor and 2.5D
+
+**Phase 3 · 5 days, directly after phase 2, 2 of them moved from step 6.**
+§16.55 (D2), answered as recommended on 2026-10-21: "Phase 3 directly after
+phase 2. It is the three.js engine the request is about, and step 6 then
+shrinks by 2 days. Step 4 (Best clips) moves 5 days later."
+
+Phase 1 gave every graphic one pure `drawListAt` and painter A (§6.3); this
+phase gives painter B its body. It rests on the research's reading of the
+evidence (its §4.2): paint every layer with canvas 2D, so every word still
+goes through `drawTextOnto` (`textPaint.ts:44`), the only renderer route
+expected to shape Hindi and Telugu (an inference until M22), and use
+three.js only to compose painted layers that ask for a camera, a depth, a
+focus blur or a glow. That is the moments engine's own pattern: compose on a
+2D canvas, upload, shade (`momentCanvas.ts:144-185`, `:321-335`).
+
+**Nothing new reaches ffmpeg.** Painter B's frames are the same numbered PNGs
+with alpha that §6.3 bakes, held by `tpad`, overlaid as every graphic is; §13
+gains no row from this phase. Graphics stay above the look, ungraded
+(§16.7). The validator never sees depth: a depth variant changes `z`,
+`camera`, `glow` and transforms, never a text item (tested below), so §6.7's
+property test, which reads the draw list's text items, holds unchanged.
+
+#### The compositor — `src/renderer/src/graphicCompositor.ts`
+
+New. Its exports:
+
+- `createCompositor(width: number, height: number): Promise<Compositor |
+  null>`: awaits `sharedRenderer(width, height)` (`threeShared.ts:35-50`)
+  and builds the scene, cameras, quad geometry and shader materials once.
+  Null when WebGL is missing (below). `Compositor` = `{ dispose(): void }`;
+  its internals are not exported.
+- `paintDrawList3d(list: DrawList, compositor: Compositor, options?:
+  PaintOptions): HTMLCanvasElement` (`options` handed to painter A for each
+  plane: the `images` a screen card's frame needs, the dim's `layer`):
+  synchronous once created, as `momentPreviewCanvas`
+  draws synchronously after an async build (`momentCanvas.ts:509-553`);
+  returns the canvas the frame is on, which the caller copies into its own
+  2D canvas with `drawImage`, as the moments do (`momentCanvas.ts:547-551`,
+  `:600-603`), until M12 says otherwise.
+- Pure, for the tests: `planesOf(list): { z: number; items: DrawItem[] }[]`,
+  `isFlat(list): boolean`, `cameraFor(camera: Camera, size: { width: number;
+  height: number }): { projection: number[]; view: number[]; distance:
+  number }`; constants `MAX_PLANES = 4` (proposal) and `WEBGL_MISSING_NOTE`.
+
+**Three routes, chosen per frame from the list alone** (`needsCompositor`,
+§6.3, has already sent the list here):
+
+| the list | route | why |
+|---|---|---|
+| flat: no `camera`, or tilt, yaw and dolly all 0 and no focus blur; and no `glow` | painter A paints every item, in plane order, onto one 2D canvas; no WebGL call | the settled frame of every 2.5D move is flat, so it equals the flat graphic **by construction**, not within a tolerance; the held end is then exactly what a flat graphic holds |
+| flat, with `glow` | one plane: painter A's canvas uploaded at 1:1 under the identity quad, then the glow pass | the glow persists at rest; the base under it is the texture at 1:1, which M6 expects at 0.000 |
+| a camera off flat, or a focus blur | one plane per `z`, under the perspective camera | the move |
+
+**Planes.** `planesOf` groups the items by `z ?? 0`, ascending (far to
+near), keeping list order inside a plane. A draw function that asks for
+depth emits its items in ascending `z`, so painter A's list order and painter
+B's plane order are the same picture. At most `MAX_PLANES` distinct `z`
+values; a draw function never emits more (tested). `z` is in frame heights,
+positive toward the viewer. Each plane is a frame-sized 2D canvas painted by
+`paintDrawList2d` (§6.3) with that plane's items alone, uploaded as a
+`CanvasTexture` with the moments' settings exactly: `NoColorSpace`, `flipY`
+false, `premultiplyAlpha` false, no mipmaps, linear filters, clamped edges.
+`textureOf` (`momentCanvas.ts:321-335`) becomes an export of that file,
+unchanged, so the two drawers upload one way. A plane is repainted and
+re-uploaded only when its items change, keyed as `Composed.at` keys its
+rectangles (`momentCanvas.ts:163-170`): a tilt that changes only the camera
+uploads each plane once.
+
+**`dim` items are screen space.** They are painted on a base layer under
+every plane by the identity route and never placed under the camera: a dim is
+a darkened region of the frame, not an object in it.
+
+**Shaders.** The flat route's quad uses the moments' identity vertex shader
+(`momentCanvas.ts:189-194`). The perspective route uses three's standard
+projection. The fragment shader samples the straight texel and writes
+premultiplied colour, as the depth push does (`momentCanvas.ts:309-317`);
+planes blend premultiplied "over" (`momentCanvas.ts:377-384`). With a focus
+blur above 0 it averages a fixed disc of taps (13, proposal) at the plane's
+radius; at radius 0 it returns the texel itself, so a settled plane is
+exact.
+
+**The camera.** `Camera` = `{ tilt, yaw, dolly, fov, focus? }` in degrees
+(§6.3). A `PerspectiveCamera` at `fov` (30° when the list gives none,
+proposal) looks at the frame's centre from `D = (H / 2) / tan(fov / 2)`
+pixels, so the `z = 0` plane exactly fills the frame. A plane at `z` sits at
+`z × H` and is scaled by `(D − zH) / D`, so under the flat camera every plane
+projects to the frame (the parallax compensation; `cameraFor` is tested on
+it). Tilt turns the planes about the frame's horizontal centre line, yaw
+about its vertical one; `dolly` moves the camera to `D × (1 − dolly)`, so 0
+is flat and a negative value starts further away. `Camera.focus` (added to
+§6.3's type for this phase) is the depth in focus and the blur in frame
+pixels per frame height of distance from it; absent, nothing is blurred.
+
+**Glow.** `GlowRequest` = `{ item, radius, strength, color? }` (§6.3). The
+requested items are painted alone onto a glow canvas per plane, rendered
+through the same camera into a render target, blurred in two separable
+passes (horizontal, then vertical) into a second, and added premultiplied
+over the planes, so alpha is 0 beyond the glow's reach and below 1 inside it.
+That is the planned route, needing nothing beyond three itself. **M7
+decides, on this phase's first day** (moved from phase 0, §6.15): both
+routes are built behind one seam, and if `UnrealBloomPass` (three r186's
+own, alpha fixed 2025-12-09, the research's §4.2) keeps alpha 0 outside the
+shape and below 1 in the glow on both machines, it is the route; else the
+two passes are. The route not taken is removed. pmndrs `postprocessing`
+stays out whatever M7's scratch-branch leg records, because its peer range
+pins three below 0.187.
+
+**What glows** (named 2026-10-21 by the review; the research's phase 3 has
+"glow by M7's winner" on the hero graphic). A drawer emits a
+`GlowRequest` only under a style with `glow` (`neon`, `energetic`), and only
+for its clip's hero graphic (below): a `counter`'s `value` text, or a
+`ring`'s `arc`, with the style's `glow.radius` and `glow.strength` and
+`palette.accent` as its colour. At most one glowing graphic per footage
+clip. The screen card's edge sweep (below) is the only other glow in step
+3. No other template glows; a glow on a keyword's lit word waits for the
+look rating.
+
+**The one renderer.** Every render calls the compositor's own `sized()`
+first, written as the moments' is (`momentCanvas.ts:393-395`, a closure
+inside the moment builder, not an export), because another drawer may have
+resized the shared context between two frames. The compositor never makes a renderer of
+its own (`threeShared.ts:25-33`: one context, a browser keeps about sixteen).
+
+**Disposal.** A `disposables` list as `momentCanvas.ts:361` and `:397-399`
+keep: every texture, material, geometry and render target the compositor
+made, disposed once each. The callers dispose it where the moments dispose
+theirs: on rebuild and on supersede in the preview (`momentCanvas.ts:523`,
+`:533-536`), on clip removal (`:555-558`), and in the bake's `finally`
+(`:612`). Not as the carousel, whose rebuilt scenes are never disposed
+(`carouselCanvas.ts:128-141`, §17).
+
+**WebGL missing.** `new WebGLRenderer` (`threeShared.ts:42`) throws, or the
+context comes back lost: `createCompositor` resolves null, once per session
+(remembered). The caller then paints the list with painter A, which ignores
+`camera`, `glow` and `z` (§6.3): every 2.5D variant draws flat, glow is
+absent, the screen card's move is its flat fade and scale, the edge sweep
+draws without its glow. The bake records `WEBGL_MISSING_NOTE` once ("drawn
+flat: 3D needs WebGL, which did not start on this computer") in the
+export's notes and the dock's graphic panel; the export succeeds (§14's
+WebGL row).
+
+**How `graphicCanvas.ts` reaches it** (§6.3's file; the seam stated here so
+the two lanes agree): when `needsCompositor(list)` is true, the preview entry
+or the bake creates one compositor (`createCompositor`) and keeps it with the
+entry or for the bake's length; each frame is `paintDrawList3d` then
+`drawImage` into the entry's or the bake's own 2D canvas; a null compositor
+means painter A and the note. The compositor always renders the whole
+frame, and a spec whose lists need it bakes the canvas region even if M1
+chose the box (§6.3): a tilt or a glow puts ink outside the flat
+`itemBounds` that `graphicBox` unions, so a box would crop it.
+
+#### The 2.5D variants of `counter` and `ring`
+
+`GraphicSpec.depth?: 'tilt' | 'parallax' | 'dolly' | 'focus'` (§6.1),
+honoured only where `TemplateDef.threeD` is true: `counter`, `ring` and
+`screen-card` in step 3 (§6.2's table; step 6 adds its three, §9). The
+variants are written by this phase's lane into `templates/counter.ts` and
+`templates/ring.ts` after phase 2 has closed them, as one `depth` branch in
+each draw function, built only from §6.3's item kinds and §6.13's motion.
+
+| `depth` | counter | ring | settles |
+|---|---|---|---|
+| `tilt` | one plane; the camera from tilt 24° (the top away) to 0 over the entrance | the same | camera exactly flat on the last beat |
+| `parallax` | panel `z` 0, label 0.02, value 0.05; yaw from −8° to 0 over the entrance, the planes sliding against each other | panel 0, arc 0.03, value 0.05 | flat on the last beat |
+| `dolly` | dolly from −0.12 to 0; the value's plane at 0.05 grows fastest | the same | flat on the last beat |
+| `focus` | camera flat throughout; label plane at −0.02 with `focus` from 10 px to 0 as the value lands sharp | the arc and value sharp, label as counter | blur exactly 0 on the last beat |
+
+Every figure is a proposal; the curve is the style's (§6.13, M14's winner).
+Each variant arrives with its flat twin: the number reaches its value, the
+arc its sweep, on the same beat frame. Because the last moving frame is flat,
+the frame `tpad` holds is the flat graphic's own (route one above). Text is
+resampled while a plane is tilted, so it softens in motion; at rest it is
+painter A's.
+
+**Who sets `depth`** (revised 2026-10-21 by the review). The first draft of
+this re-plan had you only, through the dock; then phase 3's three.js work
+never acted in an automatic run, though the research scored phase 3 for
+"the hero graphic a glow or an edge sweep" (its §0, §7.3) and D2 calls it
+"the three.js engine the request is about". So, as a proposal of this plan
+and not one of your twelve answers:
+
+- **The hero rule.** In phase 3, `applyGraphics` (§6.6) makes the first
+  kept `counter` or `ring` of each footage clip that clip's hero: it gets
+  `depth: 'tilt'`, the least of the four moves (a 24° settle over the
+  entrance, flat on its beat), under every style; and under a style with
+  `glow`, its glow (above). A clip with no counter or ring has no hero.
+  `GraphicSpec.hero?: true` marks it (typed in phase 1 with `depth`, §6.1),
+  so a rebake keeps one hero per clip.
+- **You**, through the **Depth** choice in the dock's graphic panel (§6.6),
+  on templates whose `threeD` is true: Flat, Tilt, Parallax, Dolly or
+  Focus. Your choice wins over the rule and clears `hero` on that graphic.
+- **Never the model** (§6.6), and never the style alone: D5 (§16.58) keeps
+  the default restrained, which a 24° settle on one graphic a clip is
+  meant to respect. The look rating (§6.10) asks about it with phase 3's
+  renders once phase 3 lands; if you rate it down, the rule is turned off
+  by a one-line change and the dock remains.
+
+#### The screen card — `src/shared/graphics/templates/screenCard.ts`
+
+§16.57 (D4): "Not in step 3. A screen recording gets the 2.5D card, a dim
+and graphics. Revisit with a one-day cursor-from-pixels spike only if users
+bring screen recordings; a recorder of our own is a separate project." This
+is the card.
+
+**Its trigger** (chosen 2026-10-21): **a dock action on a selected video
+clip only**, **"Screen card"** with **Tilt in** and **Pull back**, in a new
+`src/renderer/src/components/tools/ScreenCardButton.tsx` mounted beside the
+reframe section (`Inspector.tsx:228`). Not a Director suggestion: nothing
+tells the app that a clip is a screen recording (a transcript does not say
+so; a detector was not researched), and the card makes no claim, so the
+third pass has nothing to ground.
+
+**Its spec.** `GraphicData` `{ template: 'screen-card'; clipId: string; move:
+'tilt-in' | 'pull-back' }` (§6.1); `clipId` is the recording's clip. Its
+`GRAPHIC_TEMPLATES` row is §6.2's (no fields, `appFields` `clipId` and
+`move`, `threeD` true; seconds 1 / 10 / 600, the recording clip's length),
+one beat, the landing.
+
+**The move.** `SCREEN_CARD_MOVE_S = 1.0` (proposal), on the style's curve.
+**Tilt in**: the card's plane from tilt 22°, yaw −10°, dolly −0.15 and
+opacity 0 (to 1 over the first 0.25 s) to flat. **Pull back** (the research's
+§1.2 row 23, "start with the screen filling the frame"): the card's transform
+scale from 1.35 about its centre to 1, with a tilt from 6° to 0. Both land
+flat on the card's box at frame `L` = `round(SCREEN_CARD_MOVE_S × fps)`,
+the landing frame, **counted from the card's own first frame** (card
+frames, as every graphic's frames are; never a timeline frame).
+
+**The card's box** is where the render already shows the recording: the
+whole source mapped through `sourceToFrame(project, clip, asset, canvas,
+frame, { x: 0, y: 0, width: 1, height: 1 })` (`frameMap.ts:86-132`), which
+is the fitted picture inside the clip's box (`clipBox`, `plan.ts:456-482`;
+contain pads with `black@0`, `plan.ts:262`, so the bars are transparent and
+the card floats over whatever is beneath). The card never changes the
+recording's transform; a user who wants margins scales the clip first.
+
+**The recording's frames** come from the moments' footage pre-pass, the
+same pull a bridge over footage uses (`momentCanvas.ts:109-137`,
+`window.forge.momentFrames`, preload `index.ts:259`): a `FootageRequest`
+(`moment.ts:296-325`) for the card's moving frames, built by a pure
+`screenCardFootage(project, spec, cardStart, frames, fps)` from the clip
+exactly as `momentTextures` builds one (`momentTextures.ts:41-85`:
+`texturePlanFor`, `footageWindow`, `followedFootage`, `FOOTAGE_MAX_EDGE`), so
+the pulled frames are the render's own frames, crop and retime included
+(EFFECTS §36). The draw function needs each frame's file and the card's box,
+which a pure function of the spec cannot know, so this phase adds
+`GraphicTargets.screen` (§6.3's type): `{ box: Rect; file: string | null }`.
+The pure `graphicTargetsAt` gives the box; `screenTargetsAt` in
+`graphicCanvas.ts` (§6.3) fills `file` per frame from the pull, through
+`footageFrameIndex` (`moment.ts:336-340`), `null` after `L`, and the bake
+decodes each file into painter A's `images` (§6.3) before the frame is
+painted.
+
+**What it draws** (`drawScreenCard`, one plane at `z` 0 plus the
+screen-space dim):
+
+| frames | items |
+|---|---|
+| up to `L` | the recording's frame as an `image` item filling the card's box; a bezel, a `stroke` round the box, square-joined (`join: 'miter'`), its width `max(M19's minimum, round(0.004 × the short side))` px (proposal), in the style's `palette.panel`; a full-frame `dim` (no hole) at the style's `palette.dimOpacity`, fading in with the move, whatever the style's `dim` says (D4 names "a dim" for a screen recording, §16.57) |
+| `L + 1` on (held by `tpad`) | the bezel and the dim **with its hole on the card's box** (radius 0); no image |
+
+Square corners in v1: the recording beneath is a sharp rectangle, and a
+rounded bezel would leave its corners showing; rounded cards wait for a
+rounded mask on the recording itself (§17).
+
+**The hand-off.** During the move the flat recording beneath must not show
+round the tilted card, so the card hides it: the store writes two opacity
+keys on the recording clip, `[{ frame: cardStart − clip.start, value: 0,
+ease: 'hold' }, { frame: cardStart − clip.start + L + 1, value: 1 }]`
+(`Keyframe`, `render/keyframes.ts:64-69`; a key's frame counts from the
+recording clip's own start, `L` from the card's, `cardStart` and
+`clip.start` are timeline frames, and the card spans the recording, so
+`cardStart − clip.start` is 0 today), computed by a pure
+`screenCardKeys(card, recording, fps)`. A held key lands on its own frame in the preview and the
+export alike since EFFECTS §45, and keyed opacity already renders with a
+hold (`tests/integration/keyframes.int.test.ts:122-125`). At `L` the card
+draws the recording's frame `L` flat on its box, opaque, so the recording at
+opacity 0 beneath is unseen; from `L + 1` the bezel's hole shows the
+recording itself. Outside the box the dim is the same on both sides of `L`.
+The card's flat frame `L` is the pulled frame drawn by `drawImage` into its
+box, as `Composed` draws a footage frame (`momentCanvas.ts:163-184`), whose
+bridges measured 1.1 and 1.2/255 mean against the render's frames (EFFECTS
+§36): the hand-off is measured with M20 and must be within 2/255 mean
+(proposal) on both machines.
+
+**The store.** `addScreenCard(clipId, move)` adds the graphic through
+`addGraphicClip` (§6.3) spanning the recording clip exactly (no exit fade:
+the card ends as the recording ends) and writes the two keys in the same
+history step. `rebakeGenerated` (`store.ts:2050-2223`) realigns a card whose
+recording was moved, trimmed, retimed or changed frame rate: the card's
+start and length follow the recording's, and its two keys are rewritten.
+**The card is your edit, not a run's**: it is made by your dock action, so
+it carries no `generatedBy` rule. Drop removes the card and exactly the two
+keys `screenCardKeys` gives (a key of your own is kept); neither Clear
+graphics (`'clips.graphic'`) nor Direct's Clear (`DIRECTOR_RULES`) takes
+it, since §16.10 settles which graphics each Clear removes and both are
+about the graphics a run makes. Deleting the recording deletes its card. A
+split of the recording keeps the card with the left half, which keeps the
+clip's id; the card itself is not split (§6.3).
+
+**The export.** A card whose bake fails or returns null is dropped from the
+export with its note, as §6.3 drops a graphic; **its two keys are struck
+from the export's copy of the recording clip in the same step**, or the
+recording would play hidden for the move's length. Written into §6.3's
+branch in `exportBake.ts`; the rule is this phase's.
+
+**Refused, with the reason in the dock**: a recording that is steadied (the
+pre-pass does not run the stabiliser, EFFECTS §36, `momentTextures.ts:48`);
+rotated, or with keyed zoom or rotation (`sourceToFrame` models neither,
+`frameMap.ts:31-35`); with opacity keys of its own; with a colour
+adjustment, or under a look (the card's moving frames are above the look,
+ungraded, §16.7, so the landing would show the grade arrive; §16.7 is not
+reopened, this is why the dock greys it); an image clip. One card per
+recording clip.
+
+**The budget.** The screen card is outside §6.9's budget, and its dim is the
+only dim while it is on screen (§6.9). A `callout` over a recording has no
+face to point at, so rule 9 drops it, as it would without the card.
+
+**Without WebGL** the camera is ignored: Tilt in is the card fading in on
+its box, Pull back its flat scale; the hand-off is unchanged.
+
+#### The edge sweep
+
+The research's §1.2 row 21 (a short highlight running round a card's
+border; Magic UI's `BorderBeam`, a 6 s loop, linear, [18]). In step 3 it
+belongs to **the screen card only**, drawn when the resolved style carries
+`glow` (§6.5: `neon` and `energetic`, proposal): a `stroke` on the bezel's
+rectangle with `from` and `to` both advancing linearly, a span of 0.12 of the
+perimeter (proposal), **one loop of `EDGE_SWEEP_S` = 6 s from the landing,
+then gone**, two stroke items while the span crosses the path's start, and
+a `GlowRequest` on it. One card per recording clip makes "once per clip"
+true by construction.
+
+**Bounded, and narrowed** (both 2026-10-21, by the review):
+
+- **One loop, not the hold.** A card spans its recording, up to 600 s, and
+  the research warned against baking a screen card frame by frame over its
+  hold (its §4.4, §4.8). So `graphicMovingFrames` (§6.3) returns `min(total,
+  L + 1 + round(EDGE_SWEEP_S × fps))` for a glowing card, 211 frames at 30
+  fps with the default move, under M1's 300-frame whole-hold budget; after
+  the loop the settled bezel holds through `tpad`. M20 times it.
+- **On the screen card's bezel, not a graphic's panel.** The research puts
+  the sweep round "a card's rounded rectangle", the hero graphic's. In step
+  3 the hero's highlight is its glow (above), and the sweep stays on the
+  screen card, where the border is the subject; a sweep round a counter's
+  panel waits for the look rating (§6.10).
+
+Without WebGL the sweep draws without its glow, through painter A.
+
+#### The harness
+
+Phase 0 ran M6's Indic and colour parts against raw three.js (§6.15). This
+phase opens with M7, `'unreal'` and `'quad'` on the compositor's glow seam
+(moved from phase 0, §6.15), then runs M6 again **through
+`paintDrawList3d` itself** (M6 whole, each 2.5D variant's settled frame
+against its flat twin, 0 by route one), plus M12's readbacks and M20's
+screen card with its hand-off and its one-loop sweep, all through §6.11's
+options table; M13 runs on a 2.5D `counter` and a screen card. Every result goes to EFFECTS §61 with its
+command, machine and date.
+
+#### Tests (each mutation-checked; §6.11 indexes them)
+
+- **`tests/graphicCompositor.test.ts`**, its pure parts: `planesOf`
+  ascending (far to near, drawn back to front), list order kept inside a
+  plane; `isFlat` sends a flat list, and every variant's settled frame, to
+  route one; `cameraFor`'s flat camera maps one texel to one pixel, `dolly`
+  0 is flat, and the corners of a `z` 0 plane and of a compensated `z` 0.05
+  plane land on the frame's corners (1e-9); a `dim` never on a camera
+  plane; the disposal list holds every texture, material, geometry and
+  render target a build makes and each is disposed exactly once, on
+  rebuild, supersede, bake end and clip removal (a counting stand-in for
+  three); `createCompositor` null when the renderer throws (`threeShared`
+  mocked), and the caller then paints with painter A, leaving out `depth`,
+  `camera` and `glow`, and records `WEBGL_MISSING_NOTE` once. Mutations:
+  planes sorted descending; route one skipped at rest (the settled frame
+  through the textured path); the compensation dropped; a texture left off
+  the disposal list; a compositor returned, or a throw, when WebGL is
+  missing.
+- **`tests/graphicDrawList.test.ts`**, two cases added: for `counter` and
+  `ring` with each `depth`, every frame's text items (text and look) equal
+  the flat variant's; at and after the last beat every camera field and
+  focus blur is exactly 0; at most `MAX_PLANES` distinct `z`. Mutations: a
+  variant that rounds the value's string; a tilt left at 0.5° at rest.
+- **`tests/graphicFrame.test.ts`**, three cases added: a screen card's
+  image item present up to `L` and absent after, its dim drawn whatever the
+  style's `dim`, with its hole only after `L`; its moving frames `L + 1`
+  plus the settle, and under a glowing style `L + 1 + round(EDGE_SWEEP_S ×
+  fps)`, never `total`, for a 60 s card; `screenCardKeys` for a card whose
+  start is not the recording's start puts the second key at `cardStart −
+  clip.start + L + 1`. Mutations: the image drawn on the held frame; the
+  sweep looping over the whole hold (a 60 s card bakes 1,800 frames); `L`
+  taken as a timeline frame (the second key lands before the first).
+- **`tests/graphicBudget.test.ts`**, a phase-3 case (it drives
+  `applyGraphics` over fixture candidates): the first kept `counter` or
+  `ring` of each footage clip gets `depth: 'tilt'` and `hero`, and, under
+  `neon`, a `GlowRequest` on its `value` or `arc`; no other graphic does;
+  a second clip has its own hero; a graphic whose depth you set keeps
+  yours. Mutations: every counter made a hero; one hero per project instead
+  of per clip; a glow on a non-hero.
+- **`tests/renderer/graphicStore.test.ts`**, cases added: `addScreenCard`
+  writes exactly `screenCardKeys`' two keys; Drop removes the card and
+  exactly those keys (a key of yours stays); Clear graphics and Direct's
+  Clear leave the card and its keys; a moved or trimmed recording realigns
+  the card and its keys; each refusal above, with its reason. Mutations:
+  Drop leaving the keys; the realign skipped; the card given
+  `CLIPS_GRAPHIC_RULE` (Clear graphics takes it).
+- `graphic.int`'s phase-3 case, the hand-off through the real plan, is
+  §6.11's.
+
+The exit is §6.12's phase 3. §14 carries the degraded rows (WebGL
+unavailable; the recording's frames missing).
+
+#### Days
+
+| item | days |
+|---|---|
+| the compositor: routes, planes, camera and compensation, upload, disposal, WebGL missing | 1.5 |
+| glow (the two-pass route; M7's alternative behind the same seam) and focus | 0.5 |
+| the 2.5D `counter` and `ring` (the 2 days moved from step 6, less what the compositor now carries), and the hero rule in `applyGraphics` | 1 |
+| the screen card: pull, `screenTargetsAt` and the bitmaps, draw, keys, store, export drop, refusals | 1.25 |
+| the edge sweep, one loop | 0.25 |
+| the harness's phase-3 options, the tests, `graphic.int`'s case, M6/M7/M12/M13/M20 on both machines | 0.5 |
+| **phase 3** | **5** |
+
+### 6.17 The hand spike and its gate
+
+**1.5 days, unconditional, run during phase 2's weeks; mostly your runs.**
+§16.56 (D3), answered as recommended on 2026-10-21: "Yes, during phase 2,
+1.5 days counted in the unconditional 30.5 (it is mostly the user's run, on
+the user's machines and footage); pointing only; the 6-day build only if
+the gate passes; off per clip by default; every pointed graphic a proposal
+the user keeps. It needs clips with marked points, hennaed hands, a
+low-light reception and a blurred fast point among them."
+
+**What it answers.** Whether MediaPipe's hand landmarker, already in the AI
+helper's 0.10.35 wheel (the research, §5.1), finds a speaker's point on your
+footage well enough to build on. The model's card puts hands with henna,
+jewellery or a held object out of scope, and says it was not tested in low
+light or motion blur (the research, §5.3): for a wedding-first product those
+are the ordinary case, and only measurement can size them. Nothing in the
+spike is shown to you in the app.
+
+#### The spike's code
+
+Each piece is the first version of what phase 4 hardens; nothing here is UI.
+
+- **The worker** (`sidecar/forge_sidecar/workers/mp_faces.py`). `parse_spec`
+  (`:155-213`, which accepts only `detect` and `import` today) gains
+  `mode: 'hands'`: `path`, `ffmpeg`, `width`, `height` (upright), `fps`
+  (1-30), `edge`, `startMs`, `endMs?`, `durationMs?`, `model`, `track`,
+  `partial`, `minDetection`, `minPresence`, `minTracking` (each 0-1; 0.5,
+  MediaPipe's defaults, the research [172]), `numHands` (1-2; 2), `bench`
+  (boolean), `detector` (`'landmarker'` or `'gesture'`), and `faces?: {
+  model, track, partial, minScore }` to run the face detector on the same
+  decode (H12). `load` (`:500-533`) builds the `HandLandmarker` (VIDEO mode,
+  CPU delegate, the model as bytes, as `_blaze_face` does, `:352-379`). A
+  pure `hands_of(result, width, height)` normalises the 21 points to the
+  upright analysed frame, clamps, rounds to 4 dp, takes each hand's box from
+  its points, keeps at most two, largest box first, as `boxes_of` does for
+  faces (`:237-269`). A `HandsWriter` streams `HandsRaw` (§6.18's types) to
+  `partial` and renames it into place when whole, as `TrackWriter` does
+  (`:283-320`). `bench: true` adds each sample's detect time as `detectMs`
+  (never read by `pointEvents`). The `'gesture'` detector (the Gesture
+  Recognizer, for H2 and H6 only) stores the canned `label`; **it is removed
+  when the spike ends, whatever the gate says** (its licence is unstated and
+  it is not the pointing detector, the research's §7.5). A stand-in,
+  `FORGE_HANDS_WORKER_FAKE=colour` (as `FORGE_FACES_WORKER_FAKE`,
+  `workers/mp_faces.py:68-73`), never imports mediapipe: a cyan blob is the
+  index tip, a magenta blob the wrist, and it reports a fixed pointing hand
+  between them (presence 0.9). Every spawn keeps `CREATE_NO_WINDOW`
+  (`media.py:51`).
+- **The test's driver.** `tests/integration/hands.int.test.ts` starts the
+  worker directly with the argv `capabilities/faces.py`'s `worker_command`
+  gives (`:321-331`), fetched through the helper's interpreter as
+  `oldestFfmpeg.test.ts` fetches the helper's ffmpeg argv, on the helper's
+  venv or an installed pack (`FORGE_HELPER_PACK`), as `faces.int` does
+  (`tests/integration/faces.int.test.ts:1-60`). The stand-in suite runs
+  where `faces.int`'s runs. The real suite runs only as
+  `FORGE_HANDS_REAL=<clip> npx vitest run tests/integration/hands.int.test.ts`
+  and writes its tables to `tests/output/hands/real/README.txt`.
+- **The models** are yours to fetch for the spike (H13's command), into the
+  folder `faces.int` seeds the face model from
+  (`sidecar/.venv-faces/models/`, `faces.int.test.ts:51-52`); no test
+  downloads.
+- **`src/shared/hands/`**: `types.ts` (§6.18's shapes), `events.ts`
+  (`pointEvents` with §6.18's rules), `oneEuro.ts` (`oneEuroFilter`,
+  `smoothTip`), `anchor.ts` (`tipOnFrame` only), with
+  `tests/handsEvents.test.ts`, `tests/handsSmooth.test.ts` and
+  `tests/handsAnchor.test.ts` covering what H5, H7, H8 and H9 lean on, and
+  `tests/sidecar/test_hands.py` for the worker's pure parts. §6.18 specifies
+  all five tests; **the spike writes these cases of them** (listed
+  2026-10-21 by the review, so the spike lane knows what to leave), each
+  with its §6.18 mutations:
+  - `handsEvents`: the enter, exit, bridge and minimum rules; the finger
+    rule; an event cut at its shot's end and the first sample after a cut
+    discarded; `dir` in pixels; ids stable. Not `mergeHands` or
+    `pointingState` (phase 4).
+  - `handsSmooth`: every case.
+  - `handsAnchor`: `tipOnFrame` only (through a followed crop; null off
+    screen; the zero-size box). Not `pointPlacement`, rule 11 or
+    `anchorProposals` (phase 4).
+  - `test_hands.py`: `parse_spec`'s `hands` mode with its ranges and the
+    refusals of an unknown mode and `fps` 0; `hands_of`'s clamp, 4 dp and
+    order; the writer's rename. Not the shared-decode refusals or
+    `HANDS_RAW_VERSION` (phase 4 adds both to `faces.py`).
+  - `hands.int`: the worker driven directly (its argv from `worker_command`),
+    the stand-in suite (samples in source ms, monotone, versioned, keyed by
+    `size:mtime`, upright), and the gated real suite with H7's `findShots`
+    and H9's project case (§6.15's notes). Not the run through
+    `vision.faces` with `hands`, the byte-for-byte face track or the cancel
+    (phase 4's RPC).
+
+The finger rule lives in `events.ts` only, never in the worker: the raw
+track keeps all 21 points, so the rules can be re-derived from the cache
+without running the model again (the research, §5.5), and one copy cannot
+drift from another. So `test_hands.py` does not test the rule;
+`handsEvents.test.ts` does, beside the only copy.
+
+#### The clips (your part)
+
+Kept beside the face fixture under `references/recordings/` (gitignored;
+never committed, §16.5's rule), each with a marks file beside it,
+`<clip>.marks.json`: `{ condition: 'bare' | 'henna' | 'low-light' | 'blur' |
+'held' | 'rear'; points: { ms: number; tip?: { x: number; y: number } }[];
+none?: [number, number][]; hands?: { ms: number; box: UnitRect }[] }` (the
+test's own type: the source ms of each point's onset, the fingertip in
+upright 0..1 where marked, the stretches with no point, and hand boxes for
+H3). Wanted: at least ten marked points in each of bare hands in daylight,
+hennaed hands with bangles and rings, and low light or motion blur (a
+low-light reception and a fast point among them); a held microphone, phone
+or bouquet; three minutes or more of natural gesturing with no point in
+each of the first three conditions; unmirrored rear-camera or DSLR clips;
+one 16:9 talking-head clip. Two clips per condition are kept back, unseen by
+the spike, for phase 4's held-out exit. The hours are in §2's "Your part".
+
+#### Running the H rows
+
+The rows, what the spike runs for each, and what each decides are §6.15's
+(H1-H10, H12 and H13 in the spike; H11 in phase 4). Results go to EFFECTS
+§62 with their commands, machines and dates.
+
+#### The gate
+
+The gate, its three conditions and its three outcomes are §6.12's.
+
+**After a fail or a stop** (chosen 2026-10-21): the spike's code stays in
+the repo behind no UI. The worker's `hands` mode is never asked by main; the
+real suite is gated and costs CI nothing; the pure parts' tests keep it from
+rotting; and a later model, or new footage, can run the gate again in an
+hour. `bench` ships with the worker (it is the gate's own instrument, and
+harmless unasked); the `'gesture'` branch does not, whatever the gate says.
+The gate's result and the outcome are recorded here, dated, as a Built note.
+
+#### Days
+
+| item | days |
+|---|---|
+| the worker's `hands` mode, bench, the stand-in, `faces` on the same decode, the gesture branch | 0.5 |
+| `src/shared/hands/` first versions and their three tests | 0.4 |
+| `hands.int` (both suites, the README tables), `test_hands.py` | 0.3 |
+| the runs on both machines (the clips and their marks are "Your part" hours, §2) | 0.3 |
+| **the spike** | **1.5** |
+
+### 6.18 Phase 4 — The hand build, only if the gate passes
+
+**6 days, built only on the gate's pass, or on a partial with your yes
+(§6.12); in no total until then.** D3 (§16.56): pointing only; off per clip
+by default; every pointed graphic a proposal you keep. What it adds: the
+speaker points, and a callout's arrow ends on the fingertip, on clips you
+turned it on for, as proposals.
+
+#### The worker: hands on a shared decode
+
+`run` (`mp_faces.py:536-586`) gains the hands detector on the same frames:
+one `media.iter_frames` decode at the hands' rate, the face detector run
+only on the samples on the faces' grid. `frame_args` takes each sample as
+the frame on screen at `start + i × 1000 / fps` (`media.py:246-270`,
+`fps=…:round=up`), so at ten a second the even samples are the very frames a
+five-a-second pass reads, and **the face track is byte for byte the one a
+faces-only pass writes** (tested). Two conditions make that hold, and the
+helper refuses anything else with a `ValueError`: the hands' `fps` is a whole
+multiple of the faces' (10 on 5 by default; H2 and H8 may move it to 15), and
+the hands' `edge` equals the faces' (640, `faces.py:93`). If H2 shows the hand
+model needs a larger frame than 640, the shared decode is struck and hands
+run as their own pass at their own edge (H12 prices it), so the face track
+never changes because pointing was turned on. A pass with the face track
+already cached runs hands alone, and the other way round; a cancel removes
+both partials. `done` gains a third count, the samples with a hand. The
+worker's `TRACK_VERSION` copy (`mp_faces.py:123`) is joined by
+`HANDS_RAW_VERSION = 1`, the version of the raw cache file, held equal to
+the helper's by `test_hands.py`. (Named 2026-10-21 apart from the project's
+`HAND_EVENTS_VERSION`, §6.18's `hands/types.ts`: the contract had
+`HANDS_TRACK_VERSION` and `HAND_TRACK_VERSION`, two values one letter
+apart, the trap §6.1 cites for `GraphicSpec` and `GraphicsSpec`.)
+
+#### The AI helper — `capabilities/faces.py`
+
+- **Constants** beside `MODEL_URL` (`:67-82`): `HAND_MODEL_URL`, the
+  versioned `float16/1` path of `hand_landmarker.task` under
+  `storage.googleapis.com/mediapipe-models/` (the face model's own path
+  shape, `:67-70`; H13 fixes it before it is pinned); `HAND_MODEL_SHA256`
+  (H13); `HAND_MODEL_BYTES = 7_819_105`; `HAND_MODEL_LABEL = "the hand
+  finder"`; `HANDS_RAW_VERSION = 1`. The model card states Apache 2.0 (the
+  research, [176]).
+- **`vision.handsModel`** (ModelParams → ModelStatus), the press and the
+  registration, written as `faces_model` is (`:189-193`, with `model_path`
+  at `:169`): on disk or not,
+  `fetch_url` against the pinned sha256 only on `download: true`, labelled
+  byte progress, cancellable. Registered in `register` (`:673-682`) beside
+  the two face methods, behind the same `find_spec("mediapipe")`. There is
+  no `vision.hands` method (chosen 2026-10-21: one decode, H12).
+- **`vision.faces` gains `hands?: HandsParams`**, `HandsParams` = `{ fps:
+  number; edge: number }`. `settings` (`:212-250`) checks it (the two
+  conditions above); the raw track's path is `media.cache_dir("hands")`'s
+  `<key>-<hash>.json`, the hash over the version, the detector (a stand-in
+  included), the model's sha256, the key, the upright size, the window, the
+  rate, the edge and the thresholds, as `track_path` hashes the faces'
+  (`:265-287`). Hands asked with the hand model absent answer
+  `Unavailable`; main never asks so (below). `FacesResult.hands` = `{
+  track: string; detector: string }`. `run_worker` (`:501-622`) is
+  unchanged: one worker, one spawn with `media._NO_WINDOW`
+  (`media.py:50-51`), one cancel.
+
+#### Protocol, the self-test and the pack
+
+- `src/shared/sidecar/protocol.ts`: `SIDECAR_METHODS.handsModel =
+  'vision.handsModel'` beside `facesModel` (`:189`); the method in
+  `OPTIONAL_METHODS` (`:217-230`); `HandsParams`, `FacesParams.hands?`
+  (`:321-348`), `FacesResult.hands?` (`:351-373`); `HANDS_RAW_VERSION`
+  beside `FACES_TRACK_VERSION` (`:384`).
+- `sidecar/forge_sidecar/capabilities/__init__.py:40`: the faces row lists
+  `vision.handsModel` too, so `system.hello` answers it as a capability or
+  degraded, never absent (`sidecar.int`'s "every optional method" case).
+- `src/shared/sidecar/selftest.ts:32`: `SELFTEST_GROUPS.faces` gains
+  `SIDECAR_METHODS.handsModel` (chosen 2026-10-21). The faces group's child
+  already loads `libmediapipe` (the worker's import-only run,
+  `mp_faces.py:326-349`; `selftest.py:85`, `:129-132`), which the hand
+  landmarker uses too, so a failed faces group greys both finders, and
+  `selftest.py`'s `GROUPS` (`:106`) is unchanged.
+- `src/shared/sidecar/packManifest.ts`: `'vision.handsModel'` in both
+  platforms' `expects` (`:314-324`, `:628-638`); the Settings row's count
+  becomes ten (`helperFeatureCount`, `selftest.ts:119-130`).
+  `tests/helperPackManifest.test.ts:340-344` already holds `expects` inside
+  `OPTIONAL_METHODS`, and `helperPack.int`'s installed-pack case
+  (`:558-561`) checks the pack's helper registers it.
+
+#### Main — the analysis and the press
+
+- `src/shared/reframe/job.ts`: `ReframeAnalyseRequest` (`:65-82`) gains
+  `hands?: true`; `ReframeCollected` (`:111-120`) gains `hands?: HandTrack`;
+  `REFRAME_CHANNELS` (`:45-54`) gains `handModel` and `handModelProgress`
+  (`tests/renderer/bridgeMethods.test.ts` holds each to its preload
+  method). A
+  pointing ask carries `clipIds: []`, so nothing is made to follow; its job
+  row reads "Finding where they point · <name>".
+- `src/main/reframe/analyse.ts`: the cached early return (`:330-344`) holds
+  only when the hands asked for are cached too; a hands ask checks
+  `vision.handsModel` beside the face gate (`:354-355`) and fails
+  `model-missing` before any work; a hands ask's faces call (`:375-385`)
+  carries `hands: { fps: 10, edge: 640 }` (H2, H8 revise); after the
+  reduction (`:405-408`), `pointEvents(raw, DEFAULT_POINT_RULES,
+  track.shots)` makes the `HandTrack` the collect returns. Its stage label
+  becomes "finding faces and where they point" while hands run.
+  `handModel(payload)` mirrors `faceModel` (`:523-539`): only exactly
+  `download: true` fetches, one fetch at a time.
+- `src/main/ipc.ts` beside `:1285` and `:291`; `src/preload/index.ts` beside
+  `:436-443`; the harness bridge's stand-in beside the face finder's
+  (`harness/bridge.ts:273`). Every `execFile` stays `windowsHide: true`;
+  nothing new is spawned from main.
+
+#### `src/shared/hands/`
+
+- **`types.ts`**: `HandsRaw` (the AI helper's cache file, versioned like the
+  face worker's `track_path`, keyed by `size:mtime`) = `{ version: number;
+  samples: { ms: number; detectMs?: number; hands: { presence: number;
+  handedness: string; score: number; box: UnitRect; points: [number,
+  number][]; label?: string }[] }[] }` (`detectMs` the bench's only; `label`
+  the spike's gesture detector's); `PointRules` = `{ enterSamples: number;
+  exitSamples: number; enterPresence: number; exitPresence: number;
+  bridgeMs: number; minMs: number }`; `DEFAULT_POINT_RULES` = 3, 2, 0.5, 0.4,
+  200, 400 (the research's §5.4 starting values, proposals until H7 and H8);
+  `PointEvent` = `{ id: string; shot: number; startMs: number; endMs: number;
+  dir: 'left' | 'right' | 'up' | 'down'; score: number; tip: { ms: number; x:
+  number; y: number }[]; hand: UnitRect }` (source ms; upright-frame units);
+  `HandTrack` = `{ key: string; version: number; width: number; height:
+  number; fps: number; detector: string; events: PointEvent[] }`;
+  `OneEuroParams` = `{ minCutoff: number; beta: number; dCutoff: number }`
+  (1, 0, 1 to start); `HAND_EVENTS_VERSION = 1` (the version of a project's
+  `HandTrack`, apart from the raw cache's `HANDS_RAW_VERSION`, above; each
+  tested where it is read); `POINTING_SWITCH = 'Callouts
+  follow a point'` (the switch's label; proposal); `HAND_HOLD_MS = 300` and
+  `DEAD_ZONE = 0.02` (the research's §5.6 starting values).
+- **`events.ts`**: `pointEvents(raw: HandsRaw, rules: PointRules, shots:
+  readonly Shot[]): PointEvent[]`, pure. Per sample, a hand points when, in
+  pixels (x times the upright width, y times the height, because the points
+  are normalised per axis, the research's §5.4): the angle at the index PIP
+  between MCP→PIP (5→6) and PIP→TIP (6→8) is at most 30° (proposal); the
+  middle, ring and little tips (12, 16, 20) are nearer the wrist (0) than
+  their PIPs (10, 14, 18); the thumb is ignored. The sample right after each
+  cut is discarded (the tracker's crop is stale there). Per shot, with
+  `DEFAULT_POINT_RULES` (3 samples to enter at presence ≥ 0.5; 2 to leave, or
+  presence under 0.4; gaps of 200 ms or less bridged; at least 400 ms long):
+  an event starts at its first qualifying sample (backdated) and ends at its
+  last, never past its shot. `dir` is the dominant axis of the mean MCP→TIP
+  vector in pixels; `score` the mean presence times the mean curl margin
+  (proposal); `hand` the union box; `tip` the fingertip through `smoothTip`,
+  then the dead zone (a smoothed move under `DEAD_ZONE` of the short side is
+  not drawn), at 4 dp; `id` = `p<shot>-<startMs>`, the same every time the
+  same rules meet the same raw track. Also `mergeHands(old, fresh,
+  anchored: Set<string>): HandTrack` (below) and `pointingState(project,
+  clip, helper, model)` (the switch's states).
+- **`oneEuro.ts`**: `oneEuroFilter(samples, params: OneEuroParams, scale:
+  number)`, causal, in palm-size units (wrist to middle MCP, the card's
+  definition, the research's §5.4); `smoothTip(samples, params, palm:
+  number)` runs it forward, then backward over the result, to cancel the
+  lag; state never carried across events.
+- **`anchor.ts`**: `tipOnFrame(project: Project, clip: Clip, asset:
+  MediaAsset, canvas: { width: number; height: number }, event: PointEvent,
+  frame: number): Point | null` (chosen 2026-10-21 to take the asset and the
+  canvas, as `sourceToFrame` does): the clip frame's source ms through
+  `sourceMsAt` (`frameMap.ts:210-232`); null outside the event; the tip
+  interpolated linearly between its two samples; a 0.001-wide box round it,
+  because `usable` refuses a box with no size (`frameMap.ts:45-47`);
+  `sourceToFrame` (`:86-132`), null off screen; the box's centre in output
+  pixels. `pointPlacement(project, clip, asset, canvas, event, startFrame,
+  frames, template): GraphicSpec['place'] | null` (null: not offered): the
+  caption's third excluded as
+  §6.9 excludes it, the face boxes (`subjectBoxesAt`, `:275-291`) and the
+  event's hand box (through `sourceToFrame`) as obstacles; for a left or
+  right point the free third nearest the tip's height at onset, for up the
+  nearest above it, for down below; null when none is free. Also
+  `anchorValid(project, spec): boolean` (rule 11) and
+  `anchorProposals(project, clipId): GraphicProposal[]`, below.
+
+#### The project
+
+- `Project.hands?: Record<string, HandTrack>` in `src/shared/timeline.ts`
+  beside `subjects` (`:974`): a fact about the file, as the subject track is;
+  Clear leaves it; optional, so every older project opens unchanged; source
+  ms, so a frame-rate change touches nothing.
+- `Clip.pointing?: true` on `Clip` (`:355` on): absent is off (D3).
+- **A re-analysis never moves a placed graphic.** The collect lands a fresh
+  `HandTrack` through `mergeHands`: every event an `anchor` names (a placed
+  graphic's or a proposal's) is kept exactly as stored, tip samples and all,
+  even when the fresh list has an event with the same id; the rest is the
+  fresh list. A different machine, model or rule set may find other points;
+  they arrive only as new proposals. The track's `detector` names the model
+  and its sha256.
+
+#### The anchored callout
+
+- **Rule 11** (§6.7 lists it by number; its text is this): a `callout` keeps
+  its `anchor` only when `Project.hands[anchor.assetId]` is of
+  `HAND_EVENTS_VERSION` and measured on the asset's own size; it holds an
+  event whose `id` is `anchor.event`; the callout's `subject.clipId` clip
+  shows that asset; the event's shot is the one the callout's first beat
+  falls in; and the event's span intersects the callout's on-screen span in
+  source ms (first beat − `LEAD_S` to last beat + `TAIL_S`). Otherwise the
+  anchor is removed, the callout falls back to rule 9's subject box (or is
+  dropped if it has none), with the note "the point this callout followed is
+  gone". `anchorValid` is the check; the validator and the store's rebake
+  both call it.
+- **The model never sees the points, in v1.** `anchor` is not in
+  `graphics@1`'s schema (§6.6), and the menu is not shown the events. This
+  departs from the research, whose §5.7 showed the model the clip's events
+  and let deictic words ("this", "here", "look") strengthen a bind; not in
+  v1 because the eval's fixtures carry no hand tracks, so an effect on the
+  model could not be measured, and the app binds an event to a callout by
+  time alone (rule 11). A later eval line could add both.
+- **Proposals you keep.** `anchorProposals` runs when hands land and after a
+  graphics pass, on clips with `pointing` on: for each **placed** callout on
+  such a clip, the first event that passes rule 11, whose tip is on screen at
+  the callout's first beat (`tipOnFrame` not null) and for which
+  `pointPlacement` finds a third, gives one `GraphicProposal` (§6.1): the
+  callout's spec with `anchor`, `shape: 'arrow'`, the new `place`, and
+  `proposal: { reason: 'pointed' }`; its rule is the callout's own
+  (`GRAPHIC_RULE` or `CLIPS_GRAPHIC_RULE`), its note "follows the point at
+  0:42, pointing left". One event anchors one callout at most, and a point
+  whose tip is off screen at onset is not offered (H9 says how often). Keep
+  replaces the callout's spec; Drop leaves the callout pointing at the face.
+  The Transcript tile's Graphics list (§6.6) shows them beside "check the
+  number". Turning `pointing` off removes the clip's `'pointed'` proposals;
+  anchored callouts already kept stay, as your edit.
+- **Drawing** (a branch in `templates/callout.ts`, §6.2's file, written by
+  this phase's lane): the body sits in its third on the pointed side (dir
+  read from the event) and never moves; a leader line draws on from the body
+  to `targets.tip` over 0.35 s from the beat (§6.13), its end following the
+  tip on every frame with the riding arrowhead (§6.3's stroke); with no tip,
+  no line. `graphicTargetsAt` (§6.3; this branch is this phase's) gives
+  `tip` from `tipOnFrame`, or the last on-screen tip within `HAND_HOLD_MS`
+  before, or null; so the line holds 300 ms after the hand leaves the frame,
+  then is gone (an animated retract waits for your rating). The tip moves on
+  every frame, so `graphicMovingFrames` returns `total` for an anchored
+  callout (≤ 3 s, `callout`'s maximum).
+
+#### The switch — `src/renderer/src/components/tools/PointingToggle.tsx`
+
+Mounted beside the reframe section (`Inspector.tsx:228`), for a video clip:
+the clip's other face-finder control. Smart placement is a project switch in
+the OUTPUT strip; pointing is per clip (D3), so it sits in the dock. Its
+states follow `smartPlacementState`'s (`captions/smart.ts:79-85`), through
+`pointingState`:
+
+| state | shows |
+|---|---|
+| the helper missing, or the faces self-test failed | greyed, "needs the AI helper", the pointer to Settings (`HelperPointer`, `SettingsPanel.tsx:104`) |
+| the helper starting | greyed, "the AI helper is starting" |
+| the hand finder not on disk | the switch greyed "needs the hand finder", and the press **"Get the hand finder · 7.8 MB"**, or "Get the hand and face finders · 8.9 MB" when the face finder is absent too (the analysis needs both; every download is named with its size before the press, §0) |
+| off | `POINTING_SWITCH`, off (the default) |
+| on, no hand track yet | the analysis starts (the job row); "finding where they point" |
+| on, with a track | "N points found in this clip", or "no points found in this clip"; after a partial gate, the measured note |
+
+The label's size is decimal megabytes at one place, ReframePanel's
+`modelMegabytes` (`ReframePanel.tsx:69-71`): 7,819,105 B is "7.8".
+`formatBytes` (`assets/pack.ts:443-448`, the speech model's) would say "7
+MB". The store: `setPointing(clipId, on)` and `getHandModel()`, with
+`ensureHandModel` and `landHands` written as `ensureFaceModel` and the
+collect are (`store.ts:5779-5805`, `:5955-5980`); the `reframe` slice gains
+the hand model's status and its fetch.
+
+The degraded modes are §14's rows (the AI helper or a failed faces
+self-test; the hand finder not on disk; a hand track of another version or
+size; a point off screen at onset, or no free third).
+
+#### Tests (each mutation-checked; §6.11 indexes them)
+
+- **`tests/handsEvents.test.ts`**: enter on 3 qualifying samples at ten a
+  second, exit on 2 failing or presence under 0.4, dropouts of 200 ms or less
+  bridged, events under 400 ms dropped (`DEFAULT_POINT_RULES`, on synthetic
+  tracks); the finger rule on fixed 21-point hands (a sideways point and an
+  index-up point are points; a fist and an open palm are not); an event ends
+  at its shot's end, and the first sample after a cut is discarded and does
+  not continue it; `dir` from MCP to TIP in pixels; ids stable; **a
+  re-derived event list never moves a placed graphic** (`mergeHands` keeps
+  every anchored event, and every placed graphic's `anchor` and place are
+  unchanged, a proposal offered instead); `pointingState`'s table.
+  Mutations: an event across a cut (the shot boundary ignored); the first
+  sample after a cut kept; enter after one sample; exit on one failing
+  sample; no bridging; the ring finger's curl read from the middle finger's
+  joints; the direction in normalised units (a 16:9 diagonal point turns
+  from left to up); `mergeHands` overwriting an anchored event.
+- **`tests/handsSmooth.test.ts`** (H5's script): at rest the filtered tip's
+  jitter, in palm-size units, is below the raw; with `beta` above 0 the
+  cutoff rises with speed; values are divided by the palm's size before
+  filtering (the same track at twice the size gives the same result in palm
+  units); forward-backward has no net lag on a symmetric ramp and less lag
+  on a fast point than the causal pass; state reset per event. Mutations: no
+  palm-size scaling; the backward pass dropped; the derivative cutoff used
+  for the signal; state carried across events.
+- **`tests/handsAnchor.test.ts`**: `tipOnFrame` through a followed 9:16 crop
+  of a 16:9 clip (a tip at source x 0.7 lands where `sourceToFrame` puts a
+  small box there), null when the tip leaves the output frame;
+  `pointPlacement` per direction, places the body once, at onset, in the
+  free third on the pointed side with the hand's box as an obstacle;
+  rule 11 (`anchorValid`), each clause; `anchorProposals` one per event,
+  none off screen, none on a clip with `pointing` off; a hand track of
+  another version or size ignored for new proposals while kept anchors keep
+  their events. Mutations: the crop skipped (fit only), or the tip unmapped;
+  the tip passed as a zero-size box (null on every frame); the body
+  re-placed per frame; a hold beyond `HAND_HOLD_MS`.
+- **`tests/graphicPlace.test.ts`**, phase 4's case: the hand's box an
+  obstacle beside the face's. Mutation: the hand's box ignored.
+- **`tests/sidecar/test_hands.py`**: `parse_spec` accepts `{"mode":
+  "hands"}` with its ranges and still refuses an unknown mode, a rate that
+  is not a whole multiple of the faces' and an unequal edge; `hands_of`'s
+  clamp, 4 dp, two largest first; the writer's rename; `HANDS_RAW_VERSION`
+  held equal to the helper's. It runs inside
+  `tests/integration/sidecarMedia.int.test.ts:65-88`'s `unittest discover`,
+  which requires each file to run tests of its own and lets only "numpy is
+  not installed" skip, so it imports neither mediapipe nor numpy at module
+  level (CI's bare interpreter has neither). Mutations: `parse_spec`
+  refusing `hands`; the clamp removed; the order reversed; `fps` 0 accepted.
+- **`tests/integration/hands.int.test.ts`**: with `FORGE_HANDS_WORKER_FAKE`
+  the raw track's samples are in source ms, monotone, versioned and keyed by
+  `size:mtime`, in the upright frame of a turned clip; through the helper's
+  `vision.faces` with `hands`, **the face track with hands on is equal byte
+  for byte to the faces-only track**; a cancel leaves no worker, no ffmpeg
+  and neither partial; `vision.handsModel` answers without fetching; with
+  `FORGE_HANDS_REAL=<clip>` it writes `tests/output/hands/real/README.txt`
+  (the spike's tables). Mutations: samples by analysed-frame index instead of
+  ms; the cache key without mtime; the face detector run on every hands
+  sample (the face track differs).
+- **`tests/renderer/pointingToggle.test.tsx`** (added 2026-10-21): the
+  switch's states as the table above; 7,819,105 B reads "Get the hand finder
+  · 7.8 MB". Mutation: `formatBytes` ("7 MB").
+- **Existing**: `tests/helperPackManifest.test.ts`,
+  `tests/integration/sidecar.int.test.ts` (the optional methods; the groups
+  held equal), `tests/integration/reframeJob.int.test.ts` (a hands ask
+  fails `model-missing` without the model; H12 by the stage clock),
+  `tests/renderer/bridgeMethods.test.ts`, `tests/uiCensus.test.ts` with
+  `tests/fixtures/ui-census.json`. Mutation: `vision.handsModel` left out of
+  `OPTIONAL_METHODS` or `capabilities/__init__.py:40`.
+- `graphic.int`'s phase-4 case, the hand render check, is §6.11's.
+
+**Measurements.** **H11** (the raw cache and the reduced event list, `wc
+-c`, per minute of footage, node), and **H12 again** through the job's own
+stage clock (`FORGE_REFRAME_REAL=<file> npx vitest run
+tests/integration/reframeJob.int.test.ts`); both to EFFECTS §62. If H8 found
+the onset more than 3 frames off at ten a second, the rate goes to 15 (H2
+prices it); a dense re-pass round each onset is not planned.
+
+The exit is §6.12's phase 4.
+
+#### Days
+
+| item | days |
+|---|---|
+| the worker's hands on a shared decode, the raw writer, the version | 1.25 |
+| the AI helper's `vision.handsModel`, constants, cache path; protocol, self-test, `expects`, `__init__` | 0.75 |
+| main: the analysis's hands ask, the reduction, the collect, the press, IPC, preload | 0.75 |
+| `src/shared/hands/` hardened: rules, merge, smoothing, `tipOnFrame`, `pointPlacement`, `graphicTargetsAt`'s branch | 1 |
+| the anchored callout: rule 11, proposals, the callout's branch, moving frames | 1 |
+| the switch, the press, the store, census, degraded modes, `graphic.int`'s case, H11, H12, the held-out exit | 1.25 |
+| **phase 4** | **6** |
+
+### 6.19 The build order, the phases and the days
+
+Each phase is built as step 2 was: lanes that can run in parallel, then
+verifiers, then a fix phase, all inside the phase's days. Days are effort,
+not calendar. Every lane's work lands as its own commits, each green
+(typecheck and the full suite, written to a file, `$?` checked) before the
+next lane depends on it. The lanes split each section's days as its own
+piece table does (§6.3's, §6.16's, §6.17's, §6.18's).
+
+| phase | lane | builds (§) | days | needs first |
+|---|---|---|---|---|
+| 0 | one | 0.1 M4's case; 0.2 `graphicCheck.ts`'s measuring half with `encodeFrames`; 0.3 the libass reference and M21's case; 0.4 the runs and the record (§6.15) | 2 | — |
+| 1 | head, serial | the §16.8 rename as its own commit (0.25 of §6.1); then all of §6.1's types in one commit (`template.ts`'s types, the `timeline.ts` fields, `GraphicsSettings`, `GraphicProposal`, `MediaAsset.speaker`, `Clip.forGraphic`, the (box) field, and the seam's `GraphicCandidate`, §6.7, and `KeptGraphic`, §6.6, declared in `template.ts`), so `Clip.graphic` exists before anything reads it (the other 0.25 of §6.1); then `SELF_DRAWN_FIELDS`, the five list sites and `graphicGuards`' head half, the behaviour over the constant and the regex, with the membership rewrites of `paper.test` and `moment.test` (0.75 of §6.4) | 0.25 + 0.25 + 0.75 | phase 0's exit |
+| 1 | outside the days, serial | §6.20's two halves, each its own commit: D8's (`shapedScript` and the captions' fix) and D10's (the Noto files, `INDIC_FONTS`, the scan, the renderer's font sites, the CI check) | (§6.20's 1) | the head |
+| 1 | A | `motion.ts` with `graphicMotion` (§6.13); `stroke.ts` with `graphicStroke` (0.5 of §6.3); `style.ts`'s first half with `graphicStyle` (§6.5) | 1 + 0.5 + 0.5 | the head |
+| 1 | B | `drawList.ts`, `items.ts` (`DrawOut`, `unitFor`, `CLUSTER_SCRIPTS`, the drawer seam), `templates/index.ts` with `graphicDrawList` (1 of §6.3); `paint.ts` with its `PaintOptions` and `graphicPaint` (0.75); `frame.ts` and `targets.ts` with `graphicFrame`'s first half (0.25) | 2 | the head; §6.20's two halves (`unitFor` reads `shapedScript`; shaped text items name `INDIC_FONTS`); M3 for `CLUSTER_SCRIPTS`; A's `stroke.ts` before `paint.ts` |
+| 1 | C | `graphicCanvas.ts` (preview, bake, frames; the worker back-end only if M2 asks) (0.75 of §6.3); the export branch with its own catch line, `Bakers.graphic` and every literal of §6.11, `exportBakers.ts`, the store's `addGraphicClip`, `setGraphic`, `rebakeGraphic`, the trim and split rules, Preview's branch and sweep, (box) `identityPlaced`, with `graphicStore` (0.5); the three store arms (`rebakeGenerated`, `placeCopies`, `rebakeFollowed`) and `graphicGuards`' wiring half (0.25 of §6.4) | 1.5 | B's draw list and painter; M1 and M2 |
+| 1 | D | the harness's `primitives` and Indic halves (0.25 of §6.3); `pathLength`, `strokes` widths, `graphic.int`'s phase-1 cases, `SHAPES`' graphic overlay (§6.11's half) | 0.25 + 0.5 | C; §6.20's D10 half |
+| 2 | T3, first | the typed stub of `applyGraphics` (`KeptGraphic`, the signature, §6.6), committed before T2's wiring starts | inside T3's 3 | phase 1's exit |
+| 2 | T1 | `GRAPHIC_TEMPLATES`' values first (the others read the field modes), then the layout, the eight draw files, `numbers.ts`, `tree.ts`, with `graphicFrame`'s second half, `graphicHolds`, `graphicTree` (§6.2); the style's second half (§6.5) | 4 + 0.5 | phase 1's exit; M21 before the counter |
+| 2 | T2a | `claims.ts`, then `validateGraphics.ts` with `checkGraphicData`, `claims` and the property test (§6.7) | 3 | T1's values |
+| 2 | T2b | `schemaGraphics.ts`, `promptGraphics.ts`, the ask's fix with `directorAsk`, `run.ts`'s `graphicsMenuFor`, `settleGraphics` and `decisionForGraphics`, Direct's and the tile's wiring (Clip it's is step 4's), `TranscriptGraphics.tsx`, `GraphicPanel.tsx`, the store's actions but `setGraphicSounds`, with `directorGraphics`, `transcriptGraphics`, `graphicPanel` (§6.6) | 2 | T2a's validator; T3's stub |
+| 2 | T3 | `beats.ts` with `graphicBeats` (§6.8); `place.ts` (with `freeSpace.ts`'s `samplesOver`) and `budget.ts` with `graphicPlace`, `graphicBudget` (§6.9); `sound.ts` (`GRAPHIC_SOUND_FILES`), `graphics/apply.ts` (`applyGraphics`, `lowerThirdFor`, `clearGraphics`), `director/apply.ts`'s constants, sweep and return, the store's follow-on edits (`removeClip`, `moveClip`, `moveSelectionTo`, `pasteClipboard`), `setGraphicSounds` and the switch, with `graphicSound` and `graphicStore`'s phase-2 cases (§6.14) | 0.5 + 1 + 1.5 | T1's values |
+| 2 | T4 | the baseline and the eval block, the fixtures read, M14's and the look rating's runs (§6.10); the harness's `templates`, `curves`, `look` and per-template Indic options, `graphic.int`'s phase-2 cases, the property test's wiring (§6.11's half) | 1.5 + 0.5 | T1-T3 |
+| spike | H | §6.17's pieces: the worker's `hands` mode, `hands/types.ts`, `events.ts`, `oneEuro.ts`, `anchor.ts`'s `tipOnFrame`, the cases §6.17 lists; your runs | 1.5 | your footage; runs during phase 2 (nothing of phases 1-2 is needed: `sourceToFrame` through the reframe exists) |
+| 3 | depth | §6.16, split as its day table writes; M7 first, on the glow seam | 5 | phase 2's exit; M6's phase-0 parts |
+| 4 | depth | §6.18, only if the gate passed | 6 | the gate (§6.12) |
+
+The sums: phase 1, 1.25 + 2 + 2 + 1.5 + 0.75 = 7.5; phase 2, 4.5 + 3 + 2 +
+3 + 2 = 14.5. (Revised 2026-10-21 by the review: the first table put
+`Clip.graphic`'s types in lane B after the head had used them, and
+`graphicGuards`' wiring cases in the head before lane C wrote the wiring;
+neither could commit green.)
+
+**What the measurements gate.** Lane B's `unitFor` waits on M3; lane C's
+bake region and pool on M1 and M2; §6.5's entrance list on M5; phase 3's
+colour setup on M6 (phase 0) and its glow on M7 (phase 3's first day);
+phase 2's counter on M21. M22 gates phase 1's text work as §6.15's M22 row
+says. M4 gates nothing in step 3: nothing probed is emitted.
+
+**Where §6.20 falls.** Outside step 3's days, inside phase 1's run:
+
+- **D8's half** (the captions' per-word fallback, and `shapedScript` in
+  `render/textAnimation.ts`): first after the head, before lane B, because
+  `unitFor` reads `shapedScript`. Its own commit, so a revert of either
+  leaves the other.
+- **D10's half** (the two Noto fonts, `INDIC_FONTS` and the rest of §6.20's
+  font work): also before lane B, because lane B's shaped text items name
+  `INDIC_FONTS` and lane C's bake awaits them; so it lands long before lane
+  D's Indic render check, which needs the files. In phase 0 instead if M22
+  finds a font cause (§6.15).
+
+**The days.** Step 3 is 30.5: phase 0's 2, phase 1's 7.5, phase 2's 14.5,
+the spike's 1.5, phase 3's 5; that is §6's 14.5, 2 moved from step 6, and 14
+new (9.5 in phases 0-2, the spike's 1.5, 3 in phase 3). Phase 4's 6 are in
+no total until the gate passes (36.5 with it). §6.20's 1 day is counted in
+§2 beside the steps. Days that read tight, figures kept: §6.2's 4 for nine
+draw files and their layout; §6.6's 2 (less tight now that Clip it's
+wiring is step 4's); the screen card's 1.25 in phase 3; §6.20's D10 half,
+which may run to 0.75 with the `.gitignore` change, the pack-root listing,
+the catalogue's version, the CI check and the renderer's font sites.
+
+### 6.20 Outside step 3's days: the captions' per-word fallback (D8) and the Indic fonts (D10)
+
+**1 day, counted outside step 3, in §2 beside the steps; §6.19 places both
+halves inside phase 1's run.**
+
+**D8's fix · 0.5 day.** D8, §16.61: "Per word by default everywhere; per
+cluster only for scripts M3 clears. And a separate small fix, outside step
+3, so the captions' `bounce` and `wave` fall back to per-word animation for
+Indic scripts, mutation-checked."
+
+- **The defect.** `bounce` and `wave` have `scope: 'char'`
+  (`textAnimation.ts:125-142`), and `piecesOf` splits that scope with
+  `Array.from` (`:242-246`), so each code point is drawn on its own by
+  `paintAnimated` (`textPaint.ts:459`, the split at `:472`): a Devanagari
+  conjunct's consonants are painted apart, with its virama, and an i-matra
+  away from the consonant it precedes. The same split counts the pieces that
+  time the movement (`textCanvas.ts:132-136`, `captions/bake.ts:67-73`), so
+  the fix in `piecesOf` reaches every caller.
+- **`shapedScript(text: string): boolean`** in `render/textAnimation.ts`:
+  true when the text holds a code point of a script whose letters join or
+  reorder, by Unicode script property: the ten Indic scripts (Devanagari,
+  Bengali, Gurmukhi, Gujarati, Oriya, Tamil, Telugu, Kannada, Malayalam,
+  Sinhala), and Arabic, Syriac, Thai, Lao, Tibetan, Myanmar and Khmer
+  (proposal; the tests pin membership, not the list). **The seven
+  non-Indic scripts extend D8**, which named Indic scripts: they join or
+  reorder their letters too, so splitting them by code point breaks them
+  the same way; recorded here for you to narrow if you want D8 as worded.
+  Graphics read it too (§6.3's `unitFor`): one script rule for the
+  captions' fix and the engine.
+- **The fix.** `piecesOf(text, 'char')` returns the word pieces when
+  `shapedScript(text)`, and `Array.from(text)` otherwise; a mixed line falls
+  back whole. The accent mapping (`textPaint.ts:491-510`) needs no change:
+  under `char` scope it counts words by the gaps between pieces (`:505`),
+  which holds when the pieces are words.
+- **Tests.** `tests/textAnimation.test.ts`: a Hindi and a Telugu line under
+  `'char'` give the same pieces as under `'word'`; `'ab c'` still gives
+  `['a', 'b', ' ', 'c']` (the case at `:164`); `shapedScript` is true for
+  Devanagari, Telugu and a mixed line, false for Latin and Cyrillic.
+  `tests/textPaint.test.ts`, with its fake context (`:24-46`): a Hindi line
+  under `bounce` at a mid frame draws only whole words (each `fillText`
+  string one of the line's words), and an accent on word 1 lands on the
+  second word's call. Mutations: `Array.from` restored for shaped text (both
+  files fail); `shapedScript` returning false for Telugu.
+
+**D10's fonts · 0.5 day.** D10, §16.63: "Decide `BETA.md` R14, bundling Noto
+Sans Devanagari and Noto Sans Telugu (both OFL), before phase 1's Indic
+render check." `BETA.md` R14 recommended bundling them "and
+have a Hindi or Telugu transcript's captions name them, so both platforms
+draw the same letters", half a day with a render check on both builds; that
+half day is R14's own, pulled forward and counted once, here.
+
+- **Where the files live (chosen 2026-10-21): committed, under
+  `assets/fonts/`.** Two fonts, `NotoSansDevanagari-Regular.ttf` and
+  `NotoSansTelugu-Regular.ttf`, each with its OFL text beside it,
+  `OFL-NotoSansDevanagari.txt` and `OFL-NotoSansTelugu.txt`: four tracked
+  files, one licence file per family, as `BETA.md` R6's test asks ("a
+  licence file beside every family"). The copies Tor Browser bundles, read on this
+  Mac 2026-10-21, are 244,284 B and 235,176 B; the build fetches the files
+  from the Noto project's own release and records their sizes and sha256 in
+  EFFECTS §61. Committing them is what lets CI's libass and the harness see
+  the same faces as a user's machine: `/assets` is gitignored
+  (`.gitignore:28`), so CI has drawn every Indic caption in a system
+  fallback, and the Windows runner has never said which. They must sit in
+  `assets/fonts/` itself, because libass takes one `fontsdir`
+  (`plan.ts:1930`, from `fontsDir()`, `src/main/captions.ts:28-35`, which is
+  the app's own `assets/fonts` in development and in a packaged app, even
+  when an asset pack is installed). So `.gitignore`'s `/assets` becomes
+  `/assets/*`, `!/assets/fonts/`, `/assets/fonts/*`, and four negations for
+  the four files; the local library keeps its 88 files untracked, and the
+  installer packs the folder as today (`electron-builder.yml:59-63`). The
+  asset pack keeping them instead would leave the repo smaller by about half
+  a megabyte and CI blind, which is the reason for the change. Measured in
+  the commit: `git ls-files assets` lists exactly the four files, and `git
+  check-ignore` still ignores `assets/fonts/Anton-Regular.ttf`.
+- **The symlink, checked first.** The comment above the rule
+  (`.gitignore:25-27`) says `/assets` is "currently a symlink" to the
+  library. On this Mac it is a real directory (`ls -la`, 2026-10-21), but
+  git cannot track a path beyond a symbolic link, so a checkout where
+  `assets` is a link would refuse the commit or the pull. Before the commit,
+  `assets` is checked on the Surface's checkout too (`dir assets` shows
+  `<SYMLINKD>` or `<JUNCTION>` for a link); if either machine has a link,
+  it is replaced by a real folder, a copy of the library, before the
+  commit. The comment is rewritten to say what is true, and the check is
+  recorded in the commit message.
+- **Found whichever folder the catalogue scans.** The canvas loads a face
+  from the catalogue (`ensureFont`, `renderer/src/catalog.ts:140-193`), and
+  the catalogue scans `assetsRoot()`, which is the pack root under
+  `userData` once a pack is installed (`src/main/assets/scan.ts:163-169`,
+  `packs.ts:39-41`), not the app's own folder. So main's scan also lists the
+  two font files from `fontsDir()`'s folder when that folder is not the
+  scanned root's `fonts/`, as absolute paths, which `assets:fontData`
+  (`src/main/ipc.ts:675-682`) already reads: its `resolveAssetFile` takes an
+  absolute path as it is (`scan.ts:406-414`). Without it, every machine with
+  a pack installed, the beta's case, would draw Hindi and Telugu graphics in
+  the system's face while libass drew Noto.
+  - **`fontsDir()` moves** out of `src/main/captions.ts:28-35`, where it is
+    private, into `src/main/fontsDir.ts`, exported unchanged
+    (`FORGE_FONTS_DIR` first, then the packaged or the development
+    `assets/fonts`) and reading Electron's `app` only inside the call;
+    `captions.ts` and `scan.ts` import it. The tests' electron stub has
+    `isPackaged` and `getPath` only (`tests/stubs/electron.ts:5-15`, no
+    `getAppPath`), so the test sets `FORGE_FONTS_DIR`, as
+    `m0Exit.int.test.ts:872` does.
+  - **The catalogue's version is bumped** (`CATALOG_VERSION`,
+    `assets/catalog.ts:158`, 2 to 3) in the same commit: the scan reuses a
+    cached catalogue while the version and the root are unchanged
+    (`scan.ts:386`), so a machine scanned before this change would keep a
+    catalogue without the Noto entries and record "not in the catalog".
+  - **Tested** in `tests/integration/assetscan.int.test.ts`: `scanAssets`
+    on a temporary pack root holding no Noto files, with `FORGE_FONTS_DIR`
+    set to a temporary folder holding the two names, lists both families;
+    a cached catalogue of version 2 for the same root is scanned again and
+    lists them. The existing case's `entriesOfKind(catalog,
+    'font')).toHaveLength(3)` (`:39`) becomes membership (the three fonts
+    in, `notafont.txt` out), since the extra listing makes the count 5.
+    Mutations: the extra listing removed; the version bump reverted (the
+    cached case fails).
+- **Regular only.** The font loader registers one `FontFace` per family,
+  from the first catalogue entry for it, with no weight descriptor
+  (`renderer/src/catalog.ts:160`, `:173`), so a Bold file beside it would
+  not be read; heavier weights are synthesised by Chromium, as for every
+  one-file family in the library. M22's frames record how they look.
+  Registering weights is outside this step.
+- **The canvas route.** `INDIC_FONTS = ['Noto Sans Devanagari', 'Noto Sans
+  Telugu']` in `render/textPaint.ts`, placed in `fontString`'s chain
+  (`:286-291`) after the clip's own faces and before `sans-serif`, so a
+  caption or a text clip falls back to them on both systems instead of
+  whatever each resolves. Graphics name them directly for shaped items
+  (§6.3). A family in the chain resolves only once its `FontFace` is
+  registered, which `ensureFont` does (`renderer/src/catalog.ts:140-193`),
+  and the two are not installed on macOS or Windows by default. So
+  `indicFontsFor(text: string): string[]` (pure, `textPaint.ts`: the
+  `INDIC_FONTS` faces whose script the text holds) is called, and each face
+  it returns is ensured and counted in the readiness check, at every site
+  that ensures a text face today:
+  - `textCanvas.ts`: the bake's `ensureFont(spec.font)` (`:39`, `:174`),
+    and the preview's readiness check and its warm-up (`:113-116`);
+  - `captionBake.ts:111`, beside the caption families;
+  - `Preview.tsx`: the caption font effect (`:446-449`), over the caption
+    track's words, and the text-clip font effect (`:471-485`), over each
+    text clip's content;
+  - graphics: `bakeGraphicSequence` and `graphicPreviewCanvas` (§6.3).
+
+  `tests/textPaint.test.ts` holds `indicFontsFor`'s membership (Hindi
+  gives Devanagari's face, Telugu Telugu's, Latin none); mutation: a site
+  left without it is caught by the harness's Indic frames, drawn through a
+  text clip and a caption as well as a graphic (§6.11's `indic` option).
+- **The libass route.** In `captions/ass.ts`'s per-word blocks (`:202-210`),
+  a word whose text holds Devanagari or Telugu carries `\fn` naming its
+  script's face, and every other word of the same event carries `\fn` naming
+  the style's own face, so the override never leaks to the next word.
+  Poppins' and Teko's partial Devanagari (`BETA.md` R14) stays as it is
+  for Latin-faced captions that name them.
+- **The render check, on both builds.**
+  `tests/integration/captions.int.test.ts`'s Indic case (EFFECTS §51; it
+  already passes `assets/fonts` as `fontsdir`, `:226-227`) keeps its bar,
+  the app's frames equal to the complex shaper's, and now prints, as a
+  notice readable without signing in (as `captionsFree.int`'s are), whether
+  complex differs from simple on the Windows runner, with Noto Sans present
+  there: that line is the first answer to whether the 2018 build's libass
+  has HarfBuzz (EFFECTS §51 left it open). `tests/captions.test.ts` holds
+  the `\fn` tags (a Hindi word names Noto Sans Devanagari, the Latin word
+  after it names the style's face). The canvas half is the harness's (M22
+  and phase 1's Indic render check, §6.11), since painting needs a DOM
+  canvas. `tests/textPaint.test.ts` gains the font-chain case, `INDIC_FONTS`
+  in `fontString`'s output before `sans-serif`. Mutations: the chain without
+  `INDIC_FONTS` (the font-chain case fails, and the harness's Indic frames
+  fall back to the system face and differ from the named ones); the `\fn`
+  dropped from the Latin word after a Hindi one (`captions.test` fails); the
+  files removed from the folder (the Windows notice and the Mac frames
+  change).
+- **A risk to read on the first push.** With Noto Sans Devanagari in the
+  `fontsdir` on CI, libass may pick it, by glyph coverage, as the fallback
+  for Latin captions whose face is absent there (Anton on CI), where the
+  system's face was picked before. The libass render checks were written to
+  tolerate any fallback face (EFFECTS §60), so they should hold; the first
+  run's `captionsFree.int` and `captions.int` notices are read before
+  anything else lands on top.
+- **CI's warning about an empty library would go silent.** The step "Say
+  whether the asset library is in this build" (`.github/workflows/ci.yml:380-387`,
+  its reason in the comment at `:374-379`)
+  calls any non-empty `assets/` "Asset library present", so four tracked
+  files under `assets/fonts` would silence the `::warning::` that exists to
+  say the installer ships with no SFX, transitions, titles or props. In
+  the same commit the check looks for the library itself, `assets/sfxx`
+  (where the Director's sounds live, §6.14), and the warning's text says
+  the installer carries only the two Noto faces. The CI-built installer
+  carries `assets/fonts` with those four files where it had none.
+- **A gap found, outside this step.** libass's `fontsDir()` names the app's
+  own `assets/fonts` whether or not a pack is installed, so on a
+  pack-installed machine libass never sees the pack's faces; a `BETA.md`
+  row for it is proposed, not written by this revision.
+
+### 6.21 What this revision edits elsewhere
+
+The re-plan of 2026-10-21 changed these places outside §6, in the same
+edit, so the file agrees with itself:
+
+- **The status note at the top**: a paragraph saying step 3 was re-planned,
+  30.5 days in five phases plus a gated 6, nothing of it built.
+- **§2, the order and the days**: step 3's row (what the research changed;
+  30.5, was 14.5) and step 6's (5, was 7); the total paragraph (89.5 in the
+  steps, 90.5 with §6.20's day, 100-103.5 with Step P, 106-109.5 with phase
+  4); a second delta table for the re-plan; a third row of the days table,
+  "after 2026-10-21", and its check line; the milestones M2 (~30.5) and M5
+  (~12.5) and their sum (89.5); step 4's start, 16 days later; "Steps 5-7
+  (about 23.5 days now)"; and "Your part": step 3's measurement and spike
+  rows, the graphics fixtures' hours (§6.10), and the total hours.
+- **§3a's day count**: the line that put §2's total at 85-88.5 notes the
+  re-plan's 100-103.5.
+- **§8.4**: the social quote card's files are `templates/quote.ts`'s
+  `social` branch and `components/GraphicPanel.tsx`, where §8.4 said
+  `graphics/paint.ts` and `tools/GraphicPanel.tsx`.
+- **§9**: the heading (5 days) and the 3D half (2 days: `timeline`,
+  `before-after` and `versus` on the draw list; the 2.5D `counter` and
+  `ring` built here in phase 3).
+- **§13**: step 3's rows (nothing new emitted; the M4 probes listed
+  "probed, not emitted"; the measurement-only shapes).
+- **§14**: the WebGL row reworded for phase 3; new rows for no subject
+  track, no sound for a graphic, an Indic font missing, a screen card's
+  recording frames, the hand finder, and a hand track of another version;
+  the AI helper's row names the dim and pointing; the unbakeable graphic's
+  row names the screen card's keys.
+- **§15**: rows 9 and 20 point to M1, M2 and M6; rows 39-73 by pointer to
+  §6.15.
+- **§16**: decisions 54-65, D1-D12 of the research, each answered as
+  recommended on 2026-10-21.
+- **§18**: step 3's phase exits and the spike's gate.
+- **`BETA.md` R14**: its days (2.5 to 4.5) and its fonts sentence (decided,
+  built and counted in §6.20).
+
+**The review of the same day** (three reviewers: the repo, fidelity to the
+research and the answers, and buildability) changed, outside §6: §2's M2
+line (2.5D on each clip's hero, a proposal of the plan's) and "Your part"
+(M7 off phase 0's row; the look rating beside M14, 2 h; the total 38-43);
+§9's `kinetic-type` lines; §14's degraded-pack row ("N of 9", 10 with phase
+4); §15's pointer (M7 in phase 3); §16.65's answer line (the two readings of
+D12); and `BETA.md` R14 (four files, one licence per family).
+
+Not re-pointed: every reference to §6.1-§6.12 elsewhere in this file, since
+those numbers keep their topics. Not edited by this revision, and left for
+the commits that build them: `PLAN.md:1172-1180` (pointed to §6.4 by the
+commit that lands `SELF_DRAWN_FIELDS`), `EFFECTS.md` §61 and §62 (opened by
+phase 0 and the spike), `WHERE-THINGS-ARE.md` and the census (each phase's
+exit), `LLM.md` §Built (phase 2's exit), and `.github/workflows/ci.yml`'s
+asset-library check and `.gitignore`'s `/assets` rule and comment (changed
+by §6.20's fonts commit).
 
 ---
 
@@ -8837,8 +12869,10 @@ over the clip beneath, placed by §6.9.
 **Files.** `src/shared/graphics/social.ts` (the fields' sanitiser: trimmed,
 the handle stored without a leading `@` (any number of them stripped), and
 the attribution line adds exactly one; the date as typed); the
-`quote`/`social` branch of `graphics/paint.ts`; `tools/GraphicPanel.tsx`'s
-fields for the kind, with **Surprise me**; **Add a social quote** in the
+`social` branch of `graphics/templates/quote.ts`'s draw function (§6.2;
+the 2026-10-05 text said `graphics/paint.ts`, which is now the painter that
+draws every list, §6.3); `components/GraphicPanel.tsx`'s fields for the kind
+(§6.6), with **Surprise me**; **Add a social quote** in the
 Transcript tile's Graphics section and in the B-roll panel (§8.8).
 
 **Tests** (`tests/socialCard.test.ts`):
@@ -9099,7 +13133,14 @@ Census rows: every label above, plus the Settings rows and the switch.
 
 ---
 
-## 9. Step 6 — Retrieved-fact cards and the 3D templates · 7 days (Brave's 1 out)
+## 9. Step 6 — Retrieved-fact cards and the 3D templates · 5 days (Brave's 1 out; the 2.5D counter and ring moved to step 3, §16.55)
+
+> **Revised 2026-10-21 (D2, §16.55).** The 3D half falls from 4 days to 2.
+> Step 3's phase 3 (§6.16) builds the compositor (painter B on the shared
+> renderer), its disposal, the WebGL-missing path, the flat-colour and edge
+> measurements (M6), and the 2.5D `counter` and `ring`. What stays here is
+> three templates on that same draw list. The retrieved-fact cards below are
+> unchanged.
 
 **Retrieved-fact cards** (3 days) are the `source` template with `sources[]`:
 
@@ -9147,35 +13188,71 @@ serves without signing in, and a page whose schema.org data says
 `isAccessibleForFree: false` is refused (**unmeasured** on real pages; read
 on three news sites in the step).
 
-**The 3D templates** (4 days): `timeline`, `before-after`, `versus`, and 3D
-variants of `counter` and `ring`, on the shared renderer:
+**The 3D templates** (2 days, was 4): `timeline`, `before-after` and
+`versus`, each a draw function in
+`src/shared/graphics/templates/{timeline,beforeAfter,versus}.ts`, built only
+from §6.3's item kinds and §6.13's motion, as phase 2's templates are:
 
-- `threeShared.ts`; `sized()` before every render (`momentCanvas.ts:393-395`);
-- baked serially;
-- **disposed on rebuild, supersede, bake end and clip removal**, as
-  `momentCanvas.ts` does (`:523`, `:533-536`, `:555-558`, `:612`). Not like
-  the carousel, whose rebuilt scenes are never disposed
-  (`carouselCanvas.ts:128-141`: a probable leak on the one shared context,
-  found by reading, §17).
-- **Type is drawn with `drawTextOnto` into a `CanvasTexture`.** Measured:
+- **Flat by default**, through painter A. `TemplateDef.threeD` is true for
+  all three, so the dock's Depth choice offers §6.16's four variants
+  (`tilt`, `parallax`, `dolly`, `focus`) through painter B, set by you only,
+  settling flat on the last beat.
+- **Fields and pairs** as §6.1 types them; §6.7 rule 6 binds each pair as it
+  binds a `bars` item (`before` and `after`; `left` and `right`; each
+  `timeline` item's `when` and `label`), in spoken order, as rule 6 already
+  says of them ("later `before-after`, `versus`, `timeline`"). The menu, the
+  schema, the fixtures (English, Hindi and Telugu, yours) and the eval take
+  them as §6.6-§6.10 take the nine shapes; the baseline does not.
+- **`before-after`'s reveal** is the "after" panel's box growing over the
+  "before" (a `shape` item's box on §6.13's curve), so no mask kind is
+  needed.
+- **Type is drawn with `drawTextOnto` into a `CanvasTexture`**, unchanged:
+  painter B's planes are painter A's canvases (§6.16). Measured, as before:
   three 0.186.0's `TTFLoader` imports opentype.js from `cdn.jsdelivr.net` at
   runtime, and `TextGeometry` needs typeface JSON fonts the catalogue does
-  not have.
+  not have. **`three-text`** (MIT, 0.6.5, HarfBuzz through `harfbuzzjs`,
+  self-described alpha) is watched, not used: its README names no Indic
+  script, and it is tried on the EFFECTS §51 clusters before it is ever
+  trusted (the research, §4.7). Meshes that are not planes (ribbons,
+  extruded shapes) are not in step 6.
+- **Disposal and the one renderer** are §6.16's (`sized()` before every
+  render, disposal on rebuild, supersede, bake end and clip removal, never
+  as the carousel's undisposed scenes, `carouselCanvas.ts:128-141`, §17):
+  nothing in this step makes a scene of its own.
+- **The `kinetic-type` stub stays a stub.** It is still drawn as a depth
+  push (`moment.ts:30`, `:35`, `:227-228`; `momentCanvas.ts:401`) and still
+  refused by the Director (`director/apply2.ts:393-396`); `MomentKind` keeps
+  it (`timeline.ts:290`, `director/recipes/types.ts:24`). Kinetic type in
+  short-form clips is step 3's `keyword` and the captions' own entrances. A
+  headline the camera passes (`PLAN.md:1209`) would be word planes with a
+  dolly on the same compositor, costed when `PLAN.md`'s gate for it opens
+  (`PLAN.md:1420`), not in these 2 days. (§9 as written said the 3D
+  templates replace the stub, and so did the research, its §4.7; this
+  paragraph's reasons are why it departs from both.)
 
-**Measure in the harness:** whether a flat style colour through three.js
-(an `SRGBColorSpace` texture, the default output colour space) comes out
-byte-equal to the 2D painter's, and whether an antialiased semi-transparent
-edge survives WebGL premultiplied → `drawImage` → straight-alpha PNG. Both
-are **unmeasured**, and `graphicCheck.ts` gains them.
+**Measure in the harness:** step 3 measured the flat colour and the
+semi-transparent edge through three.js (M6, phases 0 and 3, EFFECTS §61).
+This step runs `await window.__forgeGraphicCheck({ parity: true, templates:
+['timeline', 'before-after', 'versus'] })` over its own three, flat and with
+each depth.
 
-The tests and render checks are §6.11's, extended per template. The 3D
-templates replace the stub `kinetic-type` moment (`moment.ts:16-19`,
-`:227-228`), which today draws as a depth push.
+The tests and render checks are §6.11's, extended per template.
 
-**Exit:** each 3D template passes the harness contract; the flat-colour
-check is within 2/255; the answer card never ships a sentence that is not a
-verbatim run of one fetched text (property test); no fetched number lands
-on a spoken beat (a test over every template's placement).
+**Exit:** each of `timeline`, `before-after` and `versus` passes step 3's
+phase-2 bar (§6.12: the property test over its text items, the render check
+frame-exact at both shapes on both builds, preview equal to export within
+1/255) flat, and its phase-3 bar with each depth variant (its settled frame
+equal to its flat frame, its text items unchanged by depth, flat with the
+note when WebGL is missing); the answer card never ships a sentence that is
+not a verbatim run of one fetched text (property test); no fetched number
+lands on a spoken beat (a test over every template's placement).
+
+| item | days |
+|---|---|
+| the retrieved-fact cards (above) | 3 |
+| the three draw functions, their pairs, menu, schema and fixtures | 1.5 |
+| their depth variants and the harness run | 0.5 |
+| **step 6** | **5** (was 7; the 3D half 2, was 4) |
 
 ---
 
@@ -9361,8 +13438,10 @@ the analysis loaded stays resident while the model runs.
 | `-filter_complex_script <file>` | step 0 (§3.7), every render | in the 2018 source (`f22fcd4` `fftools/ffmpeg_opt.c:3109`, `:3478`) | measured on the Mac (re-run by the fixer); the 360-cut render check runs it in CI |
 | `-vsync vfr` (a test fixture's variable-rate source; `-fps_mode` is 2022, too new) | §4.9's render check | old | measured in CI with step 1 |
 | ASS per-event `{\anN}` and `MarginV` via `subtitles` (as built, `buildRenderPlan`'s `ass=…:shaping=complex` burn) | step 2 (`buildAss`, built 2026-10-16) | core ASS / libass | **built**; measured on the Mac, by a bare `ass=` and through `buildRenderPlan`'s burn (`EFFECTS.md` §60): Pop moved to the top or the bottom renders on exactly the rows of Pop placed there, `\an5` ignores MarginV, and a cue is first drawn on ceil(its centisecond time × fps / 1000) at 24, 25, 30 and 60 fps. **Dated** for Windows: rendered there in run 38986994729, which failed on an unmoved line's reading under the runners' fallback face (`0c08569`); `captions.int` and `captionsFree.int` read moved lines from the run on `fb65a18`'s push |
-| `overlay` of a PNG sequence, `format=yuva420p`, `tpad=stop_mode=clone` | step 3 graphics | 2010 / Oct 2018 | in CI (moments, captions) |
-| opacity keys (`geq` on alpha) | step 3 exits | 2014 | in CI |
+| `overlay` of a PNG sequence at the clip's place (`x` and `y` from `clipBox`, `plan.ts:456-482`, written at `:1921`), `format=yuva420p` (`:1484`), `tpad=stop_mode=clone` (`holdFilter`, `:906-909`), `-start_number 0 -framerate` (`:1096`) | step 3: every graphic, from either painter, the 2.5D variants and the screen card's moving frames | 2010 / Oct 2018 | in CI (moments, captions). **Nothing new is emitted by step 3** (2026-10-21): a box bake, if M1 picks it, lands through the same overlay `x` and `y`, the plan reading `MediaAsset.frames.box` for a clip placed at the identity (§6.3); the screen card's hold is the recording's own clip under two opacity keys; graphic sounds are audio clips on the existing mix with `adelay` in samples. A graphic's PNG sequence joins `SHAPES` in `tests/oldestFfmpeg.test.ts` all the same |
+| opacity keys (`geq` on alpha) | step 3 exits, and the screen card's hand-off | 2014 | in CI |
+| `tmix`; `overlay`'s `alpha=premultiplied`; `perspective` | **not emitted.** Later options only: `tmix` for motion blur if phase 2's ratings ask for it; `alpha=premultiplied` for a raw RGBA path only if M1-M2 fall short (M11); `perspective` as the screen card's ffmpeg alternative | `tmix` listed under 4.1 (released 2018-11-06); `alpha=premultiplied` committed 2017-12-16; `perspective` 2.1 (the research, §6.3) | **probed, not emitted**: M4's case prints each one's `-h filter=` on both runners (§6.15). On the Mac's 4.4 (2026-10-21) all three are present and `overlay` lists `alpha` with `straight` and `premultiplied`; the Windows build's answer is M4's. One used later goes into `SHAPES` and the `TOO_NEW` scan first; one missing on Windows is struck, not worked around |
+| `ebur128` (M18); `-f rawvideo -pix_fmt rgba … -i pipe:0` (M11) | measurements only | — | not emitted in a render |
 | `scdet` | **not used** | 2020-05-14 | goes into `TOO_NEW` (§3.5); the Mac build has it |
 | `cropdetect` | **not used** (black bars only) | — | — |
 
@@ -9379,7 +13458,7 @@ with a window, so `-ss` and `-t` are scanned too. So have 1f's shapes since
 
 | missing | what happens | test |
 |---|---|---|
-| the Python helper | Follow the subject, Reframe and Smart placement greyed with "needs the AI helper"; crops as they were; captions at the style's place; Best clips over YouTube captions only; graphics over caption tracks only, no `callout`; every B-roll picture that may show a person asks | `reframe.int` with the helper refused; `bestClips` without asr; census rows for each greyed control. **The reframe's, as built (slice B):** `reframeJob.int`'s no-helper case (a missing interpreter, and a bare one: `no-helper` before any scene pass, in CI too); `reframePanel` and the census's `reframe-no-helper` rows for Follow the subject and Reframe to 9:16; a followed clip keeps following. **Smart placement's, as built (step 2, §5's note):** greyed with the pointer, or "the AI helper is starting", in `renderer/smartPlacement` and the census (its "needs the AI helper" row under needs `none`); with no subject track every line keeps the style's third on all three routes (`captionPlacement`); a project saved with it on can still turn it off |
+| the Python helper | Follow the subject, Reframe and Smart placement greyed with "needs the AI helper"; crops as they were; captions at the style's place; Best clips over YouTube captions only; graphics over caption tracks only, no `callout`, no dim around the speaker, and no pointing (§6.18); every B-roll picture that may show a person asks | `reframe.int` with the helper refused; `bestClips` without asr; census rows for each greyed control. **The reframe's, as built (slice B):** `reframeJob.int`'s no-helper case (a missing interpreter, and a bare one: `no-helper` before any scene pass, in CI too); `reframePanel` and the census's `reframe-no-helper` rows for Follow the subject and Reframe to 9:16; a followed clip keeps following. **Smart placement's, as built (step 2, §5's note):** greyed with the pointer, or "the AI helper is starting", in `renderer/smartPlacement` and the census (its "needs the AI helper" row under needs `none`); with no subject track every line keeps the style's third on all three routes (`captionPlacement`); a project saved with it on can still turn it off |
 | a model not on disk | its Get button with its size; nothing downloads until it is pressed | census rows; a store test that no toggle or phrase starts a download. **The face finder's, as built (slice B):** no Get button of its own — Follow the subject names it, "gets the face finder, 1.1 MB, first time" (its census row), and the press fetches, then analyses; `reframeJob.int`: a job asked without it fails `model-missing` with nothing fetched and no scene pass; `reframeStore`: a phrase is refused before any job |
 | the face detector (degraded) | salient, then centre, per shot, with a note. **As built (slice B):** the helper counts as missing (`reframeHelperFrom`), so Follow the subject is greyed "needs the AI helper"; and a shot with no face centres with a note, salient never called (§16.35) | path test "no faces"; `reframeContract` (`reframeHelperFrom`); `reframeJob.int`'s bare interpreter, where `vision.faces` is degraded |
 | two people, one of them lost for much of the shot | no two-up: the larger face, with a note | path test "a lost face gives larger" |
@@ -9389,15 +13468,21 @@ with a window, so `-ss` and `-t` are scanned too. So have 1f's shapes since
 | a retimed clip | the followed crop is recompiled from the track at read time, so its cuts move with the speed; graphics refuse with a note | `reframeKeys` after `withClipSpeed`, a ramp, `convertFrameRate`, a trim, a split; graphics test |
 | no model | graphics from the baseline; Best clips from signals; no B-roll suggestions | each pass's settle test with the fake provider refusing |
 | a prose or truncated answer | that pass only falls back; the clip stands | settle tests |
-| a graphic that cannot be baked | dropped from the export with a note; the export succeeds | `graphic.int` |
-| WebGL unavailable | 3D templates dropped with a note; 2D ones draw | graphic test |
+| a graphic that cannot be baked | dropped from the export with a note; the export succeeds (a dropped screen card also strikes its two opacity keys from the recording, §6.16) | `graphic.int` |
+| no subject track (no AI helper, Follow the subject not run, or a track of another version) | `callout` not offered (and dropped with rule 9's note, "no subject found to point at", if an answer names one); placement takes the style's third (§6.9); a graphic's dim is drawn with no hole (§6.2, §6.9) | `graphicPlace.test.ts`; `graphic.int`'s no-track case |
+| no sound for a graphic (the library pack not installed, or no file for a role) | the graphic is placed silent, with one note: "no sound library is installed — graphics land silent" (§6.14) | `graphicSound.test.ts`' empty-library case |
+| an Indic font missing (before §6.20 lands, or where its files are absent) | Hindi and Telugu draw with the system's fallback, the one M22 recorded per machine on the canvas, CoreText's through libass on the Mac, and the 2018 build's unmeasured one on Windows; the graphic is kept, with the note "Hindi and Telugu are drawn in this computer's own font" (§6.3) | `tests/textPaint.test.ts`' font-chain case (§6.20) |
+| the recording's frames for a screen card (a steadied clip, the file gone, a pull that fails) | a steadied clip is not offered the card; a pull that fails drops the card from the export with its note and strikes its two keys, so the recording plays from its first frame (§6.16) | `graphic.int`'s phase-3 case |
+| the hand finder (phase 4) | without the AI helper, or with a failed faces self-test, the pointing switch is greyed "needs the AI helper" with the pointer to Settings, and anchored callouts already kept still draw from `Project.hands`; with the helper and no model, the switch is greyed "needs the hand finder" beside the press "Get the hand finder · 7.8 MB", and nothing downloads until it is pressed (§0); a pointing ask without the model fails `model-missing` before any work (§6.18) | `reframeJob.int`'s hands case; `pointingToggle.test.tsx`; census rows |
+| a hand track of another version or size, or a point off screen at onset, or no free third (phase 4) | the track is ignored for new proposals and the switch says "find the points again", kept anchors keeping their stored events; a point off screen, or with no free third, is not offered (§6.18) | `handsAnchor.test.ts` |
+| WebGL unavailable | a graphic that asks for depth, a camera move or a glow (phase 3's 2.5D `counter` and `ring`, the glow, the edge sweep) is drawn flat by the canvas painter, with the note "drawn flat: 3D needs WebGL, which did not start on this computer"; a screen card lands flat with no tilt; step 6's 3D templates likewise draw flat (§9); 2D graphics are unchanged; the export succeeds (§6.16) | `graphicCompositor.test.ts`' WebGL-missing case |
 | no Pexels key | the source greyed: "add a key in Settings" | panel test |
 | offline | each source's search says so; nothing half-written (staging then rename); Get transcript says so and the start and end fields stay | `webFetch` test; `ingestPanel` component test |
 | a number from a YouTube track | the graphic is a proposal, "check the number", until Keep | `directorGraphics` test |
 | a link with no captions and no Python | M0: "This video has no captions", the start and end fields as today, Listen to it greyed with "needs the AI helper"; Best clips adds "Best clips needs the AI helper to listen to it" | `ingestPanel` component test (§3b.8); panel test |
 | the AI helper's pack, on an installed app (Step P, §3a) | nothing spawned at any caller; a grey "Not installed" with the sized Install; every Python control greyed "needs the AI helper", each a pointer to Settings; the local voice says why; stems split by mid/side | `sidecarService` (spawn never called); the harness check; census rows |
 | a pack install stopped part-way (cancel, quit, offline) | verified downloads kept, no receipt, the folder ignored by the order and swept at launch; the next press says "· N MB left" and fetches only that | `helperPackJob`; `fetchFile` |
-| a module degraded inside the pack (most likely the Visual C++ runtime) | the pack kept; its controls greyed by method; the row grey, "N of 8 helper features", naming what is missing, with Check again | `helperPackJob`; `test_selftest`; §15 row 30's run |
+| a module degraded inside the pack (most likely the Visual C++ runtime) | the pack kept; its controls greyed by method; the row grey, "N of 9 helper features" (the count is `expects.length`, `selftest.ts:119-130`: 9 since pack 2, 10 with phase 4's hand finder, §6.18), naming what is missing, with Check again | `helperPackJob`; `test_selftest`; §15 row 30's run |
 | a damaged pack (its interpreter gone, its receipt torn) | red "Not running" naming it, Repair with its size; never swept, never offered as a fresh Install | `helperPython`; `helperPackJob`'s sweep; `settingsPanel` |
 | macOS 13, Windows on Arm | "Not available on this computer" with the reason, no button | `helperPackManifest`; `settingsPanel` |
 | another app instance holding the pack | the sweep does nothing; Repair, Remove and Update refuse, with the reason | `helperPackJob` |
@@ -9540,6 +13625,8 @@ Each is named in its step, and each step's first task is its own row:
    2018 exe's stack reserve.
 8. The fps-prefixed zoompan on the 2018 build, at 60 and 29.97 fps (§3.4).
 9. The PNG encode of a transparent 1080×1920 graphic frame (§6.3).
+   **Re-planned 2026-10-21 as M1 and M2, rows 39 and 40 (§6.15)**, phase 0's
+   first runs.
 10. LM Studio's strict `json_schema` with `minItems: 0`; whether Gemma 4 E2B
     ever answers prose under it; LM Studio's context length for the user's
     load; Ollama past `num_ctx` (§6.6).
@@ -9574,6 +13661,9 @@ Each is named in its step, and each step's first task is its own row:
     dead proxy is named as the proxy. Open: a real proxy, the two model
     presses behind it, and the app's first Install on it (§3a.8).
 20. three.js flat colour and edge alpha against the 2D painter (§9).
+    **Re-planned 2026-10-21 as M6, row 44 (§6.15)**: its Indic and colour
+    parts in phase 0, the whole of it at step 3's phase-3 exit, where the
+    2.5D counter and ring moved (§16.55).
 21. pyautoflip on the ten clips, run once in a scratch venv on your Mac
     (Python 3.13 or older: it refuses 3.14), and rated beside ours at step
     1's exit (§4.1, §4.10).
@@ -9662,6 +13752,16 @@ Surface itself (36), CI's first runs (37), and the protocol's encoding under
   to Windows, one of them a real loss of a slowed clip's last frame on the
   2018 build; each fixed in slice C. Open: the first run of the pack's own
   CI steps, its minutes and its cache.
+
+**Rows 39–73 are step 3's** (2026-10-21), written in full in §6.15 with the
+phase each runs in and what each outcome does: M1–M22 are rows 39–60 (M1 =
+39 … M22 = 60) and land in `EFFECTS.md` §61, "Graphics: the forks
+measured"; H1–H13 are rows 61–73 (H1 = 61 … H13 = 73) and land in §62,
+"Hands: the spike measured". Phase 0 runs M1–M5, M6's Indic and colour
+parts and M22, and M21 before phase 2's counter; M8, M9, M13 and M19 run
+in phase 1; M10 and M14–M18 in phase 2; M7 first, then M6 whole, M12, M20
+and M13 again in phase 3 (M7 moved from phase 0 on 2026-10-21, §6.15); M11 only if M1–M2 fall short; H1–H10, H12 and H13 in the spike;
+H11, and H12 again, in phase 4.
 
 ---
 
@@ -10472,6 +14572,133 @@ what is needed, where the answer waits on something not yet in hand.
       start, worded "being repaired". The window asks the status once, at
       mount, and nothing polls.
 
+**Added 2026-10-21, from the step 3 research (docs/research/graphics-motion-research-2026-10-17.md §7.6); all twelve answered the same day as recommended.**
+
+54. **Step 3's scope** (D1 of the research's §7.6). §6 as written (14.5
+    days, rated 4 of 10 against your bar) or the research's phases 0–2 (24
+    days, 25.5 with the hand spike; rated 5.5)?
+
+    **Recommended: phases 0–2.** "The extra 9.5 days buy the motion
+    system, the stroke primitive, three templates that fire without
+    numbers, the dim and the sound: 1.5 of the 2.5 points between §6 and
+    the full plan, three fifths of the distance (computed from ratings that
+    are inference, §0)." (The research's §0.)
+
+    **Answer (2026-10-21):** as recommended ("ive read you 12 recomondations
+    as well wil go with it"). §6 is re-planned in phases (§6's note, §6.19).
+55. **2.5D now, or with step 6** (D2)?
+
+    **Recommended: phase 3 directly after phase 2.** "It is the three.js
+    engine the request is about, and step 6 then shrinks by 2 days. Step 4
+    (Best clips) moves 5 days later."
+
+    **Answer (2026-10-21):** as recommended ("ive read you 12 recomondations
+    as well wil go with it"). Built in §6.16; §9 falls to 5 days (§2).
+56. **Run the hand track's spike** (D3)?
+
+    **Recommended: yes, during phase 2**, "1.5 days counted in the
+    unconditional 30.5 (it is mostly the user's run, on the user's machines
+    and footage); pointing only; the 6-day build only if the gate passes;
+    off per clip by default; every pointed graphic a proposal the user
+    keeps. It needs clips with marked points, hennaed hands, a low-light
+    reception and a blurred fast point among them."
+
+    **Answer (2026-10-21):** as recommended ("ive read you 12 recomondations
+    as well wil go with it"). The spike is §6.17, its gate §6.12, the build
+    §6.18; the footage is in §2's "Your part".
+57. **The click-zoom family for screen recordings** (D4): in scope?
+
+    **Recommended: not in step 3.** "A screen recording gets the 2.5D card,
+    a dim and graphics. Revisit with a one-day cursor-from-pixels spike only
+    if users bring screen recordings; a recorder of our own is a separate
+    project."
+
+    **Answer (2026-10-21):** as recommended ("ive read you 12 recomondations
+    as well wil go with it"). §6's "What waits and what is out"; the card is
+    §6.16's.
+58. **The default style: restrained, or energetic** (D5)?
+
+    **Recommended: restrained by default** ("clean; the direction the
+    reveal sources and the drift away from the 2021 look point"), "with an
+    energetic style as an option that keeps the `pop` entrance and
+    `out-back`."
+
+    **Answer (2026-10-21):** as recommended ("ive read you 12 recomondations
+    as well wil go with it"). Seven presets, `clean` the default (§6.5).
+59. **Sound with graphics** (D6)?
+
+    **Recommended: yes**, "from the library's own sounds, capped per clip,
+    off per project if wanted; levels from M18. Each sound carries its
+    graphic's Clear rule, not the Director's `SOUND_RULE`, so each Clear
+    removes exactly its own graphics' sounds (§4.5): an addition to §6 that
+    keeps §16.10." (§4.5 there is the research's.)
+
+    **Answer (2026-10-21):** as recommended ("ive read you 12 recomondations
+    as well wil go with it"). §6.14; the sound Clear test is its
+    `graphicSound`.
+60. **The stroke look** (D7)?
+
+    **Recommended: clean vector by default**; "a marker look through
+    perfect-freehand as a style option once M10 passes; rough.js not now."
+
+    **Answer (2026-10-21):** as recommended ("ive read you 12 recomondations
+    as well wil go with it"). §6.5; M10's perfect-freehand half runs in
+    phase 2 (§6.15).
+61. **Indic kinetic type** (D8)?
+
+    **Recommended: per word by default everywhere**; "per cluster only for
+    scripts M3 clears. And a separate small fix, outside step 3, so the
+    captions' `bounce` and `wave` fall back to per-word animation for Indic
+    scripts, mutation-checked."
+
+    **Answer (2026-10-21):** as recommended ("ive read you 12 recomondations
+    as well wil go with it"). The units are §6.3's; the captions' fix is
+    §6.20, outside step 3's days.
+62. **Where the curves live** (D9)?
+
+    **Recommended: one module, `graphics/motion.ts`, above the graphic
+    style**, "read by graphics first; captions and zoom punches migrate
+    after phase 2's ratings."
+
+    **Answer (2026-10-21):** as recommended ("ive read you 12 recomondations
+    as well wil go with it"). §6.13; the migration is its own later change.
+63. **Indic fonts for graphics** (D10)?
+
+    **Recommended: decide `BETA.md` R14, bundling Noto Sans Devanagari and
+    Noto Sans Telugu** (both OFL), "before phase 1's Indic render check, the
+    exit bar §7.3 names for the §51 clusters, which phase 2's exit extends
+    to every template's Hindi and Telugu fixture. Until then the same
+    graphic draws with whatever fallback each OS resolves, which M22
+    records; if M22 finds the canvas does not shape a cluster, bundling is
+    no longer optional." (§7.3 there is the research's; here the bars are
+    §6.12's.)
+
+    **Answer (2026-10-21):** as recommended ("ive read you 12 recomondations
+    as well wil go with it"). Built in §6.20 (the two files committed under
+    `assets/fonts/`), its half day counted there once; `BETA.md` R14 says
+    so.
+64. **Emoji or hand stickers, Lottie accents** (D11)?
+
+    **Recommended: not in step 3.** "Vendor sources call emoji pops the
+    cheap look [60], and the CC BY attribution question is open." (`[60]`
+    is a source in the research's §8.)
+
+    **Answer (2026-10-21):** as recommended ("ive read you 12 recomondations
+    as well wil go with it"). §6's "What waits and what is out".
+65. **How dense** (D12)?
+
+    **Recommended: keep §6.7's spacing for every graphic**, "and set an
+    overall per-minute cap from M17's count of clips the user calls pro."
+
+    **Answer (2026-10-21):** as recommended ("ive read you 12 recomondations
+    as well wil go with it"). The budget is §6.9's; `GRAPHICS_PER_MINUTE` is
+    null until M17 (§6.15). Two readings of it are recorded in §6.9 for you
+    to overturn: the screen card is outside the spacing (read against D4,
+    which gives a recording "a dim and graphics"), and the lower third keeps
+    the 6 s gap but is outside the per-20 s count (read against D1, since
+    counted it would take the only slot of every clip under 40 s with a
+    Speaker).
+
 ---
 
 ## 17. Out of this plan, on purpose
@@ -10532,6 +14759,10 @@ what is needed, where the answer waits on something not yet in hand.
   graphics eval in `EVAL.md`, a real B-roll session with a social quote
   card, Clip it on the Surface without swapping. And M0's exit (§3b.9): its
   ten links.
+- Step 3's phase exits met in turn (§6.12); the hand spike's gate decided
+  with its numbers in `EFFECTS.md` §62 and its outcome recorded in §6.17;
+  phase 4 built only if the gate passed. Every M and H row of §6.15 in
+  `EFFECTS.md` §61 or §62, or the plan changed where it disagreed.
 - Step P's exit met before any Python half shipped in an installer.
   `BETA.md` R2 and R4 were edited on 2026-10-05 as decision §16.25 says,
   and §3.2–3.4 are fixed here in step 0, so they are done when the beta
