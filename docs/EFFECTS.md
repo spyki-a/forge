@@ -8490,7 +8490,7 @@ suite and CI are the orchestrator's.
   and the preview's recompute on a long followed clip while editing.
 - **Burned-in text** (§5.3): after 1g.
 
-## 61. Graphics: the forks measured (phase 0 of step 3) — M4 on both builds, the libass Indic reference on both runners, and the harness browser's M1, M2, M3, M5, M6 and M22 (2026-10-21/22)
+## 61. Graphics: the forks measured (phase 0 of step 3) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22)
 
 For `docs/CLIPS.md` §6.15 (step 3's phase 0, "Measure before relying"):
 pieces 0.1–0.3 were built on the evening of 2026-10-21 in seven commits,
@@ -8498,7 +8498,9 @@ all on origin/main since, and CI run 39715478059 on `1bfdc4d` (2026-10-22,
 03:11–03:24 UTC; the times, here and below, and the artifacts' sizes are
 from the runs' and the artifacts' API records, read 2026-10-22) is green
 on both runners: macos-14 job 119616429509, windows-latest job
-119616429690. Piece 0.4, the user's runs, has not begun. The seven, from
+119616429690. Piece 0.4, the user's runs, began on 2026-10-22 with the
+six console calls in the development app on the Mac (below); the eye
+check, the Surface's runs and M21 have not. The seven, from
 `git log 8dd86ab..1bfdc4d`:
 
 - `011f80f` — M4's case in `tests/oldestFfmpeg.test.ts` (piece 0.1),
@@ -8530,8 +8532,14 @@ written to `tests/output/graphic/harness-browser/2026-10-22-mac-claude-pane.md`
 empties `tests/output/graphic/` through `outputDir('graphic')`
 (`tests/integration/output.ts`, which removes every entry in the folder),
 so the next `npm test`, or the `graphic.int` run that CLIPS §6.15 gives
-the user first on the Mac, deletes it. The tables here are the only
-lasting record of the harness run.
+the user first on the Mac, deletes it (and has: read 2026-10-22, the
+folder holds only `indic-libass/`). The tables here are the only lasting
+record of the harness run. **The app run** is the user's: the same six
+calls in `npm run dev`'s DevTools console on the development Mac,
+2026-10-22, pasted into the chat and saved as
+`tests/output/phase0-runs/mac-electron-2026-10-22.txt` (gitignored, so on
+the development Mac only; no `outputDir` call in the tests names that
+folder, so `npm test` leaves it).
 
 **The decisions are the Surface's.** It is the floor machine: §6.15's
 outcome rows are read on the Surface's numbers (M2, M3 and M22 on both
@@ -8718,7 +8726,12 @@ These are §6.15's fallback: the harness "serves the renderer as an
 ordinary web page", so its numbers belong to Chrome 152, not Electron 44.
 M3 and M22 are not even that: CLIPS §6.11 has them run in the development
 app only, because they depend on Electron 44's ICU and HarfBuzz, so their
-figures here preview what the development app should show.
+figures here preview what the development app should show. On the Mac
+every figure in this subsection that the app run also reports is
+superseded by the app run's ("The development app on the Mac", below);
+the rest, the ones that subsection's "Where" lists, stand as the Mac's
+only record of them. All stay as the fallback's record, and the app
+run's tables are read against them.
 
 #### M1 — the PNG encode of the synthetic graphic
 
@@ -8976,6 +8989,264 @@ lists the candidates installed there, Nirmala UI and Mangal among those it
 looks for) until §6.20's Noto faces are in, which CLIPS §6.15 lands before
 phase 1's Indic check in any case.
 
+### The development app on the Mac (Electron 44.3.0, Chrome 152.0.7977.78), 2026-10-22
+
+**Where.** The app run (above): the user's six calls, in order, in the
+DevTools console of `npm run dev` on the development Mac, 2026-10-22,
+pasted into the chat and saved as
+`tests/output/phase0-runs/mac-electron-2026-10-22.txt`. This is the place
+CLIPS §6.15 names for M1, M2, M5 and M6, and the only one §6.11 allows M3
+and M22, so on the Mac it is the measurement and the harness run was its
+preview. The file carries each call's summary lines and nothing else: the
+result's notes and its other fields are not in it, so the workers' PNGs
+against the pool's, the draw callback's time, the slowest blurred frame,
+M3's locale and font, M6's pixel counts and the RGB values of its one
+differing square, M22's missing-glyph width and the faces not installed,
+all of which the harness run's tables give, have no app-run record. The
+file names no commit; its lines carry what `1bfdc4d` added (each frame's
+own encode, the letters' width, the consonant's shift) and nothing has
+changed the check since (`70f94cd` is docs only), so the check is
+`1bfdc4d`'s. User agent:
+
+    Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) forge/1.0.0 Chrome/152.0.7977.78 Electron/44.3.0 Safari/537.36
+
+Chrome 152 as in the pane, another build of it (`.78` here, `.167`
+there).
+
+**Conditions.** M1, M2 and M5 each read animation frames 16.6–16.7 ms
+apart before and after, the page visible and not focused (the calls were
+typed into DevTools, which `npm run dev` opens as a window of its own,
+`src/main/index.ts:217-218`), and none is THROTTLED (a throttled call's
+conditions line reads "<label> THROTTLED:", as "M1 THROTTLED: M1
+conditions: …", `reportConditions` in `graphicCheck.ts`). The 2×2
+`toBlob` floor read p50 16.40, 16.50 and 16.60 ms (p95 17.70, 18.40 and
+17.80), the frame cadence, as the pane's
+16.3–16.7 did: **Electron's main-thread `toBlob` also resolves on the next
+animation frame**, so on the Mac the app's timings sit on the cadence as
+the pane's did, and only a floor well under a frame shows the encodes
+themselves. The page's CSP, recorded by M1 and M2 alike, is
+`src/renderer/index.html:7-8`'s meta word for word:
+
+    default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: forge-media:; media-src 'self' forge-media:; font-src 'self' data: forge-media:; connect-src 'self' forge-media:
+
+**How the text came out.** The user: Cmd+C does not copy inside the app's
+window, and DevTools' `copy()` did not reach the system clipboard, so the
+text was saved through the console's Save as…. The app's Edit menu has a
+Copy of its own, CmdOrCtrl+C sending `copy` to the store and enabled only
+with a selection, not `role: 'copy'` (`src/main/menu.ts:156-175`, read
+2026-10-22); whether that is why either failed is not measured. A beta
+item, not phase 0's.
+
+#### M1 in the development app
+
+    await window.__forgeGraphicCheck({ encode: { frames: 120, region: ['canvas', 'box'], pool: [1, 2, 4] } })
+
+The harness run's synthetic graphic and box (908×666), and the same box
+against the canvas at frame 0: mean 0.000011, max 17, 1 of 604,728 pixels
+differ. The size column is the summary's: each run's mean bytes over
+1024, printed "KB" (`kb(run.bytes.mean)` in `graphicCheck.ts`), where the
+harness table has the p50 in bytes.
+
+| region | pool | ms/frame p50 | p95 | wall ms/frame | encode p50 | encode p95 | KB a frame, mean |
+|---|---|---|---|---|---|---|---|
+| canvas 1080×1920 | 1 | 16.70 | 17.00 | 16.70 | 16.40 | 16.80 | 81.1 |
+| canvas | 2 | 8.30 | 8.85 | 8.47 | 12.90 | 14.30 | 81.1 |
+| canvas | 4 | 7.60 | 11.45 | 7.77 | 24.90 | 40.80 | 81.1 |
+| box 908×666 | 1 | 16.70 | 17.50 | 16.65 | 16.40 | 17.10 | 47.3 |
+| box | 2 | 8.30 | 8.75 | 8.35 | 14.60 | 15.70 | 47.3 |
+| box | 4 | 4.15 | 4.45 | 4.28 | 14.70 | 16.00 | 47.3 |
+
+**Against the pane.** Every ms/frame p50 within 0.25 ms of the harness
+run's (the canvas at pool 4 the furthest, 7.60 against 7.85), every wall
+figure within 0.25, and every encode p50 within 0.2 ms but one: **the
+canvas's own encode at pool 4, 24.90 ms against 17.6**, 7.3 ms more,
+where its p95 is close (40.80 against 39.6). M2's baseline, the same
+four-deep canvas pool in the next call, read 24.90 and 41.10, so the
+figure held across both calls of the app run; why it moved from the
+pane's is not measured. The box's 47.3 KB mean holds the pane's p50 of
+48,485 B (47.3 KB); the canvas's 81.1 KB mean is above the pane's p50 of
+82,721 B (80.8 KB), a mean against a median. The box's frames are 42 %
+smaller by the mean.
+
+**What the row would make of it on this machine.** Its bar: "the box's p50
+encode is at least 20 % under the canvas's". By each frame's own encode,
+the row's own words, the box is 41 % under at pool 4 (14.70 against
+24.90), equal at pool 1 (16.40 both) and 13.2 % slower at pool 2 (14.60
+against 12.90). By the rate, it is 45 % under at pool 4 (4.15 against
+7.60) and equal at pools 1 and 2 (16.70, 8.30). So at pool 4 both
+readings clear 20 % on the Mac, where in the pane only the rate did
+(47 %, against 16.5 % by the encode), and at pools 1 and 2 neither does.
+On the Mac's numbers alone the row would make `GRAPHIC_BAKE_REGION`
+`'box'`, and `GRAPHIC_POOL_DEPTH` 4, the fastest rate for both regions.
+The lead is still read on the cadence: with the floor at 16.40, the
+canvas's encodes at pool 4 take about a frame and a half at p50 and the
+box's under one, which is the pane's reading (the canvas's encodes
+outlasting the cadence while the box's do not) by a wider margin; whether
+the canvas's 24.90 is its encoder's work with four in flight or frames
+waited on cannot be told apart while the floor is a frame. By the rate, a
+300-frame whole hold would take about 1.2 s at box and pool 4 and 2.3 s
+at canvas and pool 4, a 60 s clip's 270 moving frames about 1.1 s and
+2.1 s, before IPC and disk, under the 10 s bar: on the Mac's figures
+M1–M2 would not "fall short". The Surface decides.
+
+#### M2 in the development app
+
+    await window.__forgeGraphicCheck({ encode: { frames: 120, workers: [1, 2, 4] } })
+
+| route | depth | ms/frame p50 | p95 | wall ms/frame | encode p50 / p95 | in the worker p50 / p95 |
+|---|---|---|---|---|---|---|
+| pool (the baseline) | 4 | 7.77 | 11.52 | 7.76 | 24.90 / 41.10 | — |
+| workers | 1 | 8.00 | 8.60 | 8.09 | 7.90 / 8.60 | 7.70 / 8.30 |
+| workers | 2 | 4.10 | 4.50 | 4.25 | 8.10 / 9.30 | 7.90 / 8.70 |
+| workers | 4 | 2.27 | 2.67 | 2.37 | 9.00 / 11.40 | 8.80 / 10.50 |
+
+For the pool, "encode" is each `toBlob`, call to blob; for the workers,
+`postMessage` to the reply (`encodeMs`), with the worker's own
+`convertToBlob` beside it (`workerEncodeMs`). 81.1 KB a frame on every
+route.
+
+**The module worker ran under the app's CSP.** Workers 1, 2 and 4 all
+report figures, and no line reads "not run". The policy above has no
+`worker-src` and no `child-src`, so by CSP's fallback (the
+specification's, not measured here) a worker answers to `script-src
+'self'`, and the check's worker file is same-origin. **So §6.15's M2
+question is answered for this machine**, in `npm run dev`'s renderer,
+which `src/main/index.ts:226-227` loads from electron-vite's dev server.
+A packaged app loads `index.html` from disk (`:229`, `loadFile`), another
+origin under the same meta, and a worker there is not measured (the
+check is in no production bundle, `1d339ce`); nor is a `blob:` worker,
+which the row's inference says the policy refuses.
+
+**Against the pane.** Every ms/frame p50 at most 0.2 ms from the harness
+run's (7.77 against 7.675, 8.00 against 7.80, 4.10 against 4.00, 2.27
+against 2.175). The pane's one "worker encode" column (7.5, 7.7, 8.5)
+sits under both of the app's at every depth, nearer the worker's own
+(7.70, 7.90, 8.80) than the round trip (7.90, 8.10, 9.00); which it was
+is still not known. The pane's byte-identical frames 0 and 119 have no
+app-run line (above).
+
+**What the row would make of it on this machine.** Two workers beat the
+four-deep pool by 47 % at p50 (4.10 against 7.77), four by 71 % (2.27);
+one is 3.0 % slower (8.00). Two and four clear the 20 % bar on the Mac,
+and the CSP admits them. As in the pane, part of the lead is the
+cadence: the pool's own `toBlob` at depth 4 takes 24.90 ms at p50, a
+worker's `convertToBlob` 7.70–8.80, and four workers at 2.27 ms a frame
+are under what a four-deep main-thread pool can reach on a 16.7 ms
+cadence (16.7 / 4 = 4.2). Workers are taken only on both machines; the
+Surface decides.
+
+#### M3 in the development app
+
+    await window.__forgeGraphicCheck({ segments: true })
+
+| word | clusters |
+|---|---|
+| स्कूल | 2 [स्कू \| ल] |
+| क्षत्रिय | 3 [क्ष \| त्रि \| य] |
+| स्त्री | 1 |
+| తెలుగు | 3 [తె \| లు \| గు] |
+| క్ష, స్త్ర | 1 each |
+| each §51 cluster | 1 |
+
+Every per-cluster cumulative paint equals the whole word, mean 0.000 and
+max 0, on all 15 rows, here in Electron 44's own ICU and painter.
+
+**Against the pane.** The same counts and the same 0.000 on every row:
+the preview held.
+
+**What the row would make of it on this machine.** Both scripts meet it on the
+Mac: स्कूल is two clusters, as the rule says, and every word's
+per-cluster paint equals the word. The row asks it of both machines, so
+Devanagari and Telugu enter `CLUSTER_SCRIPTS` only if the Surface agrees;
+until then it stays empty. The Surface decides.
+
+#### M5 in the development app
+
+    await window.__forgeGraphicCheck({ blur: { words: 10, px: 8 } })
+
+| | p50 | p95 |
+|---|---|---|
+| blurred, draw to blob | 20.30 ms | 24.20 ms |
+| plain, draw to blob | 13.00 ms | 14.40 ms |
+| `blur(8px)` added, frame by frame | 7.10 ms | 12.20 ms |
+
+On the cadence again: this call's 2×2 floor read 16.60 ms at p50.
+
+**Against the pane.** Added 7.10 against 7.6 at p50 and 12.20 against
+11.8 at p95; blurred 20.30 against 21.2 and 24.20 against 24.1; plain
+13.00 against 12.2 at p50, and 14.40 against 21.9 at p95, the one figure
+far from the pane's. The two p50s again sum to about two frames (33.30 ms
+against the pane's 33.4), so the inference recorded there, that a
+plain-and-blurred pair may take two frames whatever the filter costs,
+stands as it was, unmeasured.
+
+**What the row would make of it on this machine.** The same two readings as
+the pane's. Against each frame's own encode (M1's p50s: 16.40 at pool 1
+for both; 12.90 canvas and 14.60 box at pool 2; 24.90 and 14.70 at pool
+4) the added p95, 12.20, passes at every depth, by 0.70 ms at the
+tightest, the canvas at pool 2. Against the rate (16.70 at pool 1; 8.30
+at pool 2; 7.60 and 4.15 at pool 4) it passes at pool 1 only. The blurred
+bake through `encodeFrames` that would say which is meant has not run.
+The Surface decides.
+
+#### M6 in the development app
+
+    await window.__forgeGraphicCheck({ parity: true })
+
+| colour management | Indic, frame | Indic, ink | colour, largest difference |
+|---|---|---|---|
+| on | mean 0.000, max 0 | 0.000 | 1 level: the accent at 50 % over the page; the accent, page, ink and mid grey squares (#2563eb, #f6f2ea, #100e0b, #808080) and the accent at 50 % over nothing 0 |
+| off | mean 0.000, max 0 | 0.000 | 0 on all six |
+
+**Against the pane.** The same on every figure the file carries; the
+pane's off row has no ink figure, and the app's reads 0.000.
+
+**What the row would make of it on this machine.** Both settings pass (Indic
+at 0.000, colour within 2/255), so the Mac does not flag phase 3; off is
+the exact one, 0 against 1. The 1 px line is phase 3's. The Surface
+decides.
+
+#### M22 in the development app
+
+    await window.__forgeGraphicCheck({ indic: true })
+
+Installed candidates, the same nine as the pane's: Kohinoor Devanagari,
+Devanagari Sangam MN, Devanagari MT, ITF Devanagari, Shree Devanagari
+714, Kohinoor Telugu, Telugu Sangam MN, Telugu MN, Arial Unicode MS. A
+dotted circle is 120.0 px.
+
+| cluster | whole, px | its letters without marks, px | narrower | code points alone, px (marks on a dotted circle) | whole against per-code-point, mean over the ink | i-matra first | drawn by |
+|---|---|---|---|---|---|---|---|
+| क्ष | 94.1 | 167.6 | yes | 246.8 (1) | 70.513 | — | Kohinoor Devanagari |
+| त्र | 71.5 | 123.7 | yes | 202.9 (1) | 55.621 | — | Kohinoor Devanagari |
+| ज्ञ | 88.6 | 183.5 | yes | 262.7 (1) | 66.026 | — | Kohinoor Devanagari |
+| श्र | 88.2 | 145.9 | yes | 225.1 (1) | 58.914 | — | Kohinoor Devanagari |
+| कि | 130.7 | — (not a conjunct) | n/a | 209.9 (1) | 71.768 | yes, the consonant 35 px right of where it is drawn alone | Kohinoor Devanagari |
+| క్ష | 66.4 | 162.1 | yes | 241.3 (1) | 67.183 | — | Kohinoor Telugu |
+| త్ర | 97.8 | 175.0 | yes | 254.2 (1) | 55.093 | — | Kohinoor Telugu |
+| శ్రీ | 68.4 | 145.6 | yes | 304.0 (2) | 61.053 | — | Kohinoor Telugu |
+| కి | 66.4 | — (not a conjunct) | n/a | 145.6 (1) | 59.031 | — | Kohinoor Telugu |
+| స్త | 96.2 | 194.0 | yes | 273.2 (1) | 57.080 | — | Kohinoor Telugu |
+
+**Against the pane.** Every figure the same: each width drawn whole, each
+conjunct's letters' width, each "narrower", each mean over the ink (to
+the pane's one decimal), कि's 35 px and the face for every cluster; the code points'
+sums are verifier 2's at `1d339ce` to the tenth, and the dotted circle is
+the pane's 120 px. Electron 44.3.0 and the pane's Chrome give these
+clusters the same numbers in the Mac's Kohinoor faces.
+
+**What the row would make of it on this machine.** The numeric halves of
+"shaped on both" pass in the development app on the Mac: every conjunct
+narrower than its letters (8 of 8), every whole frame unlike its
+per-code-point frame (10 of 10), कि's consonant 35 px into the whole
+drawing, each cluster drawn by an installed face of its own script. The
+rest is the eye: this run's contact sheet set beside `complex.png` and
+`simple.png`. **The user judged it on 2026-10-22: yes**, the whole-drawn
+row has the same shapes as `complex.png`, the conjuncts joined and कि's
+i-matra on the left of its consonant. So M22's Mac half passes whole,
+numeric and eye; then the Surface, in whichever Indic face it has (an
+expectation, as above). The Surface decides.
+
 ### What the verifiers found in the measuring code, and what the fix phase changed
 
 The numbers above are read through these changes. Verifier 1 read the
@@ -9170,27 +9441,53 @@ parallel lanes began, and passed alone and on the rerun.
    levels**; why is open (above).
 4. **The measuring code reads what it says**: per frame, with its
    conditions, on the canvas that ships, and with the shaping readings
-   that can tell shaped from unshaped. In Chrome 152, M3, M6 and M22's
-   numeric halves pass; M2's two and four workers clear 20 % (the CSP
-   unanswered); M1's region bar passes against the rate at pool 4 and
-   fails against each frame's own encode at every depth, and M5's
-   blur-rise bar passes against each
-   frame's own encode and fails against the rate at pools 2 and 4. None
-   of it decides anything.
+   that can tell shaped from unshaped. In the pane's Chrome 152 (.167),
+   M3, M6 and M22's numeric halves pass; M2's two and four workers clear
+   20 % (the CSP unanswered); M1's region bar passes against the rate at
+   pool 4 and fails against each frame's own encode at every depth, and
+   M5's blur-rise bar passes against each frame's own encode and fails
+   against the rate at pools 2 and 4. None of it decides anything, and on
+   the Mac item 5 supersedes it.
+5. **The development app on the Mac gives the pane's figures within a
+   millisecond, but for M1's canvas encode at pool 4 and M5's plain p95,
+   and answers the CSP** (the app run: Electron 44.3.0, Chrome
+   152.0.7977.78, 2026-10-22). The same-origin module
+   worker runs under the app's CSP in `npm run dev`; M3 passes for both
+   scripts and M22's numeric halves pass, in Electron 44's own ICU and
+   HarfBuzz, with the Mac's Kohinoor faces; M6's phase-0 parts pass under
+   both colour settings; M2's two and four workers clear 20 % (47 % and
+   71 %); the canvas's own encode at pool 4 reads 24.90 ms against the
+   pane's 17.6, so M1's box clears the region's bar at pool 4 by both
+   readings (41 % by each frame's own encode, 45 % by the rate) and by
+   neither at pools 1 and 2; M5's blur-rise bar passes against each
+   frame's own encode and fails against the rate at pools 2 and 4 (its
+   plain p95 also moved, 14.40 ms against 21.9, a figure no bar reads).
+   Electron's main-thread `toBlob` waits on the frame cadence as the
+   pane's did (a 2×2 floor of 16.40–16.60 ms at p50). The Mac's half of
+   the console measurements is in, and M22's eye check on the Mac passed
+   (the user, 2026-10-22: the app's whole-drawn row has `complex.png`'s
+   shapes); nothing is decided without the Surface.
 
 ### Still unmeasured, and whose
 
-- **The Mac's development app**, all six options in `npm run dev`'s
-  console, M3 and M22 above all (Electron 44's ICU and HarfBuzz), and the
-  eye check of M22's sheet against `complex.png` and `simple.png`. The
-  user's.
+- **M22's eye check on the Surface**: the user's verdict on the development
+  app's `indic` sheet against `complex.png` and `simple.png` there (the
+  Mac's was given 2026-10-22: pass). The user's.
 - **Every Surface run**: the six options, `graphic.int` there (whether the
   2018 build's libass shapes, by the rule above, in whichever face it
   reaches there, itself unmeasured), and so every phase-0 decision. The
   user's.
 - **The Windows sheets**: not uploaded by CI (above).
-- **The development app's CSP against the module worker** (M2): the
-  development app's run answers it.
+- **Why the canvas's own encode at pool 4 moved**, from 17.6 ms in the
+  pane to 24.90 in the app (twice): not measured. On the Mac it turns
+  M1's encode reading at pool 4 from a miss (16.5 %) to a pass (41 %).
+- **A blurred bake through `encodeFrames`** (M5): at the chosen depth
+  against a plain one, the run that says which of M1's two p50s M5's bar
+  reads. The check does not run it, so both readings go beside the
+  Surface's numbers.
+- **A worker outside `npm run dev`** (M2): the app run answers the CSP for
+  the dev server's page; the packaged app's page, loaded from disk, and a
+  `blob:` worker are not measured.
 - **M21**: the user's Hindi clips and the models folder; and the user's
   look over the number words in `tests/integration/asrHindi.ts`, written
   from knowledge, not checked against the model's output.

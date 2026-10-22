@@ -11184,7 +11184,8 @@ first eval run) and row 11 (the Telugu negative endings, on the Telugu
 fixtures before phase 2's exit).
 
 > **Phase 0, as measured so far (2026-10-22).** Not the "as measured" note
-> below, which waits on your runs. Every figure is in `EFFECTS.md` §61.
+> below, which waits on the Surface's runs (the Mac's, your eye check
+> included, are in). Every figure is in `EFFECTS.md` §61.
 >
 > - **M4: decided.** Both bundled builds have `tmix`, `overlay` with an
 >   `alpha` listing `straight` and `premultiplied`, and `perspective`, and
@@ -11210,49 +11211,69 @@ fixtures before phase 2's exit).
 >   comes out unshaped whatever the font, and the route for them there
 >   becomes a decision for you; under the second alone, the runner says
 >   nothing about your machines, and §6.20's fonts are what let CI see.
-> - **The harness browser.** Chrome 152 inside the Claude desktop app on
->   the development Mac (`… Claude/3.1623.0 Chrome/152.0.7977.167 Safari/537.36`),
->   not Electron, at `1bfdc4d`, visible and unthrottled (animation frames
->   16.7 ms apart, a 2×2 `toBlob` at 16.3–16.7 ms): the plan's fallback for
->   the timings, and for M3 and M22 not even that.
+> - **The development app on the Mac**, the Mac's half of the
+>   measurement: your six calls in `npm run dev`'s DevTools console,
+>   2026-10-22, Electron 44.3.0 on Chrome 152.0.7977.78
+>   (`… forge/1.0.0 Chrome/152.0.7977.78 Electron/44.3.0 Safari/537.36`),
+>   the check at `1bfdc4d`'s code, saved as
+>   `tests/output/phase0-runs/mac-electron-2026-10-22.txt` (gitignored).
+>   The window visible and not focused (DevTools has its own), animation
+>   frames 16.6–16.7 ms apart, none THROTTLED, a 2×2 `toBlob` at
+>   16.40–16.60 ms: Electron's `toBlob` waits on the frame cadence as the
+>   harness browser's did.
 >
->   | # | figure | the harness browser | the bar |
+>   | # | figure | the development app, Mac | the bar |
 >   |---|---|---|---|
->   | M1 | ms a frame at p50, pool 1 / 2 / 4: canvas; box (908×666) | 16.70 / 8.35 / 7.85; 16.60 / 8.30 / 4.15 | the box's p50 encode 20 % under the canvas's (two readings, below); the fastest depth |
->   | M1 | each frame's own encode at p50, pool 1 / 2 / 4: canvas; box | 16.4 / 12.8 / 17.6; 16.3 / 14.4 / 14.7 | the same bar, read against the encode |
->   | M1 | bytes a frame at p50, canvas / box | 82,721 / 48,485 | — |
->   | M2 | ms a frame at p50: the four-deep pool; workers 1 / 2 / 4 | 7.675; 7.80 / 4.00 / 2.175 | workers 20 % under the pool on both machines |
+>   | M1 | ms a frame at p50, pool 1 / 2 / 4: canvas; box (908×666) | 16.70 / 8.30 / 7.60; 16.70 / 8.30 / 4.15 | the box's p50 encode 20 % under the canvas's (two readings, below); the fastest depth |
+>   | M1 | each frame's own encode at p50, pool 1 / 2 / 4: canvas; box | 16.40 / 12.90 / 24.90; 16.40 / 14.60 / 14.70 | the same bar, read against the encode |
+>   | M1 | a frame's mean size, canvas / box | 81.1 / 47.3 KB | — |
+>   | M2 | ms a frame at p50: the four-deep pool; workers 1 / 2 / 4 | 7.77; 8.00 / 4.10 / 2.27 | workers 20 % under the pool on both machines |
 >   | M3 | clusters; per-cluster paint against the word | स्कूल 2, क्षत्रिय 3, తెలుగు 3; mean 0.000 on all 15 | mean 0, and the rule's counts, on both machines |
->   | M5 | `blur(8px)` added a frame, p50 / p95 | 7.6 / 11.8 ms | p95 no more than M1's p50 encode |
+>   | M5 | `blur(8px)` added a frame, p50 / p95 | 7.10 / 12.20 ms | p95 no more than M1's p50 encode |
 >   | M6 | Indic through the texture; colour's largest difference | 0.000; 1 with colour management on, 0 off | 0.000; within 2/255 |
 >   | M22 | conjuncts narrower; frames differ; कि's i-matra first; drawn by | 8 of 8; 10 of 10; yes, 35 px; Kohinoor Devanagari, Kohinoor Telugu | all, and your eye |
 >
+>   **The app's CSP admitted the worker**: workers 1, 2 and 4 all ran
+>   under `src/renderer/index.html:7-8`'s policy (`script-src 'self'`, no
+>   `worker-src`), none "not run", so M2's CSP question is answered for
+>   `npm run dev` on the Mac. A packaged app loads its page from disk
+>   (`src/main/index.ts:229`), and a worker there is not measured.
+>
+>   The harness browser's run the same day (Chrome 152.0.7977.167 in the
+>   Claude desktop app's pane, the fallback) gave M1's and M2's ms a frame
+>   within 0.25 ms of these at p50, M5's added time within 0.5 ms, and the
+>   same M3, M6 and M22. The one figure in this table that moved is M1's
+>   canvas encode at pool 4: 17.6 ms there, 24.90 here (and again in M2's
+>   baseline). Its tables stay in `EFFECTS.md` §61, superseded on the Mac.
+>
 > - **Not decided yet, and why.** The decisions are the Surface's, the
->   floor machine's, and none has run there. `GRAPHIC_BAKE_REGION` and
->   `GRAPHIC_POOL_DEPTH` (M1, M2) wait on it and on the development app:
->   in this browser `toBlob` resolves on the next animation frame, so pools
->   1 and 2 read that cadence for both regions, the box's 47 % lead at
->   pool 4 is the canvas's encodes outlasting the cadence while the box's
->   did not, and the workers' 48 % may be partly their escape from it. The
->   region's bar, "the box's p50 encode", reads two ways, as M5's does:
->   against the rate a frame the box wins at pool 4 (47 %); against each
->   frame's own encode it is 0.6 % under at pool 1, 12.5 % slower at pool
->   2 and 16.5 % under at pool 4, never 20 %, and the canvas wins. Both sit
->   on the cadence, so neither decides here. `CLUSTER_SCRIPTS` (M3) waits
->   on the development app on both machines: the harness's ICU is not
->   Electron 44's. Whether `blur-rise` is offered (M5) waits on the
->   Surface and on which of M1's p50s the bar means: against a frame's own
->   encode (14.7–17.6 ms at pool 4) it passes; against the bake's rate at
->   pool 4 (4.15–7.85) it fails; and its 7.6 and 11.8 ms are themselves on
->   the 16.7 ms cadence (`EFFECTS.md` §61). M22's verdict waits on your eye
->   against the libass sheets and on the Electron runs on the Mac and the
->   Surface. M6's phase-0 parts pass under both colour settings here, so
->   phase 3 is flagged only if the development app on the Mac or the
->   Surface says otherwise.
+>   floor machine's, and none has run there; nothing is set. On the Mac's
+>   numbers alone `GRAPHIC_BAKE_REGION` would be `'box'` and
+>   `GRAPHIC_POOL_DEPTH` 4: at pool 4 the box is 41 % under the canvas by
+>   each frame's own encode (14.70 against 24.90), the row's own words,
+>   and 45 % by the rate (4.15 against 7.60); at pools 1 and 2 it is under
+>   by neither (equal, or at pool 2 13.2 % slower by the encode). In the
+>   harness browser only the rate cleared it, and why the canvas's encode
+>   moved is not measured. Both readings sit on the 16.7 ms cadence, so
+>   the lead may be the canvas's encodes outlasting it (about a frame and
+>   a half at p50, the box's under one). Workers (M2): two and four clear
+>   20 % on the Mac (47 %, 71 %), partly by escaping the cadence.
+>   `CLUSTER_SCRIPTS` (M3): Devanagari and Telugu meet the rule on the
+>   Mac and enter if the Surface agrees. `blur-rise` (M5): its 12.20 ms at
+>   p95 passes against each frame's own encode at every depth and against
+>   the rate at pool 1 only, the same two readings as the harness
+>   browser's; which the bar means waits on a blurred bake through
+>   `encodeFrames`. M6: both colour settings pass on the Mac, so phase 3
+>   is flagged only if the Surface says otherwise. M22: its numeric halves
+>   pass in Electron on the Mac, and your eye passed its sheet against
+>   `complex.png` on 2026-10-22 (joined conjuncts, कि's i-matra first), so
+>   the Mac's half of M22 is whole; the verdict waits on the Surface.
 >
 > **Your runs**, in this order.
 >
-> *On the Mac:*
+> *On the Mac* (**all done 2026-10-22**: the six console calls, above, and
+> the eye check at the end of this part, which passed; kept here as the
+> Surface's script):
 >
 > ```
 > git pull
@@ -11282,6 +11303,8 @@ fixtures before phase 2's exit).
 > copy([r.userAgent, ...r.summary, ...r.notes].join('\n'))
 > ```
 >
+> On the Mac `copy()` did not reach the clipboard, and Cmd+C does not copy
+> in the app's window; the console's Save as… saved the text instead.
 > A result whose summary says THROTTLED is run again. If M2's summary says
 > a worker was "not run, the page's CSP refused it (…)", that line is the
 > answer to the app's CSP; "not run" for a worker that did not answer
@@ -11292,7 +11315,9 @@ fixtures before phase 2's exit).
 > `simple.png`: it should look like `complex.png`, the conjuncts joined
 > and कि's i-matra before its consonant. A loose virama or an i-matra after
 > its consonant is a fail. libass draws at about 0.57× the canvas's size
-> (`EFFECTS.md` §60), so compare shapes, not sizes.
+> (`EFFECTS.md` §60), so compare shapes, not sizes. If the app has been
+> closed since the run, `npm run dev` and the `indic` call alone bring the
+> sheet back.
 >
 > *On the Surface:*
 >
@@ -11320,7 +11345,8 @@ fixtures before phase 2's exit).
 > this build's libass shapes; letters and the same, in a face with Indic
 > layout tables, it does not. Boxes only show that this libass reaches no
 > Indic face on the Surface, and leave the question to §6.20's fonts.
-> Then the same six calls, the same `copy`, and the same eye check.
+> Then the same six calls (saved by the console's Save as… if `copy` does
+> not reach the clipboard there either) and the same eye check.
 >
 > *M21*, on whichever machine has your Hindi clips (the Mac is simplest).
 > On the Mac:
@@ -11343,11 +11369,11 @@ fixtures before phase 2's exit).
 > `tests/integration/asrHindi.ts` as well: the list was written from
 > knowledge, not checked against the model.
 >
-> **What to send back**: each call's copied text from both machines (the
-> user agent is its first line), saying which, if any, read THROTTLED or
-> "not run"; your eye's verdict on each machine's `indic` sheet against
-> `complex.png` and `simple.png` (pass, or which cluster fails and how);
-> the Surface's `README.txt` and its two sheets; and `hindi-numbers.txt`.
+> **What to send back** (the Mac's text and eye verdict are in, 2026-10-22):
+> from the Surface, each call's text (the user agent is its first
+> line), saying which, if any, read THROTTLED or "not run", the same
+> verdict on its sheet, its `README.txt` and its two sheets; and
+> `hindi-numbers.txt`. The Mac's text is in (2026-10-22).
 
 **Phase 0's exit** is §6.12's. When its runs are in, this section gains a
 "> **Phase 0, as measured**" note with each verdict and the constants'
@@ -14050,29 +14076,32 @@ H11, and H12 again, in phase 4.
   windows-latest: `tmix`, `overlay` with `alpha` listing `straight` and
   `premultiplied`, and `perspective` present on both builds, the control
   absent. Nothing is struck (§13). Closed.
-- **Rows 39, 40, 43 and 44 (M1, M2, M5, M6's phase-0 parts): partly
-  measured 2026-10-22**, in the harness browser only (Chrome 152 in the
-  Claude desktop app on the development Mac, `EFFECTS.md` §61), the plan's
-  fallback: M1's box 47 % under the canvas in ms a frame at pool 4, which
-  is the per-frame rate, not the encode comparison the row names (on each
-  frame's own encode the box is at most 16.5 % under, at pool 4), pools 1
-  and 2 reading the browser's frame cadence for both; M2's two workers 48 %
-  under the four-deep pool; M5's blur adding 7.6 ms a frame at p50 and
-  11.8 at p95, on the same cadence; M6's Indic at 0.000 and colour within
-  1 level (0 with colour management off). **Row 41 (M3): previewed** in the
-  harness browser (not its measurement, §6.11: M3 runs in the development
-  app): its counts as the rule and every per-cluster paint equal to its
-  word. Open: the development app on the Mac and the Surface, and every
-  decision (§6.15's "as measured so far" note).
-- **Row 60 (M22): partly measured 2026-10-22**: its numeric halves pass in
-  the harness browser with the Mac's Kohinoor faces (a preview, as M3's
-  is: M22 runs in the development app, §6.11), and its libass
-  reference ran on both runners (run 39715478059): all ten clusters differ
-  on macos-14 and none on windows-latest, which is a libass without
-  HarfBuzz there, a fallback face that cannot be shaped, or both
-  (`EFFECTS.md` §61 has the readings and what tells them apart: letters,
-  not boxes). Open: your eye against the sheets, the development
-  app on the Mac and the Surface, and the Surface's `graphic.int`.
+- **Rows 39, 40, 41, 43 and 44 (M1, M2, M3, M5, M6's phase-0 parts):
+  measured in the development app on the Mac; the Surface outstanding.**
+  Your six calls in `npm run dev`'s console, Electron 44.3.0 on Chrome
+  152.0.7977.78, 2026-10-22 (`EFFECTS.md` §61, where the harness
+  browser's figures of the same day stay as the fallback they superseded):
+  M1's box 41 % under the canvas by each frame's own encode at pool 4
+  (14.70 against 24.90 ms) and 45 % by the rate (4.15 against 7.60),
+  under by neither at pools 1 and 2, all on the 16.7 ms frame cadence;
+  M2's two and four workers 47 % and 71 % under the four-deep pool, the
+  module worker admitted by the app's CSP; M3's counts as the rule and
+  every per-cluster paint equal to its word, in both scripts; M5's blur
+  adding 7.10 ms a frame at p50 and 12.20 at p95, on the same cadence;
+  M6's Indic at 0.000 and colour within 1 level (0 with colour management
+  off). Open: the Surface, and so every decision (§6.15's "as measured so
+  far" note).
+- **Row 60 (M22): measured in the development app on the Mac; the
+  Surface outstanding.** Its numeric halves pass in Electron 44.3.0 with
+  the Mac's Kohinoor faces (every conjunct narrower than its letters,
+  every whole frame unlike its per-code-point frame, कि's consonant 35 px
+  in), the harness browser's figures exactly; and its libass reference
+  ran on both runners (run 39715478059): all ten clusters differ on
+  macos-14 and none on windows-latest, which is a libass without HarfBuzz
+  there, a fallback face that cannot be shaped, or both (`EFFECTS.md` §61
+  has the readings and what tells them apart: letters, not boxes). Open:
+  your eye on the app's sheet against `complex.png` and `simple.png`, the
+  Surface's run, and the Surface's `graphic.int`.
 - **Row 59 (M21): not measured.** Its gated case is built (`fca8194`) and
   waits on your Hindi clips.
 
