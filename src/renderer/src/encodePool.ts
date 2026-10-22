@@ -47,7 +47,11 @@ function documentCanvas(width: number, height: number): PoolCanvas {
 
 let makeCanvas: (width: number, height: number) => PoolCanvas = documentCanvas
 
-/** Tests only: canvases without a DOM. `null` puts the document's back. */
+/**
+ * Tests (canvases without a DOM) and the harness's graphics check (the
+ * document's own canvases with `toBlob` timed, for M1's per-frame encode)
+ * only; nothing that bakes calls it. `null` puts the document's back.
+ */
 export function setPoolCanvases(factory: ((width: number, height: number) => PoolCanvas) | null): void {
   makeCanvas = factory ?? documentCanvas
 }

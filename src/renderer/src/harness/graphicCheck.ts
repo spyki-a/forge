@@ -26,12 +26,20 @@
  * table's, read by the phase's recorder. What this file throws on is only its
  * own failure: nothing drawn, a frame outside its box, a texture read back
  * blank, where a number would otherwise be reported that measured nothing.
+ *
+ * Run the timings (encode, blur) with the window visible, in front, and
+ * untouched until the call returns. A main-thread `toBlob` encodes in the
+ * renderer's idle time, so its pace follows the frame cadence: the same check
+ * in the same page measured 16 ms a frame at 60 Hz and 882 ms once the page
+ * was throttled to one frame a second. Each timing result carries the cadence,
+ * the visibility and focus before and after, and a 2×2 canvas's `toBlob`, and
+ * says THROTTLED when the cadence was not a display's.
  */
 
 import { DEFAULT_TEXT, type TextSpec } from '@shared/timeline'
 import { drawTextOnto } from '@shared/render/textPaint'
 import { layoutText } from '@shared/render/textLayout'
-import { encodeFrames } from '../encodePool'
+import { encodeFrames, setPoolCanvases, type PoolCanvas } from '../encodePool'
 import { sharedRenderer } from '../threeShared'
 import {
   SYNTHETIC,
@@ -39,6 +47,9 @@ import {
   diffRgba,
   inkBox,
   padRect,
+  percentile,
+  perFrameMs,
+  preBaseLead,
   spread,
   syntheticBox,
   syntheticPanelAt,
@@ -86,14 +97,57 @@ export interface EncodeRun {
   frames: number
   width: number
   height: number
-  /** First draw to last write, over the frames. */
-  msPerFrame: number
+  /**
+   * §6.15's "ms per frame at p50 and p95", M1's and M2's figure: at every
+   * frame, the span of `depth` consecutive writes over `depth`
+   * (`perFrameMs`), so a burst of writes from encodes that finished together
+   * is counted once.
+   */
+  msPerFrame: Spread
+  /** The run's wall time, first draw to last write, over its frames: one number, msPerFrame's mean in effect. */
+  wallMsPerFrame: number
   wallMs: number
-  /** Between one frame's write and the next's: the pace of the run. */
+  /**
+   * Each frame's own encode, from its start to its bytes: `toBlob`'s call to
+   * its blob (the pool, timed on the pool's own canvases), or the
+   * `postMessage` to the worker's reply (workers). Its floor is `toBlob2x2`
+   * in the result's conditions.
+   */
+  encodeMs: Spread
+  /** Workers only: `convertToBlob` inside the worker, as the worker timed it. */
+  workerEncodeMs?: Spread
+  /**
+   * Secondary: between one frame's write and the next's. Deeper than 1 it is
+   * bursty (writes back to back, then a wait), so neither its p50 nor its p95
+   * is a frame's cost; msPerFrame is.
+   */
   gapMs: Spread
   /** The draw callback's own time: the commands, not their rasterising, which the encode pays. */
   drawMs: Spread
   bytes: Spread
+}
+
+export interface PageConditions {
+  visibility: string
+  focused: boolean
+  /** The median gap between animation frames over up to ten frames or 2 s; null when no frame came in that time. */
+  rafMs: number | null
+}
+
+/**
+ * What the renderer's scheduling was doing while a timing ran. A main-thread
+ * `toBlob` encodes in idle time, so its pace has the frame cadence as a floor;
+ * a throttled page (hidden, occluded, or slowed for another reason) drops the
+ * cadence to about a frame a second and every pool figure with it, while a
+ * worker's `convertToBlob` is unaffected.
+ */
+export interface RunConditions {
+  before: PageConditions
+  after: PageConditions
+  /** A 2×2 canvas's `toBlob`, call to blob, one after another: the scheduling's floor under every encode here. */
+  toBlob2x2: Spread
+  /** The page was not visible, or an animation frame came slower than THROTTLE_FRAME_MS or not at all, before or after. */
+  throttled: boolean
 }
 
 export interface WorkerRun {
@@ -106,6 +160,14 @@ export interface WorkerRun {
 
 export interface EncodeResult {
   synthetic: { width: number; height: number; panel: Rect; box: Rect; frames: number }
+  conditions: RunConditions
+  /**
+   * The page's Content-Security-Policy, from its meta tag (a policy sent as a
+   * header is not seen here); null when it has none. The harness page has
+   * none, so only `npm run dev`'s renderer, whose index.html carries the app's
+   * policy, answers whether that policy admits the module worker.
+   */
+  csp: string | null
   runs: EncodeRun[]
   workers: (EncodeRun | WorkerRun)[]
   /** The box route's frames against the canvas route's, cropped to the box: the same picture, or the box is wrong. */
@@ -137,10 +199,16 @@ export interface BlurResult {
   frames: number
   width: number
   height: number
-  /** Per frame, every word under `blur(px)`: the drawing, then a one-pixel read so it is rasterised. */
+  /** Per frame, every word under `blur(px)`, drawn and then encoded by `toBlob` as a bake pays for it: the draw's start to the blob. */
   blurMs: Spread
-  /** The same frames without the filter. */
+  /** The same frames without the filter, each timed just before its blurred twin, on the same canvas. */
   plainMs: Spread
+  /** Frame by frame, blurMs less plainMs: what the filter adds to a frame's bake. M5's bar reads its p95. */
+  addedMs: Spread
+  /** The draw calls alone, with the filter and without: the commands, which the canvas rasterises when the encode reads it. */
+  blurDrawMs: Spread
+  plainDrawMs: Spread
+  conditions: RunConditions
   note: string
 }
 
@@ -186,15 +254,31 @@ export interface IndicRow {
   /** Has a virama: a conjunct, which shaping must draw narrower than its parts. */
   conjunct: boolean
   wholeWidth: number
+  /** Each code point measured alone. A lone mark takes HarfBuzz's dotted circle, so its width here is mostly the circle's. */
   codePointWidths: number[]
+  /** Their sum: inflated by a dotted circle per mark (`marks`, and the result's `dottedCircleWidth`), so not the reading. */
   sumWidth: number
-  narrower: boolean
-  /** The whole drawing against the one drawn a code point at a time, over the two's ink. */
+  /** Combining marks (virama, vowel signs) among the code points: each one drawn alone carries a dotted circle. */
+  marks: number
+  /** The cluster's letters without its marks, each measured alone: no circle. A conjunct drawn unshaped is at least this wide. */
+  baseWidth: number
+  /** Conjuncts only (null otherwise): the whole advance narrower than `baseWidth`, which an unshaped drawing cannot be. */
+  narrower: boolean | null
+  /**
+   * The whole drawing against the one drawn a code point at a time through
+   * the same painter, over the two's ink. The per-code-point frame carries a
+   * dotted circle on every lone mark, so this differs for any engine that
+   * draws circles, shaped or not; it is the reading the plan's mutation needs
+   * (an Array.from split in the painter makes the two frames equal), and
+   * `narrower`, the eye check and `resolvedBy` are the readings for shaping.
+   */
   diff: PixelDiff
   /** More than 1/255 mean (§6.11's proposal). */
   differs: boolean
-  /** For a pre-base vowel sign (कि): its ink starts left of the consonant drawn alone; null where there is none. */
+  /** For a pre-base vowel sign (कि): the consonant drawn alone, found inside the whole drawing, sits right of where it was drawn (`preBaseLead`); null where there is none. */
   matraFirst: boolean | null
+  /** That shift, in pixels: about the matra's width when shaped, 0 when drawn in logical order. */
+  consonantShift: number | null
   /** The whole width equals the missing-glyph box's, once per code point. */
   likeMissingGlyph: boolean
   /** Installed candidates of the cluster's script whose drawing of it equals the painter's, pixel for pixel. */
@@ -208,6 +292,8 @@ export interface IndicResult {
   px: number
   width: number
   missingGlyphWidth: number
+  /** U+25CC, the dotted circle HarfBuzz draws under a lone mark, measured in the painter's font. */
+  dottedCircleWidth: number
   candidates: FontCandidate[]
   rows: IndicRow[]
   note: string
@@ -263,6 +349,17 @@ const M3_WORDS: readonly string[] = [
 
 const VIRAMA = /[्్]/
 const PRE_BASE_I = 'ि'
+/** A combining mark: a virama or a vowel sign, which HarfBuzz draws on a dotted circle when it stands alone. */
+const MARK = /\p{M}/u
+/** U+25CC DOTTED CIRCLE. */
+const DOTTED_CIRCLE = String.fromCodePoint(0x25cc)
+
+/**
+ * Slower than this between animation frames, the page is throttled, not
+ * showing a display's cadence (60 Hz is 16.7 ms, 120 Hz 8.3; 40 Hz is a floor
+ * no display the app targets runs under). The check's own line, a proposal.
+ */
+const THROTTLE_FRAME_MS = 25
 
 /*
  * Faces that may hold Devanagari or Telugu, named per script so a face is
@@ -381,6 +478,102 @@ async function decodePng(bytes: ArrayBuffer, width: number, height: number): Pro
 const ms = (n: number): string => (Number.isFinite(n) ? n.toFixed(2) : 'n/a')
 const kb = (n: number): string => (Number.isFinite(n) ? `${(n / 1024).toFixed(1)} KB` : 'n/a')
 
+function pngBlob(canvas: HTMLCanvasElement): Promise<Blob> {
+  return new Promise((resolve, reject) =>
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('graphic check: a canvas did not encode'))), 'image/png')
+  )
+}
+
+/* ------------------------------------------------- the renderer's scheduling */
+
+/** Gaps between animation frames: up to `count` of them, or as many as came in `limitMs`. */
+function animationFrameGaps(count = 10, limitMs = 2000): Promise<number[]> {
+  return new Promise((resolve) => {
+    const times: number[] = []
+    let done = false
+    const finish = (): void => {
+      if (done) return
+      done = true
+      clearTimeout(timer)
+      resolve(times.slice(1).map((t, i) => t - times[i]))
+    }
+    const timer = setTimeout(finish, limitMs)
+    const tick = (t: number): void => {
+      if (done) return
+      times.push(t)
+      if (times.length > count) finish()
+      else requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  })
+}
+
+async function pageConditions(): Promise<PageConditions> {
+  const visibility = document.visibilityState
+  const focused = document.hasFocus()
+  const gaps = await animationFrameGaps()
+  return { visibility, focused, rafMs: gaps.length ? percentile(gaps, 50) : null }
+}
+
+/** A 2×2 canvas's `toBlob`, one after another: up to `count` of them, or as many as fit in `limitMs`. */
+async function toBlobFloor(count = 8, limitMs = 3000): Promise<Spread> {
+  const { canvas, ctx } = canvas2d(2, 2)
+  ctx.fillStyle = BLUE
+  ctx.fillRect(0, 0, 1, 1)
+  const times: number[] = []
+  const started = performance.now()
+  while (times.length < count && performance.now() - started < limitMs) {
+    const t0 = performance.now()
+    await pngBlob(canvas)
+    times.push(performance.now() - t0)
+  }
+  return spread(times)
+}
+
+const throttledPage = (c: PageConditions): boolean => c.visibility !== 'visible' || c.rafMs === null || c.rafMs > THROTTLE_FRAME_MS
+
+const describePage = (c: PageConditions): string =>
+  `${c.rafMs === null ? 'no animation frame in 2 s' : `animation frames ${ms(c.rafMs)} ms apart`}, ${c.visibility}, ${c.focused ? 'focused' : 'not focused'}`
+
+/**
+ * The timings' conditions as one summary line, and a note when they were
+ * throttled: such a run's figures are the throttle's, not the encode's.
+ */
+function reportConditions(label: string, conditions: RunConditions, summary: string[], notes: string[]): string {
+  const line =
+    `${label} conditions: before ${describePage(conditions.before)}; after ${describePage(conditions.after)}; ` +
+    `a 2x2 toBlob p50 ${ms(conditions.toBlob2x2.p50)}, p95 ${ms(conditions.toBlob2x2.p95)} ms`
+  if (conditions.throttled) {
+    notes.push(
+      `${label} ran THROTTLED (${describePage(conditions.before)} before, ${describePage(conditions.after)} after): its timings are the throttle's, not the encode's. ` +
+        'Run it again with the window visible, in front and untouched until it returns.'
+    )
+    return `${label} THROTTLED: ${line}`
+  }
+  return line
+}
+
+/**
+ * The pool's canvases, each the document's own, with `toBlob` timed from its
+ * call to its blob: `encodeFrames` itself runs unchanged around them, through
+ * its canvas seam (`setPoolCanvases`), put back when the run ends.
+ */
+function timedPoolCanvases(encodes: number[]): (width: number, height: number) => PoolCanvas {
+  return (width, height) => {
+    const { canvas } = canvas2d(width, height)
+    return {
+      getContext: (contextId) => canvas.getContext(contextId),
+      toBlob: (callback, type) => {
+        const t0 = performance.now()
+        canvas.toBlob((blob) => {
+          encodes.push(performance.now() - t0)
+          callback(blob)
+        }, type)
+      }
+    }
+  }
+}
+
 class Frames {
   readonly list: CheckFrame[] = []
   dropped = 0
@@ -459,29 +652,37 @@ async function poolRun(region: 'canvas' | 'box', depth: number, frames: number):
   const draws: number[] = []
   const bytes: number[] = []
   const writtenAt: number[] = []
-  const started = performance.now()
-  const path = await encodeFrames({
-    count: frames,
-    width: box.width,
-    height: box.height,
-    depth,
-    draw: (ctx, index) => {
-      const t0 = performance.now()
-      // Frame coordinates into a box-sized canvas, as captionBake.ts paints its band.
-      ctx.translate(-box.x, -box.y)
-      drawSynthetic(ctx, index, frames)
-      draws.push(performance.now() - t0)
-    },
-    // A recorder, not a file: M1 times the drawing and the encode, not the IPC and disk a bake adds.
-    write: async (index, data) => {
-      writtenAt.push(performance.now())
-      bytes.push(data.byteLength)
-      if (keep.has(index)) kept.set(index, data)
-      return `graphic-check/${index}`
-    },
-    cancelled: () => false
-  })
-  const wallMs = performance.now() - started
+  const encodes: number[] = []
+  setPoolCanvases(timedPoolCanvases(encodes))
+  let path: string | null
+  let wallMs: number
+  try {
+    const started = performance.now()
+    path = await encodeFrames({
+      count: frames,
+      width: box.width,
+      height: box.height,
+      depth,
+      draw: (ctx, index) => {
+        const t0 = performance.now()
+        // Frame coordinates into a box-sized canvas, as captionBake.ts paints its band.
+        ctx.translate(-box.x, -box.y)
+        drawSynthetic(ctx, index, frames)
+        draws.push(performance.now() - t0)
+      },
+      // A recorder, not a file: M1 times the drawing and the encode, not the IPC and disk a bake adds.
+      write: async (index, data) => {
+        writtenAt.push(performance.now())
+        bytes.push(data.byteLength)
+        if (keep.has(index)) kept.set(index, data)
+        return `graphic-check/${index}`
+      },
+      cancelled: () => false
+    })
+    wallMs = performance.now() - started
+  } finally {
+    setPoolCanvases(null)
+  }
   if (path !== `graphic-check/${frames - 1}`) throw new Error(`graphic check: encodeFrames answered ${String(path)} for ${frames} frames`)
   return {
     run: {
@@ -491,8 +692,11 @@ async function poolRun(region: 'canvas' | 'box', depth: number, frames: number):
       frames,
       width: box.width,
       height: box.height,
-      msPerFrame: wallMs / frames,
+      // encodeFrames clamps its depth to the frames; the window is the depth it ran at.
+      msPerFrame: spread(perFrameMs(writtenAt, Math.min(depth, frames))),
+      wallMsPerFrame: wallMs / frames,
       wallMs,
+      encodeMs: spread(encodes),
       gapMs: spread(writtenAt.slice(1).map((t, i) => t - writtenAt[i])),
       drawMs: spread(draws),
       bytes: spread(bytes)
@@ -507,7 +711,17 @@ interface Reply {
   id: number
   ready?: boolean
   bytes?: ArrayBuffer
+  /** The worker's own time for convertToBlob and the bytes. */
+  ms?: number
   error?: string
+}
+
+interface Encoded {
+  bytes: ArrayBuffer
+  /** postMessage to the reply, on the main thread's clock. */
+  ms: number
+  /** The worker's own time. */
+  workerMs: number
 }
 
 /** One module worker, started and answering, or the reason it is not. */
@@ -551,14 +765,14 @@ async function startWorker(): Promise<Worker | string> {
 }
 
 /** Jobs to one worker, one reply each, matched by id. */
-function encoderOn(worker: Worker): (id: number, bitmap: ImageBitmap, width: number, height: number) => Promise<ArrayBuffer> {
-  const waiting = new Map<number, { resolve: (bytes: ArrayBuffer) => void; reject: (error: Error) => void }>()
+function encoderOn(worker: Worker): (id: number, bitmap: ImageBitmap, width: number, height: number) => Promise<Encoded> {
+  const waiting = new Map<number, { posted: number; resolve: (encoded: Encoded) => void; reject: (error: Error) => void }>()
   worker.onmessage = (event: MessageEvent<Reply>) => {
     const reply = event.data
     const job = waiting.get(reply.id)
     if (!job) return
     waiting.delete(reply.id)
-    if (reply.bytes) job.resolve(reply.bytes)
+    if (reply.bytes) job.resolve({ bytes: reply.bytes, ms: performance.now() - job.posted, workerMs: reply.ms ?? NaN })
     else job.reject(new Error(`graphic check: a worker could not encode frame ${reply.id}: ${reply.error ?? 'no bytes'}`))
   }
   worker.onerror = (event) => {
@@ -566,8 +780,8 @@ function encoderOn(worker: Worker): (id: number, bitmap: ImageBitmap, width: num
     waiting.clear()
   }
   return (id, bitmap, width, height) =>
-    new Promise<ArrayBuffer>((resolve, reject) => {
-      waiting.set(id, { resolve, reject })
+    new Promise<Encoded>((resolve, reject) => {
+      waiting.set(id, { posted: performance.now(), resolve, reject })
       worker.postMessage({ id, bitmap, width, height }, [bitmap])
     })
 }
@@ -608,6 +822,8 @@ async function workerRun(region: 'canvas' | 'box', count: number, frames: number
     const draws: number[] = []
     const bytes: number[] = []
     const writtenAt: number[] = []
+    const encodes: number[] = []
+    const workerEncodes: number[] = []
     const busy: (Promise<void> | undefined)[] = new Array(count).fill(undefined)
     let previous: Promise<void> = Promise.resolve()
     const started = performance.now()
@@ -621,7 +837,9 @@ async function workerRun(region: 'canvas' | 'box', count: number, frames: number
       const encoded = encoders[slot](index, await createImageBitmap(canvas), box.width, box.height)
       const before = previous
       const job = (async () => {
-        const data = await encoded
+        const { bytes: data, ms: roundTrip, workerMs } = await encoded
+        encodes.push(roundTrip)
+        workerEncodes.push(workerMs)
         await before
         writtenAt.push(performance.now())
         bytes.push(data.byteLength)
@@ -641,8 +859,12 @@ async function workerRun(region: 'canvas' | 'box', count: number, frames: number
         frames,
         width: box.width,
         height: box.height,
-        msPerFrame: wallMs / frames,
+        // One frame in flight per worker: the pipeline is as deep as the workers.
+        msPerFrame: spread(perFrameMs(writtenAt, Math.min(count, frames))),
+        wallMsPerFrame: wallMs / frames,
         wallMs,
+        encodeMs: spread(encodes),
+        workerEncodeMs: spread(workerEncodes),
         gapMs: spread(writtenAt.slice(1).map((t, i) => t - writtenAt[i])),
         drawMs: spread(draws),
         bytes: spread(bytes)
@@ -662,26 +884,45 @@ function sameBytes(a: ArrayBuffer, b: ArrayBuffer): boolean {
   return true
 }
 
-async function checkEncode(options: NonNullable<GraphicCheckOptions['encode']>, frames: Frames, summary: string[]): Promise<EncodeResult> {
+/** One line for a run: §6.15's ms per frame at p50 and p95 first, then each frame's own encode, then the rest. */
+function describeRun(run: EncodeRun): string {
+  return (
+    `${ms(run.msPerFrame.p50)} ms/frame p50, ${ms(run.msPerFrame.p95)} p95 (wall ${ms(run.wallMsPerFrame)} over ${run.frames}); ` +
+    `each frame's encode p50 ${ms(run.encodeMs.p50)}, p95 ${ms(run.encodeMs.p95)}` +
+    (run.workerEncodeMs ? ` (in the worker p50 ${ms(run.workerEncodeMs.p50)}, p95 ${ms(run.workerEncodeMs.p95)})` : '') +
+    `; ${kb(run.bytes.mean)}/frame at ${run.width}x${run.height}`
+  )
+}
+
+function pageCsp(): string | null {
+  return document.querySelector('meta[http-equiv="Content-Security-Policy" i]')?.getAttribute('content') ?? null
+}
+
+async function checkEncode(options: NonNullable<GraphicCheckOptions['encode']>, frames: Frames, summary: string[], notes: string[]): Promise<EncodeResult> {
   const count = Math.max(2, Math.floor(options.frames ?? 120))
   const poolAsked = options.pool !== undefined || options.region !== undefined || options.workers === undefined
   const depths = poolAsked ? (options.pool ?? [1, 2, 4]) : []
   const regions: ('canvas' | 'box')[] = options.region ?? (poolAsked ? ['canvas', 'box'] : ['canvas'])
   const box = syntheticBox(count)
+  const csp = pageCsp()
+  // The conditions' line goes first, filled in once the runs are done and the cadence after them is known.
+  const conditionsAt = summary.length
+  summary.push('')
+  const before = await pageConditions()
+  const toBlob2x2 = await toBlobFloor()
 
   // Warm: the first encode of a page pays for starting its encoder, and the first draw for the face.
   await poolRun('canvas', 4, 8)
 
   const runs: EncodeRun[] = []
-  const kept = new Map<string, Map<number, ArrayBuffer>>()
+  // The sampled frames per region, with the label of the run they came from.
+  const kept = new Map<string, { label: string; frames: Map<number, ArrayBuffer> }>()
   for (const region of regions) {
     for (const depth of depths) {
       const timed = await poolRun(region, depth, count)
       runs.push(timed.run)
-      if (!kept.has(`pool:${region}`)) kept.set(`pool:${region}`, timed.kept)
-      summary.push(
-        `M1 ${region} pool ${depth}: ${ms(timed.run.msPerFrame)} ms/frame over ${count} (gap p50 ${ms(timed.run.gapMs.p50)}, p95 ${ms(timed.run.gapMs.p95)}), ${kb(timed.run.bytes.mean)}/frame at ${timed.run.width}x${timed.run.height}`
-      )
+      if (!kept.has(region)) kept.set(region, { label: `M1 ${region} pool ${depth}`, frames: timed.kept })
+      summary.push(`M1 ${region} pool ${depth}: ${describeRun(timed.run)}`)
     }
   }
 
@@ -692,8 +933,8 @@ async function checkEncode(options: NonNullable<GraphicCheckOptions['encode']>, 
       // M2's baseline: the four-deep pool, on the same frames, in the same call.
       const baseline = await poolRun(region, 4, count)
       workerRuns.push(baseline.run)
-      if (!kept.has(`pool:${region}`)) kept.set(`pool:${region}`, baseline.kept)
-      summary.push(`M2 ${region} baseline pool 4: ${ms(baseline.run.msPerFrame)} ms/frame (gap p50 ${ms(baseline.run.gapMs.p50)}, p95 ${ms(baseline.run.gapMs.p95)})`)
+      if (!kept.has(region)) kept.set(region, { label: `M2 ${region} baseline pool 4`, frames: baseline.kept })
+      summary.push(`M2 ${region} baseline pool 4: ${describeRun(baseline.run)}`)
       for (const n of options.workers) {
         const { run, kept: theirs } = await workerRun(region, Math.max(1, Math.floor(n)), count)
         workerRuns.push(run)
@@ -701,10 +942,10 @@ async function checkEncode(options: NonNullable<GraphicCheckOptions['encode']>, 
           summary.push(`M2 ${region} workers ${n}: not run, ${run.refused}`)
           continue
         }
-        summary.push(`M2 ${region} workers ${n}: ${ms(run.msPerFrame)} ms/frame (gap p50 ${ms(run.gapMs.p50)}, p95 ${ms(run.gapMs.p95)})`)
+        summary.push(`M2 ${region} workers ${n}: ${describeRun(run)}`)
         if (!workersAgainstPool) {
           workersAgainstPool = []
-          const ours = kept.get(`pool:${region}`)!
+          const ours = kept.get(region)!.frames
           for (const frame of [0, count - 1]) {
             const a = ours.get(frame)
             const b = theirs.get(frame)
@@ -712,8 +953,9 @@ async function checkEncode(options: NonNullable<GraphicCheckOptions['encode']>, 
             const same = sameBytes(a, b)
             const diff = same ? null : diffRgba(await decodePng(a, run.width, run.height), await decodePng(b, run.width, run.height), run.width)
             workersAgainstPool.push({ frame, sameBytes: same, diff })
-            if (!same) {
-              frames.add(`M2 workers frame ${frame}`, await blobToDataUrl(new Blob([b], { type: 'image/png' })))
+            // The workers' own frame beside the pool's: the last always, and any that differs.
+            if (!same || frame === count - 1) {
+              frames.add(`M2 ${region} workers ${run.depth} frame ${frame}${same ? ' (byte-equal to the pool\'s)' : ''}`, await blobToDataUrl(new Blob([b], { type: 'image/png' })))
             }
           }
         }
@@ -721,45 +963,60 @@ async function checkEncode(options: NonNullable<GraphicCheckOptions['encode']>, 
     }
   }
 
+  const after = await pageConditions()
+  const conditions: RunConditions = { before, after, toBlob2x2, throttled: throttledPage(before) || throttledPage(after) }
+  summary[conditionsAt] = reportConditions(options.workers?.length ? (depths.length ? 'M1/M2' : 'M2') : 'M1', conditions, summary, notes) + `; CSP ${csp === null ? 'none on this page' : `"${csp}"`}`
+
   // The frames themselves: a sample from each region, decoded, so the check can see what it timed.
   let boxAgainstCanvas: PixelDiff | undefined
-  const canvasKept = kept.get('pool:canvas')
-  const boxKept = kept.get('pool:box')
+  const canvasKept = kept.get('canvas')
+  const boxKept = kept.get('box')
   if (canvasKept) {
-    for (const [frame, bytes] of canvasKept) {
+    for (const [frame, bytes] of canvasKept.frames) {
       const data = await decodePng(bytes, SYNTHETIC.width, SYNTHETIC.height)
       const ink = inkBox(data, SYNTHETIC.width, SYNTHETIC.height)
       if (!ink) throw new Error(`graphic check: canvas frame ${frame} encoded blank`)
       if (!contains(box, ink)) throw new Error(`graphic check: frame ${frame}'s ink ${JSON.stringify(ink)} is outside the box ${JSON.stringify(box)}`)
-      frames.add(`M1 canvas frame ${frame}`, await blobToDataUrl(new Blob([bytes], { type: 'image/png' })))
+      frames.add(`${canvasKept.label} frame ${frame}`, await blobToDataUrl(new Blob([bytes], { type: 'image/png' })))
     }
   }
   if (boxKept) {
-    for (const [frame, bytes] of boxKept) frames.add(`M1 box frame ${frame}`, await blobToDataUrl(new Blob([bytes], { type: 'image/png' })))
+    for (const [frame, bytes] of boxKept.frames) frames.add(`${boxKept.label} frame ${frame}`, await blobToDataUrl(new Blob([bytes], { type: 'image/png' })))
   }
   if (canvasKept && boxKept) {
     const frame = 0
-    const whole = await decodePng(canvasKept.get(frame)!, SYNTHETIC.width, SYNTHETIC.height)
-    const part = await decodePng(boxKept.get(frame)!, box.width, box.height)
+    const whole = await decodePng(canvasKept.frames.get(frame)!, SYNTHETIC.width, SYNTHETIC.height)
+    const part = await decodePng(boxKept.frames.get(frame)!, box.width, box.height)
     const cropped = new Uint8ClampedArray(box.width * box.height * 4)
     for (let y = 0; y < box.height; y++) {
       const from = ((box.y + y) * SYNTHETIC.width + box.x) * 4
       cropped.set(whole.subarray(from, from + box.width * 4), y * box.width * 4)
     }
     boxAgainstCanvas = diffRgba(cropped, part, box.width)
-    summary.push(`M1 box against canvas, frame 0: mean ${boxAgainstCanvas.mean.toFixed(3)}, max ${boxAgainstCanvas.max}`)
+    // Not always bit-equal: the live run found one pixel on the stroke's moving tip 17 levels apart (GPU rasterisation).
+    summary.push(
+      `M1 box against canvas, frame 0: mean ${boxAgainstCanvas.mean.toFixed(6)}, max ${boxAgainstCanvas.max}, ${boxAgainstCanvas.differing} of ${boxAgainstCanvas.pixels} pixels differ`
+    )
   }
 
   return {
     synthetic: { width: SYNTHETIC.width, height: SYNTHETIC.height, panel: syntheticPanelAt(0), box, frames: count },
+    conditions,
+    csp,
     runs,
     workers: workerRuns,
     boxAgainstCanvas,
     workersAgainstPool,
     note:
       'write is a recorder (bytes and time), not writeTitleFrame: these are the drawing and the encode, not the IPC and disk a bake adds. ' +
-      'msPerFrame is the run\'s wall time over its frames; gapMs is between consecutive frames\' writes, which go out in order. ' +
-      'The workers\' times include createImageBitmap on the main thread.'
+      'msPerFrame is §6.15\'s ms per frame at p50 and p95: at every frame, the span of depth consecutive writes over depth, since a pool deeper than 1 writes ' +
+      'the frames whose encodes finished together back to back; gapMs, the raw gap between writes, is bursty there and is kept only beside it. ' +
+      'encodeMs is each frame\'s own encode (toBlob\'s call to its blob; for workers, postMessage to the reply, with workerEncodeMs the worker\'s own convertToBlob). ' +
+      'A main-thread toBlob encodes in the renderer\'s idle time, so its figures have the frame cadence as a floor: when encodeMs is close to conditions.toBlob2x2, ' +
+      'a 2x2 canvas\'s, the figure is the scheduling and not the encode, and a region or depth that seems to cost nothing may be hidden under it. ' +
+      'Run with the window visible, in front and untouched; a THROTTLED run is the throttle\'s. ' +
+      'The workers\' times include createImageBitmap on the main thread. csp is this page\'s policy: the harness page has none, so only npm run dev\'s renderer ' +
+      '(src/renderer/index.html\'s policy) answers whether the app admits the worker.'
   }
 }
 
@@ -813,7 +1070,7 @@ function checkSegments(frames: Frames, summary: string[]): SegmentsResult {
 
 const BLUR_WORDS = ['every', 'word', 'lands', 'on', 'the', 'beat', 'it', 'was', 'said', 'at']
 
-function checkBlur(options: NonNullable<GraphicCheckOptions['blur']>, frames: Frames, summary: string[]): BlurResult {
+async function checkBlur(options: NonNullable<GraphicCheckOptions['blur']>, frames: Frames, summary: string[], notes: string[]): Promise<BlurResult> {
   const count = Math.max(1, Math.floor(options.words ?? 10))
   const px = Math.max(0, options.px ?? 8)
   const runFrames = Math.max(2, Math.floor(options.frames ?? 60))
@@ -842,9 +1099,16 @@ function checkBlur(options: NonNullable<GraphicCheckOptions['blur']>, frames: Fr
   }
   const rows = row + 1
 
+  /*
+   * The canvas a bake draws on, read only as a bake reads it: by toBlob. Never
+   * by getImageData, which the first version did once a frame to make it
+   * rasterise: after two readbacks Chrome moves a canvas to the CPU, where
+   * blur(8px) cost the live run 120-140 ms a frame against about 8 ms added on
+   * a canvas read only by toBlob. The encode makes it rasterise, and its time
+   * is in both figures, so the difference is the filter's.
+   */
   const { canvas, ctx } = canvas2d(width, height)
-  const drawFrame = (frame: number, filter: string): number => {
-    const t0 = performance.now()
+  const drawFrame = (frame: number, filter: string): void => {
     ctx.clearRect(0, 0, width, height)
     for (const p of placed) {
       ctx.save()
@@ -854,22 +1118,57 @@ function checkBlur(options: NonNullable<GraphicCheckOptions['blur']>, frames: Fr
       drawTextOnto(ctx, { ...base, content: p.word }, width, height)
       ctx.restore()
     }
-    // A one-pixel read makes the canvas rasterise what was asked of it, so the time is the drawing's, not the command list's.
-    ctx.getImageData(0, 0, 1, 1)
-    return performance.now() - t0
+  }
+  const bake = async (frame: number, filter: string): Promise<{ draw: number; total: number; blob: Blob }> => {
+    const t0 = performance.now()
+    drawFrame(frame, filter)
+    const t1 = performance.now()
+    const blob = await pngBlob(canvas)
+    return { draw: t1 - t0, total: performance.now() - t0, blob }
   }
 
-  const time = (filter: string): number[] => {
-    for (let f = 0; f < 5; f++) drawFrame(f, filter)
-    return Array.from({ length: runFrames }, (_, f) => drawFrame(f, filter))
+  const blurFilter = `blur(${px}px)`
+  const conditionsBefore = await pageConditions()
+  const toBlob2x2 = await toBlobFloor()
+  // Warm both, then each frame plain and blurred in turn, so a drift in the machine's pace falls on both alike.
+  for (let f = 0; f < 3; f++) {
+    await bake(f, 'none')
+    await bake(f, blurFilter)
   }
-  const plainMs = spread(time('none'))
-  const blurMs = spread(time(`blur(${px}px)`))
-  const ink = inkBox(pixels(ctx), width, height)
+  const plain: { draw: number; total: number }[] = []
+  const blurred: { draw: number; total: number }[] = []
+  let last: Blob | null = null
+  for (let f = 0; f < runFrames; f++) {
+    const p = await bake(f, 'none')
+    plain.push({ draw: p.draw, total: p.total })
+    const b = await bake(f, blurFilter)
+    blurred.push({ draw: b.draw, total: b.total })
+    last = b.blob
+  }
+  const conditions: RunConditions = {
+    before: conditionsBefore,
+    after: await pageConditions(),
+    toBlob2x2,
+    throttled: false
+  }
+  conditions.throttled = throttledPage(conditions.before) || throttledPage(conditions.after)
+
+  const blurMs = spread(blurred.map((t) => t.total))
+  const plainMs = spread(plain.map((t) => t.total))
+  const addedMs = spread(blurred.map((t, f) => t.total - plain[f].total))
+
+  // The last blurred frame, decoded from its PNG on a canvas of its own: the timed one is never read back.
+  const shown = canvas2d(width, height)
+  const bitmap = await createImageBitmap(last!)
+  shown.ctx.drawImage(bitmap, 0, 0)
+  bitmap.close()
+  const ink = inkBox(pixels(shown.ctx), width, height)
   if (!ink) throw new Error('graphic check: the blur line drew nothing')
-  frames.canvas(`M5 blur(${px}px), last frame`, crop(canvas, padRect(ink, 8, width, height)))
+  frames.canvas(`M5 blur(${px}px), last frame`, crop(shown.canvas, padRect(ink, 8, width, height)))
+  summary.push(reportConditions('M5', conditions, summary, notes))
   summary.push(
-    `M5 ${count} words, blur(${px}px) at ${width}x${height}: p50 ${ms(blurMs.p50)}, p95 ${ms(blurMs.p95)} ms/frame; without the filter p50 ${ms(plainMs.p50)}, p95 ${ms(plainMs.p95)}`
+    `M5 ${count} words, blur(${px}px) at ${width}x${height}, drawn and encoded by toBlob: the filter adds p50 ${ms(addedMs.p50)}, p95 ${ms(addedMs.p95)} ms/frame ` +
+      `(blurred p50 ${ms(blurMs.p50)}, p95 ${ms(blurMs.p95)}; plain p50 ${ms(plainMs.p50)}, p95 ${ms(plainMs.p95)})`
   )
   return {
     words: count,
@@ -879,9 +1178,15 @@ function checkBlur(options: NonNullable<GraphicCheckOptions['blur']>, frames: Fr
     height,
     blurMs,
     plainMs,
+    addedMs,
+    blurDrawMs: spread(blurred.map((t) => t.draw)),
+    plainDrawMs: spread(plain.map((t) => t.draw)),
+    conditions,
     note:
-      'Every word under the filter every frame, the worst case the row names, not a staggered entrance. Each frame ends in a one-pixel getImageData so it is rasterised; ' +
-      'a canvas Chrome sees read back often may move to the CPU, as the bake\'s does under toBlob, so these are that canvas\'s times.'
+      'Every word under the filter every frame, the worst case the row names, not a staggered entrance. Each frame is drawn and encoded by toBlob, as a bake pays for it, ' +
+      'on a canvas never read back by getImageData (which would move it to the CPU, a canvas no bake uses); its plain twin is timed just before it. ' +
+      'addedMs is what the filter adds to a frame, the figure M5\'s bar sets against M1\'s p50 encode. Both totals sit on toBlob\'s scheduling ' +
+      '(conditions.toBlob2x2), so a filter cheaper than the slack under the frame cadence can read as nothing added. A THROTTLED run is the throttle\'s.'
   }
 }
 
@@ -1100,6 +1405,7 @@ function checkIndic(frames: Frames, summary: string[]): IndicResult {
   measure.letterSpacing = '0px'
   const advance = (text: string): number => measure.measureText(text).width
   const missingGlyphWidth = advance('\u{10FFFD}')
+  const dottedCircleWidth = advance(DOTTED_CIRCLE)
 
   const candidates: FontCandidate[] = FONT_CANDIDATES.map(({ font: face, scripts }) => {
     const latinDiffers = differsFromFallback(face, base.weight, LATIN_PROBE)
@@ -1139,15 +1445,22 @@ function checkIndic(frames: Frames, summary: string[]): IndicResult {
     const area = padRect(unionRect(wholeInk, inkBox(splitData, width, height))!, 2, width, height)
     const diff = diffRgba(whole.data, splitData, width, area)
 
+    // The consonant drawn alone from the same pen, found inside the whole drawing (preBaseLead says why not by edges).
     let matraFirst: boolean | null = null
+    let consonantShift: number | null = null
     if (codePoints.includes(PRE_BASE_I)) {
-      const consonant = inkBox(draw({ ...base, content: codePoints.filter((cp) => cp !== PRE_BASE_I).join('') }).data, width, height)
-      matraFirst = consonant ? wholeInk.x < consonant.x - 1 : null
+      const consonant = draw({ ...base, content: codePoints.filter((cp) => cp !== PRE_BASE_I).join('') })
+      const lead = preBaseLead(whole.data, consonant.data, width, height)
+      matraFirst = lead ? lead.first : null
+      consonantShift = lead ? lead.shift : null
     }
 
     const wholeWidth = advance(cluster)
     const codePointWidths = codePoints.map(advance)
     const sumWidth = codePointWidths.reduce((a, b) => a + b, 0)
+    const marks = codePoints.filter((cp) => MARK.test(cp)).length
+    // The letters alone, no mark, so no dotted circle: an unshaped conjunct is at least this wide, a shaped one narrower.
+    const baseWidth = codePoints.filter((cp) => !MARK.test(cp)).reduce((sum, cp) => sum + advance(cp), 0)
     const conjunct = VIRAMA.test(cluster)
 
     const theirs = candidates
@@ -1167,10 +1480,13 @@ function checkIndic(frames: Frames, summary: string[]): IndicResult {
       wholeWidth,
       codePointWidths,
       sumWidth,
-      narrower: wholeWidth < sumWidth,
+      marks,
+      baseWidth,
+      narrower: conjunct ? wholeWidth < baseWidth : null,
       diff,
       differs: diff.mean > 1,
       matraFirst,
+      consonantShift,
       likeMissingGlyph: missingGlyphWidth > 0 && Math.abs(wholeWidth - codePoints.length * missingGlyphWidth) < 0.5,
       resolvedBy: theirs.filter((c) => c.mean === 0).map((c) => c.font),
       candidates: theirs
@@ -1179,24 +1495,33 @@ function checkIndic(frames: Frames, summary: string[]): IndicResult {
     pictures[1].push(crop(split.canvas, padRect(area, 6, width, height)))
     const r = rows[rows.length - 1]
     summary.push(
-      `M22 ${cluster}: whole ${wholeWidth.toFixed(1)} px against ${codePoints.length} code points' ${sumWidth.toFixed(1)}${conjunct ? (r.narrower ? ' (narrower)' : ' (NOT narrower)') : ''}; ` +
-        `frames ${r.differs ? 'differ' : 'DO NOT differ'} (mean ${diff.mean.toFixed(3)} over the ink)` +
-        `${matraFirst === null ? '' : matraFirst ? '; i-matra first' : '; i-matra NOT first'}; resolved by ${r.resolvedBy.length ? r.resolvedBy.join(', ') : 'no installed candidate'}`
+      `M22 ${cluster}: whole ${wholeWidth.toFixed(1)} px` +
+        (conjunct ? ` against its letters' ${baseWidth.toFixed(1)}${r.narrower ? ' (narrower)' : ' (NOT narrower)'}` : '') +
+        ` (code points alone ${sumWidth.toFixed(1)}, ${marks} mark${marks === 1 ? '' : 's'} on a dotted circle); ` +
+        `frames ${r.differs ? 'differ' : 'DO NOT differ'} from the per-code-point frame (mean ${diff.mean.toFixed(3)} over the ink)` +
+        `${matraFirst === null ? '' : `; i-matra ${matraFirst ? 'first' : 'NOT first'} (the consonant ${consonantShift} px right of where it is drawn alone)`}` +
+        `; resolved by ${r.resolvedBy.length ? r.resolvedBy.join(', ') : 'no installed candidate'}`
     )
   }
   frames.canvas('M22: each cluster whole (top row) and one code point at a time (bottom row)', sheet(pictures, { width: 220, height: 200 }))
-  summary.push(`M22 installed candidates: ${candidates.filter((c) => c.installed).map((c) => c.font).join(', ') || 'none'}`)
+  summary.push(`M22 installed candidates: ${candidates.filter((c) => c.installed).map((c) => c.font).join(', ') || 'none'}; a dotted circle is ${dottedCircleWidth.toFixed(1)} px`)
 
   return {
     font,
     px,
     width,
     missingGlyphWidth,
+    dottedCircleWidth,
     candidates,
     rows,
     note:
-      'Drawn by drawTextOnto, cream on transparent, left-aligned, no tracking. A lone combining mark drawn on its own may take HarfBuzz\'s dotted circle, ' +
-      'which widens its advance and shows in the per-code-point row; libass\'s simple shaper draws none. ' +
+      'Drawn by drawTextOnto, cream on transparent, left-aligned, no tracking. A lone combining mark drawn on its own takes HarfBuzz\'s dotted circle ' +
+      '(dottedCircleWidth), which widens its advance and inks the per-code-point row; libass\'s simple shaper draws none. So two readings carry the circle and ' +
+      'cannot alone tell shaped from unshaped: sumWidth, and differs, which reads true for any engine that draws circles, shaped or not (it is kept as the ' +
+      'plan\'s reading because the plan\'s mutation, an Array.from split in the painter, makes the two frames equal and must turn it false). ' +
+      'narrower is measured against the letters without their marks (baseWidth), which carry no circle: an unshaped conjunct is at least that wide. ' +
+      'matraFirst finds the consonant drawn alone inside the whole drawing (consonantShift, about the matra\'s width when shaped, 0 in logical order); ' +
+      'comparing left edges cannot, since a shaped pre-base matra starts at the pen as the consonant alone does. ' +
       'resolvedBy lists only installed faces named for the cluster\'s script whose drawing equals the painter\'s pixel for pixel; the eye check against graphic.int\'s libass sheets is yours.'
   }
 }
@@ -1246,12 +1571,20 @@ function showSheet(result: GraphicCheckResult): void {
     const img = document.createElement('img')
     img.src = frame.png
     img.alt = frame.label
+    img.title = 'Click for its natural size; click again to shrink it'
     Object.assign(img.style, {
       display: 'block',
       maxWidth: '360px',
       maxHeight: '320px',
+      cursor: 'zoom-in',
       background: 'repeating-conic-gradient(#808080 0 25%, #b0b0b0 0 50%) 0 0 / 16px 16px'
     })
+    // The M22 sheet is 2200 px wide: shown at 360 it is too small for the eye check of a loose virama or matra.
+    img.onclick = () => {
+      const natural = img.style.maxWidth !== 'none'
+      Object.assign(img.style, natural ? { maxWidth: 'none', maxHeight: 'none', cursor: 'zoom-out' } : { maxWidth: '360px', maxHeight: '320px', cursor: 'zoom-in' })
+      Object.assign(figure.style, { maxWidth: natural ? 'none' : '360px', flexBasis: natural ? '100%' : 'auto', overflowX: natural ? 'auto' : 'visible' })
+    }
     const caption = document.createElement('figcaption')
     caption.textContent = frame.label
     figure.append(img, caption)
@@ -1276,9 +1609,9 @@ export async function runGraphicCheck(options: GraphicCheckOptions = {}): Promis
     frames: frames.list
   }
   await document.fonts.ready
-  if (options.encode) result.encode = await checkEncode(options.encode, frames, summary)
+  if (options.encode) result.encode = await checkEncode(options.encode, frames, summary, notes)
   if (options.segments) result.segments = checkSegments(frames, summary)
-  if (options.blur) result.blur = checkBlur(options.blur, frames, summary)
+  if (options.blur) result.blur = await checkBlur(options.blur, frames, summary, notes)
   if (options.parity) result.parity = await checkParity(frames, summary)
   if (options.indic) result.indic = checkIndic(frames, summary)
   if (!options.encode && !options.segments && !options.blur && !options.parity && !options.indic) {

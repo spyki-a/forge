@@ -1,10 +1,14 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { encodeFrames, setPoolCanvases } from '../../src/renderer/src/encodePool'
 import {
   SYNTHETIC,
   contains,
   diffRgba,
   inkBox,
   percentile,
+  perFrameMs,
+  preBaseLead,
+  spread,
   syntheticBox,
   syntheticPanelAt
 } from '../../src/renderer/src/harness/graphicMeasure'
@@ -71,6 +75,109 @@ describe('percentile', () => {
     expect(percentile(values, 100)).toBe(20)
     expect(values[0]).toBe(20)
     expect(percentile([], 50)).toBeNaN()
+  })
+})
+
+describe('perFrameMs', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+    setPoolCanvases(null)
+  })
+
+  it('counts each burst of a pipelined pool once, where the gap between writes reads its parts', () => {
+    // Four deep, the encodes finishing together every 30 ms: four writes 0.5 ms apart, then a wait.
+    const writtenAt = Array.from({ length: 20 }, (_, i) => 30 * Math.floor(i / 4) + 0.5 * (i % 4))
+    const windowed = perFrameMs(writtenAt, 4)
+    expect(windowed).toHaveLength(16)
+    for (const [i, ms] of windowed.entries()) expect(ms, `window ${i}`).toBeCloseTo(7.5, 10)
+    // What the check printed before: three gaps of 0.5 and one of 28.5 a burst, p50 0.5 ms "a frame".
+    expect(percentile(writtenAt.slice(1).map((t, i) => t - writtenAt[i]), 50)).toBe(0.5)
+    // One deep, the window is the gap itself; fewer writes than the window, nothing.
+    expect(perFrameMs([0, 10, 25], 1)).toEqual([10, 15])
+    expect(perFrameMs([0, 10], 4)).toEqual([])
+  })
+
+  it("agrees with the pool's own wall time per frame at depth 1, 2 and 4, driven through encodeFrames", async () => {
+    // The verifier's simulation in fake time: every encode takes 30 ms, all of them in parallel.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+    const count = 48
+    for (const depth of [1, 2, 4]) {
+      setPoolCanvases(() => ({
+        getContext: () => ({ save: () => undefined, restore: () => undefined, clearRect: () => undefined }) as unknown as CanvasRenderingContext2D,
+        toBlob: (callback) => {
+          setTimeout(() => callback({ arrayBuffer: async () => new ArrayBuffer(1) } as unknown as Blob), 30)
+        }
+      }))
+      const writtenAt: number[] = []
+      const started = Date.now()
+      let finished = false
+      const done = encodeFrames({
+        count,
+        width: 8,
+        height: 8,
+        depth,
+        draw: () => undefined,
+        write: async (index) => {
+          writtenAt.push(Date.now())
+          return `seq/${index}`
+        },
+        cancelled: () => false
+      }).finally(() => {
+        finished = true
+      })
+      for (let ms = 0; !finished && ms < 10_000; ms++) await vi.advanceTimersByTimeAsync(1)
+      expect(await done).toBe(`seq/${count - 1}`)
+      const wall = (Date.now() - started) / count
+      const windowed = spread(perFrameMs(writtenAt, depth))
+      expect(wall, `depth ${depth}`).toBeCloseTo(30 / depth, 0)
+      expect(windowed.p50, `depth ${depth}: windowed p50 against ${wall} ms a frame`).toBeCloseTo(wall, 0)
+      expect(windowed.p95, `depth ${depth}: windowed p95`).toBeCloseTo(wall, 0)
+      if (depth > 1) {
+        // The bug it replaces: the gaps' p50 is the burst's inside, not a frame's cost.
+        const gaps = spread(writtenAt.slice(1).map((t, i) => t - writtenAt[i]))
+        expect(gaps.p50, `depth ${depth}: gap p50`).toBeLessThan(wall / 2)
+      }
+    }
+  })
+})
+
+describe('preBaseLead (M22: कि)', () => {
+  /*
+   * A consonant: a stem, a headline and an arm, rows 2 to 6. An i-matra: a
+   * stem at the pen and a hook along row 0, outside the consonant's rows, as
+   * the real one loops over the headline.
+   */
+  const W = 24
+  const H = 8
+  const consonant = (set: (x: number, y: number, rgba: number[]) => void, dx: number): void => {
+    for (let y = 2; y <= 6; y++) set(1 + dx, y, [255, 255, 255, 255])
+    for (let x = 1; x <= 6; x++) set(x + dx, 2, [255, 255, 255, 255])
+    for (let x = 3; x <= 5; x++) set(x + dx, 4, [255, 255, 255, 200])
+  }
+  const matra = (set: (x: number, y: number, rgba: number[]) => void, at: number, hookTo: number): void => {
+    for (let y = 1; y <= 6; y++) set(at, y, [255, 255, 255, 255])
+    for (let x = Math.min(at, hookTo); x <= Math.max(at, hookTo); x++) set(x, 0, [255, 255, 255, 255])
+  }
+  const alone = picture(W, H, (set) => consonant(set, 0))
+
+  it('finds the consonant pushed right by a matra drawn before it, though both drawings start at the pen', () => {
+    // Shaped: the matra at the pen (x 1), the consonant after it.
+    const shaped = picture(W, H, (set) => {
+      matra(set, 1, 12)
+      consonant(set, 6)
+    })
+    // The reading it replaces could not see this: the two left edges are the same pixel.
+    expect(inkBox(shaped, W, H)!.x).toBe(inkBox(alone, W, H)!.x)
+    expect(preBaseLead(shaped, alone, W, H)).toEqual({ shift: 6, error: 0, first: true })
+  })
+
+  it('reads an i-matra drawn after its consonant, in logical order, as not first', () => {
+    const unshaped = picture(W, H, (set) => {
+      consonant(set, 0)
+      matra(set, 9, 5)
+    })
+    expect(preBaseLead(unshaped, alone, W, H)).toEqual({ shift: 0, error: 0, first: false })
+    expect(preBaseLead(unshaped, picture(W, H, () => undefined), W, H)).toBeNull()
   })
 })
 

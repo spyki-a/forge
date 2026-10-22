@@ -44,6 +44,25 @@ export function spread(values: readonly number[]): Spread {
   }
 }
 
+/**
+ * Time per frame through a pipeline `depth` deep, from the times its frames
+ * were written, in frame order: the span of `depth` consecutive writes, over
+ * `depth`, at every frame. §6.15's "ms per frame at p50 and p95" for M1 and M2.
+ *
+ * Not the gap between one write and the next. A pool `depth` deep finishes
+ * its encodes together and writes them back to back, so its gaps are bursts:
+ * at depth 4, three gaps of the main thread's own cost and one of about a
+ * whole encode, whose p50 reads the first and p95 the second, neither the
+ * cost of a frame (the live run's 3.1 ms p50 against 7.6 ms a frame). Over a
+ * window as deep as the pipeline, each burst is counted once.
+ */
+export function perFrameMs(writtenAt: readonly number[], depth: number): number[] {
+  const d = Math.max(1, Math.floor(depth) || 1)
+  const out: number[] = []
+  for (let i = 0; i + d < writtenAt.length; i++) out.push((writtenAt[i + d] - writtenAt[i]) / d)
+  return out
+}
+
 export interface PixelDiff {
   /** Mean absolute difference per channel, in levels, over the box's pixels. */
   mean: number
@@ -124,6 +143,69 @@ export function padRect(rect: Rect, pad: number, width: number, height: number):
     width: Math.min(width, rect.x + rect.width + pad) - x,
     height: Math.min(height, rect.y + rect.height + pad) - y
   }
+}
+
+/**
+ * Where a picture's ink sits inside another picture, across: the horizontal
+ * shift of `part` that best matches `whole`, by the least summed difference
+ * in alpha over `part`'s ink box, trying every shift up to `maxShift` either
+ * way (a pixel shifted off the picture reads alpha 0). On a tie the smaller
+ * shift wins, so a part found where it was drawn reads 0. Null when `part`
+ * has no ink.
+ */
+export function bestShift(
+  whole: ArrayLike<number>,
+  part: ArrayLike<number>,
+  width: number,
+  height: number,
+  maxShift: number
+): { shift: number; error: number } | null {
+  const box = inkBox(part, width, height)
+  if (!box) return null
+  const reach = Math.max(0, Math.floor(maxShift))
+  let best = { shift: 0, error: Infinity }
+  for (let s = -reach; s <= reach; s++) {
+    let error = 0
+    for (let y = box.y; y < box.y + box.height; y++) {
+      for (let x = box.x; x < box.x + box.width; x++) {
+        const xs = x + s
+        const theirs = xs >= 0 && xs < width ? whole[(y * width + xs) * 4 + 3] : 0
+        error += Math.abs(part[(y * width + x) * 4 + 3] - theirs)
+      }
+    }
+    if (error < best.error || (error === best.error && Math.abs(s) < Math.abs(best.shift))) best = { shift: s, error }
+  }
+  return best
+}
+
+/** More than this many pixels right of where it was drawn alone, a consonant has something before it (proposal). */
+export const PRE_BASE_LEAD_PX = 2
+
+/**
+ * M22's reading of कि (§6.11): is the i-matra drawn before its consonant?
+ * `whole` is the cluster drawn whole, `consonant` the consonant drawn alone
+ * from the same pen; both left-aligned there.
+ *
+ * Not by comparing the two drawings' left edges: a shaped pre-base matra
+ * starts at the pen too, so the whole drawing's ink and the lone consonant's
+ * begin at the same pixel whether the cluster was shaped or not (the live
+ * run: 96 against 96, both ways). The consonant is found inside the whole
+ * drawing instead: shaped, the matra has pushed it right by about the matra's
+ * width (35 px at 120 px in Kohinoor Devanagari); unshaped, it is where it
+ * was drawn alone.
+ */
+export function preBaseLead(
+  whole: ArrayLike<number>,
+  consonant: ArrayLike<number>,
+  width: number,
+  height: number
+): { shift: number; error: number; first: boolean } | null {
+  const own = inkBox(consonant, width, height)
+  const theirs = inkBox(whole, width, height)
+  if (!own || !theirs) return null
+  const found = bestShift(whole, consonant, width, height, Math.max(own.width, theirs.width))
+  if (!found) return null
+  return { ...found, first: found.shift > PRE_BASE_LEAD_PX }
 }
 
 /** Does `outer` hold every pixel of `inner`? */
