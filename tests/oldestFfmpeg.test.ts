@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { buildRenderPlan, videoInputArgs, type RenderRequest } from '@shared/render/plan'
 import { filterGraphOf, withGraphFile } from '@shared/render/graphFile'
 import { keyProbeArgs } from '@shared/render/chromaKey'
@@ -14,6 +14,8 @@ import { voiceOverArgs } from '@shared/render/voiceover'
 import { PRESETS, defaultParams } from '@shared/presets'
 import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
 import { HELPER_PYTHON, SIDECAR_DIR as SIDECAR } from './integration/venv'
+import { FFMPEG } from './integration/output'
+import { ciNotice } from './integration/helperDiag'
 
 /*
  * Nothing in a filter graph may be newer than the OLDEST bundled ffmpeg.
@@ -675,5 +677,99 @@ describe('every other ffmpeg command runs on the oldest bundled ffmpeg', () => {
     const sheetGraph = sheet[sheet.indexOf('-filter_complex') + 1]
     expect([...sheetGraph.matchAll(/drawbox=x=\d+:y=\d+:w=\d+:h=\d+:color=0x[0-9A-F]{6}:t=\d+/g)], 'the sheet’s boxes').toHaveLength(9)
     expect(sheetGraph, 'the sheet’s stack').toMatch(/;\[s0\]\[s1\]\[s2\]hstack=inputs=3$/)
+  })
+})
+
+/*
+ * M4 (docs/CLIPS.md §6.15, §6.11): three filters step 3 may reach for later,
+ * asked of the bundled build, so that both CI runners answer for theirs.
+ * Nothing here is emitted. `tmix` would be motion blur, `overlay`'s
+ * `alpha=premultiplied` a raw RGBA path (M11), `perspective` the screen card's
+ * ffmpeg alternative. One missing on the Windows build is struck from §13's
+ * later options, never worked around; one used later goes into SHAPES and the
+ * TOO_NEW scan above first.
+ *
+ * Presence is read from the TEXT, never the exit code. Measured on the Mac's
+ * bundled 4.4 (2026-10-21, `-hide_banner -h filter=<name>`): an existing
+ * filter's help begins with the line "Filter tmix", "Filter overlay",
+ * "Filter perspective", exit 0; an unknown name prints "Unknown filter
+ * 'nosuchfilter'." and ALSO exits 0, so the exit code says nothing. Both went
+ * to stdout there, stderr empty; stdout and stderr are read together here so
+ * the answer is read wherever the 2018 build puts it, and lines are split on
+ * \r?\n for a Windows text-mode stdout. A line that is exactly "Filter <name>"
+ * anywhere counts (the plan says the help BEGINS with it, as on the Mac; any
+ * line is the simplest reading that a stray first line on the other build
+ * cannot turn into "absent"). The control, a name no ffmpeg has, must read
+ * absent: that is what keeps the read honest.
+ */
+const M4_FILTERS = ['tmix', 'overlay', 'perspective'] as const
+const M4_CONTROL = 'nosuchfilter'
+
+interface FilterHelp {
+  name: string
+  present: boolean
+  exit: number | null
+  /** The first non-empty line printed, for the notice. */
+  first: string
+  lines: string[]
+  error?: string
+}
+
+function filterHelp(name: string): FilterHelp {
+  const r = spawnSync(FFMPEG, ['-hide_banner', '-h', `filter=${name}`], { encoding: 'utf8', windowsHide: true, timeout: 30_000 })
+  const lines = `${r.stdout ?? ''}\n${r.stderr ?? ''}`.split(/\r?\n/)
+  return {
+    name,
+    present: lines.some((l) => l === `Filter ${name}`),
+    exit: r.status,
+    first: lines.find((l) => l.trim() !== '') ?? '(nothing printed)',
+    lines,
+    error: r.error?.message
+  }
+}
+
+/**
+ * The values listed under each `<option>` line of a help text. An option's
+ * line is indented two spaces ("  alpha             <int> …") and its named
+ * values five ("     premultiplied   1 …"), as measured on the Mac. Every
+ * occurrence is returned, not the first: the Mac's overlay help has one
+ * `alpha` line (counted), and the notice says how many the other build has.
+ */
+function optionValues(lines: string[], option: string): string[][] {
+  const at = new RegExp(`^ {2}${option}\\s+<`)
+  return lines.flatMap((line, i) => {
+    if (!at.test(line)) return []
+    const values: string[] = []
+    for (let j = i + 1; j < lines.length && /^ {3,}\S/.test(lines[j]); j++) values.push(lines[j].trim().split(/\s+/)[0])
+    return [values]
+  })
+}
+
+describe('M4: the filters step 3 may use later, asked of the bundled ffmpeg (docs/CLIPS.md §6.15)', () => {
+  it('reads each filter’s presence from its help text, and records tmix, overlay’s alpha=premultiplied and perspective', () => {
+    const probes = M4_FILTERS.map(filterHelp)
+    const control = filterHelp(M4_CONTROL)
+    const overlay = probes.find((p) => p.name === 'overlay')!
+    const alphas = optionValues(overlay.lines, 'alpha')
+    const premultiplied = alphas.some((values) => values.includes('premultiplied'))
+    // The build's own version line, so the notice says which ffmpeg answered (the plan is silent; one more spawn).
+    const version = spawnSync(FFMPEG, ['-version'], { encoding: 'utf8', windowsHide: true, timeout: 30_000 })
+    const said = (p: FilterHelp): string =>
+      `${p.name}: ${p.present ? 'present' : 'ABSENT'} (exit ${p.exit}; first line "${p.first}"${p.error ? `; ${p.error}` : ''})`
+    ciNotice(
+      'oldestFfmpeg: M4 probes',
+      [
+        `${process.platform}-${process.arch}: ${(version.stdout ?? '').split(/\r?\n/)[0] || '(no version line)'}`,
+        ...probes.map((p) =>
+          p === overlay
+            ? `${said(p)}; alpha with premultiplied: ${premultiplied ? 'listed' : 'NOT LISTED'} (${alphas.length} alpha option line(s); values ${alphas.map((v) => v.join(', ') || 'none').join(' / ') || 'none'})`
+            : said(p)
+        ),
+        `control ${said(control)}`
+      ].join('\n')
+    )
+    // Only these two are asserted; the rest is the notice's to record (§6.11).
+    expect(overlay.present, `overlay's help was not read: ${said(overlay)}`).toBe(true)
+    expect(control.present, `the control "${M4_CONTROL}" read as present: ${said(control)}`).toBe(false)
   })
 })
