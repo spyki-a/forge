@@ -378,6 +378,18 @@ Things testers will notice but can follow the first installer:
   §6.20). R6's rule holds for them: a licence file beside every family.
 - Single-instance lock; a "new version" check against the release page.
 - Keep or drop the meme packs from the manifest.
+- **Cmd+C with nothing selected copies nothing, anywhere in the window.**
+  Seen 2026-10-22 in the development app on the Mac (`CLIPS.md` §6.15's
+  phase-0 runs): with no clip selected, Cmd+C inside a text area copied
+  nothing, and DevTools' `copy()` did not reach the clipboard either; the
+  console's Save as… had to stand in. The Edit menu's Copy is the app's own
+  (`src/main/menu.ts:156-175`: `CmdOrCtrl+C` sends `copy` to the store and
+  is `enabled` only with a selection, not `role: 'copy'`), so with nothing
+  selected macOS finds a disabled accelerator and swallows the keystroke
+  before any text field sees it. Not yet measured in the app's own fields
+  (a caption's text, a name): if it holds there, the fix is to fall through
+  to the focused field's native copy when the store has no selection, with a
+  test over the menu's enabled states.
 
 ---
 
