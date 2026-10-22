@@ -10,6 +10,7 @@ import { installSwatch } from './swatch'
 import { installClipItCheck } from './clipItCheck'
 import { installReframeCheck } from './reframeCheck'
 import { installHelperPackCheck } from './helperPackCheck'
+import { installGraphicCheck } from './graphicCheck'
 import { useEditor } from '../store'
 import { useCatalog } from '../catalog'
 import '../styles.css'
@@ -44,6 +45,9 @@ installReframeCheck()
 
 /* The AI helper's one Install, pressed through every state of its Settings row (docs/CLIPS.md §3a.7). */
 installHelperPackCheck()
+
+/* The graphics engine's forks, measured before anything relies on them (docs/CLIPS.md §6.15, §6.11). */
+installGraphicCheck()
 
 /*
  * The store, reachable from a driving script.
