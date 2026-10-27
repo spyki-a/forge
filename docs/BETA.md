@@ -364,14 +364,23 @@ Things testers will notice but can follow the first installer:
   shapes them right (conjuncts joined, the i-matra first); on Windows the
   2018 build has no CoreText, and both its fallback font and whether its
   libass has HarfBuzz are unmeasured — the next push's `captions.int` line
-  answers the second. **Decided 2026-10-21** (`CLIPS.md` §16.63, D10 of the
+  answers the second. **Measured 2026-10-27 on the Surface** (`CLIPS.md`
+  §6.15, `EFFECTS.md` §61), by `graphic.int`, not the `captions.int` line:
+  letters in a system face (not named in the report), unshaped at
+  `shaping=complex`, so the build does not shape Hindi or Telugu (the
+  Telugu row, drawn in a face installed on Windows, settles it: `CLIPS.md`
+  §6.15); the route for those captions is `CLIPS.md` §16.66, open,
+  recommended: the canvas bake for those tracks on both platforms.
+  **Decided 2026-10-21** (`CLIPS.md` §16.63, D10 of the
   graphics research): bundle Noto Sans Devanagari and Noto Sans Telugu
   (OFL, the licence of the pack's Google fonts) and have a Hindi or Telugu
   transcript's captions and graphics name them, so both platforms draw the
-  same letters instead of whatever each system falls back to. Built in
+  same letters instead of whatever each system falls back to (how the
+  captions name them, libass's `\fn` tags or the canvas bake, waits on
+  `CLIPS.md` §16.66). Built in
   `CLIPS.md` §6.20, before step 3's phase-1 Indic render check, with a
   render check on both builds; this item's half day is counted there, once.
-  The two Regular files are committed under `assets/fonts/`, each with its
+  The two Regular files are to be committed under `assets/fonts/`, each with its
   own OFL text beside it (`.gitignore`'s `/assets` narrowed to let exactly
   those four files through), so CI's libass draws them too, and main's scan
   also lists them when an asset pack's root is the one scanned (`CLIPS.md`

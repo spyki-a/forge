@@ -136,7 +136,7 @@ code composes and checks.** In this piece that means:
 | ffmpeg work in main | the stems handler does its mid/side in main because "the ffmpeg to do it is already here" (`src/main/ipc.ts:762-770`); `runFfmpeg` / `killProcess` (`src/main/ffmpeg/run.ts:42-74`). **`runFfmpeg` was built for renders**: unless `complete: true` it prepends `-loglevel error` (`run.ts:80-82`), it keeps only the last 12 stderr lines (`:33`, `:96-103`, split per chunk, so a line can be cut in two) and shows them only on failure, and every failure unlinks `outputPath` (`:117-121`) | the scene-cut pass lives here and needs no Python, but **not on `runFfmpeg` as it is**: `metadata=print` logs at INFO, so `-loglevel error` prints no scene line at all (measured, §4.2) |
 | long jobs | the `downloads` `JobQueue` (`ipc.ts:114-207`, concurrency 2) chains a Python-helper call with its own bar share and cancel; it shares the `jobs:changed` list with exports, so jobs show in the EXPORT strip | the analysis job's model |
 | transcripts | `Transcript {words, segments}` keyed by asset, in SOURCE ms (`src/shared/transcript.ts:10-43`). Segments are "the boundary IDs the director picks from" (`:19-22`). `withWordText` never renumbers (`:125-133`). `segmentIntoSentences` splits on `SENTENCE_END` (`:48`, `[.!?…]` only: **no Devanagari danda `।`**) and on a 700 ms pause (`:46`), and has no length cap | sentence ids for every pass; word indices as stable anchors |
-| captions | two export routes. libass `subtitles` (`plan.ts:1649`, `src/main/captions.ts:84`, `buildAss` writes one `Dialogue` per line, `captions/ass.ts:180`). The canvas bake (`renderer/captionBake.ts` via `buildGraphicsSpec`, `graphics/fromTimeline.ts:81`) when the style needs a canvas (`:43-63`). One `captionSpec` per line (`captions/line.ts:48`) | per-line placement goes into both |
+| captions | two export routes. libass `subtitles` (`plan.ts:1649`, `src/main/captions.ts:84`, `buildAss` writes one `Dialogue` per line, `captions/ass.ts:180`). The canvas bake (`renderer/captionBake.ts` via `buildGraphicsSpec`, `graphics/fromTimeline.ts:82`) when the style needs a canvas (`captionsNeedBaking` and `captionNeedsCanvas`, `:44-70`; §16.66 would add the track's script to that rule). One `captionSpec` per line (`captions/line.ts:48`) | per-line placement goes into both |
 | the lyric-cut logic | `accentsFrom` (`automation/lyrics.ts:133`), `planLyricCuts` (min gap 160 ms, `:211`). Punch is ASCII-only (`:77`) | beats on spoken words |
 | the Director's plumbing | `askStructured` (`director/ask.ts:29-48`); the flat-schema checker (`conforms.ts`); `run.ts`'s menu and settle functions shared with the eval (`:184-250`); moments placement (`apply2.ts:349-435`) and cards (`:522-573`); `decisionFor2` (`:665-687`); the eval relay | the third pass, Best clips scoring and the B-roll pass |
 | the moments engine | `render/moment.ts` (pure, seeded, `movingFrames`), `renderer/momentCanvas.ts` (live preview, bake, dispose), `threeShared.ts` (one renderer), `render/exportBake.ts` (`Bakers`; a drawn clip that cannot be drawn is **dropped**, `:130-144`, `:164-167`) | the graphics engine's rails, 2D and 3D |
@@ -4819,7 +4819,8 @@ commit, beside `trimToRequestedRange`, `section.ts:116-131`).
 > 38357257266), which proves the `ass` filter runs on the 2018 build and
 > the app's frames are the complex shaper's there; whether that libass
 > shapes Hindi and Telugu is printed, not asserted, on Windows, and is read
-> on the Surface. **M0's exit is met.** Next: step 1, with Step P alongside.
+> on the Surface (read there 2026-10-27, by `graphic.int`: it does not;
+> §6.15, §16.66). **M0's exit is met.** Next: step 1, with Step P alongside.
 
 ---
 
@@ -11183,7 +11184,8 @@ Surface; H11 is phase 4's.
 first eval run) and row 11 (the Telugu negative endings, on the Telugu
 fixtures before phase 2's exit).
 
-> **Phase 0, as measured so far (2026-10-22).** Not the "as measured" note
+> **Phase 0, as measured so far (2026-10-22; the Surface's libass run
+> 2026-10-27).** Not the "as measured" note
 > below, which waits on the Surface's runs (the Mac's, your eye check
 > included, are in). Every figure is in `EFFECTS.md` §61.
 >
@@ -11211,6 +11213,32 @@ fixtures before phase 2's exit).
 >   comes out unshaped whatever the font, and the route for them there
 >   becomes a decision for you; under the second alone, the runner says
 >   nothing about your machines, and §6.20's fonts are what let CI see.
+>
+>   **Settled on your Surface, 2026-10-27: the first.** Your `graphic.int`
+>   there: all ten "same (mean 0.000)", `complex.png` and `simple.png`
+>   byte-identical, letters not boxes, and visibly unshaped at
+>   `shaping=complex` (your three signs: "visible viramas on every
+>   conjunct, कि's i-matra after the consonant, Telugu second consonants
+>   at full size beside the virama mark"). Letters and the same, in a face
+>   with Indic layout tables, is the first reading, and the Telugu row
+>   settles it whatever drew the Devanagari: no file in `assets/fonts`
+>   carries Telugu (`BETA.md` R14; the folder is not in git, so the
+>   Surface's copy is taken to be the Mac's library), so a face installed
+>   on Windows drew it, and the Telugu faces Windows ships carry those
+>   tables (known, not measured here). The one gap is a Telugu face
+>   another program installed system-wide; your `indic` call there, whose
+>   summary lists the candidate faces installed, will show which it has
+>   (not which one libass picked). The 2018 build's libass does not shape
+>   Hindi or Telugu ("no HarfBuzz (or shaping off)", as you put it; the
+>   same either way: `shaping=complex` draws what `simple` draws). So
+>   every Hindi or Telugu caption libass burns on Windows comes out
+>   unshaped whatever the font, §6.20's Noto faces cannot join them
+>   there, and the canvas bake is the
+>   only route that draws them right on Windows (on the Surface itself
+>   that rests on its M22, not yet run). The route is §16.66, yours
+>   (recommended: the bake for those tracks on both platforms). Which face
+>   drew the letters, and the README's fonts-dir line, were not reported.
+>   `EFFECTS.md` §61 has the run.
 > - **The development app on the Mac**, the Mac's half of the
 >   measurement: your six calls in `npm run dev`'s DevTools console,
 >   2026-10-22, Electron 44.3.0 on Chrome 152.0.7977.78
@@ -11247,7 +11275,10 @@ fixtures before phase 2's exit).
 >   baseline). Its tables stay in `EFFECTS.md` §61, superseded on the Mac.
 >
 > - **Not decided yet, and why.** The decisions are the Surface's, the
->   floor machine's, and none has run there; nothing is set. On the Mac's
+>   floor machine's. Of its runs only `graphic.int` is in (2026-10-27),
+>   which decided the libass question (above; what follows from it is
+>   §16.66, yours); every console figure still waits on the Surface, and
+>   nothing is set. On the Mac's
 >   numbers alone `GRAPHIC_BAKE_REGION` would be `'box'` and
 >   `GRAPHIC_POOL_DEPTH` 4: at pool 4 the box is 41 % under the canvas by
 >   each frame's own encode (14.70 against 24.90), the row's own words,
@@ -11319,7 +11350,10 @@ fixtures before phase 2's exit).
 > closed since the run, `npm run dev` and the `indic` call alone bring the
 > sheet back.
 >
-> *On the Surface:*
+> *On the Surface* (**`graphic.int` done 2026-10-27**: its README and
+> sheets gave the answer, letters the same at both levels, so this build's
+> libass does not shape, above; the six calls, their Save as… and the eye
+> check are still to do):
 >
 > ```
 > git pull
@@ -12509,7 +12543,11 @@ half day is R14's own, pulled forward and counted once, here.
   script's face, and every other word of the same event carries `\fn` naming
   the style's own face, so the override never leaks to the next word.
   Poppins' and Teko's partial Devanagari (`BETA.md` R14) stays as it is
-  for Latin-faced captions that name them.
+  for Latin-faced captions that name them. Whether this half is built
+  waits on §16.66 (opened 2026-10-27, when the Surface showed the Windows
+  build's libass does not shape): under its recommended answer, (a), no
+  Devanagari or Telugu word reaches libass, and these `\fn` tags are not
+  needed.
 - **The render check, on both builds.**
   `tests/integration/captions.int.test.ts`'s Indic case (EFFECTS §51; it
   already passes `assets/fonts` as `fontsdir`, `:226-227`) keeps its bar,
@@ -12527,7 +12565,13 @@ half day is R14's own, pulled forward and counted once, here.
   fall back to the system face and differ from the named ones); the `\fn`
   dropped from the Latin word after a Hindi one (`captions.test` fails); the
   files removed from the folder (the Windows notice and the Mac frames
-  change).
+  change). The Windows notice's question was answered first elsewhere,
+  on 2026-10-27, by `graphic.int` on the Surface (§6.15): the 2018 build's
+  libass does not shape. The notice is still worth building, as a
+  tripwire: it is expected to read the same on that build (reading 1;
+  not run itself), and would flip to DIFFER if a later Windows ffmpeg
+  brought a shaper. Under §16.66 (a) this check's Indic half moves to the
+  bake.
 - **A risk to read on the first push.** With Noto Sans Devanagari in the
   `fontsdir` on CI, libass may pick it, by glyph coverage, as the fallback
   for Latin captions whose face is absent there (Anton on CI), where the
@@ -14099,9 +14143,15 @@ H11, and H12 again, in phase 4.
   ran on both runners (run 39715478059): all ten clusters differ on
   macos-14 and none on windows-latest, which is a libass without HarfBuzz
   there, a fallback face that cannot be shaped, or both (`EFFECTS.md` §61
-  has the readings and what tells them apart: letters, not boxes). Open:
-  your eye on the app's sheet against `complex.png` and `simple.png`, the
-  Surface's run, and the Surface's `graphic.int`.
+  has the readings and what tells them apart: letters, not boxes). The
+  Surface's `graphic.int`, 2026-10-27: letters, the same at both levels and
+  visibly unshaped at `shaping=complex`, and the Telugu row was drawn by a
+  face installed on Windows, all but certainly one with Indic layout
+  tables (no file in `assets/fonts` carries Telugu; §6.15), so the 2018
+  build's libass does not shape Hindi or Telugu (the first reading; the
+  route for those captions is §16.66, yours). Your eye on the app's sheet
+  passed on the Mac on 2026-10-22 (§6.15). Open: the Surface's six calls
+  and your eye on its sheet there.
 - **Row 59 (M21): not measured.** Its gated case is built (`fca8194`) and
   waits on your Hindi clips.
 
@@ -15040,6 +15090,76 @@ what is needed, where the answer waits on something not yet in hand.
     the 6 s gap but is outside the per-20 s count (read against D1, since
     counted it would take the only slot of every clip under 40 s with a
     Speaker).
+
+**Added 2026-10-27, from the Surface's libass run (§6.15; measured in
+`EFFECTS.md` §61).** It is **OPEN**.
+
+66. **The route for Hindi and Telugu captions, now that the Windows
+    build's libass does not shape them** (the Surface, 2026-10-27). Your
+    `graphic.int` on the Surface drew the `EFFECTS.md` §51 clusters in
+    letters, in a system face, and the same at `shaping=complex` as at
+    `simple` (all ten "same (mean 0.000)", the two sheets byte-identical),
+    with, in your words, "visible viramas on every conjunct, कि's i-matra
+    after the consonant, Telugu second consonants at full size beside the
+    virama mark". The Telugu row alone says that is the build, not a face
+    that cannot be shaped: no file in `assets/fonts` carries Telugu
+    (`BETA.md` R14), so a face installed on Windows drew it, and the
+    Telugu faces Windows ships carry Indic layout tables (known, not
+    measured here; the one gap, a face another program installed, is in
+    §6.15, and `EFFECTS.md` §61 has the run). So the 2018 build's libass
+    does not shape them ("no HarfBuzz (or shaping off)", as you put it;
+    the same either way), and every
+    Hindi or Telugu caption it burns on Windows comes out unshaped
+    whatever the font: §6.20's Noto faces give both platforms the same
+    letters but cannot join them there. The canvas bake shapes through
+    Chromium's own HarfBuzz; M22 passed in the development app on the Mac
+    (its numeric halves and your eye, 2026-10-22) and has not run on the
+    Surface, so every option below that puts the bake on Windows rests on
+    M22 passing there.
+    - (a) **The canvas bake for every caption track whose words hold
+      Devanagari or Telugu, on both platforms.** The bake is already an
+      export route of its own: `renderer/captionBake.ts` through
+      `buildGraphicsSpec` (`src/shared/graphics/fromTimeline.ts:82`, §1's
+      captions row), and §0's free-space bar already covers both routes
+      (its render check passes on both in CI, §5.5; the ten clips are
+      still yours). Today the style alone chooses the route:
+      `captionNeedsCanvas(style)`
+      (`fromTimeline.ts:64-70`), which the export reads
+      (`src/renderer/src/components/ExportStrip.tsx:205-206`), as do the
+      preview's placement (`Preview.tsx:1850`) and the OUTPUT strip
+      (`OutputStrip.tsx:462`). The rule gains a script test over the
+      track's words, the same test as §6.20's `indicFontsFor` (the words
+      hold Devanagari or Telugu), and the bake names §6.20's Noto faces
+      through the `INDIC_FONTS` chain; libass keeps every other track.
+      Both machines then export the same letters, joined, from the same
+      project. **The whole track, not per word**: a track split between
+      the routes would change size mid-line, since libass draws Anton at
+      about 0.57× the canvas painter's size (`EFFECTS.md` §60). Cost: the
+      bake's frames against libass's one filter, so a slower export for
+      those tracks only. §6.20's libass half, the `\fn` tags, is no longer
+      needed (no Indic word reaches libass), and its render check moves to
+      the bake, so §6.20's day does not grow (an estimate). One edge to
+      cover: a bake that fails falls back to libass, "burned in plain"
+      (`ExportStrip.tsx:207-218`), which for these tracks on Windows means
+      unshaped, and that notice would say so (proposal).
+    - (b) **The bake on Windows only, libass on the Mac.** One project
+      then exports differently on the two machines, the face's size among
+      the differences (of the kind `EFFECTS.md` §60 measured for Anton,
+      0.57×; unmeasured for the Noto faces). Not recommended.
+    - (c) **Leave libass and accept unshaped Hindi and Telugu captions on
+      Windows.** Wrong for a Telugu studio, the first niche; not
+      acceptable.
+    - (d) **A different Windows ffmpeg whose libass has HarfBuzz.** The
+      other cure, but a sourcing question that is settled (`CLAUDE.md`),
+      so noted here, not reopened.
+
+    **Recommended: (a).** One route for these scripts on both machines,
+    on a route that already exists, and the only one that joins them on
+    Windows.
+
+    **Answer (2026-10-27): OPEN.** Needed: your choice. Until it is given,
+    no commit changes the caption route, and §6.20's libass half (the
+    `\fn` tags) waits on it.
 
 ---
 

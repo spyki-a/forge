@@ -4734,7 +4734,9 @@ by more than 40 levels between the two shapers (about 460 a frame, against
 3,000–6,000 a caption), 98,985 over `xON4Vot8j8g`'s 117. `ass` and its option are in `n4.1`, older than the
 2018-12-17 Windows build; whether that build's libass has HarfBuzz is not
 measured here — without it `ass_set_shaper` does nothing and the captions
-come out as before. `tests/integration/captions.int.test.ts` renders the
+come out as before. (Measured since, on 2026-10-27 on the Surface: it
+does not shape Hindi or Telugu, §61; the route for them is `CLIPS.md`
+§16.66.) `tests/integration/captions.int.test.ts` renders the
 app's plan and the plan with its caption step swapped for `ass` at each
 level: the app's frames equal complex's, bit for bit (all 120), and on the
 Mac complex differs from simple on all 54 Devanagari and all 54 Telugu
@@ -5024,8 +5026,12 @@ path, the refused-cut rate and the selector's pick are Mac numbers, through
 the sandbox's proxy. Whether the 2018 Windows ffmpeg's libass has HarfBuzz,
 and which font it falls back to for Devanagari and Telugu without CoreText,
 waits on the next push's `captions.int` line and on a font decision
-(`BETA.md` R14). The job queue and its IPC are not on the check's path (it
-calls main's handlers and `startRender` directly), nor is any card's bake
+(`BETA.md` R14). (The first half was answered, as far as captions go,
+on 2026-10-27 on the Surface, by `graphic.int`: it does not shape them,
+whether for want of HarfBuzz or with shaping off, as the user put it;
+§61, `CLIPS.md` §16.66. The face it reached there was not named.) The
+job queue and its IPC are not on the check's path (it calls main's
+handlers and `startRender` directly), nor is any card's bake
 (the projects have none). And what only the ear can say — that the
 words heard are the run's, whole at both ends — is listed link by link in
 `CLIPS.md` §3b.9.
@@ -8490,7 +8496,7 @@ suite and CI are the orchestrator's.
   and the preview's recompute on a long followed clip while editing.
 - **Burned-in text** (§5.3): after 1g.
 
-## 61. Graphics: the forks measured (phase 0 of step 3) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22)
+## 61. Graphics: the forks measured (phase 0 of step 3) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22), and the Surface's libass run (2026-10-27)
 
 For `docs/CLIPS.md` §6.15 (step 3's phase 0, "Measure before relying"):
 pieces 0.1–0.3 were built on the evening of 2026-10-21 in seven commits,
@@ -8500,7 +8506,10 @@ from the runs' and the artifacts' API records, read 2026-10-22) is green
 on both runners: macos-14 job 119616429509, windows-latest job
 119616429690. Piece 0.4, the user's runs, began on 2026-10-22 with the
 six console calls in the development app on the Mac (below); the eye
-check, the Surface's runs and M21 have not. The seven, from
+check, the Surface's runs and M21 have not. (Since: the Mac's eye check
+passed on 2026-10-22, item 5 of "What this settles", and the Surface's
+`graphic.int` ran on 2026-10-27, "The Surface's run" below; its console
+calls, its eye check and M21 have not.) The seven, from
 `git log 8dd86ab..1bfdc4d`:
 
 - `011f80f` — M4's case in `tests/oldestFfmpeg.test.ts` (piece 0.1),
@@ -8543,7 +8552,8 @@ folder, so `npm test` leaves it).
 
 **The decisions are the Surface's.** It is the floor machine: §6.15's
 outcome rows are read on the Surface's numbers (M2, M3 and M22 on both
-machines'), and nothing has run there yet. No figure in this section sets
+machines'), and of its runs only `graphic.int`'s libass reference is in
+(2026-10-27), which sets no constant. No figure in this section sets
 a constant. Where it says what a row "would make of" a number, it means
 only if the Surface, and for M3 and M22 Electron on both machines, agreed.
 
@@ -8709,6 +8719,55 @@ it finds, and §6.20's fonts are what make both platforms draw the same
 letters and make CI's notice the HarfBuzz answer §51 has waited for.
 Either way §6.20's fonts are needed, and neither reading touches M22's
 verdict on the canvas painter, which is not libass.
+
+**The Surface's run, 2026-10-27.** The user ran `graphic.int` on the
+Surface, with the bundled 2018-12-17 win32-x64 build that windows-latest
+runs, and reported it in the chat (saved as
+`tests/output/phase0-runs/surface-2026-10-27-libass.txt`, gitignored, so
+on the development Mac only): all ten clusters "same (mean 0.000)"
+between complex and simple; `complex.png` and `simple.png`
+byte-identical; letters, not boxes ("a system Devanagari/Telugu face
+found"); and "unshaped even at shaping=complex", by the user's three
+signs: "visible viramas on every conjunct, कि's i-matra after the
+consonant, Telugu second consonants at full size beside the virama
+mark". Letters and the same is the rule's reading 1 when the face that
+drew them has Indic layout tables, and for the Telugu row that is all
+but certain: no file in the font library carries Telugu (`BETA.md` R14:
+of the 88 in the development Mac's `assets/fonts`, only Poppins and Teko
+carry Devanagari, none Telugu; `/assets` is not in git, so the Surface's
+copy is taken to be the same library), so whether the folder was there
+or not, the Telugu clusters were drawn by a face installed on Windows,
+and every Telugu face Windows ships carries OpenType Indic layout
+tables, which is how Windows shapes the script itself (known, not
+measured here). The one gap is a Telugu face another program installed
+system-wide; the Surface's `indic` call, whose summary lists the
+candidate faces installed there, will show which it has, though not
+which one libass picked. The Telugu row alone settles it, whatever drew
+the Devanagari row: **the 2018 Windows build's libass does not shape
+Hindi or Telugu.** The user's own caveat is "no HarfBuzz (or shaping
+off)", a libass built without HarfBuzz or with shaping off in that
+build; the run cannot tell the two apart, and they come to the same
+thing: on that build `ass=…:shaping=complex` draws what
+`shaping=simple` draws, and §51's `ass_set_shaper` does nothing. Not
+reported, so not recorded here: which face drew the letters, the
+README's per-cluster lines, and its "fonts dir present" or "absent" line.
+Reading 2 may hold on the runner as well (the two are not exclusive); it
+no longer changes what follows.
+
+What follows is reading 1's half of "What each would mean", now measured
+rather than conditional: every Hindi or Telugu caption the libass route
+burns on Windows comes out unshaped whatever font is present; §6.20's
+Noto faces would give both platforms the same letters but cannot join
+them there; and the canvas bake, which shapes through Chromium's own
+HarfBuzz, is the only route that draws these scripts right on Windows
+(on the Surface itself that rests on M22 there, not yet run; the Mac's
+passed on 2026-10-22). Which route Hindi and Telugu captions take is the
+user's decision, opened as `CLIPS.md` §16.66 (recommended: the canvas
+bake for every caption track whose words hold Devanagari or Telugu, on
+both platforms); until it is answered no commit changes the caption
+route, and §6.20's libass half waits on it. M22's verdict on the canvas
+painter is untouched, since it is not libass. The Surface's six console
+calls, its eye check and M21 have not run.
 
 ### M1, M2, M3, M5, M6 and M22 in the harness browser (the fallback)
 
@@ -9436,9 +9495,14 @@ parallel lanes began, and passed alone and on the rerun.
    and `perspective`**: nothing is struck from §13's later options.
 2. **The Mac's libass shapes the §51 clusters**, on the dev Mac and the
    macos-14 runner alike, with or without `assets/fonts`.
-3. **The 2018 build's libass inks every cluster, with no pixel past 40
-   levels and a mean that rounds to 0.000 between the two shaping
-   levels**; why is open (above).
+3. **The 2018 build's libass does not shape Hindi or Telugu**: settled on
+   2026-10-27 on the Surface, reading 1 (above). It inks every cluster,
+   the same at both shaping levels on windows-latest (0.000, no pixel
+   past 40) and on the Surface ("same (mean 0.000)", the two sheets
+   byte-identical), where the sheets show letters, visibly unshaped at
+   `shaping=complex`. So every Hindi or Telugu caption libass burns on
+   Windows comes out unshaped whatever the font; the route for them is
+   the user's decision, `CLIPS.md` §16.66.
 4. **The measuring code reads what it says**: per frame, with its
    conditions, on the canvas that ships, and with the shaping readings
    that can tell shaped from unshaped. In the pane's Chrome 152 (.167),
@@ -9473,10 +9537,12 @@ parallel lanes began, and passed alone and on the rerun.
 - **M22's eye check on the Surface**: the user's verdict on the development
   app's `indic` sheet against `complex.png` and `simple.png` there (the
   Mac's was given 2026-10-22: pass). The user's.
-- **Every Surface run**: the six options, `graphic.int` there (whether the
-  2018 build's libass shapes, by the rule above, in whichever face it
-  reaches there, itself unmeasured), and so every phase-0 decision. The
-  user's.
+- **Every Surface run but `graphic.int`** (done 2026-10-27: it does not
+  shape, above): the six options, and so every phase-0 decision, and the
+  eye check (the bullet above). The user's.
+- **`CLIPS.md` §16.66**: the route for Hindi and Telugu captions, now that
+  the Windows build's libass does not shape them (recommended: the canvas
+  bake for those tracks on both platforms). The user's decision.
 - **The Windows sheets**: not uploaded by CI (above).
 - **Why the canvas's own encode at pool 4 moved**, from 17.6 ms in the
   pane to 24.90 in the app (twice): not measured. On the Mac it turns
