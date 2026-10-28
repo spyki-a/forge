@@ -16,7 +16,11 @@
 > (`docs/research/graphics-motion-research-2026-10-17.md`), with your answers
 > to its twelve decisions (§16.54-65): 30.5 days in five phases, where §6 as
 > written had 14.5, plus a gated 6 for the hand build (§6's note). Nothing
-> of it is built. §2's total is now about 100-103.5 days with Step P
+> of it was built then. Since: phase 0 (§6.15; its pieces 2026-10-21/22,
+> its exit met 2026-10-27, M21 still open) and, on 2026-10-27, phase 1's
+> head lane (§6.19: the §16.8 rename, §6.1's types, §6.4's constant and
+> its guards; §6.1's and §6.4's Built notes). Nothing else of step 3 is
+> built. §2's total is now about 100-103.5 days with Step P
 > (100.25-103.75 since §16.66's answer, 2026-10-27).
 >
 > **As written, 2026-10-05, when nothing here was built.** This is the plan for the
@@ -137,7 +141,7 @@ code composes and checks.** In this piece that means:
 | ffmpeg work in main | the stems handler does its mid/side in main because "the ffmpeg to do it is already here" (`src/main/ipc.ts:762-770`); `runFfmpeg` / `killProcess` (`src/main/ffmpeg/run.ts:42-74`). **`runFfmpeg` was built for renders**: unless `complete: true` it prepends `-loglevel error` (`run.ts:80-82`), it keeps only the last 12 stderr lines (`:33`, `:96-103`, split per chunk, so a line can be cut in two) and shows them only on failure, and every failure unlinks `outputPath` (`:117-121`) | the scene-cut pass lives here and needs no Python, but **not on `runFfmpeg` as it is**: `metadata=print` logs at INFO, so `-loglevel error` prints no scene line at all (measured, §4.2) |
 | long jobs | the `downloads` `JobQueue` (`ipc.ts:114-207`, concurrency 2) chains a Python-helper call with its own bar share and cancel; it shares the `jobs:changed` list with exports, so jobs show in the EXPORT strip | the analysis job's model |
 | transcripts | `Transcript {words, segments}` keyed by asset, in SOURCE ms (`src/shared/transcript.ts:10-43`). Segments are "the boundary IDs the director picks from" (`:19-22`). `withWordText` never renumbers (`:125-133`). `segmentIntoSentences` splits on `SENTENCE_END` (`:48`, `[.!?…]` only: **no Devanagari danda `।`**) and on a 700 ms pause (`:46`), and has no length cap | sentence ids for every pass; word indices as stable anchors |
-| captions | two export routes. libass `ass` (`ass=…:shaping=complex`, `plan.ts:1944`, `src/main/captions.ts:79`, `buildAss` writes one `Dialogue` per word, each carrying its whole line with that word popped, `captions/ass.ts:213`). The canvas bake (`renderer/captionBake.ts` via `buildGraphicsSpec`, `graphics/fromTimeline.ts:82`) when the style needs a canvas (`captionsNeedBaking` and `captionNeedsCanvas`, `:44-70`; §16.66 (a) adds the track's script to that rule, §6.20). One `captionSpec` per line (`captions/line.ts:48`) | per-line placement goes into both |
+| captions | two export routes. libass `ass` (`ass=…:shaping=complex`, `plan.ts:1944`, `src/main/captions.ts:79`, `buildAss` writes one `Dialogue` per word, each carrying its whole line with that word popped, `captions/ass.ts:213`). The canvas bake (`renderer/captionBake.ts` via `buildCaptionLayers` (renamed from `buildGraphicsSpec`, `1f62fba`), `graphics/fromTimeline.ts:82`) when the style needs a canvas (`captionsNeedBaking` and `captionNeedsCanvas`, `:44-70`; §16.66 (a) adds the track's script to that rule, §6.20). One `captionSpec` per line (`captions/line.ts:48`) | per-line placement goes into both |
 | the lyric-cut logic | `accentsFrom` (`automation/lyrics.ts:133`), `planLyricCuts` (min gap 160 ms, `:211`). Punch is ASCII-only (`:77`) | beats on spoken words |
 | the Director's plumbing | `askStructured` (`director/ask.ts:29-48`); the flat-schema checker (`conforms.ts`); `run.ts`'s menu and settle functions shared with the eval (`:184-250`); moments placement (`apply2.ts:349-435`) and cards (`:522-573`); `decisionFor2` (`:665-687`); the eval relay | the third pass, Best clips scoring and the B-roll pass |
 | the moments engine | `render/moment.ts` (pure, seeded, `movingFrames`), `renderer/momentCanvas.ts` (live preview, bake, dispose), `threeShared.ts` (one renderer), `render/exportBake.ts` (`Bakers`; a drawn clip that cannot be drawn is **dropped**, `:130-144`, `:164-167`) | the graphics engine's rails, 2D and 3D |
@@ -7933,6 +7937,155 @@ Director's through `ApplyContext.newId` (`director/apply.ts:83`, default
 become frame-cache paths unsanitised (`writeTitleFrame`,
 `src/main/titles.ts:143-150`, the `.seq` folder at `:148`).
 
+> **Built 2026-10-27 (the head lane's first two pieces).** Three commits on
+> `8642f52`: `1f62fba` (the rename), committed before phase 0's record
+> (`0cfffc5`), and `d10e474` (the types), each read by two critics, then
+> the fixer's `6272050`. Pushed 2026-10-27 with the rest of the lane, in
+> one push ending at `60c8b28` (no run exists for an earlier commit of
+> it); that head's CI run 40623811923 passed on both runners (`macos-14`
+> in 10.4 min, `windows-latest` in 12.7 min, 2026-10-28 UTC; every
+> annotation a notice, none a warning). Every figure below is
+> from the commits' messages and the workflow's critics; line numbers
+> were read at `60c8b28`.
+> - **The rename**, `1f62fba`: `GraphicsSpec` → `CaptionLayersSpec` and
+>   `buildGraphicsSpec` → `buildCaptionLayers`, whole-word, across `src/`
+>   and `tests/` (not `tests/output/`, not `docs/`). Counted with `grep
+>   -rwo … --exclude-dir=output`: before, 23 `GraphicsSpec` in 9 files and
+>   53 `buildGraphicsSpec` in 13 (the rename paragraph's counts above,
+>   at `4e59965`) and 0 of each new name; after, 0 of each old name and
+>   23 and 53 of the new. 76 occurrences on 75 lines in 18 files, 75 lines in and 75
+>   out; each file with the old names put back is byte-identical to its
+>   parent, so the diff holds nothing else. The declarations stay where
+>   this section cites them (`spec.ts:101`, `fromTimeline.ts:82`); `spec.ts`
+>   keeps its other exports; `buildCaptionArgs` (`ingest/args.ts`) is
+>   another function, untouched. Renamed with the code: the comments
+>   naming the old identifiers, `tier2.test`'s describe title,
+>   `captionBake.test`'s source pin (`/const spec =
+>   buildCaptionLayers\(project, canvas\)/`, one match in
+>   `captionBake.ts`) and the three README notes the render checks write
+>   (`captionBakeLength`, `captionBakeTiming`, `captionsFree`); no
+>   user-facing or CI string carried either name. Mutations, each file
+>   restored from its copy and compared with `cmp`: `tier2.ts` put back
+>   fails typecheck with TS2305 "Module '"@shared/graphics/fromTimeline"'
+>   has no exported member 'buildGraphicsSpec'" and the same for
+>   `GraphicsSpec` from `spec`; `renderer/src/graphics/main.ts` put back
+>   fails the web config with TS2305 on `GraphicsSpec`;
+>   `tests/graphics.test.ts` put back (a type-only import, which vitest
+>   alone would run) fails the node config with TS2305; `captionBake.ts`'s
+>   line put back, and the test's regex left on the old name, each fail
+>   "takes its plan from planBakeOf over the built spec, and plans nothing
+>   itself" with "AssertionError: expected [] to have a length of 1 but
+>   got +0". Suite: 312 files (307 passed, 5 skipped), 4257 tests (4194
+>   passed, 63 skipped). Both critics passed it with no must-fix, and no
+>   fix phase ran for it, so their two nice-to-fixes are open: the module
+>   header at `fromTimeline.ts:11` still says "Compile a timeline into a
+>   graphics spec for the frame server", prose a reader may now take for
+>   `GraphicSpec`; and nothing guards against an alias (a critic added
+>   `export type GraphicsSpec = CaptionLayersSpec` and `export const
+>   buildGraphicsSpec = buildCaptionLayers` with `tier2.ts` put back, and
+>   typecheck and the four unit files, 80 tests, still passed), so the
+>   one-letter trap could come back through one.
+> - **The types**, `d10e474`, in `src/shared/graphics/template.ts`, types
+>   only (no values, no `GRAPHIC_TEMPLATES`), one comment per type
+>   pointing at its section:
+>   - `GraphicTemplateId` (`:14-31`): the thirteen ids above, no `tree`.
+>   - `GraphicData` (`:34-53`): every member above, the said quote with
+>     `kind?: 'said'` (`:39`) beside the social one (`:41`), and the four
+>     amended members, `steps` (`:38`), `keyword` (`:45`), `lower-third`
+>     (`:47`) and `screen-card` (`:49`). **One deviation:** this section
+>     gives the original members only "as written", so they were taken
+>     from §6.1's text at `4e59965`.
+>   - `FieldMode` (`:56`), with `index`; `TemplateDef` (`:59-76`), with
+>     `appFields?: string[]` and `threeD: boolean`.
+>   - `GraphicSpec` (`:79-111`), every row of the table above, `proposal?`
+>     widened (`:95-98`).
+>   - The seam: `GraphicCandidate` (`:114-124`, §6.7: `sentence`, `data`,
+>     `bound`, `beatWords`, `why`, `source: 'model' | 'baseline'`,
+>     `proposal?` as `GraphicSpec['proposal']`) and `KeptGraphic`
+>     (`:127-131`, §6.6: `clipId`, `assetId`, `candidate`).
+>   - `UnitRect` is imported (`:11`), not declared. Two exist,
+>     `render/moment.ts:373` and `reframe/types.ts:18`; §6.3 names the
+>     latter's 0..1 one, in a file that imports nothing, and
+>     `timeline.ts`'s import of `GraphicSpec` (`:15`) is type-only, so
+>     there is no cycle.
+>
+>   In `src/shared/timeline.ts`, all optional: `MediaAsset.frames.box?`
+>   (`:152`, the (box) field; nothing writes it until lane C's box route,
+>   and its comment says so), `MediaAsset.speaker?` (`:177`),
+>   `Clip.graphic?` (`:525`, beside `moment`), `Clip.forGraphic?`
+>   (`:527`), `Project.graphics?` (`:992`) and `Project.graphicProposals?`
+>   (`:994`) beside `captions`, and the exported `GraphicsSettings`
+>   (`:998-1003`) and `GraphicProposal` (`:1006-1013`). `Clip.pointing` and
+>   `Project.hands` stay with phase 4.
+> - **The test**, `tests/graphicTypes.test.ts` (fifteen cases at
+>   `6272050`). Its guard is typecheck (`tsconfig.node.json` takes
+>   `tests/`; CI runs it), since `expectTypeOf` does nothing at run time:
+>   vitest passed under every type mutation. Each field's type and
+>   optionality; the lists later steps grow (ids, field modes, connectors,
+>   proposal reasons) by membership, never as a whole;
+>   `GraphicData['template']` held equal to `GraphicTemplateId` (every id
+>   has a data shape, so none is excepted); a project, clip and asset typed
+>   as saved before step 3 still satisfy `Project`, `Clip` and
+>   `MediaAsset`, with a runtime round trip through `deserializeProject`
+>   (called a smoke check in its comment since `6272050`). Mutations, one
+>   counted anchor each, `tsc -p tsconfig.node.json`, restored and
+>   compared with `cmp`
+>   (positions in `d10e474`'s file): `Clip.graphic` removed fails "error
+>   TS2339: Property 'graphic' does not exist on type 'Clip'" at (258,23);
+>   `Project.graphics` made required fails the saved fixture with "error
+>   TS2741: Property 'graphics' is missing in type '{ id: string; name:
+>   string; settings: …' but required in type 'Project'" at (76,7), and
+>   `emptyProject` at `timeline.ts(1899,3)` the same way; steps' connector
+>   narrowed to `'none' | 'line'` fails "error TS2344: Type '"none" |
+>   "line"' does not satisfy the constraint …" at (163,37). Seven more
+>   each fail their own line: `GraphicSpec.seconds` made optional,
+>   `timeline`'s data member removed, the `source` id removed,
+>   `counter.value` made a number ("value: "Expected: string, Actual:
+>   number""), `wordSource` made required, `frames.box` removed, the said
+>   quote's `kind` made required. Suite: 313 files (308 passed, 5
+>   skipped), 4271 tests (4208 passed, 63 skipped).
+> - **The critics found, and `6272050` changed.** The must-fix was right:
+>   five fields §6.1 and §6.7 make required (callout's `shape`, the screen
+>   card's `move`, the source's `kind`, the proposal's `reason`,
+>   `GraphicCandidate.source`) were held only by literal membership, and a
+>   literal still extends `X | undefined`, so each could be made optional
+>   with typecheck exiting 0. Each now has its own `IsOptional` check
+>   against `false`, and each, made optional, fails "error TS2344: Type
+>   'false' does not satisfy the constraint '"Expected: literal boolean:
+>   false, Actual: literal boolean: true"'" at its own line ((139,72)
+>   shape, (181,75) move, (144,70) kind, (245,66) reason, (268,74) the
+>   candidate's source). Taken from the nice-to-fixes: **the closed unions
+>   held closed**, `string` not extending `FieldMode`, callout's shape,
+>   the connector, `depth`, the proposal's `reason` and `wordSource`, the
+>   source's `kind`, the `move` and the candidate's `source`, and `'free'`
+>   not extending `FieldMode` (§6.7: no field drawn into a frame is free);
+>   each widened to `string` fails "error TS2554: Expected 1 arguments,
+>   but got 0." at its own `not.toExtend` line, and `'free'` added to
+>   `FieldMode` fails at (192,32). These are not snapshots: a
+>   seventh mode (`'computed'`; `FieldMode` has six at `template.ts:56`, and
+>   `6272050`'s message says sixth), a fourth connector, a third callout
+>   shape, a third reason and a fifth depth each typecheck with exit 0. **The
+>   round trip**: a new case saves and opens a project carrying every new
+>   field (`serializeProject`, JSON, `deserializeProject`, each checked
+>   with `toStrictEqual`); nothing drops them today, so it was checked
+>   with four mutations of `src/shared/project.ts`, each failing that case
+>   alone: an open that strips `clip.graphic` ("AssertionError: expected
+>   undefined to strictly equal { data: { …(3) }, seconds: 2.5, …(5) }"),
+>   one that deletes `graphics`, one that deletes `graphicProposals`, and
+>   a save that drops `frames.box` ("expected undefined to strictly equal
+>   { x: 120, y: 1400, width: 840, …(1) }"). **Two comments**:
+>   `GraphicData`'s said every value is a string, which `lit` and `parent`
+>   are not (indices into other fields; the critic's "indices the app
+>   sets" was not used, since §6.7 offers `lit` to the model), and
+>   `frames.box`'s present tense became "To be written only by the
+>   export's own bake once that route is built". **Declined**: a `keyof`
+>   equality per data member, which would pin each member's whole field
+>   set and fail a later step that rightly adds one (an extra required
+>   field already fails the first code that builds the member); the
+>   members' case is retitled "has each field §6.1 writes for each member,
+>   with its type", a subset match. Suite at `6272050`: 313 files (308
+>   passed, 5 skipped), 4272 tests (4209 passed, 63 skipped).
+
 ### 6.2 The templates — eight ids, nine shapes
 
 **Phase 2 · 4 days.** Phase 2 draws §6.2's six templates as written, plus
@@ -8983,6 +9136,197 @@ become membership of `paper` and `moment` in `SELF_DRAWN_FIELDS` and
 again by leaving `paper` and then `moment` out of the constant. The store
 assertions beside them (`if (drawsItself(c)) return { ...c, crop: undefined
 }`, `project.clips.filter(drawsItself)`) stand as they are.
+
+> **Built 2026-10-27 (the head lane's half).** `a2cad0f`, then `60c8b28`
+> after two critics; both pushed 2026-10-27 in one push ending at
+> `60c8b28`, whose CI run 40623811923 passed on both runners (`macos-14`
+> in 10.4 min, `windows-latest` in 12.7 min, 2026-10-28 UTC). Every figure is from
+> the two commits' messages and the workflow's critics; line numbers
+> were read at `60c8b28`. Lane C's half
+> stays as planned above: the wiring cases, the three store arms,
+> Preview's branch and sweep, `Bakers.graphic` and the export's branch.
+> - **The constant**, as planned: `SELF_DRAWN_FIELDS` and `SelfDrawnField`
+>   (`edit/recipes.ts:45-46`); `LIVE_DRAWN_FIELDS`, the constant filtered
+>   of solid and title (`:52-54`); and `drawsItself(clip: Pick<Clip,
+>   SelfDrawnField>)` (`:64-66`) returning `SELF_DRAWN_FIELDS.some((field)
+>   => Boolean(clip[field]))`, where it returned `Boolean(clip.text ??
+>   clip.paper ?? clip.carousel ?? clip.solid ?? clip.title ??
+>   clip.moment)`.
+> - **The five list sites**, each line found by grep at HEAD (all eight of
+>   the regex's lines were where this section put them), before → after:
+>   - Preview's local `drawsItself`: `Boolean(layer.clip.text ??
+>     layer.clip.paper ?? layer.clip.carousel ?? layer.clip.moment)` →
+>     `LIVE_DRAWN_FIELDS.some((field) => Boolean(layer.clip[field]))`
+>     (`Preview.tsx:1245-1246`, imported at `:61`; `ready` at
+>     `:1248-1249`).
+>   - `clipKind`: `if (clip.text ?? clip.title) return 'text'` kept
+>     (`clipKind.ts:156`); `if (clip.paper ?? clip.carousel ?? clip.solid
+>     ?? clip.moment) return 'graphic'` → `if (drawsItself(clip)) return
+>     'graphic'` (`:158`), so every existing kind gets the answer it had.
+>   - `isKeyable` (`render/chromaKey.ts:223`), `canSteady`
+>     (`render/steady.ts:37`) and `canMoveCamera` (`edit/camera.ts:35`):
+>     `if (clip.adjustment || clip.text || clip.title || clip.paper ||
+>     clip.carousel || clip.solid || clip.moment) return false` over a
+>     `Pick` of those seven → `if (clip.adjustment || drawsItself(clip))
+>     return false` over `Pick<Clip, 'adjustment' | SelfDrawnField>`.
+>   - `clearDirector` (`director/apply.ts:128`): `removed.filter((c) =>
+>     c.text || c.solid || c.adjustment || c.moment ||
+>     brought.has(c.assetId))` → `removed.filter((c) => drawsItself(c) ||
+>     c.adjustment || brought.has(c.assetId))`, which also takes paper,
+>     carousel and title (no Director rule makes them); an asset a
+>     survivor still uses is kept as before.
+>
+>   Through `drawsItself`, `setAspect`'s crop clear, `rebakeGenerated`'s
+>   targets and paste's own-asset rule now include a graphic clip. Nothing
+>   makes one yet, and `rebakeGenerated` has no graphic arm until lane C's
+>   `rebakeGraphic`, so one would pass through its arms untouched. The
+>   per-kind arms of the second table are lane C's and were not touched.
+> - **The regex**, run with `matchAll` over all 324 `.ts` and `.tsx` files
+>   under `src/`: before, 18 matches on the eight lines above
+>   (`recipes.ts:46`, `Preview.tsx:1242`, `clipKind.ts:155` and `:156`,
+>   `chromaKey.ts:222`, `steady.ts:36`, `camera.ts:34`,
+>   `director/apply.ts:127`); after, one match on one line, the allowed
+>   `clip.text ?? clip.title`, now `clipKind.ts:156` with the import above
+>   it. `export const SELF_DRAWN_FIELDS` is declared once under `src/`.
+> - **The test**, `tests/graphicGuards.test.ts`, 18 cases, membership
+>   throughout. One sample clip per field in a `Record` over
+>   `SelfDrawnField`, so a kind added without a sample fails typecheck;
+>   the cases loop over the samples, not the constant, so a field dropped
+>   from it is still tried at every site. For each: `drawsItself` true;
+>   `isKeyable`, `canSteady` and `canMoveCamera` false, each against a
+>   plain clip that passes, so a site that always refuses cannot pass;
+>   `clipKind` `'text'` for text and title and `'graphic'` for the rest;
+>   `clearDirector` of a project where a `COPY_RULE` clip carries the
+>   field over its own baked image beside a `SPINE_RULE` shot removes the
+>   baked asset and keeps the footage. `graphic` in both lists, solid and
+>   title not in the live one. The regex built from `SELF_DRAWN_FIELDS`,
+>   its liveness checked on the old lines and on the optional-chain
+>   version key, run per site file and over every other file under
+>   `src/`, each match's whole line compared with the allowed line in
+>   `clipKind.ts` alone; the one declaration; and the preview's gate.
+> - **`paper.test` and `moment.test`.** Their pins of the spelled-out
+>   expressions became membership and the readers' anchors: `paper` in
+>   `LIVE_DRAWN_FIELDS` (`paper.test.ts:505`) and in `SELF_DRAWN_FIELDS`
+>   with recipes' `drawsItself` read as `SELF_DRAWN_FIELDS.some(`
+>   (`:733-736`); `moment` in both (`moment.test.ts:630-631`); each with
+>   the gate's anchor (below). The store assertions beside them stand.
+>   `PLAN.md`'s rule of adding a kind to each spelled-out list now points
+>   here in one sentence (`PLAN.md:1180-1182`); no other doc changed.
+> - **Mutations** (`a2cad0f`), each at one anchor counted at one match, run
+>   against the seventeen test files that read these sites, the file
+>   restored from its copy and compared, the tree's diff hash the same
+>   before and after: `drawsItself` given back its six fails its own case
+>   ("AssertionError: expected [ 'graphic' ] to deeply equal []"), the
+>   regex's `recipes.ts` case, `paper.test`'s "is not auto-reframed when
+>   the aspect changes" on its anchor, and the five other behaviour cases,
+>   since each reads `drawsItself`; Preview given back its four fails
+>   "src/renderer/src/components/Preview.tsx spells out none", the gate
+>   case ("expected [] to have a length of 1 but got +0") and the paper
+>   and moment gate pins; `clipKind` given back its four, `isKeyable`,
+>   `canSteady` and `canMoveCamera` each given back their seven, and
+>   `clearDirector` given a spelled six without `graphic` each fail
+>   exactly two cases, their own behaviour case ("expected [ 'graphic' ]
+>   to deeply equal []") and their own file's regex case naming the line;
+>   `'graphic'` left out of the constant fails the constant's case
+>   ("expected [ 'text', 'paper', 'carousel', …(3) ] to include
+>   'graphic'"), all six behaviour cases, and typecheck ("error TS2353:
+>   Object literal may only specify known properties, and 'graphic' does
+>   not exist in type 'Record<"text" | "paper" | "carousel" | "solid" |
+>   "title" | "moment", Partial<Clip>>'"); the Preview reading
+>   `SELF_DRAWN_FIELDS` whole typechecks and fails the gate case and the
+>   paper and moment gate pins; `'paper'` left out fails `paper.test`'s
+>   two rewritten pins ("expected [ 'text', 'carousel', 'moment', …(1) ]
+>   to include 'paper'" and "expected [ 'text', 'carousel', 'solid', …(3)
+>   ] to include 'paper'"), the six behaviour cases on it, and camera,
+>   chromaKey, steady and voiceAndKinds' own paper cases; `'moment'` left
+>   out fails `moment.test`'s rewritten pin ("expected [ 'text', 'paper',
+>   'carousel', …(3) ] to include 'moment'") and its behaviour case, the
+>   six behaviour cases on it, `directorMoment`'s and `directorSound`'s
+>   clears, and camera, chromaKey and steady's moment cases. A temporary
+>   file under `src/` with a second `export const SELF_DRAWN_FIELDS` and
+>   `Boolean(c.text || c.graphic)` failed "nor does any other file under
+>   src/" and "the constant is declared once under src/", and was
+>   removed; the regex's receiver narrowed to `clip|c` failed the liveness
+>   case on Preview's old line. "Its own case and no other" held for the
+>   five spelled-out sites; it cannot for `drawsItself` or the constant,
+>   which every other site now reads.
+> - **The gate pinned whole** (`60c8b28`, the critics' must-fix). Preview
+>   has no behaviour test, so the source pin is the gate's only guard,
+>   and `a2cad0f`'s pin, in `graphicGuards`, `paper.test` and
+>   `moment.test`, matched only the start of the arrow's body. Three
+>   mutations at its one anchor passed the eleven test files that read
+>   `Preview.tsx` (313 tests, vitest exit 0): `|| Boolean(layer.clip.solid)`
+>   after the gate (solid shown before its file, the bug this section
+>   names), `&& !layer.clip.moment && !layer.clip.graphic` after it (both
+>   held at the gate for good, the permanently black preview the comment
+>   above the gate describes), and `ready`'s line given `&&
+>   !layer.clip.solid` after `elementReady(layer.element)`. A fourth, `||
+>   SELF_DRAWN_FIELDS.some(…)` after the gate, was caught then only by the
+>   gate case's `not.toMatch(/SELF_DRAWN_FIELDS/)` (a critic's run; the
+>   commit's message lists it with the three, and its fixer did not run it
+>   against the old pins). The regex sees none of the four: one side of
+>   each `||` or `&&` is a parenthesis, not a `receiver.field`. The three
+>   pins now count with `matchAll`, at exactly 1, one anchor over both
+>   bodies whole, from `const drawsItself = (layer: Layer): boolean =>`
+>   through the `LIVE_DRAWN_FIELDS.some(…)` line, nothing but whitespace,
+>   and `ready`'s whole line to its end (`GATE`,
+>   `graphicGuards.test.ts:170-171`, used at `:230`; the same pattern in
+>   `paper.test.ts:508-512` and `moment.test.ts:634-638`). Under each of
+>   six mutations, the four above, the gate reading `SELF_DRAWN_FIELDS`
+>   whole and the gate given back its four spelled-out fields, the three
+>   cases fail and no other, with "AssertionError: expected [] to have a
+>   length of 1 but got +0" (at `graphicGuards.test.ts:230`, or `:219` on
+>   the `LIVE_DRAWN_FIELDS.some(` count where that use is gone; at
+>   `paper.test.ts:512` and `moment.test.ts:638`), the spelled-out four
+>   also failing "src/renderer/src/components/Preview.tsx spells out
+>   none" ("expected [ Array(1) ] to deeply equal []").
+> - **Two nice-to-fixes taken in `60c8b28`.** The `not.toMatch` line
+>   matched the bare name anywhere in the file, comments included, so a
+>   correct comment from lane C's branch or sweep would have failed it;
+>   the whole-body anchor catches both gates it was there for, so it was
+>   removed rather than narrowed. The constant case's last loop required
+>   the live list to be the whole constant less exactly solid and title,
+>   which pinned the set: with a `'sticker'` added to the constant, kept
+>   off the live list and given a sample, `a2cad0f`'s test failed
+>   ("AssertionError: sticker: expected [ 'text', 'paper', 'carousel',
+>   …(2) ] to include 'sticker'") where that is right for a kind the
+>   preview shows from its baked file. It is now membership of the four
+>   kinds drawn live today (text, paper, carousel, moment,
+>   `graphicGuards.test.ts:77`) beside graphic's own line: the same
+>   simulation passes all 18 cases, and a filter that also drops carousel
+>   fails it alone among the three files ("AssertionError: carousel:
+>   expected [ Array(4) ] to include 'carousel'").
+> - **Suite at `60c8b28`** (and at `a2cad0f`, where the build also exited
+>   0): typecheck exits 0; 314 files (309 passed, 5 skipped), 4290 tests
+>   (4227 passed, 63 skipped).
+> - **A gap, found by a critic of `a2cad0f`, recorded and not judged
+>   here: for lane C or you.** Two more spelled-out lists of self-drawn
+>   fields that this section's census and its regex do not see, since the
+>   regex matches only `??` and `||` between two `receiver.field` members
+>   and these are the negated `&&` form. Both are `!c.generatedBy &&
+>   !c.text && !c.solid && !c.adjustment`, over the clips on a video
+>   track: `buildStrips`' `candidates` (`renderer/src/store.ts:4504-4511`)
+>   and `stripShotOf`
+>   (`renderer/src/components/tools/SourceLine.tsx:110-120`, the filter
+>   at `:113`). As read on 2026-10-27, neither is a guard of the first
+>   table's kind; each is a strip-candidate rule. `buildStrips` picks the
+>   shot the strips interrupt, the clip under the playhead or else the
+>   longest, and cuts the strips from that clip's own asset
+>   (`store.ts:4495-4514`); `stripShotOf` applies the same rule for the
+>   Strip flashes tool's "Uses:" line (`SourceLine.tsx:153-158`), whose
+>   file header asks that line to read "the SAME rule its store action
+>   applies", so the two would change together. A paper, carousel or
+>   title clip the user made carries no `generatedBy` (the clip literals
+>   of `addPaperClip`, `addCarouselClip` and `placeTitle`,
+>   `store.ts:3299-3312`, `:3402-3410` and `:3687-3700`), so on a video
+>   track one can be chosen as that shot, and so could a graphic clip
+>   without one. The critic's proposal: both filters read
+>   `!drawsItself(c)`, and the regex gains a negated-`&&` alternative
+>   (`!R\.F *&& *!R\.F`), checked live on these two lines first. The fixer
+>   declined it in `60c8b28`: it predates `a2cad0f`, sits outside the
+>   piece, and changing which shot the strips take is a behaviour change
+>   this section does not name. Until it is decided, "no list spelled out
+>   again" holds for the `??` and `||` forms only.
 
 ### 6.5 The graphic style — `src/shared/graphics/style.ts`
 
@@ -10191,7 +10535,8 @@ render check and the census.
 | phase | test | specified in |
 |---|---|---|
 | 0 | `tests/oldestFfmpeg.test.ts`'s M4 case; `tests/integration/graphic.int.test.ts`'s libass reference; `tests/integration/asr.int.test.ts`'s M21 case | below |
-| 1 | `tests/graphicGuards.test.ts` | §6.4 |
+| 1 | `tests/graphicTypes.test.ts` (built 2026-10-27, `d10e474` and `6272050`) | §6.1 |
+| 1 | `tests/graphicGuards.test.ts` (the head lane's half built 2026-10-27, `a2cad0f` and `60c8b28`; lane C's half to be written) | §6.4 |
 | 1 | `tests/graphicMotion.test.ts` (M9) | §6.13 |
 | 1 | `tests/graphicStroke.test.ts`, `tests/graphicDrawList.test.ts`, `tests/graphicPaint.test.ts` | §6.3 (two depth cases in `graphicDrawList`, §6.16) |
 | 1-3 | `tests/graphicFrame.test.ts` | phase 1 §6.3, phase 2 §6.2, the screen card §6.16 |
@@ -10267,7 +10612,8 @@ render check and the census.
   renderer tests that mock `liveBakers: {}`
   (`tests/renderer/stripsRender.test.ts:38` and three more) need nothing.
 - `tests/paper.test.ts:496-507`, `:722-725` and `tests/moment.test.ts:629`:
-  their spelled-out guard pins become membership (§6.4).
+  their spelled-out guard pins become membership (§6.4) (done 2026-10-27,
+  `a2cad0f` and `60c8b28`; §6.4's Built note).
 - `tests/textAnimation.test.ts`, `tests/textPaint.test.ts`,
   `tests/tier2.test.ts` (the caption route, the failed or empty bake's
   fallback and its notice, §16.66 (a)), `tests/captionPlacement.test.ts`
@@ -11284,7 +11630,8 @@ fixtures before phase 2's exit).
 >   unshaped whatever the font, §6.20's Noto faces cannot join them
 >   there, and the canvas bake is the
 >   only route that draws them right on Windows (on the Surface itself
->   that rests on its M22, not yet run). The route is §16.66, answered
+>   that rests on its M22, not yet run; it passed there the same day: the
+>   final note below). The route is §16.66, answered
 >   (a) the same day: the bake for those tracks on both platforms. Which face
 >   drew the letters, and the README's fonts-dir line, were not reported.
 >   `EFFECTS.md` §61 has the run.
@@ -11667,9 +12014,11 @@ values, dated, as the steps above carry their Built notes (it did,
 > unshaped; M6 does not flag phase 3. Phase 1 starts in §6.19's order: the
 > head lane, serial (the §16.8 rename, §6.1's types, `SELF_DRAWN_FIELDS`
 > and the guards), then §6.20's D8 and, after it, D10 with the route, and
-> lanes A–D, each when its needs are in. Of phase 1 only the §16.8 rename
-> is in, committed after these runs as `1f62fba` (2026-10-27); nothing
-> else of it is built.
+> lanes A–D, each when its needs are in. Of phase 1 the head lane is in,
+> committed after these runs on 2026-10-27 in five commits: `1f62fba`
+> (the rename), `d10e474` and `6272050` (§6.1's types), `a2cad0f` and
+> `60c8b28` (§6.4's constant and guards), recorded in §6.1's and §6.4's
+> Built notes; nothing else of it is built.
 
 ### 6.16 Phase 3 — The three.js compositor and 2.5D
 
@@ -12602,7 +12951,7 @@ piece table does (§6.3's, §6.16's, §6.17's, §6.18's).
 | phase | lane | builds (§) | days | needs first |
 |---|---|---|---|---|
 | 0 | one | 0.1 M4's case; 0.2 `graphicCheck.ts`'s measuring half with `encodeFrames`; 0.3 the libass reference and M21's case; 0.4 the runs and the record (§6.15) | 2 | — |
-| 1 | head, serial | the §16.8 rename as its own commit (0.25 of §6.1); then all of §6.1's types in one commit (`template.ts`'s types, the `timeline.ts` fields, `GraphicsSettings`, `GraphicProposal`, `MediaAsset.speaker`, `Clip.forGraphic`, the (box) field, and the seam's `GraphicCandidate`, §6.7, and `KeptGraphic`, §6.6, declared in `template.ts`), so `Clip.graphic` exists before anything reads it (the other 0.25 of §6.1); then `SELF_DRAWN_FIELDS`, the five list sites and `graphicGuards`' head half, the behaviour over the constant and the regex, with the membership rewrites of `paper.test` and `moment.test` (0.75 of §6.4) | 0.25 + 0.25 + 0.75 | phase 0's exit |
+| 1 | head, serial | the §16.8 rename as its own commit (0.25 of §6.1); then all of §6.1's types in one commit (`template.ts`'s types, the `timeline.ts` fields, `GraphicsSettings`, `GraphicProposal`, `MediaAsset.speaker`, `Clip.forGraphic`, the (box) field, and the seam's `GraphicCandidate`, §6.7, and `KeptGraphic`, §6.6, declared in `template.ts`), so `Clip.graphic` exists before anything reads it (the other 0.25 of §6.1); then `SELF_DRAWN_FIELDS`, the five list sites and `graphicGuards`' head half, the behaviour over the constant and the regex, with the membership rewrites of `paper.test` and `moment.test` (0.75 of §6.4) (built 2026-10-27: `1f62fba`; `d10e474` and `6272050`; `a2cad0f` and `60c8b28`) | 0.25 + 0.25 + 0.75 | phase 0's exit |
 | 1 | outside the days, serial | §6.20's two halves, each its own commit: D8's (`shapedScript` and the captions' fix) and D10's (the Noto files, `INDIC_FONTS`, the scan, the renderer's font sites, the CI check, the route, §16.66 (a)), D10's after D8's (if D10's fonts move to phase 0, below, the route becomes a third commit, after D8's) | (§6.20's 1.25) | the head |
 | 1 | A | `motion.ts` with `graphicMotion` (§6.13); `stroke.ts` with `graphicStroke` (0.5 of §6.3); `style.ts`'s first half with `graphicStyle` (§6.5) | 1 + 0.5 + 0.5 | the head |
 | 1 | B | `drawList.ts`, `items.ts` (`DrawOut`, `unitFor`, `CLUSTER_SCRIPTS`, the drawer seam), `templates/index.ts` with `graphicDrawList` (1 of §6.3); `paint.ts` with its `PaintOptions` and `graphicPaint` (0.75); `frame.ts` and `targets.ts` with `graphicFrame`'s first half (0.25) | 2 | the head; §6.20's two halves (`unitFor` reads `shapedScript`; shaped text items name `INDIC_FONTS`); M3 for `CLUSTER_SCRIPTS` (in, 2026-10-27); A's `stroke.ts` before `paint.ts` |
@@ -12861,7 +13210,8 @@ link and their tests, against the tags' one block and one test.
     (Hindi and Telugu in, Latin out), not the list. Not the transcript's
     `language` (`src/shared/transcript.ts:37`): a mixed or mislabelled
     transcript would route wrong.
-  - **Where the words come from.** As `buildGraphicsSpec` reads them:
+  - **Where the words come from.** As `buildCaptionLayers` (renamed from
+    `buildGraphicsSpec`, `1f62fba`) reads them:
     each clip on `captionTrack(project)` (`captions/timeline.ts:30-47`,
     the track both routes build from), its transcript's words
     (`project.transcripts[clip.assetId]`, `fromTimeline.ts:106-107`; the
@@ -15640,11 +15990,12 @@ what is needed, where the answer waits on something not yet in hand.
     Chromium's own HarfBuzz; M22 passed in the development app on the Mac
     (its numeric halves and your eye, 2026-10-22) and has not run on the
     Surface, so every option below that puts the bake on Windows rests on
-    M22 passing there.
+    M22 passing there. (It passed there the same day: §6.15's final note.)
     - (a) **The canvas bake for every caption track whose words hold
       Devanagari or Telugu, on both platforms.** The bake is already an
       export route of its own: `renderer/captionBake.ts` through
-      `buildGraphicsSpec` (`src/shared/graphics/fromTimeline.ts:82`, §1's
+      `buildCaptionLayers` (renamed from `buildGraphicsSpec`, `1f62fba`;
+      `src/shared/graphics/fromTimeline.ts:82`, §1's
       captions row), and §0's free-space bar already covers both routes
       (its render check passes on both in CI, §5.5; the ten clips are
       still yours). Today the style alone chooses the route:

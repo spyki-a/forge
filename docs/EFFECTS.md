@@ -8770,7 +8770,9 @@ Noto faces would give both platforms the same letters but cannot join
 them there; and the canvas bake, which shapes through Chromium's own
 HarfBuzz, is the only route that draws these scripts right on Windows
 (on the Surface itself that rests on M22 there, not yet run; the Mac's
-passed on 2026-10-22). Which route Hindi and Telugu captions take is the
+passed on 2026-10-22) (it passed there the same day: "M22 on the Surface"
+below, and `CLIPS.md` §6.15's final note).
+Which route Hindi and Telugu captions take is the
 user's decision, opened as `CLIPS.md` §16.66 (recommended: the canvas
 bake for every caption track whose words hold Devanagari or Telugu, on
 both platforms); until it is answered no commit changes the caption
@@ -8778,7 +8780,10 @@ route, and §6.20's libass half waits on it. (Answered the same day:
 (a), as recommended; §6.20 is to build the route, not built yet, and
 drops its libass half, the `\fn` tags.) M22's verdict on the canvas
 painter is untouched, since it is not libass. The Surface's six console
-calls, its eye check and M21 have not run.
+calls, its eye check and M21 have not run. (The six calls and the eye
+check ran the same day, and M22 passed there: "The development app on
+the Surface" below, and `CLIPS.md` §6.15's final note; M21 has still not
+run.)
 
 ### M1, M2, M3, M5, M6 and M22 in the harness browser (the fallback)
 
