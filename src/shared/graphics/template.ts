@@ -30,7 +30,7 @@ export type GraphicTemplateId =
   // steps 5/6
   | 'source'
 
-/** Every string a graphic draws, by template; values are strings as said (docs/CLIPS.md §6.1, meanings §6.2). */
+/** What a graphic draws, by template: every drawn value a string as said; keyword's `lit` and steps' `parent` are indices into other fields (docs/CLIPS.md §6.1, meanings §6.2). */
 export type GraphicData =
   | { template: 'counter'; value: string; label: string }
   | { template: 'bars'; title: string; items: { label: string; value: string }[] }

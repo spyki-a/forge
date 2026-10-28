@@ -145,8 +145,9 @@ export interface MediaAsset {
     count: number
     /**
      * The part of the output frame the export's bake drew, in its pixels: the
-     * box route (docs/CLIPS.md §6.1 (box), §6.3). Written only by the export's
-     * own bake, for a clip placed at the identity; absent, the clip's own box.
+     * box route (docs/CLIPS.md §6.1 (box), §6.3). To be written only by the
+     * export's own bake once that route is built, for a clip placed at the
+     * identity; absent, the clip's own box.
      */
     box?: { x: number; y: number; width: number; height: number }
   }

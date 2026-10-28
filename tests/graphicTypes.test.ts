@@ -10,7 +10,11 @@
  *
  * Lists that later steps will grow (the template ids, the field modes, the
  * connectors, a proposal's reasons) are checked by MEMBERSHIP, never as a
- * whole, so adding the next one does not fail a test that was right.
+ * whole, so adding the next one does not fail a test that was right. Each
+ * such union is also held CLOSED (`string` does not extend it), which a new
+ * member leaves true and widening it to `string` breaks; and a required
+ * field's membership is not its required-ness (a literal extends `X |
+ * undefined` too), so each required one has its own IsOptional check.
  */
 import { describe, it, expect, expectTypeOf } from 'vitest'
 import type {
@@ -32,7 +36,7 @@ import {
   type MediaAsset,
   type Project
 } from '@shared/timeline'
-import { deserializeProject } from '@shared/project'
+import { deserializeProject, serializeProject } from '@shared/project'
 
 /**
  * Whether `K` may be left out of a `T`, key by key: `true` when every key in
@@ -111,7 +115,9 @@ describe('the template ids (§6.1)', () => {
 })
 
 describe('the data (§6.1)', () => {
-  it('types each member as §6.1 writes it', () => {
+  // toMatchObjectType is a subset match: it holds each field §6.1 writes, its
+  // type and its optionality, but not the absence of a field §6.1 does not.
+  it('has each field §6.1 writes for each member, with its type', () => {
     expectTypeOf<Data<'counter'>>().toMatchObjectType<{ template: 'counter'; value: string; label: string }>()
     expectTypeOf<Data<'bars'>>().toMatchObjectType<{ template: 'bars'; title: string; items: { label: string; value: string }[] }>()
     expectTypeOf<Data<'callout'>>().toMatchObjectType<{ template: 'callout'; label: string }>()
@@ -130,9 +136,13 @@ describe('the data (§6.1)', () => {
     expectTypeOf<Data<'source'>>().toMatchObjectType<{ template: 'source'; title: string; excerpt: string; outlet: string; date: string }>()
     expectTypeOf<'arrow'>().toExtend<Data<'callout'>['shape']>()
     expectTypeOf<'circle'>().toExtend<Data<'callout'>['shape']>()
+    expectTypeOf<IsOptional<Data<'callout'>, 'shape'>>().toEqualTypeOf<false>()
+    expectTypeOf<string>().not.toExtend<Data<'callout'>['shape']>()
     for (const kind of ['wiki', 'page', 'headline', 'answer'] as const) {
       expectTypeOf(kind).toExtend<Data<'source'>['kind']>()
     }
+    expectTypeOf<IsOptional<Data<'source'>, 'kind'>>().toEqualTypeOf<false>()
+    expectTypeOf<string>().not.toExtend<Data<'source'>['kind']>()
   })
 
   it('has both quote kinds: said, whose kind may be left out, and social', () => {
@@ -161,12 +171,15 @@ describe('the data (§6.1)', () => {
     expectTypeOf<'none'>().toExtend<Steps['connector']>()
     expectTypeOf<'line'>().toExtend<Steps['connector']>()
     expectTypeOf<'tree'>().toExtend<Steps['connector']>()
+    expectTypeOf<string>().not.toExtend<Steps['connector']>()
 
     expectTypeOf<Data<'keyword'>>().toMatchObjectType<{ template: 'keyword'; words: string; lit: number }>()
     expectTypeOf<Data<'lower-third'>>().toMatchObjectType<{ template: 'lower-third'; name: string; role: string }>()
     expectTypeOf<Data<'screen-card'>>().toMatchObjectType<{ template: 'screen-card'; clipId: string }>()
     expectTypeOf<'tilt-in'>().toExtend<Data<'screen-card'>['move']>()
     expectTypeOf<'pull-back'>().toExtend<Data<'screen-card'>['move']>()
+    expectTypeOf<IsOptional<Data<'screen-card'>, 'move'>>().toEqualTypeOf<false>()
+    expectTypeOf<string>().not.toExtend<Data<'screen-card'>['move']>()
   })
 })
 
@@ -175,6 +188,9 @@ describe('the field modes and the template definition (§6.1)', () => {
     for (const mode of ['verbatim', 'grounded', 'fixed', 'speaker', 'user', 'index'] as const) {
       expectTypeOf(mode).toExtend<FieldMode>()
     }
+    // Closed: there is no `free` mode for anything drawn into a frame (§6.7).
+    expectTypeOf<'free'>().not.toExtend<FieldMode>()
+    expectTypeOf<string>().not.toExtend<FieldMode>()
   })
 
   it('types TemplateDef as §6.1 writes it, with appFields added', () => {
@@ -226,13 +242,17 @@ describe('the spec (§6.1)', () => {
     type Proposal = NonNullable<GraphicSpec['proposal']>
     expectTypeOf<'check-the-number'>().toExtend<Proposal['reason']>()
     expectTypeOf<'pointed'>().toExtend<Proposal['reason']>()
+    expectTypeOf<IsOptional<Proposal, 'reason'>>().toEqualTypeOf<false>()
+    expectTypeOf<string>().not.toExtend<Proposal['reason']>()
     expectTypeOf<IsOptional<Proposal, 'wordSource'>>().toEqualTypeOf<true>()
     for (const w of ['youtube-asr', 'youtube-lines', 'whisper-unsure'] as const) {
       expectTypeOf(w).toExtend<NonNullable<Proposal['wordSource']>>()
     }
+    expectTypeOf<string>().not.toExtend<NonNullable<Proposal['wordSource']>>()
     for (const d of ['tilt', 'parallax', 'dolly', 'focus'] as const) {
       expectTypeOf(d).toExtend<NonNullable<GraphicSpec['depth']>>()
     }
+    expectTypeOf<string>().not.toExtend<NonNullable<GraphicSpec['depth']>>()
   })
 })
 
@@ -245,6 +265,8 @@ describe('the seam between the validator and applyGraphics (§6.6, §6.7)', () =
     expectTypeOf<GraphicCandidate['data']>().toEqualTypeOf<GraphicData>()
     expectTypeOf<'model'>().toExtend<GraphicCandidate['source']>()
     expectTypeOf<'baseline'>().toExtend<GraphicCandidate['source']>()
+    expectTypeOf<IsOptional<GraphicCandidate, 'source'>>().toEqualTypeOf<false>()
+    expectTypeOf<string>().not.toExtend<GraphicCandidate['source']>()
     expectTypeOf<GraphicCandidate['proposal']>().toEqualTypeOf<GraphicSpec['proposal']>()
     expectTypeOf<IsOptional<GraphicCandidate, 'proposal'>>().toEqualTypeOf<true>()
     expectTypeOf<KeptGraphic['clipId']>().toEqualTypeOf<string>()
@@ -285,12 +307,57 @@ describe('the project, the clip and the asset (§6.1)', () => {
   })
 
   it('opens a project saved before any of them, unchanged', () => {
-    // The typed fixtures above are the compile-time half; this is the file.
+    // A smoke check: the typed fixtures above are the guard (typecheck), and
+    // the open spreads keys it does not know. This is the file's half, and
+    // its last two lines catch an open that backfills a graphic or a box.
     const file = JSON.parse(JSON.stringify({ schemaVersion: 1, app: { name: 'Forge', version: '0.1.0' }, project: savedProject }))
     const opened = deserializeProject(file).project
     expect(opened.clips).toEqual(savedProject.clips)
     expect(opened.assets).toEqual(savedProject.assets)
     expect(opened.clips[0].graphic).toBeUndefined()
     expect(opened.assets[0].frames?.box).toBeUndefined()
+  })
+
+  it('keeps every new field through a save and an open', () => {
+    const spec: GraphicSpec = {
+      data: { template: 'counter', value: '40%', label: 'of couples' },
+      seconds: 2.5,
+      beats: [0, 0.4],
+      grounding: { assetId: 'a1', sentence: 'Forty percent of couples cry.', words: [0, 3] },
+      place: { auto: true, third: 'bottom' },
+      seed: 7,
+      version: 1
+    }
+    const bakedAsset: MediaAsset = {
+      ...savedAsset,
+      id: 'g1',
+      path: '/cache/g1.png',
+      name: 'counter',
+      kind: 'image',
+      speaker: 'Priya',
+      frames: { pattern: '/cache/g1.seq/%05d.png', count: 75, box: { x: 120, y: 1400, width: 840, height: 300 } }
+    }
+    const graphicClip: Clip = { ...savedClip, id: 'graphic-1', assetId: 'g1', trackId: 'v2', graphic: spec }
+    const soundClip: Clip = { ...savedClip, id: 's1', assetId: 'a1', trackId: 'a1t', forGraphic: 'graphic-1' }
+    const project: Project = {
+      ...savedProject,
+      assets: [savedAsset, bakedAsset],
+      tracks: [
+        ...savedProject.tracks,
+        { id: 'v2', kind: 'video', name: 'V2', muted: false, hidden: false, locked: false },
+        { id: 'a1t', kind: 'audio', name: 'A1', muted: false, hidden: false, locked: false }
+      ],
+      clips: [savedClip, graphicClip, soundClip],
+      graphics: { styleId: 'clean', sound: false },
+      graphicProposals: [{ id: 'gp1', clipId: 'c1', spec, rule: 'graphic', note: 'Check the number' }]
+    }
+    const file = JSON.parse(JSON.stringify(serializeProject(project, { appVersion: '0.1.0' })))
+    const opened = deserializeProject(file).project
+    expect(opened.clips[1].graphic).toStrictEqual(spec)
+    expect(opened.clips[2].forGraphic).toBe('graphic-1')
+    expect(opened.assets[1].speaker).toBe('Priya')
+    expect(opened.assets[1].frames?.box).toStrictEqual({ x: 120, y: 1400, width: 840, height: 300 })
+    expect(opened.graphics).toStrictEqual({ styleId: 'clean', sound: false })
+    expect(opened.graphicProposals).toStrictEqual(project.graphicProposals)
   })
 })
