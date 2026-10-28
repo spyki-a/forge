@@ -16,7 +16,8 @@
 > (`docs/research/graphics-motion-research-2026-10-17.md`), with your answers
 > to its twelve decisions (§16.54-65): 30.5 days in five phases, where §6 as
 > written had 14.5, plus a gated 6 for the hand build (§6's note). Nothing
-> of it is built. §2's total is now about 100-103.5 days with Step P.
+> of it is built. §2's total is now about 100-103.5 days with Step P
+> (100.25-103.75 since §16.66's answer, 2026-10-27).
 >
 > **As written, 2026-10-05, when nothing here was built.** This is the plan for the
 > piece agreed with the user on 2026-10-04/05: the reframe engine, caption
@@ -136,7 +137,7 @@ code composes and checks.** In this piece that means:
 | ffmpeg work in main | the stems handler does its mid/side in main because "the ffmpeg to do it is already here" (`src/main/ipc.ts:762-770`); `runFfmpeg` / `killProcess` (`src/main/ffmpeg/run.ts:42-74`). **`runFfmpeg` was built for renders**: unless `complete: true` it prepends `-loglevel error` (`run.ts:80-82`), it keeps only the last 12 stderr lines (`:33`, `:96-103`, split per chunk, so a line can be cut in two) and shows them only on failure, and every failure unlinks `outputPath` (`:117-121`) | the scene-cut pass lives here and needs no Python, but **not on `runFfmpeg` as it is**: `metadata=print` logs at INFO, so `-loglevel error` prints no scene line at all (measured, §4.2) |
 | long jobs | the `downloads` `JobQueue` (`ipc.ts:114-207`, concurrency 2) chains a Python-helper call with its own bar share and cancel; it shares the `jobs:changed` list with exports, so jobs show in the EXPORT strip | the analysis job's model |
 | transcripts | `Transcript {words, segments}` keyed by asset, in SOURCE ms (`src/shared/transcript.ts:10-43`). Segments are "the boundary IDs the director picks from" (`:19-22`). `withWordText` never renumbers (`:125-133`). `segmentIntoSentences` splits on `SENTENCE_END` (`:48`, `[.!?…]` only: **no Devanagari danda `।`**) and on a 700 ms pause (`:46`), and has no length cap | sentence ids for every pass; word indices as stable anchors |
-| captions | two export routes. libass `subtitles` (`plan.ts:1649`, `src/main/captions.ts:84`, `buildAss` writes one `Dialogue` per line, `captions/ass.ts:180`). The canvas bake (`renderer/captionBake.ts` via `buildGraphicsSpec`, `graphics/fromTimeline.ts:82`) when the style needs a canvas (`captionsNeedBaking` and `captionNeedsCanvas`, `:44-70`; §16.66 would add the track's script to that rule). One `captionSpec` per line (`captions/line.ts:48`) | per-line placement goes into both |
+| captions | two export routes. libass `ass` (`ass=…:shaping=complex`, `plan.ts:1944`, `src/main/captions.ts:79`, `buildAss` writes one `Dialogue` per word, each carrying its whole line with that word popped, `captions/ass.ts:213`). The canvas bake (`renderer/captionBake.ts` via `buildGraphicsSpec`, `graphics/fromTimeline.ts:82`) when the style needs a canvas (`captionsNeedBaking` and `captionNeedsCanvas`, `:44-70`; §16.66 (a) adds the track's script to that rule, §6.20). One `captionSpec` per line (`captions/line.ts:48`) | per-line placement goes into both |
 | the lyric-cut logic | `accentsFrom` (`automation/lyrics.ts:133`), `planLyricCuts` (min gap 160 ms, `:211`). Punch is ASCII-only (`:77`) | beats on spoken words |
 | the Director's plumbing | `askStructured` (`director/ask.ts:29-48`); the flat-schema checker (`conforms.ts`); `run.ts`'s menu and settle functions shared with the eval (`:184-250`); moments placement (`apply2.ts:349-435`) and cards (`:522-573`); `decisionFor2` (`:665-687`); the eval relay | the third pass, Best clips scoring and the B-roll pass |
 | the moments engine | `render/moment.ts` (pure, seeded, `movingFrames`), `renderer/momentCanvas.ts` (live preview, bake, dispose), `threeShared.ts` (one renderer), `render/exportBake.ts` (`Bakers`; a drawn clip that cannot be drawn is **dropped**, `:130-144`, `:164-167`) | the graphics engine's rails, 2D and 3D |
@@ -192,13 +193,14 @@ code composes and checks.** In this piece that means:
 | **6** | retrieved-fact cards (Wikipedia, page, answer-with-sources over fetched text); the 3D templates `timeline`, `before-after` and `versus` on step 3's draw list | 5, was 7 (the 3D half 4 → 2: the 2.5D counter and ring moved to step 3's phase 3, §16.55) | 3, 5 | facts from outside, with their sources; three.js graphics |
 | **7** | creator styles and saved templates | 4.5 | 3; **`MARKET.md` Stage 0** (below) | toward `MARKET.md` Stage 1 |
 
-**About 89.5 working days in the steps, 90.5 with the one day outside them
-(§6.20), plus Step P's 9.5–13: about 100–103.5 days, twenty to twenty-one
-weeks, honestly counted; 106–109.5 if the hand spike passes its gate.**
+**About 89.5 working days in the steps, 90.75 with the 1.25 outside them
+(§6.20), plus Step P's 9.5–13: about 100.25–103.75 days, twenty to twenty-one
+weeks, honestly counted; 106.25–109.75 if the hand spike passes its gate.**
 (Re-planned 2026-10-21 with step 3, §16.54-65; it was 75.5, and 85–88.5
 with P. P was held at `BETA.md` R4's 5–10 until it was planned in full on
 2026-10-14, §3a; the plan and its two reviews put it at 9.5–13, with two
-open-ended risks left uncounted.)
+open-ended risks left uncounted. §6.20's day became 1.25 on 2026-10-27,
+with §16.66's answer, below.)
 
 The arithmetic, so it can be checked. **The first draft's total was 76.5**,
 with what the review added: step 0 +0.5 (the graph in a file, §3.7); step 1
@@ -233,6 +235,12 @@ slack rather than being moved.
 | outside the steps +1 | — → 1 | §16.61: the captions' per-word fallback for Indic scripts, 0.5, new; §16.63: the two Noto fonts, 0.5, `BETA.md` R14's own half day pulled forward and counted here once, as §3.1 counted R5 (§6.20) |
 | phase 4 | +6, gated | §16.56: the hand build only if the spike passes its gate; in no total above |
 
+**§16.66's answer (2026-10-27) then moved:**
+
+| delta | from → to | why |
+|---|---|---|
+| outside the steps +0.25 | 1 → 1.25 | §16.66 (a): the caption route for shaped scripts, in §6.20's D10 half (0.5 → 0.75) in place of the libass `\fn` tags it made unneeded |
+
 | step | 0 | M0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | **total** |
 |---|---|---|---|---|---|---|---|---|---|---|
 | before the answers | 4.5 | (2, inside 4) | 16 | 2.5 | 14.5 | 11 | 15.5 | 8 | 4.5 | **76.5** |
@@ -244,7 +252,9 @@ slack rather than being moved.
 If the Surface run fails and YuNet's decoder is built after all, add 0.5.
 Then, 2026-10-21: 75.5 + (30.5 − 14.5) − (7 − 5) = 89.5; plus §6.20's 1 =
 90.5. With Step P's 9.5–13, 100–103.5; with phase 4, if the spike's gate
-passes, 106–109.5.
+passes, 106–109.5. Then, 2026-10-27: §6.20's 1 + 0.25 = 1.25, so 89.5 +
+1.25 = 90.75; with Step P's 9.5–13, 100.25–103.75; with phase 4,
+106.25–109.75.
 
 **These dates are conditional on "your part" below**: step 1a cannot run
 until its clips and marks exist. With MediaPipe decided, 1a needs the ten
@@ -1007,7 +1017,8 @@ counted, and open-ended:** what the capability suites find on their first
 Windows run (they have never run there, §12), and a missing Visual C++
 runtime on a clean Windows (§16.45). Either can take P past 13. With P at
 9.5–13, §2's total becomes 75.5 + 9.5–13 = **85–88.5 days** (since step 3's
-re-plan of 2026-10-21, 90.5 + 9.5–13 = 100–103.5, §2).
+re-plan of 2026-10-21, 90.5 + 9.5–13 = 100–103.5; since §16.66's answer
+of 2026-10-27, 90.75 + 9.5–13 = 100.25–103.75, §2).
 
 ### 3a.1 P.1 — The sources · 0.5–1 day
 
@@ -7720,7 +7731,7 @@ phase 2, a 6-day build only if the gate passes (§6.17, §6.18).
 | 3 | the three.js compositor and 2.5D (§6.16; §16.55) | 5 | 2 moved from step 6's 3D templates; 3 new | M7's glow route chosen first; flat colour ≤ 2/255; Indic on a texture at 0.000; preview = export; WebGL missing tested |
 | **step 3** | | **30.5** | §6's 14.5 + 2 from step 6 + 14 new | |
 | 4 | the hand build, only if the spike passes its gate (§6.18) | 6 | new; in no total | the gate's figures on held-out clips; the line's tip on the marked fingertip |
-| outside step 3 | the captions' per-word fallback (§16.61) and the two Indic fonts (§16.63), §6.20 | 1 | 0.5 new; 0.5 is `BETA.md` R14's own, pulled forward | counted in §2 beside the steps |
+| outside step 3 | the captions' per-word fallback (§16.61), the two Indic fonts (§16.63) and the caption route for shaped scripts (§16.66 (a), 2026-10-27), §6.20 | 1.25 | 0.75 new; 0.5 is `BETA.md` R14's own, pulled forward | counted in §2 beside the steps |
 
 The split of §6's 14.5 days into "about 5" and "about 9" is the research's
 estimate (its §7.3); §6 as written never itemised them.
@@ -10235,9 +10246,17 @@ render check and the census.
 - `tests/paper.test.ts:496-507`, `:722-725` and `tests/moment.test.ts:629`:
   their spelled-out guard pins become membership (§6.4).
 - `tests/textAnimation.test.ts`, `tests/textPaint.test.ts`,
-  `tests/captions.test.ts` (the `\fn` tags),
-  `tests/integration/captions.int.test.ts` (its Windows notice with Noto
-  present) and `tests/integration/assetscan.int.test.ts` (the two fonts
+  `tests/tier2.test.ts` (the caption route, the failed or empty bake's
+  fallback and its notice, §16.66 (a)), `tests/captionPlacement.test.ts`
+  (the route's call sites; its pin of Preview's route line, `:331`,
+  rewritten), `tests/integration/captionOverlay.int.test.ts` (main's guard
+  and the plan), `tests/integration/m0Exit.int.test.ts` (its "pop is
+  libass's", `:773`, becomes the route per link, Hindi and Telugu the
+  bake's; opt-in, so never seen on CI), the comments in
+  `captionBakeLength.int`, `captionBakeTiming.int`, `captionsFree.int` and
+  `clipIt.int` that say ExportStrip routes on `captionNeedsCanvas`,
+  `tests/integration/captions.int.test.ts` (its Windows notice
+  with Noto present) and `tests/integration/assetscan.int.test.ts` (the two fonts
   listed on a pack root; its `toHaveLength(3)` for fonts becomes
   membership; the catalogue's version): §6.20.
 - `tests/eval/director.eval.test.ts`: the `FORGE_EVAL_GRAPHICS` block,
@@ -11235,8 +11254,8 @@ fixtures before phase 2's exit).
 >   unshaped whatever the font, §6.20's Noto faces cannot join them
 >   there, and the canvas bake is the
 >   only route that draws them right on Windows (on the Surface itself
->   that rests on its M22, not yet run). The route is §16.66, yours
->   (recommended: the bake for those tracks on both platforms). Which face
+>   that rests on its M22, not yet run). The route is §16.66, answered
+>   (a) the same day: the bake for those tracks on both platforms. Which face
 >   drew the letters, and the README's fonts-dir line, were not reported.
 >   `EFFECTS.md` §61 has the run.
 > - **The development app on the Mac**, the Mac's half of the
@@ -11277,8 +11296,8 @@ fixtures before phase 2's exit).
 > - **Not decided yet, and why.** The decisions are the Surface's, the
 >   floor machine's. Of its runs only `graphic.int` is in (2026-10-27),
 >   which decided the libass question (above; what follows from it is
->   §16.66, yours); every console figure still waits on the Surface, and
->   nothing is set. On the Mac's
+>   §16.66, answered (a) the same day); every console figure still waits
+>   on the Surface, and nothing is set. On the Mac's
 >   numbers alone `GRAPHIC_BAKE_REGION` would be `'box'` and
 >   `GRAPHIC_POOL_DEPTH` 4: at pool 4 the box is 41 % under the canvas by
 >   each frame's own encode (14.70 against 24.90), the row's own words,
@@ -11380,7 +11399,16 @@ fixtures before phase 2's exit).
 > layout tables, it does not. Boxes only show that this libass reaches no
 > Indic face on the Surface, and leave the question to §6.20's fonts.
 > Then the same six calls (saved by the console's Save as… if `copy` does
-> not reach the clipboard there either) and the same eye check.
+> not reach the clipboard there either) and the eye check, with its bar
+> turned round: the Surface's `complex.png` is unshaped (its libass does
+> not shape, above), so the app's whole-drawn row must not look like it.
+> The row passes where it shows what that sheet does not: conjuncts
+> joined with no loose virama, कि's i-matra before its consonant, and
+> Telugu second consonants not at full size beside a virama mark, the
+> three signs you saw on the Surface's sheets, absent. The shapes to
+> match are the Mac's `complex.png` (gitignored, so on the Mac only
+> unless copied over), which the Mac's row matched on 2026-10-22. A row
+> that looks like the Surface's `complex.png` is a fail.
 >
 > *M21*, on whichever machine has your Hindi clips (the Mac is simplest).
 > On the Mac:
@@ -12342,7 +12370,7 @@ piece table does (§6.3's, §6.16's, §6.17's, §6.18's).
 |---|---|---|---|---|
 | 0 | one | 0.1 M4's case; 0.2 `graphicCheck.ts`'s measuring half with `encodeFrames`; 0.3 the libass reference and M21's case; 0.4 the runs and the record (§6.15) | 2 | — |
 | 1 | head, serial | the §16.8 rename as its own commit (0.25 of §6.1); then all of §6.1's types in one commit (`template.ts`'s types, the `timeline.ts` fields, `GraphicsSettings`, `GraphicProposal`, `MediaAsset.speaker`, `Clip.forGraphic`, the (box) field, and the seam's `GraphicCandidate`, §6.7, and `KeptGraphic`, §6.6, declared in `template.ts`), so `Clip.graphic` exists before anything reads it (the other 0.25 of §6.1); then `SELF_DRAWN_FIELDS`, the five list sites and `graphicGuards`' head half, the behaviour over the constant and the regex, with the membership rewrites of `paper.test` and `moment.test` (0.75 of §6.4) | 0.25 + 0.25 + 0.75 | phase 0's exit |
-| 1 | outside the days, serial | §6.20's two halves, each its own commit: D8's (`shapedScript` and the captions' fix) and D10's (the Noto files, `INDIC_FONTS`, the scan, the renderer's font sites, the CI check) | (§6.20's 1) | the head |
+| 1 | outside the days, serial | §6.20's two halves, each its own commit: D8's (`shapedScript` and the captions' fix) and D10's (the Noto files, `INDIC_FONTS`, the scan, the renderer's font sites, the CI check, the route, §16.66 (a)), D10's after D8's (if D10's fonts move to phase 0, below, the route becomes a third commit, after D8's) | (§6.20's 1.25) | the head |
 | 1 | A | `motion.ts` with `graphicMotion` (§6.13); `stroke.ts` with `graphicStroke` (0.5 of §6.3); `style.ts`'s first half with `graphicStyle` (§6.5) | 1 + 0.5 + 0.5 | the head |
 | 1 | B | `drawList.ts`, `items.ts` (`DrawOut`, `unitFor`, `CLUSTER_SCRIPTS`, the drawer seam), `templates/index.ts` with `graphicDrawList` (1 of §6.3); `paint.ts` with its `PaintOptions` and `graphicPaint` (0.75); `frame.ts` and `targets.ts` with `graphicFrame`'s first half (0.25) | 2 | the head; §6.20's two halves (`unitFor` reads `shapedScript`; shaped text items name `INDIC_FONTS`); M3 for `CLUSTER_SCRIPTS`; A's `stroke.ts` before `paint.ts` |
 | 1 | C | `graphicCanvas.ts` (preview, bake, frames; the worker back-end only if M2 asks) (0.75 of §6.3); the export branch with its own catch line, `Bakers.graphic` and every literal of §6.11, `exportBakers.ts`, the store's `addGraphicClip`, `setGraphic`, `rebakeGraphic`, the trim and split rules, Preview's branch and sweep, (box) `identityPlaced`, with `graphicStore` (0.5); the three store arms (`rebakeGenerated`, `placeCopies`, `rebakeFollowed`) and `graphicGuards`' wiring half (0.25 of §6.4) | 1.5 | B's draw list and painter; M1 and M2 |
@@ -12376,25 +12404,30 @@ says. M4 gates nothing in step 3: nothing probed is emitted.
   `unitFor` reads `shapedScript`. Its own commit, so a revert of either
   leaves the other.
 - **D10's half** (the two Noto fonts, `INDIC_FONTS` and the rest of §6.20's
-  font work): also before lane B, because lane B's shaped text items name
-  `INDIC_FONTS` and lane C's bake awaits them; so it lands long before lane
-  D's Indic render check, which needs the files. In phase 0 instead if M22
-  finds a font cause (§6.15).
+  font work, and the caption route §16.66 (a) chose, 2026-10-27): also
+  before lane B, because lane B's shaped text items name `INDIC_FONTS`
+  and lane C's bake awaits them; so it lands long before lane D's Indic
+  render check, which needs the files. After D8's half, since the route
+  reads `shapedScript`. In phase 0 instead if M22 finds a font cause
+  (§6.15): the fonts then land there, and the route lands as a commit of
+  its own after D8's half.
 
 **The days.** Step 3 is 30.5: phase 0's 2, phase 1's 7.5, phase 2's 14.5,
 the spike's 1.5, phase 3's 5; that is §6's 14.5, 2 moved from step 6, and 14
 new (9.5 in phases 0-2, the spike's 1.5, 3 in phase 3). Phase 4's 6 are in
-no total until the gate passes (36.5 with it). §6.20's 1 day is counted in
-§2 beside the steps. Days that read tight, figures kept: §6.2's 4 for nine
-draw files and their layout; §6.6's 2 (less tight now that Clip it's
-wiring is step 4's); the screen card's 1.25 in phase 3; §6.20's D10 half,
-which may run to 0.75 with the `.gitignore` change, the pack-root listing,
-the catalogue's version, the CI check and the renderer's font sites.
+no total until the gate passes (36.5 with it). §6.20's 1.25 days are
+counted in §2 beside the steps (1 until §16.66's answer, 2026-10-27). Days
+that read tight, figures kept: §6.2's 4 for nine draw files and their
+layout; §6.6's 2 (less tight now that Clip it's wiring is step 4's); the
+screen card's 1.25 in phase 3; §6.20's D10 half, 0.75 since §16.66's
+route joined it, which may run to 1 with the `.gitignore` change, the
+pack-root listing, the catalogue's version, the CI check and the
+renderer's font sites.
 
 ### 6.20 Outside step 3's days: the captions' per-word fallback (D8) and the Indic fonts (D10)
 
-**1 day, counted outside step 3, in §2 beside the steps; §6.19 places both
-halves inside phase 1's run.**
+**1.25 days (1 until §16.66's answer, 2026-10-27), counted outside step 3,
+in §2 beside the steps; §6.19 places both halves inside phase 1's run.**
 
 **D8's fix · 0.5 day.** D8, §16.61: "Per word by default everywhere; per
 cluster only for scripts M3 clears. And a separate small fix, outside step
@@ -12435,12 +12468,18 @@ Indic scripts, mutation-checked."
   second word's call. Mutations: `Array.from` restored for shaped text (both
   files fail); `shapedScript` returning false for Telugu.
 
-**D10's fonts · 0.5 day.** D10, §16.63: "Decide `BETA.md` R14, bundling Noto
-Sans Devanagari and Noto Sans Telugu (both OFL), before phase 1's Indic
-render check." `BETA.md` R14 recommended bundling them "and
+**D10's fonts, and the route §16.66 (a) chose · 0.75 day.** D10, §16.63:
+"Decide `BETA.md` R14, bundling Noto Sans Devanagari and Noto Sans Telugu
+(both OFL), before phase 1's Indic render check." `BETA.md` R14
+recommended bundling them "and
 have a Hindi or Telugu transcript's captions name them, so both platforms
 draw the same letters", half a day with a render check on both builds; that
-half day is R14's own, pulled forward and counted once, here.
+half day is R14's own, pulled forward and counted once, here. The quarter
+day more is the caption route §16.66 (a) chose on 2026-10-27, in place of
+the libass `\fn` tags this half planned: a helper, three callers, main's
+guard moved where a test reaches it, the bake's fallback made one tested
+step that covers an empty bake too, two notices, `m0Exit.int`'s route per
+link and their tests, against the tags' one block and one test.
 
 - **Where the files live (chosen 2026-10-21): committed, under
   `assets/fonts/`.** Two fonts, `NotoSansDevanagari-Regular.ttf` and
@@ -12484,8 +12523,9 @@ half day is R14's own, pulled forward and counted once, here.
   scanned root's `fonts/`, as absolute paths, which `assets:fontData`
   (`src/main/ipc.ts:675-682`) already reads: its `resolveAssetFile` takes an
   absolute path as it is (`scan.ts:406-414`). Without it, every machine with
-  a pack installed, the beta's case, would draw Hindi and Telugu graphics in
-  the system's face while libass drew Noto.
+  a pack installed, the beta's case, would draw Hindi and Telugu graphics,
+  and under §16.66 (a) their captions, in the system's face, while only
+  libass, now the failed bake's fallback and CI's tripwire, drew Noto.
   - **`fontsDir()` moves** out of `src/main/captions.ts:28-35`, where it is
     private, into `src/main/fontsDir.ts`, exported unchanged
     (`FORGE_FONTS_DIR` first, then the packaged or the development
@@ -12538,16 +12578,213 @@ half day is R14's own, pulled forward and counted once, here.
   gives Devanagari's face, Telugu Telugu's, Latin none); mutation: a site
   left without it is caught by the harness's Indic frames, drawn through a
   text clip and a caption as well as a graphic (§6.11's `indic` option).
-- **The libass route.** In `captions/ass.ts`'s per-word blocks (`:202-210`),
-  a word whose text holds Devanagari or Telugu carries `\fn` naming its
-  script's face, and every other word of the same event carries `\fn` naming
-  the style's own face, so the override never leaks to the next word.
-  Poppins' and Teko's partial Devanagari (`BETA.md` R14) stays as it is
-  for Latin-faced captions that name them. Whether this half is built
-  waits on §16.66 (opened 2026-10-27, when the Surface showed the Windows
-  build's libass does not shape): under its recommended answer, (a), no
-  Devanagari or Telugu word reaches libass, and these `\fn` tags are not
-  needed.
+- **The route (§16.66 (a)).** Answered 2026-10-27 ("a is good"): a
+  caption track whose words hold Devanagari or Telugu (the script test
+  below widens it) goes through the canvas bake on both platforms, the
+  whole track, and libass keeps every other track. Today the style alone
+  chooses: `captionNeedsCanvas(style)` (`fromTimeline.ts:64-70`; its
+  comment, `:55-63`, keeps ASS for anything it can express), which
+  `captionsNeedBaking` (`:44-53`) asks after resolving the style, and
+  which three callers ask each for itself: the export
+  (`ExportStrip.tsx:205-206`), Smart placement's route for the line's
+  third (`Preview.tsx:1850`) and the OUTPUT strip's note
+  (`OutputStrip.tsx:462`).
+  - **One function, of the project.** `captionRoute(project): { route:
+    CaptionRoute; shaped: boolean; indic: boolean }` in
+    `graphics/fromTimeline.ts`, beside `captionsNeedBaking`,
+    `CaptionRoute` being the type `captions/placement.ts:119` already
+    exports. `shaped` is true when the words the captions would show hold
+    a shaped script; `indic` when they hold Devanagari or Telugu
+    (`indicFontsFor` over the same text not empty), the two scripts
+    measured on the Windows build (below); `route` is `'canvas'` when
+    `captionNeedsCanvas(style)` or `shaped`, else `'libass'`.
+    `captionsNeedBaking` keeps its two guards (`:45-46`) and then asks
+    `captionRoute`; no file in `src/` calls it, only tests, one of which
+    this changes (`m0Exit.int`, Tests below). Chosen over a second argument to
+    `captionNeedsCanvas` because the words must be gathered one way: given
+    `captionNeedsCanvas(style, text)`, each caller would gather its own
+    text, and the preview, which holds only the line at the playhead
+    (`Preview.tsx:1847`), would route line by line, the split (a) rules
+    out. `captionNeedsCanvas(style)` stays, unchanged, as the style's
+    half: `captionsFree.int`'s table asks it per style
+    (`tests/integration/captionsFree.int.test.ts:540-541`), on Latin
+    projects, so its assertion holds.
+  - **The script test.** D8's `shapedScript` (above) over the words
+    joined by spaces: one script rule for the captions' fix, the engine
+    and the route. Of those scripts the Windows build's libass is measured
+    on two, Devanagari and Telugu, and shapes neither (§6.15, the §51
+    clusters); the rest are unmeasured there (an Arabic line may join even
+    so, through the FriBidi shaping libass has without HarfBuzz; not
+    probed). The bake is right for all of them either way, since it shapes
+    through Chromium's HarfBuzz, in a system face where no font is bundled
+    (Tamil, Arabic); only what the fallback's notice claims is held to the
+    two measured (below). (a) as you accepted it
+    named Devanagari and Telugu, `indicFontsFor`'s test, so the wider test
+    is the planner's and you can narrow it; the tests pin membership
+    (Hindi and Telugu in, Latin out), not the list. Not the transcript's
+    `language` (`src/shared/transcript.ts:37`): a mixed or mislabelled
+    transcript would route wrong.
+  - **Where the words come from.** As `buildGraphicsSpec` reads them:
+    each clip on `captionTrack(project)` (`captions/timeline.ts:30-47`,
+    the track both routes build from), its transcript's words
+    (`project.transcripts[clip.assetId]`, `fromTimeline.ts:106-107`; the
+    field is `Transcript.words`, each word's `text`,
+    `src/shared/transcript.ts:41`, `:13`), only those inside the clip's
+    window (the filter at `fromTimeline.ts:124`). So the route is per
+    export, over every word the captions would show, and a Hindi word the
+    clip trims away leaves a Latin track on libass.
+  - **The three callers.** ExportStrip asks `captionRoute(exported)` where
+    it asks `captionNeedsCanvas(style)` today (`:206`), and hands it to the
+    bake's fallback (below). Preview memoises it per edit, `const
+    captionRouting = useMemo(() => captionRoute(project), [project])`, as
+    it memoises `captionPlacement` (`:457-460`), and adds `captionRouting`
+    to draw's dependencies beside `captionPlacement` (`:1897`): the third
+    at `:1850-1851` is then asked by `captionRouting.route`, the route the
+    export will take, and a transcript's words are not joined on every
+    painted frame. The OUTPUT strip's note shows when the route is
+    `'canvas'` (`:462`), memoised the same way. The comments that name the
+    old rule are rewritten in the same commit to name `captionRoute`:
+    `placement.ts:113-118`; `fromTimeline.ts:13-15` ("Everything flat and
+    text-shaped stays on tier 1"); `ExportStrip.tsx:77-81` and `:197-204`
+    ("Only the looks libass cannot burn in come through here"); and the
+    tests' "ExportStrip routes on captionNeedsCanvas" and its kin at
+    `captionBakeLength.int.test.ts:102`, `captionBakeTiming.int.test.ts:130`,
+    `captionsFree.int.test.ts:540`, `clipIt.int.test.ts:532` and
+    `m0Exit.int.test.ts:771`. `captionNeedsCanvas`'s own comment
+    (`:55-63`) stays true of the style's half.
+  - **main.** It decides by the overlay, not the style:
+    `request.captionOverlay ? null : prepareCaptions(…)`
+    (`src/main/ipc.ts:1120-1129`), so an overlay never arrives with a
+    libass step, and no overlay means libass. That second half is the
+    failed bake's fallback: ExportStrip sends no overlay when the bake
+    throws (`ExportStrip.tsx:207-218`), and main burns the track in plain.
+    It also sends none, today with no notice, when the bake resolves null
+    (`?? undefined`, `:218`): `bakeCaptions` returns null with no spec
+    (`captionBake.ts:98`), no plan (`:105`), no band, from no ink or no 2d
+    context to measure on (`:115`), and no 2d context on a pool canvas
+    (`:148`). For a styled Latin track that is today's and not this
+    change's; for a shaped track it is the accident the route must not
+    have, an unshaped track on Windows with nothing said, so an empty bake
+    on a shaped route gets the failed bake's notice too (below). So
+    `prepareCaptions` (`src/main/captions.ts:79-103`) does not learn
+    the route: returning null for a bake-routed track would turn a failed
+    or empty bake into an export with no captions, which the fallback is
+    kept to prevent. ExportStrip is the renderer's only caller of
+    `startRender` (`:221`), and through those two branches the one path
+    that sends a bake-routed track without its overlay; each now says so.
+    What changes in main is where the guard lives: it moves, unchanged,
+    into `captionsForExport(project, canvas, overlay)` in
+    `src/main/captions.ts`, which `ipc.ts` then calls in its place
+    (`:1127-1129`), so a test reaches it.
+  - **The failed or empty bake's notice.** The fallback stays (a failed
+    export is worse); its words change, and it now covers the empty bake.
+    The bake and its fallback move out of ExportStrip (`:205-219`) into
+    `captionBakeOrFallback(route, platform, bake, notify)`, beside
+    `captionRoute` in `fromTimeline.ts`, pure but for the two functions it
+    is handed (`bakeCaptions` and ExportStrip's `notify` in the app, stubs
+    in the test): a bake that throws, or one that resolves null on a
+    `shaped` route ("nothing was drawn"), is notified with
+    `captionBakeFailedNotice(route, platform, reason)` and gives no
+    overlay; a null on an unshaped route gives none silently, as today;
+    anything else is the overlay. `platform` is `navigator.platform`, read
+    as `SettingsPanel.tsx:66-69` reads it. On Windows for an `indic`
+    track: "Captions could not be drawn, so they will be burned in plain
+    and unshaped, their letters not joined: …" (proposal); otherwise
+    today's words exactly (`:212-214`), a shaped script not measured on
+    Windows included (Arabic, above). The Mac's libass shapes Devanagari
+    and Telugu (`EFFECTS.md` §51), so its fallback is plain only.
+  - **The OUTPUT strip's note** (`OutputStrip.tsx:462-478`) reads today,
+    for a style that needs a canvas: "These captions are drawn rather than
+    burned in. They are painted once before the export and composited in
+    the same pass, so it costs a little more than a plain style — not a
+    second render." It now shows for a plain style on a shaped track too,
+    where "than a plain style" would contradict itself, so that sentence
+    ends "so it costs a little more than burning them in — not a second
+    render." on every track; and when `indic` a third follows: "Their
+    letters join, which burned-in captions cannot do on Windows, so they
+    are drawn on every computer." (proposal). The first sentence stays
+    whole, so the UI census's row for it
+    (`tests/fixtures/ui-census.json:3460`, `part: true`) holds.
+  - **The size.** A shaped track in a plain style then exports at the
+    canvas painter's size, the preview's, where the same style on a Latin
+    track keeps libass's, about 0.57× (`EFFECTS.md` §60, a step of its
+    own); the whole track moves, so no line changes size part-way.
+  - **The `\fn` tags are dropped.** Under (a) a shaped-script word reaches
+    libass only through the fallback, a bake that failed or came back
+    empty (`ExportStrip.tsx:207-218`), and both now say so (above), so
+    `captions/ass.ts`'s per-word blocks (`:202-210`) stay as they are and
+    `tests/captions.test.ts` gains nothing. Poppins' and Teko's partial
+    Devanagari (`BETA.md` R14) stays as it is for Latin-faced captions
+    that name them.
+  - **Tests.** `tests/tier2.test.ts`'s "caption routing" (`:50-90`, its
+    `project()` at `:25-46` given Hindi or Telugu words): `pop` with Hindi
+    words is `'canvas'`, `shaped` and `indic`; `pop` with Telugu,
+    `'canvas'`; `pop` with its Latin `SAMPLE`, `'libass'`; `kinetic` with
+    Latin, `'canvas'` and not `shaped`; `pop` with a mixed line (Latin and
+    one Hindi word), `'canvas'`; `pop` with the Hindi word trimmed out of
+    the clip's window, `'libass'`; `captionsNeedBaking` true for `pop`
+    with Hindi. The same file holds the notice and the fallback. The
+    notice: Win32 with Hindi, and with Telugu, says "unshaped"; MacIntel
+    with Hindi, and Win32 with a Latin `kinetic` track, give today's words
+    (no case pins a script outside the two measured, so measuring one
+    later and adding it breaks nothing). The fallback, with a stub bake
+    and a recording `notify`: a bake that rejects is notified and gives
+    `undefined`; one that resolves null on a Hindi route is notified; one
+    that resolves null on a Latin `kinetic` route gives `undefined` and no
+    notice; one that resolves an overlay returns it, with no notice.
+    `tests/captionPlacement.test.ts`'s "each route is handed the lookup"
+    (`:315-335`, its `source()` at `:316`) gains the call sites, a count
+    per file by `matchAll`: `captionRoute(` once in each of
+    `ExportStrip.tsx`, `OutputStrip.tsx` and `Preview.tsx`, and
+    `captionNeedsCanvas(` in none of them; in `ExportStrip.tsx`,
+    `captionBakeOrFallback(` once and the literal "burned in plain" none
+    (the notice's words live in the helper); in `ipc.ts`,
+    `captionsForExport(` once and `prepareCaptions(` none. Its pin of
+    Preview's old route line (`:331`) is rewritten to the new one, and
+    `captionRouting` is pinned in draw's dependencies as `captionPlacement`
+    is (`:334`), since a memoised draw without it would keep the first
+    edit's route.
+    `tests/integration/captionOverlay.int.test.ts` gains main's guard,
+    with `FORGE_TEST_USERDATA` and `FORGE_FONTS_DIR` set (the electron
+    stub has no `getAppPath`, `tests/stubs/electron.ts:5-15`): a Hindi
+    project with an overlay gets null from `captionsForExport`, and
+    without one (a failed bake) gets an `.ass`; and `buildRenderPlan`
+    given the overlay and the first call's result carries the concat
+    input (`plan.ts:1166-1170`) and no `ass=` step (`:1928-1946`).
+    `tests/integration/m0Exit.int.test.ts` changes too, or its next run
+    fails: its export asserts `captionsNeedBaking(project)` false on every
+    link, as "pop is libass's" (`:771-773`), and two of the ten links
+    carry Telugu and Hindi words (`eK71EN3P78U` and `lqOH-zxtCDE`: from
+    the last run, gitignored under `tests/output/m0-exit/`, the first's
+    `captions.ass` and `second-captions.ass` hold Telugu in all 20 and 40
+    of their `Dialogue` lines, the second's `captions.ass` Devanagari in
+    all 9). It asserts instead `captionNeedsCanvas(style)` false, the
+    style's half ("pop is flat"), and `captionRoute(project).route`
+    against a flag on the link, `indic: true` on those two in `LINKS`
+    (`:143-157`; a script flag, not a title or a word of theirs):
+    `'canvas'` there, `'libass'` on the other eight. Its export stays
+    libass on all ten, since the bake needs a DOM; on those two its
+    header's "main's `prepareCaptions` (libass, …)" (`:84-85`) and its
+    README call it what it now is there, the failed bake's fallback,
+    whose readings (the `.ass` against the run, the onsets) still hold for
+    it. Opt-in and never on CI (`:160-161`), so it is run once on the Mac
+    with `FORGE_M0_EXIT=1 FORGE_M0_REUSE=1
+    FORGE_M0_LINKS=eK71EN3P78U,lqOH-zxtCDE` before the commit.
+    Mutations, each with its failure: the script test dropped from
+    `captionRoute` (`pop` with Hindi words gives `'libass'` where
+    `'canvas'` is expected; in that m0Exit run, the two links' route);
+    the guard dropped, `captionsForExport` calling `prepareCaptions`
+    whatever arrives (the overlay case gets an `.ass` where null is
+    expected, and the plan case finds `ass=` beside the overlay); the
+    notice without "unshaped" (the Win32 Hindi case fails); the empty
+    bake's branch without its notice (the null-on-Hindi case records no
+    notice); ExportStrip's own `.catch` and its literal put back (the
+    count finds "burned in plain"); Preview put back on
+    `captionNeedsCanvas(style)` (the call-site count fails);
+    `captionRouting` dropped from draw's dependencies (its pin fails).
+  - **Order.** The route reads D8's `shapedScript`, so D10's commit lands
+    after D8's (§6.19); if D10's fonts move to phase 0 instead (§6.19),
+    the route is a commit of its own, after D8's half.
 - **The render check, on both builds.**
   `tests/integration/captions.int.test.ts`'s Indic case (EFFECTS §51; it
   already passes `assets/fonts` as `fontsdir`, `:226-227`) keeps its bar,
@@ -12555,23 +12792,27 @@ half day is R14's own, pulled forward and counted once, here.
   notice readable without signing in (as `captionsFree.int`'s are), whether
   complex differs from simple on the Windows runner, with Noto Sans present
   there: that line is the first answer to whether the 2018 build's libass
-  has HarfBuzz (EFFECTS §51 left it open). `tests/captions.test.ts` holds
-  the `\fn` tags (a Hindi word names Noto Sans Devanagari, the Latin word
-  after it names the style's face). The canvas half is the harness's (M22
-  and phase 1's Indic render check, §6.11), since painting needs a DOM
-  canvas. `tests/textPaint.test.ts` gains the font-chain case, `INDIC_FONTS`
+  has HarfBuzz (EFFECTS §51 left it open). The case writes its `.ass`
+  itself (`buildTimelineCaptions`, `:225`) and swaps the plan's caption
+  step, so it drives libass directly and the route never reaches it. The
+  canvas half is the harness's (M22 and phase 1's Indic render check,
+  §6.11), since painting needs a DOM canvas; under §16.66 (a) it is this
+  check's Indic half, a Hindi or Telugu track's captions being the
+  bake's, drawn through a caption's own bake in a Latin face by the
+  `indic` option (§6.11's table, phase 1), with the route's plan-level
+  case (above) as CI's share.
+  `tests/textPaint.test.ts` gains the font-chain case, `INDIC_FONTS`
   in `fontString`'s output before `sans-serif`. Mutations: the chain without
   `INDIC_FONTS` (the font-chain case fails, and the harness's Indic frames
-  fall back to the system face and differ from the named ones); the `\fn`
-  dropped from the Latin word after a Hindi one (`captions.test` fails); the
+  fall back to the system face and differ from the named ones); the
   files removed from the folder (the Windows notice and the Mac frames
   change). The Windows notice's question was answered first elsewhere,
   on 2026-10-27, by `graphic.int` on the Surface (§6.15): the 2018 build's
   libass does not shape. The notice is still worth building, as a
   tripwire: it is expected to read the same on that build (reading 1;
   not run itself), and would flip to DIFFER if a later Windows ffmpeg
-  brought a shaper. Under §16.66 (a) this check's Indic half moves to the
-  bake.
+  brought a shaper. Under §16.66 (a), answered 2026-10-27, this check's
+  Indic half is the bake's (above), and this case is the tripwire alone.
 - **A risk to read on the first push.** With Noto Sans Devanagari in the
   `fontsdir` on CI, libass may pick it, by glyph coverage, as the fallback
   for Latin captions whose face is absent there (Anton on CI), where the
@@ -12608,9 +12849,12 @@ edit, so the file agrees with itself:
   "after 2026-10-21", and its check line; the milestones M2 (~30.5) and M5
   (~12.5) and their sum (89.5); step 4's start, 16 days later; "Steps 5-7
   (about 23.5 days now)"; and "Your part": step 3's measurement and spike
-  rows, the graphics fixtures' hours (§6.10), and the total hours.
+  rows, the graphics fixtures' hours (§6.10), and the total hours. (Since
+  §16.66's answer, 2026-10-27, the total paragraph reads 90.75,
+  100.25-103.75 and 106.25-109.75, with a third delta table and a line of
+  arithmetic for it.)
 - **§3a's day count**: the line that put §2's total at 85-88.5 notes the
-  re-plan's 100-103.5.
+  re-plan's 100-103.5 (100.25-103.75 since 2026-10-27).
 - **§8.4**: the social quote card's files are `templates/quote.ts`'s
   `social` branch and `components/GraphicPanel.tsx`, where §8.4 said
   `graphics/paint.ts` and `tools/GraphicPanel.tsx`.
@@ -13823,7 +14067,7 @@ with a window, so `-ss` and `-t` are scanned too. So have 1f's shapes since
 | a graphic that cannot be baked | dropped from the export with a note; the export succeeds (a dropped screen card also strikes its two opacity keys from the recording, §6.16) | `graphic.int` |
 | no subject track (no AI helper, Follow the subject not run, or a track of another version) | `callout` not offered (and dropped with rule 9's note, "no subject found to point at", if an answer names one); placement takes the style's third (§6.9); a graphic's dim is drawn with no hole (§6.2, §6.9) | `graphicPlace.test.ts`; `graphic.int`'s no-track case |
 | no sound for a graphic (the library pack not installed, or no file for a role) | the graphic is placed silent, with one note: "no sound library is installed — graphics land silent" (§6.14) | `graphicSound.test.ts`' empty-library case |
-| an Indic font missing (before §6.20 lands, or where its files are absent) | Hindi and Telugu draw with the system's fallback, the one M22 recorded per machine on the canvas, CoreText's through libass on the Mac, and the 2018 build's unmeasured one on Windows; the graphic is kept, with the note "Hindi and Telugu are drawn in this computer's own font" (§6.3) | `tests/textPaint.test.ts`' font-chain case (§6.20) |
+| an Indic font missing (before §6.20 lands, or where its files are absent) | Hindi and Telugu draw with the system's fallback, the one M22 recorded per machine on the canvas, CoreText's through libass on the Mac, and the 2018 build's unmeasured one on Windows (since §16.66 (a), 2026-10-27, captions in these scripts are to take the bake, libass only a failed or empty bake's fallback, and on Windows that fallback is measured unshaped, its face not named, `EFFECTS.md` §61); the graphic is kept, with the note "Hindi and Telugu are drawn in this computer's own font" (§6.3) | `tests/textPaint.test.ts`' font-chain case (§6.20) |
 | the recording's frames for a screen card (a steadied clip, the file gone, a pull that fails) | a steadied clip is not offered the card; a pull that fails drops the card from the export with its note and strikes its two keys, so the recording plays from its first frame (§6.16) | `graphic.int`'s phase-3 case |
 | the hand finder (phase 4) | without the AI helper, or with a failed faces self-test, the pointing switch is greyed "needs the AI helper" with the pointer to Settings, and anchored callouts already kept still draw from `Project.hands`; with the helper and no model, the switch is greyed "needs the hand finder" beside the press "Get the hand finder · 7.8 MB", and nothing downloads until it is pressed (§0); a pointing ask without the model fails `model-missing` before any work (§6.18) | `reframeJob.int`'s hands case; `pointingToggle.test.tsx`; census rows |
 | a hand track of another version or size, or a point off screen at onset, or no free third (phase 4) | the track is ignored for new proposals and the switch says "find the points again", kept anchors keeping their stored events; a point off screen, or with no free third, is not offered (§6.18) | `handsAnchor.test.ts` |
@@ -14149,9 +14393,9 @@ H11, and H12 again, in phase 4.
   face installed on Windows, all but certainly one with Indic layout
   tables (no file in `assets/fonts` carries Telugu; §6.15), so the 2018
   build's libass does not shape Hindi or Telugu (the first reading; the
-  route for those captions is §16.66, yours). Your eye on the app's sheet
-  passed on the Mac on 2026-10-22 (§6.15). Open: the Surface's six calls
-  and your eye on its sheet there.
+  route for those captions is §16.66, answered (a) on 2026-10-27). Your
+  eye on the app's sheet passed on the Mac on 2026-10-22 (§6.15). Open:
+  the Surface's six calls and your eye on its sheet there.
 - **Row 59 (M21): not measured.** Its gated case is built (`fca8194`) and
   waits on your Hindi clips.
 
@@ -15092,7 +15336,7 @@ what is needed, where the answer waits on something not yet in hand.
     Speaker).
 
 **Added 2026-10-27, from the Surface's libass run (§6.15; measured in
-`EFFECTS.md` §61).** It is **OPEN**.
+`EFFECTS.md` §61); answered the same day as recommended.**
 
 66. **The route for Hindi and Telugu captions, now that the Windows
     build's libass does not shape them** (the Surface, 2026-10-27). Your
@@ -15157,9 +15401,19 @@ what is needed, where the answer waits on something not yet in hand.
     on a route that already exists, and the only one that joins them on
     Windows.
 
-    **Answer (2026-10-27): OPEN.** Needed: your choice. Until it is given,
-    no commit changes the caption route, and §6.20's libass half (the
-    `\fn` tags) waits on it.
+    **Answer (2026-10-27): (a)**, as recommended ("a is good"). A caption
+    track whose words hold Devanagari or Telugu goes through the canvas
+    bake on both platforms, the whole track, never per word; libass keeps
+    every other track, and a failed or empty bake's fallback to libass
+    says, on Windows, that it is unshaped. §6.20 is to build it, in D10's
+    half ("The route (§16.66 (a))"; nothing of it is built yet): one
+    function that the export, the preview's placement and the OUTPUT strip
+    all ask (main still decides by whether an overlay arrived), its script
+    test widened by the planner to D8's `shapedScript` ((a) as you
+    accepted it named Devanagari and Telugu; you can narrow it back), the
+    "unshaped" notice held to those two, the scripts measured; the `\fn`
+    tags are dropped. The estimate above, that §6.20's day would not grow,
+    was low: D10's half is 0.75 and §6.20 1.25 (§2).
 
 ---
 

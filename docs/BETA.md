@@ -369,17 +369,22 @@ Things testers will notice but can follow the first installer:
   letters in a system face (not named in the report), unshaped at
   `shaping=complex`, so the build does not shape Hindi or Telugu (the
   Telugu row, drawn in a face installed on Windows, settles it: `CLIPS.md`
-  §6.15); the route for those captions is `CLIPS.md` §16.66, open,
-  recommended: the canvas bake for those tracks on both platforms.
+  §6.15); the route for those captions is `CLIPS.md` §16.66, answered
+  (a) on 2026-10-27: the canvas bake for those tracks on both platforms,
+  the whole track.
   **Decided 2026-10-21** (`CLIPS.md` §16.63, D10 of the
   graphics research): bundle Noto Sans Devanagari and Noto Sans Telugu
   (OFL, the licence of the pack's Google fonts) and have a Hindi or Telugu
   transcript's captions and graphics name them, so both platforms draw the
-  same letters instead of whatever each system falls back to (how the
-  captions name them, libass's `\fn` tags or the canvas bake, waits on
-  `CLIPS.md` §16.66). Built in
+  same letters instead of whatever each system falls back to (the
+  captions are to name them through the canvas bake's font chain, since
+  under `CLIPS.md` §16.66 (a) a Hindi or Telugu track will be the bake's,
+  libass only a failed or empty bake's fallback; the `\fn` tags are
+  dropped; not built yet). Built in
   `CLIPS.md` §6.20, before step 3's phase-1 Indic render check, with a
-  render check on both builds; this item's half day is counted there, once.
+  render check on both builds; this item's half day is counted there, once,
+  with the quarter day the route of `CLIPS.md` §16.66 (a) adds beside it
+  (0.75 in all, 2026-10-27).
   The two Regular files are to be committed under `assets/fonts/`, each with its
   own OFL text beside it (`.gitignore`'s `/assets` narrowed to let exactly
   those four files through), so CI's libass draws them too, and main's scan

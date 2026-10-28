@@ -8765,7 +8765,9 @@ passed on 2026-10-22). Which route Hindi and Telugu captions take is the
 user's decision, opened as `CLIPS.md` §16.66 (recommended: the canvas
 bake for every caption track whose words hold Devanagari or Telugu, on
 both platforms); until it is answered no commit changes the caption
-route, and §6.20's libass half waits on it. M22's verdict on the canvas
+route, and §6.20's libass half waits on it. (Answered the same day:
+(a), as recommended; §6.20 is to build the route, not built yet, and
+drops its libass half, the `\fn` tags.) M22's verdict on the canvas
 painter is untouched, since it is not libass. The Surface's six console
 calls, its eye check and M21 have not run.
 
@@ -9502,7 +9504,10 @@ parallel lanes began, and passed alone and on the rerun.
    byte-identical), where the sheets show letters, visibly unshaped at
    `shaping=complex`. So every Hindi or Telugu caption libass burns on
    Windows comes out unshaped whatever the font; the route for them is
-   the user's decision, `CLIPS.md` §16.66.
+   to be the canvas bake on both platforms, the user's answer (a) of
+   2026-10-27 (`CLIPS.md` §16.66), planned in its §6.20 and not built:
+   until it lands, a plain-style Hindi or Telugu track still goes to
+   libass.
 4. **The measuring code reads what it says**: per frame, with its
    conditions, on the canvas that ships, and with the shaping readings
    that can tell shaped from unshaped. In the pane's Chrome 152 (.167),
@@ -9536,13 +9541,13 @@ parallel lanes began, and passed alone and on the rerun.
 
 - **M22's eye check on the Surface**: the user's verdict on the development
   app's `indic` sheet against `complex.png` and `simple.png` there (the
-  Mac's was given 2026-10-22: pass). The user's.
+  Mac's was given 2026-10-22: pass), with its bar turned round, since the
+  Surface's `complex.png` is unshaped (above): the row passes where the
+  user's three signs are absent, matching the Mac's `complex.png`, and
+  fails where it looks like the Surface's (`CLIPS.md` §6.15). The user's.
 - **Every Surface run but `graphic.int`** (done 2026-10-27: it does not
   shape, above): the six options, and so every phase-0 decision, and the
   eye check (the bullet above). The user's.
-- **`CLIPS.md` §16.66**: the route for Hindi and Telugu captions, now that
-  the Windows build's libass does not shape them (recommended: the canvas
-  bake for those tracks on both platforms). The user's decision.
 - **The Windows sheets**: not uploaded by CI (above).
 - **Why the canvas's own encode at pool 4 moved**, from 17.6 ms in the
   pane to 24.90 in the app (twice): not measured. On the Mac it turns
