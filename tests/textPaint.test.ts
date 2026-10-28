@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { drawTextOnto } from '@shared/render/textPaint'
 import { ASCENT, LINE_HEIGHT, layoutText } from '@shared/render/textLayout'
+import { STILL, stepAt, textAnimationById } from '@shared/render/textAnimation'
 import { DEFAULT_TEXT, type TextSpec } from '@shared/timeline'
 
 /**
@@ -19,6 +20,8 @@ interface Placed {
   text: string
   y: number
   px: number
+  /** The fillStyle set when this fillText ran. */
+  fill: string
 }
 
 /** A 2D context that measures a glyph as 0.6 of the font size and remembers each fillText. */
@@ -33,7 +36,15 @@ function fakeContext(): { ctx: CanvasRenderingContext2D; placed: Placed[] } {
     {
       get(_target, key) {
         if (key === 'measureText') return (text: string) => ({ width: text.length * pxOf() * 0.6 })
-        if (key === 'fillText') return (text: string, _x: number, y: number) => placed.push({ text, y, px: pxOf() })
+        if (key === 'fillText')
+          return (text: string, _x: number, y: number) =>
+            placed.push({
+              text,
+              y,
+              px: pxOf(),
+              // A gradient here is the stub, which has no string form.
+              fill: typeof state.fillStyle === 'string' ? state.fillStyle : 'not a colour'
+            })
         if (key in state) return state[key]
         return () => stub
       },
@@ -96,5 +107,65 @@ describe('rows of different sizes', () => {
     expect(rows.map((r) => r.text)).toEqual(['ONE', 'TWO'])
     expect(rows[0].y).toBe(layout.firstBaseline)
     expect(rows[1].y - rows[0].y).toBe(layout.lineHeight)
+  })
+})
+
+/*
+ * Letters in motion, in a script whose letters join (D8, CLIPS §6.20, §16.61).
+ *
+ * `bounce` moves each letter, and the painter drew each code point with a
+ * fillText of its own: प्रिय went out as प, ्, र, ि and य, a conjunct pulled
+ * apart and an i-matra after its consonant. Each call a canvas makes shapes
+ * only the string it is given, so the test of the fix is what reaches fillText.
+ */
+describe('a shaped line under a letter animation', () => {
+  const HINDI = 'प्रिय मित्र किताब'
+  const WORDS = HINDI.split(' ')
+  const ACCENT = '#ff0000'
+  // 0.3 s in: bounce's three word starts are 0, 0.125 and 0.25 s apart, so all
+  // three are in flight and none has settled.
+  const MID = { frame: 9, fps: 30 }
+  // Small enough that the line stays one row: the accent is counted along a row.
+  const hindi = (over: Partial<TextSpec> = {}): TextSpec =>
+    spec({ content: HINDI, size: 0.03, styleId: undefined, animationId: 'bounce', ...over })
+
+  it('the frame chosen is mid-flight for every word', () => {
+    const bounce = textAnimationById('bounce')!
+    expect(bounce.scope).toBe('char')
+    for (let index = 0; index < WORDS.length; index++) {
+      const step = stepAt(bounce, MID.frame, MID.fps, index, WORDS.length)
+      expect(step, `word ${index}`).not.toEqual(STILL)
+      expect(step.alpha, `word ${index}`).toBeGreaterThan(0.002)
+    }
+  })
+
+  it('a Hindi line under bounce at a mid frame draws only whole words', () => {
+    const { ctx, placed } = fakeContext()
+    drawTextOnto(ctx, hindi(), W, H, MID)
+    expect(new Set(placed.map((p) => p.y)).size, 'one row').toBe(1)
+    expect(placed.length).toBeGreaterThan(0)
+    for (const p of placed) expect(WORDS, `fillText("${p.text}")`).toContain(p.text)
+    expect(new Set(placed.map((p) => p.text))).toEqual(new Set(WORDS))
+  })
+
+  it('an accent on word 1 lands on the second word’s call', () => {
+    const { ctx, placed } = fakeContext()
+    drawTextOnto(ctx, hindi({ highlight: { word: 1, color: ACCENT } }), W, H, MID)
+    expect(new Set(placed.map((p) => p.y)).size, 'one row').toBe(1)
+    const accented = placed.filter((p) => p.fill === ACCENT)
+    expect(accented.length).toBeGreaterThan(0)
+    for (const p of accented) expect(p.text).toBe(WORDS[1])
+    for (const word of [WORDS[0], WORDS[2]]) {
+      expect(placed.some((p) => p.text === word && p.fill !== ACCENT), word).toBe(true)
+    }
+  })
+
+  it('a Latin line under bounce still draws letter by letter, its accent on each letter of its word', () => {
+    // The fallback is for shaped scripts alone: Latin keeps its per-letter
+    // bounce, and the accent still becomes "every letter of word two".
+    const { ctx, placed } = fakeContext()
+    drawTextOnto(ctx, hindi({ content: 'ab cd', highlight: { word: 1, color: ACCENT } }), W, H, MID)
+    expect(new Set(placed.map((p) => p.text))).toEqual(new Set(['A', 'B', 'C', 'D']))
+    expect(new Set(placed.filter((p) => p.fill === ACCENT).map((p) => p.text))).toEqual(new Set(['C', 'D']))
   })
 })

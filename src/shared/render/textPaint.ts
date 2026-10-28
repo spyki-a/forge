@@ -486,7 +486,9 @@ function paintAnimated(
    * The accent is indexed by WORD, but a character-scope animation counts
    * LETTERS — so an accent on word two has to become "every letter of word two",
    * or it would land on the second letter of word one. Word scope is the easy
-   * case, where a piece and a word are the same thing.
+   * case, where a piece and a word are the same thing. A shaped-script line
+   * under character scope is cut into words already (`piecesOf`), and the gap
+   * count below still gives each of them its own word's number.
    */
   const accentPieces = new Set<number>()
   if (accent) {

@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import {
+  SHAPED_SCRIPTS,
   STILL,
   TEXT_ANIMATIONS,
   animationFrames,
   piecesOf,
+  shapedScript,
   stepAt,
   textAnimationById,
   type TextAnimation
@@ -181,5 +183,113 @@ describe('piecesOf', () => {
   it('survives text with nothing in it', () => {
     expect(piecesOf('', 'word')).toEqual([])
     expect(piecesOf('', 'char')).toEqual([])
+  })
+})
+
+/*
+ * Lines whose letters join or reorder (D8, CLIPS §6.20, §16.61).
+ *
+ * `bounce` and `wave` move letters, and a letter was a code point: प्रिय came
+ * apart into प, ्, र, ि and य, each drawn by itself, so the conjunct lost its
+ * shape and the i-matra sat after its consonant instead of before it. Such a
+ * line now moves by word, the smallest piece a canvas always draws whole.
+ */
+const HINDI = 'प्रिय मित्र किताब'
+const HINDI_WORDS = ['प्रिय', ' ', 'मित्र', ' ', 'किताब']
+const TELUGU = 'నమస్కారం తెలుగు మిత్రమా'
+const TELUGU_WORDS = ['నమస్కారం', ' ', 'తెలుగు', ' ', 'మిత్రమా']
+const MIXED = 'hello प्रिय world'
+const LATIN = 'hello world'
+const CYRILLIC = 'привет мир'
+
+describe('piecesOf a shaped script', () => {
+  it('moves a Hindi line by word under character scope', () => {
+    expect(piecesOf(HINDI, 'char')).toEqual(HINDI_WORDS)
+    expect(piecesOf(HINDI, 'char')).toEqual(piecesOf(HINDI, 'word'))
+  })
+
+  it('moves a Telugu line by word under character scope', () => {
+    expect(piecesOf(TELUGU, 'char')).toEqual(TELUGU_WORDS)
+    expect(piecesOf(TELUGU, 'char')).toEqual(piecesOf(TELUGU, 'word'))
+  })
+
+  it('moves a mixed line by word whole, its Latin words included', () => {
+    expect(piecesOf(MIXED, 'char')).toEqual(['hello', ' ', 'प्रिय', ' ', 'world'])
+    expect(piecesOf(MIXED, 'char')).toEqual(piecesOf(MIXED, 'word'))
+  })
+
+  it('still cuts every other line into code points, exactly as before', () => {
+    // The fallback is for shaped scripts alone: a Latin, Cyrillic, Greek or
+    // CJK line under `bounce` gets the very pieces it got before D8's fix.
+    for (const line of [LATIN, CYRILLIC, 'ab c', 'Γειά σου', '日本語 です', 'Bride 5:30pm!']) {
+      expect(piecesOf(line, 'char'), line).toEqual(Array.from(line))
+    }
+  })
+
+  it('leaves word and block scope as they were for a shaped line', () => {
+    expect(piecesOf(HINDI, 'word')).toEqual(HINDI_WORDS)
+    expect(piecesOf(HINDI, 'block')).toEqual([HINDI])
+  })
+})
+
+describe('shapedScript', () => {
+  it('is true for Devanagari, Telugu and a line mixing one in', () => {
+    expect(shapedScript(HINDI)).toBe(true)
+    expect(shapedScript(TELUGU)).toBe(true)
+    expect(shapedScript(MIXED)).toBe(true)
+  })
+
+  it('is false for Latin and Cyrillic, and for nothing', () => {
+    expect(shapedScript(LATIN)).toBe(false)
+    expect(shapedScript(CYRILLIC)).toBe(false)
+    expect(shapedScript('')).toBe(false)
+  })
+
+  it('gives the same answer however often it is asked', () => {
+    // A stateful regex (a `g` flag on a shared one) answers true, then false
+    // once its lastIndex has walked past the last shaped letter. Asked of one
+    // line in a row: a miss in between would reset it and hide the fault.
+    for (let i = 0; i < 24; i++) expect(shapedScript(MIXED), `call ${i}`).toBe(true)
+    for (let i = 0; i < 24; i++) expect(shapedScript(LATIN), `call ${i}`).toBe(false)
+  })
+
+  it('holds Devanagari and Telugu, the scripts D8 names first', () => {
+    // Membership, never the list: CLIPS §6.20 records the list as a proposal
+    // for the user to narrow or extend.
+    expect(SHAPED_SCRIPTS).toContain('Devanagari')
+    expect(SHAPED_SCRIPTS).toContain('Telugu')
+  })
+
+  it('reads a sample of each script it lists', () => {
+    // Iterates the constant, so a script narrowed away is simply not tried, and
+    // one added without a sample here is still compiled below.
+    const samples: Partial<Record<string, string>> = {
+      Devanagari: 'किताब',
+      Bengali: 'বাংলা',
+      Gurmukhi: 'ਪੰਜਾਬੀ',
+      Gujarati: 'ગુજરાતી',
+      Oriya: 'ଓଡ଼ିଆ',
+      Tamil: 'தமிழ்',
+      Telugu: 'తెలుగు',
+      Kannada: 'ಕನ್ನಡ',
+      Malayalam: 'മലയാളം',
+      Sinhala: 'සිංහල',
+      Arabic: 'عربي',
+      Syriac: 'ܣܘܪܝܝܐ',
+      Thai: 'ไทย',
+      Lao: 'ລາວ',
+      Tibetan: 'བོད',
+      Myanmar: 'မြန်မာ',
+      Khmer: 'ខ្មែរ'
+    }
+    for (const script of SHAPED_SCRIPTS) {
+      // Each name must be one the regex engine knows as a script.
+      expect(() => new RegExp(`\\p{Script=${script}}`, 'u'), script).not.toThrow()
+      const sample = samples[script]
+      if (!sample) continue
+      expect(new RegExp(`\\p{Script=${script}}`, 'u').test(sample), `${script} sample`).toBe(true)
+      expect(shapedScript(sample), script).toBe(true)
+      expect(shapedScript(`ok ${sample}`), `${script} mixed`).toBe(true)
+    }
   })
 })

@@ -18,7 +18,8 @@
  *
  * Pieces are WORDS or CHARACTERS. Words are what most captions animate and are
  * far cheaper; characters are for a wave or a bounce, where the whole effect is
- * letters moving against each other.
+ * letters moving against each other. A line in a script whose letters join or
+ * reorder moves by word instead (`shapedScript`, below).
  */
 
 export type Scope = 'word' | 'char' | 'block'
@@ -238,9 +239,70 @@ export function animationBounds(animation: TextAnimation): {
   return { dx, dy, scale }
 }
 
-/** Splitting a line into the pieces an animation moves. */
+/**
+ * The scripts whose letters join or reorder as they are set.
+ *
+ * In these a code point is not a letter on its own. A Devanagari conjunct is
+ * two consonants and a virama drawn as one shape, and the i-matra of कि is
+ * stored after the consonant but drawn before it; Arabic joins each letter to
+ * its neighbours. Cut such a line into code points and draw each by itself, as
+ * `bounce` and `wave` did, and the conjunct falls apart into its parts and the
+ * vowel sign lands on the wrong side of its consonant.
+ *
+ * The ten Indic scripts are D8's (CLIPS §16.61). The seven after them extend
+ * it: they join or reorder their letters too, so a split by code point breaks
+ * them the same way. A proposal recorded in CLIPS §6.20 for the user to narrow,
+ * so the tests pin membership, never this list. Unicode script names, as
+ * `\p{Script=…}` takes them.
+ */
+export const SHAPED_SCRIPTS = [
+  'Devanagari',
+  'Bengali',
+  'Gurmukhi',
+  'Gujarati',
+  'Oriya',
+  'Tamil',
+  'Telugu',
+  'Kannada',
+  'Malayalam',
+  'Sinhala',
+  'Arabic',
+  'Syriac',
+  'Thai',
+  'Lao',
+  'Tibetan',
+  'Myanmar',
+  'Khmer'
+] as const
+
+const SHAPED = new RegExp(SHAPED_SCRIPTS.map((script) => `\\p{Script=${script}}`).join('|'), 'u')
+
+/**
+ * Whether a line holds any code point of a script that joins or reorders
+ * (`SHAPED_SCRIPTS`): a letter, a mark or a digit of it alike.
+ *
+ * One is enough: the whole line then animates by word (CLIPS §6.20).
+ */
+export function shapedScript(text: string): boolean {
+  return SHAPED.test(text)
+}
+
+/**
+ * Splitting a line into the pieces an animation moves.
+ *
+ * `char` scope cuts a line into code points, so a combining mark, an emoji
+ * modifier or the halves of a flag become pieces of their own (older than D8
+ * and outside it). A line holding a shaped script (`shapedScript`) falls back
+ * to words, all of it, a Latin word beside a Hindi one included (D8, CLIPS
+ * §6.20, §16.61): a word is the smallest piece that is always drawn whole.
+ * Callers split each wrapped row on its own, so a row of a wrapped paragraph
+ * with no shaped code point still moves by code point. For a right-to-left
+ * script the fallback fixes the joining only; the pieces are still laid out in
+ * logical order, a defect older than D8. Every caller counts these same
+ * pieces, so the timing follows the fallback too.
+ */
 export function piecesOf(text: string, scope: Scope): string[] {
   if (scope === 'block') return [text]
-  if (scope === 'char') return Array.from(text)
+  if (scope === 'char' && !shapedScript(text)) return Array.from(text)
   return text.split(/(\s+)/).filter((p) => p.length > 0)
 }
