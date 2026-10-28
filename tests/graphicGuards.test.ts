@@ -68,9 +68,13 @@ describe('the constant', () => {
     expect(LIVE_DRAWN_FIELDS).toContain('graphic')
     expect(LIVE_DRAWN_FIELDS).not.toContain('solid')
     expect(LIVE_DRAWN_FIELDS).not.toContain('title')
-    // The live list is the whole one less those two: every other kind is drawn live.
+    /*
+     * The live list is a part of the whole one and holds every kind drawn live
+     * today. Membership, not the set: a later kind the preview shows from its
+     * baked file, as it does solid and title, is rightly left out of it.
+     */
     for (const field of LIVE_DRAWN_FIELDS) expect(SELF_DRAWN_FIELDS).toContain(field)
-    for (const field of SELF_DRAWN_FIELDS) if (field !== 'solid' && field !== 'title') expect(LIVE_DRAWN_FIELDS, field).toContain(field)
+    for (const field of ['text', 'paper', 'carousel', 'moment'] as const) expect(LIVE_DRAWN_FIELDS, field).toContain(field)
   })
 })
 
@@ -162,6 +166,10 @@ const spelledIn = (file: string, text: string): string[] => {
     .map((line) => `${file}: ${line}`)
 }
 
+/** The preview's readiness gate and `ready`, each body whole and nothing between them. */
+const GATE =
+  /const drawsItself = \(layer: Layer\): boolean =>\s*LIVE_DRAWN_FIELDS\.some\(\(field\) => Boolean\(layer\.clip\[field\]\)\)\s+const ready = \(layer: Layer\): boolean =>\s*drawsItself\(layer\) \? true : elementReady\(layer\.element\)\r?\n/g
+
 const SITES = [
   'src/shared/edit/recipes.ts',
   'src/renderer/src/components/Preview.tsx',
@@ -210,8 +218,15 @@ describe('no list of self-drawn fields is spelled out again', () => {
     // The bare name also occurs in the import, so the use expression is what is counted.
     expect([...preview.matchAll(/LIVE_DRAWN_FIELDS\.some\(/g)]).toHaveLength(1)
     expect([...preview.matchAll(/const drawsItself = \(layer: Layer\): boolean =>/g)]).toHaveLength(1)
-    expect(preview).toMatch(/const drawsItself = \(layer: Layer\): boolean =>\s*LIVE_DRAWN_FIELDS\.some\(\(field\) => Boolean\(layer\.clip\[field\]\)\)/)
     expect([...preview.matchAll(/drawsItself\(layer\) \? true : elementReady\(layer\.element\)/g)]).toHaveLength(1)
-    expect(preview).not.toMatch(/SELF_DRAWN_FIELDS/)
+    /*
+     * Both bodies whole, from the gate's declaration to the end of `ready`'s
+     * line. Preview has no behaviour test, so this is the gate's only guard,
+     * and a prefix is not one: `… || Boolean(layer.clip.solid)` shows solid
+     * before its file, `… || SELF_DRAWN_FIELDS.some(…)` solid and title
+     * before theirs, and `… && !layer.clip.graphic` holds a graphic at the
+     * gate for good, each after a prefix that still matches.
+     */
+    expect([...preview.matchAll(GATE)]).toHaveLength(1)
   })
 })

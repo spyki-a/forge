@@ -504,7 +504,12 @@ describe('a clip that draws itself', () => {
      */
     expect(LIVE_DRAWN_FIELDS).toContain('paper')
     expect([...preview.matchAll(/const drawsItself = \(layer: Layer\): boolean =>/g)]).toHaveLength(1)
-    expect(preview).toMatch(/const drawsItself = \(layer: Layer\): boolean =>\s*LIVE_DRAWN_FIELDS\.some\(\(field\) => Boolean\(layer\.clip\[field\]\)\)/)
+    // The gate and `ready` whole, to the end of its line: a prefix still matches `… || layer.clip.solid`.
+    expect([
+      ...preview.matchAll(
+        /const drawsItself = \(layer: Layer\): boolean =>\s*LIVE_DRAWN_FIELDS\.some\(\(field\) => Boolean\(layer\.clip\[field\]\)\)\s+const ready = \(layer: Layer\): boolean =>\s*drawsItself\(layer\) \? true : elementReady\(layer\.element\)\r?\n/g
+      )
+    ]).toHaveLength(1)
     expect(preview).toMatch(/drawsItself\(layer\) \? true : elementReady\(layer\.element\)/)
     // The old one-sided form must not come back.
     expect(preview).not.toMatch(/layer\.clip\.text \? true : elementReady/)

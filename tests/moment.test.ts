@@ -630,7 +630,12 @@ describe('a moment is a self-drawing clip on every guard', () => {
     expect(SELF_DRAWN_FIELDS).toContain('moment')
     expect(LIVE_DRAWN_FIELDS).toContain('moment')
     expect([...preview.matchAll(/const drawsItself = \(layer: Layer\): boolean =>/g)]).toHaveLength(1)
-    expect(preview).toMatch(/const drawsItself = \(layer: Layer\): boolean =>\s*LIVE_DRAWN_FIELDS\.some\(\(field\) => Boolean\(layer\.clip\[field\]\)\)/)
+    // The gate and `ready` whole, to the end of its line: a prefix still matches `… && !layer.clip.moment`.
+    expect([
+      ...preview.matchAll(
+        /const drawsItself = \(layer: Layer\): boolean =>\s*LIVE_DRAWN_FIELDS\.some\(\(field\) => Boolean\(layer\.clip\[field\]\)\)\s+const ready = \(layer: Layer\): boolean =>\s*drawsItself\(layer\) \? true : elementReady\(layer\.element\)\r?\n/g
+      )
+    ]).toHaveLength(1)
     const at = preview.indexOf('const sourceFor = (layer: Layer)')
     expect(at).toBeGreaterThan(-1)
     const body = preview.slice(at, at + 2200)
