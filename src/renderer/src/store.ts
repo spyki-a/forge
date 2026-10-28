@@ -32,6 +32,7 @@ import type {
   TextSpec
 } from '@shared/timeline'
 import { DEFAULT_COLOR, DEFAULT_TEXT, clipCoversFrame } from '@shared/timeline'
+import { CLEAN_GRAPHIC_STYLE } from '@shared/graphics/style'
 import { withMotion, withoutMotionForZoom } from '@shared/edit/camera'
 import {
   withMaskAnimation,
@@ -1101,6 +1102,10 @@ interface EditorState {
   setCaptionPlacement: (placement: 'style' | 'smart') => void
   setCaptionOverride: (key: string, value: unknown) => void
   clearCaptionOverrides: () => void
+  /** The project's graphic style (docs/CLIPS.md §6.5): keeps the text style and the accent colour, as `setCaptionStyle` keeps the look. One undo. */
+  setGraphicsStyle: (styleId: string) => void
+  /** One key of the graphic style's overrides (a `GRAPHIC_OVERRIDE_KEYS` key, guarded on read by `resolveGraphicStyle`); undefined removes it. One undo. */
+  setGraphicsOverride: (key: string, value: unknown) => void
   /** 0 = all output, 1 = all source, anything between splits the preview. */
   splitRatio: number
   setSplitRatio: (ratio: number) => void
@@ -4950,6 +4955,42 @@ export const useEditor = create<EditorState>((set, get) => ({
     get().update((p) => {
       const { placement: _was, ...captions } = p.captions
       return { ...p, captions: placement === 'smart' ? { ...captions, placement } : captions }
+    }),
+
+  /*
+   * The graphic style's two setters (docs/CLIPS.md §6.5), the captions' twins.
+   * A project with no `graphics` is 'clean' with sounds on (timeline.ts), so
+   * the first write spells that out and changes nothing else. Values are
+   * stored as given and guarded on read, by `resolveGraphicStyle`, as the
+   * caption overrides are by `resolveStyle`. The rebake of every graphic clip
+   * a change asks for (§6.5's UI) joins with `rebakeGraphic` (§6.3), which
+   * does not exist yet.
+   */
+  setGraphicsStyle: (styleId) =>
+    get().update((p) => {
+      /*
+       * A preset resets the rest and keeps the text style and the accent
+       * colour (§6.5's UI: "Picking a preset keeps `textStyleId` and the
+       * accent"), for setCaptionStyle's reason above: the two choices most
+       * likely made on purpose.
+       */
+      const was = p.graphics?.overrides ?? {}
+      const kept: Record<string, unknown> = {}
+      if (was.textStyleId !== undefined) kept.textStyleId = was.textStyleId
+      if (was['palette.accent'] !== undefined) kept['palette.accent'] = was['palette.accent']
+      return { ...p, graphics: { sound: true, ...p.graphics, styleId, overrides: kept } }
+    }),
+
+  setGraphicsOverride: (key, value) =>
+    get().update((p) => {
+      // Undefined removes the key, as setCaptionOverride does, so a reset leaves no empty override behind.
+      const next = { ...(p.graphics?.overrides ?? {}) }
+      if (value === undefined) delete next[key]
+      else next[key] = value
+      return {
+        ...p,
+        graphics: { styleId: CLEAN_GRAPHIC_STYLE.id, sound: true, ...p.graphics, overrides: next }
+      }
     }),
 
   setPlayhead: (frame) => {
