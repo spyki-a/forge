@@ -214,10 +214,12 @@ describe('the curves', () => {
     expect(residual, `the residual at k = ${k}`).toBeLessThanOrEqual(0.0011)
   })
 
-  it('every curve, and spring1, reads exactly 0 below 0 and exactly 1 above 1, the same way', () => {
+  it('every curve, and spring1, reads exactly 0 below 0 and exactly 1 above 1, and NaN at NaN, the same way', () => {
     // progress clamps before it calls a curve; a template calling one directly
     // with an unclamped x must not get out-cubic's −2.375 at −0.5 from one name
-    // and a Bézier's 0 from another.
+    // and a Bézier's 0 from another. NaN stays NaN, as unit's comment promises
+    // and a Bézier keeps it: a clamp that read NaN as 0 would hide a broken
+    // time behind a curve at rest.
     const eases: [string, (x: number) => number][] = [
       ...CURVE_NAMES.map((name): [string, (x: number) => number] => [name, curve(name)]),
       ['spring1', easeCurve('spring1')]
@@ -225,6 +227,7 @@ describe('the curves', () => {
     for (const [name, f] of eases) {
       for (const x of [-0.5, -1e-9, -10]) expect(f(x), `${name} at ${x}`).toBe(0)
       for (const x of [1.5, 1 + 1e-9, 10]) expect(f(x), `${name} at ${x}`).toBe(1)
+      expect(f(Number.NaN), `${name} at NaN`).toBeNaN()
     }
   })
 })
@@ -390,14 +393,17 @@ describe('progress', () => {
     }
   })
 
-  it('with a duration not above 0 is a cut at its start: 0 before it, 1 at it and after, under every ease', () => {
+  it('with a duration not above 0 is a cut at its start, less the 1e-6 s allowance: 0 before it, 1 at it and after, under every ease', () => {
     const start = 2
     for (const ease of EASES) {
       for (const seconds of [0, -0.35, -5, Number.NaN]) {
+        // start − 1.1e-6 lies outside the 1e-6 s allowance and reads 0; start −
+        // 0.5e-6 lies inside it and reads 1, as a timed move's end does (the
+        // before-start case), so the cut keeps the allowance too.
         for (const t of [0, start - 1e-3, start - 2e-6, start - 1.1e-6]) {
           expect(progress(t, start, seconds, ease), `${ease}, ${seconds} s, at ${t}`).toBe(0)
         }
-        for (const t of [start, start + 1e-9, start + 0.35, start + 10]) {
+        for (const t of [start - 0.5e-6, start, start + 1e-9, start + 0.35, start + 10]) {
           expect(progress(t, start, seconds, ease), `${ease}, ${seconds} s, at ${t}`).toBe(1)
         }
       }
@@ -483,8 +489,12 @@ describe('the entrances and the durations', () => {
     }
     // swap is "the old element's exit in a content swap": no longer than an exit.
     expect(DURATIONS.swap, 'swap against exit').toBeLessThanOrEqual(DURATIONS.exit)
-    // headGrow is "the riding head's scale-in": shorter than an entrance.
-    expect(DURATIONS.headGrow, 'headGrow against entrance').toBeLessThan(DURATIONS.entrance)
+    // headGrow is "the riding head's scale-in", and the head belongs to a
+    // stroke, not an entrance: §6.3 runs its grow "0 to 1 over
+    // `DURATIONS.headGrow` (0.1 s, §6.13) from the stroke's own start", and
+    // §6.2's tree row has the head "growing in over its first 0.1 s" of the
+    // edge's draw-on. So it is no longer than the draw-on it rides.
+    expect(DURATIONS.headGrow, 'headGrow against stroke').toBeLessThanOrEqual(DURATIONS.stroke)
   })
 })
 
