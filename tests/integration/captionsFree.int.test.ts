@@ -5,7 +5,7 @@ import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { deflateSync } from 'node:zlib'
 import { buildRenderPlan, type RenderRequest } from '@shared/render/plan'
-import { buildGraphicsSpec, captionNeedsCanvas } from '@shared/graphics/fromTimeline'
+import { buildCaptionLayers, captionNeedsCanvas } from '@shared/graphics/fromTimeline'
 import type { CaptionLayer } from '@shared/graphics/spec'
 import { captionBand, concatList, planBakeOf } from '@shared/captions/bake'
 import { resolveStyle, type StyleOverrides } from '@shared/captions/style'
@@ -47,7 +47,7 @@ import { FFMPEG, outputDir, run, saveFrame, writeNote } from './output'
  *                   buildTimelineCaptions the Smart placement lookup, writes
  *                   the .ass; the export burns it (`subtitlesPath`);
  *   canvas bake     the same plus a gradient look (`gradient-sunset`), so
- *                   `captionNeedsCanvas` sends it to the bake: buildGraphicsSpec
+ *                   `captionNeedsCanvas` sends it to the bake: buildCaptionLayers
  *                   → planBakeOf → the pictures → main's writeCaptionFrame /
  *                   writeCaptionList → `captionOverlay`. The painting is the
  *                   one thing stood in (the renderer's canvas does not exist in
@@ -371,7 +371,7 @@ interface Bake {
 
 /** The renderer's bakeCaptions, its painting stood in: the app's spec, plan, files and list. */
 async function bake(project: Project, canvas: { width: number; height: number }, name: string): Promise<Bake> {
-  const spec = buildGraphicsSpec(project, canvas)
+  const spec = buildCaptionLayers(project, canvas)
   const baked = spec ? planBakeOf(spec) : null
   if (!baked) throw new Error(`${name}: nothing to bake`)
   const band = bandOf(baked.layers, canvas)
@@ -710,7 +710,7 @@ afterAll(async () => {
     `Clip at timeline frame ${START}, in-point ${IN}, ${DURATION} frames: shot 1 is timeline ${SHOT_FRAMES[0].join('–')}, shot 2 ${SHOT_FRAMES[1].join('–')} ([from, to)).`,
     `Lines (Pop, ${LINES.length} sentences of two words or one, yellow ${YELLOW}): timeline frames ${LINE_FRAMES.map(([a, b]) => `${a}–${b}`).join(', ')}.`,
     '9x16: 360×640, the clip follows its subject (a 404×720 crop on each face). 16x9: 640×360, static crop 1152×648 at (64, 36).',
-    'libass: main prepareCaptions → the .ass (copied here as <case>.ass) → subtitlesPath. canvas: Pop + gradient-sunset → buildGraphicsSpec →',
+    'libass: main prepareCaptions → the .ass (copied here as <case>.ass) → subtitlesPath. canvas: Pop + gradient-sunset → buildCaptionLayers →',
     'planBakeOf → stand-in pictures (each line the yellow block layoutText gives it) in measureBand\'s band → captionOverlay.',
     'Read: every frame of each export in order; a row is the caption\'s with ≥ 3 yellow pixels (Y > 150, U < 80), the box\'s with ≥ 20',
     'white ones (Y > 200, U and V within 18 of 128), taken from the bare render (captions off) of the same aspect. Lines judged on their',

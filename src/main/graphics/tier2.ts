@@ -2,8 +2,8 @@ import { join } from 'node:path'
 import { rm, mkdir, readFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { app } from 'electron'
-import { buildGraphicsSpec, needsFrameServer } from '@shared/graphics/fromTimeline'
-import type { GraphicsFont, GraphicsSpec } from '@shared/graphics/spec'
+import { buildCaptionLayers, needsFrameServer } from '@shared/graphics/fromTimeline'
+import type { GraphicsFont, CaptionLayersSpec } from '@shared/graphics/spec'
 import { fontFamilies, type FontMeta } from '@shared/assets/catalog'
 import { loadCatalog, resolveAssetFile } from '../assets/scan'
 import { FrameServer } from './frameServer'
@@ -25,7 +25,7 @@ export { needsFrameServer }
  * face, which is wrong but legible. Losing the whole export over a font would
  * not be.
  */
-async function fontsFor(spec: GraphicsSpec): Promise<GraphicsFont[]> {
+async function fontsFor(spec: CaptionLayersSpec): Promise<GraphicsFont[]> {
   const families = new Set<string>()
   for (const layer of spec.layers) {
     if (layer.kind === 'caption') families.add(layer.spec.font)
@@ -95,7 +95,7 @@ export function startTier2Render(
       if (cancelled) throw new Error('Cancelled')
 
       /* ---- pass 2: graphics over it ---- */
-      const built = buildGraphicsSpec(options.project, canvas)
+      const built = buildCaptionLayers(options.project, canvas)
       const spec = built ? { ...built, fonts: await fontsFor(built) } : null
       if (!spec) {
         // Nothing for tier 2 to draw after all — the base render is the answer.

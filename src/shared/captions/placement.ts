@@ -52,7 +52,7 @@ export function placedStyle(style: CaptionStyle, third: Third | null | undefined
 /**
  * A clip's window on the CAPTION clock, in source ms: [inPoint, inPoint +
  * duration), with no speed — the window buildTimelineCaptions and
- * buildGraphicsSpec caption from, and so the one every route reads here.
+ * buildCaptionLayers caption from, and so the one every route reads here.
  */
 export function captionWindowMs(clip: Pick<Clip, 'inPoint' | 'duration'>, fps: number): { startMs: number; endMs: number } {
   const startMs = framesToSeconds(clip.inPoint, fps) * 1000
@@ -69,7 +69,7 @@ export function firstShownWord(group: readonly Word[], clip: Pick<Clip, 'inPoint
  * The project frame the CANVAS BAKE shows a line starting at source `ms` on:
  * the caption clock, `clip.start` plus (ms − in-point) in frames, rounded —
  * no speed, as buildTimelineCaptions shifts its cues — held to the clip's own
- * frames. buildGraphicsSpec's layer `startFrame` for the same line.
+ * frames. buildCaptionLayers's layer `startFrame` for the same line.
  */
 export function captionLineFrame(clip: Pick<Clip, 'start' | 'inPoint' | 'duration'>, fps: number, ms: number): number {
   const { startMs } = captionWindowMs(clip, fps)

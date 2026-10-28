@@ -1,6 +1,6 @@
 import type { Project } from '@shared/timeline'
 import type { CaptionLayer } from '@shared/graphics/spec'
-import { buildGraphicsSpec } from '@shared/graphics/fromTimeline'
+import { buildCaptionLayers } from '@shared/graphics/fromTimeline'
 import { captionBand, concatList, planBakeOf, type LineInk } from '@shared/captions/bake'
 import { drawTextOnto } from '@shared/render/textPaint'
 import { useCatalog } from './catalog'
@@ -94,7 +94,7 @@ export async function bakeCaptions(
   project: Project,
   canvas: { width: number; height: number }
 ): Promise<BakedCaptions | null> {
-  const spec = buildGraphicsSpec(project, canvas)
+  const spec = buildCaptionLayers(project, canvas)
   if (!spec) return null
 
   // The spec's caption lines, planned over the edit's length, not the last

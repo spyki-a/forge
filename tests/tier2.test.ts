@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  buildGraphicsSpec,
+  buildCaptionLayers,
   captionsNeedBaking,
   needsFrameServer
 } from '@shared/graphics/fromTimeline'
@@ -89,9 +89,9 @@ describe('caption routing', () => {
   })
 })
 
-describe('buildGraphicsSpec', () => {
+describe('buildCaptionLayers', () => {
   /** Caption layers, which is all this builds. */
-  const captions = (spec: ReturnType<typeof buildGraphicsSpec>): CaptionLayer[] =>
+  const captions = (spec: ReturnType<typeof buildCaptionLayers>): CaptionLayer[] =>
     (spec?.layers ?? []).flatMap((l) => (l.kind === 'caption' ? [l] : []))
 
   it('emits one layer per LINE, not one per word', () => {
@@ -101,7 +101,7 @@ describe('buildGraphicsSpec', () => {
      * came out slightly mis-spaced and no style could fix it. A line is one
      * layer now, and the painter measures it.
      */
-    const spec = buildGraphicsSpec(project(), CANVAS)!
+    const spec = buildCaptionLayers(project(), CANVAS)!
     const lines = captions(spec)
     expect(lines.length).toBeGreaterThan(0)
     expect(lines.length).toBeLessThan(SAMPLE.length)
@@ -109,12 +109,12 @@ describe('buildGraphicsSpec', () => {
   })
 
   it('carries the whole line as text', () => {
-    const [first] = captions(buildGraphicsSpec(project(), CANVAS)!)
+    const [first] = captions(buildCaptionLayers(project(), CANVAS)!)
     expect(first.spec.content).toBe('This is Forge.')
   })
 
   it('says when each word becomes the spoken one', () => {
-    const [first] = captions(buildGraphicsSpec(project(), CANVAS)!)
+    const [first] = captions(buildCaptionLayers(project(), CANVAS)!)
     // One per word of the line, in reading order, never going backwards.
     expect(first.wordFrames).toHaveLength(first.spec.content.split(' ').length)
     for (let i = 1; i < first.wordFrames.length; i++) {
@@ -124,13 +124,13 @@ describe('buildGraphicsSpec', () => {
 
   it('leaves the highlight off the spec, because it moves', () => {
     // Baking an index into the layer would freeze the caption on one word.
-    const [first] = captions(buildGraphicsSpec(project(), CANVAS)!)
+    const [first] = captions(buildCaptionLayers(project(), CANVAS)!)
     expect(first.spec.highlight).toBeUndefined()
     expect(first.highlight?.color).toBeTruthy()
   })
 
   it('uses the canvas it is given, not the project settings', () => {
-    const spec = buildGraphicsSpec(project(), CANVAS)!
+    const spec = buildCaptionLayers(project(), CANVAS)!
     expect(spec.width).toBe(1080)
     expect(spec.height).toBe(1920)
   })
@@ -138,8 +138,8 @@ describe('buildGraphicsSpec', () => {
   it('sizes type as a fraction, so one style fits any frame', () => {
     // The old spec carried pixels and had to be scaled per canvas. A fraction of
     // the height is the same number in 9:16 and 16:9 and resolves later.
-    const tall = captions(buildGraphicsSpec(project(), { width: 1080, height: 1920 })!)
-    const wide = captions(buildGraphicsSpec(project(), { width: 1920, height: 1080 })!)
+    const tall = captions(buildCaptionLayers(project(), { width: 1080, height: 1920 })!)
+    const wide = captions(buildCaptionLayers(project(), { width: 1920, height: 1080 })!)
     expect(tall[0].spec.size).toBeCloseTo(wide[0].spec.size, 6)
     expect(tall[0].spec.size).toBeGreaterThan(0)
     expect(tall[0].spec.size).toBeLessThan(0.3)
@@ -147,7 +147,7 @@ describe('buildGraphicsSpec', () => {
 
   it('maps source time to timeline frames through the clip in-point', () => {
     // Clip reads from 2s of source, so "Word" at 2000ms lands at frame 0.
-    const lines = captions(buildGraphicsSpec(project({}, { inPoint: 60, duration: 60 }), CANVAS)!)
+    const lines = captions(buildCaptionLayers(project({}, { inPoint: 60, duration: 60 }), CANVAS)!)
     expect(lines[0].startFrame).toBe(0)
     // Words before the in-point must not appear.
     const said = lines.map((l) => l.spec.content.toLowerCase()).join(' ')
@@ -155,12 +155,12 @@ describe('buildGraphicsSpec', () => {
   })
 
   it('never runs a line past the clip showing it', () => {
-    const lines = captions(buildGraphicsSpec(project({}, { inPoint: 60, duration: 60 }), CANVAS)!)
+    const lines = captions(buildCaptionLayers(project({}, { inPoint: 60, duration: 60 }), CANVAS)!)
     for (const line of lines) expect(line.endFrame).toBeLessThanOrEqual(60)
   })
 
   it('keeps a whole line on screen together', () => {
-    const spec = buildGraphicsSpec(project(), CANVAS)!
+    const spec = buildCaptionLayers(project(), CANVAS)!
     // Mid-way through the first line, it is one live layer carrying every word.
     const live = layersAt(spec, 20)
     expect(live).toHaveLength(1)
@@ -175,14 +175,14 @@ describe('buildGraphicsSpec', () => {
         overrides: { textStyleId: 'chrome', animationId: 'pop' }
       }
     })
-    for (const line of captions(buildGraphicsSpec(p, CANVAS)!)) {
+    for (const line of captions(buildCaptionLayers(p, CANVAS)!)) {
       expect(line.spec.styleId).toBe('chrome')
       expect(line.spec.animationId).toBe('pop')
     }
   })
 
   it('returns null when there is nothing to draw', () => {
-    expect(buildGraphicsSpec(project({ transcripts: {} }), CANVAS)).toBeNull()
+    expect(buildCaptionLayers(project({ transcripts: {} }), CANVAS)).toBeNull()
   })
 
   it('runs to the end of the edit, not the last word', () => {
@@ -193,7 +193,7 @@ describe('buildGraphicsSpec', () => {
      * the render check is tests/integration/captionBakeLength.int.test.ts).
      */
     const p = project()
-    const spec = buildGraphicsSpec(p, CANVAS)!
+    const spec = buildCaptionLayers(p, CANVAS)!
     // The fixture: the clip (120 frames) outlasts the last word (3.3 s, frame 99).
     expect(Math.max(...spec.layers.map((l) => l.endFrame))).toBeLessThan(projectDuration(p))
     expect(spec.durationFrames).toBe(projectDuration(p))
@@ -202,7 +202,7 @@ describe('buildGraphicsSpec', () => {
     // A music outro on its own track is the edit too: the render runs to it, so must the bake.
     const outro: Clip = { ...p.clips[0], id: 'music', trackId: 'a1', start: 100, duration: 80 }
     const scored = { ...p, clips: [...p.clips, outro] }
-    expect(buildGraphicsSpec(scored, CANVAS)!.durationFrames).toBe(180)
+    expect(buildCaptionLayers(scored, CANVAS)!.durationFrames).toBe(180)
   })
 })
 

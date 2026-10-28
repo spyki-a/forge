@@ -16,7 +16,7 @@ import { captionTrack } from './timeline'
  *                 which asks it at the frame libass first draws each line's
  *                 cue on (placement.ts `libassLineFrame`) and writes \anN and
  *                 MarginV on the line's events (ass.ts);
- *   canvas bake   buildGraphicsSpec asks it at each caption layer's
+ *   canvas bake   buildCaptionLayers asks it at each caption layer's
  *                 startFrame and gives the third to captionSpec;
  *   preview       Preview.tsx memoises it per project and canvas and asks it
  *                 for the line on screen as the style's export route would

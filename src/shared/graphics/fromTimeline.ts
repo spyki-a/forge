@@ -3,7 +3,7 @@ import { clipsOnTrack, framesToSeconds, projectDuration, secondsToFrames } from 
 import { groupWords } from '../captions/ass'
 import { captionSpec } from '../captions/line'
 import { resolveStyle, type CaptionStyle, type StyleOverrides } from '../captions/style'
-import type { CaptionLayer, GraphicsSpec } from './spec'
+import type { CaptionLayer, CaptionLayersSpec } from './spec'
 import { captionTrack } from '../captions/timeline'
 import { smartPlacement } from '../captions/smart'
 
@@ -79,10 +79,10 @@ export function captionNeedsCanvas(style: CaptionStyle): boolean {
  * lays it out with the same painter the rest of the app uses. The per-word part
  * that genuinely varies — which word is lit — survives as `wordFrames`.
  */
-export function buildGraphicsSpec(
+export function buildCaptionLayers(
   project: Project,
   options: GraphicsBuildOptions
-): GraphicsSpec | null {
+): CaptionLayersSpec | null {
   const fps = project.settings.fps
   const style = resolveStyle(
     project.captions.styleId,

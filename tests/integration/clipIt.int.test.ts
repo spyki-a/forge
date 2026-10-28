@@ -17,7 +17,7 @@ import { linkCredit, runWords, type LinkClip, type TranscriptFrom } from '@share
 import { offsetIntoDownload } from '@shared/ingest/section'
 import { runRange } from '@shared/ingest/wordRun'
 import { buildRenderPlan } from '@shared/render/plan'
-import { buildGraphicsSpec, captionsNeedBaking } from '@shared/graphics/fromTimeline'
+import { buildCaptionLayers, captionsNeedBaking } from '@shared/graphics/fromTimeline'
 import type { CaptionLayer } from '@shared/graphics/spec'
 import { concatList, planCaptionBake } from '@shared/captions/bake'
 import { resolveStyle, type StyleOverrides } from '@shared/captions/style'
@@ -59,7 +59,7 @@ import { FFMPEG, outputDir, run, writeNote } from './output'
  *     the file's clock and the link's credit;
  *   - the export: main's `prepareCaptions` (the libass `ass` route, the
  *     .ass written as render:start writes it) and the canvas bake's plan
- *     (`buildGraphicsSpec` → `planCaptionBake` → `concatList`, main's
+ *     (`buildCaptionLayers` → `planCaptionBake` → `concatList`, main's
  *     `writeCaptionFrame` / `writeCaptionList`, the band overlaid as
  *     `captionOverlay`), each through `buildRenderPlan` and the bundled ffmpeg.
  *
@@ -548,7 +548,7 @@ async function exportAs(name: string, project: Project, route: Route): Promise<{
   // 'kinetic': animated, so the app bakes it on a canvas instead.
   const baked: Project = { ...project, captions: { ...project.captions, styleId: 'kinetic', overrides: {} } }
   expect(captionsNeedBaking(baked), 'kinetic is the bake’s').toBe(true)
-  const spec = buildGraphicsSpec(baked, CANVAS)
+  const spec = buildCaptionLayers(baked, CANVAS)
   const layers = (spec?.layers ?? []).filter((l): l is CaptionLayer => l.kind === 'caption')
   const plan = spec ? planCaptionBake(layers, FPS, spec.durationFrames) : null
   if (!plan) {

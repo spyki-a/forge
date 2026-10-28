@@ -2,7 +2,7 @@ import {
   layersAt,
   transformAt,
   type CaptionLayer,
-  type GraphicsSpec,
+  type CaptionLayersSpec,
   type GraphicsLayer,
   type TextLayer,
   type ImageLayer
@@ -18,7 +18,7 @@ import { drawTextOnto } from '@shared/render/textPaint'
  * number, which is what makes export byte-identical to preview.
  */
 
-let spec: GraphicsSpec | null = null
+let spec: CaptionLayersSpec | null = null
 const stage = document.getElementById('stage') as HTMLDivElement
 const nodes = new Map<string, HTMLElement>()
 
@@ -34,7 +34,7 @@ const nodes = new Map<string, HTMLElement>()
 let captionCanvas: HTMLCanvasElement | null = null
 let captionCtx: CanvasRenderingContext2D | null = null
 
-function setSpec(next: GraphicsSpec): void {
+function setSpec(next: CaptionLayersSpec): void {
   spec = next
   stage.style.width = `${next.width}px`
   stage.style.height = `${next.height}px`
@@ -205,7 +205,7 @@ async function waitForFonts(): Promise<void> {
 declare global {
   interface Window {
     forgeGraphics: {
-      setSpec: (spec: GraphicsSpec) => void
+      setSpec: (spec: CaptionLayersSpec) => void
       renderFrame: (frame: number) => Promise<number>
       waitForFonts: () => Promise<void>
       ready: boolean

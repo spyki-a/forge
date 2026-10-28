@@ -5,7 +5,7 @@ import { activeWordOf, concatList, planBakeOf, planCaptionBake } from '@shared/c
 import { captionSpec } from '@shared/captions/line'
 import { styleById } from '@shared/captions/style'
 import { animationBounds, TEXT_ANIMATIONS, textAnimationById } from '@shared/render/textAnimation'
-import type { CaptionLayer, GraphicsSpec } from '@shared/graphics/spec'
+import type { CaptionLayer, CaptionLayersSpec } from '@shared/graphics/spec'
 import type { Word } from '@shared/transcript'
 
 /*
@@ -160,7 +160,7 @@ describe('planBakeOf', () => {
    * plan that stopped at the last line stopped the export there (EFFECTS.md
    * §42, §43; the render check is tests/integration/captionBakeLength).
    */
-  const spec = (durationFrames: number, layers: GraphicsSpec['layers']): GraphicsSpec => ({
+  const spec = (durationFrames: number, layers: CaptionLayersSpec['layers']): CaptionLayersSpec => ({
     width: 1080, height: 1920, fps: FPS, durationFrames, layers
   })
 
@@ -178,7 +178,7 @@ describe('planBakeOf', () => {
   it('hands back the caption lines the plan indexes, and only those', () => {
     const lines = [layer('a', 0, 20, [0]), layer('b', 40, 60, [40])]
     // A picture layer between them is not the bake's to draw.
-    const picture: GraphicsSpec['layers'][number] = {
+    const picture: CaptionLayersSpec['layers'][number] = {
       id: 'logo', kind: 'image', src: 'forge-media://logo.png', startFrame: 10, endFrame: 50,
       anchorX: 0.5, anchorY: 0.5, width: 100, height: 100,
       transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 }
@@ -200,13 +200,13 @@ describe('bakeCaptions plans through planBakeOf', () => {
    * bakeCaptions needs a DOM canvas, so no test can run it, and the render
    * checks stand in for it by calling planBakeOf. That guards the export's
    * length only while the renderer gets its plan the same way, from the spec
-   * as buildGraphicsSpec built it. A bake planned to the last line in here
+   * as buildCaptionLayers built it. A bake planned to the last line in here
    * would bring §43's truncation back with every render check green.
    */
   const source = readFileSync(resolve(__dirname, '../src/renderer/src/captionBake.ts'), 'utf8')
 
   it('takes its plan from planBakeOf over the built spec, and plans nothing itself', () => {
-    expect([...source.matchAll(/const spec = buildGraphicsSpec\(project, canvas\)/g)]).toHaveLength(1)
+    expect([...source.matchAll(/const spec = buildCaptionLayers\(project, canvas\)/g)]).toHaveLength(1)
     const calls = [...source.matchAll(/\bplanBakeOf\(([^)]*)\)/g)].map((m) => m[1].trim())
     expect(calls, 'planBakeOf calls in captionBake.ts, by argument').toEqual(['spec'])
     expect([...source.matchAll(/\bplanCaptionBake\(/g)], 'planCaptionBake called directly').toHaveLength(0)

@@ -1964,7 +1964,7 @@ export function buildRenderPlan(request: RenderRequest): RenderPlan {
      * with whatever durations they are held for. `shortest=1` means a bake
      * longer than the video cannot extend it, but it CAN truncate it: the
      * export stops the moment the bake does. So the bake must cover the
-     * whole edit, and it does — `buildGraphicsSpec` plans it to
+     * whole edit, and it does — `buildCaptionLayers` plans it to
      * `projectDuration`, the end this graph runs to, never to the last
      * caption (EFFECTS.md §43). That also puts the concat list's repeated
      * last entry, which holds its picture for one tick, at the edit's end:

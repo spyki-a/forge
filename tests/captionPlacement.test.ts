@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { buildTimelineCaptions } from '@shared/captions/timeline'
-import { buildGraphicsSpec } from '@shared/graphics/fromTimeline'
+import { buildCaptionLayers } from '@shared/graphics/fromTimeline'
 import { captionSpec } from '@shared/captions/line'
 import { groupWords, toAssTime } from '@shared/captions/ass'
 import { assTimeMs, captionLineFrame, firstShownWord, libassLineFrame, lineThird, type Third, type ThirdLookup } from '@shared/captions/placement'
@@ -143,7 +143,7 @@ describe('the three routes put each line in the same third', () => {
     describe(name, () => {
       const { project: p, clip } = project('smart', patch)
       const lookup = (): ThirdLookup => smartPlacement(p, STYLE, CANVAS)!
-      const layers = () => buildGraphicsSpec(p, CANVAS)!.layers.filter((l) => l.kind === 'caption')
+      const layers = () => buildCaptionLayers(p, CANVAS)!.layers.filter((l) => l.kind === 'caption')
 
       it('libass, as main/captions.ts builds it: shot 1\'s lines and the one over the cut \\an5, shot 2\'s untagged', () => {
         expect(assThirds(buildTimelineCaptions(p, STYLE, CANVAS, lookup())!)).toEqual(expected.map((t) => TAG[t]))
@@ -176,7 +176,7 @@ describe('the three routes put each line in the same third', () => {
       expect(lookup).toBeNull()
       expect(buildTimelineCaptions(p, STYLE, CANVAS, lookup)).toBe(buildTimelineCaptions(p, STYLE, CANVAS))
       expect(assThirds(buildTimelineCaptions(p, STYLE, CANVAS)!)).toEqual(['', '', ''])
-      const layers = buildGraphicsSpec(p, CANVAS)!.layers.filter((l) => l.kind === 'caption')
+      const layers = buildCaptionLayers(p, CANVAS)!.layers.filter((l) => l.kind === 'caption')
       layers.forEach((layer, i) => {
         if (layer.kind !== 'caption') throw new Error('not a caption layer')
         expect(layer.spec).toEqual(captionSpec(STYLE, GROUPS[i], -1))
@@ -189,7 +189,7 @@ describe('the three routes put each line in the same third', () => {
     const { project: p } = project('smart', {}, { track: false })
     const lookup = smartPlacement(p, STYLE, CANVAS)!
     expect(assThirds(buildTimelineCaptions(p, STYLE, CANVAS, lookup)!)).toEqual(['', '', ''])
-    const layers = buildGraphicsSpec(p, CANVAS)!.layers
+    const layers = buildCaptionLayers(p, CANVAS)!.layers
     expect(layers.map((l) => (l.kind === 'caption' ? l.spec.position : ''))).toEqual(['lower', 'lower', 'lower'])
   })
 })
@@ -252,7 +252,7 @@ describe('a line that starts part-way through the frame before a cut (§5.2 rule
       // Shot 2's face is high: the line stays at Pop's own bottom, untagged — not \an5 over the new shot.
       const heads = ass.split('\n').filter((l) => l.startsWith('Dialogue:')).map((l) => /,,(\{\\an\d\})?\{\\c&H/.exec(l)?.[1] ?? '')
       expect(heads).toEqual(['', ''])
-      const layers = buildGraphicsSpec(p, CANVAS)!.layers
+      const layers = buildCaptionLayers(p, CANVAS)!.layers
       expect(layers.map((l) => [l.startFrame, l.kind === 'caption' ? l.spec.position : '']), 'the bake shows it from the frame before').toEqual([[cut - 1, 'center']])
       const group = groupWords(p.transcripts.a.segments, p.transcripts.a.words, STYLE.wordsPerLine)[0]
       expect([lineThird(lookup, clip, FPS, group, 'libass'), lineThird(lookup, clip, FPS, group, 'canvas')], 'the preview, as each route').toEqual(['bottom', 'middle'])

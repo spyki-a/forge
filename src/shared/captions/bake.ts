@@ -1,4 +1,4 @@
-import type { CaptionLayer, GraphicsSpec } from '../graphics/spec'
+import type { CaptionLayer, CaptionLayersSpec } from '../graphics/spec'
 import { animationBounds, animationFrames, piecesOf, textAnimationById } from '../render/textAnimation'
 import { layoutText } from '../render/textLayout'
 import type { TextSpec } from '../timeline'
@@ -145,7 +145,7 @@ export interface CaptionBake {
  * canvas: the render checks stand in for its painting and call THIS, so the
  * length they guard is the length the app bakes, not a copy of the expression.
  */
-export function planBakeOf(spec: GraphicsSpec): CaptionBake | null {
+export function planBakeOf(spec: CaptionLayersSpec): CaptionBake | null {
   const layers = spec.layers.filter((l): l is CaptionLayer => l.kind === 'caption')
   const plan = planCaptionBake(layers, spec.fps, spec.durationFrames)
   return plan ? { layers, plan } : null

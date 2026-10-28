@@ -3,8 +3,8 @@ import { copyFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { deflateSync } from 'node:zlib'
 import { buildRenderPlan } from '@shared/render/plan'
-import { buildGraphicsSpec, captionsNeedBaking } from '@shared/graphics/fromTimeline'
-import type { CaptionLayer, GraphicsSpec } from '@shared/graphics/spec'
+import { buildCaptionLayers, captionsNeedBaking } from '@shared/graphics/fromTimeline'
+import type { CaptionLayer, CaptionLayersSpec } from '@shared/graphics/spec'
 import { concatList, planBakeOf } from '@shared/captions/bake'
 import { emptyProject, projectDuration, type Clip, type MediaAsset, type Project } from '@shared/timeline'
 import { segmentIntoSentences, type Word } from '@shared/transcript'
@@ -24,12 +24,12 @@ import { FFMPEG, makeColour, outputDir, run, writeNote } from './output'
  * animated look (the kinetic preset's per-frame pictures) played resampled to
  * 25 pictures a second. The fix and its measurements are §44.
  *
- * Each case is the app's path around one stand-in: buildGraphicsSpec (a
+ * Each case is the app's path around one stand-in: buildCaptionLayers (a
  * "kinetic" project, so the canvas bake's, not libass's) → planBakeOf (the step
  * bakeCaptions takes) → concatList, written by main's writeCaptionFrame /
  * writeCaptionList, overlaid as `captionOverlay` through buildRenderPlan and
  * the bundled ffmpeg. Two things stand in. The spec's caption lines: the one
- * real line buildGraphicsSpec builds, copied onto the frames each fixture
+ * real line buildCaptionLayers builds, copied onto the frames each fixture
  * needs (one-frame lines for pictures that change every frame, as an
  * animation's do; longer ones for held pictures). And the painting: each
  * picture is a band-sized PNG, transparent but for opaque white blocks that
@@ -132,9 +132,9 @@ function project(fps: number, frames: number): Project {
   }
 }
 
-/** The spec buildGraphicsSpec builds, its one real caption line copied onto each span — still, unless `animated`. */
-function specWith(p: Project, spans: [number, number][], animated: boolean): GraphicsSpec {
-  const spec = buildGraphicsSpec(p, CANVAS)
+/** The spec buildCaptionLayers builds, its one real caption line copied onto each span — still, unless `animated`. */
+function specWith(p: Project, spans: [number, number][], animated: boolean): CaptionLayersSpec {
+  const spec = buildCaptionLayers(p, CANVAS)
   if (!spec) throw new Error('no spec for a captioned project')
   const line = spec.layers.find((l): l is CaptionLayer => l.kind === 'caption')
   if (!line) throw new Error('the spec has no caption line to copy')
@@ -287,7 +287,7 @@ afterAll(async () => {
     '# captionBakeTiming — every baked caption picture starts on its own frame',
     '',
     `ffmpeg ${FFMPEG}. Flat grey clips (0x808080, 320×240) at ${RATES.join(', ')} fps, captioned in "kinetic" (the canvas bake).`,
-    'The bake as bakeCaptions makes it (buildGraphicsSpec → planBakeOf → concatList, written by main), its one real caption',
+    'The bake as bakeCaptions makes it (buildCaptionLayers → planBakeOf → concatList, written by main), its one real caption',
     'line copied onto each fixture\'s frames; each picture a stand-in whose white blocks (band rows 16–48, eight 40 px slots)',
     'spell its line\'s number in bits. one-frame: a kinetic line per frame for a second, to the edit\'s last frame. held:',
     'two seconds of still lines (the copy without its animation) held 1–7 frames with blank gaps, then 7 blank frames.',

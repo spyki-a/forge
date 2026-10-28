@@ -1,6 +1,6 @@
 import { BrowserWindow, app } from 'electron'
 import { join } from 'node:path'
-import type { GraphicsSpec } from '@shared/graphics/spec'
+import type { CaptionLayersSpec } from '@shared/graphics/spec'
 
 /**
  * Renders the graphics layer offscreen, one frame at a time.
@@ -12,9 +12,9 @@ import type { GraphicsSpec } from '@shared/graphics/spec'
  */
 export class FrameServer {
   private window: BrowserWindow | null = null
-  private spec: GraphicsSpec | null = null
+  private spec: CaptionLayersSpec | null = null
 
-  async open(spec: GraphicsSpec): Promise<void> {
+  async open(spec: CaptionLayersSpec): Promise<void> {
     await this.close()
 
     this.window = new BrowserWindow({

@@ -7,7 +7,7 @@ import {
   layerVisibleAt,
   popIn,
   IDENTITY_TRANSFORM,
-  type GraphicsSpec,
+  type CaptionLayersSpec,
   type TextLayer
 } from '@shared/graphics/spec'
 
@@ -105,7 +105,7 @@ describe('layer visibility', () => {
   })
 
   it('selects only the layers live at a frame', () => {
-    const spec: GraphicsSpec = {
+    const spec: CaptionLayersSpec = {
       width: 1080, height: 1920, fps: 30, durationFrames: 90,
       layers: [
         text({ id: 'a', startFrame: 0, endFrame: 30 }),

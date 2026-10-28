@@ -98,7 +98,7 @@ export interface GraphicsFont {
   dataUrl: string
 }
 
-export interface GraphicsSpec {
+export interface CaptionLayersSpec {
   width: number
   height: number
   fps: number
@@ -185,7 +185,7 @@ export function layerVisibleAt(layer: GraphicsLayer, frame: number): boolean {
   return frame >= layer.startFrame && frame < layer.endFrame
 }
 
-export function layersAt(spec: GraphicsSpec, frame: number): GraphicsLayer[] {
+export function layersAt(spec: CaptionLayersSpec, frame: number): GraphicsLayer[] {
   return spec.layers.filter((l) => layerVisibleAt(l, frame))
 }
 

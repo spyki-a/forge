@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { copyFile, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { buildRenderPlan, type RenderRequest } from '@shared/render/plan'
-import { buildGraphicsSpec, captionsNeedBaking } from '@shared/graphics/fromTimeline'
+import { buildCaptionLayers, captionsNeedBaking } from '@shared/graphics/fromTimeline'
 import type { CaptionLayer } from '@shared/graphics/spec'
 import { concatList, planBakeOf } from '@shared/captions/bake'
 import { emptyProject, projectDuration, type Clip, type MediaAsset, type Project } from '@shared/timeline'
@@ -16,14 +16,14 @@ import { FFMPEG, makeColour, outputDir, run, saveFrame, writeNote } from './outp
  * Styled captions (a look libass cannot draw — 'kinetic' here) are painted to
  * pictures and replayed through the concat demuxer as one more overlay, with
  * `shortest=1`. The bake used to be planned only up to the last caption's end
- * (buildGraphicsSpec's durationFrames, as bakeCaptions passes it), so the
+ * (buildCaptionLayers's durationFrames, as bakeCaptions passes it), so the
  * overlay's shortest input was the CAPTIONS and the whole export stopped where
  * the speech did: a 30-frame clip whose one caption covers frames 0–7 came out
  * 10 frames long (the caption's 8, plus the 2 the concat list's repeated last
  * entry holds), and a marked range starting after the last caption came out
  * with no video stream at all. Found while writing clipIt.int (EFFECTS.md §42); the fix is §43.
  *
- * Each case is the app's path around one stand-in: buildGraphicsSpec →
+ * Each case is the app's path around one stand-in: buildCaptionLayers →
  * planBakeOf (the step bakeCaptions takes, shared so this runs it rather than
  * a copy; captionBake.test pins that the renderer calls it) → concatList,
  * written by main's writeCaptionFrame / writeCaptionList, overlaid as
@@ -131,7 +131,7 @@ async function standIn(lit: boolean): Promise<Buffer> {
  * stands in a longer spec, for the one case of a bake longer than the video.
  */
 async function bake(name: string, p: Project, frames?: number): Promise<{ listPath: string; totalFrames: number } | null> {
-  const spec = buildGraphicsSpec(p, CANVAS)
+  const spec = buildCaptionLayers(p, CANVAS)
   if (!spec) return null
   const baked = planBakeOf(frames === undefined ? spec : { ...spec, durationFrames: frames })
   if (!baked) return null
@@ -253,7 +253,7 @@ afterAll(async () => {
     '# captionBakeLength — a baked caption must not decide how long the export is',
     '',
     `ffmpeg ${FFMPEG}. A 30-frame clip of flat grey (0x808080, 320×240, 30 fps), captioned in "kinetic" (the canvas bake),`,
-    'one word 0–250 ms: the caption covers timeline frames 0–7. The bake as bakeCaptions plans it (buildGraphicsSpec →',
+    'one word 0–250 ms: the caption covers timeline frames 0–7. The bake as bakeCaptions plans it (buildCaptionLayers →',
     'planBakeOf → concatList, written by main), with stand-in pictures: the band transparent but for',
     'a white block at x 40–280, y 170–210 of the frame. Read at (150, 180), 16×16: white = the caption, grey = the picture,',
     'black = the base canvas where the clip went missing.',
@@ -289,14 +289,14 @@ describe('a baked caption does not decide how long the export is', () => {
   it('the fixture: kinetic is baked, and its one caption ends well before the clip does', () => {
     const p = project(ONE)
     expect(captionsNeedBaking(p)).toBe(true)
-    const spec = buildGraphicsSpec(p, CANVAS)!
+    const spec = buildCaptionLayers(p, CANVAS)!
     const layers = spec.layers.filter((l): l is CaptionLayer => l.kind === 'caption')
     expect(layers.map((l) => [l.startFrame, l.endFrame])).toEqual([[CAPTION.start, CAPTION.end]])
     expect(projectDuration(p)).toBe(CLIP_FRAMES)
 
     // The off-tick edit: the same word at 60 fps, over an edit that is not a whole number of 1/25 s ticks.
     const p60 = project(ONE, FPS_60, CLIP_FRAMES_60)
-    const layers60 = buildGraphicsSpec(p60, CANVAS)!.layers.filter((l): l is CaptionLayer => l.kind === 'caption')
+    const layers60 = buildCaptionLayers(p60, CANVAS)!.layers.filter((l): l is CaptionLayer => l.kind === 'caption')
     expect(layers60.map((l) => [l.startFrame, l.endFrame])).toEqual([[CAPTION_60.start, CAPTION_60.end]])
     expect(projectDuration(p60)).toBe(CLIP_FRAMES_60)
     expect(Number.isInteger((CLIP_FRAMES_60 / FPS_60) * 25), 'the edit ends off a 1/25 s tick').toBe(false)
