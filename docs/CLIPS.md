@@ -8383,12 +8383,12 @@ its three jobs.
 | file | holds | where it runs |
 |---|---|---|
 | `src/shared/graphics/drawList.ts` | `drawListAt`, `needsCompositor`, `graphicBox` | node and renderer, pure; the only importer of `templates/index.ts` |
-| `src/shared/graphics/items.ts` | the `DrawItem` types, `Drawer`, `DrawOut`, `textItems`, `textSpecOf`, `itemBounds`, `unitFor`, `CLUSTER_SCRIPTS` | pure; the templates import this, never `drawList.ts`, so no import cycle runs through `templates/index.ts` (`textItems` reads `unitFor`, so the two live together) |
+| `src/shared/graphics/items.ts` | the `DrawItem` types (their `Point` and `Arrowhead` imported from `stroke.ts`, corrected 2026-10-28), `Drawer`, `DrawOut`, `textItems`, `textSpecOf`, `itemBounds`, `unitFor`, `CLUSTER_SCRIPTS` | pure; the templates import this, never `drawList.ts`, so no import cycle runs through `templates/index.ts` (`textItems` reads `unitFor`, so the two live together) |
 | `src/shared/graphics/templates/index.ts` | `DRAWERS: Partial<Record<GraphicTemplateId, Drawer>>`, created empty in phase 1; each template's commit adds its own row (§6.2) | pure |
-| `src/shared/graphics/stroke.ts` | `flattenPath`, `strokeAt`, the head's geometry, `STROKE_TOLERANCE` | pure |
+| `src/shared/graphics/stroke.ts` | `flattenPath`, `strokeAt`, the head's geometry (`headGrowAt`, `headShape`, `strokeShape`), `strokeWidth`, `STROKE_MIN_PX`, `STROKE_TOLERANCE`, `Point`, `Arrowhead` (corrected 2026-10-28; the stroke primitive's Built note below) | pure; imports only `DURATIONS` and `progress` from `motion.ts` |
 | `src/shared/graphics/frame.ts` | `graphicMovingFrames`, `beatFrame`, `graphicExitKeys`, `drawnGraphicAsset` | pure |
 | `src/shared/graphics/targets.ts` | `graphicTargetsAt` | pure |
-| `src/shared/graphics/paint.ts` | `paintDrawList2d`, `STROKE_MIN_PX` (`/// <reference lib="dom" />` scoped to the file, as `textPaint.ts:1-5`) | renderer |
+| `src/shared/graphics/paint.ts` | `paintDrawList2d`, importing `STROKE_MIN_PX` and `strokeWidth` from `stroke.ts`, never declaring its own (corrected 2026-10-28) (`/// <reference lib="dom" />` scoped to the file, as `textPaint.ts:1-5`) | renderer |
 | `src/renderer/src/graphicCanvas.ts` | preview, bake, frames for the harness; `GRAPHIC_BAKE_REGION` (`'box'`) and `GRAPHIC_POOL_DEPTH` (4), set by M1 on 2026-10-27 (§6.15) | renderer |
 | `src/renderer/src/encodePool.ts` | `encodeFrames`, the `toBlob` pool; and the worker back-end M2 took on 2026-10-27 (§6.15), its module worker file moved beside it from `harness/` | renderer |
 
@@ -8588,6 +8588,137 @@ tree edges, underlines and the edge sweep of §6.16 (the research, §4.4).
   phase 2; until then `resolveGraphicStyle` never yields it (§6.5), and a
   `look: 'marker'` item is drawn clean. rough.js is not used.
 
+> **Built 2026-10-28 (the stroke primitive).** `69d2d6e`, then `2074f08`
+> after two critics, the second piece of §6.19's lane A. Pushed with the
+> rest of lane A in one push ending at `716d6a7` (2026-10-28 02:20
+> America/New_York); the CI run for `716d6a7` was in progress on both
+> runners when this note was written, and its result is to be written
+> here when it completes. Every figure below is from the two commits'
+> messages, the test's two "graphicStroke:" lines (re-run at `716d6a7`,
+> 20 cases passed, vitest exit 0) and the critics where named; line
+> numbers were read at `716d6a7`.
+> - **The exports**, in `src/shared/graphics/stroke.ts`, pure, importing
+>   only `DURATIONS` and `progress` from the motion module (`:25`):
+>   `Point` (`:28-31`) and `Arrowhead` (`:60-63`), declared here so that
+>   lane B's `items.ts` takes them from this file and no import runs back
+>   into it; `PathGeometry` (`:39-43`, `lengths` cumulative, `lengths[0]`
+>   0), `StrokeSpan` (`:52-57`), `HeadShape` (`:66-69`), `StrokeInput`
+>   (`:72-77`) and `StrokeShape` (`:85-90`); `STROKE_TOLERANCE` = 0.25
+>   (`:100`, proposal; M8 sets it); `STROKE_MIN_PX` = 2 (`:110`, proposal
+>   until M19); `flattenPath(d, tolerance)` (`:187-327`); `strokeAt(path,
+>   from, to)` (`:408-412`); `headGrowAt(t, start)` (`:423-425`);
+>   `headShape(at, angle, head, visible)` (`:435-455`); `strokeWidth(width,
+>   frame)` (`:463-466`); and `strokeShape(path, stroke, frame)`
+>   (`:474-486`). The head's half-width 0.45 and inset 0.6 (`:113`,
+>   `:115`, proposals, as above) and the 16-halving guard (`:117`) are not
+>   exported.
+> - **The file table above was corrected** to say so. As planned it put
+>   `STROKE_MIN_PX` in `paint.ts` and named neither `strokeWidth` nor the
+>   head's functions, `Point` nor `Arrowhead`. They live in `stroke.ts`
+>   because `graphicStroke` owns the width case and its mutation and
+>   `paint.ts` is lane B's (`2074f08`'s reason, in place of `69d2d6e`'s,
+>   that node needed the rule before `paint.ts` exists: `paint.ts` sits
+>   under `src/shared` with a file-scoped dom lib, so node tests could
+>   reach it). `paint.ts` is to import `STROKE_MIN_PX` and `strokeWidth`,
+>   never declare its own, and `items.ts` `Point` and `Arrowhead`.
+> - **The parser's rules.** `M L H V C S Q T Z`, absolute and relative,
+>   with repeated arguments (a moveto's further pairs are linetos,
+>   relative after an `m`), SVG's packed numbers (`10-20`, `.5.5`) and
+>   exponents; a quadratic is raised to its exact cubic (controls two
+>   thirds of the way to its own control); `S` reflects the last control
+>   only after `C` or `S`, `T` only after `Q` or `T`, and takes the current
+>   point otherwise; `Z` draws back to the subpath's start and moves the
+>   current point there. Consecutive equal points are dropped, so
+>   `lengths` strictly increases. **Refused, by throwing**: `A` and `a` (a
+>   circle is four cubics, κ = 0.5523), a second moveto, after `Z` too (a
+>   stroke is one subpath, one length to draw on along), data not starting
+>   with a moveto, a command missing a number, a number with no command
+>   before it, anything not path data, and a tolerance that is not a
+>   positive finite number. Empty data is an empty geometry; nothing is
+>   kept between calls.
+> - **The flattening** halves each cubic by de Casteljau until both its
+>   control points lie within the tolerance of the chord, so the piece
+>   does too (the convex hull), at most 16 halvings as a guard against a
+>   degenerate input. At `STROKE_TOLERANCE` 0.25 px, node 24.18.1, a
+>   four-cubic circle (κ = 4/3 (√2 − 1)) against 2πr: −0.1468 % at r = 20
+>   and 30 (32 pieces), −0.1139 % at 38 (40) and −0.0831 % at 39 (48)
+>   (these two a critic's), −0.0541 % at 40 (56), −0.0262 % at 45 (a
+>   critic's), 50 and 100 (64), +0.0040 % at 200, 400 and 540 (128, the
+>   Bézier circle itself a little longer than 2πr). The quadratic `M100
+>   800 Q540 100 980 800` reads −0.0044 % against its closed form (62
+>   pieces); the two cubics `M100 1500 C300 900 700 1300 900 600` and `M0 0
+>   C540 0 540 960 1080 960`, sampled at 10,001 values of t, lie at most
+>   0.178 px from the polyline over 55 pieces and 0.176 px over 56, under
+>   the 0.25. The error steps with the piece count: **§6.3's 0.05 % holds
+>   from about r = 41 at 0.25 px, not below**, so the test asserts it from
+>   r = 50 up and prints the small radii (the Tests bullet below is
+>   corrected to say so); M8's 0.1 % holds from about r = 39 (read here
+>   against 2πr; M8 reads `getTotalLength()`). So **a ring
+>   under r = 40 belongs among M8's paths** (the user's, on the Mac in the
+>   app), where our flattening is furthest from the curve. `EFFECTS.md`
+>   §61, "The stroke's flattening", has the table.
+> - **The span.** `strokeAt` clamps 0 ≤ `from` ≤ `to` ≤ 1 (a non-number
+>   reads 0), finds the segment leaving the start and the one arriving at
+>   the tip by binary search over `lengths`, interpolates both ends and
+>   returns new points; an empty span has no points, a null tip, tangent
+>   0 and length 0. **The tangent at a vertex**: the incoming segment for
+>   the tip, so the end head turns only once the tip is past a corner;
+>   the outgoing one for a start head, the segment leaving the span's
+>   start, turned back by 180 (`:480`). Degrees, 0 rightward, 90 down the
+>   frame.
+> - **The head.** `headGrowAt` is `progress(t, start,
+>   DURATIONS.headGrow, 'linear')`: linear because the plan names no ease
+>   (it "runs 0 to 1"), and the frame 0.1 s after the stroke's start reads
+>   exactly 1. `headShape` scales by k = grow × min(1, visible / size): a
+>   triangle of length size × k and half-width 0.45 × size × k, the line
+>   stopped 0.6 × size × k short; null when k is 0. `strokeShape` cuts the
+>   line from the span less each head's inset, as fractions of the length,
+>   so the line's end and the head are one number; `from` = `to` gives no
+>   line and no head. Widths: `strokeWidth` is max(width, `STROKE_MIN_PX` ×
+>   min(w, h) / 1080), so the same stroke at 1080×1920 and, scaled by a
+>   quarter, at 270×480 differs by exactly 4 in width, line and heads.
+> - **The test**, `tests/graphicStroke.test.ts`, 17 cases in `69d2d6e`
+>   and 20 since `2074f08`: every case of the Tests bullet below, and
+>   the parser's refusals (`A`, `a`, a second moveto after `Z` too, no
+>   leading moveto, a missing number, a stray number, a stray letter, four
+>   bad tolerances); `S` and `T` equal to the explicit `C` and `Q`, and
+>   (`2074f08`) after the other kind of curve; 200 seeded spans against a
+>   reference walked segment by segment; `Z`'s length, points and moved
+>   current point; the flattening tolerance on the two cubics above; a
+>   span starting on an interior vertex, and a start head there; and the
+>   circle's lengths strictly increasing.
+> - **Mutations**, each at one anchor counted at one match with
+>   `matchAll`, `stroke.ts` restored from its copy and compared with
+>   `cmp`. §6.3's eight fail as planned: length by point count (ten
+>   cases, "r = 100: expected 0.898140836421187 to be less than or equal
+>   to 0.0005"), the span by point index (three), lengths not cumulative
+>   (five, "expected [ +0, 500, 400, 300 ] to deeply equal [ +0, 500, 900,
+>   1200 ]"), the tip at the path's end (six), the span's end snapped to a
+>   vertex (seven), the tangent from the first segment (the tangent case
+>   alone, "expected +0 to be 90"), the outgoing segment at a vertex (the
+>   tangent case and the corner head), a width in preview pixels (the
+>   width case alone, "width 1: expected 1 to be close to 4"). Six more of
+>   `69d2d6e`'s: the current point kept between calls, the start head not
+>   turned back, the head not scaled by the visible length, grow over
+>   `DURATIONS.stroke`, the line not stopped short of the end head, `S`
+>   without its reflected control. The critics' eight that passed all 17
+>   cases at `69d2d6e` (vitest exit 0) each fail since `2074f08`: `Z`
+>   without its push ("expected 300 to be 400"), `Z` not moving the
+>   current point, `STROKE_TOLERANCE` 0.5 ("r = 50: expected
+>   0.0014682246459258863 to be less than or equal to 0.0005"), the
+>   flatness test at twice the tolerance (also "… 0.36872718668771864 to
+>   be less than or equal to 0.25"), `<` for `<=` in the first segment's
+>   search, `S` reflecting after `Q`, `T` reflecting after `C`, and `push`
+>   without its duplicate check ("r = 20, point 33: expected
+>   125.47920359313349 to be greater than 125.47920359313349").
+> - **Suites**: typecheck exits 0 at both; the full suite green at
+>   `69d2d6e` (316 files: 311 passed, 5 skipped; 4343 tests: 4280 passed,
+>   63 skipped) and at `2074f08` (316 files: 311 passed, 5 skipped; 4346
+>   tests: 4283 passed, 63 skipped).
+> - **Not here, as planned**: painter A's memo per `d`, the dash, the cap
+>   and join (lane B's) and the marker look (phase 2's). Only `style.ts`
+>   reads the module yet, for `STROKE_MIN_PX`.
+
 #### The dim
 
 A `dim` is a full-frame darkening with an optional rounded hole: painter A
@@ -8675,7 +8806,18 @@ the caller and passed into `drawListAt`, so the drawing stays pure:
   on that frame and not before (`progress`, §6.13, starts its curve
   `seconds` before the beat and allows 1e-6 s, more than this 1e-6 of a
   frame, so a frame that
-  `beatFrame` names is never a hair short of 1).
+  `beatFrame` names is never a hair short of 1). **Open, yours** (found
+  2026-10-28 by a critic of the motion module): the two allowances are
+  in different units, so for a beat between 1e-6 of a frame and 1e-6 s
+  after a frame's time, `beatFrame` names the next frame while `progress`
+  already reads 1 on this one, a frame before the one named, and "not
+  before" fails. Measured by that critic at the motion module of the
+  time, with beats at a frame plus 2e-6, 1e-5 and 2e-5 of a frame at 24,
+  25, 30 and 60 fps: progress was 1 on frame 32, the one `beatFrame`
+  names, and on frame 31, all twelve. `graphicMotion`'s beat case does
+  not probe that window (its beat after a frame is 0.9e-6 of a frame,
+  inside `beatFrame`'s own allowance). The fix is one allowance in one
+  unit, which you pick; §6.13's Built note.
 - `graphicMovingFrames(spec: GraphicSpec, style: GraphicStyle, fps: number,
   total: number): number` = `min(total, beatFrame(last beat + SETTLE_S, fps)
   + 1)`, `SETTLE_S` = 0.5: the last frame baked is the first settled one, so
@@ -8901,7 +9043,10 @@ machines, so nothing waits on M22's unshaped branch.
 
 - **`tests/graphicStroke.test.ts`.** A straight line's exact length, a
   quadratic's, and a four-cubic circle's within 0.05 % of 2πr at the
-  default tolerance (proposal; the tolerance M8 sets); relative commands
+  default tolerance from r = 50 up (proposal; the tolerance M8 sets;
+  corrected 2026-10-28: at 0.25 px the bar holds from about r = 41 and
+  not below, so the small radii are printed, not asserted, the stroke
+  primitive's Built note above); relative commands
   equal absolute; `A` refused; `strokeAt(path, 0, 0.5)` ends on the point
   at half the length on a path of one long and nine short segments, and
   its span length is `(to − from) × total`; `tip` is the visible end
@@ -9484,6 +9629,154 @@ through; the radius clamp removed; the re-casing filter dropped (`'chrome'` beco
 false; a `numberFormat` key added; `clean` given `out-back`; `editorial`
 given the `clean` text style (its ink case fails); the font condition
 dropped from `graphicEligible` (the synthetic style passes).
+
+> **Built 2026-10-28 (the first half).** `b965cda`, then `0d603a8` after
+> two critics, the third piece of §6.19's lane A (§6.3's piece row
+> "`GraphicStyle`, `resolveGraphicStyle`, `clean`, `GRAPHIC_TEXT_STYLES`,
+> `graphicStyleOf`, `setGraphicsStyle` and `setGraphicsOverride`").
+> Pushed with the rest of lane A in one push ending at `716d6a7`
+> (2026-10-28 02:20 America/New_York); the CI run for `716d6a7` was in
+> progress on both runners when this note was written, and its result is
+> to be written here when it completes. Every figure below is from the
+> two commits' messages; line numbers were read at `716d6a7`. The second
+> half (the six other presets, the OUTPUT strip's Graphics section, the
+> census rows, the marker painter) stays phase 2's, as planned.
+> - **The exports**, in `src/shared/graphics/style.ts`, pure, importing
+>   `STROKE_MIN_PX` from `stroke.ts`, `EntranceName` and `MotionEase` from
+>   `motion.ts`, `TEXT_STYLES` from `render/textStyle.ts` and two types
+>   (`:22-26`): `GraphicStyle` as this section words it (`:29-71`;
+>   `motion.entrance` is `motion.ts`'s `EntranceName`, `:62`);
+>   `MARKER_READY` = false, typed `boolean` so the gate is not read as dead
+>   code (`:79`); `graphicEligible` (`:136-144`); `GRAPHIC_TEXT_STYLES`,
+>   `TEXT_STYLES` filtered by it, frozen, computed not listed (`:147`);
+>   `CLEAN_GRAPHIC_STYLE` and `GRAPHIC_STYLES`, `clean` alone, deep-frozen
+>   (`:166-187`, `:190`); `GRAPHIC_OVERRIDE_KEYS` (`:263`);
+>   `resolveGraphicStyle(styleId, overrides?)` (`:280-292`), a new object
+>   on every call; and `graphicStyleOf(project, spec)` (`:299-304`),
+>   `spec.style ?? project.graphics?.styleId ?? 'clean'` with the project's
+>   overrides. In `renderer/src/store.ts`, `setGraphicsStyle(styleId)`
+>   (`:4969-4982`) and `setGraphicsOverride(key, value)` (`:4984-4994`),
+>   typed at `:1106` and `:1108`.
+> - **`clean`'s values.** This section's table row: the `clean` text
+>   style, Montserrat, rise · `expo-out` (M14's winner replaces it) ·
+>   `accelerate`, ink #FFFFFF, accent #FFD400, panel #0B0D10 at 0.55, `dim`
+>   false · 0.35, restrained, `strokeLook` clean. Not in the table, and
+>   this file's proposals for phase 2's tiles: `muted` #6B7078, the dim's
+>   colour #000000, `radius` 0.02, `stroke` 0.006 and `shadow` 0.35.
+> - **The guards as built.** Overrides are dotted keys
+>   (`overrides['palette.accent']`, as the `accent` preset reads them), one
+>   guard each in one table (`OVERRIDES`, `:232-260`), seventeen keys:
+>   `textStyleId`, `font`, the five palette colours and two opacities,
+>   `radius`, `stroke`, `shadow`, `motion.entrance`, `motion.ease`,
+>   `motion.exit`, `strokeLook` and `dim`. Opacities and the shadow to
+>   0..1; `radius` to 0..0.1; `stroke` from §6.3's floor, `STROKE_MIN_PX` /
+>   1080 of the short side, up to 0.02; a NaN, an infinity, a negative
+>   number or a non-number to the preset's; a `textStyleId` outside
+>   `GRAPHIC_TEXT_STYLES`, a font that is not a non-empty string, an ease
+>   not a `MotionEase`, an entrance not an `EntranceName`, a `strokeLook`
+>   not clean or marker and a `dim` not a boolean to the preset's. `id`,
+>   `name`, `energy` and `glow` (phase 3's) are not overridable; any other
+>   key, an inherited one (`Object.hasOwn`, so `'toString'` is neither an
+>   ease nor a key) or overrides that are not an object are ignored. Then
+>   the gates, on the preset's value as on an override's: the entrance
+>   through `ENTRANCES` (`:90-95`), `blur-rise` to `rise` (phase 0's M5,
+>   §6.15) and `wipe` to `rise`; and `marker` to `clean` while
+>   `MARKER_READY` is false (`:290`). The ease and entrance sets are
+>   `Record`s over the motion module's unions (`:90`, `:98`), so a name
+>   added there without its row here fails typecheck. Values are stored
+>   as given and guarded on read.
+> - **Beyond this section's words, each for you to record here or
+>   overrule** (each marked so in `style.ts`'s comments by `0d603a8`):
+>   - **The colour guard is hex only** (`HEX_COLOUR`, `:200`): `#` and 3,
+>     4, 6 or 8 hex digits, else the preset's, because a canvas given a
+>     `fillStyle` or `strokeStyle` it cannot parse silently keeps the
+>     previous one. It also refuses `rgb()`, `hsl()` and named colours,
+>     which the plan does not exclude; no input of the app writes them.
+>   - **+Infinity goes to the preset's** (`numberIn`, `:213-216`), where
+>     "a NaN or negative number to the preset's" and the clamps above,
+>     read literally, would clamp it to the top. JSON cannot hold one, so
+>     only an in-memory caller can pass it.
+>   - **`GRAPHIC_OVERRIDE_KEYS`**, an export this section does not name,
+>     for the tests and phase 2's controls; and the key set itself is the
+>     file's, since this section lists none.
+>   - **The `dim` override.** §6.10's look rating sets `dim` in the
+>     presets, a preset change, and no planned control writes this
+>     override, which lets a project dim under a restrained preset.
+>   - **`graphicEligible` reads the accent face as well as the base**,
+>     wider than this section's "a base face" (`b965cda` cited the chrome
+>     case's "by its faces"). The reason: a line-scoped accent never
+>     engages on an item of one line (§6.3), but `layoutText` splits the
+>     text on `\n` and `paintForLine` merges a line-scoped accent into
+>     every paragraph after the first, so an item whose text held a `\n`
+>     would draw its second paragraph re-cased or in the accent's face; a
+>     wrapped row is not a paragraph and keeps the base. It changes
+>     nothing today: counted under node 24 importing `TEXT_STYLES`, 15 of
+>     the 42 re-case in their base face (the 4 whose line-scoped accent
+>     re-cases, cinematic, hot-pink, ice and soft-fade, among them), none
+>     sets a face, 5 scope their accent to a word (sunrise-word also
+>     re-cases), leaving 23 either way, §6.3's count.
+>   - Also beyond the list, as the code says (`:265-279`): the shadow
+>     clamped to the type's 0..1, and an unknown entrance or stroke look
+>     and a `dim` that is not a boolean to the preset's.
+> - **The store's two actions**, each one `update()` and so one undo,
+>   beside the captions' setters. `setGraphicsStyle` keeps the
+>   `textStyleId` and `palette.accent` overrides and the sounds switch and
+>   drops the rest ("Picking a preset keeps `textStyleId` and the accent",
+>   `setCaptionStyle`'s rule); `setGraphicsOverride` writes one key and
+>   deletes it on `undefined`, as `setCaptionOverride` does; a project
+>   with no `graphics` is written as `clean` with sound true, what its
+>   absence means. **The rebake** a change asks for joins with
+>   `rebakeGraphic` (§6.3, lane C's), which does not exist yet; the
+>   comment above the two actions says so (`store.ts:4960-4968`).
+> - **The tests.** `tests/graphicStyle.test.ts`, 13 cases in `b965cda`,
+>   15 since `0d603a8`: every phase-1 case above, with the `TextSpec`
+>   written out as §6.3's `textSpecOf` builds it and "Mixed Case
+>   10,00,000" drawn through every member of `GRAPHIC_TEXT_STYLES`
+>   unchanged; and two of `0d603a8`'s. One holds **`clean` the default and
+>   restrained by D5's rules, not its proposed values**, a case this
+>   section put in phase 2: `graphicStyleOf({}, {}).id` is `clean`, and on
+>   the preset and on a resolved `clean`, energy restrained, the entrance
+>   not `pop`, the ease and the exit not `out-back` (§16.58), `dim` false,
+>   `strokeLook` clean and no `glow` key, with no proposal number pinned.
+>   The other holds, through the compiler (`tests/` is in
+>   `tsconfig.node.json`), that no key of `GraphicStyle`, of `palette`,
+>   of `motion` or of the optional `glow` names a format, a locale, a
+>   grouping or a separator (`FormatNamed<K>`, this section's regex at the
+>   type level, beside two checks that it is not an empty answer).
+>   `tests/renderer/graphicStyleStore.test.ts`, beside `keyStore.test.ts`
+>   (no test of the captions' setters exists to sit beside), 4 cases in
+>   `b965cda` and 5 since `0d603a8`, every write compared with
+>   `toStrictEqual`, since `toEqual` skips a key whose value is
+>   `undefined`, the captions' bug `setCaptionOverride`'s comment records.
+>   Which id wins, the spec's or the project's, and that the fallback is
+>   `clean` rather than another preset, show only with two presets: phase
+>   2's cases.
+> - **Mutations**, at anchors counted at one match each with `matchAll`,
+>   each file restored from its copy and compared with `cmp`. This
+>   section's six that phase 1 can hold fail as planned: an override's NaN
+>   passed through ("palette.panelOpacity = NaN: expected NaN to be
+>   0.55"), the radius clamp removed, the re-casing filter dropped (four
+>   cases, "chrome: expected Set{ 'MIXED CASE 10,00,000' } to deeply equal
+>   Set{ 'Mixed Case 10,00,000' }"), `marker` honoured, a `numberFormat`
+>   key on the type and on `clean`, the font condition dropped; and since
+>   `0d603a8`, `clean` given `out-back` too ("the preset: expected
+>   'out-back' not to be 'out-back'"), with its exit `out-back`, its
+>   entrance `pop`, energy energetic, `dim` true and the glow branch
+>   inverted each failing the rules case alone, and `numberFormat` on the
+>   type alone, `locale` on `glow`'s type alone and `groupSeparator` on
+>   `palette`'s alone each failing typecheck at the `never` line. Sixteen
+>   more on `style.ts` and eight on `store.ts` in `b965cda`. Four gaps the
+>   critics confirmed against `b965cda`'s own tests (each passed, vitest
+>   or `tsc` exit 0) fail since `0d603a8`: both `!== undefined` guards in
+>   `setGraphicsStyle` removed (two store cases, one "expected true to be
+>   false"), `clean` given `out-back`, the glow branch inverted, and
+>   `numberFormat` on the type alone. `editorial` given the `clean` text
+>   style stays phase 2's.
+> - **Suites**: typecheck exits 0 at both; the full suite green at
+>   `b965cda` (318 files: 313 passed, 5 skipped; 4363 tests: 4300 passed,
+>   63 skipped) and at `0d603a8` (318 files: 313 passed, 5 skipped; 4366
+>   tests: 4303 passed, 63 skipped). Nothing outside the store reads
+>   `style.ts` yet.
 
 ### 6.6 The third pass — `graphics@1`: menu, schema, prompt
 
@@ -10537,10 +10830,10 @@ render check and the census.
 | 0 | `tests/oldestFfmpeg.test.ts`'s M4 case; `tests/integration/graphic.int.test.ts`'s libass reference; `tests/integration/asr.int.test.ts`'s M21 case | below |
 | 1 | `tests/graphicTypes.test.ts` (built 2026-10-27, `d10e474` and `6272050`) | §6.1 |
 | 1 | `tests/graphicGuards.test.ts` (the head lane's half built 2026-10-27, `a2cad0f` and `60c8b28`; lane C's half to be written) | §6.4 |
-| 1 | `tests/graphicMotion.test.ts` (M9) | §6.13 |
-| 1 | `tests/graphicStroke.test.ts`, `tests/graphicDrawList.test.ts`, `tests/graphicPaint.test.ts` | §6.3 (two depth cases in `graphicDrawList`, §6.16) |
+| 1 | `tests/graphicMotion.test.ts` (M9) (built 2026-10-27/28, `f38f971`, `862cf1b` and `ae6167c`; M9 measured, §6.13's Built note) | §6.13 |
+| 1 | `tests/graphicStroke.test.ts` (built 2026-10-28, `69d2d6e` and `2074f08`), `tests/graphicDrawList.test.ts`, `tests/graphicPaint.test.ts` | §6.3 (two depth cases in `graphicDrawList`, §6.16) |
 | 1-3 | `tests/graphicFrame.test.ts` | phase 1 §6.3, phase 2 §6.2, the screen card §6.16 |
-| 1-2 | `tests/graphicStyle.test.ts` | §6.5 |
+| 1-2 | `tests/graphicStyle.test.ts`, with `tests/renderer/graphicStyleStore.test.ts` for the store's two actions (phase 1's half of both built 2026-10-28, `b965cda` and `0d603a8`) | §6.5 |
 | 1-3 | `tests/renderer/graphicStore.test.ts` | phase 1 §6.3, the sounds that follow a graphic §6.14, the screen card §6.16 |
 | 2 | `tests/claims.test.ts`, `tests/graphicsValidator.test.ts` (the property test) | §6.7 |
 | 2 | `tests/directorGraphics.test.ts`, `tests/renderer/transcriptGraphics.test.tsx`, `tests/renderer/graphicPanel.test.tsx` | §6.6 |
@@ -10614,7 +10907,8 @@ render check and the census.
 - `tests/paper.test.ts:496-507`, `:722-725` and `tests/moment.test.ts:629`:
   their spelled-out guard pins become membership (§6.4) (done 2026-10-27,
   `a2cad0f` and `60c8b28`; §6.4's Built note).
-- `tests/textAnimation.test.ts`, `tests/textPaint.test.ts`,
+- `tests/textAnimation.test.ts`, `tests/textPaint.test.ts` (their D8
+  cases built 2026-10-27, `e5c47ac`; `textPaint`'s D10 cases to come),
   `tests/tier2.test.ts` (the caption route, the failed or empty bake's
   fallback and its notice, §16.66 (a)), `tests/captionPlacement.test.ts`
   (the route's call sites; its pin of Preview's route line, `:331`,
@@ -10867,7 +11161,9 @@ annotations.
 - `graphicPaint`: no Hindi or Telugu string drawn in pieces smaller than a
   word (or a cluster, where M3 allowed it), mutation-checked by `Array.from`.
 - `graphicMotion`: the closed-form spring within M9's tolerance of the
-  reference; M9's figures in §61.
+  reference; M9's figures in §61. (Met 2026-10-27, `f38f971`, at ω = 4
+  rad/s, where the reference's own error leaves room under the bar;
+  §6.13's Built note.)
 - `graphic.int`'s phase-1 cases frame-exact at 9:16 and 16:9 on both builds
   (CI).
 
@@ -11058,6 +11354,10 @@ number`** = the ease of `clamp((t − start + 1e-6) / seconds, 0, 1)`: a
 (§6.3), so a frame whose time is a hair before the beat, which `beatFrame`
 may name, still reads exactly 1 and not 0.99999. A template that must arrive on a beat starts its curve at `beat −
 seconds`, so progress is 1 on `beatFrame` and below 1 the frame before.
+(**Open, yours**: it is not, for a beat between 1e-6 of a frame and 1e-6
+s after a frame's time: there `progress` reads 1 on the frame before the
+one `beatFrame` names, the two allowances being in different units; the
+Built note below, and §6.3's beat-frame bullet.)
 **`entrance(name, p): { dy; scale; opacity; blur }`** turns an entrance name
 and a progress into its four values (dy and blur as fractions of the text's
 pixel size), the one place the entrances of §6.5 are defined.
@@ -11096,7 +11396,9 @@ overshoots and at ζ = 0.5 overshoots about 16 % (computed, the research's
 §1.4); **M9**: the closed form (ζ = 1, and one under- and one over-damped
 case) against a semi-implicit Euler integration with 1,000 substeps a frame,
 sampled on each frame at 24, 25, 30 and 60 fps, the largest difference under
-10⁻⁴ of the travel (proposal), and the closed form's cost per call, both
+10⁻⁴ of the travel (proposal; built at ω = 4 rad/s, since that reference
+is too coarse for the bar at a stiffer spring, the Built note below), and
+the closed form's cost per call, both
 printed for `EFFECTS.md` §61; the spring at a time depends on the time only
 (0.2 s at 30 and at 60 fps equal, bit for bit) and two calls at one time are
 equal (no state); `progress` is 0 before its start, 1 from its end on, and
@@ -11115,6 +11417,178 @@ after a frame's time reads 0.99999 on the frame `beatFrame` names).
 (`textAnimation.ts:62`, `:72`) and the zoom punches move onto this module
 after phase 2's ratings (M14's pick and the look rating, §6.10), as their
 own change (D9).
+
+> **Built 2026-10-27/28.** `f38f971` (the module and `graphicMotion` with
+> M9, 2026-10-27), then `862cf1b` after two critics and `ae6167c` after a
+> critic of `862cf1b` (both 2026-10-28): the first piece of §6.19's lane
+> A. Pushed with the rest of lane A in one push ending at `716d6a7`
+> (2026-10-28 02:20 America/New_York); the CI run for `716d6a7` was in
+> progress on both runners when this note was written, and its result is
+> to be written here when it completes. Every figure below is from the
+> three commits' messages, the test's "graphicMotion: M9" line (re-run at
+> `716d6a7`: 28 cases passed, vitest exit 0) and the critics where named;
+> line numbers were read at `716d6a7`.
+> - **The exports**, in `src/shared/graphics/motion.ts`, pure and
+>   importing nothing: `CurveName` (`:19-27`), `MotionEase` (`:34`),
+>   `EntranceName` (`:40`), `SpringParams` (`:43-46`), `cubicBezier`
+>   (`:68-104`), `curve` (`:162-164`), `easeCurve` (`:185-187`), `spring`
+>   (`:205-238`), `progress` (`:257-262`), `entrance` (`:295-300`) and
+>   `DURATIONS` (`:310-325`: the table above, frozen, doc-commented as the
+>   research's proposals the look rating revises). Two this section does
+>   not name: **`EntranceName`** (`'rise' | 'pop' | 'wipe' |
+>   'blur-rise'`), §6.5's union for the style's `motion.entrance`, named
+>   here so `style.ts` can take it (it does, `style.ts:23`); and
+>   **`easeCurve(name: MotionEase)`**, the curve or `spring1`, since this
+>   section names no function for `spring1` and `progress` and the test
+>   need one. Not exported: the 1e-6 s allowance
+>   (`PROGRESS_ALLOWANCE_S`, `:247`), `spring1`'s k = 9.23 (`:167`; its
+>   residual 0.1003 %, measured) and `out-back`'s c1 = 1.70158 (`:109`).
+>   Only `stroke.ts` and `style.ts` read the module yet.
+> - **`cubicBezier`** solves by Newton-Raphson, 8 steps, then bisection, 64
+>   halvings (`:51`, `:55`); 0 at or below x = 0, 1 at or above x = 1.
+>   What this section does not say: **when y1 and y2 lie in [0, 1], y is
+>   held in [0, 1]** (`:72`, `:102`), because in doubles the polynomial
+>   read 1.0000000000000002 at 2,163 of 100,001 points within 1e-4 of
+>   `expo-out`'s end (measured 2026-10-27). Each curve carries its own
+>   exact ends, never a wrapper in `curve()`, so an `expo-out` written as
+>   1 − 2^(−10x) would still fail; `out-back`'s formula reads 2.2e-16 at 0
+>   in doubles, so its ends are set.
+> - **Every curve clamps its input to [0, 1]** (`862cf1b`): `unit(x)`
+>   (`:125`) holds x to [0, 1] and keeps NaN NaN, as a Bézier does, and
+>   `out-cubic`, `linear` and `spring1` read their formula at `unit(x)`
+>   (`:147`, `:151`, `:181`), so the value at 1 is still the formula's own
+>   and an unnormalised `spring1` (0.999 at 1) cannot hide behind a set
+>   end. Before, `out-cubic` read −2.375 at −0.5 and 1.125 at 1.5,
+>   `linear` −0.5 and 1.5, and `spring1` 366.44 at −0.5 and 1.00099 at
+>   1.5, while the five Béziers and `out-back` already read exactly 0 and
+>   1. `progress` clamps before it calls a curve, so nothing drawn
+>   changed. Every curve, and `spring1`, gives NaN at NaN (held by the
+>   test since `ae6167c`), so a broken time is not hidden behind a curve
+>   at rest.
+> - **The spring** is the closed form of the three cases (critical at ζ
+>   exactly 1); before t = 0, or at a time that is not a number, it is at
+>   `from` with `v0`; parameters that are not a spring (ω not above 0, ζ
+>   below 0, either not finite) read as settled, at `to` and still.
+> - **The entrances** (`:295-300`): `rise` comes up from half the text's
+>   pixel size, `dy` 0.5 to 0; `pop` scales from 0.92 (`POP_FROM`,
+>   `:269`, a proposal the test holds below 1 but does not pin) with `dy`
+>   0; both fade in, opacity the eased progress clamped to [0, 1]; `blur`
+>   is 0 for every entrance (M5, 2026-10-27), kept in the return only as
+>   this section words it; `blur-rise` and `wipe` are `rise`. **Pop's
+>   fade** is not §6.5's words, which give `pop` the scale alone: it is
+>   taken from the captions' pop (`render/textAnimation.ts:114`, `alpha:
+>   Math.min(1, t * 3)`) and from §6.2's keyword row, where the card
+>   "scales from 0.92 (proposal) with a rise and fade"; its shape, opacity
+>   equal to the eased progress rather than the captions' linear ramp
+>   over the first third of the time, is this module's choice
+>   (`entrance`'s comment, `:278-287`, since `862cf1b`). **Open, yours**:
+>   that row names a rise as well, and `pop` has `dy` 0. Whether `pop`
+>   rises too, or the row is reworded, is yours.
+> - **M9, as built.** The bar, 1e-4 of the travel (this section's
+>   proposal, taken as written), is asserted at ω = 4 rad/s over 3 s, on
+>   three cases: ζ = 1 from 0 to 1 at rest; ζ = 0.5 from 0 to 1 with v0 =
+>   1; and ζ = 2 from 20 to 120 with v0 = −50
+>   (`tests/graphicMotion.test.ts:257-307`, the reference at `:502-517`).
+>   The largest difference over the three: 5.19e-5, 4.98e-5, 4.14e-5 and
+>   2.07e-5 at 24, 25, 30 and 60 fps. Not at a stiffer spring, because
+>   the reference cannot meet the bar there: semi-implicit Euler with
+>   1,000 substeps a frame is first order, its own error in proportion to
+>   ω·dt, so at ω = 10, ζ = 0.5 (Remotion's default), from rest, it reads
+>   1.69e-4, 1.61e-4, 1.36e-4 and 6.79e-5 of the travel at 24, 25, 30 and
+>   60 fps, and halves with 2,000 substeps (ratios 2.0001, 2.0001, 2.0001,
+>   2.0000). The test asserts that halving, between 1.9 and 2.1, at ω =
+>   10. A critic's independent RK4 check (200 substeps a frame) showed the
+>   remainder is the reference's, not the closed form's: the closed form
+>   within 1.2e-13 of it at ω = 10, ζ = 0.5, 24 fps, and within 1.9e-11
+>   across ζ from 0.2 to 3 and ω from 10 to 30; while semi-implicit Euler
+>   at 24 fps from rest reads, at ζ = 0.5, 8.46e-5 at ω = 5, 1.01e-4 at
+>   ω = 6 and 1.69e-4 at ω = 10, and at ζ = 1, 1.02e-4 at ω = 8. So
+>   **§6.15's M9 row is corrected**: "a larger difference means the closed
+>   form is wrong, not the tolerance" holds only up to about ω = 5 at 24
+>   fps with the reference as this section specifies it. The cost: 47-55
+>   ns a call on the Mac (node 24.18.1, `f38f971`'s runs), 47.1 ns in this
+>   record's re-run. The under-damped case first had v0 = 2, which makes
+>   the sine term's weight, v0 + ζω(from − to), zero, so the sine-sign
+>   mutation passed M9's own bar and failed only the halving; v0 = 1
+>   makes the weight −1. All of it is printed to stderr as one
+>   "graphicMotion: M9" line; `EFFECTS.md` §61, "M9 in node, 2026-10-27".
+> - **The tests**, `tests/graphicMotion.test.ts`: 22 cases in `f38f971`,
+>   28 since `862cf1b` (`ae6167c`'s probes join existing cases). Every
+>   case this section lists, with `beatFrame` (`ceil(beat × fps − 1e-6)`)
+>   written into the test until `frame.ts` is built, and beats on a frame,
+>   a hair before, 0.9e-6 of a frame after, a third and a half past, under
+>   every ease at 0.35 and 0.12 s. Since `862cf1b`: `spring1` against 1 −
+>   (1 + kx) e^(−kx), k = 9.23, divided by its value at 1, within 1e-12 at
+>   seven interior points, and k read back from the module by bisection
+>   (f(0.5) / f(0.25) falls strictly in k from 1 to 40) with its residual
+>   held in [0.0009, 0.0011] (the band admits about 9.13 to 9.35, so 9.24
+>   is the interior case's to catch); `out-back` against easings.net's
+>   easeOutBack with c1 = 1.70158 within 1e-12 at six points (the 10.0 %
+>   peak cannot tell 1.7 from 1.70158: 9.984 % against 10.000 %); every
+>   curve and `spring1` exactly 0 below 0 and exactly 1 above 1; a
+>   duration not above 0 (0, −0.35, −5, NaN) a cut at its start; and a
+>   probe at start − 1.1e-6 holding the allowance under 1.1e-6 s.
+>   **Readings the plan should know.** The `DURATIONS` are held to this
+>   section's range read, not pinned, so a revision inside a range stays
+>   green: `entrance` [0.3, 0.4], `exit` [0.12, 0.3] (its "about" read as
+>   hard bounds; whether "about" admits anything either side is yours to
+>   record), `dim` [0.3, 0.7], `stroke` [0.35, 0.6], `loop` [5, 6]. `swap`
+>   and `headGrow` have no range here, so the test holds them by
+>   relations of its own: `swap` no longer than `exit` (it is "the old
+>   element's exit in a content swap"), and `headGrow` no longer than
+>   `stroke` (since `ae6167c`, on §6.3's grow "0 to 1 over
+>   `DURATIONS.headGrow` (0.1 s, §6.13) from the stroke's own start" and
+>   §6.2's tree row, the head "growing in over its first 0.1 s";
+>   `862cf1b` had held it under `entrance`, which no line of the plan
+>   gives).
+> - **Mutations**, each at one anchor counted at one match with
+>   `matchAll`, `motion.ts` restored from its copy and compared with
+>   `cmp`. This section's all fail: `expo-out` as 1 − 2^(−10x) (five
+>   cases, "expo-out at 1: expected 0.9990234375 to be 1"); the Bézier
+>   unsolved, or solved on the wrong axis (three each, the table among
+>   them); ζ = 1 through the under-damped formula (four, NaN); the sine
+>   term's sign flipped (four, "under at 24 fps: expected
+>   0.2728488599645891 to be less than 0.0001"); the spring stepped by a
+>   call counter (six); a spring integrating from the last call's state
+>   (five); `spring1` not normalised (four, "expected 0.998996915393416 to
+>   be 1"; seven since the clamp); `progress` unclamped (two); `progress`
+>   without the 1e-6 (the beat case alone). Invented in `f38f971`: the
+>   velocity's sine coefficient with ω for ω², the bisection fallback
+>   removed, the over-damped c1 from the wrong root ("over at 24 fps:
+>   expected 0.755231685510147 to be less than 0.0001"), the [0, 1] hold
+>   removed, `blur-rise` given a blur, `DURATIONS` unfrozen. The critics'
+>   gaps, each first shown to pass the tests of the time (vitest exit 0)
+>   and failing since: `SPRING1_K` 9.24 and 5, `BACK_C1` 1.7 (the
+>   captions' constant), `entrance` 3.5, `swap` 0.25, the cut branch
+>   inverted, `PROGRESS_ALLOWANCE_S` 1.9e-6, and `out-cubic`, `linear` and
+>   `spring1` without `unit` (`862cf1b`); `headGrow` 0.38 with `stroke`
+>   0.35 and `entrance` 0.4, each inside its range ("headGrow against
+>   stroke: expected 0.38 to be less than or equal to 0.35"), the cut
+>   branch without its allowance ("expo-out, 0 s, at
+>   1.9999995: expected +0 to be 1"), and `unit` reading NaN as 0
+>   ("out-cubic at NaN: expected +0 to be NaN") (`ae6167c`).
+> - **Open, yours: `progress`'s allowance against `beatFrame`'s.**
+>   `progress` adds 1e-6 s (`:247`); `beatFrame` (§6.3) subtracts 1e-6 of
+>   a frame. So for a beat between 1e-6 of a frame and 1e-6 s after a
+>   frame's time, `beatFrame` names the next frame while `progress`
+>   already reads exactly 1 on this one: the element arrives a frame
+>   before the one named. A critic measured it at this module, with beats
+>   at a frame plus 2e-6, 1e-5 and 2e-5 of a frame at 24, 25, 30 and 60
+>   fps: progress was 1 on frame 32, the one `beatFrame` names, and on
+>   frame 31, all twelve. The test does not probe that window: its beat
+>   after a frame is 0.9e-6 of a frame, inside `beatFrame`'s own
+>   allowance. No allowance was changed and no test pins either side of
+>   it. The fix is one allowance in one unit (both in seconds, or both in
+>   frames), which you pick; §6.3's beat-frame bullet carries the same
+>   note.
+> - **Suites**: typecheck exits 0 at each. The full suite green at
+>   `f38f971` (315 files: 310 passed, 5 skipped; 4326 tests: 4263 passed,
+>   63 skipped) and at `862cf1b` (318 files: 313 passed, 5 skipped; 4372
+>   tests: 4309 passed, 63 skipped); at `ae6167c` the test file alone (28
+>   cases), another process's runs sharing the machine. The captions'
+>   `easeOut` and `backOut` are now at `textAnimation.ts:63` and `:73`,
+>   moved by a line `e5c47ac` added above them; they come here only after
+>   phase 2's ratings, as above.
 
 ### 6.14 Sound on the beats, under each graphic's own Clear
 
@@ -11506,7 +11980,7 @@ itself when it shows them wrong.
 | M6 | 44 | 0 for its Indic and colour parts; 3 whole; you, the development app | Indic through a texture at 0.000 and colour within 2/255 under one colour setting: that setting is phase 3's. Neither: phase 3 is flagged at phase 0's exit and re-planned before it starts; phases 1-2 go on. The 1 px line (phase 3): within 2/255 over black and white, or the compositor's alpha settings change until it is; it is phase 3's exit |
 | M7 | 45 | 3, first, on the compositor's glow seam with both routes built behind it (§6.16; moved from phase 0 on 2026-10-21, above); you | `UnrealBloomPass` is the glow route if, on both machines, alpha outside the shape is 0 and the glow's alpha below 1; else the quad shader (§6.16's two passes). The route not taken is removed. The pmndrs leg is optional, run only from a scratch branch with the package added there and never merged; its result is recorded, and it stays out whatever it shows, because its peer range pins three below 0.187 (the research, §4.9) |
 | M8 | 46 | 1; you, the Mac | `STROKE_TOLERANCE` is the coarsest at which total length agrees with `getTotalLength()` within 0.1 % and every sampled point within 0.5 px at 1080 wide (proposal); our flattening stays node-pure either way |
-| M9 | 47 | 1; node, anywhere | `graphicMotion.test.ts` asserts the closed form within 1e-4 of the travel against its reference (§6.13) and prints the figures; a larger difference means the closed form is wrong, not the tolerance |
+| M9 | 47 | 1; node, anywhere. **Measured 2026-10-27** (`f38f971`; §6.13's Built note, `EFFECTS.md` §61) | `graphicMotion.test.ts` asserts the closed form within 1e-4 of the travel against its reference (§6.13) and prints the figures; a larger difference means the closed form is wrong, not the tolerance, only up to about ω = 5 rad/s at 24 fps with the reference as §6.13 specifies it (semi-implicit Euler, 1,000 substeps a frame, first order), whose own error at ω = 10, ζ = 0.5 reads 1.69e-4 at 24 fps. So the bar is asserted at ω = 4 (largest 5.19e-5, at 24 fps), and at ω = 10 the reference's halving with 2,000 substeps (corrected 2026-10-27, when the build measured it) |
 | M10 | 48 | 2, the perfect-freehand half only, from a scratch branch with perfect-freehand added there and never merged (as M7's pmndrs leg; the harness imports it by a DEV-only dynamic `import()`); you, Mac and Surface | only on a pass does a phase-2 commit add perfect-freehand to `main` with the marker painter and `MARKER_READY` (D7's order). `strokeLook: 'marker'` is offered (§16.60) only if one of the two draw-ons keeps the tapered end's shape from frame to frame behind the moving tip (mean 0 outside the last 5 % of length, proposal) and preview = export ≤ 1/255. The rough.js half is not run in step 3 (§16.60: "rough.js not now") |
 | M11 | 49 | only if M1-M2 fall short; you | a raw RGBA path is then planned as its own change, outside step 3's days, using `overlay`'s `alpha=premultiplied` only if M4 found it on Windows |
 | M12 | 50 | 3; you | the fastest readback at p50 on the Surface that keeps straight alpha through to the PNG is phase 3's bake; `drawImage` stays unless another is at least twice as fast (proposal, §6.16) |
@@ -12952,8 +13426,8 @@ piece table does (§6.3's, §6.16's, §6.17's, §6.18's).
 |---|---|---|---|---|
 | 0 | one | 0.1 M4's case; 0.2 `graphicCheck.ts`'s measuring half with `encodeFrames`; 0.3 the libass reference and M21's case; 0.4 the runs and the record (§6.15) | 2 | — |
 | 1 | head, serial | the §16.8 rename as its own commit (0.25 of §6.1); then all of §6.1's types in one commit (`template.ts`'s types, the `timeline.ts` fields, `GraphicsSettings`, `GraphicProposal`, `MediaAsset.speaker`, `Clip.forGraphic`, the (box) field, and the seam's `GraphicCandidate`, §6.7, and `KeptGraphic`, §6.6, declared in `template.ts`), so `Clip.graphic` exists before anything reads it (the other 0.25 of §6.1); then `SELF_DRAWN_FIELDS`, the five list sites and `graphicGuards`' head half, the behaviour over the constant and the regex, with the membership rewrites of `paper.test` and `moment.test` (0.75 of §6.4) (built 2026-10-27: `1f62fba`; `d10e474` and `6272050`; `a2cad0f` and `60c8b28`) | 0.25 + 0.25 + 0.75 | phase 0's exit |
-| 1 | outside the days, serial | §6.20's two halves, each its own commit: D8's (`shapedScript` and the captions' fix) and D10's (the Noto files, `INDIC_FONTS`, the scan, the renderer's font sites, the CI check, the route, §16.66 (a)), D10's after D8's (if D10's fonts move to phase 0, below, the route becomes a third commit, after D8's) | (§6.20's 1.25) | the head |
-| 1 | A | `motion.ts` with `graphicMotion` (§6.13); `stroke.ts` with `graphicStroke` (0.5 of §6.3); `style.ts`'s first half with `graphicStyle` (§6.5) | 1 + 0.5 + 0.5 | the head |
+| 1 | outside the days, serial | §6.20's two halves, each its own commit: D8's (`shapedScript` and the captions' fix; built 2026-10-27, `e5c47ac`) and D10's (the Noto files, `INDIC_FONTS`, the scan, the renderer's font sites, the CI check, the route, §16.66 (a)), D10's after D8's (if D10's fonts move to phase 0, below, the route becomes a third commit, after D8's) | (§6.20's 1.25) | the head |
+| 1 | A | `motion.ts` with `graphicMotion` (§6.13); `stroke.ts` with `graphicStroke` (0.5 of §6.3); `style.ts`'s first half with `graphicStyle` (§6.5) (built 2026-10-27/28: `f38f971`, `862cf1b`, `ae6167c`; `69d2d6e`, `2074f08`; `b965cda`, `0d603a8`) | 1 + 0.5 + 0.5 | the head |
 | 1 | B | `drawList.ts`, `items.ts` (`DrawOut`, `unitFor`, `CLUSTER_SCRIPTS`, the drawer seam), `templates/index.ts` with `graphicDrawList` (1 of §6.3); `paint.ts` with its `PaintOptions` and `graphicPaint` (0.75); `frame.ts` and `targets.ts` with `graphicFrame`'s first half (0.25) | 2 | the head; §6.20's two halves (`unitFor` reads `shapedScript`; shaped text items name `INDIC_FONTS`); M3 for `CLUSTER_SCRIPTS` (in, 2026-10-27); A's `stroke.ts` before `paint.ts` |
 | 1 | C | `graphicCanvas.ts` (preview, bake, frames; the worker back-end only if M2 asks, which it did on 2026-10-27) (0.75 of §6.3); the export branch with its own catch line, `Bakers.graphic` and every literal of §6.11, `exportBakers.ts`, the store's `addGraphicClip`, `setGraphic`, `rebakeGraphic`, the trim and split rules, Preview's branch and sweep, (box) `identityPlaced`, with `graphicStore` (0.5); the three store arms (`rebakeGenerated`, `placeCopies`, `rebakeFollowed`) and `graphicGuards`' wiring half (0.25 of §6.4) | 1.5 | B's draw list and painter; M1 and M2 (in, 2026-10-27) |
 | 1 | D | the harness's `primitives` and Indic halves (0.25 of §6.3); `pathLength`, `strokes` widths, `graphic.int`'s phase-1 cases, `SHAPES`' graphic overlay (§6.11's half) | 0.25 + 0.5 | C; §6.20's D10 half |
@@ -13053,6 +13527,88 @@ Indic scripts, mutation-checked."
   string one of the line's words), and an accent on word 1 lands on the
   second word's call. Mutations: `Array.from` restored for shaped text (both
   files fail); `shapedScript` returning false for Telugu.
+
+> **Built 2026-10-27 (D8's half).** `e5c47ac`, its own commit as §6.19
+> asks, after the head and before lane A. Pushed on its own; its CI run
+> 40627327234 passed on both runners (`windows-latest` in 11.9 min,
+> `macos-14` in 7.4 min, 2026-10-28 UTC). Every figure below is from its
+> message; line numbers were read at `716d6a7`.
+> - **The defect was where this half put it.** `bounce` and `wave` have
+>   scope `'char'` (now `textAnimation.ts:130` and `:139`), and
+>   `paintAnimated` drew each code point with a `fillText` of its own (the
+>   split now `textPaint.ts:472`), so प्रिय went out as प, ्, र, ि and य.
+>   The same split counts the pieces that time the movement at
+>   `textCanvas.ts:135` and `captions/bake.ts:72`, and at
+>   `TextAnimationPicker.tsx:69`, a caller this half does not list: the
+>   picker's strip sample, the clip's own first three words (`:50`), so
+>   its loop follows the fallback too. grep found no other split of char
+>   scope under `src/`, so the fix in `piecesOf` reaches all four.
+> - **What landed**, in `render/textAnimation.ts`: `SHAPED_SCRIPTS`
+>   (`:258-276`), seventeen Unicode script names as const, D8's ten Indic
+>   (Devanagari, Bengali, Gurmukhi, Gujarati, Oriya, Tamil, Telugu,
+>   Kannada, Malayalam, Sinhala) and the seven the planner added (Arabic,
+>   Syriac, Thai, Lao, Tibetan, Myanmar, Khmer), doc-commented as the
+>   proposal above for you to narrow; one module-level regex (`:278`), the
+>   `\p{Script=…}` alternation built from the constant with the `u` flag
+>   alone, so a name dropped from the constant drops from the test (a `g`
+>   flag would carry `lastIndex` from one call to the next);
+>   `shapedScript(text)` (`:286-288`), true when the text holds any code
+>   point of them, a letter, a mark or a digit alike; and `piecesOf(text,
+>   'char')` (`:304-308`) returning the word pieces when
+>   `shapedScript(text)` and `Array.from(text)` otherwise, word and block
+>   scope unchanged. **A mixed line falls back whole**, its Latin words
+>   included. **Per wrapped row**: the painter calls `piecesOf` per row,
+>   so a row of a wrapped paragraph with no shaped code point still moves
+>   by code point; the timing is untouched, since `animationFrames` reads
+>   only whether a line has more than one piece. The accent mapping needed
+>   no change, only a comment (`textPaint.ts:489-491`): under char scope
+>   it counts a word at every gap between movable pieces (the branch at
+>   `:507`), and with word pieces the n-th movable piece is the n-th
+>   word. The regex is built at run time, so typecheck says nothing about
+>   it: under Node 24 each of the seventeen names compiled as a script
+>   property and matched a sample of its own script, and Latin, Cyrillic,
+>   Greek, Japanese, Korean and an emoji line matched none.
+> - **The tests.** `tests/textAnimation.test.ts` gained ten cases: a Hindi
+>   line (प्रिय मित्र किताब) and a Telugu line (నమస్కారం తెలుగు మిత్రమా) under
+>   `'char'` give their five word pieces, the same as under `'word'`; the
+>   mixed `hello प्रिय world` gives `['hello', ' ', 'प्रिय', ' ', 'world']`;
+>   a Latin, a Cyrillic, a Greek and a Japanese line, `'ab c'` and `'Bride
+>   5:30pm!'` give exactly `Array.from` of themselves (the existing `'ab
+>   c'` case, now at `:166`, stands); `shapedScript` true for Devanagari,
+>   Telugu and the mixed line and false for Latin, Cyrillic and the empty
+>   string; the same answer 24 times running on one line; Devanagari and
+>   Telugu members of `SHAPED_SCRIPTS`; and, iterating the constant rather
+>   than pinning it, every name compiles and each sample is shaped alone
+>   and after a Latin word. `tests/textPaint.test.ts`'s fake context now
+>   records the `fillStyle` at each `fillText`, and four cases drive
+>   `drawTextOnto` with `bounce` at frame 9 at 30 fps, mid-flight for all
+>   three words: the Hindi line draws only whole words, all three; with a
+>   highlight on word 1 every accent-coloured call is मित्र and the other
+>   two are plain; and the Latin `'ab cd'` still draws A, B, C and D, the
+>   accent on C and D.
+> - **Mutations**, each at one anchor counted at one match, run against
+>   both files, the file restored from its copy and compared with `cmp`.
+>   This half's two fail as planned: `Array.from` given back to the char
+>   branch fails five cases across both files ("fillText("प"): expected [
+>   'प्रिय', 'मित्र', 'किताब' ] to include 'प'"), and `shapedScript` false for
+>   Telugu fails three. Telugu dropped from the constant, the mixed line
+>   decided word by word, `shapedScript` asking every letter to be shaped,
+>   a `g` flag on the regex (it failed the repeat case only once that case
+>   asked one line in a row), the accent's char branch switched off (the
+>   Latin paint case alone) and the `Array.from` line removed (the `'ab
+>   c'` case, the Latin pieces and the Latin paint case) each fail too.
+> - **Suite**: typecheck and the build exit 0; the full suite green (314
+>   files: 309 passed, 5 skipped; 4304 tests: 4241 passed, 63 skipped);
+>   no other test draws `bounce` or `wave` text, and `captionBake`,
+>   `captionLine`, `exportBake`, `captionBakeTiming.int` and
+>   `captionOverlay.int` passed beside the two (7 files, 118 tests).
+> - **Limits, recorded in `piecesOf`'s comment (`:290-303`) and not fixed
+>   here**: a right-to-left script's pieces are still laid out in logical
+>   order (the fallback fixes the joining only; older than D8); and
+>   graphemes the list does not cover, a combining mark, an emoji
+>   modifier or a flag's halves, still split by code point under char
+>   scope (older than D8 and outside it). **Open, yours**: the seven
+>   scripts beyond D8's ten stay a proposal to narrow, as above.
 
 **D10's fonts, and the route §16.66 (a) chose · 0.75 day.** D10, §16.63:
 "Decide `BETA.md` R14, bundling Noto Sans Devanagari and Noto Sans Telugu
@@ -14998,6 +15554,14 @@ H11, and H12 again, in phase 4.
   colour within 1 level); colour management on, the one setting with
   Indic exact (max 0) on both, is phase 3's. Phase 3 is not flagged. The
   1 px line and M6 whole are phase 3's.
+- **Row 47 (M9): measured 2026-10-27** (`f38f971`; §6.13's Built note,
+  §6.15's M9 row, `EFFECTS.md` §61), in node on the Mac: the closed-form
+  spring within 1e-4 of the travel of semi-implicit Euler at 1,000
+  substeps a frame, at ω = 4 rad/s over 3 s on ζ = 1, 0.5 and 2 (largest
+  5.19e-5, 4.98e-5, 4.14e-5 and 2.07e-5 at 24, 25, 30 and 60 fps); at ω =
+  10, ζ = 0.5 the reference's own first-order error (1.69e-4 at 24 fps,
+  halving with 2,000 substeps) is above the bar, so the row's reading was
+  corrected to hold up to about ω = 5 at 24 fps; 47-55 ns a call. Closed.
 - **Row 49 (M11): not run** (2026-10-27, §6.15, `EFFECTS.md` §61). M1–M2
   did not fall short: a 60 s clip's three graphics, 90–270 moving frames,
   take 1.01–3.03 s at the box and pool 4 and 0.43–1.30 s on four workers

@@ -9790,6 +9790,97 @@ besides), green once run alone after 90 s waits; and
 a 350 ms sleep) failed once in the M4 lane's first full run, before the
 parallel lanes began, and passed alone and on the rerun.
 
+### M9 in node, 2026-10-27
+
+Phase 1's first measurement, from lane A's motion module (`CLIPS.md`
+§6.13 and its Built note): `f38f971` (2026-10-27), then `862cf1b` and
+`ae6167c` (2026-10-28), pushed with the rest of lane A in one push
+ending at `716d6a7` (2026-10-28 02:20 America/New_York); the CI run for
+`716d6a7` was in progress on both runners when this was written, and its
+result is to be written here when it completes. The figures are
+`f38f971`'s, printed by the test as one stderr line and read again by
+this record's re-run at `716d6a7` (`npx vitest run
+tests/graphicMotion.test.ts`, 28 cases passed, vitest exit 0, darwin,
+node v24.18.1), which gave every difference and ratio below to the digit;
+the RK4 figures are a critic's.
+
+The case (`tests/graphicMotion.test.ts:257-307`) compares
+`spring(t, p, from, to, v0)`'s closed form, on each frame over 3 s,
+against semi-implicit Euler with 1,000 substeps a frame
+(`largestDifference`, `:502-517`), as a fraction of the travel:
+
+| fps | ω = 4, the largest over ζ = 1 (0 to 1 at rest), ζ = 0.5 (0 to 1, v0 = 1) and ζ = 2 (20 to 120, v0 = −50); bar 1e-4 | ω = 10, ζ = 0.5, 0 to 1 at rest; not held to 1e-4 | 1,000 substeps against 2,000 at ω = 10 |
+|---|---|---|---|
+| 24 | 5.19e-5 | 1.69e-4 | 2.0001 |
+| 25 | 4.98e-5 | 1.61e-4 | 2.0001 |
+| 30 | 4.14e-5 | 1.36e-4 | 2.0001 |
+| 60 | 2.07e-5 | 6.79e-5 | 2.0000 |
+
+The difference at ω = 10 is the reference's, not the closed form's: the
+reference is first order, its error in proportion to ω·dt, and doubling
+its substeps halves it (the test asserts the ratio between 1.9 and 2.1).
+A critic's independent RK4 integration (200 substeps a frame) put the
+closed form within 1.2e-13 of it at ω = 10, ζ = 0.5, 24 fps, and within
+1.9e-11 across ζ from 0.2 to 3 and ω from 10 to 30; and read the
+semi-implicit reference at 24 fps from rest, ζ = 0.5, at 8.46e-5 (ω = 5),
+1.01e-4 (ω = 6) and 1.69e-4 (ω = 10), and ζ = 1 at 1.02e-4 (ω = 8). So
+the M9 row's "a larger difference means the closed form is wrong, not
+the tolerance" holds only up to about ω = 5 at 24 fps with that
+reference; `CLIPS.md` §6.15's row was corrected, and the bar is asserted
+at ω = 4. The closed form's cost: 47-55 ns a call (`f38f971`'s runs on the
+Mac), 47.1 ns in the re-run.
+
+What the case catches (`f38f971`'s mutations): the under-damped sine
+term's sign flipped ("under at 24 fps: expected 0.2728488599645891 to be
+less than 0.0001"), ζ = 1 through the under-damped formula (NaN), and the
+over-damped c1 taken from the wrong root ("over at 24 fps: expected
+0.755231685510147 to be less than 0.0001"). The under-damped case's v0 is
+1 because at v0 = 2 the sine term's weight, v0 + ζω(from − to), is zero,
+and the sign mutation then passed the bar and failed only the halving.
+
+### The stroke's flattening, 2026-10-28
+
+From lane A's stroke primitive (`CLIPS.md` §6.3, "The stroke primitive",
+and its Built note): `69d2d6e`, then `2074f08`, both 2026-10-28, in the
+same push. `flattenPath` halves each cubic by de Casteljau until both
+control points lie within the tolerance of the chord. At
+`STROKE_TOLERANCE` = 0.25 frame px (proposal; M8 sets it), a four-cubic
+circle (κ = 4/3 (√2 − 1)) centred at (540, 960), its flattened length
+against 2πr, from the test's first "graphicStroke:" line (re-run at
+`716d6a7`: `npx vitest run tests/graphicStroke.test.ts`, 20 cases passed,
+vitest exit 0, node v24.18.1) and, where marked, a critic's run:
+
+| r | flattened length against 2πr | pieces |
+|---|---|---|
+| 20 | −0.1468 % | 32 |
+| 30 | −0.1468 % | 32 |
+| 38 (a critic's) | −0.1139 % | 40 |
+| 39 (a critic's) | −0.0831 % | 48 |
+| 40 | −0.0541 % | 56 |
+| 45 (a critic's), 50, 100 | −0.0262 % | 64 |
+| 200, 400, 540 | +0.0040 % | 128 |
+
+The +0.0040 % at 128 pieces is the Bézier circle itself, a little longer
+than 2πr. The quadratic `M100 800 Q540 100 980 800` reads −0.0044 %
+against its closed form over 62 pieces. The test's second line samples
+two cubics at 10,001 values of t each: `M100 1500 C300 900 700 1300 900
+600` lies at most 0.178 px from its polyline over 55 pieces, and `M0 0
+C540 0 540 960 1080 960` 0.176 px over 56, both within the 0.25.
+
+The error steps with the piece count, so §6.3's 0.05 % holds from about
+r = 41 at 0.25 px and not below; the test asserts it from r = 50 up and
+prints r = 20, 30 and 40 (`tests/graphicStroke.test.ts:166-187`). M8's
+bar, 0.1 %, holds from about r = 39 on these figures (they are against
+2πr; M8 reads `getTotalLength()`). A
+ring under r = 40 is where our flattening is furthest from the curve, so
+it belongs among M8's paths. What the case caught: `STROKE_TOLERANCE` 0.5
+("r = 50: expected 0.0014682246459258863 to be less than or equal to
+0.0005"), the flatness test at twice the tolerance (the same, and the
+cubics' "0.36872718668771864 to be less than or equal to 0.25"), and
+`push` without its duplicate check ("r = 20, point 33: expected
+125.47920359313349 to be greater than 125.47920359313349"), each of which
+passed `69d2d6e`'s 17 cases and fails `2074f08`'s 20.
+
 ### What this settles
 
 1. **Both bundled builds have `tmix`, `overlay`'s `alpha=premultiplied`
@@ -9887,6 +9978,19 @@ parallel lanes began, and passed alone and on the rerun.
     described; the Mac's half passed whole on 2026-10-22. "Text has to be
     canvas 2D" holds, and the canvas bake `CLIPS.md` §16.66 (a) chose for
     Hindi and Telugu captions shapes on the Surface.
+14. **M9 passes, at ω = 4, and the reference limits it above** (phase 1,
+    node, 2026-10-27; "M9 in node" above). The closed-form spring is
+    within 1e-4 of the travel of semi-implicit Euler on every frame at
+    24, 25, 30 and 60 fps (largest 5.19e-5, at 24); at ω = 10 the
+    reference's own first-order error is over the bar (1.69e-4 at 24 fps)
+    and halves with twice the substeps, while a critic's RK4 agrees with
+    the closed form within 1.9e-11 across ω from 10 to 30. The closed
+    form costs 47-55 ns a call.
+15. **Our flattening meets §6.3's 0.05 % from about r = 41 at 0.25 px**
+    (phase 1, node, 2026-10-28; "The stroke's flattening" above), not on
+    a small ring: −0.1468 % at r = 20 and 30. This is against 2πr, in
+    node; it sets nothing. `STROKE_TOLERANCE` stays 0.25, a proposal,
+    until M8.
 
 ### Still unmeasured, and whose
 
@@ -9914,6 +10018,13 @@ parallel lanes began, and passed alone and on the rerun.
 - **The bake through the app's own writer, with a real template**: no
   phase-0 figure includes `writeTitleFrame`'s IPC and disk or a template's
   own draw; phase 1's render check's.
-- **M7–M20, by phase**: M8, M9, M13 and M19 in phase 1; M10 and M14–M18 in
+- **M8**: the user's, on the Mac in the development app
+  (`__forgeGraphicCheck({ pathLength: true })`): our `total` against an
+  `SVGPathElement`'s `getTotalLength()`, which sets `STROKE_TOLERANCE`.
+  Its paths should include a ring under r = 40, where item 15 finds our
+  flattening furthest from the curve (−0.0541 % at r = 40, −0.1468 % at
+  20 and 30, against 2πr).
+- **M7–M20, by phase**: M8 (above), M13 and M19 in phase 1 (M9 measured,
+  item 14); M10 and M14–M18 in
   phase 2; M7 first, then M6 whole, M12, M20 and M13 again in phase 3; M11
   is not run, since M1–M2 did not fall short (item 8). H1–H13 are §62's.
