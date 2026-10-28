@@ -159,6 +159,16 @@ describe('the curves', () => {
     expect(at).toBeCloseTo(0.58, 2)
   })
 
+  it("out-back is easings.net's easeOutBack with §6.13's c1 = 1.70158, within 1e-12, not the captions' 1.7", () => {
+    // The 10.0 % above holds for both constants (9.984 % at 1.7, 10.000 % at
+    // 1.70158); the formula tells them apart, by 1.6e-4 at 0.58.
+    const c1 = 1.70158
+    const formula = (x: number): number => 1 + (c1 + 1) * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2)
+    for (const x of [0.05, 0.2, 0.4, 0.58, 0.8, 0.95]) {
+      expect(Math.abs(curve('out-back')(x) - formula(x)), `out-back at ${x}`).toBeLessThanOrEqual(1e-12)
+    }
+  })
+
   it('spring1 ends exactly at 1 with no overshoot', () => {
     const f = easeCurve('spring1')
     let previous = f(0)
@@ -169,6 +179,53 @@ describe('the curves', () => {
       previous = y
     }
     expect(f(1)).toBe(1)
+  })
+
+  it("spring1 is §6.13's 1 − (1 + kx) e^(−kx) with k = 9.23, divided by its value at 1, within 1e-12 inside its run", () => {
+    // k is §6.13's definition, not a proposal, and M14 compares this shape
+    // blind; the ends and the monotone case above hold for any k once the
+    // curve is normalised. A change of 0.01 in k moves 0.25 by 5.7e-4.
+    const k = 9.23
+    const raw = (x: number): number => 1 - (1 + k * x) * Math.exp(-k * x)
+    const f = easeCurve('spring1')
+    for (const x of [0.01, 0.1, 0.25, 0.5, 0.75, 0.9, 0.99]) {
+      expect(Math.abs(f(x) - raw(x) / raw(1)), `spring1 at ${x}`).toBeLessThanOrEqual(1e-12)
+    }
+  })
+
+  it("the k spring1 draws with leaves §6.13's 0.1 % residual at x = 1 before the division", () => {
+    // Read back from the module, not written in: f(0.5) / f(0.25) is
+    // raw(0.5) / raw(0.25) whatever the division, and falls as k grows
+    // (strictly, from k = 1 to 40, measured), so bisection finds the module's
+    // k. §6.13: "the residual at x = 1 is 0.1 % (computed)".
+    const raw = (k: number, x: number): number => 1 - (1 + k * x) * Math.exp(-k * x)
+    const f = easeCurve('spring1')
+    const target = f(0.5) / f(0.25)
+    let lo = 1
+    let hi = 40
+    for (let i = 0; i < 200; i++) {
+      const mid = (lo + hi) / 2
+      if (raw(mid, 0.5) / raw(mid, 0.25) > target) lo = mid
+      else hi = mid
+    }
+    const k = (lo + hi) / 2
+    const residual = 1 - raw(k, 1)
+    expect(residual, `the residual at k = ${k}`).toBeGreaterThanOrEqual(0.0009)
+    expect(residual, `the residual at k = ${k}`).toBeLessThanOrEqual(0.0011)
+  })
+
+  it('every curve, and spring1, reads exactly 0 below 0 and exactly 1 above 1, the same way', () => {
+    // progress clamps before it calls a curve; a template calling one directly
+    // with an unclamped x must not get out-cubic's −2.375 at −0.5 from one name
+    // and a Bézier's 0 from another.
+    const eases: [string, (x: number) => number][] = [
+      ...CURVE_NAMES.map((name): [string, (x: number) => number] => [name, curve(name)]),
+      ['spring1', easeCurve('spring1')]
+    ]
+    for (const [name, f] of eases) {
+      for (const x of [-0.5, -1e-9, -10]) expect(f(x), `${name} at ${x}`).toBe(0)
+      for (const x of [1.5, 1 + 1e-9, 10]) expect(f(x), `${name} at ${x}`).toBe(1)
+    }
   })
 })
 
@@ -324,9 +381,24 @@ describe('progress', () => {
     for (const ease of EASES) {
       for (const seconds of [DURATIONS.entrance, DURATIONS.swap, DURATIONS.loop]) {
         const start = 2
-        for (const t of [0, 1.5, start - 1e-3, start - 2e-6]) expect(progress(t, start, seconds, ease), `${ease} at ${t}`).toBe(0)
+        // start − 1.1e-6 holds the allowance under 1.1e-6 s (§6.13's 1e-6 s).
+        for (const t of [0, 1.5, start - 1e-3, start - 2e-6, start - 1.1e-6]) expect(progress(t, start, seconds, ease), `${ease} at ${t}`).toBe(0)
         for (const t of [start + seconds, start + seconds + 1e-3, start + seconds + 0.5, start + 10 * seconds]) {
           expect(progress(t, start, seconds, ease), `${ease} at ${t}`).toBe(1)
+        }
+      }
+    }
+  })
+
+  it('with a duration not above 0 is a cut at its start: 0 before it, 1 at it and after, under every ease', () => {
+    const start = 2
+    for (const ease of EASES) {
+      for (const seconds of [0, -0.35, -5, Number.NaN]) {
+        for (const t of [0, start - 1e-3, start - 2e-6, start - 1.1e-6]) {
+          expect(progress(t, start, seconds, ease), `${ease}, ${seconds} s, at ${t}`).toBe(0)
+        }
+        for (const t of [start, start + 1e-9, start + 0.35, start + 10]) {
+          expect(progress(t, start, seconds, ease), `${ease}, ${seconds} s, at ${t}`).toBe(1)
         }
       }
     }
@@ -391,6 +463,28 @@ describe('the entrances and the durations', () => {
       expect(Number.isFinite(DURATIONS[key]), key).toBe(true)
     }
     expect(Object.isFrozen(DURATIONS)).toBe(true)
+  })
+
+  it("every duration lies in §6.13's range read; swap and headGrow, given no range, against the jobs they are part of", () => {
+    // The values are proposals the look rating revises (§6.10), so they are
+    // held to the plan's ranges, not pinned: a revision inside a range stays
+    // green, a typo (entrance 3.5) does not. exit's "about 0.12-0.3" is taken
+    // at its figures.
+    const ranges: [keyof typeof DURATIONS, number, number][] = [
+      ['entrance', 0.3, 0.4],
+      ['exit', 0.12, 0.3],
+      ['dim', 0.3, 0.7],
+      ['stroke', 0.35, 0.6],
+      ['loop', 5, 6]
+    ]
+    for (const [key, low, high] of ranges) {
+      expect(DURATIONS[key], key).toBeGreaterThanOrEqual(low)
+      expect(DURATIONS[key], key).toBeLessThanOrEqual(high)
+    }
+    // swap is "the old element's exit in a content swap": no longer than an exit.
+    expect(DURATIONS.swap, 'swap against exit').toBeLessThanOrEqual(DURATIONS.exit)
+    // headGrow is "the riding head's scale-in": shorter than an entrance.
+    expect(DURATIONS.headGrow, 'headGrow against entrance').toBeLessThan(DURATIONS.entrance)
   })
 })
 

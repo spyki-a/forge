@@ -118,9 +118,21 @@ function outBack(x: number): number {
 }
 
 /**
+ * x held to [0, 1] for a curve given by a formula: below 0 reads 0, above 1
+ * reads 1 (NaN stays NaN, as through a Bézier). The formula then makes the
+ * end itself, so a formula not exact there is not hidden behind a set end.
+ */
+const unit = (x: number): number => (x < 0 ? 0 : x > 1 ? 1 : x)
+
+/**
  * Each curve carries its own exact ends (`cubicBezier`'s, `outBack`'s, or a
- * formula exact there), never a wrapper here: `expo-out` is the Bézier form
- * because 1 − 2^(−10x) ends at 0.99902, not 1.
+ * formula exact there, read at x clamped by `unit`), never a wrapper here:
+ * `expo-out` is the Bézier form because 1 − 2^(−10x) ends at 0.99902, not 1.
+ * Every curve is held to [0, 1] the same way, exactly 0 below 0 and exactly 1
+ * above 1: the Béziers and `outBack` return their ends there, `out-cubic` and
+ * `linear` clamp x (before, out-cubic read −2.375 at −0.5 and linear 1.5 at
+ * 1.5, measured 2026-10-28). `progress` clamps before it calls a curve, so
+ * nothing it drew changed.
  */
 const CURVES: Record<CurveName, (x: number) => number> = {
   /** The default entrance, and a counter's arrival until M14 (the research's §1.4, [17]). */
@@ -132,16 +144,21 @@ const CURVES: Record<CurveName, (x: number) => number> = {
   /** Moves within the frame, [23]. */
   standard: cubicBezier(0.2, 0, 0, 1),
   /** Kept: it is the captions' `easeOut` (`render/textAnimation.ts`). */
-  'out-cubic': (x) => 1 - Math.pow(1 - x, 3),
+  'out-cubic': (x) => 1 - Math.pow(1 - unit(x), 3),
   /** The `pop` entrance only, in the energetic style, [25]. */
   'out-back': outBack,
   /** Loops only: beams, marching dashes, sweeps, [27]. */
-  linear: (x) => x,
+  linear: (x) => unit(x),
   /** IBM Carbon's expressive entrance, [26]; compared in M14 (chosen 2026-10-21). */
   'carbon-expressive': cubicBezier(0, 0, 0.3, 1)
 }
 
-/** The curve of a name: a function of x in [0, 1], 0 at 0 and exactly 1 at 1. */
+/**
+ * The curve of a name: a function of x in [0, 1], 0 at 0 and exactly 1 at 1.
+ * Every name clamps the same way outside it, exactly 0 below 0 and exactly 1
+ * above 1 (see `CURVES`), so a template that calls a curve with an unclamped
+ * x gets the same behaviour whichever curve it named.
+ */
 export function curve(name: CurveName): (x: number) => number {
   return CURVES[name]
 }
@@ -156,13 +173,15 @@ const SPRING1_END = spring1Raw(1)
  * 1 − (1 + kx) e^(−kx) with k = 9.23, divided by its value at 1 so it ends
  * exactly there, the 0.1 % residual spread over the move rather than left as
  * a jump on the last frame. A curve that ends on the beat, not a spring used
- * as the clock of an arrival, which the research rejects (its §7.5).
+ * as the clock of an arrival, which the research rejects (its §7.5). x is
+ * clamped by `unit` as the other formulas' are (before, it read 366.4 at −0.5
+ * and 1.00099 at 1.5), so its end at 1 is still the division's, not set.
  */
 function spring1(x: number): number {
-  return spring1Raw(x) / SPRING1_END
+  return spring1Raw(unit(x)) / SPRING1_END
 }
 
-/** The ease of a `MotionEase`: the named curve, or `spring1`. */
+/** The ease of a `MotionEase`: the named curve, or `spring1`, held to [0, 1] as every curve is. */
 export function easeCurve(name: MotionEase): (x: number) => number {
   return name === 'spring1' ? spring1 : curve(name)
 }
@@ -254,9 +273,18 @@ const POP_FROM = 0.92
  * 1 under `out-back`): the one place the entrances of §6.5 are defined. `dy`
  * and `blur` are fractions of the text's pixel size, `dy` down positive.
  *
- * - `rise`: up from half the text's height, opacity 0 to 1.
- * - `pop`: scale from 0.92 (a proposal), opacity 0 to 1; with `out-back`,
- *   only in the energetic style, the scale passes 1 and settles.
+ * - `rise`: up from half the text's height, opacity 0 to 1 (§6.5: "up from
+ *   half the text's height, opacity to 1").
+ * - `pop`: scale from 0.92 (§6.5, a proposal); with `out-back`, only in the
+ *   energetic style, the scale passes 1 and settles. Its fade, opacity 0 to
+ *   1, is not §6.5's words, which give `pop` the scale alone. It is taken
+ *   from the captions' pop (`render/textAnimation.ts`,
+ *   `alpha: Math.min(1, t * 3)`) and from §6.2's keyword row, where the
+ *   card "scales from 0.92 (proposal) with a rise and fade". The fade's
+ *   shape, opacity equal to the eased progress clamped to [0, 1] rather
+ *   than the captions' linear ramp over the first third of the time, is
+ *   this module's choice; so is `pop`'s `dy` of 0, though that row names a
+ *   rise as well.
  * - `blur-rise` is `rise`: phase 0 did not allow its blur (M5, 2026-10-27,
  *   §6.15's final note: blur adds 38.60 ms a frame at p95 on the Surface,
  *   against M1's p50 encode of 32.70 at the box and pool 4), so `blur` is 0
