@@ -23,7 +23,7 @@
 > D8 half (`e5c47ac`, §6.20's Built note) and phase 1's lane A: the motion
 > module, the stroke primitive and the style's first half (§6.13's, §6.3's
 > and §6.5's Built notes; pushed in one push ending at `716d6a7`, whose CI
-> run was in progress when this was written). Not built: phase 1's lanes
+> run 40643529526 passed on both runners). Not built: phase 1's lanes
 > B–D and §6.20's D10 half, and everything from phase 2 on. §2's total is
 > now about 100-103.5 days with Step P (100.25-103.75 since §16.66's
 > answer, 2026-10-27).
@@ -8596,9 +8596,9 @@ tree edges, underlines and the edge sweep of §6.16 (the research, §4.4).
 > **Built 2026-10-28 (the stroke primitive).** `69d2d6e`, then `2074f08`
 > after two critics, the second piece of §6.19's lane A. Pushed with the
 > rest of lane A in one push ending at `716d6a7` (2026-10-28 02:20
-> America/New_York); the CI run for `716d6a7` was in progress on both
-> runners when this note was written, and its result is to be written
-> here when it completes. Every figure below is from the two commits'
+> America/New_York), whose CI run 40643529526 passed on both runners
+> (`macos-14` in 10.9 min, `windows-latest` in 9.9 min, 2026-10-28 UTC;
+> every annotation a notice). Every figure below is from the two commits'
 > messages, the test's two "graphicStroke:" lines (re-run at `716d6a7`,
 > 20 cases passed, vitest exit 0) and the critics where named; line
 > numbers were read at `716d6a7`.
@@ -9648,9 +9648,9 @@ dropped from `graphicEligible` (the synthetic style passes).
 > "`GraphicStyle`, `resolveGraphicStyle`, `clean`, `GRAPHIC_TEXT_STYLES`,
 > `graphicStyleOf`, `setGraphicsStyle` and `setGraphicsOverride`").
 > Pushed with the rest of lane A in one push ending at `716d6a7`
-> (2026-10-28 02:20 America/New_York); the CI run for `716d6a7` was in
-> progress on both runners when this note was written, and its result is
-> to be written here when it completes. Every figure below is from the
+> (2026-10-28 02:20 America/New_York), whose CI run 40643529526 passed
+> on both runners (`macos-14` in 10.9 min, `windows-latest` in 9.9 min,
+> 2026-10-28 UTC; every annotation a notice). Every figure below is from the
 > two commits' messages; line numbers were read at `716d6a7`. The second
 > half (the six other presets, the OUTPUT strip's Graphics section, the
 > census rows, the marker painter) stays phase 2's, as planned.
@@ -11437,9 +11437,9 @@ own change (D9).
 > M9, 2026-10-27), then `862cf1b` after two critics and `ae6167c` after a
 > critic of `862cf1b` (both 2026-10-28): the first piece of §6.19's lane
 > A. Pushed with the rest of lane A in one push ending at `716d6a7`
-> (2026-10-28 02:20 America/New_York); the CI run for `716d6a7` was in
-> progress on both runners when this note was written, and its result is
-> to be written here when it completes. Every figure below is from the
+> (2026-10-28 02:20 America/New_York), whose CI run 40643529526 passed
+> on both runners (`macos-14` in 10.9 min, `windows-latest` in 9.9 min,
+> 2026-10-28 UTC; every annotation a notice). Every figure below is from the
 > three commits' messages, the test's "graphicMotion: M9" line (re-run at
 > `716d6a7`: 28 cases passed, vitest exit 0), the critics where named and,
 > where said, the re-run for this note's correction (`motion.ts` at

@@ -9795,9 +9795,10 @@ parallel lanes began, and passed alone and on the rerun.
 Phase 1's first measurement, from lane A's motion module (`CLIPS.md`
 §6.13 and its Built note): `f38f971` (2026-10-27), then `862cf1b` and
 `ae6167c` (2026-10-28), pushed with the rest of lane A in one push
-ending at `716d6a7` (2026-10-28 02:20 America/New_York); the CI run for
-`716d6a7` was in progress on both runners when this was written, and its
-result is to be written here when it completes. The figures are
+ending at `716d6a7` (2026-10-28 02:20 America/New_York), whose CI run
+40643529526 passed on both runners (`macos-14` in 10.9 min,
+`windows-latest` in 9.9 min, 2026-10-28 UTC; every annotation a notice).
+The figures are
 `f38f971`'s, printed by the test as one stderr line and read again by
 this record's re-run at `716d6a7` (`npx vitest run
 tests/graphicMotion.test.ts`, 28 cases passed, vitest exit 0, darwin,
