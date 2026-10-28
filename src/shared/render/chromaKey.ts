@@ -27,6 +27,7 @@
  */
 
 import type { Clip, MediaAsset } from '../timeline'
+import { drawsItself, type SelfDrawnField } from '../edit/recipes'
 
 export interface ChromaKey {
   /** The screen colour, `#rrggbb`. */
@@ -216,10 +217,10 @@ export function despillFilter(key: ChromaKey): string | null {
  * adjustment layer, which has no picture of its own at all.
  */
 export function isKeyable(
-  clip: Pick<Clip, 'adjustment' | 'text' | 'title' | 'paper' | 'carousel' | 'solid' | 'moment'>,
+  clip: Pick<Clip, 'adjustment' | SelfDrawnField>,
   asset: Pick<MediaAsset, 'kind' | 'hasVideo'> | undefined
 ): boolean {
-  if (clip.adjustment || clip.text || clip.title || clip.paper || clip.carousel || clip.solid || clip.moment) return false
+  if (clip.adjustment || drawsItself(clip)) return false
   return Boolean(asset && asset.hasVideo && (asset.kind === 'video' || asset.kind === 'image'))
 }
 

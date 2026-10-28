@@ -12,6 +12,7 @@
  */
 
 import type { Clip, MediaAsset, Motion, Project } from '../timeline'
+import { drawsItself, type SelfDrawnField } from './recipes'
 import {
   DEFAULT_SHAKE_DECAY,
   DEFAULT_SHAKE_HZ,
@@ -28,10 +29,10 @@ import {
  * clippings and cards itself, and an adjustment layer has no picture.
  */
 export function canMoveCamera(
-  clip: Pick<Clip, 'adjustment' | 'text' | 'title' | 'paper' | 'carousel' | 'solid' | 'moment'>,
+  clip: Pick<Clip, 'adjustment' | SelfDrawnField>,
   asset: Pick<MediaAsset, 'kind'> | undefined
 ): boolean {
-  if (clip.adjustment || clip.text || clip.title || clip.paper || clip.carousel || clip.solid || clip.moment) return false
+  if (clip.adjustment || drawsItself(clip)) return false
   return asset?.kind === 'image'
 }
 

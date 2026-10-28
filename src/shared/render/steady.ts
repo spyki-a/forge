@@ -20,6 +20,7 @@
  */
 
 import type { Clip, MediaAsset } from '../timeline'
+import { drawsItself, type SelfDrawnField } from '../edit/recipes'
 import { escapeFilterPath } from '../captions/timeline'
 
 /** How a steady clip is steadied in one export. */
@@ -30,10 +31,10 @@ export const STEADY_SMOOTHING = 30
 
 /** Footage only: a photograph has no shake, and the app draws the rest itself. */
 export function canSteady(
-  clip: Pick<Clip, 'adjustment' | 'text' | 'title' | 'paper' | 'carousel' | 'solid' | 'moment'>,
+  clip: Pick<Clip, 'adjustment' | SelfDrawnField>,
   asset: Pick<MediaAsset, 'kind' | 'hasVideo' | 'frames'> | undefined
 ): boolean {
-  if (clip.adjustment || clip.text || clip.title || clip.paper || clip.carousel || clip.solid || clip.moment) return false
+  if (clip.adjustment || drawsItself(clip)) return false
   return Boolean(asset && asset.kind === 'video' && asset.hasVideo && !asset.frames)
 }
 

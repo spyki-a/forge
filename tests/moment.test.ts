@@ -26,7 +26,7 @@ import { RETIME_TAIL, planeShare, retimeFilter } from '@shared/render/plan'
 import { sourceFramesFor } from '@shared/render/speed'
 import { momentTextures, withFootageFrames } from '@shared/render/momentTextures'
 import { bakeForExport, exportKey, type Bakers } from '@shared/render/exportBake'
-import { drawsItself } from '@shared/edit/recipes'
+import { LIVE_DRAWN_FIELDS, SELF_DRAWN_FIELDS, drawsItself } from '@shared/edit/recipes'
 import { clipKind } from '@shared/edit/clipKind'
 import { canMoveCamera } from '@shared/edit/camera'
 import { isKeyable } from '@shared/render/chromaKey'
@@ -626,7 +626,11 @@ describe('a moment is a self-drawing clip on every guard', () => {
 
   it('the preview lets it past the readiness gate, draws it live from the moment’s own frame, and shows nothing rather than a stale file', () => {
     const preview = source('src/renderer/src/components/Preview.tsx')
-    expect(preview).toMatch(/const drawsItself = \(layer: Layer\): boolean =>[\s\S]{0,200}layer\.clip\.moment/)
+    // Membership of the lists every guard reads (edit/recipes.ts, docs/CLIPS.md §6.4), and the gate reading the live one.
+    expect(SELF_DRAWN_FIELDS).toContain('moment')
+    expect(LIVE_DRAWN_FIELDS).toContain('moment')
+    expect([...preview.matchAll(/const drawsItself = \(layer: Layer\): boolean =>/g)]).toHaveLength(1)
+    expect(preview).toMatch(/const drawsItself = \(layer: Layer\): boolean =>\s*LIVE_DRAWN_FIELDS\.some\(\(field\) => Boolean\(layer\.clip\[field\]\)\)/)
     const at = preview.indexOf('const sourceFor = (layer: Layer)')
     expect(at).toBeGreaterThan(-1)
     const body = preview.slice(at, at + 2200)

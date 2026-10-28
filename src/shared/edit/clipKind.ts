@@ -17,6 +17,7 @@
  */
 
 import type { Clip, MediaAsset, Track } from '../timeline'
+import { drawsItself } from './recipes'
 
 export type ClipKind =
   | 'video'
@@ -153,7 +154,8 @@ export function clipKind(
 ): ClipKind {
   if (clip.adjustment) return 'adjustment'
   if (clip.text ?? clip.title) return 'text'
-  if (clip.paper ?? clip.carousel ?? clip.solid ?? clip.moment) return 'graphic'
+  // Every other kind the app draws (edit/recipes.ts), text and title having returned above.
+  if (drawsItself(clip)) return 'graphic'
 
   if (track?.kind === 'audio') {
     if (track.duck) return 'music'

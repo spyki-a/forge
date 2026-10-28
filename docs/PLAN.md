@@ -1177,7 +1177,9 @@ omission there once caused three bugs), to `isKeyable`, `canSteady` and
 timeline colours it as one. A test asserts **membership** — a clip with
 `.moment` is in each of the seven sets — rather than pinning the whole
 expression, per `CLAUDE.md`, and is mutation-checked by leaving `moment` out
-of each site.
+of each site. That rule is replaced by `docs/CLIPS.md` §6.4: every guard now
+reads one constant, `SELF_DRAWN_FIELDS` in `edit/recipes.ts`, so a new kind
+is added there once and not to each list.
 
 ### 7.2 Drawing and baking — `src/renderer/src/momentCanvas.ts`
 

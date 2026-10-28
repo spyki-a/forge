@@ -35,6 +35,25 @@ function freshId(prefix: string): string {
 }
 
 /**
+ * The fields that make a clip one the app draws itself (docs/CLIPS.md §6.4).
+ *
+ * The one list every guard reads, so the next self-drawn kind is one line
+ * here. Each guard used to spell out its own subset, and a kind left off one
+ * of them was a bug in that one place: clippings missing from the reframe
+ * once caused three.
+ */
+export const SELF_DRAWN_FIELDS = ['text', 'paper', 'carousel', 'solid', 'title', 'moment', 'graphic'] as const
+export type SelfDrawnField = (typeof SELF_DRAWN_FIELDS)[number]
+
+/**
+ * The self-drawn kinds the preview draws live, so has nothing to wait for:
+ * all but solid and title, which it shows from their baked file.
+ */
+export const LIVE_DRAWN_FIELDS: readonly Exclude<SelfDrawnField, 'solid' | 'title'>[] = SELF_DRAWN_FIELDS.filter(
+  (field): field is Exclude<SelfDrawnField, 'solid' | 'title'> => field !== 'solid' && field !== 'title'
+)
+
+/**
  * A clip that PAINTS itself from a spec rather than showing a file.
  *
  * These carry an asset that the app bakes for them, so a copy needs its own —
@@ -42,8 +61,8 @@ function freshId(prefix: string): string {
  * changes the other, and deleting either takes the picture out from under the
  * survivor.
  */
-export function drawsItself(clip: Clip): boolean {
-  return Boolean(clip.text ?? clip.paper ?? clip.carousel ?? clip.solid ?? clip.title ?? clip.moment)
+export function drawsItself(clip: Pick<Clip, SelfDrawnField>): boolean {
+  return SELF_DRAWN_FIELDS.some((field) => Boolean(clip[field]))
 }
 
 /* --------------------------------------------------------------- moving */

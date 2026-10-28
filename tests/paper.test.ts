@@ -16,6 +16,7 @@ import {
   type Measure,
   type PaperSpec
 } from '@shared/render/paper'
+import { LIVE_DRAWN_FIELDS, SELF_DRAWN_FIELDS } from '@shared/edit/recipes'
 
 /*
  * A newspaper clipping, as measurements rather than as a picture.
@@ -494,13 +495,16 @@ describe('a clip that draws itself', () => {
   )
 
   it('lets both kinds past the readiness gate', () => {
-    expect(preview).toMatch(/const drawsItself = \(layer: Layer\): boolean =>/)
     /*
      * Membership, not the whole list. Pinning the exact expression made these
      * fail the moment a FOURTH self-drawing kind was added correctly — the
      * assertion is that paper is on the list, not that nothing else ever is.
+     * The list is `LIVE_DRAWN_FIELDS` now (edit/recipes.ts, docs/CLIPS.md
+     * §6.4), and the gate reads it.
      */
-    expect(preview).toMatch(/drawsItself[\s\S]{0,160}layer\.clip\.paper/)
+    expect(LIVE_DRAWN_FIELDS).toContain('paper')
+    expect([...preview.matchAll(/const drawsItself = \(layer: Layer\): boolean =>/g)]).toHaveLength(1)
+    expect(preview).toMatch(/const drawsItself = \(layer: Layer\): boolean =>\s*LIVE_DRAWN_FIELDS\.some\(\(field\) => Boolean\(layer\.clip\[field\]\)\)/)
     expect(preview).toMatch(/drawsItself\(layer\) \? true : elementReady\(layer\.element\)/)
     // The old one-sided form must not come back.
     expect(preview).not.toMatch(/layer\.clip\.text \? true : elementReady/)
@@ -714,14 +718,16 @@ describe('a clip that is DRAWN at the canvas size', () => {
      * was written before clippings existed to suffer it.
      */
     /*
-     * The list is `drawsItself` now (edit/recipes.ts), the one every
-     * self-drawing kind joins — so the guard is that paper is on THAT list and
-     * the store reframes by it, rather than the spelled-out expression a fourth
-     * kind used to break (CLAUDE.md: membership, not the snapshot).
+     * The list is `SELF_DRAWN_FIELDS` now (edit/recipes.ts, docs/CLIPS.md
+     * §6.4), the one every self-drawing kind joins and `drawsItself` reads
+     * whole — so the guard is that paper is on THAT list and the store
+     * reframes by it, rather than the spelled-out expression a fourth kind
+     * used to break (CLAUDE.md: membership, not the snapshot).
      */
     expect(store).toContain('if (drawsItself(c)) return { ...c, crop: undefined }')
+    expect(SELF_DRAWN_FIELDS).toContain('paper')
     expect(readFileSync(resolve(__dirname, '../src/shared/edit/recipes.ts'), 'utf8')).toMatch(
-      /export function drawsItself\(clip: Clip\): boolean \{\s*return Boolean\((?:clip\.\w+ \?\? )*clip\.paper/
+      /export function drawsItself\(clip: Pick<Clip, SelfDrawnField>\): boolean \{\s*return SELF_DRAWN_FIELDS\.some\(/
     )
   })
 

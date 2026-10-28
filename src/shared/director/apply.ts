@@ -15,6 +15,7 @@ import { SPINE_PASS, type Brief, type Pace, type Role, type SpinePlan } from './
 import type { Menu, Slot } from './menu'
 import type { SegmentLayout } from './validate'
 import { fitHeadline } from './baseline'
+import { drawsItself } from '../edit/recipes'
 
 /**
  * Turn a validated plan into ordinary clips, in one project update.
@@ -119,12 +120,12 @@ export function clearDirector(project: Project): Project {
   const gone = new Set(removed.map((c) => c.id))
   const survivors = project.clips.filter((c) => !gone.has(c.id))
   const stillUsed = new Set(survivors.map((c) => c.assetId))
-  // Only what the director DREW — cards, colour cards, the look layer — or BROUGHT from the sound
-  // library (the asset says so); never footage or a sound the user imported, even when a shot or a
-  // sound was its only reference.
+  // Only what the director DREW — anything that draws itself (edit/recipes.ts), the look layer — or
+  // BROUGHT from the sound library (the asset says so); never footage or a sound the user imported,
+  // even when a shot or a sound was its only reference.
   const brought = new Set(project.assets.filter((a) => a.broughtBy === SOUND_RULE).map((a) => a.id))
   const cardAssets = new Set(
-    removed.filter((c) => c.text || c.solid || c.adjustment || c.moment || brought.has(c.assetId)).map((c) => c.assetId)
+    removed.filter((c) => drawsItself(c) || c.adjustment || brought.has(c.assetId)).map((c) => c.assetId)
   )
 
   // The track the Director added under the ad goes with the ad; one the user has since put a clip on stays —

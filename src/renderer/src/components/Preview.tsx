@@ -58,6 +58,7 @@ import { captionSourceClip } from '@shared/captions/timeline'
 import { smartPlacement } from '@shared/captions/smart'
 import { lineThird } from '@shared/captions/placement'
 import { captionNeedsCanvas } from '@shared/graphics/fromTimeline'
+import { LIVE_DRAWN_FIELDS } from '@shared/edit/recipes'
 import { useCatalog } from '../catalog'
 import { isAssetDrag, readDragPayload, type DragPayload } from '../dragPayload'
 import { DROP_CHOICES, type DropIntent } from '@shared/render/dropIntent'
@@ -1237,9 +1238,12 @@ export function Preview(): ReactNode {
      * Gating them on an `<img>` that has not been written yet leaves the
      * layer permanently unready and the preview permanently black, which is
      * exactly what clippings did until this said `paper` as well as `text`.
+     * The kinds drawn live are `LIVE_DRAWN_FIELDS` (edit/recipes.ts): solid
+     * and title are not among them, since they show their baked file and
+     * must wait for it.
      */
     const drawsItself = (layer: Layer): boolean =>
-      Boolean(layer.clip.text ?? layer.clip.paper ?? layer.clip.carousel ?? layer.clip.moment)
+      LIVE_DRAWN_FIELDS.some((field) => Boolean(layer.clip[field]))
 
     const ready = (layer: Layer): boolean =>
       drawsItself(layer) ? true : elementReady(layer.element)
