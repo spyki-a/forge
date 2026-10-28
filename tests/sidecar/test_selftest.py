@@ -4,10 +4,11 @@ Run by tests/integration/sidecarMedia.int.test.ts with every other file here,
 on the helper's venv or on CI's bare interpreter, so nothing here skips and
 nothing needs a package: the groups' sources are read as code (``ast``), the
 process rule is held with a STAND-IN interpreter (a small script set as the
-argv prefix, which records its pid, its arguments and its stdin per run), and
-the faces group's library load with a stand-in ``mediapipe`` planted first on
-the real worker's path. The real run on this interpreter is asserted for its
-shape everywhere, and for success where a group's packages are installed.
+argv prefix, which records its pid, when it started, its arguments and its
+stdin per run), and the faces group's library load with a stand-in
+``mediapipe`` planted first on the real worker's path. The real run on this
+interpreter is asserted for its shape everywhere, and for success where a
+group's packages are installed.
 
 Standard library only: unittest, no pytest.
 """
@@ -40,7 +41,7 @@ STANDIN = textwrap.dedent(
     log, args = sys.argv[1], sys.argv[2:]
     stdin = sys.stdin.buffer.read().decode("utf-8", "replace")
     with open(log, "a", encoding="utf-8") as handle:
-        handle.write(json.dumps({"pid": os.getpid(), "args": args, "stdin": stdin}) + "\\n")
+        handle.write(json.dumps({"pid": os.getpid(), "t": time.time(), "args": args, "stdin": stdin}) + "\\n")
     plan = json.loads(os.environ.get("FORGE_TEST_STANDIN") or "{}")
     if plan.get("match", "\\0") in args[-1]:
         if plan.get("sleep"):
@@ -203,6 +204,30 @@ class Commands(unittest.TestCase):
 
 
 class Processes(Folder):
+    # The two kill cases' clock. selftest() gives every group its one
+    # timeout, so in the timeout case the group that must FINISH (sklearn)
+    # has the sleeping group's budget, and the cancel case's child must have
+    # started, its line in the log, before the cancel lands. Both are a Python
+    # start: the stand-in's is about 0.1 s, and on 2026-10-28, beside two
+    # other vitest runs, it went past these cases' old 0.3 s and the finishing
+    # group was killed too ("-1 != 0"). Every start slowed by 0.3 s (a
+    # sitecustomize that sleeps first) failed both old cases, the timeout one
+    # on sklearn and the cancel one on the log ("0 != 1"); at BUDGET_S both
+    # pass a start slowed by 1.9 s, and fail at 2.1.
+    BUDGET_S = 2.0
+    """The timeout, and the cancel's timer: a budget a loaded machine's Python start meets."""
+    TOOK_S = 5.0
+    """A run longer than this waited for the sleeping child. A passing timeout run
+    is two groups of at most BUDGET_S + POLL_S each, 4.2 s: the sleeper killed on
+    the first poll past its deadline, the finisher's exit seen on the wait that
+    would have found its own; a cancelled run is one."""
+    SLEEP_S = 6.0
+    """The sleeping child's sleep: a run that waited for it takes this and its start."""
+
+    def outlive(self, run: dict) -> None:
+        """Wait until a second past the moment a stand-in's sleep would end, timed from its own start, not the run's end."""
+        time.sleep(max(0.0, run["t"] + self.SLEEP_S + 1.0 - time.time()))
+
     def run_standin(self, plan: dict | None = None, groups: list[str] | None = None, **options: object) -> tuple[dict, list[dict]]:
         script = os.path.join(self.dir, "standin.py")
         with open(script, "w", encoding="utf-8") as handle:
@@ -260,29 +285,39 @@ class Processes(Folder):
         self.assertEqual(result["faces"]["error"], "error import OSError: libmediapipe.dll could not be loaded")
 
     def test_a_group_past_its_time_is_killed_and_reported(self) -> None:
+        self.assertLess(
+            2 * (self.BUDGET_S + selftest.POLL_S), self.TOOK_S - 0.5,
+            "POLL_S changed: retune BUDGET_S, TOOK_S and SLEEP_S together",
+        )
+        self.assertLess(self.TOOK_S, self.SLEEP_S)
         marker = os.path.join(self.dir, "survived")
         started = time.monotonic()
-        result, runs = self.run_standin({"match": "ctranslate2", "sleep": 3.0, "marker": marker}, ["asr", "sklearn"], timeout=0.3)
+        result, runs = self.run_standin(
+            {"match": "ctranslate2", "sleep": self.SLEEP_S, "marker": marker}, ["asr", "sklearn"], timeout=self.BUDGET_S,
+        )
         took = time.monotonic() - started
         self.assertEqual(result["asr"]["exit"], -1)
         self.assertIn("timed out", result["asr"]["error"])
-        self.assertLess(took, 1.5, "the run waited for the child instead of killing it")
-        # The next group still ran.
-        self.assertEqual(result["sklearn"]["exit"], 0)
-        self.assertEqual(len(runs), 2)
-        time.sleep(3.5)
+        self.assertLess(took, self.TOOK_S, "the run waited for the child instead of killing it")
+        # The next group still ran, and finished inside the same budget.
+        self.assertEqual(list(result), ["asr", "sklearn"], "the group after a timed-out one was not run")
+        self.assertEqual(result["sklearn"]["exit"], 0, result["sklearn"])
+        self.assertEqual(len(runs), 2, runs)
+        [child] = [run for run in runs if "ctranslate2" in run["args"][-1]]
+        self.outlive(child)
         self.assertFalse(os.path.exists(marker), "the timed-out child was left running")
 
     def test_a_cancel_kills_the_running_group_and_starts_no_other(self) -> None:
         marker = os.path.join(self.dir, "survived")
         context = Context()
-        threading.Timer(0.3, context.cancel.set).start()
+        threading.Timer(self.BUDGET_S, context.cancel.set).start()
         started = time.monotonic()
         with self.assertRaises(Cancelled):
-            self.run_standin({"match": "ctranslate2", "sleep": 3.0, "marker": marker}, ["asr", "beats"], context=context)
-        self.assertLess(time.monotonic() - started, 1.5, "the cancel waited for the child instead of killing it")
-        self.assertEqual(len(self.runs(os.path.join(self.dir, "runs.jsonl"))), 1)
-        time.sleep(3.5)
+            self.run_standin({"match": "ctranslate2", "sleep": self.SLEEP_S, "marker": marker}, ["asr", "beats"], context=context)
+        self.assertLess(time.monotonic() - started, self.TOOK_S, "the cancel waited for the child instead of killing it")
+        runs = self.runs(os.path.join(self.dir, "runs.jsonl"))
+        self.assertEqual(len(runs), 1, runs)
+        self.outlive(runs[0])
         self.assertFalse(os.path.exists(marker), "the cancelled child was left running")
 
     def test_a_cancel_before_a_group_starts_nothing(self) -> None:
