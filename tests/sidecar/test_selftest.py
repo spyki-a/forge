@@ -228,6 +228,23 @@ class Processes(Folder):
         """Wait until a second past the moment a stand-in's sleep would end, timed from its own start, not the run's end."""
         time.sleep(max(0.0, run["t"] + self.SLEEP_S + 1.0 - time.time()))
 
+    def clock_in_order(self) -> None:
+        """The clock's order, which both kill cases stand on: each calls this first, so either run alone checks it.
+
+        A passing timeout run, two groups of at most BUDGET_S + POLL_S each,
+        fits under TOOK_S with half a second to spare (a cancelled run is one
+        group); and the sleeping child outlasts TOOK_S, or a run that waited
+        for it would pass the took bound.
+        """
+        self.assertLess(
+            2 * (self.BUDGET_S + selftest.POLL_S), self.TOOK_S - 0.5,
+            "POLL_S changed: retune BUDGET_S, TOOK_S and SLEEP_S together",
+        )
+        self.assertLess(
+            self.TOOK_S, self.SLEEP_S,
+            "SLEEP_S must outlast TOOK_S, or a run that waited for the sleeping child passes the took bound",
+        )
+
     def run_standin(self, plan: dict | None = None, groups: list[str] | None = None, **options: object) -> tuple[dict, list[dict]]:
         script = os.path.join(self.dir, "standin.py")
         with open(script, "w", encoding="utf-8") as handle:
@@ -285,11 +302,7 @@ class Processes(Folder):
         self.assertEqual(result["faces"]["error"], "error import OSError: libmediapipe.dll could not be loaded")
 
     def test_a_group_past_its_time_is_killed_and_reported(self) -> None:
-        self.assertLess(
-            2 * (self.BUDGET_S + selftest.POLL_S), self.TOOK_S - 0.5,
-            "POLL_S changed: retune BUDGET_S, TOOK_S and SLEEP_S together",
-        )
-        self.assertLess(self.TOOK_S, self.SLEEP_S)
+        self.clock_in_order()
         marker = os.path.join(self.dir, "survived")
         started = time.monotonic()
         result, runs = self.run_standin(
@@ -298,6 +311,20 @@ class Processes(Folder):
         took = time.monotonic() - started
         self.assertEqual(result["asr"]["exit"], -1)
         self.assertIn("timed out", result["asr"]["error"])
+        # WHEN the kill landed, which the whole-run bound below does not hold
+        # (a deadline of twice the timeout kills at about 4.1 s, the run about
+        # 4.2 s, under TOOK_S). run_group kills once time.perf_counter() >=
+        # started + timeout and reads ms after that kill, from the same
+        # started on the same clock, rounded to the millisecond (which takes
+        # up the float sum's last bit): a kill on time never reads under
+        # BUDGET_S, so the lower bound cannot flake, and catches a deadline set
+        # early. The deadline is seen on the first POLL_S wait past it; the
+        # upper bound gives a loaded machine a second more than that.
+        self.assertGreaterEqual(result["asr"]["ms"], self.BUDGET_S * 1000, "the child was killed before its deadline")
+        self.assertLess(
+            result["asr"]["ms"], (self.BUDGET_S + selftest.POLL_S) * 1000 + 1000,
+            "the child was killed late: a second past the first poll after its deadline",
+        )
         self.assertLess(took, self.TOOK_S, "the run waited for the child instead of killing it")
         # The next group still ran, and finished inside the same budget.
         self.assertEqual(list(result), ["asr", "sklearn"], "the group after a timed-out one was not run")
@@ -308,6 +335,7 @@ class Processes(Folder):
         self.assertFalse(os.path.exists(marker), "the timed-out child was left running")
 
     def test_a_cancel_kills_the_running_group_and_starts_no_other(self) -> None:
+        self.clock_in_order()
         marker = os.path.join(self.dir, "survived")
         context = Context()
         threading.Timer(self.BUDGET_S, context.cancel.set).start()
