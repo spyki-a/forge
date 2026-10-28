@@ -352,7 +352,7 @@ collected.
 | pyautoflip run on the ten clips on your Mac (a scratch venv on Python 3.13 or older, since it refuses 3.14, with an ffmpeg on `PATH`; its MediaPipe would likely abort in the dev sandbox as the face detector did, §4.1 — unmeasured), and its output rated beside ours (§4.1) | ~1 h | step 1's exit |
 | the helper's peak memory per capability on the Surface (§12.1) | 1 h | the floor-machine bar |
 | ten graphics fixtures with truth labels (six English, two Telugu, two Hindi), your own speech or text you wrote; since 2026-10-21 also the five nested-enumeration talks (three English, one Hindi, one Telugu) and the Hindi and Telugu strings of the 27 drawing fixtures (§6.10) | 6.5–8.5 h (was 4–6) | step 3's eval and exit |
-| step 3's phase 0 runs: `__forgeGraphicCheck` in the development app's console on the Mac and the Surface for M1, M2, M3, M5, M6's Indic and colour parts and M22, and M22's sheet judged by eye beside the libass one (§6.15) | 1.5–2 h | phase 0's exit; phase 1 starts on it |
+| step 3's phase 0 runs: `__forgeGraphicCheck` in the development app's console on the Mac and the Surface for M1, M2, M3, M5, M6's Indic and colour parts and M22, and M22's sheet judged by eye beside the libass one (§6.15): **done**, the Mac 2026-10-22 and the Surface 2026-10-27 (§6.15's "as measured" note) | 1.5–2 h, done | phase 0's exit; phase 1 starts on it |
 | M21: Hindi clips of yours with numbers said, through `asr.int`'s gated case | 30 min, with the clips | phase 2's counter |
 | the later harness runs on both machines: phase 1's primitives and Indic check, M8, M13, M19; phase 2's templates, Indic check and M10; phase 3's M6, M7, M12 | 1.5 h | phases 1-3's exits |
 | M14: the blind curve rating, six curves on your clips, for a counter, a keyword and a callout; then the blind look rating, whole graphics under the presets and restrained against energetic, with its questions (§6.10) | 2 h | phase 2's default curves; the rows of §6's "What waits" that wait on the look rating |
@@ -7775,11 +7775,11 @@ one line each):
 | motion blur on fast moves | the look rating's motion-blur question answered yes (§6.10); then `tmix` (M4) or canvas subframes |
 | text behind the subject | a full-clip person matte from the AI helper, its edges measured |
 | emoji or hand stickers, Lottie accents, animated icons | an attribution decision and a player determinism check (§16.64); a check tick beside a `steps` item is the stroke primitive, a style option once the look rating's tick question asks for it (§6.10) |
-| per-letter Indic kinetic type, a per-character typewriter | M3 (§16.61) |
+| per-letter Indic kinetic type, a per-character typewriter | M3 (§16.61); M3 cleared Devanagari and Telugu on 2026-10-27 (§6.15), so a cluster unit exists for them, never a code point; the pattern itself is not planned |
 | a code-terminal reveal | a source of the code's text; not researched |
 | a card pop with ripple rings; confetti or particle bursts | the energetic style (§16.58), once the look rating's energetic question asks for more (§6.10); a burst seeded, fired by a word |
 | an image or screenshot pop-up card | pictures to put in it: step 5's (§8) or yours; the draw list's `image` item is ready |
-| frosted glass behind a card | M5's blur cost; the panel is a style property in phase 2, the glow phase 3's |
+| frosted glass behind a card | M5's blur cost; the panel is a style property in phase 2, the glow phase 3's. M5 measured blur on words, 2026-10-27 (38.60 ms added at p95 on the Surface, `blur-rise` not offered, §6.15); a panel's backdrop blur is not measured |
 | masked or wipe text reveals, a marker sweep behind a word | a source that times them, then a look rating of them (§6.10) |
 | B-roll or a picture over the speaker | step 5 (§8) |
 | camera layouts (the speaker in a corner over a screen, a split) | a project of two sources, a layout of the reframe's kind; not planned |
@@ -8030,7 +8030,8 @@ Extended on 2026-10-21 for the new shapes:
   §16.61). A field drawn word by word is split on whitespace only; every
   other field is one text item, drawn whole by one `drawTextOnto` call
   (§6.3). Clusters only for a script in `CLUSTER_SCRIPTS` (§6.3), which is
-  empty until M3.
+  empty until M3 (M3 put Devanagari and Telugu in it on 2026-10-27,
+  §6.15).
 
 | template | fixed glyphs |
 |---|---|
@@ -8066,7 +8067,10 @@ connector may carry a **travelling beam** (a short span whose `from` and
 `to` both advance, `linear`, a 5 s loop, the research's §4.4), at most once
 per clip. Every frame of its hold then moves, so it bakes the whole hold
 (`graphicMovingFrames` returns the clip's frames for it, §6.3); it stays off
-until M1's verdict on that cost is in EFFECTS §61 (§6.15).
+until M1's verdict on that cost is in EFFECTS §61 (§6.15). (In,
+2026-10-27: a whole hold is allowed once per clip, 300 frames in 3.37 s on
+the Surface at the box and pool 4, 300 × 11.22 ms; §6.15's "as measured"
+note.)
 
 **The layout** (added 2026-10-21 so the eight drawers are built to one
 geometry; every figure a proposal, set against the sample tiles in phase 2
@@ -8232,8 +8236,8 @@ its three jobs.
 | `src/shared/graphics/frame.ts` | `graphicMovingFrames`, `beatFrame`, `graphicExitKeys`, `drawnGraphicAsset` | pure |
 | `src/shared/graphics/targets.ts` | `graphicTargetsAt` | pure |
 | `src/shared/graphics/paint.ts` | `paintDrawList2d`, `STROKE_MIN_PX` (`/// <reference lib="dom" />` scoped to the file, as `textPaint.ts:1-5`) | renderer |
-| `src/renderer/src/graphicCanvas.ts` | preview, bake, frames for the harness; `GRAPHIC_BAKE_REGION`, `GRAPHIC_POOL_DEPTH` | renderer |
-| `src/renderer/src/encodePool.ts` | `encodeFrames`, the `toBlob` pool | renderer |
+| `src/renderer/src/graphicCanvas.ts` | preview, bake, frames for the harness; `GRAPHIC_BAKE_REGION` (`'box'`) and `GRAPHIC_POOL_DEPTH` (4), set by M1 on 2026-10-27 (§6.15) | renderer |
+| `src/renderer/src/encodePool.ts` | `encodeFrames`, the `toBlob` pool; and the worker back-end M2 took on 2026-10-27 (§6.15), its module worker file moved beside it from `harness/` | renderer |
 
 **`encodePool.ts` is extracted, `captionBake.ts` is not touched.** The pool
 is `captionBake.ts:129-196`'s pattern (four canvases, an encode in flight
@@ -8314,8 +8318,9 @@ non-empty `glow`; painter A ignores all three.
   'cluster'): 'line' | 'word' | 'cluster'`: `'line'` and `'word'` as asked;
   `'cluster'` only when the text holds no shaped script (`shapedScript`,
   §6.20) or every shaped script in it is in `CLUSTER_SCRIPTS` (Unicode
-  script names, `readonly string[]`, **empty until M3 clears one**);
-  otherwise `'word'`. Words split on whitespace; clusters through
+  script names, `readonly string[]`, **empty until M3 clears one**; set
+  2026-10-27 to `['Devanagari', 'Telugu']`, both cleared on both machines,
+  §6.15); otherwise `'word'`. Words split on whitespace; clusters through
   `Intl.Segmenter` with `granularity: 'grapheme'`, as
   `ingest/captions.ts:49-64` already does, and `'word'` where it is missing.
   **Never a code point**, the defect D8 fixes in the captions (§6.20). Per
@@ -8463,7 +8468,8 @@ context's `shadowBlur`, `shadowOffsetY` and `shadowColor`. An `image` whose
 bitmap is missing from `images` is skipped. Painter A reads no clock and no
 random, formats nothing, and draws every text item through `drawTextOnto`,
 so the 42 looks apply (within `GRAPHIC_TEXT_STYLES`) and Chromium shapes
-the text (an inference until M22).
+the text (an inference until M22; M22 measured it on both machines,
+2026-10-27, §6.15).
 
 #### The box — `graphicBox(spec, style, fps, total, size, measure, targetsAt: (frame: number) => GraphicTargets, drawer?): Rect | null`
 
@@ -8613,9 +8619,14 @@ until then `'canvas'` and 4 (proposal). M2 decides only whether
 `encodeFrames` gains a worker back-end (`OffscreenCanvas.convertToBlob` on
 an `ImageBitmap` transferred from the drawn canvas, the drawing staying on
 the main thread, where `drawTextOnto` sees the document's fonts): built in
-phase 1, inside these days, only if M2 passes its bar (§6.15).
+phase 1, inside these days, only if M2 passes its bar (§6.15). **Set
+2026-10-27** (§6.15's "as measured" note): `GRAPHIC_BAKE_REGION` =
+`'box'` and `GRAPHIC_POOL_DEPTH` = 4, from the Surface's M1; and M2 passed
+on both machines, so `encodeFrames` gains the worker back-end in phase 1,
+four workers the fastest on both.
 
-**If M1 picks the box** (everything marked (box) is built only then):
+**If M1 picks the box** (everything marked (box) is built only then; M1
+picked it on 2026-10-27, so every (box) item is to be built, in phase 1):
 
 - **Only the export's bake takes the box**, and only for a clip placed at
   the identity: transform x 0, y 0, scale 1, no `scaleY`, rotation 0, no
@@ -8728,7 +8739,10 @@ validates `flattenPath` and sets `STROKE_TOLERANCE`; M19 sets
 all, the premise of drawing text with painter A; M13 sets the tolerance a
 Mac frame and a Surface frame are compared at. If M22 finds a cluster
 unshaped, what phase 1 may build meanwhile is stated once, in §6.15's M22
-row.
+row. Phase 0's answers, 2026-10-27 (§6.15's "as measured" note): `'box'`,
+4 and the worker back-end; `CLUSTER_SCRIPTS` = `['Devanagari',
+'Telugu']`; no `blur-rise`; and the canvas shapes Hindi and Telugu on both
+machines, so nothing waits on M22's unshaped branch.
 
 #### Tests (each mutation-checked; §6.11 indexes them by phase)
 
@@ -8771,7 +8785,12 @@ row.
   targets; `needsCompositor` ignoring `glow`; `graphicBox` from the settled
   or the first frame only (the entrance's frames fall outside it, as the
   caption band built from its first line only did, EFFECTS §60); the even
-  snap removed.
+  snap removed. (Set 2026-10-27: `CLUSTER_SCRIPTS` is `['Devanagari',
+  'Telugu']`, §6.15. The units case and the mutation "a script added to
+  it" were written for the empty list; phase 1 writes them against the set
+  one, where Hindi and Telugu asked for by `'cluster'` come back in
+  graphemes, never code points, and a script added means one M3 did not
+  measure.)
 - **`tests/graphicPaint.test.ts`.** A fake context in the manner of
   `tests/textPaint.test.ts:24-46` records every `fillText` with the
   `fillStyle` set when it was called; a second fake is the dim's `layer`.
@@ -8834,7 +8853,7 @@ row.
 | `stroke.ts` with the riding head | §6.3 | 0.5 |
 | `paint.ts`, painter A, the dim's cached layer | §6.3 | 0.75 |
 | `frame.ts` and `targets.ts` | §6.3 | 0.25 |
-| `graphicCanvas.ts`; `encodePool.ts`'s worker back-end only if M2 asks (`encodeFrames` itself lands in phase 0, §6.15, so M1 and M2 time it) | §6.3 | 0.75 |
+| `graphicCanvas.ts`; `encodePool.ts`'s worker back-end only if M2 asks (it does: M2 passed on 2026-10-27, §6.15) (`encodeFrames` itself lands in phase 0, §6.15, so M1 and M2 time it) | §6.3 | 0.75 |
 | the export branch, `Bakers`, `exportBakers.ts`, the store's three actions, the preview branch and sweep, (box) `identityPlaced` and the plan's read | §6.3 | 0.5 |
 | the harness check's `primitives` and Indic halves (§6.11's table) | §6.3 | 0.25 |
 | `GraphicStyle`, `resolveGraphicStyle`, `clean`, `GRAPHIC_TEXT_STYLES`, `graphicStyleOf`, `setGraphicsStyle` and `setGraphicsOverride` | §6.5 | 0.5 |
@@ -8999,7 +9018,10 @@ strength } }`. `MotionEase` is §6.13's (named so, not `Ease`, because
   proposal, with `out-back` only in the energetic style), `blur-rise` (rise
   with a blur falling to 0) **only if M5 allows** its cost; until then it
   resolves to `rise`, and allowing it adds an optional `blur?: number`
-  (frame px) to `DrawItem`. `wipe` stays in the type and resolves to `rise`:
+  (frame px) to `DrawItem`. M5 did not allow it (2026-10-27, §6.15: blur
+  adds 38.60 ms a frame at p95 on the Surface, against M1's p50 encode of
+  32.70 at the box and pool 4), so it resolves to `rise` and `DrawItem`
+  gains no `blur`. `wipe` stays in the type and resolves to `rise`:
   a masked reveal needs a clip on items, which waits for a source that times
   it and phase 2's ratings (the research, §7.4).
 - **The stroke look** (D7, §16.60: "Clean vector by default; a marker look
@@ -9092,7 +9114,8 @@ branch, the marker painter in `paint.ts` and `MARKER_READY` set
 guards every number (NaN, negative and out-of-range values clamped or
 replaced, as `resolveStyle` does); an unknown id resolves to `clean`;
 `strokeLook: 'marker'` resolves to `clean` while `MARKER_READY` is false,
-`entrance: 'blur-rise'` to `rise` unless M5 allowed it, and `wipe` to
+`entrance: 'blur-rise'` to `rise` unless M5 allowed it (it did not,
+2026-10-27, §6.15), and `wipe` to
 `rise`; no key of `GraphicStyle` or of any preset names a format, a locale,
 a grouping or a separator (`/format|locale|group|separator/i`, membership
 over the keys); `GRAPHIC_TEXT_STYLES` is `TEXT_STYLES` filtered by
@@ -10467,14 +10490,20 @@ annotations.
   word, as `CLUSTER_SCRIPTS` (M3); whether `blur-rise` is offered (M5);
   M22's verdict on the canvas painter's Indic shaping, with the fallback
   font each machine resolved. (The glow route, M7, is chosen at phase 3's
-  start, §6.15.)
+  start, §6.15.) Recorded 2026-10-27: `'box'` and 4, with the worker
+  back-end; `['Devanagari', 'Telugu']`; `blur-rise` not offered; shaped on
+  both, in Kohinoor Devanagari and Kohinoor Telugu on the Mac and Nirmala
+  UI on the Surface.
 - M4's three probes printed by both runners. A filter missing on the Windows
   build is struck from §13's later options, not worked around.
 - If M22 finds a cluster unshaped, its cause is found before any phase-1
   commit that draws text; the rename, the guards, the motion module and the
   stroke may land meanwhile (§6.15's M22 row, the one statement of it).
+  (It found none on either machine, 2026-10-27.)
 - If M6's Indic part is not 0.000, or no colour setting gives 2/255, phase 3
-  is flagged now; phases 1 and 2 do not wait on it.
+  is flagged now; phases 1 and 2 do not wait on it. (It is 0.000, and both
+  settings give 2/255, on both machines, 2026-10-27: phase 3 is not
+  flagged, and takes colour management on, §6.15.)
 
 **Phase 1.**
 
@@ -11204,9 +11233,10 @@ first eval run) and row 11 (the Telugu negative endings, on the Telugu
 fixtures before phase 2's exit).
 
 > **Phase 0, as measured so far (2026-10-22; the Surface's libass run
-> 2026-10-27).** Not the "as measured" note
-> below, which waits on the Surface's runs (the Mac's, your eye check
-> included, are in). Every figure is in `EFFECTS.md` §61.
+> 2026-10-27).** Superseded by the "as measured" note below
+> (2026-10-27), which has the Surface's console runs and every decision;
+> kept as the record of the Mac's half, the libass question and the runs'
+> script. Every figure is in `EFFECTS.md` §61.
 >
 > - **M4: decided.** Both bundled builds have `tmix`, `overlay` with an
 >   `alpha` listing `straight` and `premultiplied`, and `perspective`, and
@@ -11293,8 +11323,10 @@ fixtures before phase 2's exit).
 >   canvas encode at pool 4: 17.6 ms there, 24.90 here (and again in M2's
 >   baseline). Its tables stay in `EFFECTS.md` §61, superseded on the Mac.
 >
-> - **Not decided yet, and why.** The decisions are the Surface's, the
->   floor machine's. Of its runs only `graphic.int` is in (2026-10-27),
+> - **Not decided yet, and why** (as written before the Surface's console
+>   runs; decided 2026-10-27 in the "as measured" note below). The
+>   decisions are the Surface's, the floor machine's.
+>   Of its runs only `graphic.int` is in (2026-10-27),
 >   which decided the libass question (above; what follows from it is
 >   §16.66, answered (a) the same day); every console figure still waits
 >   on the Surface, and nothing is set. On the Mac's
@@ -11369,10 +11401,13 @@ fixtures before phase 2's exit).
 > closed since the run, `npm run dev` and the `indic` call alone bring the
 > sheet back.
 >
-> *On the Surface* (**`graphic.int` done 2026-10-27**: its README and
-> sheets gave the answer, letters the same at both levels, so this build's
-> libass does not shape, above; the six calls, their Save as… and the eye
-> check are still to do):
+> *On the Surface* (**all done 2026-10-27**: `graphic.int`, whose README
+> and sheets gave the answer, letters the same at both levels, so this
+> build's libass does not shape, above; the six calls, their text saved
+> through `console.log` with `copy()` returning undefined there too; and
+> the eye check, which passed कि's i-matra on the left, the conjuncts not
+> separately described; the "as measured" note below. Kept here as the
+> record of what was run):
 >
 > ```
 > git pull
@@ -11410,7 +11445,9 @@ fixtures before phase 2's exit).
 > unless copied over), which the Mac's row matched on 2026-10-22. A row
 > that looks like the Surface's `complex.png` is a fail.
 >
-> *M21*, on whichever machine has your Hindi clips (the Mac is simplest).
+> *M21* (**open**, the one run left that gates anything; it gates phase
+> 2's counter, not phase 0's exit), on whichever machine has your Hindi
+> clips (the Mac is simplest).
 > On the Mac:
 >
 > ```
@@ -11435,11 +11472,204 @@ fixtures before phase 2's exit).
 > from the Surface, each call's text (the user agent is its first
 > line), saying which, if any, read THROTTLED or "not run", the same
 > verdict on its sheet, its `README.txt` and its two sheets; and
-> `hindi-numbers.txt`. The Mac's text is in (2026-10-22).
+> `hindi-numbers.txt`. The Mac's text is in (2026-10-22). From the
+> Surface, 2026-10-27: the six calls' text, none THROTTLED or "not run";
+> the libass run's report, without its README's per-cluster and fonts-dir
+> lines or the face that drew the letters; and the eye verdict on कि.
+> Still to come: `hindi-numbers.txt` (M21).
 
 **Phase 0's exit** is §6.12's. When its runs are in, this section gains a
 "> **Phase 0, as measured**" note with each verdict and the constants'
-values, dated, as the steps above carry their Built notes.
+values, dated, as the steps above carry their Built notes (it did,
+2026-10-27, below).
+
+> **Phase 0, as measured (2026-10-27).** The Surface's six console calls
+> are in, beside the Mac's of 2026-10-22, and with them every decision
+> phase 0 owns. The values below are this plan's; no code holds them yet,
+> and phase 1 writes them. Every figure is in `EFFECTS.md` §61 ("The
+> development app on the Surface", and items 6–13 of its "What this
+> settles"); the run is saved as
+> `tests/output/phase0-runs/surface-electron-2026-10-27.txt`, the Mac's as
+> `mac-electron-2026-10-22.txt` beside it (both gitignored). This note
+> supersedes the "as measured so far" note above, which stays as the
+> record of the Mac's half, the libass question and the runs' script.
+>
+> **The run.** Your six calls in `npm run dev`'s DevTools console on the
+> Surface, the floor machine, 2026-10-27, at `8642f52` with the check at
+> `1bfdc4d`'s code: Electron 44.3.0 on Chrome 152.0.7977.78
+> (`Mozilla/5.0 (Windows NT 10.0; Win64; x64) … forge/1.0.0
+> Chrome/152.0.7977.78 Electron/44.3.0 Safari/537.36`), the Mac's builds
+> exactly. Every timing visible and not focused, animation frames
+> 16.60–16.70 ms apart, none THROTTLED; a 2×2 `toBlob` at p50 16.10–16.60
+> ms (M1's call read a p95 of 31.10): the frame cadence, as on the Mac.
+> The app's CSP, the Mac's string word for word
+> (`src/renderer/index.html:7-8`), admitted the module worker: workers 1,
+> 2 and 4 all ran. The text came out through `console.log`, `copy()`
+> returning undefined there too. The console also printed Chrome's hint
+> that repeated `getImageData` readbacks are faster with
+> `willReadFrequently`, raised by `checkParity`'s readbacks through the
+> check's `pixels` helper (`src/renderer/src/harness/graphicCheck.ts:421`),
+> which leaves that attribute off on purpose (`:408-410`): a nit for the
+> harness, not a bar.
+>
+> | # | figure | the Surface | the Mac, 2026-10-22 | the bar (the rows above) |
+> |---|---|---|---|---|
+> | M1 | ms a frame at p50, pool 1 / 2 / 4: canvas; box (908×666) | 29.00 / 18.80 / 20.77; 16.70 / 11.50 / 11.22 | 16.70 / 8.30 / 7.60; 16.70 / 8.30 / 4.15 | the box's p50 encode 20 % under the canvas's on the Surface (read both ways); the depth fastest on the Surface |
+> | M1 | each frame's own encode at p50, pool 1 / 2 / 4: canvas; box | 27.80 / 30.30 / 64.60; 15.60 / 18.10 / 32.70 | 16.40 / 12.90 / 24.90; 16.40 / 14.60 / 14.70 | the same bar, read against the encode |
+> | M1 | a frame's mean size, canvas / box | 82.8 / 49.1 KB | 81.1 / 47.3 KB | — |
+> | M1 | a 300-frame whole hold, 300 × the p50 rate: the box at pool 4; four workers (the canvas) | 3.37 s; 1.44 s | 1.25 s; 0.68 s | under 10 s on the Surface |
+> | M2 | ms a frame at p50: the four-deep pool; workers 1 / 2 / 4 | 23.35; 20.40 / 7.65 / 4.80 | 7.77; 8.00 / 4.10 / 2.27 | workers 20 % under the pool on both machines |
+> | M2 | each frame's encode at p50: the pool's `toBlob`; workers 1 / 2 / 4, in the worker | 70.70; 19.20 / 14.90 / 18.60 | 24.90; 7.70 / 7.90 / 8.80 | — |
+> | M3 | clusters; per-cluster paint against the word | स्कूल 2, क्षत्रिय 3, తెలుగు 3; mean 0.000, max 0 on all 15 | the same | mean 0, and the rule's counts, on both machines |
+> | M5 | `blur(8px)` added a frame, p50 / p95 | 28.60 / 38.60 ms | 7.10 / 12.20 ms | p95 no more than M1's p50 encode on the Surface |
+> | M6 | Indic through the texture, mean (max), colour management on / off; colour's largest difference, on / off | 0.000 (0) / 0.000 (1); 1 / 1 | 0.000 (0) / 0.000 (0); 1 / 0 | 0.000, and within 2/255, under one setting |
+> | M22 | conjuncts narrower; frames differ; कि's i-matra first; drawn by; your eye | 8 of 8; 10 of 10; yes, 37 px; Nirmala UI, the only candidate installed; कि's i-matra on the left | 8 of 8; 10 of 10; yes, 35 px; Kohinoor Devanagari, Kohinoor Telugu; passed whole | all, and your eye |
+>
+> **The decisions**, each against its row's own words:
+>
+> - **M1 (row 39): `GRAPHIC_BAKE_REGION` = `'box'`.** "`'box'` when the
+>   box's p50 encode is at least 20 % under the canvas's on the Surface".
+>   By each frame's own encode, the row's words, the box is 43.9 % under
+>   at pool 1 (15.60 against 27.80 ms), 40.3 % at pool 2 (18.10 against
+>   30.30) and 49.4 % at pool 4 (32.70 against 64.60); by the rate, 42.4 %
+>   (16.70 against 29.00), 38.8 % (11.50 against 18.80) and 46.0 % (11.22
+>   against 20.77). The two readings agree at every depth, where on the
+>   Mac only pool 4 cleared: on the Surface the canvas's own encode
+>   outlasts the 16.7 ms cadence at every depth, and the box's does not at
+>   pool 1. Every item marked (box) in §6.3 is to be built in phase 1.
+> - **M1 (row 39): `GRAPHIC_POOL_DEPTH` = 4.** "`GRAPHIC_POOL_DEPTH` is
+>   the depth fastest on the Surface": at the box, 11.22 ms a frame at
+>   p50 at pool 4, against 11.50 at pool 2 and 16.70 at pool 1 (by the
+>   wall 11.18, 12.33, 16.79). The margin over pool 2 is small: 2.4 % at
+>   p50, 2.3 % at p95 (16.65 against 17.05), 9.3 % by the wall (11.18
+>   against 12.33). On the canvas, pool 4 was the slower (20.77
+>   against 18.80 ms a frame, 10.5 %; its own encode 64.60 against 30.30,
+>   four 1080×1920 encodes in flight contending, a reading): recorded, not
+>   a decision, since the region is the box and the canvas's bakes (the
+>   store's own, §6.3) go through the workers below. That rests on the
+>   worker route: §6.3 names no fallback from it, and if a packaged app's
+>   page refused the worker (not measured, the caveats below), the
+>   canvas's bakes would run the pool at 4, the slower depth there on the
+>   Surface, and the depth would be read again for the canvas. With the worker
+>   back-end, the depth is the number of workers, one frame in flight each
+>   (the Built note above), and 4 is the fastest there too (4.80 ms a
+>   frame against 7.65 and 20.40).
+> - **M1 (row 39): the whole hold is allowed.** "Allowed once per clip
+>   only if 300 frames bake in under 10 s on the Surface at the chosen
+>   region and depth": 300 × 11.22 ms = 3.37 s at the box and pool 4;
+>   through four workers, measured on the canvas, 300 × 4.80 = 1.44 s. So
+>   a whole-hold motion (a travelling beam, an edge sweep) is allowed once
+>   per clip. A 60 s
+>   clip's three graphics, 90–270 moving frames, take 1.01–3.03 s at the
+>   box and pool 4 and 0.43–1.30 s on four workers, under 10 s: M1–M2 do
+>   not "fall short", and M11 does not run (§15 row 49; §13's rawvideo
+>   row stays "measurements only"). Every route measured would pass, the
+>   slowest the canvas at pool 1 (300 × 29.00 = 8.70 s).
+> - **M2 (row 40): workers are taken.** "Workers are taken only if their
+>   p50 beats the four-deep `toBlob` pool by 20 % or more on both
+>   machines". The Surface: two workers 67.2 % under the pool (7.65
+>   against 23.35 ms), four 79.4 % (4.80 against 23.35); one 12.6 %
+>   (20.40), not enough alone. The Mac: two
+>   47.2 % (4.10 against 7.77), four 70.8 % (2.27); one 3.0 % slower. So
+>   `encodeFrames` gains its worker back-end in phase 1
+>   (`OffscreenCanvas.convertToBlob` on an `ImageBitmap` transferred from
+>   the drawn canvas, §6.3), and the same-origin module worker file moves
+>   from `src/renderer/src/harness/graphicEncodeWorker.ts` beside
+>   `encodePool.ts`, as the row says. The gain is more than the cadence:
+>   each worker's own encode reads 14.90–19.20 ms at p50 on the Surface,
+>   where the pool's `toBlob`, four in flight on the main thread, reads
+>   70.70. The CSP question is answered for `npm run dev` on both
+>   machines.
+> - **M3 (row 41): `CLUSTER_SCRIPTS` = `['Devanagari', 'Telugu']`.** "A
+>   script enters `CLUSTER_SCRIPTS` only if, on both machines, the
+>   cumulative per-cluster paint's last frame equals the whole word's
+>   ... for every word listed, and the count shows the current rule". On
+>   the Surface as on the Mac: mean 0.000, max 0, on
+>   all 15 rows; स्कूल 2 clusters, क्षत्रिय 3, తెలుగు 3. Per word stays the
+>   default (D8, §16.61); a cluster unit asked of Hindi or Telugu text
+>   comes back in graphemes, never code points.
+> - **M5 (row 43): `blur-rise` is not offered.** "`blur-rise` is offered
+>   when a ten-word blur-rise frame's p95 draw is no more than M1's p50
+>   encode on the Surface, so blur at most doubles a frame's bake". The
+>   added p95 is 38.60 ms; M1's p50 encode at the chosen region and
+>   depth, the box at pool 4, is 32.70, so it fails by 5.90 ms. It fails
+>   as well against
+>   the box's other depths (15.60, 18.10), the workers' (19.00, 18.60 in
+>   the worker) and every rate, and passes only against the canvas's
+>   pool-4 encode (64.60), the region set aside; the blurred frame's own
+>   p95 (63.10) is further over. The blur more than doubles the plain
+>   frame at p50 (55.50 against 26.60 ms, 2.09 times), what "at most
+>   doubles" guards. On the Mac it passed against each frame's own
+>   encode; on the Surface the two readings agree, and fail. So
+>   `resolveGraphicStyle` maps `'blur-rise'` to `'rise'` (§6.5), and
+>   `DrawItem` gains no `blur`.
+> - **M6 (row 44): phase 3 takes colour management on.** "Indic through a
+>   texture at 0.000 and colour within 2/255 under one colour setting:
+>   that setting is phase 3's." Both settings pass on both machines: on
+>   the Surface Indic at mean 0.000 (max 0 on, 1 off) and colour within 1
+>   level under both (the accent at 50 % over the page); on the Mac Indic
+>   0.000 with max 0 under both, colour 1 on and 0 off. The row does not
+>   choose between two that pass; this note does: on (three's defaults,
+>   `ColorManagement.enabled` with `SRGBColorSpace` output), the one
+>   setting under which Indic through the texture is exact, max 0, on both
+>   machines. Both are recorded. Phase 3 is not flagged; the 1 px line and
+>   M6 whole are its own.
+> - **M22 (row 60): shaped on both.** "Every cluster's frames differ,
+>   every conjunct narrower, the eye agrees with the libass complex
+>   sheet", the eye's bar turned round on the Surface, whose own
+>   `complex.png` is unshaped, so the shapes to match are the Mac's ("Your
+>   runs" above). The Surface: every conjunct narrower than its letters
+>   (8 of 8: क्ष 97.5 against 187.6 px, त्र 75.0
+>   against 142.3, ज्ञ 86.3 against 200.4, श्र 84.0 against 165.6, క్ష 77.5
+>   against 196.2, త్ర 154.7 against 213.5, శ్రీ 124.9 against 176.3, స్త
+>   109.5 against 228.5), every whole frame unlike its per-code-point
+>   frame (10 of 10, means 50.817–87.767 over the ink), कि's i-matra first
+>   (the consonant 37 px right of where it is drawn alone), every cluster
+>   drawn by Nirmala UI, Windows' own face (known, not measured) and the
+>   only candidate the check found installed, by its Latin-probe rule (a
+>   dotted circle 71.3 px). Asked in the chat on 2026-10-27 whether, on
+>   the Surface's whole-drawn row, कि's i-matra sits on the left of its
+>   consonant (a pass) or the right (a fail), you answered "yes for the
+>   first one": on the left. The
+>   conjuncts were not separately described by eye there; their joining
+>   on the Surface rests on the numeric half. The Mac's half passed whole
+>   on 2026-10-22. So "text has to be canvas 2D" holds and phase 1 starts;
+>   §6.20's fonts still land before phase 1's Indic check (§16.63), so
+>   both machines draw Noto rather than Kohinoor and Nirmala UI. No font
+>   cause was found, so the fonts stay in phase 1 (§6.19). The libass
+>   bullet above left the canvas bake resting on this M22: it shapes on
+>   the Surface, so §16.66 (a)'s route, once §6.20 lands, will draw Hindi
+>   and Telugu right there.
+>
+> **Caveats.** The M1 and M2 figures are encode rates on this section's
+> synthetic frames (one 900×420 panel at 0.85, two lines through
+> `drawTextOnto`, a 6 px stroke, rising 2 px a frame) with a recorder for a
+> writer: a template's own draw and `writeTitleFrame`'s IPC and disk come
+> on top, and are phase 1's render check's to measure. Workers ran on the
+> canvas only; the box through workers is not measured. A packaged app's
+> page loads from disk (`src/main/index.ts:229`), and a worker there is
+> not measured. Pool 4's lead over pool 2 at the box is 2.4 % at p50. The
+> conjuncts were not judged by eye on the Surface. The same four-deep
+> canvas pool read 20.77 ms a frame in M1's call and 23.35 in M2's (12.4 %
+> more); against M1's figure the two and four workers are still 63.2 %
+> and 76.9 % under.
+>
+> **Still open: M21** (row 59), your Hindi clips through `asr.int`. It
+> gates phase 2's counter, not phase 0's exit (§6's phase table: "M21
+> before phase 2's counter").
+>
+> **Phase 0's exit is met, 2026-10-27.** §6.12's bars: every measurement
+> phase 0 owns is in `EFFECTS.md` §61 with its command, machine, date and
+> user agent (M4 with its CI runs); this note records the bake region,
+> the pool depth and the worker back-end, `CLUSTER_SCRIPTS`, `blur-rise`,
+> and M22's verdict with each machine's fallback face; M4's probes were
+> printed by both runners and nothing is struck; M22 found no cluster
+> unshaped; M6 does not flag phase 3. Phase 1 starts in §6.19's order: the
+> head lane, serial (the §16.8 rename, §6.1's types, `SELF_DRAWN_FIELDS`
+> and the guards), then §6.20's D8 and, after it, D10 with the route, and
+> lanes A–D, each when its needs are in. Of phase 1 only the §16.8 rename
+> is in, committed after these runs as `1f62fba` (2026-10-27); nothing
+> else of it is built.
 
 ### 6.16 Phase 3 — The three.js compositor and 2.5D
 
@@ -11452,7 +11682,8 @@ Phase 1 gave every graphic one pure `drawListAt` and painter A (§6.3); this
 phase gives painter B its body. It rests on the research's reading of the
 evidence (its §4.2): paint every layer with canvas 2D, so every word still
 goes through `drawTextOnto` (`textPaint.ts:44`), the only renderer route
-expected to shape Hindi and Telugu (an inference until M22), and use
+expected to shape Hindi and Telugu (an inference until M22; M22 measured
+it on both machines, 2026-10-27, §6.15), and use
 three.js only to compose painted layers that ask for a camera, a depth, a
 focus blur or a glow. That is the moments engine's own pattern: compose on a
 2D canvas, upload, shade (`momentCanvas.ts:144-185`, `:321-335`).
@@ -11793,7 +12024,9 @@ Without WebGL the sweep draws without its glow, through painter A.
 
 #### The harness
 
-Phase 0 ran M6's Indic and colour parts against raw three.js (§6.15). This
+Phase 0 ran M6's Indic and colour parts against raw three.js (§6.15):
+both colour settings passed on both machines, and this phase takes colour
+management on, the setting exact for Indic on both (2026-10-27). This
 phase opens with M7, `'unreal'` and `'quad'` on the compositor's glow seam
 (moved from phase 0, §6.15), then runs M6 again **through
 `paintDrawList3d` itself** (M6 whole, each 2.5D variant's settled frame
@@ -12372,8 +12605,8 @@ piece table does (§6.3's, §6.16's, §6.17's, §6.18's).
 | 1 | head, serial | the §16.8 rename as its own commit (0.25 of §6.1); then all of §6.1's types in one commit (`template.ts`'s types, the `timeline.ts` fields, `GraphicsSettings`, `GraphicProposal`, `MediaAsset.speaker`, `Clip.forGraphic`, the (box) field, and the seam's `GraphicCandidate`, §6.7, and `KeptGraphic`, §6.6, declared in `template.ts`), so `Clip.graphic` exists before anything reads it (the other 0.25 of §6.1); then `SELF_DRAWN_FIELDS`, the five list sites and `graphicGuards`' head half, the behaviour over the constant and the regex, with the membership rewrites of `paper.test` and `moment.test` (0.75 of §6.4) | 0.25 + 0.25 + 0.75 | phase 0's exit |
 | 1 | outside the days, serial | §6.20's two halves, each its own commit: D8's (`shapedScript` and the captions' fix) and D10's (the Noto files, `INDIC_FONTS`, the scan, the renderer's font sites, the CI check, the route, §16.66 (a)), D10's after D8's (if D10's fonts move to phase 0, below, the route becomes a third commit, after D8's) | (§6.20's 1.25) | the head |
 | 1 | A | `motion.ts` with `graphicMotion` (§6.13); `stroke.ts` with `graphicStroke` (0.5 of §6.3); `style.ts`'s first half with `graphicStyle` (§6.5) | 1 + 0.5 + 0.5 | the head |
-| 1 | B | `drawList.ts`, `items.ts` (`DrawOut`, `unitFor`, `CLUSTER_SCRIPTS`, the drawer seam), `templates/index.ts` with `graphicDrawList` (1 of §6.3); `paint.ts` with its `PaintOptions` and `graphicPaint` (0.75); `frame.ts` and `targets.ts` with `graphicFrame`'s first half (0.25) | 2 | the head; §6.20's two halves (`unitFor` reads `shapedScript`; shaped text items name `INDIC_FONTS`); M3 for `CLUSTER_SCRIPTS`; A's `stroke.ts` before `paint.ts` |
-| 1 | C | `graphicCanvas.ts` (preview, bake, frames; the worker back-end only if M2 asks) (0.75 of §6.3); the export branch with its own catch line, `Bakers.graphic` and every literal of §6.11, `exportBakers.ts`, the store's `addGraphicClip`, `setGraphic`, `rebakeGraphic`, the trim and split rules, Preview's branch and sweep, (box) `identityPlaced`, with `graphicStore` (0.5); the three store arms (`rebakeGenerated`, `placeCopies`, `rebakeFollowed`) and `graphicGuards`' wiring half (0.25 of §6.4) | 1.5 | B's draw list and painter; M1 and M2 |
+| 1 | B | `drawList.ts`, `items.ts` (`DrawOut`, `unitFor`, `CLUSTER_SCRIPTS`, the drawer seam), `templates/index.ts` with `graphicDrawList` (1 of §6.3); `paint.ts` with its `PaintOptions` and `graphicPaint` (0.75); `frame.ts` and `targets.ts` with `graphicFrame`'s first half (0.25) | 2 | the head; §6.20's two halves (`unitFor` reads `shapedScript`; shaped text items name `INDIC_FONTS`); M3 for `CLUSTER_SCRIPTS` (in, 2026-10-27); A's `stroke.ts` before `paint.ts` |
+| 1 | C | `graphicCanvas.ts` (preview, bake, frames; the worker back-end only if M2 asks, which it did on 2026-10-27) (0.75 of §6.3); the export branch with its own catch line, `Bakers.graphic` and every literal of §6.11, `exportBakers.ts`, the store's `addGraphicClip`, `setGraphic`, `rebakeGraphic`, the trim and split rules, Preview's branch and sweep, (box) `identityPlaced`, with `graphicStore` (0.5); the three store arms (`rebakeGenerated`, `placeCopies`, `rebakeFollowed`) and `graphicGuards`' wiring half (0.25 of §6.4) | 1.5 | B's draw list and painter; M1 and M2 (in, 2026-10-27) |
 | 1 | D | the harness's `primitives` and Indic halves (0.25 of §6.3); `pathLength`, `strokes` widths, `graphic.int`'s phase-1 cases, `SHAPES`' graphic overlay (§6.11's half) | 0.25 + 0.5 | C; §6.20's D10 half |
 | 2 | T3, first | the typed stub of `applyGraphics` (`KeptGraphic`, the signature, §6.6), committed before T2's wiring starts | inside T3's 3 | phase 1's exit |
 | 2 | T1 | `GRAPHIC_TEMPLATES`' values first (the others read the field modes), then the layout, the eight draw files, `numbers.ts`, `tree.ts`, with `graphicFrame`'s second half, `graphicHolds`, `graphicTree` (§6.2); the style's second half (§6.5) | 4 + 0.5 | phase 1's exit; M21 before the counter |
@@ -12395,7 +12628,10 @@ neither could commit green.)
 bake region and pool on M1 and M2; §6.5's entrance list on M5; phase 3's
 colour setup on M6 (phase 0) and its glow on M7 (phase 3's first day);
 phase 2's counter on M21. M22 gates phase 1's text work as §6.15's M22 row
-says. M4 gates nothing in step 3: nothing probed is emitted.
+says. M4 gates nothing in step 3: nothing probed is emitted. As measured
+2026-10-27 (§6.15): M1, M2, M3, M5 and M6's phase-0 parts have answered
+and M22 found both machines shaping, so of these only M21 (phase 2's
+counter) and M7 (phase 3's glow) still gate.
 
 **Where §6.20 falls.** Outside step 3's days, inside phase 1's run:
 
@@ -12410,7 +12646,8 @@ says. M4 gates nothing in step 3: nothing probed is emitted.
   render check, which needs the files. After D8's half, since the route
   reads `shapedScript`. In phase 0 instead if M22 finds a font cause
   (§6.15): the fonts then land there, and the route lands as a commit of
-  its own after D8's half.
+  its own after D8's half. M22 found no font cause (2026-10-27), so the
+  fonts land here, in phase 1.
 
 **The days.** Step 3 is 30.5: phase 0's 2, phase 1's 7.5, phase 2's 14.5,
 the spike's 1.5, phase 3's 5; that is §6's 14.5, 2 moved from step 6, and 14
@@ -14034,10 +14271,10 @@ the analysis loaded stays resident while the model runs.
 | `-filter_complex_script <file>` | step 0 (§3.7), every render | in the 2018 source (`f22fcd4` `fftools/ffmpeg_opt.c:3109`, `:3478`) | measured on the Mac (re-run by the fixer); the 360-cut render check runs it in CI |
 | `-vsync vfr` (a test fixture's variable-rate source; `-fps_mode` is 2022, too new) | §4.9's render check | old | measured in CI with step 1 |
 | ASS per-event `{\anN}` and `MarginV` via `subtitles` (as built, `buildRenderPlan`'s `ass=…:shaping=complex` burn) | step 2 (`buildAss`, built 2026-10-16) | core ASS / libass | **built**; measured on the Mac, by a bare `ass=` and through `buildRenderPlan`'s burn (`EFFECTS.md` §60): Pop moved to the top or the bottom renders on exactly the rows of Pop placed there, `\an5` ignores MarginV, and a cue is first drawn on ceil(its centisecond time × fps / 1000) at 24, 25, 30 and 60 fps. **Dated** for Windows: rendered there in run 38986994729, which failed on an unmoved line's reading under the runners' fallback face (`0c08569`); `captions.int` and `captionsFree.int` read moved lines from the run on `fb65a18`'s push |
-| `overlay` of a PNG sequence at the clip's place (`x` and `y` from `clipBox`, `plan.ts:456-482`, written at `:1921`), `format=yuva420p` (`:1484`), `tpad=stop_mode=clone` (`holdFilter`, `:906-909`), `-start_number 0 -framerate` (`:1096`) | step 3: every graphic, from either painter, the 2.5D variants and the screen card's moving frames | 2010 / Oct 2018 | in CI (moments, captions). **Nothing new is emitted by step 3** (2026-10-21): a box bake, if M1 picks it, lands through the same overlay `x` and `y`, the plan reading `MediaAsset.frames.box` for a clip placed at the identity (§6.3); the screen card's hold is the recording's own clip under two opacity keys; graphic sounds are audio clips on the existing mix with `adelay` in samples. A graphic's PNG sequence joins `SHAPES` in `tests/oldestFfmpeg.test.ts` all the same |
+| `overlay` of a PNG sequence at the clip's place (`x` and `y` from `clipBox`, `plan.ts:456-482`, written at `:1921`), `format=yuva420p` (`:1484`), `tpad=stop_mode=clone` (`holdFilter`, `:906-909`), `-start_number 0 -framerate` (`:1096`) | step 3: every graphic, from either painter, the 2.5D variants and the screen card's moving frames | 2010 / Oct 2018 | in CI (moments, captions). **Nothing new is emitted by step 3** (2026-10-21): a box bake, if M1 picks it (it did, 2026-10-27, §6.15), lands through the same overlay `x` and `y`, the plan reading `MediaAsset.frames.box` for a clip placed at the identity (§6.3); the screen card's hold is the recording's own clip under two opacity keys; graphic sounds are audio clips on the existing mix with `adelay` in samples. A graphic's PNG sequence joins `SHAPES` in `tests/oldestFfmpeg.test.ts` all the same |
 | opacity keys (`geq` on alpha) | step 3 exits, and the screen card's hand-off | 2014 | in CI |
-| `tmix`; `overlay`'s `alpha=premultiplied`; `perspective` | **not emitted.** Later options only: `tmix` for motion blur if phase 2's ratings ask for it; `alpha=premultiplied` for a raw RGBA path only if M1-M2 fall short (M11); `perspective` as the screen card's ffmpeg alternative | `tmix` listed under 4.1 (released 2018-11-06); `alpha=premultiplied` committed 2017-12-16; `perspective` 2.1 (the research, §6.3) | **probed, not emitted**: M4's case prints each one's `-h filter=` on both runners (§6.15). **Measured on both builds 2026-10-22 (UTC)**: CI run 39708062276 (`011f80f`) and run 39715478059 (`1bfdc4d`), macos-14 (4.4) and windows-latest (`N-92722-gf22fcd4483`), each print all three present ("Filter tmix", "Filter overlay", "Filter perspective", exit 0), `overlay`'s one `alpha` line with `straight` and `premultiplied`, and the control `nosuchfilter` absent (`EFFECTS.md` §61); nothing is struck. One used later goes into `SHAPES` and the `TOO_NEW` scan first; one missing on Windows is struck, not worked around |
-| `ebur128` (M18); `-f rawvideo -pix_fmt rgba … -i pipe:0` (M11) | measurements only | — | not emitted in a render |
+| `tmix`; `overlay`'s `alpha=premultiplied`; `perspective` | **not emitted.** Later options only: `tmix` for motion blur if phase 2's ratings ask for it; `alpha=premultiplied` for a raw RGBA path only if M1-M2 fall short (M11; they did not, 2026-10-27, §6.15); `perspective` as the screen card's ffmpeg alternative | `tmix` listed under 4.1 (released 2018-11-06); `alpha=premultiplied` committed 2017-12-16; `perspective` 2.1 (the research, §6.3) | **probed, not emitted**: M4's case prints each one's `-h filter=` on both runners (§6.15). **Measured on both builds 2026-10-22 (UTC)**: CI run 39708062276 (`011f80f`) and run 39715478059 (`1bfdc4d`), macos-14 (4.4) and windows-latest (`N-92722-gf22fcd4483`), each print all three present ("Filter tmix", "Filter overlay", "Filter perspective", exit 0), `overlay`'s one `alpha` line with `straight` and `premultiplied`, and the control `nosuchfilter` absent (`EFFECTS.md` §61); nothing is struck. One used later goes into `SHAPES` and the `TOO_NEW` scan first; one missing on Windows is struck, not worked around |
+| `ebur128` (M18); `-f rawvideo -pix_fmt rgba … -i pipe:0` (M11) | measurements only | — | not emitted in a render. M11's is not run: M1–M2 did not fall short (2026-10-27, §6.15, §15 row 49) |
 | `scdet` | **not used** | 2020-05-14 | goes into `TOO_NEW` (§3.5); the Mac build has it |
 | `cropdetect` | **not used** (black bars only) | — | — |
 
@@ -14356,7 +14593,7 @@ measured"; H1–H13 are rows 61–73 (H1 = 61 … H13 = 73) and land in §62,
 "Hands: the spike measured". Phase 0 runs M1–M5, M6's Indic and colour
 parts and M22, and M21 before phase 2's counter; M8, M9, M13 and M19 run
 in phase 1; M10 and M14–M18 in phase 2; M7 first, then M6 whole, M12, M20
-and M13 again in phase 3 (M7 moved from phase 0 on 2026-10-21, §6.15); M11 only if M1–M2 fall short; H1–H10, H12 and H13 in the spike;
+and M13 again in phase 3 (M7 moved from phase 0 on 2026-10-21, §6.15); M11 only if M1–M2 fall short (they did not, 2026-10-27; row 49); H1–H10, H12 and H13 in the spike;
 H11, and H12 again, in phase 4.
 
 - **Row 42 (M4): measured 2026-10-22** (§6.15, `EFFECTS.md` §61): CI runs
@@ -14365,7 +14602,8 @@ H11, and H12 again, in phase 4.
   `premultiplied`, and `perspective` present on both builds, the control
   absent. Nothing is struck (§13). Closed.
 - **Rows 39, 40, 41, 43 and 44 (M1, M2, M3, M5, M6's phase-0 parts):
-  measured in the development app on the Mac; the Surface outstanding.**
+  measured in the development app on the Mac, 2026-10-22; the Surface's
+  half and the decisions are the rows below (2026-10-27).**
   Your six calls in `npm run dev`'s console, Electron 44.3.0 on Chrome
   152.0.7977.78, 2026-10-22 (`EFFECTS.md` §61, where the harness
   browser's figures of the same day stay as the fallback they superseded):
@@ -14377,10 +14615,46 @@ H11, and H12 again, in phase 4.
   every per-cluster paint equal to its word, in both scripts; M5's blur
   adding 7.10 ms a frame at p50 and 12.20 at p95, on the same cadence;
   M6's Indic at 0.000 and colour within 1 level (0 with colour management
-  off). Open: the Surface, and so every decision (§6.15's "as measured so
-  far" note).
-- **Row 60 (M22): measured in the development app on the Mac; the
-  Surface outstanding.** Its numeric halves pass in Electron 44.3.0 with
+  off). The Surface, and so every decision, came on 2026-10-27 (the rows
+  below; §6.15's "as measured" note).
+- **Row 39 (M1): decided 2026-10-27** (§6.15's "as measured" note,
+  `EFFECTS.md` §61). Your six calls in `npm run dev`'s console on the
+  Surface, Electron 44.3.0 on Chrome 152.0.7977.78: the box's own encode
+  43.9 %, 40.3 % and 49.4 % under the canvas's at pools 1, 2 and 4 (15.60
+  against 27.80 ms, 18.10 against 30.30, 32.70 against 64.60), and 42.4 %,
+  38.8 % and 46.0 % by the rate (16.70 against 29.00, 11.50 against
+  18.80, 11.22 against 20.77): `GRAPHIC_BAKE_REGION` = `'box'`. The box's
+  fastest depth is 4 (11.22 ms a frame at p50, against 11.50 at 2 and
+  16.70 at 1): `GRAPHIC_POOL_DEPTH` = 4. A 300-frame whole hold takes
+  3.37 s at the box and pool 4 (300 × 11.22 ms), under 10 s, so a
+  whole-hold motion is allowed once per clip. Closed.
+- **Row 40 (M2): decided 2026-10-27** (§6.15, `EFFECTS.md` §61): two and
+  four workers 67.2 % and 79.4 % under the four-deep pool on the Surface
+  (7.65 and 4.80 against 23.35 ms), 47.2 % and 70.8 % on the Mac (4.10
+  and 2.27 against 7.77); the module worker admitted by the app's CSP in
+  `npm run dev` on both. Workers are taken: `encodeFrames` gains its
+  worker back-end in phase 1. Open: a worker in a packaged app's page
+  (`src/main/index.ts:229`), and the box through workers.
+- **Row 41 (M3): decided 2026-10-27** (§6.15, `EFFECTS.md` §61): on both
+  machines every per-cluster paint equals its word (mean 0.000, max 0, all
+  15 rows) and स्कूल is two clusters: `CLUSTER_SCRIPTS` = `['Devanagari',
+  'Telugu']`. Closed.
+- **Row 43 (M5): decided 2026-10-27** (§6.15, `EFFECTS.md` §61): on the
+  Surface `blur(8px)` adds 38.60 ms a frame at p95, more than M1's p50
+  encode at the box and pool 4 (32.70): `blur-rise` is not offered, and
+  `resolveGraphicStyle` maps it to `rise`. Closed.
+- **Row 44 (M6's phase-0 parts): decided 2026-10-27** (§6.15, `EFFECTS.md`
+  §61): both colour settings pass on both machines (Indic at mean 0.000,
+  colour within 1 level); colour management on, the one setting with
+  Indic exact (max 0) on both, is phase 3's. Phase 3 is not flagged. The
+  1 px line and M6 whole are phase 3's.
+- **Row 49 (M11): not run** (2026-10-27, §6.15, `EFFECTS.md` §61). M1–M2
+  did not fall short: a 60 s clip's three graphics, 90–270 moving frames,
+  take 1.01–3.03 s at the box and pool 4 and 0.43–1.30 s on four workers
+  on the Surface, under the row's 10 s. §13's rawvideo row stays
+  "measurements only".
+- **Row 60 (M22): measured on both machines; decided 2026-10-27, shaped
+  on both.** On the Mac its numeric halves pass in Electron 44.3.0 with
   the Mac's Kohinoor faces (every conjunct narrower than its letters,
   every whole frame unlike its per-code-point frame, कि's consonant 35 px
   in), the harness browser's figures exactly; and its libass reference
@@ -14394,8 +14668,15 @@ H11, and H12 again, in phase 4.
   tables (no file in `assets/fonts` carries Telugu; §6.15), so the 2018
   build's libass does not shape Hindi or Telugu (the first reading; the
   route for those captions is §16.66, answered (a) on 2026-10-27). Your
-  eye on the app's sheet passed on the Mac on 2026-10-22 (§6.15). Open:
-  the Surface's six calls and your eye on its sheet there.
+  eye on the app's sheet passed on the Mac on 2026-10-22 (§6.15). The
+  Surface's calls, 2026-10-27: every conjunct narrower (8 of 8), every
+  whole frame unlike its per-code-point frame (10 of 10), कि's consonant
+  37 px in, every cluster drawn by Nirmala UI, the only candidate
+  installed; your eye there passed कि's i-matra on the left ("yes for the
+  first one"), the conjuncts not separately described. Shaped on both:
+  "text has to be canvas 2D" holds and phase 1 starts (§6.15's "as
+  measured" note, `EFFECTS.md` §61). Closed; the conjuncts by eye on the
+  Surface optional (`EFFECTS.md` §61's "Still unmeasured").
 - **Row 59 (M21): not measured.** Its gated case is built (`fca8194`) and
   waits on your Hindi clips.
 

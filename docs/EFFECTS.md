@@ -8496,7 +8496,7 @@ suite and CI are the orchestrator's.
   and the preview's recompute on a long followed clip while editing.
 - **Burned-in text** (§5.3): after 1g.
 
-## 61. Graphics: the forks measured (phase 0 of step 3) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22), and the Surface's libass run (2026-10-27)
+## 61. Graphics: the forks measured (phase 0 of step 3) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22), and on the Surface the libass run and the development app (2026-10-27)
 
 For `docs/CLIPS.md` §6.15 (step 3's phase 0, "Measure before relying"):
 pieces 0.1–0.3 were built on the evening of 2026-10-21 in seven commits,
@@ -8507,9 +8507,11 @@ on both runners: macos-14 job 119616429509, windows-latest job
 119616429690. Piece 0.4, the user's runs, began on 2026-10-22 with the
 six console calls in the development app on the Mac (below); the eye
 check, the Surface's runs and M21 have not. (Since: the Mac's eye check
-passed on 2026-10-22, item 5 of "What this settles", and the Surface's
-`graphic.int` ran on 2026-10-27, "The Surface's run" below; its console
-calls, its eye check and M21 have not.) The seven, from
+passed on 2026-10-22, item 5 of "What this settles"; the Surface's
+`graphic.int` ran on 2026-10-27, "The Surface's run" below; and its six
+console calls and its eye check on कि the same day, "The development app on
+the Surface" below, items 6–13. Only M21 has not, besides the conjuncts'
+eye there ("Still unmeasured").) The seven, from
 `git log 8dd86ab..1bfdc4d`:
 
 - `011f80f` — M4's case in `tests/oldestFfmpeg.test.ts` (piece 0.1),
@@ -8548,14 +8550,21 @@ calls in `npm run dev`'s DevTools console on the development Mac,
 2026-10-22, pasted into the chat and saved as
 `tests/output/phase0-runs/mac-electron-2026-10-22.txt` (gitignored, so on
 the development Mac only; no `outputDir` call in the tests names that
-folder, so `npm test` leaves it).
+folder, so `npm test` leaves it). **The Surface's app run** is the
+user's too: the same six calls in `npm run dev`'s console on the Surface,
+2026-10-27, saved as
+`tests/output/phase0-runs/surface-electron-2026-10-27.txt` beside the
+Mac's.
 
 **The decisions are the Surface's.** It is the floor machine: §6.15's
 outcome rows are read on the Surface's numbers (M2, M3 and M22 on both
-machines'), and of its runs only `graphic.int`'s libass reference is in
-(2026-10-27), which sets no constant. No figure in this section sets
-a constant. Where it says what a row "would make of" a number, it means
-only if the Surface, and for M3 and M22 Electron on both machines, agreed.
+machines'). Its runs came on 2026-10-27: `graphic.int`'s libass
+reference, which sets no constant, and the six console calls, which set
+every constant phase 0 owns (items 6–13 of "What this settles"; the values
+are CLIPS §6.15's "as measured" note's). Where the Mac's subsections say
+what a row "would make of" a number, they mean on the Mac alone, written
+before the Surface's run; the Surface's subsection says what it makes of
+it.
 
 ### M4: `tmix`, `overlay`'s `alpha` and `perspective` on both builds
 
@@ -9308,6 +9317,291 @@ i-matra on the left of its consonant. So M22's Mac half passes whole,
 numeric and eye; then the Surface, in whichever Indic face it has (an
 expectation, as above). The Surface decides.
 
+### The development app on the Surface (Electron 44.3.0, Chrome 152.0.7977.78, Windows NT 10.0), 2026-10-27
+
+**Where.** The user's six calls, in order in one block, in the DevTools
+console of `npm run dev` on the Surface, the user's Windows machine and
+the floor machine, 2026-10-27, at HEAD `8642f52` with the check at
+`1bfdc4d`'s code (no commit since has touched `graphicCheck.ts`,
+`graphicMeasure.ts`, `graphicEncodeWorker.ts` or `encodePool.ts`: `git
+log`, read 2026-10-27). The text was saved from `console.log` of the
+results, `copy()` returning undefined there as it did on the Mac, as
+`tests/output/phase0-runs/surface-electron-2026-10-27.txt` (gitignored, so
+on the development Mac only). Like the Mac's file it carries each call's
+summary lines and nothing else: no notes, no frames, no PNG comparisons.
+This is the run CLIPS §6.15's outcome rows are read on. User agent:
+
+    Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) forge/1.0.0 Chrome/152.0.7977.78 Electron/44.3.0 Safari/537.36
+
+The Mac's Electron and Chrome builds exactly, on Windows.
+
+**Conditions.** M1, M2 and M5 each read animation frames 16.60–16.70 ms
+apart before and after, the page visible and not focused, none
+THROTTLED. The 2×2 `toBlob` floor read p50 16.60, 16.10 and 16.30 ms (p95
+31.10, 17.50 and 17.20): the frame cadence again, so **Electron's
+main-thread `toBlob` waits on the next animation frame on Windows as on
+the Mac**. M1's floor p95 of 31.10 ms is the one wide figure; its frames
+read 16.60 and 16.70 ms apart, so it is not THROTTLED by the check's
+rule. The Surface's encodes outlast the 16.7 ms cadence at every region
+and depth but the box at pool 1 (15.60 ms; below), where the Mac's did only
+on the canvas at pool 4 (24.90), so its figures show the encodes themselves
+where the Mac's mostly could not. The
+page's CSP, recorded by M1 and M2, is the Mac's string word for word,
+`src/renderer/index.html:7-8`'s meta (quoted under the Mac's run). The
+console also printed Chrome's hint that repeated `getImageData` readbacks
+are faster with `willReadFrequently`, raised by `checkParity`'s readbacks
+through the check's `pixels` helper
+(`src/renderer/src/harness/graphicCheck.ts:421`), which leaves that
+attribute off on purpose so its canvases are the kind a bake uses
+(`:408-410`): a nit for the harness, not a bar.
+
+#### M1 on the Surface
+
+    await window.__forgeGraphicCheck({ encode: { frames: 120, region: ['canvas', 'box'], pool: [1, 2, 4] } })
+
+The synthetic graphic and its box (908×666) as on the Mac. The box against
+the canvas at frame 0: mean 0.000002, max 1, 2 of 604,728 pixels differ
+(the Mac: 0.000011, max 17, 1 pixel), so the two routes' frames are still
+not bit-identical on Windows, by one level. The size column is the
+summary's mean, as the Mac's.
+
+| region | pool | ms/frame p50 | p95 | wall ms/frame | encode p50 | encode p95 | KB a frame, mean | the Mac's ms/frame p50; encode p50 |
+|---|---|---|---|---|---|---|---|---|
+| canvas 1080×1920 | 1 | 29.00 | 37.30 | 26.73 | 27.80 | 35.80 | 82.8 | 16.70; 16.40 |
+| canvas | 2 | 18.80 | 33.40 | 20.55 | 30.30 | 59.00 | 82.8 | 8.30; 12.90 |
+| canvas | 4 | 20.77 | 29.90 | 21.52 | 64.60 | 115.40 | 82.8 | 7.60; 24.90 |
+| box 908×666 | 1 | 16.70 | 18.80 | 16.79 | 15.60 | 17.70 | 49.1 | 16.70; 16.40 |
+| box | 2 | 11.50 | 17.05 | 12.33 | 18.10 | 27.80 | 49.1 | 8.30; 14.60 |
+| box | 4 | 11.22 | 16.65 | 11.18 | 32.70 | 59.10 | 49.1 | 4.15; 14.70 |
+
+**Against the Mac.** At pool 1 the box reads the cadence on both machines
+(16.70), and the canvas does not on the Surface: 29.00 ms a frame, 1.7
+times the Mac's 16.70, its own encode 27.80, about a frame and two thirds.
+At pool 4 both regions are 2.7 times the Mac's rate (the canvas 20.77
+against 7.60, the box 11.22 against 4.15). The encodes grow with the depth
+on the Surface, the box's 15.60, 18.10, 32.70 and the canvas's 27.80,
+30.30, 64.60 (2.1 and 2.3 times from pool 1 to 4), where the Mac's box held
+14.60–16.40: four encodes in flight contending on the floor machine is the
+reading, not measured. On the canvas, pool 4 is slower than pool 2 (20.77
+against 18.80 ms a frame, 10.5 %; by the wall 21.52 against 20.55), the
+one region where a deeper pool lost. The box's frames are 40.7 % smaller
+(49.1 against 82.8 KB; the Mac's 47.3 and 81.1).
+
+**What the row makes of it.** Its bar: "`GRAPHIC_BAKE_REGION` is `'box'`
+when the box's p50 encode is at least 20 % under the canvas's on the
+Surface". By each frame's own encode, the row's own words, the box is
+43.9 % under at pool 1 (15.60 against 27.80), 40.3 % at pool 2 (18.10
+against 30.30) and 49.4 % at pool 4 (32.70 against 64.60). By the rate, it
+is 42.4 % (16.70 against 29.00), 38.8 % (11.50 against 18.80) and 46.0 %
+(11.22 against 20.77). Both readings clear 20 % at every depth, where on
+the Mac they cleared it at pool 4 only: here the canvas's encode outlasts
+the cadence at every depth and the box's does not at pool 1. **So
+`GRAPHIC_BAKE_REGION` is `'box'`.** "`GRAPHIC_POOL_DEPTH` is the depth
+fastest on the Surface": at the box, pool 4, 11.22 ms a frame at p50
+against 11.50 at pool 2 and 16.70 at pool 1 (by the wall 11.18, 12.33,
+16.79). **So `GRAPHIC_POOL_DEPTH` is 4**, by a small margin over pool 2:
+2.4 % at p50 (11.22 against 11.50), 2.3 % at p95 (16.65 against 17.05),
+9.3 % by the wall (11.18 against 12.33), each run's p95 above the other's
+p50. The canvas's pool 4, slower than its pool 2, is recorded, not a
+decision: the region is the box, and the canvas's bakes (the store's own,
+CLIPS §6.3) go through the workers M2 takes (below). That rests on the
+worker route: CLIPS §6.3 names no fallback from it, and if a packaged app's
+page refused the worker (not measured, M2 below), the canvas's bakes would
+run the pool at 4, the slower depth there on the Surface, and the depth
+would be read again for the canvas.
+
+**The whole hold.** "A whole-hold bake ... is allowed once per clip only if
+300 frames bake in under 10 s on the Surface at the chosen region and
+depth": at the box and pool 4, 300 × 11.22 ms = 3.37 s (by the wall 3.35);
+through four workers, measured on the canvas, 300 × 4.80 = 1.44 s. Every
+route measured is under 10 s, the slowest the canvas at pool 1, 300 ×
+29.00 = 8.70 s. So a whole-hold motion is allowed once per clip. A 60 s
+clip's three graphics, 90–270 moving frames, take 1.01–3.03 s at the box
+and pool 4 and 0.43–1.30 s on four workers, under the row's 10 s: M1–M2
+do not "fall short", and M11 is not run. These are encode rates on CLIPS
+§6.15's synthetic frames (one 900×420 panel at 0.85, two lines through
+`drawTextOnto`, a 6 px stroke, rising 2 px a frame), drawn in 0.1 ms on
+the Mac's harness run, with a recorder for a writer: a template's own
+draw cost and `writeTitleFrame`'s IPC and disk come on top, and are phase
+1's render check's to measure.
+
+#### M2 on the Surface
+
+    await window.__forgeGraphicCheck({ encode: { frames: 120, workers: [1, 2, 4] } })
+
+| route | depth | ms/frame p50 | p95 | wall ms/frame | encode p50 / p95 | in the worker p50 / p95 | the Mac's ms/frame p50 |
+|---|---|---|---|---|---|---|---|
+| pool (the baseline) | 4 | 23.35 | 32.07 | 22.50 | 70.70 / 113.90 | — | 7.77 |
+| workers | 1 | 20.40 | 29.60 | 20.90 | 19.50 / 29.20 | 19.20 / 28.90 | 8.00 |
+| workers | 2 | 7.65 | 13.50 | 8.60 | 15.10 / 26.50 | 14.90 / 26.10 | 4.10 |
+| workers | 4 | 4.80 | 6.02 | 5.28 | 19.00 / 25.60 | 18.60 / 24.20 | 2.27 |
+
+82.8 KB a frame on every route. "Encode" as on the Mac: the pool's
+`toBlob`, call to blob; the workers' `postMessage` to the reply, with the
+worker's own `convertToBlob` beside it.
+
+**The module worker ran under the app's CSP on Windows too**: workers 1, 2
+and 4 all report figures, none "not run". So §6.15's M2 question is
+answered for `npm run dev` on both machines; a packaged app's page, loaded
+from disk (`src/main/index.ts:229`, `loadFile`), is still not measured,
+nor a `blob:` worker.
+
+**The baseline, twice.** M2's four-deep pool on the canvas is the same
+route as M1's canvas at pool 4 in the call before, and read 23.35 ms a
+frame against 20.77 (12.4 % more) and an encode of 70.70 against 64.60;
+the Mac's two read 7.77 and 7.60. Against M1's figure instead of M2's, two
+and four workers would be 63.2 % and 76.9 % under: the reading below does
+not turn on which.
+
+**What the row makes of it.** "Workers are taken only if their p50 beats
+the four-deep `toBlob` pool by 20 % or more on both machines". On the
+Surface two workers are 67.2 % under the pool (7.65 against 23.35 ms) and
+four 79.4 % (4.80 against 23.35); one is 12.6 % under (20.40), not enough
+alone. On the Mac, two 47.2 % (4.10 against 7.77) and four 70.8 % (2.27);
+one 3.0 % slower (8.00). **So workers are taken**: `encodeFrames` gains its
+worker back-end in phase 1 (CLIPS §6.3), and the same-origin module worker
+moves from `src/renderer/src/harness/graphicEncodeWorker.ts` beside
+`encodePool.ts`, as the row says. Four workers are the fastest on both
+machines (4.80 against 7.65 and 20.40 here). The lead is more than the
+cadence on the Surface: each worker's own encode reads 14.90–19.20 ms at
+p50 where the pool's `toBlob`, four in flight on the main thread, reads
+70.70, so the workers escape both the frame cadence and that contention
+(a reading). Workers ran on the canvas only; the box through workers is
+not measured.
+
+#### M3 on the Surface
+
+    await window.__forgeGraphicCheck({ segments: true })
+
+| word | clusters |
+|---|---|
+| स्कूल | 2 [स्कू \| ल] |
+| क्षत्रिय | 3 [क्ष \| त्रि \| य] |
+| स्त्री | 1 |
+| తెలుగు | 3 [తె \| లు \| గు] |
+| క్ష, స్త్ర | 1 each |
+| each §51 cluster | 1 |
+
+Every per-cluster cumulative paint equals the whole word, mean 0.000 and
+max 0, on all 15 rows: the Mac's counts and figures exactly.
+
+**What the row makes of it.** "A script enters `CLUSTER_SCRIPTS` only if,
+on both machines, the cumulative per-cluster paint's last frame equals the
+whole word's ... for every word listed, and the count shows the current
+rule (स्कूल two clusters, not three)". Both machines meet it for both
+scripts. **So `CLUSTER_SCRIPTS` is `['Devanagari', 'Telugu']`.** Per word
+stays the default (D8, CLIPS §16.61); a cluster unit asked of Hindi or
+Telugu text comes back in graphemes, never code points.
+
+#### M5 on the Surface
+
+    await window.__forgeGraphicCheck({ blur: { words: 10, px: 8 } })
+
+| | p50 | p95 | the Mac's p50 / p95 |
+|---|---|---|---|
+| blurred, draw to blob | 55.50 ms | 63.10 ms | 20.30 / 24.20 |
+| plain, draw to blob | 26.60 ms | 32.70 ms | 13.00 / 14.40 |
+| `blur(8px)` added, frame by frame | 28.60 ms | 38.60 ms | 7.10 / 12.20 |
+
+This call's 2×2 floor read 16.30 ms at p50. The plain frame alone is past
+a frame here (26.60), so the added time is not slack under the cadence,
+as the Mac's may have been (a reading). The filter adds 4.0 times the
+Mac's at p50 and 3.2 times at p95, and the blurred frame takes 2.09 times
+the plain one at p50 (55.50 against 26.60).
+
+**What the row makes of it.** "`blur-rise` is offered when a ten-word
+blur-rise frame's p95 draw is no more than M1's p50 encode on the
+Surface, so blur at most doubles a frame's bake". The added p95 is 38.60
+ms. M1's p50 encode at the chosen region and depth, the box at pool 4, is
+32.70: it fails by 5.90 ms. It fails against every box depth's encode
+(15.60, 18.10), against the workers' (19.00, 18.60 in the worker), and
+against every rate; it passes only against the canvas's encode at pool 4,
+64.60, the region set aside. So the Mac's two readings of the bar (each
+frame's own encode, or the rate) agree on the Surface, and both fail; the
+blur more than doubles the plain frame, which is what the row's "at most
+doubles" guards. **So `blur-rise` is not offered**: `resolveGraphicStyle`
+maps it to `rise` (CLIPS §6.5). The blurred bake through `encodeFrames`
+that would have told the two readings apart is not needed.
+
+#### M6 on the Surface
+
+    await window.__forgeGraphicCheck({ parity: true })
+
+| colour management | Indic, frame | Indic, ink | colour, largest difference | the Mac |
+|---|---|---|---|---|
+| on | mean 0.000, max 0 | 0.000 | 1 level: the accent at 50 % over the page; the accent, page, ink and mid grey squares and the accent at 50 % over nothing 0 | Indic max 0; colour 1, the same square |
+| off | mean 0.000, max 1 | 0.000 | 1 level: the same six, the same one square | Indic max 0; colour 0 on all six |
+
+**What the row makes of it.** "Indic through a texture at 0.000 and colour
+within 2/255 under one colour setting: that setting is phase 3's." Both
+settings pass on both machines. The row does not choose between two that
+pass; the tie is broken in CLIPS §6.15's "as measured" note: **colour
+management on** (three's defaults, `ColorManagement.enabled` with
+`SRGBColorSpace` output), the one setting under which Indic through the
+texture is exact, max 0, on both machines (off reads max 1 here), with
+colour within 1 level on both. Both are recorded. Phase 3 is not flagged.
+The 1 px line, and M6 whole, are phase 3's.
+
+#### M22 on the Surface
+
+    await window.__forgeGraphicCheck({ indic: true })
+
+Installed candidates: Nirmala UI alone, of the twenty the check names
+(`FONT_CANDIDATES`, `graphicCheck.ts:371-392`: the Noto pair, the Mac's
+eight, Nirmala UI, Mangal, Aparajita, Kokila, Utsaah, Gautami, Vani,
+Arial Unicode MS and the two Lohit faces). "Installed" is the check's
+rule: a Latin probe drawn in the face differs from the same probe in a
+family that does not exist (`graphicCheck.ts:1410-1415`), so a face with
+no Latin letters would read absent. A dotted circle is 71.3 px (the Mac's
+120.0).
+
+| cluster | whole, px | its letters without marks, px | narrower | code points alone, px (marks on a dotted circle) | whole against per-code-point, mean over the ink | i-matra first | drawn by | the Mac's whole, px |
+|---|---|---|---|---|---|---|---|---|
+| क्ष | 97.5 | 187.6 | yes | 258.9 (1) | 64.468 | — | Nirmala UI | 94.1 |
+| त्र | 75.0 | 142.3 | yes | 213.6 (1) | 50.817 | — | Nirmala UI | 71.5 |
+| ज्ञ | 86.3 | 200.4 | yes | 271.7 (1) | 67.669 | — | Nirmala UI | 88.6 |
+| श्र | 84.0 | 165.6 | yes | 237.0 (1) | 64.226 | — | Nirmala UI | 88.2 |
+| कि | 145.6 | — (not a conjunct) | n/a | 216.9 (1) | 65.778 | yes, the consonant 37 px right of where it is drawn alone | Nirmala UI | 130.7 |
+| క్ష | 77.5 | 196.2 | yes | 267.5 (1) | 56.107 | — | Nirmala UI | 66.4 |
+| త్ర | 154.7 | 213.5 | yes | 284.8 (1) | 87.767 | — | Nirmala UI | 97.8 |
+| శ్రీ | 124.9 | 176.3 | yes | 318.9 (2) | 78.503 | — | Nirmala UI | 68.4 |
+| కి | 79.4 | — (not a conjunct) | n/a | 148.8 (1) | 61.993 | — | Nirmala UI | 66.4 |
+| స్త | 109.5 | 228.5 | yes | 299.8 (1) | 73.902 | — | Nirmala UI | 96.2 |
+
+**Reading.** Every conjunct is narrower than its letters (8 of 8, drawn
+whole at 39.5–72.5 % of their width), every whole frame differs from its
+per-code-point frame (10 of 10, means 50.817–87.767 over the ink), कि's
+consonant sits 37 px into the whole drawing (the Mac's 35), and each
+cluster is drawn pixel for pixel by Nirmala UI, one face for both scripts.
+That Nirmala UI ships with Windows is known, not measured here. This also
+answers what the libass run above left to this call: of the Telugu faces
+the check names, it finds Nirmala UI alone installed on the Surface, by
+its Latin-probe rule (Gautami and Vani read absent by it); a face outside
+the list is not seen by it, and which face libass picked is still not
+known.
+
+**The eye.** Asked in the chat on 2026-10-27 whether, on the
+whole-drawn row, कि's i-matra sits on the left of its consonant (a pass)
+or on the right (a fail), and whether the conjuncts are one joined shape
+or two letters with a slanted stroke under the first, the user answered
+"yes for the first one": कि's i-matra on the left. The conjuncts were not
+separately described by eye on the Surface; their joining there rests on
+the numeric half above.
+
+**What the row makes of it.** "**Shaped on both** (every cluster's frames
+differ, every conjunct narrower, the eye agrees with the libass complex
+sheet)", the eye's bar turned round on the Surface, whose own
+`complex.png` is unshaped (the libass run above), so the shapes to match
+are the Mac's (CLIPS §6.15's "Your runs"): the Surface's numeric halves
+pass, its eye passed कि, and the Mac's half passed whole on 2026-10-22. **So the canvas painter shapes
+Hindi and Telugu on both machines**: "text has to be canvas 2D" holds and
+phase 1 starts; §6.20's fonts still land before phase 1's Indic check
+(CLIPS §16.63), so both machines draw Noto rather than Kohinoor and
+Nirmala UI. No font cause was found, so the fonts stay in phase 1 (CLIPS
+§6.19). It also settles what the libass run left resting on this call:
+the canvas bake, the route CLIPS §16.66 (a) chose for Hindi and Telugu
+captions, shapes on the Surface.
+
 ### What the verifiers found in the measuring code, and what the fix phase changed
 
 The numbers above are read through these changes. Verifier 1 read the
@@ -9536,34 +9830,85 @@ parallel lanes began, and passed alone and on the rerun.
    the console measurements is in, and M22's eye check on the Mac passed
    (the user, 2026-10-22: the app's whole-drawn row has `complex.png`'s
    shapes); nothing is decided without the Surface.
+6. **The development app on the Surface answers what phase 0 waited on
+   it for** (Electron 44.3.0, Chrome 152.0.7977.78, Windows NT 10.0,
+   2026-10-27; "The development app on the Surface" above). Its `toBlob`
+   waits on the frame cadence as the Mac's does (a 2×2 floor of
+   16.10–16.60 ms at p50), its encodes outlast that cadence at every
+   region and depth but the box at pool 1, where the Mac's did only on the
+   canvas at pool 4, and its CSP, the Mac's word for word, admits the
+   same-origin module worker. With items 7–13 every constant phase 0
+   owns has its value (CLIPS §6.15's "as measured" note); none is in
+   code yet.
+7. **`GRAPHIC_BAKE_REGION` = `'box'`.** On the Surface the box's own
+   encode is 43.9 %, 40.3 % and 49.4 % under the canvas's at pools 1, 2
+   and 4 (15.60 against 27.80 ms, 18.10 against 30.30, 32.70 against
+   64.60), and 42.4 %, 38.8 % and 46.0 % by the rate (16.70 against
+   29.00, 11.50 against 18.80, 11.22 against 20.77): past the row's 20 %
+   at every depth by both readings.
+8. **`GRAPHIC_POOL_DEPTH` = 4, and the whole hold is allowed.** At the box
+   the Surface's fastest depth: 11.22 ms a frame at p50, against 11.50 at
+   pool 2 (2.4 %; 9.3 % by the wall, 11.18 against 12.33) and 16.70 at
+   pool 1. 300 frames at the box and pool 4 take 3.37 s (300 × 11.22 ms),
+   through four workers 1.44 s (300 × 4.80), under the row's 10 s, so a
+   whole-hold motion is allowed once per clip; a 60 s clip's 90–270
+   moving frames take 1.01–3.03 s and 0.43–1.30 s, so M1–M2 do not fall
+   short and M11 is not run. On the synthetic frames, before a template's
+   own draw and the writer's IPC and disk.
+9. **Workers are taken.** Two and four workers 67.2 % and 79.4 % under the
+   four-deep pool on the Surface (7.65 and 4.80 against 23.35 ms), 47.2 %
+   and 70.8 % on the Mac (4.10 and 2.27 against 7.77): past the 20 % bar
+   on both machines. `encodeFrames` gains its worker back-end in phase 1,
+   four workers the fastest on both, the worker file moved beside
+   `encodePool.ts`.
+10. **`CLUSTER_SCRIPTS` = `['Devanagari', 'Telugu']`.** Every per-cluster
+    paint equals its word (mean 0.000, max 0 on all 15 rows) and स्कूल is
+    two clusters, on both machines.
+11. **`blur-rise` is not offered.** `blur(8px)` adds 38.60 ms a frame at
+    p95 on the Surface, more than M1's p50 encode at the box and pool 4
+    (32.70) and every other figure the bar could read but the canvas's
+    pool-4 encode (64.60), the region set aside; `resolveGraphicStyle`
+    maps it to `rise`.
+12. **Phase 3 takes colour management on.** Both settings pass on both
+    machines (Indic at mean 0.000, colour within 1 level); on is the one
+    under which Indic through the texture is exact, max 0, on both (the
+    Surface's off reads max 1). Phase 3 is not flagged.
+13. **The canvas painter shapes Hindi and Telugu on both machines.** On
+    the Surface every conjunct is narrower than its letters (8 of 8),
+    every whole frame unlike its per-code-point frame (10 of 10), कि's
+    consonant 37 px in, every cluster drawn by Nirmala UI, the only
+    candidate installed; the user's eye there passed कि's i-matra on the
+    left ("yes for the first one"), the conjuncts not separately
+    described; the Mac's half passed whole on 2026-10-22. "Text has to be
+    canvas 2D" holds, and the canvas bake `CLIPS.md` §16.66 (a) chose for
+    Hindi and Telugu captions shapes on the Surface.
 
 ### Still unmeasured, and whose
 
-- **M22's eye check on the Surface**: the user's verdict on the development
-  app's `indic` sheet against `complex.png` and `simple.png` there (the
-  Mac's was given 2026-10-22: pass), with its bar turned round, since the
-  Surface's `complex.png` is unshaped (above): the row passes where the
-  user's three signs are absent, matching the Mac's `complex.png`, and
-  fails where it looks like the Surface's (`CLIPS.md` §6.15). The user's.
-- **Every Surface run but `graphic.int`** (done 2026-10-27: it does not
-  shape, above): the six options, and so every phase-0 decision, and the
-  eye check (the bullet above). The user's.
+- **The conjuncts by eye on the Surface**: the user's verdict there,
+  2026-10-27, was on कि alone; that the conjuncts look joined there rests
+  on M22's numeric half (8 of 8 narrower). The user's, if wanted.
+- **A worker outside `npm run dev`** (M2): the dev server's page is
+  answered on both machines; the packaged app's page, loaded from disk
+  (`src/main/index.ts:229`), and a `blob:` worker are not measured, nor the
+  box region through workers (M2 ran the canvas only).
 - **The Windows sheets**: not uploaded by CI (above).
-- **Why the canvas's own encode at pool 4 moved**, from 17.6 ms in the
-  pane to 24.90 in the app (twice): not measured. On the Mac it turns
-  M1's encode reading at pool 4 from a miss (16.5 %) to a pass (41 %).
-- **A blurred bake through `encodeFrames`** (M5): at the chosen depth
-  against a plain one, the run that says which of M1's two p50s M5's bar
-  reads. The check does not run it, so both readings go beside the
-  Surface's numbers.
-- **A worker outside `npm run dev`** (M2): the app run answers the CSP for
-  the dev server's page; the packaged app's page, loaded from disk, and a
-  `blob:` worker are not measured.
+- **Why four-deep encodes take so much longer than one**: on the Surface
+  the canvas's own encode is 27.80 ms at pool 1 and 64.60 at pool 4 (70.70
+  in M2's call), the box's 15.60 and 32.70, and the canvas at pool 4 is
+  slower than at pool 2 (20.77 against 18.80 ms a frame); on the Mac the
+  canvas's pool-4 encode moved from 17.6 ms in the pane to 24.90 in the
+  app. Encodes in flight contending is the reading; not measured. It
+  decides nothing now: the region is the box, and the bake's encode the
+  workers', unless a packaged app's page refuses the worker (the bullet
+  above), when the canvas's bakes would run the pool at 4, its slower
+  depth on the Surface.
 - **M21**: the user's Hindi clips and the models folder; and the user's
   look over the number words in `tests/integration/asrHindi.ts`, written
   from knowledge, not checked against the model's output.
-- **The bake through the app's own writer**: no phase-0 figure includes
-  `writeTitleFrame`'s IPC and disk.
+- **The bake through the app's own writer, with a real template**: no
+  phase-0 figure includes `writeTitleFrame`'s IPC and disk or a template's
+  own draw; phase 1's render check's.
 - **M7–M20, by phase**: M8, M9, M13 and M19 in phase 1; M10 and M14–M18 in
   phase 2; M7 first, then M6 whole, M12, M20 and M13 again in phase 3; M11
-  only if M1–M2 fall short. H1–H13 are §62's.
+  is not run, since M1–M2 did not fall short (item 8). H1–H13 are §62's.
