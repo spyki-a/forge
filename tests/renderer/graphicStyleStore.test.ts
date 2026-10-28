@@ -7,6 +7,11 @@ import { useEditor } from '../../src/renderer/src/store'
  * The graphic style's two store actions (docs/CLIPS.md §6.5), the captions'
  * setters' twins. Here, as tests/renderer/keyStore.test.ts is, because the
  * store is renderer code.
+ *
+ * Every comparison of what the store wrote is toStrictEqual: toEqual skips a
+ * key whose value is undefined, so it would pass a present-but-empty
+ * override, the captions' bug (store.ts's setCaptionOverride: the Reset
+ * button sat lit over one).
  */
 
 const graphics = (): GraphicsSettings | undefined => useEditor.getState().project.graphics
@@ -21,7 +26,7 @@ describe('setGraphicsStyle', () => {
     start()
     expect(graphics()).toBeUndefined()
     useEditor.getState().setGraphicsStyle('clean')
-    expect(graphics()).toEqual({ styleId: 'clean', overrides: {}, sound: true })
+    expect(graphics()).toStrictEqual({ styleId: 'clean', overrides: {}, sound: true })
     expect(history()).toBe(1)
     useEditor.getState().undo()
     expect(graphics()).toBeUndefined()
@@ -34,12 +39,24 @@ describe('setGraphicsStyle', () => {
       sound: false
     })
     useEditor.getState().setGraphicsStyle('bold')
-    expect(graphics()).toEqual({
+    expect(graphics()).toStrictEqual({
       styleId: 'bold',
       overrides: { textStyleId: 'outline', 'palette.accent': '#2563EB' },
       sound: false
     })
     expect(history()).toBe(1)
+  })
+
+  it('keeps only what was there: one kept override does not bring the other in as an empty key', () => {
+    start({ styleId: 'clean', overrides: { textStyleId: 'outline', radius: 0.05 }, sound: true })
+    useEditor.getState().setGraphicsStyle('bold')
+    expect('palette.accent' in (graphics()?.overrides ?? {})).toBe(false)
+    expect(graphics()).toStrictEqual({ styleId: 'bold', overrides: { textStyleId: 'outline' }, sound: true })
+
+    start({ styleId: 'clean', overrides: { 'palette.accent': '#2563EB' }, sound: true })
+    useEditor.getState().setGraphicsStyle('bold')
+    expect('textStyleId' in (graphics()?.overrides ?? {})).toBe(false)
+    expect(graphics()).toStrictEqual({ styleId: 'bold', overrides: { 'palette.accent': '#2563EB' }, sound: true })
   })
 })
 
@@ -47,9 +64,9 @@ describe('setGraphicsOverride', () => {
   it('writes one key at a time on clean with sounds on, keeps the others, and removes a key set to undefined; one undo each', () => {
     start()
     useEditor.getState().setGraphicsOverride('palette.accent', '#2563EB')
-    expect(graphics()).toEqual({ styleId: 'clean', overrides: { 'palette.accent': '#2563EB' }, sound: true })
+    expect(graphics()).toStrictEqual({ styleId: 'clean', overrides: { 'palette.accent': '#2563EB' }, sound: true })
     useEditor.getState().setGraphicsOverride('radius', 0.05)
-    expect(graphics()?.overrides).toEqual({ 'palette.accent': '#2563EB', radius: 0.05 })
+    expect(graphics()?.overrides).toStrictEqual({ 'palette.accent': '#2563EB', radius: 0.05 })
     // What the export and the preview will draw with.
     const style = graphicStyleOf(useEditor.getState().project, {})
     expect(style.palette.accent).toBe('#2563EB')
@@ -58,15 +75,15 @@ describe('setGraphicsOverride', () => {
     useEditor.getState().setGraphicsOverride('radius', undefined)
     // Gone, not present-and-empty: the captions' Reset button sat lit over that.
     expect('radius' in (graphics()?.overrides ?? {})).toBe(false)
-    expect(graphics()?.overrides).toEqual({ 'palette.accent': '#2563EB' })
+    expect(graphics()?.overrides).toStrictEqual({ 'palette.accent': '#2563EB' })
     expect(history()).toBe(3)
     useEditor.getState().undo()
-    expect(graphics()?.overrides).toEqual({ 'palette.accent': '#2563EB', radius: 0.05 })
+    expect(graphics()?.overrides).toStrictEqual({ 'palette.accent': '#2563EB', radius: 0.05 })
   })
 
   it('leaves the project’s style and its sounds switch alone', () => {
     start({ styleId: 'editorial', overrides: {}, sound: false })
     useEditor.getState().setGraphicsOverride('dim', true)
-    expect(graphics()).toEqual({ styleId: 'editorial', overrides: { dim: true }, sound: false })
+    expect(graphics()).toStrictEqual({ styleId: 'editorial', overrides: { dim: true }, sound: false })
   })
 })

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, expectTypeOf } from 'vitest'
 import {
   CLEAN_GRAPHIC_STYLE,
   GRAPHIC_OVERRIDE_KEYS,
@@ -18,7 +18,9 @@ import type { TextSpec } from '@shared/timeline'
 /*
  * The graphic style's first half (docs/CLIPS.md §6.5, phase 1): the guards of
  * `resolveGraphicStyle`, its gates, the `clean` preset, `GRAPHIC_TEXT_STYLES`
- * and `graphicStyleOf`. The seven presets by id, `energy`, `dim` and each
+ * and `graphicStyleOf`. `clean`'s rules (the default, restrained, no `pop`,
+ * no `out-back`, no dim, no glow) are asserted here on the one preset there
+ * is; the seven presets by id, `energy` and `dim` across them, and each
  * preset's ink against its text style's fill are phase 2's cases, with the
  * six presets they need.
  */
@@ -80,6 +82,28 @@ describe('the preset (§6.5)', () => {
     expect(b.radius).toBe(CLEAN_GRAPHIC_STYLE.radius)
     expect(CLEAN_GRAPHIC_STYLE.palette.accent).toBe('#FFD400')
   })
+
+  it('clean is the default and restrained, by D5’s rules, not by its proposed values', () => {
+    // What a project with no graphics settings and a spec naming no style draws with.
+    expect(graphicStyleOf({}, {}).id).toBe('clean')
+    for (const [why, style] of [
+      ['the preset', CLEAN_GRAPHIC_STYLE],
+      ['resolved', clean()]
+    ] as const) {
+      expect(style.energy, why).toBe('restrained')
+      // `energetic` is the only one with `pop` and `out-back` (§16.58).
+      expect(style.motion.entrance, why).not.toBe('pop')
+      expect(style.motion.ease, why).not.toBe('out-back')
+      expect(style.motion.exit, why).not.toBe('out-back')
+      // Off in every restrained preset (§6.5, "The dim"); if §6.10's look
+      // rating turns it on in the restrained presets, this line goes with them.
+      expect(style.dim, why).toBe(false)
+      // "Every preset is clean" (§6.5, "The stroke look").
+      expect(style.strokeLook, why).toBe('clean')
+      // No phase-1 preset has a glow (phase 3's, §6.16): no key at all, not an empty one.
+      expect('glow' in style, why).toBe(false)
+    }
+  })
 })
 
 /* ------------------------------------------------------------------- gates */
@@ -122,7 +146,32 @@ describe('no number format (§6.5)', () => {
     for (const key of ['textStyleId', 'palette.accent', 'motion.ease', 'strokeLook']) expect(keys).toContain(key)
     expect(keys.filter((k) => /format|locale|group|separator/i.test(k))).toEqual([])
   })
+
+  it('no key of the GraphicStyle type names one either, an optional key no preset sets and glow’s included (checked by the compiler)', () => {
+    // The pattern catches what it is meant to, so the never below is not an empty answer.
+    expectTypeOf<FormatNamed<'numberFormat' | 'Locale' | 'thousandsSeparator' | 'digitGrouping' | 'accent'>>().toEqualTypeOf<
+      'numberFormat' | 'Locale' | 'thousandsSeparator' | 'digitGrouping'
+    >()
+    // And StyleKey reaches the nested and the optional keys.
+    expectTypeOf<Extract<StyleKey, 'textStyleId' | 'accent' | 'ease' | 'strength'>>().toEqualTypeOf<
+      'textStyleId' | 'accent' | 'ease' | 'strength'
+    >()
+    expectTypeOf<FormatNamed<StyleKey>>().toEqualTypeOf<never>()
+  })
 })
+
+/** The keys of `GraphicStyle` whose name has format, locale, group or separator in it, in any case (§6.5's regex, at the type level). */
+type FormatNamed<K> = K extends string
+  ? Lowercase<K> extends `${string}${'format' | 'locale' | 'group' | 'separator'}${string}`
+    ? K
+    : never
+  : never
+/** Every key of the type, its nested objects' and the optional glow's included. */
+type StyleKey =
+  | keyof GraphicStyle
+  | keyof GraphicStyle['palette']
+  | keyof GraphicStyle['motion']
+  | keyof NonNullable<GraphicStyle['glow']>
 
 /* ------------------------------------------------------- the text styles */
 

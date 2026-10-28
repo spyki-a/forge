@@ -44,9 +44,13 @@ export interface GraphicStyle {
     panel: string
     /** 0..1; a panel is drawn only when it is above 0 (§6.2). */
     panelOpacity: number
-    /** The dim's colour, drawn only when `dim` is true. */
+    /**
+     * The dim's colour, used whenever a template dims: when `dim` is true,
+     * and always on the screen card, which dims whatever `dim` says (§6.5,
+     * "The dim"; §6.16's screen-card row).
+     */
     dim: string
-    /** 0..1. */
+    /** 0..1, the dim's opacity, read on the same occasions as its colour: the screen card's dim takes it whatever `dim` says (§6.16). */
     dimOpacity: number
   }
   /** A panel's corner, 0..0.1 of the short side. */
@@ -58,7 +62,7 @@ export interface GraphicStyle {
   motion: { entrance: EntranceName; ease: MotionEase; exit: MotionEase }
   /** `marker` only while `MARKER_READY` (D7, §16.60). */
   strokeLook: 'clean' | 'marker'
-  /** Whether a template may dim with this style (§6.5, "The dim"). */
+  /** Whether a template may dim with this style (§6.5, "The dim"); the screen card dims whatever this says (§6.16). */
   dim: boolean
   /** Restrained by default (D5, §16.58); a preset's character, not a user's override. */
   energy: 'restrained' | 'energetic'
@@ -116,13 +120,18 @@ const STROKE_MIN = STROKE_MIN_PX / 1080
  * re-case, which would draw a string the data does not hold; set no face of
  * their own, so a shaped item's `INDIC_FONTS` face is the one drawn
  * (`fontString` draws `paint?.font ?? spec.font`); and its accent is not
- * word-scoped, which on per-word items would light every word. Both faces
- * are read, the base and the accent ("by its faces", §6.5): a line-scoped
- * accent never engages on a one-line item, but a re-casing or face-setting
- * accent would on any second line. Reading the accent changes nothing among
- * the 42 today (counted 2026-10-27 under node 24: 15 re-case in their base
- * face, the 4 whose line-scoped accent re-cases among them; none sets a face;
- * 5 scope their accent to a word, one of them among the 15; 23 pass).
+ * word-scoped, which on per-word items would light every word. §6.5 words
+ * the rule on the base face; this reads the accent face too ("by its
+ * faces", §6.5's chrome case), which is wider than its words. The reason: a
+ * line-scoped accent never engages on an item of one line (§6.3), but
+ * `layoutText` splits the text on '\n' and `paintForLine` merges the accent
+ * face into every paragraph after the first, so an item whose text held a
+ * '\n' would draw its second paragraph re-cased or in the accent's face. A
+ * wrapped row is not a paragraph and keeps the base face. Reading the
+ * accent changes nothing among the 42 today (counted 2026-10-27 under node
+ * 24: 15 re-case in their base face, the 4 whose line-scoped accent re-cases
+ * among them; none sets a face; 5 scope their accent to a word, one of them
+ * among the 15; 23 pass either way).
  */
 export function graphicEligible(style: TextStyle): boolean {
   for (const face of [style.base, style.accent]) {
@@ -180,14 +189,27 @@ export const CLEAN_GRAPHIC_STYLE: GraphicStyle = frozen({
 /** The presets by id. Phase 1 has `clean` alone; phase 2 adds the six others of §6.5's table. */
 export const GRAPHIC_STYLES: readonly GraphicStyle[] = Object.freeze([CLEAN_GRAPHIC_STYLE])
 
-/** A colour as the app's colour inputs write it: `#` and 3, 4, 6 or 8 hex digits. */
+/**
+ * A colour as the app's colour inputs write it: `#` and 3, 4, 6 or 8 hex
+ * digits. Beyond §6.5's list of guards: a canvas given a `fillStyle` or
+ * `strokeStyle` it cannot parse silently keeps the previous one, so a bad
+ * colour would draw in whatever was set before it rather than fail. It also
+ * refuses `rgb()`, `hsl()` and named colours, which the plan does not
+ * exclude; no input of the app writes them.
+ */
 const HEX_COLOUR = /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i
 
 function colourOr(value: unknown, fallback: string): string {
   return typeof value === 'string' && HEX_COLOUR.test(value) ? value : fallback
 }
 
-/** A number in [min, max]: not a finite number, or negative, is the fallback (the preset's); out of range is clamped. */
+/**
+ * A number in [min, max]: not a finite number, or negative, is the fallback
+ * (the preset's); out of range is clamped. §6.5 sends "a NaN or negative
+ * number to the preset's" and clamps the rest, so read literally +Infinity
+ * would clamp to the top; here it is the preset's, as no number anyone set
+ * (and JSON cannot hold one, so only an in-memory caller can pass it).
+ */
 function numberIn(value: unknown, fallback: number, min: number, max: number): number {
   if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return fallback
   return value < min ? min : value > max ? max : value
@@ -202,6 +224,10 @@ function easeOr(value: unknown, fallback: MotionEase): MotionEase {
  * dotted paths into `GraphicStyle` (`'palette.accent'`, §6.5's accent
  * preset). `id`, `name` and `energy` are the preset's own, and `glow` is
  * phase 3's, so none of them is here, and any key not here is ignored.
+ * §6.5 does not list the overridable keys; this set is this file's. `dim`
+ * among them is beyond its words: §6.10's look rating sets `dim` in the
+ * restrained presets, a preset change, and no planned control writes this
+ * override, which lets a project dim under a restrained preset.
  */
 const OVERRIDES: Record<string, (style: GraphicStyle, value: unknown) => void> = {
   textStyleId: (s, v) => {
@@ -233,17 +259,20 @@ const OVERRIDES: Record<string, (style: GraphicStyle, value: unknown) => void> =
   }
 }
 
-/** The keys `resolveGraphicStyle` reads from `overrides`, in the order it applies them. */
+/** The keys `resolveGraphicStyle` reads from `overrides`, in the order it applies them. An export §6.5 does not name, for the tests and phase 2's controls. */
 export const GRAPHIC_OVERRIDE_KEYS: readonly string[] = Object.freeze(Object.keys(OVERRIDES))
 
 /**
  * A preset plus the project's overrides (§6.5), as `resolveStyle` does for
  * captions: the preset by id, `clean` for an unknown one; each override
- * guarded (opacities and the shadow to 0..1, `radius` to 0..0.1, `stroke` to
+ * guarded as §6.5 lists (opacities to 0..1, `radius` to 0..0.1, `stroke` to
  * §6.3's minimum up to 0.02, a NaN or negative number to the preset's; a
  * `textStyleId` outside `GRAPHIC_TEXT_STYLES`, a missing `font`, an unknown
- * ease or entrance, a colour that is not hex to the preset's); unknown keys
- * ignored. Then the gates, on the preset's own value as on an override's:
+ * ease to the preset's) and, beyond its list, the shadow to the type's
+ * 0..1, and an infinity, an unknown entrance or stroke look, a `dim` that
+ * is not a boolean and a colour that is not hex (`HEX_COLOUR`'s canvas
+ * reason) to the preset's; unknown keys ignored. Then the gates, on the
+ * preset's own value as on an override's:
  * the entrance through `ENTRANCES` (`blur-rise` and `wipe` to `rise`), and
  * `marker` to `clean` while `MARKER_READY` is false. Always a new object, so
  * a caller that changes it changes no preset.
