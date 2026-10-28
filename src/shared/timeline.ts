@@ -12,6 +12,7 @@ import type { VoiceEffect } from './render/voice'
 import type { AssetVision } from './director/eyes'
 import type { SubjectTrack } from './reframe/types'
 import type { HalfOffsets } from './reframe/path'
+import type { GraphicSpec } from './graphics/template'
 /*
  * A value import, unlike every other one above, and safe: `render/speed.ts`
  * takes only TYPES from this file, so the edge is one-way at runtime. It is
@@ -142,6 +143,12 @@ export interface MediaAsset {
     /** An ffmpeg image2 pattern, e.g. `…/clip.seq/%05d.png`, numbered from 0. */
     pattern: string
     count: number
+    /**
+     * The part of the output frame the export's bake drew, in its pixels: the
+     * box route (docs/CLIPS.md §6.1 (box), §6.3). Written only by the export's
+     * own bake, for a clip placed at the identity; absent, the clip's own box.
+     */
+    box?: { x: number; y: number; width: number; height: number }
   }
 
   /**
@@ -164,6 +171,9 @@ export interface MediaAsset {
    * the asset in Clip it's one undo step, and saved with it like any field.
    */
   credit?: AssetCredit
+
+  /** The Transcript tile's Speaker field: a lower third's `name`, a quote's speaker (docs/CLIPS.md §6.1, §6.6; §16.31). */
+  speaker?: string
 }
 
 /**
@@ -510,6 +520,10 @@ export interface Clip {
    * is the incoming shot's picture, so the hand-off beneath it is invisible.
    */
   moment?: MomentSpec
+  /** A graphic clip's spec: what it draws, when and where (docs/CLIPS.md §6.1). */
+  graphic?: GraphicSpec
+  /** A sound clip's graphic clip id: the sound the app placed for that graphic (docs/CLIPS.md §6.1, §6.14). */
+  forGraphic?: string
   /**
    * Set when an automation rule created this clip.
    *
@@ -973,6 +987,28 @@ export interface Project {
    */
   subjects?: Record<string, SubjectTrack>
   captions: CaptionSettings
+  /** The project's graphic style and its sounds (docs/CLIPS.md §6.1); absent, the style is `'clean'` (§6.5) and sounds are on (§6.14). */
+  graphics?: GraphicsSettings
+  /** Graphics waiting for the user's Keep before they are placed (docs/CLIPS.md §6.1, §6.6). */
+  graphicProposals?: GraphicProposal[]
+}
+
+/** A project's graphics settings (docs/CLIPS.md §6.1); `sound` is §6.14's switch. */
+export interface GraphicsSettings {
+  /** A GRAPHIC_STYLES id (§6.5). */
+  styleId: string
+  overrides?: Record<string, unknown>
+  sound: boolean
+}
+
+/** A graphic set aside for the user to Keep or Drop (docs/CLIPS.md §6.1, §6.6). */
+export interface GraphicProposal {
+  id: string
+  clipId: string
+  spec: GraphicSpec
+  /** `GRAPHIC_RULE` or `CLIPS_GRAPHIC_RULE` (§6.6): which Clear takes it. */
+  rule: string
+  note: string
 }
 
 export const DEFAULT_SETTINGS: ProjectSettings = {
