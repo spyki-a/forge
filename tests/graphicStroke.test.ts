@@ -92,6 +92,26 @@ function polylineLength(points: Point[]): number {
   return sum
 }
 
+/** The point at t on the cubic p0 p1 p2 p3, in Bernstein form. */
+function cubicAt(p0: Point, p1: Point, p2: Point, p3: Point, t: number): Point {
+  const s = 1 - t
+  const a = s * s * s, b = 3 * s * s * t, c = 3 * s * t * t, d = t * t * t
+  return { x: a * p0.x + b * p1.x + c * p2.x + d * p3.x, y: a * p0.y + b * p1.y + c * p2.y + d * p3.y }
+}
+
+/** The distance from p to the nearest point of a polyline. */
+function distanceToPolyline(p: Point, points: Point[]): number {
+  let best = Number.POSITIVE_INFINITY
+  for (let k = 1; k < points.length; k++) {
+    const a = points[k - 1]
+    const dx = points[k].x - a.x
+    const dy = points[k].y - a.y
+    const u = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy)))
+    best = Math.min(best, Math.hypot(p.x - (a.x + u * dx), p.y - (a.y + u * dy)))
+  }
+  return best
+}
+
 function expectPoint(actual: Point | null, expected: Point, digits = 9): void {
   expect(actual).not.toBeNull()
   expect(actual!.x).toBeCloseTo(expected.x, digits)
@@ -143,15 +163,20 @@ describe('flattenPath', () => {
     }
   })
 
-  it('measures a four-cubic circle within 0.05 % of 2πr at the default tolerance, from r = 100 to 540', () => {
+  it('measures a four-cubic circle within 0.05 % of 2πr at the default tolerance, from r = 50 to 540, its lengths strictly increasing', () => {
     const errors: string[] = []
-    for (const r of [20, 50, 100, 200, 400, 540]) {
+    // Under r = 50 the bar is printed, not asserted: at 0.25 px the error steps with the piece count, and a small ring takes few.
+    for (const r of [20, 30, 40, 50, 100, 200, 400, 540]) {
       const path = flattenPath(circlePath(540, 960, r), T)
       const error = path.total / (2 * Math.PI * r) - 1
       errors.push(`r ${r} ${(error * 100).toFixed(4)} % over ${path.points.length - 1} pieces`)
-      if (r >= 100) expect(Math.abs(error), `r = ${r}`).toBeLessThanOrEqual(0.0005)
+      if (r >= 50) expect(Math.abs(error), `r = ${r}`).toBeLessThanOrEqual(0.0005)
       // Every point the flattening keeps lies on the curve, so within the four-cubic circle's own radial error (0.027 %) of r.
       for (const p of path.points) expect(Math.abs(Math.hypot(p.x - 540, p.y - 960) / r - 1)).toBeLessThan(0.0003)
+      // The closing Z lands on the start the last cubic already reached; it adds no point, so no piece has no length.
+      for (let k = 1; k < path.lengths.length; k++) {
+        expect(path.lengths[k], `r = ${r}, point ${k}`).toBeGreaterThan(path.lengths[k - 1])
+      }
     }
     const quadratic = flattenPath('M100 800 Q540 100 980 800', T)
     const exact = quadraticLength({ x: 100, y: 800 }, { x: 540, y: 100 }, { x: 980, y: 800 })
@@ -159,6 +184,41 @@ describe('flattenPath', () => {
       `graphicStroke: at STROKE_TOLERANCE ${T} px, a four-cubic circle's flattened length against 2πr: ${errors.join('; ')}; ` +
         `the quadratic M100 800 Q540 100 980 800 ${((quadratic.total / exact - 1) * 100).toFixed(4)} % over ${quadratic.points.length - 1} pieces\n`
     )
+  })
+
+  it('keeps every point of the true curve within STROKE_TOLERANCE of the flattened polyline', () => {
+    // The promise flattenCubic makes: each piece lies within the tolerance of its chord, so the curve does of the polyline.
+    const curves: [Point, Point, Point, Point][] = [
+      [{ x: 100, y: 1500 }, { x: 300, y: 900 }, { x: 700, y: 1300 }, { x: 900, y: 600 }],
+      [{ x: 0, y: 0 }, { x: 540, y: 0 }, { x: 540, y: 960 }, { x: 1080, y: 960 }]
+    ]
+    const worst: string[] = []
+    for (const [p0, p1, p2, p3] of curves) {
+      const d = `M${p0.x} ${p0.y} C${p1.x} ${p1.y} ${p2.x} ${p2.y} ${p3.x} ${p3.y}`
+      const path = flattenPath(d, T)
+      let largest = 0
+      for (let n = 0; n <= 10_000; n++) largest = Math.max(largest, distanceToPolyline(cubicAt(p0, p1, p2, p3, n / 10_000), path.points))
+      worst.push(`${d} ${largest.toFixed(3)} px over ${path.points.length - 1} pieces`)
+      expect(largest, d).toBeLessThanOrEqual(T)
+    }
+    process.stderr.write(`graphicStroke: the true curve's largest distance from the polyline at ${T} px: ${worst.join('; ')}\n`)
+  })
+
+  it('draws Z back to the subpath’s start and moves the current point there', () => {
+    const box = flattenPath('M0 0 H100 V100 H0 Z', T)
+    expect(box.total).toBe(400)
+    expect(box.lengths).toEqual([0, 100, 200, 300, 400])
+    expect(box.points[box.points.length - 1]).toEqual({ x: 0, y: 0 })
+    // A command after Z starts from the subpath's start, not from where the path was before Z.
+    expect(flattenPath('M0 0 H100 V100 Z l0 50', T).points).toEqual([
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+      { x: 100, y: 100 },
+      { x: 0, y: 0 },
+      { x: 0, y: 50 }
+    ])
+    const relative = flattenPath('m10 10 h100 v100 z l0 50', T)
+    expect(relative.points[relative.points.length - 1]).toEqual({ x: 10, y: 60 })
   })
 
   it('gives relative commands the same points as absolute ones, every command and repeated arguments included', () => {
@@ -180,6 +240,9 @@ describe('flattenPath', () => {
     expect(flattenPath('M0 0 L40 0 S70 -20 80 0', T)).toEqual(flattenPath('M0 0 L40 0 C40 0 70 -20 80 0', T))
     // A T after no quadratic is a straight line to its end.
     expect(flattenPath('M0 0 L40 0 T80 0', T).points).toEqual([{ x: 0, y: 0 }, { x: 40, y: 0 }, { x: 80, y: 0 }])
+    // An S after a quadratic, and a T after a cubic, have no control of their own kind to reflect: the current point is the control.
+    expect(flattenPath('M0 0 Q20 40 40 0 S70 -20 80 0', T), 'S after Q').toEqual(flattenPath('M0 0 Q20 40 40 0 C40 0 70 -20 80 0', T))
+    expect(flattenPath('M0 0 C10 20 30 20 40 0 T80 0', T), 'T after C').toEqual(flattenPath('M0 0 C10 20 30 20 40 0 Q40 0 80 0', T))
   })
 
   it('refuses A, and the rest it cannot draw as one subpath', () => {
@@ -265,6 +328,15 @@ describe('strokeAt', () => {
     expect(strokeAt(corner, 0, 0.75).tangent).toBe(90)
     expect(strokeAt(corner, 0, 1).tangent).toBe(90)
     expect(strokeAt(corner, 0.6, 1).tangent).toBe(90)
+  })
+
+  it('starts a span on an interior vertex along the segment leaving it, with the vertex once', () => {
+    const corner = flattenPath('M0 0 L100 0 L100 100', T)
+    expect(strokeAt(corner, 0.5, 1).points).toEqual([{ x: 100, y: 0 }, { x: 100, y: 100 }])
+    expect(strokeAt(corner, 0.5, 0.75).points).toEqual([{ x: 100, y: 0 }, { x: 100, y: 50 }])
+    const stairs = flattenPath(LONG_THEN_SHORT, T)
+    expect(strokeAt(stairs, 1000 / 1090, 1020 / 1090).points[0]).toEqual({ x: 1000, y: 0 })
+    expect(strokeAt(stairs, 1000 / 1090, 1020 / 1090).points[1]).toEqual({ x: 1000, y: 10 })
   })
 
   it('draws nothing when from = to, or on a path of no length, and clamps its ends', () => {
@@ -363,6 +435,12 @@ describe('the riding arrowhead', () => {
     expectPoint(shape.line[0], { x: 0, y: 124 })
     expectPoint(shape.line[shape.line.length - 1], { x: 400, y: 500 })
     expect(shape.end).toBeNull()
+    // A span starting on the corner itself leaves it along the outgoing segment, so the head points back up that one.
+    const corner = flattenPath('M0 0 L100 0 L100 100', T)
+    const onVertex = strokeShape(corner, { from: 0.5, to: 1, width: 6, heads: { start: { size: 10, grow: 1 } } }, frame)
+    const [tip, l, r] = onVertex.start!.points
+    expectPoint(tip, { x: 100, y: 0 })
+    expectPoint({ x: (l.x + r.x) / 2, y: (l.y + r.y) / 2 }, { x: 100, y: 10 })
     // Both heads on a span shorter than the two insets: no line, both heads scaled to the span.
     const short = strokeShape(path, { from: 0.1, to: 0.12, width: 6, heads: { start: { size: 40, grow: 1 }, end: { size: 40, grow: 1 } } }, frame)
     expect(short.line).toEqual([])

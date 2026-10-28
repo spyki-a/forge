@@ -18,8 +18,8 @@
  *
  * Pure: no clock, no random, no state kept between calls, no DOM, no
  * `node:path`. It imports only the motion module, for the head's scale-in.
- * `items.ts` takes `Point` and `Arrowhead` from here, so no import runs back
- * into this file.
+ * `items.ts` (lane B, not yet built) is to take `Point` and `Arrowhead` from
+ * here, so that no import runs back into this file.
  */
 
 import { DURATIONS, progress } from './motion'
@@ -103,7 +103,9 @@ export const STROKE_TOLERANCE = 0.25
  * The thinnest line drawn, in pixels of a 1080-pixel frame side, so a stroke
  * survives the 4:2:0 chroma of the plan's `format=yuva420p` overlay. 2 is the
  * research's starting value, a proposal until M19 (§6.15) measures the
- * fringe. Here, not in `paint.ts`, so that node's tests reach the width rule.
+ * fringe. Here, not in `paint.ts` as §6.3's file table has it, because this
+ * module's test (`graphicStroke`, §6.3) owns the width case and its mutation
+ * and `paint.ts` is lane B's; `paint.ts` is to import it, not declare its own.
  */
 export const STROKE_MIN_PX = 2
 
