@@ -8496,7 +8496,7 @@ suite and CI are the orchestrator's.
   and the preview's recompute on a long followed clip while editing.
 - **Burned-in text** (§5.3): after 1g.
 
-## 61. Graphics: the forks measured (phase 0 of step 3) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22), and on the Surface the libass run and the development app (2026-10-27)
+## 61. Graphics: the forks measured (phase 0 of step 3, then phase 1's first) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22), and on the Surface the libass run and the development app (2026-10-27); and in node, phase 1's M9 (2026-10-27) and the stroke's flattening (2026-10-28)
 
 For `docs/CLIPS.md` §6.15 (step 3's phase 0, "Measure before relying"):
 pieces 0.1–0.3 were built on the evening of 2026-10-21 in seven commits,
@@ -9801,8 +9801,11 @@ result is to be written here when it completes. The figures are
 `f38f971`'s, printed by the test as one stderr line and read again by
 this record's re-run at `716d6a7` (`npx vitest run
 tests/graphicMotion.test.ts`, 28 cases passed, vitest exit 0, darwin,
-node v24.18.1), which gave every difference and ratio below to the digit;
-the RK4 figures are a critic's.
+node v24.18.1), which gave every figure in the table to the digit; the
+RK4 figures and the semi-implicit readings at ω = 5, 6 and 8 are
+critics', named below, each read again by the re-run for this record's
+correction (node v24.18.1, `motion.ts` bundled by esbuild at `e186690`,
+whose code is `716d6a7`'s).
 
 The case (`tests/graphicMotion.test.ts:257-307`) compares
 `spring(t, p, from, to, v0)`'s closed form, on each frame over 3 s,
@@ -9820,15 +9823,20 @@ The difference at ω = 10 is the reference's, not the closed form's: the
 reference is first order, its error in proportion to ω·dt, and doubling
 its substeps halves it (the test asserts the ratio between 1.9 and 2.1).
 A critic's independent RK4 integration (200 substeps a frame) put the
-closed form within 1.2e-13 of it at ω = 10, ζ = 0.5, 24 fps, and within
-1.9e-11 across ζ from 0.2 to 3 and ω from 10 to 30; and read the
-semi-implicit reference at 24 fps from rest, ζ = 0.5, at 8.46e-5 (ω = 5),
-1.01e-4 (ω = 6) and 1.69e-4 (ω = 10), and ζ = 1 at 1.02e-4 (ω = 8). So
+closed form within 1.2e-13 of it at ω = 10, ζ = 0.5, 24 fps (1.21e-13
+when repeated, from rest over 3 s); and read the semi-implicit reference
+at 24 fps from rest, ζ = 0.5, at 8.46e-5 (ω = 5), 1.01e-4 (ω = 6) and
+1.69e-4 (ω = 10), and ζ = 1 at 1.02e-4 (ω = 8). Over ζ from 0.2 to 3 and
+ω from 10 to 30 at the four rates, from rest, the largest RK4 difference
+is 2.24e-11, at ζ = 0.2, ω = 30, 24 fps (1.88e-11 there at 25 fps), the
+same over 1, 2 and 3 s: a critic of this record's reading, and the
+re-run's at steps of 0.1 in ζ and 1 rad/s in ω. So
 the M9 row's "a larger difference means the closed form is wrong, not
 the tolerance" holds only up to about ω = 5 at 24 fps with that
 reference; `CLIPS.md` §6.15's row was corrected, and the bar is asserted
 at ω = 4. The closed form's cost: 47-55 ns a call (`f38f971`'s runs on the
-Mac), 47.1 ns in the re-run.
+Mac); a timing, so each run reads its own (47.1 and 49.0 ns in this
+record's two re-runs).
 
 What the case catches (`f38f971`'s mutations): the under-damped sine
 term's sign flipped ("under at 24 fps: expected 0.2728488599645891 to be
@@ -9871,9 +9879,13 @@ The error steps with the piece count, so §6.3's 0.05 % holds from about
 r = 41 at 0.25 px and not below; the test asserts it from r = 50 up and
 prints r = 20, 30 and 40 (`tests/graphicStroke.test.ts:166-187`). M8's
 bar, 0.1 %, holds from about r = 39 on these figures (they are against
-2πr; M8 reads `getTotalLength()`). A
-ring under r = 40 is where our flattening is furthest from the curve, so
-it belongs among M8's paths. What the case caught: `STROKE_TOLERANCE` 0.5
+2πr; M8 reads `getTotalLength()`). A four-cubic circle path under r = 40
+is where our flattening is furthest from the curve (−0.1468 % at r = 20
+and 30); whether M8's paths include one is open, the user's (a critic's
+proposal, left to the plan's owner by `2074f08`; `CLIPS.md` §6.3's
+Built note): on these figures one at r = 20 or 30 reads outside M8's
+0.1 % at 0.25 px, so including it would move `STROKE_TOLERANCE` finer.
+What the case caught: `STROKE_TOLERANCE` 0.5
 ("r = 50: expected 0.0014682246459258863 to be less than or equal to
 0.0005"), the flatness test at twice the tolerance (the same, and the
 cubics' "0.36872718668771864 to be less than or equal to 0.25"), and
@@ -9983,12 +9995,13 @@ passed `69d2d6e`'s 17 cases and fails `2074f08`'s 20.
     within 1e-4 of the travel of semi-implicit Euler on every frame at
     24, 25, 30 and 60 fps (largest 5.19e-5, at 24); at ω = 10 the
     reference's own first-order error is over the bar (1.69e-4 at 24 fps)
-    and halves with twice the substeps, while a critic's RK4 agrees with
-    the closed form within 1.9e-11 across ω from 10 to 30. The closed
+    and halves with twice the substeps, while an RK4 integration agrees
+    with the closed form within 2.24e-11 across ζ from 0.2 to 3 and ω
+    from 10 to 30 (its largest, at ζ = 0.2, ω = 30, 24 fps). The closed
     form costs 47-55 ns a call.
 15. **Our flattening meets §6.3's 0.05 % from about r = 41 at 0.25 px**
     (phase 1, node, 2026-10-28; "The stroke's flattening" above), not on
-    a small ring: −0.1468 % at r = 20 and 30. This is against 2πr, in
+    a small circle: −0.1468 % at r = 20 and 30. This is against 2πr, in
     node; it sets nothing. `STROKE_TOLERANCE` stays 0.25, a proposal,
     until M8.
 
@@ -10021,9 +10034,11 @@ passed `69d2d6e`'s 17 cases and fails `2074f08`'s 20.
 - **M8**: the user's, on the Mac in the development app
   (`__forgeGraphicCheck({ pathLength: true })`): our `total` against an
   `SVGPathElement`'s `getTotalLength()`, which sets `STROKE_TOLERANCE`.
-  Its paths should include a ring under r = 40, where item 15 finds our
-  flattening furthest from the curve (−0.0541 % at r = 40, −0.1468 % at
-  20 and 30, against 2πr).
+  **Open, the user's** (a critic's proposal): whether its paths include
+  a four-cubic circle path under r = 40, where item 15 finds our
+  flattening furthest from the curve (−0.1468 % at r = 20 and 30,
+  against 2πr); one at r = 20 or 30 would, on these figures, move
+  `STROKE_TOLERANCE` below 0.25.
 - **M7–M20, by phase**: M8 (above), M13 and M19 in phase 1 (M9 measured,
   item 14); M10 and M14–M18 in
   phase 2; M7 first, then M6 whole, M12, M20 and M13 again in phase 3; M11

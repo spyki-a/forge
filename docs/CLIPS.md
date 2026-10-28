@@ -19,9 +19,14 @@
 > of it was built then. Since: phase 0 (§6.15; its pieces 2026-10-21/22,
 > its exit met 2026-10-27, M21 still open) and, on 2026-10-27, phase 1's
 > head lane (§6.19: the §16.8 rename, §6.1's types, §6.4's constant and
-> its guards; §6.1's and §6.4's Built notes). Nothing else of step 3 is
-> built. §2's total is now about 100-103.5 days with Step P
-> (100.25-103.75 since §16.66's answer, 2026-10-27).
+> its guards; §6.1's and §6.4's Built notes); then, 2026-10-27/28, §6.20's
+> D8 half (`e5c47ac`, §6.20's Built note) and phase 1's lane A: the motion
+> module, the stroke primitive and the style's first half (§6.13's, §6.3's
+> and §6.5's Built notes; pushed in one push ending at `716d6a7`, whose CI
+> run was in progress when this was written). Not built: phase 1's lanes
+> B–D and §6.20's D10 half, and everything from phase 2 on. §2's total is
+> now about 100-103.5 days with Step P (100.25-103.75 since §16.66's
+> answer, 2026-10-27).
 >
 > **As written, 2026-10-05, when nothing here was built.** This is the plan for the
 > piece agreed with the user on 2026-10-04/05: the reframe engine, caption
@@ -8653,10 +8658,16 @@ tree edges, underlines and the edge sweep of §6.16 (the research, §4.4).
 >   from about r = 41 at 0.25 px, not below**, so the test asserts it from
 >   r = 50 up and prints the small radii (the Tests bullet below is
 >   corrected to say so); M8's 0.1 % holds from about r = 39 (read here
->   against 2πr; M8 reads `getTotalLength()`). So **a ring
->   under r = 40 belongs among M8's paths** (the user's, on the Mac in the
->   app), where our flattening is furthest from the curve. `EFFECTS.md`
->   §61, "The stroke's flattening", has the table.
+>   against 2πr; M8 reads `getTotalLength()`). **Open, yours** (a
+>   critic's proposal, which `2074f08` left to the plan's owner): whether
+>   M8's paths (the user's run, on the Mac in the app) include a
+>   four-cubic circle path under r = 40, where our flattening is furthest
+>   from the curve (−0.1468 % at r = 20 and 30 against 2πr). On these
+>   figures one at r = 20 or 30 would read outside M8's 0.1 % at 0.25 px
+>   and so move `STROKE_TOLERANCE` finer; §6.11's `pathLength` row and
+>   §6.15's M8 row do not name it. (A path through `flattenPath`, not
+>   the `ring` shape of §6.2's template, which painter A draws as an
+>   `arc`.) `EFFECTS.md` §61, "The stroke's flattening", has the table.
 > - **The span.** `strokeAt` clamps 0 ≤ `from` ≤ `to` ≤ 1 (a non-number
 >   reads 0), finds the segment leaving the start and the one arriving at
 >   the tip by binary search over `lengths`, interpolates both ends and
@@ -8812,8 +8823,8 @@ the caller and passed into `drawListAt`, so the drawing stays pure:
   after a frame's time, `beatFrame` names the next frame while `progress`
   already reads 1 on this one, a frame before the one named, and "not
   before" fails. Measured by that critic at the motion module of the
-  time, with beats at a frame plus 2e-6, 1e-5 and 2e-5 of a frame at 24,
-  25, 30 and 60 fps: progress was 1 on frame 32, the one `beatFrame`
+  time, with beats after frame 31 by 2e-6, 1e-5 and 2e-5 of a frame at
+  24, 25, 30 and 60 fps: progress was 1 on frame 32, the one `beatFrame`
   names, and on frame 31, all twelve. `graphicMotion`'s beat case does
   not probe that window (its beat after a frame is 0.9e-6 of a frame,
   inside `beatFrame`'s own allowance). The fix is one allowance in one
@@ -9619,7 +9630,9 @@ drawn through each by `drawTextOnto` with a fake context in the manner of
 written inline as §6.3's `textSpecOf` builds it, since `textSpecOf` is lane
 B's, §6.19); `'chrome'` (a re-casing style, by its faces) asked for
 resolves to the preset's text style. Phase 2's cases: the seven presets by id, each
-resolving to itself; `clean` the default and restrained; every preset
+resolving to itself; `clean` the default and restrained (built in phase 1
+by `0d603a8`, on D5's rules rather than the presets' values; the Built
+note below); every preset
 `energy: 'restrained'` except `energetic`, the only one with `pop` and
 `out-back` (§16.58); `dim` false in every preset but `energetic`; each
 preset's `palette.ink` equals its text style's base fill (or a gradient's
@@ -9685,8 +9698,9 @@ dropped from `graphicEligible` (the synthetic style passes).
 >   `Record`s over the motion module's unions (`:90`, `:98`), so a name
 >   added there without its row here fails typecheck. Values are stored
 >   as given and guarded on read.
-> - **Beyond this section's words, each for you to record here or
->   overrule** (each marked so in `style.ts`'s comments by `0d603a8`):
+> - **Open, yours: beyond this section's words, each for you to record
+>   here or overrule** (each marked so in `style.ts`'s comments by
+>   `0d603a8`):
 >   - **The colour guard is hex only** (`HEX_COLOUR`, `:200`): `#` and 3,
 >     4, 6 or 8 hex digits, else the preset's, because a canvas given a
 >     `fillStyle` or `strokeStyle` it cannot parse silently keeps the
@@ -9759,10 +9773,11 @@ dropped from `graphicEligible` (the synthetic style passes).
 >   cases, "chrome: expected Set{ 'MIXED CASE 10,00,000' } to deeply equal
 >   Set{ 'Mixed Case 10,00,000' }"), `marker` honoured, a `numberFormat`
 >   key on the type and on `clean`, the font condition dropped; and since
->   `0d603a8`, `clean` given `out-back` too ("the preset: expected
->   'out-back' not to be 'out-back'"), with its exit `out-back`, its
->   entrance `pop`, energy energetic, `dim` true and the glow branch
->   inverted each failing the rules case alone, and `numberFormat` on the
+>   `0d603a8`, `clean` given `out-back` as its ease too, failing the rules
+>   case alone ("the preset: expected 'out-back' not to be 'out-back'"),
+>   and its exit `out-back` the same; its entrance `pop`, energy
+>   energetic, `dim` true and the glow branch inverted each failing the
+>   rules case; and `numberFormat` on the
 >   type alone, `locale` on `glow`'s type alone and `groupSeparator` on
 >   `palette`'s alone each failing typecheck at the `never` line. Sixteen
 >   more on `style.ts` and eight on `store.ts` in `b965cda`. Four gaps the
@@ -11319,8 +11334,8 @@ name):
 | `decelerate` | `(0.05, 0.7, 0.1, 1.0)` | an alternative entrance | Material's emphasized decelerate, [23] |
 | `accelerate` | `(0.3, 0, 0.8, 0.15)` | exits | Material's emphasized accelerate, [23] |
 | `standard` | `(0.2, 0, 0, 1)` | moves within the frame | [23] |
-| `out-cubic` | 1 − (1 − x)³ | kept: it is the captions' `easeOut` (`textAnimation.ts:62`) | — |
-| `out-back` | c1 = 1.70158 | the `pop` entrance only, in the energetic style | [25]; the captions' `backOut` uses 1.7 (`textAnimation.ts:72`), 10.0 % overshoot at 58 % of the duration either way (the research, §1.4) |
+| `out-cubic` | 1 − (1 − x)³ | kept: it is the captions' `easeOut` (`textAnimation.ts:63`, moved a line by `e5c47ac`) | — |
+| `out-back` | c1 = 1.70158 | the `pop` entrance only, in the energetic style | [25]; the captions' `backOut` uses 1.7 (`textAnimation.ts:73`, moved a line by `e5c47ac`), 10.0 % overshoot at 58 % of the duration either way (the research, §1.4) |
 | `linear` | x | loops only: beams, marching dashes, sweeps | [27] |
 | `carbon-expressive` | `(0, 0, 0.3, 1)` | compared in M14 (chosen 2026-10-21) | IBM Carbon's expressive entrance, [26] |
 
@@ -11414,8 +11429,8 @@ spring that keeps state between calls; `spring1` not normalised (it ends at
 after a frame's time reads 0.99999 on the frame `beatFrame` names).
 
 **Later, not in step 3's days**: the captions' `easeOut` and `backOut`
-(`textAnimation.ts:62`, `:72`) and the zoom punches move onto this module
-after phase 2's ratings (M14's pick and the look rating, §6.10), as their
+(`textAnimation.ts:63`, `:73`, since `e5c47ac`) and the zoom punches move
+onto this module after phase 2's ratings (M14's pick and the look rating, §6.10), as their
 own change (D9).
 
 > **Built 2026-10-27/28.** `f38f971` (the module and `graphicMotion` with
@@ -11426,8 +11441,10 @@ own change (D9).
 > progress on both runners when this note was written, and its result is
 > to be written here when it completes. Every figure below is from the
 > three commits' messages, the test's "graphicMotion: M9" line (re-run at
-> `716d6a7`: 28 cases passed, vitest exit 0) and the critics where named;
-> line numbers were read at `716d6a7`.
+> `716d6a7`: 28 cases passed, vitest exit 0), the critics where named and,
+> where said, the re-run for this note's correction (`motion.ts` at
+> `716d6a7` bundled by esbuild into node v24.18.1); line numbers were read
+> at `716d6a7`.
 > - **The exports**, in `src/shared/graphics/motion.ts`, pure and
 >   importing nothing: `CurveName` (`:19-27`), `MotionEase` (`:34`),
 >   `EntranceName` (`:40`), `SpringParams` (`:43-46`), `cubicBezier`
@@ -11444,8 +11461,10 @@ own change (D9).
 >   (`PROGRESS_ALLOWANCE_S`, `:247`), `spring1`'s k = 9.23 (`:167`; its
 >   residual 0.1003 %, measured) and `out-back`'s c1 = 1.70158 (`:109`).
 >   Only `stroke.ts` and `style.ts` read the module yet.
-> - **`cubicBezier`** solves by Newton-Raphson, 8 steps, then bisection, 64
->   halvings (`:51`, `:55`); 0 at or below x = 0, 1 at or above x = 1.
+> - **`cubicBezier`** solves by Newton-Raphson, 8 steps, with a bisection
+>   fallback of at most 64 halvings when Newton does not settle inside
+>   [0, 1] (`:51`, `:55`, `:76-97`); 0 at or below x = 0, 1 at or above
+>   x = 1.
 >   What this section does not say: **when y1 and y2 lie in [0, 1], y is
 >   held in [0, 1]** (`:72`, `:102`), because in doubles the polynomial
 >   read 1.0000000000000002 at 2,163 of 100,001 points within 1e-4 of
@@ -11499,15 +11518,24 @@ own change (D9).
 >   2.0000). The test asserts that halving, between 1.9 and 2.1, at ω =
 >   10. A critic's independent RK4 check (200 substeps a frame) showed the
 >   remainder is the reference's, not the closed form's: the closed form
->   within 1.2e-13 of it at ω = 10, ζ = 0.5, 24 fps, and within 1.9e-11
->   across ζ from 0.2 to 3 and ω from 10 to 30; while semi-implicit Euler
->   at 24 fps from rest reads, at ζ = 0.5, 8.46e-5 at ω = 5, 1.01e-4 at
->   ω = 6 and 1.69e-4 at ω = 10, and at ζ = 1, 1.02e-4 at ω = 8. So
+>   within 1.2e-13 of it at ω = 10, ζ = 0.5, 24 fps (1.21e-13 when
+>   repeated, from rest over 3 s). Over ζ from 0.2 to 3 and ω from 10 to
+>   30 at the four rates, a critic of this record read the largest
+>   difference as 2.24e-11, at ζ = 0.2, ω = 30, 24 fps (1.88e-11 there at
+>   25 fps), the same over 1, 2 and 3 s, and the re-run for this
+>   correction, at steps of 0.1 in ζ and 1 rad/s in ω, read the same.
+>   Semi-implicit Euler at 24 fps from rest reads, at ζ = 0.5, 8.46e-5 at
+>   ω = 5, 1.01e-4 at ω = 6 and 1.69e-4 at ω = 10, and at ζ = 1, 1.02e-4
+>   at ω = 8 (the first critic's, read the same by the second and by the
+>   re-run). So
 >   **§6.15's M9 row is corrected**: "a larger difference means the closed
 >   form is wrong, not the tolerance" holds only up to about ω = 5 at 24
 >   fps with the reference as this section specifies it. The cost: 47-55
->   ns a call on the Mac (node 24.18.1, `f38f971`'s runs), 47.1 ns in this
->   record's re-run. The under-damped case first had v0 = 2, which makes
+>   ns a call on the Mac (node 24.18.1, `f38f971`'s runs); a timing, so
+>   each run reads its own (47.1 and 49.0 ns in this record's two
+>   re-runs). §6.15's measurement table asked for the cost per frame; its
+>   M9 row now says per call, as this section and the test do (one call a
+>   frame per spring). The under-damped case first had v0 = 2, which makes
 >   the sine term's weight, v0 + ζω(from − to), zero, so the sine-sign
 >   mutation passed M9's own bar and failed only the halving; v0 = 1
 >   makes the weight −1. All of it is printed to stderr as one
@@ -11531,8 +11559,9 @@ own change (D9).
 >   **Readings the plan should know.** The `DURATIONS` are held to this
 >   section's range read, not pinned, so a revision inside a range stays
 >   green: `entrance` [0.3, 0.4], `exit` [0.12, 0.3] (its "about" read as
->   hard bounds; whether "about" admits anything either side is yours to
->   record), `dim` [0.3, 0.7], `stroke` [0.35, 0.6], `loop` [5, 6]. `swap`
+>   hard bounds; **Open, yours**: whether "about" admits anything either
+>   side, to record), `dim` [0.3, 0.7], `stroke` [0.35, 0.6], `loop` [5,
+>   6]. `swap`
 >   and `headGrow` have no range here, so the test holds them by
 >   relations of its own: `swap` no longer than `exit` (it is "the old
 >   element's exit in a content swap"), and `headGrow` no longer than
@@ -11557,23 +11586,27 @@ own change (D9).
 >   removed, the over-damped c1 from the wrong root ("over at 24 fps:
 >   expected 0.755231685510147 to be less than 0.0001"), the [0, 1] hold
 >   removed, `blur-rise` given a blur, `DURATIONS` unfrozen. The critics'
->   gaps, each first shown to pass the tests of the time (vitest exit 0)
->   and failing since: `SPRING1_K` 9.24 and 5, `BACK_C1` 1.7 (the
->   captions' constant), `entrance` 3.5, `swap` 0.25, the cut branch
->   inverted, `PROGRESS_ALLOWANCE_S` 1.9e-6, and `out-cubic`, `linear` and
->   `spring1` without `unit` (`862cf1b`); `headGrow` 0.38 with `stroke`
->   0.35 and `entrance` 0.4, each inside its range ("headGrow against
->   stroke: expected 0.38 to be less than or equal to 0.35"), the cut
->   branch without its allowance ("expo-out, 0 s, at
->   1.9999995: expected +0 to be 1"), and `unit` reading NaN as 0
->   ("out-cubic at NaN: expected +0 to be NaN") (`ae6167c`).
+>   gaps, in `862cf1b`: six first shown to pass `f38f971`'s 22 cases
+>   (vitest exit 0), each failing since: `SPRING1_K` 9.24 and 5,
+>   `BACK_C1` 1.7 (the captions' constant), `entrance` 3.5, the cut branch
+>   inverted and `PROGRESS_ALLOWANCE_S` 1.9e-6; `swap` 0.25, a mutation of
+>   `862cf1b`'s own, failing the range case alone; and `out-cubic`,
+>   `linear` and `spring1` without `unit`, `f38f971`'s code itself,
+>   measured unclamped at −0.5 and 1.5 (above), each failing the clamp
+>   case alone. In `ae6167c`, three first shown to pass `862cf1b`'s 28
+>   cases (vitest exit 0), each failing since: `headGrow` 0.38 with
+>   `stroke` 0.35 and `entrance` 0.4, each inside its range ("headGrow
+>   against stroke: expected 0.38 to be less than or equal to 0.35"), the
+>   cut branch without its allowance ("expo-out, 0 s, at 1.9999995:
+>   expected +0 to be 1"), and `unit` reading NaN as 0 ("out-cubic at
+>   NaN: expected +0 to be NaN").
 > - **Open, yours: `progress`'s allowance against `beatFrame`'s.**
 >   `progress` adds 1e-6 s (`:247`); `beatFrame` (§6.3) subtracts 1e-6 of
 >   a frame. So for a beat between 1e-6 of a frame and 1e-6 s after a
 >   frame's time, `beatFrame` names the next frame while `progress`
 >   already reads exactly 1 on this one: the element arrives a frame
 >   before the one named. A critic measured it at this module, with beats
->   at a frame plus 2e-6, 1e-5 and 2e-5 of a frame at 24, 25, 30 and 60
+>   after frame 31 by 2e-6, 1e-5 and 2e-5 of a frame at 24, 25, 30 and 60
 >   fps: progress was 1 on frame 32, the one `beatFrame` names, and on
 >   frame 31, all twelve. The test does not probe that window: its beat
 >   after a frame is 0.9e-6 of a frame, inside `beatFrame`'s own
@@ -11587,8 +11620,9 @@ own change (D9).
 >   tests: 4309 passed, 63 skipped); at `ae6167c` the test file alone (28
 >   cases), another process's runs sharing the machine. The captions'
 >   `easeOut` and `backOut` are now at `textAnimation.ts:63` and `:73`,
->   moved by a line `e5c47ac` added above them; they come here only after
->   phase 2's ratings, as above.
+>   moved by a line `e5c47ac` added above them (this section's three
+>   citations of them, which read `:62` and `:72`, updated to match);
+>   they come here only after phase 2's ratings, as above.
 
 ### 6.14 Sound on the beats, under each graphic's own Clear
 
@@ -11951,7 +11985,7 @@ ends.
 | M6 | three.js parity | `await window.__forgeGraphicCheck({ parity: true })`: the EFFECTS §51 clusters painted by `drawTextOnto`, uploaded as a `CanvasTexture` with mipmaps off under an orthographic camera at 1:1, against the canvas drawn flat (expect 0.000); brand hex squares and a 50% blend through three.js with colour management on and off, against canvas 2D (within 2/255); a 1 px anti-aliased line at 10, 50 and 90% alpha through WebGL, `drawImage` and PNG, over black and over white | Mac, Surface | phase 3's exit |
 | M7 | glow with alpha | `await window.__forgeGraphicCheck({ glow: ['unreal', 'quad', 'pmndrs'] })`: a shape with `UnrealBloomPass` (r186) and with our own quad shader over a transparent clear: alpha outside the shape 0, the glow's alpha below 1; then pmndrs Bloom | Mac, Surface | the glow route |
 | M8 | path length | `await window.__forgeGraphicCheck({ pathLength: true })`: an off-DOM `SVGPathElement`'s `getTotalLength()` and `getPointAtLength()` against our own flattening; agreement and ms | Mac | the stroke primitive |
-| M9 | spring | `npx vitest run tests/graphicMotion.test.ts`: the closed form against frame-stepped at 24, 25, 30 and 60 fps; the largest difference and the cost per frame, printed | node | the motion module |
+| M9 | spring | `npx vitest run tests/graphicMotion.test.ts`: the closed form against frame-stepped at 24, 25, 30 and 60 fps; the largest difference and the cost per call, printed (per call since 2026-10-28, as §6.13 and the test have it; it read per frame) | node | the motion module |
 | M10 | stroke libraries | `await window.__forgeGraphicCheck({ strokes: ['rough', 'freehand'] })`: rough.js with one seed, its PNGs from the Mac and the Surface compared by mean difference; perfect-freehand drawn on by truncating its input points and by clipping the finished outline, whether the tapered end changes from frame to frame | Mac, Surface | the marker look |
 | M11 | raw RGBA | `ffmpeg -f rawvideo -pix_fmt rgba -s 1080x1920 -r 30 -i pipe:0 -i base.mp4 -filter_complex "[1][0]overlay=alpha=premultiplied"` against the PNG path; `-f framemd5` of both; IPC throughput at 8.3 MB a frame | Mac, Surface | only if M1-M2 fall short |
 | M12 | readback | `await window.__forgeGraphicCheck({ readback: ['drawImage', 'readPixels', 'readRenderTargetPixelsAsync'], frames: 120 })`: `drawImage(gl)` with `toBlob`, `readPixels` into a `Uint8Array`, and `readRenderTargetPixelsAsync`; ms at p50 and p95 | Mac, Surface | phase 3's bake |
@@ -12492,7 +12526,10 @@ values, dated, as the steps above carry their Built notes (it did,
 > committed after these runs on 2026-10-27 in five commits: `1f62fba`
 > (the rename), `d10e474` and `6272050` (§6.1's types), `a2cad0f` and
 > `60c8b28` (§6.4's constant and guards), recorded in §6.1's and §6.4's
-> Built notes; nothing else of it is built.
+> Built notes. Then §6.20's D8 half (`e5c47ac`, 2026-10-27, §6.20's Built
+> note) and lane A, in seven commits from `f38f971` to `ae6167c`
+> (2026-10-27/28; the Built notes in §6.13, §6.3 and §6.5). Lanes B–D and
+> §6.20's D10 half remain.
 
 ### 6.16 Phase 3 — The three.js compositor and 2.5D
 
