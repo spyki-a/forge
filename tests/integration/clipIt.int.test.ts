@@ -539,7 +539,7 @@ async function exportAs(name: string, project: Project, route: Route): Promise<{
       outputPath: file,
       canvas: CANVAS,
       subtitlesPath: prepared?.subtitlesPath,
-      // The app's folder in development (main/captions.ts); absent where the asset library is (CI), so libass's own fallback, as captions.int.
+      // The app's folder in development (main/captions.ts), as captions.int. On CI it holds only the two committed Noto faces (D10), so Pop's Anton is not in it there and libass falls back for that face.
       fontsDir: prepared?.fontsDir && existsSync(prepared.fontsDir) ? prepared.fontsDir : undefined
     })
     await run(FFMPEG, plan.args, { maxBuffer: 64 * 1024 * 1024 })
@@ -715,7 +715,7 @@ afterAll(async () => {
   await writeNote(dir, [
     '# clipit — Clip it, exported with its captions, read back',
     '',
-    `Platform ${process.platform}; ffmpeg ${FFMPEG}; libass fonts from ${existsSync(fontsDir) ? fontsDir : 'libass’s own fallback (no assets/fonts here)'}.`,
+    `Platform ${process.platform}; ffmpeg ${FFMPEG}; libass fonts from ${existsSync(fontsDir) ? `${fontsDir}, Pop's Anton-Regular.ttf ${existsSync(join(fontsDir, 'Anton-Regular.ttf')) ? 'in it' : 'NOT in it (libass’s own fallback draws Pop)'}` : 'libass’s own fallback (no assets/fonts here)'}.`,
     '',
     'media/: the "video" (640×360, 30 fps, 40 s, lossless, frame N names itself in twelve bars on top; flat grey below; keyframes every 3 s),',
     'its audio-only stream (a 440 Hz tone at -26 dBFS), and the json3 track the fake yt-dlp serves: w01…w57, 15 to 25 frames apart, irregularly,',

@@ -22,10 +22,12 @@ __pycache__/
 # model files under its models/. Rebuilt by hand per machine; never shipped.
 sidecar/.venv-faces/
 
-# The asset library: a real folder on the Mac (81 MB, 88 fonts beside the SFX,
-# titles, transitions and props; checked 2026-10-29), and absent altogether on
-# the Surface's checkout, which reads its library from the packs installed
-# under userData. Not a symlink on either: git cannot track a path beyond one,
+# The asset library: a real folder on the Mac (82M by `du -sh`, 88 fonts beside
+# the SFX, titles, transitions and props; checked 2026-10-29). The Surface's
+# checkout had no `assets` entry at all before the commit that added the four
+# files below (checked 2026-10-29) and reads its library from the packs
+# installed under userData; from that commit on it holds assets/fonts with
+# just those four. Not a symlink on either: git cannot track a path beyond one,
 # so a linked `assets` would refuse the four files below. The library is other
 # people's work and stays uncommitted — but only THIS one, hence the slash.
 #

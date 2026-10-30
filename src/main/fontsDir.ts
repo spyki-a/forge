@@ -22,11 +22,3 @@ export function fontsDir(): string | undefined {
     : join(app.getAppPath(), 'assets', 'fonts')
   return bundled
 }
-
-/**
- * The faces the app ships in that folder itself, committed with their OFL
- * texts (docs/CLIPS.md §6.20, D10): Noto Sans Devanagari and Noto Sans Telugu,
- * so Hindi and Telugu draw in the same letters on every machine. The scan lists
- * them from here when the catalogue's own root does not hold them.
- */
-export const APP_FONT_FILES = ['NotoSansDevanagari-Regular.ttf', 'NotoSansTelugu-Regular.ttf'] as const

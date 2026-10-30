@@ -277,6 +277,43 @@ export function searchEntries(
 }
 
 /**
+ * The faces the app ships in its own `assets/fonts`, committed with their OFL
+ * texts (docs/CLIPS.md §6.20, D10): Noto Sans Devanagari and Noto Sans Telugu,
+ * so Hindi and Telugu draw in the same letters on every machine. The scan
+ * lists them from `fontsDir()` when the catalogue's own root does not hold
+ * them (main/assets/scan.ts).
+ *
+ * Here rather than beside `fontsDir()` because the renderer reads it too
+ * (`libraryIsEmpty`), and main's module imports electron.
+ */
+export const APP_FONT_FILES = ['NotoSansDevanagari-Regular.ttf', 'NotoSansTelugu-Regular.ttf'] as const
+
+/**
+ * Whether an entry is one of the app's own faces rather than the library's:
+ * a font whose file's basename is in `APP_FONT_FILES`. The file is relative
+ * when the scan found it under the root and absolute when it came from the
+ * app's folder, with either separator, so the name is taken by splitting on
+ * both — the renderer has no `node:path`.
+ */
+export function isAppFont(entry: CatalogEntry): boolean {
+  if (entry.kind !== 'font') return false
+  const name = entry.file.split(/[\\/]/).pop() ?? ''
+  return (APP_FONT_FILES as readonly string[]).includes(name)
+}
+
+/**
+ * Whether the library holds nothing the person installed — the Library's
+ * "empty library IS the offer" (components/Library.tsx).
+ *
+ * Not `entries.length === 0`: since D10 every catalogue lists the app's two
+ * Noto faces, pack or none, so a fresh install from CI would never read as
+ * empty and the pack list would never open itself.
+ */
+export function libraryIsEmpty(catalog: AssetCatalog | null): boolean {
+  return !(catalog?.entries ?? []).some((entry) => !isAppFont(entry))
+}
+
+/**
  * ffmpeg's xfade transitions need no asset files. They are the baseline set the
  * app always has, with the luma-mask library layered on top of them.
  */

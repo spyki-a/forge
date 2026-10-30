@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Package, RefreshCw, Search } from 'lucide-react'
 import type React from 'react'
 import type { AssetKind, CatalogEntry, FontMeta, TitleMeta } from '@shared/assets/catalog'
-import { isClipSticker, searchEntries, stickerCategoryLabel } from '@shared/assets/catalog'
+import { isClipSticker, libraryIsEmpty, searchEntries, stickerCategoryLabel } from '@shared/assets/catalog'
 import { assetPath } from '@shared/assetPath'
 import { useCatalog } from '../catalog'
 import { useEditor } from '../store'
@@ -49,7 +49,7 @@ export function Library({ initialKind = 'sticker' }: { initialKind?: AssetKind }
   const [limit, setLimit] = useState(PAGE)
   const [category, setCategory] = useState<string | null>(null)
   const [showPacks, setShowPacks] = useState(false)
-  const autoOpenedPacks = useRef(false)
+  const [autoOpenedPacks, setAutoOpenedPacks] = useState(false)
   const scrollerRef = useRef<HTMLDivElement | null>(null)
   const sentinelRef = useRef<HTMLDivElement | null>(null)
 
@@ -67,27 +67,33 @@ export function Library({ initialKind = 'sticker' }: { initialKind?: AssetKind }
    */
   useEffect(() => () => setAudition(null), [setAudition])
 
-  const empty = (catalog?.entries.length ?? 0) === 0
+  const empty = libraryIsEmpty(catalog)
 
   /*
    * An empty library IS the offer.
    *
-   * A packaged build ships with no assets at all (docs/PACKAGING.md), so the
-   * first thing most people will ever see here is "Nothing here." Putting the
-   * packs behind a button they would have to find first makes that dead end
-   * look like the product.
+   * A packaged build ships with no library: from CI its assets are only the
+   * app's own two Noto faces (docs/CLIPS.md §6.20, D10), which every catalogue
+   * lists, pack or none. So "empty" is empty of everything BUT those
+   * (`libraryIsEmpty`) — counting them, no catalogue is ever empty and the
+   * packs never open themselves. The first thing most people will ever see
+   * here is "Nothing here." Putting the packs behind a button they would have
+   * to find first makes that dead end look like the product.
    *
    * Opened once, then left alone — deriving it from `empty` instead meant the
    * list vanished the instant an install finished, taking the Remove button and
    * every other pack with it. The panel that just did something is not the
    * panel to make disappear; after this the toggle owns it.
+   *
+   * Set during render, React's pattern for state that follows a prop, rather
+   * than in an effect: the same once-only latch, and the first render that has
+   * an empty catalogue already shows the list
+   * (tests/renderer/libraryPacksOpen.test.tsx renders it).
    */
-  useEffect(() => {
-    if (catalog && empty && !autoOpenedPacks.current) {
-      autoOpenedPacks.current = true
-      setShowPacks(true)
-    }
-  }, [catalog, empty])
+  if (catalog && empty && !autoOpenedPacks) {
+    setAutoOpenedPacks(true)
+    setShowPacks(true)
+  }
 
   const counts = useMemo(() => {
     const totals: Partial<Record<AssetKind, number>> = {}

@@ -2,6 +2,7 @@ import { readdir, readFile, stat, writeFile, mkdir } from 'node:fs/promises'
 import { join, relative, extname, basename, dirname, isAbsolute } from 'node:path'
 import { app } from 'electron'
 import {
+  APP_FONT_FILES,
   CATALOG_VERSION,
   charFromCodepoints,
   codepointsFromStickerFile,
@@ -11,7 +12,7 @@ import {
   type AssetCatalog,
   type CatalogEntry
 } from '@shared/assets/catalog'
-import { APP_FONT_FILES, fontsDir } from '../fontsDir'
+import { fontsDir } from '../fontsDir'
 
 /**
  * Folder names accepted for each kind.

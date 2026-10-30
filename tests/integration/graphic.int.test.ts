@@ -220,7 +220,7 @@ describe('phase 0: the libass reference for M22 (docs/CLIPS.md §6.11, §6.15)',
     await mkdir(ref, { recursive: true })
     assPath = join(ref, 'clusters.ass')
     await writeFile(assPath, clustersAss(), 'utf8')
-    // The fonts folder the app hands libass (absent on CI, where /assets is gitignored), as captions.int passes it.
+    // The fonts folder the app hands libass, as captions.int passes it: on CI it holds only the two committed Noto faces (D10).
     fontsDir = resolve(__dirname, '../../assets/fonts')
 
     const base = await makeColour(join(ref, 'base.mp4'), '0x202830', { width: W, height: H }, SECONDS, FPS)
@@ -304,7 +304,10 @@ describe('phase 0: the libass reference for M22 (docs/CLIPS.md §6.11, §6.15)',
       const said = d === null ? 'no frame' : `${d.pixels > 0 ? 'DIFFER' : 'same'} (mean ${d.mean.toFixed(3)} levels over the frame, ${d.pixels} px past ${DIFFER_LEVELS})`
       return { c, i, said }
     })
-    const where = `${process.platform}-${process.arch}, fonts dir ${existsSync(fontsDir) ? 'present' : 'absent'}, face named ${FONT} at ${FONT_SIZE}`
+    // Whether the named face is IN the folder, not only whether the folder is there: since D10 CI's
+    // assets/fonts holds the two Noto faces alone, so "present" there says nothing of the face (as captionsFree.int's anton).
+    const face = `${FONT.replace(/\s+/g, '')}-Regular.ttf`
+    const where = `${process.platform}-${process.arch}, fonts dir ${existsSync(fontsDir) ? `present, ${face} ${existsSync(join(fontsDir, face)) ? 'in it' : 'NOT in it'}` : 'absent'}, face named ${FONT} at ${FONT_SIZE}`
     ciNotice(
       'graphic.int: libass Indic reference (M22)',
       [
