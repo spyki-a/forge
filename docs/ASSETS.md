@@ -123,8 +123,13 @@ missing on a machine nobody can see.
 ### Where it is in the UI
 
 In the **Library** panel, and it opens **by itself when the library is empty** —
+empty meaning nothing but the app's own two Noto faces (`libraryIsEmpty`,
+`src/shared/assets/catalog.ts:312`, since `9a0f232`, 2026-10-29: every
+catalogue lists them, so counting them no library would ever be empty) —
 which in a packaged build is every first launch, because `assets/` is gitignored
-and an installer ships none (`docs/PACKAGING.md`). "Nothing here." is the screen
+but for `assets/fonts`'s four tracked files (Noto Sans Devanagari and Noto Sans
+Telugu with their OFL texts, `6bc8b07`, `docs/CLIPS.md` §6.20) and an installer
+ships no other assets (`docs/PACKAGING.md`). "Nothing here." is the screen
 most people will meet first, and putting the packs behind a control they would
 have to go looking for makes that dead end look like the product. There is also
 a package button in the panel's header for everyone else.

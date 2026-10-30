@@ -52,7 +52,7 @@ more to a careful closed beta.
 | R11 | a log file and Help › Show Logs | 1 |
 | R12 | clean-machine smoke test, both platforms | 2 + what it finds |
 | R13 | the rest of C4: glitch and liquid | 2 to 3 |
-| R14 | the beta.2 list | 2.5 to 4.5 (the Indic fonts' half day is built and counted in `CLIPS.md` §6.20, decided 2026-10-21) |
+| R14 | the beta.2 list | 2.5 to 4.5 (the Indic fonts' half day is counted in `CLIPS.md` §6.20, decided 2026-10-21 and built 2026-10-29/30, `6bc8b07` to `ae3e48f`) |
 
 R1 to R12 is 13 to 15 working days; R13 and R14 make a careful closed beta
 about three weeks of work once R1 starts. Four things wait on you: the name (R7), whether to
@@ -380,7 +380,7 @@ Things testers will notice but can follow the first installer:
   captions are to name them through the canvas bake's font chain, since
   under `CLIPS.md` §16.66 (a) a Hindi or Telugu track will be the bake's,
   libass only a failed or empty bake's fallback; the `\fn` tags are
-  dropped; not built yet). Built in
+  dropped; not built yet — built 2026-10-29, below). Built in
   `CLIPS.md` §6.20, before step 3's phase-1 Indic render check, with a
   render check on both builds; this item's half day is counted there, once,
   with the quarter day the route of `CLIPS.md` §16.66 (a) adds beside it
@@ -390,6 +390,41 @@ Things testers will notice but can follow the first installer:
   those four files through), so CI's libass draws them too, and main's scan
   also lists them when an asset pack's root is the one scanned (`CLIPS.md`
   §6.20). R6's rule holds for them: a licence file beside every family.
+  **Built 2026-10-29/30** (`CLIPS.md` §6.20's second Built note;
+  `EFFECTS.md` §61's three dated subsections): the four files are tracked
+  (`6bc8b07`: Noto Sans Devanagari v2.007 and Noto Sans Telugu v2.005,
+  hinted Regular, from the Noto project's own releases, with their OFL
+  texts; `tests/appFontFiles.test.ts` holds R6's rule for them), every
+  catalogue lists them wherever it scans and the Library's "empty" no
+  longer counts them (`9a0f232`), the canvas painter's chain names them
+  after the clip's face and every text site loads the face the words need
+  (`8932535`, `00b42b4`), and a Hindi or Telugu track is the bake's on both
+  platforms with the "unshaped" notice on Windows for a failed or empty
+  bake (`f77fd29`, `ae3e48f`). **Not as this item read for libass**: on
+  the Mac libass still falls back through CoreText to Kohinoor whether or
+  not the Noto files are in its fontsdir (measured 2026-10-29: 0 of 108
+  Indic frames change with them removed; the fontsdir serves a face a
+  style names, not the fallback), and the Windows build's fallback face is
+  still unmeasured. The same letters on both platforms come from the bake,
+  not from libass. **Still yours**: the render check in the development
+  app on both builds, M0's exit run on the two Indic links (then once more
+  with the route's script test put back), the Surface's reading of the
+  Windows `captions.int` notice, Electron's own `document.fonts.check`,
+  and the paper clip's font chain (`src/renderer/src/paperCanvas.ts`,
+  `src/shared/render/paperPaint.ts:79`), which names no Noto face and is
+  outside §6.20's list of sites.
+- **A pack's faces never reach libass.** Found 2026-10-29 while building
+  the Indic fonts (`CLIPS.md` §6.20, "A gap found, outside this step"):
+  libass takes one `fontsdir` (`src/shared/render/plan.ts`, from
+  `fontsDir()`, `src/main/fontsDir.ts:17`), and that is the app's own
+  `assets/fonts` whether or not an asset pack is installed, so on a
+  machine with a pack a burned-in caption in one of the pack's faces is
+  drawn by libass in a system fallback, while the preview and the canvas
+  bake, which load from the catalogue, draw the pack's face. Found by
+  reading the code, not measured in an export. The fix is a fontsdir that
+  reaches the pack's fonts as well (a merged folder, or the scanned root's
+  `fonts/` beside the app's), with a render check on a machine with a pack
+  installed; the beta's installs all have a pack, so it is this list's.
 - Single-instance lock; a "new version" check against the release page.
 - Keep or drop the meme packs from the manifest.
 - **Cmd+C with nothing selected copies nothing, anywhere in the window.**

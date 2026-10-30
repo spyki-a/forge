@@ -289,7 +289,9 @@ playhead** places it. Leaving the Library ends the audition.
 The **package button** opens the **asset packs** — the downloads that put
 things in here in the first place. It opens on its own the first time the
 library is empty, which in an installed build is the first launch: an installer
-ships no assets at all, so "Nothing here." is where most people start and the
+ships no assets but the app's own two Noto faces (Hindi's and Telugu's, under
+Fonts; `docs/CLIPS.md` §6.20), which do not count as a library, so "Nothing
+here." or those two tiles is where most people start and the
 offer has to be in it. An empty drawer in a library that is not empty offers
 **Get stickers →** (or whichever drawer it is). See `docs/ASSETS.md`. Nothing
 in the editor needs a pack; they add choices.
@@ -736,7 +738,13 @@ the spoken word changes colour.
 A plain caption is burned in during the normal encode and costs nothing extra.
 A styled or animated one is painted first — only the pictures that actually
 differ, over only the band of the frame it occupies — and composited in the
-same pass, and the strip says so while that is the case. On twenty seconds of
+same pass, and the strip says so while that is the case. A track whose
+words hold Hindi, Telugu or another script whose letters join is painted
+too, whatever its style, on both platforms (the Windows build's libass
+cannot join them; `docs/CLIPS.md` §16.66 (a), since 2026-10-29): its note
+ends "so it costs a little more than burning them in — not a second
+render." and, for Hindi or Telugu, adds that their letters join, which
+burned-in captions cannot do on Windows. On twenty seconds of
 1080×1920 that is about six seconds against the thirty-two the old two-pass
 path took. With nothing transcribed, the strip says the captions will be
 skipped.

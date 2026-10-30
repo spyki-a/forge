@@ -8496,7 +8496,7 @@ suite and CI are the orchestrator's.
   and the preview's recompute on a long followed clip while editing.
 - **Burned-in text** (§5.3): after 1g.
 
-## 61. Graphics: the forks measured (phase 0 of step 3, then phase 1's first) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22), and on the Surface the libass run and the development app (2026-10-27); and in node, phase 1's M9 (2026-10-27) and the stroke's flattening (2026-10-28)
+## 61. Graphics: the forks measured (phase 0 of step 3, then phase 1's first) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22), and on the Surface the libass run and the development app (2026-10-27); in node, phase 1's M9 (2026-10-27) and the stroke's flattening (2026-10-28); and D10's three readings, the Noto fonts' provenance, the Mac's libass against the fontsdir, and `document.fonts.check` (2026-10-29)
 
 For `docs/CLIPS.md` §6.15 (step 3's phase 0, "Measure before relying"):
 pieces 0.1–0.3 were built on the evening of 2026-10-21 in seven commits,
@@ -9894,12 +9894,151 @@ cubics' "0.36872718668771864 to be less than or equal to 0.25"), and
 125.47920359313349 to be greater than 125.47920359313349"), each of which
 passed `69d2d6e`'s 17 cases and fails `2074f08`'s 20.
 
+### The Noto fonts, 2026-10-29
+
+For `CLIPS.md` §6.20's D10 half (its second Built note), committed by
+`6bc8b07` (2026-10-29) and pushed 2026-10-30 in the push ending at
+`ae3e48f`. Fetched 2026-10-29 by the orchestrator, through the sandbox
+proxy, from the Noto project's own GitHub releases; nothing was fetched by
+the commit, which read the four sha256 again (`shasum -a 256`) and found
+them equal. The **hinted** build was taken (each zip also holds `full/`
+and `unhinted/`): it is the build Tor Browser bundles, and the Telugu file
+is byte for byte the plan's 235,176 B reference read off this Mac on
+2026-10-21; the Devanagari reference there, 244,284 B, was v2.006, and
+v2.007's hinted Regular is 243,520 B. Both files say "Copyright 2022 The
+Noto Project Authors" in their name tables and are TrueType with 17
+tables each. Neither OFL text holds a CR, so `.gitattributes`'
+`text=auto eol=lf` leaves their bytes as fetched; `*.ttf` is binary there.
+
+| file in `assets/fonts/` | release, asset (size, sha256) | the file taken (size, sha256) |
+|---|---|---|
+| `NotoSansDevanagari-Regular.ttf` | notofonts/devanagari `NotoSansDevanagari-v2.007`, `NotoSansDevanagari-v2.007.zip` (18,449,254 B, `820c7da45b1e63562cb41c0a8cac5d9a4202312043a3a040ed1325857ef469b1`) | `NotoSansDevanagari/hinted/ttf/NotoSansDevanagari-Regular.ttf` (243,520 B, `4e3c66638958c3e2ab5d37f47a8deb89fffeb7be9985c665a519bbc7ba762313`) |
+| `OFL-NotoSansDevanagari.txt` | the same zip's root `OFL.txt` | 4,386 B, `a216f6f8d85c7228093e0ee5e258d9d377e6671f68acb4db1930b29583d0f331` |
+| `NotoSansTelugu-Regular.ttf` | notofonts/telugu `NotoSansTelugu-v2.005`, `NotoSansTelugu-v2.005.zip` (34,749,676 B, `3553e00ca341dc06f4a143c604dd93a1342553169b5a06dc8b0ff50ab6eba0a2`) | `NotoSansTelugu/hinted/ttf/NotoSansTelugu-Regular.ttf` (235,176 B, `b274780b69d1d23fe84b55e809a152cb2ac5306d33864b1f87622f6971871aae`) |
+| `OFL-NotoSansTelugu.txt` | the same zip's root `OFL.txt` | 4,382 B, `481c72a8f1b4f645a7e6b10326be41b2da2c15cb470ff48a07fab773eed00102` |
+
+`.gitignore:41-47` lets exactly these four through (`/assets/*`,
+`!/assets/fonts/`, `/assets/fonts/*` and four negations): at `ae3e48f`
+`git ls-files -s assets` lists the four at mode 100644 and nothing else,
+and `git check-ignore -v assets/fonts/Anton-Regular.ttf` answers
+`.gitignore:43:/assets/fonts/*`, so the library's 88 other fonts stay
+untracked. Checked before the commit, since git cannot track a path
+beyond a symbolic link: the Surface's checkout (the user, 2026-10-29,
+PowerShell `cmd /c dir /a`) had no `assets` entry at all, neither `<DIR>`
+nor `<SYMLINKD>` nor `<JUNCTION>`, `core.symlinks` false, its catalogue
+scanning the packs under `userData`; this Mac's `assets` is a real
+directory (82M by `du -sh`). The catalogue lists the two faces from
+`fontsDir()`'s folder wherever it scans (`CATALOG_VERSION` 3), and on a
+CI runner `assets/` holds these four files and nothing else, so a CI-built
+installer now ships `assets/fonts` where it shipped no `assets` folder,
+and CI's library warning tests `assets/sfxx` instead of a non-empty
+`assets/` (`.github/workflows/ci.yml:386-393`).
+
+### libass and the fontsdir on the Mac, 2026-10-29
+
+The plan's reading was that committing the faces into libass's `fontsdir`
+would have CI's libass, and the Mac's, draw Hindi and Telugu in them, a
+face for each script on both machines. **Measured otherwise on the Mac**
+(`6bc8b07`'s probe, then `ae3e48f`'s frames, both 2026-10-29, the bundled
+darwin-arm64 ffmpeg):
+
+- **The frames.** `tests/integration/captions.int.test.ts`'s Indic case
+  (its `.ass` in Anton at 149, `fontsdir=assets/fonts`, `shaping=complex`
+  against `simple` and the app's plan) run twice with a temporary line
+  dumping its three framemd5 lists, once as committed and once with
+  `NotoSansDevanagari-Regular.ttf` and `NotoSansTelugu-Regular.ttf` moved
+  out of `assets/fonts` (md5 `53ef84da2e0f1a7b49fffe7485395722` and
+  `59d7cc5d87dc3d84824818bbe79417a8` before and after the move back, `git
+  status` clean under `assets`, the test file restored and `cmp` equal):
+  **0 of 54 Devanagari and 0 of 54 Telugu frames change**, in the complex,
+  the simple and the app's renders alike, and none of the other twelve;
+  complex against simple differs on 54 and 54 both times. `graphic.int`'s
+  `complex.png`, `simple.png` and README from the run after the files
+  went in are byte-identical (`cmp`) to the 2026-10-28 run's from before.
+- **Why.** At `-loglevel debug` on a two-line `.ass` in Anton,
+  `ass=…:fontsdir=assets/fonts:shaping=complex`, libass logs "Loading font
+  file 'assets/fonts/NotoSansDevanagari-Regular.ttf'" and the Telugu one,
+  then "Using font provider coretext", then "fontselect: (Anton, 400, 0)
+  -> /System/Library/Fonts/Kohinoor.ttc, -1, KohinoorDevanagari-Regular"
+  and "-> /System/Library/Fonts/KohinoorTelugu.ttc, -1,
+  KohinoorTelugu-Regular". libass loads the fontsdir's files, but the
+  fallback for a letter the named face lacks is the CoreText provider's,
+  which never offers the fontsdir's memory fonts. It also logs "Error
+  opening memory font 'OFL-NotoSansTelugu.txt'" and the Devanagari one,
+  harmless: libass tries every file in the folder.
+- **The fontsdir does serve a face a style names.** One Dialogue "क्ष కి"
+  at 149 on 1080×360, styled "Noto Sans Devanagari", "Noto Sans Telugu"
+  or "Anton", each with `fontsdir=assets/fonts` and with an empty folder:
+  without the fontsdir the Noto-named frame equals the Anton-named one (0
+  px past 40 levels; neither face is installed on this Mac); with it the
+  Devanagari-named frame differs from the no-fontsdir one in 4,721 px and
+  from the Telugu-named one in 4,743 (ink above 128: 2,832 px against
+  3,586 for the system fallback).
+
+So the §51 clusters the Mac shapes, here and on macos-14, are shaped in
+Kohinoor, and `captions.int:212` and its darwin message (`:280`) now say
+so. The Indic case publishes its reading through `ciNotice` (`:274`,
+"captions.int: Hindi and Telugu on libass": the platform, SAME or DIFFER
+with the frame counts, which Noto faces the fontsdir holds); on this Mac
+with `GITHUB_ACTIONS=1` it reads "darwin: complex and simple DIFFER (on 54
+Devanagari and 54 Telugu frames of 54 each); in the fontsdir:
+NotoSansDevanagari-Regular.ttf, NotoSansTelugu-Regular.ttf", and with the
+files moved out "… in the fontsdir: no Noto face". **Not measured: which
+face the Windows build falls back to**, and whether its fallback reaches
+the fontsdir at all; the notice says SAME or DIFFER, not which face, and
+the Surface's reading is the user's. It decides nothing for the captions:
+under `CLIPS.md` §16.66 (a) a Hindi or Telugu track is the canvas bake's
+on both platforms (`captionRoute`, `f77fd29`), and libass meets one only
+as a failed or empty bake's fallback. What it does change is the plan's
+account of CI: committing the faces made CI's libass able to draw a face a
+style names, not its Indic fallback.
+
+### `document.fonts.check`, 2026-10-29
+
+For the preview's readiness check in `src/renderer/src/textCanvas.ts`
+(`CLIPS.md` §6.20, "The canvas route"; `8932535`, then `00b42b4` after a
+critic measured this): what `document.fonts.check` answers for a family
+no `FontFace` names. `8932535` left it unmeasured (Electron cannot start
+in the sandbox) and reasoned that the check "counted the Noto faces
+exactly as it already counted the clip's face". Measured by the critic
+and again for `00b42b4`, in the Browser pane's Chromium 152 (UA
+Chrome/152.0.7977.167, Claude/4.29.0) on https://example.com:
+
+| call | answer |
+|---|---|
+| `document.fonts.check('16px "Noto Sans Devanagari"')`, nothing registered | `true` |
+| `document.fonts.check('16px "Zzq Not A Font 123"')` | `true` |
+| a `FontFace` added to `document.fonts` and not loaded (`document.fonts.size` 1) | `false` |
+
+`check` is true for any family no `FontFace` names, and `ensureFont`
+registers a face only after `face.load()` resolves
+(`src/renderer/src/catalog.ts:192-195`), so before a Noto face lands
+nothing names it, `check` said ready, `8932535`'s `waiting` was empty and
+the preview canvas was cached with the system's letters; the text-clip
+effect's later repaint met the same signature and got the stale canvas
+back. The same was true of Anton before `8932535`. So readiness is the
+catalogue's: `faceSettled(family)` (`catalog.ts:72-76`; true when
+`SYSTEM_FONT_FAMILIES`, `loadedFonts` or `failedFonts` has it) decides,
+and `textCanvas.ts:125`'s `waiting` is every face of `facesFor` not
+settled, each warmed and the canvas left uncached; `check` adds nothing
+over it (true for every unnamed family, true for a loaded registered one),
+so it is not asked. `tests/renderer/indicFontSites.test.ts`'s stand-in
+document answers `check` true for every family, as Chromium does, and
+readiness is set through `loadedFonts` and `failedFonts`. **Electron's
+own Chromium is unmeasured**: the Browser pane's is Chromium 152 of the
+same major as Electron 44's (`.167` against the app's `.78`, item 5), but
+a reading in the development app on the Mac, outside the sandbox, is the
+user's.
+
 ### What this settles
 
 1. **Both bundled builds have `tmix`, `overlay`'s `alpha=premultiplied`
    and `perspective`**: nothing is struck from §13's later options.
 2. **The Mac's libass shapes the §51 clusters**, on the dev Mac and the
-   macos-14 runner alike, with or without `assets/fonts`.
+   macos-14 runner alike, with or without `assets/fonts` — in Kohinoor,
+   through CoreText, not in the fontsdir's Noto faces even now that they
+   are there (measured 2026-10-29, "libass and the fontsdir on the Mac"
+   below, item 17).
 3. **The 2018 build's libass does not shape Hindi or Telugu**: settled on
    2026-10-27 on the Surface, reading 1 (above). It inks every cluster,
    the same at both shaping levels on windows-latest (0.000, no pixel
@@ -9910,7 +10049,11 @@ passed `69d2d6e`'s 17 cases and fails `2074f08`'s 20.
    to be the canvas bake on both platforms, the user's answer (a) of
    2026-10-27 (`CLIPS.md` §16.66), planned in its §6.20 and not built:
    until it lands, a plain-style Hindi or Telugu track still goes to
-   libass.
+   libass. (Built 2026-10-29, `f77fd29` and `ae3e48f`: `captionRoute`,
+   `src/shared/graphics/fromTimeline.ts:79`, sends a track whose words
+   hold a shaped script to the bake on both platforms, the whole track;
+   libass draws it only as a failed or empty bake's fallback, with a
+   notice on Windows that it comes out unshaped. Item 16.)
 4. **The measuring code reads what it says**: per frame, with its
    conditions, on the canvas that ships, and with the shaping readings
    that can tell shaped from unshaped. In the pane's Chrome 152 (.167),
@@ -10005,6 +10148,27 @@ passed `69d2d6e`'s 17 cases and fails `2074f08`'s 20.
     a small circle: −0.1468 % at r = 20 and 30. This is against 2πr, in
     node; it sets nothing. `STROKE_TOLERANCE` stays 0.25, a proposal,
     until M8.
+16. **A Hindi or Telugu caption track is the canvas bake's on both
+    platforms** (`CLIPS.md` §16.66 (a), built 2026-10-29, `f77fd29` and
+    `ae3e48f`): `captionRoute(project)` routes the whole track to the bake
+    when its words hold a shaped script or the style needs a canvas, and
+    libass draws such a track only as a failed or empty bake's fallback,
+    saying on Windows for Hindi or Telugu that it comes out unshaped. The
+    `\fn` tags were never built. The same letters on both machines come
+    from the bake's chain, which names Noto Sans Devanagari and Noto Sans
+    Telugu after the clip's face (`8932535`), with the two faces committed
+    under `assets/fonts` and listed by every catalogue (`6bc8b07`).
+17. **The Mac's libass does not draw the fontsdir's Noto faces as its
+    fallback** ("libass and the fontsdir on the Mac" above): 0 of 108
+    Indic frames change with the two files removed, the fallback is
+    CoreText's Kohinoor, and the fontsdir serves only a face a style
+    names. The plan's "a face for each on both machines" through the
+    fontsdir does not hold on the Mac; on Windows the fallback face is
+    unmeasured. Nothing the captions do depends on it (item 16).
+18. **`document.fonts.check` is true for any family no `FontFace` names**
+    (Chromium 152, above), so a preview's readiness has to be the
+    catalogue's (`faceSettled`, `00b42b4`), not the check's. Electron's
+    own Chromium is unmeasured.
 
 ### Still unmeasured, and whose
 
@@ -10040,6 +10204,21 @@ passed `69d2d6e`'s 17 cases and fails `2074f08`'s 20.
   flattening furthest from the curve (−0.1468 % at r = 20 and 30,
   against 2πr); one at r = 20 or 30 would, on these figures, move
   `STROKE_TOLERANCE` below 0.25.
+- **The Windows build's libass fallback face**, and whether its fallback
+  reaches the fontsdir's Noto at all (item 17): the Surface's, the user's;
+  CI's `captions.int` notice says SAME or DIFFER there, not which face.
+- **Electron's own `document.fonts.check`** (item 18): the Browser pane's
+  Chromium 152 is measured, the app's is not; a reading in `npm run dev`'s
+  console on the Mac is the user's.
+- **D10's render check in the development app, on both builds**: a Hindi
+  and a Telugu caption track through the bake (the canvas half of
+  `captions.int`'s Indic check, which needs a DOM), and M0's exit run on
+  its two Indic links (`FORGE_M0_EXIT=1 FORGE_M0_REUSE=1
+  FORGE_M0_LINKS=eK71EN3P78U,lqOH-zxtCDE`; a sandbox attempt met YouTube's
+  403 on every clip download), then once more with `captionRoute`'s script
+  test put back to confirm both links fail: the user's. The harness's
+  Indic frames through a text clip and a caption (`CLIPS.md` §6.11's
+  `indic` option) are lane D's.
 - **M7–M20, by phase**: M8 (above), M13 and M19 in phase 1 (M9 measured,
   item 14); M10 and M14–M18 in
   phase 2; M7 first, then M6 whole, M12, M20 and M13 again in phase 3; M11

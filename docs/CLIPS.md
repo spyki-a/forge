@@ -23,8 +23,14 @@
 > D8 half (`e5c47ac`, §6.20's Built note) and phase 1's lane A: the motion
 > module, the stroke primitive and the style's first half (§6.13's, §6.3's
 > and §6.5's Built notes; pushed in one push ending at `716d6a7`, whose CI
-> run 40643529526 passed on both runners). Not built: phase 1's lanes
-> B–D and §6.20's D10 half, and everything from phase 2 on. §2's total is
+> run 40643529526 passed on both runners); then, 2026-10-29/30, §6.20's
+> D10 half in six commits, `6bc8b07`, `9a0f232`, `8932535`, `00b42b4`,
+> `f77fd29` and `ae3e48f` (§6.20's second Built note: the Noto faces
+> committed, the catalogue's listing, the canvas painter's chain, the
+> caption route §16.66 (a); pushed as `ae3e48f`, whose CI run was not yet
+> read when this was written). Not built: phase 1's lanes B–D (lane B is
+> next: both of §6.20's halves it waits on are in) and everything from
+> phase 2 on. §2's total is
 > now about 100-103.5 days with Step P (100.25-103.75 since §16.66's
 > answer, 2026-10-27).
 >
@@ -10923,7 +10929,8 @@ render check and the census.
   their spelled-out guard pins become membership (§6.4) (done 2026-10-27,
   `a2cad0f` and `60c8b28`; §6.4's Built note).
 - `tests/textAnimation.test.ts`, `tests/textPaint.test.ts` (their D8
-  cases built 2026-10-27, `e5c47ac`; `textPaint`'s D10 cases to come),
+  cases built 2026-10-27, `e5c47ac`; `textPaint`'s D10 cases built
+  2026-10-29, `8932535` and `00b42b4`),
   `tests/tier2.test.ts` (the caption route, the failed or empty bake's
   fallback and its notice, §16.66 (a)), `tests/captionPlacement.test.ts`
   (the route's call sites; its pin of Preview's route line, `:331`,
@@ -10936,7 +10943,13 @@ render check and the census.
   `tests/integration/captions.int.test.ts` (its Windows notice
   with Noto present) and `tests/integration/assetscan.int.test.ts` (the two fonts
   listed on a pack root; its `toHaveLength(3)` for fonts becomes
-  membership; the catalogue's version): §6.20.
+  membership; the catalogue's version): §6.20. (All built 2026-10-29,
+  `6bc8b07` to `ae3e48f`, with four new files the plan did not list:
+  `tests/renderer/libraryPacksOpen.test.tsx`, `tests/appFontFiles.test.ts`,
+  `tests/renderer/indicFontSites.test.ts` and
+  `tests/renderer/captionRouteNote.test.tsx`; and `tests/exportB2.test.ts`'s
+  pin of `onExport`'s dependencies relaxed to membership. §6.20's second
+  Built note.)
 - `tests/eval/director.eval.test.ts`: the `FORGE_EVAL_GRAPHICS` block,
   copied from the look block (`:173-237`) (§6.10).
 - `tests/uiCensus.test.ts` with `tests/fixtures/ui-census.json`: the census
@@ -13463,7 +13476,7 @@ piece table does (§6.3's, §6.16's, §6.17's, §6.18's).
 |---|---|---|---|---|
 | 0 | one | 0.1 M4's case; 0.2 `graphicCheck.ts`'s measuring half with `encodeFrames`; 0.3 the libass reference and M21's case; 0.4 the runs and the record (§6.15) | 2 | — |
 | 1 | head, serial | the §16.8 rename as its own commit (0.25 of §6.1); then all of §6.1's types in one commit (`template.ts`'s types, the `timeline.ts` fields, `GraphicsSettings`, `GraphicProposal`, `MediaAsset.speaker`, `Clip.forGraphic`, the (box) field, and the seam's `GraphicCandidate`, §6.7, and `KeptGraphic`, §6.6, declared in `template.ts`), so `Clip.graphic` exists before anything reads it (the other 0.25 of §6.1); then `SELF_DRAWN_FIELDS`, the five list sites and `graphicGuards`' head half, the behaviour over the constant and the regex, with the membership rewrites of `paper.test` and `moment.test` (0.75 of §6.4) (built 2026-10-27: `1f62fba`; `d10e474` and `6272050`; `a2cad0f` and `60c8b28`) | 0.25 + 0.25 + 0.75 | phase 0's exit |
-| 1 | outside the days, serial | §6.20's two halves, each its own commit: D8's (`shapedScript` and the captions' fix; built 2026-10-27, `e5c47ac`) and D10's (the Noto files, `INDIC_FONTS`, the scan, the renderer's font sites, the CI check, the route, §16.66 (a)), D10's after D8's (if D10's fonts move to phase 0, below, the route becomes a third commit, after D8's) | (§6.20's 1.25) | the head |
+| 1 | outside the days, serial | §6.20's two halves, each its own commit: D8's (`shapedScript` and the captions' fix; built 2026-10-27, `e5c47ac`) and D10's (the Noto files, `INDIC_FONTS`, the scan, the renderer's font sites, the CI check, the route, §16.66 (a)), D10's after D8's (if D10's fonts move to phase 0, below, the route becomes a third commit, after D8's) (D10's built 2026-10-29/30 in six commits, after lane A and before lane B: `6bc8b07`, `9a0f232`, `8932535`, `00b42b4`, `f77fd29`, `ae3e48f`; §6.20's second Built note) | (§6.20's 1.25) | the head |
 | 1 | A | `motion.ts` with `graphicMotion` (§6.13); `stroke.ts` with `graphicStroke` (0.5 of §6.3); `style.ts`'s first half with `graphicStyle` (§6.5) (built 2026-10-27/28: `f38f971`, `862cf1b`, `ae6167c`; `69d2d6e`, `2074f08`; `b965cda`, `0d603a8`) | 1 + 0.5 + 0.5 | the head |
 | 1 | B | `drawList.ts`, `items.ts` (`DrawOut`, `unitFor`, `CLUSTER_SCRIPTS`, the drawer seam), `templates/index.ts` with `graphicDrawList` (1 of §6.3); `paint.ts` with its `PaintOptions` and `graphicPaint` (0.75); `frame.ts` and `targets.ts` with `graphicFrame`'s first half (0.25) | 2 | the head; §6.20's two halves (`unitFor` reads `shapedScript`; shaped text items name `INDIC_FONTS`); M3 for `CLUSTER_SCRIPTS` (in, 2026-10-27); A's `stroke.ts` before `paint.ts` |
 | 1 | C | `graphicCanvas.ts` (preview, bake, frames; the worker back-end only if M2 asks, which it did on 2026-10-27) (0.75 of §6.3); the export branch with its own catch line, `Bakers.graphic` and every literal of §6.11, `exportBakers.ts`, the store's `addGraphicClip`, `setGraphic`, `rebakeGraphic`, the trim and split rules, Preview's branch and sweep, (box) `identityPlaced`, with `graphicStore` (0.5); the three store arms (`rebakeGenerated`, `placeCopies`, `rebakeFollowed`) and `graphicGuards`' wiring half (0.25 of §6.4) | 1.5 | B's draw list and painter; M1 and M2 (in, 2026-10-27) |
@@ -13507,7 +13520,9 @@ counter) and M7 (phase 3's glow) still gate.
   reads `shapedScript`. In phase 0 instead if M22 finds a font cause
   (§6.15): the fonts then land there, and the route lands as a commit of
   its own after D8's half. M22 found no font cause (2026-10-27), so the
-  fonts land here, in phase 1.
+  fonts land here, in phase 1. (Built 2026-10-29/30, after lane A and
+  before lane B, as six commits rather than one, each read by critics
+  before the next; §6.20's second Built note.)
 
 **The days.** Step 3 is 30.5: phase 0's 2, phase 1's 7.5, phase 2's 14.5,
 the spike's 1.5, phase 3's 5; that is §6's 14.5, 2 moved from step 6, and 14
@@ -13668,10 +13683,25 @@ link and their tests, against the tags' one block and one test.
   licence file beside every family"). The copies Tor Browser bundles, read on this
   Mac 2026-10-21, are 244,284 B and 235,176 B; the build fetches the files
   from the Noto project's own release and records their sizes and sha256 in
-  EFFECTS §61. Committing them is what lets CI's libass and the harness see
+  EFFECTS §61. (Fetched 2026-10-29 from the Noto project's own releases,
+  `6bc8b07`: the Telugu file is byte for byte that reference; the
+  Devanagari reference was v2.006, and v2.007's hinted Regular, the one
+  committed, is 243,520 B. EFFECTS §61, "The Noto fonts".) Committing them is what lets CI's libass and the harness see
   the same faces as a user's machine: `/assets` is gitignored
   (`.gitignore:28`), so CI has drawn every Indic caption in a system
-  fallback, and the Windows runner has never said which. They must sit in
+  fallback, and the Windows runner has never said which. **Measured
+  2026-10-29 (`ae3e48f`), and not as this reads for libass:** the bundled
+  ffmpeg at `-loglevel debug` loads both `.ttf` files from the fontsdir,
+  then "Using font provider coretext", and maps a letter Anton lacks to
+  `/System/Library/Fonts/Kohinoor.ttc` (KohinoorDevanagari-Regular) and
+  `KohinoorTelugu.ttc`; 0 of 54 Devanagari and 0 of 54 Telugu frames of
+  `captions.int`'s Indic case change with the two files moved out. The
+  fontsdir works for a face a style names (a probe frame styled "Noto Sans
+  Devanagari" differs from the no-fontsdir frame by 4,721 px), not as the
+  fallback; which face the Windows build falls back to is unmeasured (the
+  Surface's). So the same letters on both machines come from the canvas
+  bake (the route below), and the harness, not from libass; the Built note
+  below. They must sit in
   `assets/fonts/` itself, because libass takes one `fontsdir`
   (`plan.ts:1930`, from `fontsDir()`, `src/main/captions.ts:28-35`, which is
   the app's own `assets/fonts` in development and in a packaged app, even
@@ -13699,7 +13729,8 @@ link and their tests, against the tags' one block and one test.
   `userData` once a pack is installed (`src/main/assets/scan.ts:163-169`,
   `packs.ts:39-41`), not the app's own folder. So main's scan also lists the
   two font files from `fontsDir()`'s folder when that folder is not the
-  scanned root's `fonts/`, as absolute paths, which `assets:fontData`
+  scanned root's `fonts/`, as absolute paths (built 2026-10-29 skipping by
+  entry id, not by folder, `6bc8b07`; the Built note below), which `assets:fontData`
   (`src/main/ipc.ts:675-682`) already reads: its `resolveAssetFile` takes an
   absolute path as it is (`scan.ts:406-414`). Without it, every machine with
   a pack installed, the beta's case, would draw Hindi and Telugu graphics,
@@ -13714,7 +13745,7 @@ link and their tests, against the tags' one block and one test.
     `getAppPath`), so the test sets `FORGE_FONTS_DIR`, as
     `m0Exit.int.test.ts:872` does.
   - **The catalogue's version is bumped** (`CATALOG_VERSION`,
-    `assets/catalog.ts:158`, 2 to 3) in the same commit: the scan reuses a
+    `assets/catalog.ts:158`, 2 to 3; `:163` at `ae3e48f`) in the same commit: the scan reuses a
     cached catalogue while the version and the root are unchanged
     (`scan.ts:386`), so a machine scanned before this change would keep a
     catalogue without the Noto entries and record "not in the catalog".
@@ -13725,6 +13756,10 @@ link and their tests, against the tags' one block and one test.
     lists them. The existing case's `entriesOfKind(catalog,
     'font')).toHaveLength(3)` (`:39`) becomes membership (the three fonts
     in, `notafont.txt` out), since the extra listing makes the count 5.
+    (Built otherwise, `6bc8b07`: the file points `FORGE_FONTS_DIR` at an
+    empty folder in its top `beforeAll`, `:15-19`, so every existing case
+    reads the scanned root alone and the count stays 3, the summary case
+    keeping `font: 3`; the membership rewrite was made all the same.)
     Mutations: the extra listing removed; the version bump reverted (the
     cached case fails).
 - **Regular only.** The font loader registers one `FontFace` per family,
@@ -13746,12 +13781,18 @@ link and their tests, against the tags' one block and one test.
   it returns is ensured and counted in the readiness check, at every site
   that ensures a text face today:
   - `textCanvas.ts`: the bake's `ensureFont(spec.font)` (`:39`, `:174`),
-    and the preview's readiness check and its warm-up (`:113-116`);
+    and the preview's readiness check and its warm-up (`:113-116`)
+    (measured 2026-10-29, `00b42b4`: `document.fonts.check` answers true
+    for any family no `FontFace` names, so the readiness is the
+    catalogue's `faceSettled`, `renderer/src/catalog.ts:72`, not `check`;
+    the Built note below);
   - `captionBake.ts:111`, beside the caption families;
   - `Preview.tsx`: the caption font effect (`:446-449`), over the caption
     track's words, and the text-clip font effect (`:471-485`), over each
     text clip's content;
-  - graphics: `bakeGraphicSequence` and `graphicPreviewCanvas` (§6.3).
+  - graphics: `bakeGraphicSequence` and `graphicPreviewCanvas` (§6.3)
+    (not yet written, 2026-10-29: lanes B's and C's; lane B's shaped text
+    items name `INDIC_FONTS` from `textPaint.ts:297`).
 
   `tests/textPaint.test.ts` holds `indicFontsFor`'s membership (Hindi
   gives Devanagari's face, Telugu Telugu's, Latin none); mutation: a site
@@ -13859,7 +13900,10 @@ link and their tests, against the tags' one block and one test.
   - **The failed or empty bake's notice.** The fallback stays (a failed
     export is worse); its words change, and it now covers the empty bake.
     The bake and its fallback move out of ExportStrip (`:205-219`) into
-    `captionBakeOrFallback(route, platform, bake, notify)`, beside
+    `captionBakeOrFallback(route, platform, bake, notify)` (built taking
+    the whole `CaptionRouting` object, not the bare route, since the
+    notice reads `indic` and the fallback `shaped`; `f77fd29`,
+    `ae3e48f`), beside
     `captionRoute` in `fromTimeline.ts`, pure but for the two functions it
     is handed (`bakeCaptions` and ExportStrip's `notify` in the app, stubs
     in the test): a bake that throws, or one that resolves null on a
@@ -13872,7 +13916,9 @@ link and their tests, against the tags' one block and one test.
     and unshaped, their letters not joined: …" (proposal); otherwise
     today's words exactly (`:212-214`), a shaped script not measured on
     Windows included (Arabic, above). The Mac's libass shapes Devanagari
-    and Telugu (`EFFECTS.md` §51), so its fallback is plain only.
+    and Telugu (`EFFECTS.md` §51), so its fallback is plain only (in
+    Kohinoor, the CoreText fallback, not the fontsdir's Noto: measured
+    2026-10-29, `ae3e48f`).
   - **The OUTPUT strip's note** (`OutputStrip.tsx:462-478`) reads today,
     for a style that needs a canvas: "These captions are drawn rather than
     burned in. They are painted once before the export and composited in
@@ -13949,7 +13995,13 @@ link and their tests, against the tags' one block and one test.
     whose readings (the `.ass` against the run, the onsets) still hold for
     it. Opt-in and never on CI (`:160-161`), so it is run once on the Mac
     with `FORGE_M0_EXIT=1 FORGE_M0_REUSE=1
-    FORGE_M0_LINKS=eK71EN3P78U,lqOH-zxtCDE` before the commit.
+    FORGE_M0_LINKS=eK71EN3P78U,lqOH-zxtCDE` before the commit. (Not run
+    before the commit: tried from the sandbox for `ae3e48f`, YouTube
+    answered 403 to every clip download after the metadata and caption
+    steps passed, and that partial run reset
+    `tests/output/m0-exit/2-eK71EN3P78U` and `3-lqOH-zxtCDE`, gitignored,
+    to their `README.txt`; the run, and M1 against it, are yours. The
+    Built note below.)
     Mutations, each with its failure: the script test dropped from
     `captionRoute` (`pop` with Hindi words gives `'libass'` where
     `'canvas'` is expected; in that m0Exit run, the two links' route);
@@ -13986,7 +14038,11 @@ link and their tests, against the tags' one block and one test.
   `INDIC_FONTS` (the font-chain case fails, and the harness's Indic frames
   fall back to the system face and differ from the named ones); the
   files removed from the folder (the Windows notice and the Mac frames
-  change). The Windows notice's question was answered first elsewhere,
+  change). (Measured 2026-10-29, `f77fd29` and `ae3e48f`: the notice's
+  fontsdir clause changes to "no Noto face", and NO Mac frame changes, 0
+  of 54 in each script, complex, simple and the app's alike: the Mac's
+  libass draws Kohinoor through CoreText whether or not the Noto files
+  are there. The Windows notice is CI's to read.) The Windows notice's question was answered first elsewhere,
   on 2026-10-27, by `graphic.int` on the Surface (§6.15): the 2018 build's
   libass does not shape. The notice is still worth building, as a
   tripwire: it is expected to read the same on that build (reading 1;
@@ -14013,7 +14069,329 @@ link and their tests, against the tags' one block and one test.
 - **A gap found, outside this step.** libass's `fontsDir()` names the app's
   own `assets/fonts` whether or not a pack is installed, so on a
   pack-installed machine libass never sees the pack's faces; a `BETA.md`
-  row for it is proposed, not written by this revision.
+  row for it is proposed, not written by this revision. (Written
+  2026-10-30 in `BETA.md` R14, with this record.)
+
+> **Built 2026-10-29/30 (D10's half).** Six commits on main, each its own
+> piece and each green before the next (typecheck 0, the full suite written
+> to a file and its exit read): `6bc8b07` (the four files, `fontsDir()`
+> moved, the catalogue's listing and version, CI's check), `9a0f232` (the
+> Library's "empty", after a critic of `6bc8b07`), `8932535` (the canvas
+> route: `INDIC_FONTS`, `indicFontsFor`, `facesFor` and the renderer's
+> font sites), `00b42b4` (the preview's readiness, after two critics of
+> `8932535`), `f77fd29` (the route, §16.66 (a), main's guard, the
+> fallback, the notices, the render check's notice) and `ae3e48f` (after
+> two critics of `f77fd29`, with the Mac's libass measured). After D8's
+> half and lane A, before lane B, as §6.19 places it; pushed 2026-10-30
+> as `ae3e48f`. At `ae3e48f` the suite is 317 files passed and 5 skipped
+> (322), 4,376 tests passed and 63 skipped (4,439), 67 tests more than
+> the suite held before `6bc8b07` (4,372, by its message's figures: 4,375
+> with its three new cases). Every figure below is from the six messages or the builders'
+> and critics' reports, and every line number was read at `ae3e48f` (the
+> plan's above were an older sha's).
+> CI: CI-LINE-PENDING
+> - **The files** (`6bc8b07`). `assets/fonts/NotoSansDevanagari-Regular.ttf`
+>   (243,520 B) and `NotoSansTelugu-Regular.ttf` (235,176 B), with
+>   `OFL-NotoSansDevanagari.txt` and `OFL-NotoSansTelugu.txt` beside them:
+>   the hinted Regular from the Noto project's own releases,
+>   `NotoSansDevanagari-v2.007` and `NotoSansTelugu-v2.005`, fetched
+>   2026-10-29 by the orchestrator (the release tags, the zips' and the
+>   files' sizes and sha256, EFFECTS §61 "The Noto fonts"). The Telugu
+>   file is byte for byte the Tor reference above; the Devanagari
+>   reference, 244,284 B, was v2.006. `git ls-files assets` lists exactly
+>   the four, mode 100644, and `git check-ignore -v
+>   assets/fonts/Anton-Regular.ttf` still answers `.gitignore:43` (the
+>   rules are `:41-47`): the library's 88 fonts stay untracked. **The
+>   symlink, checked first**: on the Surface (you, 2026-10-29) the repo
+>   root had no `assets` entry at all, `core.symlinks` false, its catalogue
+>   scanning the packs under `userData`; on this Mac `assets` is a real
+>   directory (82M by `du -sh`). Neither had a link; the `.gitignore`
+>   comment's "currently a symlink" was stale and now says what is true.
+>   Regular only, as planned: nothing registers weights.
+> - **Found whichever folder the catalogue scans** (`6bc8b07`).
+>   `fontsDir()` is `src/main/fontsDir.ts:17`, its body unchanged
+>   (`FORGE_FONTS_DIR`, then the packaged or the development
+>   `assets/fonts`), Electron's `app` read only inside the call;
+>   `captions.ts:9` imports it and hands it to libass at `:103`.
+>   `scan.ts:174`'s `scanAssets` then lists each of `APP_FONT_FILES` from
+>   `fontsDir()`'s folder (`:218`) as an absolute path when the file is
+>   there and no entry with its id is listed yet (`:224-227`);
+>   `resolveAssetFile` keeps an absolute path as it is (`:462`), which
+>   `assets:fontData` and `tier2.ts`'s `fontsFor` read.
+>   `CATALOG_VERSION` is 3 (`src/shared/assets/catalog.ts:163`), so a
+>   machine with a version-2 cache of the same root scans once more
+>   (`loadCatalog`, `scan.ts:425`, the check at `:432`). So a machine with
+>   a pack installed, the beta's case and the Surface's, lists both faces
+>   from `<resources>/assets/fonts`, the font picker shows them on every
+>   machine, and a CI-built installer, which shipped no `assets` folder at
+>   all, carries `assets/fonts` with the four files. Three differences
+>   from the plan's words, each for a reason: the faces are skipped **by
+>   entry id**, not when the folder "is not the scanned root's `fonts/`",
+>   the same test for a checkout and a pack-free app and one that also
+>   covers a pack holding a file of the same name; a throwing `fontsDir()`
+>   lists nothing rather than failing the scan (`:216-220`: the tests'
+>   electron stand-in has no `getAppPath`, and `assetPackInstall.int` and
+>   `tests/eval/local.ts` scan with no `FORGE_FONTS_DIR`); and
+>   `assetscan.int` points `FORGE_FONTS_DIR` at an empty folder for its
+>   existing cases (`:15-19`), so the count the plan expected to become 5
+>   stays 3 (above). The new describe (`:465`, three cases: both families
+>   listed as absolute paths from a pack root holding neither, `:517`;
+>   each once and relative when the scanned root is the folder itself,
+>   `:536`; a version-2 cache of the same root scanned again) brought the
+>   file from 28 cases to 31.
+> - **The Library's "empty"** (`9a0f232`), a defect `6bc8b07` made and a
+>   critic found: with every catalogue listing the two faces, `(catalog?.
+>   entries.length ?? 0) === 0` was never true, so a CI-built beta, which
+>   ships `assets/fonts` and no packs, would land on two Noto tiles or
+>   "Nothing here" with the packs behind the icon toggle. `APP_FONT_FILES`
+>   moved to `src/shared/assets/catalog.ts:289` (`fontsDir.ts` imports
+>   electron and cannot reach the renderer), `isAppFont` (`:298`, a `font`
+>   entry whose basename, split on both `/` and `\`, is one of the two)
+>   and `libraryIsEmpty` (`:312`, no entry that is not an app font) sit
+>   beside it, and `Library.tsx:70` reads `libraryIsEmpty(catalog)`. The
+>   once-only latch is set during render (`:52`, `:93`), not in an effect,
+>   because the suite has no DOM and effects do not run under
+>   `renderToStaticMarkup`, so an effect-driven open could be rendered by
+>   no test. **The plan did not foresee this**: it is what "empty" has to
+>   mean once the app's own faces are in every catalogue.
+> - **The canvas route** (`8932535`, `00b42b4`). `src/shared/render/
+>   textPaint.ts:297` exports `INDIC_FONTS`, `:301-302` keys each to its
+>   script (`\p{Script=Devanagari}`, `\p{Script=Telugu}`, `u`), `:310`
+>   `indicFontsFor(text)`, `:320` `facesFor(font, text)` (the clip's face
+>   first, then the script's, deduplicated; added so six sites do not each
+>   spell `[font, ...indicFontsFor(text)]`), `:330` `textClipFaceKey(clips)`
+>   (every text clip's faces, sorted and joined, so the Preview's key moves
+>   only when a script comes or goes), and `fontString` (`:341`) ends
+>   `"<paint face>", "<clip face>", "Noto Sans Devanagari", "Noto Sans
+>   Telugu", sans-serif`, both Noto faces whatever the text, since an
+>   unregistered family in a chain is skipped. The sites: `textCanvas.ts`,
+>   both bakes through `ensureFaces` (`:40`, `:151`; `Promise.all` over
+>   `facesFor`) and the preview's `waiting` (`:124-128`, below);
+>   `captionBake.ts:112`, each layer's `facesFor(l.spec.font,
+>   l.spec.content)`; `captionPreview.ts:44`'s `captionFaces(project)`
+>   (the caption face with `captionWords(project)`'s faces, `[]` with
+>   captions off), which `Preview.tsx:458` ensures; and `:492`'s
+>   `textFonts = textClipFaceKey(project.clips)`. Both effects also depend
+>   on `catalogReady` (`:448`, `:459`, `:502`): an `ensureFont` before the
+>   catalogue lands is answered false and not recorded, so without it a
+>   Hindi track opened at launch would get its Noto face only after the
+>   next edit. `captionWords(project)` (`src/shared/graphics/
+>   fromTimeline.ts:262`) gathers the words as `buildCaptionLayers` reads
+>   them, each clip on the caption track, its transcript's words through
+>   `groupWords`, only those inside the clip's window, so a word outside
+>   every segment, which no line shows, is not in it. Not changed:
+>   `TextStylePicker.tsx` and `FontPicker.tsx`, whose sample words are not
+>   the clip's; `App.tsx`'s caption-face ask; and **the paper clip**
+>   (`paperCanvas.ts:34-37`'s `ensureFaces` over its own `FACES`,
+>   `paperPaint.ts:79`'s chain `"<family>", Georgia, serif`), which the
+>   plan's list of sites does not name, so a Hindi keyword or headline on
+>   a paper clip still draws in the system's letters: a follow-up, yours,
+>   outside this half. **`8932535`'s headline, "every site that loads a
+>   text face today", should read "every site the plan lists."**
+> - **The preview's readiness is the catalogue's** (`00b42b4`), not
+>   `document.fonts.check`'s. **Measured 2026-10-29** in the Browser pane's
+>   Chromium 152 (UA Chrome/152.0.7977.167) on https://example.com:
+>   `document.fonts.check('16px "Noto Sans Devanagari"')` is true with
+>   nothing registered, `check('16px "Zzq Not A Font 123"')` is true, and
+>   a `FontFace` added to `document.fonts` and not loaded is false.
+>   `ensureFont` registers a face only after `face.load()` resolves
+>   (`renderer/src/catalog.ts:192-195`), so before then nothing names Noto,
+>   `check` answered true, `8932535`'s `waiting` was empty and the canvas
+>   was cached with the system's letters, which the text-clip effect's
+>   later repaint, meeting the same signature, got back. So `8932535`'s
+>   claim that the check counted the Noto faces "exactly as it already
+>   counted the clip's face" was wrong: it counted neither, Anton
+>   included, before `8932535` too. Now `faceSettled(family)`
+>   (`renderer/src/catalog.ts:72-76`: `SYSTEM_FONT_FAMILIES` has it,
+>   `loadedFonts` has it, or `failedFonts` has it, its fallback then drawn
+>   for good) decides, and `textCanvas.ts:125`'s `waiting` is `facesFor`'s
+>   faces not settled, each warmed and the canvas left uncached. Electron's
+>   own Chromium is unmeasured (it cannot start in the sandbox): a reading
+>   on the Mac outside it is yours. EFFECTS §61, "`document.fonts.check`".
+> - **The route (§16.66 (a))** (`f77fd29`, `ae3e48f`). `fromTimeline.ts:56`
+>   exports `CaptionRouting` (`route`, the `CaptionRoute` of
+>   `captions/placement.ts:120`; `shaped`; `indic`) and `:79`
+>   `captionRoute(project)`: `shaped` is D8's `shapedScript` over
+>   `captionWords(project)`, `indic` is `indicFontsFor` over the same text
+>   not empty, `route` is `'canvas'` when `captionNeedsCanvas(style)` or
+>   `shaped`, else `'libass'`; `captionsNeedBaking` (`:49`) keeps its two
+>   guards and asks it, `captionNeedsCanvas` (`:145`) stays the style's
+>   half. `:99` `captionBakeFailedNotice(routing, platform, reason)`: on a
+>   platform matching `/^win/i` (as `packFactsFor` reads
+>   `navigator.platform`; the plan named only `'Win32'`) for an `indic`
+>   track, "Captions could not be drawn, so they will be burned in plain
+>   and unshaped, their letters not joined: <reason>", otherwise today's
+>   words exactly. `:118` `captionBakeOrFallback(routing, platform, bake,
+>   notify)`: a bake that throws is notified and gives `undefined`; one
+>   resolving null on a `shaped` route is notified with "nothing was drawn"
+>   (`:132`) and gives `undefined`; null on an unshaped route gives
+>   `undefined` silently; anything else is returned. `src/main/
+>   captions.ts:74` exports `captionsForExport(project, canvas, overlay)`,
+>   main's guard moved unchanged, which `ipc.ts:1129` calls. The callers:
+>   `ExportStrip.tsx:203` asks `captionRoute(exported)` and `:206-209`
+>   hands it to the fallback with the guarded `navigator.platform`,
+>   `bakeCaptions` and `notify`, so the strip holds neither the notice's
+>   words nor its own `.catch`, and `style` left `onExport`'s dependencies
+>   with the comment at `:77-81` (the route is read from the exported copy
+>   inside the callback); `OutputStrip.tsx:121` and `Preview.tsx:479`
+>   memoise `captionRouting` per edit, `Preview.tsx:1870` asks the third by
+>   `captionRouting.route` and `:1919` has it in draw's dependencies;
+>   `OutputStrip.tsx:468` shows the note when the route is `'canvas'` and
+>   the captions are on, the cost sentence ending "so it costs a little
+>   more than burning them in — not a second render." on every track
+>   (`:484`), and `:487-488` adds the join sentence when `indic`. The first
+>   sentence stays whole, so the census row (`ui-census.json:3460`) holds.
+>   `plan.ts:97`'s `captionOverlay` comment names the shaped-script track
+>   beside the looks libass cannot draw. **The `\fn` tags were never
+>   built**, as the sub-bullet says. **Tamil held the two flags apart**
+>   (`ae3e48f`): இது புத்தகம் under `pop` is `'canvas'`, `shaped` and not
+>   `indic` (`tests/tier2.test.ts:213-214`), its note shows the first
+>   sentence and not the join sentence (`captionRouteNote.test.tsx:99`), a
+>   case meant to change if Tamil is measured on Windows and joins
+>   `indicFontsFor`. The `indic` flag against the last m0-exit run's `.ass`
+>   files (each Dialogue through `shapedScript` and `indicFontsFor`):
+>   `2-eK71EN3P78U`'s 20 and 40 Dialogues shaped, Noto Sans Telugu;
+>   `3-lqOH-zxtCDE`'s 9 shaped, Noto Sans Devanagari; the other seven
+>   files neither. `npm run build` exits 0 and `out/main/index.js` holds no
+>   "Noto Sans Devanagari": main does not pull `textPaint` in.
+> - **The render check, and what it measured.**
+>   `tests/integration/captions.int.test.ts`'s Indic case keeps its bar and
+>   publishes its reading through `ciNotice` (`:274-275`, "captions.int:
+>   Hindi and Telugu on libass": the platform, SAME or DIFFER with the frame
+>   counts, and which Noto faces the fontsdir holds); on this Mac with
+>   `GITHUB_ACTIONS=1`: "darwin: complex and simple DIFFER (on 54
+>   Devanagari and 54 Telugu frames of 54 each); in the fontsdir:
+>   NotoSansDevanagari-Regular.ttf, NotoSansTelugu-Regular.ttf", and with
+>   the two `.ttf` files moved out "in the fontsdir: no Noto face". **The
+>   Mac's libass does not draw the Noto faces** (`ae3e48f`, after a critic
+>   asked for the frames, not the clause): the case run twice, as
+>   committed and with the two files moved out (md5 checked before and
+>   after the move back, `git status` clean under `assets`), 0 of 54
+>   Devanagari and 0 of 54 Telugu frames change in the complex, the simple
+>   and the app's renders alike, and none of the other twelve. Why: the
+>   bundled ffmpeg at `-loglevel debug` logs "Loading font file
+>   'assets/fonts/NotoSansDevanagari-Regular.ttf'" and the Telugu one,
+>   "Using font provider coretext", then "fontselect: (Anton, 400, 0) ->
+>   /System/Library/Fonts/Kohinoor.ttc, -1, KohinoorDevanagari-Regular"
+>   and "-> KohinoorTelugu.ttc, -1, KohinoorTelugu-Regular": the fallback
+>   for a letter Anton lacks is the CoreText provider's, which never offers
+>   the fontsdir's memory fonts. It also logs "Error opening memory font
+>   'OFL-NotoSansTelugu.txt'" and the Devanagari one, harmless: libass
+>   tries every file in the folder. `6bc8b07`'s direct probe showed the
+>   other half: a Dialogue "क्ष కి" at 149 on 1080×360 styled "Noto Sans
+>   Devanagari" with the fontsdir differs from the same without it by
+>   4,721 px and from the Telugu-named frame by 4,743 (ink above 128:
+>   2,832 px against 3,586 for the system fallback), while without the
+>   fontsdir the Noto-named frame equals the Anton-named one (neither face
+>   is installed on this Mac). So the fontsdir serves a face a style
+>   names, not the fallback, and `graphic.int`'s sheets (`complex.png`,
+>   `simple.png`, README) are byte-identical to the 2026-10-28 run's from
+>   before the files were there. **Which face the Windows build falls back
+>   to is unmeasured** (the Surface's; `captions.int`'s notice says SAME or
+>   DIFFER, not which face). `captions.int:212` and `:280` and
+>   `graphic.int`'s and `clipIt.int`'s CI notices now say whether the named
+>   face (Anton) is in the folder, not only whether the folder exists
+>   (`9a0f232`): `graphic.int`'s should read "fonts dir present,
+>   Anton-Regular.ttf NOT in it" on both runners. EFFECTS §61, "libass and
+>   the fontsdir on the Mac".
+> - **CI's check** (`6bc8b07`). `.github/workflows/ci.yml:386-393` tests
+>   `assets/sfxx`, where the Director's sounds live, and its `::warning::`
+>   says the installer will carry only the two Noto faces in `assets/fonts`
+>   and no other fonts, SFX, transitions, titles or props (the comment at
+>   `:374-385` says why); probed in bash, a folder holding only
+>   `assets/fonts/a.ttf` warns under the new test and read "present" under
+>   the old. "Report what the package contains" prints "present: assets"
+>   on CI where it printed MISSING.
+> - **The tests**, by file. `tests/integration/assetscan.int.test.ts`
+>   (above). `tests/renderer/libraryPacksOpen.test.tsx` (new, `:94`): the
+>   Library on Fonts to static markup, the marker PackList's own heading
+>   `>Asset packs</span>` (the bare words also sit in the toggle's title,
+>   which a first draft matched and so passed wrong); five cases. `tests/
+>   appFontFiles.test.ts` (new, `:23`): each of `APP_FONT_FILES` is in
+>   `assets/fonts` with `OFL-<stem>.txt` beside it (R6), membership, not a
+>   snapshot of a folder that on the Mac holds 88 more. `tests/
+>   textPaint.test.ts`'s "the Indic faces" (`:188`): the two faces each
+>   the catalogue's family for one of `APP_FONT_FILES`; `indicFontsFor`'s
+>   membership (a lone U+093F and a Telugu digit enough; a mixed line);
+>   `facesFor`; and the chain on every `fillText` for a plain, a hero, a
+>   bounce mid-flight and a two-line Hindi clip under a lent paint face
+>   (`Bebas Neue`, pushed to `TEXT_STYLES` and spliced out in a `finally`).
+>   `tests/renderer/indicFontSites.test.ts` (new; `:78`, `:151`, `:253`,
+>   `:279`, `:334`): behavioural, `ensureFont` replaced with a recorder
+>   through `useCatalog.setState`, the document stood in for with
+>   `vi.stubGlobal` and its `fonts.check` true for every family as Chromium
+>   answers, readiness set through `loadedFonts` and `failedFonts`; the
+>   bakes' faces, the bakes waiting on a held Devanagari answer (no canvas
+>   made until it resolves), the preview's three readiness cases, the
+>   caption bake with Hindi only in its second line, `captionWords`' window
+>   from the in-point, every clip on the track and a word no segment holds,
+>   `captionFaces` and `textClipFaceKey`, and one read of `Preview.tsx`'s
+>   source for the two effect lines. `tests/tier2.test.ts` "the caption
+>   route" (`:121`) and the failed or empty bake, with Tamil (`:213`).
+>   `tests/captionPlacement.test.ts`: the `captionRoute(` and
+>   `captionNeedsCanvas(` counts per file, and, since the counts could not
+>   see the call sites' arguments, ExportStrip's bake block matched whole
+>   as one ordered shape (`:383`), main's call whole (`:391`) and
+>   OutputStrip's memo line and the note's condition (`:397`), the last two
+>   soft. `tests/exportB2.test.ts`'s pin no longer freezes `onExport`'s
+>   dependency list: membership of `useRange`, `aspect` and `notify`.
+>   `tests/integration/captionOverlay.int.test.ts` (`:246`): main's guard,
+>   with an overlay null, without one an `.ass` holding किताब, and the plan
+>   with the concat list and no `ass=`. `tests/integration/m0Exit.int.
+>   test.ts`: `indic: true` on `eK71EN3P78U` and `lqOH-zxtCDE` (`:154`,
+>   `:156`), `captionRoute(project).route` per link (`:791`), its
+>   `appExport` on `captionsForExport(p, canvas, undefined)`. `tests/
+>   integration/captionsFree.int.test.ts:541` asserts the route beside
+>   `captionNeedsCanvas`. `tests/renderer/captionRouteNote.test.tsx` (new,
+>   `:78`): OUTPUT rendered open, Hindi and Telugu show three sentences,
+>   kinetic Latin two, pop Latin none, Tamil the first and not the third.
+>   `Preview.tsx`'s two effects and its `catalogReady` dependencies are the
+>   sites no node test reaches; the harness's Indic frames through a text
+>   clip and a caption (§6.11's `indic` option, lane D) are their check.
+> - **Mutations**: sixty-two across the six commits, each at an anchor
+>   counted at exactly one match, the test run to a file with its exit
+>   read, the source restored from a copy and compared equal, md5 the same
+>   before and after; every one failed its case with the message in the
+>   commit's table (`6bc8b07` six, the relaxed membership's two original
+>   bugs among them; `9a0f232` six; `8932535` M1–M9; `00b42b4` N1–N10,
+>   fourteen with their letters; `f77fd29` M1–M17; `ae3e48f` A–G, ten).
+>   Of the plan's: the chain without `INDIC_FONTS` fails the three chain
+>   cases; the script test dropped from `captionRoute` fails eight (twelve
+>   with the style's half dropped instead, `captionRouteNote`'s kinetic
+>   case among them, `f77fd29` said eleven); the guard, the notice, the
+>   empty bake's branch, the strip's own `.catch`, Preview's old line and
+>   `captionRouting` dropped from draw each fail as written. Two caught a
+>   draft: `6bc8b07`'s version-revert mutation passed until the test's
+>   cache file moved to where the stub's `getPath('userData')` puts it, and
+>   `libraryPacksOpen`'s first marker matched the toggle's title. Not
+>   mutation-checked: `m0Exit`'s route assertion (gated, needs YouTube);
+>   the notice keyed on `shaped` rather than `indic` is caught by no case
+>   by design, Tamil's words not being pinned.
+> - **Differs from the plan**, besides the three in the scan and the
+>   readiness above: the Library's "empty" (`9a0f232`), which the plan does
+>   not have; `captionBakeOrFallback` and `captionBakeFailedNotice` take
+>   the whole `CaptionRouting`; the notice's test is `/^win/i`; m0Exit's
+>   `appExport` calls `captionsForExport` as the app does; `captionsFree.
+>   int`'s route assertion and `captionRouteNote.test.tsx` are extra;
+>   `ExportStrip.tsx:77-81`'s comment is removed, not rewritten; the
+>   `captionPlacement` counts for ExportStrip and ipc are soft; and the
+>   plan's reading of libass, that committing the faces makes CI's libass
+>   draw them, holds only for a style that names them (above).
+> - **Open, and whose.** Yours: the m0Exit run on the two links and M1
+>   against it (above); the render check in the development app on both
+>   builds (a Hindi and a Telugu track's captions through the bake, and
+>   the Surface's reading of the Windows notice's SAME); Electron's own
+>   `document.fonts.check`; the paper clip's chain; the seven scripts
+>   beyond D8's ten stay a proposal, and the route's script test with them.
+>   Lane D's: the harness's Indic frames through a text clip and a caption.
+>   CI's: the first run's `captions.int`, `captionsFree.int`, `graphic.int`
+>   and `clipIt.int` notices (the Windows fallback face, and whether Noto
+>   is picked for Latin captions by coverage, "A risk to read on the first
+>   push"); whether `captions.int`'s notice fits GitHub's ten a step. The
+>   libass gap (a pack's faces never reach libass) is `BETA.md` R14's row
+>   now, written with this record. Docs that said a CI installer ships no
+>   assets (`PACKAGING.md`, `ASSETS.md`, `WHERE-THINGS-ARE.md`) were
+>   corrected with this record.
 
 ### 6.21 What this revision edits elsewhere
 
@@ -15616,7 +15994,10 @@ H11, and H12 again, in phase 4.
   Surface's `graphic.int`, 2026-10-27: letters, the same at both levels and
   visibly unshaped at `shaping=complex`, and the Telugu row was drawn by a
   face installed on Windows, all but certainly one with Indic layout
-  tables (no file in `assets/fonts` carries Telugu; §6.15), so the 2018
+  tables (no file in `assets/fonts` carried Telugu then; since `6bc8b07`,
+  2026-10-29, Noto Sans Telugu does, and reaches CI's libass as its
+  fontsdir, but which face the Windows build falls back to is still
+  unmeasured, §6.20's second Built note; §6.15), so the 2018
   build's libass does not shape Hindi or Telugu (the first reading; the
   route for those captions is §16.66, answered (a) on 2026-10-27). Your
   eye on the app's sheet passed on the Mac on 2026-10-22 (§6.15). The
@@ -16543,7 +16924,8 @@ what is needed, where the answer waits on something not yet in hand.
 
     **Answer (2026-10-21):** as recommended ("ive read you 12 recomondations
     as well wil go with it"). Built in §6.20 (the two files committed under
-    `assets/fonts/`), its half day counted there once; `BETA.md` R14 says
+    `assets/fonts/`, 2026-10-29, `6bc8b07`; the whole half 2026-10-29/30,
+    its second Built note), its half day counted there once; `BETA.md` R14 says
     so.
 64. **Emoji or hand stickers, Lottie accents** (D11)?
 
@@ -16639,7 +17021,8 @@ what is needed, where the answer waits on something not yet in hand.
     bake on both platforms, the whole track, never per word; libass keeps
     every other track, and a failed or empty bake's fallback to libass
     says, on Windows, that it is unshaped. §6.20 is to build it, in D10's
-    half ("The route (§16.66 (a))"; nothing of it is built yet): one
+    half ("The route (§16.66 (a))"; built 2026-10-29, `f77fd29` and
+    `ae3e48f`, §6.20's second Built note): one
     function that the export, the preview's placement and the OUTPUT strip
     all ask (main still decides by whether an overlay arrived), its script
     test widened by the planner to D8's `shapedScript` ((a) as you

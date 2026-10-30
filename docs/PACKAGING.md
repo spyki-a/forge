@@ -122,20 +122,32 @@ The pack is about 0.7 GB on disk (pack 2: 166 MB to download on the Mac,
 ### The asset library is NOT in a CI-built installer
 
 `assets/` is gitignored — `docs/ASSETS.md` §"Open decision" explains why, and
-the decision is still open. A CI checkout therefore has no asset library, and
-**electron-builder treats a missing `extraResources` source as nothing to copy
-rather than as an error.** The installer builds, installs, starts and works,
-with an empty Library (the Shelf's Library tile) and nothing anywhere saying why.
+the decision is still open — but for four tracked files under `assets/fonts/`
+since 2026-10-29 (`6bc8b07`, `docs/CLIPS.md` §6.20): Noto Sans Devanagari and
+Noto Sans Telugu, Regular, each with its OFL text beside it, the faces the
+canvas painter names for Hindi and Telugu. A CI checkout therefore has no
+asset library, only those four files, and **electron-builder treats a missing
+`extraResources` source as nothing to copy rather than as an error.** The
+installer builds, installs, starts and works, with a Library holding only the
+two Noto faces (the Shelf's Library tile, which opens the pack list by itself
+when nothing but those two is there, `9a0f232`) and nothing anywhere saying
+why.
 
-Verified by unpacking the real artifact: `ffmpeg.exe`, `ffprobe.exe`, sharp's
-native binding, the sidecar and its `requirements*.txt` were all present and
-correct; `resources/assets/` was absent entirely.
+Verified by unpacking the real artifact (before `6bc8b07`): `ffmpeg.exe`,
+`ffprobe.exe`, sharp's native binding, the sidecar and its `requirements*.txt`
+were all present and correct; `resources/assets/` was absent entirely. Since
+`6bc8b07` a CI installer carries `resources/assets/fonts` with the four files,
+so `assetsRoot()` exists on a pack-free install; an installer built since has
+not been unpacked to confirm it.
 
 This is now reported in the packaging job — a warning before the pack, and a
-listing of what landed after it. It does not fail the build, because an
-installer without the asset pack is still worth having: everything except the
-Library works, and `scanAssets` was written to degrade to an empty catalog
-rather than to fail.
+listing of what landed after it. The warning tests the library itself,
+`assets/sfxx`, not a non-empty `assets/`, and says the installer will carry
+only the two Noto faces and no other fonts, SFX, transitions, titles or props
+(`.github/workflows/ci.yml:386-393`, since `6bc8b07`). It does not fail the
+build, because an installer without the asset pack is still worth having:
+everything except the Library works, and `scanAssets` was written to degrade
+to an empty catalog rather than to fail.
 
 **The three options are in `docs/ASSETS.md`, which already prefers shipping the
 assets as a separate first-run download** — the same shape as the models and as
@@ -202,10 +214,13 @@ answers:
    unpack, and a wrong-architecture binary.
 2. **No error dialog.** `assertBinaries()` runs at startup; if ffmpeg did not
    make it into the package, this is where it says so.
-3. **The Library tile (on the Shelf) is EMPTY, and that is expected** for a CI-built installer
-   — the asset library is gitignored and not in the package. What this step
-   actually proves is that an empty catalog degrades rather than crashes.
-   A full library needs the first-run asset download, which is unbuilt.
+3. **The Library tile (on the Shelf) holds only the two Noto faces under
+   Fonts and opens the pack list by itself, and that is expected** for a
+   CI-built installer — the asset library is gitignored and not in the
+   package; only `assets/fonts`'s four tracked files are (since `6bc8b07`,
+   2026-10-29). What this step actually proves is that a near-empty catalog
+   degrades rather than crashes. A full library needs the first-run asset
+   download, which is unbuilt.
 4. **Import a photo and export three seconds.** The whole media pipeline, in
    one go.
 5. **Paste a YouTube link.** The first download fetches yt-dlp (~30MB) — this
