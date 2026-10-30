@@ -2,8 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { AlertTriangle, CheckCircle2, Download, FolderOpen, Loader2, X } from 'lucide-react'
 import { projectDuration } from '@shared/timeline'
 import { ASPECTS, useEditor, type AspectKey } from '../store'
-import { resolveStyle, type StyleOverrides } from '@shared/captions/style'
-import { captionNeedsCanvas } from '@shared/graphics/fromTimeline'
+import { captionBakeOrFallback, captionRoute } from '@shared/graphics/fromTimeline'
 import { bakeCaptions } from '../captionBake'
 import {
   encodeSpecOf,
@@ -73,16 +72,6 @@ export function ExportStrip(): ReactNode {
   const notify = useEditor((s) => s.notify)
   const open = useEditor((s) => s.exportOpen)
   const setExportOpen = useEditor((s) => s.setExportOpen)
-
-  /*
-   * The caption style, resolved as the OUTPUT strip resolves it: the export
-   * needs to know whether the captions are a look libass can burn in or one
-   * that has to be drawn first (captionNeedsCanvas, below).
-   */
-  const style = resolveStyle(
-    project.captions.styleId,
-    project.captions.overrides as StyleOverrides | undefined
-  )
 
   const [exporting, setExporting] = useState(false)
   /** Export only between the in and out marks, when there are any. */
@@ -195,27 +184,31 @@ export function ExportStrip(): ReactNode {
         : baked
 
       /*
-       * Styled captions, drawn here rather than by a second render pass.
+       * Captions the canvas draws, here rather than by a second render pass.
        *
-       * Only the looks libass cannot burn in come through here, and only the
+       * The route is the exported copy's (`captionRoute`, of the project, the
+       * one the preview and the OUTPUT strip ask): a look libass cannot burn
+       * in, or a track whose words hold a shaped script, which the Windows
+       * build's libass draws unshaped (docs/CLIPS.md §16.66 (a)). Only the
        * pictures that actually differ get drawn — a still caption is one file
-       * held for as long as it is on screen. Everything else about the export is
-       * unchanged, which is the point: one pass, one encode.
+       * held for as long as it is on screen. Everything else about the export
+       * is unchanged, which is the point: one pass, one encode.
+       *
+       * A bake that fails, or that draws nothing on a shaped track, must not
+       * lose the export: no overlay goes to main, which burns the track in
+       * plain with libass, and the strip says so, unshaped included where it is
+       * (`captionBakeOrFallback`). The platform is read as SettingsPanel reads
+       * it.
        */
+      const routing = captionRoute(exported)
       const captionOverlay =
-        exported.captions.enabled && captionNeedsCanvas(style)
-          ? (await bakeCaptions(exported, canvas).catch((err) => {
-              // A bake that fails must not lose the export. Falling back means
-              // captions come out flat rather than styled, which is visible and
-              // recoverable; a failed export is neither.
-              notify(
-                `Captions could not be drawn, so they will be burned in plain: ${
-                  err instanceof Error ? err.message : String(err)
-                }`,
-                'info'
-              )
-              return null
-            })) ?? undefined
+        exported.captions.enabled && routing.route === 'canvas'
+          ? await captionBakeOrFallback(
+              routing,
+              typeof navigator === 'undefined' ? '' : navigator.platform,
+              () => bakeCaptions(exported, canvas),
+              (message) => notify(message, 'info')
+            )
           : undefined
 
       await window.forge.startRender({
@@ -240,7 +233,7 @@ export function ExportStrip(): ReactNode {
     }
     // `useRange` has to be here: a callback that closes over a stale toggle
     // exports with whatever it was when the edit last changed.
-  }, [aspect, notify, useRange, style])
+  }, [aspect, notify, useRange])
 
   /*
    * The File > Export… menu item, which cannot call this directly.

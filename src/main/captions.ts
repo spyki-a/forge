@@ -61,6 +61,24 @@ export async function clearCaptionFrames(): Promise<void> {
   await rm(bakeDir(), { recursive: true, force: true }).catch(() => undefined)
 }
 
+/**
+ * main's half of the caption route: an overlay means the renderer baked the
+ * track (`captionRoute` sent it to the canvas), so libass burns nothing, or
+ * every caption would be drawn twice, on top of itself; no overlay means
+ * libass. That second half is also the failed or empty bake's fallback: the
+ * export strip sends no overlay then, having said so (`captionBakeOrFallback`,
+ * graphics/fromTimeline.ts), and the track is burned in plain. So this does not
+ * ask the route itself: returning null for a canvas-routed track would turn a
+ * failed bake into an export with no captions (docs/CLIPS.md §6.20).
+ */
+export async function captionsForExport(
+  project: Project,
+  canvas: { width: number; height: number },
+  overlay: { listPath: string; y: number; height: number } | undefined
+): Promise<PreparedCaptions | null> {
+  return overlay ? null : prepareCaptions(project, canvas)
+}
+
 export async function prepareCaptions(
   project: Project,
   canvas: { width: number; height: number }

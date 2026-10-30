@@ -14,7 +14,7 @@ import { startRequest } from '../../src/main/ingest/start'
 import { probeFile, probeMany } from '../../src/main/ffmpeg/probe'
 import { FFMPEG_PATH } from '../../src/main/ffmpeg/paths'
 import { toAsset } from '../../src/main/assets'
-import { prepareCaptions } from '../../src/main/captions'
+import { captionsForExport } from '../../src/main/captions'
 import { startRender } from '../../src/main/render/renderJob'
 import { collectDownload, type IngestEntry } from '@shared/ingest/collect'
 import { buildCaptionArgs, buildYtDlpArgs, captionKeys, outputStem, type IngestRequest, type LinkMeta } from '@shared/ingest/args'
@@ -27,7 +27,8 @@ import { buildRenderPlan } from '@shared/render/plan'
 import { exportCanvas } from '@shared/render/exportShape'
 import { encodeSpecOf, type EncodeChoice } from '@shared/render/presets'
 import type { AspectKey } from '@shared/render/aspect'
-import { captionsNeedBaking } from '@shared/graphics/fromTimeline'
+import { captionNeedsCanvas, captionRoute } from '@shared/graphics/fromTimeline'
+import { resolveStyle, type StyleOverrides } from '@shared/captions/style'
 import { captionTrack } from '@shared/captions/timeline'
 import { clipsOnTrack, type MediaAsset, type Project } from '@shared/timeline'
 import type { Transcript, Word } from '@shared/transcript'
@@ -81,11 +82,17 @@ import { FFMPEG, OUTPUT_ROOT, run, saveFrame, writeNote } from './output'
  *     Clip download (`clipItFromLink`, exact — the app's default), then
  *     `collectIngest`; on two links Add another clip and a second run; on
  *     every link a run with hard edges (below), in a project of its own;
- *   - the export as render:start runs it: main's `prepareCaptions` (libass,
+ *   - the export as render:start runs it with no overlay: main's
+ *     `captionsForExport`, so `prepareCaptions` (libass,
  *     the 'pop' style a new project has) and `startRender`, the executor, at
  *     the export strip's default canvas (16:9 at 1080p, 1920×1080) and
  *     encode (`encodeSpecOf` of the store's export choice). What is not the
- *     app's: the queue and its IPC, and the cards' bake (there are none).
+ *     app's: the queue and its IPC, and the cards' bake (there are none). On
+ *     the two `indic` links (Telugu and Hindi, LINKS) the app's route for the
+ *     captions is the canvas bake (`captionRoute`, docs/CLIPS.md §16.66 (a)),
+ *     which needs a DOM, so there this libass export is what it now is in the
+ *     app, the failed bake's fallback; the readings (the .ass against the run,
+ *     the onsets) hold for it.
  *
  * The runs are not chosen by hand (fixtures/m0Exit.ts):
  *   - `pickRun`: the first row starting at 40 % of the video (2877 s on
@@ -142,9 +149,11 @@ import { FFMPEG, OUTPUT_ROOT, run, saveFrame, writeNote } from './output'
 /** The user's ten links, as given (2026-10-12). Ids only — no title or word of any of them is written here. */
 const LINKS = [
   { n: 1, url: 'https://www.youtube.com/watch?v=O35KGzkS4VA', id: 'O35KGzkS4VA', captions: true, second: true },
-  { n: 2, url: 'https://www.youtube.com/watch?v=eK71EN3P78U', id: 'eK71EN3P78U', captions: true, second: true },
+  // `indic`: the run's words hold Devanagari or Telugu (a script flag, read off the last run's .ass), so the app's route for
+  // its captions is the canvas bake (captionRoute, docs/CLIPS.md §16.66 (a)) and this libass export is the failed bake's fallback.
+  { n: 2, url: 'https://www.youtube.com/watch?v=eK71EN3P78U', id: 'eK71EN3P78U', captions: true, second: true, indic: true },
   // The link carried &t=2877s: the run is taken there.
-  { n: 3, url: 'https://www.youtube.com/watch?v=lqOH-zxtCDE&t=2877s', id: 'lqOH-zxtCDE', captions: true, atMs: 2_877_000 },
+  { n: 3, url: 'https://www.youtube.com/watch?v=lqOH-zxtCDE&t=2877s', id: 'lqOH-zxtCDE', captions: true, atMs: 2_877_000, indic: true },
   { n: 4, url: 'https://www.youtube.com/watch?v=3pG8Hgq3Z8M', id: '3pG8Hgq3Z8M', captions: true },
   { n: 5, url: 'https://www.youtube.com/watch?v=bvz_zK5ZxpM', id: 'bvz_zK5ZxpM', captions: true },
   { n: 6, url: 'https://www.youtube.com/watch?v=j4aoo1qbGoE', id: 'j4aoo1qbGoE', captions: true },
@@ -156,6 +165,8 @@ const LINKS = [
   { n: 10, url: 'https://www.youtube.com/watch?v=jze_5hvaVV8', id: 'jze_5hvaVV8', captions: true, uploaderKey: 'en-US' }
 ] as const
 type LinkSpec = (typeof LINKS)[number]
+/** Whether this link's captions are the canvas bake's in the app (`indic` above). */
+const indicLink = (spec: LinkSpec): boolean => 'indic' in spec && spec.indic
 
 const inCi = !!process.env.CI && process.env.CI !== 'false'
 const ENABLED = process.env.FORGE_M0_EXIT === '1' && !inCi
@@ -748,12 +759,15 @@ interface ExportReading {
   png: { frame: number; file: string }
 }
 
-/** One export as render:start runs it: main's captions, the executor, the strip's default canvas and encode. */
+/**
+ * One export as render:start runs it with no overlay: main's captions (`captionsForExport`, so libass), the executor,
+ * the strip's default canvas and encode. On an `indic` link that is the failed bake's fallback, the bake needing a DOM.
+ */
 async function appExport(project: Project, outputPath: string, canvas: { width: number; height: number }, withCaptions: boolean): Promise<{ ass: string | null; durationFrames: number }> {
   const encode = encodeSpecOf(state().exportChoice)
   const p = withCaptions ? project : { ...project, captions: { ...project.captions, enabled: false } }
-  const prepared = withCaptions ? await prepareCaptions(p, canvas) : null
-  if (withCaptions && !prepared) throw new Error('prepareCaptions found nothing to burn')
+  const prepared = withCaptions ? await captionsForExport(p, canvas, undefined) : null
+  if (withCaptions && !prepared) throw new Error('captionsForExport found nothing to burn')
   const request = { project: p, outputPath, canvas, encode, subtitlesPath: prepared?.subtitlesPath, fontsDir: prepared?.fontsDir }
   const { durationFrames } = buildRenderPlan(request)
   await startRender({ ...request, tempDir: join(userData, 'tmp') }, () => undefined).promise
@@ -763,14 +777,18 @@ async function appExport(project: Project, outputPath: string, canvas: { width: 
 }
 
 /** Export one project with captions and without, read the .ass and the picture, leave every file in `into`. */
-async function exportAndRead(project: Project, legs: readonly Leg[], into: string, prefix: string): Promise<ExportReading> {
+async function exportAndRead(project: Project, legs: readonly Leg[], into: string, prefix: string, indic: boolean): Promise<ExportReading> {
   const name = (f: string): string => join(into, `${prefix}${f}`)
   const fps = project.settings.fps
   const canvas = exportCanvas(state().aspect, state().exportChoice.resolution)
 
-  // 'pop', a new project's style: flat, so the app burns it with libass (ExportStrip, captionNeedsCanvas).
+  // 'pop', a new project's style: flat, the style's half of the route (captionNeedsCanvas).
   expect(project.captions.enabled, 'captions are on in a new project').toBe(true)
-  expect(captionsNeedBaking(project), 'pop is libass’s').toBe(false)
+  const style = resolveStyle(project.captions.styleId, project.captions.overrides as StyleOverrides | undefined)
+  expect(captionNeedsCanvas(style), 'pop is flat').toBe(false)
+  // The route the app takes (ExportStrip asks captionRoute): the canvas for a Hindi or Telugu track, libass for the rest.
+  // This export is libass either way; on an `indic` link it is the failed bake's fallback.
+  expect(captionRoute(project).route, 'the app’s route for these captions').toBe(indic ? 'canvas' : 'libass')
   const plain = await appExport(project, name('clip-plain.mp4'), canvas, false)
   const captioned = await appExport(project, name('clip-captions.mp4'), canvas, true)
   const ass = captioned.ass!
@@ -917,7 +935,7 @@ afterAll(async () => {
     '# m0-exit — M0’s exit check on the user’s ten links (docs/CLIPS.md §3b.9)',
     '',
     'Each link through the app’s own path: main’s ingest:meta / ingest:captions handlers and the real yt-dlp, the renderer’s store',
-    '(Get transcript, a run, Clip download, collect), then the export as render:start runs it (prepareCaptions, libass, the "pop"',
+    '(Get transcript, a run, Clip download, collect), then the export as render:start runs it with no overlay (captionsForExport, libass, the "pop"',
     'style; startRender at the export strip’s default 1920×1080). The runs: the first row at 40 % of the video (2877 s on',
     'lqOH-zxtCDE), extended to ≥ 8 words, cut to ≤ 20; O35KGzkS4VA and eK71EN3P78U also take Add another clip and a second run',
     'at 70 %; every link with captions also a "mid" run at 55 % whose first and last words touch their neighbours (no pause).',
@@ -927,7 +945,8 @@ afterAll(async () => {
     '  fast-download.mp4    the same range as Clip it’s fast cut: padded 10 s each side, copied — the words’ surroundings',
     '  clip-captions.mp4    the project exported with its captions on — WATCH AND LISTEN TO THIS ONE',
     '  clip-plain.mp4       the same export without captions (what the caption reading subtracts)',
-    '  captions.ass         the subtitles libass burnt in',
+    '  captions.ass         the subtitles libass burnt in (on eK71EN3P78U and lqOH-zxtCDE, Telugu and Hindi, the app draws',
+    '                       the captions with the canvas bake instead; libass there is the failed bake’s fallback)',
     '  frames.csv           per export frame: ink, xor, change (what onsets are read by), what the .ass says the frame is,',
     '                       whether an onset was read, which word starts there',
     '  onset.png            the export frame where the middle word is lit — where the glyphs are judged',
@@ -1226,7 +1245,14 @@ describe.skipIf(!ENABLED)('M0’s exit check on the user’s ten links (docs/CLI
       if (s.both) outs.push([s.both, s.legs.filter((l) => l.name === 'first' || l.name === 'second'), 'second-'])
       const failures: (() => void)[] = []
       for (const [project, legs, prefix] of outs) {
-        const r = await exportAndRead(project, legs, s.dir, prefix)
+        const r = await exportAndRead(project, legs, s.dir, prefix, indicLink(spec))
+        if (indicLink(spec)) {
+          s.notes.push(
+            '',
+            `## ${prefix}export: the app draws this track with the canvas bake (its words are Devanagari or Telugu, docs/CLIPS.md §16.66 (a)); ` +
+              'this export is libass, the failed bake’s fallback, and the readings below are of it'
+          )
+        }
         const off = r.match.offsets.map((o) => (o === null ? 'NONE' : `${o >= 0 ? '+' : ''}${o}`))
         const fl = r.floor
         const onTime = r.match.offsets.filter((o, i) => o !== null && r.wordFrames[i] + o === r.assFrames[i]).length

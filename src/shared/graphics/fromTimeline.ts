@@ -6,13 +6,18 @@ import { resolveStyle, type CaptionStyle, type StyleOverrides } from '../caption
 import type { CaptionLayer, CaptionLayersSpec } from './spec'
 import { captionTrack } from '../captions/timeline'
 import { smartPlacement } from '../captions/smart'
+import type { CaptionRoute } from '../captions/placement'
+import { shapedScript } from '../render/textAnimation'
+import { indicFontsFor } from '../render/textPaint'
 
 /**
  * Compile a timeline into a graphics spec for the frame server.
  *
- * Only the things ASS genuinely cannot draw end up here. Everything flat and
- * text-shaped stays on tier 1, where libass renders it during the normal encode
- * at no extra cost. See docs/research/architecture-plan-2026-09-11.md §3b.
+ * Only the captions `captionRoute` sends to the canvas end up here: a look ASS
+ * cannot draw, or a track whose words hold a shaped script, which the 2018
+ * Windows build's libass draws unshaped (docs/CLIPS.md §16.66 (a)). Every other
+ * track stays on tier 1, where libass renders it during the normal encode at
+ * no extra cost. See docs/research/architecture-plan-2026-09-11.md §3b.
  */
 
 export interface GraphicsBuildOptions {
@@ -40,16 +45,92 @@ export function needsFrameServer(_project: Project): boolean {
   return false
 }
 
-/** Whether these captions have to be drawn rather than burned in by libass. */
+/** Whether these captions have to be drawn rather than burned in by libass (`captionRoute`). */
 export function captionsNeedBaking(project: Project): boolean {
   if (!project.captions?.enabled) return false
   if (Object.keys(project.transcripts).length === 0) return false
-  return captionNeedsCanvas(
-    resolveStyle(
-      project.captions.styleId,
-      project.captions.overrides as StyleOverrides | undefined
-    )
+  return captionRoute(project).route === 'canvas'
+}
+
+/** Which export route a project's captions take, and why (`captionRoute`). */
+export interface CaptionRouting {
+  route: CaptionRoute
+  /** The words the captions would show hold a script that joins or reorders (`shapedScript`). */
+  shaped: boolean
+  /** They hold Devanagari or Telugu (`indicFontsFor`): the two scripts measured unshaped on the Windows build's libass. */
+  indic: boolean
+}
+
+/**
+ * The route for the whole caption track, asked by the export, the preview's
+ * placement and the OUTPUT strip alike (docs/CLIPS.md §6.20, §16.66 (a)).
+ *
+ * The canvas when the style needs one (`captionNeedsCanvas`, the style's half)
+ * or when the words the captions would show (`captionWords`, over every clip
+ * on the caption track and only inside each clip's window) hold a shaped
+ * script (`shapedScript`, D8's one script rule): the 2018 Windows build's
+ * libass draws Devanagari and Telugu unshaped, measured (EFFECTS.md §61), and
+ * the bake shapes through Chromium's HarfBuzz on both machines. The whole
+ * track, never per word or per line: libass draws a face at about 0.57× the
+ * painter's size (EFFECTS.md §60), so a split track would change size
+ * mid-line. Not the transcript's `language`, which a mixed or mislabelled
+ * transcript would get wrong.
+ */
+export function captionRoute(project: Project): CaptionRouting {
+  const style = resolveStyle(
+    project.captions.styleId,
+    project.captions.overrides as StyleOverrides | undefined
   )
+  const words = captionWords(project)
+  const shaped = shapedScript(words)
+  const indic = indicFontsFor(words).length > 0
+  return { route: captionNeedsCanvas(style) || shaped ? 'canvas' : 'libass', shaped, indic }
+}
+
+/**
+ * What the failed or empty bake's fallback says: the captions are burned in
+ * plain by libass instead. On Windows, for a Devanagari or Telugu track, also
+ * that they come out unshaped, their letters not joined: the 2018 build's
+ * libass is measured not to shape those two (EFFECTS.md §61). Every other case
+ * keeps the plain words, a shaped script not measured on Windows included
+ * (an Arabic line may join there even so), and the Mac's libass shapes both
+ * (EFFECTS.md §51). `platform` is `navigator.platform` ('Win32', 'MacIntel').
+ */
+export function captionBakeFailedNotice(routing: CaptionRouting, platform: string, reason: string): string {
+  if (routing.indic && /^win/i.test(platform)) {
+    return `Captions could not be drawn, so they will be burned in plain and unshaped, their letters not joined: ${reason}`
+  }
+  return `Captions could not be drawn, so they will be burned in plain: ${reason}`
+}
+
+/**
+ * The bake, and its fallback, as one step (docs/CLIPS.md §6.20).
+ *
+ * The overlay the bake made, or undefined, which sends the export to main
+ * with no overlay, so main burns the track in with libass (`captionsForExport`):
+ * a failed export is worse than plain captions. A bake that throws is said
+ * (`captionBakeFailedNotice`); so is one that drew nothing on a shaped track,
+ * since that too reaches libass, unshaped on Windows. Nothing drawn on an
+ * unshaped track gives no overlay silently, as it always has. Pure but for the
+ * two functions it is handed: `bakeCaptions` and the strip's `notify` in the
+ * app.
+ */
+export async function captionBakeOrFallback<T>(
+  routing: CaptionRouting,
+  platform: string,
+  bake: () => Promise<T | null>,
+  notify: (message: string) => void
+): Promise<T | undefined> {
+  let baked: T | null
+  try {
+    baked = await bake()
+  } catch (err) {
+    notify(captionBakeFailedNotice(routing, platform, err instanceof Error ? err.message : String(err)))
+    return undefined
+  }
+  if (baked) return baked
+  if (routing.shaped) notify(captionBakeFailedNotice(routing, platform, 'nothing was drawn'))
+  return undefined
 }
 
 /**
@@ -175,7 +256,8 @@ export function buildCaptionLayers(
  * segment, which no line shows, is not here either), only those inside the
  * clip's window. So a word the clip trims away is not here. The preview's
  * caption font effect asks `indicFontsFor` over this for the Hindi or Telugu
- * face a track needs (`captionFaces`, docs/CLIPS.md §6.20).
+ * face a track needs (`captionFaces`, docs/CLIPS.md §6.20), and `captionRoute`
+ * asks `shapedScript` over it for the track's route.
  */
 export function captionWords(project: Project): string {
   const track = captionTrack(project)

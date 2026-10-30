@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { mkdtemp, rm, writeFile, stat } from 'node:fs/promises'
+import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg'
@@ -13,6 +14,7 @@ import { segmentIntoSentences, type Word } from '@shared/transcript'
 import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
 import { smartPlacement } from '@shared/captions/smart'
 import { SUBJECT_TRACK_VERSION, type SubjectTrack } from '@shared/reframe/types'
+import { ciNotice } from './helperDiag'
 
 const run = promisify(execFile)
 /** A libass burn in a plan: the `ass` filter, or the `subtitles` one it replaced. */
@@ -203,12 +205,18 @@ describe('caption burn-in', () => {
    * app's frames must be the complex shaper's, bit for bit.
    *
    * The words are letter clusters made up for this, nobody's speech: in each
-   * script three conjuncts and a consonant with its i-matra. No font for
-   * either script is bundled (assets/fonts), so libass falls back to the
-   * system's; on macOS CoreText finds Kohinoor, and complex and simple must
-   * then differ — which is what proves the comparison can see shaping at
-   * all. Elsewhere that is only recorded: a libass without HarfBuzz, or no
-   * font for the script, draws the two alike, and the check cannot tell.
+   * script three conjuncts and a consonant with its i-matra. Noto Sans
+   * Devanagari and Noto Sans Telugu are in assets/fonts, the fontsdir, since
+   * 6bc8b07 (docs/CLIPS.md §6.20), so libass has a face for each on both
+   * machines; on macOS complex and simple must differ — which is what proves
+   * the comparison can see shaping at all. Elsewhere that is only recorded,
+   * in a notice readable without signing in: the 2018 Windows build's libass
+   * was measured not to shape these (graphic.int on the Surface, 2026-10-27,
+   * EFFECTS.md §61), so it is expected to say SAME there, and DIFFER would
+   * mean a later Windows ffmpeg brought a shaper. Under §16.66 (a) the app
+   * sends these captions to the canvas bake, libass only a failed or empty
+   * bake's fallback, so this case is that fallback's tripwire: it writes its
+   * own .ass and swaps the plan's caption step, so the route never reaches it.
    */
   it('shapes Devanagari and Telugu as libass’s complex shaper does', async () => {
     const indic = words([
@@ -257,6 +265,12 @@ describe('caption burn-in', () => {
     const differ = (from: number, to: number): number => complex.slice(from, to).filter((h, i) => h !== simple[from + i]).length
     const seen = { devanagari: differ(0, 54), telugu: differ(60, 114) }
     process.stderr.write(`captions.int: complex and simple shaping differ on ${JSON.stringify(seen)} of 54 frames each (${process.platform})\n`)
+    const noto = ['NotoSansDevanagari-Regular.ttf', 'NotoSansTelugu-Regular.ttf'].filter((file) => existsSync(join(fontsDir, file)))
+    ciNotice(
+      'captions.int: Hindi and Telugu on libass',
+      `${process.platform}: complex and simple ${seen.devanagari === 0 && seen.telugu === 0 ? 'SAME' : 'DIFFER'} ` +
+        `(on ${seen.devanagari} Devanagari and ${seen.telugu} Telugu frames of 54 each); in the fontsdir: ${noto.join(', ') || 'no Noto face'}`
+    )
     expect(app, 'the app’s captions are the complex shaper’s').toEqual(complex)
     if (process.platform === 'darwin') expect(seen, 'shaping is visible here: Kohinoor through CoreText').toEqual({ devanagari: 54, telugu: 54 })
   }, 180_000)

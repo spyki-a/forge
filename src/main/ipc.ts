@@ -33,7 +33,7 @@ import { entriesOfKind, isClipSticker, type ClipStickerMeta } from '@shared/asse
 import { fileKey, toAsset } from './assets'
 import { locateAsset, probeImports, relinkable } from './imports'
 import {
-  prepareCaptions,
+  captionsForExport,
   writeCaptionFrame,
   writeCaptionList,
   clearCaptionFrames
@@ -1120,13 +1120,13 @@ export function registerIpc(getWindow: () => BrowserWindow | null, options: IpcO
     /*
      * Captions take one path or the other, never both.
      *
-     * A look libass cannot draw arrives already baked from the renderer, and
-     * burning the same words in again with libass would render every caption
-     * twice, on top of itself.
+     * A track the renderer's route sent to the canvas (a look libass cannot
+     * draw, or a shaped script) arrives already baked, and burning the same
+     * words in again with libass would render every caption twice, on top of
+     * itself. No overlay is libass: a plain track, or a bake that failed or
+     * drew nothing (captions.ts `captionsForExport`, where a test reaches it).
      */
-    const captions = request.captionOverlay
-      ? null
-      : await prepareCaptions(request.project, canvas)
+    const captions = await captionsForExport(request.project, canvas, request.captionOverlay)
 
     // Everything the executor needs is resolved BEFORE the job is queued: the
     // queue pumps synchronously, so anything still being awaited here would not

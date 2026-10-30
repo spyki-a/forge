@@ -111,10 +111,11 @@ export function libassLineFrame(clip: Pick<Clip, 'start' | 'inPoint' | 'duration
 }
 
 /**
- * The export route that draws the captions: libass burns a style it can
- * express, the canvas bake draws the rest (graphics/fromTimeline.ts
- * `captionNeedsCanvas`). The two show a line from different frames when it
- * starts part-way through one (`libassLineFrame`, `captionLineFrame`).
+ * The export route that draws the captions, the whole track's: the canvas
+ * bake for a look libass cannot express or for words in a shaped script,
+ * libass for the rest (graphics/fromTimeline.ts `captionRoute`). The two show
+ * a line from different frames when it starts part-way through one
+ * (`libassLineFrame`, `captionLineFrame`).
  */
 export type CaptionRoute = 'libass' | 'canvas'
 

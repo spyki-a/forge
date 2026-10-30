@@ -57,7 +57,7 @@ import { activeCaptionStyle, captionAt, captionFaces, drawCaptions } from '../ca
 import { captionSourceClip } from '@shared/captions/timeline'
 import { smartPlacement } from '@shared/captions/smart'
 import { lineThird } from '@shared/captions/placement'
-import { captionNeedsCanvas } from '@shared/graphics/fromTimeline'
+import { captionRoute } from '@shared/graphics/fromTimeline'
 import { textClipFaceKey } from '@shared/render/textPaint'
 import { LIVE_DRAWN_FIELDS } from '@shared/edit/recipes'
 import { useCatalog } from '../catalog'
@@ -468,6 +468,15 @@ export function Preview(): ReactNode {
     () => (project.captions.enabled ? smartPlacement(project, activeCaptionStyle(project), ASPECTS[aspect]) : null),
     [project, aspect]
   )
+
+  /*
+   * The route the export will take for the captions (`captionRoute`: the
+   * style's half, or a shaped script in the track's words, docs/CLIPS.md
+   * §16.66 (a)), worked out once per edit as the thirds are: a transcript's
+   * words are not joined on every painted frame. The whole track's, never the
+   * line at the playhead's, as the export's is.
+   */
+  const captionRouting = useMemo(() => captionRoute(project), [project])
 
   /*
    * The faces the live text needs, and a repaint when they land.
@@ -1856,9 +1865,9 @@ export function Preview(): ReactNode {
         if (source) {
           const style = activeCaptionStyle(project)
           const caption = captionAt(project, source, playhead, style)
-          // Smart placement: the line's third as the export's route for this style asks it (§5.4) — libass and the
+          // Smart placement: the line's third as the export's route for these captions asks it (§5.4) — libass and the
           // bake first show a line that starts part-way through a frame on different frames (placement.ts).
-          const route = captionNeedsCanvas(style) ? 'canvas' : 'libass'
+          const route = captionRouting.route
           if (caption) drawCaptions(ctx, frame, style, caption, fps, lineThird(captionPlacement, source, fps, caption.words, route))
         }
       }
@@ -1906,6 +1915,8 @@ export function Preview(): ReactNode {
     repaint,
     // Smart placement's lookup: a new one is a new edit's thirds.
     captionPlacement,
+    // The captions' route: a new one moves the frame a line is first shown on.
+    captionRouting,
     // A followed crop is read at the element's frame while playing, the playhead's while paused.
     playing
   ])

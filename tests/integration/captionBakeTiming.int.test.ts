@@ -127,7 +127,7 @@ function project(fps: number, frames: number): Project {
     assets: [asset],
     clips: [clip],
     transcripts: { a1: { assetId: 'a1', language: 'en', model: 'test', durationMs: 3000, words, segments: segmentIntoSentences(words) } },
-    // Animated: the canvas bake's, not libass's (ExportStrip routes on captionNeedsCanvas).
+    // Animated: the canvas bake's, not libass's (ExportStrip routes on captionRoute, whose style half this is).
     captions: { enabled: true, styleId: 'kinetic' }
   }
 }

@@ -4,7 +4,7 @@ import type { TextSpec } from '@shared/timeline'
 import { CAPTION_STYLES, resolveStyle, type StyleOverrides } from '@shared/captions/style'
 import { REFERENCE_HEIGHT } from '@shared/captions/ass'
 import { captionSpec } from '@shared/captions/line'
-import { captionNeedsCanvas } from '@shared/graphics/fromTimeline'
+import { captionRoute } from '@shared/graphics/fromTimeline'
 import { LOUDNESS_TARGETS } from '@shared/render/loudness'
 import { FRAME_RATES } from '@shared/project/frameRate'
 import { outputSummary } from '@shared/project/outputSummary'
@@ -113,6 +113,12 @@ export function OutputStrip(): ReactNode {
     project.captions.overrides as StyleOverrides | undefined
   )
   const hasOverrides = Object.keys(project.captions.overrides ?? {}).length > 0
+  /*
+   * The route the export will take for these captions (`captionRoute`, the
+   * one the export and the preview ask), once per edit: a transcript's words
+   * are not joined on every render of the strip.
+   */
+  const captionRouting = useMemo(() => captionRoute(project), [project])
   const fontReady = loadedFonts.has(style.fontFamily)
 
   /*
@@ -459,7 +465,7 @@ export function OutputStrip(): ReactNode {
             </div>
           )}
 
-          {captionNeedsCanvas(style) && project.captions.enabled && (
+          {captionRouting.route === 'canvas' && project.captions.enabled && (
             <div className="mt-1.5 rounded border border-accent-500/40 bg-accent-500/10 px-2 py-1.5">
               <div className="text-[10.5px] leading-snug text-accent-300">
                 {/*
@@ -469,10 +475,17 @@ export function OutputStrip(): ReactNode {
                   did — and which cost about five times the render. It does not
                   any more: the captions are drawn to a few pictures first and
                   composited by the ordinary graph.
+
+                  It shows for a plain style on a Hindi or Telugu track too
+                  (docs/CLIPS.md §16.66 (a)), so the cost is against burning
+                  them in, not against a plain style, and the third sentence
+                  says why such a track is drawn.
                 */}
                 These captions are drawn rather than burned in. They are painted once
                 before the export and composited in the same pass, so it costs a little
-                more than a plain style — not a second render.
+                more than burning them in — not a second render.
+                {captionRouting.indic &&
+                  ' Their letters join, which burned-in captions cannot do on Windows, so they are drawn on every computer.'}
               </div>
             </div>
           )}

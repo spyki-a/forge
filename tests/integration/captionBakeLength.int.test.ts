@@ -99,7 +99,7 @@ function project(words: Word[] | null, fps = FPS, frames = CLIP_FRAMES): Project
     transcripts: words
       ? { a1: { assetId: 'a1', language: 'en', model: 'test', durationMs: 2000, words, segments: segmentIntoSentences(words) } }
       : {},
-    // Animated: the canvas bake's, not libass's (ExportStrip routes on captionNeedsCanvas).
+    // Animated: the canvas bake's, not libass's (ExportStrip routes on captionRoute, whose style half this is).
     captions: { enabled: true, styleId: 'kinetic' }
   }
 }

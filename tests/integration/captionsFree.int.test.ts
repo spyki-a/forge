@@ -5,7 +5,7 @@ import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { deflateSync } from 'node:zlib'
 import { buildRenderPlan, type RenderRequest } from '@shared/render/plan'
-import { buildCaptionLayers, captionNeedsCanvas } from '@shared/graphics/fromTimeline'
+import { buildCaptionLayers, captionNeedsCanvas, captionRoute } from '@shared/graphics/fromTimeline'
 import type { CaptionLayer } from '@shared/graphics/spec'
 import { captionBand, concatList, planBakeOf } from '@shared/captions/bake'
 import { resolveStyle, type StyleOverrides } from '@shared/captions/style'
@@ -47,7 +47,8 @@ import { FFMPEG, outputDir, run, saveFrame, writeNote } from './output'
  *                   buildTimelineCaptions the Smart placement lookup, writes
  *                   the .ass; the export burns it (`subtitlesPath`);
  *   canvas bake     the same plus a gradient look (`gradient-sunset`), so
- *                   `captionNeedsCanvas` sends it to the bake: buildCaptionLayers
+ *                   `captionRoute` sends it to the bake (its style half,
+ *                   `captionNeedsCanvas`; the words are Latin): buildCaptionLayers
  *                   → planBakeOf → the pictures → main's writeCaptionFrame /
  *                   writeCaptionList → `captionOverlay`. The painting is the
  *                   one thing stood in (the renderer's canvas does not exist in
@@ -537,8 +538,10 @@ async function renderCase(c: Case): Promise<Rendered> {
   const canvas = ASPECTS[c.aspect]
   const { project } = caseProject(c)
   const style = resolveStyle('pop', overridesFor(c.route, c.position))
-  // The route the app takes (ExportStrip: captionNeedsCanvas → the bake; otherwise main's prepareCaptions).
+  // The route the app takes (ExportStrip asks captionRoute → the bake; otherwise main's captionsForExport → prepareCaptions):
+  // on these Latin words the style's half alone decides it.
   expect(captionNeedsCanvas(style), `${name}: the route`).toBe(c.route === 'canvas')
+  expect(captionRoute(project).route, `${name}: the app's route`).toBe(c.route)
   const out = join(dir, `${name}.mp4`)
   const began = performance.now()
   // Each case's own userData (main's .ass, the bake's pictures and list): nothing a case reads is another's, and each is kept to look at.

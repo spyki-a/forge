@@ -529,7 +529,7 @@ async function exportAs(name: string, project: Project, route: Route): Promise<{
     return { file, frames: plan.durationFrames }
   }
   if (route === 'libass') {
-    // 'pop', a new project's style: flat, so the app burns it with libass (ExportStrip, captionNeedsCanvas).
+    // 'pop', a new project's style, on Latin words: flat, so the app burns it with libass (ExportStrip asks captionRoute).
     expect(captionsNeedBaking(project), 'pop is libass’s').toBe(false)
     // Null when there is nothing to burn — and then, as render:start does, the export goes without (the reading says so).
     const prepared = await prepareCaptions(project, CANVAS)

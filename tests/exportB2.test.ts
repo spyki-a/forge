@@ -306,7 +306,7 @@ describe('the export button sends what the panel shows', () => {
   const strip = source('src/renderer/src/components/ExportStrip.tsx')
   const inspector = source('src/renderer/src/components/Inspector.tsx')
   const OPENS = 'const onExport = useCallback('
-  const CLOSES = '}, [aspect, notify, useRange, style])'
+  const CLOSES = '}, [aspect, notify, useRange])'
   const at = strip.indexOf(OPENS)
   const end = strip.indexOf(CLOSES, at)
   const onExport = strip.slice(at, end)
@@ -351,7 +351,8 @@ describe('the export button sends what the panel shows', () => {
     // A toggle missing from the dependencies is a button that exports with
     // whatever it was when the edit last changed — which Draft once did.
     anchored()
-    expect(strip).toContain('}, [aspect, notify, useRange, style])')
+    // `style` left them with the captions' route: it is read from the exported copy inside (captionRoute).
+    expect(strip).toContain('}, [aspect, notify, useRange])')
   })
 
   it('has no half-size draft left anywhere in the export path', () => {

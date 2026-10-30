@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join, resolve } from 'node:path'
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg'
 import { buildRenderPlan } from '@shared/render/plan'
 import { concatList, planCaptionBake } from '@shared/captions/bake'
@@ -11,7 +11,9 @@ import { captionSpec } from '@shared/captions/line'
 import { styleById } from '@shared/captions/style'
 import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
 import type { CaptionLayer } from '@shared/graphics/spec'
-import type { Word } from '@shared/transcript'
+import { segmentIntoSentences, type Word } from '@shared/transcript'
+import { captionRoute } from '@shared/graphics/fromTimeline'
+import { captionsForExport } from '../../src/main/captions'
 
 /*
  * Styled captions, composited in the single pass.
@@ -198,5 +200,76 @@ describe('a baked caption overlay', () => {
     const args = buildRenderPlan({ project: project(), outputPath: '/tmp/x.mp4' }).args.join(' ')
     expect(args).not.toContain('-f concat')
     expect(args).not.toContain('[cap]')
+  })
+})
+
+describe('main’s half of the caption route (captionsForExport, docs/CLIPS.md §6.20)', () => {
+  /*
+   * A Hindi track is the canvas bake's (captionRoute, §16.66 (a)), so it
+   * arrives with an overlay, and libass must burn nothing beside it or every
+   * caption is drawn twice. Without one, a bake that failed or drew nothing,
+   * libass burns it in plain: the fallback, never an export with no captions.
+   * The electron stub has no getAppPath, so the fonts folder is named.
+   */
+  const saved = { userData: process.env.FORGE_TEST_USERDATA, fonts: process.env.FORGE_FONTS_DIR }
+  let userData = ''
+
+  beforeAll(async () => {
+    userData = await mkdtemp(join(tmpdir(), 'forge-capguard-'))
+    process.env.FORGE_TEST_USERDATA = userData
+    process.env.FORGE_FONTS_DIR = resolve(__dirname, '../../assets/fonts')
+  })
+
+  afterAll(async () => {
+    for (const [key, value] of [['FORGE_TEST_USERDATA', saved.userData], ['FORGE_FONTS_DIR', saved.fonts]] as const) {
+      if (value === undefined) delete process.env[key]
+      else process.env[key] = value
+    }
+    await rm(userData, { recursive: true, force: true }).catch(() => undefined)
+  })
+
+  const HINDI = words([['यह', 0, 1000], ['किताब', 1000, 2500], ['है।', 2500, 3800]])
+  function hindi(): Project {
+    const p = project()
+    return {
+      ...p,
+      transcripts: {
+        bg: { assetId: 'bg', language: 'hi', model: 'test', durationMs: 4000, words: HINDI, segments: segmentIntoSentences(HINDI) }
+      },
+      captions: { enabled: true, styleId: 'pop' }
+    }
+  }
+  const CANVAS = { width: W, height: H }
+  const overlay = (): { listPath: string; y: number; height: number } => ({ listPath, y: BAND_Y, height: BAND_H })
+
+  it('the fixture is the bake’s: a plain style on a Hindi track', () => {
+    expect(captionRoute(hindi()).route).toBe('canvas')
+  })
+
+  it('burns nothing beside an overlay', async () => {
+    expect(await captionsForExport(hindi(), CANVAS, overlay())).toBeNull()
+  })
+
+  it('burns the track in with libass when no overlay came, the failed bake’s fallback', async () => {
+    const prepared = await captionsForExport(hindi(), CANVAS, undefined)
+    expect(prepared).not.toBeNull()
+    expect(basename(prepared!.subtitlesPath)).toMatch(/^captions-.*\.ass$/)
+    expect(await readFile(prepared!.subtitlesPath, 'utf8')).toContain('किताब')
+    await prepared!.cleanup()
+  })
+
+  it('plans the overlay alone, with no ass step, from what main decided', async () => {
+    const captions = await captionsForExport(hindi(), CANVAS, overlay())
+    const plan = buildRenderPlan({
+      project: hindi(),
+      outputPath: join(dir, 'guard.mp4'),
+      subtitlesPath: captions?.subtitlesPath,
+      fontsDir: captions?.fontsDir,
+      captionOverlay: overlay()
+    })
+    expect(plan.args).toContain(listPath)
+    expect(plan.args.join(' ')).toContain('-f concat')
+    expect(plan.args.join(' ')).not.toContain('ass=')
+    await captions?.cleanup()
   })
 })

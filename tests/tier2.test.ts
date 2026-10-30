@@ -1,8 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import {
   buildCaptionLayers,
+  captionBakeFailedNotice,
+  captionBakeOrFallback,
+  captionRoute,
   captionsNeedBaking,
-  needsFrameServer
+  needsFrameServer,
+  type CaptionRouting
 } from '@shared/graphics/fromTimeline'
 import { segmentIntoSentences, type Word } from '@shared/transcript'
 import { emptyProject, projectDuration, type Clip, type MediaAsset, type Project } from '@shared/timeline'
@@ -86,6 +90,138 @@ describe('caption routing', () => {
     // The two-pass path is gone: it cost roughly five times the render itself.
     expect(needsFrameServer(project())).toBe(false)
     expect(needsFrameServer(project({ captions: { enabled: true, styleId: 'pop' } }))).toBe(false)
+  })
+})
+
+/** A project whose transcript is these words, one segment a sentence, as `project()` builds SAMPLE's. */
+function spoken(list: Word[], over: Partial<Project> = {}, clipOver: Partial<Clip> = {}): Project {
+  return project(
+    {
+      transcripts: {
+        a1: { assetId: 'a1', language: 'hi', model: 'test', durationMs: 4000, words: list, segments: segmentIntoSentences(list) }
+      },
+      ...over
+    },
+    clipOver
+  )
+}
+
+const HINDI = words([['यह', 0, 500], ['किताब', 500, 1100], ['है।', 1100, 1600]])
+const TELUGU = words([['ఇది', 0, 500], ['పుస్తకం', 500, 1200], ['చూడండి.', 1200, 1800]])
+/** A Latin line and one Hindi word in it. */
+const MIXED = words([['Shop', 0, 400], ['the', 400, 700], ['किताब', 700, 1200], ['now.', 1200, 1700]])
+/** SAMPLE, then a Hindi word at 3.5 s: past a 90-frame (3 s) clip's window. */
+const LATE_HINDI = words([
+  ['This', 0, 500], ['is', 500, 900], ['Forge.', 900, 1600],
+  ['Word', 2000, 2400], ['by', 2400, 2700], ['word.', 2700, 2950],
+  ['किताब।', 3500, 3900]
+])
+const POP = { captions: { enabled: true, styleId: 'pop' } } satisfies Partial<Project>
+
+describe('the caption route (captionRoute, docs/CLIPS.md §16.66 (a))', () => {
+  /*
+   * The whole track's route, from the style and the words the captions would
+   * show: a plain style on a Hindi or Telugu track goes to the canvas bake on
+   * both machines, since the 2018 Windows build's libass draws those scripts
+   * unshaped. Membership of the scripts, never the list.
+   */
+  it('sends a plain style on a Hindi track to the canvas', () => {
+    const r = captionRoute(spoken(HINDI, POP))
+    expect(r.route).toBe('canvas')
+    expect(r.shaped).toBe(true)
+    expect(r.indic).toBe(true)
+  })
+
+  it('sends a plain style on a Telugu track to the canvas', () => {
+    const r = captionRoute(spoken(TELUGU, POP))
+    expect(r.route).toBe('canvas')
+    expect(r.indic).toBe(true)
+  })
+
+  it('keeps a plain style on a Latin track on libass', () => {
+    const r = captionRoute(project(POP))
+    expect(r.route).toBe('libass')
+    expect(r.shaped).toBe(false)
+    expect(r.indic).toBe(false)
+  })
+
+  it('sends a style libass cannot draw to the canvas, Latin or not', () => {
+    const r = captionRoute(project())
+    expect(r.route).toBe('canvas')
+    expect(r.shaped).toBe(false)
+  })
+
+  it('takes the whole track to the canvas for one Hindi word in a Latin line', () => {
+    expect(captionRoute(spoken(MIXED, POP)).route).toBe('canvas')
+  })
+
+  it('reads only the words the clip shows: a Hindi word trimmed away leaves libass', () => {
+    // The fixture: the same words with the clip's window over all of them are the canvas's.
+    expect(captionRoute(spoken(LATE_HINDI, POP, { duration: 120 })).route).toBe('canvas')
+    const trimmed = captionRoute(spoken(LATE_HINDI, POP, { duration: 90 }))
+    expect(trimmed.route).toBe('libass')
+    expect(trimmed.indic).toBe(false)
+  })
+
+  it('bakes a plain style on a Hindi track', () => {
+    expect(captionsNeedBaking(spoken(HINDI, POP))).toBe(true)
+  })
+})
+
+describe('the failed or empty bake (captionBakeOrFallback)', () => {
+  const hindi = (): CaptionRouting => captionRoute(spoken(HINDI, POP))
+  const telugu = (): CaptionRouting => captionRoute(spoken(TELUGU, POP))
+  /** Latin, in a look libass cannot draw: the canvas's for its style alone. */
+  const kinetic = (): CaptionRouting => captionRoute(project())
+  const TODAY = 'Captions could not be drawn, so they will be burned in plain: boom'
+
+  it('says "unshaped" on Windows for a Hindi or a Telugu track', () => {
+    expect(captionBakeFailedNotice(hindi(), 'Win32', 'boom')).toContain('unshaped')
+    expect(captionBakeFailedNotice(telugu(), 'Win32', 'boom')).toContain('unshaped')
+    expect(captionBakeFailedNotice(hindi(), 'Win32', 'boom')).toContain('boom')
+  })
+
+  it('keeps today’s words on the Mac, whose libass shapes them, and for a Latin track on Windows', () => {
+    expect(captionBakeFailedNotice(hindi(), 'MacIntel', 'boom')).toBe(TODAY)
+    expect(captionBakeFailedNotice(kinetic(), 'Win32', 'boom')).toBe(TODAY)
+  })
+
+  /** A notify that keeps what it was told. */
+  const recorder = (): { said: string[]; notify: (m: string) => void } => {
+    const said: string[] = []
+    return { said, notify: (m) => said.push(m) }
+  }
+
+  it('says a bake that throws, and sends no overlay', async () => {
+    const r = recorder()
+    const out = await captionBakeOrFallback(hindi(), 'Win32', () => Promise.reject(new Error('boom')), r.notify)
+    expect(out).toBeUndefined()
+    expect(r.said).toHaveLength(1)
+    expect(r.said[0]).toContain('unshaped')
+    expect(r.said[0]).toContain('boom')
+  })
+
+  it('says a bake that drew nothing on a Hindi track', async () => {
+    const r = recorder()
+    const out = await captionBakeOrFallback(hindi(), 'Win32', () => Promise.resolve(null), r.notify)
+    expect(out).toBeUndefined()
+    expect(r.said).toHaveLength(1)
+    expect(r.said[0]).toContain('nothing was drawn')
+  })
+
+  it('gives nothing drawn on a Latin track no overlay and no notice, as before', async () => {
+    const r = recorder()
+    const out = await captionBakeOrFallback(kinetic(), 'Win32', () => Promise.resolve(null), r.notify)
+    expect(out).toBeUndefined()
+    expect(r.said).toEqual([])
+  })
+
+  it('returns the overlay a bake made, and says nothing', async () => {
+    const r = recorder()
+    const overlay = { listPath: '/x/captions.txt', y: 100, height: 60 }
+    const out = await captionBakeOrFallback(hindi(), 'Win32', () => Promise.resolve(overlay), r.notify)
+    expect(out).toBe(overlay)
+    expect(r.said).toEqual([])
   })
 })
 

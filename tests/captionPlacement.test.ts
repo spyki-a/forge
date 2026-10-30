@@ -327,10 +327,39 @@ describe('each route is handed the lookup', () => {
     const draws = [...preview.matchAll(/drawCaptions\(([^\n]*)\)\n/g)]
     expect(draws).toHaveLength(1)
     expect(draws[0][1]).toBe('ctx, frame, style, caption, fps, lineThird(captionPlacement, source, fps, caption.words, route)')
-    // As the export's route for this style draws the line (a line starting part-way through a frame is first shown on different frames).
-    expect([...preview.matchAll(/const route = captionNeedsCanvas\(style\) \? 'canvas' : 'libass'\n/g)]).toHaveLength(1)
+    // As the export's route for these captions draws the line (a line starting part-way through a frame is first shown on different frames):
+    // the memoised route of the whole track, the one the export takes (captionRoute, docs/CLIPS.md §16.66 (a)).
+    expect([...preview.matchAll(/const route = captionRouting\.route\n/g)]).toHaveLength(1)
+    expect([...preview.matchAll(/const captionRouting = useMemo\(\(\) => captionRoute\(project\), \[project\]\)\n/g)]).toHaveLength(1)
     expect([...preview.matchAll(/smartPlacement\(project, activeCaptionStyle\(project\), ASPECTS\[aspect\]\)/g)]).toHaveLength(1)
-    // In draw's dependencies: a memoised draw would otherwise keep the first edit's thirds.
+    // In draw's dependencies: a memoised draw would otherwise keep the first edit's thirds, and its route.
     expect([...preview.matchAll(/\n {4}captionPlacement,\n/g)]).toHaveLength(1)
+    expect([...preview.matchAll(/\n {4}captionRouting,\n/g)]).toHaveLength(1)
+  })
+})
+
+describe('one caption route, asked by every caller (captionRoute, docs/CLIPS.md §6.20)', () => {
+  const source = (path: string): string => readFileSync(resolve(__dirname, '..', path), 'utf8')
+  const count = (text: string, pattern: RegExp): number => [...text.matchAll(pattern)].length
+
+  it('the export, the OUTPUT strip and the preview each ask captionRoute once, and none asks the style alone', () => {
+    for (const file of ['ExportStrip.tsx', 'OutputStrip.tsx', 'Preview.tsx']) {
+      const text = source(`src/renderer/src/components/${file}`)
+      expect(count(text, /captionRoute\(/g), `${file}: captionRoute(`).toBe(1)
+      expect(count(text, /captionNeedsCanvas\(/g), `${file}: captionNeedsCanvas(`).toBe(0)
+    }
+  })
+
+  it('the export bakes through the one fallback step, whose words live beside the route', () => {
+    const exportStrip = source('src/renderer/src/components/ExportStrip.tsx')
+    // Soft, so a strip put back on its own .catch is caught by both: the step gone, and the notice's words back.
+    expect.soft(count(exportStrip, /captionBakeOrFallback\(/g), 'captionBakeOrFallback(').toBe(1)
+    expect.soft(count(exportStrip, /burned in plain/g), '"burned in plain"').toBe(0)
+  })
+
+  it('main decides through captionsForExport, where a test reaches its guard', () => {
+    const ipc = source('src/main/ipc.ts')
+    expect.soft(count(ipc, /captionsForExport\(/g), 'captionsForExport(').toBe(1)
+    expect.soft(count(ipc, /prepareCaptions\(/g), 'prepareCaptions(').toBe(0)
   })
 })
