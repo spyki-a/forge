@@ -678,6 +678,130 @@ export function paintForLine(style: TextStyle, line: number): Paint & Face {
   return { ...style.base, ...style.accent }
 }
 
+/** How far a style's paint reaches past the glyphs, in pixels, per side (`textInkReach`). */
+export interface InkReach {
+  left: number
+  right: number
+  top: number
+  bottom: number
+}
+
+/**
+ * `textInkReach`'s answer, in two parts a transformed item keeps apart: `user`
+ * is drawn in the item's own space (it turns and scales with the item) and
+ * `device` in the frame's (canvas's `shadowBlur`, `shadowOffsetX` and
+ * `shadowOffsetY` are not affected by the current transformation matrix, so
+ * a shadow or glow keeps its size and direction whatever the item's
+ * transform). A graphic's bake box widens the item's rectangle by `user`
+ * before its transform and by `device` after it (`itemBounds`,
+ * graphics/items.ts).
+ */
+export interface TextInkReach {
+  user: InkReach
+  device: InkReach
+}
+
+const NO_REACH = (): InkReach => ({ left: 0, right: 0, top: 0, bottom: 0 })
+
+/**
+ * How far past the glyph box a text style's paint reaches when the text is
+ * drawn at `px` (docs/CLIPS.md §6.3, "The box"): the room a graphic's bake
+ * box has to leave round a text item so no shadow, glow, outline, extrusion,
+ * split, bar or rule is cut off. Read from the style's `base` paint as
+ * `paintLine` (textPaint.ts) draws it, and from the base only: a graphic's
+ * text item is one line, `paintForLine(style, 0)` is the base, a word-scoped
+ * accent is excluded by `graphicEligible`, and a `highlight` replaces the
+ * fill on the base, not the reach. (Reading the accent too over-widened the
+ * box: `hero`'s accent, 1.6 of the size with a glow, never draws on an item.)
+ *
+ * In the item's own space (`user`):
+ * - a face's `sizeScale` above 1 draws the glyphs bigger than the box measured
+ *   at `px`; the growth is added to every side, and every fraction below is of
+ *   the scaled size, which is what `paintLine` multiplies them by (no base
+ *   face of the catalogue grows today, so the branch is cover for one added);
+ * - `stroke`: half its width each side (a round join, so no miter spike);
+ * - `extrude`: `dx × steps` and `dy × steps` on the side each points to;
+ * - `split`: `dx` both sides, `dy` both sides;
+ * - `box`: its padding each side (the bar's own height sits inside the
+ *   glyph box's ascent, so only the padding reaches past it);
+ * - `line`: the rule's 0.04 overhang plus its round cap (`drawRule` strokes
+ *   with `lineCap` round, so each end reaches half the rule's width past the
+ *   overhang) each side, and its thickness below (an under rule at 0.14
+ *   below the baseline; a strike sits inside).
+ *
+ * In the frame's space (`device`):
+ * - `shadow` and `glow`: a canvas `shadowBlur` of b is a Gaussian of σ = b/2,
+ *   so 3σ, 1.5 × b, each side, plus the shadow's `dy` below (above when
+ *   negative).
+ *
+ * An unknown or absent style has no reach: the styleless route draws only
+ * the spec's own shadow and outline, which a graphic's spec sets to 0
+ * (`textSpecOf`). Conservative where the painter's geometry is blurred: the
+ * box is a bake region, and a few pixels of margin cost nothing against a
+ * clipped glow.
+ */
+export function textInkReach(styleId: string | undefined, px: number): TextInkReach {
+  const user = NO_REACH()
+  const device = NO_REACH()
+  const style = textStyleById(styleId)
+  if (!style || !(px > 0)) return { user, device }
+  const paint: Paint & Face = style.base
+  const scaled = px * (paint.sizeScale ?? 1)
+  const grown = Math.max(0, scaled - px)
+  user.left = user.right = user.top = user.bottom = grown
+  if (paint.stroke && paint.stroke.width > 0) {
+    const half = (paint.stroke.width * scaled) / 2
+    user.left += half
+    user.right += half
+    user.top += half
+    user.bottom += half
+  }
+  if (paint.extrude && paint.extrude.steps > 0) {
+    const dx = paint.extrude.dx * scaled * paint.extrude.steps
+    const dy = paint.extrude.dy * scaled * paint.extrude.steps
+    user.left += Math.max(0, -dx)
+    user.right += Math.max(0, dx)
+    user.top += Math.max(0, -dy)
+    user.bottom += Math.max(0, dy)
+  }
+  if (paint.split) {
+    const dx = Math.abs(paint.split.dx) * scaled
+    const dy = Math.abs(paint.split.dy ?? 0) * scaled
+    user.left += dx
+    user.right += dx
+    user.top += dy
+    user.bottom += dy
+  }
+  if (paint.box) {
+    user.left += paint.box.padX * scaled
+    user.right += paint.box.padX * scaled
+    user.top += paint.box.padY * scaled
+    user.bottom += paint.box.padY * scaled
+  }
+  if (paint.line) {
+    const end = (0.04 + paint.line.width / 2) * scaled
+    user.left += end
+    user.right += end
+    user.bottom += paint.line.width * scaled
+  }
+  if (paint.shadow && paint.shadow.opacity > 0) {
+    const blur = 1.5 * paint.shadow.blur * scaled
+    const dy = paint.shadow.dy * scaled
+    device.left += blur
+    device.right += blur
+    device.top += blur + Math.max(0, -dy)
+    device.bottom += blur + Math.max(0, dy)
+  }
+  if (paint.glow && paint.glow.opacity > 0) {
+    const blur = 1.5 * paint.glow.blur * scaled
+    device.left += blur
+    device.right += blur
+    device.top += blur
+    device.bottom += blur
+  }
+  return { user, device }
+}
+
 /** Resolve a gradient's direction into a line across a box of this size. */
 export function gradientVector(
   angle: number,
