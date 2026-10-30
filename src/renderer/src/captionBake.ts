@@ -2,7 +2,7 @@ import type { Project } from '@shared/timeline'
 import type { CaptionLayer } from '@shared/graphics/spec'
 import { buildCaptionLayers } from '@shared/graphics/fromTimeline'
 import { captionBand, concatList, planBakeOf, type LineInk } from '@shared/captions/bake'
-import { drawTextOnto } from '@shared/render/textPaint'
+import { drawTextOnto, facesFor } from '@shared/render/textPaint'
 import { useCatalog } from './catalog'
 
 /**
@@ -106,8 +106,10 @@ export async function bakeCaptions(
   const { layers, plan } = bake
 
   // A face that is not loaded yet would bake in the fallback and look exactly
-  // like the font picker doing nothing — but permanently, in the export.
-  const families = new Set(layers.map((l) => l.spec.font))
+  // like the font picker doing nothing — but permanently, in the export. Each
+  // line's Hindi or Telugu face with its caption face (`facesFor`, docs/CLIPS.md
+  // §6.20), or a Hindi track bakes in the system's letters.
+  const families = new Set(layers.flatMap((l) => facesFor(l.spec.font, l.spec.content)))
   for (const family of families) await useCatalog.getState().ensureFont(family)
 
   const fps = project.settings.fps

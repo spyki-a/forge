@@ -38,8 +38,8 @@ import {
  * typing, and the picture on screen could not change until all of that had
  * finished. This is the drawing on its own — microseconds, no round trip.
  *
- * The font must already be loaded; `renderTextPng` awaits it, and the preview
- * warms it when the clip is selected.
+ * The fonts must already be loaded (`facesFor`); `renderTextPng` awaits them,
+ * and the preview warms them when the clip is selected.
  */
 export function drawTextOnto(
   ctx: CanvasRenderingContext2D,
@@ -282,12 +282,56 @@ export function plainPaint(spec: TextSpec): Paint & Face {
   }
 }
 
-/** The canvas font shorthand for a line, with the clip's own face as fallback. */
+/**
+ * The faces the app ships for Hindi and Telugu (docs/CLIPS.md §6.20, D10):
+ * Noto Sans Devanagari and Noto Sans Telugu, committed under `assets/fonts`
+ * and listed by every catalogue (`APP_FONT_FILES`, assets/catalog.ts), so both
+ * systems draw the same letters instead of whatever each resolves.
+ *
+ * In every line's font chain after the clip's own faces and before
+ * `sans-serif` (`fontString`). A family in the chain resolves only once its
+ * `FontFace` is registered, and neither is installed on macOS or Windows by
+ * default, so every site that loads a text face loads these too, for text
+ * that holds their script (`indicFontsFor`).
+ */
+export const INDIC_FONTS = ['Noto Sans Devanagari', 'Noto Sans Telugu'] as const
+
+/** The script each of `INDIC_FONTS` is there for, as `\p{Script=…}` names it. */
+const INDIC_SCRIPT: Record<(typeof INDIC_FONTS)[number], RegExp> = {
+  'Noto Sans Devanagari': /\p{Script=Devanagari}/u,
+  'Noto Sans Telugu': /\p{Script=Telugu}/u
+}
+
+/**
+ * The `INDIC_FONTS` faces whose script this text holds: a letter, a mark or a
+ * digit of it alike, one being enough. Empty for a Latin line, so a site that
+ * loads these for every text loads nothing more for Latin.
+ */
+export function indicFontsFor(text: string): string[] {
+  return INDIC_FONTS.filter((face) => INDIC_SCRIPT[face].test(text))
+}
+
+/**
+ * Every face a site has to load before drawing this text: the clip's own, then
+ * the `INDIC_FONTS` faces its text needs (`indicFontsFor`). Each is ensured,
+ * and counted wherever readiness is checked (textCanvas.ts, captionBake.ts,
+ * the preview's font effects).
+ */
+export function facesFor(font: string, text: string): string[] {
+  return [...new Set([font, ...indicFontsFor(text)])]
+}
+
+/**
+ * The canvas font shorthand for a line: the paint's face, the clip's own face
+ * as fallback, then `INDIC_FONTS` for the Hindi or Telugu letters neither
+ * carries, then the system's.
+ */
 function fontString(paint: (Paint & Face) | null, spec: TextSpec, px: number): string {
   const italic = paint?.italic ? 'italic ' : ''
   const weight = Math.round(paint?.weight ?? spec.weight)
   const family = paint?.font ?? spec.font
-  return `${italic}${weight} ${px}px "${family}", "${spec.font}", sans-serif`
+  const indic = INDIC_FONTS.map((face) => `"${face}"`).join(', ')
+  return `${italic}${weight} ${px}px "${family}", "${spec.font}", ${indic}, sans-serif`
 }
 
 /** The original, styleless drawing. Kept exactly as it was for untouched clips. */

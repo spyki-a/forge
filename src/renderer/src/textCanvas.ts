@@ -5,7 +5,7 @@ import {
   textAnimationById,
   type TextAnimation
 } from '@shared/render/textAnimation'
-import { drawTextOnto } from '@shared/render/textPaint'
+import { drawTextOnto, facesFor } from '@shared/render/textPaint'
 import { useCatalog } from './catalog'
 import { beginBake, endBake, isSuperseded } from '@shared/bakeGuard'
 
@@ -35,8 +35,9 @@ export async function renderTextPng(
   height: number
 ): Promise<ArrayBuffer> {
   // A face that is not loaded yet falls back silently, which looks exactly like
-  // the font picker doing nothing.
-  await useCatalog.getState().ensureFont(spec.font)
+  // the font picker doing nothing. The Hindi or Telugu face the words need
+  // with it (`facesFor`, docs/CLIPS.md §6.20).
+  await ensureFaces(spec)
 
   const canvas = document.createElement('canvas')
   canvas.width = width
@@ -109,11 +110,16 @@ export function textPreviewCanvas(
    * though it were right. Asking for it here — the call is synchronous once the
    * face is registered — and skipping the cache until it is ready means the
    * first frame may be a beat late but is never quietly wrong.
+   *
+   * Every face the words need counts, the Hindi or Telugu one with the clip's
+   * (`facesFor`): a Latin face that is ready over a Noto face still loading
+   * would cache the system's letters for the Indic words.
    */
-  const ready = document.fonts.check(`16px "${spec.font}"`)
+  const faces = facesFor(spec.font, spec.content)
+  const waiting = faces.filter((face) => !document.fonts.check(`16px "${face}"`))
   drawTextOnto(ctx, spec, width, height, moving ? clock : undefined)
-  if (!ready) {
-    void useCatalog.getState().ensureFont(spec.font)
+  if (waiting.length > 0) {
+    for (const face of waiting) void useCatalog.getState().ensureFont(face)
     previews.delete(clipId)
     return canvas
   }
@@ -133,6 +139,12 @@ function longestRun(spec: TextSpec, animation: TextAnimation): number {
   return spec.content
     .split('\n')
     .reduce((most, line) => Math.max(most, piecesOf(line, animation.scope).length), 1)
+}
+
+/** Load every face this text draws in, the clip's own and its script's (`facesFor`). */
+async function ensureFaces(spec: TextSpec): Promise<void> {
+  const { ensureFont } = useCatalog.getState()
+  await Promise.all(facesFor(spec.font, spec.content).map((face) => ensureFont(face)))
 }
 
 /** Drop a text clip's preview canvas — it was deleted. */
@@ -171,7 +183,7 @@ export async function bakeTextSequence(
   const animation = textAnimationById(spec.animationId)
   if (!animation) return null
 
-  await useCatalog.getState().ensureFont(spec.font)
+  await ensureFaces(spec)
   const frames = Math.min(
     Math.max(1, maxFrames),
     animationFrames(animation, fps, longestRun(spec, animation))

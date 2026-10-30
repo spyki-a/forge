@@ -167,6 +167,32 @@ export function buildCaptionLayers(
   }
 }
 
+/**
+ * The words the captions would show, joined by spaces.
+ *
+ * Gathered as `buildCaptionLayers` reads them: each clip on `captionTrack`,
+ * its transcript's words, only those inside the clip's window. So a word the
+ * clip trims away is not here. The preview's caption font effect asks
+ * `indicFontsFor` over this for the Hindi or Telugu face a track needs
+ * (docs/CLIPS.md §6.20).
+ */
+export function captionWords(project: Project): string {
+  const track = captionTrack(project)
+  if (!track) return ''
+  const fps = project.settings.fps
+  const words: string[] = []
+  for (const clip of clipsOnTrack(project, track.id)) {
+    const transcript = project.transcripts[clip.assetId]
+    if (!transcript) continue
+    const clipStartMs = framesToSeconds(clip.inPoint, fps) * 1000
+    const clipEndMs = clipStartMs + framesToSeconds(clip.duration, fps) * 1000
+    for (const word of transcript.words) {
+      if (word.endMs > clipStartMs && word.startMs < clipEndMs) words.push(word.text)
+    }
+  }
+  return words.join(' ')
+}
+
 export function captionStyleIsAnimated(style: CaptionStyle): boolean {
   return style.animated === true
 }

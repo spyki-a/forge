@@ -57,7 +57,8 @@ import { activeCaptionStyle, captionAt, drawCaptions } from '../captionPreview'
 import { captionSourceClip } from '@shared/captions/timeline'
 import { smartPlacement } from '@shared/captions/smart'
 import { lineThird } from '@shared/captions/placement'
-import { captionNeedsCanvas } from '@shared/graphics/fromTimeline'
+import { captionNeedsCanvas, captionWords } from '@shared/graphics/fromTimeline'
+import { facesFor } from '@shared/render/textPaint'
 import { LIVE_DRAWN_FIELDS } from '@shared/edit/recipes'
 import { useCatalog } from '../catalog'
 import { isAssetDrag, readDragPayload, type DragPayload } from '../dragPayload'
@@ -438,16 +439,27 @@ export function Preview(): ReactNode {
 
   const fps = project.settings.fps
   const ensureFont = useCatalog((s) => s.ensureFont)
+  /*
+   * An ask before the catalogue lands is answered false and not recorded
+   * (catalog.ts), so the font effects run again when it lands: App.tsx re-asks
+   * the caption face alone, and a Hindi track's Noto face would otherwise wait
+   * for the next edit.
+   */
+  const catalogReady = useCatalog((s) => s.catalog !== null)
   // Wipes live in the asset library, so the preview needs both the table of
   // transitions and the root their mask files are relative to.
   const transitions = useCatalog((s) => s.transitions)
   const assetsRoot = useCatalog((s) => s.root)
 
   // Canvas silently falls back to a default face for a font it does not have.
+  // The Hindi or Telugu face the track's words need with the caption face
+  // (`facesFor` over `captionWords`, docs/CLIPS.md §6.20).
   useEffect(() => {
     if (!project.captions.enabled) return
-    void ensureFont(activeCaptionStyle(project).fontFamily)
-  }, [project, ensureFont])
+    for (const face of facesFor(activeCaptionStyle(project).fontFamily, captionWords(project))) {
+      void ensureFont(face)
+    }
+  }, [project, ensureFont, catalogReady])
 
   /*
    * Smart placement's thirds (docs/CLIPS.md §5.4), worked out once per edit
@@ -467,10 +479,11 @@ export function Preview(): ReactNode {
    * the first frame changes the picture without changing any state — and the
    * draw loop only repaints on a change it can see. Keyed on the set of font
    * names rather than on the project, so typing does not re-run it on every
-   * keystroke.
+   * keystroke. Each clip's Hindi or Telugu face with its own (`facesFor`,
+   * docs/CLIPS.md §6.20), so the set moves only when a script comes or goes.
    */
   const textFonts = [
-    ...new Set(project.clips.map((c) => c.text?.font).filter((f): f is string => Boolean(f)))
+    ...new Set(project.clips.flatMap((c) => (c.text?.font ? facesFor(c.text.font, c.text.content) : [])))
   ]
     .sort()
     .join('|')
@@ -483,7 +496,7 @@ export function Preview(): ReactNode {
     return () => {
       alive = false
     }
-  }, [textFonts, ensureFont, repaint])
+  }, [textFonts, ensureFont, repaint, catalogReady])
 
   useLayoutEffect(() => {
     const element = boxRef.current
