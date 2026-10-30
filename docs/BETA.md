@@ -397,8 +397,9 @@ Things testers will notice but can follow the first installer:
   texts; `tests/appFontFiles.test.ts` holds R6's rule for them), every
   catalogue lists them wherever it scans and the Library's "empty" no
   longer counts them (`9a0f232`), the canvas painter's chain names them
-  after the clip's face and every text site loads the face the words need
-  (`8932535`, `00b42b4`), and a Hindi or Telugu track is the bake's on both
+  after the clip's face and every text site the plan lists loads the face
+  the words need (`8932535`, `00b42b4`), and a Hindi or Telugu track is
+  the bake's on both
   platforms with the "unshaped" notice on Windows for a failed or empty
   bake (`f77fd29`, `ae3e48f`). **Not as this item read for libass**: on
   the Mac libass still falls back through CoreText to Kohinoor whether or
@@ -415,8 +416,9 @@ Things testers will notice but can follow the first installer:
   outside §6.20's list of sites.
 - **A pack's faces never reach libass.** Found 2026-10-29 while building
   the Indic fonts (`CLIPS.md` §6.20, "A gap found, outside this step"):
-  libass takes one `fontsdir` (`src/shared/render/plan.ts`, from
-  `fontsDir()`, `src/main/fontsDir.ts:17`), and that is the app's own
+  libass takes one `fontsdir` (`src/shared/render/plan.ts:103`, the
+  `:fontsdir=` argument built at `:1932`, from `fontsDir()`,
+  `src/main/fontsDir.ts:17`), and that is the app's own
   `assets/fonts` whether or not an asset pack is installed, so on a
   machine with a pack a burned-in caption in one of the pack's faces is
   drawn by libass in a system fallback, while the preview and the canvas

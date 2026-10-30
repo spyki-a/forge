@@ -14129,7 +14129,7 @@ link and their tests, against the tags' one block and one test.
 >   entry id**, not when the folder "is not the scanned root's `fonts/`",
 >   the same test for a checkout and a pack-free app and one that also
 >   covers a pack holding a file of the same name; a throwing `fontsDir()`
->   lists nothing rather than failing the scan (`:216-220`: the tests'
+>   lists nothing rather than failing the scan (`:216-221`: the tests'
 >   electron stand-in has no `getAppPath`, and `assetPackInstall.int` and
 >   `tests/eval/local.ts` scan with no `FORGE_FONTS_DIR`); and
 >   `assetscan.int` points `FORGE_FONTS_DIR` at an empty folder for its
@@ -14165,8 +14165,9 @@ link and their tests, against the tags' one block and one test.
 >   `"<paint face>", "<clip face>", "Noto Sans Devanagari", "Noto Sans
 >   Telugu", sans-serif`, both Noto faces whatever the text, since an
 >   unregistered family in a chain is skipped. The sites: `textCanvas.ts`,
->   both bakes through `ensureFaces` (`:40`, `:151`; `Promise.all` over
->   `facesFor`) and the preview's `waiting` (`:124-128`, below);
+>   both bakes (`:40` and `:192`) through `ensureFaces` at `:151`
+>   (`Promise.all` over `facesFor`) and the preview's `waiting`
+>   (`:124-128`, below);
 >   `captionBake.ts:112`, each layer's `facesFor(l.spec.font,
 >   l.spec.content)`; `captionPreview.ts:44`'s `captionFaces(project)`
 >   (the caption face with `captionWords(project)`'s faces, `[]` with
@@ -14228,22 +14229,28 @@ link and their tests, against the tags' one block and one test.
 >   `undefined` silently; anything else is returned. `src/main/
 >   captions.ts:74` exports `captionsForExport(project, canvas, overlay)`,
 >   main's guard moved unchanged, which `ipc.ts:1129` calls. The callers:
->   `ExportStrip.tsx:203` asks `captionRoute(exported)` and `:206-209`
+>   `ExportStrip.tsx:203` asks `captionRoute(exported)` and `:206-210`
 >   hands it to the fallback with the guarded `navigator.platform`,
 >   `bakeCaptions` and `notify`, so the strip holds neither the notice's
 >   words nor its own `.catch`, and `style` left `onExport`'s dependencies
->   with the comment at `:77-81` (the route is read from the exported copy
->   inside the callback); `OutputStrip.tsx:121` and `Preview.tsx:479`
+>   (the list is `:236`), the comment the plan placed at
+>   `ExportStrip.tsx:77-81` going with it, removed, not rewritten (at
+>   `ae3e48f` those lines hold `useRange`'s comment and three store reads;
+>   the route is read from the exported copy inside the callback);
+>   `OutputStrip.tsx:121` and `Preview.tsx:479`
 >   memoise `captionRouting` per edit, `Preview.tsx:1870` asks the third by
 >   `captionRouting.route` and `:1919` has it in draw's dependencies;
 >   `OutputStrip.tsx:468` shows the note when the route is `'canvas'` and
 >   the captions are on, the cost sentence ending "so it costs a little
 >   more than burning them in — not a second render." on every track
->   (`:484`), and `:487-488` adds the join sentence when `indic`. The first
->   sentence stays whole, so the census row (`ui-census.json:3460`) holds.
->   `plan.ts:97`'s `captionOverlay` comment names the shaped-script track
->   beside the looks libass cannot draw. **The `\fn` tags were never
->   built**, as the sub-bullet says. **Tamil held the two flags apart**
+>   (`:484-486`), and `:487-488` adds the join sentence when `indic`. The
+>   first sentence stays whole, so the census row (`ui-census.json:3460`)
+>   holds. `plan.ts:97`'s `captionOverlay` comment names the shaped-script
+>   track beside the looks libass cannot draw. **The `\fn` tags were never
+>   built**, as the sub-bullet says. **The size** consequence the plan
+>   names stands as it reads: a plain-style Hindi or Telugu track now
+>   exports at the painter's size, not libass's; not measured in a render
+>   here, EFFECTS §60's step. **Tamil held the two flags apart**
 >   (`ae3e48f`): இது புத்தகம் under `pop` is `'canvas'`, `shaped` and not
 >   `indic` (`tests/tier2.test.ts:213-214`), its note shows the first
 >   sentence and not the join sentence (`captionRouteNote.test.tsx:99`), a
@@ -14288,12 +14295,14 @@ link and their tests, against the tags' one block and one test.
 >   `simple.png`, README) are byte-identical to the 2026-10-28 run's from
 >   before the files were there. **Which face the Windows build falls back
 >   to is unmeasured** (the Surface's; `captions.int`'s notice says SAME or
->   DIFFER, not which face). `captions.int:212` and `:280` and
->   `graphic.int`'s and `clipIt.int`'s CI notices now say whether the named
->   face (Anton) is in the folder, not only whether the folder exists
->   (`9a0f232`): `graphic.int`'s should read "fonts dir present,
->   Anton-Regular.ttf NOT in it" on both runners. EFFECTS §61, "libass and
->   the fontsdir on the Mac".
+>   DIFFER, not which face). `captions.int`'s comment (`:208-215`) and its
+>   darwin message (`:280`) name the measured face, Kohinoor through
+>   CoreText, not the fontsdir's Noto (`ae3e48f`); `graphic.int`'s notice
+>   (`:309-310`) and `clipIt.int`'s comment and README line (`:542`,
+>   `:718`) say whether the named face, Anton, is in the folder, not only
+>   whether the folder exists (`9a0f232`): `graphic.int`'s should read
+>   "fonts dir present, Anton-Regular.ttf NOT in it" on both runners.
+>   EFFECTS §61, "libass and the fontsdir on the Mac".
 > - **CI's check** (`6bc8b07`). `.github/workflows/ci.yml:386-393` tests
 >   `assets/sfxx`, where the Director's sounds live, and its `::warning::`
 >   says the installer will carry only the two Noto faces in `assets/fonts`
@@ -14335,26 +14344,30 @@ link and their tests, against the tags' one block and one test.
 >   OutputStrip's memo line and the note's condition (`:397`), the last two
 >   soft. `tests/exportB2.test.ts`'s pin no longer freezes `onExport`'s
 >   dependency list: membership of `useRange`, `aspect` and `notify`.
->   `tests/integration/captionOverlay.int.test.ts` (`:246`): main's guard,
+>   `tests/integration/captionOverlay.int.test.ts` (`:206`): main's guard,
 >   with an overlay null, without one an `.ass` holding किताब, and the plan
 >   with the concat list and no `ass=`. `tests/integration/m0Exit.int.
 >   test.ts`: `indic: true` on `eK71EN3P78U` and `lqOH-zxtCDE` (`:154`,
 >   `:156`), `captionRoute(project).route` per link (`:791`), its
 >   `appExport` on `captionsForExport(p, canvas, undefined)`. `tests/
->   integration/captionsFree.int.test.ts:541` asserts the route beside
->   `captionNeedsCanvas`. `tests/renderer/captionRouteNote.test.tsx` (new,
+>   integration/captionsFree.int.test.ts:544` asserts the route beside
+>   `captionNeedsCanvas` (`:543`). `tests/renderer/captionRouteNote.test.tsx` (new,
 >   `:78`): OUTPUT rendered open, Hindi and Telugu show three sentences,
 >   kinetic Latin two, pop Latin none, Tamil the first and not the third.
 >   `Preview.tsx`'s two effects and its `catalogReady` dependencies are the
 >   sites no node test reaches; the harness's Indic frames through a text
 >   clip and a caption (§6.11's `indic` option, lane D) are their check.
-> - **Mutations**: sixty-two across the six commits, each at an anchor
+> - **Mutations**: sixty-three across the six commits, each at an anchor
 >   counted at exactly one match, the test run to a file with its exit
 >   read, the source restored from a copy and compared equal, md5 the same
 >   before and after; every one failed its case with the message in the
 >   commit's table (`6bc8b07` six, the relaxed membership's two original
->   bugs among them; `9a0f232` six; `8932535` M1–M9; `00b42b4` N1–N10,
->   fourteen with their letters; `f77fd29` M1–M17; `ae3e48f` A–G, ten).
+>   bugs among them; `9a0f232` six; `8932535` M1–M9, its M3, Telugu keyed
+>   to Devanagari's script, failing five across both files on a critic's
+>   re-run, not the three its message says, and `00b42b4`'s N9, the same
+>   bug against the later files, eight; `00b42b4` N1–N10, fourteen with
+>   their letters, N6c and N6d counted as two; `f77fd29` M1–M17; `ae3e48f`
+>   A–G, eleven, B in four parts and C in two).
 >   Of the plan's: the chain without `INDIC_FONTS` fails the three chain
 >   cases; the script test dropped from `captionRoute` fails eight (twelve
 >   with the style's half dropped instead, `captionRouteNote`'s kinetic
@@ -14372,8 +14385,8 @@ link and their tests, against the tags' one block and one test.
 >   not have; `captionBakeOrFallback` and `captionBakeFailedNotice` take
 >   the whole `CaptionRouting`; the notice's test is `/^win/i`; m0Exit's
 >   `appExport` calls `captionsForExport` as the app does; `captionsFree.
->   int`'s route assertion and `captionRouteNote.test.tsx` are extra;
->   `ExportStrip.tsx:77-81`'s comment is removed, not rewritten; the
+>   int`'s route assertion and `captionRouteNote.test.tsx` are extra; the
+>   plan's `ExportStrip.tsx:77-81` comment is removed, not rewritten; the
 >   `captionPlacement` counts for ExportStrip and ipc are soft; and the
 >   plan's reading of libass, that committing the faces makes CI's libass
 >   draw them, holds only for a style that names them (above).
@@ -14381,17 +14394,27 @@ link and their tests, against the tags' one block and one test.
 >   against it (above); the render check in the development app on both
 >   builds (a Hindi and a Telugu track's captions through the bake, and
 >   the Surface's reading of the Windows notice's SAME); Electron's own
->   `document.fonts.check`; the paper clip's chain; the seven scripts
->   beyond D8's ten stay a proposal, and the route's script test with them.
->   Lane D's: the harness's Indic frames through a text clip and a caption.
->   CI's: the first run's `captions.int`, `captionsFree.int`, `graphic.int`
->   and `clipIt.int` notices (the Windows fallback face, and whether Noto
->   is picked for Latin captions by coverage, "A risk to read on the first
+>   `document.fonts.check`; which face the Windows build's libass falls
+>   back to for a letter Anton lacks, read on the Surface from the bundled
+>   ffmpeg's `-loglevel debug` fontselect lines, as the Mac's was (CI's
+>   notice cannot say); the paper clip's chain; the seven scripts beyond
+>   D8's ten stay a proposal, and the route's script test with them. Lane
+>   D's: the harness's Indic frames through a text clip and a caption.
+>   Lanes B's and C's: the graphics sites the plan's canvas-route bullet
+>   lists (`bakeGraphicSequence`, `graphicPreviewCanvas`), not yet written,
+>   naming `INDIC_FONTS` for their shaped items. CI's: the first run's
+>   `captions.int`, `captionsFree.int`, `graphic.int` and `clipIt.int`
+>   notices (SAME or DIFFER on the Windows runner, and whether Noto is
+>   picked for Latin captions by coverage, "A risk to read on the first
 >   push"); whether `captions.int`'s notice fits GitHub's ten a step. The
 >   libass gap (a pack's faces never reach libass) is `BETA.md` R14's row
 >   now, written with this record. Docs that said a CI installer ships no
 >   assets (`PACKAGING.md`, `ASSETS.md`, `WHERE-THINGS-ARE.md`) were
->   corrected with this record.
+>   corrected with this record. Found outside D10, a task of its own:
+>   `tests/sidecarClient.test.ts:233-254` reads the expected pid from
+>   `slow.pids()[0]` before the list is filled under load, and turned
+>   `6bc8b07`'s first full run red once (load average about 25; passed
+>   alone three times, and the second full run was green).
 
 ### 6.21 What this revision edits elsewhere
 
@@ -15995,8 +16018,9 @@ H11, and H12 again, in phase 4.
   visibly unshaped at `shaping=complex`, and the Telugu row was drawn by a
   face installed on Windows, all but certainly one with Indic layout
   tables (no file in `assets/fonts` carried Telugu then; since `6bc8b07`,
-  2026-10-29, Noto Sans Telugu does, and reaches CI's libass as its
-  fontsdir, but which face the Windows build falls back to is still
+  2026-10-29, Noto Sans Telugu does, and sits in the fontsdir CI's libass
+  is given, which serves a face a style names, not the Mac's fallback,
+  while which face the Windows build falls back to is still
   unmeasured, §6.20's second Built note; §6.15), so the 2018
   build's libass does not shape Hindi or Telugu (the first reading; the
   route for those captions is §16.66, answered (a) on 2026-10-27). Your
