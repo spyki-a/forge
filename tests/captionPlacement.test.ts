@@ -357,9 +357,44 @@ describe('one caption route, asked by every caller (captionRoute, docs/CLIPS.md 
     expect.soft(count(exportStrip, /burned in plain/g), '"burned in plain"').toBe(0)
   })
 
+  it('the export bakes only an enabled track the route sends to the canvas, and hands the step the platform, the bake and the notice', () => {
+    /*
+     * The whole block, as one ordered shape matched once: the counts above
+     * hold with the condition inverted, the enabled guard dropped (the bake
+     * never reads `enabled`, so captions turned off would be baked in), the
+     * platform blanked (no Windows notice) or the notice swallowed.
+     */
+    const exportStrip = source('src/renderer/src/components/ExportStrip.tsx')
+    const block = new RegExp(
+      [
+        'const routing = captionRoute\\(exported\\)',
+        'const captionOverlay =',
+        "exported\\.captions\\.enabled && routing\\.route === 'canvas'",
+        '\\? await captionBakeOrFallback\\(',
+        'routing,',
+        "typeof navigator === 'undefined' \\? '' : navigator\\.platform,",
+        '\\(\\) => bakeCaptions\\(exported, canvas\\),',
+        "\\(message\\) => notify\\(message, 'info'\\)",
+        '\\)',
+        ': undefined\\n'
+      ].join('\\s*'),
+      'g'
+    )
+    expect(count(exportStrip, block), 'the bake block, whole').toBe(1)
+  })
+
   it('main decides through captionsForExport, where a test reaches its guard', () => {
     const ipc = source('src/main/ipc.ts')
     expect.soft(count(ipc, /captionsForExport\(/g), 'captionsForExport(').toBe(1)
     expect.soft(count(ipc, /prepareCaptions\(/g), 'prepareCaptions(').toBe(0)
+    // The one call, whole: the overlay is what keeps a baked track from being burned in twice.
+    expect.soft(count(ipc, /captionsForExport\(request\.project, canvas, request\.captionOverlay\)/g), 'the call, with the overlay').toBe(1)
+  })
+
+  it('the OUTPUT strip re-reads the route on every edit, and shows the note on it', () => {
+    // A memo with no dependencies keeps the first edit's route: the note would never come or go.
+    const output = source('src/renderer/src/components/OutputStrip.tsx')
+    expect.soft(count(output, /const captionRouting = useMemo\(\(\) => captionRoute\(project\), \[project\]\)\n/g), 'the memo, per edit').toBe(1)
+    expect.soft(count(output, /\{captionRouting\.route === 'canvas' && project\.captions\.enabled && \(/g), 'the note’s condition').toBe(1)
   })
 })

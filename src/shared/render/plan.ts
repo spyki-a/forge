@@ -93,8 +93,10 @@ export interface RenderRequest {
    *
    * Only the band of the frame the captions touch, replayed through the concat
    * demuxer: a still caption is one file held for as long as it is on screen.
-   * This is the alternative to `subtitlesPath` for looks libass cannot draw —
-   * and it stays inside the single pass, which the frame server did not.
+   * This is the alternative to `subtitlesPath` for looks libass cannot draw,
+   * or a track whose words hold a shaped script (`captionRoute`, docs/CLIPS.md
+   * §16.66 (a)) — and it stays inside the single pass, which the frame server
+   * did not.
    */
   captionOverlay?: { listPath: string; y: number; height: number }
   /** Directory libass searches for the fonts a style names. */

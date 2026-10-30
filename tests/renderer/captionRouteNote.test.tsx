@@ -96,6 +96,13 @@ describe('the OUTPUT strip’s note on drawn captions', () => {
     expect(html).not.toContain(JOIN)
   })
 
+  it('shows for a Tamil track, a shaped script, without the third sentence, which is for the two measured', () => {
+    // Should Tamil be measured on Windows and join indicFontsFor, this case changes deliberately.
+    const html = scene(['இது', 'புத்தகம்.'], { styleId: 'pop' })
+    expect(html).toContain(FIRST)
+    expect(html).not.toContain(JOIN)
+  })
+
   it('is not there for a plain style on a Latin track, which libass burns in', () => {
     const html = scene(['Shop', 'the', 'sale.'], { styleId: 'pop' })
     expect(html).not.toContain(FIRST)

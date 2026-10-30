@@ -209,6 +209,19 @@ describe('the failed or empty bake (captionBakeOrFallback)', () => {
     expect(r.said[0]).toContain('nothing was drawn')
   })
 
+  it('says a bake that drew nothing on any shaped track, not only a Hindi or Telugu one', async () => {
+    // Tamil: shaped (SHAPED_SCRIPTS), not one of the two measured on Windows. Its notice's words are not pinned.
+    const tamil = captionRoute(spoken(words([['இது', 0, 500], ['புத்தகம்', 500, 1200]]), POP))
+    expect(tamil.route).toBe('canvas')
+    expect(tamil.shaped).toBe(true)
+    expect(tamil.indic).toBe(false)
+    const r = recorder()
+    const out = await captionBakeOrFallback(tamil, 'Win32', () => Promise.resolve(null), r.notify)
+    expect(out).toBeUndefined()
+    expect(r.said).toHaveLength(1)
+    expect(r.said[0]).toContain('nothing was drawn')
+  })
+
   it('gives nothing drawn on a Latin track no overlay and no notice, as before', async () => {
     const r = recorder()
     const out = await captionBakeOrFallback(kinetic(), 'Win32', () => Promise.resolve(null), r.notify)

@@ -306,14 +306,22 @@ describe('the export button sends what the panel shows', () => {
   const strip = source('src/renderer/src/components/ExportStrip.tsx')
   const inspector = source('src/renderer/src/components/Inspector.tsx')
   const OPENS = 'const onExport = useCallback('
-  const CLOSES = '}, [aspect, notify, useRange])'
+  /*
+   * From OPENS to the first callback close after it, its dependency list
+   * captured: the whole of onExport, matched once. The list's members are
+   * asserted, never the list, so a dependency rightly added breaks nothing.
+   */
+  const WHOLE = /const onExport = useCallback\([\s\S]*?\n  \}, \[([^\]]*)\]\)\n/g
+  const wholes = [...strip.matchAll(WHOLE)]
   const at = strip.indexOf(OPENS)
-  const end = strip.indexOf(CLOSES, at)
+  const end = wholes.length === 1 ? at + wholes[0][0].lastIndexOf('\n  }, [') : -1
   const onExport = strip.slice(at, end)
+  const dependencies = wholes.length === 1 ? wholes[0][1].split(',').map((d) => d.trim()) : []
   const escape = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const anchored = (): void => {
     expect([...strip.matchAll(new RegExp(escape(OPENS), 'g'))]).toHaveLength(1)
-    expect([...strip.matchAll(new RegExp(escape(CLOSES), 'g'))]).toHaveLength(1)
+    expect(wholes).toHaveLength(1)
+    expect(wholes[0].index).toBe(at)
     expect(at).toBeGreaterThan(-1)
     expect(end).toBeGreaterThan(at)
     // The whole flow, not a stub that happens to open and close the same way.
@@ -351,8 +359,10 @@ describe('the export button sends what the panel shows', () => {
     // A toggle missing from the dependencies is a button that exports with
     // whatever it was when the edit last changed — which Draft once did.
     anchored()
-    // `style` left them with the captions' route: it is read from the exported copy inside (captionRoute).
-    expect(strip).toContain('}, [aspect, notify, useRange])')
+    // Membership: `style` left them with the captions' route (read from the exported copy inside), and a new one may come.
+    expect(dependencies).toContain('useRange')
+    expect(dependencies).toContain('aspect')
+    expect(dependencies).toContain('notify')
   })
 
   it('has no half-size draft left anywhere in the export path', () => {

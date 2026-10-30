@@ -207,8 +207,13 @@ describe('caption burn-in', () => {
    * The words are letter clusters made up for this, nobody's speech: in each
    * script three conjuncts and a consonant with its i-matra. Noto Sans
    * Devanagari and Noto Sans Telugu are in assets/fonts, the fontsdir, since
-   * 6bc8b07 (docs/CLIPS.md §6.20), so libass has a face for each on both
-   * machines; on macOS complex and simple must differ — which is what proves
+   * 6bc8b07 (docs/CLIPS.md §6.20), and libass loads both; but the style names
+   * Anton, and on the Mac a letter Anton lacks falls back through CoreText,
+   * not to the fontsdir: Kohinoor Devanagari and Kohinoor Telugu, read off
+   * the bundled ffmpeg's own fontselect log, and every frame is the same with
+   * the two Noto files moved out (measured 2026-10-29: 0 of 54 Devanagari and
+   * 0 of 54 Telugu frames change, complex, simple and the app's alike). On
+   * macOS complex and simple must differ — which is what proves
    * the comparison can see shaping at all. Elsewhere that is only recorded,
    * in a notice readable without signing in: the 2018 Windows build's libass
    * was measured not to shape these (graphic.int on the Surface, 2026-10-27,
@@ -272,7 +277,7 @@ describe('caption burn-in', () => {
         `(on ${seen.devanagari} Devanagari and ${seen.telugu} Telugu frames of 54 each); in the fontsdir: ${noto.join(', ') || 'no Noto face'}`
     )
     expect(app, 'the app’s captions are the complex shaper’s').toEqual(complex)
-    if (process.platform === 'darwin') expect(seen, 'shaping is visible here: Kohinoor through CoreText').toEqual({ devanagari: 54, telugu: 54 })
+    if (process.platform === 'darwin') expect(seen, 'shaping is visible here: Kohinoor, the CoreText fallback, not the fontsdir’s Noto').toEqual({ devanagari: 54, telugu: 54 })
   }, 180_000)
 
   /*
