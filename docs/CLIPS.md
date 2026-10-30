@@ -27,8 +27,8 @@
 > D10 half in six commits, `6bc8b07`, `9a0f232`, `8932535`, `00b42b4`,
 > `f77fd29` and `ae3e48f` (§6.20's second Built note: the Noto faces
 > committed, the catalogue's listing, the canvas painter's chain, the
-> caption route §16.66 (a); pushed as `ae3e48f`, whose CI run was not yet
-> read when this was written). Not built: phase 1's lanes B–D (lane B is
+> caption route §16.66 (a); pushed as `ae3e48f`, whose CI run 40996919693
+> passed on both runners, its notices read in the Built note). Not built: phase 1's lanes B–D (lane B is
 > next: both of §6.20's halves it waits on are in) and everything from
 > phase 2 on. §2's total is
 > now about 100-103.5 days with Step P (100.25-103.75 since §16.66's
@@ -14089,7 +14089,23 @@ link and their tests, against the tags' one block and one test.
 > with its three new cases). Every figure below is from the six messages or the builders'
 > and critics' reports, and every line number was read at `ae3e48f` (the
 > plan's above were an older sha's).
-> CI: CI-LINE-PENDING
+> CI: run 40996919693 on `ae3e48f`, read 2026-10-30, green on both
+> runners (windows-latest and macos-14; the installer job skipped, as on
+> every push). The first-push readings, from the jobs' notices: `graphic.int`
+> reads "fonts dir present, Anton-Regular.ttf NOT in it, face named Anton
+> at 149" on both, as predicted; on win32 every one of the ten conjuncts is
+> "complex against simple same (0 px past 40)", so the 2018 build's libass
+> still does not shape with Noto in its fontsdir (the tripwire reads as
+> reading 1, §6.15 M21), and on darwin all ten DIFFER (1,040–6,013 px past
+> 40). `captions.int`: win32 "complex and simple SAME (on 0 Devanagari and 0
+> Telugu frames of 54 each); in the fontsdir: NotoSansDevanagari-Regular.ttf,
+> NotoSansTelugu-Regular.ttf"; darwin "DIFFER (on 54 Devanagari and 54
+> Telugu frames of 54 each)", the bar held on both. `captionsFree.int`'s
+> box rows came out "Anton absent" with the same rows as the run before
+> (9x16 libass bottom smart 300–337 / 461–498 on win32, 302–338 / 462–498
+> on darwin), so the Latin-coverage risk above did not move the fallback
+> face. Which face the Windows libass fell back to for the Indic letters
+> is still not read: SAME says only that it did not shape.
 > - **The files** (`6bc8b07`). `assets/fonts/NotoSansDevanagari-Regular.ttf`
 >   (243,520 B) and `NotoSansTelugu-Regular.ttf` (235,176 B), with
 >   `OFL-NotoSansDevanagari.txt` and `OFL-NotoSansTelugu.txt` beside them:
