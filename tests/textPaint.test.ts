@@ -4,6 +4,7 @@ import { APP_FONT_FILES, fontFamilyFromFilename } from '@shared/assets/catalog'
 import { ASCENT, LINE_HEIGHT, layoutText } from '@shared/render/textLayout'
 import { STILL, stepAt, textAnimationById } from '@shared/render/textAnimation'
 import { DEFAULT_TEXT, type TextSpec } from '@shared/timeline'
+import { TEXT_STYLES, textStyleById } from '@shared/render/textStyle'
 
 /**
  * Where the painter puts each row — found on the first real ad (2026-09-26).
@@ -256,4 +257,32 @@ describe('the Indic faces', () => {
       }
     })
   }
+
+  it('with a paint face of its own, the Indic faces sit after both the paint face and the clip’s', () => {
+    // No built-in style sets a face (Face.font), so the paint face equals the
+    // clip's in every case above: one is lent here for this case alone.
+    const hero = textStyleById('hero')!
+    const lent = { ...hero, id: 'indic-chain-test', base: { ...hero.base, font: 'Bebas Neue' } }
+    TEXT_STYLES.push(lent)
+    try {
+      const { ctx, placed } = fakeContext()
+      drawTextOnto(ctx, spec({ content: `${HINDI}\nमित्र`, font: 'Anton', styleId: lent.id }), W, H)
+      expect(placed.length).toBeGreaterThan(0)
+      for (const p of placed) {
+        const families = familiesOf(p.font)
+        const paintFace = families.indexOf('Bebas Neue')
+        const own = families.indexOf('Anton')
+        expect(paintFace, p.font).toBeGreaterThanOrEqual(0)
+        expect(own, p.font).toBeGreaterThanOrEqual(0)
+        for (const face of [DEVANAGARI, TELUGU]) {
+          const at = families.indexOf(face)
+          expect(at, `${face} in ${p.font}`).toBeGreaterThan(paintFace)
+          expect(at, `${face} in ${p.font}`).toBeGreaterThan(own)
+          expect(at, `${face} in ${p.font}`).toBeLessThan(families.indexOf('sans-serif'))
+        }
+      }
+    } finally {
+      TEXT_STYLES.splice(TEXT_STYLES.indexOf(lent), 1)
+    }
+  })
 })

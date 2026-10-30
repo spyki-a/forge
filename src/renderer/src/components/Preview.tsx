@@ -53,12 +53,12 @@ import { carouselPreviewCanvas } from '../carouselCanvas'
 import { forgetMomentPreview, momentPreviewCanvas } from '../momentCanvas'
 import { momentTextures } from '@shared/render/momentTextures'
 import { clipRateAt, clipSpeed } from '@shared/render/speed'
-import { activeCaptionStyle, captionAt, drawCaptions } from '../captionPreview'
+import { activeCaptionStyle, captionAt, captionFaces, drawCaptions } from '../captionPreview'
 import { captionSourceClip } from '@shared/captions/timeline'
 import { smartPlacement } from '@shared/captions/smart'
 import { lineThird } from '@shared/captions/placement'
-import { captionNeedsCanvas, captionWords } from '@shared/graphics/fromTimeline'
-import { facesFor } from '@shared/render/textPaint'
+import { captionNeedsCanvas } from '@shared/graphics/fromTimeline'
+import { textClipFaceKey } from '@shared/render/textPaint'
 import { LIVE_DRAWN_FIELDS } from '@shared/edit/recipes'
 import { useCatalog } from '../catalog'
 import { isAssetDrag, readDragPayload, type DragPayload } from '../dragPayload'
@@ -453,12 +453,9 @@ export function Preview(): ReactNode {
 
   // Canvas silently falls back to a default face for a font it does not have.
   // The Hindi or Telugu face the track's words need with the caption face
-  // (`facesFor` over `captionWords`, docs/CLIPS.md §6.20).
+  // (`captionFaces`: `facesFor` over `captionWords`, docs/CLIPS.md §6.20).
   useEffect(() => {
-    if (!project.captions.enabled) return
-    for (const face of facesFor(activeCaptionStyle(project).fontFamily, captionWords(project))) {
-      void ensureFont(face)
-    }
+    for (const face of captionFaces(project)) void ensureFont(face)
   }, [project, ensureFont, catalogReady])
 
   /*
@@ -479,14 +476,11 @@ export function Preview(): ReactNode {
    * the first frame changes the picture without changing any state — and the
    * draw loop only repaints on a change it can see. Keyed on the set of font
    * names rather than on the project, so typing does not re-run it on every
-   * keystroke. Each clip's Hindi or Telugu face with its own (`facesFor`,
-   * docs/CLIPS.md §6.20), so the set moves only when a script comes or goes.
+   * keystroke. Each clip's Hindi or Telugu face with its own
+   * (`textClipFaceKey`, docs/CLIPS.md §6.20), so the set moves only when a
+   * script comes or goes.
    */
-  const textFonts = [
-    ...new Set(project.clips.flatMap((c) => (c.text?.font ? facesFor(c.text.font, c.text.content) : [])))
-  ]
-    .sort()
-    .join('|')
+  const textFonts = textClipFaceKey(project.clips)
   useEffect(() => {
     if (!textFonts) return
     let alive = true

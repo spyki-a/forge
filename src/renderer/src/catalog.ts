@@ -56,6 +56,26 @@ export function transitionsByFamily(
 }
 
 
+/**
+ * Whether the catalogue has settled this family: a system face, one whose
+ * FontFace is registered and loaded, or one that failed (so its fallback is
+ * what will be drawn for good).
+ *
+ * Readiness is asked here and not of `document.fonts.check`, which answers
+ * true for a family no FontFace names. Measured in Chromium 152 (Chrome/152.0.7977.167),
+ * 2026-10-29: `check('16px "Noto Sans Devanagari"')` and
+ * `check('16px "Zzq Not A Font 123"')` both true, a FontFace added but not
+ * loaded false. Before `ensureFont` registers a face, which it does only once
+ * `face.load()` has resolved, nothing names it, so `check` said ready and the
+ * preview cached the system's letters for Hindi (docs/CLIPS.md §6.20).
+ */
+export function faceSettled(
+  family: string,
+  state: Pick<CatalogState, 'loadedFonts' | 'failedFonts'> = useCatalog.getState()
+): boolean {
+  return SYSTEM_FONT_FAMILIES.has(family) || state.loadedFonts.has(family) || state.failedFonts.has(family)
+}
+
 /** Registrations in flight, so a family is never fetched twice. */
 const pending = new Map<string, Promise<boolean>>()
 

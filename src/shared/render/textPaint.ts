@@ -3,7 +3,7 @@
 // DOM types for this file alone. `src/shared` is compiled into the main process
 // too, where a canvas does not exist and where a stray `document` would be a
 // real bug — so the lib is asked for here rather than widened for everything.
-import type { TextSpec } from '../timeline'
+import type { Clip, TextSpec } from '../timeline'
 import { ASCENT, LINE_HEIGHT, layoutText, type TextLayout } from './textLayout'
 import { piecesOf, stepAt, textAnimationById, type TextAnimation } from './textAnimation'
 import {
@@ -319,6 +319,18 @@ export function indicFontsFor(text: string): string[] {
  */
 export function facesFor(font: string, text: string): string[] {
   return [...new Set([font, ...indicFontsFor(text)])]
+}
+
+/**
+ * The faces every text clip needs (`facesFor` each), deduplicated, sorted and
+ * joined with `|`: the Preview's text-clip font effect is keyed on this, so it
+ * re-runs, ensures and repaints only when a face or a script comes or goes,
+ * and typing within one script does not move it.
+ */
+export function textClipFaceKey(clips: readonly Pick<Clip, 'text'>[]): string {
+  return [...new Set(clips.flatMap((c) => (c.text?.font ? facesFor(c.text.font, c.text.content) : [])))]
+    .sort()
+    .join('|')
 }
 
 /**

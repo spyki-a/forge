@@ -4,7 +4,8 @@ import { groupWords } from '@shared/captions/ass'
 import { activeWordAt, captionSpec } from '@shared/captions/line'
 import type { Third } from '@shared/captions/placement'
 import { resolveStyle, type CaptionStyle, type StyleOverrides } from '@shared/captions/style'
-import { drawTextOnto } from '@shared/render/textPaint'
+import { drawTextOnto, facesFor } from '@shared/render/textPaint'
+import { captionWords } from '@shared/graphics/fromTimeline'
 import type { Word } from '@shared/transcript'
 
 /**
@@ -32,6 +33,17 @@ export function activeCaptionStyle(project: Project): CaptionStyle {
     project.captions.styleId,
     project.captions.overrides as StyleOverrides | undefined
   )
+}
+
+/**
+ * Every face the preview's captions draw in: the caption style's face, then
+ * the Hindi or Telugu one the track's words need (`facesFor` over
+ * `captionWords`, docs/CLIPS.md §6.20). Empty with captions off. The
+ * Preview's caption font effect ensures each.
+ */
+export function captionFaces(project: Project): string[] {
+  if (!project.captions.enabled) return []
+  return facesFor(activeCaptionStyle(project).fontFamily, captionWords(project))
 }
 
 export interface PreviewCaption {

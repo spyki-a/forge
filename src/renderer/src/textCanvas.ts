@@ -6,7 +6,7 @@ import {
   type TextAnimation
 } from '@shared/render/textAnimation'
 import { drawTextOnto, facesFor } from '@shared/render/textPaint'
-import { useCatalog } from './catalog'
+import { faceSettled, useCatalog } from './catalog'
 import { beginBake, endBake, isSuperseded } from '@shared/bakeGuard'
 
 export { drawTextOnto }
@@ -114,9 +114,15 @@ export function textPreviewCanvas(
    * Every face the words need counts, the Hindi or Telugu one with the clip's
    * (`facesFor`): a Latin face that is ready over a Noto face still loading
    * would cache the system's letters for the Indic words.
+   *
+   * Ready means the catalogue has settled the face (`faceSettled`), not that
+   * `document.fonts.check` says so: that answers true for a family no
+   * FontFace names yet, which is every face before `ensureFont` registers it
+   * (measured, catalog.ts). The Preview's text-clip effect repaints once the
+   * faces land, and the canvas is drawn afresh then.
    */
   const faces = facesFor(spec.font, spec.content)
-  const waiting = faces.filter((face) => !document.fonts.check(`16px "${face}"`))
+  const waiting = faces.filter((face) => !faceSettled(face))
   drawTextOnto(ctx, spec, width, height, moving ? clock : undefined)
   if (waiting.length > 0) {
     for (const face of waiting) void useCatalog.getState().ensureFont(face)
