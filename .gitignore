@@ -22,10 +22,27 @@ __pycache__/
 # model files under its models/. Rebuilt by hand per machine; never shipped.
 sidecar/.venv-faces/
 
-# The asset library. Currently a symlink to the existing library while
-# placement is undecided (docs/ASSETS.md §"Open decision"), so it must not be
-# committed — but only THIS one, hence the slash.
-/assets
+# The asset library: a real folder on the Mac (81 MB, 88 fonts beside the SFX,
+# titles, transitions and props; checked 2026-10-29), and absent altogether on
+# the Surface's checkout, which reads its library from the packs installed
+# under userData. Not a symlink on either: git cannot track a path beyond one,
+# so a linked `assets` would refuse the four files below. The library is other
+# people's work and stays uncommitted — but only THIS one, hence the slash.
+#
+# Except two fonts and their licences (docs/CLIPS.md §6.20, D10): Noto Sans
+# Devanagari and Noto Sans Telugu, OFL, committed so CI's libass, the harness
+# and every installer see the same Hindi and Telugu faces as a user's machine.
+# They must sit in assets/fonts itself, since libass takes one fontsdir. Git
+# cannot re-include a file inside an excluded directory, so the root's
+# contents are excluded rather than the folder, then fonts/ is let back in and
+# its contents excluded again, and the four files named.
+/assets/*
+!/assets/fonts/
+/assets/fonts/*
+!/assets/fonts/NotoSansDevanagari-Regular.ttf
+!/assets/fonts/OFL-NotoSansDevanagari.txt
+!/assets/fonts/NotoSansTelugu-Regular.ttf
+!/assets/fonts/OFL-NotoSansTelugu.txt
 /asset-catalog.json
 
 *.tsbuildinfo

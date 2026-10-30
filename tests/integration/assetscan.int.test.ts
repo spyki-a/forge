@@ -1,13 +1,22 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import { scanAssets, catalogSummary } from '../../src/main/assets/scan'
-import { entriesOfKind, searchCatalog, type FontMeta } from '@shared/assets/catalog'
+import { join, basename, isAbsolute } from 'node:path'
+import { scanAssets, catalogSummary, loadCatalog, resolveAssetFile } from '../../src/main/assets/scan'
+import { entriesOfKind, fontFamilies, searchCatalog, type FontMeta } from '@shared/assets/catalog'
 
 let root = ''
+/*
+ * The app's fonts folder for every case but the last describe's: one holding
+ * neither Noto face, so the counts and the relative paths below are the
+ * scanned root's alone, whatever FORGE_FONTS_DIR the run was started with.
+ */
+let noAppFonts = ''
+const savedFontsDir = process.env.FORGE_FONTS_DIR
 
 beforeAll(async () => {
+  noAppFonts = await mkdtemp(join(tmpdir(), 'forge-assets-no-app-fonts-'))
+  process.env.FORGE_FONTS_DIR = noAppFonts
   root = await mkdtemp(join(tmpdir(), 'forge-assets-'))
   await mkdir(join(root, 'fonts'), { recursive: true })
   await mkdir(join(root, 'sfx'), { recursive: true })
@@ -32,12 +41,19 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await rm(root, { recursive: true, force: true }).catch(() => undefined)
+  await rm(noAppFonts, { recursive: true, force: true }).catch(() => undefined)
+  if (savedFontsDir === undefined) delete process.env.FORGE_FONTS_DIR
+  else process.env.FORGE_FONTS_DIR = savedFontsDir
 })
 
 describe('scanAssets', () => {
   it('classifies every asset kind', async () => {
     const catalog = await scanAssets(root)
-    expect(entriesOfKind(catalog, 'font')).toHaveLength(3)
+    // Membership, not a count: the app's own Noto faces join the fonts wherever
+    // FORGE_FONTS_DIR (fontsDir()) holds them (docs/CLIPS.md §6.20).
+    const fonts = entriesOfKind(catalog, 'font').map((e) => basename(e.file))
+    expect(fonts).toEqual(expect.arrayContaining(['BebasNeue-Regular.ttf', 'Arial Bold.ttf', 'Dunker_PERSONAL_USE_ONLY.otf']))
+    expect(fonts).not.toContain('notafont.txt')
     expect(entriesOfKind(catalog, 'sfx')).toHaveLength(1)
     expect(entriesOfKind(catalog, 'sticker')).toHaveLength(1)
     expect(entriesOfKind(catalog, 'prop')).toHaveLength(1)
@@ -443,5 +459,122 @@ describe('sticker categories', () => {
   it('still puts the category words in tags, so search finds them', async () => {
     const stickers = entriesOfKind(await scanAssets(dir), 'sticker')
     expect(stickers.flatMap((s) => s.tags)).toContain('Telugu')
+  })
+})
+
+describe("the app's own Hindi and Telugu faces, wherever the catalogue scans", () => {
+  /*
+   * docs/CLIPS.md §6.20 (D10). The two Noto faces ship in the app's own
+   * assets/fonts (fontsDir(), libass's folder), but once a pack is installed
+   * the catalogue scans the pack root under userData, and the canvas loads a
+   * face only from the catalogue. Without the extra listing every machine with
+   * a pack, the beta's case, would draw Hindi and Telugu in the system's face.
+   *
+   * The electron stand-in has no app.getAppPath, so FORGE_FONTS_DIR names the
+   * folder, as m0Exit.int does.
+   */
+  const NOTO = ['NotoSansDevanagari-Regular.ttf', 'NotoSansTelugu-Regular.ttf']
+  const saved = {
+    fonts: process.env.FORGE_FONTS_DIR,
+    assets: process.env.FORGE_ASSETS_DIR,
+    userData: process.env.FORGE_TEST_USERDATA
+  }
+  let packRoot = ''
+  let appFonts = ''
+  let checkout = ''
+  let userData = ''
+
+  beforeAll(async () => {
+    // A pack root as installPack leaves it, holding a library font and no Noto.
+    packRoot = await mkdtemp(join(tmpdir(), 'forge-assets-noto-pack-'))
+    await mkdir(join(packRoot, 'library', 'fonts'), { recursive: true })
+    await writeFile(join(packRoot, 'library', 'fonts', 'BebasNeue-Regular.ttf'), 'x')
+    // The app's own folder: the two faces, and a library face that is not one of them.
+    appFonts = await mkdtemp(join(tmpdir(), 'forge-assets-noto-app-'))
+    for (const name of [...NOTO, 'Anton-Regular.ttf']) await writeFile(join(appFonts, name), 'x')
+    // A development checkout, whose root's fonts/ is the app's folder itself.
+    checkout = await mkdtemp(join(tmpdir(), 'forge-assets-noto-checkout-'))
+    await mkdir(join(checkout, 'fonts'), { recursive: true })
+    for (const name of [...NOTO, 'Anton-Regular.ttf']) await writeFile(join(checkout, 'fonts', name), 'x')
+    userData = await mkdtemp(join(tmpdir(), 'forge-assets-noto-userdata-'))
+    process.env.FORGE_FONTS_DIR = appFonts
+  })
+
+  afterAll(async () => {
+    for (const [key, value] of [
+      ['FORGE_FONTS_DIR', saved.fonts],
+      ['FORGE_ASSETS_DIR', saved.assets],
+      ['FORGE_TEST_USERDATA', saved.userData]
+    ] as const) {
+      if (value === undefined) delete process.env[key]
+      else process.env[key] = value
+    }
+    for (const dir of [packRoot, appFonts, checkout, userData]) {
+      await rm(dir, { recursive: true, force: true }).catch(() => undefined)
+    }
+  })
+
+  it('lists both families from fontsDir() when the scanned root holds neither, as absolute paths resolveAssetFile keeps', async () => {
+    const fonts = entriesOfKind(await scanAssets(packRoot), 'font')
+    const families = fonts.map((f) => (f.meta as FontMeta).family)
+    expect(families).toEqual(expect.arrayContaining(['Noto Sans Devanagari', 'Noto Sans Telugu', 'Bebas Neue']))
+    // Only the two: the app folder's other faces stay libass's alone.
+    expect(families).not.toContain('Anton')
+    for (const name of NOTO) {
+      const entry = fonts.find((f) => basename(f.file) === name)!
+      expect(entry, name).toBeDefined()
+      expect(isAbsolute(entry.file), `${name}: ${entry.file}`).toBe(true)
+      // assets:fontData reads resolveAssetFile(entry.file); an absolute path comes back as it is.
+      expect(resolveAssetFile(entry.file)).toBe(join(appFonts, name))
+    }
+    // And the font loader, which takes the first entry per family, finds them.
+    expect(fontFamilies(await scanAssets(packRoot)).map((f) => (f.meta as FontMeta).family)).toEqual(
+      expect.arrayContaining(['Noto Sans Devanagari', 'Noto Sans Telugu'])
+    )
+  })
+
+  it('lists each once, relative, when the scanned root is the folder itself', async () => {
+    process.env.FORGE_FONTS_DIR = join(checkout, 'fonts')
+    try {
+      const fonts = entriesOfKind(await scanAssets(checkout), 'font')
+      for (const name of NOTO) {
+        const found = fonts.filter((f) => basename(f.file) === name)
+        expect(found.map((f) => f.file), name).toEqual([`fonts/${name}`])
+      }
+      const ids = fonts.map((f) => f.id)
+      expect(new Set(ids).size).toBe(ids.length)
+    } finally {
+      process.env.FORGE_FONTS_DIR = appFonts
+    }
+  })
+
+  it('scans again over a version-2 cache of the same root, which was written without them', async () => {
+    /*
+     * loadCatalog reuses a cache while its version and root are unchanged, so
+     * without CATALOG_VERSION's bump a machine scanned before this change
+     * would keep a catalogue with no Noto entries. The cache is written as a
+     * version-2 scan of this root would have been: the pack's font alone.
+     */
+    process.env.FORGE_TEST_USERDATA = userData
+    process.env.FORGE_ASSETS_DIR = packRoot
+    // Where loadCatalog's cachePath() looks: the stub's getPath('userData') is <FORGE_TEST_USERDATA>/userData.
+    const cacheDir = join(userData, 'userData')
+    await mkdir(cacheDir, { recursive: true })
+    await writeFile(
+      join(cacheDir, 'asset-catalog.json'),
+      JSON.stringify({
+        version: 2,
+        generatedAt: '2026-10-28T00:00:00.000Z',
+        scannedFrom: packRoot,
+        entries: [{
+          id: 'font:bebasneue-regular-ttf', kind: 'font', name: 'Bebas Neue',
+          file: 'library/fonts/BebasNeue-Regular.ttf', tags: ['Bebas Neue', 'bundled'],
+          meta: { family: 'Bebas Neue', source: 'bundled' }
+        }]
+      }),
+      'utf8'
+    )
+    const families = entriesOfKind(await loadCatalog(), 'font').map((f) => (f.meta as FontMeta).family)
+    expect(families).toEqual(expect.arrayContaining(['Noto Sans Devanagari', 'Noto Sans Telugu', 'Bebas Neue']))
   })
 })

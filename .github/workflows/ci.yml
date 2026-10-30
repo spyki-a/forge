@@ -371,19 +371,25 @@ jobs:
           fi
           echo "Electron binary present: $BIN"
 
-      # `assets/` is gitignored, so a CI checkout has none — and electron-builder
-      # treats a missing extraResources source as nothing to copy rather than as
-      # an error. The result is an installer that starts, works, and has an empty
-      # Library tab, with nothing anywhere saying why. This makes the absence
-      # loud: it does not fail the build, because an installer without the asset
-      # pack is still worth having, but nobody should discover it by clicking.
+      # The library under `assets/` is gitignored, so a CI checkout has none of
+      # it — and electron-builder treats a missing extraResources source as
+      # nothing to copy rather than as an error. The result is an installer that
+      # starts, works, and has a near-empty Library tab, with nothing anywhere
+      # saying why. This makes the absence loud: it does not fail the build,
+      # because an installer without the asset pack is still worth having, but
+      # nobody should discover it by clicking.
+      #
+      # Since docs/CLIPS.md §6.20 (D10) `assets/fonts` carries four tracked
+      # files, the two Noto faces and their licences, so a non-empty `assets/`
+      # no longer means a library. The check looks for the library itself,
+      # `assets/sfxx`, where the Director's sounds live.
       - name: Say whether the asset library is in this build
         shell: bash
         run: |
-          if [ -d assets ] && [ -n "$(ls -A assets 2>/dev/null)" ]; then
+          if [ -d assets/sfxx ] && [ -n "$(ls -A assets/sfxx 2>/dev/null)" ]; then
             echo "Asset library present: $(du -sh assets | cut -f1)"
           else
-            echo "::warning::No assets/ in this checkout — the installer will ship with an EMPTY asset library (no fonts, SFX, transitions, titles or props). It is gitignored; see docs/ASSETS.md 'Open decision'."
+            echo "::warning::No asset library (assets/sfxx) in this checkout — the installer will carry only the two Noto faces in assets/fonts (Noto Sans Devanagari and Noto Sans Telugu), and no other fonts, SFX, transitions, titles or props. The library is gitignored; see docs/ASSETS.md 'Open decision'."
           fi
 
       - run: npm run ${{ matrix.script }}

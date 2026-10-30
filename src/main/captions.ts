@@ -6,6 +6,7 @@ import type { Project } from '@shared/timeline'
 import { buildTimelineCaptions } from '@shared/captions/timeline'
 import { smartPlacement } from '@shared/captions/smart'
 import { resolveStyle, type StyleOverrides } from '@shared/captions/style'
+import { fontsDir } from './fontsDir'
 
 export interface PreparedCaptions {
   subtitlesPath: string
@@ -16,22 +17,6 @@ export interface PreparedCaptions {
    * launch sweep (render/renderJob.ts, `releasesTemporaries`).
    */
   cleanup: () => Promise<void>
-}
-
-/**
- * Where libass looks for the fonts a style names.
- *
- * Asset placement is still undecided, so this resolves by preference and returns
- * undefined rather than failing — libass falls back to a system font, which is
- * worse-looking but never a broken render.
- */
-function fontsDir(): string | undefined {
-  const override = process.env.FORGE_FONTS_DIR
-  if (override) return override
-  const bundled = app.isPackaged
-    ? join(process.resourcesPath, 'assets', 'fonts')
-    : join(app.getAppPath(), 'assets', 'fonts')
-  return bundled
 }
 
 /**

@@ -150,12 +150,17 @@ export interface AssetCatalog {
 
 /**
  * 2: stickers gained a `form` discriminator and video clips.
+ * 3: the app's own Noto Sans Devanagari and Noto Sans Telugu are listed from
+ *    `fontsDir()` when the root does not hold them (docs/CLIPS.md §6.20), as
+ *    absolute paths. A version-2 cache for the same pack root would keep a
+ *    catalogue without them, and every Hindi or Telugu face would be "not in
+ *    the catalog" until something forced a rescan.
  *
  * `loadCatalog` throws away a cache whose version does not match, which is the
  * point of bumping it — a catalog written before clips existed has emoji
  * entries with no `form`, and nothing downstream should have to guess.
  */
-export const CATALOG_VERSION = 2
+export const CATALOG_VERSION = 3
 
 /**
  * Fonts that ship with macOS and/or Windows. These are referenced by family name

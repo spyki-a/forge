@@ -11,6 +11,7 @@ import {
   type AssetCatalog,
   type CatalogEntry
 } from '@shared/assets/catalog'
+import { APP_FONT_FILES, fontsDir } from '../fontsDir'
 
 /**
  * Folder names accepted for each kind.
@@ -145,9 +146,10 @@ async function titleMeta(file: string): Promise<{ width: number; height: number;
  * and under `%LOCALAPPDATA%\Programs` on Windows — writing there means an
  * update silently deletes everything the user downloaded.
  *
- * Then whatever shipped with the build, which in practice is nothing: `assets/`
- * is gitignored, so a CI-built installer has none (docs/PACKAGING.md). This
- * branch is what a development checkout uses.
+ * Then whatever shipped with the build, which from CI is only the two Noto
+ * faces and their licences: the library under `assets/` is gitignored, and
+ * `assets/fonts` carries just those four tracked files (docs/PACKAGING.md,
+ * docs/CLIPS.md §6.20). This branch is what a development checkout uses.
  *
  * Resolved synchronously from a flag, because it is read on nearly every
  * catalog call and an await on each would be silly. `refreshPacksInstalled()`
@@ -172,20 +174,63 @@ export async function scanAssets(root = assetsRoot()): Promise<AssetCatalog> {
   const entries: CatalogEntry[] = []
   const rel = (file: string): string => relative(root, file).split('\\').join('/')
 
-  for (const file of await walkKind(root, 'font')) {
-    if (!FONT_EXT.has(extname(file).toLowerCase())) continue
+  const fontEntry = (file: string, path: string): CatalogEntry => {
     const filename = basename(file)
     const family = fontFamilyFromFilename(filename)
     const source = fontSourceFor(family)
     const restricted = isRestrictedFontFile(filename)
-    entries.push({
+    return {
       id: `font:${slugify(filename)}`,
       kind: 'font',
       name: family,
-      file: rel(file),
+      file: path,
       tags: [family, source, ...(restricted ? ['restricted'] : [])],
       meta: { family, source, ...(restricted ? { restricted: true } : {}) }
-    })
+    }
+  }
+
+  for (const file of await walkKind(root, 'font')) {
+    if (!FONT_EXT.has(extname(file).toLowerCase())) continue
+    entries.push(fontEntry(file, rel(file)))
+  }
+
+  /*
+   * The app's own Hindi and Telugu faces, wherever the catalogue is scanning
+   * (docs/CLIPS.md §6.20, D10).
+   *
+   * They ship in the app's `assets/fonts` (`fontsDir()`, libass's folder), but
+   * once a pack is installed the root is the pack root under userData, which
+   * never holds them — and the canvas loads a face only from the catalogue
+   * (`ensureFont`), so every machine with a pack, the beta's case, would draw
+   * Hindi and Telugu in the system's face. So each is listed from that folder
+   * when the scan above has not already listed a file of that name (a
+   * development checkout, or a packaged app with no pack, scans the folder
+   * itself), as an absolute path: `resolveAssetFile` takes one as it is, so
+   * `assets:fontData` reads it with no change.
+   *
+   * A folder that cannot be named lists nothing rather than failing the scan:
+   * the tests' electron stand-in has no `app.getAppPath`, and an empty Library
+   * would be a worse failure than two missing faces.
+   */
+  let appFonts: string | undefined
+  try {
+    appFonts = fontsDir()
+  } catch {
+    appFonts = undefined
+  }
+  if (appFonts) {
+    const listed = new Set(entries.map((entry) => entry.id))
+    for (const name of APP_FONT_FILES) {
+      const file = join(appFonts, name)
+      const entry = fontEntry(file, file)
+      if (listed.has(entry.id)) continue
+      try {
+        if (!(await stat(file)).isFile()) continue
+      } catch {
+        continue
+      }
+      entries.push(entry)
+    }
   }
 
   const sfxFiles = await walkKind(root, 'sfx')
