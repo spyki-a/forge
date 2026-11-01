@@ -37,8 +37,18 @@ export interface TextLayout {
 export const ASCENT = 0.82
 export const LINE_HEIGHT = 1.18
 
+/**
+ * The clip's own size in pixels: `size` is a fraction of the canvas's height,
+ * floored at 8 px. The one rule `layoutText` and the graphic measure's
+ * `textSpecFont` (textPaint.ts) both read, so a text item is measured at the
+ * size it is drawn at.
+ */
+export function fontPxOf(spec: Pick<TextSpec, 'size'>, height: number): number {
+  return Math.max(8, Math.round(spec.size * height))
+}
+
 export function layoutText(spec: TextSpec, width: number, height: number): TextLayout {
-  const fontPx = Math.max(8, Math.round(spec.size * height))
+  const fontPx = fontPxOf(spec, height)
   const lineHeight = Math.round(fontPx * LINE_HEIGHT)
   const lines = (spec.uppercase ? spec.content.toUpperCase() : spec.content).split('\n')
 

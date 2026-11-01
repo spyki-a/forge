@@ -663,6 +663,8 @@ async function poolRun(region: 'canvas' | 'box', depth: number, frames: number):
       width: box.width,
       height: box.height,
       depth,
+      // M1 is the pool's figure: with the workers taken (M2, 2026-10-27) `encodeFrames` would otherwise route through them.
+      encoder: 'pool',
       draw: (ctx, index) => {
         const t0 = performance.now()
         // Frame coordinates into a box-sized canvas, as captionBake.ts paints its band.
@@ -734,7 +736,8 @@ async function startWorker(): Promise<Worker | string> {
   try {
     let worker: Worker
     try {
-      worker = new Worker(new URL('./graphicEncodeWorker.ts', import.meta.url), { type: 'module' })
+      // The bake's own worker file (encodePool.ts's back-end since lane C, 2026-11-01), so M2 times the one that ships.
+      worker = new Worker(new URL('../graphicEncodeWorker.ts', import.meta.url), { type: 'module' })
     } catch (error) {
       return `the worker could not be made: ${error instanceof Error ? error.message : String(error)}`
     }

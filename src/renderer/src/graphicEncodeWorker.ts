@@ -1,14 +1,16 @@
 /**
- * M2's encoder (docs/CLIPS.md §6.15): one frame's picture in, its PNG out.
+ * The frame encoder's worker (docs/CLIPS.md §6.3, "The bake region (M1) and
+ * the box route"; M2, §6.15): one frame's picture in, its PNG out.
  *
- * The graphics check (`graphicCheck.ts`) draws each frame on the main thread,
- * where `drawTextOnto` sees the document's fonts, takes it off the canvas as
- * an `ImageBitmap`, and transfers it here; this worker draws it on an
- * `OffscreenCanvas` and encodes it with `convertToBlob`, the route §6.3 would
- * give `encodeFrames` as a worker back-end if M2 takes it. A same-origin
- * module file, not a `blob:` URL: the app's CSP (`index.html:7-8`,
- * `script-src 'self'` and no `worker-src`) admits only that. Moved beside
- * `encodePool.ts` only if M2 passes its bar.
+ * `encodeFrames` (`encodePool.ts`, beside this file) and the graphics check
+ * (`harness/graphicCheck.ts`, M2) draw each frame on the main thread, where
+ * `drawTextOnto` sees the document's fonts, take it off the canvas as an
+ * `ImageBitmap`, and transfer it here; this worker draws it on an
+ * `OffscreenCanvas` and encodes it with `convertToBlob`. A same-origin module
+ * file, not a `blob:` URL: the app's CSP (`index.html:7-8`, `script-src
+ * 'self'` and no `worker-src`) admits only that. Written for M2 under
+ * `harness/` and moved here on 2026-11-01, M2 having passed on both machines
+ * (2026-10-27): the bake's worker back-end, no longer the check's alone.
  *
  *   'ping'                          → { id: -1, ready: true }
  *   { id, bitmap, width, height }   → { id, bytes, ms } or { id, error }

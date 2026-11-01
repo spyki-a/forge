@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { encodeFrames, setPoolCanvases, type PoolCanvas } from '../../src/renderer/src/encodePool'
+import { encodeFrames, setPoolCanvases, setPoolEncoders, type FrameEncoder, type PoolCanvas } from '../../src/renderer/src/encodePool'
 
 /*
  * The graphic bake's encode pool (docs/CLIPS.md §6.3, §6.15's piece 0.2), driven
@@ -89,9 +89,18 @@ function writeInto(r: Rig) {
   }
 }
 
-afterEach(() => setPoolCanvases(null))
+afterEach(() => {
+  setPoolCanvases(null)
+  setPoolEncoders(null)
+})
 
 describe('encodeFrames', () => {
+  it('runs on the toBlob pool in node, where the page has no Worker', () => {
+    // The default route is the workers where the page has them (M2, docs/CLIPS.md §6.15); node has none, so the cases above and below
+    // without a stand-in run the pool, and a case that wants the workers stands them in with `setPoolEncoders`.
+    expect(typeof Worker).toBe('undefined')
+  })
+
   it('overlaps depth encodes, draws each frame on a clean, idle canvas, and writes every frame in order with its own bytes', async () => {
     const count = 10
     const r = rig(count)
@@ -166,5 +175,129 @@ describe('encodeFrames', () => {
     expect(r.draws.length, 'drawing went on to the end').toBeLessThan(count)
     await sleep(60)
     expect(r.writes.map((w) => w.index), 'a write after the answer').toEqual(written)
+  })
+})
+
+/*
+ * The worker back-end (docs/CLIPS.md §6.3, "The bake region (M1) and the box
+ * route"; M2 taken 2026-10-27): the frames still drawn on the pool's canvases
+ * on the main thread, each handed to one of `depth` encoders, one frame in
+ * flight each, the writes in frame order. Node has no module `Worker`, so the
+ * encoders are stood in for through `setPoolEncoders`: each fake reads the
+ * frame its canvas holds and answers after a delay that makes LATER frames
+ * finish FIRST, as the pool's fake does.
+ */
+
+interface EncoderRig {
+  asked: { count: number; width: number; height: number }[]
+  encoders: { frames: number[]; closed: number }[]
+  inFlight: number
+  maxInFlight: number
+}
+
+function encoderRig(count: number, options: { give?: number | null; failAt?: number } = {}): EncoderRig {
+  const r: EncoderRig = { asked: [], encoders: [], inFlight: 0, maxInFlight: 0 }
+  setPoolEncoders(async (depth, width, height) => {
+    r.asked.push({ count: depth, width, height })
+    if (options.give === null) return null
+    const made: FrameEncoder[] = []
+    for (let i = 0; i < (options.give ?? depth); i++) {
+      const record = { frames: [] as number[], closed: 0 }
+      r.encoders.push(record)
+      made.push({
+        encode: (canvas) => {
+          const frame = (canvas as Fake).stamp
+          record.frames.push(frame ?? -1)
+          r.inFlight++
+          r.maxInFlight = Math.max(r.maxInFlight, r.inFlight)
+          return new Promise<ArrayBuffer>((resolve, reject) => {
+            setTimeout(
+              () => {
+                r.inFlight--
+                if (frame === options.failAt || frame === null) reject(new Error('a worker could not encode'))
+                else resolve(new Uint8Array([frame]).buffer)
+              },
+              3 * (count - (frame ?? 0))
+            )
+          })
+        },
+        close: () => void record.closed++
+      })
+    }
+    return made
+  })
+  return r
+}
+
+describe('encodeFrames on the worker back-end', () => {
+  it('asks for depth encoders of the frame size, hands frame i to encoder i mod depth from the canvas it was drawn on, writes in order with each frame’s own bytes, and closes every encoder once', async () => {
+    const count = 10
+    const r = rig(count)
+    const w = encoderRig(count)
+    const path = await encodeFrames({ count, width: 8, height: 6, depth: 4, draw: drawInto(r), write: writeInto(r), cancelled: () => false })
+    expect(path).toBe('seq/9')
+    expect(w.asked).toEqual([{ count: 4, width: 8, height: 6 }])
+    expect(w.encoders).toHaveLength(4)
+    expect(w.encoders.map((e) => e.frames)).toEqual([
+      [0, 4, 8],
+      [1, 5, 9],
+      [2, 6],
+      [3, 7]
+    ])
+    expect(r.writes.map((x) => x.index)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+    for (const x of r.writes) expect(x.byte, `frame ${x.index}'s bytes`).toBe(x.index)
+    expect(r.unclean).toEqual([])
+    expect(w.maxInFlight).toBe(4)
+    // The pool's own toBlob never ran: the frames went to the encoders.
+    expect(r.maxInFlight).toBe(0)
+    expect(w.encoders.map((e) => e.closed)).toEqual([1, 1, 1, 1])
+  })
+
+  it('takes the pool when the workers are refused, and when the caller asks for the pool by name', async () => {
+    const refused = rig(6)
+    const none = encoderRig(6, { give: null })
+    await encodeFrames({ count: 6, width: 8, height: 8, depth: 4, draw: drawInto(refused), write: writeInto(refused), cancelled: () => false })
+    expect(none.asked).toHaveLength(1)
+    expect(refused.writes.map((x) => x.index)).toEqual([0, 1, 2, 3, 4, 5])
+    expect(refused.maxInFlight, 'the pool encoded').toBe(4)
+
+    const byName = rig(6)
+    const unasked = encoderRig(6)
+    await encodeFrames({ count: 6, width: 8, height: 8, depth: 4, encoder: 'pool', draw: drawInto(byName), write: writeInto(byName), cancelled: () => false })
+    expect(unasked.asked, 'the workers were not asked for').toEqual([])
+    expect(byName.maxInFlight).toBe(4)
+    expect(byName.writes.map((x) => x.index)).toEqual([0, 1, 2, 3, 4, 5])
+  })
+
+  it('runs as deep as the encoders it was given, when fewer than asked', async () => {
+    const r = rig(6)
+    const w = encoderRig(6, { give: 2 })
+    await encodeFrames({ count: 6, width: 8, height: 8, depth: 4, draw: drawInto(r), write: writeInto(r), cancelled: () => false })
+    expect(r.canvases).toHaveLength(2)
+    expect(w.maxInFlight).toBe(2)
+    expect(w.encoders.map((e) => e.frames)).toEqual([
+      [0, 2, 4],
+      [1, 3, 5]
+    ])
+    expect(r.writes.map((x) => x.index)).toEqual([0, 1, 2, 3, 4, 5])
+  })
+
+  it('rejects on an encoder that fails, writes nothing from that frame on, and still closes every encoder; a cancel closes them too', async () => {
+    const r = rig(12)
+    const w = encoderRig(12, { failAt: 5 })
+    await expect(
+      encodeFrames({ count: 12, width: 8, height: 8, depth: 4, draw: drawInto(r), write: writeInto(r), cancelled: () => false })
+    ).rejects.toThrow('a worker could not encode')
+    const written = r.writes.map((x) => x.index)
+    expect(written).toEqual(written.map((_, i) => i))
+    expect(written.every((index) => index < 5)).toBe(true)
+    expect(w.encoders.map((e) => e.closed)).toEqual([1, 1, 1, 1])
+
+    const c = rig(12)
+    const wc = encoderRig(12)
+    const path = await encodeFrames({ count: 12, width: 8, height: 8, depth: 4, draw: drawInto(c), write: writeInto(c), cancelled: () => c.writes.length >= 3 })
+    expect(path).toBeNull()
+    expect(c.writes.map((x) => x.index)).toEqual([0, 1, 2])
+    expect(wc.encoders.map((e) => e.closed)).toEqual([1, 1, 1, 1])
   })
 })

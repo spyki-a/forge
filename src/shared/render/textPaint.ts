@@ -4,7 +4,7 @@
 // too, where a canvas does not exist and where a stray `document` would be a
 // real bug — so the lib is asked for here rather than widened for everything.
 import type { Clip, TextSpec } from '../timeline'
-import { ASCENT, LINE_HEIGHT, layoutText, type TextLayout } from './textLayout'
+import { ASCENT, LINE_HEIGHT, fontPxOf, layoutText, type TextLayout } from './textLayout'
 import { piecesOf, stepAt, textAnimationById, type TextAnimation } from './textAnimation'
 import {
   gradientVector,
@@ -100,9 +100,9 @@ export function drawTextOnto(
   let wordsSoFar = 0
   layout.lines.forEach((paragraph, index) => {
     const paint = style ? paintForLine(style, index) : null
-    const px = Math.max(6, Math.round(layout.fontPx * (paint?.sizeScale ?? 1)))
+    const px = scaledPx(layout.fontPx, paint)
     ctx.font = fontString(paint, spec, px)
-    ctx.letterSpacing = `${((paint?.tracking ?? spec.tracking) * px).toFixed(2)}px`
+    ctx.letterSpacing = letterSpacingOf(paint, spec, px)
     const cased = paint?.uppercase ? paragraph.toUpperCase() : paragraph
 
     if (!cased.trim()) {
@@ -186,7 +186,7 @@ export function drawTextOnto(
   let fit = 1
   for (const row of rows) {
     ctx.font = fontString(row.paint, spec, row.px)
-    ctx.letterSpacing = `${((row.paint?.tracking ?? spec.tracking) * row.px).toFixed(2)}px`
+    ctx.letterSpacing = letterSpacingOf(row.paint, spec, row.px)
     const measured = ctx.measureText(row.text).width
     if (measured > safeWidth) fit = Math.min(fit, safeWidth / measured)
   }
@@ -218,7 +218,7 @@ export function drawTextOnto(
     const fontPx = sizes[index]
     ctx.font = fontString(paint, spec, fontPx)
     const tracking = (paint?.tracking ?? spec.tracking) * fontPx
-    ctx.letterSpacing = `${tracking.toFixed(2)}px`
+    ctx.letterSpacing = letterSpacingOf(paint, spec, fontPx)
 
     const text = row.text || ' '
     // The trailing letter-space shifts centred text; the nudge follows tracking,
@@ -344,6 +344,34 @@ function fontString(paint: (Paint & Face) | null, spec: TextSpec, px: number): s
   const family = paint?.font ?? spec.font
   const indic = INDIC_FONTS.map((face) => `"${face}"`).join(', ')
   return `${italic}${weight} ${px}px "${family}", "${spec.font}", ${indic}, sans-serif`
+}
+
+/** A row's drawn size: the layout's, scaled by the face (`hero` draws its base at 0.42), never under 6 px. */
+function scaledPx(fontPx: number, paint: (Paint & Face) | null): number {
+  return Math.max(6, Math.round(fontPx * (paint?.sizeScale ?? 1)))
+}
+
+/** The context's `letterSpacing` for a row: the face's tracking, else the clip's, in pixels of the row's size. */
+function letterSpacingOf(paint: (Paint & Face) | null, spec: TextSpec, px: number): string {
+  return `${((paint?.tracking ?? spec.tracking) * px).toFixed(2)}px`
+}
+
+/**
+ * The font shorthand and letter spacing `drawTextOnto` sets before it draws
+ * `line` of a spec on a canvas `height` tall (docs/CLIPS.md §6.3, "The
+ * measure"): the layout's size (`fontPxOf`, textLayout.ts) scaled by the
+ * face, the face's weight, italic and family chain, and its tracking, as the
+ * painter's own `fontString` and `letterSpacingOf` build them. The graphic
+ * measure (renderer/src/graphicCanvas.ts) sets a scratch context with these
+ * before `measureText`, so measure and paint cannot read two fonts. Not the
+ * shrink `drawTextOnto` applies to a row wider than its canvas: a graphic's
+ * item is boxed at its own measured width, so that fit is 1 by construction.
+ */
+export function textSpecFont(spec: TextSpec, height: number, line = 0): { font: string; letterSpacing: string; px: number } {
+  const style = textStyleById(spec.styleId)
+  const paint = style ? paintForLine(style, line) : null
+  const px = scaledPx(fontPxOf(spec, height), paint)
+  return { font: fontString(paint, spec, px), letterSpacing: letterSpacingOf(paint, spec, px), px }
 }
 
 /** The original, styleless drawing. Kept exactly as it was for untouched clips. */
