@@ -33,8 +33,8 @@
 > critics before the next: `4b68c45` (the draw list), `a82cd43` and
 > `d822c56` (painter A), `4196d43` and `0c8911f` (the frames and the
 > targets; §6.3's three Built notes, under their own sub-sections; pushed
-> in one push as `0c8911f`, whose CI run was not yet read when this was
-> written: the frames' Built note carries its line). Not built: phase
+> in one push as `0c8911f`, whose CI run 41267545247 passed on both
+> runners, read 2026-11-01: the frames' Built note carries its line). Not built: phase
 > 1's lanes C and D (lane C is next: B's draw list and painter it waits
 > on are in, and M1 and M2 answered 2026-10-27) and everything from
 > phase 2 on. §2's total is
@@ -9367,7 +9367,12 @@ the caller and passed into `drawListAt`, so the drawing stays pure:
 > figure here is from the two messages and the test's re-run at `0c8911f`
 > (`npx vitest run tests/graphicFrame.test.ts`, 28 cases passed, vitest
 > exit 0); line numbers were read at `0c8911f`.
-> CI: CI-LINE-PENDING
+> CI: run 41267545247 on `0c8911f`, read 2026-11-01 from the jobs' list
+> through api.github.com: green on both runners (windows-latest and
+> macos-14, the installer job skipped as on every push), no annotation
+> on either job but the standing notices. Lane B adds no render check of
+> its own (the harness's `primitives` option is lane D's), so this run
+> says only that the three new test files pass on both platforms.
 > - **`src/shared/graphics/frame.ts`** (170 lines): `SETTLE_S` 0.5
 >   (`:30`), `EXIT_S` 0.3 (`:37`), `BEAT_FRAME_ALLOWANCE` 1e-6 of a frame
 >   (`:48`); `beatFrame` (`:72`) = `max(0, ceil(beat × fps − 1e-6))`, never
