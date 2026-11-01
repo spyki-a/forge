@@ -8540,9 +8540,11 @@ non-empty `glow`; painter A ignores all three.
   pixel size, deterministic). In the renderer, `measureText` on a scratch
   context set with the font and letter spacing the painter will use, which
   `textPaint.ts` exports as `textSpecFont(spec): { font: string;
-  letterSpacing: string }` (the shorthand `fontString` builds at
-  `textPaint.ts:286-291`, with the face's `sizeScale` and `tracking`), so
-  measure and paint cannot read two fonts.
+  letterSpacing: string }` (not built in lane B: no commit of lane B
+  wrote it, and at `0c8911f` nothing under `src/` names it; lane C's,
+  the draw list's Built note's "Left" bullet; the shorthand `fontString`
+  builds at `textPaint.ts:286-291`, with the face's `sizeScale` and
+  `tracking`), so measure and paint cannot read two fonts.
 - **Only text styles that keep the words as given.** A text style's face
   can re-case (`paint.uppercase`, applied at `textPaint.ts:106`), which
   draws a string the data does not hold (§6.2's contract), or light one word
@@ -8610,7 +8612,7 @@ non-empty `glow`; painter A ignores all three.
 >   "When" rule under Targets as a function, which the plan names
 >   nowhere), `graphicBox` `:110`. `src/shared/graphics/templates/
 >   index.ts`: `DRAWERS`, a frozen empty `Partial<Record<GraphicTemplateId,
->   Drawer>>`. `src/shared/render/textStyle.ts:681-801`: `InkReach`
+>   Drawer>>`. `src/shared/render/textStyle.ts:681-803`: `InkReach`
 >   (`:682`), `TextInkReach { user; device }` (`:699`) and
 >   `textInkReach(styleId, px)` (`:743`). And `stroke.ts:21` and
 >   `:103-109`: the comment that said `items.ts` "is to take" `Point` and
@@ -8690,7 +8692,8 @@ non-empty `glow`; painter A ignores all three.
 >   `fontPx = round(px × sizeScale)`). The `sizeScale` growth branch stays,
 >   with the comment that no base face of the catalogue grows today, so it
 >   is cover for one added, untested by construction. The rule's round
->   cap: `drawRule` strokes with `lineCap 'round'` (`textPaint.ts:658`), so
+>   cap: `drawRule` strokes with `lineCap 'round'` (`textPaint.ts:663`; the
+>   commit's `:658` moved when `d822c56` added lines above it), so
 >   each end reaches 0.04 + width / 2 past the glyphs; pinned on
 >   underline (`user.left` = (0.04 + 0.0275) × 100, `user.bottom` = 0.055
 >   × 100). `graphicBox` clips each item's bounds to the frame before the
@@ -8773,7 +8776,12 @@ non-empty `glow`; painter A ignores all three.
 > - **Left**, as planned: §6.16's two depth cases, and phase 3's with the
 >   counter and ring variants; the render check in the harness (lane D's
 >   `primitives` option and `PRIMITIVES_SPEC`, the alpha-0-outside-the-box
->   reading of the real paint).
+>   reading of the real paint); and the renderer's measure, `textSpecFont(spec)`
+>   in `textPaint.ts` with the scratch-context `measureText` that reads it
+>   ("The measure" above), which lane C's `graphicCanvas.ts` needs for the
+>   preview and the bake and no commit of lane B wrote (at `0c8911f`
+>   nothing under `src/` names `textSpecFont`; the draw list's cases run on
+>   the node fake, 0.55 em a grapheme).
 
 #### The stroke primitive — `src/shared/graphics/stroke.ts`
 
@@ -9053,7 +9061,8 @@ the text (an inference until M22; M22 measured it on both machines,
 >   this file's. A `layer` factory must make a new canvas on each call
 >   (the memo composites its canvases on later frames): one that hands
 >   back a canvas the painter already holds is refused with an error
->   (`:55-64`, `:325-327`), the one failure lane C's `graphicCanvas.ts`,
+>   (the comment `:55-63` over the field `:64`; the loop and the throw
+>   `:326-327`), the one failure lane C's `graphicCanvas.ts`,
 >   which pools canvases, could write by accident; cheap, at most four
 >   entries.
 > - **A text item's opacity reaches every pass** (`d822c56`, both
@@ -9070,8 +9079,13 @@ the text (an inference until M22; M22 measured it on both machines,
 >   `save`, so the fix is in `textPaint.ts`, as piece 1's `textStyle.ts`
 >   edit was: all three sites now `*=` (`:454` the split, `:592` the step,
 >   `:640` the box), with a two-line comment at the split and the box
->   saying why. Identity for every existing caller: all fifteen call sites
->   of `drawTextOnto` enter at `globalAlpha` 1 (grepped; `graphicCheck.ts`
+>   saying why. Identity for every existing caller: all sixteen call sites
+>   of `drawTextOnto` outside `textPaint.ts` and `paint.ts` enter at
+>   `globalAlpha` 1 (the commit's message says fifteen and lists sixteen:
+>   `captionBake.ts` 2, `captionPreview.ts` 1, `textCanvas.ts` 3,
+>   `harness/graphicCheck.ts` 6, `TextStylePicker.tsx` 2,
+>   `TextAnimationPicker.tsx` 1, `graphics/main.ts` 1, counted again at
+>   `0c8911f`; `graphicCheck.ts`
 >   sets it under its own save and restores before its call), so
 >   `textPaint`, `captionBake` and `textAnimation`'s suites are unchanged
 >   (run, 140 passed with the three graphic suites, exit 0). The guard
@@ -9098,7 +9112,9 @@ the text (an inference until M22; M22 measured it on both machines,
 >   a negative radius (a negative extent draws mirrored, no throw); `rect`
 >   takes a negative extent; `drawImage` of a canvas with any 0 side
 >   throws an `InvalidStateError`; `globalAlpha *=` inside `save`/`restore`
->   composes and restores. So (`:209-218`, `:230`, `:236`) a circle or ring
+>   composes and restores (this last reading is in the fixer's report to
+>   the orchestrator, not in `d822c56`'s message, which lists the other
+>   four). So (`:209-218`, `:230`, `:236`) a circle or ring
 >   in a box of negative size draws nothing rather than failing the whole
 >   frame's paint, beside the existing `Math.max(0, radius)` (`:227`)
 >   whose reason was unstated; `paintDim` inks nothing on a list without a
@@ -9229,7 +9245,8 @@ built 2026-10-30 as `{ user, device }`: the user-space reach, the outline,
 the extrude, the box, widens the item before its transform, and the
 device-space reach, shadow blur and offset and glow, after it, unscaled
 and unturned, since canvas's shadow is not affected by the current
-transformation matrix; the draw list's Built note below), a
+transformation matrix (the specification's word, not a browser reading;
+`EFFECTS.md` §61's "Still unmeasured"); the draw list's Built note below), a
 shape's box and stroke and shadow, a stroke's full path widened by half its
 width and its heads, the whole frame for a dim, and a group's children under
 its transform. Snapped outward to even x, y, width and height (an odd offset
@@ -9410,7 +9427,7 @@ the caller and passed into `drawListAt`, so the drawing stays pure:
 > - **`tests/graphicMotion.test.ts`**: its local `beatFrame` ("still to be
 >   built") is now `frame.ts`'s, as its own comment said to do once
 >   `frame.ts` existed; nothing else in it changed.
-> - **Measured** (node 24, this machine): `Math.ceil(0 − 1e-6)` is −0; 1.5
+> - **Measured** (node 24, the Mac): `Math.ceil(0 − 1e-6)` is −0; 1.5
 >   × 30 − 1e-6 = 44.999999, ceil 45, so a beat at 1.0 s at 30 fps gives 46
 >   moving frames; round(0.3 × 25) = 8, round(0.3 × 24) = 7, round(0.3 ×
 >   60) = 18; 30 + 1 + 180 = 211 for the glowing screen card at 30 fps,
@@ -9495,8 +9512,9 @@ the caller and passed into `drawListAt`, so the drawing stays pure:
 >   sources cmp-equal); the full suite at `4196d43` 320 files passed, 5
 >   skipped (325), 4,454 tests passed, 63 skipped (4,517), 214 s; at
 >   `0c8911f` 4,458 passed, 63 skipped (4,521), 216.1 s; `graphicFrame`
->   with `graphicMotion` 56 passed (28 + 28; the message's "52 + 4" is an
->   arithmetic slip, the 56 is right). Read again for this record at
+>   with `graphicMotion` 56 passed (28 + 28; the message's "52 + 4" is
+>   `4196d43`'s 52, 24 + 28, plus the four cases this commit added, the
+>   same 56). Read again for this record at
 >   `0c8911f`: the three suites 25, 29 and 28 passed, exit 0 each.
 > - **Left**, as planned: `graphicFrame`'s phase-2 cases over the 27
 >   fixtures (§6.2, T1's second half); phase 3's three screen-card cases
