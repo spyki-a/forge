@@ -269,7 +269,7 @@ describe('encodeFrames on the worker back-end', () => {
     expect(byName.writes.map((x) => x.index)).toEqual([0, 1, 2, 3, 4, 5])
   })
 
-  it('runs as deep as the encoders it was given, when fewer than asked', async () => {
+  it('runs as deep as the encoders it was given, when fewer than asked; none given is the pool, not a bake of no slots', async () => {
     const r = rig(6)
     const w = encoderRig(6, { give: 2 })
     await encodeFrames({ count: 6, width: 8, height: 8, depth: 4, draw: drawInto(r), write: writeInto(r), cancelled: () => false })
@@ -280,6 +280,15 @@ describe('encodeFrames on the worker back-end', () => {
       [1, 3, 5]
     ])
     expect(r.writes.map((x) => x.index)).toEqual([0, 1, 2, 3, 4, 5])
+
+    const none = rig(6)
+    const empty = encoderRig(6, { give: 0 })
+    await encodeFrames({ count: 6, width: 8, height: 8, depth: 4, draw: drawInto(none), write: writeInto(none), cancelled: () => false })
+    expect(empty.asked).toHaveLength(1)
+    expect(empty.encoders).toHaveLength(0)
+    expect(none.canvases).toHaveLength(4)
+    expect(none.maxInFlight, 'the pool encoded').toBe(4)
+    expect(none.writes.map((x) => x.index)).toEqual([0, 1, 2, 3, 4, 5])
   })
 
   it('rejects on an encoder that fails, writes nothing from that frame on, and still closes every encoder; a cancel closes them too', async () => {

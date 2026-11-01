@@ -219,8 +219,15 @@ interface PreviewEntry {
 const previews = new Map<string, PreviewEntry>()
 /** Per clip, its own dim layer factory: the painter keeps its dim layers per factory, so a clip's go when the clip is forgotten and no clip pays for another's. */
 const previewLayers = new Map<string, (width: number, height: number) => CanvasRenderingContext2D>()
-/** Per clip, the faces and images a redraw is already waiting on, so one `onReady` is owed per face, not one per frame drawn meanwhile. */
-const warming = new Map<string, Set<string>>()
+/**
+ * Per clip, the faces and images a redraw is already waiting on, so one
+ * `onReady` is owed per face, not one per frame drawn meanwhile; and the
+ * latest `onReady` given, the one called when something lands, so a caller
+ * that passes a new callback per render is not called back on a stale one.
+ */
+const warming = new Map<string, { owed: Set<string>; onReady?: () => void }>()
+/** Every redraw of any preview canvas, counted: the stamp `canvasContentKey` (grade.ts) reads must move with the picture, not with the key. */
+let paints = 0
 
 function previewLayerOf(clipId: string): (width: number, height: number) => CanvasRenderingContext2D {
   let layer = previewLayers.get(clipId)
@@ -238,8 +245,12 @@ function previewLayerOf(clipId: string): (width: number, height: number) => Canv
  * clip's length and rate, and the frame, or `'settled'` past the moving
  * frames, so a held frame costs nothing and shows what `tpad` holds in the
  * export: the last moving frame's picture. Every redraw stamps
- * `dataset.forgeRev`, which `canvasContentKey` (grade.ts) reads. `targets`
- * is an argument so that the preview draws the same targets the bake does.
+ * `dataset.forgeRev`, which `canvasContentKey` (grade.ts) reads, with a count
+ * of redraws, as `momentCanvas` does, not with the key: the same frame is
+ * redrawn on the same canvas while a face loads and once more when it has
+ * landed, and a stamp that stayed the key's would serve the grade's copy of
+ * the fallback face for as long as the playhead held there. `targets` is an
+ * argument so that the preview draws the same targets the bake does.
  *
  * Readiness is the catalogue's (`faceSettled`), as D10 made the text clip's:
  * while a face the list draws is still loading, or an `image` still
@@ -279,7 +290,7 @@ export function graphicPreviewCanvas(
   if (!ctx) return null
   ctx.clearRect(0, 0, width, height)
   // A canvas keeps its identity when it is redrawn; the stamp is what moves when the picture does (grade.ts).
-  canvas.dataset.forgeRev = signature
+  canvas.dataset.forgeRev = String(++paints)
 
   const list = drawListAt(spec, style, drawn, clock.fps, { width, height }, graphicMeasure(), targets, drawer)
   paintFrame(list, ctx, { layer: previewLayerOf(clipId), images: bitmaps })
@@ -288,20 +299,32 @@ export function graphicPreviewCanvas(
   const imageReady = (src: string): boolean => bitmaps.has(src) || undecodable.has(src)
   const waiting = [...faces.filter((face) => !faceSettled(face)), ...imagesOf([list]).filter((src) => !imageReady(src))]
   if (waiting.length > 0) {
-    const owed = warming.get(clipId) ?? new Set<string>()
-    warming.set(clipId, owed)
+    const slot = warming.get(clipId) ?? { owed: new Set<string>() }
+    slot.onReady = onReady
+    warming.set(clipId, slot)
+    const { owed } = slot
     const fresh = waiting.filter((name) => !owed.has(name))
     for (const name of fresh) owed.add(name)
     if (fresh.length > 0) {
       const { ensureFont } = useCatalog.getState()
       const isFace = new Set(faces)
-      void Promise.all(fresh.map((name) => (isFace.has(name) ? ensureFont(name).then(() => undefined) : decodeImage(name)))).then(() => {
-        for (const name of fresh) owed.delete(name)
-        // Only what landed (or failed for good) earns a repaint: before the
-        // catalogue has loaded, `ensureFont` answers false at once and records
-        // nothing, and a repaint then would ask again, and again.
-        if (fresh.some((name) => (isFace.has(name) ? faceSettled(name) : imageReady(name)))) onReady?.()
-      })
+      void Promise.all(fresh.map((name) => (isFace.has(name) ? ensureFont(name).then(() => undefined) : decodeImage(name))))
+        .then(
+          () => true,
+          (error: unknown) => {
+            // `ensureFont` catches its own load errors and `decodeImage` its own, so this is the
+            // bridge failing: swallowed, and the names are owed no more, so the next draw asks again.
+            console.warn('A graphic preview could not ask for a face or an image', error instanceof Error ? error.message : String(error))
+            return false
+          }
+        )
+        .then((answered) => {
+          for (const name of fresh) owed.delete(name)
+          // Only what landed (or failed for good) earns a repaint: before the
+          // catalogue has loaded, `ensureFont` answers false at once and records
+          // nothing, and a repaint then would ask again, and again.
+          if (answered && fresh.some((name) => (isFace.has(name) ? faceSettled(name) : imageReady(name)))) slot.onReady?.()
+        })
     }
     // The canvas is kept for the next frame, the picture is not: no signature matches the empty one.
     previews.set(clipId, { canvas, signature: '' })
@@ -364,13 +387,23 @@ function movingFramesOf(spec: GraphicSpec, style: GraphicStyle, fps: number, tot
  * caption band is, and the box returned for the export's copy of the asset;
  * the canvas otherwise. Every face the lists draw is awaited through the
  * catalogue and every `image` decoded before a canvas is made, as the text
- * clip's bake waits (D10); then, under `bakeGuard` (`beginBake`,
- * `isSuperseded` before each write, `endBake` in a `finally`, as
- * `bakeMomentSequence`), the clip's frames are cleared and `encodeFrames`
- * draws, encodes and writes them `GRAPHIC_POOL_DEPTH` at a time through
- * `writeTitleFrame`. Returns the ffmpeg pattern with the frame count and the
- * box, or null when superseded, when nothing is drawn, or when no frame or
- * rate is given.
+ * clip's bake waits (D10), and the lists and the box are built AFTER they
+ * have landed (the lists once before, only to learn what they need): a text
+ * item is boxed at its measured width, and a width measured in the fallback
+ * face while the real one loaded would have the painter shrink the landed
+ * glyphs into the narrower box, and the box route cut the canvas to it,
+ * permanently, in the export. The clip is claimed (`beginBake`) BEFORE the
+ * awaits and checked after them, so an older bake whose face lands late
+ * finds the clip taken by the newer one that finished meanwhile and answers
+ * null, rather than clearing that bake's frames and writing its stale
+ * picture over them (`bakeTextSequence` in textCanvas.ts still claims after
+ * its await; outside this file). Then, under `bakeGuard` (`isSuperseded`
+ * before each write, `endBake` in a `finally`, as `bakeMomentSequence`), the
+ * clip's frames are cleared and `encodeFrames` draws, encodes and writes
+ * them `GRAPHIC_POOL_DEPTH` at a time through `writeTitleFrame`. Returns the
+ * ffmpeg pattern with the frame count and the box, or null when superseded,
+ * when nothing is drawn, when the box route finds every frame's ink outside
+ * the frame, or when no frame or rate is given.
  */
 export async function bakeGraphicSequence(
   spec: GraphicSpec,
@@ -390,22 +423,29 @@ export async function bakeGraphicSequence(
   const measure = graphicMeasure()
   const at = onsetTargetsAt(targetsAt)
   const moving = movingFramesOf(spec, style, fps, total, at)
-  const lists = listsOf(spec, style, fps, size, measure, at, moving, drawer)
-  if (lists.every((list) => list.items.length === 0)) return null
-
-  const box = GRAPHIC_BAKE_REGION === 'box' && boxAllowed ? graphicBox(spec, style, fps, total, size, measure, targetsAt, drawer) : null
-  if (GRAPHIC_BAKE_REGION === 'box' && boxAllowed && !box) return null
-  const region = box ?? { x: 0, y: 0, width, height }
-
-  // The faces, then the images, before any canvas: a face that is not loaded
-  // yet would bake in the fallback and look exactly like the font picker
-  // doing nothing, permanently, in the export (textCanvas.ts).
-  await ensureFaces(facesOf(lists, style))
-  await Promise.all(imagesOf(lists).map(decodeImage))
+  // Built once to learn the faces and images the frames need (neither depends
+  // on the measure), and again below once they have landed, since the memo
+  // behind `measure` is dropped when a face does and every text item's box
+  // is its measured width.
+  const probe = listsOf(spec, style, fps, size, measure, at, moving, drawer)
+  if (probe.every((list) => list.items.length === 0)) return null
 
   const token = beginBake(clipId)
   try {
+    // The faces, then the images, before any canvas: a face that is not loaded
+    // yet would bake in the fallback and look exactly like the font picker
+    // doing nothing, permanently, in the export (textCanvas.ts).
+    await ensureFaces(facesOf(probe, style))
+    await Promise.all(imagesOf(probe).map(decodeImage))
+    if (isSuperseded(clipId, token)) return null
+
+    const lists = listsOf(spec, style, fps, size, measure, at, moving, drawer)
+    const box = GRAPHIC_BAKE_REGION === 'box' && boxAllowed ? graphicBox(spec, style, fps, total, size, measure, targetsAt, drawer) : null
+    if (GRAPHIC_BAKE_REGION === 'box' && boxAllowed && !box) return null
+    const region = box ?? { x: 0, y: 0, width, height }
+
     await window.forge.clearTitleFrames(clipId)
+    // The rule, stated; `encodeFrames`'s first `cancelled()` would catch it too, before any draw.
     if (isSuperseded(clipId, token)) return null
     const layer = (w: number, h: number): CanvasRenderingContext2D => freshLayer(w, h)
     const offset = box ? { x: -box.x, y: -box.y } : undefined
@@ -435,7 +475,9 @@ export async function bakeGraphicSequence(
  * past it draws the last); each is drawn as the drawer gives it, a held
  * frame too, so the check can read the last moving frame against the held
  * end, at the canvas region, through the same `paintFrame` as the preview
- * and the bake, after the same faces and images have landed.
+ * and the bake, after the same faces and images have landed, the lists
+ * built again then, as the bake's are, so no text is boxed at the fallback
+ * face's width.
  */
 export async function graphicFrameCanvases(
   spec: GraphicSpec,
@@ -452,9 +494,11 @@ export async function graphicFrameCanvases(
   const at = onsetTargetsAt(targetsAt)
   const last = Math.max(0, Math.floor(total) - 1)
   const within = (frame: number): number => Math.min(last, Math.max(0, Math.floor(frame)))
-  const lists = frames.map((frame) => drawListAt(spec, style, within(frame), fps, { width, height }, measure, at(within(frame)), drawer))
-  await ensureFaces(facesOf(lists, style))
-  await Promise.all(imagesOf(lists).map(decodeImage))
+  const listsNow = (): DrawList[] => frames.map((frame) => drawListAt(spec, style, within(frame), fps, { width, height }, measure, at(within(frame)), drawer))
+  const probe = listsNow()
+  await ensureFaces(facesOf(probe, style))
+  await Promise.all(imagesOf(probe).map(decodeImage))
+  const lists = listsNow()
   return lists.map((list) => {
     const canvas = document.createElement('canvas')
     canvas.width = width

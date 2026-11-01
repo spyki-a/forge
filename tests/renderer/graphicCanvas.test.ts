@@ -70,6 +70,7 @@ interface FakeCanvas {
 const EM = 0.55
 /** The fake's advance per grapheme, of the font's size; one test moves it to show a stale memo. */
 const fakeEm = { value: EM }
+/** The first `<n>px` in a font shorthand or a letter spacing; 10 for a font with none, as a spacing is always written with one. */
 const pxOf = (font: string): number => Number(/(\d+(?:\.\d+)?)px/.exec(font)?.[1] ?? 10)
 const graphemeCount = (text: string): number => {
   const parts = graphemesOf(text)
@@ -141,9 +142,9 @@ function fakeCanvas(): FakeCanvas {
     measureText: (text: string) => {
       const px = pxOf(String(state.font))
       measures.push({ text, font: String(state.font), letterSpacing: String(state.letterSpacing) })
-      return bounds.value
-        ? { width: graphemeCount(text) * px * fakeEm.value, actualBoundingBoxAscent: ASCENT * px + 3, actualBoundingBoxDescent: (LINE_HEIGHT - ASCENT) * px + 2 }
-        : { width: graphemeCount(text) * px * fakeEm.value }
+      // As Chrome 152 measures (2026-11-01): the advance plus the letter spacing once per grapheme, the trailing one counted.
+      const width = graphemeCount(text) * (px * fakeEm.value + pxOf(String(state.letterSpacing)))
+      return bounds.value ? { width, actualBoundingBoxAscent: ASCENT * px + 3, actualBoundingBoxDescent: (LINE_HEIGHT - ASCENT) * px + 2 } : { width }
     }
   }
   canvas.ctx = new Proxy(
@@ -256,12 +257,12 @@ function spec(over: Partial<GraphicSpec> = {}): GraphicSpec {
  * one, a tip mark when there is one, and, when asked, an image, a dim and a
  * Hindi line.
  */
-function drawer(options: { image?: string; dim?: boolean; hindi?: boolean; empty?: boolean } = {}): Drawer {
+function drawer(options: { image?: string; dim?: boolean; hindi?: boolean; empty?: boolean; x?: number } = {}): Drawer {
   return (s, style, clock, size, measure, targets) => {
     if (options.empty) return { items: [] }
     const label = s.data.template === 'counter' ? s.data.label : 'label'
     const look: TextLook = { textStyleId: style.textStyleId, font: style.font, px: 60, align: 'left' }
-    const items: DrawItem[] = textItems({ id: 'label', text: label, look, at: { x: 100 + 200 * clock.t, y: 800, width: 800 }, unit: 'line', source: 'label' }, measure)
+    const items: DrawItem[] = textItems({ id: 'label', text: label, look, at: { x: (options.x ?? 100) + 200 * clock.t, y: 800, width: 800 }, unit: 'line', source: 'label' }, measure)
     // Built by hand in the style's own face, as a template's fixed glyph would be, so the Noto face is the site's to add (`facesFor`), not `textItems`' (which sets a shaped piece's face itself).
     if (options.hindi) items.push({ kind: 'text', id: 'hindi', opacity: 1, text: HINDI, look, box: { x: 100, y: 900, width: 400, height: Math.round(60 * LINE_HEIGHT) } })
     if (targets.subject) items.push({ kind: 'shape', id: 'subject', opacity: 1, shape: 'rect', box: { ...targets.subject }, fill: '#ff0000' })
@@ -276,6 +277,30 @@ function drawer(options: { image?: string; dim?: boolean; hindi?: boolean; empty
 const NO_TARGETS = (): GraphicTargets => ({})
 const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 10))
 const labelFill = (c: FakeCanvas): Op[] => c.ops.filter((o) => o.op === 'fillText' && o.text === 'forty')
+
+/**
+ * The catalogue's `ensureFont` with one face held until `release` is called;
+ * when it is, the face lands for real: the fake measures it at `em` (wider
+ * than the fallback's 0.55, as a loaded face is a different face) and the
+ * catalogue counts it loaded, which drops the measure's memo.
+ */
+function holdFace(family: string, em = EM): () => void {
+  let release: () => void = () => undefined
+  const held = new Promise<boolean>((resolve) => {
+    release = () => {
+      fakeEm.value = em
+      useCatalog.setState((s) => ({ loadedFonts: new Set(s.loadedFonts).add(family) }))
+      resolve(true)
+    }
+  })
+  useCatalog.setState({
+    ensureFont: (asked_: string) => {
+      asked.push(asked_)
+      return asked_ === family ? held : Promise.resolve(true)
+    }
+  })
+  return () => release()
+}
 
 /* ---------------------------------------------------------- the measure */
 
@@ -362,6 +387,20 @@ describe('textSpecFont and the renderer’s measure', () => {
     // Leave the memo on a state no later case starts from.
     useCatalog.setState({ loadedFonts: new Set(['Montserrat', 'Anton', 'Zz']) })
   })
+
+  it('tells two faces of one font string apart by their tracking: chrome and chrome-script set the same weight, family and size, 0.02 and 0.06 em apart', () => {
+    const measure = graphicMeasure()
+    const chrome = textSpecFont(itemSpec('chrome').spec, itemSpec('chrome').height)
+    const script = textSpecFont(itemSpec('chrome-script').spec, itemSpec('chrome-script').height)
+    expect(chrome.font).toBe(script.font)
+    expect(chrome.letterSpacing).toBe('1.20px')
+    expect(script.letterSpacing).toBe('3.60px')
+    const tight = measure('Track', look('chrome'))
+    const loose = measure('Track', look('chrome-script'))
+    expect(tight.width).toBeCloseTo(5 * (60 * EM + 1.2), 9)
+    expect(loose.width).toBeCloseTo(5 * (60 * EM + 3.6), 9)
+    expect(loose.width - tight.width).toBeCloseTo(5 * 2.4, 9)
+  })
 })
 
 /* ----------------------------------------------------------- the preview */
@@ -420,9 +459,10 @@ describe('graphicPreviewCanvas', () => {
     expect(at(TOTAL - 1)).toBe(atLastMoving)
     expect(at(MOVING + 7)).toBe(atLastMoving)
     expect(canvas.clears, 'and every later held frame is the cached picture').toBe(before + 1)
+    const heldStamp = canvas.dataset.forgeRev
     // A moving frame earlier is somewhere else: the label slides 200 px a second.
     expect(at(0)).toBeCloseTo(atLastMoving - 200 * ((MOVING - 1) / FPS), 6)
-    expect(canvas.dataset.forgeRev).toContain(`|${0}`)
+    expect(canvas.dataset.forgeRev, 'the stamp moved with the picture').not.toBe(heldStamp)
   })
 
   it('while a face is loading, draws and does not cache, asks the catalogue once, and repaints once it lands; a Hindi item asks for its Noto face', async () => {
@@ -432,12 +472,15 @@ describe('graphicPreviewCanvas', () => {
     const first = graphicPreviewCanvas('g4', spec(), clean(), SIZE.width, SIZE.height, clock(5), NO_TARGETS(), onReady, d)!
     const canvas = made.find((c) => (c as unknown) === (first as unknown))!
     expect(canvas.clears).toBe(1)
+    const waitingStamp = canvas.dataset.forgeRev
     expect(asked).toContain('Montserrat')
     expect(asked).toContain('Noto Sans Devanagari')
     expect(asked).not.toContain('Noto Sans Telugu')
     // Not cached: the same frame is drawn again, and the faces, already asked for, are not asked again.
     graphicPreviewCanvas('g4', spec(), clean(), SIZE.width, SIZE.height, clock(5), NO_TARGETS(), onReady, d)
     expect(canvas.clears).toBe(2)
+    // The same frame, the same canvas, drawn again: the stamp the grade's cache is keyed on has moved (grade.ts, "something that changes exactly when the picture does").
+    expect(canvas.dataset.forgeRev).not.toBe(waitingStamp)
     expect(asked.filter((f) => f === 'Montserrat')).toHaveLength(1)
     await settle()
     // The recorder answered true but settled nothing (the catalogue before it has loaded): no repaint is owed, and nothing loops.
@@ -453,13 +496,50 @@ describe('graphicPreviewCanvas', () => {
     })
     graphicPreviewCanvas('g4', spec(), clean(), SIZE.width, SIZE.height, clock(5), NO_TARGETS(), onReady, d)
     expect(canvas.clears).toBe(3)
+    const lastWaitingStamp = canvas.dataset.forgeRev
     await settle()
     expect(ready).toBe(1)
     graphicPreviewCanvas('g4', spec(), clean(), SIZE.width, SIZE.height, clock(5), NO_TARGETS(), onReady, d)
     graphicPreviewCanvas('g4', spec(), clean(), SIZE.width, SIZE.height, clock(5), NO_TARGETS(), onReady, d)
     expect(canvas.clears, 'drawn once more, then cached').toBe(4)
+    // The landed face's picture is not served the fallback face's graded copy.
+    expect(canvas.dataset.forgeRev).not.toBe(lastWaitingStamp)
+    expect(canvas.dataset.forgeRev).not.toBe(waitingStamp)
     await settle()
     expect(ready).toBe(1)
+  })
+
+  it('calls back the latest onReady given while a face loads, not the first', async () => {
+    const release = holdFace('Montserrat')
+    const d = drawer()
+    const calls: string[] = []
+    graphicPreviewCanvas('g4b', spec(), clean(), SIZE.width, SIZE.height, clock(5), NO_TARGETS(), () => void calls.push('first'), d)
+    graphicPreviewCanvas('g4b', spec(), clean(), SIZE.width, SIZE.height, clock(5), NO_TARGETS(), () => void calls.push('second'), d)
+    expect(asked.filter((f) => f === 'Montserrat')).toHaveLength(1)
+    release()
+    await settle()
+    expect(calls).toEqual(['second'])
+  })
+
+  it('a face the bridge would not even ask for is owed no more: the rejection is swallowed, warned once, and the next draw asks again', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    useCatalog.setState({
+      ensureFont: async (family: string) => {
+        asked.push(family)
+        throw new Error('bridge down')
+      }
+    })
+    const d = drawer()
+    graphicPreviewCanvas('g4c', spec(), clean(), SIZE.width, SIZE.height, clock(5), NO_TARGETS(), undefined, d)
+    graphicPreviewCanvas('g4c', spec(), clean(), SIZE.width, SIZE.height, clock(5), NO_TARGETS(), undefined, d)
+    expect(asked.filter((f) => f === 'Montserrat'), 'asked once while owed').toHaveLength(1)
+    await settle()
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(String(warn.mock.calls[0][1])).toBe('bridge down')
+    graphicPreviewCanvas('g4c', spec(), clean(), SIZE.width, SIZE.height, clock(5), NO_TARGETS(), undefined, d)
+    expect(asked.filter((f) => f === 'Montserrat'), 'asked again once the first ask failed').toHaveLength(2)
+    await settle()
+    warn.mockRestore()
   })
 
   it('a face that failed for good counts as settled: drawn in the fallback and cached', () => {
@@ -630,16 +710,7 @@ describe('bakeGraphicSequence', () => {
   })
 
   it('waits for every face the lists draw, the style’s and a Hindi item’s Noto face, before any canvas is made', async () => {
-    let release: () => void = () => undefined
-    const held = new Promise<boolean>((resolve) => {
-      release = () => resolve(true)
-    })
-    useCatalog.setState({
-      ensureFont: (family: string) => {
-        asked.push(family)
-        return family === 'Noto Sans Devanagari' ? held : Promise.resolve(true)
-      }
-    })
+    const release = holdFace('Noto Sans Devanagari')
     const done = bakeGraphicSequence(spec(), clean(), 'clip-g', SIZE.width, SIZE.height, TOTAL, FPS, NO_TARGETS, false, drawer({ hindi: true }))
     await settle()
     expect(asked).toContain('Montserrat')
@@ -650,6 +721,65 @@ describe('bakeGraphicSequence', () => {
     release()
     expect(await done).toEqual({ pattern: '/cache/clip-g.seq/%06d.png', frames: MOVING })
     expect(pictures().length).toBeGreaterThan(0)
+  })
+
+  it('boxes the text and the bake region at the landed face’s width, not the fallback’s it measured while the face loaded: the glyphs are drawn at their size, unshrunk', async () => {
+    // The style's face lands wider than the fallback (0.9 em a grapheme for 0.55): what a real face does to a width measured before it.
+    const release = holdFace('Montserrat', 0.9)
+    const d = drawer()
+    const done = bakeGraphicSequence(spec(), clean(), 'clip-l', SIZE.width, SIZE.height, TOTAL, FPS, NO_TARGETS, true, d)
+    await settle()
+    release()
+    const result = await done
+    const landed = graphicBox(spec(), clean(), FPS, TOTAL, SIZE, graphicMeasure(), NO_TARGETS, d)!
+    expect(fakeEm.value).toBe(0.9)
+    expect(result?.box).toEqual(landed)
+    // 'forty' at 60 px: 5 × (60 × 0.9) = 270 wide landed, 165 in the fallback; a box of the fallback's width would have the painter shrink the landed glyphs into it.
+    expect(landed.width).toBeGreaterThan(5 * 60 * 0.9)
+    // Every pass of every frame (clean draws a shadow pass under its fill): at 60 px, not a shrunk size.
+    const fills = pictures().flatMap(labelFill)
+    expect(fills.length).toBeGreaterThanOrEqual(MOVING)
+    for (const fill of fills) expect(fill.font).toMatch(/^700 60px /)
+  })
+
+  it('an older bake whose face lands after a newer bake has finished answers null and writes nothing over the newer one’s frames', async () => {
+    const release = holdFace('Noto Sans Devanagari')
+    const older = bakeGraphicSequence(spec(), clean(), 'clip-r', SIZE.width, SIZE.height, TOTAL, FPS, NO_TARGETS, false, drawer({ hindi: true }))
+    await settle()
+    expect(cleared).toEqual([])
+    const newer = await bakeGraphicSequence(spec(), clean(), 'clip-r', SIZE.width, SIZE.height, TOTAL, FPS, NO_TARGETS, false, drawer())
+    expect(newer).toEqual({ pattern: '/cache/clip-r.seq/%06d.png', frames: MOVING })
+    expect(cleared).toEqual(['clip-r'])
+    expect(written).toHaveLength(MOVING)
+    release()
+    expect(await older).toBeNull()
+    expect(cleared, 'the newer bake’s frames were not cleared again').toEqual(['clip-r'])
+    expect(written, 'nor written over').toHaveLength(MOVING)
+    expect(isBaking('clip-r')).toBe(false)
+  })
+
+  it('on the box route, a graphic whose ink is wholly outside the frame answers null, clearing and writing nothing; on the canvas route it bakes transparent frames', async () => {
+    settledCatalogue()
+    const off = drawer({ x: 5000 })
+    expect(graphicBox(spec(), clean(), FPS, TOTAL, SIZE, graphicMeasure(), NO_TARGETS, off)).toBeNull()
+    expect(await bakeGraphicSequence(spec(), clean(), 'clip-m', SIZE.width, SIZE.height, TOTAL, FPS, NO_TARGETS, true, off)).toBeNull()
+    expect(cleared).toEqual([])
+    expect(written).toEqual([])
+    expect(isBaking('clip-m')).toBe(false)
+    expect(await bakeGraphicSequence(spec(), clean(), 'clip-m', SIZE.width, SIZE.height, TOTAL, FPS, NO_TARGETS, false, off)).toEqual({ pattern: '/cache/clip-m.seq/%06d.png', frames: MOVING })
+    expect(written).toHaveLength(MOVING)
+  })
+
+  it('an image that would not decode is remembered across bakes: fetched once, never drawn', async () => {
+    settledCatalogue()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const missing = drawer({ image: '/assets/pics/missing-baked.png' })
+    expect(await bakeGraphicSequence(spec(), clean(), 'clip-n', SIZE.width, SIZE.height, TOTAL, FPS, NO_TARGETS, false, missing)).not.toBeNull()
+    expect(await bakeGraphicSequence(spec(), clean(), 'clip-n', SIZE.width, SIZE.height, TOTAL, FPS, NO_TARGETS, false, missing)).not.toBeNull()
+    expect(fetched.filter((u) => u.includes('missing-baked'))).toHaveLength(1)
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(pictures().flatMap((c) => c.ops.filter((o) => o.op === 'drawImage'))).toEqual([])
+    warn.mockRestore()
   })
 
   it('decodes every image the lists name before drawing, and hands the bitmap to the painter', async () => {
@@ -692,17 +822,8 @@ describe('bakeGraphicSequence', () => {
 /* ------------------------------------------------------------ the frames */
 
 describe('graphicFrameCanvases', () => {
-  it('draws each asked frame on its own canvas of the frame’s size, as the drawer gives it, a frame past the clip as its last, after the faces have landed', async () => {
-    let release: () => void = () => undefined
-    const held = new Promise<boolean>((resolve) => {
-      release = () => resolve(true)
-    })
-    useCatalog.setState({
-      ensureFont: (family: string) => {
-        asked.push(family)
-        return family === 'Montserrat' ? held : Promise.resolve(true)
-      }
-    })
+  it('draws each asked frame on its own canvas of the frame’s size, as the drawer gives it, a frame past the clip as its last, after the faces have landed and at the landed face’s width', async () => {
+    const release = holdFace('Montserrat', 0.9)
     const done = graphicFrameCanvases(spec(), clean(), SIZE.width, SIZE.height, TOTAL, FPS, [0, 15, 60, 95], NO_TARGETS, drawer())
     await settle()
     expect(asked).toContain('Montserrat')
@@ -718,5 +839,7 @@ describe('graphicFrameCanvases', () => {
     // A held frame is drawn as the drawer gives it, not as the last moving one: the check reads the two against each other.
     expect(x(fakes[2])).toBeCloseTo(100 + 200 * (60 / FPS), 6)
     expect(x(fakes[3])).toBeCloseTo(100 + 200 * ((TOTAL - 1) / FPS), 6)
+    // The lists were built after the face landed: the label is boxed at 0.9 em and drawn at its size, not shrunk into a 0.55 em box.
+    for (const c of fakes) for (const fill of labelFill(c)) expect(fill.font).toMatch(/^700 60px /)
   })
 })
