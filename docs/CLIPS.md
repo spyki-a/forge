@@ -28,8 +28,15 @@
 > `f77fd29` and `ae3e48f` (§6.20's second Built note: the Noto faces
 > committed, the catalogue's listing, the canvas painter's chain, the
 > caption route §16.66 (a); pushed as `ae3e48f`, whose CI run 40996919693
-> passed on both runners, its notices read in the Built note). Not built: phase 1's lanes B–D (lane B is
-> next: both of §6.20's halves it waits on are in) and everything from
+> passed on both runners, its notices read in the Built note); then,
+> 2026-10-30/31, phase 1's lane B in five commits, each read by two
+> critics before the next: `4b68c45` (the draw list), `a82cd43` and
+> `d822c56` (painter A), `4196d43` and `0c8911f` (the frames and the
+> targets; §6.3's three Built notes, under their own sub-sections; pushed
+> in one push as `0c8911f`, whose CI run was not yet read when this was
+> written: the frames' Built note carries its line). Not built: phase
+> 1's lanes C and D (lane C is next: B's draw list and painter it waits
+> on are in, and M1 and M2 answered 2026-10-27) and everything from
 > phase 2 on. §2's total is
 > now about 100-103.5 days with Step P (100.25-103.75 since §16.66's
 > answer, 2026-10-27).
@@ -8393,15 +8400,17 @@ its three jobs.
 
 | file | holds | where it runs |
 |---|---|---|
-| `src/shared/graphics/drawList.ts` | `drawListAt`, `needsCompositor`, `graphicBox` | node and renderer, pure; the only importer of `templates/index.ts` |
-| `src/shared/graphics/items.ts` | the `DrawItem` types (their `Point` and `Arrowhead` imported from `stroke.ts`, corrected 2026-10-28), `Drawer`, `DrawOut`, `textItems`, `textSpecOf`, `itemBounds`, `unitFor`, `CLUSTER_SCRIPTS` | pure; the templates import this, never `drawList.ts`, so no import cycle runs through `templates/index.ts` (`textItems` reads `unitFor`, so the two live together) |
+| `src/shared/graphics/drawList.ts` | `drawListAt`, `needsCompositor`, `graphicBox`, and `onsetTargetsAt` (the "When" rule under Targets as a function; built 2026-10-30, the draw list's Built note) | node and renderer, pure; the only source importer of `templates/index.ts` (its test imports it too, to pin "frozen and empty") |
+| `src/shared/graphics/items.ts` | the `DrawItem` types (their `Point` and `Arrowhead` imported from `stroke.ts`, corrected 2026-10-28), `Drawer`, `DrawOut`, `textItems`, `textSpecOf`, `itemBounds`, `unitFor`, `CLUSTER_SCRIPTS`; and, built 2026-10-30 (the draw list's Built note), `GraphicTargets` (here, not in `targets.ts`, because `Drawer` names it), `ItemTransform`, `itemOrigin`, `localBounds`, `unionRect`, `graphemesOf` | pure; the templates import this, never `drawList.ts`, so no import cycle runs through `templates/index.ts` (`textItems` reads `unitFor`, so the two live together) |
 | `src/shared/graphics/templates/index.ts` | `DRAWERS: Partial<Record<GraphicTemplateId, Drawer>>`, created empty in phase 1; each template's commit adds its own row (§6.2) | pure |
 | `src/shared/graphics/stroke.ts` | `flattenPath`, `strokeAt`, the head's geometry (`headGrowAt`, `headShape`, `strokeShape`), `strokeWidth`, `STROKE_MIN_PX`, `STROKE_TOLERANCE`, `Point`, `Arrowhead` (corrected 2026-10-28; the stroke primitive's Built note below) | pure; imports only `DURATIONS` and `progress` from `motion.ts` |
-| `src/shared/graphics/frame.ts` | `graphicMovingFrames`, `beatFrame`, `graphicExitKeys`, `drawnGraphicAsset` | pure |
-| `src/shared/graphics/targets.ts` | `graphicTargetsAt` | pure |
-| `src/shared/graphics/paint.ts` | `paintDrawList2d`, importing `STROKE_MIN_PX` and `strokeWidth` from `stroke.ts`, never declaring its own (corrected 2026-10-28) (`/// <reference lib="dom" />` scoped to the file, as `textPaint.ts:1-5`) | renderer |
+| `src/shared/graphics/frame.ts` | `graphicMovingFrames`, `beatFrame`, `graphicExitKeys`, `drawnGraphicAsset`; and the constants `SETTLE_S`, `EXIT_S`, `BEAT_FRAME_ALLOWANCE`, with §6.16's `SCREEN_CARD_MOVE_S` and `EDGE_SWEEP_S` declared here so the drawer and the bake read one number (built 2026-10-31, the frames' Built note) | pure |
+| `src/shared/graphics/targets.ts` | `graphicTargetsAt` (`subject` only in phase 1; `tip` and `screen` are §6.18's and §6.16's branches, not built; 2026-10-31, the frames' Built note) | pure; reads the project through `sourceToFrame`, `subjectBoxesAt` and `captionSourceClip`, never a second model of the crop |
+| `src/shared/graphics/paint.ts` | `paintDrawList2d` and `PaintOptions`, importing `STROKE_MIN_PX` and `strokeWidth` from `stroke.ts`, never declaring its own (corrected 2026-10-28; built 2026-10-30 as a re-export, `paint.ts:49`, since a bare import of either is unused, the painter drawing `strokeShape`'s width, and a reader of the painter then takes the floor from its module) (`/// <reference lib="dom" />` scoped to the file, as `textPaint.ts:1-5`) | renderer (node's tests drive it on a fake context) |
 | `src/renderer/src/graphicCanvas.ts` | preview, bake, frames for the harness; `GRAPHIC_BAKE_REGION` (`'box'`) and `GRAPHIC_POOL_DEPTH` (4), set by M1 on 2026-10-27 (§6.15) | renderer |
 | `src/renderer/src/encodePool.ts` | `encodeFrames`, the `toBlob` pool; and the worker back-end M2 took on 2026-10-27 (§6.15), its module worker file moved beside it from `harness/` | renderer |
+| `src/shared/render/textStyle.ts` | `textInkReach(styleId, px): TextInkReach`, with `InkReach` and `TextInkReach { user; device }` (`:682`, `:699`, `:743`), the one export this section adds to it (built 2026-10-30, the draw list's Built note) | pure; read by `items.ts` |
+| `src/shared/render/textPaint.ts` | nothing new; its box, split and step passes multiply into `globalAlpha` (`:454`, `:592`, `:640`) instead of setting it, since `d822c56` (painter A's Built note), so an item's opacity reaches every pass `drawTextOnto` makes | renderer |
 
 **`encodePool.ts` is extracted, `captionBake.ts` is not touched.** The pool
 is `captionBake.ts:129-196`'s pattern (four canvases, an encode in flight
@@ -8442,7 +8451,11 @@ export reach a graphic only through its template's row.
 
 Every `DrawItem` carries `id: string` (stable per element across frames),
 `opacity: number`, `transform?: { x; y; scale; rotate }` (frame pixels and
-degrees, about the item's own centre, as `itemBounds` gives it), and `z?:
+degrees, about the item's own centre, as `itemBounds` gives it; built
+2026-10-30 as `itemOrigin(item, size)`, the centre of the item's own
+un-widened geometry, read from the item alone with no measure and no
+style, so painter A and `itemBounds` turn about the identical point,
+`items.ts:575`, the draw list's Built note below), and `z?:
 number` (phase 3's planes). Units: `Rect` = `{ x; y; width; height }` and
 `Point` = `{ x; y }` are output-frame pixels; `UnitRect` is
 `reframe/types.ts:18`'s 0..1. The kinds:
@@ -8552,6 +8565,215 @@ non-empty `glow`; painter A ignores all three.
   own (`Face.font`, `textStyle.ts:83`, is given no value anywhere in the
   file, read 2026-10-21); `GRAPHIC_TEXT_STYLES` refuses one that does, so
   it stays so (§6.5).
+- **A line of mixed faces is placed per word** (measured 2026-10-30, the
+  draw list's Built note below): a line holding Devanagari or Telugu
+  beside Latin was placed by prefix widths in the line's Indic face while
+  its Latin pieces drew in the style's face, a 50 px overlap at 100 px
+  under a per-face measure; now each word of a mixed line is placed by the
+  running sum of its own face's widths (`lineLooksOf`, `lineWidthOf`,
+  `items.ts:316`, `:328`), and a one-face line keeps the prefix rule, so
+  its kerning holds.
+
+> **Built 2026-10-30 (the draw list).** `4b68c45`, one commit, after two
+> critics read the builder's working tree (the builder's own report was a
+> junk line, so the critics read the tree and the fixer applied their two
+> must-fixes, each verified against the code first, with the cheap
+> nice-to-fixes): the first piece of §6.19's lane B. Pushed with the rest
+> of lane B in one push ending at `0c8911f` (2026-10-31); the CI reading is
+> in the frames' Built note below. Every figure here is from the commit's
+> message and the test's re-run at `0c8911f` (`npx vitest run
+> tests/graphicDrawList.test.ts`, 25 cases passed, vitest exit 0); line
+> numbers were read at `0c8911f`.
+> - **The exports.** `src/shared/graphics/items.ts` (682 lines): the kinds
+>   as the table above lists them (`StrokeItem` `:96`, `TextItem` `:112`,
+>   `ShapeItem` `:121`, `ImageItem` `:136`, `DimItem` `:144`, `GroupItem`
+>   `:152`, `DrawItem` `:157`), `ItemTransform` (`:64`, named so because
+>   `timeline.ts` exports a `Transform` of its own, the anchor trap §6.5
+>   met with `MotionEase`), `Camera` `:160`, `GlowRequest` `:169`,
+>   `TextMeasure` `:177`, `GraphicTargets` `:187` (**here, not in
+>   `targets.ts`**, because `Drawer` names it; `targets.ts` imports it),
+>   `DrawOut` `:194`, `DrawList` `:201`, `Drawer` `:213`, `TextUnit` `:223`,
+>   `CLUSTER_SCRIPTS` `:236` (frozen, `['Devanagari', 'Telugu']` as M3 set
+>   it), `unitFor` `:253` (strikes the cleared scripts' code points, then
+>   asks `shapedScript` of the rest, so both read one property),
+>   `graphemesOf` `:270` (`Intl.Segmenter` at `'grapheme'`, null without
+>   one), `textItems` `:354`, `textSpecOf` `:446` (every `TextSpec` field
+>   the bullet above lists, `highlight` on word 0 from `look.accent`),
+>   `itemOrigin` `:575`, `localBounds` `:663`, `itemBounds` `:674`,
+>   `unionRect` `:680`. `Point` and `Arrowhead` are imported from
+>   `stroke.ts` and re-exported (`:36`), declared nowhere else; `items.ts`
+>   never imports `drawList.ts`. `src/shared/graphics/drawList.ts` (142
+>   lines): `drawListAt` `:26` (the drawer seam, defaulting to
+>   `DRAWERS[spec.data.template]`; `t = frame / fps`; `targets ?? {}`),
+>   `needsCompositor` `:58`, `onsetTargetsAt` `:75` (the subject read at
+>   frame 0 and handed to every frame, `tip` and `screen` per frame: the
+>   "When" rule under Targets as a function, which the plan names
+>   nowhere), `graphicBox` `:110`. `src/shared/graphics/templates/
+>   index.ts`: `DRAWERS`, a frozen empty `Partial<Record<GraphicTemplateId,
+>   Drawer>>`. `src/shared/render/textStyle.ts:681-801`: `InkReach`
+>   (`:682`), `TextInkReach { user; device }` (`:699`) and
+>   `textInkReach(styleId, px)` (`:743`). And `stroke.ts:21` and
+>   `:103-109`: the comment that said `items.ts` "is to take" `Point` and
+>   `Arrowhead`, and that the file table put `STROKE_MIN_PX` in `paint.ts`,
+>   rewritten here rather than in piece 2, where the brief had put it,
+>   because the file's comment was wrong at HEAD.
+> - **A line of mixed faces** (critic 1's first must-fix, critic 2's
+>   nice-to-fix). `textItems` measured every prefix of a line in the line's
+>   look (the first Indic face the line holds) while a Latin piece drew in
+>   the style's face, so with a measure whose advances differ per face the
+>   pieces overlapped or gapped; node's fake measure, the same width in any
+>   font, could not see it. Under the test's per-face measure (Montserrat
+>   0.7 em a grapheme, the Noto faces 0.5) over 'Price दाम ధర' at 100 px,
+>   'Price' ended at 350 in Montserrat while 'दाम' started at the Noto width
+>   of 'Price ', 300: a 50 px overlap (critic 1 read 20 at 40 px, the same
+>   defect). Now `lineLooksOf` (`:316`) reads each word's look and whether
+>   the line is mixed; `lineWidthOf` (`:328`) measures a one-face line
+>   whole in its look, the prefix rule, so kerning is kept, and a mixed
+>   line as the sum of each word in its own look plus the spaces in the
+>   line's; `textItems` places a mixed line's words by that running sum
+>   and, by cluster, a cluster at the width of the word's text before it in
+>   the word's look; wrapping and centring use the same width. The case at
+>   `tests/graphicDrawList.test.ts:358`: each piece starts where the one
+>   before ends plus a space between words (an ordering assertion, not a
+>   snapshot), 'Price' ends at 350 and 'दाम' starts at 400, the last piece
+>   ends at 650 as the rule computes it, a centred mixed line is placed by
+>   that width, a mixed candidate wraps at 499 and fits at 500, and
+>   one-face lines ('Price now', 'दाम दाम' by cluster) keep the prefix rule.
+> - **The transform's origin and the shadow's space** (critic 1's second
+>   must-fix, critic 2's nice-to-fix). The old `itemBounds` turned the
+>   reach-widened, measure-widened rect about its own centre, which moves
+>   with a style's asymmetric reach and a glyph's overshoot, and which
+>   painter A cannot find (`PaintOptions` carries no measure); and it
+>   rotated and scaled the shadow and glow reach with the item, though
+>   canvas's `shadowBlur`, `shadowOffsetX` and `shadowOffsetY` are not
+>   affected by the current transformation matrix (the HTML specification
+>   says so for all three; read, not probed in a browser). Now
+>   `itemOrigin(item, size)` (`:575`) is the centre of the item's own
+>   geometry, read from the item alone: a text, shape or image's box, a
+>   stroke's flattened points, the frame for a dim, a group's children each
+>   under its own transform (`localGeometry` `:543`, `itemGeometry`
+>   `:562`). `ItemTransform`'s doc (`:48-63`) states the painter's order,
+>   `translate(origin + xy)`, `rotate`, `scale`, `translate(−origin)`,
+>   which `transformed()` (`:506`) maps the corners through, so `paint.ts`
+>   reproduces the point exactly. `textInkReach` returns `{ user, device
+>   }`: `user` is drawn in the item's space (`sizeScale` growth, the
+>   outline's half-width, the extrude, the split, the box's padding, the
+>   rule) and `device` in the frame's (shadow 1.5 × blur + dy, glow 1.5 ×
+>   blur). `userBounds` (`:604`) widens a text's box by `user` and by the
+>   measure's overshoot (user-space glyph geometry), a shape's by half its
+>   stroke, carrying the shadow or glow as `device`; `placedBounds`
+>   (`:652`) transforms the user rect about `itemOrigin` with `device`
+>   untouched; `itemBounds` widens by `device` after; a group unions its
+>   children's placed rects and carries the largest device reach per side
+>   up through its own transform unscaled, since a group's transform does
+>   not scale a child's shadow either. `localBounds` (`:663`) is still
+>   exported as the rect before any transform, device included. The figure,
+>   from the bounds themselves in node: a 200×50 shape with blur 10, dy 4 at
+>   scale 0.5 had its bottom at 148 under the old bound (the widened rect
+>   scaled) and has it at 137.5 + 15 + 4 = 156.5 (`:747`); the same turned
+>   a quarter; a shape's stroke scaled; a clean text turned a quarter about
+>   its box's centre then widened by the shadow; an outline's user reach
+>   doubled under scale 2 with its shadow undoubled; a group at scale 0.5
+>   equal to the bare shape's; `itemBounds` equal to `localBounds` without
+>   a transform; and `itemOrigin` per kind the same point whatever the
+>   reach, the overshoot or the transform's own translation (`:725`).
+> - **The nice-to-fixes taken.** `textInkReach` reads the base face only:
+>   a graphic's item is one line, `paintForLine(style, 0)` is the base, a
+>   word-scoped accent is excluded by `GRAPHIC_TEXT_STYLES`, and
+>   `highlight` replaces the fill, not the reach; the accent merge
+>   over-widened the box (hero's accent, 1.6 of the size with a glow of
+>   0.5, never draws on an item). Pinned at `:636` on hero, eligible by
+>   membership of `GRAPHIC_TEXT_STYLES`: `device.left` = 1.5 × 0.16 × 42
+>   (its base is 0.42 of the size under `softShadow(0.5)`), `user` none; a
+>   critic's 0.24 × 100 forgot the base's own `sizeScale`, so the pin uses
+>   the painter's arithmetic (`paintLine` multiplies the fractions by
+>   `fontPx = round(px × sizeScale)`). The `sizeScale` growth branch stays,
+>   with the comment that no base face of the catalogue grows today, so it
+>   is cover for one added, untested by construction. The rule's round
+>   cap: `drawRule` strokes with `lineCap 'round'` (`textPaint.ts:658`), so
+>   each end reaches 0.04 + width / 2 past the glyphs; pinned on
+>   underline (`user.left` = (0.04 + 0.0275) × 100, `user.bottom` = 0.055
+>   × 100). `graphicBox` clips each item's bounds to the frame before the
+>   union (`drawList.ts:129-133`): an item wholly outside the frame, or of
+>   no area, inks nothing, and a list of only such items gives null (the
+>   old `point`, a 0×0 shape at 10,10, and `corner` cases gave 2×2 boxes
+>   and now give null; `tiny`, 0.5×0.5, keeps its 2×2; a 0.5 px sliver
+>   inside the far edge keeps 1078,1918,2,2; a shadow bringing an off-edge
+>   shape 15 px in gives 1064,84,16,82; one outside beside one inside gives
+>   the inside one's; `:611`). A non-finite bound throws (`:128`), naming
+>   the item, as `flattenPath`'s refusal does, rather than sizing a bake
+>   canvas by NaN (a NaN rotate, a NaN px). `MITER_LIMIT`'s comment
+>   (`items.ts:478-483`) binds `paint.ts` to a `miterLimit` of at most 10
+>   on a stroke item; the membership assertion is `graphicPaint`'s.
+>   `graphicBox`'s doc says the even snap holds as far as an even frame
+>   allows, as `captionBand`: an odd frame side clamps to an odd edge.
+> - **Where it differs from the plan, and why.** `drawListAt`'s `t` is
+>   `frame / fps` with `fps > 0`, else 0, and `textSpecOf`'s `size` is
+>   `look.px / box.height` with `box.height > 0`, else 0: guards against a
+>   division by zero, named here as the critics asked. `graphicBox` scans
+>   frames 0..`total − 1`, not to the last moving frame: `frame.ts` was
+>   piece 3, and a held frame draws the settled list, whose bounds the
+>   union already holds, so the box is the same and only the scan is
+>   longer; `graphicMovingFrames` may cut it later. Opacity is not read by
+>   the bounds: an item at opacity 0 on every frame still yields a box,
+>   where this section says "null when no frame has ink"; a slightly larger
+>   bake region, never a clipped one. `GraphicTargets` lives in `items.ts`,
+>   above. Per-item clipping is tighter than "the union … clamped to the
+>   frame": every box the plan's rule gives contains this one, and the
+>   harness's check (alpha 0 outside the box) is against ink, which an
+>   off-frame item has none of.
+> - **Measured** (node v24.18.1, printed by the units case): स्कूल 2
+>   clusters (5 code points), में 1 (3), क्षत्रिय 3 (8), बच्चे 2 (5), తెలుగు 3 (6),
+>   భాష 2 (3), మధురం 3 (5), so M3's counts for स्कूल, क्षत्रिय and తెలుగు hold;
+>   'क्‍ष' with a ZWJ is one cluster of 4 code points and 'क्‌ष' with a ZWNJ
+>   two ('क्‌', 'ष'), 'క్ష' three code points one cluster, 'స్త్రీ' six one, a
+>   ZWJ family emoji one; the ZWNJ split is how the glyphs render (the
+>   virama shown), so D8's "never below a cluster" holds under it.
+>   `EFFECTS.md` §61, "Canvas 2D under the painter", has the table.
+> - **The test**, `tests/graphicDrawList.test.ts`, 25 cases (21 before the
+>   critics' fixes): the drawer seam (`DRAWERS` frozen and empty; the empty
+>   list for every template id; a hand-built drawer's items, camera and
+>   glow with `t` and the targets; determinism and the seed); the units
+>   (`CLUSTER_SCRIPTS`; `unitFor`; Hindi and Telugu by `'cluster'` in
+>   graphemes, never code points, and Tamil never below a word; Latin by
+>   `'cluster'` in graphemes); `textItems` and `textSpecOf` (greedy wrapping
+>   into lines `round(px × LINE_HEIGHT)` tall, ids and sources in reading
+>   order; shaped pieces in `INDIC_FONTS`' face, Latin in the style's; the
+>   mixed line; every required `TextSpec` field, and `layoutText` reading
+>   the px back); the onset targets (two cases); `needsCompositor`;
+>   `graphicBox` (every frame's `itemBounds`, clipped, even on all four
+>   numbers, over 200 seeded lists; the rising entrance; null, the dim, the
+>   clamp and 2×2; the off-frame cases); `itemBounds` (the style reach and
+>   the glyph overshoot; a stroke's full path, half its width, its heads
+>   and a miter's ten half-widths; a shape's stroke and shadow, an image, a
+>   dim; the transform about the centre and a group's; `itemOrigin`; the
+>   shadow in the frame's space). §6.16's two depth cases are not here.
+> - **Mutations.** The builder's thirty-three (A–H this section's seven and
+>   the even snap, I–Z and AC–AF the gut mutations) were run by the builder
+>   and read by both critics; AA (the accent merge) and AB (the `sizeScale`
+>   growth) survived there, and this commit resolves them (AA by the hero
+>   pin; AB a dead branch by construction, as its comment says). Twelve
+>   more for the fixes, each applied in place by a script that counts its
+>   anchor exactly once, the test file run to a file, the source restored
+>   from its copy and cmp-equal, all twelve killed (vitest exit 1 each):
+>   the prefix rule kept for a mixed line, a mixed line's width measured
+>   whole in one face, and a mixed line's cluster at the prefix in the
+>   line's look (`:358`); the device reach widened before the transform,
+>   the origin the centre of the device-widened rect (the clean text's
+>   quarter turn, 1.2 px off), and a group widening each child by its
+>   device reach before the union (`:747`); the accent merged into
+>   `textInkReach`'s paint, the rule's cap dropped, and the measure's
+>   ascent overshoot dropped (`:636`); the per-item clip removed, and the
+>   non-finite throw removed (`:611`); a group's origin from its children's
+>   untransformed geometry (`:703`, `:725`).
+> - **Suites** (exits read from files): typecheck 0; the full suite at
+>   `4b68c45` 318 files passed, 5 skipped (323), 4,401 tests passed, 63
+>   skipped (4,464), 230.5 s, `exactCut.int`'s http leg skipped as the
+>   sandbox refuses a local port.
+> - **Left**, as planned: §6.16's two depth cases, and phase 3's with the
+>   counter and ring variants; the render check in the harness (lane D's
+>   `primitives` option and `PRIMITIVES_SPEC`, the alpha-0-outside-the-box
+>   reading of the real paint).
 
 #### The stroke primitive — `src/shared/graphics/stroke.ts`
 
@@ -8748,7 +8970,8 @@ layer at the item's opacity. **The hole is fixed at onset** (the research,
 samples a second without interpolating (`frameMap.ts:235-245`, `:275-291`),
 so a hole that followed the face would jump every 0.5 s and make every held
 frame a moving one. With the hole fixed, the layer is cached per hole and
-size and only its opacity animates (over `DURATIONS.dim`), so a dim's cost
+size (built 2026-10-30 as four layers per `layer` factory, the oldest
+dropped; painter A's Built note below) and only its opacity animates (over `DURATIONS.dim`), so a dim's cost
 is one layer, not a blur per frame. A dim makes the graphic's box the whole
 frame.
 
@@ -8772,18 +8995,253 @@ so the 42 looks apply (within `GRAPHIC_TEXT_STYLES`) and Chromium shapes
 the text (an inference until M22; M22 measured it on both machines,
 2026-10-27, §6.15).
 
+> **Built 2026-10-30/31 (painter A).** `a82cd43` (2026-10-30), then
+> `d822c56` after two critics (2026-10-31): the second piece of §6.19's
+> lane B. Pushed with the rest of lane B in one push ending at `0c8911f`;
+> the CI reading is in the frames' Built note below. Every figure here is
+> from the two messages and the test's re-run at `0c8911f` (`npx vitest run
+> tests/graphicPaint.test.ts`, 29 cases passed, vitest exit 0); line
+> numbers were read at `0c8911f`.
+> - **The exports**, `src/shared/graphics/paint.ts` (417 lines), `///
+>   <reference lib="dom" />` scoped to the file as `textPaint.ts:1-5`
+>   (`:1-8`; nothing touches `document` at load; `defaultLayer` `:111`
+>   does, only when a dim is drawn with no `layer` given): `PaintOptions`
+>   (`:52`: `offset`, `layer`, `images`, as above) and `paintDrawList2d`
+>   (`:409`): one outer `save`/`restore`, `offset` translated once, the
+>   items in list order through `paintItem` (`:364`), which multiplies
+>   `clamp01(opacity)` into the context's `globalAlpha` (a group's children
+>   inherit it, and the context's own alpha going in is honoured), skips an
+>   item nothing of which shows (effective alpha 0, its children with it),
+>   applies the transform about `itemOrigin` in `ItemTransform`'s order
+>   (`applyTransform` `:143`) and draws the kind: `paintStroke` `:177`
+>   (`strokeShape` over the memoised path; `lineWidth` the shape's width,
+>   cap, join, `miterLimit` 10 (`:74`, never larger: `items.ts`'s
+>   `MITER_LIMIT` assumes it), the dash's pattern and offset, the span's
+>   polyline stroked, each head a closed filled triangle, `marker` drawn
+>   clean); `paintText` `:204` (translate to the box, one `drawTextOnto` of
+>   `textSpecOf(text, look, box)` at the box's size; the painter formats
+>   nothing); `shapePath` `:219` and `paintShape` `:251` (`rect`,
+>   `roundRect(radius)`, `ellipse` on the box's centre and half sizes, a
+>   ring as `arc(sweep × 2π from start)` on the circle inscribed in the
+>   box, stroked and never filled, nothing at sweep 0; fill then stroke,
+>   the shadow set for the fill pass and cleared before the stroke pass,
+>   `textPaint.ts`'s reason; `shadowColor` through `withAlpha` `:133`, the
+>   `#rgb`, `#rgba`, `#rrggbb` and `#rrggbbaa` forms `resolveGraphicStyle`
+>   admits); `paintImage` `:292` (`drawImage` of `options.images.get(src)`,
+>   contain letterboxed, cover cropped from the bitmap's middle, skipped
+>   when missing or sizeless, `:294`); `dimLayer` `:316` and `paintDim`
+>   `:357` (the layer filled with `color` at `alpha`, the hole a
+>   `destination-out` `roundRect` under `filter = blur(<feather>px)`,
+>   `'none'` at feather 0, composited by one `drawImage` of the layer's
+>   canvas at (0, 0) under the item's opacity); a group's children each
+>   through `paintItem` under the group's alpha and CTM. `STROKE_MIN_PX`
+>   and `strokeWidth` are **re-exported** from `stroke.ts` (`:49`),
+>   declared nowhere here: a bare import of either is unused
+>   (`strokeShape` carries the width) and fails `noUnusedLocals`, and a
+>   reader of the painter (the test; lane D's `strokes` widths check) takes
+>   the floor from the painter's module; the file table above says so.
+> - **The two memos.** `pathOf` (`:82`): `flattenPath` per `d` at
+>   `STROKE_TOLERANCE`, 64 entries (`PATH_MEMO`, `:79`), the oldest
+>   dropped. The dim's layers (`:101-102`): a `WeakMap` keyed on the
+>   `layer` factory (two callers, two bakes or two tests, never see each
+>   other's contexts) holding a `Map` per hole, size, colour and alpha,
+>   **4 entries** (`LAYER_MEMO`), the oldest dropped: a layer is a
+>   frame-sized canvas (8 MB at 1080×1920, 33 MB at the 4K stills size),
+>   the cache's point is the frames of one clip, and a graphic baked again
+>   after four others pays one layer, not a blur per frame. "The dim"
+>   above says "cached per hole and size" and names no bound; the bound is
+>   this file's. A `layer` factory must make a new canvas on each call
+>   (the memo composites its canvases on later frames): one that hands
+>   back a canvas the painter already holds is refused with an error
+>   (`:55-64`, `:325-327`), the one failure lane C's `graphicCanvas.ts`,
+>   which pools canvases, could write by accident; cheap, at most four
+>   entries.
+> - **A text item's opacity reaches every pass** (`d822c56`, both
+>   critics' must-fix; verified first: of the 23 `GRAPHIC_TEXT_STYLES`
+>   exactly `highlight-bar` and `subtitle-block` carry a `box`, on the base
+>   face, computed under node 24, and no eligible style carries a `split`,
+>   since `glitch` and `glitch-red` re-case). `render/textPaint.ts`
+>   assigned `ctx.globalAlpha = opacity` inside its own `save` at the box
+>   bar, the chromatic split and the animation step, so under a one-word
+>   item at opacity 0.5 in `highlight-bar` the bar filled at 1 while the
+>   glyphs filled at 0.5 (reproduced: "highlight-bar fill: expected 1 to
+>   be less than or equal to 0.5"), and an entrance fade in either style
+>   popped the bar in at full. The painter cannot reach past that inner
+>   `save`, so the fix is in `textPaint.ts`, as piece 1's `textStyle.ts`
+>   edit was: all three sites now `*=` (`:454` the split, `:592` the step,
+>   `:640` the box), with a two-line comment at the split and the box
+>   saying why. Identity for every existing caller: all fifteen call sites
+>   of `drawTextOnto` enter at `globalAlpha` 1 (grepped; `graphicCheck.ts`
+>   sets it under its own save and restores before its call), so
+>   `textPaint`, `captionBake` and `textAnimation`'s suites are unchanged
+>   (run, 140 passed with the three graphic suites, exit 0). The guard
+>   sits in `tests/graphicPaint.test.ts:439`, driving `drawTextOnto`
+>   directly at `globalAlpha` 0.5 on this file's fake, which keeps a save
+>   stack and records the state per op (`textPaint.test`'s fake stubs
+>   `save`/`restore` and records no alpha, so a guard there would have
+>   needed a second fake), over every eligible style with a box on either
+>   face (computed, and asserting that the set contains `highlight-bar`,
+>   so it cannot silently test nothing): the bar's `roundRect` fill at 0.5
+>   × the box's own opacity (0.5 `highlight-bar`, 0.36 `subtitle-block`)
+>   and every fill in the span at ≤ 0.5. The step site is reached only
+>   with a `clock`, which the painter never passes; changed for the one
+>   rule and guarded directly.
+> - **The path memo keyed per `d`** (critic 2's must-fix): every stroke
+>   case used `HEAD`, so a memo keyed on nothing (the first path for every
+>   `d`) passed the whole suite; a case now paints two strokes of
+>   different paths in one list and pins each on its own points (`:634`).
+> - **Canvas facts measured before each guard was written** (`d822c56`; in
+>   the Browser pane's Chrome 152, as script on example.com since the
+>   sandbox cannot bind a port; `EFFECTS.md` §61, "Canvas 2D under the
+>   painter"): `ellipse` and `arc` throw an `IndexSizeError` on a negative
+>   radius (a radius of 0 does not); `roundRect` throws a `RangeError` on
+>   a negative radius (a negative extent draws mirrored, no throw); `rect`
+>   takes a negative extent; `drawImage` of a canvas with any 0 side
+>   throws an `InvalidStateError`; `globalAlpha *=` inside `save`/`restore`
+>   composes and restores. So (`:209-218`, `:230`, `:236`) a circle or ring
+>   in a box of negative size draws nothing rather than failing the whole
+>   frame's paint, beside the existing `Math.max(0, radius)` (`:227`)
+>   whose reason was unstated; `paintDim` inks nothing on a list without a
+>   size (`:358`; the default layer would be a 0×0 canvas, whose
+>   `drawImage` throws); a 0×0 bitmap is skipped and pinned (`:294`,
+>   nothing pinned the sizeless half before); and `paintItem` and
+>   `paintDrawList2d` restore in a `finally` (`:395`, `:414`), so a kind
+>   that throws (a template bug `flattenPath` refuses) leaves the caller's
+>   context as it was, the error still propagating (measured before the
+>   fix with a rect then a stroke whose `d` holds an arc: 3 saves, 1
+>   restore reached the context). The round-join reason at `:279`: a
+>   miter on a rect's corner would ink √2 × half the width past the box,
+>   beyond the half-width `itemBounds` widens it by.
+> - **The test**, `tests/graphicPaint.test.ts`, 25 cases in `a82cd43` and
+>   29 since `d822c56`. The fake is `textPaint.test.ts`'s manner widened:
+>   every call recorded with the state set when it was made (`fillStyle`
+>   as a string or 'not a colour' for a gradient), a save stack, the
+>   current transform kept as a matrix, every path point and `drawImage`
+>   corner mapped to device space, and `measureText` at the list's own
+>   rule (graphemes × px × 0.55, `graphicDrawList`'s) so `drawTextOnto`
+>   wraps and shrinks nothing unless a case asks (`:385`, a fake at twice
+>   the width). The cases: the pin per text item under `clean`,
+>   `shadow-pop` and `neon-green` (`:358`: every `fillText` string is the
+>   text or one of its rows, the distinct strings join back to the text,
+>   the font is the look's face at the style's base weight, '1000000'
+>   drawn as written, by line, word and cluster); the box translation and
+>   `offset` (`:397`: the baseline at box.y + round(ASCENT × px), x at
+>   box.x); the ink (`:421`); the opacity passes (`:439`); the
+>   shaped-script rule (`:489`: HINDI, TELUGU and TAMIL under the three
+>   styles, no string holding a shaped script less than a word, or a
+>   cluster where the script is in `CLUSTER_SCRIPTS`, never a lone mark);
+>   strokes (`:539` one stroke op with the span's exact points at
+>   `strokeWidth(4, SIZE)`, cap, join, miterLimit ≤ 10, no fill without a
+>   head, from = to nothing; `:565` the end head's point (300, 100) at `to`
+>   = 0.5 of `M100 100 L500 100` with base (260, 118)/(260, 82), the start
+>   head turned back, the line from 112 to 276 equal to `strokeShape`'s, no
+>   head at grow 0; `:599` widths 0.5 → 2 at 1080×1920, 0.5 at 270×480, 10
+>   → 10, 1 → 4 at 3840×2160; `:616` dash and offset, the next item
+>   undashed, marker's ops equal clean's, carrying its expiry: when M10's
+>   outline lands the two must differ; `:634` the memo per `d`); shapes,
+>   images and the dim (`:653` each path kind and its args, fill before
+>   stroke, the shadow on the fill pass and cleared on the stroke pass with
+>   the context's `shadowOffsetX` set to 7 going in and read back 0 after,
+>   `rgba(16,32,48,0.5)`, a ring never filled, sweep 0 nothing; `:715`
+>   contain [0,0,200,100 → 10,45,100,50], cover [50,0,100,100 →
+>   10,20,100,100], a missing or 0×0 bitmap skipped; `:741` the layer made
+>   once at 1080×1920, `fillRect` at alpha 0.35 source-over, the hole a
+>   `destination-out` `roundRect(300,600,200,200,12)` under `blur(8px)` at
+>   alpha 1, one `drawImage` at the item's 0.6, feather 0 → `'none'`, no
+>   hole → no cut; `:793` the bound, policy-free since `d822c56`: after a
+>   fifth distinct layer, re-painting all five makes at least one more,
+>   and after eight distinct at most 13 were ever made, which an LRU memo
+>   passes (checked) and `LAYER_MEMO` 8 or an unbounded memo fail, where
+>   `a82cd43`'s pin of FIFO broke the moment the memo was done right
+>   another way, `CLAUDE.md`'s rule; `:839` the shared-canvas refusal);
+>   the order of operations (`:853` list order, 4 save/restore pairs for 3
+>   items, an empty list saves and restores only; `:869` the throw; `:881`
+>   0.5 × 0.5 nesting gives 0.25, opacity 0 draws nothing, the context's
+>   own 0.5 honoured and restored; `:902` the painted corners' box equals
+>   `itemBounds` for rotate 90, scale 2 with translation, 0.5 with rotate
+>   37, an image at scale 3 rotate 180; `:926` a group's children at scale
+>   2 about their union's centre equal `itemBounds(group)`, a stroke scaled
+>   2 with offset (−50, −50) tipping at (250, 50), `lineWidth` still
+>   `strokeWidth`'s; `:957` `z`, a camera and a glow change nothing).
+> - **Mutations**, each at one anchor counted at one match with
+>   `matchAll`, the suite run to a log, the file restored from its copy
+>   and cmp-equal, vitest exit 1 each. `a82cd43`'s nineteen, this
+>   section's four among them: the painter splitting a text item by code
+>   point (11 cases, "shadow-pop: expected [ '4', '0' ] to deeply equal [
+>   '40' ]"); formatting a numeric-looking string (`toLocaleString`, 3,
+>   "\"1,000,000\""); the head at the path's end (2); `highlight` left out
+>   of `textSpecOf` (3, "expected '#ffffff' to be '#FFD400'"); the width in
+>   the item's own pixels ("expected 0.5 to be 2"); items in reverse order
+>   (13); opacity set instead of multiplied ("expected 0.5 to be close to
+>   0.25"); the transform about the frame's origin (2); the dim's cache
+>   dropped; the hole with source-over; the shadow left on for the stroke
+>   pass ("expected 10 to be +0"); `offset` ignored (2); the dash's offset
+>   dropped; a ring filled; cover and contain swapped; `MITER_LIMIT` 11;
+>   text by the painter's own `fillText` (8, the style's passes gone);
+>   `LAYER_MEMO` 8; the memo unbounded. `d822c56`'s fourteen: each `*=`
+>   back to `=` at the box, the split and the step ("expected 1 to be less
+>   than or equal to 0.5", "0.85", "1"); the path memo keyed on nothing;
+>   the circle's, the ring's and `paintDim`'s size guards dropped; the
+>   shared-canvas guard dropped; each `finally` dropped (a first attempt
+>   left a bare `try {` and "failed" on a transform error, which is not a
+>   kill, and was redone); the sizeless bitmap drawn; `shadowOffsetX = 0`
+>   dropped ("expected 7 to be +0"); `LAYER_MEMO` 8 and unbounded again
+>   ("expected 5 to be greater than 5").
+> - **Where it differs from the plan, and why.** An item whose effective
+>   opacity is 0 is skipped whole (no save, no ops): this section says only
+>   that opacity is multiplied in; drawing at alpha 0 inks nothing and
+>   costs the item's work, the dim's layer with it. A ring's `fill` is not
+>   read: a ring is its stroke, a filled arc would be a pie. The shape's
+>   stroke is drawn at its own width with no floor: `strokeWidth`'s floor
+>   is the stroke item's, and `items.ts` widens a shape's bounds by half
+>   its own width, so a floored shape stroke would ink past its box (not
+>   pinned, no case asks either way). The ring's radius is the circle
+>   inscribed in the box, the stroke centred on its edge, matching the
+>   bounds; the plan gives no radius rule. Under a box bake's `offset` the
+>   dim's frame-sized layer is cropped to the box canvas, which is the
+>   bake's intent (a dim makes the box the whole frame). No
+>   `setLineDash([])` after a dashed stroke: the item's `restore` resets
+>   it (pinned on the next item). Not done, as a critic said: the path
+>   memo's bound is not pinned (nothing counts `flattenPath` calls, and no
+>   export is added for a test's sake); a shape's `fill` of a non-hex
+>   string is handed to the canvas as given, which `resolveGraphicStyle`'s
+>   `HEX_COLOUR` keeps from happening (`style.ts:200`).
+> - **Suites** (exits read from files): typecheck 0 at both; the full
+>   suite at `a82cd43` 319 files passed, 5 skipped (324), 4,426 tests
+>   passed, 63 skipped (4,489), run twice, at the 8-entry memo and after
+>   the bound moved to 4, the same totals; at `d822c56` 4,430 passed, 63
+>   skipped (4,493).
+> - **Left** to lane C: `graphicCanvas.ts`'s `paintFrame`, which hands
+>   this painter `offset`, `layer` and `images`, and must make a fresh
+>   layer canvas per call (the painter now refuses a shared one). To lane
+>   D: the harness's `primitives` and Indic halves, and the `strokes`
+>   widths check reading `STROKE_MIN_PX` through this module. The Indic
+>   render check through `paintDrawList2d` on the Mac and the Surface is
+>   yours (§6.12).
+
 #### The box — `graphicBox(spec, style, fps, total, size, measure, targetsAt: (frame: number) => GraphicTargets, drawer?): Rect | null`
 
 The union of `itemBounds` over every frame of `drawListAt` from 0 to the
 last moving frame: a text item's box widened by its style's reach (shadow,
 glow, outline, extrusion, the box behind it, read from the `TextStyle`'s
-`Paint` by `textInkReach(styleId, px)` in `textStyle.ts`, a new export), a
+`Paint` by `textInkReach(styleId, px)` in `textStyle.ts`, a new export;
+built 2026-10-30 as `{ user, device }`: the user-space reach, the outline,
+the extrude, the box, widens the item before its transform, and the
+device-space reach, shadow blur and offset and glow, after it, unscaled
+and unturned, since canvas's shadow is not affected by the current
+transformation matrix; the draw list's Built note below), a
 shape's box and stroke and shadow, a stroke's full path widened by half its
 width and its heads, the whole frame for a dim, and a group's children under
 its transform. Snapped outward to even x, y, width and height (an odd offset
 or size is invalid for the subsampled chroma, as `captionBand` snaps,
 `captions/bake.ts:170`, `:178-192`), clamped to the frame, at least 2×2;
-null when no frame has ink. In node it is geometry; the harness checks the
+null when no frame has ink (corrected 2026-10-30: each item's bounds are
+clipped to the frame before the union, `drawList.ts:129-133`, so an item
+wholly outside the frame or of no area adds nothing and a list of only
+such items gives null; opacity is not read, so an item at opacity 0 still
+claims its place; and the scan runs over every frame of the clip, not to
+the last moving one, the box being the same; the draw list's Built note).
+In node it is geometry; the harness checks the
 real paint against it (alpha 0 outside the box, §6.11).
 
 #### Targets — `graphicTargetsAt(project, clip, spec, frame, size): GraphicTargets`
@@ -8798,7 +9256,12 @@ the caller and passed into `drawListAt`, so the drawing stays pure:
   `subjectBoxesAt` (`frameMap.ts:275-291`) on the clip of
   `captionTrack(project)` (`captions/timeline.ts:30`) under the frame, the
   track whose speaker the captions follow. Null off screen or with no
-  track: an ordinary case, not an error.
+  track: an ordinary case, not an error. (Corrected 2026-10-31,
+  `0c8911f`: on the `spec.subject` route too, "no track" is a track the
+  project no longer has, one hidden, or one that is not a video track,
+  since the export draws no such clip, `render/plan.ts`; before, a hidden
+  track still gave the box. `targets.ts:58`; the frames' Built note
+  below.)
 - **When**: `subject` is evaluated once, at the graphic clip's first frame,
   for every template, the callout included (§6.9 chose it 2026-10-21), and
   that value is what `targetsAt` returns for every frame of the clip. So a
@@ -8819,7 +9282,9 @@ the caller and passed into `drawListAt`, so the drawing stays pure:
 #### Moving frames, the beat frame and the exit — `graphics/frame.ts`
 
 - `beatFrame(beat, fps)` = `ceil(beat × fps − 1e-6)`: the first frame at or
-  after the beat. An element **arrives on** its beat: its progress reaches 1
+  after the beat (built 2026-10-31 as `max(0, ceil(beat × fps − 1e-6))`,
+  never −0, and 0 for a beat or a rate that is not finite; `frame.ts:72`,
+  the frames' Built note below). An element **arrives on** its beat: its progress reaches 1
   on that frame and not before (`progress`, §6.13, starts its curve
   `seconds` before the beat and allows 1e-6 s, more than this 1e-6 of a
   frame, so a frame that
@@ -8874,6 +9339,171 @@ the caller and passed into `drawListAt`, so the drawing stays pure:
   stops at the asset's length). It is the one helper the store's
   `addGraphicClip` and §6.6's pure `applyGraphics` both call, so the two
   shapes cannot differ.
+
+> **Built 2026-10-31 (the frames and the targets).** `4196d43`, then
+> `0c8911f` after two critics: the third piece of §6.19's lane B, and the
+> end of the lane. Pushed 2026-10-31 as `0c8911f`, the five commits of
+> lane B in one push (`4b68c45`, `a82cd43`, `d822c56`, `4196d43`,
+> `0c8911f`); at `0c8911f` the suite is 320 files passed and 5 skipped
+> (325), 4,458 tests passed and 63 skipped (4,521), 82 more than at
+> `ae3e48f` (4,376), the lane's three test files (25 + 29 + 28). Every
+> figure here is from the two messages and the test's re-run at `0c8911f`
+> (`npx vitest run tests/graphicFrame.test.ts`, 28 cases passed, vitest
+> exit 0); line numbers were read at `0c8911f`.
+> CI: CI-LINE-PENDING
+> - **`src/shared/graphics/frame.ts`** (170 lines): `SETTLE_S` 0.5
+>   (`:30`), `EXIT_S` 0.3 (`:37`), `BEAT_FRAME_ALLOWANCE` 1e-6 of a frame
+>   (`:48`); `beatFrame` (`:72`) = `max(0, ceil(beat × fps − 1e-6))`, never
+>   −0 (`Math.ceil(0 − 1e-6)` is −0, measured, hence the `max`), 0 for a
+>   beat that is not finite and, since `0c8911f`, 0 for a rate that is not
+>   a positive finite number, where `beatFrame(1, Infinity)` was `Infinity`
+>   (measured) and `graphicMovingFrames` then returned `total` for any spec
+>   at that rate (unreachable from a project; taken because the function
+>   refused one and not the other). `graphicMovingFrames` (`:97`) =
+>   `min(total, beatFrame(last beat + SETTLE_S) + 1)`, the three
+>   past-settle cases first: `steps` with connector `'line'` under
+>   `style.energy` `'energetic'` → `total`; `callout` with `spec.anchor` →
+>   `total`; `screen-card` under a style with `glow` → `min(total,
+>   round(SCREEN_CARD_MOVE_S × fps) + 1 + round(EDGE_SWEEP_S × fps))`.
+>   `graphicExitKeys` (`:130`): opacity 1 at `durationFrames − round(EXIT_S
+>   × fps)` leaving `'smooth'`, 0 at `durationFrames − 1` (keys count from
+>   the clip's own frame 0, as `automation/grid.ts`'s `arrivalKeys` write
+>   them; `normaliseKeys` does not clamp); a clip shorter than the exit
+>   fades from frame 0; a clip of one frame gets one key of value 1; and,
+>   since `0c8911f`, the duration is guarded by a comparison (`:131`,
+>   `durationFrames > 0 ? floor : 0`), not `Math.max(0, floor)`, because
+>   `Math.max(0, NaN)` is NaN and `graphicExitKeys(NaN, 30)` gave two keys
+>   at frame NaN with ease `'smooth'` (measured; JSON prints them null);
+>   the fps ternary at `:134`, unchanged, is now pinned. `drawnGraphicAsset`
+>   (`:156`), the literal above exactly.
+> - **`src/shared/graphics/targets.ts`** (104 lines): `graphicTargetsAt(
+>   project, clip: Pick<Clip, 'start'>, spec: Pick<GraphicSpec, 'subject'>,
+>   frame, size)` (`:94-104`) returns `{ subject }`: the subject evaluated
+>   at the clip's first frame, `clip.start`, whatever frame is asked (the
+>   "When" rule above, §6.9's rule 4), by `subjectAt` (`:51`). With
+>   `spec.subject`, the box through `sourceToFrame` on that clip at the
+>   onset, null when the project has no such clip or the onset is not on
+>   it, and, since `0c8911f` (critic 1's must-fix, measured true first),
+>   **null when the clip is not on a visible video track** (`:58`: the
+>   track missing, hidden, or not a video track): the export draws no such
+>   clip (`render/plan.ts` keeps `kind === 'video' && !hidden` only) and
+>   the other route already answered null for the same project through
+>   `captionTrack`'s own filter (`captions/timeline.ts`), while before, a
+>   hidden track and a `trackId` the project does not carry each gave
+>   {108, 192, 216×384}; there is no shared "visible video track" helper
+>   (`plan.ts` and `captionTrack` each inline the test), so this is a
+>   third inline of the same two-field test, said so at `:38-44`. Without
+>   one, the union of `subjectBoxesAt` on `captionSourceClip(project,
+>   onset)` (`captions/timeline.ts`, the clip of `captionTrack` under the
+>   frame). The canvas handed to both readers is `size` itself, the frame
+>   being drawn (`sourceToFrame` runs `followCanvas` for it), and the unit
+>   result is scaled to `size`: a 1920×1080 project holding the 1080×1920
+>   file, drawn at 1080×1920, maps a 0.1/0.2 box to x 108 on both routes
+>   and would land at x 403 through the project's own canvas (`0c8911f`'s
+>   landscape case, critic 2's; the union route there reads {108, 192,
+>   216, 576}, the critic's figure). `tip` (§6.18) and `screen` (§6.16)
+>   are left unfilled; `frame` is read by neither in phase 1 and is the
+>   seam they take (`:101-102`). A guard of this file's own on a size of
+>   no area was removed before the mutation table: `sourceToFrame` refuses
+>   it on both routes, so the guard survived by equivalence (dead code);
+>   the case stays, through that refusal (`:52`).
+> - **`tests/graphicMotion.test.ts`**: its local `beatFrame` ("still to be
+>   built") is now `frame.ts`'s, as its own comment said to do once
+>   `frame.ts` existed; nothing else in it changed.
+> - **Measured** (node 24, this machine): `Math.ceil(0 − 1e-6)` is −0; 1.5
+>   × 30 − 1e-6 = 44.999999, ceil 45, so a beat at 1.0 s at 30 fps gives 46
+>   moving frames; round(0.3 × 25) = 8, round(0.3 × 24) = 7, round(0.3 ×
+>   60) = 18; 30 + 1 + 180 = 211 for the glowing screen card at 30 fps,
+>   §6.16's figure. **The open allowance window** (the beat-frame bullet
+>   above; yours): the test measures and prints it, pinning nothing
+>   (`tests/graphicFrame.test.ts:139`): a beat 2e-6 of a frame after frame
+>   31 names 32 at 24, 25, 30 and 60 fps while `progress` already reads 1
+>   on 31, all four; no allowance was changed, and the decision stays
+>   yours. `EFFECTS.md` §61, "Canvas 2D under the painter", has the
+>   figures.
+> - **The test**, `tests/graphicFrame.test.ts`, 24 cases in `4196d43` and
+>   28 since `0c8911f`: `beatFrame` at the four rates with beats on and
+>   between frames, the 1e-6 and no more, never −0 or below 0, an
+>   element's progress 1 on its beat frame and under 1 the frame before
+>   through the real `beatFrame`, and the window printed;
+>   `graphicMovingFrames` (46; ceil, not round; capped, 0 for no frames or
+>   no rate, a spec with no finite beats, the beats case carrying +Infinity
+>   since `0c8911f`, which `beatFrame`'s rate refusal alone would take: 1
+>   moving frame instead of 16; the three past-settle cases, and every
+>   other template settling from its beats under the energetic and a
+>   glowing style alike); the seed drawn in a fixed order (a spec whose
+>   keys were inserted in another order draws the same; and, since
+>   `0c8911f`, a case that iterates `Object.entries(DRAWERS)`, empty in
+>   phase 1, and draws each template's data in both key orders on four
+>   frames, with a comment naming this section's M5 as the mutation each
+>   phase-2 template commit must check against it; and a case showing the
+>   pair can tell, through a drawer that draws in key-insertion order);
+>   `graphicExitKeys` (the two keys; read by the render's own `valueAt`,
+>   whole until the fade starts, exactly 0 on the last frame, never past
+>   the clip; the short and the one-frame clip; a NaN duration and a NaN
+>   rate); `drawnGraphicAsset`'s shape; `graphicTargetsAt` (the spec route
+>   in pixels of `size` and scaled with it; null when the clip is gone,
+>   the onset off it, or the box off screen; the visible-track case; both
+>   routes through `size` on the landscape project; the union route,
+>   chin-extended; fixed at onset while the face moves; null with no
+>   track, no face near the onset, no clip under it, every track hidden,
+>   or an empty project; `tip` and `screen` unfilled).
+> - **Mutations.** `4196d43`'s nineteen (each at one anchor counted at one
+>   match with `matchAll`, the suite run to a file, the file restored from
+>   its copy and cmp-equal, vitest exit 1 each): `round` for `ceil` (6
+>   cases, `graphicMotion`'s beat case among them); `SETTLE_S` dropped (7,
+>   46 reads 31); the `+ 1` dropped (7, 45); the hold baked, `total`
+>   returned (7); the beam under every energy (2); an anchor on any
+>   template; the screen card baking its hold; `EXIT_S` 0.2; the 0 key at
+>   `durationFrames` (3); the ease dropped (2); the subject read at
+>   `frame`, not `clip.start`; the first face for the union; the unit rect
+>   unscaled; the onset-on-the-clip guard dropped; `hasAudio` true; the
+>   `max(0, …)` dropped, −0 through (2); no rate not refused; the landing
+>   dropped from the sweep; the 1 key a frame late (2). This section's
+>   "seeded draws in key-insertion order" is a mutation of a drawer, and
+>   phase 1 has none: the case is written through the drawer seam and
+>   carries its own check. `0c8911f`'s eight (each anchor applied by a
+>   helper that refuses any count but 1): the track guard dropped (the
+>   visible-track case); the rate's `isFinite` dropped (never below 0);
+>   the beat's `isFinite` dropped (the capped case, through +Infinity);
+>   `Math.max(0, floor)` for the duration (the NaN case); the fps ternary
+>   dropped (the same case, through NaN fps); the project's canvas on the
+>   spec route (2: the landscape case and the zero-width size) and on the
+>   union route (1: the landscape case, which `4196d43` could not tell);
+>   and the `DRAWERS` case checked both ways with a temporary `counter` row
+>   in `templates/index.ts`: a fixed-order drawer passes it (56 passed)
+>   and an insertion-order drawer fails it on "counter at frame 0", so it
+>   is a guard once a drawer lands, and no mutation of `src/` can fail it
+>   until one does.
+> - **Where it differs from the plan, and why.** `SCREEN_CARD_MOVE_S` (1.0)
+>   and `EDGE_SWEEP_S` (6), §6.16's proposals, are declared in `frame.ts`
+>   (`:59-60`): `graphicMovingFrames` needs them in phase 1 for its third
+>   case and the plan names no file for them; phase 3's `screenCard.ts`
+>   can import them from here, so the drawer and the bake cannot disagree
+>   on where the loop ends. `graphicTargetsAt` takes `Pick<Clip, 'start'>`
+>   and `Pick<GraphicSpec, 'subject'>`, the narrowest it reads, where this
+>   section writes `(project, clip, spec, frame, size)`. The subject with
+>   `spec.subject` is null when the onset is not on the named clip (the
+>   box is not on screen then), and on a track the export skips: this
+>   section names "off screen or with no track" and the plan's lines put
+>   the track test on the `captionTrack` route only; the spec route now
+>   gives the same answer for the same reason. `graphicExitKeys` for a clip
+>   of one frame gives one key of value 1 rather than two keys on one
+>   frame, which `normaliseKeys` would resolve by dropping one.
+> - **Suites** (exits read from files): typecheck 0, at `0c8911f` twice
+>   (after the edits, and again before the commit with the restored
+>   sources cmp-equal); the full suite at `4196d43` 320 files passed, 5
+>   skipped (325), 4,454 tests passed, 63 skipped (4,517), 214 s; at
+>   `0c8911f` 4,458 passed, 63 skipped (4,521), 216.1 s; `graphicFrame`
+>   with `graphicMotion` 56 passed (28 + 28; the message's "52 + 4" is an
+>   arithmetic slip, the 56 is right). Read again for this record at
+>   `0c8911f`: the three suites 25, 29 and 28 passed, exit 0 each.
+> - **Left**, as planned: `graphicFrame`'s phase-2 cases over the 27
+>   fixtures (§6.2, T1's second half); phase 3's three screen-card cases
+>   and `screenCardKeys` (§6.16); `tip` and `screen` in `targets.ts`
+>   (§6.18, §6.16); the allowance-window decision (yours); lane C's wiring
+>   (`graphicCanvas.ts`, the export, the store, the preview) and lane D's
+>   harness.
 
 #### `graphicCanvas.ts` — preview, bake, frames
 
@@ -9077,7 +9707,8 @@ machines, so nothing waits on M22's unshaped branch.
   point index; lengths not cumulative; the tip at the path's end; the span's
   end snapped to a vertex; the tangent from the first segment, or the
   outgoing one at a vertex; a width in preview pixels.
-- **`tests/graphicDrawList.test.ts`.** Every case in phase 1 draws through
+- **`tests/graphicDrawList.test.ts`.** (Built 2026-10-30, `4b68c45`, 25
+  cases; the draw list's Built note above.) Every case in phase 1 draws through
   the drawer seam with hand-built drawers (one that seeds a jitter from its
   `seeded()` draws, one that returns `camera` and `glow`). `drawListAt`
   deterministic (the same arguments twice give deep-equal lists; another
@@ -9106,7 +9737,8 @@ machines, so nothing waits on M22's unshaped branch.
   one, where Hindi and Telugu asked for by `'cluster'` come back in
   graphemes, never code points, and a script added means one M3 did not
   measure.)
-- **`tests/graphicPaint.test.ts`.** A fake context in the manner of
+- **`tests/graphicPaint.test.ts`.** (Built 2026-10-30/31, `a82cd43` and
+  `d822c56`, 29 cases; painter A's Built note above.) A fake context in the manner of
   `tests/textPaint.test.ts:24-46` records every `fillText` with the
   `fillStyle` set when it was called; a second fake is the dim's `layer`.
   **The pin, per text item** (rewritten 2026-10-21: a style draws one
@@ -9128,7 +9760,8 @@ machines, so nothing waits on M22's unshaped branch.
   numeric-looking string (`toLocaleString`, which fails the pin under every
   style); the head drawn at the path's end instead of the tip; `highlight`
   left out of `textSpecOf` (the lit word draws in the style's own fill).
-- **`tests/graphicFrame.test.ts`, phase 1's cases.** `graphicMovingFrames`
+- **`tests/graphicFrame.test.ts`, phase 1's cases.** (Built 2026-10-31,
+  `4196d43` and `0c8911f`, 28 cases; the frames' Built note above.) `graphicMovingFrames`
   from the beats (`SETTLE_S`, the `+ 1`, capped at the clip; a beat at
   1.0 s at 30 fps gives 46), and past the settle in its three cases only;
   `beatFrame` at 24, 25, 30 and 60 fps with beats on and between frames; an
@@ -10852,8 +11485,8 @@ render check and the census.
 | 1 | `tests/graphicTypes.test.ts` (built 2026-10-27, `d10e474` and `6272050`) | §6.1 |
 | 1 | `tests/graphicGuards.test.ts` (the head lane's half built 2026-10-27, `a2cad0f` and `60c8b28`; lane C's half to be written) | §6.4 |
 | 1 | `tests/graphicMotion.test.ts` (M9) (built 2026-10-27/28, `f38f971`, `862cf1b` and `ae6167c`; M9 measured, §6.13's Built note) | §6.13 |
-| 1 | `tests/graphicStroke.test.ts` (built 2026-10-28, `69d2d6e` and `2074f08`), `tests/graphicDrawList.test.ts`, `tests/graphicPaint.test.ts` | §6.3 (two depth cases in `graphicDrawList`, §6.16) |
-| 1-3 | `tests/graphicFrame.test.ts` | phase 1 §6.3, phase 2 §6.2, the screen card §6.16 |
+| 1 | `tests/graphicStroke.test.ts` (built 2026-10-28, `69d2d6e` and `2074f08`), `tests/graphicDrawList.test.ts` (built 2026-10-30, `4b68c45`, 25 cases), `tests/graphicPaint.test.ts` (built 2026-10-30/31, `a82cd43` and `d822c56`, 29 cases) | §6.3 (two depth cases in `graphicDrawList`, §6.16; §6.3's three Built notes) |
+| 1-3 | `tests/graphicFrame.test.ts` (phase 1's 28 cases built 2026-10-31, `4196d43` and `0c8911f`) | phase 1 §6.3, phase 2 §6.2, the screen card §6.16 |
 | 1-2 | `tests/graphicStyle.test.ts`, with `tests/renderer/graphicStyleStore.test.ts` for the store's two actions (phase 1's half of both built 2026-10-28, `b965cda` and `0d603a8`) | §6.5 |
 | 1-3 | `tests/renderer/graphicStore.test.ts` | phase 1 §6.3, the sounds that follow a graphic §6.14, the screen card §6.16 |
 | 2 | `tests/claims.test.ts`, `tests/graphicsValidator.test.ts` (the property test) | §6.7 |
@@ -11182,18 +11815,25 @@ annotations.
   frame equal to the held end (mean 0); alpha 0 outside the box (maximum 0);
   the same spec twice identical. M8's agreement and M19's minimum width
   recorded; M13's first half (the primitives' spec baked twice,
-  `framemd5`-equal; the Mac against the Surface recorded).
+  `framemd5`-equal; the Mac against the Surface recorded). (Waits on lane
+  C's `graphicCanvas.ts` and lane D's `primitives` half; M8, M13 and M19
+  unmeasured. Lane B's draw list, painter and frames, which it reads, are
+  in, 2026-10-31.)
 - **The Indic render check** (§6.11), through `paintDrawList2d`, after
   §6.20's fonts are named first, on the Mac and the Surface; mutation-checked
-  once (a per-code-point painter fails it).
+  once (a per-code-point painter fails it). (Waits: `paintDrawList2d` is
+  built, `a82cd43`, and the fonts are in, `ae3e48f`; the check needs lane
+  D's harness half, then your runs on both machines.)
 - `graphicPaint`: no Hindi or Telugu string drawn in pieces smaller than a
   word (or a cluster, where M3 allowed it), mutation-checked by `Array.from`.
+  (Met 2026-10-30, `a82cd43`: the shaped-script cases under three styles,
+  and the `Array.from` mutation fails 11 cases; painter A's Built note.)
 - `graphicMotion`: the closed-form spring within M9's tolerance of the
   reference; M9's figures in §61. (Met 2026-10-27, `f38f971`, at ω = 4
   rad/s, where the reference's own error leaves room under the bar;
   §6.13's Built note.)
 - `graphic.int`'s phase-1 cases frame-exact at 9:16 and 16:9 on both builds
-  (CI).
+  (CI). (Lane D's; not written.)
 
 **Phase 2.** §6.12 as written on 2026-10-05, for all nine shapes (§6.2):
 
@@ -13478,7 +14118,7 @@ piece table does (§6.3's, §6.16's, §6.17's, §6.18's).
 | 1 | head, serial | the §16.8 rename as its own commit (0.25 of §6.1); then all of §6.1's types in one commit (`template.ts`'s types, the `timeline.ts` fields, `GraphicsSettings`, `GraphicProposal`, `MediaAsset.speaker`, `Clip.forGraphic`, the (box) field, and the seam's `GraphicCandidate`, §6.7, and `KeptGraphic`, §6.6, declared in `template.ts`), so `Clip.graphic` exists before anything reads it (the other 0.25 of §6.1); then `SELF_DRAWN_FIELDS`, the five list sites and `graphicGuards`' head half, the behaviour over the constant and the regex, with the membership rewrites of `paper.test` and `moment.test` (0.75 of §6.4) (built 2026-10-27: `1f62fba`; `d10e474` and `6272050`; `a2cad0f` and `60c8b28`) | 0.25 + 0.25 + 0.75 | phase 0's exit |
 | 1 | outside the days, serial | §6.20's two halves, each its own commit: D8's (`shapedScript` and the captions' fix; built 2026-10-27, `e5c47ac`) and D10's (the Noto files, `INDIC_FONTS`, the scan, the renderer's font sites, the CI check, the route, §16.66 (a)), D10's after D8's (if D10's fonts move to phase 0, below, the route becomes a third commit, after D8's) (D10's built 2026-10-29/30 in six commits, after lane A and before lane B: `6bc8b07`, `9a0f232`, `8932535`, `00b42b4`, `f77fd29`, `ae3e48f`; §6.20's second Built note) | (§6.20's 1.25) | the head |
 | 1 | A | `motion.ts` with `graphicMotion` (§6.13); `stroke.ts` with `graphicStroke` (0.5 of §6.3); `style.ts`'s first half with `graphicStyle` (§6.5) (built 2026-10-27/28: `f38f971`, `862cf1b`, `ae6167c`; `69d2d6e`, `2074f08`; `b965cda`, `0d603a8`) | 1 + 0.5 + 0.5 | the head |
-| 1 | B | `drawList.ts`, `items.ts` (`DrawOut`, `unitFor`, `CLUSTER_SCRIPTS`, the drawer seam), `templates/index.ts` with `graphicDrawList` (1 of §6.3); `paint.ts` with its `PaintOptions` and `graphicPaint` (0.75); `frame.ts` and `targets.ts` with `graphicFrame`'s first half (0.25) | 2 | the head; §6.20's two halves (`unitFor` reads `shapedScript`; shaped text items name `INDIC_FONTS`); M3 for `CLUSTER_SCRIPTS` (in, 2026-10-27); A's `stroke.ts` before `paint.ts` |
+| 1 | B | `drawList.ts`, `items.ts` (`DrawOut`, `unitFor`, `CLUSTER_SCRIPTS`, the drawer seam), `templates/index.ts` with `graphicDrawList` (1 of §6.3); `paint.ts` with its `PaintOptions` and `graphicPaint` (0.75); `frame.ts` and `targets.ts` with `graphicFrame`'s first half (0.25) (built 2026-10-30/31, each piece read by two critics before the next: `4b68c45`; `a82cd43`, `d822c56`; `4196d43`, `0c8911f`; pushed as `0c8911f`; §6.3's three Built notes) | 2 | the head; §6.20's two halves (`unitFor` reads `shapedScript`; shaped text items name `INDIC_FONTS`); M3 for `CLUSTER_SCRIPTS` (in, 2026-10-27); A's `stroke.ts` before `paint.ts` |
 | 1 | C | `graphicCanvas.ts` (preview, bake, frames; the worker back-end only if M2 asks, which it did on 2026-10-27) (0.75 of §6.3); the export branch with its own catch line, `Bakers.graphic` and every literal of §6.11, `exportBakers.ts`, the store's `addGraphicClip`, `setGraphic`, `rebakeGraphic`, the trim and split rules, Preview's branch and sweep, (box) `identityPlaced`, with `graphicStore` (0.5); the three store arms (`rebakeGenerated`, `placeCopies`, `rebakeFollowed`) and `graphicGuards`' wiring half (0.25 of §6.4) | 1.5 | B's draw list and painter; M1 and M2 (in, 2026-10-27) |
 | 1 | D | the harness's `primitives` and Indic halves (0.25 of §6.3); `pathLength`, `strokes` widths, `graphic.int`'s phase-1 cases, `SHAPES`' graphic overlay (§6.11's half) | 0.25 + 0.5 | C; §6.20's D10 half |
 | 2 | T3, first | the typed stub of `applyGraphics` (`KeptGraphic`, the signature, §6.6), committed before T2's wiring starts | inside T3's 3 | phase 1's exit |

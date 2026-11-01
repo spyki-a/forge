@@ -8496,7 +8496,7 @@ suite and CI are the orchestrator's.
   and the preview's recompute on a long followed clip while editing.
 - **Burned-in text** (§5.3): after 1g.
 
-## 61. Graphics: the forks measured (phase 0 of step 3, then phase 1's first) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22), and on the Surface the libass run and the development app (2026-10-27); in node, phase 1's M9 (2026-10-27) and the stroke's flattening (2026-10-28); and D10's three readings, the Noto fonts' provenance, the Mac's libass against the fontsdir, and `document.fonts.check` (2026-10-29)
+## 61. Graphics: the forks measured (phase 0 of step 3, then phase 1's first) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22), and on the Surface the libass run and the development app (2026-10-27); in node, phase 1's M9 (2026-10-27) and the stroke's flattening (2026-10-28); and D10's three readings, the Noto fonts' provenance, the Mac's libass against the fontsdir, and `document.fonts.check` (2026-10-29); and under painter A, Chrome 152's canvas (negative radii, a 0-side canvas, `globalAlpha`) and, in node, the draw list's mixed faces and bounds and the frames' edges (2026-10-30/31)
 
 For `docs/CLIPS.md` §6.15 (step 3's phase 0, "Measure before relying"):
 pieces 0.1–0.3 were built on the evening of 2026-10-21 in seven commits,
@@ -10030,6 +10030,84 @@ same major as Electron 44's (`.167` against the app's `.78`, item 5), but
 a reading in the development app on the Mac, outside the sandbox, is the
 user's.
 
+### Canvas 2D under the painter, 2026-10-31
+
+For `CLIPS.md` §6.3's lane B (§6.19) and its three Built notes:
+`4b68c45` (the draw list, 2026-10-30), `a82cd43` and `d822c56` (painter
+A, 2026-10-30/31), `4196d43` and `0c8911f` (the frames and the targets,
+2026-10-31), pushed as `0c8911f`. Two kinds of reading. What Chromium's
+canvas does was measured by `d822c56`'s fixer in the Browser pane's
+Chrome 152, as script on https://example.com since the sandbox cannot
+bind a port (`paint.ts:209-218`'s comment dates the probe 2026-10-30, the
+date its brief carried; git dates the commit 2026-10-31). What the draw
+list and the frames compute was measured in node v24.18.1 on the Mac by
+the tests themselves, from the commits' messages.
+
+**Chrome 152's canvas**, each read before the guard it led to was written:
+
+| call | what happens | the guard (`src/shared/graphics/paint.ts`) |
+|---|---|---|
+| `ellipse(50, 50, -10, -5, …)`, and `arc` with r = −10 | throws `IndexSizeError` ("The major-axis radius provided (-10) is negative"); a radius of 0 does not throw | a circle or ring in a box of negative size draws nothing, `:230`, `:236`, rather than failing the whole frame's paint |
+| `roundRect` with a negative radius | throws `RangeError`; a negative width or height draws mirrored, no throw; `rect` takes a negative extent | `Math.max(0, radius)` at `:227`, whose reason was unstated before |
+| `drawImage` of a canvas with any 0 side | throws `InvalidStateError` | `paintDim` inks nothing on a list without a size, `:358` (its default layer would be a 0×0 canvas); a 0×0 bitmap is skipped, `:294` |
+| `globalAlpha *= 0.5` inside `save`/`restore` | composes with the alpha in force, and `restore` brings the outer value back | the painter multiplies into `globalAlpha` (`:365`, `:373`), and `render/textPaint.ts`'s three inner sites do too (`:454`, `:592`, `:640`), so an item's opacity reaches the style's box bar: before, a one-word item at 0.5 in `highlight-bar` filled its bar at 1 and its glyphs at 0.5 |
+
+Not probed in a browser: that `shadowBlur`, `shadowOffsetX` and
+`shadowOffsetY` are not affected by the current transformation matrix.
+The bounds take the HTML specification's word for it (`items.ts`,
+`textStyle.ts:689-698`), and the figure below is the bounds function's
+own, in node.
+
+**In node (v24.18.1, the Mac)**, from the tests:
+
+- `Intl.Segmenter` at `'grapheme'`, the counts the units case prints:
+  स्कूल 2 clusters (5 code points), में 1 (3), क्षत्रिय 3 (8), बच्चे 2 (5),
+  తెలుగు 3 (6), భాష 2 (3), మధురం 3 (5); M3's counts for स्कूल, क्षत्रिय and
+  తెలుగు (item 10 above) hold. 'क्‍ष' with a ZWJ is one cluster of 4 code
+  points; 'क्‌ष' with a ZWNJ is two ('क्‌', 'ष'), which is how the glyphs
+  render (the virama shown), so D8's "never below a cluster" holds under
+  it; 'క్ష' three code points one cluster; 'స్త్రీ' six one; a ZWJ family
+  emoji one.
+- **A line of mixed faces**, under a per-face measure (Montserrat 0.7 em
+  a grapheme, the Noto faces 0.5) over 'Price दाम ధర' at 100 px: placed by
+  prefix widths in the line's Indic face, 'Price' ended at 350 in
+  Montserrat while 'दाम' started at the Noto width of 'Price ', 300, a
+  50 px overlap (a critic read 20 at 40 px, the same defect; node's fake
+  measure, the same width in any font, could not show it); placed by the
+  running sum of each word in its own face, 'दाम' starts at 400 and the
+  line ends at 650 (`items.ts:316`, `:328`; `4b68c45`).
+- **The shadow's space.** A 200×50 shape with blur 10, dy 4 at scale 0.5:
+  the old `itemBounds` put its bottom at 148 (the shadow-widened rect
+  scaled with the item); with the device-space reach added after the
+  transform it is 137.5 + 15 + 4 = 156.5 (`4b68c45`). hero's reach at 42
+  px, base face only: `device.left` = 1.5 × 0.16 × 42, the base being
+  0.42 of the size under `softShadow(0.5)`; a critic's 0.24 × 100 forgot
+  the base's own `sizeScale`.
+- **The frames** (`frame.ts`): `Math.ceil(0 − 1e-6)` is −0, hence
+  `beatFrame`'s `max(0, …)`; 1.5 × 30 − 1e-6 = 44.999999, ceil 45, so a
+  beat at 1.0 s at 30 fps gives 46 moving frames; round(0.3 × 24) = 7,
+  round(0.3 × 25) = 8, round(0.3 × 60) = 18 frames of exit; 30 + 1 + 180
+  = 211 for the glowing screen card at 30 fps. Before `0c8911f`:
+  `beatFrame(1, Infinity)` was `Infinity`, and `graphicExitKeys(NaN, 30)`
+  gave two keys at frame NaN with ease `'smooth'` (`Math.max(0, NaN)` is
+  NaN; JSON prints them null). The open allowance window (`CLIPS.md`
+  §6.3's beat-frame bullet, the user's): a beat 2e-6 of a frame after
+  frame 31 names 32 at 24, 25, 30 and 60 fps while `progress` already
+  reads 1 on 31, all four; printed by the test, pinned by nothing, no
+  allowance changed.
+- **The targets** (`targets.ts`), before `0c8911f`: a footage clip on a
+  hidden track, and one whose `trackId` the project does not carry, each
+  gave the subject {108, 192, 216×384} on the `spec.subject` route while
+  the export draws no such clip; now null. A 1920×1080 project holding
+  the 1080×1920 file, drawn at 1080×1920: a 0.1/0.2 box maps to x 108 on
+  both routes through `size`, and would land at x 403 through the
+  project's own canvas; the union route there reads {108, 192, 216, 576}.
+- **The eligible styles** (`GRAPHIC_TEXT_STYLES`, 23, node 24): exactly
+  `highlight-bar` and `subtitle-block` carry a `box`, on the base face,
+  and none carries a `split` (`glitch` and `glitch-red` re-case). Before
+  the `finally` in `paintItem`, a rect then a stroke whose `d` holds an
+  arc left 3 saves and 1 restore on the context.
+
 ### What this settles
 
 1. **Both bundled builds have `tmix`, `overlay`'s `alpha=premultiplied`
@@ -10169,6 +10247,23 @@ user's.
     (Chromium 152, above), so a preview's readiness has to be the
     catalogue's (`faceSettled`, `00b42b4`), not the check's. Electron's
     own Chromium is unmeasured.
+19. **Painter A's guards are measured, not assumed** ("Canvas 2D under
+    the painter" above, Chrome 152, 2026-10-31): a negative radius throws
+    in `ellipse`, `arc` and `roundRect`, a canvas with a 0 side throws in
+    `drawImage`, and `globalAlpha *=` composes under `save`/`restore`. So
+    a shape item of negative size, a sizeless list, a 0×0 bitmap or a
+    kind that throws no longer fails the frame, and an item's opacity
+    reaches every pass `drawTextOnto` makes (`d822c56`).
+20. **The draw list places a mixed-face line per word and keeps a
+    shadow in the frame's space** (node, 2026-10-30; `4b68c45`): the 50
+    px overlap at 100 px is gone, and a scaled or turned item's shadow
+    reach is added after its transform (156.5, not 148). The CTM rule for
+    shadows is the specification's, not a browser reading (above).
+21. **The frames and the targets refuse their edges** (node, 2026-10-31;
+    `4196d43`, `0c8911f`): no −0 or Infinity from `beatFrame`, no NaN
+    keys from `graphicExitKeys`, and no subject from a clip the export
+    would not draw. The allowance window is measured and left to the
+    user.
 
 ### Still unmeasured, and whose
 
@@ -10219,6 +10314,17 @@ user's.
   test put back to confirm both links fail: the user's. The harness's
   Indic frames through a text clip and a caption (`CLIPS.md` §6.11's
   `indic` option) are lane D's.
+- **Canvas's shadow against the CTM, in a browser** ("Canvas 2D under
+  the painter" above): the bounds take the HTML specification's word
+  that `shadowBlur` and the offsets are not transformed; no probe was
+  run. Lane D's render check (alpha 0 outside the box) reads it on the
+  real paint.
+- **The Indic render check through `paintDrawList2d`** (`CLIPS.md`
+  §6.12's phase-1 bar): painter A is built (`a82cd43`, `d822c56`) and
+  draws every text item through `drawTextOnto`; the check needs lane D's
+  harness half, then the development app on both machines. The user's.
+- **The allowance window** (item 21): measured, printed by
+  `tests/graphicFrame.test.ts`, decided by no one yet. The user's.
 - **M7–M20, by phase**: M8 (above), M13 and M19 in phase 1 (M9 measured,
   item 14); M10 and M14–M18 in
   phase 2; M7 first, then M6 whole, M12, M20 and M13 again in phase 3; M11
