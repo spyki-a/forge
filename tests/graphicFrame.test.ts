@@ -12,6 +12,7 @@ import {
 } from '@shared/graphics/frame'
 import { graphicTargetsAt } from '@shared/graphics/targets'
 import { drawListAt } from '@shared/graphics/drawList'
+import { DRAWERS } from '@shared/graphics/templates/index'
 import type { DrawItem, Drawer, TextMeasure } from '@shared/graphics/items'
 import { DURATIONS, progress, type MotionEase } from '@shared/graphics/motion'
 import { resolveGraphicStyle, type GraphicStyle } from '@shared/graphics/style'
@@ -113,6 +114,9 @@ describe('beatFrame', () => {
     }
     expect(Object.is(beatFrame(1, 0), 0)).toBe(true)
     expect(Object.is(beatFrame(1, Number.NaN), 0)).toBe(true)
+    // `fps > 0` alone admits Infinity and names frame Infinity; the rate is refused as the beat is.
+    expect(Object.is(beatFrame(1, Number.POSITIVE_INFINITY), 0)).toBe(true)
+    expect(Object.is(beatFrame(Number.POSITIVE_INFINITY, 30), 0)).toBe(true)
   })
 
   it("an element's progress is 1 on its beat frame and under 1 on the frame before, through the real beatFrame, at every rate, beats on and between frames", () => {
@@ -173,7 +177,8 @@ describe('graphicMovingFrames', () => {
     expect(graphicMovingFrames(spec({ beats: [1.0] }), clean(), 30, 0)).toBe(0)
     expect(graphicMovingFrames(spec({ beats: [1.0] }), clean(), 0, 90)).toBe(0)
     expect(graphicMovingFrames(spec({ beats: [] }), clean(), 30, 90)).toBe(beatFrame(SETTLE_S, 30) + 1)
-    expect(graphicMovingFrames(spec({ beats: [Number.NaN, -1] }), clean(), 30, 90)).toBe(beatFrame(SETTLE_S, 30) + 1)
+    // +Infinity is the one beat `> last` alone would take: `last` Infinity, beatFrame refuses it, and the clip gets 1 moving frame.
+    expect(graphicMovingFrames(spec({ beats: [Number.NaN, -1, Number.POSITIVE_INFINITY] }), clean(), 30, 90)).toBe(beatFrame(SETTLE_S, 30) + 1)
   })
 
   it('runs past the settle for a steps with a line connector under the energetic style only: the travelling beam bakes the whole hold', () => {
@@ -264,6 +269,26 @@ describe('the seed is drawn in a fixed order', () => {
     expect(la.items.map((i) => i.id)).toEqual([...JITTERED])
   })
 
+  it('and every template that lands in DRAWERS draws the same list for its data in either key order, on each of its frames', () => {
+    /*
+     * Empty in phase 1, so this runs nothing yet; each template commit of
+     * phase 2 adds its row and is covered here by construction. §6.3's M5 is
+     * the mutation each such commit must then check against this case: its
+     * drawer made to draw `seeded` in key-insertion order (`Object.entries
+     * (spec.data)`), as `insertionOrder` below does, must fail it.
+     */
+    for (const [template, drawer] of Object.entries(DRAWERS) as [GraphicTemplateId, Drawer][]) {
+      const one = spec({ template, seed: 7 })
+      const other: GraphicSpec = { ...one, data: Object.fromEntries(Object.entries(one.data).reverse()) as GraphicData }
+      expect(Object.keys(other.data), template).toEqual(Object.keys(one.data).reverse())
+      for (const frame of [0, 10, 45, 89]) {
+        expect(drawListAt(other, clean(), frame, FPS, SIZE, measure, undefined, drawer), `${template} at frame ${frame}`).toEqual(
+          drawListAt(one, clean(), frame, FPS, SIZE, measure, undefined, drawer)
+        )
+      }
+    }
+  })
+
   it('and the case can tell: the same two specs through a drawer that draws in key-insertion order differ', () => {
     const la = drawListAt(a, clean(), 10, FPS, SIZE, measure, undefined, insertionOrder)
     const lb = drawListAt(b, clean(), 10, FPS, SIZE, measure, undefined, insertionOrder)
@@ -312,6 +337,18 @@ describe('graphicExitKeys', () => {
     expect(graphicExitKeys(1, 30)).toEqual({ opacity: [{ frame: 0, value: 1 }] })
     expect(graphicExitKeys(0, 30)).toEqual({ opacity: [{ frame: 0, value: 1 }] })
   })
+
+  it('a duration or a rate that is not a positive number gets that same one key, never a key at frame NaN', () => {
+    const whole = { opacity: [{ frame: 0, value: 1 }] }
+    // Math.max(0, NaN) is NaN: a duration guarded that way gave two keys at frame NaN (measured 2026-10-30).
+    expect(graphicExitKeys(Number.NaN, 30)).toEqual(whole)
+    expect(graphicExitKeys(-5, 30)).toEqual(whole)
+    expect(graphicExitKeys(Number.NEGATIVE_INFINITY, 30)).toEqual(whole)
+    // And a rate of NaN, without its guard, put the 1 key at frame NaN and the 0 key on the last frame.
+    expect(graphicExitKeys(90, Number.NaN)).toEqual(whole)
+    expect(graphicExitKeys(90, 0)).toEqual(whole)
+    expect(graphicExitKeys(90, -30)).toEqual(whole)
+  })
 })
 
 /* --------------------------------------------------------------- the asset */
@@ -340,7 +377,7 @@ describe('drawnGraphicAsset', () => {
 /* ------------------------------------------------------------- the targets */
 
 interface Build {
-  /** The file's upright size; the canvas is the same, so the mapping is the identity. */
+  /** The file's upright size; the canvas is the same unless `canvas` says otherwise, so the mapping is the identity. */
   width: number
   height: number
   frames: number
@@ -348,6 +385,8 @@ interface Build {
   faces?: (ms: number) => UnitRect[]
   clip?: Partial<Clip>
   tracksHidden?: boolean
+  /** The project's own canvas when it is not the file's size. */
+  canvas?: { width: number; height: number }
 }
 
 function track(b: Build, faces: (ms: number) => UnitRect[]): SubjectTrack {
@@ -402,7 +441,7 @@ function setup(b: Build): { project: Project; footage: Clip; asset: MediaAsset }
   const base = emptyProject('targets')
   const project: Project = {
     ...base,
-    settings: { ...base.settings, width: b.width, height: b.height, fps: FPS },
+    settings: { ...base.settings, width: b.canvas?.width ?? b.width, height: b.canvas?.height ?? b.height, fps: FPS },
     tracks: b.tracksHidden ? base.tracks.map((t) => ({ ...t, hidden: true })) : base.tracks,
     assets: [asset],
     clips: [footage],
@@ -441,6 +480,30 @@ describe('graphicTargetsAt', () => {
     expect(graphicTargetsAt(project, { start: 119 }, spec({ subject: { clipId: 'c', box, ms: 0 } }), 119, SIZE).subject).not.toBeNull()
     expect(graphicTargetsAt(project, { start: 40 }, spec({ subject: { clipId: 'c', box: { x: 1.5, y: 0.2, width: 0.2, height: 0.2 }, ms: 0 } }), 40, SIZE).subject).toBeNull()
     expect(graphicTargetsAt(project, { start: 40 }, spec({ subject: { clipId: 'c', box, ms: 0 } }), 40, { width: 0, height: 1920 }).subject).toBeNull()
+  })
+
+  it('with spec.subject: null when the clip is not on a visible video track, as the export draws no such clip and the other route already answers', () => {
+    const s = spec({ subject: { clipId: 'c', box: { x: 0.25, y: 0.25, width: 0.5, height: 0.25 }, ms: 0 } })
+    // The same project, clip and onset give a box when the track shows.
+    expect(graphicTargetsAt(setup(PORTRAIT).project, { start: 40 }, s, 40, SIZE).subject).not.toBeNull()
+    // Measured before the guard (2026-10-30): both gave {108, 192, 216×384} for a 0.1/0.2 box.
+    expect(graphicTargetsAt(setup({ ...PORTRAIT, tracksHidden: true }).project, { start: 40 }, s, 40, SIZE).subject).toBeNull()
+    expect(graphicTargetsAt(setup({ ...PORTRAIT, clip: { trackId: 'nope' } }).project, { start: 40 }, s, 40, SIZE).subject).toBeNull()
+    expect(graphicTargetsAt(setup({ ...PORTRAIT, clip: { trackId: 'a1' } }).project, { start: 40 }, s, 40, SIZE).subject).toBeNull()
+  })
+
+  it('both routes read the mapping through size, the frame being drawn, not the project’s own canvas', () => {
+    // A landscape project holding the portrait file, drawn at a portrait size: through `size` the file fills the
+    // frame and the mapping is the identity; through the project's 1920×1080 the file is pillarboxed and the
+    // box would land at x 403 (measured 2026-10-30), a third of the way across.
+    const face = { x: 0.1, y: 0.1, width: 0.2, height: 0.2 }
+    const landscape: Build = { ...PORTRAIT, canvas: { width: 1920, height: 1080 }, faces: () => [face] }
+    const { project } = setup(landscape)
+    expect(project.settings.width).toBe(1920)
+    const taken = graphicTargetsAt(project, { start: 40 }, spec({ subject: { clipId: 'c', box: face, ms: 0 } }), 40, SIZE)
+    expectRect(taken.subject, { x: 108, y: 192, width: 216, height: 384 })
+    const found = graphicTargetsAt(project, { start: 40 }, spec(), 40, SIZE)
+    expectRect(found.subject, { x: 108, y: 192, width: 216, height: 576 })
   })
 
   it("without spec.subject: the union of the caption track's subject boxes under the onset, chin-extended, in pixels", () => {

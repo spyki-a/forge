@@ -66,10 +66,11 @@ export const EDGE_SWEEP_S = 6
  * (§6.3). An element arrives ON its beat: `progress` (§6.13) starts its curve
  * `seconds` before the beat and reads 1 on this frame, not before. Never
  * below 0 (a beat before the clip's start, which a trim clamps to 0 anyway,
- * names frame 0), and never −0, which `Math.ceil` yields for a beat at 0.
+ * names frame 0), and never −0, which `Math.ceil` yields for a beat at 0. A
+ * beat or a rate that is not finite names frame 0 too, never Infinity.
  */
 export function beatFrame(beat: number, fps: number): number {
-  if (!(fps > 0) || !Number.isFinite(beat)) return 0
+  if (!(Number.isFinite(fps) && fps > 0) || !Number.isFinite(beat)) return 0
   return Math.max(0, Math.ceil(beat * fps - BEAT_FRAME_ALLOWANCE))
 }
 
@@ -121,10 +122,13 @@ export function graphicMovingFrames(spec: GraphicSpec, style: GraphicStyle, fps:
  *
  * A clip shorter than the exit fades from its first frame; a clip of one
  * frame cannot fade and is shown whole (one key, value 1), since two keys on
- * one frame are a contradiction `normaliseKeys` resolves by dropping one.
+ * one frame are a contradiction `normaliseKeys` resolves by dropping one. A
+ * duration or a rate that is not a positive number gets that same one key,
+ * never a key at frame NaN (`Math.max(0, NaN)` is NaN, so the guard is a
+ * comparison, as `graphicMovingFrames`'s is).
  */
 export function graphicExitKeys(durationFrames: number, fps: number): KeyframeTracks {
-  const frames = Math.max(0, Math.floor(durationFrames))
+  const frames = durationFrames > 0 ? Math.floor(durationFrames) : 0
   const last = Math.max(0, frames - 1)
   // The fade's frames are the clip's last round(EXIT_S × fps), the 1 key and the 0 key both among them.
   const first = Math.max(0, frames - Math.round(EXIT_S * (fps > 0 ? fps : 0)))

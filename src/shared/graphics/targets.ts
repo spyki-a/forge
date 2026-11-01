@@ -37,7 +37,11 @@ const shows = (clip: Clip, frame: number): boolean => frame >= clip.start && fra
  *
  * With `spec.subject` (a box in SOURCE units on its `clipId`, taken once at
  * onset by §6.9): that box through `sourceToFrame` on that clip at `onset`,
- * null when the clip does not show that frame. Without one: the union of
+ * null when the clip does not show that frame, and null when the clip is not
+ * on a visible video track (its track hidden, or a track id the project no
+ * longer has): the export draws no such clip (render/plan.ts, the hidden
+ * tracks skipped), so "on screen" means the same on both routes here, the
+ * other route getting it from `captionTrack`'s own filter. Without one: the union of
  * `subjectBoxesAt` on the clip of `captionTrack(project)` under the frame,
  * the track whose speaker the captions follow. The canvas handed to the
  * mapping is `size` itself: the frame being drawn, so a project at another
@@ -50,6 +54,8 @@ function subjectAt(project: Project, spec: Pick<GraphicSpec, 'subject'>, onset: 
   if (taken) {
     const footage = project.clips.find((c) => c.id === taken.clipId)
     if (!footage || !shows(footage, onset)) return null
+    const track = project.tracks.find((t) => t.id === footage.trackId)
+    if (!track || track.kind !== 'video' || track.hidden) return null
     const asset = assetOf(project, footage)
     if (!asset) return null
     const u = sourceToFrame(project, footage, asset, size, onset, taken.box)
