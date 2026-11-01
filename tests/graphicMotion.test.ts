@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { beatFrame as realBeatFrame } from '@shared/graphics/frame'
 import {
   DURATIONS,
   cubicBezier,
@@ -60,8 +61,8 @@ function bezierReference([x1, y1, x2, y2]: [number, number, number, number], x: 
   return b((lo + hi) / 2, y1, y2)
 }
 
-/** §6.3's `beatFrame` (graphics/frame.ts, still to be built): the first frame at or after the beat. */
-const beatFrame = (beat: number, fps: number): number => Math.ceil(beat * fps - 1e-6)
+/** §6.3's `beatFrame` (graphics/frame.ts, built by lane B's third piece): the first frame at or after the beat. */
+const beatFrame = realBeatFrame
 
 const RATES = [24, 25, 30, 60]
 
