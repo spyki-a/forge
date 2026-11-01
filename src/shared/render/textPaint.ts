@@ -448,7 +448,10 @@ function paintLine(
   if (paint.split) {
     const { dx, dy = 0, colorA, colorB, opacity = 1 } = paint.split
     ctx.save()
-    ctx.globalAlpha = opacity
+    // Multiplied, never assigned: a caller's alpha going in (a graphic item's
+    // opacity, graphics/paint.ts) has to reach every pass, or a fade would
+    // leave this one at full while the fill went. Same at the box and the step.
+    ctx.globalAlpha *= opacity
     ctx.fillStyle = colorA
     ctx.fillText(text, x - dx * fontPx, y - dy * fontPx)
     ctx.fillStyle = colorB
@@ -586,7 +589,7 @@ function paintAnimated(
       const piecePaint = accentPieces.has(moving) ? accent!.paint : (paint ?? null)
 
       ctx.save()
-      ctx.globalAlpha = Math.max(0, Math.min(1, step.alpha))
+      ctx.globalAlpha *= Math.max(0, Math.min(1, step.alpha))
       /*
        * Scaled about the piece's own centre, not the canvas origin.
        *
@@ -632,7 +635,9 @@ function drawBox(
   const w = width + padX * fontPx * 2
   const h = capHeight + padY * fontPx * 2
   ctx.save()
-  ctx.globalAlpha = opacity
+  // Multiplied into the caller's alpha (see the split pass): under a graphic
+  // item at opacity 0.5 the bar draws at 0.5 × its own, as the glyphs do.
+  ctx.globalAlpha *= opacity
   ctx.fillStyle = color
   ctx.beginPath()
   ctx.roundRect(x, y, w, h, radius * fontPx)

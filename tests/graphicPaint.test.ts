@@ -6,6 +6,7 @@ import {
   graphemesOf,
   itemBounds,
   textItems,
+  textSpecOf,
   type DrawItem,
   type DrawList,
   type Rect,
@@ -14,7 +15,8 @@ import {
   type TextMeasure
 } from '@shared/graphics/items'
 import { GRAPHIC_TEXT_STYLES, resolveGraphicStyle } from '@shared/graphics/style'
-import { shapedScript } from '@shared/render/textAnimation'
+import { drawTextOnto } from '@shared/render/textPaint'
+import { shapedScript, textAnimationById } from '@shared/render/textAnimation'
 import { ASCENT, LINE_HEIGHT } from '@shared/render/textLayout'
 import { textStyleById } from '@shared/render/textStyle'
 
@@ -433,6 +435,43 @@ describe('graphicPaint: the ink', () => {
       expect(fillsOf(litSpan).length, id).toBe(fillsOf(plainSpan).length)
     })
   }
+
+  it("a text item's opacity reaches every pass drawTextOnto makes: the style's box bar, and (directly, no graphic route) the chromatic split and an animation step", () => {
+    // The styles under test are computed, never listed: every eligible style with a box on either face.
+    const barred = GRAPHIC_TEXT_STYLES.filter((s) => s.base.box || s.accent?.box)
+    expect(barred.map((s) => s.id)).toContain('highlight-bar')
+    for (const style of barred) {
+      const faded = field('forty', 'word', style.id).map((item) => ({ ...item, opacity: 0.5 }))
+      const { ctx, ops } = fake(SIZE.width, SIZE.height)
+      paintDrawList2d(ctx, flat(faded))
+      const inks = itemSpans(ops)[0].filter((op) => op.op === 'fill' || op.op === 'fillText' || op.op === 'strokeText')
+      expect(inks.length, style.id).toBeGreaterThan(1)
+      for (const op of inks) expect(op.state.globalAlpha, `${style.id} ${op.op}`).toBeLessThanOrEqual(0.5 + 1e-9)
+      // The bar itself (the roundRect fill) is at 0.5 × the box's own opacity.
+      const bars = inks.filter((op) => op.op === 'fill' && op.path[0]?.kind === 'roundRect')
+      expect(bars.length, style.id).toBe(1)
+      expect(bars[0].state.globalAlpha, style.id).toBeCloseTo(0.5 * (style.base.box?.opacity ?? 1), 12)
+    }
+    // The split pass: no eligible style carries one (glitch and glitch-red re-case), so drawTextOnto is driven directly, at 0.5 going in.
+    const splitStyle = textStyleById('glitch')!
+    expect(splitStyle.base.split).toBeTruthy()
+    const [item] = field('forty', 'word', 'clean')
+    const split = fake(SIZE.width, SIZE.height)
+    split.ctx.globalAlpha = 0.5
+    drawTextOnto(split.ctx, textSpecOf(item.text, { ...item.look, textStyleId: 'glitch' }, item.box), item.box.width, item.box.height)
+    const splitFills = fillsOf(split.ops)
+    expect(splitFills.length).toBeGreaterThanOrEqual(3)
+    for (const op of splitFills) expect(op.state.globalAlpha, `glitch fillText "${op.text}"`).toBeLessThanOrEqual(0.5 + 1e-9)
+    expect(split.ctx.globalAlpha).toBe(0.5)
+    // The animation step, reached only with a clock (the painter passes none): the settled frame's STILL alpha of 1 multiplies in, never overwrites.
+    expect(textAnimationById('fade')).toBeTruthy()
+    const moving = fake(SIZE.width, SIZE.height)
+    moving.ctx.globalAlpha = 0.5
+    drawTextOnto(moving.ctx, { ...textSpecOf(item.text, item.look, item.box), animationId: 'fade' }, item.box.width, item.box.height, { frame: 1000, fps: 30 })
+    const movingFills = fillsOf(moving.ops)
+    expect(movingFills.length).toBeGreaterThanOrEqual(1)
+    for (const op of movingFills) expect(op.state.globalAlpha, `fade fillText "${op.text}"`).toBeLessThanOrEqual(0.5 + 1e-9)
+  })
 })
 
 /* ----------------------------------------------------- the shaped scripts */
@@ -588,7 +627,23 @@ describe('graphicPaint: strokes', () => {
     paintDrawList2d(clean.ctx, flat([stroke('k', HEAD, { look: 'clean' })]))
     const marker = fake(SIZE.width, SIZE.height)
     paintDrawList2d(marker.ctx, flat([stroke('k', HEAD, { look: 'marker' })]))
+    // Until M10 (§16.60, phase 2): when the marker outline lands, this becomes a case that the marker's ops differ from clean's.
     expect(marker.ops).toEqual(clean.ops)
+  })
+
+  it('the path memo is per d: two strokes of different paths in one list each reach the context on their own points', () => {
+    const other = 'M100 300 L500 300'
+    const { ctx, ops } = fake(SIZE.width, SIZE.height)
+    paintDrawList2d(ctx, flat([stroke('a', HEAD), stroke('b', other)]))
+    const pts = (span: Op[]): Pt[] =>
+      span
+        .find((op) => op.op === 'stroke')!
+        .path.filter((p) => p.kind === 'move' || p.kind === 'line')
+        .map((p) => p.points[0])
+    const [a, b] = itemSpans(ops)
+    expect(pts(a)).toEqual(strokeAt(flattenPath(HEAD, STROKE_TOLERANCE), 0, 1).points)
+    expect(pts(b)).toEqual(strokeAt(flattenPath(other, STROKE_TOLERANCE), 0, 1).points)
+    expect(pts(b)[0]).toEqual({ x: 100, y: 300 })
   })
 })
 
@@ -606,7 +661,10 @@ describe('graphicPaint: shapes, images and the dim', () => {
       shape('s', box, { fill: undefined, stroke: { color: '#555555', width: 2 }, shadow })
     ]
     const { ctx, ops } = fake(SIZE.width, SIZE.height)
+    // The context's own shadow offset going in: the painter forces 0 on the item, and the outer restore gives it back.
+    ctx.shadowOffsetX = 7
     paintDrawList2d(ctx, flat(items))
+    expect(ctx.shadowOffsetX).toBe(7)
     const [r, o, c, g, s] = itemSpans(ops)
     // rect: a fill with the shadow, then a stroke without it.
     const rFill = r.find((op) => op.op === 'fill')!
@@ -644,23 +702,37 @@ describe('graphicPaint: shapes, images and the dim', () => {
     const [g0, r0] = itemSpans(none.ops)
     expect(g0.some((op) => op.op === 'stroke' || op.op === 'fill')).toBe(false)
     expect(r0.find((op) => op.op === 'fill')!.state.shadowBlur).toBe(0)
+    // A circle or ring in a box of negative size reaches no fill or stroke (a real canvas throws on a negative radius, measured); a rect draws, mirrored.
+    const flipped = rect(0, 0, -20, -10)
+    const neg = fake(SIZE.width, SIZE.height)
+    paintDrawList2d(neg.ctx, flat([shape('c', flipped, { shape: 'circle', stroke: { color: '#444444', width: 2 } }), shape('g', flipped, { shape: 'ring', stroke: { color: '#444444', width: 2 } }), shape('r', flipped)]))
+    const [cNeg, gNeg, rNeg] = itemSpans(neg.ops)
+    expect(cNeg.some((op) => op.op === 'stroke' || op.op === 'fill')).toBe(false)
+    expect(gNeg.some((op) => op.op === 'stroke' || op.op === 'fill')).toBe(false)
+    expect(rNeg.some((op) => op.op === 'fill')).toBe(true)
   })
 
   it("an image is drawImage of the bitmap `images` holds for its src, contain letterboxed and cover cropped from the middle; a missing bitmap is skipped", () => {
     const bitmap = { width: 200, height: 100 } as unknown as ImageBitmap
-    const images = new Map([['a.png', bitmap]])
+    const images = new Map([
+      ['a.png', bitmap],
+      ['z.png', { width: 0, height: 0 } as unknown as ImageBitmap]
+    ])
     const box = rect(10, 20, 100, 100)
     const items: DrawItem[] = [
       { kind: 'image', id: 'contain', opacity: 1, src: 'a.png', box, fit: 'contain' },
       { kind: 'image', id: 'cover', opacity: 1, src: 'a.png', box, fit: 'cover' },
-      { kind: 'image', id: 'missing', opacity: 1, src: 'b.png', box, fit: 'cover' }
+      { kind: 'image', id: 'missing', opacity: 1, src: 'b.png', box, fit: 'cover' },
+      { kind: 'image', id: 'empty', opacity: 1, src: 'z.png', box, fit: 'cover' }
     ]
     const { ctx, ops } = fake(SIZE.width, SIZE.height)
     paintDrawList2d(ctx, flat(items), { images })
-    const [contain, cover, missing] = itemSpans(ops)
+    const [contain, cover, missing, empty] = itemSpans(ops)
     expect(contain.find((op) => op.op === 'drawImage')!.args).toEqual([bitmap, 0, 0, 200, 100, 10, 45, 100, 50])
     expect(cover.find((op) => op.op === 'drawImage')!.args).toEqual([bitmap, 50, 0, 100, 100, 10, 20, 100, 100])
     expect(missing.some((op) => op.op === 'drawImage')).toBe(false)
+    // A sizeless bitmap is skipped too (its cover scale would be Infinity, its source 0 wide).
+    expect(empty.some((op) => op.op === 'drawImage')).toBe(false)
     const none = fake(SIZE.width, SIZE.height)
     paintDrawList2d(none.ctx, flat([items[0]]))
     expect(none.ops.some((op) => op.op === 'drawImage')).toBe(false)
@@ -711,6 +783,11 @@ describe('graphicPaint: shapes, images and the dim', () => {
     expect(made).toHaveLength(3)
     expect(made[2].layer.ops.some((op) => op.op === 'fill')).toBe(false)
     expect(made[2].layer.ops.some((op) => op.op === 'fillRect')).toBe(true)
+    // A list without a size: no layer made, nothing composited (drawImage of a 0-sided canvas throws on a real context, measured).
+    const sizeless = fake(0, 0)
+    paintDrawList2d(sizeless.ctx, flat([dim('d')], { width: 0, height: 0 }), { layer })
+    expect(made).toHaveLength(3)
+    expect(sizeless.ops.some((op) => op.op === 'drawImage')).toBe(false)
   })
 
   it('the layer is cached per hole and size: only the opacity animates, a second frame makes no layer; another hole, size or colour makes one', () => {
@@ -737,11 +814,16 @@ describe('graphicPaint: shapes, images and the dim', () => {
     // The first hole again, three others since: still cached.
     paintDrawList2d(fake(SIZE.width, SIZE.height).ctx, flat([dim('d', hole)]), { layer })
     expect(made).toBe(4)
-    // The memo is bounded (a layer is a frame-sized canvas): a fifth distinct layer drops the oldest, the first hole's, which is then made again.
-    paintDrawList2d(fake(SIZE.width, SIZE.height).ctx, flat([dim('d', hole, { alpha: 0.5 })]), { layer })
+    // The memo is BOUNDED (a layer is a frame-sized canvas), whatever its policy: after a fifth distinct layer, painting all five again makes at least one more; after eight distinct, at most 8 + 5 were ever made.
+    const five: DrawList[] = [flat([dim('d', hole)]), flat([dim('d', rect(300, 600, 200, 201))]), flat([dim('d', hole)], SMALL), flat([dim('d', hole, { color: '#ffffff' })]), flat([dim('d', hole, { alpha: 0.5 })])]
+    paintDrawList2d(fake(SIZE.width, SIZE.height).ctx, five[4], { layer })
     expect(made).toBe(5)
-    paintDrawList2d(fake(SIZE.width, SIZE.height).ctx, flat([dim('d', hole)]), { layer })
-    expect(made).toBe(6)
+    for (const list of five) paintDrawList2d(fake(list.width, list.height).ctx, list, { layer })
+    expect(made).toBeGreaterThan(5)
+    const before = made
+    for (const alpha of [0.6, 0.7, 0.8]) paintDrawList2d(fake(SIZE.width, SIZE.height).ctx, flat([dim('d', hole, { alpha })]), { layer })
+    expect(made).toBe(before + 3)
+    expect(made).toBeLessThanOrEqual(8 + 5)
     // Another caller's layer factory never sees this one's contexts.
     let other = 0
     paintDrawList2d(fake(SIZE.width, SIZE.height).ctx, flat([dim('d', hole)]), {
@@ -751,7 +833,17 @@ describe('graphicPaint: shapes, images and the dim', () => {
       }
     })
     expect(other).toBe(1)
-    expect(made).toBe(6)
+    expect(made).toBe(before + 3)
+  })
+
+  it('a `layer` factory that hands back a canvas the painter already holds is refused: the cache composites its canvases on later frames', () => {
+    const shared = fake(SIZE.width, SIZE.height)
+    const scratch: PaintOptions['layer'] = () => shared.ctx
+    const hole = rect(300, 600, 200, 200)
+    paintDrawList2d(fake(SIZE.width, SIZE.height).ctx, flat([dim('d', hole)]), { layer: scratch })
+    expect(() => paintDrawList2d(fake(SIZE.width, SIZE.height).ctx, flat([dim('d', rect(0, 0, 50, 50))]), { layer: scratch })).toThrow(/new canvas/)
+    // The same dim again is the cached one: no new layer asked for, no throw.
+    expect(() => paintDrawList2d(fake(SIZE.width, SIZE.height).ctx, flat([dim('d', hole)]), { layer: scratch })).not.toThrow()
   })
 })
 
@@ -772,6 +864,18 @@ describe('graphicPaint: the order of operations', () => {
     const empty = fake(SIZE.width, SIZE.height)
     paintDrawList2d(empty.ctx, flat([]))
     expect(empty.ops.map((op) => op.op)).toEqual(['save', 'restore'])
+  })
+
+  it("a kind that throws (a path flattenPath refuses) still leaves the caller's context as it was: every save restored, the error propagated", () => {
+    const { ctx, ops } = fake(SIZE.width, SIZE.height)
+    ctx.globalAlpha = 0.7
+    const bad = stroke('arc', 'M0 0 A10 10 0 0 1 20 20', { opacity: 0.5, transform: { x: 5, y: 5, scale: 2, rotate: 10 } })
+    expect(() => paintDrawList2d(ctx, flat([shape('a', rect(0, 0, 10, 10)), bad]), { offset: { x: 3, y: 3 } })).toThrow(/arcs/)
+    expect(ops.filter((op) => op.op === 'save')).toHaveLength(3)
+    expect(ops.filter((op) => op.op === 'restore')).toHaveLength(3)
+    expect(ctx.globalAlpha).toBe(0.7)
+    // What was drawn before the throw reached the context.
+    expect(ops.some((op) => op.op === 'fill')).toBe(true)
   })
 
   it("opacity multiplies into globalAlpha down the group tree; an item nothing of which shows draws nothing", () => {

@@ -55,7 +55,11 @@ export interface PaintOptions {
   /**
    * Makes the dim's offscreen context, of the frame's size. In the renderer
    * it defaults to a `document.createElement('canvas')`; node's tests pass a
-   * second fake, since a fake context cannot make a canvas.
+   * second fake, since a fake context cannot make a canvas. Each call must
+   * make a NEW canvas: the painter keeps up to four of them (per factory) and
+   * draws their contents on later frames, so a shared scratch canvas would
+   * wear the last hole cut on every cached dim. A factory that hands back a
+   * canvas the painter already holds is refused with an error.
    */
   layer?: (width: number, height: number) => CanvasRenderingContext2D
   /** The decoded bitmaps an `image` item names by `src`; an item whose bitmap is missing is skipped. */
@@ -202,7 +206,16 @@ function paintText(ctx: CanvasRenderingContext2D, item: TextItem): void {
   drawTextOnto(ctx, textSpecOf(item.text, item.look, item.box), item.box.width, item.box.height)
 }
 
-/** The shape's path: its geometry on the box's edge, a stroke centred on it (`itemBounds` widens the box by half the stroke). */
+/**
+ * The shape's path: its geometry on the box's edge, a stroke centred on it
+ * (`itemBounds` widens the box by half the stroke). False when there is
+ * nothing to draw. Two guards are measured, not assumed (Chrome 152,
+ * 2026-10-30): `roundRect` throws a RangeError on a negative radius, and
+ * `ellipse` and `arc` throw an IndexSizeError on a negative radius, so a
+ * circle or ring in a box of negative size draws nothing rather than failing
+ * the whole frame's paint; `rect` and `roundRect` take a negative extent
+ * (mirrored, no throw) and a radius of 0 is fine for all of them.
+ */
 function shapePath(ctx: CanvasRenderingContext2D, item: ShapeItem): boolean {
   const { x, y, width, height } = item.box
   ctx.beginPath()
@@ -214,12 +227,13 @@ function shapePath(ctx: CanvasRenderingContext2D, item: ShapeItem): boolean {
       ctx.roundRect(x, y, width, height, Math.max(0, item.radius ?? 0))
       return true
     case 'circle':
+      if (!(width > 0) || !(height > 0)) return false
       ctx.ellipse(x + width / 2, y + height / 2, width / 2, height / 2, 0, 0, 2 * Math.PI)
       return true
     case 'ring': {
       // An arc of `sweep` turns from `start`, on the circle inscribed in the box; nothing at sweep 0.
       const sweep = clamp01(item.sweep ?? 1)
-      if (!(sweep > 0)) return false
+      if (!(sweep > 0) || !(width > 0) || !(height > 0)) return false
       const start = item.start ?? 0
       ctx.arc(x + width / 2, y + height / 2, Math.min(width, height) / 2, start, start + sweep * 2 * Math.PI)
       return true
@@ -262,6 +276,7 @@ function paintShape(ctx: CanvasRenderingContext2D, item: ShapeItem): void {
     setShadow()
     ctx.strokeStyle = item.stroke.color
     ctx.lineWidth = item.stroke.width
+    // Round join: a miter on a rect's corner would ink √2 × half the width past the box, beyond the half-width `itemBounds` widens it by.
     ctx.lineCap = 'butt'
     ctx.lineJoin = 'round'
     ctx.stroke()
@@ -308,6 +323,9 @@ function dimLayer(item: DimItem, size: { width: number; height: number }, layer:
   const hit = own.get(key)
   if (hit) return hit
   const ctx = layer(size.width, size.height)
+  for (const held of own.values()) {
+    if (held.canvas === ctx.canvas) throw new Error('paintDrawList2d: `layer` must make a new canvas on each call; the painter keeps up to four and composites them on later frames')
+  }
   ctx.save()
   ctx.globalCompositeOperation = 'source-over'
   ctx.globalAlpha = clamp01(item.alpha)
@@ -331,8 +349,13 @@ function dimLayer(item: DimItem, size: { width: number; height: number }, layer:
   return ctx
 }
 
-/** A dim: its layer composited over the frame at the item's opacity (already in `globalAlpha`). */
+/**
+ * A dim: its layer composited over the frame at the item's opacity (already
+ * in `globalAlpha`). A list without a size inks nothing: `drawImage` of a
+ * canvas with a 0 side throws an InvalidStateError (measured, Chrome 152).
+ */
 function paintDim(ctx: CanvasRenderingContext2D, item: DimItem, size: { width: number; height: number }, layer: (width: number, height: number) => CanvasRenderingContext2D): void {
+  if (!(size.width > 0) || !(size.height > 0)) return
   ctx.drawImage(dimLayer(item, size, layer).canvas, 0, 0)
 }
 
@@ -343,29 +366,35 @@ function paintItem(ctx: CanvasRenderingContext2D, item: DrawItem, list: DrawList
   // Nothing of it shows: no ink, so no work; its children neither.
   if (!(alpha > 0)) return
   ctx.save()
-  ctx.globalAlpha = alpha
-  applyTransform(ctx, item, list)
-  switch (item.kind) {
-    case 'stroke':
-      paintStroke(ctx, item, list)
-      break
-    case 'text':
-      paintText(ctx, item)
-      break
-    case 'shape':
-      paintShape(ctx, item)
-      break
-    case 'image':
-      paintImage(ctx, item, options.images)
-      break
-    case 'dim':
-      paintDim(ctx, item, list, options.layer ?? defaultLayer)
-      break
-    case 'group':
-      for (const child of item.children) paintItem(ctx, child, list, options)
-      break
+  // The restore is owed whatever a kind throws (a template bug `flattenPath`
+  // refuses, say): the caller's context is left as it was, not translated and
+  // alpha'd by the saves of the item that failed. The error still propagates.
+  try {
+    ctx.globalAlpha = alpha
+    applyTransform(ctx, item, list)
+    switch (item.kind) {
+      case 'stroke':
+        paintStroke(ctx, item, list)
+        break
+      case 'text':
+        paintText(ctx, item)
+        break
+      case 'shape':
+        paintShape(ctx, item)
+        break
+      case 'image':
+        paintImage(ctx, item, options.images)
+        break
+      case 'dim':
+        paintDim(ctx, item, list, options.layer ?? defaultLayer)
+        break
+      case 'group':
+        for (const child of item.children) paintItem(ctx, child, list, options)
+        break
+    }
+  } finally {
+    ctx.restore()
   }
-  ctx.restore()
 }
 
 /**
@@ -379,7 +408,10 @@ function paintItem(ctx: CanvasRenderingContext2D, item: DrawItem, list: DrawList
  */
 export function paintDrawList2d(ctx: CanvasRenderingContext2D, list: DrawList, options: PaintOptions = {}): void {
   ctx.save()
-  if (options.offset) ctx.translate(options.offset.x, options.offset.y)
-  for (const item of list.items) paintItem(ctx, item, list, options)
-  ctx.restore()
+  try {
+    if (options.offset) ctx.translate(options.offset.x, options.offset.y)
+    for (const item of list.items) paintItem(ctx, item, list, options)
+  } finally {
+    ctx.restore()
+  }
 }
