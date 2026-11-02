@@ -10108,6 +10108,93 @@ own, in node.
   the `finally` in `paintItem`, a rect then a stroke whose `d` holds an
   arc left 3 saves and 1 restore on the context.
 
+### The worker encoder and measureText, 2026-11-01
+
+For `CLIPS.md` §6.3's lane C, its first piece: `b610c91` (`graphicCanvas.ts`,
+`encodeFrames`' worker back-end, `textSpecFont`) and `1ea9a96` (its
+critics' must-fixes); the `graphicCanvas.ts` Built note. Measured by
+`b610c91`'s builder on 2026-11-01 in the Browser pane's Chrome 152
+(Claude/4.4212.0, Chrome/152.0.7977.167) on the harness page (`npm run
+harness`); Electron cannot start in the sandbox, so none of it is the
+app's.
+
+- **`encodeFrames` through the shipped worker route**: 60 frames of a
+  1080×1920 synthetic (a panel, 72 px text, a stroke), depth 4, a recorder
+  for `write`: 265.7 ms the first run, the four module workers started
+  inside it; 206.8 ms the second; the `toBlob` pool asked for by name
+  (`encoder: 'pool'`) 523.8 ms. All 60 PNGs byte-equal between the two
+  routes, M2's reading again, now through `encodeFrames` itself. The
+  worker was served as `/src/graphicEncodeWorker.ts?worker_file&type=module`
+  from its new place beside `encodePool.ts`, with no console warning.
+  Frame 30's PNG decoded with `premultiplyAlpha: 'none'` reads the stroke
+  pixel at (250, 1060) as 38, 99, 233, 255 (#2663e9) and a clear pixel
+  0, 0, 0, 0. The first run's extra 58.9 ms is the workers' start, read
+  by difference, not timed on its own.
+- **M1 still runs on the pool**: `encode: { frames: 30, pool: [4], region:
+  ['box'] }` → 5.45 ms a frame at p50, 8.20 at p95, 43.1 KB a frame at
+  908×486, route `'pool'`, the harness asking for the pool by name so the
+  figure keeps its meaning.
+- **`measureText` counts `letterSpacing`**: 'Hello' in `700 60px
+  sans-serif` measures 146.69 at 0 px and 176.69 at 6 px, +30 = 5 × 6, the
+  trailing gap counted. Measure and paint both set it, so they agree; the
+  test's fake adds the spacing once a grapheme to match (`1ea9a96`).
+- **`graphicMeasure`**: 'Hello' in clean at 60 px, width 146.69, ascent
+  43.18, descent 1.11; in hero, 25 px (`textSpecFont`: `"500 25px
+  "Montserrat", …"`), width 56.97.
+- **Measure and paint agree on the page**: a text item boxed by
+  `graphicMeasure` and painted through `graphicFrameCanvases`, its box
+  {100, 800, 332.26×71}, has its ink at 93..439 × 798..864, inside
+  `itemBounds` {85.6, 785.6, 361.06×103.4} (clean's shadow reach,
+  14.4/18): no shrink.
+- **The held frame is cached**: `graphicPreviewCanvas` at frames 60 and 70
+  of a 90-frame clip with a beat at 0.5 s returns one canvas, its key
+  ending `'|settled'`.
+- **In the test's fake, before `1ea9a96`** (node, a held face landing at
+  0.9 em a grapheme for the fallback's 0.55): the bake's box was {84, 782,
+  790×110} against 894 wide once the face had landed, and every fill pass
+  drew at `700 37px` for 60; the order is fixed, the figures are the
+  fake's, not a browser's.
+
+Read for this record at `8acf930` (2026-11-02, the Mac): `npm run build`
+exits 0 and emits the worker as its own chunk,
+`out/renderer/assets/graphicEncodeWorker-xUUPYCk3.js` (1,056 bytes),
+constructed in the main bundle as `new Worker(new URL(…
+"graphicEncodeWorker-xUUPYCk3.js" …, import.meta.url), { type: "module"
+})`. At `b610c91` nothing in the app imported `graphicCanvas.ts`, so the
+build had emitted none (a critic's reading); the store's import since
+`a273729` brings it in. Whether the packaged app's `file://` page starts
+it is not read here.
+
+### The box route under crop, mask, matte and transitions, 2026-11-02
+
+For `CLIPS.md` §6.3's lane C, its second piece: `a273729` (`identityPlaced`
+and the plan's read of `frames.box`) and `fa4ddc3` (its critics'
+must-fixes); the box route's Built note. Measured in node on the Mac
+through `buildRenderPlan` (a throwaway vitest file under `tests/`, there
+being no `tsx` in the repo, deleted after each run), on a 1080×1920
+project whose graphic's asset carries an 840×300 box at 120, 1400.
+
+| the clip | on the box route | on the canvas route, or the preview |
+|---|---|---|
+| at the identity (`a273729`) | `scale=840:300…pad=840:300`, overlay `x='120'`, `y='1400'` | `scale=1080:1920` at `x='0'`, `y='0'` |
+| turned 10° (`a273729`) | refused: `clipBox`'s placement less the turn's growth (a negative offset), no 840×300 scale | — |
+| `defaultMask('reveal')` | `geq=lum='(clip((1-hypot(…(X-0.5*W)…)/(0.25*W)…` against the stream's W and H, the 840×300 box | the preview draws the stencil against the clip's canvas-sized destination |
+| `crop {0, 0, 540, 1920}` | `crop=w='min(540,in_w)'` on the 840×300 stream, still overlaid at 120, 1400 | the crop is of the canvas-sized picture |
+| a luma wipe (an `extraTransitions` entry with a mask) | its pattern `format=gray,scale=840:300` | `scale=1080:1920`; the preview wipes against the destination (`Preview.tsx:1826-1829` at `fa4ddc3`) |
+| `zoom-in` | `scale=trunc(iw*1.15/2)*2:-2,crop=iw/1.15:ih/1.15` on the 840×300 stream: a punch-in about the box's centre | about the canvas's centre |
+| `slide-left` | overlay `(120)+(if(lt(t-0.33,0.47), 1080*(…`, the travel the canvas's | the same |
+| `dissolve` | `fade=t=in…alpha=1` | the same |
+| a hand-made `box: {0, 0, 0, 0}` | `scale=0:0:force_original_aspect_ratio=decrease`, which fails the render | — |
+
+So `identityPlaced` (`src/shared/render/plan.ts:505`) refuses a crop, any
+mask that masks something (a full-frame mask, a blur of 0, emits nothing
+and stays allowed), a track matte, and any `transitionIn`, the slide and
+the dissolve with the rest since one pure predicate needs no transition
+lookup; and the plan reads `frames.box` only when it is at least 2×2
+(`:1287-1291`). Nothing new reaches ffmpeg: an integer overlay, a
+same-size scale and pad, `tpad`. Read as filter text, not a rendered
+frame; the rendered box case is `graphic.int`'s, lane D's.
+
 ### What this settles
 
 1. **Both bundled builds have `tmix`, `overlay`'s `alpha=premultiplied`
@@ -10264,6 +10351,23 @@ own, in node.
     keys from `graphicExitKeys`, and no subject from a clip the export
     would not draw. The allowance window is measured and left to the
     user.
+22. **The bake's encode is the workers', and the measure is the paint's
+    font** (Chrome 152, the pane, 2026-11-01; "The worker encoder and
+    measureText" above; `b610c91`, `1ea9a96`): `encodeFrames` through
+    four module workers wrote 60 1080×1920 frames in 206.8 ms against the
+    pool's 523.8, byte-equal, so M2's choice holds through the code that
+    ships, and a refused worker falls back to the pool once a session;
+    `measureText` counts `letterSpacing`, so `graphicMeasure`, setting the
+    font and spacing `textSpecFont` gives the painter, boxes text that
+    paints inside its bounds with no shrink. In the browser pane, not
+    the app.
+23. **The box route is for a clip at the identity and nothing sized by
+    its stream** (node, 2026-11-02; "The box route under crop, mask,
+    matte and transitions" above; `a273729`, `fa4ddc3`): a mask, a crop,
+    a luma wipe's pattern and a punch-in all read the stream's size,
+    which on the box route is the box, so `identityPlaced` refuses them,
+    the matte and every transition with them; a box under 2×2 is never
+    read. A slide and a dissolve would have come out the same.
 
 ### Still unmeasured, and whose
 
@@ -10273,7 +10377,26 @@ own, in node.
 - **A worker outside `npm run dev`** (M2): the dev server's page is
   answered on both machines; the packaged app's page, loaded from disk
   (`src/main/index.ts:229`), and a `blob:` worker are not measured, nor the
-  box region through workers (M2 ran the canvas only).
+  box region through workers (M2 ran the canvas only). Since `b610c91`
+  (2026-11-01) the worker is the shipped file beside `encodePool.ts`,
+  reached through `encodeFrames`: measured in the pane's Chrome 152
+  only (item 22). Not measured: **the app's CSP against the moved file**
+  in `npm run dev` on either machine (the harness location's was
+  admitted there in phase 0; the policy and the origin are the same, the
+  path is not); **the packaged app's `file://` page** starting the
+  production chunk `npm run build` emits (read 2026-11-02 above); and
+  **the box through workers** in the app. A refusal on any of them costs
+  the gain, not the bake (the pool takes over, one console warning,
+  `encodePool.ts:209`). The user's.
+- **The workers' start cost on its own** (`CLIPS.md` §6.3's
+  `graphicCanvas.ts` Built note, "Open"): four module workers are
+  started and terminated per bake; the first run's extra 58.9 ms (item
+  22) is a difference of two runs, not a timing. Whether a session pool
+  is worth keeping is lane D's to time on the harness page.
+- **The Windows side of lane C**: none of item 22 was read on the Surface
+  or in Electron on Windows; CI runs lane C's suites on both runners,
+  which use a fake canvas and stand-in encoders, not a worker. The
+  user's, with M2's own call again if wanted.
 - **The Windows sheets**: not uploaded by CI (above).
 - **Why four-deep encodes take so much longer than one**: on the Surface
   the canvas's own encode is 27.80 ms at pool 1 and 64.60 at pool 4 (70.70
