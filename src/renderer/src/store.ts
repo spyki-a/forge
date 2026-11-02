@@ -499,6 +499,30 @@ function graphicTrimmed(trimmed: Clip, before: Clip, fps: number): Clip {
 }
 
 /**
+ * How long a trimmed graphic's rebake waits for the edge to rest. Timeline's
+ * drag trims on every pointer move, and `bakeGraphicSequence` builds every
+ * moving frame's draw list on the main thread before it claims the clip, so
+ * a drag of a hundred moves must cost one bake, not a hundred starts; the
+ * spec and the exit keys are still rewritten per move, so the live preview
+ * follows the edge.
+ */
+export const GRAPHIC_TRIM_REBAKE_MS = 150
+const trimRebakes = new Map<string, ReturnType<typeof setTimeout>>()
+
+/** The one bake a run of trims costs, `GRAPHIC_TRIM_REBAKE_MS` after the last of them. */
+function rebakeWhenTrimRests(clipId: string, rebake: () => Promise<void>): void {
+  const pending = trimRebakes.get(clipId)
+  if (pending !== undefined) clearTimeout(pending)
+  trimRebakes.set(
+    clipId,
+    setTimeout(() => {
+      trimRebakes.delete(clipId)
+      void rebake()
+    }, GRAPHIC_TRIM_REBAKE_MS)
+  )
+}
+
+/**
  * Dragging a slider over an existing key must not silently reset its easing —
  * the value is what changed, not the shape of the curve leaving it.
  */
@@ -1957,29 +1981,34 @@ export const useEditor = create<EditorState>((set, get) => ({
 
   trimClipStart: (clipId, start) => {
     const { fps } = get().project.settings
-    get().update((p) => ({
-      ...p,
-      clips: p.clips.map((c) => (c.id === clipId ? graphicTrimmed(trimStart(c, Math.round(start)), c, fps) : c))
-    }))
-    // The frames, numbered from the clip's own first frame, start on a different beat now.
-    if (get().project.clips.find((c) => c.id === clipId)?.graphic) void get().rebakeGraphic(clipId)
+    const before = get().project
+    get().update((p) => {
+      const clip = p.clips.find((c) => c.id === clipId)
+      if (!clip) return p
+      const trimmed = trimStart(clip, Math.round(start))
+      // A drag trims on every pointer move: an edge that did not move is no edit (no history entry, no version, no bake).
+      if (trimmed.start === clip.start && trimmed.duration === clip.duration) return p
+      return { ...p, clips: p.clips.map((c) => (c.id === clipId ? graphicTrimmed(trimmed, c, fps) : c)) }
+    })
+    // The frames, numbered from the clip's own first frame, start on a different beat now: baked once the edge rests.
+    const after = get().project
+    if (after !== before && after.clips.find((c) => c.id === clipId)?.graphic) rebakeWhenTrimRests(clipId, () => get().rebakeGraphic(clipId))
   },
 
   trimClipEnd: (clipId, end) => {
     const { fps } = get().project.settings
+    const before = get().project
     get().update((p) => {
       const clip = p.clips.find((c) => c.id === clipId)
       if (!clip) return p
       const asset = p.assets.find((a) => a.id === clip.assetId)
       if (!asset) return p
-      return {
-        ...p,
-        clips: p.clips.map((c) =>
-          c.id === clipId ? graphicTrimmed(trimEnd(c, Math.round(end), asset.durationFrames), c, fps) : c
-        )
-      }
+      const trimmed = trimEnd(clip, Math.round(end), asset.durationFrames)
+      if (trimmed.duration === clip.duration) return p
+      return { ...p, clips: p.clips.map((c) => (c.id === clipId ? graphicTrimmed(trimmed, c, fps) : c)) }
     })
-    if (get().project.clips.find((c) => c.id === clipId)?.graphic) void get().rebakeGraphic(clipId)
+    const after = get().project
+    if (after !== before && after.clips.find((c) => c.id === clipId)?.graphic) rebakeWhenTrimRests(clipId, () => get().rebakeGraphic(clipId))
   },
 
   splitAtPlayhead: () => {
@@ -3439,6 +3468,11 @@ export const useEditor = create<EditorState>((set, get) => ({
       notify('A graphic goes on a video track', 'info')
       return null
     }
+    // A length that is not a positive number (a cleared field reads NaN) would make a clip of duration NaN.
+    if (!(Number.isFinite(spec.seconds) && spec.seconds > 0)) {
+      notify('A graphic needs a length in seconds', 'info')
+      return null
+    }
 
     /*
      * App-minted (docs/CLIPS.md §6.1), as the card ring's id is: a clip id
@@ -3488,12 +3522,16 @@ export const useEditor = create<EditorState>((set, get) => ({
 
   setGraphic: async (clipId, patch) => {
     const { fps } = get().project.settings
+    // A length that is not a positive number (a cleared field reads NaN) is no length; the rest of the patch still lands.
+    const { seconds, ...rest } = patch
+    const wanted: typeof patch = seconds !== undefined && Number.isFinite(seconds) && seconds > 0 ? { ...rest, seconds } : rest
+    if (Object.keys(wanted).length === 0) return
     get().update((p) => ({
       ...p,
       clips: p.clips.map((c) => {
         if (c.id !== clipId || !c.graphic) return c
-        const graphic: GraphicSpec = { ...c.graphic, ...patch, version: c.graphic.version + 1 }
-        if (patch.seconds === undefined || patch.seconds === c.graphic.seconds) return { ...c, graphic }
+        const graphic: GraphicSpec = { ...c.graphic, ...wanted, version: c.graphic.version + 1 }
+        if (wanted.seconds === undefined || wanted.seconds === c.graphic.seconds) return { ...c, graphic }
         // A new length: the clip follows it, and the exit fade moves to its last 0.3 s.
         const duration = Math.max(1, Math.round(graphic.seconds * fps))
         return { ...c, graphic, duration, keyframes: { ...c.keyframes, ...graphicExitKeys(duration, fps) } }

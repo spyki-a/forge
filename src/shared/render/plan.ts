@@ -487,20 +487,32 @@ export function clipBox(
  * Whether a clip sits at the identity placement (docs/CLIPS.md §6.3, "The
  * bake region (M1) and the box route"): transform x 0, y 0, scale 1, no
  * `scaleY` (or 1, which `clipBox` reads as the same geometry), rotation 0,
- * no motion `path`, and no keyframes but `opacity` (a graphic's exit fade).
- * Only such a clip's export bake may take the box: a rotated clip turns
- * about its stream's middle, which for a box is not the canvas's, so a box
- * would part from the preview. Read by the export's bake (exportBake.ts,
- * `boxAllowed`) and by the per-clip box below, so the bake and the plan
- * cannot disagree about which clips the box applies to.
+ * no motion `path`, no keyframes but `opacity` (a graphic's exit fade), and
+ * nothing that is sized against the clip's STREAM: no `crop` (cut from the
+ * stream's pixels), no mask that masks anything (`isFullFrameMask`: a geq
+ * sized by the stream's W and H), no track `matte` and no `transitionIn` (a
+ * wipe's pattern and a punch-in are scaled to the stream, as the finish
+ * below says). Only such a clip's export bake may take the box: a rotated
+ * clip turns about its stream's middle, which for a box is not the canvas's,
+ * and each of the others was measured to land on the 840×300 box where the
+ * preview draws it against the canvas-sized clip, so the box would part from
+ * the preview. A fade or a slide would come out the same either way; they
+ * take the canvas route with the rest, since one pure predicate needs no
+ * transition lookup. Read by the export's bake (exportBake.ts, `boxAllowed`)
+ * and by the per-clip box below, so the bake and the plan cannot disagree
+ * about which clips the box applies to.
  */
-export function identityPlaced(clip: Pick<Clip, 'transform' | 'path' | 'keyframes'>): boolean {
+export function identityPlaced(clip: Pick<Clip, 'transform' | 'path' | 'keyframes' | 'crop' | 'mask' | 'matte' | 'transitionIn'>): boolean {
   const t = clip.transform
   if (t) {
     if ((t.x ?? 0) !== 0 || (t.y ?? 0) !== 0 || (t.scale ?? 1) !== 1 || (t.rotation ?? 0) !== 0) return false
     if (t.scaleY !== undefined && t.scaleY !== 1) return false
   }
   if (clip.path && clip.path.length > 0) return false
+  if (clip.crop) return false
+  if (clip.mask && !isFullFrameMask(clip.mask)) return false
+  if (clip.matte) return false
+  if (clip.transitionIn) return false
   const keys = clip.keyframes
   if (!keys) return true
   return (Object.keys(keys) as (keyof typeof keys)[]).every((property) => property === 'opacity' || (keys[property]?.length ?? 0) === 0)
@@ -1268,10 +1280,15 @@ export function buildRenderPlan(request: RenderRequest): RenderPlan {
      * asset (`frames.box`, written only by exportBake.ts, never by the edit):
      * the stream is the box's size, so the fit scales nothing and the overlay
      * lands at the box's even x and y (docs/CLIPS.md §6.3). Only at the
-     * identity placement, the same test the bake made before drawing it.
+     * identity placement, the same test the bake made before drawing it, and
+     * only a box with area: `graphicBox` never writes one under 2×2, but a
+     * saved project is a second writer, and `scale=0:0` fails the render.
      */
     const drawnBox = asset.frames?.box
-    const box = drawnBox && identityPlaced(clip) ? { ...clipBox(clip, { width, height }), ...drawnBox } : clipBox(clip, { width, height })
+    const box =
+      drawnBox && drawnBox.width >= 2 && drawnBox.height >= 2 && identityPlaced(clip)
+        ? { ...clipBox(clip, { width, height }), ...drawnBox }
+        : clipBox(clip, { width, height })
 
     /*
      * Room for the corners, when the clip is turned.

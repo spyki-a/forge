@@ -184,6 +184,7 @@ export async function bakeForExport(
          * and scales nothing.
          */
         const spec = clip.graphic
+        // `sourceToFrame` (reframe/frameMap.ts) follows the canvas it is handed itself, so this is the moment's shape, not a difference a case can tell.
         const followed = followCanvas(project, exportCanvas)
         const targetsAt = (f: number): GraphicTargets => graphicTargetsAt(followed, clip, spec, clip.start + f, stills)
         const run = await bakers.graphic(spec, graphicStyleOf(project, spec), key, stills.width, stills.height, clip.duration, fps, targetsAt, identityPlaced(clip))

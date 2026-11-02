@@ -4,6 +4,7 @@ import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/
 import type { GraphicSpec } from '@shared/graphics/template'
 import type { GraphicTargets } from '@shared/graphics/items'
 import { graphicStyleOf } from '@shared/graphics/style'
+import { defaultMask } from '@shared/render/mask'
 
 /*
  * An export draws its own cards, at its own canvas, into a copy.
@@ -255,13 +256,26 @@ describe('a graphic', () => {
     expect(asks[0].at[1]).toEqual(asks[0].at[0])
   })
 
-  it('allows the box only at the identity placement', async () => {
+  it('allows the box only at the identity placement: not turned, keyed, masked, cropped, matted or wiped on', async () => {
     const { bakers: b, asks } = bakers(null)
-    await bakeForExport(edit({ transform: { x: 0, y: 0, scale: 1, rotation: 10, opacity: 1 } }), { width: 1080, height: 1920 }, b)
-    expect(asks[0].boxAllowed).toBe(false)
+    const refused: Partial<Clip>[] = [
+      { transform: { x: 0, y: 0, scale: 1, rotation: 10, opacity: 1 } },
+      { keyframes: { zoom: [{ frame: 0, value: 1 }, { frame: 30, value: 1.4 }] } },
+      // Sized against the stream, which on the box route would be the box, not the canvas the preview draws them on.
+      { mask: defaultMask('reveal') },
+      { crop: { x: 0, y: 0, width: 540, height: 1920 } },
+      { matte: { clipId: 'shot' } },
+      { transitionIn: { id: 'dissolve', durationFrames: 14 } }
+    ]
+    for (const over of refused) {
+      asks.length = 0
+      await bakeForExport(edit(over), { width: 1080, height: 1920 }, b)
+      expect(asks[0].boxAllowed, JSON.stringify(over)).toBe(false)
+    }
+    // A mask that masks nothing is no mask.
     asks.length = 0
-    await bakeForExport(edit({ keyframes: { zoom: [{ frame: 0, value: 1 }, { frame: 30, value: 1.4 }] } }), { width: 1080, height: 1920 }, b)
-    expect(asks[0].boxAllowed).toBe(false)
+    await bakeForExport(edit({ mask: { ...defaultMask('blur'), blur: 0 } }), { width: 1080, height: 1920 }, b)
+    expect(asks[0].boxAllowed).toBe(true)
   })
 
   it('points the copy at the frames: at the box’s size with frames.box when the bake took the box, at the stills’ size without one; never the edit', async () => {

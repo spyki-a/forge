@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildRenderPlan, clipBox, identityPlaced } from '@shared/render/plan'
+import { defaultMask } from '@shared/render/mask'
 import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
 
 /*
@@ -34,6 +35,8 @@ describe('identityPlaced', () => {
     expect(identityPlaced(at({ path: [] }))).toBe(true)
     // Opacity is not a placement.
     expect(identityPlaced(at({ transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 0.5 } }))).toBe(true)
+    // A mask that masks nothing (a blur of 0 is `isFullFrameMask`) is no mask: the plan emits no filter for it either.
+    expect(identityPlaced(at({ mask: { ...defaultMask('blur'), blur: 0 } }))).toBe(true)
   })
 
   it('is false for any other placement: a moved, scaled, stretched or turned clip, a motion path, or a keyed zoom', () => {
@@ -46,15 +49,29 @@ describe('identityPlaced', () => {
     expect(identityPlaced(at({ path: [{ frame: 0, x: 0, y: 0 }, { frame: 30, x: 0.5, y: 0 }] as Clip['path'] }))).toBe(false)
     expect(identityPlaced(at({ keyframes: { ...EXIT, zoom: [{ frame: 0, value: 1 }, { frame: 30, value: 1.4 }] } }))).toBe(false)
   })
+
+  it('is false for anything sized against the stream: a crop, a mask that masks, a track matte, a transition in', () => {
+    // Each measured through buildRenderPlan on the 840×300 box stream: the crop cuts the box's pixels, the mask's geq is
+    // sized by the box's W and H, a wipe's pattern is scaled to 840:300 and a punch-in scales about the box's centre, where
+    // the preview draws every one of them against the canvas-sized clip.
+    expect(identityPlaced(at({ crop: { x: 0, y: 0, width: 540, height: 1920 } }))).toBe(false)
+    expect(identityPlaced(at({ mask: defaultMask('reveal') }))).toBe(false)
+    expect(identityPlaced(at({ mask: defaultMask('blur') }))).toBe(false)
+    expect(identityPlaced(at({ matte: { clipId: 'shape' } }))).toBe(false)
+    expect(identityPlaced(at({ transitionIn: { id: 'wipe-x', durationFrames: 14 } }))).toBe(false)
+    expect(identityPlaced(at({ transitionIn: { id: 'zoom-in', durationFrames: 14 } }))).toBe(false)
+    // A fade would come out the same on both routes; it takes the canvas route with the rest, one predicate without a lookup.
+    expect(identityPlaced(at({ transitionIn: { id: 'dissolve', durationFrames: 14 } }))).toBe(false)
+  })
 })
 
 describe('the plan reads frames.box', () => {
   const video: MediaAsset = { id: 'video', path: '/media/shot.mp4', name: 'shot', kind: 'video', durationFrames: 300, width: 1080, height: 1920, fps: 30, hasVideo: true, hasAudio: false, size: 1 }
   /** The export's copy of a graphic's asset after the box route: the box's size, and the box on its frames. */
-  const drawn = (box: boolean): MediaAsset => ({
+  const drawn = (box: boolean, rect = BOX): MediaAsset => ({
     id: 'g', path: '/cache/g-export.seq/00000.png', name: 'counter — graphic', kind: 'image', durationFrames: 300,
-    width: box ? BOX.width : 1080, height: box ? BOX.height : 1920, fps: null, hasVideo: true, hasAudio: false, size: 0,
-    frames: box ? { pattern: '/cache/g-export.seq/%05d.png', count: 20, box: BOX } : { pattern: '/cache/g-export.seq/%05d.png', count: 20 }
+    width: box ? rect.width : 1080, height: box ? rect.height : 1920, fps: null, hasVideo: true, hasAudio: false, size: 0,
+    frames: box ? { pattern: '/cache/g-export.seq/%05d.png', count: 20, box: rect } : { pattern: '/cache/g-export.seq/%05d.png', count: 20 }
   })
   const project = (graphic: Clip, asset: MediaAsset): Project => {
     const base = emptyProject('box')
@@ -99,5 +116,21 @@ describe('the plan reads frames.box', () => {
     expect(Number(place.x)).toBeLessThanOrEqual(0)
     expect(Number(place.y)).toBeLessThanOrEqual(0)
     expect(g).not.toContain(`scale=${BOX.width}:${BOX.height}:force_original_aspect_ratio`)
+  })
+
+  it('a masked clip at the identity keeps clipBox’s placement too: the mask is sized against the stream, which must stay the canvas', () => {
+    const masked = clip({ id: 'g', assetId: 'g', trackId: 'v2', start: 10, duration: 40, keyframes: EXIT, mask: defaultMask('reveal') })
+    const g = graph(project(masked, drawn(true)))
+    expect(graphicOverlay(g)).toEqual({ x: '0', y: '0' })
+    expect(g).not.toContain(`scale=${BOX.width}:${BOX.height}:force_original_aspect_ratio`)
+    expect(g).toContain('scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:')
+  })
+
+  it('reads a box only when it has area: a 0×0 box from a saved project falls back to clipBox, never scale=0:0', () => {
+    const identity = clip({ id: 'g', assetId: 'g', trackId: 'v2', start: 10, duration: 40, keyframes: EXIT })
+    const g = graph(project(identity, drawn(true, { x: 0, y: 0, width: 0, height: 0 })))
+    expect(g).not.toContain('scale=0:0')
+    expect(graphicOverlay(g)).toEqual({ x: '0', y: '0' })
+    expect(g).toContain('scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:')
   })
 })

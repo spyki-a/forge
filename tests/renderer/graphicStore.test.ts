@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { basename } from 'node:path'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -6,8 +6,9 @@ import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/
 import type { GraphicSpec } from '@shared/graphics/template'
 import type { GraphicTargets } from '@shared/graphics/items'
 import { drawnGraphicAsset, graphicExitKeys } from '@shared/graphics/frame'
+import { graphicTargetsAt } from '@shared/graphics/targets'
 import { copySelection } from '@shared/edit/recipes'
-import { useEditor } from '../../src/renderer/src/store'
+import { GRAPHIC_TRIM_REBAKE_MS, useEditor } from '../../src/renderer/src/store'
 
 /*
  * The store's graphic actions (docs/CLIPS.md §6.3, "The store"; §6.4's three
@@ -20,7 +21,7 @@ import { useEditor } from '../../src/renderer/src/store'
  */
 
 const bake = vi.hoisted(() => ({
-  asks: [] as { clipId: string; width: number; height: number; frames: number; fps: number; boxAllowed: boolean; styleId: string; subject: GraphicTargets['subject'] }[],
+  asks: [] as { clipId: string; width: number; height: number; frames: number; fps: number; boxAllowed: boolean; styleId: string; accent: string; subject: GraphicTargets['subject'] }[],
   /** The next answer; null is a superseded or empty bake. */
   answer: null as { pattern: string; frames: number } | null,
   forgotten: [] as string[]
@@ -29,7 +30,7 @@ const bake = vi.hoisted(() => ({
 vi.mock('../../src/renderer/src/graphicCanvas', () => ({
   bakeGraphicSequence: async (
     _spec: GraphicSpec,
-    style: { id: string },
+    style: { id: string; palette: { accent: string } },
     clipId: string,
     width: number,
     height: number,
@@ -38,7 +39,7 @@ vi.mock('../../src/renderer/src/graphicCanvas', () => ({
     targetsAt: (frame: number) => GraphicTargets,
     boxAllowed: boolean
   ) => {
-    bake.asks.push({ clipId, width, height, frames, fps, boxAllowed, styleId: style.id, subject: targetsAt(0).subject })
+    bake.asks.push({ clipId, width, height, frames, fps, boxAllowed, styleId: style.id, accent: style.palette.accent, subject: targetsAt(0).subject })
     return bake.answer ? { pattern: bake.answer.pattern.replace('<clip>', clipId), frames: bake.answer.frames } : null
   },
   forgetGraphicPreview: (clipId: string) => bake.forgotten.push(clipId),
@@ -61,11 +62,14 @@ const shot: Clip = {
   transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 }, color: { brightness: 0, contrast: 1, saturation: 1 }
 }
 
+/** The project's one style with an override only the project carries: what tells the project's style from the `clean` default. */
+const GRAPHICS = { styleId: 'clean', overrides: { 'palette.accent': '#2563EB' }, sound: true }
+
 function start(over: Partial<Project> = {}): void {
   const base = emptyProject('graphics')
   useEditor.setState({
     ...useEditor.getInitialState(),
-    project: { ...base, settings: { ...base.settings, width: 1080, height: 1920, fps: FPS }, assets: [footage], clips: [shot], ...over },
+    project: { ...base, settings: { ...base.settings, width: 1080, height: 1920, fps: FPS }, graphics: GRAPHICS, assets: [footage], clips: [shot], ...over },
     playhead: 0,
     past: [],
     future: [],
@@ -79,7 +83,10 @@ const clipOf = (id: string): Clip => project().clips.find((c) => c.id === id)!
 const assetOf = (clip: Clip): MediaAsset => project().assets.find((a) => a.id === clip.assetId)!
 const history = (): number => state().past.length
 const notices = (): string[] => state().notices.map((n) => n.text)
-const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0))
+/** Let a background bake land: a tick, under the fake clock when the trims' cases run one. */
+const settle = (): Promise<void> => (vi.isFakeTimers() ? vi.advanceTimersByTimeAsync(0).then(() => undefined) : new Promise((resolve) => setTimeout(resolve, 0)))
+/** Let a trim's edge rest: the store's one bake fires `GRAPHIC_TRIM_REBAKE_MS` after the last trim. */
+const rested = (): Promise<void> => vi.advanceTimersByTimeAsync(GRAPHIC_TRIM_REBAKE_MS).then(() => undefined)
 
 /** Add a graphic at frame 30 on V1 (it climbs to V2 over the shot) and let its bake land. */
 async function added(over: Partial<GraphicSpec> = {}): Promise<string> {
@@ -105,6 +112,17 @@ describe('addGraphicClip', () => {
     expect(notices()).toEqual(['A graphic goes on a video track'])
     expect(project().clips).toHaveLength(1)
     expect(bake.asks).toEqual([])
+  })
+
+  it('refuses a length that is not a positive number (a cleared field reads NaN), with the note, and makes nothing', async () => {
+    for (const seconds of [NaN, 0, -1, Infinity]) {
+      expect(await state().addGraphicClip('v1', 0, spec({ seconds })), String(seconds)).toBeNull()
+    }
+    expect(notices()).toEqual(Array(4).fill('A graphic needs a length in seconds'))
+    expect(project().clips).toHaveLength(1)
+    expect(project().assets).toHaveLength(1)
+    expect(bake.asks).toEqual([])
+    expect(history()).toBe(0)
   })
 
   it('mints graphic-<base36>-<5 base36>, a legal Windows basename, never a string from the spec', async () => {
@@ -134,7 +152,8 @@ describe('addGraphicClip', () => {
     expect(asset.frames).toEqual({ pattern: `/cache/${id}.seq/%05d.png`, count: 46 })
     // One undo entry for the add; the bake landing added none.
     expect(history()).toBe(1)
-    expect(bake.asks).toEqual([{ clipId: id, width: 1080, height: 1920, frames: 90, fps: FPS, boxAllowed: false, styleId: 'clean', subject: null }])
+    // The project's style with its override, as `graphicStyleOf` resolves it: not the `clean` default, which phase 1's one preset would not tell apart.
+    expect(bake.asks).toEqual([{ clipId: id, width: 1080, height: 1920, frames: 90, fps: FPS, boxAllowed: false, styleId: 'clean', accent: '#2563EB', subject: null }])
     expect(state().selectedClipId).toBe(id)
     // The undo takes the clip and its asset off together.
     state().undo()
@@ -177,13 +196,20 @@ describe('rebakeGraphic', () => {
     expect(bake.asks.map((a) => a.clipId)).toEqual([id])
   })
 
-  it('redraws at the new canvas after an aspect change, through rebakeGenerated’s arm, at the project’s new size', async () => {
-    const id = await added()
+  it('redraws at the new canvas after an aspect change, through rebakeGenerated’s arm, at the project’s new size with the targets at that size', async () => {
+    const id = await added({ subject: { clipId: 'shot', box: { x: 0.1, y: 0.2, width: 0.2, height: 0.3 }, ms: 1000 } })
+    const portrait = bake.asks[0].subject
+    expect(portrait).toMatchObject({ x: 108, y: 384, width: 216, height: 576 })
     bake.asks = []
     useEditor.setState((s) => ({ project: { ...s.project, settings: { ...s.project.settings, width: 1920, height: 1080 } } }))
     await state().rebakeGenerated()
-    expect(bake.asks).toEqual([expect.objectContaining({ clipId: id, width: 1920, height: 1080, boxAllowed: false })])
+    expect(bake.asks).toEqual([expect.objectContaining({ clipId: id, width: 1920, height: 1080, boxAllowed: false, accent: '#2563EB' })])
     expect(assetOf(clipOf(id))).toMatchObject({ width: 1920, height: 1080 })
+    // The subject in the NEW canvas's pixels (graphics/targets.ts on the 1920×1080 project), not the portrait answer again.
+    const landscape = graphicTargetsAt(project(), clipOf(id), clipOf(id).graphic!, 30, { width: 1920, height: 1080 }).subject
+    expect(landscape).not.toBeNull()
+    expect(bake.asks[0].subject).toEqual(landscape)
+    expect(bake.asks[0].subject).not.toEqual(portrait)
   })
 })
 
@@ -216,43 +242,125 @@ describe('setGraphic', () => {
     await state().setGraphic(id, { seconds: 1 })
     expect(clipOf(id).keyframes).toEqual({ zoom: [{ frame: 0, value: 1 }], ...graphicExitKeys(30, FPS) })
   })
+
+  it('a seconds that is not a positive number (a cleared field reads NaN) is no length: alone it is no edit, beside other fields they still land', async () => {
+    const id = await added()
+    bake.asks = []
+    const before = history()
+    for (const seconds of [NaN, 0, -2, Infinity]) await state().setGraphic(id, { seconds })
+    expect(clipOf(id)).toMatchObject({ duration: 90, graphic: spec() })
+    expect(history()).toBe(before)
+    expect(bake.asks).toEqual([])
+    await state().setGraphic(id, { seconds: NaN, beats: [0.1] })
+    expect(clipOf(id)).toMatchObject({ duration: 90, graphic: spec({ beats: [0.1], version: 2 }) })
+    expect(clipOf(id).keyframes).toEqual(graphicExitKeys(90, FPS))
+    expect(history()).toBe(before + 1)
+    expect(bake.asks.map((a) => a.clipId)).toEqual([id])
+  })
 })
 
 describe('trims and splits', () => {
-  it('a tail trim keeps spec.seconds equal to the clip’s length and the exit keys on its last 0.3 s, bumps the version, and rebakes', async () => {
+  // The trims' rebake waits for the edge to rest, on a clock the cases advance.
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
+
+  it('a tail trim keeps spec.seconds equal to the clip’s length and the exit keys on its last 0.3 s, bumps the version, and rebakes once the edge rests', async () => {
     const id = await added()
     bake.asks = []
     state().trimClipEnd(id, 90)
-    await settle()
     const clip = clipOf(id)
     expect(clip).toMatchObject({ start: 30, duration: 60, inPoint: 0 })
     expect(clip.graphic).toEqual(spec({ seconds: 2, version: 2 }))
     expect(clip.keyframes).toEqual(graphicExitKeys(60, FPS))
+    // Not yet: the bake fires GRAPHIC_TRIM_REBAKE_MS after the last trim.
+    await settle()
+    expect(bake.asks).toEqual([])
+    await rested()
     expect(bake.asks.map((a) => a.clipId)).toEqual([id])
+    expect(bake.asks[0].frames).toBe(60)
     // A tail trim can lengthen the clip up to the asset's ten seconds.
     state().trimClipEnd(id, 30 + 300)
     expect(clipOf(id)).toMatchObject({ duration: 300, graphic: expect.objectContaining({ seconds: 10 }) })
   })
 
-  it('a head trim takes the trimmed seconds off every beat, a beat before 0 becoming 0, and leaves inPoint at 0', async () => {
+  it('a drag’s many trims cost one bake, GRAPHIC_TRIM_REBAKE_MS after the last of them, at the last length; each move still rewrites the spec and the keys', async () => {
     const id = await added()
     bake.asks = []
+    const before = history()
+    for (const end of [110, 100, 95, 92, 88]) state().trimClipEnd(id, end)
+    // Every move was an edit the live preview follows.
+    expect(clipOf(id)).toMatchObject({ duration: 58, graphic: expect.objectContaining({ seconds: 58 / FPS, version: 6 }) })
+    expect(clipOf(id).keyframes).toEqual(graphicExitKeys(58, FPS))
+    expect(history()).toBe(before + 5)
+    await vi.advanceTimersByTimeAsync(GRAPHIC_TRIM_REBAKE_MS - 1)
+    expect(bake.asks).toEqual([])
+    await vi.advanceTimersByTimeAsync(1)
+    expect(bake.asks.map((a) => a.clipId)).toEqual([id])
+    expect(bake.asks[0].frames).toBe(58)
+    // A head trim resets the wait: one bake for the pair, at the length the pair left.
+    bake.asks = []
+    state().trimClipStart(id, 40)
+    await vi.advanceTimersByTimeAsync(GRAPHIC_TRIM_REBAKE_MS - 1)
+    state().trimClipEnd(id, 80)
+    await vi.advanceTimersByTimeAsync(GRAPHIC_TRIM_REBAKE_MS - 1)
+    expect(bake.asks).toEqual([])
+    await vi.advanceTimersByTimeAsync(1)
+    expect(bake.asks.map((a) => a.frames)).toEqual([40])
+  })
+
+  it('an edge that did not move is no edit: no history entry, no version, no bake', async () => {
+    const id = await added()
+    bake.asks = []
+    const before = history()
+    state().trimClipEnd(id, 120)
+    state().trimClipStart(id, 30)
+    expect(clipOf(id)).toMatchObject({ start: 30, duration: 90, graphic: expect.objectContaining({ version: 1 }) })
+    expect(history()).toBe(before)
+    await rested()
+    expect(bake.asks).toEqual([])
+    // Beyond the asset's room the end clamps to where it was, which is also no move: one edit and one bake for the pair.
+    state().trimClipEnd(id, 30 + 300)
+    state().trimClipEnd(id, 30 + 400)
+    expect(clipOf(id)).toMatchObject({ start: 30, duration: 300, graphic: expect.objectContaining({ version: 2 }) })
+    expect(history()).toBe(before + 1)
+    await rested()
+    expect(bake.asks).toHaveLength(1)
+    // And the same for footage: a no-op trim pushes nothing to undo.
+    const was = history()
+    state().trimClipEnd('shot', 600)
+    state().trimClipStart('shot', 0)
+    expect(history()).toBe(was)
+    expect(clipOf('shot')).toBe(project().clips.find((c) => c.id === 'shot'))
+  })
+
+  it('a head trim takes the trimmed seconds off every beat, a beat before 0 becoming 0, and leaves inPoint at 0', async () => {
+    const id = await added({ beats: [0.25, 1.0] })
+    bake.asks = []
     state().trimClipStart(id, 45)
-    await settle()
+    await rested()
     const clip = clipOf(id)
     // `trimStart` alone would put the in-point at 15; a graphic's frames start at its own first frame.
     expect(clip).toMatchObject({ start: 45, duration: 75, inPoint: 0 })
+    // 0.5 s off each: the 0.25 beat would be at -0.25 and becomes 0.
     expect(clip.graphic).toEqual(spec({ seconds: 2.5, beats: [0, 0.5], version: 2 }))
     expect(clip.keyframes).toEqual(graphicExitKeys(75, FPS))
     expect(clip.keyframes?.opacity?.map((k) => k.frame)).toEqual([66, 74])
     expect(bake.asks.map((a) => a.clipId)).toEqual([id])
   })
 
+  it('a head trim leaves a user’s other keyframe tracks where rebaseAnimation puts them, on the picture, while the exit keys are rewritten', async () => {
+    const id = await added()
+    useEditor.setState((s) => ({ project: { ...s.project, clips: s.project.clips.map((c) => (c.id === id ? { ...c, keyframes: { ...c.keyframes, zoom: [{ frame: 0, value: 1 }, { frame: 60, value: 1.2 }] } } : c)) } }))
+    state().trimClipStart(id, 45)
+    // The beats shift by the cut, so the picture at the new frame 0 is the old frame 15's: a zoom key shifts with it, as every clip's does.
+    expect(clipOf(id).keyframes).toEqual({ zoom: [{ frame: -15, value: 1 }, { frame: 45, value: 1.2 }], ...graphicExitKeys(75, FPS) })
+  })
+
   it('a trim of a footage clip is as it was: no spec, no keys written, no bake', async () => {
     bake.asks = []
     state().trimClipEnd('shot', 300)
     state().trimClipStart('shot', 10)
-    await settle()
+    await rested()
     expect(clipOf('shot')).toMatchObject({ start: 10, duration: 290, inPoint: 10 })
     expect(clipOf('shot').keyframes).toBeUndefined()
     expect(bake.asks).toEqual([])
@@ -265,15 +373,15 @@ describe('trims and splits', () => {
     state().splitAtPlayhead()
     expect(project().clips.filter((c) => c.graphic)).toHaveLength(1)
     expect(clipOf(id)).toMatchObject({ start: 30, duration: 90 })
-    expect(notices()).toContain('A graphic is trimmed, not split')
-    expect(notices()).not.toContain('Put the playhead inside a clip to split it')
+    expect(notices()).toEqual(['A graphic is trimmed, not split'])
     expect(history()).toBe(before)
-    // With nothing selected, both are under the playhead: the shot splits, the graphic stays whole.
-    useEditor.setState({ selectedClipId: null, selectedClipIds: [] })
+    // With nothing selected, both are under the playhead: the shot splits, the graphic stays whole and is said again.
+    useEditor.setState({ selectedClipId: null, selectedClipIds: [], notices: [] })
     state().splitAtPlayhead()
     expect(project().clips.filter((c) => c.assetId === 'talk')).toHaveLength(2)
     expect(project().clips.filter((c) => c.graphic)).toHaveLength(1)
     expect(clipOf(id)).toMatchObject({ start: 30, duration: 90 })
+    expect(notices()).toEqual(['A graphic is trimmed, not split'])
   })
 })
 
@@ -292,14 +400,22 @@ describe('the arms', () => {
     expect(assetOf(clipOf(id)).frames).toEqual({ pattern: `/cache/${id}.seq/%05d.png`, count: 46 })
   })
 
-  it('rebakeFollowed redraws a graphic whose onset target sits on a re-followed clip: spec.subject’s, or the caption track’s clip under it', async () => {
-    const named = await added({ subject: { clipId: 'shot', box: { x: 0.1, y: 0.2, width: 0.2, height: 0.3 }, ms: 1000 } })
+  it('rebakeFollowed redraws a graphic whose onset target sits on a re-followed clip: spec.subject’s, or the caption track’s clip under it, and no other', async () => {
+    // A second shot with a path of its own, on v2 past the graphics, so `rebakeFollowed(['broll'])` reaches the arm.
+    const broll: MediaAsset = { ...footage, id: 'broll', path: '/media/broll.mp4', name: 'broll' }
+    start({ assets: [footage, broll], clips: [shot, { ...shot, id: 'b', assetId: 'broll', trackId: 'v2', start: 300, duration: 300 }] })
+    const named = await added({ subject: { clipId: 'b', box: { x: 0.1, y: 0.2, width: 0.2, height: 0.3 }, ms: 1000 } })
     const under = await added()
+    expect(clipOf(named).trackId).toBe('v2')
     bake.asks = []
     await state().rebakeFollowed(['other'])
     expect(bake.asks).toEqual([])
+    // The named subject's clip is on broll; the caption track's clip under frame 30 is the talk shot.
+    await state().rebakeFollowed(['broll'])
+    expect(bake.asks.map((a) => a.clipId)).toEqual([named])
+    bake.asks = []
     await state().rebakeFollowed(['talk'])
-    expect(bake.asks.map((a) => a.clipId).sort()).toEqual([named, under].sort())
+    expect(bake.asks.map((a) => a.clipId)).toEqual([under])
   })
 
   it('removing a graphic reaches forgetGraphicPreview in the preview’s sweep', () => {
