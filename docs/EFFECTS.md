@@ -8496,7 +8496,7 @@ suite and CI are the orchestrator's.
   and the preview's recompute on a long followed clip while editing.
 - **Burned-in text** (§5.3): after 1g.
 
-## 61. Graphics: the forks measured (phase 0 of step 3, then phase 1's first) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22), and on the Surface the libass run and the development app (2026-10-27); in node, phase 1's M9 (2026-10-27) and the stroke's flattening (2026-10-28); and D10's three readings, the Noto fonts' provenance, the Mac's libass against the fontsdir, and `document.fonts.check` (2026-10-29); and under painter A, Chrome 152's canvas (negative radii, a 0-side canvas, `globalAlpha`) and, in node, the draw list's mixed faces and bounds and the frames' edges (2026-10-30/31)
+## 61. Graphics: the forks measured (phase 0 of step 3, then phase 1's first) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22), and on the Surface the libass run and the development app (2026-10-27); in node, phase 1's M9 (2026-10-27) and the stroke's flattening (2026-10-28); and D10's three readings, the Noto fonts' provenance, the Mac's libass against the fontsdir, and `document.fonts.check` (2026-10-29); and under painter A, Chrome 152's canvas (negative radii, a 0-side canvas, `globalAlpha`) and, in node, the draw list's mixed faces and bounds and the frames' edges (2026-10-30/31); and lane C's worker encoder and measureText in the pane's Chrome 152 (2026-11-01) and, in node, the box route under crop, mask, matte and transitions (2026-11-02)
 
 For `docs/CLIPS.md` §6.15 (step 3's phase 0, "Measure before relying"):
 pieces 0.1–0.3 were built on the evening of 2026-10-21 in seven commits,
@@ -10115,8 +10115,8 @@ For `CLIPS.md` §6.3's lane C, its first piece: `b610c91` (`graphicCanvas.ts`,
 critics' must-fixes); the `graphicCanvas.ts` Built note. Measured by
 `b610c91`'s builder on 2026-11-01 in the Browser pane's Chrome 152
 (Claude/4.4212.0, Chrome/152.0.7977.167) on the harness page (`npm run
-harness`); Electron cannot start in the sandbox, so none of it is the
-app's.
+harness`), at `b610c91`, not re-run after `1ea9a96`; Electron cannot
+start in the sandbox, so none of it is the app's.
 
 - **`encodeFrames` through the shipped worker route**: 60 frames of a
   1080×1920 synthetic (a panel, 72 px text, a stroke), depth 4, a recorder
@@ -10128,8 +10128,9 @@ app's.
   from its new place beside `encodePool.ts`, with no console warning.
   Frame 30's PNG decoded with `premultiplyAlpha: 'none'` reads the stroke
   pixel at (250, 1060) as 38, 99, 233, 255 (#2663e9) and a clear pixel
-  0, 0, 0, 0. The first run's extra 58.9 ms is the workers' start, read
-  by difference, not timed on its own.
+  0, 0, 0, 0. The first run's extra 58.9 ms is attributed to the
+  workers' start by difference, not timed on its own (a first run also
+  carries the JIT's and the first encode's warm-up).
 - **M1 still runs on the pool**: `encode: { frames: 30, pool: [4], region:
   ['box'] }` → 5.45 ms a frame at p50, 8.20 at p95, 43.1 KB a frame at
   908×486, route `'pool'`, the harness asking for the pool by name so the
@@ -10147,8 +10148,10 @@ app's.
   `itemBounds` {85.6, 785.6, 361.06×103.4} (clean's shadow reach,
   14.4/18): no shrink.
 - **The held frame is cached**: `graphicPreviewCanvas` at frames 60 and 70
-  of a 90-frame clip with a beat at 0.5 s returns one canvas, its key
-  ending `'|settled'`.
+  of a 90-frame clip with a beat at 0.5 s returns one canvas, its stamp
+  (then the key) ending `'|settled'`; since `1ea9a96` the stamp is a
+  paint count and the key the entry's signature, so the reading cannot
+  be repeated as written.
 - **In the test's fake, before `1ea9a96`** (node, a held face landing at
   0.9 em a grapheme for the fallback's 0.55): the bake's box was {84, 782,
   790×110} against 894 wide once the face had landed, and every fill pass
@@ -10178,13 +10181,18 @@ project whose graphic's asset carries an 840×300 box at 120, 1400.
 |---|---|---|
 | at the identity (`a273729`) | `scale=840:300…pad=840:300`, overlay `x='120'`, `y='1400'` | `scale=1080:1920` at `x='0'`, `y='0'` |
 | turned 10° (`a273729`) | refused: `clipBox`'s placement less the turn's growth (a negative offset), no 840×300 scale | — |
-| `defaultMask('reveal')` | `geq=lum='(clip((1-hypot(…(X-0.5*W)…)/(0.25*W)…` against the stream's W and H, the 840×300 box | the preview draws the stencil against the clip's canvas-sized destination |
-| `crop {0, 0, 540, 1920}` | `crop=w='min(540,in_w)'` on the 840×300 stream, still overlaid at 120, 1400 | the crop is of the canvas-sized picture |
+| `defaultMask('reveal')` | `geq=lum='(clip((1-hypot(…(X-0.5*W)…)/(0.25*W)…` against the stream's W and H, the 840×300 box | the preview draws the stencil against the clip's canvas-sized destination (read from the code, not probed) |
+| `crop {0, 0, 540, 1920}` | `crop=w='min(540,in_w)'` on the 840×300 stream, still overlaid at 120, 1400 | the crop is of the canvas-sized picture (read from the code; the canvas route's filter not probed) |
 | a luma wipe (an `extraTransitions` entry with a mask) | its pattern `format=gray,scale=840:300` | `scale=1080:1920`; the preview wipes against the destination (`Preview.tsx:1826-1829` at `fa4ddc3`) |
-| `zoom-in` | `scale=trunc(iw*1.15/2)*2:-2,crop=iw/1.15:ih/1.15` on the 840×300 stream: a punch-in about the box's centre | about the canvas's centre |
+| `zoom-in` | `scale=trunc(iw*1.15/2)*2:-2,crop=iw/1.15:ih/1.15` on the 840×300 stream: a punch-in about the box's centre | about the canvas's centre (inferred; the canvas route's filter not probed) |
 | `slide-left` | overlay `(120)+(if(lt(t-0.33,0.47), 1080*(…`, the travel the canvas's | the same |
 | `dissolve` | `fade=t=in…alpha=1` | the same |
 | a hand-made `box: {0, 0, 0, 0}` | `scale=0:0:force_original_aspect_ratio=decrease`, which fails the render | — |
+
+Probed filter text on both routes: the identity row and the luma wipe;
+on the box route alone: the mask, the crop and the punch-in, the turn
+and the 0×0 box (`slide-left` and `dissolve` were read on both, as
+`fa4ddc3`'s message gives them).
 
 So `identityPlaced` (`src/shared/render/plan.ts:505`) refuses a crop, any
 mask that masks something (a full-frame mask, a blur of 0, emits nothing
@@ -10354,8 +10362,8 @@ frame; the rendered box case is `graphic.int`'s, lane D's.
 22. **The bake's encode is the workers', and the measure is the paint's
     font** (Chrome 152, the pane, 2026-11-01; "The worker encoder and
     measureText" above; `b610c91`, `1ea9a96`): `encodeFrames` through
-    four module workers wrote 60 1080×1920 frames in 206.8 ms against the
-    pool's 523.8, byte-equal, so M2's choice holds through the code that
+    four module workers wrote 60 1080×1920 frames in 206.8 ms (the second
+    run; 265.7 the first, which started them) against the pool's 523.8, byte-equal, so M2's choice holds through the code that
     ships, and a refused worker falls back to the pool once a session;
     `measureText` counts `letterSpacing`, so `graphicMeasure`, setting the
     font and spacing `textSpecFont` gives the painter, boxes text that

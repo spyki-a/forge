@@ -8423,9 +8423,9 @@ its three jobs.
 | `src/shared/graphics/targets.ts` | `graphicTargetsAt` (`subject` only in phase 1; `tip` and `screen` are §6.18's and §6.16's branches, not built; 2026-10-31, the frames' Built note) | pure; reads the project through `sourceToFrame`, `subjectBoxesAt` and `captionSourceClip`, never a second model of the crop |
 | `src/shared/graphics/paint.ts` | `paintDrawList2d` and `PaintOptions`, importing `STROKE_MIN_PX` and `strokeWidth` from `stroke.ts`, never declaring its own (corrected 2026-10-28; built 2026-10-30 as a re-export, `paint.ts:49`, since a bare import of either is unused, the painter drawing `strokeShape`'s width, and a reader of the painter then takes the floor from its module) (`/// <reference lib="dom" />` scoped to the file, as `textPaint.ts:1-5`) | renderer (node's tests drive it on a fake context) |
 | `src/renderer/src/graphicCanvas.ts` | preview, bake, frames for the harness; `GRAPHIC_BAKE_REGION` (`'box'`) and `GRAPHIC_POOL_DEPTH` (4), set by M1 on 2026-10-27 (§6.15); and, built 2026-10-31/11-01 (`b610c91`, `1ea9a96`; the `graphicCanvas.ts` Built note below), `graphicMeasure`, the renderer's `TextMeasure` (`:81`), with `graphicPreviewCanvas` (`:263`), `forgetGraphicPreview` (`:339`), `bakeGraphicSequence` (`:408`) and `graphicFrameCanvases` (`:482`) | renderer |
-| `src/renderer/src/encodePool.ts` | `encodeFrames`, the `toBlob` pool; and the worker back-end M2 took on 2026-10-27 (§6.15), its module worker file moved beside it from `harness/` (built 2026-10-31, `b610c91`: `FrameEncoder` `:47`, the `encoder?: 'workers' \| 'pool'` option `:72`, the workers the default and the pool the remembered fallback when they are refused, `startWorkers` `:202`, `encodeFrames` `:259`; the module worker is `src/renderer/src/graphicEncodeWorker.ts`, 58 lines, `git mv`'d from `harness/`) | renderer |
+| `src/renderer/src/encodePool.ts` | `encodeFrames`, the `toBlob` pool; and the worker back-end M2 took on 2026-10-27 (§6.15), its module worker file moved beside it from `src/renderer/src/harness/` (built 2026-10-31, `b610c91`: `FrameEncoder` `:47`, the `encoder?: 'workers' \| 'pool'` option `:72`, the workers the default and the pool the remembered fallback when they are refused, `startWorkers` `:202`, `encodeFrames` `:259`; the module worker is `src/renderer/src/graphicEncodeWorker.ts`, 58 lines, `git mv`'d from `src/renderer/src/harness/`) | renderer |
 | `src/shared/render/textStyle.ts` | `textInkReach(styleId, px): TextInkReach`, with `InkReach` and `TextInkReach { user; device }` (`:682`, `:699`, `:743`), the one export this section adds to it (built 2026-10-30, the draw list's Built note) | pure; read by `items.ts` |
-| `src/shared/render/textPaint.ts` | nothing new; its box, split and step passes multiply into `globalAlpha` (`:454`, `:592`, `:640`) instead of setting it, since `d822c56` (painter A's Built note), so an item's opacity reaches every pass `drawTextOnto` makes. Corrected 2026-11-01 (`b610c91`, the `graphicCanvas.ts` Built note below): one export after all, `textSpecFont(spec, height, line = 0): { font; letterSpacing; px }` (`:370`), the measure's font, built from the painter's own `fontString` (`:341`) and two helpers cut out of `drawTextOnto` so its three sites and this read one rule, `scaledPx` (`:350`) and `letterSpacingOf` (`:355`); `drawTextOnto`'s behaviour unchanged | renderer |
+| `src/shared/render/textPaint.ts` | nothing new; its box, split and step passes multiply into `globalAlpha` (`:454`, `:592`, `:640`) instead of setting it, since `d822c56` (painter A's Built note), so an item's opacity reaches every pass `drawTextOnto` makes. Corrected 2026-11-01 (`b610c91`, the `graphicCanvas.ts` Built note below): one export after all, `textSpecFont(spec, height, line = 0): { font; letterSpacing; px }` (`:370`), the measure's font, built from the painter's own `fontString` (`:341`) and two helpers cut out of `drawTextOnto` so its three sites and this read one rule, `scaledPx` (`:350`) and `letterSpacingOf` (`:355`); `drawTextOnto`'s behaviour unchanged, the three `globalAlpha` multiplies above now at `:482`, `:620` and `:668` | renderer |
 | `src/shared/render/textLayout.ts` | added 2026-11-01 (`b610c91`): `fontPxOf(spec, height)` (`:46`), `layoutText`'s `max(8, round(size × height))` as a function, read by `layoutText` and `textSpecFont` | pure |
 
 **`encodePool.ts` is extracted, `captionBake.ts` is not touched.** The pool
@@ -9719,16 +9719,18 @@ the caller and passed into `drawListAt`, so the drawing stays pure:
 >   encoders.length` (`:265`), one frame in flight per encoder, the writes
 >   in frame order as before, every encoder closed in a `finally`
 >   (`:318`). `src/renderer/src/graphicEncodeWorker.ts` moved from
->   `harness/` (`git mv`, its header rewritten, the protocol unchanged);
->   `harness/graphicCheck.ts` reaches it at `'../graphicEncodeWorker.ts'`
+>   `src/renderer/src/harness/` (`git mv`, its header rewritten, the
+>   protocol unchanged); `src/renderer/src/harness/graphicCheck.ts`
+>   reaches it at `'../graphicEncodeWorker.ts'`
 >   (`:740`), and M1's pool run asks `encoder: 'pool'` by name (`:667`) so
 >   its figure stays the pool's; M2's own worker run is left as it was.
 > - **`textSpecFont`** (`textPaint.ts:370`) and **`fontPxOf`**
 >   (`textLayout.ts:46`), as the file table above says; `tests/textPaint`,
 >   `captionBake` and `textAnimation` pass as before.
-> - **Measured, 2026-11-01**, Chrome 152 (Claude/4.4212.0,
->   Chrome/152.0.7977.167) on the harness page (`npm run harness` through
->   the Browser pane; Electron cannot start in the sandbox): through the
+> - **Measured, 2026-11-01, at `b610c91`** (not re-run after `1ea9a96`),
+>   Chrome 152 (Claude/4.4212.0, Chrome/152.0.7977.167) on the harness
+>   page (`npm run harness` through the Browser pane; Electron cannot
+>   start in the sandbox): through the
 >   shipped worker route, `encodeFrames` over 60 frames of a 1080×1920
 >   synthetic (a panel, 72 px text, a stroke) at depth 4 with a recorder
 >   for `write` took 265.7 ms the first run (the four workers started
@@ -9743,8 +9745,10 @@ the caller and passed into `drawListAt`, so the drawing stays pure:
 >   `graphicFrameCanvases` lands inside its `itemBounds` ({100, 800,
 >   332.26×71}, its ink 93..439 × 798..864, inside {85.6, 785.6,
 >   361.06×103.4}): no shrink. The preview at frames 60 and 70 of a
->   90-frame clip with a beat at 0.5 s is one canvas, its key ending
->   `'|settled'`. `EFFECTS.md` §61, "The worker encoder and measureText,
+>   90-frame clip with a beat at 0.5 s is one canvas, its stamp, then the
+>   key, ending `'|settled'` (since `1ea9a96` the stamp is a paint count
+>   and the key is the entry's signature, so that reading cannot be
+>   repeated as written). `EFFECTS.md` §61, "The worker encoder and measureText,
 >   2026-11-01".
 > - **The three must-fixes of `1ea9a96`**, each verified against
 >   `b610c91` first. (1) The bake's lists and box were measured before the
@@ -9848,7 +9852,20 @@ the caller and passed into `drawListAt`, so the drawing stays pure:
 >   2, and piece 2 did not; the preview asks for its own faces through
 >   `warming`, but an ask made before the catalogue lands is unrecorded and
 >   no effect re-asks for a graphic when it lands. Unmeasured, and moot
->   until a graphic can be made in the app (§6.6's panel).
+>   until a graphic can be made in the app (§6.6's panel). Accepted in
+>   `1ea9a96` and unmeasured: the probe's extra drawer pass over the
+>   moving frames (the cost of fix (1)), and the box route's whole-clip
+>   scans (the drawer and `itemBounds` through `graphicBox`, and
+>   `movingFramesOf`'s targets scan, about 1,800 `drawListAt` calls for a
+>   60 s clip at 30 fps), which `graphicBox`'s contract (the whole clip)
+>   requires and the test's sliding drawer would catch if cut.
+> - **Not built, as planned (phase 3, §6.16's):** `screenTargetsAt` (no
+>   such function in `graphicCanvas.ts`; `liveBakers.graphic` and
+>   `rebakeGraphic` pass every template through untouched), and
+>   `paintFrame`'s compositor branch: `paintFrame` (`:208`) is painter A
+>   alone, its comment (`:199-207`) naming the seam as §6.16's, and
+>   `needsCompositor` is false for every phase-1 list (pinned in lane B's
+>   `graphicDrawList` cases).
 
 #### The bake region (M1) and the box route
 
@@ -9946,7 +9963,12 @@ picked it on 2026-10-27, so every (box) item is to be built, in phase 1):
 >   preview wipes against the destination (`Preview.tsx:1826-1829` at
 >   `fa4ddc3`); `zoom-in`'s punch-in crops the 840×300 stream, about the
 >   box's centre, not the canvas's. `slide-left` (its travel the
->   canvas's) and `dissolve` come out the same either way. A hand-made
+>   canvas's) and `dissolve` come out the same either way. Probed on both
+>   routes: the identity rows and the luma wipe; on the box route alone:
+>   the mask, the crop and the punch-in, whose canvas-route picture (the
+>   stencil against the canvas-sized clip, the crop of the canvas-sized
+>   stream, the punch-in about the canvas's centre) is read from the code,
+>   not probed. A hand-made
 >   asset with `box: {0, 0, 0, 0}` emitted
 >   `scale=0:0:force_original_aspect_ratio=decrease`. `EFFECTS.md` §61,
 >   "The box route under crop, mask, matte and transitions, 2026-11-02".
@@ -10140,6 +10162,29 @@ picked it on 2026-10-27, so every (box) item is to be built, in phase 1):
 >   repaint)`, then `return live ?? nothing()`; the targets resolved per
 >   draw, as the moment's branch resolves its textures; the sweep's
 >   `forgetGraphicPreview(clipId)` (`:725`) beside `forgetMomentPreview`.
+> - **The five must-fixes of `fa4ddc3`**, each verified against
+>   `a273729` first, the two critics' five entries (critic 1's two,
+>   critic 2's three; (2) and (5) overlap, critic 2's third naming both
+>   the condition and the subject route). (1) The box route under a crop
+>   or a mask (critic 1), widened on measurement to the matte and any
+>   `transitionIn` (the box route's note above). (2) `rebakeFollowed`'s
+>   negative returned at `paths.size === 0` before the arm, so the arm's
+>   condition `assetIds.includes(under.assetId)` relaxed to `if (under)`
+>   passed all 16 cases (critic 1; critic 2's Mw; §6.4's lane-C note).
+>   (3) The head trim's beat floor was untested: the fixture's beats
+>   [0.5, 1.0] under a 0.5 s cut never went below 0, and `Math.max(0,
+>   beat − cut)` → `beat − cut` passed all 16 cases (critic 2's Ma); the
+>   beats are now [0.25, 1.0]. (4) The store's style: `graphicStyleOf(
+>   project, spec)` → `CLEAN_GRAPHIC_STYLE` passed all 16 (critic 2's Mb),
+>   as E10 had in the export, phase 1 having one preset; the case now
+>   reads a `'palette.accent'` override of `'#2563EB'`. (5)
+>   `rebakeFollowed`'s subject route was unexercised: with both graphics
+>   over the one shot, the route cut to `captionSourceClip(project,
+>   clip.start)` alone passed the store suite, caught only by
+>   `graphicGuards`' textual pin (critic 2's Mc); the case now has a
+>   second asset, `broll`, under a named subject. Four tests among them
+>   passed against the bug they were written to guard (the floor, the
+>   style, the arm's condition, the subject route).
 > - **Nothing in the app calls `addGraphicClip` yet**: its caller is
 >   §6.6's panel (phase 2), and the Director's graphics come through §6.6's
 >   pure apply. So the Preview's branch and the export's are exercised by
@@ -10202,9 +10247,12 @@ picked it on 2026-10-27, so every (box) item is to be built, in phase 1):
 >   `setGraphic` or `addGraphicClip`; an empty patch editing; a head trim
 >   clamping other tracks' keys; the spec keeping its `seconds`; the keys
 >   left; `inPoint` left), then the 37 re-run against the changed code,
->   all killed but S16, P1 and P2, whose lines were rewritten: S16 is
->   superseded by T1, T5 and T5b, and P1 and P2 were re-anchored and
->   killed.
+>   all killed but S16, P1 and P2, which could not be applied (anchor
+>   count 0, their lines rewritten), not survivors: S16 is superseded by
+>   T1, T5 and T5b, and P1 and P2 were re-anchored and killed. The
+>   totals are the messages' count; their named mutants come to one
+>   fewer each (36 in `a273729`: S1–S17, E1–E10, P1–P6, W1–W3; 26 in
+>   `fa4ddc3`: B1–B7, T1–T18, T5b).
 > - **Where it differs from the plan, and why**, beyond the corrections
 >   in place above: no `footage?` yet; `setGraphic`'s `seconds` sets the
 >   duration directly; a head trim cannot lengthen a graphic; the trim's
@@ -10213,12 +10261,21 @@ picked it on 2026-10-27, so every (box) item is to be built, in phase 1):
 >   export's `followCanvas` is kept though redundant, the plan asking for
 >   the moment's shape; a rename of `identityPlaced` to `boxRouteAllowed`
 >   was declined, the plan naming it and `graphicGuards` pinning it once.
+>   The store mints the id as a literal (`:3482`), not through a
+>   `newId('graphic')`: `fa4ddc3`'s message lists that as a difference,
+>   but it is §6.1's own rule (the store's `graphic-<base36 time>-<5
+>   base36>`), and §6.6's `newId('graphic')` is the Director's
+>   `ApplyContext.newId` (`director/apply.ts:84`), not a store helper.
 > - **Left**, as planned: lane D's harness `primitives` option and
 >   `PRIMITIVES_SPEC`, `graphic.int`'s phase-1 cases with the box case and
 >   `SHAPES`' graphic overlay (§6.11); the Indic render check and M8, M13
 >   and M19 (the user's runs); phase 2's `place.auto` recompute in
 >   `rebakeGenerated`'s arm, §6.16's screen-card realign and `footage`;
->   `addGraphicClip`'s caller, §6.6's panel.
+>   `addGraphicClip`'s caller, §6.6's panel. Not built, as planned (phase
+>   3, §6.16's): the screen card's `footage` reaching the export through
+>   `liveBakers.graphic` and `screenTargetsAt`, and a dropped screen
+>   card's strike of its two opacity keys from the export's copy of the
+>   recording clip; the export's branch has neither.
 
 #### Degraded modes
 
@@ -10720,9 +10777,19 @@ assertions beside them (`if (drawsItself(c)) return { ...c, crop: undefined
 > critics (the three store arms and the wiring cases, with §6.3's export,
 > store and preview), then `8acf930` after two critics read its working
 > tree on `fa4ddc3` (the strips' shot rule; two must-fixes, each verified
-> against the code first, both held). Pushed with the lane in one push
-> ending at `8acf930` (the CI reading is in §6.3's `graphicCanvas.ts`
-> Built note). Figures from the three messages and the test files'
+> against the code first, both held). Piece 3's builder returned no
+> report: its whole answer was one line, that its full suite run was
+> still in progress and it would wait for it before staging and
+> committing, and it did not commit. The two critics read its
+> uncommitted tree (four files) on `fa4ddc3`; one critic's own full run
+> failed only on the other critic's scratch file,
+> `tests/renderer/zz-critic-scratch.test.ts`, deleted while vitest
+> collected it, with 4,530 passed. The fixer committed the tree with both
+> must-fixes as `8acf930` and re-ran the full suite once the critics had
+> finished, so `8acf930`'s message and the fixer's run, not the
+> builder's, are the source of this note's tables and totals. Pushed with
+> the lane in one push ending at `8acf930` (the CI reading is in §6.3's
+> `graphicCanvas.ts` Built note). Figures from the three messages and the test files'
 > re-run at `8acf930` (`graphicGuards` 25, `sourceChoice` 31,
 > `graphicStore` 21, vitest exit 0); line numbers read at `8acf930`.
 > - **The three arms** (`src/renderer/src/store.ts`). `rebakeGenerated`
@@ -10766,13 +10833,14 @@ assertions beside them (`if (drawsItself(c)) return { ...c, crop: undefined
 >   read `!c.text && !c.solid`, the comment above them (`:4725-4731`)
 >   naming no kinds and pointing at `stripShotOf` as the rule's other
 >   site; `stripShotOf` (`components/tools/SourceLine.tsx:115`, the import
->   at `:5`) reads `!drawsItself(c)`, its doc comment (`:108-111`)
->   enumerating nothing. In `graphicGuards`, `SPELLED` is `JOINED|NEGATED`
+>   at `:5`) reads `!drawsItself(c)`, its doc comment (`:106-111`)
+>   enumerating no kinds (`:109-110` the lines `8acf930` rewrote). In `graphicGuards`, `SPELLED` is `JOINED|NEGATED`
 >   (`:162-164`): the `??`/`||` form as before and
 >   `!R.F\s*&&\s*!R.F`, with `\s*` rather than ` *` because the store's
 >   form spans four lines; the two files join `SITES` (`:194-195`, so two
 >   more "spells out none" cases, 25 in all); both old lists join the
->   liveness samples (`:201`), the store's as its four-line text, which is
+>   liveness samples (the `before` array, `:201`; its comment and the two
+>   new samples `:208-211`), the store's as its four-line text, which is
 >   what holds the joint to `\s*`. `tests/renderer/sourceChoice.test.ts`,
 >   22 cases at `fa4ddc3` and 31 at `8acf930`: a `rebakeGraphic` stub in
 >   the `beforeEach` (`:121`; set inside one test, it leaked into every
@@ -12516,7 +12584,7 @@ annotations.
   the same spec twice identical. M8's agreement and M19's minimum width
   recorded; M13's first half (the primitives' spec baked twice,
   `framemd5`-equal; the Mac against the Surface recorded). (Waits on lane
-  C's `graphicCanvas.ts` and lane D's `primitives` half; M8, M13 and M19
+  C's `graphicCanvas.ts` [in, 2026-11-01, below] and lane D's `primitives` half; M8, M13 and M19
   unmeasured. Lane B's draw list, painter and frames, which it reads, are
   in, 2026-10-31; lane C's `graphicCanvas.ts`, whose
   `graphicFrameCanvases` and `bakeGraphicSequence` the check drives, is
@@ -12536,7 +12604,8 @@ annotations.
   rad/s, where the reference's own error leaves room under the bar;
   §6.13's Built note.)
 - `graphic.int`'s phase-1 cases frame-exact at 9:16 and 16:9 on both builds
-  (CI). (Lane D's; not written. What they render is in since `8acf930`:
+  (CI). (Lane D's; not written. What they render is in since `a273729` and
+  `fa4ddc3` (pushed as `8acf930`):
   the export's graphic branch and the box route, checked so far through
   `buildRenderPlan`'s text and fake bakers, not a rendered frame; §6.3's
   box route Built note.)
@@ -13804,8 +13873,9 @@ values, dated, as the steps above carry their Built notes (it did,
 >   the workers the default with the pool as a remembered fallback;
 >   §6.3's `graphicCanvas.ts` Built note. Measured there 2026-11-01 in the
 >   pane's Chrome 152, not the app: 60 frames at 1080×1920 through
->   `encodeFrames` at depth 4, 206.8 ms on four workers against 523.8 ms
->   on the pool, byte-equal PNGs.)
+>   `encodeFrames` at depth 4, 206.8 ms on four workers (the second run;
+>   265.7 the first, which started them) against 523.8 ms on the pool,
+>   byte-equal PNGs.)
 > - **M3 (row 41): `CLUSTER_SCRIPTS` = `['Devanagari', 'Telugu']`.** "A
 >   script enters `CLUSTER_SCRIPTS` only if, on both machines, the
 >   cumulative per-cluster paint's last frame equals the whole word's
@@ -13874,8 +13944,8 @@ values, dated, as the steps above carry their Built notes (it did,
 > on top, and are phase 1's render check's to measure. Workers ran on the
 > canvas only; the box through workers is not measured. A packaged app's
 > page loads from disk (`src/main/index.ts:229`), and a worker there is
-> not measured (still so after `b610c91` built the back-end, 2026-11-02:
-> the production build emits the worker chunk, the packaged page's start
+> not measured (still so after `b610c91` built the back-end on 2026-10-31;
+> read again 2026-11-02 at `8acf930`: the production build emits the worker chunk, the packaged page's start
 > of it is unread; §6.3's `graphicCanvas.ts` Built note). Pool 4's lead over pool 2 at the box is 2.4 % at p50. The
 > conjuncts were not judged by eye on the Surface. The same four-deep
 > canvas pool read 20.77 ms a frame in M1's call and 23.35 in M2's (12.4 %
