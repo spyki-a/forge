@@ -61,7 +61,8 @@ const bakers = (): Bakers => ({
   title: async () => { throw new Error('no titles') },
   paper: async () => { throw new Error('no paper') },
   carousel: async () => { throw new Error('no carousel') },
-  moment: async () => { throw new Error('no moments') }
+  moment: async () => { throw new Error('no moments') },
+  graphic: async () => { throw new Error('no graphics') }
 })
 
 /** Two photos and a speaking clip of `clipSeconds`; the Director's standard shots, applied and rendered. */

@@ -67,7 +67,8 @@ const bakers = (colours: Record<string, string>): Bakers => ({
   solid: async () => { throw new Error('no solid') },
   title: async () => { throw new Error('no title') },
   paper: async () => { throw new Error('no paper') },
-  carousel: async () => { throw new Error('no carousel') }
+  carousel: async () => { throw new Error('no carousel') },
+  graphic: async () => { throw new Error('no graphic') }
 })
 
 beforeAll(async () => {

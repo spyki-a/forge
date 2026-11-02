@@ -44,7 +44,7 @@ const unused = async (): Promise<never> => {
 }
 const bakers: Bakers = {
   solid: (spec, key, w, h) => drawCard(spec.color, key, w, h),
-  text: unused, textSequence: unused, title: unused, paper: unused, carousel: unused, moment: unused
+  text: unused, textSequence: unused, title: unused, paper: unused, carousel: unused, moment: unused, graphic: unused
 }
 
 async function landscapeEdit(): Promise<Project> {

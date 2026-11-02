@@ -51,6 +51,9 @@ import { forgetTextPreview, textPreviewCanvas } from '../textCanvas'
 import { paperPreviewCanvas } from '../paperCanvas'
 import { carouselPreviewCanvas } from '../carouselCanvas'
 import { forgetMomentPreview, momentPreviewCanvas } from '../momentCanvas'
+import { forgetGraphicPreview, graphicPreviewCanvas } from '../graphicCanvas'
+import { graphicStyleOf } from '@shared/graphics/style'
+import { graphicTargetsAt } from '@shared/graphics/targets'
 import { momentTextures } from '@shared/render/momentTextures'
 import { clipRateAt, clipSpeed } from '@shared/render/speed'
 import { activeCaptionStyle, captionAt, captionFaces, drawCaptions } from '../captionPreview'
@@ -718,6 +721,8 @@ export function Preview(): ReactNode {
       forgetTextPreview(clipId)
       // A moment's scene holds two full-size textures on the one WebGL context; a re-directed ad makes new ids.
       forgetMomentPreview(clipId)
+      // A graphic's canvas, its dim layers and the faces it was waiting on (graphicCanvas.ts).
+      forgetGraphicPreview(clipId)
       // And the wipe's, which is keyed `<clip>#wipe` for the same reason a
       // sticker's matte is: it belongs to the clip, not to the mask file.
       forgetWipe(`${clipId}#wipe`)
@@ -1309,6 +1314,29 @@ export function Preview(): ReactNode {
           : null
         // Not drawable yet (the pictures loading) or not at all (a shot it bridged is gone): nothing,
         // never the baked file — those frames are of a picture that may no longer be beneath it.
+        return live ?? nothing()
+      }
+
+      if (layer.clip.graphic) {
+        /*
+         * A graphic is drawn live from its spec through the one engine its
+         * bake draws with (graphicCanvas.ts, docs/CLIPS.md §6.3), under the
+         * style the export resolves (`graphicStyleOf`) and the targets the
+         * export reads (graphics/targets.ts): the subject fixed at the clip's
+         * first frame, whatever frame is asked; phases 3 and 4's per-frame
+         * targets read the frame's own. Nothing rather than the baked file:
+         * its frames may be of a spec, a canvas or a subject no longer there.
+         */
+        const live = graphicPreviewCanvas(
+          layer.clip.id,
+          layer.clip.graphic,
+          graphicStyleOf(project, layer.clip.graphic),
+          ASPECTS[aspect].width,
+          ASPECTS[aspect].height,
+          { frame: playhead - layer.clip.start, total: layer.clip.duration, fps },
+          graphicTargetsAt(project, layer.clip, layer.clip.graphic, playhead, { width: ASPECTS[aspect].width, height: ASPECTS[aspect].height }),
+          repaint
+        )
         return live ?? nothing()
       }
 

@@ -524,7 +524,7 @@ describe('an export redraws a moment', () => {
         calls.push({ key, width, height, from: textures.from?.path ?? null, to: textures.to.path, at: [textures.from?.at ?? null, textures.to.at] })
         return { pattern: `/cache/${key}.seq/%05d.png`, frames }
       },
-      text: unused, textSequence: async () => null, solid: unused, title: unused, paper: unused, carousel: unused
+      text: unused, textSequence: async () => null, solid: unused, title: unused, paper: unused, carousel: unused, graphic: unused
     }
     const edit = project({ width: 1080, height: 1920 })
     const baked = await bakeForExport(edit, { width: 1920, height: 1080 }, bakers)
@@ -550,7 +550,7 @@ describe('an export redraws a moment', () => {
     const errors: string[] = []
     const bakers: Bakers = {
       moment: async () => { asked++; return null },
-      text: async () => '', textSequence: async () => null, solid: async () => '', title: async () => '', paper: async () => null, carousel: async () => null
+      text: async () => '', textSequence: async () => null, solid: async () => '', title: async () => '', paper: async () => null, carousel: async () => null, graphic: async () => null
     }
     const gone: Project = {
       ...emptyProject(),

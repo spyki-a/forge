@@ -593,7 +593,8 @@ export async function evalRenderPlan(project: Project, out: string, options: Eva
       const id = key.replace(/-export$/, '')
       const drawn = drawnMomentFrames(options.moments, id)
       return drawn === movingFrames(spec, fps, frames) ? { pattern: join(options.moments!, `${id}.seq`, '%05d.png'), frames: drawn } : unused()
-    }
+    },
+    graphic: unused
   }, (clip, err) => {
     throw new Error(`${clip.id} could not be drawn: ${String(err)}`)
   })

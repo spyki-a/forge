@@ -25,11 +25,18 @@
  */
 
 import type { Clip, MediaAsset, Project } from '../timeline'
+import type { GraphicSpec } from '../graphics/template'
+import type { GraphicStyle } from '../graphics/style'
+import type { GraphicTargets, Rect } from '../graphics/items'
+import { graphicStyleOf } from '../graphics/style'
+import { graphicTargetsAt } from '../graphics/targets'
 import { momentTextures, type MomentTextures } from './momentTextures'
-import { followCanvas } from './plan'
+import { followCanvas, identityPlaced } from './plan'
 
 type Size = { width: number; height: number }
 type Sequence = { pattern: string; frames: number } | null
+/** A graphic's, with the box when the bake took the box route (docs/CLIPS.md §6.3). */
+type GraphicSequence = { pattern: string; frames: number; box?: Rect } | null
 
 /** The drawing functions, as the renderer has them. */
 export interface Bakers {
@@ -64,6 +71,25 @@ export interface Bakers {
     frames: number,
     fps: number
   ) => Promise<Sequence>
+  /**
+   * A graphic's moving frames (docs/CLIPS.md §6.3; the renderer's
+   * graphicCanvas.ts `bakeGraphicSequence`), returning as it does: the
+   * pattern with the count, the box when `boxAllowed` and the bake took the
+   * box route, null when nothing could be drawn. `targetsAt(f)` is the
+   * targets for frame `f` of the clip. Phase 3's screen card adds its
+   * `footage` here (§6.16).
+   */
+  graphic: (
+    spec: GraphicSpec,
+    style: GraphicStyle,
+    key: string,
+    width: number,
+    height: number,
+    frames: number,
+    fps: number,
+    targetsAt: (frame: number) => GraphicTargets,
+    boxAllowed: boolean
+  ) => Promise<GraphicSequence>
 }
 
 /** The key an export's copy of a clip's card is written under. */
@@ -144,6 +170,29 @@ export async function bakeForExport(
           dropped.add(clip.id)
           onError(clip, new Error(textures ? 'the moment could not be drawn' : 'a shot the moment bridges is gone or is footage'))
         }
+      } else if (clip.graphic) {
+        /*
+         * At the STILLS' size, the canvas exactly, so lines and type are crisp
+         * at 4K (docs/CLIPS.md §6.3). The targets as a moment's textures are
+         * read: the project under the export's canvas (`followCanvas`), the
+         * subject taken at the clip's first frame for every frame of it (the
+         * onset rule, graphics/targets.ts); phases 3 and 4's per-frame targets
+         * read project frame `clip.start + f`. The box route only for a clip
+         * placed at the identity (`identityPlaced`, render/plan.ts): the
+         * export's copy of the asset then takes the box's size and carries
+         * `frames.box`, so the plan overlays it at the box's own even x and y
+         * and scales nothing.
+         */
+        const spec = clip.graphic
+        const followed = followCanvas(project, exportCanvas)
+        const targetsAt = (f: number): GraphicTargets => graphicTargetsAt(followed, clip, spec, clip.start + f, stills)
+        const run = await bakers.graphic(spec, graphicStyleOf(project, spec), key, stills.width, stills.height, clip.duration, fps, targetsAt, identityPlaced(clip))
+        if (run) repointed.set(asset.id, sequenceAsset(asset, run, run.box ? { width: run.box.width, height: run.box.height } : stills, run.box))
+        else {
+          // Never the edit's asset: empty until the store's bake lands (`-i ''` fails the whole export), or the frames of another spec.
+          dropped.add(clip.id)
+          onError(clip, new Error('the graphic could not be drawn'))
+        }
       } else if (clip.text) {
         const path = await bakers.text(clip.text, key, stills.width, stills.height)
         // An animated caption's frames are what the export reads; a still one
@@ -166,6 +215,8 @@ export async function bakeForExport(
       // A moment's asset is empty until it is drawn: a bake that threw (no WebGL, a picture that would not
       // decode) leaves nothing an export could read, so the moment is left out and the shots beneath cut.
       if (clip.moment) dropped.add(clip.id)
+      // A graphic's asset is empty the same way; its own line, since §6.4's regex refuses two self-drawn fields joined on one receiver.
+      if (clip.graphic) dropped.add(clip.id)
       onError(clip, err)
     }
   }
@@ -178,11 +229,11 @@ export async function bakeForExport(
   }
 }
 
-function sequenceAsset(asset: MediaAsset, run: NonNullable<Sequence>, size: Size): MediaAsset {
+function sequenceAsset(asset: MediaAsset, run: NonNullable<Sequence>, size: Size, box?: Rect): MediaAsset {
   return {
     ...asset,
     path: run.pattern.replace('%05d', '00000'),
     ...size,
-    frames: { pattern: run.pattern, count: run.frames }
+    frames: box ? { pattern: run.pattern, count: run.frames, box } : { pattern: run.pattern, count: run.frames }
   }
 }

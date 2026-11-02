@@ -32,7 +32,11 @@ import type {
   TextSpec
 } from '@shared/timeline'
 import { DEFAULT_COLOR, DEFAULT_TEXT, clipCoversFrame } from '@shared/timeline'
-import { CLEAN_GRAPHIC_STYLE } from '@shared/graphics/style'
+import { CLEAN_GRAPHIC_STYLE, graphicStyleOf } from '@shared/graphics/style'
+import type { GraphicSpec } from '@shared/graphics/template'
+import { drawnGraphicAsset, graphicExitKeys } from '@shared/graphics/frame'
+import { graphicTargetsAt } from '@shared/graphics/targets'
+import { captionSourceClip } from '@shared/captions/timeline'
 import { withMotion, withoutMotionForZoom } from '@shared/edit/camera'
 import {
   withMaskAnimation,
@@ -169,6 +173,7 @@ import { bakeText, bakeTextSequence } from './textCanvas'
 import { bakePaperSequence, paperDuration } from './paperCanvas'
 import { bakeCarouselSequence } from './carouselCanvas'
 import { bakeMomentSequence } from './momentCanvas'
+import { bakeGraphicSequence } from './graphicCanvas'
 import { momentTextures } from '@shared/render/momentTextures'
 import type { TexturePlan } from '@shared/render/moment'
 import {
@@ -469,6 +474,28 @@ function stackOverlay(
   }
 
   return { project, trackId, start: findFreeSlot(project, trackId, desired, duration) }
+}
+
+/**
+ * A graphic clip after a trim (docs/CLIPS.md §6.3, the store): `spec.seconds`
+ * follows the clip's new length and the exit fade is rewritten onto its last
+ * 0.3 s (`graphicExitKeys`); a head trim takes the trimmed seconds off every
+ * beat (a beat before 0 becomes 0) and leaves `inPoint` at 0, since a
+ * graphic's frames start at its own first frame, whatever `trimStart` moved
+ * it to. The version is bumped as every edit bumps it. Any other clip comes
+ * back as trimmed.
+ */
+function graphicTrimmed(trimmed: Clip, before: Clip, fps: number): Clip {
+  if (!trimmed.graphic) return trimmed
+  const cut = (trimmed.start - before.start) / fps
+  const spec = trimmed.graphic
+  const graphic: GraphicSpec = {
+    ...spec,
+    seconds: trimmed.duration / fps,
+    beats: cut !== 0 ? spec.beats.map((beat) => Math.max(0, beat - cut)) : spec.beats,
+    version: spec.version + 1
+  }
+  return { ...trimmed, inPoint: 0, graphic, keyframes: { ...trimmed.keyframes, ...graphicExitKeys(trimmed.duration, fps) } }
 }
 
 /**
@@ -882,6 +909,17 @@ interface EditorState {
   setPaper: (clipId: string, patch: Partial<PaperSpec>) => void
   /** Write the run's frames to disk. Nothing waits on it; the preview is live. */
   rebakePaper: (clipId: string) => Promise<void>
+  /**
+   * A graphic over the footage (docs/CLIPS.md §6.3): drawn live in the
+   * preview from its spec, its moving frames baked in the background. The id
+   * is minted here (§6.1), never taken from a model or a transcript. The
+   * Director's graphics are built by §6.6's pure apply, not through this.
+   */
+  addGraphicClip: (trackId: string, startFrame: number, spec: GraphicSpec) => Promise<string | null>
+  /** Change a graphic's spec: `update()`, then a rebake. A new `seconds` moves the clip's length and its exit fade with it. */
+  setGraphic: (clipId: string, patch: Partial<Omit<GraphicSpec, 'version'>>) => Promise<void>
+  /** Write a graphic's moving frames to disk, at the project's canvas. Nothing waits on it; the preview is live. */
+  rebakeGraphic: (clipId: string) => Promise<void>
   /** Photographs on a ring, in 3D. Needs at least one image in the project. */
   addCarouselClip: (trackId: string, startFrame: number) => Promise<string | null>
   setCarousel: (clipId: string, patch: Partial<CarouselClipSpec>) => void
@@ -1918,13 +1956,17 @@ export const useEditor = create<EditorState>((set, get) => ({
   },
 
   trimClipStart: (clipId, start) => {
+    const { fps } = get().project.settings
     get().update((p) => ({
       ...p,
-      clips: p.clips.map((c) => (c.id === clipId ? trimStart(c, Math.round(start)) : c))
+      clips: p.clips.map((c) => (c.id === clipId ? graphicTrimmed(trimStart(c, Math.round(start)), c, fps) : c))
     }))
+    // The frames, numbered from the clip's own first frame, start on a different beat now.
+    if (get().project.clips.find((c) => c.id === clipId)?.graphic) void get().rebakeGraphic(clipId)
   },
 
   trimClipEnd: (clipId, end) => {
+    const { fps } = get().project.settings
     get().update((p) => {
       const clip = p.clips.find((c) => c.id === clipId)
       if (!clip) return p
@@ -1933,19 +1975,27 @@ export const useEditor = create<EditorState>((set, get) => ({
       return {
         ...p,
         clips: p.clips.map((c) =>
-          c.id === clipId ? trimEnd(c, Math.round(end), asset.durationFrames) : c
+          c.id === clipId ? graphicTrimmed(trimEnd(c, Math.round(end), asset.durationFrames), c, fps) : c
         )
       }
     })
+    if (get().project.clips.find((c) => c.id === clipId)?.graphic) void get().rebakeGraphic(clipId)
   },
 
   splitAtPlayhead: () => {
     const { project, playhead, selectedClipId, notify } = get()
-    const candidates = project.clips.filter(
+    const under = project.clips.filter(
       (c) => playhead > c.start && playhead < clipEnd(c) && (!selectedClipId || c.id === selectedClipId)
     )
+    /*
+     * A graphic is trimmed, not split (docs/CLIPS.md §6.3): its frames start
+     * at its own first frame, so the right half would draw the entrance
+     * again. It is left whole among the candidates, and said.
+     */
+    if (under.some((c) => c.graphic)) notify('A graphic is trimmed, not split', 'info')
+    const candidates = under.filter((c) => !c.graphic)
     if (candidates.length === 0) {
-      notify('Put the playhead inside a clip to split it', 'info')
+      if (under.length === 0) notify('Put the playhead inside a clip to split it', 'info')
       return
     }
     get().update((p) => {
@@ -2147,6 +2197,13 @@ export const useEditor = create<EditorState>((set, get) => ({
           continue
         }
 
+        if (clip.graphic) {
+          // At the new canvas, through the one bake (docs/CLIPS.md §6.4's arm). §6.9's `place.auto`
+          // recompute is phase 2's and §6.16's screen-card realign phase 3's; both go here, before it.
+          await get().rebakeGraphic(clip.id)
+          continue
+        }
+
         if (clip.text) {
           const drawn = { ...clip.text, version: clip.text.version + 1 }
           const path = await bakeText(drawn, clip.id, width, height)
@@ -2234,6 +2291,19 @@ export const useEditor = create<EditorState>((set, get) => ({
     if (paths.size === 0) return
     const reads = (plan: TexturePlan | null | undefined): boolean => !!plan?.footage && paths.has(plan.footage.path)
     for (const clip of project.clips) {
+      if (clip.graphic) {
+        /*
+         * A graphic whose onset target sits on a re-followed clip (docs/CLIPS.md
+         * §6.4, `rebakeFollowed`'s arm): the clip `spec.subject` names, or
+         * the caption track's clip under the graphic's first frame, the one
+         * graphics/targets.ts reads. A callout's target moves when Follow
+         * re-solves the crop beneath it.
+         */
+        const subject = clip.graphic.subject
+        const under = subject ? (project.clips.find((c) => c.id === subject.clipId) ?? null) : captionSourceClip(project, clip.start)
+        if (under && assetIds.includes(under.assetId)) await get().rebakeGraphic(clip.id)
+        continue
+      }
       if (!clip.moment) continue
       try {
         // From the shots as they are NOW: the followed crop just changed.
@@ -3351,6 +3421,115 @@ export const useEditor = create<EditorState>((set, get) => ({
       // and small ever after an aspect change — see the note there, and the
       // test that now checks both paths. History-less: the frames landing is
       // not a gesture of the user's, and an undo step for it undoes nothing.
+      get().fillAssetPath(clip.assetId, {
+        path: baked.pattern.replace('%05d', '00000'),
+        width,
+        height,
+        frames: { pattern: baked.pattern, count: baked.frames }
+      })
+    } catch (err) {
+      notify(err instanceof Error ? err.message : String(err))
+    }
+  },
+
+  addGraphicClip: async (trackId, startFrame, spec) => {
+    const { project, notify } = get()
+    const track = project.tracks.find((t) => t.id === trackId)
+    if (!track || track.locked || track.kind !== 'video') {
+      notify('A graphic goes on a video track', 'info')
+      return null
+    }
+
+    /*
+     * App-minted (docs/CLIPS.md §6.1), as the card ring's id is: a clip id
+     * becomes a frame-cache path unsanitised (main/titles.ts `writeTitleFrame`),
+     * so it is never a string from a model or a transcript.
+     */
+    const clipId = `graphic-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
+    const { width, height, fps } = project.settings
+    const duration = Math.max(1, Math.round(spec.seconds * fps))
+    // The one asset shape (graphics/frame.ts), long enough for a trim to lengthen the clip, as the paper asset is.
+    const asset = drawnGraphicAsset(clipId, width, height, Math.max(duration, Math.round(fps * 10)), `${spec.data.template} — graphic`)
+
+    /*
+     * On the timeline in the same tick as the click, as text and clippings
+     * are: the preview draws the graphic itself from this spec, and the bake
+     * lands in the background.
+     */
+    get().update((p) => {
+      // A graphic goes OVER footage, so this climbs a track rather than queueing after what is there.
+      const slot = stackOverlay(p, trackId, startFrame, duration)
+      return {
+        ...slot.project,
+        assets: [...slot.project.assets, asset],
+        clips: [
+          ...slot.project.clips,
+          {
+            id: clipId,
+            assetId: asset.id,
+            trackId: slot.trackId,
+            start: slot.start,
+            duration,
+            inPoint: 0,
+            volume: 1,
+            transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
+            color: { brightness: 0, contrast: 1, saturation: 1 },
+            // The exit is opacity keys over the clip's last 0.3 s (graphics/frame.ts): held frames are never baked to fade.
+            keyframes: graphicExitKeys(duration, fps),
+            graphic: spec
+          }
+        ]
+      }
+    })
+    get().revealClip(clipId)
+    void get().rebakeGraphic(clipId)
+    return clipId
+  },
+
+  setGraphic: async (clipId, patch) => {
+    const { fps } = get().project.settings
+    get().update((p) => ({
+      ...p,
+      clips: p.clips.map((c) => {
+        if (c.id !== clipId || !c.graphic) return c
+        const graphic: GraphicSpec = { ...c.graphic, ...patch, version: c.graphic.version + 1 }
+        if (patch.seconds === undefined || patch.seconds === c.graphic.seconds) return { ...c, graphic }
+        // A new length: the clip follows it, and the exit fade moves to its last 0.3 s.
+        const duration = Math.max(1, Math.round(graphic.seconds * fps))
+        return { ...c, graphic, duration, keyframes: { ...c.keyframes, ...graphicExitKeys(duration, fps) } }
+      })
+    }))
+    await get().rebakeGraphic(clipId)
+  },
+
+  rebakeGraphic: async (clipId) => {
+    const { project, notify } = get()
+    const clip = project.clips.find((c) => c.id === clipId)
+    if (!clip?.graphic) return
+    const spec = clip.graphic
+    const { width, height, fps } = project.settings
+    try {
+      /*
+       * The canvas region at the project's size (docs/CLIPS.md §6.3): only
+       * the export's bake takes the box, so the edit's asset never carries
+       * one. The targets on the project as it is, the subject at the clip's
+       * first frame (graphics/targets.ts); phases 3 and 4's per-frame targets
+       * read project frame `clip.start + f`.
+       */
+      const baked = await bakeGraphicSequence(
+        spec,
+        graphicStyleOf(project, spec),
+        clipId,
+        width,
+        height,
+        clip.duration,
+        fps,
+        (f) => graphicTargetsAt(project, clip, spec, clip.start + f, { width, height }),
+        false
+      )
+      // Superseded, or nothing drawn: the newer bake's frames, or the old ones, stay.
+      if (!baked) return
+      // History-less, as `rebakePaper`: a bake is a file, not an edit. The new size with the frames.
       get().fillAssetPath(clip.assetId, {
         path: baked.pattern.replace('%05d', '00000'),
         width,
@@ -5309,6 +5488,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       else if (from.solid) await get().setSolid(clipId, {})
       else if (from.paper) await get().rebakePaper(clipId)
       else if (from.carousel) await get().rebakeCarousel(clipId)
+      else if (from.graphic) await get().rebakeGraphic(clipId)
     }
   },
 

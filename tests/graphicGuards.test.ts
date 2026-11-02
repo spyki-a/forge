@@ -11,15 +11,18 @@ import { canMoveCamera } from '@shared/edit/camera'
 import { isKeyable } from '@shared/render/chromaKey'
 import { canSteady } from '@shared/render/steady'
 import { COPY_RULE, DIRECTOR_RULES, SPINE_RULE, clearDirector } from '@shared/director/apply'
+import { bakeForExport, type Bakers } from '@shared/render/exportBake'
 
 /*
  * Every guard a self-drawn kind joins reads one constant (docs/CLIPS.md §6.4,
  * §16.9): `SELF_DRAWN_FIELDS` in edit/recipes.ts, or the preview's
- * `LIVE_DRAWN_FIELDS`. This is the head lane's half of the test: the
- * behaviour of each list site over the constant, and the regex that no site
- * spells out a list of its own again. The wiring of the per-kind arms (the
- * store's rebakes, the preview's branch and sweep, the export's bake) is lane
- * C's half and comes with those arms.
+ * `LIVE_DRAWN_FIELDS`. The head lane's half of the test: the behaviour of
+ * each list site over the constant, and the regex that no site spells out a
+ * list of its own again. Lane C's half, at the end: the wiring of the
+ * per-kind arms (the store's three arms, the preview's branch and sweep, the
+ * export's bakers and its branch), each anchored on unique text with its
+ * arguments and counted before it is trusted, and the export's drop of a
+ * graphic that will not draw.
  *
  * Membership throughout, never the whole list: the next self-drawn kind is
  * one line in the constant, and nothing here should need to change for it
@@ -228,5 +231,96 @@ describe('no list of self-drawn fields is spelled out again', () => {
      * gate for good, each after a prefix that still matches.
      */
     expect([...preview.matchAll(GATE)]).toHaveLength(1)
+  })
+})
+
+/* ------------------------------------------------------- lane C's wiring */
+
+/**
+ * A store action's body: from its own anchor (counted once) to the next
+ * action's anchor, not a fixed slice length (docs/CLIPS.md §6.4, "The wiring").
+ */
+function body(text: string, from: string, to: string): string {
+  const starts = [...text.matchAll(new RegExp(from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))]
+  expect(starts, from).toHaveLength(1)
+  const start = starts[0].index!
+  const end = text.indexOf(to, start)
+  expect(end, to).toBeGreaterThan(start)
+  return text.slice(start, end)
+}
+
+describe('lane C’s wiring: every per-kind arm has its graphic arm', () => {
+  const store = SOURCES.get('src/renderer/src/store.ts')!
+  const preview = SOURCES.get('src/renderer/src/components/Preview.tsx')!
+
+  it('the store’s three arms: rebakeGenerated, placeCopies and rebakeFollowed each reach rebakeGraphic', () => {
+    const rebake = body(store, 'rebakeGenerated: async () => {', 'rebakeFollowed: async (assetIds) => {')
+    expect(rebake).toContain('project.clips.filter(drawsItself)')
+    expect(rebake).toContain('if (clip.graphic) {')
+    expect(rebake).toContain('await get().rebakeGraphic(clip.id)')
+    const followed = body(store, 'rebakeFollowed: async (assetIds) => {', 'audition: null,')
+    // The clip the targets read: `spec.subject`'s, or the caption track's under the graphic's first frame.
+    expect(followed).toContain("subject ? (project.clips.find((c) => c.id === subject.clipId) ?? null) : captionSourceClip(project, clip.start)")
+    expect(followed).toContain('if (under && assetIds.includes(under.assetId)) await get().rebakeGraphic(clip.id)')
+    const paste = body(store, 'placeCopies: async (board, frame) => {', 'revealClip: (clipId) => {')
+    expect(paste).toContain('else if (from.graphic) await get().rebakeGraphic(clipId)')
+  })
+
+  it('the preview’s branch draws a graphic live through graphicPreviewCanvas with its clock and the onset targets, shows nothing rather than a stale file, and its sweep forgets it', () => {
+    expect([...preview.matchAll(/LIVE_DRAWN_FIELDS\.some\(/g)]).toHaveLength(1)
+    const branches = [...preview.matchAll(/if \(layer\.clip\.graphic\) \{/g)]
+    expect(branches).toHaveLength(1)
+    const start = branches[0].index!
+    const next = preview.indexOf('if (layer.clip.', start + 1)
+    const branch = preview.slice(start, next)
+    expect(branch).toContain('graphicPreviewCanvas(')
+    expect(branch).toContain('graphicStyleOf(project, layer.clip.graphic)')
+    expect(branch).toContain('{ frame: playhead - layer.clip.start, total: layer.clip.duration, fps }')
+    expect(branch).toContain('graphicTargetsAt(project, layer.clip, layer.clip.graphic, playhead,')
+    expect(branch).toContain('return live ?? nothing()')
+    expect([...preview.matchAll(/forgetGraphicPreview\(clipId\)/g)]).toHaveLength(1)
+  })
+
+  it('the export’s bakers hand a graphic to the store’s own bake, its arguments in order, and the export drops a failed one on a line of its own', () => {
+    const bakers = SOURCES.get('src/renderer/src/exportBakers.ts')!
+    expect(bakers).toMatch(
+      /graphic: \(spec, style, key, width, height, frames, fps, targetsAt, boxAllowed\) =>\s*bakeGraphicSequence\(spec, style, key, width, height, frames, fps, targetsAt, boxAllowed\)/
+    )
+    const exportBake = SOURCES.get('src/shared/render/exportBake.ts')!
+    // The catch's two lines, each its own (§6.4's regex refuses `clip.moment || clip.graphic`).
+    expect([...exportBake.matchAll(/\n *if \(clip\.moment\) dropped\.add\(clip\.id\)\n/g)]).toHaveLength(1)
+    expect([...exportBake.matchAll(/\n *if \(clip\.graphic\) dropped\.add\(clip\.id\)\n/g)]).toHaveLength(1)
+    expect([...exportBake.matchAll(/identityPlaced\(clip\)/g)]).toHaveLength(1)
+  })
+})
+
+describe('lane C’s export: a graphic that will not draw is dropped, and said', () => {
+  const unused = async (): Promise<never> => { throw new Error('not this one') }
+  const bakers = (graphic: Bakers['graphic']): Bakers => ({
+    text: unused, textSequence: async () => null, solid: unused, title: unused, paper: unused, carousel: unused, moment: unused, graphic
+  })
+  const edit = (): Project => ({
+    ...emptyProject('guards'),
+    assets: [asset('f'), asset('g', { kind: 'image', path: '', fps: null, size: 0 })],
+    clips: [clip({ id: 'shot', assetId: 'f' }), { ...carrying('graphic'), id: 'g', assetId: 'g', trackId: 'v2' }]
+  })
+
+  it('a null bake and a bake that throws each leave the graphic out of the export, onError heard, the shot kept', async () => {
+    const errors: string[] = []
+    const nulled = await bakeForExport(edit(), { width: 1080, height: 1920 }, bakers(async () => null), (c, err) => errors.push(`${c.id}: ${String(err)}`))
+    expect(nulled.clips.map((c) => c.id)).toEqual(['shot'])
+    expect(errors).toEqual(['g: Error: the graphic could not be drawn'])
+    // Never an asset with an empty path in the export: the shot's stays as it was.
+    expect(nulled.assets.find((a) => a.id === 'f')).toEqual(asset('f'))
+
+    const threw = await bakeForExport(edit(), { width: 1080, height: 1920 }, bakers(async () => { throw new Error('no canvas') }), (c, err) => errors.push(`${c.id}: ${String(err)}`))
+    expect(threw.clips.map((c) => c.id)).toEqual(['shot'])
+    expect(errors[1]).toBe('g: Error: no canvas')
+  })
+
+  it('a drawn one stays', async () => {
+    const drawn = await bakeForExport(edit(), { width: 1080, height: 1920 }, bakers(async () => ({ pattern: '/cache/g-export.seq/%05d.png', frames: 12 })))
+    expect(drawn.clips.map((c) => c.id)).toEqual(['shot', 'g'])
+    expect(drawn.assets.find((a) => a.id === 'g')!.frames).toEqual({ pattern: '/cache/g-export.seq/%05d.png', count: 12 })
   })
 })

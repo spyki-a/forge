@@ -484,6 +484,29 @@ export function clipBox(
 }
 
 /**
+ * Whether a clip sits at the identity placement (docs/CLIPS.md §6.3, "The
+ * bake region (M1) and the box route"): transform x 0, y 0, scale 1, no
+ * `scaleY` (or 1, which `clipBox` reads as the same geometry), rotation 0,
+ * no motion `path`, and no keyframes but `opacity` (a graphic's exit fade).
+ * Only such a clip's export bake may take the box: a rotated clip turns
+ * about its stream's middle, which for a box is not the canvas's, so a box
+ * would part from the preview. Read by the export's bake (exportBake.ts,
+ * `boxAllowed`) and by the per-clip box below, so the bake and the plan
+ * cannot disagree about which clips the box applies to.
+ */
+export function identityPlaced(clip: Pick<Clip, 'transform' | 'path' | 'keyframes'>): boolean {
+  const t = clip.transform
+  if (t) {
+    if ((t.x ?? 0) !== 0 || (t.y ?? 0) !== 0 || (t.scale ?? 1) !== 1 || (t.rotation ?? 0) !== 0) return false
+    if (t.scaleY !== undefined && t.scaleY !== 1) return false
+  }
+  if (clip.path && clip.path.length > 0) return false
+  const keys = clip.keyframes
+  if (!keys) return true
+  return (Object.keys(keys) as (keyof typeof keys)[]).every((property) => property === 'opacity' || (keys[property]?.length ?? 0) === 0)
+}
+
+/**
  * Brightness, contrast and saturation.
  *
  * The slider ranges were chosen to BE ffmpeg's, so this is a straight handover
@@ -1240,7 +1263,15 @@ export function buildRenderPlan(request: RenderRequest): RenderPlan {
     const asset = assetById(project, clip.assetId)!
     const bake = parallaxBakeFor(project, clip)
     const planes = planeInputs.get(clip.id)
-    const box = clipBox(clip, { width, height })
+    /*
+     * A graphic the export baked by the box route carries the box on its
+     * asset (`frames.box`, written only by exportBake.ts, never by the edit):
+     * the stream is the box's size, so the fit scales nothing and the overlay
+     * lands at the box's even x and y (docs/CLIPS.md §6.3). Only at the
+     * identity placement, the same test the bake made before drawing it.
+     */
+    const drawnBox = asset.frames?.box
+    const box = drawnBox && identityPlaced(clip) ? { ...clipBox(clip, { width, height }), ...drawnBox } : clipBox(clip, { width, height })
 
     /*
      * Room for the corners, when the clip is turned.

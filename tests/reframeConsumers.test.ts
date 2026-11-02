@@ -103,7 +103,7 @@ describe('a moment over a followed clip', () => {
     const none = async (): Promise<null> => null
     const bakers: Bakers = {
       text: async () => '/t.png', textSequence: none, solid: async () => '/s.png', title: async () => '/ti.png',
-      paper: none, carousel: none,
+      paper: none, carousel: none, graphic: none,
       moment: async (_spec, _key, textures, _w, _h, frames) => {
         asked.push(textures)
         return { pattern: '/m/%05d.png', frames }

@@ -3,6 +3,7 @@ import { bakeText, bakeTextSequence } from './textCanvas'
 import { bakePaperSequence } from './paperCanvas'
 import { bakeCarouselSequence } from './carouselCanvas'
 import { bakeMomentSequence } from './momentCanvas'
+import { bakeGraphicSequence } from './graphicCanvas'
 
 /**
  * The canvas drawing an export's cards go through — the same functions the
@@ -22,5 +23,8 @@ export const liveBakers: Bakers = {
     window.forge.renderTitle({ template: spec.template, texts: spec.texts, clipId: key, width, height }),
   paper: (spec, key, width, height, frames) => bakePaperSequence(spec, key, width, height, frames),
   carousel: (spec, key, photos, width, height, frames, fps) =>
-    bakeCarouselSequence(spec, key, photos, width, height, frames, fps)
+    bakeCarouselSequence(spec, key, photos, width, height, frames, fps),
+  // The box route only here, where the export says the clip is placed at the identity (docs/CLIPS.md §6.3).
+  graphic: (spec, style, key, width, height, frames, fps, targetsAt, boxAllowed) =>
+    bakeGraphicSequence(spec, style, key, width, height, frames, fps, targetsAt, boxAllowed)
 }

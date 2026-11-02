@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { bakeForExport, exportBakeSizes, exportKey, type Bakers } from '@shared/render/exportBake'
 import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
+import type { GraphicSpec } from '@shared/graphics/template'
+import type { GraphicTargets } from '@shared/graphics/items'
+import { graphicStyleOf } from '@shared/graphics/style'
 
 /*
  * An export draws its own cards, at its own canvas, into a copy.
@@ -38,6 +41,10 @@ function fakeBakers(fail: string[] = []): { bakers: Bakers; calls: Call[] } {
     },
     moment: async (_s, key, _t, w, h, frames) => {
       record('moment', key, w, h)
+      return { pattern: `/cache/${key}.seq/%05d.png`, frames }
+    },
+    graphic: async (_s, _style, key, w, h, frames) => {
+      record('graphic', key, w, h)
       return { pattern: `/cache/${key}.seq/%05d.png`, frames }
     }
   }
@@ -159,5 +166,121 @@ describe('baking for one export', () => {
     expect(out.assets.find((a) => a.id === 's')).toEqual(edit.assets.find((a) => a.id === 's'))
     // And the rest were still drawn.
     expect(out.assets.find((a) => a.id === 't')!.path).toBe(`/cache/${exportKey('words')}.png`)
+  })
+})
+
+/* -------------------------------------------------------------- graphics */
+
+/*
+ * The graphic's branch (docs/CLIPS.md §6.3, "The export, the store, the
+ * preview"): baked at the STILLS' size with the style `graphicStyleOf`
+ * resolves, its targets read on the export's canvas at the clip's first
+ * frame, the box allowed only at the identity placement, and the export's
+ * copy of the asset carrying the box when the bake took it. The drop of a
+ * graphic that will not draw is tests/graphicGuards.test.ts's (lane C's half).
+ */
+describe('a graphic', () => {
+  const BOX = { x: 120, y: 1400, width: 840, height: 300 }
+  const spec = (over: Partial<GraphicSpec> = {}): GraphicSpec => ({
+    data: { template: 'counter', value: '40', label: 'forty' },
+    seconds: 2,
+    beats: [0.5],
+    place: { auto: true, third: 'bottom' },
+    // On the shot, in source units: the targets' spec route (graphics/targets.ts).
+    subject: { clipId: 'shot', box: { x: 0.1, y: 0.2, width: 0.2, height: 0.3 }, ms: 0 },
+    seed: 1,
+    version: 3,
+    ...over
+  })
+  interface Ask { key: string; width: number; height: number; frames: number; fps: number; boxAllowed: boolean; styleId: string; accent: string; at: (GraphicTargets | null)[] }
+  /** Fake bakers recording what the graphic was asked for, answering `give`. */
+  const bakers = (give: { pattern: string; frames: number; box?: typeof BOX } | null): { bakers: Bakers; asks: Ask[] } => {
+    const asks: Ask[] = []
+    const unused = async (): Promise<never> => { throw new Error('not this one') }
+    return {
+      asks,
+      bakers: {
+        text: unused, textSequence: async () => null, solid: unused, title: unused, paper: unused, carousel: unused, moment: unused,
+        graphic: async (_spec, style, key, width, height, frames, fps, targetsAt, boxAllowed) => {
+          asks.push({ key, width, height, frames, fps, boxAllowed, styleId: style.id, accent: style.palette.accent, at: [targetsAt(0), targetsAt(20)] })
+          return give
+        }
+      }
+    }
+  }
+  /** The project's one style, with an override only the project carries: what tells the project's style from a default. */
+  const GRAPHICS = { styleId: 'clean', overrides: { 'palette.accent': '#2563EB' }, sound: true }
+  /** A 9:16 project: a 1080×1920 shot on v1 (`shotFrames` long), a graphic over it on v2 from frame 30, at the identity unless `over` says otherwise. */
+  const edit = (over: Partial<Clip> = {}, shotFrames = 300): Project => ({
+    ...emptyProject(),
+    settings: { ...emptyProject().settings, width: 1080, height: 1920, fps: 30 },
+    graphics: GRAPHICS,
+    assets: [
+      asset('video', { kind: 'video', path: '/media/shot.mp4', width: 1080, height: 1920, fps: 30, durationFrames: 300 }),
+      asset('g', { path: '', width: 1080, height: 1920, durationFrames: 300 })
+    ],
+    clips: [
+      clip({ id: 'shot', assetId: 'video', duration: shotFrames }),
+      clip({ id: 'g', assetId: 'g', trackId: 'v2', start: 30, duration: 60, graphic: spec(), keyframes: { opacity: [{ frame: 51, value: 1, ease: 'smooth' }, { frame: 59, value: 0 }] }, ...over })
+    ]
+  })
+
+  it('is baked at the stills’ size, the export canvas exactly, under <clip>-export, with the project’s style, for the clip’s frames at its rate', async () => {
+    const { bakers: b, asks } = bakers({ pattern: '/cache/g-export.seq/%05d.png', frames: 31 })
+    await bakeForExport(edit(), { width: 1080, height: 1920 }, b)
+    expect(asks).toHaveLength(1)
+    // The project's style with its override, as `graphicStyleOf` resolves it (the one call the store and the preview make too).
+    expect(asks[0]).toMatchObject({ key: exportKey('g'), width: 1080, height: 1920, frames: 60, fps: 30, boxAllowed: true, styleId: 'clean', accent: '#2563EB' })
+    expect(asks[0].accent).toBe(graphicStyleOf({ graphics: GRAPHICS }, spec()).palette.accent)
+    // At 4K, the stills' size is the export canvas: 4K lines and type, not 1080's blown up.
+    asks.length = 0
+    await bakeForExport(edit(), { width: 2160, height: 3840 }, b)
+    expect(asks[0]).toMatchObject({ width: 2160, height: 3840 })
+  })
+
+  it('hands targets read on the export’s canvas at the stills’ size: the subject the clip’s first frame sees, for every frame of it', async () => {
+    const { bakers: b, asks } = bakers(null)
+    await bakeForExport(edit(), { width: 1080, height: 1920 }, b)
+    // The 0.1/0.2 box of the 1080×1920 shot, on a 1080×1920 frame: x 108, y 384, 216×576 (graphics/targets.ts, the frames' Built note).
+    expect(asks[0].at[0]?.subject).toMatchObject({ x: 108, y: 384, width: 216, height: 576 })
+    expect(asks[0].at[1]).toEqual(asks[0].at[0])
+    // Half the size, half the pixels: the targets are in the STILLS' pixels, not the project's.
+    asks.length = 0
+    await bakeForExport(edit(), { width: 540, height: 960 }, b)
+    expect(asks[0].at[0]?.subject).toMatchObject({ x: 54, y: 192, width: 108, height: 288 })
+    // The onset's, though the shot ends under the graphic: frame 20 of the clip is past the shot, and still sees the box.
+    asks.length = 0
+    await bakeForExport(edit({}, 45), { width: 1080, height: 1920 }, b)
+    expect(asks[0].at[0]?.subject).toMatchObject({ x: 108, y: 384, width: 216, height: 576 })
+    expect(asks[0].at[1]).toEqual(asks[0].at[0])
+  })
+
+  it('allows the box only at the identity placement', async () => {
+    const { bakers: b, asks } = bakers(null)
+    await bakeForExport(edit({ transform: { x: 0, y: 0, scale: 1, rotation: 10, opacity: 1 } }), { width: 1080, height: 1920 }, b)
+    expect(asks[0].boxAllowed).toBe(false)
+    asks.length = 0
+    await bakeForExport(edit({ keyframes: { zoom: [{ frame: 0, value: 1 }, { frame: 30, value: 1.4 }] } }), { width: 1080, height: 1920 }, b)
+    expect(asks[0].boxAllowed).toBe(false)
+  })
+
+  it('points the copy at the frames: at the box’s size with frames.box when the bake took the box, at the stills’ size without one; never the edit', async () => {
+    const boxed = bakers({ pattern: '/cache/g-export.seq/%05d.png', frames: 31, box: BOX })
+    const source = edit()
+    const out = await bakeForExport(source, { width: 1080, height: 1920 }, boxed.bakers)
+    const drawn = out.assets.find((a) => a.id === 'g')!
+    expect(drawn.path).toBe('/cache/g-export.seq/00000.png')
+    expect({ width: drawn.width, height: drawn.height }).toEqual({ width: 840, height: 300 })
+    expect(drawn.frames).toEqual({ pattern: '/cache/g-export.seq/%05d.png', count: 31, box: BOX })
+    // Nothing of the box's x and y lands on the asset itself.
+    expect('x' in drawn).toBe(false)
+    expect(out.clips.map((c) => c.id)).toEqual(['shot', 'g'])
+    expect(source.assets.find((a) => a.id === 'g')!.path).toBe('')
+    expect(source.assets.find((a) => a.id === 'g')!.frames).toBeUndefined()
+
+    const whole = bakers({ pattern: '/cache/g-export.seq/%05d.png', frames: 31 })
+    const canvas = (await bakeForExport(source, { width: 1080, height: 1920 }, whole.bakers)).assets.find((a) => a.id === 'g')!
+    expect({ width: canvas.width, height: canvas.height }).toEqual({ width: 1080, height: 1920 })
+    expect(canvas.frames).toEqual({ pattern: '/cache/g-export.seq/%05d.png', count: 31 })
   })
 })
