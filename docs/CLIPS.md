@@ -9632,7 +9632,13 @@ the caller and passed into `drawListAt`, so the drawing stays pure:
 > Mac, exits read from files). Every other figure here is from the two commits'
 > messages and the lane's seven test files re-run at `8acf930` for this
 > record (132 passed, vitest exit 0); line numbers were read at `8acf930`.
-> CI: CI-LINE-PENDING
+> CI: run 41489547562 on `8acf930` passed on both runners (macos-14 and
+> windows-latest success, the installer job skipped as on every push; read
+> 2026-11-02 through api.github.com, the jobs' conclusions only, as CLAUDE.md
+> describes). The run carries no lane-C render check of its own (the
+> harness's `primitives` option and `graphic.int`'s phase-1 cases are lane
+> D's), so it says only that lane C's seven test files pass on both
+> platforms, the Windows one on the 2018 ffmpeg.
 > - **`src/renderer/src/graphicCanvas.ts`** (466 lines at `b610c91`, 510
 >   at `8acf930`). `GRAPHIC_BAKE_REGION` = `'box'` (`:42`) and
 >   `GRAPHIC_POOL_DEPTH` = 4 (`:45`), M1's values, typed as the plan's
