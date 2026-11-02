@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { emptyProject, type Clip, type MediaAsset } from '@shared/timeline'
+import { DEFAULT_TEXT, emptyProject, type Clip, type MediaAsset } from '@shared/timeline'
+import { DEFAULT_PAPER } from '@shared/render/paper'
+import { DEFAULT_CAROUSEL } from '@shared/render/carousel'
+import type { SelfDrawnField } from '@shared/edit/recipes'
 import { FILMSTRIP_RULE } from '@shared/automation/filmstrip'
 import { GRID_RULE } from '@shared/automation/grid'
 import { ONE_PHOTO_RULE } from '@shared/automation/onePhoto'
@@ -11,6 +14,7 @@ import {
   musicLineOf,
   photoFor,
   photosOf,
+  stripShotOf,
   usesOf
 } from '../../src/renderer/src/components/tools/SourceLine'
 
@@ -112,7 +116,9 @@ beforeEach(() => {
     // No sidecar here: the subject bake answers "nothing found", which the reel handles.
     bakeParallax: async () => null,
     // Nor a canvas for three.js: the ring's spec is what is under test, not its frames.
-    rebakeCarousel: async () => undefined
+    rebakeCarousel: async () => undefined,
+    // Nor one for a graphic: where the strips' shot rule leaves it is what is under test, not its bake.
+    rebakeGraphic: async () => undefined
   })
 })
 
@@ -234,6 +240,86 @@ describe('Strip flashes’ line names the shot buildStrips flashes over', () => 
       expect(line, 'the line').toBe(c.says)
     })
   }
+
+  /*
+   * One sample of each self-drawn field (docs/CLIPS.md §6.4; the shapes
+   * tests/graphicGuards.test.ts samples): a `Record` over the type, so a new
+   * kind without a sample fails typecheck. The strips' shot rule reads
+   * `drawsItself`, in the store and on the line, and its behaviour over the
+   * constant is asserted here, where a `.tsx` import typechecks.
+   */
+  const DRAWN: Record<SelfDrawnField, Partial<Clip>> = {
+    text: { text: { ...DEFAULT_TEXT, version: 1 } },
+    paper: { paper: { ...DEFAULT_PAPER, keyword: 'glow' } },
+    carousel: { carousel: { ...DEFAULT_CAROUSEL, assetIds: ['a'] } },
+    solid: { solid: { color: '#000000', opacity: 1, version: 1 } },
+    title: { title: { template: 'lower-third', texts: ['Asha'], version: 1 } },
+    moment: { moment: { kind: 'zoom-punch', from: { clipId: 'clip-a' }, to: { clipId: 'clip-c' }, seconds: 0.4, intensity: 0.5, seed: 7, version: 1 } },
+    graphic: { graphic: { data: { template: 'counter', value: '3x', label: 'faster' }, seconds: 2, beats: [0.4], place: { auto: true, third: 'bottom' }, seed: 7, version: 1 } }
+  }
+
+  it('stripShotOf never names a clip the editor drew, whatever its kind, though it sits alone under the playhead', () => {
+    placed()
+    const { project } = useEditor.getState()
+    // Every field that was taken as the shot, named at once: the predicate only, so one wrong kind does not hide the rest.
+    const named = (Object.keys(DRAWN) as SelfDrawnField[]).filter((field) => {
+      // The drawn clip in the gap at 120–180 on v1, alone under the playhead at 150, over a's own photo.
+      const drawn: Clip = { ...clip(`drawn-${field}`, 'a', 'v1', 120, 60), ...DRAWN[field] }
+      const found = stripShotOf({ ...project, clips: [...project.clips, drawn] }, 150)
+      // Falls back to c, the longest, as none is under the playhead.
+      return found?.clip.id !== 'clip-c' || found.under !== false
+    })
+    expect(named).toEqual([])
+    // The same project without the drawn clip, read the same way: the rule still finds a shot under the playhead.
+    expect(stripShotOf(project, 50)).toEqual({ clip: project.clips[0], under: true })
+  })
+
+  /*
+   * The store's side of the same rule, one case per field so the report names
+   * the kind: the drawn clip carries a's own photo, so a store that took it
+   * would read as 'a' chosen over 'c'. A filter cut down to one member
+   * (`!c.graphic &&`) passes the regex (one negated member joins nothing) and
+   * the graphic case below; this is what catches it.
+   */
+  for (const field of Object.keys(DRAWN) as SelfDrawnField[]) {
+    it(`buildStrips never cuts from a clip the editor drew: ${field}, alone under the playhead`, async () => {
+      placed()
+      useEditor.setState((s) => ({
+        project: { ...s.project, clips: [...s.project.clips, { ...clip(`drawn-${field}`, 'a', 'v1', 120, 60), ...DRAWN[field] }] },
+        playhead: 150
+      }))
+      const { project, selectedClipId, playhead } = useEditor.getState()
+      const line = usesOf('strip-flashes', project, selectedClipId, playhead, undefined)
+
+      await useEditor.getState().buildStrips()
+      const strips = useEditor.getState().project.clips.filter((x) => x.generatedBy?.rule === STRIP_RULE)
+      expect(strips.length, 'some flashes were built').toBeGreaterThan(0)
+      expect(builtFrom(STRIP_RULE), 'the store').toEqual(['c'])
+      expect(line, 'the line').toBe('c.jpg — the longest shot, as none is under the playhead')
+    })
+  }
+
+  it('a graphic alone under the playhead is not the shot: the line and the store both fall back to the longest', async () => {
+    placed()
+    // Through addGraphicClip, the only drawn kind above whose asset has no path until its bake lands.
+    // In the gap at 120–180 on v1, which is free there, so the graphic lands on the shot's own track (docs/CLIPS.md §6.4).
+    const graphicId = await useEditor.getState().addGraphicClip('v1', 120, {
+      data: { template: 'counter', value: '3x', label: 'faster' }, seconds: 2, beats: [0.4], place: { auto: true, third: 'bottom' }, seed: 7, version: 1
+    })
+    const graphic = useEditor.getState().project.clips.find((x) => x.id === graphicId)
+    expect(graphic, 'the graphic was made').toBeDefined()
+    expect([graphic!.trackId, graphic!.start, graphic!.duration]).toEqual(['v1', 120, 60])
+    useEditor.setState({ playhead: 150 })
+    const { project, selectedClipId, playhead } = useEditor.getState()
+    const line = usesOf('strip-flashes', project, selectedClipId, playhead, undefined)
+
+    await useEditor.getState().buildStrips()
+    const strips = useEditor.getState().project.clips.filter((x) => x.generatedBy?.rule === STRIP_RULE)
+    expect(strips.length, 'some flashes were built').toBeGreaterThan(0)
+    // Never the graphic's own asset, whose path is '' until its bake lands.
+    expect(builtFrom(STRIP_RULE), 'the store').toEqual(['c'])
+    expect(line, 'the line').toBe('c.jpg — the longest shot, as none is under the playhead')
+  })
 })
 
 describe('the card ring’s line says how many of the photos the ring takes', () => {

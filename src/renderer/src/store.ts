@@ -4721,14 +4721,20 @@ export const useEditor = create<EditorState>((set, get) => ({
      * timeline. The strips take that clip's OWN asset, so what flashes is a
      * treated copy of the shot rather than something unrelated cutting in — the
      * whole effect depends on the viewer recognising it as the same picture.
+     *
+     * So nothing the editor DREW is the shot (`drawsItself`, every self-drawn
+     * kind at once, docs/CLIPS.md §6.4): a card's baked PNG is not a picture
+     * the viewer recognises, and a graphic's asset has no file at all until
+     * its bake lands, so strips cut from it would reach the export as thirty
+     * clips of an empty path. tools/SourceLine.tsx `stripShotOf` states this
+     * same rule on the panel's "Uses:" line; the two change together.
      */
     const videoTracks = project.tracks.filter((t) => t.kind === 'video')
     const candidates = project.clips.filter(
       (c) =>
         videoTracks.some((t) => t.id === c.trackId) &&
         !c.generatedBy &&
-        !c.text &&
-        !c.solid &&
+        !drawsItself(c) &&
         !c.adjustment
     )
     const base =

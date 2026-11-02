@@ -22,7 +22,12 @@ import { bakeForExport, type Bakers } from '@shared/render/exportBake'
  * per-kind arms (the store's three arms, the preview's branch and sweep, the
  * export's bakers and its branch), each anchored on unique text with its
  * arguments and counted before it is trusted, and the export's drop of a
- * graphic that will not draw.
+ * graphic that will not draw. And the strips' shot rule, the two negated
+ * lists (`!c.text && !c.solid`) §6.4's Built note recorded as unseen by the
+ * regex: `buildStrips` in the store and `stripShotOf` on the panel's "Uses:"
+ * line now read `drawsItself`, and the regex sees that form too; their
+ * behaviour over the constant is tests/renderer/sourceChoice.test.ts's, where
+ * a `.tsx` import typechecks (tsconfig.web.json).
  *
  * Membership throughout, never the whole list: the next self-drawn kind is
  * one line in the constant, and nothing here should need to change for it
@@ -146,13 +151,17 @@ const SOURCES = new Map(walk(join(ROOT, 'src')).map((path) => [relative(ROOT, pa
 
 /*
  * §6.4's regex, its alternation built from the constant itself: two direct
- * `receiver.field` members of self-drawn fields joined by `??` or `||`. An
+ * `receiver.field` members of self-drawn fields joined by `??` or `||`, or
+ * two negated ones joined by `&&` (`!c.text && !c.solid`, the strips' shot
+ * rule's form, which spans lines in the store, so that joint takes `\s`). An
  * optional chain is not a match, so the preview's version keys
  * (`c.title?.version ?? …`) are never seen.
  */
 const RECEIVER = '(?:layer\\.clip|clip|c)'
 const FIELD = `(?:${SELF_DRAWN_FIELDS.join('|')})`
-const SPELLED = new RegExp(`\\b${RECEIVER}\\.${FIELD} *(?:\\?\\?|\\|\\|) *${RECEIVER}\\.${FIELD}\\b`, 'g')
+const JOINED = `\\b${RECEIVER}\\.${FIELD} *(?:\\?\\?|\\|\\|) *${RECEIVER}\\.${FIELD}\\b`
+const NEGATED = `!${RECEIVER}\\.${FIELD}\\s*&&\\s*!${RECEIVER}\\.${FIELD}\\b`
+const SPELLED = new RegExp(`${JOINED}|${NEGATED}`, 'g')
 
 /** The one allowed line: a classification into `'text'`, not a guard. */
 const ALLOWED = { file: 'src/shared/edit/clipKind.ts', line: "if (clip.text ?? clip.title) return 'text'" }
@@ -180,7 +189,10 @@ const SITES = [
   'src/shared/render/chromaKey.ts',
   'src/shared/render/steady.ts',
   'src/shared/edit/camera.ts',
-  'src/shared/director/apply.ts'
+  'src/shared/director/apply.ts',
+  // The strips' shot rule, in the store and on the panel's line (their negated lists, as they stood at fa4ddc3).
+  'src/renderer/src/store.ts',
+  'src/renderer/src/components/tools/SourceLine.tsx'
 ]
 
 describe('no list of self-drawn fields is spelled out again', () => {
@@ -192,7 +204,11 @@ describe('no list of self-drawn fields is spelled out again', () => {
       "if (clip.text ?? clip.title) return 'text'",
       "if (clip.paper ?? clip.carousel ?? clip.solid ?? clip.moment) return 'graphic'",
       'if (clip.adjustment || clip.text || clip.title || clip.paper || clip.carousel || clip.solid || clip.moment) return false',
-      'removed.filter((c) => c.text || c.solid || c.adjustment || c.moment || brought.has(c.assetId)).map((c) => c.assetId)'
+      'removed.filter((c) => c.text || c.solid || c.adjustment || c.moment || brought.has(c.assetId)).map((c) => c.assetId)',
+      // The strips' two negated lists as they stood at fa4ddc3: the panel's on one line, the store's across four.
+      // The four-line one is what holds NEGATED's joint to `\s*`: folded onto one line it would guard nothing of the kind.
+      '(c) => videoTracks.some((t) => t.id === c.trackId) && !c.generatedBy && !c.text && !c.solid && !c.adjustment',
+      '        videoTracks.some((t) => t.id === c.trackId) &&\n        !c.generatedBy &&\n        !c.text &&\n        !c.solid &&\n        !c.adjustment'
     ]
     expect(before.filter((line) => [...line.matchAll(SPELLED)].length === 0)).toEqual([])
     // An optional chain is a key, not a guard.

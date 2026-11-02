@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { Check, Loader2, Upload } from 'lucide-react'
 import type { Clip, MediaAsset, Project } from '@shared/timeline'
 import { isPhoto } from '@shared/edit/photos'
+import { drawsItself } from '@shared/edit/recipes'
 import { useEditor } from '../../store'
 import { Thumbnail } from '../MediaPool'
 import { musicOf } from './shared'
@@ -105,12 +106,13 @@ export function photoFor(
 /**
  * The shot Strip flashes will flash over: the one under the playhead, else the
  * longest — over the clips buildStrips considers (store.ts): on a video track,
- * made by no rule, and not text, a colour card or a grade.
+ * made by no rule, nothing the editor drew itself (shared/edit/recipes.ts
+ * drawsItself, every self-drawn kind at once), and not a grade.
  */
 export function stripShotOf(project: Project, playhead: number): { clip: Clip; under: boolean } | null {
   const videoTracks = project.tracks.filter((t) => t.kind === 'video')
   const candidates = project.clips.filter(
-    (c) => videoTracks.some((t) => t.id === c.trackId) && !c.generatedBy && !c.text && !c.solid && !c.adjustment
+    (c) => videoTracks.some((t) => t.id === c.trackId) && !c.generatedBy && !drawsItself(c) && !c.adjustment
   )
   const under = candidates.find((c) => playhead >= c.start && playhead < c.start + c.duration)
   if (under) return { clip: under, under: true }
