@@ -7,7 +7,8 @@
  *   await window.__forgeGraphicCheck({ segments: true })                                                       M3
  *   await window.__forgeGraphicCheck({ blur: { words: 10, px: 8 } })                                           M5
  *   await window.__forgeGraphicCheck({ parity: true })                                       M6, Indic and colour
- *   await window.__forgeGraphicCheck({ indic: true })                                         M22's numeric halves
+ *   await window.__forgeGraphicCheck({ indic: true })                M22's numeric halves, then phase 1's Indic render check
+ *   await window.__forgeGraphicCheck({ primitives: true })                 phase 1's exit (§6.12) and M13's first half
  *
  * Every option is independent; one not passed runs nothing. The result carries
  * the numbers, a bounded sample of the frames drawn (PNG data URLs, never all
@@ -21,6 +22,16 @@
  * DevTools console, never on the harness page, whose browser is whichever
  * opened it; the timings may fall back to the harness with its user agent
  * recorded (§6.11, "Where it runs").
+ *
+ * Phase 1's `primitives` and `indic` drive the app's own code: the graphic's
+ * preview frames and bake (graphicCanvas.ts, through the drawer seam), a text
+ * clip's `renderTextPng` and the captions' `bakeCaptions`. In the development
+ * app they write: three title-frame sequences per primitives case, under clip
+ * ids `graphic-check-primitives-<run>-<case>-{a,b,canvas}`, and the caption
+ * frames, which `bakeCaptions` clears first, so the next export bakes its own.
+ * The harness bridge counts those writes instead. The page has no file
+ * system, so what is meant to be kept (the Indic sheet) is handed back in the
+ * result for you to save.
  *
  * Phase 0 measures; it decides nothing. The verdicts are §6.15's outcome
  * table's, read by the phase's recorder. What this file throws on is only its
@@ -36,25 +47,50 @@
  * says THROTTLED when the cadence was not a display's.
  */
 
-import { DEFAULT_TEXT, type TextSpec } from '@shared/timeline'
+import { DEFAULT_TEXT, emptyProject, type Clip, type MediaAsset, type Project, type TextSpec } from '@shared/timeline'
+import { segmentIntoSentences, type Word } from '@shared/transcript'
 import { drawTextOnto } from '@shared/render/textPaint'
-import { layoutText } from '@shared/render/textLayout'
+import { LINE_HEIGHT, layoutText } from '@shared/render/textLayout'
+import { fontFamilies } from '@shared/assets/catalog'
+import { mediaUrl } from '@shared/mediaUrl'
+import type { GraphicSpec } from '@shared/graphics/template'
+import { resolveGraphicStyle, type GraphicStyle } from '@shared/graphics/style'
+import { textItems, textSpecOf, type DrawItem, type Drawer, type GraphicTargets, type TextItem, type TextLook, type TextMeasure } from '@shared/graphics/items'
+import { drawListAt, graphicBox, onsetTargetsAt } from '@shared/graphics/drawList'
+import { paintDrawList2d } from '@shared/graphics/paint'
+import { beatFrame, graphicMovingFrames } from '@shared/graphics/frame'
+import { entrance } from '@shared/graphics/motion'
+import { headGrowAt } from '@shared/graphics/stroke'
+import { buildCaptionLayers } from '@shared/graphics/fromTimeline'
+import { planBakeOf } from '@shared/captions/bake'
 import { encodeFrames, setPoolCanvases, type PoolCanvas } from '../encodePool'
 import { sharedRenderer } from '../threeShared'
+import { GRAPHIC_POOL_DEPTH, bakeGraphicSequence, graphicFrameCanvases, graphicMeasure } from '../graphicCanvas'
+import { renderTextPng } from '../textCanvas'
+import { bakeCaptions } from '../captionBake'
+import { faceSettled, useCatalog } from '../catalog'
 import {
   SYNTHETIC,
+  alphaOutside,
   contains,
+  cropRgba,
+  diffOverInk,
   diffRgba,
+  framePath,
   inkBox,
   padRect,
   percentile,
   perFrameMs,
   preBaseLead,
+  primitivesVerdict,
+  siblingPath,
   spread,
   syntheticBox,
   syntheticPanelAt,
   unionRect,
   type PixelDiff,
+  type PrimitivesReading,
+  type PrimitivesVerdict,
   type Rect,
   type Spread
 } from './graphicMeasure'
@@ -77,8 +113,31 @@ export interface GraphicCheckOptions {
   blur?: { words?: number; px?: number; frames?: number }
   /** M6's phase-0 parts: the §51 clusters through a `CanvasTexture`, and colour, with colour management on and off. */
   parity?: boolean
-  /** M22's numeric halves: each §51 cluster drawn whole and one code point at a time. */
+  /**
+   * M22's numeric halves: each §51 cluster drawn whole and one code point at
+   * a time (phase 0, bare `drawTextOnto`); then phase 1's half of the Indic
+   * render check (§6.11): a text clip's bake and a caption's bake in a Latin
+   * face, read for the `INDIC_FONTS` face the site loads (§6.20), and the
+   * clusters through a draw list's text item and `paintDrawList2d` against
+   * `drawTextOnto` directly.
+   */
   indic?: boolean
+  /**
+   * Phase 1's exit (§6.12) and M13's first half: `PRIMITIVES_SPEC` through
+   * the drawer seam, each of `PRIMITIVE_CASES` drawn by the preview path
+   * (`graphicFrameCanvases`) and baked twice by `bakeGraphicSequence` on the
+   * export's box route, each PNG decoded and read against the preview.
+   */
+  primitives?: boolean
+}
+
+/** Every option, in the order `runGraphicCheck` runs them. */
+export const GRAPHIC_CHECK_OPTIONS = ['encode', 'segments', 'blur', 'parity', 'indic', 'primitives'] as const
+export type GraphicCheckOption = (typeof GRAPHIC_CHECK_OPTIONS)[number]
+
+/** The options a call asked for, in run order: each one by itself, so an option not passed runs nothing (the file's rule). */
+export function askedOptions(options: GraphicCheckOptions): GraphicCheckOption[] {
+  return GRAPHIC_CHECK_OPTIONS.filter((name) => Boolean(options[name]))
 }
 
 /* ------------------------------------------------------------- the result */
@@ -297,6 +356,101 @@ export interface IndicResult {
   candidates: FontCandidate[]
   rows: IndicRow[]
   note: string
+  /** Phase 1's half (§6.11, "The Indic render check"), run after phase 0's. */
+  phase1?: IndicPhase1Result
+}
+
+export interface IndicPaintRow {
+  cluster: string
+  script: Script
+  /** The face the text item's look names (`textItems` sets a shaped piece's `INDIC_FONTS` face), and the catalogue's state of it when it was drawn. */
+  face: string
+  faceState: string
+  /** The item painted by `paintDrawList2d` (through `graphicFrameCanvases`) against one `drawTextOnto` call with `textSpecOf` of it: one function, one spec, expected equal. */
+  paintAgainstDirect: PixelDiff
+  equal: boolean
+  /** The whole item against one item per code point through the same painter, over the two's ink: differs by more than 1/255 mean, or the painter splits. */
+  wholeAgainstSplit: PixelDiff
+  differs: boolean
+  conjunct: boolean
+  /** The graphic measure's advance of the cluster, and of its letters without their marks. */
+  wholeWidth: number
+  baseWidth: number
+  narrower: boolean | null
+  /** कि only: the consonant drawn alone found right of where it was drawn, inside the whole drawing (`preBaseLead`). */
+  matraFirst: boolean | null
+  consonantShift: number | null
+}
+
+export interface IndicSiteRow {
+  site: 'text clip' | 'caption'
+  /** The function that baked it. */
+  call: string
+  /** The site's own face, a Latin one, and the `INDIC_FONTS` face its words need. */
+  font: string
+  face: string
+  /** The catalogue's state of `face` before the site ran and after. */
+  before: string
+  after: string
+  /** The site's frame, decoded, against the same picture drawn by `drawTextOnto` just before it ran and just after; null where no frame could be read. */
+  againstBefore: PixelDiff | null
+  againstAfter: PixelDiff | null
+  /** The face not loaded before, loaded after, the frame equal to the after drawing and different from the before one; null where this run cannot tell (`reason`). */
+  seen: boolean | null
+  reason: string
+}
+
+export interface IndicPhase1Result {
+  /** The catalogue the faces load through, as this page has it. */
+  catalog: string
+  sites: IndicSiteRow[]
+  paint: IndicPaintRow[]
+  /** The whole-drawn clusters through the painter, for the eye check beside graphic.int's libass sheets; the page has no file system, so it is handed back. */
+  sheet: { path: string; png: string }
+  note: string
+}
+
+export interface PrimitiveCaseResult {
+  name: PrimitiveCase
+  /** The frames read, within the clip: the progress frames, the last moving frame and the held end. */
+  frames: number[]
+  /** `graphicBox` over the clip, and the box the bake returned: the same, or the bake's region is not the box's. */
+  box: Rect | null
+  bakeBox: Rect | null
+  boxAgrees: boolean
+  /** The frames read that the bake drew (those before `moving`), in the order of `reading.bakeAgainstPreview`. */
+  bakeFrames: number[]
+  reading: PrimitivesReading
+  verdict: PrimitivesVerdict
+  /** `paintDrawList2d` over each moving frame's list on a 1080×1920 canvas never read back: the commands, rasterised by an encode. */
+  drawMs: Spread
+  /** The box route's first bake, its writes `GRAPHIC_POOL_DEPTH` at a time (`perFrameMs`, as M1 reads a pool): its frames drawn and encoded at `region`; null where the writes could not be watched. */
+  encodeMsPerFrame: Spread | null
+  /** The same of the canvas route's bake, at 1080×1920. */
+  canvasEncodeMsPerFrame: Spread | null
+  /** The box route's first bake and the canvas route's, call to answer: faces, lists, box, clear, draw, encode and write. */
+  bakeWallMs: number
+  canvasWallMs: number
+  region: { width: number; height: number }
+  /** The box route's two bakes' ffmpeg patterns, and the canvas route's: on disk in the development app, for M13's framemd5. */
+  patterns: [string, string]
+  canvasPattern: string
+  /** Where the box route's PNGs were read from: the writes as they were made, the files the main process wrote, or nowhere. */
+  bytesFrom: 'writes' | 'files' | 'none'
+}
+
+export interface PrimitivesResult {
+  fps: number
+  width: number
+  height: number
+  /** The clip's frames, the moving ones, and each progress with the frame it lands on. */
+  total: number
+  moving: number
+  progress: { p: number; frame: number }[]
+  catalog: string
+  cases: PrimitiveCaseResult[]
+  conditions: RunConditions
+  note: string
 }
 
 export interface GraphicCheckResult {
@@ -308,6 +462,7 @@ export interface GraphicCheckResult {
   blur?: BlurResult
   parity?: ParityResult
   indic?: IndicResult
+  primitives?: PrimitivesResult
   /** One line per figure, to copy. */
   summary: string[]
   notes: string[]
@@ -1529,6 +1684,753 @@ function checkIndic(frames: Frames, summary: string[]): IndicResult {
   }
 }
 
+/* --------------------------------------------- phase 1: what both options share */
+
+const NO_TARGETS = (): GraphicTargets => ({})
+
+const sleep = (msWait: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, msWait))
+
+/**
+ * The catalogue the faces load through, settled: `ensureFont` answers false
+ * and records nothing while it is null (catalog.ts), so a check run before
+ * the app shell's load lands would read every face as the fallback's. Asked
+ * for here if nobody has, then waited on, up to `limitMs`.
+ */
+async function catalogSettled(limitMs = 10_000): Promise<string> {
+  const first = useCatalog.getState()
+  if (first.catalog === null && !first.loading) void first.load()
+  const started = performance.now()
+  while (useCatalog.getState().catalog === null && performance.now() - started < limitMs) await sleep(50)
+  const { catalog, exists, error } = useCatalog.getState()
+  if (catalog === null) return `no catalogue after ${limitMs / 1000} s${error ? ` (${error})` : ''}: every face draws as its fallback`
+  return `${exists ? 'a catalogue' : 'no asset library, an empty catalogue'} of ${fontFamilies(catalog).length} font families`
+}
+
+/** Whether the catalogue has landed, so `ensureFont` records what it is asked for. */
+const catalogReady = (): boolean => useCatalog.getState().catalog !== null
+
+/** The catalogue's state of a face, in words. */
+function faceState(family: string): string {
+  const { loadedFonts, failedFonts } = useCatalog.getState()
+  if (loadedFonts.has(family)) return 'loaded'
+  const why = failedFonts.get(family)
+  if (why !== undefined) return `failed (${why})`
+  return faceSettled(family) ? 'a system face' : 'not loaded'
+}
+
+/**
+ * Calls `run` with `window.forge[method]` replaced by a recorder that keeps
+ * each frame's bytes, by its index, and the time it was written, then hands
+ * on to the bridge's own; put back after. Where the bridge cannot be written
+ * (an object Electron's `contextBridge` exposes may be frozen: not measured
+ * here, since Electron cannot start in this sandbox) `writes` is null and the
+ * caller reads the files the main process wrote instead.
+ */
+async function recordingWrites<T>(
+  method: 'writeTitleFrame' | 'writeCaptionFrame',
+  run: () => Promise<T>
+): Promise<{ value: T; writes: Map<number, { bytes: ArrayBuffer; at: number }> | null }> {
+  const forge = window.forge as unknown as Record<string, unknown>
+  const original = forge[method] as (...args: unknown[]) => Promise<string>
+  const writes = new Map<number, { bytes: ArrayBuffer; at: number }>()
+  // writeTitleFrame(clipId, frame, bytes); writeCaptionFrame(index, bytes).
+  const at = method === 'writeTitleFrame' ? 1 : 0
+  const recorder = (...args: unknown[]): Promise<string> => {
+    writes.set(args[at] as number, { bytes: args[at + 1] as ArrayBuffer, at: performance.now() })
+    return original.apply(window.forge, args)
+  }
+  let installed = false
+  try {
+    forge[method] = recorder
+    installed = forge[method] === recorder
+  } catch {
+    installed = false
+  }
+  try {
+    return { value: await run(), writes: installed ? writes : null }
+  } finally {
+    if (installed) forge[method] = original
+  }
+}
+
+/** A file the main process wrote, through the media scheme the renderer reads local files by; null where it is not a file (the harness's `harness://` answers) or will not come. */
+async function readFile(path: string): Promise<ArrayBuffer | null> {
+  if (/^harness:/.test(path)) return null
+  try {
+    const response = await fetch(mediaUrl(path))
+    return response.ok ? await response.arrayBuffer() : null
+  } catch {
+    return null
+  }
+}
+
+/** A canvas's picture, as straight RGBA. */
+const canvasPixels = (canvas: HTMLCanvasElement): Uint8ClampedArray => {
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('graphic check: a preview canvas has no 2D context')
+  return pixels(ctx)
+}
+
+/** RGBA pixels on a canvas of their own, at `at` on a `width`×`height` one (a box's picture put back where it sits in the frame). */
+function rgbaCanvas(data: Uint8ClampedArray, w: number, h: number, frame?: { width: number; height: number; at: { x: number; y: number } }): HTMLCanvasElement {
+  const { canvas, ctx } = canvas2d(frame?.width ?? w, frame?.height ?? h)
+  ctx.putImageData(new ImageData(new Uint8ClampedArray(data), w, h), frame?.at.x ?? 0, frame?.at.y ?? 0)
+  return canvas
+}
+
+const describeDiff = (d: PixelDiff): string => `mean ${d.mean.toFixed(3)}, max ${d.max}, ${d.differing} of ${d.pixels} pixels differ`
+
+/* ------------------------------------------------- phase 1: the primitives */
+
+export type PrimitiveCase = 'stroke' | 'text-latin' | 'text-indic' | 'dim-hard' | 'dim-feather' | 'group'
+
+/** §6.11's `primitives` row: a cubic stroke with an end head, a text entrance in Latin and in the §51 clusters, a dim with a hard and a 24 px feathered hole, a rotated, scaled group. */
+export const PRIMITIVE_CASES: readonly PrimitiveCase[] = Object.freeze(['stroke', 'text-latin', 'text-indic', 'dim-hard', 'dim-feather', 'group'])
+
+/** The progress values §6.11 reads each case at. */
+export const PRIMITIVE_PROGRESS: readonly number[] = Object.freeze([0, 0.5, 1])
+
+export const PRIMITIVES_FPS = 30
+export const PRIMITIVES_SIZE: { readonly width: number; readonly height: number } = Object.freeze({ width: 1080, height: 1920 })
+
+/**
+ * The primitives' spec (§6.3, "The drawer seam"): a `counter` with beats at
+ * 0.5 and 1.0 s, `seconds` 2, seed 1, drawn only through `primitivesDrawer`,
+ * since phase 1 has no template. Its data is never drawn: the drawer's lists
+ * are fixed.
+ */
+export const PRIMITIVES_SPEC: GraphicSpec = Object.freeze<GraphicSpec>({
+  data: Object.freeze({ template: 'counter' as const, value: '0', label: 'primitives' }),
+  seconds: 2,
+  // Frozen with the rest, so no drawer or caller can move a beat under the next run.
+  beats: Object.freeze([0.5, 1.0]) as number[],
+  place: Object.freeze({ auto: true as const, third: 'middle' as const }),
+  seed: 1,
+  version: 0
+})
+
+/** The last finite beat, 0 with none. */
+function lastBeat(spec: GraphicSpec): number {
+  let last = 0
+  for (const beat of spec.beats) if (Number.isFinite(beat) && beat > last) last = beat
+  return last
+}
+
+/**
+ * The primitives' progress at `t`: linear from the clip's start to its last
+ * beat, so 0.5 on the first beat and 1 on the second, then held (each
+ * element arrives on a beat, as §6.3 has a template's do). `t / last`
+ * clamped, not motion.ts's `progress`: that adds its 1e-6 s allowance, so
+ * frame 0 would read 1e-6 and not §6.11's "to 0"; at 30 fps `beatFrame`'s
+ * frames 0, 15 and 30 give t = 0, 0.5 and 1 exactly, and so exactly 0, 0.5
+ * and 1 here. A spec with no beat past 0 is settled from its start.
+ */
+export function primitivesProgress(spec: GraphicSpec, t: number): number {
+  const last = lastBeat(spec)
+  if (!(last > 0)) return 1
+  const p = t / last
+  return p > 0 ? (p < 1 ? p : 1) : 0
+}
+
+export interface PrimitiveFrames {
+  /** The clip's frames: `seconds` at the rate. */
+  total: number
+  /** `graphicMovingFrames`: the frames the bake draws. */
+  moving: number
+  /** Each of `PRIMITIVE_PROGRESS` and the frame it lands on (`beatFrame` of its share of the last beat). */
+  progress: { p: number; frame: number }[]
+  lastMoving: number
+  /** The clip's last frame, held by `tpad` in the export. */
+  heldEnd: number
+  /** Every frame the check reads, ascending, once each. */
+  read: number[]
+}
+
+export function primitiveFrames(spec: GraphicSpec, style: GraphicStyle, fps: number): PrimitiveFrames {
+  const total = Math.max(1, Math.round(spec.seconds * fps))
+  const moving = graphicMovingFrames(spec, style, fps, total)
+  const last = lastBeat(spec)
+  const at = PRIMITIVE_PROGRESS.map((p) => ({ p, frame: Math.min(total - 1, beatFrame(p * last, fps)) }))
+  const lastMoving = Math.max(0, moving - 1)
+  const heldEnd = total - 1
+  const read = [...new Set([...at.map((x) => x.frame), lastMoving, heldEnd])].sort((a, b) => a - b)
+  return { total, moving, progress: at, lastMoving, heldEnd, read }
+}
+
+/** The stroke's cubic, in 1080×1920 frame pixels: one subpath, as `flattenPath` takes. */
+export const PRIMITIVE_STROKE_D = 'M 180 1500 C 260 1080, 820 1640, 900 1180'
+/** The dims' hole, fixed at onset as §6.3's dim's is. */
+export const PRIMITIVE_HOLE: Rect = Object.freeze({ x: 240, y: 700, width: 600, height: 520 })
+const PRIMITIVE_TEXT_PX = 96
+const PRIMITIVE_LATIN = 'Measured, not assumed'
+/**
+ * The §51 clusters as two words, the Devanagari run and the Telugu run, so the
+ * `cluster` unit (M3's, for both scripts) is what cuts them: by word they would
+ * be two items, not ten. No cluster ends in a virama, so no conjunct forms
+ * across a joint.
+ */
+const PRIMITIVE_INDIC = [INDIC_CLUSTERS.filter((c) => /\p{Script=Devanagari}/u.test(c)).join(''), INDIC_CLUSTERS.filter((c) => /\p{Script=Telugu}/u.test(c)).join('')].join(' ')
+
+/**
+ * The hand-built drawer of one case (§6.11's `primitives` row), its lists a
+ * function of `primitivesProgress` alone:
+ * - `stroke`: the cubic drawn on from 0 to p (`to`), its end head riding the
+ *   tip and growing over its first 0.1 s (`headGrowAt`);
+ * - `text-latin`, `text-indic`: `textItems` of a Latin line by word, and of
+ *   the ten §51 clusters, a word per script, by cluster (each a shaped piece
+ *   in its script's `INDIC_FONTS` face), entering by the `rise` entrance at p (opacity p,
+ *   up from half the text's height);
+ * - `dim-hard`, `dim-feather`: a dim at 0.6 over the frame at opacity p, its
+ *   hole hard and feathered 24 px;
+ * - `group`: a rounded panel with a word on it, as one group at full
+ *   opacity, scaled from 0.8 to 1.2 and turned to −12° by p.
+ * Pure, as a template's drawer: no clock, no random, measure only through
+ * `measure`.
+ */
+export function primitivesDrawer(name: PrimitiveCase): Drawer {
+  return (spec, style, clock, size, measure) => {
+    const p = primitivesProgress(spec, clock.t)
+    switch (name) {
+      case 'stroke':
+        return {
+          items: [
+            {
+              kind: 'stroke',
+              id: 'stroke',
+              opacity: 1,
+              d: PRIMITIVE_STROKE_D,
+              from: 0,
+              to: p,
+              width: 10,
+              color: BLUE,
+              cap: 'round',
+              join: 'round',
+              heads: { end: { size: 44, grow: headGrowAt(clock.t, 0) } }
+            }
+          ]
+        }
+      case 'text-latin':
+      case 'text-indic': {
+        const look: TextLook = { textStyleId: style.textStyleId, font: style.font, px: PRIMITIVE_TEXT_PX, align: 'center' }
+        const latin = name === 'text-latin'
+        const items = textItems(
+          { id: name, text: latin ? PRIMITIVE_LATIN : PRIMITIVE_INDIC, look, at: { x: 90, y: 800, width: size.width - 180 }, unit: latin ? 'word' : 'cluster' },
+          measure
+        )
+        const move = entrance('rise', p)
+        return { items: items.map((item) => ({ ...item, opacity: move.opacity, transform: { x: 0, y: move.dy * PRIMITIVE_TEXT_PX, scale: move.scale, rotate: 0 } })) }
+      }
+      case 'dim-hard':
+      case 'dim-feather':
+        return {
+          items: [
+            { kind: 'dim', id: 'dim', opacity: p, color: '#000000', alpha: 0.6, hole: { box: { ...PRIMITIVE_HOLE }, radius: 32, feather: name === 'dim-feather' ? 24 : 0 } }
+          ]
+        }
+      case 'group': {
+        const panel: Rect = { x: 240, y: 820, width: 600, height: 280 }
+        const px = 80
+        const word = textItems(
+          {
+            id: 'group-word',
+            text: 'Grouped',
+            look: { textStyleId: style.textStyleId, font: style.font, px, align: 'center' },
+            at: { x: panel.x, y: panel.y + Math.round((panel.height - Math.round(px * LINE_HEIGHT)) / 2), width: panel.width },
+            unit: 'line'
+          },
+          measure
+        )
+        const children: DrawItem[] = [{ kind: 'shape', id: 'group-panel', opacity: 1, shape: 'rounded', box: panel, radius: 28, fill: NEAR_BLACK, stroke: { color: BLUE, width: 6 } }, ...word]
+        return { items: [{ kind: 'group', id: 'group', opacity: 1, transform: { x: 0, y: 0, scale: 0.8 + 0.4 * p, rotate: -12 * p }, children }] }
+      }
+    }
+  }
+}
+
+/** The bake's PNGs by frame, from the writes as they were made or else the files the main process wrote; null where neither can be had. */
+async function bakedBytes(
+  baked: { pattern: string; frames: number },
+  writes: Map<number, { bytes: ArrayBuffer; at: number }> | null
+): Promise<{ bytes: Map<number, ArrayBuffer>; from: 'writes' | 'files' } | null> {
+  const out = new Map<number, ArrayBuffer>()
+  if (writes) {
+    for (const [index, { bytes }] of writes) out.set(index, bytes)
+    return out.size === baked.frames ? { bytes: out, from: 'writes' } : null
+  }
+  for (let index = 0; index < baked.frames; index++) {
+    const bytes = await readFile(framePath(baked.pattern, index))
+    if (!bytes) return null
+    out.set(index, bytes)
+  }
+  return { bytes: out, from: 'files' }
+}
+
+let primitivesRun = 0
+
+interface PrimitiveBake {
+  value: { pattern: string; frames: number; box?: Rect }
+  wallMs: number
+  /** The writes' times in frame order, where the recorder watched them. */
+  writtenAt: number[] | null
+  bytes: { bytes: Map<number, ArrayBuffer>; from: 'writes' | 'files' } | null
+}
+
+/** One `bakeGraphicSequence` of a case under its own clip id, its writes watched and its PNGs gathered. */
+async function bakePrimitive(name: PrimitiveCase, id: string, boxAllowed: boolean, style: GraphicStyle, layout: PrimitiveFrames, drawer: Drawer): Promise<PrimitiveBake> {
+  const { width, height } = PRIMITIVES_SIZE
+  const t0 = performance.now()
+  const { value, writes } = await recordingWrites('writeTitleFrame', () =>
+    bakeGraphicSequence(PRIMITIVES_SPEC, style, id, width, height, layout.total, PRIMITIVES_FPS, NO_TARGETS, boxAllowed, drawer)
+  )
+  const wallMs = performance.now() - t0
+  if (!value) throw new Error(`graphic check: the primitives' ${name} bake (${boxAllowed ? 'box' : 'canvas'} route) answered nothing`)
+  const writtenAt = writes ? [...writes.entries()].sort((a, b) => a[0] - b[0]).map(([, w]) => w.at) : null
+  return { value, wallMs, writtenAt, bytes: await bakedBytes(value, writes) }
+}
+
+/** A bake's per-frame time: its writes `GRAPHIC_POOL_DEPTH` at a time (`perFrameMs`, as M1 reads a pool); null where the writes could not be watched. */
+const bakeSpread = (bake: PrimitiveBake): Spread | null =>
+  bake.writtenAt ? spread(perFrameMs(bake.writtenAt, Math.min(GRAPHIC_POOL_DEPTH, bake.writtenAt.length))) : null
+
+async function checkPrimitive(
+  name: PrimitiveCase,
+  style: GraphicStyle,
+  layout: PrimitiveFrames,
+  frames: Frames,
+  notes: string[]
+): Promise<PrimitiveCaseResult> {
+  const spec = PRIMITIVES_SPEC
+  const fps = PRIMITIVES_FPS
+  const { width, height } = PRIMITIVES_SIZE
+  const size = { width, height }
+  const drawer = primitivesDrawer(name)
+  const read = layout.read
+
+  // The preview path, twice: the same spec drawn twice must be the same picture.
+  const preview = (await graphicFrameCanvases(spec, style, width, height, layout.total, fps, read, NO_TARGETS, drawer)).map(canvasPixels)
+  const again = (await graphicFrameCanvases(spec, style, width, height, layout.total, fps, read, NO_TARGETS, drawer)).map(canvasPixels)
+  const drawnTwice = read.map((_, i) => diffRgba(preview[i], again[i], width))
+  const at = (frame: number): Uint8ClampedArray => preview[read.indexOf(frame)]
+  const heldAgainstLast = diffRgba(at(layout.lastMoving), at(layout.heldEnd), width)
+
+  const measure = graphicMeasure()
+  const box = graphicBox(spec, style, fps, layout.total, size, measure, NO_TARGETS, drawer)
+  const outside = preview.map((data) => alphaOutside(data, width, height, box))
+
+  // The paint's own time over the moving frames' lists, on a frame-sized canvas never read back.
+  const timing = canvas2d(width, height)
+  const layer = (w: number, h: number): CanvasRenderingContext2D => canvas2d(w, h).ctx
+  const targets = onsetTargetsAt(NO_TARGETS)
+  const draws: number[] = []
+  for (let frame = 0; frame < layout.moving; frame++) {
+    const list = drawListAt(spec, style, frame, fps, size, measure, targets(frame), drawer)
+    const t0 = performance.now()
+    timing.ctx.clearRect(0, 0, width, height)
+    paintDrawList2d(timing.ctx, list, { layer })
+    draws.push(performance.now() - t0)
+  }
+
+  // The bake on the export's box route (boxAllowed, as an identity-placed clip is) twice, and once on the
+  // canvas route (the store's bake, and the export's for any other clip), each under its own clip id so every sequence stays.
+  const run = ++primitivesRun
+  const id = (route: string): string => `graphic-check-primitives-${run}-${name}-${route}`
+  const first = await bakePrimitive(name, id('a'), true, style, layout, drawer)
+  const second = await bakePrimitive(name, id('b'), true, style, layout, drawer)
+  const whole = await bakePrimitive(name, id('canvas'), false, style, layout, drawer)
+  const bakeBox = first.value.box ?? null
+  const region = bakeBox ?? { x: 0, y: 0, width, height }
+  if (!first.bytes || !whole.bytes) {
+    notes.push(`primitives ${name}: a bake's PNGs could not be read (neither the writes nor ${(!first.bytes ? first : whole).value.pattern}); its readings against the preview are missing.`)
+  }
+
+  let equal = 0
+  if (first.bytes && second.bytes) {
+    for (const [index, bytes] of first.bytes.bytes) if (second.bytes.bytes.has(index) && sameBytes(bytes, second.bytes.bytes.get(index)!)) equal++
+  }
+
+  const bakeFrames = read.filter((frame) => frame < first.value.frames)
+  const decoded = new Map<number, Uint8ClampedArray>()
+  const bakeAgainstPreview: PixelDiff[] = []
+  const canvasAgainstPreview: PixelDiff[] = []
+  const canvasOutside: { max: number; pixels: number }[] = []
+  for (const frame of bakeFrames) {
+    const boxBytes = first.bytes?.bytes.get(frame)
+    if (boxBytes) {
+      const data = await decodePng(boxBytes, region.width, region.height)
+      decoded.set(frame, data)
+      bakeAgainstPreview.push(diffOverInk(cropRgba(at(frame), width, region), data, region.width, region.height))
+    }
+    const canvasBytes = whole.bytes?.bytes.get(frame)
+    if (canvasBytes) {
+      const data = await decodePng(canvasBytes, width, height)
+      canvasAgainstPreview.push(diffOverInk(at(frame), data, width, height))
+      canvasOutside.push(alphaOutside(data, width, height, box))
+    }
+  }
+  const reading: PrimitivesReading = {
+    bakeAgainstPreview,
+    canvasAgainstPreview,
+    heldAgainstLast,
+    outside: [...outside, ...canvasOutside],
+    drawnTwice,
+    bakedTwice: { equal, of: first.bytes ? first.bytes.bytes.size : 0 }
+  }
+
+  // One sheet per case: the preview's frames over the box route's, each bake frame put back where its box sits.
+  const cell = { width: 180, height: 320 }
+  frames.canvas(
+    `primitives ${name}: preview (top) and box-route bake (bottom) at frames ${read.join(', ')}`,
+    sheet(
+      [
+        read.map((frame) => rgbaCanvas(at(frame), width, height)),
+        read.map((frame) => {
+          const data = decoded.get(frame)
+          return data ? rgbaCanvas(data, region.width, region.height, { width, height, at: region }) : canvas2d(width, height).canvas
+        })
+      ],
+      cell
+    )
+  )
+
+  return {
+    name,
+    frames: read,
+    box,
+    bakeBox,
+    boxAgrees: JSON.stringify(box) === JSON.stringify(bakeBox),
+    bakeFrames,
+    reading,
+    verdict: primitivesVerdict(reading),
+    drawMs: spread(draws),
+    encodeMsPerFrame: bakeSpread(first),
+    canvasEncodeMsPerFrame: bakeSpread(whole),
+    bakeWallMs: first.wallMs,
+    canvasWallMs: whole.wallMs,
+    region: { width: region.width, height: region.height },
+    patterns: [first.value.pattern, second.value.pattern],
+    canvasPattern: whole.value.pattern,
+    bytesFrom: first.bytes ? first.bytes.from : 'none'
+  }
+}
+
+async function checkPrimitives(frames: Frames, summary: string[], notes: string[]): Promise<PrimitivesResult> {
+  const style = resolveGraphicStyle('clean')
+  const layout = primitiveFrames(PRIMITIVES_SPEC, style, PRIMITIVES_FPS)
+  const catalog = await catalogSettled()
+  const conditionsAt = summary.length
+  summary.push('')
+  const before = await pageConditions()
+  const toBlob2x2 = await toBlobFloor()
+
+  const cases: PrimitiveCaseResult[] = []
+  for (const name of PRIMITIVE_CASES) {
+    const r = await checkPrimitive(name, style, layout, frames, notes)
+    cases.push(r)
+    const label = (frame: number): string => {
+      const p = layout.progress.find((x) => x.frame === frame)
+      return p ? `p=${p.p}` : frame === layout.lastMoving ? 'last moving' : `frame ${frame}`
+    }
+    const v = r.verdict
+    const perFrame = (timed: Spread | null, wallMs: number): string =>
+      timed ? `p50 ${ms(timed.p50)}, p95 ${ms(timed.p95)} ms/frame` : `${ms(wallMs / layout.moving)} ms/frame by its wall`
+    const diffs = (list: PixelDiff[]): string =>
+      list.length ? r.bakeFrames.map((frame, i) => `${label(frame)} ${describeDiff(list[i])}`).join('; ') : 'not read'
+    summary.push(
+      `primitives ${name}: ${v.pass ? 'PASS' : 'FAIL'}; over their ink, the box route's PNG against the preview cut to the box ${r.bakeBox ? `${r.bakeBox.width}x${r.bakeBox.height} at ${r.bakeBox.x},${r.bakeBox.y}` : 'none'}` +
+        `${r.boxAgrees ? '' : ` (graphicBox says ${JSON.stringify(r.box)}: NOT the bake's)`}: ${diffs(r.reading.bakeAgainstPreview)}` +
+        `; the canvas route's: ${diffs(r.reading.canvasAgainstPreview)}${v.bake ? '' : ' (OVER 1/255)'}` +
+        `; last moving against the held end ${describeDiff(r.reading.heldAgainstLast)}${v.held ? '' : ' (NOT EQUAL)'}` +
+        `; alpha outside graphicBox (preview and canvas PNGs) max ${Math.max(...r.reading.outside.map((o) => o.max))} (${r.reading.outside.reduce((sum, o) => sum + o.pixels, 0)} pixels)` +
+        `; drawn twice max ${Math.max(...r.reading.drawnTwice.map((d) => d.max))}; baked twice ${r.reading.bakedTwice.equal} of ${r.reading.bakedTwice.of} PNGs byte-equal` +
+        `; paint mean ${ms(r.drawMs.mean)}, p95 ${ms(r.drawMs.p95)} ms at ${PRIMITIVES_SIZE.width}x${PRIMITIVES_SIZE.height} (commands only)` +
+        `; bake ${perFrame(r.encodeMsPerFrame, r.bakeWallMs)} at ${r.region.width}x${r.region.height} (wall ${ms(r.bakeWallMs)} ms)` +
+        `, ${perFrame(r.canvasEncodeMsPerFrame, r.canvasWallMs)} at ${PRIMITIVES_SIZE.width}x${PRIMITIVES_SIZE.height} (wall ${ms(r.canvasWallMs)} ms), ${layout.moving} frames each; PNGs read from ${r.bytesFrom}`
+    )
+  }
+
+  const after = await pageConditions()
+  const conditions: RunConditions = { before, after, toBlob2x2, throttled: throttledPage(before) || throttledPage(after) }
+  summary[conditionsAt] = reportConditions('primitives', conditions, summary, notes) + `; ${catalog}`
+  const first = cases[0]
+  if (first && first.bytesFrom === 'files') {
+    summary.push(
+      `primitives M13: each case baked twice on the box route; the two sequences of the ${first.name} case are ${first.patterns[0]} and ${first.patterns[1]} ` +
+        `(read each with "$FFMPEG" -start_number 0 -i <pattern> -f framemd5 -), the others beside them, and the canvas route's beside those (${first.canvasPattern})`
+    )
+  }
+  return {
+    fps: PRIMITIVES_FPS,
+    width: PRIMITIVES_SIZE.width,
+    height: PRIMITIVES_SIZE.height,
+    total: layout.total,
+    moving: layout.moving,
+    progress: layout.progress,
+    catalog,
+    cases,
+    conditions,
+    note:
+      'Each case is PRIMITIVES_SPEC through its own hand-built drawer (primitivesDrawer), at 1080x1920 and 30 fps. The preview is graphicFrameCanvases (the canvas region, drawn ' +
+      'twice); the bake is bakeGraphicSequence through encodeFrames (its default route: the workers where the page has them), on the export\'s box route ' +
+      '(boxAllowed) twice under two clip ids and once on the canvas route, each PNG decoded with premultiplyAlpha and colorSpaceConversion "none" and read ' +
+      'against the preview (cut to the box for the box route) over the two pictures\' ink, padded 2 px (diffOverInk). The bar (§6.12) is PRIMITIVES_BAR: within 1/255 mean on both routes, the held end equal to the last ' +
+      'moving frame, alpha 0 outside graphicBox (on the preview and the canvas route\'s PNGs), the same spec twice identical. paint times the commands on a canvas ' +
+      'never read back (an encode rasterises them); each bake\'s figure is its writes GRAPHIC_POOL_DEPTH at a time, through the IPC and disk in the development ' +
+      'app and the harness bridge\'s recorder here. ' +
+      'Two bakes byte-equal on one page is M13\'s first half as the page can read it; the framemd5 of the files on disk, and the Mac against the Surface, are yours.'
+  }
+}
+
+/* ---------------------------------------------- phase 1: the Indic render check */
+
+/** The clusters of a script, in §51's order. */
+const clustersOf = (script: Script): string[] => INDIC_CLUSTERS.filter((c) => scriptOf(c) === script)
+
+/** Where the page hands the whole-drawn sheet back for: beside graphic.int's libass sheets (tests/output/graphic/indic-libass/). */
+export const INDIC_PAINT_SHEET = 'tests/output/graphic/indic-paint/whole.png'
+
+/** The site's frame against the drawings before and after it ran, and what that says of the face the site loads. */
+export function siteReading(
+  base: Omit<IndicSiteRow, 'againstBefore' | 'againstAfter' | 'seen' | 'reason'>,
+  frame: Uint8ClampedArray | null,
+  before: Uint8ClampedArray,
+  after: Uint8ClampedArray,
+  width: number,
+  catalogReady: boolean
+): IndicSiteRow {
+  const againstBefore = frame ? diffRgba(frame, before, width) : null
+  const againstAfter = frame ? diffRgba(frame, after, width) : null
+  let seen: boolean | null = null
+  let reason: string
+  if (!frame || !againstBefore || !againstAfter) reason = 'the site\'s frame could not be read'
+  else if (base.before === 'loaded') reason = 'the face was loaded before the site ran (an earlier check, or the Preview, loaded it), so this run cannot see the site load it: reload the page and run { indic: true } first'
+  else if (base.after === 'not loaded' && catalogReady) {
+    // `ensureFont` records a failure for every face a catalogue it has cannot load, so a face neither loaded nor failed was never asked for.
+    seen = false
+    reason = 'the site never asked for the face: neither loaded nor failed after it ran, with the catalogue there to ask'
+  } else if (base.after !== 'loaded') reason = `the face did not load on this page (${base.after}), so the site drew the system's letters; the development app's run is yours`
+  else {
+    seen = againstAfter.max === 0 && againstBefore.differing > 0
+    reason = seen
+      ? 'the site loaded the face and drew in it: its frame equals the drawing after it ran and differs from the one before'
+      : againstAfter.max !== 0
+        ? 'the site\'s frame differs from the drawing after the face landed'
+        : 'the face landed but the drawing did not change with it'
+  }
+  return { ...base, againstBefore, againstAfter, seen, reason }
+}
+
+/** A text clip's bake (`renderTextPng`, what `bakeText` writes) of the Devanagari clusters in the style's Latin face. */
+async function textClipSite(style: GraphicStyle): Promise<IndicSiteRow> {
+  const width = 1080
+  const height = 480
+  const face = 'Noto Sans Devanagari'
+  const spec = textSpec(clustersOf('deva').join(' '), { font: style.font, size: 0.2, weight: 700, align: 'center', position: 'center' })
+  const draw = (): Uint8ClampedArray => {
+    const { ctx } = canvas2d(width, height)
+    drawTextOnto(ctx, spec, width, height)
+    return pixels(ctx)
+  }
+  const before = faceState(face)
+  const drawnBefore = draw()
+  const bytes = await renderTextPng(spec, width, height)
+  const after = faceState(face)
+  const frame = await decodePng(bytes, width, height)
+  return siteReading({ site: 'text clip', call: 'renderTextPng', font: spec.font, face, before, after }, frame, drawnBefore, draw(), width, catalogReady())
+}
+
+/** A caption's bake (`bakeCaptions`) of a track whose words are the Telugu clusters, in the caption style's Latin face; its first line's settled picture read. */
+async function captionSite(): Promise<{ row: IndicSiteRow; frame: HTMLCanvasElement | null }> {
+  const width = 1080
+  const height = 1920
+  const face = 'Noto Sans Telugu'
+  const words: Word[] = clustersOf('telu').map((text, index) => ({ index, text, startMs: index * 500, endMs: (index + 1) * 500, confidence: 0.9 }))
+  const asset: MediaAsset = {
+    id: 'graphic-check-caption-asset', path: '/graphic-check/caption.mp4', name: 'caption.mp4', kind: 'video', durationFrames: 900,
+    width: 1920, height: 1080, fps: 30, hasVideo: true, hasAudio: true, size: 0
+  }
+  const clip: Clip = {
+    id: 'graphic-check-caption-clip', assetId: asset.id, trackId: 'v1', start: 0, duration: 120, inPoint: 0, volume: 1,
+    transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
+    color: { brightness: 0, contrast: 1, saturation: 1 }
+  }
+  const project: Project = {
+    ...emptyProject('graphic check'),
+    assets: [asset],
+    clips: [clip],
+    transcripts: { [asset.id]: { assetId: asset.id, language: 'te', model: 'graphic-check', durationMs: 30_000, words, segments: segmentIntoSentences(words) } },
+    captions: { enabled: true, styleId: 'kinetic' }
+  }
+  const layers = buildCaptionLayers(project, { width, height })
+  const bake = layers ? planBakeOf(layers) : null
+  // The first line's settled picture, the last of its pictures to move: the kinetic style pops each word in from nothing,
+  // so its first picture (since 0) has no ink in any face and would read the same before and after (measured, Chrome 152).
+  let index = -1
+  bake?.plan.pictures.forEach((p, i) => {
+    if (p.layer === 0 && (index < 0 || p.since >= bake.plan.pictures[index].since)) index = i
+  })
+  if (!bake || index < 0) throw new Error('graphic check: the caption track gave no picture to bake')
+  const picture = bake.plan.pictures[index]
+  const layer = bake.layers[picture.layer]
+  const fps = project.settings.fps
+  // The picture as captionBake.ts draws it (its loop's drawTextOnto call), at frame size: its band is cut out once the bake has measured it.
+  const draw = (): Uint8ClampedArray => {
+    const { ctx } = canvas2d(width, height)
+    drawTextOnto(
+      ctx,
+      { ...layer.spec, highlight: layer.highlight && picture.word >= 0 ? { word: picture.word, ...layer.highlight } : undefined },
+      width,
+      height,
+      layer.spec.animationId ? { frame: picture.since, fps } : undefined
+    )
+    return pixels(ctx)
+  }
+  const before = faceState(face)
+  const drawnBefore = draw()
+  const { value: baked, writes } = await recordingWrites('writeCaptionFrame', () => bakeCaptions(project, { width, height }))
+  const after = faceState(face)
+  const drawnAfter = draw()
+  const base = { site: 'caption' as const, call: 'bakeCaptions', font: layer.spec.font, face, before, after }
+  if (!baked) return { row: siteReading(base, null, drawnBefore, drawnAfter, width, catalogReady()), frame: null }
+  const band: Rect = { x: 0, y: baked.y, width, height: baked.height }
+  const bytes = writes ? (writes.get(index)?.bytes ?? null) : await readFile(siblingPath(baked.listPath, `${String(index).padStart(5, '0')}.png`))
+  const frame = bytes ? await decodePng(bytes, width, band.height) : null
+  return {
+    row: siteReading(base, frame, cropRgba(drawnBefore, width, band), cropRgba(drawnAfter, width, band), width, catalogReady()),
+    frame: frame ? rgbaCanvas(frame, width, band.height) : null
+  }
+}
+
+/** The §51 clusters through a draw list's text item and painter A, against `drawTextOnto` directly and against one item per code point. */
+async function paintClusters(style: GraphicStyle, frames: Frames): Promise<{ rows: IndicPaintRow[]; sheetPng: string }> {
+  const width = 1080
+  const height = 480
+  const px = 120
+  const lineHeight = Math.round(px * LINE_HEIGHT)
+  const look: TextLook = { textStyleId: style.textStyleId, font: style.font, px, align: 'left' }
+  const field = (text: string, measure: TextMeasure): TextItem[] =>
+    textItems({ id: 'cluster', text, look, at: { x: 60, y: Math.round((height - lineHeight) / 2), width: width - 120 }, unit: 'line' }, measure)
+  const paint = async (items: (measure: TextMeasure) => DrawItem[]): Promise<HTMLCanvasElement> => {
+    const drawer: Drawer = (_spec, _style, _clock, _size, measure) => ({ items: items(measure) })
+    const [canvas] = await graphicFrameCanvases(PRIMITIVES_SPEC, style, width, height, 1, PRIMITIVES_FPS, [0], NO_TARGETS, drawer)
+    return canvas
+  }
+  /**
+   * One text item per code point (`Array.from`, libass's `shaping=simple`), each in the whole item's look and box moved right
+   * by the advances of the ones before it, drawn whole by the same painter. The box keeps the whole item's width: one cut
+   * to the code point's own advance draws a mark (advance 0) into a box of no width, and the per-code-point painter of the
+   * plan's mutation, which only moves its pen, then matched it in 3 of the 10 clusters (Chrome 152, 2026-11-02).
+   */
+  const perCodePoint = (cluster: string) => (measure: TextMeasure): DrawItem[] => {
+    const [whole] = field(cluster, measure)
+    let pen = 0
+    return Array.from(cluster).map((cp, i) => {
+      const item: TextItem = { kind: 'text', id: `cp-${i}`, opacity: 1, text: cp, look: whole.look, box: { ...whole.box, x: whole.box.x + pen } }
+      pen += measure(cp, whole.look).width
+      return item
+    })
+  }
+
+  const rows: IndicPaintRow[] = []
+  const pictures: HTMLCanvasElement[][] = [[], []]
+  for (const cluster of INDIC_CLUSTERS) {
+    const wholeCanvas = await paint((m) => field(cluster, m))
+    const splitCanvas = await paint(perCodePoint(cluster))
+    // After the faces have landed (graphicFrameCanvases awaited them): the item the painter drew, built again with the same measure.
+    const measure = graphicMeasure()
+    const [item] = field(cluster, measure)
+    const direct = canvas2d(width, height)
+    direct.ctx.save()
+    direct.ctx.translate(item.box.x, item.box.y)
+    drawTextOnto(direct.ctx, textSpecOf(item.text, item.look, item.box), item.box.width, item.box.height)
+    direct.ctx.restore()
+
+    const whole = canvasPixels(wholeCanvas)
+    const split = canvasPixels(splitCanvas)
+    const paintAgainstDirect = diffRgba(whole, pixels(direct.ctx), width)
+    const ink = unionRect(inkBox(whole, width, height), inkBox(split, width, height))
+    if (!ink) throw new Error(`graphic check: ${cluster} drew nothing through the painter`)
+    const area = padRect(ink, 2, width, height)
+    const wholeAgainstSplit = diffRgba(whole, split, width, area)
+
+    let matraFirst: boolean | null = null
+    let consonantShift: number | null = null
+    const codePoints = Array.from(cluster)
+    if (codePoints.includes(PRE_BASE_I)) {
+      const consonant = canvasPixels(await paint((m) => field(codePoints.filter((cp) => cp !== PRE_BASE_I).join(''), m)))
+      const lead = preBaseLead(whole, consonant, width, height)
+      matraFirst = lead ? lead.first : null
+      consonantShift = lead ? lead.shift : null
+    }
+    const conjunct = VIRAMA.test(cluster)
+    const wholeWidth = measure(cluster, item.look).width
+    const baseWidth = codePoints.filter((cp) => !MARK.test(cp)).reduce((sum, cp) => sum + measure(cp, item.look).width, 0)
+    rows.push({
+      cluster,
+      script: scriptOf(cluster),
+      face: item.look.font,
+      faceState: faceState(item.look.font),
+      paintAgainstDirect,
+      equal: paintAgainstDirect.max === 0,
+      wholeAgainstSplit,
+      differs: wholeAgainstSplit.mean > 1,
+      conjunct,
+      wholeWidth,
+      baseWidth,
+      narrower: conjunct ? wholeWidth < baseWidth : null,
+      matraFirst,
+      consonantShift
+    })
+    pictures[0].push(crop(wholeCanvas, padRect(area, 6, width, height)))
+    pictures[1].push(crop(splitCanvas, padRect(area, 6, width, height)))
+  }
+  const cell = { width: 220, height: 200 }
+  frames.canvas('Indic phase 1: each cluster through paintDrawList2d whole (top row) and one item per code point (bottom row)', sheet(pictures, cell))
+  return { rows, sheetPng: sheet([pictures[0]], cell).toDataURL('image/png') }
+}
+
+async function checkIndicPhase1(frames: Frames, summary: string[]): Promise<IndicPhase1Result> {
+  const style = resolveGraphicStyle('clean')
+  const catalog = await catalogSettled()
+  // The sites first, each on a script of its own, before the painter's half loads both faces: a site whose face is already loaded cannot be seen loading it.
+  const sites: IndicSiteRow[] = [await textClipSite(style)]
+  const caption = await captionSite()
+  sites.push(caption.row)
+  if (caption.frame) frames.canvas('Indic phase 1: the caption bake\'s first line, settled (Telugu, the caption style\'s face)', caption.frame)
+  for (const s of sites) {
+    summary.push(
+      `Indic site ${s.site} (${s.call}, ${s.font}, ${s.face} ${s.before} before, ${s.after} after): ` +
+        (s.againstAfter && s.againstBefore ? `the frame against the drawing after ${describeDiff(s.againstAfter)}, against the one before ${describeDiff(s.againstBefore)}; ` : '') +
+        `${s.seen === null ? 'cannot tell' : s.seen ? 'SEEN' : 'NOT SEEN'}: ${s.reason}`
+    )
+  }
+
+  const { rows, sheetPng } = await paintClusters(style, frames)
+  for (const r of rows) {
+    summary.push(
+      `Indic paint ${r.cluster} (${r.face}, ${r.faceState}): text item through paintDrawList2d against drawTextOnto ${describeDiff(r.paintAgainstDirect)}${r.equal ? ' (equal)' : ' (NOT EQUAL)'}; ` +
+        `whole against per code point ${r.differs ? 'differ' : 'DO NOT differ'} (mean ${r.wholeAgainstSplit.mean.toFixed(3)} over the ink)` +
+        (r.conjunct ? `; ${r.wholeWidth.toFixed(1)} px against its letters' ${r.baseWidth.toFixed(1)}${r.narrower ? ' (narrower)' : ' (NOT narrower)'}` : '') +
+        (r.matraFirst === null ? '' : `; i-matra ${r.matraFirst ? 'first' : 'NOT first'} (the consonant ${r.consonantShift} px right of where it is drawn alone)`)
+    )
+  }
+  summary.push(`Indic phase 1 sheet: save result.indic.phase1.sheet.png as ${INDIC_PAINT_SHEET}, beside graphic.int's indic-libass sheets, for the eye check (the page has no file system; graphic.int clears tests/output/graphic/ when it starts, so save it after a graphic.int run)`)
+  return {
+    catalog,
+    sites,
+    paint: rows,
+    sheet: { path: INDIC_PAINT_SHEET, png: sheetPng },
+    note:
+      'Sites: a text clip\'s bake (renderTextPng, what bakeText writes) of the Devanagari clusters and a caption track\'s bake (bakeCaptions, the kinetic style, its first line\'s ' +
+      'settled picture) of the Telugu ones, each in a Latin face, so the INDIC_FONTS face is there only if the site loaded it (§6.20). Each frame is read against the same picture drawn by ' +
+      'drawTextOnto just before the site ran and just after: seen when the face was not loaded before, was after, and the frame equals the after drawing and differs from ' +
+      'the before one. The harness bridge serves no fonts (its catalogue is empty), so on the harness page neither face loads and only the development app can see it. ' +
+      'The caption bake clears and rewrites the app\'s caption frames. Paint: each cluster as a text item (textItems, unit line, the style\'s Latin face, so the ' +
+      'item takes its script\'s face) through graphicFrameCanvases and paintDrawList2d, against one drawTextOnto call with textSpecOf of the same item (expected equal), ' +
+      'and against one item per code point through the same painter (the plan\'s mutation, an Array.from split in the painter, makes them equal). narrower and the ' +
+      'i-matra are read with the graphic measure, as phase 0 read them with its own.'
+  }
+}
+
 /* ------------------------------------------------------------ the sheet */
 
 const SHEET_ID = 'forge-graphic-check-sheet'
@@ -1612,13 +2514,19 @@ export async function runGraphicCheck(options: GraphicCheckOptions = {}): Promis
     frames: frames.list
   }
   await document.fonts.ready
+  const asked = askedOptions(options)
   if (options.encode) result.encode = await checkEncode(options.encode, frames, summary, notes)
   if (options.segments) result.segments = checkSegments(frames, summary)
   if (options.blur) result.blur = await checkBlur(options.blur, frames, summary, notes)
   if (options.parity) result.parity = await checkParity(frames, summary)
-  if (options.indic) result.indic = checkIndic(frames, summary)
-  if (!options.encode && !options.segments && !options.blur && !options.parity && !options.indic) {
-    notes.push('No option was passed, so nothing ran: encode, segments, blur, parity and indic (docs/CLIPS.md §6.11).')
+  if (options.indic) {
+    // Phase 0's bare drawTextOnto first, as it was measured, before phase 1's half loads the Noto faces.
+    result.indic = checkIndic(frames, summary)
+    result.indic.phase1 = await checkIndicPhase1(frames, summary)
+  }
+  if (options.primitives) result.primitives = await checkPrimitives(frames, summary, notes)
+  if (asked.length === 0) {
+    notes.push(`No option was passed, so nothing ran: ${GRAPHIC_CHECK_OPTIONS.join(', ')} (docs/CLIPS.md §6.11).`)
   }
   if (frames.dropped > 0) notes.push(`${frames.dropped} more frames were drawn than a result carries (${MAX_FRAMES}).`)
   showSheet(result)

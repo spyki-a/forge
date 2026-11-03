@@ -259,3 +259,106 @@ export function syntheticBox(frames: number): Rect {
   const bottom = Math.min(SYNTHETIC.height, Math.ceil((padded.y + padded.height) / 2) * 2)
   return { x, y, width: right - x, height: bottom - y }
 }
+
+/* ------------------------------------------------- phase 1: the primitives */
+
+/** `data`'s pixels inside `box`, as a `box`-sized RGBA picture: the canvas route's frame cut to the box route's region. */
+export function cropRgba(data: ArrayLike<number>, width: number, box: Rect): Uint8ClampedArray {
+  const out = new Uint8ClampedArray(box.width * box.height * 4)
+  for (let y = 0; y < box.height; y++) {
+    for (let x = 0; x < box.width; x++) {
+      const from = ((box.y + y) * width + box.x + x) * 4
+      const to = (y * box.width + x) * 4
+      for (let c = 0; c < 4; c++) out[to + c] = data[from + c]
+    }
+  }
+  return out
+}
+
+/**
+ * The alpha a frame carries outside `box` (§6.12's phase 1 bar: "alpha 0
+ * outside the box, maximum 0"): its largest value and how many pixels carry
+ * any. A null box (no ink anywhere) reads every pixel as outside it.
+ */
+export function alphaOutside(data: ArrayLike<number>, width: number, height: number, box: Rect | null): { max: number; pixels: number } {
+  let max = 0
+  let pixels = 0
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (box && x >= box.x && x < box.x + box.width && y >= box.y && y < box.y + box.height) continue
+      const a = data[(y * width + x) * 4 + 3]
+      if (a > 0) {
+        pixels++
+        if (a > max) max = a
+      }
+    }
+  }
+  return { max, pixels }
+}
+
+/**
+ * Two pictures of one size compared over their ink: the union of both ink
+ * boxes, grown by `pad` (kept inside the picture), the way the Indic reading
+ * compares a cluster's frames; the whole picture when neither has any ink.
+ * Over the whole box route's region a thin stroke moved a pixel averaged 0.68
+ * levels, under §6.12's 1/255, where over its ink it does not (Chrome 152,
+ * 2026-11-02): a mean is only as strict as the area it is taken over.
+ */
+export function diffOverInk(a: ArrayLike<number>, b: ArrayLike<number>, width: number, height: number, pad = 2): PixelDiff {
+  const ink = unionRect(inkBox(a, width, height), inkBox(b, width, height))
+  return diffRgba(a, b, width, ink ? padRect(ink, pad, width, height) : undefined)
+}
+
+/** One frame's file in a numbered sequence's ffmpeg pattern (`writeTitleFrame`'s `%05d.png`, titles.ts); the pattern unchanged when it numbers nothing. */
+export function framePath(pattern: string, index: number): string {
+  return pattern.replace(/%0(\d+)d/, (_, digits: string) => String(Math.max(0, Math.floor(index))).padStart(Number(digits), '0'))
+}
+
+/** A file beside another, whichever separator the main process joined it with (`writeCaptionList`'s list beside `writeCaptionFrame`'s pictures, captions.ts). */
+export function siblingPath(path: string, name: string): string {
+  const cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'))
+  return `${path.slice(0, cut + 1)}${name}`
+}
+
+/**
+ * §6.12's phase 1 bar for the `primitives` check, as the check reads it: the
+ * baked PNG against the preview within 1/255 mean (a mean difference of at
+ * most 1 level over the two pictures' ink, `diffOverInk`), the last moving frame equal to the held end
+ * (mean 0), no alpha outside the box (maximum 0), and the same spec twice
+ * identical (the preview drawn twice equal, every PNG of two bakes
+ * byte-equal).
+ */
+export const PRIMITIVES_BAR = { bakeMeanLevels: 1, heldMean: 0, outsideAlpha: 0 } as const
+
+export interface PrimitivesReading {
+  /** Per frame read, the box route's decoded PNG (the export's, `boxAllowed`) against the preview cut to the box, over their ink (`diffOverInk`). */
+  bakeAgainstPreview: PixelDiff[]
+  /** Per frame read, the canvas route's decoded PNG (the store's bake, and the export's for a clip not identity-placed) against the preview, over their ink. */
+  canvasAgainstPreview: PixelDiff[]
+  /** The last moving frame against the held end, on the preview. */
+  heldAgainstLast: PixelDiff
+  /** Per frame read, the alpha outside `graphicBox` on the preview, then on the canvas route's PNG. */
+  outside: { max: number; pixels: number }[]
+  /** Per frame read, the preview drawn a second time against the first. */
+  drawnTwice: PixelDiff[]
+  /** PNGs of the second bake byte-equal to the first's, of how many. */
+  bakedTwice: { equal: number; of: number }
+}
+
+export interface PrimitivesVerdict {
+  bake: boolean
+  held: boolean
+  outside: boolean
+  twice: boolean
+  pass: boolean
+}
+
+/** The bar applied to a case's readings: each part, and all of them. A case with no frame read, or no PNG on either route, passes nothing. */
+export function primitivesVerdict(r: PrimitivesReading): PrimitivesVerdict {
+  const within = (diffs: readonly PixelDiff[]): boolean => diffs.length > 0 && diffs.every((d) => d.mean <= PRIMITIVES_BAR.bakeMeanLevels)
+  const bake = within(r.bakeAgainstPreview) && within(r.canvasAgainstPreview)
+  const held = r.heldAgainstLast.pixels > 0 && r.heldAgainstLast.mean <= PRIMITIVES_BAR.heldMean
+  const outside = r.outside.length > 0 && r.outside.every((o) => o.max <= PRIMITIVES_BAR.outsideAlpha)
+  const twice = r.drawnTwice.length > 0 && r.drawnTwice.every((d) => d.max === 0) && r.bakedTwice.of > 0 && r.bakedTwice.equal === r.bakedTwice.of
+  return { bake, held, outside, twice, pass: bake && held && outside && twice }
+}
