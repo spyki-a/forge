@@ -408,3 +408,345 @@ export function m13Line(cases: readonly { name: string; patterns: readonly [stri
     `; the canvas route's beside them (${onDisk.map((c) => c.canvasPattern).join(', ')}). Each run adds its own; the app's title-frame folder keeps them until cleared.`
   )
 }
+
+/* ------------------------------------------------------ M8: the path's length */
+
+/**
+ * M8's bar (§6.15, proposal): `STROKE_TOLERANCE` is the coarsest tolerance at
+ * which every path's flattened length agrees with the browser's
+ * `getTotalLength()` within 0.1 %, and every sampled point within 0.5 px, at
+ * 1080 wide (the paths are in a 1080-wide frame's pixels).
+ */
+export const M8_BAR = { lengthPct: 0.1, pointPx: 0.5 } as const
+
+/** Our length against the browser's, in percent, signed: (ours / theirs − 1) × 100. 0 for two empty paths, Infinity for one empty against one not. */
+export function lengthPct(ours: number, theirs: number): number {
+  if (theirs > 0) return (ours / theirs - 1) * 100
+  return ours === 0 && theirs === 0 ? 0 : Infinity
+}
+
+/** The largest distance between two point lists taken pair by pair; Infinity when they are not the same length or a point is missing. */
+export function largestGap(a: readonly ({ x: number; y: number } | null)[], b: readonly ({ x: number; y: number } | null)[]): number {
+  if (a.length !== b.length) return Infinity
+  let max = 0
+  for (let i = 0; i < a.length; i++) {
+    const p = a[i]
+    const q = b[i]
+    if (!p || !q) return Infinity
+    const d = Math.hypot(p.x - q.x, p.y - q.y)
+    if (!(d <= max)) max = d
+  }
+  return max
+}
+
+/** One path at one tolerance: `flattenPath`'s length and the browser's, and the largest distance between the two at the same fractions of each length. */
+export interface PathLengthRow {
+  path: string
+  tolerance: number
+  ours: number
+  theirs: number
+  /** `lengthPct(ours, theirs)`. */
+  lengthPct: number
+  pointPx: number
+}
+
+/** Every path at one tolerance: the worst length and the worst point, with the paths they came from, and whether both are within `M8_BAR`. */
+export interface ToleranceReading {
+  tolerance: number
+  paths: number
+  /** The signed `lengthPct` of largest size. */
+  worstLengthPct: number
+  worstLengthPath: string
+  worstPointPx: number
+  worstPointPath: string
+  pass: boolean
+}
+
+export interface PathLengthVerdict {
+  /** Coarsest first. */
+  tolerances: ToleranceReading[]
+  /** The coarsest tolerance that passes (M8's reading of `STROKE_TOLERANCE`); null when none does. */
+  coarsest: number | null
+  /** Whether every tolerance finer than `coarsest` passes too, so the coarsest is a threshold and not a lucky step. */
+  finerAllPass: boolean
+}
+
+/**
+ * M8's verdict over its rows. A tolerance with no row, or a row that is not
+ * a number (a path the browser could not measure), passes nothing.
+ */
+export function pathLengthVerdict(rows: readonly PathLengthRow[]): PathLengthVerdict {
+  const tolerances = [...new Set(rows.map((r) => r.tolerance))].sort((a, b) => b - a)
+  const readings = tolerances.map((tolerance): ToleranceReading => {
+    const at = rows.filter((r) => r.tolerance === tolerance)
+    let worstLength = at[0]
+    let worstPoint = at[0]
+    for (const r of at) {
+      if (!(Math.abs(r.lengthPct) <= Math.abs(worstLength.lengthPct))) worstLength = r
+      if (!(r.pointPx <= worstPoint.pointPx)) worstPoint = r
+    }
+    const pass = at.length > 0 && at.every((r) => Math.abs(r.lengthPct) <= M8_BAR.lengthPct && r.pointPx <= M8_BAR.pointPx)
+    return {
+      tolerance,
+      paths: at.length,
+      worstLengthPct: worstLength.lengthPct,
+      worstLengthPath: worstLength.path,
+      worstPointPx: worstPoint.pointPx,
+      worstPointPath: worstPoint.path,
+      pass
+    }
+  })
+  const coarsest = readings.find((r) => r.pass)?.tolerance ?? null
+  const finerAllPass = coarsest !== null && readings.filter((r) => r.tolerance < coarsest).every((r) => r.pass)
+  return { tolerances: readings, coarsest, finerAllPass }
+}
+
+/* ------------------------------------------------ M19: the strokes' chroma */
+
+/**
+ * M19's bar (§6.15, proposal): `STROKE_MIN_PX` is the smallest width whose
+ * centre line keeps U and V within 8 levels of the PNG's own after the plan's
+ * `format=yuva420p` overlay.
+ */
+export const M19_BAR = { chromaLevels: 8 } as const
+
+/**
+ * The `strokes` option's layout on a 1080×1920 frame: one band per width, 300
+ * tall from y = 60 (six bands at most), each holding a horizontal stroke and
+ * a diagonal one. The horizontal's top edge sits on an even row, 40 into the
+ * band, so a whole-pixel width covers whole rows from the top of a 4:2:0
+ * chroma pair: a 1 px line half a pair, 2 px one pair. The diagonal's slope,
+ * 191/320, is no small ratio, so along it the line crosses the pairs at every
+ * phase.
+ */
+export const STROKE_BANDS = {
+  top: 60,
+  height: 300,
+  max: 6,
+  horizontal: { from: 120, to: 960, dy: 40 },
+  diagonal: { from: { x: 380, dy: 96 }, to: { x: 700, dy: 287 } }
+} as const
+
+export interface StrokeBand {
+  /** The band's rectangle on the frame. */
+  box: Rect
+  /** Each line's ends, its centre line in frame pixels. */
+  horizontal: [{ x: number; y: number }, { x: number; y: number }]
+  diagonal: [{ x: number; y: number }, { x: number; y: number }]
+}
+
+/** Band `index`'s rectangle and lines, for a stroke `width` px wide: the horizontal's centre is half the width below its even top edge. */
+export function strokeBand(index: number, width: number, frameWidth = 1080): StrokeBand {
+  const B = STROKE_BANDS
+  const top = B.top + index * B.height
+  const y = top + B.horizontal.dy + width / 2
+  return {
+    box: { x: 0, y: top, width: frameWidth, height: B.height },
+    horizontal: [
+      { x: B.horizontal.from, y },
+      { x: B.horizontal.to, y }
+    ],
+    diagonal: [
+      { x: B.diagonal.from.x, y: top + B.diagonal.from.dy },
+      { x: B.diagonal.to.x, y: top + B.diagonal.to.dy }
+    ]
+  }
+}
+
+/** A drawn line read back from its picture. */
+export interface StrokeLine {
+  /** The line's pixels (alpha above 0), as one 8-connected region. */
+  box: Rect
+  /** dy/dx of its centre line, fitted by least squares over the scan lines (Infinity for a vertical one). */
+  slope: number
+  /** Its width across the line in pixels: the median scan line's coverage (alpha sum / 255) times the cosine of its angle to the scan. */
+  width: number
+  /** The centre line: on each scan line across the line (a column, or a row for a line steeper than 45°), `end` px clear of each end, the pixels nearest its alpha-weighted middle (both, at an even crisp width's tie). */
+  centre: { x: number; y: number }[]
+}
+
+/** Regions under this many pixels are specks, not lines. */
+const SPECK = 16
+
+/**
+ * The lines of an RGBA picture (straight alpha, as `getImageData` and a
+ * PNG decoded with `premultiplyAlpha: 'none'` give it): each 8-connected
+ * region of alpha above 0, read for its width and its centre line. In the
+ * order of each region's first pixel, row by row.
+ */
+export function strokeLines(data: ArrayLike<number>, width: number, height: number, end = 4): StrokeLine[] {
+  const label = new Int32Array(width * height).fill(-1)
+  const stack = new Int32Array(width * height)
+  const lines: StrokeLine[] = []
+  let next = 0
+  for (let start = 0; start < width * height; start++) {
+    if (label[start] !== -1 || data[start * 4 + 3] === 0) continue
+    const id = next++
+    const members: number[] = []
+    let top = 0
+    stack[top++] = start
+    label[start] = id
+    while (top > 0) {
+      const at = stack[--top]
+      members.push(at)
+      const x = at % width
+      const y = (at - x) / width
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx
+          const ny = y + dy
+          if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue
+          const n = ny * width + nx
+          if (label[n] === -1 && data[n * 4 + 3] > 0) {
+            label[n] = id
+            stack[top++] = n
+          }
+        }
+      }
+    }
+    if (members.length < SPECK) continue
+    lines.push(lineOf(members, data, width, end))
+  }
+  return lines
+}
+
+function lineOf(members: readonly number[], data: ArrayLike<number>, width: number, end: number): StrokeLine {
+  let left = Infinity
+  let right = -Infinity
+  let top = Infinity
+  let bottom = -Infinity
+  for (const at of members) {
+    const x = at % width
+    const y = (at - x) / width
+    if (x < left) left = x
+    if (x > right) right = x
+    if (y < top) top = y
+    if (y > bottom) bottom = y
+  }
+  const box = { x: left, y: top, width: right - left + 1, height: bottom - top + 1 }
+  // Scan across the line: columns for a line no steeper than 45°, rows otherwise.
+  const byColumn = box.width >= box.height
+  const scans = new Map<number, { along: number; across: number; alpha: number }[]>()
+  for (const at of members) {
+    const x = at % width
+    const y = (at - x) / width
+    const along = byColumn ? x : y
+    const list = scans.get(along) ?? []
+    list.push({ along, across: byColumn ? y : x, alpha: data[at * 4 + 3] })
+    scans.set(along, list)
+  }
+  const first = byColumn ? left : top
+  const last = byColumn ? right : bottom
+  const sums: number[] = []
+  const fit: { u: number; v: number }[] = []
+  const centre: { x: number; y: number }[] = []
+  for (let along = first + end; along <= last - end; along++) {
+    const scan = scans.get(along)
+    if (!scan) continue
+    let sum = 0
+    let weighted = 0
+    for (const p of scan) {
+      sum += p.alpha
+      weighted += p.alpha * p.across
+    }
+    const mid = weighted / sum
+    sums.push(sum / 255)
+    fit.push({ u: along, v: mid })
+    // The pixels nearest the scan line's alpha-weighted middle: one for an odd crisp width, both middle rows for an even one.
+    let nearest = Infinity
+    for (const p of scan) nearest = Math.min(nearest, Math.abs(p.across - mid))
+    for (const p of scan) if (Math.abs(p.across - mid) - nearest < 1e-9) centre.push(byColumn ? { x: along, y: p.across } : { x: p.across, y: along })
+  }
+  // Least squares of the across position on the along one: the slope against the scan.
+  const n = fit.length
+  const mu = fit.reduce((s, p) => s + p.u, 0) / n
+  const mv = fit.reduce((s, p) => s + p.v, 0) / n
+  let sxy = 0
+  let sxx = 0
+  for (const p of fit) {
+    sxy += (p.u - mu) * (p.v - mv)
+    sxx += (p.u - mu) * (p.u - mu)
+  }
+  const m = sxx > 0 ? sxy / sxx : 0
+  const median = percentile(sums, 50)
+  return {
+    box,
+    slope: byColumn ? m : m === 0 ? Infinity : 1 / m,
+    width: n > 0 ? median / Math.sqrt(1 + m * m) : 0,
+    centre
+  }
+}
+
+/** A line's centre-line chroma after the overlay against the PNG's own, in levels. */
+export interface ChromaReading {
+  pixels: number
+  maxU: number
+  maxV: number
+  meanU: number
+  meanV: number
+  /** Both maxima within `M19_BAR`. */
+  within: boolean
+}
+
+/**
+ * U and V along `centre`: the reference's at each pixel (planes at full
+ * resolution, `width` wide: the PNG over the colour with no subsampling)
+ * against the overlay's 4:2:0 sample that pixel is stored with (planes
+ * `ceil(width / 2)` wide, at x >> 1, y >> 1), which is what a player
+ * upsamples from.
+ */
+export function chromaAlong(
+  centre: readonly { x: number; y: number }[],
+  reference: { u: ArrayLike<number>; v: ArrayLike<number> },
+  measured: { u: ArrayLike<number>; v: ArrayLike<number> },
+  width: number
+): ChromaReading {
+  const half = Math.ceil(width / 2)
+  let maxU = 0
+  let maxV = 0
+  let sumU = 0
+  let sumV = 0
+  for (const { x, y } of centre) {
+    const full = y * width + x
+    const sub = (y >> 1) * half + (x >> 1)
+    const du = Math.abs(reference.u[full] - measured.u[sub])
+    const dv = Math.abs(reference.v[full] - measured.v[sub])
+    if (!(du <= maxU)) maxU = du
+    if (!(dv <= maxV)) maxV = dv
+    sumU += du
+    sumV += dv
+  }
+  const pixels = centre.length
+  return {
+    pixels,
+    maxU,
+    maxV,
+    meanU: pixels > 0 ? sumU / pixels : NaN,
+    meanV: pixels > 0 ? sumV / pixels : NaN,
+    within: pixels > 0 && maxU <= M19_BAR.chromaLevels && maxV <= M19_BAR.chromaLevels
+  }
+}
+
+/** Alpha alone, two RGBA pictures over `box`: the largest difference, and each picture's coverage (alpha sum / 255). */
+export function alphaAgainst(a: ArrayLike<number>, b: ArrayLike<number>, width: number, box: Rect): { max: number; coverage: [number, number] } {
+  let max = 0
+  let ca = 0
+  let cb = 0
+  for (let y = box.y; y < box.y + box.height; y++) {
+    for (let x = box.x; x < box.x + box.width; x++) {
+      const at = (y * width + x) * 4 + 3
+      const d = Math.abs(a[at] - b[at])
+      if (d > max) max = d
+      ca += a[at]
+      cb += b[at]
+    }
+  }
+  return { max, coverage: [ca / 255, cb / 255] }
+}
+
+/** The folder of a numbered sequence's ffmpeg pattern, whichever separator the main process joined it with, never ending in one; null for the harness bridge's `harness://` answers, which are no folder. */
+export function folderOf(pattern: string): string | null {
+  if (/^harness:/.test(pattern)) return null
+  const cut = Math.max(pattern.lastIndexOf('/'), pattern.lastIndexOf('\\'))
+  return cut > 0 ? pattern.slice(0, cut) : null
+}

@@ -508,7 +508,9 @@ describe('the options are independent', () => {
       checkParity: 'parity',
       checkIndic: 'indic',
       checkIndicPhase1: 'indic',
-      checkPrimitives: 'primitives'
+      checkPrimitives: 'primitives',
+      checkPathLength: 'pathLength',
+      checkStrokes: 'strokes'
     }
     const calls = [...body.matchAll(/\b(check[A-Z]\w*)\(/g)]
     // Membership, not the whole list: a later option's check, under its own guard, joins without breaking this.

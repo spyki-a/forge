@@ -9,6 +9,8 @@
  *   await window.__forgeGraphicCheck({ parity: true })                                       M6, Indic and colour
  *   await window.__forgeGraphicCheck({ indic: true })                M22's numeric halves, then phase 1's Indic render check
  *   await window.__forgeGraphicCheck({ primitives: true })                 phase 1's exit (§6.12) and M13's first half
+ *   await window.__forgeGraphicCheck({ pathLength: true })                                                     M8
+ *   await window.__forgeGraphicCheck({ strokes: { widths: [1, 2, 3] } })          M19's PNGs, for graphic.int's read
  *
  * Every option is independent; one not passed runs nothing. The result carries
  * the numbers, a bounded sample of the frames drawn (PNG data URLs, never all
@@ -60,7 +62,7 @@ import { drawListAt, graphicBox, onsetTargetsAt } from '@shared/graphics/drawLis
 import { paintDrawList2d } from '@shared/graphics/paint'
 import { beatFrame, graphicMovingFrames } from '@shared/graphics/frame'
 import { entrance } from '@shared/graphics/motion'
-import { headGrowAt } from '@shared/graphics/stroke'
+import { STROKE_TOLERANCE, flattenPath, headGrowAt, strokeAt, strokeWidth, type PathGeometry, type Point } from '@shared/graphics/stroke'
 import { buildCaptionLayers } from '@shared/graphics/fromTimeline'
 import { planBakeOf } from '@shared/captions/bake'
 import { encodeFrames, setPoolCanvases, type PoolCanvas } from '../encodePool'
@@ -70,25 +72,37 @@ import { renderTextPng } from '../textCanvas'
 import { bakeCaptions } from '../captionBake'
 import { faceSettled, useCatalog } from '../catalog'
 import {
+  M8_BAR,
+  M19_BAR,
+  STROKE_BANDS,
   SYNTHETIC,
+  alphaAgainst,
   alphaOutside,
   contains,
   cropRgba,
   diffOverInk,
   diffRgba,
+  folderOf,
   framePath,
   inkBox,
+  largestGap,
+  lengthPct,
   m13Line,
   padRect,
+  pathLengthVerdict,
   percentile,
   perFrameMs,
   preBaseLead,
   primitivesVerdict,
   siblingPath,
   spread,
+  strokeBand,
+  strokeLines,
   syntheticBox,
   syntheticPanelAt,
   unionRect,
+  type PathLengthRow,
+  type PathLengthVerdict,
   type PixelDiff,
   type PrimitivesReading,
   type PrimitivesVerdict,
@@ -130,10 +144,23 @@ export interface GraphicCheckOptions {
    * export's box route, each PNG decoded and read against the preview.
    */
   primitives?: boolean
+  /**
+   * M8: each of `M8_PATHS` as an off-DOM `SVGPathElement`, its
+   * `getTotalLength()` and `getPointAtLength()` against `flattenPath` and
+   * `strokeAt` at each of `M8_TOLERANCES`; agreement in % and px, and ms.
+   */
+  pathLength?: boolean
+  /**
+   * M19's PNGs: a horizontal and a diagonal stroke per width (px at 1080
+   * wide; [1, 2, 3] when absent, at most `STROKE_BANDS.max`), baked by
+   * `bakeGraphicSequence` into the app's title-frame folder, which the result
+   * names for `FORGE_GRAPHIC_FRAMES` (graphic.int's M19 read).
+   */
+  strokes?: { widths?: number[] }
 }
 
 /** Every option, in the order `runGraphicCheck` runs them. */
-export const GRAPHIC_CHECK_OPTIONS = ['encode', 'segments', 'blur', 'parity', 'indic', 'primitives'] as const
+export const GRAPHIC_CHECK_OPTIONS = ['encode', 'segments', 'blur', 'parity', 'indic', 'primitives', 'pathLength', 'strokes'] as const
 export type GraphicCheckOption = (typeof GRAPHIC_CHECK_OPTIONS)[number]
 
 /** The options a call asked for, in run order: each one by itself, so an option not passed runs nothing (the file's rule). */
@@ -454,6 +481,53 @@ export interface PrimitivesResult {
   note: string
 }
 
+export interface PathLengthPathRow {
+  name: string
+  d: string
+  /** The browser's `getTotalLength()`, and for a circle its 2πr. */
+  theirs: number
+  exact?: number
+  /** Ms for the element, its length and `M8_SAMPLES + 1` points, once. */
+  theirsMs: number
+  /** Per tolerance, coarsest first: our length, its agreement, the largest point gap, the pieces, and ms for `flattenPath` and the same points (the mean of `M8_REPEATS` runs). */
+  at: { tolerance: number; ours: number; lengthPct: number; pointPx: number; pieces: number; oursMs: number }[]
+}
+
+export interface PathLengthResult {
+  tolerances: number[]
+  samples: number
+  paths: PathLengthPathRow[]
+  verdict: PathLengthVerdict
+  /** Where `STROKE_TOLERANCE` stands in the verdict. */
+  strokeTolerance: { value: number; pass: boolean | null }
+  note: string
+}
+
+export interface StrokesWidthRow {
+  /** The width asked for, in px at 1080 wide; what the painter would draw for it unscaled (`strokeWidth`, the floor), and what was drawn. */
+  width: number
+  floored: number
+  /** The band's lines read back from the bake's first PNG (`strokeLines`): width across and slope, horizontal then diagonal. */
+  read: { width: number; slope: number; centre: number }[]
+  /** The painter's picture (graphicFrameCanvases) against the same lines drawn natively at `lineWidth` = width, over the band: alpha only. */
+  againstNative: { max: number; coverage: [number, number] }
+}
+
+export interface StrokesResult {
+  widths: number[]
+  /** The scale each stroke is drawn under (`strokesScale`): 1 when no width is under the floor. */
+  scale: number
+  frames: { moving: number; baked: number; equal: number }
+  rows: StrokesWidthRow[]
+  pattern: string
+  /** The folder the bake wrote, for `FORGE_GRAPHIC_FRAMES`; null on the harness page, whose bridge writes no file. */
+  folder: string | null
+  /** The first PNG as baked, where its bytes could be read: the file itself, for a folder of your own where the page has none. */
+  png: string | null
+  bytesFrom: 'writes' | 'files' | 'none'
+  note: string
+}
+
 export interface GraphicCheckResult {
   userAgent: string
   page: string
@@ -464,6 +538,8 @@ export interface GraphicCheckResult {
   parity?: ParityResult
   indic?: IndicResult
   primitives?: PrimitivesResult
+  pathLength?: PathLengthResult
+  strokes?: StrokesResult
   /** One line per figure, to copy. */
   summary: string[]
   notes: string[]
@@ -2478,6 +2554,311 @@ async function checkIndicPhase1(frames: Frames, summary: string[]): Promise<Indi
 
 /* ------------------------------------------------------------ the sheet */
 
+/* -------------------------------------------------------- phase 1: M8, the path's length */
+
+/** The circle's control-point ratio, 4/3 (√2 − 1): the plan's κ = 0.5523 (§6.3). */
+const KAPPA = (4 / 3) * (Math.SQRT2 - 1)
+
+/** A circle as four cubics, clockwise on the frame from its rightmost point, as a template draws a ring through `flattenPath` (tests/graphicStroke.test.ts's `circlePath`). */
+export function m8Circle(cx: number, cy: number, r: number): string {
+  const c = KAPPA * r
+  return [
+    `M${cx + r} ${cy}`,
+    `C${cx + r} ${cy + c} ${cx + c} ${cy + r} ${cx} ${cy + r}`,
+    `C${cx - c} ${cy + r} ${cx - r} ${cy + c} ${cx - r} ${cy}`,
+    `C${cx - r} ${cy - c} ${cx - c} ${cy - r} ${cx} ${cy - r}`,
+    `C${cx + c} ${cy - r} ${cx + r} ${cy - c} ${cx + r} ${cy}`,
+    'Z'
+  ].join(' ')
+}
+
+/**
+ * The circle's radii: under r = 40, where the stroke's Built note (§6.3,
+ * 2026-10-28) found the flattening furthest from the curve at 0.25 px
+ * (−0.1468 % against 2πr at r = 20 and 30), its open question; and the radii
+ * that note read, up to the frame's half width.
+ */
+export const M8_RADII: readonly number[] = Object.freeze([20, 30, 38, 39, 40, 45, 50, 100, 200, 400, 540])
+
+/**
+ * M8's paths, in 1080-wide frame pixels: the four-cubic circle at each of
+ * `M8_RADII`; a line; an S-curve and the two cubics lane A's flattening test
+ * reads (tests/graphicStroke.test.ts); its quadratic; the mixed path of its
+ * span test; the primitives' stroke; and the arrow paths of its head tests
+ * and tests/graphicPaint.test.ts (straight runs and corners, where a length
+ * is exact and a point is only as good as the walk along it).
+ */
+export const M8_PATHS: readonly { name: string; d: string; exact?: number }[] = Object.freeze([
+  ...M8_RADII.map((r) => ({ name: `circle r=${r}`, d: m8Circle(540, 960, r), exact: 2 * Math.PI * r })),
+  { name: 'line', d: 'M100 200 L980 1700', exact: Math.hypot(880, 1500) },
+  { name: 'S-curve', d: 'M0 0 C540 0 540 960 1080 960' },
+  { name: 'cubic', d: 'M100 1500 C300 900 700 1300 900 600' },
+  { name: 'quadratic', d: 'M100 800 Q540 100 980 800' },
+  { name: 'mixed', d: 'M100 1500 C300 900 700 1300 900 600 S500 200 300 300 Q100 400 150 150 L800 100' },
+  { name: 'primitives stroke', d: PRIMITIVE_STROKE_D },
+  { name: 'arrow down', d: 'M500 100 V900', exact: 800 },
+  { name: 'arrow corner', d: 'M0 0 L100 0 L100 100', exact: 200 },
+  { name: 'arrow L', d: 'M0 0 L0 500 L500 500', exact: 1000 },
+  { name: 'arrow big', d: 'M100 900 L700 900 L700 300', exact: 1200 },
+  { name: 'arrow small', d: 'M25 225 L175 225 L175 75', exact: 300 },
+  { name: 'arrow head', d: 'M100 100 L500 100', exact: 400 }
+])
+
+/** The tolerances read, coarsest first: four times `STROKE_TOLERANCE` down to a quarter of it. */
+export const M8_TOLERANCES: readonly number[] = Object.freeze([1, 0.5, 0.25, 0.125, 0.0625])
+/** Points compared per path, at fractions k / M8_SAMPLES of each length, k = 0 to M8_SAMPLES. */
+export const M8_SAMPLES = 64
+/** Our side is timed over this many runs, since one `flattenPath` is under the clock's grain. */
+const M8_REPEATS = 20
+
+/** Fractions 0 to 1 in `n` equal steps, both ends included. */
+export function pathFractions(n: number): number[] {
+  const steps = Math.max(1, Math.floor(n))
+  return Array.from({ length: steps + 1 }, (_, k) => k / steps)
+}
+
+/**
+ * Our point at each fraction of the path's length, as a draw-on's tip sits
+ * there (`strokeAt(path, 0, f).tip`); the path's start at 0, where the span
+ * is empty and has no tip; null for an empty path.
+ */
+export function oursAlong(path: PathGeometry, fractions: readonly number[]): (Point | null)[] {
+  return fractions.map((f) => (f > 0 ? strokeAt(path, 0, f).tip : (path.points[0] ?? null)))
+}
+
+function checkPathLength(summary: string[]): PathLengthResult {
+  const fractions = pathFractions(M8_SAMPLES)
+  const rows: PathLengthRow[] = []
+  const paths: PathLengthPathRow[] = []
+  for (const { name, d, exact } of M8_PATHS) {
+    // The browser's: an off-DOM element, never attached, as §6.15's M8 row has it; timed from its creation.
+    const t0 = performance.now()
+    const element = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+    element.setAttribute('d', d)
+    const theirs = element.getTotalLength()
+    const theirPoints = fractions.map((f) => {
+      const p = element.getPointAtLength(f * theirs)
+      return { x: p.x, y: p.y }
+    })
+    const theirsMs = performance.now() - t0
+    const at = M8_TOLERANCES.map((tolerance) => {
+      const t1 = performance.now()
+      let geometry = flattenPath(d, tolerance)
+      let ours = oursAlong(geometry, fractions)
+      for (let i = 1; i < M8_REPEATS; i++) {
+        geometry = flattenPath(d, tolerance)
+        ours = oursAlong(geometry, fractions)
+      }
+      const oursMs = (performance.now() - t1) / M8_REPEATS
+      const row: PathLengthRow = { path: name, tolerance, ours: geometry.total, theirs, lengthPct: lengthPct(geometry.total, theirs), pointPx: largestGap(ours, theirPoints) }
+      rows.push(row)
+      return { tolerance, ours: geometry.total, lengthPct: row.lengthPct, pointPx: row.pointPx, pieces: geometry.points.length - 1, oursMs }
+    })
+    paths.push({ name, d, theirs, ...(exact !== undefined ? { exact } : {}), theirsMs, at })
+  }
+  const verdict = pathLengthVerdict(rows)
+  const standing = verdict.tolerances.find((t) => t.tolerance === STROKE_TOLERANCE)
+  const pct = (n: number): string => `${n >= 0 ? '+' : ''}${n.toFixed(4)} %`
+  for (const t of verdict.tolerances) {
+    summary.push(
+      `pathLength M8 at tolerance ${t.tolerance} px: ${t.pass ? 'PASS' : 'FAIL'} over ${t.paths} paths; worst length ${pct(t.worstLengthPct)} (${t.worstLengthPath}), ` +
+        `worst point ${t.worstPointPx.toFixed(3)} px (${t.worstPointPath}); bar ${M8_BAR.lengthPct} % and ${M8_BAR.pointPx} px`
+    )
+  }
+  summary.push(
+    `pathLength M8: the coarsest tolerance within the bar is ${verdict.coarsest ?? 'none'}${verdict.coarsest !== null ? (verdict.finerAllPass ? ', every finer one passing too' : ', but a finer one FAILS') : ''}; ` +
+      `STROKE_TOLERANCE is ${STROKE_TOLERANCE} (${standing ? (standing.pass ? 'passes' : 'FAILS') : 'not read'})`
+  )
+  for (const p of paths) {
+    const here = p.at.find((a) => a.tolerance === STROKE_TOLERANCE)
+    if (!here) continue
+    summary.push(
+      `pathLength ${p.name} at ${STROKE_TOLERANCE}: ours ${here.ours.toFixed(4)} over ${here.pieces} pieces, the browser's ${p.theirs.toFixed(4)} (${pct(here.lengthPct)})` +
+        `${p.exact !== undefined ? `, exact ${p.exact.toFixed(4)} (ours ${pct(lengthPct(here.ours, p.exact))}, the browser's ${pct(lengthPct(p.theirs, p.exact))})` : ''}` +
+        `; largest point gap ${here.pointPx.toFixed(3)} px; ms: ours ${here.oursMs.toFixed(4)}, the browser's ${p.theirsMs.toFixed(4)} (${M8_SAMPLES + 1} points each)`
+    )
+  }
+  return {
+    tolerances: [...M8_TOLERANCES],
+    samples: M8_SAMPLES,
+    paths,
+    verdict,
+    strokeTolerance: { value: STROKE_TOLERANCE, pass: standing ? standing.pass : null },
+    note:
+      'Each path once as an off-DOM SVGPathElement (getTotalLength, then getPointAtLength at k/64 of its own length), and at each tolerance through flattenPath, ' +
+      'its points at the same fractions of our length through strokeAt(path, 0, f).tip, as a draw-on tip sits: so a point gap is where the two draw-ons\' tips part, ' +
+      'not a distance to the curve. The bar (M8, §6.15, proposal) is 0.1 % on length and 0.5 px on points at 1080 wide, the coarsest passing tolerance being the reading; ' +
+      'it measures, it sets nothing. The browser is this page\'s: the reading for the plan is yours, in the development app on the Mac (Electron 44).'
+  }
+}
+
+/* ------------------------------------------------------- phase 1: M19, the strokes' PNGs */
+
+export const STROKES_FPS = 30
+export const STROKES_SIZE: { readonly width: number; readonly height: number } = Object.freeze({ width: 1080, height: 1920 })
+export const STROKES_WIDTHS: readonly number[] = Object.freeze([1, 2, 3])
+
+/**
+ * The strokes' spec: a `counter`, one second, no beats, drawn only through
+ * `strokesDrawer`, whose lines stand still, so every moving frame the bake
+ * writes is the same picture.
+ */
+export const STROKES_SPEC: GraphicSpec = Object.freeze<GraphicSpec>({
+  data: Object.freeze({ template: 'counter' as const, value: '0', label: 'strokes' }),
+  seconds: 1,
+  beats: Object.freeze([]) as unknown as number[],
+  place: Object.freeze({ auto: true as const, third: 'middle' as const }),
+  seed: 1,
+  version: 0
+})
+
+/**
+ * The scale each stroke is drawn under: 1 when no width is under the
+ * painter's floor on this frame (`strokeWidth`, `STROKE_MIN_PX` of a 1080
+ * side), else the narrowest width over the floor. M19 sets that floor, so it
+ * cannot be the floor that draws its narrowest line: a 1 px stroke would be
+ * painted 2 px. Each stroke is laid out 1 / scale times as long and as wide
+ * about its own centre (`itemOrigin`) and drawn under its item's transform at
+ * the scale, which the painter applies about that centre, so on the frame it
+ * is the line and the width asked for, through the same painter.
+ */
+export function strokesScale(widths: readonly number[], size: { width: number; height: number }): number {
+  const floor = strokeWidth(0, size)
+  const narrowest = Math.min(...widths)
+  return narrowest >= floor ? 1 : narrowest / floor
+}
+
+/** The drawer of `widths`: in band i (`strokeBand`), a horizontal and a diagonal stroke `widths[i]` px wide, butt-capped, in the theme's blue, standing still. */
+export function strokesDrawer(widths: readonly number[]): Drawer {
+  return (_spec, _style, _clock, size) => {
+    const scale = strokesScale(widths, size)
+    const items: DrawItem[] = widths.flatMap((w, i) => {
+      const band = strokeBand(i, w, size.width)
+      return (['horizontal', 'diagonal'] as const).map((which): DrawItem => {
+        const [a, b] = band[which]
+        const c = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
+        const far = (p: { x: number; y: number }): { x: number; y: number } => ({ x: c.x + (p.x - c.x) / scale, y: c.y + (p.y - c.y) / scale })
+        const from = far(a)
+        const to = far(b)
+        return {
+          kind: 'stroke',
+          id: `stroke-${i}-${which}`,
+          opacity: 1,
+          d: `M ${from.x} ${from.y} L ${to.x} ${to.y}`,
+          from: 0,
+          to: 1,
+          width: w / scale,
+          color: BLUE,
+          cap: 'butt',
+          join: 'miter',
+          ...(scale !== 1 ? { transform: { x: 0, y: 0, scale, rotate: 0 } } : {})
+        }
+      })
+    })
+    return { items }
+  }
+}
+
+let strokesRun = 0
+
+async function checkStrokes(options: NonNullable<GraphicCheckOptions['strokes']>, frames: Frames, summary: string[], notes: string[]): Promise<StrokesResult> {
+  if (Array.isArray(options)) throw new Error("graphic check: strokes takes { widths }; the ['freehand'] form is phase 2's M10 (§6.11)")
+  const widths = [...(options.widths ?? STROKES_WIDTHS)]
+  if (widths.length === 0 || widths.length > STROKE_BANDS.max || !widths.every((w) => Number.isFinite(w) && w > 0)) {
+    throw new Error(`graphic check: strokes takes 1 to ${STROKE_BANDS.max} widths, each a positive number of px (got ${JSON.stringify(options.widths)})`)
+  }
+  const { width, height } = STROKES_SIZE
+  const size = { width, height }
+  const fps = STROKES_FPS
+  const style = resolveGraphicStyle('clean')
+  const total = Math.max(1, Math.round(STROKES_SPEC.seconds * fps))
+  const moving = graphicMovingFrames(STROKES_SPEC, style, fps, total)
+  const drawer = strokesDrawer(widths)
+  const scale = strokesScale(widths, size)
+
+  // The painter's picture against the same lines drawn natively at lineWidth = width, alpha only: the scale must not
+  // be what is measured (a colour channel of a pixel whose alpha is 0 or 1 can read 0 or 255 and means nothing).
+  const [painted] = await graphicFrameCanvases(STROKES_SPEC, style, width, height, total, fps, [0], NO_TARGETS, drawer)
+  const paintedPx = canvasPixels(painted)
+  const native = canvas2d(width, height)
+  native.ctx.strokeStyle = BLUE
+  native.ctx.lineCap = 'butt'
+  widths.forEach((w, i) => {
+    const band = strokeBand(i, w, width)
+    native.ctx.lineWidth = w
+    for (const [a, b] of [band.horizontal, band.diagonal]) {
+      native.ctx.beginPath()
+      native.ctx.moveTo(a.x, a.y)
+      native.ctx.lineTo(b.x, b.y)
+      native.ctx.stroke()
+    }
+  })
+  const nativePx = pixels(native.ctx)
+
+  // The bake: the canvas route (boxAllowed false), so each PNG is the whole frame and the overlay sits at 0,0.
+  const id = `graphic-check-strokes-${++strokesRun}`
+  const t0 = performance.now()
+  const { value, writes } = await recordingWrites(
+    'writeTitleFrame',
+    () => bakeGraphicSequence(STROKES_SPEC, style, id, width, height, total, fps, NO_TARGETS, false, drawer),
+    id
+  )
+  const wallMs = performance.now() - t0
+  if (!value) throw new Error('graphic check: the strokes\' bake answered nothing')
+  const bytes = await bakedBytes(value, writes)
+  const folder = folderOf(value.pattern)
+  let equal = 0
+  let png: string | null = null
+  let lines: ReturnType<typeof strokeLines> = []
+  if (bytes) {
+    const firstBytes = bytes.bytes.get(0)!
+    for (const [, b] of bytes.bytes) if (sameBytes(b, firstBytes)) equal++
+    lines = strokeLines(await decodePng(firstBytes, width, height), width, height)
+    png = await blobToDataUrl(new Blob([firstBytes], { type: 'image/png' }))
+    frames.add(`strokes: the bake's first PNG, widths ${widths.join(', ')} px from the top`, png)
+  } else {
+    notes.push(`strokes: the bake's PNGs could not be read (neither the writes nor ${value.pattern}); the lines were not read back.`)
+  }
+
+  const rows: StrokesWidthRow[] = widths.map((w, i) => {
+    const band = strokeBand(i, w, width)
+    const inBand = lines.filter((l) => l.box.y >= band.box.y && l.box.y + l.box.height <= band.box.y + band.box.height)
+    return {
+      width: w,
+      floored: strokeWidth(w, size),
+      read: inBand.map((l) => ({ width: l.width, slope: l.slope, centre: l.centre.length })),
+      againstNative: alphaAgainst(paintedPx, nativePx, width, band.box)
+    }
+  })
+  for (const r of rows) {
+    summary.push(
+      `strokes ${r.width} px (the painter's floor alone would draw ${r.floored}): read from the PNG ${r.read.length ? r.read.map((l) => `${l.width.toFixed(3)} px at slope ${l.slope.toFixed(3)}, ${l.centre} centre pixels`).join('; ') : 'nothing'}` +
+        `; the painter against a native lineWidth ${r.width}: alpha max ${r.againstNative.max}, coverage ${r.againstNative.coverage.map((c) => c.toFixed(2)).join(' and ')}`
+    )
+  }
+  summary.push(
+    `strokes: ${value.frames} PNGs of ${moving} moving frames, ${equal} byte-equal to the first, at ${width}x${height} (canvas route, wall ${ms(wallMs)} ms), drawn under scale ${scale.toFixed(4)}; ` +
+      (folder
+        ? `folder ${folder}: FORGE_GRAPHIC_FRAMES="${folder}" npx vitest run tests/integration/graphic.int.test.ts reads each line's centre-line U and V after the plan's format=yuva420p overlay against the PNG's own (M19, bar ${M19_BAR.chromaLevels} levels)`
+        : `no folder (${value.pattern}): the page wrote no file; the first PNG is in the result's strokes.png, which M19's read takes in a folder of its own as 00000.png`)
+  )
+  return {
+    widths,
+    scale,
+    frames: { moving, baked: value.frames, equal },
+    rows,
+    pattern: value.pattern,
+    folder,
+    png,
+    bytesFrom: bytes ? bytes.from : 'none',
+    note:
+      'M19\'s PNGs (§6.15): STROKES_SPEC through strokesDrawer, one band per width (strokeBand: a horizontal stroke whose top edge sits on an even row, and a ' +
+      'diagonal at slope 191/320), baked by bakeGraphicSequence on the canvas route into the app\'s title-frame folder. Each stroke is drawn under its own transform ' +
+      'at strokesScale, so the painter\'s floor (STROKE_MIN_PX, the value M19 sets) does not widen the narrowest; againstNative says whether that changed the picture. ' +
+      'The overlay and the chroma read are node\'s: graphic.int\'s M19 case over FORGE_GRAPHIC_FRAMES, on the Mac and the Surface, yours.'
+  }
+}
+
 const SHEET_ID = 'forge-graphic-check-sheet'
 
 /** The frames on the page, over everything, on a checkerboard so transparency shows. Replaced by each run. */
@@ -2570,6 +2951,8 @@ export async function runGraphicCheck(options: GraphicCheckOptions = {}): Promis
     result.indic.phase1 = await checkIndicPhase1(frames, summary)
   }
   if (options.primitives) result.primitives = await checkPrimitives(frames, summary, notes)
+  if (options.pathLength) result.pathLength = checkPathLength(summary)
+  if (options.strokes) result.strokes = await checkStrokes(options.strokes, frames, summary, notes)
   if (asked.length === 0) {
     notes.push(`No option was passed, so nothing ran: ${GRAPHIC_CHECK_OPTIONS.join(', ')} (docs/CLIPS.md §6.11).`)
   }

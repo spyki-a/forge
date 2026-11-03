@@ -5,6 +5,7 @@
     "src/preload/**/*",
     "src/shared/**/*",
     "src/renderer/src/dock.ts",
+    "src/renderer/src/harness/graphicMeasure.ts",
     "tests/**/*"
   ],
   "exclude": ["tests/renderer/**/*"],

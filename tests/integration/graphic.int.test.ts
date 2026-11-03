@@ -1,12 +1,14 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { existsSync } from 'node:fs'
-import { mkdir, readdir, writeFile } from 'node:fs/promises'
-import { join, resolve } from 'node:path'
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
+import { isAbsolute, join, relative, resolve } from 'node:path'
 import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
 import { buildRenderPlan } from '@shared/render/plan'
 import { DEFAULT_CAPTION_STYLE } from '@shared/captions/style'
 import { REFERENCE_HEIGHT, toAssTime } from '@shared/captions/ass'
-import { FFMPEG, makeColour, outputDir, run, saveFrame, writeNote } from './output'
+import { EXIT_S, graphicExitKeys } from '@shared/graphics/frame'
+import { M19_BAR, chromaAlong, strokeLines, type ChromaReading, type StrokeLine } from '../../src/renderer/src/harness/graphicMeasure'
+import { FFMPEG, OUTPUT_ROOT, makeColour, outputDir, run, saveFrame, writeNote } from './output'
 import { ciNotice } from './helperDiag'
 
 /*
@@ -34,6 +36,24 @@ import { ciNotice } from './helperDiag'
  */
 
 const FPS = 30
+
+/**
+ * M19's folder (docs/CLIPS.md §6.15): a graphic's PNGs, as the harness's
+ * `strokes` option bakes them into the app's title-frame folder and names it.
+ * Unset, M19's read skips, with why.
+ */
+const STROKE_FRAMES = process.env.FORGE_GRAPHIC_FRAMES ?? ''
+
+/** Whether `child` is `parent` or inside it. */
+const within = (parent: string, child: string): boolean => {
+  const r = relative(parent, child)
+  return r === '' || (!r.startsWith('..') && !isAbsolute(r))
+}
+
+// This file empties tests/output/graphic first (outputDir): a folder of PNGs inside it would be gone before it is read.
+if (STROKE_FRAMES !== '' && within(join(OUTPUT_ROOT, 'graphic'), resolve(STROKE_FRAMES))) {
+  throw new Error(`FORGE_GRAPHIC_FRAMES=${STROKE_FRAMES} is inside ${join(OUTPUT_ROOT, 'graphic')}, which this file empties before it runs: copy the PNGs elsewhere first`)
+}
 
 let root = ''
 
@@ -340,3 +360,301 @@ describe('phase 0: the libass reference for M22 (docs/CLIPS.md §6.11, §6.15)',
     ])
   })
 })
+
+/* ------------------------------------------------- phase 1: M19's read */
+
+/*
+ * M19 (docs/CLIPS.md §6.15): how much of a thin stroke's colour survives the
+ * plan's 4:2:0 overlay. The PNGs are the app's (the harness's `strokes`
+ * option bakes them through `bakeGraphicSequence` and prints the folder); the
+ * overlay and the read are here, through the bundled ffmpeg.
+ *
+ * The overlay is the render plan's own: `buildRenderPlan` over a flat colour
+ * clip on V1 and the folder's sequence on V2 as the export's bake leaves a
+ * graphic's asset (`frames: { pattern, count }`, the opacity exit's keys from
+ * `graphicExitKeys`), its filter graph run as it is, only its outputs swapped
+ * for the raw 4:2:0 frames: `format=yuva420p` on the sequence, the exit's
+ * `geq` (a round trip through RGB), `overlay=…:format=yuv420`, then
+ * `format=yuv420p`. The reference is the same PNG over the same frame with no
+ * subsampling: `format=yuva444p`, `overlay=…:format=yuv444`, one swscale matrix
+ * on both sides, so what differs is the 4:2:0 alone.
+ *
+ * Read along each line's centre line (`strokeLines`: per scan line across it,
+ * the pixels nearest its alpha-weighted middle, 4 px clear of each end): the overlay's U
+ * and V at each pixel (the 4:2:0 sample it is stored with) against the
+ * reference's. The bar (M19, proposal) is 8 levels; this measures and prints,
+ * it sets nothing: STROKE_MIN_PX is the user's to set from it. What is
+ * asserted is that the read measured something: every PNG has lines, every
+ * line a centre, and away from the lines the two sides agree, so the frames
+ * compared are the same frame.
+ */
+
+/** The flat colours under the strokes: the render check's dark base, and the app's cream (#f2efe7). */
+const M19_COLOURS: readonly { name: string; hex: string }[] = [
+  { name: 'dark', hex: '0x202830' },
+  { name: 'cream', hex: '0xf2efe7' }
+]
+
+/** Away from the lines, the two sides' U and V may differ by this much (rounding of one conversion against another); more, and they are not one frame. */
+const BACKGROUND_LEVELS = 1
+/** A 4:2:0 sample is background when no inked pixel lies within this many pixels of its 2×2 block (swscale's chroma filters reach a few pixels). */
+const BACKGROUND_CLEAR = 8
+
+/** A PNG's width and height, from its IHDR. */
+function pngSize(bytes: Buffer): { width: number; height: number } {
+  if (bytes.length < 24 || bytes.toString('latin1', 12, 16) !== 'IHDR') throw new Error('not a PNG')
+  return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) }
+}
+
+/** An image's pixels as straight RGBA, as ffmpeg decodes them. */
+async function rgbaOf(file: string, width: number, height: number): Promise<Buffer> {
+  const { stdout } = await run(FFMPEG, ['-hide_banner', '-loglevel', 'error', '-i', file, '-frames:v', '1', '-f', 'rawvideo', '-pix_fmt', 'rgba', 'pipe:1'], {
+    encoding: 'buffer',
+    maxBuffer: 64 * 1024 * 1024
+  })
+  const rgba = stdout as unknown as Buffer
+  if (rgba.length !== width * height * 4) throw new Error(`${file}: ${rgba.length} bytes, not ${width}×${height} RGBA`)
+  return rgba
+}
+
+/** The flat colour as a lossless 4:2:0 clip (x264 at qp 0), so the base is exactly the colour on both sides. */
+async function flatClip(file: string, hex: string, size: { width: number; height: number }, frames: number): Promise<void> {
+  await run(FFMPEG, [
+    '-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi',
+    '-i', `color=c=${hex}:size=${size.width}x${size.height}:rate=${FPS}:duration=${frames / FPS}`,
+    '-c:v', 'libx264', '-qp', '0', '-pix_fmt', 'yuv420p', file
+  ])
+}
+
+/** A project as the export hands the plan a baked graphic: the flat clip on V1, the sequence on V2 at the identity, with its exit's keys. */
+function m19Project(base: string, pattern: string, count: number, size: { width: number; height: number }, duration: number): Project {
+  const empty = emptyProject('m19')
+  const flat: MediaAsset = { id: 'flat', path: base, name: 'flat.mp4', kind: 'video', durationFrames: duration, ...size, fps: FPS, hasVideo: true, hasAudio: false, size: 1 }
+  const strokes: MediaAsset = {
+    id: 'strokes', path: pattern.replace('%05d', '00000'), name: 'strokes — graphic', kind: 'image', durationFrames: duration, ...size,
+    fps: null, hasVideo: true, hasAudio: false, size: 0, frames: { pattern, count }
+  }
+  const clip = (id: string, trackId: string, keyframes?: Clip['keyframes']): Clip => ({
+    id, assetId: id, trackId, start: 0, duration, inPoint: 0, volume: 1,
+    transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 }, color: { brightness: 0, contrast: 1, saturation: 1 },
+    ...(keyframes ? { keyframes } : {})
+  })
+  return {
+    ...empty,
+    settings: { ...empty.settings, ...size, fps: FPS },
+    assets: [flat, strokes],
+    clips: [clip('flat', 'v1'), clip('strokes', 'v2', graphicExitKeys(duration, FPS))]
+  }
+}
+
+/**
+ * The plan's arguments up to its filter graph, and the graph without its
+ * audio source, its video's three steps each found once on the sequence's
+ * input (`[1:v]`, the second input): the plan's own, not a copy that could
+ * drift from it.
+ */
+function m19Graph(project: Project, size: { width: number; height: number }): { inputs: string[]; graph: string; steps: string[] } {
+  const plan = buildRenderPlan({ project, outputPath: join(root, 'm19-unused.mp4'), canvas: size })
+  const at = plan.args.indexOf('-filter_complex')
+  if (at < 0) throw new Error('the plan has no -filter_complex')
+  const segments = plan.args[at + 1].split(';')
+  const audio = segments.filter((s) => s.startsWith('anullsrc'))
+  const sequence = segments.filter((s) => s.startsWith('[1:v]'))
+  const overlays = segments.filter((s) => /\[v1\]overlay=/.test(s))
+  const out = segments.filter((s) => s === '[vmix]format=yuv420p[vout]')
+  if (audio.length !== 1 || sequence.length !== 1 || overlays.length !== 1 || out.length !== 1) {
+    throw new Error(`the plan's graph is not the shape M19 reads (audio ${audio.length}, sequence ${sequence.length}, overlay ${overlays.length}, out ${out.length}): ${plan.args[at + 1]}`)
+  }
+  const steps = [
+    ...[...sequence[0].matchAll(/format=yuva420p/g)].map((m) => m[0]),
+    ...[...sequence[0].matchAll(/geq=r=/g)].map((m) => m[0]),
+    ...[...overlays[0].matchAll(/:format=yuv420:/g)].map((m) => m[0]),
+    out[0]
+  ]
+  return { inputs: plan.args.slice(0, at), graph: segments.filter((s) => !s.startsWith('anullsrc')).join(';'), steps }
+}
+
+interface M19Line {
+  png: string
+  colour: string
+  line: StrokeLine
+  chroma: ChromaReading
+}
+
+describe('phase 1: the plan’s overlay of a graphic’s PNGs, as M19 reads it (docs/CLIPS.md §6.15)', () => {
+  // Always: the read below runs the plan's own graph, so a plan that stops emitting these steps fails here, not silently there.
+  it('emits format=yuva420p and the exit’s geq on the sequence, overlay format=yuv420, then format=yuv420p, once each', () => {
+    const size = { width: 1080, height: 1920 }
+    const { steps, inputs } = m19Graph(m19Project('/media/flat.mp4', '/cache/strokes.seq/%05d.png', 16, size, 40), size)
+    expect(steps).toEqual(['format=yuva420p', 'geq=r=', ':format=yuv420:', '[vmix]format=yuv420p[vout]'])
+    expect(inputs.join(' ')).toContain('-start_number 0 -framerate 30 -i /cache/strokes.seq/%05d.png')
+  })
+})
+
+const m19Body = (): void => {
+  const lines: M19Line[] = []
+  const background: { colour: string; png: string; maxU: number; maxV: number; blocks: number }[] = []
+  let pngs: string[] = []
+  let distinct: { file: string; frame: number }[] = []
+  let dir = ''
+  let graphNote = ''
+
+  beforeAll(async () => {
+    dir = join(root, 'm19')
+    await mkdir(dir, { recursive: true })
+    pngs = (await readdir(STROKE_FRAMES)).filter((f) => /^\d{5}\.png$/.test(f)).sort()
+    if (pngs.length === 0) return
+    if (pngs[0] !== '00000.png' || pngs.at(-1) !== `${String(pngs.length - 1).padStart(5, '0')}.png`) {
+      throw new Error(`${STROKE_FRAMES}: the PNGs are not one sequence numbered from 00000 (${pngs[0]} to ${pngs.at(-1)} of ${pngs.length})`)
+    }
+    const bytes = await Promise.all(pngs.map((f) => readFile(join(STROKE_FRAMES, f))))
+    const size = pngSize(bytes[0])
+    // The moving frames are often one picture (the strokes option's are): each picture is read once, at its first frame.
+    distinct = []
+    bytes.forEach((b, frame) => {
+      if (!bytes.slice(0, frame).some((earlier) => earlier.equals(b))) distinct.push({ file: pngs[frame], frame })
+    })
+    const pattern = join(STROKE_FRAMES, '%05d.png')
+    // The moving frames, half a second held, then the exit: every frame read is before the exit's first key.
+    const duration = pngs.length + Math.round(FPS / 2) + Math.round(EXIT_S * FPS)
+
+    for (const colour of M19_COLOURS) {
+      const base = join(dir, `${colour.name}.mp4`)
+      await flatClip(base, colour.hex, size, duration)
+      const { inputs, graph } = m19Graph(m19Project(base, pattern, pngs.length, size, duration), size)
+      graphNote = graph.replace(base, '<flat clip>').replace(/;/g, ';\n')
+      const { stdout } = await run(FFMPEG, [...inputs, '-filter_complex', graph, '-map', '[vout]', '-frames:v', String(pngs.length), '-f', 'rawvideo', '-pix_fmt', 'yuv420p', 'pipe:1'], {
+        encoding: 'buffer',
+        maxBuffer: 512 * 1024 * 1024
+      })
+      const all = stdout as unknown as Buffer
+      const luma = size.width * size.height
+      const half = Math.ceil(size.width / 2) * Math.ceil(size.height / 2)
+      const frameBytes = luma + 2 * half
+      if (all.length !== frameBytes * pngs.length) throw new Error(`${colour.name}: ${all.length} bytes of 4:2:0 is not ${pngs.length} frames of ${size.width}×${size.height}`)
+
+      for (const { file, frame } of distinct) {
+        const png = join(STROKE_FRAMES, file)
+        const at = frame * frameBytes
+        const measured = { u: all.subarray(at + luma, at + luma + half), v: all.subarray(at + luma + half, at + frameBytes) }
+        const { stdout: ref } = await run(FFMPEG, [
+          '-hide_banner', '-loglevel', 'error', '-i', base, '-i', png, '-filter_complex',
+          "[0:v]format=yuv444p[b];[1:v]format=yuva444p[g];[b][g]overlay=x='0':y='0':format=yuv444,format=yuv444p[out]",
+          '-map', '[out]', '-frames:v', '1', '-f', 'rawvideo', '-pix_fmt', 'yuv444p', 'pipe:1'
+        ], { encoding: 'buffer', maxBuffer: 256 * 1024 * 1024 })
+        const full = ref as unknown as Buffer
+        if (full.length !== luma * 3) throw new Error(`${colour.name} reference: ${full.length} bytes, not ${size.width}×${size.height} 4:4:4`)
+        const reference = { u: full.subarray(luma, 2 * luma), v: full.subarray(2 * luma, 3 * luma) }
+
+        const rgba = await rgbaOf(png, size.width, size.height)
+        for (const line of strokeLines(rgba, size.width, size.height)) {
+          lines.push({ png: file, colour: colour.name, line, chroma: chromaAlong(line.centre, reference, measured, size.width) })
+        }
+
+        // Background: every 4:2:0 sample with no ink within BACKGROUND_CLEAR px of its block, by a summed-area table of the ink.
+        const W = size.width
+        const H = size.height
+        const sat = new Int32Array((W + 1) * (H + 1))
+        for (let y = 0; y < H; y++) {
+          let row = 0
+          for (let x = 0; x < W; x++) {
+            row += rgba[(y * W + x) * 4 + 3] > 0 ? 1 : 0
+            sat[(y + 1) * (W + 1) + x + 1] = sat[y * (W + 1) + x + 1] + row
+          }
+        }
+        const inkIn = (x0: number, y0: number, x1: number, y1: number): number => {
+          const a = Math.max(0, x0)
+          const b = Math.max(0, y0)
+          const c = Math.min(W, x1)
+          const d = Math.min(H, y1)
+          return sat[d * (W + 1) + c] - sat[b * (W + 1) + c] - sat[d * (W + 1) + a] + sat[b * (W + 1) + a]
+        }
+        let maxU = 0
+        let maxV = 0
+        let blocks = 0
+        const cw = Math.ceil(W / 2)
+        for (let by = 0; by < Math.ceil(H / 2); by++) {
+          for (let bx = 0; bx < cw; bx++) {
+            const x = 2 * bx
+            const y = 2 * by
+            if (inkIn(x - BACKGROUND_CLEAR, y - BACKGROUND_CLEAR, x + 2 + BACKGROUND_CLEAR, y + 2 + BACKGROUND_CLEAR) > 0) continue
+            blocks++
+            for (const [px, py] of [[x, y], [Math.min(W - 1, x + 1), Math.min(H - 1, y + 1)]]) {
+              maxU = Math.max(maxU, Math.abs(reference.u[py * W + px] - measured.u[by * cw + bx]))
+              maxV = Math.max(maxV, Math.abs(reference.v[py * W + px] - measured.v[by * cw + bx]))
+            }
+          }
+        }
+        background.push({ colour: colour.name, png: file, maxU, maxV, blocks })
+
+        // The overlay's frame, to look at.
+        const raw = join(dir, `${colour.name}-${file}.yuv`)
+        await writeFile(raw, all.subarray(at, at + frameBytes))
+        await run(FFMPEG, ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'rawvideo', '-pix_fmt', 'yuv420p', '-s', `${size.width}x${size.height}`, '-i', raw, join(dir, `${colour.name}-${file}`)])
+      }
+    }
+  }, 600_000)
+
+  it('reads every line of every picture over each colour, with a centre line, the two sides agreeing away from the lines', async () => {
+    expect(pngs.length, `no 00000.png… sequence in FORGE_GRAPHIC_FRAMES=${STROKE_FRAMES}`).toBeGreaterThan(0)
+    for (const colour of M19_COLOURS) {
+      for (const { file } of distinct) {
+        const here = lines.filter((l) => l.colour === colour.name && l.png === file)
+        expect(here.length, `${colour.name} ${file}: lines found`).toBeGreaterThan(0)
+        for (const l of here) expect(l.chroma.pixels, `${colour.name} ${file}: a line at ${JSON.stringify(l.line.box)} has no centre`).toBeGreaterThan(0)
+      }
+    }
+    for (const b of background) {
+      expect(b.blocks, `${b.colour} ${b.png}: no background sample`).toBeGreaterThan(0)
+      expect(Math.max(b.maxU, b.maxV), `${b.colour} ${b.png}: U and V away from the lines`).toBeLessThanOrEqual(BACKGROUND_LEVELS)
+    }
+
+    // Per width, read from the picture: lines whose widths round to one tenth are one width.
+    const key = (l: M19Line): string => l.line.width.toFixed(1)
+    const widths = [...new Set(lines.map(key))].sort((a, b) => Number(a) - Number(b))
+    const verdicts = widths.map((w) => {
+      const of = lines.filter((l) => key(l) === w)
+      const maxU = Math.max(...of.map((l) => l.chroma.maxU))
+      const maxV = Math.max(...of.map((l) => l.chroma.maxV))
+      return { w, of, maxU, maxV, within: of.every((l) => l.chroma.within) }
+    })
+    const smallest = verdicts.find((v) => v.within)?.w ?? 'none'
+    const rows = lines.map((l) => {
+      const orientation = Math.abs(l.line.slope) < 0.01 ? 'horizontal' : `slope ${l.line.slope.toFixed(3)}`
+      return (
+        `${l.png}  ${l.colour}  ${l.line.width.toFixed(3)} px  ${orientation}  at ${l.line.box.x},${l.line.box.y} ${l.line.box.width}x${l.line.box.height}  ` +
+        `${l.chroma.pixels} centre px  U max ${l.chroma.maxU} mean ${l.chroma.meanU.toFixed(2)}  V max ${l.chroma.maxV} mean ${l.chroma.meanV.toFixed(2)}  ${l.chroma.within ? 'within' : 'OVER'} ${M19_BAR.chromaLevels}`
+      )
+    })
+    const said = verdicts.map((v) => `${v.w} px: U max ${v.maxU}, V max ${v.maxV} over ${v.of.length} lines, ${v.within ? 'within' : 'OVER'} ${M19_BAR.chromaLevels}`).join('; ')
+    process.stderr.write(
+      `graphic.int M19 (${process.platform}-${process.arch}, ${FFMPEG}): ${pngs.length} PNGs, ${distinct.length} distinct, from ${STROKE_FRAMES}; ${said}; ` +
+        `the smallest width within the bar: ${smallest}; background U/V ${background.map((b) => `${b.colour} ${Math.max(b.maxU, b.maxV)}`).join(', ')}\n`
+    )
+    await writeFile(join(dir, 'graph.txt'), `${graphNote}\n`, 'utf8')
+    await writeNote(dir, [
+      '# graphic: M19, a stroke\'s chroma through the plan\'s 4:2:0 overlay (docs/CLIPS.md §6.15)',
+      '',
+      `${pngs.length} PNGs from FORGE_GRAPHIC_FRAMES=${STROKE_FRAMES} (${distinct.length} distinct, each read at its first frame), ${process.platform}-${process.arch}, ${new Date().toISOString()}.`,
+      'Each overlaid by the render plan\'s own graph (graph.txt: format=yuva420p, the exit\'s geq, overlay format=yuv420, format=yuv420p) on a lossless',
+      'flat clip, and again with no subsampling (format=yuva444p, overlay format=yuv444) as the reference. Along each line\'s centre line, the overlay\'s',
+      `U and V (the 4:2:0 sample each pixel is stored with) against the reference's; the bar is ${M19_BAR.chromaLevels} levels (M19, proposal). STROKE_MIN_PX is yours to set.`,
+      '',
+      `Per width: ${said}.`,
+      `The smallest width within the bar: ${smallest}.`,
+      `Away from the lines (no ink within ${BACKGROUND_CLEAR} px of a sample): ${background.map((b) => `${b.colour} ${b.png} U ${b.maxU} V ${b.maxV} over ${b.blocks} samples`).join('; ')}.`,
+      '',
+      '<colour>-<png> — the overlay\'s frame, to look at; <colour>.mp4 the flat clip.',
+      '',
+      'png  colour  width  slope  box  centre  U  V',
+      ...rows
+    ])
+  })
+}
+
+if (STROKE_FRAMES === '') {
+  process.stderr.write('graphic.int M19: skipped, FORGE_GRAPHIC_FRAMES is not set (the folder the harness\'s strokes option prints; docs/CLIPS.md §6.15)\n')
+  describe.skip('phase 1: M19, a stroke’s chroma through the plan’s overlay — skipped: FORGE_GRAPHIC_FRAMES is not set (a folder of a graphic’s PNGs)', m19Body)
+} else {
+  describe('phase 1: M19, a stroke’s chroma through the plan’s overlay (docs/CLIPS.md §6.15)', m19Body)
+}
