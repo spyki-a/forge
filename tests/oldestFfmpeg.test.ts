@@ -13,6 +13,7 @@ import { steadyDetectFilter } from '@shared/render/steady'
 import { voiceOverArgs } from '@shared/render/voiceover'
 import { PRESETS, defaultParams } from '@shared/presets'
 import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
+import { graphicExitKeys } from '@shared/graphics/frame'
 import { HELPER_PYTHON, SIDECAR_DIR as SIDECAR } from './integration/venv'
 import { FFMPEG } from './integration/output'
 import { ciNotice } from './integration/helperDiag'
@@ -172,6 +173,16 @@ const SEVERAL = 'music and a second clip both off zero, so two clips are delayed
 /** The shape with zoom keys on footage. */
 const ZOOMED = 'zoom keys on a video clip, at speed 1'
 
+/**
+ * A graphic as the export hands it to the plan (docs/CLIPS.md §6.3, §6.11
+ * "Existing tests that change"): its moving frames as numbered PNGs cut to
+ * the box (`frames.box`, the box route M1 chose), the hold left to `tpad`,
+ * the exit as `graphicExitKeys`' opacity keys.
+ */
+const GRAPHIC = 'a graphic’s frames on the box route, held, with its opacity exit'
+const GRAPHIC_PATTERN = '/tmp/g-export.seq/%05d.png'
+const GRAPHIC_BOX = { x: 126, y: 108, width: 322, height: 92 }
+
 /** The shapes with a followed crop (docs/CLIPS.md §4.7): one crop, and the stacked two-up. */
 const FOLLOWED = 'a followed clip at speed 1: fps=, then a crop keyed by a flat sum'
 const TWO_UP = 'a followed clip with a stacked two-up: split, two keyed crops, vstack, tpad'
@@ -285,6 +296,40 @@ const SHAPES: { name: string; project: Project; range?: { start: number; end: nu
         clip({
           id: 'mo', assetId: 'mo', trackId: 'v2', start: 54, duration: 12,
           moment: { kind: 'zoom-punch', from: { clipId: 'a' }, to: { clipId: 'b' }, seconds: 0.4, intensity: 0.5, seed: 1, version: 1 }
+        })
+      ]
+    })
+  },
+  {
+    /*
+     * Step 3's graphic (docs/CLIPS.md §6.3): the image2 input, the tpad hold,
+     * `format=yuva420p`, the exit's geq on alpha and an overlay at the box's
+     * own x and y. Nothing in it is new (§13's row: 2010 / Oct 2018), and the
+     * moment above reaches the same input and hold; it is here so the scan
+     * covers the graphic's own shape. graphic.int's phase-1 case is the
+     * render, in CI on both runners.
+     */
+    name: GRAPHIC,
+    project: project({
+      tracks: [
+        { id: 'v1', kind: 'video', name: 'V1', muted: false, hidden: false, locked: false },
+        { id: 'v2', kind: 'video', name: 'V2', muted: false, hidden: false, locked: false },
+        { id: 'a1', kind: 'audio', name: 'A1', muted: false, hidden: false, locked: false, duck: true }
+      ],
+      assets: [
+        asset('v'),
+        {
+          id: 'gr', path: GRAPHIC_PATTERN.replace('%05d', '00000'), name: 'counter — graphic', kind: 'image', durationFrames: 300,
+          width: GRAPHIC_BOX.width, height: GRAPHIC_BOX.height, fps: null, hasVideo: true, hasAudio: false, size: 0,
+          frames: { pattern: GRAPHIC_PATTERN, count: 46, box: GRAPHIC_BOX }
+        }
+      ],
+      clips: [
+        clip({ id: 'a' }),
+        clip({
+          id: 'gr', assetId: 'gr', trackId: 'v2', start: 10, duration: 60,
+          graphic: { data: { template: 'counter', value: '3', label: 'shape' }, seconds: 2, beats: [0.5, 1], place: { auto: false, box: { x: 0.2, y: 0.3, width: 0.5, height: 0.25 } }, seed: 1, version: 1 },
+          keyframes: graphicExitKeys(60, 30)
         })
       ]
     })
@@ -614,6 +659,28 @@ describe('a filter graph runs on the oldest bundled ffmpeg', () => {
       // What goes in the file is the graph the scan above read.
       expect(filterGraphOf(args), name).toBe(graphOf(p, range, captionOverlay))
     }
+  })
+
+  it('reaches the graphic’s overlay: its PNGs, the hold, the exit on alpha and the box’s place, so the scan above is not of a graph without them', () => {
+    const shape = SHAPES.find((s) => s.name === GRAPHIC)!
+    const args = buildRenderPlan({ project: shape.project, outputPath: '/tmp/out.mp4' }).args
+    // The sequence is one image2 input, numbered from 0 at the project's rate (plan.ts's `-start_number 0 -framerate`).
+    const sites = args.flatMap((a, i) => (a === GRAPHIC_PATTERN ? [i] : []))
+    expect(sites, 'the pattern in the argv').toHaveLength(1)
+    expect(args.slice(sites[0] - 5, sites[0] + 1)).toEqual(['-start_number', '0', '-framerate', '30', '-i', GRAPHIC_PATTERN])
+    // Its input's index: the inputs before its own `-i`.
+    const input = args.slice(0, sites[0] - 1).filter((a) => a === '-i').length
+    // Its chain, at its one site, by step and order: the hold, then yuva420p, then the exit's geq on alpha; then the overlay at the box's x and y.
+    const graph = graphOf(shape.project)
+    const chains = [...graph.matchAll(new RegExp(`\\[${input}:v\\]([^;]*)\\[(v\\d+)\\]`, 'g'))]
+    expect(chains, `chains from input ${input}: ${graph}`).toHaveLength(1)
+    const chain = chains[0][1]
+    const count = (re: RegExp): number => [...chain.matchAll(re)].length
+    expect([count(/tpad=stop_mode=clone:/g), count(/format=yuva420p/g), count(/geq=/g), count(/:a='alpha\(X,Y\)\*/g)], `${chain}: tpad, yuva420p, geq, alpha keys`).toEqual([1, 1, 1, 1])
+    const order = [chain.indexOf('tpad='), chain.indexOf('format=yuva420p'), chain.indexOf('geq=')]
+    expect([...order].sort((a, b) => a - b), `${chain} in order`).toEqual(order)
+    const overlays = [...graph.matchAll(new RegExp(`\\[${chains[0][2]}\\]overlay=x='${GRAPHIC_BOX.x}':y='${GRAPHIC_BOX.y}':format=yuv420:`, 'g'))]
+    expect(overlays, 'the overlay at the box').toHaveLength(1)
   })
 
   it('reaches the range trims, so the scan above is not of a graph without them', () => {

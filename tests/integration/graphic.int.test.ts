@@ -2,11 +2,17 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import { existsSync } from 'node:fs'
 import { mkdir, readFile, readdir, unlink, writeFile } from 'node:fs/promises'
 import { isAbsolute, join, relative, resolve } from 'node:path'
+import { crc32, deflateSync } from 'node:zlib'
 import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
 import { buildRenderPlan } from '@shared/render/plan'
+import { bakeForExport, exportKey, type Bakers } from '@shared/render/exportBake'
 import { DEFAULT_CAPTION_STYLE } from '@shared/captions/style'
 import { REFERENCE_HEIGHT, toAssTime } from '@shared/captions/ass'
-import { EXIT_S, graphicExitKeys } from '@shared/graphics/frame'
+import { EXIT_S, beatFrame, drawnGraphicAsset, graphicExitKeys, graphicMovingFrames } from '@shared/graphics/frame'
+import { graphicBox } from '@shared/graphics/drawList'
+import { CLEAN_GRAPHIC_STYLE } from '@shared/graphics/style'
+import type { Drawer, Rect, TextMeasure } from '@shared/graphics/items'
+import type { GraphicSpec } from '@shared/graphics/template'
 import { M19_BAR, chromaAlong, strokeBandIndex, strokeLines, type ChromaReading, type StrokeLine } from '../../src/renderer/src/harness/graphicMeasure'
 import { FFMPEG, OUTPUT_ROOT, makeColour, outputDir, run, saveFrame, writeNote } from './output'
 import { ciNotice } from './helperDiag'
@@ -150,17 +156,17 @@ const SHAPING_ANCHOR = ':shaping=complex[vsub]'
 const pad = (n: number): string => String(n).padStart(2, '0')
 const codePoints = (s: string): string => Array.from(s, (c) => `U+${c.codePointAt(0)!.toString(16).toUpperCase().padStart(4, '0')}`).join(' ')
 
-/** Every frame of the file, in order (`-vsync passthrough`, so frame n is the plan's frame n), as luma. */
-async function lumaFrames(file: string): Promise<Buffer[]> {
+/** Every frame of the file, in order (`-vsync passthrough`, so frame n is the plan's frame n), as luma (`gray`) or RGB (`rgb24`); phase 0's band unless a size is given. */
+async function lumaFrames(file: string, size: { width: number; height: number } = { width: W, height: H }, pixFmt: 'gray' | 'rgb24' = 'gray'): Promise<Buffer[]> {
   const { stdout } = await run(
     FFMPEG,
-    ['-hide_banner', '-loglevel', 'error', '-i', file, '-map', '0:v:0', '-vsync', 'passthrough', '-f', 'rawvideo', '-pix_fmt', 'gray', 'pipe:1'],
-    { encoding: 'buffer', maxBuffer: 256 * 1024 * 1024 }
+    ['-hide_banner', '-loglevel', 'error', '-i', file, '-map', '0:v:0', '-vsync', 'passthrough', '-f', 'rawvideo', '-pix_fmt', pixFmt, 'pipe:1'],
+    { encoding: 'buffer', maxBuffer: 512 * 1024 * 1024 }
   )
   const all = stdout as unknown as Buffer
-  const size = W * H
-  if (all.length === 0 || all.length % size !== 0) throw new Error(`${file}: ${all.length} bytes of luma is not a whole number of ${W}×${H} frames`)
-  return Array.from({ length: all.length / size }, (_, i) => all.subarray(i * size, (i + 1) * size))
+  const bytes = size.width * size.height * (pixFmt === 'gray' ? 1 : 3)
+  if (all.length === 0 || all.length % bytes !== 0) throw new Error(`${file}: ${all.length} bytes of ${pixFmt} is not a whole number of ${size.width}×${size.height} frames`)
+  return Array.from({ length: all.length / bytes }, (_, i) => all.subarray(i * bytes, (i + 1) * bytes))
 }
 
 /** An image file's pixels, as RGB, and its size as ffmpeg decodes it. */
@@ -358,6 +364,672 @@ describe('phase 0: the libass reference for M22 (docs/CLIPS.md §6.11, §6.15)',
         const shown = (r: LevelResult): string => (r.runs[i] ? `${r.runs[i].first}-${r.runs[i].last}` : 'none')
         return `${pad(i)}  ${c.text}  ${c.script} ${c.reads}  ${codePoints(c.text)}  ${shown(complex)} | ${shown(simple)}  ${said}`
       })
+    ])
+  })
+})
+
+/* ------------------------------------------------- phase 1: the render check */
+
+/*
+ * Phase 1's render check (docs/CLIPS.md §6.11, "The render check", phase 1;
+ * §6.3): a graphic clip through the export's own path, `bakeForExport` →
+ * `buildRenderPlan` → the bundled ffmpeg, with a fake `Bakers.graphic` in the
+ * app's place, as moment.int fakes the moment's drawer (moment.int.test.ts
+ * :52-72). The fake keeps the bake's contract and draws nothing of a
+ * template's: for moving frame i (`graphicMovingFrames`, so the hold is the
+ * render's `tpad`, never baked) it fills the spec's place rect, scaled to the
+ * export's size, with grey 20 + 15·(i mod 12), white on an arrival frame
+ * (`beatFrame` of a beat), transparent outside. Greys 15 apart, so a frame
+ * off by one reads as another grey; mod 12, so a frame names itself.
+ *
+ * Its box route is the app's (graphicCanvas.ts `bakeGraphicSequence`, with
+ * `GRAPHIC_BAKE_REGION` 'box' since M1, 2026-10-27): when the export allows
+ * it (`boxAllowed`, `identityPlaced`) the frames are cut to the box
+ * `graphicBox` gives a list whose one item is the place rect, and the box is
+ * returned for the asset's `frames.box`. The plan's §6.11 says the fake needs
+ * no `graphicBox`; it is called here all the same, for its box only (the fake
+ * paints no list), so the box the plan overlays is the production one and
+ * "(box) an odd x" is a mutation of production code, not of this file. Its
+ * canvas route is the same frames at the canvas, no box: the region the
+ * app's bake takes when `GRAPHIC_BAKE_REGION` is 'canvas', chosen here by the
+ * fake rather than by un-placing the clip (a transition or a mask), which
+ * would change the plan's graph for reasons of its own and could not be
+ * framemd5-equal for this one's.
+ *
+ * The spec's box has every edge on an odd pixel at both shapes, so
+ * `graphicBox` snaps each side outward and the box route's PNGs carry a
+ * transparent margin on all four: the case where the box and the frame's
+ * 4:2:0 blocks do not coincide with the ink.
+ */
+
+const P1_SHOT = { width: 360, height: 640 }
+const P1_SHAPES = { portrait: { width: 360, height: 640 }, landscape: { width: 640, height: 360 } } as const
+type P1Shape = keyof typeof P1_SHAPES
+const P1_SHAPE_NAMES = Object.keys(P1_SHAPES) as P1Shape[]
+/** The red shot, 3.5 s; the graphic from half a second in, for its two seconds: a second of red after it. */
+const P1_SHOT_FRAMES = 105
+const P1_START = 15
+/** In units of the frame. Every edge lands on an odd pixel at 360×640 and at 640×360 (P1_PLACE_PX). */
+const P1_PLACE = { x: 0.1985, y: 0.3015, width: 0.5, height: 0.25 }
+const P1_SPEC: GraphicSpec = {
+  data: { template: 'counter', value: '3', label: 'render check' },
+  seconds: 2,
+  beats: [0.5, 1.0],
+  place: { auto: false, box: P1_PLACE },
+  seed: 1,
+  version: 1
+}
+const P1_FRAMES = Math.round(P1_SPEC.seconds * FPS)
+
+/* Hand-derived, so a change to the code they come from fails against them rather than moving the test with it. */
+/** The place rect in pixels: round(unit × side) for each edge. */
+const P1_PLACE_PX: Record<P1Shape, Rect> = {
+  portrait: { x: 71, y: 193, width: 180, height: 160 },
+  landscape: { x: 127, y: 109, width: 320, height: 90 }
+}
+/** `graphicBox` of it: snapped outward to even on every side. */
+const P1_BOX_PX: Record<P1Shape, Rect> = {
+  portrait: { x: 70, y: 192, width: 182, height: 162 },
+  landscape: { x: 126, y: 108, width: 322, height: 92 }
+}
+/** `beatFrame(1.0 + SETTLE_S) + 1` at 30 fps: frames 0..45 drawn, 45 the first settled one. */
+const P1_MOVING = 46
+/** The beats' frames: 0.5 s and 1.0 s at 30 fps. */
+const P1_ARRIVALS = [15, 30]
+/** The exit's first key (opacity 1), `P1_FRAMES − round(EXIT_S × 30)`; its last (0) on the clip's last frame. */
+const P1_EXIT = 51
+
+/** A pixel matches within 5 levels per channel (`toBeLessThan(6)`), as moment.int reads H.264. */
+const P1_LEVELS = 6
+/**
+ * Pixels within this many of an edge (the place rect's, or the shot's where
+ * 16:9 pillarboxes it) are left out of the inside and outside readings: H.264
+ * at the plan's CRF 20 smears a sharp edge across its transform blocks.
+ * Measured on the Mac (2026-11-03), the box export against the moving
+ * frame's grey at 9:16: 8 levels at 8 px inside the edge, 5 at 9, 2 from
+ * 17; outside it, against the shot's own export, 14 at 7 px and 3 at 8. So
+ * 10, the edge itself being read in luma (P1_EDGE_PX).
+ */
+const P1_MARGIN = 10
+/**
+ * Where the red shot shows in the export: the whole 9:16 frame; at 16:9 the
+ * plan's contain fit, 202 wide (360 × 360/640, even) from x 218, black
+ * either side (read off the base export, 2026-11-03).
+ */
+const P1_SHOT_RECT: Record<P1Shape, Rect> = {
+  portrait: { x: 0, y: 0, width: 360, height: 640 },
+  landscape: { x: 218, y: 0, width: 202, height: 360 }
+}
+/** The grey's first and last columns and rows within this many pixels of the place rect's edges, in luma. */
+const P1_EDGE_PX = 1
+/** An edge is read on a frame only where the two sides' luma differ by this much (a grey near the base's luma has no edge to find). */
+const P1_EDGE_CONTRAST = 40
+
+const p1Grey = (i: number): number => 20 + 15 * (i % 12)
+
+/** The spec's place rect in pixels of `size`. Phase 1's spec is placed by hand; `auto` is phase 2's layout. */
+function placeRect(spec: GraphicSpec, size: { width: number; height: number }): Rect {
+  if (spec.place.auto) throw new Error('the phase 1 fake draws a placed box only')
+  const b = spec.place.box
+  const x0 = Math.round(b.x * size.width)
+  const y0 = Math.round(b.y * size.height)
+  return { x: x0, y: y0, width: Math.round((b.x + b.width) * size.width) - x0, height: Math.round((b.y + b.height) * size.height) - y0 }
+}
+
+/** The place rect as one shape item: what `graphicBox` reads for the box route's box (its bounds only; nothing paints it). */
+const placeDrawer: Drawer = (spec, _style, _clock, size) => ({
+  items: [{ kind: 'shape', id: 'place', opacity: 1, shape: 'rect', box: placeRect(spec, size), fill: '#ffffff' }]
+})
+const NO_TEXT: TextMeasure = () => ({ width: 0, ascent: 0, descent: 0 })
+
+/** An RGBA PNG by hand, filter 0 on every row: nothing between the fake and the file decides what is in it. */
+function rgbaPng(width: number, height: number, rgba: Buffer): Buffer {
+  const row = 1 + width * 4
+  const raw = Buffer.alloc(row * height)
+  for (let y = 0; y < height; y++) rgba.copy(raw, y * row + 1, y * width * 4, (y + 1) * width * 4)
+  const chunk = (type: string, data: Buffer): Buffer => {
+    const body = Buffer.concat([Buffer.from(type, 'latin1'), data])
+    const out = Buffer.alloc(body.length + 8)
+    out.writeUInt32BE(data.length, 0)
+    body.copy(out, 4)
+    out.writeUInt32BE(crc32(body), body.length + 4)
+    return out
+  }
+  const ihdr = Buffer.alloc(13)
+  ihdr.writeUInt32BE(width, 0)
+  ihdr.writeUInt32BE(height, 4)
+  ihdr.set([8, 6, 0, 0, 0], 8)
+  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0))])
+}
+
+type P1Route = 'box' | 'canvas' | 'null'
+
+/** What the export asked the fake for, and what it wrote. */
+interface P1Ask {
+  key: string
+  width: number
+  height: number
+  frames: number
+  fps: number
+  boxAllowed: boolean
+  box: Rect | null
+  seq: string
+}
+
+function p1Bakers(route: P1Route, dir: string, asks: P1Ask[]): Bakers {
+  const none = (what: string) => async (): Promise<never> => {
+    throw new Error(`the phase 1 project has no ${what}`)
+  }
+  return {
+    moment: none('moment'),
+    text: none('text'),
+    textSequence: async () => null,
+    solid: none('colour card'),
+    title: none('title'),
+    paper: none('paper'),
+    carousel: none('carousel'),
+    graphic: async (spec, style, key, width, height, frames, fps, targetsAt, boxAllowed) => {
+      const ask: P1Ask = { key, width, height, frames, fps, boxAllowed, box: null, seq: '' }
+      asks.push(ask)
+      // A bake that could not draw: the export must drop the clip, never read the edit's empty asset.
+      if (route === 'null') return null
+      const size = { width, height }
+      const moving = graphicMovingFrames(spec, style, fps, frames)
+      const box = route === 'box' && boxAllowed ? graphicBox(spec, style, fps, frames, size, NO_TEXT, targetsAt, placeDrawer) : null
+      if (route === 'box' && boxAllowed && !box) return null
+      const region = box ?? { x: 0, y: 0, width, height }
+      const place = placeRect(spec, size)
+      const arrivals = new Set(spec.beats.map((b) => beatFrame(b, fps)))
+      const seq = join(dir, `${key}.seq`)
+      await mkdir(seq, { recursive: true })
+      for (let i = 0; i < moving; i++) {
+        const level = arrivals.has(i) ? 255 : p1Grey(i)
+        const rgba = Buffer.alloc(region.width * region.height * 4)
+        for (let y = Math.max(place.y, region.y); y < Math.min(place.y + place.height, region.y + region.height); y++) {
+          for (let x = Math.max(place.x, region.x); x < Math.min(place.x + place.width, region.x + region.width); x++) {
+            const at = ((y - region.y) * region.width + (x - region.x)) * 4
+            rgba[at] = level
+            rgba[at + 1] = level
+            rgba[at + 2] = level
+            rgba[at + 3] = 255
+          }
+        }
+        await writeFile(join(seq, `${String(i).padStart(5, '0')}.png`), rgbaPng(region.width, region.height, rgba))
+      }
+      ask.box = box
+      ask.seq = seq
+      const pattern = join(seq, '%05d.png')
+      return box ? { pattern, frames: moving, box } : { pattern, frames: moving }
+    }
+  }
+}
+
+/** The red shot on V1; with `graphic`, the graphic clip on V2 as the store adds one (the drawn asset, empty; the exit's keys). */
+function p1Project(shot: string, graphic: boolean): Project {
+  const empty = emptyProject('graphic-phase-1')
+  const red: MediaAsset = {
+    id: 'red', path: shot, name: 'red.mp4', kind: 'video', durationFrames: P1_SHOT_FRAMES, ...P1_SHOT, fps: FPS, hasVideo: true, hasAudio: false, size: 1
+  }
+  const drawn = drawnGraphicAsset('g', P1_SHOT.width, P1_SHOT.height, Math.max(P1_FRAMES, FPS * 10), 'counter — graphic')
+  const clip = (over: Partial<Clip> & Pick<Clip, 'id' | 'assetId' | 'trackId' | 'start' | 'duration'>): Clip => ({
+    inPoint: 0, volume: 1, transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 }, color: { brightness: 0, contrast: 1, saturation: 1 }, ...over
+  })
+  return {
+    ...empty,
+    settings: { ...empty.settings, ...P1_SHOT, fps: FPS },
+    captions: { enabled: false, styleId: empty.captions.styleId },
+    assets: graphic ? [red, drawn] : [red],
+    clips: [
+      clip({ id: 'red', assetId: 'red', trackId: 'v1', start: 0, duration: P1_SHOT_FRAMES }),
+      ...(graphic
+        ? [clip({ id: 'g', assetId: drawn.id, trackId: 'v2', start: P1_START, duration: P1_FRAMES, graphic: P1_SPEC, keyframes: graphicExitKeys(P1_FRAMES, FPS) })]
+        : [])
+    ]
+  }
+}
+
+interface P1Export {
+  file: string
+  /** The plan's argv, as the export ran it. */
+  args: string[]
+  asks: P1Ask[]
+  /** What `onError` heard, as "<clip>: <message>". */
+  notes: string[]
+  baked: Project
+  /** PNGs in the fake's sequence folder. */
+  pngs: number
+}
+
+/** One export of `project` at `shape`, the fake on `route`, into `<dir>/<name>/`. */
+async function p1Export(dir: string, name: string, project: Project, shape: P1Shape, route: P1Route): Promise<P1Export> {
+  const out = join(dir, name)
+  await mkdir(out, { recursive: true })
+  const asks: P1Ask[] = []
+  const notes: string[] = []
+  const canvas = P1_SHAPES[shape]
+  const baked = await bakeForExport(project, canvas, p1Bakers(route, out, asks), (clip, err) => {
+    notes.push(`${clip.id}: ${err instanceof Error ? err.message : String(err)}`)
+  })
+  const file = join(out, 'export.mp4')
+  const plan = buildRenderPlan({ project: baked, outputPath: file, canvas })
+  await writeFile(join(out, 'graph.txt'), plan.args.join(' ').replace(/;/g, ';\n'), 'utf8')
+  await run(FFMPEG, plan.args, { maxBuffer: 64 * 1024 * 1024 })
+  const pngs = asks[0]?.seq ? (await readdir(asks[0].seq)).filter((f) => /^\d{5}\.png$/.test(f)).length : 0
+  return { file, args: plan.args, asks, notes, baked, pngs }
+}
+
+/**
+ * The plan's own filtered frames, before the encoder, as yuv420p: its argv up
+ * to the outputs, then `[vout]` to raw video and `[aout]` to nowhere (the
+ * graph's anullsrc must be consumed, and bounded). The encoder is left out
+ * because one frame's difference moves x264's decisions on its neighbours:
+ * two routes that differ by a column differ in the export's framemd5 frames
+ * before it (measured: frame 14, the frame before the clip).
+ */
+async function planFrames(args: string[], size: { width: number; height: number }): Promise<Buffer[]> {
+  const maps = args.flatMap((a, i) => (a === '-map' ? [i] : []))
+  if (maps.length !== 2 || args[maps[0] + 1] !== '[vout]' || args[maps[1] + 1] !== '[aout]') throw new Error(`the plan's outputs are not [vout] and [aout]: ${args.join(' ')}`)
+  const { stdout } = await run(
+    FFMPEG,
+    [
+      ...args.slice(0, maps[0]),
+      '-map', '[vout]', '-vsync', 'passthrough', '-f', 'rawvideo', '-pix_fmt', 'yuv420p', 'pipe:1',
+      '-map', '[aout]', '-t', String(P1_SHOT_FRAMES / FPS), '-f', 'null', '-'
+    ],
+    { encoding: 'buffer', maxBuffer: 512 * 1024 * 1024 }
+  )
+  const all = stdout as unknown as Buffer
+  const bytes = size.width * size.height * 1.5
+  if (all.length === 0 || all.length % bytes !== 0) throw new Error(`${all.length} bytes of yuv420p is not a whole number of ${size.width}×${size.height} frames`)
+  return Array.from({ length: all.length / bytes }, (_, i) => all.subarray(i * bytes, (i + 1) * bytes))
+}
+
+/** Where two yuv420p frames differ: each differing sample as frame pixels (a chroma sample as the 2×2 it covers), by plane. */
+function differingPixels(a: Buffer, b: Buffer, size: { width: number; height: number }): { plane: 'Y' | 'U' | 'V'; x: number; y: number }[] {
+  const out: { plane: 'Y' | 'U' | 'V'; x: number; y: number }[] = []
+  const luma = size.width * size.height
+  const cw = size.width / 2
+  for (let k = 0; k < a.length; k++) {
+    if (a[k] === b[k]) continue
+    if (k < luma) out.push({ plane: 'Y', x: k % size.width, y: Math.floor(k / size.width) })
+    else {
+      const c = (k - luma) % (luma / 4)
+      out.push({ plane: k < luma * 1.25 ? 'U' : 'V', x: 2 * (c % cw), y: 2 * Math.floor(c / cw) })
+    }
+  }
+  return out
+}
+
+/** The file's video as framemd5 lines, the header's comments left out. */
+async function framemd5(file: string): Promise<string[]> {
+  const { stdout } = await run(FFMPEG, ['-hide_banner', '-loglevel', 'error', '-i', file, '-map', '0:v:0', '-vsync', 'passthrough', '-f', 'framemd5', 'pipe:1'], {
+    maxBuffer: 64 * 1024 * 1024
+  })
+  return String(stdout).split(/\r?\n/).filter((l) => l !== '' && !l.startsWith('#'))
+}
+
+const pixelOf = (frame: Buffer, width: number, x: number, y: number): [number, number, number] => {
+  const at = (y * width + x) * 3
+  return [frame[at], frame[at + 1], frame[at + 2]]
+}
+const furthest = (px: readonly number[], want: readonly number[]): number => Math.max(...px.map((c, k) => Math.abs(c - want[k])))
+const RED = [255, 0, 0] as const
+
+const BLACK = [0, 0, 0] as const
+
+/** Whether (x, y) is at least `m` pixels inside `r` (m 0: inside it). */
+const deepIn = (r: Rect, x: number, y: number, m: number): boolean => x >= r.x + m && x < r.x + r.width - m && y >= r.y + m && y < r.y + r.height - m
+/** Whether (x, y) is at least `m` pixels clear of `r`. */
+const clearOf = (r: Rect, x: number, y: number, m: number): boolean => x < r.x - m || x >= r.x + r.width + m || y < r.y - m || y >= r.y + r.height + m
+
+/**
+ * Per pixel of a shape's frame, what the readings make of it: `inside` the
+ * place rect by P1_MARGIN or `outside` it by P1_MARGIN (else neither), and
+ * what the base shows there, red or black, when it is P1_MARGIN from the
+ * shot's edge (else null: the pillarbox's edge is H.264's to smear).
+ */
+interface PixelZones {
+  inside: Uint8Array
+  outside: Uint8Array
+  under: (typeof RED | typeof BLACK | null)[]
+}
+function zonesOf(shape: P1Shape): PixelZones {
+  const size = P1_SHAPES[shape]
+  const place = P1_PLACE_PX[shape]
+  const shot = P1_SHOT_RECT[shape]
+  const n = size.width * size.height
+  const zones: PixelZones = { inside: new Uint8Array(n), outside: new Uint8Array(n), under: new Array(n).fill(null) }
+  for (let y = 0; y < size.height; y++) {
+    for (let x = 0; x < size.width; x++) {
+      const k = y * size.width + x
+      zones.inside[k] = deepIn(place, x, y, P1_MARGIN) ? 1 : 0
+      zones.outside[k] = clearOf(place, x, y, P1_MARGIN) ? 1 : 0
+      zones.under[k] = deepIn(shot, x, y, P1_MARGIN) ? RED : clearOf(shot, x, y, P1_MARGIN) ? BLACK : null
+    }
+  }
+  return zones
+}
+
+/**
+ * One frame's reading: the largest channel distance from `want` over the
+ * inside pixels (from the base's colour when `want` is null), and from the
+ * base's colour over the outside ones; and the mean distance from the base's
+ * colour over the inside, which the exit's fall drives to 0.
+ */
+function regionReading(frame: Buffer, zones: PixelZones, want: number | null): { inside: number; outside: number; insideMean: number } {
+  let worstIn = 0
+  let worstOut = 0
+  let sumIn = 0
+  let nIn = 0
+  for (let k = 0; k < zones.inside.length; k++) {
+    const under = zones.under[k]
+    const at = k * 3
+    if (zones.inside[k]) {
+      for (let c = 0; c < 3; c++) {
+        if (want !== null) worstIn = Math.max(worstIn, Math.abs(frame[at + c] - want))
+        else if (under) worstIn = Math.max(worstIn, Math.abs(frame[at + c] - under[c]))
+        if (under) {
+          sumIn += Math.abs(frame[at + c] - under[c])
+          nIn++
+        }
+      }
+    } else if (zones.outside[k] && under) {
+      for (let c = 0; c < 3; c++) worstOut = Math.max(worstOut, Math.abs(frame[at + c] - under[c]))
+    }
+  }
+  return { inside: worstIn, outside: worstOut, insideMean: sumIn / Math.max(1, nIn) }
+}
+
+type EdgeName = 'left' | 'right' | 'top' | 'bottom'
+/**
+ * The grey's edges on one frame, in luma, along the place rect's middle row
+ * and middle column: each the first pixel, coming from outside, past the
+ * midpoint of the two sides' luma (read P1_MARGIN + 2 px either side of the
+ * edge). An edge whose two sides differ by less than P1_EDGE_CONTRAST is not
+ * read (null).
+ */
+function edgesOf(luma: Buffer, size: { width: number; height: number }, place: Rect): Record<EdgeName, number | null> {
+  const at = (x: number, y: number): number => luma[y * size.width + x]
+  const off = P1_MARGIN + 2
+  const row = place.y + Math.floor(place.height / 2)
+  const col = place.x + Math.floor(place.width / 2)
+  /** Walking `from` towards `to` (inside), the first index whose luma is on the inside's side of the midpoint. */
+  const cross = (read: (k: number) => number, from: number, to: number): number | null => {
+    const outside = read(from)
+    const inside = read(to)
+    if (Math.abs(inside - outside) < P1_EDGE_CONTRAST) return null
+    const mid = (inside + outside) / 2
+    const step = to > from ? 1 : -1
+    for (let k = from; k !== to + step; k += step) if ((read(k) - mid) * (inside - outside) > 0) return k
+    return null
+  }
+  return {
+    left: cross((x) => at(x, row), place.x - off, place.x + off),
+    right: cross((x) => at(x, row), place.x + place.width - 1 + off, place.x + place.width - 1 - off),
+    top: cross((y) => at(col, y), place.y - off, place.y + off),
+    bottom: cross((y) => at(col, y), place.y + place.height - 1 + off, place.y + place.height - 1 - off)
+  }
+}
+
+/** Where each edge should be read: the place rect's first and last column and row. */
+const edgeWant = (place: Rect): Record<EdgeName, number> => ({
+  left: place.x,
+  right: place.x + place.width - 1,
+  top: place.y,
+  bottom: place.y + place.height - 1
+})
+
+/** The frames saved to look at, each taken at (f − 0.25)/fps: before, the first, each arrival and the frame before it, the last moving, a held one, mid-exit, the clip's last, and after. */
+const P1_SAVED = [P1_START - 1, P1_START, ...P1_ARRIVALS.flatMap((a) => [P1_START + a - 1, P1_START + a]), P1_START + P1_MOVING - 1, P1_START + P1_MOVING + 2, P1_START + 55, P1_START + P1_FRAMES - 1, P1_START + P1_FRAMES]
+
+describe('phase 1: a graphic through bakeForExport, the plan and the bundled ffmpeg (docs/CLIPS.md §6.11, §6.3)', () => {
+  let dir = ''
+  const base = {} as Record<P1Shape, P1Export>
+  const boxed = {} as Record<P1Shape, P1Export>
+  const canvased = {} as Record<P1Shape, P1Export>
+  const zones = {} as Record<P1Shape, PixelZones>
+  const rgb = {} as Record<P1Shape, Buffer[]>
+  const baseRgb = {} as Record<P1Shape, Buffer[]>
+  const luma = {} as Record<P1Shape, { box: Buffer[]; canvas: Buffer[] }>
+  const md5 = {} as Record<P1Shape, { base: string[]; box: string[]; canvas: string[] }>
+  const lines: string[] = []
+
+  beforeAll(async () => {
+    dir = join(root, 'phase1')
+    await mkdir(dir, { recursive: true })
+    const shot = await makeColour(join(dir, 'red.mp4'), 'red', P1_SHOT, P1_SHOT_FRAMES / FPS, FPS)
+    for (const shape of P1_SHAPE_NAMES) {
+      const size = P1_SHAPES[shape]
+      zones[shape] = zonesOf(shape)
+      base[shape] = await p1Export(dir, `${shape}-base`, p1Project(shot, false), shape, 'box')
+      boxed[shape] = await p1Export(dir, `${shape}-box`, p1Project(shot, true), shape, 'box')
+      canvased[shape] = await p1Export(dir, `${shape}-canvas`, p1Project(shot, true), shape, 'canvas')
+      rgb[shape] = await lumaFrames(boxed[shape].file, size, 'rgb24')
+      baseRgb[shape] = await lumaFrames(base[shape].file, size, 'rgb24')
+      luma[shape] = { box: await lumaFrames(boxed[shape].file, size, 'gray'), canvas: await lumaFrames(canvased[shape].file, size, 'gray') }
+      md5[shape] = { base: await framemd5(base[shape].file), box: await framemd5(boxed[shape].file), canvas: await framemd5(canvased[shape].file) }
+      const saved = join(dir, `${shape}-box`, 'frames')
+      await mkdir(saved, { recursive: true })
+      for (const f of P1_SAVED) await saveFrame(boxed[shape].file, (f - 0.25) / FPS, join(saved, `f${String(f).padStart(3, '0')}.png`))
+    }
+  }, 600_000)
+
+  it('moves for the frames the code says, hand-derived: 46 moving, arrivals on 15 and 30, the exit from 51', () => {
+    expect(graphicMovingFrames(P1_SPEC, CLEAN_GRAPHIC_STYLE, FPS, P1_FRAMES)).toBe(P1_MOVING)
+    expect(P1_SPEC.beats.map((b) => beatFrame(b, FPS))).toEqual(P1_ARRIVALS)
+    expect(graphicExitKeys(P1_FRAMES, FPS).opacity).toEqual([
+      { frame: P1_EXIT, value: 1, ease: 'smooth' },
+      { frame: P1_FRAMES - 1, value: 0 }
+    ])
+    expect(P1_EXIT).toBe(P1_FRAMES - Math.round(EXIT_S * FPS))
+    for (const shape of P1_SHAPE_NAMES) expect(placeRect(P1_SPEC, P1_SHAPES[shape]), shape).toEqual(P1_PLACE_PX[shape])
+  })
+
+  it('bakes at the export’s shape, the moving frames only, and the box route’s asset carries the box', () => {
+    for (const shape of P1_SHAPE_NAMES) {
+      const size = P1_SHAPES[shape]
+      for (const [route, e] of [['box', boxed[shape]], ['canvas', canvased[shape]]] as const) {
+        expect(e.notes, `${shape} ${route}: onError`).toEqual([])
+        expect(e.asks.map(({ key, width, height, frames, fps, boxAllowed }) => ({ key, width, height, frames, fps, boxAllowed })), `${shape} ${route}: what the export asked for`).toEqual([
+          { key: exportKey('g'), ...size, frames: P1_FRAMES, fps: FPS, boxAllowed: true }
+        ])
+        expect(e.pngs, `${shape} ${route}: PNGs written, against graphicMovingFrames`).toBe(graphicMovingFrames(P1_SPEC, CLEAN_GRAPHIC_STYLE, FPS, P1_FRAMES))
+        expect(e.pngs, `${shape} ${route}: PNGs written, hand-derived`).toBe(P1_MOVING)
+      }
+      const asset = boxed[shape].baked.assets.find((a) => a.id === 'graphic-asset-g')!
+      expect(boxed[shape].asks[0].box, `${shape}: graphicBox`).toEqual(P1_BOX_PX[shape])
+      expect(asset.frames, `${shape}: the box route's asset`).toEqual({ pattern: join(boxed[shape].asks[0].seq, '%05d.png'), count: P1_MOVING, box: P1_BOX_PX[shape] })
+      expect({ width: asset.width, height: asset.height }, `${shape}: the box route's asset is the box's size`).toEqual({ width: P1_BOX_PX[shape].width, height: P1_BOX_PX[shape].height })
+      const whole = canvased[shape].baked.assets.find((a) => a.id === 'graphic-asset-g')!
+      expect(whole.frames?.box, `${shape}: the canvas route's asset has no box`).toBeUndefined()
+      expect({ width: whole.width, height: whole.height }, `${shape}: the canvas route's asset is the canvas's size`).toEqual(size)
+      lines.push(`- ${shape}: ${boxed[shape].pngs} PNGs written by each route (graphicMovingFrames ${P1_MOVING}); the box route's box ${JSON.stringify(boxed[shape].asks[0].box)} for the spec's ${JSON.stringify(P1_PLACE_PX[shape])}`)
+    }
+  })
+
+  it('reads the base: the red shot where the plan fits it, black beside it at 16:9, on every frame', () => {
+    for (const shape of P1_SHAPE_NAMES) {
+      expect(baseRgb[shape].length, `${shape}: base frames`).toBe(P1_SHOT_FRAMES)
+      let worst = 0
+      for (const [f, frame] of baseRgb[shape].entries()) {
+        // Against the base's colour everywhere it has one, the box's place included: nothing is drawn there.
+        const r = regionReading(frame, zones[shape], null)
+        worst = Math.max(worst, r.inside, r.outside)
+        expect(Math.max(r.inside, r.outside), `${shape} base frame ${f}`).toBeLessThan(P1_LEVELS)
+      }
+      lines.push(`- ${shape} base (the shot alone): within ${worst} levels of red in the shot and black beside it, ${P1_MARGIN} px clear of its edges, on all ${P1_SHOT_FRAMES} frames`)
+    }
+  })
+
+  it('reads every frame: red before, grey(i) on each moving frame, white arrivals, the hold, the fall to red, red after, the base outside the box', () => {
+    for (const shape of P1_SHAPE_NAMES) {
+      const size = P1_SHAPES[shape]
+      const place = P1_PLACE_PX[shape]
+      const frames = rgb[shape]
+      expect(frames.length, `${shape}: frames`).toBe(P1_SHOT_FRAMES)
+      const cx = place.x + Math.floor(place.width / 2)
+      const cy = place.y + Math.floor(place.height / 2)
+
+      const readings: { f: number; want: string; inside: number; outside: number; insideMean: number }[] = []
+      for (let f = 0; f < P1_SHOT_FRAMES; f++) {
+        const i = f - P1_START
+        const level = i < 0 || i >= P1_FRAMES ? null : i < P1_MOVING ? (P1_ARRIVALS.includes(i) ? 255 : p1Grey(i)) : i <= P1_EXIT ? p1Grey(P1_MOVING - 1) : null
+        const exiting = i > P1_EXIT && i < P1_FRAMES
+        const r = regionReading(frames[f], zones[shape], level)
+        readings.push({ f, want: exiting ? 'exit' : level === null ? 'base' : String(level), ...r })
+        // Outside the box the base shows on every frame.
+        expect(r.outside, `${shape} frame ${f}: outside the box against the base`).toBeLessThan(P1_LEVELS)
+        // Before and after the clip the base inside the box too; each moving frame its grey or white; the hold the last moving frame's grey.
+        if (!exiting) expect(r.inside, `${shape} frame ${f} (clip frame ${i}): inside the box, want ${level ?? 'the base'}`).toBeLessThan(P1_LEVELS)
+      }
+      // Red in the box's middle the frame before the clip and the frame after it.
+      expect(furthest(pixelOf(frames[P1_START - 1], size.width, cx, cy), RED), `${shape}: the frame before the clip`).toBeLessThan(P1_LEVELS)
+      expect(furthest(pixelOf(frames[P1_START + P1_FRAMES], size.width, cx, cy), RED), `${shape}: the frame after the clip`).toBeLessThan(P1_LEVELS)
+      // Each arrival white, the frame before it not.
+      for (const a of P1_ARRIVALS) {
+        expect(furthest(pixelOf(frames[P1_START + a], size.width, cx, cy), [255, 255, 255]), `${shape}: arrival ${a} white`).toBeLessThan(P1_LEVELS)
+        expect(furthest(pixelOf(frames[P1_START + a - 1], size.width, cx, cy), [255, 255, 255]), `${shape}: the frame before arrival ${a} is not white`).toBeGreaterThanOrEqual(P1_LEVELS)
+      }
+      // The exit: from the held grey at its first key, the box falls to the base every frame, and is the base on the clip's last frame (opacity 0).
+      const exit = readings.slice(P1_START + P1_EXIT, P1_START + P1_FRAMES)
+      expect(exit).toHaveLength(P1_FRAMES - P1_EXIT)
+      expect(exit[0].insideMean, `${shape}: the exit starts from the held grey, not the base`).toBeGreaterThan(20)
+      exit.slice(1).forEach((r, k) => {
+        expect(r.insideMean, `${shape} exit frame ${r.f}: mean distance from the base ${r.insideMean.toFixed(2)} after ${exit[k].insideMean.toFixed(2)}`).toBeLessThan(exit[k].insideMean)
+      })
+      const last = regionReading(frames[P1_START + P1_FRAMES - 1], zones[shape], null)
+      expect(last.inside, `${shape}: the clip's last frame, opacity 0, against the base`).toBeLessThan(P1_LEVELS)
+      lines.push(
+        `- ${shape} ${size.width}×${size.height}, box route: inside the box within ${Math.max(...readings.filter((r) => r.want !== 'exit').map((r) => r.inside))} levels of what each frame wants ` +
+          `(the base before and after, grey(i) or white while moving, grey(${P1_MOVING - 1}) held to clip frame ${P1_EXIT}), outside it within ${Math.max(...readings.map((r) => r.outside))} of the base on all ${P1_SHOT_FRAMES} frames; ` +
+          `the exit's mean distance from the base, frames ${P1_START + P1_EXIT}–${P1_START + P1_FRAMES - 1}: ${exit.map((r) => r.insideMean.toFixed(1)).join(', ')}`
+      )
+    }
+  })
+
+  it('samples a frame at (f − 0.25)/fps as decoding every frame in order gives it', async () => {
+    for (const shape of P1_SHAPE_NAMES) {
+      const size = P1_SHAPES[shape]
+      for (const f of P1_SAVED) {
+        const png = join(dir, `${shape}-box`, 'frames', `f${String(f).padStart(3, '0')}.png`)
+        expect(difference(await rgbOf(png, size.width, size.height), rgb[shape][f]), `${shape}: ${png} against decoded frame ${f}`).toEqual({ mean: 0, pixels: 0 })
+      }
+    }
+  })
+
+  it('(box) puts the grey’s first and last columns and rows within 1 px of the box the spec gave, at both shapes and by both routes, in luma', () => {
+    for (const shape of P1_SHAPE_NAMES) {
+      const size = P1_SHAPES[shape]
+      const place = P1_PLACE_PX[shape]
+      const want = edgeWant(place)
+      for (const route of ['box', 'canvas'] as const) {
+        const read = {} as Record<EdgeName, { frames: number; offsets: Set<number> }>
+        for (const name of Object.keys(want) as EdgeName[]) read[name] = { frames: 0, offsets: new Set() }
+        // Every frame the graphic is whole: moving and held, to the exit's first key.
+        for (let i = 0; i <= P1_EXIT; i++) {
+          const edges = edgesOf(luma[shape][route][P1_START + i], size, place)
+          for (const name of Object.keys(edges) as EdgeName[]) {
+            const at = edges[name]
+            if (at === null) continue
+            read[name].frames++
+            read[name].offsets.add(at - want[name])
+            expect(Math.abs(at - want[name]), `${shape} ${route} clip frame ${i}: the ${name} edge at ${at}, the spec's at ${want[name]}`).toBeLessThanOrEqual(P1_EDGE_PX)
+          }
+        }
+        // Read, not skipped: every edge on both arrivals at least, where white meets the base.
+        for (const name of Object.keys(read) as EdgeName[]) expect(read[name].frames, `${shape} ${route}: frames the ${name} edge was read on`).toBeGreaterThanOrEqual(P1_ARRIVALS.length)
+        const said = (Object.keys(read) as EdgeName[]).map((n) => `${n} on ${read[n].frames} frames, offset ${[...read[n].offsets].sort((a, b) => a - b).join('/')} px`).join('; ')
+        lines.push(`- ${shape} ${route} route, the grey's edges in luma against the spec's ${JSON.stringify(place)}: ${said}`)
+      }
+    }
+  })
+
+  /*
+   * Measured 2026-11-03 on the Mac's 4.4 build: NOT framemd5-equal. The exit's
+   * `geq` (plan.ts, the opacity keys' `a='alpha(X,Y)*…'`, with r, g and b
+   * passed through as `r(X,Y)`…) samples bilinearly with x clamped to w − 2
+   * and y to h − 2, so on every frame the stream's last column is a copy of
+   * the one before it and its last row of the row above (an 8×6 RGBA probe,
+   * identity geq: column 7 equals column 6 and row 5 row 4 in all four
+   * channels; `interpolation=nearest` keeps them, an option the 2018 build is
+   * not known to have). On the canvas route the stream's last column is the
+   * frame's, where nothing is drawn. On the box route it is the box's, and
+   * `graphicBox` snapped outward from an odd ink edge leaves one transparent
+   * column there: the geq fills it with the ink's, so the box route draws
+   * the grey one pixel wider at the right and one taller at the bottom. So
+   * what is asserted is where they may differ: only in the box's last column
+   * and last row, read on the plan's own frames before the encoder (one
+   * differing column moves x264's choices on other frames). Equal frames, and
+   * the exports' framemd5 must be equal too; that is the plan's claim, and
+   * this reads it the moment the geq stops copying.
+   */
+  it('(box) exports the same frames by the box route and by the canvas route, but for the exit geq’s copy into the box’s last column and row', async () => {
+    for (const shape of P1_SHAPE_NAMES) {
+      const size = P1_SHAPES[shape]
+      const box = P1_BOX_PX[shape]
+      const [byBox, byCanvas] = [await planFrames(boxed[shape].args, size), await planFrames(canvased[shape].args, size)]
+      expect(byBox.length, `${shape}: the plan's frames`).toBe(P1_SHOT_FRAMES)
+      expect(byCanvas.length, `${shape}: the plan's frames, canvas route`).toBe(P1_SHOT_FRAMES)
+      const lastColumn = box.x + box.width - 1
+      const lastRow = box.y + box.height - 1
+      /** The box's last column or last row (a chroma sample: the 2×2 it covers touches them). */
+      const geqEdge = (p: { plane: string; x: number; y: number }): boolean => {
+        const span = p.plane === 'Y' ? 0 : 1
+        const inX = p.x + span >= box.x && p.x <= lastColumn
+        const inY = p.y + span >= box.y && p.y <= lastRow
+        return (inY && p.x <= lastColumn && p.x + span >= lastColumn) || (inX && p.y <= lastRow && p.y + span >= lastRow)
+      }
+      let differing = 0
+      let frames = 0
+      const planes = new Set<string>()
+      for (let f = 0; f < P1_SHOT_FRAMES; f++) {
+        const where = differingPixels(byBox[f], byCanvas[f], size)
+        if (where.length > 0) frames++
+        differing += where.length
+        for (const p of where) planes.add(p.plane)
+        const stray = where.filter((p) => !geqEdge(p))
+        expect(stray.slice(0, 8), `${shape} frame ${f}: the routes differ outside the box's last column and row (${stray.length} samples)`).toEqual([])
+      }
+      const same = differing === 0
+      if (same) expect(md5[shape].canvas, `${shape}: equal frames, so the exports' framemd5`).toEqual(md5[shape].box)
+      const md5Differ = md5[shape].box.filter((l, f) => l !== md5[shape].canvas[f]).length
+      lines.push(
+        `- ${shape}: box route against canvas route, the plan's frames before the encoder: ${same ? 'equal on every frame' : `${differing} samples differ over ${frames} frames (planes ${[...planes].join(', ')}), every one in the box's last column (x ${lastColumn}) or last row (y ${lastRow})`}; ` +
+          `the exports' framemd5 ${md5Differ === 0 ? 'equal' : `differ on ${md5Differ} of ${md5[shape].box.length} frames`}`
+      )
+    }
+  })
+
+  it('drops a graphic whose bake answers null, with a note, and the export is the base’s frame for frame', async () => {
+    for (const shape of P1_SHAPE_NAMES) {
+      const e = await p1Export(dir, `${shape}-null`, p1Project(join(dir, 'red.mp4'), true), shape, 'null')
+      expect(e.notes, `${shape}: onError`).toEqual(['g: the graphic could not be drawn'])
+      expect(e.asks.map((a) => a.key), `${shape}: asked once`).toEqual([exportKey('g')])
+      expect(e.baked.clips.map((c) => c.id), `${shape}: the clip is dropped`).toEqual(['red'])
+      const nulled = await framemd5(e.file)
+      expect(nulled, `${shape}: the null bake's export against the base's`).toEqual(md5[shape].base)
+      lines.push(`- ${shape}: a null bake — note "${e.notes.join('; ')}", clips exported: ${e.baked.clips.map((c) => c.id).join(', ')}; framemd5-equal to the base over ${nulled.length} frames`)
+    }
+  }, 300_000)
+
+  it('writes the README', async () => {
+    await writeNote(dir, [
+      '# graphic, phase 1: a graphic through the export (docs/CLIPS.md §6.11 "The render check", §6.3)',
+      '',
+      `A red ${P1_SHOT.width}×${P1_SHOT.height} shot (red.mp4, ${P1_SHOT_FRAMES} frames at ${FPS} fps) on V1; a graphic clip on V2 from frame ${P1_START} for ${P1_FRAMES} frames,`,
+      `its spec placed by hand at ${JSON.stringify(P1_PLACE)} with beats at ${P1_SPEC.beats.join(' and ')} s, its exit the opacity keys of graphicExitKeys.`,
+      'Exported through bakeForExport, buildRenderPlan and the bundled ffmpeg at 9:16 (360×640) and 16:9 (640×360), with a fake Bakers.graphic:',
+      `moving frame i (${P1_MOVING} of them, graphicMovingFrames) fills the place rect with grey 20 + 15·(i mod 12), white on an arrival frame`,
+      `(${P1_ARRIVALS.join(' and ')}), transparent outside; the render holds the last with tpad and fades it from clip frame ${P1_EXIT}.`,
+      'The box route cuts the frames to graphicBox\'s box (snapped outward to even) and hands the box to the plan; the canvas route writes them at the canvas.',
+      `Readings ${P1_MARGIN} px clear of every edge, within ${P1_LEVELS - 1} levels; the edges themselves in luma, within ${P1_EDGE_PX} px.`,
+      '',
+      '<shape>-box/     the box route: export.mp4, graph.txt, g-export.seq/ (the PNGs), frames/fNNN.png (frame NNN, taken at (f − 0.25)/fps)',
+      '<shape>-canvas/  the canvas route, read against the box route',
+      '<shape>-base/    the shot alone, no graphic: what "the base" means below',
+      '<shape>-null/    the graphic\'s bake answering null: dropped with a note, framemd5-equal to the base',
+      '',
+      ...lines
     ])
   })
 })
