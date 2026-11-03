@@ -1,13 +1,13 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { existsSync } from 'node:fs'
-import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir, unlink, writeFile } from 'node:fs/promises'
 import { isAbsolute, join, relative, resolve } from 'node:path'
 import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
 import { buildRenderPlan } from '@shared/render/plan'
 import { DEFAULT_CAPTION_STYLE } from '@shared/captions/style'
 import { REFERENCE_HEIGHT, toAssTime } from '@shared/captions/ass'
 import { EXIT_S, graphicExitKeys } from '@shared/graphics/frame'
-import { M19_BAR, chromaAlong, strokeLines, type ChromaReading, type StrokeLine } from '../../src/renderer/src/harness/graphicMeasure'
+import { M19_BAR, chromaAlong, strokeBandIndex, strokeLines, type ChromaReading, type StrokeLine } from '../../src/renderer/src/harness/graphicMeasure'
 import { FFMPEG, OUTPUT_ROOT, makeColour, outputDir, run, saveFrame, writeNote } from './output'
 import { ciNotice } from './helperDiag'
 
@@ -44,9 +44,10 @@ const FPS = 30
  */
 const STROKE_FRAMES = process.env.FORGE_GRAPHIC_FRAMES ?? ''
 
-/** Whether `child` is `parent` or inside it. */
+/** Whether `child` is `parent` or inside it; ignoring case on macOS and Windows, whose file systems do, so `Tests/Output/graphic` is caught too. */
 const within = (parent: string, child: string): boolean => {
-  const r = relative(parent, child)
+  const fold = process.platform === 'darwin' || process.platform === 'win32' ? (p: string): string => p.toLowerCase() : (p: string): string => p
+  const r = relative(fold(parent), fold(child))
   return r === '' || (!r.startsWith('..') && !isAbsolute(r))
 }
 
@@ -376,17 +377,24 @@ describe('phase 0: the libass reference for M22 (docs/CLIPS.md §6.11, §6.15)',
  * for the raw 4:2:0 frames: `format=yuva420p` on the sequence, the exit's
  * `geq` (a round trip through RGB), `overlay=…:format=yuv420`, then
  * `format=yuv420p`. The reference is the same PNG over the same frame with no
- * subsampling: `format=yuva444p`, `overlay=…:format=yuv444`, one swscale matrix
- * on both sides, so what differs is the 4:2:0 alone.
+ * subsampling and no `geq`: `format=yuva444p`, `overlay=…:format=yuv444`, one
+ * swscale matrix on both sides. So what differs is the plan's whole chain: the
+ * 4:2:0, and the exit `geq`'s RGB round trip, which is a second chroma
+ * subsample (0954b3d's probe without it: 58/51/22 levels of U against
+ * 63/54/29 with it, on node-made PNGs).
  *
  * Read along each line's centre line (`strokeLines`: per scan line across it,
  * the pixels nearest its alpha-weighted middle, 4 px clear of each end): the overlay's U
  * and V at each pixel (the 4:2:0 sample it is stored with) against the
  * reference's. The bar (M19, proposal) is 8 levels; this measures and prints,
  * it sets nothing: STROKE_MIN_PX is the user's to set from it. What is
- * asserted is that the read measured something: every PNG has lines, every
- * line a centre, and away from the lines the two sides agree, so the frames
- * compared are the same frame.
+ * asserted is that the read measured something, and measured it on the right
+ * frame: every PNG has lines, every line a centre; away from the lines the two
+ * sides' U and V agree; on every inked pixel their Y agrees (luma is full
+ * resolution on both sides, so a graphic a frame late or a pixel off shows
+ * there, where a flat background cannot); and the reference's U and V on the
+ * crisp pixels (alpha 255) are the PNG's own, converted alone, so the
+ * reference is not subsampled itself.
  */
 
 /** The flat colours under the strokes: the render check's dark base, and the app's cream (#f2efe7). */
@@ -399,6 +407,10 @@ const M19_COLOURS: readonly { name: string; hex: string }[] = [
 const BACKGROUND_LEVELS = 1
 /** A 4:2:0 sample is background when no inked pixel lies within this many pixels of its 2×2 block (swscale's chroma filters reach a few pixels). */
 const BACKGROUND_CLEAR = 8
+/** On every inked pixel the two sides' Y may differ by this much; more, and the overlay's frame is not the PNG's, or not where it is (measured 0 on the Mac, 2026-11-03). */
+const INK_LUMA_LEVELS = 2
+/** On a crisp pixel (alpha 255) the reference's U and V may differ from the PNG converted alone by this much; more, and the reference is subsampled (measured 0 on the Mac, 2026-11-03). */
+const REFERENCE_LEVELS = 1
 
 /** A PNG's width and height, from its IHDR. */
 function pngSize(bytes: Buffer): { width: number; height: number } {
@@ -481,6 +493,19 @@ interface M19Line {
   chroma: ChromaReading
 }
 
+/** The largest |a − b| over the pixels `which` picks (by index into one plane), and how many it picked. */
+function largestOver(a: ArrayLike<number>, b: ArrayLike<number>, n: number, which: (i: number) => boolean): { max: number; pixels: number } {
+  let max = 0
+  let pixels = 0
+  for (let i = 0; i < n; i++) {
+    if (!which(i)) continue
+    pixels++
+    const d = Math.abs(a[i] - b[i])
+    if (d > max) max = d
+  }
+  return { max, pixels }
+}
+
 describe('phase 1: the plan’s overlay of a graphic’s PNGs, as M19 reads it (docs/CLIPS.md §6.15)', () => {
   // Always: the read below runs the plan's own graph, so a plan that stops emitting these steps fails here, not silently there.
   it('emits format=yuva420p and the exit’s geq on the sequence, overlay format=yuv420, then format=yuv420p, once each', () => {
@@ -494,6 +519,8 @@ describe('phase 1: the plan’s overlay of a graphic’s PNGs, as M19 reads it (
 const m19Body = (): void => {
   const lines: M19Line[] = []
   const background: { colour: string; png: string; maxU: number; maxV: number; blocks: number }[] = []
+  const ink: { colour: string; png: string; maxY: number; pixels: number }[] = []
+  const crisp: { colour: string; png: string; maxU: number; maxV: number; pixels: number }[] = []
   let pngs: string[] = []
   let distinct: { file: string; frame: number }[] = []
   let dir = ''
@@ -523,7 +550,8 @@ const m19Body = (): void => {
       await flatClip(base, colour.hex, size, duration)
       const { inputs, graph } = m19Graph(m19Project(base, pattern, pngs.length, size, duration), size)
       graphNote = graph.replace(base, '<flat clip>').replace(/;/g, ';\n')
-      const { stdout } = await run(FFMPEG, [...inputs, '-filter_complex', graph, '-map', '[vout]', '-frames:v', String(pngs.length), '-f', 'rawvideo', '-pix_fmt', 'yuv420p', 'pipe:1'], {
+      // `-vsync passthrough`, as lumaFrames reads: frame n out is the plan's frame n.
+      const { stdout } = await run(FFMPEG, [...inputs, '-filter_complex', graph, '-map', '[vout]', '-frames:v', String(pngs.length), '-vsync', 'passthrough', '-f', 'rawvideo', '-pix_fmt', 'yuv420p', 'pipe:1'], {
         encoding: 'buffer',
         maxBuffer: 512 * 1024 * 1024
       })
@@ -547,6 +575,20 @@ const m19Body = (): void => {
         const reference = { u: full.subarray(luma, 2 * luma), v: full.subarray(2 * luma, 3 * luma) }
 
         const rgba = await rgbaOf(png, size.width, size.height)
+        // The right frame, in the right place: Y over every inked pixel.
+        const y = largestOver(all.subarray(at, at + luma), full.subarray(0, luma), luma, (i) => rgba[i * 4 + 3] > 0)
+        ink.push({ colour: colour.name, png: file, maxY: y.max, pixels: y.pixels })
+        // The reference unsubsampled: its U and V on the crisp pixels are the PNG's, converted alone through the same swscale.
+        const { stdout: alone } = await run(FFMPEG, ['-hide_banner', '-loglevel', 'error', '-i', png, '-frames:v', '1', '-f', 'rawvideo', '-pix_fmt', 'yuv444p', 'pipe:1'], {
+          encoding: 'buffer',
+          maxBuffer: 256 * 1024 * 1024
+        })
+        const own = alone as unknown as Buffer
+        if (own.length !== luma * 3) throw new Error(`${file} alone: ${own.length} bytes, not ${size.width}×${size.height} 4:4:4`)
+        const opaque = (i: number): boolean => rgba[i * 4 + 3] === 255
+        const u = largestOver(reference.u, own.subarray(luma, 2 * luma), luma, opaque)
+        const v = largestOver(reference.v, own.subarray(2 * luma, 3 * luma), luma, opaque)
+        crisp.push({ colour: colour.name, png: file, maxU: u.max, maxV: v.max, pixels: u.pixels })
         for (const line of strokeLines(rgba, size.width, size.height)) {
           lines.push({ png: file, colour: colour.name, line, chroma: chromaAlong(line.centre, reference, measured, size.width) })
         }
@@ -591,6 +633,7 @@ const m19Body = (): void => {
         const raw = join(dir, `${colour.name}-${file}.yuv`)
         await writeFile(raw, all.subarray(at, at + frameBytes))
         await run(FFMPEG, ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'rawvideo', '-pix_fmt', 'yuv420p', '-s', `${size.width}x${size.height}`, '-i', raw, join(dir, `${colour.name}-${file}`)])
+        await unlink(raw)
       }
     }
   }, 600_000)
@@ -608,16 +651,28 @@ const m19Body = (): void => {
       expect(b.blocks, `${b.colour} ${b.png}: no background sample`).toBeGreaterThan(0)
       expect(Math.max(b.maxU, b.maxV), `${b.colour} ${b.png}: U and V away from the lines`).toBeLessThanOrEqual(BACKGROUND_LEVELS)
     }
+    expect(ink.length).toBe(M19_COLOURS.length * distinct.length)
+    for (const k of ink) {
+      expect(k.pixels, `${k.colour} ${k.png}: no inked pixel`).toBeGreaterThan(0)
+      expect(k.maxY, `${k.colour} ${k.png}: Y on the inked pixels, the overlay's frame against the PNG's (a frame late, or a pixel off?)`).toBeLessThanOrEqual(INK_LUMA_LEVELS)
+    }
+    expect(crisp.length).toBe(M19_COLOURS.length * distinct.length)
+    for (const c of crisp) {
+      expect(c.pixels, `${c.colour} ${c.png}: no crisp pixel`).toBeGreaterThan(0)
+      expect(Math.max(c.maxU, c.maxV), `${c.colour} ${c.png}: the reference's U and V on the crisp pixels against the PNG's own (is the reference subsampled?)`).toBeLessThanOrEqual(REFERENCE_LEVELS)
+    }
 
-    // Per width, read from the picture: lines whose widths round to one tenth are one width.
-    const key = (l: M19Line): string => l.line.width.toFixed(1)
-    const widths = [...new Set(lines.map(key))].sort((a, b) => Number(a) - Number(b))
-    const verdicts = widths.map((w) => {
-      const of = lines.filter((l) => key(l) === w)
+    // Per band, as drawn (strokeBandIndex): a band is one width, labelled by its horizontal's read width, whatever its diagonal reads; narrowest first.
+    const bands = [...new Set(lines.map((l) => strokeBandIndex(l.line.box)))]
+    const verdicts = bands.map((band) => {
+      const of = lines.filter((l) => strokeBandIndex(l.line.box) === band)
+      const flat = of.filter((l) => Math.abs(l.line.slope) < 0.01)
+      const width = (flat.length ? flat : of)[0].line.width
+      const w = `${band === null ? 'outside the bands, ' : ''}${width.toFixed(1)}`
       const maxU = Math.max(...of.map((l) => l.chroma.maxU))
       const maxV = Math.max(...of.map((l) => l.chroma.maxV))
-      return { w, of, maxU, maxV, within: of.every((l) => l.chroma.within) }
-    })
+      return { w, width, of, maxU, maxV, within: band !== null && of.every((l) => l.chroma.within) }
+    }).sort((a, b) => a.width - b.width)
     const smallest = verdicts.find((v) => v.within)?.w ?? 'none'
     const rows = lines.map((l) => {
       const orientation = Math.abs(l.line.slope) < 0.01 ? 'horizontal' : `slope ${l.line.slope.toFixed(3)}`
@@ -629,7 +684,8 @@ const m19Body = (): void => {
     const said = verdicts.map((v) => `${v.w} px: U max ${v.maxU}, V max ${v.maxV} over ${v.of.length} lines, ${v.within ? 'within' : 'OVER'} ${M19_BAR.chromaLevels}`).join('; ')
     process.stderr.write(
       `graphic.int M19 (${process.platform}-${process.arch}, ${FFMPEG}): ${pngs.length} PNGs, ${distinct.length} distinct, from ${STROKE_FRAMES}; ${said}; ` +
-        `the smallest width within the bar: ${smallest}; background U/V ${background.map((b) => `${b.colour} ${Math.max(b.maxU, b.maxV)}`).join(', ')}\n`
+        `the smallest width within the bar: ${smallest}; background U/V ${background.map((b) => `${b.colour} ${Math.max(b.maxU, b.maxV)}`).join(', ')}; ` +
+        `ink Y ${ink.map((k) => `${k.colour} ${k.maxY}`).join(', ')}; reference U/V on crisp pixels ${crisp.map((c) => `${c.colour} ${Math.max(c.maxU, c.maxV)}`).join(', ')}\n`
     )
     await writeFile(join(dir, 'graph.txt'), `${graphNote}\n`, 'utf8')
     await writeNote(dir, [
@@ -643,6 +699,10 @@ const m19Body = (): void => {
       `Per width: ${said}.`,
       `The smallest width within the bar: ${smallest}.`,
       `Away from the lines (no ink within ${BACKGROUND_CLEAR} px of a sample): ${background.map((b) => `${b.colour} ${b.png} U ${b.maxU} V ${b.maxV} over ${b.blocks} samples`).join('; ')}.`,
+      `Y on every inked pixel, the overlay against the reference (bar ${INK_LUMA_LEVELS}: the same frame, in the same place): ${ink.map((k) => `${k.colour} ${k.png} ${k.maxY} over ${k.pixels} px`).join('; ')}.`,
+      `The reference's U and V on the crisp pixels against the PNG converted alone (bar ${REFERENCE_LEVELS}: not subsampled): ${crisp.map((c) => `${c.colour} ${c.png} U ${c.maxU} V ${c.maxV} over ${c.pixels} px`).join('; ')}.`,
+      'The measured side is the plan\'s whole chain, the exit geq\'s RGB round trip included (a second chroma subsample: up to 7 levels of U in 0954b3d\'s probe without it);',
+      'the reference has neither the 4:2:0 nor the geq.',
       '',
       '<colour>-<png> — the overlay\'s frame, to look at; <colour>.mp4 the flat clip.',
       '',

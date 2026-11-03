@@ -4,6 +4,7 @@ import { STROKE_TOLERANCE, flattenPath, strokeWidth } from '@shared/graphics/str
 import { resolveGraphicStyle } from '@shared/graphics/style'
 import {
   GRAPHIC_CHECK_OPTIONS,
+  M8_OPEN_BELOW,
   M8_PATHS,
   M8_RADII,
   M8_TOLERANCES,
@@ -25,9 +26,12 @@ import {
   folderOf,
   largestGap,
   lengthPct,
+  pathLengthReadings,
   pathLengthVerdict,
   strokeBand,
+  strokeBandIndex,
   strokeLines,
+  strokeWidthsError,
   type PathLengthRow
 } from '../../src/renderer/src/harness/graphicMeasure'
 
@@ -126,6 +130,33 @@ describe('M8: the arithmetic', () => {
     expect(pathLengthVerdict([row('a', 0.25, 0, Infinity)]).tolerances[0].pass).toBe(false)
     expect(pathLengthVerdict([])).toEqual({ tolerances: [], coarsest: null, finerAllPass: false })
   })
+
+  it('marks the circles under r = 40 open, §6.3’s question for the owner, and nothing else', () => {
+    expect(M8_OPEN_BELOW).toBe(40)
+    const open = M8_PATHS.filter((p) => p.open).map((p) => p.name)
+    for (const name of ['circle r=20', 'circle r=30', 'circle r=38', 'circle r=39']) expect(open).toContain(name)
+    for (const name of ['circle r=40', 'circle r=45', 'line', 'S-curve', 'arrow head']) expect(open).not.toContain(name)
+    for (const name of open) expect(Number(name.replace(/^circle r=/, '')), name).toBeLessThan(40)
+  })
+
+  it('gives the verdict twice, over every path and without the open ones, so the readout answers neither way', () => {
+    const rows = [
+      row('circle r=20', 0.5, -0.39, 0.37), row('circle r=40', 0.5, -0.2, 0.2), row('line', 0.5, 0, 0),
+      row('circle r=20', 0.25, -0.16, 0.18), row('circle r=40', 0.25, -0.07, 0.18), row('line', 0.25, 0, 0),
+      row('circle r=20', 0.125, -0.07, 0.09), row('circle r=40', 0.125, -0.03, 0.09), row('line', 0.125, 0, 0)
+    ]
+    const { all, withoutOpen } = pathLengthReadings(rows, new Set(['circle r=20']))
+    expect(all).toEqual(pathLengthVerdict(rows))
+    expect(all.coarsest).toBe(0.125)
+    expect(withoutOpen.coarsest).toBe(0.25)
+    for (const t of withoutOpen.tolerances) {
+      expect(t.paths).toBe(2)
+      expect(t.worstLengthPath).not.toBe('circle r=20')
+      expect(t.worstPointPath).not.toBe('circle r=20')
+    }
+    // Nothing open: the two are one.
+    expect(pathLengthReadings(rows, new Set()).withoutOpen).toEqual(all)
+  })
 })
 
 /* ----------------------------------------------------------------- M19 */
@@ -150,12 +181,61 @@ describe('M19: the strokes’ layout and drawer', () => {
     expect((b.y - a.y) / (b.x - a.x)).toBeCloseTo(191 / 320, 12)
   })
 
+  it('takes 1 to 6 widths, each over 0 and at most the 20 px a band holds apart, and names what it got otherwise', () => {
+    expect(STROKE_BANDS.maxWidth).toBe(20)
+    for (const ok of [[1, 2, 3], [20], [0.5, 1, 2, 3, 4, 20]]) expect(strokeWidthsError(ok), JSON.stringify(ok)).toBeNull()
+    for (const bad of [[], [1, 2, 3, 4, 5, 6, 7], [0], [-1], [NaN], [Infinity], [20.5], [1, 40]]) {
+      expect(strokeWidthsError(bad), JSON.stringify(bad)).toContain(`got ${JSON.stringify(bad)}`)
+    }
+  })
+
+  it('keeps a band’s two lines apart up to the widest it takes: a disc raster of each reads as two lines, not one', () => {
+    const w = STROKE_BANDS.maxWidth
+    const band = strokeBand(0, w)
+    const H = band.box.height
+    const W = SIZE.width
+    // Each line as the set of pixel centres within w/2 of the segment (a butt cap would be shorter; a disc is the larger ink).
+    const near = (px: number, py: number, [a, b]: readonly { x: number; y: number }[]): boolean => {
+      const dx = b.x - a.x
+      const dy = b.y - a.y
+      const t = Math.max(0, Math.min(1, ((px - a.x) * dx + (py - a.y) * dy) / (dx * dx + dy * dy)))
+      return Math.hypot(px - (a.x + t * dx), py - (a.y + t * dy)) <= w / 2 + 1
+    }
+    const data = picture(W, H, (x, y) => (near(x + 0.5, band.box.y + y + 0.5, band.horizontal) || near(x + 0.5, band.box.y + y + 0.5, band.diagonal) ? 255 : 0))
+    const lines = strokeLines(data, W, H)
+    expect(lines).toHaveLength(2)
+    // And neither touches the band's edge.
+    for (const l of lines) {
+      expect(l.box.y).toBeGreaterThan(0)
+      expect(l.box.y + l.box.height).toBeLessThan(H)
+    }
+  })
+
+  it('names the band a read line lies in by its top edge, so M19 groups lines as drawn, not by a rounded width; none outside the bands', () => {
+    const at = (y: number): number | null => strokeBandIndex({ x: 0, y, width: 10, height: 1 })
+    expect(at(60)).toBe(0)
+    expect(at(359)).toBe(0)
+    expect(at(360)).toBe(1)
+    expect(at(60 + 5 * 300)).toBe(5)
+    expect(at(59)).toBeNull()
+    expect(at(60 + 6 * 300)).toBeNull()
+    // Each band's own lines, as strokeBand lays them, at every width it takes.
+    for (let i = 0; i < STROKE_BANDS.max; i++) {
+      for (const w of [1, 3, STROKE_BANDS.maxWidth]) {
+        const band = strokeBand(i, w)
+        for (const [a] of [band.horizontal, band.diagonal]) expect(strokeBandIndex({ x: a.x, y: Math.floor(a.y - w), width: 1, height: 1 }), `band ${i} width ${w}`).toBe(i)
+      }
+    }
+  })
+
   it('scales by the narrowest width over the painter’s floor, and not at all when none is under it', () => {
     expect(strokeWidth(0, SIZE)).toBe(2)
     expect(strokesScale(STROKES_WIDTHS, SIZE)).toBe(0.5)
     expect(strokesScale([2, 3], SIZE)).toBe(1)
     expect(strokesScale([0.5, 3], SIZE)).toBe(0.25)
     expect(strokesScale([1], { width: 540, height: 960 })).toBe(1)
+    // The narrowest over the floor, not on it: no scale.
+    expect(strokesScale([3, 4], SIZE)).toBe(1)
   })
 
   it('draws each width at that width on the frame, along its band’s lines, through the painter’s own floor', () => {

@@ -74,7 +74,6 @@ import { faceSettled, useCatalog } from '../catalog'
 import {
   M8_BAR,
   M19_BAR,
-  STROKE_BANDS,
   SYNTHETIC,
   alphaAgainst,
   alphaOutside,
@@ -89,7 +88,7 @@ import {
   lengthPct,
   m13Line,
   padRect,
-  pathLengthVerdict,
+  pathLengthReadings,
   percentile,
   perFrameMs,
   preBaseLead,
@@ -98,11 +97,13 @@ import {
   spread,
   strokeBand,
   strokeLines,
+  strokeWidthsError,
   syntheticBox,
   syntheticPanelAt,
   unionRect,
   type PathLengthRow,
   type PathLengthVerdict,
+  type ToleranceReading,
   type PixelDiff,
   type PrimitivesReading,
   type PrimitivesVerdict,
@@ -152,7 +153,8 @@ export interface GraphicCheckOptions {
   pathLength?: boolean
   /**
    * M19's PNGs: a horizontal and a diagonal stroke per width (px at 1080
-   * wide; [1, 2, 3] when absent, at most `STROKE_BANDS.max`), baked by
+   * wide; [1, 2, 3] when absent, at most `STROKE_BANDS.max` of them, each at
+   * most `STROKE_BANDS.maxWidth`: `strokeWidthsError`), baked by
    * `bakeGraphicSequence` into the app's title-frame folder, which the result
    * names for `FORGE_GRAPHIC_FRAMES` (graphic.int's M19 read).
    */
@@ -500,6 +502,11 @@ export interface PathLengthResult {
   verdict: PathLengthVerdict
   /** Where `STROKE_TOLERANCE` stands in the verdict. */
   strokeTolerance: { value: number; pass: boolean | null }
+  /** The paths marked `open` (the circles under `M8_OPEN_BELOW`, §6.3's open question), which the second verdict leaves out. */
+  open: string[]
+  /** The verdict over every path but `open`; beside `verdict`, so the readout answers the open question neither way. */
+  verdictWithoutOpen: PathLengthVerdict
+  strokeToleranceWithoutOpen: { value: number; pass: boolean | null }
   note: string
 }
 
@@ -2581,6 +2588,14 @@ export function m8Circle(cx: number, cy: number, r: number): string {
 export const M8_RADII: readonly number[] = Object.freeze([20, 30, 38, 39, 40, 45, 50, 100, 200, 400, 540])
 
 /**
+ * The circles under this radius are the stroke note's open question (§6.3,
+ * "Open, yours": whether M8's paths include a four-cubic circle under
+ * r = 40). They are read, marked `open`, and the verdict is given with them
+ * and without them: the owner's to choose, not the readout's.
+ */
+export const M8_OPEN_BELOW = 40
+
+/**
  * M8's paths, in 1080-wide frame pixels: the four-cubic circle at each of
  * `M8_RADII`; a line; an S-curve and the two cubics lane A's flattening test
  * reads (tests/graphicStroke.test.ts); its quadratic; the mixed path of its
@@ -2588,8 +2603,8 @@ export const M8_RADII: readonly number[] = Object.freeze([20, 30, 38, 39, 40, 45
  * and tests/graphicPaint.test.ts (straight runs and corners, where a length
  * is exact and a point is only as good as the walk along it).
  */
-export const M8_PATHS: readonly { name: string; d: string; exact?: number }[] = Object.freeze([
-  ...M8_RADII.map((r) => ({ name: `circle r=${r}`, d: m8Circle(540, 960, r), exact: 2 * Math.PI * r })),
+export const M8_PATHS: readonly { name: string; d: string; exact?: number; open?: true }[] = Object.freeze([
+  ...M8_RADII.map((r) => ({ name: `circle r=${r}`, d: m8Circle(540, 960, r), exact: 2 * Math.PI * r, ...(r < M8_OPEN_BELOW ? { open: true as const } : {}) })),
   { name: 'line', d: 'M100 200 L980 1700', exact: Math.hypot(880, 1500) },
   { name: 'S-curve', d: 'M0 0 C540 0 540 960 1080 960' },
   { name: 'cubic', d: 'M100 1500 C300 900 700 1300 900 600' },
@@ -2656,19 +2671,28 @@ function checkPathLength(summary: string[]): PathLengthResult {
     })
     paths.push({ name, d, theirs, ...(exact !== undefined ? { exact } : {}), theirsMs, at })
   }
-  const verdict = pathLengthVerdict(rows)
-  const standing = verdict.tolerances.find((t) => t.tolerance === STROKE_TOLERANCE)
+  const open = M8_PATHS.filter((p) => p.open).map((p) => p.name)
+  const { all: verdict, withoutOpen } = pathLengthReadings(rows, new Set(open))
+  const standingIn = (v: PathLengthVerdict): ToleranceReading | undefined => v.tolerances.find((t) => t.tolerance === STROKE_TOLERANCE)
+  const standing = standingIn(verdict)
+  const standingWithoutOpen = standingIn(withoutOpen)
   const pct = (n: number): string => `${n >= 0 ? '+' : ''}${n.toFixed(4)} %`
-  for (const t of verdict.tolerances) {
+  const readings: [string, PathLengthVerdict, ToleranceReading | undefined][] = [
+    ['every path', verdict, standing],
+    [`without the circles under r = ${M8_OPEN_BELOW} (${open.join(', ')}: §6.3's open question, yours)`, withoutOpen, standingWithoutOpen]
+  ]
+  for (const [over, v, here] of readings) {
+    for (const t of v.tolerances) {
+      summary.push(
+        `pathLength M8, ${over}, at tolerance ${t.tolerance} px: ${t.pass ? 'PASS' : 'FAIL'} over ${t.paths} paths; worst length ${pct(t.worstLengthPct)} (${t.worstLengthPath}), ` +
+          `worst point ${t.worstPointPx.toFixed(3)} px (${t.worstPointPath}); bar ${M8_BAR.lengthPct} % and ${M8_BAR.pointPx} px`
+      )
+    }
     summary.push(
-      `pathLength M8 at tolerance ${t.tolerance} px: ${t.pass ? 'PASS' : 'FAIL'} over ${t.paths} paths; worst length ${pct(t.worstLengthPct)} (${t.worstLengthPath}), ` +
-        `worst point ${t.worstPointPx.toFixed(3)} px (${t.worstPointPath}); bar ${M8_BAR.lengthPct} % and ${M8_BAR.pointPx} px`
+      `pathLength M8, ${over}: the coarsest tolerance within the bar is ${v.coarsest ?? 'none'}${v.coarsest !== null ? (v.finerAllPass ? ', every finer one passing too' : ', but a finer one FAILS') : ''}; ` +
+        `STROKE_TOLERANCE is ${STROKE_TOLERANCE} (${here ? (here.pass ? 'passes' : 'FAILS') : 'not read'})`
     )
   }
-  summary.push(
-    `pathLength M8: the coarsest tolerance within the bar is ${verdict.coarsest ?? 'none'}${verdict.coarsest !== null ? (verdict.finerAllPass ? ', every finer one passing too' : ', but a finer one FAILS') : ''}; ` +
-      `STROKE_TOLERANCE is ${STROKE_TOLERANCE} (${standing ? (standing.pass ? 'passes' : 'FAILS') : 'not read'})`
-  )
   for (const p of paths) {
     const here = p.at.find((a) => a.tolerance === STROKE_TOLERANCE)
     if (!here) continue
@@ -2684,11 +2708,15 @@ function checkPathLength(summary: string[]): PathLengthResult {
     paths,
     verdict,
     strokeTolerance: { value: STROKE_TOLERANCE, pass: standing ? standing.pass : null },
+    open,
+    verdictWithoutOpen: withoutOpen,
+    strokeToleranceWithoutOpen: { value: STROKE_TOLERANCE, pass: standingWithoutOpen ? standingWithoutOpen.pass : null },
     note:
       'Each path once as an off-DOM SVGPathElement (getTotalLength, then getPointAtLength at k/64 of its own length), and at each tolerance through flattenPath, ' +
       'its points at the same fractions of our length through strokeAt(path, 0, f).tip, as a draw-on tip sits: so a point gap is where the two draw-ons\' tips part, ' +
       'not a distance to the curve. The bar (M8, §6.15, proposal) is 0.1 % on length and 0.5 px on points at 1080 wide, the coarsest passing tolerance being the reading; ' +
-      'it measures, it sets nothing. The browser is this page\'s: the reading for the plan is yours, in the development app on the Mac (Electron 44).'
+      'it measures, it sets nothing. The verdict is given twice, over every path and without the circles under r = 40 (`open`), whose place in M8 ' +
+      'is §6.3\'s open question and yours. The browser is this page\'s: the reading for the plan is yours, in the development app on the Mac (Electron 44).'
   }
 }
 
@@ -2764,9 +2792,8 @@ let strokesRun = 0
 async function checkStrokes(options: NonNullable<GraphicCheckOptions['strokes']>, frames: Frames, summary: string[], notes: string[]): Promise<StrokesResult> {
   if (Array.isArray(options)) throw new Error("graphic check: strokes takes { widths }; the ['freehand'] form is phase 2's M10 (§6.11)")
   const widths = [...(options.widths ?? STROKES_WIDTHS)]
-  if (widths.length === 0 || widths.length > STROKE_BANDS.max || !widths.every((w) => Number.isFinite(w) && w > 0)) {
-    throw new Error(`graphic check: strokes takes 1 to ${STROKE_BANDS.max} widths, each a positive number of px (got ${JSON.stringify(options.widths)})`)
-  }
+  const wrong = strokeWidthsError(widths)
+  if (wrong) throw new Error(`graphic check: ${wrong}`)
   const { width, height } = STROKES_SIZE
   const size = { width, height }
   const fps = STROKES_FPS

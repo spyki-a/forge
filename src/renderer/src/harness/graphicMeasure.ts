@@ -501,6 +501,16 @@ export function pathLengthVerdict(rows: readonly PathLengthRow[]): PathLengthVer
   return { tolerances: readings, coarsest, finerAllPass }
 }
 
+/**
+ * M8's two readings: over every path, and over every path but `open`, the
+ * paths whose place in M8 the plan left to its owner (§6.3's stroke note,
+ * "Open, yours": whether M8 includes a four-cubic circle under r = 40). The
+ * readout gives both, so neither answers that question for the owner.
+ */
+export function pathLengthReadings(rows: readonly PathLengthRow[], open: ReadonlySet<string>): { all: PathLengthVerdict; withoutOpen: PathLengthVerdict } {
+  return { all: pathLengthVerdict(rows), withoutOpen: pathLengthVerdict(rows.filter((r) => !open.has(r.path))) }
+}
+
 /* ------------------------------------------------ M19: the strokes' chroma */
 
 /**
@@ -523,9 +533,18 @@ export const STROKE_BANDS = {
   top: 60,
   height: 300,
   max: 6,
+  /** The widest stroke a band holds apart: wider, and the diagonal's top corner nears the horizontal (they touch about 39 px), so `strokeLines` would read the two as one region. */
+  maxWidth: 20,
   horizontal: { from: 120, to: 960, dy: 40 },
   diagonal: { from: { x: 380, dy: 96 }, to: { x: 700, dy: 287 } }
 } as const
+
+/** Why `widths` cannot be the `strokes` option's (1 to `STROKE_BANDS.max` of them, each a number of px over 0 and at most `STROKE_BANDS.maxWidth`); null when they can. */
+export function strokeWidthsError(widths: readonly number[]): string | null {
+  const B = STROKE_BANDS
+  if (widths.length >= 1 && widths.length <= B.max && widths.every((w) => Number.isFinite(w) && w > 0 && w <= B.maxWidth)) return null
+  return `strokes takes 1 to ${B.max} widths, each a number of px over 0 and at most ${B.maxWidth} (got ${JSON.stringify(widths)})`
+}
 
 export interface StrokeBand {
   /** The band's rectangle on the frame. */
@@ -551,6 +570,13 @@ export function strokeBand(index: number, width: number, frameWidth = 1080): Str
       { x: B.diagonal.to.x, y: top + B.diagonal.to.dy }
     ]
   }
+}
+
+/** The band a box read from the picture lies in (`STROKE_BANDS`, by its top edge), or null above the first band or past the last: so lines are grouped by the band they were drawn in, not by a read width that another machine's antialiasing can round apart. */
+export function strokeBandIndex(box: Rect): number | null {
+  const B = STROKE_BANDS
+  const index = Math.floor((box.y - B.top) / B.height)
+  return index >= 0 && index < B.max ? index : null
 }
 
 /** A drawn line read back from its picture. */
