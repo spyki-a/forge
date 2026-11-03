@@ -86,6 +86,8 @@ export function onsetTargetsAt(targetsAt: (frame: number) => GraphicTargets): (f
 
 const evenDown = (v: number): number => 2 * Math.floor(v / 2)
 const evenUp = (v: number): number => 2 * Math.ceil(v / 2)
+/** Transparent columns past the ink on a box's right and rows below it: what the exit geq's w − 2 / h − 2 clamp copies stay clear (graphicBox). */
+const GEQ_EDGE_PX = 2
 
 /**
  * The frame rectangle a graphic can ink over its clip (§6.3, "The box"): the
@@ -95,6 +97,7 @@ const evenUp = (v: number): number => 2 * Math.ceil(v / 2)
  * width and height (an odd offset or size is invalid for the subsampled
  * chroma, as `captionBand` snaps, captions/bake.ts; even as far as an even
  * frame allows, as `captionBand`: an odd frame side clamps to an odd edge),
+ * then widened by GEQ_EDGE_PX on the right and at the bottom (below),
  * clamped to the frame, at least 2×2; null when no frame has ink inside the
  * frame (no item, every item wholly outside it, or one of no area), or
  * `total` is not positive. A non-finite bound (a NaN rotate, a NaN px) is a
@@ -106,6 +109,22 @@ const evenUp = (v: number): number => 2 * Math.ceil(v / 2)
  * it needs nothing of `frame.ts` (lane B's third piece): a held frame draws
  * the settled list, whose bounds the union already holds, so the box is the
  * same and only the scan is longer; `graphicMovingFrames` may cut it later.
+ *
+ * The far sides' two transparent columns and rows are for the render's exit
+ * fade (plan.ts, the opacity keys' `geq=r='r(X,Y)'…:a='alpha(X,Y)*…'`): geq's
+ * `getpix` samples bilinearly with x clamped to w − 2 and y to h − 2, so the
+ * stream's last column becomes a copy of the one before it and its last row
+ * of the row above, in all four channels. Read in libavfilter/vf_geq.c at
+ * f22fcd4 (:91-92, the Windows build's 2018-12-17 master: the clamp on every
+ * call and no `interpolation` option, which came later) and run on the Mac's
+ * 4.4 build (an 8×6 RGBA identity geq: column 7 equal to column 6, row 5 to
+ * row 4). With the box ending at the ink's even edge, or one past an odd
+ * one, that copy drew the graphic a pixel wider and taller on the box route
+ * than on the canvas route and in the preview (f8d74ee's graphic.int: 39,893
+ * plan-frame samples at 9:16, 36,066 at 16:9, all in the box's last column
+ * and row). Two more transparent columns and rows make the copied ones
+ * transparent too; where the frame's edge clamps the box first, the canvas
+ * route's stream ends there as well and both routes copy the same pixels.
  */
 export function graphicBox(
   spec: GraphicSpec,
@@ -136,7 +155,7 @@ export function graphicBox(
   if (!all) return null
   const x0 = Math.min(Math.max(0, evenDown(all.x)), Math.max(0, size.width - 2))
   const y0 = Math.min(Math.max(0, evenDown(all.y)), Math.max(0, size.height - 2))
-  const x1 = Math.min(size.width, evenUp(all.x + all.width))
-  const y1 = Math.min(size.height, evenUp(all.y + all.height))
+  const x1 = Math.min(size.width, evenUp(all.x + all.width) + GEQ_EDGE_PX)
+  const y1 = Math.min(size.height, evenUp(all.y + all.height) + GEQ_EDGE_PX)
   return { x: x0, y: y0, width: Math.max(2, x1 - x0), height: Math.max(2, y1 - y0) }
 }

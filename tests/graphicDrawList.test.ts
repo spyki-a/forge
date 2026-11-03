@@ -582,9 +582,9 @@ describe('graphicDrawList: graphicBox', () => {
     expect(first.y - settled.y).toBeCloseTo(100, 1)
     expect(box.y).toBeLessThanOrEqual(settled.y)
     expect(box.y + box.height).toBeGreaterThanOrEqual(first.y + first.height)
-    // And the box is no bigger than those two frames' union, snapped: the frames between lie between them.
+    // And the box is no bigger than those two frames' union, snapped, with the two rows below it for the exit geq: the frames between lie between them.
     expect(box.y).toBeGreaterThanOrEqual(settled.y - 2)
-    expect(box.y + box.height).toBeLessThanOrEqual(first.y + first.height + 2)
+    expect(box.y + box.height).toBeLessThanOrEqual(first.y + first.height + 4)
   })
 
   it('is null with no items, no drawer or no frames; a dim makes it the whole frame; it clamps to the frame and is at least 2×2', () => {
@@ -595,17 +595,17 @@ describe('graphicDrawList: graphicBox', () => {
       rect(0, 0, SIZE.width, SIZE.height)
     )
     const off = graphicBox(spec(), style(), FPS, 1, SIZE, measure, () => ({}), () => ({ items: [shape('s', rect(-50, -50, 100, 100))] }))
-    expect(off).toEqual(rect(0, 0, 50, 50))
+    expect(off).toEqual(rect(0, 0, 52, 52))
     const past = graphicBox(spec(), style(), FPS, 1, SIZE, measure, () => ({}), () => ({ items: [shape('s', rect(1000, 1900, 300, 300))] }))
     expect(past).toEqual(rect(1000, 1900, 80, 20))
     const tiny = graphicBox(spec(), style(), FPS, 1, SIZE, measure, () => ({}), () => ({ items: [shape('s', rect(10.3, 10.3, 0.5, 0.5))] }))
-    expect(tiny).toEqual(rect(10, 10, 2, 2))
+    expect(tiny).toEqual(rect(10, 10, 4, 4))
     // A sliver inside the far edge is kept, at the 2×2 minimum.
     const edge = graphicBox(spec(), style(), FPS, 1, SIZE, measure, () => ({}), () => ({ items: [shape('s', rect(1079.5, 1919.5, 0.5, 0.5))] }))
     expect(edge).toEqual(rect(1078, 1918, 2, 2))
-    // Odd edges snap outward: 11..21 becomes 10..22.
+    // Odd edges snap outward: 11..21 becomes 10..22, then two more on the right and at the bottom: 10..24.
     const odd = graphicBox(spec(), style(), FPS, 1, SIZE, measure, () => ({}), () => ({ items: [shape('s', rect(11, 11, 10, 10))] }))
-    expect(odd).toEqual(rect(10, 10, 12, 12))
+    expect(odd).toEqual(rect(10, 10, 14, 14))
   })
 
   it('is null when no frame has ink inside the frame: an item of no area, or one wholly outside it, never a sliver at the edge', () => {
@@ -621,12 +621,34 @@ describe('graphicDrawList: graphicBox', () => {
     expect(boxOf([shape('s', rect(100, -50, 50, 50))])).toBeNull()
     expect(boxOf([{ kind: 'image', id: 'i', opacity: 1, src: 'a.png', box: rect(-10, -10, 10, 10), fit: 'cover' }])).toBeNull()
     // Its reach can bring it in: a shadow of blur 10 on a shape just past the right edge inks 15 px of the frame.
-    expect(boxOf([shape('s', rect(1080, 100, 50, 50), { shadow: { blur: 10, dy: 0, color: '#000', opacity: 1 } })])).toEqual(rect(1064, 84, 16, 82))
-    // One item outside beside one inside: the box is the inside one's.
-    expect(boxOf([shape('a', rect(2000, 100, 50, 50)), shape('b', rect(100, 100, 50, 50))])).toEqual(rect(100, 100, 50, 50))
+    expect(boxOf([shape('s', rect(1080, 100, 50, 50), { shadow: { blur: 10, dy: 0, color: '#000', opacity: 1 } })])).toEqual(rect(1064, 84, 16, 84))
+    // One item outside beside one inside: the box is the inside one's (with its two columns and rows for the exit geq).
+    expect(boxOf([shape('a', rect(2000, 100, 50, 50)), shape('b', rect(100, 100, 50, 50))])).toEqual(rect(100, 100, 52, 52))
     // A non-finite bound is a template bug and throws, never a NaN box for a bake canvas.
     expect(() => boxOf([shape('s', rect(100, 100, 50, 50), { transform: { x: 0, y: 0, scale: 1, rotate: NaN } })])).toThrow(/non-finite/)
     expect(() => boxOf([text('t', 'x', rect(100, 100, 50, 47), { look: look(NaN) })])).toThrow(/non-finite/)
+  })
+  it("keeps two transparent columns past the ink's right edge and two rows below its bottom, for the exit geq's w − 2 / h − 2 copy; none added on the left or top; the frame's edge clamps them", () => {
+    const boxOf = (r: Rect): Rect | null => graphicBox(spec(), style(), FPS, 1, SIZE, measure, () => ({}), () => ({ items: [shape('s', r)] }))
+    // Ink on even edges 100..150: the box's last two columns (150, 151) and rows are past it, the left and top flush.
+    for (const [r, want] of [
+      [rect(100, 200, 50, 60), rect(100, 200, 52, 62)],
+      // Odd edges 101..151 snap to 100..152, then 154: columns 152 and 153 are clear, and 151's half-column snapped over.
+      [rect(101, 201, 50, 60), rect(100, 200, 54, 64)],
+      // Fractional: 100.5..149.5 snaps to 100..150, then 152.
+      [rect(100.5, 200.5, 49, 59), rect(100, 200, 52, 62)]
+    ] as const) {
+      const box = boxOf(r) as Rect
+      expect(box, JSON.stringify(r)).toEqual(want)
+      // Hand-checked against the rule, not only the numbers: the last two columns and rows hold no ink.
+      expect(box.x + box.width - 2, `${JSON.stringify(r)}: the column geq copies from`).toBeGreaterThanOrEqual(r.x + r.width)
+      expect(box.y + box.height - 2, `${JSON.stringify(r)}: the row geq copies from`).toBeGreaterThanOrEqual(r.y + r.height)
+      expect(box.x).toBe(2 * Math.floor(r.x / 2))
+      expect(box.y).toBe(2 * Math.floor(r.y / 2))
+    }
+    // At the frame's far edge the frame clamps first: both routes' streams end there, and geq copies the same pixels on each.
+    expect(boxOf(rect(1000, 1850, 79, 69))).toEqual(rect(1000, 1850, 80, 70))
+    expect(boxOf(rect(1000, 1850, 78, 68))).toEqual(rect(1000, 1850, 80, 70))
   })
 })
 

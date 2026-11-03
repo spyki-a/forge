@@ -398,8 +398,10 @@ describe('phase 0: the libass reference for M22 (docs/CLIPS.md §6.11, §6.15)',
  *
  * The spec's box has every edge on an odd pixel at both shapes, so
  * `graphicBox` snaps each side outward and the box route's PNGs carry a
- * transparent margin on all four: the case where the box and the frame's
- * 4:2:0 blocks do not coincide with the ink.
+ * transparent margin on all four (one pixel on the left and top, three on
+ * the right and at the bottom, where the box keeps two more for the exit
+ * geq's copy): the case where the box and the frame's 4:2:0 blocks do not
+ * coincide with the ink.
  */
 
 const P1_SHOT = { width: 360, height: 640 }
@@ -427,10 +429,10 @@ const P1_PLACE_PX: Record<P1Shape, Rect> = {
   portrait: { x: 71, y: 193, width: 180, height: 160 },
   landscape: { x: 127, y: 109, width: 320, height: 90 }
 }
-/** `graphicBox` of it: snapped outward to even on every side. */
+/** `graphicBox` of it: snapped outward to even on every side, then two more columns on the right and rows at the bottom (the exit geq's w − 2 / h − 2). */
 const P1_BOX_PX: Record<P1Shape, Rect> = {
-  portrait: { x: 70, y: 192, width: 182, height: 162 },
-  landscape: { x: 126, y: 108, width: 322, height: 92 }
+  portrait: { x: 70, y: 192, width: 184, height: 164 },
+  landscape: { x: 126, y: 108, width: 324, height: 94 }
 }
 /** `beatFrame(1.0 + SETTLE_S) + 1` at 30 fps: frames 0..45 drawn, 45 the first settled one. */
 const P1_MOVING = 46
@@ -445,12 +447,16 @@ const P1_LEVELS = 6
  * Pixels within this many of an edge (the place rect's, or the shot's where
  * 16:9 pillarboxes it) are left out of the inside and outside readings: H.264
  * at the plan's CRF 20 smears a sharp edge across its transform blocks.
- * Measured on the Mac (2026-11-03), the box export against the moving
- * frame's grey at 9:16: 8 levels at 8 px inside the edge, 5 at 9, 2 from
- * 17; outside it, against the shot's own export, 14 at 7 px and 3 at 8. So
- * 10, the edge itself being read in luma (P1_EDGE_PX).
+ * Measured on the Mac's 4.4 build (2026-11-03), the worst inside reading of
+ * the 9:16 box export against each frame's grey, by margin: 8 levels at 8 px,
+ * 5 from 9 to 14, 3 at 16, 2 at 18; at 16:9, 2 from 9. Outside, against the
+ * shot's own export, 14 at 7 px and 3 at 8. 10 left the 9:16 reading at 5 of
+ * the 5 allowed, and a change that leaves the box's inside alone but moves
+ * x264's choices (the boxAllowed-false and geq-interpolation probes) read 6
+ * and failed. So 16: 3 levels of headroom on the 5. The edges themselves are
+ * read in luma (P1_EDGE_PX), so the wider margin loses no placement check.
  */
-const P1_MARGIN = 10
+const P1_MARGIN = 16
 /**
  * Where the red shot shows in the export: the whole 9:16 frame; at 16:9 the
  * plan's contain fit, 202 wide (360 × 360/640, even) from x 218, black
@@ -789,6 +795,7 @@ describe('phase 1: a graphic through bakeForExport, the plan and the bundled ffm
   const canvased = {} as Record<P1Shape, P1Export>
   const zones = {} as Record<P1Shape, PixelZones>
   const rgb = {} as Record<P1Shape, Buffer[]>
+  const canvasRgb = {} as Record<P1Shape, Buffer[]>
   const baseRgb = {} as Record<P1Shape, Buffer[]>
   const luma = {} as Record<P1Shape, { box: Buffer[]; canvas: Buffer[] }>
   const md5 = {} as Record<P1Shape, { base: string[]; box: string[]; canvas: string[] }>
@@ -805,6 +812,7 @@ describe('phase 1: a graphic through bakeForExport, the plan and the bundled ffm
       boxed[shape] = await p1Export(dir, `${shape}-box`, p1Project(shot, true), shape, 'box')
       canvased[shape] = await p1Export(dir, `${shape}-canvas`, p1Project(shot, true), shape, 'canvas')
       rgb[shape] = await lumaFrames(boxed[shape].file, size, 'rgb24')
+      canvasRgb[shape] = await lumaFrames(canvased[shape].file, size, 'rgb24')
       baseRgb[shape] = await lumaFrames(base[shape].file, size, 'rgb24')
       luma[shape] = { box: await lumaFrames(boxed[shape].file, size, 'gray'), canvas: await lumaFrames(canvased[shape].file, size, 'gray') }
       md5[shape] = { base: await framemd5(base[shape].file), box: await framemd5(boxed[shape].file), canvas: await framemd5(canvased[shape].file) }
@@ -861,12 +869,13 @@ describe('phase 1: a graphic through bakeForExport, the plan and the bundled ffm
     }
   })
 
-  it('reads every frame: red before, grey(i) on each moving frame, white arrivals, the hold, the fall to red, red after, the base outside the box', () => {
-    for (const shape of P1_SHAPE_NAMES) {
+  it('reads every frame by both routes: red before, grey(i) on each moving frame, white arrivals, the hold, the fall to red, red after, the base outside the box', () => {
+    for (const [shape, route] of P1_SHAPE_NAMES.flatMap((n) => [[n, 'box'], [n, 'canvas']] as const)) {
       const size = P1_SHAPES[shape]
       const place = P1_PLACE_PX[shape]
-      const frames = rgb[shape]
-      expect(frames.length, `${shape}: frames`).toBe(P1_SHOT_FRAMES)
+      const frames = route === 'box' ? rgb[shape] : canvasRgb[shape]
+      const at = `${shape} ${route}`
+      expect(frames.length, `${at}: frames`).toBe(P1_SHOT_FRAMES)
       const cx = place.x + Math.floor(place.width / 2)
       const cy = place.y + Math.floor(place.height / 2)
 
@@ -878,29 +887,32 @@ describe('phase 1: a graphic through bakeForExport, the plan and the bundled ffm
         const r = regionReading(frames[f], zones[shape], level)
         readings.push({ f, want: exiting ? 'exit' : level === null ? 'base' : String(level), ...r })
         // Outside the box the base shows on every frame.
-        expect(r.outside, `${shape} frame ${f}: outside the box against the base`).toBeLessThan(P1_LEVELS)
+        expect(r.outside, `${at} frame ${f}: outside the box against the base`).toBeLessThan(P1_LEVELS)
         // Before and after the clip the base inside the box too; each moving frame its grey or white; the hold the last moving frame's grey.
-        if (!exiting) expect(r.inside, `${shape} frame ${f} (clip frame ${i}): inside the box, want ${level ?? 'the base'}`).toBeLessThan(P1_LEVELS)
+        if (!exiting) expect(r.inside, `${at} frame ${f} (clip frame ${i}): inside the box, want ${level ?? 'the base'}`).toBeLessThan(P1_LEVELS)
       }
       // Red in the box's middle the frame before the clip and the frame after it.
-      expect(furthest(pixelOf(frames[P1_START - 1], size.width, cx, cy), RED), `${shape}: the frame before the clip`).toBeLessThan(P1_LEVELS)
-      expect(furthest(pixelOf(frames[P1_START + P1_FRAMES], size.width, cx, cy), RED), `${shape}: the frame after the clip`).toBeLessThan(P1_LEVELS)
-      // Each arrival white, the frame before it not.
+      expect(furthest(pixelOf(frames[P1_START - 1], size.width, cx, cy), RED), `${at}: the frame before the clip`).toBeLessThan(P1_LEVELS)
+      expect(furthest(pixelOf(frames[P1_START + P1_FRAMES], size.width, cx, cy), RED), `${at}: the frame after the clip`).toBeLessThan(P1_LEVELS)
+      // Each arrival white over the whole inside (the loop above read it against 255), and the frame before it not, read over the inside too.
       for (const a of P1_ARRIVALS) {
-        expect(furthest(pixelOf(frames[P1_START + a], size.width, cx, cy), [255, 255, 255]), `${shape}: arrival ${a} white`).toBeLessThan(P1_LEVELS)
-        expect(furthest(pixelOf(frames[P1_START + a - 1], size.width, cx, cy), [255, 255, 255]), `${shape}: the frame before arrival ${a} is not white`).toBeGreaterThanOrEqual(P1_LEVELS)
+        expect(regionReading(frames[P1_START + a], zones[shape], 255).inside, `${at}: arrival ${a} white`).toBeLessThan(P1_LEVELS)
+        expect(furthest(pixelOf(frames[P1_START + a], size.width, cx, cy), [255, 255, 255]), `${at}: arrival ${a} white in the middle`).toBeLessThan(P1_LEVELS)
+        const before = regionReading(frames[P1_START + a - 1], zones[shape], 255)
+        expect(before.inside, `${at}: the frame before arrival ${a} is not white`).toBeGreaterThanOrEqual(P1_LEVELS)
+        expect(regionReading(frames[P1_START + a - 1], zones[shape], p1Grey(a - 1)).inside, `${at}: the frame before arrival ${a} is grey(${a - 1})`).toBeLessThan(P1_LEVELS)
       }
       // The exit: from the held grey at its first key, the box falls to the base every frame, and is the base on the clip's last frame (opacity 0).
       const exit = readings.slice(P1_START + P1_EXIT, P1_START + P1_FRAMES)
       expect(exit).toHaveLength(P1_FRAMES - P1_EXIT)
-      expect(exit[0].insideMean, `${shape}: the exit starts from the held grey, not the base`).toBeGreaterThan(20)
+      expect(exit[0].insideMean, `${at}: the exit starts from the held grey, not the base`).toBeGreaterThan(20)
       exit.slice(1).forEach((r, k) => {
-        expect(r.insideMean, `${shape} exit frame ${r.f}: mean distance from the base ${r.insideMean.toFixed(2)} after ${exit[k].insideMean.toFixed(2)}`).toBeLessThan(exit[k].insideMean)
+        expect(r.insideMean, `${at} exit frame ${r.f}: mean distance from the base ${r.insideMean.toFixed(2)} after ${exit[k].insideMean.toFixed(2)}`).toBeLessThan(exit[k].insideMean)
       })
       const last = regionReading(frames[P1_START + P1_FRAMES - 1], zones[shape], null)
-      expect(last.inside, `${shape}: the clip's last frame, opacity 0, against the base`).toBeLessThan(P1_LEVELS)
+      expect(last.inside, `${at}: the clip's last frame, opacity 0, against the base`).toBeLessThan(P1_LEVELS)
       lines.push(
-        `- ${shape} ${size.width}×${size.height}, box route: inside the box within ${Math.max(...readings.filter((r) => r.want !== 'exit').map((r) => r.inside))} levels of what each frame wants ` +
+        `- ${shape} ${size.width}×${size.height}, ${route} route: inside the box within ${Math.max(...readings.filter((r) => r.want !== 'exit').map((r) => r.inside))} levels of what each frame wants ` +
           `(the base before and after, grey(i) or white while moving, grey(${P1_MOVING - 1}) held to clip frame ${P1_EXIT}), outside it within ${Math.max(...readings.map((r) => r.outside))} of the base on all ${P1_SHOT_FRAMES} frames; ` +
           `the exit's mean distance from the base, frames ${P1_START + P1_EXIT}–${P1_START + P1_FRAMES - 1}: ${exit.map((r) => r.insideMean.toFixed(1)).join(', ')}`
       )
@@ -945,40 +957,29 @@ describe('phase 1: a graphic through bakeForExport, the plan and the bundled ffm
   })
 
   /*
-   * Measured 2026-11-03 on the Mac's 4.4 build: NOT framemd5-equal. The exit's
-   * `geq` (plan.ts, the opacity keys' `a='alpha(X,Y)*…'`, with r, g and b
-   * passed through as `r(X,Y)`…) samples bilinearly with x clamped to w − 2
-   * and y to h − 2, so on every frame the stream's last column is a copy of
-   * the one before it and its last row of the row above (an 8×6 RGBA probe,
-   * identity geq: column 7 equals column 6 and row 5 row 4 in all four
-   * channels; `interpolation=nearest` keeps them, an option the 2018 build is
-   * not known to have). On the canvas route the stream's last column is the
-   * frame's, where nothing is drawn. On the box route it is the box's, and
-   * `graphicBox` snapped outward from an odd ink edge leaves one transparent
-   * column there: the geq fills it with the ink's, so the box route draws
-   * the grey one pixel wider at the right and one taller at the bottom. So
-   * what is asserted is where they may differ: only in the box's last column
-   * and last row, read on the plan's own frames before the encoder (one
-   * differing column moves x264's choices on other frames). Equal frames, and
-   * the exports' framemd5 must be equal too; that is the plan's claim, and
-   * this reads it the moment the geq stops copying.
+   * The plan's claim: the box route and the canvas route are framemd5-equal.
+   * f8d74ee measured them NOT equal, by the exit's `geq` (plan.ts, the opacity
+   * keys' `geq=r='r(X,Y)'…:a='alpha(X,Y)*…'`): its `getpix` samples bilinearly
+   * with x clamped to w − 2 and y to h − 2 (libavfilter/vf_geq.c:91-92 at
+   * f22fcd4, the Windows build's 2018 master, which has no `interpolation`
+   * option; the Mac's 4.4 build the same, an 8×6 RGBA probe), so the
+   * stream's last column is a copy of the one before it and its last row of
+   * the row above. With the box ending one past the ink's odd edge, that drew
+   * the grey a pixel wider and taller on the box route: 39,893 plan-frame
+   * samples at 9:16 and 36,066 at 16:9, all in the box's last column and row,
+   * and the exports' framemd5 apart on 60 and 105 of 105 frames (one column
+   * moves x264's choices on other frames: frame 14, before the clip,
+   * differed). `graphicBox` now keeps two transparent columns and rows past
+   * the ink on the far sides, so what geq copies is transparent. Read on the
+   * plan's own frames before the encoder (where a difference is) and on the
+   * exports' framemd5 (the plan's bar).
    */
-  it('(box) exports the same frames by the box route and by the canvas route, but for the exit geq’s copy into the box’s last column and row', async () => {
+  it('(box) exports the same frames by the box route and by the canvas route: the plan’s frames equal before the encoder, the exports framemd5-equal', async () => {
     for (const shape of P1_SHAPE_NAMES) {
       const size = P1_SHAPES[shape]
-      const box = P1_BOX_PX[shape]
       const [byBox, byCanvas] = [await planFrames(boxed[shape].args, size), await planFrames(canvased[shape].args, size)]
       expect(byBox.length, `${shape}: the plan's frames`).toBe(P1_SHOT_FRAMES)
       expect(byCanvas.length, `${shape}: the plan's frames, canvas route`).toBe(P1_SHOT_FRAMES)
-      const lastColumn = box.x + box.width - 1
-      const lastRow = box.y + box.height - 1
-      /** The box's last column or last row (a chroma sample: the 2×2 it covers touches them). */
-      const geqEdge = (p: { plane: string; x: number; y: number }): boolean => {
-        const span = p.plane === 'Y' ? 0 : 1
-        const inX = p.x + span >= box.x && p.x <= lastColumn
-        const inY = p.y + span >= box.y && p.y <= lastRow
-        return (inY && p.x <= lastColumn && p.x + span >= lastColumn) || (inX && p.y <= lastRow && p.y + span >= lastRow)
-      }
       let differing = 0
       let frames = 0
       const planes = new Set<string>()
@@ -987,16 +988,18 @@ describe('phase 1: a graphic through bakeForExport, the plan and the bundled ffm
         if (where.length > 0) frames++
         differing += where.length
         for (const p of where) planes.add(p.plane)
-        const stray = where.filter((p) => !geqEdge(p))
-        expect(stray.slice(0, 8), `${shape} frame ${f}: the routes differ outside the box's last column and row (${stray.length} samples)`).toEqual([])
       }
-      const same = differing === 0
-      if (same) expect(md5[shape].canvas, `${shape}: equal frames, so the exports' framemd5`).toEqual(md5[shape].box)
       const md5Differ = md5[shape].box.filter((l, f) => l !== md5[shape].canvas[f]).length
       lines.push(
-        `- ${shape}: box route against canvas route, the plan's frames before the encoder: ${same ? 'equal on every frame' : `${differing} samples differ over ${frames} frames (planes ${[...planes].join(', ')}), every one in the box's last column (x ${lastColumn}) or last row (y ${lastRow})`}; ` +
+        `- ${shape}: box route against canvas route, the plan's frames before the encoder: ${differing === 0 ? 'equal on every frame' : `${differing} samples differ over ${frames} frames (planes ${[...planes].join(', ')})`}; ` +
           `the exports' framemd5 ${md5Differ === 0 ? 'equal' : `differ on ${md5Differ} of ${md5[shape].box.length} frames`}`
       )
+      for (let f = 0; f < P1_SHOT_FRAMES; f++) {
+        const where = differingPixels(byBox[f], byCanvas[f], size)
+        expect(where.slice(0, 8), `${shape} frame ${f}: the routes' plan frames differ (${where.length} samples)`).toEqual([])
+      }
+      expect(md5[shape].box.length, `${shape}: framemd5 lines`).toBe(P1_SHOT_FRAMES)
+      expect(md5[shape].canvas, `${shape}: the exports' framemd5`).toEqual(md5[shape].box)
     }
   })
 
@@ -1021,7 +1024,7 @@ describe('phase 1: a graphic through bakeForExport, the plan and the bundled ffm
       'Exported through bakeForExport, buildRenderPlan and the bundled ffmpeg at 9:16 (360×640) and 16:9 (640×360), with a fake Bakers.graphic:',
       `moving frame i (${P1_MOVING} of them, graphicMovingFrames) fills the place rect with grey 20 + 15·(i mod 12), white on an arrival frame`,
       `(${P1_ARRIVALS.join(' and ')}), transparent outside; the render holds the last with tpad and fades it from clip frame ${P1_EXIT}.`,
-      'The box route cuts the frames to graphicBox\'s box (snapped outward to even) and hands the box to the plan; the canvas route writes them at the canvas.',
+      'The box route cuts the frames to graphicBox\'s box (snapped outward to even, two more columns and rows on the far sides for the exit geq) and hands the box to the plan; the canvas route writes them at the canvas.',
       `Readings ${P1_MARGIN} px clear of every edge, within ${P1_LEVELS - 1} levels; the edges themselves in luma, within ${P1_EDGE_PX} px.`,
       '',
       '<shape>-box/     the box route: export.mp4, graph.txt, g-export.seq/ (the PNGs), frames/fNNN.png (frame NNN, taken at (f − 0.25)/fps)',

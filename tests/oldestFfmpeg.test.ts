@@ -117,7 +117,23 @@ const TOO_NEW: { pattern: RegExp; since: string; why: string }[] = [
    * newer than the floor (the names diffed, f22fcd4 against n7.1).
    */
   { pattern: /\bsgn\(/, since: '4.3', why: 'gte/lt for a step, or gt(x,0)-lt(x,0)' },
-  { pattern: /\brandomi\(/, since: '7.0', why: 'random(), scaled and floored' }
+  { pattern: /\brandomi\(/, since: '7.0', why: 'random(), scaled and floored' },
+  /*
+   * geq's `interpolation` (and its short `i`): the obvious reach when the
+   * exit fade's geq copies a stream's last column and row (it samples
+   * bilinearly with x clamped to w − 2 and y to h − 2), and the Mac's 4.4
+   * build has it (`-h filter=geq`: nearest/bilinear, run 2026-11-03), the
+   * `colortemperature` story again. Read in libavfilter/vf_geq.c at f22fcd4,
+   * the Windows build's master: the option table has the expressions only,
+   * and `getpix` clamps on every call (:91-92). Nor would it be enough
+   * (measured on the Mac, appended to plan.ts's exit geq: Y equal, U and V
+   * still apart in the box's last column and row).
+   */
+  {
+    pattern: /\bgeq=[^;[]*?:(interpolation|i)=/,
+    since: 'after 2018-12-17 (not in vf_geq.c at f22fcd4)',
+    why: "geq always samples bilinearly there, clamped to w − 2 / h − 2; keep two transparent columns and rows at a stream's far edge instead (graphicBox)"
+  }
 ]
 
 const W = 640
@@ -181,7 +197,13 @@ const ZOOMED = 'zoom keys on a video clip, at speed 1'
  */
 const GRAPHIC = 'a graphic’s frames on the box route, held, with its opacity exit'
 const GRAPHIC_PATTERN = '/tmp/g-export.seq/%05d.png'
-const GRAPHIC_BOX = { x: 126, y: 108, width: 322, height: 92 }
+/**
+ * Written as the export would write it, not derived from this clip's own
+ * place (the plan only reads `frames.box`): graphic.int's phase-1 spec's 16:9
+ * box as `graphicBox` gives it, snapped outward to even with two more columns
+ * and rows on the far sides for the exit geq's copy.
+ */
+const GRAPHIC_BOX = { x: 126, y: 108, width: 324, height: 94 }
 
 /** The shapes with a followed crop (docs/CLIPS.md §4.7): one crop, and the stacked two-up. */
 const FOLLOWED = 'a followed clip at speed 1: fps=, then a crop keyed by a flat sum'
