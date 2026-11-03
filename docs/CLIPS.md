@@ -45,14 +45,31 @@
 > strips' shot rule over `drawsItself`, which decides the gap §6.4's head
 > lane note left open); §6.3's three lane-C Built notes and §6.4's;
 > pushed in one push as `8acf930` (2026-11-02), whose CI reading is in
-> §6.3's `graphicCanvas.ts` Built note. Nothing in the app makes a
-> graphic clip yet: `addGraphicClip`'s caller is phase 2's panel (§6.6).
-> Not built: phase 1's lane D, which is next (the harness's `primitives`
-> and Indic halves, `pathLength`, the `strokes` widths, `graphic.int`'s
-> phase-1 cases with the box case, `SHAPES`' graphic overlay; §6.19), and
-> everything from phase 2 on. Yours meanwhile: the Indic render check
-> through `paintDrawList2d` on both machines, M8, M13 and M19 (lane D's
-> harness first), M21, and the beat-frame allowance window. §2's total is
+> §6.3's `graphicCanvas.ts` Built note; then, 2026-11-02/03, phase 1's
+> lane D in six commits, each piece read by two critics before the next:
+> `6592a38` and `69c2340` (the harness's `primitives` option and phase
+> 1's half of `indic`), `0954b3d` and `2bb706d` (`pathLength` for M8,
+> `strokes` for M19, `graphic.int`'s gated M19 read), and `f8d74ee` and
+> `683a6f0` (`graphic.int`'s phase-1 render cases with the (box) case,
+> `SHAPES`' graphic overlay, and the lane's one production change,
+> `graphicBox`'s two transparent columns and rows on its far sides for
+> the exit geq's copy, §6.3's "The box"); §6.11's three lane-D Built
+> notes; pushed in one push as `683a6f0` (2026-11-03), whose CI reading
+> is in §6.11's render-check Built note (the Windows build's run of the
+> (box) case is unread until it is filled). **Phase 1 is closed on the
+> build side**: every lane of §6.19's phase 1 is built and pushed. Its
+> exit (§6.12) waits on your runs: `primitives`, `indic`, `pathLength`
+> and `strokes` in `npm run dev`'s console on the Mac and the Surface,
+> M13's `framemd5`, the Indic sheet by eye, and M19's read with
+> `FORGE_GRAPHIC_FRAMES` on both machines; and on two decisions of the
+> plan's owner, M8's reading (0.125 or 0.25, by whether its paths include
+> the circles under r = 40) and M19's fix (no width of 1-3 px is within
+> its bar on the Mac's chain); §6.15's phase-1 note has the figures.
+> Also yours, outside the bar: M21 and the beat-frame allowance window.
+> Nothing in the app makes a graphic clip yet: `addGraphicClip`'s caller
+> is phase 2's panel (§6.6). Not built: everything from phase 2 on, which
+> is next, once you have read phase 1's exit: T3's typed stub of
+> `applyGraphics` first, then T1 (§6.19). §2's total is
 > now about 100-103.5 days with Step P (100.25-103.75 since §16.66's
 > answer, 2026-10-27).
 >
@@ -8415,7 +8432,7 @@ its three jobs.
 
 | file | holds | where it runs |
 |---|---|---|
-| `src/shared/graphics/drawList.ts` | `drawListAt`, `needsCompositor`, `graphicBox`, and `onsetTargetsAt` (the "When" rule under Targets as a function; built 2026-10-30, the draw list's Built note) | node and renderer, pure; the only source importer of `templates/index.ts` (its test imports it too, to pin "frozen and empty") |
+| `src/shared/graphics/drawList.ts` | `drawListAt`, `needsCompositor`, `graphicBox`, and `onsetTargetsAt` (the "When" rule under Targets as a function; built 2026-10-30, the draw list's Built note); `graphicBox`'s two far-side columns and rows, `GEQ_EDGE_PX` (module-private, since `683a6f0`, 2026-11-03; "The box" below) | node and renderer, pure; the only source importer of `templates/index.ts` (its test imports it too, to pin "frozen and empty") |
 | `src/shared/graphics/items.ts` | the `DrawItem` types (their `Point` and `Arrowhead` imported from `stroke.ts`, corrected 2026-10-28), `Drawer`, `DrawOut`, `textItems`, `textSpecOf`, `itemBounds`, `unitFor`, `CLUSTER_SCRIPTS`; and, built 2026-10-30 (the draw list's Built note), `GraphicTargets` (here, not in `targets.ts`, because `Drawer` names it), `ItemTransform`, `itemOrigin`, `localBounds`, `unionRect`, `graphemesOf` | pure; the templates import this, never `drawList.ts`, so no import cycle runs through `templates/index.ts` (`textItems` reads `unitFor`, so the two live together) |
 | `src/shared/graphics/templates/index.ts` | `DRAWERS: Partial<Record<GraphicTemplateId, Drawer>>`, created empty in phase 1; each template's commit adds its own row (§6.2) | pure |
 | `src/shared/graphics/stroke.ts` | `flattenPath`, `strokeAt`, the head's geometry (`headGrowAt`, `headShape`, `strokeShape`), `strokeWidth`, `STROKE_MIN_PX`, `STROKE_TOLERANCE`, `Point`, `Arrowhead` (corrected 2026-10-28; the stroke primitive's Built note below) | pure; imports only `DURATIONS` and `progress` from `motion.ts` |
@@ -8849,7 +8866,10 @@ tree edges, underlines and the edge sweep of §6.16 (the research, §4.4).
   a 1080×1920 export draw the same relative width. Painter A draws
   `max(width, STROKE_MIN_PX × min(w, h) / 1080)`; `STROKE_MIN_PX` = 2
   (proposal until M19 measures the 4:2:0 fringe through the plan's
-  `format=yuva420p`, `plan.ts:1484`).
+  `format=yuva420p`, `plan.ts:1484`). (M19 measured in part 2026-11-03,
+  §6.15's phase-1 note: no width of 1, 2 or 3 px is within its bar on the
+  Mac's chain, most of the fringe the transparent pixels' black chroma;
+  `STROKE_MIN_PX` unchanged, the fix the plan owner's.)
 - **The marker look** (D7, §16.60) is perfect-freehand's outline over the
   span's points, drawn only once M10 passes and the dependency is added in
   phase 2; until then `resolveGraphicStyle` never yields it (§6.5), and a
@@ -8930,6 +8950,23 @@ tree edges, underlines and the edge sweep of §6.16 (the research, §4.4).
 >   §6.15's M8 row do not name it. (A path through `flattenPath`, not
 >   the `ring` shape of §6.2's template, which painter A draws as an
 >   `arc`.) `EFFECTS.md` §61, "The stroke's flattening", has the table.
+>   (**Measured 2026-11-03, still open, yours.** Lane D's `{ pathLength:
+>   true }` (`0954b3d`, `2bb706d`; §6.11's lane-D harness Built note) in
+>   the Browser pane's Chrome 152, against `getTotalLength()` and not the
+>   app's Chromium, reads the question both ways, `M8_OPEN_BELOW` = 40
+>   marking the circles under r = 40: over all 23 paths `STROKE_TOLERANCE`
+>   0.25 fails on length alone, at r = 20 (−0.1614 %), 30 (−0.1615 %) and
+>   38 (−0.1282 %), passing at 39 (−0.0973 %), 40 (−0.0683 %) and from
+>   50 up, points under 0.19 px everywhere, and the coarsest within the
+>   bar is 0.125 (worst −0.0688 %, r = 20); without the open circles the
+>   coarsest is 0.25 (worst −0.0683 % at r = 40, 0.183 px). Chrome's own
+>   length reads +0.014 % over 2πr on every circle, so about −0.010 % of
+>   each figure is the browser's. So the prediction above holds: with a
+>   circle at r = 20 or 30 in M8's paths, 0.25 moves to 0.125; without,
+>   it stays. `STROKE_TOLERANCE` is unchanged at 0.25; the choice is the
+>   plan owner's, and the run in the development app on the Mac yours.
+>   §6.15's phase-1 note; `EFFECTS.md` §61, "flattenPath against
+>   SVGPathElement".)
 > - **The span.** `strokeAt` clamps 0 ≤ `from` ≤ `to` ≤ 1 (a non-number
 >   reads 0), finds the segment leaving the start and the one arriving at
 >   the tip by binary search over `lengths`, interpolates both ends and
@@ -9286,6 +9323,38 @@ claims its place; and the scan runs over every frame of the clip, not to
 the last moving one, the box being the same; the draw list's Built note).
 In node it is geometry; the harness checks the
 real paint against it (alpha 0 outside the box, §6.11).
+
+**Corrected 2026-11-03 (`683a6f0`): two more columns on the right and
+two more rows at the bottom.** After the even snap, `graphicBox` widens
+the box by `GEQ_EDGE_PX` = 2 transparent columns past the ink's right
+edge and 2 rows below its bottom, then clamps to the frame
+(`src/shared/graphics/drawList.ts:89-90`, module-private; `:158-159`; the
+reason in the comment above `graphicBox`, `:92-128`). The left and top
+are unchanged. The cause, measured: the plan's exit fade on a graphic is
+`geq=r='r(X,Y)':…:a='alpha(X,Y)*(…)/255'` (`plan.ts:724`), and geq
+samples bilinearly with x clamped to w − 2 and y to h − 2, so the
+stream's last column becomes a copy of the column before it and its last
+row of the row above, in all four channels (read in
+`libavfilter/vf_geq.c` at `f22fcd4`, the Windows build's 2018-12-17
+master, `:91-92`, on every call, with no `interpolation` option there;
+probed on the Mac's 4.4 build, an 8×6 RGBA identity geq). On the canvas
+route that column is the frame's, where nothing is drawn; on the box
+route, with the box ending one column past an odd ink edge, it was the
+ink's, so the box route drew the graphic one pixel wider and taller than
+the canvas route and the preview: `graphic.int`'s phase-1 case at
+`f8d74ee` read 39,893 plan-frame samples apart at 9:16 and 36,066 at
+16:9, every one in the box's last column or row, and the exports'
+`framemd5` apart on 60 and 105 of 105 frames. With the two columns and
+rows the copied pixels are transparent (where the frame's edge clamps
+the box first, the canvas route's stream ends there too, so both copy
+the same pixels): both routes' plan frames equal on every frame, the
+exports `framemd5`-equal at both shapes, every edge at 0 px, on the
+Mac's build (the Windows build's reading is CI's, §6.11's render-check
+Built note). geq's `interpolation=nearest`, on the 4.4 build only, was
+measured and is not a fix (U and V still apart, 19,774 samples at 9:16);
+`TOO_NEW` refuses it. The text above, "snapped outward to even x, y,
+width and height", still holds: the box stays even. `EFFECTS.md` §61,
+"geq's w − 2 clamp and the box route's extra edge".
 
 #### Targets — `graphicTargetsAt(project, clip, spec, frame, size): GraphicTargets`
 
@@ -12252,6 +12321,7 @@ render check and the census.
 | 1 | `tests/graphicMotion.test.ts` (M9) (built 2026-10-27/28, `f38f971`, `862cf1b` and `ae6167c`; M9 measured, §6.13's Built note) | §6.13 |
 | 1 | `tests/graphicStroke.test.ts` (built 2026-10-28, `69d2d6e` and `2074f08`), `tests/graphicDrawList.test.ts` (built 2026-10-30, `4b68c45`, 25 cases), `tests/graphicPaint.test.ts` (built 2026-10-30/31, `a82cd43` and `d822c56`, 29 cases) | §6.3 (two depth cases in `graphicDrawList`, §6.16; §6.3's three Built notes) |
 | 1 | `tests/renderer/graphicCanvas.test.ts` (built 2026-10-31/11-01, `b610c91` and `1ea9a96`, 26 cases), `tests/renderer/encodePool.test.ts`'s worker cases (the same commits, 9 cases in all), `tests/graphicBoxRoute.test.ts` (built 2026-11-02, `a273729` and `fa4ddc3`, 7 cases), `tests/exportBake.test.ts`'s graphic cases (the same commits, 4, 13 in all); none was named by this index before it was written | §6.3 (lane C's three Built notes) |
+| 1 | `tests/renderer/graphicCheckPrimitives.test.ts` (built 2026-11-02, `6592a38`, 37 cases; `69c2340`, 50) and `tests/renderer/graphicCheckStrokes.test.ts` (built 2026-11-03, `0954b3d`, 20 cases; `2bb706d`, 25): the harness check's pure parts, node; `tests/graphicDrawList.test.ts`'s far-side case (`683a6f0`, 26 cases); none was named by this index before it was written | below (lane D's harness Built note); §6.3's "The box" |
 | 1-3 | `tests/graphicFrame.test.ts` (phase 1's 28 cases built 2026-10-31, `4196d43` and `0c8911f`) | phase 1 §6.3, phase 2 §6.2, the screen card §6.16 |
 | 1-2 | `tests/graphicStyle.test.ts`, with `tests/renderer/graphicStyleStore.test.ts` for the store's two actions (phase 1's half of both built 2026-10-28, `b965cda` and `0d603a8`) | §6.5 |
 | 1-3 | `tests/renderer/graphicStore.test.ts` (phase 1's 21 cases built 2026-11-02, `a273729` and `fa4ddc3`) | phase 1 §6.3, the sounds that follow a graphic §6.14, the screen card §6.16 |
@@ -12311,7 +12381,18 @@ render check and the census.
 - `tests/oldestFfmpeg.test.ts`: M4's case (phase 0, above); and in phase 1 a
   graphic's PNG sequence with its opacity exit joins `SHAPES` (`:196`), so
   the `TOO_NEW` scan (`:61`) covers the graphic overlay's shape although
-  nothing in it is new (§13).
+  nothing in it is new (§13). (Done 2026-11-03, `f8d74ee` and `683a6f0`:
+  `GRAPHIC`, `GRAPHIC_PATTERN` and `GRAPHIC_BOX` (`:198-206`, the box
+  126,108 324×94 as the export writes it, not derived from the clip's
+  place), the shape in `SHAPES` (`:325-358`, the box route's asset with
+  `frames: { pattern, count 46, box }`, a counter clip with
+  `graphicExitKeys(60, 30)` on V2), so the scan and the graph-file case
+  cover it, and a reach test (`:686`): the pattern once as `-start_number
+  0 -framerate 30 -i`, its chain's `tpad=stop_mode=clone`,
+  `format=yuva420p`, `geq=` and the alpha keys once each and in order, one
+  overlay at the box's x and y. And a `TOO_NEW` row, `683a6f0`
+  (`:121-135`): geq's `interpolation`/`i`, not in `vf_geq.c` at
+  `f22fcd4`. The render check's lane-D Built note below.)
 - **Every `Bakers` literal gains `graphic`** (phase 1; `Bakers.graphic` is
   required): `tests/exportBake.test.ts:23`, `tests/moment.test.ts:522` and
   `:551`, `tests/reframeConsumers.test.ts:104`,
@@ -12400,16 +12481,183 @@ every run is yours.
 | `blur: { words, px }` | 0 | a ten-word blur-rise line at 1080×1920 | M5 |
 | `parity: true` | 0 (Indic and colour, raw three.js), 3 (whole, through `paintDrawList3d`, and each 2.5D variant's settled frame against its flat twin) | painter output through a `CanvasTexture` against the canvas | M6 |
 | `glow: ['unreal', 'quad', 'pmndrs']` | 3, first, through the compositor's glow seam with both routes built behind it (`'unreal'` and `'quad'`; `'pmndrs'` only from a scratch branch, §6.15); moved from phase 0 on 2026-10-21 | alpha outside a glowing shape | M7 |
-| `indic: true` | 0 (bare `drawTextOnto`), 1 (through a text item and `paintDrawList2d`, and through a text clip's and a caption's own bake in a Latin face, so the `INDIC_FONTS` loading at those sites, §6.20, is seen in the frames), 2 (with `templates`) | the Indic render check below | M22; phases 1 and 2's Indic bars |
-| `primitives: true` | 1 | `PRIMITIVES_SPEC` through the drawer seam (§6.3), its drawer returning hand-built lists (a cubic stroke with an end head at `to` 0, 0.5 and 1; a text entrance in Latin and in the EFFECTS §51 clusters at progress 0, 0.5 and 1; a dim with a hard and a 24 px feathered hole; a rotated, scaled group) through the preview path and through `encodeFrames`, each PNG decoded (`createImageBitmap` with `premultiplyAlpha` and `colorSpaceConversion` `'none'`): per case the mean and largest difference against the preview canvas, the last moving frame against the held end, alpha outside `graphicBox`, the same list drawn twice, and 1080×1920 draw and encode times | phase 1's exit; M13's first half |
-| `pathLength: true` | 1 | `SVGPathElement` length and points against `flattenPath` | M8 |
-| `strokes: { widths: [1, 2, 3] }` | 1 | stroke PNGs through the app's bake, for M19's overlay | M19 |
+| `indic: true` | 0 (bare `drawTextOnto`), 1 (through a text item and `paintDrawList2d`, and through a text clip's and a caption's own bake in a Latin face, so the `INDIC_FONTS` loading at those sites, §6.20, is seen in the frames), 2 (with `templates`) | the Indic render check below (phase 1's half built 2026-11-02, `6592a38` and `69c2340`; the Built notes below) | M22; phases 1 and 2's Indic bars |
+| `primitives: true` | 1 | `PRIMITIVES_SPEC` through the drawer seam (§6.3), its drawer returning hand-built lists (a cubic stroke with an end head at `to` 0, 0.5 and 1; a text entrance in Latin and in the EFFECTS §51 clusters at progress 0, 0.5 and 1; a dim with a hard and a 24 px feathered hole; a rotated, scaled group) through the preview path and through `encodeFrames`, each PNG decoded (`createImageBitmap` with `premultiplyAlpha` and `colorSpaceConversion` `'none'`): per case the mean and largest difference against the preview canvas, the last moving frame against the held end, alpha outside `graphicBox`, the same list drawn twice, and 1080×1920 draw and encode times (built 2026-11-02, `6592a38` and `69c2340`, with a canvas-route bake beside the box route's two and the live Preview's canvas read too; the Built note below) | phase 1's exit; M13's first half |
+| `pathLength: true` | 1 | `SVGPathElement` length and points against `flattenPath` (built 2026-11-03, `0954b3d` and `2bb706d`: 23 paths at five tolerances, read with and without the circles under r = 40; the Built note below) | M8 |
+| `strokes: { widths: [1, 2, 3] }` | 1 | stroke PNGs through the app's bake, for M19's overlay (built 2026-11-03, `0954b3d` and `2bb706d`: the canvas route, widths up to 20 px, the folder printed for `graphic.int`'s gated read; the Built note below) | M19 |
 | `templates: GraphicTemplateId[]` | 2 (and step 6, §9) | per shape, from `specs.json`: frames 0, a beat, the last moving frame and the end differ as they should; the last moving frame equals the held end (mean 0); alpha 0 outside the box; the same spec twice identical; preview against baked PNG ≤ 1/255; draw and encode timed | phase 2's exit |
 | `curves: { names: CurveName[]; clipId: string }` | 2 | the named graphic clip of the open project (a counter, then a keyword and a callout, §6.10) under each named curve, lettered and shown blind; the key in the result | M14 |
 | `look: { clipIds: string[] }` | 2 | each named graphic clip under four presets and `clean` with the dim, lettered and shown blind; the key in the result (§6.10) | the look rating |
 | `strokes: ['freehand']` | 2, from a scratch branch with perfect-freehand added there and never merged, imported by a DEV-only dynamic `import()` (§6.15) | perfect-freehand's draw-on, both ways; the `rough` half is not run in step 3 (§16.60) | M10 |
 | `readback: […], frames` | 3 | the three readbacks timed | M12 |
 | `screenCard: '<path>'` | 3 | Tilt in and Pull back at 9:16, at rest and moving; the bake cost of the moving frames and of the one-loop edge sweep; the hand-off (§6.16) | M20 |
+
+> **Built 2026-11-02/03 (lane D's harness half: `primitives`, phase 1's
+> `indic`, `pathLength`, `strokes`).** `6592a38`, then `69c2340` after
+> two critics (2026-11-02); `0954b3d`, then `2bb706d` after two critics
+> (2026-11-03): the first two pieces of §6.19's lane D. No production
+> code changed in any of the four; every browser mutation of production
+> code was put back git-diff-clean. Pushed with the rest of the lane in
+> one push ending at `683a6f0` (2026-11-03); its CI line is in the render
+> check's Built note below, and no CI runner opens the harness page (only
+> the two node test files run there). Every figure is from the four
+> commits' messages and the workflow's reports; line numbers were read at
+> `683a6f0`. Measured on the harness page (`npm run harness`, port 5199)
+> in the Claude desktop app's Browser pane on the Mac, Chrome
+> 152.0.7977.167, page visible and not throttled (a run with the pane
+> hidden read THROTTLED, said so, and none of its timings is quoted); not
+> Electron 44, which cannot start in the sandbox. The harness bridge's
+> writes are a recorder and a counter, no IPC and no disk, so the bake
+> figures are the draw and the encode only, lighter than the app's.
+> - **The options**, `src/renderer/src/harness/graphicCheck.ts` (2,993
+>   lines at `683a6f0`): `GRAPHIC_CHECK_OPTIONS` (`:165`) ends
+>   `'indic', 'primitives', 'pathLength', 'strokes'`, and
+>   `runGraphicCheck` (`:2957`) runs each under its own `if (options.X)`
+>   (`:2971-2982`), `indic` (phase 0's bare `drawTextOnto` first, then
+>   phase 1's half) before `primitives`. The pure readers are in
+>   `graphicMeasure.ts` (778 lines), which `tsconfig.node.json` now
+>   includes (`:8`), so `graphic.int` imports the page's readers rather
+>   than a copy.
+> - **`{ primitives: true }`.** `PRIMITIVES_SPEC` (`:1906`, frozen: a
+>   counter, beats 0.5 and 1.0, 2 s, seed 1) through the drawer seam;
+>   `primitivesProgress` (`:1932`) is t over the last beat, clamped, so
+>   frames 0, 15 and 30 read exactly 0, 0.5 and 1; `primitiveFrames`
+>   (`:1953`): 60 frames, 46 moving, read at 0, 15, 30, 45 and 59.
+>   `primitivesDrawer` (`:1994`), six cases: `stroke`, the cubic
+>   `PRIMITIVE_STROKE_D` (`:1965`) drawn on to p with an end head growing
+>   over 0.1 s; `text-latin`, "Measured, not assumed" by word;
+>   `text-indic`, the ten §51 clusters as two words, one per script, cut
+>   by cluster (`PRIMITIVE_INDIC`, `:1976`); `dim-hard` and
+>   `dim-feather`, a dim at 0.6 over `PRIMITIVE_HOLE` (`:1967`) with
+>   feather 0 and 24; `group`, a rounded panel and its word, scale 0.8 +
+>   0.4p, turned −12p°. Per case (`checkPrimitive`, `:2101`;
+>   `checkPrimitives`, `:2245`, under the `clean` style): the frames
+>   drawn twice through `graphicFrameCanvases`; `graphicBox` and alpha
+>   outside it; the live Preview's own canvas (`graphicPreviewCanvas`,
+>   read through a copy, `copiedPixels`, `:1872`); three bakes through
+>   `bakeGraphicSequence` (`bakePrimitive`, `:2083`), the box route twice
+>   and the canvas route once, each PNG decoded by `decodePng` (`:706`,
+>   which throws when a PNG is not the size it is read as) against the
+>   preview over the two pictures' ink (`diffOverInk`, `graphicMeasure.ts:307`).
+>   The verdict, `primitivesVerdict` (`graphicMeasure.ts:383`) against
+>   `PRIMITIVES_BAR` (`:331`: bake mean 1 level, held mean 0, outside
+>   alpha 0), wants both routes within the bar, the held end equal, no
+>   alpha outside, drawn twice equal, every PNG of the two box bakes
+>   byte-equal, the live Preview equal, the box even and the bake's
+>   (`boxSound`, `:376`), and both routes writing exactly the moving
+>   frames; a part with nothing read passes nothing. M13's line,
+>   `m13Line` (`:401`), prints every case's sequences wherever they are
+>   files. The PNG bytes come from `recordingWrites` (`:1823`), which
+>   wraps `window.forge`'s writes for the run and keeps only the check's
+>   clip id; where the bridge cannot be wrapped, the files are read
+>   through `mediaUrl`.
+> - **Measured, `primitives`**: all six cases PASS, in `6592a38`'s run and
+>   three runs after `69c2340`. Canvas route against the preview: max 0
+>   at every frame of every case. Box route: within the bar, a handful of
+>   edge pixels apart (the stroke 2 pixels at max 235 and the group 6 at
+>   max 56 in `6592a38`'s run; later, the stroke 0, the group 9 and
+>   text-indic 19 in one run and 0 in the next), varying run to run, mean at most 0.001 over the ink: rasterisation at the −box
+>   offset, not the encode, since the canvas route through the same
+>   workers is exact. Last moving frame against the held end max 0; alpha
+>   outside `graphicBox` 0; drawn twice max 0; the box route baked twice
+>   46 of 46 PNGs byte-equal; live max 0; boxes even and the bake's
+>   (stroke 820×420 at 130,1130, text-latin 700×328, text-indic 768×230
+>   with the page's empty catalogue, the dims the frame, group 824×532);
+>   46 frames baked on both routes. Bake per frame: box route p50
+>   0.73-0.95 ms in `6592a38` (the dims 2.08-2.25) and 0.65-1.13 in
+>   `69c2340` (the dims 2.65-2.80); canvas route at 1080×1920 p50
+>   2.07-2.50 ms (p95 2.75-3.13) and 2.05-2.70; paint with rasterisation
+>   (`69c2340`) mean 0.67-1.58 ms. These boxes predate `683a6f0`'s two
+>   far-side columns and rows (§6.3's "The box"); the page was not run
+>   again after it, as both sides call the one `graphicBox`.
+> - **A finding** (`69c2340`): a canvas `getImageData` has read twice
+>   paints its third picture differently in this Chrome (on the Preview's
+>   reused canvas, frame 30 on, up to 255 on the stroke and group); read
+>   through a copy, all six are max 0. The cause, Chrome moving the canvas
+>   off the GPU, is inferred from the pattern, not proven; the Preview
+>   never reads its canvas back.
+> - **`{ pathLength: true }`** (M8, `:2564` on): `M8_RADII` (`:2588`),
+>   `M8_OPEN_BELOW` = 40 (`:2596`), `M8_PATHS` (`:2606`, 23 paths:
+>   `m8Circle`'s four-cubic circles, `:2570`, a line, the S-curve, cubic,
+>   quadratic and mixed paths of `tests/graphicStroke.test.ts`, the
+>   primitives' stroke, the head tests' arrows), `M8_TOLERANCES` (`:2623`,
+>   1 to 0.0625), `checkPathLength` (`:2644`), with
+>   `pathLengthVerdict` and `pathLengthReadings` (`graphicMeasure.ts:478`,
+>   `:510`) against `M8_BAR` (`:420`, 0.1 % and 0.5 px). Both readings
+>   print, every path and without the circles under r = 40, the second
+>   labelled as §6.3's open question. Measured: coarsest within the bar
+>   0.125 over all 23, 0.25 without the open circles; the figures are
+>   §6.15's phase-1 note and `EFFECTS.md` §61's "flattenPath against
+>   SVGPathElement".
+> - **`{ strokes: { widths: [1, 2, 3] } }`** (M19, `:2723` on):
+>   `STROKES_SPEC` (a counter, 1 s, no beats: 16 moving frames, one
+>   picture), `strokesScale` (`:2753`) and `strokesDrawer` (`:2760`), a
+>   horizontal and a diagonal per width in `strokeBand`s
+>   (`graphicMeasure.ts:558`), baked by `checkStrokes` (`:2792`) on the
+>   canvas route; widths over 0 and at most `STROKE_BANDS.maxWidth` 20
+>   (`strokeWidthsError`, `:543`). The painter floors a stroke at 2 px on
+>   1080×1920, so each stroke is laid out 1/scale as long and as wide and
+>   drawn under its item's transform at `strokesScale` (0.5 here): the
+>   width asked for, through the same painter and bake. The result names
+>   the folder (`folderOf`, `:774`; null on the harness page, where the
+>   first PNG comes back as a data URL) and prints the
+>   `FORGE_GRAPHIC_FRAMES` command. Measured on the page: 16 PNGs
+>   byte-equal, widths read back 1.000/2.000/3.000 (horizontals) and
+>   0.983/1.963/3.000 (diagonals), alpha against a native `lineWidth` max
+>   1/1/0. The read through the plan's chain is the render check's gated
+>   case below; its figures are §6.15's phase-1 note.
+> - **The tests**: `tests/renderer/graphicCheckPrimitives.test.ts`, 37
+>   cases in `6592a38`, 50 since `69c2340` (the spec and its freezing,
+>   the progress, the frames, every case's lists through `drawListAt`'s
+>   seam, the readers, the verdict part by part, `siteReading`'s
+>   outcomes, the recorder against a stubbed and a frozen bridge, and
+>   `runGraphicCheck` read as source: every `check*(` call under its own
+>   option's guard, by membership, `indic` before `primitives`);
+>   `tests/renderer/graphicCheckStrokes.test.ts`, 20 cases in `0954b3d`,
+>   25 since `2bb706d` (the paths, the circle's figures, the verdict's
+>   inclusive bars and both readings, the bands, `strokesScale`, the
+>   drawer, `strokeLines`, `chromaAlong`, `alphaAgainst`, `folderOf`,
+>   the width bound). Re-run at `683a6f0` for this record: 50 and 25
+>   passed.
+> - **Mutations**: `6592a38`, 25 in node (each fails at least one case)
+>   and five of production code in the browser (the painter per code
+>   point, `captionBake` without `facesFor`, `textCanvas` loading only
+>   `spec.font`, the box offset a pixel down, the settle cut by 0.6 s);
+>   `69c2340`, 19 in node and four in the browser (the hold baked, the
+>   plan's odd box x, the Preview a frame early, a box PNG decoded at the
+>   frame's size); `0954b3d`, 20 (M1-M20, two of them of `plan.ts`,
+>   caught by `graphic.int`'s always-on case); `2bb706d`, 11. The
+>   tables, with each case's failure, are in the commits' messages. The
+>   box offset moved a pixel down passes both dims (their ink is the
+>   whole frame): the dims are blind to a 1 px shift, recorded, not
+>   hidden.
+> - **Where it differs from the plan, and why.** (a) `primitivesProgress`
+>   is t over the last beat, clamped, not `motion.ts`'s `progress`, whose
+>   1e-6 s allowance made frame 0 read 1e-6, not §6.11's "to 0". (b) A
+>   canvas-route bake beside the plan's two: the store's bakes and any
+>   clip not identity-placed take the canvas, and it gives the row's
+>   1080×1920 encode times, which the box route cannot. (c) The 1/255
+>   mean is over the two pictures' ink, padded 2 px (`diffOverInk`), not
+>   the whole box: a stroke moved a pixel averaged 0.682 levels over its
+>   820×420 box and passed. (d) The Indic primitive is two words cut by
+>   cluster: ten space-separated clusters cut by word and by cluster
+>   alike. (e)-(f) belong to the Indic note below. (g) The PNGs are read
+>   from the bridge's writes as they were made, through a wrapper on
+>   `window.forge`, or the files through `mediaUrl` where it cannot be
+>   installed; the row names neither. (h) The live Preview's canvas and
+>   the box's evenness and frame counts are read beside the row's five
+>   parts (`69c2340`, the critics'). (i) `strokes` draws under a scale so
+>   a 1 px stroke is 1 px, past the painter's 2 px floor. (j) M8 reads
+>   two sets of paths, so the open question stays open (`2bb706d`, a
+>   critic's must-fix: `0954b3d`'s single verdict over every circle had
+>   answered it).
+> - **Open, and whose.** The development-app runs (§6.12's phase-1 bar
+>   lists them) are yours: Electron 44's Chromium is not the pane's, and
+>   whether its `contextBridge` lets `recordingWrites` wrap `window.forge`
+>   is unmeasured (if not, the check reads the files and says "PNGs read
+>   from files"; M13's line prints either way), as is the app's CSP
+>   against the module worker and everything on Windows. M8's reading and
+>   M19's fix are the plan owner's (§6.15's phase-1 note).
 
 #### The Indic render check
 
@@ -12439,6 +12687,73 @@ directly: one function, one spec), after §6.20's fonts are in (§16.63).
 - **Mutation**, run once by you on the Mac: the painter made to draw per
   code point (an `Array.from` split in `paintDrawList2d`) must fail it, every
   conjunct's frame then equal to its per-code-point frame.
+
+> **Built 2026-11-02 (phase 1's half, lane D).** `6592a38`, then
+> `69c2340` after two critics; pushed as `683a6f0` with the lane (the
+> harness Built note above has the page and the browser; line numbers at
+> `683a6f0`, in `graphicCheck.ts`). `{ indic: true }` runs phase 0's bare
+> `drawTextOnto` reading first, as M22 measured it, then
+> `checkIndicPhase1` (`:2519`), first in the call, before anything else
+> on the page loads the faces:
+> - **The sites** (`textClipSite`, `:2351`; `captionSite`, `:2370`;
+>   `siteReading`, `:2320`): a text clip's bake (`renderTextPng`, what
+>   `bakeText` writes) of the Devanagari clusters in clean's Montserrat,
+>   and a caption track's bake (`bakeCaptions`, the kinetic style's
+>   Anton) of the Telugu ones, each frame against the same picture drawn
+>   by `drawTextOnto` just before the site ran and just after. SEEN when
+>   the `INDIC_FONTS` face was not loaded before, was after, and the frame
+>   equals the after drawing and differs from the before one; NOT SEEN
+>   when it differs, or when the face is neither loaded nor failed after
+>   with the catalogue there (never asked for); "cannot tell" otherwise.
+> - **The paint** (`paintClusters`, `:2432`): each cluster as a text item
+>   through `graphicFrameCanvases` and `paintDrawList2d`, against one
+>   `drawTextOnto` call of the same item (expected equal) and against one
+>   item per code point through the same painter, narrower and the
+>   i-matra read with the graphic measure. The whole-drawn sheet comes
+>   back as `result.indic.phase1.sheet.png` with its path,
+>   `INDIC_PAINT_SHEET` (`:2317`, `tests/output/graphic/indic-paint/whole.png`):
+>   the page has no file system, and `graphic.int` empties
+>   `tests/output/graphic/` when it starts, so it is saved after a
+>   `graphic.int` run, beside the libass sheets.
+> - **Measured** in the pane's Chrome 152. With the harness's empty
+>   catalogue (its bridge serves no fonts): both sites "cannot tell"
+>   (the faces fail, "not in the catalog"); all ten clusters through the
+>   painter equal to `drawTextOnto` (max 0) in the system's faces, whole
+>   against per code point apart (mean 34.8-46.9 over the ink), every
+>   conjunct narrower, कि's i-matra first (35 px); since `69c2340` each row
+>   says the face failed and the cluster was drawn in the system's
+>   fallback. With the two tracked Noto faces given to the page's
+>   catalogue by hand in the console (nothing of it committed): the text
+>   clip SEEN (Noto Sans Devanagari; after max 0, before mean 6.658,
+>   17,363 pixels), the caption SEEN (Noto Sans Telugu; after max 0,
+>   before mean 12.154, 32,955 pixels); all ten clusters equal to
+>   `drawTextOnto` (max 0), whole against per code point mean 32.8-47.6,
+>   the eight conjuncts narrower (क्ष 86.0 against 161.5 px), कि's i-matra
+>   first (31 px).
+> - **Mutations, in the browser**, each put back git-diff-clean: the
+>   painter per code point (`paint.ts`'s `paintText` split by
+>   `Array.from`) makes all ten NOT EQUAL to `drawTextOnto` and each equal
+>   to its per-code-point frame, which is this section's mutation run once
+>   in the pane (yours on the Mac in the app, as written); `captionBake`'s
+>   faces cut to the caption font, the caption site NOT SEEN;
+>   `textCanvas`'s `ensureFaces` cut to `spec.font`, the text clip site
+>   NOT SEEN.
+> - **Where it differs from the plan, and why.** (e) The per-code-point
+>   reference keeps the whole item's box, moved right by the advances
+>   before it: cut to each code point's advance, a mark (advance 0) drew
+>   into no width, and the painter mutation read "differ" on 7 of 10.
+>   (f) `siteReading` reads a face never asked for as NOT SEEN, not
+>   "cannot tell" (which let the caption mutation through); and the
+>   caption site reads its first line's settled picture, since the
+>   kinetic style's first picture has no ink in any face. The two sites
+>   are phase 1's addition from the `indic` row ("through a text clip's
+>   and a caption's own bake"); the reading of them is this section's
+>   own rule, not the plan's.
+> - **Open, yours**: the run in the development app on the Mac and the
+>   Surface after a reload (where the catalogue serves the Noto faces, so
+>   the sites can read SEEN without a hand-given catalogue), the eye check
+>   of the saved sheet beside the libass sheets, and the mutation once on
+>   the Mac.
 
 #### The render check — `tests/integration/graphic.int.test.ts`
 
@@ -12522,6 +12837,150 @@ is absent (only §6.20's two Noto faces and their licences are tracked under
   drawn. Mutations: the tip mapped through the fit but not the crop; the
   tip taken once at onset.
 
+> **Built 2026-11-03 (phase 1, lane D's third piece, with M19's gated
+> read).** `0954b3d` and `2bb706d` (the always-on plan-shape case and
+> M19's gated read), then `f8d74ee` (phase 1's render cases and `SHAPES`'
+> graphic overlay, `tests/oldestFfmpeg.test.ts`) and `683a6f0` after two
+> critics (the box route's 1 px overdraw fixed in `graphicBox`, the (box)
+> case made the plan's strict bar, `P1_MARGIN` 16). Pushed in one push
+> ending at `683a6f0` (2026-11-03) with the rest of lane D (`6592a38`,
+> `69c2340`, `0954b3d`, `2bb706d`, `f8d74ee`, `683a6f0`). At `683a6f0`
+> the full suite on the Mac is 325 files passed and 5 skipped (330),
+> 4,625 tests passed and 64 skipped (4,689), 207 s, typecheck 0 (the
+> workflow's own run, exits read from files); 88 more tests than at
+> `8acf930` (4,537 passed). Every other figure is from the four commits'
+> messages; line numbers were read at `683a6f0`.
+> CI: CI-LINE-PENDING
+> - **The file**, `tests/integration/graphic.int.test.ts` (1,395 lines),
+>   14 cases: phase 0's three, kept whole; phase 1's nine (`:791`); the
+>   always-on plan-shape case and M19's gated read (`:1184`, `:1392-1394`).
+>   On the Mac without `FORGE_GRAPHIC_FRAMES`: 13 passed, M19's skipped
+>   with its reason in the suite's name and one stderr line.
+> - **Phase 1's render cases** (`f8d74ee`, `683a6f0`). The constants are
+>   hand-derived (`:416-470`): `P1_SPEC`, a counter, 2 s, beats 0.5 and
+>   1.0, `place: { auto: false, box: { 0.1985, 0.3015, 0.5, 0.25 } }`,
+>   whose place lands on odd pixels at both shapes (`P1_PLACE_PX`: 71,193
+>   180×160 at 9:16 360×640, 127,109 320×90 at 16:9 640×360), so
+>   `graphicBox` snaps every side outward (`P1_BOX_PX`: 70,192 184×164
+>   and 126,108 324×94 since `683a6f0`; 182×162 and 322×92 before);
+>   `P1_MOVING` 46, `P1_ARRIVALS` 15 and 30, `P1_EXIT` 51; `P1_LEVELS` 6
+>   (the plan's 5 levels, `toBeLessThan(6)`); `P1_MARGIN` 16 (`:459`);
+>   `P1_EDGE_PX` 1. The fake `Bakers.graphic` (`p1Bakers`, `:525`): moving
+>   frame i fills the place rect, scaled to the export, with grey 20 +
+>   15·(i mod 12), white on an arrival frame, transparent outside, as
+>   RGBA PNGs written by hand; on the box route cut to `graphicBox`'s box;
+>   `'null'` answers null. The project (`p1Project`, `:574`): a red 9:16
+>   shot on V1, the graphic clip on V2 as the store adds one
+>   (`drawnGraphicAsset`, `graphicExitKeys`); `p1Export` (`:610`) runs
+>   `bakeForExport` at the shape, then `buildRenderPlan`, then the bundled
+>   ffmpeg; `planFrames` (`:635`) reads the plan's own frames before the
+>   encoder (`[vout]` to raw yuv420p). The nine cases: (1) the counts,
+>   hand-derived; (2) each route asked once at the export's shape, 46
+>   PNGs written (= `graphicMovingFrames`), the box route's asset
+>   carrying `frames.box`, the canvas route's none; (3) the base, red in
+>   the shot and black beside it at 16:9, all 105 frames; (4) every frame
+>   by both routes (`683a6f0` decodes the canvas route too): red before,
+>   grey(i) or white on each moving frame, each arrival white over the
+>   whole inside and the frame before it grey(a − 1), grey(45) held to
+>   clip frame 51, the exit's mean distance from the base falling every
+>   frame (9:16: 136.0, 130.0, 114.7, 91.9, 67.6, 42.1, 20.7, 4.3, 1.0;
+>   16:9: 141.1 … 0.7), the base after, and outside the box the base on
+>   every frame; (5) frames sampled at (f − 0.25)/fps equal the decoded
+>   frame f exactly, eleven per shape (`P1_SAVED`, `:789`); (6) (box) the
+>   grey's first and last columns and rows in luma within 1 px of the
+>   spec's box at both shapes by both routes; (7) (box) the two routes'
+>   plan frames equal on all 105 frames at both shapes and the exports'
+>   `framemd5` equal; (8) a null bake: `onError` says "g: the graphic
+>   could not be drawn", the clip is dropped, the export `framemd5`-equal
+>   to the base's; (9) the README, `tests/output/graphic/phase1/README.txt`.
+> - **Measured on the Mac** (darwin-arm64, the bundled 4.4 build
+>   `92718-g092cb17983`): every case passes at `683a6f0`. **The (box)
+>   case is met there**: the two routes' plan frames equal on every frame
+>   and the exports `framemd5`-equal at 9:16 and 16:9, every edge at 0 px
+>   on both routes. At `f8d74ee` they were not: the exit geq's clamp to
+>   w − 2 and h − 2 drew the box route's graphic a pixel wider and taller
+>   (39,893 plan-frame samples apart at 9:16, 36,066 at 16:9, all in the
+>   box's last column or row; `framemd5` apart on 60 and 105 of 105), and
+>   `f8d74ee`'s case 7 recorded it as a finding; `683a6f0` fixed it in
+>   `graphicBox` and made case 7 strict (§6.3's "The box", corrected;
+>   `EFFECTS.md` §61, "geq's w − 2 clamp and the box route's extra
+>   edge"). **The smear H.264 leaves at an edge**, the worst inside
+>   reading by its distance from the box's edge on the 9:16 box export: 8
+>   levels at 8 px, 5 from 9 to 14, 3 at 16, 2 at 18; at 16:9, 2 from 9.
+>   At `P1_MARGIN` 10 (`f8d74ee`) the 9:16 worst was exactly 5 of the 5
+>   allowed; at 16 it is 3 inside and 3 outside at both shapes and on
+>   both routes. The edges are still read in luma 18 px either side, so
+>   placement loses no check.
+> - **M19's gated read** (`0954b3d`, `2bb706d`; `:1086-1394`). Skipped
+>   without `FORGE_GRAPHIC_FRAMES`; with it, per distinct PNG and colour
+>   (#202830, #f2efe7): a lossless flat clip (x264, qp 0); the plan's own
+>   graph with its outputs swapped for raw yuv420p and `-vsync
+>   passthrough`, read before the exit's first key; the reference, the
+>   same PNG over the same frame at 4:4:4; `strokeLines` on the PNG, then
+>   `chromaAlong` per line. Guards that the two sides are one frame: U and
+>   V within 1 away from the ink, the ink's Y within `INK_LUMA_LEVELS` 2
+>   (`:1086`), the reference's U and V within `REFERENCE_LEVELS` 1
+>   (`:1088`) of the PNG converted alone. It measures and prints the
+>   widths without passing or failing them, into `tests/output/graphic/m19/`.
+>   The file throws at load when the folder lies inside
+>   `tests/output/graphic` (`:51-62`, case-blind on darwin and win32),
+>   which it empties first. Its figures are §6.15's phase-1 note.
+> - **The always-on case** (`:1186`): the plan for a baked graphic
+>   carries, on the sequence's one `[1:v]` segment, `format=yuva420p` and
+>   the exit's `geq` once each, its overlay `:format=yuv420:` once, and
+>   `[vmix]format=yuv420p[vout]` once, so a plan that drifts fails here
+>   and not silently in the gated read.
+> - **`SHAPES`' graphic overlay** (`tests/oldestFfmpeg.test.ts`, "Existing
+>   tests that change" above): the shape and its reach test, and the
+>   `TOO_NEW` row for geq's `interpolation`.
+> - **`tests/graphicDrawList.test.ts`** (`683a6f0`, 26 cases): the five
+>   hand-derived boxes moved by 2 on the far sides (52×52, 4×4, 14×14,
+>   16×84 and 52×52; the rising entrance's bound by 4), and a case "keeps
+>   two transparent columns past the ink's right edge and two rows below
+>   its bottom" (even, odd and fractional ink; left and top flush; the
+>   frame's edge clamping, 1000,1850 79×69 and 78×68 → 80×70).
+> - **Mutations**, each put back cmp-equal. The plan's four: the export
+>   baking at the project's shape (`exportBake.ts`; four cases, e.g.
+>   16:9 frame 15 outside the box 237 levels off), a null bake left on
+>   the edit's asset (the null case: the export fails on `-i ''`), the
+>   hold baked (`frame.ts`; 60 PNGs not 46, clip frame 46 off grey(45)),
+>   and (box) an odd x (`graphicBox` returning x0 + 1: the routes differ
+>   at Y x 70, as the overlay rounds x 71 down to 70 for yuv420; the
+>   1 px edge check passes, as this section expects). And: x floored to
+>   an odd value with an odd width makes the render itself fail ("Failed
+>   to configure input pad on Parsed_pad_13"), so the even width is
+>   load-bearing; `identityPlaced` false, the reach test; `holdFilter`
+>   ending `,sgn(0)`, the `TOO_NEW` scan; `saveFrame` at (f + 0.5)/fps,
+>   the sampling case. `683a6f0`'s nine: the pad removed (from both, x
+>   only, y only: five tests each, case 7 at 679, 320 and 360 samples on
+>   frame 15), the pad removed with `:interpolation=nearest` (the `TOO_NEW`
+>   row on two shapes, case 2, case 7 at 19,774 U and V samples), `:i=n`
+>   with the pad kept (`TOO_NEW`), the odd x (eight tests), the exit's
+>   alpha replaced rather than multiplied (four, 300,336 samples), the
+>   hold baked (six), `-start_number 1` (three).
+> - **Where it differs from the plan, and why.** The fake calls
+>   `graphicBox` (with a one-item drawer read for its bounds only), where
+>   this section says it needs none: so the box the plan overlays is the
+>   production one and "(box) an odd x" is a mutation of `drawList.ts`.
+>   The canvas route is driven by the fake's region, not by un-placing
+>   the clip (a transition or a mask changes the graph for reasons of its
+>   own). "Outside the box" is read against the base's colours (black
+>   beside the shot at 16:9), with `P1_MARGIN` from every edge, where
+>   this section gives no margin and H.264 needs one. The null bake is a
+>   case of its own. The box's `framemd5` equality, a proposal here, held
+>   only after the fix above.
+> - **Open.** The Windows build's run is CI's: every case runs on both
+>   runners, the Windows one on the 2018 ffmpeg, and the (box) case's
+>   equality there is unread until the CI line above is filled (the
+>   `f22fcd4` source says geq clamps there exactly as on the Mac). Not
+>   added: a second spec with even edges touching the frame's right edge
+>   (a critic's; the clamp is covered in node by `graphicDrawList`'s new
+>   case, and a second spec doubles the file's export time), left to the
+>   plan's owner. Two concurrent runs share `tests/output/graphic/` and
+>   empty each other's (a critic's note; a workflow matter, the file
+>   unchanged). M19's read on both machines over the development app's
+>   PNGs is yours.
+
 #### Census rows
 
 The Transcript tile's "Graphics", "Find graphics in this clip", "Keep",
@@ -12595,12 +13054,30 @@ annotations.
   in, 2026-10-31; lane C's `graphicCanvas.ts`, whose
   `graphicFrameCanvases` and `bakeGraphicSequence` the check drives, is
   in, 2026-11-01 (`b610c91`, `1ea9a96`). It waits on lane D's
-  `primitives` half, then your runs.)
+  `primitives` half, then your runs.) (2026-11-03: lane D's half is in,
+  `6592a38` and `69c2340`, with `pathLength` and `strokes`, `0954b3d` and
+  `2bb706d`. On the harness page in the Browser pane's Chrome 152, not
+  the app, all six primitive cases pass this bar, three runs: the canvas
+  route's PNG against the preview max 0; the box route's within the bar,
+  a handful of edge pixels apart that vary from run to run, mean at most
+  0.001 over the ink; the held end max 0; alpha outside `graphicBox` 0;
+  drawn twice max 0; the box route baked twice 46 of 46 PNGs
+  byte-equal. M8 and M19 read in part there and on the Mac's ffmpeg, M8
+  passing at 0.125 or at 0.25 by which paths it reads and M19 met by no
+  width; both decisions open; §6.15's phase-1 note. Not met until your
+  runs below.)
 - **The Indic render check** (§6.11), through `paintDrawList2d`, after
   §6.20's fonts are named first, on the Mac and the Surface; mutation-checked
   once (a per-code-point painter fails it). (Waits: `paintDrawList2d` is
   built, `a82cd43`, and the fonts are in, `ae3e48f`; the check needs lane
-  D's harness half, then your runs on both machines.)
+  D's harness half, then your runs on both machines.) (2026-11-03: the
+  harness half is in, `6592a38` and `69c2340`; in the pane's Chrome 152
+  the ten clusters through the painter equal `drawTextOnto` (max 0) and
+  differ per code point, and the per-code-point mutation fails it, all
+  ten; the two sites read SEEN with the Noto faces given by hand, "cannot
+  tell" with the page's empty catalogue. Not met until your runs on both
+  machines and your eye on the sheet it hands back; §6.11's Indic
+  Built note.)
 - `graphicPaint`: no Hindi or Telugu string drawn in pieces smaller than a
   word (or a cluster, where M3 allowed it), mutation-checked by `Array.from`.
   (Met 2026-10-30, `a82cd43`: the shaped-script cases under three styles,
@@ -12614,10 +13091,45 @@ annotations.
   `fa4ddc3` (pushed as `8acf930`):
   the export's graphic branch and the box route, checked so far through
   `buildRenderPlan`'s text and fake bakers, not a rendered frame; §6.3's
-  box route Built note.)
+  box route Built note.) (2026-11-03: written, `f8d74ee` and `683a6f0`,
+  nine cases; met on the Mac's 4.4 build, the (box) case's two routes
+  `framemd5`-equal at both shapes once `graphicBox` kept two transparent
+  columns and rows on its far sides, §6.3's "The box". The Windows build's
+  reading is the CI line in §6.11's render-check Built note, unread when
+  this was written.)
 - Not a bar, recorded with it (2026-11-02): nothing in the app makes a
   graphic clip until §6.6's panel, so no phase-1 bar is read through the
   app's own UI; the harness drives `graphicCanvas.ts` directly.
+- **Phase 1's state, 2026-11-03.** Built and pushed, every lane of
+  §6.19's phase 1 (the head, D8, A, D10, B, C and D, the last as
+  `683a6f0`): the build's side of this bar is closed. Met by the build:
+  `graphicGuards`, `graphicPaint` and `graphicMotion` (above); the
+  harness's `primitives` check passing, and its phase-1 Indic readings
+  as expected, in Chromium on the Mac, in the Browser pane (not the
+  development app); `graphic.int`'s
+  phase-1 cases frame-exact on the Mac's build, the Windows build pending
+  the CI line. The full suite at `683a6f0` on the Mac: typecheck 0; 325
+  files passed and 5 skipped (330), 4,625 tests passed and 64 skipped
+  (4,689), 207 s (the workflow's own run, exits read from files).
+  **Yours, which the bar names**, in `npm run dev`'s DevTools console on
+  the Mac and the Surface, reloading first: `await
+  window.__forgeGraphicCheck({ primitives: true })`, `({ indic: true })`,
+  `({ pathLength: true })` (the Mac) and `({ strokes: { widths: [1, 2, 3]
+  } })`; M13's `framemd5` of each primitive case's two sequences over the
+  patterns the summary prints, and the Mac's against the Surface's; the
+  Indic eye check of the sheet `indic` hands back, saved to
+  `tests/output/graphic/indic-paint/whole.png` beside the libass sheets
+  after a `graphic.int` run, and the per-code-point painter mutation once
+  on the Mac; M19's read, `FORGE_GRAPHIC_FRAMES="<the folder strokes
+  prints>" npx vitest run tests/integration/graphic.int.test.ts`, on both
+  machines. **The plan owner's**: M8's reading (0.125 or 0.25) and M19's
+  fix (§6.15's phase-1 note). Also open and yours, not phase 1's bar:
+  M21 and the beat-frame allowance window. Unmeasured, which your first
+  runs answer: whether Electron's `contextBridge` lets the check wrap
+  `window.forge` (if not, it reads the files and says so), the app's CSP
+  against the module worker, and every Windows reading but CI's. When
+  these are in, phase 1's exit is read here and phase 2 starts with T3's
+  typed stub of `applyGraphics`, then T1 (§6.19).
 
 **Phase 2.** §6.12 as written on 2026-10-05, for all nine shapes (§6.2):
 
@@ -13450,18 +13962,18 @@ itself when it shows them wrong.
 | M5 | 43 | 0; you, the development app | `blur-rise` is offered when a ten-word blur-rise frame's p95 draw is no more than M1's p50 encode on the Surface, so blur at most doubles a frame's bake (proposal); otherwise `resolveGraphicStyle` maps it to `rise` (§6.5) |
 | M6 | 44 | 0 for its Indic and colour parts; 3 whole; you, the development app | Indic through a texture at 0.000 and colour within 2/255 under one colour setting: that setting is phase 3's. Neither: phase 3 is flagged at phase 0's exit and re-planned before it starts; phases 1-2 go on. The 1 px line (phase 3): within 2/255 over black and white, or the compositor's alpha settings change until it is; it is phase 3's exit |
 | M7 | 45 | 3, first, on the compositor's glow seam with both routes built behind it (§6.16; moved from phase 0 on 2026-10-21, above); you | `UnrealBloomPass` is the glow route if, on both machines, alpha outside the shape is 0 and the glow's alpha below 1; else the quad shader (§6.16's two passes). The route not taken is removed. The pmndrs leg is optional, run only from a scratch branch with the package added there and never merged; its result is recorded, and it stays out whatever it shows, because its peer range pins three below 0.187 (the research, §4.9) |
-| M8 | 46 | 1; you, the Mac | `STROKE_TOLERANCE` is the coarsest at which total length agrees with `getTotalLength()` within 0.1 % and every sampled point within 0.5 px at 1080 wide (proposal); our flattening stays node-pure either way |
+| M8 | 46 | 1; you, the Mac | `STROKE_TOLERANCE` is the coarsest at which total length agrees with `getTotalLength()` within 0.1 % and every sampled point within 0.5 px at 1080 wide (proposal); our flattening stays node-pure either way. (Measured 2026-11-03 in the Browser pane's Chrome 152, not the app, `0954b3d` and `2bb706d`: over all 23 paths the coarsest within the bar is 0.125, 0.25 failing on length alone at the four-cubic circles r = 20, 30 and 38, worst −0.1615 %; without the circles under r = 40, §6.3's open question, 0.25 passes, worst −0.0683 % at r = 40. Both readings print. Undecided, the plan owner's: whether M8's paths include those circles, so 0.125 or 0.25; `STROKE_TOLERANCE` unchanged. The note below) |
 | M9 | 47 | 1; node, anywhere. **Measured 2026-10-27** (`f38f971`; §6.13's Built note, `EFFECTS.md` §61) | `graphicMotion.test.ts` asserts the closed form within 1e-4 of the travel against its reference (§6.13) and prints the figures; a larger difference means the closed form is wrong, not the tolerance, only up to about ω = 5 rad/s at 24 fps with the reference as §6.13 specifies it (semi-implicit Euler, 1,000 substeps a frame, first order), whose own error at ω = 10, ζ = 0.5 reads 1.69e-4 at 24 fps. So the bar is asserted at ω = 4 (largest 5.19e-5, at 24 fps), and at ω = 10 the reference's halving with 2,000 substeps (corrected 2026-10-27, when the build measured it) |
 | M10 | 48 | 2, the perfect-freehand half only, from a scratch branch with perfect-freehand added there and never merged (as M7's pmndrs leg; the harness imports it by a DEV-only dynamic `import()`); you, Mac and Surface | only on a pass does a phase-2 commit add perfect-freehand to `main` with the marker painter and `MARKER_READY` (D7's order). `strokeLook: 'marker'` is offered (§16.60) only if one of the two draw-ons keeps the tapered end's shape from frame to frame behind the moving tip (mean 0 outside the last 5 % of length, proposal) and preview = export ≤ 1/255. The rough.js half is not run in step 3 (§16.60: "rough.js not now") |
 | M11 | 49 | only if M1-M2 fall short; you | a raw RGBA path is then planned as its own change, outside step 3's days, using `overlay`'s `alpha=premultiplied` only if M4 found it on Windows |
 | M12 | 50 | 3; you | the fastest readback at p50 on the Surface that keeps straight alpha through to the PNG is phase 3's bake; `drawImage` stays unless another is at least twice as fast (proposal, §6.16) |
-| M13 | 51 | 1 (the primitives' spec), 3 (a 2.5D counter and a screen card); you | two bakes on one machine must be `framemd5`-equal, or the bake is not deterministic and the phase does not exit. The Mac-against-Surface mean difference is recorded as the golden tolerance; no CI check compares pixels across machines |
+| M13 | 51 | 1 (the primitives' spec), 3 (a 2.5D counter and a screen card); you | two bakes on one machine must be `framemd5`-equal, or the bake is not deterministic and the phase does not exit. The Mac-against-Surface mean difference is recorded as the golden tolerance; no CI check compares pixels across machines. (Phase 1's harness half built 2026-11-02, `6592a38` and `69c2340`: `primitives` bakes each case twice on the box route and prints the patterns through `m13Line`; on the harness page 46 of 46 PNGs byte-equal per case, which is not this row's run. The `framemd5` run and the Mac against the Surface are still yours. The note below) |
 | M14 | 52 | 2; you, blind, on your clips, with `curves: { names, clipId }` (§6.10, §6.11; the key returned in the result for you to save) | run on a counter, then a keyword and a callout (§6.10); the overall pick becomes the restrained presets' `motion.ease` in `GRAPHIC_STYLES`, a template's own differing pick its default (§6.13). Until then `expo-out`. The look rating follows it (§6.10) |
 | M15 | 53 | 2; you mark the onset frames into `tests/fixtures/graphics/onsets.json` (`{ assetId; marks: { word: number; frame: number }[] }`, proposal), and `scripts/measure-onsets.mjs` (proposal) reads it against the transcript's `startMs` | median error within one frame at 30 fps: beats as §6.8 writes them. More: an onset refinement is planned as its own change, outside step 3's days (proposal) |
 | M16 | 54 | 2; node | a template whose seconds do not hold its longest fixture label gets its seconds raised in §6.2's table or its label capped, decided in phase 2 |
 | M17 | 55 | 2; you count | `GRAPHICS_PER_MINUTE` = the median graphics per minute of the five clips you call pro, rounded down (proposal); null until counted. Zooms and sounds per minute are recorded beside it |
 | M18 | 56 | 2; you, the Mac: `mix.wav` is the audio of an export of one of your clips with a graphic's sound on a beat, exported by the app with the sound on (`ffmpeg -i <export> -vn mix.wav`), one per sound | the row's "pop" is `pop_bubble.wav`, a candidate role (§6.14). Each role's level under speech is set where you judge speech intelligible; the integrated loudness and the momentary maximum are recorded; `GRAPHIC_SOUND_DB` and `GRAPHIC_SOUND_CAP` are revised with them |
-| M19 | 57 | 1; you write the PNGs in the development app, then a node read | `STROKE_MIN_PX` is the smallest of 1, 2 and 3 px at 1080 wide whose centre line keeps U and V within 8 levels of the PNG's after the `format=yuva420p` overlay (proposal); the research's starting value is 2 px. The read is a gated case in `graphic.int` over the folder the bake wrote (`FORGE_GRAPHIC_FRAMES=<folder>`, proposal) |
+| M19 | 57 | 1; you write the PNGs in the development app, then a node read | `STROKE_MIN_PX` is the smallest of 1, 2 and 3 px at 1080 wide whose centre line keeps U and V within 8 levels of the PNG's after the `format=yuva420p` overlay (proposal); the research's starting value is 2 px. The read is a gated case in `graphic.int` over the folder the bake wrote (`FORGE_GRAPHIC_FRAMES=<folder>`, proposal). (Built and measured in part 2026-11-03, `0954b3d` and `2bb706d`, on the harness page's PNG and the Mac's 4.4 build: no width of the three is within the bar, 1 px U 63, 2 px 54, 3 px 34; the cause measured, the transparent pixels' black chroma averaged in by `format=yuva420p`, the exit geq's round trip up to 7 levels more. Undecided, the plan owner's: a width, the stroke's colour bled into its transparent neighbours, or a different bar; `STROKE_MIN_PX` unchanged. The note below) |
 | M20 | 58 | 3; you | legible at rest and its moving frames within M1's whole-hold budget: the card ships as §6.16 plans it. Legible but slow: tilt-in only, no pull-back. Not legible: the card is not offered, and a recording gets the dim and graphics only. The run also records the card's hand-off (frame `L` of the card against the export's frame `L` without the card), whose bar is 2/255 mean (proposal, §6.16) |
 | M21 | 59 | 0, any time before phase 2's counter; you, with your Hindi clips | the counter's Hindi digits follow what the installed model writes (Devanagari or ASCII); the share written as words, which §16.11 drops in v1, is recorded beside it |
 | M22 | 60 | 0; you, the development app on the Mac and the Surface | **Shaped on both** (every cluster's frames differ, every conjunct narrower, the eye agrees with the libass complex sheet): "text has to be canvas 2D" holds and phase 1 starts; §6.20's fonts still land before phase 1's Indic check, so both machines draw the same letters (§16.63). **A cluster unshaped, and the font that drew it lacks the script** (its width equals a missing-glyph box's, or no candidate font matches): §6.20's fonts move into phase 0, M22 runs again with them named first, and phase 1's text work starts when it passes. **Unshaped with a font that has the script**: the shaper is not running, so the research's choice of painter (its §4.2) reopens as a decision for you (the next free §16 number) before any graphic draws Indic text. While either cause is open, no phase-1 commit that draws text lands; the rename, the guards, the motion module and the stroke may (this sentence is the one statement of it; §6.3 and §6.12 point here). The font each cluster resolved to is found by drawing it in each installed candidate face named explicitly; a candidate counts as installed only if a Latin probe drawn in it differs from the same probe in a family that does not exist |
@@ -13978,7 +14490,60 @@ values, dated, as the steps above carry their Built notes (it did,
 > Built notes. Then §6.20's D8 half (`e5c47ac`, 2026-10-27, §6.20's Built
 > note) and lane A, in seven commits from `f38f971` to `ae6167c`
 > (2026-10-27/28; the Built notes in §6.13, §6.3 and §6.5). Lanes B–D and
-> §6.20's D10 half remain.
+> §6.20's D10 half remain. (Since: D10's half, 2026-10-29/30, lane B,
+> 2026-10-30/31, lane C, 2026-10-31 to 11-02, and lane D, 2026-11-02/03;
+> §6.19's table names each lane's commits.)
+>
+> **Phase 1's measurements, as read so far (2026-11-03).** Lane D built
+> the harness options M8, M13 and M19 are run with (§6.11's three lane-D
+> Built notes) and took a first reading of M8 and M19 where the sandbox
+> can: the harness page in the Claude desktop app's Browser pane (Chrome
+> 152.0.7977.167, page visible, not Electron 44) and the Mac's bundled
+> 4.4 ffmpeg. None of it is the development app's run the rows ask for,
+> and nothing was decided.
+>
+> - **M8** (row 46; `0954b3d`, `2bb706d`; `EFFECTS.md` §61, "flattenPath
+>   against SVGPathElement"). The worst of 23 paths per tolerance, length
+>   then point: 1, −0.6437 % and 0.740 px; 0.5, −0.3885 % and 0.370 px;
+>   0.25, −0.1615 % and 0.184 px; 0.125, −0.0688 % and 0.092 px; 0.0625,
+>   −0.0409 % and 0.041 px. The coarsest within M8's bar is 0.125; at
+>   0.25 the length fails at the four-cubic circles r = 20, 30 and 38 and
+>   passes at 39, 40 and from 50 up. Without the circles under r = 40
+>   (`M8_OPEN_BELOW`, §6.3's stroke note's open question) the coarsest is
+>   0.25 (worst −0.0683 % at r = 40, 0.183 px). Chrome's own
+>   `getTotalLength()` reads +0.014 % over 2πr on every circle, so about
+>   −0.010 % of each figure is the browser's. Ours 0.6 ms over the 23
+>   paths, the browser's 57.3 ms. **Left: your run** in the development
+>   app on the Mac, both readings printing; **the plan owner's choice**,
+>   whether M8 includes the circles under r = 40 (0.125) or not (0.25).
+>   `STROKE_TOLERANCE` is 0.25 until then.
+> - **M13** (row 51). The `primitives` option bakes each of its six cases
+>   twice on the box route and once on the canvas route and prints the
+>   sequences through `m13Line` wherever they are files (`6592a38`,
+>   `69c2340`); on the harness page, whose bridge writes no file, each
+>   case's two bakes were 46 of 46 PNGs byte-equal. **Left: yours**, the
+>   `framemd5` of each case's two sequences in the development app on
+>   each machine, and the Mac's frames against the Surface's for the
+>   golden tolerance.
+> - **M19** (row 57; `0954b3d`, `2bb706d`; `EFFECTS.md` §61, "Stroke
+>   chroma through yuva420p"). The `strokes` option's PNG from the
+>   harness page, read by `graphic.int`'s gated case through the plan's
+>   own graph on the Mac: the centre line's U and V against the 4:4:4
+>   reference, 1 px U 63 V 35, 2 px U 54 V 30, 3 px U 34 V 19, all over
+>   the bar's 8; the background, the ink's Y and the reference read 0.
+>   The cause measured: all 2,065,202 transparent pixels decode as RGB
+>   (0, 0, 0) and `format=yuva420p` averages that black into the stroke's
+>   chroma (bled with the stroke's colour, the 2 and 3 px horizontals
+>   read 0, 1 px U 32); the exit geq's round trip adds up to 7 levels
+>   (58/51/22 without it, against 63/54/29, on the node-made PNGs).
+>   **Left: yours**, the strokes PNGs from the development app and
+>   `FORGE_GRAPHIC_FRAMES` on the Mac and the Surface (the 2018 build's Y
+>   and reference figures are unmeasured; `INK_LUMA_LEVELS` 2 leaves it a
+>   level of room); **the plan owner's**, M19's fix: a width, the colour
+>   bled into the transparent pixels before the encode, or a different
+>   bar. `STROKE_MIN_PX` is 2 until then.
+> - **Not phase 1's to measure here, still open**: M21 (row 59) and the
+>   beat-frame allowance window (§6.13's "Open, yours"), both yours.
 
 ### 6.16 Phase 3 — The three.js compositor and 2.5D
 
@@ -14916,7 +15481,7 @@ piece table does (§6.3's, §6.16's, §6.17's, §6.18's).
 | 1 | A | `motion.ts` with `graphicMotion` (§6.13); `stroke.ts` with `graphicStroke` (0.5 of §6.3); `style.ts`'s first half with `graphicStyle` (§6.5) (built 2026-10-27/28: `f38f971`, `862cf1b`, `ae6167c`; `69d2d6e`, `2074f08`; `b965cda`, `0d603a8`) | 1 + 0.5 + 0.5 | the head |
 | 1 | B | `drawList.ts`, `items.ts` (`DrawOut`, `unitFor`, `CLUSTER_SCRIPTS`, the drawer seam), `templates/index.ts` with `graphicDrawList` (1 of §6.3); `paint.ts` with its `PaintOptions` and `graphicPaint` (0.75); `frame.ts` and `targets.ts` with `graphicFrame`'s first half (0.25) (built 2026-10-30/31, each piece read by two critics before the next: `4b68c45`; `a82cd43`, `d822c56`; `4196d43`, `0c8911f`; pushed as `0c8911f`; §6.3's three Built notes) | 2 | the head; §6.20's two halves (`unitFor` reads `shapedScript`; shaped text items name `INDIC_FONTS`); M3 for `CLUSTER_SCRIPTS` (in, 2026-10-27); A's `stroke.ts` before `paint.ts` |
 | 1 | C | `graphicCanvas.ts` (preview, bake, frames; the worker back-end only if M2 asks, which it did on 2026-10-27) (0.75 of §6.3); the export branch with its own catch line, `Bakers.graphic` and every literal of §6.11, `exportBakers.ts`, the store's `addGraphicClip`, `setGraphic`, `rebakeGraphic`, the trim and split rules, Preview's branch and sweep, (box) `identityPlaced`, with `graphicStore` (0.5); the three store arms (`rebakeGenerated`, `placeCopies`, `rebakeFollowed`) and `graphicGuards`' wiring half (0.25 of §6.4) (built 2026-10-31 to 11-02, each piece read by two critics before the next: `b610c91`, `1ea9a96`; `a273729`, `fa4ddc3`; and `8acf930`, the strips' shot rule over `drawsItself`, which §6.4's head-lane note had left open; pushed as `8acf930`; §6.3's three lane-C Built notes and §6.4's) | 1.5 | B's draw list and painter; M1 and M2 (in, 2026-10-27) |
-| 1 | D | the harness's `primitives` and Indic halves (0.25 of §6.3); `pathLength`, `strokes` widths, `graphic.int`'s phase-1 cases, `SHAPES`' graphic overlay (§6.11's half) | 0.25 + 0.5 | C; §6.20's D10 half |
+| 1 | D | the harness's `primitives` and Indic halves (0.25 of §6.3); `pathLength`, `strokes` widths, `graphic.int`'s phase-1 cases, `SHAPES`' graphic overlay (§6.11's half) (built 2026-11-02/03, each piece read by two critics before the next: `6592a38`, `69c2340`; `0954b3d`, `2bb706d`; `f8d74ee`, `683a6f0`, the last with the lane's one production change, `graphicBox`'s two far-side columns and rows, §6.3's "The box"; pushed as `683a6f0`; §6.11's three lane-D Built notes) | 0.25 + 0.5 | C; §6.20's D10 half |
 | 2 | T3, first | the typed stub of `applyGraphics` (`KeptGraphic`, the signature, §6.6), committed before T2's wiring starts | inside T3's 3 | phase 1's exit |
 | 2 | T1 | `GRAPHIC_TEMPLATES`' values first (the others read the field modes), then the layout, the eight draw files, `numbers.ts`, `tree.ts`, with `graphicFrame`'s second half, `graphicHolds`, `graphicTree` (§6.2); the style's second half (§6.5) | 4 + 0.5 | phase 1's exit; M21 before the counter |
 | 2 | T2a | `claims.ts`, then `validateGraphics.ts` with `checkGraphicData`, `claims` and the property test (§6.7) | 3 | T1's values |
@@ -14940,7 +15505,10 @@ phase 2's counter on M21. M22 gates phase 1's text work as §6.15's M22 row
 says. M4 gates nothing in step 3: nothing probed is emitted. As measured
 2026-10-27 (§6.15): M1, M2, M3, M5 and M6's phase-0 parts have answered
 and M22 found both machines shaping, so of these only M21 (phase 2's
-counter) and M7 (phase 3's glow) still gate.
+counter) and M7 (phase 3's glow) still gate. (2026-11-03: every phase-1
+lane is built and pushed, through `683a6f0`; phase 1's exit, §6.12, now
+waits on your runs, M8's and M19's decisions among them, and gates phase
+2.)
 
 **Where §6.20 falls.** Outside step 3's days, inside phase 1's run:
 
@@ -17451,6 +18019,15 @@ H11, and H12 again, in phase 4.
   colour within 1 level); colour management on, the one setting with
   Indic exact (max 0) on both, is phase 3's. Phase 3 is not flagged. The
   1 px line and M6 whole are phase 3's.
+- **Row 46 (M8): measured in part 2026-11-03** (`0954b3d`, `2bb706d`;
+  §6.11's lane-D harness Built note, §6.15's M8 row, `EFFECTS.md` §61,
+  "flattenPath against SVGPathElement"), in the Browser pane's Chrome
+  152.0.7977.167 on the harness page, not the app: over 23 paths the
+  coarsest tolerance within the bar is 0.125 (0.25 fails on length alone,
+  −0.1615 % at the r = 30 circle); without the four-cubic circles under r
+  = 40, §6.3's open question, it is 0.25 (worst −0.0683 % at r = 40).
+  Open: the run in the development app on the Mac, and which reading
+  sets `STROKE_TOLERANCE` (unchanged, 0.25), the plan owner's.
 - **Row 47 (M9): measured 2026-10-27** (`f38f971`; §6.13's Built note,
   §6.15's M9 row, `EFFECTS.md` §61), in node on the Mac: the closed-form
   spring within 1e-4 of the travel of semi-implicit Euler at 1,000
@@ -17464,6 +18041,22 @@ H11, and H12 again, in phase 4.
   take 1.01–3.03 s at the box and pool 4 and 0.43–1.30 s on four workers
   on the Surface, under the row's 10 s. §13's rawvideo row stays
   "measurements only".
+- **Row 51 (M13): not measured** (phase 1's half). Its harness half is
+  built (`6592a38`, `69c2340`): `{ primitives: true }` bakes each case
+  twice on the box route and prints, through `m13Line`, the two
+  sequences' patterns and the canvas route's beside them, wherever they
+  are files. On the harness page each case's two bakes were 46 of 46
+  PNGs byte-equal (§6.11's lane-D harness Built note); the `framemd5`
+  run over the app's files, and the Mac against the Surface, are yours.
+- **Row 57 (M19): measured in part 2026-11-03** (`0954b3d`, `2bb706d`;
+  §6.15's M19 row, `EFFECTS.md` §61, "Stroke chroma through yuva420p"):
+  the strokes PNG from the harness page's bake read through the plan's
+  chain by `graphic.int`'s gated case on the Mac's 4.4 build: no width of
+  1-3 px keeps its centre line within 8 levels (1 px U 63, 2 px 54, 3 px
+  34); most of it the transparent pixels' black chroma, bled in by
+  `format=yuva420p`. Open: the PNGs from the development app and the read
+  on both machines (yours), and the fix, the plan owner's; `STROKE_MIN_PX`
+  unchanged, 2.
 - **Row 60 (M22): measured on both machines; decided 2026-10-27, shaped
   on both.** On the Mac its numeric halves pass in Electron 44.3.0 with
   the Mac's Kohinoor faces (every conjunct narrower than its letters,

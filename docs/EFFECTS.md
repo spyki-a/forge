@@ -8496,7 +8496,7 @@ suite and CI are the orchestrator's.
   and the preview's recompute on a long followed clip while editing.
 - **Burned-in text** (§5.3): after 1g.
 
-## 61. Graphics: the forks measured (phase 0 of step 3, then phase 1's first) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22), and on the Surface the libass run and the development app (2026-10-27); in node, phase 1's M9 (2026-10-27) and the stroke's flattening (2026-10-28); and D10's three readings, the Noto fonts' provenance, the Mac's libass against the fontsdir, and `document.fonts.check` (2026-10-29); and under painter A, Chrome 152's canvas (negative radii, a 0-side canvas, `globalAlpha`) and, in node, the draw list's mixed faces and bounds and the frames' edges (2026-10-30/31); and lane C's worker encoder and measureText in the pane's Chrome 152 (2026-11-01) and, in node, the box route under crop, mask, matte and transitions (2026-11-02)
+## 61. Graphics: the forks measured (phase 0 of step 3, then phase 1's first) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22), and on the Surface the libass run and the development app (2026-10-27); in node, phase 1's M9 (2026-10-27) and the stroke's flattening (2026-10-28); and D10's three readings, the Noto fonts' provenance, the Mac's libass against the fontsdir, and `document.fonts.check` (2026-10-29); and under painter A, Chrome 152's canvas (negative radii, a 0-side canvas, `globalAlpha`) and, in node, the draw list's mixed faces and bounds and the frames' edges (2026-10-30/31); and lane C's worker encoder and measureText in the pane's Chrome 152 (2026-11-01) and, in node, the box route under crop, mask, matte and transitions (2026-11-02); and lane D's three, geq's w − 2 clamp on the box route, a stroke's chroma through `yuva420p` (M19 in part) and `flattenPath` against `SVGPathElement` (M8 in part) (2026-11-03)
 
 For `docs/CLIPS.md` §6.15 (step 3's phase 0, "Measure before relying"):
 pieces 0.1–0.3 were built on the evening of 2026-10-21 in seven commits,
@@ -10203,6 +10203,174 @@ lookup; and the plan reads `frames.box` only when it is at least 2×2
 same-size scale and pad, `tpad`. Read as filter text, not a rendered
 frame; the rendered box case is `graphic.int`'s, lane D's.
 
+### geq's w − 2 clamp and the box route's extra edge, 2026-11-03
+
+For `CLIPS.md` §6.11's lane D, its third piece: `f8d74ee` found it,
+`683a6f0` fixed it (the render check's Built note; §6.3's "The box",
+corrected). Measured on the Mac's bundled 4.4 build (`92718-g092cb17983`)
+through `graphic.int`'s phase-1 case, a red 9:16 shot with a graphic on
+V2 whose place box has every edge on an odd pixel, exported at 9:16
+360×640 and 16:9 640×360 by the box route and by the canvas route.
+
+- **The cause, in the source.** The plan's exit fade on a graphic is
+  `geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*(…)/255'`
+  (`src/shared/render/plan.ts:724`). geq's `getpix` samples bilinearly
+  with x clamped to w − 2 and y to h − 2: `libavfilter/vf_geq.c` at
+  `f22fcd4`, the Windows build's 2018-12-17 master (fetched from
+  raw.githubusercontent.com, 376 lines), reads `xi = x = av_clipf(x, 0, w
+  - 2); yi = y = av_clipf(y, 0, h - 2);` at `:91-92` on every call, and
+  its option table (`:58-72`) has the expressions only, no
+  `interpolation`. The Mac's 4.4 build has `interpolation`/`i`
+  (`-h filter=geq`: nearest or bilinear, bilinear the default).
+- **The probe** (`f8d74ee`, the Mac): an 8×6 RGBA gradient through an
+  identity geq comes out with alpha column 7 equal to column 6 (181, 181)
+  and row 5 equal to row 4 on every row, R likewise, and the same with
+  `format=yuva420p` before it; so the stream's last column is a copy of
+  the one before it and its last row of the row above, in all four
+  channels. With `:interpolation=nearest` the last column and row are
+  kept (211, 216).
+- **What it did to a graphic.** On the canvas route the stream's last
+  column is the frame's, where nothing is drawn. On the box route it is
+  the box's, and `graphicBox`, snapping outward from an odd ink edge,
+  left one transparent column and row there, which the copy filled with
+  ink: the box route drew the graphic 1 px wider at the right and 1 px
+  taller at the bottom than the canvas route and the preview. Before the
+  fix: the grey's right and bottom edges at +1 px on the box route on
+  every frame read, 0 px on the canvas route; the plan's own frames
+  before the encoder apart in 39,893 samples over 59 frames at 9:16 and
+  36,066 over 59 at 16:9 (Y, U and V), every one in the box's last column
+  (x 251 / 447) or last row (y 353 / 199), frame 74 (opacity 0) equal;
+  the exports' `framemd5` apart on 60 of 105 frames at 9:16 and 105 of
+  105 at 16:9 (one changed column moves x264's choices on other frames:
+  frame 14, before the clip, differs). Where the ink's edge is already
+  even, the copied column is the ink's own neighbour: invisible on a flat
+  fill, a pixel on an anti-aliased edge. Every keyed-opacity clip has the
+  same copy at the frame's edge, where it does not show.
+- **The fix** (`683a6f0`): `graphicBox` widens the box by `GEQ_EDGE_PX` =
+  2 transparent columns on the right and rows at the bottom after the
+  even snap, clamped to the frame (`src/shared/graphics/drawList.ts:89-90`,
+  `:158-159`, the reason in its comment, `:92-128`). The columns and rows geq copies
+  are then transparent; where the frame's edge clamps the box first, the
+  canvas route's stream ends there too, so both copy the same pixels; the
+  left and top need nothing (geq never clamps below 0). After it: the
+  two routes' plan frames equal on every frame at both shapes, the
+  exports `framemd5`-equal, every edge at 0 px on both routes, the boxes
+  70,192 184×164 and 126,108 324×94 (were 182×162 and 322×92).
+- **`interpolation=nearest` is not the fix** (`683a6f0`, the Mac, a
+  critic's claim run there): with the pad removed and `:interpolation=nearest`
+  appended to `plan.ts:724`, Y is equal but U and V are still apart in
+  19,774 samples over 59 frames at 9:16, and the exports' `framemd5` apart
+  on 60 of 105; and the 2018 build does not have the option. `TOO_NEW`
+  refuses it (`tests/oldestFfmpeg.test.ts:133`, `/\bgeq=[^;[]*?:(interpolation|i)=/`,
+  "after 2018-12-17 (not in vf_geq.c at f22fcd4)").
+
+The Windows build's half is read from its source, not run: CI's
+windows-latest runner is the one place `graphic.int`'s (box) case runs on
+it, unread until `CLIPS.md` §6.11's render-check Built note carries its CI
+line.
+
+### Stroke chroma through yuva420p, 2026-11-03
+
+M19 (`CLIPS.md` §6.15, row 57) in part: `0954b3d` and `2bb706d`, §6.11's
+lane-D harness Built note. The page half in the Browser pane's Chrome
+152.0.7977.167 on the harness page, not Electron 44; the node half on the
+Mac (darwin-arm64, the bundled 4.4 build) through `graphic.int`'s gated
+case, `FORGE_GRAPHIC_FRAMES=<folder> npx vitest run
+tests/integration/graphic.int.test.ts`, which runs `buildRenderPlan`'s own
+graph (the sequence's `format=yuva420p`, the exit's geq, `overlay` at
+`format=yuv420`, `format=yuv420p`) to raw yuv420p over a lossless flat
+clip of two colours (#202830 and #f2efe7), against the same PNG over the
+same frame at 4:4:4 (`format=yuva444p`, `overlay` at `format=yuv444`), and
+reads U and V along each line's centre line.
+
+- **The page half.** `{ strokes: { widths: [1, 2, 3] } }` bakes a
+  horizontal and a diagonal (slope 191/320) per width, butt-capped,
+  #2563eb, through `bakeGraphicSequence` on the canvas route: 16 PNGs of
+  16 moving frames, all byte-equal, wall 66.6 ms, drawn under scale 0.5
+  (the painter floors a width at 2 px, so each stroke is laid out twice
+  as long and wide and scaled about its origin); read back from the PNG,
+  horizontals 1.000, 2.000, 3.000 px, diagonals 0.983, 1.963, 3.000; the
+  painter's alpha against a native `lineWidth` max 1, 1, 0, coverage
+  equal to two decimals (1213.80, 2425.85, 3639.15).
+- **Through the plan's chain**, the centre line's U and V against the
+  4:4:4 reference, the largest over the four lines of each width:
+
+  | width | the bake's own PNG (`2bb706d`) | PNGs made in node (`0954b3d`) | within 8 |
+  |---|---|---|---|
+  | 1 px | U 63, V 35 | U 63, V 35 | no |
+  | 2 px | U 54, V 30 | U 54, V 30 | no |
+  | 3 px | U 34, V 19 | U 29, V 18 | no |
+
+  Away from the lines U and V agree within 0 on both colours (498,692
+  samples each), the ink's Y within 0 of the reference's (`2bb706d`'s
+  check, bar 2), and the reference's U and V on every crisp pixel within
+  0 of the PNG converted alone to yuv444p (bar 1). Per line on the dark
+  base (node PNGs): 1 px horizontal U 58, V 32; 2 px U 34, V 20; 3 px U
+  24, V 14; diagonals U max 49, 49, 27. The node PNGs are librsvg's
+  render of the same lines (horizontals identical to the bake's,
+  diagonals apart in anti-aliasing by alpha max 43, 27, 22).
+- **The cause, measured.** The bake's PNG decoded by ffmpeg: all
+  2,065,202 transparent pixels are RGB (0, 0, 0), the partial-alpha ones
+  the stroke's colour (37, 99, 235 ±1). `format=yuva420p` averages each
+  2×2 block's chroma, the transparent pixels' black with the stroke's.
+  **The bleed probe** (node PNGs, not committed): every pixel's colour set
+  to the stroke's, alpha kept, gives the 2 and 3 px horizontals U 0, V 0
+  on both colours; 1 px reads U 32 (half its pair is background, which no
+  1 px line escapes); the diagonals U max 36-41 at 1-2 px and 17-20 at 3
+  px (means 3.8-16), from the pairs their edges straddle.
+- **The geq round trip** (node PNGs, not committed): the plan's graph
+  with the exit's keys removed reads 58/51/22 against 63/54/29 on the
+  black-bleed PNGs, and nothing changes on the bled ones; so the exit's
+  RGB round trip, a second chroma subsample, adds up to 7 levels.
+
+So M19's bar as written (the centre line within 8) is met by no width
+from 1 to 3 px on this chain. `STROKE_MIN_PX` is unchanged at 2; whether
+the answer is a width, the stroke's colour bled into the transparent
+pixels before the encode, or a different bar is the plan owner's. The
+2018 Windows build's figures, its swscale included, are unmeasured.
+
+### flattenPath against SVGPathElement, 2026-11-03
+
+M8 (`CLIPS.md` §6.15, row 46): `0954b3d`, with `2bb706d`'s two readings;
+§6.11's lane-D harness Built note. `{ pathLength: true }` on the harness
+page in the Browser pane's Chrome 152.0.7977.167 (macOS, not Electron
+44): per path, an off-DOM `SVGPathElement`'s `getTotalLength()` and
+`getPointAtLength()` at 64 fractions of its own length against
+`flattenPath` and `strokeAt`'s tip at the same fractions of ours, per
+tolerance; bar `M8_BAR`, 0.1 % on the length and 0.5 px on every point.
+23 paths: four-cubic circles at r = 20, 30, 38, 39, 40, 45, 50, 100,
+200, 400 and 540, a line, `tests/graphicStroke.test.ts`'s S-curve, cubic,
+quadratic and mixed path, the primitives' stroke and the arrow paths of
+the head tests. The worst over the 23 per tolerance:
+
+| tolerance | length (worst, path) | point (worst, path) | bar |
+|---|---|---|---|
+| 1 | −0.6437 % (circle r=30) | 0.740 px (circle r=40) | fails |
+| 0.5 | −0.3885 % (circle r=20) | 0.370 px (circle r=20) | fails |
+| 0.25 | −0.1615 % (circle r=30) | 0.184 px (circle r=38) | fails |
+| 0.125 | −0.0688 % (circle r=20) | 0.092 px (circle r=20) | passes |
+| 0.0625 | −0.0409 % (circle r=30) | 0.041 px (S-curve) | passes |
+
+At `STROKE_TOLERANCE` 0.25 the length fails at r = 20 (−0.1614 %, 32
+pieces), 30 (−0.1615 %) and 38 (−0.1282 %), and passes at 39 (−0.0973 %,
+48 pieces), 40 (−0.0683 %) and from 50 up (−0.0404 % to −0.0101 %);
+points stay under 0.19 px everywhere. **Both readings** (`2bb706d`,
+`M8_OPEN_BELOW` = 40 marking the circles under r = 40 as `CLIPS.md` §6.3's
+open question): every path (23), the coarsest passing 0.125 and 0.25
+failing; without the open circles (19), the coarsest passing 0.25 (worst
+−0.0683 % at r = 40, 0.183 px) and 0.5 failing (−0.1610 %, r = 40).
+Chrome's own `getTotalLength()` reads +0.014 % over 2πr on every circle
+(+0.0146 % at r = 20, +0.0141 % at 540), where the Bézier circle itself
+is +0.0040 % (node, "The stroke's flattening" above), so about −0.010 %
+of each figure is the browser's. The line, the arrows and the corner
+paths agree exactly (0.0000 %, 0.000 px). Time over the 23 paths at
+0.25: ours 0.6 ms (the mean of 20 runs), the browser's 57.3 ms (once,
+from `createElementNS`), the page's clock grain 0.1 ms. At 0.125 the
+pieces grow: 56 at r = 20 (32 at 0.25), 64 at r = 30 to 50, 256 at 540
+(128), the mixed path 203 (136). `STROKE_TOLERANCE` is unchanged; which
+reading M8 takes is the plan owner's, and the run in the development app
+(Electron 44's Chromium) is the user's.
+
 ### What this settles
 
 1. **Both bundled builds have `tmix`, `overlay`'s `alpha=premultiplied`
@@ -10376,6 +10544,27 @@ frame; the rendered box case is `graphic.int`'s, lane D's.
     which on the box route is the box, so `identityPlaced` refuses them,
     the matte and every transition with them; a box under 2×2 is never
     read. A slide and a dissolve would have come out the same.
+24. **The box route draws what the canvas route draws, frame for frame,
+    on the Mac's build** (2026-11-03; "geq's w − 2 clamp and the box
+    route's extra edge" above; `683a6f0`): the exit geq's clamp to w − 2
+    and h − 2 copied the stream's last column and row, so a box ending
+    one pixel past the ink drew the graphic a pixel wider and taller;
+    `graphicBox` keeps two transparent columns and rows on the far sides,
+    and the two routes' exports are `framemd5`-equal at 9:16 and 16:9.
+    geq's `interpolation=nearest` is not a fix (U and V still apart) and
+    is not on the 2018 build. The Windows build's run is CI's.
+25. **No stroke of 1 to 3 px keeps its centre line within M19's 8
+    levels through the plan's chain** (2026-11-03, the Mac's build;
+    "Stroke chroma through yuva420p" above): 1 px U 63, 2 px 54, 3 px 34
+    on the bake's own PNG. The transparent pixels' black chroma averaged
+    in by `format=yuva420p` is most of it (bled, the 2 and 3 px
+    horizontals read 0), the exit geq's round trip up to 7 levels more.
+    Nothing is decided: `STROKE_MIN_PX` stays 2.
+26. **`flattenPath` meets M8 at 0.25 px everywhere but on the four-cubic
+    circles under r = 39** (2026-11-03, Chrome 152 in the pane;
+    "flattenPath against SVGPathElement" above): with them the coarsest
+    tolerance within the bar is 0.125, without them 0.25. Which reading
+    M8 takes is the plan owner's; `STROKE_TOLERANCE` stays 0.25.
 
 ### Still unmeasured, and whose
 
@@ -10400,7 +10589,10 @@ frame; the rendered box case is `graphic.int`'s, lane D's.
   `graphicCanvas.ts` Built note, "Open"): four module workers are
   started and terminated per bake; the first run's extra 58.9 ms (item
   22) is a difference of two runs, not a timing. Whether a session pool
-  is worth keeping is lane D's to time on the harness page.
+  is worth keeping is lane D's to time on the harness page. (Lane D,
+  2026-11-02/03, did not time the start on its own: its bakes' figures are
+  per frame and per 46-frame bake, `CLIPS.md` §6.11's lane-D harness
+  Built note.)
 - **The Windows side of lane C**: none of item 22 was read on the Surface
   or in Electron on Windows; CI runs lane C's suites on both runners,
   which use a fake canvas and stand-in encoders, not a worker. The
@@ -10421,7 +10613,11 @@ frame; the rendered box case is `graphic.int`'s, lane D's.
   from knowledge, not checked against the model's output.
 - **The bake through the app's own writer, with a real template**: no
   phase-0 figure includes `writeTitleFrame`'s IPC and disk or a template's
-  own draw; phase 1's render check's.
+  own draw; phase 1's render check's. (Still so after lane D, 2026-11-03:
+  the harness bridge's writes are a recorder, so the primitives' per-frame
+  bake figures, box route p50 0.65-1.13 ms and canvas route 2.05-2.70 ms,
+  are the draw and the encode only; the app's are the user's, in the
+  development app's console.)
 - **M8**: the user's, on the Mac in the development app
   (`__forgeGraphicCheck({ pathLength: true })`): our `total` against an
   `SVGPathElement`'s `getTotalLength()`, which sets `STROKE_TOLERANCE`.
@@ -10429,7 +10625,26 @@ frame; the rendered box case is `graphic.int`'s, lane D's.
   a four-cubic circle path under r = 40, where item 15 finds our
   flattening furthest from the curve (−0.1468 % at r = 20 and 30,
   against 2πr); one at r = 20 or 30 would, on these figures, move
-  `STROKE_TOLERANCE` below 0.25.
+  `STROKE_TOLERANCE` below 0.25. (Measured 2026-11-03 in the pane's
+  Chrome 152, item 26 and "flattenPath against SVGPathElement" above:
+  with those circles the coarsest tolerance within the bar is 0.125,
+  without them 0.25; both readings print. Electron 44's Chromium, and
+  the choice, are still the user's.)
+- **The Windows side of lane D** (2026-11-03): the box route's equality
+  after the pad (item 24) on the 2018 build is CI's windows-latest
+  runner's to read (`graphic.int`'s (box) case runs there; the source
+  says the clamp is the same); M19's figures (item 25) on the 2018 build,
+  its swscale included, need the strokes PNGs from the development app
+  on the Surface and `FORGE_GRAPHIC_FRAMES` there; M8 (item 26) and the
+  primitives' and Indic readings were taken in the Mac's Browser pane
+  only. The user's, but for CI's half.
+- **Whether Electron's `contextBridge` lets the harness wrap
+  `window.forge`** (lane D's `recordingWrites`, which keeps each PNG's
+  bytes as the bake writes it): Electron cannot start in the sandbox, so
+  it is not measured. If the bridge is frozen, the check reads the files
+  the main process wrote through `mediaUrl` and says "PNGs read from
+  files"; M13's line prints either way. The user's first development-app
+  run answers it.
 - **The Windows build's libass fallback face**, and whether its fallback
   reaches the fontsdir's Noto at all (item 17): the Surface's, the user's;
   CI's `captions.int` notice says SAME or DIFFER there, not which face.
@@ -10444,19 +10659,40 @@ frame; the rendered box case is `graphic.int`'s, lane D's.
   403 on every clip download), then once more with `captionRoute`'s script
   test put back to confirm both links fail: the user's. The harness's
   Indic frames through a text clip and a caption (`CLIPS.md` §6.11's
-  `indic` option) are lane D's.
+  `indic` option) are lane D's. (Built 2026-11-02, `6592a38` and
+  `69c2340`: on the harness page, with the two Noto faces given to its
+  catalogue by hand, both sites read SEEN; with its own empty catalogue,
+  "cannot tell". The development app's run is the user's.)
 - **Canvas's shadow against the CTM, in a browser** ("Canvas 2D under
   the painter" above): the bounds take the HTML specification's word
   that `shadowBlur` and the offsets are not transformed; no probe was
   run. Lane D's render check (alpha 0 outside the box) reads it on the
-  real paint.
+  real paint. (Read 2026-11-02 in the pane's Chrome 152, `6592a38` and
+  `69c2340`: the primitives' `group` case draws a word in clean's text
+  style, which carries a shadow, inside a group scaled 0.8-1.2 and turned
+  to −12°, and alpha outside `graphicBox` is 0 on the preview and the
+  canvas route's PNGs. That is consistent with the bounds' rule, not a
+  probe of the CTM itself; the app's Chromium is the user's.)
 - **The Indic render check through `paintDrawList2d`** (`CLIPS.md`
   §6.12's phase-1 bar): painter A is built (`a82cd43`, `d822c56`) and
   draws every text item through `drawTextOnto`; the check needs lane D's
   harness half, then the development app on both machines. The user's.
+  (Lane D's half is built, `6592a38` and `69c2340`, 2026-11-02: in the
+  pane's Chrome 152 all ten §51 clusters through `paintDrawList2d` equal
+  `drawTextOnto` (max 0) and differ from the per-code-point drawing (mean
+  34.8-46.9 in the system's faces, 32.8-47.6 in the Noto faces), every
+  conjunct narrower, कि's i-matra first; the per-code-point painter
+  mutation, run once in the pane, makes all ten NOT EQUAL. The
+  development app on both machines, the eye check of the sheet it hands
+  back, and the mutation on the Mac in the app are still the user's.)
 - **The allowance window** (item 21): measured, printed by
   `tests/graphicFrame.test.ts`, decided by no one yet. The user's.
 - **M7–M20, by phase**: M8 (above), M13 and M19 in phase 1 (M9 measured,
-  item 14); M10 and M14–M18 in
+  item 14; M8 and M19 measured in part 2026-11-03, the pane's Chrome 152
+  and the Mac's ffmpeg, items 25 and 26, their app runs and decisions the
+  user's; M13's two bakes per case, `framemd5` over the patterns the
+  check prints and the Mac against the Surface, the user's: on the
+  harness page each case's two box-route bakes were 46 of 46 PNGs
+  byte-equal, which is not M13's run); M10 and M14–M18 in
   phase 2; M7 first, then M6 whole, M12, M20 and M13 again in phase 3; M11
   is not run, since M1–M2 did not fall short (item 8). H1–H13 are §62's.
