@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { graphemesOf, type DrawItem, type DrawList, type TextMeasure } from '@shared/graphics/items'
 import { drawListAt } from '@shared/graphics/drawList'
 import { beatFrame, graphicMovingFrames } from '@shared/graphics/frame'
@@ -20,6 +20,7 @@ import {
   primitiveFrames,
   primitivesDrawer,
   primitivesProgress,
+  recordingWrites,
   siteReading,
   type GraphicCheckOptions,
   type PrimitiveCase
@@ -27,10 +28,12 @@ import {
 import {
   PRIMITIVES_BAR,
   alphaOutside,
+  boxSound,
   cropRgba,
   diffOverInk,
   diffRgba,
   framePath,
+  m13Line,
   primitivesVerdict,
   siblingPath,
   type PixelDiff,
@@ -242,8 +245,11 @@ describe('alphaOutside', () => {
       set(1, 1, [255, 255, 255, 255])
       set(3, 0, [255, 255, 255, 7])
       set(0, 3, [255, 255, 255, 9])
+      // Just left of and just above the box: the near edges' outer column and row are outside it too.
+      set(0, 1, [0, 0, 0, 5])
+      set(1, 0, [0, 0, 0, 5])
     })
-    expect(alphaOutside(frame, 4, 4, { x: 1, y: 1, width: 2, height: 2 })).toEqual({ max: 9, pixels: 2 })
+    expect(alphaOutside(frame, 4, 4, { x: 1, y: 1, width: 2, height: 2 })).toEqual({ max: 9, pixels: 4 })
     expect(alphaOutside(frame, 4, 4, { x: 0, y: 0, width: 4, height: 4 })).toEqual({ max: 0, pixels: 0 })
   })
 
@@ -273,6 +279,8 @@ describe('diffOverInk', () => {
     const ink = diffOverInk(a, b, 100, 100, 2)
     expect(whole.mean).toBeLessThan(PRIMITIVES_BAR.bakeMeanLevels)
     expect(ink.pixels).toBe(6 * 5)
+    // checkPrimitive calls it with the default pad: the same 2 px.
+    expect(diffOverInk(a, b, 100, 100).pixels).toBe(6 * 5)
     expect(ink.differing).toBe(2)
     expect(ink.mean).toBeGreaterThan(PRIMITIVES_BAR.bakeMeanLevels)
   })
@@ -304,6 +312,7 @@ describe('framePath and siblingPath', () => {
 
 const same = (pixels = 100): PixelDiff => ({ mean: 0, max: 0, differing: 0, pixels })
 const off = (mean: number, pixels = 100): PixelDiff => ({ mean, max: 255, differing: 1, pixels })
+const BOX = { x: 130, y: 1130, width: 820, height: 420 }
 
 function reading(patch: Partial<PrimitivesReading> = {}): PrimitivesReading {
   return {
@@ -313,13 +322,17 @@ function reading(patch: Partial<PrimitivesReading> = {}): PrimitivesReading {
     outside: [{ max: 0, pixels: 0 }],
     drawnTwice: [same()],
     bakedTwice: { equal: 46, of: 46 },
+    live: [same(), same()],
+    boxes: { check: { ...BOX }, bake: { ...BOX } },
+    frames: { baked: 46, canvas: 46, moving: 46 },
     ...patch
   }
 }
 
 describe('primitivesVerdict (§6.12\'s phase 1 bar)', () => {
   it('passes readings that meet every part', () => {
-    expect(primitivesVerdict(reading())).toEqual({ bake: true, held: true, outside: true, twice: true, pass: true })
+    const v = primitivesVerdict(reading())
+    for (const part of ['bake', 'held', 'outside', 'twice', 'live', 'box', 'count', 'pass'] as const) expect(v[part], part).toBe(true)
   })
 
   it('allows the bake within 1/255 mean on BOTH routes, and not past it on either', () => {
@@ -342,6 +355,23 @@ describe('primitivesVerdict (§6.12\'s phase 1 bar)', () => {
     expect(primitivesVerdict(reading({ bakedTwice: { equal: 45, of: 46 } })).twice).toBe(false)
   })
 
+  it('wants the Preview\'s own canvas equal to the frames read, every one of them', () => {
+    expect(primitivesVerdict(reading({ live: [same(), { mean: 0.001, max: 1, differing: 1, pixels: 100 }] })).live).toBe(false)
+    expect(primitivesVerdict(reading({ live: [same(), { mean: 0.001, max: 1, differing: 1, pixels: 100 }] })).pass).toBe(false)
+  })
+
+  it('wants the bake\'s box even and the one the check computed', () => {
+    expect(primitivesVerdict(reading({ boxes: { check: { ...BOX }, bake: { ...BOX, x: 131, width: 819 } } })).box).toBe(false)
+    expect(primitivesVerdict(reading({ boxes: { check: { ...BOX, x: 131, width: 819 }, bake: { ...BOX, x: 131, width: 819 } } })).pass).toBe(false)
+    expect(primitivesVerdict(reading({ boxes: { check: { ...BOX }, bake: { ...BOX, y: 1128 } } })).box).toBe(false)
+  })
+
+  it('wants each bake to write the moving frames and no more: the hold is tpad\'s, never baked', () => {
+    expect(primitivesVerdict(reading({ frames: { baked: 60, canvas: 46, moving: 46 } })).count).toBe(false)
+    expect(primitivesVerdict(reading({ frames: { baked: 46, canvas: 60, moving: 46 } })).count).toBe(false)
+    expect(primitivesVerdict(reading({ frames: { baked: 60, canvas: 60, moving: 46 } })).pass).toBe(false)
+  })
+
   it('passes nothing it did not read: no frame, no PNG, an empty held reading', () => {
     expect(primitivesVerdict(reading({ bakeAgainstPreview: [] })).bake).toBe(false)
     expect(primitivesVerdict(reading({ canvasAgainstPreview: [] })).bake).toBe(false)
@@ -349,6 +379,67 @@ describe('primitivesVerdict (§6.12\'s phase 1 bar)', () => {
     expect(primitivesVerdict(reading({ outside: [] })).outside).toBe(false)
     expect(primitivesVerdict(reading({ drawnTwice: [] })).twice).toBe(false)
     expect(primitivesVerdict(reading({ bakedTwice: { equal: 0, of: 0 } })).twice).toBe(false)
+    expect(primitivesVerdict(reading({ live: [] })).live).toBe(false)
+    expect(primitivesVerdict(reading({ live: [same(0)] })).live).toBe(false)
+    expect(primitivesVerdict(reading({ frames: { baked: 0, canvas: 0, moving: 0 } })).count).toBe(false)
+  })
+})
+
+describe('boxSound', () => {
+  it('is sound for an even box both sides agree on, and for no box on either side', () => {
+    expect(boxSound({ ...BOX }, { ...BOX })).toBe(true)
+    expect(boxSound(null, null)).toBe(true)
+  })
+
+  it('is not for an odd edge or size on the bake\'s box, each of the four', () => {
+    for (const odd of [{ x: 131 }, { y: 1131 }, { width: 821 }, { height: 421 }]) expect(boxSound({ ...BOX, ...odd }, { ...BOX, ...odd }), JSON.stringify(odd)).toBe(false)
+  })
+
+  it('is not when the bake\'s box is not the one the check computed, or only one side has one', () => {
+    expect(boxSound({ ...BOX }, { ...BOX, width: 822 })).toBe(false)
+    expect(boxSound({ ...BOX }, null)).toBe(false)
+    expect(boxSound(null, { ...BOX })).toBe(false)
+  })
+})
+
+describe('m13Line (§6.15 M13\'s first half: the patterns the user reads with framemd5)', () => {
+  const cases = (prefix: string, sep: string) =>
+    (['stroke', 'group'] as const).map((name) => ({
+      name,
+      patterns: [`${prefix}${sep}graphic-check-primitives-1-${name}-a.seq${sep}%05d.png`, `${prefix}${sep}graphic-check-primitives-1-${name}-b.seq${sep}%05d.png`] as [string, string],
+      canvasPattern: `${prefix}${sep}graphic-check-primitives-1-${name}-canvas.seq${sep}%05d.png`
+    }))
+
+  it('names every case\'s two sequences when they are files, on either separator', () => {
+    for (const list of [cases('/Users/a/Library/forge/titles', '/'), cases('C:\\Users\\a\\AppData\\forge\\titles', '\\')]) {
+      const line = m13Line(list)
+      expect(line).not.toBeNull()
+      for (const c of list) {
+        for (const pattern of c.patterns) expect(line).toContain(pattern)
+        expect(line).toContain(c.canvasPattern)
+      }
+      expect(line).toContain('framemd5')
+    }
+  })
+
+  it('says nothing for the harness bridge\'s answers, which no ffmpeg can read', () => {
+    expect(m13Line(cases('harness://titles', '/'))).toBeNull()
+    expect(m13Line([])).toBeNull()
+  })
+
+  /*
+   * The line was once printed only when the PNGs were read from files, which
+   * happens only when the recorder could NOT wrap the bridge: in an app whose
+   * bridge it can wrap, M13 would have had no patterns. Read as source: the
+   * call is not gated on where the bytes came from.
+   */
+  it('is printed by checkPrimitives whatever the bytes were read from', () => {
+    const source = readFileSync(join(__dirname, '..', '..', 'src', 'renderer', 'src', 'harness', 'graphicCheck.ts'), 'utf8')
+    const start = source.indexOf('async function checkPrimitives(')
+    expect(start).toBeGreaterThan(0)
+    const body = source.slice(start, source.indexOf('\n}\n', start))
+    expect([...body.matchAll(/m13Line\(/g)]).toHaveLength(1)
+    expect(body).not.toMatch(/bytesFrom\s*===/)
   })
 })
 
@@ -367,6 +458,11 @@ describe('siteReading (the Indic render check\'s site half, §6.20)', () => {
   it('does not see it when the frame is the drawing before, or when nothing changed', () => {
     expect(siteReading({ ...base, before: 'not loaded', after: 'loaded' }, before, before, after, 4, true).seen).toBe(false)
     expect(siteReading({ ...base, before: 'not loaded', after: 'loaded' }, before, before, before, 4, true).seen).toBe(false)
+  })
+
+  it('does not see it when the frame is neither drawing: the site drew in some third face', () => {
+    const third = picture(4, 1, (set) => set(2, 0, [255, 255, 255, 255]))
+    expect(siteReading({ ...base, before: 'not loaded', after: 'loaded' }, third, before, after, 4, true).seen).toBe(false)
   })
 
   it('reads a face neither loaded nor failed after the site, with a catalogue there, as never asked for', () => {
@@ -415,16 +511,87 @@ describe('the options are independent', () => {
       checkPrimitives: 'primitives'
     }
     const calls = [...body.matchAll(/\b(check[A-Z]\w*)\(/g)]
-    expect(calls.map((c) => c[1]).sort()).toEqual(Object.keys(owner).sort())
+    // Membership, not the whole list: a later option's check, under its own guard, joins without breaking this.
+    for (const name of Object.keys(owner)) expect(calls.map((c) => c[1]), name).toContain(name)
     for (const call of calls) {
       const before = body.slice(0, call.index)
       const guard = [...before.matchAll(/if \(options\.(\w+)\)/g)].pop()
       expect(guard, `${call[1]} has no option guard`).toBeDefined()
-      expect(guard![1], `${call[1]} runs under options.${guard![1]}`).toBe(owner[call[1]])
+      expect(GRAPHIC_CHECK_OPTIONS as readonly string[], `${call[1]} runs under options.${guard![1]}`).toContain(guard![1])
+      if (call[1] in owner) expect(guard![1], `${call[1]} runs under options.${guard![1]}`).toBe(owner[call[1]])
       // No other statement between the guard and the call: an `if` with a block ends at its `}`.
       const between = before.slice(guard!.index! + guard![0].length)
       expect(between.includes('\n  }\n') || between.includes('\n  if ('), `${call[1]} is outside its guard`).toBe(false)
     }
     for (const name of GRAPHIC_CHECK_OPTIONS) expect([...body.matchAll(new RegExp(`if \\(options\\.${name}\\)`, 'g'))], name).toHaveLength(1)
+  })
+
+  /*
+   * The Indic sites must run before the primitives' text-indic case loads both
+   * Noto faces: a site whose face is already loaded reads "cannot tell" (the
+   * comment in checkIndicPhase1). So indic runs before primitives, in the
+   * options' order and in runGraphicCheck's body.
+   */
+  it('runs the Indic sites before the primitives load the faces', () => {
+    expect(GRAPHIC_CHECK_OPTIONS.indexOf('indic')).toBeLessThan(GRAPHIC_CHECK_OPTIONS.indexOf('primitives'))
+    const source = readFileSync(join(__dirname, '..', '..', 'src', 'renderer', 'src', 'harness', 'graphicCheck.ts'), 'utf8')
+    const start = source.indexOf('export async function runGraphicCheck(')
+    const body = source.slice(start, source.indexOf('\n}\n', start))
+    const indic = [...body.matchAll(/checkIndicPhase1\(/g)]
+    const primitives = [...body.matchAll(/checkPrimitives\(/g)]
+    expect(indic).toHaveLength(1)
+    expect(primitives).toHaveLength(1)
+    expect(indic[0].index!).toBeLessThan(primitives[0].index!)
+  })
+})
+
+/* ------------------------------------------------------------ the recorder */
+
+describe('recordingWrites', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  const bridge = () => {
+    const seen: unknown[][] = []
+    const forge = {
+      writeTitleFrame: (...args: unknown[]) => {
+        seen.push(args)
+        return Promise.resolve(`/titles/${String(args[0])}.seq/%05d.png`)
+      }
+    }
+    return { forge, seen }
+  }
+
+  it('keeps only the clip\'s writes, hands every write on to the bridge, and puts the bridge back', async () => {
+    const { forge, seen } = bridge()
+    const original = forge.writeTitleFrame
+    vi.stubGlobal('window', { forge })
+    const a = new ArrayBuffer(1)
+    const other = new ArrayBuffer(2)
+    const { value, writes } = await recordingWrites(
+      'writeTitleFrame',
+      async () => {
+        const w = (window as unknown as { forge: typeof forge }).forge
+        await w.writeTitleFrame('mine', 0, a)
+        // A store bake of another clip, writing while the check's runs.
+        await w.writeTitleFrame('someone-else', 0, other)
+        await w.writeTitleFrame('mine', 1, a)
+        return 'done'
+      },
+      'mine'
+    )
+    expect(value).toBe('done')
+    expect(writes).not.toBeNull()
+    expect([...writes!.keys()].sort()).toEqual([0, 1])
+    expect(writes!.get(0)!.bytes).toBe(a)
+    expect(seen.map((args) => args[0])).toEqual(['mine', 'someone-else', 'mine'])
+    expect(forge.writeTitleFrame).toBe(original)
+  })
+
+  it('answers null writes where the bridge cannot be written, and still runs', async () => {
+    const { forge } = bridge()
+    vi.stubGlobal('window', { forge: Object.freeze(forge) })
+    const { value, writes } = await recordingWrites('writeTitleFrame', async () => 7, 'mine')
+    expect(value).toBe(7)
+    expect(writes).toBeNull()
   })
 })

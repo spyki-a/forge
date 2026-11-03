@@ -343,6 +343,17 @@ export interface PrimitivesReading {
   drawnTwice: PixelDiff[]
   /** PNGs of the second bake byte-equal to the first's, of how many. */
   bakedTwice: { equal: number; of: number }
+  /**
+   * Per frame read, the Preview's own canvas (`graphicPreviewCanvas`, with its
+   * settled frame, signature cache and per-clip dim layer) against the
+   * harness's frames (`graphicFrameCanvases`) at the same frame, or at the
+   * last moving frame for one past it, which is what the Preview shows there.
+   */
+  live: PixelDiff[]
+  /** `graphicBox` as the check computed it, and the box the box route's bake returned. */
+  boxes: { check: Rect | null; bake: Rect | null }
+  /** The frames each bake wrote against `graphicMovingFrames`: the hold is `tpad`'s in the export, never baked. */
+  frames: { baked: number; canvas: number; moving: number }
 }
 
 export interface PrimitivesVerdict {
@@ -350,7 +361,22 @@ export interface PrimitivesVerdict {
   held: boolean
   outside: boolean
   twice: boolean
+  live: boolean
+  box: boolean
+  count: boolean
   pass: boolean
+}
+
+/**
+ * The box route's region is sound: the bake's box is the one the check
+ * computed (the alpha-outside reading is taken against the check's), and
+ * its edges and size are even, as `graphicBox` rounds them for the 4:2:0
+ * overlay's chroma (§6.11's (box) case). No box on either side agrees.
+ */
+export function boxSound(check: Rect | null, bake: Rect | null): boolean {
+  const agree = check === null || bake === null ? check === bake : check.x === bake.x && check.y === bake.y && check.width === bake.width && check.height === bake.height
+  const even = bake === null || [bake.x, bake.y, bake.width, bake.height].every((v) => v % 2 === 0)
+  return agree && even
 }
 
 /** The bar applied to a case's readings: each part, and all of them. A case with no frame read, or no PNG on either route, passes nothing. */
@@ -360,5 +386,25 @@ export function primitivesVerdict(r: PrimitivesReading): PrimitivesVerdict {
   const held = r.heldAgainstLast.pixels > 0 && r.heldAgainstLast.mean <= PRIMITIVES_BAR.heldMean
   const outside = r.outside.length > 0 && r.outside.every((o) => o.max <= PRIMITIVES_BAR.outsideAlpha)
   const twice = r.drawnTwice.length > 0 && r.drawnTwice.every((d) => d.max === 0) && r.bakedTwice.of > 0 && r.bakedTwice.equal === r.bakedTwice.of
-  return { bake, held, outside, twice, pass: bake && held && outside && twice }
+  const live = r.live.length > 0 && r.live.every((d) => d.pixels > 0 && d.max === 0)
+  const box = boxSound(r.boxes.check, r.boxes.bake)
+  const count = r.frames.moving > 0 && r.frames.baked === r.frames.moving && r.frames.canvas === r.frames.moving
+  return { bake, held, outside, twice, live, box, count, pass: bake && held && outside && twice && live && box && count }
+}
+
+/**
+ * M13's line (§6.15): each case's two box-route sequences, for the user's
+ * framemd5 of the files on disk, printed whenever they are files (the
+ * development app), however the check read their bytes; nothing where they
+ * are the harness bridge's `harness://` answers, which no ffmpeg can read.
+ */
+export function m13Line(cases: readonly { name: string; patterns: readonly [string, string]; canvasPattern: string }[]): string | null {
+  const onDisk = cases.filter((c) => !/^harness:/.test(c.patterns[0]))
+  if (onDisk.length === 0) return null
+  return (
+    'primitives M13: each case baked twice on the box route, its two sequences kept on disk for the framemd5 of each ' +
+    '("$FFMPEG" -start_number 0 -i <pattern> -f framemd5 -), the Mac\'s against the Surface\'s: ' +
+    onDisk.map((c) => `${c.name} ${c.patterns.join(' and ')}`).join('; ') +
+    `; the canvas route's beside them (${onDisk.map((c) => c.canvasPattern).join(', ')}). Each run adds its own; the app's title-frame folder keeps them until cleared.`
+  )
 }

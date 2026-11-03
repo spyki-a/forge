@@ -65,7 +65,7 @@ import { buildCaptionLayers } from '@shared/graphics/fromTimeline'
 import { planBakeOf } from '@shared/captions/bake'
 import { encodeFrames, setPoolCanvases, type PoolCanvas } from '../encodePool'
 import { sharedRenderer } from '../threeShared'
-import { GRAPHIC_POOL_DEPTH, bakeGraphicSequence, graphicFrameCanvases, graphicMeasure } from '../graphicCanvas'
+import { GRAPHIC_POOL_DEPTH, bakeGraphicSequence, forgetGraphicPreview, graphicFrameCanvases, graphicMeasure, graphicPreviewCanvas } from '../graphicCanvas'
 import { renderTextPng } from '../textCanvas'
 import { bakeCaptions } from '../captionBake'
 import { faceSettled, useCatalog } from '../catalog'
@@ -78,6 +78,7 @@ import {
   diffRgba,
   framePath,
   inkBox,
+  m13Line,
   padRect,
   percentile,
   perFrameMs,
@@ -422,7 +423,7 @@ export interface PrimitiveCaseResult {
   bakeFrames: number[]
   reading: PrimitivesReading
   verdict: PrimitivesVerdict
-  /** `paintDrawList2d` over each moving frame's list on a 1080×1920 canvas never read back: the commands, rasterised by an encode. */
+  /** `paintDrawList2d` over each moving frame's list on a 1080×1920 canvas, one pixel of it copied to a 1x1 probe and read after each, so the rasterisation is in the figure. */
   drawMs: Spread
   /** The box route's first bake, its writes `GRAPHIC_POOL_DEPTH` at a time (`perFrameMs`, as M1 reads a pool): its frames drawn and encoded at `region`; null where the writes could not be watched. */
   encodeMsPerFrame: Spread | null
@@ -624,6 +625,12 @@ async function decodePng(bytes: ArrayBuffer, width: number, height: number): Pro
     premultiplyAlpha: 'none',
     colorSpaceConversion: 'none'
   })
+  // A PNG of another size would be drawn at 0,0 and read as a crop or a pad of itself: said instead.
+  if (bitmap.width !== width || bitmap.height !== height) {
+    const found = `${bitmap.width}x${bitmap.height}`
+    bitmap.close()
+    throw new Error(`graphic check: a PNG is ${found}, not the ${width}x${height} it was read as`)
+  }
   const { ctx } = canvas2d(width, height)
   ctx.drawImage(bitmap, 0, 0)
   bitmap.close()
@@ -1724,11 +1731,16 @@ function faceState(family: string): string {
  * on to the bridge's own; put back after. Where the bridge cannot be written
  * (an object Electron's `contextBridge` exposes may be frozen: not measured
  * here, since Electron cannot start in this sandbox) `writes` is null and the
- * caller reads the files the main process wrote instead.
+ * caller reads the files the main process wrote instead. For
+ * `writeTitleFrame`, `clipId` keeps only that clip's writes: in the
+ * development app a store bake (a text clip's rebake once the catalogue
+ * lands, a title's) can write while the check's runs, and its frames would
+ * otherwise sit under the check's indices. `writeCaptionFrame` names no clip.
  */
-async function recordingWrites<T>(
+export async function recordingWrites<T>(
   method: 'writeTitleFrame' | 'writeCaptionFrame',
-  run: () => Promise<T>
+  run: () => Promise<T>,
+  clipId?: string
 ): Promise<{ value: T; writes: Map<number, { bytes: ArrayBuffer; at: number }> | null }> {
   const forge = window.forge as unknown as Record<string, unknown>
   const original = forge[method] as (...args: unknown[]) => Promise<string>
@@ -1736,7 +1748,9 @@ async function recordingWrites<T>(
   // writeTitleFrame(clipId, frame, bytes); writeCaptionFrame(index, bytes).
   const at = method === 'writeTitleFrame' ? 1 : 0
   const recorder = (...args: unknown[]): Promise<string> => {
-    writes.set(args[at] as number, { bytes: args[at + 1] as ArrayBuffer, at: performance.now() })
+    if (clipId === undefined || method !== 'writeTitleFrame' || args[0] === clipId) {
+      writes.set(args[at] as number, { bytes: args[at + 1] as ArrayBuffer, at: performance.now() })
+    }
     return original.apply(window.forge, args)
   }
   let installed = false
@@ -1768,6 +1782,13 @@ async function readFile(path: string): Promise<ArrayBuffer | null> {
 const canvasPixels = (canvas: HTMLCanvasElement): Uint8ClampedArray => {
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('graphic check: a preview canvas has no 2D context')
+  return pixels(ctx)
+}
+
+/** A canvas's picture read from a copy of it, so the canvas itself is never read back (which can move it off the GPU and change how it paints next). */
+function copiedPixels(source: HTMLCanvasElement): Uint8ClampedArray {
+  const { ctx } = canvas2d(source.width, source.height)
+  ctx.drawImage(source, 0, 0)
   return pixels(ctx)
 }
 
@@ -1979,8 +2000,10 @@ interface PrimitiveBake {
 async function bakePrimitive(name: PrimitiveCase, id: string, boxAllowed: boolean, style: GraphicStyle, layout: PrimitiveFrames, drawer: Drawer): Promise<PrimitiveBake> {
   const { width, height } = PRIMITIVES_SIZE
   const t0 = performance.now()
-  const { value, writes } = await recordingWrites('writeTitleFrame', () =>
-    bakeGraphicSequence(PRIMITIVES_SPEC, style, id, width, height, layout.total, PRIMITIVES_FPS, NO_TARGETS, boxAllowed, drawer)
+  const { value, writes } = await recordingWrites(
+    'writeTitleFrame',
+    () => bakeGraphicSequence(PRIMITIVES_SPEC, style, id, width, height, layout.total, PRIMITIVES_FPS, NO_TARGETS, boxAllowed, drawer),
+    id
   )
   const wallMs = performance.now() - t0
   if (!value) throw new Error(`graphic check: the primitives' ${name} bake (${boxAllowed ? 'box' : 'canvas'} route) answered nothing`)
@@ -2013,12 +2036,30 @@ async function checkPrimitive(
   const at = (frame: number): Uint8ClampedArray => preview[read.indexOf(frame)]
   const heldAgainstLast = diffRgba(at(layout.lastMoving), at(layout.heldEnd), width)
 
+  // The Preview's own canvas, as the user sees it (graphicCanvas.ts): its settled frame, signature cache and
+  // per-clip dim layer, after graphicFrameCanvases has landed the faces. Past the moving frames it shows the last one.
+  // Read through a copy, never by getImageData on the canvas itself: read back twice, Chrome 152 paints that canvas's
+  // third picture differently (a stroke's edges up to 255 levels, text up to 15, from frame 30 on), where through a copy
+  // all six cases are equal at every frame read (the harness page, 2026-11-02); the Preview never reads its canvas back.
+  const liveId = `graphic-check-preview-${name}`
+  forgetGraphicPreview(liveId)
+  const live: PixelDiff[] = []
+  for (const frame of read) {
+    const canvas = graphicPreviewCanvas(liveId, spec, style, width, height, { frame, total: layout.total, fps }, {}, undefined, drawer)
+    const shown = at(Math.min(frame, layout.lastMoving))
+    live.push(canvas ? diffRgba(copiedPixels(canvas), shown, width) : { mean: 0, max: 0, differing: 0, pixels: 0 })
+  }
+  forgetGraphicPreview(liveId)
+
   const measure = graphicMeasure()
   const box = graphicBox(spec, style, fps, layout.total, size, measure, NO_TARGETS, drawer)
   const outside = preview.map((data) => alphaOutside(data, width, height, box))
 
-  // The paint's own time over the moving frames' lists, on a frame-sized canvas never read back.
+  // The paint's time over the moving frames' lists on a frame-sized canvas, one pixel of it copied to a 1x1 probe
+  // and read there after each, so the rasterisation is in the figure and not only the recording of the commands; the
+  // timed canvas itself is never read back, which would move it off the GPU (see the live reading above).
   const timing = canvas2d(width, height)
+  const probe = canvas2d(1, 1)
   const layer = (w: number, h: number): CanvasRenderingContext2D => canvas2d(w, h).ctx
   const targets = onsetTargetsAt(NO_TARGETS)
   const draws: number[] = []
@@ -2027,6 +2068,8 @@ async function checkPrimitive(
     const t0 = performance.now()
     timing.ctx.clearRect(0, 0, width, height)
     paintDrawList2d(timing.ctx, list, { layer })
+    probe.ctx.drawImage(timing.canvas, 0, 0, 1, 1, 0, 0, 1, 1)
+    probe.ctx.getImageData(0, 0, 1, 1)
     draws.push(performance.now() - t0)
   }
 
@@ -2073,7 +2116,10 @@ async function checkPrimitive(
     heldAgainstLast,
     outside: [...outside, ...canvasOutside],
     drawnTwice,
-    bakedTwice: { equal, of: first.bytes ? first.bytes.bytes.size : 0 }
+    bakedTwice: { equal, of: first.bytes ? first.bytes.bytes.size : 0 },
+    live,
+    boxes: { check: box, bake: bakeBox },
+    frames: { baked: first.value.frames, canvas: whole.value.frames, moving: layout.moving }
   }
 
   // One sheet per case: the preview's frames over the box route's, each bake frame put back where its box sits.
@@ -2142,7 +2188,9 @@ async function checkPrimitives(frames: Frames, summary: string[], notes: string[
         `; last moving against the held end ${describeDiff(r.reading.heldAgainstLast)}${v.held ? '' : ' (NOT EQUAL)'}` +
         `; alpha outside graphicBox (preview and canvas PNGs) max ${Math.max(...r.reading.outside.map((o) => o.max))} (${r.reading.outside.reduce((sum, o) => sum + o.pixels, 0)} pixels)` +
         `; drawn twice max ${Math.max(...r.reading.drawnTwice.map((d) => d.max))}; baked twice ${r.reading.bakedTwice.equal} of ${r.reading.bakedTwice.of} PNGs byte-equal` +
-        `; paint mean ${ms(r.drawMs.mean)}, p95 ${ms(r.drawMs.p95)} ms at ${PRIMITIVES_SIZE.width}x${PRIMITIVES_SIZE.height} (commands only)` +
+        `; the Preview's own canvas against these frames max ${Math.max(0, ...r.reading.live.map((d) => d.max))}${v.live ? '' : ' (NOT EQUAL)'}` +
+        `; box ${v.box ? 'even and the bake\'s' : 'ODD or NOT the bake\'s'}; frames baked ${r.reading.frames.baked} (box route) and ${r.reading.frames.canvas} (canvas route) of ${r.reading.frames.moving} moving${v.count ? '' : ' (NOT THE MOVING FRAMES)'}` +
+        `; paint mean ${ms(r.drawMs.mean)}, p95 ${ms(r.drawMs.p95)} ms at ${PRIMITIVES_SIZE.width}x${PRIMITIVES_SIZE.height} (rasterised: a pixel copied out and read after each)` +
         `; bake ${perFrame(r.encodeMsPerFrame, r.bakeWallMs)} at ${r.region.width}x${r.region.height} (wall ${ms(r.bakeWallMs)} ms)` +
         `, ${perFrame(r.canvasEncodeMsPerFrame, r.canvasWallMs)} at ${PRIMITIVES_SIZE.width}x${PRIMITIVES_SIZE.height} (wall ${ms(r.canvasWallMs)} ms), ${layout.moving} frames each; PNGs read from ${r.bytesFrom}`
     )
@@ -2151,13 +2199,9 @@ async function checkPrimitives(frames: Frames, summary: string[], notes: string[
   const after = await pageConditions()
   const conditions: RunConditions = { before, after, toBlob2x2, throttled: throttledPage(before) || throttledPage(after) }
   summary[conditionsAt] = reportConditions('primitives', conditions, summary, notes) + `; ${catalog}`
-  const first = cases[0]
-  if (first && first.bytesFrom === 'files') {
-    summary.push(
-      `primitives M13: each case baked twice on the box route; the two sequences of the ${first.name} case are ${first.patterns[0]} and ${first.patterns[1]} ` +
-        `(read each with "$FFMPEG" -start_number 0 -i <pattern> -f framemd5 -), the others beside them, and the canvas route's beside those (${first.canvasPattern})`
-    )
-  }
+  // Whenever the sequences are files, however the bytes were read: the recorder installing on the app's bridge must not hide them.
+  const m13 = m13Line(cases)
+  if (m13) summary.push(m13)
   return {
     fps: PRIMITIVES_FPS,
     width: PRIMITIVES_SIZE.width,
@@ -2173,8 +2217,9 @@ async function checkPrimitives(frames: Frames, summary: string[], notes: string[
       'twice); the bake is bakeGraphicSequence through encodeFrames (its default route: the workers where the page has them), on the export\'s box route ' +
       '(boxAllowed) twice under two clip ids and once on the canvas route, each PNG decoded with premultiplyAlpha and colorSpaceConversion "none" and read ' +
       'against the preview (cut to the box for the box route) over the two pictures\' ink, padded 2 px (diffOverInk). The bar (§6.12) is PRIMITIVES_BAR: within 1/255 mean on both routes, the held end equal to the last ' +
-      'moving frame, alpha 0 outside graphicBox (on the preview and the canvas route\'s PNGs), the same spec twice identical. paint times the commands on a canvas ' +
-      'never read back (an encode rasterises them); each bake\'s figure is its writes GRAPHIC_POOL_DEPTH at a time, through the IPC and disk in the development ' +
+      'moving frame, alpha 0 outside graphicBox (on the preview and the canvas route\'s PNGs), the same spec twice identical; and, beside the bar, the Preview\'s own ' +
+      'canvas (graphicPreviewCanvas) equal to these frames, the bake\'s box even and graphicBox\'s, and each bake writing exactly the moving frames. paint times the ' +
+      'commands and one pixel copied to a 1x1 probe and read, so the rasterisation is in it and the timed canvas stays on the GPU; each bake\'s figure is its writes GRAPHIC_POOL_DEPTH at a time, through the IPC and disk in the development ' +
       'app and the harness bridge\'s recorder here. ' +
       'Two bakes byte-equal on one page is M13\'s first half as the page can read it; the framemd5 of the files on disk, and the Mac against the Surface, are yours.'
   }
@@ -2407,7 +2452,7 @@ async function checkIndicPhase1(frames: Frames, summary: string[]): Promise<Indi
   const { rows, sheetPng } = await paintClusters(style, frames)
   for (const r of rows) {
     summary.push(
-      `Indic paint ${r.cluster} (${r.face}, ${r.faceState}): text item through paintDrawList2d against drawTextOnto ${describeDiff(r.paintAgainstDirect)}${r.equal ? ' (equal)' : ' (NOT EQUAL)'}; ` +
+      `Indic paint ${r.cluster} (${r.faceState === 'loaded' || r.faceState === 'a system face' ? `${r.face}, ${r.faceState}` : `${r.face} ${r.faceState}, so drawn in the system's fallback: phase 0's resolvedBy rows name it`}): text item through paintDrawList2d against drawTextOnto ${describeDiff(r.paintAgainstDirect)}${r.equal ? ' (equal)' : ' (NOT EQUAL)'}; ` +
         `whole against per code point ${r.differs ? 'differ' : 'DO NOT differ'} (mean ${r.wholeAgainstSplit.mean.toFixed(3)} over the ink)` +
         (r.conjunct ? `; ${r.wholeWidth.toFixed(1)} px against its letters' ${r.baseWidth.toFixed(1)}${r.narrower ? ' (narrower)' : ' (NOT narrower)'}` : '') +
         (r.matraFirst === null ? '' : `; i-matra ${r.matraFirst ? 'first' : 'NOT first'} (the consonant ${r.consonantShift} px right of where it is drawn alone)`)
