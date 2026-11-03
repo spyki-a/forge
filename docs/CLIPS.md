@@ -55,8 +55,9 @@
 > `graphicBox`'s two transparent columns and rows on its far sides for
 > the exit geq's copy, §6.3's "The box"); §6.11's three lane-D Built
 > notes; pushed in one push as `683a6f0` (2026-11-03), whose CI reading
-> is in §6.11's render-check Built note (the Windows build's run of the
-> (box) case is unread until it is filled). **Phase 1 is closed on the
+> is in §6.11's render-check Built note (run 41693366322, green on both
+> runners, read 2026-11-03: the (box) case holds on the 2018 Windows
+> ffmpeg). **Phase 1 is closed on the
 > build side**: every lane of §6.19's phase 1 is built and pushed. Its
 > exit (§6.12) waits on your runs: `primitives`, `indic` and `strokes` in
 > `npm run dev`'s console on the Mac and the Surface and `pathLength` on
@@ -12876,7 +12877,14 @@ is absent (only §6.20's two Noto faces and their licences are tracked under
 > workflow's own run, exits read from files); 88 more tests than at
 > `8acf930` (4,537 passed). Every other figure is from the four commits'
 > messages; line numbers were read at `683a6f0`.
-> CI: CI-LINE-PENDING
+> CI: run 41693366322 on `683a6f0` passed on both runners (macos-14 and
+> windows-latest success, the installer job skipped as on every push; read
+> 2026-11-03 through api.github.com, the jobs' conclusions only, as
+> CLAUDE.md describes). So graphic.int's thirteen un-gated cases, the
+> (box) case's framemd5 equality of the two routes among them, pass on the
+> 2018 Windows ffmpeg: `graphicBox`'s pad holds there as the `f22fcd4`
+> source said it would. M19's gated read skipped there as on the Mac; its
+> Windows figures stay the user's run on the Surface.
 > - **The file**, `tests/integration/graphic.int.test.ts` (1,395 lines),
 >   14 cases: phase 0's three, kept whole; phase 1's nine (`:791`); the
 >   always-on plan-shape case and M19's gated read (`:1184`, `:1392-1394`).
@@ -13000,8 +13008,8 @@ is absent (only §6.20's two Noto faces and their licences are tracked under
 > - **Open.** The Windows build's run is CI's: every case but M19's gated
 >   read (skipped there, as CI sets no `FORGE_GRAPHIC_FRAMES`) runs on both
 >   runners, the Windows one on the 2018 ffmpeg, and the (box) case's
->   equality there is unread until the CI line above is filled (the
->   `f22fcd4` source says geq clamps there exactly as on the Mac). Not
+>   equality there is read in the CI line above (green, 2026-11-03; the
+>   `f22fcd4` source said geq clamps there exactly as on the Mac). Not
 >   added: a second spec with even edges touching the frame's right edge
 >   (a critic's; the clamp is covered in node by `graphicDrawList`'s new
 >   case, and a second spec doubles the file's export time), left to the
