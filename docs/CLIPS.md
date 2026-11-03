@@ -58,8 +58,9 @@
 > is in §6.11's render-check Built note (the Windows build's run of the
 > (box) case is unread until it is filled). **Phase 1 is closed on the
 > build side**: every lane of §6.19's phase 1 is built and pushed. Its
-> exit (§6.12) waits on your runs: `primitives`, `indic`, `pathLength`
-> and `strokes` in `npm run dev`'s console on the Mac and the Surface,
+> exit (§6.12) waits on your runs: `primitives`, `indic` and `strokes` in
+> `npm run dev`'s console on the Mac and the Surface and `pathLength` on
+> the Mac,
 > M13's `framemd5`, the Indic sheet by eye, and M19's read with
 > `FORGE_GRAPHIC_FRAMES` on both machines; and on two decisions of the
 > plan's owner, M8's reading (0.125 or 0.25, by whether its paths include
@@ -8818,7 +8819,8 @@ non-empty `glow`; painter A ignores all three.
 > - **Left**, as planned: §6.16's two depth cases, and phase 3's with the
 >   counter and ring variants; the render check in the harness (lane D's
 >   `primitives` option and `PRIMITIVES_SPEC`, the alpha-0-outside-the-box
->   reading of the real paint); and the renderer's measure, `textSpecFont(spec)`
+>   reading of the real paint; built 2026-11-02, `6592a38` and `69c2340`,
+>   §6.11's lane-D harness Built note); and the renderer's measure, `textSpecFont(spec)`
 >   in `textPaint.ts` with the scratch-context `measureText` that reads it
 >   ("The measure" above), which lane C's `graphicCanvas.ts` needs for the
 >   preview and the bake and no commit of lane B wrote (at `0c8911f`
@@ -8869,7 +8871,9 @@ tree edges, underlines and the edge sweep of §6.16 (the research, §4.4).
   `format=yuva420p`, `plan.ts:1484`). (M19 measured in part 2026-11-03,
   §6.15's phase-1 note: no width of 1, 2 or 3 px is within its bar on the
   Mac's chain, most of the fringe the transparent pixels' black chroma;
-  `STROKE_MIN_PX` unchanged, the fix the plan owner's.)
+  `STROKE_MIN_PX` unchanged, the fix the plan owner's. `plan.ts:1484` is
+  an older sha's: at `683a6f0` a clip's `format=yuva420p`, the graphic
+  sequence's included, is `plan.ts:1534`.)
 - **The marker look** (D7, §16.60) is perfect-freehand's outline over the
   span's points, drawn only once M10 passes and the dependency is added in
   phase 2; until then `resolveGraphicStyle` never yields it (§6.5), and a
@@ -9347,7 +9351,11 @@ the canvas route and the preview: `graphic.int`'s phase-1 case at
 `framemd5` apart on 60 and 105 of 105 frames. With the two columns and
 rows the copied pixels are transparent (where the frame's edge clamps
 the box first, the canvas route's stream ends there too, so both copy
-the same pixels): both routes' plan frames equal on every frame, the
+the same pixels: reasoned from geq's clamp and checked as geometry by
+`graphicDrawList`'s new case, 1000,1850 → 80×70, not rendered, since
+`graphic.int`'s spec touches no frame edge and a render case for it was
+left to the plan's owner, §6.11's render-check Built note): for
+`graphic.int`'s spec, both routes' plan frames equal on every frame, the
 exports `framemd5`-equal at both shapes, every edge at 0 px, on the
 Mac's build (the Windows build's reading is CI's, §6.11's render-check
 Built note). geq's `interpolation=nearest`, on the 4.4 build only, was
@@ -9915,7 +9923,11 @@ the caller and passed into `drawListAt`, so the drawing stays pure:
 >   about 60 ms of start by the two figures above, unmeasured on its own;
 >   whether to keep a session pool is lane D's to time on the harness page.
 >   Whether M2's own worker run should read `encodeFrames`'s worker route:
->   lane D's. The module worker in the packaged app's page: `npm run build`
+>   lane D's. (2026-11-03: lane D, `6592a38` to `683a6f0`, did neither:
+>   its bakes are timed per frame and per 46-frame bake, not the workers'
+>   start on its own, and M2's run and `checkEncode` are unchanged;
+>   §6.11's lane-D harness Built note. Both are now the plan owner's to
+>   schedule, outside phase 1's bar.) The module worker in the packaged app's page: `npm run build`
 >   at `8acf930` (2026-11-02, for this record) emits the worker as its own
 >   chunk, `out/renderer/assets/graphicEncodeWorker-xUUPYCk3.js` (1,056
 >   bytes), constructed in the main bundle as `new Worker(new URL(…,
@@ -10073,7 +10085,15 @@ picked it on 2026-10-27, so every (box) item is to be built, in phase 1):
 >   reaches ffmpeg") carried to fields its list did not name.
 > - **Open.** The route's render check, `graphic.int`'s box case
 >   (§6.11), is lane D's; until it runs, the box route is checked by
->   `buildRenderPlan`'s text, not by a rendered frame.
+>   `buildRenderPlan`'s text, not by a rendered frame. (Run 2026-11-03,
+>   `f8d74ee` and `683a6f0`: the rendered (box) case found the exit geq's
+>   w − 2 / h − 2 copy drawing the box route's graphic 1 px wider and
+>   taller, 39,893 and 36,066 plan-frame samples apart at 9:16 and 16:9;
+>   fixed in `graphicBox` by two transparent columns and rows on its far
+>   sides, §6.3's "The box", corrected. Both routes are now
+>   `framemd5`-equal at 9:16 and 16:9 for `graphic.int`'s spec on the
+>   Mac's 4.4 build; the Windows build's reading is the CI line in §6.11's
+>   render-check Built note.)
 
 #### The export, the store, the preview
 
@@ -12555,8 +12575,8 @@ every run is yours.
 >   three runs after `69c2340`. Canvas route against the preview: max 0
 >   at every frame of every case. Box route: within the bar, a handful of
 >   edge pixels apart (the stroke 2 pixels at max 235 and the group 6 at
->   max 56 in `6592a38`'s run; later, the stroke 0, the group 9 and
->   text-indic 19 in one run and 0 in the next), varying run to run, mean at most 0.001 over the ink: rasterisation at the −box
+>   max 56 in `6592a38`'s run; in `69c2340`'s runs the stroke 0 and 0,
+>   the group 9 (6 pixels), text-indic 0, then 19, then 0), varying run to run, mean at most 0.001 over the ink: rasterisation at the −box
 >   offset, not the encode, since the canvas route through the same
 >   workers is exact. Last moving frame against the held end max 0; alpha
 >   outside `graphicBox` 0; drawn twice max 0; the box route baked twice
@@ -12657,7 +12677,12 @@ every run is yours.
 >   is unmeasured (if not, the check reads the files and says "PNGs read
 >   from files"; M13's line prints either way), as is the app's CSP
 >   against the module worker and everything on Windows. M8's reading and
->   M19's fix are the plan owner's (§6.15's phase-1 note).
+>   M19's fix are the plan owner's (§6.15's phase-1 note). Not built by
+>   lane D, though lane C's record named them for it: the workers' start
+>   timed on its own (the session-pool question; these bakes are timed
+>   per frame and per bake) and whether M2's worker run should read
+>   `encodeFrames`' worker route; both the plan owner's to schedule,
+>   outside phase 1's bar (§6.3's `graphicCanvas.ts` Built note, "Open").
 
 #### The Indic render check
 
@@ -12693,8 +12718,9 @@ directly: one function, one spec), after §6.20's fonts are in (§16.63).
 > harness Built note above has the page and the browser; line numbers at
 > `683a6f0`, in `graphicCheck.ts`). `{ indic: true }` runs phase 0's bare
 > `drawTextOnto` reading first, as M22 measured it, then
-> `checkIndicPhase1` (`:2519`), first in the call, before anything else
-> on the page loads the faces:
+> `checkIndicPhase1` (`:2519`), before `primitives` and before anything
+> else on the page loads the `INDIC_FONTS` faces (`runGraphicCheck`,
+> `:2971-2982`):
 > - **The sites** (`textClipSite`, `:2351`; `captionSite`, `:2370`;
 >   `siteReading`, `:2320`): a text clip's bake (`renderTextPng`, what
 >   `bakeText` writes) of the Devanagari clusters in clean's Montserrat,
@@ -12901,8 +12927,10 @@ is absent (only §6.20's two Noto faces and their licences are tracked under
 >   w − 2 and h − 2 drew the box route's graphic a pixel wider and taller
 >   (39,893 plan-frame samples apart at 9:16, 36,066 at 16:9, all in the
 >   box's last column or row; `framemd5` apart on 60 and 105 of 105), and
->   `f8d74ee`'s case 7 recorded it as a finding; `683a6f0` fixed it in
->   `graphicBox` and made case 7 strict (§6.3's "The box", corrected;
+>   `f8d74ee`'s case 7 exempted the box's last column and row, so it
+>   passed against the defect, which both critics flagged as a test
+>   asserting the broken behaviour; `683a6f0` fixed it in `graphicBox`
+>   and made case 7 the plan's strict bar (§6.3's "The box", corrected;
 >   `EFFECTS.md` §61, "geq's w − 2 clamp and the box route's extra
 >   edge"). **The smear H.264 leaves at an edge**, the worst inside
 >   reading by its distance from the box's edge on the 9:16 box export: 8
@@ -12911,7 +12939,7 @@ is absent (only §6.20's two Noto faces and their licences are tracked under
 >   allowed; at 16 it is 3 inside and 3 outside at both shapes and on
 >   both routes. The edges are still read in luma 18 px either side, so
 >   placement loses no check.
-> - **M19's gated read** (`0954b3d`, `2bb706d`; `:1086-1394`). Skipped
+> - **M19's gated read** (`0954b3d`, `2bb706d`; `:1040-1394`). Skipped
 >   without `FORGE_GRAPHIC_FRAMES`; with it, per distinct PNG and colour
 >   (#202830, #f2efe7): a lossless flat clip (x264, qp 0); the plan's own
 >   graph with its outputs swapped for raw yuv420p and `-vsync
@@ -12969,7 +12997,8 @@ is absent (only §6.20's two Noto faces and their licences are tracked under
 >   this section gives no margin and H.264 needs one. The null bake is a
 >   case of its own. The box's `framemd5` equality, a proposal here, held
 >   only after the fix above.
-> - **Open.** The Windows build's run is CI's: every case runs on both
+> - **Open.** The Windows build's run is CI's: every case but M19's gated
+>   read (skipped there, as CI sets no `FORGE_GRAPHIC_FRAMES`) runs on both
 >   runners, the Windows one on the 2018 ffmpeg, and the (box) case's
 >   equality there is unread until the CI line above is filled (the
 >   `f22fcd4` source says geq clamps there exactly as on the Mac). Not
@@ -13127,8 +13156,12 @@ annotations.
   M21 and the beat-frame allowance window. Unmeasured, which your first
   runs answer: whether Electron's `contextBridge` lets the check wrap
   `window.forge` (if not, it reads the files and says so), the app's CSP
-  against the module worker, and every Windows reading but CI's. When
-  these are in, phase 1's exit is read here and phase 2 starts with T3's
+  against the module worker, and every Windows reading but CI's. Not
+  built by lane D, and outside this bar, though lane C's record named
+  them for it: the workers' start timed on its own (the session-pool
+  question) and whether M2's worker run should read `encodeFrames`'
+  worker route; the plan owner's to schedule (§6.3's `graphicCanvas.ts`
+  Built note, "Open"). When these are in, phase 1's exit is read here and phase 2 starts with T3's
   typed stub of `applyGraphics`, then T1 (§6.19).
 
 **Phase 2.** §6.12 as written on 2026-10-05, for all nine shapes (§6.2):
@@ -14533,7 +14566,7 @@ values, dated, as the steps above carry their Built notes (it did,
 >   the bar's 8; the background, the ink's Y and the reference read 0.
 >   The cause measured: all 2,065,202 transparent pixels decode as RGB
 >   (0, 0, 0) and `format=yuva420p` averages that black into the stroke's
->   chroma (bled with the stroke's colour, the 2 and 3 px horizontals
+>   chroma (on PNGs made in node: bled with the stroke's colour, the 2 and 3 px horizontals
 >   read 0, 1 px U 32); the exit geq's round trip adds up to 7 levels
 >   (58/51/22 without it, against 63/54/29, on the node-made PNGs).
 >   **Left: yours**, the strokes PNGs from the development app and
@@ -16377,6 +16410,10 @@ link and their tests, against the tags' one block and one test.
 >   `Preview.tsx`'s two effects and its `catalogReady` dependencies are the
 >   sites no node test reaches; the harness's Indic frames through a text
 >   clip and a caption (§6.11's `indic` option, lane D) are their check.
+>   (Built 2026-11-02, `6592a38` and `69c2340`: on the harness page both
+>   sites read SEEN with the two Noto faces given by hand and "cannot
+>   tell" with its empty catalogue; the app's run is yours, §6.11's Indic
+>   Built note.)
 > - **Mutations**: sixty-three across the six commits, each at an anchor
 >   counted at exactly one match, the test run to a file with its exit
 >   read, the source restored from a copy and compared equal, md5 the same

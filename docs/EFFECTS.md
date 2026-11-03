@@ -10242,8 +10242,9 @@ V2 whose place box has every edge on an odd pixel, exported at 9:16
   (x 251 / 447) or last row (y 353 / 199), frame 74 (opacity 0) equal;
   the exports' `framemd5` apart on 60 of 105 frames at 9:16 and 105 of
   105 at 16:9 (one changed column moves x264's choices on other frames:
-  frame 14, before the clip, differs). Where the ink's edge is already
-  even, the copied column is the ink's own neighbour: invisible on a flat
+  frame 14, before the clip, differs). By the same clamp, read from the
+  source and not rendered (neither of the next two sentences was run):
+  where the ink's edge is already even, the copied column is the ink's own neighbour: invisible on a flat
   fill, a pixel on an anti-aliased edge. Every keyed-opacity clip has the
   same copy at the frame's edge, where it does not show.
 - **The fix** (`683a6f0`): `graphicBox` widens the box by `GEQ_EDGE_PX` =
@@ -10251,16 +10252,20 @@ V2 whose place box has every edge on an odd pixel, exported at 9:16
   even snap, clamped to the frame (`src/shared/graphics/drawList.ts:89-90`,
   `:158-159`, the reason in its comment, `:92-128`). The columns and rows geq copies
   are then transparent; where the frame's edge clamps the box first, the
-  canvas route's stream ends there too, so both copy the same pixels; the
-  left and top need nothing (geq never clamps below 0). After it: the
-  two routes' plan frames equal on every frame at both shapes, the
+  canvas route's stream ends there too, so both copy the same pixels
+  (reasoned from geq's clamp and checked as geometry by
+  `graphicDrawList`'s new case, 1000,1850 → 80×70, not rendered:
+  `graphic.int`'s spec touches no frame edge); the left and top need
+  nothing (geq never clamps below 0). After it, for `graphic.int`'s
+  spec: the two routes' plan frames equal on every frame at both shapes, the
   exports `framemd5`-equal, every edge at 0 px on both routes, the boxes
   70,192 184×164 and 126,108 324×94 (were 182×162 and 322×92).
 - **`interpolation=nearest` is not the fix** (`683a6f0`, the Mac, a
   critic's claim run there): with the pad removed and `:interpolation=nearest`
   appended to `plan.ts:724`, Y is equal but U and V are still apart in
   19,774 samples over 59 frames at 9:16, and the exports' `framemd5` apart
-  on 60 of 105; and the 2018 build does not have the option. `TOO_NEW`
+  on 60 of 105 (the critic's run of `f8d74ee` read 11,817 samples at
+  16:9 and `framemd5` apart on 90 of 105 there); and the 2018 build does not have the option. `TOO_NEW`
   refuses it (`tests/oldestFfmpeg.test.ts:133`, `/\bgeq=[^;[]*?:(interpolation|i)=/`,
   "after 2018-12-17 (not in vf_geq.c at f22fcd4)").
 
@@ -10335,8 +10340,9 @@ M8 (`CLIPS.md` §6.15, row 46): `0954b3d`, with `2bb706d`'s two readings;
 §6.11's lane-D harness Built note. `{ pathLength: true }` on the harness
 page in the Browser pane's Chrome 152.0.7977.167 (macOS, not Electron
 44): per path, an off-DOM `SVGPathElement`'s `getTotalLength()` and
-`getPointAtLength()` at 64 fractions of its own length against
-`flattenPath` and `strokeAt`'s tip at the same fractions of ours, per
+`getPointAtLength()` at the 65 fractions k/64 (k = 0..64, `M8_SAMPLES`)
+of its own length against `flattenPath` and `strokeAt`'s tip at the same
+fractions of ours, per
 tolerance; bar `M8_BAR`, 0.1 % on the length and 0.5 px on every point.
 23 paths: four-cubic circles at r = 20, 30, 38, 39, 40, 45, 50, 100,
 200, 400 and 540, a line, `tests/graphicStroke.test.ts`'s S-curve, cubic,
@@ -10545,7 +10551,9 @@ reading M8 takes is the plan owner's, and the run in the development app
     the matte and every transition with them; a box under 2×2 is never
     read. A slide and a dissolve would have come out the same.
 24. **The box route draws what the canvas route draws, frame for frame,
-    on the Mac's build** (2026-11-03; "geq's w − 2 clamp and the box
+    on the Mac's build, for `graphic.int`'s spec at 9:16 and 16:9**
+    (a box the frame's edge clamps: reasoned, checked as geometry in
+    node, not rendered) (2026-11-03; "geq's w − 2 clamp and the box
     route's extra edge" above; `683a6f0`): the exit geq's clamp to w − 2
     and h − 2 copied the stream's last column and row, so a box ending
     one pixel past the ink drew the graphic a pixel wider and taller;
@@ -10557,11 +10565,12 @@ reading M8 takes is the plan owner's, and the run in the development app
     levels through the plan's chain** (2026-11-03, the Mac's build;
     "Stroke chroma through yuva420p" above): 1 px U 63, 2 px 54, 3 px 34
     on the bake's own PNG. The transparent pixels' black chroma averaged
-    in by `format=yuva420p` is most of it (bled, the 2 and 3 px
-    horizontals read 0), the exit geq's round trip up to 7 levels more.
+    in by `format=yuva420p` is most of it (bled, on PNGs made in node,
+    the 2 and 3 px horizontals read 0), the exit geq's round trip up to 7 levels more.
     Nothing is decided: `STROKE_MIN_PX` stays 2.
 26. **`flattenPath` meets M8 at 0.25 px everywhere but on the four-cubic
-    circles under r = 39** (2026-11-03, Chrome 152 in the pane;
+    circles under r = 40** (`M8_OPEN_BELOW`; 0.25 fails at r = 20, 30
+    and 38; 2026-11-03, Chrome 152 in the pane;
     "flattenPath against SVGPathElement" above): with them the coarsest
     tolerance within the bar is 0.125, without them 0.25. Which reading
     M8 takes is the plan owner's; `STROKE_TOLERANCE` stays 0.25.
@@ -10592,7 +10601,9 @@ reading M8 takes is the plan owner's, and the run in the development app
   is worth keeping is lane D's to time on the harness page. (Lane D,
   2026-11-02/03, did not time the start on its own: its bakes' figures are
   per frame and per 46-frame bake, `CLIPS.md` §6.11's lane-D harness
-  Built note.)
+  Built note. Nor did it read whether M2's worker run should take
+  `encodeFrames`' worker route, the other question lane C's record left
+  it; both are the plan owner's to schedule, outside phase 1's bar.)
 - **The Windows side of lane C**: none of item 22 was read on the Surface
   or in Electron on Windows; CI runs lane C's suites on both runners,
   which use a fake canvas and stand-in encoders, not a worker. The
@@ -10689,7 +10700,7 @@ reading M8 takes is the plan owner's, and the run in the development app
   `tests/graphicFrame.test.ts`, decided by no one yet. The user's.
 - **M7–M20, by phase**: M8 (above), M13 and M19 in phase 1 (M9 measured,
   item 14; M8 and M19 measured in part 2026-11-03, the pane's Chrome 152
-  and the Mac's ffmpeg, items 25 and 26, their app runs and decisions the
+  and the Mac's ffmpeg, items 26 and 25, their app runs and decisions the
   user's; M13's two bakes per case, `framemd5` over the patterns the
   check prints and the Mac against the Surface, the user's: on the
   harness page each case's two box-route bakes were 46 of 46 PNGs
