@@ -1,0 +1,835 @@
+{
+  "note": "The 27 drawing fixtures of docs/CLIPS.md §6.2 and §6.10: one GraphicSpec per shape (counter, bars, steps with no connector, steps with a connector, quote, callout, ring, keyword, lower-third) in English, Hindi and Telugu. Written by the T1 lane on 2026-11-07. The Hindi and Telugu strings AWAIT THE USER'S CHECK (§6.10: \"the Hindi and Telugu strings everywhere are yours\"); the English ones are for the user to check too. The connected steps are a nested tree in English, a line in Hindi and a flat tree (the title fanning out) in Telugu. Each template's longest label is in its English fixture (bars 5 items, steps 6 items, quote 16 words, keyword 4 words). beats are seconds from the clip's start, the first at LEAD_S 0.5; seconds = the largest of seconds.min, the last beat + TAIL_S 0.8, and LEAD_S + readingSeconds(the drawn strings joined by spaces) + EXIT_S 0.3, rounded up to 0.1 s, within seconds.max.",
+  "specs": [
+    {
+      "id": "counter-en",
+      "shape": "counter",
+      "language": "en",
+      "spec": {
+        "data": {
+          "template": "counter",
+          "value": "10,00,000",
+          "label": "views on the first reel"
+        },
+        "seconds": 2.5,
+        "beats": [
+          0.5
+        ],
+        "place": {
+          "auto": true,
+          "third": "bottom"
+        },
+        "seed": 1000,
+        "version": 1
+      }
+    },
+    {
+      "id": "counter-hi",
+      "shape": "counter",
+      "language": "hi",
+      "spec": {
+        "data": {
+          "template": "counter",
+          "value": "₹500",
+          "label": "हर एल्बम पर बचत"
+        },
+        "seconds": 2,
+        "beats": [
+          0.5
+        ],
+        "place": {
+          "auto": true,
+          "third": "middle"
+        },
+        "seed": 1037,
+        "version": 1
+      }
+    },
+    {
+      "id": "counter-te",
+      "shape": "counter",
+      "language": "te",
+      "spec": {
+        "data": {
+          "template": "counter",
+          "value": "౩౦౦",
+          "label": "పెళ్లిళ్లు చిత్రీకరించాము"
+        },
+        "seconds": 2,
+        "beats": [
+          0.5
+        ],
+        "place": {
+          "auto": true,
+          "third": "top"
+        },
+        "seed": 1074,
+        "version": 1
+      }
+    },
+    {
+      "id": "bars-en",
+      "shape": "bars",
+      "language": "en",
+      "spec": {
+        "data": {
+          "template": "bars",
+          "title": "Hours spent on one wedding",
+          "items": [
+            {
+              "label": "Shooting",
+              "value": "10"
+            },
+            {
+              "label": "Culling",
+              "value": "6"
+            },
+            {
+              "label": "Editing",
+              "value": "18"
+            },
+            {
+              "label": "Colour",
+              "value": "4"
+            },
+            {
+              "label": "Delivery",
+              "value": "2"
+            }
+          ]
+        },
+        "seconds": 4.8,
+        "beats": [
+          0.5,
+          1.1,
+          1.7,
+          2.3,
+          2.9
+        ],
+        "place": {
+          "auto": true,
+          "third": "bottom"
+        },
+        "seed": 1111,
+        "version": 1
+      }
+    },
+    {
+      "id": "bars-hi",
+      "shape": "bars",
+      "language": "hi",
+      "spec": {
+        "data": {
+          "template": "bars",
+          "title": "पैसा कहाँ गया",
+          "items": [
+            {
+              "label": "फ़ोटो",
+              "value": "₹40,000"
+            },
+            {
+              "label": "वीडियो",
+              "value": "₹60,000"
+            },
+            {
+              "label": "एल्बम",
+              "value": "₹15,000"
+            }
+          ]
+        },
+        "seconds": 3,
+        "beats": [
+          0.5,
+          1.1,
+          1.7
+        ],
+        "place": {
+          "auto": true,
+          "third": "middle"
+        },
+        "seed": 1148,
+        "version": 1
+      }
+    },
+    {
+      "id": "bars-te",
+      "shape": "bars",
+      "language": "te",
+      "spec": {
+        "data": {
+          "template": "bars",
+          "title": "గంటల లెక్క",
+          "items": [
+            {
+              "label": "షూటింగ్",
+              "value": "8"
+            },
+            {
+              "label": "ఎడిటింగ్",
+              "value": "12"
+            }
+          ]
+        },
+        "seconds": 3,
+        "beats": [
+          0.5,
+          1.1
+        ],
+        "place": {
+          "auto": true,
+          "third": "top"
+        },
+        "seed": 1185,
+        "version": 1
+      }
+    },
+    {
+      "id": "steps-en",
+      "shape": "steps",
+      "language": "en",
+      "spec": {
+        "data": {
+          "template": "steps",
+          "title": "Before the ceremony",
+          "connector": "none",
+          "items": [
+            {
+              "label": "Charge every battery",
+              "parent": -1
+            },
+            {
+              "label": "Format the cards",
+              "parent": -1
+            },
+            {
+              "label": "Scout the venue",
+              "parent": -1
+            },
+            {
+              "label": "Check the light",
+              "parent": -1
+            },
+            {
+              "label": "Meet the couple",
+              "parent": -1
+            },
+            {
+              "label": "Shoot the details",
+              "parent": -1
+            }
+          ]
+        },
+        "seconds": 7,
+        "beats": [
+          0.5,
+          1.1,
+          1.7,
+          2.3,
+          2.9,
+          3.5
+        ],
+        "place": {
+          "auto": true,
+          "third": "bottom"
+        },
+        "seed": 1222,
+        "version": 1
+      }
+    },
+    {
+      "id": "steps-hi",
+      "shape": "steps",
+      "language": "hi",
+      "spec": {
+        "data": {
+          "template": "steps",
+          "title": "शादी से पहले",
+          "connector": "none",
+          "items": [
+            {
+              "label": "बैटरी चार्ज करें",
+              "parent": -1
+            },
+            {
+              "label": "कार्ड खाली करें",
+              "parent": -1
+            },
+            {
+              "label": "जगह देख लें",
+              "parent": -1
+            }
+          ]
+        },
+        "seconds": 3,
+        "beats": [
+          0.5,
+          1.1,
+          1.7
+        ],
+        "place": {
+          "auto": true,
+          "third": "middle"
+        },
+        "seed": 1259,
+        "version": 1
+      }
+    },
+    {
+      "id": "steps-te",
+      "shape": "steps",
+      "language": "te",
+      "spec": {
+        "data": {
+          "template": "steps",
+          "title": "పెళ్లికి ముందు",
+          "connector": "none",
+          "items": [
+            {
+              "label": "బ్యాటరీలు ఛార్జ్ చేయండి",
+              "parent": -1
+            },
+            {
+              "label": "కార్డులు ఖాళీ చేయండి",
+              "parent": -1
+            },
+            {
+              "label": "వేదికను చూడండి",
+              "parent": -1
+            }
+          ]
+        },
+        "seconds": 3,
+        "beats": [
+          0.5,
+          1.1,
+          1.7
+        ],
+        "place": {
+          "auto": true,
+          "third": "top"
+        },
+        "seed": 1296,
+        "version": 1
+      }
+    },
+    {
+      "id": "steps-connected-en",
+      "shape": "steps-connected",
+      "language": "en",
+      "spec": {
+        "data": {
+          "template": "steps",
+          "title": "Three things matter on a wedding shoot",
+          "connector": "tree",
+          "items": [
+            {
+              "label": "The plan",
+              "parent": -1
+            },
+            {
+              "label": "The budget",
+              "parent": 0
+            },
+            {
+              "label": "The timeline",
+              "parent": 0
+            },
+            {
+              "label": "The shoot itself",
+              "parent": -1
+            },
+            {
+              "label": "The edit",
+              "parent": -1
+            }
+          ]
+        },
+        "seconds": 5.7,
+        "beats": [
+          0.5,
+          1.1,
+          1.7,
+          2.3,
+          2.9
+        ],
+        "place": {
+          "auto": true,
+          "third": "bottom"
+        },
+        "seed": 1333,
+        "version": 1
+      }
+    },
+    {
+      "id": "steps-connected-hi",
+      "shape": "steps-connected",
+      "language": "hi",
+      "spec": {
+        "data": {
+          "template": "steps",
+          "title": "एडिट के तीन कदम",
+          "connector": "line",
+          "items": [
+            {
+              "label": "क्लिप चुनें",
+              "parent": -1
+            },
+            {
+              "label": "रंग ठीक करें",
+              "parent": -1
+            },
+            {
+              "label": "संगीत जोड़ें",
+              "parent": -1
+            }
+          ]
+        },
+        "seconds": 3,
+        "beats": [
+          0.5,
+          1.1,
+          1.7
+        ],
+        "place": {
+          "auto": true,
+          "third": "middle"
+        },
+        "seed": 1370,
+        "version": 1
+      }
+    },
+    {
+      "id": "steps-connected-te",
+      "shape": "steps-connected",
+      "language": "te",
+      "spec": {
+        "data": {
+          "template": "steps",
+          "title": "పెళ్లి రోజు ప్రణాళిక",
+          "connector": "tree",
+          "items": [
+            {
+              "label": "మేకప్",
+              "parent": -1
+            },
+            {
+              "label": "వేడుక",
+              "parent": -1
+            },
+            {
+              "label": "విందు",
+              "parent": -1
+            }
+          ]
+        },
+        "seconds": 3,
+        "beats": [
+          0.5,
+          1.1,
+          1.7
+        ],
+        "place": {
+          "auto": true,
+          "third": "top"
+        },
+        "seed": 1407,
+        "version": 1
+      }
+    },
+    {
+      "id": "quote-en",
+      "shape": "quote",
+      "language": "en",
+      "spec": {
+        "data": {
+          "template": "quote",
+          "kind": "said",
+          "text": "You only get one first look, so put the camera exactly where the light already is.",
+          "speaker": "Priya Raman"
+        },
+        "seconds": 5.8,
+        "beats": [
+          0.5,
+          0.8,
+          1.1,
+          1.4,
+          1.7,
+          2,
+          2.3,
+          2.6,
+          2.9,
+          3.2,
+          3.5,
+          3.8,
+          4.1,
+          4.4,
+          4.7,
+          5
+        ],
+        "place": {
+          "auto": true,
+          "third": "bottom"
+        },
+        "seed": 1444,
+        "version": 1
+      }
+    },
+    {
+      "id": "quote-hi",
+      "shape": "quote",
+      "language": "hi",
+      "spec": {
+        "data": {
+          "template": "quote",
+          "kind": "said",
+          "text": "हर शादी की अपनी एक कहानी होती है।",
+          "speaker": "अनन्या शर्मा"
+        },
+        "seconds": 3.4,
+        "beats": [
+          0.5,
+          0.8,
+          1.1,
+          1.4,
+          1.7,
+          2,
+          2.3,
+          2.6
+        ],
+        "place": {
+          "auto": true,
+          "third": "middle"
+        },
+        "seed": 1481,
+        "version": 1
+      }
+    },
+    {
+      "id": "quote-te",
+      "shape": "quote",
+      "language": "te",
+      "spec": {
+        "data": {
+          "template": "quote",
+          "kind": "said",
+          "text": "ప్రతి పెళ్లికి తనదైన ఒక కథ ఉంటుంది.",
+          "speaker": "శ్రీనివాస్ రెడ్డి"
+        },
+        "seconds": 2.8,
+        "beats": [
+          0.5,
+          0.8,
+          1.1,
+          1.4,
+          1.7,
+          2
+        ],
+        "place": {
+          "auto": true,
+          "third": "top"
+        },
+        "seed": 1518,
+        "version": 1
+      }
+    },
+    {
+      "id": "callout-en",
+      "shape": "callout",
+      "language": "en",
+      "spec": {
+        "data": {
+          "template": "callout",
+          "label": "The ring bearer",
+          "shape": "arrow"
+        },
+        "seconds": 1.6,
+        "beats": [
+          0.5
+        ],
+        "place": {
+          "auto": true,
+          "third": "bottom"
+        },
+        "seed": 1555,
+        "version": 1,
+        "subject": {
+          "clipId": "fixture-footage",
+          "box": {
+            "x": 0.35,
+            "y": 0.2,
+            "width": 0.3,
+            "height": 0.35
+          },
+          "ms": 0
+        }
+      }
+    },
+    {
+      "id": "callout-hi",
+      "shape": "callout",
+      "language": "hi",
+      "spec": {
+        "data": {
+          "template": "callout",
+          "label": "दुल्हन का लहंगा",
+          "shape": "circle"
+        },
+        "seconds": 1.5,
+        "beats": [
+          0.5
+        ],
+        "place": {
+          "auto": true,
+          "third": "middle"
+        },
+        "seed": 1592,
+        "version": 1,
+        "subject": {
+          "clipId": "fixture-footage",
+          "box": {
+            "x": 0.35,
+            "y": 0.2,
+            "width": 0.3,
+            "height": 0.35
+          },
+          "ms": 0
+        }
+      }
+    },
+    {
+      "id": "callout-te",
+      "shape": "callout",
+      "language": "te",
+      "spec": {
+        "data": {
+          "template": "callout",
+          "label": "పెళ్లి మండపం",
+          "shape": "arrow"
+        },
+        "seconds": 1.5,
+        "beats": [
+          0.5
+        ],
+        "place": {
+          "auto": true,
+          "third": "top"
+        },
+        "seed": 1629,
+        "version": 1,
+        "subject": {
+          "clipId": "fixture-footage",
+          "box": {
+            "x": 0.35,
+            "y": 0.2,
+            "width": 0.3,
+            "height": 0.35
+          },
+          "ms": 0
+        }
+      }
+    },
+    {
+      "id": "ring-en",
+      "shape": "ring",
+      "language": "en",
+      "spec": {
+        "data": {
+          "template": "ring",
+          "value": "40%",
+          "label": "of couples book in March"
+        },
+        "seconds": 2.2,
+        "beats": [
+          0.5
+        ],
+        "place": {
+          "auto": true,
+          "third": "bottom"
+        },
+        "seed": 1666,
+        "version": 1
+      }
+    },
+    {
+      "id": "ring-hi",
+      "shape": "ring",
+      "language": "hi",
+      "spec": {
+        "data": {
+          "template": "ring",
+          "value": "४०%",
+          "label": "जोड़े दिसंबर में शादी करते हैं"
+        },
+        "seconds": 2,
+        "beats": [
+          0.5
+        ],
+        "place": {
+          "auto": true,
+          "third": "middle"
+        },
+        "seed": 1703,
+        "version": 1
+      }
+    },
+    {
+      "id": "ring-te",
+      "shape": "ring",
+      "language": "te",
+      "spec": {
+        "data": {
+          "template": "ring",
+          "value": "75%",
+          "label": "అతిథులు సమయానికి వచ్చారు"
+        },
+        "seconds": 2,
+        "beats": [
+          0.5
+        ],
+        "place": {
+          "auto": true,
+          "third": "top"
+        },
+        "seed": 1740,
+        "version": 1
+      }
+    },
+    {
+      "id": "keyword-en",
+      "shape": "keyword",
+      "language": "en",
+      "spec": {
+        "data": {
+          "template": "keyword",
+          "words": "Light beats expensive gear",
+          "lit": 0
+        },
+        "seconds": 2.1,
+        "beats": [
+          0.5
+        ],
+        "place": {
+          "auto": false,
+          "box": {
+            "x": 0.1,
+            "y": 0.62,
+            "width": 0.8,
+            "height": 0.2
+          }
+        },
+        "seed": 1777,
+        "version": 1
+      }
+    },
+    {
+      "id": "keyword-hi",
+      "shape": "keyword",
+      "language": "hi",
+      "spec": {
+        "data": {
+          "template": "keyword",
+          "words": "पहली झलक",
+          "lit": 1
+        },
+        "seconds": 1.5,
+        "beats": [
+          0.5
+        ],
+        "place": {
+          "auto": true,
+          "third": "middle"
+        },
+        "seed": 1814,
+        "version": 1
+      }
+    },
+    {
+      "id": "keyword-te",
+      "shape": "keyword",
+      "language": "te",
+      "spec": {
+        "data": {
+          "template": "keyword",
+          "words": "మొదటి చూపు",
+          "lit": 1
+        },
+        "seconds": 1.5,
+        "beats": [
+          0.5
+        ],
+        "place": {
+          "auto": true,
+          "third": "top"
+        },
+        "seed": 1851,
+        "version": 1
+      }
+    },
+    {
+      "id": "lower-third-en",
+      "shape": "lower-third",
+      "language": "en",
+      "spec": {
+        "data": {
+          "template": "lower-third",
+          "name": "Priya Raman",
+          "role": "Wedding photographer, Chennai"
+        },
+        "seconds": 2.9,
+        "beats": [
+          0.5
+        ],
+        "place": {
+          "auto": true,
+          "third": "bottom"
+        },
+        "seed": 1888,
+        "version": 1
+      }
+    },
+    {
+      "id": "lower-third-hi",
+      "shape": "lower-third",
+      "language": "hi",
+      "spec": {
+        "data": {
+          "template": "lower-third",
+          "name": "अनन्या शर्मा",
+          "role": "वेडिंग फ़ोटोग्राफ़र, जयपुर"
+        },
+        "seconds": 2.5,
+        "beats": [
+          0.5
+        ],
+        "place": {
+          "auto": true,
+          "third": "bottom"
+        },
+        "seed": 1925,
+        "version": 1
+      }
+    },
+    {
+      "id": "lower-third-te",
+      "shape": "lower-third",
+      "language": "te",
+      "spec": {
+        "data": {
+          "template": "lower-third",
+          "name": "శ్రీనివాస్ రెడ్డి",
+          "role": "ఫోటోగ్రాఫర్, హైదరాబాద్"
+        },
+        "seconds": 2.5,
+        "beats": [
+          0.5
+        ],
+        "place": {
+          "auto": true,
+          "third": "bottom"
+        },
+        "seed": 1962,
+        "version": 1
+      }
+    }
+  ]
+}
