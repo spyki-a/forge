@@ -30,8 +30,8 @@ import { textInkReach } from '@shared/render/textStyle'
 
 /*
  * The draw list (docs/CLIPS.md §6.3, phase 1): `drawListAt` through the
- * drawer seam, with hand-built drawers (phase 1 has no template: `DRAWERS` is
- * empty); the units a text field is cut into (`unitFor`, `CLUSTER_SCRIPTS` as
+ * drawer seam, with hand-built drawers (phase 1 had no template: `DRAWERS` was
+ * empty; phase 2's drawers are graphicFrame's); the units a text field is cut into (`unitFor`, `CLUSTER_SCRIPTS` as
  * M3 set it, 2026-10-27, §6.15); `textItems` and `textSpecOf`; the onset
  * targets; `needsCompositor`; `graphicBox` and `itemBounds`. §6.16's two
  * depth cases wait for phase 3's `counter` and `ring` variants.
@@ -148,13 +148,17 @@ const ARABIC = 'مرحبا بالعالم'
 /* -------------------------------------------------------------- the drawers */
 
 describe('graphicDrawList: the drawer seam', () => {
-  it('DRAWERS is a frozen, empty record in phase 1', () => {
+  it('DRAWERS is a frozen record, each row a function, never a screen card or a step-6 template in phase 2', () => {
+    // Empty in phase 1; phase 2's template commits add rows (§6.2), so membership is asserted, not the whole list.
     expect(Object.isFrozen(DRAWERS)).toBe(true)
-    expect(Object.keys(DRAWERS)).toHaveLength(0)
+    for (const [id, drawer] of Object.entries(DRAWERS)) expect(typeof drawer, id).toBe('function')
+    for (const id of ['screen-card', 'timeline', 'before-after', 'versus', 'source'] as GraphicTemplateId[]) expect(DRAWERS[id], id).toBeUndefined()
   })
 
-  it('with no drawer for the template, the list is empty and flat, for every template id', () => {
-    for (const id of Object.keys(TEMPLATE_IDS) as GraphicTemplateId[]) {
+  it('with no drawer for the template, the list is empty and flat, for every template id without a row in DRAWERS', () => {
+    const without = (Object.keys(TEMPLATE_IDS) as GraphicTemplateId[]).filter((id) => DRAWERS[id] === undefined)
+    expect(without).toContain('source')
+    for (const id of without) {
       const list = drawListAt(spec(1, id), style(), 7, FPS, SIZE, measure)
       expect(list, id).toStrictEqual({ width: SIZE.width, height: SIZE.height, items: [] })
       expect(needsCompositor(list), id).toBe(false)
@@ -589,7 +593,9 @@ describe('graphicDrawList: graphicBox', () => {
 
   it('is null with no items, no drawer or no frames; a dim makes it the whole frame; it clamps to the frame and is at least 2×2', () => {
     expect(graphicBox(spec(), style(), FPS, 10, SIZE, measure, () => ({}), () => ({ items: [] }))).toBeNull()
-    expect(graphicBox(spec(), style(), FPS, 10, SIZE, measure, () => ({}))).toBeNull()
+    // A template with no drawer (`source` is steps 5/6's): the default DRAWERS row is absent.
+    expect(DRAWERS.source).toBeUndefined()
+    expect(graphicBox(spec(1, 'source'), style(), FPS, 10, SIZE, measure, () => ({}))).toBeNull()
     expect(graphicBox(spec(), style(), FPS, 0, SIZE, measure, () => ({}), () => ({ items: [shape('s', rect(0, 0, 10, 10))] }))).toBeNull()
     expect(graphicBox(spec(), style(), FPS, 1, SIZE, measure, () => ({}), () => ({ items: [dim('d', rect(1, 1, 1, 1))] }))).toEqual(
       rect(0, 0, SIZE.width, SIZE.height)

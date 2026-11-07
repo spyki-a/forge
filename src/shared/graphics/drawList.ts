@@ -42,6 +42,28 @@ export function drawListAt(
   return list
 }
 
+/**
+ * Whether a graphic fits its place (§6.2, "Too big"): false when its
+ * template's drawer, shrunk to `FIT_MIN` of the layout table
+ * (`templates/layout.ts`), still cannot fit the content rect, so it returns
+ * an empty list on every frame; the caller then drops the graphic with
+ * `TOO_LONG_NOTE`. A `DrawOut` has no note field, so this is the question the
+ * store asks, beyond §6.2's words. Read at the clip's start: the layout does
+ * not move with t. True for a template with no drawer, which has nothing to
+ * fit.
+ */
+export function graphicFits(
+  spec: GraphicSpec,
+  style: GraphicStyle,
+  size: { width: number; height: number },
+  measure: TextMeasure,
+  targets?: GraphicTargets,
+  drawer: Drawer | undefined = DRAWERS[spec.data.template]
+): boolean {
+  if (!drawer) return true
+  return drawer(spec, style, { t: 0, fps: 30 }, size, measure, targets ?? {}).items.length > 0
+}
+
 function anyZ(items: readonly DrawItem[]): boolean {
   for (const item of items) {
     if (item.z !== undefined) return true

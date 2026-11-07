@@ -63,6 +63,10 @@ function dataFor(template: GraphicTemplateId, connector: 'none' | 'line' | 'tree
   if (template === 'steps') return { template, title: 'Steps', items: [{ label: 'one' }, { label: 'two' }, { label: 'three' }], connector }
   if (template === 'callout') return { template, label: 'here', shape: 'arrow' }
   if (template === 'counter') return { template, value: '40', label: 'forty' }
+  if (template === 'ring') return { template, value: '40%', label: 'forty' }
+  if (template === 'bars') return { template, title: 'Bars', items: [{ label: 'one', value: '10' }, { label: 'two', value: '20' }] }
+  if (template === 'keyword') return { template, words: 'light beats gear', lit: 1 }
+  if (template === 'lower-third') return { template, name: 'Priya Raman', role: 'Photographer' }
   return { template } as GraphicData
 }
 
