@@ -10395,7 +10395,9 @@ Mac on 2026-11-06 (stamped 2026-11-07T01:40-01:50Z), the Surface on
 `/Users/spyker/Library/Application Support/forge/titles/`, the Surface's
 under `C:\Users\rokza\AppData\Roaming\forge\titles\`, zipped to the Mac
 for the cross-machine reads, which the Mac's bundled 4.4 ffmpeg decoded
-to rgba. Every option passes on both; the figures are `CLIPS.md` §6.15's
+to rgba. Every option passes or is recorded on both (`pathLength`'s
+0.25 fails over all paths and M19 finds no width within the bar; M8 and
+M19 slide by the user's decisions of 2026-11-03); the figures are `CLIPS.md` §6.15's
 phase-1 notes. What the runs taught:
 
 - **The same draw list through the same Electron and Chrome build
@@ -10408,8 +10410,8 @@ phase-1 notes. What the runs taught:
   | stroke 822×422 | 0.36 % | 0.084 | 4.05 | 122 | 1.0040 |
   | text-latin 738×330 | 15.7 % | 2.007 | 5.19 | 212 | 1.0427 |
   | text-indic 722×224/226 | 20.2 % | 2.030 | 4.51 | 105 | 1.0418 |
-  | dim-hard 1080×1920 | 11.1 % (all but 6,725 px by 1-4 levels) | 0.112 | 0.135 | 46 | 1.0013 |
-  | dim-feather 1080×1920 | 19.0 % (all but 114 px by 1-4) | 0.219 | 0.246 | 5 | 1.0018 |
+  | dim-hard 1080×1920 | 11.1 % (10,577,324 of 10,584,049 by 1-4 levels) | 0.112 | 0.135 | 46 | 1.0013 |
+  | dim-feather 1080×1920 | 19.0 % (18,140,331 of 18,140,445 by 1-4) | 0.219 | 0.246 | 5 | 1.0018 |
   | group 826×534 | 6.2 % | 0.459 | 1.01 | 154 | 1.0000 |
 
   The stroke's differing pixels are a 1 px rim along both edges (58,037
@@ -10424,22 +10426,25 @@ phase-1 notes. What the runs taught:
   0.980, 1.963 and 2.994 on the Surface for 1, 2 and 3 px, and exactly
   1.000, 2.000 and 3.000 at slope 0 on both. The Surface covers a slanted
   anti-aliased edge more heavily; the geometry is the same. Within each
-  machine the bake is exact (the Surface's preview against its PNGs max 0
-  on every line). M13's golden tolerance is this table: edges, not
+  machine the bake matches its preview within the bar: max 0 on every
+  line on the Surface, the Mac with three small box-route residues
+  (stroke p = 1 max 235 over 2 px, text-indic p = 0.5 max 26, group max
+  9). M13's golden tolerance is this table: edges, not
   geometry.
 - **dim-hard's opacity ramp quantises differently on two frames.**
   Frames 13 and 16 differ over the whole frame by one level (alpha 66
   and 67, 81 and 82); every other ramp frame is equal (5/5, 10/10,
   77/77, 153/153 at the end). dim-feather has the same two frames one
   level apart. The platforms quantise `globalAlpha` differently on some
-  values.
+  frames.
 - **The two bundled ffmpegs decode these PNGs identically.** The user's
   `.frames` file, the Surface's 2018 build's `-f framemd5` of its own
   dim-hard-a PNGs, equals the Mac's 4.4 build's `framemd5` of the same
   zipped PNGs on 46 of 46 frames; only the `#software: Lavf…` header
   line differs. So `framemd5` lines compare straight across the builds
   once the header is dropped. (Within each machine the two bakes were
-  `framemd5`-equal in all six cases, 46 of 46.)
+  equal in all six cases: the Mac's by `framemd5`, 46 of 46; the
+  Surface's by the user's own SHA-256 run per sequence.)
 - **`indic`'s site lines read "cannot tell" unless `indic` runs first
   after a reload.** `primitives` loads the Noto faces, so a site then
   finds its face loaded before it ran. The Mac's first run (01:47:14Z,
@@ -10476,7 +10481,8 @@ phase-1 notes. What the runs taught:
 - **`recordingWrites` in the app.** Which way the PNGs came, the wrapper
   on `window.forge` or the files through `mediaUrl`, was not noted;
   either way the check read every PNG on both machines (the two box
-  bakes 46 of 46 byte-equal, both routes against the preview).
+  bakes 46 of 46 byte-equal, both routes against the preview; a reading
+  of those figures, not a line of the runs).
 
 ### What this settles
 
@@ -10799,7 +10805,10 @@ phase-1 notes. What the runs taught:
   style, which carries a shadow, inside a group scaled 0.8-1.2 and turned
   to −12°, and alpha outside `graphicBox` is 0 on the preview and the
   canvas route's PNGs. That is consistent with the bounds' rule, not a
-  probe of the CTM itself; the app's Chromium is the user's.)
+  probe of the CTM itself; the app's Chromium is the user's.) (Read
+  2026-11-06/07 in the development app, Electron 44.3.0, on both
+  machines: the group case's alpha outside `graphicBox` 0 on both
+  routes; still consistent with the rule, not a probe of the CTM.)
 - **The Indic render check through `paintDrawList2d`** (`CLIPS.md`
   §6.12's phase-1 bar): painter A is built (`a82cd43`, `d822c56`) and
   draws every text item through `drawTextOnto`; the check needs lane D's

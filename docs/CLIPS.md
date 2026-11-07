@@ -62,12 +62,16 @@
 > **Phase 1 exits** (read 2026-11-06/07): your runs its bar names
 > (§6.12) are read on both machines in `npm run dev` (Electron 44.3.0,
 > Chrome 152.0.7977.78), the Mac on 2026-11-06 and the Surface on
-> 2026-11-07, and all pass: `primitives` (all six cases on both),
-> `indic` (both sites SEEN, the sheet shaped by your eye on both),
-> `strokes` and `pathLength` (on both), M13 (the two bakes
-> `framemd5`-equal in all six cases on each machine, the Mac against the
-> Surface recorded as the golden tolerance) and M19's read with
-> `FORGE_GRAPHIC_FRAMES` (on both); §6.12's "Phase 1's exit" and §6.15's
+> 2026-11-07 (stamped 01:40-01:50Z and 03:23-03:27Z, about 1.5 h
+> apart), and all pass or are recorded as the bar asks: `primitives`
+> (all six cases on both), `indic` (both sites SEEN, the sheet shaped by
+> your eye on both), `strokes` (on both) and M13 (the two bakes equal in
+> all six cases on each machine, the Mac by `framemd5`, the Surface by
+> your own SHA-256 run and the harness's byte-equal PNGs; the Mac
+> against the Surface recorded as the golden tolerance) pass;
+> `pathLength` (0.25 fails over all paths) and M19's read with
+> `FORGE_GRAPHIC_FRAMES` (no width within the bar) are recorded, on
+> both; §6.12's "Phase 1's exit" and §6.15's
 > phase-1 notes have the figures. M8 and M19 slide by your decisions of
 > 2026-11-03: M8 as a doc decision (M8 over r ≥ 40, or 0.125 later),
 > `STROKE_TOLERANCE` unchanged at 0.25; M19 to a contained pre-beta
@@ -12710,7 +12714,8 @@ every run is yours.
 >   twice 46 of 46 PNGs byte-equal; 46 + 46 frames of 46 moving. The Mac
 >   kept three box-route residues inside the bar (stroke p = 1 max 235
 >   over 2 of 243,460 px; text-indic p = 0.5 mean 0.220 max 26, the canvas
->   route the same; group max 9 over 6 px); the Surface read max 0 on
+>   route the same; group p = 0 max 6 over 7 px and p = 1 max 9 over
+>   6 px); the Surface read max 0 on
 >   every line. Boxes: stroke 822×422 at 130,1130, text-latin 738×330 at
 >   172,776, group 826×534 at 128,696 on both; text-indic 722×224 at
 >   180,768 on the Mac and 722×226 at 180,766 on the Surface (the Noto
@@ -12722,7 +12727,8 @@ every run is yours.
 >   `console.log(r.summary.join('\n'))` is the text route, and the window
 >   has to stay visible (hidden reads THROTTLED). Whether the PNGs came
 >   through `recordingWrites`' wrapper or from the files was not noted;
->   either way the check read every PNG on both machines.
+>   either way the check read every PNG on both machines (a reading of
+>   the 46 of 46 byte-equal bakes, not a line of the runs).
 
 #### The Indic render check
 
@@ -12831,8 +12837,9 @@ directly: one function, one spec), after §6.20's fonts are in (§16.63).
 >   (after 0; before mean 12.122 max 255, 32,872 of 267,840); M22's
 >   clusters resolved before Noto loaded by Kohinoor Devanagari and
 >   Kohinoor Telugu, a dotted circle 120.0 px. The Surface: the text clip
->   SEEN (before mean 7.348 max 255, 18,975 of 518,400), the caption SEEN
->   (before mean 33.484 max 255, 77,961 of 267,840); M22's clusters
+>   SEEN (after mean 0.000 max 0; before mean 7.348 max 255, 18,975 of
+>   518,400), the caption SEEN (after 0; before mean 33.484 max 255,
+>   77,961 of 267,840); M22's clusters
 >   resolved by Nirmala UI, the only installed candidate, a dotted circle
 >   71.3 px, every conjunct narrower than its letters (क्ष 97.5 against
 >   187.6 px), कि's consonant 37 px right. The paint in Noto: all ten
@@ -13176,7 +13183,8 @@ annotations.
   width; both decisions open; §6.15's phase-1 note. Not met until your
   runs below.) (Met 2026-11-06/07 in the development app on the Mac and
   the Surface: all six cases pass on both, M13's two bakes
-  `framemd5`-equal on each, the Mac against the Surface recorded, M8 and
+  equal on each (the Mac by `framemd5`, the Surface by the user's
+  SHA-256 run), the Mac against the Surface recorded, M8 and
   M19 recorded; "Phase 1's exit" below.)
 - **The Indic render check** (§6.11), through `paintDrawList2d`, after
   §6.20's fonts are named first, on the Mac and the Surface; mutation-checked
@@ -13270,8 +13278,9 @@ annotations.
     lengths and verdicts exactly; M8 recorded.
   - `strokes`, both machines: 1.000/2.000/3.000 px at slope 0 on both;
     16 PNGs byte-equal.
-  - M13, both machines: the two bakes `framemd5`-equal in all six cases,
-    46 of 46 frames; the Mac against the Surface recorded as the golden
+  - M13, both machines: the two bakes equal in all six cases, the Mac
+    by `framemd5` (46 of 46 frames), the Surface by your own SHA-256 run
+    per sequence and the harness's 46 of 46 byte-equal PNGs; the Mac against the Surface recorded as the golden
     tolerance (mean over the box 0.084-2.030 per case, edges not
     geometry).
   - M19's read with `FORGE_GRAPHIC_FRAMES`, both machines: no width of
@@ -13285,7 +13294,8 @@ annotations.
   `STROKE_MIN_PX` unchanged. **The bar is met and phase 1 exits.** Still
   yours, none of it phase 1's bar: M21, the beat-frame allowance window,
   and the per-code-point painter mutation once in the app on the Mac
-  (optional, not run). Not answered by the runs: the app's CSP against
+  (optional, not run). Not answered by the runs (a reading of the
+  code, not a line of theirs): the app's CSP against
   the moved worker file (a refused worker costs the gain, not the bake,
   so a passing bake does not tell) and which way `recordingWrites` read
   the PNGs (not noted; every PNG was read). Next: phase 2, T3's typed
@@ -14127,7 +14137,7 @@ itself when it shows them wrong.
 | M10 | 48 | 2, the perfect-freehand half only, from a scratch branch with perfect-freehand added there and never merged (as M7's pmndrs leg; the harness imports it by a DEV-only dynamic `import()`); you, Mac and Surface | only on a pass does a phase-2 commit add perfect-freehand to `main` with the marker painter and `MARKER_READY` (D7's order). `strokeLook: 'marker'` is offered (§16.60) only if one of the two draw-ons keeps the tapered end's shape from frame to frame behind the moving tip (mean 0 outside the last 5 % of length, proposal) and preview = export ≤ 1/255. The rough.js half is not run in step 3 (§16.60: "rough.js not now") |
 | M11 | 49 | only if M1-M2 fall short; you | a raw RGBA path is then planned as its own change, outside step 3's days, using `overlay`'s `alpha=premultiplied` only if M4 found it on Windows |
 | M12 | 50 | 3; you | the fastest readback at p50 on the Surface that keeps straight alpha through to the PNG is phase 3's bake; `drawImage` stays unless another is at least twice as fast (proposal, §6.16) |
-| M13 | 51 | 1 (the primitives' spec), 3 (a 2.5D counter and a screen card); you | two bakes on one machine must be `framemd5`-equal, or the bake is not deterministic and the phase does not exit. The Mac-against-Surface mean difference is recorded as the golden tolerance; no CI check compares pixels across machines. (Phase 1's harness half built 2026-11-02, `6592a38` and `69c2340`: `primitives` bakes each case twice on the box route and prints the patterns through `m13Line`; on the harness page 46 of 46 PNGs byte-equal per case, which is not this row's run. Read 2026-11-06/07 in the development app: the two bakes `framemd5`-equal in all six cases, 46 of 46 frames, on each machine; the Mac against the Surface recorded as the golden tolerance, mean over the box 0.084-2.030 per case, largest premultiplied gap 5-212, at the anti-aliased edges, not the geometry. The notes below) |
+| M13 | 51 | 1 (the primitives' spec), 3 (a 2.5D counter and a screen card); you | two bakes on one machine must be `framemd5`-equal, or the bake is not deterministic and the phase does not exit. The Mac-against-Surface mean difference is recorded as the golden tolerance; no CI check compares pixels across machines. (Phase 1's harness half built 2026-11-02, `6592a38` and `69c2340`: `primitives` bakes each case twice on the box route and prints the patterns through `m13Line`; on the harness page 46 of 46 PNGs byte-equal per case, which is not this row's run. Read 2026-11-06/07 in the development app: the two bakes equal in all six cases on each machine, the Mac by `framemd5` (46 of 46 frames), the Surface by the user's own SHA-256 run per sequence and the harness's 46 of 46 byte-equal PNGs; the Mac against the Surface recorded as the golden tolerance, mean over the box 0.084-2.030 per case, largest premultiplied gap 5-212, at the anti-aliased edges, not the geometry. The notes below) |
 | M14 | 52 | 2; you, blind, on your clips, with `curves: { names, clipId }` (§6.10, §6.11; the key returned in the result for you to save) | run on a counter, then a keyword and a callout (§6.10); the overall pick becomes the restrained presets' `motion.ease` in `GRAPHIC_STYLES`, a template's own differing pick its default (§6.13). Until then `expo-out`. The look rating follows it (§6.10) |
 | M15 | 53 | 2; you mark the onset frames into `tests/fixtures/graphics/onsets.json` (`{ assetId; marks: { word: number; frame: number }[] }`, proposal), and `scripts/measure-onsets.mjs` (proposal) reads it against the transcript's `startMs` | median error within one frame at 30 fps: beats as §6.8 writes them. More: an onset refinement is planned as its own change, outside step 3's days (proposal) |
 | M16 | 54 | 2; node | a template whose seconds do not hold its longest fixture label gets its seconds raised in §6.2's table or its label capped, decided in phase 2 |
@@ -14779,9 +14789,9 @@ values, dated, as the steps above carry their Built notes (it did,
 >   54 V 31, 3 px U 34 V 19, each OVER 8; the smallest width within the
 >   bar none; background, ink Y and reference 0 on both colours. The
 >   Surface, the user's line as pasted: "graphic.int M19 (win32-x64,
->   C:\Users\rokza\my claude\forge\node_modules\@ffmpeg-installer\win32-x64\ffmpeg.exe):
+>   `C:\Users\rokza\my claude\forge\node_modules\@ffmpeg-installer\win32-x64\ffmpeg.exe`):
 >   16 PNGs, 1 distinct, from
->   C:\Users\rokza\AppData\Roaming\forge\titles\graphic-check-strokes-1.seq;
+>   `C:\Users\rokza\AppData\Roaming\forge\titles\graphic-check-strokes-1.seq`;
 >   1.0 px: U max 63, V max 35 over 4 lines, OVER 8; 2.0 px: U max 54, V
 >   max 30 over 4 lines, OVER 8; 3.0 px: U max 34, V max 19 over 4 lines,
 >   OVER 8; the smallest width within the bar: none; background U/V dark
@@ -18309,8 +18319,9 @@ H11, and H12 again, in phase 4.
   sequences' patterns and the canvas route's beside them, wherever they
   are files. On the harness page each case's two bakes were 46 of 46
   PNGs byte-equal (§6.11's lane-D harness Built note). In the
-  development app the two bakes are `framemd5`-equal in all six cases,
-  46 of 46 frames, on the Mac and on the Surface; the Mac against the
+  development app the two bakes are equal in all six cases on each
+  machine, the Mac by `framemd5` (46 of 46 frames), the Surface by the
+  user's own SHA-256 run per sequence; the Mac against the
   Surface, recorded as the golden tolerance: mean over the box
   0.084-2.030 per case, largest premultiplied gap 5-212, at the
   anti-aliased edges, not the geometry (§6.15's table). Phase 1's half
