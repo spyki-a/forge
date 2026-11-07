@@ -1,0 +1,292 @@
+{
+  "note": "Written as text by the T1 lane on 2026-11-07, for the user to check before it is relied on (docs/CLIPS.md §6.10: a lane may write the three English nested fixtures as text). Words are timed at 0.3 s each, since treeParents reads only their order. parents are as treeParents returns them: -1 the title, any other value an earlier item.",
+  "language": "en",
+  "transcript": {
+    "assetId": "fixture-nested-en-1",
+    "language": "en",
+    "model": "text-written fixture",
+    "durationMs": 9900,
+    "words": [
+      {
+        "index": 0,
+        "text": "Three",
+        "startMs": 0,
+        "endMs": 300,
+        "confidence": null
+      },
+      {
+        "index": 1,
+        "text": "things",
+        "startMs": 300,
+        "endMs": 600,
+        "confidence": null
+      },
+      {
+        "index": 2,
+        "text": "matter",
+        "startMs": 600,
+        "endMs": 900,
+        "confidence": null
+      },
+      {
+        "index": 3,
+        "text": "on",
+        "startMs": 900,
+        "endMs": 1200,
+        "confidence": null
+      },
+      {
+        "index": 4,
+        "text": "a",
+        "startMs": 1200,
+        "endMs": 1500,
+        "confidence": null
+      },
+      {
+        "index": 5,
+        "text": "wedding",
+        "startMs": 1500,
+        "endMs": 1800,
+        "confidence": null
+      },
+      {
+        "index": 6,
+        "text": "shoot.",
+        "startMs": 1800,
+        "endMs": 2100,
+        "confidence": null
+      },
+      {
+        "index": 7,
+        "text": "First,",
+        "startMs": 2100,
+        "endMs": 2400,
+        "confidence": null
+      },
+      {
+        "index": 8,
+        "text": "the",
+        "startMs": 2400,
+        "endMs": 2700,
+        "confidence": null
+      },
+      {
+        "index": 9,
+        "text": "plan,",
+        "startMs": 2700,
+        "endMs": 3000,
+        "confidence": null
+      },
+      {
+        "index": 10,
+        "text": "which",
+        "startMs": 3000,
+        "endMs": 3300,
+        "confidence": null
+      },
+      {
+        "index": 11,
+        "text": "has",
+        "startMs": 3300,
+        "endMs": 3600,
+        "confidence": null
+      },
+      {
+        "index": 12,
+        "text": "two",
+        "startMs": 3600,
+        "endMs": 3900,
+        "confidence": null
+      },
+      {
+        "index": 13,
+        "text": "parts:",
+        "startMs": 3900,
+        "endMs": 4200,
+        "confidence": null
+      },
+      {
+        "index": 14,
+        "text": "the",
+        "startMs": 4200,
+        "endMs": 4500,
+        "confidence": null
+      },
+      {
+        "index": 15,
+        "text": "budget,",
+        "startMs": 4500,
+        "endMs": 4800,
+        "confidence": null
+      },
+      {
+        "index": 16,
+        "text": "which",
+        "startMs": 4800,
+        "endMs": 5100,
+        "confidence": null
+      },
+      {
+        "index": 17,
+        "text": "itself",
+        "startMs": 5100,
+        "endMs": 5400,
+        "confidence": null
+      },
+      {
+        "index": 18,
+        "text": "has",
+        "startMs": 5400,
+        "endMs": 5700,
+        "confidence": null
+      },
+      {
+        "index": 19,
+        "text": "three",
+        "startMs": 5700,
+        "endMs": 6000,
+        "confidence": null
+      },
+      {
+        "index": 20,
+        "text": "kinds",
+        "startMs": 6000,
+        "endMs": 6300,
+        "confidence": null
+      },
+      {
+        "index": 21,
+        "text": "of",
+        "startMs": 6300,
+        "endMs": 6600,
+        "confidence": null
+      },
+      {
+        "index": 22,
+        "text": "cost,",
+        "startMs": 6600,
+        "endMs": 6900,
+        "confidence": null
+      },
+      {
+        "index": 23,
+        "text": "and",
+        "startMs": 6900,
+        "endMs": 7200,
+        "confidence": null
+      },
+      {
+        "index": 24,
+        "text": "the",
+        "startMs": 7200,
+        "endMs": 7500,
+        "confidence": null
+      },
+      {
+        "index": 25,
+        "text": "timeline.",
+        "startMs": 7500,
+        "endMs": 7800,
+        "confidence": null
+      },
+      {
+        "index": 26,
+        "text": "Second,",
+        "startMs": 7800,
+        "endMs": 8100,
+        "confidence": null
+      },
+      {
+        "index": 27,
+        "text": "the",
+        "startMs": 8100,
+        "endMs": 8400,
+        "confidence": null
+      },
+      {
+        "index": 28,
+        "text": "shoot",
+        "startMs": 8400,
+        "endMs": 8700,
+        "confidence": null
+      },
+      {
+        "index": 29,
+        "text": "itself.",
+        "startMs": 8700,
+        "endMs": 9000,
+        "confidence": null
+      },
+      {
+        "index": 30,
+        "text": "Third,",
+        "startMs": 9000,
+        "endMs": 9300,
+        "confidence": null
+      },
+      {
+        "index": 31,
+        "text": "the",
+        "startMs": 9300,
+        "endMs": 9600,
+        "confidence": null
+      },
+      {
+        "index": 32,
+        "text": "edit.",
+        "startMs": 9600,
+        "endMs": 9900,
+        "confidence": null
+      }
+    ],
+    "segments": [
+      {
+        "id": "s01",
+        "startMs": 0,
+        "endMs": 2100,
+        "text": "Three things matter on a wedding shoot.",
+        "wordStart": 0,
+        "wordEnd": 6
+      },
+      {
+        "id": "s02",
+        "startMs": 2100,
+        "endMs": 7800,
+        "text": "First, the plan, which has two parts: the budget, which itself has three kinds of cost, and the timeline.",
+        "wordStart": 7,
+        "wordEnd": 25
+      },
+      {
+        "id": "s03",
+        "startMs": 7800,
+        "endMs": 9000,
+        "text": "Second, the shoot itself.",
+        "wordStart": 26,
+        "wordEnd": 29
+      },
+      {
+        "id": "s04",
+        "startMs": 9000,
+        "endMs": 9900,
+        "text": "Third, the edit.",
+        "wordStart": 30,
+        "wordEnd": 32
+      }
+    ]
+  },
+  "title": "Three things matter on a wedding shoot",
+  "items": [
+    "plan",
+    "budget",
+    "timeline",
+    "shoot itself",
+    "edit"
+  ],
+  "parents": [
+    -1,
+    0,
+    0,
+    -1,
+    -1
+  ]
+}
