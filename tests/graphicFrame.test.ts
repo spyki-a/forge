@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
 import {
   BEAT_FRAME_ALLOWANCE,
   EDGE_SWEEP_S,
@@ -11,9 +12,11 @@ import {
   graphicMovingFrames
 } from '@shared/graphics/frame'
 import { graphicTargetsAt } from '@shared/graphics/targets'
-import { drawListAt } from '@shared/graphics/drawList'
+import { drawListAt, graphicFits } from '@shared/graphics/drawList'
 import { DRAWERS } from '@shared/graphics/templates/index'
-import type { DrawItem, Drawer, TextMeasure } from '@shared/graphics/items'
+import { itemBounds, type DrawItem, type DrawList, type Drawer, type ShapeItem, type StrokeItem, type TextItem, type TextMeasure } from '@shared/graphics/items'
+import { numberOf } from '@shared/graphics/numbers'
+import { FIT_MIN, contentRect } from '@shared/graphics/templates/layout'
 import { DURATIONS, progress, type MotionEase } from '@shared/graphics/motion'
 import { resolveGraphicStyle, type GraphicStyle } from '@shared/graphics/style'
 import type { GraphicData, GraphicSpec, GraphicTemplateId } from '@shared/graphics/template'
@@ -31,7 +34,9 @@ import { DEFAULT_COLOR, DEFAULT_TRANSFORM, emptyProject, type Clip, type MediaAs
  * between frames; an element's progress 1 on its beat frame and under 1 the
  * frame before; the seed drawn in a fixed order; the exit keys; the drawn
  * asset; and `graphicTargetsAt`'s subject, fixed at onset. Phase 2's cases
- * (the 27 fixtures, §6.2) and phase 3's (the screen card, §6.16) are not here.
+ * (§6.2) are at the foot, for the templates drawn so far (counter, ring, bars,
+ * keyword, lower-third) over their fixtures; phase 3's (the screen card,
+ * §6.16) are not here.
  */
 
 const RATES = [24, 25, 30, 60]
@@ -552,5 +557,359 @@ describe('graphicTargetsAt', () => {
     expect(got.subject).not.toBeNull()
     expect(got.tip).toBeUndefined()
     expect(got.screen).toBeUndefined()
+  })
+})
+
+/* ------------------------------------------------- phase 2: the templates */
+
+/*
+ * §6.2's Tests passage, `graphicFrame`'s phase-2 cases, for the five
+ * templates drawn so far, over their fixtures in tests/fixtures/graphics/
+ * specs.json (English, Hindi, Telugu each): at the settled frame the text
+ * items are every `data` string verbatim and nothing else but the listed
+ * fixed glyphs; each element arrives on its beat frame; the counting strings
+ * are ≤ the value and in its own format; the ring's `%` only when the value
+ * lacks one; keyword's words as said, `lit` a colour and an underline
+ * reaching 1 on the beat frame; lower-third's name and role as typed; the
+ * list at the last moving frame deep-equals the list at the clip's last
+ * frame. The fake measure is phase 1's (a width per UTF-16 unit).
+ */
+
+interface Fixture {
+  id: string
+  shape: string
+  language: 'en' | 'hi' | 'te'
+  spec: GraphicSpec
+}
+
+const FIXTURES = (
+  JSON.parse(readFileSync(new URL('./fixtures/graphics/specs.json', import.meta.url), 'utf8')) as { specs: Fixture[] }
+).specs
+const DRAWN = ['counter', 'ring', 'bars', 'keyword', 'lower-third']
+const DRAWN_FIXTURES = FIXTURES.filter((f) => DRAWN.includes(f.shape))
+
+const fakeMeasure: TextMeasure = (text, look) => ({ width: text.length * look.px * 0.55, ascent: look.px * 0.8, descent: look.px * 0.2 })
+
+const totalOf = (s: GraphicSpec, fps: number): number => Math.max(1, Math.round(s.seconds * fps))
+const listAt = (s: GraphicSpec, frame: number, fps = FPS, size = SIZE, style = clean()): DrawList =>
+  drawListAt(s, style, frame, fps, size, fakeMeasure)
+/** The settled frame: the last the bake draws, `graphicMovingFrames` − 1. */
+const settledFrame = (s: GraphicSpec, fps = FPS): number => graphicMovingFrames(s, clean(), fps, totalOf(s, fps)) - 1
+
+function flat(items: readonly DrawItem[]): DrawItem[] {
+  return items.flatMap((item) => (item.kind === 'group' ? flat(item.children) : [item]))
+}
+const textsOf = (list: DrawList): TextItem[] => flat(list.items).filter((i): i is TextItem => i.kind === 'text')
+const byId = <T extends DrawItem>(list: DrawList, id: string): T => {
+  const found = flat(list.items).filter((i) => i.id === id)
+  expect(found, `one item ${id}`).toHaveLength(1)
+  return found[0] as T
+}
+/** A field's drawn string: its pieces in reading order, joined by single spaces (a wrapped line or a word per piece). */
+function fieldText(list: DrawList, path: string): string | null {
+  const pieces = textsOf(list)
+    .filter((t) => t.source?.path === path)
+    .sort((a, b) => a.source!.piece - b.source!.piece)
+  return pieces.length === 0 ? null : pieces.map((t) => t.text).join(' ')
+}
+const normalised = (s: string): string => s.split(/\s+/).filter((w) => w.length > 0).join(' ')
+
+/** Every drawn `data` field of a fixture, by its source path, as the painter must draw it at the settled frame. */
+function expectedFields(data: GraphicData): Record<string, string> {
+  switch (data.template) {
+    case 'counter':
+      return { 'data.value': data.value, 'data.label': data.label }
+    case 'ring':
+      // §6.2's one added glyph: `%`, only when the value carries neither `%` nor a percent word.
+      return { 'data.value': /%|\bper\s?cent\b/i.test(data.value) ? data.value : `${data.value}%`, 'data.label': data.label }
+    case 'bars': {
+      const out: Record<string, string> = { 'data.title': data.title }
+      data.items.forEach((item, i) => {
+        out[`data.items.${i}.label`] = item.label
+        out[`data.items.${i}.value`] = item.value
+      })
+      return out
+    }
+    case 'keyword':
+      return { 'data.words': normalised(data.words) }
+    case 'lower-third':
+      return data.role === '' ? { 'data.name': data.name } : { 'data.name': data.name, 'data.role': data.role }
+    default:
+      throw new Error(`not drawn yet: ${data.template}`)
+  }
+}
+
+/* The value's own format, read independently of numbers.ts: its digit block, its grouping, its prefix and suffix. */
+const ZEROS = [0x30, 0x966, 0xc66]
+const zeroOf = (ch: string): number | null => {
+  const c = ch.codePointAt(0)!
+  for (const z of ZEROS) if (c >= z && c <= z + 9) return z
+  return null
+}
+function shapeOf(value: string): { prefix: string; body: string; suffix: string; zero: number | null } {
+  const chars = Array.from(value)
+  const first = chars.findIndex((c) => zeroOf(c) !== null)
+  if (first < 0) return { prefix: value, body: '', suffix: '', zero: null }
+  let end = chars.length
+  while (end > first && zeroOf(chars[end - 1]) === null) end--
+  return { prefix: chars.slice(0, first).join(''), body: chars.slice(first, end).join(''), suffix: chars.slice(end).join(''), zero: zeroOf(chars[first]) }
+}
+const toAscii = (body: string, zero: number): string => Array.from(body).map((c) => (zeroOf(c) === zero ? String(c.codePointAt(0)! - zero) : c)).join('')
+const INDIAN = /^\d{1,2}(,\d{2})*,\d{3}$|^\d{1,3}$/
+const WESTERN = /^\d{1,3}(,\d{3})*$/
+/** Whether `drawn` is written in `value`'s own format: the same prefix, suffix and digit block, and the value's grouping (Indian, western or none). */
+function inOwnFormat(drawn: string, value: string): boolean {
+  const v = shapeOf(value)
+  const d = shapeOf(drawn)
+  if (v.zero === null) return drawn === value
+  if (d.prefix !== v.prefix || d.suffix !== v.suffix || d.zero !== v.zero) return false
+  if (Array.from(d.body).some((c) => c !== ',' && c !== '.' && zeroOf(c) !== v.zero)) return false
+  const vi = toAscii(v.body, v.zero).split('.')
+  const di = toAscii(d.body, v.zero).split('.')
+  if ((vi[1] ?? '').length !== (di[1] ?? '').length) return false
+  const grouped = vi[0].includes(',')
+  const indian = grouped && /^\d{1,2}(,\d{2})+,\d{3}$/.test(vi[0])
+  if (!grouped) return !di[0].includes(',')
+  return indian ? INDIAN.test(di[0]) : WESTERN.test(di[0])
+}
+
+/** The counting fields of a fixture: the value text item's id and the value it counts to. */
+function countingOf(data: GraphicData): { id: string; value: string; beat: number }[] {
+  if (data.template === 'counter' || data.template === 'ring') return [{ id: 'value', value: data.value, beat: 0 }]
+  if (data.template === 'bars') return data.items.map((item, i) => ({ id: `value-${i}`, value: item.value, beat: i }))
+  return []
+}
+
+describe('graphicFrame, phase 2: the five templates drawn so far, over their fixtures (§6.2)', () => {
+  it('has the fifteen fixtures of the five templates, each drawn by its own DRAWERS row', () => {
+    expect(DRAWN_FIXTURES).toHaveLength(15)
+    for (const f of DRAWN_FIXTURES) {
+      expect(DRAWERS[f.spec.data.template], f.id).toBeDefined()
+      expect(listAt(f.spec, 0).items.length, f.id).toBeGreaterThan(0)
+    }
+  })
+
+  it('at the settled frame, the text items are every data string verbatim (a per-word or wrapped field’s pieces joined) and nothing else but the ring’s % glyph', () => {
+    for (const f of DRAWN_FIXTURES) {
+      const list = listAt(f.spec, settledFrame(f.spec))
+      const want = expectedFields(f.spec.data)
+      for (const [path, text] of Object.entries(want)) expect(fieldText(list, path), `${f.id} ${path}`).toBe(text)
+      // Nothing else: every text item belongs to one of those fields.
+      for (const t of textsOf(list)) expect(Object.keys(want), `${f.id}: ${t.id} "${t.text}"`).toContain(t.source?.path)
+      // And every text item is fully shown, untransformed, at the settled frame.
+      for (const t of textsOf(list)) {
+        expect(t.opacity, `${f.id} ${t.id}`).toBe(1)
+        expect(t.transform, `${f.id} ${t.id}`).toBeUndefined()
+      }
+    }
+  })
+
+  it('the settled list lies inside the content rect, at 9:16 and at 16:9', () => {
+    for (const size of [SIZE, { width: 1920, height: 1080 }]) {
+      for (const f of DRAWN_FIXTURES) {
+        const list = listAt(f.spec, settledFrame(f.spec), FPS, size)
+        const rect = contentRect(f.spec.place, size)
+        expect(list.items.length, `${f.id} at ${size.width}×${size.height}: drawn`).toBeGreaterThan(0)
+        for (const item of list.items) {
+          if (item.kind === 'dim') continue
+          // A shape's or text's own box (the text's ink reach is the style's, not the layout's).
+          const box = item.kind === 'stroke' ? itemBounds(item, size)! : (item as ShapeItem | TextItem).box
+          const label = `${f.id} ${item.id} at ${size.width}×${size.height}`
+          expect(box.x, label).toBeGreaterThanOrEqual(rect.x - 1e-6)
+          expect(box.y, label).toBeGreaterThanOrEqual(rect.y - 1e-6)
+          expect(box.x + box.width, label).toBeLessThanOrEqual(rect.x + rect.width + 1e-6)
+          expect(box.y + box.height, label).toBeLessThanOrEqual(rect.y + rect.height + 1e-6)
+        }
+      }
+    }
+  })
+
+  it('each element arrives on its beat frame and not the frame before, at 24, 25, 30 and 60 fps', () => {
+    for (const fps of RATES) {
+      for (const f of DRAWN_FIXTURES) {
+        const s = f.spec
+        const data = s.data
+        const at = (frame: number): DrawList => listAt(s, frame, fps)
+        const arrives = (beat: number, read: (l: DrawList) => number, settled: number, what: string): void => {
+          const bf = beatFrame(beat, fps)
+          expect(read(at(bf)), `${f.id} ${what} on its beat frame ${bf} at ${fps}`).toBe(settled)
+          expect(read(at(bf - 1)), `${f.id} ${what} the frame before, ${bf - 1}, at ${fps}`).toBeLessThan(settled)
+        }
+        if (data.template === 'counter') {
+          const bf = beatFrame(s.beats[0], fps)
+          for (let frame = bf; frame < totalOf(s, fps); frame++) expect(byId<TextItem>(at(frame), 'value').text, `${f.id} frame ${frame} at ${fps}`).toBe(data.value)
+        }
+        if (data.template === 'ring') {
+          const share = numberOf(data.value)! / 100
+          arrives(s.beats[0], (l) => byId<ShapeItem>(l, 'arc').sweep!, share, 'arc')
+          expect(byId<TextItem>(at(beatFrame(s.beats[0], fps)), 'value').text, `${f.id} value at ${fps}`).toBe(data.value)
+        }
+        if (data.template === 'bars') {
+          const largest = Math.max(...data.items.map((i) => numberOf(i.value)!))
+          data.items.forEach((item, i) => {
+            const full = byId<ShapeItem>(at(0), `track-${i}`).box.width * (numberOf(item.value)! / largest)
+            arrives(s.beats[i], (l) => byId<ShapeItem>(l, `bar-${i}`).box.width, full, `bar-${i}`)
+            arrives(s.beats[i], (l) => byId<TextItem>(l, `label-${i}`).opacity, 1, `label-${i}`)
+            expect(byId<TextItem>(at(beatFrame(s.beats[i], fps)), `value-${i}`).text, `${f.id} value-${i} at ${fps}`).toBe(item.value)
+          })
+        }
+        if (data.template === 'keyword') {
+          const words = normalised(data.words).split(' ')
+          arrives(s.beats[0], (l) => byId<StrokeItem>(l, 'underline').to, 1, 'underline')
+          arrives(s.beats[0], (l) => byId<TextItem>(l, `word-${words.length - 1}`).opacity, 1, 'the last word')
+          arrives(s.beats[0], (l) => byId<ShapeItem>(l, 'panel').opacity, clean().palette.panelOpacity, 'the card')
+        }
+        if (data.template === 'lower-third') {
+          const full = byId<ShapeItem>(at(settledFrame(s, fps)), 'bar').box.width
+          arrives(s.beats[0], (l) => byId<ShapeItem>(l, 'bar').box.width, full, 'bar')
+          arrives(s.beats[0], (l) => byId<TextItem>(l, 'name').opacity, 1, 'name')
+          // The role follows 0.1 s later (§6.2's proposal).
+          if (data.role !== '') arrives(s.beats[0] + 0.1, (l) => byId<TextItem>(l, 'role').opacity, 1, 'role')
+        }
+      }
+    }
+  })
+
+  it('a counter whose in-between strings differ from the value lands on its beat frame, not a frame later', () => {
+    // 10,00,000 has an in-between string on the frame before its beat at every rate; a short value may round to itself earlier (measured).
+    const f = DRAWN_FIXTURES.find((x) => x.id === 'counter-en')!
+    for (const fps of RATES) {
+      const bf = beatFrame(f.spec.beats[0], fps)
+      expect(byId<TextItem>(listAt(f.spec, bf - 1, fps), 'value').text, `at ${fps}`).not.toBe('10,00,000')
+      expect(byId<TextItem>(listAt(f.spec, bf, fps), 'value').text, `at ${fps}`).toBe('10,00,000')
+    }
+  })
+
+  it("the counting strings before the beat are ≤ the value and in the value's own format: 10,00,000 through Indian groups, ₹ kept, Devanagari and Telugu digits kept", () => {
+    const seen = new Set<string>()
+    for (const fps of RATES) {
+      for (const f of DRAWN_FIXTURES) {
+        for (const c of countingOf(f.spec.data)) {
+          const bf = beatFrame(f.spec.beats[c.beat], fps)
+          const target = numberOf(c.value)!
+          for (let frame = 0; frame < bf; frame++) {
+            let text = byId<TextItem>(listAt(f.spec, frame, fps), c.id).text
+            if (f.spec.data.template === 'ring' && !/%|\bper\s?cent\b/i.test(c.value)) text = text.slice(0, -1)
+            expect(numberOf(text), `${f.id} ${c.id} frame ${frame} at ${fps}: "${text}"`).not.toBeNull()
+            expect(numberOf(text)!, `${f.id} ${c.id} frame ${frame} at ${fps}: "${text}"`).toBeLessThanOrEqual(target)
+            expect(inOwnFormat(text, c.value), `${f.id} ${c.id} frame ${frame} at ${fps}: "${text}" in the format of "${c.value}"`).toBe(true)
+            seen.add(text)
+          }
+        }
+      }
+    }
+    // The cases the plan names were actually drawn: an Indian group of six digits or more, ₹ under 500, Devanagari digits.
+    expect([...seen].some((t) => /^\d,\d\d,\d{3}$/.test(t)), 'an Indian-grouped in-between').toBe(true)
+    expect([...seen].some((t) => /^₹[1-4]\d\d$/.test(t)), '₹ through the hundreds').toBe(true)
+    expect([...seen].some((t) => /^[०-९]+%$/.test(t) && t !== '४०%'), 'Devanagari in-between').toBe(true)
+    expect([...seen].some((t) => /^[౦-౯]+$/.test(t) && t !== '౩౦౦'), 'Telugu in-between').toBe(true)
+  })
+
+  it('the ring draws % only when its value lacks one: never on a value with % or "percent", always on a bare number', () => {
+    for (const f of DRAWN_FIXTURES.filter((x) => x.shape === 'ring')) {
+      for (let frame = 0; frame < totalOf(f.spec, FPS); frame++) {
+        const text = byId<TextItem>(listAt(f.spec, frame), 'value').text
+        expect(text.endsWith('%%'), `${f.id} frame ${frame}: "${text}"`).toBe(false)
+        if (/percent/.test((f.spec.data as { value: string }).value)) expect(text.includes('%'), `${f.id} frame ${frame}: "${text}"`).toBe(false)
+      }
+      expect(byId<TextItem>(listAt(f.spec, settledFrame(f.spec)), 'value').text, f.id).toBe((f.spec.data as { value: string }).value)
+    }
+    const bare: GraphicSpec = { ...DRAWN_FIXTURES.find((x) => x.id === 'ring-te')!.spec, data: { template: 'ring', value: '75', label: 'bare' } }
+    expect(byId<TextItem>(listAt(bare, settledFrame(bare)), 'value').text).toBe('75%')
+    // And a counter never takes one, whatever its value.
+    const counter: GraphicSpec = { ...bare, data: { template: 'counter', value: '40', label: 'bare' } }
+    expect(byId<TextItem>(listAt(counter, settledFrame(counter)), 'value').text).toBe('40')
+  })
+
+  it('keyword draws its words as said; lit changes the lit word’s colour and no text, and its underline spans the lit word', () => {
+    for (const f of DRAWN_FIXTURES.filter((x) => x.shape === 'keyword')) {
+      const data = f.spec.data as Extract<GraphicData, { template: 'keyword' }>
+      const words = normalised(data.words).split(' ')
+      const texts: string[][] = []
+      for (let lit = 0; lit < words.length; lit++) {
+        const s: GraphicSpec = { ...f.spec, data: { ...data, lit } }
+        const list = listAt(s, settledFrame(s))
+        const drawn = textsOf(list)
+        texts.push(drawn.map((t) => t.text))
+        expect(drawn.map((t) => t.text), `${f.id} lit ${lit}`).toEqual(words)
+        drawn.forEach((t, i) => {
+          expect(t.id, `${f.id}`).toBe(`word-${i}`)
+          expect(t.source, `${f.id} word-${i}`).toEqual({ path: 'data.words', piece: i })
+          expect(t.look.accent, `${f.id} lit ${lit} word-${i}`).toBe(i === lit ? clean().palette.accent : undefined)
+        })
+        const underline = byId<StrokeItem>(list, 'underline')
+        const box = drawn[lit].box
+        const xs = [...underline.d.matchAll(/[ML] (-?[\d.]+) (-?[\d.]+)/g)].map((m) => Number(m[1]))
+        expect(xs, `${f.id} lit ${lit}: the underline's two points`).toHaveLength(2)
+        expect(Math.min(...xs), `${f.id} lit ${lit}`).toBeCloseTo(box.x, 6)
+        expect(Math.max(...xs), `${f.id} lit ${lit}`).toBeCloseTo(box.x + box.width, 6)
+        expect(underline.color).toBe(clean().palette.accent)
+        expect(underline.heads).toBeUndefined()
+        expect(underline.cap).toBe('round')
+      }
+      // The words themselves never change with lit.
+      for (const t of texts) expect(t).toEqual(texts[0])
+    }
+  })
+
+  it('lower-third draws the name exactly as the speaker holds it and the role as typed, with no glyph, and no role item when the role is empty', () => {
+    for (const f of DRAWN_FIXTURES.filter((x) => x.shape === 'lower-third')) {
+      const data = f.spec.data as Extract<GraphicData, { template: 'lower-third' }>
+      const list = listAt(f.spec, settledFrame(f.spec))
+      expect(textsOf(list).map((t) => t.text), f.id).toEqual([data.name, data.role])
+      const none: GraphicSpec = { ...f.spec, data: { ...data, role: '' } }
+      const without = listAt(none, settledFrame(none))
+      expect(textsOf(without).map((t) => t.text), f.id).toEqual([data.name])
+      expect(flat(without.items).some((i) => i.id === 'role'), f.id).toBe(false)
+    }
+  })
+
+  it('per fixture, the list at the last moving frame deep-equals the list at the clip’s last frame, at every rate', () => {
+    for (const fps of RATES) {
+      for (const f of DRAWN_FIXTURES) {
+        const total = totalOf(f.spec, fps)
+        const last = settledFrame(f.spec, fps)
+        expect(last, `${f.id} at ${fps}`).toBeLessThan(total)
+        expect(listAt(f.spec, last, fps), `${f.id} at ${fps}`).toEqual(listAt(f.spec, total - 1, fps))
+      }
+    }
+  })
+
+  it('item ids are stable: every frame of a fixture draws the same ids in the same order', () => {
+    for (const f of DRAWN_FIXTURES) {
+      const ids = flat(listAt(f.spec, settledFrame(f.spec)).items).map((i) => i.id)
+      expect(new Set(ids).size, `${f.id}: unique`).toBe(ids.length)
+      for (let frame = 0; frame < totalOf(f.spec, FPS); frame++) expect(flat(listAt(f.spec, frame).items).map((i) => i.id), `${f.id} frame ${frame}`).toEqual(ids)
+    }
+  })
+
+  it('with style.dim, every list opens with the dim, its hole round the onset subject and none without one; it fades in over DURATIONS.dim', () => {
+    const dimmed: GraphicStyle = { ...clean(), dim: true }
+    const subject = { x: 300, y: 500, width: 400, height: 500 }
+    for (const f of DRAWN_FIXTURES) {
+      const withHole = drawListAt(f.spec, dimmed, 0, FPS, SIZE, fakeMeasure, { subject })
+      expect(withHole.items[0].kind, f.id).toBe('dim')
+      expect(withHole.items[0].opacity, f.id).toBeLessThan(0.01)
+      expect((withHole.items[0] as Extract<DrawItem, { kind: 'dim' }>).hole?.box, f.id).toEqual(subject)
+      const settled = drawListAt(f.spec, dimmed, beatFrame(DURATIONS.dim, FPS), FPS, SIZE, fakeMeasure, { subject: null })
+      expect(settled.items[0].kind, f.id).toBe('dim')
+      expect(settled.items[0].opacity, f.id).toBe(1)
+      expect((settled.items[0] as Extract<DrawItem, { kind: 'dim' }>).hole, f.id).toBeUndefined()
+      expect(listAt(f.spec, 0).items.some((i) => i.kind === 'dim'), `${f.id}: clean does not dim`).toBe(false)
+    }
+  })
+
+  it('too big: a field that cannot fit at FIT_MIN drops the graphic (an empty list, graphicFits false); one that fits only smaller is scaled, never below FIT_MIN', () => {
+    expect(FIT_MIN).toBe(0.6)
+    const base = DRAWN_FIXTURES.find((x) => x.id === 'counter-en')!.spec
+    const long: GraphicSpec = { ...base, data: { template: 'counter', value: '1,23,45,67,89,01,23,45,678', label: 'views' } }
+    expect(listAt(long, 0).items).toEqual([])
+    expect(graphicFits(long, clean(), SIZE, fakeMeasure)).toBe(false)
+    expect(graphicFits(base, clean(), SIZE, fakeMeasure)).toBe(true)
+    // A value wider than the wrap at the table's 0.11 but not at 0.6 of it: drawn smaller.
+    const wide: GraphicSpec = { ...base, data: { template: 'counter', value: '1,23,45,67,890', label: 'views' } }
+    const value = byId<TextItem>(listAt(wide, settledFrame(wide)), 'value')
+    expect(value.look.px).toBeLessThan(Math.round(0.11 * 1080))
+    expect(value.look.px).toBeGreaterThanOrEqual(Math.round(0.11 * 1080 * FIT_MIN) - 1)
   })
 })
