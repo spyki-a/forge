@@ -58,19 +58,27 @@
 > is in §6.11's render-check Built note (run 41693366322, green on both
 > runners, read 2026-11-03: the (box) case holds on the 2018 Windows
 > ffmpeg). **Phase 1 is closed on the
-> build side**: every lane of §6.19's phase 1 is built and pushed. Its
-> exit (§6.12) waits on your runs: `primitives`, `indic` and `strokes` in
-> `npm run dev`'s console on the Mac and the Surface and `pathLength` on
-> the Mac,
-> M13's `framemd5`, the Indic sheet by eye, and M19's read with
-> `FORGE_GRAPHIC_FRAMES` on both machines; and on two decisions of the
-> plan's owner, M8's reading (0.125 or 0.25, by whether its paths include
-> the circles under r = 40) and M19's fix (no width of 1-3 px is within
-> its bar on the Mac's chain); §6.15's phase-1 note has the figures.
-> Also yours, outside the bar: M21 and the beat-frame allowance window.
+> build side**: every lane of §6.19's phase 1 is built and pushed.
+> **Phase 1 exits** (read 2026-11-06/07): your runs its bar names
+> (§6.12) are read on both machines in `npm run dev` (Electron 44.3.0,
+> Chrome 152.0.7977.78), the Mac on 2026-11-06 and the Surface on
+> 2026-11-07, and all pass: `primitives` (all six cases on both),
+> `indic` (both sites SEEN, the sheet shaped by your eye on both),
+> `strokes` and `pathLength` (on both), M13 (the two bakes
+> `framemd5`-equal in all six cases on each machine, the Mac against the
+> Surface recorded as the golden tolerance) and M19's read with
+> `FORGE_GRAPHIC_FRAMES` (on both); §6.12's "Phase 1's exit" and §6.15's
+> phase-1 notes have the figures. M8 and M19 slide by your decisions of
+> 2026-11-03: M8 as a doc decision (M8 over r ≥ 40, or 0.125 later),
+> `STROKE_TOLERANCE` unchanged at 0.25; M19 to a contained pre-beta
+> half-day piece (the stroke colour bled into alpha-0 neighbours in the
+> bake's encode path, with a render test), `STROKE_MIN_PX` unchanged
+> at 2. Still yours, outside the bar: M21, the beat-frame allowance
+> window, and the per-code-point painter mutation once in the app on the
+> Mac (optional, not run).
 > Nothing in the app makes a graphic clip yet: `addGraphicClip`'s caller
 > is phase 2's panel (§6.6). Not built: everything from phase 2 on, which
-> is next, once you have read phase 1's exit: T3's typed stub of
+> is next: T3's typed stub of
 > `applyGraphics` first, then T1 (§6.19). §2's total is
 > now about 100-103.5 days with Step P (100.25-103.75 since §16.66's
 > answer, 2026-10-27).
@@ -8874,7 +8882,11 @@ tree edges, underlines and the edge sweep of §6.16 (the research, §4.4).
   Mac's chain, most of the fringe the transparent pixels' black chroma;
   `STROKE_MIN_PX` unchanged, the fix the plan owner's. `plan.ts:1484` is
   an older sha's: at `683a6f0` a clip's `format=yuva420p`, the graphic
-  sequence's included, is `plan.ts:1534`.)
+  sequence's included, is `plan.ts:1534`.) (Read 2026-11-06/07 over the
+  development app's PNGs on both machines, the Surface on the 2018 build:
+  no width within the bar on either, 1 px U 64 and 63; the user's
+  decision of 2026-11-03 slides the fix to a pre-beta half-day piece,
+  `STROKE_MIN_PX` unchanged; §6.15's phase-1 notes.)
 - **The marker look** (D7, §16.60) is perfect-freehand's outline over the
   span's points, drawn only once M10 passes and the dependency is added in
   phase 2; until then `resolveGraphicStyle` never yields it (§6.5), and a
@@ -8971,7 +8983,10 @@ tree edges, underlines and the edge sweep of §6.16 (the research, §4.4).
 >   it stays. `STROKE_TOLERANCE` is unchanged at 0.25; the choice is the
 >   plan owner's, and the run in the development app on the Mac yours.
 >   §6.15's phase-1 note; `EFFECTS.md` §61, "flattenPath against
->   SVGPathElement".)
+>   SVGPathElement".) (Read 2026-11-06/07 in the development app on the
+>   Mac and the Surface: the same lengths and verdicts as the pane's.
+>   The user's decision of 2026-11-03: M8 slides as a doc decision (M8
+>   over r ≥ 40, or 0.125 later); `STROKE_TOLERANCE` unchanged at 0.25.)
 > - **The span.** `strokeAt` clamps 0 ≤ `from` ≤ `to` ≤ 1 (a non-number
 >   reads 0), finds the segment leaving the start and the one arriving at
 >   the tip by binary search over `lengths`, interpolates both ends and
@@ -12684,6 +12699,30 @@ every run is yours.
 >   per frame and per bake) and whether M2's worker run should read
 >   `encodeFrames`' worker route; both the plan owner's to schedule,
 >   outside phase 1's bar (§6.3's `graphicCanvas.ts` Built note, "Open").
+> - **Read 2026-11-06/07, in the development app** (the user, `npm run
+>   dev`'s DevTools console, Electron 44.3.0, Chrome 152.0.7977.78; the
+>   Mac 2026-11-06, the Surface 2026-11-07T03:23-03:27Z; §6.12's "Phase
+>   1's exit", §6.15's phase-1 notes, `EFFECTS.md` §61's "Phase 1's exit
+>   in the development app"). `primitives`: all six cases PASS on both
+>   machines, frames 16.60-16.70 ms apart, visible, not throttled, 83 font
+>   families in the catalogue; the held end, alpha outside `graphicBox`,
+>   drawn twice and the live Preview max 0 everywhere; the box route baked
+>   twice 46 of 46 PNGs byte-equal; 46 + 46 frames of 46 moving. The Mac
+>   kept three box-route residues inside the bar (stroke p = 1 max 235
+>   over 2 of 243,460 px; text-indic p = 0.5 mean 0.220 max 26, the canvas
+>   route the same; group max 9 over 6 px); the Surface read max 0 on
+>   every line. Boxes: stroke 822×422 at 130,1130, text-latin 738×330 at
+>   172,776, group 826×534 at 128,696 on both; text-indic 722×224 at
+>   180,768 on the Mac and 722×226 at 180,766 on the Surface (the Noto
+>   metrics differ by platform). Through the app's own writer, paint mean
+>   1.06-1.69 ms on the Mac and 2.53-7.86 on the Surface; bake per frame
+>   on the box route 1.51-4.30 ms and 3.97-8.90, on the canvas route
+>   3.12-6.72 and 7.15-8.81. `pathLength` and `strokes`: §6.15's
+>   phase-1 note. In Electron's console `copy()` is not defined;
+>   `console.log(r.summary.join('\n'))` is the text route, and the window
+>   has to stay visible (hidden reads THROTTLED). Whether the PNGs came
+>   through `recordingWrites`' wrapper or from the files was not noted;
+>   either way the check read every PNG on both machines.
 
 #### The Indic render check
 
@@ -12781,6 +12820,33 @@ directly: one function, one spec), after §6.20's fonts are in (§16.63).
 >   the sites can read SEEN without a hand-given catalogue), the eye check
 >   of the saved sheet beside the libass sheets, and the mutation once on
 >   the Mac.
+> - **Read 2026-11-06/07, in the development app on both machines** (the
+>   user; §6.12's "Phase 1's exit"). Order matters: `{ indic: true }` has
+>   to run FIRST after a reload, or `primitives` has already loaded the
+>   Noto faces and both sites read "cannot tell" (the Mac's first run,
+>   01:47:14Z, after `primitives`, read exactly that; after a reload, run
+>   first at 01:50:33Z, both SEEN; the Surface ran it first, 03:23:19Z,
+>   both SEEN). The Mac: the text clip SEEN (after mean 0.000 max 0;
+>   before mean 6.586 max 255, 17,305 of 518,400 px), the caption SEEN
+>   (after 0; before mean 12.122 max 255, 32,872 of 267,840); M22's
+>   clusters resolved before Noto loaded by Kohinoor Devanagari and
+>   Kohinoor Telugu, a dotted circle 120.0 px. The Surface: the text clip
+>   SEEN (before mean 7.348 max 255, 18,975 of 518,400), the caption SEEN
+>   (before mean 33.484 max 255, 77,961 of 267,840); M22's clusters
+>   resolved by Nirmala UI, the only installed candidate, a dotted circle
+>   71.3 px, every conjunct narrower than its letters (क्ष 97.5 against
+>   187.6 px), कि's consonant 37 px right. The paint in Noto: all ten
+>   clusters through `paintDrawList2d` equal to `drawTextOnto` (max 0) on
+>   both, the same widths on both (क्ष 86.0 against 161.5 px), whole
+>   against per code point mean 32.772-47.580 over the ink on the Mac and
+>   34.472-49.831 on the Surface, कि's i-matra first (the consonant 31 px
+>   right on the Mac). The sheet by your eye, from a screenshot of the
+>   page on each machine: joined clusters above, broken per code point
+>   below, the caption's క్షత్రశ్రీ shaped in yellow with the black
+>   outline: PASS on both. The first look at Hindi and Telugu drawn on
+>   Windows through the canvas path (§16.66). The per-code-point painter
+>   mutation in the app on the Mac was not run (optional; it was run in
+>   the pane above).
 
 #### The render check — `tests/integration/graphic.int.test.ts`
 
@@ -12884,7 +12950,12 @@ is absent (only §6.20's two Noto faces and their licences are tracked under
 > (box) case's framemd5 equality of the two routes among them, pass on the
 > 2018 Windows ffmpeg: `graphicBox`'s pad holds there as the `f22fcd4`
 > source said it would. M19's gated read skipped there as on the Mac; its
-> Windows figures stay the user's run on the Surface.
+> Windows figures stay the user's run on the Surface. (Read 2026-11-07:
+> the user's run on the Surface, the 2018 win32-x64 ffmpeg over the
+> development app's strokes PNGs, 1 px U max 63 V max 35, 2 px U 54 V 30,
+> 3 px U 34 V 19, each over 4 lines, OVER 8; background, ink Y and
+> reference 0; the Mac's over its own app PNGs 64/36, 54/31, 34/19, the
+> same zeros. §6.15's phase-1 notes.)
 > - **The file**, `tests/integration/graphic.int.test.ts` (1,395 lines),
 >   14 cases: phase 0's three, kept whole; phase 1's nine (`:791`); the
 >   always-on plan-shape case and M19's gated read (`:1184`, `:1392-1394`).
@@ -13016,7 +13087,8 @@ is absent (only §6.20's two Noto faces and their licences are tracked under
 >   plan's owner. Two concurrent runs share `tests/output/graphic/` and
 >   empty each other's (a critic's note; a workflow matter, the file
 >   unchanged). M19's read on both machines over the development app's
->   PNGs is yours.
+>   PNGs is yours. (Read 2026-11-06/07 on both, the figures in the CI
+>   line's note above: no width within the bar on either build.)
 
 #### Census rows
 
@@ -13102,7 +13174,10 @@ annotations.
   byte-equal. M8 and M19 read in part there and on the Mac's ffmpeg, M8
   passing at 0.125 or at 0.25 by which paths it reads and M19 met by no
   width; both decisions open; §6.15's phase-1 note. Not met until your
-  runs below.)
+  runs below.) (Met 2026-11-06/07 in the development app on the Mac and
+  the Surface: all six cases pass on both, M13's two bakes
+  `framemd5`-equal on each, the Mac against the Surface recorded, M8 and
+  M19 recorded; "Phase 1's exit" below.)
 - **The Indic render check** (§6.11), through `paintDrawList2d`, after
   §6.20's fonts are named first, on the Mac and the Surface; mutation-checked
   once (a per-code-point painter fails it). (Waits: `paintDrawList2d` is
@@ -13114,7 +13189,11 @@ annotations.
   ten; the two sites read SEEN with the Noto faces given by hand, "cannot
   tell" with the page's empty catalogue. Not met until your runs on both
   machines and your eye on the sheet it hands back; §6.11's Indic
-  Built note.)
+  Built note.) (Met 2026-11-06/07 in the development app on both
+  machines: both sites SEEN, the paint equal to `drawTextOnto` and apart
+  per code point, the sheet shaped by your eye on both. The mutation was
+  run once in the pane, 2026-11-02; once more in the app on the Mac is
+  optional and not run.)
 - `graphicPaint`: no Hindi or Telugu string drawn in pieces smaller than a
   word (or a cluster, where M3 allowed it), mutation-checked by `Array.from`.
   (Met 2026-10-30, `a82cd43`: the shaped-script cases under three styles,
@@ -13133,7 +13212,8 @@ annotations.
   `framemd5`-equal at both shapes once `graphicBox` kept two transparent
   columns and rows on its far sides, §6.3's "The box". The Windows build's
   reading is the CI line in §6.11's render-check Built note, unread when
-  this was written.)
+  this was written.) (Met on both builds: run 41693366322 green on both
+  runners, read 2026-11-03.)
 - Not a bar, recorded with it (2026-11-02): nothing in the app makes a
   graphic clip until §6.6's panel, so no phase-1 bar is read through the
   app's own UI; the harness drives `graphicCanvas.ts` directly.
@@ -13171,6 +13251,45 @@ annotations.
   worker route; the plan owner's to schedule (§6.3's `graphicCanvas.ts`
   Built note, "Open"). When these are in, phase 1's exit is read here and phase 2 starts with T3's
   typed stub of `applyGraphics`, then T1 (§6.19).
+- **Phase 1's exit, read 2026-11-06/07.** Every run the bar names is
+  read, in `npm run dev`'s DevTools console (Electron 44.3.0, Chrome
+  152.0.7977.78), on the Mac on 2026-11-06 and on the Surface on
+  2026-11-07 (03:23-03:27Z); the figures are §6.15's phase-1 notes and
+  `EFFECTS.md` §61's "Phase 1's exit in the development app".
+  - `primitives`, both machines: all six cases PASS (the Mac with three
+    box-route residues inside the bar, the Surface max 0 on every line);
+    the held end, alpha outside `graphicBox`, drawn twice and the live
+    Preview max 0 on both.
+  - `indic`, both machines, run first after a reload: both sites SEEN;
+    the ten clusters through `paintDrawList2d` equal to `drawTextOnto`
+    and apart per code point; M22 resolved by Kohinoor on the Mac and
+    Nirmala UI on the Surface before Noto loads.
+  - The Indic sheet by your eye, both machines: joined above, broken per
+    code point below, the Telugu caption shaped: PASS.
+  - `pathLength`, the Mac (and the Surface, beyond the bar): the pane's
+    lengths and verdicts exactly; M8 recorded.
+  - `strokes`, both machines: 1.000/2.000/3.000 px at slope 0 on both;
+    16 PNGs byte-equal.
+  - M13, both machines: the two bakes `framemd5`-equal in all six cases,
+    46 of 46 frames; the Mac against the Surface recorded as the golden
+    tolerance (mean over the box 0.084-2.030 per case, edges not
+    geometry).
+  - M19's read with `FORGE_GRAPHIC_FRAMES`, both machines: no width of
+    1-3 px within 8 levels (1 px U 64 on the Mac, 63 on the 2018 build);
+    M19 recorded.
+
+  M8 and M19 slide by your decisions of 2026-11-03: M8 as a doc decision
+  (M8 over r ≥ 40, or 0.125 later), `STROKE_TOLERANCE` unchanged; M19 to
+  a contained pre-beta half-day piece (the stroke colour bled into alpha-0
+  neighbours in the bake's encode path, with a render test),
+  `STROKE_MIN_PX` unchanged. **The bar is met and phase 1 exits.** Still
+  yours, none of it phase 1's bar: M21, the beat-frame allowance window,
+  and the per-code-point painter mutation once in the app on the Mac
+  (optional, not run). Not answered by the runs: the app's CSP against
+  the moved worker file (a refused worker costs the gain, not the bake,
+  so a passing bake does not tell) and which way `recordingWrites` read
+  the PNGs (not noted; every PNG was read). Next: phase 2, T3's typed
+  stub of `applyGraphics` first, then T1 (§6.19).
 
 **Phase 2.** §6.12 as written on 2026-10-05, for all nine shapes (§6.2):
 
@@ -14003,18 +14122,18 @@ itself when it shows them wrong.
 | M5 | 43 | 0; you, the development app | `blur-rise` is offered when a ten-word blur-rise frame's p95 draw is no more than M1's p50 encode on the Surface, so blur at most doubles a frame's bake (proposal); otherwise `resolveGraphicStyle` maps it to `rise` (§6.5) |
 | M6 | 44 | 0 for its Indic and colour parts; 3 whole; you, the development app | Indic through a texture at 0.000 and colour within 2/255 under one colour setting: that setting is phase 3's. Neither: phase 3 is flagged at phase 0's exit and re-planned before it starts; phases 1-2 go on. The 1 px line (phase 3): within 2/255 over black and white, or the compositor's alpha settings change until it is; it is phase 3's exit |
 | M7 | 45 | 3, first, on the compositor's glow seam with both routes built behind it (§6.16; moved from phase 0 on 2026-10-21, above); you | `UnrealBloomPass` is the glow route if, on both machines, alpha outside the shape is 0 and the glow's alpha below 1; else the quad shader (§6.16's two passes). The route not taken is removed. The pmndrs leg is optional, run only from a scratch branch with the package added there and never merged; its result is recorded, and it stays out whatever it shows, because its peer range pins three below 0.187 (the research, §4.9) |
-| M8 | 46 | 1; you, the Mac | `STROKE_TOLERANCE` is the coarsest at which total length agrees with `getTotalLength()` within 0.1 % and every sampled point within 0.5 px at 1080 wide (proposal); our flattening stays node-pure either way. (Measured 2026-11-03 in the Browser pane's Chrome 152, not the app, `0954b3d` and `2bb706d`: over all 23 paths the coarsest within the bar is 0.125, 0.25 failing on length alone at the four-cubic circles r = 20, 30 and 38, worst −0.1615 %; without the circles under r = 40, §6.3's open question, 0.25 passes, worst −0.0683 % at r = 40. Both readings print. Undecided, the plan owner's: whether M8's paths include those circles, so 0.125 or 0.25; `STROKE_TOLERANCE` unchanged. The note below) |
+| M8 | 46 | 1; you, the Mac | `STROKE_TOLERANCE` is the coarsest at which total length agrees with `getTotalLength()` within 0.1 % and every sampled point within 0.5 px at 1080 wide (proposal); our flattening stays node-pure either way. (Measured 2026-11-03 in the Browser pane's Chrome 152, not the app, `0954b3d` and `2bb706d`: over all 23 paths the coarsest within the bar is 0.125, 0.25 failing on length alone at the four-cubic circles r = 20, 30 and 38, worst −0.1615 %; without the circles under r = 40, §6.3's open question, 0.25 passes, worst −0.0683 % at r = 40. Both readings print. Read 2026-11-06/07 in the development app on the Mac and the Surface: the same lengths and verdicts on both. The user's decision of 2026-11-03: M8 slides as a doc decision (M8 over r ≥ 40, or 0.125 later); `STROKE_TOLERANCE` unchanged at 0.25. The notes below) |
 | M9 | 47 | 1; node, anywhere. **Measured 2026-10-27** (`f38f971`; §6.13's Built note, `EFFECTS.md` §61) | `graphicMotion.test.ts` asserts the closed form within 1e-4 of the travel against its reference (§6.13) and prints the figures; a larger difference means the closed form is wrong, not the tolerance, only up to about ω = 5 rad/s at 24 fps with the reference as §6.13 specifies it (semi-implicit Euler, 1,000 substeps a frame, first order), whose own error at ω = 10, ζ = 0.5 reads 1.69e-4 at 24 fps. So the bar is asserted at ω = 4 (largest 5.19e-5, at 24 fps), and at ω = 10 the reference's halving with 2,000 substeps (corrected 2026-10-27, when the build measured it) |
 | M10 | 48 | 2, the perfect-freehand half only, from a scratch branch with perfect-freehand added there and never merged (as M7's pmndrs leg; the harness imports it by a DEV-only dynamic `import()`); you, Mac and Surface | only on a pass does a phase-2 commit add perfect-freehand to `main` with the marker painter and `MARKER_READY` (D7's order). `strokeLook: 'marker'` is offered (§16.60) only if one of the two draw-ons keeps the tapered end's shape from frame to frame behind the moving tip (mean 0 outside the last 5 % of length, proposal) and preview = export ≤ 1/255. The rough.js half is not run in step 3 (§16.60: "rough.js not now") |
 | M11 | 49 | only if M1-M2 fall short; you | a raw RGBA path is then planned as its own change, outside step 3's days, using `overlay`'s `alpha=premultiplied` only if M4 found it on Windows |
 | M12 | 50 | 3; you | the fastest readback at p50 on the Surface that keeps straight alpha through to the PNG is phase 3's bake; `drawImage` stays unless another is at least twice as fast (proposal, §6.16) |
-| M13 | 51 | 1 (the primitives' spec), 3 (a 2.5D counter and a screen card); you | two bakes on one machine must be `framemd5`-equal, or the bake is not deterministic and the phase does not exit. The Mac-against-Surface mean difference is recorded as the golden tolerance; no CI check compares pixels across machines. (Phase 1's harness half built 2026-11-02, `6592a38` and `69c2340`: `primitives` bakes each case twice on the box route and prints the patterns through `m13Line`; on the harness page 46 of 46 PNGs byte-equal per case, which is not this row's run. The `framemd5` run and the Mac against the Surface are still yours. The note below) |
+| M13 | 51 | 1 (the primitives' spec), 3 (a 2.5D counter and a screen card); you | two bakes on one machine must be `framemd5`-equal, or the bake is not deterministic and the phase does not exit. The Mac-against-Surface mean difference is recorded as the golden tolerance; no CI check compares pixels across machines. (Phase 1's harness half built 2026-11-02, `6592a38` and `69c2340`: `primitives` bakes each case twice on the box route and prints the patterns through `m13Line`; on the harness page 46 of 46 PNGs byte-equal per case, which is not this row's run. Read 2026-11-06/07 in the development app: the two bakes `framemd5`-equal in all six cases, 46 of 46 frames, on each machine; the Mac against the Surface recorded as the golden tolerance, mean over the box 0.084-2.030 per case, largest premultiplied gap 5-212, at the anti-aliased edges, not the geometry. The notes below) |
 | M14 | 52 | 2; you, blind, on your clips, with `curves: { names, clipId }` (§6.10, §6.11; the key returned in the result for you to save) | run on a counter, then a keyword and a callout (§6.10); the overall pick becomes the restrained presets' `motion.ease` in `GRAPHIC_STYLES`, a template's own differing pick its default (§6.13). Until then `expo-out`. The look rating follows it (§6.10) |
 | M15 | 53 | 2; you mark the onset frames into `tests/fixtures/graphics/onsets.json` (`{ assetId; marks: { word: number; frame: number }[] }`, proposal), and `scripts/measure-onsets.mjs` (proposal) reads it against the transcript's `startMs` | median error within one frame at 30 fps: beats as §6.8 writes them. More: an onset refinement is planned as its own change, outside step 3's days (proposal) |
 | M16 | 54 | 2; node | a template whose seconds do not hold its longest fixture label gets its seconds raised in §6.2's table or its label capped, decided in phase 2 |
 | M17 | 55 | 2; you count | `GRAPHICS_PER_MINUTE` = the median graphics per minute of the five clips you call pro, rounded down (proposal); null until counted. Zooms and sounds per minute are recorded beside it |
 | M18 | 56 | 2; you, the Mac: `mix.wav` is the audio of an export of one of your clips with a graphic's sound on a beat, exported by the app with the sound on (`ffmpeg -i <export> -vn mix.wav`), one per sound | the row's "pop" is `pop_bubble.wav`, a candidate role (§6.14). Each role's level under speech is set where you judge speech intelligible; the integrated loudness and the momentary maximum are recorded; `GRAPHIC_SOUND_DB` and `GRAPHIC_SOUND_CAP` are revised with them |
-| M19 | 57 | 1; you write the PNGs in the development app, then a node read | `STROKE_MIN_PX` is the smallest of 1, 2 and 3 px at 1080 wide whose centre line keeps U and V within 8 levels of the PNG's after the `format=yuva420p` overlay (proposal); the research's starting value is 2 px. The read is a gated case in `graphic.int` over the folder the bake wrote (`FORGE_GRAPHIC_FRAMES=<folder>`, proposal). (Built and measured in part 2026-11-03, `0954b3d` and `2bb706d`, on the harness page's PNG and the Mac's 4.4 build: no width of the three is within the bar, 1 px U 63, 2 px 54, 3 px 34; the cause measured, the transparent pixels' black chroma averaged in by `format=yuva420p`, the exit geq's round trip up to 7 levels more. Undecided, the plan owner's: a width, the stroke's colour bled into its transparent neighbours, or a different bar; `STROKE_MIN_PX` unchanged. The note below) |
+| M19 | 57 | 1; you write the PNGs in the development app, then a node read | `STROKE_MIN_PX` is the smallest of 1, 2 and 3 px at 1080 wide whose centre line keeps U and V within 8 levels of the PNG's after the `format=yuva420p` overlay (proposal); the research's starting value is 2 px. The read is a gated case in `graphic.int` over the folder the bake wrote (`FORGE_GRAPHIC_FRAMES=<folder>`, proposal). (Built and measured in part 2026-11-03, `0954b3d` and `2bb706d`, on the harness page's PNG and the Mac's 4.4 build: no width of the three is within the bar, 1 px U 63, 2 px 54, 3 px 34; the cause measured, the transparent pixels' black chroma averaged in by `format=yuva420p`, the exit geq's round trip up to 7 levels more. Read 2026-11-06/07 over the development app's PNGs: the Mac 1 px U 64 V 36, 2 px U 54 V 31, 3 px U 34 V 19; the Surface's 2018 build U 63 V 35, U 54 V 30, U 34 V 19; no width within the bar on either, background, ink Y and reference 0 on both. The user's decision of 2026-11-03: M19 slides to a contained pre-beta half-day piece (the stroke colour bled into alpha-0 neighbours in the bake's encode path, with a render test); `STROKE_MIN_PX` unchanged at 2. The notes below) |
 | M20 | 58 | 3; you | legible at rest and its moving frames within M1's whole-hold budget: the card ships as §6.16 plans it. Legible but slow: tilt-in only, no pull-back. Not legible: the card is not offered, and a recording gets the dim and graphics only. The run also records the card's hand-off (frame `L` of the card against the export's frame `L` without the card), whose bar is 2/255 mean (proposal, §6.16) |
 | M21 | 59 | 0, any time before phase 2's counter; you, with your Hindi clips | the counter's Hindi digits follow what the installed model writes (Devanagari or ASCII); the share written as words, which §16.11 drops in v1, is recorded beside it |
 | M22 | 60 | 0; you, the development app on the Mac and the Surface | **Shaped on both** (every cluster's frames differ, every conjunct narrower, the eye agrees with the libass complex sheet): "text has to be canvas 2D" holds and phase 1 starts; §6.20's fonts still land before phase 1's Indic check, so both machines draw the same letters (§16.63). **A cluster unshaped, and the font that drew it lacks the script** (its width equals a missing-glyph box's, or no candidate font matches): §6.20's fonts move into phase 0, M22 runs again with them named first, and phase 1's text work starts when it passes. **Unshaped with a font that has the script**: the shaper is not running, so the research's choice of painter (its §4.2) reopens as a decision for you (the next free §16 number) before any graphic draws Indic text. While either cause is open, no phase-1 commit that draws text lands; the rename, the guards, the motion module and the stroke may (this sentence is the one statement of it; §6.3 and §6.12 point here). The font each cluster resolved to is found by drawing it in each installed candidate face named explicitly; a candidate counts as installed only if a Latin probe drawn in it differs from the same probe in a family that does not exist |
@@ -14585,6 +14704,99 @@ values, dated, as the steps above carry their Built notes (it did,
 >   bar. `STROKE_MIN_PX` is 2 until then.
 > - **Not phase 1's to measure here, still open**: M21 (row 59) and the
 >   beat-frame allowance window (§6.13's "Open, yours"), both yours.
+>
+> **Phase 1's measurements in the development app, read 2026-11-06/07.**
+> The user's runs in `npm run dev` (Electron 44.3.0, Chrome
+> 152.0.7977.78), on the Mac 2026-11-06 (stamped 2026-11-07T01:40-01:50Z)
+> and on the Surface 2026-11-07T03:23-03:27Z; the Mac's sequences under
+> `/Users/spyker/Library/Application Support/forge/titles/`, the Surface's
+> under `C:\Users\rokza\AppData\Roaming\forge\titles\`, zipped to the Mac
+> for the cross-machine read. §6.12's "Phase 1's exit" has the bar's
+> items; `EFFECTS.md` §61's "Phase 1's exit in the development app" the
+> facts they taught.
+>
+> - **M8** (row 46). Both machines (the Mac 01:48:06Z, the Surface
+>   03:26:36Z) print the lengths and verdicts above exactly: every path,
+>   1 FAIL (−0.6437 %, r = 30; 0.740 px, r = 40), 0.5 FAIL, 0.25 FAIL
+>   (−0.1615 %, r = 30; 0.184 px, r = 38), 0.125 PASS (−0.0688 %, r = 20;
+>   0.092 px), 0.0625 PASS, coarsest 0.125; without the circles under
+>   r = 40, 0.25 PASS (−0.0683 %, r = 40, 0.183 px), coarsest 0.25. Only
+>   the timings differ: ours 0.005-0.05 ms a path on the Mac and
+>   0.005-0.16 on the Surface, the browser's 1.6-6.3 ms and 0.1-11.9.
+>   **The user's decision of 2026-11-03**: M8 slides as a doc decision
+>   (M8 over r ≥ 40, or 0.125 later); `STROKE_TOLERANCE` unchanged at
+>   0.25.
+> - **M13** (row 51), within each machine. The Mac: a against b
+>   `framemd5`-equal in all six cases, 46 of 46 frames (the bundled 4.4
+>   build; `ffmpeg -start_number 0 -i %05d.png -f framemd5 -`, the
+>   header dropped, each line's last field joined by `\n` and hashed per
+>   sequence: 1-stroke `5a6a6251cd5163ad90fa2c05ffda3a39`, 2-text-latin
+>   `4c39acef86e5a82583e0d6f670bbc959`, 3-text-indic
+>   `62663d8bb586e1d9d6f47320b100dd22`, 4-dim-hard (a = b = canvas)
+>   `28d124537b335c16b06be2d0a657c473`, 5-dim-feather (a = b = canvas)
+>   `9f4c853850db449d141fc081d78a1a61`, 6-group
+>   `b86cca5321ac769c8249e983e00d4bf9`; the canvas route differs from a
+>   on the four cropped cases only because its PNG is the whole
+>   1080×1920). The Surface: a against b equal in all six cases by the
+>   user's own hash run (SHA-256 per sequence of a different input, the
+>   same shape, dim-hard and dim-feather a = b = canvas), so the
+>   cross-machine half was read from the PNGs. The Surface's 2018 build's
+>   `framemd5` of its own dim-hard-a PNGs equals the Mac's 4.4 build's of
+>   the same files on 46 of 46 frames: the two builds decode these PNGs
+>   identically.
+> - **M13, the Mac against the Surface: the golden tolerance.** Sequence
+>   a, decoded by the Mac's bundled ffmpeg to rgba, premultiplied (the
+>   largest of R, G, B times alpha, and alpha). Frame 0 is byte-equal in
+>   the five entrance cases; group's card shows from frame 0.
+>
+>   | case | frames equal | differing px | mean over the box | mean over the ink | largest gap | alpha mass S/M | where |
+>   |---|---|---|---|---|---|---|---|
+>   | 1-stroke, 822×422 | 1/46 | 58,214 of 15,956,664 (0.36 %); 1,892 a frame at the held end | 0.084 | 4.05 over 332,430 | 122 | 1.0040 | a 1 px rim along both edges of the curve and the head; 10,146 px inked by the Surface only, 101 by the Mac only; 177 opaque on both, 58,037 at an edge |
+>   | 2-text-latin, 738×330 | 1/46 | 1,759,908 of 11,202,840 (15.7 %); 39,752 a frame at the end | 2.007 | 5.19 over 4,332,422 | 212 | 1.0427 | glyph edges: at frame 45 the 81,364 edge px differ by 8.25 mean, the 21,470 opaque on both by 0.068 |
+>   | 3-text-indic, 722×224 (Mac), 722×226 (Surface) | 1/46 | 1,502,076 of 7,439,488 (20.2 %); 19,000 a frame at the end | 2.030 | 4.51 over 3,350,064 | 105 | 1.0418 | glyph edges of both scripts; 59,748 px Surface only, 0 Mac only; 11,073 opaque on both, 1,491,003 at an edge; the Surface's two extra rows hold no ink |
+>   | 4-dim-hard, 1080×1920 | 1/46 | 10,584,049 of 95,385,600 (11.1 %), 10,577,324 of them by 1-4 levels; 232 px at the held end (max 46) | 0.112 | 0.135 over 79,317,491 | 46 | 1.0013 | frames 13 and 16 of the opacity ramp one level apart over the whole frame (alpha 66 and 67, 81 and 82), every other ramp frame equal; the 232 px at the end the hole's edge |
+>   | 5-dim-feather, 1080×1920 | 1/46 | 18,140,445 of 95,385,600 (19.0 %), 18,140,331 by 1-4; 238,143 a frame at the end | 0.219 | 0.246 over 84,839,672 | 5 | 1.0018 | the 24 px feather's gradient rounding, at most 4 levels at the end; 1,013,282 px Surface only (its tail reaches alpha 1 where the Mac's is 0); the same two ramp frames one level apart |
+>   | 6-group, 826×534 | 0/46 | 1,255,315 of 20,289,864 (6.2 %); 31,777 a frame at the end | 0.459 | 1.01 over 9,194,122 | 154 | 1.0000 | the card's turned rounded edge and the word's glyph edges; of the 247,261 px opaque on both at frame 45, 217,741 equal, 20,638 one level apart, 3,596 two |
+>
+>   The two platforms' raster paths cover anti-aliased edges differently
+>   (the Surface's slightly heavier, +0.4 % alpha mass on the stroke,
+>   +4.2 % on text; `strokes` reads the same at slope 0.597, below);
+>   fills, interiors and the opacity ramp agree within one or two levels;
+>   no case moved, resized (bar text-indic's 2 px of Noto metrics) or
+>   dropped anything. The golden tolerance is this table: mean over the
+>   box 0.084-2.030, over the ink 0.135-5.19, largest premultiplied gap
+>   5-212; its shape edges, not geometry.
+> - **M19** (row 57). `strokes` in the app: the Mac (01:48:44Z) 1.000,
+>   2.000, 3.000 px at slope 0 and 0.855, 1.808, 2.923 at slope 0.597,
+>   the painter against a native `lineWidth` alpha max 0, coverage equal,
+>   16 PNGs byte-equal, the canvas route's wall 84.00 ms; the Surface
+>   (03:27:21Z) 1.000, 2.000, 3.000 at slope 0 and 0.980, 1.963, 2.994 at
+>   0.597, alpha max 1, 0, 0 (coverage 1212.60 and 1212.62, 2425.95 both,
+>   3637.39 both), 16 PNGs byte-equal, wall 211.30 ms; scale 0.5 on both.
+>   Then `graphic.int`'s gated read over each folder. The Mac (4.4,
+>   `/Users/spyker/Library/Application Support/forge/titles/graphic-check-strokes-1.seq`,
+>   2 passed, 12 skipped): 16 PNGs, 1 distinct; 1 px U 64 V 36, 2 px U
+>   54 V 31, 3 px U 34 V 19, each OVER 8; the smallest width within the
+>   bar none; background, ink Y and reference 0 on both colours. The
+>   Surface, the user's line as pasted: "graphic.int M19 (win32-x64,
+>   C:\Users\rokza\my claude\forge\node_modules\@ffmpeg-installer\win32-x64\ffmpeg.exe):
+>   16 PNGs, 1 distinct, from
+>   C:\Users\rokza\AppData\Roaming\forge\titles\graphic-check-strokes-1.seq;
+>   1.0 px: U max 63, V max 35 over 4 lines, OVER 8; 2.0 px: U max 54, V
+>   max 30 over 4 lines, OVER 8; 3.0 px: U max 34, V max 19 over 4 lines,
+>   OVER 8; the smallest width within the bar: none; background U/V dark
+>   0, cream 0; ink Y dark 0, cream 0; reference U/V on crisp pixels dark
+>   0, cream 0". Within one level of the Mac at every width, the same
+>   verdict, and Y, background and reference 0 on the 2018 build too: the
+>   fringe is `format=yuva420p`'s chroma averaging over alpha-0
+>   neighbours whose RGB is (0, 0, 0), nothing the older build adds.
+>   **The user's decision of 2026-11-03**: M19 slides to a contained
+>   pre-beta half-day piece (the stroke colour bled into alpha-0
+>   neighbours in the bake's encode path, with a render test);
+>   `STROKE_MIN_PX` unchanged at 2.
+> - **Left, yours, outside phase 1's bar**: M21 (row 59), the beat-frame
+>   allowance window, and the per-code-point painter mutation once in the
+>   app on the Mac (optional, not run).
 
 ### 6.16 Phase 3 — The three.js compositor and 2.5D
 
@@ -15522,7 +15734,7 @@ piece table does (§6.3's, §6.16's, §6.17's, §6.18's).
 | 1 | A | `motion.ts` with `graphicMotion` (§6.13); `stroke.ts` with `graphicStroke` (0.5 of §6.3); `style.ts`'s first half with `graphicStyle` (§6.5) (built 2026-10-27/28: `f38f971`, `862cf1b`, `ae6167c`; `69d2d6e`, `2074f08`; `b965cda`, `0d603a8`) | 1 + 0.5 + 0.5 | the head |
 | 1 | B | `drawList.ts`, `items.ts` (`DrawOut`, `unitFor`, `CLUSTER_SCRIPTS`, the drawer seam), `templates/index.ts` with `graphicDrawList` (1 of §6.3); `paint.ts` with its `PaintOptions` and `graphicPaint` (0.75); `frame.ts` and `targets.ts` with `graphicFrame`'s first half (0.25) (built 2026-10-30/31, each piece read by two critics before the next: `4b68c45`; `a82cd43`, `d822c56`; `4196d43`, `0c8911f`; pushed as `0c8911f`; §6.3's three Built notes) | 2 | the head; §6.20's two halves (`unitFor` reads `shapedScript`; shaped text items name `INDIC_FONTS`); M3 for `CLUSTER_SCRIPTS` (in, 2026-10-27); A's `stroke.ts` before `paint.ts` |
 | 1 | C | `graphicCanvas.ts` (preview, bake, frames; the worker back-end only if M2 asks, which it did on 2026-10-27) (0.75 of §6.3); the export branch with its own catch line, `Bakers.graphic` and every literal of §6.11, `exportBakers.ts`, the store's `addGraphicClip`, `setGraphic`, `rebakeGraphic`, the trim and split rules, Preview's branch and sweep, (box) `identityPlaced`, with `graphicStore` (0.5); the three store arms (`rebakeGenerated`, `placeCopies`, `rebakeFollowed`) and `graphicGuards`' wiring half (0.25 of §6.4) (built 2026-10-31 to 11-02, each piece read by two critics before the next: `b610c91`, `1ea9a96`; `a273729`, `fa4ddc3`; and `8acf930`, the strips' shot rule over `drawsItself`, which §6.4's head-lane note had left open; pushed as `8acf930`; §6.3's three lane-C Built notes and §6.4's) | 1.5 | B's draw list and painter; M1 and M2 (in, 2026-10-27) |
-| 1 | D | the harness's `primitives` and Indic halves (0.25 of §6.3); `pathLength`, `strokes` widths, `graphic.int`'s phase-1 cases, `SHAPES`' graphic overlay (§6.11's half) (built 2026-11-02/03, each piece read by two critics before the next: `6592a38`, `69c2340`; `0954b3d`, `2bb706d`; `f8d74ee`, `683a6f0`, the last with the lane's one production change, `graphicBox`'s two far-side columns and rows, §6.3's "The box"; pushed as `683a6f0`; §6.11's three lane-D Built notes) | 0.25 + 0.5 | C; §6.20's D10 half |
+| 1 | D | the harness's `primitives` and Indic halves (0.25 of §6.3); `pathLength`, `strokes` widths, `graphic.int`'s phase-1 cases, `SHAPES`' graphic overlay (§6.11's half) (built 2026-11-02/03, each piece read by two critics before the next: `6592a38`, `69c2340`; `0954b3d`, `2bb706d`; `f8d74ee`, `683a6f0`, the last with the lane's one production change, `graphicBox`'s two far-side columns and rows, §6.3's "The box"; pushed as `683a6f0`; §6.11's three lane-D Built notes; phase 1's exit read 2026-11-06/07 in the development app on both machines and met, §6.12) | 0.25 + 0.5 | C; §6.20's D10 half |
 | 2 | T3, first | the typed stub of `applyGraphics` (`KeptGraphic`, the signature, §6.6), committed before T2's wiring starts | inside T3's 3 | phase 1's exit |
 | 2 | T1 | `GRAPHIC_TEMPLATES`' values first (the others read the field modes), then the layout, the eight draw files, `numbers.ts`, `tree.ts`, with `graphicFrame`'s second half, `graphicHolds`, `graphicTree` (§6.2); the style's second half (§6.5) | 4 + 0.5 | phase 1's exit; M21 before the counter |
 | 2 | T2a | `claims.ts`, then `validateGraphics.ts` with `checkGraphicData`, `claims` and the property test (§6.7) | 3 | T1's values |
@@ -15549,7 +15761,10 @@ and M22 found both machines shaping, so of these only M21 (phase 2's
 counter) and M7 (phase 3's glow) still gate. (2026-11-03: every phase-1
 lane is built and pushed, through `683a6f0`; phase 1's exit, §6.12, now
 waits on your runs, M8's and M19's decisions among them, and gates phase
-2.)
+2.) (2026-11-06/07: your runs are read on both machines and phase 1's
+exit is met, §6.12; M8 and M19 slide by your decisions of 2026-11-03.
+Phase 2 is no longer gated by phase 1; of the measurements, M21 still
+gates its counter.)
 
 **Where §6.20 falls.** Outside step 3's days, inside phase 1's run:
 
@@ -18071,8 +18286,10 @@ H11, and H12 again, in phase 4.
   coarsest tolerance within the bar is 0.125 (0.25 fails on length alone,
   −0.1615 % at the r = 30 circle); without the four-cubic circles under r
   = 40, §6.3's open question, it is 0.25 (worst −0.0683 % at r = 40).
-  Open: the run in the development app on the Mac, and which reading
-  sets `STROKE_TOLERANCE` (unchanged, 0.25), the plan owner's.
+  Read 2026-11-06/07 in the development app on the Mac and the Surface:
+  the same lengths and verdicts on both. The user's decision of
+  2026-11-03: M8 slides as a doc decision (M8 over r ≥ 40, or 0.125
+  later); `STROKE_TOLERANCE` unchanged, 0.25. Closed for phase 1.
 - **Row 47 (M9): measured 2026-10-27** (`f38f971`; §6.13's Built note,
   §6.15's M9 row, `EFFECTS.md` §61), in node on the Mac: the closed-form
   spring within 1e-4 of the travel of semi-implicit Euler at 1,000
@@ -18086,22 +18303,31 @@ H11, and H12 again, in phase 4.
   take 1.01–3.03 s at the box and pool 4 and 0.43–1.30 s on four workers
   on the Surface, under the row's 10 s. §13's rawvideo row stays
   "measurements only".
-- **Row 51 (M13): not measured** (phase 1's half). Its harness half is
+- **Row 51 (M13): measured 2026-11-06/07** (phase 1's half). Its harness half is
   built (`6592a38`, `69c2340`): `{ primitives: true }` bakes each case
   twice on the box route and prints, through `m13Line`, the two
   sequences' patterns and the canvas route's beside them, wherever they
   are files. On the harness page each case's two bakes were 46 of 46
-  PNGs byte-equal (§6.11's lane-D harness Built note); the `framemd5`
-  run over the app's files, and the Mac against the Surface, are yours.
+  PNGs byte-equal (§6.11's lane-D harness Built note). In the
+  development app the two bakes are `framemd5`-equal in all six cases,
+  46 of 46 frames, on the Mac and on the Surface; the Mac against the
+  Surface, recorded as the golden tolerance: mean over the box
+  0.084-2.030 per case, largest premultiplied gap 5-212, at the
+  anti-aliased edges, not the geometry (§6.15's table). Phase 1's half
+  closed; phase 3's is M13 again.
 - **Row 57 (M19): measured in part 2026-11-03** (`0954b3d`, `2bb706d`;
   §6.15's M19 row, `EFFECTS.md` §61, "Stroke chroma through yuva420p"):
   the strokes PNG from the harness page's bake read through the plan's
   chain by `graphic.int`'s gated case on the Mac's 4.4 build: no width of
   1-3 px keeps its centre line within 8 levels (1 px U 63, 2 px 54, 3 px
   34); most of it the transparent pixels' black chroma, bled in by
-  `format=yuva420p`. Open: the PNGs from the development app and the read
-  on both machines (yours), and the fix, the plan owner's; `STROKE_MIN_PX`
-  unchanged, 2.
+  `format=yuva420p`. Read 2026-11-06/07 over the development app's PNGs
+  on both machines: the Mac 1 px U 64, 2 px 54, 3 px 34; the Surface's
+  2018 build 63, 54, 34; none within the bar, background, ink Y and
+  reference 0 on both. The user's decision of 2026-11-03: M19 slides to a
+  contained pre-beta half-day piece (the stroke colour bled into alpha-0
+  neighbours in the bake's encode path, with a render test);
+  `STROKE_MIN_PX` unchanged, 2.
 - **Row 60 (M22): measured on both machines; decided 2026-10-27, shaped
   on both.** On the Mac its numeric halves pass in Electron 44.3.0 with
   the Mac's Kohinoor faces (every conjunct narrower than its letters,
@@ -18129,7 +18355,10 @@ H11, and H12 again, in phase 4.
   first one"), the conjuncts not separately described. Shaped on both:
   "text has to be canvas 2D" holds and phase 1 starts (§6.15's "as
   measured" note, `EFFECTS.md` §61). Closed; the conjuncts by eye on the
-  Surface optional (`EFFECTS.md` §61's "Still unmeasured").
+  Surface optional (`EFFECTS.md` §61's "Still unmeasured"). (Seen
+  2026-11-07: your eye on the development app's sheet on the Surface,
+  joined clusters above and broken per code point below; §6.11's Indic
+  Built note.)
 - **Row 59 (M21): not measured.** Its gated case is built (`fca8194`) and
   waits on your Hindi clips.
 
@@ -19151,6 +19380,13 @@ what is needed, where the answer waits on something not yet in hand.
     "unshaped" notice held to those two, the scripts measured; the `\fn`
     tags are dropped. The estimate above, that §6.20's day would not grow,
     was low: D10's half is 0.75 and §6.20 1.25 (§2).
+
+    **Measured on Windows, 2026-11-07** (phase 1's exit, §6.12): the
+    canvas path's Indic drawing in the development app on the Surface,
+    both sites SEEN (a text clip's bake and a caption track's), the sheet
+    shaped by your eye, Nirmala UI resolving M22 before Noto loads, and
+    the Noto paint's readings the Mac's (every cluster equal to
+    `drawTextOnto`, max 0, the same widths).
 
 ---
 

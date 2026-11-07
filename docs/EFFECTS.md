@@ -10333,6 +10333,10 @@ from 1 to 3 px on this chain. `STROKE_MIN_PX` is unchanged at 2; whether
 the answer is a width, the stroke's colour bled into the transparent
 pixels before the encode, or a different bar is the plan owner's. The
 2018 Windows build's figures, its swscale included, are unmeasured.
+(Measured 2026-11-07 on the Surface, "Phase 1's exit in the development
+app" below: within one level of the Mac's, the same zeros. The user's
+decision of 2026-11-03 slides M19 to a pre-beta half-day piece, the
+colour bled in the bake's encode path; `STROKE_MIN_PX` stays 2.)
 
 ### flattenPath against SVGPathElement, 2026-11-03
 
@@ -10375,7 +10379,104 @@ from `createElementNS`), the page's clock grain 0.1 ms. At 0.125 the
 pieces grow: 56 at r = 20 (32 at 0.25), 64 at r = 30 to 50, 256 at 540
 (128), the mixed path 203 (136). `STROKE_TOLERANCE` is unchanged; which
 reading M8 takes is the plan owner's, and the run in the development app
-(Electron 44's Chromium) is the user's.
+(Electron 44's Chromium) is the user's. (Run 2026-11-06/07 on the Mac
+and the Surface: the same lengths and verdicts, "Phase 1's exit in the
+development app" below. The user's decision of 2026-11-03: M8 slides as
+a doc decision, M8 over r ≥ 40 or 0.125 later; `STROKE_TOLERANCE` stays
+0.25.)
+
+### Phase 1's exit in the development app, 2026-11-06/07
+
+`CLIPS.md` §6.12's phase-1 bar, run by the user in `npm run dev`
+(Electron 44.3.0, Chrome 152.0.7977.78, the renderer on localhost:5173),
+`rN = await window.__forgeGraphicCheck({...})` typed in DevTools: the
+Mac on 2026-11-06 (stamped 2026-11-07T01:40-01:50Z), the Surface on
+2026-11-07T03:23-03:27Z. The Mac's bakes are under
+`/Users/spyker/Library/Application Support/forge/titles/`, the Surface's
+under `C:\Users\rokza\AppData\Roaming\forge\titles\`, zipped to the Mac
+for the cross-machine reads, which the Mac's bundled 4.4 ffmpeg decoded
+to rgba. Every option passes on both; the figures are `CLIPS.md` §6.15's
+phase-1 notes. What the runs taught:
+
+- **The same draw list through the same Electron and Chrome build
+  rasterises differently on the two platforms, at the edges only.**
+  `primitives`' box route, sequence a, the Surface's PNGs against the
+  Mac's, premultiplied (the largest of R, G, B times alpha, and alpha):
+
+  | case | differing px | mean over the box | mean over the ink | largest gap | alpha mass Surface/Mac |
+  |---|---|---|---|---|---|
+  | stroke 822×422 | 0.36 % | 0.084 | 4.05 | 122 | 1.0040 |
+  | text-latin 738×330 | 15.7 % | 2.007 | 5.19 | 212 | 1.0427 |
+  | text-indic 722×224/226 | 20.2 % | 2.030 | 4.51 | 105 | 1.0418 |
+  | dim-hard 1080×1920 | 11.1 % (all but 6,725 px by 1-4 levels) | 0.112 | 0.135 | 46 | 1.0013 |
+  | dim-feather 1080×1920 | 19.0 % (all but 114 px by 1-4) | 0.219 | 0.246 | 5 | 1.0018 |
+  | group 826×534 | 6.2 % | 0.459 | 1.01 | 154 | 1.0000 |
+
+  The stroke's differing pixels are a 1 px rim along both edges (58,037
+  of 58,214 at an edge, 177 opaque on both); text-latin's at frame 45
+  are its 81,364 edge px by 8.25 mean against its 21,470 opaque-on-both
+  px by 0.068. Fills, interiors and the opacity ramp agree within one or
+  two levels; nothing moved or dropped, and only text-indic's box
+  differs, by 2 px of Noto metrics (722×224 at 180,768 on the Mac,
+  722×226 at 180,766 on the Surface, the two rows holding no ink).
+  `strokes` reads the same from the other side: the width read back from
+  the PNG at slope 0.597 is 0.855, 1.808 and 2.923 px on the Mac and
+  0.980, 1.963 and 2.994 on the Surface for 1, 2 and 3 px, and exactly
+  1.000, 2.000 and 3.000 at slope 0 on both. The Surface covers a slanted
+  anti-aliased edge more heavily; the geometry is the same. Within each
+  machine the bake is exact (the Surface's preview against its PNGs max 0
+  on every line). M13's golden tolerance is this table: edges, not
+  geometry.
+- **dim-hard's opacity ramp quantises differently on two frames.**
+  Frames 13 and 16 differ over the whole frame by one level (alpha 66
+  and 67, 81 and 82); every other ramp frame is equal (5/5, 10/10,
+  77/77, 153/153 at the end). dim-feather has the same two frames one
+  level apart. The platforms quantise `globalAlpha` differently on some
+  values.
+- **The two bundled ffmpegs decode these PNGs identically.** The user's
+  `.frames` file, the Surface's 2018 build's `-f framemd5` of its own
+  dim-hard-a PNGs, equals the Mac's 4.4 build's `framemd5` of the same
+  zipped PNGs on 46 of 46 frames; only the `#software: Lavf…` header
+  line differs. So `framemd5` lines compare straight across the builds
+  once the header is dropped. (Within each machine the two bakes were
+  `framemd5`-equal in all six cases, 46 of 46.)
+- **`indic`'s site lines read "cannot tell" unless `indic` runs first
+  after a reload.** `primitives` loads the Noto faces, so a site then
+  finds its face loaded before it ran. The Mac's first run (01:47:14Z,
+  after `primitives`) read "cannot tell" on both sites; after a reload,
+  run first (01:50:33Z), both SEEN. The Surface ran it first (03:23:19Z):
+  both SEEN.
+- **The system faces that resolve M22 before Noto loads.** The Mac:
+  Kohinoor Devanagari and Kohinoor Telugu, a dotted circle 120.0 px
+  (installed candidates: Kohinoor Devanagari, Devanagari Sangam MN,
+  Devanagari MT, ITF Devanagari, Shree Devanagari 714, Kohinoor Telugu,
+  Telugu Sangam MN, Telugu MN, Arial Unicode MS). The Surface: Nirmala UI,
+  the only installed candidate, a dotted circle 71.3 px. With Noto loaded
+  both machines draw every cluster through `paintDrawList2d` equal to
+  `drawTextOnto` (max 0) at the same widths (क्ष 86.0 against 161.5 px).
+- **Electron's console has no `copy()`** (a harmless ReferenceError);
+  `console.log(r.summary.join('\n'))` is the text route. The window has
+  to stay visible: hidden, the check reads THROTTLED.
+- **M19 on the 2018 build.** Over the development app's strokes PNGs:
+  1 px U 63 V 35, 2 px U 54 V 30, 3 px U 34 V 19 on the Surface's
+  win32-x64 ffmpeg; the Mac's 4.4 build over its own app PNGs 64/36,
+  54/31, 34/19. Background, ink Y and reference 0 on both. The fringe is
+  `format=yuva420p`'s chroma averaging over alpha-0 neighbours whose RGB
+  is (0, 0, 0); the older build's swscale adds nothing.
+- **M8 in Electron 44.** Both machines print the pane's lengths and
+  verdicts exactly (above); only the timings differ, ours 0.005-0.05 ms
+  a path on the Mac and 0.005-0.16 on the Surface, the browser's
+  1.6-6.3 ms and 0.1-11.9.
+- **The bake through the app's own writer** (IPC and disk, the
+  primitives' hand-built lists, not a template): paint mean 1.06-1.69 ms
+  at 1080×1920 on the Mac, 2.53-7.86 on the Surface (the group's 7.86,
+  p95 16.40, the slowest of either); bake per frame on the box route
+  1.51-4.30 ms and 3.97-8.90, on the canvas route 3.12-6.72 and
+  7.15-8.81. Paint is 2-5× slower on the Surface, bakes 2-3×.
+- **`recordingWrites` in the app.** Which way the PNGs came, the wrapper
+  on `window.forge` or the files through `mediaUrl`, was not noted;
+  either way the check read every PNG on both machines (the two box
+  bakes 46 of 46 byte-equal, both routes against the preview).
 
 ### What this settles
 
@@ -10574,12 +10675,25 @@ reading M8 takes is the plan owner's, and the run in the development app
     "flattenPath against SVGPathElement" above): with them the coarsest
     tolerance within the bar is 0.125, without them 0.25. Which reading
     M8 takes is the plan owner's; `STROKE_TOLERANCE` stays 0.25.
+27. **Phase 1 exits** (2026-11-06/07, the development app on both
+    machines; "Phase 1's exit in the development app" above): every run
+    `CLIPS.md` §6.12 names passes or is recorded; M8 and M19 slide by the
+    user's decisions of 2026-11-03, `STROKE_TOLERANCE` 0.25 and
+    `STROKE_MIN_PX` 2 unchanged.
+28. **The Mac and the Surface draw one list alike but for anti-aliased
+    edges**, and their bundled ffmpegs decode the PNGs identically: a
+    cross-machine golden compares by an edge tolerance (mean over the box
+    up to 2.030, largest premultiplied gap up to 212), not by hash, and
+    `framemd5` lines compare across the builds without their header.
 
 ### Still unmeasured, and whose
 
 - **The conjuncts by eye on the Surface**: the user's verdict there,
   2026-10-27, was on कि alone; that the conjuncts look joined there rests
   on M22's numeric half (8 of 8 narrower). The user's, if wanted.
+  (Seen 2026-11-07: the user's eye on the development app's `indic`
+  sheet on the Surface, joined clusters above, broken per code point
+  below, the Telugu caption shaped.)
 - **A worker outside `npm run dev`** (M2): the dev server's page is
   answered on both machines; the packaged app's page, loaded from disk
   (`src/main/index.ts:229`), and a `blob:` worker are not measured, nor the
@@ -10628,7 +10742,9 @@ reading M8 takes is the plan owner's, and the run in the development app
   the harness bridge's writes are a recorder, so the primitives' per-frame
   bake figures, box route p50 0.65-1.13 ms and canvas route 2.05-2.70 ms,
   are the draw and the encode only; the app's are the user's, in the
-  development app's console.)
+  development app's console.) (Read 2026-11-06/07 through the app's
+  writer, the primitives' lists rather than a template: "Phase 1's exit
+  in the development app" above. A real template's bake is phase 2's.)
 - **M8**: the user's, on the Mac in the development app
   (`__forgeGraphicCheck({ pathLength: true })`): our `total` against an
   `SVGPathElement`'s `getTotalLength()`, which sets `STROKE_TOLERANCE`.
@@ -10640,22 +10756,19 @@ reading M8 takes is the plan owner's, and the run in the development app
   Chrome 152, item 26 and "flattenPath against SVGPathElement" above:
   with those circles the coarsest tolerance within the bar is 0.125,
   without them 0.25; both readings print. Electron 44's Chromium, and
-  the choice, are still the user's.)
-- **The Windows side of lane D** (2026-11-03): the box route's equality
-  after the pad (item 24) on the 2018 build is CI's windows-latest
-  runner's to read (`graphic.int`'s (box) case runs there; the source
-  says the clamp is the same); M19's figures (item 25) on the 2018 build,
-  its swscale included, need the strokes PNGs from the development app
-  on the Surface and `FORGE_GRAPHIC_FRAMES` there; M8 (item 26) and the
-  primitives' and Indic readings were taken in the Mac's Browser pane
-  only. The user's, but for CI's half.
-- **Whether Electron's `contextBridge` lets the harness wrap
-  `window.forge`** (lane D's `recordingWrites`, which keeps each PNG's
-  bytes as the bake writes it): Electron cannot start in the sandbox, so
-  it is not measured. If the bridge is frozen, the check reads the files
-  the main process wrote through `mediaUrl` and says "PNGs read from
-  files"; M13's line prints either way. The user's first development-app
-  run answers it.
+  the choice, are still the user's.) (Read 2026-11-06/07 in Electron 44
+  on both machines, the same figures; the user's decision of 2026-11-03
+  slides M8 as a doc decision. Closed for phase 1.)
+- ~~**The Windows side of lane D**~~: measured. The (box) case's
+  equality on the 2018 build, CI run 41693366322 (2026-11-03); M19 on
+  the 2018 build, 1 px U 63, 2 px 54, 3 px 34, and M8, `primitives` and
+  `indic` in the development app on the Surface, 2026-11-07 ("Phase 1's
+  exit in the development app" above).
+- ~~**Whether Electron's `contextBridge` lets the harness wrap
+  `window.forge`**~~: moot for the check. In the development app on
+  both machines (2026-11-06/07) it read every PNG, the two box bakes 46
+  of 46 byte-equal; which of the two ways it took was not noted ("Phase
+  1's exit in the development app" above).
 - **The Windows build's libass fallback face**, and whether its fallback
   reaches the fontsdir's Noto at all (item 17): the Surface's, the user's;
   CI's `captions.int` notice says SAME or DIFFER there, not which face.
@@ -10673,7 +10786,10 @@ reading M8 takes is the plan owner's, and the run in the development app
   `indic` option) are lane D's. (Built 2026-11-02, `6592a38` and
   `69c2340`: on the harness page, with the two Noto faces given to its
   catalogue by hand, both sites read SEEN; with its own empty catalogue,
-  "cannot tell". The development app's run is the user's.)
+  "cannot tell". The development app's run is the user's.) (Read
+  2026-11-06/07: both sites SEEN in the development app on both machines.
+  The caption track's export through the bake and M0's exit on the two
+  Indic links stay the user's.)
 - **Canvas's shadow against the CTM, in a browser** ("Canvas 2D under
   the painter" above): the bounds take the HTML specification's word
   that `shadowBlur` and the offsets are not transformed; no probe was
@@ -10696,6 +10812,9 @@ reading M8 takes is the plan owner's, and the run in the development app
   mutation, run once in the pane, makes all ten NOT EQUAL. The
   development app on both machines, the eye check of the sheet it hands
   back, and the mutation on the Mac in the app are still the user's.)
+  (Read 2026-11-06/07 in the development app on both machines, both
+  sites SEEN and the sheet shaped by the user's eye; only the mutation in
+  the app on the Mac, optional, is left.)
 - **The allowance window** (item 21): measured, printed by
   `tests/graphicFrame.test.ts`, decided by no one yet. The user's.
 - **M7–M20, by phase**: M8 (above), M13 and M19 in phase 1 (M9 measured,
@@ -10704,6 +10823,9 @@ reading M8 takes is the plan owner's, and the run in the development app
   user's; M13's two bakes per case, `framemd5` over the patterns the
   check prints and the Mac against the Surface, the user's: on the
   harness page each case's two box-route bakes were 46 of 46 PNGs
-  byte-equal, which is not M13's run); M10 and M14–M18 in
+  byte-equal, which is not M13's run; all of it read 2026-11-06/07 in
+  the development app, "Phase 1's exit in the development app" above,
+  M8 and M19 sliding by the user's decisions of 2026-11-03); M10 and
+  M14–M18 in
   phase 2; M7 first, then M6 whole, M12, M20 and M13 again in phase 3; M11
   is not run, since M1–M2 did not fall short (item 8). H1–H13 are §62's.
