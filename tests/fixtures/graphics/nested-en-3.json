@@ -5,7 +5,7 @@
     "assetId": "fixture-nested-en-3",
     "language": "en",
     "model": "text-written fixture",
-    "durationMs": 11700,
+    "durationMs": 11400,
     "words": [
       {
         "index": 0,
@@ -233,7 +233,7 @@
       },
       {
         "index": 32,
-        "text": "three",
+        "text": "two",
         "startMs": 9600,
         "endMs": 9900,
         "confidence": null
@@ -247,37 +247,30 @@
       },
       {
         "index": 34,
-        "text": "bounce,",
+        "text": "bounce",
         "startMs": 10200,
         "endMs": 10500,
         "confidence": null
       },
       {
         "index": 35,
-        "text": "gel,",
+        "text": "or",
         "startMs": 10500,
         "endMs": 10800,
         "confidence": null
       },
       {
         "index": 36,
-        "text": "or",
+        "text": "a",
         "startMs": 10800,
         "endMs": 11100,
         "confidence": null
       },
       {
         "index": 37,
-        "text": "a",
+        "text": "softbox.",
         "startMs": 11100,
         "endMs": 11400,
-        "confidence": null
-      },
-      {
-        "index": 38,
-        "text": "softbox.",
-        "startMs": 11400,
-        "endMs": 11700,
         "confidence": null
       }
     ],
@@ -301,10 +294,10 @@
       {
         "id": "s03",
         "startMs": 7800,
-        "endMs": 11700,
-        "text": "The second way is flash, with three options: bounce, gel, or a softbox.",
+        "endMs": 11400,
+        "text": "The second way is flash, with two options: bounce or a softbox.",
         "wordStart": 26,
-        "wordEnd": 38
+        "wordEnd": 37
       }
     ]
   },
@@ -315,7 +308,6 @@
     "slow shutter",
     "flash",
     "bounce",
-    "gel",
     "softbox"
   ],
   "parents": [
@@ -323,7 +315,6 @@
     0,
     0,
     -1,
-    3,
     3,
     3
   ]

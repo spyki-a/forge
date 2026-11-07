@@ -71,6 +71,11 @@ describe('GRAPHIC_TEMPLATES (§6.2)', () => {
       ['lower-third', 'role', 'user']
     ]
     for (const [id, field, mode] of modes) expect(row(id).fields[field], `${id}.${field}`).toBe(mode)
+    // the table gives each row's fields exactly: no stray mode-bearing field (T2's validator checks each)
+    for (const id of DRAWN) {
+      const listed = modes.filter(([m]) => m === id).map(([, f]) => f)
+      expect(new Set(Object.keys(row(id).fields)), id).toEqual(new Set(listed))
+    }
     expect(row('screen-card').fields).toEqual({})
   })
 
@@ -85,6 +90,9 @@ describe('GRAPHIC_TEMPLATES (§6.2)', () => {
     expect(row('counter').pairs).toContainEqual(['label', 'value'])
     expect(row('ring').pairs).toContainEqual(['label', 'value'])
     expect(row('bars').pairs).toContainEqual(['items.label', 'items.value'])
+    for (const id of ['steps', 'quote', 'callout', 'keyword', 'lower-third', 'screen-card'] as const) {
+      expect(row(id).pairs, id).toBeUndefined() // the table's "—"
+    }
     expect(row('bars').maxItems).toBe(5)
     expect(row('steps').maxItems).toBe(6)
     expect(row('bars').minItems).toBe(2)
@@ -121,7 +129,10 @@ describe('GRAPHIC_TEMPLATES (§6.2)', () => {
       expect(Object.isFrozen(def.fields), id).toBe(true)
       expect(Object.isFrozen(def.seconds), id).toBe(true)
       if (def.appFields) expect(Object.isFrozen(def.appFields), id).toBe(true)
+      for (const pair of def.pairs ?? []) expect(Object.isFrozen(pair), id).toBe(true)
     }
+    expect(Object.isFrozen(row('quote').kindFields!.social)).toBe(true)
+    expect(Object.isFrozen(row('counter').pairs![0])).toBe(true)
     expect(() => {
       ;(row('counter').fields as Record<string, string>).value = 'verbatim'
     }).toThrow()

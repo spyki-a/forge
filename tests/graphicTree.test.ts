@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { connectorFor, parentsValid, treeParents, SUB_COUNT_CUES } from '@shared/graphics/tree'
 import { claimToken } from '@shared/director/claims'
+import { GRAPHIC_TEMPLATES } from '@shared/graphics/template'
 import type { Transcript, Word } from '@shared/transcript'
 
 /*
@@ -88,7 +89,9 @@ function generated(seed: number): { items: { label: string }[]; words: Word[] } 
       if (r() < 0.7) {
         const at = Math.floor(r() * (words.length + 1))
         const cue = pick(SUB_COUNT_CUES) + (r() < 0.5 ? ':' : '')
-        const pair = r() < 0.5 ? [pick(COUNT_WORDS), cue] : [cue, pick(COUNT_WORDS)]
+        // 0-2 fillers between the count and its cue: the rule's reach is two tokens
+        const between = Array.from({ length: Math.floor(r() * 3) }, () => pick(FILLER))
+        const pair = r() < 0.5 ? [pick(COUNT_WORDS), ...between, cue] : [cue, ...between, pick(COUNT_WORDS)]
         words.splice(at, 0, ...pair)
       }
       out.push(...words)
@@ -101,12 +104,25 @@ describe('treeParents on the English nested-enumeration fixtures (§6.10)', () =
   it.each(NESTED)('$name gives its expected parent list exactly', ({ fixture }) => {
     expect(fixture.language).toBe('en')
     expect(fixture.parents).toHaveLength(fixture.items.length)
+    // `words` is the stretch (§6.2): from the first item's first word, as the app will pass it;
+    // each fixture's last word is its last item's, so the stretch runs to the end
+    const first = claimToken(fixture.items[0].split(/\s+/)[0])
+    const from = fixture.transcript.words.findIndex((w) => claimToken(w.text) === first)
+    expect(from).toBeGreaterThan(0)
     const parents = treeParents(
       fixture.items.map((label) => ({ label })),
       fixture.title,
-      fixture.transcript.words
+      fixture.transcript.words.slice(from)
     )
     expect(parents).toEqual(fixture.parents)
+  })
+
+  it('every fixture is a list the steps template can hold (minItems..maxItems)', () => {
+    const steps = GRAPHIC_TEMPLATES.steps!
+    for (const { name, fixture } of NESTED) {
+      expect(fixture.items.length, name).toBeGreaterThanOrEqual(steps.minItems!)
+      expect(fixture.items.length, name).toBeLessThanOrEqual(steps.maxItems!)
+    }
   })
 
   it('every fixture nests somewhere, so a flat answer cannot pass it', () => {
@@ -117,6 +133,24 @@ describe('treeParents on the English nested-enumeration fixtures (§6.10)', () =
     const words = wordsOf('Plan, which has two parts: budget and timeline. Second, shoot.')
     expect(treeParents([{ label: 'plan' }, { label: 'budget' }, { label: 'timeline' }, { label: 'shoot' }], '', words)).toEqual([
       -1, 0, 0, -1
+    ])
+  })
+
+  it('takes a count two tokens from its cue, and not one three tokens away', () => {
+    const labels = ['plan', 'budget', 'timeline', 'shoot'].map((label) => ({ label }))
+    expect(treeParents(labels, '', wordsOf('Plan, which has two main parts: budget and timeline. Then shoot.'))).toEqual([
+      -1, 0, 0, -1
+    ])
+    expect(
+      treeParents(labels, '', wordsOf('Plan, which has two quite separate parts: budget and timeline. Then shoot.'))
+    ).toEqual([-1, -1, -1, -1])
+  })
+
+  it('finds each run in spoken order, after the run before it', () => {
+    // "lenses" is said before "shoot"; its own run is the one after the count
+    const words = wordsOf('Plan around the lenses you own. Shoot, which needs two things: lenses and light.')
+    expect(treeParents(['plan', 'shoot', 'lenses', 'light'].map((label) => ({ label })), '', words)).toEqual([
+      -1, -1, 1, 1
     ])
   })
 
@@ -142,7 +176,7 @@ describe('treeParents on the English nested-enumeration fixtures (§6.10)', () =
     ).toEqual([-1, -1, -1])
   })
 
-  it('keeps a Hindi and a Telugu list flat (v1), finding their runs with claimToken', () => {
+  it('keeps a Hindi and a Telugu list flat (v1)', () => {
     const hi = wordsOf('पहला, योजना, जिसके दो हिस्से हैं: बजट और समय। दूसरा, शूट।')
     expect(treeParents(['योजना', 'बजट', 'समय', 'शूट'].map((label) => ({ label })), '', hi)).toEqual([-1, -1, -1, -1])
     const te = wordsOf('మొదటిది, ప్రణాళిక, దానికి రెండు భాగాలు: బడ్జెట్, సమయం. రెండవది, షూట్.')

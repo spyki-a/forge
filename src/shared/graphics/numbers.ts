@@ -131,7 +131,12 @@ function group(intDigits: string, grouping: Grouping): string {
  * The value at `fraction` of the way from 0, in the value's own format
  * (docs/CLIPS.md §6.2). At `fraction` ≥ 1, `value` itself, unchanged. A
  * value with no in-between (no digits, or two numbers) is returned whole at
- * every fraction: it appears whole on its beat.
+ * every fraction, fraction 0 included: it appears whole on its beat.
+ *
+ * The seam for the drawers (counter, ring, bars): inBetween does not hold
+ * such a value back before its beat. A drawer that shows inBetween(value, p)
+ * over the lead tests `numberOf(value) === null` and draws nothing until the
+ * beat, so the value is "whole on its beat" (§6.2), not from t = 0.
  */
 export function inBetween(value: string, fraction: number): string {
   if (fraction >= 1) return value

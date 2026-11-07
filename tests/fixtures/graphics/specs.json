@@ -635,10 +635,10 @@
       "spec": {
         "data": {
           "template": "ring",
-          "value": "40%",
+          "value": "40 percent",
           "label": "of couples book in March"
         },
-        "seconds": 2.2,
+        "seconds": 2.6,
         "beats": [
           0.5
         ],

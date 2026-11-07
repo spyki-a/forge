@@ -122,10 +122,20 @@ describe('specs.json, the drawing fixtures (§6.2, §6.10)', () => {
         expect(n >= 1 && n <= 4, id).toBe(true)
         expect(Number.isInteger(d.lit) && d.lit >= 0 && d.lit < n, id).toBe(true)
       }
-      if (d.template === 'ring') expect(d.value.endsWith('%'), id).toBe(true)
+      if (d.template === 'ring') {
+        // §6.2's shapes table: the number carries % (or "percent") and is ≤ 100
+        expect(d.value, id).toMatch(/(%|\bpercent)$/)
+        expect(numberOf(d.value)!, id).toBeLessThanOrEqual(100)
+      }
       if (d.template === 'counter' || d.template === 'ring') expect(numberOf(d.value), id).not.toBeNull()
       if (d.template === 'callout') expect(spec.subject, id).toBeDefined()
     }
+  })
+
+  it('has a ring written with "percent", so the painter’s add-% rule has a case that must not add one', () => {
+    const rings = FILE.specs.filter((e) => e.spec.data.template === 'ring').map((e) => e.spec.data)
+    expect(rings.some((d) => d.template === 'ring' && /\bpercent$/.test(d.value))).toBe(true)
+    expect(rings.some((d) => d.template === 'ring' && d.value.endsWith('%'))).toBe(true)
   })
 
   it('covers the line and the tree, a nested tree among them', () => {
@@ -164,9 +174,11 @@ describe('readingSeconds (§6.2)', () => {
     expect(readingSeconds('Before the ceremony')).toBe(19 / 20)
   })
 
-  it('counts a Hindi and a Telugu label in graphemes, not UTF-16 units', () => {
-    // Pinned on Node 24's ICU 78 (Unicode 17), which CI's setup-node 24 runs on
-    // both runners; the Telugu conjunct "ళ్లి" is one cluster there.
+  // Pinned on Node 24's ICU 78 (Unicode 17), which CI's setup-node 24 runs on
+  // both runners; the Telugu conjunct "ళ్లి" is one cluster only from ICU 74
+  // (Unicode 15.1's GB9c), so an older Node skips this case rather than fail it.
+  const ICU_MAJOR = Number((process.versions.icu ?? '0').split('.')[0])
+  it.skipIf(ICU_MAJOR < 74)('counts a Hindi and a Telugu label in graphemes, not UTF-16 units', () => {
     expect(readingSeconds('शादी से पहले')).toBe(8 / 20) // 12 UTF-16 units
     expect(readingSeconds('పెళ్లికి ముందు')).toBe(6 / 20) // 14 UTF-16 units
   })
