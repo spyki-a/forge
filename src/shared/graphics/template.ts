@@ -1,8 +1,10 @@
 /**
  * A graphic's types: which templates exist, what each one draws, how the
  * validator treats each field, and the spec a graphic clip carries
- * (docs/CLIPS.md §6.1). Types only in phase 1: the values, GRAPHIC_TEMPLATES,
- * arrive with phase 2's templates (§6.2).
+ * (docs/CLIPS.md §6.1). The types are phase 1's; the values, GRAPHIC_TEMPLATES
+ * at the foot of the file, are phase 2's (§6.2). Which templates the model is
+ * offered (§6.2's last column, §6.6's "Templates offered") is the menu's to
+ * say, not a field here.
  *
  * Nothing here imports the timeline, so `timeline.ts` can take
  * `GraphicSpec` from this file without an import cycle.
@@ -70,6 +72,8 @@ export interface TemplateDef {
   /** Fields that bind as label–value pairs (§6.7 rule 6). */
   pairs?: [label: string, value: string][]
   maxItems?: number
+  /** The fewest items a list template draws: §6.2's "(at least 2)" for bars and steps. */
+  minItems?: number
   needsSubject?: boolean
   /** "This template may ask for depth" (§6.16). */
   threeD: boolean
@@ -128,4 +132,87 @@ export interface KeptGraphic {
   clipId: string
   assetId: string
   candidate: GraphicCandidate
+}
+
+/** Seconds, field modes and the rest for each drawn template (docs/CLIPS.md §6.2's GRAPHIC_TEMPLATES table; the seconds are the nine shapes' table, proposals until M16). Frozen through and through. */
+export const GRAPHIC_TEMPLATES: Partial<Record<GraphicTemplateId, TemplateDef>> = deepFreeze({
+  counter: {
+    id: 'counter',
+    seconds: { min: 2, default: 3, max: 4 },
+    fields: { value: 'grounded', label: 'grounded' },
+    pairs: [['label', 'value']],
+    threeD: true
+  },
+  bars: {
+    id: 'bars',
+    seconds: { min: 3, default: 5, max: 6 },
+    fields: { title: 'grounded', 'items.label': 'grounded', 'items.value': 'grounded' },
+    fixedTitles: ['By the numbers', 'Compared'],
+    pairs: [['items.label', 'items.value']],
+    maxItems: 5,
+    minItems: 2,
+    threeD: false
+  },
+  steps: {
+    id: 'steps',
+    seconds: { min: 3, default: 6, max: 8 },
+    fields: { title: 'grounded', 'items.label': 'grounded' },
+    fixedTitles: ['Step by step'],
+    maxItems: 6,
+    minItems: 2,
+    appFields: ['parent', 'connector'],
+    threeD: false
+  },
+  quote: {
+    id: 'quote',
+    seconds: { min: 2, default: 4, max: 6 },
+    fields: { text: 'verbatim', speaker: 'speaker' },
+    kindFields: { social: { text: 'user', name: 'user', handle: 'user', date: 'user', link: 'user' } },
+    appFields: ['speaker'],
+    threeD: false
+  },
+  callout: {
+    id: 'callout',
+    seconds: { min: 1.5, default: 2.5, max: 3 },
+    fields: { label: 'grounded' },
+    appFields: ['shape'],
+    needsSubject: true,
+    threeD: false
+  },
+  ring: {
+    id: 'ring',
+    seconds: { min: 2, default: 3, max: 4 },
+    fields: { value: 'grounded', label: 'grounded' },
+    pairs: [['label', 'value']],
+    threeD: true
+  },
+  keyword: {
+    id: 'keyword',
+    seconds: { min: 1.5, default: 2.5, max: 3.5 },
+    fields: { words: 'verbatim', lit: 'index' },
+    threeD: false
+  },
+  'lower-third': {
+    id: 'lower-third',
+    seconds: { min: 2.5, default: 3.5, max: 5 },
+    fields: { name: 'speaker', role: 'user' },
+    appFields: ['name'],
+    threeD: false
+  },
+  'screen-card': {
+    id: 'screen-card',
+    seconds: { min: 1, default: 10, max: 600 },
+    fields: {},
+    appFields: ['clipId', 'move'],
+    threeD: true
+  }
+} satisfies Partial<Record<GraphicTemplateId, TemplateDef>>)
+
+/** Object.freeze all the way down, so no caller can edit a field mode in place. */
+function deepFreeze<T>(value: T): T {
+  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
+    Object.freeze(value)
+    for (const v of Object.values(value as Record<string, unknown>)) deepFreeze(v)
+  }
+  return value
 }
