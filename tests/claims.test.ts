@@ -721,10 +721,18 @@ describe('bind: what passes, and where it binds', () => {
       .toMatchObject({ ok: false, reason: 'negated' })
   })
 
-  it("a negator in another clause of the sentence does not negate the claim (rule 7's clause as the plan words it)", () => {
-    // The plan's clause stops at a comma, so "It's not true, 90% of startups fail." keeps a ring
-    // too: open, the user's decision (see the fix commit's "Open, yours"). Safe either way here.
-    expect(bindData({ template: 'counter', value: '40', label: 'clients' }, ['Not last year, but now we have 40 clients.']).ok)
+  it('a negator two clauses back does not negate the claim; the clause directly before does (piece 3 fix)', () => {
+    // Rule 7's clause, and the one directly before it in the sentence: a negated clause governs the one
+    // after its mark. Two clauses back it does not.
+    expect(bindData({ template: 'counter', value: '40', label: 'clients' }, ['Not last year, as you know, but now we have 40 clients.']).ok)
+      .toBe(true)
+    expect(bindData({ template: 'counter', value: '40', label: 'clients' }, ['Not last year, but now we have 40 clients.']))
+      .toMatchObject({ ok: false, reason: 'negated' })
+    // The cost, the safe direction: an affirming 'No,' drops a true counter too.
+    expect(bindData({ template: 'counter', value: '40', label: 'clients' }, ['No, we have 40 clients.']))
+      .toMatchObject({ ok: false, reason: 'negated' })
+    // A clause before the sentence's start is not the claim's: the previous sentence's 'not' does not reach.
+    expect(bindData({ template: 'counter', value: '40', label: 'clients' }, ['It was not easy.', 'We have 40 clients.']).ok)
       .toBe(true)
     expect(bindData({ template: 'counter', value: '40', label: 'clients' }, ["We don't have 40 clients."]))
       .toMatchObject({ ok: false, reason: 'negated' })
@@ -952,10 +960,12 @@ describe('bind: the edges the critics found unpinned', () => {
       .toMatchObject({ ok: false, reason: 'order' })
   })
 
-  it("a run over two clauses is judged in each: keyword 'cheap really' over 'It is cheap, really not.' → negated", () => {
+  it("a keyword run never spans a clause mark: 'cheap really' over 'It is cheap, really.' → absent (piece 3 fix)", () => {
     expect(bindData({ template: 'keyword', words: 'cheap really', lit: 0 }, ['It is cheap, really not.']))
-      .toMatchObject({ ok: false, reason: 'negated' })
-    expect(bindData({ template: 'keyword', words: 'cheap really', lit: 0 }, ['It is cheap, really.']).ok).toBe(true)
+      .toMatchObject({ ok: false, reason: 'absent' })
+    expect(bindData({ template: 'keyword', words: 'cheap really', lit: 0 }, ['It is cheap, really.']))
+      .toMatchObject({ ok: false, reason: 'absent' })
+    expect(bindData({ template: 'keyword', words: 'cheap really', lit: 0 }, ['It is cheap really.']).ok).toBe(true)
   })
 })
 
@@ -1074,9 +1084,9 @@ describe("rule 8's speaker mode: a said quote's speaker is the app's", () => {
   })
 
   it('a run directly after "<name> said" is kept with that name as its speaker, and no other', () => {
-    const said = ['Elon said: fail fast.']
+    const said = ['I think Elon said: fail fast.']
     expect(kept(one1(said, g({ sentence: 's00', template: 'quote', quote: 'fail fast' })))).toMatchObject([
-      { data: { speaker: 'Elon' }, beatWords: [2, 3] }
+      { data: { speaker: 'Elon' }, beatWords: [4, 5] }
     ])
     const t = talk(said)
     const grounding = { assetId: t.assetId, sentence: 's00', words: [] }
@@ -1098,10 +1108,12 @@ describe("rule 8's speaker mode: a said quote's speaker is the app's", () => {
     }
   })
 
-  it('reportedBy reads back across a sentence mark and past "told me" and "that"', () => {
+  it('reportedBy reads back across a sentence mark and past "told me" and "that", but names only within one sentence', () => {
+    // Across a sentence the run is still reported (so it is never shipped as the speaker's own), but no
+    // verb governs it from the sentence before, so no one is named and the quote is refused.
     const st = stretchOf(['Priya told us.', 'Book early.'], 0)
-    expect(reportedBy(st, 3)).toEqual({ reported: true, name: 'Priya' })
-    expect(reportedBy(stretchOf(['Priya says that book early.'], 0), 3)).toEqual({ reported: true, name: 'Priya' })
+    expect(reportedBy(st, 3)).toEqual({ reported: true, name: null })
+    expect(reportedBy(stretchOf(['I hear Priya says that book early.'], 0), 5)).toEqual({ reported: true, name: 'Priya' })
     expect(reportedBy(stretchOf(['Book early.'], 0), 0)).toEqual({ reported: false })
   })
 })
@@ -1123,6 +1135,10 @@ describe('rule 9: keyword', () => {
   it('keyword "my job" taken across two sentences → dropped', () => {
     const v = one1(['I love my.', 'Job is great.'], kw('s00', 'my job', 1))
     expect(droppedOf(v)).toEqual([{ path: '$.graphics[0].words', message: "graphic dropped: 'my job' is not said in s00" }])
+    // Unpunctuated, so the segment edge alone is what drops it (no clause mark in the run).
+    expect(droppedOf(one1(['I love my', 'Job is great'], kw('s00', 'my job', 1)))).toEqual([
+      { path: '$.graphics[0].words', message: "graphic dropped: 'my job' is not said in s00" }
+    ])
     expect(kept(one1(['I love my job.'], kw('s00', 'my job', 1)))).toHaveLength(1)
   })
 
@@ -1306,7 +1322,7 @@ describe("validateGraphics: one graphic at a time, the answer's paths and messag
   it('a kept graphic records its sentence, one bound word per claim in claim order, its beats, its why and its source', () => {
     const said = ['We had 3 weddings in May and 5 in June.']
     const v = one1(said, g({ sentence: 's00', template: 'bars', title: 'Compared', items: [{ label: 'May weddings', value: '3' }, { label: 'June', value: '5' }], why: 'two months' }))
-    expect(kept(v)).toEqual([
+    expect(kept(v)).toMatchObject([
       {
         sentence: 's00',
         data: { template: 'bars', title: 'Compared', items: [{ label: 'May weddings', value: '3' }, { label: 'June', value: '5' }] },
@@ -1316,6 +1332,7 @@ describe("validateGraphics: one graphic at a time, the answer's paths and messag
         source: 'model'
       }
     ])
+    expect(kept(v)[0]).not.toHaveProperty('proposal')
   })
 
   it('a quote beats on each of its words', () => {
@@ -1437,17 +1454,213 @@ describe('settleGraphics: the validation half (rule 10 and the baseline seam)', 
     const bad: GraphicCandidate = { ...good, data: { template: 'ring', value: '45%', label: 'clients' } }
     const s = settleGraphics({ value: answer(), truncated: true }, menuOf(t), t, { baseline: () => [bad, good] })
     expect(s).toMatchObject({ baseline: true, rejected: "The model's graphics ran out of room before it finished" })
-    expect(s.kept).toEqual([{ ...good, bound: [2, 4], beatWords: [2] }])
+    expect(s.kept).toMatchObject([{ ...good, bound: [2, 4], beatWords: [2] }])
+    expect(s.kept).toHaveLength(1)
     expect(s.dropped).toEqual([
       { path: '$', message: "the baseline's graphics are used: The model's graphics ran out of room before it finished" },
       { path: '$.baseline[0].value', message: "graphic dropped: '45%' is not said in s00" }
     ])
     // No model at all; and no baseline yet (lane T4's): nothing, with the reason.
-    expect(settleGraphics({ error: 'no model is set up' }, menuOf(t), t)).toEqual({
-      kept: [],
-      dropped: [{ path: '$', message: "the baseline's graphics are used: no model is set up" }],
-      baseline: true,
-      rejected: 'no model is set up'
-    })
+    const none = settleGraphics({ error: 'no model is set up' }, menuOf(t), t)
+    expect(none).toMatchObject({ baseline: true, rejected: 'no model is set up' })
+    expect(none.kept).toEqual([])
+    expect(none.dropped).toEqual([{ path: '$', message: "the baseline's graphics are used: no model is set up" }])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Piece 3's fix: the false graphics the two critics found kept, each now dropped and pinned by its own case.
+
+describe("rule 8's speaker: a name only where '<name> said / says / told' directly governs the run (piece 3 fix)", () => {
+  const quote = (q: string, sentence = 's00'): AnswerGraphic => g({ sentence, template: 'quote', quote: q })
+  const refused = (q: string): { path: string; message: string }[] => [
+    { path: '$.graphics[0].quote', message: `graphic dropped: '${q}': it is reported speech and the transcript does not name who said it` }
+  ]
+
+  it("'That is not what Elon said.' 'Fail fast.' → no 'fail fast — Elon'", () => {
+    const v = one1(['That is not what Elon said.', 'Fail fast.'], quote('fail fast', 's01'))
+    expect(kept(v)).toEqual([])
+    expect(droppedOf(v)).toEqual(refused('fail fast'))
+  })
+
+  it("a verb in the segment before governs nothing: 'I think Elon said' / 'fail fast' → refused", () => {
+    expect(droppedOf(one1(['I think Elon said', 'fail fast'], quote('fail fast', 's01')))).toEqual(refused('fail fast'))
+  })
+
+  it("a sentence mark inside one segment: 'I think Elon said. Fail fast.' → refused", () => {
+    expect(droppedOf(one1(['I think Elon said. Fail fast.'], quote('fail fast')))).toEqual(refused('fail fast'))
+  })
+
+  it("a negator before the verb in its sentence: 'Never has Elon said: fail fast.' → dropped; two clauses back → refused", () => {
+    // The clause directly before the run holds the negator, so rule 7 drops it first.
+    const negated = [{ path: '$.graphics[0].quote', message: "graphic dropped: 'fail fast' is said negated in s00" }]
+    expect(droppedOf(one1(['Never has Elon said: fail fast.'], quote('fail fast')))).toEqual(negated)
+    // Further back than rule 7 reaches, the speaker rule's own scan refuses the name.
+    expect(droppedOf(one1(['Never, as I recall, has Elon said: fail fast.'], quote('fail fast')))).toEqual(refused('fail fast'))
+  })
+
+  it("a negator is never the speaker: 'Nobody said: fail fast.', 'Nobody told me: fail fast.' → dropped", () => {
+    for (const said of ['Nobody said: fail fast.', 'Nobody told me: fail fast.']) {
+      const v = one1([said], quote('fail fast'))
+      expect(kept(v), said).toEqual([])
+      expect(droppedOf(v), said).toEqual([{ path: '$.graphics[0].quote', message: "graphic dropped: 'fail fast' is said negated in s00" }])
+    }
+  })
+
+  it("a capital at a sentence's start is no name: 'Then said: …', 'Mentors said: …', 'Elon said: …' alone → refused", () => {
+    for (const said of ['Then said: fail fast.', 'Mentors said: fail fast.', 'Elon said: fail fast.']) {
+      expect(droppedOf(one1([said], quote('fail fast'))), said).toEqual(refused('fail fast'))
+    }
+    // The same word written with a capital where no sentence starts is a name.
+    expect(kept(one1(['I met Elon. Elon said: fail fast.'], quote('fail fast')))).toMatchObject([{ data: { speaker: 'Elon' } }])
+  })
+
+  it("'said this:' points at the run: 'My coach told me this: quit your job.' → refused, not the speaker's own", () => {
+    expect(droppedOf(one1(['My coach told me this: quit your job.'], quote('quit your job')))).toEqual(refused('quit your job'))
+  })
+})
+
+describe('rule 7: a negated clause governs the clause after its mark (piece 3 fix)', () => {
+  it("'I would never say this: quit your job.' and 'Nobody should ever tell you this: quit your job.' → no 'quit your job'", () => {
+    for (const said of ['I would never say this: quit your job.', 'Nobody should ever tell you this: quit your job.']) {
+      const v = one1([said], g({ sentence: 's00', template: 'quote', quote: 'quit your job' }))
+      expect(kept(v), said).toEqual([])
+      expect(droppedOf(v), said).toEqual([{ path: '$.graphics[0].quote', message: "graphic dropped: 'quit your job' is said negated in s00" }])
+    }
+  })
+
+  it("'It is not true, 90% of startups fail.' → no 90% ring (the review's own case, a comma added)", () => {
+    for (const said of ['It is not true, 90% of startups fail.', "It's not true, that 90% of startups fail."]) {
+      const v = one1([said], g({ sentence: 's00', template: 'ring', value: '90%', label: 'startups fail' }))
+      expect(kept(v), said).toEqual([])
+      expect(droppedOf(v).map((p) => p.message), said).toContain("graphic dropped: '90%' is said negated in s00")
+    }
+    expect(kept(one1(['It is true, 90% of startups fail.'], g({ sentence: 's00', template: 'ring', value: '90%', label: 'startups fail' })))).toHaveLength(1)
+  })
+
+  it("a negator outside §6.7's list: 'It is hardly easy.' → no keyword 'easy'", () => {
+    const v = one1(['It is hardly easy.'], g({ sentence: 's00', template: 'keyword', words: 'easy', lit: 0 }))
+    expect(kept(v)).toEqual([])
+    expect(droppedOf(v)).toEqual([{ path: '$.graphics[0].words', message: "graphic dropped: 'easy' is said negated in s00" }])
+  })
+})
+
+describe('rule 9: a keyword is one phrase, never across a clause or sentence mark (piece 3 fix)', () => {
+  it("'It is easy, money comes slowly.' → no keyword 'easy money'", () => {
+    const v = one1(['It is easy, money comes slowly.'], g({ sentence: 's00', template: 'keyword', words: 'easy money', lit: 0 }))
+    expect(kept(v)).toEqual([])
+    expect(droppedOf(v)).toEqual([{ path: '$.graphics[0].words', message: "graphic dropped: 'easy money' is not said in s00" }])
+  })
+
+  it("two sentences in ONE segment: 'I love my. Job is hard.' → no keyword 'my job'", () => {
+    const v = one1(['I love my. Job is hard.'], g({ sentence: 's00', template: 'keyword', words: 'my job', lit: 1 }))
+    expect(kept(v)).toEqual([])
+    expect(droppedOf(v)).toEqual([{ path: '$.graphics[0].words', message: "graphic dropped: 'my job' is not said in s00" }])
+  })
+})
+
+describe('rule 4: a qualified number is no exact number (piece 3 fix)', () => {
+  const counter = (said: string): Verdict => one1([said], g({ sentence: 's00', template: 'counter', value: '40', label: 'clients' }))
+  const absent = [{ path: '$.graphics[0].value', message: "graphic dropped: '40' is not said in s00" }]
+
+  it("'between 30 and 40' is a range, as '30 to 40' is", () => {
+    expect(droppedOf(counter('We signed between 30 and 40 clients.'))).toEqual(absent)
+    expect(numbersIn(claimTokensOf('between 30 and 40'))).toEqual([])
+    // 'and' alone joins nothing: 'we kept 30 and 40 clients came' is two numbers.
+    expect(numbersIn(claimTokensOf('we kept 30 and 40 came')).map((f) => f.value.n)).toEqual([30, 40])
+  })
+
+  it("'up to 40' → no counter 40", () => {
+    expect(droppedOf(counter('We could sign up to 40 clients.'))).toEqual(absent)
+  })
+
+  it("'almost 40', and 'fewer than 40%' → no 40 and no 40% ring", () => {
+    expect(droppedOf(counter('We signed almost 40 clients.'))).toEqual(absent)
+    const ring = one1(['Fewer than 40% of clients came back.'], g({ sentence: 's00', template: 'ring', value: '40%', label: 'clients came back' }))
+    expect(kept(ring)).toEqual([])
+    expect(droppedOf(ring)).toContainEqual({ path: '$.graphics[0].value', message: "graphic dropped: '40%' is not said in s00" })
+    // The unqualified number still binds.
+    expect(kept(counter('We signed 40 clients.'))).toHaveLength(1)
+  })
+})
+
+describe("rule 9's item counts and ring's lower bound, each pinned (piece 3 fix)", () => {
+  it('a bars of one item, or a steps of one row → dropped (minItems)', () => {
+    const one = one1(['We had 3 weddings in May.'], g({ sentence: 's00', template: 'bars', title: 'By the numbers', items: [{ label: 'May', value: '3' }] }))
+    expect(kept(one)).toEqual([])
+    expect(droppedOf(one)).toEqual([{ path: '$.graphics[0].items', message: 'graphic dropped: a bars needs at least 2 items, has 1' }])
+    const row = one1(['First charge the batteries.'], g({ sentence: 's00', template: 'steps', title: 'Step by step', items: [{ label: 'charge batteries', value: '' }] }))
+    expect(kept(row)).toEqual([])
+    expect(droppedOf(row)).toEqual([{ path: '$.graphics[0].items', message: 'graphic dropped: a steps needs at least 2 items, has 1' }])
+  })
+
+  it('six bars, which the answer shape allows, → dropped (maxItems 5)', () => {
+    const said = ['We had 1 in May, 2 in June, 3 in July, 4 in August, 5 in September and 6 in October.']
+    const months = ['May', 'June', 'July', 'August', 'September', 'October']
+    const v = one1(said, g({ sentence: 's00', template: 'bars', title: 'By the numbers', items: months.map((label, k) => ({ label, value: String(k + 1) })) }))
+    expect(kept(v)).toEqual([])
+    expect(droppedOf(v)).toEqual([{ path: '$.graphics[0].items', message: 'graphic dropped: a bars holds at most 5 items, has 6' }])
+  })
+
+  it('a ring below 0 → dropped', () => {
+    const v = one1(['Our bookings fell -5% this year.'], g({ sentence: 's00', template: 'ring', value: '-5%', label: 'bookings' }))
+    expect(kept(v)).toEqual([])
+    expect(droppedOf(v)).toEqual([{ path: '$.graphics[0].value', message: "graphic dropped: '-5%' is not a share of a whole (0 to 100%)" }])
+  })
+})
+
+describe('the edges the critics found unpinned in piece 3', () => {
+  it('a Whisper word at exactly 0.5 is not unsure: no proposal', () => {
+    const said = ['We signed 40% of clients.']
+    const ring = g({ sentence: 's00', template: 'ring', value: '40%', label: 'clients' })
+    expect(kept(one1(said, ring, {}, talk(said, { confidence: { '40%': 0.5 } })))[0]).not.toHaveProperty('proposal')
+  })
+
+  it("checkGraphicData with no grounding (a hand-made graphic at the dock's entry) → one problem at '$'", () => {
+    const t = talk(['We signed 40% of clients.'])
+    expect(checkGraphicData({ template: 'ring', value: '40%', label: 'clients' }, def('ring'), undefined, t)).toEqual([
+      { path: '$', message: 'has no sentence to ground it' }
+    ])
+  })
+
+  it('a sentence of the transcript that is not on the menu → dropped', () => {
+    const t = talk(['We signed 40% of clients.', 'We signed 40% of clients again.'])
+    const menu = menuOf(t)
+    const v = validateGraphics(answer(g({ sentence: 's01', template: 'ring', value: '40%', label: 'clients' })), { ...menu, sentences: menu.sentences.slice(0, 1) }, t)
+    expect(droppedOf(v)).toEqual([{ path: '$.graphics[0].sentence', message: "graphic dropped: 's01' is not a sentence on the menu" }])
+  })
+
+  it("a lit that is not an integer is the wrong shape: the whole answer is rejected (§6.6's integer)", () => {
+    const t = talk(['Light beats expensive gear.'])
+    const v = validateGraphics(answer(g({ sentence: 's00', template: 'keyword', words: 'expensive gear', lit: 0.5 })), menuOf(t), t)
+    expect(v).toHaveProperty('rejected')
+    expect((v as { rejected: string }).rejected).toMatch(/^The graphics are not the shape asked for — \$\.graphics\[0\]\.lit /u)
+  })
+
+  it("FUNCTION_WORDS_EN is English's: a Hindi talk's keyword 'is it' is not refused for it", () => {
+    const t = talk(['यह is it है।'], { language: 'hi' })
+    expect(kept(validateGraphics(answer(g({ sentence: 's00', template: 'keyword', words: 'is it', lit: 0 })), menuOf(t), t))).toHaveLength(1)
+  })
+
+  it("rule 10 spaces by a graphic's FIRST beat: a bars whose last beat is near a ring keeps both", () => {
+    const said = ['We had 3 weddings in May and 5 weddings in June and 7 weddings in July and 9 weddings in August.', 'The light was soft.', 'In week 2 we signed 40% of clients today.']
+    for (let k = 0; k < 13; k++) said.push('The light was soft that day.')
+    const t = talk(said)
+    const months = ['May', 'June', 'July', 'August']
+    const s = settleGraphics(
+      {
+        value: answer(
+          g({ sentence: 's00', template: 'bars', title: 'By the numbers', items: months.map((label, k) => ({ label, value: String(3 + 2 * k) })) }),
+          g({ sentence: 's02', template: 'ring', value: '40%', label: 'clients' })
+        ),
+        truncated: false
+      },
+      menuOf(t),
+      t
+    )
+    // Bars beats at 0.8 s to 6.8 s; the ring's at 12.0 s: 11.2 s after the bars' first beat, 5.2 s after its last.
+    expect(s.kept.map((k) => t.words[k.beatWords[0]].startMs)).toEqual([800, 12000])
+    expect(s.kept.map((k) => k.data.template)).toEqual(['bars', 'ring'])
+    expect(s.dropped).toEqual([])
   })
 })

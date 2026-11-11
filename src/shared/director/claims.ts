@@ -300,9 +300,11 @@ function wordGroup(ts: readonly string[], i: number): { n: number; next: number 
  * a half million', 'three quarters', '2 and one third'); two numbers next to
  * each other, both of them ('nineteen ninety nine' is neither 19 nor 99,
  * 'twenty twenty one' neither 20 nor 21); two numbers joined as a range or a
- * ratio by 'to', 'or', 'in', 'of' or 'out of', both of them ('40 to 50
- * clients' is not 40 clients, '1 in 4 couples' is not 4 couples; so '300 in
- * 2019' is dropped too, the safe direction).
+ * ratio by 'to', 'or', 'in', 'of' or 'out of', or as 'between X and Y', both
+ * of them ('40 to 50 clients' is not 40 clients, '1 in 4 couples' is not 4
+ * couples; so '300 in 2019' is dropped too, the safe direction); a number
+ * with a qualifier directly before it (`QUALIFIERS`: 'almost 40', 'up to 40',
+ * 'fewer than 40%').
  *
  * Not parsed, so a claim written for them is dropped by the binding (the
  * safe direction, §6.7 rule 4): Hindi and Telugu number words, ordinals
@@ -430,16 +432,33 @@ function numberSpans(tokens: readonly string[]): { value: CanonNumber; at: numbe
   const joined = new Set<number>()
   for (let k = 0; k + 1 < out.length; k++) {
     const gap = ts.slice(out[k].tsEnd, out[k + 1].tsFrom).join(' ')
-    if (gap === '' || NUMBER_JOINERS.includes(gap)) {
+    const between = gap === 'and' && ts[out[k].tsFrom - 1] === 'between'
+    if (gap === '' || NUMBER_JOINERS.includes(gap) || between) {
       joined.add(k)
       joined.add(k + 1)
     }
   }
-  return out.filter((_, k) => !joined.has(k)).map(({ value, at, from, end }) => ({ value, at, from, end }))
+  // A number said with a qualifier directly before it ('almost 40', 'up to 40', 'fewer than 40%')
+  // is no exact number: drawn bare, it would state one.
+  const qualified = (o: { tsFrom: number }): boolean =>
+    QUALIFIERS.includes(ts[o.tsFrom - 1] ?? '') ||
+    QUALIFIER_PAIRS.some(([a, b]) => ts[o.tsFrom - 2] === a && ts[o.tsFrom - 1] === b)
+  return out.filter((o, k) => !joined.has(k) && !qualified(o)).map(({ value, at, from, end }) => ({ value, at, from, end }))
 }
 
 /** The words that join two numbers into a range or a ratio, as one space-joined gap (see `numberSpans`). */
 const NUMBER_JOINERS: readonly string[] = ['to', 'or', 'in', 'of', 'out of']
+
+/**
+ * The words that, directly before a number, make it no exact number
+ * ('almost 40', 'over 40%', 'fewer than 40', 'at least 40'), and the two-word
+ * ones whose second word alone qualifies nothing ('up to', 'close to',
+ * 'upwards of'). Beyond §6.7's words, each only drops more.
+ */
+export const QUALIFIERS: readonly string[] = [
+  'almost', 'nearly', 'about', 'around', 'roughly', 'approximately', 'approx', 'over', 'under', 'than', 'least', 'most'
+]
+const QUALIFIER_PAIRS: readonly (readonly [string, string])[] = [['up', 'to'], ['close', 'to'], ['upwards', 'of']]
 
 /** The fraction words that may follow a number ('two and a half', 'three quarters'). */
 const FRACTIONS: ReadonlySet<string> = new Set(['half', 'halves', 'quarter', 'quarters', 'third', 'thirds'])
@@ -519,10 +538,22 @@ export const NEGATOR_SPELLINGS: readonly string[] = [
   'hadnt', 'couldnt', 'wouldnt', 'shouldnt', 'mustnt', 'neednt', 'aint', 'नही'
 ]
 
-/** A word that negates (rule 7): any of `NEGATORS`' lists, whatever the language, one of `NEGATOR_SPELLINGS`, or an English contraction ending in n't. */
-function isNegator(t: string): boolean {
+/**
+ * English words that negate what they stand with though §6.7's list does not
+ * name them ('It is hardly easy' cannot ship "easy"). Beyond the plan's list,
+ * each only drops more.
+ */
+export const NEAR_NEGATORS: readonly string[] = ['hardly', 'barely', 'scarcely']
+
+/**
+ * A word that negates (rule 7): any of `NEGATORS`' lists, whatever the
+ * language, one of `NEGATOR_SPELLINGS` or `NEAR_NEGATORS`, or an English
+ * contraction ending in n't. `validateGraphics.ts` reads it for a reporting
+ * verb's clause (rule 8's speaker).
+ */
+export function isNegator(t: string): boolean {
   return NEGATORS.en.includes(t) || NEGATORS.hi.includes(t) || NEGATORS.te.includes(t) ||
-    NEGATOR_SPELLINGS.includes(t) || /n['’]t$/u.test(t)
+    NEGATOR_SPELLINGS.includes(t) || NEAR_NEGATORS.includes(t) || /n['’]t$/u.test(t)
 }
 
 /** Rule 8's exemption: an English function word, and never a negator, a direction word or a comparative. */
@@ -763,7 +794,10 @@ const BIND_BUDGET = 200_000
  * in (from the previous clause break or sentence start to the next) may hold
  * no negator its field lacks, and a run may not directly follow a negator:
  * else 'negated', with `at` the assignment that came that far, so a caller
- * can demote a quote to the clause (`clauseAt`).
+ * can demote a quote to the clause (`clauseAt`). Beyond rule 7's words, the
+ * clause directly before the claim's, in the same sentence, is judged with
+ * it: a negated clause governs the one after its mark ('It is not true, 90%
+ * of startups fail'; 'I would never say this: quit your job').
  *
  * `at` holds one word index per claim, in claim order: a number's first digit
  * or number word, a token's word, a run's first word. Negators of every
@@ -806,6 +840,9 @@ function bindOnce(claims: readonly Claim[], stretch: ClaimStretch, lang: string)
   const english = /^en(?:$|[-_])/iu.test(lang)
   const { toks, numbers } = tokensOfStretch(stretch)
   const spoken = toks.map((x, i) => i).filter((i) => toks[i].np >= 0)
+  // Each clause's sentence: a clause ended by a break has its sentence's next clause after it.
+  const clauseSent = new Map<number, number>()
+  for (const x of toks) clauseSent.set(x.clause, x.sent)
   const occOf = (tokens: number[], word: number, extra: Partial<Occurrence> = {}): Occurrence => {
     const nps = tokens.map((i) => toks[i].np).filter((n) => n >= 0)
     return { tokens, word, sent: toks[tokens[0]].sent, first: Math.min(...nps), last: Math.max(...nps), ...extra }
@@ -894,12 +931,14 @@ function bindOnce(claims: readonly Claim[], stretch: ClaimStretch, lang: string)
       if (!best || best.stage < 2) best = { stage: 2, reason: 'unpaired', missing: nearer, at }
       return false
     }
-    // Rule 7.
+    // Rule 7, over each claim's clauses and the clause directly before the first of them in its sentence.
     const negated = claims.filter((c, i) => {
       const o = chosen[i]
       if (o.afterNegator) return true
       const lacks = fieldNegators.get(c.path)!
       const clauses = new Set(o.tokens.map((t) => toks[t].clause))
+      const first = Math.min(...clauses)
+      if (clauseSent.get(first - 1) === clauseSent.get(first)) clauses.add(first - 1)
       return toks.some((x) => x.np >= 0 && clauses.has(x.clause) && isNegator(x.t) && !lacks.has(x.t))
     })
     if (negated.length > 0) {
@@ -988,8 +1027,9 @@ function orderBroken(claims: readonly Claim[], chosen: readonly Occurrence[]): C
 
 /**
  * Every place a verbatim field's tokens stand as a contiguous run of one
- * sentence's spoken tokens (clause breaks between them allowed), starting and
- * ending on a sentence or clause boundary unless `mid`; each marked when the
+ * sentence's spoken tokens (clause breaks between them allowed, but not in a
+ * `mid` run: a keyword is one phrase), starting and ending on a sentence or
+ * clause boundary unless `mid`; each marked when the
  * spoken token before it, past any 'ever' and across a sentence break, is a
  * negator (rule 8's "directly after a negator", read in the safe direction).
  */
@@ -1011,6 +1051,9 @@ function runsOf(
     const startsOnEdge = before < 0 || toks[before].sent !== sent || toks[before].np < 0
     const endsOnEdge = after >= toks.length || toks[after].sent !== sent || toks[after].np < 0
     if (!mid && !(startsOnEdge && endsOnEdge)) continue
+    // A keyword's run is one phrase: no clause or sentence mark inside it ('It is easy, money comes
+    // slowly' never says "easy money"; 'I love my. Job is hard' in one segment never says "my job").
+    if (mid && toks.slice(run[0], run[run.length - 1] + 1).some((x) => x.np < 0)) continue
     // The spoken token before the run, past any 'ever' ('never, ever, quit'), in this sentence or
     // the one before ('Never.' 'Quit your job.': an ASR sentence break inside one phrase).
     let p = s - 1

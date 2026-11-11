@@ -18,6 +18,7 @@ import {
   CLAUSE_BREAK,
   FUNCTION_WORDS_EN,
   bind,
+  isNegator,
   claimTokens,
   claimTokensOf,
   claimsOf,
@@ -160,16 +161,37 @@ const OBJECT_PRONOUNS: readonly string[] = ['me', 'us', 'him', 'her', 'them', 'y
 /** Words that are never a name, though written with a capital. */
 const NOT_NAMES: readonly string[] = ['i', 'he', 'she', 'we', 'they', 'you', 'it', 'someone', 'somebody', 'everyone', 'everybody', 'people', 'who', 'one']
 
+/** The object a reporting verb may take that points at the run after it ("said this: …", "told me that …"). */
+const DEMONSTRATIVES: readonly string[] = ['that', 'this', 'it']
+
+/** A word whose own punctuation ends a sentence, inside a segment ('great.', 'really?'). */
+const SENTENCE_END = /[.!?।॥…]["'”’)\]]*$/u
+
+/** A word's letters, its edges trimmed, as it was written (the case kept). */
+function bare(text: string): string {
+  return text.normalize('NFC').replace(/^[^\p{L}\p{M}\p{N}]+|[^\p{L}\p{M}\p{N}]+$/gu, '')
+}
+
 /**
  * Who a quote's run is reported as said by (rule 8's `speaker`): the spoken
  * words directly before the run's first word (`first`, a word index), read
  * back across clause and sentence marks, past an object pronoun after the verb
- * and a 'that'. When they end in a reporting verb the run is a REPORTED quote:
- * `{ reported: true, name }`, `name` the verb's subject when the verb is one of
- * "said / says / told" and the word before it is a name (written with a capital
- * letter, not a pronoun or function word), else null. Otherwise `{ reported:
- * false }`. Hindi and Telugu reporting verbs are not listed, so a reported
- * quote there reads as not reported (its speaker stays the app's).
+ * and a 'that', 'this' or 'it'. When they end in a reporting verb the run is a
+ * REPORTED quote: `{ reported: true, name }`, else `{ reported: false }`.
+ *
+ * `name` is the verb's subject only when the verb DIRECTLY GOVERNS the run
+ * (rule 8, "<name> said / says / told"), and null otherwise, so the quote is
+ * refused: the verb is one of "said / says / told"; the subject, the verb and
+ * the run are in one sentence (a segment, and no sentence mark between them);
+ * no negator stands in that sentence from its start to the verb ('Never has
+ * Elon said: …', 'That is not what Elon said. Fail fast.'); and the subject is
+ * a name: written with a capital, not a pronoun or a function word (a
+ * negator subject, 'Nobody said: …', is the scan's above), and either not the first word of its sentence or written
+ * with a capital again in the stretch where no sentence starts ('Mentors said:
+ * …' and 'Then said: …' name no one). When in doubt, no name. Hindi and Telugu
+ * reporting verbs are not listed, so a reported quote there reads as not
+ * reported (its speaker stays the app's); their scripts have no capitals, so
+ * no name is ever read from them.
  */
 export function reportedBy(stretch: ClaimStretch, first: number): { reported: false } | { reported: true; name: string | null } {
   const ordered = [...stretch.words].sort((a, b) => a.index - b.index)
@@ -181,15 +203,41 @@ export function reportedBy(stretch: ClaimStretch, first: number): { reported: fa
     if (t.length > 0) spoken.push({ word: before[k], t: t[t.length - 1] })
   }
   let k = 0
-  if (spoken[k]?.t === 'that') k += 1
+  if (spoken[k] && DEMONSTRATIVES.includes(spoken[k].t)) k += 1
   if (spoken[k] && OBJECT_PRONOUNS.includes(spoken[k].t) && spoken[k + 1] && REPORTING_VERBS.includes(spoken[k + 1].t)) k += 1
   const verb = spoken[k]
   if (!verb || !REPORTING_VERBS.includes(verb.t)) return { reported: false }
   const subject = spoken[k + 1]
   if (!NAMING_VERBS.includes(verb.t) || !subject) return { reported: true, name: null }
-  const raw = subject.word.text.normalize('NFC').replace(/^[^\p{L}\p{M}\p{N}]+|[^\p{L}\p{M}\p{N}]+$/gu, '')
-  const isName = /^\p{Lu}/u.test(raw) && !NOT_NAMES.includes(subject.t) && !FUNCTION_WORDS_EN.includes(subject.t)
-  return { reported: true, name: isName ? raw : null }
+  const unnamed = { reported: true as const, name: null }
+
+  // One sentence: one segment, and no sentence mark from the subject to the run.
+  const segmentOf = (i: number): number => stretch.sentences.findIndex((s) => i >= s.wordStart && i <= s.wordEnd)
+  if (segmentOf(subject.word.index) !== segmentOf(first) || segmentOf(first) < 0) return unnamed
+  if (ordered.some((w) => w.index >= subject.word.index && w.index < first && SENTENCE_END.test(w.text))) return unnamed
+  // That sentence's words up to the verb: from the segment's start or the last sentence mark before the subject.
+  const segment = stretch.sentences[segmentOf(first)]
+  const lead = ordered.filter((w) => w.index >= segment.wordStart && w.index < subject.word.index)
+  let from = segment.wordStart
+  for (const w of lead) if (SENTENCE_END.test(w.text)) from = w.index + 1
+  const upToVerb = ordered.filter((w) => w.index >= from && w.index <= verb.word.index)
+  if (upToVerb.some((w) => claimTokens(w.text).some(isNegator))) return unnamed
+
+  // A name.
+  const raw = bare(subject.word.text)
+  const t = subject.t
+  if (!/^\p{Lu}/u.test(raw) || NOT_NAMES.includes(t) || FUNCTION_WORDS_EN.includes(t)) return unnamed
+  const startsSentence = (w: Word): boolean => {
+    const seg = stretch.sentences[segmentOf(w.index)]
+    if (!seg || w.index === seg.wordStart) return true
+    const prev = ordered.filter((x) => x.index < w.index && x.index >= seg.wordStart).pop()
+    return !prev || SENTENCE_END.test(prev.text)
+  }
+  if (startsSentence(subject.word)) {
+    const again = ordered.some((w) => w.index !== subject.word.index && bare(w.text) === raw && !startsSentence(w))
+    if (!again) return unnamed
+  }
+  return { reported: true, name: raw }
 }
 
 // ---------------------------------------------------------------------------
