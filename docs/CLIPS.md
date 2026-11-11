@@ -12452,7 +12452,10 @@ validation half, and both tests.
 >     side ('one point two million' had read 1 and 2,000,000); two numbers
 >     side by side, both ('nineteen ninety nine' had bound as 99 and as 19,
 >     against the code's own comment; `0c88a89`); a fraction after it
->     ('two and a half million' had bound counter 2 'million views');
+>     ('two and a half million' had bound counter 2 'million views'; a
+>     multiplier word left by such an unread number grounding a label
+>     token is not guarded, not done in `0c88a89` since that case now
+>     drops as 'absent');
 >     a range or ratio, both numbers ('to', 'or', 'in', 'of', 'out of',
 >     and 'between X and Y' since `f4b283b`; '1 in 4 couples'); a
 >     qualifier directly before it (`QUALIFIERS`: almost, nearly, about,
@@ -12511,14 +12514,16 @@ validation half, and both tests.
 >     two pairs with different values binds again with the values
 >     exchanged; if that binds too, 'unpaired': 'Instagram gave us 30%,
 >     referrals 70%, and Instagram keeps growing.' let the false bars bind
->     on the second 'Instagram' inside every written rule). Their measured
->     cost, true graphics now dropped: ring 90% 'of startups fail' over
->     "It's true that 90% of startups fail in 5 years." (the 5); bars
->     [2019: 3, now: 12] over the 2019 sentence (the 40); ring 30% 'from
->     Instagram' over the Instagram sentence (the 70%); counter 60 over
->     'We grew from 40 to 60 clients.' and counter 300 over 'We shot 300 in
->     2019, all weddings.' (the joiners; 'We shot 300 weddings in 2019.'
->     binds). The eval should count these.
+>     on the second 'Instagram' inside every written rule). The stray-number
+>     rule's measured cost, three true graphics now dropped: ring 90% 'of
+>     startups fail' over "It's true that 90% of startups fail in 5
+>     years." (the 5); bars [2019: 3, now: 12] over the 2019 sentence (the
+>     40); ring 30% 'from Instagram' over the Instagram sentence (the 70%).
+>     `0c88a89`'s message lists two more with them, which the range and
+>     ratio reading drops instead, as 'absent' (`numbersIn` reads no number
+>     at the joiner): counter 60 over 'We grew from 40 to 60 clients.' and
+>     counter 300 over 'We shot 300 in 2019, all weddings.' ('We shot 300
+>     weddings in 2019.' binds). The eval should count all five.
 >   - **Beyond rule 6, `3b887d0`: `itemsDisordered`**, a list's unpaired
 >     rows (steps' items) said in item order, else `order` ("'pack bag' is
 >     not said in the order the list draws it"): 'first charge batteries,
@@ -12526,7 +12531,7 @@ validation half, and both tests.
 >     drawn 1 and 2. Until then (`bac73ac`) no order between rows was
 >     checked.
 >   - **Rule 7 as built.** `NEGATORS` is exactly the list above;
->     `isNegator` also reads `NEGATOR_SPELLINGS` ('cannot', 17 n't forms
+>     `isNegator` also reads `NEGATOR_SPELLINGS` ('cannot', 18 n't forms
 >     written without the apostrophe as an explicit list, since a pattern
 >     on 'nt' takes 'client' and 'want', and Hindi 'नही'; `0c88a89`),
 >     `NEAR_NEGATORS` (hardly, barely, scarcely; `f4b283b`) and any token
@@ -12600,15 +12605,17 @@ validation half, and both tests.
 >     (`GRAPHIC_KEPT_CHARS`, grapheme clusters: dropped; `why` cut to 60
 >     with '…'); then the repairs and `checkGraphicData`, called through the
 >     module's own export (`import * as self`) so a spy sees it. **Repairs**,
->     each a "graphic repaired: …" note: `lit` out of range to the last
->     word; a bars or steps title that does not ground to the template's
->     first fixed title; steps' written parents and connector stripped,
+>     three of them with a "graphic repaired: …" note: `lit` out of range
+>     to the last word; a bars or steps title that does not ground to the
+>     template's first fixed title; steps drawn flat with a 'line' if
+>     `parentsValid` fails (a branch `treeParents` cannot reach, so
+>     untested). Two are silent, although the function's doc comment says
+>     "each with a note": steps' written parents and connector stripped,
 >     then `treeParents` over the words from the first item's first bound
->     word to the last item's last and `connectorFor` (flat and 'line' with
->     a note if `parentsValid` fails, a branch `treeParents` cannot reach,
->     so untested); a said quote's speaker the app's. The notes go into
->     `dropped`, the only list §6.7's return has; a wrong-template field is
->     ignored without a note (`dataOf` reads the template's own fields). A
+>     word to the last item's last and `connectorFor`; a said quote's
+>     speaker set to the app's. The notes go into `dropped`, the only
+>     list §6.7's return has; a wrong-template field is ignored without a
+>     note (`dataOf` reads the template's own fields). A
 >     callout's shape is 'arrow' until placement sets it. Rule 11 is not
 >     read. `validateBaseline(candidates, menu, transcript)` puts the
 >     baseline's candidates through the same gate, `bound`, `beatWords` and
@@ -12706,11 +12713,14 @@ validation half, and both tests.
 >   replaces the whole function: recorded, not worked round); the decimal
 >   dropped; Indian grouping refused ("expected [] to deeply equal [ {
 >   …(2) } ]"); each multiplier ignored ("expected 4 to be 4000",
->   "expected 5 to be 5000"); 'forty' not parsed; each of the 33
+>   "expected 5 to be 5000"); 'forty' not parsed; each of the
 >   `UNREAD_SCALES` words and five suffixes removed one at a time, each
->   failing its own row; ignore units ("expected { ok: true, at: [ 102,
->   103 ] } to match { ok: false, reason: 'unit' }"); units on the spec
->   strings (the bare $40/40% bars, said so 'signups' is 13 tokens from
+>   failing its own row (the `1469cc5` fixer's count, 33 words in 40 named
+>   rows; the set holds 34 words besides the suffixes, 10 English, 11
+>   Hindi, 13 Telugu, and `claims.test` 41 rows); ignore units
+>   ("expected { ok: true, at: [ 102, 103 ] } to match { ok: false,
+>   reason: 'unit' }"); units on the spec strings (the bare $40/40%
+>   bars, said so 'signups' is 13 tokens from
 >   '$40' so only this mutation gives units ['', '']); same sentence; the
 >   window (and off by one, the 8/9 pair); spoken order (killed on the
 >   reason: with order gone the stray-number rule still drops both swaps,
@@ -12735,9 +12745,12 @@ validation half, and both tests.
 >   **`graphicsValidator`**: skip grounded fields, 6 fail **only on the
 >   floors** ("en counter: 0 of 60 kept: expected 0 to be greater than or equal to 50"), since
 >   `checkGraphicData`'s "holds no word the transcript can ground" drops
->   every labelled graphic first; with that check off too, the negator
->   generator ("kept [{template:counter, value:$36, label:students}] —
->   seed 100000 en counter cite s01"); drop the order rule, 3 fail **only
+>   every labelled graphic first; with that check off too, 6 fail, among
+>   them the negator generator ("kept [{template:counter, value:$36,
+>   label:students}] — seed 100000 en counter cite s01"); skip only the
+>   grounded label and title tokens with that check off, 5 fail, among
+>   them a label taken from the neighbouring sentence ("kept
+>   [{counter,value $36,label orders}]"); drop the order rule, 3 fail **only
 >   on the floors** ("en bars: 0 of 60 kept"), since the exchange check
 >   then drops every true bars; with the exchange check gone too, the
 >   swap generator ("kept [{bars, title Compared, items bookings 22,
@@ -12751,10 +12764,14 @@ validation half, and both tests.
 >   failing), `itemsDisordered` off (reorder, 180), bind's window raised to
 >   1000 (the window generator, 360; before, only `claims.test` caught
 >   it), bind's one-occurrence check removed (duplicate, 116; likewise),
->   and the matcher's own window, keyword-clause, run-after-negator,
->   value-marks, word-marks, said-marks and row checks, each killed (the
->   window and keyword-clause checks had survived their mutations, dead,
->   until a generator or a hand case reached them). Each generator's
+>   the pin on `numbersIn` without word multipliers (4 fail, and 35
+>   true-generator cases), and the matcher's own window, keyword-clause,
+>   run-after-negator, value-marks, word-marks, said-marks and row
+>   checks, each killed (the window and keyword-clause checks had
+>   survived their mutations, dead,
+>   until a generator or a hand case reached them; the matcher's
+>   `isNumberish` takes only a tens-units hyphen word since `3b887d0`).
+>   Each generator's
 >   identity mutation fails ("the generator made a graphic that was
 >   said"). The case "every kept graphic grounds by the independent
 >   matcher" failed under no mutation at `e027bd3`: the true talks carry
@@ -12960,8 +12977,8 @@ earlier one wins. A candidate is kept only when every rule holds:
    after it at the soonest. (2026-11-11: `GRAPHIC_SPACING` = `{ minGapS:
    6, perS: 20 }` exists, frozen, in `src/shared/graphics/template.ts`
    beside `GRAPHIC_TEMPLATES`, built by lane T2a (`bd0fcf3`) for
-   `settleGraphics`' rule 10 ahead of T3's `budget.ts`, which reads it
-   from there; §6.7's Built note.)
+   `settleGraphics`' rule 10 ahead of T3's `budget.ts`, which will read
+   it from there; §6.7's Built note.)
 2. **One on screen.** Its span overlaps no kept graphic's span. A Director
    card (`COPY_RULE`, `ENDING_RULE`) counts as one: one piece of designed
    type at a time.
@@ -14338,76 +14355,80 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
     per-code-point painter mutation once in the app on the Mac.
   - **From lane T2a (2026-11-11; §6.7's Built note).** False or
     misleading graphics the validator still KEEPS:
-  - hedges and modality: 'We hope to sign 40 clients.' and 'We could sign
-    40 clients.' keep counter 40; no rule covers modality (`claims.ts`,
-    rule 7; `f4b283b`);
-  - 'We failed to sign 40 clients.' keeps the counter (so does 'unable
-    to'): 'failed', 'fail', 'unable' are not negators in §6.7's list, and
-    adding them would drop true graphics such as '90% of startups fail'
-    (`claims.ts`, `NEGATORS` or `NEAR_NEGATORS`; `3b887d0`);
-  - a correction in the next clause, 'We signed 40 clients? No, 30.',
-    keeps 40, since 'We signed 40 clients, not 30.' has the same shape and
-    there the clause confirms the 40 (`claims.ts`, `bind`; `f4b283b`);
-  - Telugu verb-ending negation: `NEGATORS.te` holds only the two words
-    and rule 7's suffix list does not exist ('40 క్లయింట్లు రాలేదు.' keeps
-    counter 40; §15 row 11); Hindi 'ना' is not a negator, being also the
-    tag particle (`claims.ts`);
-  - rule 4 read as worded: 'he lost 40 pounds' is £40, '4K' 4000,
-    'apartment 4B' 4 billion (k, m, b written on the digits); '10.000', a
-    European thousands point, reads 10 in both parsers (`claims.ts`,
-    `numbers.ts`; `1469cc5`).
+    - hedges and modality: 'We hope to sign 40 clients.' and 'We could sign
+      40 clients.' keep counter 40; no rule covers modality (`claims.ts`,
+      rule 7; `f4b283b`); and the hypothetical 'used to have 40', raised
+      by `0c88a89` beside the comparatives and not covered by `f4b283b`'s
+      qualifiers, unmeasured at `3b887d0`;
+    - 'We failed to sign 40 clients.' keeps the counter (so does 'unable
+      to'): 'failed', 'fail', 'unable' are not negators in §6.7's list, and
+      adding them would drop true graphics such as '90% of startups fail'
+      (`claims.ts`, `NEGATORS` or `NEAR_NEGATORS`; `3b887d0`);
+    - a correction in the next clause, 'We signed 40 clients? No, 30.',
+      keeps 40, since 'We signed 40 clients, not 30.' has the same shape and
+      there the clause confirms the 40 (`claims.ts`, `bind`; `f4b283b`);
+    - Telugu verb-ending negation: `NEGATORS.te` holds only the two words
+      and rule 7's suffix list does not exist ('40 క్లయింట్లు రాలేదు.' keeps
+      counter 40; §15 row 11); Hindi 'ना' is not a negator, being also the
+      tag particle (`claims.ts`);
+    - rule 4 read as worded: 'he lost 40 pounds' is £40, '4K' 4000,
+      'apartment 4B' 4 billion (k, m, b written on the digits); '10.000', a
+      European thousands point, reads 10 in both parsers (`claims.ts`,
+      `numbers.ts`; `1469cc5`);
   - True graphics the validator now DROPS, the safe direction, each
     reversible:
-  - the rule 7 widening: a negator in the clause directly before the
-    claim's, in the same sentence, negates, so 'No, we have 40 clients.'
-    drops a true counter (`claims.ts`, `bind`; `f4b283b`, pinned in
-    `claims.test`);
-  - the qualifiers (almost, nearly, about, around, roughly,
-    approximately, approx, over, under, than, least, most, 'up to',
-    'close to', 'upwards of') directly before a number, 'between X and Y'
-    and X to, or, in, of, out of Y: no number, so 'We signed more than 40
-    clients.' drops (`claims.ts`, `QUALIFIERS`; `0c88a89`, `f4b283b`);
-  - `NEAR_NEGATORS` (hardly, barely, scarcely) and `NEGATOR_SPELLINGS`
-    ('cannot', the n't forms without the apostrophe, Hindi 'नही') beside
-    §6.7's `NEGATORS`, to be confirmed (`claims.ts`);
-  - rule 7 per field, as worded: counter '40' / 'clients not happy' over
-    'We had 40 clients not happy.' drops; per graphic would keep it
-    (`claims.ts`; `0c88a89`);
-  - 'a thousand', 'two thousand and five', years said in pairs, 'two and
-    a half', Hindi and Telugu number words and scale words, a digit run
-    followed by 'hundred', a standalone k, m or b ('plan 4 b'), '४0' (two
-    scripts in one word) and '40 mn' as two words: no number, so the
-    graphic drops; M21 bears on the Hindi and Telugu part (`claims.ts`;
-    `1469cc5`, `0c88a89`, `3b887d0`);
-  - the stray-number and exchange rules, beyond rule 6, with their
-    measured cost (§6.7's Built note lists the true graphics they drop;
-    `claims.ts`, `bind`; `0c88a89`);
-  - a quote's speaker name only for "<Name> said / says / told" in one
-    segment with no negator before the verb, and a sentence-initial
-    capital a name only if the stretch writes it with a capital
-    elsewhere, so 'Elon said: fail fast.' alone gets no name and the
-    quote drops; Hindi and Telugu reporting verbs are not listed
-    (`validateGraphics.ts`, `reportedBy`; `f4b283b`);
-  - a keyword's run may hold no clause mark (`claims.ts`, `runsOf`;
-    `f4b283b`);
-  - marks: a value may carry only a minus, a leading currency sign, a
-    trailing % and a trailing point, and '>40', '40+', '~40', '#1' drop;
-    the edge marks a label or a quote may carry are the fixer's list
-    (`claims.ts`, `marksOf`; `3b887d0`);
-  - steps' rows held to spoken order (`claims.ts`, `itemsDisordered`;
-    `3b887d0`).
+    - the rule 7 widening: a negator in the clause directly before the
+      claim's, in the same sentence, negates, so 'No, we have 40 clients.'
+      drops a true counter (`claims.ts`, `bind`; `f4b283b`, pinned in
+      `claims.test`);
+    - the qualifiers (almost, nearly, about, around, roughly,
+      approximately, approx, over, under, than, least, most, 'up to',
+      'close to', 'upwards of') directly before a number, 'between X and Y'
+      and X to, or, in, of, out of Y: no number, so 'We signed more than 40
+      clients.' drops, and so do counter 60 over 'We grew from 40 to 60
+      clients.' and counter 300 over 'We shot 300 in 2019, all weddings.'
+      (`claims.ts`, `QUALIFIERS`; `0c88a89`, `f4b283b`);
+    - `NEAR_NEGATORS` (hardly, barely, scarcely) and `NEGATOR_SPELLINGS`
+      ('cannot', the n't forms without the apostrophe, Hindi 'नही') beside
+      §6.7's `NEGATORS`, to be confirmed (`claims.ts`);
+    - rule 7 per field, as worded: counter '40' / 'clients not happy' over
+      'We had 40 clients not happy.' drops; per graphic would keep it
+      (`claims.ts`; `0c88a89`);
+    - 'a thousand', 'two thousand and five', years said in pairs, 'two and
+      a half', Hindi and Telugu number words and scale words, a digit run
+      followed by 'hundred', a standalone k, m or b ('plan 4 b'), '४0' (two
+      scripts in one word) and '40 mn' as two words: no number, so the
+      graphic drops; M21 bears on the Hindi and Telugu part (`claims.ts`;
+      `1469cc5`, `0c88a89`, `3b887d0`);
+    - the stray-number and exchange rules, beyond rule 6; the stray rule's
+      measured cost is three true graphics (§6.7's Built note lists them;
+      `claims.ts`, `bind`; `0c88a89`);
+    - a quote's speaker name only for "<Name> said / says / told" in one
+      segment with no negator before the verb, and a sentence-initial
+      capital a name only if the stretch writes it with a capital
+      elsewhere, so 'Elon said: fail fast.' alone gets no name and the
+      quote drops; Hindi and Telugu reporting verbs are not listed
+      (`validateGraphics.ts`, `reportedBy`; `f4b283b`);
+    - a keyword's run may hold no clause mark (`claims.ts`, `runsOf`;
+      `f4b283b`);
+    - marks: a value may carry only a minus, a leading currency sign, a
+      trailing % and a trailing point, and '>40', '40+', '~40', '#1' drop;
+      the edge marks a label or a quote may carry are the fixer's list
+      (`claims.ts`, `marksOf`; `3b887d0`);
+    - steps' rows held to spoken order (`claims.ts`, `itemsDisordered`;
+      `3b887d0`).
   - Other:
-  - the Hindi and Telugu strings in `tests/claims.test.ts` and
-    `tests/graphicsValidator.test.ts` are the build's own and await your
-    check, like the fixture strings;
-  - rule 7's quote demotion is not built: a negated quote drops instead,
-    which §6.7 allows (`validateGraphics.ts`);
-  - the property test's true generator writes clean talks (no distractor
-    numbers, reported speech, qualifiers or ranges; `claims.test`'s named
-    cases cover those), so "every kept graphic grounds" certifies nothing
-    alone, and §6.7's two named mutations (skip grounded fields, drop the
-    order rule) fail it only through its floors
-    (`tests/graphicsValidator.test.ts`).
+    - the Hindi and Telugu strings in `tests/claims.test.ts` and
+      `tests/graphicsValidator.test.ts` are the build's own and await your
+      check, like the fixture strings;
+    - rule 7's quote demotion is not built: a negated quote drops instead,
+      which §6.7 allows (`validateGraphics.ts`);
+    - the property test's true generator writes clean talks (no distractor
+      numbers, reported speech, qualifiers or ranges; `claims.test`'s named
+      cases cover those), so "every kept graphic grounds" certifies nothing
+      alone, and §6.7's two named mutations (skip grounded fields, drop the
+      order rule) fail it only through its floors
+      (`tests/graphicsValidator.test.ts`).
 
 - **Phase 2's state, lane T2a, 2026-11-11.** Built and pushed: lane T2a
   (§6.7's Built note), `a29e8fa` … `3b887d0`, nine commits, green on both
@@ -16906,9 +16927,9 @@ value should be written into `data.value`, which is T2a's and T2b's
 the measurements, M7 still gates phase 3's glow, and M10 the marker
 painter, which T1 did not build. Next: T2a.) (2026-11-11: T2a is built
 and pushed through `3b887d0`, green on both runners, so both of T2b's
-gates, T2a's validator and T3's stub, are met. Next: T3, then T2b, then
-T4, the order the session set (the table above lists T2b's row before
-T3's; T3 needs only T1's values). M21, unmeasured, now bears on how
+gates, T2a's validator and T3's stub, are met. Next by §6.19: T3, then
+T2b, then T4 (the table above lists T2b's row before T3's; T3 needs only
+T1's values). M21, unmeasured, now bears on how
 often the validator drops a Hindi number said as words, §6.15's phase-2
 note.)
 

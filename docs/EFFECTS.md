@@ -10962,8 +10962,11 @@ width per UTF-16 unit); **no render check has run on a phase-2 drawing**
 `3b887d0`), the build workflow's journal (four builders, eight critics,
 four fixers) and the session's reads on the Mac. Every figure is vitest in
 node; each "kept" below was probed by a builder or a critic on the commit
-named, through `bind`, `checkGraphicData` or `settleGraphics`, and is
-pinned dropped since. Only what cost time or would not be guessed:
+named, through `bind`, `checkGraphicData` or `settleGraphics` from
+`bac73ac` on, and through `claimTokensOf` and `numbersIn` alone on
+`a29e8fa`, where `bind` did not exist yet ("read", and would bind once a
+label did); each is pinned dropped since. Only what cost time or would
+not be guessed:
 
 - **Trimming edges so a spoken word compares also trims what the model
   wrote.** Rule 2 trims characters outside letters, marks and numbers;
@@ -10980,20 +10983,24 @@ pinned dropped since. Only what cost time or would not be guessed:
   jobs; a shared normaliser hides the second.**
 - **A leading decimal point is punctuation to an edge trim.** '.5%' read
   5% and '$.50' read $50, in `claims.ts` and in `numbers.ts`' `numberOf`
-  alike (`a29e8fa`); a ring '5%' would have grounded on half a percent.
+  alike (`a29e8fa` for `claims.ts`; `numberOf`'s half was T1's,
+  `cb394b5`, and the piece 1 critic found both); a ring '5%' would have
+  grounded on half a percent.
   The minus had been carved out of the trim for exactly this reason, and
   the point had not. `1469cc5`: both parsers read no number.
-- **"The safe direction" in a comment was false three times.** `a29e8fa`
+- **"The safe direction" in a comment was false twice.** `a29e8fa`
   listed 'minus' as a word and a digit run before 'hundred' as "not
   covered (the safe direction, dropped later by the binding)". Measured:
   'minus 40 percent' and 'negative 5%' read +40% and +5%, '–40%' (an en
   dash, which the trim did not know as a minus) +40%, '5 hundred' 5,
   '₹40 lakh crore' ₹4,000,000, '40 हज़ार' 40: each a value read, positive
-  or at the wrong magnitude, and bound. Likewise "nineteen ninety nine"
-  bound as 99 and as 19, and "two and a half million views" bound counter
-  2 'million views', against `numbersIn`'s own comment that both were not
-  parsed (`0c88a89`). **Probe a "dropped" claim; a parser that reads part
-  of a span returns a wrong number, not none.**
+  or at the wrong magnitude, that would bind once a label did (probed
+  through `numbersIn`; the en dash, 'lakh crore' and 'हज़ार' were never
+  claimed safe). Then `bac73ac`'s `numbersIn` comment said years in
+  pairs and fractions were not parsed, and "nineteen ninety nine" bound
+  as 99 and as 19, and "two and a half million views" bound counter 2
+  'million views' (fixed in `0c88a89`). **Probe a "dropped" claim; a
+  parser that reads part of a span returns a wrong number, not none.**
 - **A comma inside a number-word run.** `claimTokens` stripped
   punctuation, so 'we had forty, two of them came back' read 42 and
   'forty. Two' 42. `numbersIn(tokens)` as the plan signs it cannot see a
@@ -11014,8 +11021,10 @@ pinned dropped since. Only what cost time or would not be guessed:
   worded. `0c88a89` added the exchange check (bind again with two pairs'
   values exchanged; if that binds too, drop) and the stray-number rule (a
   label as near or nearer to an unbound number of its sentence as to its
-  value drops); measured cost: five true graphics dropped, among them
-  'We grew from 40 to 60 clients.' + counter 60.
+  value drops); the stray rule's measured cost: three true graphics
+  dropped, among them "It's true that 90% of startups fail in 5 years." +
+  ring 90% (the 5). `0c88a89`'s message counts two more with them, which
+  the range and ratio reading drops, not the stray rule.
 - **A list's rows were never ordered.** Rule 6 orders a field's own
   tokens and the pairs, and says nothing of a list's rows, so 'first
   charge batteries, then pack bag.' kept steps [pack bag, charge
