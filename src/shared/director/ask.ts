@@ -10,10 +10,19 @@ import { parseModelJson, type CompletionRequest, type CompletionResult } from '.
  * Thinking costs seconds; the alternative is the fallback every time, looking
  * like a model failure.
  *
- * Every caller that asks a model for JSON goes through this — the spine and
- * the look pass alike (docs/PLAN.md §4.1) — so the recovery cannot be present
- * in one and forgotten in the other.
+ * Every caller that asks a model for JSON goes through this — the spine, the
+ * look pass and the graphics pass alike (docs/PLAN.md §4.1, docs/CLIPS.md
+ * §6.6) — so the recovery cannot be present in one and forgotten in the other.
+ *
+ * On the OpenAI shape thinking on changes nothing: `openaiRequestBody` never
+ * sends `think` (provider.ts), so on LM Studio the "retry" would be the same
+ * request with more room. When the FIRST result's `provider` is 'openai', the
+ * retry also appends `JSON_ONLY_NUDGE` to the user prompt, as its own last
+ * line, keeping the raised `maxTokens` (docs/CLIPS.md §6.6, "The ask").
  */
+
+/** The line the OpenAI-shaped retry appends to the user prompt (§6.6). */
+export const JSON_ONLY_NUDGE = 'Answer with the JSON object only.'
 
 /** How much more room the second, thinking, attempt gets. */
 export const THINKING_EXTRA_TOKENS = 800
@@ -36,9 +45,15 @@ export async function askStructured(
   let parsed = parseModelJson(result.text)
   if ('error' in parsed && !result.truncated) {
     onRetry?.()
-    notes.push(`the first answer was not JSON (${parsed.error}) — asked again with thinking on`)
+    const openai = result.provider === 'openai'
+    notes.push(
+      openai
+        ? `the first answer was not JSON (${parsed.error}) — asked again for the JSON object only`
+        : `the first answer was not JSON (${parsed.error}) — asked again with thinking on`
+    )
     result = await complete({
       ...request,
+      ...(openai ? { user: `${request.user}\n${JSON_ONLY_NUDGE}` } : {}),
       maxTokens: (request.maxTokens ?? 0) > 0 ? request.maxTokens! + THINKING_EXTRA_TOKENS : request.maxTokens,
       think: true
     })
