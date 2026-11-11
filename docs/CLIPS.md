@@ -101,7 +101,8 @@
 > and `lower-third`; no marker painter, since M10 has not passed and
 > `MARKER_READY` stays false), and OUTPUT has a Graphics section (§6.5).
 > Nothing in the app makes a graphic clip yet: `addGraphicClip`'s caller
-> is phase 2's panel (§6.6, T2b's), and `applyGraphics` is a typed stub.
+> is phase 2's panel (§6.6, T2b's), and `applyGraphics` is a typed stub
+> (until T3, below).
 > Then **lane T2a, the validator** (§6.7), built 2026-11-11 in four
 > pieces, each read by two critics before its fixer and the next piece:
 > piece 1, `a29e8fa`, fix `1469cc5`; piece 2, `bac73ac`, fix `0c88a89`;
@@ -116,13 +117,43 @@
 > `settleGraphics`' validation half in `run.ts`) exists and is tested,
 > and nothing in the app calls it: `graphicsMenuFor`, the schema, the
 > prompt, the ask and `decisionForGraphics` are T2b's, `applyGraphics`
-> is still the stub, and `settleGraphics` has no baseline until T4's
+> is still the stub (until T3, below), and `settleGraphics` has no baseline until T4's
 > `baselineGraphics` (a rejected answer settles to no graphics, with its
 > reason). So still nothing in the app makes a graphic clip.
-> Not built: the rest of phase 2, which is next: T3 (beats, place,
-> budget, sound, apply), then T2b and T4 as §6.19 orders them. Still
-> yours from these lanes: the list in §6.12's "Phase 2's state,
-> 2026-11-11", with T2a's items added below it. (Until T2a was recorded
+> Then **lane T3** (§6.8, §6.9, §6.6's real body, §6.14), built
+> 2026-11-11 in six pieces, each read by two critics before its fixer and
+> the next piece: piece 1 (beats), `c27b9a4`, fix `4699660`; piece 2
+> (placement), `216065e`, `37d0e69`, fix `518a62f`; piece 3 (the budget),
+> `1a14bd4`, fix `ac79a1e`; piece 4 (sound), `5c52691`, fix `21d316d`;
+> piece 5 (`applyGraphics`, `lowerThirdFor`, `clearGraphics`, the
+> Director's sweep), `0f3f7a4`, fix `3d070ab`; piece 6 (the store's
+> follow-on edits, `setGraphicSounds`, the switch), `e8f2a1f`, fix
+> `69e677c`; then `8db943a`, the census row read on screen (§6.8's,
+> §6.9's, §6.6's and §6.14's Built notes). Pushed 2026-11-11 with the T2a
+> record as `77ac70a` (run 43109884716: `windows-latest` and `macos-15`
+> green, no annotation; the installer job skipped, as on every push):
+> **the lane is green on both runners at `77ac70a`.** The suite at
+> `69e677c` on the Mac: 338 files passed and 5 skipped (343), 5171 tests
+> passed and 64 skipped (5235); the harness census at `69e677c`: 892 rows
+> checked, 0 missing, 8 skipped. What the app can do now: `applyGraphics`
+> is real and tested, and its only callers are tests, so **still nothing
+> in the app makes a graphic from speech**. What you can see: the OUTPUT
+> strip's Graphics section has a **"Graphic sounds"** switch (on when the
+> project has no setting; it calls `setGraphicSounds`); a graphic clip
+> made by hand (`addGraphicClip`) with sounds tied to it (`forGraphic`)
+> takes them along on Delete, Cut, `removeClip`, a drag and the arrow
+> nudge, and a pasted sound loses the tie; Direct's Clear and Direct again
+> sweep any file an app rule brought that nothing uses, and `GRAPHIC_RULE`
+> is in `DIRECTOR_RULES`. `findGraphics`, `keepGraphic`, `dropGraphic`,
+> the store's `clearGraphics()`, `setSpeaker`, the menu, the schema, the
+> prompt, the ask, `decisionForGraphics`, Direct's wiring and the two
+> panels are T2b's; the baseline and the eval T4's.
+> Not built: the rest of phase 2, which is next: T2b, then T4 (§6.19).
+> Still yours from these lanes: the list in §6.12's "Phase 2's state,
+> 2026-11-11", with T2a's and T3's items added below it. (Until T3 was
+> recorded this line read: "Not built: the rest of phase 2, which is
+> next: T3 (beats, place, budget, sound, apply), then T2b and T4 as §6.19
+> orders them"; until T2a was recorded
 > this line read: "Not built: the rest of phase 2, which is next: T2a
 > (`claims.ts`, then `validateGraphics.ts` with `checkGraphicData`,
 > `claims` and the property test, §6.7), then T3, T2b and T4 as §6.19
@@ -8028,7 +8059,7 @@ it was.
 | `beats` | number[] | the app, from word timings (§6.8) | when each element arrives, seconds from the clip's start; never the model's |
 | `grounding?` | `{ assetId; sentence; words: number[] }` | the app | the transcript's asset, the cited sentence, the word index each beat landed on |
 | `place` | `{ auto: true; third: 'top' \| 'middle' \| 'bottom' } \| { auto: false; box: UnitRect }` | the app (§6.9), or the user's drag | where it sits; `auto` is recomputed on rebake |
-| `subject?` | `{ clipId; box: UnitRect; ms }` | the app, once, at onset (§6.9) | a callout's target and a dim's hole on the clip beneath, in source units |
+| `subject?` | `{ clipId; box: UnitRect; ms }` (2026-11-11, lane T3, `518a62f`: or `null`, looked for and not taken, drawn with no hole; `graphicTypes`' pin includes it) | the app, once, at onset (§6.9) | a callout's target and a dim's hole on the clip beneath, in source units |
 | `sources?` | `{ title; url; outlet; date; licence }[]` | steps 5/6 | retrieved facts |
 | `proposal?` | `{ reason: 'check-the-number' \| 'pointed'; wordSource?: 'youtube-asr' \| 'youtube-lines' \| 'whisper-unsure' }` | the app | a graphic the user keeps before it is placed (§6.6; `'pointed'` §6.18) |
 | `style?` | string | the user | a `GRAPHIC_STYLES` id; absent is the project's |
@@ -9698,7 +9729,12 @@ the caller and passed into `drawListAt`, so the drawing stays pure:
   project no longer has, one hidden, or one that is not a video track,
   since the export draws no such clip, `render/plan.ts`; before, a hidden
   track still gave the box. `targets.ts:58`; the frames' Built note
-  below.)
+  below.) (2026-11-11, lane T3, `518a62f`: `spec.subject` may be `null`,
+  "looked for at onset and not taken" (§6.9 step 4), which `subjectAt`
+  reads as no hole and never as the caption track's union; only an
+  ABSENT subject, a graphic §6.9 never placed, takes that fallback. Before,
+  a counter over a Ken Burns motion stored no subject and drew the caption
+  track's face through the un-modelled zoom; §6.9's Built note.)
 - **When**: `subject` is evaluated once, at the graphic clip's first frame,
   for every template, the callout included (§6.9 chose it 2026-10-21), and
   that value is what `targetsAt` returns for every frame of the clip. So a
@@ -10899,6 +10935,20 @@ arm, and the test anchors each):
 nothing: size 0. The frame-rate change needs nothing beyond
 `rebakeGenerated`'s arm: the spec is in seconds (§6.1).
 
+(2026-11-11, lane T3, `e8f2a1f` and `69e677c`; §6.14's Built note.) The
+store's edits of a graphic now carry its sounds through
+`graphics/apply.ts`: `removeClip`, `deleteSelection` and `cutSelection`
+(the Delete key and the menu's Delete and Cut, these two beyond §6.14's
+words, through `removeMany`) go through `removeWithFollowers`;
+`moveClip`, `moveSelectionTo` and `nudgeSelection` (the arrows, beyond
+the words) through `followGraphicMoves`; `setGraphic` re-places the
+graphic's sounds through `resoundGraphic` in its one update; the paste's
+copy (`pasteClipboard`) sets `forGraphic` undefined. `rebakeFollowed`'s
+graphic arm (`518a62f`) does not re-follow a graphic whose `subject` is
+`null`. `rebakeGenerated`'s graphic arm still does **not** recompute
+`place.auto` (its comment still says so; §6.9's Built note, part (d),
+handed to T2b).
+
 **The test**, `tests/graphicGuards.test.ts`, modelled on
 `tests/moment.test.ts:585-647`, asserting membership, never a whole list.
 It is written in two halves (chosen 2026-10-21 by the review, so each lane
@@ -11659,6 +11709,8 @@ dropped from `graphicEligible` (the synthetic style passes).
 >   caption preset rows and their picker as "under the caption presets"
 >   says, so the captions' controls stay together; shown whether captions
 >   are on or off. "Graphic sounds" is §6.14's, T3's, and not built.
+>   (Built 2026-11-11 by lane T3, `e8f2a1f`: `GraphicSoundsToggle`,
+>   between the style rows and the sample tile; §6.14's Built note.)
 > - **The rebake** (`1a681c7`, fix `62f3c83`): `setGraphicsStyle` and
 >   `setGraphicsOverride` now call `rebakeGraphicClips` when the project
 >   changed: every graphic clip's id, one after the other, through
@@ -11932,7 +11984,11 @@ project). Each is a `GraphicProposal` (§6.1).
 
 - `GRAPHIC_RULE = 'director.graphic'` sits beside `director/apply.ts:37-49`
   and joins `DIRECTOR_RULES` (`:49`), so Direct again and Direct's Clear
-  take Direct's graphics, their sounds and their files (§6.14).
+  take Direct's graphics, their sounds and their files (§6.14). (Built
+  2026-11-11 by lane T3: declared by `1a14bd4` for the budget, in
+  `DIRECTOR_RULES` since `0f3f7a4`, which also made `clearDirector`'s
+  sweep take any `broughtBy` and filter `graphicProposals` by
+  `DIRECTOR_RULES`; §6.14's Built note.)
 - `CLIPS_GRAPHIC_RULE = 'clips.graphic'` sits in `graphics/apply.ts`, outside
   the Director. Its own **Clear graphics**, `clearGraphics(project):
   Project`, removes, in one undo step: the `'clips.graphic'` graphic clips
@@ -11981,6 +12037,135 @@ project). Each is a `GraphicProposal` (§6.1).
   > and a track pushed in place ("expected { id: 'p-…', …(7) } to deeply
   > equal …"). `lowerThirdFor`, `clearGraphics` and the real body (the
   > landing order above) are T3's.
+
+  > **Built 2026-11-11 (lane T3, piece 5, §6.19):** `0f3f7a4`, then
+  > `3d070ab` after two critics; pushed as `77ac70a`, green on both
+  > runners (the status block). The stub and its placeholder problem are
+  > gone. Figures from the two messages and the build workflow's journal
+  > (`wf_bd4e915e-7cc`); the code at `69e677c` is what is described.
+  > Nothing in the app calls `applyGraphics` yet: its callers are tests
+  > (T2b wires `findGraphics` and Direct).
+  > - **The landing order as built** (`graphics/apply.ts`). First, a run
+  >   whose `ctx.fps` is not `project.settings.fps` lands nothing, with one
+  >   problem at `'$'`, `fpsMismatchNote`: "graphics not placed: the run's
+  >   frame rate (N) is not the project's (M)" (`3d070ab`; every reader
+  >   under it, `firstShownWord`, `placeGraphic`, `subjectAtOnset`,
+  >   `graphicSounds`, counts in the project's frames, and `0f3f7a4`'s
+  >   "ctx.fps is used for every frame" was wrong). Then: (1)
+  >   `lowerThirdFor` on each `covered` id, once per id, first; (2-3) per
+  >   graphic, its footage clip gone (`NO_CLIP_NOTE`), a template not in
+  >   `GRAPHIC_TEMPLATES` (`NOT_DRAWN_NOTE`), a `KeptGraphic.assetId` not
+  >   its clip's (`WRONG_ASSET_NOTE`, `3d070ab`), no transcript
+  >   (`NO_TRANSCRIPT_NOTE`); `graphicBeats` with `{ spread: false }` for a
+  >   quote only; null (a retimed clip) drops every graphic on that clip
+  >   with ONE problem per clip, "graphics dropped: <`RETIMED_NOTE`>";
+  >   `graphicTiming` at the project's rate, a refusal dropped with its
+  >   note; the spec built with the template's first third as a
+  >   placeholder `place` and `seed` 0; (4) a candidate with a `proposal`
+  >   (never a lower third, even one that arrives with one) set aside as a
+  >   `GraphicProposal`: id `newId('graphic-proposal')`, `clipId` its
+  >   footage clip, the run's rule, its timing in `spec` with the
+  >   placeholder place, no subject and seed `momentSeed(start, 0)`, and
+  >   the note `check the number: heard "<the words bound to its claims,
+  >   else what it draws>"`, appended to `graphicProposals`; (5)
+  >   `applyBudget(project, rest)`, each drop a problem with the budget's
+  >   reason; (6-7) in the budget's onset order, each graphic on the
+  >   project before the next: `placeGraphic` (null: "no free third", or
+  >   the clip note when the clip is gone), `subjectAtOnset` (a `{ dropped
+  >   }` drops it), `graphicLane` (its note); (8) the sounds. Because the
+  >   budget runs before placement, as §6.6 orders it, a graphic the budget
+  >   kept and placement then dropped does not hand its slot to one the
+  >   budget refused.
+  > - **Each graphic clip**: id `newId('graphic')`; its asset
+  >   `graphicClipAsset(id, template, duration, settings)`, lifted out of
+  >   the store into `graphics/frame.ts` (`drawnGraphicAsset` with the
+  >   project's size, `max(duration, round(fps × 10))` frames and
+  >   "<template> — graphic"), which the store's `addGraphicClip` now calls
+  >   too, so the two pass the same arguments, not only the same helper;
+  >   keys `graphicExitKeys`; `graphic` = the spec with `place`, `subject`
+  >   (`null` when not taken) and `seed` `momentSeed(start, landing
+  >   index)`, the spine's function, `version` 1, `grounding` { the kept
+  >   graphic's asset, its sentence, its beat words }, beats from the clip's
+  >   start; `generatedBy` { the run's rule, reason `<kind> "<first drawn
+  >   string>" — <why>` }. `clipIds` in landing (onset) order. Problems
+  >   read `graphic dropped: the counter "40%" — <reason>` at `$.kept[i]`,
+  >   or `$.covered[j]` for a lower third. The input is never edited;
+  >   nothing to land returns the same project.
+  > - **The sounds** (step 8, `soundsFor`, lifted by `3d070ab`):
+  >   `graphicSounds` on each landed graphic over `ctx.sounds`, its
+  >   `removed` taken off first, its `tracks` appended, its files and clips
+  >   added; then any file an app rule brought (`broughtBy`) that a
+  >   re-placed sound stood on, or that this run added, and that no clip
+  >   uses, leaves the pool, as the Clears' sweep would. Its notes, each
+  >   once, are problems at `'$.sounds'` (with no library,
+  >   `NO_SOUND_LIBRARY_NOTE` once and the graphics land).
+  > - **`GraphicsApplyContext`** = `Pick<ApplyContext, 'fps' | 'newId'> &
+  >   { sounds?: SoundPack }`, beyond the plan's signature: a pure function
+  >   cannot read the library, and the spine's apply takes it the same way
+  >   (`ApplyContext2.sounds`). Absent, graphics land silent with §6.14's
+  >   note. The canvas is `project.settings`' width and height, what
+  >   `addGraphicClip` and `rebakeGraphic` use, not a new argument.
+  > - **`lowerThirdFor(project, clip)`**: the asset's Speaker as held (not
+  >   trimmed: the drawer draws it as held), `role` '' (the dock's pre-fill
+  >   is T2b's), its beat the first word the clip shows (`firstShownWord`),
+  >   `sentence` the segment holding that word, `bound` empty, `why`
+  >   `LOWER_THIRD_WHY` ("the speaker’s name, on the first word the clip
+  >   shows"), `source` `'baseline'` (the type's only non-model value), no
+  >   `proposal`. Null with no Speaker or a Speaker of only spaces, no
+  >   transcript, no shown word, or when a lower-third graphic already
+  >   stands over THAT clip (`footageOf`, any rule); per clip, so a second
+  >   footage clip gets its own (`3d070ab`).
+  > - **Notes the plan does not word**, each exported: `NO_TRANSCRIPT_NOTE`
+  >   "its transcript is not in the project", `NOT_DRAWN_NOTE` "that kind
+  >   of graphic is not drawn yet", `WRONG_ASSET_NOTE` "its words are from
+  >   another file than the clip it sits on", `fpsMismatchNote`,
+  >   `CHECK_THE_NUMBER` "check the number", `LOWER_THIRD_WHY`; and
+  >   `CLEAR_GRAPHICS_NOTE` "Direct's graphics stay; Direct's Clear takes
+  >   them" (§6.14's Built note has `clearGraphics`). `drawnStrings` and
+  >   `drawnText` are exported (the reading-hold text, joined by spaces as
+  >   `graphicHolds.test` joins it).
+  > - **`tests/graphicApply.test.ts`**: 45 tests at `69e677c` (34 at
+  >   `0f3f7a4`, whose message counts 26 cases: most run under both rules
+  >   through `describe.each`; 45 by `3d070ab`'s message and by the file).
+  >   The stub's "input not mutated" kept as a full run deep-equal to a
+  >   `structuredClone`, the empty run's same object, the rule constant;
+  >   the landing order with every frame by hand (the lower third at 30 +
+  >   75 frames, the counter at 315 + 60, `ceil(10.5 × 30)`, its tick at 330
+  >   on the rule's lane), a lower third per covered clip, clip ids in onset
+  >   order, at most once, the proposal, a budget drop, the callout with no
+  >   subject, the retimed clip (two clips, two notes), the track limit, a
+  >   quote's beats [0.5, 0.6] against steps' [0.5, 0.66], the cap's file
+  >   leaving the pool, the two Clears over both rules; since `3d070ab`
+  >   placement observed (captions at the bottom send the lower third to
+  >   the top, in the middle the counter to the top), a callout landing with
+  >   its subject (`{ clipId 'c', box, ms 29500 }` from frame 855, by hand),
+  >   a 1920×1080 file letterboxed into the 1080×1920 frame (the counter to
+  >   the top), the no-library note once, the wrong-asset drop, the fps
+  >   refusal, `resoundAfterClear` both ways and its untouched case.
+  >   **Mutations**, each a single-match anchor, each failing, the file
+  >   restored and `cmp`-checked: `lowerThirdFor` not called (10 fail);
+  >   the already-one check removed; the transcript's first word, not the
+  >   first shown ("expected [ +0 ] to deeply equal [ 1 ]"); beats in
+  >   timeline seconds (12); a proposal placed; budget drops ignored;
+  >   landing in kept order; a callout with no subject kept; the retimed
+  >   note per graphic; a lane drop silent; `graphicClipAsset`'s
+  >   `durationFrames` = duration (also 4 `graphicStore` failures); the
+  >   lower third always `CLIPS_GRAPHIC_RULE`; the input edited in place; the
+  >   cap's moved-off file kept; sounds not placed; a quote's beats spread
+  >   (survived its first run until the quote/steps case was added:
+  >   "expected 0.6600000000000001 to be close to 0.6"); and `3d070ab`'s
+  >   M1-M12: `place` dropped ("expected { auto: true, third: 'bottom' } to
+  >   deeply equal { auto: true, third: 'top' }"), `subject: null`, the
+  >   canvas's width and height swapped ("… third: 'middle' … 'top'"), the
+  >   already-one check over any clip, the covered dedupe off, the retimed
+  >   note by `retimed.size === 0`, the `$.sounds` push removed, the
+  >   wrong-asset check off, a lower third with a proposal set aside, the
+  >   fps check off, `resoundAfterClear` touching nothing, and without its
+  >   `generatedBy` test. **Unguarded, recorded**: `seed: 0` survives (the
+  >   seed is the builder's choice); `placeGraphic` or `subjectAtOnset`
+  >   given `project` for `next` is equivalent while placement ignores
+  >   other graphics; the lower thirds before the kept graphics matter only
+  >   on a tie within 6 s, not pinned.
 
 **The decision record.** There is no `Project.decisions`; the 2026-10-05
 text was wrong. A run appends a `DecisionRecord` (`src/shared/project.ts:23-37`:
@@ -12031,12 +12216,18 @@ Each edit is `setGraphic` (§6.3).
 `keepGraphic(proposalId)`, `dropGraphic(clipId)`, `clearGraphics()`,
 `setSpeaker(assetId, name)`, `setGraphicSounds(on)`. Drop takes the graphic,
 its drawn asset when nothing else uses it, and its sounds (§6.14).
+(2026-11-11: `setGraphicSounds` is built, by lane T3, `e8f2a1f`; §6.14's
+Built note. The other five are T2b's; the pure functions they are to
+call, `applyGraphics`, `removeWithFollowers`, `resoundAfterClear`,
+`resoundGraphic` and `clearGraphics`, are built.)
 
 **Census rows** (exact text): the Transcript tile's "Graphics", "Find
 graphics in this clip", "Keep", "Drop", "check the number" (for a stub
 transcript of each source: a YouTube ASR track, a YouTube uploader track,
 an unsure Whisper word), "Clear graphics", "Speaker"; the dock's graphic
 panel and its "Role"; the OUTPUT strip's "Graphic sounds" (§6.14).
+(2026-11-11: "Graphic sounds" is built and read on screen, lane T3,
+`e8f2a1f` and `8db943a`; §6.11's census rows. The rest are T2b's.)
 
 **Tests** (§6.11 indexes them by phase):
 
@@ -12796,7 +12987,9 @@ wordIndices: number[]): number[] | null`, in `src/shared/graphics/beats.ts`.
 `readingSeconds` (§6.2). (Built ahead of T3, by lane T1: `beats.ts` exists
 since 2026-11-07 with `readingSeconds` (`8f18cc8`), and since 2026-11-10
 holds `LEAD_S` 0.5, `TAIL_S` 0.8 and `graphicSeconds` (`1871004`), §6.2's
-Built note; `graphicBeats` is still T3's.)
+Built note; `graphicBeats` is still T3's.) (2026-11-11: `graphicBeats`,
+`spreadBeats` and `graphicTiming` are built by lane T3; the Built note
+at the end of this section.)
 
 - **Beat times.** Each element's grounded word is its beat (`beatWords`,
   §6.7; the per-template beats are §6.2's table): `word.startMs` → timeline
@@ -12846,6 +13039,128 @@ late.
 
 **Days: 0.5** (phase 2).
 
+> **Built 2026-11-11 (lane T3, piece 1, §6.19).** `c27b9a4`, then
+> `4699660` after two critics (the plan, the tests); pushed as `77ac70a`,
+> green on both runners (the status block). Figures from the two messages
+> and the build workflow's journal (`wf_bd4e915e-7cc`); where the fix
+> changed the piece, the code at `69e677c` is described, with one clause of
+> history. **Every "beyond the plan's words" item is a choice this section
+> left open, yours to keep or overrule.**
+> - **`graphicBeats(project, clip, transcript, wordIndices, options: {
+>   spread?: boolean } = {}): number[] | null`** in `graphics/beats.ts`:
+>   the fifth argument is beyond the signature, how a quote says "do not
+>   spread" (`applyGraphics` passes `{ spread: false }` for a quote only;
+>   the default spreads). Each word's `startMs` goes to TIMELINE seconds
+>   with the captions' own offset, the same expression as
+>   `buildTimelineCaptions`' `offsetMs` (`captions/timeline.ts:96`), the
+>   in-point ms read through `captionWindowMs` as `libassLineFrame` reads
+>   it; not rounded. `wordIndices` are `Word.index` values, as
+>   `director/run.ts` reads `beatWords`, not array positions. **A word is
+>   on the clip by `firstShownWord`'s test** (`endMs` after the caption
+>   window's start, `startMs` before its end; `4699660`), and **a word the
+>   cut lands inside beats on `clip.start`'s time**, where `libassLineFrame`
+>   and `captionLineFrame` both draw it, so a lower third on a clip
+>   trimmed mid-word lands on "the first word … that the clip shows"
+>   (`c27b9a4` used `startMs ≥` the window's start and dropped such a
+>   word, so that lower third dropped). An index that names no word, or a
+>   word the clip shows no part of (one ending exactly at the in-point
+>   included), is NaN, and `graphicTiming` drops the graphic. Null when
+>   the clip has `speed` or `ramp` set, as `apply2.ts:248` refuses a J-cut;
+>   an explicit `speed: 1` is refused too, which the store never stores
+>   (`withClipSpeed`, `render/speed.ts:309-313`, deletes it at 1x;
+>   recorded as intended). A held frame (`Clip.hold`) is not refused.
+> - **`spreadBeats(beats)`**, exported: in **time** order (`4699660`; a
+>   stable sort of the finite beats), a beat closer than `BEAT_GAP_S`
+>   (`DEFAULT_MIN_GAP_MS` ÷ 1000, `automation/lyrics.ts`, 160, verified)
+>   after the one before it, as moved, goes to 160 ms after it, the later
+>   moved; each value is written back to its own element's place, so a
+>   bars graphic's beats stay in item order, which the validator does not
+>   hold to spoken order (`validateGraphics.ts` `beatWordsOf`; `claims.ts`
+>   `bind` holds only steps' rows to item order). `c27b9a4` spread in the
+>   order given, so a bars graphic whose first item was said second got
+>   [3, 3.16] where [3, 1] was due: a bar 2.16 s after its own word
+>   (`EFFECTS.md` §61). Equal times keep their given order; an exact
+>   160 ms gap is left (a 1e-9 s allowance: 2.01 − 1.85 is
+>   0.1599999999999997 in a double); a NaN is left, and is no beat to
+>   space from. Never for a quote.
+> - **`graphicTiming(clip, beats, def, drawn, fps): GraphicTiming`**
+>   (the name, the signature and the union are this lane's; §6.8 words the
+>   rules only): `{ ok: true; start; duration; seconds; beats }` or `{ ok:
+>   false; note }`. No beats: `NO_BEAT_NOTE`; any NaN: `NOT_SHOWN_NOTE`.
+>   **Start** = max(`clip.start`, `beatFrame(first − LEAD_S, fps)`), the
+>   first being the least beat: §6.3's beat-frame rule (the ceiling, with
+>   its 1e-6 allowance), no second rounding rule, so the lead is at most
+>   0.5 s and more than 0.5 s less a frame, clamped at the footage clip's
+>   start. **Beats** are measured from that whole frame's time, in the
+>   order given (`max(0, …)` is a float guard no input reaches), so
+>   `start + beatFrame(relative)` is the beat's own timeline frame: an
+>   element arrives ON its beat's frame (§6.3). That equals the frame the
+>   captions first show the word on only for a word on a whole
+>   centisecond: libass truncates to centiseconds and the canvas bake
+>   rounds, so a word at 2505 ms at 60 fps arrives on 151 where both
+>   caption routes show it from 150 (pinned; §6.8 asks only that the times
+>   agree). **Seconds** = `graphicSeconds` over the relative beats,
+>   unrounded. Over the template's maximum: dropped with "said over X s; a
+>   <template> card holds <max>", X rounded DOWN to 0.1 s so "over" stays
+>   true, a hyphen read as a space ("a lower third card"), the needed
+>   figure from `graphicSeconds` with the maximum set to infinity.
+>   **Duration** = max(1, round(seconds × fps)), to nearest, the store's
+>   own rule (`addGraphicClip`, `setGraphic`). Past `clip.start +
+>   clip.duration`: `CLIP_END_NOTE`. `graphicTiming` does not re-check
+>   retiming; it relies on `graphicBeats`' null.
+> - **The notes, exported**: `RETIMED_NOTE` "graphics on a speed-changed
+>   clip are not timed yet"; `CLIP_END_NOTE` "too close to the clip's end
+>   to be read" (§6.8's words, the apostrophe kept); `NOT_SHOWN_NOTE` "a
+>   word it lands on is not on this clip"; `NO_BEAT_NOTE` "no word to time
+>   it on"; and `BEAT_GAP_S`.
+> - **`tests/graphicBeats.test.ts`** (new): 35 tests at `4699660` by the
+>   fixer's run (28 at `c27b9a4`): the trimmed and the moved clip, pinned
+>   by hand (2.0 s, 3.5 s) and equal to `buildTimelineCaptions`' Dialogue
+>   start, `libassLineFrame` and `captionLineFrame`; `startMs` not `endMs`;
+>   `Word.index`; words the clip does not show, and the straddling word
+>   (1900-2100 ms, in-point 2000) on frame 30 with a lower third timed
+>   there; 160 ms spreading (1.00, 1.05, 1.30 → 1.00, 1.16, 1.32), the
+>   exact gap on 1850/2010 ms (the first version's 1300/1460 could not
+>   fail for the allowance), a quote unspread, the bars said out of item
+>   order ([1, 0] → [3, 1]); retimed refused; the lead and its clamp; the
+>   earliest beat as the first ([7.5, 4] → start 105); the template's
+>   minimum, the tail, the maximum's drop and its note rounded down (8.07
+>   s needed → "said over 8 s"); the duration to nearest both ways (24
+>   fps, 2.05 s → 49, 2.15 s → 52); the clip's end at its boundary frame;
+>   start and arrival frames by hand at 24, 25, 30 and 60 fps, a start
+>   fraction under .5 (word 1710 ms at 30 fps: 66.3 → 67, arrival 82) and
+>   the 2505 ms row.
+> - **Mutations** (each anchor counted with `matchAll`, one match; the
+>   file restored and `cmp`-identical): §6.8's own, re-run on the fixed
+>   code, each failing: the offset dropped (13 fail, "expected [ 2.5 ] to
+>   deeply equal [ 2 ]"); the offset from `clip.start` without `inPoint`
+>   (13, "expected [ 4 ]…"); `endMs` for `startMs` (21, "expected [ 2.4
+>   ]…"); 100 ms spacing (4, "expected 0.1 to be 0.16"); spreading removed
+>   (2, "expected 1.05 to be close to 1.16"); spreading applied to a quote
+>   (2, "expected 1.16 to be 1"); a retimed clip accepted (1, "expected [ 1
+>   ] to be null"); beats one frame late (21). And `4699660`'s: spread in
+>   given order ("expected [ 3, 3.16 ] to deeply equal [ 3, 1 ]"); the
+>   straddling word refused ("expected [ NaN ] to deeply equal [ 1 ]") or
+>   not clamped ("expected [ 0.9 ]…"); the window start inclusive on
+>   `endMs` ("expected 1 to be NaN"); the 1e-9 allowance removed; the start
+>   rounded to nearest ("expected 66 to be 67"); the duration by ceil and
+>   by floor (one case each); the first beat as `beats[0]`; the note's
+>   figure by round and by ceil. `c27b9a4`'s other mutations (the lead
+>   unclamped, the clip's end unchecked, the start floored, the maximum
+>   ignored, an index as an array position, the earlier beat moved) failed
+>   as its message lists. **A correction to `c27b9a4`'s record**: its
+>   "duration rounded up fails 11 cases" cannot have been that mutation
+>   (every duration there was a whole number of frames, and a critic
+>   reproduced 28 passes); the duration rule was unguarded until
+>   `4699660`.
+> - **Beyond the plan's words**: the fifth argument and `spreadBeats`
+>   exported; `graphicTiming` and its union; a word the cut lands inside
+>   timed at `clip.start`; spreading in time order with the elements'
+>   order kept; the maximum's note wording; relative beats held at 0 or
+>   above. Declined by `4699660`: a composed `timeGraphic` helper, left to
+>   piece 5, which composes the calls inside `applyGraphics`; one shared
+>   path for T2b's Keep is still open (§6.12).
+
 ### 6.9 Placement and the budget — `src/shared/graphics/place.ts`, `budget.ts`
 
 **Phase 2 · 1 day.**
@@ -12893,7 +13208,11 @@ third":
    - With no remaining third (the caption takes all three over a span that
      crosses two cuts), the graphic is dropped ("no free third").
    - **With no track**: the middle, or the top when the captions use the
-     middle (§6.9 as written).
+     middle (§6.9 as written). (2026-11-11, as built, `37d0e69`: for every
+     template but the lower third; the lower third keeps its own
+     preference, the bottom, or the top when the captions use the bottom,
+     since step 3 gives it no middle. §14's "no subject track" row said
+     "the style's third"; corrected there. The Built note below.)
 4. **The subject at onset.** `GraphicSpec.subject` = `{ clipId, box, ms }` is
    taken **once, at the graphic's onset frame**, from the sample
    `subjectBoxesAt` reads on that frame (`nearestSample`,
@@ -12938,7 +13257,9 @@ third":
 
 `place.auto` is recomputed, with the subject at onset, by `rebakeGenerated`
 on an aspect change or a reframe (§6.4 wires the call); a box you dragged
-is kept.
+is kept. (2026-11-11: **not built** by lane T3 and handed to T2b, with
+its case and its mutation; the Built note's part (d) has the three
+reasons.)
 
 **On the timeline.** Graphics sit on lanes **above the look and every card**
 (§16.7), so type is never graded and never hidden under a moment.
@@ -12978,7 +13299,8 @@ earlier one wins. A candidate is kept only when every rule holds:
    6, perS: 20 }` exists, frozen, in `src/shared/graphics/template.ts`
    beside `GRAPHIC_TEMPLATES`, built by lane T2a (`bd0fcf3`) for
    `settleGraphics`' rule 10 ahead of T3's `budget.ts`, which will read
-   it from there; §6.7's Built note.)
+   it from there; §6.7's Built note. It does, since `1a14bd4`; the Built
+   note below.)
 2. **One on screen.** Its span overlaps no kept graphic's span. A Director
    card (`COPY_RULE`, `ENDING_RULE`) counts as one: one piece of designed
    type at a time.
@@ -12986,7 +13308,12 @@ earlier one wins. A candidate is kept only when every rule holds:
    `moment.kind` is `'zoom-punch'` (`timeline.ts:290`) nor, on the footage
    clip beneath, a span between two adjacent `zoom` keys of different value
    (`KEYED_PROPERTIES`, `render/keyframes.ts:74`). A held zoom is not a
-   punch.
+   punch. (2026-11-11, as built, `ac79a1e`: this rule is worded without
+   eases, and the code has `Ease` `'hold'`, which keeps a key's value to
+   the next key and steps ON that key's frame, so after a hold key the
+   punch is that one frame, not the span; and a move counts only over the
+   frames its footage clip is on the timeline. The Built note's part
+   (c).)
 4. **The per-minute cap.** When `GRAPHICS_PER_MINUTE` is set, no 60 s window
    of the timeline holds more than that many graphics. It is null until M17
    gives it a value (§6.15). Rule 1 alone already allows at most three a
@@ -13036,8 +13363,269 @@ applied by `graphicSounds` (§6.14), not here.
   later graphic winning; an overlap allowed when the spacing passes (the
   overlap check removed); punches or zoom keys ignored; the lower third
   counted (the 30 s clip's counter is dropped).
+  (2026-11-11: both files built by lane T3, every case above but
+  `place.auto` recomputed on an aspect change with a dragged box kept,
+  and its mutation "a dragged box recomputed" (part (d) below, T2b's);
+  the budget's property runs over `specs.json` at seeded starts, and over
+  every eval fixture's settled graphics only once T4 feeds it. Phase 4's
+  hand case is §6.18's.)
 
 **Days: 1** (phase 2).
+
+> **Built 2026-11-11 (lane T3, pieces 2 and 3, §6.19).** Piece 2:
+> `216065e` (2a, `samplesOver`), `37d0e69` (2b, `place.ts`), then
+> `518a62f` after two critics; piece 3: `1a14bd4`, then `ac79a1e` after
+> two critics. Pushed as `77ac70a`, green on both runners (the status
+> block). Figures from the five messages and the build workflow's journal
+> (`wf_bd4e915e-7cc`); the code at `69e677c` is described, with a clause
+> of history where a fix changed it. **Every "beyond the plan's words"
+> item is a choice this section left open, yours to keep or overrule.**
+> - **(a) `samplesOver(project, clip, asset, canvas, from, to)`** in
+>   `reframe/freeSpace.ts`, beside `spanSamples`: clip frames, `from`
+>   inclusive, `to` exclusive, `spanSamples`' rule applied to each shot
+>   the range crosses (each sample on its export frame through
+>   `exportFrameAt`, held to its shot's frames), the samples whose frame
+>   is in the range kept, never clamped in; none in it, the sample nearest
+>   `floor((from + to − 1) / 2)`, rounded down as `spanSamples` takes a
+>   short shot's middle. Beyond the signature it reads the track itself
+>   (`subjectTrackOf`), and is empty with no track, an empty range or no
+>   sample near. `spanSamples`' body is split into two private helpers,
+>   `placedSamples` and `nearestOverlap`, with no change in behaviour (its
+>   14 cases passed before and after). `tests/freeSpace.test.ts`, 18 tests
+>   (14 before): a range inside one shot and across the cut, a range
+>   shorter than the sample step, Smart placement's per-shot answer on the
+>   same fixture by hand (0.05 stays, 0.11 moves), and since `518a62f`
+>   "from inclusive, to exclusive" ([30, 45) gives [0.03]; [30, 46) gives
+>   [0.03, 0.04]). Mutations: the range ignored, and a sample clamped into
+>   the range ("expected [ 0.01, … 0.06 ] to deeply equal [ 0.03, 0.04 ]");
+>   `s.frame < to` as `<=` ("expected [ 0.03, 0.04 ] to deeply equal [
+>   0.03 ]") and `s.frame >= from` as `>`, which left both files green
+>   until `518a62f`'s case.
+> - **(b) `graphics/place.ts`** (new). **`placeGraphic(project, clipId,
+>   startFrame, frames, template, canvas)`**, steps 1-3: the captions'
+>   thirds over the span (`captionThirdsOver`, exported: none with
+>   captions off; under Smart placement every third its lookup gives on a
+>   frame of the span, a frame no caption clip covers excluding nothing;
+>   else `styleThird`); the overlap per third `shotOverlap` of
+>   `samplesOver` on the CLIP frames of the span (`startFrame −
+>   clip.start`, pinned by `518a62f`); among `thirdPreference(template)`
+>   (exported: the lower third bottom then top, every other template
+>   middle, top, bottom) less the excluded, the first whose overlap is not
+>   over `OVERLAP_LIMIT` (Smart placement's own "at most", `chooseThird`;
+>   an exact float 0.05 cannot be built through `shotOverlap`, so the
+>   boundary is a comment, not a case); else the least covered, a tie to
+>   the earlier preferred; none remaining, null ("no free third"). Null
+>   too when the clip is gone: the caller looks it up first. **The
+>   no-track default as built**: every remaining third reads 0, so the
+>   template's first: the middle, or the top under captions in the middle,
+>   and for the lower third the bottom, or the top under captions at the
+>   bottom (the correction beside step 3). A lower third with the bottom
+>   excluded and the top covered takes the top as least covered.
+> - **`subjectAtOnset(project, clipId, startFrame, frames, template,
+>   canvas)`** (the name is this lane's): `{ subject: { clipId, box, ms }
+>   }`, `{ subject: null }`, or, for a callout only, `{ dropped }`. Read
+>   once on the onset frame from the sample `subjectBoxesAt` reads there
+>   (`shotSpans`, the shot the export shows, `sourceMsAt`,
+>   `nearestSample`), in SOURCE units, without the chin, at the sample's
+>   ms. **Not taken** (`{ subject: null }`, a callout dropped): a `motion`
+>   on the clip, or a zoom the export applies (two keys or more,
+>   `hasKeys`) whose `valueAt` is other than 1 on ANY frame of the span
+>   (so a 1.2 key before the span held into it counts, one after it does
+>   not), with `ZOOMS_UNDER_NOTE`; no track, no sample near, no usable
+>   face or the face off screen at onset, with `NO_SUBJECT_NOTE`; the clip
+>   gone, `NO_CLIP_NOTE`. **`518a62f`**: (1) **a subject not taken draws no
+>   hole**: `GraphicSpec.subject` may be `null` (`template.ts`, the
+>   `graphicTypes` pin), `targets.ts`' `subjectAt` reads `null` as no hole
+>   and never falls back, and the store's `rebakeFollowed` arm does not
+>   re-follow it; before, an absent subject made `targets.ts` take the
+>   caption track's union, so a counter over a Ken Burns motion drew a
+>   hole at { x: 378, y: 768, width: 324, … } through the zoom the rule
+>   exists to avoid. (2) **The largest face ON SCREEN**: the largest
+>   among the faces `sourceToFrame` keeps at onset, as `facesOnFrame`
+>   drops off-screen faces first; before, the largest raw face was taken,
+>   so a two-person 16:9 interview reframed to 9:16 whose larger face the
+>   crop cuts away dropped the callout. The private copy of `frameMap.ts`'
+>   `usable` is gone (`sourceToFrame` refuses an unusable box). (3) The
+>   frame shift, the zoom over the span (not the onset only) and the
+>   onset's own shot each pinned. `targets.ts` was otherwise unchanged:
+>   it already maps `spec.subject.box` through `sourceToFrame` at the
+>   graphic clip's first frame, the onset `subjectAtOnset` reads; the
+>   tests tie the two. (`frame.ts` changed only in piece 5,
+>   `graphicClipAsset`; §6.6's Built note.)
+> - **`graphicLane(project, clipId, startFrame, frames, rule)`** (the
+>   name is this lane's): `{ project, trackId }` or `{ dropped }`. The
+>   starting lane is the lowest video track above the footage clip's and
+>   every track holding an adjustment clip, a moment or a `COPY_RULE` /
+>   `ENDING_RULE` card **anywhere on the timeline** (`cardsAbove`'s
+>   reading, so one end card lifts every graphic of the ad above it);
+>   from there `stackedSlot`, which skips a locked track, and **a hidden
+>   track is skipped too** (`518a62f`, beyond the words: the export draws
+>   nothing on it, so a graphic there was placed and never seen; `laneFor`
+>   in `apply2.ts` has the same hole and is left); else a new top track.
+>   A track this adds, the starting lane when none is above or the new
+>   top, is marked `director: true` when `DIRECTOR_RULES` holds the rule,
+>   and unmarked for `'clips.graphic'`. At the track limit `{ dropped:
+>   NO_LANE_NOTE }`; the footage clip gone, `NO_CLIP_NOTE`. The same
+>   project object comes back when no track is added; the input is never
+>   edited.
+> - **The notes**, exported from `place.ts`: `NO_FREE_THIRD_NOTE` "no
+>   free third"; `NO_SUBJECT_NOTE` "no subject found to point at" (rule
+>   9's); `ZOOMS_UNDER_NOTE` "the shot zooms under it, so its target would
+>   miss"; `NO_LANE_NOTE` "no free layer above the footage and the cards"
+>   and `NO_CLIP_NOTE` "the clip it sits on is gone" (these two the
+>   builder's wording).
+> - **`tests/graphicPlace.test.ts`** (new): 22 tests at piece 5 (builder
+>   5's count; 17 at `37d0e69`): the caption's third excluded from the
+>   style and from Smart placement; the middle for steps, bars, counter,
+>   keyword, the bottom for the lower third; `OVERLAP_LIMIT` and the least
+>   covered; the subject over the span only; no free third across two
+>   cuts; the no-track default; the callout on a 1920×1080 file reframed
+>   9:16 pinned to a hand box (x 1788/9, y 576, 3072/9 × 384 px), the held
+>   frames equal; read once at onset (a moving face; a followed clip whose
+>   crop steps at a cut); the null-subject drop; Ken Burns and a zoom to
+>   1.2 against a held 1 and a zoom after the span; the lane cases (above
+>   the look and a moment, above a card, a free lane reused as the same
+>   object, a new top track marked for a Direct rule and not for
+>   `'clips.graphic'`, the track limit); and `518a62f`'s six. **Mutations**
+>   (each anchor counted, one match, three for the three
+>   `NO_SUBJECT_NOTE` sites; restored and `cmp`-clean), every one failing:
+>   the caption's third not excluded ("expected 'middle' to be 'top'");
+>   the callout at the source box unmapped ("expected 432 to be close to
+>   198.66666666666666"); the subject re-read per frame; the null-subject
+>   drop removed; the zoom check removed; a held zoom of 1 counted; the
+>   chin kept; the first face for the largest; the subject read 45 frames
+>   late; the overlap over the whole clip; the least covered replaced by
+>   the first remaining; an adjustment, a moment or a card not counted;
+>   every new track marked, or none; and `518a62f`'s M1 (the null check in
+>   `targets.ts` removed: "expected { x: 378, y: 768, width: 324, … } to
+>   be null"), M2 (the largest before the visibility check), M3 (the hidden
+>   skip), M4 (`from = startFrame`), M5 (the zoom over `k..k + 1`), M6
+>   (always shot 0), M9 (the store's null branch). M4, M5 and M6 had left
+>   the file green before `518a62f`.
+> - **(c) `graphics/budget.ts`** (new). **`applyBudget<C extends
+>   BudgetCandidate>(project, candidates, options: { perMinute?: number |
+>   null } = {}): { kept: C[]; dropped: { spec; reason }[] }`**:
+>   `BudgetCandidate` = `{ clipId` (the footage clip), `rule`, `start`,
+>   `duration` (timeline frames, `graphicTiming`'s), `spec: Pick<GraphicSpec,
+>   'data' | 'beats'> }`; generic, so `applyGraphics` and T2b's Keep get
+>   their own type back; `dropped` carries the caller's own spec object; no
+>   third is read (the budget runs before placement). Every graphic on the
+>   timeline (any rule, a screen card aside) is held first, as placed, even
+>   where a candidate's onset is earlier; the candidates follow in onset
+>   order, equal onsets in the order given. **The onset**
+>   (`onsetSeconds`, exported) is the start's time plus the LEAST beat
+>   (the start's time with none), as `run.ts`' `spaceGraphics` takes the
+>   first beat word's start; onsets compare with a 1e-6 s allowance
+>   (frames 51 and 231 at 30 fps come out 5.9999999 s apart). **The checks
+>   run in this order, the first broken the reason**: rule 1's gap (every
+>   held onset, a lower third's included, `TOO_CLOSE_REASON`); rule 2
+>   (a held graphic's frames or a `COPY_RULE` / `ENDING_RULE` card's,
+>   `ON_SCREEN_REASON`); rule 3 (a `'zoom-punch'` moment's frames, or the
+>   frames between two adjacent zoom keys of different value on its own
+>   footage clip, read through `normaliseKeys` as the renderer reads them,
+>   `zoomPunchReason` naming the EARLIEST punch under the span,
+>   `toFixed(1)`); rule 1's count (not for a lower third: fewer than
+>   max(1, ⌊seconds ÷ 20 + 1e-9⌋) held graphics that are not lower thirds
+>   with an onset over "its clip": the footage clip's span for any rule
+>   but `GRAPHIC_RULE`, and for Direct the whole ad read as
+>   `projectDuration` (`timeline.ts:1075`, the end of any clip on any
+>   track, so a music bed past the picture raises Direct's count: two 20
+>   s shots under a 120 s bed keep 4); `perClipReason`); rule 4 when the
+>   cap is set (`options.perMinute`, else `GRAPHICS_PER_MINUTE`, exported
+>   and `null`): every half-open 60 s window over onsets holding this one
+>   holds at most the cap, lower thirds counted (`perMinuteReason`). A
+>   `'screen-card'` is kept with no rule read and neither held nor
+>   counted, as a candidate or on the timeline (rule 3 included), but a
+>   candidate whose footage clip is gone is dropped with `NO_CLIP_NOTE`
+>   first, a screen card's included (`ac79a1e`). **`ac79a1e` also**: a
+>   zoom key whose ease is `'hold'` punches only on the next key's frame
+>   [next, next + 1) (`1a14bd4` read the held span as the punch and missed
+>   the jump: a counter at frames 300-360 over keys {0: 1 hold, 1500: 1.2}
+>   was dropped "over a zoom punch at 0.0 s"); a move is cut to the frames
+>   its footage clip is on the timeline, [max(a, start), min(b, clip
+>   end)), and named from the first of them, so a head trim's rebased keys
+>   never name 9.0 s for a move seen from 10.0 s, nor −2.0 s, and keys
+>   left past a tail trim punch nothing. **The reasons**, exported:
+>   `ON_SCREEN_REASON` "another graphic is on screen then" and
+>   `zoomPunchReason(s)` "over a zoom punch at 12.4 s" (§6.9's words);
+>   `TOO_CLOSE_REASON` "within 6 s of another graphic, the earlier one
+>   stays", `perClipReason('clip' | 'ad')` "at most one graphic per 20 s
+>   of clip, the earlier ones stay" ("of the ad") and `perMinuteReason(2)`
+>   "more than 2 graphics in a minute" (the builder's; the gap's differs
+>   from the validator's rule-10 note, "… is within 6 s of the one before
+>   — the earlier one stays"). `PER_MINUTE_WINDOW_S` 60. `GRAPHIC_RULE` =
+>   `'director.graphic'` was declared here first (`1a14bd4`, in
+>   `director/apply.ts`, not yet in `DIRECTOR_RULES` until `0f3f7a4`).
+>   Zoom keys are read as clip-local frames with no speed mapping (a
+>   retimed clip is refused upstream). "The footage clip beneath" is read
+>   as the candidate's own `clipId`: a zoom on B-roll over it on V2 is not
+>   seen.
+> - **`tests/graphicBudget.test.ts`** (new): 26 tests at `ac79a1e` by the
+>   fixer's run (17 at `1a14bd4`), at 30 fps with every time by hand: 6.0
+>   s kept and one frame closer dropped, the earlier winning when given
+>   second; 30 s takes 1, 40 s 2, 59.9 s 2; three 10 s shots take 3 under
+>   Clip it and 2 under Direct; the 30 s clip with a Speaker (the lower
+>   third and a counter at 8.5 s kept, one at 4.5 s dropped by the gap), a
+>   lower-third candidate kept where a counter holds the one slot (added:
+>   the plan's case alone let "the lower third counted" survive); the steps
+>   8 s long and the counter 6.5 s after it; the cards; the punch moment
+>   (12.4 s) and the zoom move (12.0 s); the cap injected (perMinute 2:
+>   onsets 1, 8, 15, 61.5 s keep a, b, d); the screen card; and since
+>   `ac79a1e` the onset by a first beat of 0, a placed graphic's whole
+>   span, the count's end (a held onset on the next shot's first frame,
+>   10.0 s, and later, 14.5 s), frames 51 and 231, the earliest of two
+>   punches, the tie-break, the hold key ([300, 360) and [1425, 1500)
+>   kept, [1500, 1575) dropped "at 50.0 s"), the rebased move (10.0 s, 0.0
+>   s, past the end ignored), a screen card on a gone clip, and the two
+>   reasons' texts. **The property** (§6.12), `assertBudgetHolds`,
+>   checked by the test's own overlap, gap and punch code, independent of
+>   `budget.ts`: 400 sets from `render/moment.ts`' `seeded` generator
+>   (20-100 s clips, punches, whips, cards, a held graphic, zoom moves and
+>   held zooms, 2-11 candidates; floors of more than 400 kept and more
+>   than 400 dropped; a first beat of 0 in about 30 % since `ac79a1e`),
+>   and **`fixtureCases()`**, the hook T4 feeds: today the 27 specs of
+>   `specs.json` at seeded starts on a 120 s clip with a punch, in five
+>   layouts. **Mutations**, all failing: the later graphic winning;
+>   rule 2 removed; cards ignored; punch moments ignored; zoom keys
+>   ignored; a held zoom a punch; the lower-third candidate counted; held
+>   lower thirds counted; the cap ignored; a screen card budgeted; Direct
+>   per footage clip; timeline graphics not held; the gap inclusive; the
+>   count rounded; a timeline screen card held; the lower third outside
+>   the gap; and `ac79a1e`'s: hold ignored, its +1 dropped, the start and
+>   end clamps dropped, the no-clip check skipped for the screen card, and
+>   the critics' Q1 (onset without the beat), Q18 (placed graphics
+>   zero-length), Q6 and Q7b (the count's end), Q5 (the 1e-6 s), Q9 (the
+>   latest punch named), Q13 (the tie-break reversed), each of which had
+>   left the file green. The first full run of `1a14bd4` failed
+>   `graphicGuards`' "nor does any other file under src/" on `!c.graphic ||
+>   c.graphic.data`; the line reads through `const spec = c.graphic`, the
+>   guard unchanged.
+> - **(d) `place.auto` is NOT recomputed in `rebakeGenerated`'s graphic
+>   arm** (`store.ts`, its comment unchanged), so neither the case
+>   "`place.auto` recomputed on an aspect change and a dragged box kept"
+>   nor the mutation "a dragged box recomputed" exists. Builder 2's three
+>   reasons, upheld by both critics: a `GraphicSpec` records which footage
+>   clip it sits over only when a subject was taken (`null` carries none),
+>   and `placeGraphic` needs that id; this section does not say what a
+>   rebake does when the recompute finds no free third or drops a
+>   callout's subject (a rebake cannot delete a placed clip, and keeping
+>   the old value is placing approximately); and recomputing the subject
+>   would break lane C's case "redraws at the new canvas after an aspect
+>   change" (`graphicStore.test`), whose spec carries a subject on a clip
+>   with no track. Handed to T2b, with the decision where the footage
+>   clip's id is stored.
+> - **Beyond the plan's words, and holes it leaves**: the names
+>   `subjectAtOnset`, `graphicLane`, `thirdPreference`,
+>   `captionThirdsOver`, `onsetSeconds`; the zoom read as the export's
+>   curve; cards counted anywhere on the timeline; a hidden track never
+>   the lane; `subject: null`; the four reasons' wording and the order of
+>   the checks; the hold reading; Direct's ad as `projectDuration`; the
+>   footage clip beneath as the candidate's own. A plan hole (recorded by
+>   `518a62f`, not fixed): under Smart placement a caption line keeps the
+>   third of the shot it STARTS in (`smart.ts`, rule 4), but
+>   `captionThirdsOver` excludes per frame and per shot, so a graphic just
+>   after a cut can take the third a line begun before the cut still
+>   holds; the fix needs the lines' start frames.
 
 ### 6.10 The baseline and the eval
 
@@ -13224,14 +13812,14 @@ render check and the census.
 | 1 | `tests/renderer/graphicCanvas.test.ts` (built 2026-10-31/11-01, `b610c91` and `1ea9a96`, 26 cases), `tests/renderer/encodePool.test.ts`'s worker cases (the same commits, 9 cases in all), `tests/graphicBoxRoute.test.ts` (built 2026-11-02, `a273729` and `fa4ddc3`, 7 cases), `tests/exportBake.test.ts`'s graphic cases (the same commits, 4, 13 in all); none was named by this index before it was written | §6.3 (lane C's three Built notes) |
 | 1 | `tests/renderer/graphicCheckPrimitives.test.ts` (built 2026-11-02, `6592a38`, 37 cases; `69c2340`, 50) and `tests/renderer/graphicCheckStrokes.test.ts` (built 2026-11-03, `0954b3d`, 20 cases; `2bb706d`, 25): the harness check's pure parts, node; `tests/graphicDrawList.test.ts`'s far-side case (`683a6f0`, 26 cases); none was named by this index before it was written | below (lane D's harness Built note); §6.3's "The box" |
 | 1-3 | `tests/graphicFrame.test.ts` (phase 1's 28 cases built 2026-10-31, `4196d43` and `0c8911f`; phase 2's built 2026-11-07/10, `f64a879`, `9e7a89e`, `712246e` and `85b59e3`, 60 cases at `e06e1c3`, §6.2's Built note) | phase 1 §6.3, phase 2 §6.2, the screen card §6.16 |
-| 1-2 | `tests/graphicStyle.test.ts`, with `tests/renderer/graphicStyleStore.test.ts` for the store's two actions (phase 1's half of both built 2026-10-28, `b965cda` and `0d603a8`; phase 2's 2026-11-10/11, `d680132`, `1a681c7` and `62f3c83`, 21 and 7 cases), and `tests/renderer/graphicsSection.test.tsx` (new, `1a681c7` and `62f3c83`, 8 cases; not named here before it was written) | §6.5 (the second half's Built note) |
-| 1-3 | `tests/renderer/graphicStore.test.ts` (phase 1's 21 cases built 2026-11-02, `a273729` and `fa4ddc3`) | phase 1 §6.3, the sounds that follow a graphic §6.14, the screen card §6.16 |
+| 1-2 | `tests/graphicStyle.test.ts`, with `tests/renderer/graphicStyleStore.test.ts` for the store's two actions (phase 1's half of both built 2026-10-28, `b965cda` and `0d603a8`; phase 2's 2026-11-10/11, `d680132`, `1a681c7` and `62f3c83`, 21 and 7 cases), and `tests/renderer/graphicsSection.test.tsx` (new, `1a681c7` and `62f3c83`, 8 cases; not named here before it was written; the switch's case by lane T3, `e8f2a1f`, 9) | §6.5 (the second half's Built note) |
+| 1-3 | `tests/renderer/graphicStore.test.ts` (phase 1's 21 cases built 2026-11-02, `a273729` and `fa4ddc3`; phase 2's built 2026-11-11 by lane T3, `518a62f`, `e8f2a1f` and `69e677c`, 31 tests) | phase 1 §6.3, the sounds that follow a graphic §6.14, the screen card §6.16 |
 | 2 | `tests/claims.test.ts`, `tests/graphicsValidator.test.ts` (the property test) (both built 2026-11-11 by lane T2a: `claims.test` from `a29e8fa` to `3b887d0`, 217 tests at `3b887d0`; `graphicsValidator` `e027bd3` and `3b887d0`, 26; the last fixer's run) | §6.7 (its Built note) |
-| 2 | `tests/directorGraphics.test.ts`, `tests/renderer/transcriptGraphics.test.tsx`, `tests/renderer/graphicPanel.test.tsx`; and `tests/graphicApply.test.ts`, the stub's (built 2026-11-06/07, `41a3db0` and `ddd1ede`, 2 cases) | §6.6 (the stub's Built note) |
+| 2 | `tests/directorGraphics.test.ts`, `tests/renderer/transcriptGraphics.test.tsx`, `tests/renderer/graphicPanel.test.tsx`; and `tests/graphicApply.test.ts`, the stub's (built 2026-11-06/07, `41a3db0` and `ddd1ede`, 2 cases), over the real body since lane T3 (2026-11-11, `0f3f7a4` and `3d070ab`, 45 tests) | §6.6 (the stub's and the real body's Built notes) |
 | 2 | `tests/graphicHolds.test.ts` (M16) (built 2026-11-10, `1871004`, 4 cases), `tests/graphicTree.test.ts` (built 2026-11-07, `35dd847` and `528986c`, 22 cases at `e06e1c3`); and, not named here before they were written, `tests/graphicTemplates.test.ts` (`cb394b5`, `528986c`, 9 cases), `tests/graphicNumbers.test.ts` (`cb394b5`, 15) and `tests/graphicSpecs.test.ts` (`8f18cc8`, `528986c`, 11) | §6.2 (its Built note) |
-| 2 | `tests/graphicBeats.test.ts` | §6.8 |
-| 2-4 | `tests/graphicPlace.test.ts`, `tests/graphicBudget.test.ts` | §6.9 (phase 3's hero case in `graphicBudget`, §6.16; phase 4's hand case in `graphicPlace`, §6.18) |
-| 2 | `tests/graphicSound.test.ts` (the sound Clear test) | §6.14 |
+| 2 | `tests/graphicBeats.test.ts` (built 2026-11-11 by lane T3, `c27b9a4` and `4699660`, 35 tests) | §6.8 (its Built note) |
+| 2-4 | `tests/graphicPlace.test.ts`, `tests/graphicBudget.test.ts` (phase 2's built 2026-11-11 by lane T3: `graphicPlace` `37d0e69`, `518a62f`, 22 tests, without the `place.auto` recompute case, T2b's; `graphicBudget` `1a14bd4`, `ac79a1e`, 26, its property over `specs.json` with `fixtureCases()` for T4); and, not named here before it was written, `tests/freeSpace.test.ts`'s `samplesOver` cases (`216065e`, `518a62f`, 18 tests in the file) | §6.9 (its Built note; phase 3's hero case in `graphicBudget`, §6.16; phase 4's hand case in `graphicPlace`, §6.18) |
+| 2 | `tests/graphicSound.test.ts` (the sound Clear test) (built 2026-11-11 by lane T3, `5c52691` … `69e677c`, 49 tests, cases (1)-(7)) | §6.14 (its Built note) |
 | 3 | `tests/graphicCompositor.test.ts` | §6.16 |
 | spike, 4 | `tests/handsEvents.test.ts`, `tests/handsSmooth.test.ts`, `tests/handsAnchor.test.ts`, `tests/sidecar/test_hands.py`, `tests/integration/hands.int.test.ts` | §6.18 (their first versions, §6.17) |
 | 4 | `tests/renderer/pointingToggle.test.tsx` (added 2026-10-21 by §6.18) | §6.18 |
@@ -13275,6 +13863,32 @@ phase-2 cases (T3), and the harness, `graphic.int` and render-check
 halves (T4). (The paragraph above, written before T2a, lists
 `claims.test` and `graphicsValidator` as not built; that was its date's
 state.)
+
+**Phase 2's half, lane T3, 2026-11-11.** Built and pushed as `77ac70a`,
+green on both runners: `tests/graphicBeats.test.ts` (35 tests),
+`tests/graphicPlace.test.ts` (22), `tests/graphicBudget.test.ts` (26),
+`tests/graphicSound.test.ts` (49), `tests/graphicApply.test.ts` over the
+real body (45), `tests/renderer/graphicStore.test.ts`'s phase-2 cases (31
+in the file), `tests/freeSpace.test.ts`'s `samplesOver` cases (18 in the
+file) and `tests/renderer/graphicsSection.test.tsx`'s switch case (9),
+each count the last builder's or fixer's run that touched it. Every
+mutation §6.8, §6.9 and §6.14 name for them was run and fails, mutation
+by mutation in their Built notes with the failure texts: §6.8's eight,
+§6.9's placement six (the caption's third, the callout unmapped, the
+subject re-read, the null-subject drop, the zoom check; phase 4's hand
+box is §6.18's) and budget four (the later winning, the overlap check,
+punches or zoom keys, the lower third counted), §6.14's table and the
+store's two arms. **Not built**: §6.9's "a dragged box recomputed" with
+its case (`place.auto` is not recomputed; T2b); the budget property over
+every fixture's settled graphics (`fixtureCases()` feeds `specs.json` at
+seeded starts until T4 wires the fixtures); `directorGraphics`,
+`transcriptGraphics`, `graphicPanel` (T2b); the harness, `graphic.int`
+and render-check halves (T4). Survivors recorded, not worked round: three
+of `clearGraphics`' guards are equivalent mutants today (§6.14's Built
+note); the graphic clip's `seed` is unpinned (`seed: 0` survives, §6.6's
+Built note). (The two paragraphs above list `graphicBeats`,
+`graphicPlace`, `graphicBudget`, `graphicSound` and `graphicStore`'s
+phase-2 cases as not built; that was their date's state.)
 
 #### Phase 0's cases
 
@@ -13813,7 +14427,9 @@ is absent (only §6.20's two Noto faces and their licences are tracked under
   middle third and captions at the bottom. Read: **the frame of each beat's
   word is white, and the frame before is not**; the box's centre sits in
   the third §6.9 chose (hand-derived, as `captionsFree.int`'s `EXPECTED`); a
-  no-track case keeps the style's third. A sound case: `graphicSounds`
+  no-track case keeps the style's third (2026-11-11: §6.9 step 3's
+  no-track default, as `placeGraphic` builds it, `37d0e69`: the template's
+  first third the captions leave). A sound case: `graphicSounds`
   places a stand-in tick on the counter's beat: a 20 ms 1 kHz tone the
   test makes (CI has no library), handed in as a one-entry `SoundPack`
   whose `SoundFile` is `{ id, name: 'clock_tick.wav', file: <the tone>,
@@ -14023,7 +14639,13 @@ text is each owning section's. (2026-11-11: OUTPUT's "Graphics", the seven
 preset rows and "Accent colour" are in, with the counts a second style
 picker in OUTPUT changes and its "None", read on screen with 0 missing;
 §6.5's second Built note. "Graphic sounds" and the rest wait on their
-lanes.)
+lanes.) (2026-11-11, lane T3: "Graphic sounds" is in, home `output`,
+count 1, reasoned from the code by `e8f2a1f` and read on screen by the
+session at `69e677c`: 892 rows checked, 0 missing, 8 skipped, one element
+with the exact text, a span inside the `role="switch"` button,
+`aria-checked="true"` on a fresh project; `8db943a` the row's note.
+§6.14's Built note. The Transcript tile's rows and the dock's are
+T2b's.)
 
 ### 6.12 Exit — by phase
 
@@ -14326,7 +14948,7 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
   - the beam's loop 5.5 s (`DURATIONS.loop`) where §6.2 says 5 s
     (`templates/steps.ts`);
   - the stub's problem, path `'$'` and its wording (`graphics/apply.ts`;
-    T3 replaces it);
+    T3 replaces it) (2026-11-11: replaced, `0f3f7a4`; the stub is gone);
   - a code-mixed Hindi or Telugu stretch that says "2 parts" nests, since
     `treeParents` carries no language (`tree.ts`; whether T2 passes one
     and forces flat, `528986c`);
@@ -14451,6 +15073,166 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
   to', a correction in the next clause, Telugu verb endings). The tree's
   item and M16 stand as the paragraph above says. Everything else there
   is still ahead.
+
+- **Phase 2's state, lane T3, 2026-11-11.** Built and pushed: lane T3
+  (§6.8's, §6.9's, §6.6's real-body and §6.14's Built notes), `c27b9a4` …
+  `8db943a`, fourteen commits (thirteen by the build workflow, six pieces
+  each read by two critics before its fixer, and `8db943a`, the census
+  row's note), pushed with the T2a record as `77ac70a`, green on both
+  runners (run 43109884716, `windows-latest` and `macos-15`, no
+  annotation; the installer job skipped; the job logs need a sign-in, so
+  the runners' own test totals are not known). The suite at `69e677c` on
+  the Mac: typecheck 0; 338 files passed and 5 skipped (343), 5171 tests
+  passed and 64 skipped (5235), 236.47 s (read by the session to a file,
+  `$?` read); `npm run build` 0 by the last fixer. Against `3b887d0`'s 334
+  files and 4981 tests passed, the lane added 4 test files and 190 passed
+  tests. Harness census at `69e677c`: 892 rows checked, 0 missing, 8
+  skipped, "Graphic sounds" among them with its count of 1. `applyGraphics`
+  is real and its only callers are tests, so nothing in the app makes a
+  graphic from speech (the status block). Not built: T2b and T4. **Of the
+  bar above**, the lane carries: **the sound Clear test**, whose own
+  words are met by the build (its three cases, each named, and four more;
+  with graphic sounds tagged `SOUND_RULE` case (1) fails; §6.14's Built
+  note); `graphicBudget`'s property, which exists, is green and is
+  mutation-checked, but runs over `specs.json`'s 27 specs at seeded
+  starts, not "every fixture's" settled graphics, so that item is **not
+  met** until T4 feeds `fixtureCases()`; and the code M17 and M18 will
+  set: `GRAPHICS_PER_MINUTE` is null and injectable, `GRAPHIC_SOUND_CAP`
+  3 and `GRAPHIC_SOUND_DB` (−24, −26) are proposals, neither measurement
+  is recorded, so neither item is met. Everything else above is still
+  ahead.
+  **Still yours, from lane T3** (each from a commit's "Open, yours", a
+  builder's open list or a fixer's declined list; every other "beyond the
+  plan's words" choice is in the four Built notes, each yours to keep or
+  overrule):
+  - Timing (§6.8):
+    - a held-frame clip (`Clip.hold`, a freeze) is not refused: §6.8
+      names only speed and a ramp, and the window then holds words that
+      are not heard; the J-cut twin's answer would settle both
+      (`beats.ts`);
+    - an explicit `speed: 1` is refused like any speed, as the J-cut's
+      test is; the store never stores it (`beats.ts`, `apply2.ts:248`);
+    - a word index that names no word, or a word the clip shows no part
+      of, drops the graphic ("a word it lands on is not on this clip");
+      a word the cut lands inside beats on the clip's first frame
+      (`beats.ts`, `4699660`);
+    - the 1e-6 window between `beatFrame` and `progress` is unchanged
+      (`frame.ts`, `BEAT_FRAME_ALLOWANCE`'s note; from phase 1).
+  - Placement and the budget (§6.9):
+    - `place.auto` is not recomputed on an aspect change or a reframe;
+      handed to T2b (below), and what a rebake does when the recompute
+      finds no free third or drops a callout's subject is unworded, so
+      yours (`store.ts` `rebakeGenerated`, `place.ts`);
+    - a "lower third" lands at the TOP when the captions are at the
+      bottom: §6.9 as worded, for your eye (`place.ts`,
+      `thirdPreference`);
+    - whether a lower third counts toward `GRAPHICS_PER_MINUTE` (built
+      as counted), and that rule 4 counts onsets only (a graphic running
+      into a window from before it is not counted): both matter only once
+      M17 sets the cap (`budget.ts`);
+    - the wording of the gap, count and per-minute reasons is the
+      builder's; the gap's differs from the validator's rule-10 note
+      ("… is within 6 s of the one before — the earlier one stays"), and
+      "the earlier one stays" is untrue when a placed graphic later than
+      the candidate holds (`budget.ts`, `director/run.ts`);
+    - Direct's "whole ad" for the per-20 s count is `projectDuration`, so
+      a music bed past the picture raises it; a zoom move on B-roll on V2
+      over the footage clip is not seen by rule 3; zoom keys are read as
+      clip-local frames with no speed mapping (a Keep on a retimed clip
+      would read them unmapped): the builder's readings (`budget.ts`);
+    - Clip it's and the tile's graphics lane is unmarked, so Clear
+      graphics leaves an emptied graphics video track in place
+      (`place.ts`, `apply.ts`);
+    - one end card anywhere on the timeline lifts every graphic of the ad
+      above it (`cardsAbove`'s reading), and a track added as the starting
+      lane is marked `director: true` by the same rule as a new top track
+      (`place.ts`, `graphicLane`);
+    - a hidden track is never the lane (beyond the words); `laneFor` in
+      `apply2.ts` has the same hole and is left (`place.ts`, `apply2.ts`);
+    - a plan hole: under Smart placement a caption line keeps the third
+      of the shot it starts in, but placement excludes per frame and per
+      shot, so a graphic just after a cut can sit under a line begun
+      before it; the fix needs the lines' start frames (`place.ts`,
+      `captionThirdsOver`; `smart.ts`).
+  - Sound (§6.14):
+    - a whoosh whose move has no fastest frame on the clip (a callout
+      with beat 0, a move wholly outside the clip) is dropped without a
+      note (`sound.ts`);
+    - two graphics with the same onset on one footage clip each place a
+      tick on one frame, on two lanes, double the level; the budget's
+      spacing likely makes it unreachable, nothing guards it (`sound.ts`);
+    - a trim (head or tail), ripple delete and close gap do not move or
+      re-place a graphic's sounds: a head trim moves the beats
+      (`graphicTrimmed`) and a tail trim can leave a sound past the
+      graphic's end (`store.ts`);
+    - `removeClip`, Delete and `setGraphicSounds` do not re-place the
+      other graphics' sounds on that footage clip, so a sound the removed
+      graphic had pushed past the cap stays out until Find again or the
+      switch is cycled (`apply.ts`, `resoundAfterClear`'s case);
+    - under `energetic` one bars or steps card fills the cap of 3 with
+      its title's and first row's whooshes and a tick; `GRAPHIC_SOUND_CAP`
+      and `GRAPHIC_SOUND_DB` are proposals until M18 (`sound.ts`);
+    - a graphic of yours (made by hand) on a footage clip with an app
+      graphic gets sounds under that app run's rule, which its Clear then
+      takes; which rule depends on the onset-order sort, and an edit of
+      the app graphic sounds yours; a footage clip holding only your
+      graphics gets none, from `resoundAfterClear` and from
+      `setGraphicSounds(true)` alike, where §6.14 says "every graphic", so
+      off then on is not an identity for yours (`sound.ts`, `apply.ts`);
+    - followers on a locked audio track are still shifted or taken, while
+      placement refuses a locked lane (`apply.ts`);
+    - a graphic pasted or duplicated with its own sound: the copy's sound
+      loses `forGraphic` (as §6.14 says) and keeps its `generatedBy`, so it
+      does not follow the copy and its rule's Clear still takes it; a
+      pasted graphic alone gets no sounds (`edit/recipes.ts`, `store.ts`);
+    - `moveClip` shifts sounds without a lane check, so a shifted sound
+      can overlap another clip on its audio track, and a graphic moved
+      onto another footage clip keeps its sounds there, uncapped by that
+      clip's count (`apply.ts`, `followGraphicMoves`);
+    - with no library, a `setGraphic` of any field (text too) takes the
+      graphic's sounds; and `setGraphic` discards `resoundGraphic`'s notes,
+      so a sound dropped past a shortened graphic's end goes without a
+      word (`apply.ts`, `store.ts`);
+    - a sound you trimmed at its head and left on exactly frame 0 gets
+      its head back on its graphic's later move: the code cannot tell it
+      from a sound the drag cut (`apply.ts`, `followGraphicMoves`).
+  - Tests:
+    - the graphic clip's `seed` (`momentSeed(start, landing index)`) is
+      unpinned: `seed: 0` survives (`tests/graphicApply.test.ts`);
+    - three of `clearGraphics`' guards are equivalent mutants today, the
+      `forGraphic` clause, the "Graphic sounds" name check and the
+      `!t.director` check: second guards, unguarded by any test; nor
+      have `footageOf`'s preference order and the Clip-it lane's
+      `!t.director` guard a case (`apply.ts`, `sound.ts`);
+    - whole-list assertions on hand-built fixtures in `graphicSound.test`
+      and `graphicStore.test` were kept on purpose (the whole list is what
+      catches an extra removal), and would break if a later lane rightly
+      adds a clip or asset to those fixtures;
+    - the lower thirds land before the kept graphics, which matters only
+      on a tie within 6 s; not pinned (`apply.ts`).
+
+  **For T2b, not yours** (recorded so they are not lost): the per-clip
+  Clear for Find again (`clearGraphics` is project-wide); a helper that
+  lands one `GraphicProposal` for Keep (budget, `placeGraphic`,
+  `subjectAtOnset`, `graphicLane`, then `resoundGraphic`) and returns the
+  refusal (a proposal keeps no start or duration, and the candidate's
+  `why`, `bound` and `source` are lost); `dropGraphic` as
+  `removeWithFollowers` then `resoundAfterClear` in one update; the
+  store's `clearGraphics()` and Direct's Clear running
+  `resoundAfterClear` and showing `CLEAR_GRAPHICS_NOTE`; `findGraphics`
+  as `applyGraphics(project, kept, covered, rule, { fps, newId, sounds:
+  soundPackFor(…) })` then `rebakeGraphic` per clip id; `setSpeaker`; the
+  lower third's Role pre-fill (T3 leaves it ''); `place.auto` recomputed
+  in `rebakeGenerated` with its case and the mutation "a dragged box
+  recomputed", once the footage clip's id is stored for a spec without
+  a subject; a removed footage clip leaves its proposals behind;
+  structured drops (they come back only as `Problem` text, which
+  `decisionForGraphics` will want structured).
+  **For T4, not yours**: `fixtureCases()` in
+  `tests/graphicBudget.test.ts` is the hook for the eval fixtures (each
+  fixture's project and settled graphics, through `graphicBeats` and
+  `graphicTiming`, into `assertBudgetHolds`); the eval will want drops
+  structured too.
 
 **The spike's gate** (§16.56; the spike is §6.17). Read from `EFFECTS.md`
 §62, which holds H1-H10, H12 and H13 with their commands, machines and
@@ -15034,6 +15816,283 @@ graphics land silent"), as the Director's sound design does
 **Days: 1.5** (phase 2): `sound.ts`, `apply.ts`'s `clearGraphics` and the
 sweep, the store's follow-on edits, the switch and the tests.
 
+> **Built 2026-11-11 (lane T3, pieces 4, 5 and 6, §6.19).** Piece 4:
+> `5c52691`, then `21d316d` after two critics; piece 5's sound half (the
+> sweep, `clearGraphics`, `resoundAfterClear`): `0f3f7a4`, then
+> `3d070ab`; piece 6: `e8f2a1f`, then `69e677c`; then `8db943a`, the
+> census row read on screen. Pushed as `77ac70a`, green on both runners
+> (the status block). Figures from the messages and the build workflow's
+> journal (`wf_bd4e915e-7cc`); the code at `69e677c` is described, with a
+> clause of history where a fix changed it. **Every "beyond the plan's
+> words" item is a choice this section left open, yours to keep or
+> overrule.**
+> - **`graphics/sound.ts`** (new). `GRAPHIC_SOUND_FILES` exactly as
+>   above, frozen; all five names verified as `SOUND_ROLES` entries with
+>   this section's figures (`clock_tick.wav` 0.08 s, peak 0.005 s,
+>   `soundRoles.ts:46`; the whooshes 0.26-0.65 s, peaks in the middle
+>   third); no finding. `GRAPHIC_SOUND_CAP` 3; `GRAPHIC_SOUND_DB` { tick:
+>   −24, whoosh: −26 }; `graphicSoundGain(key, peakDb)` = min(`MAX_SOUND_GAIN`,
+>   10^((level − peakDb) ÷ 20)); `graphicSoundFiles(pack)` the pack
+>   filtered BY NAME in the list's own order (`pickSound`'s index without
+>   its longest-first sort); `GRAPHIC_SOUND_LANE_NAME` "Graphic sounds";
+>   `NO_SOUND_LIBRARY_NOTE` this section's text; `noSoundFileNote(key)`
+>   "no whoosh in the sound library — that sound is not placed" (the
+>   builder's, for a library with one key's files and not the other's,
+>   where "no sound library is installed" would be false).
+>   - **The cues** (`graphicSoundCues`): the restrained table as written;
+>     under `energetic` a tick on every beat and a whoosh on the fastest
+>     frame of each stroke and entrance as the drawers run them
+>     (`counter.ts:80`, `ring.ts:95`, `bars.ts:96`/`:106`,
+>     `steps.ts:167`/`:192`/`:221`, `keyword.ts:85`/`:114`,
+>     `callout.ts:162`/`:171`), and since `21d316d` the ring's arc
+>     (`ring.ts:98`) as a stroke when its value reads as a number above 0;
+>     the keyword's staggered word entrances sit inside its card's and are
+>     not counted; quote, lower third and screen card stay silent under
+>     `energetic` too; two cues of one key on one frame are one. A tick's
+>     peak frame is the beat frame, `clip.start + beatFrame(beat)` (§6.3's
+>     ceiling). **The fastest frame** (`fastestFrame`): the local frame in
+>     [1, frames − 1] whose `progress` (the drawer's own call) changes most
+>     INTO it from the frame before, frame 0 excluded, the earliest on a
+>     tie within `TIE` = 1e-9 (`21d316d`: under a linear ease, which the
+>     `motion.ease` override can set, float noise put a callout's whoosh on
+>     local frame 12 where the first whole step ends on 4); null when
+>     nothing changes, so never a held frame.
+>   - **`graphicSounds(project, clip, spec, rule, pack, options?: { newId
+>     })`**: `clip` is the GRAPHIC clip (its id the `forGraphic`, its start
+>     what `spec.beats` count from; beats are clip-local with `inPoint` 0,
+>     as `graphicTrimmed` keeps it). Returns the plan's `{ clips, assets }`
+>     and, beyond its words, `tracks` (the new lanes, to append in order;
+>     `addTrack` regroups video then audio, so appending matches only when
+>     the tracks already are, which the doc comment says), `notes` and
+>     `removed`. **Its unit is the footage clip** (`21d316d`): it places
+>     afresh the sounds of EVERY graphic on `clip`'s footage clip
+>     (`footageOf`: of the video clips that draw nothing themselves and are
+>     no adjustment layer, covering the graphic's first frame, the one
+>     `spec.subject` names, else one of `spec.grounding`'s asset, else the
+>     bottom-most; a graphic over none is counted alone), each under its
+>     own `generatedBy.rule` (the call's rule for `clip` and for a graphic
+>     with none), reads the project without their current sounds, and
+>     returns those sounds' ids in `removed` for the caller to take off.
+>     **The cap**: the cues whose key has a file, in onset order (frame, a
+>     tick before a whoosh on one frame, then the graphic's id), the first
+>     `GRAPHIC_SOUND_CAP` kept; the file is the cue's rank among the kept
+>     cues of its key, modulo the files. So the result is a function of
+>     the footage clip's graphics: Find again, `setGraphic` and
+>     `setGraphicSounds(true)` leave the same sounds, in any call order,
+>     and one graphic placed twice leaves one set. (`5c52691` placed only
+>     `clip`'s own sounds, so a Direct sound placed first was never counted
+>     or removed: Direct's keyword at 900, then Clip-it keywords at 300,
+>     600, 700, left 4 sounds on the footage clip against 3 afresh.)
+>     **Each sound**: its file's peak `min(fileFrames − 1, round(peakSeconds
+>     × fps))` frames before the cue's frame, rounded to nearest as
+>     `placeSounds` rounds; started part-way in (`inPoint`) before frame 0;
+>     the whole file but never past its graphic clip's end (`placeSounds`
+>     stops at the ad's end; the plan is silent here), and dropped with
+>     "the <key> on "<field>" falls after the graphic ends — not placed"
+>     when its peak would fall at or after it; on `graphicSoundLane`'s lane
+>     for its graphic's rule, or dropped with "no free audio track for the
+>     <key> on "<field>" — not placed" at the track limit; at
+>     `graphicSoundGain`; `generatedBy` { rule, reason `<key> on "<field>" ·
+>     <file>` }; a file in the pool under the same path reused (no asset,
+>     no `broughtBy`), else an asset with `broughtBy` the rule of the
+>     graphic that first needs it. With `Project.graphics.sound` false:
+>     nothing, no note. With no file for either key: nothing placed,
+>     nothing removed, `NO_SOUND_LIBRARY_NOTE`. Notes come back per call;
+>     callers dedupe them.
+>   - **The two lanes** (`graphicSoundLane(project, rule, start, duration,
+>     placed)`, written as `apply2.ts`' `soundLaneFor`): `GRAPHIC_RULE`, a
+>     free, unlocked audio track marked `director`, else a new one named
+>     `SOUND_LANE_NAME` and marked; any other rule, a free, unlocked,
+>     unmarked track named "Graphic sounds", else a new one so named, never
+>     the Director's. "Free" counts the sounds already placed in this call
+>     (three overlapping whooshes of one energetic tree go on two lanes).
+>     Null at the track limit.
+>   - **Line references.** The builder found this section's figure for
+>     the peak alignment out of date and wrote the current one in
+>     `sound.ts`' comments: `placeSounds` lines peaks up at
+>     `director/sound.ts:113-130` (this section says `:112-136`);
+>     `pickSound` is at `:75-80`, as this section says.
+> - **The sweep and `clearGraphics`** (`0f3f7a4`). `GRAPHIC_RULE` is in
+>   `DIRECTOR_RULES`; `clearDirector`'s `brought` set is `a.broughtBy !==
+>   undefined`, still limited to assets of removed clips that no survivor
+>   uses; it filters `graphicProposals` by `DIRECTOR_RULES` and no longer
+>   returns early when only Direct's proposals are there; its drawn-asset
+>   filter already read `drawsItself` (`SELF_DRAWN_FIELDS` holds
+>   `graphic`), unchanged. **`clearGraphics(project)`** takes every
+>   `CLIPS_GRAPHIC_RULE` clip and every clip whose `forGraphic` is one of
+>   its graphics; of their assets, each drawn one (`drawsItself`) or with a
+>   `broughtBy`, that no survivor uses (an import of yours stays); the
+>   rule's proposals; and an audio track named "Graphic sounds", not
+>   marked `director`, **only when this Clear emptied it** (narrower than
+>   `clearDirector`'s any empty director track: the track is unmarked, and
+>   a user's track may share the name; a project keeps a track of each
+>   kind it had). The graphics' own video lane is unmarked (§6.9) and
+>   stays. The same project comes back when there is nothing to take.
+>   `CLEAR_GRAPHICS_NOTE` "Direct's graphics stay; Direct's Clear takes
+>   them" is exported for T2b's store action to show.
+> - **`resoundAfterClear(before, after, sounds, { newId })`** (`3d070ab`,
+>   beyond the words). The cap is per footage clip over every graphic on
+>   it, so one rule's run can push another rule's graphic's sounds out, and
+>   that rule's Clear then leaves the other's graphic silent: a Clip-it run
+>   over a Direct keyword took its three slots, and Clear graphics left the
+>   keyword with 0 sounds (3 before); Direct's Clear does the mirror. It
+>   re-places, through `graphicSounds`, the sounds of every footage clip a
+>   Clear took a graphic from that still holds a graphic of an app rule
+>   (`generatedBy` set); a footage clip left with only graphics of yours is
+>   untouched. The store's `clearGraphics()` and Direct's Clear are to call
+>   it inside their own undo step (T2b); nothing calls it yet.
+> - **A graphic's sounds follow it** (`e8f2a1f`, `69e677c`; the pure half
+>   in `graphics/apply.ts`, so T2b's `dropGraphic` and `keepGraphic` call
+>   the same code; a follower is matched by `forGraphic`, never by time):
+>   - **`graphicFollowers(project, ids)`**: the clips whose `forGraphic` is
+>     one of `ids`.
+>   - **`removeWithFollowers(project, ids, removeClips?)`** (`removeClip`;
+>     `deleteSelection` and `cutSelection` pass `removeMany`): the clips,
+>     every follower, and of the followers' files those the app brought
+>     that no survivor uses; a graphic's own drawn asset stays, as
+>     `removeClip` has always left a removed clip's asset. **`69e677c`**:
+>     the followers include those in `ids` themselves, so a graphic
+>     selected with its own sound (a marquee) and deleted or cut takes the
+>     file the sound brought; before, that file stayed in the pool with no
+>     clip, which neither Clear could take later.
+>   - **`followGraphicMoves(before, after, moving)`** (`moveClip`,
+>     `moveSelectionTo`, `nudgeSelection`): each follower not itself in the
+>     move shifted by its graphic's own shift. A follower shifted before
+>     frame 0 starts on 0 part-way into its file (`inPoint` up, `duration`
+>     down), so its peak stays on its frame; one with nothing left after 0
+>     is taken with its brought file when unused. **`69e677c`**: a follower
+>     standing on frame 0 with `inPoint` > 0 gets its head back on a later
+>     positive shift, up to the frames cut, since the timeline's drag calls
+>     `moveSelectionTo` on every pointer move: a drag to 0 and back had
+>     turned a whoosh's 27/0/8 into 30/3/5 for good. (A sound you trimmed
+>     at its head and left on exactly frame 0 gets its head back too: the
+>     code cannot tell the two apart.)
+>   - **`silenceGraphics(project)`** (`setGraphicSounds(false)`): every
+>     clip with a `forGraphic` off, the files they stood on that the app
+>     brought and no survivor uses, `Project.graphics.sound` false (the
+>     `clean` preset when the project had no settings); the lanes stay.
+>   - **`soundAllGraphics(project, pack, { newId })`**
+>     (`setGraphicSounds(true)`): `sound` true, and one `graphicSounds`
+>     call per footage clip that holds an APP graphic, in onset order (and
+>     one per such graphic over no footage), so the cap is afresh per
+>     footage clip and each graphic keeps its rule and lane. A footage clip
+>     holding only graphics of yours gets none (§6.14 says "every
+>     graphic"; the builder took `resoundAfterClear`'s rule). Already on:
+>     the same project, no undo step.
+>   - **`resoundGraphic(project, graphicId, pack, { newId })`**
+>     (`setGraphic`, and T2b's `keepGraphic`): the graphic's sounds placed
+>     again through `graphicSounds`, under its own rule; a graphic of yours
+>     under the rule of the earliest app graphic on its footage clip, and
+>     untouched when there is none. **`69e677c`**: with no library, the
+>     edited graphic's own sounds (and their brought files when unused) are
+>     taken, with `NO_SOUND_LIBRARY_NOTE`, since they stood on its old
+>     beats; before, a beat edit left the tick on the old frame (78 with
+>     the beat on 90). Any field's edit does this with no library.
+>   - **The store** (`src/renderer/src/store.ts`): `removeClip` through
+>     `removeWithFollowers`; `moveClip` and `moveSelectionTo` through
+>     `followGraphicMoves` inside their own update, one undo step; beyond
+>     the plan, `deleteSelection` and `cutSelection` (the Delete key, the
+>     menu's Delete and Cut) through `removeWithFollowers` and
+>     `nudgeSelection` (the arrows) through `followGraphicMoves`, since the
+>     timeline's Delete goes through `deleteSelection`, so a deleted graphic
+>     would have left its sounds; `setGraphic` re-places through
+>     `resoundGraphic` in its one update over `soundPackFor` (its notes not
+>     shown, so a panel edit does not repeat them); `pasteClipboard`'s copy
+>     (`edit/recipes.ts`) sets `forGraphic` undefined (it keeps its
+>     `generatedBy`, so its rule's Clear still takes it).
+>   - **`setGraphicSounds(on)`**: one update, one undo step: `false`
+>     through `silenceGraphics`; `true` through `soundAllGraphics` over
+>     `soundPackFor(catalog, root)`, the notes shown as info notices.
+>   - **The switch**: `OutputStrip.tsx`'s `GraphicSoundsToggle`, its text
+>     the exported `GRAPHIC_SOUNDS` "Graphic sounds", between the style
+>     rows and the sample tile in the Graphics section, the Smart placement
+>     switch's markup (`role="switch"`, `aria-checked`), on when
+>     `Project.graphics.sound` is absent; a press calls `setGraphicSounds`
+>     with the other value.
+> - **The tests.** **`tests/graphicSound.test.ts`** (new): 49 tests at
+>   `69e677c` by the last fixer's run (18 at `5c52691`, 29 at `21d316d`,
+>   43 at `e8f2a1f`). Placement: the files; rule, `forGraphic` and the beat
+>   frame (the counter's tick 60 + ceil(0.6 × 30) = 78); the peak at 120
+>   fps (131); a callout's whoosh; the restrained table and the energetic
+>   moves; the cap and the cap counting sounds; both tick files; no
+>   repeats; the gain capped (6.31× written as 2); reuse; the lanes; sound
+>   false; no library; ticks only. After the critics: the cap on Find
+>   again equal to afresh; linear ease frames 4 and 13, whoosh@304; a held
+>   move; an energetic tree's [[297, 8], [302, 11], [305, 9]] on two
+>   lanes; a counter at frame 0 [0, 5, 3]; the graphic-end clamp [78, 1]
+>   and drop; the track limit at 12 tracks; a locked lane; the ring's arc;
+>   the same-frame merge; a tick before a whoosh. **The sound Clear test**,
+>   each case named as numbered here: "(1) Direct's Clear leaves a Clip-it
+>   graphic's sound clip and its file"; "(2) Clear graphics removes them:
+>   the graphic, its drawn asset, its sound and its file"; "(3) Direct's
+>   Clear removes a Direct graphic's sound and its file"; "(4) the reused
+>   file …" and "(4), the other way …" (`3d070ab`), each leaving no orphan;
+>   "(5) a sound you imported, reused, survives both Clears" (with a
+>   `SOUND_RULE` clip on the import since `3d070ab`); "(6) Drop takes
+>   exactly its graphic's sounds: matched by forGraphic, never by time,
+>   with the file it brought", "(6) Drop sweeps only its sounds' brought
+>   files …" and "(6) a graphic dropped together with its own sound (a
+>   marquee) …" (`69e677c`); "(7) a pasted sound loses forGraphic …". And
+>   the pure half: `followGraphicMoves`, the trim at 0, the wholly-before-0
+>   drop, the head given back (27/0/8, 0/3/5, 27/0/8, and 0/1/7 part
+>   way), `silenceGraphics`, `soundAllGraphics`, `resoundGraphic` (318 then
+>   330 under Direct's rule for a graphic of yours; no library).
+>   **`tests/renderer/graphicStore.test.ts`, phase 2's cases**: 31 tests
+>   at `69e677c` (21 before): `removeClip` twice (its sounds and nothing
+>   else; the last graphic on a brought file takes the file), `moveClip`,
+>   `moveSelectionTo` (a sound in the move shifted once), Delete, Cut and
+>   the nudge, the marquee Delete, the paste, `setGraphicSounds` false
+>   then true with and without a library, `setGraphic` re-placing and with
+>   no library, each proving its undo (`undoesTo` over the whole project).
+>   **`tests/renderer/graphicsSection.test.tsx`**: 9 tests (8 before), the
+>   switch. Whole-list assertions on hand-built fixtures were kept on
+>   purpose: the whole list is what catches an extra removal; the new
+>   cases assert membership.
+> - **The mutation table above, every row run**, each failing: tagged
+>   `SOUND_RULE`, case (1) ("expected { rule: 'director.sound', …(1) } to
+>   deeply equal { rule: 'clips.graphic', …(1) }"); `clearGraphics`
+>   leaving the sounds, case (2) ("expected { id: 'graphic-sound-5', …(10)
+>   } to be undefined"); the sweep on `SOUND_RULE` alone, case (3); on
+>   `SOUND_RULE` and `GRAPHIC_RULE` only, case (4) alone; Drop by time,
+>   case (6) ("expected [ 'ds', 'graphic-sound-5' ] to deeply equal [
+>   'graphic-sound-5' ]") and Drop leaving the sound, (6) and (7); the cap
+>   ignored (4 cases, "expected [ 1220 ] to deeply equal []") or counted per
+>   project ("expected [] to deeply equal [ 3320 ]"); the tick by role (10
+>   cases, "expected [ [ 101, 72 ] ] to deeply equal [ [ 131, 10 ] ]").
+>   And the store's: the remove arm dropped ("expected [ 'shot', 's1', 'g2',
+>   's2', …(1) ] to deeply equal [ 'shot', 'g2', 's2', 'mine-clip' ]"), the
+>   move arms dropped ("expected 78 to be 138", "… 118"). Beyond the
+>   table, each failing: the peak not subtracted, the gain uncapped, the
+>   reused file given a second asset, the whoosh on the beat, either lane
+>   rule broken, whooshes longest first, energetic read as restrained,
+>   the switch ignored, each note dropped, the file index per graphic;
+>   `21d316d`'s M1-M12 (the builder's own-only cap, no tie tolerance, a
+>   held frame a candidate, the lane without this call's sounds, no clamp
+>   at 0 or at the graphic's end, no track-limit check, a locked lane, no
+>   merge, the tie order, the ring arc and its guard), each of the second
+>   critic's five green before it; `0f3f7a4`'s C2-C12 (the drawn asset,
+>   `GRAPHIC_RULE` graphics taken, either Clear leaving its proposals, the
+>   emptied track left, a user's "Graphic sounds" track taken,
+>   `GRAPHIC_RULE` out of `DIRECTOR_RULES`, the early return) and
+>   `3d070ab`'s Y5 and Y3; `e8f2a1f`'s S1-S19 (S7 Drop by time, S11 one
+>   pick for every footage clip, S12 a footage clip of only yours sounded,
+>   S13 the shift clamped, S14 and S15 the nudge and Delete arms, S16 and
+>   S17 the switch) and `69e677c`'s M1-M3, O1-O4 and O8 (Cut). **Second
+>   guards, equivalent today and unguarded**: `clearGraphics`' `forGraphic`
+>   clause, its "Graphic sounds" name check and its `!t.director` check
+>   (every sound carries its graphic's rule and sits on its rule's lane);
+>   also untested, `footageOf`'s preference order and the `!t.director`
+>   guard of the Clip-it lane.
+> - **The census**: the "Graphic sounds" row (`tests/fixtures/ui-census.json`,
+>   home `output`, count 1, reasoned from the code by `e8f2a1f`: the only
+>   other "Graphic sounds" the app writes is the track name, outside
+>   OUTPUT and absent from an empty project), read on screen by the
+>   session at `69e677c`: `missing: []`, 892 rows checked, 8 skipped (the
+>   `harnessOnly: false` rows of the fixture's 900), 60.8 s; one element
+>   with the exact text, a span inside the `role="switch"` button,
+>   `aria-checked="true"` on a fresh project. `8db943a` changed only the
+>   row's note; `tests/uiCensus.test.ts` 9 passed.
+
 ### 6.15 Phase 0 — Measure before relying: M1-M22 and H1-H13
 
 **2 days**, mostly your runs. Its pieces, built in this order (§6.19):
@@ -15244,8 +16303,8 @@ itself when it shows them wrong.
 | M14 | 52 | 2; you, blind, on your clips, with `curves: { names, clipId }` (§6.10, §6.11; the key returned in the result for you to save) | run on a counter, then a keyword and a callout (§6.10); the overall pick becomes the restrained presets' `motion.ease` in `GRAPHIC_STYLES`, a template's own differing pick its default (§6.13). Until then `expo-out`. The look rating follows it (§6.10) |
 | M15 | 53 | 2; you mark the onset frames into `tests/fixtures/graphics/onsets.json` (`{ assetId; marks: { word: number; frame: number }[] }`, proposal), and `scripts/measure-onsets.mjs` (proposal) reads it against the transcript's `startMs` | median error within one frame at 30 fps: beats as §6.8 writes them. More: an onset refinement is planned as its own change, outside step 3's days (proposal) |
 | M16 | 54 | 2; node. **Measured 2026-11-10** (`1871004`; §6.15's phase-2 note) | a template whose seconds do not hold its longest fixture label gets its seconds raised in §6.2's table or its label capped, decided in phase 2 (every template holds: nothing raised or capped) |
-| M17 | 55 | 2; you count | `GRAPHICS_PER_MINUTE` = the median graphics per minute of the five clips you call pro, rounded down (proposal); null until counted. Zooms and sounds per minute are recorded beside it |
-| M18 | 56 | 2; you, the Mac: `mix.wav` is the audio of an export of one of your clips with a graphic's sound on a beat, exported by the app with the sound on (`ffmpeg -i <export> -vn mix.wav`), one per sound | the row's "pop" is `pop_bubble.wav`, a candidate role (§6.14). Each role's level under speech is set where you judge speech intelligible; the integrated loudness and the momentary maximum are recorded; `GRAPHIC_SOUND_DB` and `GRAPHIC_SOUND_CAP` are revised with them |
+| M17 | 55 | 2; you count | `GRAPHICS_PER_MINUTE` = the median graphics per minute of the five clips you call pro, rounded down (proposal); null until counted. Zooms and sounds per minute are recorded beside it. (2026-11-11, lane T3, `1a14bd4`: `GRAPHICS_PER_MINUTE` exists in `graphics/budget.ts`, null, and `applyBudget`'s rule 4 reads it, or `options.perMinute`, which the test injects: half-open 60 s windows over onsets, lower thirds counted; unmeasured, still yours) |
+| M18 | 56 | 2; you, the Mac: `mix.wav` is the audio of an export of one of your clips with a graphic's sound on a beat, exported by the app with the sound on (`ffmpeg -i <export> -vn mix.wav`), one per sound | the row's "pop" is `pop_bubble.wav`, a candidate role (§6.14). Each role's level under speech is set where you judge speech intelligible; the integrated loudness and the momentary maximum are recorded; `GRAPHIC_SOUND_DB` and `GRAPHIC_SOUND_CAP` are revised with them. (2026-11-11, lane T3, `5c52691`: both exist in `graphics/sound.ts` at this section's proposals, `GRAPHIC_SOUND_CAP` 3 per footage clip and `GRAPHIC_SOUND_DB` tick −24, whoosh −26, the gain capped at `MAX_SOUND_GAIN`; under `energetic` one bars or steps card fills the cap; unmeasured, still yours) |
 | M19 | 57 | 1; you write the PNGs in the development app, then a node read | `STROKE_MIN_PX` is the smallest of 1, 2 and 3 px at 1080 wide whose centre line keeps U and V within 8 levels of the PNG's after the `format=yuva420p` overlay (proposal); the research's starting value is 2 px. The read is a gated case in `graphic.int` over the folder the bake wrote (`FORGE_GRAPHIC_FRAMES=<folder>`, proposal). (Built and measured in part 2026-11-03, `0954b3d` and `2bb706d`, on the harness page's PNG and the Mac's 4.4 build: no width of the three is within the bar, 1 px U 63, 2 px 54, 3 px 34; the cause measured, the transparent pixels' black chroma averaged in by `format=yuva420p`, the exit geq's round trip up to 7 levels more. Read 2026-11-06/07 over the development app's PNGs: the Mac 1 px U 64 V 36, 2 px U 54 V 31, 3 px U 34 V 19; the Surface's 2018 build U 63 V 35, U 54 V 30, U 34 V 19; no width within the bar on either, background, ink Y and reference 0 on both. The user's decision of 2026-11-03: M19 slides to a contained pre-beta half-day piece (the stroke colour bled into alpha-0 neighbours in the bake's encode path, with a render test); `STROKE_MIN_PX` unchanged at 2. The notes below) |
 | M20 | 58 | 3; you | legible at rest and its moving frames within M1's whole-hold budget: the card ships as §6.16 plans it. Legible but slow: tilt-in only, no pull-back. Not legible: the card is not offered, and a recording gets the dim and graphics only. The run also records the card's hand-off (frame `L` of the card against the export's frame `L` without the card), whose bar is 2/255 mean (proposal, §6.16) |
 | M21 | 59 | 0, any time before phase 2's counter (2026-11-07: the counter was built first, so now before T2's validator and prompt); you, with your Hindi clips | the counter's Hindi digits follow what the installed model writes (Devanagari or ASCII); the share written as words, which §16.11 drops in v1, is recorded beside it (since 2026-11-07 it bears on how a value is written into `data.value`, not on how the counter draws it, §6.19's gate paragraph) |
@@ -15949,6 +17008,12 @@ values, dated, as the steps above carry their Built notes (it did,
 > - M10, M5 and M14 unchanged: no marker painter (`MARKER_READY` false),
 >   no `blur-rise`, every preset value and `DURATIONS` a proposal until
 >   M14 and the look rating.
+> - **M17 and M18** (rows 55, 56), 2026-11-11, lane T3: not measured.
+>   The code they set exists at its proposals: `GRAPHICS_PER_MINUTE` null
+>   and injectable (`budget.ts`), `GRAPHIC_SOUND_CAP` 3 and
+>   `GRAPHIC_SOUND_DB` −24 / −26 (`sound.ts`); §6.9's and §6.14's Built
+>   notes. Nothing phase 2 placed has been heard or exported yet (no
+>   caller in the app).
 
 ### 6.16 Phase 3 — The three.js compositor and 2.5D
 
@@ -16891,7 +17956,7 @@ piece table does (§6.3's, §6.16's, §6.17's, §6.18's).
 | 2 | T1 | `GRAPHIC_TEMPLATES`' values first (the others read the field modes), then the layout, the eight draw files, `numbers.ts`, `tree.ts`, with `graphicFrame`'s second half, `graphicHolds`, `graphicTree` (§6.2); the style's second half (§6.5) (built 2026-11-07 to 11, each piece read by two critics before the next: `cb394b5`, `35dd847`, `8f18cc8`, `528986c`; `4e6004e`, `dd309bf`, `f64a879`, `9e7a89e`; `712246e`, `1871004`, `85b59e3`; `d680132`, `1a681c7`, `62f3c83`; and `51e2f23`, the census read on screen; pushed as `51e2f23`, green on both runners at `e06e1c3`; §6.2's and §6.5's phase-2 Built notes; no marker painter, M10 not passed) | 4 + 0.5 | phase 1's exit; M21 before the counter (built ahead of it, 2026-11-07: the gate paragraph below) |
 | 2 | T2a | `claims.ts`, then `validateGraphics.ts` with `checkGraphicData`, `claims` and the property test (§6.7) (built 2026-11-11, each piece read by two critics before the next: `a29e8fa`, `1469cc5`; `bac73ac`, `0c88a89`; `cbbd25d`, `bd0fcf3`, `f4b283b`; `e027bd3`, `3b887d0`; with `settleGraphics`' validation half, `GraphicsMenu` and `SettledGraphics` in `run.ts` and `GRAPHIC_SPACING` in `template.ts`; pushed as `3b887d0`, green on both runners; §6.7's Built note; nothing in the app calls it until T2b) | 3 | T1's values |
 | 2 | T2b | `schemaGraphics.ts`, `promptGraphics.ts`, the ask's fix with `directorAsk`, `run.ts`'s `graphicsMenuFor`, `settleGraphics` (its validation half built by T2a, 2026-11-11; the baseline seam is T4's) and `decisionForGraphics`, Direct's and the tile's wiring (Clip it's is step 4's), `TranscriptGraphics.tsx`, `GraphicPanel.tsx`, the store's actions but `setGraphicSounds`, with `directorGraphics`, `transcriptGraphics`, `graphicPanel` (§6.6) | 2 | T2a's validator; T3's stub |
-| 2 | T3 | `beats.ts` with `graphicBeats` (§6.8); `place.ts` (with `freeSpace.ts`'s `samplesOver`) and `budget.ts` with `graphicPlace`, `graphicBudget` (§6.9); `sound.ts` (`GRAPHIC_SOUND_FILES`), `graphics/apply.ts` (`applyGraphics`, `lowerThirdFor`, `clearGraphics`), `director/apply.ts`'s constants, sweep and return, the store's follow-on edits (`removeClip`, `moveClip`, `moveSelectionTo`, `pasteClipboard`), `setGraphicSounds` and the switch, with `graphicSound` and `graphicStore`'s phase-2 cases (§6.14) | 0.5 + 1 + 1.5 | T1's values |
+| 2 | T3 | `beats.ts` with `graphicBeats` (§6.8); `place.ts` (with `freeSpace.ts`'s `samplesOver`) and `budget.ts` with `graphicPlace`, `graphicBudget` (§6.9); `sound.ts` (`GRAPHIC_SOUND_FILES`), `graphics/apply.ts` (`applyGraphics`, `lowerThirdFor`, `clearGraphics`), `director/apply.ts`'s constants, sweep and return, the store's follow-on edits (`removeClip`, `moveClip`, `moveSelectionTo`, `pasteClipboard`), `setGraphicSounds` and the switch, with `graphicSound` and `graphicStore`'s phase-2 cases (§6.14) (built 2026-11-11, each piece read by two critics before the next: `c27b9a4`, `4699660`; `216065e`, `37d0e69`, `518a62f`; `1a14bd4`, `ac79a1e`; `5c52691`, `21d316d`; `0f3f7a4`, `3d070ab`; `e8f2a1f`, `69e677c`; and `8db943a`, the census row read on screen; beyond the row, `resoundAfterClear`, the follower functions and the Delete, Cut and nudge arms; pushed as `77ac70a`, green on both runners; §6.8's, §6.9's, §6.6's and §6.14's Built notes; `place.auto`'s recompute not built, handed to T2b; nothing in the app calls `applyGraphics` until T2b) | 0.5 + 1 + 1.5 | T1's values |
 | 2 | T4 | the baseline and the eval block, the fixtures read, M14's and the look rating's runs (§6.10); the harness's `templates`, `curves`, `look` and per-template Indic options, `graphic.int`'s phase-2 cases, the property test's wiring (§6.11's half) | 1.5 + 0.5 | T1-T3 |
 | spike | H | §6.17's pieces: the worker's `hands` mode, `hands/types.ts`, `events.ts`, `oneEuro.ts`, `anchor.ts`'s `tipOnFrame`, the cases §6.17 lists; your runs | 1.5 | your footage; runs during phase 2 (nothing of phases 1-2 is needed: `sourceToFrame` through the reframe exists) |
 | 3 | depth | §6.16, split as its day table writes; M7 first, on the glow seam | 5 | phase 2's exit; M6's phase-0 parts |
@@ -16931,7 +17996,12 @@ gates, T2a's validator and T3's stub, are met. Next by §6.19: T3, then
 T2b, then T4 (the table above lists T2b's row before T3's; T3 needs only
 T1's values). M21, unmeasured, now bears on how
 often the validator drops a Hindi number said as words, §6.15's phase-2
-note.)
+note.) (2026-11-11: T3 is built and pushed through `77ac70a`, green
+on both runners; `applyGraphics`, the follower functions and
+`resoundAfterClear` exist for T2b to call. Next by §6.19: T2b, then T4;
+T4's gate in the table, T1-T3, is met. M17 and M18 set the
+proposals T3 built, `GRAPHICS_PER_MINUTE` and the sounds' cap and levels;
+both unmeasured.)
 
 **Where §6.20 falls.** Outside step 3's days, inside phase 1's run:
 
@@ -19093,7 +20163,7 @@ with a window, so `-ss` and `-t` are scanned too. So have 1f's shapes since
 | no model | graphics from the baseline; Best clips from signals; no B-roll suggestions | each pass's settle test with the fake provider refusing |
 | a prose or truncated answer | that pass only falls back; the clip stands | settle tests |
 | a graphic that cannot be baked | dropped from the export with a note; the export succeeds (a dropped screen card also strikes its two opacity keys from the recording, §6.16) | `graphic.int` |
-| no subject track (no AI helper, Follow the subject not run, or a track of another version) | `callout` not offered (and dropped with rule 9's note, "no subject found to point at", if an answer names one); placement takes the style's third (§6.9); a graphic's dim is drawn with no hole (§6.2, §6.9) | `graphicPlace.test.ts`; `graphic.int`'s no-track case |
+| no subject track (no AI helper, Follow the subject not run, or a track of another version) | `callout` not offered (and dropped with rule 9's note, "no subject found to point at", if an answer names one); placement takes the style's third (§6.9) (2026-11-11, corrected by lane T3's build, `37d0e69`, `518a62f`: §6.9 step 3's no-track default, the middle, or the top when the captions use the middle, and for a lower third the bottom, or the top when the captions use the bottom); a graphic's dim is drawn with no hole (§6.2, §6.9) | `graphicPlace.test.ts`; `graphic.int`'s no-track case |
 | no sound for a graphic (the library pack not installed, or no file for a role) | the graphic is placed silent, with one note: "no sound library is installed — graphics land silent" (§6.14) | `graphicSound.test.ts`' empty-library case |
 | an Indic font missing (before §6.20 lands, or where its files are absent) | Hindi and Telugu draw with the system's fallback, the one M22 recorded per machine on the canvas, CoreText's through libass on the Mac, and the 2018 build's unmeasured one on Windows (since §16.66 (a), 2026-10-27, captions in these scripts are to take the bake, libass only a failed or empty bake's fallback, and on Windows that fallback is measured unshaped, its face not named, `EFFECTS.md` §61); the graphic is kept, with the note "Hindi and Telugu are drawn in this computer's own font" (§6.3) | `tests/textPaint.test.ts`' font-chain case (§6.20) |
 | the recording's frames for a screen card (a steadied clip, the file gone, a pull that fails) | a steadied clip is not offered the card; a pull that fails drops the card from the export with its note and strikes its two keys, so the recording plays from its first frame (§6.16) | `graphic.int`'s phase-3 case |

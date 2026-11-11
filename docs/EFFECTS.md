@@ -8525,7 +8525,7 @@ suite and CI are the orchestrator's.
   and the preview's recompute on a long followed clip while editing.
 - **Burned-in text** (§5.3): after 1g.
 
-## 61. Graphics: the forks measured (phase 0 of step 3, then phase 1's first) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22), and on the Surface the libass run and the development app (2026-10-27); in node, phase 1's M9 (2026-10-27) and the stroke's flattening (2026-10-28); and D10's three readings, the Noto fonts' provenance, the Mac's libass against the fontsdir, and `document.fonts.check` (2026-10-29); and under painter A, Chrome 152's canvas (negative radii, a 0-side canvas, `globalAlpha`) and, in node, the draw list's mixed faces and bounds and the frames' edges (2026-10-30/31); and lane C's worker encoder and measureText in the pane's Chrome 152 (2026-11-01) and, in node, the box route under crop, mask, matte and transitions (2026-11-02); and lane D's three, geq's w − 2 clamp on the box route, a stroke's chroma through `yuva420p` (M19 in part) and `flattenPath` against `SVGPathElement` (M8 in part) (2026-11-03); and phase 2's lanes T3-first and T1, in node and on the harness census (2026-11-06 to 11); and lane T2a's validator against the false graphics its critics wrote, in node (2026-11-11)
+## 61. Graphics: the forks measured (phase 0 of step 3, then phase 1's first) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22), and on the Surface the libass run and the development app (2026-10-27); in node, phase 1's M9 (2026-10-27) and the stroke's flattening (2026-10-28); and D10's three readings, the Noto fonts' provenance, the Mac's libass against the fontsdir, and `document.fonts.check` (2026-10-29); and under painter A, Chrome 152's canvas (negative radii, a 0-side canvas, `globalAlpha`) and, in node, the draw list's mixed faces and bounds and the frames' edges (2026-10-30/31); and lane C's worker encoder and measureText in the pane's Chrome 152 (2026-11-01) and, in node, the box route under crop, mask, matte and transitions (2026-11-02); and lane D's three, geq's w − 2 clamp on the box route, a stroke's chroma through `yuva420p` (M19 in part) and `flattenPath` against `SVGPathElement` (M8 in part) (2026-11-03); and phase 2's lanes T3-first and T1, in node and on the harness census (2026-11-06 to 11); and lane T2a's validator against the false graphics its critics wrote, in node (2026-11-11); and lane T3's beats, placement, budget and graphic sounds against their critics' inputs, in node and on the harness census (2026-11-11)
 
 For `docs/CLIPS.md` §6.15 (step 3's phase 0, "Measure before relying"):
 pieces 0.1–0.3 were built on the evening of 2026-10-21 in seven commits,
@@ -11082,3 +11082,140 @@ not be guessed:
   exited 1 on "Cannot find module" for one). Its results were taken from
   a `git archive` copy; the fixers ran each mutation alone and `cmp`-
   checked the files after every batch.
+
+### Phase 2, lane T3, 2026-11-11
+
+`CLIPS.md` §6.8's, §6.9's, §6.6's real-body and §6.14's Built notes. Read
+from the fourteen commits (`c27b9a4` … `8db943a`), the build workflow's
+journal (`wf_bd4e915e-7cc`: six builders, twelve critics, six fixers) and
+the session's reads on the Mac. Every figure is vitest in node, each input
+probed by a critic on the commit named and pinned since; nothing here was
+heard or exported (no caller in the app). Only what cost time or would not
+be guessed:
+
+- **The validator keeps a bars graphic's rows in ITEM order, not spoken
+  order.** `claims.ts`' `bind` holds only steps' rows to item order, and
+  `beatWordsOf` returns bars' beat words in item order. `c27b9a4` spread
+  arriving beats "in the order given", so bars whose first item was said
+  second (words at 1.0 s and 3.0 s, indices [1, 0]) got beats [3, 3.16]
+  where [3, 1] was due: the second bar landed 2.16 s after its own word.
+  `4699660` spreads in time order and writes each value back to its
+  element's place. **"The later moved" means later in time; the order of a
+  list is not the order of speech.**
+- **A word the cut lands inside is shown by the captions and was dropped by
+  the beats.** `c27b9a4` tested `startMs` ≥ the caption window's start, so
+  a word at 900-1300 ms on a clip whose in-point is 1000 ms gave NaN and
+  the graphic dropped; `firstShownWord` counts it shown (`endMs` after the
+  start) and both caption routes draw it from `clip.start`. A lower third
+  on any clip trimmed mid-word would silently have had no first word.
+  Since `4699660` it beats on the clip's first frame.
+- **On its beat's frame is not on libass's frame.** An element arrives on
+  `beatFrame(beat)` (the ceiling); libass truncates a cue to centiseconds
+  and the canvas bake rounds, so a word at 2505 ms at 60 fps arrives on
+  151 while both caption routes show it from 150. Equal only for words on
+  a whole centisecond; `c27b9a4`'s message claimed equality, and a row now
+  pins the one-frame difference.
+- **A recorded mutation that cannot have been the one named.** `c27b9a4`
+  listed "the duration rounded up fails 11 cases"; every duration in the
+  file was a whole number of frames, so `Math.ceil` changed nothing and a
+  critic got 28 of 28 passing under it, and under floor too: the rounding
+  rule was unguarded. And "a gap of exactly 160 ms is left alone" (1.30,
+  1.46) could not fail for its allowance, since moving 1.46 to 1.3 + 0.16
+  gives 1.46 again; rebuilt on 1.85/2.01, whose difference is
+  0.1599999999999997.
+- **An absent field and a null field are two answers.** §6.9 step 4 says a
+  counter over a Ken Burns motion "draws its dim without a hole", and
+  `subjectAtOnset` returned no subject; but `GraphicSpec.subject` had no
+  `null`, an absent subject is lane C's cue for the caption track's union,
+  and `targets.ts` drew a hole at { x: 378, y: 768, width: 324 } through
+  the zoom the rule exists to avoid. The test checked `subjectAtOnset`'s
+  return, never what was drawn. `518a62f`: `subject: null` means "looked
+  and took none".
+- **The largest face is chosen after the crop, not before.** Picking the
+  largest raw face and then asking whether it is on screen dropped the
+  callout of the ordinary two-person 16:9 interview reframed to 9:16
+  whenever the larger face was the one cut away (`bigOff` 0.15 × 0.3
+  outside a 608-wide crop, `smallOn` in it). `subjectBoxesAt`'s
+  `facesOnFrame` filters first; `518a62f` does the same.
+- **Placement was built, tested in `place.ts`, and never observed from
+  `applyGraphics`.** At `0f3f7a4` every apply fixture had captions off and
+  no subject track, so `placeGraphic` always returned the template's first
+  third, which is the placeholder the spec carries before step 6. Deleting
+  `place` from the landed spec, setting `subject: null`, or swapping the
+  canvas's width and height each left `graphicApply`, `graphicSound` and
+  `graphicPlace` green (83 of 83). `3d070ab` added captions that move a
+  graphic off its first third, a callout landing with its subject, and a
+  1920×1080 file letterboxed into a 1080×1920 frame. **A step that returns
+  the default on every fixture is not observed.**
+- **The cap is per footage clip, so one rule's run and its own Clear can
+  silence another rule's graphic.** With the cap over every graphic on the
+  footage clip, a Clip-it run of energetic steps over a Direct keyword took
+  the keyword's three sound slots, and Clear graphics then took the steps
+  and their sounds: keyword sounds 0, 3 before (measured). Direct's Clear
+  does the mirror. Neither Clear is wrong by its own words ("each Clear
+  removes exactly its own graphics' sounds"). `resoundAfterClear`
+  (`3d070ab`) re-places the footage clips a Clear touched.
+- **Placing one graphic's sounds cannot keep a cap over all of them.**
+  `5c52691` counted the cap over every graphic on the footage clip but
+  placed and removed only the called graphic's sounds, so a Direct keyword
+  at frame 900 sounded first, then Clip-it keywords at 300, 600 and 700
+  each placed and merged, left 4 sounds where placing all afresh gives 3
+  ("find again 4, switch afresh 3"), and calling it twice on one graphic
+  stacked a second set. `21d316d` makes the footage clip the unit: every
+  graphic's sounds on it re-placed, the old ones returned in `removed`.
+- **A float tie decides a whoosh's frame under a linear ease.** Every
+  interior frame of a linear move changes `progress` by the same amount,
+  and rounding makes one of them "largest": `fastestFrame` gave frame 12
+  for a move over local frames 3-16 (the earliest equal step is 4), and 23
+  for other starts. A `motion.ease` override of `linear` is all it takes.
+  `21d316d` compares within 1e-9.
+- **The plan names `removeClip`; the Delete key is `deleteSelection`.**
+  Wiring the follow-on edits into the three actions §6.14 names would have
+  left a graphic deleted from the timeline, cut, or nudged with the arrows
+  with its sounds where they were. `e8f2a1f` routes `deleteSelection`,
+  `cutSelection` and `nudgeSelection` too.
+- **Three follow-on holes found only by the piece's critics** (`69e677c`):
+  a marquee Delete of a graphic AND its own sound filtered the sound out of
+  the followers (it was already in the ids), so the early return skipped
+  the sweep and the file it brought stayed in the pool with no clip, which
+  neither Clear can take later; the timeline's drag calls
+  `moveSelectionTo` on every pointer move, so a graphic dragged to frame 0
+  and back trimmed its whoosh's head at 0 and never gave it back (27/0/8
+  became 30/3/5, where a fresh placement gives 27/0/8); and `setGraphic`
+  with no library returned `removed: []`, leaving the old tick on frame 78
+  with the beat moved to 90.
+- **A held zoom key is a step, and a rebased key names a time off screen.**
+  `render/keyframes.ts`' `eased` returns 0 for `'hold'`, so the segment
+  after a hold key is flat and the zoom jumps on the next key's frame.
+  `1a14bd4` read every span between keys of different value as a punch,
+  backwards for a hold: keys {0: 1 hold, 1500: 1.2} dropped a counter at
+  frames 300-360 "over a zoom punch at 0.0 s" and kept one on frame 1500,
+  over the jump. A head trim rebases keys to negative frames
+  (`rebaseAnimation`), so a move named from its first key said 9.0 s when
+  it is seen from 10.0 s, or −2.0 s. `ac79a1e`: a hold punches only on
+  the next key's frame, and a move is cut to the frames its footage clip
+  is on screen.
+- **Onsets 6 s apart are not 6 s apart in a double.** For 191 of the start
+  frames 0-2999 at 30 fps, s/30 + 0.5 and (s + 180)/30 + 0.5 differ by
+  less than 6 (frames 51 and 231 among them); the budget's 1e-6 s
+  allowance was unexercised (its removal survived) until `ac79a1e`'s case.
+- **Equivalent mutants recorded as second guards.** `clearGraphics`'
+  `forGraphic` clause, its "Graphic sounds" name check and its
+  `!t.director` check each survive removal, because every graphic sound
+  carries its graphic's rule and a clips-rule sound sits only on a
+  "Graphic sounds" lane; `placeGraphic` or `subjectAtOnset` given the
+  project before the run survives while placement ignores other graphics.
+  Kept as written, unguarded, not worked round.
+- **A guard over the source tree caught innocent code.**
+  `graphicGuards`' "nor does any other file under src/" fails on a hand-
+  spelled self-drawn list; `budget.ts`'s `!c.graphic || c.graphic.data…`
+  matched its `c.graphic || c.graphic` pattern and failed `1a14bd4`'s
+  first full run. The line reads through `const spec = c.graphic`; the
+  guard is unchanged, and may catch other innocent code later.
+- **A shared temporary path is not private.** A fixer backed its mutation
+  files up into `$TMPDIR/orig`, which turned out to belong to another
+  session, so `targets.ts` stood mutated for a moment; it was restored
+  from the copy and every mutation re-run against a dedicated path. As
+  T2a found, parallel critics in one tree also leave scratch test files:
+  one critic's full run went red only on the other's
+  `tests/planholes-critic.test.ts`.

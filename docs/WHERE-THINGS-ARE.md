@@ -753,11 +753,22 @@ skipped.
 below the whole captions block, shown whether captions are on or off: the
 seven graphic looks as rows of name and face (Clean, Bold, Editorial, Neon,
 Mono, Accent, Energetic; the project's lit), an **Accent colour** under the
-Accent row, a sample tile drawing a counter ("10,00,000 views") in the
+Accent row, a **Graphic sounds** switch under the looks (since
+2026-11-11), a sample tile drawing a counter ("10,00,000 views") in the
 chosen look, and a **Style** picker of only the text styles a graphic can
 use, whose **None** goes back to the look's own. A change redraws every
-graphic clip in the background. Nothing in the app places a graphic yet
-(docs/CLIPS.md §6.5).
+graphic clip in the background.
+
+**Graphic sounds** (`GraphicSoundsToggle` in `OutputStrip.tsx`) is the
+same kind of switch as Smart placement, on unless the project turned it
+off. Off takes every sound that belongs to a graphic (a tick or a whoosh
+the app placed on its beat) and the library files only they used; on puts
+them back from the sound library for the graphics the app placed, each
+under its own Clear, at most three sounds per footage clip. With no sound
+library installed, on places nothing and says so. One undo step either
+way. Nothing in the app places a graphic from speech yet, and a graphic
+you add by hand gets no sounds from the switch, so today it only records
+the setting (docs/CLIPS.md §6.5, §6.14).
 
 ## EXPORT — making the file
 
