@@ -551,9 +551,25 @@ describe('the sound Clear test (§6.14): each Clear takes exactly its own graphi
     expect(orphans(afterBoth)).toEqual([])
   })
 
+  it("(4), the other way: a Clip-it graphic's sound on the file a Direct graphic brought; Direct's Clear, then Clear graphics, leaves no orphan in the pool", () => {
+    const p0 = landed()
+    const whoosh = fileAt(p0, 'fast_whoosh.wav')!
+    expect(whoosh.broughtBy).toBe(GRAPHIC_RULE)
+    const clipsSound: Clip = { ...footage('cs', 100, 2), trackId: 'a1', assetId: whoosh.id, forGraphic: 'g1', generatedBy: { rule: CLIPS_GRAPHIC_RULE, reason: 'whoosh' } }
+    const p = { ...p0, clips: [...p0.clips, clipsSound] }
+    const afterDirect = clearDirector(p)
+    // The Clip-it sound still stands on it, so Direct's Clear keeps the file.
+    expect(fileAt(afterDirect, 'fast_whoosh.wav')).toBeDefined()
+    const afterBoth = clearGraphics(afterDirect)
+    expect(fileAt(afterBoth, 'fast_whoosh.wav')).toBeUndefined()
+    expect(orphans(afterBoth)).toEqual([])
+  })
+
   it('(5) a sound you imported, reused, survives both Clears', () => {
     const mine: MediaAsset = { id: 'mine', path: `${LIB}/clock_tick.wav`, name: 'clock_tick.wav', kind: 'audio', durationFrames: 2, width: null, height: null, fps: null, hasVideo: false, hasAudio: true, size: 4000 }
-    const p = landed([mine])
+    // A Director sound stands on it too, so Direct's Clear removes a clip on your import and must still keep the file.
+    const ds: Clip = { ...footage('ds', 900, 2), trackId: 'a1', assetId: 'mine', generatedBy: { rule: SOUND_RULE, reason: 'tick on the cut' } }
+    const p = landed([mine], [ds])
     // Reused, not brought again.
     expect(soundOf(p, 'g1')!.assetId).toBe('mine')
     expect(p.assets.filter((a) => a.path === mine.path)).toHaveLength(1)

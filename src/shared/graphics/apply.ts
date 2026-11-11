@@ -47,6 +47,19 @@ export const NO_TRANSCRIPT_NOTE = 'its transcript is not in the project'
 /** A template with no row in GRAPHIC_TEMPLATES is not drawn yet (not §6's words; the plan is silent). */
 export const NOT_DRAWN_NOTE = 'that kind of graphic is not drawn yet'
 
+/**
+ * A kept graphic whose words are from another file than the clip it sits on
+ * (`KeptGraphic.assetId` is not the footage clip's `assetId`): its beats would
+ * be read from words the clip does not show (not §6's words; the plan is
+ * silent, so it is dropped rather than drawn on the wrong words).
+ */
+export const WRONG_ASSET_NOTE = 'its words are from another file than the clip it sits on'
+
+/** The run's rate is not the project's: every frame would be off, so nothing lands (not §6's words; the plan is silent). */
+export function fpsMismatchNote(runFps: number, projectFps: number): string {
+  return `graphics not placed: the run's frame rate (${runFps}) is not the project's (${projectFps})`
+}
+
 /** The proposal's mark (§6.6, "What is placed without review"): shown beside the words it heard. */
 export const CHECK_THE_NUMBER = 'check the number'
 
@@ -59,7 +72,10 @@ export const LOWER_THIRD_WHY = 'the speaker’s name, on the first word the clip
  * it (`ApplyContext2.sounds`, director/apply2.ts): the store reads it with
  * `soundPackFor` and a pure function cannot. Absent, graphics land silent
  * with §6.14's one note. `fps` is the project's rate (the store passes
- * `project.settings.fps`, as it does to the spine's apply).
+ * `project.settings.fps`, as it does to the spine's apply); a run whose `fps`
+ * is not `project.settings.fps` lands nothing, with `fpsMismatchNote`, since
+ * every reader under it (the captions' offset, placement, the sounds) counts
+ * in the project's frames.
  */
 export type GraphicsApplyContext = Pick<ApplyContext, 'fps' | 'newId'> & { sounds?: SoundPack }
 
@@ -182,7 +198,7 @@ function heardOf(kept: KeptGraphic, transcript: Pick<Transcript, 'words'>): stri
  *    (`graphicBeats` null) drops every graphic on it, with ONE problem per
  *    clip (`RETIMED_NOTE`).
  * 3. **The seconds and the start** (§6.2, §6.8): `graphicTiming`, at
- *    `ctx.fps`; a graphic it refuses is dropped with its note.
+ *    the project's rate (`ctx.fps` must equal it); a graphic it refuses is dropped with its note.
  * 4. **Proposals set aside** (§6.6): a candidate with a `proposal` is not
  *    placed; it becomes a `GraphicProposal` (id `newId('graphic-proposal')`,
  *    `clipId` its footage clip, this run's `rule`, the note "check the
@@ -227,7 +243,8 @@ export function applyGraphics(
   ctx: GraphicsApplyContext
 ): { project: Project; problems: Problem[]; clipIds: string[] } {
   const newId = ctx.newId ?? defaultId
-  const fps = ctx.fps
+  const fps = project.settings.fps
+  if (ctx.fps !== fps) return { project, problems: [{ path: '$', message: fpsMismatchNote(ctx.fps, fps) }], clipIds: [] }
   const canvas = { width: project.settings.width, height: project.settings.height }
   const problems: Problem[] = []
   const drop = (path: string, data: GraphicData, reason: string): void => {
@@ -261,13 +278,16 @@ export function applyGraphics(
       drop(path, data, NOT_DRAWN_NOTE)
       continue
     }
+    if (k.assetId !== clip.assetId) {
+      drop(path, data, WRONG_ASSET_NOTE)
+      continue
+    }
     const transcript = project.transcripts[k.assetId]
     if (!transcript) {
       drop(path, data, NO_TRANSCRIPT_NOTE)
       continue
     }
-    // ctx.fps throughout, the project's rate under it.
-    const beats = graphicBeats({ settings: { ...project.settings, fps } }, clip, transcript, k.candidate.beatWords, {
+    const beats = graphicBeats(project, clip, transcript, k.candidate.beatWords, {
       spread: data.template !== 'quote'
     })
     if (beats === null) {
@@ -356,11 +376,37 @@ export function applyGraphics(
   }
 
   // 8. The sounds, on each landed graphic; graphicSounds re-places every graphic sound on its footage clip.
+  const sounded = soundsFor(next, clipIds, rule, ctx.sounds ?? [], newId)
+  next = sounded.project
+  for (const n of sounded.notes) problems.push({ path: '$.sounds', message: n })
+
+  if (proposals.length > 0) next = { ...next, graphicProposals: [...(next.graphicProposals ?? []), ...proposals] }
+  return { project: next, problems, clipIds }
+}
+
+/**
+ * `graphicSounds` on each graphic clip of `graphicIds` in turn (each call
+ * re-places every graphic sound on that graphic's footage clip), `rule` for
+ * a graphic with no `generatedBy`; its clips on their lanes, its new files
+ * in the pool, the sounds it re-places taken off first, and a file the app
+ * brought that no clip uses afterwards (one a re-placed sound stood on, or
+ * one this call added) taken out of the pool, as Clear's sweep would. Its
+ * notes, each once.
+ */
+function soundsFor(
+  project: Project,
+  graphicIds: readonly string[],
+  rule: string,
+  sounds: SoundPack,
+  newId: (prefix: string) => string
+): { project: Project; notes: string[] } {
+  let next = project
   const notes: string[] = []
   const mayGo = new Set<string>()
-  for (const id of clipIds) {
-    const g = next.clips.find((c) => c.id === id)!
-    const out = graphicSounds(next, g, g.graphic!, rule, ctx.sounds ?? [], { newId })
+  for (const id of graphicIds) {
+    const g = next.clips.find((c) => c.id === id)
+    if (!g?.graphic) continue
+    const out = graphicSounds(next, g, g.graphic, g.generatedBy?.rule ?? rule, sounds, { newId })
     for (const n of out.notes) if (!notes.includes(n)) notes.push(n)
     if (out.removed.length === 0 && out.clips.length === 0 && out.assets.length === 0 && out.tracks.length === 0) continue
     const gone = new Set(out.removed)
@@ -374,14 +420,48 @@ export function applyGraphics(
     }
   }
   if (mayGo.size > 0) {
-    // A brought file no clip stands on any more (a sound the cap re-placed elsewhere) leaves the pool, as Clear's sweep would.
     const used = new Set(next.clips.map((c) => c.assetId))
     next = { ...next, assets: next.assets.filter((a) => !(mayGo.has(a.id) && a.broughtBy !== undefined && !used.has(a.id))) }
   }
-  for (const n of notes) problems.push({ path: '$.sounds', message: n })
+  return { project: next, notes }
+}
 
-  if (proposals.length > 0) next = { ...next, graphicProposals: [...(next.graphicProposals ?? []), ...proposals] }
-  return { project: next, problems, clipIds }
+/**
+ * The sounds a Clear leaves out of place, put back (beyond §6.14's words).
+ * The cap is per footage clip over every graphic on it (`graphicSounds`), so
+ * a run of one rule can push out another rule's graphic's sounds: a Clip-it
+ * run over a Direct keyword takes the keyword's three sound slots, and Clear
+ * graphics then takes the Clip-it graphics and their sounds and leaves the
+ * keyword silent. Called with the project before a Clear (`clearGraphics`
+ * or `clearDirector`) and the one it returned, it re-places the sounds of
+ * every footage clip the Clear took a graphic from and that still holds a
+ * graphic of an app rule (`generatedBy` set), through `graphicSounds`, so
+ * they are again a function of the footage clip's graphics. A footage clip
+ * left with only graphics of yours (no `generatedBy`) is not touched: a Clear
+ * never gives your graphics sounds. The store calls it inside the Clear's
+ * own undo step, with the pack it reads (`soundPackFor`); `after` comes back
+ * as the same object when there is nothing to re-place.
+ */
+export function resoundAfterClear(
+  before: Project,
+  after: Project,
+  sounds: SoundPack,
+  options: { newId?: (prefix: string) => string } = {}
+): { project: Project; notes: string[] } {
+  const still = new Set(after.clips.map((c) => c.id))
+  const touched = new Set<string>()
+  for (const g of before.clips) {
+    if (!g.graphic || still.has(g.id)) continue
+    const f = footageOf(before, g, g.graphic)
+    if (f !== null && still.has(f)) touched.add(f)
+  }
+  const pick: string[] = []
+  for (const f of touched) {
+    const g = after.clips.find((c) => c.graphic && c.generatedBy !== undefined && footageOf(after, c, c.graphic) === f)
+    if (g) pick.push(g.id)
+  }
+  if (pick.length === 0) return { project: after, notes: [] }
+  return soundsFor(after, pick, CLIPS_GRAPHIC_RULE, sounds, options.newId ?? defaultId)
 }
 
 /* ------------------------------------------------------------------- clear */

@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { emptyProject, DEFAULT_COLOR, DEFAULT_TRANSFORM, MAX_TRACKS, type Clip, type MediaAsset, type Project, type Track } from '@shared/timeline'
-import { CHECK_THE_NUMBER, CLEAR_GRAPHICS_NOTE, CLIPS_GRAPHIC_RULE, applyGraphics, clearGraphics, lowerThirdFor } from '@shared/graphics/apply'
+import { CHECK_THE_NUMBER, CLEAR_GRAPHICS_NOTE, CLIPS_GRAPHIC_RULE, WRONG_ASSET_NOTE, applyGraphics, clearGraphics, fpsMismatchNote, lowerThirdFor, resoundAfterClear } from '@shared/graphics/apply'
 import { GRAPHIC_RULE, SOUND_RULE, clearDirector } from '@shared/director/apply'
 import { RETIMED_NOTE } from '@shared/graphics/beats'
 import { TOO_CLOSE_REASON } from '@shared/graphics/budget'
 import { NO_LANE_NOTE, NO_SUBJECT_NOTE } from '@shared/graphics/place'
-import { GRAPHIC_SOUND_LANE_NAME } from '@shared/graphics/sound'
+import { GRAPHIC_SOUND_LANE_NAME, NO_SOUND_LIBRARY_NOTE } from '@shared/graphics/sound'
+import { SUBJECT_TRACK_VERSION, type SubjectTrack, type UnitRect } from '@shared/reframe/types'
 import { SOUND_LANE_NAME } from '@shared/director/sound'
 import { SOUND_ROLES, type SoundPack } from '@shared/director/soundRoles'
 import type { GraphicCandidate, GraphicData, KeptGraphic } from '@shared/graphics/template'
@@ -97,6 +98,17 @@ function ids(): (prefix: string) => string {
   return (prefix) => `${prefix}-${(n[prefix] = (n[prefix] ?? 0) + 1)}`
 }
 
+/** The face every 500 ms of a 60 s track of file 'a' (its own size, 1080×1920, one shot). */
+const FACE: UnitRect = { x: 0.4, y: 0.4, width: 0.2, height: 0.1 }
+function faceTrack(face: UnitRect, size = { width: 1080, height: 1920 }): SubjectTrack {
+  const samples = Array.from({ length: 120 }, (_, i) => ({ ms: i * 500, faces: [{ ...face, score: 0.9 }] }))
+  return {
+    key: '1:1700000000000', version: SUBJECT_TRACK_VERSION, ...size, durationMs: 60000,
+    shots: [{ startMs: 0, endMs: 60000, score: 0 }], samples, perShot: [{}], detector: 'synthetic',
+    scene: { threshold: 0.3, minShotMs: 500, backend: 'ffmpeg-select-rgb24' }, at: '2026-11-11T00:00:00.000Z'
+  }
+}
+
 const TICK: SoundPack = [{ ...SOUND_ROLES['clock_tick.wav'], id: 'clock_tick.wav', name: 'clock_tick.wav', file: '/lib/sfx/clock_tick.wav' }]
 
 describe('applyGraphics: the input and the rule', () => {
@@ -141,6 +153,14 @@ describe('lowerThirdFor (§6.6, §6.8)', () => {
     // With one already over the clip (any rule's), none.
     const landed = applyGraphics(p, [], ['c'], GRAPHIC_RULE, { fps: FPS, newId: ids() }).project
     expect(lowerThirdFor(landed, landed.clips[0])).toBeNull()
+  })
+
+  it("one over another clip does not count: a second footage clip still gets its own", () => {
+    const p = setup({ extra: [clipOf('c2', 'b', 'v1', 1300, 600, { inPoint: 60 })], assets: [assetOf('b', 'Ravi')] })
+    const landed = applyGraphics(p, [], ['c'], CLIPS_GRAPHIC_RULE, { fps: FPS, newId: ids() }).project
+    expect(landed.clips.filter((c) => c.graphic?.data.template === 'lower-third')).toHaveLength(1)
+    const c2 = landed.clips.find((c) => c.id === 'c2')!
+    expect(lowerThirdFor(landed, c2)?.candidate.data).toEqual({ template: 'lower-third', name: 'Ravi', role: '' })
   })
 })
 
@@ -234,6 +254,8 @@ describe.each([
   it('a lower third at most once per clip: covered twice, and again on a second run', () => {
     const once = run([], ['c', 'c'])
     expect(once.clipIds).toEqual(['graphic-1'])
+    // Not made twice and then budgeted away: no problem at all.
+    expect(once.problems).toEqual([])
     const again = run([], ['c'], once.project)
     expect(again.clipIds).toEqual([])
     expect(again.project.clips.filter((c) => c.graphic?.data.template === 'lower-third')).toHaveLength(1)
@@ -270,6 +292,83 @@ describe.each([
     expect(out.problems).toHaveLength(1)
   })
 
+  it('two retimed clips: one note each', () => {
+    const extra = [clipOf('r', 'b', 'v1', 1300, 600, { speed: 2 }), clipOf('r2', 'b', 'v1', 1900, 600, { speed: 0.5 })]
+    const project = setup({ extra, assets: [assetOf('b', 'Ravi')] })
+    const out = run([keptOn('r', 'b', COUNTER), keptOn('r2', 'b', COUNTER), keptOn('r2', 'b', CALLOUT)], [], project)
+    expect(out.clipIds).toEqual([])
+    expect(out.problems.map((p) => [p.path, p.message])).toEqual([
+      ['$.kept[0]', `graphics dropped: ${RETIMED_NOTE}`],
+      ['$.kept[1]', `graphics dropped: ${RETIMED_NOTE}`]
+    ])
+  })
+
+  it('placement moves a graphic off its first third: captions at the bottom send the lower third to the top, captions in the middle send the counter to the top', () => {
+    const captioned = (position: 'bottom' | 'center'): Project => {
+      const p = setup()
+      return { ...p, captions: { ...p.captions, enabled: true, placement: 'style', overrides: { position } } }
+    }
+    // The lower third prefers the bottom, then the top (never the middle); the captions hold the bottom.
+    const low = run([], ['c'], captioned('bottom'))
+    expect(low.problems).toEqual([])
+    expect(low.project.clips.find((c) => c.id === low.clipIds[0])!.graphic!.place).toEqual({ auto: true, third: 'top' })
+    // The counter prefers the middle, then the top; the captions hold the middle.
+    const mid = run([keptOn('c', 'a', COUNTER)], [], captioned('center'))
+    expect(mid.problems).toEqual([])
+    expect(mid.project.clips.find((c) => c.id === mid.clipIds[0])!.graphic!.place).toEqual({ auto: true, third: 'top' })
+  })
+
+  it('a callout lands with the subject taken at its onset: the face, in source units, and the sample on the onset frame', () => {
+    // The callout's beat is 29.0 s: start ceil(28.5 × 30) = 855, clip frame 855 − 30 = 825, source frame 60 + 825 = 885,
+    // 29 500 ms: the sample there. The file is the canvas's shape, uncropped, so the face is on screen.
+    const project = { ...setup(), subjects: { a: faceTrack(FACE) } }
+    const out = run([keptOn('c', 'a', CALLOUT)], [], project)
+    // The tick-only pack has no whoosh for the stroke: that note only.
+    expect(out.problems.filter((p) => p.path !== '$.sounds')).toEqual([])
+    const g = out.project.clips.find((c) => c.id === out.clipIds[0])!
+    expect(g.start).toBe(855)
+    expect(g.graphic!.subject).toEqual({ clipId: 'c', box: { x: 0.4, y: 0.4, width: 0.2, height: 0.1 }, ms: 29500 })
+  })
+
+  it('the output frame is the canvas placement reads: a landscape file, letterboxed into the portrait frame, puts its face in the middle third', () => {
+    // File 'a' is 1920×1080 here, fitted (contain) into the 1080×1920 frame: 1080 × 1080/1920 = 607.5 px tall, from
+    // y (1920 − 607.5)/2 = 656.25 px, so 0.3418-0.6582 of the frame. The face at file y 0.05, 0.15 tall (0.225 with the
+    // chin's half), sits at frame y 0.3418 + 0.05 × 0.3164 = 0.3576 to 0.3576 + 0.225 × 0.3164 = 0.4288: the middle
+    // third, 0.4 wide, so 0.4 × 0.0712/0.3333 = 0.085 of it, over the 0.05 limit. The counter goes to the top.
+    // Read on a 1920×1080 frame instead, the file fills it and the face is in the top third: the middle would be free.
+    const base = setup()
+    const project = {
+      ...base,
+      assets: base.assets.map((a) => (a.id === 'a' ? { ...a, width: 1920, height: 1080 } : a)),
+      subjects: { a: faceTrack({ x: 0.3, y: 0.05, width: 0.4, height: 0.15 }, { width: 1920, height: 1080 }) }
+    }
+    const out = run([keptOn('c', 'a', COUNTER)], [], project)
+    expect(out.problems).toEqual([])
+    expect(out.project.clips.find((c) => c.id === out.clipIds[0])!.graphic!.place).toEqual({ auto: true, third: 'top' })
+  })
+
+  it('with no sound library the graphics land silent, with the one note once', () => {
+    const keyword = cand({ template: 'keyword', words: 'look', lit: 0 }, [9], { sentence: 's4' })
+    const out = applyGraphics(setup({ speaker: null }), [keptOn('c', 'a', COUNTER), keptOn('c', 'a', keyword)], [], rule, { fps: FPS, newId: ids() })
+    expect(out.clipIds).toHaveLength(2)
+    expect(out.problems).toEqual([{ path: '$.sounds', message: NO_SOUND_LIBRARY_NOTE }])
+    expect(out.project.clips.some((c) => c.forGraphic !== undefined)).toBe(false)
+  })
+
+  it('a kept graphic whose words are from another file than its clip is dropped with its note', () => {
+    const out = run([keptOn('c', 'b', COUNTER)], [])
+    expect(out.clipIds).toEqual([])
+    expect(out.problems.map((p) => [p.path, p.message])).toEqual([['$.kept[0]', `graphic dropped: the counter "40%" — ${WRONG_ASSET_NOTE}`]])
+  })
+
+  it('a lower third is never a proposal, even one that arrives with a proposal set', () => {
+    const lower = cand({ template: 'lower-third', name: 'Priya Rao', role: '' }, [1], { sentence: 's1', proposal: { reason: 'check-the-number', wordSource: 'youtube-asr' } })
+    const out = run([keptOn('c', 'a', lower)], [])
+    expect(out.project.graphicProposals ?? []).toEqual([])
+    expect(out.clipIds).toHaveLength(1)
+    expect(out.project.clips.find((c) => c.id === out.clipIds[0])!.graphic!.proposal).toBeUndefined()
+  })
+
   it('at the track limit with no free lane, a graphic is dropped with its note', () => {
     const tracks: Track[] = [
       ...Array.from({ length: MAX_TRACKS - 2 }, (_, i): Track => ({ id: `v${i + 1}`, kind: 'video', name: `V${i + 1}`, muted: false, hidden: false, locked: false })),
@@ -303,6 +402,63 @@ describe('applyGraphics: the sounds re-placed on a footage clip (§6.14 cap)', (
     expect(second.project.clips.filter((c) => c.forGraphic)).toHaveLength(3)
     const orphans = second.project.assets.filter((a) => a.broughtBy !== undefined && !second.project.clips.some((c) => c.assetId === a.id))
     expect(orphans.map((a) => a.name)).toEqual([])
+  })
+})
+
+describe('applyGraphics: the run’s rate', () => {
+  it('a run whose fps is not the project’s lands nothing, with one note', () => {
+    const project = setup()
+    const out = applyGraphics(project, [keptOn('c', 'a', COUNTER)], ['c'], CLIPS_GRAPHIC_RULE, { fps: 25, newId: ids(), sounds: TICK })
+    expect(out.project).toBe(project)
+    expect(out.clipIds).toEqual([])
+    expect(out.problems).toEqual([{ path: '$', message: fpsMismatchNote(25, 30) }])
+    expect(fpsMismatchNote(25, 30)).toBe("graphics not placed: the run's frame rate (25) is not the project's (30)")
+  })
+})
+
+describe('resoundAfterClear: one rule’s Clear leaves the other rule’s graphics their sounds (§6.14 cap)', () => {
+  const ALL: SoundPack = ['clock_tick.wav', 'fast_whoosh.wav', 'whoosh_fast.wav', 'sword_swish.wav', 'swoosh_heavy.wav'].map((name) => ({ ...SOUND_ROLES[name], id: name, name, file: `/lib/sfx/${name}` }))
+  const keyword = cand({ template: 'keyword', words: 'look', lit: 0 }, [9], { sentence: 's4' })
+  const steps = cand({ template: 'steps', title: 'Step by step', items: [{ label: '40%' }, { label: 'fast' }], connector: 'none' }, [4, 10])
+  const soundsOf = (p: Project, g: string) => p.clips.filter((c) => c.forGraphic === g).map((c) => [c.start, c.generatedBy!.rule, p.assets.find((a) => a.id === c.assetId)!.name])
+  const orphans = (p: Project) => p.assets.filter((a) => a.broughtBy !== undefined && !p.clips.some((c) => c.assetId === a.id)).map((a) => a.id)
+
+  for (const [name, first, second, clear] of [
+    ['Clip it over Direct, then Clear graphics', GRAPHIC_RULE, CLIPS_GRAPHIC_RULE, clearGraphics],
+    ['Direct over Clip it, then Direct’s Clear', CLIPS_GRAPHIC_RULE, GRAPHIC_RULE, clearDirector]
+  ] as const) {
+    it(name, () => {
+      const project = { ...setup({ speaker: null }), graphics: { styleId: 'energetic', sound: true } }
+      const newId = ids()
+      const a = applyGraphics(project, [keptOn('c', 'a', keyword)], [], first, { fps: FPS, newId, sounds: ALL })
+      const kw = a.clipIds[0]
+      const alone = soundsOf(a.project, kw)
+      expect(alone).toHaveLength(3)
+      // The other rule's steps at 11 s take the cap's three slots, all before the keyword's onset at 29 s.
+      const b = applyGraphics(a.project, [keptOn('c', 'a', steps)], [], second, { fps: FPS, newId, sounds: ALL })
+      expect(soundsOf(b.project, kw)).toEqual([])
+      const cleared = clear(b.project)
+      expect(cleared.clips.some((c) => c.id === b.clipIds[0])).toBe(false)
+      // The Clear alone leaves the keyword silent; put back, it has the sounds it had before the second run.
+      expect(soundsOf(cleared, kw)).toEqual([])
+      const back = resoundAfterClear(b.project, cleared, ALL, { newId })
+      expect(soundsOf(back.project, kw)).toEqual(alone)
+      expect(back.notes).toEqual([])
+      expect(orphans(back.project)).toEqual([])
+      // Nothing taken, nothing to put back: the same project.
+      expect(resoundAfterClear(back.project, back.project, ALL).project).toBe(back.project)
+    })
+  }
+
+  it('a footage clip left with only a graphic of yours gets no sounds from a Clear', () => {
+    const project = { ...setup({ speaker: null }), graphics: { styleId: 'energetic', sound: true } }
+    const a = applyGraphics(project, [keptOn('c', 'a', keyword)], [], CLIPS_GRAPHIC_RULE, { fps: FPS, newId: ids(), sounds: ALL })
+    const g = a.project.clips.find((c) => c.id === a.clipIds[0])!
+    const yours: Clip = { ...g, id: 'yours', generatedBy: undefined, start: 315 }
+    const withYours = { ...a.project, clips: [...a.project.clips, yours] }
+    const cleared = clearGraphics(withYours)
+    expect(cleared.clips.some((c) => c.id === 'yours')).toBe(true)
+    expect(resoundAfterClear(withYours, cleared, ALL).project).toBe(cleared)
   })
 })
 
