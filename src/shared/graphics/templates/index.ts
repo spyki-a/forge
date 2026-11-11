@@ -14,14 +14,20 @@
 import type { GraphicTemplateId } from '../template'
 import type { Drawer } from '../items'
 import { drawBars } from './bars'
+import { drawCallout } from './callout'
 import { drawCounter } from './counter'
 import { drawKeyword } from './keyword'
 import { drawLowerThird } from './lowerThird'
+import { drawQuote } from './quote'
 import { drawRing } from './ring'
+import { drawSteps } from './steps'
 
 export const DRAWERS: Partial<Record<GraphicTemplateId, Drawer>> = Object.freeze({
   counter: drawCounter,
   bars: drawBars,
+  steps: drawSteps,
+  quote: drawQuote,
+  callout: drawCallout,
   ring: drawRing,
   keyword: drawKeyword,
   'lower-third': drawLowerThird

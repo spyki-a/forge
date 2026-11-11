@@ -17,7 +17,7 @@
 
 import { TITLE_SAFE } from '../../timeline'
 import { textItems, itemOrigin, type DimItem, type DrawItem, type GraphicTargets, type Point, type Rect, type ShapeItem, type TextItem, type TextLook, type TextMeasure } from '../items'
-import { DURATIONS, progress, type MotionEase } from '../motion'
+import { DURATIONS, entrance, progress, type MotionEase } from '../motion'
 import type { GraphicStyle } from '../style'
 import type { GraphicSpec } from '../template'
 import { LINE_HEIGHT } from '../../render/textLayout'
@@ -44,8 +44,7 @@ export const TOO_LONG_NOTE = 'too long to fit its place'
  * §6.2's per-template sizes, of the short side `s` for the text sizes and the
  * geometry the table gives in `s`; the multipliers of a text's own px (a gap,
  * a padding) and the shares of the content width as the table words them.
- * Frozen. Only the five templates drawn so far have their row; the rest join
- * with their drawers.
+ * Frozen. The eight templates drawn in phase 2 have their row.
  */
 export const LAYOUT_SIZES = Object.freeze({
   /** value 0.11, label 0.045; value above label, 0.25 × the label's px apart; the panel padded 0.6 × the label's px. */
@@ -57,8 +56,27 @@ export const LAYOUT_SIZES = Object.freeze({
   /** words 0.08; the panel padded 0.5 × the words' px. */
   keyword: Object.freeze({ words: 0.08, pad: 0.5 }),
   /** name 0.05, role 0.035; the bar 0.008 tall, under the name, as wide as the name plus 0.04. */
-  'lower-third': Object.freeze({ name: 0.05, role: 0.035, barHeight: 0.008, barExtra: 0.04 })
+  'lower-third': Object.freeze({ name: 0.05, role: 0.035, barHeight: 0.008, barExtra: 0.04 }),
+  /** title 0.05, numerals and labels 0.045; a numeral column 0.07 wide; rows 0.6 × the label's px apart; a tree indents a child 0.06. */
+  steps: Object.freeze({ title: 0.05, num: 0.045, label: 0.045, numColumn: 0.07, rowGap: 0.6, indent: 0.06 }),
+  /** words 0.055, marks 0.09, speaker 0.035; the speaker right-aligned beneath, 0.5 × its px below. */
+  quote: Object.freeze({ words: 0.055, marks: 0.09, speaker: 0.035, speakerGap: 0.5 }),
+  /** label 0.045, with a panel as the counter's (padded 0.6 × the label's px). */
+  callout: Object.freeze({ label: 0.045, pad: 0.6 })
 })
+
+/**
+ * A riding arrowhead's full length, of `s` (the tree's edges, the callout's
+ * arrow). Beyond §6.2's words, which name `heads.end` and no size; the
+ * phase-1 harness drew 44 px at 1080 (0.041), this is a little smaller so a
+ * tree's 0.06 indent still shows a line before the head.
+ */
+export const HEAD_SIZE = 0.025
+
+/** A stroke's width in frame pixels: the style's `stroke`, a fraction of `s` (§6.5). */
+export function strokePx(style: GraphicStyle, size: { width: number; height: number }): number {
+  return style.stroke * shortSide(size)
+}
 
 /* --------------------------------------------------------------- the rects */
 
@@ -210,6 +228,15 @@ export function moved<T extends DrawItem>(item: T, move: Move, about: Point, siz
       rotate: own.rotate
     }
   }
+}
+
+/**
+ * The style's entrance at progress `p` (`entrance`, motion.ts) as a `Move`,
+ * its `dy` turned into pixels by `px`, the text size it is a fraction of.
+ */
+export function enterMove(style: GraphicStyle, p: number, px: number): Move {
+  const e = entrance(style.motion.entrance, p)
+  return { dy: e.dy * px, scale: e.scale, opacity: e.opacity }
 }
 
 /** A rectangle's centre. */

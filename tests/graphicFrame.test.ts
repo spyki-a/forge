@@ -16,6 +16,7 @@ import { drawListAt, graphicFits } from '@shared/graphics/drawList'
 import { DRAWERS } from '@shared/graphics/templates/index'
 import { itemBounds, type DrawItem, type DrawList, type Drawer, type ShapeItem, type StrokeItem, type TextItem, type TextMeasure } from '@shared/graphics/items'
 import { numberOf } from '@shared/graphics/numbers'
+import { STROKE_TOLERANCE, flattenPath, strokeShape } from '@shared/graphics/stroke'
 import { FIT_MIN, contentRect, wrapWidth } from '@shared/graphics/templates/layout'
 import { DURATIONS, progress, type MotionEase } from '@shared/graphics/motion'
 import { resolveGraphicStyle, type GraphicStyle } from '@shared/graphics/style'
@@ -72,6 +73,7 @@ function dataFor(template: GraphicTemplateId, connector: 'none' | 'line' | 'tree
   if (template === 'bars') return { template, title: 'Bars', items: [{ label: 'one', value: '10' }, { label: 'two', value: '20' }] }
   if (template === 'keyword') return { template, words: 'light beats gear', lit: 1 }
   if (template === 'lower-third') return { template, name: 'Priya Raman', role: 'Photographer' }
+  if (template === 'quote') return { template, kind: 'said', text: 'light beats gear', speaker: 'Priya Raman' }
   return { template } as GraphicData
 }
 
@@ -989,5 +991,446 @@ describe('graphicFrame, phase 2: the five templates drawn so far, over their fix
     const value = byId<TextItem>(listAt(wide, settledFrame(wide)), 'value')
     expect(value.look.px).toBeLessThan(Math.round(0.11 * 1080))
     expect(value.look.px).toBeGreaterThanOrEqual(Math.round(0.11 * 1080 * FIT_MIN) - 1)
+  })
+})
+
+/*
+ * Phase 2's cases for the last three templates (§6.2): steps (connector none,
+ * line and tree), quote and callout, over their twelve fixtures. A callout
+ * draws only with a subject (`targets.subject`, resolved by the caller at
+ * onset, §6.9); these cases hand it the fixture's subject box in frame pixels
+ * of the size drawn, as an identity mapping of the footage would give.
+ */
+
+const LAST_THREE = ['steps', 'steps-connected', 'quote', 'callout']
+const LAST_FIXTURES = FIXTURES.filter((f) => LAST_THREE.includes(f.shape))
+const CONNECTORS = ['none', 'line', 'tree'] as const
+
+type StepsData = Extract<GraphicData, { template: 'steps' }>
+type QuoteData = Extract<GraphicData, { template: 'quote' }>
+
+/** The fixture's subject box in pixels of `size`; none for any other template. */
+function targetsFor(s: GraphicSpec, size = SIZE): { subject?: { x: number; y: number; width: number; height: number } } {
+  const b = s.subject?.box
+  if (s.data.template !== 'callout' || !b) return {}
+  return { subject: { x: b.x * size.width, y: b.y * size.height, width: b.width * size.width, height: b.height * size.height } }
+}
+const listOf = (s: GraphicSpec, frame: number, fps = FPS, size = SIZE, style = clean()): DrawList =>
+  drawListAt(s, style, frame, fps, size, fakeMeasure, targetsFor(s, size))
+const withConnector = (s: GraphicSpec, connector: StepsData['connector']): GraphicSpec => ({ ...s, data: { ...(s.data as StepsData), connector } })
+/** Every steps fixture under each connector; the other fixtures as they are. */
+const LAST_VARIANTS: { id: string; spec: GraphicSpec }[] = LAST_FIXTURES.flatMap((f) =>
+  f.spec.data.template === 'steps' ? CONNECTORS.map((c) => ({ id: `${f.id}/${c}`, spec: withConnector(f.spec, c) })) : [{ id: f.id, spec: f.spec }]
+)
+/** A stroke's ink: `strokeShape`'s line widened by half its width, and its heads' triangles. */
+function strokeInk(item: StrokeItem, size: { width: number; height: number }): { x: number; y: number; width: number; height: number } {
+  const shape = strokeShape(flattenPath(item.d, STROKE_TOLERANCE), item, size)
+  const half = shape.width / 2
+  const pts = [
+    ...shape.line.flatMap((p) => [{ x: p.x - half, y: p.y - half }, { x: p.x + half, y: p.y + half }]),
+    ...(shape.start?.points ?? []),
+    ...(shape.end?.points ?? [])
+  ]
+  const xs = pts.map((p) => p.x)
+  const ys = pts.map((p) => p.y)
+  return { x: Math.min(...xs), y: Math.min(...ys), width: Math.max(...xs) - Math.min(...xs), height: Math.max(...ys) - Math.min(...ys) }
+}
+const opacityOf = (list: DrawList, id: string): number => list.items.find((i) => i.id === id)!.opacity
+const strokesOf = (list: DrawList): StrokeItem[] => flat(list.items).filter((i): i is StrokeItem => i.kind === 'stroke')
+
+/** The numerals §6.2 expects, worked out here: "1".. in order, restarting under each parent in a tree. */
+function expectedNumerals(data: StepsData): string[] {
+  const count = new Map<number, number>()
+  return data.items.map((item) => {
+    const key = data.connector === 'tree' ? (item.parent ?? -1) : -1
+    count.set(key, (count.get(key) ?? 0) + 1)
+    return String(count.get(key))
+  })
+}
+
+/** Every data string the fixture draws, by source path, and the fixed glyphs §6.2's table lists for its template. */
+function lastFields(data: GraphicData): { fields: Record<string, string>; glyphs: string[] } {
+  switch (data.template) {
+    case 'steps': {
+      const fields: Record<string, string> = { 'data.title': data.title }
+      data.items.forEach((item, i) => (fields[`data.items.${i}.label`] = item.label))
+      return { fields, glyphs: ['1', '2', '3', '4', '5', '6'] }
+    }
+    case 'quote':
+      if (data.kind === 'social') return { fields: { 'data.text': normalised(data.text), 'data.name': data.name }, glyphs: ['“', '”', '— '] }
+      return { fields: data.speaker === '' ? { 'data.text': normalised(data.text) } : { 'data.text': normalised(data.text), 'data.speaker': data.speaker }, glyphs: ['“', '”', '— '] }
+    case 'callout':
+      return { fields: { 'data.label': data.label }, glyphs: [] }
+    default:
+      throw new Error(`not one of the last three: ${data.template}`)
+  }
+}
+
+describe('graphicFrame, phase 2: steps, quote and callout, over their twelve fixtures (§6.2)', () => {
+  it('has the twelve fixtures, each drawn by its own DRAWERS row', () => {
+    expect(LAST_FIXTURES).toHaveLength(12)
+    for (const f of LAST_FIXTURES) {
+      expect(DRAWERS[f.spec.data.template], f.id).toBeDefined()
+      expect(listOf(f.spec, 0).items.length, f.id).toBeGreaterThan(0)
+    }
+  })
+
+  it('at the settled frame, the text items are every data string verbatim and nothing else but the template’s listed fixed glyphs, under every connector', () => {
+    for (const v of LAST_VARIANTS) {
+      const list = listOf(v.spec, settledFrame(v.spec))
+      const { fields, glyphs } = lastFields(v.spec.data)
+      for (const [path, text] of Object.entries(fields)) expect(fieldText(list, path), `${v.id} ${path}`).toBe(text)
+      for (const t of textsOf(list)) {
+        if (t.source === undefined) expect(glyphs, `${v.id}: ${t.id} "${t.text}" is a listed glyph`).toContain(t.text)
+        else expect(Object.keys(fields), `${v.id}: ${t.id} "${t.text}"`).toContain(t.source.path)
+        expect(t.opacity, `${v.id} ${t.id}`).toBe(1)
+        expect(t.transform, `${v.id} ${t.id}`).toBeUndefined()
+      }
+      for (const i of list.items) {
+        expect(i.opacity, `${v.id} ${i.id}`).toBe(i.id === 'panel' ? clean().palette.panelOpacity : 1)
+        expect(i.transform, `${v.id} ${i.id}`).toBeUndefined()
+      }
+    }
+  })
+
+  it('steps: one numeral per row, "1".. restarting under each parent in a tree, a fixed glyph with no source, grouped with its label as row-i', () => {
+    for (const v of LAST_VARIANTS.filter((x) => x.spec.data.template === 'steps')) {
+      const data = v.spec.data as StepsData
+      const list = listOf(v.spec, settledFrame(v.spec))
+      const numerals = data.items.map((_, i) => byId<TextItem>(list, `num-${i}`))
+      expect(numerals.map((n) => n.text), v.id).toEqual(expectedNumerals(data))
+      for (const n of numerals) expect(n.source, `${v.id} ${n.id}`).toBeUndefined()
+      data.items.forEach((_, i) => {
+        const row = list.items.find((item) => item.id === `row-${i}`)
+        expect(row?.kind, `${v.id} row-${i}`).toBe('group')
+        const ids = (row as Extract<DrawItem, { kind: 'group' }>).children.map((c) => c.id)
+        expect(ids, `${v.id} row-${i}`).toContain(`num-${i}`)
+        expect(ids, `${v.id} row-${i}`).toContain(`label-${i}`)
+      })
+    }
+    // The nested fixture restarts: parents [-1, 0, 0, -1, -1] number 1, 1, 2, 2, 3.
+    const nested = FIXTURES.find((f) => f.id === 'steps-connected-en')!.spec
+    expect(textsOf(listOf(nested, settledFrame(nested))).filter((t) => t.id.startsWith('num-')).map((t) => t.text)).toEqual(['1', '1', '2', '2', '3'])
+  })
+
+  it('a connector or a tree adds no text item: the same strings and sources under none, line and tree; strokes only, line without heads, tree with one', () => {
+    for (const f of LAST_FIXTURES.filter((x) => x.spec.data.template === 'steps')) {
+      // The same text items by id; the same data strings from the same fields (a tree renumbers its fixed numerals only).
+      const ids = (c: StepsData['connector']): string[] => textsOf(listOf(withConnector(f.spec, c), settledFrame(f.spec))).map((t) => t.id).sort()
+      const said = (c: StepsData['connector']): string[] =>
+        textsOf(listOf(withConnector(f.spec, c), settledFrame(f.spec)))
+          .filter((t) => t.source !== undefined)
+          .map((t) => `${t.id}|${t.text}|${t.source!.path}|${t.source!.piece}`)
+          .sort()
+      for (const c of ['line', 'tree'] as const) {
+        expect(ids(c), `${f.id} ${c}`).toEqual(ids('none'))
+        expect(said(c), `${f.id} ${c}`).toEqual(said('none'))
+      }
+      const n = (f.spec.data as StepsData).items.length
+      const none = listOf(withConnector(f.spec, 'none'), settledFrame(f.spec))
+      expect(strokesOf(none), `${f.id} none`).toEqual([])
+      expect(flat(none.items).filter((i) => i.kind !== 'text' && i.kind !== 'group').map((i) => i.id), `${f.id} none: nothing but text`).toEqual([])
+      const lined = listOf(withConnector(f.spec, 'line'), settledFrame(f.spec))
+      const line = strokesOf(lined)
+      expect(line.map((s) => s.id), `${f.id} line`).toEqual(Array.from({ length: n - 1 }, (_, i) => `edge-${i + 1}`))
+      // Each segment joins the numeral above to its own row's numeral: from the one's middle to the other's.
+      line.forEach((s, j) => {
+        const ys = [...s.d.matchAll(/[ML] (-?[\d.]+) (-?[\d.]+)/g)].map((m) => Number(m[2]))
+        const mid = (k: number): number => byId<TextItem>(lined, `num-${k}`).box.y + byId<TextItem>(lined, `num-${k}`).box.height / 2
+        expect(ys, `${f.id} line ${s.id}`).toHaveLength(2)
+        expect(ys[0], `${f.id} line ${s.id} from the numeral above`).toBeCloseTo(mid(j), 6)
+        expect(ys[1], `${f.id} line ${s.id} to its own`).toBeCloseTo(mid(j + 1), 6)
+      })
+      for (const s of line) {
+        expect(s.heads, `${f.id} line ${s.id}`).toBeUndefined()
+        expect(s.cap, `${f.id} line ${s.id}`).toBe('round')
+        expect([s.from, s.to], `${f.id} line ${s.id} drawn whole`).toEqual([0, 1])
+      }
+      const tree = strokesOf(listOf(withConnector(f.spec, 'tree'), settledFrame(f.spec)))
+      expect(tree.map((s) => s.id), `${f.id} tree`).toEqual(Array.from({ length: n }, (_, i) => `edge-${i}`))
+      for (const s of tree) {
+        expect(s.heads?.end?.grow, `${f.id} tree ${s.id}`).toBe(1)
+        expect(s.heads?.end?.size, `${f.id} tree ${s.id}`).toBeGreaterThan(0)
+        expect(s.heads?.start, `${f.id} tree ${s.id}`).toBeUndefined()
+      }
+    }
+  })
+
+  it('rows arrive on their beats, and each edge reaches to 1 on its row’s beat frame, not before, at 24, 25, 30 and 60 fps', () => {
+    for (const fps of RATES) {
+      for (const v of LAST_VARIANTS.filter((x) => x.spec.data.template === 'steps')) {
+        const data = v.spec.data as StepsData
+        data.items.forEach((_, i) => {
+          const bf = beatFrame(v.spec.beats[i], fps)
+          const on = listOf(v.spec, bf, fps)
+          const before = listOf(v.spec, bf - 1, fps)
+          const row = on.items.find((item) => item.id === `row-${i}`)!
+          expect(row.opacity, `${v.id} row-${i} on its beat frame ${bf} at ${fps}`).toBe(1)
+          expect(row.transform, `${v.id} row-${i} in place on its beat frame ${bf} at ${fps}`).toBeUndefined()
+          expect(opacityOf(before, `row-${i}`), `${v.id} row-${i} the frame before at ${fps}`).toBeLessThan(1)
+          if (data.connector === 'none' || (data.connector === 'line' && i === 0)) return
+          expect(byId<StrokeItem>(on, `edge-${i}`).to, `${v.id} edge-${i} on its beat frame at ${fps}`).toBe(1)
+          expect(byId<StrokeItem>(before, `edge-${i}`).to, `${v.id} edge-${i} the frame before at ${fps}`).toBeLessThan(1)
+          expect(byId<StrokeItem>(listOf(v.spec, Math.max(0, beatFrame(v.spec.beats[i] - DURATIONS.stroke, fps) - 1), fps), `edge-${i}`).to, `${v.id} edge-${i} not begun before DURATIONS.stroke ahead at ${fps}`).toBe(0)
+          if (data.connector === 'tree') {
+            // The head rides from the stroke's own start, growing over 0.1 s (§6.3): whole by the beat, still 0 a stroke's length ahead.
+            expect(byId<StrokeItem>(on, `edge-${i}`).heads!.end!.grow, `${v.id} edge-${i} head at ${fps}`).toBe(1)
+          }
+        })
+      }
+    }
+  })
+
+  it('a tree indents each row by its depth and draws each edge from its parent’s numeral column, or from the title’s marker for a child of the title', () => {
+    for (const f of LAST_FIXTURES.filter((x) => x.spec.data.template === 'steps')) {
+      const s = withConnector(f.spec, 'tree')
+      const data = s.data as StepsData
+      const list = listOf(s, settledFrame(s))
+      const marker = byId<ShapeItem>(list, 'marker')
+      const nums = data.items.map((_, i) => byId<TextItem>(list, `num-${i}`))
+      const startOf = (i: number): { x: number; y: number } => {
+        const m = /^M (-?[\d.]+) (-?[\d.]+)/.exec(byId<StrokeItem>(list, `edge-${i}`).d)!
+        return { x: Number(m[1]), y: Number(m[2]) }
+      }
+      const endOf = (i: number): { x: number; y: number } => {
+        const m = /L (-?[\d.]+) (-?[\d.]+)$/.exec(byId<StrokeItem>(list, `edge-${i}`).d)!
+        return { x: Number(m[1]), y: Number(m[2]) }
+      }
+      const centre = (r: { x: number; width: number }): number => r.x + r.width / 2
+      const middle = (r: { y: number; height: number }): number => r.y + r.height / 2
+      data.items.forEach((item, i) => {
+        const p = item.parent ?? -1
+        // Each row sits at its own height, so the start's y names the parent: the marker's middle or the parent numeral's.
+        if (p < 0) {
+          expect(startOf(i).x, `${f.id} edge-${i} leaves the marker`).toBeCloseTo(marker.box.x, 6)
+          expect(startOf(i).y, `${f.id} edge-${i} leaves the marker`).toBeCloseTo(middle(marker.box), 6)
+        } else {
+          expect(startOf(i).y, `${f.id} edge-${i} leaves its parent ${p}`).toBeCloseTo(middle(nums[p].box), 6)
+          // From the parent numeral column's left: left of its glyph, within the 0.07 column.
+          expect(startOf(i).x, `${f.id} edge-${i} leaves its parent ${p}`).toBeLessThan(nums[p].box.x)
+          expect(startOf(i).x, `${f.id} edge-${i} leaves its parent ${p}`).toBeGreaterThan(centre(nums[p].box) - (0.07 * 1080) / 2 - 1e-6)
+        }
+        // Down and across: it ends on row i's middle, left of its numeral column.
+        expect(endOf(i).y, `${f.id} edge-${i} ends on its row`).toBeCloseTo(nums[i].box.y + nums[i].box.height / 2, 6)
+        expect(endOf(i).x, `${f.id} edge-${i} ends left of its numeral`).toBeLessThan(nums[i].box.x)
+        expect(endOf(i).x, `${f.id} edge-${i} runs across`).toBeGreaterThan(startOf(i).x)
+        // Depth: a child of an item sits one indent (0.06 of s, shrunk with the rest at most to FIT_MIN) right of its parent's numeral.
+        if (p >= 0) {
+          const indent = centre(nums[i].box) - centre(nums[p].box)
+          expect(indent, `${f.id} row-${i} indented under ${p}`).toBeGreaterThanOrEqual(0.06 * 1080 * FIT_MIN - 1e-6)
+          expect(indent, `${f.id} row-${i} indented under ${p}`).toBeLessThanOrEqual(0.06 * 1080 + 1e-6)
+        }
+      })
+      // Every child of the title in one column, right of the marker.
+      const roots = data.items.map((item, i) => ((item.parent ?? -1) < 0 ? centre(nums[i].box) : null)).filter((x): x is number => x !== null)
+      for (const x of roots) {
+        expect(x, `${f.id} a child of the title`).toBeCloseTo(roots[0], 6)
+        expect(x, `${f.id} a child of the title`).toBeGreaterThan(marker.box.x + marker.box.width)
+      }
+    }
+  })
+
+  it('the travelling beam: under line and the energetic style only, one empty span until the last beat, then a span of at most BEAM_SPAN advancing linearly', () => {
+    const f = FIXTURES.find((x) => x.id === 'steps-connected-hi')!
+    expect((f.spec.data as StepsData).connector).toBe('line')
+    const last = beatFrame(f.spec.beats[f.spec.beats.length - 1], FPS)
+    for (let frame = 0; frame < totalOf(f.spec, FPS); frame++) {
+      const beam = byId<StrokeItem>(listOf(f.spec, frame, FPS, SIZE, energetic()), 'beam')
+      if (frame < last) expect(beam.to, `frame ${frame}`).toBe(0)
+      expect(beam.from, `frame ${frame}`).toBeGreaterThanOrEqual(0)
+      expect(beam.to, `frame ${frame}`).toBeLessThanOrEqual(1)
+      expect(beam.to - beam.from, `frame ${frame}`).toBeLessThanOrEqual(0.2 + 1e-9)
+    }
+    const a = byId<StrokeItem>(listOf(f.spec, last + 10, FPS, SIZE, energetic()), 'beam')
+    const b = byId<StrokeItem>(listOf(f.spec, last + 20, FPS, SIZE, energetic()), 'beam')
+    expect(b.to, 'advancing').toBeGreaterThan(a.to)
+    expect(b.to - a.to, 'linear: ten frames, the same step twice').toBeCloseTo(a.to - byId<StrokeItem>(listOf(f.spec, last, FPS, SIZE, energetic()), 'beam').to, 9)
+    for (const style of [clean(), energetic()]) {
+      for (const c of ['none', 'tree'] as const) expect(flat(listOf(withConnector(f.spec, c), last + 10, FPS, SIZE, style).items).some((i) => i.id === 'beam'), `${c}`).toBe(false)
+    }
+    expect(flat(listOf(f.spec, last + 10).items).some((i) => i.id === 'beam'), 'clean draws no beam').toBe(false)
+  })
+
+  it('quote: everything enters together, ending on the first beat; the lit word is the latest beat at or before t, held until the next, in palette.accent, never the text', () => {
+    for (const fps of RATES) {
+      for (const f of LAST_FIXTURES.filter((x) => x.shape === 'quote')) {
+        const s = f.spec
+        const words = normalised((s.data as QuoteData).text).split(' ')
+        const first = beatFrame(s.beats[0], fps)
+        for (const item of listOf(s, first, fps).items) expect(item.opacity, `${f.id} ${item.id} on the first beat frame at ${fps}`).toBe(1)
+        for (const item of listOf(s, first - 1, fps).items) expect(item.opacity, `${f.id} ${item.id} the frame before at ${fps}`).toBeLessThan(1)
+        for (let frame = 0; frame < totalOf(s, fps); frame++) {
+          const drawn = textsOf(listOf(s, frame, fps))
+          // The latest beat whose frame is at or before this one, worked out here from beatFrame.
+          let want = -1
+          s.beats.forEach((b, i) => {
+            if (beatFrame(b, fps) <= frame) want = i
+          })
+          const lit = drawn.filter((t) => t.look.accent !== undefined)
+          expect(lit.map((t) => t.id), `${f.id} frame ${frame} at ${fps}`).toEqual(want < 0 ? [] : [`word-${want}`])
+          for (const t of lit) expect(t.look.accent, `${f.id} frame ${frame}`).toBe(clean().palette.accent)
+          expect(drawn.filter((t) => t.source?.path === 'data.text').map((t) => t.text), `${f.id} frame ${frame}: the words as said`).toEqual(words)
+        }
+      }
+    }
+  })
+
+  it('quote: the marks open and close the words, and "— " stands before a speaker right-aligned beneath; no speaker, no dash', () => {
+    for (const f of LAST_FIXTURES.filter((x) => x.shape === 'quote')) {
+      const data = f.spec.data as QuoteData
+      const list = listOf(f.spec, settledFrame(f.spec))
+      const texts = textsOf(list)
+      expect(texts[0].id, f.id).toBe('open')
+      expect(texts[0].text, f.id).toBe('“')
+      const close = byId<TextItem>(list, 'close')
+      expect(close.text, f.id).toBe('”')
+      const lastWord = texts.filter((t) => t.source?.path === 'data.text').pop()!
+      expect(close.box.x, `${f.id}: after the last word`).toBeGreaterThan(lastWord.box.x + lastWord.box.width)
+      const dash = byId<TextItem>(list, 'dash')
+      const speaker = byId<TextItem>(list, 'speaker')
+      expect(dash.text, f.id).toBe('— ')
+      expect(speaker.text, f.id).toBe(data.kind === 'social' ? '' : data.speaker)
+      expect(dash.box.x + dash.box.width, `${f.id}: the dash just before the speaker`).toBeCloseTo(speaker.box.x, 6)
+      expect(speaker.box.y, `${f.id}: beneath`).toBeGreaterThan(lastWord.box.y + lastWord.box.height)
+      expect(speaker.box.x + speaker.box.width, `${f.id}: right-aligned to the words`).toBeCloseTo(Math.max(...texts.filter((t) => t.source?.path === 'data.text').map((t) => t.box.x + t.box.width), close.box.x + close.box.width), 6)
+      const without: GraphicSpec = { ...f.spec, data: { ...data, speaker: '' } as QuoteData }
+      const ids = flat(listOf(without, settledFrame(without)).items).map((i) => i.id)
+      expect(ids, f.id).not.toContain('dash')
+      expect(ids, f.id).not.toContain('speaker')
+    }
+    // The social kind: name, handle and date verbatim, the link never drawn.
+    const said = FIXTURES.find((x) => x.id === 'quote-en')!.spec
+    const social: GraphicSpec = {
+      ...said,
+      data: { template: 'quote', kind: 'social', text: 'Light beats gear', name: 'Priya Raman', handle: '@priya.frames', date: '12 Oct 2026', link: 'https://example.com/p/1' }
+    }
+    const list = listOf(social, settledFrame(social))
+    expect(fieldText(list, 'data.text')).toBe('Light beats gear')
+    for (const [path, text] of [['data.name', 'Priya Raman'], ['data.handle', '@priya.frames'], ['data.date', '12 Oct 2026']]) expect(fieldText(list, path), path).toBe(text)
+    expect(textsOf(list).some((t) => t.text.includes('example.com')), 'the link is not drawn').toBe(false)
+    expect(byId<TextItem>(list, 'dash').box.x + byId<TextItem>(list, 'dash').box.width).toBeCloseTo(byId<TextItem>(list, 'name').box.x, 6)
+  })
+
+  it('callout: the stroke draws on to 1 on the beat frame, not before; the label enters from the beat; the arrow joins two edge midpoints, bows outward and carries a head; the circle rings the subject padded 12 %', () => {
+    for (const fps of RATES) {
+      for (const f of LAST_FIXTURES.filter((x) => x.shape === 'callout')) {
+        const s = f.spec
+        const bf = beatFrame(s.beats[0], fps)
+        expect(byId<StrokeItem>(listOf(s, bf, fps), 'stroke').to, `${f.id} on its beat frame at ${fps}`).toBe(1)
+        expect(byId<StrokeItem>(listOf(s, bf - 1, fps), 'stroke').to, `${f.id} the frame before at ${fps}`).toBeLessThan(1)
+        // The label enters from the beat: nothing of it before, all of it a DURATIONS.entrance later.
+        for (let frame = 0; frame < bf; frame++) expect(byId<TextItem>(listOf(s, frame, fps), 'label').opacity, `${f.id} label frame ${frame} at ${fps}`).toBe(0)
+        expect(byId<TextItem>(listOf(s, bf + 1, fps), 'label').opacity, `${f.id} label a frame after the beat at ${fps}`).toBeGreaterThan(0)
+        expect(byId<TextItem>(listOf(s, beatFrame(s.beats[0] + DURATIONS.entrance, fps), fps), 'label').opacity, `${f.id} label whole at ${fps}`).toBe(1)
+      }
+    }
+    for (const f of LAST_FIXTURES.filter((x) => x.shape === 'callout')) {
+      const s = f.spec
+      const subject = targetsFor(s).subject!
+      for (const shape of ['arrow', 'circle'] as const) {
+        const spec: GraphicSpec = { ...s, data: { template: 'callout', label: (s.data as { label: string }).label, shape } }
+        const list = listOf(spec, settledFrame(spec))
+        const stroke = byId<StrokeItem>(list, 'stroke')
+        const panel = byId<ShapeItem>(list, 'panel').box
+        const nums = [...stroke.d.matchAll(/-?\d+(?:\.\d+)?(?:e-?\d+)?/g)].map((m) => Number(m[0]))
+        if (shape === 'arrow') {
+          expect(stroke.d, f.id).toMatch(/^M \S+ \S+ Q \S+ \S+ \S+ \S+$/)
+          const [ax, ay, cx, cy, bx, by] = nums
+          const mids = (r: { x: number; y: number; width: number; height: number }): [number, number][] => [
+            [r.x + r.width / 2, r.y],
+            [r.x + r.width, r.y + r.height / 2],
+            [r.x + r.width / 2, r.y + r.height],
+            [r.x, r.y + r.height / 2]
+          ]
+          const on = (x: number, y: number, r: typeof panel): boolean => mids(r).some(([mx, my]) => Math.abs(mx - x) < 1e-6 && Math.abs(my - y) < 1e-6)
+          expect(on(ax, ay, panel), `${f.id}: starts on an edge of the label`).toBe(true)
+          expect(on(bx, by, subject), `${f.id}: ends on an edge of the subject`).toBe(true)
+          // The nearest pair: no other pair of midpoints is closer.
+          const d = Math.hypot(bx - ax, by - ay)
+          for (const [px, py] of mids(panel)) for (const [qx, qy] of mids(subject)) expect(Math.hypot(qx - px, qy - py), f.id).toBeGreaterThanOrEqual(d - 1e-6)
+          // Bowing away from the frame's centre.
+          const mx = (ax + bx) / 2
+          const my = (ay + by) / 2
+          expect((cx - mx) * (mx - SIZE.width / 2) + (cy - my) * (my - SIZE.height / 2), `${f.id}: bows outward`).toBeGreaterThan(0)
+          expect(stroke.heads?.end?.grow, f.id).toBe(1)
+        } else {
+          expect(stroke.d.trim().endsWith('Z'), `${f.id}: closed`).toBe(true)
+          expect(stroke.heads, f.id).toBeUndefined()
+          const xs = nums.filter((_, i) => i % 2 === 0)
+          const ys = nums.filter((_, i) => i % 2 === 1)
+          expect(Math.min(...xs), f.id).toBeCloseTo(subject.x - 0.12 * subject.width, 6)
+          expect(Math.max(...xs), f.id).toBeCloseTo(subject.x + subject.width * 1.12, 6)
+          expect(Math.min(...ys), f.id).toBeCloseTo(subject.y - 0.12 * subject.height, 6)
+          expect(Math.max(...ys), f.id).toBeCloseTo(subject.y + subject.height * 1.12, 6)
+        }
+        // Beside the subject on the side with more room, inside the content rect.
+        const rect = contentRect(spec.place, SIZE)
+        expect(panel.x, f.id).toBeGreaterThanOrEqual(rect.x - 1e-6)
+        expect(panel.x + panel.width, f.id).toBeLessThanOrEqual(rect.x + rect.width + 1e-6)
+      }
+      // No subject at onset: nothing drawn (the app drops it, §6.9).
+      expect(drawListAt(s, clean(), settledFrame(s), FPS, SIZE, fakeMeasure, { subject: null }).items, f.id).toEqual([])
+      expect(drawListAt(s, clean(), settledFrame(s), FPS, SIZE, fakeMeasure).items, f.id).toEqual([])
+    }
+  })
+
+  it('per fixture and connector, the list at the last moving frame deep-equals the list at the clip’s last frame, at every rate', () => {
+    for (const fps of RATES) {
+      for (const v of LAST_VARIANTS) {
+        const total = totalOf(v.spec, fps)
+        const last = settledFrame(v.spec, fps)
+        expect(last, `${v.id} at ${fps}`).toBeLessThan(total)
+        expect(listOf(v.spec, last, fps), `${v.id} at ${fps}`).toEqual(listOf(v.spec, total - 1, fps))
+      }
+    }
+  })
+
+  it('item ids are stable and unique: every frame of a fixture draws the same ids in the same order', () => {
+    for (const v of LAST_VARIANTS) {
+      for (const style of [clean(), energetic()]) {
+        const ids = flat(listOf(v.spec, settledFrame(v.spec), FPS, SIZE, style).items).map((i) => i.id)
+        expect(new Set(ids).size, `${v.id}: unique`).toBe(ids.length)
+        for (let frame = 0; frame < totalOf(v.spec, FPS); frame++) expect(flat(listOf(v.spec, frame, FPS, SIZE, style).items).map((i) => i.id), `${v.id} frame ${frame}`).toEqual(ids)
+      }
+    }
+  })
+
+  it('with style.dim, every list opens with the dim, its hole round the onset subject, fading in over DURATIONS.dim', () => {
+    const dimmed: GraphicStyle = { ...clean(), dim: true }
+    for (const v of LAST_VARIANTS) {
+      const subject = targetsFor(v.spec).subject ?? { x: 300, y: 500, width: 400, height: 500 }
+      const at0 = drawListAt(v.spec, dimmed, 0, FPS, SIZE, fakeMeasure, { subject })
+      expect(at0.items[0].kind, v.id).toBe('dim')
+      expect((at0.items[0] as Extract<DrawItem, { kind: 'dim' }>).hole?.box, v.id).toEqual(subject)
+      expect(drawListAt(v.spec, dimmed, beatFrame(DURATIONS.dim, FPS), FPS, SIZE, fakeMeasure, { subject }).items[0].opacity, v.id).toBe(1)
+      expect(listOf(v.spec, 0).items.some((i) => i.kind === 'dim'), `${v.id}: clean does not dim`).toBe(false)
+    }
+  })
+
+  it('the settled list lies inside the content rect at 9:16 and 16:9 (a callout’s stroke reaches its subject, outside it); the six-row steps does not fit a 16:9 third and is dropped', () => {
+    for (const size of [SIZE, { width: 1920, height: 1080 }]) {
+      for (const v of LAST_VARIANTS) {
+        const list = listOf(v.spec, settledFrame(v.spec), FPS, size)
+        const label = `${v.id} at ${size.width}×${size.height}`
+        if (v.id.startsWith('steps-en/') && size.width === 1920) {
+          // Measured: six rows at the table's sizes, shrunk to FIT_MIN, are taller than a 16:9 third.
+          expect(list.items, label).toEqual([])
+          expect(graphicFits(v.spec, clean(), size, fakeMeasure), label).toBe(false)
+          continue
+        }
+        expect(list.items.length, `${label}: drawn`).toBeGreaterThan(0)
+        const rect = contentRect(v.spec.place, size)
+        for (const item of flat(list.items)) {
+          if (item.kind === 'dim' || (v.spec.data.template === 'callout' && item.kind === 'stroke')) continue
+          // A shape's or text's own box (the text's ink reach is the style's, not the layout's); a stroke's ink as painter A draws it,
+          // its line widened by half its width and its heads' triangles (itemBounds is the bake's conservative reach, wider than the ink).
+          const box = item.kind === 'stroke' ? strokeInk(item, size) : (item as ShapeItem | TextItem).box
+          expect(box.x, `${label} ${item.id}`).toBeGreaterThanOrEqual(rect.x - 1e-6)
+          expect(box.y, `${label} ${item.id}`).toBeGreaterThanOrEqual(rect.y - 1e-6)
+          expect(box.x + box.width, `${label} ${item.id}`).toBeLessThanOrEqual(rect.x + rect.width + 1e-6)
+          expect(box.y + box.height, `${label} ${item.id}`).toBeLessThanOrEqual(rect.y + rect.height + 1e-6)
+        }
+      }
+    }
   })
 })
