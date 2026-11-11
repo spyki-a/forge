@@ -4,13 +4,14 @@
  * palette, corner radius, stroke width and panel shadow, its motion names,
  * its stroke look and its dim.
  *
- * Phase 1 builds the first half: the type, `resolveGraphicStyle` and its
+ * Phase 1 built the first half: the type, `resolveGraphicStyle` and its
  * guards, the `clean` preset, `GRAPHIC_TEXT_STYLES` and `graphicStyleOf`
  * (the store's `setGraphicsStyle` and `setGraphicsOverride` are in
- * `renderer/src/store.ts`). The six other presets of §6.5's table (`bold`,
- * `editorial`, `neon`, `mono`, `accent`, `energetic`), chosen against the
- * sample tiles, the OUTPUT strip's Graphics section and, if M10 passes, the
- * marker painter and `MARKER_READY` set are phase 2's (§6.5, "Days").
+ * `renderer/src/store.ts`). Phase 2 adds the six other presets of §6.5's
+ * table (`bold`, `editorial`, `neon`, `mono`, `accent`, `energetic`), every
+ * value a proposal until the look rating (§6.10); the OUTPUT strip's
+ * Graphics section draws them. The marker painter and `MARKER_READY` wait
+ * for M10, which has not passed.
  *
  * No number format, locale, grouping or separator: a style that regrouped
  * "10,00,000" as "1,000,000" would draw a string nobody said (§6.2), so no
@@ -66,7 +67,7 @@ export interface GraphicStyle {
   dim: boolean
   /** Restrained by default (D5, §16.58); a preset's character, not a user's override. */
   energy: 'restrained' | 'energetic'
-  /** Phase 3's hero glow and the screen card's edge sweep (§6.16); no phase-1 preset has one. */
+  /** Phase 3's hero glow and the screen card's edge sweep (§6.16); `neon` and `energetic` carry one, which nothing draws before phase 3. */
   glow?: { radius: number; strength: number }
 }
 
@@ -186,8 +187,76 @@ export const CLEAN_GRAPHIC_STYLE: GraphicStyle = frozen({
   energy: 'restrained'
 })
 
-/** The presets by id. Phase 1 has `clean` alone; phase 2 adds the six others of §6.5's table. */
-export const GRAPHIC_STYLES: readonly GraphicStyle[] = Object.freeze([CLEAN_GRAPHIC_STYLE])
+/**
+ * The glow `neon` and `energetic` carry (§6.5's table: "`glow` (phase 3: the
+ * hero's glow and the screen card's edge sweep, §6.16)", `energetic`'s "as
+ * `neon`'s"). Phase 3 reads it; nothing in phases 1 and 2 draws it, except
+ * that a screen card under a glowing style moves for one edge sweep
+ * (`graphicMovingFrames`, frame.ts). §6.5 gives no numbers: `radius` a
+ * fraction of the short side as the style's other sizes are, and `strength`
+ * 0..1 taken from `neon-green`'s own glow opacity (0.65, render/textStyle.ts),
+ * this file's proposals beyond the plan's words.
+ */
+const GLOW = { radius: 0.02, strength: 0.65 }
+
+/**
+ * The six other presets (§6.5's presets table), each a copy of `clean`'s
+ * values with the table's columns over it. The ink is the text style's base
+ * fill, read from `TEXT_STYLES` (a gradient's last stop for `neon-green`),
+ * since a graphic's text takes its text style's fill and the ink must match
+ * it (§6.3). `muted`, the dim's colour, `radius`, `stroke` and `shadow` are
+ * not in the table and stay `clean`'s proposals. The `accent` preset's
+ * accent is the 3dit blue `#2563EB`, which the user's pick replaces through
+ * `overrides['palette.accent']`, the guard every preset already reads.
+ */
+function preset(
+  id: string,
+  name: string,
+  textStyleId: string,
+  font: string,
+  motion: GraphicStyle['motion'],
+  palette: Pick<GraphicStyle['palette'], 'ink' | 'accent' | 'panel' | 'panelOpacity' | 'dimOpacity'>,
+  rest: Pick<GraphicStyle, 'dim' | 'energy'> & { glow?: GraphicStyle['glow'] }
+): GraphicStyle {
+  const style: GraphicStyle = {
+    ...CLEAN_GRAPHIC_STYLE,
+    id,
+    name,
+    textStyleId,
+    font,
+    palette: { ...CLEAN_GRAPHIC_STYLE.palette, ...palette },
+    motion: { ...motion },
+    dim: rest.dim,
+    energy: rest.energy
+  }
+  if (rest.glow) style.glow = { ...rest.glow }
+  return frozen(style)
+}
+
+const RISE_EXPO: GraphicStyle['motion'] = { entrance: 'rise', ease: 'expo-out', exit: 'accelerate' }
+
+/** The presets by id: `clean`, the default, then the six others of §6.5's table, in its order. */
+export const GRAPHIC_STYLES: readonly GraphicStyle[] = Object.freeze([
+  CLEAN_GRAPHIC_STYLE,
+  preset('bold', 'Bold', 'outline', 'Anton', RISE_EXPO,
+    { ink: '#FFFFFF', accent: '#FFD400', panel: '#000000', panelOpacity: 0.7, dimOpacity: 0.35 },
+    { dim: false, energy: 'restrained' }),
+  preset('editorial', 'Editorial', 'midnight', 'Playfair Display', { entrance: 'rise', ease: 'decelerate', exit: 'accelerate' },
+    { ink: '#101014', accent: '#B4232A', panel: '#F2EFE7', panelOpacity: 0.92, dimOpacity: 0.3 },
+    { dim: false, energy: 'restrained' }),
+  preset('neon', 'Neon', 'neon-green', 'Unbounded', RISE_EXPO,
+    { ink: '#68D43A', accent: '#FFFFFF', panel: '#050608', panelOpacity: 0.6, dimOpacity: 0.45 },
+    { dim: false, energy: 'restrained', glow: GLOW }),
+  preset('mono', 'Mono', 'clean', 'Montserrat', { entrance: 'rise', ease: 'standard', exit: 'accelerate' },
+    { ink: '#FFFFFF', accent: '#FFFFFF', panel: '#000000', panelOpacity: 0.5, dimOpacity: 0.35 },
+    { dim: false, energy: 'restrained' }),
+  preset('accent', 'Accent', 'clean', 'Montserrat', RISE_EXPO,
+    { ink: '#FFFFFF', accent: '#2563EB', panel: '#0B0D10', panelOpacity: 0.55, dimOpacity: 0.35 },
+    { dim: false, energy: 'restrained' }),
+  preset('energetic', 'Energetic', 'shadow-pop', 'Poppins', { entrance: 'pop', ease: 'out-back', exit: 'accelerate' },
+    { ink: '#FFE14D', accent: '#FFFFFF', panel: '#000000', panelOpacity: 0.6, dimOpacity: 0.5 },
+    { dim: true, energy: 'energetic', glow: GLOW })
+])
 
 /**
  * A colour as the app's colour inputs write it: `#` and 3, 4, 6 or 8 hex

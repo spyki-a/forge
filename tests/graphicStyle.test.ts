@@ -19,10 +19,9 @@ import type { TextSpec } from '@shared/timeline'
  * The graphic style's first half (docs/CLIPS.md §6.5, phase 1): the guards of
  * `resolveGraphicStyle`, its gates, the `clean` preset, `GRAPHIC_TEXT_STYLES`
  * and `graphicStyleOf`. `clean`'s rules (the default, restrained, no `pop`,
- * no `out-back`, no dim, no glow) are asserted here on the one preset there
- * is; the seven presets by id, `energy` and `dim` across them, and each
- * preset's ink against its text style's fill are phase 2's cases, with the
- * six presets they need.
+ * no `out-back`, no dim, no glow) are asserted on `clean` itself; phase 2's
+ * cases, the seven presets by id, `energy` and `dim` across them, and each
+ * preset's ink against its text style's fill, are under "the seven presets".
  */
 
 const clean = (): GraphicStyle => resolveGraphicStyle('clean')
@@ -325,6 +324,105 @@ describe('the other overrides (§6.5)', () => {
   })
 })
 
+/* ------------------------------------------------------- the seven presets */
+
+/*
+ * Phase 2's cases (§6.5): the six other presets of the table beside `clean`.
+ * Membership over GRAPHIC_STYLES, never its length or a snapshot of its
+ * values: every number is a proposal the look rating (§6.10) will revise, so
+ * what is pinned is the rules the values must keep, not the values.
+ */
+
+/** §6.5's presets table: id, name and text style. */
+const TABLE: readonly (readonly [string, string, string])[] = [
+  ['clean', 'Clean', 'clean'],
+  ['bold', 'Bold', 'outline'],
+  ['editorial', 'Editorial', 'midnight'],
+  ['neon', 'Neon', 'neon-green'],
+  ['mono', 'Mono', 'clean'],
+  ['accent', 'Accent', 'clean'],
+  ['energetic', 'Energetic', 'shadow-pop']
+]
+
+/** A text style's base fill as the ink must match it: a solid's colour, a gradient's last stop (§6.5). */
+function inkOf(textStyleId: string): string {
+  const style = TEXT_STYLES.find((t) => t.id === textStyleId)
+  if (!style) throw new Error(`no text style ${textStyleId}`)
+  const fill = style.base.fill
+  if (fill.kind === 'solid') return fill.color.toUpperCase()
+  if (fill.kind === 'gradient') return fill.stops[fill.stops.length - 1].color.toUpperCase()
+  throw new Error(`${textStyleId} has no fill to match`)
+}
+
+describe('the seven presets (§6.5, phase 2)', () => {
+  it('each of the table’s seven, by id, resolves to itself, with the table’s name and text style', () => {
+    const ids = GRAPHIC_STYLES.map((s) => s.id)
+    expect(new Set(ids).size, 'ids are unique').toBe(ids.length)
+    for (const [id, name, textStyleId] of TABLE) {
+      const preset = GRAPHIC_STYLES.find((s) => s.id === id)
+      expect(preset, id).toBeDefined()
+      expect(preset!.name, id).toBe(name)
+      expect(preset!.textStyleId, id).toBe(textStyleId)
+      // A text style a graphic may use (§6.3), so resolving keeps it.
+      expect(GRAPHIC_TEXT_STYLES.map((t) => t.id), id).toContain(textStyleId)
+      const resolved = resolveGraphicStyle(id)
+      expect(resolved.id, id).toBe(id)
+      expect(resolved, id).toEqual(preset)
+      // Frozen, as clean is: a caller that changes a resolved style changes no preset.
+      expect(Object.isFrozen(preset), id).toBe(true)
+      expect(Object.isFrozen(preset!.palette), id).toBe(true)
+    }
+  })
+
+  it('every preset is restrained but energetic, the only one with pop and out-back (§16.58)', () => {
+    expect(GRAPHIC_STYLES.map((s) => s.id)).toContain('energetic')
+    for (const style of GRAPHIC_STYLES) {
+      if (style.id === 'energetic') {
+        expect(style.energy).toBe('energetic')
+        expect(style.motion.entrance).toBe('pop')
+        expect(style.motion.ease).toBe('out-back')
+        continue
+      }
+      expect(style.energy, style.id).toBe('restrained')
+      expect(style.motion.entrance, style.id).not.toBe('pop')
+      expect(style.motion.ease, style.id).not.toBe('out-back')
+      expect(style.motion.exit, style.id).not.toBe('out-back')
+    }
+  })
+
+  it('dim is false in every preset but energetic; every stroke look is clean (MARKER_READY is false)', () => {
+    for (const style of GRAPHIC_STYLES) {
+      expect(style.dim, style.id).toBe(style.id === 'energetic')
+      expect(style.strokeLook, style.id).toBe('clean')
+    }
+  })
+
+  it('each preset’s ink is its text style’s base fill, or a gradient’s last stop, read from TEXT_STYLES', () => {
+    for (const style of GRAPHIC_STYLES) {
+      expect(style.palette.ink.toUpperCase(), `${style.id} on ${style.textStyleId}`).toBe(inkOf(style.textStyleId))
+    }
+  })
+
+  it('neon and energetic carry the glow phase 3 reads; the restrained others carry no glow key', () => {
+    for (const style of GRAPHIC_STYLES) {
+      if (style.id === 'neon' || style.id === 'energetic') {
+        expect(style.glow, style.id).toBeDefined()
+        expect(style.glow!.radius, style.id).toBeGreaterThan(0)
+        expect(style.glow!.strength, style.id).toBeGreaterThan(0)
+      } else {
+        expect('glow' in style, style.id).toBe(false)
+      }
+    }
+  })
+
+  it('the accent preset is the 3dit blue until the user picks a colour, and takes the pick through palette.accent', () => {
+    expect(resolveGraphicStyle('accent').palette.accent).toBe('#2563EB')
+    expect(resolveGraphicStyle('accent', { 'palette.accent': '#E11D48' }).palette.accent).toBe('#E11D48')
+    // Guarded as every colour: not hex, the preset's.
+    expect(resolveGraphicStyle('accent', { 'palette.accent': 'red' }).palette.accent).toBe('#2563EB')
+  })
+})
+
 /* ------------------------------------------------------------ graphicStyleOf */
 
 describe('graphicStyleOf (§6.5)', () => {
@@ -338,6 +436,6 @@ describe('graphicStyleOf (§6.5)', () => {
     // A spec naming a style keeps the project's overrides (and an unknown one is clean).
     expect(graphicStyleOf({ graphics }, { style: 'no-such-style' }).palette.accent).toBe('#2563EB')
     expect(graphicStyleOf({ graphics: { ...graphics, styleId: 'no-such-style' } }, {})).toEqual(style)
-    // Which id wins, the spec's or the project's, is visible only with two presets: phase 2's case.
+    // Which id wins, the spec's or the project's, with two presets: tests/renderer/graphicStyleStore.test.ts.
   })
 })

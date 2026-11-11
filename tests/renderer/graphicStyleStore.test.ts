@@ -87,3 +87,21 @@ describe('setGraphicsOverride', () => {
     expect(graphics()).toStrictEqual({ styleId: 'editorial', overrides: { dim: true }, sound: false })
   })
 })
+
+describe('which id wins, the spec’s or the project’s, and the fallback is clean (§6.5, phase 2)', () => {
+  it('a spec naming a preset wins over the project’s; a spec naming none takes the project’s; an unknown id on either side is clean, not the other preset', () => {
+    start()
+    useEditor.getState().setGraphicsStyle('bold')
+    const project = useEditor.getState().project
+    expect(graphicStyleOf(project, {}).id).toBe('bold')
+    expect(graphicStyleOf(project, { style: 'editorial' }).id).toBe('editorial')
+    // An unknown id falls back to clean, not to the project's bold.
+    expect(graphicStyleOf(project, { style: 'no-such-style' }).id).toBe('clean')
+    start({ styleId: 'no-such-style', overrides: {}, sound: true })
+    expect(graphicStyleOf(useEditor.getState().project, {}).id).toBe('clean')
+    expect(graphicStyleOf(useEditor.getState().project, { style: 'editorial' }).id).toBe('editorial')
+    // No graphics at all: clean.
+    start()
+    expect(graphicStyleOf(useEditor.getState().project, {}).id).toBe('clean')
+  })
+})
