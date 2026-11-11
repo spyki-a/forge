@@ -41,7 +41,9 @@ const shows = (clip: Clip, frame: number): boolean => frame >= clip.start && fra
  * on a visible video track (its track hidden, or a track id the project no
  * longer has): the export draws no such clip (render/plan.ts, the hidden
  * tracks skipped), so "on screen" means the same on both routes here, the
- * other route getting it from `captionTrack`'s own filter. Without one: the union of
+ * other route getting it from `captionTrack`'s own filter. With `spec.subject`
+ * null (§6.9 found none to take, or the shot zooms under the graphic): null,
+ * no hole. Without one (absent, a graphic §6.9 never placed): the union of
  * `subjectBoxesAt` on the clip of `captionTrack(project)` under the frame,
  * the track whose speaker the captions follow. The canvas handed to the
  * mapping is `size` itself: the frame being drawn, so a project at another
@@ -51,6 +53,8 @@ const shows = (clip: Clip, frame: number): boolean => frame >= clip.start && fra
 function subjectAt(project: Project, spec: Pick<GraphicSpec, 'subject'>, onset: number, size: { width: number; height: number }): Rect | null {
   // A size with no area is `sourceToFrame`'s own refusal (null), on both routes; no guard of this file's.
   const taken = spec.subject
+  // §6.9 step 4: looked for and not taken (none at onset, or a zoom under the span): no hole, never the fallback.
+  if (taken === null) return null
   if (taken) {
     const footage = project.clips.find((c) => c.id === taken.clipId)
     if (!footage || !shows(footage, onset)) return null

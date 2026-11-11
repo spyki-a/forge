@@ -311,6 +311,13 @@ describe('samplesOver (§6.9 step 2): a graphic’s span reader beside spanSampl
     expect(bottoms(samplesOver(project, clip, a, PORTRAIT, 80, 100))).toEqual([0.07])
   })
 
+  it('from inclusive, to exclusive: a sample on the range’s first frame is read, one on its end frame is not', () => {
+    const { project, clip, a } = ranged()
+    // Sample 2 sits on clip frame 30, sample 3 on frame 45.
+    expect(bottoms(samplesOver(project, clip, a, PORTRAIT, 30, 45))).toEqual([0.03])
+    expect(bottoms(samplesOver(project, clip, a, PORTRAIT, 30, 46))).toEqual([0.03, 0.04])
+  })
+
   it('a range shorter than the sample step reads the sample nearest its middle', () => {
     const { project, clip, a } = ranged()
     // [16, 20) holds no sample's frame; its middle, frame 17, shows source ≈ 567 ms, nearest sample 1 (500 ms).

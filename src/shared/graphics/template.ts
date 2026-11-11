@@ -91,8 +91,13 @@ export interface GraphicSpec {
   grounding?: { assetId: string; sentence: string; words: number[] }
   /** Where it sits (§6.9); `auto` is recomputed on rebake. */
   place: { auto: true; third: 'top' | 'middle' | 'bottom' } | { auto: false; box: UnitRect }
-  /** A callout's target and a dim's hole on the clip beneath, in source units, set once at onset (§6.9). */
-  subject?: { clipId: string; box: UnitRect; ms: number }
+  /**
+   * A callout's target and a dim's hole on the clip beneath, in source units, set once at onset (§6.9).
+   * `null`: the subject was looked for and not taken (none at onset, or the shot zooms under the graphic,
+   * §6.9 step 4), so no hole is drawn. Absent: never placed by §6.9 (a graphic added by hand), and
+   * targets.ts falls back to the caption track's subject.
+   */
+  subject?: { clipId: string; box: UnitRect; ms: number } | null
   /** Retrieved facts, steps 5/6. */
   sources?: { title: string; url: string; outlet: string; date: string; licence: string }[]
   /** A graphic the user keeps before it is placed (§6.6; `'pointed'` §6.18). */

@@ -2343,8 +2343,10 @@ export const useEditor = create<EditorState>((set, get) => ({
          * graphics/targets.ts reads. A callout's target moves when Follow
          * re-solves the crop beneath it.
          */
+        // `subject: null` is §6.9's "not taken": no target to move, so nothing beneath to re-follow.
         const subject = clip.graphic.subject
-        const under = subject ? (project.clips.find((c) => c.id === subject.clipId) ?? null) : captionSourceClip(project, clip.start)
+        const under =
+          subject === null ? null : subject ? (project.clips.find((c) => c.id === subject.clipId) ?? null) : captionSourceClip(project, clip.start)
         if (under && assetIds.includes(under.assetId)) await get().rebakeGraphic(clip.id)
         continue
       }

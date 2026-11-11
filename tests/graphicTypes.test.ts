@@ -226,7 +226,8 @@ describe('the spec (§6.1)', () => {
     }
 
     expectTypeOf<GraphicSpec['grounding']>().toEqualTypeOf<{ assetId: string; sentence: string; words: number[] } | undefined>()
-    expectTypeOf<GraphicSpec['subject']>().toEqualTypeOf<{ clipId: string; box: UnitRect; ms: number } | undefined>()
+    // null: §6.9 step 4 looked and did not take one (no hole drawn); absent: never placed by §6.9.
+    expectTypeOf<GraphicSpec['subject']>().toEqualTypeOf<{ clipId: string; box: UnitRect; ms: number } | null | undefined>()
     expectTypeOf<GraphicSpec['sources']>().toEqualTypeOf<
       { title: string; url: string; outlet: string; date: string; licence: string }[] | undefined
     >()

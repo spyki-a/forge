@@ -81,7 +81,8 @@ export function captionThirdsOver(
  * clip `clipId` for project frames [startFrame, startFrame + frames) on the
  * output frame `canvas`; null is "no free third" (`NO_FREE_THIRD_NOTE`), and
  * the caller drops the graphic. Null too when the clip is not in the project
- * (`NO_CLIP_NOTE`).
+ * (`NO_CLIP_NOTE`): the caller tells the two apart by looking the clip up
+ * first, as `subjectAtOnset` and `graphicLane` do.
  *
  * 1. The captions' thirds over the span are excluded (`captionThirdsOver`).
  * 2. The subject's overlap per third is the 90th percentile (`shotOverlap`)
@@ -112,6 +113,7 @@ export function placeGraphic(
   const asset = project.assets.find((a) => a.id === clip.assetId)
   const from = startFrame - clip.start
   const overlap = asset ? shotOverlap(samplesOver(project, clip, asset, canvas, from, from + frames)) : { top: 0, middle: 0, bottom: 0 }
+  // "At most OVERLAP_LIMIT", Smart placement's own boundary (freeSpace.ts `chooseThird`, `!(mine > OVERLAP_LIMIT)`).
   const free = remaining.find((t) => !(overlap[t] > OVERLAP_LIMIT))
   if (free) return { auto: true, third: free }
   let best = remaining[0]
@@ -134,20 +136,20 @@ function zoomsUnder(clip: Clip, from: number, to: number): boolean {
   return false
 }
 
-const usable = (b: UnitRect | null | undefined): b is UnitRect =>
-  !!b && [b.x, b.y, b.width, b.height].every((v) => typeof v === 'number' && Number.isFinite(v)) && b.width > 0 && b.height > 0
-
 /**
  * The subject at onset (docs/CLIPS.md §6.9 step 4), taken ONCE on the
  * graphic's first frame `startFrame` (a project frame) over the footage clip
  * `clipId`: the sample `subjectBoxesAt` reads on that frame (the shot the
  * export shows there, `sourceMsAt`, `nearestSample` within reach), its
- * largest face by area, in SOURCE units, WITHOUT the chin extension, and
+ * largest face by area among those on screen at onset, in SOURCE units,
+ * WITHOUT the chin extension, and
  * that sample's ms. `graphicTargetsAt` (targets.ts) maps exactly this box
  * through `sourceToFrame` at the graphic clip's first frame.
  *
  * - `{ subject }` with the box, or `{ subject: null }` for a template that
- *   then draws its dim without a hole;
+ *   then draws its dim without a hole (stored as `GraphicSpec.subject: null`,
+ *   which `graphicTargetsAt` reads as no hole, never its caption-track
+ *   fallback);
  * - `{ dropped }` only for a `callout`: `ZOOMS_UNDER_NOTE` when the clip
  *   carries a `motion` or a zoom other than 1 anywhere over
  *   [startFrame, startFrame + frames) (the subject is then not taken for any
@@ -175,14 +177,17 @@ export function subjectAtOnset(
   const span = shotSpans(project, clip, track, canvas).find((s) => k >= s.from && k < s.to)
   const ms = span ? sourceMsAt(clip, project.settings.fps, k) : null
   const sample = span && ms !== null ? nearestSample(track, span.index, ms) : null
+  // The largest among the faces ON SCREEN at onset, as `subjectBoxesAt` reads them (frameMap.ts `facesOnFrame`
+  // drops the ones off screen first): a larger face the crop cuts away does not hide a smaller one in view.
+  // `sourceToFrame` is null for an unusable box too (its own `usable`), so no check of this file's.
   let face: UnitRect | null = null
   for (const f of sample?.faces ?? []) {
-    if (usable(f) && (!face || f.width * f.height > face.width * face.height)) face = f
+    const box: UnitRect = { x: f.x, y: f.y, width: f.width, height: f.height }
+    if (!sourceToFrame(project, clip, asset, canvas, startFrame, box)) continue
+    if (!face || box.width * box.height > face.width * face.height) face = box
   }
   if (!sample || !face) return none(NO_SUBJECT_NOTE)
-  const box: UnitRect = { x: face.x, y: face.y, width: face.width, height: face.height }
-  if (!sourceToFrame(project, clip, asset, canvas, startFrame, box)) return none(NO_SUBJECT_NOTE)
-  return { subject: { clipId, box, ms: sample.ms } }
+  return { subject: { clipId, box: face, ms: sample.ms } }
 }
 
 /**
@@ -195,7 +200,8 @@ export function subjectAtOnset(
  * yours), a moment, or a Director card (`COPY_RULE`, `ENDING_RULE`), anywhere
  * on the timeline: director/apply2.ts `cardsAbove`'s rule, widened to cards
  * and adjustments. From there the first lane free over the span
- * (`stackedSlot`, which skips a locked track); else a new top track
+ * (`stackedSlot`, which skips a locked track; a hidden track is skipped
+ * too, beyond the plan words); else a new top track
  * (`addTrack`). A track this adds — the starting lane when there is none
  * above, or the new top — is marked `director: true` when the rule is one of
  * `DIRECTOR_RULES` (Direct's, so its Clear takes the track when empty) and is
@@ -230,13 +236,26 @@ export function graphicLane(
     }
     return added.id
   }
+  // `stackedSlot` skips a locked track; a hidden one is skipped here too: the export draws no clip on it
+  // (render/plan.ts), so a graphic there would be placed and never seen.
+  const visibleSlot = (start: string): string | null => {
+    let at: string | undefined = start
+    while (at) {
+      const slot = stackedSlot(next, at, startFrame, frames)
+      if (!slot) return null
+      const track = next.tracks.find((t) => t.id === slot.trackId)
+      if (!track?.hidden) return slot.trackId
+      at = lanes()[indexOf(slot.trackId) + 1]?.id
+    }
+    return null
+  }
   const from = lanes()[top + 1]?.id ?? addTop()
   if (!from) return { dropped: NO_LANE_NOTE }
-  let slot = stackedSlot(next, from, startFrame, frames)
-  if (!slot) {
+  let trackId = visibleSlot(from)
+  if (!trackId) {
     if (!addTop()) return { dropped: NO_LANE_NOTE }
-    slot = stackedSlot(next, from, startFrame, frames)
+    trackId = visibleSlot(from)
   }
-  if (!slot) return { dropped: NO_LANE_NOTE }
-  return { project: next, trackId: slot.trackId }
+  if (!trackId) return { dropped: NO_LANE_NOTE }
+  return { project: next, trackId }
 }

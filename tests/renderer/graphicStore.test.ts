@@ -406,6 +406,9 @@ describe('the arms', () => {
     start({ assets: [footage, broll], clips: [shot, { ...shot, id: 'b', assetId: 'broll', trackId: 'v2', start: 300, duration: 300 }] })
     const named = await added({ subject: { clipId: 'b', box: { x: 0.1, y: 0.2, width: 0.2, height: 0.3 }, ms: 1000 } })
     const under = await added()
+    // §6.9's "not taken" (subject: null): no target, so nothing beneath to re-follow, the caption track's clip not read.
+    const none = await added({ subject: null })
+    expect(bake.asks.find((a) => a.clipId === none)!.subject).toBeNull()
     expect(clipOf(named).trackId).toBe('v2')
     bake.asks = []
     await state().rebakeFollowed(['other'])

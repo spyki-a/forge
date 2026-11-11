@@ -160,6 +160,13 @@ describe('placeGraphic: the third (§6.9 steps 1-3)', () => {
     expect(third(setup({ t }), 'counter', 40, 60)).toBe('top')
   })
 
+  it('project frames are read as the clip’s own: the clip’s 30-frame start decides the shot', () => {
+    // Project frames 100-120 are clip frames 70-90 (2333-3000 ms), all in shot 0, the face in the middle: the top.
+    // Read unshifted, frames 100-120 would be 3333-4000 ms, shot 1, the face low: the middle.
+    const t: Build = { cutsMs: [3000], endMs: 6000, faces: (shot) => [shot === 0 ? MIDDLE_FACE : LOW_FACE] }
+    expect(third(setup({ t }), 'counter', 100, 20)).toBe('top')
+  })
+
   it('no free third: the captions take all three over a span crossing two cuts, and the graphic is dropped (null)', () => {
     // Smart, at the bottom: shot 0 nothing (bottom), shot 1 a face low (middle), shot 2 a face low and one in the middle (top).
     const t: Build = { cutsMs: [2000, 4000], endMs: 6000, faces: (shot) => (shot === 0 ? [] : shot === 1 ? [LOW_FACE] : [LOW_FACE, MIDDLE_FACE]) }
@@ -219,11 +226,14 @@ describe('subjectAtOnset (§6.9 step 4)', () => {
     const moving = reframed({}, (_s, ms) => [{ ...BIG, x: 0.4 + ms / 100000 }])
     const got = subjectAtOnset(moving, 'c', 60, 75, 'counter', PORTRAIT) as { subject: NonNullable<GraphicSpec['subject']> }
     expect(got.subject.box.x).toBeCloseTo(0.41, 12)
+    expect(got.subject.box.y).toBe(0.3)
+    expect(got.subject.box.width).toBe(0.1)
+    expect(got.subject.box.height).toBe(0.2)
     expect(got.subject.ms).toBe(1000)
-    // A dim's hole and a connector's target take the same box as a callout's.
+    // A dim's hole and a connector's target (a steps graphic) take the same box as a counter's.
+    expect(subjectAtOnset(moving, 'c', 60, 75, 'steps', PORTRAIT)).toEqual(got)
     // A clip the project no longer holds: no subject, no hole.
     expect(subjectAtOnset(moving, 'gone', 60, 75, 'steps', PORTRAIT)).toEqual({ subject: null })
-    expect(subjectAtOnset(moving, 'c', 60, 75, 'steps', PORTRAIT)).toEqual(got)
 
     // Followed: 1920×1080 on 9:16, shot 0's face low left, shot 1's high right; the crop steps at clip frame 80.
     const W = 1920
@@ -263,6 +273,21 @@ describe('subjectAtOnset (§6.9 step 4)', () => {
     expect(subjectAtOnset(reframed(), 'c', 10, 75, 'callout', PORTRAIT)).toEqual({ dropped: NO_SUBJECT_NOTE })
   })
 
+  it('the largest face ON SCREEN: a larger face the crop cuts away does not hide a smaller one in view', () => {
+    // Two people in a 16:9 interview reframed to 9:16: the larger at x 38-326 px, outside the crop from 656; the smaller in it.
+    const bigOff: UnitRect = { x: 0.02, y: 0.3, width: 0.15, height: 0.3 }
+    const smallOn: UnitRect = { x: 0.45, y: 0.3, width: 0.05, height: 0.1 }
+    const p = reframed({}, () => [bigOff, smallOn])
+    expect(subjectAtOnset(p, 'c', 60, 75, 'callout', PORTRAIT)).toEqual({ subject: { clipId: 'c', box: smallOn, ms: 1000 } })
+    expect(subjectAtOnset(p, 'c', 60, 75, 'counter', PORTRAIT)).toEqual({ subject: { clipId: 'c', box: smallOn, ms: 1000 } })
+  })
+
+  it('the subject from the shot the export shows at onset: an onset in shot 1 takes shot 1’s face', () => {
+    // Project frame 150 is clip frame 120, source 4000 ms, in shot 1 (from 3000 ms), whose face is low.
+    const p = setup({ t: { cutsMs: [3000], endMs: 6000, faces: (shot) => [shot === 0 ? MIDDLE_FACE : LOW_FACE] } })
+    expect(subjectAtOnset(p, 'c', 150, 30, 'callout', PORTRAIT)).toEqual({ subject: { clipId: 'c', box: LOW_FACE, ms: 4000 } })
+  })
+
   it('over a Ken Burns motion or a zoom key of 1.2 a callout is dropped and a counter’s dim has no hole; a held zoom of 1 changes nothing', () => {
     expect(ZOOMS_UNDER_NOTE).toBe('the shot zooms under it, so its target would miss')
     const taken = subjectAtOnset(reframed(), 'c', 60, 75, 'callout', PORTRAIT)
@@ -278,6 +303,25 @@ describe('subjectAtOnset (§6.9 step 4)', () => {
     expect(subjectAtOnset(held, 'c', 60, 75, 'callout', PORTRAIT)).toEqual(taken)
     const later = reframed({ keyframes: { zoom: [{ frame: 0, value: 1 }, { frame: 110, value: 1 }, { frame: 140, value: 1.2 }] } })
     expect(subjectAtOnset(later, 'c', 60, 75, 'callout', PORTRAIT)).toEqual(taken)
+    // A zoom that is 1 at onset (clip frame 30) and starts inside the span (clip frame 60 on): "anywhere over the span".
+    const inside = reframed({ keyframes: { zoom: [{ frame: 0, value: 1 }, { frame: 60, value: 1 }, { frame: 90, value: 1.2 }] } })
+    expect(subjectAtOnset(inside, 'c', 60, 75, 'callout', PORTRAIT)).toEqual({ dropped: ZOOMS_UNDER_NOTE })
+  })
+
+  it('the counter over a Ken Burns motion DRAWS no hole: its stored subject null is read as none, never the caption track’s', () => {
+    // Captions on, so the caption track's clip under the onset is 'c': the fallback a spec with no subject reads.
+    const kenBurns = setup({
+      t: { endMs: 6000, faces: () => [MIDDLE_FACE] },
+      clip: { motion: { kind: 'kenburns', direction: 'in', amount: 0.1 } },
+      captions: { enabled: true }
+    })
+    const got = subjectAtOnset(kenBurns, 'c', 60, 75, 'counter', PORTRAIT) as { subject: GraphicSpec['subject'] }
+    expect(got).toEqual({ subject: null })
+    expect(graphicTargetsAt(kenBurns, { start: 60 }, spec(got.subject), 60, PORTRAIT).subject).toBeNull()
+    // The fallback is there to be refused: with no subject at all, the caption track's face (frame units, chin-extended).
+    const fallback = graphicTargetsAt(kenBurns, { start: 60 }, {}, 60, PORTRAIT).subject!
+    expect(fallback.x).toBeCloseTo(0.35 * 1080, 6)
+    expect(fallback.y).toBeCloseTo(0.4 * 1920, 6)
   })
 })
 
@@ -363,5 +407,17 @@ describe('graphicLane (§6.9 “On the timeline”)', () => {
     // One lane free over the span below the top: taken.
     const freed = laned(busy.filter((c) => c.trackId !== 'v5'), tracks)
     expect(graphicLane(freed, 'c', 60, 90, SPINE_RULE)).toMatchObject({ trackId: 'v5' })
+  })
+
+  it('a hidden track is never the lane: the export draws nothing on it', () => {
+    const hidden = { ...V('v2'), hidden: true }
+    expect(graphicLane(laned([], [V('v1'), hidden, V('v3')]), 'c', 60, 90, CLIPS_GRAPHIC_RULE)).toMatchObject({ trackId: 'v3' })
+    // Every lane above hidden or busy: a new top track.
+    const got = graphicLane(laned([clipOf('u3', 'a', 'v3', 30, 180)], [V('v1'), hidden, V('v3')]), 'c', 60, 90, CLIPS_GRAPHIC_RULE) as {
+      project: Project
+      trackId: string
+    }
+    expect(videoIds(got.project)).toHaveLength(4)
+    expect(got.trackId).toBe(videoIds(got.project)[3])
   })
 })
