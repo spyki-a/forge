@@ -51,39 +51,83 @@ const CURRENCY_SIGNS: readonly string[] = ['$', '€', '£', '₹']
 const MINUS = '−'
 
 /**
- * Leading and trailing characters outside letters, marks, numbers, the
- * currency signs and `%`; a leading run stops at a minus directly before a
- * digit or a currency sign and a digit.
+ * The token `claimTokens` puts where a word's own punctuation ended or began a
+ * clause or a sentence (`, ; : — – . ! ? । ॥ …`), so `numbersIn` never joins
+ * number words across it ('forty, two of them' is 40 and 2, never 42), and
+ * rule 7's clause has an edge to stop at. `claimToken` trims every
+ * character outside letters, marks and numbers, so no spoken word is ever
+ * this token.
  */
-const UNIT_EDGES = /^(?:(?![-−][$€£₹]?\p{N})[^\p{L}\p{M}\p{N}$€£₹%])+|[^\p{L}\p{M}\p{N}$€£₹%]+$/gu
+export const CLAUSE_BREAK = ','
+
+const BREAK_CHARS = /[,;:—–.!?।॥…]/u
+
+/**
+ * The leading characters a spoken word sheds: outside letters, marks,
+ * numbers, the currency signs and `%`, stopping at a minus (hyphen-minus,
+ * U+2212 or an en dash U+2013) or a decimal point that stands directly
+ * before the digits (or before a currency sign and the digits).
+ */
+const LEAD_EDGE = /^(?:(?![-−–]?[$€£₹]?[-−–]?\.?\p{N})[^\p{L}\p{M}\p{N}$€£₹%])+/u
+
+/** The trailing characters a spoken word sheds: outside letters, marks, numbers, the currency signs and `%`. */
+const TRAIL_EDGE = /[^\p{L}\p{M}\p{N}$€£₹%]+$/u
+
+/** The digit blocks a token holds (ASCII and rule 3's ten), by each block's zero. */
+function digitBlocks(text: string): Set<number> {
+  const blocks = new Set<number>()
+  for (const ch of text) {
+    const c = ch.codePointAt(0)!
+    if (c >= 0x30 && c <= 0x39) blocks.add(0x30)
+    for (const z of NATIVE_ZEROS) if (c >= z && c <= z + 9) blocks.add(z)
+  }
+  return blocks
+}
 
 /**
  * One spoken word as the validator's tokens (§6.7 rule 2): a leading currency
  * sign and a trailing `%` are split off FIRST as unit tokens, then each part
- * goes through `claimToken`. '$40' → ['$', '40'], '40%.' → ['40', '%'],
- * '(₹40,000)' → ['₹', '40,000'], '%' → ['%'], 'Parts:' → ['parts'], '—' → [].
+ * goes through `claimToken`. '$40' → ['$', '40'], '40%' → ['40', '%'],
+ * '(₹40,000)' → ['₹', '40,000'], '%' → ['%'], 'Parts' → ['parts'].
  *
- * Beyond rule 2's words: a minus directly before the digits ('-5%', '$-5',
- * '-$5', '−5') is split off as the token '−' rather than trimmed away, so `numbersIn`
- * reads −5, not 5: trimming it would let a drawn "5%" ground on a spoken
- * "-5%". A hyphen before a letter is trimmed as rule 2 says.
+ * Beyond rule 2's words, each so a number is never read as another value:
+ * - a minus directly before the digits ('-5%', '$-5', '-$5', '−5', '–5')
+ *   is split off as the token '−' rather than trimmed away, so `numbersIn`
+ *   reads −5, not 5: trimmed, a drawn "5%" would ground on a spoken "-5%".
+ *   A hyphen before a letter is trimmed as rule 2 says;
+ * - a decimal point directly before the digits stays on them ('.5%' →
+ *   ['.5', '%']), and `numbersIn` reads no number from it: trimmed, '.5%'
+ *   would be read as 5%. `numbers.ts`' `numberOf` refuses it too;
+ * - a TRAILING currency sign ('40€') stays on the digits ('40€'), which
+ *   `numbersIn` reads as no number: rule 2 splits only a leading sign, and
+ *   trimmed, '40€' would be a bare 40;
+ * - digits from two blocks in one word ('4०') are not mapped to ASCII, so
+ *   `numbersIn` reads no number, as `numberOf` reads none ('digits from two
+ *   scripts');
+ * - a clause or sentence mark in the punctuation the word sheds becomes a
+ *   `CLAUSE_BREAK` token on that side ('forty,' → ['forty', ',']; '—' →
+ *   [',']), except the point of the currency word 'Rs.' ('Rs. 500' is ₹500).
  */
 export function claimTokens(word: string): string[] {
-  let rest = word.normalize('NFC').toLowerCase().replace(UNIT_EDGES, '')
-  const head: string[] = []
+  const nfc = word.normalize('NFC').toLowerCase()
+  const lead = LEAD_EDGE.exec(nfc)?.[0] ?? ''
+  let rest = nfc.slice(lead.length)
+  const trail = TRAIL_EDGE.exec(rest)?.[0] ?? ''
+  rest = rest.slice(0, rest.length - trail.length)
+  const head: string[] = BREAK_CHARS.test(lead) ? [CLAUSE_BREAK] : []
   const tail: string[] = []
   let negative = false
-  const lead = /^[-−](?=[$€£₹])/u.exec(rest)
-  if (lead) {
+  const signLead = /^[-−–](?=[$€£₹])/u.exec(rest)
+  if (signLead) {
     negative = true
-    rest = rest.slice(lead[0].length)
+    rest = rest.slice(signLead[0].length)
   }
   const first = Array.from(rest)[0]
   if (first !== undefined && CURRENCY_SIGNS.includes(first)) {
     head.push(first)
     rest = rest.slice(first.length)
   }
-  const minus = /^[-−](?=\p{N})/u.exec(rest)
+  const minus = /^[-−–](?=\.?\p{N})/u.exec(rest)
   if (minus) {
     negative = true
     rest = rest.slice(minus[0].length)
@@ -93,8 +137,16 @@ export function claimTokens(word: string): string[] {
     tail.push('%')
     rest = rest.replace(/%+$/u, '')
   }
-  const body = claimToken(rest)
-  return [...head, ...(body ? [body] : []), ...tail]
+  let body: string
+  const point = /^\.(?=\p{N})/u.test(rest)
+  const last = Array.from(rest).pop()
+  const signTail = last !== undefined && CURRENCY_SIGNS.includes(last) && /\p{N}/u.test(rest)
+  if (digitBlocks(rest).size > 1) body = rest.replace(EDGES, '')
+  else body = claimToken(signTail ? rest.slice(0, -last.length) : rest)
+  if (body && signTail) body += last
+  if (body && point) body = `.${body}`
+  const breakAfter = BREAK_CHARS.test(trail) && !(body === 'rs' && trail === '.' && tail.length === 0)
+  return [...head, ...(body ? [body] : []), ...tail, ...(breakAfter ? [CLAUSE_BREAK] : [])]
 }
 
 /** Every token of a phrase, words split on white space (a spec's value or label, a transcript's run). */
@@ -139,6 +191,25 @@ const CURRENCY_WORDS: ReadonlyMap<string, Currency> = new Map([
 const MULTIPLIER_WORDS: readonly string[] = ['thousand', 'million', 'billion', 'lakh', 'lakhs', 'crore', 'crores']
 const SUFFIXES: readonly string[] = ['k', 'm', 'mn', 'b', 'bn']
 
+/**
+ * Words that scale a number which `numbersIn` does not apply: after a number
+ * (and after its one multiplier word) any of these, or a second multiplier
+ * word, makes that number NO number, never the bare digits at the wrong
+ * magnitude ('5 hundred' is not 5, '₹40 lakh crore' is not ₹40 lakh,
+ * '40 हज़ार' is not 40). The short suffixes standing alone are here too
+ * ('$5 m', 'plan 4 b'): a letter or a multiplier, the validator cannot tell.
+ * The Hindi and Telugu scale words are listed so a digit said before one is
+ * dropped, as rule 4 drops their number words; held in `claimToken`'s form.
+ */
+const UNREAD_SCALES: ReadonlySet<string> = new Set(
+  [
+    'hundred', 'hundreds', 'thousands', 'millions', 'billions', 'trillion', 'trillions', 'dozen', 'dozens',
+    'grand', ...SUFFIXES,
+    'सौ', 'हज़ार', 'हजार', 'हज़ारों', 'हजारों', 'लाख', 'लाखों', 'करोड़', 'करोड़ों', 'अरब', 'खरब',
+    'వంద', 'వందల', 'వందలు', 'వేయి', 'వెయ్యి', 'వేల', 'వేలు', 'లక్ష', 'లక్షల', 'లక్షలు', 'కోటి', 'కోట్ల', 'కోట్లు'
+  ].map(claimToken)
+)
+
 /** A token of ASCII digits: optional comma groups, an optional decimal part, an optional short suffix. */
 const DIGITS = /^(\d+(?:,\d+)*)(?:\.(\d+))?([a-z]*)$/u
 
@@ -155,6 +226,14 @@ function digitValue(token: string): number | null {
 
 function isNumberWord(t: string): boolean {
   return SMALL.has(t) || TENS.has(t)
+}
+
+/** 'forty-two': a ten and a unit (1-9), the only hyphenated number words read ('fifty-fifty' is none). */
+function hyphenParts(t: string): string[] | null {
+  const parts = t.split('-')
+  if (parts.length !== 2 || !TENS.has(parts[0])) return null
+  const unit = SMALL.get(parts[1])
+  return unit !== undefined && unit >= 1 && unit <= 9 ? parts : null
 }
 
 /** One sub-thousand group of number words from `i`: 'forty two', 'two hundred and five', 'a hundred'. */
@@ -193,33 +272,40 @@ function wordGroup(ts: readonly string[], i: number): { n: number; next: number 
 /**
  * Every number in a run of tokens (§6.7 rule 4), each with the token index it
  * starts at. The tokens are `claimTokens`' (already through `claimToken`:
- * NFC, lower case, ASCII digits, the unit signs split off); `numbersIn` does
- * not normalise them again.
+ * NFC, lower case, ASCII digits, the unit signs split off, `CLAUSE_BREAK`
+ * where a clause or sentence mark stood); `numbersIn` does not normalise them
+ * again, and no number runs across a `CLAUSE_BREAK`.
  *
- * A number is: an optional currency sign (`$ € £ ₹`) or `rs`; an optional
- * minus (`claimTokens`' '−'); then digits (thousands separators removed in
- * western and Indian grouping, the decimal point kept, an attached `k`, `m`,
- * `mn`, `b`, `bn` applied) or English number words (zero to nineteen, the
- * tens, hyphenated or spaced, `hundred`, `thousand`, `a hundred`); then at
- * most one multiplier word (`thousand`, `million`, `billion`, `lakh`,
- * `crore`); then at most one unit: `%`, `percent`, `per cent`, or a currency
- * word (`dollar(s)`, `rupee(s)`, `rs`, `euro(s)`, `pound(s)`). `at` is the
- * index of the number's first token after any sign: the digits, or the first
- * number word ('a' of 'a hundred').
+ * A number is: an optional `minus` or `negative`; an optional currency sign
+ * (`$ € £ ₹`) or `rs`; an optional minus (`claimTokens`' '−'); then digits
+ * (thousands separators removed in western and Indian grouping, the decimal
+ * point kept, an attached `k`, `m`, `mn`, `b`, `bn` applied) or English number
+ * words (zero to nineteen, the tens, `forty-two` or `forty two`, `hundred`,
+ * `thousand`, `a hundred`); then at most one multiplier word (`thousand`,
+ * `million`, `billion`, `lakh`, `crore`); then at most one unit: `%`,
+ * `percent`, `per cent`, or a currency word (`dollar(s)`, `rupee(s)`, `rs`,
+ * `euro(s)`, `pound(s)`). `at` is the index of the number's first token after
+ * any sign: the digits, or the first number word ('a' of 'a hundred').
+ *
+ * Read as NO number (the whole span skipped), because any reading of it could
+ * be a value the speaker did not say: a number followed by a scale word it
+ * does not apply or by a second multiplier (`UNREAD_SCALES`); a number next
+ * to `point` on either side ('one point two million' is neither 1 nor 2
+ * million); a currency number followed by a percent ('$40%'), or by another
+ * currency's word ('$40 rupees').
  *
  * Not parsed, so a claim written for them is dropped by the binding (the
  * safe direction, §6.7 rule 4): Hindi and Telugu number words, ordinals
- * ('1st', 'first'), a decimal comma ('1,5'), ranges ('40-50'), 'minus' as a
- * word, and a digit run followed by 'hundred'.
+ * ('1st', 'first'), a decimal comma ('1,5'), ranges ('40-50'), 'a thousand'
+ * and 'a million' (only 'a hundred' is read), fractions ('two and a half'),
+ * years said in pairs ('nineteen ninety nine' is 19 and 99).
  */
 export function numbersIn(tokens: readonly string[]): { value: CanonNumber; at: number }[] {
-  // Hyphenated number words ('forty-two') become their parts, each keeping its token's index.
+  // A hyphenated ten and unit ('forty-two') becomes its parts, each keeping its token's index.
   const ts: string[] = []
   const index: number[] = []
   tokens.forEach((t, i) => {
-    const parts = t.split('-')
-    const words = parts.length > 1 && parts.every(isNumberWord) ? parts : [t]
-    for (const w of words) {
+    for (const w of hyphenParts(t) ?? [t]) {
       ts.push(w)
       index.push(i)
     }
@@ -229,12 +315,16 @@ export function numbersIn(tokens: readonly string[]): { value: CanonNumber; at: 
   let i = 0
   while (i < ts.length) {
     let j = i
+    let sign = 1
+    if (ts[j] === 'minus' || ts[j] === 'negative') {
+      sign = -1
+      j += 1
+    }
     let currency: Currency | undefined
     if (CURRENCY_SIGNS.includes(ts[j]) || ts[j] === 'rs') {
       currency = ts[j] === 'rs' ? '₹' : (ts[j] as Currency)
       j += 1
     }
-    let sign = 1
     if (ts[j] === MINUS) {
       sign = -1
       j += 1
@@ -266,17 +356,32 @@ export function numbersIn(tokens: readonly string[]): { value: CanonNumber; at: 
       n *= MULTIPLIERS[ts[j]]
       j += 1
     }
+    // A scale word not applied, a second multiplier, or 'point' after the number:
+    // the span, that word included, is no number.
+    if (ts[j] === 'point' || UNREAD_SCALES.has(ts[j] ?? '') || MULTIPLIER_WORDS.includes(ts[j] ?? '')) {
+      i = j + 1
+      continue
+    }
+    let unread = ts[i - 1] === 'point'
     let unit: CanonNumber['unit'] = currency ? 'currency' : ''
     if (ts[j] === '%' || ts[j] === 'percent') {
-      if (!currency) unit = '%'
+      if (currency) unread = true
+      unit = '%'
       j += 1
     } else if (ts[j] === 'per' && ts[j + 1] === 'cent') {
-      if (!currency) unit = '%'
+      if (currency) unread = true
+      unit = '%'
       j += 2
-    } else if (!currency && CURRENCY_WORDS.has(ts[j])) {
-      currency = CURRENCY_WORDS.get(ts[j])
+    } else if (CURRENCY_WORDS.has(ts[j])) {
+      const word = CURRENCY_WORDS.get(ts[j])
+      if (currency && currency !== word) unread = true
+      currency = word
       unit = 'currency'
       j += 1
+    }
+    if (unread) {
+      i = j
+      continue
     }
     out.push({ value: currency ? { n: sign * n, unit, currency } : { n: sign * n, unit }, at: index[start] })
     i = j

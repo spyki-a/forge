@@ -75,9 +75,13 @@ interface Parsed {
  * native digits directly; `numbersIn` reduces a run of spoken tokens (native
  * digits already mapped to ASCII by `claimToken`) to comparable VALUES
  * (`{n, unit, currency?}`), finds every number in the run, and reads English
- * number words, which no drawn value needs. tests/claims.test.ts holds the two
- * to the same value on every numeric fixture value.
- * Null when it has no digits, two numbers
+ * number words, which no drawn value needs. `numbersIn` also reads NO number
+ * where any reading could be a value not said (a scale word it does not apply,
+ * 'point', '$40%'): a spec value it refuses never reaches a drawer, so this
+ * parser need not refuse it. tests/claims.test.ts holds the two to the same
+ * value on every numeric fixture value, and to no number on a leading point
+ * and on digits from two scripts.
+ * Null when it has no digits, a point directly before them ('.5%'), two numbers
  * ("1,000-2,000", "40 to 50"), digits from two scripts, or a grouping that is
  * neither western nor Indian ("1,0", which may be a decimal comma).
  */
@@ -86,6 +90,9 @@ function parse(value: string): Parsed | null {
   const first = chars.findIndex(isDigit)
   if (first < 0) return null
   const zero = zeroOf(chars[first])!
+  // A point directly before the digits ('.5%', '$.50'): read as 5 or 50 it would be
+  // ten times the value, so no in-between (claims.ts' numbersIn reads no number either).
+  if (chars[first - 1] === '.') return null
 
   // The number runs over digits of one block, commas between digits, and one
   // point followed by a digit.
@@ -198,14 +205,14 @@ export const MULTIPLIERS: Readonly<Record<string, number>> = {
 /**
  * The value's size, for a bar's length or a ring's sweep (docs/CLIPS.md
  * §6.2): its one number with grouping removed, decimals kept, the script read
- * as digits, a minus before it applied and an English multiplier after it
+ * as digits, a minus (hyphen-minus, U+2212 or an en dash) before it applied and an English multiplier after it
  * (`k`, `million`, `lakh` …) applied. Null when the value has no in-between.
  */
 export function numberOf(value: string): number | null {
   const p = parse(value)
   if (!p) return null
   let n = p.scaled / 10 ** p.decimals
-  if (p.prefix.includes('-') || p.prefix.includes('−')) n = -n
+  if (/[-−–]/u.test(p.prefix)) n = -n
   const word = p.suffix.trim().toLowerCase().split(/\s+/)[0] ?? ''
   const multiplier = MULTIPLIERS[word]
   return multiplier ? n * multiplier : n
