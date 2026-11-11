@@ -27,7 +27,8 @@ import {
   type Claim,
   type ClaimStretch
 } from './claims'
-import { conforms, type ObjectSchema, type Problem } from './conforms'
+import { conforms, type Problem } from './conforms'
+import { graphicsSchema, type AnswerGraphic, type GraphicsAnswer } from './schemaGraphics'
 import { parentsValid, treeParents, connectorFor } from '../graphics/tree'
 import {
   GRAPHIC_TEMPLATES,
@@ -43,85 +44,11 @@ import type { GraphicsMenu } from './run'
 import * as self from './validateGraphics'
 
 // ---------------------------------------------------------------------------
-// The answer (§6.6's fields, in declaration order).
+// The answer: its types and its one shape are `schemaGraphics.ts`' (§6.6).
+// Re-exported here, where T2a's callers import them from.
 
-/** One graphic of a `graphics@1` answer: the union of the offered templates' fields, unused ones '' (§6.6). */
-export interface AnswerGraphic {
-  sentence: string
-  template: string
-  title: string
-  value: string
-  label: string
-  items: { label: string; value: string }[]
-  quote: string
-  words: string
-  lit: number
-  why: string
-}
-
-/** A `graphics@1` answer (§6.6): `reasoning` first, then at most `MAX_GRAPHICS` graphics. */
-export interface GraphicsAnswer {
-  reasoning: string
-  graphics: AnswerGraphic[]
-}
-
-/** At most four graphics an answer (§6.6, `MAX_GRAPHICS`). */
-export const MAX_GRAPHICS = 4
-
-/** At most six items a graphic in the answer's shape (§6.6: `items` `maxItems` 6). */
-export const MAX_ANSWER_ITEMS = 6
-
-/**
- * The answer's shape as the validator checks it: §6.6's fields in declaration
- * order, unconstrained (no enum, no length, no integer range), so an
- * out-of-list id or an out-of-range `lit` is repaired or dropped one graphic at
- * a time rather than failing the pass (`schema2.ts`' `constrained: false`).
- * Lane T2b's `graphicsSchema(menu, { constrained: false })` (`schemaGraphics.ts`)
- * must accept exactly what this accepts; when it lands, `validateGraphics`
- * checks against it and this goes.
- */
-export function graphicsAnswerShape(): ObjectSchema {
-  const text = { type: 'string' } as const
-  return {
-    type: 'object',
-    properties: {
-      reasoning: text,
-      graphics: {
-        type: 'array',
-        minItems: 0,
-        maxItems: MAX_GRAPHICS,
-        items: {
-          type: 'object',
-          properties: {
-            sentence: text,
-            template: text,
-            title: text,
-            value: text,
-            label: text,
-            items: {
-              type: 'array',
-              maxItems: MAX_ANSWER_ITEMS,
-              items: {
-                type: 'object',
-                properties: { label: text, value: text },
-                required: ['label', 'value'],
-                additionalProperties: false
-              }
-            },
-            quote: text,
-            words: text,
-            lit: { type: 'integer' },
-            why: text
-          },
-          required: ['sentence', 'template', 'title', 'value', 'label', 'items', 'quote', 'words', 'lit', 'why'],
-          additionalProperties: false
-        }
-      }
-    },
-    required: ['reasoning', 'graphics'],
-    additionalProperties: false
-  }
-}
+export { MAX_ANSWER_ITEMS, MAX_GRAPHICS } from './schemaGraphics'
+export type { AnswerGraphic, GraphicsAnswer } from './schemaGraphics'
 
 // ---------------------------------------------------------------------------
 // The stretch.
@@ -716,7 +643,9 @@ function offered(template: string, sentence: string, menu: GraphicsMenu, root: s
 /**
  * Does a `graphics@1` answer make sense against its menu (§6.7). Rejects only
  * what `validate2.ts` rejects: an answer cut off at the token cap and the wrong
- * shape (checked by `conforms` against `graphicsAnswerShape`). Everything else
+ * shape (checked by `conforms` against `graphicsSchema(menu, { constrained:
+ * false })`, the decoder's schema without its enums, lengths and ranges, so
+ * there is one shape). Everything else
  * is one graphic at a time: repaired with a note, or dropped with problems
  * whose paths are the answer's ('$.graphics[1].items[0].value') and whose
  * messages the panel shows ("graphic dropped: '45%' is not said in s07").
@@ -734,7 +663,7 @@ export function validateGraphics(
   options: { truncated?: boolean } = {}
 ): { kept: GraphicCandidate[]; dropped: Problem[] } | { rejected: string } {
   if (options.truncated) return { rejected: "The model's graphics ran out of room before it finished" }
-  const shape = conforms(graphicsAnswerShape(), answer)
+  const shape = conforms(graphicsSchema(menu, { constrained: false }), answer)
   if (shape.length > 0) return { rejected: `The graphics are not the shape asked for — ${shape[0].path} ${shape[0].message}` }
   const graphics = (answer as GraphicsAnswer).graphics
   const kept: GraphicCandidate[] = []

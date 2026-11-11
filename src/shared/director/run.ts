@@ -11,7 +11,11 @@ import { validateSpine2 } from './validate2'
 import { baselineSpine2 } from './baseline2'
 import { composeAd } from './compose'
 import { cohere, type Cohered } from './coherence'
-import type { Transcript } from '../transcript'
+import { capSegments, type Transcript } from '../transcript'
+import { SEGMENT_MAX_MS, SEGMENT_MAX_WORDS } from '../ingest/captions'
+import { captionWindowMs } from '../captions/placement'
+import { subjectTrackOf } from '../reframe/frameMap'
+import { MAX_CANDIDATES } from './menu'
 import { GRAPHIC_SPACING, type GraphicCandidate, type GraphicTemplateId } from '../graphics/template'
 import { validateBaseline, validateGraphics } from './validateGraphics'
 
@@ -266,6 +270,75 @@ export interface GraphicsMenu {
   sentences: { id: string; startMs: number; text: string; wordStart: number; wordEnd: number }[]
   templates: GraphicTemplateId[]
   wordSource: 'whisper' | 'youtube-asr' | 'youtube-lines'
+}
+
+/** The templates every graphics menu offers (§6.6), in `GRAPHIC_TEMPLATES`' order; `callout` goes after `quote` when offered. */
+export const GRAPHIC_TEMPLATES_ALWAYS: readonly GraphicTemplateId[] = Object.freeze(['counter', 'bars', 'steps', 'quote', 'ring', 'keyword'])
+
+/** Where a transcript's words came from, as §6.6's proposals read it (`proposalOf` in validateGraphics.ts). */
+export function wordSourceOf(transcript: Pick<Transcript, 'model' | 'approximate'>): GraphicsMenu['wordSource'] {
+  if (transcript.model === 'youtube-lines' || transcript.approximate === true) return 'youtube-lines'
+  if (transcript.model.startsWith('youtube-')) return 'youtube-asr'
+  return 'whisper'
+}
+
+/**
+ * The graphics pass's menus for one footage clip (docs/CLIPS.md §6.6).
+ *
+ * - **Sentences**: the transcript's segments capped by `capSegments` at 30
+ *   words or 15 s (§7.2), the same capped segments `stretchFor` reads, so a
+ *   sentence id here ('s07', 's07.2') is the one the validator finds. Each is
+ *   held to the words the clip SHOWS, the caption window
+ *   (`captionWindowMs`, `firstShownWord`'s test: `endMs` after the window's
+ *   start and `startMs` before its end) that `graphicBeats` reads: a sentence
+ *   the clip shows none of is left out; one it shows part of keeps its id and
+ *   lists only the shown words, `startMs` its first shown word's.
+ * - **Windows**: at most `MAX_CANDIDATES` (24) sentences a menu; a longer
+ *   clip is cut into 24-sentence windows, one menu (one call) each.
+ * - **Templates**: `GRAPHIC_TEMPLATES_ALWAYS`, and `callout` only when the
+ *   clip's asset has a subject track (`subjectTrackOf`). Never `lower-third`,
+ *   `screen-card` or a later step's id.
+ * - **wordSource**: `wordSourceOf` the transcript.
+ *
+ * No menu (an empty list) when the clip shows no speech, or the transcript is
+ * another file's. Pure.
+ */
+export function graphicsMenuFor(project: Project, clip: Clip, transcript: Transcript): GraphicsMenu[] {
+  if (transcript.assetId !== clip.assetId) return []
+  const window = captionWindowMs(clip, project.settings.fps)
+  const shown = (w: { startMs: number; endMs: number }): boolean => w.endMs > window.startMs && w.startMs < window.endMs
+  const byIndex = new Map(transcript.words.map((w) => [w.index, w]))
+  const sentences: GraphicsMenu['sentences'] = []
+  for (const s of capSegments(transcript, SEGMENT_MAX_WORDS, SEGMENT_MAX_MS)) {
+    const words = transcript.words.filter((w) => w.index >= s.wordStart && w.index <= s.wordEnd)
+    const seen = words.filter(shown)
+    if (seen.length === 0) continue
+    if (seen.length === words.length && byIndex.has(s.wordStart) && byIndex.has(s.wordEnd)) {
+      sentences.push({ id: s.id, startMs: s.startMs, text: s.text, wordStart: s.wordStart, wordEnd: s.wordEnd })
+    } else {
+      const text = seen.map((w) => w.text).join(' ').replace(/\s+/gu, ' ').trim()
+      sentences.push({ id: s.id, startMs: seen[0].startMs, text, wordStart: seen[0].index, wordEnd: seen[seen.length - 1].index })
+    }
+  }
+  if (sentences.length === 0) return []
+  const asset = project.assets.find((a) => a.id === clip.assetId)
+  const callout = asset !== undefined && subjectTrackOf(project, clip, asset) !== null
+  const templates: GraphicTemplateId[] = callout
+    ? [...GRAPHIC_TEMPLATES_ALWAYS.slice(0, 4), 'callout', ...GRAPHIC_TEMPLATES_ALWAYS.slice(4)]
+    : [...GRAPHIC_TEMPLATES_ALWAYS]
+  const wordSource = wordSourceOf(transcript)
+  const menus: GraphicsMenu[] = []
+  for (let i = 0; i < sentences.length; i += MAX_CANDIDATES) {
+    menus.push({
+      assetId: transcript.assetId,
+      clipId: clip.id,
+      language: transcript.language,
+      sentences: sentences.slice(i, i + MAX_CANDIDATES),
+      templates: [...templates],
+      wordSource
+    })
+  }
+  return menus
 }
 
 /** One graphics answer, settled (docs/CLIPS.md §6.6, §6.7): `settle2`'s twin. */
