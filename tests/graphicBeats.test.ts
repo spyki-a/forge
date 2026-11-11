@@ -13,7 +13,7 @@ import {
 } from '@shared/graphics/beats'
 import { DEFAULT_MIN_GAP_MS } from '@shared/automation/lyrics'
 import { buildTimelineCaptions } from '@shared/captions/timeline'
-import { captionLineFrame, libassLineFrame } from '@shared/captions/placement'
+import { captionLineFrame, firstShownWord, libassLineFrame } from '@shared/captions/placement'
 import { resolveStyle } from '@shared/captions/style'
 import { beatFrame } from '@shared/graphics/frame'
 import { GRAPHIC_TEMPLATES, type TemplateDef } from '@shared/graphics/template'
@@ -109,19 +109,33 @@ describe('a beat is its word\'s start through the clip, with the captions\' offs
   })
 })
 
-describe('a word the clip does not show is no beat: the graphic drops, nothing is clamped', () => {
+describe('a word the clip does not show is no beat: the graphic drops', () => {
   // 30 fps, in-point 60 (2000 ms), duration 90 (3000 ms): the window is [2000, 5000).
-  const WS = words([['early', 1900, 2100], ['first', 2000, 2200], ['late', 5000, 5200], ['last', 4990, 5100]])
+  const WS = words([
+    ['before', 1800, 1950], ['early', 1900, 2100], ['first', 2000, 2200], ['late', 5000, 5200], ['last', 4990, 5100], ['edge', 1900, 2000]
+  ])
   const { project, clip } = fixture(30, { start: 30, inPoint: 60, duration: 90 }, WS)
 
-  it('a word starting before the in-point, after the window, or no word at all, reads NaN', () => {
-    const beats = graphicBeats(project, clip, project.transcripts.a, [0, 1, 2, 3, 99], { spread: false })!
+  it('a word ending by the in-point, starting at the window\'s end, or no word at all, reads NaN', () => {
+    const beats = graphicBeats(project, clip, project.transcripts.a, [0, 1, 2, 3, 4, 5, 99], { spread: false })!
     // 'first' at 2000 ms sits on the clip's first frame, 30 = 1.0 s; 'last' at 4990 ms at 1.0 + 2.99 = 3.99 s.
-    expect(beats[1]).toBe(1)
-    expect(beats[3]).toBeCloseTo(3.99, 9)
-    expect(beats[0]).toBeNaN()
-    expect(beats[2]).toBeNaN()
-    expect(beats[4]).toBeNaN()
+    expect(beats[2]).toBe(1)
+    expect(beats[4]).toBeCloseTo(3.99, 9)
+    expect(beats[0]).toBeNaN() // 1800-1950: wholly before 2000
+    expect(beats[5]).toBeNaN() // 1900-2000: ends exactly where the window starts, firstShownWord's endMs > start
+    expect(beats[3]).toBeNaN() // starts at 5000, the window's (open) end
+    expect(beats[6]).toBeNaN()
+  })
+
+  it('a word the cut lands inside beats on the clip\'s first frame, where both caption routes draw it', () => {
+    // 'early' 1900-2100 straddles the in-point 2000: the captions show it from frame 30 (1.0 s), so does the beat.
+    const beats = graphicBeats(project, clip, project.transcripts.a, [1], { spread: false })!
+    expect(beats).toEqual([1])
+    expect(libassLineFrame(clip, 30, 1900)).toBe(30)
+    expect(captionLineFrame(clip, 30, 1900)).toBe(30)
+    expect(firstShownWord(WS, clip, 30)?.text).toBe('early')
+    // So a lower third on it is timed, its lead clamped at the clip's start (frame 30), the beat 0 s in.
+    expect(graphicTiming(clip, beats, GRAPHIC_TEMPLATES['lower-third'] as TemplateDef, 'Ana', 30)).toMatchObject({ ok: true, start: 30, beats: [0] })
   })
 
   it('graphicTiming drops a graphic with a beat that is not on the clip, and one with no beat', () => {
@@ -149,10 +163,26 @@ describe('spacing: arriving beats are spread to 160 ms, the later moved; a quote
     expect(beats[2]).toBeCloseTo(1.32, 9)
   })
 
-  it('a gap of exactly 160 ms is left alone', () => {
-    // 1300 and 1460 ms, 160 ms apart.
-    const beats = graphicBeats(project, clip, project.transcripts.a, [2, 3])!
-    expect(beats).toEqual([1.3, 1.46])
+  it('a gap of exactly 160 ms is left alone, though the double says 0.1599999999999997', () => {
+    // 1850 and 2010 ms: 2.01 − 1.85 is under 0.16 in a double, and 1.85 + 0.16 is 2.0100000000000002, so a
+    // beat moved without the allowance would not be 2.01.
+    const near = fixture(30, { duration: 300 }, words([['a', 1850, 1900], ['b', 2010, 2100]]))
+    expect(graphicBeats(near.project, near.clip, near.project.transcripts.a, [0, 1])).toEqual([1.85, 2.01])
+  })
+
+  it('spreads in TIME order and keeps the elements\' order: a bars graphic whose first item was said second', () => {
+    // Bars beats are in item order (beatWordsOf). Items said at 3.0 s and 1.0 s: 2 s apart, nothing moves.
+    const far = fixture(30, { duration: 600 }, words([['one', 1000, 1200], ['two', 3000, 3200]]))
+    expect(graphicBeats(far.project, far.clip, far.project.transcripts.a, [1, 0])).toEqual([3, 1])
+    // Said at 1.05 s and 1.00 s, item order: the later in TIME (the first item, 1.05) moves to 1.16; the earlier stays.
+    const beats = graphicBeats(project, clip, project.transcripts.a, [1, 0])!
+    expect(beats[0]).toBeCloseTo(1.16, 9)
+    expect(beats[1]).toBe(1)
+    // GraphicSpec.beats stay in item order; the start is taken from the earlier-spoken item (1.0 s − 0.5 = frame 15).
+    const t = graphicTiming({ start: 0, duration: 300 }, beats, BARS, 'ab', 30)
+    expect(t).toMatchObject({ ok: true, start: 15 })
+    expect(t.ok && t.beats[0]).toBeCloseTo(0.66, 9)
+    expect(t.ok && t.beats[1]).toBeCloseTo(0.5, 9)
   })
 
   it('a quote\'s beats (spread: false) are the words\' own times', () => {
@@ -192,6 +222,14 @@ describe('graphicTiming: the lead, the tail, the template\'s bounds and the clip
     expect(t.ok && t.beats).toEqual([LEAD_S])
   })
 
+  it('the first beat is the earliest, whatever the order given', () => {
+    // Beats 7.5 and 4.0 s: the lead is before 4.0, frame 105 (3.5 s); relative beats 4.0 and 0.5, in the order given.
+    const t = graphicTiming(clip, [7.5, 4], BARS, 'ab', 30)
+    expect(t).toMatchObject({ ok: true, start: 105 })
+    expect(t.ok && t.beats[0]).toBeCloseTo(4, 9)
+    expect(t.ok && t.beats[1]).toBeCloseTo(0.5, 9)
+  })
+
   it('the lead clamped at the footage clip\'s start', () => {
     // Beat at 1.6 s: 1.1 s is frame 33, before the clip's 45, so the graphic starts at 45 and the beat is 0.1 s in.
     const t = graphicTiming(clip, [1.6], COUNTER, '40%', 30)
@@ -216,6 +254,21 @@ describe('graphicTiming: the lead, the tail, the template\'s bounds and the clip
   it('past the template\'s maximum: dropped, with what was needed and what the card holds', () => {
     // Steps, beats at 2.0 and 9.5 s: start 1.5 s (frame 45, exactly the clip's), relative 0.5 and 8.0; 8.8 > 8.
     expect(graphicTiming(clip, [2, 9.5], STEPS, 'ab', 30)).toEqual({ ok: false, note: 'said over 8.8 s; a steps card holds 8' })
+  })
+
+  it('the note\'s figure is rounded DOWN to 0.1 s, so "over" stays true', () => {
+    // Steps, beats at 2.0 and 8.77 s: start 1.5 s, relative 0.5 and 7.27; 7.27 + 0.8 = 8.07 s needed, said "over 8".
+    expect(graphicTiming(clip, [2, 8.77], STEPS, 'ab', 30)).toEqual({ ok: false, note: 'said over 8 s; a steps card holds 8' })
+  })
+
+  it('the duration is seconds × fps rounded to NEAREST (the store\'s rule), both ways', () => {
+    // 24 fps, one beat 0.5 s in. A counter drawing 25 graphemes reads 0.5 + 25/20 + 0.3 = 2.05 s: 49.2 frames → 49.
+    const at24 = { start: 0, duration: 24 * 20 }
+    const t25 = graphicTiming(at24, [4], COUNTER, 'x'.repeat(25), 24)
+    expect(t25).toMatchObject({ ok: true, duration: 49 })
+    expect(t25.ok && t25.seconds).toBeCloseTo(2.05, 9)
+    // 27 graphemes: 0.5 + 1.35 + 0.3 = 2.15 s: 51.6 frames → 52.
+    expect(graphicTiming(at24, [4], COUNTER, 'x'.repeat(27), 24)).toMatchObject({ ok: true, duration: 52 })
   })
 
   it('a lower third\'s note says "lower third"', () => {
@@ -251,7 +304,9 @@ describe('the element lands ON its beat\'s frame, at 24, 25, 30 and 60 fps', () 
     { fps: 24, word: 2000, start: 60, arrival: 72 }, // 2.5 × 24 = 60; 3 × 24 = 72, a beat exactly on a frame
     { fps: 25, word: 2000, start: 63, arrival: 75 }, // 62.5; 75
     { fps: 30, word: 2000, start: 75, arrival: 90 },
-    { fps: 60, word: 2000, start: 150, arrival: 180 }
+    { fps: 60, word: 2000, start: 150, arrival: 180 },
+    // A fraction under .5, so the start's ceil is not round's: 2.71 − 0.5 = 2.21; 2.21 × 30 = 66.3 → 67 (round: 66); 2.71 × 30 = 81.3 → 82.
+    { fps: 30, word: 1710, start: 67, arrival: 82 }
   ]
   for (const row of ROWS) {
     it(`${row.fps} fps, a word at ${row.word} ms: starts on ${row.start}, arrives on ${row.arrival}`, () => {
@@ -264,8 +319,19 @@ describe('the element lands ON its beat\'s frame, at 24, 25, 30 and 60 fps', () 
       expect(t.duration).toBe(2 * row.fps)
       // §6.3: an element arrives on its clip's frame beatFrame(beat); on the timeline, start plus that.
       expect(t.start + beatFrame(t.beats[0], row.fps)).toBe(row.arrival)
-      // And the libass captions first draw the same word on that frame.
+      // And the libass captions first draw the same word on that frame: every row's word is on a whole centisecond.
       expect(libassLineFrame(clip, row.fps, row.word)).toBe(row.arrival)
     })
   }
+
+  it('a word off the centisecond: it arrives on its own frame, one after both caption routes show it', () => {
+    // 60 fps, clip at 0: a word at 2505 ms. Start ceil(2.005 × 60) = ceil(120.3) = 121; arrival ceil(2.505 × 60) = ceil(150.3) = 151.
+    // libass truncates the cue to 2500 ms (frame 150); the canvas bake rounds 150.3 to 150. §6.8 asks the times agree, not the frames.
+    const { project, clip } = fixture(60, { start: 0, inPoint: 0, duration: 6000 }, words([['x', 2505, 2600]]))
+    const t = graphicTiming(clip, graphicBeats(project, clip, project.transcripts.a, [0])!, COUNTER, 'x', 60)
+    expect(t).toMatchObject({ ok: true, start: 121 })
+    expect(t.ok && t.start + beatFrame(t.beats[0], 60)).toBe(151)
+    expect(libassLineFrame(clip, 60, 2505)).toBe(150)
+    expect(captionLineFrame(clip, 60, 2505)).toBe(150)
+  })
 })

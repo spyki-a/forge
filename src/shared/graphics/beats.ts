@@ -64,10 +64,9 @@ export const CLIP_END_NOTE = "too close to the clip's end to be read"
 
 /**
  * The note a graphic is dropped with when a word it lands on is not one the
- * clip shows: its index names no word of the transcript, or the word starts
- * outside the clip's caption window. Not §6.8's words (the plan is silent);
- * the graphic is dropped rather than its beat clamped, as a graphic that
- * cannot be timed is never placed approximately.
+ * clip shows: its index names no word of the transcript, or the clip's
+ * caption window holds no part of it (`firstShownWord`'s test, captions/
+ * placement.ts). Not §6.8's words (the plan is silent).
  */
 export const NOT_SHOWN_NOTE = 'a word it lands on is not on this clip'
 
@@ -88,11 +87,17 @@ export const BEAT_GAP_S = DEFAULT_MIN_GAP_MS / 1000
  *
  * `wordIndices` are `Word.index` values (as `GraphicCandidate.beatWords`
  * holds them, and `director/run.ts` reads them by `Word.index`), not array
- * positions. A beat is NaN when its index names no word, or when the word
- * starts outside the clip's caption window [in-point, in-point + duration)
- * (`captionWindowMs`): the clip does not show that start, so the beat is
- * not on it. `graphicTiming` drops a graphic with a NaN beat
- * (`NOT_SHOWN_NOTE`); nothing is clamped.
+ * positions. A word is on the clip when the captions show it:
+ * `firstShownWord`'s test (captions/placement.ts), `endMs` after the
+ * caption window's start [in-point, in-point + duration) and `startMs`
+ * before its end. A word the clip's cut lands inside (starting before the
+ * in-point, ending after it) is drawn by both caption routes from the clip's
+ * first frame (`libassLineFrame` and `captionLineFrame` hold to
+ * `clip.start`), so its beat is `clip.start`'s time, where the captions put
+ * it; this is how a lower third lands on "the first word ... that the clip
+ * shows" (§6.8) on a clip trimmed mid-word. A beat is NaN when its index
+ * names no word or the clip shows no part of it, and `graphicTiming` drops
+ * that graphic (`NOT_SHOWN_NOTE`).
  *
  * Null when the clip is retimed, `speed` or `ramp` set, as the J-cut refuses
  * one (director/apply2.ts:248): the captions ignore speed, so a speed-aware
@@ -117,25 +122,33 @@ export function graphicBeats(
   const byIndex = new Map(transcript.words.map((w) => [w.index, w]))
   const beats = wordIndices.map((i) => {
     const word = byIndex.get(i)
-    if (!word || !(word.startMs >= window.startMs && word.startMs < window.endMs)) return Number.NaN
-    return (word.startMs - offsetMs) / 1000
+    if (!word || !(word.endMs > window.startMs && word.startMs < window.endMs)) return Number.NaN
+    // A word the cut lands inside is drawn from the clip's first frame, as the captions draw it.
+    return (Math.max(word.startMs, window.startMs) - offsetMs) / 1000
   })
   return options.spread === false ? beats : spreadBeats(beats)
 }
 
 /**
- * §6.8's spacing: in the order given (the elements' order, which the
- * validator keeps in spoken order), a beat closer than 160 ms
- * (`DEFAULT_MIN_GAP_MS`, automation/lyrics.ts) after the one before it, as
- * moved, is moved to 160 ms after it — the later moved, never the earlier.
- * A gap of exactly 160 ms is left (1e-9 s allowance for float error). A NaN
- * beat is left NaN and is no beat to space from. A new array.
+ * §6.8's spacing, in TIME order: a beat closer than 160 ms
+ * (`DEFAULT_MIN_GAP_MS`, automation/lyrics.ts) after the beat before it in
+ * time, as moved, is moved to 160 ms after it — the later moved, never the
+ * earlier. Each value is written back to its own element's place, so the
+ * elements keep the order they were given: a bars graphic's beats are in
+ * item order (validateGraphics.ts `beatWordsOf`), which need not be the
+ * spoken order. Equal times keep their given order (a stable sort). A gap
+ * of exactly 160 ms is left (1e-9 s allowance for float error: 2.01 − 1.85
+ * is 0.1599999999999997 in a double). A NaN beat is left NaN and is no beat
+ * to space from. A new array.
  */
 export function spreadBeats(beats: readonly number[]): number[] {
   const out = [...beats]
+  const order = out
+    .map((b, i) => ({ b, i }))
+    .filter((e) => Number.isFinite(e.b))
+    .sort((x, y) => x.b - y.b)
   let prev = Number.NaN
-  for (let i = 0; i < out.length; i++) {
-    if (!Number.isFinite(out[i])) continue
+  for (const { i } of order) {
     if (Number.isFinite(prev) && out[i] - prev < BEAT_GAP_S - 1e-9) out[i] = prev + BEAT_GAP_S
     prev = out[i]
   }
@@ -167,10 +180,17 @@ export type GraphicTiming =
  *   no second rule — and never before `clip.start`. So the lead is at most
  *   0.5 s and more than 0.5 s less one frame.
  * - **Beats**: each beat less `start`'s time, in seconds (`GraphicSpec.beats`),
- *   held to 0 against float error. Since `start` is a whole frame, the frame
+ *   in the order given (a bars graphic's item order). The `max(0, …)` is
+ *   only a guard against float error: `start` is never after the first
+ *   beat, so no input reaches it. Since `start` is a whole frame, the frame
  *   an element arrives on, `start + beatFrame(beat, fps)` (§6.3), is the
  *   beat's own timeline frame `beatFrame(timeline beat, fps)`: it lands ON
- *   its beat.
+ *   its beat. That is the beat's own frame (§6.3), and the frame the libass
+ *   captions first draw the word on only when the word starts on a whole
+ *   centisecond: libass truncates a cue to centiseconds (`assTimeMs`) and the
+ *   canvas bake rounds, so a word at 2505 ms at 60 fps arrives on 151 where
+ *   both caption routes show it from 150. §6.8 asks only that the times
+ *   agree; nothing may rely on the frames being equal.
  * - **Seconds**: `graphicSeconds` over those beats (at least the last beat
  *   plus `TAIL_S`, within the template's bounds); over `seconds.max`, the
  *   drop "said over 8.8 s; a steps card holds 8", the figure rounded DOWN to
