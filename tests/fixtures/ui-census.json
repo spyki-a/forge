@@ -8681,6 +8681,6 @@
     "file": "src/renderer/src/components/OutputStrip.tsx",
     "line": 110,
     "newHome": "output strip (Graphics section, docs/CLIPS.md §6.14)",
-    "note": "The switch beside the graphic style tiles (§6.14, \"Off per project\"): Project.graphics.sound, on when absent; calls setGraphicSounds. Written as GRAPHIC_SOUNDS in OutputStrip.tsx. Count 1 reasoned from the code: the only other 'Graphic sounds' the app writes is the audio track's name (GRAPHIC_SOUND_LANE_NAME), on the timeline, not in OUTPUT, and an empty project has no such track. Not yet read by the harness census on screen."
+    "note": "The switch beside the graphic style tiles (§6.14, \"Off per project\"): Project.graphics.sound, on when absent; calls setGraphicSounds. Written as GRAPHIC_SOUNDS in OutputStrip.tsx. Count 1 reasoned from the code: the only other 'Graphic sounds' the app writes is the audio track's name (GRAPHIC_SOUND_LANE_NAME), on the timeline, not in OUTPUT, and an empty project has no such track. Read on screen 2026-11-11 by the harness census at 69e677c: missing [], 892 checked, 8 skipped."
   }
 ]
