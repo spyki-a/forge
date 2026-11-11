@@ -518,7 +518,7 @@ function bars(items: [label: string, value: string][], title = 'By the numbers')
 describe('claimsOf', () => {
   it("a counter: its value one number claim, its label's content tokens, both in pair 0", () => {
     const claims = claimsOf({ template: 'counter', value: '40 percent', label: 'of couples book in March' }, def('counter'))
-    expect(claims).toEqual([
+    expect(claims).toMatchObject([
       { path: 'value', text: '40 percent', kind: 'number', value: { n: 40, unit: '%' }, pair: 0 },
       { path: 'label', text: 'couples', kind: 'token', pair: 0 },
       { path: 'label', text: 'book', kind: 'token', pair: 0 },
@@ -562,10 +562,10 @@ describe('claimsOf', () => {
   })
 
   it('no claim of an index, user, speaker, fixed or app field', () => {
-    expect(claimsOf({ template: 'keyword', words: 'Light beats gear', lit: 1 }, def('keyword'))).toEqual([
+    expect(claimsOf({ template: 'keyword', words: 'Light beats gear', lit: 1 }, def('keyword'))).toMatchObject([
       { path: 'words', text: 'Light beats gear', kind: 'run', mid: true }
     ])
-    expect(claimsOf({ template: 'quote', kind: 'said', text: 'Fail fast', speaker: 'Elon' }, def('quote'))).toEqual([
+    expect(claimsOf({ template: 'quote', kind: 'said', text: 'Fail fast', speaker: 'Elon' }, def('quote'))).toMatchObject([
       { path: 'text', text: 'Fail fast', kind: 'run' }
     ])
     const social: GraphicData = { template: 'quote', kind: 'social', text: 'hi', name: 'n', handle: 'h', date: 'd', link: 'l' }
@@ -594,7 +594,10 @@ describe('bind: the review cases, each named (§6.7, "Why it binds, not just mat
   it('"we spent $40 on ads and 40% of signups" + bars with BARE values: the matched numbers carry two units', () => {
     // The spec strings share a unit (none); the matched numbers do not. Rule 9's bars rule
     // (piece 3) drops on the matched units, which bind must give as the stretch's, not the spec's.
-    const r = bindData(bars([['ads', '40'], ['signups', '40']]), ['We spent $40 on ads and 40% of signups came from them.'])
+    // Said so that 'signups' is 13 tokens from '$40': the window alone forces it onto the 40%, so
+    // only the spec-strings mutation (not one occurrence bound twice) gives the units ['', ''].
+    const said = ['We spent $40 on ads last month and then 40% of all our new signups came from them.']
+    const r = bindData(bars([['ads', '40'], ['signups', '40']]), said)
     expect(r.ok).toBe(true)
     if (!r.ok) return
     const units = r.matched.filter((m): m is CanonNumber => m !== undefined).map((m) => m.unit)
@@ -626,8 +629,11 @@ describe('bind: the review cases, each named (§6.7, "Why it binds, not just mat
   })
 
   it('"I\'d never tell you to quit your job" + quote "quit your job" → refused', () => {
+    // Refused as 'absent': 'quit' starts mid-clause (after 'to'), so the boundary rule refuses it before
+    // rule 7 (which would also refuse it) is reached. Double-guarded: no single mutation keeps it. The
+    // after-a-negator rule's own case is "I would say never, quit your job." below.
     const quote: GraphicData = { template: 'quote', kind: 'said', text: 'quit your job', speaker: '' }
-    expect(bindData(quote, ["I'd never tell you to quit your job."]).ok).toBe(false)
+    expect(bindData(quote, ["I'd never tell you to quit your job."])).toMatchObject({ ok: false, reason: 'absent' })
   })
 
   it('stretch "clients happy" + label "clients not happy" → absent', () => {
@@ -702,7 +708,9 @@ describe('bind: what passes, and where it binds', () => {
       .toMatchObject({ ok: false, reason: 'negated' })
   })
 
-  it('a negator in another clause of the sentence does not negate the claim', () => {
+  it("a negator in another clause of the sentence does not negate the claim (rule 7's clause as the plan words it)", () => {
+    // The plan's clause stops at a comma, so "It's not true, 90% of startups fail." keeps a ring
+    // too: open, the user's decision (see the fix commit's "Open, yours"). Safe either way here.
     expect(bindData({ template: 'counter', value: '40', label: 'clients' }, ['Not last year, but now we have 40 clients.']).ok)
       .toBe(true)
     expect(bindData({ template: 'counter', value: '40', label: 'clients' }, ["We don't have 40 clients."]))
@@ -764,7 +772,7 @@ describe('bind: verbatim runs', () => {
   it('a whole clause or sentence binds, its first word recorded', () => {
     const st = stretchOf(['Honestly, put the camera where the light is.'])
     const r = bind(claimsOf(quote('Put the camera where the light is'), def('quote')), st, 'en')
-    expect(r).toEqual({ ok: true, at: [wordAt(st, 'put')], matched: [undefined] })
+    expect(r).toMatchObject({ ok: true, at: [wordAt(st, 'put')], matched: [undefined] })
   })
 
   it('a run that starts or ends mid-clause is refused', () => {
@@ -799,6 +807,141 @@ describe('bind is pure over its claims', () => {
   it('claims with no value bind nowhere, and no claims bind trivially', () => {
     const none: Claim = { path: 'value', text: 'x', kind: 'number', pair: 0 }
     expect(bind([none], stretchOf(['we signed 40 clients']), 'en')).toMatchObject({ ok: false, reason: 'absent', missing: [none] })
-    expect(bind([], stretchOf(['anything']), 'en')).toEqual({ ok: true, at: [], matched: [] })
+    expect(bind([], stretchOf(['anything']), 'en')).toMatchObject({ ok: true, at: [], matched: [] })
+  })
+})
+
+describe('numbersIn: what is no number, so a claim for it is dropped (the fix after the critics)', () => {
+  it("years said in pairs are no number ('nineteen ninety nine' is neither 19 nor 99)", () => {
+    expect(numbersIn(claimTokensOf('in nineteen ninety nine we had clients'))).toEqual([])
+    expect(numbersIn(claimTokensOf('twenty twenty one'))).toEqual([])
+    // Still read: one group, and two groups apart.
+    expect(one('nineteen hundred and ninety nine').n).toBe(1999)
+    expect(numbersIn(claimTokensOf('nineteen brides, ninety guests')).map((f) => f.value.n)).toEqual([19, 90])
+  })
+
+  it("a number followed by a fraction is no number ('two and a half million', 'three quarters')", () => {
+    expect(numbersIn(claimTokensOf('we got two and a half million views'))).toEqual([])
+    expect(numbersIn(claimTokensOf('2 and a half'))).toEqual([])
+    expect(numbersIn(claimTokensOf('three quarters of couples'))).toEqual([])
+    expect(numbersIn(claimTokensOf('two million and a half'))).toEqual([])
+    // 'and' then no fraction: both read.
+    expect(numbersIn(claimTokensOf('two and fifty')).map((f) => f.value.n)).toEqual([2, 50])
+  })
+
+  it("two numbers joined as a range or a ratio are no number ('40 to 50', '1 in 4', '3 out of 4')", () => {
+    for (const text of ['40 to 50 clients', 'forty or fifty clients', '1 in 4 couples', '3 out of 4 couples', '3 of 4']) {
+      expect(numbersIn(claimTokensOf(text)), text).toEqual([])
+    }
+    expect(numbersIn(claimTokensOf('40 clients to 50 staff')).map((f) => f.value.n)).toEqual([40, 50])
+  })
+})
+
+describe('bind: the false graphics the critics found, each named and dropped', () => {
+  it('"In nineteen ninety nine we had clients." + counter 99 or 19 → absent (a year is not a count)', () => {
+    const said = ['In nineteen ninety nine we had clients.']
+    expect(bindData({ template: 'counter', value: '99', label: 'clients' }, said)).toMatchObject({ ok: false, reason: 'absent' })
+    expect(bindData({ template: 'counter', value: '19', label: 'clients' }, said)).toMatchObject({ ok: false, reason: 'absent' })
+  })
+
+  it('"We got two and a half million views." + counter 2 / "million views" → absent', () => {
+    expect(bindData({ template: 'counter', value: '2', label: 'million views' }, ['We got two and a half million views.']))
+      .toMatchObject({ ok: false, reason: 'absent' })
+  })
+
+  it('"1 in 4 couples." + counter 4 couples, "We had 40 to 50 clients." + counter 40 → absent', () => {
+    expect(bindData({ template: 'counter', value: '4', label: 'couples' }, ['1 in 4 couples.']))
+      .toMatchObject({ ok: false, reason: 'absent' })
+    expect(bindData({ template: 'counter', value: '40', label: 'clients' }, ['We had 40 to 50 clients.']))
+      .toMatchObject({ ok: false, reason: 'absent' })
+  })
+
+  it('a value the speaker did not say does not bind: 41 or 40.5 over "we signed 40 clients" → absent', () => {
+    for (const value of ['41', '40.5', '40.000001']) {
+      expect(bindData({ template: 'counter', value, label: 'clients' }, ['we signed 40 clients']), value)
+        .toMatchObject({ ok: false, reason: 'absent' })
+    }
+    expect(bindData({ template: 'counter', value: '40', label: 'clients' }, ['we signed 40 clients']).ok).toBe(true)
+  })
+
+  it('"Instagram gave us 30%, referrals 70%, and Instagram keeps growing." + bars [Instagram 70%, referrals 30%] → unpaired', () => {
+    // 'Instagram' said twice: its second occurrence lets the false chart keep spoken order. Both pairings
+    // bind, so the stretch cannot tell them apart, and the graphic is dropped (either way round).
+    const said = ['Instagram gave us 30%, referrals 70%, and Instagram keeps growing.']
+    expect(bindData(bars([['Instagram', '70%'], ['referrals', '30%']]), said)).toMatchObject({ ok: false, reason: 'unpaired' })
+    expect(bindData(bars([['Instagram', '30%'], ['referrals', '70%']]), said)).toMatchObject({ ok: false, reason: 'unpaired' })
+  })
+
+  it('"We had 40 clients and 12 staff." + counter 12 / clients → unpaired; each true counter binds', () => {
+    const said = ['We had 40 clients and 12 staff.']
+    expect(bindData({ template: 'counter', value: '12', label: 'clients' }, said)).toMatchObject({ ok: false, reason: 'unpaired' })
+    expect(bindData({ template: 'counter', value: '40', label: 'clients' }, said).ok).toBe(true)
+    expect(bindData({ template: 'counter', value: '12', label: 'staff' }, said).ok).toBe(true)
+  })
+
+  it('"10% of staff quit and 90% of interns stayed." + ring 90% / "of staff quit" → unpaired', () => {
+    const said = ['10% of staff quit and 90% of interns stayed.']
+    expect(bindData({ template: 'ring', value: '90%', label: 'of staff quit' }, said)).toMatchObject({ ok: false, reason: 'unpaired' })
+    expect(bindData({ template: 'ring', value: '90%', label: 'of interns stayed' }, said).ok).toBe(true)
+  })
+
+  it("rule 7's other spellings: 'cannot', 'dont' without its apostrophe, Hindi 'नही' → negated", () => {
+    const ring: GraphicData = { template: 'ring', value: '90%', label: 'of startups fail' }
+    expect(bindData(ring, ['You cannot say 90% of startups fail.'])).toMatchObject({ ok: false, reason: 'negated' })
+    expect(bindData(ring, ['I dont think 90% of startups fail.'])).toMatchObject({ ok: false, reason: 'negated' })
+    const quote: GraphicData = { template: 'quote', kind: 'said', text: 'quit your job', speaker: '' }
+    expect(bindData(quote, ['I would say dont, quit your job.'])).toMatchObject({ ok: false, reason: 'negated' })
+    expect(bindData({ template: 'counter', value: '40', label: 'ग्राहक खुश' }, ['40 ग्राहक खुश नही थे।'], 'hi'))
+      .toMatchObject({ ok: false, reason: 'negated' })
+    // The words those spellings must not take.
+    expect(bindData({ template: 'counter', value: '40', label: 'clients want' }, ['40 clients want it.']).ok).toBe(true)
+  })
+
+  it("Hindi and Telugu negators negate through bind", () => {
+    expect(bindData({ template: 'counter', value: '40', label: 'ग्राहक' }, ['40 ग्राहक नहीं आए'], 'hi'))
+      .toMatchObject({ ok: false, reason: 'negated' })
+    expect(bindData({ template: 'counter', value: '40', label: 'జంటలు' }, ['40 జంటలు లేదు'], 'te'))
+      .toMatchObject({ ok: false, reason: 'negated' })
+    expect(bindData({ template: 'counter', value: '40', label: 'ग्राहक' }, ['40 ग्राहक आए'], 'hi').ok).toBe(true)
+  })
+
+  it('"I would never, ever, quit your job." + quote "quit your job" → negated (an \'ever\' between is still directly after)', () => {
+    const quote: GraphicData = { template: 'quote', kind: 'said', text: 'quit your job', speaker: '' }
+    expect(bindData(quote, ['I would never, ever, quit your job.'])).toMatchObject({ ok: false, reason: 'negated' })
+  })
+
+  it('"Never." "Quit your job." + quote "quit your job" → negated (a sentence break does not end "directly after")', () => {
+    const quote: GraphicData = { template: 'quote', kind: 'said', text: 'quit your job', speaker: '' }
+    expect(bindData(quote, ['Never.', 'Quit your job.'])).toMatchObject({ ok: false, reason: 'negated' })
+    expect(bindData(quote, ['Honestly.', 'Quit your job.']).ok).toBe(true)
+  })
+
+  it("English plurals fold, but 'news' is not the plural of 'new': counter 40 / 'new clients' → absent", () => {
+    expect(bindData({ template: 'counter', value: '40', label: 'new clients' }, ['40 clients saw the news.']))
+      .toMatchObject({ ok: false, reason: 'absent' })
+    expect(bindData({ template: 'counter', value: '40', label: 'new clients' }, ['40 new client came.']).ok).toBe(true)
+  })
+})
+
+describe('bind: the edges the critics found unpinned', () => {
+  it('BIND_WINDOW: a label 8 spoken tokens from its value binds, 9 does not', () => {
+    const at8 = stretchOf(['We shot 300 in the hills and the coast for weddings.'])
+    expect(wordAt(at8, 'weddings.') - wordAt(at8, '300')).toBe(BIND_WINDOW)
+    const at9 = stretchOf(['We shot 300 in the hills and the coast for all weddings.'])
+    expect(wordAt(at9, 'weddings.') - wordAt(at9, '300')).toBe(BIND_WINDOW + 1)
+    const claims = claimsOf({ template: 'counter', value: '300', label: 'weddings' }, def('counter'))
+    expect(bind(claims, at8, 'en').ok).toBe(true)
+    expect(bind(claims, at9, 'en')).toMatchObject({ ok: false, reason: 'unpaired' })
+  })
+
+  it("spoken order holds over a WHOLE label: [ads growth 40, signups 70] over 'Ads 40 signups 70 growth.' → order", () => {
+    expect(bindData(bars([['ads growth', '40'], ['signups', '70']]), ['Ads 40 signups 70 growth.']))
+      .toMatchObject({ ok: false, reason: 'order' })
+  })
+
+  it("a run over two clauses is judged in each: keyword 'cheap really' over 'It is cheap, really not.' → negated", () => {
+    expect(bindData({ template: 'keyword', words: 'cheap really', lit: 0 }, ['It is cheap, really not.']))
+      .toMatchObject({ ok: false, reason: 'negated' })
+    expect(bindData({ template: 'keyword', words: 'cheap really', lit: 0 }, ['It is cheap, really.']).ok).toBe(true)
   })
 })

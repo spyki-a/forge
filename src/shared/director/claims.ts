@@ -296,13 +296,18 @@ function wordGroup(ts: readonly string[], i: number): { n: number; next: number 
  * does not apply or by a second multiplier (`UNREAD_SCALES`); a number next
  * to `point` on either side ('one point two million' is neither 1 nor 2
  * million); a currency number followed by a percent ('$40%'), or by another
- * currency's word ('$40 rupees').
+ * currency's word ('$40 rupees'); a number followed by a fraction ('two and
+ * a half million', 'three quarters', '2 and one third'); two numbers next to
+ * each other, both of them ('nineteen ninety nine' is neither 19 nor 99,
+ * 'twenty twenty one' neither 20 nor 21); two numbers joined as a range or a
+ * ratio by 'to', 'or', 'in', 'of' or 'out of', both of them ('40 to 50
+ * clients' is not 40 clients, '1 in 4 couples' is not 4 couples; so '300 in
+ * 2019' is dropped too, the safe direction).
  *
  * Not parsed, so a claim written for them is dropped by the binding (the
  * safe direction, §6.7 rule 4): Hindi and Telugu number words, ordinals
- * ('1st', 'first'), a decimal comma ('1,5'), ranges ('40-50'), 'a thousand'
- * and 'a million' (only 'a hundred' is read), fractions ('two and a half'),
- * years said in pairs ('nineteen ninety nine' is 19 and 99).
+ * ('1st', 'first'), a decimal comma ('1,5'), ranges written '40-50', 'a
+ * thousand' and 'a million' (only 'a hundred' is read).
  */
 export function numbersIn(tokens: readonly string[]): { value: CanonNumber; at: number }[] {
   return numberSpans(tokens).map(({ value, at }) => ({ value, at }))
@@ -326,7 +331,7 @@ function numberSpans(tokens: readonly string[]): { value: CanonNumber; at: numbe
     }
   })
 
-  const out: { value: CanonNumber; at: number; from: number; end: number }[] = []
+  const out: { value: CanonNumber; at: number; from: number; end: number; tsFrom: number; tsEnd: number }[] = []
   let i = 0
   while (i < ts.length) {
     let j = i
@@ -367,9 +372,20 @@ function numberSpans(tokens: readonly string[]): { value: CanonNumber; at: numbe
       i += 1
       continue
     }
+    // A fraction after the number ('two and a half', 'three quarters'): no number, its tail skipped.
+    let frac = fractionAt(ts, j)
+    if (frac > 0) {
+      i = j + frac
+      continue
+    }
     if (MULTIPLIER_WORDS.includes(ts[j] ?? '')) {
       n *= MULTIPLIERS[ts[j]]
       j += 1
+    }
+    frac = fractionAt(ts, j)
+    if (frac > 0) {
+      i = j + frac
+      continue
     }
     // A scale word not applied, a second multiplier, or 'point' after the number:
     // the span, that word included, is no number.
@@ -402,11 +418,40 @@ function numberSpans(tokens: readonly string[]): { value: CanonNumber; at: numbe
       value: currency ? { n: sign * n, unit, currency } : { n: sign * n, unit },
       at: index[start],
       from: index[i],
-      end: index[j - 1] + 1
+      end: index[j - 1] + 1,
+      tsFrom: i,
+      tsEnd: j
     })
     i = j
   }
-  return out
+  // Two numbers standing next to each other ('nineteen ninety nine', 'twenty twenty one') or
+  // joined as a range or a ratio ('40 to 50', '40 or 50', '1 in 4', '3 out of 4', '3 of 4'):
+  // both are no number, since either read alone is a value the speaker did not say.
+  const joined = new Set<number>()
+  for (let k = 0; k + 1 < out.length; k++) {
+    const gap = ts.slice(out[k].tsEnd, out[k + 1].tsFrom).join(' ')
+    if (gap === '' || NUMBER_JOINERS.includes(gap)) {
+      joined.add(k)
+      joined.add(k + 1)
+    }
+  }
+  return out.filter((_, k) => !joined.has(k)).map(({ value, at, from, end }) => ({ value, at, from, end }))
+}
+
+/** The words that join two numbers into a range or a ratio, as one space-joined gap (see `numberSpans`). */
+const NUMBER_JOINERS: readonly string[] = ['to', 'or', 'in', 'of', 'out of']
+
+/** The fraction words that may follow a number ('two and a half', 'three quarters'). */
+const FRACTIONS: ReadonlySet<string> = new Set(['half', 'halves', 'quarter', 'quarters', 'third', 'thirds'])
+
+/** How many tokens of a fraction start at `j` ('half': 1; 'and a half', 'and one quarter': 3), else 0. */
+function fractionAt(ts: readonly string[], j: number): number {
+  if (FRACTIONS.has(ts[j] ?? '')) return 1
+  const between = ts[j + 1] ?? ''
+  if (ts[j] === 'and' && (between === 'a' || between === 'an' || isNumberWord(between) || digitValue(between) !== null)) {
+    return FRACTIONS.has(ts[j + 2] ?? '') ? 3 : 0
+  }
+  return 0
 }
 
 // ---------------------------------------------------------------------------
@@ -462,9 +507,22 @@ export interface Claim {
   mid?: true
 }
 
-/** A word that negates (rule 7): any of `NEGATORS`' lists, whatever the language, or an English contraction ending in n't. */
+/**
+ * Spellings of rule 7's negators that `NEGATORS` as §6.7 lists them does not
+ * hold, each the same word: 'cannot' (the plan's n't covers "can't"), the n't
+ * contractions as ASR writes them without the apostrophe (an explicit list:
+ * a pattern on 'nt' would take 'client' and 'want'), and Hindi 'नही', the
+ * common spelling of 'नहीं' without the anusvara. Each one only drops more.
+ */
+export const NEGATOR_SPELLINGS: readonly string[] = [
+  'cannot', 'dont', 'doesnt', 'didnt', 'cant', 'wont', 'isnt', 'arent', 'wasnt', 'werent', 'hasnt', 'havent',
+  'hadnt', 'couldnt', 'wouldnt', 'shouldnt', 'mustnt', 'neednt', 'aint', 'नही'
+]
+
+/** A word that negates (rule 7): any of `NEGATORS`' lists, whatever the language, one of `NEGATOR_SPELLINGS`, or an English contraction ending in n't. */
 function isNegator(t: string): boolean {
-  return NEGATORS.en.includes(t) || NEGATORS.hi.includes(t) || NEGATORS.te.includes(t) || /n['’]t$/u.test(t)
+  return NEGATORS.en.includes(t) || NEGATORS.hi.includes(t) || NEGATORS.te.includes(t) ||
+    NEGATOR_SPELLINGS.includes(t) || /n['’]t$/u.test(t)
 }
 
 /** Rule 8's exemption: an English function word, and never a negator, a direction word or a comparative. */
@@ -646,15 +704,25 @@ function unitOk(spec: CanonNumber, said: CanonNumber): boolean {
   return said.unit === 'currency' && said.currency === spec.currency
 }
 
+/**
+ * English words ending in s or es that are no plural of the word without it
+ * ('news' is not 'new's, 'has' not 'ha's): rule 8's fold never makes one.
+ */
+const NOT_PLURALS: ReadonlySet<string> = new Set([
+  'news', 'has', 'his', 'yes', 'bus', 'gas', 'plus', 'less', 'this', 'thus', 'was', 'is', 'us', 'as', 'its', 'does', 'goes'
+])
+
 /** Rule 8: one token for another, English plurals (`s`, `es`) folded on both sides. */
 function sameToken(a: string, b: string, english: boolean): boolean {
   if (a === b) return true
   if (!english || !/^[a-z]+$/u.test(a) || !/^[a-z]+$/u.test(b)) return false
-  return a + 's' === b || a + 'es' === b || b + 's' === a || b + 'es' === a
+  const [short, long] = a.length < b.length ? [a, b] : [b, a]
+  if (NOT_PLURALS.has(long)) return false
+  return short + 's' === long || short + 'es' === long
 }
 
 /** The spoken distance of a token from an occurrence's span: 0 inside it, 1 next to it. */
-function distance(np: number, o: Occurrence): number {
+function distance(np: number, o: { first: number; last: number }): number {
   return np < o.first ? o.first - np : np > o.last ? np - o.last : 0
 }
 
@@ -701,8 +769,40 @@ const BIND_BUDGET = 200_000
  * or number word, a token's word, a run's first word. Negators of every
  * listed language count whatever `lang` says; Telugu's negative verb endings
  * are caught by no list (rule 7). Pure and node-runnable.
+ *
+ * Beyond rule 6's words, each in the safe direction (a pairing the stretch
+ * cannot tell from another is dropped, 'unpaired'):
+ * - a pair's label token may not sit as near or nearer to a number of its
+ *   sentence that no claim binds as to its own value ('We had 40 clients and
+ *   12 staff' cannot ship "12 clients");
+ * - when two pairs' values, exchanged, bind as well under every rule, the
+ *   graphic is dropped: a label word said twice ('Instagram gave us 30%,
+ *   referrals 70%, and Instagram keeps growing') would otherwise let either
+ *   chart through.
  */
 export function bind(claims: readonly Claim[], stretch: ClaimStretch, lang: string): BindResult {
+  const r = bindOnce(claims, stretch, lang)
+  if (!r.ok) return r
+  const values = claims.filter((c) => c.kind === 'number' && c.pair !== undefined && c.value !== undefined)
+  for (let p = 0; p < values.length; p++) {
+    for (let q = p + 1; q < values.length; q++) {
+      const [a, b] = [values[p], values[q]]
+      if (a.pair === b.pair) continue
+      const same = sameValue(a.value!.n, b.value!.n) && a.value!.unit === b.value!.unit && a.value!.currency === b.value!.currency
+      if (same) continue
+      const swapped = claims.map((c) =>
+        c === a ? { ...c, text: b.text, value: b.value } : c === b ? { ...c, text: a.text, value: a.value } : c
+      )
+      if (bindOnce(swapped, stretch, lang).ok) {
+        return { ok: false, missing: claims.filter((c) => c.pair === a.pair || c.pair === b.pair), reason: 'unpaired' }
+      }
+    }
+  }
+  return r
+}
+
+/** `bind` without the exchange check: one search over every placement. */
+function bindOnce(claims: readonly Claim[], stretch: ClaimStretch, lang: string): BindResult {
   const english = /^en(?:$|[-_])/iu.test(lang)
   const { toks, numbers } = tokensOfStretch(stretch)
   const spoken = toks.map((x, i) => i).filter((i) => toks[i].np >= 0)
@@ -758,7 +858,7 @@ export function bind(claims: readonly Claim[], stretch: ClaimStretch, lang: stri
   const chosen: Occurrence[] = new Array<Occurrence>(claims.length)
   const used = new Set<number>()
   let tried = 0
-  let best: { stage: number; reason: 'order' | 'negated'; missing: Claim[]; at: number[] } | null = null
+  let best: { stage: number; reason: 'order' | 'unpaired' | 'negated'; missing: Claim[]; at: number[] } | null = null
 
   const fits = (i: number, o: Occurrence): boolean => {
     if (o.tokens.some((t) => used.has(t))) return false
@@ -788,6 +888,12 @@ export function bind(claims: readonly Claim[], stretch: ClaimStretch, lang: stri
       if (!best || best.stage < 1) best = { stage: 1, reason: 'order', missing: disordered, at }
       return false
     }
+    // A label token as near or nearer to a number no claim binds as to its own value.
+    const nearer = strayNearer()
+    if (nearer.length > 0) {
+      if (!best || best.stage < 2) best = { stage: 2, reason: 'unpaired', missing: nearer, at }
+      return false
+    }
     // Rule 7.
     const negated = claims.filter((c, i) => {
       const o = chosen[i]
@@ -797,10 +903,28 @@ export function bind(claims: readonly Claim[], stretch: ClaimStretch, lang: stri
       return toks.some((x) => x.np >= 0 && clauses.has(x.clause) && isNegator(x.t) && !lacks.has(x.t))
     })
     if (negated.length > 0) {
-      if (!best || best.stage < 2) best = { stage: 2, reason: 'negated', missing: negated, at }
+      if (!best || best.stage < 3) best = { stage: 3, reason: 'negated', missing: negated, at }
       return false
     }
     return true
+  }
+
+  const strayNearer = (): Claim[] => {
+    const bound = new Set(claims.flatMap((c, i) => (c.kind === 'number' ? [chosen[i].tokens[0]] : [])))
+    const strays = numbers.filter((n) => !bound.has(n.from))
+    return claims.filter((c, i) => {
+      if (c.kind !== 'token' || c.pair === undefined) return false
+      const v = claims.findIndex((d) => d.kind === 'number' && d.pair === c.pair)
+      if (v < 0) return false
+      const label = chosen[i]
+      const own = distance(label.first, chosen[v])
+      return strays.some((n) => {
+        if (toks[n.from].sent !== label.sent) return false
+        if (label.tokens[0] >= n.from && label.tokens[0] < n.end) return false
+        const nps = toks.slice(n.from, n.end).map((x) => x.np).filter((x) => x >= 0)
+        return distance(label.first, { first: Math.min(...nps), last: Math.max(...nps) }) <= own
+      })
+    })
   }
 
   const search = (k: number): boolean => {
@@ -826,7 +950,7 @@ export function bind(claims: readonly Claim[], stretch: ClaimStretch, lang: stri
     }
   }
   if (best) {
-    const b: { reason: 'order' | 'negated'; missing: Claim[]; at: number[] } = best
+    const b: { reason: 'order' | 'unpaired' | 'negated'; missing: Claim[]; at: number[] } = best
     return { ok: false, missing: b.missing, reason: b.reason, at: b.at }
   }
   return { ok: false, missing: [...claims], reason: 'unpaired' }
@@ -866,7 +990,8 @@ function orderBroken(claims: readonly Claim[], chosen: readonly Occurrence[]): C
  * Every place a verbatim field's tokens stand as a contiguous run of one
  * sentence's spoken tokens (clause breaks between them allowed), starting and
  * ending on a sentence or clause boundary unless `mid`; each marked when the
- * spoken token before it is a negator.
+ * spoken token before it, past any 'ever' and across a sentence break, is a
+ * negator (rule 8's "directly after a negator", read in the safe direction).
  */
 function runsOf(
   field: readonly string[],
@@ -886,8 +1011,11 @@ function runsOf(
     const startsOnEdge = before < 0 || toks[before].sent !== sent || toks[before].np < 0
     const endsOnEdge = after >= toks.length || toks[after].sent !== sent || toks[after].np < 0
     if (!mid && !(startsOnEdge && endsOnEdge)) continue
-    const prior = s > 0 ? spoken[s - 1] : -1
-    const afterNegator = prior >= 0 && toks[prior].sent === sent && isNegator(toks[prior].t)
+    // The spoken token before the run, past any 'ever' ('never, ever, quit'), in this sentence or
+    // the one before ('Never.' 'Quit your job.': an ASR sentence break inside one phrase).
+    let p = s - 1
+    while (p >= 0 && toks[spoken[p]].t === 'ever') p -= 1
+    const afterNegator = p >= 0 && isNegator(toks[spoken[p]].t)
     out.push({ tokens: run, afterNegator })
   }
   return out
