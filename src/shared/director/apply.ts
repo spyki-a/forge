@@ -48,6 +48,13 @@ export const SOUND_RULE = 'director.sound'
 /** A moment the rhythm engine placed over a cut (render/moment.ts), drawn by the app and baked for the export. */
 export const MOMENT_RULE = 'director.moment'
 export const DIRECTOR_RULES: readonly string[] = [SPINE_RULE, COPY_RULE, ENDING_RULE, LOOK_RULE, BACKDROP_RULE, SOUND_RULE, MOMENT_RULE]
+/**
+ * Direct's graphics (docs/CLIPS.md §6.6, §16.10). Declared here, beside the
+ * rules, for the budget (graphics/budget.ts: Direct's graphics are spaced
+ * over the whole ad). It joins `DIRECTOR_RULES` with the sweep (lane T3's
+ * director/apply.ts piece), not before, so `clearDirector` is unchanged here.
+ */
+export const GRAPHIC_RULE = 'director.graphic'
 
 /**
  * The accent on the punch word.
