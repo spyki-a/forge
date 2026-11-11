@@ -14,7 +14,8 @@
  * and draws no underline.
  *
  * Motion: the card (the panel, the words, the underline) enters with
- * `style.motion.entrance` over `DURATIONS.entrance`, arriving on the beat;
+ * `style.motion.entrance` over `DURATIONS.entrance`, arriving on the beat,
+ * and scales from 0.92 whatever the entrance (`pop`'s scale, motion.ts);
  * the words stagger 0.05 s each, the last arriving on the beat, each with the
  * same entrance over the same duration, inside the card's; the underline
  * draws on left to right (`from` 0, `to` p) over `DURATIONS.stroke`, ending
@@ -81,8 +82,15 @@ export const drawKeyword: Drawer = (spec, style, clock, size, measure, targets):
   const beat = beatOf(spec, 0)
   const E = DURATIONS.entrance
   const px = l.look.px
-  const card = entrance(style.motion.entrance, progress(t, beat - E, E, style.motion.ease))
-  const cardMove = { dy: card.dy * px, scale: card.scale, opacity: card.opacity }
+  const pc = progress(t, beat - E, E, style.motion.ease)
+  const card = entrance(style.motion.entrance, pc)
+  // §6.2: "the card scales from 0.92 (proposal) with a rise and fade". `rise`
+  // (and the entrances that resolve to it) scales nothing, so the card takes
+  // `pop`'s scale from motion.ts beside the style's own rise and fade; under
+  // `pop` itself the entrance's own scale (with `out-back`'s overshoot in
+  // energetic) is used as it is.
+  const cardScale = style.motion.entrance === 'pop' ? card.scale : entrance('pop', pc).scale
+  const cardMove = { dy: card.dy * px, scale: cardScale, opacity: card.opacity }
   const cardCentre = centreOf(panelBox)
 
   const items: DrawItem[] = []

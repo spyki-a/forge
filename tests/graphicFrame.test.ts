@@ -16,7 +16,7 @@ import { drawListAt, graphicFits } from '@shared/graphics/drawList'
 import { DRAWERS } from '@shared/graphics/templates/index'
 import { itemBounds, type DrawItem, type DrawList, type Drawer, type ShapeItem, type StrokeItem, type TextItem, type TextMeasure } from '@shared/graphics/items'
 import { numberOf } from '@shared/graphics/numbers'
-import { FIT_MIN, contentRect } from '@shared/graphics/templates/layout'
+import { FIT_MIN, contentRect, wrapWidth } from '@shared/graphics/templates/layout'
 import { DURATIONS, progress, type MotionEase } from '@shared/graphics/motion'
 import { resolveGraphicStyle, type GraphicStyle } from '@shared/graphics/style'
 import type { GraphicData, GraphicSpec, GraphicTemplateId } from '@shared/graphics/template'
@@ -758,6 +758,23 @@ describe('graphicFrame, phase 2: the five templates drawn so far, over their fix
           arrives(s.beats[0], (l) => byId<StrokeItem>(l, 'underline').to, 1, 'underline')
           arrives(s.beats[0], (l) => byId<TextItem>(l, `word-${words.length - 1}`).opacity, 1, 'the last word')
           arrives(s.beats[0], (l) => byId<ShapeItem>(l, 'panel').opacity, clean().palette.panelOpacity, 'the card')
+          // The words stagger 0.05 s each, the last arriving on the beat: inside the lead, each word is ahead of the next.
+          const inLead = at(Math.floor((s.beats[0] - 0.2) * fps))
+          for (let i = 0; i + 1 < words.length; i++) {
+            const a = byId<TextItem>(inLead, `word-${i}`).opacity
+            const b = byId<TextItem>(inLead, `word-${i + 1}`).opacity
+            expect(a, `${f.id} word-${i} ahead of word-${i + 1} inside the lead at ${fps}`).toBeGreaterThan(b)
+          }
+          // The card scales from 0.92 (§6.2) under clean's rise as well: below 1 through the lead, 1 from the beat.
+          const bf = beatFrame(s.beats[0], fps)
+          const start = Math.floor((s.beats[0] - DURATIONS.entrance) * fps)
+          for (let frame = Math.max(0, start); frame < bf; frame++) {
+            const scale = byId<ShapeItem>(at(frame), 'panel').transform?.scale ?? 1
+            expect(scale, `${f.id} the card's scale frame ${frame} at ${fps}`).toBeLessThan(1)
+            expect(scale, `${f.id} the card's scale frame ${frame} at ${fps}`).toBeGreaterThanOrEqual(0.92 - 1e-9)
+          }
+          expect(byId<ShapeItem>(at(Math.max(0, start)), 'panel').transform?.scale, `${f.id} the card starts at 0.92 at ${fps}`).toBeCloseTo(0.92, 4)
+          expect(byId<ShapeItem>(at(bf), 'panel').transform, `${f.id} the card on its beat at ${fps}`).toBeUndefined()
         }
         if (data.template === 'lower-third') {
           const full = byId<ShapeItem>(at(settledFrame(s, fps)), 'bar').box.width
@@ -849,6 +866,11 @@ describe('graphicFrame, phase 2: the five templates drawn so far, over their fix
       }
       // The words themselves never change with lit.
       for (const t of texts) expect(t).toEqual(texts[0])
+      // The lit word in palette.accent throughout (§6.2), not only once settled.
+      for (let frame = 0; frame <= beatFrame(f.spec.beats[0], FPS); frame++) {
+        const drawn = textsOf(listAt(f.spec, frame))
+        drawn.forEach((t, i) => expect(t.look.accent, `${f.id} frame ${frame} word-${i}`).toBe(i === data.lit ? clean().palette.accent : undefined))
+      }
     }
   })
 
@@ -894,8 +916,64 @@ describe('graphicFrame, phase 2: the five templates drawn so far, over their fix
       const settled = drawListAt(f.spec, dimmed, beatFrame(DURATIONS.dim, FPS), FPS, SIZE, fakeMeasure, { subject: null })
       expect(settled.items[0].kind, f.id).toBe('dim')
       expect(settled.items[0].opacity, f.id).toBe(1)
+      const before = drawListAt(f.spec, dimmed, beatFrame(DURATIONS.dim, FPS) - 1, FPS, SIZE, fakeMeasure, { subject: null })
+      expect(before.items[0].opacity, `${f.id}: still fading the frame before DURATIONS.dim`).toBeLessThan(1)
       expect((settled.items[0] as Extract<DrawItem, { kind: 'dim' }>).hole, f.id).toBeUndefined()
       expect(listAt(f.spec, 0).items.some((i) => i.kind === 'dim'), `${f.id}: clean does not dim`).toBe(false)
+    }
+  })
+
+  it('the layout, pinned independently of layout.ts: each third inset by 0.05 of the width at the sides and of the height at the frame’s edge, the dragged box itself, the wrap ≤ 0.8 of the width, lower-third at the left, the rest centred', () => {
+    for (const size of [SIZE, { width: 1920, height: 1080 }]) {
+      const W = size.width
+      const H = size.height
+      const at = `${W}×${H}`
+      const want = {
+        top: { x: 0.05 * W, y: 0.05 * H, width: 0.9 * W, height: H / 3 - 0.05 * H },
+        middle: { x: 0.05 * W, y: H / 3, width: 0.9 * W, height: H / 3 },
+        bottom: { x: 0.05 * W, y: (2 * H) / 3, width: 0.9 * W, height: H / 3 - 0.05 * H }
+      }
+      for (const third of ['top', 'middle', 'bottom'] as const) {
+        const rect = contentRect({ auto: true, third }, size)
+        for (const k of ['x', 'y', 'width', 'height'] as const) expect(rect[k], `${third} ${k} at ${at}`).toBeCloseTo(want[third][k], 6)
+        expect(wrapWidth(rect, size), `${third} wrap at ${at}`).toBeCloseTo(Math.min(0.9 * W, 0.8 * W), 6)
+      }
+      const dragged = contentRect({ auto: false, box: { x: 0.1, y: 0.62, width: 0.8, height: 0.2 } }, size)
+      expect(dragged.x).toBeCloseTo(0.1 * W, 6)
+      expect(dragged.y).toBeCloseTo(0.62 * H, 6)
+      expect(dragged.width).toBeCloseTo(0.8 * W, 6)
+      expect(dragged.height).toBeCloseTo(0.2 * H, 6)
+      for (const f of DRAWN_FIXTURES) {
+        const list = listAt(f.spec, settledFrame(f.spec), FPS, size)
+        const place = f.spec.place
+        const third = place.auto ? want[place.third] : { x: place.box.x * W, y: place.box.y * H, width: place.box.width * W, height: place.box.height * H }
+        if (f.shape === 'lower-third') {
+          expect(byId<TextItem>(list, 'name').box.x, `${f.id} at the rect's left at ${at}`).toBeCloseTo(third.x, 6)
+          expect(byId<ShapeItem>(list, 'bar').box.x, `${f.id} bar at ${at}`).toBeCloseTo(third.x, 6)
+        } else if (f.shape === 'counter' || f.shape === 'keyword') {
+          const panel = byId<ShapeItem>(list, 'panel').box
+          expect(panel.x + panel.width / 2, `${f.id} centred across at ${at}`).toBeCloseTo(third.x + third.width / 2, 6)
+          expect(panel.y + panel.height / 2, `${f.id} centred down at ${at}`).toBeCloseTo(third.y + third.height / 2, 6)
+        }
+      }
+    }
+  })
+
+  it('a style whose ease is out-back never draws a count, a sweep or a bar past its value before the beat (drawOnEase)', () => {
+    const backed: GraphicStyle = { ...clean(), motion: { ...clean().motion, ease: 'out-back' } }
+    for (const f of DRAWN_FIXTURES.filter((x) => x.shape === 'ring' || x.shape === 'bars')) {
+      const data = f.spec.data
+      for (let frame = 0; frame < totalOf(f.spec, FPS); frame++) {
+        const list = listAt(f.spec, frame, FPS, SIZE, backed)
+        if (data.template === 'ring') expect(byId<ShapeItem>(list, 'arc').sweep!, `${f.id} frame ${frame}`).toBeLessThanOrEqual(numberOf(data.value)! / 100 + 1e-12)
+        if (data.template === 'bars') {
+          const largest = Math.max(...data.items.map((i) => numberOf(i.value)!))
+          data.items.forEach((item, i) => {
+            const full = byId<ShapeItem>(list, `track-${i}`).box.width * (numberOf(item.value)! / largest)
+            expect(byId<ShapeItem>(list, `bar-${i}`).box.width, `${f.id} bar-${i} frame ${frame}`).toBeLessThanOrEqual(full + 1e-9)
+          })
+        }
+      }
     }
   })
 
