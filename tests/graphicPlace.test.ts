@@ -12,7 +12,7 @@ import {
 import { graphicTargetsAt } from '@shared/graphics/targets'
 import type { GraphicSpec, GraphicTemplateId } from '@shared/graphics/template'
 import { CLIPS_GRAPHIC_RULE } from '@shared/graphics/apply'
-import { COPY_RULE, ENDING_RULE, SPINE_RULE } from '@shared/director/apply'
+import { COPY_RULE, ENDING_RULE, GRAPHIC_RULE, SPINE_RULE } from '@shared/director/apply'
 import { CHIN_EXTENSION } from '@shared/reframe/freeSpace'
 import { SUBJECT_TRACK_VERSION, type SubjectSample, type SubjectTrack, type UnitRect } from '@shared/reframe/types'
 import { DEFAULT_COLOR, DEFAULT_TRANSFORM, MAX_TRACKS, emptyProject, type Clip, type MediaAsset, type Project, type Track } from '@shared/timeline'
@@ -385,8 +385,8 @@ describe('graphicLane (§6.9 “On the timeline”)', () => {
     expect(videoIds(clips.project)).toHaveLength(4)
     expect(clips.trackId).toBe(videoIds(clips.project)[3])
     expect(clips.project.tracks.find((t) => t.id === clips.trackId)!.director).toBeUndefined()
-    // SPINE_RULE stands in for Direct's graphic rule, which lane T3's piece 5 adds to DIRECTOR_RULES.
-    const direct = graphicLane(laned(full), 'c', 60, 90, SPINE_RULE) as { project: Project; trackId: string }
+    // Direct's graphic rule, one of DIRECTOR_RULES since lane T3's piece 5.
+    const direct = graphicLane(laned(full), 'c', 60, 90, GRAPHIC_RULE) as { project: Project; trackId: string }
     expect(direct.project.tracks.find((t) => t.id === direct.trackId)!.director).toBe(true)
     // The tracks that were there are not marked.
     expect(direct.project.tracks.filter((t) => t.director).map((t) => t.id)).toEqual([direct.trackId])

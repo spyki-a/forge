@@ -47,14 +47,15 @@ export const BACKDROP_RULE = 'director.backdrop'
 export const SOUND_RULE = 'director.sound'
 /** A moment the rhythm engine placed over a cut (render/moment.ts), drawn by the app and baked for the export. */
 export const MOMENT_RULE = 'director.moment'
-export const DIRECTOR_RULES: readonly string[] = [SPINE_RULE, COPY_RULE, ENDING_RULE, LOOK_RULE, BACKDROP_RULE, SOUND_RULE, MOMENT_RULE]
 /**
- * Direct's graphics (docs/CLIPS.md §6.6, §16.10). Declared here, beside the
- * rules, for the budget (graphics/budget.ts: Direct's graphics are spaced
- * over the whole ad). It joins `DIRECTOR_RULES` with the sweep (lane T3's
- * director/apply.ts piece), not before, so `clearDirector` is unchanged here.
+ * Direct's graphics and their sounds (docs/CLIPS.md §6.6, §6.14, §16.10). In
+ * `DIRECTOR_RULES`, so Direct again and Direct's Clear take Direct's
+ * graphics, their sounds (each carries its graphic's rule) and their files.
+ * The clips flow's own rule, `CLIPS_GRAPHIC_RULE`, lives in graphics/apply.ts
+ * and is never one of these.
  */
 export const GRAPHIC_RULE = 'director.graphic'
+export const DIRECTOR_RULES: readonly string[] = [SPINE_RULE, COPY_RULE, ENDING_RULE, LOOK_RULE, BACKDROP_RULE, SOUND_RULE, MOMENT_RULE, GRAPHIC_RULE]
 
 /**
  * The accent on the punch word.
@@ -122,15 +123,30 @@ export function clearDirector(project: Project): Project {
     (c) => c.generatedBy !== undefined && DIRECTOR_RULES.includes(c.generatedBy.rule)
   )
   const emptyDirectorTrack = (clips: Clip[]) => (t: Track): boolean => t.director === true && !clips.some((c) => c.trackId === t.id)
-  if (removed.length === 0 && !project.clips.some((c) => c.directorTrim) && !project.tracks.some(emptyDirectorTrack(project.clips))) return project
+  // Direct's pending graphics go with its Clear (docs/CLIPS.md §6.6): the proposals of a rule of DIRECTOR_RULES.
+  const proposals = project.graphicProposals?.filter((g) => !DIRECTOR_RULES.includes(g.rule))
+  const proposalsGone = proposals !== undefined && proposals.length !== project.graphicProposals!.length
+  if (
+    removed.length === 0 &&
+    !proposalsGone &&
+    !project.clips.some((c) => c.directorTrim) &&
+    !project.tracks.some(emptyDirectorTrack(project.clips))
+  ) {
+    return project
+  }
 
   const gone = new Set(removed.map((c) => c.id))
   const survivors = project.clips.filter((c) => !gone.has(c.id))
   const stillUsed = new Set(survivors.map((c) => c.assetId))
-  // Only what the director DREW — anything that draws itself (edit/recipes.ts), the look layer — or
-  // BROUGHT from the sound library (the asset says so); never footage or a sound the user imported,
-  // even when a shot or a sound was its only reference.
-  const brought = new Set(project.assets.filter((a) => a.broughtBy === SOUND_RULE).map((a) => a.id))
+  // Only what the director DREW — anything that draws itself (edit/recipes.ts), a graphic included, the
+  // look layer — or what an app rule BROUGHT from the sound library (the asset says so); never footage or
+  // a sound the user imported, even when a shot or a sound was its only reference.
+  //
+  // Any `broughtBy`, not only SOUND_RULE's (docs/CLIPS.md §6.14): placeSounds and graphicSounds both reuse
+  // a pooled file by path whatever rule brought it, so a Director whoosh can stand on a file a Clip-it
+  // graphic brought; keyed on the Director's rules, this Clear would leave that file in the pool after
+  // Clear graphics took the graphic. Still only assets of removed clips that no survivor uses (below).
+  const brought = new Set(project.assets.filter((a) => a.broughtBy !== undefined).map((a) => a.id))
   const cardAssets = new Set(
     removed.filter((c) => drawsItself(c) || c.adjustment || brought.has(c.assetId)).map((c) => c.assetId)
   )
@@ -142,7 +158,8 @@ export function clearDirector(project: Project): Project {
     ...project,
     tracks: tracks.some((t) => t.kind === 'video') ? tracks : project.tracks,
     clips: survivors.map((c) => (c.directorTrim ? restoreTrim(c) : c)),
-    assets: project.assets.filter((a) => !(cardAssets.has(a.id) && !stillUsed.has(a.id)))
+    assets: project.assets.filter((a) => !(cardAssets.has(a.id) && !stillUsed.has(a.id))),
+    ...(proposals !== undefined ? { graphicProposals: proposals } : {})
   }
 }
 

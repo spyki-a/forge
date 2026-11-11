@@ -17,7 +17,7 @@
 
 import type { KeyframeTracks } from '../render/keyframes'
 import type { MediaAsset } from '../timeline'
-import type { GraphicSpec } from './template'
+import type { GraphicSpec, GraphicTemplateId } from './template'
 import type { GraphicStyle } from './style'
 
 /* --------------------------------------------------------------- constants */
@@ -167,4 +167,21 @@ export function drawnGraphicAsset(clipId: string, width: number, height: number,
     hasVideo: true,
     hasAudio: false
   }
+}
+
+/**
+ * The drawn asset of a graphic clip of `duration` frames with id `clipId`, on
+ * a project of `settings`: `drawnGraphicAsset` with the project's size,
+ * `durationFrames` = `max(duration, round(fps × 10))` and the name "<template>
+ * — graphic". Lifted out of the store's `addGraphicClip` (lane T3, piece 5) so
+ * that and §6.6's `applyGraphics` pass the same arguments as well as call the
+ * same helper: "so the two cannot differ".
+ */
+export function graphicClipAsset(
+  clipId: string,
+  template: GraphicTemplateId,
+  duration: number,
+  settings: { width: number; height: number; fps: number }
+): MediaAsset {
+  return drawnGraphicAsset(clipId, settings.width, settings.height, Math.max(duration, Math.round(settings.fps * 10)), `${template} — graphic`)
 }

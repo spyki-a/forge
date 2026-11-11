@@ -34,7 +34,7 @@ import type {
 import { DEFAULT_COLOR, DEFAULT_TEXT, clipCoversFrame } from '@shared/timeline'
 import { CLEAN_GRAPHIC_STYLE, graphicStyleOf } from '@shared/graphics/style'
 import type { GraphicSpec } from '@shared/graphics/template'
-import { drawnGraphicAsset, graphicExitKeys } from '@shared/graphics/frame'
+import { graphicClipAsset, graphicExitKeys } from '@shared/graphics/frame'
 import { graphicTargetsAt } from '@shared/graphics/targets'
 import { captionSourceClip } from '@shared/captions/timeline'
 import { withMotion, withoutMotionForZoom } from '@shared/edit/camera'
@@ -3497,10 +3497,11 @@ export const useEditor = create<EditorState>((set, get) => ({
      * so it is never a string from a model or a transcript.
      */
     const clipId = `graphic-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
-    const { width, height, fps } = project.settings
+    const { fps } = project.settings
     const duration = Math.max(1, Math.round(spec.seconds * fps))
-    // The one asset shape (graphics/frame.ts), long enough for a trim to lengthen the clip, as the paper asset is.
-    const asset = drawnGraphicAsset(clipId, width, height, Math.max(duration, Math.round(fps * 10)), `${spec.data.template} — graphic`)
+    // The one asset shape (graphics/frame.ts), long enough for a trim to lengthen the clip, as the paper asset
+    // is; applyGraphics (graphics/apply.ts) makes its assets through the same call.
+    const asset = graphicClipAsset(clipId, spec.data.template, duration, project.settings)
 
     /*
      * On the timeline in the same tick as the click, as text and clippings

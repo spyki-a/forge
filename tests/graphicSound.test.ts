@@ -10,8 +10,8 @@ import {
   noSoundFileNote,
   graphicSounds
 } from '@shared/graphics/sound'
-import { CLIPS_GRAPHIC_RULE } from '@shared/graphics/apply'
-import { GRAPHIC_RULE, SOUND_RULE } from '@shared/director/apply'
+import { CLIPS_GRAPHIC_RULE, clearGraphics } from '@shared/graphics/apply'
+import { GRAPHIC_RULE, SOUND_RULE, clearDirector } from '@shared/director/apply'
 import { SOUND_LANE_NAME } from '@shared/director/sound'
 import { SOUND_ROLES, type SoundFile, type SoundPack } from '@shared/director/soundRoles'
 import { MAX_SOUND_GAIN } from '@shared/render/soundLevels'
@@ -470,5 +470,96 @@ describe('graphicSounds: after the critics (§6.14)', () => {
       // Beat 0.02 s is frame ceil(0.6) = 1, the frame the entrance is fastest on.
       expect(at(counter(), [0.02], 'energetic')).toEqual(['tick@301', 'whoosh@301'])
     })
+  })
+})
+
+/* ------------------------------------------------------------------ the Clears */
+
+describe('the sound Clear test (§6.14): each Clear takes exactly its own graphics’ sounds and files', () => {
+  /** A drawn graphic asset, as graphicClipAsset makes one. */
+  const drawn = (clipId: string): MediaAsset => ({ id: `graphic-asset-${clipId}`, path: '', name: 'graphic', kind: 'image', durationFrames: 300, size: 0, width: 1920, height: 1080, fps: null, hasVideo: true, hasAudio: false })
+
+  /**
+   * Over footage f1: a Clip-it counter g1 (its restrained tick, clock_tick.wav) and a Direct callout d1 on V2
+   * (its stroke's whoosh, fast_whoosh.wav), each graphic's sounds placed by graphicSounds under its own rule.
+   */
+  function landed(extraAssets: MediaAsset[] = [], extraClips: Clip[] = []): Project {
+    const g1 = graphic('g1', 60, 90, spec(counter(), [0.6]))
+    const d1: Clip = { ...graphic('d1', 600, 75, spec(callout(), [0.55])), generatedBy: { rule: GRAPHIC_RULE, reason: 'r' } }
+    let p = project(30, [g1, d1, ...extraClips], { assets: [drawn('g1'), drawn('d1'), ...extraAssets] })
+    const newId = ids()
+    p = merge(p, graphicSounds(p, g1, g1.graphic!, CLIPS_GRAPHIC_RULE, ALL, { newId }))
+    p = merge(p, graphicSounds(p, d1, d1.graphic!, GRAPHIC_RULE, ALL, { newId }))
+    return p
+  }
+  const soundOf = (p: Project, graphicId: string): Clip | undefined => p.clips.find((c) => c.forGraphic === graphicId)
+  const fileAt = (p: Project, name: string): MediaAsset | undefined => p.assets.find((a) => a.path === `${LIB}/${name}`)
+  /** Every file an app rule brought has a clip on it: no orphan in the pool. */
+  const orphans = (p: Project): string[] => p.assets.filter((a) => a.broughtBy !== undefined && !p.clips.some((c) => c.assetId === a.id)).map((a) => a.id)
+
+  it('the fixture: each graphic has its sound under its own rule, each file brought by that rule', () => {
+    const p = landed()
+    expect(soundOf(p, 'g1')!.generatedBy!.rule).toBe(CLIPS_GRAPHIC_RULE)
+    expect(soundOf(p, 'd1')!.generatedBy!.rule).toBe(GRAPHIC_RULE)
+    expect(fileAt(p, 'clock_tick.wav')!.broughtBy).toBe(CLIPS_GRAPHIC_RULE)
+    expect(fileAt(p, 'fast_whoosh.wav')!.broughtBy).toBe(GRAPHIC_RULE)
+  })
+
+  it("(1) Direct's Clear leaves a Clip-it graphic's sound clip and its file", () => {
+    const p = landed()
+    const cleared = clearDirector(p)
+    expect(cleared.clips.map((c) => c.id)).toContain('g1')
+    expect(soundOf(cleared, 'g1')).toEqual(soundOf(p, 'g1'))
+    expect(fileAt(cleared, 'clock_tick.wav')).toBeDefined()
+    expect(cleared.assets.map((a) => a.id)).toContain('graphic-asset-g1')
+  })
+
+  it('(2) Clear graphics removes them: the graphic, its drawn asset, its sound and its file', () => {
+    const p = landed()
+    const cleared = clearGraphics(p)
+    expect(cleared.clips.map((c) => c.id)).not.toContain('g1')
+    expect(soundOf(cleared, 'g1')).toBeUndefined()
+    expect(fileAt(cleared, 'clock_tick.wav')).toBeUndefined()
+    expect(cleared.assets.map((a) => a.id)).not.toContain('graphic-asset-g1')
+    // Direct's graphic stays, with its sound and its file.
+    expect(cleared.clips.map((c) => c.id)).toContain('d1')
+    expect(soundOf(cleared, 'd1')).toBeDefined()
+    expect(fileAt(cleared, 'fast_whoosh.wav')).toBeDefined()
+    expect(orphans(cleared)).toEqual([])
+  })
+
+  it("(3) Direct's Clear removes a Direct graphic's sound and its file", () => {
+    const p = landed()
+    const cleared = clearDirector(p)
+    expect(cleared.clips.map((c) => c.id)).not.toContain('d1')
+    expect(soundOf(cleared, 'd1')).toBeUndefined()
+    expect(fileAt(cleared, 'fast_whoosh.wav')).toBeUndefined()
+    expect(cleared.assets.map((a) => a.id)).not.toContain('graphic-asset-d1')
+    expect(orphans(cleared)).toEqual([])
+  })
+
+  it("(4) the reused file: a Director sound on the file a Clip-it graphic brought; Clear graphics, then Direct's Clear, leaves no orphan in the pool", () => {
+    const p0 = landed()
+    const tick = fileAt(p0, 'clock_tick.wav')!
+    const directorSound: Clip = { ...footage('ds', 900, 2), trackId: 'a1', assetId: tick.id, generatedBy: { rule: SOUND_RULE, reason: 'tick on the cut' } }
+    const p = { ...p0, clips: [...p0.clips, directorSound] }
+    const afterGraphics = clearGraphics(p)
+    // The Director's sound still stands on it, so Clear graphics keeps the file.
+    expect(fileAt(afterGraphics, 'clock_tick.wav')).toBeDefined()
+    const afterBoth = clearDirector(afterGraphics)
+    expect(fileAt(afterBoth, 'clock_tick.wav')).toBeUndefined()
+    expect(orphans(afterBoth)).toEqual([])
+  })
+
+  it('(5) a sound you imported, reused, survives both Clears', () => {
+    const mine: MediaAsset = { id: 'mine', path: `${LIB}/clock_tick.wav`, name: 'clock_tick.wav', kind: 'audio', durationFrames: 2, width: null, height: null, fps: null, hasVideo: false, hasAudio: true, size: 4000 }
+    const p = landed([mine])
+    // Reused, not brought again.
+    expect(soundOf(p, 'g1')!.assetId).toBe('mine')
+    expect(p.assets.filter((a) => a.path === mine.path)).toHaveLength(1)
+    for (const cleared of [clearDirector(clearGraphics(p)), clearGraphics(clearDirector(p))]) {
+      expect(cleared.assets.find((a) => a.id === 'mine')).toEqual(mine)
+      expect(soundOf(cleared, 'g1')).toBeUndefined()
+    }
   })
 })
