@@ -1813,7 +1813,7 @@
     "home": "output",
     "needs": "none",
     "file": "src/renderer/src/components/TextStylePicker.tsx",
-    "line": 62,
+    "line": 73,
     "newHome": "output strip (caption host, Inspector.tsx:604)",
     "count": 2,
     "note": "Count 2 since the Graphics section (docs/CLIPS.md §6.5): the caption style picker's and the graphic style picker's. Reasoned from the code, not yet read by the harness census on screen."
@@ -1824,7 +1824,7 @@
     "home": "dock",
     "needs": "text-clip",
     "file": "src/renderer/src/components/TextStylePicker.tsx",
-    "line": 62,
+    "line": 73,
     "newHome": "trimmer dock (text host, Inspector.tsx:1210)"
   },
   {
@@ -2584,11 +2584,21 @@
   {
     "label": "None",
     "match": "text",
+    "home": "output",
+    "needs": "none",
+    "file": "src/renderer/src/components/TextStylePicker.tsx",
+    "line": 80,
+    "newHome": "output strip (graphic host, OutputStrip.tsx:251)",
+    "note": "The Graphics section's text style picker (docs/CLIPS.md §6.5): shown whenever the picker's spec names a style, and graphicPickerSpec always names the preset's text style, so it is always on screen in an open OUTPUT. The captions' picker names none there. It clears the textStyleId override. Reasoned from the code, not yet read by the harness census on screen."
+  },
+  {
+    "label": "None",
+    "match": "text",
     "home": "dock",
     "needs": "text-clip",
     "count": 2,
     "file": "src/renderer/src/components/TextStylePicker.tsx",
-    "line": 69,
+    "line": 80,
     "newHome": "trimmer dock (text host, Inspector.tsx:1210)",
     "note": "Count 2: the text card's Style None and Animation None."
   },
@@ -3273,7 +3283,7 @@
     "home": "output",
     "needs": "none",
     "file": "src/renderer/src/components/TextStylePicker.tsx",
-    "line": 56,
+    "line": 67,
     "newHome": "output strip (caption host, Inspector.tsx:604)",
     "count": 2,
     "note": "Count 2 since the Graphics section (docs/CLIPS.md §6.5): the caption style picker's and the graphic style picker's. Reasoned from the code, not yet read by the harness census on screen."
@@ -3284,7 +3294,7 @@
     "home": "dock",
     "needs": "text-clip",
     "file": "src/renderer/src/components/TextStylePicker.tsx",
-    "line": 56,
+    "line": 67,
     "newHome": "trimmer dock (text host, Inspector.tsx:1210)"
   },
   {

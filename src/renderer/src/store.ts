@@ -509,7 +509,6 @@ function graphicTrimmed(trimmed: Clip, before: Clip, fps: number): Clip {
 export const GRAPHIC_TRIM_REBAKE_MS = 150
 const trimRebakes = new Map<string, ReturnType<typeof setTimeout>>()
 
-/** The one bake a run of trims costs, `GRAPHIC_TRIM_REBAKE_MS` after the last of them. */
 /**
  * Every graphic clip rebaked through `rebakeGraphic`, one after the other, as
  * the canvas-size change does (docs/CLIPS.md §6.5's UI: "A change rebakes
@@ -525,6 +524,7 @@ function rebakeGraphicClips(get: () => EditorState): void {
   })()
 }
 
+/** The one bake a run of trims costs, `GRAPHIC_TRIM_REBAKE_MS` after the last of them. */
 function rebakeWhenTrimRests(clipId: string, rebake: () => Promise<void>): void {
   const pending = trimRebakes.get(clipId)
   if (pending !== undefined) clearTimeout(pending)
@@ -5216,6 +5216,8 @@ export const useEditor = create<EditorState>((set, get) => ({
       const kept: Record<string, unknown> = {}
       if (was.textStyleId !== undefined) kept.textStyleId = was.textStyleId
       if (was['palette.accent'] !== undefined) kept['palette.accent'] = was['palette.accent']
+      // The same preset again with nothing to reset is no change: no undo step, no rebake.
+      if (p.graphics?.styleId === styleId && Object.keys(was).length === Object.keys(kept).length) return p
       return { ...p, graphics: { sound: true, ...p.graphics, styleId, overrides: kept } }
     })
     if (get().project !== before) rebakeGraphicClips(get)
@@ -5225,7 +5227,10 @@ export const useEditor = create<EditorState>((set, get) => ({
     const before = get().project
     get().update((p) => {
       // Undefined removes the key, as setCaptionOverride does, so a reset leaves no empty override behind.
-      const next = { ...(p.graphics?.overrides ?? {}) }
+      const was = p.graphics?.overrides ?? {}
+      // Removing a key that is not there, or setting the value it has, is no change: no undo step, no rebake.
+      if (value === undefined ? !(key in was) : Object.is(was[key], value)) return p
+      const next = { ...was }
       if (value === undefined) delete next[key]
       else next[key] = value
       return {

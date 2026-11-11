@@ -188,6 +188,21 @@ describe('OUTPUT’s Graphics section (§6.5)', () => {
     expect(count(open)).toBe(TEXT_STYLES.length)
   })
 
+  it('the picker’s gallery, opened, shows only those too: every tile, the hero and the search count', () => {
+    const { pickers } = section()
+    const props = { ...(pickers[0].props as Parameters<typeof TextStylePicker>[0]), initialBrowsing: true }
+    const html = renderToStaticMarkup(createElement(TextStylePicker, props))
+    const allowed = new Set(GRAPHIC_TEXT_STYLES.map((t) => t.name))
+    // The gallery's tiles name each style under it, in a truncate div; the inline row's titles are read above.
+    const names = [...html.matchAll(/<div class="truncate text-\[10\.5px\] text-ink-200">([^<]*)<\/div>/g)].map((m) => m[1].replace(/&amp;/g, '&'))
+    expect(names).toHaveLength(GRAPHIC_TEXT_STYLES.length)
+    for (const name of names) expect(allowed, name).toContain(name)
+    expect(/placeholder="Search (\d+) styles/.exec(html)?.[1]).toBe(String(GRAPHIC_TEXT_STYLES.length))
+    // And the picker opened without the prop is the whole library, so the pattern above reads real tiles.
+    const all = renderToStaticMarkup(createElement(TextStylePicker, { ...props, ids: undefined }))
+    expect([...all.matchAll(/<div class="truncate text-\[10\.5px\] text-ink-200">/g)]).toHaveLength(TEXT_STYLES.length)
+  })
+
   it('the sample tile draws the counter at its settled frame, in the project’s style', () => {
     const { samples } = section()
     expect(samples).toHaveLength(1)

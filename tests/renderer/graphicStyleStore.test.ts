@@ -133,5 +133,36 @@ describe('a style change rebakes every graphic clip (§6.5’s UI)', () => {
     await vi.waitFor(() => expect(rebaked).toHaveLength(2))
     expect(rebaked).toEqual(['g1', 'g2'])
 
+    /*
+     * And no change is no rebake and no undo step: the same value again, a
+     * key removed that is not there (the Graphics picker's None with no
+     * override set), the same preset again with nothing to reset. Each is
+     * set up as a real change first, so a pass is not the empty case.
+     */
+    await new Promise((r) => setTimeout(r, 0))
+    rebaked.length = 0
+    const steps = history()
+    useEditor.getState().setGraphicsOverride('palette.accent', '#E11D48')
+    useEditor.getState().setGraphicsOverride('textStyleId', undefined)
+    useEditor.getState().setGraphicsStyle('bold')
+    await new Promise((r) => setTimeout(r, 0))
+    expect(rebaked).toEqual([])
+    expect(history()).toBe(steps)
+    // While a real change of each still counts: one undo step and two bakes apiece.
+    useEditor.getState().setGraphicsOverride('textStyleId', 'outline')
+    useEditor.getState().setGraphicsOverride('textStyleId', undefined)
+    useEditor.getState().setGraphicsStyle('neon')
+    expect(history()).toBe(steps + 3)
+    await vi.waitFor(() => expect(rebaked).toHaveLength(6))
+    // The same preset again over an override it resets is a change.
+    useEditor.getState().setGraphicsOverride('radius', 0.05)
+    useEditor.getState().setGraphicsStyle('neon')
+    expect(graphics()?.overrides).toStrictEqual({ 'palette.accent': '#E11D48' })
+    expect(history()).toBe(steps + 5)
+    // And a key already there, given another value, is a change.
+    useEditor.getState().setGraphicsOverride('palette.accent', '#2563EB')
+    expect(graphics()?.overrides).toStrictEqual({ 'palette.accent': '#2563EB' })
+    expect(history()).toBe(steps + 6)
+
   })
 })

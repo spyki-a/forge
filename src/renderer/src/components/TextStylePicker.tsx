@@ -31,7 +31,8 @@ const INLINE_COUNT = 6
 export function TextStylePicker({
   spec,
   onPick,
-  ids
+  ids,
+  initialBrowsing = false
 }: {
   spec: TextSpec
   onPick: (styleId: string | undefined) => void
@@ -41,8 +42,10 @@ export function TextStylePicker({
    * The inline row, the count and the gallery all read the same list.
    */
   ids?: readonly string[]
+  /** Opens with the gallery showing: a render of the whole path, gallery included, for tests/renderer/graphicsSection.test.tsx. */
+  initialBrowsing?: boolean
 }): ReactNode {
-  const [browsing, setBrowsing] = useState(false)
+  const [browsing, setBrowsing] = useState(initialBrowsing)
   const styles = useMemo(() => (ids ? TEXT_STYLES.filter((s) => ids.includes(s.id)) : TEXT_STYLES), [ids])
 
   /*
