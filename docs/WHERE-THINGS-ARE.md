@@ -766,9 +766,9 @@ the app placed on its beat) and the library files only they used; on puts
 them back from the sound library for the graphics the app placed, each
 under its own Clear, at most three sounds per footage clip. With no sound
 library installed, on places nothing and says so. One undo step either
-way. Nothing in the app places a graphic from speech yet, and a graphic
-you add by hand gets no sounds from the switch, so today it only records
-the setting (docs/CLIPS.md §6.5, §6.14).
+way. Nothing in the app places a graphic yet, by hand or from speech
+(only the test harness makes one), so today the switch changes nothing
+you can hear; it records the setting (docs/CLIPS.md §6.5, §6.14).
 
 ## EXPORT — making the file
 

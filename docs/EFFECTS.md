@@ -11141,12 +11141,12 @@ be guessed:
   `applyGraphics`.** At `0f3f7a4` every apply fixture had captions off and
   no subject track, so `placeGraphic` always returned the template's first
   third, which is the placeholder the spec carries before step 6. Deleting
-  `place` from the landed spec, setting `subject: null`, or swapping the
-  canvas's width and height each left `graphicApply`, `graphicSound` and
-  `graphicPlace` green (83 of 83). `3d070ab` added captions that move a
-  graphic off its first third, a callout landing with its subject, and a
-  1920×1080 file letterboxed into a 1080×1920 frame. **A step that returns
-  the default on every fixture is not observed.**
+  `place` from the landed spec or setting `subject: null` each left
+  `graphicApply`, `graphicSound` and `graphicPlace` green (83 of 83), and
+  swapping the canvas's width and height also survived. `3d070ab` added
+  captions that move a graphic off its first third, a callout landing with
+  its subject, and a 1920×1080 file letterboxed into a 1080×1920 frame.
+  **A step that returns the default on every fixture is not observed.**
 - **The cap is per footage clip, so one rule's run and its own Clear can
   silence another rule's graphic.** With the cap over every graphic on the
   footage clip, a Clip-it run of energetic steps over a Direct keyword took
@@ -11170,9 +11170,10 @@ be guessed:
   for other starts. A `motion.ease` override of `linear` is all it takes.
   `21d316d` compares within 1e-9.
 - **The plan names `removeClip`; the Delete key is `deleteSelection`.**
-  Wiring the follow-on edits into the three actions §6.14 names would have
-  left a graphic deleted from the timeline, cut, or nudged with the arrows
-  with its sounds where they were. `e8f2a1f` routes `deleteSelection`,
+  Wiring the follow-on edits into the remove and move actions §6.14 names
+  (`removeClip`, `moveClip`, `moveSelectionTo`) would have left a graphic
+  deleted from the timeline, cut, or nudged with the arrows with its sounds
+  where they were. `e8f2a1f` routes `deleteSelection`,
   `cutSelection` and `nudgeSelection` too.
 - **Three follow-on holes found only by the piece's critics** (`69e677c`):
   a marquee Delete of a graphic AND its own sound filtered the sound out of

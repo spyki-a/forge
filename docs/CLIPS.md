@@ -117,9 +117,10 @@
 > `settleGraphics`' validation half in `run.ts`) exists and is tested,
 > and nothing in the app calls it: `graphicsMenuFor`, the schema, the
 > prompt, the ask and `decisionForGraphics` are T2b's, `applyGraphics`
-> is still the stub (until T3, below), and `settleGraphics` has no baseline until T4's
-> `baselineGraphics` (a rejected answer settles to no graphics, with its
-> reason). So still nothing in the app makes a graphic clip.
+> is still the stub (until T3, below), and `settleGraphics` has no
+> baseline until T4's `baselineGraphics` (a rejected answer settles to no
+> graphics, with its reason). So still nothing in the app makes a
+> graphic clip.
 > Then **lane T3** (§6.8, §6.9, §6.6's real body, §6.14), built
 > 2026-11-11 in six pieces, each read by two critics before its fixer and
 > the next piece: piece 1 (beats), `c27b9a4`, fix `4699660`; piece 2
@@ -140,11 +141,12 @@
 > in the app makes a graphic from speech**. What you can see: the OUTPUT
 > strip's Graphics section has a **"Graphic sounds"** switch (on when the
 > project has no setting; it calls `setGraphicSounds`); a graphic clip
-> made by hand (`addGraphicClip`) with sounds tied to it (`forGraphic`)
-> takes them along on Delete, Cut, `removeClip`, a drag and the arrow
-> nudge, and a pasted sound loses the tie; Direct's Clear and Direct again
-> sweep any file an app rule brought that nothing uses, and `GRAPHIC_RULE`
-> is in `DIRECTOR_RULES`. `findGraphics`, `keepGraphic`, `dropGraphic`,
+> made by hand (lane C's `addGraphicClip`, the harness: no control in the
+> app makes one) with sounds tied to it (`forGraphic`) takes them along
+> on Delete, Cut, `removeClip`, a drag and the arrow nudge, and a pasted
+> sound loses the tie; Direct's Clear and Direct again sweep any file an
+> app rule brought that nothing uses, and `GRAPHIC_RULE` is in
+> `DIRECTOR_RULES`. `findGraphics`, `keepGraphic`, `dropGraphic`,
 > the store's `clearGraphics()`, `setSpeaker`, the menu, the schema, the
 > prompt, the ask, `decisionForGraphics`, Direct's wiring and the two
 > panels are T2b's; the baseline and the eval T4's.
@@ -12995,7 +12997,10 @@ at the end of this section.)
   §6.7; the per-template beats are §6.2's table): `word.startMs` → timeline
   seconds through the clip, with the same offset the captions use
   (`offsetMs`, `captions/timeline.ts:86-96`, `:96`). The graphic then agrees
-  with the captions.
+  with the captions. (2026-11-11, lane T3: a word the cut lands inside,
+  begun before the in-point and still shown by the captions, beats on the
+  clip's first frame, not at its `startMs`, since `4699660`; the Built
+  note below.)
 - **Lead, settle, tail.** The graphic clip starts `LEAD_S` (0.5 s) before
   the first beat, the entrance, but never before the footage clip's start.
   Its seconds are §6.2's rule: at least to the last beat plus `TAIL_S`
@@ -13399,8 +13404,9 @@ applied by `graphicSounds` (§6.14), not here.
 >   [0.03, 0.04]). Mutations: the range ignored, and a sample clamped into
 >   the range ("expected [ 0.01, … 0.06 ] to deeply equal [ 0.03, 0.04 ]");
 >   `s.frame < to` as `<=` ("expected [ 0.03, 0.04 ] to deeply equal [
->   0.03 ]") and `s.frame >= from` as `>`, which left both files green
->   until `518a62f`'s case.
+>   0.03 ]") and `s.frame >= from` as `>` ("expected [ 0.04 ] to deeply
+>   equal [ 0.03, 0.04 ]"), both of which left `freeSpace` and
+>   `graphicPlace` green (34/34) until `518a62f`'s case.
 > - **(b) `graphics/place.ts`** (new). **`placeGraphic(project, clipId,
 >   startFrame, frames, template, canvas)`**, steps 1-3: the captions'
 >   thirds over the span (`captionThirdsOver`, exported: none with
@@ -13818,7 +13824,7 @@ render check and the census.
 | 2 | `tests/directorGraphics.test.ts`, `tests/renderer/transcriptGraphics.test.tsx`, `tests/renderer/graphicPanel.test.tsx`; and `tests/graphicApply.test.ts`, the stub's (built 2026-11-06/07, `41a3db0` and `ddd1ede`, 2 cases), over the real body since lane T3 (2026-11-11, `0f3f7a4` and `3d070ab`, 45 tests) | §6.6 (the stub's and the real body's Built notes) |
 | 2 | `tests/graphicHolds.test.ts` (M16) (built 2026-11-10, `1871004`, 4 cases), `tests/graphicTree.test.ts` (built 2026-11-07, `35dd847` and `528986c`, 22 cases at `e06e1c3`); and, not named here before they were written, `tests/graphicTemplates.test.ts` (`cb394b5`, `528986c`, 9 cases), `tests/graphicNumbers.test.ts` (`cb394b5`, 15) and `tests/graphicSpecs.test.ts` (`8f18cc8`, `528986c`, 11) | §6.2 (its Built note) |
 | 2 | `tests/graphicBeats.test.ts` (built 2026-11-11 by lane T3, `c27b9a4` and `4699660`, 35 tests) | §6.8 (its Built note) |
-| 2-4 | `tests/graphicPlace.test.ts`, `tests/graphicBudget.test.ts` (phase 2's built 2026-11-11 by lane T3: `graphicPlace` `37d0e69`, `518a62f`, 22 tests, without the `place.auto` recompute case, T2b's; `graphicBudget` `1a14bd4`, `ac79a1e`, 26, its property over `specs.json` with `fixtureCases()` for T4); and, not named here before it was written, `tests/freeSpace.test.ts`'s `samplesOver` cases (`216065e`, `518a62f`, 18 tests in the file) | §6.9 (its Built note; phase 3's hero case in `graphicBudget`, §6.16; phase 4's hand case in `graphicPlace`, §6.18) |
+| 2-4 | `tests/graphicPlace.test.ts`, `tests/graphicBudget.test.ts` (phase 2's built 2026-11-11 by lane T3: `graphicPlace` `37d0e69`, `518a62f`, `0f3f7a4` (its Direct lane case moved to `GRAPHIC_RULE`), 22 tests, without the `place.auto` recompute case, T2b's; `graphicBudget` `1a14bd4`, `ac79a1e`, 26, its property over `specs.json` with `fixtureCases()` for T4); and, not named here before it was written, `tests/freeSpace.test.ts`'s `samplesOver` cases (`216065e`, `518a62f`, 18 tests in the file) | §6.9 (its Built note; phase 3's hero case in `graphicBudget`, §6.16; phase 4's hand case in `graphicPlace`, §6.18) |
 | 2 | `tests/graphicSound.test.ts` (the sound Clear test) (built 2026-11-11 by lane T3, `5c52691` … `69e677c`, 49 tests, cases (1)-(7)) | §6.14 (its Built note) |
 | 3 | `tests/graphicCompositor.test.ts` | §6.16 |
 | spike, 4 | `tests/handsEvents.test.ts`, `tests/handsSmooth.test.ts`, `tests/handsAnchor.test.ts`, `tests/sidecar/test_hands.py`, `tests/integration/hands.int.test.ts` | §6.18 (their first versions, §6.17) |
@@ -13872,11 +13878,13 @@ real body (45), `tests/renderer/graphicStore.test.ts`'s phase-2 cases (31
 in the file), `tests/freeSpace.test.ts`'s `samplesOver` cases (18 in the
 file) and `tests/renderer/graphicsSection.test.tsx`'s switch case (9),
 each count the last builder's or fixer's run that touched it. Every
-mutation §6.8, §6.9 and §6.14 name for them was run and fails, mutation
-by mutation in their Built notes with the failure texts: §6.8's eight,
-§6.9's placement six (the caption's third, the callout unmapped, the
-subject re-read, the null-subject drop, the zoom check; phase 4's hand
-box is §6.18's) and budget four (the later winning, the overlap check,
+mutation §6.8, §6.9 and §6.14 name for them but §6.9's "a dragged box
+recomputed" (T2b's, part (d) of §6.9's Built note) was run and fails,
+mutation by mutation in their Built notes with the failure texts: §6.8's
+eight, §6.9's placement five (the caption's third, the callout unmapped,
+the subject re-read, the null-subject drop, the zoom check; its sixth,
+"a dragged box recomputed", was not run; phase 4's hand box is §6.18's)
+and budget four (the later winning, the overlap check,
 punches or zoom keys, the lower third counted), §6.14's table and the
 store's two arms. **Not built**: §6.9's "a dragged box recomputed" with
 its case (`place.auto` is not recomputed; T2b); the budget property over
@@ -15165,10 +15173,12 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
       re-place a graphic's sounds: a head trim moves the beats
       (`graphicTrimmed`) and a tail trim can leave a sound past the
       graphic's end (`store.ts`);
-    - `removeClip`, Delete and `setGraphicSounds` do not re-place the
-      other graphics' sounds on that footage clip, so a sound the removed
-      graphic had pushed past the cap stays out until Find again or the
-      switch is cycled (`apply.ts`, `resoundAfterClear`'s case);
+    - `removeClip` and Delete do not re-place the other graphics' sounds
+      on that footage clip, so a sound the removed graphic had pushed past
+      the cap stays out until Find again or the switch is cycled
+      (`setGraphicSounds(true)` re-places them through `soundAllGraphics`;
+      piece 6's Open line names `setGraphicSounds` too, which its false
+      arm alone fits) (`apply.ts`, `resoundAfterClear`'s case);
     - under `energetic` one bars or steps card fills the cap of 3 with
       its title's and first row's whooshes and a tick; `GRAPHIC_SOUND_CAP`
       and `GRAPHIC_SOUND_DB` are proposals until M18 (`sound.ts`);
@@ -15179,6 +15189,9 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
       graphics gets none, from `resoundAfterClear` and from
       `setGraphicSounds(true)` alike, where §6.14 says "every graphic", so
       off then on is not an identity for yours (`sound.ts`, `apply.ts`);
+      and through a `setGraphic` on a shared footage clip a graphic of
+      yours gains a sound that can push an app graphic's sound past the
+      cap (`apply.ts`, `resoundGraphic`);
     - followers on a locked audio track are still shifted or taken, while
       placement refuses a locked lane (`apply.ts`);
     - a graphic pasted or duplicated with its own sound: the copy's sound
@@ -15209,7 +15222,22 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
       catches an extra removal), and would break if a later lane rightly
       adds a clip or asset to those fixtures;
     - the lower thirds land before the kept graphics, which matters only
-      on a tie within 6 s; not pinned (`apply.ts`).
+      on a tie within 6 s; not pinned (`apply.ts`);
+    - in the followed clip's "read once" case the first target is
+      asserted only as not null and equal at both frames, never pinned
+      by hand: its value is the Follow solver's crop at onset (`518a62f`
+      declined; `tests/graphicPlace.test.ts`);
+    - case (4) builds its Director sound as a tick, not a whoosh; it
+      still fails alone under its mutation (`3d070ab` declined;
+      `tests/graphicSound.test.ts`);
+    - the `lowerThirdFor` fixture is built with `applyGraphics`; mutation
+      A2 fails it (`3d070ab` declined; `tests/graphicApply.test.ts`);
+    - the restrained-against-energetic table runs through
+      `graphicSoundCues`, not `graphicSounds`, but for the energetic-cap
+      case (`tests/graphicSound.test.ts`);
+    - `graphicSounds`' new tracks take their ids from `addTrack`'s
+      `Date.now`/`Math.random`, not from the injectable `newId`
+      (`sound.ts`).
 
   **For T2b, not yours** (recorded so they are not lost): the per-clip
   Clear for Find again (`clearGraphics` is project-wide); a helper that
@@ -15673,7 +15701,9 @@ aside as meme and UI sounds, "not for the Director" (`PLAN.md:1064`).
 
 - **A landing sound** goes only where something visibly stops or appears.
   Its measured peak (`peakSeconds`) is placed on the beat frame, as
-  `placeSounds` lines peaks up (`director/sound.ts:112-136`).
+  `placeSounds` lines peaks up (`director/sound.ts:112-136`). (2026-11-11,
+  lane T3: the lines are `:113-130` at `77ac70a`, as `sound.ts`' comment
+  cites them.)
 - **A whoosh's peak** goes on the fastest frame of its move: the frame where
   the curve's progress changes most, computed from §6.13's curve. Never on
   a held frame.
@@ -15774,10 +15804,12 @@ undefined`, a superset of learning `GRAPHIC_RULE`.
 `true` when absent) is the OUTPUT strip's **"Graphic sounds"** switch, beside
 the style tiles (§6.5). `setGraphicSounds(false)` removes every clip with a
 `forGraphic` and its brought files in one undo step; `true` places them
-again for every graphic. With no sound library installed, or no file for a
-role, graphics land silent with one note ("no sound library is installed —
-graphics land silent"), as the Director's sound design does
-(`sound.ts:93-95`).
+again for every graphic. (2026-11-11, lane T3: built for every footage
+clip holding an app graphic, `soundAllGraphics`; a footage clip holding
+only graphics of yours gets none, the Built note below and §6.12.) With
+no sound library installed, or no file for a role, graphics land silent
+with one note ("no sound library is installed — graphics land silent"),
+as the Director's sound design does (`sound.ts:93-95`).
 
 **Tests** (§6.11 indexes them by phase):
 
@@ -15843,9 +15875,10 @@ sweep, the store's follow-on edits, the switch and the tests.
 >     under `energetic` a tick on every beat and a whoosh on the fastest
 >     frame of each stroke and entrance as the drawers run them
 >     (`counter.ts:80`, `ring.ts:95`, `bars.ts:96`/`:106`,
->     `steps.ts:167`/`:192`/`:221`, `keyword.ts:85`/`:114`,
+>     `steps.ts:167`/`:192`/`:204-221`, `keyword.ts:85`/`:114`,
 >     `callout.ts:162`/`:171`), and since `21d316d` the ring's arc
->     (`ring.ts:98`) as a stroke when its value reads as a number above 0;
+>     (`ring.ts:98-101`, `:120`) as a stroke when its value reads as a
+>     number above 0;
 >     the keyword's staggered word entrances sit inside its card's and are
 >     not counted; quote, lower third and screen card stay silent under
 >     `energetic` too; two cues of one key on one frame are one. A tick's
@@ -17999,7 +18032,7 @@ often the validator drops a Hindi number said as words, §6.15's phase-2
 note.) (2026-11-11: T3 is built and pushed through `77ac70a`, green
 on both runners; `applyGraphics`, the follower functions and
 `resoundAfterClear` exist for T2b to call. Next by §6.19: T2b, then T4;
-T4's gate in the table, T1-T3, is met. M17 and M18 set the
+T4's gate in the table, T1-T3, now waits on T2b only. M17 and M18 set the
 proposals T3 built, `GRAPHICS_PER_MINUTE` and the sounds' cap and levels;
 both unmeasured.)
 
