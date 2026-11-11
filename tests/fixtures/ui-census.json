@@ -2586,10 +2586,11 @@
     "match": "text",
     "home": "output",
     "needs": "none",
+    "count": 2,
     "file": "src/renderer/src/components/TextStylePicker.tsx",
     "line": 80,
     "newHome": "output strip (graphic host, OutputStrip.tsx:251)",
-    "note": "The Graphics section's text style picker (docs/CLIPS.md §6.5): shown whenever the picker's spec names a style, and graphicPickerSpec always names the preset's text style, so it is always on screen in an open OUTPUT. The captions' picker names none there. It clears the textStyleId override. Reasoned from the code, not yet read by the harness census on screen."
+    "note": "Count 2: the Graphics section's Style None and the captions' Animation None (TextAnimationPicker.tsx:133, which had no row before). The Graphics picker's None (docs/CLIPS.md §6.5) shows whenever the picker's spec names a style, and graphicPickerSpec always names the preset's text style, so it is always on screen in an open OUTPUT; it clears the textStyleId override. The captions' Style picker names no style there, so it shows none. Read on screen by the harness census 2026-11-11: with count 1 it reported 'None ×2 … the row accounts for 1'."
   },
   {
     "label": "None",
