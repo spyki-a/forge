@@ -8,6 +8,7 @@ import {
   captionThirds,
   chooseThird,
   overlapByThird,
+  samplesOver,
   shotOverlap,
   styleThird,
   thirdAt,
@@ -282,6 +283,50 @@ describe('captionThirds', () => {
     expect(thirds).toEqual([
       { startFrame: 30, endFrame: 110, third: 'top' },
       { startFrame: 110, endFrame: 180, third: 'bottom' }
+    ])
+  })
+})
+
+describe('samplesOver (§6.9 step 2): a graphic’s span reader beside spanSamples', () => {
+  /*
+   * Two shots, cut at 3 s; the clip shows the whole file from project frame 30
+   * at 30 fps on its own shape, so sample i (ms = 500·i) sits on clip frame
+   * 15·i and its face covers (i + 1) hundredths of the lower third, nothing
+   * else: each overlap below names its sample by hand.
+   */
+  const ranged = (): { project: Project; clip: Clip; a: MediaAsset } => {
+    const t = track({ cutsMs: [3000], endMs: 6000, faces: (_s, ms) => [faceCovering((ms / 500 + 1) / 100, 0.45, 0.7)] })
+    const { project, clip } = oneClip(t)
+    return { project, clip, a: project.assets[0] }
+  }
+  const bottoms = (rows: Record<Third, number>[]): number[] => rows.map((r) => Math.round(r.bottom * 1e9) / 1e9)
+
+  it('a range inside one shot reads only that shot’s samples inside the range', () => {
+    const { project, clip, a } = ranged()
+    // Clip frames [20, 50): samples 2 (frame 30) and 3 (frame 45); 1 (frame 15) and 4 (frame 60) are outside.
+    const rows = samplesOver(project, clip, a, PORTRAIT, 20, 50)
+    expect(bottoms(rows)).toEqual([0.03, 0.04])
+    expect(rows.every((r) => r.top === 0 && r.middle === 0)).toBe(true)
+    // A range across the cut reads each shot's own: [80, 100) holds only sample 6, on the cut's frame 90.
+    expect(bottoms(samplesOver(project, clip, a, PORTRAIT, 80, 100))).toEqual([0.07])
+  })
+
+  it('a range shorter than the sample step reads the sample nearest its middle', () => {
+    const { project, clip, a } = ranged()
+    // [16, 20) holds no sample's frame; its middle, frame 17, shows source ≈ 567 ms, nearest sample 1 (500 ms).
+    expect(bottoms(samplesOver(project, clip, a, PORTRAIT, 16, 20))).toEqual([0.02])
+    // No track, or an empty range: nothing.
+    expect(samplesOver({ ...project, subjects: {} }, clip, a, PORTRAIT, 20, 50)).toEqual([])
+    expect(samplesOver(project, clip, a, PORTRAIT, 20, 20)).toEqual([])
+  })
+
+  it('leaves Smart placement’s spanSamples as it was: one entry per shot, every sample of each shot', () => {
+    // Shot 0 holds samples 0-5 (bottom 0.01..0.06), shot 1 samples 6-11 (0.07..0.12). The 90th percentile
+    // (never the top alone from three samples) is the second highest: 0.05 stays, 0.11 moves.
+    const { project } = ranged()
+    expect(captionThirds(project, BOTTOM, PORTRAIT)).toEqual([
+      { startFrame: 30, endFrame: 120, third: 'bottom' },
+      { startFrame: 120, endFrame: 210, third: 'middle' }
     ])
   })
 })

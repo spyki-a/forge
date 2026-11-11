@@ -171,23 +171,89 @@ function spanSamples(
   track: SubjectTrack,
   span: ShotSpan
 ): Record<Third, number>[] {
+  const out = placedSamples(project, clip, asset, canvas, track, span).map((s) => s.overlap)
+  if (out.length > 0) return out
+  const near = nearestOverlap(project, clip, asset, canvas, track, span, Math.floor((span.from + span.to - 1) / 2))
+  return near ? [near] : []
+}
+
+/**
+ * `spanSamples`' first rule, with each sample's frame kept: every sample of
+ * the shot the clip shows, on the clip frame the export shows it on
+ * (`exportFrameAt`), held to the shot's own frames [span.from, span.to), and
+ * its overlap there. None for a held clip.
+ */
+function placedSamples(
+  project: Project,
+  clip: Clip,
+  asset: MediaAsset,
+  canvas: { width: number; height: number },
+  track: SubjectTrack,
+  span: ShotSpan
+): { frame: number; overlap: Record<Third, number> }[] {
   const fps = project.settings.fps
   const shot = track.shots[span.index]
+  const out: { frame: number; overlap: Record<Third, number> }[] = []
+  if (clip.hold) return out
+  for (const sample of track.samples) {
+    if (!Number.isFinite(sample.ms) || sample.ms < shot.startMs || sample.ms >= shot.endMs) continue
+    const at = exportFrameAt(clip, fps, sample.ms)
+    if (at === null || at < 0 || at >= clip.duration) continue
+    const frame = Math.min(Math.max(at, span.from), span.to - 1)
+    out.push({ frame, overlap: overlapByThird(facesOnFrame(project, clip, asset, canvas, clip.start + frame, sample.faces)) })
+  }
+  return out
+}
+
+/** `spanSamples`' fallback: the overlap of the shot's sample nearest clip frame `middle`'s source time, within reach, read on that frame; null when none is near. */
+function nearestOverlap(
+  project: Project,
+  clip: Clip,
+  asset: MediaAsset,
+  canvas: { width: number; height: number },
+  track: SubjectTrack,
+  span: ShotSpan,
+  middle: number
+): Record<Third, number> | null {
+  const ms = sourceMsAt(clip, project.settings.fps, middle)
+  const near = ms === null ? null : nearestSample(track, span.index, ms)
+  return near ? overlapByThird(facesOnFrame(project, clip, asset, canvas, clip.start + middle, near.faces)) : null
+}
+
+/**
+ * Each third's overlap on every sample the clip shows over CLIP frames
+ * [from, to) (docs/CLIPS.md §6.9 step 2), for a graphic over that range:
+ * `spanSamples`' rule applied to each shot the range crosses — each sample
+ * on its export frame (`exportFrameAt`), held to its shot's frames — keeping
+ * the samples whose frame falls in the range. A sample outside the range is
+ * left out, never clamped into it. When none falls in the range, the sample
+ * nearest the range's middle frame, `floor((from + to − 1) / 2)` (rounded
+ * DOWN, as `spanSamples` takes a short shot's middle), from the shot the
+ * export shows there, within reach, as `spanSamples` does for a short shot.
+ * Empty with no subject track, an empty range, or no sample near.
+ */
+export function samplesOver(
+  project: Project,
+  clip: Clip,
+  asset: MediaAsset,
+  canvas: { width: number; height: number },
+  from: number,
+  to: number
+): Record<Third, number>[] {
+  const track = subjectTrackOf(project, clip, asset)
+  if (!track || !(to > from)) return []
+  const spans = shotSpans(project, clip, track, canvas).filter((s) => s.from < to && s.to > from)
   const out: Record<Third, number>[] = []
-  if (!clip.hold) {
-    for (const sample of track.samples) {
-      if (!Number.isFinite(sample.ms) || sample.ms < shot.startMs || sample.ms >= shot.endMs) continue
-      const at = exportFrameAt(clip, fps, sample.ms)
-      if (at === null || at < 0 || at >= clip.duration) continue
-      const frame = Math.min(Math.max(at, span.from), span.to - 1)
-      out.push(overlapByThird(facesOnFrame(project, clip, asset, canvas, clip.start + frame, sample.faces)))
+  for (const span of spans) {
+    for (const s of placedSamples(project, clip, asset, canvas, track, span)) {
+      if (s.frame >= from && s.frame < to) out.push(s.overlap)
     }
   }
   if (out.length > 0) return out
-  const middle = Math.floor((span.from + span.to - 1) / 2)
-  const ms = sourceMsAt(clip, fps, middle)
-  const near = ms === null ? null : nearestSample(track, span.index, ms)
-  return near ? [overlapByThird(facesOnFrame(project, clip, asset, canvas, clip.start + middle, near.faces))] : []
+  const middle = Math.floor((from + to - 1) / 2)
+  const span = spans.find((s) => middle >= s.from && middle < s.to)
+  const near = span ? nearestOverlap(project, clip, asset, canvas, track, span, middle) : null
+  return near ? [near] : []
 }
 
 /**
