@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { graphicStyleOf } from '@shared/graphics/style'
 import { emptyProject, type GraphicsSettings } from '@shared/timeline'
 import { useEditor } from '../../src/renderer/src/store'
@@ -103,5 +103,35 @@ describe('which id wins, the spec’s or the project’s, and the fallback is cl
     // No graphics at all: clean.
     start()
     expect(graphicStyleOf(useEditor.getState().project, {}).id).toBe('clean')
+  })
+})
+
+describe('a style change rebakes every graphic clip (§6.5’s UI)', () => {
+  it('setGraphicsStyle and setGraphicsOverride each call rebakeGraphic once per graphic clip, and for no other clip', async () => {
+    const base = emptyProject()
+    const trackId = base.tracks.find((t) => t.kind === 'video')!.id
+    const clip = (id: string, graphic: boolean) => ({
+      id, assetId: `a-${id}`, trackId, start: 0, duration: 30, inPoint: 0, volume: 1,
+      transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
+      color: { brightness: 0, contrast: 1, saturation: 1 },
+      ...(graphic
+        ? { graphic: { data: { template: 'counter' as const, value: '5', label: 'x' }, seconds: 1, beats: [0.5], place: { auto: true as const, third: 'bottom' as const }, seed: 1, version: 1 } }
+        : {})
+    })
+    const rebaked: string[] = []
+    const rebakeGraphic = async (clipId: string): Promise<void> => {
+      rebaked.push(clipId)
+    }
+    useEditor.setState({ project: { ...base, clips: [clip('g1', true), clip('v1', false), clip('g2', true)] }, past: [], future: [], rebakeGraphic })
+
+    useEditor.getState().setGraphicsStyle('bold')
+    await vi.waitFor(() => expect(rebaked).toHaveLength(2))
+    expect(rebaked).toEqual(['g1', 'g2'])
+
+    rebaked.length = 0
+    useEditor.getState().setGraphicsOverride('palette.accent', '#E11D48')
+    await vi.waitFor(() => expect(rebaked).toHaveLength(2))
+    expect(rebaked).toEqual(['g1', 'g2'])
+
   })
 })

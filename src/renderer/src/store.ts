@@ -510,6 +510,21 @@ export const GRAPHIC_TRIM_REBAKE_MS = 150
 const trimRebakes = new Map<string, ReturnType<typeof setTimeout>>()
 
 /** The one bake a run of trims costs, `GRAPHIC_TRIM_REBAKE_MS` after the last of them. */
+/**
+ * Every graphic clip rebaked through `rebakeGraphic`, one after the other, as
+ * the canvas-size change does (docs/CLIPS.md §6.5's UI: "A change rebakes
+ * every graphic clip through `rebakeGraphic`, not `rebakeGenerated`"). In the
+ * background: a bake is a file, not an edit, and each bake's own supersede
+ * guard drops a stale one when a newer style change starts another.
+ */
+function rebakeGraphicClips(get: () => EditorState): void {
+  const ids = get().project.clips.filter((c) => c.graphic).map((c) => c.id)
+  if (ids.length === 0) return
+  void (async () => {
+    for (const id of ids) await get().rebakeGraphic(id)
+  })()
+}
+
 function rebakeWhenTrimRests(clipId: string, rebake: () => Promise<void>): void {
   const pending = trimRebakes.get(clipId)
   if (pending !== undefined) clearTimeout(pending)
@@ -5185,11 +5200,11 @@ export const useEditor = create<EditorState>((set, get) => ({
    * A project with no `graphics` is 'clean' with sounds on (timeline.ts), so
    * the first write spells that out and changes nothing else. Values are
    * stored as given and guarded on read, by `resolveGraphicStyle`, as the
-   * caption overrides are by `resolveStyle`. The rebake of every graphic clip
-   * a change asks for (§6.5's UI) joins with `rebakeGraphic` (§6.3), which
-   * does not exist yet.
+   * caption overrides are by `resolveStyle`. A change rebakes every graphic
+   * clip through `rebakeGraphic` (§6.5's UI, `rebakeGraphicClips`).
    */
-  setGraphicsStyle: (styleId) =>
+  setGraphicsStyle: (styleId) => {
+    const before = get().project
     get().update((p) => {
       /*
        * A preset resets the rest and keeps the text style and the accent
@@ -5202,9 +5217,12 @@ export const useEditor = create<EditorState>((set, get) => ({
       if (was.textStyleId !== undefined) kept.textStyleId = was.textStyleId
       if (was['palette.accent'] !== undefined) kept['palette.accent'] = was['palette.accent']
       return { ...p, graphics: { sound: true, ...p.graphics, styleId, overrides: kept } }
-    }),
+    })
+    if (get().project !== before) rebakeGraphicClips(get)
+  },
 
-  setGraphicsOverride: (key, value) =>
+  setGraphicsOverride: (key, value) => {
+    const before = get().project
     get().update((p) => {
       // Undefined removes the key, as setCaptionOverride does, so a reset leaves no empty override behind.
       const next = { ...(p.graphics?.overrides ?? {}) }
@@ -5214,7 +5232,9 @@ export const useEditor = create<EditorState>((set, get) => ({
         ...p,
         graphics: { styleId: CLEAN_GRAPHIC_STYLE.id, sound: true, ...p.graphics, overrides: next }
       }
-    }),
+    })
+    if (get().project !== before) rebakeGraphicClips(get)
+  },
 
   setPlayhead: (frame) => {
     const max = Math.max(0, projectDuration(get().project))

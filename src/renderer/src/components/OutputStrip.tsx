@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Sparkles } from 'lucide-react'
 import type { TextSpec } from '@shared/timeline'
 import { CAPTION_STYLES, resolveStyle, type StyleOverrides } from '@shared/captions/style'
@@ -9,6 +9,13 @@ import { LOUDNESS_TARGETS } from '@shared/render/loudness'
 import { FRAME_RATES } from '@shared/project/frameRate'
 import { outputSummary } from '@shared/project/outputSummary'
 import { smartPlacementState } from '@shared/captions/smart'
+import { GRAPHIC_STYLES, GRAPHIC_TEXT_STYLES, graphicStyleOf, resolveGraphicStyle, type GraphicStyle } from '@shared/graphics/style'
+import type { GraphicSpec } from '@shared/graphics/template'
+import { textSpecOf, type DrawList, type TextMeasure } from '@shared/graphics/items'
+import { drawListAt } from '@shared/graphics/drawList'
+import { graphicMovingFrames } from '@shared/graphics/frame'
+import { paintDrawList2d } from '@shared/graphics/paint'
+import { graphicMeasure } from '../graphicCanvas'
 import { useEditor } from '../store'
 import { HelperPointer } from './SettingsPanel'
 import { useCatalog } from '../catalog'
@@ -90,6 +97,163 @@ export function SmartPlacementToggle(): ReactNode {
           {state === 'needs-helper' ? <HelperPointer /> : HELPER_STARTING}
         </p>
       )}
+    </div>
+  )
+}
+
+/* ---------------------------------------------------------------- graphics */
+
+/** The section's words (docs/CLIPS.md §6.5's UI); the census rows match them. */
+export const GRAPHICS = 'Graphics'
+export const ACCENT_COLOUR = 'Accent colour'
+
+/**
+ * The sample the Graphics section's tile draws (§6.5's UI: "a fixed
+ * `counter` sample at its settled frame (a UI sample, not a claim)"): a
+ * number as said, through the counter's own drawer. Placed by a box nearly
+ * the tile's whole, not a third of the frame, since a tile is not a frame,
+ * as the caption sample is centred and enlarged (`captionSample`).
+ */
+const SAMPLE_VALUE = '10,00,000'
+export const GRAPHIC_SAMPLE: GraphicSpec = Object.freeze({
+  data: { template: 'counter', value: SAMPLE_VALUE, label: 'views' },
+  seconds: 2.5,
+  beats: [0.5],
+  place: { auto: false, box: { x: 0.04, y: 0.04, width: 0.92, height: 0.92 } },
+  seed: 1,
+  version: 0
+}) as GraphicSpec
+
+/** The rate the sample is timed at; it only picks which frame is the settled one. */
+const SAMPLE_FPS = 30
+
+/**
+ * The sample's draw list at its settled frame, the last moving frame
+ * (`graphicMovingFrames` − 1, what the Preview holds past it), at a tile's
+ * size in device pixels: what the tile paints with `paintDrawList2d`.
+ */
+export function graphicSampleList(style: GraphicStyle, width: number, height: number, measure: TextMeasure): DrawList {
+  const total = Math.round(GRAPHIC_SAMPLE.seconds * SAMPLE_FPS)
+  const settled = Math.max(0, graphicMovingFrames(GRAPHIC_SAMPLE, style, SAMPLE_FPS, total) - 1)
+  return drawListAt(GRAPHIC_SAMPLE, style, settled, SAMPLE_FPS, { width, height }, measure)
+}
+
+/** The ids the Graphics section's text style picker may show (§6.3's `GRAPHIC_TEXT_STYLES`), one array so the picker's memo holds. */
+export const GRAPHIC_TEXT_STYLE_IDS: readonly string[] = Object.freeze(GRAPHIC_TEXT_STYLES.map((t) => t.id))
+
+/** The picker's TextSpec for a style's text style and face, kept while they hold so its tiles are not redrawn on every edit. */
+let pickerSpec: { key: string; spec: TextSpec } | null = null
+function graphicPickerSpec(style: GraphicStyle): TextSpec {
+  const key = `${style.textStyleId}|${style.font}`
+  if (pickerSpec?.key !== key) {
+    const spec = textSpecOf(SAMPLE_VALUE, { textStyleId: style.textStyleId, font: style.font, px: 100, align: 'center' }, { x: 0, y: 0, width: 0, height: 500 })
+    pickerSpec = { key, spec }
+  }
+  return pickerSpec.spec
+}
+
+/** A colour as `<input type="color">` takes it: `#rrggbb`, lower case; a 3-digit hex widened, anything else the 3dit blue. */
+function colourInputValue(colour: string): string {
+  if (/^#[0-9a-f]{6}$/i.test(colour)) return colour.toLowerCase()
+  if (/^#[0-9a-f]{3}$/i.test(colour)) return `#${[...colour.slice(1)].map((c) => c + c).join('')}`.toLowerCase()
+  if (/^#[0-9a-f]{8}$/i.test(colour)) return colour.slice(0, 7).toLowerCase()
+  return '#2563eb'
+}
+
+/** The tile: the sample painted by `paintDrawList2d` in this style, redrawn when the style or a face changes. */
+function GraphicSample({ style }: { style: GraphicStyle }): ReactNode {
+  const ref = useRef<HTMLCanvasElement | null>(null)
+  const ensureFont = useCatalog((s) => s.ensureFont)
+  const loadedFonts = useCatalog((s) => s.loadedFonts)
+  const key = JSON.stringify(style)
+
+  useEffect(() => {
+    void ensureFont(style.font)
+  }, [style.font, ensureFont])
+
+  useEffect(() => {
+    const canvas = ref.current
+    if (!canvas) return
+    // Sized from the element, as the style tiles are (TextStylePicker's Tile).
+    const dpr = Math.min(2, window.devicePixelRatio || 1)
+    const w = Math.round(canvas.clientWidth * dpr)
+    const h = Math.round(canvas.clientHeight * dpr)
+    if (w < 8 || h < 8) return
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.clearRect(0, 0, w, h)
+    try {
+      paintDrawList2d(ctx, graphicSampleList(JSON.parse(key) as GraphicStyle, w, h, graphicMeasure()))
+    } catch {
+      // A sample that cannot draw must not take the strip down.
+    }
+  }, [key, loadedFonts])
+
+  return (
+    <div className="relative h-16 w-full overflow-hidden rounded-md border border-ink-850 bg-stage">
+      <canvas ref={ref} className="pointer-events-none absolute inset-0 size-full" />
+    </div>
+  )
+}
+
+/**
+ * OUTPUT's Graphics section (docs/CLIPS.md §6.5's UI), under the captions:
+ * the seven presets as rows in the captions' manner (name and face, the
+ * chosen one lit), a sample tile, the text style picker limited to
+ * `GRAPHIC_TEXT_STYLES`, and the accent colour beside the `accent` preset.
+ * Picking a preset keeps the text style and the accent (`setGraphicsStyle`);
+ * either action rebakes every graphic clip (store.ts). No state of its own,
+ * so a test can call it.
+ */
+export function GraphicsSection(): ReactNode {
+  const project = useEditor((s) => s.project)
+  const setGraphicsStyle = useEditor((s) => s.setGraphicsStyle)
+  const setGraphicsOverride = useEditor((s) => s.setGraphicsOverride)
+  const style = graphicStyleOf(project, {})
+  const accent = resolveGraphicStyle('accent', project.graphics?.overrides).palette.accent
+  return (
+    <div data-graphics-section="">
+      <div className="mb-1 text-[11px] text-ink-400">{GRAPHICS}</div>
+      <div className="grid gap-1">
+        {GRAPHIC_STYLES.map((preset) => (
+          <div key={preset.id} className="grid gap-1">
+            <button
+              data-graphic-style={preset.id}
+              onClick={() => setGraphicsStyle(preset.id)}
+              className={`flex items-center justify-between rounded px-2 py-1.5 text-[11px] transition-colors ${
+                style.id === preset.id ? 'bg-ink-700 text-ink-200' : 'bg-ink-800 text-ink-400 hover:bg-ink-700'
+              }`}
+            >
+              <span>{preset.name}</span>
+              <span className="text-[10px] text-ink-600">{preset.font}</span>
+            </button>
+            {preset.id === 'accent' && (
+              <label className="flex items-center gap-2 px-2">
+                <span className="text-[10.5px] text-ink-400">{ACCENT_COLOUR}</span>
+                <input
+                  type="color"
+                  data-graphic-accent=""
+                  value={colourInputValue(accent)}
+                  onChange={(e) => setGraphicsOverride('palette.accent', e.target.value)}
+                  className="h-5 w-8 shrink-0 cursor-pointer rounded border border-ink-700 bg-transparent"
+                />
+              </label>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="mt-1.5">
+        <GraphicSample style={style} />
+      </div>
+      <div className="mt-1.5">
+        <TextStylePicker
+          spec={graphicPickerSpec(style)}
+          ids={GRAPHIC_TEXT_STYLE_IDS}
+          onPick={(id) => setGraphicsOverride('textStyleId', id)}
+        />
+      </div>
     </div>
   )
 }
@@ -496,6 +660,8 @@ export function OutputStrip(): ReactNode {
             </div>
           )}
         </div>
+
+        <GraphicsSection />
       </div>
     </Strip>
   )

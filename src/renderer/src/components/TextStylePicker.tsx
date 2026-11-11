@@ -30,12 +30,20 @@ const INLINE_COUNT = 6
 
 export function TextStylePicker({
   spec,
-  onPick
+  onPick,
+  ids
 }: {
   spec: TextSpec
   onPick: (styleId: string | undefined) => void
+  /**
+   * The ids it may show, when not all of `TEXT_STYLES` (docs/CLIPS.md §6.5:
+   * the Graphics section's picker is limited to `GRAPHIC_TEXT_STYLES`).
+   * The inline row, the count and the gallery all read the same list.
+   */
+  ids?: readonly string[]
 }): ReactNode {
   const [browsing, setBrowsing] = useState(false)
+  const styles = useMemo(() => (ids ? TEXT_STYLES.filter((s) => ids.includes(s.id)) : TEXT_STYLES), [ids])
 
   /*
    * The chosen style is always in the inline row.
@@ -44,11 +52,11 @@ export function TextStylePicker({
    * is disorienting — the row has to be able to show what is currently on.
    */
   const inline = useMemo(() => {
-    const head = TEXT_STYLES.slice(0, INLINE_COUNT)
-    const current = TEXT_STYLES.find((s) => s.id === spec.styleId)
+    const head = styles.slice(0, INLINE_COUNT)
+    const current = styles.find((s) => s.id === spec.styleId)
     if (!current || head.some((s) => s.id === current.id)) return head
     return [current, ...head.slice(0, INLINE_COUNT - 1)]
-  }, [spec.styleId])
+  }, [spec.styleId, styles])
 
   return (
     <div className="space-y-1.5">
@@ -59,7 +67,7 @@ export function TextStylePicker({
             onClick={() => setBrowsing(true)}
             className="rounded px-1.5 py-0.5 text-[10px] text-ink-400 hover:bg-ink-800 hover:text-ink-100"
           >
-            Browse all {TEXT_STYLES.length}
+            Browse all {styles.length}
           </button>
           {spec.styleId && (
             <button
@@ -97,6 +105,7 @@ export function TextStylePicker({
             onClick={(e) => e.stopPropagation()}
           >
             <Gallery
+              styles={styles}
               spec={spec}
               onPick={(id) => {
                 onPick(id)
@@ -112,10 +121,12 @@ export function TextStylePicker({
 }
 
 function Gallery({
+  styles,
   spec,
   onPick,
   onClose
 }: {
+  styles: readonly TextStyle[]
   spec: TextSpec
   onPick: (styleId: string) => void
   onClose: () => void
@@ -123,7 +134,7 @@ function Gallery({
   const [query, setQuery] = useState('')
   /** What the hero is showing: whatever is under the pointer, else the chosen one. */
   const [hovered, setHovered] = useState<string | null>(null)
-  const showing = hovered ?? spec.styleId ?? TEXT_STYLES[0].id
+  const showing = hovered ?? spec.styleId ?? styles[0]?.id ?? TEXT_STYLES[0].id
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -138,11 +149,11 @@ function Gallery({
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase()
-    if (!needle) return TEXT_STYLES
-    return TEXT_STYLES.filter(
+    if (!needle) return styles
+    return styles.filter(
       (s) => s.name.toLowerCase().includes(needle) || s.description.toLowerCase().includes(needle)
     )
-  }, [query])
+  }, [query, styles])
 
   return (
     <div className="flex h-full flex-col">
@@ -152,7 +163,7 @@ function Gallery({
           autoFocus
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder={`Search ${TEXT_STYLES.length} styles — glow, metal, gradient…`}
+          placeholder={`Search ${styles.length} styles — glow, metal, gradient…`}
           className="min-w-0 flex-1 bg-transparent text-[11.5px] text-ink-200 outline-none placeholder:text-ink-600"
         />
         <span className="shrink-0 font-mono text-[10px] tabular-nums text-ink-600">

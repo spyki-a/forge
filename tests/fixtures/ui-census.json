@@ -1814,7 +1814,9 @@
     "needs": "none",
     "file": "src/renderer/src/components/TextStylePicker.tsx",
     "line": 62,
-    "newHome": "output strip (caption host, Inspector.tsx:604)"
+    "newHome": "output strip (caption host, Inspector.tsx:604)",
+    "count": 2,
+    "note": "Count 2 since the Graphics section (docs/CLIPS.md §6.5): the caption style picker's and the graphic style picker's. Reasoned from the code, not yet read by the harness census on screen."
   },
   {
     "label": "Browse all",
@@ -3272,7 +3274,9 @@
     "needs": "none",
     "file": "src/renderer/src/components/TextStylePicker.tsx",
     "line": 56,
-    "newHome": "output strip (caption host, Inspector.tsx:604)"
+    "newHome": "output strip (caption host, Inspector.tsx:604)",
+    "count": 2,
+    "note": "Count 2 since the Graphics section (docs/CLIPS.md §6.5): the caption style picker's and the graphic style picker's. Reasoned from the code, not yet read by the harness census on screen."
   },
   {
     "label": "Style",
@@ -3601,7 +3605,9 @@
     "part": true,
     "file": "src/shared/render/textStyle.ts",
     "line": 173,
-    "newHome": "output strip (caption host, Inspector.tsx:604)"
+    "newHome": "output strip (caption host, Inspector.tsx:604)",
+    "count": 2,
+    "note": "Count 2 since the Graphics section (docs/CLIPS.md §6.5): the caption style picker's and the graphic style picker's. Reasoned from the code, not yet read by the harness census on screen."
   },
   {
     "label": "Width",
@@ -8568,5 +8574,92 @@
     "line": 93,
     "newHome": "Shelf tile URL",
     "note": "The \"needs the AI helper\" pointer's title beside the greyed Listen to it (HelperPointer, §16.41)."
+  },
+  {
+    "label": "Graphics",
+    "match": "text",
+    "home": "output",
+    "needs": "none",
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 107,
+    "newHome": "output strip (Graphics section, docs/CLIPS.md §6.5)",
+    "note": "The Graphics section's heading (§6.5's UI), under the captions. Written as GRAPHICS in OutputStrip.tsx."
+  },
+  {
+    "label": "Clean",
+    "match": "text",
+    "home": "output",
+    "needs": "none",
+    "file": "src/shared/graphics/style.ts",
+    "line": 169,
+    "newHome": "output strip (Graphics section, docs/CLIPS.md §6.5)",
+    "count": 4,
+    "note": "Count 4 on an empty project, where captions are on: the caption preset Clean (captions/style.ts), the caption style picker's Clean tile, the graphic preset row Clean (§6.5), and the graphic style picker's Clean tile (the preset's own text style, first in GRAPHIC_TEXT_STYLES). The count is reasoned from the code, not yet read by the harness census on screen."
+  },
+  {
+    "label": "Bold",
+    "match": "text",
+    "home": "output",
+    "needs": "none",
+    "file": "src/shared/graphics/style.ts",
+    "line": 241,
+    "newHome": "output strip (Graphics section, docs/CLIPS.md §6.5)",
+    "note": "A graphic preset row (§6.5). The caption preset is \"Bold centre\", a different whole text."
+  },
+  {
+    "label": "Editorial",
+    "match": "text",
+    "home": "output",
+    "needs": "none",
+    "file": "src/shared/graphics/style.ts",
+    "line": 244,
+    "newHome": "output strip (Graphics section, docs/CLIPS.md §6.5)"
+  },
+  {
+    "label": "Neon",
+    "match": "text",
+    "home": "output",
+    "needs": "none",
+    "file": "src/shared/graphics/style.ts",
+    "line": 247,
+    "newHome": "output strip (Graphics section, docs/CLIPS.md §6.5)",
+    "note": "A graphic preset row (§6.5). The text style neon-green is also named Neon, but no style picker in OUTPUT shows its tile on an empty project."
+  },
+  {
+    "label": "Mono",
+    "match": "text",
+    "home": "output",
+    "needs": "none",
+    "file": "src/shared/graphics/style.ts",
+    "line": 250,
+    "newHome": "output strip (Graphics section, docs/CLIPS.md §6.5)"
+  },
+  {
+    "label": "Accent",
+    "match": "text",
+    "home": "output",
+    "needs": "none",
+    "file": "src/shared/graphics/style.ts",
+    "line": 253,
+    "newHome": "output strip (Graphics section, docs/CLIPS.md §6.5)"
+  },
+  {
+    "label": "Energetic",
+    "match": "text",
+    "home": "output",
+    "needs": "none",
+    "file": "src/shared/graphics/style.ts",
+    "line": 256,
+    "newHome": "output strip (Graphics section, docs/CLIPS.md §6.5)"
+  },
+  {
+    "label": "Accent colour",
+    "match": "text",
+    "home": "output",
+    "needs": "none",
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 108,
+    "newHome": "output strip (Graphics section, docs/CLIPS.md §6.5)",
+    "note": "The colour beside the accent preset (§6.5's UI); writes overrides['palette.accent']. Written as ACCENT_COLOUR in OutputStrip.tsx."
   }
 ]
