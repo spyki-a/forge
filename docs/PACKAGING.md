@@ -177,11 +177,11 @@ yt-dlp. Until that is built, a CI installer has no library.
 
 1. Run the workflow by hand (Actions → CI → Run workflow) or push a `v*`
    tag: the `installer` job runs only then, not on every push. It runs after
-   the test matrix is green on both platforms (Windows and `macos-15`, which
+   the test matrix is green on both platforms (Windows and a Mac job, which
    since 2026-10-16 run on every push and install the AI helper's pack; the
-   Mac job was `macos-14` until 2026-11-11, when GitHub's retirement of that
-   image moved it, `e06e1c3`) — an installer built from a red commit is a
-   thing someone will install.
+   Mac job was `macos-14` until 2026-11-11, when GitHub's retirement of
+   that image moved it to `macos-15`, `e06e1c3`) — an installer built
+   from a red commit is a thing someone will install.
 2. Open the run on GitHub → Artifacts → `forge-windows-latest`.
 3. Unzip, run the `.exe`.
 

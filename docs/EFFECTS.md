@@ -10932,9 +10932,15 @@ width per UTF-16 unit); **no render check has run on a phase-2 drawing**
 - **The Telugu grapheme count depends on ICU.** "పెళ్లికి ముందు" is 6
   graphemes under Node 24's ICU 78 (Unicode 15.1's GB9c makes the
   conjunct "ళ్లి" one cluster) and 7 under an older ICU; the pin skips below
-  ICU 74 (`528986c`). Both CI runners use setup-node 24. The two labels
-  `graphicHolds` pins, 'जगह देख लें' (8) and 'మేకప్' (3), hold no conjunct and
-  need no skip.
+  ICU 74 (`528986c`). Both CI runners use setup-node 24; whether the case
+  ran or skipped there is not known, since the job logs need admin rights.
+  The two labels `graphicHolds` pins, 'जगह देख लें' (8) and 'మేకప్' (3),
+  hold no conjunct and need no skip.
+- **An anchor matched twice, again.** `85b59e3`'s fixer counted every
+  mutation anchor with `matchAll` before using it: `if (tree) {` matched
+  2 sites in `templates/steps.ts`, so it was re-anchored
+  on `if (tree) {\n    const marker`. CLAUDE.md's anchor rule, caught
+  before it bit.
 - **The harness census, 2026-11-11** (`window.__forgeCensus()` in the
   Browser pane's harness at localhost:5199, Chrome 152). Piece 4's counts
   were reasoned from the code; one was wrong by one: OUTPUT's "None" is 2

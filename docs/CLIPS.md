@@ -3419,7 +3419,8 @@ from inside the pack is part of the clean Mac's run (§3a.9).
 > runs on dispatch or a tag), and the guard's behaviour is unmeasured.
 >
 > **CI** (`.github/workflows/ci.yml`): the test matrix is `[windows-latest,
-> macos-14]` on every push (the repo is public, so the minutes are free;
+> macos-14]` on every push (`macos-15` since 2026-11-11, the note below;
+> the repo is public, so the minutes are free;
 > the header's 9–14 and 6–10 minutes a push are estimates until row 37);
 > the installer job stays on dispatch or a `v*` tag. After `npm test`,
 > which keeps its bare 3.12:
@@ -3577,9 +3578,9 @@ uninstaller; the guide says Remove first.
 §16.48 (b), on a **`macos-14` arm64 runner** pushed too, which is free for a
 public repo and is the only place the pack's macOS 14 floor runs (the dev
 Mac runs macOS 26). (2026-11-11: on `macos-15` since `e06e1c3`, GitHub
-having retired the macOS 14 image; the AI helper pack's macOS 14 floor now runs on no CI machine, §3a.6's
-note.) After the existing `npm test` (which keeps its bare 3.12
-and every degraded check, §16.36):
+having retired the macOS 14 image; the AI helper pack's macOS 14 floor
+now runs on no CI machine, §3a.6's note.) After the existing `npm test`
+(which keeps its bare 3.12 and every degraded check, §16.36):
 
 1. **The URL probe, on every push**, cache or not: each manifest URL (67
    for pack 2, as built) gets a HEAD or a 1-byte range request, asserting 200 or 206 and the
@@ -7845,7 +7846,7 @@ phase 2, a 6-day build only if the gate passes (§6.17, §6.18).
 
 | phase | what | days | of which | exit, in one line |
 |---|---|---|---|---|
-| 0 | measure the forks: M1-M5, M6's Indic and colour parts, M22, and M21 before phase 2's counter (§6.15; M7, the glow, opens phase 3) | 2 | 0.5 is §6.3's own measurement as written; 1.5 new | every number in `EFFECTS.md` §61 with its command; the bake region, pool depth, Indic animation unit and blur-rise chosen; M22's verdict on the canvas painter's Indic shaping |
+| 0 | measure the forks: M1-M5, M6's Indic and colour parts, M22, and M21 before phase 2's counter (§6.15; M7, the glow, opens phase 3; 2026-11-11: the counter was built ahead of M21 on 2026-11-07, and M21 now bears on T2's validator and prompt, §6.19's gate paragraph) | 2 | 0.5 is §6.3's own measurement as written; 1.5 new | every number in `EFFECTS.md` §61 with its command; the bake region, pool depth, Indic animation unit and blur-rise chosen; M22's verdict on the canvas painter's Indic shaping |
 | 1 | the engine and the motion module: the §16.8 rename, `SELF_DRAWN_FIELDS` and every guard, the draw list, the canvas painter, the stroke, the dim, `motion.ts`, the canvas, bake and export (§6.1, §6.3-§6.5, §6.13, §6.11) | 7.5 | about 5 of §6 as written; 2.5 new | the primitives' preview = export ≤ 1/255; the Indic render check; the render check frame-exact on both builds |
 | 2 | the templates in nine shapes, the third pass, the validator, beats, placement and the budget, sound, the baseline and the eval (§6.2, §6.5-§6.10, §6.14, §6.11) | 14.5 | about 9 of §6; 5.5 new | the exit as written for nine shapes, plus the Indic check per template, the sound Clear test and the tree |
 | spike | the hand spike, run during phase 2 (§6.17; §16.56) | 1.5 | new; mostly your runs | H1-H10, H12, H13 in `EFFECTS.md` §62; the gate passed or failed |
@@ -8586,14 +8587,18 @@ fixtures' wiring and the three tests above.
 >   `712246e`). Where the words left a choice:
 >   - `counter`: the group's rise in the value's px; the fit counts the
 >     panel's padding whether or not the panel is drawn and needs the value
->     on one line; panel shadow blur 0.02 s, drop 0.006 s.
+>     on one line; panel shadow blur 0.02 of s, drop 0.006 of s. The dim
+>     (`dimFor`, every template's) fades in with `drawOnEase`, its hole's
+>     corner `style.radius` × s and its edge hard (feather 0).
 >   - `ring`: enters as the counter does (no entrance is named); its box
 >     the ink, 0.28 of s less one thickness; the `%` by `ringNeedsGlyph`
 >     (`/%|\bper\s?cent\b/i`, §6.7's units, so a Hindi or Telugu percent
 >     word would get a `%`, out of reach today by §6.7 rule 9, beside M21);
 >     its track starts at −π/2 too.
 >   - `bars`: the content width is the wrap width; the title left-aligned
->     above the rows, entering from t = 0; the track enters with its row
+>     above the rows, a row gap below it, entering from t = 0; a row as
+>     tall as its label's lines, the track centred on the first line; the
+>     track enters with its row
 >     in `palette.muted` (the table gives muted to the ring's track only);
 >     the value 0.25 × the label's px past the bar's current end; the fit
 >     also needs the widest value at its full bar inside (bars-hi draws at
@@ -8605,7 +8610,8 @@ fixtures' wiring and the three tests above.
 >     `palette.panelOpacity > 0`; "one line where it fits" read as the
 >     wrap at the wrap width
 >     (keyword-en takes two lines), not a shrink; a `lit` outside the
->     words lights none and draws no underline.
+>     words lights none and draws no underline. Each word's own entrance
+>     is composed inside the card's, and the underline rides the card.
 >   - `lower-third`: "rises from behind it" is the entrance alone (an item
 >     has no clip); the role 0.25 × its px below the bar, arriving the beat
 >     + 0.1 s (`ROLE_DELAY_S`).
@@ -8613,19 +8619,33 @@ fixtures' wiring and the three tests above.
 >     is a vertical rule down that edge; the tree's marker a dot 0.3 × the
 >     label's px; elbow corner 0.3 × the label's px, the leg stopping 0.15
 >     short; parents that fail `parentsValid` draw flat under the title
->     (pinned by `85b59e3`). **The travelling beam is built**: `energetic`
->     with `line` only, from the last beat, a `BEAM_SPAN` 0.2 of the rule
->     advancing over `DURATIONS.loop`, **5.5 s, where this section says a
->     5 s loop**.
+>     (pinned by `85b59e3`). The numerals are centred in their 0.07
+>     column; the title's children are depth 1 (one indent), an item's
+>     children depth 2; the title and its marker enter from t = 0 with a
+>     title row gap below, as the bars' title does; the tree's "the row
+>     enters on the beat" is read as the rows' "ending in place on its
+>     beat"; strokes are `palette.ink` at `style.stroke` × s, round caps
+>     and joins, in `style.strokeLook`. **The travelling beam is built**:
+>     `energetic` with `line` only, from the last beat, a `BEAM_SPAN` 0.2
+>     of the rule advancing over `DURATIONS.loop`, **5.5 s, where this
+>     section says a 5 s loop**.
 >   - `quote`: “ and ” in every language; the dash a separate fixed-glyph
 >     item `dash`; the lit word by `captions/line.ts`'s `activeWordAt`,
 >     imported, read at t + 1e-6 s; the social kind's name after the dash,
 >     handle and date beneath, `link` stored and not drawn; a
->     whitespace-only speaker skipped (the words say absent when '').
+>     whitespace-only speaker skipped (the words say absent when ''). Each
+>     mark sits 0.1 × the words' px from its word, top-aligned with its
+>     line; the words centred and wrapped at the wrap width less both
+>     marks; the speaker's right edge the words' right edge; the block
+>     centred in the content rect. In the social kind, handle and date are
+>     right-aligned at the speaker's size; nothing is shaped as a post and
+>     nothing is fetched.
 >   - `callout`: "nearest edge" is the closest pair of edge midpoints; the
->     bow 0.2 of the chord; the label beside the subject on the wider side
->     (left on a tie), clamped into the rect; the circle four cubics
->     (κ 0.5523), padded 12 % (`CIRCLE_PAD`), from the top clockwise; with
+>     bow 0.2 of the chord, on the side away from the frame's centre; the
+>     label panel centred in the content rect's height, beside the subject
+>     on the wider side (left on a tie), one panel padding from it, clamped
+>     into the rect; the circle four cubics (κ 0.5523), padded 12 %
+>     (`CIRCLE_PAD`), from the top clockwise, with no head; with
 >     `targets.subject` null, no items at all; a `panel` item the draw-list
 >     column does not name; the arrow leaves the panel's box even when
 >     `panelOpacity` is 0.
@@ -8691,7 +8711,7 @@ its three jobs.
 
 | file | holds | where it runs |
 |---|---|---|
-| `src/shared/graphics/drawList.ts` | `drawListAt`, `needsCompositor`, `graphicBox`, and `onsetTargetsAt` (the "When" rule under Targets as a function; built 2026-10-30, the draw list's Built note); `graphicBox`'s two far-side columns and rows, `GEQ_EDGE_PX` (module-private, since `683a6f0`, 2026-11-03; "The box" below) | node and renderer, pure; the only source importer of `templates/index.ts` (its test imports it too, to pin "frozen and empty") |
+| `src/shared/graphics/drawList.ts` | `drawListAt`, `needsCompositor`, `graphicBox`, and `onsetTargetsAt` (the "When" rule under Targets as a function; built 2026-10-30, the draw list's Built note); `graphicBox`'s two far-side columns and rows, `GEQ_EDGE_PX` (module-private, since `683a6f0`, 2026-11-03; "The box" below) | node and renderer, pure; the only source importer of `templates/index.ts` (its test imports it too, to pin "frozen and empty"; since `4e6004e`, 2026-11-07, to pin membership, and `tests/graphicFrame.test.ts` imports it too) |
 | `src/shared/graphics/items.ts` | the `DrawItem` types (their `Point` and `Arrowhead` imported from `stroke.ts`, corrected 2026-10-28), `Drawer`, `DrawOut`, `textItems`, `textSpecOf`, `itemBounds`, `unitFor`, `CLUSTER_SCRIPTS`; and, built 2026-10-30 (the draw list's Built note), `GraphicTargets` (here, not in `targets.ts`, because `Drawer` names it), `ItemTransform`, `itemOrigin`, `localBounds`, `unionRect`, `graphemesOf` | pure; the templates import this, never `drawList.ts`, so no import cycle runs through `templates/index.ts` (`textItems` reads `unitFor`, so the two live together) |
 | `src/shared/graphics/templates/index.ts` | `DRAWERS: Partial<Record<GraphicTemplateId, Drawer>>`, created empty in phase 1; each template's commit adds its own row (§6.2) (eight rows since 2026-11-07/10, `4e6004e`, `dd309bf`, `712246e`: every phase-2 id; the draw files and `templates/layout.ts` beside it, §6.2's Built note) | pure |
 | `src/shared/graphics/stroke.ts` | `flattenPath`, `strokeAt`, the head's geometry (`headGrowAt`, `headShape`, `strokeShape`), `strokeWidth`, `STROKE_MIN_PX`, `STROKE_TOLERANCE`, `Point`, `Arrowhead` (corrected 2026-10-28; the stroke primitive's Built note below) | pure; imports only `DURATIONS` and `progress` from `motion.ts` |
@@ -11591,14 +11611,18 @@ dropped from `graphicEligible` (the synthetic style passes).
 >   an unknown id), each calling `setGraphicsStyle`; an **Accent colour**
 >   input directly under the accent row, writing
 >   `setGraphicsOverride('palette.accent')` whichever preset is chosen
->   (it lights words, bars and underlines under every preset) and showing
->   #2563EB until a pick; the **sample tile**, `GraphicSample`, a fixed
+>   (it lights words, bars and underlines under every preset; picking it
+>   does not also choose the accent preset) and showing #2563EB until a
+>   pick; the **sample tile**, `GraphicSample`, a fixed
 >   counter ("10,00,000" over "views", `GRAPHIC_SAMPLE`) drawn by the
 >   counter drawer at its settled frame at 30 fps and painted by
 >   `paintDrawList2d`, placed by a box of 0.92 of the tile (a tile is not
 >   a frame); and `TextStylePicker` limited by a new optional `ids` prop to
->   `GRAPHIC_TEXT_STYLES`, writing `setGraphicsOverride('textStyleId')`,
->   its "None" removing the override. **It sits after the whole captions
+>   `GRAPHIC_TEXT_STYLES` (the filter limits the inline row, the gallery's
+>   list, its "Browse all" count and its search placeholder's count),
+>   writing `setGraphicsOverride('textStyleId')`, its sample text
+>   "10,00,000" in the resolved style's text style and face, its "None"
+>   removing the override. **It sits after the whole captions
 >   block** (picker, font, size, placement and notes), not between the
 >   caption preset rows and their picker as "under the caption presets"
 >   says, so the captions' controls stay together; shown whether captions
@@ -11633,7 +11657,8 @@ dropped from `graphicEligible` (the synthetic style passes).
 > - **The tests**: `tests/renderer/graphicsSection.test.tsx`, new, 7 cases
 >   in `1a681c7` and 8 since `62f3c83` (the picker's gallery opened,
 >   through a new `initialBrowsing` test prop); `graphicStyleStore`, 7
->   cases at `e06e1c3` (the rebake once per graphic clip and for no other;
+>   cases at `e06e1c3` (the seventh, `1a681c7`'s: the rebake once per
+>   graphic clip and for no other;
 >   `62f3c83` extended its cases with the no-change and one-undo checks).
 >   Mutations: the picker unfiltered at the strip or inside
 >   `TextStylePicker` ("Chrome: expected [ 'Clean', 'White glow', ...(21)
@@ -11897,8 +11922,9 @@ project). Each is a `GraphicProposal` (§6.1).
   > type-only, and `CLIPS_GRAPHIC_RULE = 'clips.graphic'`. The stub ignores
   > its arguments and returns the same project object, `clipIds: []` and
   > one problem, `{ path: '$', message: 'graphics are not built yet —
-  > nothing was placed' }`: the path and the wording are the builder's (no
-  > director file uses a bare `'$'`), placeholders T3 replaces.
+  > nothing was placed' }`: `'$'` is the root path `conforms()` itself
+  > uses (`director/conforms.ts:112`); the path and the wording are the
+  > builder's placeholders, which T3 replaces.
   > `tests/graphicApply.test.ts`, 2 cases: the return shape, with the
   > project deep-equal to a `structuredClone` taken before the call
   > (`ddd1ede`: `toBe` alone passed an in-place edit), and the rule
@@ -13754,20 +13780,22 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
   `51e2f23`, green on both runners at `e06e1c3` (windows-latest and
   macos-15). The suite at `62f3c83` on the Mac: typecheck 0; 332 files
   passed and 5 skipped (337), 4738 tests passed and 64 skipped (4802),
-  220.66 s (read by the session to a file, `$?` read). Against 918b6ed's
-  326 files and 4627 tests passed, which already held the stub's two
-  cases, the lane added 6 files and 111 tests after the stub. Harness
-  census at `51e2f23`: 891 rows, 0 missing, 8 skipped. Not built: T2a,
+  220.66 s (read by the session to a file, `$?` read). Against the
+  stub's 326 files and 4627 tests passed (`41a3db0`, `ddd1ede`), the lane
+  added 6 files and 111 tests after the stub. Harness census at
+  `51e2f23`: 891 rows, 0 missing, 8 skipped. Not built: T2a,
   T2b, the rest of T3 and T4. **Of the bar above**, the build has met
   only what T1's own tests carry: the tree's item as its words read (the
   three English fixtures' exact parent lists and the property killed by a
-  forward parent, `graphicTree`; the fixtures are the lane's own and await
-  your check), and M16's reading holds as the rule stands (every longest
-  fixture label holds at 20 graphemes a second; the 0.6 s figure is
-  printed, not enforced, and yours). Everything else is ahead: the
-  property test and the adversarial generators (T2a), the Keep rows, the
-  eval, the render check on both builds and the Indic render check (T4;
-  no render check has run on a phase-2 drawing), preview = export, M14,
+  forward parent, `graphicTree`; the fixtures and their parent lists are
+  the lane's own, written beside `treeParents`, so the item counts as met
+  only once you have checked the three lists), and M16's reading holds
+  as the rule stands (every longest fixture label holds at 20 graphemes
+  a second; the 0.6 s figure is printed, not enforced, and yours).
+  Everything else is ahead: the property test and the adversarial
+  generators (T2a), the Keep rows, the eval, the render check on both
+  builds and the Indic render check (T4; no render check has run on a
+  phase-2 drawing), preview = export, M14,
   the look rating, M18, `graphicBudget`'s property, the sound Clear test,
   rows 10 and 11, M15, M17 and `LLM.md` §Built. **Still yours, from these
   lanes** (every other "beyond the plan's words" choice is in §6.2's and
@@ -13812,6 +13840,12 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
     (`drawList.ts`); the arrow leaving the panel's box with no panel
     drawn and callout's `panel` item; `graphicHolds`' own word count, to
     move beside `readingSeconds` once a production count exists;
+  - the Hindi and Telugu `nested-*.json` fixtures and the ten eval
+    transcripts, not written by this lane (§6.10; `tests/fixtures/graphics/`);
+  - whether `graphicSpecs`' Telugu grapheme case (`skipIf(ICU_MAJOR < 74)`)
+    ran or skipped on CI's runners: both use setup-node 24 and were green,
+    but the job logs cannot be read without admin rights, so it is not
+    known (`tests/graphicSpecs.test.ts`);
   - the AI helper pack's macOS 14 floor runs on no CI machine since
     2026-11-11 (`.github/workflows/ci.yml`, §3a.6, §16.48): whether that
     matters before the beta;
@@ -15290,9 +15324,9 @@ values, dated, as the steps above carry their Built notes (it did,
 >   The stricter 0.6 s a word, printed to stderr and not enforced, is over
 >   the max for counter-en (4.40 > 4), bars-en (9.80 > 6), bars-hi
 >   (6.20 > 6), steps-en (13.40 > 8), quote-en (11.60 > 6), quote-hi
->   (6.80 > 6), ring-en and ring-hi (5.00 > 4). Whether to enforce it is yours. The
->   Hindi and Telugu labels are the lane's, awaiting your check, so the
->   reading holds for them as written.
+>   (6.80 > 6), ring-en and ring-hi (5.00 > 4). Whether to enforce it is
+>   yours. The Hindi and Telugu labels are the lane's, awaiting your
+>   check, so the reading holds for them as written.
 > - **M21** (row 59): not measured, still yours. **The counter was built
 >   ahead of it** (2026-11-07, `4e6004e`), on the reasoning stated to you
 >   on 2026-11-07 and not objected to: `inBetween` keeps whatever digit
@@ -19549,9 +19583,10 @@ what is needed, where the answer waits on something not yet in hand.
     2026-11-02; the push of `51e2f23` had its Mac job cancelled unstarted
     ("The configuration 'macos-14-arm64-us-default' is not supported"),
     and `e06e1c3` moved it to `macos-15` (run 43016087950 green on both).
-    (b) stands on `macos-15`, but the AI helper pack's macOS 14 floor now runs on no CI machine: only a real
-    macOS 14 machine can check it now. Whether that matters before the
-    beta is yours (§3a.6's note; §6.12's "Phase 2's state, 2026-11-11").
+    (b) stands on `macos-15`, but the AI helper pack's macOS 14 floor now
+    runs on no CI machine: only a real macOS 14 machine can check it now.
+    Whether that matters before the beta is yours (§3a.6's note; §6.12's
+    "Phase 2's state, 2026-11-11").
 49. **The speech model on Transcribe.** Once P makes `asr.transcribe`
     available, MediaPool's Transcribe fetches `Systran/faster-whisper-small`
     (464 MB) unnamed, at `main` with no pin, and asks huggingface.co at each
