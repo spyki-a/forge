@@ -517,6 +517,30 @@ describe('phase 2: a graphic’s sounds follow it (§6.14)', () => {
     state().deleteSelection()
     expect(ids()).toEqual(['shot', 'g2', 's2', 'mine-clip'])
     undoesTo(before, 0)
+    state().selectMany(['g1'])
+    state().cutSelection()
+    expect(ids()).toEqual(['shot', 'g2', 's2', 'mine-clip'])
+    undoesTo(before, 0)
+  })
+
+  it('a graphic deleted together with its own sound (a marquee) takes the file the sound brought', () => {
+    const before = fixture([g('g1', 60), tick('s1', 'g1', 78), mine])
+    state().selectMany(['g1', 's1'])
+    state().deleteSelection()
+    expect(ids()).toEqual(['shot', 'mine-clip'])
+    expect(project().assets.map((a) => a.id)).not.toContain('tick-file')
+    expect(project().assets.map((a) => a.id)).toContain('mine')
+    undoesTo(before, 0)
+  })
+
+  it('setGraphic with no library installed takes the graphic’s sound off its old beat; the other graphic’s stays', async () => {
+    const before = fixture()
+    await state().setGraphic('g1', { beats: [1.0] })
+    expect(project().clips.filter((c) => c.forGraphic === 'g1')).toEqual([])
+    expect(at('s2')!.start).toBe(318)
+    // s2 still stands on the tick file.
+    expect(project().assets.map((a) => a.id)).toContain('tick-file')
+    undoesTo(before, 0)
   })
 
   it('a pasted copy of a graphic’s sound has no forGraphic, so removing the graphic leaves it', async () => {
@@ -576,8 +600,6 @@ describe('phase 2: a graphic’s sounds follow it (§6.14)', () => {
     expect(at('s1')).toBeUndefined()
     // g2 is on the same shot, so its tick is re-placed with it (the cap and the index are the shot's): still on 318.
     expect(project().clips.filter((c) => c.forGraphic === 'g2').map((c) => [c.start, c.assetId])).toEqual([[318, 'tick-file']])
-    expect(history()).toBe(1)
-    state().undo()
-    expect(project().clips).toEqual(before.clips)
+    undoesTo(before, 0)
   })
 })

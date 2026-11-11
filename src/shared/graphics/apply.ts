@@ -23,7 +23,7 @@ import { RETIMED_NOTE, graphicBeats, graphicTiming } from './beats'
 import { applyBudget, type BudgetCandidate } from './budget'
 import { graphicClipAsset, graphicExitKeys } from './frame'
 import { NO_CLIP_NOTE, NO_FREE_THIRD_NOTE, graphicLane, placeGraphic, subjectAtOnset, thirdPreference } from './place'
-import { GRAPHIC_SOUND_LANE_NAME, footageOf, graphicSounds } from './sound'
+import { GRAPHIC_SOUND_LANE_NAME, NO_SOUND_LIBRARY_NOTE, footageOf, graphicSoundFiles, graphicSounds } from './sound'
 import { CLEAN_GRAPHIC_STYLE } from './style'
 import { GRAPHIC_TEMPLATES, type GraphicData, type GraphicSpec, type KeptGraphic } from './template'
 import type { GraphicProposal } from '../timeline'
@@ -560,7 +560,7 @@ function withoutUnusedBrought(project: Project, gone: readonly Clip[]): Project 
  * `removeClip` on a graphic, and T2b's `dropGraphic` (§6.14): the clips
  * `ids` (through `removeClips`, a plain filter by default; the store's
  * Delete passes `removeMany`), every clip that follows one of them
- * (`forGraphic`) and is not one of them, and of the followers' files those
+ * (`forGraphic`), and of the followers' files (those in `ids` too) those
  * the app brought that no surviving clip uses. A graphic's own drawn asset
  * stays in the pool, as `removeClip` has always left the asset of a clip it
  * removes (lane C's arm; an undo puts the clip back over it). The same
@@ -575,11 +575,17 @@ export function removeWithFollowers(
   }
 ): Project {
   const going = new Set(ids)
-  const followers = graphicFollowers(project, going).filter((c) => !going.has(c.id))
+  /*
+   * Every follower of a graphic in `ids`, those in `ids` themselves included:
+   * a graphic selected with its own sound (a marquee) takes the sound through
+   * `removeClips`, and the file the sound brought must still go with it.
+   */
+  const followers = graphicFollowers(project, going)
   const removed = removeClips(project, ids)
   if (followers.length === 0) return removed
   const gone = new Set(followers.map((c) => c.id))
-  return withoutUnusedBrought({ ...removed, clips: removed.clips.filter((c) => !gone.has(c.id)) }, followers)
+  const clips = removed.clips.some((c) => gone.has(c.id)) ? removed.clips.filter((c) => !gone.has(c.id)) : removed.clips
+  return withoutUnusedBrought(clips === removed.clips ? removed : { ...removed, clips }, followers)
 }
 
 /**
@@ -591,7 +597,9 @@ export function removeWithFollowers(
  * shifted before frame 0 starts on 0, part-way into its file (its `inPoint`
  * up and its `duration` down by the frames cut), as `graphicSounds` places
  * one there, so its peak still lands on its frame; one with nothing left
- * after frame 0 is taken, with its brought file when unused. `after` comes
+ * after frame 0 is taken, with its brought file when unused; one standing on
+ * 0 part-way in gets its head back on a later shift (no frames are lost to a
+ * drag left and back). `after` comes
  * back as the same object when nothing follows.
  */
 export function followGraphicMoves(before: Project, after: Project, moving: Iterable<string>): Project {
@@ -615,6 +623,17 @@ export function followGraphicMoves(before: Project, after: Project, moving: Iter
     }
     changed = true
     const start = c.start + shift
+    /*
+     * A sound standing on frame 0 part-way into its file (cut there by an
+     * earlier step of the same drag, or placed there by graphicSounds) gets
+     * its head back when its graphic moves later, up to the frames it was cut:
+     * a drag left and back leaves the sound a fresh placement gives.
+     */
+    const back = shift > 0 && c.start === 0 && c.inPoint > 0 ? Math.min(c.inPoint, shift) : 0
+    if (back > 0) {
+      clips.push({ ...c, start: start - back, inPoint: c.inPoint - back, duration: c.duration + back })
+      continue
+    }
     if (start >= 0) {
       clips.push({ ...c, start })
       continue
@@ -690,8 +709,9 @@ export function soundAllGraphics(
  * a graphic of yours (no `generatedBy`) is re-placed under the rule of the
  * earliest app graphic on its footage clip, and when there is none it has no
  * sounds to re-place and the project comes back as it was (a run never
- * sounded it). With the sounds off, or no library, `graphicSounds` places
- * nothing and takes nothing.
+ * sounded it). With the sounds off, `graphicSounds` places nothing and takes
+ * nothing. With no library, the graphic's own sounds are taken (they stood on
+ * its old beats) and it lands silent, with §6.14's one note.
  */
 export function resoundGraphic(
   project: Project,
@@ -701,6 +721,21 @@ export function resoundGraphic(
 ): { project: Project; notes: string[] } {
   const g = project.clips.find((c) => c.id === graphicId)
   if (!g?.graphic) return { project, notes: [] }
+  /*
+   * No library: nothing can be placed again, and graphicSounds then takes
+   * nothing either. The graphic's own sounds stood on its old beats, so they
+   * go (with their brought files when unused) and it lands silent, §6.14's
+   * words for a graphic with no library. The other graphics' sounds on its
+   * footage clip are still on their beats and stay.
+   */
+  const files = graphicSoundFiles(sounds)
+  if (project.graphics?.sound !== false && files.tick.length === 0 && files.whoosh.length === 0) {
+    const own = graphicFollowers(project, [graphicId])
+    if (own.length > 0) {
+      const gone = new Set(own.map((c) => c.id))
+      return { project: withoutUnusedBrought({ ...project, clips: project.clips.filter((c) => !gone.has(c.id)) }, own), notes: [NO_SOUND_LIBRARY_NOTE] }
+    }
+  }
   let pick: Clip | undefined = g.generatedBy !== undefined ? g : undefined
   if (!pick) {
     const f = footageOf(project, g, g.graphic)
