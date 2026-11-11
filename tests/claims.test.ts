@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
   BIND_WINDOW,
   CLAUSE_BREAK,
@@ -16,6 +16,19 @@ import {
   type ClaimStretch
 } from '@shared/director/claims'
 import { numberOf } from '@shared/graphics/numbers'
+import * as validator from '@shared/director/validateGraphics'
+import {
+  checkGraphicData,
+  reportedBy,
+  stretchFor,
+  validateBaseline,
+  validateGraphics,
+  type AnswerGraphic
+} from '@shared/director/validateGraphics'
+import type { GraphicsMenu } from '@shared/director/run'
+import type { GraphicCandidate } from '@shared/graphics/template'
+import { capSegments, type Transcript } from '@shared/transcript'
+import nestedEn1 from './fixtures/graphics/nested-en-1.json'
 import { GRAPHIC_TEMPLATES, type GraphicData, type TemplateDef } from '@shared/graphics/template'
 import type { Segment, Word } from '@shared/transcript'
 import specs from './fixtures/graphics/specs.json'
@@ -943,5 +956,444 @@ describe('bind: the edges the critics found unpinned', () => {
     expect(bindData({ template: 'keyword', words: 'cheap really', lit: 0 }, ['It is cheap, really not.']))
       .toMatchObject({ ok: false, reason: 'negated' })
     expect(bindData({ template: 'keyword', words: 'cheap really', lit: 0 }, ['It is cheap, really.']).ok).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// The third half: validateGraphics.ts (§6.7's head, rules 8-9).
+
+/**
+ * A talk as the validator gets it: one segment per sentence, ids s00, s01, …,
+ * words from index 0, each `msPerWord` long (the next starting 50 ms after).
+ */
+function talk(sentences: string[], options: { msPerWord?: number; language?: string; confidence?: Record<string, number> } = {}): Transcript {
+  const step = options.msPerWord ?? 400
+  const words: Word[] = []
+  const segments: Segment[] = []
+  let index = 0
+  sentences.forEach((text, k) => {
+    const start = index
+    for (const w of text.split(/\s+/u).filter(Boolean)) {
+      words.push({ index, text: w, startMs: index * step, endMs: index * step + step - 50, confidence: options.confidence?.[w] ?? null })
+      index += 1
+    }
+    segments.push({ id: `s${String(k).padStart(2, '0')}`, startMs: start * step, endMs: (index - 1) * step + step - 50, text, wordStart: start, wordEnd: index - 1 })
+  })
+  return { assetId: 'asset-1', language: options.language ?? 'en', model: 'test', durationMs: index * step, words, segments }
+}
+
+/** The menu `graphicsMenuFor` (lane T2b's) would make: the capped sentences, the templates offered. */
+function menuOf(t: Transcript, extra: Partial<GraphicsMenu> = {}): GraphicsMenu {
+  return {
+    assetId: t.assetId,
+    clipId: 'clip-1',
+    language: t.language,
+    sentences: capSegments(t, 30, 15000).map((s) => ({ id: s.id, startMs: s.startMs, text: s.text, wordStart: s.wordStart, wordEnd: s.wordEnd })),
+    templates: ['counter', 'bars', 'steps', 'quote', 'ring', 'keyword'],
+    wordSource: 'whisper',
+    ...extra
+  }
+}
+
+/** One answer graphic, every unused field '' as the schema has it (§6.6). */
+function g(fields: Partial<AnswerGraphic> & Pick<AnswerGraphic, 'sentence' | 'template'>): AnswerGraphic {
+  return { title: '', value: '', label: '', items: [], quote: '', words: '', lit: 0, why: 'it helps', ...fields }
+}
+
+function answer(...graphics: AnswerGraphic[]): { reasoning: string; graphics: AnswerGraphic[] } {
+  return { reasoning: 'r', graphics }
+}
+
+type Verdict = ReturnType<typeof validateGraphics>
+
+function kept(v: Verdict): GraphicCandidate[] {
+  expect(v, 'not rejected').not.toHaveProperty('rejected')
+  return 'kept' in v ? v.kept : []
+}
+
+function droppedOf(v: Verdict): { path: string; message: string }[] {
+  expect(v, 'not rejected').not.toHaveProperty('rejected')
+  return 'dropped' in v ? v.dropped : []
+}
+
+/** Validate one answer graphic over the sentences, the menu offering what `extra` says. */
+function one1(sentences: string[], graphic: AnswerGraphic, extra: Partial<GraphicsMenu> = {}, t = talk(sentences)): Verdict {
+  return validateGraphics(answer(graphic), menuOf(t, extra), t)
+}
+
+describe('rule 9: the template rules after binding, the review cases', () => {
+  it('"we signed 40 clients" + ring 40 → dropped: the matched number carries no %', () => {
+    const v = one1(['We signed 40 clients.'], g({ sentence: 's00', template: 'ring', value: '40', label: 'clients' }))
+    expect(kept(v)).toEqual([])
+    expect(droppedOf(v)).toEqual([{ path: '$.graphics[0].value', message: "graphic dropped: '40' is not said as a percentage in s00" }])
+    // The same ring over a said percentage is kept, its one beat the value's word.
+    const ok = one1(['We signed 40% of clients.'], g({ sentence: 's00', template: 'ring', value: '40', label: 'clients' }))
+    expect(kept(ok)).toMatchObject([{ data: { template: 'ring', value: '40', label: 'clients' }, bound: [2, 4], beatWords: [2] }])
+  })
+
+  it('a ring over 100% → dropped', () => {
+    const v = one1(['Our bookings grew 120% this year.'], g({ sentence: 's00', template: 'ring', value: '120%', label: 'bookings grew' }))
+    expect(droppedOf(v)).toEqual([{ path: '$.graphics[0].value', message: "graphic dropped: '120%' is not a share of a whole (0 to 100%)" }])
+  })
+
+  it('the bars in two units ($40 and 40%, bare in the spec) → dropped', () => {
+    const said = ['We spent $40 on ads last month and then 40% of all our new signups came from them.']
+    const v = one1(said, g({ sentence: 's00', template: 'bars', title: 'By the numbers', items: [{ label: 'ads', value: '40' }, { label: 'signups', value: '40' }] }))
+    expect(kept(v)).toEqual([])
+    expect(droppedOf(v)).toEqual([{ path: '$.graphics[0].items', message: 'graphic dropped: the bars are said in s00 in more than one unit' }])
+  })
+
+  it('a counter must hold a number', () => {
+    const v = one1(['We signed forty-ish clients.'], g({ sentence: 's00', template: 'counter', value: 'forty-ish', label: 'clients' }))
+    expect(droppedOf(v)).toEqual([{ path: '$.graphics[0].value', message: "graphic dropped: 'forty-ish' is not one number" }])
+  })
+
+  it('a quote of more than 16 words → dropped', () => {
+    const line = 'one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen'
+    const v = one1([`${line}.`], g({ sentence: 's00', template: 'quote', quote: line }))
+    expect(droppedOf(v)).toEqual([{ path: '$.graphics[0].quote', message: 'graphic dropped: a quote is at most 16 words, this is 17' }])
+  })
+})
+
+describe("rule 8's speaker mode: a said quote's speaker is the app's", () => {
+  const elon = ['My mentor told me, and I think Elon said something like it: fail fast.']
+
+  it('"…I think Elon said something like it: fail fast" + speaker Elon → refused', () => {
+    const t = talk(elon)
+    const data: GraphicData = { template: 'quote', kind: 'said', text: 'fail fast', speaker: 'Elon' }
+    const grounding = { assetId: t.assetId, sentence: 's00', words: [] }
+    expect(checkGraphicData(data, def('quote'), grounding, t)).toEqual([
+      { path: '$.speaker', message: "'Elon' is not who said it: no one is named saying it" }
+    ])
+    // With no speaker, or the asset's Speaker the app passes, it grounds; a model's quote takes ''.
+    expect(checkGraphicData({ ...data, speaker: '' }, def('quote'), grounding, t)).toEqual([])
+    expect(checkGraphicData({ ...data, speaker: 'Priya' }, def('quote'), grounding, t, ['Priya'])).toEqual([])
+    expect(kept(one1(elon, g({ sentence: 's00', template: 'quote', quote: 'fail fast' })))).toMatchObject([
+      { data: { template: 'quote', kind: 'said', text: 'fail fast', speaker: '' } }
+    ])
+  })
+
+  it('a run directly after "<name> said" is kept with that name as its speaker, and no other', () => {
+    const said = ['Elon said: fail fast.']
+    expect(kept(one1(said, g({ sentence: 's00', template: 'quote', quote: 'fail fast' })))).toMatchObject([
+      { data: { speaker: 'Elon' }, beatWords: [2, 3] }
+    ])
+    const t = talk(said)
+    const grounding = { assetId: t.assetId, sentence: 's00', words: [] }
+    const data: GraphicData = { template: 'quote', kind: 'said', text: 'fail fast', speaker: '' }
+    expect(checkGraphicData(data, def('quote'), grounding, t, ['Priya'])).toEqual([
+      { path: '$.speaker', message: "'' is not who said it: the stretch says Elon said it" }
+    ])
+    expect(checkGraphicData({ ...data, speaker: 'Priya' }, def('quote'), grounding, t, ['Priya'])).toHaveLength(1)
+  })
+
+  it('a reported quote whose speaker the stretch does not name → refused', () => {
+    for (const said of ['He said: fail fast.', 'My mentor told me: fail fast.', 'Someone asked: why bother.']) {
+      const quote = said.split(': ')[1].replace('.', '')
+      const v = one1([said], g({ sentence: 's00', template: 'quote', quote }))
+      expect(kept(v), said).toEqual([])
+      expect(droppedOf(v), said).toEqual([
+        { path: '$.graphics[0].quote', message: `graphic dropped: '${quote}': it is reported speech and the transcript does not name who said it` }
+      ])
+    }
+  })
+
+  it('reportedBy reads back across a sentence mark and past "told me" and "that"', () => {
+    const st = stretchOf(['Priya told us.', 'Book early.'], 0)
+    expect(reportedBy(st, 3)).toEqual({ reported: true, name: 'Priya' })
+    expect(reportedBy(stretchOf(['Priya says that book early.'], 0), 3)).toEqual({ reported: true, name: 'Priya' })
+    expect(reportedBy(stretchOf(['Book early.'], 0), 0)).toEqual({ reported: false })
+  })
+})
+
+describe('rule 9: keyword', () => {
+  const kw = (sentence: string, words: string, lit = 0): AnswerGraphic => g({ sentence, template: 'keyword', words, lit })
+
+  it('"this is not easy" + keyword "easy" → dropped (rule 7 on its clause)', () => {
+    const v = one1(['This is not easy.'], kw('s00', 'easy'))
+    expect(kept(v)).toEqual([])
+    expect(droppedOf(v)).toEqual([{ path: '$.graphics[0].words', message: "graphic dropped: 'easy' is said negated in s00" }])
+    // Not directly after the negator, so rule 7 on the clause alone drops it.
+    expect(droppedOf(one1(['This is not really easy.'], kw('s00', 'easy')))).toEqual([
+      { path: '$.graphics[0].words', message: "graphic dropped: 'easy' is said negated in s00" }
+    ])
+    expect(kept(one1(['This is easy.'], kw('s00', 'easy')))).toMatchObject([{ data: { words: 'easy', lit: 0 }, beatWords: [2] }])
+  })
+
+  it('keyword "my job" taken across two sentences → dropped', () => {
+    const v = one1(['I love my.', 'Job is great.'], kw('s00', 'my job', 1))
+    expect(droppedOf(v)).toEqual([{ path: '$.graphics[0].words', message: "graphic dropped: 'my job' is not said in s00" }])
+    expect(kept(one1(['I love my job.'], kw('s00', 'my job', 1)))).toHaveLength(1)
+  })
+
+  it('keyword "of the" → dropped: no content word', () => {
+    const v = one1(['Most of the time it rains.'], kw('s00', 'of the'))
+    expect(droppedOf(v)).toEqual([{ path: '$.graphics[0].words', message: "graphic dropped: 'of the' holds no word that says anything" }])
+  })
+
+  it('lit 7 on a two-word keyword → repaired to 1, with a note', () => {
+    const v = one1(['Light beats expensive gear.'], kw('s00', 'expensive gear', 7))
+    expect(kept(v)).toMatchObject([{ data: { template: 'keyword', words: 'expensive gear', lit: 1 }, beatWords: [2] }])
+    expect(droppedOf(v)).toEqual([{ path: '$.graphics[0].lit', message: 'graphic repaired: lit 7 is not one of the 2 words — the last one is lit' }])
+  })
+
+  it("checkGraphicData flags a lit out of range (the dock's warning)", () => {
+    const t = talk(['Light beats expensive gear.'])
+    const grounding = { assetId: t.assetId, sentence: 's00', words: [] }
+    expect(checkGraphicData({ template: 'keyword', words: 'expensive gear', lit: 2 }, def('keyword'), grounding, t)).toEqual([
+      { path: '$.lit', message: "lit 2 is not one of the keyword's 2 words" }
+    ])
+    expect(checkGraphicData({ template: 'keyword', words: 'expensive gear', lit: 1 }, def('keyword'), grounding, t)).toEqual([])
+  })
+
+  it('a keyword of five words → dropped', () => {
+    const v = one1(['Light beats expensive gear every time.'], kw('s00', 'beats expensive gear every time'))
+    expect(droppedOf(v)).toEqual([{ path: '$.graphics[0].words', message: 'graphic dropped: a keyword is 1 to 4 said words, this is 5' }])
+  })
+})
+
+describe('rule 9: what a model may not name', () => {
+  it('an answer naming lower-third → dropped ("not offered"), even when a menu wrongly offers it', () => {
+    const said = ['Hi, I am Priya.']
+    for (const templates of [undefined, ['counter', 'lower-third']] as const) {
+      const v = one1(said, g({ sentence: 's00', template: 'lower-third', label: 'Priya' }), templates ? { templates: [...templates] } : {})
+      expect(kept(v)).toEqual([])
+      expect(droppedOf(v)).toEqual([{ path: '$.graphics[0].template', message: "graphic dropped: 'lower-third' is not offered" }])
+    }
+  })
+
+  it('a callout the menu did not offer → dropped ("not offered"); offered, it grounds', () => {
+    const said = ['Look at the bride.']
+    const answerCallout = g({ sentence: 's00', template: 'callout', label: 'the bride' })
+    expect(droppedOf(one1(said, answerCallout))).toEqual([{ path: '$.graphics[0].template', message: "graphic dropped: 'callout' is not offered" }])
+    expect(kept(one1(said, answerCallout, { templates: ['callout'] }))).toMatchObject([
+      { data: { template: 'callout', label: 'the bride', shape: 'arrow' }, beatWords: [3] }
+    ])
+  })
+
+  it('a sentence not on the menu → dropped', () => {
+    const v = one1(['We signed 40% of clients.'], g({ sentence: 's09', template: 'ring', value: '40%', label: 'clients' }))
+    expect(droppedOf(v)).toEqual([{ path: '$.graphics[0].sentence', message: "graphic dropped: 's09' is not a sentence on the menu" }])
+  })
+})
+
+describe('validateGraphics rejects only a truncated answer and the wrong shape', () => {
+  const t = talk(['We signed 40% of clients.'])
+  const fine = answer(g({ sentence: 's00', template: 'ring', value: '40%', label: 'clients' }))
+
+  it('a truncated answer → rejected', () => {
+    expect(validateGraphics(fine, menuOf(t), t, { truncated: true })).toEqual({ rejected: "The model's graphics ran out of room before it finished" })
+  })
+
+  it('the wrong shape → rejected, with the path', () => {
+    expect(validateGraphics({ reasoning: 'r', graphics: 'none' }, menuOf(t), t)).toEqual({
+      rejected: 'The graphics are not the shape asked for — $.graphics is "none", expected a list'
+    })
+    const { why: _why, ...noWhy } = fine.graphics[0]
+    expect(validateGraphics({ reasoning: 'r', graphics: [noWhy] }, menuOf(t), t)).toEqual({
+      rejected: 'The graphics are not the shape asked for — $.graphics[0].why is missing'
+    })
+  })
+
+  it('a model-written parent is not a field of the answer: the wrong shape', () => {
+    const steps = g({ sentence: 's00', template: 'steps', items: [{ label: 'a', value: '' }] })
+    const withParent = { ...steps, items: [{ label: 'a', value: '', parent: 0 }] }
+    expect(validateGraphics(answer(withParent as AnswerGraphic), menuOf(t), t)).toEqual({
+      rejected: 'The graphics are not the shape asked for — $.graphics[0].items[0].parent is not a field the plan has'
+    })
+  })
+
+  it('an empty list is an answer, and a fine one is kept', () => {
+    expect(validateGraphics(answer(), menuOf(t), t)).toEqual({ kept: [], dropped: [] })
+    expect(kept(validateGraphics(fine, menuOf(t), t))).toHaveLength(1)
+  })
+})
+
+describe('steps: the app sets connector and every parent (rule 9)', () => {
+  const fixture = nestedEn1 as unknown as { transcript: Transcript; items: string[]; parents: number[] }
+  const t = fixture.transcript
+  const stepsData = (parents: number[] | null, connector: 'none' | 'line' | 'tree'): GraphicData => ({
+    template: 'steps',
+    title: 'Step by step',
+    items: fixture.items.map((label, j) => (parents ? { label, parent: parents[j] } : { label })),
+    connector
+  })
+
+  it("a model's steps get the app's tree, from tree.ts", () => {
+    const v = validateGraphics(
+      answer(g({ sentence: 's03', template: 'steps', title: 'Step by step', items: fixture.items.map((label) => ({ label, value: '' })) })),
+      menuOf(t),
+      t
+    )
+    expect(kept(v)).toHaveLength(1)
+    const data = kept(v)[0].data as Extract<GraphicData, { template: 'steps' }>
+    expect(data.items.map((i) => i.parent)).toEqual(fixture.parents)
+    expect(data.connector).toBe('tree')
+    // Each item's beat is its label's first bound word.
+    // plan, budget, timeline (s02), shoot (s03; not s01's 'shoot', outside the stretch), edit (s04).
+    expect(kept(v)[0].beatWords).toEqual([9, 15, 25, 28, 32])
+  })
+
+  it('a steps graphic with a written parent gets the app\'s parents (the baseline seam, where data carries them)', () => {
+    // A written tree over a flat-said list: [−1, 0, 0] and 'tree' where the speaker said three plain steps.
+    const flat = talk(['First charge the batteries, then format the cards, then pack the bag.'])
+    const written: GraphicCandidate = {
+      sentence: 's00',
+      data: { template: 'steps', title: 'Step by step', items: [{ label: 'charge batteries', parent: -1 }, { label: 'format cards', parent: 0 }, { label: 'pack bag', parent: 0 }], connector: 'tree' },
+      bound: [],
+      beatWords: [],
+      why: 'a list',
+      source: 'baseline'
+    }
+    const s = validateBaseline([written], menuOf(flat), flat)
+    expect(s.kept).toHaveLength(1)
+    const data = s.kept[0].data as Extract<GraphicData, { template: 'steps' }>
+    expect(data.items.map((i) => i.parent)).toEqual([-1, -1, -1])
+    expect(data.connector).toBe('line')
+    // And the fixture's own tree, written wrong, comes back right.
+    const wrong: GraphicCandidate = { ...written, sentence: 's03', data: stepsData([-1, -1, -1, 2, 3], 'line') }
+    const nested = validateBaseline([wrong], menuOf(t), t)
+    expect((nested.kept[0].data as Extract<GraphicData, { template: 'steps' }>).items.map((i) => i.parent)).toEqual(fixture.parents)
+  })
+
+  it('checkGraphicData flags parents that are not a tree', () => {
+    const grounding = { assetId: t.assetId, sentence: 's03', words: [] }
+    expect(checkGraphicData(stepsData([-1, 0, 1, -1, -1], 'tree'), def('steps'), grounding, t)).toEqual([
+      { path: '$.items', message: 'the steps are not a valid tree' }
+    ])
+    expect(checkGraphicData(stepsData(fixture.parents, 'tree'), def('steps'), grounding, t)).toEqual([])
+  })
+
+  it('a steps row of function words alone grounds nothing → dropped', () => {
+    const v = validateGraphics(
+      answer(g({ sentence: 's00', template: 'steps', title: 'Step by step', items: [{ label: 'charge batteries', value: '' }, { label: 'of the', value: '' }] })),
+      menuOf(talk(['Charge batteries, most of the time.'])),
+      talk(['Charge batteries, most of the time.'])
+    )
+    expect(droppedOf(v)).toEqual([{ path: '$.graphics[0].items[1].label', message: "graphic dropped: 'of the' holds no word the transcript can ground" }])
+  })
+
+  it('a title the stretch does not say is replaced by the first fixed title, with a note', () => {
+    const said = ['We had 3 weddings in May and 5 in June.']
+    const v = one1(said, g({ sentence: 's00', template: 'bars', title: 'Our best year', items: [{ label: 'May', value: '3' }, { label: 'June', value: '5' }] }))
+    expect(kept(v)).toMatchObject([{ data: { title: 'By the numbers' }, beatWords: [2, 7] }])
+    expect(droppedOf(v)).toEqual([{ path: '$.graphics[0].title', message: "graphic repaired: the title 'Our best year' is not said in s00 — 'By the numbers'" }])
+  })
+})
+
+describe("validateGraphics: one graphic at a time, the answer's paths and messages", () => {
+  it('drops each graphic with its own path and the reason the panel shows, keeping the others', () => {
+    const said = ['We signed 40% of clients.', 'Then we spent $5 on ads and $9 on prints.']
+    const v = one1(said, g({ sentence: 's00', template: 'counter', value: '45%', label: 'clients' }))
+    expect(droppedOf(v)).toEqual([{ path: '$.graphics[0].value', message: "graphic dropped: '45%' is not said in s00" }])
+    const t = talk(said)
+    const many = validateGraphics(
+      answer(
+        g({ sentence: 's00', template: 'ring', value: '40%', label: 'clients' }),
+        g({ sentence: 's01', template: 'bars', title: 'Compared', items: [{ label: 'ads', value: '$5' }, { label: 'prints', value: '$7' }] }),
+        g({ sentence: 's01', template: 'quote', quote: 'we spent $5 on ads' })
+      ),
+      menuOf(t),
+      t
+    )
+    expect(kept(many).map((k) => k.data.template)).toEqual(['ring'])
+    expect(droppedOf(many)).toEqual([
+      { path: '$.graphics[1].items[1].value', message: "graphic dropped: '$7' is not said in s01" },
+      { path: '$.graphics[2].quote', message: "graphic dropped: 'we spent $5 on ads' is not said in s01" }
+    ])
+  })
+
+  it('a kept graphic records its sentence, one bound word per claim in claim order, its beats, its why and its source', () => {
+    const said = ['We had 3 weddings in May and 5 in June.']
+    const v = one1(said, g({ sentence: 's00', template: 'bars', title: 'Compared', items: [{ label: 'May weddings', value: '3' }, { label: 'June', value: '5' }], why: 'two months' }))
+    expect(kept(v)).toEqual([
+      {
+        sentence: 's00',
+        data: { template: 'bars', title: 'Compared', items: [{ label: 'May weddings', value: '3' }, { label: 'June', value: '5' }] },
+        bound: [5, 3, 2, 9, 7],
+        beatWords: [2, 7],
+        why: 'two months',
+        source: 'model'
+      }
+    ])
+  })
+
+  it('a quote beats on each of its words', () => {
+    const v = one1(['Honestly, put the camera where the light is.'], g({ sentence: 's00', template: 'quote', quote: 'put the camera where the light is' }))
+    expect(kept(v)).toMatchObject([{ bound: [1], beatWords: [1, 2, 3, 4, 5, 6, 7] }])
+  })
+
+  it("a number bound to a YouTube word, or to a Whisper word under 0.5, is a proposal (§6.6); a label's word is not", () => {
+    const said = ['We signed 40% of clients.']
+    const ring = g({ sentence: 's00', template: 'ring', value: '40%', label: 'clients' })
+    expect(kept(one1(said, ring, { wordSource: 'youtube-asr' }))[0].proposal).toEqual({ reason: 'check-the-number', wordSource: 'youtube-asr' })
+    expect(kept(one1(said, ring, {}, talk(said, { confidence: { '40%': 0.3 } })))[0].proposal).toEqual({ reason: 'check-the-number', wordSource: 'whisper-unsure' })
+    expect(kept(one1(said, ring, {}, talk(said, { confidence: { 'clients.': 0.3, '40%': 0.9 } })))[0]).not.toHaveProperty('proposal')
+  })
+
+  it('a field over its kept length (§6.6) → dropped; the why is cut', () => {
+    const said = ['We signed 40% of clients.']
+    const long = one1(said, g({ sentence: 's00', template: 'ring', value: '40%', label: 'clients '.repeat(6).trim() }))
+    expect(droppedOf(long)).toEqual([{ path: '$.graphics[0].label', message: 'graphic dropped: is 47 characters, at most 40 are drawn' }])
+    const why = one1(said, g({ sentence: 's00', template: 'ring', value: '40%', label: 'clients', why: 'x'.repeat(80) }))
+    expect(kept(why)[0].why).toBe(`${'x'.repeat(59)}…`)
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('validateGraphics calls the exported checkGraphicData, the one the dock calls (§6.6)', () => {
+    const spy = vi.spyOn(validator, 'checkGraphicData')
+    const t = talk(['We signed 40% of clients.'])
+    const graphic = g({ sentence: 's00', template: 'ring', value: '40%', label: 'clients' })
+    expect(kept(validateGraphics(answer(graphic), menuOf(t), t))).toHaveLength(1)
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(spy.mock.calls[0][0]).toEqual({ template: 'ring', value: '40%', label: 'clients' })
+    expect(spy.mock.calls[0][2]).toEqual({ assetId: 'asset-1', sentence: 's00', words: [] })
+    // And what it says decides: a check that finds a problem drops the graphic.
+    spy.mockReturnValue([{ path: '$.label', message: 'made up' }])
+    expect(droppedOf(validateGraphics(answer(graphic), menuOf(t), t))).toEqual([{ path: '$.graphics[0].label', message: 'graphic dropped: made up' }])
+  })
+})
+
+describe('the stretch: the cited sentence and one either side, over capped segments', () => {
+  const said = ['We signed 40% of our clients.', 'It was a good year.', 'The light was soft.', 'We shot in May.']
+  const ring = (sentence: string): AnswerGraphic => g({ sentence, template: 'ring', value: '40%', label: 'clients' })
+
+  it('a fact said in the next sentence of the one cited is kept; two sentences away it is dropped', () => {
+    expect(kept(one1(said, ring('s00')))).toHaveLength(1)
+    expect(kept(one1(said, ring('s01')))).toHaveLength(1)
+    const v = one1(said, ring('s02'))
+    expect(kept(v)).toEqual([])
+    expect(droppedOf(v)).toEqual([
+      { path: '$.graphics[0].value', message: "graphic dropped: '40%' is not said in s02" },
+      { path: '$.graphics[0].label', message: "graphic dropped: 'clients' is not said in s02" }
+    ])
+  })
+
+  it('stretchFor holds the cited sentence and one either side, their words and no more', () => {
+    const t = talk(said)
+    const st = stretchFor(t, 's01')!
+    expect(st.sentences.map((s) => s.id)).toEqual(['s00', 's01', 's02'])
+    expect(st.words.map((w) => w.index)).toEqual(Array.from({ length: t.segments[2].wordEnd + 1 }, (_, i) => i))
+    expect(stretchFor(t, 's00')!.sentences.map((s) => s.id)).toEqual(['s00', 's01'])
+    expect(stretchFor(t, 's09')).toBeNull()
+  })
+
+  it('a 40-word unpunctuated segment is capped, so the stretch is not the whole talk', () => {
+    // 1 s a word: 40 s, past the 15 s cap, so capSegments cuts it in four of ten words.
+    const words = ['We', 'signed', '40%', 'of', 'our', 'clients']
+    for (let i = 6; i < 40; i++) words.push(`word${i}`)
+    const t = talk([words.join(' ')], { msPerWord: 1000 })
+    const pieces = capSegments(t, 30, 15000).map((s) => s.id)
+    expect(pieces).toEqual(['s00.1', 's00.2', 's00.3', 's00.4'])
+    expect(kept(one1([], ring('s00.2'), {}, t))).toHaveLength(1)
+    const far = one1([], ring('s00.3'), {}, t)
+    expect(kept(far)).toEqual([])
+    expect(droppedOf(far)).toEqual([
+      { path: '$.graphics[0].value', message: "graphic dropped: '40%' is not said in s00.3" },
+      { path: '$.graphics[0].label', message: "graphic dropped: 'clients' is not said in s00.3" }
+    ])
   })
 })

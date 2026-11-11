@@ -11,6 +11,7 @@ import { validateSpine2 } from './validate2'
 import { baselineSpine2 } from './baseline2'
 import { composeAd } from './compose'
 import { cohere, type Cohered } from './coherence'
+import type { GraphicTemplateId } from '../graphics/template'
 
 /**
  * The pure half of a Director run: what the music is, how long the ad is, the
@@ -247,6 +248,22 @@ export function settle2(
   if ('rejected' in standard) throw new Error(`Even the standard cut could not be laid out: ${standard.rejected}`)
   const composed = settle(standard.plan, standard.recipe)
   return { composed, baseline: true, rejected: verdict.rejected, problems: [...verdict.problems, ...standard.problems, ...composed.problems] }
+}
+
+/**
+ * What the graphics pass is offered for one footage clip (docs/CLIPS.md §6.6):
+ * its transcript's asset and the clip, the language line's language, the
+ * capped sentences the clip shows (`capSegments` at 30 words or 15 s, §7.2),
+ * the templates offered, and where the words came from (§6.6's proposals).
+ * Built by `graphicsMenuFor` (lane T2b's).
+ */
+export interface GraphicsMenu {
+  assetId: string
+  clipId: string
+  language: string
+  sentences: { id: string; startMs: number; text: string; wordStart: number; wordEnd: number }[]
+  templates: GraphicTemplateId[]
+  wordSource: 'whisper' | 'youtube-asr' | 'youtube-lines'
 }
 
 export { buildSlots }
