@@ -102,13 +102,33 @@
 > `MARKER_READY` stays false), and OUTPUT has a Graphics section (§6.5).
 > Nothing in the app makes a graphic clip yet: `addGraphicClip`'s caller
 > is phase 2's panel (§6.6, T2b's), and `applyGraphics` is a typed stub.
-> Not built: the rest of phase 2, which is next: T2a (`claims.ts`, then
-> `validateGraphics.ts` with `checkGraphicData`, `claims` and the
-> property test, §6.7), then T3, T2b and T4 as §6.19 orders them. Still
+> Then **lane T2a, the validator** (§6.7), built 2026-11-11 in four
+> pieces, each read by two critics before its fixer and the next piece:
+> piece 1, `a29e8fa`, fix `1469cc5`; piece 2, `bac73ac`, fix `0c88a89`;
+> piece 3, `cbbd25d`, `bd0fcf3`, fix `f4b283b`; piece 4, `e027bd3`, fix
+> `3b887d0` (§6.7's Built note). Pushed 2026-11-11 as `3b887d0` (run
+> 43057394122: `macos-15` and `windows-latest` green, no annotation; the
+> installer job skipped, as on every push): **the lane is green on both
+> runners at `3b887d0`.** The suite at `3b887d0` on the Mac: 334 files
+> passed and 5 skipped (339), 4981 tests passed and 64 skipped (5045).
+> What the app can do now: nothing new on screen. The validator
+> (`claims.ts`; `validateGraphics.ts` with `checkGraphicData`;
+> `settleGraphics`' validation half in `run.ts`) exists and is tested,
+> and nothing in the app calls it: `graphicsMenuFor`, the schema, the
+> prompt, the ask and `decisionForGraphics` are T2b's, `applyGraphics`
+> is still the stub, and `settleGraphics` has no baseline until T4's
+> `baselineGraphics` (a rejected answer settles to no graphics, with its
+> reason). So still nothing in the app makes a graphic clip.
+> Not built: the rest of phase 2, which is next: T3 (beats, place,
+> budget, sound, apply), then T2b and T4 as §6.19 orders them. Still
 > yours from these lanes: the list in §6.12's "Phase 2's state,
-> 2026-11-11". (Before 2026-11-06 this line read: "Not built: everything
-> from phase 2 on, which is next: T3's typed stub of `applyGraphics`
-> first, then T1 (§6.19).") §2's total is
+> 2026-11-11", with T2a's items added below it. (Until T2a was recorded
+> this line read: "Not built: the rest of phase 2, which is next: T2a
+> (`claims.ts`, then `validateGraphics.ts` with `checkGraphicData`,
+> `claims` and the property test, §6.7), then T3, T2b and T4 as §6.19
+> orders them"; before 2026-11-06: "Not built: everything from phase 2
+> on, which is next: T3's typed stub of `applyGraphics` first, then T1
+> (§6.19).") §2's total is
 > now about 100-103.5 days with Step P (100.25-103.75 since §16.66's
 > answer, 2026-10-27).
 >
@@ -8532,6 +8552,16 @@ fixtures' wiring and the three tests above.
 >   always ("expected '950,000' to be '9,50,000'"), decimals dropped, the
 >   script made ASCII ("expected '20%' to be '२०%'"), fraction ≥ 1
 >   reformatted ("expected '15,00,000' to be '10,00,000'").
+>   (2026-11-11, lane T2a, `a29e8fa` and `1469cc5`: `numbers.ts` now
+>   exports `groupingOf` (with the `Grouping` type) and `MULTIPLIERS`,
+>   which `claims.ts` reads, so the drawn value and the claim share one
+>   grouping rule and one multiplier table; `numberOf` refuses a point
+>   directly before the digits ('.5%', '$.50' were 5 and 50) and reads an
+>   en dash before the digits as a minus ('–40%' is −40); a mixed middle
+>   grouping ('1,000,00,000') was refused before and still is, now
+>   through `groupingOf`, which also refuses an empty lead group. Those
+>   cases are in `tests/claims.test.ts`; `tests/graphicNumbers.test.ts`
+>   is unchanged. §6.7's Built note.)
 > - **`tree.ts`** (`35dd847`, fix `528986c`): `treeParents`, `parentsValid`,
 >   `connectorFor(parents)` (this lane's name; the plan names no function)
 >   and `SUB_COUNT_CUES` (exported, frozen). A label's run is its tokens
@@ -8542,7 +8572,9 @@ fixtures' wiring and the three tests above.
 >   lower case, edge trims outside letters, marks and digits, native digits
 >   to ASCII), because `tree.ts` reads it; it is T2a's file, which T2a
 >   extends (rule 2's split of a currency sign and a `%` into unit tokens
->   is not in it). `tests/graphicTree.test.ts`, 22 cases at `e06e1c3` (one
+>   is not in it; extended 2026-11-11 by T2a, the split being
+>   `claimTokens`, before an unchanged `claimToken`, §6.7's Built note).
+>   `tests/graphicTree.test.ts`, 22 cases at `e06e1c3` (one
 >   an `it.each` over the three fixtures), two of them seeded properties
 >   over 500 generated lists each (a mulberry32 loop: the repo has no
 >   fast-check), checked by an oracle written apart from `parentsValid`.
@@ -11688,6 +11720,22 @@ sentences: { id: string; startMs: number; text: string; wordStart: number;
 wordEnd: number }[]; templates: GraphicTemplateId[]; wordSource: 'whisper' |
 'youtube-asr' | 'youtube-lines' }`.
 
+> **Typed ahead of T2b, 2026-11-11** (lane T2a, `cbbd25d`, `bd0fcf3`;
+> §6.7's Built note). `GraphicsMenu` and `SettledGraphics` are declared
+> in `run.ts` in the words above and §6.7's, types only; `graphicsMenuFor`
+> is not built. The answer's types (`AnswerGraphic`, `GraphicsAnswer`,
+> `MAX_GRAPHICS` 4, `MAX_ANSWER_ITEMS` 6) and the unconstrained shape
+> check, `graphicsAnswerShape()`, live in `validateGraphics.ts` until T2b
+> builds `schemaGraphics.ts`: `graphicsSchema(menu, { constrained: false
+> })` must accept exactly what `graphicsAnswerShape` accepts (§6.6's
+> fields in declaration order, `additionalProperties` false, `maxItems` 4
+> and 6, `lit` an integer, no enum, length or integer range), then
+> `validateGraphics` checks against it (one line) and
+> `graphicsAnswerShape` goes; T2b imports or moves the types. A `parent`
+> written into an answer item is therefore the wrong shape and rejects
+> the answer (the schema has no field for it), and a `lit` of 0.5 rejects
+> it too.
+
 - **Sentences.** The segments of the words the clip shows, capped by
   `capSegments` (`transcript.ts:207`) at 30 words or 15 s (§7.2).
 - **Windows.** At most 24 sentences a call (`MAX_CANDIDATES`, `menu.ts:41`).
@@ -12132,6 +12180,13 @@ The rules, in order:
    - **pairs keep spoken order**: across a template's pairs, if value A is
      said before value B, A's label is said before B's label. This is what
      drops [Instagram 70%, referrals 30%] and [2019: 12, now: 3];
+     (Measured otherwise, 2026-11-11, `bac73ac`: in the Instagram sentence
+     as written, 'referrals' is 12 words from '30%', so `BIND_WINDOW`
+     drops the swap first, 'unpaired'; only the same swap said tighter,
+     "30% came from Instagram and 70% from referrals.", is dropped by the
+     order rule alone. Since `0c88a89` the stray-number rule, beyond these
+     words, also drops both swaps with the order rule taken out. §6.7's
+     Built note.)
    - unpaired `grounded` fields (a `steps` label, a `callout` label, a
      grounded title) bind as one run: their content tokens within one
      sentence, in spoken order, with gaps of at most 3 tokens between them.
@@ -12139,6 +12194,10 @@ The rules, in order:
    (`, ; : —` or a sentence start) to the next. If the clause a claim binds
    in holds a negator the field lacks, the graphic is **dropped**, or for a
    `quote` **demoted** to the verbatim clause with its negator.
+   (As built, 2026-11-11, `cbbd25d`, `f4b283b`: the demotion is not
+   built, and a negated quote drops; the clause is judged together with
+   the clause directly before it in the same sentence, beyond these
+   words; §6.7's Built note.)
    - **Negators**: `not`, `no`, `never`, `n't`, `without`, `nor`,
      `neither`, `none`, `nobody`, `nothing`; Hindi `नहीं`, `न`, `मत`; Telugu
      `కాదు`, `లేదు`.
@@ -12247,7 +12306,9 @@ validator never sees it (§6.16).
   exists with `claimToken(word)` alone, rules 1-3, because lane T1's
   `tree.ts` reads it; T2a extends this file rather than creating it, and
   rule 2's split of a leading currency sign and a trailing `%` into unit
-  tokens is not in it yet. §6.2's Built note.)
+  tokens is not in it yet. §6.2's Built note.) (2026-11-11: T2a built
+  the rest of this list and more; `claimToken` itself is unchanged, and
+  rule 2's split is `claimTokens`, before it. The Built note below.)
 - `numbersIn(tokens: string[]): { value: CanonNumber; at: number }[]` (`at`
   a token index)
 - `claimsOf(data: GraphicData, def: TemplateDef): Claim[]`
@@ -12263,7 +12324,10 @@ def: TemplateDef, grounding: GraphicSpec['grounding'], transcript:
 Transcript): Problem[]`, the per-graphic core (rules 4-9 over one graphic's
 data against its stretch) that `validateGraphics` calls for each answer
 graphic and the dock calls on each edit (§6.6), so the two cannot check
-differently; `graphicPanel.test` pins the shared call.
+differently; `graphicPanel.test` pins the shared call. (Built 2026-11-11
+with an optional fifth argument, `speakers`, for the dock; until T2b's
+`graphicPanel.test`, `claims.test` pins the shared call with a spy.
+§6.7's Built note.)
 
 **Tests** (§6.11 indexes them by phase):
 
@@ -12296,7 +12360,10 @@ differently; `graphicPanel.test` pins the shared call.
   numbers** (the bare $40/40% bars); **the same-sentence rule removed** (the
   next-sentence label); **the 8-token window removed** (the 12-token
   label); **spoken order not checked** (the Instagram swap and the 2019
-  bars, which every other rule passes); **negators exempt as function
+  bars, which every other rule passes; 2026-11-11: as built, the swap
+  case is the tighter one, the stray-number rule beyond these words also
+  drops both, and the mutation is killed on the reason; the Built note
+  below); **negators exempt as function
   words** (the "clients not happy" label); **rule 7 removed** (the 90 %
   ring); and, new: keyword's rule-7 check removed ("not easy"); keyword
   allowed across a sentence boundary; `lit`'s range check removed.
@@ -12317,13 +12384,389 @@ differently; `graphicPanel.test` pins the shared call.
   the property even when the spec is clean; `tests/graphicPaint.test.ts`
   (§6.3) pins `paintDrawList2d`'s `fillText` strings to those items. This is
   the bar's "by construction", node-pure. Mutations, each failing the
-  property: skip `grounded` fields; drop the order rule; let `inBetween` or
-  `drawListAt` regroup the settled value; let a template draw `data.label`
-  re-cased; accept a `keyword` run with a gap. (Let the painter regroup:
-  `graphicPaint` fails.)
+  property: skip `grounded` fields; drop the order rule (2026-11-11: as
+  built, these two fail the file only through its floors, never through
+  a kept graphic that does not ground; the Built note below); let
+  `inBetween` or `drawListAt` regroup the settled value; let a template
+  draw `data.label` re-cased; accept a `keyword` run with a gap. (Let the
+  painter regroup: `graphicPaint` fails.)
 
 **Days: 3** (phase 2): `claims.ts`, `validateGraphics.ts`, `settleGraphics`'
 validation half, and both tests.
+
+> **Built 2026-11-11 (lane T2a, §6.19).** Four pieces, each read by two
+> critics (the plan, the tests) before its fixer and the next piece:
+> piece 1, `a29e8fa`, fix `1469cc5`; piece 2, `bac73ac`, fix `0c88a89`;
+> piece 3, `cbbd25d` (3a), `bd0fcf3` (3b), fix `f4b283b`; piece 4,
+> `e027bd3`, fix `3b887d0`. Pushed as `3b887d0`, green on both runners
+> (the status block). Figures from the commit messages and the build
+> workflow's journal (`wf_babe4559-cc9`); where a later fix changed a
+> piece, the code at `3b887d0` is what is described, with one clause of
+> history. **Every "beyond the plan's words" item below is a choice this
+> section left open, made by a builder or a fixer, and yours to keep or
+> overrule; each one only drops more unless it says otherwise.** Nothing
+> in the app calls any of it yet (T2b, T3, T4).
+> - **`claims.ts`, the normaliser and numbers** (`a29e8fa`, `1469cc5`;
+>   the claims and binding `bac73ac`, `0c88a89`, `f4b283b`, `3b887d0`).
+>   Its exports at `3b887d0`: `claimToken` (unchanged since `35dd847`),
+>   `claimTokens`, `claimTokensOf`, `CLAUSE_BREAK`, `Currency`,
+>   `CanonNumber`, `numbersIn`, `QUALIFIERS`, `BIND_WINDOW` (8),
+>   `NEGATORS`, `NEGATOR_SPELLINGS`, `NEAR_NEGATORS`, `isNegator`,
+>   `FUNCTION_WORDS_EN` (the 40 as written), `Claim`, `claimsOf`,
+>   `ClaimStretch`, `BindResult`, `bind`, `clauseAt`, `marksOf`,
+>   `marksUnsaid`, `SAID_MARKS`. `BIND_BUDGET` (200,000 placements) is
+>   module-private.
+>   - **Rule 2's split is `claimTokens(word)`**, before `claimToken`,
+>     because `tree.ts` reads `claimToken`'s one string: a leading
+>     currency sign and a trailing `%` come off as unit tokens ('$40' →
+>     ['$', '40']); `claimTokensOf(text)` splits a phrase on white space;
+>     `numbersIn` takes their tokens and does not normalise again.
+>     **`CLAUSE_BREAK`** (`1469cc5`) is the token ',' put where a word's
+>     shed punctuation held `, ; : — – . ! ? । ॥ …`, so no number-word
+>     join crosses it ('forty, two' read 42) and rule 7's clause has an
+>     edge; 'Rs.' is the one abbreviation excepted ('Rs. 500' is ₹500),
+>     so 'Dr.' or 'approx.' breaks.
+>   - **The minus forms**: a hyphen-minus, U+2212 or an en dash directly
+>     before the digits or before a currency sign and the digits ('-5%',
+>     '$-5', '-$5', '–40%') is kept as its own '−' token and makes n
+>     negative (rule 2 alone would trim it, and a drawn 5% would ground on
+>     a spoken −5%); the words 'minus' and 'negative' before a number too
+>     (`1469cc5`: 'minus 40 percent', 'negative 5%' and '–40%' had read
+>     +40% and +5%).
+>   - **`numbersIn`** reads rule 4 as worded (both groupings through
+>     `numbers.ts`' `groupingOf`; the decimal point kept; k, m, mn, b, bn
+>     only written on the digits; one multiplier word of thousand,
+>     million, billion, lakh(s), crore(s); `MULTIPLIERS` shared with
+>     `numbers.ts`; % = percent = per cent; the currency signs and words,
+>     'rs' before a number too; the English number words, 'two hundred
+>     and five' = 205; lookups in Maps, so 'constructor' is no number
+>     word), and reads **NO number** wherever any reading could be a
+>     value not said: a point directly before the digits ('.5%', '$.50'
+>     had read 5% and $50); a scale word it does not apply or a second
+>     multiplier (`UNREAD_SCALES`: hundred after digits, hundreds,
+>     thousands, millions, billions, trillion(s), dozen(s), grand, the
+>     standalone k/m/mn/b/bn, and the Hindi and Telugu scale words such as
+>     लाख, हज़ार, करोड़, వంద, వేల, లక్ష, కోట్లు; '5 hundred' had
+>     read 5, '₹40 lakh crore' ₹4,000,000, '40 हज़ार' 40; 'plan 4 b',
+>     4 in `a29e8fa`, is no number since `1469cc5`); 'point' on either
+>     side ('one point two million' had read 1 and 2,000,000); two numbers
+>     side by side, both ('nineteen ninety nine' had bound as 99 and as 19,
+>     against the code's own comment; `0c88a89`); a fraction after it
+>     ('two and a half million' had bound counter 2 'million views');
+>     a range or ratio, both numbers ('to', 'or', 'in', 'of', 'out of',
+>     and 'between X and Y' since `f4b283b`; '1 in 4 couples'); a
+>     qualifier directly before it (`QUALIFIERS`: almost, nearly, about,
+>     around, roughly, approximately, approx, over, under, than, least,
+>     most; and 'up to', 'close to', 'upwards of'; `f4b283b`); a grouping
+>     neither western nor Indian, or mixed ('1,000,00,000'); digits of two
+>     scripts in one word ('4०', as `numberOf`); a trailing currency sign
+>     ('40€'); a currency with a percent ('$40%', '₹40 per cent': `a29e8fa`
+>     kept 'currency', `1469cc5` reversed it); a sign with another
+>     currency's word ('$40 rupees'); a hyphen pair other than a ten and a
+>     unit ('fifty-fifty' had given two numbers at one index). Not parsed,
+>     so dropped: Hindi and Telugu number words, ordinals, a decimal comma,
+>     '40-50', 'a thousand', 'a million', 'two thousand and five'. Beyond:
+>     `numbersIn` maps a private `numberSpans`, each number with its whole
+>     token span, which `bind` and `claimsOf` read.
+>   - **`claimsOf(data, def)`** reads `TemplateDef.fields` (with
+>     `kindFields`), `pairs`, `fixedTitles` and `appFields`: a pair's value
+>     field is ONE `number` claim whose `value` is the field's one number
+>     only when the field is that number and nothing else ('40 percent',
+>     '₹500'; '40 clients' and '40 to 50' bind nowhere, 'absent'); any other
+>     grounded field one `token` claim per content token, the English
+>     function words exempt (in any language's spec, since `claimsOf` takes
+>     no language), negators, direction words and comparatives never; a
+>     verbatim field one `run` claim. Beyond: `Claim.mid` marks keyword's
+>     run (bind has no template argument); `Claim.pair` is 0 for counter
+>     and ring and the item's index for bars.
+>   - **`bind(claims, stretch, lang)`** places every claim by backtracking
+>     over every placement, values first, and names the furthest stage
+>     reached. **The reasons**: `absent` (no equal number, token or run; a
+>     value field that is not one number; a verbatim run not on a clause or
+>     sentence edge), `unit` (equal values only in another unit),
+>     `unpaired` (no placement meets the pair's one sentence, the window,
+>     an unpaired run's one sentence, field order and gaps ≤ 3, and one
+>     occurrence per claim with no shared token of a number's whole span;
+>     also the stray-number and exchange rules and a search past
+>     `BIND_BUDGET`), `order` (rule 6's pairs; a list's rows), `negated`
+>     (rule 7; a run directly after a negator). **The window** is counted
+>     in spoken tokens, unit tokens counted and clause marks not, from the
+>     edge of the value's whole span (sign, digits, multiplier, unit): 8
+>     binds, 9 does not. Order across pairs is strict (every token of A's
+>     label before every token of B's), none within one label. The ok
+>     result carries `matched`, the stretch number each number claim bound
+>     to (how rule 9 judges the stretch's units, never the spec's); a
+>     failure an optional `at`, the placement that reached `order` or
+>     `negated`; `clauseAt(stretch, word)` is the quote demotion's seam,
+>     which nothing calls. Plurals (s, es) are folded only for an English
+>     `lang`, and never onto a word in `NOT_PLURALS` (news, has, his, yes,
+>     bus, gas, plus, less, this, thus, was, is, us, as, its, does, goes;
+>     `0c88a89`: 'new clients' had bound on 'news').
+>   - **Beyond rule 6, `0c88a89`: the stray-number rule** (a pair's label
+>     token as near or nearer to an unbound number of its sentence as to
+>     its own value: 'unpaired', judged after order and before rule 7;
+>     '40 clients and 12 staff' + counter 12 'clients' and '10% of staff
+>     quit and 90% of interns stayed' + ring 90% 'of staff quit' were kept)
+>     **and the exchange check** (`bind` runs `bindOnce`, then for every
+>     two pairs with different values binds again with the values
+>     exchanged; if that binds too, 'unpaired': 'Instagram gave us 30%,
+>     referrals 70%, and Instagram keeps growing.' let the false bars bind
+>     on the second 'Instagram' inside every written rule). Their measured
+>     cost, true graphics now dropped: ring 90% 'of startups fail' over
+>     "It's true that 90% of startups fail in 5 years." (the 5); bars
+>     [2019: 3, now: 12] over the 2019 sentence (the 40); ring 30% 'from
+>     Instagram' over the Instagram sentence (the 70%); counter 60 over
+>     'We grew from 40 to 60 clients.' and counter 300 over 'We shot 300 in
+>     2019, all weddings.' (the joiners; 'We shot 300 weddings in 2019.'
+>     binds). The eval should count these.
+>   - **Beyond rule 6, `3b887d0`: `itemsDisordered`**, a list's unpaired
+>     rows (steps' items) said in item order, else `order` ("'pack bag' is
+>     not said in the order the list draws it"): 'first charge batteries,
+>     then pack bag.' + steps [pack bag, charge batteries] was kept and
+>     drawn 1 and 2. Until then (`bac73ac`) no order between rows was
+>     checked.
+>   - **Rule 7 as built.** `NEGATORS` is exactly the list above;
+>     `isNegator` also reads `NEGATOR_SPELLINGS` ('cannot', 17 n't forms
+>     written without the apostrophe as an explicit list, since a pattern
+>     on 'nt' takes 'client' and 'want', and Hindi 'नही'; `0c88a89`),
+>     `NEAR_NEGATORS` (hardly, barely, scarcely; `f4b283b`) and any token
+>     ending n't or n’t, whatever `lang` says. Hindi 'ना' is not one (it is
+>     also the tag particle of 'है ना'). Applied per FIELD as worded: a
+>     counter '40' / 'clients not happy' over 'We had 40 clients not
+>     happy.' drops, since the value field lacks the 'not' (a callout with
+>     that label binds). **Beyond the words (`f4b283b`): the clause
+>     directly before the claim's first clause, in the same sentence, is
+>     judged with it**, so a negated clause governs the one after its
+>     mark ('It is not true, 90% of startups fail.', 'I would never say
+>     this: quit your job.' were kept; `0c88a89` had declined this as the
+>     plan's words, and the critics of piece 3 found it kept the review's
+>     own case with one comma). Its cost, measured and pinned: 'No, we
+>     have 40 clients.' and 'Not last year, but now we have 40 clients.'
+>     drop a true counter (two clauses back still binds). **Rule 8's
+>     "directly after a negator"** reads the spoken token before the run
+>     past any 'ever', across a sentence break ('never, ever, quit your
+>     job'; 'Never.' 'Quit your job.' are refused; `0c88a89`). A keyword's
+>     run holds no clause or sentence mark (`f4b283b`: 'It is easy, money
+>     comes slowly.' gave 'easy money'; 'I love my. Job is hard.' in one
+>     segment gave 'my job'). The quote demotion is not built: bind's run
+>     must start and end on an edge, so a negated quote drops, which this
+>     section allows.
+>   - **`marksOf(text, mode)` and `marksUnsaid`** (`3b887d0`, beyond rule
+>     2): rule 2 trims a word's edges so a SPOKEN word compares, but on the
+>     spec side a trimmed mark is model-written text the painter still
+>     draws, which rule 8's "no free mode" forbids. A value word may carry
+>     only a minus, a leading currency sign, a trailing % and a trailing
+>     point ('Rs.'), else not one number; a grounded or verbatim word only
+>     opening brackets or quotes and one currency sign before, a %,
+>     closing brackets or quotes and `. , ; : …` after, or be a dash alone;
+>     a verbatim word's trailing ? or ! only where the stretch's own word at
+>     that place carries it (`SAID_MARKS`). Kept at `e027bd3`, dropped now:
+>     counter '>40', '40+', '~40', '±40', '#1' and the like, ring '+40%',
+>     bars '70+', labels '> clients', 'clients?', callout '-bride', keyword
+>     '¬easy' and 'easy!' over 'this is easy.', quote 'keep it simple?' over
+>     'honestly, keep it simple.'. The allowed edge marks are the fixer's
+>     choice.
+> - **`validateGraphics.ts`** (new, `cbbd25d`, `f4b283b`, `3b887d0`).
+>   Exports: `AnswerGraphic`, `GraphicsAnswer`, `MAX_GRAPHICS` 4,
+>   `MAX_ANSWER_ITEMS` 6, `graphicsAnswerShape`, `STRETCH_SENTENCES` 1,
+>   `stretchFor`, `reportedBy`, `QUOTE_MAX_WORDS` 16, `KEYWORD_MAX_WORDS`
+>   4, `checkGraphicData`, `GRAPHIC_KEPT_CHARS`, `validateGraphics`,
+>   `validateBaseline`.
+>   - **`checkGraphicData(data, def, grounding, transcript, speakers =
+>     [])`**: the fifth argument is beyond the signature, the names the app
+>     may set as a said quote's speaker (the asset's Speaker, a link's
+>     channel), which the dock can pass (T2b) and the validator never has.
+>     In order: no grounding, "has no sentence to ground it"; the stretch
+>     (`stretchFor`: the cited capped segment and one either side, over
+>     `capSegments` at 30 words or 15 s); rule 9's item counts
+>     (`minItems`, `maxItems`), a said quote ≤ 16 words, a keyword's 1-4
+>     words, its `lit` range (the dock's warning) and in English a content
+>     word; then `claimsOf`, a value field not one number, `marksOf` over
+>     every grounded and verbatim field, and a grounded field with words
+>     but no content word (or an empty steps row or callout label, each a
+>     beat), "holds no word the transcript can ground"; then `bind`, each
+>     missing claim a problem on its field; `marksUnsaid` over each run;
+>     on the MATCHED numbers ring's % and 0 ≤ n ≤ 100 (the floor beyond
+>     the words) and bars' one unit; rule 8's speaker; written steps
+>     parents through `parentsValid`. Paths are rooted at the data
+>     ('$.items[1].value') and no message says "dropped", so the dock can
+>     show them as warnings (§6.6).
+>   - **`validateGraphics(answer, menu, transcript, { truncated })`**
+>     rejects only a truncated answer and the wrong shape (`conforms`
+>     against `graphicsAnswerShape()`, §6.6's note on what T2b must do with
+>     it). Per graphic: "not offered" for a template the menu did not offer
+>     and for `lower-third` and `screen-card` whatever the menu says; a
+>     sentence not on the menu; a drawn field over its kept length
+>     (`GRAPHIC_KEPT_CHARS`, grapheme clusters: dropped; `why` cut to 60
+>     with '…'); then the repairs and `checkGraphicData`, called through the
+>     module's own export (`import * as self`) so a spy sees it. **Repairs**,
+>     each a "graphic repaired: …" note: `lit` out of range to the last
+>     word; a bars or steps title that does not ground to the template's
+>     first fixed title; steps' written parents and connector stripped,
+>     then `treeParents` over the words from the first item's first bound
+>     word to the last item's last and `connectorFor` (flat and 'line' with
+>     a note if `parentsValid` fails, a branch `treeParents` cannot reach,
+>     so untested); a said quote's speaker the app's. The notes go into
+>     `dropped`, the only list §6.7's return has; a wrong-template field is
+>     ignored without a note (`dataOf` reads the template's own fields). A
+>     callout's shape is 'arrow' until placement sets it. Rule 11 is not
+>     read. `validateBaseline(candidates, menu, transcript)` puts the
+>     baseline's candidates through the same gate, `bound`, `beatWords` and
+>     proposal recomputed, paths '$.baseline[i]'. Declined by `f4b283b`:
+>     `settleOne` also calls the private `check()` beside the spied
+>     export, so the spy proves the call, not that the kept binding came
+>     from it (one function today).
+>   - **Rule 8's speaker, `reportedBy(stretch, first)`**: a run directly
+>     after a reporting verb (say, tell, ask, write in their forms, read
+>     wide; back past 'that', 'this', 'it' and an object pronoun, across
+>     clause and sentence marks) is reported, so never the speaker's own.
+>     A NAME is read only for "<name> said / says / told" with the subject,
+>     the verb and the run in one segment and no sentence mark between, no
+>     negator from that sentence's start to the verb, and the subject
+>     written with a capital, not a pronoun or function word, and not the
+>     sentence's first word unless the stretch writes it with a capital
+>     again where no sentence starts (`f4b283b`: 'That is not what Elon
+>     said.' 'Fail fast.', 'Never has Elon said: fail fast.', 'Nobody
+>     said: fail fast.', 'Then said', 'Mentors said' had shipped a name).
+>     So 'Elon said: fail fast.' alone refuses the quote, and 'I met Elon.
+>     Elon said: fail fast.' keeps Elon. Hindi and Telugu reporting verbs
+>     are not listed: a reported quote there reads as not reported.
+>   - **Proposal** (§6.6): any bound number claim with a YouTube
+>     `wordSource` gives 'check-the-number'; with Whisper, a bound number
+>     word whose confidence is below 0.5 ('whisper-unsure'; exactly 0.5 is
+>     none). Label words do not count. **`beatWords`** per §6.2's table:
+>     counter and ring the value's word, bars each item's value's, steps
+>     each item's label's first bound word, callout its label's, keyword
+>     its first word, quote one per spoken word of the run; times, spread
+>     and lead are `graphicBeats`' (T3).
+> - **`run.ts`** (`cbbd25d`, `bd0fcf3`): `GraphicsMenu`, `SettledGraphics`
+>   (§6.6's note), `GraphicsBaseline` and **`settleGraphics(answer, menu,
+>   transcript, { baseline? })`**, `settle2`'s twin: an accepted answer
+>   through `validateGraphics`, then rule 10; a rejected one (cut off, the
+>   wrong shape, or `{ error }`) through `validateBaseline` over
+>   `options.baseline`, the seam for T4's `baselineGraphics`, which is no
+>   candidates until then (a rejected answer settles to no graphics, with
+>   "the baseline's graphics are used: <reason>" first). Never throws.
+>   **Rule 10** (private `spaceGraphics`): onsets ≥ 6 s apart and at most
+>   max(1, ⌊clip s ÷ 20⌋) graphics, the earlier winning whatever order the
+>   answer lists them; the onset is the first beat word's `startMs`, the
+>   clip's seconds the span of the menu's sentences, each 24-sentence menu
+>   window spaced alone (`applyBudget` re-spaces across the project);
+>   spacing drops are notes on '$.graphics' naming template and sentence.
+>   **`GRAPHIC_SPACING` = { minGapS: 6, perS: 20 }**, frozen, lives in
+>   `graphics/template.ts` beside `GRAPHIC_TEMPLATES` (`bd0fcf3`), the file
+>   both `run.ts` and T3's `budget.ts` read, so neither owns it and T3
+>   does not move it.
+> - **The tests.** **`tests/claims.test.ts`** (new): 217 tests at
+>   `3b887d0` by the last fixer's run (39 at `a29e8fa`, 213 at `f4b283b`);
+>   every rule and every case this section names, built on real `Word[]`
+>   and `Segment[]` by `stretchOf`, each case named, plus every false
+>   graphic a critic found, pinned dropped, and the controls that must stay
+>   kept. **`tests/graphicsValidator.test.ts`**, the property test (new,
+>   `e027bd3`, 18 cases; 26 at `3b887d0` by the last fixer's run, 1.70 s
+>   alone): a mulberry32 PRNG and a true generator, 60 talks per template
+>   per language × the seven templates a model may write × en, hi, te =
+>   **1260 cases, all kept**, numbers in every rule-4 format, a third of
+>   the Hindi and Telugu talks in NFD (68 kept graphics on them at
+>   `e027bd3`); **an independent matcher** written from this section's
+>   words that imports neither `bind` nor `checkGraphicData` nor
+>   `claimTokens`, has its own tokeniser and its own copies of the 40
+>   function words, the negators and the fixed titles, and **shares only
+>   `claimToken` and `numbersIn`**, each pinned by hand in the file; since
+>   `3b887d0` it reads a field's marks from the raw text and orders a
+>   list's rows. **The painter half**, two halves (beyond the words): each
+>   kept graphic drawn at its settled frame by `drawListAt` with phase 1's
+>   fake measure must draw exactly the strings the validator checked
+>   (per-word pieces joined, the ring's % appended; the quote's marks and
+>   dash and steps' numerals set aside), nothing else and not nothing, and
+>   those strings put back as data must ground by the matcher; a kept
+>   graphic `graphicFits` calls too big counts as drawing nothing (bars 166
+>   of 180 drawn at `e027bd3`). **Adversarial generators**, each asserting
+>   dropped (or repaired) on every case, with case counts at `3b887d0`:
+>   swap 180, negator 1080, neighbour label 540, unit strip 359, keyword
+>   gap 174, keyword in a negated clause 180 (read as a negator put at the
+>   start of the keyword's own clause), lit 180, parent 180 (the answer
+>   rejected as the wrong shape, and through the baseline seam the written
+>   parents replaced by the app's), and since `3b887d0` decorate a value,
+>   label, keyword or quote with a mark 1080, reorder two steps 180, move
+>   the label 10 words past its value in its own sentence 360, duplicate
+>   one bars pair 180. The negator generator puts its negator at the bound
+>   clause's start, for a quote directly before the run, and asserts
+>   dropped (the demotion is not built). The matcher measures the window
+>   from the number's whole span, as `bind` does, and folds plurals with no
+>   exception list (`bind`'s `NOT_PLURALS` only drops more). **Floors**:
+>   kept ≥ 50 of 60 per template and language, drawn ≥ 150 per
+>   template, ≥ 150 cases per generator, ≥ 5 kept on NFD talks.
+> - **Mutations**, each by a script that counted its anchor at one match
+>   (`matchAll`; two for the two `self.checkGraphicData` sites) and
+>   restored the file from a copy, checked by `cmp`. **`claims.test`**:
+>   `claimToken` as `normaliseToken` ("expected '12' to be '1.2'"); strip
+>   `\p{M}` ("expected 'పళల' to be 'పెళ్లి'"; it and the no-NFC mutation fail
+>   only cases the `normaliseToken` swap also fails, since that swap
+>   replaces the whole function: recorded, not worked round); the decimal
+>   dropped; Indian grouping refused ("expected [] to deeply equal [ {
+>   …(2) } ]"); each multiplier ignored ("expected 4 to be 4000",
+>   "expected 5 to be 5000"); 'forty' not parsed; each of the 33
+>   `UNREAD_SCALES` words and five suffixes removed one at a time, each
+>   failing its own row; ignore units ("expected { ok: true, at: [ 102,
+>   103 ] } to match { ok: false, reason: 'unit' }"); units on the spec
+>   strings (the bare $40/40% bars, said so 'signups' is 13 tokens from
+>   '$40' so only this mutation gives units ['', '']); same sentence; the
+>   window (and off by one, the 8/9 pair); spoken order (killed on the
+>   reason: with order gone the stray-number rule still drops both swaps,
+>   'unpaired'); negators exempt; rule 7 removed; one occurrence twice;
+>   keyword across a sentence ("my job", and since `f4b283b` an
+>   unpunctuated two-segment form, so the segment rule alone still kills
+>   it); ring's % not required (only the 40-clients ring: "expected [ {
+>   sentence: 's00', …(5) } ] to deeply equal []"); keyword's rule 7
+>   removed ("not really easy"); lit's repair and range check; lower-third
+>   accepted; the model's parent kept ("expected [ -1, +0, +0 ] to deeply
+>   equal [ -1, -1, -1 ]"); the stretch ±2; the cap removed;
+>   `checkGraphicData` bypassed (the spy: "expected \"checkGraphicData\" to
+>   be called 1 times, but got 0 times"); spacing not applied, the later
+>   one winning, the cap and the 6 s gap each removed, the onset by the
+>   latest beat ("expected [ 800 ] to deeply equal [ 800, 12000 ]"); the
+>   baseline not validated; and one each for every fix above (the
+>   clause-before widening, the keyword clause mark, `NEAR_NEGATORS`,
+>   'between', the qualifiers, each speaker check, `minItems`, `maxItems`,
+>   ring's floor, `marksOf`'s three gates, `itemsDisordered`). The name
+>   test's own negator check of `cbbd25d` survived its mutation, was dead
+>   (the scan to the verb covers the subject) and was removed.
+>   **`graphicsValidator`**: skip grounded fields, 6 fail **only on the
+>   floors** ("en counter: 0 of 60 kept: expected 0 to be greater than or equal to 50"), since
+>   `checkGraphicData`'s "holds no word the transcript can ground" drops
+>   every labelled graphic first; with that check off too, the negator
+>   generator ("kept [{template:counter, value:$36, label:students}] —
+>   seed 100000 en counter cite s01"); drop the order rule, 3 fail **only
+>   on the floors** ("en bars: 0 of 60 kept"), since the exchange check
+>   then drops every true bars; with the exchange check gone too, the
+>   swap generator ("kept [{bars, title Compared, items bookings 22,
+>   followers 29 percent, editors 70%}] — seed 102000"); `drawListAt`
+>   regrouping ("data.value is drawn '70,0000', the validator checked
+>   '7,00,000'"); `inBetween` regrouping ("drawn '600,000' … '6,00,000'");
+>   the label re-cased (only the exact-string half: "drawn 'STUDENTS', the
+>   validator checked 'students'"); a keyword run with a gap; the pins
+>   (NFC: "expected 'వైబ్స్' to be 'వైబ్స్'", which only the pin sees);
+>   and, since `3b887d0`, `marksOf`'s gates (decorate, 289, 740, 51 and 52
+>   failing), `itemsDisordered` off (reorder, 180), bind's window raised to
+>   1000 (the window generator, 360; before, only `claims.test` caught
+>   it), bind's one-occurrence check removed (duplicate, 116; likewise),
+>   and the matcher's own window, keyword-clause, run-after-negator,
+>   value-marks, word-marks, said-marks and row checks, each killed (the
+>   window and keyword-clause checks had survived their mutations, dead,
+>   until a generator or a hand case reached them). Each generator's
+>   identity mutation fails ("the generator made a graphic that was
+>   said"). The case "every kept graphic grounds by the independent
+>   matcher" failed under no mutation at `e027bd3`: the true talks carry
+>   no distractors, so it certifies nothing alone (open, §6.12).
+> - **The suites**, each read to a file with `$?`: typecheck 0 and the full
+>   suite 0 at every commit; 333 files passed and 5 skipped (338), 4777
+>   tests passed and 64 skipped at `a29e8fa`; 4951 tests passed at
+>   `f4b283b`; at
+>   `3b887d0` 334 and 5 (339), 4981 and 64 (5045), read by the session
+>   on the Mac. `npm run build` 0 at `cbbd25d` and `bd0fcf3` (the
+>   module's self-import bundles). `tests/graphicTree.test.ts`
+>   (`claimToken`'s other reader) green at every piece.
 
 ### 6.8 Beats — the words land the animation
 
@@ -12514,7 +12957,11 @@ earlier one wins. A candidate is kept only when every rule holds:
    counter, keyword or steps, against D1's point of "three templates that
    fire without numbers" (§16.54). Being on the clip's first word, it is
    the earliest, so it is placed first and the next graphic starts 6 s
-   after it at the soonest.
+   after it at the soonest. (2026-11-11: `GRAPHIC_SPACING` = `{ minGapS:
+   6, perS: 20 }` exists, frozen, in `src/shared/graphics/template.ts`
+   beside `GRAPHIC_TEMPLATES`, built by lane T2a (`bd0fcf3`) for
+   `settleGraphics`' rule 10 ahead of T3's `budget.ts`, which reads it
+   from there; §6.7's Built note.)
 2. **One on screen.** Its span overlaps no kept graphic's span. A Director
    card (`COPY_RULE`, `ENDING_RULE`) counts as one: one piece of designed
    type at a time.
@@ -12762,7 +13209,7 @@ render check and the census.
 | 1-3 | `tests/graphicFrame.test.ts` (phase 1's 28 cases built 2026-10-31, `4196d43` and `0c8911f`; phase 2's built 2026-11-07/10, `f64a879`, `9e7a89e`, `712246e` and `85b59e3`, 60 cases at `e06e1c3`, §6.2's Built note) | phase 1 §6.3, phase 2 §6.2, the screen card §6.16 |
 | 1-2 | `tests/graphicStyle.test.ts`, with `tests/renderer/graphicStyleStore.test.ts` for the store's two actions (phase 1's half of both built 2026-10-28, `b965cda` and `0d603a8`; phase 2's 2026-11-10/11, `d680132`, `1a681c7` and `62f3c83`, 21 and 7 cases), and `tests/renderer/graphicsSection.test.tsx` (new, `1a681c7` and `62f3c83`, 8 cases; not named here before it was written) | §6.5 (the second half's Built note) |
 | 1-3 | `tests/renderer/graphicStore.test.ts` (phase 1's 21 cases built 2026-11-02, `a273729` and `fa4ddc3`) | phase 1 §6.3, the sounds that follow a graphic §6.14, the screen card §6.16 |
-| 2 | `tests/claims.test.ts`, `tests/graphicsValidator.test.ts` (the property test) | §6.7 |
+| 2 | `tests/claims.test.ts`, `tests/graphicsValidator.test.ts` (the property test) (both built 2026-11-11 by lane T2a: `claims.test` from `a29e8fa` to `3b887d0`, 217 tests at `3b887d0`; `graphicsValidator` `e027bd3` and `3b887d0`, 26; the last fixer's run) | §6.7 (its Built note) |
 | 2 | `tests/directorGraphics.test.ts`, `tests/renderer/transcriptGraphics.test.tsx`, `tests/renderer/graphicPanel.test.tsx`; and `tests/graphicApply.test.ts`, the stub's (built 2026-11-06/07, `41a3db0` and `ddd1ede`, 2 cases) | §6.6 (the stub's Built note) |
 | 2 | `tests/graphicHolds.test.ts` (M16) (built 2026-11-10, `1871004`, 4 cases), `tests/graphicTree.test.ts` (built 2026-11-07, `35dd847` and `528986c`, 22 cases at `e06e1c3`); and, not named here before they were written, `tests/graphicTemplates.test.ts` (`cb394b5`, `528986c`, 9 cases), `tests/graphicNumbers.test.ts` (`cb394b5`, 15) and `tests/graphicSpecs.test.ts` (`8f18cc8`, `528986c`, 11) | §6.2 (its Built note) |
 | 2 | `tests/graphicBeats.test.ts` | §6.8 |
@@ -12788,6 +13235,29 @@ T4's. Not built either: `claims.test`, `graphicsValidator`,
 `directorGraphics`, `transcriptGraphics`, `graphicPanel`, `graphicBeats`,
 `graphicPlace`, `graphicBudget`, `graphicSound` and `graphicStore`'s
 phase-2 cases.
+
+**Phase 2's half, lane T2a, 2026-11-11.** Built and pushed as `3b887d0`,
+green on both runners: `tests/claims.test.ts` and
+`tests/graphicsValidator.test.ts`, the property test, with every mutation
+§6.7 names for them run and failing (§6.7's Built note has each with its
+failure text). Two of them fail the property test **only through its
+floors**: "skip `grounded` fields" (`checkGraphicData`'s "holds no word
+the transcript can ground" drops every labelled graphic first: "en counter: 0
+of 60 kept") and "drop the order rule" (the exchange check, beyond §6.7's
+words, then drops every true bars: "en bars: 0 of 60 kept"); no kept
+graphic that fails to ground is ever shown for either, and with the net or
+the exchange check also taken out each is caught by a generator. The case
+"every kept graphic grounds by the independent matcher" failed under no
+mutation, since the true talks carry no distractor numbers, reported
+speech, qualifiers or ranges (`claims.test`'s named cases hold those).
+`graphicPanel.test`'s pin of the shared `checkGraphicData` call is T2b's;
+T2a pins it with a spy in `claims.test`. Still not built: `directorGraphics`,
+`transcriptGraphics`, `graphicPanel` (T2b), `graphicBeats`,
+`graphicPlace`, `graphicBudget`, `graphicSound` and `graphicStore`'s
+phase-2 cases (T3), and the harness, `graphic.int` and render-check
+halves (T4). (The paragraph above, written before T2a, lists
+`claims.test` and `graphicsValidator` as not built; that was its date's
+state.)
 
 #### Phase 0's cases
 
@@ -13802,22 +14272,34 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
   §6.5's Built notes and §6.6's stub note, each yours to keep or overrule):
   - the Hindi and Telugu strings in `tests/fixtures/graphics/specs.json`
     (the two `graphicHolds` pins: 'जगह देख लें', 8 graphemes; 'మేకప్', 3),
-    and the three English `nested-en-*.json` texts and parent lists;
+    and the three English `nested-en-*.json` texts and parent lists
+    (2026-11-11, the strings: you will check them in the evening; not
+    yet checked);
   - M21 (row 59, `tests/integration/asr.int.test.ts`): unmeasured; it now
     bears on how a Hindi value is written (T2's validator and prompt),
-    not on how the counter draws;
+    not on how the counter draws (2026-11-11: you asked what it means;
+    the session explained it, one short recording of spoken Hindi
+    numbers, transcribed and read for digits or words, and said its
+    natural time is the check on your real recording; still unmeasured,
+    still yours. Since T2a it bears on exactly this: Hindi and Telugu
+    number words and scale words read as no number, so such a graphic
+    drops);
   - whether a 16:9 third should take six rows (steps-en is dropped there
-    even at `FIT_MIN`; `templates/layout.ts`'s `LAYOUT_SIZES`);
+    even at `FIT_MIN`; `templates/layout.ts`'s `LAYOUT_SIZES`)
+    (2026-11-11: accepted as it is for now, to be fixed later, when the
+    graphics are checked on your real recording);
   - whether short counts should be held back (₹500, ౩౦౦, the rings' 40
     and 75 round to the whole value up to three frames before the beat;
     `counter.ts`, `ring.ts`, `bars.ts`; with M14);
   - ring-en's "40 percent" wider than the ring's hole under the fake
     measure (`ring.ts`; the look rating);
   - M16's 0.6 s-a-word figure, over the max for eight fixtures: enforce
-    it or not (`tests/graphicHolds.test.ts`, §6.15's phase-2 note);
+    it or not (`tests/graphicHolds.test.ts`, §6.15's phase-2 note)
+    (2026-11-11: accepted as it is, printed and not enforced);
   - `drawOnEase`: `expo-out` for counts, sweeps, widths and draw-ons
     where the style says `out-back`, against §6.2's worded formula
-    (`templates/layout.ts`);
+    (`templates/layout.ts`) (2026-11-11: to be seen later, at the same
+    check on your real recording; no decision);
   - undo and redo of a graphics style change do not rebake the graphic
     clips (`store.ts`; the export rebakes);
   - the Graphics section after the whole captions block, not "under the
@@ -13848,9 +14330,106 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
     known (`tests/graphicSpecs.test.ts`);
   - the AI helper pack's macOS 14 floor runs on no CI machine since
     2026-11-11 (`.github/workflows/ci.yml`, §3a.6, §16.48): whether that
-    matters before the beta;
+    matters before the beta (2026-11-11: you asked what it means; the
+    session explained it and recommended leaving it until the beta and
+    deciding then, by testing once on a macOS 14 Mac or by stating macOS
+    15 or later; no decision yet);
   - from phase 1, unchanged: the beat-frame allowance window, and the
     per-code-point painter mutation once in the app on the Mac.
+  - **From lane T2a (2026-11-11; §6.7's Built note).** False or
+    misleading graphics the validator still KEEPS:
+  - hedges and modality: 'We hope to sign 40 clients.' and 'We could sign
+    40 clients.' keep counter 40; no rule covers modality (`claims.ts`,
+    rule 7; `f4b283b`);
+  - 'We failed to sign 40 clients.' keeps the counter (so does 'unable
+    to'): 'failed', 'fail', 'unable' are not negators in §6.7's list, and
+    adding them would drop true graphics such as '90% of startups fail'
+    (`claims.ts`, `NEGATORS` or `NEAR_NEGATORS`; `3b887d0`);
+  - a correction in the next clause, 'We signed 40 clients? No, 30.',
+    keeps 40, since 'We signed 40 clients, not 30.' has the same shape and
+    there the clause confirms the 40 (`claims.ts`, `bind`; `f4b283b`);
+  - Telugu verb-ending negation: `NEGATORS.te` holds only the two words
+    and rule 7's suffix list does not exist ('40 క్లయింట్లు రాలేదు.' keeps
+    counter 40; §15 row 11); Hindi 'ना' is not a negator, being also the
+    tag particle (`claims.ts`);
+  - rule 4 read as worded: 'he lost 40 pounds' is £40, '4K' 4000,
+    'apartment 4B' 4 billion (k, m, b written on the digits); '10.000', a
+    European thousands point, reads 10 in both parsers (`claims.ts`,
+    `numbers.ts`; `1469cc5`).
+  - True graphics the validator now DROPS, the safe direction, each
+    reversible:
+  - the rule 7 widening: a negator in the clause directly before the
+    claim's, in the same sentence, negates, so 'No, we have 40 clients.'
+    drops a true counter (`claims.ts`, `bind`; `f4b283b`, pinned in
+    `claims.test`);
+  - the qualifiers (almost, nearly, about, around, roughly,
+    approximately, approx, over, under, than, least, most, 'up to',
+    'close to', 'upwards of') directly before a number, 'between X and Y'
+    and X to, or, in, of, out of Y: no number, so 'We signed more than 40
+    clients.' drops (`claims.ts`, `QUALIFIERS`; `0c88a89`, `f4b283b`);
+  - `NEAR_NEGATORS` (hardly, barely, scarcely) and `NEGATOR_SPELLINGS`
+    ('cannot', the n't forms without the apostrophe, Hindi 'नही') beside
+    §6.7's `NEGATORS`, to be confirmed (`claims.ts`);
+  - rule 7 per field, as worded: counter '40' / 'clients not happy' over
+    'We had 40 clients not happy.' drops; per graphic would keep it
+    (`claims.ts`; `0c88a89`);
+  - 'a thousand', 'two thousand and five', years said in pairs, 'two and
+    a half', Hindi and Telugu number words and scale words, a digit run
+    followed by 'hundred', a standalone k, m or b ('plan 4 b'), '४0' (two
+    scripts in one word) and '40 mn' as two words: no number, so the
+    graphic drops; M21 bears on the Hindi and Telugu part (`claims.ts`;
+    `1469cc5`, `0c88a89`, `3b887d0`);
+  - the stray-number and exchange rules, beyond rule 6, with their
+    measured cost (§6.7's Built note lists the true graphics they drop;
+    `claims.ts`, `bind`; `0c88a89`);
+  - a quote's speaker name only for "<Name> said / says / told" in one
+    segment with no negator before the verb, and a sentence-initial
+    capital a name only if the stretch writes it with a capital
+    elsewhere, so 'Elon said: fail fast.' alone gets no name and the
+    quote drops; Hindi and Telugu reporting verbs are not listed
+    (`validateGraphics.ts`, `reportedBy`; `f4b283b`);
+  - a keyword's run may hold no clause mark (`claims.ts`, `runsOf`;
+    `f4b283b`);
+  - marks: a value may carry only a minus, a leading currency sign, a
+    trailing % and a trailing point, and '>40', '40+', '~40', '#1' drop;
+    the edge marks a label or a quote may carry are the fixer's list
+    (`claims.ts`, `marksOf`; `3b887d0`);
+  - steps' rows held to spoken order (`claims.ts`, `itemsDisordered`;
+    `3b887d0`).
+  - Other:
+  - the Hindi and Telugu strings in `tests/claims.test.ts` and
+    `tests/graphicsValidator.test.ts` are the build's own and await your
+    check, like the fixture strings;
+  - rule 7's quote demotion is not built: a negated quote drops instead,
+    which §6.7 allows (`validateGraphics.ts`);
+  - the property test's true generator writes clean talks (no distractor
+    numbers, reported speech, qualifiers or ranges; `claims.test`'s named
+    cases cover those), so "every kept graphic grounds" certifies nothing
+    alone, and §6.7's two named mutations (skip grounded fields, drop the
+    order rule) fail it only through its floors
+    (`tests/graphicsValidator.test.ts`).
+
+- **Phase 2's state, lane T2a, 2026-11-11.** Built and pushed: lane T2a
+  (§6.7's Built note), `a29e8fa` … `3b887d0`, nine commits, green on both
+  runners at `3b887d0` (run 43057394122, `macos-15` and
+  `windows-latest`, no annotation; the job logs need a sign-in, so the
+  runners' own test totals are not known). The suite at `3b887d0` on the
+  Mac: typecheck 0; 334 files passed and 5 skipped (339), 4981 tests
+  passed and 64 skipped (5045), 229.58 s (read by the session to a file,
+  `$?` read). Against `62f3c83`'s 332 files and 4738 tests passed, the
+  lane added 2 test files and 243 passed tests. Nothing in the app calls
+  the validator yet (the status block). Not built: T2b, the rest of T3
+  and T4. **Of the bar above**, the lane carries the property test and
+  the adversarial generators: they exist, are green and are
+  mutation-checked (§6.11's T2a paragraph), over the draw list's text
+  items for the seven templates a model may write. The bar's own words,
+  "zero ungrounded, mispaired or de-negated graphics can ship", are **not
+  met**: nothing in the app ships through the validator yet (T2b), two of
+  the named mutations fail the property only through its floors, and the
+  lane's own list above holds false graphics it keeps (modality, 'failed
+  to', a correction in the next clause, Telugu verb endings). The tree's
+  item and M16 stand as the paragraph above says. Everything else there
+  is still ahead.
 
 **The spike's gate** (§16.56; the spike is §6.17). Read from `EFFECTS.md`
 §62, which holds H1-H10, H12 and H13 with their commands, machines and
@@ -14706,7 +15285,10 @@ Surface; H11 is phase 4's.
 §6's own open measurements stay as written: §15 row 10 (LM Studio's strict
 `json_schema` with `minItems: 0` under Gemma 4 E2B, answered by phase 2's
 first eval run) and row 11 (the Telugu negative endings, on the Telugu
-fixtures before phase 2's exit).
+fixtures before phase 2's exit). (2026-11-11: row 11 is still unmeasured;
+lane T2a built no Telugu suffix list, since none was collected, so a
+Telugu clause negated only by its verb ending keeps its graphic. The
+phase-2 note below.)
 
 > **Phase 0, as measured so far (2026-10-22; the Surface's libass run
 > 2026-10-27).** Superseded by the "as measured" note below
@@ -15335,7 +15917,14 @@ values, dated, as the steps above carry their Built notes (it did,
 >   rule §6.2 already settles for the drawer, so M21 cannot change how the
 >   counter draws a value. It can change how a Hindi value should be
 >   written into `data.value`, which is the validator's and the prompt's
->   (T2a, T2b).
+>   (T2a, T2b). (2026-11-11, lane T2a, `1469cc5`: the validator reads no
+>   number from Hindi and Telugu number words, nor from a digit before a
+>   Hindi or Telugu scale word ('40 हज़ार', '40 వేల' had read 40), so such
+>   a graphic is dropped, the safe direction. M21 is still unmeasured and
+>   now bears on exactly that: how often a Hindi number reaches the
+>   validator as words. Row 11 likewise: `NEGATORS.te` holds the two
+>   words, no Telugu suffix list exists, and a clause negated only by its
+>   verb ending keeps its graphic; unmeasured.)
 > - M10, M5 and M14 unchanged: no marker painter (`MARKER_READY` false),
 >   no `blur-rise`, every preset value and `DURATIONS` a proposal until
 >   M14 and the look rating.
@@ -16279,8 +16868,8 @@ piece table does (§6.3's, §6.16's, §6.17's, §6.18's).
 | 1 | D | the harness's `primitives` and Indic halves (0.25 of §6.3); `pathLength`, `strokes` widths, `graphic.int`'s phase-1 cases, `SHAPES`' graphic overlay (§6.11's half) (built 2026-11-02/03, each piece read by two critics before the next: `6592a38`, `69c2340`; `0954b3d`, `2bb706d`; `f8d74ee`, `683a6f0`, the last with the lane's one production change, `graphicBox`'s two far-side columns and rows, §6.3's "The box"; pushed as `683a6f0`; §6.11's three lane-D Built notes; phase 1's exit read 2026-11-06/07 in the development app on both machines and met, §6.12) | 0.25 + 0.5 | C; §6.20's D10 half |
 | 2 | T3, first | the typed stub of `applyGraphics` (`KeptGraphic`, the signature, §6.6), committed before T2's wiring starts (built 2026-11-06/07, read by two critics before its fix: `41a3db0`, `ddd1ede`; pushed with T1 as `51e2f23`; §6.6's stub note) | inside T3's 3 | phase 1's exit |
 | 2 | T1 | `GRAPHIC_TEMPLATES`' values first (the others read the field modes), then the layout, the eight draw files, `numbers.ts`, `tree.ts`, with `graphicFrame`'s second half, `graphicHolds`, `graphicTree` (§6.2); the style's second half (§6.5) (built 2026-11-07 to 11, each piece read by two critics before the next: `cb394b5`, `35dd847`, `8f18cc8`, `528986c`; `4e6004e`, `dd309bf`, `f64a879`, `9e7a89e`; `712246e`, `1871004`, `85b59e3`; `d680132`, `1a681c7`, `62f3c83`; and `51e2f23`, the census read on screen; pushed as `51e2f23`, green on both runners at `e06e1c3`; §6.2's and §6.5's phase-2 Built notes; no marker painter, M10 not passed) | 4 + 0.5 | phase 1's exit; M21 before the counter (built ahead of it, 2026-11-07: the gate paragraph below) |
-| 2 | T2a | `claims.ts`, then `validateGraphics.ts` with `checkGraphicData`, `claims` and the property test (§6.7) | 3 | T1's values |
-| 2 | T2b | `schemaGraphics.ts`, `promptGraphics.ts`, the ask's fix with `directorAsk`, `run.ts`'s `graphicsMenuFor`, `settleGraphics` and `decisionForGraphics`, Direct's and the tile's wiring (Clip it's is step 4's), `TranscriptGraphics.tsx`, `GraphicPanel.tsx`, the store's actions but `setGraphicSounds`, with `directorGraphics`, `transcriptGraphics`, `graphicPanel` (§6.6) | 2 | T2a's validator; T3's stub |
+| 2 | T2a | `claims.ts`, then `validateGraphics.ts` with `checkGraphicData`, `claims` and the property test (§6.7) (built 2026-11-11, each piece read by two critics before the next: `a29e8fa`, `1469cc5`; `bac73ac`, `0c88a89`; `cbbd25d`, `bd0fcf3`, `f4b283b`; `e027bd3`, `3b887d0`; with `settleGraphics`' validation half, `GraphicsMenu` and `SettledGraphics` in `run.ts` and `GRAPHIC_SPACING` in `template.ts`; pushed as `3b887d0`, green on both runners; §6.7's Built note; nothing in the app calls it until T2b) | 3 | T1's values |
+| 2 | T2b | `schemaGraphics.ts`, `promptGraphics.ts`, the ask's fix with `directorAsk`, `run.ts`'s `graphicsMenuFor`, `settleGraphics` (its validation half built by T2a, 2026-11-11; the baseline seam is T4's) and `decisionForGraphics`, Direct's and the tile's wiring (Clip it's is step 4's), `TranscriptGraphics.tsx`, `GraphicPanel.tsx`, the store's actions but `setGraphicSounds`, with `directorGraphics`, `transcriptGraphics`, `graphicPanel` (§6.6) | 2 | T2a's validator; T3's stub |
 | 2 | T3 | `beats.ts` with `graphicBeats` (§6.8); `place.ts` (with `freeSpace.ts`'s `samplesOver`) and `budget.ts` with `graphicPlace`, `graphicBudget` (§6.9); `sound.ts` (`GRAPHIC_SOUND_FILES`), `graphics/apply.ts` (`applyGraphics`, `lowerThirdFor`, `clearGraphics`), `director/apply.ts`'s constants, sweep and return, the store's follow-on edits (`removeClip`, `moveClip`, `moveSelectionTo`, `pasteClipboard`), `setGraphicSounds` and the switch, with `graphicSound` and `graphicStore`'s phase-2 cases (§6.14) | 0.5 + 1 + 1.5 | T1's values |
 | 2 | T4 | the baseline and the eval block, the fixtures read, M14's and the look rating's runs (§6.10); the harness's `templates`, `curves`, `look` and per-template Indic options, `graphic.int`'s phase-2 cases, the property test's wiring (§6.11's half) | 1.5 + 0.5 | T1-T3 |
 | spike | H | §6.17's pieces: the worker's `hands` mode, `hands/types.ts`, `events.ts`, `oneEuro.ts`, `anchor.ts`'s `tipOnFrame`, the cases §6.17 lists; your runs | 1.5 | your footage; runs during phase 2 (nothing of phases 1-2 is needed: `sourceToFrame` through the reframe exists) |
@@ -16315,7 +16904,13 @@ cannot change how the counter draws. It can still change how a Hindi
 value should be written into `data.value`, which is T2a's and T2b's
 (the validator and the prompt); M21 itself is unmeasured and yours. Of
 the measurements, M7 still gates phase 3's glow, and M10 the marker
-painter, which T1 did not build. Next: T2a.)
+painter, which T1 did not build. Next: T2a.) (2026-11-11: T2a is built
+and pushed through `3b887d0`, green on both runners, so both of T2b's
+gates, T2a's validator and T3's stub, are met. Next: T3, then T2b, then
+T4, the order the session set (the table above lists T2b's row before
+T3's; T3 needs only T1's values). M21, unmeasured, now bears on how
+often the validator drops a Hindi number said as words, §6.15's phase-2
+note.)
 
 **Where §6.20 falls.** Outside step 3's days, inside phase 1's run:
 
@@ -18639,7 +19234,12 @@ Each is named in its step, and each step's first task is its own row:
     ever answers prose under it; LM Studio's context length for the user's
     load; Ollama past `num_ctx` (§6.6).
 11. Telugu negative verb endings on the Telugu fixtures, against the
-    validator's rule 7 (§6.7).
+    validator's rule 7 (§6.7). (2026-11-11: lane T2a built rule 7 with
+    `NEGATORS.te` as the two words §6.7 lists and no suffix list, since
+    none has been collected; so a Telugu clause negated by its verb ending
+    keeps its graphic ('40 క్లయింట్లు రాలేదు.' keeps counter 40), and the
+    property test does not generate it. Still unmeasured; §6.7's Built
+    note, §6.12's T2a items.)
 12. Prefill time for a 3k-token Best-clips prompt on the Surface, against
     the 180 s timeout.
 13. YouTube ASR word timing against faster-whisper on three videos (step
@@ -18924,7 +19524,11 @@ H11, and H12 again, in phase 4.
   ahead of it on 2026-11-07, since `inBetween` keeps the value's own
   script and grouping; M21 now bears on how T2's validator and prompt
   should have a Hindi value written, not on the counter. §6.15's phase-2
-  note.)
+  note.) (2026-11-11, lane T2a: the validator reads Hindi and Telugu
+  number words, and a digit followed by a Hindi or Telugu scale word
+  ('40 हज़ार', '40 వేల'), as no number, so a graphic whose number was said
+  that way is dropped, the safe direction; M21, still unmeasured, now
+  sizes exactly how often that bites.)
 
 ---
 

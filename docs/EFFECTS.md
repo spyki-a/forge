@@ -8525,7 +8525,7 @@ suite and CI are the orchestrator's.
   and the preview's recompute on a long followed clip while editing.
 - **Burned-in text** (§5.3): after 1g.
 
-## 61. Graphics: the forks measured (phase 0 of step 3, then phase 1's first) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22), and on the Surface the libass run and the development app (2026-10-27); in node, phase 1's M9 (2026-10-27) and the stroke's flattening (2026-10-28); and D10's three readings, the Noto fonts' provenance, the Mac's libass against the fontsdir, and `document.fonts.check` (2026-10-29); and under painter A, Chrome 152's canvas (negative radii, a 0-side canvas, `globalAlpha`) and, in node, the draw list's mixed faces and bounds and the frames' edges (2026-10-30/31); and lane C's worker encoder and measureText in the pane's Chrome 152 (2026-11-01) and, in node, the box route under crop, mask, matte and transitions (2026-11-02); and lane D's three, geq's w − 2 clamp on the box route, a stroke's chroma through `yuva420p` (M19 in part) and `flattenPath` against `SVGPathElement` (M8 in part) (2026-11-03); and phase 2's lanes T3-first and T1, in node and on the harness census (2026-11-06 to 11)
+## 61. Graphics: the forks measured (phase 0 of step 3, then phase 1's first) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22), and on the Surface the libass run and the development app (2026-10-27); in node, phase 1's M9 (2026-10-27) and the stroke's flattening (2026-10-28); and D10's three readings, the Noto fonts' provenance, the Mac's libass against the fontsdir, and `document.fonts.check` (2026-10-29); and under painter A, Chrome 152's canvas (negative radii, a 0-side canvas, `globalAlpha`) and, in node, the draw list's mixed faces and bounds and the frames' edges (2026-10-30/31); and lane C's worker encoder and measureText in the pane's Chrome 152 (2026-11-01) and, in node, the box route under crop, mask, matte and transitions (2026-11-02); and lane D's three, geq's w − 2 clamp on the box route, a stroke's chroma through `yuva420p` (M19 in part) and `flattenPath` against `SVGPathElement` (M8 in part) (2026-11-03); and phase 2's lanes T3-first and T1, in node and on the harness census (2026-11-06 to 11); and lane T2a's validator against the false graphics its critics wrote, in node (2026-11-11)
 
 For `docs/CLIPS.md` §6.15 (step 3's phase 0, "Measure before relying"):
 pieces 0.1–0.3 were built on the evening of 2026-10-21 in seven commits,
@@ -10955,3 +10955,121 @@ width per UTF-16 unit); **no render check has run on a phase-2 drawing**
   started into `window.__r` and polled.
 - **The `macos-14` runner's retirement** of 2026-11-02, met on this lane's
   push, is §59's last subsection.
+
+### Phase 2, lane T2a, 2026-11-11
+
+`CLIPS.md` §6.7's Built note. Read from the nine commits (`a29e8fa` …
+`3b887d0`), the build workflow's journal (four builders, eight critics,
+four fixers) and the session's reads on the Mac. Every figure is vitest in
+node; each "kept" below was probed by a builder or a critic on the commit
+named, through `bind`, `checkGraphicData` or `settleGraphics`, and is
+pinned dropped since. Only what cost time or would not be guessed:
+
+- **Trimming edges so a spoken word compares also trims what the model
+  wrote.** Rule 2 trims characters outside letters, marks and numbers;
+  `claimToken` did it on both sides, so on the SPEC side a value '>40',
+  '40+', '~40', '±40' or '#1', a label 'clients?' or '↑ clients', a callout
+  '-bride', a keyword '¬easy' or 'easy!' and a quote 'keep it simple?'
+  over 'honestly, keep it simple.' all bound as the clean word, and the
+  painter draws the field verbatim. `3b887d0`'s message lists 23 such
+  graphics kept at `e027bd3`. The property test could not see it: its
+  independent matcher shared `claimToken`, so its `valueOf` read '>40' as
+  40 too, the same hole on both sides. Fixed by `marksOf`, which reads a
+  spec field's marks from the raw text (and the matcher now does the
+  same). **Normalising for comparison and checking what is drawn are two
+  jobs; a shared normaliser hides the second.**
+- **A leading decimal point is punctuation to an edge trim.** '.5%' read
+  5% and '$.50' read $50, in `claims.ts` and in `numbers.ts`' `numberOf`
+  alike (`a29e8fa`); a ring '5%' would have grounded on half a percent.
+  The minus had been carved out of the trim for exactly this reason, and
+  the point had not. `1469cc5`: both parsers read no number.
+- **"The safe direction" in a comment was false three times.** `a29e8fa`
+  listed 'minus' as a word and a digit run before 'hundred' as "not
+  covered (the safe direction, dropped later by the binding)". Measured:
+  'minus 40 percent' and 'negative 5%' read +40% and +5%, '–40%' (an en
+  dash, which the trim did not know as a minus) +40%, '5 hundred' 5,
+  '₹40 lakh crore' ₹4,000,000, '40 हज़ार' 40: each a value read, positive
+  or at the wrong magnitude, and bound. Likewise "nineteen ninety nine"
+  bound as 99 and as 19, and "two and a half million views" bound counter
+  2 'million views', against `numbersIn`'s own comment that both were not
+  parsed (`0c88a89`). **Probe a "dropped" claim; a parser that reads part
+  of a span returns a wrong number, not none.**
+- **A comma inside a number-word run.** `claimTokens` stripped
+  punctuation, so 'we had forty, two of them came back' read 42 and
+  'forty. Two' 42. `numbersIn(tokens)` as the plan signs it cannot see a
+  boundary; `1469cc5` emits a `CLAUSE_BREAK` token where the mark stood,
+  which also gave rule 7 its clause edge. 'Rs.' is the one exception.
+- **The plan's own swap is dropped by the window, not the order rule.**
+  §6.7 names [Instagram 70%, referrals 30%] over "Last year 30% of our
+  clients came from Instagram and 70% from referrals" as what only the
+  order rule drops; 'referrals' is 12 words from '30%', so `BIND_WINDOW`
+  drops it first (`bac73ac`). The order rule's case had to be said
+  tighter, 8 tokens.
+- **The written rules let a false chart through on a repeated word.**
+  'Instagram gave us 30%, referrals 70%, and Instagram keeps growing.'
+  with bars [Instagram 70%, referrals 30%] bound the label to the second
+  'Instagram', after 70%, so spoken order held; '40 clients and 12 staff'
+  gave counter 12 'clients'; '10% of staff quit and 90% of interns
+  stayed' gave ring 90% 'of staff quit'. Each passes every rule as
+  worded. `0c88a89` added the exchange check (bind again with two pairs'
+  values exchanged; if that binds too, drop) and the stray-number rule (a
+  label as near or nearer to an unbound number of its sentence as to its
+  value drops); measured cost: five true graphics dropped, among them
+  'We grew from 40 to 60 clients.' + counter 60.
+- **A list's rows were never ordered.** Rule 6 orders a field's own
+  tokens and the pairs, and says nothing of a list's rows, so 'first
+  charge batteries, then pack bag.' kept steps [pack bag, charge
+  batteries], drawn 1 and 2, through three pieces and four critics, and
+  the matcher had the same blind spot. Found by piece 4's plan critic;
+  `itemsDisordered` (`3b887d0`).
+- **One comma defeats rule 7's clause.** "It is not true, 90% of startups
+  fail." kept the ring of the review's own case, since the clause starts
+  after the comma; ASR writes such commas. `f4b283b` judges the clause
+  directly before as well. **Its cost, measured: 'No, we have 40
+  clients.' now drops a true counter**, and 'Not last year, but now we
+  have 40 clients.' too (two clauses back still binds).
+- **NEGATORS' "n't" never matches a token.** `claimToken` keeps "don't"
+  and "don’t" whole, so an exact match on "n't" finds nothing;
+  `isNegator` matches the ending, both apostrophes, and ASR's apostrophe-
+  less forms needed an explicit list ('dont', 'cant'; a pattern on 'nt'
+  takes 'client' and 'want').
+- **A matcher check no generator reaches is dead.** In the property
+  test, the independent matcher's window check (deleted: 18 of 18 green,
+  the full suite green) and its keyword one-clause check survived their
+  mutations, because no generated talk put a label past the window or a
+  keyword across a comma; production's window could be raised to 1000
+  with the file green, caught only by `claims.test`. `3b887d0` added a
+  hand case and a "label past the window" generator (360 cases), and both
+  mutations then fail. **And "drop the order rule" is caught only by the
+  floors**: with it gone, the exchange check finds every TRUE bars binding
+  swapped too and drops it ("en bars: 0 of 60 kept"); the swap generator
+  sees a false chart only with the exchange check also gone. "Skip
+  grounded fields" is the same, behind `checkGraphicData`'s "holds no
+  word" net. The case "every kept graphic grounds by the matcher" failed
+  under no mutation at all: the true talks carry no distractors.
+- **A Devanagari NFC case that compared a string with itself.** The
+  literal 'क़ल' in `a29e8fa`'s case was already U+0915 U+093C U+0932, so
+  `normalize('NFD')` returned it unchanged; with NFC removed from
+  `claimToken`, only the Latin 'Café' case failed. `1469cc5` writes the
+  composed form in escapes (U+0958, a composition exclusion, which NFC
+  changes) and adds a Telugu case whose NFD differs ('నలభై', U+0C46
+  U+0C56). Likewise the mixed-grouping rule had no test reaching it: all
+  three "bad grouping" inputs were refused by the earlier length check.
+- **Mutation uniqueness cannot always be had.** §6.11 asks each mutation
+  be killed by a case no other rule catches; "strip `\p{M}`" and "no NFC"
+  fail only cases that the "`normaliseToken` swap" also fails, since that
+  swap replaces the whole function each of them changes one line of.
+  Recorded, not worked round.
+- **Whole-object snapshots of a bind result**, flagged by two test critics
+  before they bit: `{ ok, at, matched }` and whole `GraphicCandidate`s
+  pinned with `toEqual` would fail the moment a field is rightly added
+  (phase 4's anchor). Made `toMatchObject` plus a length or
+  `not.toHaveProperty`, and the relaxed versions mutation-checked.
+- **Concurrent agents in one working tree contaminate mutation runs.**
+  Piece 4's plan critic saw `claims.ts` and `validateGraphics.ts` change
+  mtime under it while another agent mutated and restored them, and one
+  probe came back kept once and dropped on every rerun; other critics
+  found scratch test files appearing and vanishing (a full run once
+  exited 1 on "Cannot find module" for one). Its results were taken from
+  a `git archive` copy; the fixers ran each mutation alone and `cmp`-
+  checked the files after every batch.
