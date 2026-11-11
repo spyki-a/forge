@@ -4,19 +4,28 @@ import {
   CLAUSE_BREAK,
   FUNCTION_WORDS_EN,
   NEGATORS,
+  bind,
   claimToken,
   claimTokens,
   claimTokensOf,
+  claimsOf,
+  clauseAt,
   numbersIn,
-  type CanonNumber
+  type CanonNumber,
+  type Claim,
+  type ClaimStretch
 } from '@shared/director/claims'
 import { numberOf } from '@shared/graphics/numbers'
+import { GRAPHIC_TEMPLATES, type GraphicData, type TemplateDef } from '@shared/graphics/template'
+import type { Segment, Word } from '@shared/transcript'
 import specs from './fixtures/graphics/specs.json'
 
 /*
- * director/claims.ts, the normaliser half (docs/CLIPS.md §6.7 rules 1-5's
- * normaliser and the exports list). The binding cases (the review's five,
- * the negation and order cases) are the second half's, with claimsOf and bind.
+ * director/claims.ts (docs/CLIPS.md §6.7): the normaliser (rules 1-4 and the
+ * lists), then claimsOf and bind (rules 5-8) with the review's cases, each
+ * named. Rule 9's template rules over a bound graphic (ring's %, bars' one
+ * unit) are validateGraphics.ts's; the cases here that need one assert the
+ * bind-level half and say what the template rule then decides.
  *
  * Each mutation §6.7 and the lane's brief name was put back and run against
  * this file; the case that kills it is named in the lane's commit.
@@ -453,5 +462,343 @@ describe('the lists rules 6-8 name', () => {
     for (const list of [NEGATORS.en, NEGATORS.hi, NEGATORS.te, directions, comparatives]) {
       for (const w of list) expect(FUNCTION_WORDS_EN, w).not.toContain(w)
     }
+  })
+})
+
+// ---------------------------------------------------------------------------
+// The second half: claimsOf and bind.
+
+/**
+ * A stretch as the validator gets it: real Word[] (indices from `first`, 400 ms
+ * each) and one Segment per sentence, wordStart..wordEnd inclusive.
+ */
+function stretchOf(sentences: string[], first = 100): ClaimStretch {
+  const words: Word[] = []
+  const segs: Segment[] = []
+  let index = first
+  sentences.forEach((text, k) => {
+    const start = index
+    for (const w of text.split(/\s+/u).filter(Boolean)) {
+      words.push({ index, text: w, startMs: index * 400, endMs: index * 400 + 350, confidence: null })
+      index += 1
+    }
+    segs.push({
+      id: `s${String(k).padStart(2, '0')}`,
+      startMs: start * 400,
+      endMs: (index - 1) * 400 + 350,
+      text,
+      wordStart: start,
+      wordEnd: index - 1
+    })
+  })
+  return { words, sentences: segs }
+}
+
+/** The word index of the first word of `sentence` (in a stretch built by `stretchOf`) whose text is `text`. */
+function wordAt(stretch: ClaimStretch, text: string): number {
+  const found = stretch.words.filter((w) => w.text === text)
+  expect(found, `"${text}" in the stretch`).toHaveLength(1)
+  return found[0].index
+}
+
+function def(id: keyof typeof GRAPHIC_TEMPLATES): TemplateDef {
+  const d = GRAPHIC_TEMPLATES[id]
+  expect(d, id).toBeDefined()
+  return d!
+}
+
+function bindData(data: GraphicData, sentences: string[], lang = 'en'): ReturnType<typeof bind> {
+  return bind(claimsOf(data, def(data.template)), stretchOf(sentences), lang)
+}
+
+function bars(items: [label: string, value: string][], title = 'By the numbers'): GraphicData {
+  return { template: 'bars', title, items: items.map(([label, value]) => ({ label, value })) }
+}
+
+describe('claimsOf', () => {
+  it("a counter: its value one number claim, its label's content tokens, both in pair 0", () => {
+    const claims = claimsOf({ template: 'counter', value: '40 percent', label: 'of couples book in March' }, def('counter'))
+    expect(claims).toEqual([
+      { path: 'value', text: '40 percent', kind: 'number', value: { n: 40, unit: '%' }, pair: 0 },
+      { path: 'label', text: 'couples', kind: 'token', pair: 0 },
+      { path: 'label', text: 'book', kind: 'token', pair: 0 },
+      { path: 'label', text: 'march', kind: 'token', pair: 0 }
+    ])
+  })
+
+  it('bars: each item its own pair, in item order; a fixed title makes no claim, a said title does', () => {
+    const fixed = claimsOf(bars([['Ads', '$40'], ['Signups', '40%']]), def('bars'))
+    expect(fixed.map((c) => [c.path, c.kind, c.pair])).toEqual([
+      ['items[0].label', 'token', 0],
+      ['items[0].value', 'number', 0],
+      ['items[1].label', 'token', 1],
+      ['items[1].value', 'number', 1]
+    ])
+    const said = claimsOf(bars([['Ads', '40']], 'Where the money went'), def('bars'))
+    expect(said.filter((c) => c.path === 'title').map((c) => c.text)).toEqual(['where', 'money', 'went'])
+    expect(said.find((c) => c.path === 'title')?.pair).toBeUndefined()
+  })
+
+  it('a value field that is not exactly one number has no value, so it binds nowhere', () => {
+    for (const value of ['40 clients', '40 to 50', 'forty-ish', '', 'one point two million']) {
+      const [c] = claimsOf({ template: 'counter', value, label: '' }, def('counter'))
+      expect(c, value).toMatchObject({ kind: 'number', path: 'value' })
+      expect(c.value, value).toBeUndefined()
+    }
+  })
+
+  it('negators, direction words and comparatives are claims; function words are not', () => {
+    const texts = claimsOf({ template: 'callout', label: 'not up to the more than before', shape: 'arrow' }, def('callout'))
+      .map((c) => c.text)
+    for (const w of ['not', 'up', 'more', 'than', 'before']) expect(texts, w).toContain(w)
+    for (const w of ['to', 'the']) expect(texts, w).not.toContain(w)
+  })
+
+  it('in Hindi and Telugu every token is a claim', () => {
+    expect(claimsOf({ template: 'callout', label: 'दुल्हन का लहंगा', shape: 'arrow' }, def('callout')).map((c) => c.text))
+      .toEqual(['दुल्हन', 'का', 'लहंगा'])
+    expect(claimsOf({ template: 'callout', label: 'పెళ్లి మండపం', shape: 'circle' }, def('callout')).map((c) => c.text))
+      .toEqual(['పెళ్లి', 'మండపం'])
+  })
+
+  it('no claim of an index, user, speaker, fixed or app field', () => {
+    expect(claimsOf({ template: 'keyword', words: 'Light beats gear', lit: 1 }, def('keyword'))).toEqual([
+      { path: 'words', text: 'Light beats gear', kind: 'run', mid: true }
+    ])
+    expect(claimsOf({ template: 'quote', kind: 'said', text: 'Fail fast', speaker: 'Elon' }, def('quote'))).toEqual([
+      { path: 'text', text: 'Fail fast', kind: 'run' }
+    ])
+    const social: GraphicData = { template: 'quote', kind: 'social', text: 'hi', name: 'n', handle: 'h', date: 'd', link: 'l' }
+    expect(claimsOf(social, def('quote'))).toEqual([])
+    expect(claimsOf({ template: 'lower-third', name: 'Priya', role: 'Photographer' }, def('lower-third'))).toEqual([])
+    expect(claimsOf({ template: 'callout', label: 'bride', shape: 'circle' }, def('callout')).map((c) => c.path))
+      .toEqual(['label'])
+    const steps = claimsOf({
+      template: 'steps', title: 'Step by step', connector: 'tree',
+      items: [{ label: 'Charge batteries', parent: -1 }, { label: 'Format cards', parent: 0 }]
+    }, def('steps'))
+    expect(steps.map((c) => c.path)).toEqual(['items[0].label', 'items[0].label', 'items[1].label', 'items[1].label'])
+    for (const c of steps) expect(c.pair, c.path).toBeUndefined()
+  })
+})
+
+describe('bind: the review cases, each named (§6.7, "Why it binds, not just matches")', () => {
+  it('"we signed 40 clients" + ring 40: binds, and the matched number carries no % (rule 9 drops the ring)', () => {
+    // Deferred to validateGraphics.ts (piece 3): the ring rule that drops it on matched[0].unit.
+    const r = bindData({ template: 'ring', value: '40', label: 'clients' }, ['we signed 40 clients'])
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.matched[0]).toEqual({ n: 40, unit: '' })
+  })
+
+  it('"we spent $40 on ads and 40% of signups" + bars with BARE values: the matched numbers carry two units', () => {
+    // The spec strings share a unit (none); the matched numbers do not. Rule 9's bars rule
+    // (piece 3) drops on the matched units, which bind must give as the stretch's, not the spec's.
+    const r = bindData(bars([['ads', '40'], ['signups', '40']]), ['We spent $40 on ads and 40% of signups came from them.'])
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    const units = r.matched.filter((m): m is CanonNumber => m !== undefined).map((m) => m.unit)
+    expect(units).toEqual(['currency', '%'])
+  })
+
+  it("the Instagram/referrals swap in §6.7's own sentence: 'referrals' is 12 words from '30%', so the window drops it first", () => {
+    const full = ['Last year 30% of our clients came from Instagram and 70% from referrals.']
+    expect(bindData(bars([['Instagram', '70%'], ['referrals', '30%']]), full)).toMatchObject({ ok: false, reason: 'unpaired' })
+  })
+
+  it('the Instagram/referrals swap: bars [Instagram 70%, referrals 30%] → order', () => {
+    // Said tighter, every label sits within the window of its swapped value, and only the order rule drops it.
+    const st = stretchOf(['30% came from Instagram and 70% from referrals.'])
+    // 7 words on, 8 tokens past the '%' token: the window's edge, inside it.
+    expect(wordAt(st, 'referrals.') - wordAt(st, '30%')).toBe(7)
+    const r = bind(claimsOf(bars([['Instagram', '70%'], ['referrals', '30%']]), def('bars')), st, 'en')
+    expect(r).toMatchObject({ ok: false, reason: 'order' })
+  })
+
+  it('"3 offices and 40 staff in 2019, now 12 offices" + bars [2019: 12, now: 3] → order', () => {
+    const said = ['We had 3 offices and 40 staff in 2019, now 12 offices.']
+    expect(bindData(bars([['2019', '12'], ['now', '3']]), said)).toMatchObject({ ok: false, reason: 'order' })
+  })
+
+  it('"It\'s not true that 90% of startups fail" + ring 90% → negated', () => {
+    const r = bindData({ template: 'ring', value: '90%', label: 'of startups fail' }, ["It's not true that 90% of startups fail."])
+    expect(r).toMatchObject({ ok: false, reason: 'negated' })
+  })
+
+  it('"I\'d never tell you to quit your job" + quote "quit your job" → refused', () => {
+    const quote: GraphicData = { template: 'quote', kind: 'said', text: 'quit your job', speaker: '' }
+    expect(bindData(quote, ["I'd never tell you to quit your job."]).ok).toBe(false)
+  })
+
+  it('stretch "clients happy" + label "clients not happy" → absent', () => {
+    const r = bindData({ template: 'counter', value: '40', label: 'clients not happy' }, ['We kept 40 clients happy.'])
+    expect(r).toMatchObject({ ok: false, reason: 'absent' })
+    if (r.ok) return
+    expect(r.missing.map((c) => c.text)).toEqual(['not'])
+  })
+
+  it("a counter's label taken from the next sentence, within 8 tokens across the boundary → unpaired", () => {
+    const said = ['We shot 300.', 'Weddings were most of it.']
+    const st = stretchOf(said)
+    const claims = claimsOf({ template: 'counter', value: '300', label: 'weddings' }, def('counter'))
+    // The label is one spoken token past the value: inside the window, outside the sentence.
+    expect(wordAt(st, 'Weddings') - wordAt(st, '300.')).toBe(1)
+    expect(bind(claims, st, 'en')).toMatchObject({ ok: false, reason: 'unpaired' })
+  })
+
+  it('a label 12 tokens from its value in one sentence → unpaired', () => {
+    const said = ['We filmed 300 last year across the coast and the green hills in winter weddings.']
+    const st = stretchOf(said)
+    expect(wordAt(st, 'weddings.') - wordAt(st, '300')).toBe(12)
+    const r = bind(claimsOf({ template: 'counter', value: '300', label: 'weddings' }, def('counter')), st, 'en')
+    expect(r).toMatchObject({ ok: false, reason: 'unpaired' })
+  })
+
+  it('a unit added by the model fails', () => {
+    expect(bindData({ template: 'counter', value: '40%', label: 'clients' }, ['we signed 40 clients']))
+      .toMatchObject({ ok: false, reason: 'unit' })
+    expect(bindData({ template: 'ring', value: '40%', label: 'clients' }, ['we signed 40 clients']))
+      .toMatchObject({ ok: false, reason: 'unit' })
+    expect(bindData({ template: 'counter', value: '$40', label: 'clients' }, ['we signed 40% of clients']))
+      .toMatchObject({ ok: false, reason: 'unit' })
+    expect(bindData({ template: 'counter', value: '€40', label: 'ads' }, ['we spent $40 on ads']))
+      .toMatchObject({ ok: false, reason: 'unit' })
+  })
+
+  it('a unit dropped passes where the template allows it, the matched unit given for the template to judge', () => {
+    // A counter draws data.value only (rule 5); a ring needs the matched %, which this one has.
+    const dropped = bindData({ template: 'counter', value: '40', label: 'couples' }, ['40% of couples book in March.'])
+    expect(dropped.ok).toBe(true)
+    if (dropped.ok) expect(dropped.matched[0]).toEqual({ n: 40, unit: '%' })
+  })
+
+  it('one 40 said, two bars of 40: no two claims bind the same occurrence → unpaired', () => {
+    const r = bindData(bars([['ads', '40'], ['signups', '40']]), ['We spent 40 on ads and signups.'])
+    expect(r).toMatchObject({ ok: false, reason: 'unpaired' })
+  })
+})
+
+describe('bind: what passes, and where it binds', () => {
+  it('the swap the right way round binds, one word index per claim in claim order', () => {
+    const st = stretchOf(['Last year 30% of our clients came from Instagram and 70% from referrals.'])
+    const claims = claimsOf(bars([['Instagram', '30%'], ['referrals', '70%']]), def('bars'))
+    const r = bind(claims, st, 'en')
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.at).toEqual([wordAt(st, 'Instagram'), wordAt(st, '30%'), wordAt(st, 'referrals.'), wordAt(st, '70%')])
+    expect(r.matched).toEqual([undefined, { n: 30, unit: '%' }, undefined, { n: 70, unit: '%' }])
+  })
+
+  it("it's true that 90% of startups fail binds the ring", () => {
+    expect(bindData({ template: 'ring', value: '90%', label: 'of startups fail' }, ["It's true that 90% of startups fail."]).ok)
+      .toBe(true)
+  })
+
+  it('a label negated in its own words binds where the stretch says it; its value in that clause does not', () => {
+    expect(bindData({ template: 'callout', label: 'clients not happy', shape: 'arrow' }, ['Look, clients not happy.']).ok)
+      .toBe(true)
+    // Rule 7 is per field: the value '40' lacks the clause's 'not', so the counter drops.
+    expect(bindData({ template: 'counter', value: '40', label: 'clients not happy' }, ['We had 40 clients not happy.']))
+      .toMatchObject({ ok: false, reason: 'negated' })
+  })
+
+  it('a negator in another clause of the sentence does not negate the claim', () => {
+    expect(bindData({ template: 'counter', value: '40', label: 'clients' }, ['Not last year, but now we have 40 clients.']).ok)
+      .toBe(true)
+    expect(bindData({ template: 'counter', value: '40', label: 'clients' }, ["We don't have 40 clients."]))
+      .toMatchObject({ ok: false, reason: 'negated' })
+  })
+
+  it('the cited fact may sit in a neighbouring sentence of the stretch', () => {
+    expect(bindData({ template: 'counter', value: '300', label: 'weddings' }, ['Hi.', 'We shot 300 weddings.', 'Bye.']).ok).toBe(true)
+  })
+
+  it('folds English plurals on both sides, and only in English', () => {
+    expect(bindData({ template: 'counter', value: '40', label: 'client' }, ['we signed 40 clients']).ok).toBe(true)
+    expect(bindData({ template: 'counter', value: '40', label: 'boxes' }, ['we sold 40 box']).ok).toBe(true)
+    expect(bindData({ template: 'counter', value: '40', label: 'client' }, ['we signed 40 clients'], 'hi').ok).toBe(false)
+  })
+
+  it('a word said as a number word binds a digit, Indian grouping and native digits too', () => {
+    expect(bindData({ template: 'counter', value: '40', label: 'clients' }, ['we signed forty clients']).ok).toBe(true)
+    expect(bindData({ template: 'counter', value: '10,00,000', label: 'views' }, ['ten lakh views on the reel']).ok).toBe(true)
+    expect(bindData({ template: 'counter', value: '10,00,000', label: 'views' }, ['10 lakh views on the reel']).ok).toBe(true)
+    expect(bindData({ template: 'counter', value: '౩౦౦', label: 'పెళ్లిళ్లు' }, ['మేము ౩౦౦ పెళ్లిళ్లు చేశాము'], 'te').ok).toBe(true)
+  })
+
+  it('a Hindi or Telugu number said in words is not bound by a digit (v1: dropped)', () => {
+    expect(bindData({ template: 'counter', value: '40%', label: 'జంటలు' }, ['నలభై శాతం జంటలు'], 'te'))
+      .toMatchObject({ ok: false, reason: 'absent' })
+  })
+})
+
+describe('bind: unpaired grounded fields bind as one run', () => {
+  const callout = (label: string): GraphicData => ({ template: 'callout', label, shape: 'arrow' })
+
+  it('binds in spoken order with gaps of up to 3', () => {
+    expect(bindData(callout('The ring bearer'), ['Watch the ring bearer here.']).ok).toBe(true)
+    expect(bindData(callout('ring bearer'), ['The ring and the little bearer.']).ok).toBe(true)
+  })
+
+  it('out of spoken order → unpaired', () => {
+    expect(bindData(callout('ring bearer'), ['The bearer of the ring.'])).toMatchObject({ ok: false, reason: 'unpaired' })
+  })
+
+  it('a gap of 4 → unpaired', () => {
+    expect(bindData(callout('ring bearer'), ['The ring and the very little bearer.'])).toMatchObject({ ok: false, reason: 'unpaired' })
+  })
+
+  it('across two sentences → unpaired', () => {
+    expect(bindData(callout('ring bearer'), ['The ring.', 'The bearer.'])).toMatchObject({ ok: false, reason: 'unpaired' })
+  })
+
+  it('every Hindi token is checked', () => {
+    expect(bindData(callout('दुल्हन का लहंगा'), ['यह दुल्हन का लहंगा है'], 'hi').ok).toBe(true)
+    expect(bindData(callout('दुल्हन का लहंगा'), ['यह दुल्हन लहंगा है'], 'hi')).toMatchObject({ ok: false, reason: 'absent' })
+  })
+})
+
+describe('bind: verbatim runs', () => {
+  const quote = (text: string): GraphicData => ({ template: 'quote', kind: 'said', text, speaker: '' })
+
+  it('a whole clause or sentence binds, its first word recorded', () => {
+    const st = stretchOf(['Honestly, put the camera where the light is.'])
+    const r = bind(claimsOf(quote('Put the camera where the light is'), def('quote')), st, 'en')
+    expect(r).toEqual({ ok: true, at: [wordAt(st, 'put')], matched: [undefined] })
+  })
+
+  it('a run that starts or ends mid-clause is refused', () => {
+    expect(bindData(quote('the camera where the light is'), ['Put the camera where the light is.'])).toMatchObject({ ok: false, reason: 'absent' })
+    expect(bindData(quote('put the camera'), ['Put the camera where the light is.'])).toMatchObject({ ok: false, reason: 'absent' })
+  })
+
+  it('a run across two sentences is refused', () => {
+    expect(bindData(quote('fail fast learn fast'), ['Fail fast.', 'Learn fast.'])).toMatchObject({ ok: false, reason: 'absent' })
+  })
+
+  it('a run directly after a negator is refused, at the clause the caller may demote to', () => {
+    const st = stretchOf(['I would say never, quit your job.'])
+    const r = bind(claimsOf(quote('quit your job'), def('quote')), st, 'en')
+    expect(r).toMatchObject({ ok: false, reason: 'negated' })
+    if (r.ok) return
+    expect(r.at).toEqual([wordAt(st, 'quit')])
+    expect(clauseAt(st, r.at![0])).toEqual({ start: wordAt(st, 'quit'), end: wordAt(st, 'job.') })
+    expect(clauseAt(st, wordAt(st, 'never,'))).toEqual({ start: wordAt(st, 'I'), end: wordAt(st, 'never,') })
+  })
+
+  it("keyword's run may sit mid-clause, but not in a negated clause or after a negator", () => {
+    const kw = (words: string): GraphicData => ({ template: 'keyword', words, lit: 0 })
+    expect(bindData(kw('expensive gear'), ['Light beats expensive gear every time.']).ok).toBe(true)
+    expect(bindData(kw('easy'), ['This is not easy.'])).toMatchObject({ ok: false, reason: 'negated' })
+    expect(bindData(kw('easy'), ['This is not really easy.'])).toMatchObject({ ok: false, reason: 'negated' })
+    expect(bindData(kw('my job'), ['I love my.', 'Job is great.'])).toMatchObject({ ok: false, reason: 'absent' })
+  })
+})
+
+describe('bind is pure over its claims', () => {
+  it('claims with no value bind nowhere, and no claims bind trivially', () => {
+    const none: Claim = { path: 'value', text: 'x', kind: 'number', pair: 0 }
+    expect(bind([none], stretchOf(['we signed 40 clients']), 'en')).toMatchObject({ ok: false, reason: 'absent', missing: [none] })
+    expect(bind([], stretchOf(['anything']), 'en')).toEqual({ ok: true, at: [], matched: [] })
   })
 })

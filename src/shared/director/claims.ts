@@ -5,8 +5,10 @@
  * to find each step's run in the spoken words), `claimTokens` (rule 2's unit
  * split before it), `numbersIn` (rule 4: every number in a run of tokens as
  * `{n, unit, currency?}`), and the lists rules 6-8 name (`BIND_WINDOW`,
- * `NEGATORS`, `FUNCTION_WORDS_EN`). The claims and the binding (`claimsOf`,
- * `bind`) are the second half of lane T2a. Named apart from `automation/keywords.ts`'s `normaliseToken`, which
+ * `NEGATORS`, `FUNCTION_WORDS_EN`), then a graphic's claims (`claimsOf`) and
+ * their binding to the stretch (`bind`, rules 5-8; `clauseAt` for rule 7's
+ * clause). Rule 9's template rules over the bound result are
+ * `validateGraphics.ts`'s. Named apart from `automation/keywords.ts`'s `normaliseToken`, which
  * is ASCII-only and maps Hindi and Telugu to '' (§6.7), and from
  * `director/validate.ts`'s `normalise`, which drops final combining marks.
  *
@@ -14,6 +16,8 @@
  */
 
 import { MULTIPLIERS, groupingOf } from '../graphics/numbers'
+import type { FieldMode, GraphicData, TemplateDef } from '../graphics/template'
+import type { Segment, Word } from '../transcript'
 
 /** The zero of each native digit block §6.7 rule 3 maps to ASCII. */
 const NATIVE_ZEROS = [0x966, 0x9e6, 0xa66, 0xae6, 0xbe6, 0xc66, 0xce6, 0xd66, 0x660, 0x6f0] as const
@@ -301,6 +305,17 @@ function wordGroup(ts: readonly string[], i: number): { n: number; next: number 
  * years said in pairs ('nineteen ninety nine' is 19 and 99).
  */
 export function numbersIn(tokens: readonly string[]): { value: CanonNumber; at: number }[] {
+  return numberSpans(tokens).map(({ value, at }) => ({ value, at }))
+}
+
+/**
+ * `numbersIn`'s numbers with each one's whole span: `from` the index of its
+ * first token (a sign or a currency included), `end` one past its last (a
+ * multiplier or a unit included). `bind` needs the span so no other claim can
+ * bind a token of a bound number, and `claimsOf` so a value field is one
+ * number and nothing else.
+ */
+function numberSpans(tokens: readonly string[]): { value: CanonNumber; at: number; from: number; end: number }[] {
   // A hyphenated ten and unit ('forty-two') becomes its parts, each keeping its token's index.
   const ts: string[] = []
   const index: number[] = []
@@ -311,7 +326,7 @@ export function numbersIn(tokens: readonly string[]): { value: CanonNumber; at: 
     }
   })
 
-  const out: { value: CanonNumber; at: number }[] = []
+  const out: { value: CanonNumber; at: number; from: number; end: number }[] = []
   let i = 0
   while (i < ts.length) {
     let j = i
@@ -383,7 +398,12 @@ export function numbersIn(tokens: readonly string[]): { value: CanonNumber; at: 
       i = j
       continue
     }
-    out.push({ value: currency ? { n: sign * n, unit, currency } : { n: sign * n, unit }, at: index[start] })
+    out.push({
+      value: currency ? { n: sign * n, unit, currency } : { n: sign * n, unit },
+      at: index[start],
+      from: index[i],
+      end: index[j - 1] + 1
+    })
     i = j
   }
   return out
@@ -418,3 +438,471 @@ export const FUNCTION_WORDS_EN: readonly string[] = [
   'were', 'be', 'been', 'it', 'its', 'this', 'that', 'these', 'those', 'our',
   'my', 'your', 'their', 'we', 'i', 'you', 'they', 'he', 'she', 'have'
 ]
+
+// ---------------------------------------------------------------------------
+// The claims (§6.7's exports list) and the binding (rules 5-8).
+
+/**
+ * One thing a graphic says that the stretch must hold (§6.7's exports list).
+ * `path` is the field's, relative to the graphic's `data` ('label',
+ * 'items[1].value'); every token claim of one field shares it, which is how
+ * `bind` knows a field's tokens bind together. `text` is the value field's
+ * string (`number`), one content token (`token`), or the verbatim field's
+ * string (`run`). `pair` numbers each label–value pair the data holds, in data
+ * order: for `counter` and `ring` it is 0, the index into `TemplateDef.pairs`;
+ * for `bars`, whose one pair is a list's, it is the item's index. `mid` is
+ * `keyword`'s: its run may start and end mid-clause (rule 8, rule 9).
+ */
+export interface Claim {
+  path: string
+  text: string
+  kind: 'number' | 'token' | 'run'
+  value?: CanonNumber
+  pair?: number
+  mid?: true
+}
+
+/** A word that negates (rule 7): any of `NEGATORS`' lists, whatever the language, or an English contraction ending in n't. */
+function isNegator(t: string): boolean {
+  return NEGATORS.en.includes(t) || NEGATORS.hi.includes(t) || NEGATORS.te.includes(t) || /n['’]t$/u.test(t)
+}
+
+/** Rule 8's exemption: an English function word, and never a negator, a direction word or a comparative. */
+function exempt(t: string): boolean {
+  return FUNCTION_WORDS_EN.includes(t)
+}
+
+/** A phrase's tokens without the clause breaks: what a field says. */
+function spokenTokensOf(text: string): string[] {
+  return claimTokensOf(text).filter((t) => t !== CLAUSE_BREAK)
+}
+
+/** The one number a value field holds, when the field is that number and nothing else ('40 percent', '₹500'); else undefined. */
+function soleNumber(text: string): CanonNumber | undefined {
+  const tokens = claimTokensOf(text)
+  const spans = numberSpans(tokens)
+  if (spans.length !== 1) return undefined
+  const { value, from, end } = spans[0]
+  const outside = tokens.some((t, i) => (i < from || i >= end) && t !== CLAUSE_BREAK)
+  return outside ? undefined : value
+}
+
+/**
+ * Every claim a graphic's data makes (§6.7), in data order: each field the
+ * template marks `grounded` or `verbatim` (`TemplateDef.fields`, with
+ * `kindFields` for the data's `kind` over them), top-level fields first, then
+ * each item's. No claim of an `index`, `user`, `fixed`, `speaker` or app
+ * field (`TemplateDef.appFields`).
+ *
+ * - A pair's value field (`TemplateDef.pairs`' second key) is ONE `number`
+ *   claim, its `value` the field's one number when the field is exactly one
+ *   number, else undefined, which `bind` finds nowhere: a value field with no
+ *   number, two numbers or a word besides its number is dropped.
+ * - Any other `grounded` field is one `token` claim per content token: its
+ *   tokens (`claimTokensOf`, clause marks set aside) less the English
+ *   function words (rule 8). A negator, a direction word or a comparative is
+ *   never exempt. A title that is one of the template's `fixedTitles` makes no
+ *   claim, nor does an empty field.
+ * - A `verbatim` field is one `run` claim; `keyword`'s carries `mid`.
+ */
+export function claimsOf(data: GraphicData, def: TemplateDef): Claim[] {
+  const record = data as unknown as Record<string, unknown>
+  const kind = typeof record.kind === 'string' ? record.kind : undefined
+  const modes: Record<string, FieldMode> = { ...def.fields, ...((kind && def.kindFields?.[kind]) || {}) }
+  const app = new Set(def.appFields ?? [])
+  const pairs = def.pairs ?? []
+  const fixed = new Set((def.fixedTitles ?? []).map((t) => spokenTokensOf(t).join(' ')))
+  const out: Claim[] = []
+  let nextPair = 0
+
+  // Top-level pairs take their indices first, then each item's, in item order.
+  const topPair = new Map<string, { pair: number; role: 'label' | 'value' }>()
+  for (const [label, value] of pairs) {
+    if (label.startsWith('items.')) continue
+    const pair = nextPair++
+    topPair.set(label, { pair, role: 'label' })
+    topPair.set(value, { pair, role: 'value' })
+  }
+
+  const field = (path: string, key: string, text: unknown, at?: { pair: number; role: 'label' | 'value' }): void => {
+    const mode = modes[key]
+    const leaf = key.split('.').pop()!
+    if (app.has(key) || app.has(leaf)) return
+    if (mode !== 'grounded' && mode !== 'verbatim') return
+    const s = typeof text === 'string' ? text : ''
+    if (mode === 'verbatim') {
+      out.push(def.id === 'keyword' ? { path, text: s, kind: 'run', mid: true } : { path, text: s, kind: 'run' })
+      return
+    }
+    if (at?.role === 'value') {
+      const value = soleNumber(s)
+      out.push(value ? { path, text: s, kind: 'number', value, pair: at.pair } : { path, text: s, kind: 'number', pair: at.pair })
+      return
+    }
+    const tokens = spokenTokensOf(s)
+    if (key === 'title' && fixed.has(tokens.join(' '))) return
+    for (const t of tokens) {
+      if (exempt(t)) continue
+      out.push(at ? { path, text: t, kind: 'token', pair: at.pair } : { path, text: t, kind: 'token' })
+    }
+  }
+
+  const keys = Object.keys(modes)
+  for (const key of keys) if (!key.startsWith('items.')) field(key, key, record[key], topPair.get(key))
+  const items = Array.isArray(record.items) ? (record.items as Record<string, unknown>[]) : []
+  const itemKeys = keys.filter((k) => k.startsWith('items.'))
+  const itemPairs = pairs.filter(([label]) => label.startsWith('items.'))
+  items.forEach((item, j) => {
+    const roles = new Map<string, { pair: number; role: 'label' | 'value' }>()
+    for (const [label, value] of itemPairs) {
+      const pair = nextPair++
+      roles.set(label, { pair, role: 'label' })
+      roles.set(value, { pair, role: 'value' })
+    }
+    for (const key of itemKeys) {
+      const leaf = key.slice('items.'.length)
+      field(`items[${j}].${leaf}`, key, item?.[leaf], roles.get(key))
+    }
+  })
+  return out
+}
+
+/** The words a graphic's facts may come from: the cited sentence and one either side, over capped segments (§6.7, "The stretch"). */
+export interface ClaimStretch {
+  words: readonly Word[]
+  sentences: readonly Segment[]
+}
+
+/** One token of the stretch, as `bind` places claims on it. */
+interface StretchToken {
+  t: string
+  /** The `Word.index` it came from. */
+  word: number
+  /** Which sentence of the stretch (in spoken order). */
+  sent: number
+  /** Which clause (rule 7): a new one at each sentence start and after each `CLAUSE_BREAK`. */
+  clause: number
+  /** Its position among the stretch's spoken tokens (clause breaks not counted); −1 on a break. */
+  np: number
+}
+
+/** The stretch's tokens, in spoken order, and every number in each sentence (none runs across a sentence). */
+function tokensOfStretch(stretch: ClaimStretch): {
+  toks: StretchToken[]
+  numbers: { value: CanonNumber; at: number; from: number; end: number }[]
+} {
+  const byIndex = new Map<number, Word>()
+  for (const w of stretch.words) byIndex.set(w.index, w)
+  const sentences = [...stretch.sentences].sort((a, b) => a.wordStart - b.wordStart)
+  const toks: StretchToken[] = []
+  const numbers: { value: CanonNumber; at: number; from: number; end: number }[] = []
+  let clause = -1
+  let np = 0
+  sentences.forEach((s, sent) => {
+    clause += 1
+    const first = toks.length
+    for (let w = s.wordStart; w <= s.wordEnd; w++) {
+      const word = byIndex.get(w)
+      if (!word) continue
+      for (const t of claimTokens(word.text)) {
+        if (t === CLAUSE_BREAK) {
+          toks.push({ t, word: w, sent, clause, np: -1 })
+          clause += 1
+        } else toks.push({ t, word: w, sent, clause, np: np++ })
+      }
+    }
+    for (const n of numberSpans(toks.slice(first).map((x) => x.t))) {
+      numbers.push({ value: n.value, at: first + n.at, from: first + n.from, end: first + n.end })
+    }
+  })
+  return { toks, numbers }
+}
+
+/** Where one claim may bind: the stretch tokens it takes, and what `bind` judges it by. */
+interface Occurrence {
+  /** Indices into the stretch's tokens; no two bound claims share one. */
+  tokens: number[]
+  /** The word index `bind` records for the claim. */
+  word: number
+  sent: number
+  /** The spoken positions of its first and last token. */
+  first: number
+  last: number
+  /** The matched stretch number (a `number` claim's). */
+  value?: CanonNumber
+  /** A run directly after a negator (rule 8: refused). */
+  afterNegator?: true
+}
+
+/** Rule 5: equal values, relative 1e-9. */
+function sameValue(a: number, b: number): boolean {
+  return a === b || Math.abs(a - b) <= 1e-9 * Math.max(Math.abs(a), Math.abs(b))
+}
+
+/** Rule 5: a `%` or a currency in the spec must be on the matched stretch number; a bare spec number matches any. */
+function unitOk(spec: CanonNumber, said: CanonNumber): boolean {
+  if (spec.unit === '') return true
+  if (spec.unit === '%') return said.unit === '%'
+  return said.unit === 'currency' && said.currency === spec.currency
+}
+
+/** Rule 8: one token for another, English plurals (`s`, `es`) folded on both sides. */
+function sameToken(a: string, b: string, english: boolean): boolean {
+  if (a === b) return true
+  if (!english || !/^[a-z]+$/u.test(a) || !/^[a-z]+$/u.test(b)) return false
+  return a + 's' === b || a + 'es' === b || b + 's' === a || b + 'es' === a
+}
+
+/** The spoken distance of a token from an occurrence's span: 0 inside it, 1 next to it. */
+function distance(np: number, o: Occurrence): number {
+  return np < o.first ? o.first - np : np > o.last ? np - o.last : 0
+}
+
+export type BindResult =
+  | { ok: true; at: number[]; matched: (CanonNumber | undefined)[] }
+  | {
+      ok: false
+      missing: Claim[]
+      reason: 'absent' | 'unpaired' | 'order' | 'negated' | 'unit'
+      at?: number[]
+    }
+
+/** How many assignments `bind` tries before it gives up: past this it drops ('unpaired'), the safe direction. */
+const BIND_BUDGET = 200_000
+
+/**
+ * Bind every claim to the stretch (§6.7 rules 5-8), or say why not.
+ *
+ * Each claim binds to ONE occurrence and no two claims to the same one:
+ * - a `number` claim to a number in the stretch of equal value (rule 5), whose
+ *   unit holds the spec's `%` or currency if it has one; a bare spec number may
+ *   match a number with a unit. No value-equal number: 'absent'; only ones with
+ *   another unit: 'unit'. What the template then requires of the MATCHED
+ *   number (ring's `%`, bars' one unit) is rule 9's: `matched` holds the
+ *   matched stretch number for each `number` claim (undefined for the others),
+ *   never the spec's.
+ * - a `token` claim to an equal token (English plurals folded when `lang` is
+ *   English). A pair's label tokens sit in the same sentence as their value's
+ *   occurrence, each within `BIND_WINDOW` spoken tokens of it (rule 6); an
+ *   unpaired field's tokens bind as one run: one sentence, in the field's
+ *   order, at most 3 spoken tokens between neighbours.
+ * - a `run` claim (verbatim) to a contiguous run of one sentence's spoken
+ *   tokens equal to the field's, starting and ending on a sentence or clause
+ *   boundary unless `mid` (keyword, rule 9). None: 'absent'.
+ * Not every claim placeable that way together: 'unpaired'. Across the pairs,
+ * if A's value is said before B's, every token of A's label is said before
+ * every token of B's: else 'order'. Then rule 7: the clause each claim binds
+ * in (from the previous clause break or sentence start to the next) may hold
+ * no negator its field lacks, and a run may not directly follow a negator:
+ * else 'negated', with `at` the assignment that came that far, so a caller
+ * can demote a quote to the clause (`clauseAt`).
+ *
+ * `at` holds one word index per claim, in claim order: a number's first digit
+ * or number word, a token's word, a run's first word. Negators of every
+ * listed language count whatever `lang` says; Telugu's negative verb endings
+ * are caught by no list (rule 7). Pure and node-runnable.
+ */
+export function bind(claims: readonly Claim[], stretch: ClaimStretch, lang: string): BindResult {
+  const english = /^en(?:$|[-_])/iu.test(lang)
+  const { toks, numbers } = tokensOfStretch(stretch)
+  const spoken = toks.map((x, i) => i).filter((i) => toks[i].np >= 0)
+  const occOf = (tokens: number[], word: number, extra: Partial<Occurrence> = {}): Occurrence => {
+    const nps = tokens.map((i) => toks[i].np).filter((n) => n >= 0)
+    return { tokens, word, sent: toks[tokens[0]].sent, first: Math.min(...nps), last: Math.max(...nps), ...extra }
+  }
+
+  // Every place each claim may bind.
+  const candidates: Occurrence[][] = []
+  const absent: Claim[] = []
+  const unit: Claim[] = []
+  for (const c of claims) {
+    let found: Occurrence[] = []
+    if (c.kind === 'number') {
+      const spec = c.value
+      const equal = spec ? numbers.filter((n) => sameValue(n.value.n, spec.n)) : []
+      const fit = equal.filter((n) => unitOk(spec!, n.value))
+      found = fit.map((n) => {
+        const span = Array.from({ length: n.end - n.from }, (_, k) => n.from + k)
+        return occOf(span, toks[n.at].word, { value: n.value })
+      })
+      if (equal.length > 0 && fit.length === 0) unit.push(c)
+    } else if (c.kind === 'token') {
+      found = spoken.filter((i) => sameToken(c.text, toks[i].t, english)).map((i) => occOf([i], toks[i].word))
+    } else {
+      found = runsOf(spokenTokensOf(c.text), toks, spoken, c.mid === true).map((r) =>
+        occOf(r.tokens, toks[r.tokens[0]].word, r.afterNegator ? { afterNegator: true } : {})
+      )
+    }
+    if (found.length === 0 && !unit.includes(c)) absent.push(c)
+    candidates.push(found)
+  }
+  if (absent.length > 0) return { ok: false, missing: absent, reason: 'absent' }
+  if (unit.length > 0) return { ok: false, missing: unit, reason: 'unit' }
+
+  // Each field's negators (rule 7: a negator the field lacks).
+  const fieldNegators = new Map<string, Set<string>>()
+  for (const c of claims) {
+    const set = fieldNegators.get(c.path) ?? new Set<string>()
+    for (const t of c.kind === 'run' ? spokenTokensOf(c.text) : [c.text]) if (isNegator(t)) set.add(t)
+    fieldNegators.set(c.path, set)
+  }
+  // The claim before each in its unpaired field, for the run rule.
+  const previousInField = claims.map((c, i) => {
+    if (c.kind !== 'token' || c.pair !== undefined) return -1
+    for (let j = i - 1; j >= 0; j--) if (claims[j].path === c.path) return j
+    return -1
+  })
+
+  // Values first, so each label's window prunes its tokens' places early; the rest in claim order.
+  const order = [...claims.keys()].sort((a, b) => Number(claims[b].kind === 'number') - Number(claims[a].kind === 'number'))
+  const chosen: Occurrence[] = new Array<Occurrence>(claims.length)
+  const used = new Set<number>()
+  let tried = 0
+  let best: { stage: number; reason: 'order' | 'negated'; missing: Claim[]; at: number[] } | null = null
+
+  const fits = (i: number, o: Occurrence): boolean => {
+    if (o.tokens.some((t) => used.has(t))) return false
+    const c = claims[i]
+    if (c.pair !== undefined) {
+      for (let j = 0; j < claims.length; j++) {
+        const d = claims[j]
+        if (!chosen[j] || d.pair !== c.pair || (d.kind === 'number') === (c.kind === 'number')) continue
+        const [value, label] = c.kind === 'number' ? [o, chosen[j]] : [chosen[j], o]
+        if (label.sent !== value.sent) return false
+        if (distance(label.first, value) > BIND_WINDOW) return false
+      }
+    }
+    const p = previousInField[i]
+    if (p >= 0) {
+      const prev = chosen[p]
+      if (o.sent !== prev.sent || o.first <= prev.last || o.first - prev.last - 1 > 3) return false
+    }
+    return true
+  }
+
+  const judge = (): boolean => {
+    const at = chosen.map((o) => o.word)
+    // Spoken order across the pairs.
+    const disordered = orderBroken(claims, chosen)
+    if (disordered.length > 0) {
+      if (!best || best.stage < 1) best = { stage: 1, reason: 'order', missing: disordered, at }
+      return false
+    }
+    // Rule 7.
+    const negated = claims.filter((c, i) => {
+      const o = chosen[i]
+      if (o.afterNegator) return true
+      const lacks = fieldNegators.get(c.path)!
+      const clauses = new Set(o.tokens.map((t) => toks[t].clause))
+      return toks.some((x) => x.np >= 0 && clauses.has(x.clause) && isNegator(x.t) && !lacks.has(x.t))
+    })
+    if (negated.length > 0) {
+      if (!best || best.stage < 2) best = { stage: 2, reason: 'negated', missing: negated, at }
+      return false
+    }
+    return true
+  }
+
+  const search = (k: number): boolean => {
+    if (k === order.length) return judge()
+    const i = order[k]
+    for (const o of candidates[i]) {
+      if (++tried > BIND_BUDGET) return false
+      if (!fits(i, o)) continue
+      chosen[i] = o
+      for (const t of o.tokens) used.add(t)
+      if (search(k + 1)) return true
+      delete chosen[i]
+      for (const t of o.tokens) used.delete(t)
+    }
+    return false
+  }
+
+  if (search(0)) {
+    return {
+      ok: true,
+      at: chosen.map((o) => o.word),
+      matched: chosen.map((o, i) => (claims[i].kind === 'number' ? o.value : undefined))
+    }
+  }
+  if (best) {
+    const b: { reason: 'order' | 'negated'; missing: Claim[]; at: number[] } = best
+    return { ok: false, missing: b.missing, reason: b.reason, at: b.at }
+  }
+  return { ok: false, missing: [...claims], reason: 'unpaired' }
+}
+
+/**
+ * Rule 6's spoken order: the claims of every two pairs whose values are said
+ * in one order and whose labels are not wholly in the same order. A pair with
+ * no label token has no label to order.
+ */
+function orderBroken(claims: readonly Claim[], chosen: readonly Occurrence[]): Claim[] {
+  const pairs = new Map<number, { value?: number; first: number; last: number }>()
+  claims.forEach((c, i) => {
+    if (c.pair === undefined) return
+    const p = pairs.get(c.pair) ?? { first: Infinity, last: -Infinity }
+    if (c.kind === 'number') p.value = chosen[i].first
+    else {
+      p.first = Math.min(p.first, chosen[i].first)
+      p.last = Math.max(p.last, chosen[i].last)
+    }
+    pairs.set(c.pair, p)
+  })
+  const bad = new Set<number>()
+  const list = [...pairs.entries()].filter(([, p]) => p.value !== undefined && p.first !== Infinity)
+  for (const [a, pa] of list) {
+    for (const [b, pb] of list) {
+      if (pa.value! < pb.value! && !(pa.last < pb.first)) {
+        bad.add(a)
+        bad.add(b)
+      }
+    }
+  }
+  return claims.filter((c) => c.pair !== undefined && bad.has(c.pair))
+}
+
+/**
+ * Every place a verbatim field's tokens stand as a contiguous run of one
+ * sentence's spoken tokens (clause breaks between them allowed), starting and
+ * ending on a sentence or clause boundary unless `mid`; each marked when the
+ * spoken token before it is a negator.
+ */
+function runsOf(
+  field: readonly string[],
+  toks: readonly StretchToken[],
+  spoken: readonly number[],
+  mid: boolean
+): { tokens: number[]; afterNegator: boolean }[] {
+  if (field.length === 0) return []
+  const out: { tokens: number[]; afterNegator: boolean }[] = []
+  for (let s = 0; s + field.length <= spoken.length; s++) {
+    const run = spoken.slice(s, s + field.length)
+    if (toks[run[0]].sent !== toks[run[run.length - 1]].sent) continue
+    if (!run.every((ti, k) => toks[ti].t === field[k])) continue
+    const sent = toks[run[0]].sent
+    const before = run[0] - 1
+    const after = run[run.length - 1] + 1
+    const startsOnEdge = before < 0 || toks[before].sent !== sent || toks[before].np < 0
+    const endsOnEdge = after >= toks.length || toks[after].sent !== sent || toks[after].np < 0
+    if (!mid && !(startsOnEdge && endsOnEdge)) continue
+    const prior = s > 0 ? spoken[s - 1] : -1
+    const afterNegator = prior >= 0 && toks[prior].sent === sent && isNegator(toks[prior].t)
+    out.push({ tokens: run, afterNegator })
+  }
+  return out
+}
+
+/**
+ * The clause a word sits in (rule 7), as the first and last word index of its
+ * spoken tokens: from the previous clause break or sentence start to the next.
+ * Null when the word is not in the stretch. For a quote demoted to the
+ * verbatim clause with its negator (rule 7), which the caller decides.
+ */
+export function clauseAt(stretch: ClaimStretch, word: number): { start: number; end: number } | null {
+  const { toks } = tokensOfStretch(stretch)
+  const mine = toks.find((x) => x.word === word && x.np >= 0)
+  if (!mine) return null
+  const inClause = toks.filter((x) => x.clause === mine.clause && x.np >= 0)
+  return { start: inClause[0].word, end: inClause[inClause.length - 1].word }
+}
