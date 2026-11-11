@@ -749,6 +749,16 @@ burned-in captions cannot do on Windows. On twenty seconds of
 path took. With nothing transcribed, the strip says the captions will be
 skipped.
 
+**Graphics** (`GraphicsSection` in `OutputStrip.tsx`, since 2026-11-11) —
+below the whole captions block, shown whether captions are on or off: the
+seven graphic looks as rows of name and face (Clean, Bold, Editorial, Neon,
+Mono, Accent, Energetic; the project's lit), an **Accent colour** under the
+Accent row, a sample tile drawing a counter ("10,00,000 views") in the
+chosen look, and a **Style** picker of only the text styles a graphic can
+use, whose **None** goes back to the look's own. A change redraws every
+graphic clip in the background. Nothing in the app places a graphic yet
+(docs/CLIPS.md §6.5).
+
 ## EXPORT — making the file
 
 The second strip (`ExportStrip.tsx`). **The Export button is in its header**,

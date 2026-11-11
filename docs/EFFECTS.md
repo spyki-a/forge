@@ -8004,6 +8004,35 @@ numpy). The fix phase's last run over 49 files: 665 passed.
 - **The 2018 build's run of `RETIME_TAIL`** and of the three Windows test
   fixes: the next Windows CI run.
 
+### The `macos-14` runner retired (2026-11-11)
+
+Added 2026-11-11, here because this section put macOS back on the push
+for the pack (`446f99b`). The push of `51e2f23` (run 43013571098,
+2026-11-11 11:38Z) went green on `windows-latest` (job 130498938975,
+12.8 min) and had its `macos-14` job (130498939314) **cancelled at
+11:38:10Z, one second after 11:38:09Z, no runner, no step run**, the
+run's conclusion `cancelled`, with the annotation:
+
+    The configuration 'macos-14-arm64-us-default' is not supported
+
+Nothing in the repo caused it. GitHub's changelog of 2026-10-01
+(github.blog/changelog/2026-10-01-github-actions-macos-14-runner-image-retirement)
+retired the macOS 14 image on 2026-11-02 (labels `macos-14`,
+`macos-14-large`, `macos-14-xlarge`; brownouts on eight October days;
+`macos-15` and `macos-latest`, which is `macos-26`, the arm64
+replacements). The last run that got a `macos-14` machine was
+41693366322 on `683a6f0`, 2026-11-03. The annotation names a
+configuration, not the retirement, so the reason is found only in the
+changelog. `e06e1c3` moved the matrix to `[windows-latest, macos-15]`;
+run 43016087950 passed on both (`macos-15` job 130507399573, 11.1 min,
+`npm test` 12:02:22Z to 12:10:16Z; `windows-latest` 130507399980, 12.0
+min), no annotation. So nothing the suite had measured on macOS 14 (the
+libass Indic reference in §61, the caption free-space rows against
+macOS 14's fallback faces in §60) read differently enough on macOS 15 to
+fail a case; that the figures are the same is not known (the job logs
+need a sign-in). **The pack's macOS 14 floor (§16.48 (b)) now runs on no
+CI machine**: only a real macOS 14 machine can check it.
+
 ## 60. Captions in the free third — the subject on the output frame, the chooser, per-event \an and MarginV on both routes (2026-10-16)
 
 For `docs/CLIPS.md` §5 (step 2, caption free space): ten commits,
@@ -8496,7 +8525,7 @@ suite and CI are the orchestrator's.
   and the preview's recompute on a long followed clip while editing.
 - **Burned-in text** (§5.3): after 1g.
 
-## 61. Graphics: the forks measured (phase 0 of step 3, then phase 1's first) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22), and on the Surface the libass run and the development app (2026-10-27); in node, phase 1's M9 (2026-10-27) and the stroke's flattening (2026-10-28); and D10's three readings, the Noto fonts' provenance, the Mac's libass against the fontsdir, and `document.fonts.check` (2026-10-29); and under painter A, Chrome 152's canvas (negative radii, a 0-side canvas, `globalAlpha`) and, in node, the draw list's mixed faces and bounds and the frames' edges (2026-10-30/31); and lane C's worker encoder and measureText in the pane's Chrome 152 (2026-11-01) and, in node, the box route under crop, mask, matte and transitions (2026-11-02); and lane D's three, geq's w − 2 clamp on the box route, a stroke's chroma through `yuva420p` (M19 in part) and `flattenPath` against `SVGPathElement` (M8 in part) (2026-11-03)
+## 61. Graphics: the forks measured (phase 0 of step 3, then phase 1's first) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22), and on the Surface the libass run and the development app (2026-10-27); in node, phase 1's M9 (2026-10-27) and the stroke's flattening (2026-10-28); and D10's three readings, the Noto fonts' provenance, the Mac's libass against the fontsdir, and `document.fonts.check` (2026-10-29); and under painter A, Chrome 152's canvas (negative radii, a 0-side canvas, `globalAlpha`) and, in node, the draw list's mixed faces and bounds and the frames' edges (2026-10-30/31); and lane C's worker encoder and measureText in the pane's Chrome 152 (2026-11-01) and, in node, the box route under crop, mask, matte and transitions (2026-11-02); and lane D's three, geq's w − 2 clamp on the box route, a stroke's chroma through `yuva420p` (M19 in part) and `flattenPath` against `SVGPathElement` (M8 in part) (2026-11-03); and phase 2's lanes T3-first and T1, in node and on the harness census (2026-11-06 to 11)
 
 For `docs/CLIPS.md` §6.15 (step 3's phase 0, "Measure before relying"):
 pieces 0.1–0.3 were built on the evening of 2026-10-21 in seven commits,
@@ -10838,3 +10867,85 @@ phase-1 notes. What the runs taught:
   M14–M18 in
   phase 2; M7 first, then M6 whole, M12, M20 and M13 again in phase 3; M11
   is not run, since M1–M2 did not fall short (item 8). H1–H13 are §62's.
+
+### Phase 2, lanes T3-first and T1, 2026-11-06 to 11
+
+`CLIPS.md` §6.2's and §6.5's phase-2 Built notes. Read from the
+eighteen commits (`41a3db0` … `51e2f23`), the build workflow's journal
+(builders', critics' and fixers' reports) and the session's own reads on
+the Mac. Every drawing figure is vitest under phase 1's fake measure (a
+width per UTF-16 unit); **no render check has run on a phase-2 drawing**
+(T4's). Only what cost time or would not be guessed:
+
+- **`out-back` overshoots a count before its beat.** §6.2 words the
+  counter as `p = progress(t, 0, beat, style.motion.ease)`; under
+  `energetic`'s `out-back`, p passes 1 inside the lead, so a count,
+  a ring's sweep, a bar's width or a draw-on would show more than its
+  value before the beat. `layout.ts`'s `drawOnEase` gives those `expo-out`
+  where the style says `out-back` (the entrance keeps `out-back`). The
+  guard, added by `9e7a89e`, with `drawOnEase` removed: "bars-en bar-0
+  frame 9: expected 277.61 to be less than or equal to 264".
+- **Under `expo-out` over the 0.5 s lead, a short value arrives early by
+  rounding.** ₹500 reads "₹500" from frame 12 of a beat at frame 15 at
+  30 fps (`4e6004e`); ₹500, ౩౦౦ and the rings' 40 and 75 reach their whole
+  value up to three frames before the beat at 24, 25, 30 and 60 fps
+  (`f64a879`). Only a long value, counter-en's 10,00,000, shows its
+  arrival frame from the string alone. So the tests assert the value from
+  the beat on and ≤ it before, and arrival on the beat frame is pinned on
+  10,00,000 only. Whether short counts should be held back is M14's and
+  the user's.
+- **A large count reads "12", not "0", at frame 0.** Seen by piece 4's
+  builder on OUTPUT's sample (10,00,000, beat 0.5 s): "clean: expected [
+  '12', 'views' ] …" when the sample was drawn at frame 0.
+  `inBetween(value, 0)` is "0"; the fraction is not 0. `progress` reads
+  (t − start + 1e-6) / seconds (`PROGRESS_ALLOWANCE_S`, `motion.ts`), so
+  at t = 0 over a 0.5 s lead x = 2e-6. `expo-out` is the cubic Bézier
+  (0.16, 1, 0.3, 1), whose slope at 0 is 3 / (3 × 0.16) = 6.25, so the
+  eased fraction is about 1.25e-5, a hair under once the t² terms are
+  counted; times 1,000,000 that is just under 12.5, which `inBetween`'s
+  `Math.round` makes 12, the string seen. (Not 6.93 ×: that is the slope
+  of 1 − 2^(−10x), which `motion.ts` does not use.) The entrance has the
+  item at near-zero opacity on that frame, so nothing shows; left as it
+  is. **A test must not assert "0" at frame 0 of a large count.**
+- **A layout checked against the module's own `contentRect` certifies a
+  broken one.** `f64a879`'s "inside the content rect" case imported
+  `contentRect` from `layout.ts`: piece 2's tests critic put back no side
+  inset, no bottom inset, `WRAP_MAX` 1 and a centred lower third, and all
+  41 cases stayed green (as did a reversed and a removed keyword stagger,
+  and a dim over `DURATIONS.entrance`). `9e7a89e` pinned the rects by
+  number (x 0.05 W, width 0.9 W, the thirds' edges 0.05 H in; `wrapWidth`
+  = min(rect, 0.8 W)), and each mutation then fails ("top x at 1080x1920:
+  expected +0 to be close to 54").
+- **steps-en (six rows) does not fit a 16:9 bottom third even at
+  `FIT_MIN` 0.6** under the table's sizes: `drawListAt` returns [] and
+  `graphicFits` is false, so it is dropped with "too long to fit its
+  place". Recorded, then unpinned by `85b59e3` (a pin would fail when the
+  sizes are rightly revised); the sizes are proposals.
+- **`itemBounds` is the bake's conservative reach, not the ink.** A tree
+  edge's arrowhead bound runs 2 px past a 16:9 third while its ink is
+  inside; `712246e` checks text and shapes by their box and strokes by
+  `strokeShape`'s ink. Assert containment on the ink.
+- **A riding head's "not begun" needs a tolerance.** A frame a hair past
+  a stroke's start reads a head growth of 1e-5, because a beat less the
+  stroke's duration is a float; `85b59e3` reads "not begun" as < 1e-4 and
+  gives the window edges 1e-6 s.
+- **The Telugu grapheme count depends on ICU.** "పెళ్లికి ముందు" is 6
+  graphemes under Node 24's ICU 78 (Unicode 15.1's GB9c makes the
+  conjunct "ళ్లి" one cluster) and 7 under an older ICU; the pin skips below
+  ICU 74 (`528986c`). Both CI runners use setup-node 24. The two labels
+  `graphicHolds` pins, 'जगह देख लें' (8) and 'మేకప్' (3), hold no conjunct and
+  need no skip.
+- **The harness census, 2026-11-11** (`window.__forgeCensus()` in the
+  Browser pane's harness at localhost:5199, Chrome 152). Piece 4's counts
+  were reasoned from the code; one was wrong by one: OUTPUT's "None" is 2
+  on screen (the Graphics picker's and the captions' Animation None,
+  `TextAnimationPicker.tsx:133`, which had no row in OUTPUT before), and
+  the census said "ambiguous — 2 on screen here, 0 of them in an empty
+  project; the row accounts for 1". `51e2f23` set count 2: 891 checked, 0
+  missing, 8 skipped. The census needs a tall window: at 1441 × 640 it
+  threw "census: the Curve tray was asked for curves and shows rail in 28
+  px"; it ran at 1324 × 882. It takes about 55 s (57,152 ms, then 55,132),
+  longer than one javascript call in the pane allows (45 s), so it is
+  started into `window.__r` and polled.
+- **The `macos-14` runner's retirement** of 2026-11-02, met on this lane's
+  push, is §59's last subsection.

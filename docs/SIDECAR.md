@@ -282,8 +282,10 @@ be installed into `userData/python-dev/` (its own root, so the dev app never tou
 installed one's); the tests reach a pack through `FORGE_HELPER_PACK=<userData or version
 folder>` (`tests/integration/venv.ts`), started through the pack rung's own launch, and
 `FORGE_PACK_REAL=1 npx vitest run tests/integration/helperPack.int.test.ts` installs one for
-real from the pinned hosts. CI does both on every push, on Windows and `macos-14`
-(`.github/workflows/ci.yml`, CLIPS §3a.6).
+real from the pinned hosts. CI does both on every push, on Windows and `macos-15`
+(`.github/workflows/ci.yml`, CLIPS §3a.6). (It was `macos-14` until 2026-11-11, when
+`e06e1c3` moved the Mac job because GitHub retired that image: the pack's macOS 14 floor
+now runs on no CI machine, and only a real macOS 14 machine can check it.)
 
 Which Python runs the helper is `resolveHelperPython` (`src/shared/sidecar/helperPython.ts`,
 `docs/CLIPS.md` §3a.2). In development: `FORGE_PYTHON` when set, then this venv, then a dev pack

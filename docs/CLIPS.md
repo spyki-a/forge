@@ -80,10 +80,35 @@
 > at 2. Still yours, outside the bar: M21, the beat-frame allowance
 > window, and the per-code-point painter mutation once in the app on the
 > Mac (optional, not run).
+> Then **phase 2 began** (§6.19), and its first two lanes are built and
+> pushed. "T3, first", 2026-11-06/07: `41a3db0`, fix `ddd1ede` (§6.6's
+> "Built (stub)" note). T1, in four pieces, each read by two critics
+> before the next: piece 1, 2026-11-07, `cb394b5`, `35dd847`, `8f18cc8`,
+> fix `528986c`; piece 2, `4e6004e`, `dd309bf`, `f64a879` (2026-11-07),
+> fix `9e7a89e` (2026-11-10: you paused the run on 2026-11-07 before
+> piece 2's critics, and it resumed 2026-11-10); piece 3, 2026-11-10,
+> `712246e`, `1871004`, fix `85b59e3`; piece 4, 2026-11-10/11,
+> `d680132`, `1a681c7`, fix `62f3c83`; then `51e2f23`, the census read on
+> screen (§6.2's and §6.5's phase-2 Built notes). Pushed 2026-11-11 as
+> `51e2f23` (run 43013571098: `windows-latest` green; the `macos-14` job
+> cancelled unstarted, GitHub having retired that image), then
+> `e06e1c3` moved the Mac job to `macos-15` (run 43016087950, green on
+> `windows-latest` and `macos-15`): **the lane is green on both runners
+> at `e06e1c3`.** The suite at `62f3c83` on the Mac: 332 files passed and
+> 5 skipped (337), 4738 tests passed and 64 skipped (4802). What the app
+> can do now: the eight templates draw through their drawers (`DRAWERS`
+> holds `counter`, `bars`, `steps`, `quote`, `callout`, `ring`, `keyword`
+> and `lower-third`; no marker painter, since M10 has not passed and
+> `MARKER_READY` stays false), and OUTPUT has a Graphics section (§6.5).
 > Nothing in the app makes a graphic clip yet: `addGraphicClip`'s caller
-> is phase 2's panel (§6.6). Not built: everything from phase 2 on, which
-> is next: T3's typed stub of
-> `applyGraphics` first, then T1 (§6.19). §2's total is
+> is phase 2's panel (§6.6, T2b's), and `applyGraphics` is a typed stub.
+> Not built: the rest of phase 2, which is next: T2a (`claims.ts`, then
+> `validateGraphics.ts` with `checkGraphicData`, `claims` and the
+> property test, §6.7), then T3, T2b and T4 as §6.19 orders them. Still
+> yours from these lanes: the list in §6.12's "Phase 2's state,
+> 2026-11-11". (Before 2026-11-06 this line read: "Not built: everything
+> from phase 2 on, which is next: T3's typed stub of `applyGraphics`
+> first, then T1 (§6.19).") §2's total is
 > now about 100-103.5 days with Step P (100.25-103.75 since §16.66's
 > answer, 2026-10-27).
 >
@@ -1047,7 +1072,10 @@ skipped, and the capability suites, started **through the pack's own
 launch** (its flags and environment), with hello's `sys.prefix` and every
 `sys.path` entry inside the pack or the app's `sidecar` folder. CI does the
 same on every push on Windows and on a macOS 14 runner (§16.48 answered
-(b), built in slice C, §3a.6). (The old text said
+(b), built in slice C, §3a.6). (Since 2026-11-11, `e06e1c3`, on a
+`macos-15` runner: GitHub retired the macOS 14 image on 2026-11-02, so
+the AI helper pack's macOS 14 floor now runs on no CI machine; §3a.6's
+note.) (The old text said
 "the twelve helper tests"; `sidecar.int.test.ts` had 15 when this was
 planned and has 20 since slice B.)
 
@@ -1065,7 +1093,7 @@ planned and has 20 since slice B.)
 | the job on its own queue: stages, Repair that fetches first, Remove, Update, quit, the launch sweep, the lock across app instances | 1–1.25 | §3a.3 |
 | the speech model's own press, pinned and loaded local-only (§16.49) | 0.5–1 | §3a.4 |
 | the UI: the Settings row in its states, the sized buttons, the pointers, gating by method, the harness bridge and the census | 1–1.5 | §3a.4 |
-| tests with their mutations; CI's real install on Windows and macOS 14, its cache, the URL probe, the PE import listing, `pip check`, the suites through the pack's launch | 1.5–1.75 | §3a.6, §3a.7 |
+| tests with their mutations; CI's real install on Windows and macOS 14 (macOS 15 since 2026-11-11, §3a.6), its cache, the URL probe, the PE import listing, `pip check`, the suites through the pack's launch | 1.5–1.75 | §3a.6, §3a.7 |
 | the clean Mac and the Surface, and what they find | 0.5–1 | §3a.9 |
 | docs | 0.5 | §3a.10 |
 | **P** | **9.5–13** | |
@@ -2479,7 +2507,8 @@ Repair and Remove need the wait too.
 >   or venv helper runs, `installing` is not broadcast, so the row reads the
 >   job list then.
 > - **CI's install** (§3a.6, rows 28 and 37), on Windows and `macos-14`,
->   with the URL probe, the native-import listing and the cache.
+>   with the URL probe, the native-import listing and the cache. (The Mac
+>   job is on `macos-15` since 2026-11-11, `e06e1c3`; §3a.6.)
 > - **`net.fetch`** (row 19): the job uses Node's fetch, which ignores a
 >   proxy unless `NODE_USE_ENV_PROXY=1`, and the app does not set it
 >   (§3a.5's note).
@@ -3437,6 +3466,25 @@ from inside the pack is part of the clean Mac's run (§3a.9).
 >    **listing built, comparison pending**, until the next slice commits
 >    CI's artifact as the fixture.
 >
+> **The Mac job moved to `macos-15`, 2026-11-11** (`e06e1c3`). GitHub
+> retired the macOS 14 runner image on 2026-11-02 (its changelog of
+> 2026-10-01; labels `macos-14`, `macos-14-large`, `macos-14-xlarge`;
+> `macos-15` and `macos-latest`, which is `macos-26`, the arm64
+> replacements). The push of `51e2f23` (run 43013571098) had its
+> `macos-14` job cancelled one second after it was queued, no step run,
+> with "The configuration 'macos-14-arm64-us-default' is not supported";
+> the last run that got a `macos-14` machine was 41693366322 on `683a6f0`,
+> 2026-11-03. The matrix is now `[windows-latest, macos-15]`, the lowest
+> arm64 image GitHub still hosts, named rather than `macos-latest`; run
+> 43016087950 on `e06e1c3` passed on both (`macos-15` 11.1 min,
+> `windows-latest` 12.0 min, no annotation), the pack's install and
+> suites included. **What it loses**: `macos-14` was the only machine
+> anywhere that ran the AI helper pack's macOS 14 floor (onnxruntime's and
+> av's arm64 wheels are `macosx_14_0`; §16.48 (b)); that floor now runs on
+> no CI machine, and only a real macOS 14 machine can check it. Whether
+> that matters before the beta is yours (§6.12's "Phase 2's state,
+> 2026-11-11"). No test reads the label (`tests/helperPackCi.test.ts`).
+>
 > **Measured locally** (the packaging lane, in clean copies): the URL probe
 > answered for all 67 URLs (206, every length the pin's) in 0.6 s; pack 2
 > installed fresh into `$TMPDIR/laneC-pack é/userData` in 53.0 s, then
@@ -3528,7 +3576,9 @@ uninstaller; the guide says Remove first.
 **CI installs the pack for real**, on the Windows push job and, by
 §16.48 (b), on a **`macos-14` arm64 runner** pushed too, which is free for a
 public repo and is the only place the pack's macOS 14 floor runs (the dev
-Mac runs macOS 26). After the existing `npm test` (which keeps its bare 3.12
+Mac runs macOS 26). (2026-11-11: on `macos-15` since `e06e1c3`, GitHub
+having retired the macOS 14 image; the AI helper pack's macOS 14 floor now runs on no CI machine, §3a.6's
+note.) After the existing `npm test` (which keeps its bare 3.12
 and every degraded check, §16.36):
 
 1. **The URL probe, on every push**, cache or not: each manifest URL (67
@@ -4026,7 +4076,10 @@ Mac).
 
 ### 3a.9 P.9 — Exit · 0.5–1 day
 
-- **CI**: on the Windows push job and the `macos-14` one (§16.48),
+- **CI**: on the Windows push job and the `macos-14` one (§16.48; the
+  `macos-15` one since 2026-11-11, `e06e1c3`, the macOS 14 image retired,
+  so the pack's macOS 14 floor is now checked only on a real macOS 14
+  machine, §3a.6),
   `helperPack.int` installs the pinned pack into a temp userData with a
   space and a non-ASCII character in its path, and the helper's suites run
   green from inside it through the pack's launch, `sidecarMedia.int`'s Python
@@ -7877,7 +7930,8 @@ M7). Nothing is installed by this plan.
 ### 6.1 The spec — `Clip.graphic?: GraphicSpec`
 
 **Phase 1 · 0.5 day.** The meaning of each template's fields is §6.2's, and
-their values (`GRAPHIC_TEMPLATES`) are built in phase 2.
+their values (`GRAPHIC_TEMPLATES`) are built in phase 2 (built 2026-11-07,
+`cb394b5`, with `TemplateDef.minItems?` added; §6.2's Built note).
 
 **The rename first (§16.8).** `src/shared/graphics/` already holds
 `spec.ts`'s `GraphicsSpec` (`spec.ts:101`), the caption-layer scene for the
@@ -8296,7 +8350,9 @@ frame's short side, `s`; positions are output pixels.
 
 - **The content rect.** With `place.auto`, the chosen third (the frame's
   full width, a third of its height), inset at each side by `TITLE_SAFE`
-  (0.05, `timeline.ts:757`) of the width, and, where the third meets the
+  (0.05, `src/shared/timeline.ts:772`; corrected 2026-11-11, it read
+  `timeline.ts:757`, and `captions/timeline.ts` has no `TITLE_SAFE`) of
+  the width, and, where the third meets the
   frame's top or bottom edge, by `TITLE_SAFE` of the height. With `auto:
   false`, the dragged box itself. The graphic is centred in it, except the
   lower third, which sits at its left.
@@ -8331,6 +8387,10 @@ itself, unchanged. A value with no digits, or with two numbers
 `numberOf(value: string): number | null` gives a bar or a ring its size.
 Nothing calls `toLocaleString`. The counter's Hindi digits follow what the
 installed speech model writes (M21, measured before the counter is built).
+(2026-11-07: the counter was built ahead of M21, because `inBetween` keeps
+whatever script and grouping `data.value` is written in, so M21 cannot
+change how the counter draws; it can change how a Hindi value should be
+written, which is T2's. §6.19's gate paragraph.)
 
 **The tree — `graphics/tree.ts`.** The app computes the parents; the model
 never fills them (the research, §4.5).
@@ -8380,7 +8440,11 @@ stricter rule, twice at 200 words a minute (0.6 s a word, the research
 [34]), is printed by M16 and not enforced until its result is read into
 EFFECTS §61. A template whose seconds do not hold its longest fixture label
 gets its seconds raised in the table above or its label capped, decided in
-phase 2 (§6.15, M16).
+phase 2 (§6.15, M16). (Measured 2026-11-10, `1871004`: every longest label
+holds at 20 graphemes a second, so nothing was raised or capped; the 0.6 s
+figure, over the max for eight fixtures, is read into EFFECTS §61 on
+2026-11-11 and still printed, not enforced: whether to enforce it is
+yours. §6.15's phase-2 note.)
 
 **Fixtures for drawing**, `tests/fixtures/graphics/specs.json`: one
 `GraphicSpec` per shape in English, Hindi and Telugu, 27 in all, each with
@@ -8431,6 +8495,187 @@ Telugu (D10, §16.63; §6.20), not whatever fallback each OS resolves.
 and the layout above, `numbers.ts`, `tree.ts`, `GRAPHIC_TEMPLATES`, the
 fixtures' wiring and the three tests above.
 
+> **Built 2026-11-07 to 10 (lane T1's pieces 1-3, §6.19).** Piece 1:
+> `cb394b5`, `35dd847`, `8f18cc8`, fix `528986c` (2026-11-07); piece 2:
+> `4e6004e`, `dd309bf`, `f64a879` (2026-11-07), fix `9e7a89e`
+> (2026-11-10); piece 3: `712246e`, `1871004`, fix `85b59e3`
+> (2026-11-10); each piece read by two critics (the plan, the tests)
+> before its fixer and the next piece. Pushed with the lane as `51e2f23`
+> (2026-11-11); CI green on both runners at `e06e1c3` (the status block).
+> Figures from the commit messages and the build workflow's journal; a
+> case count "at `e06e1c3`" is a source count of `it(`/`test(` lines,
+> not a run. The style's second half is §6.5's Built note. **Every
+> "beyond the plan's words" item below is a choice this section left
+> open, made by a builder, and yours to keep or overrule.**
+> - **`GRAPHIC_TEMPLATES`** (`cb394b5`, `src/shared/graphics/template.ts`):
+>   the table above row for row, nine rows (screen-card's seconds 1/10/600),
+>   deep-frozen; no row for `timeline`, `before-after`, `versus`, `source`.
+>   Beyond: `TemplateDef` gains `minItems?` (the "(at least 2)" of bars
+>   and steps; §6.1's type has no such field); `pairs` written in the
+>   tuple's `[label, value]` order where the table writes `[value,
+>   label]`; typed `Partial<Record<…>>` as `DRAWERS` is; the 16-word and
+>   4-word caps stay §6.7 rule 9's (no field holds them); "offered to the
+>   model" is no field (§6.6's menu says). `tests/graphicTemplates.test.ts`,
+>   9 cases, a file §6.11's index did not name.
+> - **`numbers.ts`** (`cb394b5`): `inBetween` and `numberOf` as worded.
+>   The prefix is everything before the first digit and the suffix
+>   everything after the last, verbatim; only commas group; a minus stays
+>   at 0 ("-0"). **"No in-between"** (no digits, two numbers, digits of
+>   two blocks, a grouping neither western nor Indian) means the value is
+>   returned whole at every fraction, 0 included, so a drawer tests
+>   `numberOf(value) === null` and draws nothing before the beat: that is
+>   the drawers' seam (`528986c`'s doc comment). `numberOf` applies a
+>   minus and §6.7 rule 4's English multipliers (k, thousand, m/mn/million,
+>   b/bn/billion, lakh, crore); Hindi and Telugu multiplier words are not
+>   read. `tests/graphicNumbers.test.ts`, 15 cases. Mutations: western
+>   always ("expected '950,000' to be '9,50,000'"), decimals dropped, the
+>   script made ASCII ("expected '20%' to be '२०%'"), fraction ≥ 1
+>   reformatted ("expected '15,00,000' to be '10,00,000'").
+> - **`tree.ts`** (`35dd847`, fix `528986c`): `treeParents`, `parentsValid`,
+>   `connectorFor(parents)` (this lane's name; the plan names no function)
+>   and `SUB_COUNT_CUES` (exported, frozen). A label's run is its tokens
+>   in order with at most 3 skipped between two (§6.7 rule 6's gap),
+>   searched in spoken order from the run before; a run not found leaves
+>   the whole list flat; `title` is ignored. **`src/shared/director/claims.ts`
+>   was started here**, with `claimToken` alone (§6.7 rules 1-3: NFC,
+>   lower case, edge trims outside letters, marks and digits, native digits
+>   to ASCII), because `tree.ts` reads it; it is T2a's file, which T2a
+>   extends (rule 2's split of a currency sign and a `%` into unit tokens
+>   is not in it). `tests/graphicTree.test.ts`, 22 cases at `e06e1c3` (one
+>   an `it.each` over the three fixtures), two of them seeded properties
+>   over 500 generated lists each (a mulberry32 loop: the repo has no
+>   fast-check), checked by an oracle written apart from `parentsValid`.
+>   Mutations: a forward parent accepted ("seed 23: [3,-1,-1,-1]: expected
+>   true to be false"), rule 2 on a child's own count (3 failed), every
+>   parent the title (7 failed), and since `528986c` the cue reach 1 and 3
+>   and the run search from 0.
+> - **The fixtures**: `tests/fixtures/graphics/nested-en-1.json`, `-2`,
+>   `-3` (`35dd847`; three files where §6.10 says `nested-*.json`, each
+>   with a note awaiting your check; en-3 cut from seven items to six,
+>   steps' maximum, by `528986c`); and `specs.json` (`8f18cc8`), 27 drawing
+>   fixtures, the nine shapes × English, Hindi and Telugu, in a shape this
+>   lane chose (`{ note, specs: [{ id, shape, language, spec }] }`): the
+>   connected steps nested in English, a line in Hindi, a flat tree in
+>   Telugu; one ring written "40 percent" (ring-en, since `528986c`) and
+>   the others with `%`; each template's longest allowed label in its
+>   English fixture; seconds the largest of `seconds.min`, the last beat +
+>   0.8 and 0.5 + `readingSeconds` + 0.3, rounded up to 0.1 s. **The Hindi
+>   and Telugu strings were written by the lane and await your check**
+>   (the file's note says so). `tests/graphicSpecs.test.ts`, 11 cases at
+>   `e06e1c3`, one skipped below ICU 74 (the Telugu pin, 6 graphemes, is
+>   Node 24's ICU 78: "ళ్లి" one cluster; an older ICU counts 7).
+>   `readingSeconds` (graphemes ÷ 20, `READING_GRAPHEMES_PER_S`) landed
+>   in `beats.ts` with it.
+> - **The layout**, `src/shared/graphics/templates/layout.ts` (`4e6004e`,
+>   `712246e`; the plan named no file): `contentRect`, `wrapWidth`
+>   (`WRAP_MAX` 0.8), `fitScale` (steps of `FIT_STEP` 0.05 from 1 to
+>   `FIT_MIN` 0.6, null past it), `TOO_LONG_NOTE`, `LAYOUT_SIZES` (the
+>   table above), `HEAD_SIZE` 0.025 of s (the plan names no head size;
+>   the harness drew 0.041), and the shared helpers (`dimFor`, `panelFor`,
+>   `enterMove`, `beatOf`, `drawOnEase` …). The too-big answer is
+>   `graphicFits(spec, style, size, measure, targets?, drawer?)` in
+>   `drawList.ts` plus an empty list, since a `DrawOut` has no note. A
+>   wrapped field's further lines are `<id>-<n>`; source paths are
+>   `data.`-prefixed. **`drawOnEase`**: counts, sweeps, bar widths and
+>   draw-ons take `expo-out` where the style says `out-back`, which departs
+>   from this section's `p = progress(t, 0, beat, style.motion.ease)` under
+>   `energetic`, because out-back would draw a count past its value before
+>   the beat (`EFFECTS.md` §61, phase 2); a question for you.
+> - **The eight draw files**, registered in `DRAWERS` (counter and ring
+>   `4e6004e`; bars, keyword, lower-third `dd309bf`; steps, quote, callout
+>   `712246e`). Where the words left a choice:
+>   - `counter`: the group's rise in the value's px; the fit counts the
+>     panel's padding whether or not the panel is drawn and needs the value
+>     on one line; panel shadow blur 0.02 s, drop 0.006 s.
+>   - `ring`: enters as the counter does (no entrance is named); its box
+>     the ink, 0.28 of s less one thickness; the `%` by `ringNeedsGlyph`
+>     (`/%|\bper\s?cent\b/i`, §6.7's units, so a Hindi or Telugu percent
+>     word would get a `%`, out of reach today by §6.7 rule 9, beside M21);
+>     its track starts at −π/2 too.
+>   - `bars`: the content width is the wrap width; the title left-aligned
+>     above the rows, entering from t = 0; the track enters with its row
+>     in `palette.muted` (the table gives muted to the ring's track only);
+>     the value 0.25 × the label's px past the bar's current end; the fit
+>     also needs the widest value at its full bar inside (bars-hi draws at
+>     0.83 under the fake measure).
+>   - `keyword`: **the card scales from 0.92 under every entrance**
+>     (`9e7a89e`: under `rise` it had not scaled at all; 0.92 is
+>     `motion.ts`'s `POP_FROM`); under `pop` it scales and fades but does
+>     not rise (pop's dy is 0); the panel only when
+>     `palette.panelOpacity > 0`; "one line where it fits" read as the
+>     wrap at the wrap width
+>     (keyword-en takes two lines), not a shrink; a `lit` outside the
+>     words lights none and draws no underline.
+>   - `lower-third`: "rises from behind it" is the entrance alone (an item
+>     has no clip); the role 0.25 × its px below the bar, arriving the beat
+>     + 0.1 s (`ROLE_DELAY_S`).
+>   - `steps`: every edge leaves the numeral column's left middle; a line
+>     is a vertical rule down that edge; the tree's marker a dot 0.3 × the
+>     label's px; elbow corner 0.3 × the label's px, the leg stopping 0.15
+>     short; parents that fail `parentsValid` draw flat under the title
+>     (pinned by `85b59e3`). **The travelling beam is built**: `energetic`
+>     with `line` only, from the last beat, a `BEAM_SPAN` 0.2 of the rule
+>     advancing over `DURATIONS.loop`, **5.5 s, where this section says a
+>     5 s loop**.
+>   - `quote`: “ and ” in every language; the dash a separate fixed-glyph
+>     item `dash`; the lit word by `captions/line.ts`'s `activeWordAt`,
+>     imported, read at t + 1e-6 s; the social kind's name after the dash,
+>     handle and date beneath, `link` stored and not drawn; a
+>     whitespace-only speaker skipped (the words say absent when '').
+>   - `callout`: "nearest edge" is the closest pair of edge midpoints; the
+>     bow 0.2 of the chord; the label beside the subject on the wider side
+>     (left on a tie), clamped into the rect; the circle four cubics
+>     (κ 0.5523), padded 12 % (`CIRCLE_PAD`), from the top clockwise; with
+>     `targets.subject` null, no items at all; a `panel` item the draw-list
+>     column does not name; the arrow leaves the panel's box even when
+>     `panelOpacity` is 0.
+>   - None draws seeded random, so §6.3's key-order mutation does not
+>     apply to them; the key-order case runs them.
+> - **`graphicFrame`'s second half** is its phase-2 cases in
+>   `tests/graphicFrame.test.ts`, with no new export (`frame.ts`'s header
+>   already said so): 28 phase-1 cases, 41 at `f64a879`, 43 at `9e7a89e`,
+>   57 at `712246e` (its builder's run), 60 at `e06e1c3`. Through
+>   `specs.json` with phase 1's fake measure: every `data` string verbatim
+>   at the settled frame and nothing else but the listed glyphs; each
+>   element on its beat frame and not the frame before at 24, 25, 30 and
+>   60 fps; in-between strings ≤ the value and in its own format, read by
+>   a checker written apart from `numbers.ts`; the ring's `%` rule both
+>   ways; keyword's words, stagger, card scale, lit accent and underline;
+>   the layout pinned independently of `layout.ts` (`9e7a89e`); the last
+>   moving frame equal to the last frame; stable ids; the dim; the too-big
+>   rule; the riding heads' growth and the callout's side (`85b59e3`). The
+>   five mutations this section lists fail ("counter-en value frame 1 at
+>   24: \"430,720\" in the format of \"10,00,000\"…"; "expected '40
+>   percent%' to be '40 percent'"; "expected 'LIGHT beats expensive gear'
+>   …"; "steps-en/none row-0 on its beat frame 12 at 24: expected
+>   0.9997897993643579 to be 1"; "keyword-en lit 1: expected
+>   279.84999999999997 to be close to 563.65"), and every other mutation
+>   is in its commit's message with its failure text. **Measured, not
+>   asserted**:
+>   steps-en (six rows) does not fit a 16:9 bottom third even at
+>   `FIT_MIN` and is dropped ("too long to fit its place"; `85b59e3`
+>   unpinned it); short values (₹500, ౩౦౦, the rings' 40 and 75) reach the
+>   whole value by rounding up to three frames before the beat; ring-en's
+>   "40 percent" is wider than the ring's hole under the fake measure.
+>   `tests/graphicDrawList.test.ts`'s "`DRAWERS` is a frozen, empty record
+>   in phase 1" became membership (`4e6004e`). **No render check is this
+>   lane's**: the drawers are seen only through vitest and OUTPUT's sample
+>   tile; the render checks are T4's (§6.11).
+> - **Reading holds, M16** (`1871004`): `LEAD_S` 0.5, `TAIL_S` 0.8 and
+>   `graphicSeconds(def, beats, drawn)` in `beats.ts` (the largest of the
+>   three, null over `seconds.max`, not rounded), ahead of T3's
+>   `graphicBeats`; `tests/graphicHolds.test.ts`, 4 cases; the label read is
+>   the drawn strings joined by spaces, the words counted by the test's own
+>   `wordsOf` (no production word count exists). The result is §6.15's
+>   phase-2 note: nothing raised or capped. Mutations: seconds without the
+>   reading time ("counter-en: at least its reading time: expected 2 to be
+>   greater than or equal to 2.4499999989999997"), UTF-16 units ("expected
+>   11 to be 8"), empty words.
+> - **The suites**, each read to a file with `$?`: typecheck 0 and the full
+>   suite 0 at every commit; 326 files passed and 5 skipped, 4627 tests
+>   passed and 64 skipped at `ddd1ede`; 331 and 5, 4722 and 64 at
+>   `85b59e3`.
+
 ### 6.3 Drawing: one draw list, two painters, preview, bake, export
 
 **Phase 1 · 4 days.** One engine from the first commit (§16.54, D1): a pure
@@ -8448,7 +8693,7 @@ its three jobs.
 |---|---|---|
 | `src/shared/graphics/drawList.ts` | `drawListAt`, `needsCompositor`, `graphicBox`, and `onsetTargetsAt` (the "When" rule under Targets as a function; built 2026-10-30, the draw list's Built note); `graphicBox`'s two far-side columns and rows, `GEQ_EDGE_PX` (module-private, since `683a6f0`, 2026-11-03; "The box" below) | node and renderer, pure; the only source importer of `templates/index.ts` (its test imports it too, to pin "frozen and empty") |
 | `src/shared/graphics/items.ts` | the `DrawItem` types (their `Point` and `Arrowhead` imported from `stroke.ts`, corrected 2026-10-28), `Drawer`, `DrawOut`, `textItems`, `textSpecOf`, `itemBounds`, `unitFor`, `CLUSTER_SCRIPTS`; and, built 2026-10-30 (the draw list's Built note), `GraphicTargets` (here, not in `targets.ts`, because `Drawer` names it), `ItemTransform`, `itemOrigin`, `localBounds`, `unionRect`, `graphemesOf` | pure; the templates import this, never `drawList.ts`, so no import cycle runs through `templates/index.ts` (`textItems` reads `unitFor`, so the two live together) |
-| `src/shared/graphics/templates/index.ts` | `DRAWERS: Partial<Record<GraphicTemplateId, Drawer>>`, created empty in phase 1; each template's commit adds its own row (§6.2) | pure |
+| `src/shared/graphics/templates/index.ts` | `DRAWERS: Partial<Record<GraphicTemplateId, Drawer>>`, created empty in phase 1; each template's commit adds its own row (§6.2) (eight rows since 2026-11-07/10, `4e6004e`, `dd309bf`, `712246e`: every phase-2 id; the draw files and `templates/layout.ts` beside it, §6.2's Built note) | pure |
 | `src/shared/graphics/stroke.ts` | `flattenPath`, `strokeAt`, the head's geometry (`headGrowAt`, `headShape`, `strokeShape`), `strokeWidth`, `STROKE_MIN_PX`, `STROKE_TOLERANCE`, `Point`, `Arrowhead` (corrected 2026-10-28; the stroke primitive's Built note below) | pure; imports only `DURATIONS` and `progress` from `motion.ts` |
 | `src/shared/graphics/frame.ts` | `graphicMovingFrames`, `beatFrame`, `graphicExitKeys`, `drawnGraphicAsset`; and the constants `SETTLE_S`, `EXIT_S`, `BEAT_FRAME_ALLOWANCE`, with §6.16's `SCREEN_CARD_MOVE_S` and `EDGE_SWEEP_S` declared here so the drawer and the bake read one number (built 2026-10-31, the frames' Built note) | pure |
 | `src/shared/graphics/targets.ts` | `graphicTargetsAt` (`subject` only in phase 1; `tip` and `screen` are §6.18's and §6.16's branches, not built; 2026-10-31, the frames' Built note) | pure; reads the project through `sourceToFrame`, `subjectBoxesAt` and `captionSourceClip`, never a second model of the crop |
@@ -11165,7 +11410,9 @@ dropped from `graphicEligible` (the synthetic style passes).
 > 2026-10-28 UTC; every annotation a notice). Every figure below is from the
 > two commits' messages; line numbers were read at `716d6a7`. The second
 > half (the six other presets, the OUTPUT strip's Graphics section, the
-> census rows, the marker painter) stays phase 2's, as planned.
+> census rows, the marker painter) stays phase 2's, as planned. (Built
+> 2026-11-10/11, all but the marker painter, M10 not having passed; the
+> second half's Built note below.)
 > - **The exports**, in `src/shared/graphics/style.ts`, pure, importing
 >   `STROKE_MIN_PX` from `stroke.ts`, `EntranceName` and `MotionEase` from
 >   `motion.ts`, `TEXT_STYLES` from `render/textStyle.ts` and two types
@@ -11253,7 +11500,10 @@ dropped from `graphicEligible` (the synthetic style passes).
 >   with no `graphics` is written as `clean` with sound true, what its
 >   absence means. **The rebake** a change asks for joins with
 >   `rebakeGraphic` (§6.3, lane C's), which does not exist yet; the
->   comment above the two actions says so (`store.ts:4960-4968`).
+>   comment above the two actions says so (`store.ts:4960-4968`). (Since
+>   `1a681c7`, 2026-11-11: both actions rebake every graphic clip through
+>   `rebakeGraphic` when the project changed; the second half's Built
+>   note below.)
 > - **The tests.** `tests/graphicStyle.test.ts`, 13 cases in `b965cda`,
 >   15 since `0d603a8`: every phase-1 case above, with the `TextSpec`
 >   written out as §6.3's `textSpecOf` builds it and "Mixed Case
@@ -11276,7 +11526,7 @@ dropped from `graphicEligible` (the synthetic style passes).
 >   `undefined`, the captions' bug `setCaptionOverride`'s comment records.
 >   Which id wins, the spec's or the project's, and that the fallback is
 >   `clean` rather than another preset, show only with two presets: phase
->   2's cases.
+>   2's cases. (Built, `d680132`, the second half's Built note.)
 > - **Mutations**, at anchors counted at one match each with `matchAll`,
 >   each file restored from its copy and compared with `cmp`. This
 >   section's six that phase 1 can hold fail as planned: an override's NaN
@@ -11298,12 +11548,107 @@ dropped from `graphicEligible` (the synthetic style passes).
 >   `setGraphicsStyle` removed (two store cases, one "expected true to be
 >   false"), `clean` given `out-back`, the glow branch inverted, and
 >   `numberFormat` on the type alone. `editorial` given the `clean` text
->   style stays phase 2's.
+>   style stays phase 2's. (Run 2026-11-10, `d680132`: it fails.)
 > - **Suites**: typecheck exits 0 at both; the full suite green at
 >   `b965cda` (318 files: 313 passed, 5 skipped; 4363 tests: 4300 passed,
 >   63 skipped) and at `0d603a8` (318 files: 313 passed, 5 skipped; 4366
 >   tests: 4303 passed, 63 skipped). Nothing outside the store reads
 >   `style.ts` yet.
+
+> **Built 2026-11-10/11 (the second half).** `d680132` (2026-11-10),
+> `1a681c7`, then `62f3c83` after two critics (2026-11-11), lane T1's
+> piece 4 (§6.19), and `51e2f23`, the census read on screen (2026-11-11).
+> Pushed with the lane as `51e2f23`; green on both runners at `e06e1c3`
+> (the status block). Figures from the messages and the journal; case
+> counts are the builders' and the fixer's, and match a source count at
+> `e06e1c3` where one is given.
+> - **The six presets** (`d680132`): `GRAPHIC_STYLES` is `clean` then
+>   the table's six in its order, each `preset()`, a copy of clean's
+>   values with the table's columns over it, deep-frozen. Text style,
+>   face, entrance, ease, exit, ink, accent, panel at opacity, `dim` and
+>   `dimOpacity`, and energy as the table gives them (each ink the text
+>   style's base fill from `TEXT_STYLES`, neon's the gradient's last stop
+>   #68D43A; the accent preset's accent #2563EB, which
+>   `overrides['palette.accent']` replaces). Beyond the table: **the glow
+>   on `neon` and `energetic` is `{ radius: 0.02, strength: 0.65 }`**, a
+>   proposal (radius a fraction of the short side, strength neon-green's
+>   own glow opacity; this section names a glow and no numbers), read
+>   before phase 3 only for its presence by `graphicMovingFrames`; and
+>   `muted` #6B7078, the dim's #000000, `radius` 0.02, `stroke` 0.006 and
+>   `shadow` 0.35 are clean's proposals in all six. `MARKER_READY` stays
+>   false (M10 has not passed): no marker painter, no dependency.
+>   `tests/graphicStyle.test.ts`, 15 to 21 cases (this section's phase-2
+>   cases, the glow on neon and energetic only, the accent's default and
+>   override; membership over `GRAPHIC_STYLES`, no snapshot);
+>   `tests/renderer/graphicStyleStore.test.ts`, 5 to 6 (which id wins,
+>   with the clean fallback). Mutations: `editorial` given `clean` (2
+>   fail, "editorial on clean: expected '#101014' to be '#FFFFFF'"),
+>   `clean` given `out-back`, energetic's dim false, and five of the
+>   builder's own.
+> - **OUTPUT's Graphics section** (`1a681c7`, `OutputStrip.tsx`'s
+>   `GraphicsSection`): the "Graphics" heading; the seven presets as rows
+>   (name and face, the project's resolved preset lit, clean for none or
+>   an unknown id), each calling `setGraphicsStyle`; an **Accent colour**
+>   input directly under the accent row, writing
+>   `setGraphicsOverride('palette.accent')` whichever preset is chosen
+>   (it lights words, bars and underlines under every preset) and showing
+>   #2563EB until a pick; the **sample tile**, `GraphicSample`, a fixed
+>   counter ("10,00,000" over "views", `GRAPHIC_SAMPLE`) drawn by the
+>   counter drawer at its settled frame at 30 fps and painted by
+>   `paintDrawList2d`, placed by a box of 0.92 of the tile (a tile is not
+>   a frame); and `TextStylePicker` limited by a new optional `ids` prop to
+>   `GRAPHIC_TEXT_STYLES`, writing `setGraphicsOverride('textStyleId')`,
+>   its "None" removing the override. **It sits after the whole captions
+>   block** (picker, font, size, placement and notes), not between the
+>   caption preset rows and their picker as "under the caption presets"
+>   says, so the captions' controls stay together; shown whether captions
+>   are on or off. "Graphic sounds" is §6.14's, T3's, and not built.
+> - **The rebake** (`1a681c7`, fix `62f3c83`): `setGraphicsStyle` and
+>   `setGraphicsOverride` now call `rebakeGraphicClips` when the project
+>   changed: every graphic clip's id, one after the other, through
+>   `rebakeGraphic`, in the background, including a clip whose spec names
+>   its own style. The fixer's **no-op guard**: a write of the same value,
+>   the removal of an absent key, or the same preset with nothing to reset
+>   returns the project unchanged, so it is neither an undo step nor a
+>   rebake. Not covered: undo and redo of a graphics change do not rebake
+>   (the Preview's baked frames keep the newer style until the next bake;
+>   the export rebakes); the plan does not word it.
+> - **The census** (`1a681c7`, `62f3c83`, `51e2f23`): rows in output/none
+>   for "Graphics", "Clean" (count 4), "Bold", "Editorial", "Neon",
+>   "Mono", "Accent", "Energetic", "Accent colour"; "Browse all", "Style"
+>   and "White glow" at count 2 (a second picker in OUTPUT); and "None"
+>   (`TextStylePicker.tsx:80`). These counts were reasoned from the code,
+>   the agents being kept out of the Browser pane. **Read on screen
+>   2026-11-11** (`window.__forgeCensus()` in the harness, Chrome 152, at
+>   1324 × 882): at `62f3c83`, 891 rows checked, 8 skipped, **1
+>   missing**, the "None" row: "ambiguous — 2 on screen here, 0 of them in
+>   an empty project; the row accounts for 1". The second None is the
+>   captions' Animation None (`TextAnimationPicker.tsx:133`), which no row
+>   had counted in OUTPUT before this section existed. `51e2f23` set the
+>   row to count 2 and named both; read again, 891 checked, 0 missing, 8
+>   skipped, 55,132 ms. The other reasoned counts held as written. The
+>   section was seen open: "Graphics", then Clean / Montserrat, Bold /
+>   Anton, Editorial / Playfair Display, Neon / Unbounded (the rest below
+>   the fold).
+> - **The tests**: `tests/renderer/graphicsSection.test.tsx`, new, 7 cases
+>   in `1a681c7` and 8 since `62f3c83` (the picker's gallery opened,
+>   through a new `initialBrowsing` test prop); `graphicStyleStore`, 7
+>   cases at `e06e1c3` (the rebake once per graphic clip and for no other;
+>   `62f3c83` extended its cases with the no-change and one-undo checks).
+>   Mutations: the picker unfiltered at the strip or inside
+>   `TextStylePicker` ("Chrome: expected [ 'Clean', 'White glow', ...(21)
+>   ] to include 'Chrome'"), the accent control writing `palette.ink`, no
+>   rebake, every clip rebaked ("expected [ 'g1', 'v1', 'g2' ] to have a
+>   length of 2 but got 3"), the sample at frame 0 ("clean: expected [
+>   '12', 'views' ] to include '10,00,000'"; the "12" is `EFFECTS.md` §61,
+>   phase 2), the census label misspelt; and in `62f3c83` the gallery, the
+>   placeholder count and each no-change guard (the override guard on `key
+>   in was` survived its first test and was killed by a present-key case).
+> - **The suites**: typecheck 0; the full suite at `62f3c83` on the Mac,
+>   read by the session to a file with `$?`: 332 files passed and 5
+>   skipped (337), 4738 tests passed and 64 skipped (4802), 220.66 s. At
+>   `51e2f23` (three lines of the census fixture) typecheck 0 and
+>   `uiCensus`, `censusHomes` and `graphicsSection` together, 22 passed.
 
 ### 6.6 The third pass — `graphics@1`: menu, schema, prompt
 
@@ -11544,6 +11889,24 @@ project). Each is a `GraphicProposal` (§6.1).
   and its asset from `drawnGraphicAsset` (§6.3), the helper the store's
   `addGraphicClip` uses, so the two cannot differ. The store then calls
   `rebakeGraphic` on each returned clip id.
+
+  > **Built (stub) 2026-11-06/07** (lane "T3, first", §6.19): `41a3db0`,
+  > then `ddd1ede` after two critics; pushed with lane T1 as `51e2f23`.
+  > `src/shared/graphics/apply.ts` holds `applyGraphics` with the
+  > signature above, the return type written inline, all four imports
+  > type-only, and `CLIPS_GRAPHIC_RULE = 'clips.graphic'`. The stub ignores
+  > its arguments and returns the same project object, `clipIds: []` and
+  > one problem, `{ path: '$', message: 'graphics are not built yet —
+  > nothing was placed' }`: the path and the wording are the builder's (no
+  > director file uses a bare `'$'`), placeholders T3 replaces.
+  > `tests/graphicApply.test.ts`, 2 cases: the return shape, with the
+  > project deep-equal to a `structuredClone` taken before the call
+  > (`ddd1ede`: `toBe` alone passed an in-place edit), and the rule
+  > constant. Mutations: a copy returned, a second problem, the rule
+  > `'director.graphic'`, and since `ddd1ede` the project's name changed
+  > and a track pushed in place ("expected { id: 'p-…', …(7) } to deeply
+  > equal …"). `lowerThirdFor`, `clearGraphics` and the real body (the
+  > landing order above) are T3's.
 
 **The decision record.** There is no `Project.decisions`; the 2026-10-05
 text was wrong. A run appends a `DecisionRecord` (`src/shared/project.ts:23-37`:
@@ -11853,7 +12216,12 @@ validator never sees it (§6.16).
   2026-10-21 from the contract's `normaliseToken`, which
   `automation/keywords.ts:50` already exports with an ASCII-only body that
   maps 'शादी' to '' and '1.2' to '12': one name for two functions is the
-  trap `MotionEase` and `CaptionLayersSpec` were named to avoid)
+  trap `MotionEase` and `CaptionLayersSpec` were named to avoid). (Built
+  ahead of T2a, 2026-11-07, `35dd847`: `src/shared/director/claims.ts`
+  exists with `claimToken(word)` alone, rules 1-3, because lane T1's
+  `tree.ts` reads it; T2a extends this file rather than creating it, and
+  rule 2's split of a leading currency sign and a trailing `%` into unit
+  tokens is not in it yet. §6.2's Built note.)
 - `numbersIn(tokens: string[]): { value: CanonNumber; at: number }[]` (`at`
   a token index)
 - `claimsOf(data: GraphicData, def: TemplateDef): Claim[]`
@@ -11939,7 +12307,10 @@ wordIndices: number[]): number[] | null`, in `src/shared/graphics/beats.ts`.
 **timeline** time in seconds, or null when the clip is retimed.
 `applyGraphics` then sets the graphic clip's start frame and stores
 `GraphicSpec.beats` relative to it, in seconds (§6.1). `beats.ts` also holds
-`readingSeconds` (§6.2).
+`readingSeconds` (§6.2). (Built ahead of T3, by lane T1: `beats.ts` exists
+since 2026-11-07 with `readingSeconds` (`8f18cc8`), and since 2026-11-10
+holds `LEAD_S` 0.5, `TAIL_S` 0.8 and `graphicSeconds` (`1871004`), §6.2's
+Built note; `graphicBeats` is still T3's.)
 
 - **Beat times.** Each element's grounded word is its beat (`beatWords`,
   §6.7; the per-template beats are §6.2's table): `word.startMs` → timeline
@@ -12362,12 +12733,12 @@ render check and the census.
 | 1 | `tests/graphicStroke.test.ts` (built 2026-10-28, `69d2d6e` and `2074f08`), `tests/graphicDrawList.test.ts` (built 2026-10-30, `4b68c45`, 25 cases), `tests/graphicPaint.test.ts` (built 2026-10-30/31, `a82cd43` and `d822c56`, 29 cases) | §6.3 (two depth cases in `graphicDrawList`, §6.16; §6.3's three Built notes) |
 | 1 | `tests/renderer/graphicCanvas.test.ts` (built 2026-10-31/11-01, `b610c91` and `1ea9a96`, 26 cases), `tests/renderer/encodePool.test.ts`'s worker cases (the same commits, 9 cases in all), `tests/graphicBoxRoute.test.ts` (built 2026-11-02, `a273729` and `fa4ddc3`, 7 cases), `tests/exportBake.test.ts`'s graphic cases (the same commits, 4, 13 in all); none was named by this index before it was written | §6.3 (lane C's three Built notes) |
 | 1 | `tests/renderer/graphicCheckPrimitives.test.ts` (built 2026-11-02, `6592a38`, 37 cases; `69c2340`, 50) and `tests/renderer/graphicCheckStrokes.test.ts` (built 2026-11-03, `0954b3d`, 20 cases; `2bb706d`, 25): the harness check's pure parts, node; `tests/graphicDrawList.test.ts`'s far-side case (`683a6f0`, 26 cases); none was named by this index before it was written | below (lane D's harness Built note); §6.3's "The box" |
-| 1-3 | `tests/graphicFrame.test.ts` (phase 1's 28 cases built 2026-10-31, `4196d43` and `0c8911f`) | phase 1 §6.3, phase 2 §6.2, the screen card §6.16 |
-| 1-2 | `tests/graphicStyle.test.ts`, with `tests/renderer/graphicStyleStore.test.ts` for the store's two actions (phase 1's half of both built 2026-10-28, `b965cda` and `0d603a8`) | §6.5 |
+| 1-3 | `tests/graphicFrame.test.ts` (phase 1's 28 cases built 2026-10-31, `4196d43` and `0c8911f`; phase 2's built 2026-11-07/10, `f64a879`, `9e7a89e`, `712246e` and `85b59e3`, 60 cases at `e06e1c3`, §6.2's Built note) | phase 1 §6.3, phase 2 §6.2, the screen card §6.16 |
+| 1-2 | `tests/graphicStyle.test.ts`, with `tests/renderer/graphicStyleStore.test.ts` for the store's two actions (phase 1's half of both built 2026-10-28, `b965cda` and `0d603a8`; phase 2's 2026-11-10/11, `d680132`, `1a681c7` and `62f3c83`, 21 and 7 cases), and `tests/renderer/graphicsSection.test.tsx` (new, `1a681c7` and `62f3c83`, 8 cases; not named here before it was written) | §6.5 (the second half's Built note) |
 | 1-3 | `tests/renderer/graphicStore.test.ts` (phase 1's 21 cases built 2026-11-02, `a273729` and `fa4ddc3`) | phase 1 §6.3, the sounds that follow a graphic §6.14, the screen card §6.16 |
 | 2 | `tests/claims.test.ts`, `tests/graphicsValidator.test.ts` (the property test) | §6.7 |
-| 2 | `tests/directorGraphics.test.ts`, `tests/renderer/transcriptGraphics.test.tsx`, `tests/renderer/graphicPanel.test.tsx` | §6.6 |
-| 2 | `tests/graphicHolds.test.ts` (M16), `tests/graphicTree.test.ts` | §6.2 |
+| 2 | `tests/directorGraphics.test.ts`, `tests/renderer/transcriptGraphics.test.tsx`, `tests/renderer/graphicPanel.test.tsx`; and `tests/graphicApply.test.ts`, the stub's (built 2026-11-06/07, `41a3db0` and `ddd1ede`, 2 cases) | §6.6 (the stub's Built note) |
+| 2 | `tests/graphicHolds.test.ts` (M16) (built 2026-11-10, `1871004`, 4 cases), `tests/graphicTree.test.ts` (built 2026-11-07, `35dd847` and `528986c`, 22 cases at `e06e1c3`); and, not named here before they were written, `tests/graphicTemplates.test.ts` (`cb394b5`, `528986c`, 9 cases), `tests/graphicNumbers.test.ts` (`cb394b5`, 15) and `tests/graphicSpecs.test.ts` (`8f18cc8`, `528986c`, 11) | §6.2 (its Built note) |
 | 2 | `tests/graphicBeats.test.ts` | §6.8 |
 | 2-4 | `tests/graphicPlace.test.ts`, `tests/graphicBudget.test.ts` | §6.9 (phase 3's hero case in `graphicBudget`, §6.16; phase 4's hand case in `graphicPlace`, §6.18) |
 | 2 | `tests/graphicSound.test.ts` (the sound Clear test) | §6.14 |
@@ -12376,6 +12747,21 @@ render check and the census.
 | 4 | `tests/renderer/pointingToggle.test.tsx` (added 2026-10-21 by §6.18) | §6.18 |
 | 0-4 | `tests/integration/graphic.int.test.ts`, the render check | below |
 | 0-2 | the Indic render check, in the app's renderer | below |
+
+**Phase 2's half of this index, 2026-11-11.** Built by lanes "T3, first"
+and T1 (§6.19), pushed as `51e2f23`, green on both runners at `e06e1c3`:
+the rows above marked built, with every mutation each names failing (§6.2's
+and §6.5's Built notes, §6.6's stub note). The case counts "at `e06e1c3`"
+are source counts. Not built, and T4's: the harness check's `templates`,
+`curves`, `look` and per-template Indic options, `graphic.int`'s phase-2
+cases and the property test's wiring; the property test itself is T2a's
+(§6.7). **No render check has run on anything phase 2 drew**: the drawers
+are exercised by vitest with phase 1's fake measure and, on screen, only
+by OUTPUT's sample tile; the render checks, Indic and `graphic.int`, are
+T4's. Not built either: `claims.test`, `graphicsValidator`,
+`directorGraphics`, `transcriptGraphics`, `graphicPanel`, `graphicBeats`,
+`graphicPlace`, `graphicBudget`, `graphicSound` and `graphicStore`'s
+phase-2 cases.
 
 #### Phase 0's cases
 
@@ -12476,7 +12862,16 @@ render check and the census.
 - `tests/eval/director.eval.test.ts`: the `FORGE_EVAL_GRAPHICS` block,
   copied from the look block (`:173-237`) (§6.10).
 - `tests/uiCensus.test.ts` with `tests/fixtures/ui-census.json`: the census
-  rows below.
+  rows below. (OUTPUT's Graphics rows done 2026-11-11, `1a681c7`,
+  `62f3c83` and `51e2f23`, read on screen by the harness census; §6.5's
+  second Built note.)
+- `tests/graphicDrawList.test.ts`: phase 1's "`DRAWERS` is a frozen,
+  empty record" became membership once the first drawers registered
+  (done 2026-11-07, `4e6004e`: frozen, each row a function, none for
+  `screen-card` and the later ids; the no-drawer cases run over the ids
+  with no row). `tests/graphicFrame.test.ts`'s `dataFor` gained the
+  phase-2 templates' data, so the key-order case runs every registered
+  drawer (`4e6004e`, `712246e`).
 - `tests/integration/sidecar.int.test.ts`: the self-test groups held equal
   to the helper's (`:155-178`) once `vision.handsModel` joins
   `SELFTEST_GROUPS.faces`, and the optional methods (phase 4, §6.18).
@@ -13111,7 +13506,11 @@ tiles ("Clean", "Bold", "Editorial", "Neon", "Mono", "Accent",
 point", proposal), with "needs the AI helper", "the AI helper is starting",
 "needs the hand finder", "Get the hand finder · 7.8 MB", "Get the hand and
 face finders · 8.9 MB" and "Finding where they point" (§6.18). The exact
-text is each owning section's.
+text is each owning section's. (2026-11-11: OUTPUT's "Graphics", the seven
+preset rows and "Accent colour" are in, with the counts a second style
+picker in OUTPUT changes and its "None", read on screen with 0 missing;
+§6.5's second Built note. "Graphic sounds" and the rest wait on their
+lanes.)
 
 ### 6.12 Exit — by phase
 
@@ -13129,7 +13528,8 @@ annotations.
 - Every measurement phase 0 owns (M1, M2, M3, M4, M5, M6's Indic and colour
   parts, M22) is in `EFFECTS.md` §61 with its command, machine (the Mac,
   the Surface, or the CI run's id), date and user agent. M21 is there before
-  phase 2's counter is built.
+  phase 2's counter is built. (2026-11-07: it was not; the counter was
+  built ahead of it, by the reasoning in §6.19's gate paragraph.)
 - §6.15's "as measured" note records, and phase 1 starts from: the bake
   region and pool depth (M1, M2); whether any Indic entrance may go below a
   word, as `CLUSTER_SCRIPTS` (M3); whether `blur-rise` is offered (M5);
@@ -13348,6 +13748,75 @@ Also before phase 2 is called done: §15 rows 10 and 11 measured (the eval's
 first run answers LM Studio's `minItems: 0`; the Telugu fixtures answer the
 negative endings); M15 and M17 recorded, and `GRAPHICS_PER_MINUTE` set from
 M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
+
+- **Phase 2's state, 2026-11-11.** Built and pushed: lanes "T3, first"
+  (the stub, §6.6) and T1 (§6.2, the style's second half §6.5), through
+  `51e2f23`, green on both runners at `e06e1c3` (windows-latest and
+  macos-15). The suite at `62f3c83` on the Mac: typecheck 0; 332 files
+  passed and 5 skipped (337), 4738 tests passed and 64 skipped (4802),
+  220.66 s (read by the session to a file, `$?` read). Against 918b6ed's
+  326 files and 4627 tests passed, which already held the stub's two
+  cases, the lane added 6 files and 111 tests after the stub. Harness
+  census at `51e2f23`: 891 rows, 0 missing, 8 skipped. Not built: T2a,
+  T2b, the rest of T3 and T4. **Of the bar above**, the build has met
+  only what T1's own tests carry: the tree's item as its words read (the
+  three English fixtures' exact parent lists and the property killed by a
+  forward parent, `graphicTree`; the fixtures are the lane's own and await
+  your check), and M16's reading holds as the rule stands (every longest
+  fixture label holds at 20 graphemes a second; the 0.6 s figure is
+  printed, not enforced, and yours). Everything else is ahead: the
+  property test and the adversarial generators (T2a), the Keep rows, the
+  eval, the render check on both builds and the Indic render check (T4;
+  no render check has run on a phase-2 drawing), preview = export, M14,
+  the look rating, M18, `graphicBudget`'s property, the sound Clear test,
+  rows 10 and 11, M15, M17 and `LLM.md` §Built. **Still yours, from these
+  lanes** (every other "beyond the plan's words" choice is in §6.2's and
+  §6.5's Built notes and §6.6's stub note, each yours to keep or overrule):
+  - the Hindi and Telugu strings in `tests/fixtures/graphics/specs.json`
+    (the two `graphicHolds` pins: 'जगह देख लें', 8 graphemes; 'మేకప్', 3),
+    and the three English `nested-en-*.json` texts and parent lists;
+  - M21 (row 59, `tests/integration/asr.int.test.ts`): unmeasured; it now
+    bears on how a Hindi value is written (T2's validator and prompt),
+    not on how the counter draws;
+  - whether a 16:9 third should take six rows (steps-en is dropped there
+    even at `FIT_MIN`; `templates/layout.ts`'s `LAYOUT_SIZES`);
+  - whether short counts should be held back (₹500, ౩౦౦, the rings' 40
+    and 75 round to the whole value up to three frames before the beat;
+    `counter.ts`, `ring.ts`, `bars.ts`; with M14);
+  - ring-en's "40 percent" wider than the ring's hole under the fake
+    measure (`ring.ts`; the look rating);
+  - M16's 0.6 s-a-word figure, over the max for eight fixtures: enforce
+    it or not (`tests/graphicHolds.test.ts`, §6.15's phase-2 note);
+  - `drawOnEase`: `expo-out` for counts, sweeps, widths and draw-ons
+    where the style says `out-back`, against §6.2's worded formula
+    (`templates/layout.ts`);
+  - undo and redo of a graphics style change do not rebake the graphic
+    clips (`store.ts`; the export rebakes);
+  - the Graphics section after the whole captions block, not "under the
+    caption presets" (`OutputStrip.tsx`);
+  - the glow `{ radius: 0.02, strength: 0.65 }` on neon and energetic
+    (`style.ts`);
+  - the beam's loop 5.5 s (`DURATIONS.loop`) where §6.2 says 5 s
+    (`templates/steps.ts`);
+  - the stub's problem, path `'$'` and its wording (`graphics/apply.ts`;
+    T3 replaces it);
+  - a code-mixed Hindi or Telugu stretch that says "2 parts" nests, since
+    `treeParents` carries no language (`tree.ts`; whether T2 passes one
+    and forces flat, `528986c`);
+  - the fixers' record-only items (`9e7a89e`'s and `85b59e3`'s "Open,
+    yours"): keyword under `pop` does not rise; keyword's panel gated on
+    `panelOpacity`; bars' track muted and the ring's track start;
+    `beatOf`'s fallback and an out-of-range `lit`; the ring's `%` rule
+    against a Hindi or Telugu percent word (beside M21); `graphicFits`
+    without targets drops a callout as "too long", so T2 must pass them
+    (`drawList.ts`); the arrow leaving the panel's box with no panel
+    drawn and callout's `panel` item; `graphicHolds`' own word count, to
+    move beside `readingSeconds` once a production count exists;
+  - the AI helper pack's macOS 14 floor runs on no CI machine since
+    2026-11-11 (`.github/workflows/ci.yml`, §3a.6, §16.48): whether that
+    matters before the beta;
+  - from phase 1, unchanged: the beat-frame allowance window, and the
+    per-code-point painter mutation once in the app on the Mac.
 
 **The spike's gate** (§16.56; the spike is §6.17). Read from `EFFECTS.md`
 §62, which holds H1-H10, H12 and H13 with their commands, machines and
@@ -14140,12 +14609,12 @@ itself when it shows them wrong.
 | M13 | 51 | 1 (the primitives' spec), 3 (a 2.5D counter and a screen card); you | two bakes on one machine must be `framemd5`-equal, or the bake is not deterministic and the phase does not exit. The Mac-against-Surface mean difference is recorded as the golden tolerance; no CI check compares pixels across machines. (Phase 1's harness half built 2026-11-02, `6592a38` and `69c2340`: `primitives` bakes each case twice on the box route and prints the patterns through `m13Line`; on the harness page 46 of 46 PNGs byte-equal per case, which is not this row's run. Read 2026-11-06/07 in the development app: the two bakes equal in all six cases on each machine, the Mac by `framemd5` (46 of 46 frames), the Surface by the user's own SHA-256 run per sequence and the harness's 46 of 46 byte-equal PNGs; the Mac against the Surface recorded as the golden tolerance, mean over the box 0.084-2.030 per case, largest premultiplied gap 5-212, at the anti-aliased edges, not the geometry. The notes below) |
 | M14 | 52 | 2; you, blind, on your clips, with `curves: { names, clipId }` (§6.10, §6.11; the key returned in the result for you to save) | run on a counter, then a keyword and a callout (§6.10); the overall pick becomes the restrained presets' `motion.ease` in `GRAPHIC_STYLES`, a template's own differing pick its default (§6.13). Until then `expo-out`. The look rating follows it (§6.10) |
 | M15 | 53 | 2; you mark the onset frames into `tests/fixtures/graphics/onsets.json` (`{ assetId; marks: { word: number; frame: number }[] }`, proposal), and `scripts/measure-onsets.mjs` (proposal) reads it against the transcript's `startMs` | median error within one frame at 30 fps: beats as §6.8 writes them. More: an onset refinement is planned as its own change, outside step 3's days (proposal) |
-| M16 | 54 | 2; node | a template whose seconds do not hold its longest fixture label gets its seconds raised in §6.2's table or its label capped, decided in phase 2 |
+| M16 | 54 | 2; node. **Measured 2026-11-10** (`1871004`; §6.15's phase-2 note) | a template whose seconds do not hold its longest fixture label gets its seconds raised in §6.2's table or its label capped, decided in phase 2 (every template holds: nothing raised or capped) |
 | M17 | 55 | 2; you count | `GRAPHICS_PER_MINUTE` = the median graphics per minute of the five clips you call pro, rounded down (proposal); null until counted. Zooms and sounds per minute are recorded beside it |
 | M18 | 56 | 2; you, the Mac: `mix.wav` is the audio of an export of one of your clips with a graphic's sound on a beat, exported by the app with the sound on (`ffmpeg -i <export> -vn mix.wav`), one per sound | the row's "pop" is `pop_bubble.wav`, a candidate role (§6.14). Each role's level under speech is set where you judge speech intelligible; the integrated loudness and the momentary maximum are recorded; `GRAPHIC_SOUND_DB` and `GRAPHIC_SOUND_CAP` are revised with them |
 | M19 | 57 | 1; you write the PNGs in the development app, then a node read | `STROKE_MIN_PX` is the smallest of 1, 2 and 3 px at 1080 wide whose centre line keeps U and V within 8 levels of the PNG's after the `format=yuva420p` overlay (proposal); the research's starting value is 2 px. The read is a gated case in `graphic.int` over the folder the bake wrote (`FORGE_GRAPHIC_FRAMES=<folder>`, proposal). (Built and measured in part 2026-11-03, `0954b3d` and `2bb706d`, on the harness page's PNG and the Mac's 4.4 build: no width of the three is within the bar, 1 px U 63, 2 px 54, 3 px 34; the cause measured, the transparent pixels' black chroma averaged in by `format=yuva420p`, the exit geq's round trip up to 7 levels more. Read 2026-11-06/07 over the development app's PNGs: the Mac 1 px U 64 V 36, 2 px U 54 V 31, 3 px U 34 V 19; the Surface's 2018 build U 63 V 35, U 54 V 30, U 34 V 19; no width within the bar on either, background, ink Y and reference 0 on both. The user's decision of 2026-11-03: M19 slides to a contained pre-beta half-day piece (the stroke colour bled into alpha-0 neighbours in the bake's encode path, with a render test); `STROKE_MIN_PX` unchanged at 2. The notes below) |
 | M20 | 58 | 3; you | legible at rest and its moving frames within M1's whole-hold budget: the card ships as §6.16 plans it. Legible but slow: tilt-in only, no pull-back. Not legible: the card is not offered, and a recording gets the dim and graphics only. The run also records the card's hand-off (frame `L` of the card against the export's frame `L` without the card), whose bar is 2/255 mean (proposal, §6.16) |
-| M21 | 59 | 0, any time before phase 2's counter; you, with your Hindi clips | the counter's Hindi digits follow what the installed model writes (Devanagari or ASCII); the share written as words, which §16.11 drops in v1, is recorded beside it |
+| M21 | 59 | 0, any time before phase 2's counter (2026-11-07: the counter was built first, so now before T2's validator and prompt); you, with your Hindi clips | the counter's Hindi digits follow what the installed model writes (Devanagari or ASCII); the share written as words, which §16.11 drops in v1, is recorded beside it (since 2026-11-07 it bears on how a value is written into `data.value`, not on how the counter draws it, §6.19's gate paragraph) |
 | M22 | 60 | 0; you, the development app on the Mac and the Surface | **Shaped on both** (every cluster's frames differ, every conjunct narrower, the eye agrees with the libass complex sheet): "text has to be canvas 2D" holds and phase 1 starts; §6.20's fonts still land before phase 1's Indic check, so both machines draw the same letters (§16.63). **A cluster unshaped, and the font that drew it lacks the script** (its width equals a missing-glyph box's, or no candidate font matches): §6.20's fonts move into phase 0, M22 runs again with them named first, and phase 1's text work starts when it passes. **Unshaped with a font that has the script**: the shaper is not running, so the research's choice of painter (its §4.2) reopens as a decision for you (the next free §16 number) before any graphic draws Indic text. While either cause is open, no phase-1 commit that draws text lands; the rename, the guards, the motion module and the stroke may (this sentence is the one statement of it; §6.3 and §6.12 point here). The font each cluster resolved to is found by drawing it in each installed candidate face named explicitly; a candidate counts as installed only if a Latin probe drawn in it differs from the same probe in a family that does not exist |
 
 The hand spike's measurements. All but H11 are your runs (MediaPipe needs
@@ -14807,6 +15276,35 @@ values, dated, as the steps above carry their Built notes (it did,
 > - **Left, yours, outside phase 1's bar**: M21 (row 59), the beat-frame
 >   allowance window, and the per-code-point painter mutation once in the
 >   app on the Mac (optional, not run).
+>
+> **Phase 2's measurements so far, 2026-11-10/11** (lane T1; §6.2's Built
+> note, `EFFECTS.md` §61's phase-2 subsection).
+>
+> - **M16** (row 54), measured 2026-11-10 in node by
+>   `tests/graphicHolds.test.ts` (`1871004`), per template and language
+>   (8 × 3) over `specs.json`'s 27 fixtures (screen-card has none): every
+>   template's longest fixture label, in every language, holds at 20
+>   graphemes a second inside its `seconds.max` (steps-en, 123 graphemes,
+>   needs 6.95 s against its fixture's 7.0; quote-en 5.80 s, set by its
+>   last beat + `TAIL_S`), so no seconds were raised and no label capped.
+>   The stricter 0.6 s a word, printed to stderr and not enforced, is over
+>   the max for counter-en (4.40 > 4), bars-en (9.80 > 6), bars-hi
+>   (6.20 > 6), steps-en (13.40 > 8), quote-en (11.60 > 6), quote-hi
+>   (6.80 > 6), ring-en and ring-hi (5.00 > 4). Whether to enforce it is yours. The
+>   Hindi and Telugu labels are the lane's, awaiting your check, so the
+>   reading holds for them as written.
+> - **M21** (row 59): not measured, still yours. **The counter was built
+>   ahead of it** (2026-11-07, `4e6004e`), on the reasoning stated to you
+>   on 2026-11-07 and not objected to: `inBetween` keeps whatever digit
+>   script and grouping `data.value` is written in (a Devanagari value
+>   counts in Devanagari, an Indian-grouped one keeps its grouping), the
+>   rule §6.2 already settles for the drawer, so M21 cannot change how the
+>   counter draws a value. It can change how a Hindi value should be
+>   written into `data.value`, which is the validator's and the prompt's
+>   (T2a, T2b).
+> - M10, M5 and M14 unchanged: no marker painter (`MARKER_READY` false),
+>   no `blur-rise`, every preset value and `DURATIONS` a proposal until
+>   M14 and the look rating.
 
 ### 6.16 Phase 3 — The three.js compositor and 2.5D
 
@@ -15745,8 +16243,8 @@ piece table does (§6.3's, §6.16's, §6.17's, §6.18's).
 | 1 | B | `drawList.ts`, `items.ts` (`DrawOut`, `unitFor`, `CLUSTER_SCRIPTS`, the drawer seam), `templates/index.ts` with `graphicDrawList` (1 of §6.3); `paint.ts` with its `PaintOptions` and `graphicPaint` (0.75); `frame.ts` and `targets.ts` with `graphicFrame`'s first half (0.25) (built 2026-10-30/31, each piece read by two critics before the next: `4b68c45`; `a82cd43`, `d822c56`; `4196d43`, `0c8911f`; pushed as `0c8911f`; §6.3's three Built notes) | 2 | the head; §6.20's two halves (`unitFor` reads `shapedScript`; shaped text items name `INDIC_FONTS`); M3 for `CLUSTER_SCRIPTS` (in, 2026-10-27); A's `stroke.ts` before `paint.ts` |
 | 1 | C | `graphicCanvas.ts` (preview, bake, frames; the worker back-end only if M2 asks, which it did on 2026-10-27) (0.75 of §6.3); the export branch with its own catch line, `Bakers.graphic` and every literal of §6.11, `exportBakers.ts`, the store's `addGraphicClip`, `setGraphic`, `rebakeGraphic`, the trim and split rules, Preview's branch and sweep, (box) `identityPlaced`, with `graphicStore` (0.5); the three store arms (`rebakeGenerated`, `placeCopies`, `rebakeFollowed`) and `graphicGuards`' wiring half (0.25 of §6.4) (built 2026-10-31 to 11-02, each piece read by two critics before the next: `b610c91`, `1ea9a96`; `a273729`, `fa4ddc3`; and `8acf930`, the strips' shot rule over `drawsItself`, which §6.4's head-lane note had left open; pushed as `8acf930`; §6.3's three lane-C Built notes and §6.4's) | 1.5 | B's draw list and painter; M1 and M2 (in, 2026-10-27) |
 | 1 | D | the harness's `primitives` and Indic halves (0.25 of §6.3); `pathLength`, `strokes` widths, `graphic.int`'s phase-1 cases, `SHAPES`' graphic overlay (§6.11's half) (built 2026-11-02/03, each piece read by two critics before the next: `6592a38`, `69c2340`; `0954b3d`, `2bb706d`; `f8d74ee`, `683a6f0`, the last with the lane's one production change, `graphicBox`'s two far-side columns and rows, §6.3's "The box"; pushed as `683a6f0`; §6.11's three lane-D Built notes; phase 1's exit read 2026-11-06/07 in the development app on both machines and met, §6.12) | 0.25 + 0.5 | C; §6.20's D10 half |
-| 2 | T3, first | the typed stub of `applyGraphics` (`KeptGraphic`, the signature, §6.6), committed before T2's wiring starts | inside T3's 3 | phase 1's exit |
-| 2 | T1 | `GRAPHIC_TEMPLATES`' values first (the others read the field modes), then the layout, the eight draw files, `numbers.ts`, `tree.ts`, with `graphicFrame`'s second half, `graphicHolds`, `graphicTree` (§6.2); the style's second half (§6.5) | 4 + 0.5 | phase 1's exit; M21 before the counter |
+| 2 | T3, first | the typed stub of `applyGraphics` (`KeptGraphic`, the signature, §6.6), committed before T2's wiring starts (built 2026-11-06/07, read by two critics before its fix: `41a3db0`, `ddd1ede`; pushed with T1 as `51e2f23`; §6.6's stub note) | inside T3's 3 | phase 1's exit |
+| 2 | T1 | `GRAPHIC_TEMPLATES`' values first (the others read the field modes), then the layout, the eight draw files, `numbers.ts`, `tree.ts`, with `graphicFrame`'s second half, `graphicHolds`, `graphicTree` (§6.2); the style's second half (§6.5) (built 2026-11-07 to 11, each piece read by two critics before the next: `cb394b5`, `35dd847`, `8f18cc8`, `528986c`; `4e6004e`, `dd309bf`, `f64a879`, `9e7a89e`; `712246e`, `1871004`, `85b59e3`; `d680132`, `1a681c7`, `62f3c83`; and `51e2f23`, the census read on screen; pushed as `51e2f23`, green on both runners at `e06e1c3`; §6.2's and §6.5's phase-2 Built notes; no marker painter, M10 not passed) | 4 + 0.5 | phase 1's exit; M21 before the counter (built ahead of it, 2026-11-07: the gate paragraph below) |
 | 2 | T2a | `claims.ts`, then `validateGraphics.ts` with `checkGraphicData`, `claims` and the property test (§6.7) | 3 | T1's values |
 | 2 | T2b | `schemaGraphics.ts`, `promptGraphics.ts`, the ask's fix with `directorAsk`, `run.ts`'s `graphicsMenuFor`, `settleGraphics` and `decisionForGraphics`, Direct's and the tile's wiring (Clip it's is step 4's), `TranscriptGraphics.tsx`, `GraphicPanel.tsx`, the store's actions but `setGraphicSounds`, with `directorGraphics`, `transcriptGraphics`, `graphicPanel` (§6.6) | 2 | T2a's validator; T3's stub |
 | 2 | T3 | `beats.ts` with `graphicBeats` (§6.8); `place.ts` (with `freeSpace.ts`'s `samplesOver`) and `budget.ts` with `graphicPlace`, `graphicBudget` (§6.9); `sound.ts` (`GRAPHIC_SOUND_FILES`), `graphics/apply.ts` (`applyGraphics`, `lowerThirdFor`, `clearGraphics`), `director/apply.ts`'s constants, sweep and return, the store's follow-on edits (`removeClip`, `moveClip`, `moveSelectionTo`, `pasteClipboard`), `setGraphicSounds` and the switch, with `graphicSound` and `graphicStore`'s phase-2 cases (§6.14) | 0.5 + 1 + 1.5 | T1's values |
@@ -15774,7 +16272,16 @@ waits on your runs, M8's and M19's decisions among them, and gates phase
 2.) (2026-11-06/07: your runs are read on both machines and phase 1's
 exit is met, §6.12; M8 and M19 slide by your decisions of 2026-11-03.
 Phase 2 is no longer gated by phase 1; of the measurements, M21 still
-gates its counter.)
+gates its counter.) (2026-11-11: lanes "T3, first" and T1 are built and
+pushed through `51e2f23`, green on both runners at `e06e1c3`. M21 no
+longer gates the counter's build: the counter was built ahead of it on
+2026-11-07, because `inBetween` keeps whatever digit script and grouping
+`data.value` is written in, the rule §6.2 settles for the drawer, so M21
+cannot change how the counter draws. It can still change how a Hindi
+value should be written into `data.value`, which is T2a's and T2b's
+(the validator and the prompt); M21 itself is unmeasured and yours. Of
+the measurements, M7 still gates phase 3's glow, and M10 the marker
+painter, which T1 did not build. Next: T2a.)
 
 **Where §6.20 falls.** Outside step 3's days, inside phase 1's run:
 
@@ -18225,7 +18732,8 @@ phase each runs in and what each outcome does: M1–M22 are rows 39–60 (M1 =
 39 … M22 = 60) and land in `EFFECTS.md` §61, "Graphics: the forks
 measured"; H1–H13 are rows 61–73 (H1 = 61 … H13 = 73) and land in §62,
 "Hands: the spike measured". Phase 0 runs M1–M5, M6's Indic and colour
-parts and M22, and M21 before phase 2's counter; M8, M9, M13 and M19 run
+parts and M22, and M21 before phase 2's counter (built ahead of it
+2026-11-07, row 59 below); M8, M9, M13 and M19 run
 in phase 1; M10 and M14–M18 in phase 2; M7 first, then M6 whole, M12, M20
 and M13 again in phase 3 (M7 moved from phase 0 on 2026-10-21, §6.15); M11 only if M1–M2 fall short (they did not, 2026-10-27; row 49); H1–H10, H12 and H13 in the spike;
 H11, and H12 again, in phase 4.
@@ -18370,8 +18878,19 @@ H11, and H12 again, in phase 4.
   2026-11-07: your eye on the development app's sheet on the Surface,
   joined clusters above and broken per code point below; §6.11's Indic
   Built note.)
+- **Row 54 (M16): measured 2026-11-10** (`1871004`,
+  `tests/graphicHolds.test.ts`, node; §6.15's phase-2 note): every
+  template's longest fixture label holds at 20 graphemes a second inside
+  `seconds.max` in English, Hindi and Telugu, so nothing is raised or
+  capped; the 0.6 s-a-word figure, printed and not enforced, is over the
+  max for counter-en, bars-en, bars-hi, steps-en, quote-en, quote-hi,
+  ring-en and ring-hi. Enforcing it is yours.
 - **Row 59 (M21): not measured.** Its gated case is built (`fca8194`) and
-  waits on your Hindi clips.
+  waits on your Hindi clips. (2026-11-11: phase 2's counter was built
+  ahead of it on 2026-11-07, since `inBetween` keeps the value's own
+  script and grouping; M21 now bears on how T2's validator and prompt
+  should have a Hindi value written, not on the counter. §6.15's phase-2
+  note.)
 
 ---
 
@@ -19025,6 +19544,14 @@ what is needed, where the answer waits on something not yet in hand.
     way.
 
     **Answer (2026-10-14):** as recommended ("okay go ahead").
+
+    **Note, 2026-11-11.** GitHub retired the `macos-14` image on
+    2026-11-02; the push of `51e2f23` had its Mac job cancelled unstarted
+    ("The configuration 'macos-14-arm64-us-default' is not supported"),
+    and `e06e1c3` moved it to `macos-15` (run 43016087950 green on both).
+    (b) stands on `macos-15`, but the AI helper pack's macOS 14 floor now runs on no CI machine: only a real
+    macOS 14 machine can check it now. Whether that matters before the
+    beta is yours (§3a.6's note; §6.12's "Phase 2's state, 2026-11-11").
 49. **The speech model on Transcribe.** Once P makes `asr.transcribe`
     available, MediaPool's Transcribe fetches `Systran/faster-whisper-small`
     (464 MB) unnamed, at `main` with no pin, and asks huggingface.co at each
