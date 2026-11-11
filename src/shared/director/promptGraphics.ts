@@ -62,12 +62,20 @@ export function languageName(lang: string): string {
 /**
  * The prompt's last line: `prompt.ts`' `languageLine` (the measured line, its
  * script and an example for Telugu and Hindi), or for English, which that
- * line leaves out, the same sentence without a script.
+ * line leaves out, the same sentence without a script; for a code that names
+ * no language, `UNDETERMINED_LINE`.
  */
 export function graphicsLanguageLine(lang: string): string {
-  const name = languageName(lang) || 'English'
+  if (UNDETERMINED.has(lang.trim().toLowerCase())) return UNDETERMINED_LINE
+  const name = languageName(lang)
   return languageLine(name) ?? `Write all copy in ${name}.`
 }
+
+/** A code that names no language: BCP-47's 'und' (parseJson3's default, `ingest/captions.ts`), 'auto', or nothing. `Intl` names 'und' "root". */
+const UNDETERMINED = new Set(['', 'und', 'auto'])
+
+/** The last line when the transcript names no language. */
+export const UNDETERMINED_LINE = 'Write all copy in the language of the sentences, in its own script.'
 
 /** The two prompts for one graphics menu. */
 export function graphicsPrompt(menu: GraphicsMenu, lang: string): { system: string; user: string } {

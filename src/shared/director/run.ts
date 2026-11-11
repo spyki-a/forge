@@ -11,7 +11,7 @@ import { validateSpine2 } from './validate2'
 import { baselineSpine2 } from './baseline2'
 import { composeAd } from './compose'
 import { cohere, type Cohered } from './coherence'
-import { capSegments, type Transcript } from '../transcript'
+import { capSegments, type Transcript, type Word } from '../transcript'
 import { SEGMENT_MAX_MS, SEGMENT_MAX_WORDS } from '../ingest/captions'
 import { captionWindowMs } from '../captions/placement'
 import { subjectTrackOf } from '../reframe/frameMap'
@@ -275,11 +275,15 @@ export interface GraphicsMenu {
 /** The templates every graphics menu offers (§6.6), in `GRAPHIC_TEMPLATES`' order; `callout` goes after `quote` when offered. */
 export const GRAPHIC_TEMPLATES_ALWAYS: readonly GraphicTemplateId[] = Object.freeze(['counter', 'bars', 'steps', 'quote', 'ring', 'keyword'])
 
-/** Where a transcript's words came from, as §6.6's proposals read it (`proposalOf` in validateGraphics.ts). */
+/**
+ * Where a transcript's words came from, as §6.6's proposals read it
+ * (`proposalOf` in validateGraphics.ts). `approximate` decides only inside a
+ * YouTube transcript (§6.6's YouTube bullet): a Whisper transcript is
+ * 'whisper', approximate or not.
+ */
 export function wordSourceOf(transcript: Pick<Transcript, 'model' | 'approximate'>): GraphicsMenu['wordSource'] {
-  if (transcript.model === 'youtube-lines' || transcript.approximate === true) return 'youtube-lines'
-  if (transcript.model.startsWith('youtube-')) return 'youtube-asr'
-  return 'whisper'
+  if (!transcript.model.startsWith('youtube-')) return 'whisper'
+  return transcript.model === 'youtube-lines' || transcript.approximate === true ? 'youtube-lines' : 'youtube-asr'
 }
 
 /**
@@ -310,7 +314,11 @@ export function graphicsMenuFor(project: Project, clip: Clip, transcript: Transc
   const byIndex = new Map(transcript.words.map((w) => [w.index, w]))
   const sentences: GraphicsMenu['sentences'] = []
   for (const s of capSegments(transcript, SEGMENT_MAX_WORDS, SEGMENT_MAX_MS)) {
-    const words = transcript.words.filter((w) => w.index >= s.wordStart && w.index <= s.wordEnd)
+    const words: Word[] = []
+    for (let i = s.wordStart; i <= s.wordEnd; i += 1) {
+      const w = byIndex.get(i)
+      if (w) words.push(w)
+    }
     const seen = words.filter(shown)
     if (seen.length === 0) continue
     if (seen.length === words.length && byIndex.has(s.wordStart) && byIndex.has(s.wordEnd)) {

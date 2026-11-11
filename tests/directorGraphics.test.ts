@@ -10,7 +10,7 @@ import {
   maxTokensForGraphics,
   type AnswerGraphic
 } from '@shared/director/schemaGraphics'
-import { GRAPHICS_SYSTEM, GRAPHIC_TEMPLATE_ROWS, graphicsLanguageLine, graphicsPrompt } from '@shared/director/promptGraphics'
+import { GRAPHICS_SYSTEM, GRAPHIC_TEMPLATE_ROWS, UNDETERMINED_LINE, clockOf, graphicsLanguageLine, graphicsPrompt } from '@shared/director/promptGraphics'
 import { graphicsMenuFor, wordSourceOf, type GraphicsMenu } from '@shared/director/run'
 import { GRAPHIC_KEPT_CHARS, KEYWORD_MAX_WORDS, validateGraphics } from '@shared/director/validateGraphics'
 import { MAX_CANDIDATES } from '@shared/director/menu'
@@ -146,7 +146,6 @@ describe('graphicsSchema: flat, reasoning first, required in declaration order',
     const full = menusOf(talk(Array.from({ length: 30 }, (_, i) => `Sentence number ${i} is here.`)), {}, { track: subjectTrack() })[0]
     const most = JSON.stringify(graphicsSchema(full)).length
     console.log(`graphics@1 schema size: ${one} chars (3 sentences, 7 templates), ${most} chars (24 sentences, 7 templates), unconstrained ${JSON.stringify(graphicsSchema(menu, { constrained: false })).length}`)
-    expect(one).toBeGreaterThan(0)
   })
 
   it('constrained: the menu\'s ids and templates as enums, the decoded lengths, lit 0..3; unconstrained: none of them', () => {
@@ -236,13 +235,43 @@ describe('graphicsPrompt: the SENTENCES table, the TEMPLATES table, the language
     expect(user).toContain('s00  0:00  "Sentence 0 says a lot of things here now."')
     const at = user.findIndex((l) => l.startsWith('TEMPLATES'))
     expect(at).toBeGreaterThan(user.findIndex((l) => l.startsWith('s07')))
-    expect(user).toContain('counter — one number, said with what it counts — value, label')
-    expect(user).toContain('keyword — one to four words the speaker stresses, copied exactly; lit is which of them to light, counting from 0 — words, lit')
+    // §6.6's TEMPLATES table, its "when" words written here as literals, one row for each offered template.
+    const rows: Record<string, string> = {
+      counter: 'counter — one number, said with what it counts — value, label',
+      bars: 'bars — two to five numbers said as a comparison, in one unit — title, items',
+      steps: 'steps — two to six steps or reasons said in order — title, items[].label',
+      quote: 'quote — a line worth quoting, copied word for word from clause to clause — quote',
+      ring: 'ring — a share of a whole, said as a percentage — value, label',
+      keyword: 'keyword — one to four words the speaker stresses, copied exactly; lit is which of them to light, counting from 0 — words, lit'
+    }
+    const offered = user.slice(at + 1, user.length - 2)
+    expect(offered).toEqual(['counter', 'bars', 'steps', 'quote', 'ring', 'keyword'].map((id) => rows[id]))
     expect(user.some((l) => l.startsWith('callout'))).toBe(false)
     expect(user.some((l) => /lower-third|screen-card/u.test(l))).toBe(false)
     const withTrack = graphicsPrompt(menusOf(TALK, {}, { track: subjectTrack() })[0], 'en').user.split('\n')
     expect(withTrack).toContain('callout — a thing on screen the speaker names — label')
-    expect(Object.keys(GRAPHIC_TEMPLATE_ROWS)).toEqual(['counter', 'bars', 'steps', 'quote', 'callout', 'ring', 'keyword'])
+    // Membership: a later step's template may rightly get a row; these seven have one, and the two never offered have none.
+    for (const id of ['counter', 'bars', 'steps', 'quote', 'callout', 'ring', 'keyword'] as const) expect(GRAPHIC_TEMPLATE_ROWS[id], id).toBeDefined()
+    for (const id of ['lower-third', 'screen-card'] as const) expect(GRAPHIC_TEMPLATE_ROWS[id], id).toBeUndefined()
+  })
+
+  it('the clock is m:ss, floored, minutes past 0 and past 9', () => {
+    expect(clockOf(3600)).toBe('0:03')
+    expect(clockOf(59_999)).toBe('0:59')
+    expect(clockOf(72_000)).toBe('1:12')
+    expect(clockOf(605_400)).toBe('10:05')
+    // In the table: s10 of 10-word sentences starts at word 100, 100 × 400 ms = 40 s; s18 at word 180 = 72 s.
+    const long = menusOf(talk(Array.from({ length: 20 }, (_, i) => `Sentence ${i} has exactly ten words in it right now.`)))[0]
+    const user = graphicsPrompt(long, 'en').user.split('\n')
+    expect(user).toContain('s18  1:12  "Sentence 18 has exactly ten words in it right now."')
+  })
+
+  it('every sentence of a full 24-sentence menu is in the SENTENCES table, once each, in order', () => {
+    const [full] = menusOf(talk(Array.from({ length: 30 }, (_, i) => `Sentence number ${i} is here.`)))
+    expect(full.sentences).toHaveLength(24)
+    const user = graphicsPrompt(full, 'en').user.split('\n')
+    const listed = [...user.join('\n').matchAll(/^(s\d\d(?:\.\d+)?)  /gmu)].map((m) => m[1])
+    expect(listed).toEqual(full.sentences.map((s) => s.id))
   })
 
   it('the last line is the language, for a code and for the language\'s name, Telugu and Hindi included', () => {
@@ -258,6 +287,15 @@ describe('graphicsPrompt: the SENTENCES table, the TEMPLATES table, the language
       expect(user[user.length - 1], lang).toBe(graphicsLanguageLine(lang))
       expect(user[user.length - 1], lang).toContain(says)
       expect(user.filter((l) => l.startsWith('Write all copy')), lang).toHaveLength(1)
+    }
+  })
+
+  it('a code that names no language (parseJson3\'s \'und\', \'auto\', nothing) is not named', () => {
+    for (const lang of ['und', 'UND', 'auto', '', ' ']) {
+      const user = graphicsPrompt(menu, lang).user.split('\n')
+      expect(user[user.length - 1], JSON.stringify(lang)).toBe(UNDETERMINED_LINE)
+      expect(user[user.length - 1]).toBe('Write all copy in the language of the sentences, in its own script.')
+      expect(user[user.length - 1]).not.toMatch(/root|auto|English/u)
     }
   })
 })
@@ -349,7 +387,9 @@ describe('graphicsMenuFor', () => {
       [talk(said, { model: 'youtube-lines', approximate: true }), 'youtube-lines', 'youtube-lines'],
       [talk(said, { model: 'youtube-lines' }), 'youtube-lines', 'youtube-lines'],
       [talk(said, { model: 'youtube-asr+lines' }), 'youtube-asr', 'youtube-asr'],
-      [talk(said, { model: 'youtube-asr+lines', approximate: true }), 'youtube-lines', 'youtube-lines']
+      [talk(said, { model: 'youtube-asr+lines', approximate: true }), 'youtube-lines', 'youtube-lines'],
+      // approximate decides only inside a YouTube transcript (§6.6's YouTube bullet): a Whisper one stays 'whisper'.
+      [talk(said, { model: 'faster-whisper small', approximate: true }), 'whisper', null]
     ]
     for (const [t, source, proposal] of cases) {
       const [menu] = menusOf(t)
