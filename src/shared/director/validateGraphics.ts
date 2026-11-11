@@ -22,6 +22,8 @@ import {
   claimTokens,
   claimTokensOf,
   claimsOf,
+  marksOf,
+  marksUnsaid,
   type Claim,
   type ClaimStretch
 } from './claims'
@@ -362,6 +364,21 @@ function check(
     if (!key.startsWith('items.')) fields.push(key)
     else if (items) items.forEach((_, j) => fields.push(`items[${j}].${key.slice('items.'.length)}`))
   }
+  // Rule 8: no mark lands in the picture that the binding trimmed away ('-bride', 'clients?', '¬easy').
+  const kind = typeof record.kind === 'string' ? record.kind : undefined
+  const modes = { ...def.fields, ...((kind && def.kindFields?.[kind]) || {}) }
+  const valuePaths = new Set(claims.filter((c) => c.kind === 'number').map((c) => c.path))
+  for (const key of Object.keys(modes)) {
+    const mode = modes[key]
+    if (mode !== 'grounded' && mode !== 'verbatim') continue
+    const paths = !key.startsWith('items.') ? [key] : items ? items.map((_, j) => `items[${j}].${key.slice('items.'.length)}`) : []
+    for (const path of paths) {
+      if (valuePaths.has(path)) continue
+      const text = fieldText(data, path)
+      const marks = marksOf(text, mode === 'verbatim' ? 'verbatim' : 'words')
+      if (marks.length > 0) problems.push({ path: `$.${path}`, message: `'${text}' draws '${marks.join("', '")}', which the transcript cannot ground` })
+    }
+  }
   for (const path of fields) {
     if (hasClaim.has(path)) continue
     const text = fieldText(data, path)
@@ -380,10 +397,20 @@ function check(
     for (const c of r.missing) {
       if (seen.has(c.path)) continue
       seen.add(c.path)
-      problems.push({ path: `$.${c.path}`, message: reasonText(r.reason, fieldText(data, c.path), sentence) })
+      const row = r.reason === 'order' && c.kind === 'token' && c.pair === undefined
+      const message = row
+        ? `'${fieldText(data, c.path)}' is not said in the order the list draws it in ${sentence}`
+        : reasonText(r.reason, fieldText(data, c.path), sentence)
+      problems.push({ path: `$.${c.path}`, message })
     }
     return out(stretch, claims)
   }
+  // A verbatim field's '?' and '!' only where the speaker's own word carries them.
+  claims.forEach((c, i) => {
+    if (c.kind !== 'run') return
+    const unsaid = marksUnsaid(c.text, stretch, r.at[i])
+    if (unsaid.length > 0) problems.push({ path: `$.${c.path}`, message: `'${c.text}' draws '${unsaid.join("', '")}', which is not said in ${sentence}` })
+  })
 
   // Rule 9 on the MATCHED stretch numbers (rule 5: the template decides).
   if (data.template === 'ring') {

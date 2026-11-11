@@ -1664,3 +1664,60 @@ describe('the edges the critics found unpinned in piece 3', () => {
     expect(s.dropped).toEqual([])
   })
 })
+
+describe("rule 8's marks and a list's row order: the false graphics piece 4's critics found", () => {
+  const counter = (value: string, label = 'clients'): AnswerGraphic => g({ sentence: 's00', template: 'counter', value, label })
+
+  it("a value with a mark around its number ('>40', '40+', '~40', '#1', …) is not one number → dropped", () => {
+    for (const value of ['>40', '<40', '≥40', '±40', '+40', '40+', '~40', '40×', '40*', '40 %', '%40', '40%%']) {
+      const v = one1(['we signed 40 clients.'], counter(value))
+      expect(kept(v), value).toEqual([])
+      expect(droppedOf(v), value).toEqual([{ path: '$.graphics[0].value', message: `graphic dropped: '${value}' is not one number` }])
+    }
+    expect(kept(one1(['we signed 1 client.'], counter('#1', 'client')))).toEqual([])
+    for (const value of ['+40%', '40%+']) expect(kept(one1(['we had 40% of clients.'], g({ sentence: 's00', template: 'ring', value, label: 'clients' }))), value).toEqual([])
+    const bars = g({ sentence: 's00', template: 'bars', title: 'Compared', items: [{ label: 'clients', value: '30' }, { label: 'couples', value: '70+' }] })
+    expect(kept(one1(['30 clients and 70 couples.'], bars))).toEqual([])
+    // The marks a number is written with still read: a minus, a sign, a %, 'Rs.'.
+    expect(kept(one1(['we signed 40 clients.'], counter('40'))).map((k) => k.data)).toEqual([{ template: 'counter', value: '40', label: 'clients' }])
+    expect(kept(one1(['we had 40% of clients.'], g({ sentence: 's00', template: 'ring', value: '40%', label: 'clients' })))).toHaveLength(1)
+    expect(kept(one1(['we spent Rs. 500 on prints.'], counter('Rs. 500', 'prints')))).toHaveLength(1)
+    expect(kept(one1(['bookings fell -5% this year.'], counter('-5%', 'bookings')))).toHaveLength(1)
+  })
+
+  it("a label, a callout's label or a keyword with a mark ('> clients', 'clients?', '-bride', '¬easy') → dropped", () => {
+    for (const label of ['> clients', '↑ clients', 'clients?', '-clients', '+ clients']) {
+      const v = one1(['we signed 40 clients.'], counter('40', label))
+      expect(kept(v), label).toEqual([])
+      expect(droppedOf(v)[0], label).toMatchObject({ path: '$.graphics[0].label', message: expect.stringContaining('which the transcript cannot ground') })
+    }
+    const callout = one1(['look at the bride right here.'], g({ sentence: 's00', template: 'callout', label: '-bride' }), { templates: ['callout'] })
+    expect(kept(callout)).toEqual([])
+    expect(kept(one1(['look at the bride right here.'], g({ sentence: 's00', template: 'callout', label: 'the bride' }), { templates: ['callout'] }))).toHaveLength(1)
+    expect(kept(one1(['this is easy.'], g({ sentence: 's00', template: 'keyword', words: '¬easy', lit: 0 })))).toEqual([])
+    // Plain punctuation draws nothing the speaker did not: brackets, quotes, a comma, a point.
+    expect(kept(one1(['we signed 40 clients.'], counter('40', '(clients).')))).toHaveLength(1)
+  })
+
+  it("a verbatim '?' or '!' only where the speaker's word carries it: 'keep it simple?' over '… keep it simple.' → dropped", () => {
+    const quote = (text: string): AnswerGraphic => g({ sentence: 's00', template: 'quote', quote: text })
+    const v = one1(['honestly, keep it simple.'], quote('keep it simple?'))
+    expect(kept(v)).toEqual([])
+    expect(droppedOf(v)).toEqual([{ path: '$.graphics[0].quote', message: "graphic dropped: 'keep it simple?' draws '?', which is not said in s00" }])
+    expect(kept(one1(['this is easy.'], g({ sentence: 's00', template: 'keyword', words: 'easy!', lit: 0 })))).toEqual([])
+    // Said, it is kept: a question, an exclamation, a run starting inside its first word.
+    expect(kept(one1(['honestly, why not?'], quote('why not?')))).toHaveLength(1)
+    expect(kept(one1(['honestly, keep it simple!'], quote('keep it simple!')))).toHaveLength(1)
+    expect(kept(one1(['this is easy!'], g({ sentence: 's00', template: 'keyword', words: 'easy!', lit: 0 })))).toHaveLength(1)
+    expect(kept(one1(['we paid $40!'], g({ sentence: 's00', template: 'keyword', words: '40!', lit: 0 })))).toHaveLength(1)
+  })
+
+  it("steps' rows in the order they are said: 'first charge batteries, then pack bag.' + [pack bag, charge batteries] → dropped", () => {
+    const said = ['first charge batteries, then pack bag.']
+    const steps = (labels: string[]): AnswerGraphic => g({ sentence: 's00', template: 'steps', title: 'Step by step', items: labels.map((label) => ({ label, value: '' })) })
+    const v = one1(said, steps(['pack bag', 'charge batteries']))
+    expect(kept(v)).toEqual([])
+    expect(droppedOf(v)).toContainEqual({ path: '$.graphics[0].items[0].label', message: "graphic dropped: 'pack bag' is not said in the order the list draws it in s00" })
+    expect(kept(one1(said, steps(['charge batteries', 'pack bag'])))).toHaveLength(1)
+  })
+})

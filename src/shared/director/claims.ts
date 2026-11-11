@@ -566,8 +566,106 @@ function spokenTokensOf(text: string): string[] {
   return claimTokensOf(text).filter((t) => t !== CLAUSE_BREAK)
 }
 
+// ---------------------------------------------------------------------------
+// The marks a spec field may draw (rule 8: no free text lands in a picture).
+
+/** A word's leading and trailing characters outside letters, marks and numbers, as written (NFC). */
+function edgesOf(word: string): { lead: string; trail: string; whole: boolean } {
+  const w = word.normalize('NFC')
+  const lead = /^[^\p{L}\p{M}\p{N}]*/u.exec(w)![0]
+  if (lead.length === w.length) return { lead, trail: '', whole: true }
+  const trail = /[^\p{L}\p{M}\p{N}]*$/u.exec(w)![0]
+  return { lead, trail, whole: false }
+}
+
+/** A value word's edges: a minus, a leading currency sign, a minus after it; a trailing % and a point ('Rs.'). */
+const VALUE_LEAD = /^[-−–]?[$€£₹]?[-−–]?$/u
+const VALUE_TRAIL = /^%?\.?$/u
+/** A grounded or verbatim word's edges: opening brackets and quotes, one currency sign; a %, closing marks, plain clause punctuation. */
+const WORD_LEAD = /^[(["“‘']*[$€£₹]?$/u
+const WORD_TRAIL = /^%?[)\]"”’'.,;:…]*$/u
+/** What a verbatim word may end in when the stretch's word at that place ends in it too (`marksUnsaid`). */
+export const SAID_MARKS = /[?!]/u
+/** A word of a field that is a dash alone, plain clause punctuation (rule 7's `—`). */
+const DASH_WORD = /^[—–-]$/u
+
+/**
+ * The characters of a spec field that `claimTokens` trims before comparing
+ * and the painter would still draw, beyond plain punctuation: '>40', '40+',
+ * '~40', '#1', '±40', '40×', '↑ clients', '-bride', '¬easy', 'clients?'. Rule
+ * 2 trims edges so a spoken word compares; on the SPEC side a trimmed mark
+ * is model-written text that lands in a picture, which rule 8 forbids ("no
+ * free mode for anything drawn into a frame"). Empty when the field draws
+ * nothing it was not checked for.
+ *
+ * `mode` 'value': each word may hold only a minus, a leading currency sign,
+ * a trailing `%` and a trailing point at its edges (`soleNumber` reads such a
+ * field as not one number). 'words': opening brackets and quotes and one
+ * currency sign before, a `%`, closing brackets and quotes and `. , ; : …`
+ * after, or a dash alone. 'verbatim': as 'words', and `?` or `!` at a word's
+ * end, which `marksUnsaid` then holds to the stretch's own word. Beyond
+ * §6.7's words; each only drops more.
+ */
+export function marksOf(text: string, mode: 'value' | 'words' | 'verbatim'): string[] {
+  const out: string[] = []
+  for (const word of text.split(/\s+/u).filter(Boolean)) {
+    const { lead, trail, whole } = edgesOf(word)
+    if (whole) {
+      if (mode !== 'value' && DASH_WORD.test(lead)) continue
+      out.push(lead)
+      continue
+    }
+    const [leadOk, trailOk] = mode === 'value' ? [VALUE_LEAD, VALUE_TRAIL] : [WORD_LEAD, WORD_TRAIL]
+    if (!leadOk.test(lead)) out.push(lead)
+    const t = mode === 'verbatim' ? trail.replace(/[?!]+(?=[)\]"”’']*$)/u, '') : trail
+    if (!trailOk.test(t)) out.push(trail)
+  }
+  return out
+}
+
+/**
+ * The `?` and `!` a verbatim field's words end in that the stretch's word at
+ * the same place does not ('keep it simple?' over 'keep it simple.', 'easy!'
+ * over 'easy.'): a question or an exclamation the speaker did not make.
+ * `first` is the run's first word index (`bind`'s `at`); the field's tokens
+ * are aligned to the stretch's from it. Empty when every mark is said.
+ */
+export function marksUnsaid(text: string, stretch: ClaimStretch, first: number): string[] {
+  const field = text.split(/\s+/u).filter(Boolean).map((w) => ({
+    n: claimTokens(w).filter((t) => t !== CLAUSE_BREAK).length,
+    tokens: claimTokens(w).filter((t) => t !== CLAUSE_BREAK),
+    marks: [...edgesOf(w).trail].filter((ch) => SAID_MARKS.test(ch))
+  }))
+  if (field.every((f) => f.marks.length === 0)) return []
+  const want = field.flatMap((f) => f.tokens)
+  const said: { t: string; word: Word }[] = []
+  for (const w of [...stretch.words].sort((a, b) => a.index - b.index)) {
+    if (w.index < first) continue
+    for (const t of claimTokens(w.text)) if (t !== CLAUSE_BREAK) said.push({ t, word: w })
+  }
+  // The run may start inside its first word ('40' of '$40'): the offset where the field's tokens stand.
+  let off = -1
+  for (let k = 0; k < said.length && said[k].word.index === first; k++) {
+    if (want.every((t, j) => said[k + j]?.t === t)) {
+      off = k
+      break
+    }
+  }
+  const out: string[] = []
+  let at = off
+  for (const f of field) {
+    at += f.n
+    if (f.marks.length === 0) continue
+    const word = off < 0 || (f.n === 0 && at === off) ? undefined : said[at - 1]?.word
+    const theirs = word ? [...edgesOf(word.text).trail] : []
+    for (const m of f.marks) if (!theirs.includes(m)) out.push(m)
+  }
+  return out
+}
+
 /** The one number a value field holds, when the field is that number and nothing else ('40 percent', '₹500'); else undefined. */
 function soleNumber(text: string): CanonNumber | undefined {
+  if (marksOf(text, 'value').length > 0) return undefined
   const tokens = claimTokensOf(text)
   const spans = numberSpans(tokens)
   if (spans.length !== 1) return undefined
@@ -812,7 +910,9 @@ const BIND_BUDGET = 200_000
  * - when two pairs' values, exchanged, bind as well under every rule, the
  *   graphic is dropped: a label word said twice ('Instagram gave us 30%,
  *   referrals 70%, and Instagram keeps growing') would otherwise let either
- *   chart through.
+ *   chart through;
+ * - a list's unpaired rows (steps' items) are said in item order, or
+ *   'order' (`itemsDisordered`): a steps graphic numbers them.
  */
 export function bind(claims: readonly Claim[], stretch: ClaimStretch, lang: string): BindResult {
   const r = bindOnce(claims, stretch, lang)
@@ -920,7 +1020,7 @@ function bindOnce(claims: readonly Claim[], stretch: ClaimStretch, lang: string)
   const judge = (): boolean => {
     const at = chosen.map((o) => o.word)
     // Spoken order across the pairs.
-    const disordered = orderBroken(claims, chosen)
+    const disordered = [...orderBroken(claims, chosen), ...itemsDisordered(claims, chosen)]
     if (disordered.length > 0) {
       if (!best || best.stage < 1) best = { stage: 1, reason: 'order', missing: disordered, at }
       return false
@@ -1023,6 +1123,39 @@ function orderBroken(claims: readonly Claim[], chosen: readonly Occurrence[]): C
     }
   }
   return claims.filter((c) => c.pair !== undefined && bad.has(c.pair))
+}
+
+/**
+ * A list's unpaired rows in spoken order: every token of item j's field is
+ * said before every token of item j+1's same field ('first charge batteries,
+ * then pack bag' cannot ship steps [pack bag, charge batteries], which draws
+ * 1 and 2 on a sequence the speaker did not give). Rule 6 orders a run's
+ * tokens within one field and the pairs across a template, and is silent on
+ * a list's rows; beyond its words, only drops more ('order').
+ */
+function itemsDisordered(claims: readonly Claim[], chosen: readonly Occurrence[]): Claim[] {
+  const rows = new Map<string, Map<number, { first: number; last: number }>>()
+  claims.forEach((c, i) => {
+    if (c.kind !== 'token' || c.pair !== undefined) return
+    const m = /^items\[(\d+)\]\.(\w+)$/u.exec(c.path)
+    if (!m) return
+    const byItem = rows.get(m[2]) ?? new Map<number, { first: number; last: number }>()
+    const j = Number(m[1])
+    const r = byItem.get(j) ?? { first: Infinity, last: -Infinity }
+    byItem.set(j, { first: Math.min(r.first, chosen[i].first), last: Math.max(r.last, chosen[i].last) })
+    rows.set(m[2], byItem)
+  })
+  const bad = new Set<string>()
+  for (const [leaf, byItem] of rows) {
+    const items = [...byItem.keys()].sort((a, b) => a - b)
+    for (let k = 0; k + 1 < items.length; k++) {
+      if (!(byItem.get(items[k])!.last < byItem.get(items[k + 1])!.first)) {
+        bad.add(`items[${items[k]}].${leaf}`)
+        bad.add(`items[${items[k + 1]}].${leaf}`)
+      }
+    }
+  }
+  return claims.filter((c) => bad.has(c.path))
 }
 
 /**

@@ -22,13 +22,17 @@ import type { Segment, Transcript, Word } from '@shared/transcript'
  *    negator put into the bound clause; a label from the neighbouring
  *    sentence; a unit stripped from the talk but not the spec; a keyword run
  *    with a gap; a keyword run in a negated clause; a lit past the run's end;
- *    a model-written parent. Each asserts what the rules demand on EVERY case
+ *    a model-written parent; a mark put on a value, a label or a quoted run
+ *    ('>40', 'clients?', '¬easy'); two steps reordered; the label moved past
+ *    the window in its own sentence; one bars pair drawn twice. Each asserts
+ *    what the rules demand on EVERY case
  *    (dropped, or repaired for lit and parent) and counts its cases against a
  *    floor: a generator that yields nothing proves nothing.
  * 3. An independent matcher, written here from §6.7's words and importing
  *    neither bind nor checkGraphicData: it checks BINDING (one occurrence per
- *    claim, the same sentence, the window, spoken order, no unmatched
- *    negator), not membership. Every graphic settleGraphics keeps must ground
+ *    claim, the same sentence, the window, spoken order of pairs and of a
+ *    list's rows, no unmatched negator), not membership, and reads what a
+ *    field DRAWS from its raw text, nothing trimmed. Every graphic settleGraphics keeps must ground
  *    by it. It shares two functions with claims.ts, claimToken and numbersIn,
  *    and pins both below against hand-written expectations.
  * 4. Over what the painter draws: each kept graphic, given beats, is drawn at
@@ -123,10 +127,29 @@ const NUMBERISH = new Set([
   'ninety', 'hundred', 'thousand', 'million', 'billion', 'lakh', 'lakhs', 'crore', 'crores', '%', 'percent', 'per', 'cent',
   'dollar', 'dollars', 'rupee', 'rupees', 'euro', 'euros', 'pound', 'pounds'
 ])
-const isNumberish = (t: string): boolean => NUMBERISH.has(t) || /\d/u.test(t) || /^[a-z]+-[a-z]+$/u.test(t)
+/** A hyphenated ten and unit ('forty-two'), the only hyphenated word a number span holds. */
+const TEN_UNIT = /^(twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)-(one|two|three|four|five|six|seven|eight|nine)$/u
+const isNumberish = (t: string): boolean => NUMBERISH.has(t) || /\d/u.test(t) || TEN_UNIT.test(t)
+
+/*
+ * What a spec field may DRAW, read from its raw text with nothing trimmed
+ * (rule 8: no free text lands in a picture). A value word is a number's
+ * characters alone: a minus, a leading sign, letters and digits with grouping,
+ * a point or a hyphen inside, a trailing % and a point ('Rs.'). Any other word
+ * is its letters and digits with opening brackets or quotes and one sign
+ * before, and a %, closing brackets or quotes and . , ; : … after; or a dash
+ * alone. A verbatim word may also end in ? or !, held to the speaker's word.
+ */
+const M_VALUE_WORD = /^[-−–]?[$€£₹]?[-−–]?[\p{L}\p{M}\p{N}](?:[\p{L}\p{M}\p{N}.,-]*[\p{L}\p{M}\p{N}])?%?\.?$/u
+const M_PLAIN_WORD = /^[(["“‘']*[$€£₹]?[\p{L}\p{M}\p{N}](?:\S*[\p{L}\p{M}\p{N}])?%?[)\]"”’'.,;:…]*$/u
+const M_SAID_WORD = /^[(["“‘']*[$€£₹]?[\p{L}\p{M}\p{N}](?:\S*[\p{L}\p{M}\p{N}])?%?[?!]*[)\]"”’'.,;:…]*$/u
+const M_DASH = /^[—–-]$/u
+const plainField = (text: string, word: RegExp): boolean => text.split(/\s+/u).filter(Boolean).every((w) => M_DASH.test(w) || word.test(w.normalize('NFC')))
 
 interface MTok {
   t: string
+  /** The spoken word it came from, as written. */
+  word: string
   sent: number
   clause: number
   /** Position among its sentence's tokens. */
@@ -161,7 +184,7 @@ function mStretch(t: Transcript, sentence: string): MStretch | null {
       const w = byIndex.get(i)
       if (!w) continue
       const { toks: ts, breakAfter } = wordTokens(w.text)
-      for (const x of ts) toks.push({ t: x, sent, clause, pos: pos++, key: key++ })
+      for (const x of ts) toks.push({ t: x, word: w.text, sent, clause, pos: pos++, key: key++ })
       if (breakAfter) clause += 1
     }
   })
@@ -183,6 +206,7 @@ function mStretch(t: Transcript, sentence: string): MStretch | null {
 
 /** A value field's one number: exactly one number, and nothing in the field but it. */
 function valueOf(text: string): CanonNumber | null {
+  if (!text.split(/\s+/u).filter(Boolean).every((w) => M_VALUE_WORD.test(w.normalize('NFC')))) return null
   const ts = phraseTokens(text)
   const ns = numbersIn(ts)
   if (ns.length !== 1) return null
@@ -196,9 +220,23 @@ interface MClaim {
   kind: MKind
   tok?: string
   run?: string[]
+  /** A verbatim run's ? and !: at which of its tokens (the last of the word written with it), which marks. */
+  said?: { at: number; marks: string }[]
   value?: CanonNumber
   pair?: number
   negs: Set<string>
+}
+
+/** Each word of a verbatim field that ends in ? or !, by the index of its last token in the run. */
+function saidMarks(text: string): { at: number; marks: string }[] {
+  const out: { at: number; marks: string }[] = []
+  let n = 0
+  for (const w of text.split(/\s+/u).filter(Boolean)) {
+    n += wordTokens(w).toks.length
+    const m = /([?!]+)[)\]"”’'.,;:…]*$/u.exec(w)
+    if (m) out.push({ at: n - 1, marks: m[1] })
+  }
+  return out
 }
 interface MOcc {
   keys: number[]
@@ -230,6 +268,7 @@ function grounds(data: GraphicData, t: Transcript, sentence: string): string | n
   const negsOf = (text: string): Set<string> => new Set(phraseTokens(text).filter(isNeg))
   /** A grounded field's content tokens as claims; a non-empty field with none grounds nothing. */
   const tokens = (field: string, text: string, pair?: number): string | null => {
+    if (!plainField(text, M_PLAIN_WORD)) return `${field} '${text}' draws a mark no word says`
     const ts = phraseTokens(text).filter((x) => !(en && M_FUNCTION_EN.includes(x)))
     if (text.trim() !== '' && ts.length === 0) return `${field} '${text}' says nothing`
     for (const tok of ts) claims.push({ field, kind: 'tok', tok, pair, negs: negsOf(text) })
@@ -266,7 +305,8 @@ function grounds(data: GraphicData, t: Transcript, sentence: string): string | n
     case 'quote': {
       const run = phraseTokens(data.text)
       if (run.length === 0) bad = 'empty quote'
-      else claims.push({ field: 'text', kind: 'run', run, negs: negsOf(data.text) })
+      else if (!plainField(data.text, M_SAID_WORD)) bad = `text '${data.text}' draws a mark no word says`
+      else claims.push({ field: 'text', kind: 'run', run, said: saidMarks(data.text), negs: negsOf(data.text) })
       break
     }
     case 'keyword': {
@@ -274,7 +314,8 @@ function grounds(data: GraphicData, t: Transcript, sentence: string): string | n
       const run = phraseTokens(data.words)
       if (words.length < 1 || words.length > 4) bad = 'a keyword is 1 to 4 words'
       else if (en && run.every((x) => M_FUNCTION_EN.includes(x))) bad = 'a keyword with no content word'
-      else claims.push({ field: 'words', kind: 'kw', run, negs: negsOf(data.words) })
+      else if (!plainField(data.words, M_SAID_WORD)) bad = `words '${data.words}' draws a mark no word says`
+      else claims.push({ field: 'words', kind: 'kw', run, said: saidMarks(data.words), negs: negsOf(data.words) })
       break
     }
     default:
@@ -306,6 +347,9 @@ function grounds(data: GraphicData, t: Transcript, sentence: string): string | n
       for (let i = 0; i + c.run!.length <= ts.length; i++) {
         const win = ts.slice(i, i + c.run!.length)
         if (!win.every((x, k) => x.t === c.run![k])) continue
+        // A written ? or ! only where the speaker's word ends in it.
+        const trailOf = (w: string): string => /[^\p{L}\p{M}\p{N}]*$/u.exec(w)![0]
+        if ((c.said ?? []).some((s) => s.at < 0 || ![...s.marks].every((ch) => trailOf(win[s.at].word).includes(ch)))) continue
         if (i > 0 && isNeg(ts[i - 1].t)) continue
         if (c.kind === 'kw') {
           if (new Set(win.map((x) => x.clause)).size !== 1) continue
@@ -361,6 +405,14 @@ function grounds(data: GraphicData, t: Transcript, sentence: string): string | n
         if (sa && sb && sa.v < sb.v && !(sa.hi < sb.lo)) return false
       }
     }
+    // A list's rows in the order they are drawn: every word of row i said before every word of row i+1.
+    if (data.template === 'steps') {
+      const at = (i: number, f: (o: MOcc) => number): number[] =>
+        claims.flatMap((c, k) => (c.field === `items[${i}].label` ? [f(chosen[k]!) + 1000 * chosen[k]!.sent] : []))
+      for (let i = 0; i + 1 < data.items.length; i++) {
+        if (!(Math.max(...at(i, (o) => o.last)) < Math.min(...at(i + 1, (o) => o.first)))) return false
+      }
+    }
     // No negator the field lacks in any clause a claim binds in.
     for (let i = 0; i < claims.length; i++) {
       const o = chosen[i]!
@@ -386,7 +438,7 @@ function grounds(data: GraphicData, t: Transcript, sentence: string): string | n
     }
     return false
   }
-  return search(0) ? null : 'no binding: one occurrence each, same sentence, the window, spoken order, no unmatched negator, the unit'
+  return search(0) ? null : 'no binding: one occurrence each, same sentence, the window, spoken order (pairs and rows), no unmatched negator, the unit'
 }
 
 // ---------------------------------------------------------------------------
@@ -810,7 +862,8 @@ function expectedDrawn(d: GraphicData): Record<string, string> {
  * does, else why not. (a) Each drawn field is exactly the string the
  * validator checked, nothing else is drawn but the fixed glyphs, and the
  * frame is not empty; (b) the drawn strings, put back as the graphic's data,
- * ground by the matcher; a drawn speaker is a word of the stretch.
+ * ground by the matcher; a drawn speaker's words are words of the stretch
+ * (membership only: the speaker's binding is rule 8's, pinned in claims.test.ts).
  */
 function drawnGrounds(k: GraphicCandidate, t: Transcript): string | null {
   const list = settledList(k)
@@ -943,6 +996,35 @@ describe('the independent matcher, by hand: it binds, it does not just match (§
     expect(grounds({ template: 'keyword', words: 'signed 40', lit: 0 }, t, 's00')).toBeNull()
     expect(grounds({ template: 'keyword', words: 'easy', lit: 0 }, talk(['this is not easy.']), 's00')).not.toBeNull()
   })
+  it('the window: a label 8 tokens from its value grounds, 9 does not', () => {
+    const gap = (n: number): Transcript => talk([`we signed 40 ${Array.from({ length: n - 1 }, () => 'really').join(' ')} clients.`])
+    expect(grounds({ template: 'counter', value: '40', label: 'clients' }, gap(8), 's00')).toBeNull()
+    expect(grounds({ template: 'counter', value: '40', label: 'clients' }, gap(9), 's00')).not.toBeNull()
+  })
+  it('a keyword stays in one clause; a run directly after a negator in the clause before is refused', () => {
+    const t = talk(['we signed 40 couples, clients loved it.'])
+    expect(grounds({ template: 'keyword', words: 'couples clients', lit: 0 }, t, 's00')).not.toBeNull()
+    expect(grounds({ template: 'keyword', words: 'clients loved', lit: 0 }, t, 's00')).toBeNull()
+    expect(grounds({ template: 'quote', kind: 'said', text: 'quit your job', speaker: '' }, talk(['I would never, quit your job.']), 's00')).not.toBeNull()
+    expect(grounds({ template: 'quote', kind: 'said', text: 'quit your job', speaker: '' }, talk(['honestly, quit your job.']), 's00')).toBeNull()
+  })
+  it('a mark is read from the raw field: a decorated number or label, an unsaid ? or ! is refused', () => {
+    const t = talk(['we signed 40 clients.'])
+    for (const value of ['>40', '40+', '~40', '#40', '±40', '+40', '%40']) expect(grounds({ template: 'counter', value, label: 'clients' }, t, 's00'), value).not.toBeNull()
+    for (const label of ['clients?', '-clients', '> clients']) expect(grounds({ template: 'counter', value: '40', label }, t, 's00'), label).not.toBeNull()
+    expect(grounds({ template: 'counter', value: '40', label: '(clients).' }, t, 's00')).toBeNull()
+    expect(grounds({ template: 'keyword', words: 'easy!', lit: 0 }, talk(['this is easy.']), 's00')).not.toBeNull()
+    expect(grounds({ template: 'keyword', words: '¬easy', lit: 0 }, talk(['this is easy.']), 's00')).not.toBeNull()
+    expect(grounds({ template: 'keyword', words: 'easy!', lit: 0 }, talk(['this is easy!']), 's00')).toBeNull()
+    expect(grounds({ template: 'quote', kind: 'said', text: 'why not?', speaker: '' }, talk(['honestly, why not?']), 's00')).toBeNull()
+    expect(grounds({ template: 'quote', kind: 'said', text: 'keep it simple?', speaker: '' }, talk(['honestly, keep it simple.']), 's00')).not.toBeNull()
+  })
+  it("steps' rows in the order they are said", () => {
+    const t = talk(['first charge batteries, then pack bag.'])
+    const steps = (labels: string[]): GraphicData => ({ template: 'steps', title: '', items: labels.map((label) => ({ label })), connector: 'none' })
+    expect(grounds(steps(['charge batteries', 'pack bag']), t, 's00')).toBeNull()
+    expect(grounds(steps(['pack bag', 'charge batteries']), t, 's00')).not.toBeNull()
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -1034,6 +1116,14 @@ function clauseStart(words: readonly string[], i: number): number {
 }
 const insertAt = (words: readonly string[], i: number, w: string): string[] => [...words.slice(0, i), w, ...words.slice(i)]
 
+/** Marks a model may put on a field that change what it says, each before or after it (rule 8: none is drawn). */
+const MARKS: { s: string; before: boolean }[] = [
+  ...['>', '<', '≥', '±', '+', '~', '#', '¬', '↑', '≈'].map((s) => ({ s, before: true })),
+  ...['+', '×', '*', '?', '!', '↑', '‼'].map((s) => ({ s, before: false }))
+]
+/** A word that says nothing, to put between a label and its value. */
+const PAD: Record<Lang, string> = { en: 'really', hi: 'सच', te: 'నిజంగా' }
+
 /** What one adversarial generator made of one kept true case: a false case, or nothing to make. */
 type Made = { case: Case; graphic: AnswerGraphic } | null
 
@@ -1109,6 +1199,63 @@ const ADVERSARIAL: { name: string; from: Tpl[]; make: (c: Case, rng: Rng) => Mad
       // Not a gap at all when the run is also said contiguously somewhere in the talk.
       if (c.sentences.some((s) => s.map((w) => w.replace(M_BREAK, '')).join(' ').includes(run.join(' ')))) return null
       return { case: c, graphic: { ...c.graphic, words: run.join(' '), lit: 0 } }
+    },
+    outcome: 'dropped'
+  },
+  {
+    name: 'decorate a value, a label or a quoted run with a mark no word says',
+    from: ['counter', 'ring', 'bars', 'callout', 'keyword', 'quote'],
+    make: (c, rng) => {
+      const mark = rng.pick(MARKS)
+      const deco = (s: string): string => (mark.before ? mark.s + s : s + mark.s)
+      switch (c.template) {
+        case 'counter':
+        case 'ring':
+          return { case: c, graphic: rng.chance(0.5) ? { ...c.graphic, value: deco(c.graphic.value) } : { ...c.graphic, label: deco(c.graphic.label) } }
+        case 'bars': {
+          const i = rng.int(0, c.graphic.items.length - 1)
+          const key = rng.pick(['label', 'value'] as const)
+          return { case: c, graphic: { ...c.graphic, items: c.graphic.items.map((it, k) => (k === i ? { ...it, [key]: deco(it[key]) } : it)) } }
+        }
+        case 'callout':
+          return { case: c, graphic: { ...c.graphic, label: deco(c.graphic.label) } }
+        case 'keyword':
+          return { case: c, graphic: { ...c.graphic, words: deco(c.graphic.words) } }
+        default:
+          return { case: c, graphic: { ...c.graphic, quote: deco(c.graphic.quote) } }
+      }
+    },
+    outcome: 'dropped'
+  },
+  {
+    name: 'reorder two steps',
+    from: ['steps'],
+    make: (c, rng) => {
+      const [i, j] = rng.sample([...c.graphic.items.keys()], 2)
+      const items = c.graphic.items.map((it, k) => (k === i ? c.graphic.items[j] : k === j ? c.graphic.items[i] : it))
+      return { case: c, graphic: { ...c.graphic, items } }
+    },
+    outcome: 'dropped'
+  },
+  {
+    name: 'move the label past the window in its own sentence',
+    from: ['counter', 'ring'],
+    make: (c) => {
+      const p = c.pairs![0]
+      const words = c.sentences[c.fact]
+      // Ten words between the number and the label, whichever is said first: 11 tokens apart, past BIND_WINDOW's 8.
+      const at = p.labelAt > p.numAt ? p.labelAt : p.labelAt + p.label.length
+      const pad = Array.from({ length: 10 }, () => PAD[c.lang])
+      return { case: withFact(c, [...words.slice(0, at), ...pad, ...words.slice(at)]), graphic: c.graphic }
+    },
+    outcome: 'dropped'
+  },
+  {
+    name: 'duplicate one bars pair (one thing said, drawn twice)',
+    from: ['bars'],
+    make: (c, rng) => {
+      const [i, j] = rng.sample([...c.graphic.items.keys()], 2)
+      return { case: c, graphic: { ...c.graphic, items: c.graphic.items.map((it, k) => (k === j ? { ...c.graphic.items[i] } : it)) } }
     },
     outcome: 'dropped'
   },
