@@ -11,7 +11,9 @@ import { validateSpine2 } from './validate2'
 import { baselineSpine2 } from './baseline2'
 import { composeAd } from './compose'
 import { cohere, type Cohered } from './coherence'
-import type { GraphicTemplateId } from '../graphics/template'
+import type { Transcript } from '../transcript'
+import { GRAPHIC_SPACING, type GraphicCandidate, type GraphicTemplateId } from '../graphics/template'
+import { validateBaseline, validateGraphics } from './validateGraphics'
 
 /**
  * The pure half of a Director run: what the music is, how long the ad is, the
@@ -264,6 +266,100 @@ export interface GraphicsMenu {
   sentences: { id: string; startMs: number; text: string; wordStart: number; wordEnd: number }[]
   templates: GraphicTemplateId[]
   wordSource: 'whisper' | 'youtube-asr' | 'youtube-lines'
+}
+
+/** One graphics answer, settled (docs/CLIPS.md §6.6, §6.7): `settle2`'s twin. */
+export interface SettledGraphics {
+  /** Validated and spaced (§6.7 rules 1-10), in onset order. */
+  kept: GraphicCandidate[]
+  /** Every note: each graphic dropped with its reason, each repair, each spacing drop. */
+  dropped: Problem[]
+  /** The baseline's graphics were used because the model's answer could not be. */
+  baseline: boolean
+  /** Why the model's answer could not be used, when it could not. */
+  rejected: string | null
+}
+
+/**
+ * The baseline's candidates for a menu (§6.10, `baselineGraphics(transcript,
+ * menu)`, lane T4's). Until T4 lands, `settleGraphics` takes none: a rejected
+ * answer settles to no graphics, with the reason.
+ */
+export type GraphicsBaseline = (transcript: Transcript, menu: GraphicsMenu) => GraphicCandidate[]
+
+const NO_BASELINE: GraphicsBaseline = () => []
+
+/**
+ * Rule 10 within one answer (§6.7): onsets at least `GRAPHIC_SPACING.minGapS`
+ * apart, and at most max(1, ⌊clip seconds ÷ `GRAPHIC_SPACING.perS`⌋)
+ * graphics, the earlier winning. A graphic's onset is its first beat word's
+ * start (the lead before it is the same for every graphic); the clip's seconds
+ * are those its menu's sentences span. A menu window (24 sentences, §6.6) is
+ * spaced alone; `applyBudget` spaces across the project (§6.9).
+ */
+function spaceGraphics(
+  kept: readonly GraphicCandidate[],
+  menu: GraphicsMenu,
+  transcript: Transcript
+): { kept: GraphicCandidate[]; dropped: Problem[] } {
+  const byIndex = new Map(transcript.words.map((w) => [w.index, w]))
+  const onsetMs = (c: GraphicCandidate): number => {
+    const words = c.beatWords.length > 0 ? c.beatWords : c.bound
+    const starts = words.map((i) => byIndex.get(i)?.startMs).filter((v): v is number => v !== undefined)
+    return starts.length > 0 ? Math.min(...starts) : Infinity
+  }
+  const first = menu.sentences.length > 0 ? byIndex.get(Math.min(...menu.sentences.map((s) => s.wordStart))) : undefined
+  const last = menu.sentences.length > 0 ? byIndex.get(Math.max(...menu.sentences.map((s) => s.wordEnd))) : undefined
+  const clipS = first && last ? Math.max(0, last.endMs - first.startMs) / 1000 : 0
+  const cap = Math.max(1, Math.floor(clipS / GRAPHIC_SPACING.perS))
+  const ordered = kept.map((c, i) => ({ c, i, at: onsetMs(c) })).sort((a, b) => a.at - b.at || a.i - b.i)
+  const out: GraphicCandidate[] = []
+  const dropped: Problem[] = []
+  let previous = -Infinity
+  for (const { c, at } of ordered) {
+    const name = `the ${c.data.template} on ${c.sentence}`
+    if (out.length >= cap) {
+      dropped.push({ path: '$.graphics', message: `graphic dropped: ${name} — at most one graphic per ${GRAPHIC_SPACING.perS} s of clip, the earlier ones stay` })
+    } else if (at - previous < GRAPHIC_SPACING.minGapS * 1000) {
+      dropped.push({ path: '$.graphics', message: `graphic dropped: ${name} is within ${GRAPHIC_SPACING.minGapS} s of the one before — the earlier one stays` })
+    } else {
+      out.push(c)
+      previous = at
+    }
+  }
+  return { kept: out, dropped }
+}
+
+/**
+ * A graphics answer as what the app would place (docs/CLIPS.md §6.6, §6.7):
+ * validated one graphic at a time and spaced (rule 10), or, when the answer is
+ * rejected (cut off, the wrong shape, or no answer at all), the baseline's
+ * candidates validated the same way, with the reason. Never throws. The app and
+ * the eval both settle here, so what the eval scores is what the user gets.
+ *
+ * This is the VALIDATION half (lane T2a): `options.baseline` is the seam for
+ * §6.10's `baselineGraphics` (lane T4), and is no candidates until then; the
+ * menu, the model call and `decisionForGraphics` are lane T2b's.
+ */
+export function settleGraphics(
+  answer: { value: unknown; truncated: boolean } | { error: string },
+  menu: GraphicsMenu,
+  transcript: Transcript,
+  options: { baseline?: GraphicsBaseline } = {}
+): SettledGraphics {
+  const verdict = 'error' in answer ? { rejected: answer.error } : validateGraphics(answer.value, menu, transcript, { truncated: answer.truncated })
+  if (!('rejected' in verdict)) {
+    const spaced = spaceGraphics(verdict.kept, menu, transcript)
+    return { kept: spaced.kept, dropped: [...verdict.dropped, ...spaced.dropped], baseline: false, rejected: null }
+  }
+  const standard = validateBaseline((options.baseline ?? NO_BASELINE)(transcript, menu), menu, transcript)
+  const spaced = spaceGraphics(standard.kept, menu, transcript)
+  return {
+    kept: spaced.kept,
+    dropped: [{ path: '$', message: `the baseline's graphics are used: ${verdict.rejected}` }, ...standard.dropped, ...spaced.dropped],
+    baseline: true,
+    rejected: verdict.rejected
+  }
 }
 
 export { buildSlots }

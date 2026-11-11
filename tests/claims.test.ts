@@ -25,8 +25,8 @@ import {
   validateGraphics,
   type AnswerGraphic
 } from '@shared/director/validateGraphics'
-import type { GraphicsMenu } from '@shared/director/run'
-import type { GraphicCandidate } from '@shared/graphics/template'
+import { settleGraphics, type GraphicsMenu } from '@shared/director/run'
+import { GRAPHIC_SPACING, type GraphicCandidate } from '@shared/graphics/template'
 import { capSegments, type Transcript } from '@shared/transcript'
 import nestedEn1 from './fixtures/graphics/nested-en-1.json'
 import { GRAPHIC_TEMPLATES, type GraphicData, type TemplateDef } from '@shared/graphics/template'
@@ -960,7 +960,7 @@ describe('bind: the edges the critics found unpinned', () => {
 })
 
 // ---------------------------------------------------------------------------
-// The third half: validateGraphics.ts (§6.7's head, rules 8-9).
+// The third half: validateGraphics.ts (§6.7's head, rules 8-10) and settleGraphics' validation half.
 
 /**
  * A talk as the validator gets it: one segment per sentence, ids s00, s01, …,
@@ -1395,5 +1395,59 @@ describe('the stretch: the cited sentence and one either side, over capped segme
       { path: '$.graphics[0].value', message: "graphic dropped: '40%' is not said in s00.3" },
       { path: '$.graphics[0].label', message: "graphic dropped: 'clients' is not said in s00.3" }
     ])
+  })
+})
+
+describe('settleGraphics: the validation half (rule 10 and the baseline seam)', () => {
+  // 400 ms a word; each 'N% of clients' sentence is where a ring may sit.
+  const lines = (n: number): string[] => Array.from({ length: n }, (_, k) => `In week ${k} we signed ${k + 1}% of clients today.`)
+
+  it('graphics closer than 6 s: the earlier one stays, whatever order the answer lists them', () => {
+    expect(GRAPHIC_SPACING).toEqual({ minGapS: 6, perS: 20 })
+    // Each sentence is 9 words = 3.6 s, so s00's number and s01's are 3.6 s apart, s00's and s02's 7.2 s;
+    // twelve sentences are 43.15 s of clip, room for two.
+    const t = talk(lines(12))
+    const ring = (k: number): AnswerGraphic => g({ sentence: `s0${k}`, template: 'ring', value: `${k + 1}%`, label: 'clients' })
+    const s = settleGraphics({ value: answer(ring(1), ring(0), ring(2)), truncated: false }, menuOf(t), t)
+    expect(s.baseline).toBe(false)
+    expect(s.rejected).toBeNull()
+    expect(s.kept.map((k) => k.sentence)).toEqual(['s00', 's02'])
+    expect(s.dropped).toEqual([
+      { path: '$.graphics', message: 'graphic dropped: the ring on s01 is within 6 s of the one before — the earlier one stays' }
+    ])
+  })
+
+  it('at most one graphic per 20 s of clip', () => {
+    // Eight sentences of 3.6 s: 28.75 s of clip, so one graphic; twelve: 43.15 s, so two.
+    const short = talk(lines(8))
+    const ring = (k: number): AnswerGraphic => g({ sentence: `s${String(k).padStart(2, '0')}`, template: 'ring', value: `${k + 1}%`, label: 'clients' })
+    const s = settleGraphics({ value: answer(ring(0), ring(3), ring(6)), truncated: false }, menuOf(short), short)
+    expect(s.kept.map((k) => k.sentence)).toEqual(['s00'])
+    expect(s.dropped.map((p) => p.message)).toEqual([
+      'graphic dropped: the ring on s03 — at most one graphic per 20 s of clip, the earlier ones stay',
+      'graphic dropped: the ring on s06 — at most one graphic per 20 s of clip, the earlier ones stay'
+    ])
+    const long = talk(lines(12))
+    expect(settleGraphics({ value: answer(ring(0), ring(3), ring(6)), truncated: false }, menuOf(long), long).kept.map((k) => k.sentence)).toEqual(['s00', 's03'])
+  })
+
+  it('a rejected answer settles to the baseline, validated the same way, and says why', () => {
+    const t = talk(['We signed 40% of clients.'])
+    const good: GraphicCandidate = { sentence: 's00', data: { template: 'ring', value: '40%', label: 'clients' }, bound: [], beatWords: [], why: 'a share', source: 'baseline' }
+    const bad: GraphicCandidate = { ...good, data: { template: 'ring', value: '45%', label: 'clients' } }
+    const s = settleGraphics({ value: answer(), truncated: true }, menuOf(t), t, { baseline: () => [bad, good] })
+    expect(s).toMatchObject({ baseline: true, rejected: "The model's graphics ran out of room before it finished" })
+    expect(s.kept).toEqual([{ ...good, bound: [2, 4], beatWords: [2] }])
+    expect(s.dropped).toEqual([
+      { path: '$', message: "the baseline's graphics are used: The model's graphics ran out of room before it finished" },
+      { path: '$.baseline[0].value', message: "graphic dropped: '45%' is not said in s00" }
+    ])
+    // No model at all; and no baseline yet (lane T4's): nothing, with the reason.
+    expect(settleGraphics({ error: 'no model is set up' }, menuOf(t), t)).toEqual({
+      kept: [],
+      dropped: [{ path: '$', message: "the baseline's graphics are used: no model is set up" }],
+      baseline: true,
+      rejected: 'no model is set up'
+    })
   })
 })

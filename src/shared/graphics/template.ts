@@ -208,6 +208,16 @@ export const GRAPHIC_TEMPLATES: Partial<Record<GraphicTemplateId, TemplateDef>> 
   }
 } satisfies Partial<Record<GraphicTemplateId, TemplateDef>>)
 
+/**
+ * Rule 10's spacing (docs/CLIPS.md §6.7; D12, §16.65), kept for every graphic:
+ * onsets at least `minGapS` apart, and at most one graphic per `perS` seconds of
+ * clip, the earlier winning. `settleGraphics` applies it within one answer
+ * (`director/run.ts`); `applyBudget` (`graphics/budget.ts`, §6.9) applies it
+ * again across the project. Here, beside the templates, so both read it and
+ * neither owns it.
+ */
+export const GRAPHIC_SPACING: Readonly<{ minGapS: number; perS: number }> = Object.freeze({ minGapS: 6, perS: 20 })
+
 /** Object.freeze all the way down, so no caller can edit a field mode in place. */
 function deepFreeze<T>(value: T): T {
   if (value && typeof value === 'object' && !Object.isFrozen(value)) {
