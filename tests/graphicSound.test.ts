@@ -10,7 +10,17 @@ import {
   noSoundFileNote,
   graphicSounds
 } from '@shared/graphics/sound'
-import { CLIPS_GRAPHIC_RULE, clearGraphics } from '@shared/graphics/apply'
+import {
+  CLIPS_GRAPHIC_RULE,
+  clearGraphics,
+  followGraphicMoves,
+  graphicFollowers,
+  removeWithFollowers,
+  resoundGraphic,
+  silenceGraphics,
+  soundAllGraphics
+} from '@shared/graphics/apply'
+import { copySelection, pasteClipboard } from '@shared/edit/recipes'
 import { GRAPHIC_RULE, SOUND_RULE, clearDirector } from '@shared/director/apply'
 import { SOUND_LANE_NAME } from '@shared/director/sound'
 import { SOUND_ROLES, type SoundFile, type SoundPack } from '@shared/director/soundRoles'
@@ -577,5 +587,142 @@ describe('the sound Clear test (§6.14): each Clear takes exactly its own graphi
       expect(cleared.assets.find((a) => a.id === 'mine')).toEqual(mine)
       expect(soundOf(cleared, 'g1')).toBeUndefined()
     }
+  })
+
+  it("(6) Drop takes exactly its graphic's sounds: matched by forGraphic, never by time, with the file it brought", () => {
+    // A Director sound on your own file, on the very frame of g1's tick and inside g1's span.
+    const yours: MediaAsset = { id: 'yours', path: '/media/hit.wav', name: 'hit.wav', kind: 'audio', durationFrames: 2, width: null, height: null, fps: null, hasVideo: false, hasAudio: true, size: 4000 }
+    const ds: Clip = { ...footage('ds', 78, 2), trackId: 'a1', assetId: 'yours', generatedBy: { rule: SOUND_RULE, reason: 'tick on the cut' } }
+    const p = landed([yours], [ds])
+    const tick = soundOf(p, 'g1')!
+    // Worked by hand: g1 starts on 60, its beat 0.6 s is ceil(18) = 18 frames in; clock_tick peaks 0 frames in.
+    expect(tick.start).toBe(78)
+    expect(graphicFollowers(p, ['g1']).map((c) => c.id)).toEqual([tick.id])
+
+    const dropped = removeWithFollowers(p, ['g1'])
+    // Every clip but g1 and its tick, each as it was.
+    expect(dropped.clips).toEqual(p.clips.filter((c) => c.id !== 'g1' && c.id !== tick.id))
+    expect(dropped.clips.map((c) => c.id)).toContain('ds')
+    expect(soundOf(dropped, 'd1')).toEqual(soundOf(p, 'd1'))
+    // The file g1's tick brought goes with it; your file and Direct's whoosh file stay.
+    expect(fileAt(dropped, 'clock_tick.wav')).toBeUndefined()
+    expect(fileAt(dropped, 'fast_whoosh.wav')).toBeDefined()
+    expect(dropped.assets.find((a) => a.id === 'yours')).toEqual(yours)
+    expect(orphans(dropped)).toEqual([])
+    // Nothing follows a clip that is not a graphic: the same project.
+    expect(removeWithFollowers(dropped, [])).toBe(dropped)
+  })
+
+  it('(7) a pasted sound loses forGraphic: an ordinary sound, which Drop on the original never takes', () => {
+    const p = landed()
+    const tick = soundOf(p, 'g1')!
+    const pasted = pasteClipboard(p, copySelection(p, [tick.id])!, 1200)
+    const copy = pasted.project.clips.find((c) => c.id === pasted.ids[0])!
+    expect(copy.forGraphic).toBeUndefined()
+    expect(copy.assetId).toBe(tick.assetId)
+    expect(copy.start).toBe(1200)
+    const dropped = removeWithFollowers(pasted.project, ['g1'])
+    expect(soundOf(dropped, 'g1')).toBeUndefined()
+    expect(dropped.clips.find((c) => c.id === copy.id)).toEqual(copy)
+    // The pasted sound still stands on the file, so it stays.
+    expect(fileAt(dropped, 'clock_tick.wav')).toBeDefined()
+  })
+})
+
+describe("a graphic's sounds follow it (§6.14): the store's pure half", () => {
+  const counterAt = (id: string, start: number, assetId = 'asset-f1'): Clip => graphic(id, start, 90, spec(counter(), [0.6], { grounding: { assetId, sentence: 's', words: [] } }))
+  /** A tick by hand: a CLIPS_GRAPHIC_RULE sound for `graphicId` on the brought file `fileId`. */
+  const tickFor = (id: string, graphicId: string, start: number, fileId = 'tick-file'): Clip => ({
+    ...footage(id, start, 2), trackId: 'a1', assetId: fileId, forGraphic: graphicId, generatedBy: { rule: CLIPS_GRAPHIC_RULE, reason: 'tick' }
+  })
+  const tickFile: MediaAsset = { id: 'tick-file', path: `${LIB}/clock_tick.wav`, name: 'clock_tick.wav', kind: 'audio', durationFrames: 2, width: null, height: null, fps: null, hasVideo: false, hasAudio: true, size: 1, broughtBy: CLIPS_GRAPHIC_RULE }
+  const mineFile: MediaAsset = { id: 'mine', path: '/media/mine.wav', name: 'mine.wav', kind: 'audio', durationFrames: 30, width: null, height: null, fps: null, hasVideo: false, hasAudio: true, size: 4000 }
+  const mine: Clip = { ...footage('mine-clip', 78, 30), trackId: 'a2', assetId: 'mine' }
+  const at = (p: Project, id: string): Clip | undefined => p.clips.find((c) => c.id === id)
+
+  it('followGraphicMoves shifts the sounds of a moved graphic by its own shift, and nothing else', () => {
+    const before = project(30, [counterAt('g1', 60), counterAt('g2', 300), tickFor('s1', 'g1', 78), tickFor('s2', 'g2', 318), mine], { assets: [tickFile, mineFile] })
+    const after = { ...before, clips: before.clips.map((c) => (c.id === 'g1' ? { ...c, start: 100 } : c)) }
+    const moved = followGraphicMoves(before, after, ['g1'])
+    // 78 + (100 − 60), by hand.
+    expect(at(moved, 's1')!.start).toBe(118)
+    expect(at(moved, 's1')!.inPoint).toBe(0)
+    expect(at(moved, 's2')).toEqual(at(before, 's2'))
+    expect(at(moved, 'mine-clip')).toEqual(mine)
+    // A sound in the move itself already moved: it is not shifted a second time.
+    const both = { ...after, clips: after.clips.map((c) => (c.id === 's1' ? { ...c, start: 118 } : c)) }
+    expect(at(followGraphicMoves(before, both, ['g1', 's1']), 's1')!.start).toBe(118)
+    // No graphic moved: the same project.
+    expect(followGraphicMoves(before, before, [])).toBe(before)
+  })
+
+  it('a sound shifted before frame 0 starts on 0, part-way into its file, so its peak stays on its frame', () => {
+    // A whoosh of 15 frames starting 5 frames before g1 (its peak 8 frames in), and g1 moved from 10 to 0.
+    const whoosh: Clip = { ...tickFor('w1', 'g1', 5), duration: 15 }
+    const before = project(30, [counterAt('g1', 10), whoosh], { assets: [tickFile] })
+    const after = { ...before, clips: before.clips.map((c) => (c.id === 'g1' ? { ...c, start: 0 } : c)) }
+    const w = at(followGraphicMoves(before, after, ['g1']), 'w1')!
+    // Shifted to −5: start 0, 5 frames in, 10 left; its peak, at 13 before, is at 0 + (8 − 5) = 3 = 13 − 10.
+    expect(w).toMatchObject({ start: 0, inPoint: 5, duration: 10 })
+  })
+
+  it('silenceGraphics takes every graphic sound and the files they brought; yours stay; the setting is false', () => {
+    const p = project(30, [counterAt('g1', 60), tickFor('s1', 'g1', 78), mine], { assets: [tickFile, mineFile] })
+    const off = silenceGraphics(p)
+    expect(off.clips.map((c) => c.id)).toEqual(['f1', 'g1', 'mine-clip'])
+    expect(off.assets.map((a) => a.id)).toEqual(['mine'])
+    expect(off.graphics).toEqual({ styleId: 'clean', sound: false })
+    expect(silenceGraphics(off)).toBe(off)
+    // Its lanes stay, so placing again finds them.
+    expect(off.tracks).toEqual(p.tracks)
+  })
+
+  it('soundAllGraphics places every graphic again: its own rule, the cap afresh per footage clip in onset order, none for a footage clip of only yours', () => {
+    const f2 = { ...footage('f2', 3000, 1000), assetId: 'asset-f2' }
+    const f3 = { ...footage('f3', 4000, 1000), assetId: 'asset-f3' }
+    const yoursOnly: Clip = { ...counterAt('y1', 4100, 'asset-f3'), generatedBy: undefined }
+    const direct: Clip = { ...counterAt('d2', 3100, 'asset-f2'), generatedBy: { rule: GRAPHIC_RULE, reason: 'r' } }
+    // Placed out of onset order on purpose.
+    const p = project(30, [f2, f3, counterAt('g4', 1200), counterAt('g2', 400), counterAt('g1', 60), counterAt('g3', 800), direct, yoursOnly], {
+      graphics: { styleId: 'clean', sound: false }
+    })
+    const out = soundAllGraphics(p, ALL, { newId: ids() })
+    expect(out.notes).toEqual([])
+    expect(out.project.graphics?.sound).toBe(true)
+    const starts = (g: string): number[] => out.project.clips.filter((c) => c.forGraphic === g).map((c) => c.start)
+    // Each start by hand: the graphic's start + ceil(0.6 × 30) = + 18. f1's first three in onset order; g4 past the cap.
+    expect(starts('g1')).toEqual([78])
+    expect(starts('g2')).toEqual([418])
+    expect(starts('g3')).toEqual([818])
+    expect(starts('g4')).toEqual([])
+    // f2's own three: Direct's graphic, under its own rule and on the Sound design lane.
+    const d = out.project.clips.find((c) => c.forGraphic === 'd2')!
+    expect(d.start).toBe(3118)
+    expect(d.generatedBy?.rule).toBe(GRAPHIC_RULE)
+    expect(out.project.tracks.find((t) => t.id === d.trackId)).toMatchObject({ name: SOUND_LANE_NAME, director: true })
+    const g1 = out.project.clips.find((c) => c.forGraphic === 'g1')!
+    expect(g1.generatedBy?.rule).toBe(CLIPS_GRAPHIC_RULE)
+    expect(out.project.tracks.find((t) => t.id === g1.trackId)?.name).toBe(GRAPHIC_SOUND_LANE_NAME)
+    // f3 holds only a graphic of yours: no run sounded it, so none comes back.
+    expect(starts('y1')).toEqual([])
+    // Already on: nothing.
+    expect(soundAllGraphics(out.project, ALL).project).toBe(out.project)
+    // No library: the one note, the setting on, nothing placed.
+    const silent = soundAllGraphics(p, [])
+    expect(silent.notes).toEqual([NO_SOUND_LIBRARY_NOTE])
+    expect(silent.project.clips.filter((c) => c.forGraphic !== undefined)).toEqual([])
+  })
+
+  it('resoundGraphic re-places a graphic’s sounds on its new beats; a graphic of yours alone on its footage has none to re-place', () => {
+    const base = project(30, [counterAt('g1', 60)])
+    const placed = soundAllGraphics({ ...base, graphics: { styleId: 'clean', sound: false } }, ALL, { newId: ids() }).project
+    expect(placed.clips.filter((c) => c.forGraphic === 'g1').map((c) => c.start)).toEqual([78])
+    const edited = { ...placed, clips: placed.clips.map((c) => (c.id === 'g1' ? { ...c, graphic: { ...c.graphic!, beats: [1.0] } } : c)) }
+    const out = resoundGraphic(edited, 'g1', ALL, { newId: ids() }).project
+    // 60 + ceil(1.0 × 30) = 90, by hand; the old tick is gone, the file reused.
+    expect(out.clips.filter((c) => c.forGraphic === 'g1').map((c) => c.start)).toEqual([90])
+    expect(out.assets.filter((a) => a.path === `${LIB}/clock_tick.wav`)).toHaveLength(1)
+    const yours = project(30, [{ ...counterAt('y1', 60), generatedBy: undefined }])
+    expect(resoundGraphic(yours, 'y1', ALL).project).toBe(yours)
   })
 })

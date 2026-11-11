@@ -106,6 +106,40 @@ export function SmartPlacementToggle(): ReactNode {
 /** The section's words (docs/CLIPS.md §6.5's UI); the census rows match them. */
 export const GRAPHICS = 'Graphics'
 export const ACCENT_COLOUR = 'Accent colour'
+/** The switch's words (docs/CLIPS.md §6.14, "Off per project"). */
+export const GRAPHIC_SOUNDS = 'Graphic sounds'
+
+/**
+ * The Graphics section's "Graphic sounds" switch (docs/CLIPS.md §6.14, "Off
+ * per project"), beside the style tiles: `Project.graphics.sound`, on when
+ * absent; a press calls `setGraphicSounds` with the other value. The same
+ * switch markup as Smart placement's. No state of its own, so a test can
+ * call it.
+ */
+export function GraphicSoundsToggle(): ReactNode {
+  const on = useEditor((s) => s.project.graphics?.sound !== false)
+  const setGraphicSounds = useEditor((s) => s.setGraphicSounds)
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      data-graphic-sounds=""
+      onClick={() => setGraphicSounds(!on)}
+      className="flex w-full items-center justify-between rounded bg-ink-800 px-2 py-1.5 text-[11px] text-ink-300 transition-colors hover:bg-ink-700 hover:text-ink-100"
+    >
+      <span>{GRAPHIC_SOUNDS}</span>
+      <span
+        aria-hidden
+        className={`relative h-3 w-6 shrink-0 rounded-full transition-colors ${on ? 'bg-accent-500' : 'bg-ink-600'}`}
+      >
+        <span
+          className={`absolute top-0.5 h-2 w-2 rounded-full bg-ink-950 transition-all ${on ? 'left-3.5' : 'left-0.5'}`}
+        />
+      </span>
+    </button>
+  )
+}
 
 /**
  * The sample the Graphics section's tile draws (§6.5's UI: "a fixed
@@ -243,6 +277,9 @@ export function GraphicsSection(): ReactNode {
             )}
           </div>
         ))}
+      </div>
+      <div className="mt-1">
+        <GraphicSoundsToggle />
       </div>
       <div className="mt-1.5">
         <GraphicSample style={style} />

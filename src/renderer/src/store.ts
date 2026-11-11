@@ -35,6 +35,7 @@ import { DEFAULT_COLOR, DEFAULT_TEXT, clipCoversFrame } from '@shared/timeline'
 import { CLEAN_GRAPHIC_STYLE, graphicStyleOf } from '@shared/graphics/style'
 import type { GraphicSpec } from '@shared/graphics/template'
 import { graphicClipAsset, graphicExitKeys } from '@shared/graphics/frame'
+import { followGraphicMoves, removeWithFollowers, resoundGraphic, silenceGraphics, soundAllGraphics } from '@shared/graphics/apply'
 import { graphicTargetsAt } from '@shared/graphics/targets'
 import { captionSourceClip } from '@shared/captions/timeline'
 import { withMotion, withoutMotionForZoom } from '@shared/edit/camera'
@@ -1183,6 +1184,13 @@ interface EditorState {
   setGraphicsStyle: (styleId: string) => void
   /** One key of the graphic style's overrides (a `GRAPHIC_OVERRIDE_KEYS` key, guarded on read by `resolveGraphicStyle`); undefined removes it. One undo. */
   setGraphicsOverride: (key: string, value: unknown) => void
+  /**
+   * The OUTPUT strip's "Graphic sounds" switch (docs/CLIPS.md §6.14, "Off per
+   * project"): false takes every graphic's sound and its brought file; true
+   * places them again for every graphic, from the library as the Director
+   * reads it (`soundPackFor`). One undo.
+   */
+  setGraphicSounds: (on: boolean) => void
   /** 0 = all output, 1 = all source, anything between splits the preview. */
   splitRatio: number
   setSplitRatio: (ratio: number) => void
@@ -1954,7 +1962,8 @@ export const useEditor = create<EditorState>((set, get) => ({
   },
 
   removeClip: (clipId) => {
-    get().update((p) => ({ ...p, clips: p.clips.filter((c) => c.id !== clipId) }))
+    // A graphic's sounds go with it, with their brought files when unused (§6.14), in the same undo step.
+    get().update((p) => removeWithFollowers(p, [clipId]))
     set((s) => ({ selectedClipId: s.selectedClipId === clipId ? null : s.selectedClipId }))
   },
 
@@ -1985,12 +1994,14 @@ export const useEditor = create<EditorState>((set, get) => ({
         ? snapped
         : findFreeSlot(p, targetTrack, snapped, clip.duration, clipId)
 
-      return {
+      const moved = {
         ...p,
         clips: p.clips.map((c) =>
           c.id === clipId ? { ...c, start: landing, trackId: targetTrack } : c
         )
       }
+      // A graphic's sounds shift by its own shift, in the same undo step (§6.14).
+      return followGraphicMoves(p, moved, [clipId])
     })
   },
 
@@ -3544,17 +3555,27 @@ export const useEditor = create<EditorState>((set, get) => ({
     const { seconds, ...rest } = patch
     const wanted: typeof patch = seconds !== undefined && Number.isFinite(seconds) && seconds > 0 ? { ...rest, seconds } : rest
     if (Object.keys(wanted).length === 0) return
-    get().update((p) => ({
-      ...p,
-      clips: p.clips.map((c) => {
-        if (c.id !== clipId || !c.graphic) return c
-        const graphic: GraphicSpec = { ...c.graphic, ...wanted, version: c.graphic.version + 1 }
-        if (wanted.seconds === undefined || wanted.seconds === c.graphic.seconds) return { ...c, graphic }
-        // A new length: the clip follows it, and the exit fade moves to its last 0.3 s.
-        const duration = Math.max(1, Math.round(graphic.seconds * fps))
-        return { ...c, graphic, duration, keyframes: { ...c.keyframes, ...graphicExitKeys(duration, fps) } }
-      })
-    }))
+    const { catalog, root } = useCatalog.getState()
+    get().update((p) => {
+      const edited: Project = {
+        ...p,
+        clips: p.clips.map((c) => {
+          if (c.id !== clipId || !c.graphic) return c
+          const graphic: GraphicSpec = { ...c.graphic, ...wanted, version: c.graphic.version + 1 }
+          if (wanted.seconds === undefined || wanted.seconds === c.graphic.seconds) return { ...c, graphic }
+          // A new length: the clip follows it, and the exit fade moves to its last 0.3 s.
+          const duration = Math.max(1, Math.round(graphic.seconds * fps))
+          return { ...c, graphic, duration, keyframes: { ...c.keyframes, ...graphicExitKeys(duration, fps) } }
+        })
+      }
+      /*
+       * Its sounds re-placed on its new beats and length (§6.14: "setGraphic
+       * and keepGraphic re-place them"), in the same update, so the same undo
+       * step. Their notes are not shown: an edit from the panel would say
+       * them on every change.
+       */
+      return resoundGraphic(edited, clipId, soundPackFor(catalog, root)).project
+    })
     await get().rebakeGraphic(clipId)
   },
 
@@ -5244,6 +5265,20 @@ export const useEditor = create<EditorState>((set, get) => ({
     if (get().project !== before) rebakeGraphicClips(get)
   },
 
+  setGraphicSounds: (on) => {
+    // The library as the Director reads it (soundPackFor): with none installed, true places nothing, with the one note.
+    const { catalog, root } = useCatalog.getState()
+    const notes: string[] = []
+    // One update, so one undo step, whichever way.
+    get().update((p) => {
+      if (!on) return silenceGraphics(p)
+      const out = soundAllGraphics(p, soundPackFor(catalog, root))
+      notes.push(...out.notes)
+      return out.project
+    })
+    for (const note of notes) get().notify(note, 'info')
+  },
+
   setPlayhead: (frame) => {
     const max = Math.max(0, projectDuration(get().project))
     set({ playhead: Math.max(0, Math.min(Math.round(frame), max)) })
@@ -5463,19 +5498,26 @@ export const useEditor = create<EditorState>((set, get) => ({
   },
 
   moveSelectionTo: (origins, shift) => {
-    get().update((p) => ({
-      ...p,
-      clips: p.clips.map((c) => {
-        const from = origins.get(c.id)
-        return from === undefined ? c : { ...c, start: Math.max(0, from + shift) }
-      })
-    }))
+    get().update((p) =>
+      // A moved graphic's sounds that are not in the move shift by its own shift (§6.14), in the same update.
+      followGraphicMoves(
+        p,
+        {
+          ...p,
+          clips: p.clips.map((c) => {
+            const from = origins.get(c.id)
+            return from === undefined ? c : { ...c, start: Math.max(0, from + shift) }
+          })
+        },
+        origins.keys()
+      )
+    )
   },
 
   nudgeSelection: (deltaFrames) => {
     const { selectedClipIds } = get()
     if (selectedClipIds.length === 0) return
-    get().update((p) => moveMany(p, selectedClipIds, Math.round(deltaFrames)))
+    get().update((p) => followGraphicMoves(p, moveMany(p, selectedClipIds, Math.round(deltaFrames)), selectedClipIds))
   },
 
   deleteSelection: () => {
@@ -5488,7 +5530,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       return
     }
     if (selectedClipIds.length === 0) return
-    get().update((p) => removeMany(p, selectedClipIds))
+    get().update((p) => removeWithFollowers(p, selectedClipIds, removeMany))
     set({ selectedClipIds: [], selectedClipId: null })
   },
 
@@ -5517,7 +5559,7 @@ export const useEditor = create<EditorState>((set, get) => ({
     const board = clipsToClipboard(project, selectedClipIds)
     if (!board) return
     set({ clipboard: board })
-    get().update((p) => removeMany(p, selectedClipIds))
+    get().update((p) => removeWithFollowers(p, selectedClipIds, removeMany))
     set({ selectedClipIds: [], selectedClipId: null })
   },
 

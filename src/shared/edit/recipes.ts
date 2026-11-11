@@ -310,7 +310,13 @@ export function pasteClipboard(
        * and the copy has landed somewhere else entirely — keeping it would
        * blend the new clip against a neighbour it has no relationship with.
        */
-      transitionIn: undefined
+      transitionIn: undefined,
+      /*
+       * A pasted sound is an ordinary sound (docs/CLIPS.md §6.14): it no
+       * longer follows the graphic it was placed for, so Drop and removeClip
+       * on that graphic never take it, and a move of it never shifts it.
+       */
+      forGraphic: undefined
     }
 
     if (generated) toBake.push({ clipId: id, from: source })

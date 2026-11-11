@@ -31,7 +31,7 @@ vi.mock('../../src/renderer/src/exportBakers', () => ({ liveBakers: {} }))
 vi.mock('../../src/renderer/src/captionBake', () => ({ bakeCaptions: async () => null }))
 
 const { useEditor } = await import('../../src/renderer/src/store')
-const { OutputStrip, GraphicsSection, GRAPHICS, ACCENT_COLOUR, GRAPHIC_TEXT_STYLE_IDS, graphicSampleList } = await import(
+const { OutputStrip, GraphicsSection, GRAPHICS, ACCENT_COLOUR, GRAPHIC_SOUNDS, GRAPHIC_TEXT_STYLE_IDS, graphicSampleList } = await import(
   '../../src/renderer/src/components/OutputStrip'
 )
 const { TextStylePicker } = await import('../../src/renderer/src/components/TextStylePicker')
@@ -116,6 +116,35 @@ describe('OUTPUT’s Graphics section (§6.5)', () => {
       const row = rows.find((r) => r.props['data-graphic-style'] === preset.id)!
       expect(norm(textOf(row.props.children as ReactNode)), preset.id).toBe(`${preset.name} ${preset.font}`)
     }
+  })
+
+  it('the Graphic sounds switch (§6.14) sits beside the style tiles, reads the project with absent meaning on, and calls setGraphicSounds', () => {
+    const html = renderToStaticMarkup(createElement(OutputStrip)).replace(/\s+/g, ' ')
+    expect(GRAPHIC_SOUNDS).toBe('Graphic sounds')
+    expect(html).toContain(`>${GRAPHIC_SOUNDS}<`)
+    const switches = (): Host[] => section().all.hosts.filter((h) => h.type === 'button' && 'data-graphic-sounds' in h.props)
+    const { all, rows } = section()
+    expect(switches()).toHaveLength(1)
+    const sw = all.hosts.find((h) => h.type === 'button' && 'data-graphic-sounds' in h.props)!
+    expect(sw.props.role).toBe('switch')
+    expect(norm(textOf(sw.props.children as ReactNode))).toBe(GRAPHIC_SOUNDS)
+    // Beside the tiles: after the last preset row.
+    expect(all.hosts.indexOf(sw)).toBeGreaterThan(all.hosts.indexOf(rows[rows.length - 1]))
+    // Absent: on.
+    expect(state().project.graphics).toBeUndefined()
+    expect(sw.props['aria-checked']).toBe(true)
+    start({ styleId: 'bold', overrides: {}, sound: false })
+    expect(switches()[0].props['aria-checked']).toBe(false)
+    start({ styleId: 'bold', overrides: {}, sound: true })
+    expect(switches()[0].props['aria-checked']).toBe(true)
+    // A press: setGraphicSounds with the other value, one undo step.
+    ;(switches()[0].props.onClick as () => void)()
+    expect(state().project.graphics).toStrictEqual({ styleId: 'bold', overrides: {}, sound: false })
+    expect(state().past).toHaveLength(1)
+    expect(switches()[0].props['aria-checked']).toBe(false)
+    ;(switches()[0].props.onClick as () => void)()
+    expect(state().project.graphics?.sound).toBe(true)
+    expect(state().past).toHaveLength(2)
   })
 
   it('lights the project’s preset, clean when it names none or an unknown one', () => {

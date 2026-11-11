@@ -9,6 +9,9 @@ import { drawnGraphicAsset, graphicExitKeys } from '@shared/graphics/frame'
 import { graphicTargetsAt } from '@shared/graphics/targets'
 import { copySelection } from '@shared/edit/recipes'
 import { GRAPHIC_TRIM_REBAKE_MS, useEditor } from '../../src/renderer/src/store'
+import { useCatalog } from '../../src/renderer/src/catalog'
+import { CLIPS_GRAPHIC_RULE } from '@shared/graphics/apply'
+import { NO_SOUND_LIBRARY_NOTE } from '@shared/graphics/sound'
 
 /*
  * The store's graphic actions (docs/CLIPS.md §6.3, "The store"; §6.4's three
@@ -425,5 +428,156 @@ describe('the arms', () => {
     const preview = readFileSync(resolve(__dirname, '../../src/renderer/src/components/Preview.tsx'), 'utf8')
     const sweeps = [...preview.matchAll(/forgetMomentPreview\(clipId\)\s*\n[^\n]*\n\s*forgetGraphicPreview\(clipId\)/g)]
     expect(sweeps).toHaveLength(1)
+  })
+})
+
+/*
+ * Phase 2's cases (docs/CLIPS.md §6.14, "A graphic's sounds follow it" and
+ * "Off per project"): each edit takes or shifts a graphic's sounds in its
+ * own update, so one undo puts all of it back. The fixture is written by
+ * hand, so no frame below comes from the code under test: over the talk shot,
+ * a Clip-it counter g1 on V2 at 60 (its beat 0.6 s: 60 + ceil(18) = 78) with
+ * its tick s1 on frame 78, and g2 at 300 with its tick s2 on 318, both on the
+ * one tick file the rule brought; and a sound of yours on frame 78, on your
+ * own file, that follows nothing.
+ */
+describe('phase 2: a graphic’s sounds follow it (§6.14)', () => {
+  const rule = { rule: CLIPS_GRAPHIC_RULE, reason: 'r' }
+  const drawn = (id: string): MediaAsset => ({ id: `drawn-${id}`, path: '', name: 'counter — graphic', kind: 'image', durationFrames: 300, size: 0, width: 1080, height: 1920, fps: null, hasVideo: true, hasAudio: false })
+  const tickFile: MediaAsset = { id: 'tick-file', path: '/lib/sfx/clock_tick.wav', name: 'clock_tick.wav', kind: 'audio', durationFrames: 2, width: null, height: null, fps: null, hasVideo: false, hasAudio: true, size: 1, broughtBy: CLIPS_GRAPHIC_RULE }
+  const mineFile: MediaAsset = { id: 'mine', path: '/media/mine.wav', name: 'mine.wav', kind: 'audio', durationFrames: 30, width: null, height: null, fps: null, hasVideo: false, hasAudio: true, size: 4000 }
+  const g = (id: string, at: number): Clip => ({ ...shot, id, assetId: `drawn-${id}`, trackId: 'v2', start: at, duration: 90, graphic: spec({ beats: [0.6] }), generatedBy: rule })
+  const tick = (id: string, graphicId: string, at: number): Clip => ({ ...shot, id, assetId: 'tick-file', trackId: 'a1', start: at, duration: 2, forGraphic: graphicId, generatedBy: rule })
+  const mine: Clip = { ...shot, id: 'mine-clip', assetId: 'mine', trackId: 'a2', start: 78, duration: 30 }
+
+  function fixture(clips: Clip[] = [g('g1', 60), tick('s1', 'g1', 78), g('g2', 300), tick('s2', 'g2', 318), mine]): Project {
+    start({ assets: [footage, drawn('g1'), drawn('g2'), tickFile, mineFile], clips: [shot, ...clips] })
+    return project()
+  }
+  const ids = (): string[] => project().clips.map((c) => c.id)
+  const at = (id: string): Clip | undefined => project().clips.find((c) => c.id === id)
+  /** One undo: the project exactly as before the edit, and the history one shorter. */
+  function undoesTo(before: Project, past: number): void {
+    expect(history()).toBe(past + 1)
+    state().undo()
+    expect(project()).toEqual(before)
+    expect(history()).toBe(past)
+  }
+
+  afterEach(() => useCatalog.setState(useCatalog.getInitialState()))
+
+  it('removeClip on a graphic takes its forGraphic sounds and nothing else; one undo restores it', () => {
+    const before = fixture()
+    state().removeClip('g1')
+    expect(ids()).toEqual(['shot', 'g2', 's2', 'mine-clip'])
+    // s2 still stands on the tick file, so it stays; the drawn asset stays, as removeClip leaves a clip's asset.
+    expect(project().assets.map((a) => a.id)).toEqual(['talk', 'drawn-g1', 'drawn-g2', 'tick-file', 'mine'])
+    undoesTo(before, 0)
+  })
+
+  it('removeClip on the last graphic on a brought file takes the file too', () => {
+    const before = fixture([g('g1', 60), tick('s1', 'g1', 78), mine])
+    state().removeClip('g1')
+    expect(ids()).toEqual(['shot', 'mine-clip'])
+    expect(project().assets.map((a) => a.id)).toEqual(['talk', 'drawn-g1', 'drawn-g2', 'mine'])
+    undoesTo(before, 0)
+  })
+
+  it('moveClip shifts its sounds by the graphic’s own shift; others stay', () => {
+    const before = fixture()
+    state().moveClip('g1', 120)
+    expect(at('g1')!.start).toBe(120)
+    // 78 + (120 − 60), by hand.
+    expect(at('s1')!.start).toBe(138)
+    expect(at('s2')!.start).toBe(318)
+    expect(at('mine-clip')!.start).toBe(78)
+    undoesTo(before, 0)
+  })
+
+  it('moveSelectionTo shifts the sounds not in the move by the graphic’s own shift, and a sound in the move only once', () => {
+    const before = fixture()
+    state().moveSelectionTo(new Map([['g1', 60]]), 40)
+    expect(at('g1')!.start).toBe(100)
+    expect(at('s1')!.start).toBe(118)
+    expect(at('mine-clip')!.start).toBe(78)
+    undoesTo(before, 0)
+    // The sound selected with it: from its origin, 78 + 40, not shifted again.
+    state().moveSelectionTo(new Map([['g1', 60], ['s1', 78]]), 40)
+    expect(at('s1')!.start).toBe(118)
+    undoesTo(before, 0)
+  })
+
+  it('beyond the plan words: Delete and the arrow nudge carry the sounds too', () => {
+    const before = fixture()
+    state().selectMany(['g1'])
+    state().nudgeSelection(10)
+    expect(at('s1')!.start).toBe(88)
+    undoesTo(before, 0)
+    state().selectMany(['g1'])
+    state().deleteSelection()
+    expect(ids()).toEqual(['shot', 'g2', 's2', 'mine-clip'])
+    undoesTo(before, 0)
+  })
+
+  it('a pasted copy of a graphic’s sound has no forGraphic, so removing the graphic leaves it', async () => {
+    fixture()
+    await state().placeCopies(copySelection(project(), ['s1'])!, 1000)
+    const copy = project().clips.find((c) => c.start === 1000)!
+    expect(copy.assetId).toBe('tick-file')
+    expect(copy.forGraphic).toBeUndefined()
+    state().removeClip('g1')
+    expect(at(copy.id)).toEqual(copy)
+    expect(project().assets.map((a) => a.id)).toContain('tick-file')
+  })
+
+  it('setGraphicSounds(false) takes every graphic sound and its brought file in one undo; (true) places them again from the library', () => {
+    const before = fixture()
+    state().setGraphicSounds(false)
+    expect(ids()).toEqual(['shot', 'g1', 'g2', 'mine-clip'])
+    expect(project().assets.map((a) => a.id)).toEqual(['talk', 'drawn-g1', 'drawn-g2', 'mine'])
+    expect(project().graphics?.sound).toBe(false)
+    undoesTo(before, 0)
+
+    state().setGraphicSounds(false)
+    const off = project()
+    // With no library installed: the setting on, nothing placed, the one note.
+    state().setGraphicSounds(true)
+    expect(project().graphics?.sound).toBe(true)
+    expect(project().clips.filter((c) => c.forGraphic !== undefined)).toEqual([])
+    expect(notices()).toContain(NO_SOUND_LIBRARY_NOTE)
+    undoesTo(off, 1)
+
+    // With the library: the library's tick on each graphic's beat, by hand 78 and 318, under its rule.
+    useCatalog.setState({
+      catalog: { version: 3, generatedAt: '', scannedFrom: '/lib', entries: [{ id: 'clock', kind: 'sfx', name: 'clock tick', file: 'sfx/clock_tick.wav', tags: [], meta: {} }] },
+      root: '/lib'
+    })
+    state().setGraphicSounds(true)
+    const sounds = project().clips.filter((c) => c.forGraphic !== undefined).sort((a, b) => a.start - b.start)
+    expect(sounds.map((c) => [c.forGraphic, c.start, c.duration, c.generatedBy?.rule])).toEqual([
+      ['g1', 78, 2, CLIPS_GRAPHIC_RULE],
+      ['g2', 318, 2, CLIPS_GRAPHIC_RULE]
+    ])
+    const file = project().assets.find((a) => a.id === sounds[0].assetId)!
+    expect(file).toMatchObject({ path: '/lib/sfx/clock_tick.wav', kind: 'audio', broughtBy: CLIPS_GRAPHIC_RULE })
+    undoesTo(off, 1)
+  })
+
+  it('setGraphic re-places its sounds on the new beats, in the same undo step', async () => {
+    useCatalog.setState({
+      catalog: { version: 3, generatedAt: '', scannedFrom: '/lib', entries: [{ id: 'clock', kind: 'sfx', name: 'clock tick', file: 'sfx/clock_tick.wav', tags: [], meta: {} }] },
+      root: '/lib'
+    })
+    const before = fixture()
+    await state().setGraphic('g1', { beats: [1.0] })
+    // 60 + ceil(1.0 × 30) = 90, by hand; s1 gone, the new tick on the file already in the pool.
+    const ticks = project().clips.filter((c) => c.forGraphic === 'g1')
+    expect(ticks.map((c) => [c.start, c.assetId])).toEqual([[90, 'tick-file']])
+    expect(at('s1')).toBeUndefined()
+    // g2 is on the same shot, so its tick is re-placed with it (the cap and the index are the shot's): still on 318.
+    expect(project().clips.filter((c) => c.forGraphic === 'g2').map((c) => [c.start, c.assetId])).toEqual([[318, 'tick-file']])
+    expect(history()).toBe(1)
+    state().undo()
+    expect(project().clips).toEqual(before.clips)
   })
 })

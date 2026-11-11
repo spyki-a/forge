@@ -24,6 +24,7 @@ import { applyBudget, type BudgetCandidate } from './budget'
 import { graphicClipAsset, graphicExitKeys } from './frame'
 import { NO_CLIP_NOTE, NO_FREE_THIRD_NOTE, graphicLane, placeGraphic, subjectAtOnset, thirdPreference } from './place'
 import { GRAPHIC_SOUND_LANE_NAME, footageOf, graphicSounds } from './sound'
+import { CLEAN_GRAPHIC_STYLE } from './style'
 import { GRAPHIC_TEMPLATES, type GraphicData, type GraphicSpec, type KeptGraphic } from './template'
 import type { GraphicProposal } from '../timeline'
 
@@ -524,4 +525,191 @@ export function clearGraphics(project: Project): Project {
     assets: project.assets.filter((a) => !(ours.has(a.id) && !stillUsed.has(a.id))),
     ...(proposals !== undefined ? { graphicProposals: proposals } : {})
   }
+}
+
+/* ------------------------------------------------- a graphic's sounds follow it */
+
+/*
+ * §6.14 "A graphic's sounds follow it" and "Off per project": the pure half
+ * of the store's follow-on edits, so the store's removeClip, moveClip and
+ * moveSelectionTo and lane T2b's dropGraphic and keepGraphic call the same
+ * functions. A follower is matched by its `forGraphic`, never by its time.
+ */
+
+/** The clips that follow the graphic clips `ids`: those whose `forGraphic` is one of them (§6.14). */
+export function graphicFollowers(project: Pick<Project, 'clips'>, ids: Iterable<string>): Clip[] {
+  const graphics = new Set(ids)
+  return project.clips.filter((c) => c.forGraphic !== undefined && graphics.has(c.forGraphic))
+}
+
+/**
+ * Of the assets the clips `gone` stood on, those the app brought
+ * (`broughtBy`) that no clip of `survivors` uses: Clear's sweep (§6.14), for
+ * the files a graphic's sounds stood on. A file you imported carries no
+ * `broughtBy` and stays; a graphic's drawn asset carries none either.
+ */
+function withoutUnusedBrought(project: Project, gone: readonly Clip[]): Project {
+  if (gone.length === 0) return project
+  const used = new Set(project.clips.map((c) => c.assetId))
+  const stood = new Set(gone.map((c) => c.assetId))
+  const assets = project.assets.filter((a) => !(stood.has(a.id) && a.broughtBy !== undefined && !used.has(a.id)))
+  return assets.length === project.assets.length ? project : { ...project, assets }
+}
+
+/**
+ * `removeClip` on a graphic, and T2b's `dropGraphic` (§6.14): the clips
+ * `ids` (through `removeClips`, a plain filter by default; the store's
+ * Delete passes `removeMany`), every clip that follows one of them
+ * (`forGraphic`) and is not one of them, and of the followers' files those
+ * the app brought that no surviving clip uses. A graphic's own drawn asset
+ * stays in the pool, as `removeClip` has always left the asset of a clip it
+ * removes (lane C's arm; an undo puts the clip back over it). The same
+ * project comes back when nothing is removed.
+ */
+export function removeWithFollowers(
+  project: Project,
+  ids: readonly string[],
+  removeClips: (project: Project, ids: readonly string[]) => Project = (p, gone) => {
+    const set = new Set(gone)
+    return p.clips.some((c) => set.has(c.id)) ? { ...p, clips: p.clips.filter((c) => !set.has(c.id)) } : p
+  }
+): Project {
+  const going = new Set(ids)
+  const followers = graphicFollowers(project, going).filter((c) => !going.has(c.id))
+  const removed = removeClips(project, ids)
+  if (followers.length === 0) return removed
+  const gone = new Set(followers.map((c) => c.id))
+  return withoutUnusedBrought({ ...removed, clips: removed.clips.filter((c) => !gone.has(c.id)) }, followers)
+}
+
+/**
+ * `moveClip` and `moveSelectionTo` (§6.14): given the project `before` a
+ * move and `after` it, and the ids of the clips in the move, every clip that
+ * follows a graphic and is not in the move itself is shifted by its
+ * graphic's own shift (`after`'s start less `before`'s), so its peak stays on
+ * the frame of the graphic it was placed on. Beyond §6.14's words: a sound
+ * shifted before frame 0 starts on 0, part-way into its file (its `inPoint`
+ * up and its `duration` down by the frames cut), as `graphicSounds` places
+ * one there, so its peak still lands on its frame; one with nothing left
+ * after frame 0 is taken, with its brought file when unused. `after` comes
+ * back as the same object when nothing follows.
+ */
+export function followGraphicMoves(before: Project, after: Project, moving: Iterable<string>): Project {
+  const inMove = new Set(moving)
+  const was = new Map(before.clips.map((c) => [c.id, c.start]))
+  const shiftOf = new Map<string, number>()
+  for (const c of after.clips) {
+    if (!c.graphic) continue
+    const from = was.get(c.id)
+    if (from !== undefined && from !== c.start) shiftOf.set(c.id, c.start - from)
+  }
+  if (shiftOf.size === 0) return after
+  const dropped: Clip[] = []
+  let changed = false
+  const clips: Clip[] = []
+  for (const c of after.clips) {
+    const shift = c.forGraphic === undefined || inMove.has(c.id) ? undefined : shiftOf.get(c.forGraphic)
+    if (shift === undefined) {
+      clips.push(c)
+      continue
+    }
+    changed = true
+    const start = c.start + shift
+    if (start >= 0) {
+      clips.push({ ...c, start })
+      continue
+    }
+    // Frames, so integers: the cut is exact, no rounding.
+    const cut = -start
+    if (cut >= c.duration) {
+      dropped.push(c)
+      continue
+    }
+    clips.push({ ...c, start: 0, inPoint: c.inPoint + cut, duration: c.duration - cut })
+  }
+  if (!changed) return after
+  return withoutUnusedBrought({ ...after, clips }, dropped)
+}
+
+/**
+ * `setGraphicSounds(false)` (§6.14, "Off per project"): every clip with a
+ * `forGraphic` off, the files they stood on that the app brought and no
+ * surviving clip uses, and `Project.graphics.sound` false (with the `clean`
+ * preset when the project had no graphics settings). Their lanes stay, so
+ * `true` finds them again. The same project comes back when it is already off
+ * and no clip follows a graphic.
+ */
+export function silenceGraphics(project: Project): Project {
+  const followers = project.clips.filter((c) => c.forGraphic !== undefined)
+  if (project.graphics?.sound === false && followers.length === 0) return project
+  const gone = new Set(followers.map((c) => c.id))
+  const next: Project = {
+    ...project,
+    graphics: { styleId: CLEAN_GRAPHIC_STYLE.id, ...project.graphics, sound: false },
+    clips: project.clips.filter((c) => !gone.has(c.id))
+  }
+  return withoutUnusedBrought(next, followers)
+}
+
+/**
+ * `setGraphicSounds(true)` (§6.14): `Project.graphics.sound` true, and the
+ * sounds placed again for every graphic on the timeline through
+ * `graphicSounds`, each under its own rule and on its own lane, the cap
+ * counted afresh per footage clip in onset order. One call per footage clip
+ * that holds a graphic of an app rule (`generatedBy` set; `graphicSounds`
+ * places every graphic on it, yours under that graphic's rule, as a run
+ * does), and one per such graphic over no footage, in onset order. A footage
+ * clip with only graphics of yours gets none: no run placed sounds there, so
+ * none come back (resoundAfterClear's rule). Already on (`true` or absent):
+ * nothing, the same project.
+ */
+export function soundAllGraphics(
+  project: Project,
+  sounds: SoundPack,
+  options: { newId?: (prefix: string) => string } = {}
+): { project: Project; notes: string[] } {
+  if (project.graphics?.sound !== false) return { project, notes: [] }
+  const on: Project = { ...project, graphics: { ...project.graphics, sound: true } }
+  const seen = new Set<string>()
+  const pick: string[] = []
+  const graphics = on.clips.filter((c) => c.graphic && c.generatedBy !== undefined).sort((a, b) => a.start - b.start || (a.id < b.id ? -1 : 1))
+  for (const g of graphics) {
+    const key = footageOf(on, g, g.graphic!) ?? `alone:${g.id}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    pick.push(g.id)
+  }
+  return soundsFor(on, pick, CLIPS_GRAPHIC_RULE, sounds, options.newId ?? defaultId)
+}
+
+/**
+ * Re-place one graphic's sounds (§6.14: "`setGraphic` and `keepGraphic`
+ * re-place them"): its `forGraphic` clips off and placed again through
+ * `graphicSounds`, which re-places every graphic sound on its footage clip
+ * so the cap and the file index hold. Placed under the graphic's own rule;
+ * a graphic of yours (no `generatedBy`) is re-placed under the rule of the
+ * earliest app graphic on its footage clip, and when there is none it has no
+ * sounds to re-place and the project comes back as it was (a run never
+ * sounded it). With the sounds off, or no library, `graphicSounds` places
+ * nothing and takes nothing.
+ */
+export function resoundGraphic(
+  project: Project,
+  graphicId: string,
+  sounds: SoundPack,
+  options: { newId?: (prefix: string) => string } = {}
+): { project: Project; notes: string[] } {
+  const g = project.clips.find((c) => c.id === graphicId)
+  if (!g?.graphic) return { project, notes: [] }
+  let pick: Clip | undefined = g.generatedBy !== undefined ? g : undefined
+  if (!pick) {
+    const f = footageOf(project, g, g.graphic)
+    if (f !== null) {
+      pick = project.clips
+        .filter((c) => c.graphic && c.generatedBy !== undefined && footageOf(project, c, c.graphic) === f)
+        .sort((a, b) => a.start - b.start || (a.id < b.id ? -1 : 1))[0]
+    }
+  }
+  if (!pick) return { project, notes: [] }
+  return soundsFor(project, [pick.id], CLIPS_GRAPHIC_RULE, sounds, options.newId ?? defaultId)
 }
