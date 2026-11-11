@@ -1,15 +1,23 @@
 name: CI
 
-# Both platforms on every push: Windows, and macOS 14 on arm64.
+# Both platforms on every push: Windows, and macOS 15 on arm64 (macOS 14 until
+# GitHub retired that image; see below).
 #
 # Windows is the job that says something new on most pushes: most of what
 # breaks there breaks in paths, process handling and line endings, all three
 # invisible from a Mac until someone runs the app, and in the 2018 ffmpeg
 # (docs/EFFECTS.md §25). macOS came back to the push with the AI helper's
 # pack (docs/CLIPS.md §3a.6, §16.48 (b)): both runners install the pinned pack
-# for real and run the helper's suites from inside it, and `macos-14` is the
-# only machine anywhere that runs the pack's macOS 14 floor (onnxruntime's and
-# av's arm64 wheels are `macosx_14_0`; the dev Mac is on macOS 26).
+# for real and run the helper's suites from inside it. Until 2026-11-03 the
+# Mac job ran on `macos-14`, the only machine anywhere that ran the pack's
+# macOS 14 floor (onnxruntime's and av's arm64 wheels are `macosx_14_0`; the
+# dev Mac is on macOS 26). GitHub retired that image on 2026-11-02
+# (github.blog/changelog/2026-10-01-github-actions-macos-14-runner-image-retirement):
+# the push of 2026-11-11 (run 43013571098) had its Mac job cancelled in one
+# second with "The configuration 'macos-14-arm64-us-default' is not
+# supported". So the job is on `macos-15`, the lowest arm64 image still
+# hosted, and THE FLOOR NOW RUNS NOWHERE: a macOS 14 machine is the only
+# place left to check it.
 #
 # The cost. This file used to keep macOS off the push because GitHub billed it
 # at TEN times and rounded every job up to a whole minute. Measured then:
@@ -30,7 +38,7 @@ name: CI
 # from the pack add a few minutes), and a few less on a hit, so roughly
 # 9-14 minutes a push on Windows and 6-10 on the Mac, in parallel. Were the
 # repo private again, that would bill about 80-130 minutes a push: take
-# `macos-14` back off the push before it does.
+# `macos-15` back off the push before it does.
 #
 # The installers stay on request (Actions -> CI -> Run workflow) or a `v*`
 # tag: see the `if` on `package`.
@@ -68,9 +76,11 @@ jobs:
       fail-fast: false
       matrix:
         # Both on every push (the header says why, and what it costs).
-        # `macos-14` rather than `macos-latest`: an arm64 runner on the pack's
-        # macOS floor, which macos-latest would move off without a word.
-        os: [windows-latest, macos-14]
+        # `macos-15` rather than `macos-latest`: an arm64 runner as near the
+        # pack's macOS 14 floor as GitHub still hosts (`macos-14` was retired
+        # on 2026-11-02), and a named version, which macos-latest would move
+        # off without a word.
+        os: [windows-latest, macos-15]
 
     steps:
       - uses: actions/checkout@v5

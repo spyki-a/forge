@@ -146,9 +146,10 @@ npm run pack:win    # electron-builder — must run ON Windows, see below
 ```
 
 CI runs typecheck, the **full** suite including the ffmpeg integration tests,
-and the build, on **Windows and `macos-14`** for every push (macOS came back
+and the build, on **Windows and `macos-15`** for every push (macOS came back
 to the push on 2026-10-16 with the AI helper's pack: the repo is public, so
-the minutes are free). After the suite, both runners install the AI helper's
+the minutes are free; it was `macos-14` until GitHub retired that image on
+2026-11-02, so the pack's macOS 14 floor now runs on no CI machine). After the suite, both runners install the AI helper's
 pinned pack for real (or check the week's cached one again), probe every URL
 it pins, run the helper's suites from inside it, and run `pip check`; Windows
 also lists the pack's native imports (`docs/CLIPS.md` §3a.6). The installers
