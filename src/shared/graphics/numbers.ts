@@ -33,7 +33,26 @@ function isDigit(ch: string): boolean {
   return zeroOf(ch) !== null
 }
 
-type Grouping = 'none' | 'western' | 'indian'
+export type Grouping = 'none' | 'western' | 'indian'
+
+/**
+ * The grouping of a number's integer part, split on its commas: 'none' for
+ * one group, 'western' for 3-3 (`1,000,000`), 'indian' for 3-2-2
+ * (`10,00,000`), null for anything else ("1,0", which may be a decimal
+ * comma; "1234,567"). Shared with `director/claims.ts`'s `numbersIn`, so the
+ * drawn value and the validator's claim cannot read a grouping differently.
+ */
+export function groupingOf(groups: readonly string[]): Grouping | null {
+  if (groups.length <= 1) return 'none'
+  const len = (g: string): number => Array.from(g).length
+  const last = groups[groups.length - 1]
+  const lead = groups[0]
+  const middle = groups.slice(1, -1)
+  if (len(lead) < 1 || len(last) !== 3 || len(lead) > 3) return null
+  if (middle.every((g) => len(g) === 3)) return 'western'
+  if (middle.every((g) => len(g) === 2) && len(lead) <= 2) return 'indian'
+  return null
+}
 
 /** A value's one number, read in its own format. */
 interface Parsed {
@@ -48,7 +67,17 @@ interface Parsed {
 }
 
 /**
- * Read the value's single number. Null when it has no digits, two numbers
+ * Read the value's single number. This parser and `director/claims.ts`'s
+ * `numbersIn` share the grouping rule (`groupingOf`) and the multipliers
+ * (`MULTIPLIERS`) but are two functions on purpose: this one keeps the value's
+ * WRITTEN format (prefix, suffix, digit script, grouping, decimal places) so a
+ * drawer can count in it, reads one value as typed into a field, and works on
+ * native digits directly; `numbersIn` reduces a run of spoken tokens (native
+ * digits already mapped to ASCII by `claimToken`) to comparable VALUES
+ * (`{n, unit, currency?}`), finds every number in the run, and reads English
+ * number words, which no drawn value needs. tests/claims.test.ts holds the two
+ * to the same value on every numeric fixture value.
+ * Null when it has no digits, two numbers
  * ("1,000-2,000", "40 to 50"), digits from two scripts, or a grouping that is
  * neither western nor Indian ("1,0", which may be a decimal comma).
  */
@@ -87,16 +116,8 @@ function parse(value: string): Parsed | null {
   const body = chars.slice(first, end).join('')
   const [intPart, decPart = ''] = body.split('.')
   const groups = intPart.split(',')
-  let grouping: Grouping = 'none'
-  if (groups.length > 1) {
-    const last = groups[groups.length - 1]
-    const lead = groups[0]
-    const middle = groups.slice(1, -1)
-    if (Array.from(last).length !== 3 || Array.from(lead).length > 3) return null
-    if (middle.every((g) => Array.from(g).length === 3)) grouping = 'western'
-    else if (middle.every((g) => Array.from(g).length === 2) && Array.from(lead).length <= 2) grouping = 'indian'
-    else return null
-  }
+  const grouping = groupingOf(groups)
+  if (grouping === null) return null
 
   const digits = Array.from(groups.join('') + decPart)
   let scaled = 0
@@ -154,8 +175,12 @@ export function inBetween(value: string, fraction: number): string {
   return p.prefix + script + p.suffix
 }
 
-/** The suffix words that multiply a number (§6.7 rule 4's list), as a bar's size needs them. */
-const MULTIPLIERS: Record<string, number> = {
+/**
+ * The suffix words that multiply a number (§6.7 rule 4's list), as a bar's
+ * size needs them. Shared with `director/claims.ts`, which reads the same
+ * table for a claim's value: one list of multipliers, not two.
+ */
+export const MULTIPLIERS: Readonly<Record<string, number>> = {
   k: 1e3,
   thousand: 1e3,
   m: 1e6,
