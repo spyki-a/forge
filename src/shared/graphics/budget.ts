@@ -14,6 +14,7 @@
  */
 
 import { COPY_RULE, ENDING_RULE, GRAPHIC_RULE } from '../director/apply'
+import { normaliseKeys } from '../render/keyframes'
 import { clipEnd, framesToSeconds, projectDuration, type Clip, type Project } from '../timeline'
 import { NO_CLIP_NOTE } from './place'
 import { GRAPHIC_SPACING, type GraphicSpec, type GraphicTemplateId } from './template'
@@ -31,7 +32,11 @@ export const PER_MINUTE_WINDOW_S = 60
 /** Rule 2's drop, §6.9's words; Keep shows the same text (§6.6). */
 export const ON_SCREEN_REASON = 'another graphic is on screen then'
 
-/** Rule 3's drop, §6.9's words: "over a zoom punch at 12.4 s", the punch's first frame in timeline seconds, to 0.1 s (nearest). */
+/**
+ * Rule 3's drop, §6.9's words: "over a zoom punch at 12.4 s", the punch's
+ * first frame on screen in timeline seconds (a zoom move's first frame inside
+ * its footage clip, never before it), to 0.1 s (nearest).
+ */
 export function zoomPunchReason(seconds: number): string {
   return `over a zoom punch at ${seconds.toFixed(1)} s`
 }
@@ -109,14 +114,20 @@ const EPS = 1e-6
  * 3. **No zoom punch**: its frames overlap neither a clip whose
  *    `moment.kind` is `'zoom-punch'` nor, on its footage clip, the frames
  *    between two adjacent `zoom` keys of different value (keys are frames
- *    from the clip's start, render/keyframes.ts). A held zoom is not a punch.
+ *    from the clip's start, read as the renderer reads them, `normaliseKeys`),
+ *    cut to the frames the footage clip is on the timeline. A held zoom is not
+ *    a punch: two keys of one value, or the segment after a key whose ease is
+ *    `'hold'`, which keeps its value to the next key and jumps ON that key's
+ *    frame (render/keyframes.ts `eased` and the ffmpeg expression), so the
+ *    punch there is that one frame.
  * 4. **Per minute**: when the cap (`options.perMinute`, else
  *    `GRAPHICS_PER_MINUTE`) is not null, no 60 s window [w, w + 60) that
  *    holds its onset holds more than the cap of onsets.
  *
- * A `'screen-card'` is outside the budget (§6.9, §6.16): kept with no rule
- * read, and neither held for the others nor counted. A candidate whose
- * footage clip is gone is dropped with `NO_CLIP_NOTE`. `kept` is in onset
+ * A candidate whose footage clip is gone is dropped with `NO_CLIP_NOTE`,
+ * a screen card's included. A `'screen-card'` is otherwise outside the
+ * budget (§6.9, §6.16): kept with no rule read, and neither held for the
+ * others nor counted. `kept` is in onset
  * order; `dropped` carries each spec as given with its reason. A graphic
  * already on the timeline always holds, even where a candidate's onset is
  * earlier: it is placed.
@@ -144,6 +155,10 @@ export function applyBudget<C extends BudgetCandidate>(
   const dropped: { spec: C['spec']; reason: string }[] = []
   for (const { c, onset } of ordered) {
     const template = c.spec.data.template
+    if (!project.clips.some((x) => x.id === c.clipId)) {
+      dropped.push({ spec: c.spec, reason: NO_CLIP_NOTE })
+      continue
+    }
     if (template === 'screen-card') {
       kept.push(c)
       continue
@@ -171,7 +186,7 @@ function refusal(
 ): string | null {
   const fps = project.settings.fps
   const footage = project.clips.find((x) => x.id === c.clipId)
-  if (!footage) return NO_CLIP_NOTE
+  if (!footage) return NO_CLIP_NOTE // applyBudget has dropped it already; kept for the type
   const from = c.start
   const to = c.start + c.duration
   const overlaps = (a: number, b: number): boolean => from < b && a < to
@@ -184,11 +199,16 @@ function refusal(
 
   // Rule 3: the earliest punch under its frames, a moment's or a zoom move's on the footage beneath.
   const under: number[] = punches.filter((p) => overlaps(p.start, clipEnd(p))).map((p) => p.start)
-  const keys = [...(footage.keyframes?.zoom ?? [])].sort((a, b) => a.frame - b.frame)
+  const keys = normaliseKeys(footage.keyframes?.zoom ?? [], footage.duration)
   for (let i = 0; i + 1 < keys.length; i++) {
     if (keys[i].value === keys[i + 1].value) continue
-    const a = footage.start + keys[i].frame
-    if (overlaps(a, footage.start + keys[i + 1].frame)) under.push(a)
+    // A hold steps on the next key's frame: the punch is that one frame.
+    const a = footage.start + (keys[i].ease === 'hold' ? keys[i + 1].frame : keys[i].frame)
+    const b = footage.start + keys[i + 1].frame + (keys[i].ease === 'hold' ? 1 : 0)
+    // Only the frames the footage clip is on screen: a head trim rebases keys before its start (timeline.ts rebaseAnimation).
+    const lo = Math.max(a, footage.start)
+    const hi = Math.min(b, clipEnd(footage))
+    if (lo < hi && overlaps(lo, hi)) under.push(lo)
   }
   if (under.length > 0) return zoomPunchReason(framesToSeconds(Math.min(...under), fps))
 

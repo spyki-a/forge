@@ -163,6 +163,36 @@ describe('applyBudget, rule 1: the spacing (D12)', () => {
     const r = applyBudget(project([['f', 0, 900]]), [cand('a', 'counter', 0, 75, { clipId: 'nope' })])
     expect(reasons(r)).toEqual([NO_CLIP_NOTE])
   })
+
+  it('an onset is the start plus the FIRST beat, a first beat of 0 included', () => {
+    const p = project([['f', 0, 1800]])
+    // a: 0/30 + 0 = 0 s. b: 165/30 + 0.5 = 6.0 s. Exactly 6 s apart: both kept.
+    expect(names(applyBudget(p, [cand('a', 'counter', 0, 75, { beats: [0] }), cand('b', 'counter', 165, 75)]))).toEqual(['a', 'b'])
+    // a: 15/30 + 0.6 = 1.1 s. b: 195/30 + 0 = 6.5 s. 5.4 s apart: b dropped, though their starts are 6 s apart.
+    const r = applyBudget(p, [cand('a', 'counter', 15, 75, { beats: [0.6, 1.4] }), cand('b', 'counter', 195, 75, { beats: [0] })])
+    expect(names(r)).toEqual(['a'])
+    expect(reasons(r)).toEqual([TOO_CLOSE_REASON])
+    expect(TOO_CLOSE_REASON).toBe('within 6 s of another graphic, the earlier one stays')
+  })
+
+  it('two onsets 6 s apart that add up to 5.9999999 s in floating point are both kept', () => {
+    // 51/30 + 0.5 and 231/30 + 0.5: 180 frames, 6 s, apart, but their difference is computed below 6.
+    expect(231 / 30 + 0.5 - (51 / 30 + 0.5)).toBeLessThan(6)
+    expect(names(applyBudget(project([['f', 0, 1800]]), [cand('a', 'counter', 51, 75), cand('b', 'counter', 231, 75)]))).toEqual(['a', 'b'])
+  })
+
+  it("counts only the graphics whose onset is on the candidate's own clip, not the next shot's, its first frame included", () => {
+    // f is 10 s (one slot), g follows it. h1's onset is 285/30 + 0.5 = 10.0 s, g's first frame; h2's is 420/30 + 0.5 = 14.5 s, on g.
+    for (const held of [graphicClip('h1', 'counter', 285, 75), graphicClip('h2', 'counter', 420, 75)]) {
+      const p = project([['f', 0, 300], ['g', 300, 300]], [held])
+      expect(names(applyBudget(p, [cand('a', 'counter', 0, 75)])), held.id).toEqual(['a'])
+    }
+  })
+
+  it('equal onsets: the one given first wins', () => {
+    const p = project([['f', 0, 1800]])
+    expect(names(applyBudget(p, [cand('y', 'counter', 300, 75), cand('x', 'counter', 300, 75)]))).toEqual(['y'])
+  })
 })
 
 describe('applyBudget, rule 2: one on screen', () => {
@@ -176,6 +206,12 @@ describe('applyBudget, rule 2: one on screen', () => {
     expect(ON_SCREEN_REASON).toBe('another graphic is on screen then')
     // Starting on the steps' last frame + 1 is no overlap.
     expect(names(applyBudget(p, [steps, cand('after', 'counter', 240, 75)]))).toEqual(['steps', 'after'])
+  })
+
+  it('a graphic already on the timeline is on screen for its whole span', () => {
+    // The steps on the timeline: frames [0, 240), onset 0.5 s. The counter: onset 7.0 s, frames [195, 270).
+    const p = project([['f', 0, 1800]], [graphicClip('s1', 'steps', 0, 240)])
+    expect(reasons(applyBudget(p, [cand('counter', 'counter', 195, 75)]))).toEqual([ON_SCREEN_REASON])
   })
 
   it('a Director card counts as one (COPY_RULE and ENDING_RULE); a shot of the spine does not', () => {
@@ -210,6 +246,37 @@ describe('applyBudget, rule 3: none over a zoom punch', () => {
     expect(names(applyBudget(p, [cand('held', 'counter', 600, 75)]))).toEqual(['held']) // 20 s to 22.5 s, held at 1.2
     expect(names(applyBudget(p, [cand('before', 'counter', 285, 75)]))).toEqual(['before']) // ends on frame 360, the move's first
   })
+
+  it('names the earliest punch under the graphic', () => {
+    // Punches at frames 372 (12.4 s) and 390 (13.0 s), both under the counter's [330, 405).
+    const p = project([['f', 0, 1800]], [moment('z1', 'zoom-punch', 372, 6), moment('z2', 'zoom-punch', 390, 6)])
+    expect(reasons(applyBudget(p, [cand('a', 'counter', 330, 75)]))).toEqual(['over a zoom punch at 12.4 s'])
+  })
+
+  it("a key whose ease is 'hold' keeps its zoom to the next key and jumps on that key's frame: only that frame is a punch", () => {
+    // 1 held from frame 0, 1.2 on frame 1500 (50 s): the zoom changes on frame 1500 alone (render/keyframes.ts, eased: hold → 0).
+    const p = project([['f', 0, 1800]])
+    p.clips[0] = { ...p.clips[0], keyframes: { zoom: [{ frame: 0, value: 1, ease: 'hold' }, { frame: 1500, value: 1.2 }] } }
+    expect(names(applyBudget(p, [cand('held', 'counter', 300, 60)]))).toEqual(['held']) // 10 s to 12 s, zoom 1 throughout
+    expect(names(applyBudget(p, [cand('ends', 'counter', 1425, 75)]))).toEqual(['ends']) // [1425, 1500): ends before the jump
+    expect(reasons(applyBudget(p, [cand('jump', 'counter', 1500, 75)]))).toEqual(['over a zoom punch at 50.0 s'])
+  })
+
+  it('a zoom move counts only where its footage clip is on the timeline, and is named from the first frame it is seen', () => {
+    // A head trim rebased the keys to before the clip's start: 1 → 1.3 over the clip's own frames [-30, 30).
+    // At start 300 the move is seen over [300, 330): 10.0 s, not 9.0 s.
+    const trimmed = project([['f', 300, 1500]])
+    trimmed.clips[0] = { ...trimmed.clips[0], keyframes: { zoom: [{ frame: -30, value: 1 }, { frame: 30, value: 1.3 }] } }
+    expect(reasons(applyBudget(trimmed, [cand('a', 'counter', 300, 75)]))).toEqual(['over a zoom punch at 10.0 s'])
+    // At start 0, keys [-60, 30): seen from frame 0, so 0.0 s, never a negative time.
+    const atZero = project([['f', 0, 1800]])
+    atZero.clips[0] = { ...atZero.clips[0], keyframes: { zoom: [{ frame: -60, value: 1 }, { frame: 30, value: 1.3 }] } }
+    expect(reasons(applyBudget(atZero, [cand('a', 'counter', 0, 75)]))).toEqual(['over a zoom punch at 0.0 s'])
+    // A tail trim left a move past the clip's end: f is [0, 300), its keys move over its own [300, 330), where g is shown.
+    const tail = project([['f', 0, 300], ['g', 300, 300]])
+    tail.clips[0] = { ...tail.clips[0], keyframes: { zoom: [{ frame: 300, value: 1 }, { frame: 330, value: 1.3 }] } }
+    expect(names(applyBudget(tail, [cand('a', 'counter', 270, 75)]))).toEqual(['a'])
+  })
 })
 
 describe('applyBudget, rule 4: the per-minute cap', () => {
@@ -221,6 +288,7 @@ describe('applyBudget, rule 4: the per-minute cap', () => {
     const capped = applyBudget(p, set, { perMinute: 2 })
     expect(names(capped)).toEqual(['a', 'b', 'd'])
     expect(reasons(capped)).toEqual([perMinuteReason(2)])
+    expect(perMinuteReason(2)).toBe('more than 2 graphics in a minute')
     expect(names(applyBudget(p, set))).toEqual(['a', 'b', 'c', 'd'])
   })
 })
@@ -236,6 +304,10 @@ describe('applyBudget: the screen card is outside the budget', () => {
     // Kept even over a punch (frames 30-42, under the card, not the counter): no rule is read for it.
     const punched = project([['f', 0, 900]], [moment('z', 'zoom-punch', 30, 12)])
     expect(names(applyBudget(punched, [counter, cand('card2', 'screen-card', 0, 300)]))).toEqual(['card2', 'counter'])
+  })
+
+  it('is still dropped when its footage clip is gone', () => {
+    expect(reasons(applyBudget(project([['f', 0, 900]]), [cand('card', 'screen-card', 0, 300, { clipId: 'gone' })]))).toEqual([NO_CLIP_NOTE])
   })
 })
 
@@ -296,7 +368,7 @@ function generated(seed: number): { p: Project; candidates: Cand[] } {
   }
   const candidates = Array.from({ length: 2 + int(10) }, (_, i) => {
     const frames = 45 + int(200)
-    return cand(`c${i}`, TEMPLATES[int(TEMPLATES.length)], int(Math.max(1, length - frames)), frames, { beats: [0.5, 0.5 + random() * 2] })
+    return cand(`c${i}`, TEMPLATES[int(TEMPLATES.length)], int(Math.max(1, length - frames)), frames, { beats: [random() < 0.3 ? 0 : 0.5, 0.5 + random() * 2] })
   })
   return { p, candidates }
 }
