@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  fastestFrame,
   GRAPHIC_SOUND_CAP,
   GRAPHIC_SOUND_DB,
   GRAPHIC_SOUND_FILES,
@@ -64,19 +65,26 @@ function project(fps: number, clips: Clip[], patch: Partial<Project> = {}): Proj
   return { ...base, settings: { ...base.settings, fps }, clips: [footage('f1', 0, 3000), ...clips], ...patch }
 }
 
-/** Places every graphic clip in `order`, merging each result in, as applyGraphics will. */
-function placeAll(p: Project, order: string[], rule: string, pack: SoundPack): { project: Project; byGraphic: Record<string, Clip[]>; notes: string[] } {
+/** Merges one call's result in, as applyGraphics will: the re-placed sounds off, the new tracks, assets and sounds on. */
+function merge(p: Project, out: ReturnType<typeof graphicSounds>): Project {
+  const gone = new Set(out.removed)
+  return { ...p, tracks: [...p.tracks, ...out.tracks], assets: [...p.assets, ...out.assets], clips: [...p.clips.filter((c) => !gone.has(c.id)), ...out.clips] }
+}
+
+/** Places every graphic clip in `order`, merging each result in; `byGraphic` is read from the project after the last call. */
+function placeAll(p: Project, order: string[], rule: string, pack: SoundPack, newId = ids()): { project: Project; byGraphic: Record<string, Clip[]>; notes: string[] } {
   let next = p
-  const byGraphic: Record<string, Clip[]> = {}
   const notes: string[] = []
-  const newId = ids()
   for (const id of order) {
     const g = next.clips.find((c) => c.id === id)!
     const out = graphicSounds(next, g, g.graphic!, rule, pack, { newId })
-    byGraphic[id] = out.clips
     notes.push(...out.notes)
-    next = { ...next, tracks: [...next.tracks, ...out.tracks], assets: [...next.assets, ...out.assets], clips: [...next.clips, ...out.clips] }
+    next = merge(next, out)
   }
+  const byGraphic: Record<string, Clip[]> = {}
+  for (const c of next.clips) if (c.forGraphic) (byGraphic[c.forGraphic] ??= []).push(c)
+  for (const id of order) byGraphic[id] ??= []
+  for (const list of Object.values(byGraphic)) list.sort((a, b) => a.start - b.start)
   return { project: next, byGraphic, notes }
 }
 
@@ -307,25 +315,160 @@ describe('graphicSounds: placement (§6.14)', () => {
 
   it('with Project.graphics.sound false, nothing is placed and nothing is said', () => {
     const p = project(30, [graphic('g1', 60, 90, spec(counter(), [0.6]))], { graphics: { styleId: 'clean', sound: false } })
-    expect(graphicSounds(p, p.clips[1], p.clips[1].graphic!, CLIPS_GRAPHIC_RULE, ALL, { newId: ids() })).toEqual({ clips: [], assets: [], tracks: [], notes: [] })
+    expect(graphicSounds(p, p.clips[1], p.clips[1].graphic!, CLIPS_GRAPHIC_RULE, ALL, { newId: ids() })).toEqual({ clips: [], assets: [], tracks: [], notes: [], removed: [] })
   })
 
   it('with no library, or none of its files, the graphic lands silent with the one note', () => {
     const p = project(30, [graphic('g1', 60, 90, spec(counter(), [0.6]))])
     for (const pack of [[], [fileOf('heartbeat_pulse.wav'), fileOf('riser_climax.wav')]]) {
-      expect(graphicSounds(p, p.clips[1], p.clips[1].graphic!, CLIPS_GRAPHIC_RULE, pack, { newId: ids() })).toEqual({ clips: [], assets: [], tracks: [], notes: [NO_SOUND_LIBRARY_NOTE] })
+      expect(graphicSounds(p, p.clips[1], p.clips[1].graphic!, CLIPS_GRAPHIC_RULE, pack, { newId: ids() })).toEqual({ clips: [], assets: [], tracks: [], notes: [NO_SOUND_LIBRARY_NOTE], removed: [] })
     }
     expect(NO_SOUND_LIBRARY_NOTE).toBe('no sound library is installed — graphics land silent')
   })
 
   it('a library with ticks but no whoosh: a callout lands silent with its own note, a counter still ticks', () => {
     const ticksOnly = [fileOf('clock_tick.wav')]
-    const p = project(30, [graphic('g1', 60, 75, spec(callout(), [0.55])), graphic('g2', 300, 90, spec(counter(), [0.6]))])
+    // The counter on a second footage clip, so each call re-places one graphic's sounds.
+    const p = project(30, [graphic('g1', 60, 75, spec(callout(), [0.55])), footage('f2', 3000, 3000), graphic('g2', 3300, 90, spec(counter(), [0.6], { grounding: { assetId: 'asset-f2', sentence: 's', words: [] } }))])
     const silent = graphicSounds(p, p.clips[1], p.clips[1].graphic!, CLIPS_GRAPHIC_RULE, ticksOnly, { newId: ids() })
-    expect(silent).toEqual({ clips: [], assets: [], tracks: [], notes: [noSoundFileNote('whoosh')] })
+    expect(silent).toEqual({ clips: [], assets: [], tracks: [], notes: [noSoundFileNote('whoosh')], removed: [] })
     expect(noSoundFileNote('whoosh')).toBe('no whoosh in the sound library — that sound is not placed')
-    const ticks = graphicSounds(p, p.clips[2], p.clips[2].graphic!, CLIPS_GRAPHIC_RULE, ticksOnly, { newId: ids() })
+    const ticks = graphicSounds(p, p.clips[3], p.clips[3].graphic!, CLIPS_GRAPHIC_RULE, ticksOnly, { newId: ids() })
     expect(ticks.notes).toEqual([])
-    expect(ticks.clips.map((c) => c.start)).toEqual([318])
+    expect(ticks.clips.map((c) => c.start)).toEqual([3318])
+  })
+})
+
+describe('graphicSounds: after the critics (§6.14)', () => {
+  /** What a sound is, without the ids a run makes up: its graphic, its span, its file and its fader. */
+  const shape = (p: Project) =>
+    p.clips
+      .filter((c) => c.forGraphic)
+      .map((c) => `${c.forGraphic} ${c.start}+${c.duration}@${c.inPoint} ${p.assets.find((a) => a.id === c.assetId)!.name} ${c.volume.toFixed(5)} ${c.generatedBy!.rule}`)
+      .sort()
+
+  it("the cap holds on Find again: Clip-it graphics before Direct's push its sound out, as placing every graphic afresh does", () => {
+    // Direct's keyword at 900 sounds first; three Clip-it keywords at 300, 600, 700 then come in. Each keyword ticks on
+    // its start + ceil(0.65 × 30) = start + 20; clock_tick peaks 0 frames in, so a tick starts on its beat frame.
+    const d = { ...graphic('d', 900, 75, spec(keyword('d'), [0.65])), generatedBy: { rule: GRAPHIC_RULE, reason: 'r' } }
+    const cs = [graphic('c1', 300, 75, spec(keyword('c1'), [0.65])), graphic('c2', 600, 75, spec(keyword('c2'), [0.65])), graphic('c3', 700, 75, spec(keyword('c3'), [0.65]))]
+    const direct = placeAll(project(30, [d]), ['d'], GRAPHIC_RULE, ALL)
+    expect(direct.byGraphic.d.map((c) => c.start)).toEqual([920])
+    const withCs = { ...direct.project, clips: [...direct.project.clips, ...cs] }
+    const findAgain = placeAll(withCs, ['c1', 'c2', 'c3'], CLIPS_GRAPHIC_RULE, ALL, ids())
+    expect(findAgain.project.clips.filter((c) => c.forGraphic).map((c) => [c.forGraphic, c.start]).sort()).toEqual([['c1', 320], ['c2', 620], ['c3', 720]])
+    // Afresh: every sound off, every graphic placed again in another order.
+    const bare = { ...withCs, clips: withCs.clips.filter((c) => !c.forGraphic) }
+    const afresh = placeAll(bare, ['d', 'c3', 'c1', 'c2'], CLIPS_GRAPHIC_RULE, ALL, ids())
+    expect(shape(findAgain.project)).toEqual(shape(afresh.project))
+    // Placing one graphic twice leaves one set of sounds, not two.
+    const twice = placeAll(project(30, [graphic('g1', 60, 90, spec(counter(), [0.6]))]), ['g1', 'g1'], CLIPS_GRAPHIC_RULE, ALL)
+    expect(twice.project.clips.filter((c) => c.forGraphic).map((c) => c.start)).toEqual([78])
+  })
+
+  it('under a linear ease a whoosh lands on the first whole step of the move, not where float noise puts it', () => {
+    // A stroke from 0.10 s = frame 3 over 0.45 s: every whole step from frame 3 to 16 is the same 1/13.5; the first ends on 4.
+    expect(fastestFrame({ start: 0.1, seconds: 0.45, ease: 'linear' }, 30, 75)).toBe(4)
+    // From 0.37 s (frame 11.1): the step into 12 is part of one, into 13 the first whole one.
+    expect(fastestFrame({ start: 0.37, seconds: 0.45, ease: 'linear' }, 30, 75)).toBe(13)
+    // The same through a restrained callout whose style's ease is set linear: beat 0.55 s, the stroke from frame 3.
+    const s = spec(callout(), [0.55])
+    const p = project(30, [graphic('g1', 300, 75, s)], { graphics: { styleId: 'clean', sound: true, overrides: { 'motion.ease': 'linear' } } })
+    expect(graphicSoundCues(p, p.clips[1], s).map((c) => `${c.key}@${c.frame}`)).toEqual(['whoosh@304'])
+  })
+
+  it('a move held over the whole clip has no fastest frame, so no whoosh', () => {
+    // A callout 10 frames long whose stroke starts at 2.0 − 0.45 = 1.55 s, after the clip has ended.
+    expect(fastestFrame({ start: 1.55, seconds: 0.45, ease: 'expo-out' }, 30, 10)).toBeNull()
+    const s = spec(callout(), [2.0])
+    const p = project(30, [graphic('g1', 300, 10, s)])
+    expect(graphicSoundCues(p, p.clips[1], s)).toEqual([])
+    expect(graphicSounds(p, p.clips[1], s, CLIPS_GRAPHIC_RULE, ALL, { newId: ids() }).clips).toEqual([])
+  })
+
+  it('three whooshes of one call that overlap go on two lanes, never stacked on one', () => {
+    // An energetic tree of two rows at 300, beats 0.65 and 1.05: the title enters (fastest 301), row 1's edge strokes from
+    // 0.20 s (fastest 307), row 1 enters from 0.30 s (fastest 310); the cap keeps those three. fast_whoosh peaks
+    // round(3.9) = 4 in, 8 frames long: 297+8. whoosh_fast round(5.4) = 5 in: 302, 0.35 × 30 measured 11 frames. sword_swish
+    // round(4.5) = 5 in, 9 frames: 305+9, free again on the first lane from 305.
+    const steps: GraphicData = { template: 'steps', title: 'Step by step', items: [{ label: 'one' }, { label: 'two' }], connector: 'tree' }
+    const p = project(30, [graphic('g1', 300, 90, spec(steps, [0.65, 1.05], { style: 'energetic' }))])
+    const out = graphicSounds(p, p.clips[1], p.clips[1].graphic!, CLIPS_GRAPHIC_RULE, ALL, { newId: ids() })
+    expect(out.clips.map((c) => [c.start, c.duration])).toEqual([[297, 8], [302, 11], [305, 9]])
+    expect(out.tracks).toHaveLength(2)
+    for (const a of out.clips)
+      for (const b of out.clips) if (a !== b && a.trackId === b.trackId) expect(a.start + a.duration <= b.start || b.start + b.duration <= a.start).toBe(true)
+  })
+
+  it('a sound whose start falls before frame 0 starts on 0, part-way into its file', () => {
+    // An energetic counter at frame 0: the entrance is fastest on frame 1, fast_whoosh peaks 4 in: start −3, so 3 frames in, 8 − 3 long.
+    const p = project(30, [graphic('g1', 0, 90, spec(counter(), [0.6], { style: 'energetic' }))])
+    const out = graphicSounds(p, p.clips[1], p.clips[1].graphic!, CLIPS_GRAPHIC_RULE, ALL, { newId: ids() })
+    expect(out.clips.map((c) => [c.start, c.duration, c.inPoint])).toEqual([[0, 5, 3], [18, 2, 0]])
+  })
+
+  it("a sound never runs past its graphic's end, and one whose peak falls at or after the end is dropped with its note", () => {
+    // A counter at 60, beat 0.6 s: its tick (2 frames, peak 0 in) starts on 78. 19 frames long, the graphic ends on 79: one frame.
+    const clamped = project(30, [graphic('g1', 60, 19, spec(counter(), [0.6]))])
+    const kept = graphicSounds(clamped, clamped.clips[1], clamped.clips[1].graphic!, CLIPS_GRAPHIC_RULE, ALL, { newId: ids() })
+    expect(kept.clips.map((c) => [c.start, c.duration])).toEqual([[78, 1]])
+    expect(kept.notes).toEqual([])
+    // 18 frames long, it ends on 78, the peak's own frame.
+    const late = project(30, [graphic('g1', 60, 18, spec(counter(), [0.6]))])
+    const dropped = graphicSounds(late, late.clips[1], late.clips[1].graphic!, CLIPS_GRAPHIC_RULE, ALL, { newId: ids() })
+    expect(dropped.clips).toEqual([])
+    expect(dropped.assets).toEqual([])
+    expect(dropped.notes).toEqual(['the tick on "40%" falls after the graphic ends — not placed'])
+  })
+
+  it('at the track limit with no free lane, the sound is dropped with its note', () => {
+    const base = project(30, [graphic('g1', 60, 90, spec(counter(), [0.6]))])
+    const extra: Track[] = Array.from({ length: 8 }, (_, i) => ({ id: `ax${i}`, kind: 'audio', name: `AX${i}`, muted: false, hidden: false, locked: false }))
+    const full = { ...base, tracks: [...base.tracks, ...extra] }
+    expect(full.tracks).toHaveLength(12)
+    const out = graphicSounds(full, full.clips[1], full.clips[1].graphic!, CLIPS_GRAPHIC_RULE, ALL, { newId: ids() })
+    expect(out.clips).toEqual([])
+    expect(out.tracks).toEqual([])
+    expect(out.assets).toEqual([])
+    expect(out.notes).toEqual(['no free audio track for the tick on "40%" — not placed'])
+  })
+
+  it('a locked "Graphic sounds" track or Sound design lane is never filled', () => {
+    const g1 = graphic('g1', 60, 90, spec(counter(), [0.6]))
+    const base = project(30, [g1])
+    const locked = (id: string, name: string, director: boolean): Track => ({ id, kind: 'audio', name, muted: false, hidden: false, locked: true, ...(director ? { director: true as const } : {}) })
+    const p = { ...base, tracks: [...base.tracks, locked('gs', GRAPHIC_SOUND_LANE_NAME, false), locked('sd', SOUND_LANE_NAME, true)] }
+    for (const rule of [CLIPS_GRAPHIC_RULE, GRAPHIC_RULE]) {
+      const out = graphicSounds(p, p.clips[1], g1.graphic!, rule, ALL, { newId: ids() })
+      expect(out.tracks).toHaveLength(1)
+      expect(out.clips[0].trackId).toBe(out.tracks[0].id)
+    }
+  })
+
+  describe('the cues', () => {
+    const at = (data: GraphicData, beats: number[], style: string, overrides?: Record<string, unknown>) => {
+      const s = spec(data, beats, { style })
+      const p = project(30, [graphic('g', 300, 180, s)], overrides ? { graphics: { styleId: 'clean', sound: true, overrides } } : {})
+      return graphicSoundCues(p, p.clips[1], s).map((c) => `${c.key}@${c.frame}`)
+    }
+    const ring = (value = '40%'): GraphicData => ({ template: 'ring', value, label: 'more' })
+
+    it("an energetic ring's arc is a stroke: under an accelerating ease it is fastest on its last step, its beat's frame", () => {
+      // The arc draws from 0 to the beat, 0.6 s = 18 frames; an accelerating curve's steepest whole step is the last, 17 to 18.
+      expect(at(ring(), [0.6], 'energetic', { 'motion.ease': 'accelerate' })).toContain('whoosh@318')
+      // A counter has no arc.
+      expect(at(counter(), [0.6], 'energetic', { 'motion.ease': 'accelerate' })).not.toContain('whoosh@318')
+      // A value that is not a number draws no arc.
+      expect(at(ring('many'), [0.6], 'energetic', { 'motion.ease': 'accelerate' })).not.toContain('whoosh@318')
+    })
+
+    it('two cues of one key on one frame are one: the default ring\'s entrance and arc are both fastest on frame 1', () => {
+      expect(at(ring(), [0.6], 'energetic')).toEqual(['whoosh@301', 'tick@318'])
+    })
+
+    it('a tick goes before a whoosh on one frame', () => {
+      // Beat 0.02 s is frame ceil(0.6) = 1, the frame the entrance is fastest on.
+      expect(at(counter(), [0.02], 'energetic')).toEqual(['tick@301', 'whoosh@301'])
+    })
   })
 })

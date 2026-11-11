@@ -31,6 +31,7 @@ import { MAX_SOUND_GAIN } from '../render/soundLevels'
 import { drawsItself } from '../edit/recipes'
 import { addTrack, clipEnd, overlapsOn, trackLimitReached, type Clip, type MediaAsset, type Project, type Track } from '../timeline'
 import { beatFrame } from './frame'
+import { numberOf } from './numbers'
 import { DURATIONS, progress, type MotionEase } from './motion'
 import { graphicStyleOf } from './style'
 import { beatOf, drawOnEase } from './templates/layout'
@@ -105,6 +106,9 @@ export interface GraphicSoundCue {
   graphicId: string
 }
 
+/** Two steps of progress closer than this are one change (float noise; a step is at least ~1e-3 at 120 fps over a 5 s move). */
+const TIE = 1e-9
+
 /** A move as a drawer runs it: `progress(t, start, seconds, ease)`, t in seconds from the graphic clip's start. */
 interface Move {
   start: number
@@ -115,10 +119,12 @@ interface Move {
 /**
  * The fastest frame of a move, local to the graphic clip: the frame f in
  * [1, frames − 1] whose progress changes most from frame f − 1's (the
- * absolute change), the earliest on a tie. Null when no frame changes at all
- * (the move is held over the clip's whole span): a whoosh is never placed on
- * a held frame. Frame 0 has no frame before it on the clip and is not a
- * candidate.
+ * absolute change), the earliest on a tie. A tie is within `TIE`: under a
+ * `linear` ease (an override of `motion.ease` can set it) every whole step
+ * of a move is the same change but for float noise, and the noise must not
+ * pick the frame. Null when no frame changes at all (the move is held over
+ * the clip's whole span): a whoosh is never placed on a held frame. Frame 0
+ * has no frame before it on the clip and is not a candidate.
  */
 export function fastestFrame(move: Move, fps: number, frames: number): number | null {
   if (!(fps > 0)) return null
@@ -128,7 +134,7 @@ export function fastestFrame(move: Move, fps: number, frames: number): number | 
   for (let f = 1; f < frames; f++) {
     const p = progress(f / fps, move.start, move.seconds, move.ease)
     const change = Math.abs(p - prev)
-    if (change > most) {
+    if (change > most + TIE) {
       most = change
       best = f
     }
@@ -146,7 +152,9 @@ export function fastestFrame(move: Move, fps: number, frames: number): number | 
  * none. `energetic` adds a tick on every beat and a whoosh on the fastest
  * frame of each stroke and each entrance, the moves as the drawers in
  * templates/ run them:
- * - `counter`, `ring`: the group's entrance from t = 0 (counter.ts:80, ring.ts:95);
+ * - `counter`, `ring`: the group's entrance from t = 0 (counter.ts:80, ring.ts:95),
+ *   and the ring's arc, a stroke drawn on from 0 to its beat when its value
+ *   is a number above 0 (ring.ts:98-101, :120);
  * - `bars`: the title's from 0 and each row's ending on its beat (bars.ts:96, :106);
  * - `steps`: the title's from 0, each row's ending on its beat, and each
  *   connector stroke ending on its row's beat (`line` from the second row,
@@ -189,6 +197,8 @@ export function graphicSoundCues(
       if (energetic) {
         everyBeat(() => data.value)
         moves.push({ move: enter(0), field: data.value })
+        // The arc sweeps share × progress (ring.ts:100-101): it moves only when the value reads as a number above 0.
+        if (data.template === 'ring' && (numberOf(data.value) ?? 0) > 0) moves.push({ move: { start: 0, seconds: beatOf(spec, 0), ease: drawOnEase(style) }, field: data.value })
       } else ticks.push({ beat: beatOf(spec, 0), field: data.value })
       break
     case 'bars': {
@@ -329,32 +339,50 @@ export interface GraphicSoundsOptions {
  * The sound clips for one graphic clip `clip` (§6.14), with `spec` its spec
  * (`clip.graphic`, passed as the plan's signature has it). `clip` is the
  * GRAPHIC clip: its id is each sound's `forGraphic`, and its start is what
- * `spec.beats` count from (§6.1).
+ * `spec.beats` count from (§6.1). `spec.beats` are clip-local seconds read
+ * from `clip.start` with `clip.inPoint` ignored: a graphic clip keeps
+ * `inPoint` 0 (the store's `graphicTrimmed` shifts the beats on a head trim
+ * instead), and a graphic that did not would sound off its beats.
+ *
+ * The unit is the footage clip, not the graphic. The cap ("every sound is
+ * under `GRAPHIC_SOUND_CAP` per footage clip, in onset order") and the index
+ * ("within a key the file varies by index") are over every graphic on that
+ * footage clip, so a graphic added before another's onset can push the
+ * other's sound out or change its file. So the call places afresh the sounds
+ * of EVERY graphic on `clip`'s footage clip (`footageOf`; `clip` alone when
+ * it is over none), each under its own rule (`generatedBy.rule`, this call's
+ * `rule` for `clip` and for a graphic with none), and returns in `removed`
+ * the ids of the sound clips on the project for those graphics (`forGraphic`
+ * one of them, `clip`'s own included), which the caller takes off before it
+ * adds `clips`. Placement reads the project without them. So the result is a
+ * function of the footage clip's graphics: Find again, `setGraphic` re-placing
+ * one graphic and `setGraphicSounds(true)` placing every graphic afresh all
+ * leave the same sounds.
  *
  * - With `Project.graphics.sound` false: nothing, and no note.
- * - The cap and the index: every graphic clip on the same footage clip
- *   (`footageOf`), this one included whether or not it is on the project
- *   yet, gives its cues (`graphicSoundCues`); those whose key the pack has a
- *   file for are taken in onset order, the first `GRAPHIC_SOUND_CAP` kept,
- *   and this graphic's kept cues are placed. Within a key the file is the
- *   cue's index among the kept cues of that key, modulo the files. So the
- *   result is a function of the project's graphics, whichever order the
- *   caller places them in. A graphic over no footage clip is counted alone.
+ * - Cues: every graphic's `graphicSoundCues`; those whose key the pack has a
+ *   file for are taken in onset order, the first `GRAPHIC_SOUND_CAP` kept.
+ *   Within a key the file is the cue's index among the kept cues of that
+ *   key, modulo the files.
+ * - With no file for either key: nothing placed, nothing removed, and
+ *   §6.14's one note.
  * - Each cue: the file's peak frame `min(fileFrames − 1, round(peakSeconds ×
  *   fps))` (rounded to nearest, as `placeSounds`) before the cue's frame, so
  *   the peak lands on it; started part-way in before the timeline's start;
- *   the whole file, never past the graphic clip's end; on
- *   `graphicSoundLane`'s lane; at `graphicSoundGain`.
+ *   the whole file, never past its graphic clip's end; on
+ *   `graphicSoundLane`'s lane for its graphic's rule; at `graphicSoundGain`.
  * - A file already in the pool as an audio asset of the same path is reused
- *   (no new asset, no new `broughtBy`); else a new asset with `broughtBy:
- *   rule`.
+ *   (no new asset, no new `broughtBy`); else a new asset with `broughtBy:`
+ *   the rule of the graphic that first needs it.
  *
  * Returns the plan's `{ clips, assets }` and, beyond its words, `tracks`
  * (the lanes the project does not have yet, to append in order, as
- * `addTrack` would have) and `notes` (§6.14's one note when the library has
- * no file, and a note for a sound with no lane). The caller merges the
- * tracks, assets and clips into the project before the next graphic's call,
- * so the next call reuses the file and sees the lane busy.
+ * `addTrack` would have: `addTrack` keeps a project's tracks grouped video
+ * then audio, so appending is the same only when they already are),
+ * `notes` (§6.14's one note when the library has no file, a note for a key
+ * with no file, for a sound past its graphic's end and for a sound with no
+ * lane; one per call, so a caller placing many graphics dedupes them) and
+ * `removed`.
  */
 export function graphicSounds(
   project: Project,
@@ -363,46 +391,48 @@ export function graphicSounds(
   rule: string,
   pack: SoundPack,
   options: GraphicSoundsOptions = {}
-): { clips: Clip[]; assets: MediaAsset[]; tracks: Track[]; notes: string[] } {
-  const none = { clips: [], assets: [], tracks: [], notes: [] }
+): { clips: Clip[]; assets: MediaAsset[]; tracks: Track[]; notes: string[]; removed: string[] } {
+  const none = { clips: [], assets: [], tracks: [], notes: [], removed: [] }
   if (project.graphics?.sound === false) return none
   const fps = project.settings.fps
   const newId = options.newId ?? defaultId
+
+  // Every graphic on this footage clip, this one as given.
+  const footage = footageOf(project, clip, spec)
+  const graphics = new Map<string, { clip: Clip; spec: GraphicSpec; rule: string }>([[clip.id, { clip, spec, rule }]])
+  if (footage !== null) {
+    for (const c of project.clips) {
+      if (c.id === clip.id || !c.graphic) continue
+      if (footageOf(project, c, c.graphic) === footage) graphics.set(c.id, { clip: c, spec: c.graphic, rule: c.generatedBy?.rule ?? rule })
+    }
+  }
+  const removed = project.clips.filter((c) => c.forGraphic !== undefined && graphics.has(c.forGraphic)).map((c) => c.id)
+  const cues = [...graphics.values()].flatMap((g) => graphicSoundCues(project, g.clip, g.spec))
+  if (cues.length === 0) return { ...none, removed }
   const files = graphicSoundFiles(pack)
-  const own = graphicSoundCues(project, clip, spec)
-  if (own.length === 0) return none
   if (files.tick.length === 0 && files.whoosh.length === 0) return { ...none, notes: [NO_SOUND_LIBRARY_NOTE] }
 
   const notes: string[] = []
   for (const key of ['tick', 'whoosh'] as const) {
-    if (files[key].length === 0 && own.some((c) => c.key === key)) notes.push(noSoundFileNote(key))
+    if (files[key].length === 0 && cues.some((c) => c.key === key)) notes.push(noSoundFileNote(key))
   }
-
-  // Every graphic on this footage clip, this one as given; counted in onset order.
-  const footage = footageOf(project, clip, spec)
-  const graphics: { clip: Clip; spec: GraphicSpec }[] = [{ clip, spec }]
-  if (footage !== null) {
-    for (const c of project.clips) {
-      if (c.id === clip.id || !c.graphic) continue
-      if (footageOf(project, c, c.graphic) === footage) graphics.push({ clip: c, spec: c.graphic })
-    }
-  }
-  const kept = graphics
-    .flatMap((g) => (g.clip.id === clip.id ? own : graphicSoundCues(project, g.clip, g.spec)))
+  const kept = cues
     .filter((c) => files[c.key].length > 0)
     .sort(cueOrder)
     .slice(0, GRAPHIC_SOUND_CAP)
 
-  let next = project
+  // The project as it stands without the sounds this call re-places.
+  const gone = new Set(removed)
+  let next: Project = gone.size === 0 ? project : { ...project, clips: project.clips.filter((c) => !gone.has(c.id)) }
   const clips: Clip[] = []
   const assets: MediaAsset[] = []
   const assetFor = new Map<string, string>(project.assets.filter((a) => a.kind === 'audio').map((a) => [a.path, a.id]))
   const indexOf: Record<GraphicSoundKey, number> = { tick: 0, whoosh: 0 }
-  const graphicEnd = clip.start + clip.duration
 
   for (const cue of kept) {
     const index = indexOf[cue.key]++
-    if (cue.graphicId !== clip.id) continue
+    const g = graphics.get(cue.graphicId)!
+    const graphicEnd = g.clip.start + g.clip.duration
     const file = files[cue.key][index % files[cue.key].length]
     // Frames from seconds, rounded to nearest, as placeSounds rounds them.
     const fileFrames = Math.max(1, Math.round(file.seconds * fps))
@@ -419,7 +449,7 @@ export function graphicSounds(
       notes.push(`the ${cue.key} on "${cue.field}" falls after the graphic ends — not placed`)
       continue
     }
-    const lane = graphicSoundLane(next, rule, start, duration, clips)
+    const lane = graphicSoundLane(next, g.rule, start, duration, clips)
     if (!lane) {
       notes.push(`no free audio track for the ${cue.key} on "${cue.field}" — not placed`)
       continue
@@ -443,7 +473,7 @@ export function graphicSounds(
         hasAudio: true,
         // A library file, not a drawn card: any positive size says so, as placeSounds' assets do.
         size: 1,
-        broughtBy: rule
+        broughtBy: g.rule
       })
     }
 
@@ -457,11 +487,11 @@ export function graphicSounds(
       volume: graphicSoundGain(cue.key, file.peakDb),
       transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
       color: { brightness: 0, contrast: 1, saturation: 1 },
-      forGraphic: clip.id,
-      generatedBy: { rule, reason: `${cue.key} on "${cue.field}" · ${file.name}` }
+      forGraphic: cue.graphicId,
+      generatedBy: { rule: g.rule, reason: `${cue.key} on "${cue.field}" · ${file.name}` }
     })
   }
 
   const had = new Set(project.tracks.map((t) => t.id))
-  return { clips, assets, tracks: next.tracks.filter((t) => !had.has(t.id)), notes }
+  return { clips, assets, tracks: next.tracks.filter((t) => !had.has(t.id)), notes, removed }
 }
