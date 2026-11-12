@@ -396,7 +396,8 @@ export function applyGraphics(
  * after "graphic dropped: <the graphic> — ", rebuilt from the graphic's own
  * data, never split on a dash the graphic's words may hold. The one note a
  * retimed clip gets drops every graphic of the run on that clip, each one
- * here. The sounds' notes and the frame-rate refusal drop no graphic and are
+ * here, once: a graphic already dropped for its own reason is not dropped
+ * again for the retime. The sounds' notes and the frame-rate refusal drop no graphic and are
  * not here.
  */
 export function graphicDropsOf(
@@ -421,6 +422,13 @@ export function graphicDropsOf(
     text: drawnStrings(k.candidate.data).find((t) => t.trim() !== '') ?? '',
     reason
   })
+  // A graphic dropped for its own reason is not dropped again for its clip's
+  // retime, wherever in the problems either note stands.
+  const own = new Set<KeptGraphic>()
+  for (const p of problems) {
+    const k = run.get(p.path)
+    if (k && p.message.startsWith(`graphic dropped: ${nameOf(k.candidate.data)} — `)) own.add(k)
+  }
   const out: GraphicDrop[] = []
   for (const p of problems) {
     const k = run.get(p.path)
@@ -428,7 +436,7 @@ export function graphicDropsOf(
     const head = `graphic dropped: ${nameOf(k.candidate.data)} — `
     if (p.message.startsWith(head)) out.push(dropOf(k, p.message.slice(head.length)))
     else if (p.message === `graphics dropped: ${RETIMED_NOTE}`) {
-      for (const other of run.values()) if (other.clipId === k.clipId) out.push(dropOf(other, RETIMED_NOTE))
+      for (const other of run.values()) if (other.clipId === k.clipId && !own.has(other)) out.push(dropOf(other, RETIMED_NOTE))
     }
   }
   return out

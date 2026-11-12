@@ -387,7 +387,11 @@ const DROPPED_HEAD = 'graphic dropped: '
 /**
  * Rule 10 within one answer (§6.7): onsets at least `GRAPHIC_SPACING.minGapS`
  * apart, and at most max(1, ⌊clip seconds ÷ `GRAPHIC_SPACING.perS`⌋)
- * graphics, the earlier winning. A graphic's onset is its first beat word's
+ * graphics, the earlier winning. A proposal (§6.6, "What is placed without
+ * review") is not spaced and spaces nothing: `applyGraphics` sets proposals
+ * aside before the budget (§6.6's landing order), so they are not what the
+ * app would place, and a number that may never be kept must not drop a
+ * trusted graphic; Keep places one through the budget (§6.9). A graphic's onset is its first beat word's
  * start (the lead before it is the same for every graphic); the clip's seconds
  * are those its menu's sentences span. A menu window (24 sentences, §6.6) is
  * spaced alone; `applyBudget` spaces across the project (§6.9).
@@ -412,18 +416,22 @@ function spaceGraphics(
   const dropped: Problem[] = []
   const drops: GraphicDrop[] = []
   let previous = -Infinity
+  let spaced = 0
   const drop = (c: GraphicCandidate, reason: string): void => {
     dropped.push({ path: '$.graphics', message: `${DROPPED_HEAD}${reason}` })
     drops.push({ clipId: menu.clipId, template: c.data.template, text: firstDrawn(drawnStrings(c.data)), reason })
   }
   for (const { c, at } of ordered) {
     const name = `the ${c.data.template} on ${c.sentence}`
-    if (out.length >= cap) {
+    if (c.proposal) {
+      out.push(c)
+    } else if (spaced >= cap) {
       drop(c, `${name} — at most one graphic per ${GRAPHIC_SPACING.perS} s of clip, the earlier ones stay`)
     } else if (at - previous < GRAPHIC_SPACING.minGapS * 1000) {
       drop(c, `${name} is within ${GRAPHIC_SPACING.minGapS} s of the one before — the earlier one stays`)
     } else {
       out.push(c)
+      spaced += 1
       previous = at
     }
   }
@@ -495,14 +503,15 @@ export function graphicsWindowName(menu: Pick<GraphicsMenu, 'sentences'>): strin
 /**
  * The name the app sets as a said quote's speaker for an asset (§6.6
  * "Speaker", §16.31): its Speaker (`MediaAsset.speaker`) when it holds more
- * than spaces, else a link's channel (`credit.author`), else ''. For the
+ * than spaces, else a link's channel (`credit.author` of a credit whose
+ * `source` is 'link'; §16.31 names "a link's channel"), else ''. For the
  * quote only: a lower third reads `MediaAsset.speaker` alone
  * (`lowerThirdFor`), so it is never made from a channel without your press.
  */
 export function quoteSpeakerFor(asset: Pick<MediaAsset, 'speaker' | 'credit'> | undefined): string {
   if (!asset) return ''
   if (asset.speaker !== undefined && asset.speaker.trim() !== '') return asset.speaker
-  return asset.credit?.author ?? ''
+  return asset.credit?.source === 'link' ? (asset.credit.author ?? '') : ''
 }
 
 /**
@@ -525,7 +534,7 @@ export function quoteSpeakerFor(asset: Pick<MediaAsset, 'speaker' | 'credit'> | 
  * Without it a rejected pass settles to no graphics, and the note says so
  * ("no graphics for <window>: <why>"); with it, "the baseline's graphics are
  * used for <window>: <why>". `options.speaker` is the app's speaker for a
- * said quote (`quoteSpeakerFor`).
+ * said quote (`quoteSpeakerFor`), trimmed: spaces are no speaker.
  */
 export function settleGraphics(
   answer: { value: unknown; truncated: boolean } | { error: string },
@@ -533,7 +542,7 @@ export function settleGraphics(
   transcript: Transcript,
   options: { baseline?: GraphicsBaseline; speaker?: string } = {}
 ): SettledGraphics {
-  const speaker = options.speaker ?? ''
+  const speaker = options.speaker?.trim() ?? ''
   const verdict =
     'error' in answer ? { rejected: answer.error } : validateGraphics(answer.value, menu, transcript, { truncated: answer.truncated, speaker })
   if (!('rejected' in verdict)) {
@@ -569,7 +578,9 @@ export function settleGraphics(
  * - `settled`: one `SettledGraphics` for the run's one decision record
  *   (`decisionForGraphics`): every part's kept, notes and drops in order;
  *   `baseline` true only when EVERY window's model answer went unused (so the
- *   record names no model only when none answered); `rejected` each window's
+ *   record names no model only when none answered), and so true for a run of
+ *   no windows (a clip with no speech in its span): no model was asked, and
+ *   the record must not name one (§6.6, "when no model answered"); `rejected` each window's
  *   reason joined by '; ', null when none was.
  */
 export function pairSettled(parts: readonly { menu: GraphicsMenu; settled: SettledGraphics }[]): {
@@ -583,7 +594,7 @@ export function pairSettled(parts: readonly { menu: GraphicsMenu; settled: Settl
     settled: {
       kept: parts.flatMap(({ settled }) => settled.kept),
       dropped: parts.flatMap(({ settled }) => settled.dropped),
-      baseline: parts.length > 0 && parts.every(({ settled }) => settled.baseline),
+      baseline: parts.every(({ settled }) => settled.baseline),
       rejected: reasons.length > 0 ? reasons.join('; ') : null,
       drops: parts.flatMap(({ settled }) => settled.drops)
     }
