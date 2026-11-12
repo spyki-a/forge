@@ -1328,9 +1328,10 @@ interface EditorState {
    * menus, each window asked once through the spine's route, settled,
    * paired and landed under `CLIPS_GRAPHIC_RULE`, replacing the clip's own
    * `'clips.graphic'` graphics, sounds and proposals: ONE undo step and ONE
-   * decision record. With no model, or every pass rejected, it still lands
-   * the lower third when the asset has a Speaker. A clip removed while the
-   * ask was out gets nothing.
+   * decision record. With no model, or a window's answer rejected, that
+   * window's graphics are the baseline's (§6.10), and the lower third still
+   * lands when the asset has a Speaker. A clip removed while the ask was out
+   * gets nothing.
    */
   findGraphics: (clipId: string) => Promise<void>
   /** Keep a proposal (§6.6): placed through the budget and §6.9 now; refused, the reason is shown and returned, and it stays listed. One undo. */

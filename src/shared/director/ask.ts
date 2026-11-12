@@ -24,6 +24,13 @@ import { parseModelJson, type CompletionRequest, type CompletionResult } from '.
 /** The line the OpenAI-shaped retry appends to the user prompt (§6.6). */
 export const JSON_ONLY_NUDGE = 'Answer with the JSON object only.'
 
+/** The note a retry leaves (shown with a run's notes, on screen): why the second ask, and how it differs. */
+export function notJsonRetryNote(error: string, openai: boolean): string {
+  return openai
+    ? `the first answer was not JSON (${error}) — asked again for the JSON object only`
+    : `the first answer was not JSON (${error}) — asked again with thinking on`
+}
+
 /** How much more room the second, thinking, attempt gets. */
 export const THINKING_EXTRA_TOKENS = 800
 
@@ -46,11 +53,7 @@ export async function askStructured(
   if ('error' in parsed && !result.truncated) {
     onRetry?.()
     const openai = result.provider === 'openai'
-    notes.push(
-      openai
-        ? `the first answer was not JSON (${parsed.error}) — asked again for the JSON object only`
-        : `the first answer was not JSON (${parsed.error}) — asked again with thinking on`
-    )
+    notes.push(notJsonRetryNote(parsed.error, openai))
     result = await complete({
       ...request,
       ...(openai ? { user: `${request.user}\n${JSON_ONLY_NUDGE}` } : {}),

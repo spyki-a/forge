@@ -27,7 +27,8 @@
  * `numberSpans` (§6.7 rule 4, which reads `numbers.ts`' grouping and
  * multipliers): there is one number reader. A unit is rule 4's: `%`
  * (`percent`, `per cent`) or a currency, so "40 clients" gives no counter.
- * The content words are what `FUNCTION_WORDS_EN` (rule 8's list) is not.
+ * The content words are what `FUNCTION_WORDS_EN` (rule 8's list) is not, and
+ * no negator; outside English a number's label is its clause's words.
  *
  * Pure and node-runnable.
  */
@@ -35,7 +36,8 @@
 import type { Transcript, Word } from '../transcript'
 import type { GraphicCandidate, GraphicData } from '../graphics/template'
 import { GRAPHIC_TEMPLATES } from '../graphics/template'
-import { connectorFor, treeParents } from '../graphics/tree'
+import { ORDINAL_OPENERS, STEP_COUNT_WORDS, connectorFor, treeParents } from '../graphics/tree'
+import { graphemeCount } from '../ingest/captions'
 import { CLAUSE_BREAK, FUNCTION_WORDS_EN, claimTokens, isNegator, numberSpans, type CanonNumber } from './claims'
 import { GRAPHIC_KEPT_CHARS, STRETCH_SENTENCES } from './validateGraphics'
 import type { GraphicsMenu } from './run'
@@ -51,8 +53,8 @@ export const BASELINE_KEYWORD_TAIL = 3
  * "second", "step one"), as `claimToken` writes them: an ordinal alone, or
  * "step" and a count. Up to six, a steps graphic's most items (§6.2).
  */
-export const BASELINE_ORDINALS: readonly string[] = Object.freeze(['first', 'second', 'third', 'fourth', 'fifth', 'sixth'])
-export const BASELINE_STEP_COUNTS: readonly string[] = Object.freeze(['one', 'two', 'three', 'four', 'five', 'six', '1', '2', '3', '4', '5', '6'])
+export const BASELINE_ORDINALS: readonly string[] = ORDINAL_OPENERS
+export const BASELINE_STEP_COUNTS: readonly string[] = STEP_COUNT_WORDS
 
 /** Each baseline graphic's `why` (the decision record's, §6.6): what the rule saw. */
 export const BASELINE_WHY = Object.freeze({
@@ -102,28 +104,67 @@ function isContent(t: string): boolean {
   return /\p{L}/u.test(t) && !FUNCTION_WORDS_EN.includes(t) && !isNegator(t)
 }
 
-/** A number's value as drawn: its words as said when they hold a digit ('40%', '$1,200', '500 rupees'), else rule 4's value in digits ('forty percent' → '40%'). */
-function valueText(read: Read, from: number, end: number, value: CanonNumber): string {
+/**
+ * A number's value as drawn: its words as said when they hold a digit ('40%',
+ * '$1,200', '500 rupees'), a sign said apart from its digits joined to them
+ * ('40 %' → '40%', '$ 40' → '$40': the validator reads a value as one
+ * number); else, or when the words as said are longer than a value is drawn
+ * (`GRAPHIC_KEPT_CHARS.value`: '1.2 million dollars'), rule 4's value in
+ * digits ('forty percent' → '40%', '$1200000'). Null when that is too long
+ * as well: no graphic, rather than one the validator drops.
+ */
+function valueText(read: Read, from: number, end: number, value: CanonNumber): string | null {
   const lo = read.wordOf[from]
   const hi = read.wordOf[end - 1]
   const said = read.words
     .slice(lo, hi + 1)
     .map((w) => w.text)
     .join(' ')
-  if (/\p{N}/u.test(said)) return bare(said)
+  const fits = (text: string): boolean => graphemeCount(text) <= GRAPHIC_KEPT_CHARS.value
+  if (/\p{N}/u.test(said)) {
+    const joined = bare(said)
+      .replace(/(\p{N})\s+%/gu, '$1%')
+      .replace(/([$€£₹])\s+(?=\p{N})/gu, '$1')
+    if (fits(joined)) return joined
+  }
   const sign = value.n < 0 ? '-' : ''
   const n = String(Math.abs(value.n))
-  if (value.unit === '%') return `${sign}${n}%`
-  return `${sign}${value.currency ?? ''}${n}`
+  const digits = value.unit === '%' ? `${sign}${n}%` : `${sign}${value.currency ?? ''}${n}`
+  return fits(digits) ? digits : null
 }
 
 /**
- * The label a number is said of: the first content word after it in its
- * clause, else the last content word before it in its clause; never a word
- * of a number. Null when the clause holds none.
+ * The label a number is said of. English: the first content word after it in
+ * its clause, else the last content word before it in its clause. Any other
+ * language (no function-word list exists for it, §6.10): the clause's words
+ * after the number, else those before it, cut to whole words within a
+ * label's drawn length (`GRAPHIC_KEPT_CHARS.label`), as the drawing
+ * fixtures' Hindi and Telugu counters and rings are written. Never a word of
+ * a number. Null when the clause holds none.
  */
-function labelFor(read: Read, from: number, end: number, spans: readonly { from: number; end: number }[]): string | null {
+function labelFor(read: Read, from: number, end: number, spans: readonly { from: number; end: number }[], english: boolean): string | null {
   const inNumber = (i: number): boolean => spans.some((s) => i >= s.from && i < s.end)
+  if (!english) {
+    const clauseWords = (start: number, step: 1 | -1): string[] => {
+      const at: number[] = []
+      for (let i = start; i >= 0 && i < read.tokens.length && read.tokens[i] !== CLAUSE_BREAK; i += step) {
+        const k = read.wordOf[i]
+        if (!inNumber(i) && /\p{L}/u.test(read.tokens[i]) && !at.includes(k)) at.push(k)
+      }
+      // Nearest the number first, so a cut keeps the words said beside it.
+      const kept: number[] = []
+      for (const k of at) {
+        const next = step === 1 ? [...kept, k] : [k, ...kept]
+        if (graphemeCount(next.map((j) => bare(read.words[j].text)).join(' ')) > GRAPHIC_KEPT_CHARS.label) break
+        kept.splice(0, kept.length, ...next)
+      }
+      return kept.map((j) => bare(read.words[j].text)).filter((w) => w !== '')
+    }
+    const after = clauseWords(end, 1)
+    if (after.length > 0) return after.join(' ')
+    const before = clauseWords(from - 1, -1)
+    return before.length > 0 ? before.join(' ') : null
+  }
   const take = (i: number): string | null => (isContent(read.tokens[i]) && !inNumber(i) ? bare(read.words[read.wordOf[i]].text) : null)
   for (let i = end; i < read.tokens.length && read.tokens[i] !== CLAUSE_BREAK; i += 1) {
     const label = take(i)
@@ -136,16 +177,19 @@ function labelFor(read: Read, from: number, end: number, spans: readonly { from:
   return null
 }
 
-/** A sentence's ring (its first percent) or, with none, its counter (its first currency amount); null for neither. */
-function numberGraphic(read: Read): GraphicCandidate | null {
+/** A sentence's ring (its first percent) or, with none or no ring offered, its counter (its first currency amount); null for neither. */
+function numberGraphic(read: Read, offered: (t: GraphicData['template']) => boolean, english: boolean): GraphicCandidate | null {
   const spans = numberSpans(read.tokens)
   for (const template of ['ring', 'counter'] as const) {
+    if (!offered(template)) continue
     for (const s of spans) {
       const wanted = template === 'ring' ? s.value.unit === '%' : s.value.unit === 'currency'
       if (!wanted) continue
-      const label = labelFor(read, s.from, s.end, spans)
+      const label = labelFor(read, s.from, s.end, spans, english)
       if (!label) continue
-      const data: GraphicData = { template, value: valueText(read, s.from, s.end, s.value), label }
+      const value = valueText(read, s.from, s.end, s.value)
+      if (!value) continue
+      const data: GraphicData = { template, value, label }
       return candidate(read.id, data, BASELINE_WHY[template])
     }
   }
@@ -162,7 +206,12 @@ function stepItem(read: Read): string | null {
   const words = read.words.map((w) => w.text)
   const first = claimTokens(words[0] ?? '')
   let skip: number
-  if (BASELINE_ORDINALS.includes(first[0])) skip = 1
+  if (BASELINE_ORDINALS.includes(first[0])) {
+    // "First of all" opens a sentence, it counts nothing off.
+    const said = (k: number): string => claimTokens(words[k] ?? '').filter((t) => t !== CLAUSE_BREAK)[0] ?? ''
+    if (first.length === 1 && said(1) === 'of' && said(2) === 'all') return null
+    skip = 1
+  }
   else if (first[0] === 'step' && first.length === 1 && BASELINE_STEP_COUNTS.includes(claimTokens(words[1] ?? '')[0])) skip = 2
   else return null
   // "First, the plan" — the opener's own comma ends nothing.
@@ -208,8 +257,12 @@ function candidate(sentence: string, data: GraphicData, why: string): GraphicCan
  * menu's sentence order. At most one graphic a sentence: a run of ordinal
  * sentences is one `steps` (its first `2 × STRETCH_SENTENCES + 1`, the
  * stretch of its middle sentence, which it cites, so every item is in the
- * stretch the validator reads); every other sentence gives a `ring`, else a
- * `counter`, else a `keyword`. Only templates the menu offers.
+ * stretch the validator reads; the run's later sentences give nothing); every
+ * other sentence gives a `ring`, else a `counter`, else a `keyword`. Only
+ * templates the menu offers.
+ * Its parents are `treeParents`' over the run's words, which the validator
+ * recomputes in any case; every item opens with its own ordinal, so tree.ts
+ * nests none of them (an item counted off is never a child).
  */
 export function baselineGraphics(transcript: Transcript, menu: GraphicsMenu): GraphicCandidate[] {
   const byIndex = new Map(transcript.words.map((w) => [w.index, w]))
@@ -245,8 +298,8 @@ export function baselineGraphics(transcript: Transcript, menu: GraphicsMenu): Gr
       continue
     }
     const read = reads[k]
-    const number = numberGraphic(read)
-    if (number && offered(number.data.template)) out.push(number)
+    const number = numberGraphic(read, offered, isEnglish(menu.language))
+    if (number) out.push(number)
     else {
       const keyword = offered('keyword') ? keywordGraphic(read, menu.language) : null
       if (keyword) out.push(keyword)

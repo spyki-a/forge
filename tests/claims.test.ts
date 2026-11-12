@@ -1461,7 +1461,7 @@ describe('settleGraphics: the validation half (rule 10 and the baseline seam)', 
       { path: '$', message: "the baseline's graphics are used for sentence s00: The model's graphics ran out of room before it finished" },
       { path: '$.baseline[0].value', message: "graphic dropped: '45%' is not said in s00" }
     ])
-    // No model at all; and no baseline yet (lane T4's): nothing, with a note that is true without one (T2b, piece 2).
+    // No model at all, and no baseline passed to the seam (the app passes baselineGraphics, lane T4): nothing, with a note that is true without one (T2b, piece 2).
     const none = settleGraphics({ error: 'no model is set up' }, menuOf(t), t)
     expect(none).toMatchObject({ baseline: true, rejected: 'no model is set up' })
     expect(none.kept).toEqual([])

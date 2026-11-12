@@ -17,8 +17,10 @@ import {
   graphicsWindowName,
   pairSettled,
   quoteSpeakerFor,
+  runGraphicsPass,
   settleGraphics,
   wordSourceOf,
+  type GraphicsAsk,
   type GraphicsMenu
 } from '@shared/director/run'
 import { CLIPS_GRAPHIC_RULE, WRONG_ASSET_NOTE, applyGraphics, graphicDropsOf, lowerThirdFor } from '@shared/graphics/apply'
@@ -27,6 +29,7 @@ import { NO_CLIP_NOTE } from '@shared/graphics/place'
 import type { GraphicCandidate, KeptGraphic } from '@shared/graphics/template'
 import { GRAPHIC_KEPT_CHARS, KEYWORD_MAX_WORDS, validateGraphics } from '@shared/director/validateGraphics'
 import { MAX_CANDIDATES } from '@shared/director/menu'
+import { baselineGraphics } from '@shared/director/baselineGraphics'
 import { captionWindowMs } from '@shared/captions/placement'
 import { SUBJECT_TRACK_VERSION, type SubjectTrack } from '@shared/reframe/types'
 import { DEFAULT_COLOR, DEFAULT_TRANSFORM, emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
@@ -861,4 +864,49 @@ describe('graphicDropsOf: a retimed clip drops only its own graphics, each once'
       expect(drops).toContainEqual({ clipId: clip.id, template: 'keyword', text: 'simple always', reason: RETIMED_NOTE })
     })
   }
+})
+
+describe('runGraphicsPass (lane T4: the one loop Find, Direct and the eval run)', () => {
+  /*
+   * Thirty sentences, so two windows (24 a menu): s00 to s23 and s24 to s29. Every sentence but s25 is eleven words
+   * with no number, so the baseline finds nothing in it; s25 holds a percent, so window 2's baseline is its ring.
+   */
+  const LONG = 'The light was soft and warm all through that long day.'
+  const SENTENCES = Array.from({ length: 30 }, (_, i) => (i === 25 ? 'We saw 40% of couples return.' : LONG))
+  const EMPTY = { value: { reasoning: 'r', graphics: [] }, truncated: false }
+
+  it('asks each window once, returns every part, falls to the baseline for the window whose ask threw, and hands the ask\'s notes back', async () => {
+    const t = talk(SENTENCES)
+    const { project, clip } = fixture(t)
+    const asked: string[] = []
+    const ask: GraphicsAsk = async (_request, menu) => {
+      asked.push(menu.sentences[0].id)
+      if (menu.sentences[0].id === 's24') throw new Error('the bridge broke')
+      return { answer: EMPTY, model: { id: 'm1', runtime: 'openai' }, notes: ['asked again'] }
+    }
+    const r = await runGraphicsPass(project, [clip], ask, { baseline: baselineGraphics })
+    expect(asked).toEqual(['s00', 's24'])
+    expect(r.parts.map((p) => [p.menu.sentences[0].id, p.menu.sentences[p.menu.sentences.length - 1].id, p.transcript === t, p.settled.baseline])).toEqual([
+      ['s00', 's23', true, false],
+      ['s24', 's29', true, true]
+    ])
+    expect(r.parts[0].settled.kept).toEqual([])
+    expect(r.parts[1].settled.kept.map((k) => [k.sentence, k.data, k.source])).toEqual([['s25', { template: 'ring', value: '40%', label: 'couples' }, 'baseline']])
+    expect(r.parts[1].settled.dropped[0].message).toBe("the baseline's graphics are used for sentences s24 to s29: the bridge broke")
+    expect(r.pair.kept.map((k) => [k.clipId, k.candidate.sentence])).toEqual([['c', 's25']])
+    expect(r.model).toEqual({ id: 'm1', runtime: 'openai' })
+    expect(r.notes).toEqual(['asked again'])
+  })
+
+  it('keeps the last model that answered when a later window\'s ask names none; null when none ever did', async () => {
+    const t = talk(SENTENCES)
+    const { project, clip } = fixture(t)
+    const named: GraphicsAsk = async (_r, menu) => ({ answer: EMPTY, model: menu.sentences[0].id === 's00' ? { id: 'm1', runtime: 'openai' } : null })
+    expect((await runGraphicsPass(project, [clip], named, { baseline: baselineGraphics })).model).toEqual({ id: 'm1', runtime: 'openai' })
+    const none: GraphicsAsk = async () => ({ answer: { error: 'No model is set up' }, model: null })
+    const r = await runGraphicsPass(project, [clip], none, { baseline: baselineGraphics })
+    expect(r.model).toBeNull()
+    expect(r.notes).toEqual([])
+    expect(r.parts.map((p) => p.settled.baseline)).toEqual([true, true])
+  })
 })

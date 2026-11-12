@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
-import type { CompletionRequest, CompletionResult } from '@shared/director/provider'
+import { parseModelJson, type CompletionRequest, type CompletionResult } from '@shared/director/provider'
+import { notJsonRetryNote } from '@shared/director/ask'
 import type { Segment, Transcript, Word } from '@shared/transcript'
 import { GRAPHIC_RULE } from '@shared/director/apply'
 import { GRAPHICS_PASS } from '@shared/director/schemaGraphics'
@@ -202,6 +203,21 @@ describe('Direct runs the graphics pass (§6.6, "Where it runs")', () => {
     expect(s.past).toHaveLength(1)
     state().undo()
     expect(project()).toEqual(before)
+  })
+
+  it('the graphics ask\'s retry note (the first answer not JSON) reaches Direct\'s problems', async () => {
+    const CUT_JSON = '{"graphics": ['
+    let calls = 0
+    graphicsAnswer = async () => {
+      calls += 1
+      return calls === 1 ? { ...prose(), text: CUT_JSON } : { ...prose(), text: KEYWORD }
+    }
+    await state().direct()
+    expect(graphicsAsks).toHaveLength(2)
+    // The spine's own prose leaves a retry note too; the graphics' first answer is broken JSON, so its note differs.
+    const note = (text: string): string => notJsonRetryNote((parseModelJson(text) as { error: string }).error, true)
+    expect(note(CUT_JSON)).not.toBe(note(prose().text))
+    expect(state().lastDirection!.problems).toContain(note(CUT_JSON))
   })
 
   it('a baseline that throws never fails Direct: the spine stands, no graphic, and the note says why', async () => {

@@ -7,6 +7,10 @@
  * count of two to six said between item j's run and item j+1's, within two
  * tokens of a word such as "parts" or "ways", makes the next that-many items
  * j's children. A child's own count is ignored, so depth is at most two.
+ * An item counted off by an ordinal ("Second, the shoot", "step two") is the
+ * speaker's own top-level item, never a child: a count whose next items are
+ * one nests nothing (lane T4's fix; nested-en-1 read with only its ordinal
+ * items, as the baseline finds them).
  * Hindi and Telugu stay flat in v1: the cue list is English, as §16.11's
  * number words are.
  *
@@ -43,6 +47,23 @@ const COUNTS: Record<string, number> = {
   four: 4,
   five: 5,
   six: 6
+}
+
+/**
+ * The words that count an item off (§6.10's "first", "second", "step one"),
+ * as `claimToken` writes them: an ordinal, or "step" and a count. Up to six,
+ * a steps graphic's most items. English, as the cue list is.
+ */
+export const ORDINAL_OPENERS: readonly string[] = Object.freeze(['first', 'second', 'third', 'fourth', 'fifth', 'sixth'])
+export const STEP_COUNT_WORDS: readonly string[] = Object.freeze(['one', 'two', 'three', 'four', 'five', 'six', '1', '2', '3', '4', '5', '6'])
+
+/** How many tokens before an item's run an ordinal still counts it off ("Second, the shoot": two; "The second way is flash": three). */
+const OPENER_REACH = 3
+
+/** Whether the tokens just before `start` (none before `after`) count the item there off: an ordinal, or "step" and a count. */
+function countedOff(tokens: string[], after: number, start: number): boolean {
+  const lead = tokens.slice(Math.max(after, start - OPENER_REACH), start)
+  return lead.some((t, i) => ORDINAL_OPENERS.includes(t) || (t === 'step' && STEP_COUNT_WORDS.includes(lead[i + 1] ?? '')))
 }
 
 /** How far a count may sit from its cue word, in tokens. */
@@ -114,6 +135,9 @@ export function treeParents(items: { label: string }[], title: string, words: Wo
     if (parents[j] !== -1) continue // a child's own count is ignored: depth ≤ 2
     const k = subCount(tokens, runs[j][1] + 1, runs[j + 1][0])
     if (k === null || k > items.length - 1 - j) continue
+    let counted = false
+    for (let c = j + 1; c <= j + k; c++) if (countedOff(tokens, runs[c - 1][1] + 1, runs[c][0])) counted = true
+    if (counted) continue
     for (let c = j + 1; c <= j + k; c++) parents[c] = j
   }
   return parents

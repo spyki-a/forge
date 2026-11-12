@@ -164,6 +164,18 @@ describe('treeParents on the English nested-enumeration fixtures (§6.10)', () =
     expect(parents).toEqual([-1, 0, 0, -1, -1])
   })
 
+  it('never makes a child of an item counted off by an ordinal (lane T4: nested-en-1 read with its ordinal items only)', () => {
+    // nested-en-1's own words, with the three items the baseline finds: "two parts" is said after "plan", but the
+    // next two items are counted off ("Second, the shoot itself", "Third, the edit"), so neither is the plan's part.
+    const one = NESTED[0].fixture
+    expect(treeParents(['plan', 'shoot itself', 'edit'].map((label) => ({ label })), '', one.transcript.words)).toEqual([-1, -1, -1])
+    // "Step two" counts off as "Second" does, and so does an ordinal three tokens before the item.
+    expect(treeParents(['plan', 'budget', 'timeline'].map((label) => ({ label })), '', wordsOf('Step one, the plan, in two parts. Step two, the budget. Step three, the timeline.'))).toEqual([-1, -1, -1])
+    expect(treeParents(['light', 'flash', 'bounce'].map((label) => ({ label })), '', wordsOf('First, light, which has two kinds. The second way is flash. Then bounce.'))).toEqual([-1, -1, -1])
+    // The parts said with no ordinal still nest, the counted-off item after them stays a sibling.
+    expect(treeParents(['plan', 'budget', 'timeline', 'shoot itself', 'edit'].map((label) => ({ label })), '', one.transcript.words)).toEqual([-1, 0, 0, -1, -1])
+  })
+
   it('nests nothing when the count is more than the items left', () => {
     const words = wordsOf('Plan, which has five parts: budget and timeline.')
     expect(treeParents([{ label: 'plan' }, { label: 'budget' }, { label: 'timeline' }], '', words)).toEqual([-1, -1, -1])
