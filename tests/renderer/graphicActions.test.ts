@@ -7,8 +7,9 @@ import type { AnswerGraphic } from '@shared/director/schemaGraphics'
 import { GRAPHIC_RULE } from '@shared/director/apply'
 import { GRAPHICS_PASS } from '@shared/director/schemaGraphics'
 import { CLEAR_GRAPHICS_NOTE, CLIPS_GRAPHIC_RULE } from '@shared/graphics/apply'
-import { ON_SCREEN_REASON } from '@shared/graphics/budget'
+import { ON_SCREEN_REASON, TOO_CLOSE_REASON } from '@shared/graphics/budget'
 import { GRAPHICS_BUSY_NOTE, GRAPHICS_CLIP_GONE_NOTE, GRAPHICS_NO_SPEECH_NOTE, useEditor } from '../../src/renderer/src/store'
+import { baselineFailedNote } from '@shared/director/run'
 import { useCatalog } from '../../src/renderer/src/catalog'
 
 /*
@@ -23,6 +24,19 @@ import { useCatalog } from '../../src/renderer/src/catalog'
  */
 
 const bake = vi.hoisted(() => ({ asks: [] as string[] }))
+/** Lane T4: the baseline made to throw, for the case that it never fails Find. */
+const broken = vi.hoisted(() => ({ baseline: false }))
+
+vi.mock('@shared/director/baselineGraphics', async (original) => {
+  const real = await original<typeof import('@shared/director/baselineGraphics')>()
+  return {
+    ...real,
+    baselineGraphics: (...args: Parameters<typeof real.baselineGraphics>) => {
+      if (broken.baseline) throw new Error('the baseline broke')
+      return real.baselineGraphics(...args)
+    }
+  }
+})
 
 vi.mock('../../src/renderer/src/graphicCanvas', () => ({
   bakeGraphicSequence: async (_spec: unknown, _style: unknown, clipId: string) => {
@@ -154,6 +168,7 @@ function undoesTo(before: Project): void {
 beforeEach(() => {
   asks = []
   bake.asks = []
+  broken.baseline = false
   answer = answering(COUNTER, KEYWORD)
   vi.stubGlobal('window', {
     forge: {
@@ -350,30 +365,144 @@ describe('dropGraphic and clearGraphics (§6.6, §6.14)', () => {
 })
 
 describe('findGraphics: the run’s edges', () => {
-  it('with no model it still completes, the lower third placed from the Speaker, the record naming no model', async () => {
+  /*
+   * With no model the baseline runs (§6.10, lane T4). By hand, over SAID: no sentence holds a percent or a
+   * currency amount ("40 clients" has no unit, rule 4), none opens with an ordinal, and every one is at most
+   * eight words, not a question, ending on a content word, so each gives a keyword of its last word: "year"
+   * (s00, word 5, 2.0 s), "day" (s01, word 11, 4.4 s; s02, word 17, 6.8 s, …), "today" (s03, word 22, 8.8 s).
+   * Rule 10 over the window (its words span 0 to 49.75 s, so at most ⌊49.75 ÷ 20⌋ = 2, onsets 6 s apart):
+   * "year" stays, the next two "day"s are within 6 s of it, "today" (6.8 s after) stays, and the cap drops the rest.
+   */
+  it('with no model it still completes, the lower third placed from the Speaker and the baseline’s graphics, the record naming no model', async () => {
     start({ speaker: 'Ana' })
     answer = async () => {
       throw new Error('No model is set up')
     }
+    const before = project()
     await state().findGraphics('shot')
-    expect(templates(graphicsOver('shot'))).toEqual(['lower-third'])
-    expect(graphicsOver('shot')[0].graphic!.data).toEqual({ template: 'lower-third', name: 'Ana', role: '' })
+    // The lower third from 0 s holds the screen when "year" lands at 2.0 s (the budget, §6.9): "today" is placed.
+    expect(graphicsOver('shot').map((c) => c.graphic!.data)).toEqual([
+      { template: 'lower-third', name: 'Ana', role: '' },
+      { template: 'keyword', words: 'today', lit: 0 }
+    ])
     expect(state().decisions.map((d) => d.model)).toEqual([{ id: 'baseline', runtime: 'none' }])
-    expect(state().lastGraphics!.notes).toContain('no graphics for sentences s00 to s20: No model is set up')
+    expect(state().lastGraphics!.notes).toContain("the baseline's graphics are used for sentences s00 to s20: No model is set up")
+    expect(state().lastGraphics!.model).toBe('baseline')
     expect(state().findingGraphics).toBeNull()
+    undoesTo(before)
   })
 
-  it('with no model and no Speaker it still completes: nothing placed, ONE record naming no model, the note', async () => {
+  it('with no model and no Speaker it still completes: the baseline’s graphics placed, ONE record naming no model, the note', async () => {
+    answer = async () => {
+      throw new Error('No model is set up')
+    }
+    const before = project()
+    await state().findGraphics('shot')
+    expect(graphicsOver('shot').map((c) => [c.graphic!.data, c.graphic!.grounding!.sentence])).toEqual([
+      [{ template: 'keyword', words: 'year', lit: 0 }, 's00'],
+      [{ template: 'keyword', words: 'today', lit: 0 }, 's03']
+    ])
+    expect(project().graphicProposals ?? []).toEqual([])
+    expect(state().decisions.map((d) => [d.pass, d.model])).toEqual([[GRAPHICS_PASS, { id: 'baseline', runtime: 'none' }]])
+    const op = state().decisions[0].ops[0] as { baseline: boolean; graphics: { source: string }[] }
+    expect(op.baseline).toBe(true)
+    expect(op.graphics.map((c) => c.source)).toEqual(['baseline', 'baseline'])
+    expect(state().lastGraphics!.notes).toContain("the baseline's graphics are used for sentences s00 to s20: No model is set up")
+    expect(state().findingGraphics).toBeNull()
+    expect(state().past).toHaveLength(1)
+    undoesTo(before)
+  })
+
+  /*
+   * Two windows (§6.6: 24 sentences a menu). s00 "We signed 40 clients this year.", then 29 fillers of six words:
+   * s_k starts at word 6k. The 70 s shot shows s00 to s23 (window 1) and s24 to s29, of s29 only its first word
+   * "The" (word 174 at 69.6 s), so window 2 is s24 to s29. The model answers window 1 with the counter and is cut
+   * off on window 2. By hand, window 2's baseline: each filler's keyword "day" (s24's word 149 at 59.6 s, then
+   * every 2.4 s), s29's "The" none; rule 10 over the window (57.6 to 69.95 s, so ⌊12.35 ÷ 20⌋ → 1): s24's alone.
+   */
+  const THIRTY = ['We signed 40 clients this year.', ...Array.from({ length: 29 }, () => FILLER)]
+  const cutOffOnWindow2 = (cutAll = false) => async (r: CompletionRequest): Promise<CompletionResult> => ({
+    ...(await answering(COUNTER)()),
+    truncated: cutAll || r.user.includes('s24')
+  })
+
+  it('a model whose answer for one of two windows is rejected: that window alone comes from the baseline, and the note says so; ONE undo', async () => {
+    start({ project: { transcripts: { talk: talk('talk', THIRTY), talk2: talk('talk2', SAID) } } })
+    answer = cutOffOnWindow2()
+    const before = project()
+    await state().findGraphics('shot')
+    expect(asks).toHaveLength(2)
+    expect(graphicsOver('shot').map((c) => [c.graphic!.data, c.graphic!.grounding!.sentence])).toEqual([
+      [{ template: 'counter', value: '40', label: 'clients' }, 's00'],
+      [{ template: 'keyword', words: 'day', lit: 0 }, 's24']
+    ])
+    expect(state().lastGraphics!.notes).toContain("the baseline's graphics are used for sentences s24 to s29: The model's graphics ran out of room before it finished")
+    // A model answered window 1, so the record names it; its one op says which graphic is whose.
+    expect(state().decisions.map((d) => d.model)).toEqual([{ id: 'fake-model', runtime: 'openai' }])
+    const op = state().decisions[0].ops[0] as { baseline: boolean; graphics: { source: string; sentence: string }[] }
+    expect(op.baseline).toBe(false)
+    expect(op.graphics.map((c) => [c.source, c.sentence])).toEqual([['model', 's00'], ['baseline', 's24']])
+    expect(state().past).toHaveLength(1)
+    undoesTo(before)
+  })
+
+  it('a model whose every answer is rejected: the baseline’s graphics, and the record names no model', async () => {
+    start({ project: { transcripts: { talk: talk('talk', THIRTY), talk2: talk('talk2', SAID) } } })
+    answer = cutOffOnWindow2(true)
+    await state().findGraphics('shot')
+    expect(asks).toHaveLength(2)
+    expect(state().decisions.map((d) => d.model)).toEqual([{ id: 'baseline', runtime: 'none' }])
+    expect(state().lastGraphics!.model).toBe('baseline')
+    // By hand: window 1's keywords are "year" (s00, 2.0 s) and every filler's "day". A keyword's run binds to its
+    // first occurrence in the stretch (the sentence either side, §6.7), so s03's "day" lands on s02's (word 17,
+    // 6.8 s) and s04's on s03's (word 23, 9.2 s): rule 10 keeps "year" and s04's (7.2 s after), the cap of
+    // ⌊57.55 ÷ 20⌋ = 2 drops the rest. Window 2's s24 keyword (on s23's "day", 57.2 s) is dropped by the budget.
+    expect(graphicsOver('shot').map((c) => c.graphic!.grounding!.sentence)).toEqual(['s00', 's04'])
+  })
+
+  it('a number heard on a YouTube track still waits for Keep on the baseline route', async () => {
+    const said = ['We charged $1,200 for the album.', ...SAID.slice(1)]
+    start({ project: { transcripts: { talk: talk('talk', said, 'youtube-asr'), talk2: talk('talk2', SAID) } } })
+    answer = async () => {
+      throw new Error('No model is set up')
+    }
+    await state().findGraphics('shot')
+    // The counter is the baseline's, and it waits (a proposal is not spaced, §6.7 rule 10); the keywords hold no
+    // number and are placed. By hand: s01's "day" (word 11, 4.4 s); s02's (on s01's "day") and s03's "today"
+    // (8.8 s) within 6 s of it; s04's "day" (s03 holds none, so its own word 28, 11.2 s); s05 on past the cap of 2.
+    expect(graphicsOver('shot').map((c) => [c.graphic!.data.template, c.graphic!.grounding!.sentence])).toEqual([
+      ['keyword', 's01'],
+      ['keyword', 's04']
+    ])
+    const proposals = project().graphicProposals ?? []
+    expect(proposals.map((p) => [p.clipId, p.rule, p.spec.data, p.spec.proposal])).toEqual([
+      ['shot', CLIPS_GRAPHIC_RULE, { template: 'counter', value: '$1,200', label: 'album' }, { reason: 'check-the-number', wordSource: 'youtube-asr' }]
+    ])
+    // The window's note, and one spacing note for each of the other 18 keywords (21 sentences, less the counter and the two placed).
+    expect(notices()).toEqual(['Graphics: 2 placed, 1 to check — 19 notes'])
+    // Keep is refused while s01's keyword is 3.2 s from the counter's "$1,200" (1.2 s); dropped, Keep places it in ONE step.
+    expect(state().keepGraphic(proposals[0].id)).toBe(TOO_CLOSE_REASON)
+    state().dropGraphic(graphicsOver('shot')[0].id)
+    const before = project()
+    expect(state().keepGraphic(proposals[0].id)).toBeNull()
+    expect(graphicsOver('shot').map((c) => c.graphic!.data)).toContainEqual({ template: 'counter', value: '$1,200', label: 'album' })
+    expect(project().graphicProposals).toEqual([])
+    undoesTo(before)
+  })
+
+  it('a baseline that throws never fails Find: the run completes, the window has no graphics, and the notes say why', async () => {
+    broken.baseline = true
     answer = async () => {
       throw new Error('No model is set up')
     }
     await state().findGraphics('shot')
     expect(graphicsOver('shot')).toEqual([])
-    expect(project().graphicProposals ?? []).toEqual([])
-    expect(state().decisions.map((d) => [d.pass, d.model])).toEqual([[GRAPHICS_PASS, { id: 'baseline', runtime: 'none' }]])
-    expect(state().lastGraphics!.notes).toContain('no graphics for sentences s00 to s20: No model is set up')
-    expect(notices()).toEqual(['Graphics: 0 placed — 1 note'])
+    expect(state().lastGraphics!.notes).toEqual(
+      expect.arrayContaining(['no graphics for sentences s00 to s20: No model is set up', baselineFailedNote('the baseline broke')])
+    )
+    expect(state().decisions.map((d) => d.model)).toEqual([{ id: 'baseline', runtime: 'none' }])
     expect(state().findingGraphics).toBeNull()
+    expect(notices()).toEqual(['Graphics: 0 placed — 2 notes'])
   })
 
   it('a clip with no transcript, or whose span shows no word of it, asks nothing, clears nothing and records nothing', async () => {

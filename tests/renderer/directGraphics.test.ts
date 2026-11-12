@@ -6,6 +6,7 @@ import { GRAPHIC_RULE } from '@shared/director/apply'
 import { GRAPHICS_PASS } from '@shared/director/schemaGraphics'
 import { CLIPS_GRAPHIC_RULE } from '@shared/graphics/apply'
 import { useEditor, graphicsSkippedNote } from '../../src/renderer/src/store'
+import { baselineFailedNote } from '@shared/director/run'
 import { useCatalog } from '../../src/renderer/src/catalog'
 
 /*
@@ -21,6 +22,19 @@ import { useCatalog } from '../../src/renderer/src/catalog'
 
 const fail = vi.hoisted(() => ({ apply: false }))
 const bake = vi.hoisted(() => ({ asks: [] as string[] }))
+/** Lane T4: the baseline made to throw, for the case that it never fails Direct. */
+const broken = vi.hoisted(() => ({ baseline: false }))
+
+vi.mock('@shared/director/baselineGraphics', async (original) => {
+  const real = await original<typeof import('@shared/director/baselineGraphics')>()
+  return {
+    ...real,
+    baselineGraphics: (...args: Parameters<typeof real.baselineGraphics>) => {
+      if (broken.baseline) throw new Error('the baseline broke')
+      return real.baselineGraphics(...args)
+    }
+  }
+})
 
 vi.mock('@shared/graphics/apply', async (original) => {
   const real = await original<typeof import('@shared/graphics/apply')>()
@@ -86,6 +100,7 @@ beforeEach(() => {
   bake.asks = []
   graphicsAnswer = async () => ({ ...prose(), text: KEYWORD })
   fail.apply = false
+  broken.baseline = false
   vi.stubGlobal('window', {
     forge: {
       fileKeys: async (paths: string[]) => Object.fromEntries(paths.map((p) => [p, `k:${p}`])),
@@ -149,6 +164,59 @@ describe('Direct runs the graphics pass (§6.6, "Where it runs")', () => {
     expect(s.past).toHaveLength(1)
     state().undo()
     expect(project()).toEqual(before)
+  })
+
+  it('with no model, the baseline’s graphics land after the spine’s fallback, under GRAPHIC_RULE, its record naming no model; ONE undo', async () => {
+    graphicsAnswer = async () => {
+      throw new Error('No model is set up')
+    }
+    /*
+     * A graphic lands only between the headline card (to 58, 1.93 s) and the ending (from 174, 5.8 s). By hand:
+     * "And so it is." ends on three function words (no keyword); "Our sales grew today." gives "today" (word 7,
+     * 2.8 s), the window's one (its cap is 1); the third sentence, ten words, none.
+     */
+    const words: Word[] = []
+    const segments: Segment[] = []
+    for (const [k, text] of ['And so it is.', 'Our sales grew today.', 'The light was soft and warm all that long day.'].entries()) {
+      const start = words.length
+      for (const w of text.split(' ')) words.push({ index: words.length, text: w, startMs: words.length * 400, endMs: words.length * 400 + 350, confidence: null })
+      segments.push({ id: `s${String(k).padStart(2, '0')}`, startMs: start * 400, endMs: (words.length - 1) * 400 + 350, text, wordStart: start, wordEnd: words.length - 1 })
+    }
+    useEditor.setState({ project: { ...project(), transcripts: { talk: { assetId: 'talk', language: 'en', model: 'whisper-small', durationMs: words.length * 400, words, segments } } } })
+    const before = project()
+    await state().direct()
+    const s = state()
+    expect(s.lastDirection!.baseline).toBe(true)
+    expect(graphicsAsks).toHaveLength(1)
+    const placed = s.project.clips.filter((c) => c.graphic)
+    expect(placed.map((c) => [c.graphic!.data, c.graphic!.grounding!.sentence, c.generatedBy?.rule])).toEqual([
+      [{ template: 'keyword', words: 'today', lit: 0 }, 's01', GRAPHIC_RULE]
+    ])
+    expect(bake.asks).toEqual([placed[0].id])
+    // Direct's notes are `describeProblem`'s: the window's note has the path '$', so it reads ': …'.
+    expect(s.lastDirection!.problems).toContain(": the baseline's graphics are used for sentences s00 to s02: No model is set up")
+    expect(s.decisions.map((d) => [d.pass, d.model])).toEqual([
+      ['spine@2', expect.anything()],
+      [GRAPHICS_PASS, { id: 'baseline', runtime: 'none' }]
+    ])
+    expect(s.past).toHaveLength(1)
+    state().undo()
+    expect(project()).toEqual(before)
+  })
+
+  it('a baseline that throws never fails Direct: the spine stands, no graphic, and the note says why', async () => {
+    broken.baseline = true
+    graphicsAnswer = async () => {
+      throw new Error('No model is set up')
+    }
+    await state().direct()
+    const s = state()
+    expect(s.lastDirection).not.toBeNull()
+    expect(s.project.clips.some((c) => c.generatedBy?.rule === 'director.spine')).toBe(true)
+    expect(directGraphics()).toEqual([])
+    expect(s.lastDirection!.problems).toEqual(expect.arrayContaining([': no graphics for sentences s00 to s02: No model is set up', `: ${baselineFailedNote('the baseline broke')}`]))
+    expect(s.decisions.map((d) => d.pass)).toEqual(['spine@2', GRAPHICS_PASS])
+    expect(s.notices.map((n) => n.tone)).toEqual(['info'])
   })
 
   it('Direct again replaces its graphics and Direct\'s Clear takes them', async () => {

@@ -1,0 +1,264 @@
+import { describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import {
+  BASELINE_KEYWORD_MAX_WORDS,
+  BASELINE_WHY,
+  baselineGraphics
+} from '@shared/director/baselineGraphics'
+import { settleGraphics, type GraphicsMenu } from '@shared/director/run'
+import type { AnswerGraphic } from '@shared/director/schemaGraphics'
+import { validateBaseline, validateGraphics } from '@shared/director/validateGraphics'
+import type { GraphicCandidate, GraphicData, GraphicTemplateId } from '@shared/graphics/template'
+import type { Segment, Transcript, Word } from '@shared/transcript'
+
+/*
+ * The graphics baseline (docs/CLIPS.md §6.10, "The baseline (no model)"),
+ * lane T4 piece 1. Every transcript is data built here, in English written for
+ * the test; the Hindi and Telugu sentences are the drawing fixtures' own
+ * (tests/fixtures/graphics/specs.json), and the nested talks are the three
+ * English nested fixtures. Every expected candidate is written by hand.
+ */
+
+/** `sentences`, one word every 400 ms, segment ids s00, s01, … (the director tests' `talk`). */
+function talk(sentences: string[], language = 'en'): Transcript {
+  const words: Word[] = []
+  const segments: Segment[] = []
+  let index = 0
+  sentences.forEach((text, k) => {
+    const start = index
+    for (const w of text.split(/\s+/u).filter(Boolean)) {
+      words.push({ index, text: w, startMs: index * 400, endMs: index * 400 + 350, confidence: null })
+      index += 1
+    }
+    segments.push({ id: `s${String(k).padStart(2, '0')}`, startMs: start * 400, endMs: (index - 1) * 400 + 350, text, wordStart: start, wordEnd: index - 1 })
+  })
+  return { assetId: 'talk', language, model: 'whisper-small', durationMs: index * 400, words, segments }
+}
+
+const ALWAYS: GraphicTemplateId[] = ['counter', 'bars', 'steps', 'quote', 'ring', 'keyword']
+
+/** The menu of every sentence, as `graphicsMenuFor` builds one for a clip that shows them all. */
+function menuOf(t: Transcript, templates: GraphicTemplateId[] = ALWAYS): GraphicsMenu {
+  return {
+    assetId: t.assetId,
+    clipId: 'shot',
+    language: t.language,
+    sentences: t.segments.map((s) => ({ id: s.id, startMs: s.startMs, text: s.text, wordStart: s.wordStart, wordEnd: s.wordEnd })),
+    templates: [...templates],
+    wordSource: 'whisper'
+  }
+}
+
+const run = (sentences: string[], language = 'en'): GraphicCandidate[] => {
+  const t = talk(sentences, language)
+  return baselineGraphics(t, menuOf(t))
+}
+const shapes = (c: GraphicCandidate[]): [string, GraphicData][] => c.map((g) => [g.sentence, g.data])
+
+const FIXTURES = join(__dirname, 'fixtures', 'graphics')
+const specText = (id: string): string => {
+  const specs = JSON.parse(readFileSync(join(FIXTURES, 'specs.json'), 'utf8')).specs as { id: string; spec: { data: { text: string } } }[]
+  return specs.find((s) => s.id === id)!.spec.data.text
+}
+
+describe('the four rules (§6.10)', () => {
+  it('a sentence with a % gives a ring: the number as said in digits, said as words in digits, the content word it is said of', () => {
+    expect(shapes(run(['We saw 40% of couples return.']))).toEqual([['s00', { template: 'ring', value: '40%', label: 'couples' }]])
+    // Rule 4's value of "Forty percent", in digits; the label the first content word after it in its clause.
+    expect(shapes(run(['Forty percent of our couples booked again.']))).toEqual([['s00', { template: 'ring', value: '40%', label: 'couples' }]])
+    expect(run(['We saw 40% of couples return.'])[0]).toMatchObject({ why: BASELINE_WHY.ring, source: 'baseline' })
+  })
+
+  it('a number with a currency gives a counter', () => {
+    expect(shapes(run(['We charged $1,200 for the album.']))).toEqual([['s00', { template: 'counter', value: '$1,200', label: 'album' }]])
+    // A currency said as a word stays as said; the label the content word after it.
+    expect(shapes(run(['It cost 500 rupees in total.']))).toEqual([['s00', { template: 'counter', value: '500 rupees', label: 'total' }]])
+    // Rule 4's value of "forty dollars", in digits with its sign.
+    expect(shapes(run(['It was forty dollars an album.']))).toEqual([['s00', { template: 'counter', value: '$40', label: 'album' }]])
+  })
+
+  it('a percent beats a counter in the same sentence', () => {
+    expect(shapes(run(['We kept 40% of the $40 fee.']))).toEqual([['s00', { template: 'ring', value: '40%', label: 'fee' }]])
+  })
+
+  it('a number with no unit and no currency gives nothing (eleven words, so no keyword either)', () => {
+    expect(run(['We shot 40 weddings in a long busy season this year.'])).toEqual([])
+    // Eight words: no counter, and the keyword rule gives its last word instead.
+    expect(shapes(run(['We shot 40 weddings in one busy year.']))).toEqual([['s00', { template: 'keyword', words: 'year', lit: 0 }]])
+  })
+
+  it('two or more consecutive sentences opening with ordinals give steps: the middle one cited, a fixed title, the connector and parents from tree.ts', () => {
+    expect(shapes(run(['First, pack the bags.', 'Second, check the schedule.', 'Third, eat breakfast.']))).toEqual([
+      ['s01', { template: 'steps', title: 'Step by step', items: [{ label: 'pack the bags', parent: -1 }, { label: 'check the schedule', parent: -1 }, { label: 'eat breakfast', parent: -1 }], connector: 'line' }]
+    ])
+    // "step one": two items, flat, so no connector (tree.ts connectorFor: 'none' for two).
+    expect(shapes(run(['Step one, pack the bags.', 'Step two, check the light.']))).toEqual([
+      ['s01', { template: 'steps', title: 'Step by step', items: [{ label: 'pack the bags', parent: -1 }, { label: 'check the light', parent: -1 }], connector: 'none' }]
+    ])
+    // A sub-count after the first item ("in two parts", tree.ts rule 2): the next two items are its children.
+    expect(shapes(run(['First, the plan, in two parts.', 'Second, the budget.', 'Third, the timeline.']))).toEqual([
+      ['s01', { template: 'steps', title: 'Step by step', items: [{ label: 'plan', parent: -1 }, { label: 'budget', parent: 0 }, { label: 'timeline', parent: 0 }], connector: 'tree' }]
+    ])
+  })
+
+  it('ordinals that are not consecutive give no steps; one ordinal alone gives none', () => {
+    const gap = run(['First, pack the bags.', 'The light was soft and warm all through that long day.', 'Second, check the schedule.'])
+    expect(gap.filter((c) => c.data.template === 'steps')).toEqual([])
+    expect(run(['First, pack the bags.']).filter((c) => c.data.template === 'steps')).toEqual([])
+  })
+
+  it('a short English sentence ending on a content word gives a keyword of its last words, lit the last', () => {
+    expect(shapes(run(['Keep it simple always today.']))).toEqual([['s00', { template: 'keyword', words: 'today', lit: 0 }]])
+    // The last word is a function word, so is the one before: the fewest last words that hold a content word, three.
+    expect(shapes(run(['Love is all you have.']))).toEqual([['s00', { template: 'keyword', words: 'all you have', lit: 2 }]])
+    // Exactly eight words still gives one.
+    expect(BASELINE_KEYWORD_MAX_WORDS).toBe(8)
+    expect(shapes(run(['We drove home slowly after the long wedding.']))).toEqual([['s00', { template: 'keyword', words: 'wedding', lit: 0 }]])
+  })
+
+  it('a nine-word sentence, a question and a sentence ending on function words give no keyword', () => {
+    expect(run(['We drove home very slowly after the long wedding.'])).toEqual([])
+    expect(run(['Is the light good today?'])).toEqual([])
+    expect(run(['This is it.'])).toEqual([])
+    expect(run(['It is so for you.'])).toEqual([])
+  })
+
+  it('Hindi and Telugu get no baseline keyword (the drawing fixtures’ quotes, six and seven words)', () => {
+    expect(run([specText('quote-hi')], 'hi')).toEqual([])
+    expect(run([specText('quote-te')], 'te')).toEqual([])
+  })
+})
+
+describe('what the baseline never makes', () => {
+  const MANY = [
+    'We saw 40% of couples return.',
+    'The light was soft and warm all through that long day.',
+    'We charged $1,200 for the album.',
+    'The light was soft and warm all through that long day.',
+    'First, pack the bags.',
+    'Second, check the schedule.',
+    'The light was soft and warm all through that long day.',
+    'Keep it simple always today.'
+  ]
+
+  it('never a lower-third, a callout or a quote, whatever the menu offers', () => {
+    const t = talk(MANY)
+    const out = baselineGraphics(t, menuOf(t, ['counter', 'bars', 'steps', 'quote', 'callout', 'ring', 'keyword', 'lower-third']))
+    expect(out.map((c) => c.data.template)).toEqual(['ring', 'counter', 'steps', 'keyword'])
+  })
+
+  it('never a template the menu does not offer', () => {
+    const t = talk(MANY)
+    expect(baselineGraphics(t, menuOf(t, ['counter', 'bars', 'quote'])).map((c) => c.data.template)).toEqual(['counter'])
+    // Only keywords offered: a sentence whose ring, counter or step is not offered gives its keyword if it has one.
+    expect(shapes(baselineGraphics(t, menuOf(t, ['keyword'])))).toEqual([
+      ['s00', { template: 'keyword', words: 'return', lit: 0 }],
+      ['s02', { template: 'keyword', words: 'album', lit: 0 }],
+      ['s04', { template: 'keyword', words: 'bags', lit: 0 }],
+      ['s05', { template: 'keyword', words: 'schedule', lit: 0 }],
+      ['s07', { template: 'keyword', words: 'today', lit: 0 }]
+    ])
+  })
+
+  it('is deterministic: two calls deep-equal, and the same with every object’s keys in reverse order', () => {
+    const t = talk(MANY)
+    const m = menuOf(t)
+    const first = baselineGraphics(t, m)
+    expect(baselineGraphics(t, m)).toEqual(first)
+    const reversed = <T>(o: T): T =>
+      Array.isArray(o) ? (o.map(reversed) as T) : o && typeof o === 'object' ? (Object.fromEntries(Object.entries(o).reverse().map(([k, v]) => [k, reversed(v)])) as T) : o
+    const t2 = reversed(t)
+    const m2 = reversed(m)
+    expect(Object.keys(t2)[0]).toBe('segments')
+    expect(baselineGraphics(t2, m2)).toEqual(first)
+  })
+})
+
+describe('validated the same way (§6.7)', () => {
+  const CLEAN = [
+    'We saw 40% of couples return.',
+    'It was forty dollars an album.',
+    'First, the plan, in two parts.',
+    'Second, the budget.',
+    'Third, the timeline.',
+    'Keep it simple always today.',
+    'Love is all you have.'
+  ]
+
+  it('every candidate of a clean transcript survives validateBaseline unchanged, with no note', () => {
+    const t = talk(CLEAN)
+    const m = menuOf(t)
+    const out = baselineGraphics(t, m)
+    expect(out.map((c) => c.data.template)).toEqual(['ring', 'counter', 'steps', 'keyword', 'keyword'])
+    const v = validateBaseline(out, m, t)
+    expect(v.dropped).toEqual([])
+    expect(v.kept.map((k) => [k.sentence, k.data, k.source])).toEqual(out.map((c) => [c.sentence, c.data, 'baseline']))
+  })
+
+  it('and survives validateGraphics unchanged when written as a model answer', () => {
+    const t = talk(CLEAN)
+    const m = menuOf(t)
+    const out = baselineGraphics(t, m)
+    const answer = (c: GraphicCandidate): AnswerGraphic => {
+      const g: AnswerGraphic = { sentence: c.sentence, template: c.data.template, title: '', value: '', label: '', items: [], quote: '', words: '', lit: 0, why: c.why }
+      const d = c.data
+      if (d.template === 'ring' || d.template === 'counter') return { ...g, value: d.value, label: d.label }
+      if (d.template === 'steps') return { ...g, title: d.title, items: d.items.map((i) => ({ label: i.label, value: '' })) }
+      if (d.template === 'keyword') return { ...g, words: d.words, lit: d.lit }
+      throw new Error(`no answer form for ${d.template}`)
+    }
+    const v = validateGraphics({ reasoning: 'r', graphics: out.slice(0, 4).map(answer) }, m, t)
+    expect('rejected' in v).toBe(false)
+    if ('rejected' in v) return
+    expect(v.dropped).toEqual([])
+    expect(v.kept.map((k) => [k.sentence, k.data])).toEqual(out.slice(0, 4).map((c) => [c.sentence, c.data]))
+  })
+
+  it('a negated percent is made by the baseline and dropped by the validator', () => {
+    const t = talk(['Not 40% of couples rebook.'])
+    const m = menuOf(t)
+    const out = baselineGraphics(t, m)
+    // The baseline makes it: the rule reads a percent, not what is said of it.
+    expect(shapes(out)).toEqual([['s00', { template: 'ring', value: '40%', label: 'couples' }]])
+    // The validator drops it, with its reason.
+    const v = validateBaseline(out, m, t)
+    expect(v.kept).toEqual([])
+    expect(v.dropped.map((p) => p.message)).toContain("graphic dropped: '40%' is said negated in s00")
+    // And through the seam: a rejected window settles to none of it, and says why.
+    const s = settleGraphics({ error: 'No model is set up' }, m, t, { baseline: baselineGraphics })
+    expect(s.kept).toEqual([])
+    expect(s.drops.map((d) => [d.template, d.text])).toEqual([['ring', '40%']])
+  })
+})
+
+describe('the nested English fixtures (§6.10\'s nested set; tree.ts on the baseline\'s items)', () => {
+  const nested = (n: number): { transcript: Transcript; items: string[]; parents: number[] } =>
+    JSON.parse(readFileSync(join(FIXTURES, `nested-en-${n}.json`), 'utf8'))
+  const stepsOf = (t: Transcript): GraphicCandidate[] => baselineGraphics(t, menuOf(t)).filter((c) => c.data.template === 'steps')
+
+  it('the baseline finds an enumeration only where each item opens its own sentence, so none of the three matches its fixture', () => {
+    // nested-en-1: "First, the plan …", "Second, the shoot itself.", "Third, the edit.": three items, and the
+    // "two parts" said after the plan makes the next TWO baseline items its children (tree.ts rule 2), where the
+    // fixture's two children are the budget and the timeline, said inside the plan's sentence.
+    const one = nested(1)
+    expect(stepsOf(one.transcript).map((c) => c.data)).toEqual([
+      { template: 'steps', title: 'Step by step', items: [{ label: 'plan', parent: -1 }, { label: 'shoot itself', parent: 0 }, { label: 'edit', parent: 0 }], connector: 'tree' }
+    ])
+    expect(one.parents).toEqual([-1, 0, 0, -1, -1])
+    // nested-en-2: "Step one, …", "Step two, …", "Step three, …": three items; "three pieces" is more than the one
+    // item after it, so the list stays flat; the fixture's three sub-items are said inside step two's sentence.
+    const two = nested(2)
+    expect(stepsOf(two.transcript).map((c) => c.data)).toEqual([
+      {
+        template: 'steps',
+        title: 'Step by step',
+        items: [{ label: 'pack the bags the night before', parent: -1 }, { label: 'schedule', parent: -1 }, { label: 'eat a real breakfast', parent: -1 }],
+        connector: 'line'
+      }
+    ])
+    expect(two.parents).toEqual([-1, -1, 1, 1, 1, -1])
+    // nested-en-3: "The first way …", "The second way …" open with "The", not an ordinal: no steps.
+    expect(stepsOf(nested(3).transcript)).toEqual([])
+  })
+})

@@ -225,15 +225,10 @@ import {
   gridsFor,
   menu2For,
   musicFor,
-  pairSettled,
-  quoteSpeakerFor,
-  settle2,
-  settleGraphics,
-  type GraphicsMenu,
-  type SettledGraphics
+  runGraphicsPass,
+  settle2
 } from '@shared/director/run'
-import { graphicsPrompt } from '@shared/director/promptGraphics'
-import { graphicsSchema, maxTokensForGraphics } from '@shared/director/schemaGraphics'
+import { baselineGraphics } from '@shared/director/baselineGraphics'
 import { maxTokensFor2, spine2Prompt } from '@shared/director/prompt2'
 import { spine2Schema } from '@shared/director/schema2'
 import { recipeById, type RecipeId } from '@shared/director/recipes'
@@ -642,46 +637,29 @@ export function graphicsSkippedNote(why: string): string {
 }
 
 /**
- * The graphics pass over footage clips (docs/CLIPS.md §6.6), shared by Find
- * and Direct: for each clip with a transcript, its menus (`graphicsMenuFor`),
- * each window asked once through the spine's own route (`askStructured`
- * over the bridge's `directorComplete`; the key never leaves the main
- * process) and wrapped so a throw becomes `{ error }`, settled
- * (`settleGraphics`, the quote's speaker `quoteSpeakerFor`) and paired
- * (`pairSettled`). `model` is the last model that answered, null when none
- * did. Never throws for a failed ask.
+ * The graphics pass over footage clips (docs/CLIPS.md §6.6, §6.10), shared by
+ * Find and Direct: `runGraphicsPass` (director/run.ts, the loop the eval runs
+ * too) with each window asked once through the spine's own route
+ * (`askStructured` over the bridge's `directorComplete`; the key never leaves
+ * the main process), and §6.10's `baselineGraphics` for every window whose
+ * answer is rejected or that no model answered, and only those. `model` is
+ * the last model that answered, null when none did. Never throws for a
+ * failed ask or a failed baseline.
  */
-async function askGraphicsPass(
-  project: Project,
-  clips: readonly Clip[],
-  onRetry?: () => void
-): Promise<{ pair: ReturnType<typeof pairSettled>; model: { id: string; runtime: string } | null; notes: string[] }> {
-  const parts: { menu: GraphicsMenu; settled: SettledGraphics }[] = []
-  const notes: string[] = []
-  let model: { id: string; runtime: string } | null = null
-  for (const clip of clips) {
-    const transcript = project.transcripts[clip.assetId]
-    if (!transcript) continue
-    const speaker = quoteSpeakerFor(project.assets.find((a) => a.id === clip.assetId))
-    for (const menu of graphicsMenuFor(project, clip, transcript)) {
-      const { system, user } = graphicsPrompt(menu, menu.language)
-      let answer: Parameters<typeof settleGraphics>[0]
-      try {
-        const asked = await askStructured(
-          (request) => window.forge.directorComplete(request),
-          { system, user, schema: graphicsSchema(menu), maxTokens: maxTokensForGraphics(menu) },
-          onRetry
-        )
-        notes.push(...asked.notes)
-        model = { id: asked.result.model, runtime: asked.result.provider }
-        answer = 'error' in asked.parsed ? { error: asked.parsed.error } : { value: asked.parsed.value, truncated: asked.result.truncated }
-      } catch (err) {
-        answer = { error: err instanceof Error ? err.message : String(err) }
+function askGraphicsPass(project: Project, clips: readonly Clip[], onRetry?: () => void): ReturnType<typeof runGraphicsPass> {
+  return runGraphicsPass(
+    project,
+    clips,
+    async (request) => {
+      const asked = await askStructured((r) => window.forge.directorComplete(r), request, onRetry)
+      return {
+        answer: 'error' in asked.parsed ? { error: asked.parsed.error } : { value: asked.parsed.value, truncated: asked.result.truncated },
+        model: { id: asked.result.model, runtime: asked.result.provider },
+        notes: asked.notes
       }
-      parts.push({ menu, settled: settleGraphics(answer, menu, transcript, { speaker }) })
-    }
-  }
-  return { pair: pairSettled(parts), model, notes }
+    },
+    { baseline: baselineGraphics }
+  )
 }
 
 /**

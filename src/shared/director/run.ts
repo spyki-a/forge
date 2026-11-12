@@ -20,7 +20,9 @@ import { MAX_CANDIDATES } from './menu'
 import { GRAPHIC_SPACING, type GraphicCandidate, type GraphicDrop, type GraphicTemplateId, type KeptGraphic } from '../graphics/template'
 import { validateBaseline, validateGraphics, type AnswerGraphic } from './validateGraphics'
 import { drawnStrings, quoteSpeakerOf } from '../graphics/apply'
-import { GRAPHICS_PASS } from './schemaGraphics'
+import { GRAPHICS_PASS, graphicsSchema, maxTokensForGraphics } from './schemaGraphics'
+import { graphicsPrompt } from './promptGraphics'
+import type { CompletionRequest } from './provider'
 
 /**
  * The pure half of a Director run: what the music is, how long the ad is, the
@@ -361,7 +363,7 @@ export interface SettledGraphics {
   /**
    * The model's answer was not used (no model, or the pass rejected), so the
    * baseline path ran: `options.baseline`'s candidates, validated, or none
-   * while there is no baseline (lane T4's).
+   * when no baseline was given or it threw.
    */
   baseline: boolean
   /** Why the model's answer could not be used, when it could not. */
@@ -376,10 +378,16 @@ export interface SettledGraphics {
 
 /**
  * The baseline's candidates for a menu (§6.10, `baselineGraphics(transcript,
- * menu)`, lane T4's). Until T4 lands, `settleGraphics` takes none: a rejected
- * answer settles to no graphics, with the reason.
+ * menu)` in `baselineGraphics.ts`, whose signature this is). Without one,
+ * `settleGraphics` takes none: a rejected answer settles to no graphics, with
+ * the reason. The store's Find and Direct pass `baselineGraphics` (lane T4).
  */
 export type GraphicsBaseline = (transcript: Transcript, menu: GraphicsMenu) => GraphicCandidate[]
+
+/** The note when the baseline itself threw for a window (lane T4; not the plan's words): that window has no graphics, and the run goes on. */
+export function baselineFailedNote(why: string): string {
+  return `the baseline could not find graphics: ${why}`
+}
 
 /** The "graphic dropped: " head the validator's and the spacing's messages carry, taken off a structured drop's reason. */
 const DROPPED_HEAD = 'graphic dropped: '
@@ -531,7 +539,8 @@ export function quoteSpeakerFor(asset: Pick<MediaAsset, 'speaker' | 'credit'> | 
  * `options.baseline` is the seam for §6.10's `baselineGraphics` (lane T4).
  * Without it a rejected pass settles to no graphics, and the note says so
  * ("no graphics for <window>: <why>"); with it, "the baseline's graphics are
- * used for <window>: <why>". `options.speaker` is the app's speaker for a
+ * used for <window>: <why>". A baseline that throws gives that window no
+ * graphics, the first note, and `baselineFailedNote`. `options.speaker` is the app's speaker for a
  * said quote (`quoteSpeakerFor`), trimmed: spaces are no speaker.
  */
 export function settleGraphics(
@@ -550,14 +559,28 @@ export function settleGraphics(
     return { kept: spaced.kept, dropped: [...verdict.dropped, ...spaced.dropped], baseline: false, rejected: null, drops: [...drops, ...spaced.drops] }
   }
   const window = graphicsWindowName(menu)
-  const candidates = options.baseline ? options.baseline(transcript, menu) : []
+  // The baseline never fails the settle (lane T4): a throw inside it is no candidates, with its own note.
+  let candidates: GraphicCandidate[] = []
+  let failed: string | null = null
+  if (options.baseline) {
+    try {
+      candidates = options.baseline(transcript, menu)
+    } catch (err) {
+      failed = err instanceof Error ? err.message : String(err)
+    }
+  }
   const standard = validateBaseline(candidates, menu, transcript, { speaker })
   const spaced = spaceGraphics(standard.kept, menu, transcript)
-  const head = options.baseline ? `the baseline's graphics are used for ${window}` : `no graphics for ${window}`
+  const head = options.baseline && failed === null ? `the baseline's graphics are used for ${window}` : `no graphics for ${window}`
   const drops = dropsOf(standard.dropped, '$.baseline', (i) => (candidates[i] ? { template: candidates[i].data.template, strings: drawnStrings(candidates[i].data) } : undefined), menu.clipId)
   return {
     kept: spaced.kept,
-    dropped: [{ path: '$', message: `${head}: ${verdict.rejected}` }, ...standard.dropped, ...spaced.dropped],
+    dropped: [
+      { path: '$', message: `${head}: ${verdict.rejected}` },
+      ...(failed === null ? [] : [{ path: '$', message: baselineFailedNote(failed) }]),
+      ...standard.dropped,
+      ...spaced.dropped
+    ],
     baseline: true,
     rejected: verdict.rejected,
     drops: [...drops, ...spaced.drops]
@@ -597,6 +620,61 @@ export function pairSettled(parts: readonly { menu: GraphicsMenu; settled: Settl
       drops: parts.flatMap(({ settled }) => settled.drops)
     }
   }
+}
+
+/** One window's ask, as `runGraphicsPass` hands it out: the request the app sends, and the menu it was built from. */
+export type GraphicsAsk = (
+  request: CompletionRequest,
+  menu: GraphicsMenu
+) => Promise<{ answer: { value: unknown; truncated: boolean } | { error: string }; model: { id: string; runtime: string } | null; notes?: string[] }>
+
+/** One window of a run: its menu and transcript, and the answer settled. */
+export interface GraphicsRunPart {
+  menu: GraphicsMenu
+  transcript: Transcript
+  settled: SettledGraphics
+}
+
+/**
+ * The graphics pass over footage clips (docs/CLIPS.md §6.6, §6.10), with the
+ * ask taken as an argument so the store's Find and Direct (over the bridge)
+ * and the eval (over its saved answers) run the same loop: for each clip
+ * whose asset has a transcript, its menus (`graphicsMenuFor`); each window's
+ * request built with the app's `graphicsPrompt`, `graphicsSchema` and
+ * `maxTokensForGraphics`; asked once (a throw is `{ error }`); settled
+ * (`settleGraphics`, the quote's speaker `quoteSpeakerFor`, `options.baseline`
+ * for a window whose answer is rejected, and only that window); then paired
+ * (`pairSettled`). `model` is the last model that answered, null when none
+ * did. Never throws for a failed ask or a failed baseline.
+ */
+export async function runGraphicsPass(
+  project: Project,
+  clips: readonly Clip[],
+  ask: GraphicsAsk,
+  options: { baseline?: GraphicsBaseline } = {}
+): Promise<{ pair: ReturnType<typeof pairSettled>; model: { id: string; runtime: string } | null; notes: string[]; parts: GraphicsRunPart[] }> {
+  const parts: GraphicsRunPart[] = []
+  const notes: string[] = []
+  let model: { id: string; runtime: string } | null = null
+  for (const clip of clips) {
+    const transcript = project.transcripts[clip.assetId]
+    if (!transcript) continue
+    const speaker = quoteSpeakerFor(project.assets.find((a) => a.id === clip.assetId))
+    for (const menu of graphicsMenuFor(project, clip, transcript)) {
+      const { system, user } = graphicsPrompt(menu, menu.language)
+      let answer: Parameters<typeof settleGraphics>[0]
+      try {
+        const asked = await ask({ system, user, schema: graphicsSchema(menu), maxTokens: maxTokensForGraphics(menu) }, menu)
+        notes.push(...(asked.notes ?? []))
+        if (asked.model) model = asked.model
+        answer = asked.answer
+      } catch (err) {
+        answer = { error: err instanceof Error ? err.message : String(err) }
+      }
+      parts.push({ menu, transcript, settled: settleGraphics(answer, menu, transcript, { speaker, baseline: options.baseline }) })
+    }
+  }
+  return { pair: pairSettled(parts), model, notes, parts }
 }
 
 const defaultId = (prefix: string): string => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`

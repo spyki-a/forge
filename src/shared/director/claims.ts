@@ -320,9 +320,10 @@ export function numbersIn(tokens: readonly string[]): { value: CanonNumber; at: 
  * first token (a sign or a currency included), `end` one past its last (a
  * multiplier or a unit included). `bind` needs the span so no other claim can
  * bind a token of a bound number, and `claimsOf` so a value field is one
- * number and nothing else.
+ * number and nothing else. Exported for `baselineGraphics` (§6.10), which
+ * reads its numbers here rather than with a second reader.
  */
-function numberSpans(tokens: readonly string[]): { value: CanonNumber; at: number; from: number; end: number }[] {
+export function numberSpans(tokens: readonly string[]): { value: CanonNumber; at: number; from: number; end: number }[] {
   // A hyphenated ten and unit ('forty-two') becomes its parts, each keeping its token's index.
   const ts: string[] = []
   const index: number[] = []

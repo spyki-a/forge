@@ -429,7 +429,8 @@ describe('the Transcript tile’s Graphics section (§6.6, "By hand")', () => {
     const notes = section().find((h) => h.props['data-graphic-notes'] !== undefined)!
     const lines = hosts(notes.props.children as ReactNode).filter((h) => h.type === 'li').map((h) => text(h))
     expect(lines[0]).toBe(TG.NO_MODEL_LINE)
-    expect(lines).toContain('no graphics for sentences s00 to s20: No model is set up')
+    // The baseline ran for the window (§6.10, lane T4), and the note says so.
+    expect(lines).toContain("the baseline's graphics are used for sentences s00 to s20: No model is set up")
     // Another clip shows none of this clip's notes.
     expect(section('shot2').some((h) => h.props['data-graphic-notes'] !== undefined)).toBe(false)
 
