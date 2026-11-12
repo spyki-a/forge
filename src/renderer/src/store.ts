@@ -33,9 +33,27 @@ import type {
 } from '@shared/timeline'
 import { DEFAULT_COLOR, DEFAULT_TEXT, clipCoversFrame } from '@shared/timeline'
 import { CLEAN_GRAPHIC_STYLE, graphicStyleOf } from '@shared/graphics/style'
-import type { GraphicSpec } from '@shared/graphics/template'
+import type { GraphicDrop, GraphicSpec } from '@shared/graphics/template'
 import { graphicClipAsset, graphicExitKeys } from '@shared/graphics/frame'
-import { followGraphicMoves, removeWithFollowers, resoundGraphic, silenceGraphics, soundAllGraphics } from '@shared/graphics/apply'
+import {
+  CLEAR_GRAPHICS_NOTE,
+  CLIPS_GRAPHIC_RULE,
+  applyGraphics,
+  clearGraphics as clearGraphicsOf,
+  followGraphicMoves,
+  graphicDropsOf,
+  keepProposal,
+  placeAgain,
+  removeWithFollowers,
+  replaceClipGraphics,
+  resoundAfterClear,
+  resoundGraphic,
+  silenceGraphics,
+  soundAllGraphics,
+  withSpeaker,
+  withoutGraphic
+} from '@shared/graphics/apply'
+import { footageOf } from '@shared/graphics/sound'
 import { graphicTargetsAt } from '@shared/graphics/targets'
 import { captionSourceClip } from '@shared/captions/timeline'
 import { withMotion, withoutMotionForZoom } from '@shared/edit/camera'
@@ -192,13 +210,30 @@ import {
   type SplitLayout
 } from '@shared/render/layout'
 import type { DecisionRecord } from '@shared/project'
-import { clearDirector, occupiedBy } from '@shared/director/apply'
+import { GRAPHIC_RULE, clearDirector, occupiedBy } from '@shared/director/apply'
 import { applyRecipe, decisionFor2 } from '@shared/director/apply2'
 import { soundPackFor } from '@shared/director/soundRoles'
 import { BASELINE_MODEL } from '@shared/director/baseline'
 import type { Problem } from '@shared/director/conforms'
 import { buildSlots } from '@shared/director/menu'
-import { adSeconds, briefFor, expectedRecipe, gridsFor, menu2For, musicFor, settle2 } from '@shared/director/run'
+import {
+  adSeconds,
+  briefFor,
+  decisionForGraphics,
+  expectedRecipe,
+  graphicsMenuFor,
+  gridsFor,
+  menu2For,
+  musicFor,
+  pairSettled,
+  quoteSpeakerFor,
+  settle2,
+  settleGraphics,
+  type GraphicsMenu,
+  type SettledGraphics
+} from '@shared/director/run'
+import { graphicsPrompt } from '@shared/director/promptGraphics'
+import { graphicsSchema, maxTokensForGraphics } from '@shared/director/schemaGraphics'
 import { maxTokensFor2, spine2Prompt } from '@shared/director/prompt2'
 import { spine2Schema } from '@shared/director/schema2'
 import { recipeById, type RecipeId } from '@shared/director/recipes'
@@ -525,6 +560,21 @@ function rebakeGraphicClips(get: () => EditorState): void {
   })()
 }
 
+/**
+ * §6.9's `place.auto` recompute on one graphic (graphics/apply.ts
+ * `placeAgain`), written history-neutral, as `fillAssetPath` writes a bake:
+ * the aspect change or the reframe that asked is the undo step. Its note
+ * (the old place kept, no third left) is shown. True when the place changed.
+ */
+function placeAgainQuietly(get: () => EditorState, set: (partial: Partial<EditorState>) => void, clipId: string): boolean {
+  const before = get().project
+  const again = placeAgain(before, clipId)
+  if (again.note) get().notify(again.note, 'info')
+  if (again.project === before) return false
+  set({ project: again.project, dirty: true })
+  return true
+}
+
 /** The one bake a run of trims costs, `GRAPHIC_TRIM_REBAKE_MS` after the last of them. */
 function rebakeWhenTrimRests(clipId: string, rebake: () => Promise<void>): void {
   const pending = trimRebakes.get(clipId)
@@ -536,6 +586,69 @@ function rebakeWhenTrimRests(clipId: string, rebake: () => Promise<void>): void 
       void rebake()
     }, GRAPHIC_TRIM_REBAKE_MS)
   )
+}
+
+/** Said when Find graphics is pressed while a Find is still asking (docs/CLIPS.md §6.6; not the plan's words). */
+export const GRAPHICS_BUSY_NOTE = 'Graphics are still being found — wait for that run to finish'
+/** Said when the clip was removed while its graphics were being found (not the plan's words). */
+export const GRAPHICS_CLIP_GONE_NOTE = 'The clip was removed while its graphics were being found — nothing was placed'
+
+/**
+ * A Find run's one line (not the plan's words): how many graphics landed, how
+ * many wait to have their number checked, how many notes. True whether a
+ * model answered, none did, or (lane T4) the baseline's graphics were used.
+ */
+export function graphicsRunNote(placed: number, waiting: number, notes: number): string {
+  const count = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`
+  return `Graphics: ${placed} placed${waiting > 0 ? `, ${waiting} to check` : ''}${notes > 0 ? ` — ${count(notes, 'note')}` : ''}`
+}
+
+/** Direct's note when its graphics pass failed: the spine stands (docs/CLIPS.md §6.6, "Where it runs"; not the plan's words). */
+export function graphicsSkippedNote(why: string): string {
+  return `graphics were skipped — ${why}`
+}
+
+/**
+ * The graphics pass over footage clips (docs/CLIPS.md §6.6), shared by Find
+ * and Direct: for each clip with a transcript, its menus (`graphicsMenuFor`),
+ * each window asked once through the spine's own route (`askStructured`
+ * over the bridge's `directorComplete`; the key never leaves the main
+ * process) and wrapped so a throw becomes `{ error }`, settled
+ * (`settleGraphics`, the quote's speaker `quoteSpeakerFor`) and paired
+ * (`pairSettled`). `model` is the last model that answered, null when none
+ * did. Never throws for a failed ask.
+ */
+async function askGraphicsPass(
+  project: Project,
+  clips: readonly Clip[],
+  onRetry?: () => void
+): Promise<{ pair: ReturnType<typeof pairSettled>; model: { id: string; runtime: string } | null; notes: string[] }> {
+  const parts: { menu: GraphicsMenu; settled: SettledGraphics }[] = []
+  const notes: string[] = []
+  let model: { id: string; runtime: string } | null = null
+  for (const clip of clips) {
+    const transcript = project.transcripts[clip.assetId]
+    if (!transcript) continue
+    const speaker = quoteSpeakerFor(project.assets.find((a) => a.id === clip.assetId))
+    for (const menu of graphicsMenuFor(project, clip, transcript)) {
+      const { system, user } = graphicsPrompt(menu, menu.language)
+      let answer: Parameters<typeof settleGraphics>[0]
+      try {
+        const asked = await askStructured(
+          (request) => window.forge.directorComplete(request),
+          { system, user, schema: graphicsSchema(menu), maxTokens: maxTokensForGraphics(menu) },
+          onRetry
+        )
+        notes.push(...asked.notes)
+        model = { id: asked.result.model, runtime: asked.result.provider }
+        answer = 'error' in asked.parsed ? { error: asked.parsed.error } : { value: asked.parsed.value, truncated: asked.result.truncated }
+      } catch (err) {
+        answer = { error: err instanceof Error ? err.message : String(err) }
+      }
+      parts.push({ menu, settled: settleGraphics(answer, menu, transcript, { speaker }) })
+    }
+  }
+  return { pair: pairSettled(parts), model, notes }
 }
 
 /**
@@ -1191,6 +1304,32 @@ interface EditorState {
    * reads it (`soundPackFor`). One undo.
    */
   setGraphicSounds: (on: boolean) => void
+  /**
+   * The footage clip whose graphics are being found right now (docs/CLIPS.md
+   * §6.6), or null. A second press while one runs is refused with
+   * `GRAPHICS_BUSY_NOTE`, never queued.
+   */
+  findingGraphics: string | null
+  /** What the last Find did, for the Transcript tile's notes: its clip, every note (each drop with its reason), and who answered. */
+  lastGraphics: { clipId: string; notes: string[]; drops: GraphicDrop[]; model: string } | null
+  /**
+   * Find graphics in this clip (§6.6): the graphics pass over the clip's
+   * menus, each window asked once through the spine's route, settled,
+   * paired and landed under `CLIPS_GRAPHIC_RULE`, replacing the clip's own
+   * `'clips.graphic'` graphics, sounds and proposals: ONE undo step and ONE
+   * decision record. With no model, or every pass rejected, it still lands
+   * the lower third when the asset has a Speaker. A clip removed while the
+   * ask was out gets nothing.
+   */
+  findGraphics: (clipId: string) => Promise<void>
+  /** Keep a proposal (§6.6): placed through the budget and §6.9 now; refused, the reason is shown and returned, and it stays listed. One undo. */
+  keepGraphic: (proposalId: string) => string | null
+  /** Drop a graphic (its drawn asset when unused, its sounds) or a proposal (§6.6, §6.14). One undo. */
+  dropGraphic: (id: string) => void
+  /** Clear graphics (§6.6): every `'clips.graphic'` graphic, sound, file and proposal; Direct's stay, and the note says so. One undo. */
+  clearGraphics: () => void
+  /** The Transcript tile's Speaker (§6.6, §16.31): writes `MediaAsset.speaker` and redraws every graphic that drew the old name. One undo. */
+  setSpeaker: (assetId: string, name: string) => void
   /** 0 = all output, 1 = all source, anything between splits the preview. */
   splitRatio: number
   setSplitRatio: (ratio: number) => void
@@ -2253,8 +2392,11 @@ export const useEditor = create<EditorState>((set, get) => ({
         }
 
         if (clip.graphic) {
-          // At the new canvas, through the one bake (docs/CLIPS.md §6.4's arm). §6.9's `place.auto`
-          // recompute is phase 2's and §6.16's screen-card realign phase 3's; both go here, before it.
+          // §6.9's `place.auto` recompute first (graphics/apply.ts placeAgain; a dragged box is kept), history-neutral:
+          // the aspect change that asked is the undo step, and its snapshot holds the old place. §6.16's
+          // screen-card realign is phase 3's and goes here too.
+          placeAgainQuietly(get, set, clip.id)
+          // At the new canvas, through the one bake (docs/CLIPS.md §6.4's arm).
           await get().rebakeGraphic(clip.id)
           continue
         }
@@ -2358,7 +2500,14 @@ export const useEditor = create<EditorState>((set, get) => ({
         const subject = clip.graphic.subject
         const under =
           subject === null ? null : subject ? (project.clips.find((c) => c.id === subject.clipId) ?? null) : captionSourceClip(project, clip.start)
-        if (under && assetIds.includes(under.assetId)) await get().rebakeGraphic(clip.id)
+        /*
+         * §6.9's `place.auto` recompute on a reframe: the free third over a re-followed footage clip (footageOf,
+         * the sounds' reading) is read again, history-neutral as the moments' repoint below; a dragged box is kept.
+         */
+        const footage = footageOf(project, clip, clip.graphic)
+        const footageClip = footage === null ? undefined : project.clips.find((c) => c.id === footage)
+        const moved = footageClip !== undefined && assetIds.includes(footageClip.assetId) && placeAgainQuietly(get, set, clip.id)
+        if ((under && assetIds.includes(under.assetId)) || moved) await get().rebakeGraphic(clip.id)
         continue
       }
       if (!clip.moment) continue
@@ -2536,7 +2685,10 @@ export const useEditor = create<EditorState>((set, get) => ({
     }),
 
   clearDirectorOutput: () => {
-    get().update((p) => clearDirector(p))
+    const { catalog, root } = useCatalog.getState()
+    // One update: Direct's Clear (its graphics, their sounds and files, its proposals among it), then the
+    // sounds of another rule's graphics it left out of place put back (graphics/apply.ts resoundAfterClear).
+    get().update((p) => resoundAfterClear(p, clearDirector(p), soundPackFor(catalog, root)).project)
     set({ lastDirection: null })
   },
 
@@ -2736,6 +2888,7 @@ export const useEditor = create<EditorState>((set, get) => ({
 
       /* Apply, as ONE update: the whole plan is one undo. */
       set({ directStage: 'placing the shots' })
+      const pack = soundPackFor(useCatalog.getState().catalog, useCatalog.getState().root)
       const applied = applyRecipe(get().project, composed, menu, {
         fps,
         videoTrackId: videoTrack.id,
@@ -2746,10 +2899,14 @@ export const useEditor = create<EditorState>((set, get) => ({
         parallaxAssets,
         lookFile: look,
         // The library's sounds the Director may fire (soundRoles.ts); none installed, and the ad says so.
-        sounds: soundPackFor(useCatalog.getState().catalog, useCatalog.getState().root)
+        sounds: pack
       })
       notes.push(...applied.problems.map(describeProblem))
-      get().update(() => applied.project)
+      // Direct again cleared the last run's graphics with its spine: the sounds of the graphics left on a footage
+      // clip go back under the cap, in the same update (resoundAfterClear, as Direct's Clear does).
+      get().update((p) => resoundAfterClear(p, applied.project, pack).project)
+      const spineProject = get().project
+      const spineStep = get().past
       const heroSlot = menu.slots.find((s) => s.id === composed.plan.hero)
       set((s) => ({
         decisions: [...s.decisions, decisionFor2(composed, { id: model, runtime })],
@@ -2819,6 +2976,40 @@ export const useEditor = create<EditorState>((set, get) => ({
           }
         }
       })()
+
+      /*
+       * The graphics pass (docs/CLIPS.md §6.6, "Where it runs"), after the
+       * spine, the look and the bakes: every shot on the video track whose
+       * asset has a transcript, through the pure functions Find uses, under
+       * GRAPHIC_RULE, so Direct again and Direct's Clear take them. It lands
+       * on the project as it is then (an edit made while the model was asked
+       * is never overwritten), in the spine's own undo step when no step was
+       * taken since (else a step of its own). A failure of the pass
+       * never fails Direct: the spine stands, and the note says why.
+       */
+      const shots = spineProject.clips.filter((c) => c.trackId === videoTrack.id && spineProject.transcripts[c.assetId] !== undefined)
+      if (shots.length > 0) {
+        try {
+          set({ directStage: 'finding graphics' })
+          const run = await askGraphicsPass(spineProject, shots)
+          const current = get().project
+          const covered = shots.map((c) => c.id)
+          const landed = applyGraphics(current, run.pair.kept, covered, GRAPHIC_RULE, { fps: current.settings.fps, sounds: pack })
+          if (landed.project !== current) {
+            // No undo step since the spine's (a bake landing is history-less): the graphics join the spine's step.
+            if (get().past === spineStep) set({ project: landed.project, dirty: true })
+            else get().update(() => landed.project)
+          }
+          const drops = [...run.pair.settled.drops, ...graphicDropsOf(current, run.pair.kept, covered, landed.problems)]
+          const record = decisionForGraphics({ ...run.pair.settled, drops }, run.model)
+          set((s) => ({ decisions: [...s.decisions, record] }))
+          notes.push(...run.notes, ...run.pair.settled.dropped.map(describeProblem), ...landed.problems.map(describeProblem))
+          for (const id of landed.clipIds) void get().rebakeGraphic(id)
+        } catch (err) {
+          notes.push(graphicsSkippedNote(err instanceof Error ? err.message : String(err)))
+        }
+        set((s) => (s.lastDirection ? { lastDirection: { ...s.lastDirection, problems: [...notes] } } : {}))
+      }
 
       const count = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`
       notify(
@@ -5277,6 +5468,103 @@ export const useEditor = create<EditorState>((set, get) => ({
       return out.project
     })
     for (const note of notes) get().notify(note, 'info')
+  },
+
+  findingGraphics: null,
+  lastGraphics: null,
+
+  findGraphics: async (clipId) => {
+    const { notify } = get()
+    // One run at a time: the second press is refused, not queued (its answer would land over the first's).
+    if (get().findingGraphics !== null) {
+      notify(GRAPHICS_BUSY_NOTE, 'info')
+      return
+    }
+    const asked = get().project
+    const clip = asked.clips.find((c) => c.id === clipId)
+    if (!clip) return
+    set({ findingGraphics: clipId })
+    try {
+      const run = await askGraphicsPass(asked, [clip])
+      // Removed while the ask was out: nothing lands, nothing is recorded.
+      if (!get().project.clips.some((c) => c.id === clipId)) {
+        notify(GRAPHICS_CLIP_GONE_NOTE, 'info')
+        return
+      }
+      const { catalog, root } = useCatalog.getState()
+      const sounds = soundPackFor(catalog, root)
+      let landed: ReturnType<typeof replaceClipGraphics> | null = null
+      // ONE update: the clip's old Clip-it graphics, their sounds and proposals out, the run's in.
+      get().update((p) => {
+        landed = replaceClipGraphics(p, clipId, run.pair.kept, { fps: p.settings.fps, sounds })
+        return landed.project
+      })
+      const done = landed as ReturnType<typeof replaceClipGraphics> | null
+      if (!done) return
+      const drops = [...run.pair.settled.drops, ...graphicDropsOf(done.cleared, run.pair.kept, [clipId], done.problems)]
+      const record = decisionForGraphics({ ...run.pair.settled, drops }, run.model)
+      const notes = [...run.notes, ...run.pair.settled.dropped.map((p) => p.message), ...done.problems.map((p) => p.message)]
+      set((s) => ({
+        decisions: [...s.decisions, record],
+        lastGraphics: { clipId, notes, drops, model: record.model?.id ?? 'baseline' }
+      }))
+      for (const id of done.clipIds) void get().rebakeGraphic(id)
+      const waiting = (done.project.graphicProposals ?? []).filter((g) => g.clipId === clipId && g.rule === CLIPS_GRAPHIC_RULE).length
+      notify(graphicsRunNote(done.clipIds.length, waiting, notes.length), 'info')
+    } catch (err) {
+      notify(err instanceof Error ? err.message : String(err))
+    } finally {
+      set({ findingGraphics: null })
+    }
+  },
+
+  keepGraphic: (proposalId) => {
+    const { catalog, root } = useCatalog.getState()
+    const sounds = soundPackFor(catalog, root)
+    let kept: ReturnType<typeof keepProposal> | null = null
+    get().update((p) => {
+      kept = keepProposal(p, proposalId, { fps: p.settings.fps, sounds })
+      return kept.project
+    })
+    const out = kept as ReturnType<typeof keepProposal> | null
+    if (!out) return null
+    if (out.refused !== null) {
+      get().notify(out.refused, 'info')
+      return out.refused
+    }
+    for (const id of out.clipIds) void get().rebakeGraphic(id)
+    return null
+  },
+
+  dropGraphic: (id) => {
+    const { catalog, root } = useCatalog.getState()
+    const sounds = soundPackFor(catalog, root)
+    get().update((p) => withoutGraphic(p, id, sounds).project)
+    set((s) => ({
+      selectedClipId: s.selectedClipId === id ? null : s.selectedClipId,
+      selectedClipIds: s.selectedClipIds.filter((c) => c !== id)
+    }))
+  },
+
+  clearGraphics: () => {
+    const { catalog, root } = useCatalog.getState()
+    const sounds = soundPackFor(catalog, root)
+    // One update: the Clear, then the sounds it leaves out of place put back (resoundAfterClear).
+    get().update((p) => {
+      const after = clearGraphicsOf(p)
+      return after === p ? p : resoundAfterClear(p, after, sounds).project
+    })
+    get().notify(CLEAR_GRAPHICS_NOTE, 'info')
+  },
+
+  setSpeaker: (assetId, name) => {
+    let changed: string[] = []
+    get().update((p) => {
+      const out = withSpeaker(p, assetId, name)
+      changed = out.changed
+      return out.project
+    })
+    for (const id of changed) void get().rebakeGraphic(id)
   },
 
   setPlayhead: (frame) => {

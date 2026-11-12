@@ -246,7 +246,6 @@ export function applyGraphics(
   const newId = ctx.newId ?? defaultId
   const fps = project.settings.fps
   if (ctx.fps !== fps) return { project, problems: [{ path: '$', message: fpsMismatchNote(ctx.fps, fps) }], clipIds: [] }
-  const canvas = { width: project.settings.width, height: project.settings.height }
   const problems: Problem[] = []
   const drop = (path: string, data: GraphicData, reason: string): void => {
     problems.push({ path, message: `graphic dropped: ${nameOf(data)} — ${reason}` })
@@ -268,52 +267,13 @@ export function applyGraphics(
   const timed: Timed[] = []
   const retimed = new Set<string>()
   for (const { path, kept: k } of run) {
-    const data = k.candidate.data
-    const clip = project.clips.find((c) => c.id === k.clipId)
-    if (!clip) {
-      drop(path, data, NO_CLIP_NOTE)
-      continue
-    }
-    const def = GRAPHIC_TEMPLATES[data.template]
-    if (!def) {
-      drop(path, data, NOT_DRAWN_NOTE)
-      continue
-    }
-    if (k.assetId !== clip.assetId) {
-      drop(path, data, WRONG_ASSET_NOTE)
-      continue
-    }
-    const transcript = project.transcripts[k.assetId]
-    if (!transcript) {
-      drop(path, data, NO_TRANSCRIPT_NOTE)
-      continue
-    }
-    const beats = graphicBeats(project, clip, transcript, k.candidate.beatWords, {
-      spread: data.template !== 'quote'
-    })
-    if (beats === null) {
+    const one = timeOne(project, path, k, rule)
+    if ('timed' in one) timed.push(one.timed)
+    else if ('retimed' in one) {
       // Once per clip (§6.8): every graphic on a retimed clip goes, with one note.
-      if (!retimed.has(clip.id)) problems.push({ path, message: `graphics dropped: ${RETIMED_NOTE}` })
-      retimed.add(clip.id)
-      continue
-    }
-    const timing = graphicTiming(clip, beats, def, drawnText(data), fps)
-    if (!timing.ok) {
-      drop(path, data, timing.note)
-      continue
-    }
-    const spec: GraphicSpec = {
-      data,
-      seconds: timing.seconds,
-      beats: timing.beats,
-      grounding: { assetId: k.assetId, sentence: k.candidate.sentence, words: [...k.candidate.beatWords] },
-      // Chosen at step 6; the template's first third until then (a proposal keeps it until Keep places it).
-      place: { auto: true, third: thirdPreference(data.template)[0] },
-      seed: 0,
-      version: 1,
-      ...(k.candidate.proposal && data.template !== 'lower-third' ? { proposal: k.candidate.proposal } : {})
-    }
-    timed.push({ path, kept: k, clipId: clip.id, rule, start: timing.start, duration: timing.duration, seconds: timing.seconds, spec })
+      if (!retimed.has(one.retimed)) problems.push({ path, message: `graphics dropped: ${RETIMED_NOTE}` })
+      retimed.add(one.retimed)
+    } else drop(path, k.candidate.data, one.reason)
   }
 
   // 4. Proposals set aside: not placed until Keep.
@@ -334,23 +294,88 @@ export function applyGraphics(
   }
 
   // 6-7. Placement, the subject at onset and the lane, in onset order; each graphic on the project before the next.
+  const landed = landKept(project, budget.kept, rule, newId, (t, reason) => drop(t.path, t.spec.data, reason))
+  let next = landed.project
+  const clipIds = landed.clipIds
+
+  // 8. The sounds, on each landed graphic; graphicSounds re-places every graphic sound on its footage clip.
+  const sounded = soundsFor(next, clipIds, rule, ctx.sounds ?? [], newId)
+  next = sounded.project
+  for (const n of sounded.notes) problems.push({ path: '$.sounds', message: n })
+
+  if (proposals.length > 0) next = { ...next, graphicProposals: [...(next.graphicProposals ?? []), ...proposals] }
+  return { project: next, problems, clipIds }
+}
+
+/**
+ * §6.6's landing steps 2-3 for one graphic (the beats, the seconds and the
+ * start), shared by `applyGraphics` and `keepProposal`: the timed graphic,
+ * or why it is dropped, or `{ retimed }` with its clip's id when the clip
+ * is retimed (the caller says that once per clip).
+ */
+function timeOne(project: Project, path: string, k: KeptGraphic, rule: string): { timed: Timed } | { reason: string } | { retimed: string } {
+  const fps = project.settings.fps
+  const data = k.candidate.data
+  const clip = project.clips.find((c) => c.id === k.clipId)
+  if (!clip) return { reason: NO_CLIP_NOTE }
+  const def = GRAPHIC_TEMPLATES[data.template]
+  if (!def) return { reason: NOT_DRAWN_NOTE }
+  if (k.assetId !== clip.assetId) return { reason: WRONG_ASSET_NOTE }
+  const transcript = project.transcripts[k.assetId]
+  if (!transcript) return { reason: NO_TRANSCRIPT_NOTE }
+  const beats = graphicBeats(project, clip, transcript, k.candidate.beatWords, {
+    spread: data.template !== 'quote'
+  })
+  if (beats === null) return { retimed: clip.id }
+  const timing = graphicTiming(clip, beats, def, drawnText(data), fps)
+  if (!timing.ok) return { reason: timing.note }
+  const spec: GraphicSpec = {
+    data,
+    seconds: timing.seconds,
+    beats: timing.beats,
+    grounding: { assetId: k.assetId, sentence: k.candidate.sentence, words: [...k.candidate.beatWords] },
+    // Chosen at step 6; the template's first third until then (a proposal keeps it until Keep places it).
+    place: { auto: true, third: thirdPreference(data.template)[0] },
+    seed: 0,
+    version: 1,
+    ...(k.candidate.proposal && data.template !== 'lower-third' ? { proposal: k.candidate.proposal } : {})
+  }
+  return { timed: { path, kept: k, clipId: clip.id, rule, start: timing.start, duration: timing.duration, seconds: timing.seconds, spec } }
+}
+
+/**
+ * §6.6's landing steps 6-7 for graphics the budget kept, in its order, each
+ * on the project before the next: placement (`placeGraphic`), the subject
+ * at onset (`subjectAtOnset`), the lane (`graphicLane`) and the graphic clip
+ * with its drawn asset. Shared by `applyGraphics` and `keepProposal`; a
+ * graphic it cannot land goes to `drop` with its reason.
+ */
+function landKept(
+  project: Project,
+  kept: readonly Timed[],
+  rule: string,
+  newId: (prefix: string) => string,
+  drop: (t: Timed, reason: string) => void
+): { project: Project; clipIds: string[] } {
+  const fps = project.settings.fps
+  const canvas = { width: project.settings.width, height: project.settings.height }
   let next: Project = project
   const clipIds: string[] = []
-  for (const t of budget.kept) {
+  for (const t of kept) {
     const template = t.spec.data.template
     const place = placeGraphic(next, t.clipId, t.start, t.duration, template, canvas)
     if (!place) {
-      drop(t.path, t.spec.data, next.clips.some((c) => c.id === t.clipId) ? NO_FREE_THIRD_NOTE : NO_CLIP_NOTE)
+      drop(t, next.clips.some((c) => c.id === t.clipId) ? NO_FREE_THIRD_NOTE : NO_CLIP_NOTE)
       continue
     }
     const subject = subjectAtOnset(next, t.clipId, t.start, t.duration, template, canvas)
     if ('dropped' in subject) {
-      drop(t.path, t.spec.data, subject.dropped)
+      drop(t, subject.dropped)
       continue
     }
     const lane = graphicLane(next, t.clipId, t.start, t.duration, rule)
     if ('dropped' in lane) {
-      drop(t.path, t.spec.data, lane.dropped)
+      drop(t, lane.dropped)
       continue
     }
     next = lane.project
@@ -375,14 +400,7 @@ export function applyGraphics(
     next = { ...next, assets: [...next.assets, asset], clips: [...next.clips, clip] }
     clipIds.push(id)
   }
-
-  // 8. The sounds, on each landed graphic; graphicSounds re-places every graphic sound on its footage clip.
-  const sounded = soundsFor(next, clipIds, rule, ctx.sounds ?? [], newId)
-  next = sounded.project
-  for (const n of sounded.notes) problems.push({ path: '$.sounds', message: n })
-
-  if (proposals.length > 0) next = { ...next, graphicProposals: [...(next.graphicProposals ?? []), ...proposals] }
-  return { project: next, problems, clipIds }
+  return { project: next, clipIds }
 }
 
 /**
@@ -547,11 +565,45 @@ export function resoundAfterClear(
  * The same project comes back when there is nothing to take.
  */
 export function clearGraphics(project: Project): Project {
-  const graphicIds = new Set(project.clips.filter((c) => c.generatedBy?.rule === CLIPS_GRAPHIC_RULE && c.graphic).map((c) => c.id))
-  const removed = project.clips.filter(
-    (c) => c.generatedBy?.rule === CLIPS_GRAPHIC_RULE || (c.forGraphic !== undefined && graphicIds.has(c.forGraphic))
+  return clearRuleGraphics(
+    project,
+    (c) => c.generatedBy?.rule === CLIPS_GRAPHIC_RULE,
+    (g) => g.rule === CLIPS_GRAPHIC_RULE
   )
-  const proposals = project.graphicProposals?.filter((g) => g.rule !== CLIPS_GRAPHIC_RULE)
+}
+
+/**
+ * Find again's clear (docs/CLIPS.md §6.6, "Find again replaces the clip's
+ * 'clips.graphic' graphics, their sounds and its pending proposals"):
+ * `clearGraphics`' body over ONE footage clip: the `CLIPS_GRAPHIC_RULE`
+ * graphic clips whose footage clip (`footageOf`, the sounds' own reading)
+ * is `clipId`, every clip that follows one of them (`forGraphic`), their
+ * drawn assets and brought files no survivor uses, the `CLIPS_GRAPHIC_RULE`
+ * proposals on `clipId`, and a "Graphic sounds" track this emptied. Another
+ * clip's graphics, Direct's graphics and your own stay. The same project
+ * comes back when there is nothing to take.
+ */
+export function clearClipGraphics(project: Project, clipId: string): Project {
+  return clearRuleGraphics(
+    project,
+    (c) => c.graphic !== undefined && c.generatedBy?.rule === CLIPS_GRAPHIC_RULE && footageOf(project, c, c.graphic) === clipId,
+    (g) => g.rule === CLIPS_GRAPHIC_RULE && g.clipId === clipId
+  )
+}
+
+/**
+ * The one body of `clearGraphics` and `clearClipGraphics`: the clips `taken`
+ * picks, every clip that follows a graphic among them, the proposals
+ * `proposalTaken` picks, and the sweep described on `clearGraphics`.
+ */
+function clearRuleGraphics(
+  project: Project,
+  taken: (c: Clip) => boolean,
+  proposalTaken: (g: GraphicProposal) => boolean
+): Project {
+  const graphicIds = new Set(project.clips.filter((c) => taken(c) && c.graphic).map((c) => c.id))
+  const removed = project.clips.filter((c) => taken(c) || (c.forGraphic !== undefined && graphicIds.has(c.forGraphic)))
+  const proposals = project.graphicProposals?.filter((g) => !proposalTaken(g))
   const proposalsGone = proposals !== undefined && proposals.length !== project.graphicProposals!.length
   if (removed.length === 0 && !proposalsGone) return project
 
@@ -804,4 +856,220 @@ export function resoundGraphic(
   }
   if (!pick) return { project, notes: [] }
   return soundsFor(project, [pick.id], CLIPS_GRAPHIC_RULE, sounds, options.newId ?? defaultId)
+}
+
+/* ------------------------------------------- Find, Keep, Drop, the Speaker */
+
+/*
+ * The pure half of the store's graphics actions (docs/CLIPS.md §6.6 "Store
+ * actions", §6.9, §6.14), so the store's findGraphics, keepGraphic,
+ * dropGraphic and setSpeaker and the rebake arms call code a node test runs.
+ */
+
+/**
+ * Find (and Find again) landing on one footage clip, in one returned project
+ * (§6.6, "Find again replaces the clip's 'clips.graphic' graphics, their
+ * sounds and its pending proposals, in one undo step"): `clearClipGraphics`,
+ * then `resoundAfterClear` (a graphic of another rule on the clip, Direct's,
+ * gets back a sound slot the old run held), then `applyGraphics` under
+ * `CLIPS_GRAPHIC_RULE` with `clipId` covered (the lower third). `cleared` is
+ * the project `applyGraphics` was given, for `graphicDropsOf`.
+ */
+export function replaceClipGraphics(
+  project: Project,
+  clipId: string,
+  kept: KeptGraphic[],
+  ctx: GraphicsApplyContext
+): { project: Project; problems: Problem[]; clipIds: string[]; cleared: Project } {
+  const cleared = clearClipGraphics(project, clipId)
+  const resounded = cleared === project ? cleared : resoundAfterClear(project, cleared, ctx.sounds ?? [], { newId: ctx.newId }).project
+  const applied = applyGraphics(resounded, kept, [clipId], CLIPS_GRAPHIC_RULE, ctx)
+  return { ...applied, cleared: resounded }
+}
+
+/** Keep on a proposal that is no longer listed (not §6's words; the plan is silent). */
+export const PROPOSAL_GONE_NOTE = 'that graphic is no longer waiting for a check'
+
+/**
+ * Keep (docs/CLIPS.md §6.6 "Proposals live in", §6.9): ONE `GraphicProposal`
+ * placed "through §6.9's placement and budget at that moment", by the steps
+ * `applyGraphics` lands a graphic with, not a copy of them: the beats and
+ * the seconds again on its footage clip as it is now (the proposal's
+ * `grounding` holds its beat words; a `GraphicProposal` holds no start), the
+ * budget (`applyBudget`) under the proposal's own rule, placement, the
+ * subject at onset, the lane, the graphic clip, then its sounds (as
+ * `resoundGraphic` places them). The placed graphic carries no `proposal`:
+ * it is checked. The proposal leaves `Project.graphicProposals`.
+ *
+ * Refused (the budget, no free third, no subject for a callout, no lane, the
+ * clip gone or retimed, the proposal gone, another rate): `refused` is the
+ * reason, the project comes back as the same object and the proposal stays
+ * listed.
+ */
+export function keepProposal(
+  project: Project,
+  proposalId: string,
+  ctx: GraphicsApplyContext
+): { project: Project; problems: Problem[]; clipIds: string[]; refused: string | null } {
+  const refuse = (reason: string): { project: Project; problems: Problem[]; clipIds: string[]; refused: string } => ({ project, problems: [], clipIds: [], refused: reason })
+  const fps = project.settings.fps
+  if (ctx.fps !== fps) return refuse(fpsMismatchNote(ctx.fps, fps))
+  const proposal = project.graphicProposals?.find((g) => g.id === proposalId)
+  if (!proposal) return refuse(PROPOSAL_GONE_NOTE)
+  const clip = project.clips.find((c) => c.id === proposal.clipId)
+  if (!clip) return refuse(NO_CLIP_NOTE)
+  const { spec } = proposal
+  const kept: KeptGraphic = {
+    clipId: proposal.clipId,
+    assetId: spec.grounding?.assetId ?? clip.assetId,
+    candidate: {
+      sentence: spec.grounding?.sentence ?? '',
+      data: spec.data,
+      bound: [],
+      beatWords: [...(spec.grounding?.words ?? [])],
+      why: '',
+      source: 'model'
+    }
+  }
+  const one = timeOne(project, '$', kept, proposal.rule)
+  if ('retimed' in one) return refuse(RETIMED_NOTE)
+  if ('reason' in one) return refuse(one.reason)
+  const budget = applyBudget(project, [one.timed])
+  if (budget.dropped.length > 0) return refuse(budget.dropped[0].reason)
+  let refusal: string | null = null
+  const newId = ctx.newId ?? defaultId
+  const landed = landKept(project, budget.kept, proposal.rule, newId, (_t, reason) => {
+    refusal = reason
+  })
+  if (refusal !== null || landed.clipIds.length === 0) return refuse(refusal ?? NO_CLIP_NOTE)
+  const sounded = soundsFor(landed.project, landed.clipIds, proposal.rule, ctx.sounds ?? [], newId)
+  const next: Project = {
+    ...sounded.project,
+    graphicProposals: (sounded.project.graphicProposals ?? []).filter((g) => g.id !== proposalId)
+  }
+  return { project: next, problems: sounded.notes.map((message) => ({ path: '$.sounds', message })), clipIds: landed.clipIds, refused: null }
+}
+
+/**
+ * Drop (docs/CLIPS.md §6.6, §6.14): on a graphic clip, the graphic, its drawn
+ * asset when nothing else uses it, and its sounds with the files the app
+ * brought for them when unused (`removeWithFollowers`), then the other
+ * graphics' sounds on its footage clip put back under the cap
+ * (`resoundAfterClear`). Nothing else: another graphic's sounds, your
+ * imported files, the footage. On a proposal's id, the proposal leaves
+ * `Project.graphicProposals` (Drop on a proposal "removes it"). The same
+ * project comes back for an id that is neither.
+ */
+export function withoutGraphic(
+  project: Project,
+  id: string,
+  sounds: SoundPack,
+  options: { newId?: (prefix: string) => string } = {}
+): { project: Project; notes: string[] } {
+  if (project.graphicProposals?.some((g) => g.id === id)) {
+    return { project: { ...project, graphicProposals: project.graphicProposals.filter((g) => g.id !== id) }, notes: [] }
+  }
+  const g = project.clips.find((c) => c.id === id)
+  if (!g?.graphic) return { project, notes: [] }
+  const removed = removeWithFollowers(project, [id])
+  const unused = drawsItself(g) && !removed.clips.some((c) => c.assetId === g.assetId)
+  const after = unused ? { ...removed, assets: removed.assets.filter((a) => a.id !== g.assetId) } : removed
+  return resoundAfterClear(project, after, sounds, options)
+}
+
+/** The note when a graphic's auto third cannot be chosen again after an aspect change or a reframe (not §6's words). */
+export function keptPlaceNote(d: GraphicData, reason: string): string {
+  return `${nameOf(d)} keeps its old place — ${reason}`
+}
+
+/**
+ * §6.9's `place.auto` recompute, on an aspect change or a reframe: a graphic
+ * whose place is auto is placed again (`placeGraphic`, which reads the
+ * subject's overlap over the span) over its footage clip as the project now
+ * is. A box you dragged (`place.auto` false) is kept. The footage clip is
+ * `footageOf`'s (the clip the subject names, else one of the grounding's
+ * asset, else the bottom-most under the graphic's first frame), as the
+ * sounds read it: a graphic stores no footage clip id when no subject was
+ * taken.
+ *
+ * The subject at onset is kept as it was taken (beyond the plan's words,
+ * which say the place is recomputed "with the subject at onset"): it is a
+ * box in SOURCE units read once at onset (§6.9 step 4), which `graphicTargetsAt`
+ * maps through the crop as it now is, so an aspect change or a reframe does
+ * not move it; only whether the face is still on screen there could change,
+ * and that is not read again here.
+ *
+ * When no third is left, it keeps its old place with `keptPlaceNote`,
+ * rather than vanishing. `version` goes up when the place changed;
+ * otherwise the same project comes back.
+ */
+export function placeAgain(project: Project, graphicId: string): { project: Project; note: string | null } {
+  const g = project.clips.find((c) => c.id === graphicId)
+  const spec = g?.graphic
+  if (!g || !spec || !spec.place.auto) return { project, note: null }
+  const footage = footageOf(project, g, spec)
+  if (footage === null) return { project, note: null }
+  const canvas = { width: project.settings.width, height: project.settings.height }
+  const place = placeGraphic(project, footage, g.start, g.duration, spec.data.template, canvas)
+  if (!place) return { project, note: keptPlaceNote(spec.data, NO_FREE_THIRD_NOTE) }
+  if (place.auto && place.third === spec.place.third) return { project, note: null }
+  const graphic: GraphicSpec = { ...spec, place, version: spec.version + 1 }
+  return { project: { ...project, clips: project.clips.map((c) => (c.id === graphicId ? { ...c, graphic } : c)) }, note: null }
+}
+
+/**
+ * The Transcript tile's Speaker (docs/CLIPS.md §6.6 "Speaker", §16.31):
+ * `MediaAsset.speaker` set to `name` (a name of only spaces is no Speaker:
+ * the field goes), and every graphic of that asset (its `grounding`'s asset,
+ * else its footage clip's) that drew the OLD name drawn with the new one:
+ * a lower third's `name` that was the old Speaker, and a said quote's
+ * `speaker` that was `quoteSpeakerFor`'s old answer (the Speaker, else a
+ * link's channel) becomes its new answer. Each changed graphic's `version`
+ * goes up; `changed` lists them for the store's rebake.
+ *
+ * An emptied Speaker leaves an existing lower third as it is (beyond the
+ * plan's words: §6.6 says only that a lower third waits for a name; one
+ * already placed keeps the name it drew, and Drop takes it), while a quote
+ * goes to the channel, or ''. The same project comes back when nothing
+ * changes.
+ */
+export function withSpeaker(project: Project, assetId: string, name: string): { project: Project; changed: string[] } {
+  const asset = project.assets.find((a) => a.id === assetId)
+  if (!asset) return { project, changed: [] }
+  const speaker = name.trim() === '' ? undefined : name
+  if (speaker === asset.speaker) return { project, changed: [] }
+  const { speaker: _old, ...rest } = asset
+  const nextAsset: MediaAsset = speaker === undefined ? rest : { ...rest, speaker }
+  const oldLower = asset.speaker !== undefined && asset.speaker.trim() !== '' ? asset.speaker : undefined
+  const oldQuote = quoteSpeakerOf(asset)
+  const newQuote = quoteSpeakerOf(nextAsset)
+  const changed: string[] = []
+  const clips = project.clips.map((c) => {
+    const spec = c.graphic
+    if (!spec) return c
+    const owner = spec.grounding?.assetId ?? project.clips.find((f) => f.id === footageOf(project, c, spec))?.assetId
+    if (owner !== assetId) return c
+    const d = spec.data
+    let data: GraphicData | null = null
+    if (d.template === 'lower-third' && speaker !== undefined && oldLower !== undefined && d.name === oldLower) data = { ...d, name: speaker }
+    if (d.template === 'quote' && d.kind !== 'social' && d.speaker === oldQuote && oldQuote !== newQuote) data = { ...d, speaker: newQuote }
+    if (!data) return c
+    changed.push(c.id)
+    return { ...c, graphic: { ...spec, data, version: spec.version + 1 } }
+  })
+  return {
+    project: { ...project, assets: project.assets.map((a) => (a.id === assetId ? nextAsset : a)), clips: changed.length > 0 ? clips : project.clips },
+    changed
+  }
+}
+
+/**
+ * The name a said quote draws as its speaker for an asset (§6.6 "Speaker",
+ * §16.31): its Speaker when it holds more than spaces, else a link's channel,
+ * else ''. director/run.ts `quoteSpeakerFor` returns this; it lives here so
+ * `withSpeaker` reads the same rule without graphics/ importing the run.
+ */
+export function quoteSpeakerOf(asset: Pick<MediaAsset, 'speaker' | 'credit'>): string {
+  if (asset.speaker !== undefined && asset.speaker.trim() !== '') return asset.speaker
+  return asset.credit?.source === 'link' ? (asset.credit.author ?? '') : ''
 }

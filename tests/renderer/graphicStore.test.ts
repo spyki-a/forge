@@ -407,10 +407,13 @@ describe('the arms', () => {
     // A second shot with a path of its own, on v2 past the graphics, so `rebakeFollowed(['broll'])` reaches the arm.
     const broll: MediaAsset = { ...footage, id: 'broll', path: '/media/broll.mp4', name: 'broll' }
     start({ assets: [footage, broll], clips: [shot, { ...shot, id: 'b', assetId: 'broll', trackId: 'v2', start: 300, duration: 300 }] })
-    const named = await added({ subject: { clipId: 'b', box: { x: 0.1, y: 0.2, width: 0.2, height: 0.3 }, ms: 1000 } })
-    const under = await added()
+    // In the third §6.9 would choose over the talk shot (a counter, no captions, no track: the middle), so the
+    // reframe's place.auto recompute (lane T2b) moves none of them and only the onset target decides the redraw.
+    const middle = { auto: true as const, third: 'middle' as const }
+    const named = await added({ place: middle, subject: { clipId: 'b', box: { x: 0.1, y: 0.2, width: 0.2, height: 0.3 }, ms: 1000 } })
+    const under = await added({ place: middle })
     // §6.9's "not taken" (subject: null): no target, so nothing beneath to re-follow, the caption track's clip not read.
-    const none = await added({ subject: null })
+    const none = await added({ place: middle, subject: null })
     expect(bake.asks.find((a) => a.clipId === none)!.subject).toBeNull()
     expect(clipOf(named).trackId).toBe('v2')
     bake.asks = []

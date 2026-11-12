@@ -19,7 +19,7 @@ import { subjectTrackOf } from '../reframe/frameMap'
 import { MAX_CANDIDATES } from './menu'
 import { GRAPHIC_SPACING, type GraphicCandidate, type GraphicDrop, type GraphicTemplateId, type KeptGraphic } from '../graphics/template'
 import { validateBaseline, validateGraphics, type AnswerGraphic } from './validateGraphics'
-import { drawnStrings } from '../graphics/apply'
+import { drawnStrings, quoteSpeakerOf } from '../graphics/apply'
 import { GRAPHICS_PASS } from './schemaGraphics'
 
 /**
@@ -509,9 +509,7 @@ export function graphicsWindowName(menu: Pick<GraphicsMenu, 'sentences'>): strin
  * (`lowerThirdFor`), so it is never made from a channel without your press.
  */
 export function quoteSpeakerFor(asset: Pick<MediaAsset, 'speaker' | 'credit'> | undefined): string {
-  if (!asset) return ''
-  if (asset.speaker !== undefined && asset.speaker.trim() !== '') return asset.speaker
-  return asset.credit?.source === 'link' ? (asset.credit.author ?? '') : ''
+  return asset ? quoteSpeakerOf(asset) : ''
 }
 
 /**

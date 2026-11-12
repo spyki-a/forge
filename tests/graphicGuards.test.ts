@@ -277,7 +277,8 @@ describe('lane C’s wiring: every per-kind arm has its graphic arm', () => {
     const followed = body(store, 'rebakeFollowed: async (assetIds) => {', 'audition: null,')
     // The clip the targets read: `spec.subject`'s, or the caption track's under the graphic's first frame.
     expect(followed).toContain("subject ? (project.clips.find((c) => c.id === subject.clipId) ?? null) : captionSourceClip(project, clip.start)")
-    expect(followed).toContain('if (under && assetIds.includes(under.assetId)) await get().rebakeGraphic(clip.id)')
+    // Lane T2b: or when the reframe's place.auto recompute moved it (placeAgainQuietly).
+    expect(followed).toContain('if ((under && assetIds.includes(under.assetId)) || moved) await get().rebakeGraphic(clip.id)')
     const paste = body(store, 'placeCopies: async (board, frame) => {', 'revealClip: (clipId) => {')
     expect(paste).toContain('else if (from.graphic) await get().rebakeGraphic(clipId)')
   })
