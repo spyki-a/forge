@@ -10,6 +10,7 @@ import {
   claimTokensOf,
   claimsOf,
   clauseAt,
+  marksOf,
   numbersIn,
   type CanonNumber,
   type Claim,
@@ -1719,5 +1720,20 @@ describe("rule 8's marks and a list's row order: the false graphics piece 4's cr
     expect(kept(v)).toEqual([])
     expect(droppedOf(v)).toContainEqual({ path: '$.graphics[0].items[0].label', message: "graphic dropped: 'pack bag' is not said in the order the list draws it in s00" })
     expect(kept(one1(said, steps(['charge batteries', 'pack bag'])))).toHaveLength(1)
+  })
+})
+
+describe("a sentence's own end mark is no drawn mark: the danda (piece 5's critic)", () => {
+  it("a whole Hindi sentence quoted verbatim, ending in '।' or '॥', grounds as a whole Telugu or English one does", () => {
+    for (const end of ['।', '॥']) {
+      const said = `हमने इस साल चालीस ग्राहक जोड़े${end}`
+      const t = talk([said], { language: 'hi' })
+      const grounding = { assetId: t.assetId, sentence: 's00', words: [] }
+      expect(checkGraphicData({ template: 'quote', kind: 'said', text: said, speaker: '' }, def('quote'), grounding, t), end).toEqual([])
+      expect(marksOf(`जोड़े${end}`, 'words'), end).toEqual([])
+      expect(marksOf(`जोड़े${end}`, 'verbatim'), end).toEqual([])
+    }
+    // A mark the sentence does not end in is still drawn and refused.
+    expect(marksOf('जोड़े»', 'words')).toEqual(['»'])
   })
 })

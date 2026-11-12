@@ -5,7 +5,8 @@ import type { Problem } from '@shared/director/conforms'
 // calls per graphic (§6.7), so the dock and the validator cannot check differently,
 // and tests/renderer/graphicPanel.test.tsx spies on this very binding.
 import * as validator from '@shared/director/validateGraphics'
-import { quoteSpeakerOf } from '@shared/graphics/apply'
+import { drawnText, quoteSpeakerOf } from '@shared/graphics/apply'
+import { graphicSeconds } from '@shared/graphics/beats'
 import { placeGraphic } from '@shared/graphics/place'
 import { footageOf } from '@shared/graphics/sound'
 import { GRAPHIC_TEMPLATES, type FieldMode, type GraphicData, type GraphicSpec, type TemplateDef } from '@shared/graphics/template'
@@ -37,7 +38,9 @@ import { useEditor } from '../store'
  *   or a box you dragged, with a way back to auto.
  *
  * No Depth choice (phase 3). A graphic whose transcript is not in the project
- * shows its fields unchecked with one note.
+ * shows its fields unchecked with one note; one with no grounding at all, with
+ * its own. Under Seconds, a warning (never a block) when the length is under
+ * §6.2's reading hold for its beats and what it draws (`graphicSeconds`).
  *
  * No hook but the store's, so a test can call it as a function (as
  * TranscriptGraphics): every text field is uncontrolled, saved on leaving it
@@ -57,8 +60,19 @@ export const CONNECTOR = 'Connector'
 export const SHAPE = 'Shape'
 /** The one note for a graphic whose words cannot be checked (not the plan's words). */
 export const UNCHECKED_NOTE = 'Its transcript is not in the project, so these words are not checked'
+/** The one note for a graphic with checked fields and no grounding at all: it is tied to no words (not the plan's words). */
+export const NO_GROUNDING_NOTE = 'It is not tied to anything said, so these words are not checked'
 /** Back to auto, greyed: §6.9 finds no free third (not the plan's words). */
 export const NO_FREE_THIRD_TITLE = 'No third is free of the captions here'
+/** Back to auto, greyed: no footage clip under the graphic to place it over (not the plan's words). */
+export const NO_FOOTAGE_TITLE = 'No footage is under it to place it over'
+
+/** Under Seconds, never a block: shorter than §6.2's reading hold, its last beat plus TAIL_S and the time to read it (not the plan's words). */
+export function tooShortNote(need: number | null, max: number): string {
+  return need === null
+    ? `It needs more than ${max} s for its beats and to be read`
+    : `It needs ${Math.ceil(need * 10 - 1e-6) / 10} s for its beats and to be read`
+}
 
 /** The on-screen name of each field the panel shows (not the plan's words but Speaker and Role). */
 export const FIELD_LABELS: Readonly<Record<string, string>> = Object.freeze({
@@ -198,7 +212,8 @@ export function GraphicPanel({ clip }: { clip: Clip }): ReactNode {
   // §6.6: re-checked on every edit, never a block. Only a template with a grounded, verbatim or index field.
   const problems: Problem[] =
     checks && transcript ? validator.checkGraphicData(data, def, spec.grounding, transcript, speaker === '' ? [] : [speaker]) : []
-  const unchecked = checks && !transcript
+  const unchecked = checks && spec.grounding !== undefined && !transcript
+  const ungrounded = checks && spec.grounding === undefined
   const shown = new Set(fields.map((f) => f.path))
   const general = problems.filter((p) => !shown.has(pathOf(p)))
   const save = (next: GraphicData): void => void setGraphic(clip.id, { data: next })
@@ -215,6 +230,8 @@ export function GraphicPanel({ clip }: { clip: Clip }): ReactNode {
           id={id}
           key={`${owner.id}:${stored}`}
           defaultValue={stored}
+          // A link's channel, which a said quote draws when the asset has no Speaker (quoteSpeakerOf).
+          placeholder={stored.trim() === '' && speaker !== '' ? speaker : undefined}
           onBlur={(e) => {
             if (e.target.value.trim() !== stored.trim()) setSpeaker(owner.id, e.target.value)
           }}
@@ -277,6 +294,9 @@ export function GraphicPanel({ clip }: { clip: Clip }): ReactNode {
   const choice = GRAPHIC_CHOICES[data.template]
   const chosen = choice ? valueAt(data, choice.field) : null
   const { min, max } = def.seconds
+  // §6.2's reading hold over what is drawn now: a warning under Seconds when shorter, never a block.
+  const need = graphicSeconds(def, spec.beats, drawnText(data))
+  const tooShort = need === null || spec.seconds < need - 1e-6 ? tooShortNote(need, max) : null
   const footageId = footageOf(project, clip, spec)
   const auto =
     spec.place.auto || footageId === null
@@ -287,6 +307,7 @@ export function GraphicPanel({ clip }: { clip: Clip }): ReactNode {
     <div data-graphic-panel="" className="space-y-2 border-t border-ink-850 pt-2">
       {heading}
       {unchecked && <p className="text-[10px] leading-snug text-ink-500">{UNCHECKED_NOTE}</p>}
+      {ungrounded && <p className="text-[10px] leading-snug text-ink-500">{NO_GROUNDING_NOTE}</p>}
       {general.map((w, i) => (
         <p key={i} data-warning-for="" className="text-[10px] leading-snug text-amber-400">
           {w.message}
@@ -340,6 +361,11 @@ export function GraphicPanel({ clip }: { clip: Clip }): ReactNode {
           {min}–{max} s
         </span>
       </div>
+      {tooShort && (
+        <p data-warning-for="seconds" className="text-[10px] leading-snug text-amber-400">
+          {tooShort}
+        </p>
+      )}
 
       <div className="flex items-center gap-2">
         <span className="w-16 shrink-0 text-[10px] text-ink-500">{PLACE}</span>
@@ -355,7 +381,7 @@ export function GraphicPanel({ clip }: { clip: Clip }): ReactNode {
             <button
               type="button"
               disabled={auto === null}
-              title={auto === null ? NO_FREE_THIRD_TITLE : undefined}
+              title={footageId === null ? NO_FOOTAGE_TITLE : auto === null ? NO_FREE_THIRD_TITLE : undefined}
               onClick={() => {
                 if (auto) void setGraphic(clip.id, { place: auto })
               }}

@@ -583,7 +583,8 @@ const VALUE_LEAD = /^[-−–]?[$€£₹]?[-−–]?$/u
 const VALUE_TRAIL = /^%?\.?$/u
 /** A grounded or verbatim word's edges: opening brackets and quotes, one currency sign; a %, closing marks, plain clause punctuation. */
 const WORD_LEAD = /^[(["“‘']*[$€£₹]?$/u
-const WORD_TRAIL = /^%?[)\]"”’'.,;:…]*$/u
+// The danda and double danda too: a Hindi sentence's own full stop, as BREAK_CHARS has them (piece 5's critic).
+const WORD_TRAIL = /^%?[)\]"”’'.,;:…।॥]*$/u
 /** What a verbatim word may end in when the stretch's word at that place ends in it too (`marksUnsaid`). */
 export const SAID_MARKS = /[?!]/u
 /** A word of a field that is a dash alone, plain clause punctuation (rule 7's `—`). */

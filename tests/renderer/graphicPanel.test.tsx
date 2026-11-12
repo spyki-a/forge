@@ -275,8 +275,10 @@ describe('the dock’s graphic panel (§6.6)', () => {
         // The panel as it draws after the edit: the check ran on the edited data, the template, the grounding and the transcript.
         panel('g')
         expect(spy, `${template} ${path}`).toHaveBeenCalledTimes(1)
-        const [checkedData, checkedDef, grounding, transcript] = spy.mock.calls[0]
+        const [checkedData, checkedDef, grounding, transcript, speakers] = spy.mock.calls[0]
         expect(checkedData).toEqual(dataOf('g'))
+        // The asset's Speaker as the said quote's speaker, as settleGraphics passes it (piece 2).
+        expect(speakers, `${template} ${path}`).toEqual(['Ana'])
         expect(checkedDef).toBe(def)
         expect(grounding).toEqual(clipById('g').graphic!.grounding)
         expect(transcript).toBe(project().transcripts.talk)
@@ -320,10 +322,9 @@ describe('the dock’s graphic panel (§6.6)', () => {
   it('user fields are never checked: a lower third’s Role, a social card’s fields', () => {
     const spy = vi.spyOn(validator, 'checkGraphicData')
     start([graphicClip('lt', FIXTURES['lower-third'])])
-    expect(shownFields('lt')).toEqual([
-      ['name', 'speaker'],
-      ['role', 'user']
-    ])
+    expect(shownFields('lt')).toContainEqual(['name', 'speaker'])
+    expect(shownFields('lt')).toContainEqual(['role', 'user'])
+    expect(shownFields('lt').filter(([, mode]) => ['grounded', 'verbatim', 'index'].includes(mode))).toEqual([])
     expect(field('lt', 'role').label).toBe(GP.ROLE)
     const before = project()
     edit('lt', 'role', 'Photographer?!')
@@ -335,7 +336,8 @@ describe('the dock’s graphic panel (§6.6)', () => {
 
     const social: GraphicData = { template: 'quote', kind: 'social', text: 'Never said 99', name: 'Someone', handle: '@x', date: '2026', link: 'https://example.invalid' }
     start([graphicClip('sq', social)])
-    expect(shownFields('sq').map(([, mode]) => mode)).toEqual(['user', 'user', 'user', 'user', 'user'])
+    expect(shownFields('sq').map(([p]) => p)).toEqual(expect.arrayContaining(['text', 'name', 'handle', 'date', 'link']))
+    expect(shownFields('sq').filter(([, mode]) => mode !== 'user')).toEqual([])
     edit('sq', 'text', 'Not in any transcript 1234')
     expect((dataOf('sq') as { text: string }).text).toBe('Not in any transcript 1234')
     panel('sq')
@@ -372,6 +374,11 @@ describe('the dock’s graphic panel (§6.6)', () => {
     expect(name.label).toBe(GP.SPEAKER_FIELD)
     expect(name.input.props.defaultValue).toBe('Ana')
     expect(field('q', 'speaker').input.props.defaultValue).toBe('Ana')
+    // The said quote is checked with the asset's Speaker as its speaker: no false "not who said it".
+    const spy = vi.spyOn(validator, 'checkGraphicData')
+    expect(field('q', 'speaker').warnings).toEqual([])
+    expect(spy.mock.calls.map((c) => c[4])).toEqual([['Ana']])
+    spy.mockRestore()
     const before = project()
     edit('lt', 'name', 'Bea')
     expect(calls).toEqual([['talk', 'Bea']])
@@ -380,9 +387,30 @@ describe('the dock’s graphic panel (§6.6)', () => {
     expect(dataOf('lt')).toEqual({ template: 'lower-third', name: 'Bea', role: '' })
     expect((dataOf('q') as { speaker: string }).speaker).toBe('Bea')
     undoesTo(before)
-    // Leaving it unchanged calls nothing.
+    // Leaving it unchanged calls nothing, spaces around it included (the Speaker is held trimmed).
     edit('lt', 'name', 'Ana')
+    edit('lt', 'name', '  Ana ')
     expect(calls).toEqual([['talk', 'Bea']])
+  })
+
+  it('with no Speaker on the asset the check is given no speaker', () => {
+    start([graphicClip('q', { template: 'quote', text: 'We signed 40 clients', speaker: '' })], { speaker: '' })
+    const spy = vi.spyOn(validator, 'checkGraphicData')
+    expect(field('q', 'speaker').input.props.defaultValue).toBe('')
+    expect(spy.mock.calls.map((c) => c[4])).toEqual([[]])
+  })
+
+  it('a link asset with no Speaker shows the channel a said quote draws as the Speaker field’s placeholder', () => {
+    start([graphicClip('q', { template: 'quote', text: 'We signed 40 clients', speaker: 'Chan' })], { speaker: '' })
+    useEditor.setState({
+      project: { ...project(), assets: project().assets.map((a) => (a.id === 'talk' ? { ...a, credit: { source: 'link' as const, title: 'A talk', author: 'Chan', pageUrl: 'https://example.invalid/v', line: 'A talk — Chan, https://example.invalid/v', attributionRequired: false, fetchedAt: '2026-11-11T00:00:00Z' } } : a)) }
+    })
+    const input = field('q', 'speaker').input
+    expect(input.props.defaultValue).toBe('')
+    expect(input.props.placeholder).toBe('Chan')
+    // With a Speaker set there is no placeholder.
+    start([graphicClip('q', { template: 'quote', text: 'We signed 40 clients', speaker: 'Ana' })])
+    expect(field('q', 'speaker').input.props.placeholder).toBeUndefined()
   })
 
   it('a lower third’s Role is pre-filled, at creation, from the asset’s most recent lower third', () => {
@@ -401,14 +429,16 @@ describe('the dock’s graphic panel (§6.6)', () => {
   })
 
   it('the seconds stay within the template’s bounds, and a seconds edit leaves the sounds on their beats, in one undo step', () => {
-    // A counter whose tick is at 3.5 s: shortened to 2.5 s the tick would be past its end.
-    const g = graphicClip('g', FIXTURES.counter, { beats: [3.5], seconds: 4 })
+    // A counter whose tick is on its beat at 1 s: 30 frames into the clip, less the file's peak.
+    const g = graphicClip('g', FIXTURES.counter, { beats: [1], seconds: 4 })
     start([{ ...g, duration: FPS * 4 }])
     const pack = soundPackFor(useCatalog.getState().catalog, '/lib')
     useEditor.setState({ project: resoundGraphic(project(), 'g', pack).project })
-    const sounds = (p: Project) =>
-      p.clips.filter((c) => c.forGraphic === 'g').map((c) => ({ start: c.start, duration: c.duration, inPoint: c.inPoint, assetId: c.assetId }))
-    expect(sounds(project())).toHaveLength(1)
+    const sounds = (p: Project) => p.clips.filter((c) => c.forGraphic === 'g').map((c) => ({ start: c.start, duration: c.duration, inPoint: c.inPoint, assetId: c.assetId }))
+    const placed = sounds(project())
+    expect(placed).toHaveLength(1)
+    // The tick's start, written down: the beat's frame (1 s × 30) less the file's peak frames (the catalog's clock has no peak: 0).
+    expect(placed[0].start).toBe(0 + 30)
     const seconds = (): Host => panel('g').find((h) => h.type === 'input' && h.props.id === 'forge-graphic-seconds')!
     const type = (value: string): void => (seconds().props.onBlur as (e: { target: { value: string } }) => void)({ target: { value } })
     expect([seconds().props.min, seconds().props.max]).toEqual([2, 4])
@@ -416,21 +446,39 @@ describe('the dock’s graphic panel (§6.6)', () => {
     type('2.5')
     expect(clipById('g').graphic!.seconds).toBe(2.5)
     expect(clipById('g').duration).toBe(75)
-    // The sounds are those the graphic's beats give at its new length: placed afresh, the same.
-    const fresh = resoundGraphic(project(), 'g', pack).project
-    expect(sounds(project())).toEqual(sounds(fresh))
-    expect(sounds(project())).not.toEqual(sounds(before))
-    for (const s of project().clips.filter((c) => c.forGraphic === 'g')) expect(s.start + s.duration).toBeLessThanOrEqual(clipById('g').start + clipById('g').duration)
+    // The beat is inside the new length: its sound is still there, on the same frame.
+    expect(sounds(project())).toEqual(placed)
+    expect(allWarnings('g')).toEqual([])
     undoesTo(before)
-    // Out of bounds: kept to them, never refused.
+    // Out of bounds: kept to them, never refused; a tenth of a second at most.
     type('99')
     expect(clipById('g').graphic!.seconds).toBe(4)
     type('0')
     expect(clipById('g').graphic!.seconds).toBe(2)
+    type('2.53')
+    expect(clipById('g').graphic!.seconds).toBe(2.5)
     // A cleared field is no length: nothing changes.
     const at = project()
     type('')
     expect(project()).toBe(at)
+  })
+
+  it('a seconds edit that cuts a beat off drops that beat’s sound, and warns (never blocks) under Seconds that it is too short', () => {
+    // Its tick at 3 s, past a 2.5 s end; §6.2's hold for it is 3 + TAIL_S = 3.8 s.
+    const g = graphicClip('g', FIXTURES.counter, { beats: [3], seconds: 4 })
+    start([{ ...g, duration: FPS * 4 }])
+    const pack = soundPackFor(useCatalog.getState().catalog, '/lib')
+    useEditor.setState({ project: resoundGraphic(project(), 'g', pack).project })
+    expect(project().clips.filter((c) => c.forGraphic === 'g').map((c) => c.start)).toEqual([90])
+    expect(allWarnings('g')).toEqual([])
+    const seconds = panel('g').find((h) => h.type === 'input' && h.props.id === 'forge-graphic-seconds')!
+    ;(seconds.props.onBlur as (e: { target: { value: string } }) => void)({ target: { value: '2.5' } })
+    expect(clipById('g').graphic!.seconds).toBe(2.5)
+    expect(project().clips.filter((c) => c.forGraphic === 'g')).toEqual([])
+    const warned = panel('g').filter((h) => h.type === 'p' && h.props['data-warning-for'] === 'seconds').map(text)
+    expect(warned).toEqual([GP.tooShortNote(3.8, 4)])
+    expect(warned).toEqual(['It needs 3.8 s for its beats and to be read'])
+    expect(panel('g').find((h) => h.type === 'input' && h.props.id === 'forge-graphic-seconds')!.props.disabled).toBeUndefined()
   })
 
   it('the place: an auto third, or a box you dragged with a way back to auto (one undo step)', () => {
@@ -481,5 +529,65 @@ describe('the dock’s graphic panel (§6.6)', () => {
     // A lower third has nothing to check: no note.
     start([graphicClip('lt', FIXTURES['lower-third'])], { transcript: false })
     expect(panel('lt').filter((h) => h.type === 'p' && text(h) === GP.UNCHECKED_NOTE)).toHaveLength(0)
+  })
+
+  it('a problem that names no shown field is shown under the heading', () => {
+    // What the check returns for '$', for the list as a whole ('$.items': "the steps are not a valid tree") or for a path no field shows.
+    start([graphicClip('s', FIXTURES.steps)])
+    vi.spyOn(validator, 'checkGraphicData').mockReturnValue([
+      { path: '$', message: 'whole' },
+      { path: '$.items', message: 'the steps are not a valid tree' },
+      { path: '$.sentence', message: 'gone' },
+      { path: '$.items[0].label', message: 'a field’s own' }
+    ])
+    expect(panel('s').filter((h) => h.type === 'p' && h.props['data-warning-for'] === '').map(text)).toEqual(['whole', 'the steps are not a valid tree', 'gone'])
+    expect(field('s', 'items[0].label').warnings).toEqual(['a field’s own'])
+  })
+
+  it('Back to auto, greyed with no footage under the graphic, says so (not that captions fill the thirds)', () => {
+    const box = { auto: false as const, box: { x: 0.1, y: 0.1, width: 0.5, height: 0.2 } }
+    // Past the end of the only footage clip ('shot', 0 to 2100).
+    start([{ ...graphicClip('g', FIXTURES.counter, { place: box }), start: 3000 }])
+    const back = buttonsOf('g', GP.BACK_TO_AUTO)
+    expect(back).toHaveLength(1)
+    expect(back[0].props.disabled).toBe(true)
+    expect(back[0].props.title).toBe(GP.NO_FOOTAGE_TITLE)
+    expect(back[0].props.title).not.toBe(GP.NO_FREE_THIRD_TITLE)
+    // Over footage with a free third: enabled, no title.
+    start([graphicClip('g', FIXTURES.counter, { place: box })])
+    expect(buttonsOf('g', GP.BACK_TO_AUTO)[0].props.title).toBeUndefined()
+  })
+
+  it('a graphic with checked fields and no grounding at all shows its own note, not the missing-transcript one', () => {
+    const spy = vi.spyOn(validator, 'checkGraphicData')
+    start([graphicClip('g', FIXTURES.counter, { grounding: undefined })])
+    const notes = panel('g').filter((h) => h.type === 'p').map(text)
+    expect(notes).toContain(GP.NO_GROUNDING_NOTE)
+    expect(notes).not.toContain(GP.UNCHECKED_NOTE)
+    expect(spy).not.toHaveBeenCalled()
+    edit('g', 'value', '45')
+    expect((dataOf('g') as { value: string }).value).toBe('45')
+  })
+
+  it('the check runs on the grounding’s transcript, not the footage clip’s', () => {
+    const spy = vi.spyOn(validator, 'checkGraphicData')
+    start([graphicClip('g', FIXTURES.counter, { grounding: { assetId: 'talk2', sentence: 's00', words: [2] } })])
+    const t2 = talk('talk2', ['We signed 40 clients this year.'])
+    useEditor.setState({ project: { ...project(), assets: [...project().assets, footage('talk2')], transcripts: { ...project().transcripts, talk2: t2 } } })
+    panel('g')
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(spy.mock.calls[0][3]).toBe(t2)
+  })
+
+  it('an index is saved as a whole number; pressing the choice already chosen saves nothing', () => {
+    start([graphicClip('g', FIXTURES.keyword, { grounding: { assetId: 'talk', sentence: 's00', words: [1] } })])
+    edit('g', 'lit', '1.9')
+    expect((dataOf('g') as { lit: number }).lit).toBe(1)
+    start([graphicClip('s', FIXTURES.steps)])
+    const at = project()
+    const past = state().past.length
+    ;(buttonsOf('s', 'None')[0].props.onClick as () => void)()
+    expect(project()).toBe(at)
+    expect(state().past.length).toBe(past)
   })
 })
