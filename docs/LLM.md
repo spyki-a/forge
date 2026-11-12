@@ -317,7 +317,7 @@ app's: the validator, the beats, placement, the budget, the sounds.
 
 | file | what |
 |---|---|
-| `src/shared/director/run.ts` | `graphicsMenuFor` (the clip's shown sentences, capped at 30 words or 15 s, in windows of 24; the templates offered, `callout` only with a subject track; where the words came from); `settleGraphics`, one call per window, the SAME code for the app and the eval; `pairSettled` joins a run's windows; `decisionForGraphics` |
+| `src/shared/director/run.ts` | `graphicsMenuFor` (the clip's shown sentences, capped at 30 words or 15 s, in windows of 24; the templates offered, `callout` only with a subject track; where the words came from); `settleGraphics`, one call per window, the code the app runs and the eval (T4) is to call; `pairSettled` joins a run's windows; `decisionForGraphics` |
 | `src/shared/director/promptGraphics.ts` | one constant playbook; the user prompt is the SENTENCES table, the offered TEMPLATES, and the language line last (the spine's measured line for Telugu and Hindi) |
 | `src/shared/director/schemaGraphics.ts` | `graphicsSchema(menu, { constrained })`, flat, `reasoning` first, at most four graphics; constrained for the decoder (the menu's ids as enums, decoded lengths), unconstrained for the validator's shape check; 1817–1943 chars constrained, 1559 not; `maxTokensForGraphics` 850 |
 | `src/shared/director/ask.ts` | the retry's fix: on the OpenAI shape, where `think` is never sent, the retry adds "Answer with the JSON object only." |
@@ -328,16 +328,19 @@ app's: the validator, the beats, placement, the budget, the sounds.
 heard from a YouTube track or an unsure Whisper word is a proposal**, placed
 only when the user presses Keep. **The record** is one `graphics@1`
 `DecisionRecord` per Find or Direct run; its model is `{ id, runtime }`, or
-`baseline` when no model's answer was used, and nothing else of the model
+`{ id: 'baseline', runtime: 'none' }` when no model's answer was used in any
+window, and nothing else of the model
 object reaches it (no key, header or address).
 
 **Not built**: the baseline (`baselineGraphics`, §6.10) is a seam in
-`settleGraphics` that nothing fills yet, so with no model, or a rejected
-window, only the app's lower third lands; the eval block, which reads the
+`settleGraphics` that nothing fills yet, so a rejected window settles to no
+graphics while the other windows' land, and with no model, or every window
+rejected, only the app's lower third lands; the eval block, which reads the
 pass, is lane T4's. **No real model has been asked by a test**: every ask
 in the suite is injected. Whether LM Studio's strict `json_schema` takes
-this schema's `minItems: 0`, and how many tokens an answer needs, are the
-eval's first run (CLIPS §15 row 10). The detail, every choice and every
+this schema's `minItems: 0` is the eval's first run (CLIPS §15 row 10);
+`maxTokensForGraphics`' 850 is the plan's starting figure, which T4's eval
+recalibrates (CLIPS §6.6). The detail, every choice and every
 open item: CLIPS §6.6's T2b Built note, §6.7, §6.12.
 
 ---

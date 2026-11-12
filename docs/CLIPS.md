@@ -102,7 +102,9 @@
 > `MARKER_READY` stays false), and OUTPUT has a Graphics section (§6.5).
 > Nothing in the app makes a graphic clip yet: `addGraphicClip`'s caller
 > is phase 2's panel (§6.6, T2b's), and `applyGraphics` is a typed stub
-> (until T3, below).
+> (until T3, below; and until T2b, below: the dock's panel turned out to
+> edit a graphic and make none, and Find graphics and Direct make them
+> through `applyGraphics`).
 > Then **lane T2a, the validator** (§6.7), built 2026-11-11 in four
 > pieces, each read by two critics before its fixer and the next piece:
 > piece 1, `a29e8fa`, fix `1469cc5`; piece 2, `bac73ac`, fix `0c88a89`;
@@ -193,8 +195,9 @@
 > grounded, verbatim or index field is checked again after each edit,
 > with a warning that never blocks. An aspect change or a reframe places
 > `place.auto` graphics again. What it cannot do yet: **with no model, or
-> a window's answer rejected, only the lower third lands** (with a
-> Speaker), and the tile says "No model’s answer was used in this run":
+> every window's answer rejected, only the lower third lands** (with a
+> Speaker), and the tile says "No model’s answer was used in this run";
+> a rejected window among answered ones loses only its own graphics:
 > `settleGraphics`' baseline seam is empty until T4's `baselineGraphics`.
 > **No real model has been asked by any test**: every ask in the suite is
 > injected, so the pass has never run against Gemma or any model; the
@@ -10782,7 +10785,10 @@ picked it on 2026-10-27, so every (box) item is to be built, in phase 1):
 >   `SHAPES`' graphic overlay (§6.11); the Indic render check and M8, M13
 >   and M19 (the user's runs); phase 2's `place.auto` recompute in
 >   `rebakeGenerated`'s arm, §6.16's screen-card realign and `footage`;
->   `addGraphicClip`'s caller, §6.6's panel. Not built, as planned (phase
+>   `addGraphicClip`'s caller, §6.6's panel (2026-11-11, lane T2b: the
+>   panel makes no graphic, no control calls `addGraphicClip`, and the
+>   recompute is in `setAspect`'s own update and `rebakeFollowed`, not
+>   `rebakeGenerated`, §6.9's T2b note). Not built, as planned (phase
 >   3, §6.16's): the screen card's `footage` reaching the export through
 >   `liveBakers.graphic` and `screenTargetsAt`, and a dropped screen
 >   card's strike of its two opacity keys from the export's copy of the
@@ -11922,7 +11928,9 @@ The TEMPLATES table's rows:
     `unsupportedKeywords []` and `flatViolations []`, without `words` and
     `lit`. With them it is re-measured by the test. (2026-11-11, lane
     T2b, `226cdb0`: 1817 chars for 3 sentences and 7 templates, 1943 for
-    24 and 7, constrained; 1559 unconstrained; both lists empty.)
+    24 and 7, constrained; 1559 unconstrained; both lists empty. No size
+    ceiling is asserted: a critic asked for one and `44024d9` declined it,
+    since any figure would be invented; the size stays printed.)
   - **The fields, in declaration order.** `reasoning` (≤ 300) comes first.
     Then `graphics`: `maxItems` 4 (`MAX_GRAPHICS`), `minItems` 0. Each
     object holds, in order: `sentence` (an enum of this request's ids);
@@ -12014,9 +12022,13 @@ type the app defined.
 - **With no model**, or a pass that is rejected, the baseline runs (§6.10)
   through the same validator, and the notes say so. (2026-11-11, lane T2b:
   the seam is wired in `settleGraphics` and empty until T4's
-  `baselineGraphics`, so today such a run lands only the lower third
-  (with a Speaker), its note "no graphics for <window>: <why>", and the
-  tile says "No model’s answer was used in this run".)
+  `baselineGraphics`, so today a rejected window settles to no graphics,
+  its note "no graphics for <window>: <why>", and the other windows'
+  graphics still land; a run with no model, or every window rejected,
+  lands only the lower third (with a Speaker), and the tile says "No
+  model’s answer was used in this run", shown only when the record names
+  no model, which `pairSettled` makes so only when every window went
+  unused.)
 - **A `lower-third`** is the app's in every run: placed on the speaker's
   first word the clip shows, at most once per clip, when the asset has a
   Speaker (§6.8, §6.9). It is made by `lowerThirdFor(project, clip):
@@ -12733,6 +12745,12 @@ channel name", read on screen at `d33d5b4`; the Built note below, part
 >   (`findingGraphics` set). `64adaed` changed the stub's first sentence
 >   from "Keep it simple today.": the tile draws each word as its own text
 >   node, so the census would have counted 2 "Keep" (EFFECTS §61).
+>   `harnessGraphicsRun` throws if the clip is shorter than its 4 s of
+>   words; `ffc5391` held it to a 5 s clip in node and left the harness
+>   video's length unmeasured ("Open, yours"). Answered by the on-screen
+>   census at `d33d5b4`: the `transcript-graphics-asr`, `-lines` and
+>   `-whisper` states read with `missing: []`, so the stub did not throw
+>   on the harness's video.
 > - **(j) The dock's panel** (`GraphicPanel.tsx`, new, `becf32e`,
 >   `d33d5b4`), mounted in `Inspector.tsx` (`:241`) after `CarouselPanel`
 >   (`:238`) and `PaperPanel` (`:235`) as `{clip.graphic && <GraphicPanel
@@ -15600,7 +15618,9 @@ annotations.
   runners, read 2026-11-03.)
 - Not a bar, recorded with it (2026-11-02): nothing in the app makes a
   graphic clip until §6.6's panel, so no phase-1 bar is read through the
-  app's own UI; the harness drives `graphicCanvas.ts` directly.
+  app's own UI; the harness drives `graphicCanvas.ts` directly. (2026-11-11,
+  lane T2b: the panel edits a graphic and makes none; Find graphics and
+  Direct make them.)
 - **Phase 1's state, 2026-11-03.** Built and pushed, every lane of
   §6.19's phase 1 (the head, D8, A, D10, B, C and D, the last as
   `683a6f0`): the build's side of this bar is closed. Met by the build:
@@ -16130,9 +16150,10 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
   skipped (915 rows), 57.0 s, the lane's fifteen among them, every count
   held. **The app now makes graphics from speech** when a model is set
   up (the status block): Find graphics in the Transcript tile and
-  Direct's graphics pass. With no model, or a window's answer rejected,
-  only the lower third lands (with a Speaker) until T4's baseline fills
-  `settleGraphics`' seam. **No real model has been asked by any test.**
+  Direct's graphics pass. With no model, or every window's answer
+  rejected, only the lower third lands (with a Speaker) until T4's
+  baseline fills `settleGraphics`' seam; a rejected window among answered
+  ones loses only its own graphics. **No real model has been asked by any test.**
   Not built: T4. **Of the bar above**, the lane carries one item: "every
   number heard from a YouTube track or an unsure Whisper word waits for
   Keep (census rows present)". In the app as built, both routes that land
@@ -16150,7 +16171,12 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
   Those are the item's own words. Clip it's route (step 4) does not exist
   yet, the harness states stub the answer rather than call
   `findGraphics`, and no real model's answer has gone through it. The
-  rest of the bar stands as the T3 paragraph above says, and T4's
+  rest of the bar stands as the T3 paragraph above says (the property
+  item is still not met: Find and Direct now ship through the validator,
+  so the T2a paragraph's first reason, "nothing in the app ships through
+  the validator yet", no longer holds, but its other two do: two named
+  mutations fail the property only through its floors, and the lane's
+  list holds false graphics it keeps), and T4's
   eval, render checks, preview = export, M14, the look rating, M18 and
   the budget property over every fixture are ahead. Of "Also before phase
   2 is called done": `LLM.md` §Built records `graphics@1` (written with
@@ -16188,12 +16214,14 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
       spine's measured line (0/24 to 24/24), kept; double quotes inside a
       SENTENCES line are not escaped, as in `prompt.ts` and `prompt2.ts`:
       both for the eval to measure (`promptGraphics.ts`);
-    - a window is named in a note by its sentence ids ("sentences s00 to
-      s23"), which the tile never shows, not by its clock span; and the
-      notes of a run over several windows carry no window name, Find's
-      notes are the bare messages and Direct's carry their path through
-      `describeProblem` (`run.ts`, `store.ts`; `db4b46d` and `f52e11f`
-      declined, for piece 4, which kept them);
+    - a window is named in a rejection note by its sentence ids ("no
+      graphics for sentences s00 to s23: …"), not by its clock span; and
+      a per-graphic drop note of a run over several windows carries no
+      window name ("graphic dropped: 's00' is not a sentence on the menu"
+      may come twice, from two windows), Find's notes are the bare
+      messages and Direct's carry their path through `describeProblem`
+      (`run.ts`, `store.ts`; `db4b46d` and `f52e11f` declined, for piece
+      4, which kept them);
     - a stray-field repair note is still written for a graphic the
       spacing then drops, and a length drop's `GraphicDrop.reason` names
       no field ("is 60 characters, at most 40 are drawn"; the field is
@@ -16269,7 +16297,9 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
   worded to stay true once the seam is filled; the harness options, a
   Find-made graphic state for the census and the warnings, and a "no
   model" Find state once a baseline exists; `graphic.int`'s phase-2
-  cases; the budget property over the fixtures.
+  cases; the budget property over the fixtures; when `options.baseline`
+  returns no candidates, the note still reads "the baseline's graphics
+  are used for <window>: …" (`run.ts`, a critic of piece 1).
 
 **The spike's gate** (§16.56; the spike is §6.17). Read from `EFFECTS.md`
 §62, which holds H1-H10, H12 and H13 with their commands, machines and
@@ -21242,7 +21272,7 @@ with a window, so `-ss` and `-t` are scanned too. So have 1f's shapes since
 | no shots found (a single take) | one shot; the path still pans | path test |
 | a rotated file whose size disagrees | the track is refused; centred crop; "the file's orientation changed — reframe again" | `faces.int` rotated case |
 | a retimed clip | the followed crop is recompiled from the track at read time, so its cuts move with the speed; graphics refuse with a note | `reframeKeys` after `withClipSpeed`, a ramp, `convertFrameRate`, a trim, a split; graphics test |
-| no model | graphics from the baseline (2026-11-11, lane T2b: until T4's `baselineGraphics` fills `settleGraphics`' seam, only the lower third lands, with a Speaker, the note "no graphics for <window>: <why>" and the tile's "No model’s answer was used in this run"); Best clips from signals; no B-roll suggestions | each pass's settle test with the fake provider refusing (graphics: `directorGraphics`' seam and record cases, `graphicActions`' two no-model cases, built by T2b) |
+| no model | graphics from the baseline (2026-11-11, lane T2b: until T4's `baselineGraphics` fills `settleGraphics`' seam, only the lower third lands (with no model, or every window rejected; a rejected window among answered ones loses only its own), with a Speaker, the note "no graphics for <window>: <why>" and the tile's "No model’s answer was used in this run"); Best clips from signals; no B-roll suggestions | each pass's settle test with the fake provider refusing (graphics: `directorGraphics`' seam and record cases, `graphicActions`' two no-model cases, built by T2b) |
 | a prose or truncated answer | that pass only falls back; the clip stands | settle tests |
 | a graphic that cannot be baked | dropped from the export with a note; the export succeeds (a dropped screen card also strikes its two opacity keys from the recording, §6.16) | `graphic.int` |
 | no subject track (no AI helper, Follow the subject not run, or a track of another version) | `callout` not offered (and dropped with rule 9's note, "no subject found to point at", if an answer names one); placement takes the style's third (§6.9) (2026-11-11, corrected by lane T3's build, `37d0e69`, `518a62f`: §6.9 step 3's no-track default, the middle, or the top when the captions use the middle, and for a lower third the bottom, or the top when the captions use the bottom); a graphic's dim is drawn with no hole (§6.2, §6.9) | `graphicPlace.test.ts`; `graphic.int`'s no-track case |

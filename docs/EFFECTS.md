@@ -11247,12 +11247,14 @@ is injected. Only what cost time or would not be guessed:
   into a record of a run with no windows (a critic's scratch test); the
   eval could not tell an empty run from a model's. `db4b46d` made
   `baseline` `parts.every(...)` (true for none). Then piece 3's critic
-  found the store still WROTE such a record: Find on a clip whose
-  transcript had gone, or whose every word was moved 100 s past the
-  shot, asked nothing (no menu) yet wiped the clip's two Clip-it graphics
-  and appended a `{ id: 'baseline', runtime: 'none' }` record with
-  "Graphics: 0 placed"; Direct over such a shot did the same. `f52e11f`:
-  `holdsSpeech` first; nothing asked, cleared or recorded.
+  found the store still WROTE such a record, in two scratch inputs:
+  Direct over a shot whose every word was moved 100 s past it asked
+  nothing and appended a `{ id: 'baseline', runtime: 'none' }` graphics
+  record; Find pressed again on a clip whose transcript had been removed
+  asked nothing, yet wiped the clip's two Clip-it graphics and appended
+  the same record with "Graphics: 0 placed". `f52e11f`: `holdsSpeech`
+  first; nothing asked, cleared or recorded (its tests add the 100 s
+  shift to Find as well).
 - **A retimed clip's note dropped a graphic twice.** `graphicDropsOf`
   expands the one retimed note to every graphic of the run on that clip;
   a graphic already dropped for its own reason (a wrong asset) came back

@@ -375,9 +375,11 @@ with **Keep** and **Drop**, and under it **check the number** beside the
 words heard (`heard "40 clients"`); Keep places it, or a notice says why
 it cannot ("another graphic is on screen then") and it stays listed. A
 run's notes follow, each dropped graphic with its reason, led by "No
-model’s answer was used in this run" when none was; a notice sums the run
+model’s answer was used in this run" when none was in any window; if the
+clip is removed while its run is out, "The clip was removed while its
+graphics were being found — nothing was placed"; a notice sums the run
 up ("Graphics: N placed, M to check — K notes"). **Clear graphics**
-(shown while Find has placed anything; tooltip: "Removes every graphic
+(shown while any Find graphics graphic is placed or a number of one waits; tooltip: "Removes every graphic
 Find graphics placed, in every clip, with its sounds and the numbers
 waiting to be checked") takes them, with "Direct's graphics stay;
 Direct's Clear takes them" under it. Last, **Speaker**: the name of the
@@ -632,18 +634,23 @@ field: **Value**, **Label**, **Title**, **Quote**, **Words**, **Lit word**,
 **Speaker** (the file's Speaker, as in the Transcript tile: changing it
 here renames every graphic that drew it), a lower third's **Role**
 (filled in from that file's last lower third), and a social card's
-**Name**, **Handle**, **Date**, **Link**. Each saves when you leave it
-(Enter leaves it) as one undo step. A word typed that the transcript does
+**Name**, **Handle**, **Date**, **Link**. Each text field saves when you
+leave it (Enter leaves it) as one undo step; the Connector and Shape
+buttons and Back to auto save on press. A word typed that the transcript does
 not say gets an amber warning under the field ("'45' is not said in
-s00") and is saved anyway; a graphic whose transcript is gone, or that is
-tied to nothing said, says its words are not checked. Steps have
+s00") and is saved anyway; a graphic whose transcript is gone says "Its
+transcript is not in the project, so these words are not checked", one
+tied to nothing said "It is not tied to anything said, so these words
+are not checked". Steps have
 **Connector** (None, Line, Tree), a callout **Shape** (Arrow, Circle).
 **Seconds**, within the kind's range shown beside it, warns (never
 blocks) when too short to read ("It needs … s for its beats and to be
 read"). **Place** reads "Auto · the top third" (or middle, bottom), or
 "A box you dragged" with **Back to auto**, greyed when no third is free
 of the captions ("No third is free of the captions here") or no footage
-is under it ("No footage is under it to place it over").
+is under it ("No footage is under it to place it over"). After an aspect
+change or a reframe, an auto graphic with no free third left keeps its
+place, with the notice "<graphic> keeps its old place — no free third".
 
 **Sound** (anything with sound) — **Mute**, and a **Level** fader in dB up to
 +6. When a volume line is drawn on the clip, a note says the line sets the
