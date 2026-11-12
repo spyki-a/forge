@@ -8682,5 +8682,136 @@
     "line": 110,
     "newHome": "output strip (Graphics section, docs/CLIPS.md §6.14)",
     "note": "The switch beside the graphic style tiles (§6.14, \"Off per project\"): Project.graphics.sound, on when absent; calls setGraphicSounds. Written as GRAPHIC_SOUNDS in OutputStrip.tsx. Count 1 reasoned from the code: the only other 'Graphic sounds' the app writes is the audio track's name (GRAPHIC_SOUND_LANE_NAME), on the timeline, not in OUTPUT, and an empty project has no such track. Read on screen 2026-11-11 by the harness census at 69e677c: missing [], 892 checked, 8 skipped."
+  },
+  {
+    "label": "Graphics",
+    "match": "text",
+    "home": "transcript",
+    "needs": "transcript",
+    "file": "src/renderer/src/components/TranscriptGraphics.tsx",
+    "line": 34,
+    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "note": "The section's heading (§6.6 \"By hand\"), written as GRAPHICS_HEADING; the only 'Graphics' text in the Transcript tile (OUTPUT's own heading is another home). Count reasoned from the code by lane T2b piece 4; not yet read by the harness census on screen."
+  },
+  {
+    "label": "Find graphics in this clip",
+    "match": "text",
+    "home": "transcript",
+    "needs": "transcript",
+    "file": "src/renderer/src/components/TranscriptGraphics.tsx",
+    "line": 35,
+    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "note": "findGraphics on the selected clip (§6.6), written as FIND_GRAPHICS; pressable here: the census transcript's one word is shown by the clip. Count reasoned from the code by lane T2b piece 4; not yet read by the harness census on screen."
+  },
+  {
+    "label": "Finding graphics…",
+    "match": "text",
+    "home": "transcript",
+    "needs": "transcript-finding",
+    "file": "src/renderer/src/components/TranscriptGraphics.tsx",
+    "line": 37,
+    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "note": "The same button while the ask is out (findingGraphics is the clip), written as FINDING_GRAPHICS; Transcribe's \"Transcribing…\" pattern. Count reasoned from the code by lane T2b piece 4; not yet read by the harness census on screen."
+  },
+  {
+    "label": "Transcribe this clip first — graphics are found in its words",
+    "match": "title",
+    "home": "transcript",
+    "needs": "video-clip",
+    "file": "src/renderer/src/components/TranscriptGraphics.tsx",
+    "line": 39,
+    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "note": "Find greyed on a clip with no transcript, its title saying why (FIND_NEEDS_TRANSCRIPT). Count reasoned from the code by lane T2b piece 4; not yet read by the harness census on screen."
+  },
+  {
+    "label": "Speaker",
+    "match": "text",
+    "home": "transcript",
+    "needs": "transcript",
+    "file": "src/renderer/src/components/TranscriptGraphics.tsx",
+    "line": 45,
+    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "note": "The Speaker field's label (§6.6, §16.31), written as SPEAKER: MediaAsset.speaker, saved on leaving the field. Count reasoned from the code by lane T2b piece 4; not yet read by the harness census on screen."
+  },
+  {
+    "label": "Keep",
+    "match": "text",
+    "home": "transcript",
+    "needs": "transcript-graphics-asr",
+    "file": "src/renderer/src/components/TranscriptGraphics.tsx",
+    "line": 40,
+    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "note": "Keep on the one counter waiting to be checked (keepGraphic), written as KEEP. harness/graphicsStub.ts lands one keyword and one counter proposal. Count reasoned from the code by lane T2b piece 4; not yet read by the harness census on screen."
+  },
+  {
+    "label": "Drop",
+    "match": "text",
+    "home": "transcript",
+    "needs": "transcript-graphics-asr",
+    "count": 2,
+    "file": "src/renderer/src/components/TranscriptGraphics.tsx",
+    "line": 41,
+    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "note": "Drop on each listed graphic and each proposal (dropGraphic), written as DROP: the placed keyword's and the waiting counter's. Count reasoned from the code by lane T2b piece 4; not yet read by the harness census on screen."
+  },
+  {
+    "label": "check the number",
+    "match": "text",
+    "home": "transcript",
+    "needs": "transcript-graphics-asr",
+    "file": "src/shared/graphics/apply.ts",
+    "line": 65,
+    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "note": "Beside the words the waiting counter heard (CHECK_THE_NUMBER), over a stub YouTube ASR track (model 'youtube-asr'). Count reasoned from the code by lane T2b piece 4; not yet read by the harness census on screen."
+  },
+  {
+    "label": "check the number",
+    "match": "text",
+    "home": "transcript",
+    "needs": "transcript-graphics-lines",
+    "file": "src/shared/graphics/apply.ts",
+    "line": 65,
+    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "note": "The same, over a stub YouTube uploader track (model 'youtube-lines'). Count reasoned from the code by lane T2b piece 4; not yet read by the harness census on screen."
+  },
+  {
+    "label": "check the number",
+    "match": "text",
+    "home": "transcript",
+    "needs": "transcript-graphics-whisper",
+    "file": "src/shared/graphics/apply.ts",
+    "line": 65,
+    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "note": "The same, over a stub Whisper transcript whose number word is under 0.5 confidence (wordSource 'whisper-unsure'). Count reasoned from the code by lane T2b piece 4; not yet read by the harness census on screen."
+  },
+  {
+    "label": "Clear graphics",
+    "match": "text",
+    "home": "transcript",
+    "needs": "transcript-graphics-asr",
+    "file": "src/renderer/src/components/TranscriptGraphics.tsx",
+    "line": 42,
+    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "note": "Clear graphics (§6.6), written as CLEAR_GRAPHICS; shown while the project holds a Clip-it graphic or proposal. Count reasoned from the code by lane T2b piece 4; not yet read by the harness census on screen."
+  },
+  {
+    "label": "Direct's graphics stay; Direct's Clear takes them",
+    "match": "text",
+    "home": "transcript",
+    "needs": "transcript-graphics-asr",
+    "file": "src/shared/graphics/apply.ts",
+    "line": 43,
+    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "note": "Clear graphics' note under the button (CLEAR_GRAPHICS_NOTE). Count reasoned from the code by lane T2b piece 4; not yet read by the harness census on screen."
+  },
+  {
+    "label": "Use the channel name",
+    "match": "text",
+    "home": "transcript",
+    "needs": "transcript-graphics-asr",
+    "file": "src/renderer/src/components/TranscriptGraphics.tsx",
+    "line": 47,
+    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "note": "The press beside an empty Speaker on a link's asset (§6.6: \"press to use the channel's\"), written as USE_CHANNEL_NAME; the census's ASR run makes the video a link's asset with a channel. Count reasoned from the code by lane T2b piece 4; not yet read by the harness census on screen."
   }
 ]

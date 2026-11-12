@@ -154,7 +154,8 @@ export const SHELF_TOOLS: readonly ShelfTool[] = [
     hint: 'The words spoken in the selected clip — click to jump, cut the clip to a run of them, correct a misheard one',
     panel: TranscriptPanel,
     takesMedia: false,
-    busy: (s) => any(s.transcribing)
+    // Transcribing, or finding graphics in a clip (docs/CLIPS.md §6.6).
+    busy: (s) => any(s.transcribing) || s.findingGraphics !== null
   },
   {
     id: 'director',

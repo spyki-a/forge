@@ -20,6 +20,7 @@ import { useEditor } from '../store'
 import { rowStamp, TranscriptRows } from './tools/TranscriptRows'
 import { SpeechModelPress, transcribeWhy } from './MediaPool'
 import { HelperPointer } from './SettingsPanel'
+import { TranscriptGraphics } from './TranscriptGraphics'
 
 /**
  * Transcript for the selected clip — the words it plays — with click-to-seek,
@@ -103,6 +104,8 @@ export function TranscriptPanel(): ReactNode {
       </div>
 
       <TranscriptBody clip={clip} transcript={transcript} editing={editing} />
+
+      <TranscriptGraphics clip={clip} hasTranscript={Boolean(transcript)} />
 
       <Vocabulary assetId={clip.assetId} hasTranscript={Boolean(transcript)} />
     </div>

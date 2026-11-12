@@ -23,6 +23,7 @@ import type { Transcript } from '@shared/transcript'
 import { useEditor, type ShelfToolId, type UrlSourceStatus } from '../store'
 import { HARNESS_HELPER_PACK, HARNESS_LINKS, HARNESS_SPEECH_MODEL_BYTES, harnessHelperStatus } from './bridge'
 import { harnessSubjectTrack } from './reframeStub'
+import { harnessGraphicsRun, type HarnessWordSource } from './graphicsStub'
 import { useCatalog } from '../catalog'
 import { usePacks } from '../packs'
 import { SHELF_TOOLS } from '../components/shelf/tools'
@@ -1308,6 +1309,46 @@ function helperRowIn(status: SidecarStatus, speech: boolean | null = null, extra
  * the timeline", "Nothing transcribed yet"), and building one big scenario
  * makes them vanish.
  */
+/**
+ * The census video on the timeline, selected, with a run of Find graphics
+ * landed on it (CLIPS.md §6.6) from the stub transcript of `source`; `link`
+ * makes the video a link's asset with a channel, as Clip it's are.
+ */
+async function graphicsRun(env: Env, source: HarnessWordSource, link: boolean): Promise<Built> {
+  const { m, V } = await videoClip(env)
+  if (link) {
+    const pageUrl = 'https://example.invalid/watch?v=census'
+    editor().update((p) => ({
+      ...p,
+      assets: p.assets.map((a) =>
+        a.id === m.video.id
+          ? {
+              ...a,
+              credit: {
+                source: 'link' as const,
+                title: 'A census talk',
+                author: 'Census Channel',
+                pageUrl,
+                line: `A census talk — Census Channel, ${pageUrl}`,
+                attributionRequired: true,
+                fetchedAt: new Date(0).toISOString()
+              }
+            }
+          : a
+      )
+    }))
+  }
+  let placed: string[] = []
+  editor().update((p) => {
+    const out = harnessGraphicsRun(p, V, source)
+    placed = out.placed
+    return out.project
+  })
+  for (const id of placed) await editor().rebakeGraphic(id)
+  focus(V, 0)
+  return { ids: { V } }
+}
+
 const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
   /* nothing at all: a new, empty project */
   none: async () => ({}),
@@ -1688,6 +1729,26 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
   },
   /* …and the same words under it */
   'transcript-starting-line': async (env) => RECIPES['transcript-helper-starting'](env),
+  /*
+   * The Transcript tile's Graphics section (CLIPS.md §6.6) after a run of Find
+   * graphics on the census video: one keyword placed and one counter waiting
+   * with "check the number", from a stub transcript of each source the plan
+   * names — a YouTube ASR track, a YouTube uploader track, an unsure Whisper
+   * word (harness/graphicsStub.ts: the answer is stubbed, the validator and
+   * the landing are the app's). The ASR one is a link's asset, its channel
+   * credited, so the Speaker's "Use the channel name" press shows.
+   */
+  'transcript-graphics-asr': async (env) => graphicsRun(env, 'youtube-asr', true),
+  'transcript-graphics-lines': async (env) => graphicsRun(env, 'youtube-lines', false),
+  'transcript-graphics-whisper': async (env) => graphicsRun(env, 'whisper-unsure', false),
+  /* Find graphics pressed and its ask still out: the button reads "Finding graphics…" */
+  'transcript-finding': async (env) => {
+    const built = await RECIPES.transcript(env)
+    const V = built.ids?.V
+    if (!V) throw new Error('census: the transcript scenario made no clip')
+    useEditor.setState({ findingGraphics: V })
+    return built
+  },
   'clipmenu-open': async (env) => clipMenu(env, false),
   'clipmenu-detached': async (env) => clipMenu(env, true),
 
