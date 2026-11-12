@@ -24,6 +24,7 @@ import { canSteady } from '@shared/render/steady'
 import { canMoveCamera } from '@shared/edit/camera'
 import { isKeyable } from '@shared/render/chromaKey'
 import { CarouselPanel } from './CarouselPanel'
+import { GraphicPanel } from './GraphicPanel'
 import { PaperPanel } from './PaperPanel'
 import { SpeedPanel } from './SpeedPanel'
 import { TextStylePicker } from './TextStylePicker'
@@ -235,6 +236,9 @@ export function Inspector(): ReactNode {
 
               {/* A ring of photographs, for the clips that are one. */}
               {clip.carousel && <CarouselPanel clip={clip} />}
+
+              {/* A graphic's fields by mode, for the clips that draw one (docs/CLIPS.md §6.6, "The dock's panel"). */}
+              {clip.graphic && <GraphicPanel clip={clip} />}
 
               {/*
                 Sound, for anything that has some.

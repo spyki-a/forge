@@ -1785,6 +1785,27 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
       if (hide) await click(hide)
     }
   }),
+  /*
+   * A lower third over the census video, selected: the dock's graphic panel
+   * (components/GraphicPanel.tsx, CLIPS.md §6.6) with its "Role". Added through
+   * the store as the panel's own clip would be, not through the panel.
+   */
+  'graphic-lower-third': async (env) => {
+    await videoClip(env)
+    const G = await made(
+      editor().addGraphicClip(topVideoTrack(), 0, {
+        data: { template: 'lower-third', name: 'Census Speaker', role: '' },
+        seconds: 3.5,
+        beats: [0.5],
+        place: { auto: true, third: 'bottom' },
+        seed: 1,
+        version: 1
+      }),
+      'addGraphicClip'
+    )
+    focus(G)
+    return { ids: { G } }
+  },
   'ring-clip': async (env) => {
     await media(env)
     const R = await made(editor().addCarouselClip(topVideoTrack(), 0), 'addCarouselClip')

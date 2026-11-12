@@ -128,9 +128,31 @@ function nameOf(d: GraphicData): string {
 /* --------------------------------------------------------- the lower third */
 
 /**
+ * The Role a new lower third of `assetId` starts with (docs/CLIPS.md §6.6, the
+ * dock's panel: "a lower third's Role, pre-filled from the asset's most recent
+ * lower third"): the `role` of the last lower-third graphic in `project.clips`
+ * whose asset is `assetId` (its grounding's, else its footage clip's, as
+ * `withSpeaker` finds them), as it is stored, '' when there is none. "Most
+ * recent" is the clips' order: every landing appends its clip
+ * (`landKept`, the store's `addGraphicClip`). The pre-fill happens here, at
+ * creation, so what the panel shows is what is drawn.
+ */
+export function lastRoleOf(project: Pick<Project, 'clips' | 'tracks'>, assetId: string): string {
+  for (let i = project.clips.length - 1; i >= 0; i--) {
+    const c = project.clips[i]
+    const spec = c.graphic
+    if (spec?.data.template !== 'lower-third') continue
+    const owner = spec.grounding?.assetId ?? project.clips.find((f) => f.id === footageOf(project, c, spec))?.assetId
+    if (owner === assetId) return spec.data.role
+  }
+  return ''
+}
+
+/**
  * The app's lower third on the footage clip `clip` (docs/CLIPS.md §6.6, §6.8):
  * the asset's Speaker (`MediaAsset.speaker`) as the name, drawn exactly as it
- * is held, and an empty role (the user types one in the dock); its beat the
+ * is held, and its role pre-filled from the asset's most recent lower third
+ * (`lastRoleOf`; '' when it has none: the user types one in the dock); its beat the
  * first word of the asset's transcript that the clip shows (`firstShownWord`,
  * the captions' own test). `applyGraphics` calls it first on each covered
  * clip, so it carries the run's rule.
@@ -162,7 +184,7 @@ export function lowerThirdFor(project: Project, clip: Clip): KeptGraphic | null 
     assetId: clip.assetId,
     candidate: {
       sentence: segment?.id ?? '',
-      data: { template: 'lower-third', name, role: '' },
+      data: { template: 'lower-third', name, role: lastRoleOf(project, clip.assetId) },
       bound: [],
       beatWords: [word.index],
       why: LOWER_THIRD_WHY,

@@ -8813,5 +8813,25 @@
     "line": 47,
     "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
     "note": "The press beside an empty Speaker on a link's asset (§6.6: \"press to use the channel's\"), written as USE_CHANNEL_NAME; the census's ASR run makes the video a link's asset with a channel. Count reasoned from the code by lane T2b piece 4; not yet read by the harness census on screen."
+  },
+  {
+    "label": "Graphic",
+    "match": "text",
+    "home": "dock",
+    "needs": "graphic-lower-third",
+    "file": "src/renderer/src/components/GraphicPanel.tsx",
+    "line": 48,
+    "newHome": "trimmer dock (the graphic panel, docs/CLIPS.md §6.6)",
+    "note": "The dock's graphic panel's heading, written as GRAPHIC_PANEL_HEADING, beside PaperPanel's \"Clippings\" and CarouselPanel's \"Card ring\"; the template's name (\"lower third\") is its own text node beside it. Count reasoned from the code by lane T2b piece 5 (the Inspector's asset name is \"lower-third — graphic\", not a whole \"Graphic\"); not yet read by the harness census on screen."
+  },
+  {
+    "label": "Role",
+    "match": "text",
+    "home": "dock",
+    "needs": "graphic-lower-third",
+    "file": "src/renderer/src/components/GraphicPanel.tsx",
+    "line": 50,
+    "newHome": "trimmer dock (the graphic panel, docs/CLIPS.md §6.6)",
+    "note": "A lower third's Role (a user field, never checked), written as ROLE; its label, the one text node \"Role\". Count reasoned from the code by lane T2b piece 5; not yet read by the harness census on screen."
   }
 ]
