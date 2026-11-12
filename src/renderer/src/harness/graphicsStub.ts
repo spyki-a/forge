@@ -26,8 +26,14 @@ import { replaceClipGraphics } from '@shared/graphics/apply'
 
 export type HarnessWordSource = 'youtube-asr' | 'youtube-lines' | 'whisper-unsure'
 
-/** The two sentences, one word every 400 ms from 0: "simple" at 0.8 s, "40" at 2.4 s; all within the first 4 s. */
-const SENTENCES = ['Keep it simple today.', 'We signed 40 clients this year.']
+/**
+ * The two sentences, one word every 400 ms from 0: "simple" at 0.8 s, "40" at 2.4 s; all within the first 4 s.
+ * No word is a label the census counts in this state: the tile draws each word
+ * as its own text node, so a first word "Keep" was a second whole "Keep" beside
+ * the button (tests/renderer/transcriptGraphics.test.tsx counts each row's
+ * label over the whole tile in this state).
+ */
+const SENTENCES = ['Make it simple today.', 'We signed 40 clients this year.']
 
 /** The source's transcript of the two sentences for `assetId`: YouTube's words carry no confidence; Whisper's are sure but for the number. */
 export function harnessGraphicsTranscript(assetId: string, source: HarnessWordSource): Transcript {

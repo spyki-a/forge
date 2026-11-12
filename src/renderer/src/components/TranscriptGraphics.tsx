@@ -90,6 +90,8 @@ export function TranscriptGraphics({ clip, hasTranscript }: { clip: Clip; hasTra
   const asset = project.assets.find((a) => a.id === clip.assetId)
   const speaker = asset?.speaker ?? ''
   const channel = channelOf(asset)
+  // A clip that draws itself is no footage: nothing is found in it, and its Speaker would land on the drawn image.
+  if (clip.graphic !== undefined) return null
 
   /** Where a proposal would start, from its first grounding word through this clip; null when it has none. */
   const proposalStamp = (g: GraphicProposal): string | null => {

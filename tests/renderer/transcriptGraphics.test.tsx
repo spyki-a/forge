@@ -43,7 +43,7 @@ vi.mock('../../src/renderer/src/graphicCanvas', () => ({
   graphicPreviewCanvas: () => null
 }))
 
-const { useEditor } = await import('../../src/renderer/src/store')
+const { useEditor, GRAPHICS_BUSY_NOTE } = await import('../../src/renderer/src/store')
 const { useCatalog } = await import('../../src/renderer/src/catalog')
 const TG = await import('../../src/renderer/src/components/TranscriptGraphics')
 const { TranscriptGraphics } = TG
@@ -207,7 +207,13 @@ function row(id: string): Host[] {
   if (!li) throw new Error(`${id} is not listed`)
   return [li, ...hosts(li.props.children as ReactNode)]
 }
-const speakerField = (): Host => section().find((h) => h.type === 'input' && h.props.id === 'forge-speaker')!
+/** The Speaker field, found through its on-screen label's htmlFor. */
+function speakerField(): Host {
+  const all = section()
+  const labels = all.filter((h) => h.type === 'label' && text(h) === TG.SPEAKER)
+  expect(labels).toHaveLength(1)
+  return all.find((h) => h.type === 'input' && h.props.id === labels[0].props.htmlFor)!
+}
 /** Type into the Speaker field and leave it, as a user does: the field's own value, then its blur. */
 function typeSpeaker(value: string): void {
   ;(speakerField().props.onBlur as (e: { target: { value: string } }) => void)({ target: { value } })
@@ -269,6 +275,7 @@ describe('the Transcript tile’s Graphics section (§6.6, "By hand")', () => {
     // Another clip's Find is greyed too, its title saying why.
     const other = buttons(TG.FIND_GRAPHICS, section('shot2'))[0]
     expect(other.props.disabled).toBe(true)
+    expect(other.props.title).toBe(GRAPHICS_BUSY_NOTE)
     release()
     await vi.waitFor(() => expect(state().findingGraphics).toBeNull())
     expect(shelfToolById('transcript')!.busy!(state())).toBe(false)
@@ -346,7 +353,7 @@ describe('the Transcript tile’s Graphics section (§6.6, "By hand")', () => {
       expect(own).toHaveLength(1)
       expect(section(id).filter((h) => h.type === 'li' && h.props['data-graphic-proposal'] !== undefined).map((h) => h.props['data-graphic-proposal'])).toEqual(own)
     }
-    const drawn =clipItGraphics().map((c) => c.assetId)
+    const drawn = clipItGraphics().map((c) => c.assetId)
     expect(drawn.length).toBeGreaterThan(0)
     // The note shows beside the button before it is pressed.
     expect(section().map((h) => text(h))).toContain(CLEAR_GRAPHICS_NOTE)
@@ -436,6 +443,48 @@ describe('the Transcript tile’s Graphics section (§6.6, "By hand")', () => {
     expect(after).toContain("graphic dropped: '99' is not said in s00")
   })
 
+  it('Drop on a "check the number" proposal takes the proposal and places nothing, in ONE undo step', async () => {
+    start({ model: 'youtube-asr' })
+    await pressFind()
+    const [proposal] = project().graphicProposals!
+    expect(listedProposals()).toEqual([proposal.id])
+    const before = project()
+    press(buttons(TG.DROP, row(proposal.id))[0])
+    expect(project().graphicProposals ?? []).toEqual([])
+    // No counter placed: the number nobody checked never reaches the timeline.
+    expect(clipItGraphics().map((c) => c.graphic!.data.template)).toEqual(['keyword'])
+    expect(listedProposals()).toEqual([])
+    undoesTo(before)
+  })
+
+  it('a proposal’s row shows where it would start on the timeline, through its own clip', async () => {
+    // shot2 starts at 70 s; its counter's first word ("40") is 0.8 s in: 1:10, not 0:00.
+    start({ model: 'youtube-asr' })
+    useEditor.setState({ selectedClipId: 'shot2', selectedClipIds: ['shot2'] })
+    press(buttons(TG.FIND_GRAPHICS, section('shot2'))[0])
+    await vi.waitFor(() => expect(state().findingGraphics).toBeNull())
+    const [proposal] = project().graphicProposals!
+    expect(proposal.clipId).toBe('shot2')
+    const li = section('shot2').find((h) => h.type === 'li' && h.props['data-graphic-proposal'] === proposal.id)!
+    expect(hosts(li.props.children as ReactNode).map((h) => text(h))).toContain('1:10')
+  })
+
+  it('Enter in the Speaker field leaves it (saving it), and its keys stay out of the shortcut layer', () => {
+    const blur = vi.fn()
+    const stop = vi.fn()
+    ;(speakerField().props.onKeyDown as (e: unknown) => void)({ key: 'Enter', target: { blur }, stopPropagation: stop })
+    expect(blur).toHaveBeenCalledTimes(1)
+    expect(stop).toHaveBeenCalledTimes(1)
+    ;(speakerField().props.onKeyDown as (e: unknown) => void)({ key: 'a', target: { blur }, stopPropagation: stop })
+    expect(blur).toHaveBeenCalledTimes(1)
+    expect(stop).toHaveBeenCalledTimes(2)
+  })
+
+  it('a selected graphic clip shows no Graphics section: no Speaker to land on its drawn image', () => {
+    expect(TranscriptGraphics({ clip: clipById('direct-g')!, hasTranscript: false })).toBeNull()
+    expect(section().length).toBeGreaterThan(0)
+  })
+
   it('Find is greyed with its reason on a clip with no transcript', () => {
     start({ transcript: false })
     const [find] = buttons(TG.FIND_GRAPHICS)
@@ -446,6 +495,29 @@ describe('the Transcript tile’s Graphics section (§6.6, "By hand")', () => {
 })
 
 describe('the census’s graphics run (harness/graphicsStub.ts)', () => {
+  it.each([
+    ['youtube-asr', 'transcript-graphics-asr', true],
+    ['youtube-lines', 'transcript-graphics-lines', false],
+    ['whisper-unsure', 'transcript-graphics-whisper', false]
+  ] as const)('%s: every text row of %s counts on the whole tile what the fixture says (a transcript word is a text node too)', async (source, needs, link) => {
+    const census = (await import('../fixtures/ui-census.json')).default as Array<{ label: string; match: string; needs?: string; count?: number }>
+    const rows = census.filter((r) => r.needs === needs && r.match === 'text')
+    expect(rows.length).toBeGreaterThan(0)
+    const base = emptyProject('census')
+    const clip: Clip = { ...shotOf('V', 'vid', 0), duration: FPS * 5 }
+    const vid = footage('vid', { width: 640, height: 360, durationFrames: FPS * 5, ...(link ? { credit: linkCredit } : {}) })
+    const p: Project = { ...base, settings: { ...base.settings, fps: FPS }, assets: [vid], clips: [clip] }
+    useEditor.setState({ project: harnessGraphicsRun(p, 'V', source).project, selectedClipId: 'V', selectedClipIds: ['V'] })
+    const html = renderToStaticMarkup(createElement(TranscriptPanel))
+    const escape = (s: string): string => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;')
+    const quote = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    for (const r of rows) {
+      // A whole text node: between tags, or a tag and React's <!-- --> between adjacent texts.
+      const whole = new RegExp(`(?:>|-->)${quote(escape(r.label))}(?:<)`, 'g')
+      expect([...html.matchAll(whole)], r.label).toHaveLength(r.count ?? 1)
+    }
+  })
+
   it.each(['youtube-asr', 'youtube-lines', 'whisper-unsure'] as const)('%s: one keyword placed and one counter waiting with "check the number", on a 5 s clip of a 640×360 file', (source) => {
     const base = emptyProject('census')
     const clip: Clip = { ...shotOf('V', 'vid', 0), duration: FPS * 5 }
