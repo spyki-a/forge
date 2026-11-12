@@ -147,8 +147,9 @@ function nameOf(d: GraphicData): string {
  */
 export function lowerThirdFor(project: Project, clip: Clip): KeptGraphic | null {
   const asset = project.assets.find((a) => a.id === clip.assetId)
-  const name = asset?.speaker
-  if (name === undefined || name.trim() === '') return null
+  // Drawn trimmed, as a said quote's speaker is (settleGraphics), so setSpeaker finds both by one name.
+  const name = asset?.speaker?.trim()
+  if (name === undefined || name === '') return null
   const transcript = project.transcripts[clip.assetId]
   if (!transcript) return null
   const already = project.clips.some((c) => c.graphic?.data.template === 'lower-third' && footageOf(project, c, c.graphic) === clip.id)
@@ -1019,7 +1020,7 @@ export function placeAgain(project: Project, graphicId: string): { project: Proj
 
 /**
  * The Transcript tile's Speaker (docs/CLIPS.md §6.6 "Speaker", §16.31):
- * `MediaAsset.speaker` set to `name` (a name of only spaces is no Speaker:
+ * `MediaAsset.speaker` set to `name`, trimmed (a name of only spaces is no Speaker:
  * the field goes), and every graphic of that asset (its `grounding`'s asset,
  * else its footage clip's) that drew the OLD name drawn with the new one:
  * a lower third's `name` that was the old Speaker, and a said quote's
@@ -1036,11 +1037,12 @@ export function placeAgain(project: Project, graphicId: string): { project: Proj
 export function withSpeaker(project: Project, assetId: string, name: string): { project: Project; changed: string[] } {
   const asset = project.assets.find((a) => a.id === assetId)
   if (!asset) return { project, changed: [] }
-  const speaker = name.trim() === '' ? undefined : name
+  // Stored trimmed: a lower third and a said quote both draw the trimmed name (lowerThirdFor, settleGraphics).
+  const speaker = name.trim() === '' ? undefined : name.trim()
   if (speaker === asset.speaker) return { project, changed: [] }
   const { speaker: _old, ...rest } = asset
   const nextAsset: MediaAsset = speaker === undefined ? rest : { ...rest, speaker }
-  const oldLower = asset.speaker !== undefined && asset.speaker.trim() !== '' ? asset.speaker : undefined
+  const oldLower = asset.speaker !== undefined && asset.speaker.trim() !== '' ? asset.speaker.trim() : undefined
   const oldQuote = quoteSpeakerOf(asset)
   const newQuote = quoteSpeakerOf(nextAsset)
   const changed: string[] = []
@@ -1066,10 +1068,10 @@ export function withSpeaker(project: Project, assetId: string, name: string): { 
 /**
  * The name a said quote draws as its speaker for an asset (§6.6 "Speaker",
  * §16.31): its Speaker when it holds more than spaces, else a link's channel,
- * else ''. director/run.ts `quoteSpeakerFor` returns this; it lives here so
+ * else '', trimmed (as settleGraphics draws it). director/run.ts `quoteSpeakerFor` returns this; it lives here so
  * `withSpeaker` reads the same rule without graphics/ importing the run.
  */
 export function quoteSpeakerOf(asset: Pick<MediaAsset, 'speaker' | 'credit'>): string {
-  if (asset.speaker !== undefined && asset.speaker.trim() !== '') return asset.speaker
-  return asset.credit?.source === 'link' ? (asset.credit.author ?? '') : ''
+  if (asset.speaker !== undefined && asset.speaker.trim() !== '') return asset.speaker.trim()
+  return asset.credit?.source === 'link' ? (asset.credit.author ?? '').trim() : ''
 }

@@ -8,7 +8,7 @@ import { GRAPHIC_RULE } from '@shared/director/apply'
 import { GRAPHICS_PASS } from '@shared/director/schemaGraphics'
 import { CLEAR_GRAPHICS_NOTE, CLIPS_GRAPHIC_RULE } from '@shared/graphics/apply'
 import { ON_SCREEN_REASON } from '@shared/graphics/budget'
-import { GRAPHICS_BUSY_NOTE, GRAPHICS_CLIP_GONE_NOTE, useEditor } from '../../src/renderer/src/store'
+import { GRAPHICS_BUSY_NOTE, GRAPHICS_CLIP_GONE_NOTE, GRAPHICS_NO_SPEECH_NOTE, useEditor } from '../../src/renderer/src/store'
 import { useCatalog } from '../../src/renderer/src/catalog'
 
 /*
@@ -84,6 +84,30 @@ const directGraphic: Clip = {
   generatedBy: { rule: GRAPHIC_RULE, reason: 'r' }
 }
 const drawnAsset = (id: string): MediaAsset => ({ id, path: '', name: 'keyword — graphic', kind: 'image', durationFrames: 300, size: 0, width: 1080, height: 1920, fps: null, hasVideo: true, hasAudio: false })
+
+/*
+ * By hand, for the sound cap (GRAPHIC_SOUND_CAP, three a footage clip): counters over the talk shot at frames
+ * 60, 300, 540 (onsets 2.5, 10.5, 18.5 s) with their ticks hold the three slots; one more at 780 (26.5 s) is
+ * silent under the cap, and its tick, once a slot is free, starts on its beat: 780 + ceil(0.5 × 30) = 795.
+ */
+const counterAt = (id: string, at: number, rule: string): Clip => ({
+  ...directGraphic, id, assetId: `drawn-${id}`, start: at, duration: 90,
+  graphic: { data: { template: 'counter', value: '40', label: 'clients' }, seconds: 3, beats: [0.5], place: { auto: true, third: 'middle' }, seed: 1, version: 1 },
+  generatedBy: { rule, reason: 'r' }
+})
+const tickFor = (graphic: Clip): Clip => ({ ...shotOf(`t-${graphic.id}`, 'tick', graphic.start + 15), trackId: 'a1', duration: 2, forGraphic: graphic.id, generatedBy: { rule: graphic.generatedBy!.rule, reason: 'r' } })
+const tickFile = (rule: string): MediaAsset => ({ id: 'tick', path: '/lib/sfx/clock_tick.wav', name: 'clock_tick.wav', kind: 'audio', durationFrames: 2, width: null, height: null, fps: null, hasVideo: false, hasAudio: true, size: 1, broughtBy: rule })
+/** Three sounded counters under `held`'s rule, then the silent fourth under `fourth`'s, over the talk shot. */
+function capHeld(held: string, fourth: string, transcripts: Project['transcripts'] = {}): void {
+  const three = [counterAt('h1', 60, held), counterAt('h2', 300, held), counterAt('h3', 540, held)]
+  start({
+    project: {
+      assets: [footage('talk'), tickFile(held), ...['h1', 'h2', 'h3', 'c4'].map((id) => drawnAsset(`drawn-${id}`))],
+      clips: [shotOf('shot', 'talk', 0), ...three, ...three.map(tickFor), counterAt('c4', 780, fourth)],
+      transcripts
+    }
+  })
+}
 
 let asks: CompletionRequest[]
 let answer: (r: CompletionRequest) => Promise<CompletionResult>
@@ -175,22 +199,25 @@ describe('findGraphics (§6.6, "Where it runs": by hand, from the Transcript til
     for (const c of graphicsOver('shot')) expect(soundsOf(c.id)).toHaveLength(1)
     expect(project().clips.filter((c) => c.forGraphic !== undefined)).toHaveLength(sounded)
     expect(state().decisions).toHaveLength(2)
-    undoesTo(state().past.at(-1)!)
+    expect(state().past).toHaveLength(2)
+    state().undo()
     undoesTo(before)
   })
 
   it('Find again replaces only that clip’s Clip-it graphics, sounds and proposals; another clip’s and Direct’s stay', async () => {
+    // Both YouTube transcripts, so each clip's counter waits as a proposal: shot2's must outlive Find again on shot.
+    start({ model: 'youtube-asr' })
     await state().findGraphics('shot2')
-    // shot: a YouTube transcript, so its counter waits as a proposal.
-    useEditor.setState({ project: { ...project(), transcripts: { ...project().transcripts, talk: talk('talk', SAID, 'youtube-asr') } } })
     await state().findGraphics('shot')
+    const otherProposals = (project().graphicProposals ?? []).filter((p) => p.clipId === 'shot2')
+    expect(otherProposals).toHaveLength(1)
     const other = graphicsOver('shot2').map((c) => c.id)
     const otherSounds = other.flatMap((id) => soundsOf(id).map((c) => c.id))
     const old = graphicsOver('shot').map((c) => c.id)
     const oldSounds = old.flatMap((id) => soundsOf(id).map((c) => c.id))
     expect(old).toHaveLength(1)
     expect(oldSounds).toHaveLength(1)
-    expect((project().graphicProposals ?? []).map((p) => p.clipId)).toEqual(['shot'])
+    expect((project().graphicProposals ?? []).map((p) => p.clipId)).toEqual(['shot2', 'shot'])
     const before = project()
 
     answer = answering(QUOTE)
@@ -198,8 +225,8 @@ describe('findGraphics (§6.6, "Where it runs": by hand, from the Transcript til
     const now = graphicsOver('shot')
     expect(templates(now)).toEqual(['quote'])
     for (const id of [...old, ...oldSounds]) expect(project().clips.some((c) => c.id === id)).toBe(false)
-    // The old run's proposal went with it; the new run has none.
-    expect(project().graphicProposals ?? []).toEqual([])
+    // The old run's proposal went with it; the new run has none; shot2's waits as it was.
+    expect(project().graphicProposals ?? []).toEqual(otherProposals)
     // shot2's graphics and sounds, and Direct's graphic, are the same clips.
     expect(graphicsOver('shot2').map((c) => c.id)).toEqual(other)
     expect(other.flatMap((id) => soundsOf(id).map((c) => c.id))).toEqual(otherSounds)
@@ -278,6 +305,16 @@ describe('dropGraphic and clearGraphics (§6.6, §6.14)', () => {
     undoesTo(before)
   })
 
+  it('Drop gives the sound slot its graphic held back to a graphic silent under the cap, on its beat, under its rule; ONE undo', () => {
+    capHeld(CLIPS_GRAPHIC_RULE, CLIPS_GRAPHIC_RULE)
+    const before = project()
+    expect(soundsOf('c4')).toEqual([])
+    state().dropGraphic('h1')
+    expect(project().clips.some((c) => c.id === 'h1' || c.forGraphic === 'h1')).toBe(false)
+    expect(soundsOf('c4').map((c) => [c.start, c.generatedBy?.rule])).toEqual([[795, CLIPS_GRAPHIC_RULE]])
+    undoesTo(before)
+  })
+
   it('Drop on a proposal removes it, and only it', async () => {
     start({ model: 'youtube-asr' })
     await state().findGraphics('shot')
@@ -326,6 +363,55 @@ describe('findGraphics: the run’s edges', () => {
     expect(state().findingGraphics).toBeNull()
   })
 
+  it('with no model and no Speaker it still completes: nothing placed, ONE record naming no model, the note', async () => {
+    answer = async () => {
+      throw new Error('No model is set up')
+    }
+    await state().findGraphics('shot')
+    expect(graphicsOver('shot')).toEqual([])
+    expect(project().graphicProposals ?? []).toEqual([])
+    expect(state().decisions.map((d) => [d.pass, d.model])).toEqual([[GRAPHICS_PASS, { id: 'baseline', runtime: 'none' }]])
+    expect(state().lastGraphics!.notes).toContain('no graphics for sentences s00 to s20: No model is set up')
+    expect(notices()).toEqual(['Graphics: 0 placed — 1 note'])
+    expect(state().findingGraphics).toBeNull()
+  })
+
+  it('a clip with no transcript, or whose span shows no word of it, asks nothing, clears nothing and records nothing', async () => {
+    await state().findGraphics('shot')
+    const placed = graphicsOver('shot')
+    expect(placed).toHaveLength(2)
+    const past = state().past.length
+    // Its transcript taken away: Find again keeps the run it has.
+    const { talk: _gone, ...rest } = project().transcripts
+    useEditor.setState({ project: { ...project(), transcripts: rest }, notices: [] })
+    await state().findGraphics('shot')
+    expect(asks).toHaveLength(1)
+    expect(graphicsOver('shot')).toEqual(placed)
+    expect(state().decisions).toHaveLength(1)
+    expect(state().past.length).toBe(past)
+    expect(notices()).toEqual([GRAPHICS_NO_SPEECH_NOTE])
+    // Every word 100 s later, past the 70 s shot: a transcript, but no speech shown.
+    const late = talk('talk', SAID)
+    const shifted: Transcript = { ...late, words: late.words.map((w) => ({ ...w, startMs: w.startMs + 100_000, endMs: w.endMs + 100_000 })), segments: late.segments.map((s) => ({ ...s, startMs: s.startMs + 100_000, endMs: s.endMs + 100_000 })) }
+    useEditor.setState({ project: { ...project(), transcripts: { ...rest, talk: shifted } }, notices: [] })
+    await state().findGraphics('shot')
+    expect(asks).toHaveLength(1)
+    expect(graphicsOver('shot')).toEqual(placed)
+    expect(state().decisions).toHaveLength(1)
+    expect(notices()).toEqual([GRAPHICS_NO_SPEECH_NOTE])
+  })
+
+  it('Find again that lands nothing gives Direct’s graphic back the sound slot the old run held, in the same step', async () => {
+    capHeld(CLIPS_GRAPHIC_RULE, GRAPHIC_RULE, { talk: talk('talk', SAID) })
+    answer = answering()
+    const before = project()
+    expect(soundsOf('c4')).toEqual([])
+    await state().findGraphics('shot')
+    expect(project().clips.filter((c) => c.generatedBy?.rule === CLIPS_GRAPHIC_RULE)).toEqual([])
+    expect(soundsOf('c4').map((c) => [c.start, c.generatedBy?.rule])).toEqual([[795, GRAPHIC_RULE]])
+    undoesTo(before)
+  })
+
   it('a second press while one runs is refused; a clip removed while the ask was out gets nothing and no record', async () => {
     let release: () => void = () => undefined
     answer = (r) => new Promise((resolve) => {
@@ -333,7 +419,8 @@ describe('findGraphics: the run’s edges', () => {
       void r
     })
     const first = state().findGraphics('shot')
-    await state().findGraphics('shot2')
+    // Not awaited: a second press that asked would wait on an answer never given; a short race reads it at once.
+    await Promise.race([state().findGraphics('shot2'), new Promise((resolve) => setTimeout(resolve, 50))])
     expect(notices()).toEqual([GRAPHICS_BUSY_NOTE])
     expect(asks).toHaveLength(1)
     state().removeClip('shot')
@@ -348,7 +435,8 @@ describe('findGraphics: the run’s edges', () => {
 
 describe('setSpeaker (§6.6 "Speaker", §16.31)', () => {
   it('writes MediaAsset.speaker and redraws exactly the graphics that drew the old name, in ONE step', async () => {
-    start({ speaker: 'Ana' })
+    // talk2's Speaker is 'Ana' too: its lower third drew the same name and is not this asset's.
+    start({ project: { assets: [footage('talk', 'Ana'), footage('talk2', 'Ana'), drawnAsset('drawn-direct-g')] } })
     answer = answering(QUOTE)
     await state().findGraphics('shot')
     answer = answering(KEYWORD)
@@ -357,6 +445,7 @@ describe('setSpeaker (§6.6 "Speaker", §16.31)', () => {
     expect(lower.graphic!.data).toEqual({ template: 'lower-third', name: 'Ana', role: '' })
     expect(quote.graphic!.data).toMatchObject({ template: 'quote', speaker: 'Ana' })
     const untouched = graphicsOver('shot2')
+    expect(untouched.map((c) => c.graphic!.data)).toContainEqual({ template: 'lower-third', name: 'Ana', role: '' })
     const before = project()
     bake.asks = []
 
@@ -373,6 +462,34 @@ describe('setSpeaker (§6.6 "Speaker", §16.31)', () => {
     expect('speaker' in project().assets.find((a) => a.id === 'talk')!).toBe(false)
     expect(clipById(lower.id).graphic!.data).toMatchObject({ name: 'Ana' })
     expect(clipById(quote.id).graphic!.data).toMatchObject({ speaker: '' })
+  })
+
+  it('a Speaker with spaces around it is stored and drawn trimmed, so the lower third and the quote draw one name and both follow it', async () => {
+    start({ speaker: ' Ana ' })
+    answer = answering(QUOTE)
+    await state().findGraphics('shot')
+    const [lower, quote] = graphicsOver('shot')
+    expect(lower.graphic!.data).toEqual({ template: 'lower-third', name: 'Ana', role: '' })
+    expect(quote.graphic!.data).toMatchObject({ template: 'quote', speaker: 'Ana' })
+    const drawn = (): unknown[] => [clipById(lower.id).graphic!.data, (clipById(quote.id).graphic!.data as { speaker: string }).speaker]
+    const speakerOf = (): string | undefined => project().assets.find((a) => a.id === 'talk')!.speaker
+    bake.asks = []
+
+    state().setSpeaker('talk', 'Bea')
+    expect(drawn()).toEqual([{ template: 'lower-third', name: 'Bea', role: '' }, 'Bea'])
+    expect(bake.asks.sort()).toEqual([lower.id, quote.id].sort())
+
+    // The same name with spaces: stored 'Bea', nothing drawn differently, nothing rebaked.
+    bake.asks = []
+    state().setSpeaker('talk', '  Bea  ')
+    expect(speakerOf()).toBe('Bea')
+    expect(drawn()).toEqual([{ template: 'lower-third', name: 'Bea', role: '' }, 'Bea'])
+    expect(bake.asks).toEqual([])
+
+    state().setSpeaker('talk', '  Cy ')
+    expect(speakerOf()).toBe('Cy')
+    expect(drawn()).toEqual([{ template: 'lower-third', name: 'Cy', role: '' }, 'Cy'])
+    expect(bake.asks.sort()).toEqual([lower.id, quote.id].sort())
   })
 })
 
@@ -391,6 +508,29 @@ describe('place.auto on an aspect change (§6.9)', () => {
     expect(clipById('dragged-g').graphic).toEqual(dragged.graphic)
     expect(bake.asks.sort()).toEqual(['auto-g', 'dragged-g'])
     undoesTo(before)
+  })
+
+  it('a rate change moves no third: an auto place stays where it was', async () => {
+    const auto: Clip = { ...directGraphic, id: 'auto-g', start: 0, graphic: { ...directGraphic.graphic!, place: { auto: true, third: 'top' } } }
+    start({ project: { clips: [shotOf('shot', 'talk', 0), auto], transcripts: {} } })
+    state().setFrameRate(25)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(clipById('auto-g').graphic).toMatchObject({ place: { auto: true, third: 'top' }, version: 1 })
+  })
+
+  it('a reframe of the footage beneath re-places an auto place and rebakes it, keeps a dragged box and does not rebake it, history-neutral', async () => {
+    // `subject: null` (not taken): no onset target beneath, so only the recompute can ask for the rebake.
+    const auto: Clip = { ...directGraphic, id: 'auto-g', start: 0, graphic: { ...directGraphic.graphic!, subject: null, place: { auto: true, third: 'top' } } }
+    const box = { x: 0.2, y: 0.1, width: 0.5, height: 0.2 }
+    const dragged: Clip = { ...directGraphic, id: 'dragged-g', start: FPS * 20, graphic: { ...directGraphic.graphic!, subject: null, place: { auto: false, box } } }
+    start({ project: { clips: [shotOf('shot', 'talk', 0), auto, dragged], transcripts: {} } })
+    const past = state().past.length
+
+    await state().rebakeFollowed(['talk'])
+    expect(clipById('auto-g').graphic).toMatchObject({ place: { auto: true, third: 'middle' }, version: 2 })
+    expect(clipById('dragged-g').graphic).toEqual(dragged.graphic)
+    expect(bake.asks).toEqual(['auto-g'])
+    expect(state().past.length).toBe(past)
   })
 })
 
@@ -418,7 +558,7 @@ describe('Direct’s Clear in the store (§6.14, resoundAfterClear)', () => {
     state().clearDirectorOutput()
     expect(project().clips.filter((c) => c.generatedBy?.rule === GRAPHIC_RULE)).toEqual([])
     // The Clip-it counter's tick, on its beat: 780 + ceil(0.5 × 30) = 795, under its own rule.
-    expect(soundsOf('c4').map((c) => [c.start + Math.round(0.005 * FPS), c.generatedBy?.rule])).toEqual([[795, CLIPS_GRAPHIC_RULE]])
+    expect(soundsOf('c4').map((c) => [c.start, c.generatedBy?.rule])).toEqual([[795, CLIPS_GRAPHIC_RULE]])
     undoesTo(before)
   })
 })

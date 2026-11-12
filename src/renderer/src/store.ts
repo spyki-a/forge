@@ -575,6 +575,24 @@ function placeAgainQuietly(get: () => EditorState, set: (partial: Partial<Editor
   return true
 }
 
+/**
+ * §6.9's `place.auto` recompute over every graphic, on the aspect change
+ * (graphics/apply.ts placeAgain; a dragged box is kept), inside setAspect's
+ * own update so its one undo step holds the old places. Not in
+ * rebakeGenerated, which setFrameRate also calls: a rate change moves no
+ * third. Each kept-old-place note goes into `notes`.
+ */
+function withPlacesAgain(project: Project, notes: string[]): Project {
+  let next = project
+  for (const c of project.clips) {
+    if (!c.graphic) continue
+    const again = placeAgain(next, c.id)
+    if (again.note) notes.push(again.note)
+    next = again.project
+  }
+  return next
+}
+
 /** The one bake a run of trims costs, `GRAPHIC_TRIM_REBAKE_MS` after the last of them. */
 function rebakeWhenTrimRests(clipId: string, rebake: () => Promise<void>): void {
   const pending = trimRebakes.get(clipId)
@@ -590,6 +608,21 @@ function rebakeWhenTrimRests(clipId: string, rebake: () => Promise<void>): void 
 
 /** Said when Find graphics is pressed while a Find is still asking (docs/CLIPS.md §6.6; not the plan's words). */
 export const GRAPHICS_BUSY_NOTE = 'Graphics are still being found — wait for that run to finish'
+/**
+ * Said when Find graphics is pressed on a clip with no transcript, or whose
+ * span shows no transcribed word (not the plan's words): nothing is asked,
+ * cleared or recorded.
+ */
+export const GRAPHICS_NO_SPEECH_NOTE = 'This clip shows no transcribed speech — no graphics were looked for, and nothing changed'
+/**
+ * Whether a footage clip holds speech for the graphics pass (§6.6 "Where it
+ * runs": "whose span holds speech"): its asset has a transcript and its span
+ * shows at least one of its words, i.e. `graphicsMenuFor` gives a menu.
+ */
+function holdsSpeech(project: Project, clip: Clip): boolean {
+  const transcript = project.transcripts[clip.assetId]
+  return transcript !== undefined && graphicsMenuFor(project, clip, transcript).length > 0
+}
 /** Said when the clip was removed while its graphics were being found (not the plan's words). */
 export const GRAPHICS_CLIP_GONE_NOTE = 'The clip was removed while its graphics were being found — nothing was placed'
 
@@ -2247,7 +2280,8 @@ export const useEditor = create<EditorState>((set, get) => ({
   setAspect: (aspect) => {
     set({ aspect })
     const { width, height } = ASPECTS[aspect]
-    get().update((p) => ({
+    const placeNotes: string[] = []
+    get().update((p) => withPlacesAgain({
       ...p,
       settings: { ...p.settings, width, height },
       clips: p.clips.map((c) => {
@@ -2279,7 +2313,8 @@ export const useEditor = create<EditorState>((set, get) => ({
         if (c.follow) return { ...c, crop: storedFollowCrop({ ...p, settings: { ...p.settings, width, height } }, c, p.settings.fps) }
         return { ...c, crop: solveCrop(asset, aspect) }
       })
-    }))
+    }, placeNotes))
+    for (const note of placeNotes) get().notify(note, 'info')
     void get().rebakeGenerated()
   },
 
@@ -2392,10 +2427,8 @@ export const useEditor = create<EditorState>((set, get) => ({
         }
 
         if (clip.graphic) {
-          // §6.9's `place.auto` recompute first (graphics/apply.ts placeAgain; a dragged box is kept), history-neutral:
-          // the aspect change that asked is the undo step, and its snapshot holds the old place. §6.16's
-          // screen-card realign is phase 3's and goes here too.
-          placeAgainQuietly(get, set, clip.id)
+          // §6.9's `place.auto` recompute is setAspect's (in its own update), not this arm's: setFrameRate calls
+          // here too, and a rate change moves no third. §6.16's screen-card realign is phase 3's.
           // At the new canvas, through the one bake (docs/CLIPS.md §6.4's arm).
           await get().rebakeGraphic(clip.id)
           continue
@@ -2913,7 +2946,8 @@ export const useEditor = create<EditorState>((set, get) => ({
         lastDirection: {
           model,
           reasoning: composed.plan.reasoning,
-          problems: notes,
+          // A copy: the graphics pass below adds to `notes`, and lastDirection is replaced then, never written in place.
+          problems: [...notes],
           baseline,
           recipe: { id: composed.recipe.id, name: composed.recipe.name, intent: composed.recipe.intent },
           ...(heroSlot ? { hero: heroSlot.label } : {})
@@ -2980,14 +3014,14 @@ export const useEditor = create<EditorState>((set, get) => ({
       /*
        * The graphics pass (docs/CLIPS.md §6.6, "Where it runs"), after the
        * spine, the look and the bakes: every shot on the video track whose
-       * asset has a transcript, through the pure functions Find uses, under
+       * asset has a transcript and whose span holds speech, through the pure functions Find uses, under
        * GRAPHIC_RULE, so Direct again and Direct's Clear take them. It lands
        * on the project as it is then (an edit made while the model was asked
        * is never overwritten), in the spine's own undo step when no step was
        * taken since (else a step of its own). A failure of the pass
        * never fails Direct: the spine stands, and the note says why.
        */
-      const shots = spineProject.clips.filter((c) => c.trackId === videoTrack.id && spineProject.transcripts[c.assetId] !== undefined)
+      const shots = spineProject.clips.filter((c) => c.trackId === videoTrack.id && holdsSpeech(spineProject, c))
       if (shots.length > 0) {
         try {
           set({ directStage: 'finding graphics' })
@@ -5483,6 +5517,11 @@ export const useEditor = create<EditorState>((set, get) => ({
     const asked = get().project
     const clip = asked.clips.find((c) => c.id === clipId)
     if (!clip) return
+    // No transcript, or no word of it shown: nothing to ask, so nothing is cleared and no run is recorded.
+    if (!holdsSpeech(asked, clip)) {
+      notify(GRAPHICS_NO_SPEECH_NOTE, 'info')
+      return
+    }
     set({ findingGraphics: clipId })
     try {
       const run = await askGraphicsPass(asked, [clip])
