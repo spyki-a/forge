@@ -120,7 +120,7 @@
 > is still the stub (until T3, below), and `settleGraphics` has no
 > baseline until T4's `baselineGraphics` (a rejected answer settles to no
 > graphics, with its reason). So still nothing in the app makes a
-> graphic clip.
+> graphic clip (until T2b, below).
 > Then **lane T3** (§6.8, §6.9, §6.6's real body, §6.14), built
 > 2026-11-11 in six pieces, each read by two critics before its fixer and
 > the next piece: piece 1 (beats), `c27b9a4`, fix `4699660`; piece 2
@@ -138,7 +138,8 @@
 > passed and 64 skipped (5235); the harness census at `69e677c`: 892 rows
 > checked, 0 missing, 8 skipped. What the app can do now: `applyGraphics`
 > is real and tested, and its only callers are tests, so **still nothing
-> in the app makes a graphic from speech**. What you can see: the OUTPUT
+> in the app makes a graphic from speech** (until T2b, below). What you
+> can see: the OUTPUT
 > strip's Graphics section has a **"Graphic sounds"** switch (on when the
 > project has no setting; it calls `setGraphicSounds`); a graphic clip
 > made by hand (lane C's `addGraphicClip`, the harness: no control in the
@@ -150,9 +151,61 @@
 > the store's `clearGraphics()`, `setSpeaker`, the menu, the schema, the
 > prompt, the ask, `decisionForGraphics`, Direct's wiring and the two
 > panels are T2b's; the baseline and the eval T4's.
-> Not built: the rest of phase 2, which is next: T2b, then T4 (§6.19).
+> Then **lane T2b** (§6.6: the menu, the prompt, the schema, the ask's
+> fix, `settleGraphics` whole, `decisionForGraphics`, the store's actions,
+> Direct's wiring, the Transcript tile's Graphics section and the dock's
+> graphic panel; §6.9's `place.auto` recompute), built 2026-11-11 in five
+> pieces, each read by two critics before its fixer and the next piece:
+> piece 1 (the menu, the prompt, the schema), `226cdb0`, fix `44024d9`;
+> piece 2 (the ask; settle, pairing, the record), `c4a4395`, `0f28dfa`,
+> fix `db4b46d`; piece 3 (the store's actions, Direct, the recompute),
+> `7a35dfd`, fix `f52e11f`; piece 4 (the tile's section), `ffc5391`, fix
+> `64adaed`; piece 5 (the dock's panel), `becf32e`, fix `d33d5b4`; then
+> `71db0a7`, the census rows read on screen (§6.6's T2b Built note).
+> Pushed 2026-11-11 with the T3 record as `c6e4278` (run 43144819099:
+> `macos-15` and `windows-latest` green, no annotation; the installer job
+> skipped): **the lane is green on both runners at `c6e4278`.** The suite
+> at `d33d5b4` on the Mac: 343 files passed and 5 skipped (348), 5290
+> tests passed and 64 skipped (5354); the harness census at `d33d5b4`:
+> 907 rows checked, 0 missing, 8 skipped. What the app can do now: **it
+> makes graphics from speech when a model is set up** (Ollama, LM Studio
+> or the hosted route, as Direct's). The Transcript tile has a
+> **Graphics** section: **"Find graphics in this clip"** asks the model
+> once per window of at most 24 sentences, settles the answer through the
+> validator and lands what survives through `applyGraphics` (the budget,
+> placement, the sounds); every graphic over the clip is listed with
+> **Drop**; a number heard from a YouTube track or an unsure Whisper word
+> waits as a proposal with **check the number**, the words heard,
+> **Keep** and **Drop**, and is not placed until Keep; **"Clear
+> graphics"** takes every graphic Find placed, in every clip, with its
+> sounds and waiting proposals, and Direct's stay; a **Speaker** field
+> per asset (stored and drawn trimmed; on a link's asset the channel is
+> its placeholder and "Use the channel name" fills it), and with a
+> Speaker a lower third lands in every run on the first word the clip
+> shows. Direct runs the graphics pass after the spine, the look and the
+> bakes, over every shot on its video track whose span shows transcribed
+> speech; a graphics failure never fails Direct, and Direct's Clear and
+> Direct again take Direct's graphics and put the sounds of what stays
+> back. Selecting a graphic clip shows the dock's **Graphic** panel: its
+> template's fields, Seconds, Place with Back to auto, a lower third's
+> Role (pre-filled from the asset's last lower third); a field's edit is
+> one `setGraphic` (a Speaker field's is `setSpeaker`), and every
+> grounded, verbatim or index field is checked again after each edit,
+> with a warning that never blocks. An aspect change or a reframe places
+> `place.auto` graphics again. What it cannot do yet: **with no model, or
+> a window's answer rejected, only the lower third lands** (with a
+> Speaker), and the tile says "No model’s answer was used in this run":
+> `settleGraphics`' baseline seam is empty until T4's `baselineGraphics`.
+> **No real model has been asked by any test**: every ask in the suite is
+> injected, so the pass has never run against Gemma or any model; the
+> first real run is the eval's or yours.
+> Not built: the rest of phase 2, which is next: T4, the last lane (the
+> baseline, the eval, the harness's options, `graphic.int`'s phase-2
+> cases; §6.19).
 > Still yours from these lanes: the list in §6.12's "Phase 2's state,
-> 2026-11-11", with T2a's and T3's items added below it. (Until T3 was
+> 2026-11-11", with T2a's, T3's and T2b's items added below it. (Until
+> T2b was recorded this line read: "Not built: the rest of phase 2, which
+> is next: T2b, then T4 (§6.19)"; until T3 was
 > recorded this line read: "Not built: the rest of phase 2, which is
 > next: T3 (beats, place, budget, sound, apply), then T2b and T4 as §6.19
 > orders them"; until T2a was recorded
@@ -8174,7 +8227,11 @@ become frame-cache paths unsanitised (`writeTitleFrame`,
 >   - The seam: `GraphicCandidate` (`:114-124`, §6.7: `sentence`, `data`,
 >     `bound`, `beatWords`, `why`, `source: 'model' | 'baseline'`,
 >     `proposal?` as `GraphicSpec['proposal']`) and `KeptGraphic`
->     (`:127-131`, §6.6: `clipId`, `assetId`, `candidate`).
+>     (`:127-131`, §6.6: `clipId`, `assetId`, `candidate`). (2026-11-11,
+>     lane T2b, `0f28dfa`: no field of either changed; `KeptGraphic`'s
+>     comment now names `pairSettled`, and beside it `GraphicDrop` {
+>     `clipId`, `template`, `text`, `reason` }, beyond the words, the
+>     structured drop of §6.6's T2b Built note, part (e).)
 >   - `UnitRect` is imported (`:11`), not declared. Two exist,
 >     `render/moment.ts:373` and `reframe/types.ts:18`; §6.3 names the
 >     latter's 0..1 one, in a file that imports nothing, and
@@ -10639,7 +10696,11 @@ picked it on 2026-10-27, so every (box) item is to be built, in phase 1):
 >   §6.6's panel (phase 2), and the Director's graphics come through §6.6's
 >   pure apply. So the Preview's branch and the export's are exercised by
 >   the tests only until phase 2, and no graphic has been baked through
->   the app's own writer.
+>   the app's own writer. (2026-11-11, lane T2b: still no control calls
+>   `addGraphicClip`, which the harness's census states use; the dock's
+>   panel edits a graphic and makes none. Find graphics and Direct now land
+>   graphic clips through `applyGraphics` and bake each through
+>   `rebakeGraphic`; §6.6's T2b Built note.)
 > - **The tests.** `tests/renderer/graphicStore.test.ts`, 16 cases in
 >   `a273729` and 21 since `fa4ddc3` (the bake mocked as a recorder
 >   through `vi.mock`, since the store's wiring is under test, not the
@@ -10923,14 +10984,14 @@ arm, and the test anchors each):
 
 | site | today | the graphic arm |
 |---|---|---|
-| `rebakeGenerated` (`store.ts:2050-2223`) | moment `:2076`, carousel `:2086`, paper `:2110`, text `:2145`, solid `:2198`, title `:2205` | before the text arm: `await get().rebakeGraphic(clip.id)`, with `place.auto` recomputed first (§6.9) and a screen card realigned (§6.16) |
+| `rebakeGenerated` (`store.ts:2050-2223`) | moment `:2076`, carousel `:2086`, paper `:2110`, text `:2145`, solid `:2198`, title `:2205` | before the text arm: `await get().rebakeGraphic(clip.id)`, with `place.auto` recomputed first (§6.9) and a screen card realigned (§6.16) (2026-11-11, lane T2b, `f52e11f`: the recompute is not in this arm, which `setFrameRate` also calls; it is in `setAspect`'s own update and `rebakeFollowed`'s arm, §6.9's dated note) |
 | `placeCopies` (`store.ts:5256-5272`) | its `toBake` loop (`:5266-5271`) rebakes text, solid, paper, carousel (a pasted moment is not rebaked there, a gap outside this step) | `else if (from.graphic) await get().rebakeGraphic(clipId)` |
 | `rebakeFollowed` (`store.ts:2225-2253`) | moments whose shots read a re-followed file | a graphic whose `spec.subject.clipId`'s asset, or the caption track's clip under it, is in `assetIds` is rebaked: a callout's onset target moves when Follow re-solves the crop beneath it. Not in §6.4 as written. (Built 2026-11-02 testing `assetIds.includes(under.assetId)`, the words of this row, not the paths set the moment arm reads; lane C's Built note below) |
 | Preview's `sourceFor` (`Preview.tsx:1263`) | the moment's branch `:1272-1293`, `live ?? nothing()` at `:1292` | §6.3's branch, also ending `return live ?? nothing()` |
 | Preview's removed-clip sweep (`Preview.tsx:680-707`) | `forgetTextPreview` `:701`, `forgetMomentPreview` `:703` | `forgetGraphicPreview(clipId)` |
 | `bakeForExport` (`exportBake.ts:117-170`) | a moment that cannot draw is dropped (`:137-145`, `:168`) | §6.3's branch, dropped the same way, the catch's graphic line apart from the moment's (§6.3) |
 | `liveBakers` (`exportBakers.ts:13-26`) | seven bakers | `graphic` |
-| the Inspector's per-kind panels (`Inspector.tsx:234-237`, `PaperPanel`, `CarouselPanel`) | — | `GraphicPanel` for a clip with `.graphic`, in phase 2 with the panel (§6.6) |
+| the Inspector's per-kind panels (`Inspector.tsx:234-237`, `PaperPanel`, `CarouselPanel`) | — | `GraphicPanel` for a clip with `.graphic`, in phase 2 with the panel (§6.6) (built 2026-11-11 by lane T2b, `becf32e`, at `Inspector.tsx:241` after `CarouselPanel`; anchored by `graphicPanel.test`'s mount case) |
 
 `SpeedPanel` needs nothing: it returns null for an image asset
 (`SpeedPanel.tsx:30`), and a graphic's asset is one. `isPhoto` needs
@@ -10949,7 +11010,16 @@ copy (`pasteClipboard`) sets `forGraphic` undefined. `rebakeFollowed`'s
 graphic arm (`518a62f`) does not re-follow a graphic whose `subject` is
 `null`. `rebakeGenerated`'s graphic arm still does **not** recompute
 `place.auto` (its comment still says so; §6.9's Built note, part (d),
-handed to T2b).
+handed to T2b). (2026-11-11, lane T2b, `7a35dfd`, `f52e11f`: it still does
+not, now on purpose, since `setFrameRate` calls it too; the recompute is
+in `setAspect`'s own update (`withPlacesAgain`) and in `rebakeFollowed`'s
+graphic arm (`placeAgainQuietly`, history-neutral), §6.9's dated note.
+`setGraphic` is the panel's one writer of a graphic's fields, seconds and
+place (a Speaker field calls `setSpeaker`). `graphicGuards`' anchor on
+`rebakeFollowed` follows the new line, `if ((under &&
+assetIds.includes(under.assetId)) || moved) await
+get().rebakeGraphic(clip.id)`, matching `store.ts` once (`7a35dfd`; the
+first full run failed on the old anchor).)
 
 **The test**, `tests/graphicGuards.test.ts`, modelled on
 `tests/moment.test.ts:585-647`, asserting membership, never a whole list.
@@ -11343,7 +11413,15 @@ assertions beside them (`if (drawsItself(c)) return { ...c, crop: undefined
 >   and 63 skipped (4,600), 11 more than `fa4ddc3`'s 4,526.
 > - **Left**: from phase 2, `Inspector.tsx`'s mount (`GraphicPanel`,
 >   §6.6) and its anchor in `graphicGuards`; phase 2's `place.auto` and
->   phase 3's realign in `rebakeGenerated`'s arm.
+>   phase 3's realign in `rebakeGenerated`'s arm. (2026-11-11, lane T2b:
+>   the mount is built, `becf32e`, `{clip.graphic && <GraphicPanel
+>   clip={clip} />}` at `Inspector.tsx:241`, after `CarouselPanel`; its
+>   anchor is `tests/renderer/graphicPanel.test.tsx`'s mount case, which
+>   reads `Inspector.tsx` and counts each anchor once, not
+>   `graphicGuards` (mutation: the mount removed, the mount and census
+>   cases fail). `place.auto` is recomputed in `setAspect`'s own update
+>   and in `rebakeFollowed`, not in `rebakeGenerated`'s arm, §6.9's dated
+>   note. Phase 3's realign is still left.)
 
 ### 6.5 The graphic style — `src/shared/graphics/style.ts`
 
@@ -11788,7 +11866,12 @@ wordEnd: number }[]; templates: GraphicTemplateId[]; wordSource: 'whisper' |
 > `graphicsAnswerShape` goes; T2b imports or moves the types. A `parent`
 > written into an answer item is therefore the wrong shape and rejects
 > the answer (the schema has no field for it), and a `lit` of 0.5 rejects
-> it too.
+> it too. (2026-11-11, lane T2b: done as written. `graphicsMenuFor` is
+> built (`226cdb0`), `schemaGraphics.ts` holds the types and
+> `graphicsSchema`, `validateGraphics` checks the shape against
+> `graphicsSchema(menu, { constrained: false })`, and
+> `graphicsAnswerShape` is gone; the Built note below, part (c), and
+> §6.7's dated note.)
 
 - **Sentences.** The segments of the words the clip shows, capped by
   `capSegments` (`transcript.ts:207`) at 30 words or 15 s (§7.2).
@@ -11837,7 +11920,9 @@ The TEMPLATES table's rows:
     the **union** of the offered templates' fields, unused ones left as `''`.
   - **Measured size.** The 2026-10-05 prototype measured 1,269 chars, with
     `unsupportedKeywords []` and `flatViolations []`, without `words` and
-    `lit`. With them it is re-measured by the test.
+    `lit`. With them it is re-measured by the test. (2026-11-11, lane
+    T2b, `226cdb0`: 1817 chars for 3 sentences and 7 templates, 1943 for
+    24 and 7, constrained; 1559 unconstrained; both lists empty.)
   - **The fields, in declaration order.** `reasoning` (≤ 300) comes first.
     Then `graphics`: `maxItems` 4 (`MAX_GRAPHICS`), `minItems` 0. Each
     object holds, in order: `sentence` (an enum of this request's ids);
@@ -11854,7 +11939,12 @@ The TEMPLATES table's rows:
   - **`constrained`.** `true` for the decoder (enums, maxLengths, the
     integer's range); `false` for the validator's shape check, so an
     out-of-list id or an out-of-range `lit` is repaired rather than failing
-    the pass (`schema2.ts:88-93`).
+    the pass (`schema2.ts:88-93`). (2026-11-11, lane T2b, the code
+    otherwise: an out-of-range `lit` is repaired, but an out-of-list id,
+    or a template not offered, DROPS that one graphic with a note
+    ("graphic dropped: 's99' is not a sentence on the menu", T2a's
+    `offered()`), and the pass stands; the test pins "never the pass", not
+    a repair. `0f28dfa` followed the code; the Built note below.)
   - **Decode limits are looser than what is kept.** A grammar cut-off
     mid-string made Gemma 4 E2B close a whole plan after one segment
     (`EVAL.md:84-95`).
@@ -11922,7 +12012,11 @@ type the app defined.
   Find again replaces the clip's `'clips.graphic'` graphics, their sounds
   and its pending proposals, in one undo step.
 - **With no model**, or a pass that is rejected, the baseline runs (§6.10)
-  through the same validator, and the notes say so.
+  through the same validator, and the notes say so. (2026-11-11, lane T2b:
+  the seam is wired in `settleGraphics` and empty until T4's
+  `baselineGraphics`, so today such a run lands only the lower third
+  (with a Speaker), its note "no graphics for <window>: <why>", and the
+  tile says "No model’s answer was used in this run".)
 - **A `lower-third`** is the app's in every run: placed on the speaker's
   first word the clip shows, at most once per clip, when the asset has a
   Speaker (§6.8, §6.9). It is made by `lowerThirdFor(project, clip):
@@ -11959,7 +12053,7 @@ become a confident counter. So (§16.30):
 
 | missing | what happens |
 |---|---|
-| a model, or a pass rejected | the baseline, validated the same way, with a note |
+| a model, or a pass rejected | the baseline, validated the same way, with a note (2026-11-11, lane T2b: the seam is empty until T4, so only the lower third, with a Speaker) |
 | a subject track | `callout` not offered; a dim drawn with no hole; placement takes the no-track default (§6.9) |
 | captions | no third is excluded |
 | a Speaker on the asset | no lower third; a quote's speaker is '' (or a link's channel, §16.31) |
@@ -12046,7 +12140,10 @@ project). Each is a `GraphicProposal` (§6.1).
   > gone. Figures from the two messages and the build workflow's journal
   > (`wf_bd4e915e-7cc`); the code at `69e677c` is what is described.
   > Nothing in the app calls `applyGraphics` yet: its callers are tests
-  > (T2b wires `findGraphics` and Direct).
+  > (T2b wires `findGraphics` and Direct). (2026-11-11, lane T2b: it does
+  > now, from Find graphics through `replaceClipGraphics` and from Direct;
+  > the T2b Built note below. Since `f52e11f` `lowerThirdFor` draws the
+  > Speaker trimmed, and since `becf32e` its `role` is `lastRoleOf`'s.)
   > - **The landing order as built** (`graphics/apply.ts`). First, a run
   >   whose `ctx.fps` is not `project.settings.fps` lands nothing, with one
   >   problem at `'$'`, `fpsMismatchNote`: "graphics not placed: the run's
@@ -12184,6 +12281,10 @@ id: 'baseline', runtime: 'none' }` when no model answered (no model, or a
 rejected pass whose baseline ran); `createdAt` from `options.now`. It is
 saved in the project file's `decisions` (`project.ts:45`). There is one
 record per Find or Direct run (and, from step 4, per Clip it run).
+(2026-11-11, lane T2b, `0f28dfa`, `db4b46d`: built as worded, with a
+fourth key in the op, `drops`; a Find or Direct that asks nothing, a clip
+whose span shows no speech, writes no record, and a run of no windows
+names no model; the Built note below, part (f).)
 
 **The dock's panel**, `src/renderer/src/components/GraphicPanel.tsx`
 (chosen 2026-10-21: per-kind dock panels live in `components/`, beside
@@ -12214,6 +12315,13 @@ mode:
 
 Each edit is `setGraphic` (§6.3).
 
+(2026-11-11, lane T2b, `becf32e`, `d33d5b4`: built, mounted at
+`Inspector.tsx:241`; `checkGraphicData` takes a fifth argument,
+`speakers` (T2a's), which the panel passes; a Speaker field's edit is
+`setSpeaker`, not `setGraphic`; the Role is pre-filled at creation by
+`lastRoleOf`; a warning under Seconds below §6.2's reading hold. The Built
+note below, part (j).)
+
 **Store actions** (`src/renderer/src/store.ts`): `findGraphics(clipId)`,
 `keepGraphic(proposalId)`, `dropGraphic(clipId)`, `clearGraphics()`,
 `setSpeaker(assetId, name)`, `setGraphicSounds(on)`. Drop takes the graphic,
@@ -12221,7 +12329,10 @@ its drawn asset when nothing else uses it, and its sounds (§6.14).
 (2026-11-11: `setGraphicSounds` is built, by lane T3, `e8f2a1f`; §6.14's
 Built note. The other five are T2b's; the pure functions they are to
 call, `applyGraphics`, `removeWithFollowers`, `resoundAfterClear`,
-`resoundGraphic` and `clearGraphics`, are built.)
+`resoundGraphic` and `clearGraphics`, are built.) (2026-11-11, lane T2b:
+the other five are built, `7a35dfd` and `f52e11f`; `dropGraphic` takes
+a proposal's id too, and `keepGraphic` returns its refusal or null. The
+Built note below, part (g).)
 
 **Census rows** (exact text): the Transcript tile's "Graphics", "Find
 graphics in this clip", "Keep", "Drop", "check the number" (for a stub
@@ -12230,6 +12341,10 @@ an unsure Whisper word), "Clear graphics", "Speaker"; the dock's graphic
 panel and its "Role"; the OUTPUT strip's "Graphic sounds" (§6.14).
 (2026-11-11: "Graphic sounds" is built and read on screen, lane T3,
 `e8f2a1f` and `8db943a`; §6.11's census rows. The rest are T2b's.)
+(2026-11-11, lane T2b: the rest are in, fifteen rows with the "Finding
+graphics…" state, Find's greyed title, "Clear graphics"' note and "Use the
+channel name", read on screen at `d33d5b4`; the Built note below, part
+(k).)
 
 **Tests** (§6.11 indexes them by phase):
 
@@ -12267,6 +12382,580 @@ panel and its "Role"; the OUTPUT strip's "Graphic sounds" (§6.14).
   in the stretch shows a warning, never a block; `user` fields (Role, a
   social card's) are never checked. Mutations: the check skipped on edit;
   the warning made a disabled field; a `user` field checked.
+
+> **Built 2026-11-11 (lane T2b, §6.19), in five pieces, each read by two
+> critics before its fixer and the next piece** (the build workflow
+> `wf_4812e7bc-b11`, 20 agents; all ten verdicts "accept-after-fixes"):
+> piece 1 (the menu, the prompt, the schema) `226cdb0`, fix `44024d9`;
+> piece 2 (the ask's fix; `settleGraphics` whole, `decisionForGraphics`)
+> `c4a4395` (2a, the ask) and `0f28dfa` (2b), fix `db4b46d`; piece 3 (the
+> store's actions, Direct's wiring, the `place.auto` recompute) `7a35dfd`,
+> fix `f52e11f`; piece 4 (the Transcript tile's Graphics section)
+> `ffc5391`, fix `64adaed`; piece 5 (the dock's panel) `becf32e`, fix
+> `d33d5b4`; then `71db0a7`, the census rows' notes after the session read
+> them on screen. Pushed 2026-11-11 with the T3 record as `c6e4278`, green
+> on both runners (the status block). Over `77ac70a..d33d5b4`: 26 files,
+> 5221 insertions and 212 deletions, nothing under `docs/`. Read from the
+> twelve messages, the journal and the code at `71db0a7`, which is what is
+> described: where a piece said one thing and its fix changed it, the fix
+> is the state. **Every "beyond the plan's words" item below is a
+> builder's or a fixer's choice, yours to keep or overrule.** **No test
+> asks a real model**: every ask in the suite is injected, so the pass has
+> never run against Gemma or any model; the first real run is the eval's
+> (T4) or yours.
+> - **(a) The menu** (`run.ts`, `226cdb0`, `44024d9`).
+>   `graphicsMenuFor(project, clip, transcript): GraphicsMenu[]` as
+>   worded, pure. Sentences are `capSegments(t, SEGMENT_MAX_WORDS 30,
+>   SEGMENT_MAX_MS 15000)`, the capped segments `stretchFor` reads, so a
+>   sentence id is the capped segment's own (`'s07'`, `'s07.2'`), not
+>   renumbered per menu (beyond the words): unique within a menu and
+>   across a clip's windows. Each is held to the words the clip shows
+>   (`captionWindowMs` and `firstShownWord`'s test, `endMs` after the
+>   window's start and `startMs` before its end): a sentence it shows none
+>   of is left out; one it shows part of keeps its id, lists only the
+>   shown words and starts at its first shown word (beyond the words). The
+>   validator's stretch is still the whole capped sentence, so a graphic
+>   grounded on an unshown word is kept by `validateGraphics` and dropped
+>   later by `graphicTiming` (`NOT_SHOWN_NOTE`), correct end to end (open,
+>   §6.12). Windows of `MAX_CANDIDATES` (24): 50 sentences give 24, 24, 2.
+>   Templates: `GRAPHIC_TEMPLATES_ALWAYS` (counter, bars, steps, quote,
+>   ring, keyword; exported, beyond the words), `callout` after `quote`
+>   only when `subjectTrackOf` finds a track; never `lower-third` or
+>   `screen-card`. `wordSource` is `wordSourceOf(transcript)` (exported,
+>   beyond the words): `'whisper'` for any model not starting `youtube-`;
+>   inside YouTube, `'youtube-lines'` when the model is `'youtube-lines'`
+>   or the transcript is `approximate`, else `'youtube-asr'`. `226cdb0`
+>   read `approximate` first for every transcript (`wordSourceOf({ model:
+>   'faster-whisper small', approximate: true })` gave `'youtube-lines'`,
+>   unreachable today, since only `ingest/captions.ts` sets `approximate`);
+>   `44024d9` follows the YouTube bullet above. No menu when the
+>   transcript's `assetId` is not the clip's, or the clip shows no speech.
+>   `44024d9` takes a sentence's words by index (`byIndex`) instead of
+>   filtering the whole transcript per sentence (O(segments × words)).
+> - **(b) The prompt** (`promptGraphics.ts`, new, `226cdb0`, `44024d9`).
+>   `GRAPHICS_SYSTEM` holds every clause of the "It says" list above, and
+>   beyond the words: "You are given the talk's SENTENCES …", "You answer
+>   with one JSON object and nothing else", "Most sentences need none.",
+>   "Fill only the fields the template lists. Leave every other text field
+>   empty (""), items an empty list and lit 0.", a `why` line and
+>   reasoning first, in the spine's wording. `GRAPHIC_TEMPLATE_ROWS` holds
+>   the table's "when" and fields (the callout row without "(offered only
+>   with a subject)", a note to us; the keyword row without backticks).
+>   `graphicsPrompt(menu, lang)`: the header "SENTENCES (id, when it is
+>   said, the words)", one line per sentence, `s07  0:25  "…"`; a blank;
+>   "TEMPLATES (id — when to use it — its fields)", one `id — when —
+>   fields` line per OFFERED template; a blank; the language line LAST.
+>   `clockOf(ms)`: m:ss, floored, minutes past 59. `graphicsLanguageLine`:
+>   `prompt.ts`' `languageLine` for a named language (Telugu and Hindi get
+>   the measured line, its script and its example); English, which
+>   `languageLine` leaves null, "Write all copy in English."; a two- or
+>   three-letter code is named by `Intl.DisplayNames('en')`
+>   (`languageName`); `'und'`, `'auto'` or nothing: `UNDETERMINED_LINE`,
+>   "Write all copy in the language of the sentences, in its own script."
+>   (`44024d9`; before, `'und'`, `parseJson3`'s default, gave "Write all
+>   copy in root, in its own script.", since ICU names it "root", and `''`
+>   gave English). The store passes `menu.language`. Declined by
+>   `44024d9`, for T4's eval: double quotes inside a SENTENCES line are not
+>   escaped (as `prompt.ts` and `prompt2.ts`), and the Telugu and Hindi
+>   example says "headline" in a pass that writes none.
+> - **(c) The schema** (`schemaGraphics.ts`, new, `226cdb0`).
+>   `GRAPHICS_PASS` `'graphics@1'`; `MAX_GRAPHICS` 4; `MAX_ANSWER_ITEMS`
+>   6; `GRAPHIC_DECODE_CHARS` { reasoning 300, title 60, value 24, label
+>   60, itemLabel 48, itemValue 24, quote 200, words 60, why 100 }; `LIT_MAX`
+>   3 (the last two exported beyond the words). `graphicsSchema(menu, {
+>   constrained })`, `constrained` defaulting to true (beyond the words):
+>   `reasoning` first, then `graphics` (`minItems` 0, `maxItems` 4), each
+>   object in declaration order `sentence`, `template`, `title`, `value`,
+>   `label`, `items` (`maxItems` 6; `label`, `value`), `quote`, `words`,
+>   `lit`, `why`, `required` in that order, `additionalProperties` false.
+>   Constrained adds the menu's sentence ids and offered templates as
+>   enums, every text field's decoded `maxLength`, and `lit`'s `minimum`
+>   0 and `maximum` 3, and throws on an empty sentence or template list
+>   (as `spine2Schema` does on no slots); unconstrained has no enum,
+>   length or range. One graphic object always carries every field: the
+>   six always-offered templates' union is already the whole set, so only
+>   the two enums depend on the menu. The descriptions are short and name
+>   none of the forbidden fields. **Measured** (printed by the test under
+>   `--reporter=verbose`): 1817 chars constrained for 3 sentences and 7
+>   templates, 1943 for 24 sentences and 7, 1559 unconstrained;
+>   `unsupportedKeywords []` and `flatViolations []` in both modes.
+>   `maxTokensForGraphics` = 250 + 150 × 4 = 850. `validateGraphics` now
+>   checks the shape with `conforms(graphicsSchema(menu, { constrained:
+>   false }), answer)`; `graphicsAnswerShape` is gone; `AnswerGraphic`,
+>   `GraphicsAnswer`, `MAX_GRAPHICS` and `MAX_ANSWER_ITEMS` live in
+>   `schemaGraphics.ts` and are re-exported from `validateGraphics.ts` (no
+>   importer changed, no cycle). §6.7's dated note has how the swap was
+>   proved equal.
+> - **(d) The ask** (`ask.ts`, `c4a4395`). `JSON_ONLY_NUDGE` = "Answer
+>   with the JSON object only.", exported. When the FIRST result's
+>   `provider` is `'openai'` and its text is not JSON (and not cut off),
+>   the retry is `{ ...request, user: user + '\n' + JSON_ONLY_NUDGE,
+>   maxTokens: maxTokens + THINKING_EXTRA_TOKENS (800), think: true }`,
+>   its note "the first answer was not JSON (<error>) — asked again for
+>   the JSON object only" (the wording beyond the words); on Ollama's
+>   shape the retry is unchanged, its note "… — asked again with thinking
+>   on". `think: true` is still set on the OpenAI retry, where
+>   `openaiRequestBody` never sends it, so the two retries differ only by
+>   the user line. The function sees only the request and the result;
+>   every pass (the spine, the look, the graphics) gains it. The graphics
+>   ask passes no `onRetry` (§6.12, open).
+> - **(e) `settleGraphics` whole** (`run.ts`, `0f28dfa`, `db4b46d`). One
+>   call per menu, so per window. A window cut off or the wrong shape
+>   rejects that window's pass only, never the clip and never another
+>   window; its note names the window by `graphicsWindowName(menu)`
+>   ("sentences s00 to s23", "sentence s24"; exported, beyond the words):
+>   "no graphics for <window>: <why>" with no baseline, and "the
+>   baseline's graphics are used for <window>: <why>" when
+>   `options.baseline` is given. **The seam is still a seam**: no caller
+>   passes `options.baseline` (T4's `baselineGraphics`), so the first note
+>   is the one shown today, and it stays true once T4 fills the seam.
+>   `options.speaker`, trimmed (`db4b46d`; spaces are no speaker), goes to
+>   `validateGraphics` and `validateBaseline` as `options.speaker`:
+>   `settleOne` sets a said quote's `speaker` to it (a reported name still
+>   wins) and passes it to `checkGraphicData` as the one allowed name.
+>   `quoteSpeakerFor(asset)` (beyond the words): the Speaker when it holds
+>   more than spaces, else `credit.author` only when `credit.source` is
+>   `'link'` (`db4b46d`, §16.31's "a link's channel"; step 5 will widen
+>   `source`), else `''`, trimmed (`f52e11f`); it returns
+>   `graphics/apply.ts`' `quoteSpeakerOf` since `7a35dfd`. It is a quote's
+>   channel only: `lowerThirdFor` reads `MediaAsset.speaker` alone, so a
+>   channel never makes a lower third without your press. **Structured
+>   drops** (beyond the words): `GraphicDrop` { `clipId`, `template`,
+>   `text` (the first string it would draw, `''` when none), `reason`
+>   (without "graphic dropped: ") } in `template.ts`;
+>   `SettledGraphics.drops`, read off the validator's and the spacing's
+>   problem PATHS (`$.graphics[i]`, `$.baseline[i]`), never the message,
+>   one drop per graphic with its reasons joined by "; "; a repair or the
+>   rejection is no drop. `graphicDropsOf(project, kept, covered,
+>   problems)` in `graphics/apply.ts`: `applyGraphics`' drops from its
+>   paths (`$.kept[i]`; `$.covered[j]` through `lowerThirdFor` on the
+>   project as given), the reason after "graphic dropped: <the graphic> —
+>   " rebuilt from the graphic's own data, never split on a dash; the one
+>   retimed note drops every graphic of the run on THAT clip; `$.sounds`
+>   and `$` are no drops; `applyGraphics`' return is unchanged (T3's Open,
+>   the cheapest true fix). `db4b46d`: a graphic dropped for its own
+>   reason is not dropped again for its clip's retime, in either order of
+>   the two notes. **`pairSettled(parts)`** → { `kept`: `KeptGraphic[]`,
+>   `settled` } (beyond the words; the store and T4's eval pair here):
+>   each kept candidate paired with its menu's `clipId` and `assetId`, in
+>   the parts' order, a rejected window adding only its baseline's;
+>   `settled` joins every part's kept, notes and drops, `rejected` the
+>   windows' reasons joined by "; ", and `baseline` is
+>   `parts.every(...)`: true only when no window's model answer was used,
+>   and so true for zero parts (`db4b46d`; before, a run of no windows
+>   named a model that was never asked). **Rule 10** (`spaceGraphics`)
+>   since `db4b46d` neither spaces nor counts a proposal (EFFECTS §61).
+>   **A wrong-template field** (`strayFields` in `validateGraphics.ts`,
+>   beyond the words): a filled field another template holds (a string
+>   not `''` after trim, an items row with words, a steps row's `value`, a
+>   `lit` not 0) is left out with "graphic repaired: '<field>' is not a
+>   field of a <template> — left out" at `$.graphics[i].<field>`, only on
+>   a kept graphic.
+> - **(f) The decision record** (`run.ts`, `0f28dfa`, `db4b46d`).
+>   `decisionForGraphics(settled, model, { id, now })` as worded: `id` from
+>   `options.id` or a default made as `apply2.ts`' `defaultId` (copied,
+>   not exported); `pass` `GRAPHICS_PASS`; `ops` `[{ graphics, dropped,
+>   baseline, drops }]` (`drops` beyond the words); `model` `{ id, runtime
+>   }` read off the object given, or `{ id: 'baseline', runtime: 'none' }`
+>   when `model` is null or `settled.baseline`; `createdAt` from
+>   `options.now`. Only `id` and `runtime` are read, so no key, header or
+>   credentialed URL can reach the record: `JSON.stringify` of a record
+>   made from a model object carrying `apiKey`, an `Authorization` header
+>   and a user:password URL holds none of "sk-SECRET", "Bearer",
+>   "Authorization", "hunter2", "apiKey", "baseUrl", "api.example.com" (the
+>   mutation `{ ...model }` fails it). One op per run whatever its
+>   windows; its `graphics` are `GraphicCandidate`s, which name no clip
+>   (only `drops` carry `clipId`; open, §6.12).
+> - **(g) The store's actions** (`store.ts`, `7a35dfd`, `f52e11f`; the pure
+>   halves in `graphics/apply.ts`). Each is one `update`, so one undo
+>   step, and an action that changes nothing takes none.
+>   - **`findGraphics(clipId)`**, async. A press while `findingGraphics`
+>     is set (any clip) is refused, not queued, with `GRAPHICS_BUSY_NOTE`
+>     "Graphics are still being found — wait for that run to finish". A
+>     clip whose span shows no transcribed speech (`holdsSpeech`: a
+>     transcript and a non-empty `graphicsMenuFor`, "whose span holds
+>     speech") gets `GRAPHICS_NO_SPEECH_NOTE` "This clip shows no
+>     transcribed speech — no graphics were looked for, and nothing
+>     changed": nothing asked, cleared or recorded (`f52e11f`; before, a
+>     Find after the transcript went wiped the clip's Clip-it graphics and
+>     appended a record of a run that never ran). Else `findingGraphics` =
+>     the clip, and **`askGraphicsPass`** (module-private, shared with
+>     Direct): per clip, each window's `graphicsPrompt(menu,
+>     menu.language)` through `askStructured` over
+>     `window.forge.directorComplete` (the spine's route; the key stays in
+>     the main process) with `graphicsSchema(menu)` and
+>     `maxTokensForGraphics`, a throw caught as `{ error }`,
+>     `settleGraphics` with `{ speaker: quoteSpeakerFor(asset) }`, then
+>     `pairSettled`; its model is the last that answered. A clip removed
+>     while the ask was out gets `GRAPHICS_CLIP_GONE_NOTE` "The clip was
+>     removed while its graphics were being found — nothing was placed":
+>     nothing lands, no record. Else ONE update,
+>     `replaceClipGraphics(p, clipId, kept, { fps, sounds })`; ONE
+>     `decisionForGraphics` record, its drops the settled ones plus
+>     `graphicDropsOf`'s; `lastGraphics` = { clipId, notes, drops, model
+>     id }; `rebakeGraphic` per landed clip; the notice `graphicsRunNote`,
+>     "Graphics: N placed[, M to check][ — K notes]". `findingGraphics`
+>     goes back to null in a `finally`.
+>   - **`keepGraphic(proposalId): string | null`**: `keepProposal` in one
+>     update; refused, the reason is returned AND shown as a notice, the
+>     project unchanged and the proposal listed; else each landed clip
+>     rebaked and null returned.
+>   - **`dropGraphic(id)`** (the plan's argument is a clip id; it takes a
+>     proposal id too, beyond the words): `withoutGraphic` in one update,
+>     and the clip leaves the selection.
+>   - **`clearGraphics()`**: `graphics/apply.ts`' `clearGraphics`, then
+>     `resoundAfterClear`, in one update; `CLEAR_GRAPHICS_NOTE` as a notice
+>     every time.
+>   - **`setSpeaker(assetId, name)`**: `withSpeaker` in one update, then
+>     `rebakeGraphic` per changed graphic.
+>   - The pure halves: **`replaceClipGraphics(project, clipId, kept,
+>     ctx)`**: `clearClipGraphics`, then `resoundAfterClear` when anything
+>     was cleared (Direct's graphic on the clip gets back a slot the old
+>     run held), then `applyGraphics` under `CLIPS_GRAPHIC_RULE` with the
+>     clip covered; it returns the project `applyGraphics` was given, for
+>     `graphicDropsOf`. **`clearClipGraphics(project, clipId)`**, the
+>     per-clip Clear: `clearGraphics`' body (`clearRuleGraphics`, now
+>     shared) over one footage clip, the Clip-it graphics whose `footageOf`
+>     is that clip, their followers, drawn assets and brought files no
+>     survivor uses, that clip's Clip-it proposals and an emptied "Graphic
+>     sounds" track. **`keepProposal(project, id, ctx)`**: the beats and
+>     the seconds again from the proposal's grounding words on its footage
+>     clip as it is now (through `timeOne`, lifted out of `applyGraphics`
+>     with `landKept`: the same code, `graphicApply`'s 45 green before and
+>     after), `applyBudget` under the proposal's own rule, `landKept`, its
+>     sounds, the proposal off the list; the placed graphic carries no
+>     `proposal`, and its `generatedBy` reason has no why (a
+>     `GraphicProposal` keeps none). Refused, the reason and the same
+>     project: another rate, `PROPOSAL_GONE_NOTE` "that graphic is no
+>     longer waiting for a check", the clip gone, retimed, the budget ("another
+>     graphic is on screen then", `ON_SCREEN_REASON`, among its reasons),
+>     no free third, no subject for a callout, no lane.
+>     **`withoutGraphic(project, id, sounds)`**: a proposal id removes the
+>     proposal; a graphic goes through `removeWithFollowers`, its drawn
+>     asset when nothing else uses it, then `resoundAfterClear`; any other
+>     id gives the same project. **`placeAgain(project, graphicId)`**:
+>     §6.9's recompute, §6.9's dated note. **`withSpeaker(project, assetId,
+>     name)`**: the Speaker stored trimmed (only spaces delete the field;
+>     `f52e11f`); a lower third whose `name` was the old trimmed Speaker
+>     takes the new one, and a said quote whose `speaker` was
+>     `quoteSpeakerOf`'s old answer takes its new answer; only graphics
+>     whose grounding's asset, else footage clip's asset, is `assetId`;
+>     each changed graphic's `version` up, `changed` listed. An emptied
+>     Speaker leaves a placed lower third's name (beyond the words; open,
+>     §6.12); a quote goes to the channel or `''`. **`lastRoleOf(project,
+>     assetId)`** (`becf32e`): the `role` of the LAST lower third in
+>     `project.clips` whose asset is `assetId`, as stored (an empty one
+>     included), `''` when there is none; `lowerThirdFor`'s `role` since
+>     `becf32e` (T3 left it `''`), so the Role is pre-filled at creation
+>     and what the panel shows is what is drawn. `lowerThirdFor` draws the
+>     Speaker trimmed since `f52e11f` (T3's note above said "as held").
+>     `quoteSpeakerOf` is exported.
+> - **(h) Where it runs: Direct** (`store.ts`, `7a35dfd`, `f52e11f`).
+>   Direct's spine update now runs `resoundAfterClear(p, applied.project,
+>   pack)` (Direct again's clear gives the graphics left on a footage clip
+>   their sounds back), and the spine's `lastDirection` takes a copy of
+>   the notes. After the spine, the look and the bakes, with
+>   `directStage` "finding graphics": the shots on the video track that
+>   hold speech (`holdsSpeech`, `f52e11f`; before, any shot with a
+>   transcript, and a shot showing none of its words appended a record
+>   naming the baseline) through `askGraphicsPass`, then `applyGraphics`
+>   on the project as it is THEN (an edit made while the model was asked
+>   is never overwritten), those shots covered, under `GRAPHIC_RULE`, with
+>   the spine's sound pack. It joins the spine's undo step when no step
+>   was taken since (`past` unchanged; a bake writes no history), else it
+>   is a step of its own (beyond the words). One `graphics@1` record after
+>   `spine@2`'s; its notes, through `describeProblem` (so prefixed by
+>   their path, where Find's are the bare messages), replace
+>   `lastDirection`'s problems; each landed clip rebaked. A throw is
+>   `graphicsSkippedNote` "graphics were skipped — <why>": the spine
+>   stands and no graphics record is written. No shot holding speech:
+>   nothing asked, nothing recorded. Direct's Clear
+>   (`clearDirectorOutput`) is `resoundAfterClear(p, clearDirector(p),
+>   pack)` in one update. The drawn graphics are rebaked by `rebakeGraphic`
+>   as Find's are; `rebakeGenerated` no longer re-places (§6.9's note).
+> - **(i) By hand: the Transcript tile's Graphics section**
+>   (`TranscriptGraphics.tsx`, new, `ffc5391`, `64adaed`), mounted in
+>   `TranscriptPanel.tsx` (`:108`) between `TranscriptBody` (`:106`) and
+>   `Vocabulary` (`:110`); every text an exported constant. The heading
+>   "Graphics"; **"Find graphics in this clip"** (`findGraphics`), reading
+>   "Finding graphics…" while its own ask is out, greyed with the title
+>   "Transcribe this clip first — graphics are found in its words"
+>   (`FIND_NEEDS_TRANSCRIPT`) when the clip's asset has no transcript, and
+>   greyed with `GRAPHICS_BUSY_NOTE` as its title while another clip's
+>   run is out (a transcript whose span shows no word leaves it pressable;
+>   the press says `GRAPHICS_NO_SPEECH_NOTE`). The list: every graphic
+>   whose footage clip (`footageOf`) is this one, WHICHEVER rule made it,
+>   in time order, a row being its start (m:ss, `rowStamp`), its template
+>   with hyphens as spaces, its `drawnStrings` joined by " · " and
+>   **"Drop"**; then each proposal of the clip: its stamp (its first
+>   grounding word mapped through the clip, none without one), template,
+>   words, **"Keep"** and **"Drop"**, and under it **"check the number"**
+>   beside the heard part of its note (`heard "40 clients"`), or the note
+>   as written when it is not a "check the number" one (phase 4's). The
+>   notes, only while `lastGraphics` is this clip's: `NO_MODEL_LINE` "No
+>   model’s answer was used in this run" first when the record's model is
+>   `'baseline'` (true with no model or a rejected pass, now and once T4
+>   fills the seam), then each note. **"Clear graphics"** (the store's
+>   `clearGraphics`), titled `CLEAR_GRAPHICS_TITLE` "Removes every graphic
+>   Find graphics placed, in every clip, with its sounds and the numbers
+>   waiting to be checked", with `CLEAR_GRAPHICS_NOTE` under it, shown
+>   only while the project holds a Clip-it graphic or proposal. The
+>   **"Speaker"** field (`MediaAsset.speaker` through `setSpeaker`, label
+>   `htmlFor` the input), uncontrolled and keyed on the stored name, saved
+>   on leaving it when the trimmed value changed, Enter leaving it and
+>   every key kept from the shortcut layer; on a link's asset the channel
+>   (`credit.author`, trimmed) is its placeholder, never its value, and
+>   **"Use the channel name"** (title `USE_CHANNEL_TITLE` "A lower third
+>   shows the Speaker; a channel may be a brand rather than the person
+>   speaking") beside it while the Speaker is empty writes the channel.
+>   Not shown with no clip selected (the tile's "Select a clip to see its
+>   transcript") or when the selected clip draws a graphic (`64adaed`;
+>   before, its Speaker field wrote `MediaAsset.speaker` onto the drawn
+>   image asset). The Shelf's transcript tile is busy while
+>   `findingGraphics` is set (`shelf/tools.ts`). On-screen texts not the
+>   plan's: "Finding graphics…", `FIND_NEEDS_TRANSCRIPT`, "Use the channel
+>   name" (§6.6 says "press to use the channel's") and its title,
+>   `CLEAR_GRAPHICS_TITLE`, `NO_MODEL_LINE`, and the store's
+>   `GRAPHICS_BUSY_NOTE`, `GRAPHICS_NO_SPEECH_NOTE`,
+>   `GRAPHICS_CLIP_GONE_NOTE`, `graphicsRunNote`, `graphicsSkippedNote`,
+>   `PROPOSAL_GONE_NOTE` and `keptPlaceNote`. Clear and Drop leave
+>   `lastGraphics`: the notes describe that run. **The harness's stand-in**
+>   (`harness/graphicsStub.ts`, new, pure): the harness has no model, so
+>   `harnessGraphicsRun` stubs the ANSWER only, over
+>   `harnessGraphicsTranscript` (two sentences, "Make it simple today." and
+>   "We signed 40 clients this year.", a word every 400 ms, "simple" at 0.8
+>   s and "40" at 2.4 s, for each source: `youtube-asr`, `youtube-lines`,
+>   and Whisper with the "40" at 0.3), through the real `settleGraphics`,
+>   `pairSettled` and `replaceClipGraphics`, and throws unless one graphic
+>   is placed and one proposal waits. `census.ts`'s states
+>   `transcript-graphics-asr` (the video made a link's asset, channel
+>   "Census Channel"), `-lines`, `-whisper` and `transcript-finding`
+>   (`findingGraphics` set). `64adaed` changed the stub's first sentence
+>   from "Keep it simple today.": the tile draws each word as its own text
+>   node, so the census would have counted 2 "Keep" (EFFECTS §61).
+> - **(j) The dock's panel** (`GraphicPanel.tsx`, new, `becf32e`,
+>   `d33d5b4`), mounted in `Inspector.tsx` (`:241`) after `CarouselPanel`
+>   (`:238`) and `PaperPanel` (`:235`) as `{clip.graphic && <GraphicPanel
+>   clip={clip} />}`. The heading "Graphic" with the template's name
+>   beside it (hyphens as spaces; an unknown template shows the heading
+>   only). The fields by mode, `TemplateDef.fields`, or a kind's own
+>   `kindFields` in their PLACE, not merged (a social card's data has no
+>   speaker; beyond the words); labels Value, Label, Title, Quote, Words,
+>   "Lit word", Role, Name, Handle, Date, Link and "Row N label" / "Row N
+>   value", a speaker-mode field "Speaker". Grounded, verbatim and index
+>   fields are re-checked by `checkGraphicData`, called through the module
+>   namespace (the export `validateGraphics` calls), on the STORED data at
+>   each draw (every edit is stored first, so every edit is checked), with
+>   the template's def, `spec.grounding`, the grounding asset's transcript
+>   and `speakers` = [`quoteSpeakerOf(the owner asset)`], or [] when that
+>   is `''` (`d33d5b4` pins the argument). Each problem is an amber
+>   warning under the field its path names, and a problem naming no shown
+>   field (`$`, `$.items`, `$.sentence`) one line under the heading; never
+>   disabled, never read-only, saved whatever the check says. A template
+>   with no grounded, verbatim or index field (a lower third, a social
+>   card) calls no check; `user` fields are never checked. A Speaker field
+>   shows the owner asset's stored Speaker (the grounding's asset, else
+>   the footage clip's), its placeholder `quoteSpeakerOf` when empty (a
+>   link's channel, `d33d5b4`), and calls `setSpeaker`; with no owner
+>   asset it edits the drawn name through `setGraphic`. Every other edit
+>   is one `setGraphic`, saved on leaving the field (Enter leaves it); a
+>   cleared index or seconds field saves nothing; an index is saved
+>   truncated, in range or not; pressing the choice already chosen saves
+>   nothing. App choices only on their templates: the steps' "Connector"
+>   (None, Line, Tree) and the callout's "Shape" (Arrow, Circle); the steps'
+>   `parent`, the screen card's `clipId` and `move` are not shown, and no
+>   control adds or removes a bars or steps row. **"Seconds"** with "<min>–<max> s",
+>   clamped to the template's bounds and rounded to 0.1 s, through
+>   `setGraphic` (so its sounds are placed again); since `d33d5b4` a
+>   warning under it, never a block, when the length is under
+>   `graphicSeconds(def, beats, drawnText(data))`, §6.2's reading hold:
+>   `tooShortNote`, "It needs <n> s for its beats and to be read", or "It
+>   needs more than <max> s for its beats and to be read". **"Place"**:
+>   "Auto · the <third> third", or "A box you dragged" with **"Back to
+>   auto"** (`placeGraphic` on its footage clip, computed at each draw
+>   while the place is a dragged box), greyed with `NO_FREE_THIRD_TITLE`
+>   "No third is free of the captions here" when no third is free and,
+>   since `d33d5b4`, `NO_FOOTAGE_TITLE` "No footage is under it to place
+>   it over" when no footage clip is under it (before, that case said
+>   captions); it keeps the subject at onset. A lower third's **"Role"**,
+>   a `user` field, shows the stored role, which `lastRoleOf` filled at
+>   creation. Notes: `UNCHECKED_NOTE` "Its transcript is not in the
+>   project, so these words are not checked" when a grounding exists and
+>   its transcript is gone, and since `d33d5b4` `NO_GROUNDING_NOTE` "It is
+>   not tied to anything said, so these words are not checked" for checked
+>   fields with no grounding (before, `UNCHECKED_NOTE` said that, untrue).
+>   No Depth choice (phase 3). On-screen texts not the plan's: everything
+>   above but "Role" and "Speaker".
+> - **(k) The census** (`tests/fixtures/ui-census.json`, 15 rows). Home
+>   `transcript`: "Graphics" 1, "Find graphics in this clip" 1, "Speaker" 1
+>   (needs `transcript`); "Finding graphics…" 1 (`transcript-finding`); the
+>   title "Transcribe this clip first — graphics are found in its words" 1
+>   (`video-clip`); "Keep" 1, "Drop" 2 (the keyword's and the
+>   proposal's), "Clear graphics" 1, "Direct's graphics stay; Direct's
+>   Clear takes them" 1, "Use the channel name" 1
+>   (`transcript-graphics-asr`); "check the number" 1 in each of
+>   `transcript-graphics-asr`, `-lines` and `-whisper`. Home `dock`:
+>   "Graphic" 1 and "Role" 1 (`graphic-lower-third`: a lower third added
+>   through `addGraphicClip` on the top video track at 0, selected).
+>   Reasoned from the code by the builders, then counted in node by
+>   rendering the tile and the dock over the harness states (`64adaed`,
+>   `becf32e`), then **read on screen by the session at `d33d5b4`**
+>   (`window.__forgeCensus()`, the harness preview): `missing: []`, 907
+>   rows checked, 8 skipped (the `harnessOnly: false` rows of the
+>   fixture's 915), 57.0 s; every count held. `71db0a7` turned the
+>   fifteen rows' notes, and four earlier rows' ("Browse all", "Style",
+>   "White glow", count 2 each since §6.5's Graphics section, and "Clean",
+>   count 4, among the checked rows of this and the earlier readings), to
+>   read.
+> - **(l) The tests**, counts read by the session at `d33d5b4` (vitest's
+>   json reporter), all passing: `tests/directorGraphics.test.ts` (new)
+>   51, `tests/directorAsk.test.ts` 5 (2 new), `tests/claims.test.ts` 218
+>   (two assertions on the rejection note's text updated by `0f28dfa`, one
+>   Hindi danda case by `d33d5b4`), `tests/renderer/graphicActions.test.ts`
+>   (new; `graphicStore.test` was already about 600 lines) 19,
+>   `tests/renderer/directGraphics.test.ts` (new) 7,
+>   `tests/renderer/transcriptGraphics.test.tsx` (new) 19,
+>   `tests/renderer/graphicPanel.test.tsx` (new) 20; touched:
+>   `tests/renderer/graphicStore.test.ts` 31 (the `rebakeFollowed`
+>   fixture's three graphics moved into the middle third, the third §6.9
+>   picks over the talk shot, so the reframe moves none and the case still
+>   pins the onset-target rule; T3's own M9 re-run still fails it) and
+>   `tests/graphicGuards.test.ts` (§6.4's dated note); unchanged
+>   `tests/graphicsValidator.test.ts` 26 and `tests/graphicApply.test.ts`
+>   45. **Mutations**, each on an anchor the runner counted at exactly one
+>   match, each failing, each file restored and `cmp`-identical:
+>   - `directorGraphics`, piece 1: `lower-third` in the menu ("expected [
+>     'counter', 'bars', 'steps', …(4) ] to not include 'lower-third'") or
+>     in the enum ("expected [ …(5) ] to deeply equal [ …(4) ]", and the
+>     names walk "the schema offers 'lower-third'"); the language line
+>     moved above TEMPLATES ("en: expected 'keyword — one to four words the
+>     speak…' to be 'Write all copy in English.'"); a `parent` in the item
+>     schema, property and required (21 failing across `claims.test` and
+>     `graphicsValidator`), or as a property only (5, among them
+>     `flatViolations` and `graphicsValidator`'s parent generator, "180
+>     failing"); `callout` always offered; the window at 25 ("expected [
+>     25, 25 ] to deeply equal [ 24, 24, 2 ]"); a part-shown sentence kept
+>     whole; `approximate` ignored; a YouTube model read as Whisper; the
+>     shape check fed the answer with `parent` stripped; "At most four
+>     graphics" removed; `44024d9`'s: `wordSourceOf` approximate-first
+>     ("faster-whisper small: expected 'youtube-lines' to be 'whisper'"),
+>     `clockOf` without minutes ("expected '0:72' to be '1:12'") and
+>     rounded ("expected '0:04' to be '0:03'"), the table cut to 8
+>     sentences, quote's "when" cut short, a `lower-third` row added
+>     ("lower-third: expected { when: 'a name', fields: 'label' } to be
+>     undefined"), the bars row removed, the undetermined check removed.
+>     The critics' own kills held, and four survivors were pinned by
+>     `44024d9` (the clock's minutes and its floor, every sentence
+>     listed, every offered row's words).
+>   - Piece 2: the nudge removed ("expected 'u' to be 'u\nAnswer with the
+>     JSON object only.'") or sent on every shape; the record's model
+>     inside `ops` (both the builder's top-level form and the plan's,
+>     re-run by a critic: "expected { id: 'graphics@1' } to deeply equal {
+>     id: 'google/gemma-4-e2b', …(1) }"); a truncated window taking the
+>     others ("expected [] to have a length of 1 but got +0"); the repair
+>     turned into a reject, by `constrained: true` or the `lit` repair a
+>     drop; a YouTube number placed without review ("expected null to
+>     deeply equal { reason: 'check-the-number', …(1) }"); the channel
+>     ignored; the speaker ignored by `settleOne`; the stray-field note
+>     removed; the retimed note on the noted graphic only; the old untrue
+>     note; the model copied whole ("… not to contain 'sk-SECRET'");
+>     `some` for `every`; a split on " — "; an unknown path read as a
+>     drop; `db4b46d`'s M1-M14: a proposal spaced again or the cap counted
+>     with `out.length`, `parts.length > 0 &&` restored ("expected false to
+>     be true"), the speaker untrimmed ("expected [ '   ' ] to deeply equal
+>     [ '' ]"), any credit's author ("expected 'A Photographer' to be
+>     ''"), the own-drop check removed, the retimed clip filter removed,
+>     `dropsOf` reading index 0, the baseline route's validator drops lost,
+>     each stray branch (`lit`, a steps row's `value`, `title`) removed,
+>     `validateBaseline` without the speaker ("expected [ '' ] to deeply
+>     equal [ 'Ana' ]"), the bars title out of `answerDrawn`. Eight of
+>     these (the index, the clip filter, the baseline drops, the three
+>     stray branches, the baseline speaker, the bars title) had left 283
+>     of 283 green before `db4b46d`'s cases.
+>   - `graphicActions` and `directGraphics`: Find again leaving the old
+>     graphics ("expected +0 to be -1"); a proposal placed before Keep (5
+>     cases); Keep ignoring the budget ("expected null to be 'another
+>     graphic is on screen then'"); Drop leaving the sound, or taking
+>     another graphic's; Clear graphics taking a `GRAPHIC_RULE` graphic;
+>     `setSpeaker` not rebaking; a graphics failure failing Direct
+>     ("expected [ …(4) ] to include 'graphics were skipped — the graphics
+>     …'"); a dragged box re-placed (§6.9); Direct's graphics under the
+>     Clip-it rule, or as a second undo step; the busy guard off; a
+>     removed clip still recorded; a Speaker of spaces kept; Find in two
+>     updates; Direct's Clear without `resoundAfterClear` (it survived the
+>     Direct file; a `graphicActions` case kills it, "expected [] to
+>     deeply equal [ [ 795, 'clips.graphic' ] ]"); `f52e11f`'s seventeen:
+>     the Speaker stored untrimmed ("expected '  Bea  ' to be 'Bea'"), the
+>     quote or the lower third untrimmed, `withSpeaker`'s owner guard, the
+>     per-clip proposal pick without its `clipId`, `withoutGraphic` and
+>     `replaceClipGraphics` without their resound ("… [ [ 795,
+>     'director.graphic' ] ]"), Direct's spine update without it ("… [ [
+>     3795, 'clips.graphic' ] ]"), Find's no-speech check off, Direct's
+>     shots by transcript only ("expected [ 'spine@2', 'graphics@1' ] to
+>     deeply equal [ 'spine@2' ]"), the recompute back in
+>     `rebakeGenerated` (the rate-change case), `setAspect` without it,
+>     the reframe's `moved` forced false, Direct's rebake removed, the
+>     mid-ask branch joining the spine's step ("expected [ …(2) ] to have
+>     a length of 3 but got 2"), `lastDirection` not replaced, and the busy
+>     guard again, now failing in 56 ms where it timed out at 120 s. Nine
+>     of these (the second critic's eight and the `lastDirection` one) had
+>     left the files green before `f52e11f`'s cases.
+>   - `transcriptGraphics`: a proposal placed before Keep (also the three
+>     harness cases, "census: the youtube-asr graphics run placed 1 and set
+>     aside 0, not 1 and 1 — …"); Clear leaving the drawn asset or taking
+>     `GRAPHIC_RULE` graphics; the Speaker not saved ("expected undefined
+>     to be 'Ana'"); the list filtered to one rule; the channel as the
+>     value ("expected 'Bright Weddings Channel' to be ''"); Keep calling
+>     Drop; no running text; the tile not busy; another clip's notes; the
+>     no-model line always; Find not greyed; the heard words hidden; the
+>     census Whisper word made sure; every clip's proposals listed (it
+>     survived first; the Clear case now checks each clip's own);
+>     `64adaed`'s: the stub back to "Keep it simple today." ("Keep:
+>     expected [ …(2) ] to have a length of 1 but got 2"), a proposal's
+>     Drop calling Keep ("expected [ 'keyword', 'counter' ] to deeply equal
+>     [ 'keyword' ]"; it had left 94 of 94 green), the busy title gone, Enter's
+>     blur gone, the proposal stamp hidden or taken from the source time
+>     ("… to include '1:10'"), the graphic-clip guard removed.
+>   - `graphicPanel`: the check skipped on edit; a warning disabling its
+>     field ("expected true to be undefined"); the edit not saved while
+>     warned ("ring value: expected '40' to be '40 x'"); a `user` field
+>     checked; the connector on a counter ("counter: expected [ 'None',
+>     'Line', 'Tree' ] to deeply equal []"); a copy of `checkGraphicData`
+>     captured at load; the Speaker edited through `setGraphic` ("expected
+>     [] to deeply equal [ [ 'talk', 'Bea' ] ]"); no Role pre-fill;
+>     `lastRoleOf` without its owner check; seconds unbounded ("expected 99
+>     to be 4"); the seconds edit around `setGraphic`; Back to auto doing
+>     nothing; no note without a transcript; a social card's modes merged
+>     (found by the test as first written); the heading's text and the
+>     Inspector's mount (also the census case); `d33d5b4`'s: the no-footage
+>     title ("expected 'No third is free of the captions here' to be 'No
+>     footage is under it to place it ov…'"), `speakers` [] ("counter
+>     value: expected [] to deeply equal [ 'Ana' ]"), `setGraphic`
+>     dropping the sounds or placing them a frame late ("expected [ {
+>     start: 31, … } ] to deeply equal [ { start: 30, … } ]"), the general
+>     problems dropped, the no-grounding note, the placeholder, the Seconds
+>     warning, seconds unrounded ("expected 2.53 to be 2.5"), an index
+>     untruncated ("expected 1.9 to be 1"), the Speaker compared untrimmed,
+>     a chosen choice saved again, the transcript from the footage clip's
+>     asset, and the plan's four re-run after the lists were relaxed to
+>     membership. Nine of `d33d5b4`'s were critics' mutations that had left
+>     the file green (`speakers` [], the two sound mutations, the general
+>     problems, seconds unrounded, an index untruncated, the Speaker
+>     compared untrimmed, a chosen choice saved again, the transcript from
+>     another asset).
+>   - **Unguarded, recorded**: Back to auto greyed for no free third (needs
+>     captions over every third; unchanged code); the pre-filled Role
+>     reaching the panel through `findGraphics` (`lowerThirdFor` is pinned
+>     directly); a `directorAsk` case with no `maxTokens`.
+> - **Suite** at `d33d5b4` on the Mac (read by the session to a file, `$?`
+>   read): typecheck 0; 343 files passed and 5 skipped (348), 5290 tests
+>   passed and 64 skipped (5354), 241.01 s; against `69e677c`'s 338 files
+>   and 5171 tests passed, 5 files and 119 tests more. `npm run build` 0
+>   at `becf32e` and at `d33d5b4` (the builder's and the fixer's runs).
+>   After `71db0a7`: `uiCensus` and `censusHomes`, 14 passed. Every ask in
+>   the lane's diff goes out through `window.forge.directorComplete`
+>   wrapped by `askStructured`; no added line in `src/` names a key, a
+>   header or an authorization.
 
 **Days: 2** (phase 2): the menu, prompt and schema; the ask's fix;
 `settleGraphics` and `decisionForGraphics`; Direct's and the tile's wiring
@@ -12520,7 +13209,9 @@ graphic and the dock calls on each edit (§6.6), so the two cannot check
 differently; `graphicPanel.test` pins the shared call. (Built 2026-11-11
 with an optional fifth argument, `speakers`, for the dock; until T2b's
 `graphicPanel.test`, `claims.test` pins the shared call with a spy.
-§6.7's Built note.)
+§6.7's Built note.) (2026-11-11, lane T2b: `graphicPanel.test` pins it
+now, a spy on the module's export, its fifth argument asserted since
+`d33d5b4`; §6.6's T2b Built note, part (j).)
 
 **Tests** (§6.11 indexes them by phase):
 
@@ -12598,7 +13289,9 @@ validation half, and both tests.
 > history. **Every "beyond the plan's words" item below is a choice this
 > section left open, made by a builder or a fixer, and yours to keep or
 > overrule; each one only drops more unless it says otherwise.** Nothing
-> in the app calls any of it yet (T2b, T3, T4).
+> in the app calls any of it yet (T2b, T3, T4). (2026-11-11: since lane
+> T2b, Find graphics and Direct settle every answer here; §6.6's T2b Built
+> note.)
 > - **`claims.ts`, the normaliser and numbers** (`a29e8fa`, `1469cc5`;
 >   the claims and binding `bac73ac`, `0c88a89`, `f4b283b`, `3b887d0`).
 >   Its exports at `3b887d0`: `claimToken` (unchanged since `35dd847`),
@@ -12978,6 +13671,52 @@ validation half, and both tests.
 >   module's self-import bundles). `tests/graphicTree.test.ts`
 >   (`claimToken`'s other reader) green at every piece.
 
+> **What lane T2b changed here, 2026-11-11** (§6.6's T2b Built note has
+> the rest; the code at `71db0a7`):
+> - **The shape check** (`226cdb0`): `validateGraphics` checks against
+>   `graphicsSchema(menu, { constrained: false })`, and
+>   `graphicsAnswerShape` is gone; `AnswerGraphic`, `GraphicsAnswer`,
+>   `MAX_GRAPHICS` and `MAX_ANSWER_ITEMS` moved to `schemaGraphics.ts` and
+>   are re-exported from here, so no importer changed. Proved equal
+>   before the swap: a scratch test (not kept) found
+>   `graphicsSchema(…, { constrained: false })` with its descriptions
+>   stripped deep-equal to the old `graphicsAnswerShape()` for menus
+>   offering `['callout']`, the six, and none; `tests/graphicsValidator.test.ts`
+>   and `tests/claims.test.ts` passed 243 before and 243 after, the sorted
+>   case lists identical (diff empty), "a model-written parent is not a
+>   field of the answer: the wrong shape" among them. Since the object
+>   always carries every field, a T2a test menu offering `['callout']`
+>   alone still takes the full answer. A `parent` in the item schema
+>   (M4a) fails 21 cases across the two files.
+> - **The quote's speaker and the wrong-template field** (`0f28dfa`):
+>   `validateGraphics` and `validateBaseline` take `options.speaker`;
+>   `settleOne` sets a said quote's `speaker` to it when the speech is not
+>   reported (the reported name still wins) and passes it to
+>   `checkGraphicData` as `speakers` (the fifth argument T2a added, now
+>   passed). `strayFields`: a filled field that belongs to another
+>   template is left out with "graphic repaired: '<field>' is not a field
+>   of a <template> — left out", only on a kept graphic (§6.6's part (e)).
+>   The two `claims.test` assertions of the rejection note's text follow
+>   the new wording ("the baseline's graphics are used for sentence s00:
+>   …", "no graphics for sentence s00: no model is set up"); what they pin
+>   is otherwise unchanged. `tests/graphicsValidator.test.ts` untouched.
+> - **Rule 10 in settle** (`db4b46d`, `run.ts`'s `spaceGraphics`): a
+>   proposal is kept unspaced, does not move the previous onset and does
+>   not count toward the cap, since `applyGraphics` sets proposals aside
+>   before the budget (§6.6's landing order) and this rule is applied in
+>   settle "so the eval counts what the app would place"; Keep places one
+>   through `applyBudget` (§6.9). Before, a YouTube number, always a
+>   proposal, dropped a trusted keyword 2.4 s after it, and pressing Drop
+>   on the number then left nothing (EFFECTS §61).
+> - **The Hindi danda** (`d33d5b4`, `claims.ts`): `WORD_TRAIL` takes '।'
+>   and '॥', as `BREAK_CHARS` and `validateGraphics`' `SENTENCE_END`
+>   already did; before, a whole Hindi sentence quoted verbatim returned
+>   "'…जोड़े।' draws '।', which the transcript cannot ground", so the
+>   validator dropped a true Hindi quote and the dock warned falsely. A new
+>   `claims.test` case, failing without the fix and again with only '।'
+>   added. `claims.test` holds 218 at `d33d5b4`, `graphicsValidator` 26,
+>   all green.
+
 ### 6.8 Beats — the words land the animation
 
 **Phase 2 · 0.5 day.** `graphicBeats(project, clip, transcript,
@@ -13164,7 +13903,10 @@ late.
 >   order kept; the maximum's note wording; relative beats held at 0 or
 >   above. Declined by `4699660`: a composed `timeGraphic` helper, left to
 >   piece 5, which composes the calls inside `applyGraphics`; one shared
->   path for T2b's Keep is still open (§6.12).
+>   path for T2b's Keep is still open (§6.12). (2026-11-11, lane T2b,
+>   `7a35dfd`: `keepProposal` times a proposal through `timeOne`, lifted
+>   out of `applyGraphics` with `landKept`, the same code; §6.6's T2b
+>   Built note, part (g).)
 
 ### 6.9 Placement and the budget — `src/shared/graphics/place.ts`, `budget.ts`
 
@@ -13264,7 +14006,10 @@ third":
 on an aspect change or a reframe (§6.4 wires the call); a box you dragged
 is kept. (2026-11-11: **not built** by lane T3 and handed to T2b, with
 its case and its mutation; the Built note's part (d) has the three
-reasons.)
+reasons.) (2026-11-11, lane T2b: built otherwise than worded, not by
+`rebakeGenerated` but in `setAspect`'s own update and in
+`rebakeFollowed`'s graphic arm; the subject at onset is kept, not read
+again; the dated note after the Built note.)
 
 **On the timeline.** Graphics sit on lanes **above the look and every card**
 (§16.7), so type is never graded and never hidden under a moment.
@@ -13370,7 +14115,9 @@ applied by `graphicSounds` (§6.14), not here.
   counted (the 30 s clip's counter is dropped).
   (2026-11-11: both files built by lane T3, every case above but
   `place.auto` recomputed on an aspect change with a dragged box kept,
-  and its mutation "a dragged box recomputed" (part (d) below, T2b's);
+  and its mutation "a dragged box recomputed" (part (d) below, T2b's;
+  built by T2b in `tests/renderer/graphicActions.test.ts`, the dated note
+  after the Built note);
   the budget's property runs over `specs.json` at seeded starts, and over
   every eval fixture's settled graphics only once T4 feeds it. Phase 4's
   hand case is §6.18's.)
@@ -13633,6 +14380,45 @@ applied by `graphicSounds` (§6.14), not here.
 >   after a cut can take the third a line begun before the cut still
 >   holds; the fix needs the lines' start frames.
 
+> **The `place.auto` recompute, built by lane T2b, 2026-11-11** (`7a35dfd`,
+> moved by `f52e11f`; part (d) above handed it over). `placeAgain(project,
+> graphicId)` in `graphics/apply.ts`: a graphic whose `place.auto` is
+> true is placed again by `placeGraphic` over its footage clip as the
+> project now is; a box you dragged (`place.auto` false) is kept. The
+> footage clip is `footageOf`'s (the subject's clip, else one of the
+> grounding's asset, else the bottom-most under the graphic's first
+> frame), so the id part (d) found missing is not stored: it is read the
+> way the sounds read it. The third only is chosen again; the subject at
+> onset is kept as taken (beyond the words, which say "with the subject
+> at onset"): it is a box in source units that `graphicTargetsAt` maps
+> through the crop as it now is, and whether the face is still on screen
+> there is **not read again**, so a callout is never dropped by it (open,
+> §6.12). No free third: the old place is kept with `keptPlaceNote`, "<the
+> graphic> keeps its old place — no free third", shown as a notice; the
+> place unchanged gives the same project, a changed one `version` + 1.
+> **Where it runs**: in `setAspect`'s ONE update (`withPlacesAgain`, over
+> every graphic), so the aspect change's undo step holds the old places;
+> and on a reframe in `rebakeFollowed`'s graphic arm, history-neutral
+> (`placeAgainQuietly`, as a bake is written), only for a graphic whose
+> footage clip's asset was re-followed, rebaking it when the place moved.
+> **Not in `rebakeGenerated`**: `7a35dfd` put it there, and
+> `setFrameRate` calls `rebakeGenerated` too, so a rate change moved a
+> third nobody reframed (`setFrameRate(25)` turned an auto `'top'` over a
+> talk shot with no captions and no subject into `'middle'`); `f52e11f`
+> moved it into `setAspect`, and a case pins that a rate change keeps an
+> auto third (EFFECTS §61). **Tests** (`tests/renderer/graphicActions.test.ts`):
+> the aspect change re-places an auto place and keeps a dragged box; a
+> rate change keeps an auto third; a reframe (`rebakeFollowed(['talk'])`)
+> re-places an auto place with subject null, rebakes only it, keeps a
+> dragged box and adds no history. Mutations, each failing: §6.9's "a
+> dragged box recomputed" (`placeAgain`'s auto guard removed: "expected {
+> data: { …(3) }, seconds: 2, …(4) } to deeply equal { … }"), the
+> recompute back in `rebakeGenerated` and `setAspect` without it (each
+> "… to match object { place: { auto: true, …(1) }, …(1) }"), and the
+> reframe's `moved` forced false (it had left four files, 72 tests,
+> green before `f52e11f`'s case). Back to auto in the dock is the same
+> `placeGraphic` (§6.6's part (j)).
+
 ### 6.10 The baseline and the eval
 
 **Phase 2 · 1.5 days.**
@@ -13821,7 +14607,7 @@ render check and the census.
 | 1-2 | `tests/graphicStyle.test.ts`, with `tests/renderer/graphicStyleStore.test.ts` for the store's two actions (phase 1's half of both built 2026-10-28, `b965cda` and `0d603a8`; phase 2's 2026-11-10/11, `d680132`, `1a681c7` and `62f3c83`, 21 and 7 cases), and `tests/renderer/graphicsSection.test.tsx` (new, `1a681c7` and `62f3c83`, 8 cases; not named here before it was written; the switch's case by lane T3, `e8f2a1f`, 9) | §6.5 (the second half's Built note) |
 | 1-3 | `tests/renderer/graphicStore.test.ts` (phase 1's 21 cases built 2026-11-02, `a273729` and `fa4ddc3`; phase 2's built 2026-11-11 by lane T3, `518a62f`, `e8f2a1f` and `69e677c`, 31 tests) | phase 1 §6.3, the sounds that follow a graphic §6.14, the screen card §6.16 |
 | 2 | `tests/claims.test.ts`, `tests/graphicsValidator.test.ts` (the property test) (both built 2026-11-11 by lane T2a: `claims.test` from `a29e8fa` to `3b887d0`, 217 tests at `3b887d0`; `graphicsValidator` `e027bd3` and `3b887d0`, 26; the last fixer's run) | §6.7 (its Built note) |
-| 2 | `tests/directorGraphics.test.ts`, `tests/renderer/transcriptGraphics.test.tsx`, `tests/renderer/graphicPanel.test.tsx`; and `tests/graphicApply.test.ts`, the stub's (built 2026-11-06/07, `41a3db0` and `ddd1ede`, 2 cases), over the real body since lane T3 (2026-11-11, `0f3f7a4` and `3d070ab`, 45 tests) | §6.6 (the stub's and the real body's Built notes) |
+| 2 | `tests/directorGraphics.test.ts`, `tests/renderer/transcriptGraphics.test.tsx`, `tests/renderer/graphicPanel.test.tsx` (built 2026-11-11 by lane T2b: `directorGraphics` `226cdb0` … `db4b46d`, 51 tests; `transcriptGraphics` `ffc5391`, `64adaed`, 19; `graphicPanel` `becf32e`, `d33d5b4`, 20; and, not named here before they were written, `tests/renderer/graphicActions.test.ts` (`7a35dfd`, `f52e11f`, 19) and `tests/renderer/directGraphics.test.ts` (`7a35dfd`, `f52e11f`, 7); counts read at `d33d5b4`); and `tests/graphicApply.test.ts`, the stub's (built 2026-11-06/07, `41a3db0` and `ddd1ede`, 2 cases), over the real body since lane T3 (2026-11-11, `0f3f7a4` and `3d070ab`, 45 tests) | §6.6 (the stub's, the real body's and T2b's Built notes) |
 | 2 | `tests/graphicHolds.test.ts` (M16) (built 2026-11-10, `1871004`, 4 cases), `tests/graphicTree.test.ts` (built 2026-11-07, `35dd847` and `528986c`, 22 cases at `e06e1c3`); and, not named here before they were written, `tests/graphicTemplates.test.ts` (`cb394b5`, `528986c`, 9 cases), `tests/graphicNumbers.test.ts` (`cb394b5`, 15) and `tests/graphicSpecs.test.ts` (`8f18cc8`, `528986c`, 11) | §6.2 (its Built note) |
 | 2 | `tests/graphicBeats.test.ts` (built 2026-11-11 by lane T3, `c27b9a4` and `4699660`, 35 tests) | §6.8 (its Built note) |
 | 2-4 | `tests/graphicPlace.test.ts`, `tests/graphicBudget.test.ts` (phase 2's built 2026-11-11 by lane T3: `graphicPlace` `37d0e69`, `518a62f`, `0f3f7a4` (its Direct lane case moved to `GRAPHIC_RULE`), 22 tests, without the `place.auto` recompute case, T2b's; `graphicBudget` `1a14bd4`, `ac79a1e`, 26, its property over `specs.json` with `fixtureCases()` for T4); and, not named here before it was written, `tests/freeSpace.test.ts`'s `samplesOver` cases (`216065e`, `518a62f`, 18 tests in the file) | §6.9 (its Built note; phase 3's hero case in `graphicBudget`, §6.16; phase 4's hand case in `graphicPlace`, §6.18) |
@@ -13897,6 +14683,39 @@ note); the graphic clip's `seed` is unpinned (`seed: 0` survives, §6.6's
 Built note). (The two paragraphs above list `graphicBeats`,
 `graphicPlace`, `graphicBudget`, `graphicSound` and `graphicStore`'s
 phase-2 cases as not built; that was their date's state.)
+
+**Phase 2's half, lane T2b, 2026-11-11.** Built and pushed as `c6e4278`
+(with the T3 record), green on both runners:
+`tests/directorGraphics.test.ts` (51 tests), `tests/directorAsk.test.ts`
+(5, two new), `tests/renderer/graphicActions.test.ts` (19),
+`tests/renderer/directGraphics.test.ts` (7),
+`tests/renderer/transcriptGraphics.test.tsx` (19),
+`tests/renderer/graphicPanel.test.tsx` (20), `tests/claims.test.ts`'s
+updated rejection wording and its Hindi danda case (218 in the file),
+`graphicStore.test`'s moved `rebakeFollowed` fixture (31) and
+`graphicGuards`' moved anchor; counts read by the session at `d33d5b4`.
+Every mutation §6.6 names for them was run and fails: for
+`directorGraphics`, `lower-third` in the menu or the enum, the language
+line moved up, a `parent` accepted from the answer (21 failing as a
+required property, 5 as a property only), the record's `model` put inside
+`ops` (both forms); for `directorAsk`, the nudge removed; for
+`transcriptGraphics`, a proposal placed before Keep, Clear graphics
+leaving the drawn asset, Clear graphics taking `GRAPHIC_RULE` graphics,
+the speaker not saved; for `graphicPanel`, the check skipped on edit, the
+warning made a disabled field, a `user` field checked; and §6.9's "a
+dragged box recomputed", in `graphicActions` (it was T2b's). §6.6's T2b
+Built note, part (l), lists them all with their failure texts, with the
+builders' and fixers' own. **The census rows** of
+§6.6 are in and read on screen at `d33d5b4` (907 checked, 0 missing, 8
+skipped; part (k)). **Not built, and T4's**: the harness's `templates`,
+`curves`, `look` and per-template Indic options, `graphic.int`'s
+phase-2 cases, the render checks on anything phase 2 drew, the property
+test's wiring to the eval fixtures (`fixtureCases()`), and the eval
+block. No test asks a real model. Recorded as unguarded: Back to auto
+greyed for no free third; the pre-filled Role reaching the panel through
+`findGraphics`; a `directorAsk` case with no `maxTokens`. (The three
+paragraphs above list `directorGraphics`, `transcriptGraphics` and
+`graphicPanel` as not built; that was their date's state.)
 
 #### Phase 0's cases
 
@@ -14017,6 +14836,9 @@ phase-2 cases as not built; that was their date's state.)
   and `tests/renderer/bridgeMethods.test.ts`: `vision.handsModel` in
   `expects` and the hand model's channels (phase 4, §6.18).
 - `tests/directorAsk.test.ts`: the OpenAI retry's nudge (phase 2, §6.6).
+  (Done 2026-11-11 by lane T2b, `c4a4395`: two cases beside the retry
+  cases, 5 in the file; mutations "the nudge removed" and "the nudge on
+  every shape" fail; §6.6's T2b Built note, parts (d) and (l).)
 - `tests/freeSpace.test.ts`: `samplesOver`'s cases (phase 2, §6.9).
 
 #### The harness check — `window.__forgeGraphicCheck(options)`
@@ -14653,7 +15475,18 @@ session at `69e677c`: 892 rows checked, 0 missing, 8 skipped, one element
 with the exact text, a span inside the `role="switch"` button,
 `aria-checked="true"` on a fresh project; `8db943a` the row's note.
 §6.14's Built note. The Transcript tile's rows and the dock's are
-T2b's.)
+T2b's.) (2026-11-11, lane T2b: they are in, fifteen rows, home
+`transcript` (13: "Graphics", "Find graphics in this clip", "Speaker",
+"Finding graphics…", Find's greyed title "Transcribe this clip first —
+graphics are found in its words", "Keep", "Drop" count 2, "Clear
+graphics", "Direct's graphics stay; Direct's Clear takes them", "Use the
+channel name", and "check the number" once in each of the three source
+states) and home `dock` ("Graphic", "Role"), reasoned from the code by
+`ffc5391` and `becf32e`, counted in node over the rendered tile and dock
+(`64adaed`, `becf32e`), and read on screen by the session at `d33d5b4`:
+`missing: []`, 907 rows checked, 8 skipped, 57.0 s, every count held;
+`71db0a7` the notes. §6.6's T2b Built note, part (k). Phase 3's and
+phase 4's rows wait on their phases.)
 
 ### 6.12 Exit — by phase
 
@@ -15130,7 +15963,11 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
     - `place.auto` is not recomputed on an aspect change or a reframe;
       handed to T2b (below), and what a rebake does when the recompute
       finds no free third or drops a callout's subject is unworded, so
-      yours (`store.ts` `rebakeGenerated`, `place.ts`);
+      yours (`store.ts` `rebakeGenerated`, `place.ts`) (2026-11-11: built
+      by T2b, `7a35dfd`, `f52e11f`: with no free third the old place is
+      kept with a note, and the subject is not read again, so a callout
+      is never dropped by it; both T2b's readings, in its list below;
+      §6.9's dated note);
     - a "lower third" lands at the TOP when the captions are at the
       bottom: §6.9 as worded, for your eye (`place.ts`,
       `thirdPreference`);
@@ -15240,27 +16077,199 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
       (`sound.ts`).
 
   **For T2b, not yours** (recorded so they are not lost): the per-clip
-  Clear for Find again (`clearGraphics` is project-wide); a helper that
+  Clear for Find again (`clearGraphics` is project-wide) (built by T2b,
+  `7a35dfd`: `clearClipGraphics`); a helper that
   lands one `GraphicProposal` for Keep (budget, `placeGraphic`,
   `subjectAtOnset`, `graphicLane`, then `resoundGraphic`) and returns the
   refusal (a proposal keeps no start or duration, and the candidate's
-  `why`, `bound` and `source` are lost); `dropGraphic` as
-  `removeWithFollowers` then `resoundAfterClear` in one update; the
+  `why`, `bound` and `source` are lost) (built by T2b, `7a35dfd`:
+  `keepProposal`, through `timeOne` and `landKept`, its sounds through
+  `soundsFor`; the why, bound and source are still lost); `dropGraphic` as
+  `removeWithFollowers` then `resoundAfterClear` in one update (built by
+  T2b, `7a35dfd`, pinned by `f52e11f`: `withoutGraphic`); the
   store's `clearGraphics()` and Direct's Clear running
-  `resoundAfterClear` and showing `CLEAR_GRAPHICS_NOTE`; `findGraphics`
+  `resoundAfterClear` and showing `CLEAR_GRAPHICS_NOTE` (built by T2b,
+  `7a35dfd`; the note is the store's Clear graphics', not Direct's
+  Clear's); `findGraphics`
   as `applyGraphics(project, kept, covered, rule, { fps, newId, sounds:
-  soundPackFor(…) })` then `rebakeGraphic` per clip id; `setSpeaker`; the
-  lower third's Role pre-fill (T3 leaves it ''); `place.auto` recomputed
+  soundPackFor(…) })` then `rebakeGraphic` per clip id (built by T2b,
+  `7a35dfd`, through `replaceClipGraphics`); `setSpeaker` (built by T2b,
+  `7a35dfd`, `f52e11f`); the
+  lower third's Role pre-fill (T3 leaves it '') (built by T2b, `becf32e`:
+  `lastRoleOf`, at creation); `place.auto` recomputed
   in `rebakeGenerated` with its case and the mutation "a dragged box
   recomputed", once the footage clip's id is stored for a spec without
-  a subject; a removed footage clip leaves its proposals behind;
+  a subject (built by T2b otherwise, `7a35dfd`, `f52e11f`: in `setAspect`'s
+  own update and `rebakeFollowed`, the footage clip read by `footageOf`,
+  no id stored; §6.9's dated note); a removed footage clip leaves its
+  proposals behind (not fixed by T2b; in its list below);
   structured drops (they come back only as `Problem` text, which
-  `decisionForGraphics` will want structured).
+  `decisionForGraphics` will want structured) (built by T2b, `0f28dfa`,
+  `db4b46d`: `GraphicDrop`, `SettledGraphics.drops`, `graphicDropsOf`).
   **For T4, not yours**: `fixtureCases()` in
   `tests/graphicBudget.test.ts` is the hook for the eval fixtures (each
   fixture's project and settled graphics, through `graphicBeats` and
   `graphicTiming`, into `assertBudgetHolds`); the eval will want drops
-  structured too.
+  structured too (2026-11-11: they are, by T2b; T4's list below).
+
+- **Phase 2's state, lane T2b, 2026-11-11.** Built and pushed: lane T2b
+  (§6.6's T2b Built note, with dated notes in §6.1, §6.4, §6.7, §6.9 and
+  §6.14), `226cdb0` … `71db0a7`, twelve commits (eleven by the build
+  workflow `wf_4812e7bc-b11`, five pieces each read by two critics before
+  its fixer, and `71db0a7`, the census rows' notes), pushed with the T3
+  record as `c6e4278`, green on both runners (run 43144819099 on
+  `c6e4278`: job 130940054254 `macos-15` and job 130940054594
+  `windows-latest` success, no annotation; the installer job skipped; the
+  job logs need a sign-in, so the runners' own test totals are not
+  known). The suite at `d33d5b4` on the Mac: typecheck 0; 343 files
+  passed and 5 skipped (348), 5290 tests passed and 64 skipped (5354),
+  241.01 s (read by the session to a file, `$?` read); `npm run build` 0
+  by the last builder and the last fixer. Against `69e677c`'s 338 files
+  and 5171 tests passed, the lane added 5 test files and 119 passed
+  tests. Harness census at `d33d5b4`: 907 rows checked, 0 missing, 8
+  skipped (915 rows), 57.0 s, the lane's fifteen among them, every count
+  held. **The app now makes graphics from speech** when a model is set
+  up (the status block): Find graphics in the Transcript tile and
+  Direct's graphics pass. With no model, or a window's answer rejected,
+  only the lower third lands (with a Speaker) until T4's baseline fills
+  `settleGraphics`' seam. **No real model has been asked by any test.**
+  Not built: T4. **Of the bar above**, the lane carries one item: "every
+  number heard from a YouTube track or an unsure Whisper word waits for
+  Keep (census rows present)". In the app as built, both routes that land
+  a graphic today, Find graphics and Direct, go through `applyGraphics`,
+  which sets a graphic with a proposal aside in `graphicProposals`, and
+  nothing places one but Keep (`keepProposal`); a number grounded on a
+  YouTube transcript's words or a Whisper word under 0.5 confidence is
+  such a proposal (`proposalOf`, T2a's, now fed `wordSourceOf`). Pinned:
+  "a proposal is not placed until Keep" (`graphicActions`,
+  `transcriptGraphics`, the harness's three sources), with the mutation
+  "a proposal placed before Keep" failing each, and a proposal's Drop
+  placing nothing (`64adaed`). The census rows are present and read on
+  screen: "check the number" once in each of the three source states
+  (YouTube ASR, YouTube uploader, an unsure Whisper word) and "Keep".
+  Those are the item's own words. Clip it's route (step 4) does not exist
+  yet, the harness states stub the answer rather than call
+  `findGraphics`, and no real model's answer has gone through it. The
+  rest of the bar stands as the T3 paragraph above says, and T4's
+  eval, render checks, preview = export, M14, the look rating, M18 and
+  the budget property over every fixture are ahead. Of "Also before phase
+  2 is called done": `LLM.md` §Built records `graphics@1` (written with
+  this record, 2026-11-11); §15 rows 10 and 11, M15 and M17 are still
+  unmeasured.
+  **Still yours, from lane T2b** (each from a commit's "Open, yours", a
+  builder's open list or a fixer's declined list; every other "beyond the
+  plan's words" choice is in §6.6's T2b Built note, each yours to keep or
+  overrule):
+  - The pass (§6.6):
+    - the schema is 1817 to 1943 chars constrained (1559 unconstrained),
+      larger than the prototype's 1,269; whether LM Studio's strict
+      `json_schema` takes `minItems: 0` at this size is §15 row 10, for
+      the eval's first run (`schemaGraphics.ts`);
+    - `maxTokensForGraphics` is the plan's starting figure, 850; the
+      longest legal answer (every field at its decoded length) would not
+      fit, while a real answer fills one template's fields; T4's eval
+      recalibrates (`schemaGraphics.ts`);
+    - a sentence the clip shows only part of is kept by `validateGraphics`
+      (its stretch is the whole capped sentence) and dropped later by
+      `graphicTiming` (`NOT_SHOWN_NOTE`): correct end to end, but whether
+      the eval counts before or after timing, or `settleGraphics` drops
+      bound words outside the menu's `wordStart`..`wordEnd`, is open (a
+      decision for T4; `run.ts`, `validateGraphics.ts`; `44024d9`,
+      `db4b46d` declined);
+    - the decision record's op holds `GraphicCandidate`s, so in a run over
+      several clips a sentence id does not say which clip a graphic sits
+      on (only `drops` carry `clipId`): whether ops should hold
+      `KeptGraphic`s (`run.ts`, `decisionForGraphics`);
+    - §6.6's "an out-of-list id … is repaired" against the code's drop of
+      that one graphic (the pass stands); the builder followed the code,
+      and a dated note now stands beside the plan's sentence
+      (`validateGraphics.ts`);
+    - the language line's "headline" example for Telugu and Hindi is the
+      spine's measured line (0/24 to 24/24), kept; double quotes inside a
+      SENTENCES line are not escaped, as in `prompt.ts` and `prompt2.ts`:
+      both for the eval to measure (`promptGraphics.ts`);
+    - a window is named in a note by its sentence ids ("sentences s00 to
+      s23"), which the tile never shows, not by its clock span; and the
+      notes of a run over several windows carry no window name, Find's
+      notes are the bare messages and Direct's carry their path through
+      `describeProblem` (`run.ts`, `store.ts`; `db4b46d` and `f52e11f`
+      declined, for piece 4, which kept them);
+    - a stray-field repair note is still written for a graphic the
+      spacing then drops, and a length drop's `GraphicDrop.reason` names
+      no field ("is 60 characters, at most 40 are drawn"; the field is
+      only in the problem's path) (`validateGraphics.ts`, `run.ts`;
+      `db4b46d` declined);
+    - a keyword whose word also occurs in an earlier identical sentence
+      inside the validator's stretch (three "The light was soft that
+      day." in a row) binds where the spacing reads it 6 s too close; a
+      T2a stretch question, measured in passing (`claims.ts`,
+      `validateGraphics.ts`; `db4b46d`).
+  - The ask:
+    - Direct's stage text "asking again, thinking on" (`store.ts`) is
+      shown for the spine's OpenAI retry too, where nothing turns thinking
+      on, and the graphics ask passes no `onRetry`, so it never shows
+      for it (the retry's note goes into the notes).
+  - The store and Direct:
+    - removing a footage clip leaves its proposals in
+      `Project.graphicProposals`; the tile no longer shows them, since
+      that clip cannot be selected, and Keep on one would say the clip is
+      gone (`store.ts`, `graphics/apply.ts`);
+    - `placeAgain` does not read again whether a callout's face is still
+      on screen after an aspect change or a reframe (`graphics/apply.ts`);
+    - `lastGraphics` is not cleared by undo: after Find and undo, the
+      notes still describe the undone run; Clear and Drop leave it on
+      purpose (beyond the words); `CLEAR_GRAPHICS_NOTE` shows when nothing
+      was cleared (`store.ts`; `f52e11f` declined);
+    - when the Speaker is cleared, lower thirds that drew the old name
+      stay (§6.6 says a lower third is "null without a Speaker"): go or
+      stay (`graphics/apply.ts`, `withSpeaker`; `64adaed` declined);
+    - Find again loses a typed Role unless another lower third of the
+      same asset holds one (`clearClipGraphics` runs before
+      `lowerThirdFor`), and `lastRoleOf` takes the last lower third's
+      role as stored, an empty one included, so a later lower third with
+      no Role hides an earlier typed one: whether Find again should carry
+      the clip's own Role, and whether to skip an empty one
+      (`graphics/apply.ts`; `d33d5b4` declined);
+    - a reported quote ("Ravi said …") draws the name the transcript
+      gives; its Speaker field shows the asset's Speaker, and the name
+      drawn is not shown in the panel (`GraphicPanel.tsx`);
+    - a said quote is not re-timed when a new Speaker changes its reading
+      hold (`graphics/apply.ts`, `withSpeaker`; `7a35dfd`);
+    - Keep's refusal is a notice, not shown under the proposal (the
+      returned reason is unused by the tile) (`TranscriptGraphics.tsx`;
+      `64adaed` declined); a kept graphic's `generatedBy` reason has no
+      why, and its `bound` and `source` are lost (`keepProposal`).
+  - The dock's panel:
+    - no overlap check when a graphic is made longer into the next clip
+      on its track (`overlapsOn` says it must not happen; `trimClipEnd`
+      has none either) (`GraphicPanel.tsx`, `store.ts` `setGraphic`;
+      `d33d5b4` declined);
+    - `placeGraphic` runs on every draw of the panel while the place is a
+      dragged box, to know whether Back to auto is free (not measured as
+      slow) (`GraphicPanel.tsx`; `d33d5b4` declined);
+    - Back to auto keeps the subject at onset, as `placeAgain` does
+      (`GraphicPanel.tsx`);
+    - no control adds or removes a bars or steps row; the steps' `parent`
+      and the screen card's `clipId` and `move` are not shown; a Speaker
+      field with no owner asset edits the drawn name (`GraphicPanel.tsx`).
+  - Tests:
+    - no test for Back to auto greyed because no third is free (it needs
+      captions over every third), none for the pre-filled Role reaching
+      the panel through `findGraphics` (`tests/renderer/graphicPanel.test.tsx`;
+      `d33d5b4` declined), and no `directorAsk` case with no `maxTokens`
+      (`tests/directorAsk.test.ts`; `db4b46d` declined).
+
+  **For T4, not yours**: `baselineGraphics` as `options.baseline`,
+  threaded through the store's `askGraphicsPass` (module-private, shared
+  by `findGraphics` and Direct; neither passes a baseline today); an
+  exported pure loop (menus, ask, settle, pair) taking the ask, for the
+  eval and the harness; the eval reading the per-window settled parts
+  rather than `pairSettled`'s joined string, `SettledGraphics.drops` and
+  `graphicDropsOf`; `NO_MODEL_LINE` and the `'baseline'` record model are
+  worded to stay true once the seam is filled; the harness options, a
+  Find-made graphic state for the census and the warnings, and a "no
+  model" Find state once a baseline exists; `graphic.int`'s phase-2
+  cases; the budget property over the fixtures.
 
 **The spike's gate** (§16.56; the spike is §6.17). Read from `EFFECTS.md`
 §62, which holds H1-H10, H12 and H13 with their commands, machines and
@@ -15973,7 +16982,9 @@ sweep, the store's follow-on edits, the switch and the tests.
 >   Clear took a graphic from that still holds a graphic of an app rule
 >   (`generatedBy` set); a footage clip left with only graphics of yours is
 >   untouched. The store's `clearGraphics()` and Direct's Clear are to call
->   it inside their own undo step (T2b); nothing calls it yet.
+>   it inside their own undo step (T2b); nothing calls it yet. (2026-11-11:
+>   they do, with Drop, Find again and Direct again; the dated note at the
+>   end of this section.)
 > - **A graphic's sounds follow it** (`e8f2a1f`, `69e677c`; the pure half
 >   in `graphics/apply.ts`, so T2b's `dropGraphic` and `keepGraphic` call
 >   the same code; a follower is matched by `forGraphic`, never by time):
@@ -16125,6 +17136,40 @@ sweep, the store's follow-on edits, the switch and the tests.
 >   with the exact text, a span inside the `role="switch"` button,
 >   `aria-checked="true"` on a fresh project. `8db943a` changed only the
 >   row's note; `tests/uiCensus.test.ts` 9 passed.
+
+> **The resounds lane T2b wired, 2026-11-11** (`7a35dfd`, `f52e11f`; §6.6's
+> T2b Built note). Every action that takes a graphic now puts the other
+> graphics' sounds on that footage clip back under the cap with
+> `resoundAfterClear`, inside its own one update: **Drop**
+> (`withoutGraphic`: `removeWithFollowers`, the drawn asset when unused,
+> then the resound); **Find again** (`replaceClipGraphics`:
+> `clearClipGraphics`, the resound, then the new run; it matters when the
+> new run lands nothing on the clip, since otherwise `soundsFor`
+> re-places that clip anyway); **Direct again** (Direct's spine update,
+> `resoundAfterClear(p, applied.project, pack)`); **Direct's Clear**
+> (`clearDirectorOutput`, `resoundAfterClear(p, clearDirector(p),
+> pack)`); and the store's **`clearGraphics()`** (the Clear, then the
+> resound when anything was taken). Keep places the kept graphic's sounds
+> through `soundsFor`. Pinned in `tests/renderer/graphicActions.test.ts`
+> and `tests/renderer/directGraphics.test.ts`, each by hand: Drop frees a
+> slot (three sounded counters, a silent fourth, Drop one: the fourth's
+> tick at 795 under its rule, one undo); Find again landing nothing gives
+> Direct's silent counter its tick (795, `director.graphic`); Direct again
+> over a clip of yours at frame 3000, where three Direct counters held the
+> cap, gives the Clip-it counter its tick at 3795 in the same undo step;
+> Direct's Clear gives a Clip-it counter back the tick three Direct
+> counters held (795); Drop takes the graphic's own sound and leaves
+> another graphic's sounds the same clips. Mutations, each failing:
+> `withoutGraphic` and `replaceClipGraphics` without their resound, Direct's
+> spine update without it, Direct's Clear without it (it survived the
+> Direct file at first; the store case kills it, "expected [] to deeply
+> equal [ [ 795, 'clips.graphic' ] ]"), Drop leaving the sound, and Drop
+> taking another graphic's. The first three had left both files green
+> before `f52e11f`'s cases. The store's `clearGraphics()` resound is
+> asserted by the Clear graphics case (Direct's graphic keeps its one
+> sound, under its rule, and the file it stands on), but no mutation of
+> that call is recorded. Still not resounded: `removeClip` and Delete
+> on a graphic, a trim, ripple delete and close gap (T3's items, §6.12).
 
 ### 6.15 Phase 0 — Measure before relying: M1-M22 and H1-H13
 
@@ -17988,7 +19033,7 @@ piece table does (§6.3's, §6.16's, §6.17's, §6.18's).
 | 2 | T3, first | the typed stub of `applyGraphics` (`KeptGraphic`, the signature, §6.6), committed before T2's wiring starts (built 2026-11-06/07, read by two critics before its fix: `41a3db0`, `ddd1ede`; pushed with T1 as `51e2f23`; §6.6's stub note) | inside T3's 3 | phase 1's exit |
 | 2 | T1 | `GRAPHIC_TEMPLATES`' values first (the others read the field modes), then the layout, the eight draw files, `numbers.ts`, `tree.ts`, with `graphicFrame`'s second half, `graphicHolds`, `graphicTree` (§6.2); the style's second half (§6.5) (built 2026-11-07 to 11, each piece read by two critics before the next: `cb394b5`, `35dd847`, `8f18cc8`, `528986c`; `4e6004e`, `dd309bf`, `f64a879`, `9e7a89e`; `712246e`, `1871004`, `85b59e3`; `d680132`, `1a681c7`, `62f3c83`; and `51e2f23`, the census read on screen; pushed as `51e2f23`, green on both runners at `e06e1c3`; §6.2's and §6.5's phase-2 Built notes; no marker painter, M10 not passed) | 4 + 0.5 | phase 1's exit; M21 before the counter (built ahead of it, 2026-11-07: the gate paragraph below) |
 | 2 | T2a | `claims.ts`, then `validateGraphics.ts` with `checkGraphicData`, `claims` and the property test (§6.7) (built 2026-11-11, each piece read by two critics before the next: `a29e8fa`, `1469cc5`; `bac73ac`, `0c88a89`; `cbbd25d`, `bd0fcf3`, `f4b283b`; `e027bd3`, `3b887d0`; with `settleGraphics`' validation half, `GraphicsMenu` and `SettledGraphics` in `run.ts` and `GRAPHIC_SPACING` in `template.ts`; pushed as `3b887d0`, green on both runners; §6.7's Built note; nothing in the app calls it until T2b) | 3 | T1's values |
-| 2 | T2b | `schemaGraphics.ts`, `promptGraphics.ts`, the ask's fix with `directorAsk`, `run.ts`'s `graphicsMenuFor`, `settleGraphics` (its validation half built by T2a, 2026-11-11; the baseline seam is T4's) and `decisionForGraphics`, Direct's and the tile's wiring (Clip it's is step 4's), `TranscriptGraphics.tsx`, `GraphicPanel.tsx`, the store's actions but `setGraphicSounds`, with `directorGraphics`, `transcriptGraphics`, `graphicPanel` (§6.6) | 2 | T2a's validator; T3's stub |
+| 2 | T2b | `schemaGraphics.ts`, `promptGraphics.ts`, the ask's fix with `directorAsk`, `run.ts`'s `graphicsMenuFor`, `settleGraphics` (its validation half built by T2a, 2026-11-11; the baseline seam is T4's) and `decisionForGraphics`, Direct's and the tile's wiring (Clip it's is step 4's), `TranscriptGraphics.tsx`, `GraphicPanel.tsx`, the store's actions but `setGraphicSounds`, with `directorGraphics`, `transcriptGraphics`, `graphicPanel` (§6.6) (built 2026-11-11, each piece read by two critics before the next: `226cdb0`, `44024d9`; `c4a4395`, `0f28dfa`, `db4b46d`; `7a35dfd`, `f52e11f`; `ffc5391`, `64adaed`; `becf32e`, `d33d5b4`; and `71db0a7`, the census rows read on screen; beyond the row, `pairSettled`, the structured drops, `graphicActions` and `directGraphics`, and the `place.auto` recompute T3 handed over; pushed with the T3 record as `c6e4278`, green on both runners; §6.6's T2b Built note; the baseline seam still empty, T4's) | 2 | T2a's validator; T3's stub |
 | 2 | T3 | `beats.ts` with `graphicBeats` (§6.8); `place.ts` (with `freeSpace.ts`'s `samplesOver`) and `budget.ts` with `graphicPlace`, `graphicBudget` (§6.9); `sound.ts` (`GRAPHIC_SOUND_FILES`), `graphics/apply.ts` (`applyGraphics`, `lowerThirdFor`, `clearGraphics`), `director/apply.ts`'s constants, sweep and return, the store's follow-on edits (`removeClip`, `moveClip`, `moveSelectionTo`, `pasteClipboard`), `setGraphicSounds` and the switch, with `graphicSound` and `graphicStore`'s phase-2 cases (§6.14) (built 2026-11-11, each piece read by two critics before the next: `c27b9a4`, `4699660`; `216065e`, `37d0e69`, `518a62f`; `1a14bd4`, `ac79a1e`; `5c52691`, `21d316d`; `0f3f7a4`, `3d070ab`; `e8f2a1f`, `69e677c`; and `8db943a`, the census row read on screen; beyond the row, `resoundAfterClear`, the follower functions and the Delete, Cut and nudge arms; pushed as `77ac70a`, green on both runners; §6.8's, §6.9's, §6.6's and §6.14's Built notes; `place.auto`'s recompute not built, handed to T2b; nothing in the app calls `applyGraphics` until T2b) | 0.5 + 1 + 1.5 | T1's values |
 | 2 | T4 | the baseline and the eval block, the fixtures read, M14's and the look rating's runs (§6.10); the harness's `templates`, `curves`, `look` and per-template Indic options, `graphic.int`'s phase-2 cases, the property test's wiring (§6.11's half) | 1.5 + 0.5 | T1-T3 |
 | spike | H | §6.17's pieces: the worker's `hands` mode, `hands/types.ts`, `events.ts`, `oneEuro.ts`, `anchor.ts`'s `tipOnFrame`, the cases §6.17 lists; your runs | 1.5 | your footage; runs during phase 2 (nothing of phases 1-2 is needed: `sourceToFrame` through the reframe exists) |
@@ -18034,7 +19079,11 @@ on both runners; `applyGraphics`, the follower functions and
 `resoundAfterClear` exist for T2b to call. Next by §6.19: T2b, then T4;
 T4's gate in the table, T1-T3, now waits on T2b only. M17 and M18 set the
 proposals T3 built, `GRAPHICS_PER_MINUTE` and the sounds' cap and levels;
-both unmeasured.)
+both unmeasured.) (2026-11-11: T2b is built and pushed with the T3 record
+as `c6e4278`, green on both runners (run 43144819099), so T4's gate in
+the table, T1-T3, is met: every lane before it is built and pushed. Next
+by §6.19: T4, the last lane of phase 2. M17, M18 and M21 are still
+unmeasured, and §15 rows 10 and 11 wait on T4's eval.)
 
 **Where §6.20 falls.** Outside step 3's days, inside phase 1's run:
 
@@ -20193,7 +21242,7 @@ with a window, so `-ss` and `-t` are scanned too. So have 1f's shapes since
 | no shots found (a single take) | one shot; the path still pans | path test |
 | a rotated file whose size disagrees | the track is refused; centred crop; "the file's orientation changed — reframe again" | `faces.int` rotated case |
 | a retimed clip | the followed crop is recompiled from the track at read time, so its cuts move with the speed; graphics refuse with a note | `reframeKeys` after `withClipSpeed`, a ramp, `convertFrameRate`, a trim, a split; graphics test |
-| no model | graphics from the baseline; Best clips from signals; no B-roll suggestions | each pass's settle test with the fake provider refusing |
+| no model | graphics from the baseline (2026-11-11, lane T2b: until T4's `baselineGraphics` fills `settleGraphics`' seam, only the lower third lands, with a Speaker, the note "no graphics for <window>: <why>" and the tile's "No model’s answer was used in this run"); Best clips from signals; no B-roll suggestions | each pass's settle test with the fake provider refusing (graphics: `directorGraphics`' seam and record cases, `graphicActions`' two no-model cases, built by T2b) |
 | a prose or truncated answer | that pass only falls back; the clip stands | settle tests |
 | a graphic that cannot be baked | dropped from the export with a note; the export succeeds (a dropped screen card also strikes its two opacity keys from the recording, §6.16) | `graphic.int` |
 | no subject track (no AI helper, Follow the subject not run, or a track of another version) | `callout` not offered (and dropped with rule 9's note, "no subject found to point at", if an answer names one); placement takes the style's third (§6.9) (2026-11-11, corrected by lane T3's build, `37d0e69`, `518a62f`: §6.9 step 3's no-track default, the middle, or the top when the captions use the middle, and for a lower third the bottom, or the top when the captions use the bottom); a graphic's dim is drawn with no hole (§6.2, §6.9) | `graphicPlace.test.ts`; `graphic.int`'s no-track case |
@@ -20205,7 +21254,7 @@ with a window, so `-ss` and `-t` are scanned too. So have 1f's shapes since
 | WebGL unavailable | a graphic that asks for depth, a camera move or a glow (phase 3's 2.5D `counter` and `ring`, the glow, the edge sweep) is drawn flat by the canvas painter, with the note "drawn flat: 3D needs WebGL, which did not start on this computer"; a screen card lands flat with no tilt; step 6's 3D templates likewise draw flat (§9); 2D graphics are unchanged; the export succeeds (§6.16) | `graphicCompositor.test.ts`' WebGL-missing case |
 | no Pexels key | the source greyed: "add a key in Settings" | panel test |
 | offline | each source's search says so; nothing half-written (staging then rename); Get transcript says so and the start and end fields stay | `webFetch` test; `ingestPanel` component test |
-| a number from a YouTube track | the graphic is a proposal, "check the number", until Keep | `directorGraphics` test |
+| a number from a YouTube track | the graphic is a proposal, "check the number", until Keep | `directorGraphics` test (built 2026-11-11 by lane T2b, with `graphicActions`' and `transcriptGraphics`' proposal cases and the census's three source states, read on screen) |
 | a link with no captions and no Python | M0: "This video has no captions", the start and end fields as today, Listen to it greyed with "needs the AI helper"; Best clips adds "Best clips needs the AI helper to listen to it" | `ingestPanel` component test (§3b.8); panel test |
 | the AI helper's pack, on an installed app (Step P, §3a) | nothing spawned at any caller; a grey "Not installed" with the sized Install; every Python control greyed "needs the AI helper", each a pointer to Settings; the local voice says why; stems split by mid/side | `sidecarService` (spawn never called); the harness check; census rows |
 | a pack install stopped part-way (cancel, quit, offline) | verified downloads kept, no receipt, the folder ignored by the order and swept at launch; the next press says "· N MB left" and fetches only that | `helperPackJob`; `fetchFile` |

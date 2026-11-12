@@ -8525,7 +8525,7 @@ suite and CI are the orchestrator's.
   and the preview's recompute on a long followed clip while editing.
 - **Burned-in text** (§5.3): after 1g.
 
-## 61. Graphics: the forks measured (phase 0 of step 3, then phase 1's first) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22), and on the Surface the libass run and the development app (2026-10-27); in node, phase 1's M9 (2026-10-27) and the stroke's flattening (2026-10-28); and D10's three readings, the Noto fonts' provenance, the Mac's libass against the fontsdir, and `document.fonts.check` (2026-10-29); and under painter A, Chrome 152's canvas (negative radii, a 0-side canvas, `globalAlpha`) and, in node, the draw list's mixed faces and bounds and the frames' edges (2026-10-30/31); and lane C's worker encoder and measureText in the pane's Chrome 152 (2026-11-01) and, in node, the box route under crop, mask, matte and transitions (2026-11-02); and lane D's three, geq's w − 2 clamp on the box route, a stroke's chroma through `yuva420p` (M19 in part) and `flattenPath` against `SVGPathElement` (M8 in part) (2026-11-03); and phase 2's lanes T3-first and T1, in node and on the harness census (2026-11-06 to 11); and lane T2a's validator against the false graphics its critics wrote, in node (2026-11-11); and lane T3's beats, placement, budget and graphic sounds against their critics' inputs, in node and on the harness census (2026-11-11)
+## 61. Graphics: the forks measured (phase 0 of step 3, then phase 1's first) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22), and on the Surface the libass run and the development app (2026-10-27); in node, phase 1's M9 (2026-10-27) and the stroke's flattening (2026-10-28); and D10's three readings, the Noto fonts' provenance, the Mac's libass against the fontsdir, and `document.fonts.check` (2026-10-29); and under painter A, Chrome 152's canvas (negative radii, a 0-side canvas, `globalAlpha`) and, in node, the draw list's mixed faces and bounds and the frames' edges (2026-10-30/31); and lane C's worker encoder and measureText in the pane's Chrome 152 (2026-11-01) and, in node, the box route under crop, mask, matte and transitions (2026-11-02); and lane D's three, geq's w − 2 clamp on the box route, a stroke's chroma through `yuva420p` (M19 in part) and `flattenPath` against `SVGPathElement` (M8 in part) (2026-11-03); and phase 2's lanes T3-first and T1, in node and on the harness census (2026-11-06 to 11); and lane T2a's validator against the false graphics its critics wrote, in node (2026-11-11); and lane T3's beats, placement, budget and graphic sounds against their critics' inputs, in node and on the harness census (2026-11-11); and lane T2b's menu, settle, store actions and two panels against their critics' inputs, in node and on the harness census (2026-11-11)
 
 For `docs/CLIPS.md` §6.15 (step 3's phase 0, "Measure before relying"):
 pieces 0.1–0.3 were built on the evening of 2026-10-21 in seven commits,
@@ -11220,3 +11220,119 @@ be guessed:
   T2a found, parallel critics in one tree also leave scratch test files:
   one critic's full run went red only on the other's
   `tests/planholes-critic.test.ts`.
+
+### Phase 2, lane T2b, 2026-11-11
+
+`CLIPS.md` §6.6's T2b Built note, with dated notes in §6.7, §6.9 and
+§6.14. Read from the twelve commits (`226cdb0` … `71db0a7`), the build
+workflow's journal (`wf_4812e7bc-b11`: five builders, ten critics, five
+fixers) and the session's reads on the Mac. Every figure is vitest in
+node, each input probed by a critic on the commit named and pinned since,
+except the census, read on screen; **no real model was asked**: every ask
+is injected. Only what cost time or would not be guessed:
+
+- **Rule 10 spaced a number that was never on screen.** `settleGraphics`
+  applies §6.7's spacing "so the eval counts what the app would place",
+  but `0f28dfa` spaced and counted proposals too, while `applyGraphics`
+  sets proposals aside BEFORE its budget. Measured: a YouTube talk 'We
+  signed 40 clients this year.' then 'Keep it simple always today.', a
+  counter on the 40 and a keyword on "simple": the counter settled as a
+  proposal, and the keyword was dropped "within 6 s of the one before".
+  On every YouTube clip every number is a proposal, so true keywords,
+  quotes and steps near a number vanished, and pressing Drop on the
+  number left nothing. `db4b46d`: a proposal is neither spaced nor
+  spacing; Keep places it through the budget.
+- **A run that asked nothing named a model.** `pairSettled([])` gave
+  `baseline: false`, so `decisionForGraphics` wrote the caller's model
+  into a record of a run with no windows (a critic's scratch test); the
+  eval could not tell an empty run from a model's. `db4b46d` made
+  `baseline` `parts.every(...)` (true for none). Then piece 3's critic
+  found the store still WROTE such a record: Find on a clip whose
+  transcript had gone, or whose every word was moved 100 s past the
+  shot, asked nothing (no menu) yet wiped the clip's two Clip-it graphics
+  and appended a `{ id: 'baseline', runtime: 'none' }` record with
+  "Graphics: 0 placed"; Direct over such a shot did the same. `f52e11f`:
+  `holdsSpeech` first; nothing asked, cleared or recorded.
+- **A retimed clip's note dropped a graphic twice.** `graphicDropsOf`
+  expands the one retimed note to every graphic of the run on that clip;
+  a graphic already dropped for its own reason (a wrong asset) came back
+  a second time for the retime: three drops for two graphics (measured).
+  `db4b46d` skips a graphic with its own drop, in either order of the two
+  notes. The clip filter of that loop was right but unguarded: removing
+  it left 283 of 283 green until a second, un-retimed clip was added.
+- **A drop read off the wrong index passed because two graphics drew the
+  same thing.** `dropsOf` reads the graphic's index off the problem's path;
+  `const i = 0` left 283 of 283 green, since the kept and the dropped
+  graphic were both counter "40". Fixed in the test (the dropped one is a
+  ring "70%"), not the code.
+- **A Speaker with spaces drew two names.** `setSpeaker` stored ' Ana ' as
+  typed, the lower third drew ' Ana ', and `settleGraphics` drew the quote
+  'Ana' (it trims); a later `setSpeaker('Bea')` renamed the lower third and
+  left the quote on 'Ana', unrebaked, since it compared against the
+  untrimmed name. `f52e11f`: stored, compared and drawn trimmed.
+- **A rate change moved a graphic nobody reframed.** `7a35dfd` put §6.9's
+  `place.auto` recompute in `rebakeGenerated`'s graphic arm, where the
+  plan put it; `setFrameRate` calls `rebakeGenerated` too, so
+  `setFrameRate(25)` turned an auto `'top'` over a talk shot with no
+  captions and no subject into `'middle'`. `f52e11f` moved it into
+  `setAspect`'s own update (and kept the reframe's in `rebakeFollowed`).
+  **A shared rebake arm runs for every caller of the rebake.**
+- **A fixture moved to keep a test green hid the path under test.**
+  `7a35dfd` moved `graphicStore.test`'s `rebakeFollowed` fixture into the
+  middle third so the new recompute moved nothing there, which left the
+  reframe's recompute observed by no case: forcing its `moved` false left
+  72 tests green across four files until `f52e11f` added a reframe case.
+- **The state's notes were written in place.** Direct's `lastDirection.problems`
+  WAS the `notes` array the graphics pass then pushed into, so the
+  pass's own `set(…problems: [...notes])` could be deleted with every
+  test green (`toContain` saw the in-place push). `f52e11f`: the spine's
+  record takes a copy.
+- **The census stub's first word was a label.** The Transcript tile draws
+  every transcript word as its own text node, and the census matches whole
+  text nodes, so the stub sentence "Keep it simple today." made a second
+  "Keep" beside the button: rendering the panel over the harness run
+  counted 2 where the fixture, reasoned from the code, said 1 (critic,
+  `renderToStaticMarkup`). `64adaed`: "Make it simple today.", and a case
+  counts every row's label over the whole rendered tile per source. Read
+  on screen at `d33d5b4`: 907 checked, 0 missing.
+- **The Hindi danda was read as a drawn mark.** `claims.ts`' `WORD_TRAIL`
+  lacked '।' and '॥', which `BREAK_CHARS` and `SENTENCE_END` hold: a whole
+  Hindi sentence quoted verbatim returned "'…जोड़े।' draws '।', which the
+  transcript cannot ground", so the validator dropped a true Hindi quote
+  and the dock warned. The same check on a whole Telugu sentence passed.
+  `d33d5b4`; its case fails without the fix and with only '।' added.
+- **`approximate` is a YouTube word, and 'und' is "root".** `226cdb0`
+  read `approximate` first for every transcript (`{ model: 'faster-whisper
+  small', approximate: true }` gave `'youtube-lines'`); `44024d9` reads it
+  only inside a `youtube-` model, as §6.6 words it. And
+  `Intl.DisplayNames('en')` names 'und', `parseJson3`'s default language,
+  "root" on this machine's ICU, so the prompt's last line read "Write all
+  copy in root, in its own script."; 'auto' gave "auto", and '' gave
+  English. `44024d9`: no language named for those three.
+- **The OpenAI retry was the same request with more room.**
+  `openaiRequestBody` never sends `think`, so on LM Studio, every eval's
+  configuration, `askStructured`'s "retry with thinking on" changed only
+  `maxTokens`. `c4a4395` appends "Answer with the JSON object only." on a
+  first result whose provider is `'openai'`; `think: true` still rides
+  along, unsent.
+- **A shortened graphic draws a number never said.** A counter `{ value
+  '40' }` with a beat at 3.5 s and 4 s long, typed down to 2 s in the
+  dock's Seconds, draws '39' on frames 50-59 through `drawListAt` (the
+  count never reaches its beat); steps or bars cut below a later beat
+  lose rows and those rows' sounds. Clamped only to the template's bounds
+  at `becf32e`; `d33d5b4` warns under Seconds (never blocks) below
+  `graphicSeconds`, §6.2's reading hold.
+- **The shape swap was proved equal before it was made.**
+  `graphicsSchema(menu, { constrained: false })` with its descriptions
+  stripped deep-equals the old hand-written `graphicsAnswerShape()` for
+  menus offering `['callout']`, the six, and none (a scratch test, not
+  kept); `graphicsValidator` and `claims.test` ran 243 before and 243
+  after, the sorted case lists identical. Possible only because the
+  answer object carries every field for every menu.
+- **Survivors that looked like coverage.** A proposal's Drop wired to
+  Keep (which would PLACE the unchecked number) left 94 of 94 green until
+  `64adaed` pressed it; the busy guard's removal failed only by a 120 s
+  timeout until the second press was raced (56 ms); Direct's rebake of
+  its landed graphics could be removed with the suite green, since the
+  bake was mocked as `async () => null` with no recorder. Each is pinned
+  now.

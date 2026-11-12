@@ -306,6 +306,42 @@ three months.
 
 ---
 
+## Built — `graphics@1`, 11 November 2026
+
+The third pass: which moments of a talk a simple graphic would help, and
+the words copied into a template the app drew (docs/CLIPS.md §6.6; lane
+T2b, `226cdb0` … `71db0a7`). The model picks a sentence and a template and
+copies words; it never picks a look, a motion, a sound, a place, a beat, a
+connector, a speaker or a lower third. Everything after the copy is the
+app's: the validator, the beats, placement, the budget, the sounds.
+
+| file | what |
+|---|---|
+| `src/shared/director/run.ts` | `graphicsMenuFor` (the clip's shown sentences, capped at 30 words or 15 s, in windows of 24; the templates offered, `callout` only with a subject track; where the words came from); `settleGraphics`, one call per window, the SAME code for the app and the eval; `pairSettled` joins a run's windows; `decisionForGraphics` |
+| `src/shared/director/promptGraphics.ts` | one constant playbook; the user prompt is the SENTENCES table, the offered TEMPLATES, and the language line last (the spine's measured line for Telugu and Hindi) |
+| `src/shared/director/schemaGraphics.ts` | `graphicsSchema(menu, { constrained })`, flat, `reasoning` first, at most four graphics; constrained for the decoder (the menu's ids as enums, decoded lengths), unconstrained for the validator's shape check; 1817–1943 chars constrained, 1559 not; `maxTokensForGraphics` 850 |
+| `src/shared/director/ask.ts` | the retry's fix: on the OpenAI shape, where `think` is never sent, the retry adds "Answer with the JSON object only." |
+| `src/shared/director/validateGraphics.ts`, `claims.ts` | the validator it settles through (§6.7, lane T2a): rejects only a cut-off answer or the wrong shape, then keeps, repairs or drops one graphic at a time |
+| `src/renderer/src/store.ts` | `findGraphics` (the Transcript tile) and Direct's graphics pass, after the spine, the look and the bakes, through the same `window.forge.directorComplete` route as the spine |
+
+**A rejected window costs only that window**, never the clip. **A number
+heard from a YouTube track or an unsure Whisper word is a proposal**, placed
+only when the user presses Keep. **The record** is one `graphics@1`
+`DecisionRecord` per Find or Direct run; its model is `{ id, runtime }`, or
+`baseline` when no model's answer was used, and nothing else of the model
+object reaches it (no key, header or address).
+
+**Not built**: the baseline (`baselineGraphics`, §6.10) is a seam in
+`settleGraphics` that nothing fills yet, so with no model, or a rejected
+window, only the app's lower third lands; the eval block, which reads the
+pass, is lane T4's. **No real model has been asked by a test**: every ask
+in the suite is injected. Whether LM Studio's strict `json_schema` takes
+this schema's `minItems: 0`, and how many tokens an answer needs, are the
+eval's first run (CLIPS §15 row 10). The detail, every choice and every
+open item: CLIPS §6.6's T2b Built note, §6.7, §6.12.
+
+---
+
 ## Built — `spine@2`, 24–25 September 2026
 
 `direct()` and the eval now run `spine@2` (docs/PLAN.md §5.2–5.6). C0

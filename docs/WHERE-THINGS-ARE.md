@@ -95,7 +95,8 @@ On screen it is three to a row in the 240 px column (Upload, URL, Narration,
 then Library, Transcript, Director…) and four from about 290 px; it is the same
 order either way, read row by row. Each tile's tooltip says what the tool is
 for. Narration's tile says **soon**. A tile whose tool has a run under way
-wears a small spinning badge — a transcription (Upload, Transcript), a download
+wears a small spinning badge — a transcription (Upload, Transcript), Find
+graphics (Transcript), a download
 (URL), the Director directing, a depth bake (Depth / Parallax), a reel (Beat
 sync and One photo, which share one), a grid, the strip flashes — so a reel
 started in Beat sync can still be seen from anywhere else.
@@ -354,6 +355,41 @@ is greyed as the Media pool's is, its tooltip saying why, and under it the
 way on: **needs the AI helper** (the button to Settings' row), the speech
 model's **Get the speech model · 464 MB**, or "the AI helper is starting".
 
+Between the rows and Listen for, the **Graphics** section
+(`TranscriptGraphics.tsx`; `docs/CLIPS.md` §6.6, built 2026-11-11), for
+any selected clip that is not itself a graphic. **Find graphics in this
+clip** asks the model set up for Direct (Ollama, LM Studio or the hosted
+route) which moments of the clip's words a graphic would help, and lands
+what survives the checks over the clip; it reads **Finding graphics…**
+while it asks, and the Shelf's Transcript tile wears its busy badge. It is
+greyed with the tooltip "Transcribe this clip first — graphics are found
+in its words" when the clip has no transcript, and with "Graphics are
+still being found — wait for that run to finish" while another clip's run
+is out. Pressed on a clip that shows no transcribed word, a notice says
+"This clip shows no transcribed speech — no graphics were looked for, and
+nothing changed". Under it, every graphic over the clip, whoever made it
+(Find, Direct, you): its start, its kind ("counter", "lower third"…), the
+words it draws, and **Drop**. A number heard from a YouTube track or a
+word the transcriber was unsure of is not placed: it waits in the list
+with **Keep** and **Drop**, and under it **check the number** beside the
+words heard (`heard "40 clients"`); Keep places it, or a notice says why
+it cannot ("another graphic is on screen then") and it stays listed. A
+run's notes follow, each dropped graphic with its reason, led by "No
+model’s answer was used in this run" when none was; a notice sums the run
+up ("Graphics: N placed, M to check — K notes"). **Clear graphics**
+(shown while Find has placed anything; tooltip: "Removes every graphic
+Find graphics placed, in every clip, with its sounds and the numbers
+waiting to be checked") takes them, with "Direct's graphics stay;
+Direct's Clear takes them" under it. Last, **Speaker**: the name of the
+person speaking in this file, saved when you leave the field (Enter
+leaves it); with a Speaker, each run puts a lower third with that name on
+the first word the clip shows, and renaming redraws every graphic that
+drew the old name. For a file from a link the channel shows greyed as the
+placeholder, and **Use the channel name** (tooltip: "A lower third shows
+the Speaker; a channel may be a brand rather than the person speaking")
+fills it. Without a model, only that lower third lands until the
+baseline is built (§6.10).
+
 ### Director
 
 An ad from your pictures, your music and a line about the product
@@ -587,6 +623,27 @@ page**, and **Customise** for the rest.
 
 **Card ring** (a ring) — Cards, Radius, Card size, Visible arc, Spin, Tilt,
 Roll, and whether the cards face the camera.
+
+**Graphic** (a graphic clip: a counter, bars, steps, a quote, a callout, a
+ring, a keyword or a lower third; `GraphicPanel.tsx`, `docs/CLIPS.md` §6.6,
+built 2026-11-11) — the heading with the kind beside it, then its words by
+field: **Value**, **Label**, **Title**, **Quote**, **Words**, **Lit word**,
+**Row 1 label** / **Row 1 value** and on down, a quote's or lower third's
+**Speaker** (the file's Speaker, as in the Transcript tile: changing it
+here renames every graphic that drew it), a lower third's **Role**
+(filled in from that file's last lower third), and a social card's
+**Name**, **Handle**, **Date**, **Link**. Each saves when you leave it
+(Enter leaves it) as one undo step. A word typed that the transcript does
+not say gets an amber warning under the field ("'45' is not said in
+s00") and is saved anyway; a graphic whose transcript is gone, or that is
+tied to nothing said, says its words are not checked. Steps have
+**Connector** (None, Line, Tree), a callout **Shape** (Arrow, Circle).
+**Seconds**, within the kind's range shown beside it, warns (never
+blocks) when too short to read ("It needs … s for its beats and to be
+read"). **Place** reads "Auto · the top third" (or middle, bottom), or
+"A box you dragged" with **Back to auto**, greyed when no third is free
+of the captions ("No third is free of the captions here") or no footage
+is under it ("No footage is under it to place it over").
 
 **Sound** (anything with sound) — **Mute**, and a **Level** fader in dB up to
 +6. When a volume line is drawn on the clip, a note says the line sets the
