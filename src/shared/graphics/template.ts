@@ -132,11 +132,27 @@ export interface GraphicCandidate {
   proposal?: GraphicSpec['proposal']
 }
 
-/** A kept candidate paired with the footage clip and transcript asset its menu came from: `applyGraphics`' input (docs/CLIPS.md §6.6). */
+/** A kept candidate paired with the footage clip and transcript asset its menu came from: `applyGraphics`' input (docs/CLIPS.md §6.6; `pairSettled` in director/run.ts pairs them). */
 export interface KeptGraphic {
   clipId: string
   assetId: string
   candidate: GraphicCandidate
+}
+
+/**
+ * A graphic that was not kept or not placed, structured (beyond §6.6's words:
+ * the drops otherwise come back only as `Problem` text): the footage clip it
+ * was for, its template as named, the first string it would draw ('' when it
+ * draws none) and why, without the "graphic dropped: " head. Built by
+ * `settleGraphics` (the validator's and the spacing's drops) and
+ * `graphicDropsOf` (applyGraphics'), for the decision record, the panel's
+ * notes and the eval.
+ */
+export interface GraphicDrop {
+  clipId: string
+  template: string
+  text: string
+  reason: string
 }
 
 /** Seconds, field modes and the rest for each drawn template (docs/CLIPS.md §6.2's GRAPHIC_TEMPLATES table; the seconds are the nine shapes' table, proposals until M16). Frozen through and through. */

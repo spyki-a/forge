@@ -1457,14 +1457,14 @@ describe('settleGraphics: the validation half (rule 10 and the baseline seam)', 
     expect(s.kept).toMatchObject([{ ...good, bound: [2, 4], beatWords: [2] }])
     expect(s.kept).toHaveLength(1)
     expect(s.dropped).toEqual([
-      { path: '$', message: "the baseline's graphics are used: The model's graphics ran out of room before it finished" },
+      { path: '$', message: "the baseline's graphics are used for sentence s00: The model's graphics ran out of room before it finished" },
       { path: '$.baseline[0].value', message: "graphic dropped: '45%' is not said in s00" }
     ])
-    // No model at all; and no baseline yet (lane T4's): nothing, with the reason.
+    // No model at all; and no baseline yet (lane T4's): nothing, with a note that is true without one (T2b, piece 2).
     const none = settleGraphics({ error: 'no model is set up' }, menuOf(t), t)
     expect(none).toMatchObject({ baseline: true, rejected: 'no model is set up' })
     expect(none.kept).toEqual([])
-    expect(none.dropped).toEqual([{ path: '$', message: "the baseline's graphics are used: no model is set up" }])
+    expect(none.dropped).toEqual([{ path: '$', message: 'no graphics for sentence s00: no model is set up' }])
   })
 })
 

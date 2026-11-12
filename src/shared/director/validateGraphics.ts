@@ -390,8 +390,10 @@ function speakerFor(stretch: ClaimStretch, first: number): { reported: true; spe
  *
  * `speakers` (beyond §6.7's signature, optional): the names the app may set as
  * a said quote's speaker, the asset's Speaker and a link's channel. The
- * validator has no project, so it passes none: a model's quote takes '' or the
- * name the stretch says said it ("<name> said / says / told"), never another.
+ * validator has no project: its caller passes the one name the app would set
+ * (`validateGraphics`' `options.speaker`, `quoteSpeakerFor` in run.ts), so a
+ * model's quote takes that name, '' without one, or the name the stretch says
+ * said it ("<name> said / says / told"), never another.
  * `user`, `fixed` and app fields are never checked; a lower third's `name` is
  * the app's and is not checked here.
  */
@@ -551,7 +553,8 @@ function settleOne(
   source: GraphicCandidate['source'],
   root: string,
   menu: GraphicsMenu,
-  transcript: Transcript
+  transcript: Transcript,
+  speaker = ''
 ): { kept: GraphicCandidate; notes: Problem[] } | { dropped: Problem[] } {
   const notes: Problem[] = []
   const def = GRAPHIC_TEMPLATES[input.template]
@@ -573,11 +576,11 @@ function settleOne(
     data.items = data.items.map((it) => ({ label: it.label }))
     data.connector = 'none'
   }
-  if (data.template === 'quote' && data.kind !== 'social') data.speaker = ''
+  if (data.template === 'quote' && data.kind !== 'social') data.speaker = speaker
 
   const grounding = { assetId: menu.assetId, sentence, words: [] as number[] }
   if (data.template === 'quote' && data.kind !== 'social') {
-    // The app's speaker (rule 8): the name the stretch says said a reported quote, else ''.
+    // The app's speaker (rule 8): the name the stretch says said a reported quote, else the asset's (`speaker`, '' without one).
     const c0 = check(data, def, grounding, transcript, [])
     if (c0.stretch && c0.bound.length > 0) {
       const allowed = speakerFor(c0.stretch, c0.bound[0])
@@ -585,12 +588,13 @@ function settleOne(
       if (allowed.reported) data.speaker = allowed.speaker
     }
   }
-  let problems = self.checkGraphicData(data, def, grounding, transcript)
+  const speakers = speaker === '' ? [] : [speaker]
+  let problems = self.checkGraphicData(data, def, grounding, transcript, speakers)
   if ((data.template === 'bars' || data.template === 'steps') && def.fixedTitles?.length && problems.some((p) => p.path === '$.title')) {
     const fixed = def.fixedTitles[0]
     notes.push({ path: `${root}.title`, message: `graphic repaired: the title '${data.title}' is not said in ${sentence} — '${fixed}'` })
     data.title = fixed
-    problems = self.checkGraphicData(data, def, grounding, transcript)
+    problems = self.checkGraphicData(data, def, grounding, transcript, speakers)
   }
   if (problems.length > 0) return drop(problems)
 
@@ -625,6 +629,34 @@ function settleOne(
 }
 
 /**
+ * The answer fields one graphic filled that its template does not hold (§6.6:
+ * "unused ones left as ''"): a string field not '' after trimming, an `items`
+ * row with a label or a value, a steps row's `value`, a `lit` not 0. Each is
+ * left out of the graphic's data (`dataOf` reads only its template's), so a
+ * graphic is repaired, never dropped, for them; the note names the field.
+ */
+function strayFields(g: AnswerGraphic, template: GraphicTemplateId): string[] {
+  const holds: Record<string, readonly string[]> = {
+    counter: ['value', 'label'],
+    ring: ['value', 'label'],
+    bars: ['title', 'items'],
+    steps: ['title', 'items'],
+    quote: ['quote'],
+    callout: ['label'],
+    keyword: ['words', 'lit']
+  }
+  const own = holds[template] ?? []
+  const out: string[] = []
+  for (const f of ['title', 'value', 'label', 'quote', 'words'] as const) {
+    if (!own.includes(f) && g[f].trim() !== '') out.push(f)
+  }
+  if (!own.includes('items') && g.items.some((it) => it.label.trim() !== '' || it.value.trim() !== '')) out.push('items')
+  if (template === 'steps') g.items.forEach((it, j) => (it.value.trim() !== '' ? out.push(`items[${j}].value`) : undefined))
+  if (!own.includes('lit') && g.lit !== 0) out.push('lit')
+  return out
+}
+
+/**
  * Rule 9's "not offered" and the menu's sentences: a template the menu did not
  * offer (a `callout` without a subject track, §6.6), or `lower-third` or
  * `screen-card` whatever the menu says, or a sentence not on the menu, drops
@@ -654,13 +686,18 @@ function offered(template: string, sentence: string, menu: GraphicsMenu, root: s
  * Per graphic: its sentence must be one of the menu's; its template one the
  * menu offers, and never `lower-third` or `screen-card`, whatever the menu
  * says ("not offered"); each drawn field within its kept length (§6.6); then
- * `checkGraphicData`, the one the dock calls.
+ * `checkGraphicData`, the one the dock calls. A field another template holds,
+ * filled, is left out with a note (`strayFields`).
+ *
+ * `options.speaker` (beyond §6.7's signature): the app's speaker for a said
+ * quote that is not reported speech, the asset's Speaker or a link's channel
+ * (`quoteSpeakerFor`, run.ts; §6.6, §16.31); '' when absent.
  */
 export function validateGraphics(
   answer: unknown,
   menu: GraphicsMenu,
   transcript: Transcript,
-  options: { truncated?: boolean } = {}
+  options: { truncated?: boolean; speaker?: string } = {}
 ): { kept: GraphicCandidate[]; dropped: Problem[] } | { rejected: string } {
   if (options.truncated) return { rejected: "The model's graphics ran out of room before it finished" }
   const shape = conforms(graphicsSchema(menu, { constrained: false }), answer)
@@ -686,11 +723,15 @@ export function validateGraphics(
       dropped.push(...long.map((p) => ({ path: p.path, message: `graphic dropped: ${p.message}` })))
       return
     }
-    const r = settleOne(data, g.sentence, g.why, 'model', root, menu, transcript)
+    const r = settleOne(data, g.sentence, g.why, 'model', root, menu, transcript, options.speaker ?? '')
     if ('dropped' in r) dropped.push(...r.dropped)
     else {
       kept.push(r.kept)
-      dropped.push(...r.notes)
+      const stray = strayFields(g, g.template as GraphicTemplateId)
+      dropped.push(
+        ...stray.map((f) => ({ path: `${root}.${f}`, message: `graphic repaired: '${f}' is not a field of a ${g.template} — left out` })),
+        ...r.notes
+      )
     }
   })
   return { kept, dropped }
@@ -705,7 +746,8 @@ export function validateGraphics(
 export function validateBaseline(
   candidates: readonly GraphicCandidate[],
   menu: GraphicsMenu,
-  transcript: Transcript
+  transcript: Transcript,
+  options: { speaker?: string } = {}
 ): { kept: GraphicCandidate[]; dropped: Problem[] } {
   const kept: GraphicCandidate[] = []
   const dropped: Problem[] = []
@@ -716,7 +758,7 @@ export function validateBaseline(
       dropped.push(off)
       return
     }
-    const r = settleOne(cand.data, cand.sentence, cand.why, 'baseline', root, menu, transcript)
+    const r = settleOne(cand.data, cand.sentence, cand.why, 'baseline', root, menu, transcript, options.speaker ?? '')
     if ('dropped' in r) dropped.push(...r.dropped)
     else {
       kept.push(r.kept)

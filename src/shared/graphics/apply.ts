@@ -25,7 +25,7 @@ import { graphicClipAsset, graphicExitKeys } from './frame'
 import { NO_CLIP_NOTE, NO_FREE_THIRD_NOTE, graphicLane, placeGraphic, subjectAtOnset, thirdPreference } from './place'
 import { GRAPHIC_SOUND_LANE_NAME, NO_SOUND_LIBRARY_NOTE, footageOf, graphicSoundFiles, graphicSounds } from './sound'
 import { CLEAN_GRAPHIC_STYLE } from './style'
-import { GRAPHIC_TEMPLATES, type GraphicData, type GraphicSpec, type KeptGraphic } from './template'
+import { GRAPHIC_TEMPLATES, type GraphicData, type GraphicDrop, type GraphicSpec, type KeptGraphic } from './template'
 import type { GraphicProposal } from '../timeline'
 
 /**
@@ -383,6 +383,55 @@ export function applyGraphics(
 
   if (proposals.length > 0) next = { ...next, graphicProposals: [...(next.graphicProposals ?? []), ...proposals] }
   return { project: next, problems, clipIds }
+}
+
+/**
+ * `applyGraphics`' drops, structured (beyond §6.6's words; lane T3 left them
+ * as `Problem` text only, and the cheapest true fix is this reader, not a
+ * change of `applyGraphics`' return): given the SAME `project`, `kept` and
+ * `covered` that call was given, and its `problems`, each graphic it dropped
+ * as `{ clipId, template, text, reason }`. A problem's path names the
+ * graphic (`$.kept[i]`, or `$.covered[j]` for the lower third that
+ * `lowerThirdFor` makes on the project as given); the reason is the message
+ * after "graphic dropped: <the graphic> — ", rebuilt from the graphic's own
+ * data, never split on a dash the graphic's words may hold. The one note a
+ * retimed clip gets drops every graphic of the run on that clip, each one
+ * here. The sounds' notes and the frame-rate refusal drop no graphic and are
+ * not here.
+ */
+export function graphicDropsOf(
+  project: Project,
+  kept: readonly KeptGraphic[],
+  covered: readonly string[],
+  problems: readonly Problem[]
+): GraphicDrop[] {
+  const run = new Map<string, KeptGraphic>()
+  const seen = new Set<string>()
+  covered.forEach((id, j) => {
+    if (seen.has(id)) return
+    seen.add(id)
+    const clip = project.clips.find((c) => c.id === id)
+    const lower = clip ? lowerThirdFor(project, clip) : null
+    if (lower) run.set(`$.covered[${j}]`, lower)
+  })
+  kept.forEach((k, i) => run.set(`$.kept[${i}]`, k))
+  const dropOf = (k: KeptGraphic, reason: string): GraphicDrop => ({
+    clipId: k.clipId,
+    template: k.candidate.data.template,
+    text: drawnStrings(k.candidate.data).find((t) => t.trim() !== '') ?? '',
+    reason
+  })
+  const out: GraphicDrop[] = []
+  for (const p of problems) {
+    const k = run.get(p.path)
+    if (!k) continue
+    const head = `graphic dropped: ${nameOf(k.candidate.data)} — `
+    if (p.message.startsWith(head)) out.push(dropOf(k, p.message.slice(head.length)))
+    else if (p.message === `graphics dropped: ${RETIMED_NOTE}`) {
+      for (const other of run.values()) if (other.clipId === k.clipId) out.push(dropOf(other, RETIMED_NOTE))
+    }
+  }
+  return out
 }
 
 /**

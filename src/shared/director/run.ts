@@ -1,4 +1,5 @@
 import type { Clip, MediaAsset, Project } from '../timeline'
+import type { DecisionRecord } from '../project'
 import { framesToSeconds } from '../timeline'
 import type { MusicAnalysis } from '../automation/cutPlan'
 import type { Problem } from './conforms'
@@ -16,8 +17,10 @@ import { SEGMENT_MAX_MS, SEGMENT_MAX_WORDS } from '../ingest/captions'
 import { captionWindowMs } from '../captions/placement'
 import { subjectTrackOf } from '../reframe/frameMap'
 import { MAX_CANDIDATES } from './menu'
-import { GRAPHIC_SPACING, type GraphicCandidate, type GraphicTemplateId } from '../graphics/template'
-import { validateBaseline, validateGraphics } from './validateGraphics'
+import { GRAPHIC_SPACING, type GraphicCandidate, type GraphicDrop, type GraphicTemplateId, type KeptGraphic } from '../graphics/template'
+import { validateBaseline, validateGraphics, type AnswerGraphic } from './validateGraphics'
+import { drawnStrings } from '../graphics/apply'
+import { GRAPHICS_PASS } from './schemaGraphics'
 
 /**
  * The pure half of a Director run: what the music is, how long the ad is, the
@@ -349,16 +352,26 @@ export function graphicsMenuFor(project: Project, clip: Clip, transcript: Transc
   return menus
 }
 
-/** One graphics answer, settled (docs/CLIPS.md §6.6, §6.7): `settle2`'s twin. */
+/** One graphics answer, settled (docs/CLIPS.md §6.6, §6.7): `settle2`'s twin. One per menu (one window). */
 export interface SettledGraphics {
   /** Validated and spaced (§6.7 rules 1-10), in onset order. */
   kept: GraphicCandidate[]
-  /** Every note: each graphic dropped with its reason, each repair, each spacing drop. */
+  /** Every note: each graphic dropped with its reason, each repair, each spacing drop, a rejection's. */
   dropped: Problem[]
-  /** The baseline's graphics were used because the model's answer could not be. */
+  /**
+   * The model's answer was not used (no model, or the pass rejected), so the
+   * baseline path ran: `options.baseline`'s candidates, validated, or none
+   * while there is no baseline (lane T4's).
+   */
   baseline: boolean
   /** Why the model's answer could not be used, when it could not. */
   rejected: string | null
+  /**
+   * Beyond §6.6's words: each graphic dropped (by the validator or the
+   * spacing; never a repair, never the rejection itself), structured: the
+   * menu's clip, the template, the first string it would draw, the reason.
+   */
+  drops: GraphicDrop[]
 }
 
 /**
@@ -368,7 +381,8 @@ export interface SettledGraphics {
  */
 export type GraphicsBaseline = (transcript: Transcript, menu: GraphicsMenu) => GraphicCandidate[]
 
-const NO_BASELINE: GraphicsBaseline = () => []
+/** The "graphic dropped: " head the validator's and the spacing's messages carry, taken off a structured drop's reason. */
+const DROPPED_HEAD = 'graphic dropped: '
 
 /**
  * Rule 10 within one answer (§6.7): onsets at least `GRAPHIC_SPACING.minGapS`
@@ -382,7 +396,7 @@ function spaceGraphics(
   kept: readonly GraphicCandidate[],
   menu: GraphicsMenu,
   transcript: Transcript
-): { kept: GraphicCandidate[]; dropped: Problem[] } {
+): { kept: GraphicCandidate[]; dropped: Problem[]; drops: GraphicDrop[] } {
   const byIndex = new Map(transcript.words.map((w) => [w.index, w]))
   const onsetMs = (c: GraphicCandidate): number => {
     const words = c.beatWords.length > 0 ? c.beatWords : c.bound
@@ -396,19 +410,99 @@ function spaceGraphics(
   const ordered = kept.map((c, i) => ({ c, i, at: onsetMs(c) })).sort((a, b) => a.at - b.at || a.i - b.i)
   const out: GraphicCandidate[] = []
   const dropped: Problem[] = []
+  const drops: GraphicDrop[] = []
   let previous = -Infinity
+  const drop = (c: GraphicCandidate, reason: string): void => {
+    dropped.push({ path: '$.graphics', message: `${DROPPED_HEAD}${reason}` })
+    drops.push({ clipId: menu.clipId, template: c.data.template, text: firstDrawn(drawnStrings(c.data)), reason })
+  }
   for (const { c, at } of ordered) {
     const name = `the ${c.data.template} on ${c.sentence}`
     if (out.length >= cap) {
-      dropped.push({ path: '$.graphics', message: `graphic dropped: ${name} — at most one graphic per ${GRAPHIC_SPACING.perS} s of clip, the earlier ones stay` })
+      drop(c, `${name} — at most one graphic per ${GRAPHIC_SPACING.perS} s of clip, the earlier ones stay`)
     } else if (at - previous < GRAPHIC_SPACING.minGapS * 1000) {
-      dropped.push({ path: '$.graphics', message: `graphic dropped: ${name} is within ${GRAPHIC_SPACING.minGapS} s of the one before — the earlier one stays` })
+      drop(c, `${name} is within ${GRAPHIC_SPACING.minGapS} s of the one before — the earlier one stays`)
     } else {
       out.push(c)
       previous = at
     }
   }
-  return { kept: out, dropped }
+  return { kept: out, dropped, drops }
+}
+
+function firstDrawn(strings: readonly string[]): string {
+  return strings.find((t) => t.trim() !== '') ?? ''
+}
+
+/** The strings an answer graphic would draw, in `drawnStrings`' order for its template; every field for one no template holds. */
+function answerDrawn(g: AnswerGraphic): string[] {
+  const items = g.items ?? []
+  switch (g.template) {
+    case 'counter':
+    case 'ring':
+      return [g.value, g.label]
+    case 'bars':
+      return [g.title, ...items.flatMap((i) => [i.label, i.value])]
+    case 'steps':
+      return [g.title, ...items.map((i) => i.label)]
+    case 'quote':
+      return [g.quote]
+    case 'callout':
+      return [g.label]
+    case 'keyword':
+      return [g.words]
+    default:
+      return [g.title, g.value, g.label, g.quote, g.words]
+  }
+}
+
+/**
+ * The validator's drops, structured: its problem paths are rooted at the
+ * graphic's place in what was validated ('$.graphics[2].items[0].value',
+ * '$.baseline[1].value'), so the index is read off the path, never the
+ * message; a graphic dropped for several fields is one drop, its reasons
+ * joined by '; '. Repairs ("graphic repaired: …") are not drops.
+ */
+function dropsOf(
+  problems: readonly Problem[],
+  root: '$.graphics' | '$.baseline',
+  drawn: (i: number) => { template: string; strings: string[] } | undefined,
+  clipId: string
+): GraphicDrop[] {
+  const at = new Map<number, string[]>()
+  const pattern = root === '$.graphics' ? /^\$\.graphics\[(\d+)\]/u : /^\$\.baseline\[(\d+)\]/u
+  for (const p of problems) {
+    const m = pattern.exec(p.path)
+    if (!m || !p.message.startsWith(DROPPED_HEAD)) continue
+    const i = Number(m[1])
+    at.set(i, [...(at.get(i) ?? []), p.message.slice(DROPPED_HEAD.length)])
+  }
+  return [...at.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .flatMap(([i, reasons]) => {
+      const d = drawn(i)
+      return d ? [{ clipId, template: d.template, text: firstDrawn(d.strings), reason: reasons.join('; ') }] : []
+    })
+}
+
+/** How a note names one menu window: its first and last sentence ids. */
+export function graphicsWindowName(menu: Pick<GraphicsMenu, 'sentences'>): string {
+  const ids = menu.sentences.map((s) => s.id)
+  if (ids.length === 0) return 'no sentences'
+  return ids.length === 1 ? `sentence ${ids[0]}` : `sentences ${ids[0]} to ${ids[ids.length - 1]}`
+}
+
+/**
+ * The name the app sets as a said quote's speaker for an asset (§6.6
+ * "Speaker", §16.31): its Speaker (`MediaAsset.speaker`) when it holds more
+ * than spaces, else a link's channel (`credit.author`), else ''. For the
+ * quote only: a lower third reads `MediaAsset.speaker` alone
+ * (`lowerThirdFor`), so it is never made from a channel without your press.
+ */
+export function quoteSpeakerFor(asset: Pick<MediaAsset, 'speaker' | 'credit'> | undefined): string {
+  if (!asset) return ''
+  if (asset.speaker !== undefined && asset.speaker.trim() !== '') return asset.speaker
+  return asset.credit?.author ?? ''
 }
 
 /**
@@ -418,28 +512,110 @@ function spaceGraphics(
  * candidates validated the same way, with the reason. Never throws. The app and
  * the eval both settle here, so what the eval scores is what the user gets.
  *
- * This is the VALIDATION half (lane T2a): `options.baseline` is the seam for
- * §6.10's `baselineGraphics` (lane T4), and is no candidates until then; the
- * menu, the model call and `decisionForGraphics` are lane T2b's.
+ * One call per menu, so one window's answer: a window cut off or the wrong
+ * shape rejects that window's pass only, and its note names the window
+ * (`graphicsWindowName`); the clip's other windows settle on their own, and
+ * `pairSettled` joins them. Repairs (§6.7) are notes in `dropped`: a `lit`
+ * out of range, a title, a steps tree, a field another template holds. A
+ * graphic on a sentence not on the menu, or a template not offered, is
+ * dropped with a note and never rejects the pass (the shape check is
+ * `constrained: false`).
+ *
+ * `options.baseline` is the seam for §6.10's `baselineGraphics` (lane T4).
+ * Without it a rejected pass settles to no graphics, and the note says so
+ * ("no graphics for <window>: <why>"); with it, "the baseline's graphics are
+ * used for <window>: <why>". `options.speaker` is the app's speaker for a
+ * said quote (`quoteSpeakerFor`).
  */
 export function settleGraphics(
   answer: { value: unknown; truncated: boolean } | { error: string },
   menu: GraphicsMenu,
   transcript: Transcript,
-  options: { baseline?: GraphicsBaseline } = {}
+  options: { baseline?: GraphicsBaseline; speaker?: string } = {}
 ): SettledGraphics {
-  const verdict = 'error' in answer ? { rejected: answer.error } : validateGraphics(answer.value, menu, transcript, { truncated: answer.truncated })
+  const speaker = options.speaker ?? ''
+  const verdict =
+    'error' in answer ? { rejected: answer.error } : validateGraphics(answer.value, menu, transcript, { truncated: answer.truncated, speaker })
   if (!('rejected' in verdict)) {
+    const graphics = (answer as { value: { graphics: AnswerGraphic[] } }).value.graphics
     const spaced = spaceGraphics(verdict.kept, menu, transcript)
-    return { kept: spaced.kept, dropped: [...verdict.dropped, ...spaced.dropped], baseline: false, rejected: null }
+    const drops = dropsOf(verdict.dropped, '$.graphics', (i) => (graphics[i] ? { template: graphics[i].template, strings: answerDrawn(graphics[i]) } : undefined), menu.clipId)
+    return { kept: spaced.kept, dropped: [...verdict.dropped, ...spaced.dropped], baseline: false, rejected: null, drops: [...drops, ...spaced.drops] }
   }
-  const standard = validateBaseline((options.baseline ?? NO_BASELINE)(transcript, menu), menu, transcript)
+  const window = graphicsWindowName(menu)
+  const candidates = options.baseline ? options.baseline(transcript, menu) : []
+  const standard = validateBaseline(candidates, menu, transcript, { speaker })
   const spaced = spaceGraphics(standard.kept, menu, transcript)
+  const head = options.baseline ? `the baseline's graphics are used for ${window}` : `no graphics for ${window}`
+  const drops = dropsOf(standard.dropped, '$.baseline', (i) => (candidates[i] ? { template: candidates[i].data.template, strings: drawnStrings(candidates[i].data) } : undefined), menu.clipId)
   return {
     kept: spaced.kept,
-    dropped: [{ path: '$', message: `the baseline's graphics are used: ${verdict.rejected}` }, ...standard.dropped, ...spaced.dropped],
+    dropped: [{ path: '$', message: `${head}: ${verdict.rejected}` }, ...standard.dropped, ...spaced.dropped],
     baseline: true,
-    rejected: verdict.rejected
+    rejected: verdict.rejected,
+    drops: [...drops, ...spaced.drops]
+  }
+}
+
+/**
+ * A run's settled windows, joined (beyond §6.6's words; the store's Find and
+ * Direct and lane T4's eval join them here, so they cannot pair differently):
+ *
+ * - `kept`: each kept candidate paired with the `clipId` and `assetId` of the
+ *   menu its answer came from (§6.6: "the caller pairs each kept candidate
+ *   with the clipId and assetId of the GraphicsMenu its answer came from"), as
+ *   `applyGraphics` takes them, in the parts' order. A rejected window adds
+ *   only its baseline's; it takes nothing from the other windows.
+ * - `settled`: one `SettledGraphics` for the run's one decision record
+ *   (`decisionForGraphics`): every part's kept, notes and drops in order;
+ *   `baseline` true only when EVERY window's model answer went unused (so the
+ *   record names no model only when none answered); `rejected` each window's
+ *   reason joined by '; ', null when none was.
+ */
+export function pairSettled(parts: readonly { menu: GraphicsMenu; settled: SettledGraphics }[]): {
+  kept: KeptGraphic[]
+  settled: SettledGraphics
+} {
+  const kept = parts.flatMap(({ menu, settled }) => settled.kept.map((candidate) => ({ clipId: menu.clipId, assetId: menu.assetId, candidate })))
+  const reasons = parts.flatMap(({ settled }) => (settled.rejected === null ? [] : [settled.rejected]))
+  return {
+    kept,
+    settled: {
+      kept: parts.flatMap(({ settled }) => settled.kept),
+      dropped: parts.flatMap(({ settled }) => settled.dropped),
+      baseline: parts.length > 0 && parts.every(({ settled }) => settled.baseline),
+      rejected: reasons.length > 0 ? reasons.join('; ') : null,
+      drops: parts.flatMap(({ settled }) => settled.drops)
+    }
+  }
+}
+
+const defaultId = (prefix: string): string => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`
+
+/**
+ * The graphics pass's decision record (docs/CLIPS.md §6.6, "The decision
+ * record"), `decisionFor2`'s twin: `id` from `options.id` or a default made as
+ * apply2.ts's `defaultId` makes one; `pass` `GRAPHICS_PASS`; one op, `{
+ * graphics, dropped, baseline }` (the settled kept, its notes, and whether the
+ * baseline path ran), plus, beyond the plan's words, `drops`, the structured
+ * drops; `model` the answering model's `{ id, runtime }`, or `{ id:
+ * 'baseline', runtime: 'none' }` when no model answered (`model` null, or
+ * `settled.baseline`); `createdAt` from `options.now`. Only `id` and
+ * `runtime` are read from `model`, so nothing else a caller's object holds (a
+ * key, a header, an address) can reach the record or the project file.
+ */
+export function decisionForGraphics(
+  settled: SettledGraphics,
+  model: { id: string; runtime: string } | null,
+  options: { id?: string; now?: Date } = {}
+): DecisionRecord {
+  const answered = model !== null && !settled.baseline
+  return {
+    id: options.id ?? defaultId('decision'),
+    pass: GRAPHICS_PASS,
+    ops: [{ graphics: settled.kept, dropped: settled.dropped, baseline: settled.baseline, drops: settled.drops }],
+    model: answered ? { id: model.id, runtime: model.runtime } : { id: 'baseline', runtime: 'none' },
+    createdAt: (options.now ?? new Date()).toISOString()
   }
 }
 

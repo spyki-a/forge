@@ -11,7 +11,20 @@ import {
   type AnswerGraphic
 } from '@shared/director/schemaGraphics'
 import { GRAPHICS_SYSTEM, GRAPHIC_TEMPLATE_ROWS, UNDETERMINED_LINE, clockOf, graphicsLanguageLine, graphicsPrompt } from '@shared/director/promptGraphics'
-import { graphicsMenuFor, wordSourceOf, type GraphicsMenu } from '@shared/director/run'
+import {
+  decisionForGraphics,
+  graphicsMenuFor,
+  graphicsWindowName,
+  pairSettled,
+  quoteSpeakerFor,
+  settleGraphics,
+  wordSourceOf,
+  type GraphicsMenu
+} from '@shared/director/run'
+import { CLIPS_GRAPHIC_RULE, applyGraphics, graphicDropsOf, lowerThirdFor } from '@shared/graphics/apply'
+import { RETIMED_NOTE } from '@shared/graphics/beats'
+import { NO_CLIP_NOTE } from '@shared/graphics/place'
+import type { KeptGraphic } from '@shared/graphics/template'
 import { GRAPHIC_KEPT_CHARS, KEYWORD_MAX_WORDS, validateGraphics } from '@shared/director/validateGraphics'
 import { MAX_CANDIDATES } from '@shared/director/menu'
 import { captionWindowMs } from '@shared/captions/placement'
@@ -21,7 +34,7 @@ import { capSegments, type Segment, type Transcript, type Word } from '@shared/t
 
 /*
  * The graphics pass's menu, prompt and schema (docs/CLIPS.md §6.6), lane T2b
- * piece 1. Every transcript here is built as data; no model is called.
+ * piece 1; settleGraphics whole, pairSettled and decisionForGraphics, piece 2. Every transcript here is built as data; no model is called.
  */
 
 const FPS = 30
@@ -407,5 +420,297 @@ describe('graphicsMenuFor', () => {
     expect(menusOf(t)[0].language).toBe('te')
     const user = graphicsPrompt(menusOf(t)[0], menusOf(t)[0].language).user.split('\n')
     expect(user[user.length - 1]).toContain('Telugu script')
+  })
+})
+
+/* ------------------------------------------------------------- piece 2 */
+
+/** A clip's answer for one menu, as the ask returns it. */
+const answered = (...graphics: AnswerGraphic[]): { value: unknown; truncated: boolean } => ({ value: { reasoning: 'r', graphics }, truncated: false })
+
+/** n sentences 'In week K we signed N clients today.' (8 words, 3.2 s each): a counter may sit on any of them. */
+const weeks = (n: number): string[] => Array.from({ length: n }, (_, k) => `In week ${k} we signed ${k + 10} clients today.`)
+
+/** A counter on sentence k of `weeks`. */
+const counterOn = (k: number): AnswerGraphic => g({ sentence: `s${String(k).padStart(2, '0')}`, template: 'counter', value: String(k + 10), label: 'clients' })
+
+/** Seventeen six-word filler sentences after the given ones: 40 s and more of clip, so rule 10 allows two graphics. */
+const padded = (said: string[]): string[] => [...said, ...Array.from({ length: 17 }, () => 'The light was soft that day.')]
+
+const FILLER = 'The light was soft that day.'
+
+/** `a` as s00 and `b` as s03, two fillers between (`b` 7.2 s after `a`'s start), then `padded`'s. */
+const apart = (a: string, b: string): string[] => padded([a, FILLER, FILLER, b])
+
+describe('settleGraphics: one window rejected never takes the clip; the notes say which window', () => {
+  const t = talk(weeks(30))
+  const menus = menusOf(t)
+
+  it('a long clip is two windows, and graphicsWindowName names each', () => {
+    expect(menus).toHaveLength(2)
+    expect(graphicsWindowName(menus[0])).toBe('sentences s00 to s23')
+    expect(graphicsWindowName(menus[1])).toBe('sentences s24 to s29')
+    expect(graphicsWindowName({ sentences: menus[1].sentences.slice(0, 1) })).toBe('sentence s24')
+  })
+
+  for (const [name, first] of [
+    ['cut off at the token cap', { value: { reasoning: 'r', graphics: [counterOn(0)] }, truncated: true }],
+    ['the wrong shape', { value: { reasoning: 'r', graphics: 'none' }, truncated: false }]
+  ] as const) {
+    it(`window 1 ${name}: window 2 still settles, and pairSettled keeps its graphic`, () => {
+      const one = settleGraphics(first, menus[0], t)
+      const two = settleGraphics(answered(counterOn(25)), menus[1], t)
+      expect(one).toMatchObject({ kept: [], baseline: true })
+      expect(one.rejected).toMatch(name === 'the wrong shape' ? /not the shape asked for/u : /ran out of room/u)
+      expect(one.dropped[0]).toEqual({ path: '$', message: `no graphics for sentences s00 to s23: ${one.rejected}` })
+      expect(two).toMatchObject({ baseline: false, rejected: null })
+      expect(two.kept.map((k) => k.sentence)).toEqual(['s25'])
+
+      const run = pairSettled([{ menu: menus[0], settled: one }, { menu: menus[1], settled: two }])
+      expect(run.kept).toHaveLength(1)
+      expect(run.kept[0]).toEqual({ clipId: 'c', assetId: 'a', candidate: two.kept[0] })
+      // The model answered for window 2, so the run is not the baseline's; window 1's reason is kept.
+      expect(run.settled.baseline).toBe(false)
+      expect(run.settled.rejected).toBe(one.rejected)
+      expect(run.settled.dropped).toContainEqual(one.dropped[0])
+    })
+  }
+
+  it('with the baseline seam given, its note says the baseline is used for that window', () => {
+    const one = settleGraphics({ value: answered().value, truncated: true }, menus[0], t, { baseline: () => [] })
+    expect(one.dropped[0].message).toBe("the baseline's graphics are used for sentences s00 to s23: The model's graphics ran out of room before it finished")
+  })
+})
+
+describe('settleGraphics: an out-of-range lit and a wrong-template field are repaired, an id off the menu drops one graphic, never the pass', () => {
+  const t = talk(apart('We signed 40 clients this year.', 'Keep it simple always today.'))
+  const [menu] = menusOf(t)
+
+  it('lit 7 of two words lights the last; a counter that filled `quote` keeps its own fields; s99 drops alone', () => {
+    const s = settleGraphics(
+      answered(
+        g({ sentence: 's00', template: 'counter', value: '40', label: 'clients', quote: 'We signed 40 clients' }),
+        g({ sentence: 's99', template: 'counter', value: '40', label: 'clients' }),
+        g({ sentence: 's03', template: 'keyword', words: 'simple always', lit: 7 })
+      ),
+      menu,
+      t
+    )
+    expect(s.rejected).toBeNull()
+    expect(s.baseline).toBe(false)
+    expect(s.kept.map((k) => k.data)).toEqual([
+      { template: 'counter', value: '40', label: 'clients' },
+      { template: 'keyword', words: 'simple always', lit: 1 }
+    ])
+    expect(s.dropped).toContainEqual({ path: '$.graphics[0].quote', message: "graphic repaired: 'quote' is not a field of a counter — left out" })
+    expect(s.dropped).toContainEqual({ path: '$.graphics[2].lit', message: 'graphic repaired: lit 7 is not one of the 2 words — the last one is lit' })
+    expect(s.dropped).toContainEqual({ path: '$.graphics[1].sentence', message: "graphic dropped: 's99' is not a sentence on the menu" })
+    // Only the off-menu graphic is a drop; the repairs are notes.
+    expect(s.drops).toEqual([{ clipId: 'c', template: 'counter', text: '40', reason: "'s99' is not a sentence on the menu" }])
+  })
+
+  it('a clean answer carries no repair note', () => {
+    const s = settleGraphics(answered(g({ sentence: 's00', template: 'counter', value: '40', label: 'clients' })), menu, t)
+    expect(s.dropped).toEqual([])
+    expect(s.drops).toEqual([])
+  })
+})
+
+describe('settleGraphics: spacing (rule 10) and the structured drops', () => {
+  it('two counters 3.2 s apart: the earlier stays, the later is a note and a drop', () => {
+    const t = talk(padded(weeks(2)))
+    const [menu] = menusOf(t)
+    const s = settleGraphics(answered(counterOn(1), counterOn(0)), menu, t)
+    expect(s.kept.map((k) => k.sentence)).toEqual(['s00'])
+    const reason = 'the counter on s01 is within 6 s of the one before — the earlier one stays'
+    expect(s.dropped).toEqual([{ path: '$.graphics', message: `graphic dropped: ${reason}` }])
+    expect(s.drops).toEqual([{ clipId: 'c', template: 'counter', text: '11', reason }])
+  })
+
+  it('a graphic dropped for two fields is one drop, its reasons joined', () => {
+    const t = talk(padded(['We signed 40 clients this year.']))
+    const [menu] = menusOf(t)
+    const s = settleGraphics(answered(g({ sentence: 's00', template: 'counter', value: '45', label: 'brides' })), menu, t)
+    expect(s.kept).toEqual([])
+    expect(s.drops).toHaveLength(1)
+    expect(s.drops[0]).toMatchObject({ clipId: 'c', template: 'counter', text: '45' })
+    expect(s.dropped.length).toBe(2)
+    expect(s.drops[0].reason).toBe(s.dropped.map((p) => p.message.replace(/^graphic dropped: /u, '')).join('; '))
+  })
+})
+
+describe('settleGraphics: what is a proposal, per wordSource (§6.6, "What is placed without review")', () => {
+  const said = apart('We signed 40 clients this year.', 'Keep it simple always today.')
+  const counter = g({ sentence: 's00', template: 'counter', value: '40', label: 'clients' })
+  const keyword = g({ sentence: 's03', template: 'keyword', words: 'simple', lit: 0 })
+  const cases: [string, Transcript, string | null][] = [
+    ['a YouTube ASR number', talk(said, { model: 'youtube-asr' }), 'youtube-asr'],
+    ["a YouTube uploader's number", talk(said, { model: 'youtube-lines' }), 'youtube-lines'],
+    ['a Whisper number under 0.5', talk(said, { confidence: { '40': 0.3 } }), 'whisper-unsure'],
+    ['a Whisper number at 0.5', talk(said, { confidence: { '40': 0.5 } }), null],
+    ['a corrected word (confidence null)', talk(said, { confidence: { '40': null } }), null]
+  ]
+  for (const [name, t, wordSource] of cases) {
+    it(`${name}: ${wordSource === null ? 'trusted' : 'a proposal'}`, () => {
+      const [menu] = menusOf(t)
+      const s = settleGraphics(answered(counter, keyword), menu, t)
+      expect(s.kept.map((k) => k.data.template)).toEqual(['counter', 'keyword'])
+      expect(s.kept[0].proposal ?? null).toEqual(wordSource === null ? null : { reason: 'check-the-number', wordSource })
+      // A keyword holds no number, so it is never a proposal, whatever the source.
+      expect(s.kept[1].proposal).toBeUndefined()
+    })
+  }
+
+  it('a YouTube number lands as a proposal, not on the timeline, through pairSettled and applyGraphics', () => {
+    const t = talk(said, { model: 'youtube-asr' })
+    const { project, clip } = fixture(t)
+    const [menu] = graphicsMenuFor(project, clip, t)
+    const run = pairSettled([{ menu, settled: settleGraphics(answered(counter, keyword), menu, t) }])
+    let n = 0
+    const out = applyGraphics(project, run.kept, [clip.id], CLIPS_GRAPHIC_RULE, { fps: FPS, newId: (p) => `${p}-${++n}` })
+    const placed = out.project.clips.filter((c) => c.graphic)
+    expect(placed.map((c) => c.graphic!.data.template)).toEqual(['keyword'])
+    expect(out.project.graphicProposals?.map((p) => p.spec.data.template)).toEqual(['counter'])
+    expect(out.project.graphicProposals?.[0].note).toBe('check the number: heard "40 clients"')
+    // A proposal set aside is no drop, and neither is the sound library's note.
+    expect(out.problems.some((p) => p.path === '$.sounds')).toBe(true)
+    expect(graphicDropsOf(project, run.kept, [clip.id], out.problems)).toEqual([])
+  })
+})
+
+describe('pairSettled: each kept candidate with its own menu’s clip and asset', () => {
+  it('two clips of two assets; the run is the baseline only when every window was', () => {
+    const ta = talk(padded(['We signed 40 clients this year.']), { assetId: 'a' })
+    const tb = talk(padded(['We signed 70 clients this year.']))
+    const [ma] = menusOf(ta)
+    const mb: GraphicsMenu = { ...menusOf(tb)[0], assetId: 'b', clipId: 'c2' }
+    const sa = settleGraphics(answered(g({ sentence: 's00', template: 'counter', value: '40', label: 'clients' })), ma, ta)
+    const sb = settleGraphics(answered(g({ sentence: 's00', template: 'counter', value: '70', label: 'clients' })), mb, tb)
+    const run = pairSettled([{ menu: ma, settled: sa }, { menu: mb, settled: sb }])
+    expect(run.kept.map((k) => [k.clipId, k.assetId, (k.candidate.data as { value: string }).value])).toEqual([
+      ['c', 'a', '40'],
+      ['c2', 'b', '70']
+    ])
+    expect(run.settled.kept).toEqual([...sa.kept, ...sb.kept])
+    expect(run.settled.baseline).toBe(false)
+
+    const none = settleGraphics({ error: 'no model is set up' }, ma, ta)
+    const both = pairSettled([{ menu: ma, settled: none }, { menu: mb, settled: settleGraphics({ error: 'no model is set up' }, mb, tb) }])
+    expect(both.kept).toEqual([])
+    expect(both.settled.baseline).toBe(true)
+    expect(both.settled.rejected).toBe('no model is set up; no model is set up')
+    expect(pairSettled([]).settled).toEqual({ kept: [], dropped: [], baseline: false, rejected: null, drops: [] })
+  })
+})
+
+describe("the quote's speaker: the asset's Speaker, else a link's channel; a lower third never from the channel (§6.6, §16.31)", () => {
+  const said = padded(['Fail fast and learn faster every day.'])
+  const quote = g({ sentence: 's00', template: 'quote', quote: 'Fail fast and learn faster every day.' })
+  const credit = { source: 'link' as const, title: 'A talk', author: 'Studio Channel', pageUrl: 'https://example.com/v', line: 'A talk — Studio Channel, https://example.com/v', attributionRequired: true, fetchedAt: '2026-11-11T00:00:00.000Z' }
+
+  it('quoteSpeakerFor: the Speaker, then the channel, then nothing; a Speaker of spaces is none', () => {
+    expect(quoteSpeakerFor({ speaker: 'Ana', credit })).toBe('Ana')
+    expect(quoteSpeakerFor({ credit })).toBe('Studio Channel')
+    expect(quoteSpeakerFor({ speaker: '  ', credit })).toBe('Studio Channel')
+    expect(quoteSpeakerFor({ speaker: '' })).toBe('')
+    expect(quoteSpeakerFor({ credit: { ...credit, author: null } })).toBe('')
+    expect(quoteSpeakerFor(undefined)).toBe('')
+  })
+
+  it('a quote lands with the speaker settleGraphics is given; a lower third waits for a Speaker', () => {
+    const t = talk(said, { model: 'youtube-asr' })
+    const { project, clip } = fixture(t)
+    const linked = { ...project, assets: project.assets.map((a) => ({ ...a, credit })) }
+    const [menu] = graphicsMenuFor(linked, clip, t)
+    const speaker = quoteSpeakerFor(linked.assets[0])
+    const s = settleGraphics(answered(quote), menu, t, { speaker })
+    expect(s.kept.map((k) => k.data)).toEqual([{ template: 'quote', kind: 'said', text: 'Fail fast and learn faster every day.', speaker: 'Studio Channel' }])
+    expect(settleGraphics(answered(quote), menu, t).kept.map((k) => (k.data as { speaker: string }).speaker)).toEqual([''])
+    expect(lowerThirdFor(linked, clip)).toBeNull()
+    const named = { ...linked, assets: linked.assets.map((a) => ({ ...a, speaker: 'Ana' })) }
+    expect(settleGraphics(answered(quote), menu, t, { speaker: quoteSpeakerFor(named.assets[0]) }).kept.map((k) => (k.data as { speaker: string }).speaker)).toEqual(['Ana'])
+    expect(lowerThirdFor(named, clip)?.candidate.data).toEqual({ template: 'lower-third', name: 'Ana', role: '' })
+  })
+
+  it('a reported quote keeps the name the stretch says said it, whatever speaker is given', () => {
+    const t = talk(padded(['Then Elon said: fail fast.']))
+    const [menu] = menusOf(t)
+    const s = settleGraphics(answered(g({ sentence: 's00', template: 'quote', quote: 'fail fast.' })), menu, t, { speaker: 'Studio Channel' })
+    expect(s.kept.map((k) => (k.data as { speaker: string }).speaker)).toEqual(['Elon'])
+  })
+})
+
+describe('decisionForGraphics: decisionFor2’s twin', () => {
+  const t = talk(padded(['We signed 40 clients this year.']))
+  const [menu] = menusOf(t)
+  const settled = settleGraphics(answered(g({ sentence: 's00', template: 'counter', value: '40', label: 'clients' })), menu, t)
+  const now = new Date('2026-11-11T10:00:00.000Z')
+
+  it('the record: id, pass, one op of graphics, dropped and baseline, the model at the top, createdAt', () => {
+    const rec = decisionForGraphics(settled, { id: 'google/gemma-4-e2b', runtime: 'openai' }, { id: 'decision-1', now })
+    expect(rec.id).toBe('decision-1')
+    expect(rec.pass).toBe('graphics@1')
+    expect(rec.pass).toBe(GRAPHICS_PASS)
+    expect(rec.model).toEqual({ id: 'google/gemma-4-e2b', runtime: 'openai' })
+    expect(rec.createdAt).toBe('2026-11-11T10:00:00.000Z')
+    expect(rec.ops).toHaveLength(1)
+    const op = rec.ops[0] as Record<string, unknown>
+    expect(op).toMatchObject({ graphics: settled.kept, dropped: settled.dropped, baseline: false })
+    expect(Object.keys(op)).not.toContain('model')
+    expect(decisionForGraphics(settled, { id: 'm', runtime: 'ollama' }).id).toMatch(/^decision-[0-9a-z]+-[0-9a-z]{1,5}$/u)
+  })
+
+  it("model.id is 'baseline' when no model answered: no model, or a rejected pass", () => {
+    expect(decisionForGraphics(settled, null, { now }).model).toEqual({ id: 'baseline', runtime: 'none' })
+    const rejected = settleGraphics({ value: answered().value, truncated: true }, menu, t)
+    const rec = decisionForGraphics(rejected, { id: 'google/gemma-4-e2b', runtime: 'openai' }, { now })
+    expect(rec.model).toEqual({ id: 'baseline', runtime: 'none' })
+    expect(rec.ops[0]).toMatchObject({ baseline: true, graphics: [] })
+  })
+
+  it('nothing of a key, a header or a credentialed address reaches the record', () => {
+    const model = {
+      id: 'gpt-x',
+      runtime: 'openai',
+      apiKey: 'sk-SECRET-1234567890',
+      headers: { Authorization: 'Bearer sk-SECRET-1234567890' },
+      baseUrl: 'https://user:hunter2@api.example.com/v1'
+    }
+    const text = JSON.stringify(decisionForGraphics(settled, model, { now }))
+    for (const secret of ['sk-SECRET', 'Bearer', 'Authorization', 'hunter2', 'apiKey', 'baseUrl', 'api.example.com']) expect(text).not.toContain(secret)
+  })
+})
+
+describe("graphicDropsOf: applyGraphics' drops, structured from its problems", () => {
+  it('a graphic whose clip is gone, with a dash in its words; a retimed clip drops each of its graphics', () => {
+    const t = talk(apart('We signed 40 clients this year.', 'Keep it simple always today.'))
+    const { project, clip } = fixture(t)
+    const cand = (data: KeptGraphic['candidate']['data'], words: number[]): KeptGraphic['candidate'] => ({ sentence: 's00', data, bound: words, beatWords: words, why: 'w', source: 'model' })
+    const kept: KeptGraphic[] = [
+      { clipId: 'gone', assetId: 'a', candidate: cand({ template: 'keyword', words: 'fast — slow', lit: 0 }, [2]) }
+    ]
+    const out = applyGraphics(project, kept, [], CLIPS_GRAPHIC_RULE, { fps: FPS, newId: (p) => `${p}-1` })
+    expect(out.problems.map((p) => p.message)).toEqual([`graphic dropped: the keyword "fast — slow" — ${NO_CLIP_NOTE}`])
+    expect(graphicDropsOf(project, kept, [], out.problems)).toEqual([{ clipId: 'gone', template: 'keyword', text: 'fast — slow', reason: NO_CLIP_NOTE }])
+
+    const fast = { ...project, clips: project.clips.map((c) => ({ ...c, speed: 2 })) }
+    const two: KeptGraphic[] = [
+      { clipId: clip.id, assetId: 'a', candidate: cand({ template: 'counter', value: '40', label: 'clients' }, [2, 3]) },
+      { clipId: clip.id, assetId: 'a', candidate: cand({ template: 'keyword', words: 'simple always', lit: 0 }, [20]) }
+    ]
+    const slow = applyGraphics(fast, two, [], CLIPS_GRAPHIC_RULE, { fps: FPS, newId: (p) => `${p}-1` })
+    expect(slow.problems.filter((p) => p.message.includes(RETIMED_NOTE))).toHaveLength(1)
+    expect(graphicDropsOf(fast, two, [], slow.problems)).toEqual([
+      { clipId: clip.id, template: 'counter', text: '40', reason: RETIMED_NOTE },
+      { clipId: clip.id, template: 'keyword', text: 'simple always', reason: RETIMED_NOTE }
+    ])
+  })
+
+  it("a lower third dropped at '$.covered[j]' is read off the project as given", () => {
+    const t = talk(padded(['We signed 40 clients this year.']))
+    const { project, clip } = fixture(t)
+    const named = { ...project, assets: project.assets.map((a) => ({ ...a, speaker: 'Ana' })), clips: project.clips.map((c) => ({ ...c, speed: 2 })) }
+    const out = applyGraphics(named, [], [clip.id], CLIPS_GRAPHIC_RULE, { fps: FPS, newId: (p) => `${p}-1` })
+    expect(graphicDropsOf(named, [], [clip.id], out.problems)).toEqual([{ clipId: clip.id, template: 'lower-third', text: 'Ana', reason: RETIMED_NOTE }])
   })
 })
