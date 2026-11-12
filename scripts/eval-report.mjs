@@ -26,9 +26,21 @@ const mean = (xs) => {
 const fmt = (x, digits = 0) => (x === null || x === undefined ? '—' : Number(x).toFixed(digits))
 const cell = (s) => String(s ?? '').replace(/\|/g, '\\|').replace(/\n/g, ' ')
 
-/** The numbers one run comes down to. */
-export function summarise(run) {
-  const results = run.results ?? []
+/** The graphics pass's id (src/shared/director/schemaGraphics.ts `GRAPHICS_PASS`): its runs and results are not the spine's. */
+export const GRAPHICS_PASS = 'graphics@1'
+
+/** A run of the graphics eval (tests/eval/director.eval.test.ts, FORGE_EVAL_GRAPHICS), which has no spine row. */
+export const isGraphicsRun = (run) => run?.pass === GRAPHICS_PASS
+
+/**
+ * The numbers one run comes down to. `options.pass` keeps the results of that
+ * pass only; without it, every result but the graphics pass's (a spine
+ * result carries `pass: 'spine@2'`, an older one none), so a graphics run is
+ * never read as a broken spine row.
+ */
+export function summarise(run, options = {}) {
+  const pass = options.pass ?? null
+  const results = (run.results ?? []).filter((r) => (pass === null ? r.pass !== GRAPHICS_PASS : r.pass === pass))
   const count = (v) => results.filter((r) => r.verdict === v).length
   const headlines = results.flatMap((r) => r.headlines ?? [])
   const ratings = Object.values(run.ratings ?? {})
@@ -62,7 +74,9 @@ export function meetsBar(summary) {
   return summary.landed >= Math.ceil(0.8 * summary.briefs) && summary.copy !== null && summary.copy >= 3
 }
 
-export function buildReport(runs, findings = '') {
+export function buildReport(allRuns, findings = '') {
+  const runs = allRuns.filter((run) => !isGraphicsRun(run))
+  const graphicsRuns = allRuns.filter(isGraphicsRun)
   const lines = []
   lines.push('# The Director, measured')
   lines.push('')
@@ -119,7 +133,68 @@ export function buildReport(runs, findings = '') {
     lines.push('</details>')
     lines.push('')
   }
+  if (graphicsRuns.length > 0) lines.push(...graphicsReport(graphicsRuns))
   return `${lines.join('\n')}\n`
+}
+
+const pct = (x) => (x === null || x === undefined ? '—' : `${Math.round(x * 100)}%`)
+const byKey = (m) => {
+  const e = Object.entries(m ?? {})
+  return e.length === 0 ? '—' : e.map(([k, v]) => `${k} ${v}`).join(' · ')
+}
+
+/** A graphics run's blind template-fit ratings (`npm run eval:rate`): the mean for each side, and how many fixtures are rated. */
+export function summariseGraphics(run) {
+  const ratings = Object.values(run.ratings ?? {})
+  return {
+    fixtures: (run.results ?? []).length,
+    rated: ratings.filter((r) => typeof r.fit === 'number').length,
+    fit: mean(ratings.map((r) => r.fit)),
+    baselineFit: mean(ratings.map((r) => r.baselineFit)),
+    fitAtLeast3: ratings.filter((r) => typeof r.fit === 'number' && r.fit >= 3).length
+  }
+}
+
+/** The figures of docs/CLIPS.md §6.10's "Recorded per run" for each graphics run, model against baseline, as score recorded them. */
+export function graphicsReport(runs) {
+  const lines = ['## Graphics runs', '']
+  for (const run of runs) {
+    const m = run.figures?.model ?? {}
+    const b = run.figures?.baseline ?? {}
+    const g = summariseGraphics(run)
+    const both = (f) => `| ${f[0]} | ${f[1](m)} | ${f[2] ? f[2](b) : f[1](b)} |`
+    lines.push(`### ${run.run}`)
+    lines.push('')
+    lines.push(`${run.provider} · \`${run.model}\` · ${run.transport} · ${g.fixtures} fixtures`)
+    lines.push('')
+    lines.push('| figure | model | baseline |')
+    lines.push('|---|---|---|')
+    const none = () => '—'
+    for (const row of [
+      ['windows', (f) => fmt(f.windows)],
+      ['answered · parsed · cut off · wrong shape', (f) => `${fmt(f.answered)} · ${fmt(f.parsed)} · ${fmt(f.truncated)} · ${fmt(f.wrongShape)}`, none],
+      ['prose came back (asked again) · retries not yet asked', (f) => `${fmt(f.prose)} · ${fmt(f.retryPending)}`, none],
+      ['windows settled by the baseline instead', (f) => fmt(f.fellBack), none],
+      ['graphics proposed', (f) => fmt(f.proposed)],
+      ['proposed, by template', (f) => byKey(f.proposedByTemplate)],
+      ['kept, by template', (f) => byKey(f.keptByTemplate)],
+      ['dropped (share)', (f) => `${fmt(f.dropped)} (${pct(f.droppedShare)})`],
+      ['dropped by the validator (share)', (f) => `${fmt(f.droppedByValidator)} (${pct(f.validatorShare)})`],
+      ['dropped, by reason', (f) => byKey(f.droppedByReason)],
+      ['**hallucination rate**', (f) => `**${fmt(f.hallucinations)}/${fmt(f.proposed)} (${pct(f.hallucinationRate)})**`],
+      ['Hindi · Telugu dropped: a number said as a word (at most)', (f) => `${fmt(f.numberAsWord?.hi)} · ${fmt(f.numberAsWord?.te)}`],
+      ['Telugu traps kept (negative endings missed, at most)', (f) => fmt(f.teluguTrapsKept)],
+      ['traps kept', (f) => fmt(f.trapsKept)],
+      ['lit repairs', (f) => fmt(f.litRepairs)],
+      ['truth hits (±1 sentence)', (f) => `${fmt(f.truthHits)}/${fmt(f.truths)} (${pct(f.truthHitRate)}) · ${fmt(f.fixturesHit)} of ${fmt(f.fixturesWithTruth)} fixtures`],
+      ['nested set, exact', (f) => ((f.nested ?? []).length === 0 ? '—' : f.nested.map((n) => `${cell(n.fixtureId)} ${n.exact ? 'exact' : 'not'} (${n.bar})`).join(' · '))],
+      ['template fit, blind 1–5', () => `${fmt(g.fit, 1)} (${g.fitAtLeast3} of ${g.rated} rated ≥ 3)`, () => fmt(g.baselineFit, 1)]
+    ]) {
+      lines.push(both(row))
+    }
+    lines.push('')
+  }
+  return lines
 }
 
 export function loadRuns(dir = join(REPO, 'eval', 'runs')) {

@@ -10,6 +10,10 @@
  * from the fixed list (docs/PLAN.md §0). The answers go into the run's file in
  * eval/runs/, beside what the model did. Already-rated briefs are skipped;
  * `--again` rates them afresh.
+ *
+ * A graphics run (`pass: 'graphics@1'`, the FORGE_EVAL_GRAPHICS block) is
+ * rated for template fit instead: per fixture, the model's kept graphics and
+ * the baseline's as A and B in the same fixed order, each 1–5.
  */
 
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
@@ -26,6 +30,28 @@ export function modelIsA(id) {
   let sum = 0
   for (const ch of id) sum += ch.codePointAt(0)
   return sum % 2 === 0
+}
+
+/** The graphics pass's id (schemaGraphics.ts `GRAPHICS_PASS`): a graphics run is rated for template fit, not copy. */
+const GRAPHICS_PASS = 'graphics@1'
+
+/**
+ * A graphics run's side, as the rater sees it blind (docs/CLIPS.md §6.10's
+ * template-fit rating): each kept graphic's sentence id, the sentence said,
+ * its template and what it draws. The model's side is the windows its own
+ * answer settled (a window settled by the baseline instead is not the
+ * model's; tests/eval/graphicsEval.ts `sideWindows`).
+ */
+export function graphicLinesOf(windows, side) {
+  const own = side === 'model' ? (windows ?? []).filter((w) => !w.baseline) : (windows ?? [])
+  return own
+    .flatMap((w) => w.kept ?? [])
+    .map((k) => `  ${k.sentence} "${k.said}" → ${k.template}: ${(k.strings ?? []).filter((t) => t.trim() !== '').join(' · ')}`)
+}
+
+/** A or B's template-fit ratings back on their sides. */
+export function graphicsRating(aIsModel, ratingA, ratingB) {
+  return { fit: aIsModel ? ratingA : ratingB, baselineFit: aIsModel ? ratingB : ratingA }
 }
 
 // spine@2 plans have shots; runs recorded before it have segments.
@@ -58,6 +84,21 @@ async function main() {
   for (const result of run.results) {
     if (run.ratings[result.fixtureId] && !again) continue
     const aIsModel = modelIsA(result.fixtureId)
+    if (run.pass === GRAPHICS_PASS) {
+      const [a, b] = aIsModel
+        ? [graphicLinesOf(result.model, 'model'), graphicLinesOf(result.baseline, 'baseline')]
+        : [graphicLinesOf(result.baseline, 'baseline'), graphicLinesOf(result.model, 'model')]
+      console.log(`— ${result.fixtureId} (${result.language})`)
+      console.log('A:')
+      console.log(a.join('\n') || '  (no graphics)')
+      console.log('B:')
+      console.log(b.join('\n') || '  (no graphics)')
+      const fit = (label) => ask(`  ${label} — template fit 1–5: `, (x) => /^[1-5]$/.test(x)).then(Number)
+      run.ratings[result.fixtureId] = graphicsRating(aIsModel, await fit('A'), await fit('B'))
+      writeFileSync(path, `${JSON.stringify(run, null, 2)}\n`)
+      console.log('')
+      continue
+    }
     const model = result.verdict === 'used' || result.verdict === 'repaired' ? result.applied : null
     const [a, b] = aIsModel ? [model, result.baseline] : [result.baseline, model]
 

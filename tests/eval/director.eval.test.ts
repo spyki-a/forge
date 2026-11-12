@@ -235,3 +235,123 @@ describe.skipIf(!PROVIDER || !LOOKS)('the look pass on a real model', () => {
     3_600_000
   )
 })
+
+/**
+ * `FORGE_EVAL_GRAPHICS=<folder> npm run eval -- -t "the graphics pass"` — the
+ * graphics pass (docs/CLIPS.md §6.10) on every `eval-*.json` and
+ * `nested-*.json` in a folder (tests/fixtures/graphics), one request per
+ * menu window, built by the app's own loop (`runGraphicsPass`, with
+ * `graphicsMenuFor`, `graphicsPrompt`, `graphicsSchema`,
+ * `maxTokensForGraphics` and `askStructured`; tests/eval/graphicsEval.ts).
+ * STEP=prepare writes the requests (ask them with the relay, as the look
+ * pass's), STEP=score settles each saved answer through `settleGraphics`, with
+ * `baselineGraphics` for a window it cannot use and again alone for "model
+ * against baseline", into results-graphics.json in the run's folder and the
+ * run's record in eval/runs/. An answer that came back as prose adds its
+ * retry (askStructured's second ask) to requests.json: relay again, score
+ * again. FORGE_EVAL_THINK is not read: askStructured sets thinking as the app
+ * does. Registered only when both FORGE_EVAL and FORGE_EVAL_GRAPHICS are set,
+ * so the normal suite's counts for this file do not change.
+ */
+const GRAPHICS = process.env.FORGE_EVAL_GRAPHICS
+if (PROVIDER && GRAPHICS) {
+  describe('the graphics pass on a real model', () => {
+    it(
+      'prepares or scores one request per window of each fixture',
+      async () => {
+        const { resolve } = await import('node:path')
+        const { readFileSync } = await import('node:fs')
+        const { GRAPHICS_PASS } = await import('@shared/director/schemaGraphics')
+        const { loadGraphicsFixtures, noEvalFixturesLine } = await import('./graphicsFixtures')
+        const { credentialsIn, graphicsFigures, graphicsRequestsFor, scoreGraphicsFixture } = await import('./graphicsEval')
+        const folder = resolve(GRAPHICS!)
+        const config = { provider: PROVIDER!, model: process.env.FORGE_EVAL_MODEL ?? '' }
+        expect(config.model, 'FORGE_EVAL_MODEL names the model').not.toBe('')
+        const server =
+          process.env.FORGE_EVAL_SERVER ?? (config.provider === 'openai' ? 'http://127.0.0.1:1234' : 'http://127.0.0.1:11434')
+        const runId = process.env.FORGE_EVAL_RUN ?? `graphics-${stamp()}`
+        const runDir = join(EVAL_ROOT, runId)
+        const fixtures = loadGraphicsFixtures(folder)
+        if (fixtures.eval.length === 0) {
+          console.log(noEvalFixturesLine(folder))
+          return
+        }
+        const inputs = [
+          ...fixtures.eval.map((f) => ({ ...f, set: 'eval' as const })),
+          ...fixtures.nested.map((f) => ({ ...f, set: 'nested' as const }))
+        ]
+        const clean = async (path: string): Promise<void> => {
+          const { readFile } = await import('node:fs/promises')
+          expect(credentialsIn(await readFile(path, 'utf8')), `${path} holds no key, header or credentialed URL`).toEqual([])
+        }
+        expect(credentialsIn(JSON.stringify(server)), 'FORGE_EVAL_SERVER carries no credentials').toEqual([])
+
+        if (STEP === 'prepare' || STEP === 'all') {
+          const requests: EvalRequest[] = []
+          for (const f of inputs) requests.push(...(await graphicsRequestsFor(f, config)))
+          await writeJson(join(runDir, 'requests.json'), requests)
+          await clean(join(runDir, 'requests.json'))
+          console.log(`${runId}: ${requests.length} graphics requests for ${inputs.length} fixtures`)
+        }
+
+        const score = async (): Promise<EvalRequest[]> => {
+          const responseFor = (id: string): EvalResponse | null => {
+            const file = join(runDir, 'responses', `${id}.json`)
+            if (!existsSync(file)) return null
+            return JSON.parse(readFileSync(file, 'utf8')) as EvalResponse
+          }
+          const results = []
+          const pending: EvalRequest[] = []
+          for (const f of inputs) {
+            const scored = await scoreGraphicsFixture(f, config, responseFor)
+            results.push(scored.result)
+            pending.push(...scored.pending)
+          }
+          const figures = { model: graphicsFigures(results, 'model'), baseline: graphicsFigures(results, 'baseline') }
+          await writeJson(join(runDir, 'results-graphics.json'), { run: runId, model: config.model, figures, results })
+          await clean(join(runDir, 'results-graphics.json'))
+          const record = {
+            run: runId,
+            stamp: new Date().toISOString(),
+            pass: GRAPHICS_PASS,
+            provider: config.provider,
+            model: config.model,
+            server,
+            transport: STEP === 'all' ? 'node' : 'relay',
+            figures,
+            results
+          }
+          await writeJson(join(REPO, 'eval', 'runs', `${runId}.json`), record)
+          await clean(join(REPO, 'eval', 'runs', `${runId}.json`))
+          if (pending.length > 0) {
+            const requests = (await readJson<EvalRequest[]>(join(runDir, 'requests.json'))) ?? []
+            const have = new Set(requests.map((r) => r.id))
+            await writeJson(join(runDir, 'requests.json'), [...requests, ...pending.filter((p) => !have.has(p.id))])
+            await clean(join(runDir, 'requests.json'))
+            console.log(`${runId}: ${pending.length} answers came back as prose; their retries are added to requests.json: run the relay again, then score again`)
+          }
+          const m = figures.model
+          console.log(
+            `${runId}: ${m.windows} windows, ${m.parsed} parsed, ${m.prose} prose, ${m.proposed} proposed, ${m.dropped} dropped, hallucination ${m.hallucinationRate ?? '—'}, truth hits ${m.truthHits}/${m.truths} (baseline ${figures.baseline.truthHits}/${figures.baseline.truths})`
+          )
+          return pending
+        }
+
+        if (STEP === 'all') {
+          for (let round = 0; round < 2; round += 1) {
+            const requests = (await readJson<EvalRequest[]>(join(runDir, 'requests.json'))) ?? []
+            for (const request of requests) {
+              const file = join(runDir, 'responses', `${request.id}.json`)
+              if (existsSync(file)) continue
+              await writeJson(file, await askNode(request, server))
+            }
+            if ((await score()).length === 0) break
+          }
+        } else if (STEP === 'score') {
+          await score()
+        }
+      },
+      3_600_000
+    )
+  })
+}
