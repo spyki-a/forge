@@ -1816,7 +1816,7 @@
     "line": 73,
     "newHome": "output strip (caption host, Inspector.tsx:604)",
     "count": 2,
-    "note": "Count 2 since the Graphics section (docs/CLIPS.md §6.5): the caption style picker's and the graphic style picker's. Reasoned from the code, not yet read by the harness census on screen."
+    "note": "Count 2 since the Graphics section (docs/CLIPS.md §6.5): the caption style picker's and the graphic style picker's. Reasoned from the code. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "Browse all",
@@ -3287,7 +3287,7 @@
     "line": 67,
     "newHome": "output strip (caption host, Inspector.tsx:604)",
     "count": 2,
-    "note": "Count 2 since the Graphics section (docs/CLIPS.md §6.5): the caption style picker's and the graphic style picker's. Reasoned from the code, not yet read by the harness census on screen."
+    "note": "Count 2 since the Graphics section (docs/CLIPS.md §6.5): the caption style picker's and the graphic style picker's. Reasoned from the code. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "Style",
@@ -3618,7 +3618,7 @@
     "line": 173,
     "newHome": "output strip (caption host, Inspector.tsx:604)",
     "count": 2,
-    "note": "Count 2 since the Graphics section (docs/CLIPS.md §6.5): the caption style picker's and the graphic style picker's. Reasoned from the code, not yet read by the harness census on screen."
+    "note": "Count 2 since the Graphics section (docs/CLIPS.md §6.5): the caption style picker's and the graphic style picker's. Reasoned from the code. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "Width",
@@ -8605,7 +8605,7 @@
     "line": 169,
     "newHome": "output strip (Graphics section, docs/CLIPS.md §6.5)",
     "count": 4,
-    "note": "Count 4 on an empty project, where captions are on: the caption preset Clean (captions/style.ts), the caption style picker's Clean tile, the graphic preset row Clean (§6.5), and the graphic style picker's Clean tile (the preset's own text style, first in GRAPHIC_TEXT_STYLES). The count is reasoned from the code, not yet read by the harness census on screen."
+    "note": "Count 4 on an empty project, where captions are on: the caption preset Clean (captions/style.ts), the caption style picker's Clean tile, the graphic preset row Clean (§6.5), and the graphic style picker's Clean tile (the preset's own text style, first in GRAPHIC_TEXT_STYLES). The count is reasoned from the code. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "Bold",
@@ -8691,7 +8691,7 @@
     "file": "src/renderer/src/components/TranscriptGraphics.tsx",
     "line": 34,
     "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
-    "note": "The section's heading (§6.6 \"By hand\"), written as GRAPHICS_HEADING; the only 'Graphics' text in the Transcript tile (OUTPUT's own heading is another home). Count reasoned from the code by lane T2b piece 4; not yet read by the harness census on screen."
+    "note": "The section's heading (§6.6 \"By hand\"), written as GRAPHICS_HEADING; the only 'Graphics' text in the Transcript tile (OUTPUT's own heading is another home). Count reasoned from the code by lane T2b piece 4. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "Find graphics in this clip",
@@ -8701,7 +8701,7 @@
     "file": "src/renderer/src/components/TranscriptGraphics.tsx",
     "line": 35,
     "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
-    "note": "findGraphics on the selected clip (§6.6), written as FIND_GRAPHICS; pressable here: the census transcript's one word is shown by the clip. Count reasoned from the code by lane T2b piece 4; not yet read by the harness census on screen."
+    "note": "findGraphics on the selected clip (§6.6), written as FIND_GRAPHICS; pressable here: the census transcript's one word is shown by the clip. Count reasoned from the code by lane T2b piece 4. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "Finding graphics…",
@@ -8711,7 +8711,7 @@
     "file": "src/renderer/src/components/TranscriptGraphics.tsx",
     "line": 37,
     "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
-    "note": "The same button while the ask is out (findingGraphics is the clip), written as FINDING_GRAPHICS; Transcribe's \"Transcribing…\" pattern. Count reasoned from the code by lane T2b piece 4; not yet read by the harness census on screen."
+    "note": "The same button while the ask is out (findingGraphics is the clip), written as FINDING_GRAPHICS; Transcribe's \"Transcribing…\" pattern. Count reasoned from the code by lane T2b piece 4. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "Transcribe this clip first — graphics are found in its words",
@@ -8721,7 +8721,7 @@
     "file": "src/renderer/src/components/TranscriptGraphics.tsx",
     "line": 39,
     "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
-    "note": "Find greyed on a clip with no transcript, its title saying why (FIND_NEEDS_TRANSCRIPT). Count reasoned from the code by lane T2b piece 4; not yet read by the harness census on screen."
+    "note": "Find greyed on a clip with no transcript, its title saying why (FIND_NEEDS_TRANSCRIPT). Count reasoned from the code by lane T2b piece 4. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "Speaker",
@@ -8731,7 +8731,7 @@
     "file": "src/renderer/src/components/TranscriptGraphics.tsx",
     "line": 45,
     "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
-    "note": "The Speaker field's label (§6.6, §16.31), written as SPEAKER: MediaAsset.speaker, saved on leaving the field. Count reasoned from the code by lane T2b piece 4; not yet read by the harness census on screen."
+    "note": "The Speaker field's label (§6.6, §16.31), written as SPEAKER: MediaAsset.speaker, saved on leaving the field. Count reasoned from the code by lane T2b piece 4. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "Keep",
@@ -8741,7 +8741,7 @@
     "file": "src/renderer/src/components/TranscriptGraphics.tsx",
     "line": 40,
     "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
-    "note": "Keep on the one counter waiting to be checked (keepGraphic), written as KEEP. harness/graphicsStub.ts lands one keyword and one counter proposal. Count reasoned from the code by lane T2b piece 4; not yet read by the harness census on screen."
+    "note": "Keep on the one counter waiting to be checked (keepGraphic), written as KEEP. harness/graphicsStub.ts lands one keyword and one counter proposal. Count reasoned from the code by lane T2b piece 4. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "Drop",
@@ -8752,7 +8752,7 @@
     "file": "src/renderer/src/components/TranscriptGraphics.tsx",
     "line": 41,
     "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
-    "note": "Drop on each listed graphic and each proposal (dropGraphic), written as DROP: the placed keyword's and the waiting counter's. Count reasoned from the code by lane T2b piece 4; not yet read by the harness census on screen."
+    "note": "Drop on each listed graphic and each proposal (dropGraphic), written as DROP: the placed keyword's and the waiting counter's. Count reasoned from the code by lane T2b piece 4. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "check the number",
@@ -8762,7 +8762,7 @@
     "file": "src/shared/graphics/apply.ts",
     "line": 65,
     "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
-    "note": "Beside the words the waiting counter heard (CHECK_THE_NUMBER), over a stub YouTube ASR track (model 'youtube-asr'). Count reasoned from the code by lane T2b piece 4; not yet read by the harness census on screen."
+    "note": "Beside the words the waiting counter heard (CHECK_THE_NUMBER), over a stub YouTube ASR track (model 'youtube-asr'). Count reasoned from the code by lane T2b piece 4. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "check the number",
@@ -8772,7 +8772,7 @@
     "file": "src/shared/graphics/apply.ts",
     "line": 65,
     "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
-    "note": "The same, over a stub YouTube uploader track (model 'youtube-lines'). Count reasoned from the code by lane T2b piece 4; not yet read by the harness census on screen."
+    "note": "The same, over a stub YouTube uploader track (model 'youtube-lines'). Count reasoned from the code by lane T2b piece 4. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "check the number",
@@ -8782,7 +8782,7 @@
     "file": "src/shared/graphics/apply.ts",
     "line": 65,
     "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
-    "note": "The same, over a stub Whisper transcript whose number word is under 0.5 confidence (wordSource 'whisper-unsure'). Count reasoned from the code by lane T2b piece 4; not yet read by the harness census on screen."
+    "note": "The same, over a stub Whisper transcript whose number word is under 0.5 confidence (wordSource 'whisper-unsure'). Count reasoned from the code by lane T2b piece 4. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "Clear graphics",
@@ -8792,7 +8792,7 @@
     "file": "src/renderer/src/components/TranscriptGraphics.tsx",
     "line": 42,
     "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
-    "note": "Clear graphics (§6.6), written as CLEAR_GRAPHICS; shown while the project holds a Clip-it graphic or proposal. Count reasoned from the code by lane T2b piece 4; not yet read by the harness census on screen."
+    "note": "Clear graphics (§6.6), written as CLEAR_GRAPHICS; shown while the project holds a Clip-it graphic or proposal. Count reasoned from the code by lane T2b piece 4. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "Direct's graphics stay; Direct's Clear takes them",
@@ -8802,7 +8802,7 @@
     "file": "src/shared/graphics/apply.ts",
     "line": 43,
     "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
-    "note": "Clear graphics' note under the button (CLEAR_GRAPHICS_NOTE). Count reasoned from the code by lane T2b piece 4; not yet read by the harness census on screen."
+    "note": "Clear graphics' note under the button (CLEAR_GRAPHICS_NOTE). Count reasoned from the code by lane T2b piece 4. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "Use the channel name",
@@ -8812,7 +8812,7 @@
     "file": "src/renderer/src/components/TranscriptGraphics.tsx",
     "line": 47,
     "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
-    "note": "The press beside an empty Speaker on a link's asset (§6.6: \"press to use the channel's\"), written as USE_CHANNEL_NAME; the census's ASR run makes the video a link's asset with a channel. Count reasoned from the code by lane T2b piece 4; not yet read by the harness census on screen."
+    "note": "The press beside an empty Speaker on a link's asset (§6.6: \"press to use the channel's\"), written as USE_CHANNEL_NAME; the census's ASR run makes the video a link's asset with a channel. Count reasoned from the code by lane T2b piece 4. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "Graphic",
@@ -8822,7 +8822,7 @@
     "file": "src/renderer/src/components/GraphicPanel.tsx",
     "line": 48,
     "newHome": "trimmer dock (the graphic panel, docs/CLIPS.md §6.6)",
-    "note": "The dock's graphic panel's heading, written as GRAPHIC_PANEL_HEADING, beside PaperPanel's \"Clippings\" and CarouselPanel's \"Card ring\"; the template's name (\"lower third\") is its own text node beside it. Count reasoned from the code by lane T2b piece 5 (the Inspector's asset name is \"lower-third — graphic\", not a whole \"Graphic\"); not yet read by the harness census on screen."
+    "note": "The dock's graphic panel's heading, written as GRAPHIC_PANEL_HEADING, beside PaperPanel's \"Clippings\" and CarouselPanel's \"Card ring\"; the template's name (\"lower third\") is its own text node beside it. Count reasoned from the code by lane T2b piece 5 (the Inspector's asset name is \"lower-third — graphic\", not a whole \"Graphic\"). Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "Role",
@@ -8832,6 +8832,6 @@
     "file": "src/renderer/src/components/GraphicPanel.tsx",
     "line": 50,
     "newHome": "trimmer dock (the graphic panel, docs/CLIPS.md §6.6)",
-    "note": "A lower third's Role (a user field, never checked), written as ROLE; its label, the one text node \"Role\". Count reasoned from the code by lane T2b piece 5; not yet read by the harness census on screen."
+    "note": "A lower third's Role (a user field, never checked), written as ROLE; its label, the one text node \"Role\". Count reasoned from the code by lane T2b piece 5. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   }
 ]
