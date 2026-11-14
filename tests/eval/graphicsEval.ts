@@ -337,6 +337,17 @@ export function dropReasonOf(reason: string): DropReason {
  */
 export const HALLUCINATION_REASONS: readonly DropReason[] = Object.freeze(['not-said', 'ungrounded', 'other-unit'])
 
+/**
+ * Whether a drop counts as a hallucination: ANY of its reasons (a drop's
+ * reasons are joined with '; ', run.ts `dropsOf`) is of a class in
+ * `HALLUCINATION_REASONS`, not only the first class `dropReasonOf` gives the
+ * whole text, so a drop that joins a negation with a value said nowhere is
+ * still counted.
+ */
+export function isHallucination(reason: string): boolean {
+  return reason.split('; ').some((part) => HALLUCINATION_REASONS.includes(dropReasonOf(part)))
+}
+
 /** The repair note of a keyword's `lit` out of range (validateGraphics.ts `settleOne`). */
 export const LIT_REPAIR_HEAD = 'graphic repaired: lit '
 
@@ -373,6 +384,13 @@ export interface GraphicsFigures {
   prose: number
   retryPending: number
   fellBack: number
+  /**
+   * The model side's windows whose saved answer was an HTTP error, by status
+   * (a server that refuses the schema itself answers 400: §15 row 10), and
+   * the first such window's error text as settle recorded it.
+   */
+  errorsByStatus: Record<string, number>
+  firstError: string | null
   /** Graphics proposed: each one the side's settle kept or dropped (a drop counted once, however many reasons it has). */
   proposed: number
   proposedByTemplate: Record<string, number>
@@ -469,6 +487,8 @@ export function graphicsFigures(results: readonly GraphicsFixtureResult[], side:
     prose: 0,
     retryPending: 0,
     fellBack: 0,
+    errorsByStatus: {},
+    firstError: null,
     proposed: 0,
     proposedByTemplate: {},
     kept: 0,
@@ -503,6 +523,10 @@ export function graphicsFigures(results: readonly GraphicsFixtureResult[], side:
         if (w.prose) f.prose += 1
         if (w.retryPending) f.retryPending += 1
         if (w.baseline) f.fellBack += 1
+        if (w.status !== 0 && w.status !== 200) {
+          bump(f.errorsByStatus, String(w.status))
+          f.firstError ??= w.rejected
+        }
       }
     }
     const windows = sideWindows(r, side)
@@ -519,7 +543,7 @@ export function graphicsFigures(results: readonly GraphicsFixtureResult[], side:
         bump(f.droppedByReason, why)
         f.dropped += 1
         if (why !== 'spacing') f.droppedByValidator += 1
-        if (HALLUCINATION_REASONS.includes(why)) f.hallucinations += 1
+        if (isHallucination(d.reason)) f.hallucinations += 1
       }
       f.litRepairs += w.dropped.filter((p) => p.message.startsWith(LIT_REPAIR_HEAD)).length
     }
@@ -586,21 +610,85 @@ export function graphicsFigures(results: readonly GraphicsFixtureResult[], side:
 // ---------------------------------------------------------------------------
 // What may never be written.
 
+/** A field name that holds a key or a credential, wherever it sits in a written file. */
+const KEY_FIELDS: readonly (readonly [string, RegExp])[] = [
+  ['an authorization field', /^(?:proxy-)?authorization$/iu],
+  ['an api key field', /^(?:api[-_]?key|x-api-key|apikey)$/iu]
+]
+
+function credentialFields(value: unknown, found: Set<string>): void {
+  if (Array.isArray(value)) {
+    for (const v of value) credentialFields(v, found)
+    return
+  }
+  if (value === null || typeof value !== 'object') return
+  for (const [key, v] of Object.entries(value)) {
+    for (const [name, pattern] of KEY_FIELDS) if (pattern.test(key) && v !== null && v !== '') found.add(name)
+    // A headers OBJECT: a model answer's 'headers' string or a word in the transcript is not one.
+    if (/^headers$/iu.test(key) && v !== null && typeof v === 'object' && !Array.isArray(v)) found.add('a headers field')
+    credentialFields(v, found)
+  }
+}
+
 /**
  * Anything in a request or result file's text that looks like a key, a
- * header or a credentialed URL: an `authorization`, `api_key`/`apiKey`,
- * `x-api-key` or `headers` field; a bearer token; an `sk-` key; a URL with a
- * user and password. Empty when clean. The eval asserts it on every file it
- * writes.
+ * header or a credentialed URL. In JSON, by FIELD: an `authorization`,
+ * `api_key`/`apiKey` or `x-api-key` field, or a `headers` field holding an
+ * object; the transcript's words and the model's answer are values, so
+ * "The ring bearer responsibilities were clear." or an answer's
+ * `headers: 'x'` string is not one. In any text: a bearer token as a whole
+ * string value ('"Bearer <16 or more token characters, a digit among them>"');
+ * an `sk-` key; a URL with a user and password. Empty when clean. The eval
+ * asserts it on every file it writes.
  */
 export function credentialsIn(text: string): string[] {
-  const patterns: [string, RegExp][] = [
-    ['an authorization field', /"authorization"\s*:/iu],
-    ['an api key field', /"(?:api[-_]?key|x-api-key|apikey)"\s*:/iu],
-    ['a headers field', /"headers"\s*:/iu],
-    ['a bearer token', /\bbearer\s+[A-Za-z0-9._~+/-]{12,}/iu],
-    ['an sk- key', /\bsk-[A-Za-z0-9_-]{12,}/u],
-    ['a credentialed URL', /[a-z][a-z0-9+.-]*:\/\/[^/\s"@]+:[^/\s"@]*@/iu]
-  ]
-  return patterns.filter(([, p]) => p.test(text)).map(([name]) => name)
+  const found = new Set<string>()
+  let parsed: unknown
+  let json = true
+  try {
+    parsed = JSON.parse(text)
+  } catch {
+    json = false
+  }
+  if (json) credentialFields(parsed, found)
+  else {
+    if (/"(?:proxy-)?authorization"\s*:/iu.test(text)) found.add('an authorization field')
+    if (/"(?:api[-_]?key|x-api-key|apikey)"\s*:/iu.test(text)) found.add('an api key field')
+    if (/"headers"\s*:\s*\{/iu.test(text)) found.add('a headers field')
+  }
+  if (/(?:^|["'])bearer\s+(?=[^"'\s]*\d)[A-Za-z0-9._~+/=-]{16,}(?:["']|$)/imu.test(text)) found.add('a bearer token')
+  if (/\bsk-[A-Za-z0-9_-]{12,}/u.test(text)) found.add('an sk- key')
+  if (/[a-z][a-z0-9+.-]*:\/\/[^/\s"@]+:[^/\s"@]*@/iu.test(text)) found.add('a credentialed URL')
+  const order = ['an authorization field', 'an api key field', 'a headers field', 'a bearer token', 'an sk- key', 'a credentialed URL']
+  return order.filter((name) => found.has(name))
+}
+
+// ---------------------------------------------------------------------------
+// What score refuses, and what it keeps.
+
+/** A graphics request's id holds '.graphics.' (`graphicsRequestId`); a spine or look request's does not. */
+export const isGraphicsRequest = (r: Pick<EvalRequest, 'id'>): boolean => r.id.includes('.graphics.')
+
+/**
+ * Why STEP=score must not write a run record, or null when it may: the run
+ * was never prepared (no requests.json), holds no graphics request (a spine
+ * or look run's name reused), or no answer is saved for any of its graphics
+ * requests (the relay not run yet, or FORGE_EVAL_RUN forgotten). Each would
+ * otherwise record every window as fallen to the baseline, a model run nobody
+ * measured.
+ */
+export function graphicsScoreRefusal(runId: string, requests: readonly EvalRequest[] | null, answered: (id: string) => boolean): string | null {
+  if (requests === null) return `${runId} was never prepared: it has no requests.json. Run STEP=prepare with FORGE_EVAL_RUN=${runId}, then the relay, then STEP=score.`
+  const graphics = requests.filter(isGraphicsRequest)
+  if (graphics.length === 0) return `${runId}'s requests.json holds no graphics request: name the graphics run with FORGE_EVAL_RUN.`
+  if (!graphics.some((r) => answered(r.id))) return `No answer is saved for any of ${runId}'s ${graphics.length} graphics requests: run the relay on it first, then STEP=score.`
+  return null
+}
+
+/** A graphics run record with the blind ratings an earlier score of the same run carried (`npm run eval:rate`), so scoring again keeps them. */
+export function withRatingsOf<T extends object>(record: T, previous: unknown): T & { ratings?: Record<string, unknown> } {
+  if (previous === null || typeof previous !== 'object') return record
+  const p = previous as { pass?: unknown; ratings?: unknown }
+  if (p.pass !== GRAPHICS_PASS || p.ratings === null || typeof p.ratings !== 'object') return record
+  return { ...record, ratings: p.ratings as Record<string, unknown> }
 }

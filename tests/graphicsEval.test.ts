@@ -9,6 +9,7 @@ import { graphicsSchema, maxTokensForGraphics } from '@shared/director/schemaGra
 import { graphicsPrompt } from '@shared/director/promptGraphics'
 import type { Segment, Transcript, Word } from '@shared/transcript'
 import {
+  CALLOUT_TRUTH_LINE,
   GRAPHICS_FIXTURE_DIR,
   loadGraphicsFixtures,
   noEvalFixturesLine,
@@ -23,13 +24,16 @@ import {
   dropReasonOf,
   graphicsFigures,
   graphicsRequestsFor,
+  graphicsScoreRefusal,
+  isHallucination,
   scoreGraphicsFixture,
+  withRatingsOf,
   type GraphicsEvalInput,
   type GraphicsFixtureResult
 } from './eval/graphicsEval'
-import type { EvalResponse } from './eval/pipeline'
-import { buildReport, summarise } from '../scripts/eval-report.mjs'
-import { graphicLinesOf, graphicsRating } from '../scripts/eval-rate.mjs'
+import type { EvalRequest, EvalResponse } from './eval/pipeline'
+import { buildReport, summarise, summariseGraphics } from '../scripts/eval-report.mjs'
+import { graphicLinesOf, graphicsRating, graphicsToRate } from '../scripts/eval-rate.mjs'
 
 /*
  * The graphics eval's readers, requests, settle and per-run figures
@@ -136,20 +140,31 @@ async function scoredAB(): Promise<GraphicsFixtureResult[]> {
   return [a.result, b.result]
 }
 
+const REPO_FIXTURES = loadGraphicsFixtures()
+
 describe('the fixture readers (§6.10 "Fixtures")', () => {
-  it('reads the repo’s folder: no eval-*.json (the owner’s ten are not there), the three English nested fixtures', () => {
-    const { eval: evals, nested } = loadGraphicsFixtures()
-    expect(evals).toEqual([])
-    expect(nested.map((n) => [n.id, n.language, n.parents])).toEqual([
-      ['nested-en-1', 'en', [-1, 0, 0, -1, -1]],
-      ['nested-en-2', 'en', [-1, -1, 1, 1, 1, -1]],
-      ['nested-en-3', 'en', [-1, 0, 0, -1, 3, 3]]
-    ])
+  it('reads the repo’s folder: the three English nested fixtures are among its nested set, whatever the owner adds beside them', () => {
+    const { nested } = REPO_FIXTURES
+    const byId = new Map(nested.map((n) => [n.id, [n.language, n.parents]]))
+    expect(byId.get('nested-en-1')).toEqual(['en', [-1, 0, 0, -1, -1]])
+    expect(byId.get('nested-en-2')).toEqual(['en', [-1, -1, 1, 1, 1, -1]])
+    expect(byId.get('nested-en-3')).toEqual(['en', [-1, 0, 0, -1, 3, 3]])
     expect(noEvalFixturesLine()).toBe(
       'No eval-*.json in tests/fixtures/graphics: the ten eval transcripts are your recordings and are not there yet, so no graphics request was written.'
     )
     expect(noEvalFixturesLine(GRAPHICS_FIXTURE_DIR)).toBe(noEvalFixturesLine())
   })
+
+  // Skipped, by name, while tests/fixtures/graphics holds no eval-*.json: the ten eval transcripts are the owner's recordings.
+  it.skipIf(REPO_FIXTURES.eval.length === 0)(
+    'reads every eval-*.json in tests/fixtures/graphics (SKIPPED while there is none: the ten eval transcripts are the owner’s recordings, not yet added)',
+    () => {
+      for (const f of REPO_FIXTURES.eval) {
+        expect(f.id.startsWith('eval-')).toBe(true)
+        expect(f.truth.length + f.traps.length).toBeGreaterThanOrEqual(0)
+      }
+    }
+  )
 
   it('reads an eval fixture of the §6.10 shape, a note beside it allowed', () => {
     const f = readEvalFixture('eval-a.json', { note: 'written for the test', language: 'en', transcript: A, truth: FIXTURE_A.set === 'eval' ? FIXTURE_A.truth : [], traps: ['s03'] })
@@ -169,8 +184,11 @@ describe('the fixture readers (§6.10 "Fixtures")', () => {
     expect(err({ ...base, truth: undefined })).toBe('eval-x.json: truth is not a list')
     expect(err({ ...base, traps: 's03' })).toBe('eval-x.json: traps is not a list')
     expect(err({ ...base, truth: [{ sentence: 's00', template: 'tree' }] })).toBe(
-      "eval-x.json: truth[0].template 'tree' is not one of counter, bars, steps, quote, ring, keyword, callout"
+      "eval-x.json: truth[0].template 'tree' is not one of counter, bars, steps, quote, ring, keyword"
     )
+    // A callout is never offered in the eval (no subject track): its truth could never be hit, so it is refused, saying why.
+    expect(err({ ...base, truth: [{ sentence: 's00', template: 'callout' }] })).toBe(`eval-x.json: truth[0].template ${CALLOUT_TRUTH_LINE}`)
+    expect(CALLOUT_TRUTH_LINE).toBe('is a callout, which the eval never offers (its project has no subject track), so neither side could hit it')
     expect(err({ ...base, truth: [{ sentence: 's09', template: 'ring' }] })).toBe("eval-x.json: truth[0].sentence 's09' is not a sentence of the transcript")
     expect(err({ ...base, truth: [{ sentence: 's00' }] })).toBe('eval-x.json: truth[0] is not { sentence, template }')
     expect(err({ ...base, traps: ['s05'] })).toBe("eval-x.json: traps[0] 's05' is not a sentence of the transcript")
@@ -244,12 +262,24 @@ describe('credentialsIn: what no request or result file may hold', () => {
   it('finds a key, a header and a credentialed URL, and nothing in a clean body', () => {
     expect(credentialsIn(JSON.stringify({ model: 'm', messages: [{ role: 'user', content: 'Then we grew to 70 percent.' }] }))).toEqual([])
     expect(credentialsIn('{"apiKey": "x"}')).toEqual(['an api key field'])
-    expect(credentialsIn('{"headers": {"Authorization": "Bearer abcdefghijklmnop"}}')).toEqual(['an authorization field', 'a headers field', 'a bearer token'])
+    expect(credentialsIn('{"headers": {"Authorization": "Bearer abc123defghijklmnop"}}')).toEqual(['an authorization field', 'a headers field', 'a bearer token'])
+    expect(credentialsIn('{"note": "Bearer eyJhbGciOiJIUzI1NiJ9.e30.x1"}')).toEqual(['a bearer token'])
+    expect(credentialsIn('not json "headers": {"x-api-key": "k"}')).toEqual(['an api key field', 'a headers field'])
     expect(credentialsIn('{"server": "https://user:secret@example.com/v1"}')).toEqual(['a credentialed URL'])
     expect(credentialsIn('{"x": "sk-abcdefghijklmnop1234"}')).toEqual(['an sk- key'])
   })
 
-  it('finds none in a scored run’s results', async () => {
+  it('raises no false alarm on wedding speech or on a model answer’s own fields (the transcript and the answer are values)', () => {
+    // A transcript says 'bearer' and a long word; an answer holds a 'headers' string: neither is a credential.
+    const said = 'The ring bearer responsibilities were clear.'
+    expect(credentialsIn(JSON.stringify({ text: said }))).toEqual([])
+    expect(credentialsIn(JSON.stringify([{ id: 'eval-a.graphics.s00', body: { messages: [{ role: 'user', content: `s00: ${said}` }] } }], null, 2))).toEqual([])
+    expect(credentialsIn(JSON.stringify({ answer: { headers: 'x' } }))).toEqual([])
+    expect(credentialsIn(JSON.stringify({ answer: { graphics: [{ title: 'Authorization', words: 'api key' }] } }))).toEqual([])
+  })
+
+  // A smoke check, not a guard: nothing in scoreGraphicsFixture carries a key. The guard is the block's clean() on every file it writes.
+  it('finds none in a scored run’s results (smoke)', async () => {
     expect(credentialsIn(JSON.stringify(await scoredAB(), null, 2))).toEqual([])
   })
 })
@@ -288,6 +318,9 @@ describe('STEP=score: each saved answer settled as the app settles it', () => {
     expect(cut.result.model.map((w) => [w.parsed, w.truncated, w.wrongShape, w.prose, w.baseline])).toEqual([[true, true, false, false, true]])
     const shape = await scoreGraphicsFixture(FIXTURE_A, CONFIG, from({ 'eval-a.graphics.s00': saved('eval-a.graphics.s00', '{"graphics": []}') }))
     expect(shape.result.model.map((w) => [w.parsed, w.truncated, w.wrongShape, w.baseline])).toEqual([[true, false, true, true]])
+    // Cut off AND not the shape: still counted cut off, not the wrong shape (a cut answer is not judged for its shape).
+    const cutShape = await scoreGraphicsFixture(FIXTURE_A, CONFIG, from({ 'eval-a.graphics.s00': saved('eval-a.graphics.s00', '{"graphics": []}', 'length') }))
+    expect(cutShape.result.model.map((w) => [w.parsed, w.truncated, w.wrongShape, w.baseline])).toEqual([[true, true, false, true]])
     const none = await scoreGraphicsFixture(FIXTURE_A, CONFIG, from({}))
     expect(none.result.model.map((w) => [w.answered, w.parsed, w.baseline, w.rejected])).toEqual([[false, false, true, 'no saved answer for eval-a.graphics.s00']])
     const figures = graphicsFigures([cut.result, shape.result, none.result], 'model')
@@ -315,6 +348,58 @@ describe('the figures of "Recorded per run" (§6.10)', () => {
     // A: s00 counter hit, s02 ring hit (the ring on s01), s04 counter miss, s02 counter miss (two away); B: s01 keyword hit (on s02).
     expect([f.truths, f.truthHits, f.truthHitRate, f.fixturesHit, f.fixturesWithTruth]).toEqual([5, 3, 3 / 5, 2, 2])
     expect(f.numberAsWord).toEqual({ hi: 0, te: 0 })
+    expect([f.errorsByStatus, f.firstError]).toEqual([{}, null])
+  })
+
+  it('counts a truth once however many kept graphics sit near it, and a spacing drop as dropped but not by the validator', async () => {
+    // 53 words at 1.2 s: a 63.6 s clip, so at most three graphics (one per 20 s); the fourth is the spacing's.
+    const C = talk(
+      [
+        'We signed 40 clients over the whole of this year.',
+        'Our plan for every couple stays simple and calm, always and forever.',
+        'We booked 12 venues across the county this spring season.',
+        'Good light makes every portrait look calm, honest and very warm.',
+        'Welcome back to the studio for one more short lesson today.'
+      ],
+      { assetId: 'C' }
+    )
+    const answer = {
+      reasoning: '',
+      graphics: [
+        g({ sentence: 's00', template: 'counter', value: '40', label: 'clients' }),
+        g({ sentence: 's02', template: 'counter', value: '12', label: 'venues' }),
+        g({ sentence: 's03', template: 'keyword', words: 'portrait' }),
+        g({ sentence: 's03', template: 'keyword', words: 'honest' })
+      ]
+    }
+    const r = (
+      await scoreGraphicsFixture({ set: 'eval', id: 'eval-c', language: 'en', transcript: C, truth: [{ sentence: 's01', template: 'counter' }], traps: [] }, CONFIG, from({ 'eval-c.graphics.s00': saved('eval-c.graphics.s00', JSON.stringify(answer)) }))
+    ).result
+    expect(r.model[0].kept.map((k) => [k.sentence, k.template])).toEqual([
+      ['s00', 'counter'],
+      ['s02', 'counter'],
+      ['s03', 'keyword']
+    ])
+    const f = graphicsFigures([r], 'model')
+    // The truth on s01 has both counters within one sentence: one truth, one hit.
+    expect([f.truths, f.truthHits, f.truthHitRate, f.fixturesHit]).toEqual([1, 1, 1, 1])
+    // The 'honest' keyword is dropped by the spacing (rule 10), not by the validator.
+    expect([f.proposed, f.kept, f.dropped, f.droppedByValidator, f.validatorShare, f.hallucinations]).toEqual([4, 3, 1, 0, 0, 0])
+    expect(f.droppedByReason).toEqual({ spacing: 1 })
+  })
+
+  it('counts an answer that was an HTTP error by its status, with the first one’s text (§15 row 10: a schema the server refuses)', async () => {
+    const refused: EvalResponse = { id: 'eval-a.graphics.s00', status: 400, ms: 10, error: 'response_format json_schema: minItems is not supported' }
+    const r = (await scoreGraphicsFixture(FIXTURE_A, CONFIG, from({ 'eval-a.graphics.s00': refused }))).result
+    const f = graphicsFigures([r, (await scoreGraphicsFixture(FIXTURE_B, CONFIG, from(RESPONSES))).result], 'model')
+    expect([f.windows, f.answered, f.fellBack, f.errorsByStatus, f.firstError]).toEqual([
+      2,
+      1,
+      1,
+      { '400': 1 },
+      'eval-a.graphics.s00: response_format json_schema: minItems is not supported'
+    ])
+    expect(graphicsFigures([r], 'baseline').errorsByStatus).toEqual({})
   })
 
   it('counts the baseline’s side by hand, over the same fixtures (model against baseline)', async () => {
@@ -396,9 +481,19 @@ describe('the figures of "Recorded per run" (§6.10)', () => {
     expect(reasonOf(g({ sentence: 's02', template: 'steps', title: 'Step by step', items: [{ label: 'the', value: '' }, { label: 'lens', value: '' }] }))).toEqual(['ungrounded'])
     expect(reasonOf(g({ sentence: 's02', template: 'steps', title: 'Step by step', items: [{ label: 'light', value: '' }, { label: 'lens?', value: '' }] }))).toEqual(['ungrounded'])
     expect(reasonOf(g({ sentence: 's00', template: 'counter', value: '90', label: 'flowers' }))).toEqual(['not-said'])
+    // Said, out of the order the list draws: 'order', which the not-said pattern would also match.
+    expect(reasonOf(g({ sentence: 's02', template: 'steps', title: 'Step by step', items: [{ label: 'lens', value: '' }, { label: 'light', value: '' }, { label: 'frame', value: '' }] }))).toEqual(['order'])
     expect(reasonOf(g({ sentence: 's00', template: 'keyword', words: 'flowers' }), g({ sentence: 's00', template: 'keyword', words: 'hall' }))).toEqual(['spacing'])
     expect(dropReasonOf('something new')).toBe('other')
     expect([...HALLUCINATION_REASONS]).toEqual(['not-said', 'ungrounded', 'other-unit'])
+  })
+
+  it('counts a drop as a hallucination when ANY of its joined reasons is one', () => {
+    const negated = "'20%' is said negated in s03"
+    const notSaid = "'90' is not said in s02"
+    // Written as run.ts dropsOf joins a drop's reasons: '; '.
+    expect(dropReasonOf(`${negated}; ${notSaid}`)).toBe('negated')
+    expect([isHallucination(`${negated}; ${notSaid}`), isHallucination(negated), isHallucination(notSaid)]).toEqual([true, false, true])
   })
 })
 
@@ -473,7 +568,28 @@ describe('the report and the blind rating with a graphics run (§6.10)', () => {
     expect(section).toContain('| **hallucination rate** | **1/5 (20%)** | **0/3 (0%)** |')
     expect(section).toContain('| lit repairs | 1 | 0 |')
     expect(section).toContain('| truth hits (±1 sentence) | 3/5 (60%) · 2 of 2 fixtures | 2/5 (40%) · 1 of 2 fixtures |')
-    expect(section).toContain('| template fit, blind 1–5 | 3.0 (1 of 2 rated ≥ 3) | 1.5 |')
+    expect(section).toContain('| template fit, blind 1–5 (eval set) | 3.0 (≥ 3 on 1 of 2 eval fixtures; 2 rated) | 1.5 |')
+    expect(section).toContain('| answers that were HTTP errors, by status (the first) | — | — |')
+  })
+
+  it('rates and counts template fit over the eval set only, the bar’s ≥ 3 included', () => {
+    // Ten eval fixtures rated 3,3,3,3,3,3,3,1,1,1 (7 of 10 at ≥ 3: the bar of 8 is NOT met) and five nested talks rated 5.
+    const evalFits = [3, 3, 3, 3, 3, 3, 3, 1, 1, 1]
+    const results = [
+      ...evalFits.map((_, i) => ({ fixtureId: `eval-${i}`, set: 'eval' })),
+      ...[0, 1, 2, 3, 4].map((i) => ({ fixtureId: `nested-${i}`, set: 'nested' }))
+    ]
+    const ratings: Record<string, { fit: number; baselineFit: number }> = {}
+    evalFits.forEach((fit, i) => (ratings[`eval-${i}`] = { fit, baselineFit: 2 }))
+    for (let i = 0; i < 5; i += 1) ratings[`nested-${i}`] = { fit: 5, baselineFit: 5 }
+    const run = { run: 'g2', pass: 'graphics@1', results, ratings }
+    const s = summariseGraphics(run)
+    // Hand: mean (7 × 3 + 3 × 1) / 10 = 2.4; 7 at ≥ 3; baseline 2.
+    expect([s.fixtures, s.evalFixtures, s.rated, s.fitAtLeast3, s.fit, s.baselineFit]).toEqual([15, 10, 10, 7, 2.4, 2])
+    expect(buildReport([run], '').split('\n')).toContain('| template fit, blind 1–5 (eval set) | 2.4 (≥ 3 on 7 of 10 eval fixtures; 10 rated) | 2.0 |')
+    // eval:rate shows only the eval set; a result with no set (an older record) is the eval set's.
+    const all: { fixtureId: string; set?: string }[] = [...results, { fixtureId: 'old' }]
+    expect(graphicsToRate(all).map((r) => r.fixtureId)).toEqual([...evalFits.map((_, i) => `eval-${i}`), 'old'])
   })
 
   it('shows each side’s kept graphics for the blind template-fit rating, and puts each rating back on its side', async () => {
@@ -490,5 +606,39 @@ describe('the report and the blind rating with a graphics run (§6.10)', () => {
     expect(graphicLinesOf([{ ...a.model[0], baseline: true }], 'model')).toEqual([])
     expect(graphicsRating(true, 4, 2)).toEqual({ fit: 4, baselineFit: 2 })
     expect(graphicsRating(false, 4, 2)).toEqual({ fit: 2, baselineFit: 4 })
+  })
+})
+
+describe('what STEP=score refuses and keeps', () => {
+  const req = (id: string): EvalRequest => ({ id, fixtureId: id.split('.')[0], provider: 'openai', path: '/v1/chat/completions', body: {} })
+
+  it('refuses, naming the run, an unprepared run, another pass’s run, and a run with no answer saved', () => {
+    const never = () => false
+    expect(graphicsScoreRefusal('graphics-1', null, never)).toBe(
+      'graphics-1 was never prepared: it has no requests.json. Run STEP=prepare with FORGE_EVAL_RUN=graphics-1, then the relay, then STEP=score.'
+    )
+    // A spine run's name reused: its requests are no graphics requests, and its answers do not count.
+    expect(graphicsScoreRefusal('r1', [req('b0.spine')], () => true)).toBe("r1's requests.json holds no graphics request: name the graphics run with FORGE_EVAL_RUN.")
+    expect(graphicsScoreRefusal('graphics-1', [req('eval-a.graphics.s00'), req('eval-b.graphics.s00')], never)).toBe(
+      "No answer is saved for any of graphics-1's 2 graphics requests: run the relay on it first, then STEP=score."
+    )
+    // One answer is enough to score: the rest are recorded as unanswered.
+    expect(graphicsScoreRefusal('graphics-1', [req('eval-a.graphics.s00'), req('eval-b.graphics.s00')], (id) => id === 'eval-b.graphics.s00')).toBeNull()
+  })
+
+  it('keeps the blind ratings of an earlier score of the same graphics run', () => {
+    const record = { run: 'g1', pass: 'graphics@1', results: [] }
+    expect(withRatingsOf(record, { run: 'g1', pass: 'graphics@1', ratings: { 'eval-a': { fit: 4, baselineFit: 2 } } })).toEqual({ ...record, ratings: { 'eval-a': { fit: 4, baselineFit: 2 } } })
+    expect(withRatingsOf(record, null)).toEqual(record)
+    // A spine record's ratings are not a graphics run's.
+    expect(withRatingsOf(record, { run: 'g1', ratings: { b0: { copy: 3 } } })).toEqual(record)
+  })
+
+  it('registers the graphics block only behind FORGE_EVAL and FORGE_EVAL_GRAPHICS (the normal suite’s counts unchanged)', () => {
+    const source = readFileSync(join(__dirname, 'eval', 'director.eval.test.ts'), 'utf8')
+    const guards = [...source.matchAll(/if \(PROVIDER && GRAPHICS\) \{\n {2}describe\('the graphics pass on a real model'/gu)]
+    expect(guards.length).toBe(1)
+    expect([...source.matchAll(/describe(?:\.skipIf\([^)]*\))?\('the graphics pass on a real model'/gu)].length).toBe(1)
+    expect(source).toContain('const GRAPHICS = process.env.FORGE_EVAL_GRAPHICS\n')
   })
 })

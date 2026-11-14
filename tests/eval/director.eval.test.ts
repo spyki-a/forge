@@ -263,7 +263,7 @@ if (PROVIDER && GRAPHICS) {
         const { readFileSync } = await import('node:fs')
         const { GRAPHICS_PASS } = await import('@shared/director/schemaGraphics')
         const { loadGraphicsFixtures, noEvalFixturesLine } = await import('./graphicsFixtures')
-        const { credentialsIn, graphicsFigures, graphicsRequestsFor, scoreGraphicsFixture } = await import('./graphicsEval')
+        const { credentialsIn, graphicsFigures, graphicsRequestsFor, graphicsScoreRefusal, scoreGraphicsFixture, withRatingsOf } = await import('./graphicsEval')
         const folder = resolve(GRAPHICS!)
         const config = { provider: PROVIDER!, model: process.env.FORGE_EVAL_MODEL ?? '' }
         expect(config.model, 'FORGE_EVAL_MODEL names the model').not.toBe('')
@@ -300,9 +300,14 @@ if (PROVIDER && GRAPHICS) {
             if (!existsSync(file)) return null
             return JSON.parse(readFileSync(file, 'utf8')) as EvalResponse
           }
+          // Refuse before writing anything: an unprepared run, another pass's run, or one the relay has not answered.
+          const prepared = await readJson<EvalRequest[]>(join(runDir, 'requests.json'))
+          const refusal = graphicsScoreRefusal(runId, prepared, (id) => existsSync(join(runDir, 'responses', `${id}.json`)))
+          if (refusal !== null) throw new Error(refusal)
+          const asked = new Set(prepared!.map((r) => r.fixtureId))
           const results = []
           const pending: EvalRequest[] = []
-          for (const f of inputs) {
+          for (const f of inputs.filter((i) => asked.has(i.id))) {
             const scored = await scoreGraphicsFixture(f, config, responseFor)
             results.push(scored.result)
             pending.push(...scored.pending)
@@ -310,7 +315,8 @@ if (PROVIDER && GRAPHICS) {
           const figures = { model: graphicsFigures(results, 'model'), baseline: graphicsFigures(results, 'baseline') }
           await writeJson(join(runDir, 'results-graphics.json'), { run: runId, model: config.model, figures, results })
           await clean(join(runDir, 'results-graphics.json'))
-          const record = {
+          const recordPath = join(REPO, 'eval', 'runs', `${runId}.json`)
+          const record = withRatingsOf({
             run: runId,
             stamp: new Date().toISOString(),
             pass: GRAPHICS_PASS,
@@ -320,9 +326,9 @@ if (PROVIDER && GRAPHICS) {
             transport: STEP === 'all' ? 'node' : 'relay',
             figures,
             results
-          }
-          await writeJson(join(REPO, 'eval', 'runs', `${runId}.json`), record)
-          await clean(join(REPO, 'eval', 'runs', `${runId}.json`))
+          }, await readJson<unknown>(recordPath))
+          await writeJson(recordPath, record)
+          await clean(recordPath)
           if (pending.length > 0) {
             const requests = (await readJson<EvalRequest[]>(join(runDir, 'requests.json'))) ?? []
             const have = new Set(requests.map((r) => r.id))

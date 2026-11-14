@@ -29,6 +29,7 @@ export function buildReport(runs: unknown[], findings?: string): string
 /** A graphics run's blind template-fit ratings (`npm run eval:rate`). */
 export interface GraphicsRatingSummary {
   fixtures: number
+  evalFixtures: number
   rated: number
   fit: number | null
   baselineFit: number | null

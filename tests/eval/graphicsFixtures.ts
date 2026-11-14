@@ -24,11 +24,17 @@ export const GRAPHICS_FIXTURE_DIR = resolve(__dirname, '..', 'fixtures', 'graphi
 const REPO = resolve(__dirname, '..', '..')
 
 /**
- * The template ids a truth may name: the ones a graphics menu ever offers
- * (`GRAPHIC_TEMPLATES_ALWAYS` and `callout`, run.ts `graphicsMenuFor`). A
- * lower third and a screen card are the app's, never a pass's (§6.6).
+ * The template ids a truth may name: the ones the eval's menu offers
+ * (`GRAPHIC_TEMPLATES_ALWAYS`, run.ts `graphicsMenuFor`). A `callout` is
+ * offered only beside a subject track, and the eval's project has none
+ * (`projectForTranscript`), so no side could ever hit a callout truth: it is
+ * refused with `CALLOUT_TRUTH_LINE`. A lower third and a screen card are the
+ * app's, never a pass's (§6.6).
  */
-export const EVAL_TEMPLATE_IDS: readonly GraphicTemplateId[] = Object.freeze([...GRAPHIC_TEMPLATES_ALWAYS, 'callout'])
+export const EVAL_TEMPLATE_IDS: readonly GraphicTemplateId[] = Object.freeze([...GRAPHIC_TEMPLATES_ALWAYS])
+
+/** Why a callout truth is refused: the eval offers no callout. */
+export const CALLOUT_TRUTH_LINE = "is a callout, which the eval never offers (its project has no subject track), so neither side could hit it"
 
 export interface EvalGraphicsFixture {
   /** The file's basename without `.json`. */
@@ -171,7 +177,8 @@ export function readEvalFixture(path: string, raw: unknown): EvalGraphicsFixture
       return
     }
     if (!ids.has(t.sentence)) problems.push(`truth[${i}].sentence '${t.sentence}' is not a sentence of the transcript`)
-    if (!(EVAL_TEMPLATE_IDS as string[]).includes(t.template)) problems.push(`truth[${i}].template '${t.template}' is not one of ${EVAL_TEMPLATE_IDS.join(', ')}`)
+    if (t.template === 'callout') problems.push(`truth[${i}].template ${CALLOUT_TRUTH_LINE}`)
+    else if (!(EVAL_TEMPLATE_IDS as string[]).includes(t.template)) problems.push(`truth[${i}].template '${t.template}' is not one of ${EVAL_TEMPLATE_IDS.join(', ')}`)
   })
   ;(raw.traps as unknown[]).forEach((t, i) => {
     if (typeof t !== 'string') problems.push(`traps[${i}] is not a sentence id`)

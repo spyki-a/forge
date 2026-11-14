@@ -49,6 +49,16 @@ export function graphicLinesOf(windows, side) {
     .map((k) => `  ${k.sentence} "${k.said}" → ${k.template}: ${(k.strings ?? []).filter((t) => t.trim() !== '').join(' · ')}`)
 }
 
+/**
+ * The results of a graphics run that are rated: the eval set's only (§6.12's
+ * "template fit ≥ 3/5 on ≥ 8 of 10" is over the ten eval transcripts); a
+ * nested talk is scored exactly, not rated. A result with no `set` is the
+ * eval set's.
+ */
+export function graphicsToRate(results) {
+  return (results ?? []).filter((r) => (r.set ?? 'eval') === 'eval')
+}
+
 /** A or B's template-fit ratings back on their sides. */
 export function graphicsRating(aIsModel, ratingA, ratingB) {
   return { fit: aIsModel ? ratingA : ratingB, baselineFit: aIsModel ? ratingB : ratingA }
@@ -81,7 +91,7 @@ async function main() {
   const score = (label) => ask(`  ${label} — copy 1–5: `, (a) => /^[1-5]$/.test(a)).then(Number)
 
   console.log(`\n${run.run} — ${run.model}\n`)
-  for (const result of run.results) {
+  for (const result of run.pass === GRAPHICS_PASS ? graphicsToRate(run.results) : run.results) {
     if (run.ratings[result.fixtureId] && !again) continue
     const aIsModel = modelIsA(result.fixtureId)
     if (run.pass === GRAPHICS_PASS) {

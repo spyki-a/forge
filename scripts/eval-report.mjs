@@ -143,11 +143,20 @@ const byKey = (m) => {
   return e.length === 0 ? '—' : e.map(([k, v]) => `${k} ${v}`).join(' · ')
 }
 
-/** A graphics run's blind template-fit ratings (`npm run eval:rate`): the mean for each side, and how many fixtures are rated. */
+/**
+ * A graphics run's blind template-fit ratings (`npm run eval:rate`), over the
+ * EVAL set only: §6.12's bar is "template fit ≥ 3/5 on ≥ 8 of 10", the ten
+ * eval transcripts, so a nested talk's rating (an older run's) is not counted.
+ * `fixtures` is every result; `evalFixtures` the bar's denominator.
+ */
 export function summariseGraphics(run) {
-  const ratings = Object.values(run.ratings ?? {})
+  const evalIds = new Set((run.results ?? []).filter((r) => (r.set ?? 'eval') === 'eval').map((r) => r.fixtureId))
+  const ratings = Object.entries(run.ratings ?? {})
+    .filter(([id]) => evalIds.has(id))
+    .map(([, r]) => r)
   return {
     fixtures: (run.results ?? []).length,
+    evalFixtures: evalIds.size,
     rated: ratings.filter((r) => typeof r.fit === 'number').length,
     fit: mean(ratings.map((r) => r.fit)),
     baselineFit: mean(ratings.map((r) => r.baselineFit)),
@@ -175,6 +184,7 @@ export function graphicsReport(runs) {
       ['answered · parsed · cut off · wrong shape', (f) => `${fmt(f.answered)} · ${fmt(f.parsed)} · ${fmt(f.truncated)} · ${fmt(f.wrongShape)}`, none],
       ['prose came back (asked again) · retries not yet asked', (f) => `${fmt(f.prose)} · ${fmt(f.retryPending)}`, none],
       ['windows settled by the baseline instead', (f) => fmt(f.fellBack), none],
+      ['answers that were HTTP errors, by status (the first)', (f) => `${byKey(f.errorsByStatus)}${f.firstError ? ` (${cell(f.firstError)})` : ''}`, none],
       ['graphics proposed', (f) => fmt(f.proposed)],
       ['proposed, by template', (f) => byKey(f.proposedByTemplate)],
       ['kept, by template', (f) => byKey(f.keptByTemplate)],
@@ -188,7 +198,7 @@ export function graphicsReport(runs) {
       ['lit repairs', (f) => fmt(f.litRepairs)],
       ['truth hits (±1 sentence)', (f) => `${fmt(f.truthHits)}/${fmt(f.truths)} (${pct(f.truthHitRate)}) · ${fmt(f.fixturesHit)} of ${fmt(f.fixturesWithTruth)} fixtures`],
       ['nested set, exact', (f) => ((f.nested ?? []).length === 0 ? '—' : f.nested.map((n) => `${cell(n.fixtureId)} ${n.exact ? 'exact' : 'not'} (${n.bar})`).join(' · '))],
-      ['template fit, blind 1–5', () => `${fmt(g.fit, 1)} (${g.fitAtLeast3} of ${g.rated} rated ≥ 3)`, () => fmt(g.baselineFit, 1)]
+      ['template fit, blind 1–5 (eval set)', () => `${fmt(g.fit, 1)} (≥ 3 on ${g.fitAtLeast3} of ${g.evalFixtures} eval fixtures; ${g.rated} rated)`, () => fmt(g.baselineFit, 1)]
     ]) {
       lines.push(both(row))
     }
