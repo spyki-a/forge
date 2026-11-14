@@ -9,6 +9,10 @@
  * difference taken over colour alone would call two different edges equal.
  */
 
+import type { Clip, Project } from '@shared/timeline'
+import type { GraphicSpec } from '@shared/graphics/template'
+import type { MotionEase } from '@shared/graphics/motion'
+
 export interface Rect {
   x: number
   y: number
@@ -775,4 +779,312 @@ export function folderOf(pattern: string): string | null {
   if (/^harness:/.test(pattern)) return null
   const cut = Math.max(pattern.lastIndexOf('/'), pattern.lastIndexOf('\\'))
   return cut > 0 ? pattern.slice(0, cut) : null
+}
+
+/* ------------------------------------------------- phase 2: the templates */
+
+/**
+ * §6.11's `templates` row, as the check reads it (phase 2's exit, §6.12): per
+ * shape, from specs.json, frames 0, a beat, the last moving frame and the end
+ * differ as they should; the last moving frame equals the held end (mean 0);
+ * alpha 0 outside the box; the same spec drawn twice identical; the baked PNG
+ * against the preview within 1/255 (a mean of at most 1 level over the two
+ * pictures' ink, `diffOverInk`, on both routes, as `primitives` reads it).
+ * Beside `PRIMITIVES_BAR`, its own, so the two can part.
+ */
+export const TEMPLATES_BAR = { bakeMeanLevels: 1, heldMean: 0, outsideAlpha: 0 } as const
+
+/** A template case's readings: the primitives' parts, and the two "differ as they should" ones. */
+export interface TemplateReading extends PrimitivesReading {
+  /** Frame 0 against the first beat's frame, on the preview: an element arrives, so they differ; null where no beat frame lies after 0 within the moving frames. */
+  startAgainstBeat: PixelDiff | null
+  /** Frame 0 against the last moving frame: the graphic moved at all. */
+  startAgainstEnd: PixelDiff | null
+  /** The clip's frames: a held end exists only when it is more than the moving ones. */
+  total: number
+}
+
+export interface TemplateVerdict extends PrimitivesVerdict {
+  /** Frame 0 differs from the beat's frame and from the last moving frame. */
+  moves: boolean
+}
+
+/**
+ * `TEMPLATES_BAR` applied to a case's readings, part by part. A part with
+ * nothing read passes nothing: no frame, no PNG on either route, no beat
+ * frame, no held end (a clip whose moving frames are all of it holds nothing
+ * to compare).
+ */
+export function templateVerdict(r: TemplateReading): TemplateVerdict {
+  const within = (diffs: readonly PixelDiff[]): boolean => diffs.length > 0 && diffs.every((d) => d.pixels > 0 && d.mean <= TEMPLATES_BAR.bakeMeanLevels)
+  const bake = within(r.bakeAgainstPreview) && within(r.canvasAgainstPreview)
+  const held = r.total > r.frames.moving && r.heldAgainstLast.pixels > 0 && r.heldAgainstLast.mean <= TEMPLATES_BAR.heldMean
+  const outside = r.outside.length > 0 && r.outside.every((o) => o.max <= TEMPLATES_BAR.outsideAlpha)
+  const twice = r.drawnTwice.length > 0 && r.drawnTwice.every((d) => d.pixels > 0 && d.max === 0) && r.bakedTwice.of > 0 && r.bakedTwice.equal === r.bakedTwice.of
+  const live = r.live.length > 0 && r.live.every((d) => d.pixels > 0 && d.max === 0)
+  const box = r.boxes.check !== null && boxSound(r.boxes.check, r.boxes.bake)
+  const count = r.frames.moving > 0 && r.frames.baked === r.frames.moving && r.frames.canvas === r.frames.moving
+  const moves = r.startAgainstBeat !== null && r.startAgainstEnd !== null && r.startAgainstBeat.differing > 0 && r.startAgainstEnd.differing > 0
+  return { bake, held, outside, twice, live, box, count, moves, pass: bake && held && outside && twice && live && box && count && moves }
+}
+
+/** One drawing fixture of specs.json (§6.2, §6.10): its id, shape, language and spec. */
+export interface TemplateFixture {
+  id: string
+  shape: string
+  language: string
+  spec: GraphicSpec
+}
+
+/** specs.json's text, read: every entry with an id, a shape, a language and a spec naming a template, or a throw naming the first that is not. */
+export function parseTemplateFixtures(text: string): TemplateFixture[] {
+  const file = JSON.parse(text) as { specs?: unknown }
+  if (!Array.isArray(file.specs)) throw new Error('specs.json has no specs list')
+  return file.specs.map((entry: unknown, i: number) => {
+    const e = entry as Partial<TemplateFixture>
+    if (typeof e?.id !== 'string' || typeof e.shape !== 'string' || typeof e.language !== 'string' || typeof e.spec?.data?.template !== 'string') {
+      throw new Error(`specs.json's entry ${i} is not an id, a shape, a language and a spec`)
+    }
+    return { id: e.id, shape: e.shape, language: e.language, spec: e.spec }
+  })
+}
+
+/** The fixtures of the templates asked for, and every id asked for that cannot be read, by name: never skipped silently. */
+export interface TemplateCases {
+  cases: TemplateFixture[]
+  /** Asked for, and not a template any drawer draws. */
+  unknown: string[]
+  /** A drawn template with no fixture in specs.json. */
+  noSpec: string[]
+}
+
+/** The cases for `asked` (in its order, each id once), from `fixtures`, given the ids that have a drawer (`DRAWERS`' keys). */
+export function templateCasesFor(asked: readonly string[], fixtures: readonly TemplateFixture[], drawn: readonly string[]): TemplateCases {
+  const cases: TemplateFixture[] = []
+  const unknown: string[] = []
+  const noSpec: string[] = []
+  for (const id of [...new Set(asked)]) {
+    if (!drawn.includes(id)) {
+      unknown.push(String(id))
+      continue
+    }
+    const own = fixtures.filter((f) => f.spec.data.template === id)
+    if (own.length === 0) noSpec.push(id)
+    cases.push(...own)
+  }
+  return { cases, unknown, noSpec }
+}
+
+/**
+ * A fixture's targets in frame pixels: its `subject` box (source units) as if
+ * the footage filled the frame, since a fixture has no project to map it
+ * through (`graphicTargetsAt`); none without one. Only the callout fixtures
+ * carry one, and a callout with no subject draws nothing (§6.9).
+ */
+export function fixtureTargets(spec: Pick<GraphicSpec, 'subject'>, size: { width: number; height: number }): { subject?: Rect } {
+  const s = spec.subject
+  if (!s) return {}
+  return { subject: { x: s.box.x * size.width, y: s.box.y * size.height, width: s.box.width * size.width, height: s.box.height * size.height } }
+}
+
+/** A tally per key: passed only when it had at least one case and every case of it passed. */
+export function tallyBy<T>(cases: readonly T[], keyOf: (c: T) => string, passed: (c: T) => boolean): Record<string, boolean> {
+  const out: Record<string, boolean> = {}
+  for (const c of cases) {
+    const key = keyOf(c)
+    out[key] = (out[key] ?? true) && passed(c)
+  }
+  return out
+}
+
+/** The Indic reading of one text item (§6.11's phase 2 sentence of "The Indic render check"), its parts as `IndicPaintRow` carries them. */
+export interface IndicItemParts {
+  text: string
+  /** The painter against one `drawTextOnto` call of the same item. */
+  equal: boolean
+  /** Whole against per code point, over the ink. */
+  differs: boolean
+  /** A conjunct's advance against its letters', null for no conjunct. */
+  narrower: boolean | null
+  /** कि's i-matra before its consonant, null where there is no i-matra. */
+  matraFirst: boolean | null
+}
+
+/** Whether shaping can change the item's picture: a mark (a virama, a matra, a nukta) in it. Without one, whole and per code point may rightly be equal. */
+export const shapedText = (text: string): boolean => /\p{M}/u.test(text)
+
+/**
+ * An item passes when the painter equals `drawTextOnto`, a shaped item
+ * (`shapedText`) differs from its per-code-point drawing, a conjunct is
+ * narrower and an i-matra comes first; a reading not taken (null) neither
+ * passes nor fails.
+ */
+export function indicItemPass(r: IndicItemParts): boolean {
+  return r.equal && (!shapedText(r.text) || r.differs) && r.narrower !== false && r.matraFirst !== false
+}
+
+/* ------------------------------------------- phase 2: the blind ratings */
+
+/** The letters a blind rating's renders are named by, in the order the page shows them. */
+export const BLIND_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+/** A rating's renders lettered: the names in letter order (A first), and the key, letter to name. */
+export interface Lettered<T extends string> {
+  order: T[]
+  key: Record<string, T>
+}
+
+/**
+ * Letters `names` blind (§6.10, M14 and the look rating): a Fisher-Yates
+ * shuffle drawn from `random` (from the last place down, each place swapped
+ * with one at or before it, `floor(random() × (i + 1))`), then A, B, C... in
+ * the shuffled order. `random` is the seam a test pins; the check passes
+ * `Math.random`, so two runs can differ. 1 to 26 names, each once, or a throw.
+ */
+export function letterBlind<T extends string>(names: readonly T[], random: () => number): Lettered<T> {
+  if (names.length < 1 || names.length > BLIND_LETTERS.length) throw new Error(`a blind rating letters 1 to ${BLIND_LETTERS.length} renders (got ${names.length})`)
+  if (new Set(names).size !== names.length) throw new Error(`a blind rating names each render once (got ${JSON.stringify(names)})`)
+  const order = [...names]
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.min(i, Math.max(0, Math.floor(random() * (i + 1))))
+    const swap = order[i]
+    order[i] = order[j]
+    order[j] = swap
+  }
+  const key: Record<string, T> = {}
+  order.forEach((name, i) => (key[BLIND_LETTERS[i]] = name))
+  return { order, key }
+}
+
+/**
+ * What the page shows of a blind rating: per row (a clip), its label and its
+ * letters, the questions, and how to save the key. Built from the lettered
+ * rows, of which it takes the letters alone: the key is the result's, never
+ * the page's, the summary's or the console's (§6.10).
+ */
+export interface BlindPage {
+  heading: string
+  rows: { label: string; letters: string[] }[]
+  questions: readonly string[]
+  howToSave: string
+}
+
+export function blindPage(heading: string, rows: readonly { label: string; lettered: Lettered<string> }[], questions: readonly string[], howToSave: string): BlindPage {
+  return {
+    heading,
+    rows: rows.map((r) => ({ label: r.label, letters: Object.keys(r.lettered.key).sort() })),
+    questions: [...questions],
+    howToSave
+  }
+}
+
+/** The page's lines for the summary: the heading, each row's letters, the questions and how to save; read from the page alone, so nothing the page does not show is printed. */
+export function blindLines(page: BlindPage): string[] {
+  return [
+    page.heading,
+    ...page.rows.map((r) => `${r.label}: renders ${r.letters.join(', ')}`),
+    ...page.questions.map((q, i) => `Q${i + 1}. ${q}`),
+    page.howToSave
+  ]
+}
+
+/** M14's six curves (§6.15's row), the ones to name when no other list is wanted. */
+export const M14_CURVES: readonly MotionEase[] = Object.freeze(['expo-out', 'out-cubic', 'spring1', 'linear', 'decelerate', 'carbon-expressive'])
+
+/** Every ease a curve rating may name: `CurveName`'s and `spring1` (§6.13). A `Record` so the compiler holds it to the type. */
+const EASE_NAMES: Record<MotionEase, true> = {
+  'expo-out': true,
+  decelerate: true,
+  accelerate: true,
+  standard: true,
+  'out-cubic': true,
+  'out-back': true,
+  linear: true,
+  'carbon-expressive': true,
+  spring1: true
+}
+
+/** Why `curves` cannot run (§6.11's row: names and a clip id); null when it can. */
+export function curvesError(options: { names?: unknown; clipId?: unknown } | null | undefined): string | null {
+  const names = options?.names
+  if (!Array.isArray(names) || names.length < 1 || names.length > BLIND_LETTERS.length) return `curves takes { names, clipId }: 1 to ${BLIND_LETTERS.length} curve names (M14's are ${M14_CURVES.join(', ')})`
+  const unknown = names.filter((n) => typeof n !== 'string' || !Object.hasOwn(EASE_NAMES, n))
+  if (unknown.length > 0) return `curves: not a curve: ${unknown.map((n) => JSON.stringify(n)).join(', ')} (the curves are ${Object.keys(EASE_NAMES).join(', ')})`
+  if (new Set(names).size !== names.length) return 'curves: name each curve once'
+  if (typeof options?.clipId !== 'string' || options.clipId === '') return 'curves: name the graphic clip with clipId'
+  return null
+}
+
+/** Why `look` cannot run: clip ids, each once; null when it can. */
+export function lookError(options: { clipIds?: unknown } | null | undefined): string | null {
+  const ids = options?.clipIds
+  if (!Array.isArray(ids) || ids.length < 1 || ids.some((id) => typeof id !== 'string' || id === '')) return 'look takes { clipIds }: the ids of graphic clips of the open project'
+  if (new Set(ids).size !== ids.length) return 'look: name each clip once'
+  return null
+}
+
+/** The look rating's renders per clip (§6.10 step 1): four presets, and `clean` again with the dim on. */
+export const LOOK_VARIANTS: readonly { name: string; styleId: string; overrides?: { dim: true } }[] = Object.freeze([
+  { name: 'clean', styleId: 'clean' },
+  { name: 'bold', styleId: 'bold' },
+  { name: 'editorial', styleId: 'editorial' },
+  { name: 'energetic', styleId: 'energetic' },
+  { name: 'clean with dim', styleId: 'clean', overrides: { dim: true } }
+])
+
+/** M14's question (§6.10 step 2), shown beside its renders. */
+export const CURVE_QUESTIONS: readonly string[] = Object.freeze(['Watch each letter without the key. Which is best? Which is second?'])
+
+/** The look rating's questions (§6.10 step 2), per graphic, answered without the key, shown beside its renders. */
+export const LOOK_QUESTIONS: readonly string[] = Object.freeze([
+  'Does it look like a pro reveal or tutorial? Rate each letter 1 to 5.',
+  'Restrained against energetic: which would you ship?',
+  'Is the dim wanted?',
+  'Would motion blur on the fast moves help? Yes or no.',
+  'Would a check tick beside a step help? Yes or no.',
+  'Does the energetic style want more (ripples, a burst)? Yes or no.',
+  'Is any duration too quick or too slow? Name the template.'
+])
+
+/** The look rating wants at least this many graphics, covering the eight templates (§6.10 step 1). */
+export const LOOK_MIN_CLIPS = 6
+
+/** The line a clip id that names no clip of the open project is refused with. */
+export const noClipLine = (clipId: string): string => `No clip "${clipId}" in the open project.`
+/** The line a clip that is not a graphic clip is refused with. */
+export const notGraphicLine = (clipId: string): string => `Clip "${clipId}" is not a graphic clip: name a clip a graphic was made into.`
+
+/** The graphic clip of `project` named `clipId`, or the plain line it is refused with. */
+export function graphicClipOf(project: Pick<Project, 'clips'>, clipId: string): { clip: Clip & { graphic: GraphicSpec } } | { refused: string } {
+  const clip = project.clips.find((c) => c.id === clipId)
+  if (!clip) return { refused: noClipLine(clipId) }
+  if (!clip.graphic) return { refused: notGraphicLine(clipId) }
+  return { clip: clip as Clip & { graphic: GraphicSpec } }
+}
+
+/** The ratings' rate (§6.10: "at 30 fps"). */
+export const BLIND_FPS = 30
+
+/** A clip's frames at `BLIND_FPS`: its length in the project's frames, at the project's rate, at least 1. */
+export function framesAt(durationFrames: number, projectFps: number, fps = BLIND_FPS): number {
+  if (!(projectFps > 0) || !(durationFrames > 0)) return 1
+  return Math.max(1, Math.round((durationFrames / projectFps) * fps))
+}
+
+/** Where §6.10 keeps a rating's key, by the date of the run (`YYYY-MM-DD`). */
+export function keyPath(option: 'curves' | 'look', date: string): string {
+  return `tests/output/graphic/${option}/key-${date.slice(0, 10)}.json`
+}
+
+/**
+ * How to save a rating's key without seeing it (§6.10, "the key is returned
+ * in the result object, not shown"): a `const` statement echoes nothing, and
+ * the copy routes never print it.
+ */
+export function saveKeyLine(option: 'curves' | 'look', date: string): string {
+  return (
+    `Run it as const r = await window.__forgeGraphicCheck(...) so the console echoes nothing; before you watch, save the key: copy(r.${option}.key) where the console has copy() (Chrome), ` +
+    `or, in the development app (whose console has no copy()), setTimeout(() => navigator.clipboard.writeText(JSON.stringify(r.${option}.key)), 3000) and click the page within 3 s; ` +
+    `paste it into ${keyPath(option, date)} (gitignored). The page and the summary show letters only.`
+  )
 }

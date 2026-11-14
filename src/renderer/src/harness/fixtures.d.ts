@@ -10,3 +10,9 @@ declare module '*/ui-census.json?raw' {
   const text: string
   export default text
 }
+
+/* The graphics drawing fixtures, the same way: the graphics check's `templates` option draws them (graphicCheck.ts). */
+declare module '*/specs.json?raw' {
+  const text: string
+  export default text
+}

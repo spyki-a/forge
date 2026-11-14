@@ -510,7 +510,12 @@ describe('the options are independent', () => {
       checkIndicPhase1: 'indic',
       checkPrimitives: 'primitives',
       checkPathLength: 'pathLength',
-      checkStrokes: 'strokes'
+      checkStrokes: 'strokes',
+      // Phase 2's (T4): the Indic half over the templates rides indic's guard, after phase 1's sites.
+      checkIndicTemplates: 'indic',
+      checkTemplates: 'templates',
+      checkCurves: 'curves',
+      checkLook: 'look'
     }
     const calls = [...body.matchAll(/\b(check[A-Z]\w*)\(/g)]
     // Membership, not the whole list: a later option's check, under its own guard, joins without breaking this.

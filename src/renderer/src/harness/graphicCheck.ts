@@ -11,6 +11,10 @@
  *   await window.__forgeGraphicCheck({ primitives: true })                 phase 1's exit (§6.12) and M13's first half
  *   await window.__forgeGraphicCheck({ pathLength: true })                                                     M8
  *   await window.__forgeGraphicCheck({ strokes: { widths: [1, 2, 3] } })          M19's PNGs, for graphic.int's read
+ *   await window.__forgeGraphicCheck({ templates: ['counter', 'bars'] })        phase 2's exit: each template's specs.json fixtures
+ *   await window.__forgeGraphicCheck({ indic: true, templates: [...] })      and the Indic render check over their Hindi and Telugu
+ *   const r = await window.__forgeGraphicCheck({ curves: { names: [...], clipId: '<id>' } })     M14, blind (§6.10)
+ *   const r = await window.__forgeGraphicCheck({ look: { clipIds: ['<id>', ...] } })        the look rating, blind (§6.10)
  *
  * Every option is independent; one not passed runs nothing. The result carries
  * the numbers, a bounded sample of the frames drawn (PNG data URLs, never all
@@ -55,13 +59,15 @@ import { drawTextOnto } from '@shared/render/textPaint'
 import { LINE_HEIGHT, layoutText } from '@shared/render/textLayout'
 import { fontFamilies } from '@shared/assets/catalog'
 import { mediaUrl } from '@shared/mediaUrl'
-import type { GraphicSpec } from '@shared/graphics/template'
-import { resolveGraphicStyle, type GraphicStyle } from '@shared/graphics/style'
+import type { GraphicSpec, GraphicTemplateId } from '@shared/graphics/template'
+import { graphicStyleOf, resolveGraphicStyle, type GraphicStyle } from '@shared/graphics/style'
+import { DRAWERS } from '@shared/graphics/templates/index'
+import { graphicTargetsAt } from '@shared/graphics/targets'
 import { textItems, textSpecOf, type DrawItem, type Drawer, type GraphicTargets, type TextItem, type TextLook, type TextMeasure } from '@shared/graphics/items'
 import { drawListAt, graphicBox, onsetTargetsAt } from '@shared/graphics/drawList'
 import { paintDrawList2d } from '@shared/graphics/paint'
 import { beatFrame, graphicMovingFrames } from '@shared/graphics/frame'
-import { entrance } from '@shared/graphics/motion'
+import { entrance, type MotionEase } from '@shared/graphics/motion'
 import { STROKE_TOLERANCE, flattenPath, headGrowAt, strokeAt, strokeWidth, type PathGeometry, type Point } from '@shared/graphics/stroke'
 import { buildCaptionLayers } from '@shared/graphics/fromTimeline'
 import { planBakeOf } from '@shared/captions/bake'
@@ -71,7 +77,14 @@ import { GRAPHIC_POOL_DEPTH, bakeGraphicSequence, forgetGraphicPreview, graphicF
 import { renderTextPng } from '../textCanvas'
 import { bakeCaptions } from '../captionBake'
 import { faceSettled, useCatalog } from '../catalog'
+import { useEditor } from '../store'
+import specsText from '../../../../tests/fixtures/graphics/specs.json?raw'
 import {
+  BLIND_FPS,
+  CURVE_QUESTIONS,
+  LOOK_MIN_CLIPS,
+  LOOK_QUESTIONS,
+  LOOK_VARIANTS,
   M8_BAR,
   M19_BAR,
   SYNTHETIC,
@@ -100,6 +113,21 @@ import {
   strokeWidthsError,
   syntheticBox,
   syntheticPanelAt,
+  blindLines,
+  blindPage,
+  curvesError,
+  fixtureTargets,
+  framesAt,
+  graphicClipOf,
+  indicItemPass,
+  letterBlind,
+  lookError,
+  parseTemplateFixtures,
+  saveKeyLine,
+  shapedText,
+  tallyBy,
+  templateCasesFor,
+  templateVerdict,
   unionRect,
   type PathLengthRow,
   type PathLengthVerdict,
@@ -108,7 +136,12 @@ import {
   type PrimitivesReading,
   type PrimitivesVerdict,
   type Rect,
-  type Spread
+  type Spread,
+  type BlindPage,
+  type Lettered,
+  type TemplateFixture,
+  type TemplateReading,
+  type TemplateVerdict
 } from './graphicMeasure'
 
 /* ---------------------------------------------------------------- options */
@@ -159,10 +192,29 @@ export interface GraphicCheckOptions {
    * names for `FORGE_GRAPHIC_FRAMES` (graphic.int's M19 read).
    */
   strokes?: { widths?: number[] }
+  /**
+   * Phase 2's exit (§6.11's `templates` row, §6.12): each fixture of
+   * `tests/fixtures/graphics/specs.json` whose template is named, through the
+   * template's own drawer, read as `primitives` reads a case
+   * (`readGraphicCase`) and judged by `templateVerdict` against
+   * `TEMPLATES_BAR`, per shape and per template. An id no drawer draws, or a
+   * template with no fixture, is named in the result. With `indic`, the Indic
+   * render check also runs over the named templates' Hindi and Telugu
+   * fixtures (`checkIndicTemplates`).
+   */
+  templates?: GraphicTemplateId[]
+  /**
+   * M14 (§6.10): the named graphic clip of the open project under each named
+   * curve (`CurveName`s and `spring1`, M14's six in `M14_CURVES`), lettered
+   * and shown blind on the page; the key in the result only.
+   */
+  curves?: { names: MotionEase[]; clipId: string }
+  /** The look rating (§6.10): each named graphic clip under `LOOK_VARIANTS`, lettered per clip and shown blind with `LOOK_QUESTIONS`; the keys in the result only. */
+  look?: { clipIds: string[] }
 }
 
 /** Every option, in the order `runGraphicCheck` runs them. */
-export const GRAPHIC_CHECK_OPTIONS = ['encode', 'segments', 'blur', 'parity', 'indic', 'primitives', 'pathLength', 'strokes'] as const
+export const GRAPHIC_CHECK_OPTIONS = ['encode', 'segments', 'blur', 'parity', 'indic', 'primitives', 'pathLength', 'strokes', 'templates', 'curves', 'look'] as const
 export type GraphicCheckOption = (typeof GRAPHIC_CHECK_OPTIONS)[number]
 
 /** The options a call asked for, in run order: each one by itself, so an option not passed runs nothing (the file's rule). */
@@ -388,6 +440,8 @@ export interface IndicResult {
   note: string
   /** Phase 1's half (§6.11, "The Indic render check"), run after phase 0's. */
   phase1?: IndicPhase1Result
+  /** Phase 2's half, with `templates`: every named template's Hindi and Telugu fixture, after phase 1's. */
+  templates?: IndicTemplatesResult
 }
 
 export interface IndicPaintRow {
@@ -547,6 +601,10 @@ export interface GraphicCheckResult {
   primitives?: PrimitivesResult
   pathLength?: PathLengthResult
   strokes?: StrokesResult
+  templates?: TemplatesResult
+  /** The key of each is in it, never in `summary`, `notes`, `frames` or on the page. */
+  curves?: CurvesResult
+  look?: LookResult
   /** One line per figure, to copy. */
   summary: string[]
   notes: string[]
@@ -2080,16 +2138,16 @@ interface PrimitiveBake {
 }
 
 /** One `bakeGraphicSequence` of a case under its own clip id, its writes watched and its PNGs gathered. */
-async function bakePrimitive(name: PrimitiveCase, id: string, boxAllowed: boolean, style: GraphicStyle, layout: PrimitiveFrames, drawer: Drawer): Promise<PrimitiveBake> {
-  const { width, height } = PRIMITIVES_SIZE
+async function bakeCase(c: GraphicCase, id: string, boxAllowed: boolean): Promise<PrimitiveBake> {
+  const { width, height } = c.size
   const t0 = performance.now()
   const { value, writes } = await recordingWrites(
     'writeTitleFrame',
-    () => bakeGraphicSequence(PRIMITIVES_SPEC, style, id, width, height, layout.total, PRIMITIVES_FPS, NO_TARGETS, boxAllowed, drawer),
+    () => bakeGraphicSequence(c.spec, c.style, id, width, height, c.layout.total, c.fps, c.targetsAt, boxAllowed, c.drawer),
     id
   )
   const wallMs = performance.now() - t0
-  if (!value) throw new Error(`graphic check: the primitives' ${name} bake (${boxAllowed ? 'box' : 'canvas'} route) answered nothing`)
+  if (!value) throw new Error(`graphic check: the ${c.label} bake (${boxAllowed ? 'box' : 'canvas'} route) answered nothing`)
   const writtenAt = writes ? [...writes.entries()].sort((a, b) => a[0] - b[0]).map(([, w]) => w.at) : null
   return { value, wallMs, writtenAt, bytes: await bakedBytes(value, writes) }
 }
@@ -2098,23 +2156,47 @@ async function bakePrimitive(name: PrimitiveCase, id: string, boxAllowed: boolea
 const bakeSpread = (bake: PrimitiveBake): Spread | null =>
   bake.writtenAt ? spread(perFrameMs(bake.writtenAt, Math.min(GRAPHIC_POOL_DEPTH, bake.writtenAt.length))) : null
 
-async function checkPrimitive(
-  name: PrimitiveCase,
-  style: GraphicStyle,
-  layout: PrimitiveFrames,
-  frames: Frames,
-  notes: string[]
-): Promise<PrimitiveCaseResult> {
-  const spec = PRIMITIVES_SPEC
-  const fps = PRIMITIVES_FPS
-  const { width, height } = PRIMITIVES_SIZE
+/** What a graphic case is read with: a spec, its style and frames, its drawer (the template's own when absent), its targets, its size and rate, and what its ids and lines are called. */
+interface GraphicCase {
+  /** `primitives text-latin`, `templates counter-en`: the head of its notes and the sheet's label, and the bake's error. */
+  label: string
+  /** The live Preview's clip id. */
+  liveId: string
+  /** A bake's clip id, by route (`a`, `b`, `canvas`). */
+  bakeId: (route: string) => string
+  spec: GraphicSpec
+  style: GraphicStyle
+  layout: { total: number; moving: number; lastMoving: number; heldEnd: number; read: number[] }
+  fps: number
+  size: { width: number; height: number }
+  targetsAt: (frame: number) => GraphicTargets
+  drawer?: Drawer
+}
+
+/** A case read: the primitives' parts, and its preview's frames for the template's own readings. */
+interface CaseRead extends Omit<PrimitiveCaseResult, 'name' | 'verdict'> {
+  /** The preview's picture at a frame read. */
+  at: (frame: number) => Uint8ClampedArray
+}
+
+/**
+ * One case, read as §6.11's `primitives` row reads it (and the `templates`
+ * row, which asks the same of a template's own drawer): the preview drawn
+ * twice, the live Preview's canvas, `graphicBox` and the alpha outside it,
+ * the paint timed, three bakes (the box route twice, the canvas route once)
+ * each PNG decoded against the preview over the ink, and a sheet of the
+ * preview over the box route's bake.
+ */
+async function readGraphicCase(c: GraphicCase, frames: Frames, notes: string[]): Promise<CaseRead> {
+  const { spec, style, layout, fps, drawer, targetsAt } = c
+  const { width, height } = c.size
   const size = { width, height }
-  const drawer = primitivesDrawer(name)
   const read = layout.read
+  const onset = onsetTargetsAt(targetsAt)
 
   // The preview path, twice: the same spec drawn twice must be the same picture.
-  const preview = (await graphicFrameCanvases(spec, style, width, height, layout.total, fps, read, NO_TARGETS, drawer)).map(canvasPixels)
-  const again = (await graphicFrameCanvases(spec, style, width, height, layout.total, fps, read, NO_TARGETS, drawer)).map(canvasPixels)
+  const preview = (await graphicFrameCanvases(spec, style, width, height, layout.total, fps, read, targetsAt, drawer)).map(canvasPixels)
+  const again = (await graphicFrameCanvases(spec, style, width, height, layout.total, fps, read, targetsAt, drawer)).map(canvasPixels)
   const drawnTwice = read.map((_, i) => diffRgba(preview[i], again[i], width))
   const at = (frame: number): Uint8ClampedArray => preview[read.indexOf(frame)]
   const heldAgainstLast = diffRgba(at(layout.lastMoving), at(layout.heldEnd), width)
@@ -2124,18 +2206,17 @@ async function checkPrimitive(
   // Read through a copy, never by getImageData on the canvas itself: read back twice, Chrome 152 paints that canvas's
   // third picture differently (a stroke's edges up to 255 levels, text up to 15, from frame 30 on), where through a copy
   // all six cases are equal at every frame read (the harness page, 2026-11-02); the Preview never reads its canvas back.
-  const liveId = `graphic-check-preview-${name}`
-  forgetGraphicPreview(liveId)
+  forgetGraphicPreview(c.liveId)
   const live: PixelDiff[] = []
   for (const frame of read) {
-    const canvas = graphicPreviewCanvas(liveId, spec, style, width, height, { frame, total: layout.total, fps }, {}, undefined, drawer)
+    const canvas = graphicPreviewCanvas(c.liveId, spec, style, width, height, { frame, total: layout.total, fps }, onset(frame), undefined, drawer)
     const shown = at(Math.min(frame, layout.lastMoving))
     live.push(canvas ? diffRgba(copiedPixels(canvas), shown, width) : { mean: 0, max: 0, differing: 0, pixels: 0 })
   }
-  forgetGraphicPreview(liveId)
+  forgetGraphicPreview(c.liveId)
 
   const measure = graphicMeasure()
-  const box = graphicBox(spec, style, fps, layout.total, size, measure, NO_TARGETS, drawer)
+  const box = graphicBox(spec, style, fps, layout.total, size, measure, targetsAt, drawer)
   const outside = preview.map((data) => alphaOutside(data, width, height, box))
 
   // The paint's time over the moving frames' lists on a frame-sized canvas, one pixel of it copied to a 1x1 probe
@@ -2144,10 +2225,9 @@ async function checkPrimitive(
   const timing = canvas2d(width, height)
   const probe = canvas2d(1, 1)
   const layer = (w: number, h: number): CanvasRenderingContext2D => canvas2d(w, h).ctx
-  const targets = onsetTargetsAt(NO_TARGETS)
   const draws: number[] = []
   for (let frame = 0; frame < layout.moving; frame++) {
-    const list = drawListAt(spec, style, frame, fps, size, measure, targets(frame), drawer)
+    const list = drawListAt(spec, style, frame, fps, size, measure, onset(frame), drawer)
     const t0 = performance.now()
     timing.ctx.clearRect(0, 0, width, height)
     paintDrawList2d(timing.ctx, list, { layer })
@@ -2158,15 +2238,13 @@ async function checkPrimitive(
 
   // The bake on the export's box route (boxAllowed, as an identity-placed clip is) twice, and once on the
   // canvas route (the store's bake, and the export's for any other clip), each under its own clip id so every sequence stays.
-  const run = ++primitivesRun
-  const id = (route: string): string => `graphic-check-primitives-${run}-${name}-${route}`
-  const first = await bakePrimitive(name, id('a'), true, style, layout, drawer)
-  const second = await bakePrimitive(name, id('b'), true, style, layout, drawer)
-  const whole = await bakePrimitive(name, id('canvas'), false, style, layout, drawer)
+  const first = await bakeCase(c, c.bakeId('a'), true)
+  const second = await bakeCase(c, c.bakeId('b'), true)
+  const whole = await bakeCase(c, c.bakeId('canvas'), false)
   const bakeBox = first.value.box ?? null
   const region = bakeBox ?? { x: 0, y: 0, width, height }
   if (!first.bytes || !whole.bytes) {
-    notes.push(`primitives ${name}: a bake's PNGs could not be read (neither the writes nor ${(!first.bytes ? first : whole).value.pattern}); its readings against the preview are missing.`)
+    notes.push(`${c.label}: a bake's PNGs could not be read (neither the writes nor ${(!first.bytes ? first : whole).value.pattern}); its readings against the preview are missing.`)
   }
 
   let equal = 0
@@ -2208,7 +2286,7 @@ async function checkPrimitive(
   // One sheet per case: the preview's frames over the box route's, each bake frame put back where its box sits.
   const cell = { width: 180, height: 320 }
   frames.canvas(
-    `primitives ${name}: preview (top) and box-route bake (bottom) at frames ${read.join(', ')}`,
+    `${c.label}: preview (top) and box-route bake (bottom) at frames ${read.join(', ')}`,
     sheet(
       [
         read.map((frame) => rgbaCanvas(at(frame), width, height)),
@@ -2222,14 +2300,12 @@ async function checkPrimitive(
   )
 
   return {
-    name,
     frames: read,
     box,
     bakeBox,
     boxAgrees: JSON.stringify(box) === JSON.stringify(bakeBox),
     bakeFrames,
     reading,
-    verdict: primitivesVerdict(reading),
     drawMs: spread(draws),
     encodeMsPerFrame: bakeSpread(first),
     canvasEncodeMsPerFrame: bakeSpread(whole),
@@ -2238,8 +2314,36 @@ async function checkPrimitive(
     region: { width: region.width, height: region.height },
     patterns: [first.value.pattern, second.value.pattern],
     canvasPattern: whole.value.pattern,
-    bytesFrom: first.bytes ? first.bytes.from : 'none'
+    bytesFrom: first.bytes ? first.bytes.from : 'none',
+    at
   }
+}
+
+async function checkPrimitive(
+  name: PrimitiveCase,
+  style: GraphicStyle,
+  layout: PrimitiveFrames,
+  frames: Frames,
+  notes: string[]
+): Promise<PrimitiveCaseResult> {
+  const run = ++primitivesRun
+  const { at: _at, ...read } = await readGraphicCase(
+    {
+      label: `primitives ${name}`,
+      liveId: `graphic-check-preview-${name}`,
+      bakeId: (route) => `graphic-check-primitives-${run}-${name}-${route}`,
+      spec: PRIMITIVES_SPEC,
+      style,
+      layout,
+      fps: PRIMITIVES_FPS,
+      size: { width: PRIMITIVES_SIZE.width, height: PRIMITIVES_SIZE.height },
+      targetsAt: NO_TARGETS,
+      drawer: primitivesDrawer(name)
+    },
+    frames,
+    notes
+  )
+  return { name, ...read, verdict: primitivesVerdict(read.reading) }
 }
 
 async function checkPrimitives(frames: Frames, summary: string[], notes: string[]): Promise<PrimitivesResult> {
@@ -2428,15 +2532,23 @@ async function captionSite(): Promise<{ row: IndicSiteRow; frame: HTMLCanvasElem
   }
 }
 
-/** The §51 clusters through a draw list's text item and painter A, against `drawTextOnto` directly and against one item per code point. */
-async function paintClusters(style: GraphicStyle, frames: Frames): Promise<{ rows: IndicPaintRow[]; sheetPng: string }> {
-  const width = 1080
-  const height = 480
-  const px = 120
-  const lineHeight = Math.round(px * LINE_HEIGHT)
-  const look: TextLook = { textStyleId: style.textStyleId, font: style.font, px, align: 'left' }
-  const field = (text: string, measure: TextMeasure): TextItem[] =>
-    textItems({ id: 'cluster', text, look, at: { x: 60, y: Math.round((height - lineHeight) / 2), width: width - 120 }, unit: 'line' }, measure)
+/**
+ * One text item through painter A, read as the Indic render check reads a
+ * cluster (§6.11): the item `build` makes (again after the faces land, with
+ * the same measure) painted whole by `paintDrawList2d` (through
+ * `graphicFrameCanvases`) on a `width`×`height` canvas, against one
+ * `drawTextOnto` call of the same item (expected equal) and against one item
+ * per code point through the same painter; a conjunct's advance against its
+ * letters', and an i-matra's place (the item built again with `text`, its
+ * text without the i-matra). Phase 1's clusters and phase 2's
+ * template items are both read here: one reader.
+ */
+async function readIndicItem(
+  build: (measure: TextMeasure, text?: string) => TextItem,
+  style: GraphicStyle,
+  width: number,
+  height: number
+): Promise<{ row: IndicPaintRow; whole: HTMLCanvasElement; split: HTMLCanvasElement; area: Rect }> {
   const paint = async (items: (measure: TextMeasure) => DrawItem[]): Promise<HTMLCanvasElement> => {
     const drawer: Drawer = (_spec, _style, _clock, _size, measure) => ({ items: items(measure) })
     const [canvas] = await graphicFrameCanvases(PRIMITIVES_SPEC, style, width, height, 1, PRIMITIVES_FPS, [0], NO_TARGETS, drawer)
@@ -2448,53 +2560,53 @@ async function paintClusters(style: GraphicStyle, frames: Frames): Promise<{ row
    * to the code point's own advance draws a mark (advance 0) into a box of no width, and the per-code-point painter of the
    * plan's mutation, which only moves its pen, then matched it in 3 of the 10 clusters (Chrome 152, 2026-11-02).
    */
-  const perCodePoint = (cluster: string) => (measure: TextMeasure): DrawItem[] => {
-    const [whole] = field(cluster, measure)
+  const perCodePoint = (measure: TextMeasure): DrawItem[] => {
+    const whole = build(measure)
     let pen = 0
-    return Array.from(cluster).map((cp, i) => {
+    return Array.from(whole.text).map((cp, i) => {
       const item: TextItem = { kind: 'text', id: `cp-${i}`, opacity: 1, text: cp, look: whole.look, box: { ...whole.box, x: whole.box.x + pen } }
       pen += measure(cp, whole.look).width
       return item
     })
   }
 
-  const rows: IndicPaintRow[] = []
-  const pictures: HTMLCanvasElement[][] = [[], []]
-  for (const cluster of INDIC_CLUSTERS) {
-    const wholeCanvas = await paint((m) => field(cluster, m))
-    const splitCanvas = await paint(perCodePoint(cluster))
-    // After the faces have landed (graphicFrameCanvases awaited them): the item the painter drew, built again with the same measure.
-    const measure = graphicMeasure()
-    const [item] = field(cluster, measure)
-    const direct = canvas2d(width, height)
-    direct.ctx.save()
-    direct.ctx.translate(item.box.x, item.box.y)
-    drawTextOnto(direct.ctx, textSpecOf(item.text, item.look, item.box), item.box.width, item.box.height)
-    direct.ctx.restore()
+  const wholeCanvas = await paint((m) => [build(m)])
+  const splitCanvas = await paint(perCodePoint)
+  // After the faces have landed (graphicFrameCanvases awaited them): the item the painter drew, built again with the same measure.
+  const measure = graphicMeasure()
+  const item = build(measure)
+  const text = item.text
+  const direct = canvas2d(width, height)
+  direct.ctx.save()
+  direct.ctx.translate(item.box.x, item.box.y)
+  drawTextOnto(direct.ctx, textSpecOf(item.text, item.look, item.box), item.box.width, item.box.height)
+  direct.ctx.restore()
 
-    const whole = canvasPixels(wholeCanvas)
-    const split = canvasPixels(splitCanvas)
-    const paintAgainstDirect = diffRgba(whole, pixels(direct.ctx), width)
-    const ink = unionRect(inkBox(whole, width, height), inkBox(split, width, height))
-    if (!ink) throw new Error(`graphic check: ${cluster} drew nothing through the painter`)
-    const area = padRect(ink, 2, width, height)
-    const wholeAgainstSplit = diffRgba(whole, split, width, area)
+  const whole = canvasPixels(wholeCanvas)
+  const split = canvasPixels(splitCanvas)
+  const paintAgainstDirect = diffRgba(whole, pixels(direct.ctx), width)
+  const ink = unionRect(inkBox(whole, width, height), inkBox(split, width, height))
+  if (!ink) throw new Error(`graphic check: ${text} drew nothing through the painter`)
+  const area = padRect(ink, 2, width, height)
+  const wholeAgainstSplit = diffRgba(whole, split, width, area)
 
-    let matraFirst: boolean | null = null
-    let consonantShift: number | null = null
-    const codePoints = Array.from(cluster)
-    if (codePoints.includes(PRE_BASE_I)) {
-      const consonant = canvasPixels(await paint((m) => field(codePoints.filter((cp) => cp !== PRE_BASE_I).join(''), m)))
-      const lead = preBaseLead(whole, consonant, width, height)
-      matraFirst = lead ? lead.first : null
-      consonantShift = lead ? lead.shift : null
-    }
-    const conjunct = VIRAMA.test(cluster)
-    const wholeWidth = measure(cluster, item.look).width
-    const baseWidth = codePoints.filter((cp) => !MARK.test(cp)).reduce((sum, cp) => sum + measure(cp, item.look).width, 0)
-    rows.push({
-      cluster,
-      script: scriptOf(cluster),
+  let matraFirst: boolean | null = null
+  let consonantShift: number | null = null
+  const codePoints = Array.from(text)
+  if (codePoints.includes(PRE_BASE_I)) {
+    const without = codePoints.filter((cp) => cp !== PRE_BASE_I).join('')
+    const consonant = canvasPixels(await paint((m) => [build(m, without)]))
+    const lead = preBaseLead(whole, consonant, width, height)
+    matraFirst = lead ? lead.first : null
+    consonantShift = lead ? lead.shift : null
+  }
+  const conjunct = VIRAMA.test(text)
+  const wholeWidth = measure(text, item.look).width
+  const baseWidth = codePoints.filter((cp) => !MARK.test(cp)).reduce((sum, cp) => sum + measure(cp, item.look).width, 0)
+  return {
+    row: {
+      cluster: text,
+      script: scriptOf(text),
       face: item.look.font,
       faceState: faceState(item.look.font),
       paintAgainstDirect,
@@ -2507,9 +2619,30 @@ async function paintClusters(style: GraphicStyle, frames: Frames): Promise<{ row
       narrower: conjunct ? wholeWidth < baseWidth : null,
       matraFirst,
       consonantShift
-    })
-    pictures[0].push(crop(wholeCanvas, padRect(area, 6, width, height)))
-    pictures[1].push(crop(splitCanvas, padRect(area, 6, width, height)))
+    },
+    whole: wholeCanvas,
+    split: splitCanvas,
+    area
+  }
+}
+
+/** The §51 clusters through a draw list's text item and painter A, against `drawTextOnto` directly and against one item per code point. */
+async function paintClusters(style: GraphicStyle, frames: Frames): Promise<{ rows: IndicPaintRow[]; sheetPng: string }> {
+  const width = 1080
+  const height = 480
+  const px = 120
+  const lineHeight = Math.round(px * LINE_HEIGHT)
+  const look: TextLook = { textStyleId: style.textStyleId, font: style.font, px, align: 'left' }
+  const field = (text: string, measure: TextMeasure): TextItem[] =>
+    textItems({ id: 'cluster', text, look, at: { x: 60, y: Math.round((height - lineHeight) / 2), width: width - 120 }, unit: 'line' }, measure)
+
+  const rows: IndicPaintRow[] = []
+  const pictures: HTMLCanvasElement[][] = [[], []]
+  for (const cluster of INDIC_CLUSTERS) {
+    const { row, whole, split, area } = await readIndicItem((m, text) => field(text ?? cluster, m)[0], style, width, height)
+    rows.push(row)
+    pictures[0].push(crop(whole, padRect(area, 6, width, height)))
+    pictures[1].push(crop(split, padRect(area, 6, width, height)))
   }
   const cell = { width: 220, height: 200 }
   frames.canvas('Indic phase 1: each cluster through paintDrawList2d whole (top row) and one item per code point (bottom row)', sheet(pictures, cell))
@@ -2886,6 +3019,566 @@ async function checkStrokes(options: NonNullable<GraphicCheckOptions['strokes']>
   }
 }
 
+/* -------------------------------------------------- phase 2: the templates */
+
+/**
+ * The 27 drawing fixtures (§6.2, §6.10), `tests/fixtures/graphics/specs.json`,
+ * read through Vite's `?raw` as the census reads its rows (census.ts): the
+ * page has no file system, and the file is the one the node tests read, so
+ * the page draws exactly what they hold.
+ */
+export const TEMPLATE_FIXTURES: readonly TemplateFixture[] = Object.freeze(parseTemplateFixtures(specsText))
+
+/** The templates a drawer draws (`DRAWERS`' rows): the ids `templates` reads; any other is named, never skipped. */
+export const DRAWN_TEMPLATES: readonly string[] = Object.freeze(Object.keys(DRAWERS))
+
+export const TEMPLATES_FPS = 30
+export const TEMPLATES_SIZE: { readonly width: number; readonly height: number } = Object.freeze({ width: 1080, height: 1920 })
+
+export interface TemplateFrames {
+  /** The clip's frames: `seconds` at the rate. */
+  total: number
+  /** `graphicMovingFrames`: the frames the bake draws. */
+  moving: number
+  /** The first beat's frame (`beatFrame`), within the clip. */
+  beat: number
+  lastMoving: number
+  /** The clip's last frame, held by `tpad` in the export. */
+  heldEnd: number
+  /** Every frame the check reads, ascending, once each: 0, the beat, the last moving frame and the end. */
+  read: number[]
+}
+
+/** §6.11's frames of a template case: 0, a beat (the first), the last moving frame and the held end. */
+export function templateFrames(spec: GraphicSpec, style: GraphicStyle, fps: number): TemplateFrames {
+  const total = Math.max(1, Math.round(spec.seconds * fps))
+  const moving = graphicMovingFrames(spec, style, fps, total)
+  const beats = spec.beats.filter((b) => Number.isFinite(b))
+  const beat = Math.min(total - 1, beatFrame(beats.length > 0 ? Math.min(...beats) : 0, fps))
+  const lastMoving = Math.max(0, moving - 1)
+  const heldEnd = total - 1
+  const read = [...new Set([0, beat, lastMoving, heldEnd])].sort((a, b) => a - b)
+  return { total, moving, beat, lastMoving, heldEnd, read }
+}
+
+/** A template case's reading against the preview's frames: frame 0 against the beat and against the last moving frame (null where there is no such frame after 0). */
+export function startReadings(
+  layout: Pick<TemplateFrames, 'beat' | 'moving' | 'lastMoving'>,
+  at: (frame: number) => Uint8ClampedArray,
+  width: number
+): Pick<TemplateReading, 'startAgainstBeat' | 'startAgainstEnd'> {
+  return {
+    startAgainstBeat: layout.beat > 0 && layout.beat < layout.moving ? diffRgba(at(0), at(layout.beat), width) : null,
+    startAgainstEnd: layout.lastMoving > 0 ? diffRgba(at(0), at(layout.lastMoving), width) : null
+  }
+}
+
+export interface TemplateCaseResult extends Omit<PrimitiveCaseResult, 'name' | 'reading' | 'verdict'> {
+  /** The fixture's id, shape, template and language (specs.json). */
+  id: string
+  shape: string
+  template: string
+  language: string
+  beat: number
+  reading: TemplateReading
+  verdict: TemplateVerdict
+}
+
+export interface TemplatesResult {
+  /** The ids asked for, as given. */
+  asked: string[]
+  fps: number
+  width: number
+  height: number
+  cases: TemplateCaseResult[]
+  /** Per shape and per template: PASS only when it had a case and every case of it passed. A template with no fixture is false here. */
+  byShape: Record<string, boolean>
+  byTemplate: Record<string, boolean>
+  /** Asked for, and not a template any drawer draws; and drawn, with no fixture in specs.json. Named, never skipped. */
+  unknown: string[]
+  noSpec: string[]
+  catalog: string
+  conditions: RunConditions
+  note: string
+}
+
+let templatesRun = 0
+
+/** The ids a `templates` option names: a list, or a throw saying what it takes. */
+function templateIds(asked: unknown): string[] {
+  if (!Array.isArray(asked)) throw new Error(`graphic check: templates takes a list of template ids (§6.11), of ${DRAWN_TEMPLATES.join(', ')}`)
+  return asked.map((id) => String(id))
+}
+
+async function checkTemplates(option: GraphicTemplateId[], frames: Frames, summary: string[], notes: string[]): Promise<TemplatesResult> {
+  const asked = templateIds(option)
+  const style = resolveGraphicStyle('clean')
+  const fps = TEMPLATES_FPS
+  const size = { width: TEMPLATES_SIZE.width, height: TEMPLATES_SIZE.height }
+  const { cases: fixtures, unknown, noSpec } = templateCasesFor(asked, TEMPLATE_FIXTURES, DRAWN_TEMPLATES)
+  const catalog = await catalogSettled()
+  const conditionsAt = summary.length
+  summary.push('')
+  const before = await pageConditions()
+  const toBlob2x2 = await toBlobFloor()
+  const run = ++templatesRun
+
+  const cases: TemplateCaseResult[] = []
+  for (const f of fixtures) {
+    const layout = templateFrames(f.spec, style, fps)
+    const targets = fixtureTargets(f.spec, size)
+    const { at, ...read } = await readGraphicCase(
+      {
+        label: `templates ${f.id}`,
+        liveId: `graphic-check-template-${f.id}`,
+        bakeId: (route) => `graphic-check-templates-${run}-${f.id}-${route}`,
+        spec: f.spec,
+        style,
+        layout,
+        fps,
+        size,
+        targetsAt: () => targets
+      },
+      frames,
+      notes
+    )
+    const reading: TemplateReading = { ...read.reading, ...startReadings(layout, at, size.width), total: layout.total }
+    const verdict = templateVerdict(reading)
+    cases.push({ id: f.id, shape: f.shape, template: f.spec.data.template, language: f.language, beat: layout.beat, ...read, reading, verdict })
+    const failed = (Object.keys(verdict) as (keyof TemplateVerdict)[]).filter((k) => k !== 'pass' && !verdict[k])
+    const worst = (list: PixelDiff[]): string => (list.length ? `mean ${Math.max(...list.map((d) => d.mean)).toFixed(3)}, max ${Math.max(...list.map((d) => d.max))}` : 'not read')
+    summary.push(
+      `templates ${f.id}: ${verdict.pass ? 'PASS' : `FAIL (${failed.join(', ')})`}; frames ${layout.read.join(', ')} of ${layout.total} (${layout.moving} moving, the beat at ${layout.beat})` +
+        `; frame 0 against the beat ${reading.startAgainstBeat ? describeDiff(reading.startAgainstBeat) : 'not read'}, against the last moving ${reading.startAgainstEnd ? describeDiff(reading.startAgainstEnd) : 'not read'}` +
+        `; last moving against the held end ${describeDiff(reading.heldAgainstLast)}` +
+        `; alpha outside graphicBox max ${Math.max(0, ...reading.outside.map((o) => o.max))}; drawn twice max ${Math.max(0, ...reading.drawnTwice.map((d) => d.max))}; baked twice ${reading.bakedTwice.equal} of ${reading.bakedTwice.of} PNGs byte-equal` +
+        `; over the ink, the box route's PNG against the preview ${worst(reading.bakeAgainstPreview)}, the canvas route's ${worst(reading.canvasAgainstPreview)}; the live Preview max ${Math.max(0, ...reading.live.map((d) => d.max))}` +
+        `; box ${read.bakeBox ? `${read.bakeBox.width}x${read.bakeBox.height} at ${read.bakeBox.x},${read.bakeBox.y}` : 'none'}; paint mean ${ms(read.drawMs.mean)}, p95 ${ms(read.drawMs.p95)} ms` +
+        `; bake ${read.encodeMsPerFrame ? `p50 ${ms(read.encodeMsPerFrame.p50)}, p95 ${ms(read.encodeMsPerFrame.p95)} ms/frame` : `${ms(read.bakeWallMs / Math.max(1, layout.moving))} ms/frame by its wall`} (box route)` +
+        `, ${read.canvasEncodeMsPerFrame ? `p50 ${ms(read.canvasEncodeMsPerFrame.p50)}, p95 ${ms(read.canvasEncodeMsPerFrame.p95)} ms/frame` : `${ms(read.canvasWallMs / Math.max(1, layout.moving))} ms/frame by its wall`} (canvas route); PNGs read from ${read.bytesFrom}`
+    )
+  }
+
+  const byShape = tallyBy(cases, (c) => c.shape, (c) => c.verdict.pass)
+  const byTemplate = tallyBy(cases, (c) => c.template, (c) => c.verdict.pass)
+  for (const id of noSpec) byTemplate[id] = false
+  const verdicts = (r: Record<string, boolean>): string => Object.entries(r).map(([k, v]) => `${k} ${v ? 'PASS' : 'FAIL'}`).join(', ')
+  if (cases.length > 0) {
+    summary.push(`templates by shape: ${verdicts(byShape)}`)
+    summary.push(`templates by template: ${verdicts(byTemplate)}`)
+  }
+  if (unknown.length > 0) notes.push(`templates: NOT READ, no drawer draws ${unknown.map((id) => JSON.stringify(id)).join(', ')} (the drawn templates are ${DRAWN_TEMPLATES.join(', ')}).`)
+  if (noSpec.length > 0) notes.push(`templates: NOT READ, no fixture in specs.json for ${noSpec.join(', ')}: FAIL, since nothing was read.`)
+  if (asked.length === 0) notes.push(`templates: no template named; name some of ${DRAWN_TEMPLATES.join(', ')}.`)
+
+  const after = await pageConditions()
+  const conditions: RunConditions = { before, after, toBlob2x2, throttled: throttledPage(before) || throttledPage(after) }
+  summary[conditionsAt] = reportConditions('templates', conditions, summary, notes) + `; ${catalog}`
+  const m13 = m13Line(cases.map((c) => ({ name: c.id, patterns: c.patterns, canvasPattern: c.canvasPattern })))
+  if (m13) summary.push(m13.replace(/^primitives M13/, 'templates M13'))
+  return {
+    asked,
+    fps,
+    width: size.width,
+    height: size.height,
+    cases,
+    byShape,
+    byTemplate,
+    unknown,
+    noSpec,
+    catalog,
+    conditions,
+    note:
+      'Each case is a specs.json fixture of a template asked for, through its own drawer (DRAWERS), under clean at 1080x1920 and 30 fps, a callout\'s subject its fixture box as if the footage filled the frame (fixtureTargets). ' +
+      'It is read as primitives reads a case (readGraphicCase): the preview drawn twice, the live Preview, graphicBox and the alpha outside it, the paint timed, the box route baked twice and the canvas route once, every PNG decoded against the preview over the ink. ' +
+      'The bar is TEMPLATES_BAR (§6.12\'s phase 2 exit, "preview = export within 1/255"): frame 0 differs from the first beat\'s frame and from the last moving frame, the last moving frame equals the held end (mean 0), no alpha outside the box, the same spec twice identical, both routes within 1 level over the ink; ' +
+      'beside it, as for primitives, the live Preview equal, the box even and the bake\'s, and each bake writing exactly the moving frames. A part with nothing read passes nothing; a template with no fixture is FAIL and named, an id no drawer draws is named. ' +
+      'Yours: the run on the Mac and the Surface in the development app (§6.12).'
+  }
+}
+
+/* ---------------------------------------- phase 2: the Indic render check over the templates */
+
+/** Where the page hands the templates' whole-drawn Indic sheet back for: beside phase 1's and graphic.int's libass sheets. */
+export const INDIC_TEMPLATES_SHEET = 'tests/output/graphic/indic-paint/templates.png'
+
+/** The languages whose fixtures the Indic reading takes. */
+const INDIC_LANGUAGES: readonly string[] = ['hi', 'te']
+
+const INDIC_TEXT = /[ऀ-ॿఀ-౿]/
+
+/** Every text item of a list, inside groups too, in paint order. */
+export function textItemsOf(items: readonly DrawItem[]): TextItem[] {
+  return items.flatMap((item) => (item.kind === 'text' ? [item] : item.kind === 'group' ? textItemsOf(item.children) : []))
+}
+
+/** The Hindi and Telugu text items of a fixture's settled frame (its last moving frame), each by its id: what the Indic reading reads. */
+export function indicItemsOf(list: { items: DrawItem[] }): TextItem[] {
+  return textItemsOf(list.items).filter((item) => INDIC_TEXT.test(item.text))
+}
+
+export interface IndicTemplateRow extends IndicPaintRow {
+  fixture: string
+  template: string
+  language: string
+  /** The text item's id in the template's list. */
+  item: string
+  /** `indicItemPass`: equal to drawTextOnto, a shaped item apart from its per-code-point drawing, a conjunct narrower, an i-matra first. */
+  pass: boolean
+}
+
+export interface IndicTemplatesResult {
+  asked: string[]
+  rows: IndicTemplateRow[]
+  /** Per fixture: PASS only when it had a Hindi or Telugu item and every one passed. */
+  byFixture: Record<string, boolean>
+  unknown: string[]
+  noSpec: string[]
+  /** Asked for, with fixtures, none of them in Hindi or Telugu. */
+  noIndic: string[]
+  /** The whole-drawn items for the eye check; the page has no file system, so it is handed back. */
+  sheet: { path: string; png: string } | null
+  note: string
+}
+
+/** Above and below a template item on the canvas it is read on. */
+const INDIC_ITEM_PAD = 60
+
+async function checkIndicTemplates(option: GraphicTemplateId[], frames: Frames, summary: string[]): Promise<IndicTemplatesResult> {
+  const asked = templateIds(option)
+  const style = resolveGraphicStyle('clean')
+  const fps = TEMPLATES_FPS
+  const size = { width: TEMPLATES_SIZE.width, height: TEMPLATES_SIZE.height }
+  const { cases, unknown, noSpec } = templateCasesFor(asked, TEMPLATE_FIXTURES, DRAWN_TEMPLATES)
+  const indicCases = cases.filter((f) => INDIC_LANGUAGES.includes(f.language))
+  const noIndic = [...new Set(cases.map((f) => f.spec.data.template))].filter((t) => !indicCases.some((f) => f.spec.data.template === t))
+  const rows: IndicTemplateRow[] = []
+  const pictures: HTMLCanvasElement[] = []
+  for (const f of indicCases) {
+    const layout = templateFrames(f.spec, style, fps)
+    const targets = fixtureTargets(f.spec, size)
+    const listWith = (measure: TextMeasure): TextItem[] => indicItemsOf(drawListAt(f.spec, style, layout.lastMoving, fps, size, measure, targets))
+    for (const first of listWith(graphicMeasure())) {
+      // The item as the template's drawer gives it at rest (built again after the faces land, as a bake builds its lists),
+      // drawn alone at its own x and size, at full opacity and untransformed, on a band as tall as it with a pad.
+      const height = Math.ceil(first.box.height) + 2 * INDIC_ITEM_PAD
+      const build = (measure: TextMeasure, text?: string): TextItem => {
+        const item = listWith(measure).find((i) => i.id === first.id) ?? first
+        const placed: TextItem = { ...item, opacity: 1, transform: undefined, box: { ...item.box, y: INDIC_ITEM_PAD } }
+        return text === undefined ? placed : { ...placed, text }
+      }
+      const { row, whole, area } = await readIndicItem(build, style, size.width, height)
+      const pass = indicItemPass({ text: row.cluster, equal: row.equal, differs: row.differs, narrower: row.narrower, matraFirst: row.matraFirst })
+      rows.push({ ...row, fixture: f.id, template: f.spec.data.template, language: f.language, item: first.id, pass })
+      pictures.push(crop(whole, padRect(area, 6, size.width, height)))
+    }
+  }
+  const byFixture = tallyBy(rows, (r) => r.fixture, (r) => r.pass)
+  for (const f of indicCases) if (!(f.id in byFixture)) byFixture[f.id] = false
+  for (const r of rows) {
+    summary.push(
+      `Indic templates ${r.fixture} ${r.item} "${r.cluster}" (${r.face}, ${r.faceState}): ${r.pass ? 'PASS' : 'FAIL'}; through paintDrawList2d against drawTextOnto ${describeDiff(r.paintAgainstDirect)}${r.equal ? ' (equal)' : ' (NOT EQUAL)'}` +
+        `; whole against per code point ${r.differs ? 'differ' : 'do not differ'} (mean ${r.wholeAgainstSplit.mean.toFixed(3)} over the ink${shapedText(r.cluster) ? '' : '; no mark, so not required to differ'})` +
+        (r.conjunct ? `; ${r.wholeWidth.toFixed(1)} px against its letters' ${r.baseWidth.toFixed(1)}${r.narrower ? ' (narrower)' : ' (NOT narrower)'}` : '') +
+        (r.matraFirst === null ? '' : `; i-matra ${r.matraFirst ? 'first' : 'NOT first'} (shift ${r.consonantShift} px)`)
+    )
+  }
+  if (Object.keys(byFixture).length > 0) summary.push(`Indic templates by fixture: ${Object.entries(byFixture).map(([k, v]) => `${k} ${v ? 'PASS' : 'FAIL'}`).join(', ')}`)
+  if (unknown.length > 0) summary.push(`Indic templates: NOT READ, no drawer draws ${unknown.map((id) => JSON.stringify(id)).join(', ')}`)
+  if (noSpec.length > 0) summary.push(`Indic templates: NOT READ, no fixture in specs.json for ${noSpec.join(', ')}`)
+  if (noIndic.length > 0) summary.push(`Indic templates: NOT READ, no Hindi or Telugu fixture for ${noIndic.join(', ')}`)
+  let sheetOut: { path: string; png: string } | null = null
+  if (pictures.length > 0) {
+    // One row per fixture's items would be ragged; the items in order, ten to a row.
+    const perRow = 10
+    const grid: HTMLCanvasElement[][] = []
+    for (let i = 0; i < pictures.length; i += perRow) grid.push(pictures.slice(i, i + perRow))
+    const cell = { width: 320, height: 120 }
+    const png = sheet(grid, cell).toDataURL('image/png')
+    frames.add('Indic phase 2: each Hindi and Telugu template item through paintDrawList2d, whole', png)
+    sheetOut = { path: INDIC_TEMPLATES_SHEET, png }
+    summary.push(`Indic templates sheet: save result.indic.templates.sheet.png as ${INDIC_TEMPLATES_SHEET}, beside the phase-1 sheet and graphic.int's indic-libass sheets, for the eye check (after a graphic.int run, which clears tests/output/graphic/)`)
+  }
+  return {
+    asked,
+    rows,
+    byFixture,
+    unknown,
+    noSpec,
+    noIndic,
+    sheet: sheetOut,
+    note:
+      'Phase 2\'s Indic render check (§6.11): every Hindi and Telugu fixture of the templates asked for, through the template\'s own drawer at its last moving frame (clean, 1080x1920, 30 fps); each text item ' +
+      'with Devanagari or Telugu in it drawn alone at its own x, size and look, at full opacity and untransformed, by readIndicItem, the reader phase 1\'s clusters go through: through paintDrawList2d against one ' +
+      'drawTextOnto call (equal), whole against one item per code point (differ, where the item carries a mark), a conjunct\'s advance narrower than its letters\', an i-matra first; the face each item drew in and its state recorded. ' +
+      'The whole-drawn sheet is the eye check\'s, beside the libass sheets. The plan\'s mutation (a per-code-point painter) makes every shaped item equal to its per-code-point drawing.'
+  }
+}
+
+/* ------------------------------------------------ phase 2: the blind ratings */
+
+/** A rating's key, for the file §6.10 names (`keyPath`): which render each letter was. Returned, never shown or printed. */
+export interface BlindKey {
+  option: 'curves' | 'look'
+  date: string
+  clipId: string
+  template: string
+  letters: Record<string, string>
+}
+
+export interface CurvesResult {
+  clipId: string
+  /** A plain line when the clip was refused (none of that id, or not a graphic clip); then nothing else was drawn. */
+  refused: string | null
+  template: string | null
+  fps: number
+  total: number
+  /** The letters on the page, A first. */
+  letters: string[]
+  /** For `keyPath('curves', date)`: save it with `saveKeyLine`'s route before you watch. */
+  key: BlindKey | null
+  howToSave: string
+  note: string
+}
+
+export interface LookResult {
+  clips: { clipId: string; template: string; letters: string[] }[]
+  /** One per clip rendered, in the clips' order. */
+  keys: BlindKey[]
+  refused: string[]
+  questions: readonly string[]
+  howToSave: string
+  note: string
+}
+
+/** A render on the blind page: its letter, and its picture at a frame (the Preview's own canvas, `graphicPreviewCanvas`). */
+interface BlindPlayer {
+  letter: string
+  liveId: string
+  total: number
+  fps: number
+  width: number
+  height: number
+  draw: (frame: number) => HTMLCanvasElement | null
+}
+
+interface BlindShown {
+  page: BlindPage
+  rows: BlindPlayer[][]
+}
+
+/** A style under another curve, and nothing else changed: §6.10's "one variable at a time" (the durations are the template's, the beats the clip's). */
+export function curveStyle(base: GraphicStyle, ease: MotionEase): GraphicStyle {
+  const style: GraphicStyle = { ...base, palette: { ...base.palette }, motion: { ...base.motion, ease } }
+  if (base.glow) style.glow = { ...base.glow }
+  return style
+}
+
+/** The look rating's style for a variant (`LOOK_VARIANTS`): the preset as it stands, no project override, `clean` with the dim on through the `dim` override. */
+export function lookStyle(variant: (typeof LOOK_VARIANTS)[number]): GraphicStyle {
+  return resolveGraphicStyle(variant.styleId, variant.overrides)
+}
+
+let blindRun = 0
+
+/** The players of one graphic clip of the open project under each style, in letter order, after each style's faces have landed. */
+async function blindPlayers(
+  project: Project,
+  clip: Clip & { graphic: GraphicSpec },
+  lettered: Lettered<string>,
+  styleOf: (name: string) => GraphicStyle
+): Promise<BlindPlayer[]> {
+  const spec = clip.graphic
+  const { width, height } = project.settings
+  const total = framesAt(clip.duration, project.settings.fps)
+  // The subject at the clip's first frame, as the store's bake and the Preview take it (graphics/targets.ts).
+  const targets = graphicTargetsAt(project, clip, spec, clip.start, { width, height })
+  const run = ++blindRun
+  const players: BlindPlayer[] = []
+  for (const [letter, name] of Object.entries(lettered.key).sort(([a], [b]) => a.localeCompare(b))) {
+    const style = styleOf(name)
+    const moving = graphicMovingFrames(spec, style, BLIND_FPS, total)
+    // The faces land before the page plays it: graphicFrameCanvases awaits them, as the bake does.
+    await graphicFrameCanvases(spec, style, width, height, total, BLIND_FPS, [Math.max(0, moving - 1)], () => targets)
+    const liveId = `graphic-check-blind-${run}-${letter}`
+    players.push({
+      letter,
+      liveId,
+      total,
+      fps: BLIND_FPS,
+      width,
+      height,
+      draw: (frame) => graphicPreviewCanvas(liveId, spec, style, width, height, { frame, total, fps: BLIND_FPS }, targets)
+    })
+  }
+  return players
+}
+
+const clipLabel = (clip: Clip & { graphic: GraphicSpec }): string => `clip ${clip.id} (${clip.graphic.data.template})`
+
+async function checkCurves(option: NonNullable<GraphicCheckOptions['curves']>, date: string, summary: string[], notes: string[], shown: BlindShown[]): Promise<CurvesResult> {
+  const wrong = curvesError(option)
+  if (wrong) throw new Error(`graphic check: ${wrong}`)
+  const howToSave = saveKeyLine('curves', date)
+  const note =
+    'M14 (§6.10): the named graphic clip of the open project, its spec, beats and durations as they are, under each named curve as its style\'s motion.ease (curveStyle: nothing else changed), ' +
+    'at 30 fps through the Preview\'s own canvas, looped on the page beside its letter. The letters are shuffled per run (letterBlind, Math.random); the key is result.curves.key only.'
+  const project = useEditor.getState().project
+  const got = graphicClipOf(project, option.clipId)
+  if ('refused' in got) {
+    notes.push(`curves: ${got.refused}`)
+    return { clipId: option.clipId, refused: got.refused, template: null, fps: BLIND_FPS, total: 0, letters: [], key: null, howToSave, note }
+  }
+  const { clip } = got
+  const lettered = letterBlind(option.names, Math.random)
+  const base = graphicStyleOf(project, clip.graphic)
+  const players = await blindPlayers(project, clip, lettered, (name) => curveStyle(base, name as MotionEase))
+  const page = blindPage(`M14, curves blind: ${clipLabel(clip)}, ${option.names.length} renders at 30 fps`, [{ label: clipLabel(clip), lettered }], CURVE_QUESTIONS, howToSave)
+  shown.push({ page, rows: [players] })
+  summary.push(...blindLines(page))
+  return {
+    clipId: clip.id,
+    refused: null,
+    template: clip.graphic.data.template,
+    fps: BLIND_FPS,
+    total: framesAt(clip.duration, project.settings.fps),
+    letters: page.rows[0].letters,
+    key: { option: 'curves', date, clipId: clip.id, template: clip.graphic.data.template, letters: { ...lettered.key } },
+    howToSave,
+    note
+  }
+}
+
+async function checkLook(option: NonNullable<GraphicCheckOptions['look']>, date: string, summary: string[], notes: string[], shown: BlindShown[]): Promise<LookResult> {
+  const wrong = lookError(option)
+  if (wrong) throw new Error(`graphic check: ${wrong}`)
+  const howToSave = saveKeyLine('look', date)
+  const project = useEditor.getState().project
+  const refused: string[] = []
+  const clips: LookResult['clips'] = []
+  const keys: BlindKey[] = []
+  const rows: { label: string; lettered: Lettered<string> }[] = []
+  const players: BlindPlayer[][] = []
+  for (const clipId of option.clipIds) {
+    const got = graphicClipOf(project, clipId)
+    if ('refused' in got) {
+      refused.push(got.refused)
+      notes.push(`look: ${got.refused}`)
+      continue
+    }
+    const { clip } = got
+    const lettered = letterBlind(LOOK_VARIANTS.map((v) => v.name), Math.random)
+    players.push(await blindPlayers(project, clip, lettered, (name) => lookStyle(LOOK_VARIANTS.find((v) => v.name === name)!)))
+    rows.push({ label: clipLabel(clip), lettered })
+    keys.push({ option: 'look', date, clipId: clip.id, template: clip.graphic.data.template, letters: { ...lettered.key } })
+  }
+  const page = blindPage(`The look rating, blind: ${rows.length} graphic clips, ${LOOK_VARIANTS.length} renders each at 30 fps`, rows, LOOK_QUESTIONS, howToSave)
+  page.rows.forEach((r, i) => clips.push({ clipId: keys[i].clipId, template: keys[i].template, letters: r.letters }))
+  if (rows.length > 0) {
+    shown.push({ page, rows: players })
+    summary.push(...blindLines(page))
+  }
+  if (rows.length < LOOK_MIN_CLIPS) notes.push(`look: ${rows.length} graphic clips rendered; the rating wants at least ${LOOK_MIN_CLIPS}, covering the eight templates, on three of your clips (§6.10).`)
+  return {
+    clips,
+    keys,
+    refused,
+    questions: LOOK_QUESTIONS,
+    howToSave,
+    note:
+      'The look rating (§6.10): each named graphic clip of the open project under clean, bold, editorial and energetic as the presets stand (no project override), and clean again with dim on, ' +
+      'at 30 fps through the Preview\'s own canvas, looped on the page beside its letter, with the questions. Letters shuffled per clip (letterBlind, Math.random); the keys are result.look.keys only.'
+  }
+}
+
+const BLIND_ID = 'forge-graphic-check-blind'
+/** Blank frames between two loops of a render. */
+const BLIND_PAUSE_FRAMES = 15
+const BLIND_CELL_WIDTH = 200
+
+/** The blind renders on the page, looping, beside their letters, with the questions and how to save the key: the page holds letters only. Replaced by each run. */
+function showBlind(shown: readonly BlindShown[]): void {
+  document.getElementById(BLIND_ID)?.remove()
+  const panel = document.createElement('div')
+  panel.id = BLIND_ID
+  Object.assign(panel.style, {
+    position: 'fixed',
+    top: '8px',
+    left: '8px',
+    width: 'min(1100px, calc(100vw - 16px))',
+    maxHeight: 'calc(100vh - 16px)',
+    overflow: 'auto',
+    zIndex: '2147483647',
+    background: NEAR_BLACK,
+    color: CREAM,
+    font: '13px system-ui, sans-serif',
+    padding: '8px',
+    border: `1px solid ${BLUE}`,
+    borderRadius: '6px'
+  })
+  const all: { player: BlindPlayer; ctx: CanvasRenderingContext2D; w: number; h: number }[] = []
+  const close = document.createElement('button')
+  close.textContent = 'Close'
+  close.onclick = () => panel.remove()
+  panel.append(close)
+  for (const { page, rows } of shown) {
+    const heading = document.createElement('h3')
+    heading.textContent = page.heading
+    panel.append(heading)
+    page.rows.forEach((row, i) => {
+      const label = document.createElement('div')
+      label.textContent = row.label
+      Object.assign(label.style, { margin: '8px 0 4px', fontWeight: '600' })
+      const grid = document.createElement('div')
+      Object.assign(grid.style, { display: 'flex', flexWrap: 'wrap', gap: '8px' })
+      for (const player of rows[i]) {
+        const figure = document.createElement('figure')
+        Object.assign(figure.style, { margin: '0' })
+        const canvas = document.createElement('canvas')
+        const w = BLIND_CELL_WIDTH
+        const h = Math.round((BLIND_CELL_WIDTH * player.height) / player.width)
+        canvas.width = w
+        canvas.height = h
+        canvas.style.background = 'repeating-conic-gradient(#808080 0 25%, #b0b0b0 0 50%) 0 0 / 16px 16px'
+        const caption = document.createElement('figcaption')
+        caption.textContent = player.letter
+        Object.assign(caption.style, { textAlign: 'center', fontSize: '18px', fontWeight: '700' })
+        figure.append(canvas, caption)
+        grid.append(figure)
+        const ctx = canvas.getContext('2d')
+        if (ctx) all.push({ player, ctx, w, h })
+      }
+      panel.append(label, grid)
+    })
+    const questions = document.createElement('ol')
+    for (const q of page.questions) {
+      const li = document.createElement('li')
+      li.textContent = q
+      questions.append(li)
+    }
+    const save = document.createElement('p')
+    save.textContent = page.howToSave
+    panel.append(questions, save)
+  }
+  document.body.append(panel)
+  const started = performance.now()
+  const tick = (): void => {
+    if (!panel.isConnected) {
+      for (const { player } of all) forgetGraphicPreview(player.liveId)
+      return
+    }
+    const elapsed = performance.now() - started
+    for (const { player, ctx, w, h } of all) {
+      const frame = Math.floor((elapsed * player.fps) / 1000) % (player.total + BLIND_PAUSE_FRAMES)
+      ctx.clearRect(0, 0, w, h)
+      const picture = frame < player.total ? player.draw(frame) : null
+      if (picture) ctx.drawImage(picture, 0, 0, w, h)
+    }
+    requestAnimationFrame(tick)
+  }
+  requestAnimationFrame(tick)
+}
+
 const SHEET_ID = 'forge-graphic-check-sheet'
 
 /** The frames on the page, over everything, on a checkerboard so transparency shows. Replaced by each run. */
@@ -2976,15 +3669,22 @@ export async function runGraphicCheck(options: GraphicCheckOptions = {}): Promis
     // Phase 0's bare drawTextOnto first, as it was measured, before phase 1's half loads the Noto faces.
     result.indic = checkIndic(frames, summary)
     result.indic.phase1 = await checkIndicPhase1(frames, summary)
+    // Phase 2's half, after the sites (which want the faces unloaded), over the named templates' Hindi and Telugu fixtures.
+    if (options.templates !== undefined) result.indic.templates = await checkIndicTemplates(options.templates, frames, summary)
   }
   if (options.primitives) result.primitives = await checkPrimitives(frames, summary, notes)
   if (options.pathLength) result.pathLength = checkPathLength(summary)
   if (options.strokes) result.strokes = await checkStrokes(options.strokes, frames, summary, notes)
+  if (options.templates) result.templates = await checkTemplates(options.templates, frames, summary, notes)
+  const blind: BlindShown[] = []
+  if (options.curves) result.curves = await checkCurves(options.curves, result.date, summary, notes, blind)
+  if (options.look) result.look = await checkLook(options.look, result.date, summary, notes, blind)
   if (asked.length === 0) {
     notes.push(`No option was passed, so nothing ran: ${GRAPHIC_CHECK_OPTIONS.join(', ')} (docs/CLIPS.md §6.11).`)
   }
   if (frames.dropped > 0) notes.push(`${frames.dropped} more frames were drawn than a result carries (${MAX_FRAMES}).`)
   showSheet(result)
+  if (blind.length > 0) showBlind(blind)
   return result
 }
 
