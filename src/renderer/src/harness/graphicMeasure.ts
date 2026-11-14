@@ -920,10 +920,56 @@ export interface IndicItemParts {
   equal: boolean
   /** Whole against per code point, over the ink. */
   differs: boolean
-  /** A conjunct's advance against its letters', null for no conjunct. */
+  /** `conjunctsNarrower`: every conjunct's advance, measured alone, below its letters', null for no conjunct. */
   narrower: boolean | null
   /** कि's i-matra before its consonant, null where there is no i-matra. */
   matraFirst: boolean | null
+}
+
+/*
+ * A conjunct, per script: a consonant (with its nukta, if any), then one or
+ * more of a virama, an optional ZWJ, and a consonant with its nukta. The
+ * Devanagari and Telugu consonant blocks are spelled out; a mark after the
+ * conjunct (a vowel sign) is not part of it. A virama with no consonant after
+ * it (a word-final virama, an explicit halant) makes no conjunct. A virama
+ * followed by ZWNJ asks for an explicit halant, so no joined form: no conjunct
+ * spans it (the consonant after the ZWNJ may start one of its own). A virama
+ * followed by ZWJ asks for the half form, still a joined form, so the
+ * conjunct spans it.
+ */
+const DEVANAGARI_CONJUNCT = '[\\u0915-\\u0939\\u0958-\\u095F\\u0978-\\u097F]\\u093C?(?:\\u094D\\u200D?[\\u0915-\\u0939\\u0958-\\u095F\\u0978-\\u097F]\\u093C?)+'
+const TELUGU_CONJUNCT = '[\\u0C15-\\u0C39\\u0C58-\\u0C5A\\u0C5D]\\u0C3C?(?:\\u0C4D\\u200D?[\\u0C15-\\u0C39\\u0C58-\\u0C5A\\u0C5D]\\u0C3C?)+'
+const CONJUNCT = new RegExp(`${DEVANAGARI_CONJUNCT}|${TELUGU_CONJUNCT}`, 'gu')
+const JOINER = /[\u200C\u200D]/u
+
+/** Every conjunct of a Devanagari or Telugu string, in order (§6.11's "each conjunct"), by the rule above. */
+export function conjunctsOf(text: string): string[] {
+  return Array.from(text.matchAll(CONJUNCT), (m) => m[0])
+}
+
+/** A conjunct's letters: its code points that are neither a mark (a virama, a nukta) nor a joiner, each measured alone for the sum it is read against. */
+export function conjunctLetters(conjunct: string): string[] {
+  return Array.from(conjunct).filter((cp) => !/\p{M}/u.test(cp) && !JOINER.test(cp))
+}
+
+/** One conjunct measured alone in its item's look: its advance, and the sum of its letters' advances. */
+export interface ConjunctReading {
+  text: string
+  width: number
+  letters: number
+}
+
+/** The item's conjunct verdict: null with no conjunct, true when every conjunct is narrower than its letters, false otherwise. */
+export function conjunctsNarrower(readings: readonly ConjunctReading[]): boolean | null {
+  if (readings.length === 0) return null
+  return readings.every((r) => r.width < r.letters)
+}
+
+/** The summary line's part for the conjuncts: each named with its width against its letters', NOT narrower beside the one that is not. */
+export function describeConjuncts(readings: readonly ConjunctReading[]): string {
+  return readings
+    .map((r) => `${r.text} ${r.width.toFixed(1)} px against its letters' ${r.letters.toFixed(1)}${r.width < r.letters ? ' (narrower)' : ' (NOT narrower)'}`)
+    .join(', ')
 }
 
 /** Whether shaping can change the item's picture: a mark (a virama, a matra, a nukta) in it. Without one, whole and per code point may rightly be equal. */

@@ -119,7 +119,12 @@ import {
   fixtureTargets,
   framesAt,
   graphicClipOf,
+  conjunctLetters,
+  conjunctsNarrower,
+  conjunctsOf,
+  describeConjuncts,
   indicItemPass,
+  type ConjunctReading,
   indicTemplateCases,
   letterBlind,
   lookError,
@@ -458,10 +463,19 @@ export interface IndicPaintRow {
   /** The whole item against one item per code point through the same painter, over the two's ink: differs by more than 1/255 mean, or the painter splits. */
   wholeAgainstSplit: PixelDiff
   differs: boolean
+  /** The item holds a conjunct (`conjunctsOf`), not merely a virama: a word-final virama makes none. */
   conjunct: boolean
-  /** The graphic measure's advance of the cluster, and of its letters without their marks. */
+  /** Each conjunct (`conjunctsOf`) measured alone in the item's look, against its letters (`conjunctLetters`), each alone; `narrower` is read from these. */
+  conjuncts: ConjunctReading[]
+  /**
+   * The graphic measure's advance of the whole item, and of its code points without their marks: phase 1's
+   * first reading, kept for its tables (for a cluster that is exactly one conjunct they are that conjunct's
+   * two numbers). Over a phrase they are no verdict: a spacing vowel sign widens the whole and is left out of
+   * the sum. The verdict is `conjuncts`'.
+   */
   wholeWidth: number
   baseWidth: number
+  /** `conjunctsNarrower(conjuncts)`: null with no conjunct, true when every conjunct is narrower than its letters. */
   narrower: boolean | null
   /** कि only: the consonant drawn alone found right of where it was drawn, inside the whole drawing (`preBaseLead`). */
   matraFirst: boolean | null
@@ -2540,8 +2554,10 @@ async function captionSite(): Promise<{ row: IndicSiteRow; frame: HTMLCanvasElem
  * the same measure) painted whole by `paintDrawList2d` (through
  * `graphicFrameCanvases`) on a `width`×`height` canvas, against one
  * `drawTextOnto` call of the same item (expected equal) and against one item
- * per code point through the same painter; a conjunct's advance against its
- * letters', and an i-matra's place (the item built again with `text`, its
+ * per code point through the same painter; each conjunct's advance, measured
+ * alone, against its letters' (`conjunctsOf`, `conjunctsNarrower`: per
+ * conjunct, never the whole item, which a spacing vowel sign rightly widens),
+ * and an i-matra's place (the item built again with `text`, its
  * text without the i-matra). Phase 1's clusters and phase 2's
  * template items are both read here: one reader.
  */
@@ -2602,7 +2618,12 @@ async function readIndicItem(
     matraFirst = lead ? lead.first : null
     consonantShift = lead ? lead.shift : null
   }
-  const conjunct = VIRAMA.test(text)
+  // Each conjunct alone, with the same measure and look, against its own letters: §6.11's "each conjunct", not the whole item.
+  const conjuncts: ConjunctReading[] = conjunctsOf(text).map((c) => ({
+    text: c,
+    width: measure(c, item.look).width,
+    letters: conjunctLetters(c).reduce((sum, cp) => sum + measure(cp, item.look).width, 0)
+  }))
   const wholeWidth = measure(text, item.look).width
   const baseWidth = codePoints.filter((cp) => !MARK.test(cp)).reduce((sum, cp) => sum + measure(cp, item.look).width, 0)
   return {
@@ -2615,10 +2636,11 @@ async function readIndicItem(
       equal: paintAgainstDirect.max === 0,
       wholeAgainstSplit,
       differs: wholeAgainstSplit.mean > 1,
-      conjunct,
+      conjunct: conjuncts.length > 0,
+      conjuncts,
       wholeWidth,
       baseWidth,
-      narrower: conjunct ? wholeWidth < baseWidth : null,
+      narrower: conjunctsNarrower(conjuncts),
       matraFirst,
       consonantShift
     },
@@ -2672,7 +2694,7 @@ async function checkIndicPhase1(frames: Frames, summary: string[]): Promise<Indi
     summary.push(
       `Indic paint ${r.cluster} (${r.faceState === 'loaded' || r.faceState === 'a system face' ? `${r.face}, ${r.faceState}` : `${r.face} ${r.faceState}, so drawn in the system's fallback: phase 0's resolvedBy rows name it`}): text item through paintDrawList2d against drawTextOnto ${describeDiff(r.paintAgainstDirect)}${r.equal ? ' (equal)' : ' (NOT EQUAL)'}; ` +
         `whole against per code point ${r.differs ? 'differ' : 'DO NOT differ'} (mean ${r.wholeAgainstSplit.mean.toFixed(3)} over the ink)` +
-        (r.conjunct ? `; ${r.wholeWidth.toFixed(1)} px against its letters' ${r.baseWidth.toFixed(1)}${r.narrower ? ' (narrower)' : ' (NOT narrower)'}` : '') +
+        (r.conjunct ? `; ${describeConjuncts(r.conjuncts)}` : '') +
         (r.matraFirst === null ? '' : `; i-matra ${r.matraFirst ? 'first' : 'NOT first'} (the consonant ${r.consonantShift} px right of where it is drawn alone)`)
     )
   }
@@ -2690,7 +2712,8 @@ async function checkIndicPhase1(frames: Frames, summary: string[]): Promise<Indi
       'The caption bake clears and rewrites the app\'s caption frames. Paint: each cluster as a text item (textItems, unit line, the style\'s Latin face, so the ' +
       'item takes its script\'s face) through graphicFrameCanvases and paintDrawList2d, against one drawTextOnto call with textSpecOf of the same item (expected equal), ' +
       'and against one item per code point through the same painter (the plan\'s mutation, an Array.from split in the painter, makes them equal). narrower and the ' +
-      'i-matra are read with the graphic measure, as phase 0 read them with its own.'
+      'i-matra are read with the graphic measure; narrower reads each conjunct alone against its letters (so the Telugu cluster with a vowel sign reads its conjunct ' +
+      'without the sign), where phase 0 read the whole cluster with its own measure.'
   }
 }
 
@@ -3222,7 +3245,7 @@ export interface IndicTemplateRow extends IndicPaintRow {
   language: string
   /** The text item's id in the template's list. */
   item: string
-  /** `indicItemPass`: equal to drawTextOnto, a shaped item apart from its per-code-point drawing, a conjunct narrower, an i-matra first. */
+  /** `indicItemPass`: equal to drawTextOnto, a shaped item apart from its per-code-point drawing, every conjunct narrower, an i-matra first. */
   pass: boolean
 }
 
@@ -3276,7 +3299,7 @@ async function checkIndicTemplates(option: GraphicTemplateId[], frames: Frames, 
     summary.push(
       `Indic templates ${r.fixture} ${r.item} "${r.cluster}" (${r.face}, ${r.faceState}): ${r.pass ? 'PASS' : 'FAIL'}; through paintDrawList2d against drawTextOnto ${describeDiff(r.paintAgainstDirect)}${r.equal ? ' (equal)' : ' (NOT EQUAL)'}` +
         `; whole against per code point ${r.differs ? 'differ' : 'do not differ'} (mean ${r.wholeAgainstSplit.mean.toFixed(3)} over the ink${shapedText(r.cluster) ? '' : '; no mark, so not required to differ'})` +
-        (r.conjunct ? `; ${r.wholeWidth.toFixed(1)} px against its letters' ${r.baseWidth.toFixed(1)}${r.narrower ? ' (narrower)' : ' (NOT narrower)'}` : '') +
+        (r.conjunct ? `; ${describeConjuncts(r.conjuncts)}` : '') +
         (r.matraFirst === null ? '' : `; i-matra ${r.matraFirst ? 'first' : 'NOT first'} (shift ${r.consonantShift} px)`)
     )
   }
@@ -3307,7 +3330,7 @@ async function checkIndicTemplates(option: GraphicTemplateId[], frames: Frames, 
     note:
       'Phase 2\'s Indic render check (§6.11): every Hindi and Telugu fixture of the templates asked for, through the template\'s own drawer at its last moving frame (clean, 1080x1920, 30 fps); each text item ' +
       'with Devanagari or Telugu in it drawn alone at its own x, size and look, at full opacity and untransformed, by readIndicItem, the reader phase 1\'s clusters go through: through paintDrawList2d against one ' +
-      'drawTextOnto call (equal), whole against one item per code point (differ, where the item carries a mark), a conjunct\'s advance narrower than its letters\', an i-matra first; the face each item drew in and its state recorded. ' +
+      'drawTextOnto call (equal), whole against one item per code point (differ, where the item carries a mark), each conjunct (conjunctsOf; a word-final virama makes none) measured alone narrower than its letters\' sum, an i-matra first; the face each item drew in and its state recorded. ' +
       'The whole-drawn sheet is the eye check\'s, beside the libass sheets. The plan\'s mutation (a per-code-point painter) makes every shaped item equal to its per-code-point drawing.'
   }
 }

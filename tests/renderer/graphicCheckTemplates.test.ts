@@ -30,7 +30,11 @@ import {
   TEMPLATES_BAR,
   blindLines,
   blindPage,
+  conjunctLetters,
+  conjunctsNarrower,
+  conjunctsOf,
   curvesError,
+  describeConjuncts,
   fixtureTargets,
   framesAt,
   graphicClipOf,
@@ -389,6 +393,121 @@ describe('the Indic items of a template', () => {
   })
 })
 
+describe('conjunctsOf and conjunctsNarrower (§6.11: "each conjunct\'s measureText advance narrower than the sum of its code points\' advances")', () => {
+  // Every Hindi and Telugu input here is the owner's: INDIC_CLUSTERS, or specs.json read by fixture id and field.
+  const specs = (JSON.parse(specsText) as { specs: { id: string; spec: { data: Record<string, unknown> } }[] }).specs
+  const data = (id: string): Record<string, unknown> => {
+    const found = specs.filter((x) => x.id === id)
+    expect(found, id).toHaveLength(1)
+    return found[0].spec.data
+  }
+  const label = (id: string, i: number): string => (data(id).items as { label: string }[])[i].label
+  const C = INDIC_CLUSTERS
+
+  it('reads phase 1\'s ten clusters: eight are one conjunct, the Telugu one with a vowel sign is its conjunct without the sign, the two i-matras none', () => {
+    expect(C).toHaveLength(10)
+    const withSign = Array.from(C[7])
+    expect(withSign).toHaveLength(4)
+    expect(withSign[3]).toBe('ీ')
+    expect(C.map(conjunctsOf)).toEqual([[C[0]], [C[1]], [C[2]], [C[3]], [], [C[5]], [C[6]], [withSign.slice(0, 3).join('')], [], [C[9]]])
+  })
+
+  it('reads a phrase with two conjuncts and a word-final virama as the two conjuncts alone', () => {
+    const name = data('lower-third-te').name as string
+    const cps = Array.from(name)
+    // By hand: the first word opens with a conjunct and ends in a virama before the space; the second holds one conjunct.
+    expect(cps[9]).toBe('్')
+    expect(cps[10]).toBe(' ')
+    expect(conjunctsOf(name)).toEqual([cps.slice(0, 3).join(''), cps.slice(13, 16).join('')])
+  })
+
+  it('a word-final virama makes no conjunct', () => {
+    const words = [label('steps-connected-te', 0), label('bars-te', 0), label('bars-te', 1)]
+    for (const w of words) {
+      expect(Array.from(w).at(-1), w).toBe('్')
+      expect(conjunctsOf(w), w).toEqual([])
+    }
+    // A cluster's consonant with its virama and nothing after it.
+    expect(conjunctsOf(Array.from(C[0]).slice(0, 2).join(''))).toEqual([])
+  })
+
+  it('holds a nukta inside a conjunct, and leaves it out of the letters', () => {
+    const [k, virama, ss] = Array.from(C[0])
+    expect(virama).toBe('्')
+    const withNukta = `${k}\u093C${virama}${ss}`
+    expect(conjunctsOf(withNukta)).toEqual([withNukta])
+    expect(conjunctLetters(withNukta)).toEqual([k, ss])
+    // A nukta with no virama near it is no conjunct.
+    expect(conjunctsOf(label('bars-hi', 0))).toEqual([])
+  })
+
+  it('holds a nukta on the consonant after the virama too, in both scripts', () => {
+    const [k, virama, ss] = Array.from(C[0])
+    const after = `${k}${virama}${ss}\u093C`
+    expect(conjunctsOf(after)).toEqual([after])
+    expect(conjunctLetters(after)).toEqual([k, ss])
+    const [tk, tVirama, tss] = Array.from(C[5])
+    expect(tVirama).toBe('\u0C4D')
+    for (const t of [`${tk}\u0C3C${tVirama}${tss}`, `${tk}${tVirama}${tss}\u0C3C`]) {
+      expect(conjunctsOf(t), t).toEqual([t])
+      expect(conjunctLetters(t), t).toEqual([tk, tss])
+    }
+  })
+
+  it('Telugu: ZWNJ after a virama makes no conjunct, ZWJ one conjunct with the joiner not a letter', () => {
+    const [tk, tVirama, tss] = Array.from(C[5])
+    expect(conjunctsOf(`${tk}${tVirama}\u200C${tss}`)).toEqual([])
+    const half = `${tk}${tVirama}\u200D${tss}`
+    expect(conjunctsOf(half)).toEqual([half])
+    expect(conjunctLetters(half)).toEqual([tk, tss])
+  })
+
+  it('a virama of the other script joins nothing', () => {
+    const [k, , ss] = Array.from(C[0])
+    const [tk, , tss] = Array.from(C[5])
+    expect(conjunctsOf(`${k}\u0C4D${ss}`)).toEqual([])
+    expect(conjunctsOf(`${tk}\u094D${tss}`)).toEqual([])
+    expect(conjunctsOf(`${k}\u094D${tss}`)).toEqual([])
+    expect(conjunctsOf(`${tk}\u0C4D${ss}`)).toEqual([])
+  })
+
+  it('ZWNJ after a virama asks for an explicit halant: no conjunct across it; ZWJ asks for the half form: one conjunct, the joiner not a letter', () => {
+    const [k, virama, ss] = Array.from(C[0])
+    expect(conjunctsOf(`${k}${virama}\u200C${ss}`)).toEqual([])
+    const half = `${k}${virama}\u200D${ss}`
+    expect(conjunctsOf(half)).toEqual([half])
+    expect(conjunctLetters(half)).toEqual([k, ss])
+  })
+
+  it('reads no conjunct in a string with no virama, nor in a Latin one', () => {
+    const title = data('steps-hi').title as string
+    expect(title).not.toMatch(/[्్]/)
+    expect(conjunctsOf(title)).toEqual([])
+    expect(conjunctsOf(data('counter-en').label as string)).toEqual([])
+  })
+
+  it('conjunctLetters: a cluster\'s consonants without its virama', () => {
+    const cps = Array.from(C[1])
+    expect(conjunctLetters(C[1])).toEqual([cps[0], cps[2]])
+  })
+
+  it('conjunctsNarrower: null with no conjunct, true when every one is narrower, false when any one is not', () => {
+    expect(conjunctsNarrower([])).toBe(null)
+    expect(conjunctsNarrower([{ text: 'a', width: 37.2, letters: 74.7 }])).toBe(true)
+    expect(conjunctsNarrower([{ text: 'a', width: 37.2, letters: 74.7 }, { text: 'b', width: 24.7, letters: 43.4 }])).toBe(true)
+    expect(conjunctsNarrower([{ text: 'a', width: 37.2, letters: 74.7 }, { text: 'b', width: 50, letters: 43.4 }])).toBe(false)
+    expect(conjunctsNarrower([{ text: 'a', width: 43.4, letters: 43.4 }])).toBe(false)
+  })
+
+  it('describeConjuncts names each conjunct, NOT narrower beside the one that is not', () => {
+    expect(describeConjuncts([{ text: 'a', width: 37.24, letters: 74.7 }, { text: 'b', width: 50, letters: 43.4 }])).toBe(
+      "a 37.2 px against its letters' 74.7 (narrower), b 50.0 px against its letters' 43.4 (NOT narrower)"
+    )
+    // Equal is not narrower, as conjunctsNarrower reads it.
+    expect(describeConjuncts([{ text: 'a', width: 43.4, letters: 43.4 }])).toBe("a 43.4 px against its letters' 43.4 (NOT narrower)")
+  })
+})
+
 /* ------------------------------------------------------- the blind ratings */
 
 describe('letterBlind', () => {
@@ -527,6 +646,39 @@ describe('the phase-2 glue, read as source: the key off the page and the console
       expect([...bodyOf(name).matchAll(/letterBlind\(/g)], name).toHaveLength(1)
     })
   }
+  it('readIndicItem reads narrower per conjunct, each measured alone, never the whole item against its letters', () => {
+    const body = bodyOf('readIndicItem')
+    expect([...body.matchAll(/conjunctsOf\(/g)]).toHaveLength(1)
+    // The map over the conjuncts, read by its facts, not its spelling: each conjunct's own width in the item's look, its letters', never the item's.
+    const start = body.indexOf('conjunctsOf(text).map(')
+    expect(start).toBeGreaterThan(-1)
+    const map = body.slice(start, body.indexOf('}))', start))
+    expect([...map.matchAll(/width: measure\((\w+), item\.look\)/g)].map((m) => m[1])).toEqual([map.match(/\.map\(\((\w+)\)/)![1]])
+    expect([...map.matchAll(/conjunctLetters\((\w+)\)/g)].map((m) => m[1])).toEqual([map.match(/\.map\(\((\w+)\)/)![1]])
+    expect(map).not.toMatch(/measure\(text\b|Array\.from\(/)
+    const narrower = [...body.matchAll(/narrower: /g)]
+    expect(narrower).toHaveLength(1)
+    expect(body.slice(narrower[0].index!, body.indexOf('\n', narrower[0].index!))).toBe('narrower: conjunctsNarrower(conjuncts),')
+    expect([...body.matchAll(/conjunct: /g)]).toHaveLength(1)
+    expect(body).toContain('conjunct: conjuncts.length > 0,')
+    expect(body).not.toMatch(/VIRAMA|wholeWidth\s*<|<\s*baseWidth/)
+  })
+
+  it('checkIndicTemplates passes each row on its own conjunct verdict', () => {
+    const body = bodyOf('checkIndicTemplates')
+    const calls = [...body.matchAll(/indicItemPass\(\{[^}]*\}\)/g)]
+    expect(calls).toHaveLength(1)
+    expect(calls[0][0]).toContain('narrower: row.narrower')
+  })
+
+  for (const name of ['checkIndicPhase1', 'checkIndicTemplates']) {
+    it(`${name}: its line names each conjunct's reading, not the whole item's`, () => {
+      const body = bodyOf(name)
+      expect([...body.matchAll(/describeConjuncts\(r\.conjuncts\)/g)], name).toHaveLength(1)
+      expect(body, name).not.toMatch(/r\.baseWidth|r\.wholeWidth/)
+    })
+  }
+
   it('checkIndicTemplates takes its cases from indicTemplateCases alone, with no language filter of its own', () => {
     const body = bodyOf('checkIndicTemplates')
     expect([...body.matchAll(/indicTemplateCases\(/g)]).toHaveLength(1)
