@@ -1423,12 +1423,16 @@ if (STROKE_FRAMES === '') {
  * each arrival frame.
  *
  * The project: one red 9:16 source (360×640, 10 s) cut into two footage
- * clips on V1, [0, 180) from in-point 0 and [180, 300) from in-point 180,
- * because the budget allows one graphic per 20 s of a footage clip (§6.9 rule
+ * clips on V1, [0, 180) from in-point 0 and [180, 300) from in-point 165
+ * (source 165-285: the second clip's in-point is OFF its timeline start, so
+ * a word's timeline frame is its source frame + 15 there, and the render
+ * reads graphicBeats' offset, the captions' own, end to end), because the
+ * budget allows one graphic per 20 s of a footage clip (§6.9 rule
  * 1, `GRAPHIC_SPACING.perS`) and onsets 6 s apart (`minGapS`). A transcript
  * whose words start on whole frames: "forty" at 1.000 s (the counter's one
  * beat, timeline frame 30), "plan," "shoot," "edit." at 7.0, 7.5 and 8.0 s
- * (the steps' three beats, a tree of three items, frames 210, 225, 240).
+ * of the source (the steps' three beats, a tree of three items, source
+ * frames 210, 225, 240, timeline frames 225, 240, 255).
  * Captions on, Pop (`styleId: 'pop'`), at its own bottom or moved to the top;
  * nothing burns them here (no `subtitlesPath`: the burn is captions.int's),
  * so placement reads them (§6.9 step 1) and the frames show only the graphic.
@@ -1447,8 +1451,10 @@ if (STROKE_FRAMES === '') {
  */
 
 const P2_SOURCE_FRAMES = 300
-/** The second footage clip's first frame (and its in-point: the timeline is the source). */
+/** The second footage clip's first frame on the timeline. */
 const P2_SPLIT = 180
+/** The second footage clip's in-point: 15 frames before its start, so its timeline frame = source frame + 15. */
+const P2_B_IN = 165
 /** The face, in units of the 360×640 source: rows 0.40-0.55, 0.625 with §5.1's chin extension (half its height), all inside the middle third (0.333-0.667). */
 const P2_FACE: UnitRect = { x: 0.2, y: 0.4, width: 0.6, height: 0.15 }
 
@@ -1490,15 +1496,15 @@ const P2_STEPS: KeptGraphic = {
 }
 
 /* Hand-derived from the words (§6.8): a beat is its word's start on the timeline, the graphic starts at the first frame at or after the first beat less 0.5 s. */
-/** Each beat word's timeline frame: startMs × 30 / 1000. */
-const P2_BEAT_FRAMES = { counter: [30], steps: [210, 225, 240] } as const
-/** counter: 1.0 − 0.5 s = frame 15, its 2 s minimum (60 frames; the last beat plus 0.8 s is 1.3 s); steps: 7.0 − 0.5 = 6.5 s, frame 195, its 3 s minimum (the last beat 1.5 s + 0.8 is 2.3 s). */
+/** Each beat word's timeline frame: startMs × 30 / 1000, + 15 on clip b (in-point 165, start 180): source 210, 225, 240 there. */
+const P2_BEAT_FRAMES = { counter: [30], steps: [225, 240, 255] } as const
+/** counter: 1.0 − 0.5 s = frame 15, its 2 s minimum (60 frames; the last beat plus 0.8 s is 1.3 s); steps: 7.5 − 0.5 = 7.0 s on the timeline, frame 210, its 3 s minimum (the last beat 1.5 s + 0.8 is 2.3 s), so 90 frames, ending at clip b's end, 300. */
 const P2_TIMING = {
   counter: { start: 15, duration: 60, beats: [0.5] },
-  steps: { start: 195, duration: 90, beats: [0.5, 1.0, 1.5] }
+  steps: { start: 210, duration: 90, beats: [0.5, 1.0, 1.5] }
 } as const
-/** Each tick's onset in seconds (§6.14: restrained `clean` ticks a counter's arrival and a steps' first item; the tone's peak is its onset, peakSeconds 0): frames 30 and 210. */
-const P2_TICK_S = [1.0, 7.0]
+/** Each tick's onset in seconds (§6.14: restrained `clean` ticks a counter's arrival and a steps' first item; the tone's peak is its onset, peakSeconds 0): timeline frames 30 and 225. */
+const P2_TICK_S = [1.0, 7.5]
 
 type P2CaseName = 'face-captions-bottom' | 'no-track-captions-bottom' | 'face-captions-top'
 const P2_CASES: readonly { name: P2CaseName; face: boolean; captions: 'bottom' | 'top' }[] = [
@@ -1609,15 +1615,15 @@ function p2Project(shot: string, shape: P1Shape, c: (typeof P2_CASES)[number]): 
   const red: MediaAsset = {
     id: 'red', path: shot, name: 'red.mp4', kind: 'video', durationFrames: P2_SOURCE_FRAMES, ...P1_SHOT, fps: FPS, hasVideo: true, hasAudio: false, size: 1
   }
-  const clip = (id: string, start: number, duration: number): Clip => ({
-    id, assetId: 'red', trackId: 'v1', start, duration, inPoint: start, volume: 1,
+  const clip = (id: string, start: number, duration: number, inPoint: number): Clip => ({
+    id, assetId: 'red', trackId: 'v1', start, duration, inPoint, volume: 1,
     transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 }, color: { brightness: 0, contrast: 1, saturation: 1 }
   })
   return {
     ...empty,
     settings: { ...empty.settings, ...P1_SHAPES[shape], fps: FPS, sampleRate: P2_RATE },
     assets: [red],
-    clips: [clip('a', 0, P2_SPLIT), clip('b', P2_SPLIT, P2_SOURCE_FRAMES - P2_SPLIT)],
+    clips: [clip('a', 0, P2_SPLIT, 0), clip('b', P2_SPLIT, P2_SOURCE_FRAMES - P2_SPLIT, P2_B_IN)],
     transcripts: {
       red: { assetId: 'red', language: 'en', model: 'test', durationMs: (P2_SOURCE_FRAMES * 1000) / FPS, words: P2_WORDS, segments: segmentIntoSentences(P2_WORDS) }
     },
@@ -1742,10 +1748,10 @@ describe('phase 2: graphics landed by applyGraphics on their words, placed and s
         const lane = applied.project.tracks.find((t) => t.kind === 'audio' && t.name === GRAPHIC_SOUND_LANE_NAME)
         expect(lane, `${at}: the "${GRAPHIC_SOUND_LANE_NAME}" lane`).toBeDefined()
         const ticks = applied.project.clips.filter((x) => x.trackId === lane!.id)
-        expect(ticks.map((x) => ({ start: x.start, forGraphic: x.forGraphic })), `${at}: the sound clips`).toEqual([
-          { start: P2_BEAT_FRAMES.counter[0], forGraphic: counter.id },
-          { start: P2_BEAT_FRAMES.steps[0], forGraphic: steps.id }
-        ])
+        // One string, so a failure prints every frame (vitest cuts a list short in its message).
+        expect(ticks.map((x) => `${x.start} for ${x.forGraphic}`).join('; '), `${at}: the sound clips`).toBe(
+          `${P2_BEAT_FRAMES.counter[0]} for ${counter.id}; ${P2_BEAT_FRAMES.steps[0]} for ${steps.id}`
+        )
         expect(runs[c.name][shape].export.notes, `${at}: the export's onError`).toEqual([])
         expect(runs[c.name][shape].export.asks.map((a) => a.box !== null), `${at}: both baked by the box route`).toEqual([true, true])
         expect(runs[c.name][shape].frames, `${at}: frames exported`).toBe(P2_SOURCE_FRAMES)
@@ -1791,7 +1797,7 @@ describe('phase 2: graphics landed by applyGraphics on their words, placed and s
     }
   })
 
-  it('puts each graphic’s box where the third’s content rect is, its centre in the third worked out by hand; with no track, the style’s third', () => {
+  it('puts each graphic’s box where the third’s content rect is, its centre in the third worked out by hand; with no track, §6.9’s no-track default', () => {
     for (const c of P2_CASES) {
       for (const shape of P1_SHAPE_NAMES) {
         const size = P1_SHAPES[shape]
@@ -1845,7 +1851,7 @@ describe('phase 2: graphics landed by applyGraphics on their words, placed and s
     await writeNote(dir, [
       '# graphic, phase 2: graphics landed on their words (docs/CLIPS.md §6.11 "The render check", §6.8, §6.9, §6.14)',
       '',
-      `A red ${P1_SHOT.width}×${P1_SHOT.height} source (red.mp4, ${P2_SOURCE_FRAMES} frames at ${FPS} fps) as two footage clips, [0, ${P2_SPLIT}) and [${P2_SPLIT}, ${P2_SOURCE_FRAMES}).`,
+      `A red ${P1_SHOT.width}×${P1_SHOT.height} source (red.mp4, ${P2_SOURCE_FRAMES} frames at ${FPS} fps) as two footage clips, [0, ${P2_SPLIT}) from in-point 0 and [${P2_SPLIT}, ${P2_SOURCE_FRAMES}) from in-point ${P2_B_IN}.`,
       `A counter on "forty" (frame ${P2_BEAT_FRAMES.counter[0]}) and a steps tree on "plan," "shoot," "edit." (frames ${P2_BEAT_FRAMES.steps.join(', ')}), hand-built KeptGraphics`,
       'through applyGraphics (no model, no settle), style clean (no dim), Pop captions on but not burnt; the fake Bakers.graphic fills the chosen third\'s',
       'content rect with grey(i), white on each arrival frame. A 20 ms 1 kHz tone (tick-1khz-20ms.wav) as the pack\'s clock_tick.wav.',
