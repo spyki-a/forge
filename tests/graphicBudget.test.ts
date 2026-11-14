@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
@@ -12,7 +12,13 @@ import {
   type BudgetCandidate
 } from '@shared/graphics/budget'
 import { NO_CLIP_NOTE } from '@shared/graphics/place'
-import { CLIPS_GRAPHIC_RULE } from '@shared/graphics/apply'
+import { CLIPS_GRAPHIC_RULE, applyGraphics, drawnText, lowerThirdFor } from '@shared/graphics/apply'
+import { graphicBeats, graphicTiming } from '@shared/graphics/beats'
+import { baselineGraphics } from '@shared/director/baselineGraphics'
+import { runGraphicsPass } from '@shared/director/run'
+import { GRAPHIC_TEMPLATES, type KeptGraphic } from '@shared/graphics/template'
+import type { Transcript } from '@shared/transcript'
+import { GRAPHICS_FIXTURE_DIR, loadGraphicsFixtures } from './eval/graphicsFixtures'
 import { COPY_RULE, ENDING_RULE, GRAPHIC_RULE, SPINE_RULE } from '@shared/director/apply'
 import type { GraphicData, GraphicSpec, GraphicTemplateId } from '@shared/graphics/template'
 import type { Keyframe } from '@shared/render/keyframes'
@@ -323,7 +329,7 @@ const overlap = (a: [number, number], b: [number, number]): boolean => a[0] < b[
  * moment or a zoom move on its footage, and onsets are 6 s apart. A screen
  * card is outside it.
  */
-function assertBudgetHolds(p: Project, candidates: Cand[]): { kept: number; dropped: number } {
+function assertBudgetHolds(p: Project, candidates: Cand[]): { kept: number; dropped: number; reasons: string[] } {
   const r = applyBudget(p, candidates)
   const spans: { span: [number, number]; onset: number }[] = []
   for (const c of p.clips) {
@@ -347,7 +353,7 @@ function assertBudgetHolds(p: Project, candidates: Cand[]): { kept: number; drop
     spans.push({ span, onset })
   }
   expect(r.kept.length + r.dropped.length).toBe(candidates.length)
-  return { kept: r.kept.length, dropped: r.dropped.length }
+  return { kept: r.kept.length, dropped: r.dropped.length, reasons: r.dropped.map((d) => d.reason) }
 }
 
 const TEMPLATES: GraphicTemplateId[] = ['counter', 'steps', 'lower-third', 'screen-card']
@@ -378,25 +384,167 @@ interface FixtureSpec {
   spec: GraphicSpec
 }
 
-/**
- * The graphics of tests/fixtures/graphics/specs.json as candidates, each at a
- * seeded start on one long footage clip. Lane T4 adds its eval fixtures'
- * settled graphics here: each fixture's project and its settled, timed
- * candidates (`settleGraphics`, then the beats and the seconds) are a case
- * of `assertBudgetHolds`.
- */
-function fixtureCases(): { p: Project; candidates: Cand[] }[] {
-  const file = JSON.parse(readFileSync(join(__dirname, 'fixtures', 'graphics', 'specs.json'), 'utf8')) as { specs: FixtureSpec[] }
-  return [1, 2, 3, 4, 5].map((seed) => {
-    const random = seeded(seed * 7919)
-    const p = project([['f', 0, 3600]], [moment('z', 'zoom-punch', 900 + Math.floor(random() * 900), 12)])
-    const candidates = file.specs.map((s) => {
-      const frames = Math.round(s.spec.seconds * FPS)
-      return { name: s.id, clipId: 'f', rule: CLIPS_GRAPHIC_RULE, start: Math.floor(random() * (3600 - frames)), duration: frames, spec: s.spec }
-    })
-    return { p, candidates }
-  })
+/** One case of the property over the fixtures: the project, its candidates, and the fixture files it was made from. */
+interface FixtureCase {
+  name: string
+  files: string[]
+  p: Project
+  candidates: Cand[]
+  /** The run's kept graphics and covered clips as `applyGraphics` takes them (none for specs.json's hand-built candidates). */
+  kept: KeptGraphic[]
+  covered: string[]
 }
+
+/** Every fixture file the property must cover: specs.json, every nested-*.json and every eval-*.json in the folder, read by name here, apart from the readers. */
+function fixtureFilesPresent(): string[] {
+  return readdirSync(GRAPHICS_FIXTURE_DIR)
+    .filter((f) => f === 'specs.json' || /^(nested|eval)-.*\.json$/u.test(f))
+    .sort()
+}
+
+/** A footage clip of a transcript's file at `start`, `inPoint` and `frames` long, its asset the transcript's own. */
+function transcriptClip(t: Transcript, id: string, start: number, inPoint: number, frames: number): Clip {
+  return clip(id, 'v1', start, frames, { assetId: t.assetId, inPoint })
+}
+
+/** The frames a transcript's words run over at 30 fps, and one second more. */
+const spokenFrames = (t: Transcript): number => Math.ceil((Math.max(t.durationMs, ...t.words.map((w) => w.endMs)) / 1000) * FPS) + FPS
+
+/** A project of footage clips on V1 over transcripts (`[transcript, clip]`), each asset with the transcript's id and `speaker`. */
+function transcriptProject(shots: [Transcript, Clip][], speaker: string | undefined, extra: Clip[] = []): Project {
+  const base = emptyProject('budget fixtures')
+  return {
+    ...base,
+    settings: { ...base.settings, fps: FPS },
+    assets: shots.map(([t]) => ({ id: t.assetId, path: `/m/${t.assetId}.mp4`, name: `${t.assetId}.mp4`, kind: 'video' as const, durationFrames: 99999, width: 1080, height: 1920, fps: FPS, hasVideo: true, hasAudio: true, size: 1, ...(speaker ? { speaker } : {}) })),
+    clips: [...shots.map(([, c]) => c), ...extra],
+    transcripts: Object.fromEntries(shots.map(([t]) => [t.assetId, t]))
+  }
+}
+
+/**
+ * A run with no model over `p`'s footage clips (the baseline of §6.10,
+ * through `runGraphicsPass`, as Find graphics runs it), each kept graphic
+ * and, with a Speaker, each clip's lower third, timed as `applyGraphics`
+ * times them (`graphicBeats`, `graphicTiming`; a proposal set aside, as
+ * step 4 sets it aside) into budget candidates.
+ */
+async function baselineCandidates(p: Project): Promise<{ candidates: Cand[]; kept: KeptGraphic[]; covered: string[] }> {
+  const footage = p.clips.filter((c) => c.trackId === 'v1')
+  const run = await runGraphicsPass(p, footage, async () => ({ answer: { error: 'no model answered' }, model: null }), { baseline: baselineGraphics })
+  const kept = run.pair.kept
+  const covered = footage.map((c) => c.id)
+  const lower = footage.flatMap((c) => {
+    const l = lowerThirdFor(p, c)
+    return l ? [l] : []
+  })
+  const candidates: Cand[] = []
+  ;[...lower, ...kept].forEach((k, i) => {
+    const c = p.clips.find((x) => x.id === k.clipId)!
+    const data = k.candidate.data
+    if (k.candidate.proposal) return
+    const beats = graphicBeats(p, c, p.transcripts[k.assetId], k.candidate.beatWords, { spread: data.template !== 'quote' })
+    if (beats === null) return
+    const timing = graphicTiming(c, beats, GRAPHIC_TEMPLATES[data.template]!, drawnText(data), FPS)
+    if (!timing.ok) return
+    candidates.push({ name: `${data.template} ${i} on ${c.id}`, clipId: c.id, rule: CLIPS_GRAPHIC_RULE, start: timing.start, duration: timing.duration, spec: { data, beats: timing.beats } })
+  })
+  return { candidates, kept, covered }
+}
+
+/** Zoom keys on footage clip `c` that move from 1 to 1.2 over six frames starting three frames into timeline span `at`. */
+function zoomOver(c: Clip, at: [number, number]): Clip {
+  const a = at[0] - c.start + 3
+  return { ...c, keyframes: { zoom: [{ frame: 0, value: 1 }, { frame: a, value: 1 }, { frame: a + 6, value: 1.2 }] } }
+}
+
+/**
+ * The property's cases over every fixture (§6.12: "no two graphics overlap
+ * in time, none sits over a zoom punch", over every fixture):
+ *
+ * - every transcript fixture (the nested-*.json today, and every eval-*.json
+ *   the owner adds, through piece 2's reader) alone, at two cut lengths (the
+ *   whole talk; two seconds off its head and one off its tail), with no
+ *   zoom, and again with a zoom move put under its first candidate; and all
+ *   of them back to back on one timeline, each asset with a Speaker, so the
+ *   lower thirds and the spacing across clips are read;
+ * - specs.json's 27 graphics, which have no transcript, as hand-built
+ *   candidates at seeded starts on one footage clip at two cut lengths (120 s
+ *   and 60 s), with a zoom punch, and again with a zoom move as well.
+ */
+async function fixtureCases(): Promise<FixtureCase[]> {
+  const fixtures = loadGraphicsFixtures()
+  const talks = [...fixtures.nested, ...fixtures.eval].map((f) => ({ file: f.file, t: f.transcript }))
+  const out: FixtureCase[] = []
+  for (const { file, t } of talks) {
+    const whole = spokenFrames(t)
+    for (const [cut, inPoint, frames] of [['whole', 0, whole], ['cut', 2 * FPS, whole - 3 * FPS]] as const) {
+      const plain = transcriptProject([[t, transcriptClip(t, 'f', 0, inPoint, frames)]], undefined)
+      const made = await baselineCandidates(plain)
+      out.push({ name: `${file}, ${cut}`, files: [file], p: plain, ...made })
+      if (made.candidates.length === 0) continue
+      const first = made.candidates[0]
+      const zoomed = { ...plain, clips: plain.clips.map((c) => (c.id === 'f' ? zoomOver(c, [first.start, first.start + first.duration]) : c)) }
+      out.push({ name: `${file}, ${cut}, zoom under its first graphic`, files: [file], p: zoomed, ...(await baselineCandidates(zoomed)) })
+    }
+  }
+  if (talks.length > 0) {
+    let at = 0
+    const shots = talks.map(({ t }, i): [Transcript, Clip] => {
+      const c = transcriptClip(t, `f${i}`, at, 0, spokenFrames(t))
+      at += c.duration
+      return [t, c]
+    })
+    const joined = transcriptProject(shots, 'Asha')
+    out.push({ name: 'every transcript fixture back to back, with a Speaker', files: talks.map((x) => x.file), p: joined, ...(await baselineCandidates(joined)) })
+  }
+  const specs = (JSON.parse(readFileSync(join(GRAPHICS_FIXTURE_DIR, 'specs.json'), 'utf8')) as { specs: FixtureSpec[] }).specs
+  for (const length of [3600, 1800]) {
+    for (const seed of [1, 2, 3, 4, 5]) {
+      const random = seeded(seed * 7919 + length)
+      const punch = moment('z', 'zoom-punch', Math.floor(length / 4) + Math.floor(random() * (length / 4)), 12)
+      const candidates = specs.map((s) => {
+        const frames = Math.round(s.spec.seconds * FPS)
+        return { name: s.id, clipId: 'f', rule: CLIPS_GRAPHIC_RULE, start: Math.floor(random() * (length - frames)), duration: frames, spec: s.spec }
+      })
+      const p = project([['f', 0, length]], [punch])
+      out.push({ name: `specs.json, ${length / FPS} s, seed ${seed}`, files: ['specs.json'], p, candidates, kept: [], covered: [] })
+      const zoomed = { ...p, clips: p.clips.map((c) => (c.id === 'f' ? zoomOver(c, [candidates[0].start, candidates[0].start + candidates[0].duration]) : c)) }
+      out.push({ name: `specs.json, ${length / FPS} s, seed ${seed}, zoom under ${candidates[0].name}`, files: ['specs.json'], p: zoomed, candidates, kept: [], covered: [] })
+    }
+  }
+  return out
+}
+
+/**
+ * Independent of budget.ts and apply.ts: the graphics landed on a project
+ * hold the property — no two overlap in time, onsets 6 s apart, none over a
+ * zoom-punch moment or a zoom move on any footage clip (V1) — a screen card
+ * apart.
+ */
+function assertLandedHolds(p: Project, name: string): number {
+  const graphics = p.clips.filter((c) => c.graphic && c.graphic.data.template !== 'screen-card')
+  const punches = p.clips.filter((c) => c.moment?.kind === 'zoom-punch').map((c): [number, number] => [c.start, c.start + c.duration])
+  for (const f of p.clips.filter((c) => c.trackId === 'v1')) {
+    const keys = f.keyframes?.zoom ?? []
+    keys.slice(1).forEach((key, i) => {
+      if (key.value !== keys[i].value) punches.push([Math.max(f.start, f.start + keys[i].frame), Math.min(f.start + f.duration, f.start + key.frame)])
+    })
+  }
+  graphics.forEach((g, i) => {
+    const span: [number, number] = [g.start, g.start + g.duration]
+    const onset = g.start / FPS + Math.min(...g.graphic!.beats)
+    for (const q of punches) expect(overlap(span, q), `${name}: ${g.graphic!.data.template} over a punch`).toBe(false)
+    for (const h of graphics.slice(i + 1)) {
+      expect(overlap(span, [h.start, h.start + h.duration]), `${name}: two graphics overlap`).toBe(false)
+      expect(Math.abs(onset - (h.start / FPS + Math.min(...h.graphic!.beats))) >= 6 - 1e-6, `${name}: two onsets within 6 s`).toBe(true)
+    }
+  })
+  return graphics.length
+}
+
+/** `momentSeed(frame, index)` worked apart from apply2.ts, in BigInt: (frame + 1) × 2654435761 + (index + 1) × 40503, mod 2^32. */
+const seedByHand = (frame: number, index: number): number => Number((BigInt(frame + 1) * 2654435761n + BigInt(index + 1) * 40503n) % 2n ** 32n)
 
 describe('applyBudget, the property (§6.12)', () => {
   it('over 400 seeded sets: no two kept graphics overlap, none is within 6 s of another, none sits over a punch', () => {
@@ -413,14 +561,65 @@ describe('applyBudget, the property (§6.12)', () => {
     expect(dropped).toBeGreaterThan(400)
   })
 
-  it('over the 27 fixture specs, five seeded layouts', () => {
-    const cases = fixtureCases()
-    expect(cases).toHaveLength(5)
+  it('over every fixture: each fixture file is a case, every case holds, and the spacing and the zoom rules each drop something', async () => {
+    const files = fixtureFilesPresent()
+    const cases = await fixtureCases()
+    // A silent zero cannot pass as covered: every fixture file in the folder is in some case, and there are at least as many cases.
+    expect(files).toContain('specs.json')
+    expect(files.filter((f) => f.startsWith('nested-')).length).toBeGreaterThanOrEqual(3)
+    expect(cases.length).toBeGreaterThanOrEqual(files.length)
+    expect([...new Set(cases.flatMap((c) => c.files))].sort()).toEqual(files)
+    for (const c of cases.filter((x) => x.files[0] === 'specs.json')) expect(c.candidates, c.name).toHaveLength(27)
     let kept = 0
-    for (const { p, candidates } of cases) {
-      expect(candidates).toHaveLength(27)
-      kept += assertBudgetHolds(p, candidates).kept
+    const reasons: string[] = []
+    for (const c of cases) {
+      const n = assertBudgetHolds(c.p, c.candidates)
+      kept += n.kept
+      reasons.push(...n.reasons)
     }
-    expect(kept).toBeGreaterThan(5)
+    // Every transcript fixture gives the budget a graphic to read; the rules under test each drop one.
+    for (const f of files.filter((x) => x !== 'specs.json')) {
+      expect(cases.filter((c) => c.files.length === 1 && c.files[0] === f).some((c) => c.candidates.length > 0), `${f}: a candidate`).toBe(true)
+    }
+    expect(kept).toBeGreaterThan(cases.length)
+    expect(reasons.filter((r) => r === TOO_CLOSE_REASON).length, 'spacing drops').toBeGreaterThan(0)
+    expect(reasons.filter((r) => r.startsWith('over a zoom punch at ')).length, 'zoom drops').toBeGreaterThanOrEqual(10)
+    const evals = files.filter((f) => f.startsWith('eval-')).length
+    process.stderr.write(
+      `graphicBudget, the property over the fixtures: ${cases.length} cases over ${files.length} files (${files.join(', ')}); ${kept} kept; ` +
+        (evals === 0 ? 'no eval-*.json yet (the ten eval transcripts are the owner’s recordings), so none of them is a case\n' : `${evals} eval-*.json among them\n`)
+    )
+  })
+
+  it.skipIf(loadGraphicsFixtures().eval.length === 0)('over every eval-*.json the owner has added (skipped while there is none: they are the owner’s recordings)', async () => {
+    const evals = fixtureFilesPresent().filter((f) => f.startsWith('eval-'))
+    const cases = await fixtureCases()
+    for (const f of evals) {
+      const own = cases.filter((c) => c.files.length === 1 && c.files[0] === f)
+      expect(own.length, f).toBeGreaterThanOrEqual(2)
+      for (const c of own) assertBudgetHolds(c.p, c.candidates)
+    }
+  })
+
+  it('applyGraphics on every transcript fixture case lands graphics that hold the property, each seeded from its start and landing index', async () => {
+    const cases = (await fixtureCases()).filter((c) => !c.files.includes('specs.json'))
+    let landed = 0
+    let seeds = 0
+    for (const c of cases) {
+      let n = 0
+      const ids = (prefix: string): string => `${prefix}-${++n}`
+      const out = applyGraphics(c.p, c.kept, c.covered, CLIPS_GRAPHIC_RULE, { fps: FPS, newId: ids })
+      landed += assertLandedHolds(out.project, c.name)
+      out.clipIds.forEach((id, i) => {
+        const g = out.project.clips.find((x) => x.id === id)!
+        expect(g.graphic!.seed, `${c.name}: ${id}`).toBe(seedByHand(g.start, i))
+        seeds += 1
+      })
+    }
+    // Every case with no zoom put under it lands at least one graphic (measured at piece 3: 8 landed over 12 cases, 6 of them zoom-free).
+    expect(landed).toBeGreaterThanOrEqual(cases.filter((c) => !c.name.includes('zoom') && c.candidates.length > 0).length)
+    expect(seeds).toBe(landed)
+    // The seed worked by hand once, so the BigInt rule itself is pinned: frame 15, index 0 → 16 × 2654435761 + 40503 mod 2^32.
+    expect(seedByHand(15, 0)).toBe(3816307015)
   })
 })

@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest'
+import { readdirSync } from 'node:fs'
+import { join } from 'node:path'
 import { claimToken, numbersIn, type CanonNumber } from '@shared/director/claims'
-import { settleGraphics, type GraphicsMenu, type SettledGraphics } from '@shared/director/run'
+import { baselineGraphics } from '@shared/director/baselineGraphics'
+import { graphicsMenuFor, settleGraphics, type GraphicsMenu, type SettledGraphics } from '@shared/director/run'
 import type { AnswerGraphic } from '@shared/director/validateGraphics'
 import { drawListAt, graphicFits } from '@shared/graphics/drawList'
 import { graphicMovingFrames } from '@shared/graphics/frame'
@@ -8,6 +11,7 @@ import type { DrawItem, DrawList, TextItem, TextMeasure } from '@shared/graphics
 import { resolveGraphicStyle } from '@shared/graphics/style'
 import { GRAPHIC_TEMPLATES, type GraphicCandidate, type GraphicData, type GraphicSpec } from '@shared/graphics/template'
 import type { Segment, Transcript, Word } from '@shared/transcript'
+import { loadGraphicsFixtures, projectForTranscript } from './eval/graphicsFixtures'
 
 /*
  * docs/CLIPS.md §6.7's second test, the property test, and §6.12's phase-2
@@ -1344,6 +1348,170 @@ describe('the adversarial generators: each false graphic is dropped, every case,
         got.connector === (reference.kept[0].data as Extract<GraphicData, { template: 'steps' }>).connector
       if (!ok) failures.push(`written ${written.join()}, app ${appParents.join()}: ${JSON.stringify({ rejected: s.rejected, kept: s.kept.map((k) => k.data) })} — ${show(c)}`)
       else if (grounds(got, t, s.kept[0].sentence) !== null || drawnGrounds(s.kept[0], t) !== null) failures.push(`the repaired steps do not ground — ${show(c)}`)
+    }
+    noFailures(failures)
+    expect(made).toBeGreaterThanOrEqual(FLOOR_ADVERSARIAL)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// The baseline route (§6.10, lane T4 piece 3): the same bar over what the
+// baseline makes. A run with no model settles every window through
+// `settleGraphics(..., { baseline: baselineGraphics })`, so what ships is the
+// baseline's candidates after `validateBaseline` and the spacing.
+
+/** What the run gets when no model answers: the reason a rejected window carries. */
+const NO_MODEL: { error: string } = { error: 'no model answered' }
+
+/** One talk the baseline is run over: its transcript, the menus the app would ask it in, and where it came from. */
+interface BaselineTalk {
+  name: string
+  t: Transcript
+  menus: GraphicsMenu[]
+  /** Written true (the generator's true talks, the owner's or the build's fixtures): no negator put in. */
+  truthful: boolean
+}
+
+/** The generator's true talks, as they are. */
+const TRUE_TALKS: BaselineTalk[] = TRUE_CASES.map((c) => {
+  const t = transcriptOf(c)
+  return { name: show(c), t, menus: [menuOf(t)], truthful: true }
+})
+
+/** The same talks with a negator put at the start of the fact's bound clause (the adversarial generator's own edit, seeded by the case). */
+const NEGATED_TALKS: BaselineTalk[] = TRUE_CASES.flatMap((c) => {
+  if (!c.pairs && !c.runs) return []
+  const rng = new Rng(c.seed)
+  const words = c.sentences[c.fact]
+  const at = c.pairs ? rng.pick(c.pairs).numAt : rng.pick(c.runs!).at
+  const n = withFact(c, insertAt(words, clauseStart(words, at), NEGATOR[c.lang]))
+  const t = transcriptOf(n)
+  return [{ name: `negated: ${show(n)}`, t, menus: [menuOf(t)], truthful: false }]
+})
+
+/** Every graphics fixture with a transcript in tests/fixtures/graphics (the nested set today; the owner's eval-*.json when added), read by piece 2's reader, in the menus the app builds. */
+const FIXTURE_FILES = loadGraphicsFixtures()
+const FIXTURE_TALKS: BaselineTalk[] = [...FIXTURE_FILES.nested, ...FIXTURE_FILES.eval].map((f) => {
+  const { project, clip } = projectForTranscript(f.transcript)
+  return { name: f.file, t: f.transcript, menus: graphicsMenuFor(project, clip, f.transcript), truthful: true }
+})
+
+const BASELINE_TALKS = [...TRUE_TALKS, ...NEGATED_TALKS, ...FIXTURE_TALKS]
+
+/** Each talk's windows: the baseline's raw candidates, and what settles with no model. */
+const BASELINE_RUNS = BASELINE_TALKS.map((talk) => ({
+  talk,
+  windows: talk.menus.map((menu) => ({ menu, raw: baselineGraphics(talk.t, menu), settled: settleGraphics(NO_MODEL, menu, talk.t, { baseline: baselineGraphics }) }))
+}))
+
+/** The fewest kept baseline graphics per template over every talk (measured at piece 3: keyword 818, ring 182, counter 30, steps 1, from a nested fixture). */
+const FLOOR_BASELINE: Partial<Record<GraphicData['template'], number>> = { keyword: 300, ring: 150, counter: 20, steps: 1 }
+
+describe('the property on the baseline route: zero ungrounded, mispaired or de-negated graphics ship with no model (§6.10, §6.12)', () => {
+  it('runs over the generated talks in three languages, the same talks negated, and every fixture with a transcript', () => {
+    expect(TRUE_TALKS.length).toBe(LANGS.length * TEMPLATES.length * PER)
+    expect(NEGATED_TALKS.length).toBeGreaterThanOrEqual(FLOOR_ADVERSARIAL)
+    // Every nested-*.json and eval-*.json in the folder is a talk here: a silent zero cannot pass as covered.
+    const files = readdirSync(join(__dirname, 'fixtures', 'graphics')).filter((f) => /^(nested|eval)-.*\.json$/u.test(f))
+    expect(files.length).toBeGreaterThanOrEqual(3)
+    expect(FIXTURE_TALKS.map((x) => x.name).sort()).toEqual(files.sort())
+    const evals = files.filter((f) => f.startsWith('eval-')).length
+    process.stderr.write(
+      `graphicsValidator, the baseline route: ${TRUE_TALKS.length} generated talks, ${NEGATED_TALKS.length} negated, ${FIXTURE_TALKS.length} fixture talks (${FIXTURE_TALKS.map((x) => x.name).join(', ')})` +
+        (evals === 0 ? '; no eval-*.json yet (the ten eval transcripts are the owner’s recordings), so none of them is run\n' : `; ${evals} eval-*.json\n`)
+    )
+  })
+
+  it('every window settles on the baseline path, and every graphic it keeps is the baseline’s', () => {
+    const failures: string[] = []
+    for (const { talk, windows } of BASELINE_RUNS) {
+      for (const w of windows) {
+        if (!w.settled.baseline || w.settled.rejected !== NO_MODEL.error) failures.push(`not the baseline path — ${talk.name}`)
+        for (const k of w.settled.kept) if (k.source !== 'baseline') failures.push(`kept a ${k.source} graphic — ${talk.name}`)
+      }
+    }
+    noFailures(failures)
+  })
+
+  it('every graphic that ships grounds by the independent matcher, as data and as the painter draws it', () => {
+    const failures: string[] = []
+    const kept: Record<string, number> = {}
+    for (const { talk, windows } of BASELINE_RUNS) {
+      for (const k of windows.flatMap((w) => w.settled.kept)) {
+        kept[k.data.template] = (kept[k.data.template] ?? 0) + 1
+        const why = grounds(k.data, talk.t, k.sentence) ?? drawnGrounds(k, talk.t)
+        if (why !== null) failures.push(`${why}: ${JSON.stringify(k.data)} on ${k.sentence} — ${talk.name}`)
+      }
+    }
+    process.stderr.write(`graphicsValidator, the baseline route: kept ${JSON.stringify(kept)}\n`)
+    noFailures(failures)
+    for (const [template, floor] of Object.entries(FLOOR_BASELINE)) expect(kept[template] ?? 0, `${template}: ${kept[template] ?? 0} baseline graphics kept`).toBeGreaterThanOrEqual(floor)
+  })
+
+  it('each baseline candidate validated alone on the route (no spacing or cap to hide it behind an earlier one) ships only if it grounds, as data and as drawn', () => {
+    const failures: string[] = []
+    let made = 0
+    for (const { talk, windows } of BASELINE_RUNS) {
+      for (const w of windows) {
+        for (const r of w.raw) {
+          made += 1
+          const alone = settleGraphics(NO_MODEL, w.menu, talk.t, { baseline: () => [r] })
+          for (const k of alone.kept) {
+            const why = grounds(k.data, talk.t, k.sentence) ?? drawnGrounds(k, talk.t)
+            if (why !== null) failures.push(`${why}: ${JSON.stringify(k.data)} on ${k.sentence} — ${talk.name}`)
+          }
+        }
+      }
+    }
+    noFailures(failures)
+    expect(made).toBeGreaterThanOrEqual(FLOOR_ADVERSARIAL)
+  })
+
+  it('the validator has work on this route: over the negated talks the baseline proposes graphics the matcher refuses, and none of them ships', () => {
+    let refused = 0
+    const shipped: string[] = []
+    for (const { talk, windows } of BASELINE_RUNS.filter((r) => !r.talk.truthful)) {
+      for (const w of windows) {
+        for (const r of w.raw) {
+          if (grounds(r.data, talk.t, r.sentence) === null) continue
+          refused += 1
+          if (w.settled.kept.some((k) => k.sentence === r.sentence && k.data.template === r.data.template)) shipped.push(`${JSON.stringify(r.data)} — ${talk.name}`)
+        }
+      }
+    }
+    noFailures(shipped)
+    expect(refused, `${refused} false baseline candidates`).toBeGreaterThanOrEqual(FLOOR_ADVERSARIAL)
+  })
+
+  it('on a true English talk the baseline proposes nothing the matcher refuses: each number paired with its own label, no word lifted from elsewhere', () => {
+    const failures: string[] = []
+    let made = 0
+    for (const { talk, windows } of BASELINE_RUNS.filter((r) => r.talk.truthful && r.talk.t.language === 'en')) {
+      for (const r of windows.flatMap((w) => w.raw)) {
+        made += 1
+        const why = grounds(r.data, talk.t, r.sentence)
+        if (why !== null) failures.push(`${why}: ${JSON.stringify(r.data)} on ${r.sentence} — ${talk.name}`)
+      }
+    }
+    noFailures(failures)
+    expect(made).toBeGreaterThanOrEqual(FLOOR_ADVERSARIAL)
+  })
+
+  it('in every language a baseline number’s value and label are said in the sentence it cites (no label from the next sentence)', () => {
+    const failures: string[] = []
+    let made = 0
+    for (const { talk, windows } of BASELINE_RUNS) {
+      for (const r of windows.flatMap((w) => w.raw)) {
+        if (r.data.template !== 'counter' && r.data.template !== 'ring') continue
+        made += 1
+        const seg = talk.t.segments.find((s) => s.id === r.sentence)!
+        const said = phraseTokens(talk.t.words.filter((w) => w.index >= seg.wordStart && w.index <= seg.wordEnd).map((w) => w.text).join(' '))
+        const value = numbersIn(phraseTokens(r.data.value)).map((x) => x.value.n)
+        const heard = numbersIn(said).map((x) => x.value.n)
+        if (value.length !== 1 || !heard.includes(value[0])) failures.push(`value '${r.data.value}' is not said in ${r.sentence} — ${talk.name}`)
+        const label = phraseTokens(r.data.label)
+        if (label.length === 0 || !label.every((x) => said.includes(x))) failures.push(`label '${r.data.label}' is not said in ${r.sentence} — ${talk.name}`)
+      }
     }
     noFailures(failures)
     expect(made).toBeGreaterThanOrEqual(FLOOR_ADVERSARIAL)

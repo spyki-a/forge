@@ -6,7 +6,9 @@ import {
   BASELINE_WHY,
   baselineGraphics
 } from '@shared/director/baselineGraphics'
-import { settleGraphics, type GraphicsMenu } from '@shared/director/run'
+import { runGraphicsPass, settleGraphics, type GraphicsMenu } from '@shared/director/run'
+import { CLIPS_GRAPHIC_RULE, applyGraphics } from '@shared/graphics/apply'
+import { DEFAULT_COLOR, DEFAULT_TRANSFORM, emptyProject, type Clip, type Project } from '@shared/timeline'
 import { MAX_GRAPHICS, type AnswerGraphic } from '@shared/director/schemaGraphics'
 import { GRAPHIC_KEPT_CHARS, validateBaseline, validateGraphics } from '@shared/director/validateGraphics'
 import type { GraphicCandidate, GraphicData, GraphicTemplateId } from '@shared/graphics/template'
@@ -336,5 +338,69 @@ describe('the nested English fixtures (§6.10\'s nested set; tree.ts on the base
     expect(two.parents).toEqual([-1, -1, 1, 1, 1, -1])
     // nested-en-3: "The first way …", "The second way …" open with "The", not an ordinal: no steps.
     expect(stepsOf(nested(3).transcript)).toEqual([])
+  })
+})
+
+describe('the proposal bar on the baseline route (§6.6, §6.12): every number heard from an approximate source waits for Keep', () => {
+  /**
+   * Two sentences 42 s apart on a 50 s clip, so the spacing and the
+   * per-20 s count keep both when they are trusted: a percent (the
+   * baseline's ring) and a currency amount (its counter). The baseline
+   * makes no bars (§6.10's four rules), so ring and counter are every
+   * numeric template it can land. Each number's word is unsure (0.3) when
+   * `unsure`; every other word is sure.
+   */
+  const SENTENCES: [number, string][] = [
+    [0, 'We saw 40% of couples return.'],
+    [42_000, 'We charged $1,200 for the album.']
+  ]
+  function heard(model: string, approximate: boolean, unsure: boolean): Transcript {
+    const words: Word[] = []
+    const segments: Segment[] = []
+    SENTENCES.forEach(([at, text], k) => {
+      const start = words.length
+      text.split(' ').forEach((w, j) => {
+        const sure = !(unsure && /\d/u.test(w))
+        words.push({ index: words.length, text: w, startMs: at + j * 400, endMs: at + j * 400 + 350, confidence: sure ? 0.95 : 0.3 })
+      })
+      segments.push({ id: `s${String(k).padStart(2, '0')}`, startMs: at, endMs: words[words.length - 1].endMs, text, wordStart: start, wordEnd: words.length - 1 })
+    })
+    return { assetId: 'talk', language: 'en', model, durationMs: 50_000, words, segments, ...(approximate ? { approximate: true } : {}) }
+  }
+  function projectOf(t: Transcript): { project: Project; clip: Clip } {
+    const base = emptyProject('proposals')
+    const clip: Clip = { id: 'shot', assetId: 'talk', trackId: 'v1', start: 0, duration: 1500, inPoint: 0, volume: 1, transform: { ...DEFAULT_TRANSFORM }, color: { ...DEFAULT_COLOR } }
+    const asset = { id: 'talk', path: '/m/talk.mp4', name: 'talk.mp4', kind: 'video' as const, durationFrames: 1500, width: 1080, height: 1920, fps: 30, hasVideo: true, hasAudio: true, size: 1 }
+    return { clip, project: { ...base, settings: { ...base.settings, fps: 30 }, assets: [asset], clips: [clip], transcripts: { talk: t } } }
+  }
+  /** Find graphics with no model, as the store runs it: the baseline through `runGraphicsPass`, then `applyGraphics`. */
+  async function find(t: Transcript): Promise<Project> {
+    const { project, clip } = projectOf(t)
+    const run = await runGraphicsPass(project, [clip], async () => ({ answer: { error: 'No model is set up' }, model: null }), { baseline: baselineGraphics })
+    let n = 0
+    return applyGraphics(project, run.pair.kept, [], CLIPS_GRAPHIC_RULE, { fps: 30, newId: (prefix) => `${prefix}-${++n}` }).project
+  }
+  const NUMERIC = ['counter', 'ring']
+  const landedNumbers = (p: Project): string[] => p.clips.flatMap((c) => (c.graphic && NUMERIC.includes(c.graphic.data.template) ? [c.graphic.data.template] : []))
+
+  it('a YouTube uploader’s track, YouTube’s speech track and an unsure Whisper word: every ring and counter is a proposal, none lands without Keep', async () => {
+    const sources: [string, Transcript][] = [
+      ['youtube-lines', heard('youtube-lines', true, false)],
+      ['youtube-asr', heard('youtube-asr', false, false)],
+      ['whisper-unsure', heard('whisper-small', false, true)]
+    ]
+    for (const [wordSource, t] of sources) {
+      const p = await find(t)
+      expect(landedNumbers(p), wordSource).toEqual([])
+      const waiting = p.graphicProposals ?? []
+      expect(waiting.map((w) => w.spec.data.template).sort(), wordSource).toEqual(['counter', 'ring'])
+      for (const w of waiting) expect(w.spec.proposal, wordSource).toEqual({ reason: 'check-the-number', wordSource })
+    }
+  })
+
+  it('and with sure Whisper words the same talk lands both, so the case above is not empty by accident', async () => {
+    const p = await find(heard('whisper-small', false, false))
+    expect(landedNumbers(p).sort()).toEqual(['counter', 'ring'])
+    expect(p.graphicProposals ?? []).toEqual([])
   })
 })

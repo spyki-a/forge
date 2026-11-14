@@ -4,6 +4,7 @@ import { connectorFor, parentsValid, treeParents, SUB_COUNT_CUES } from '@shared
 import { claimToken } from '@shared/director/claims'
 import { GRAPHIC_TEMPLATES } from '@shared/graphics/template'
 import type { Transcript, Word } from '@shared/transcript'
+import { loadGraphicsFixtures } from './eval/graphicsFixtures'
 
 /*
  * graphics/tree.ts (docs/CLIPS.md §6.2, "The tree"; the test as §6.2 words
@@ -199,6 +200,45 @@ describe('treeParents on the English nested-enumeration fixtures (§6.10)', () =
   it('reads a count in Devanagari digits as its number', () => {
     const words = wordsOf('Plan, which has २ parts: budget and timeline. Then shoot.')
     expect(treeParents(['plan', 'budget', 'timeline', 'shoot'].map((label) => ({ label })), '', words)).toEqual([-1, 0, 0, -1])
+  })
+})
+
+describe('treeParents on every nested fixture, as the eval reads them (piece 2’s reader; §6.10, §6.12)', () => {
+  const fixtures = loadGraphicsFixtures().nested
+  /** The computed parents of a fixture's items, over the stretch from its first item's first word (as above). */
+  const computed = (f: (typeof fixtures)[number]): number[] => {
+    const first = claimToken(f.items[0].split(/\s+/)[0])
+    const from = f.transcript.words.findIndex((w) => claimToken(w.text) === first)
+    return treeParents(
+      f.items.map((label) => ({ label })),
+      f.title,
+      f.transcript.words.slice(Math.max(0, from))
+    )
+  }
+
+  it('every English one gives its expected parent list exactly, and the reader finds at least the three in the repo', () => {
+    const english = fixtures.filter((f) => f.language === 'en')
+    expect(english.map((f) => f.file)).toEqual(expect.arrayContaining(['nested-en-1.json', 'nested-en-2.json', 'nested-en-3.json']))
+    for (const f of english) {
+      const parents = computed(f)
+      expect(parents, f.file).toEqual(f.parents)
+      expect(parentsValid(parents), f.file).toBe(true)
+      expect(connectorFor(parents), f.file).toBe('tree')
+    }
+  })
+
+  it('a Hindi or Telugu one is scored and printed, not passed (§6.12: v1’s sub-count cues are English only)', () => {
+    const other = fixtures.filter((f) => f.language !== 'en')
+    const rows = other.map((f) => {
+      const parents = computed(f)
+      expect(parentsValid(parents), f.file).toBe(true)
+      return `${f.file}: ${JSON.stringify(parents)} against ${JSON.stringify(f.parents)} (${parents.join() === f.parents.join() ? 'equal' : 'differs'})`
+    })
+    process.stderr.write(
+      rows.length === 0
+        ? 'graphicTree: no Hindi or Telugu nested fixture yet (they are the owner’s), so none is scored\n'
+        : `graphicTree, Hindi and Telugu nested fixtures, recorded not passed: ${rows.join('; ')}\n`
+    )
   })
 })
 

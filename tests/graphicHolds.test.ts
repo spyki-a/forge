@@ -4,6 +4,7 @@ import { GRAPHIC_TEMPLATES, type GraphicData, type GraphicSpec, type TemplateDef
 import { LEAD_S, TAIL_S, graphicSeconds, readingSeconds } from '@shared/graphics/beats'
 import { EXIT_S } from '@shared/graphics/frame'
 import { graphemeCount } from '@shared/ingest/captions'
+import { loadGraphicsFixtures } from './eval/graphicsFixtures'
 
 /*
  * M16, the reading holds (docs/CLIPS.md §6.2, "Reading holds (M16)"; §6.15's
@@ -104,6 +105,21 @@ describe('graphicHolds (M16): every template’s longest fixture label is read i
     }
     process.stderr.write(`graphicHolds (M16): ${rows.join('; ')}\n`)
     expect(rows).toHaveLength(TEMPLATES.length * LANGUAGES.length)
+  })
+
+  it('every nested fixture (piece 2’s reader: the three English ones today, the owner’s Hindi and Telugu ones when added), drawn as the steps its title and items make, is read inside steps’ seconds', () => {
+    const nested = loadGraphicsFixtures().nested
+    expect(nested.length).toBeGreaterThanOrEqual(3)
+    const def = GRAPHIC_TEMPLATES.steps!
+    const rows: string[] = []
+    for (const f of nested) {
+      const data: GraphicData = { template: 'steps', title: f.title, items: f.items.map((label, i) => ({ label, parent: f.parents[i] })), connector: 'tree' }
+      const fixture: Fixture = { id: f.id, shape: 'steps', language: f.language as Fixture['language'], spec: { data, seconds: def.seconds.default, beats: [LEAD_S], place: { auto: true, third: 'middle' }, seed: 1, version: 1 } }
+      expect(holdProblem(fixture, def), f.file).toBeNull()
+      const text = drawnText(data)
+      rows.push(`${f.id}: ${graphemeCount(text)} graphemes → ${(LEAD_S + readingSeconds(text) + EXIT_S).toFixed(2)} s of ${def.seconds.max}`)
+    }
+    process.stderr.write(`graphicHolds (M16), the nested fixtures: ${rows.join('; ')}\n`)
   })
 
   it('a template whose maximum is short fails, naming the label', () => {
