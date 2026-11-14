@@ -12,7 +12,14 @@ import { EXIT_S, beatFrame, drawnGraphicAsset, graphicExitKeys, graphicMovingFra
 import { graphicBox } from '@shared/graphics/drawList'
 import { CLEAN_GRAPHIC_STYLE } from '@shared/graphics/style'
 import type { Drawer, Rect, TextMeasure } from '@shared/graphics/items'
-import type { GraphicSpec } from '@shared/graphics/template'
+import type { GraphicSpec, KeptGraphic } from '@shared/graphics/template'
+import { contentRect } from '@shared/graphics/templates/layout'
+import { CLIPS_GRAPHIC_RULE, applyGraphics } from '@shared/graphics/apply'
+import { GRAPHIC_SOUND_LANE_NAME } from '@shared/graphics/sound'
+import type { SoundPack } from '@shared/director/soundRoles'
+import type { Third } from '@shared/reframe/freeSpace'
+import { SUBJECT_TRACK_VERSION, type SubjectTrack, type UnitRect } from '@shared/reframe/types'
+import { segmentIntoSentences, type Word } from '@shared/transcript'
 import { M19_BAR, chromaAlong, strokeBandIndex, strokeLines, type ChromaReading, type StrokeLine } from '../../src/renderer/src/harness/graphicMeasure'
 import { FFMPEG, OUTPUT_ROOT, makeColour, outputDir, run, saveFrame, writeNote } from './output'
 import { ciNotice } from './helperDiag'
@@ -473,9 +480,18 @@ const P1_EDGE_CONTRAST = 40
 
 const p1Grey = (i: number): number => 20 + 15 * (i % 12)
 
-/** The spec's place rect in pixels of `size`. Phase 1's spec is placed by hand; `auto` is phase 2's layout. */
+/**
+ * The spec's place rect in pixels of `size`, each edge rounded: phase 1's box
+ * placed by hand, or for `place.auto` (phase 2) the chosen third's content
+ * rect of §6.2's layout (`contentRect`, the rect every drawer is built to).
+ */
 function placeRect(spec: GraphicSpec, size: { width: number; height: number }): Rect {
-  if (spec.place.auto) throw new Error('the phase 1 fake draws a placed box only')
+  if (spec.place.auto) {
+    const c = contentRect(spec.place, size)
+    const x0 = Math.round(c.x)
+    const y0 = Math.round(c.y)
+    return { x: x0, y: y0, width: Math.round(c.x + c.width) - x0, height: Math.round(c.y + c.height) - y0 }
+  }
   const b = spec.place.box
   const x0 = Math.round(b.x * size.width)
   const y0 = Math.round(b.y * size.height)
@@ -1393,3 +1409,451 @@ if (STROKE_FRAMES === '') {
 } else {
   describe('phase 1: M19, a stroke’s chroma through the plan’s overlay (docs/CLIPS.md §6.15)', m19Body)
 }
+
+/* ------------------------------------------------- phase 2: graphics landed on their words */
+
+/*
+ * Phase 2's render check (docs/CLIPS.md §6.11, "The render check", phase 2;
+ * §6.2, §6.8, §6.9, §6.14): graphics made the way a run lands them, as
+ * hand-built `KeptGraphic`s through `applyGraphics` on a fixture project (no
+ * model, no settle), then exported as phase 1 exports: `bakeForExport` with
+ * phase 1's fake `Bakers.graphic` (the box route), `buildRenderPlan`, the
+ * bundled ffmpeg. The fake fills the place rect, here the chosen third's
+ * content rect (`placeRect` → §6.2's `contentRect`), with grey(i), white on
+ * each arrival frame.
+ *
+ * The project: one red 9:16 source (360×640, 10 s) cut into two footage
+ * clips on V1, [0, 180) from in-point 0 and [180, 300) from in-point 180,
+ * because the budget allows one graphic per 20 s of a footage clip (§6.9 rule
+ * 1, `GRAPHIC_SPACING.perS`) and onsets 6 s apart (`minGapS`). A transcript
+ * whose words start on whole frames: "forty" at 1.000 s (the counter's one
+ * beat, timeline frame 30), "plan," "shoot," "edit." at 7.0, 7.5 and 8.0 s
+ * (the steps' three beats, a tree of three items, frames 210, 225, 240).
+ * Captions on, Pop (`styleId: 'pop'`), at its own bottom or moved to the top;
+ * nothing burns them here (no `subtitlesPath`: the burn is captions.int's),
+ * so placement reads them (§6.9 step 1) and the frames show only the graphic.
+ * The style `clean`, whose `dim` is false. A subject track written by hand,
+ * as captionsFree.int writes its own: one shot, a face in every sample at
+ * P2_FACE, in the middle third. A sound pack of one entry, `clock_tick.wav`
+ * by name, whose file is a 20 ms 1 kHz tone this file writes (CI has no
+ * library).
+ *
+ * The cases (P2_CASES), each at 9:16 and 16:9: the face in the middle and the
+ * captions at the bottom (the plan's case); no track, the captions at the
+ * bottom (the plan's no-track case: the style's third); and, beyond the
+ * plan's words, the face in the middle and the captions at the TOP, the one
+ * case where a graphic placed without reading the captions lands elsewhere
+ * (in the other two the third it would pick is free of the captions anyway).
+ */
+
+const P2_SOURCE_FRAMES = 300
+/** The second footage clip's first frame (and its in-point: the timeline is the source). */
+const P2_SPLIT = 180
+/** The face, in units of the 360×640 source: rows 0.40-0.55, 0.625 with §5.1's chin extension (half its height), all inside the middle third (0.333-0.667). */
+const P2_FACE: UnitRect = { x: 0.2, y: 0.4, width: 0.6, height: 0.15 }
+
+/** The words, each on a whole frame at 30 fps; `index` is the position. */
+const P2_WORDS: Word[] = [
+  { text: 'We', startMs: 300, endMs: 600 },
+  { text: 'shot', startMs: 600, endMs: 1000 },
+  { text: 'forty', startMs: 1000, endMs: 1400 },
+  { text: 'weddings.', startMs: 1400, endMs: 2000 },
+  { text: 'Then', startMs: 6600, endMs: 7000 },
+  { text: 'plan,', startMs: 7000, endMs: 7400 },
+  { text: 'shoot,', startMs: 7500, endMs: 7900 },
+  { text: 'edit.', startMs: 8000, endMs: 8400 }
+].map((w, index) => ({ ...w, index, confidence: 0.9 }))
+
+const P2_COUNTER: KeptGraphic = {
+  clipId: 'a',
+  assetId: 'red',
+  candidate: {
+    sentence: 'We shot forty weddings.',
+    data: { template: 'counter', value: '40', label: 'weddings' },
+    bound: [2, 3],
+    beatWords: [2],
+    why: 'a number said',
+    source: 'baseline'
+  }
+}
+const P2_STEPS: KeptGraphic = {
+  clipId: 'b',
+  assetId: 'red',
+  candidate: {
+    sentence: 'Then plan, shoot, edit.',
+    data: { template: 'steps', title: 'Step by step', items: [{ label: 'plan', parent: -1 }, { label: 'shoot', parent: 0 }, { label: 'edit', parent: 0 }], connector: 'tree' },
+    bound: [5, 6, 7],
+    beatWords: [5, 6, 7],
+    why: 'three steps said',
+    source: 'baseline'
+  }
+}
+
+/* Hand-derived from the words (§6.8): a beat is its word's start on the timeline, the graphic starts at the first frame at or after the first beat less 0.5 s. */
+/** Each beat word's timeline frame: startMs × 30 / 1000. */
+const P2_BEAT_FRAMES = { counter: [30], steps: [210, 225, 240] } as const
+/** counter: 1.0 − 0.5 s = frame 15, its 2 s minimum (60 frames; the last beat plus 0.8 s is 1.3 s); steps: 7.0 − 0.5 = 6.5 s, frame 195, its 3 s minimum (the last beat 1.5 s + 0.8 is 2.3 s). */
+const P2_TIMING = {
+  counter: { start: 15, duration: 60, beats: [0.5] },
+  steps: { start: 195, duration: 90, beats: [0.5, 1.0, 1.5] }
+} as const
+/** Each tick's onset in seconds (§6.14: restrained `clean` ticks a counter's arrival and a steps' first item; the tone's peak is its onset, peakSeconds 0): frames 30 and 210. */
+const P2_TICK_S = [1.0, 7.0]
+
+type P2CaseName = 'face-captions-bottom' | 'no-track-captions-bottom' | 'face-captions-top'
+const P2_CASES: readonly { name: P2CaseName; face: boolean; captions: 'bottom' | 'top' }[] = [
+  { name: 'face-captions-bottom', face: true, captions: 'bottom' },
+  { name: 'no-track-captions-bottom', face: false, captions: 'bottom' },
+  { name: 'face-captions-top', face: true, captions: 'top' }
+]
+/**
+ * The third each case's graphics take, worked out by hand from §6.9 steps
+ * 1-3 (not from place.ts): a counter's and a steps' preference is middle,
+ * top, bottom; the captions' third is excluded; a third is free when the
+ * face covers at most 0.05 of it. The face, chin-extended, covers rows
+ * 0.40-0.625 of the frame at both shapes (the source fills the height): 0.6
+ * of the width at 9:16, 0.6 × 202/640 = 0.19 at 16:9 (the contain fit's 202
+ * px of 640), so 0.405 and 0.128 of the middle third, 0 of the others.
+ *
+ * - face, captions bottom: middle covered, top free → top.
+ * - no track, captions bottom: middle free → middle (§6.9 step 3's no-track
+ *   default, the template's first third the captions leave).
+ * - face, captions top: middle covered, top excluded → bottom. Placed
+ *   ignoring the captions, it would take the top.
+ */
+const P2_EXPECTED: Record<P2CaseName, Third> = { 'face-captions-bottom': 'top', 'no-track-captions-bottom': 'middle', 'face-captions-top': 'bottom' }
+/**
+ * Each third's content rect in pixels (§6.2): the full width less 0.05 of it
+ * each side, a third of the height, less 0.05 of the height where the third
+ * meets the frame's top or bottom; each edge rounded. 9:16 (360×640): x 18
+ * to 342; thirds at 213.33 and 426.67; top 32 to 213, middle 213 to 427,
+ * bottom 427 to 608. 16:9 (640×360): x 32 to 608; top 18 to 120, middle 120
+ * to 240, bottom 240 to 342.
+ */
+const P2_RECT_PX: Record<P1Shape, Record<Third, Rect>> = {
+  portrait: { top: { x: 18, y: 32, width: 324, height: 181 }, middle: { x: 18, y: 213, width: 324, height: 214 }, bottom: { x: 18, y: 427, width: 324, height: 181 } },
+  landscape: { top: { x: 32, y: 18, width: 576, height: 102 }, middle: { x: 32, y: 120, width: 576, height: 120 }, bottom: { x: 32, y: 240, width: 576, height: 102 } }
+}
+/** Each third's rows [from, to) of the frame, for the centre's reading. */
+const thirdRows = (third: Third, height: number): [number, number] => {
+  const k = third === 'top' ? 0 : third === 'middle' ? 1 : 2
+  return [(k * height) / 3, ((k + 1) * height) / 3]
+}
+
+/** The tone: 1 kHz, 20 ms, 48 kHz mono 16-bit, at −10 dBFS peak, from sample 0 (sin 0): its peak, as the pack says, is its onset. */
+const P2_RATE = 48000
+const P2_TONE = { hz: 1000, seconds: 0.02, peakDb: -10 }
+/**
+ * An onset is the first sample whose magnitude passes this share of the
+ * read's own peak, after at least P2_ONSET_GAP_S below it. A 1 kHz sine from
+ * phase 0 at 48 kHz reaches sin(2π/48) = 0.13 of its peak on its second
+ * sample, so a tenth is crossed within one sample (0.02 ms) of where the
+ * tone starts, whatever level the fader gives it. What comes before it is
+ * not exact silence: the master's `loudnorm` resamples internally, and rings
+ * ahead of the tone up to 0.0017 of the peak in the plan's own audio; the
+ * export's AAC spreads 0.0095 ahead of it (pre-echo), both measured on the
+ * Mac's 4.4 build, 2026-11-14, and printed in the README on every run. A
+ * tenth is ten times the larger, so neither is read as an onset. Relative,
+ * not absolute, so the reading does not depend on GRAPHIC_SOUND_DB or on
+ * `loudnorm`'s gain (the read's peak is 0.89, the tone's −10 dBFS through
+ * the −14 dB fader and the master).
+ */
+const P2_ONSET_SHARE = 0.1
+const P2_ONSET_GAP_S = 0.1
+/** The plan's bar: within 1 ms of the beat frame's time. */
+const P2_ONSET_MS = 1
+
+/** A 16-bit PCM WAV, mono, written by hand. */
+function toneWav(): Buffer {
+  const n = Math.round(P2_TONE.seconds * P2_RATE)
+  const amp = Math.pow(10, P2_TONE.peakDb / 20)
+  const data = Buffer.alloc(n * 2)
+  for (let i = 0; i < n; i++) data.writeInt16LE(Math.round(32767 * amp * Math.sin((2 * Math.PI * P2_TONE.hz * i) / P2_RATE)), i * 2)
+  const head = Buffer.alloc(44)
+  head.write('RIFF', 0, 'latin1')
+  head.writeUInt32LE(36 + data.length, 4)
+  head.write('WAVE', 8, 'latin1')
+  head.write('fmt ', 12, 'latin1')
+  head.writeUInt32LE(16, 16)
+  head.writeUInt16LE(1, 20)
+  head.writeUInt16LE(1, 22)
+  head.writeUInt32LE(P2_RATE, 24)
+  head.writeUInt32LE(P2_RATE * 2, 28)
+  head.writeUInt16LE(2, 32)
+  head.writeUInt16LE(16, 34)
+  head.write('data', 36, 'latin1')
+  head.writeUInt32LE(data.length, 40)
+  return Buffer.concat([head, data])
+}
+
+/** The subject track, as a reframe stores one: one shot, a sample every 500 ms, the face in each. */
+function p2Track(): SubjectTrack {
+  const ms = (P2_SOURCE_FRAMES * 1000) / FPS
+  return {
+    key: 'hand-built:graphic-phase-2',
+    version: SUBJECT_TRACK_VERSION,
+    ...P1_SHOT,
+    durationMs: ms,
+    shots: [{ startMs: 0, endMs: ms, score: 0 }],
+    samples: Array.from({ length: ms / 500 }, (_, i) => ({ ms: i * 500, faces: [{ ...P2_FACE, score: 0.9 }] })),
+    perShot: [{}],
+    detector: 'hand-built (no detector)',
+    scene: { threshold: 0.3, minShotMs: 500, backend: 'ffmpeg-select-rgb24' },
+    at: '2026-11-14T00:00:00.000Z'
+  }
+}
+
+/** The fixture project at `shape` for one case, before any graphic. */
+function p2Project(shot: string, shape: P1Shape, c: (typeof P2_CASES)[number]): Project {
+  const empty = emptyProject('graphic-phase-2')
+  const red: MediaAsset = {
+    id: 'red', path: shot, name: 'red.mp4', kind: 'video', durationFrames: P2_SOURCE_FRAMES, ...P1_SHOT, fps: FPS, hasVideo: true, hasAudio: false, size: 1
+  }
+  const clip = (id: string, start: number, duration: number): Clip => ({
+    id, assetId: 'red', trackId: 'v1', start, duration, inPoint: start, volume: 1,
+    transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 }, color: { brightness: 0, contrast: 1, saturation: 1 }
+  })
+  return {
+    ...empty,
+    settings: { ...empty.settings, ...P1_SHAPES[shape], fps: FPS, sampleRate: P2_RATE },
+    assets: [red],
+    clips: [clip('a', 0, P2_SPLIT), clip('b', P2_SPLIT, P2_SOURCE_FRAMES - P2_SPLIT)],
+    transcripts: {
+      red: { assetId: 'red', language: 'en', model: 'test', durationMs: (P2_SOURCE_FRAMES * 1000) / FPS, words: P2_WORDS, segments: segmentIntoSentences(P2_WORDS) }
+    },
+    ...(c.face ? { subjects: { red: p2Track() } } : {}),
+    captions: { enabled: true, styleId: 'pop', ...(c.captions === 'top' ? { overrides: { position: 'top' } } : {}) },
+    graphics: { styleId: CLEAN_GRAPHIC_STYLE.id, sound: true }
+  }
+}
+
+/** The plan's own mixed audio before the encoder, channel 0 (the graph's `[aout]` to raw f32le, `[vout]` to nowhere). */
+async function planAudio(args: string[], seconds: number): Promise<Float32Array> {
+  const maps = args.flatMap((a, i) => (a === '-map' ? [i] : []))
+  if (maps.length !== 2 || args[maps[0] + 1] !== '[vout]' || args[maps[1] + 1] !== '[aout]') throw new Error(`the plan's outputs are not [vout] and [aout]: ${args.join(' ')}`)
+  const { stdout } = await run(
+    FFMPEG,
+    [...args.slice(0, maps[0]), '-map', '[vout]', '-f', 'null', '-', '-map', '[aout]', '-t', String(seconds), '-f', 'f32le', 'pipe:1'],
+    { encoding: 'buffer', maxBuffer: 256 * 1024 * 1024 }
+  )
+  return channel0(stdout as unknown as Buffer)
+}
+
+/** The export's audio as decoded (AAC), channel 0. */
+async function fileAudio(file: string): Promise<Float32Array> {
+  const { stdout } = await run(FFMPEG, ['-hide_banner', '-loglevel', 'error', '-i', file, '-map', '0:a:0', '-f', 'f32le', 'pipe:1'], {
+    encoding: 'buffer',
+    maxBuffer: 256 * 1024 * 1024
+  })
+  return channel0(stdout as unknown as Buffer)
+}
+
+/** The first channel of interleaved stereo f32le. */
+function channel0(raw: Buffer): Float32Array {
+  if (raw.length === 0 || raw.length % 8 !== 0) throw new Error(`${raw.length} bytes is not whole stereo f32 samples`)
+  const out = new Float32Array(raw.length / 8)
+  for (let i = 0; i < out.length; i++) out[i] = raw.readFloatLE(i * 8)
+  return out
+}
+
+/** Each onset (P2_ONSET_SHARE of the read's peak, after P2_ONSET_GAP_S below it), in samples; and the peak, and the largest magnitude in the 10 ms before each onset as a share of the peak. */
+function onsetsOf(samples: Float32Array): { onsets: number[]; peak: number; before: number[] } {
+  let peak = 0
+  for (const s of samples) peak = Math.max(peak, Math.abs(s))
+  const threshold = P2_ONSET_SHARE * peak
+  const onsets: number[] = []
+  let last = Number.NEGATIVE_INFINITY
+  for (let i = 0; i < samples.length; i++) {
+    if (!(Math.abs(samples[i]) > threshold)) continue
+    if (i - last > P2_ONSET_GAP_S * P2_RATE) onsets.push(i)
+    last = i
+  }
+  const before = onsets.map((o) => {
+    let m = 0
+    for (let i = Math.max(0, o - P2_RATE / 100); i < o; i++) m = Math.max(m, Math.abs(samples[i]))
+    return peak > 0 ? m / peak : 0
+  })
+  return { onsets, peak, before }
+}
+
+interface P2Run {
+  applied: ReturnType<typeof applyGraphics>
+  export: P1Export
+  /** Luma of each beat frame and the frame before it, by timeline frame. */
+  luma: Map<number, Buffer>
+  frames: number
+  planOnsets: ReturnType<typeof onsetsOf>
+  fileOnsets: ReturnType<typeof onsetsOf>
+}
+
+describe('phase 2: graphics landed by applyGraphics on their words, placed and sounded, through the export (docs/CLIPS.md §6.11, §6.8, §6.9, §6.14)', () => {
+  let dir = ''
+  let tone = ''
+  const runs = {} as Record<P2CaseName, Record<P1Shape, P2Run>>
+  const lines: string[] = []
+  const beatFrames = [...P2_BEAT_FRAMES.counter, ...P2_BEAT_FRAMES.steps]
+
+  beforeAll(async () => {
+    dir = join(root, 'phase2')
+    await mkdir(dir, { recursive: true })
+    const shot = await makeColour(join(dir, 'red.mp4'), 'red', P1_SHOT, P2_SOURCE_FRAMES / FPS, FPS)
+    tone = join(dir, 'tick-1khz-20ms.wav')
+    await writeFile(tone, toneWav())
+    const pack: SoundPack = [{ id: 'stand-in-tick', name: 'clock_tick.wav', file: tone, role: 'tick', seconds: P2_TONE.seconds, peakSeconds: 0, peakDb: P2_TONE.peakDb }]
+    for (const c of P2_CASES) {
+      runs[c.name] = {} as Record<P1Shape, P2Run>
+      for (const shape of P1_SHAPE_NAMES) {
+        let n = 0
+        const applied = applyGraphics(p2Project(shot, shape, c), [P2_COUNTER, P2_STEPS], [], CLIPS_GRAPHIC_RULE, {
+          fps: FPS,
+          newId: (prefix) => `${prefix}-${++n}`,
+          sounds: pack
+        })
+        const e = await p1Export(dir, `${c.name}-${shape}`, applied.project, shape, 'box')
+        const all = await lumaFrames(e.file, P1_SHAPES[shape], 'gray')
+        const luma = new Map<number, Buffer>()
+        for (const f of beatFrames) for (const g of [f - 1, f]) luma.set(g, all[g])
+        const seconds = P2_SOURCE_FRAMES / FPS
+        runs[c.name][shape] = { applied, export: e, luma, frames: all.length, planOnsets: onsetsOf(await planAudio(e.args, seconds)), fileOnsets: onsetsOf(await fileAudio(e.file)) }
+        const saved = join(dir, `${c.name}-${shape}`, 'frames')
+        await mkdir(saved, { recursive: true })
+        for (const f of beatFrames) for (const g of [f - 1, f]) await saveFrame(e.file, (g - 0.25) / FPS, join(saved, `f${String(g).padStart(3, '0')}.png`))
+      }
+    }
+  }, 600_000)
+
+  it('lands the counter and the steps through applyGraphics, timed on their words and placed in the third worked out by hand, with a tick each on the sound lane', () => {
+    for (const c of P2_CASES) {
+      for (const shape of P1_SHAPE_NAMES) {
+        const at = `${c.name} ${shape}`
+        const { applied } = runs[c.name][shape]
+        expect(applied.problems, `${at}: applyGraphics' problems`).toEqual([])
+        expect(applied.clipIds, `${at}: graphics landed`).toHaveLength(2)
+        const graphics = applied.clipIds.map((id) => applied.project.clips.find((x) => x.id === id)!)
+        const [counter, steps] = graphics
+        expect(counter.graphic?.data.template, `${at}: the first landed`).toBe('counter')
+        expect(steps.graphic?.data.template, `${at}: the second landed`).toBe('steps')
+        for (const [g, want] of [[counter, P2_TIMING.counter], [steps, P2_TIMING.steps]] as const) {
+          expect({ start: g.start, duration: g.duration }, `${at} ${g.graphic!.data.template}: its span`).toEqual({ start: want.start, duration: want.duration })
+          expect(g.graphic!.beats.length, `${at} ${g.graphic!.data.template}: beats`).toBe(want.beats.length)
+          g.graphic!.beats.forEach((b, i) => expect(b, `${at} ${g.graphic!.data.template}: beat ${i}`).toBeCloseTo(want.beats[i], 9))
+          expect(g.graphic!.place, `${at} ${g.graphic!.data.template}: its place`).toEqual({ auto: true, third: P2_EXPECTED[c.name] })
+        }
+        const lane = applied.project.tracks.find((t) => t.kind === 'audio' && t.name === GRAPHIC_SOUND_LANE_NAME)
+        expect(lane, `${at}: the "${GRAPHIC_SOUND_LANE_NAME}" lane`).toBeDefined()
+        const ticks = applied.project.clips.filter((x) => x.trackId === lane!.id)
+        expect(ticks.map((x) => ({ start: x.start, forGraphic: x.forGraphic })), `${at}: the sound clips`).toEqual([
+          { start: P2_BEAT_FRAMES.counter[0], forGraphic: counter.id },
+          { start: P2_BEAT_FRAMES.steps[0], forGraphic: steps.id }
+        ])
+        expect(runs[c.name][shape].export.notes, `${at}: the export's onError`).toEqual([])
+        expect(runs[c.name][shape].export.asks.map((a) => a.box !== null), `${at}: both baked by the box route`).toEqual([true, true])
+        expect(runs[c.name][shape].frames, `${at}: frames exported`).toBe(P2_SOURCE_FRAMES)
+      }
+    }
+    // The hand-derived rects are what the fake fills: §6.2's contentRect, rounded.
+    for (const shape of P1_SHAPE_NAMES) {
+      for (const third of ['top', 'middle', 'bottom'] as const) {
+        const spec = { ...P1_SPEC, place: { auto: true as const, third } }
+        expect(placeRect(spec, P1_SHAPES[shape]), `${shape} ${third}`).toEqual(P2_RECT_PX[shape][third])
+      }
+    }
+  })
+
+  it('shows each element white on the frame of its beat word, and not on the frame before', () => {
+    for (const c of P2_CASES) {
+      for (const shape of P1_SHAPE_NAMES) {
+        const size = P1_SHAPES[shape]
+        const rect = P2_RECT_PX[shape][P2_EXPECTED[c.name]]
+        const said: string[] = []
+        for (const f of beatFrames) {
+          const on = runs[c.name][shape].luma.get(f)!
+          const before = runs[c.name][shape].luma.get(f - 1)!
+          let worstOn = 0
+          let whiteBefore = 0
+          let inside = 0
+          for (let y = 0; y < size.height; y++) {
+            for (let x = 0; x < size.width; x++) {
+              if (!deepIn(rect, x, y, P1_MARGIN)) continue
+              inside++
+              const k = y * size.width + x
+              worstOn = Math.max(worstOn, 255 - on[k])
+              if (255 - before[k] < P1_LEVELS) whiteBefore++
+            }
+          }
+          expect(inside, `${c.name} ${shape}: pixels read inside`).toBeGreaterThan(0)
+          expect(worstOn, `${c.name} ${shape} frame ${f}, a beat word's frame: inside the ${P2_EXPECTED[c.name]} third's rect, the furthest luma from white`).toBeLessThan(P1_LEVELS)
+          expect(whiteBefore, `${c.name} ${shape} frame ${f - 1}, the frame before a beat word's: white pixels inside the rect`).toBe(0)
+          said.push(`${f} white within ${worstOn}, ${f - 1} none white`)
+        }
+        lines.push(`- ${c.name} ${shape}: ${said.join('; ')} (over the ${P2_EXPECTED[c.name]} rect less ${P1_MARGIN} px, in luma)`)
+      }
+    }
+  })
+
+  it('puts each graphic’s box where the third’s content rect is, its centre in the third worked out by hand; with no track, the style’s third', () => {
+    for (const c of P2_CASES) {
+      for (const shape of P1_SHAPE_NAMES) {
+        const size = P1_SHAPES[shape]
+        const third = P2_EXPECTED[c.name]
+        const rect = P2_RECT_PX[shape][third]
+        const want = edgeWant(rect)
+        const [r0, r1] = thirdRows(third, size.height)
+        for (const f of beatFrames) {
+          const luma = runs[c.name][shape].luma.get(f)!
+          const edges = edgesOf(luma, size, rect)
+          for (const name of Object.keys(want) as EdgeName[]) {
+            expect(edges[name], `${c.name} ${shape} frame ${f}: the ${name} edge read`).not.toBeNull()
+            expect(Math.abs(edges[name]! - want[name]), `${c.name} ${shape} frame ${f}: the ${name} edge at ${edges[name]}, the ${third} third's rect at ${want[name]}`).toBeLessThanOrEqual(P1_EDGE_PX)
+          }
+          const centre = (edges.top! + edges.bottom!) / 2
+          expect(centre >= r0 && centre < r1, `${c.name} ${shape} frame ${f}: the box's centre row ${centre} in the ${third} third, rows ${r0.toFixed(1)}-${r1.toFixed(1)}`).toBe(true)
+          // And nothing white elsewhere: a graphic in another third would show here.
+          let stray = 0
+          for (let y = 0; y < size.height; y++) for (let x = 0; x < size.width; x++) if (clearOf(rect, x, y, P1_MARGIN) && 255 - luma[y * size.width + x] < P1_LEVELS) stray++
+          expect(stray, `${c.name} ${shape} frame ${f}: white pixels ${P1_MARGIN} px clear of the ${third} rect`).toBe(0)
+          if (f === beatFrames[0]) lines.push(`- ${c.name} ${shape}: the box's edges ${JSON.stringify(edges)} against the ${third} third's ${JSON.stringify(rect)}, centre row ${centre}`)
+        }
+      }
+    }
+  })
+
+  it('places the stand-in tick on the counter’s beat: the mixed audio’s onset within 1 ms of the beat frame’s time, before the encoder and in the export', () => {
+    for (const c of P2_CASES) {
+      for (const shape of P1_SHAPE_NAMES) {
+        const r = runs[c.name][shape]
+        for (const [where, read] of [['the plan\'s audio before the encoder', r.planOnsets], ['the export\'s AAC', r.fileOnsets]] as const) {
+          const at = `${c.name} ${shape}, ${where}`
+          expect(read.peak, `${at}: a sound at all`).toBeGreaterThan(0)
+          expect(read.onsets.length, `${at}: onsets at samples ${read.onsets.join(', ')}`).toBe(P2_TICK_S.length)
+          read.onsets.forEach((o, i) => {
+            const ms = (o / P2_RATE - P2_TICK_S[i]) * 1000
+            expect(Math.abs(ms), `${at}: onset ${i} at ${(o / P2_RATE).toFixed(5)} s, the beat frame's ${P2_TICK_S[i]} s, ${ms.toFixed(3)} ms off`).toBeLessThanOrEqual(P2_ONSET_MS)
+          })
+          if (shape === 'portrait') {
+            lines.push(
+              `- ${c.name}, ${where}: onsets ${read.onsets.map((o, i) => `${(o / P2_RATE).toFixed(5)} s (${((o / P2_RATE - P2_TICK_S[i]) * 1000).toFixed(3)} ms from ${P2_TICK_S[i]} s)`).join(', ')}; ` +
+                `peak ${read.peak.toFixed(4)}; the largest magnitude in the 10 ms before each, of the peak: ${read.before.map((b) => b.toFixed(4)).join(', ')}`
+            )
+          }
+        }
+      }
+    }
+  })
+
+  it('writes the README', async () => {
+    await writeNote(dir, [
+      '# graphic, phase 2: graphics landed on their words (docs/CLIPS.md §6.11 "The render check", §6.8, §6.9, §6.14)',
+      '',
+      `A red ${P1_SHOT.width}×${P1_SHOT.height} source (red.mp4, ${P2_SOURCE_FRAMES} frames at ${FPS} fps) as two footage clips, [0, ${P2_SPLIT}) and [${P2_SPLIT}, ${P2_SOURCE_FRAMES}).`,
+      `A counter on "forty" (frame ${P2_BEAT_FRAMES.counter[0]}) and a steps tree on "plan," "shoot," "edit." (frames ${P2_BEAT_FRAMES.steps.join(', ')}), hand-built KeptGraphics`,
+      'through applyGraphics (no model, no settle), style clean (no dim), Pop captions on but not burnt; the fake Bakers.graphic fills the chosen third\'s',
+      'content rect with grey(i), white on each arrival frame. A 20 ms 1 kHz tone (tick-1khz-20ms.wav) as the pack\'s clock_tick.wav.',
+      'Cases: a face in the middle third with the captions at the bottom (graphics: top), no subject track (middle), the face with the captions at the top (bottom).',
+      '',
+      '<case>-<shape>/  export.mp4, graph.txt, the PNG sequences, frames/fNNN.png (each beat word\'s frame and the frame before it, taken at (f − 0.25)/fps)',
+      '',
+      ...lines
+    ])
+  })
+})
