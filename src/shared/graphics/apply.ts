@@ -150,8 +150,8 @@ export function lastRoleOf(project: Pick<Project, 'clips' | 'tracks'>, assetId: 
 
 /**
  * The app's lower third on the footage clip `clip` (docs/CLIPS.md §6.6, §6.8):
- * the asset's Speaker (`MediaAsset.speaker`) as the name, drawn exactly as it
- * is held, and its role pre-filled from the asset's most recent lower third
+ * the asset's Speaker (`MediaAsset.speaker`) as the name, drawn trimmed of
+ * the spaces around it, and its role pre-filled from the asset's most recent lower third
  * (`lastRoleOf`; '' when it has none: the user types one in the dock); its beat the
  * first word of the asset's transcript that the clip shows (`firstShownWord`,
  * the captions' own test). `applyGraphics` calls it first on each covered
