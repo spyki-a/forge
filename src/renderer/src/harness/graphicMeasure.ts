@@ -334,6 +334,17 @@ export function siblingPath(path: string, name: string): string {
  */
 export const PRIMITIVES_BAR = { bakeMeanLevels: 1, heldMean: 0, outsideAlpha: 0 } as const
 
+/**
+ * §6.11's `templates` row, as the check reads it (phase 2's exit, §6.12): per
+ * shape, from specs.json, frames 0, a beat, the last moving frame and the end
+ * differ as they should; the last moving frame equals the held end (mean 0);
+ * alpha 0 outside the box; the same spec drawn twice identical; the baked PNG
+ * against the preview within 1/255 (a mean of at most 1 level over the two
+ * pictures' ink, `diffOverInk`, on both routes, as `primitives` reads it).
+ * Beside `PRIMITIVES_BAR`, its own, so the two can part.
+ */
+export const TEMPLATES_BAR = { bakeMeanLevels: 1, heldMean: 0, outsideAlpha: 0 } as const
+
 export interface PrimitivesReading {
   /** Per frame read, the box route's decoded PNG (the export's, `boxAllowed`) against the preview cut to the box, over their ink (`diffOverInk`). */
   bakeAgainstPreview: PixelDiff[]
@@ -783,17 +794,6 @@ export function folderOf(pattern: string): string | null {
 
 /* ------------------------------------------------- phase 2: the templates */
 
-/**
- * §6.11's `templates` row, as the check reads it (phase 2's exit, §6.12): per
- * shape, from specs.json, frames 0, a beat, the last moving frame and the end
- * differ as they should; the last moving frame equals the held end (mean 0);
- * alpha 0 outside the box; the same spec drawn twice identical; the baked PNG
- * against the preview within 1/255 (a mean of at most 1 level over the two
- * pictures' ink, `diffOverInk`, on both routes, as `primitives` reads it).
- * Beside `PRIMITIVES_BAR`, its own, so the two can part.
- */
-export const TEMPLATES_BAR = { bakeMeanLevels: 1, heldMean: 0, outsideAlpha: 0 } as const
-
 /** A template case's readings: the primitives' parts, and the two "differ as they should" ones. */
 export interface TemplateReading extends PrimitivesReading {
   /** Frame 0 against the first beat's frame, on the preview: an element arrives, so they differ; null where no beat frame lies after 0 within the moving frames. */
@@ -887,6 +887,22 @@ export function fixtureTargets(spec: Pick<GraphicSpec, 'subject'>, size: { width
   return { subject: { x: s.box.x * size.width, y: s.box.y * size.height, width: s.box.width * size.width, height: s.box.height * size.height } }
 }
 
+/** The languages whose fixtures phase 2's Indic reading takes (§6.11: "every template's Hindi and Telugu fixture"). */
+export const INDIC_LANGUAGES: readonly string[] = Object.freeze(['hi', 'te'])
+
+/** `templateCasesFor`'s, narrowed to the Hindi and Telugu fixtures, and every template asked for with fixtures but none of them Hindi or Telugu, by name. */
+export interface IndicTemplateCases extends TemplateCases {
+  noIndic: string[]
+}
+
+/** The Indic render check's cases over the templates asked for (§6.11's phase 2 sentence): each Hindi and Telugu fixture, nothing dropped silently. */
+export function indicTemplateCases(asked: readonly string[], fixtures: readonly TemplateFixture[], drawn: readonly string[]): IndicTemplateCases {
+  const { cases, unknown, noSpec } = templateCasesFor(asked, fixtures, drawn)
+  const indic = cases.filter((f) => INDIC_LANGUAGES.includes(f.language))
+  const noIndic = [...new Set(cases.map((f) => f.spec.data.template))].filter((t) => !indic.some((f) => f.spec.data.template === t))
+  return { cases: indic, unknown, noSpec, noIndic }
+}
+
 /** A tally per key: passed only when it had at least one case and every case of it passed. */
 export function tallyBy<T>(cases: readonly T[], keyOf: (c: T) => string, passed: (c: T) => boolean): Record<string, boolean> {
   const out: Record<string, boolean> = {}
@@ -938,15 +954,17 @@ export interface Lettered<T extends string> {
  * Letters `names` blind (§6.10, M14 and the look rating): a Fisher-Yates
  * shuffle drawn from `random` (from the last place down, each place swapped
  * with one at or before it, `floor(random() × (i + 1))`), then A, B, C... in
- * the shuffled order. `random` is the seam a test pins; the check passes
- * `Math.random`, so two runs can differ. 1 to 26 names, each once, or a throw.
+ * the shuffled order. `random` is the seam a test pins (a draw that is not
+ * finite counts as 0); the check passes `Math.random`, so two runs can differ. 1 to 26 names, each once, or a throw.
  */
 export function letterBlind<T extends string>(names: readonly T[], random: () => number): Lettered<T> {
   if (names.length < 1 || names.length > BLIND_LETTERS.length) throw new Error(`a blind rating letters 1 to ${BLIND_LETTERS.length} renders (got ${names.length})`)
   if (new Set(names).size !== names.length) throw new Error(`a blind rating names each render once (got ${JSON.stringify(names)})`)
   const order = [...names]
   for (let i = order.length - 1; i > 0; i--) {
-    const j = Math.min(i, Math.max(0, Math.floor(random() * (i + 1))))
+    const drawn = random()
+    // A source that answers NaN or an infinity would make j NaN and lose a name; it counts as 0.
+    const j = Math.min(i, Math.max(0, Math.floor((Number.isFinite(drawn) ? drawn : 0) * (i + 1))))
     const swap = order[i]
     order[i] = order[j]
     order[j] = swap
@@ -1077,14 +1095,21 @@ export function keyPath(option: 'curves' | 'look', date: string): string {
 }
 
 /**
+ * The field of each rating's result that holds its key: `CurvesResult.key`
+ * (one clip) and `LookResult.keys` (one per clip). graphicCheck.ts holds the
+ * two result types to it, so a renamed field fails the typecheck.
+ */
+export const BLIND_KEY_FIELD = Object.freeze({ curves: 'key', look: 'keys' } as const)
+
+/**
  * How to save a rating's key without seeing it (§6.10, "the key is returned
- * in the result object, not shown"): a `const` statement echoes nothing, and
- * the copy routes never print it.
+ * in the result object, not shown"; "you save it with DevTools' copy()"): a
+ * `const` statement echoes nothing, and copy() puts the key on the clipboard
+ * without printing it.
  */
 export function saveKeyLine(option: 'curves' | 'look', date: string): string {
   return (
-    `Run it as const r = await window.__forgeGraphicCheck(...) so the console echoes nothing; before you watch, save the key: copy(r.${option}.key) where the console has copy() (Chrome), ` +
-    `or, in the development app (whose console has no copy()), setTimeout(() => navigator.clipboard.writeText(JSON.stringify(r.${option}.key)), 3000) and click the page within 3 s; ` +
-    `paste it into ${keyPath(option, date)} (gitignored). The page and the summary show letters only.`
+    `Run it as const r = await window.__forgeGraphicCheck(...) so the console echoes nothing; before you watch, save the key with DevTools' copy(r.${option}.${BLIND_KEY_FIELD[option]}) ` +
+    `and paste it into ${keyPath(option, date)} (gitignored). The page and the summary show letters only.`
   )
 }

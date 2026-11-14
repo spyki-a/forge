@@ -16,10 +16,14 @@ import {
   lookStyle,
   startReadings,
   templateFrames,
-  textItemsOf
+  textItemsOf,
+  type CurvesResult,
+  type LookResult
 } from '../../src/renderer/src/harness/graphicCheck'
 import {
+  BLIND_KEY_FIELD,
   BLIND_LETTERS,
+  INDIC_LANGUAGES,
   LOOK_QUESTIONS,
   LOOK_VARIANTS,
   M14_CURVES,
@@ -31,6 +35,7 @@ import {
   framesAt,
   graphicClipOf,
   indicItemPass,
+  indicTemplateCases,
   keyPath,
   letterBlind,
   lookError,
@@ -148,6 +153,44 @@ describe('templateCasesFor', () => {
   it('over the real fixtures: steps takes both the plain and the connected shapes, three languages each', () => {
     const got = templateCasesFor(['steps'], TEMPLATE_FIXTURES, DRAWN_TEMPLATES)
     expect(got.cases.map((c) => c.id)).toEqual(['steps-en', 'steps-hi', 'steps-te', 'steps-connected-en', 'steps-connected-hi', 'steps-connected-te'])
+  })
+})
+
+describe('indicTemplateCases (the Indic render check\'s phase 2 sentence: every Hindi and Telugu fixture)', () => {
+  it('takes Hindi and Telugu, both', () => {
+    expect(INDIC_LANGUAGES).toContain('hi')
+    expect(INDIC_LANGUAGES).toContain('te')
+    expect(INDIC_LANGUAGES).not.toContain('en')
+  })
+
+  it('over the real 27 fixtures and every drawn template: the eighteen Hindi and Telugu ones, no English, nothing unnamed', () => {
+    const got = indicTemplateCases(['counter', 'bars', 'steps', 'quote', 'callout', 'ring', 'keyword', 'lower-third'], TEMPLATE_FIXTURES, DRAWN_TEMPLATES)
+    // specs.json's ids, read by hand: each of the eight templates in hi and te, and steps' connected shape in both.
+    const want = [
+      'counter-hi', 'counter-te', 'bars-hi', 'bars-te', 'steps-hi', 'steps-te', 'steps-connected-hi', 'steps-connected-te', 'quote-hi', 'quote-te',
+      'callout-hi', 'callout-te', 'ring-hi', 'ring-te', 'keyword-hi', 'keyword-te', 'lower-third-hi', 'lower-third-te'
+    ]
+    const ids = got.cases.map((c) => c.id)
+    for (const id of want) expect(ids, id).toContain(id)
+    expect(ids).toHaveLength(18)
+    for (const id of ids) expect(id, id).not.toMatch(/-en$/)
+    expect(got.noIndic).toEqual([])
+    expect(got.unknown).toEqual([])
+    expect(got.noSpec).toEqual([])
+  })
+
+  it('steps gives its four: plain and connected, Hindi and Telugu', () => {
+    expect(indicTemplateCases(['steps'], TEMPLATE_FIXTURES, DRAWN_TEMPLATES).cases.map((c) => c.id)).toEqual(['steps-hi', 'steps-te', 'steps-connected-hi', 'steps-connected-te'])
+  })
+
+  it('names a template whose fixtures are English only, an unknown id and a template with no fixture: none dropped silently', () => {
+    const f = (id: string, template: string, language: string): TemplateFixture => ({ id, shape: template, language, spec: { data: { template } } as unknown as GraphicSpec })
+    const fixtures = [f('a-en', 'counter', 'en'), f('b-en', 'bars', 'en'), f('b-te', 'bars', 'te')]
+    const got = indicTemplateCases(['counter', 'bars', 'ring', 'bogus'], fixtures, ['counter', 'bars', 'ring'])
+    expect(got.cases.map((c) => c.id)).toEqual(['b-te'])
+    expect(got.noIndic).toEqual(['counter'])
+    expect(got.noSpec).toEqual(['ring'])
+    expect(got.unknown).toEqual(['bogus'])
   })
 })
 
@@ -294,6 +337,17 @@ describe('tallyBy', () => {
     expect(tallyBy(cases, (c) => c.shape, (c) => c.pass)).toEqual({ counter: false, bars: true })
     expect(tallyBy([], () => 'x', () => true)).toEqual({})
   })
+
+  it('a failing case before a passing one still fails its key: the tally is every case, not the last', () => {
+    const cases = [
+      { shape: 'ring', pass: false },
+      { shape: 'ring', pass: true },
+      { shape: 'quote', pass: true },
+      { shape: 'quote', pass: false },
+      { shape: 'quote', pass: true }
+    ]
+    expect(tallyBy(cases, (c) => c.shape, (c) => c.pass)).toEqual({ ring: false, quote: false })
+  })
 })
 
 /* ------------------------------------------- the Indic reading over the templates */
@@ -370,6 +424,15 @@ describe('letterBlind', () => {
     expect(orders.size).toBeGreaterThan(1)
   })
 
+  it('a source answering NaN or an infinity loses no name: such a draw counts as 0', () => {
+    // As all zeros: [b, c, d, a].
+    for (const bad of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+      const { order, key } = letterBlind(names, source(bad))
+      expect(order, String(bad)).toEqual(['b', 'c', 'd', 'a'])
+      expect(key, String(bad)).toEqual({ A: 'b', B: 'c', C: 'd', D: 'a' })
+    }
+  })
+
   it('refuses no name, a name twice, and more names than letters', () => {
     expect(() => letterBlind([], Math.random)).toThrow(/1 to 26/)
     expect(() => letterBlind(['a', 'a'], Math.random)).toThrow(/once/)
@@ -409,7 +472,77 @@ describe('saveKeyLine and keyPath', () => {
     const line = saveKeyLine('look', '2026-11-14T01:02:03.000Z')
     expect(line).toContain('tests/output/graphic/look/key-2026-11-14.json')
     expect(line).toContain('const r = await window.__forgeGraphicCheck(')
-    expect(line).toContain('copy(r.look.key)')
+    expect(line).toContain("DevTools' copy(r.look.keys)")
+    expect(saveKeyLine('curves', '2026-11-14')).toContain("DevTools' copy(r.curves.key)")
+  })
+
+  it('the path it names holds the key on a result of each rating: curves.key, look.keys', () => {
+    const blind = { option: 'look' as const, date: '2026-11-14', clipId: 'g1', template: 'counter', letters: { A: 'clean' } }
+    // Hand-built as the two result types hold their keys (graphicCheck.ts: CurvesResult.key, LookResult.keys).
+    const r: { curves: Pick<CurvesResult, 'key'>; look: Pick<LookResult, 'keys'> } = { curves: { key: { ...blind, option: 'curves' } }, look: { keys: [blind] } }
+    for (const option of ['curves', 'look'] as const) {
+      const named = saveKeyLine(option, '2026-11-14').match(/copy\(r\.([a-z]+)\.([a-z]+)\)/)
+      expect(named, option).not.toBeNull()
+      expect(named![1]).toBe(option)
+      const at = (r[option] as Record<string, unknown>)[named![2]]
+      expect(at, `r.${option}.${named![2]}`).toBeDefined()
+    }
+    expect(BLIND_KEY_FIELD).toEqual({ curves: 'key', look: 'keys' })
+  })
+
+  it('states no route nobody measured: copy() is the route, as §6.10 says', () => {
+    for (const option of ['curves', 'look'] as const) {
+      const line = saveKeyLine(option, '2026-11-14')
+      expect(line).not.toMatch(/has no copy\(\)|setTimeout|writeText/)
+    }
+  })
+})
+
+/*
+ * Read as source: the glue that puts a rating on the page. The pure page is
+ * guarded above; this is the half that writes the summary and the notes, and
+ * letters the renders it also keys.
+ */
+describe('the phase-2 glue, read as source: the key off the page and the console, the cases from their pure readers', () => {
+  const source = readFileSync(join(__dirname, '..', '..', 'src', 'renderer', 'src', 'harness', 'graphicCheck.ts'), 'utf8')
+  const bodyOf = (name: string): string => {
+    const heads = [...source.matchAll(new RegExp(`async function ${name}\\(`, 'g'))]
+    expect(heads, name).toHaveLength(1)
+    const start = heads[0].index!
+    return source.slice(start, source.indexOf('\n}\n', start))
+  }
+
+  for (const name of ['checkCurves', 'checkLook']) {
+    it(`${name}: the key is read only into the returned key, and no summary or note line names it`, () => {
+      const body = bodyOf(name)
+      const reads = [...body.matchAll(/lettered\.key\b/g)]
+      expect(reads.length, name).toBeGreaterThan(0)
+      for (const m of reads) expect(body.slice(m.index! - 'letters: { ...'.length, m.index!), name).toBe('letters: { ...')
+      const logged = body.split('\n').filter((l) => /summary\.push\(|notes\.push\(|console\./.test(l))
+      expect(logged.length, name).toBeGreaterThan(0)
+      for (const line of logged) expect(line, name).not.toMatch(/\bkeys?\b|lettered|JSON\.stringify/)
+    })
+
+    it(`${name}: letters its renders once, so the key it returns is the lettering the players drew`, () => {
+      expect([...bodyOf(name).matchAll(/letterBlind\(/g)], name).toHaveLength(1)
+    })
+  }
+  it('checkIndicTemplates takes its cases from indicTemplateCases alone, with no language filter of its own', () => {
+    const body = bodyOf('checkIndicTemplates')
+    expect([...body.matchAll(/indicTemplateCases\(/g)]).toHaveLength(1)
+    expect([...body.matchAll(/templateCasesFor\(/g)]).toHaveLength(0)
+    expect(body).not.toMatch(/\.language\)/)
+  })
+
+  it('checkTemplates puts an id no drawer draws on the by-template line as FAIL, beside a template with no fixture', () => {
+    const body = bodyOf('checkTemplates')
+    expect([...body.matchAll(/for \(const id of unknown\) byTemplate\[id\] = false/g)]).toHaveLength(1)
+    expect([...body.matchAll(/for \(const id of noSpec\) byTemplate\[id\] = false/g)]).toHaveLength(1)
+    const tally = body.indexOf('const byTemplate = tallyBy(')
+    const line = body.indexOf('summary.push(`templates by template:')
+    expect(tally).toBeGreaterThan(-1)
+    expect(body.indexOf('for (const id of unknown) byTemplate[id] = false')).toBeGreaterThan(tally)
+    expect(body.indexOf('for (const id of unknown) byTemplate[id] = false')).toBeLessThan(line)
   })
 })
 

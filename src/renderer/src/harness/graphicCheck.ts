@@ -120,10 +120,12 @@ import {
   framesAt,
   graphicClipOf,
   indicItemPass,
+  indicTemplateCases,
   letterBlind,
   lookError,
   parseTemplateFixtures,
   saveKeyLine,
+  BLIND_KEY_FIELD,
   shapedText,
   tallyBy,
   templateCasesFor,
@@ -3091,7 +3093,7 @@ export interface TemplatesResult {
   width: number
   height: number
   cases: TemplateCaseResult[]
-  /** Per shape and per template: PASS only when it had a case and every case of it passed. A template with no fixture is false here. */
+  /** Per shape and per template: PASS only when it had a case and every case of it passed. A template with no fixture, and an id no drawer draws, is false in byTemplate. */
   byShape: Record<string, boolean>
   byTemplate: Record<string, boolean>
   /** Asked for, and not a template any drawer draws; and drawn, with no fixture in specs.json. Named, never skipped. */
@@ -3162,11 +3164,11 @@ async function checkTemplates(option: GraphicTemplateId[], frames: Frames, summa
   const byShape = tallyBy(cases, (c) => c.shape, (c) => c.verdict.pass)
   const byTemplate = tallyBy(cases, (c) => c.template, (c) => c.verdict.pass)
   for (const id of noSpec) byTemplate[id] = false
+  // An id no drawer draws is FAIL on the same line, so the line carries the whole verdict.
+  for (const id of unknown) byTemplate[id] = false
   const verdicts = (r: Record<string, boolean>): string => Object.entries(r).map(([k, v]) => `${k} ${v ? 'PASS' : 'FAIL'}`).join(', ')
-  if (cases.length > 0) {
-    summary.push(`templates by shape: ${verdicts(byShape)}`)
-    summary.push(`templates by template: ${verdicts(byTemplate)}`)
-  }
+  if (cases.length > 0) summary.push(`templates by shape: ${verdicts(byShape)}`)
+  if (Object.keys(byTemplate).length > 0) summary.push(`templates by template: ${verdicts(byTemplate)}`)
   if (unknown.length > 0) notes.push(`templates: NOT READ, no drawer draws ${unknown.map((id) => JSON.stringify(id)).join(', ')} (the drawn templates are ${DRAWN_TEMPLATES.join(', ')}).`)
   if (noSpec.length > 0) notes.push(`templates: NOT READ, no fixture in specs.json for ${noSpec.join(', ')}: FAIL, since nothing was read.`)
   if (asked.length === 0) notes.push(`templates: no template named; name some of ${DRAWN_TEMPLATES.join(', ')}.`)
@@ -3192,7 +3194,7 @@ async function checkTemplates(option: GraphicTemplateId[], frames: Frames, summa
       'Each case is a specs.json fixture of a template asked for, through its own drawer (DRAWERS), under clean at 1080x1920 and 30 fps, a callout\'s subject its fixture box as if the footage filled the frame (fixtureTargets). ' +
       'It is read as primitives reads a case (readGraphicCase): the preview drawn twice, the live Preview, graphicBox and the alpha outside it, the paint timed, the box route baked twice and the canvas route once, every PNG decoded against the preview over the ink. ' +
       'The bar is TEMPLATES_BAR (§6.12\'s phase 2 exit, "preview = export within 1/255"): frame 0 differs from the first beat\'s frame and from the last moving frame, the last moving frame equals the held end (mean 0), no alpha outside the box, the same spec twice identical, both routes within 1 level over the ink; ' +
-      'beside it, as for primitives, the live Preview equal, the box even and the bake\'s, and each bake writing exactly the moving frames. A part with nothing read passes nothing; a template with no fixture is FAIL and named, an id no drawer draws is named. ' +
+      'beside it, as for primitives, the live Preview equal, the box even and the bake\'s, and each bake writing exactly the moving frames. A part with nothing read passes nothing; a template with no fixture and an id no drawer draws are each FAIL and named. ' +
       'Yours: the run on the Mac and the Surface in the development app (§6.12).'
   }
 }
@@ -3201,9 +3203,6 @@ async function checkTemplates(option: GraphicTemplateId[], frames: Frames, summa
 
 /** Where the page hands the templates' whole-drawn Indic sheet back for: beside phase 1's and graphic.int's libass sheets. */
 export const INDIC_TEMPLATES_SHEET = 'tests/output/graphic/indic-paint/templates.png'
-
-/** The languages whose fixtures the Indic reading takes. */
-const INDIC_LANGUAGES: readonly string[] = ['hi', 'te']
 
 const INDIC_TEXT = /[ऀ-ॿఀ-౿]/
 
@@ -3249,9 +3248,7 @@ async function checkIndicTemplates(option: GraphicTemplateId[], frames: Frames, 
   const style = resolveGraphicStyle('clean')
   const fps = TEMPLATES_FPS
   const size = { width: TEMPLATES_SIZE.width, height: TEMPLATES_SIZE.height }
-  const { cases, unknown, noSpec } = templateCasesFor(asked, TEMPLATE_FIXTURES, DRAWN_TEMPLATES)
-  const indicCases = cases.filter((f) => INDIC_LANGUAGES.includes(f.language))
-  const noIndic = [...new Set(cases.map((f) => f.spec.data.template))].filter((t) => !indicCases.some((f) => f.spec.data.template === t))
+  const { cases: indicCases, unknown, noSpec, noIndic } = indicTemplateCases(asked, TEMPLATE_FIXTURES, DRAWN_TEMPLATES)
   const rows: IndicTemplateRow[] = []
   const pictures: HTMLCanvasElement[] = []
   for (const f of indicCases) {
@@ -3340,6 +3337,10 @@ export interface CurvesResult {
   howToSave: string
   note: string
 }
+
+/** `saveKeyLine` names `BLIND_KEY_FIELD`'s field of each result: held to the two types here, so a renamed field fails the typecheck. */
+const _blindKeyFields: { readonly curves: keyof CurvesResult; readonly look: keyof LookResult } = BLIND_KEY_FIELD
+void _blindKeyFields
 
 export interface LookResult {
   clips: { clipId: string; template: string; letters: string[] }[]
