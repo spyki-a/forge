@@ -11,7 +11,7 @@ import type { DrawItem, DrawList, TextItem, TextMeasure } from '@shared/graphics
 import { resolveGraphicStyle } from '@shared/graphics/style'
 import { GRAPHIC_TEMPLATES, type GraphicCandidate, type GraphicData, type GraphicSpec } from '@shared/graphics/template'
 import type { Segment, Transcript, Word } from '@shared/transcript'
-import { loadGraphicsFixtures, projectForTranscript } from './eval/graphicsFixtures'
+import { loadGraphicsFixtures, projectForTranscript, readEvalFixture } from './eval/graphicsFixtures'
 
 /*
  * docs/CLIPS.md §6.7's second test, the property test, and §6.12's phase-2
@@ -1391,10 +1391,18 @@ const NEGATED_TALKS: BaselineTalk[] = TRUE_CASES.flatMap((c) => {
 
 /** Every graphics fixture with a transcript in tests/fixtures/graphics (the nested set today; the owner's eval-*.json when added), read by piece 2's reader, in the menus the app builds. */
 const FIXTURE_FILES = loadGraphicsFixtures()
-const FIXTURE_TALKS: BaselineTalk[] = [...FIXTURE_FILES.nested, ...FIXTURE_FILES.eval].map((f) => {
+/**
+ * A fixture's talk. A nested fixture is an enumeration written to be read
+ * true; an eval transcript is NOT counted true: §6.10 has it hold traps (a
+ * negated claim, a negated phrase a keyword might lift), which the raw
+ * true-talk case would read as the baseline's error though the validator
+ * drops them. Its shipped graphics are read by every shipped-output case.
+ */
+function fixtureTalk(f: { file: string; transcript: Transcript }, kind: 'nested' | 'eval'): BaselineTalk {
   const { project, clip } = projectForTranscript(f.transcript)
-  return { name: f.file, t: f.transcript, menus: graphicsMenuFor(project, clip, f.transcript), truthful: true }
-})
+  return { name: f.file, t: f.transcript, menus: graphicsMenuFor(project, clip, f.transcript), truthful: kind === 'nested' }
+}
+const FIXTURE_TALKS: BaselineTalk[] = [...FIXTURE_FILES.nested.map((f) => fixtureTalk(f, 'nested')), ...FIXTURE_FILES.eval.map((f) => fixtureTalk(f, 'eval'))]
 
 const BASELINE_TALKS = [...TRUE_TALKS, ...NEGATED_TALKS, ...FIXTURE_TALKS]
 
@@ -1434,6 +1442,8 @@ describe('the property on the baseline route: zero ungrounded, mispaired or de-n
   })
 
   it('every graphic that ships grounds by the independent matcher, as data and as the painter draws it', () => {
+    // Not the de-negation guard on its own: a keyword lifted from a negated clause binds no words, so the per-20 s cap hides it
+    // here (mutation V1 survives this case). The case 'each baseline candidate validated alone …' below is that guard; keep it.
     const failures: string[] = []
     const kept: Record<string, number> = {}
     for (const { talk, windows } of BASELINE_RUNS) {
@@ -1495,6 +1505,34 @@ describe('the property on the baseline route: zero ungrounded, mispaired or de-n
     }
     noFailures(failures)
     expect(made).toBeGreaterThanOrEqual(FLOOR_ADVERSARIAL)
+  })
+
+  it('an eval transcript is not read as a true talk: its §6.10 traps make raw baseline candidates the matcher refuses, and none of them ships', () => {
+    // An eval fixture as data, in English written for this test (never a file): a negated claim and a negated phrase a keyword might lift.
+    const said = ['We did not sign 40% of the couples.', 'Never skip the toast.', 'We charged $1,200 for the album.']
+    const words: Word[] = []
+    const segments: Segment[] = []
+    said.forEach((text, k) => {
+      const start = words.length
+      for (const w of text.split(' ')) words.push({ index: words.length, text: w, startMs: words.length * 400, endMs: words.length * 400 + 350, confidence: null })
+      segments.push({ id: `s${String(k).padStart(2, '0')}`, startMs: start * 400, endMs: (words.length - 1) * 400 + 350, text, wordStart: start, wordEnd: words.length - 1 })
+    })
+    const transcript: Transcript = { assetId: 'talk', language: 'en', model: 'whisper-small', durationMs: words.length * 400, words, segments }
+    const f = readEvalFixture('eval-traps.json', { language: 'en', transcript, truth: [{ sentence: 's02', template: 'counter' }], traps: ['s00', 's01'] })
+    const talk = fixtureTalk(f, 'eval')
+    expect(talk.truthful).toBe(false)
+    let refused = 0
+    for (const menu of talk.menus) {
+      const settled = settleGraphics(NO_MODEL, menu, talk.t, { baseline: baselineGraphics })
+      for (const r of baselineGraphics(talk.t, menu)) {
+        if (grounds(r.data, talk.t, r.sentence) === null) continue
+        refused += 1
+        expect(f.traps, JSON.stringify(r.data)).toContain(r.sentence)
+        expect(settled.kept.some((k) => k.sentence === r.sentence), JSON.stringify(r.data)).toBe(false)
+      }
+    }
+    // Measured: the ring on s00 and the keyword on s01, both refused, both on a trap.
+    expect(refused).toBeGreaterThanOrEqual(2)
   })
 
   it('in every language a baseline number’s value and label are said in the sentence it cites (no label from the next sentence)', () => {

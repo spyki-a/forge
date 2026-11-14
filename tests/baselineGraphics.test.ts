@@ -81,6 +81,11 @@ describe('the four rules (§6.10)', () => {
     expect(shapes(run(['It was forty dollars an album.']))).toEqual([['s00', { template: 'counter', value: '$40', label: 'album' }]])
   })
 
+  it('a label never crosses its clause: with no content word after the number before the comma, the one before it, not a word of the next clause', () => {
+    // "couples" is said after the comma, in the next clause: the label is "only", before the number in its own.
+    expect(shapes(run(['Last year it was only 40%, but couples returned happily.']))).toEqual([['s00', { template: 'ring', value: '40%', label: 'only' }]])
+  })
+
   it('a percent beats a counter in the same sentence; with no ring offered, the counter', () => {
     expect(shapes(run(['We kept 40% of the $40 fee.']))).toEqual([['s00', { template: 'ring', value: '40%', label: 'fee' }]])
     const t = talk(['We kept 40% of the $40 fee.'])
@@ -355,12 +360,16 @@ describe('the proposal bar on the baseline route (§6.6, §6.12): every number h
     [42_000, 'We charged $1,200 for the album.']
   ]
   function heard(model: string, approximate: boolean, unsure: boolean): Transcript {
+    return heardOver(SENTENCES, model, approximate, (w) => unsure && /\d/u.test(w))
+  }
+  /** `sentences` as Whisper (or YouTube) heard them, each word unsure (0.3) where `unsure` says so and sure (0.95) elsewhere. */
+  function heardOver(sentences: [number, string][], model: string, approximate: boolean, unsure: (word: string) => boolean): Transcript {
     const words: Word[] = []
     const segments: Segment[] = []
-    SENTENCES.forEach(([at, text], k) => {
+    sentences.forEach(([at, text], k) => {
       const start = words.length
       text.split(' ').forEach((w, j) => {
-        const sure = !(unsure && /\d/u.test(w))
+        const sure = !unsure(w)
         words.push({ index: words.length, text: w, startMs: at + j * 400, endMs: at + j * 400 + 350, confidence: sure ? 0.95 : 0.3 })
       })
       segments.push({ id: `s${String(k).padStart(2, '0')}`, startMs: at, endMs: words[words.length - 1].endMs, text, wordStart: start, wordEnd: words.length - 1 })
@@ -402,5 +411,31 @@ describe('the proposal bar on the baseline route (§6.6, §6.12): every number h
     const p = await find(heard('whisper-small', false, false))
     expect(landedNumbers(p).sort()).toEqual(['counter', 'ring'])
     expect(p.graphicProposals ?? []).toEqual([])
+  })
+
+  /**
+   * A number said over several words: its value word sure and another word of
+   * it unsure (the scale word 'million', a '%' said apart). Written by hand:
+   * the counter's value is $1,200,000 and the ring's 40%, and each must wait.
+   */
+  const SPREAD: [number, string][] = [
+    [0, 'Only 40 % of couples came back.'],
+    [42_000, 'We raised 1.2 million dollars for the charity.']
+  ]
+  it('a number said over several words waits for Keep when any of its words is unsure, not only its first (the scale word, a % said apart)', async () => {
+    for (const [word, waits, lands] of [['%', 'ring', 'counter'], ['million', 'counter', 'ring']] as const) {
+      const p = await find(heardOver(SPREAD, 'whisper-small', false, (w) => w === word))
+      expect(landedNumbers(p), word).toEqual([lands])
+      expect((p.graphicProposals ?? []).map((w) => w.spec.data.template), word).toEqual([waits])
+      for (const w of p.graphicProposals ?? []) expect(w.spec.proposal, word).toEqual({ reason: 'check-the-number', wordSource: 'whisper-unsure' })
+    }
+    // The control: every word sure, both land.
+    const sure = await find(heardOver(SPREAD, 'whisper-small', false, () => false))
+    expect(landedNumbers(sure).sort()).toEqual(['counter', 'ring'])
+    // A waiting graphic is seeded from the start it would land at, index 0 (apply.ts step 4): read off the sure run's ring,
+    // worked by hand in BigInt as (frame + 1) × 2654435761 + 40503 mod 2^32, apart from apply2.ts's momentSeed.
+    const ring = sure.clips.find((c) => c.graphic?.data.template === 'ring')!
+    const waiting = (await find(heardOver(SPREAD, 'whisper-small', false, (w) => w === '%'))).graphicProposals![0]
+    expect(waiting.spec.seed).toBe(Number((BigInt(ring.start + 1) * 2654435761n + 40503n) % 2n ** 32n))
   })
 })

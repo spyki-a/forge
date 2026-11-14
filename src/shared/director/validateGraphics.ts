@@ -24,6 +24,7 @@ import {
   claimsOf,
   marksOf,
   marksUnsaid,
+  numberSpans,
   type Claim,
   type ClaimStretch
 } from './claims'
@@ -523,13 +524,36 @@ function beatWordsOf(data: GraphicData, claims: readonly Claim[], bound: readonl
   }
 }
 
-/** §6.6: a graphic whose number claims bound to a YouTube word or an unsure Whisper word is a proposal only. */
-function proposalOf(claims: readonly Claim[], bound: readonly number[], menu: GraphicsMenu, transcript: Transcript): GraphicSpec['proposal'] {
+/**
+ * Every word a bound number is said over: the words of each number span of
+ * its sentence in the stretch (tokenised as `bind` tokenises it, a currency,
+ * a scale word and a unit included) whose value token is word `at`, the one
+ * `bind` records. `[at]` when no span is found there.
+ */
+function numberWordsAt(stretch: ClaimStretch, at: number): number[] {
+  const byIndex = new Map(stretch.words.map((w) => [w.index, w]))
+  for (const s of stretch.sentences) {
+    if (at < s.wordStart || at > s.wordEnd) continue
+    const toks: { t: string; word: number }[] = []
+    for (let w = s.wordStart; w <= s.wordEnd; w++) {
+      const word = byIndex.get(w)
+      if (word) for (const t of claimTokens(word.text)) toks.push({ t, word: w })
+    }
+    const words = numberSpans(toks.map((x) => x.t))
+      .filter((n) => toks[n.at].word === at)
+      .flatMap((n) => toks.slice(n.from, n.end).map((x) => x.word))
+    if (words.length > 0) return [...new Set(words)]
+  }
+  return [at]
+}
+
+/** §6.6: a graphic whose number claims bound to a YouTube word or an unsure Whisper word (any word the number is said over) is a proposal only. */
+function proposalOf(claims: readonly Claim[], bound: readonly number[], menu: GraphicsMenu, transcript: Transcript, stretch: ClaimStretch): GraphicSpec['proposal'] {
   const numbers = claims.flatMap((c, i) => (c.kind === 'number' ? [bound[i]] : []))
   if (numbers.length === 0) return undefined
   if (menu.wordSource !== 'whisper') return { reason: 'check-the-number', wordSource: menu.wordSource }
   const byIndex = new Map(transcript.words.map((w) => [w.index, w]))
-  const unsure = numbers.some((i) => {
+  const unsure = numbers.flatMap((at) => numberWordsAt(stretch, at)).some((i) => {
     const c = byIndex.get(i)?.confidence
     return c !== null && c !== undefined && c < 0.5
   })
@@ -615,7 +639,7 @@ function settleOne(
       data.connector = 'line'
     }
   }
-  const proposal = proposalOf(c.claims, c.bound, menu, transcript)
+  const proposal = proposalOf(c.claims, c.bound, menu, transcript, stretch)
   const kept: GraphicCandidate = {
     sentence,
     data,

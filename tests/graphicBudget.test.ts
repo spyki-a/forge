@@ -464,7 +464,8 @@ function zoomOver(c: Clip, at: [number, number]): Clip {
  *
  * - every transcript fixture (the nested-*.json today, and every eval-*.json
  *   the owner adds, through piece 2's reader) alone, at two cut lengths (the
- *   whole talk; two seconds off its head and one off its tail), with no
+ *   whole talk; two seconds off its head and one second of speech off its
+ *   tail, past `spokenFrames`' second of padding), with no
  *   zoom, and again with a zoom move put under its first candidate; and all
  *   of them back to back on one timeline, each asset with a Speaker, so the
  *   lower thirds and the spacing across clips are read;
@@ -478,7 +479,7 @@ async function fixtureCases(): Promise<FixtureCase[]> {
   const out: FixtureCase[] = []
   for (const { file, t } of talks) {
     const whole = spokenFrames(t)
-    for (const [cut, inPoint, frames] of [['whole', 0, whole], ['cut', 2 * FPS, whole - 3 * FPS]] as const) {
+    for (const [cut, inPoint, frames] of [['whole', 0, whole], ['cut', 2 * FPS, whole - 4 * FPS]] as const) {
       const plain = transcriptProject([[t, transcriptClip(t, 'f', 0, inPoint, frames)]], undefined)
       const made = await baselineCandidates(plain)
       out.push({ name: `${file}, ${cut}`, files: [file], p: plain, ...made })
@@ -567,7 +568,12 @@ describe('applyBudget, the property (§6.12)', () => {
     // A silent zero cannot pass as covered: every fixture file in the folder is in some case, and there are at least as many cases.
     expect(files).toContain('specs.json')
     expect(files.filter((f) => f.startsWith('nested-')).length).toBeGreaterThanOrEqual(3)
-    expect(cases.length).toBeGreaterThanOrEqual(files.length)
+    // Counted per kind, so specs.json's twenty cases cannot stand in for the transcripts: each transcript file is at
+    // least its two cut lengths alone, and specs.json its two lengths.
+    const talkFiles = files.filter((f) => f !== 'specs.json')
+    const alone = (f: string): number => cases.filter((c) => c.files.length === 1 && c.files[0] === f).length
+    expect(cases.filter((c) => !c.files.includes('specs.json')).length, 'transcript cases').toBeGreaterThanOrEqual(2 * talkFiles.length)
+    for (const f of files) expect(alone(f), `${f}: cases of its own`).toBeGreaterThanOrEqual(2)
     expect([...new Set(cases.flatMap((c) => c.files))].sort()).toEqual(files)
     for (const c of cases.filter((x) => x.files[0] === 'specs.json')) expect(c.candidates, c.name).toHaveLength(27)
     let kept = 0
@@ -577,17 +583,27 @@ describe('applyBudget, the property (§6.12)', () => {
       kept += n.kept
       reasons.push(...n.reasons)
     }
-    // Every transcript fixture gives the budget a graphic to read; the rules under test each drop one.
-    for (const f of files.filter((x) => x !== 'specs.json')) {
-      expect(cases.filter((c) => c.files.length === 1 && c.files[0] === f).some((c) => c.candidates.length > 0), `${f}: a candidate`).toBe(true)
+    // Every English transcript fixture gives the budget a graphic to read. Outside English the baseline reads no ordinal and
+    // makes no keyword (§6.10's rules), so an owner's Hindi or Telugu nested fixture may rightly give none: counted and printed, not failed.
+    const fixtures = loadGraphicsFixtures()
+    const language = new Map([...fixtures.nested, ...fixtures.eval].map((x) => [x.file, x.transcript.language]))
+    const others: string[] = []
+    for (const f of talkFiles) {
+      const n = cases.filter((c) => c.files.length === 1 && c.files[0] === f).reduce((s, c) => s + c.candidates.length, 0)
+      if (/^en(?:$|[-_])/iu.test(language.get(f) ?? '')) expect(n > 0, `${f}: a candidate`).toBe(true)
+      else others.push(`${f} (${language.get(f)}): ${n} candidates`)
     }
+    // The zoom rule drops something on the transcripts themselves, not only on specs.json's hand-built candidates.
+    const talkReasons = cases.filter((c) => !c.files.includes('specs.json')).flatMap((c) => assertBudgetHolds(c.p, c.candidates).reasons)
+    expect(talkReasons.filter((r) => r.startsWith('over a zoom punch at ')).length, 'zoom drops on the transcripts').toBeGreaterThan(0)
     expect(kept).toBeGreaterThan(cases.length)
     expect(reasons.filter((r) => r === TOO_CLOSE_REASON).length, 'spacing drops').toBeGreaterThan(0)
     expect(reasons.filter((r) => r.startsWith('over a zoom punch at ')).length, 'zoom drops').toBeGreaterThanOrEqual(10)
     const evals = files.filter((f) => f.startsWith('eval-')).length
     process.stderr.write(
       `graphicBudget, the property over the fixtures: ${cases.length} cases over ${files.length} files (${files.join(', ')}); ${kept} kept; ` +
-        (evals === 0 ? 'no eval-*.json yet (the ten eval transcripts are the owner’s recordings), so none of them is a case\n' : `${evals} eval-*.json among them\n`)
+        (evals === 0 ? 'no eval-*.json yet (the ten eval transcripts are the owner’s recordings), so none of them is a case' : `${evals} eval-*.json among them`) +
+        (others.length > 0 ? `; outside English, not floored: ${others.join(', ')}\n` : '; no Hindi or Telugu transcript fixture yet\n')
     )
   })
 
