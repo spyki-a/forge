@@ -13,6 +13,19 @@
 > the same day (`CLIPS.md` §16.25): R2 gained items 7–9 and R4's full route
 > is `CLIPS.md` Step P; both are built inside that plan, before the beta
 > resumes.
+>
+> **2026-11-14: part of `CLIPS.md` now comes after the beta.** The user's
+> decisions (`CLIPS.md` §16.74, §16.75): the hand spike and phase 4
+> (`CLIPS.md` §6.17, §6.18: "for now we will drop that") and step 5,
+> B-roll (§8: "how about we move the b-roll after beta too"), with step
+> 6's retrieved-fact cards (§9; the session's reading, not the user's
+> words). So "CLIPS.md's plan runs first" means its part before the beta:
+> phase 2's exit, phase 3, step 4, 1g, step 6's three 3D templates and
+> step 7 (`CLIPS.md` §2's 2026-11-14 note: 81.75–85.25 days with Step P,
+> was 100.25–103.75), then R1–R12, R13 and R14 here; the moved parts
+> (18.5 days, 24.5 with phase 4) come after. On 2026-11-15 the user also
+> put captions as items on the timeline after the beta (`CLIPS.md`
+> §16.76; §3 below).
 
 ## 0. What "beta" means
 
@@ -455,6 +468,13 @@ auto-update; Intel Macs; credits; mask tracking; the pro-editor gaps in
 COMPARISON.md; the open sheets in SHEETS.md. Stale docs to fix as they are
 touched: PLAN.md:8, LLM.md:435, PACKAGING.md, SHEETS.md ⑪,
 REFERENCES.md:154.
+
+**Added 2026-11-15:** captions as items on the timeline, so that one
+caption or one word can be changed or removed there (`CLIPS.md` §16.76;
+not designed, not estimated). Today one word is corrected with the
+Transcript tile's **Edit** (`WHERE-THINGS-ARE.md`). The parts of
+`CLIPS.md` moved after the beta on 2026-11-14 are listed in the top
+block.
 
 ## 4. Done means
 

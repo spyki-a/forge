@@ -290,12 +290,18 @@
 > census on screen: 924 checked, 0 missing, 8 skipped (912 at `8b1f2a8`).
 > Still yours from it: §6.12's try-out list and §16.67-73.
 > Of phase 2's lanes nothing is left to build. Next by §6.19: phase 3,
-> after phase 2's exit (§6.12's list). Decided by you on 2026-11-14, not
-> yet carried into §2, §6.17-§6.19, §8, §9, §16, §17 or BETA.md (the
-> record's next pass): the hand spike (§6.17) and phase 4 (§6.18), which
-> §6.19 placed during and after phase 2, move to after the beta; so does
-> step 5, B-roll (§8), and with it, by the session's reading, step 6's
-> retrieved-fact cards.
+> after phase 2's exit (§6.12's list). **Moved to after the beta by you,
+> 2026-11-14 (§16.74):** the hand spike (§6.17) and phase 4 (§6.18),
+> which §6.19 placed during and after phase 2; step 3 before the beta is
+> 29 days. **Moved to after the beta by you, 2026-11-14 (§16.75):** step
+> 5, B-roll (§8), and with it, by the session's reading, step 6's
+> retrieved-fact cards (§9); its three 3D templates stay before it.
+> **Decided by you, 2026-11-15 (§16.76):** captions as items on the
+> timeline come after the beta. The order to the beta is §2's 2026-11-14
+> note: phase 2's exit, phase 3, step 4, 1g, step 6's 3D templates, step
+> 7, then `BETA.md`. (Until this was recorded, 2026-11-15, these lines
+> read: "Decided by you on 2026-11-14, not yet carried into §2,
+> §6.17-§6.19, §8, §9, §16, §17 or BETA.md (the record's next pass)".)
 > Still yours from these lanes: the list in §6.12's "Phase 2's state,
 > 2026-11-11", with T2a's, T3's, T2b's and T4's items added below it,
 > and try-out 1's after them (2026-11-15).
@@ -314,7 +320,8 @@
 > on, which is next: T3's typed stub of `applyGraphics` first, then T1
 > (§6.19).") §2's total is
 > now about 100-103.5 days with Step P (100.25-103.75 since §16.66's
-> answer, 2026-10-27).
+> answer, 2026-10-27; since 2026-11-14, 81.75-85.25 before the beta and
+> 18.5 after it, §16.74-75).
 >
 > **As written, 2026-10-05, when nothing here was built.** This is the plan for the
 > piece agreed with the user on 2026-10-04/05: the reframe engine, caption
@@ -484,10 +491,10 @@ code composes and checks.** In this piece that means:
 | **P** (§3a) | **BETA R4's full route**: the app installs its own Python pack under `userData` | 9.5–13 (planned 2026-10-14, §3a; `BETA.md` R4 had 5 to 10; 9–12 if the speech model's press waits, §16.49) | — | every Python half below reaches an installed user |
 | **1** | the reframe engine: scene cuts in main, faces (MediaPipe), a salient box, Florence-2 grounding, the crop path with the stacked two-up, the followed crop, "Reframe to 9:16" | 17.5 (1g Florence is 3 of them, gated by its own measurement; 18 if the Surface run fails and YuNet's decoder is built) | 0; P for faces on an installed machine | a landscape talk becomes a 9:16 that follows its subject, frame-exact at every cut, and two people too far apart share the frame |
 | **2** | caption free space | 2.5 | 1 | captions stay off faces, stable within a shot |
-| **3** | the graphics engine, re-planned 2026-10-21 after the graphics research (§16.54-65): one draw list read by two painters (canvas 2D, and a three.js compositor for 2.5D), one motion module, one stroke primitive; eight templates in nine shapes (counter, bars, steps alone or with a connector or a tree, quote, callout, ring, keyword, lower third), and a screen recording as a 2.5D card; a dim; sound on the beats; the graphic style; the Director's third pass with its validator; the hand spike | 30.5, was 14.5 (phases 0-3 and the spike, §6; +6 for phase 4's hand build only if the spike passes its gate) | 2 for placement (degrades to the style's third without it) | a spoken number becomes a counter that lands on the word, a clip that says no number still gets graphics, and nothing unsaid is ever drawn |
+| **3** | the graphics engine, re-planned 2026-10-21 after the graphics research (§16.54-65): one draw list read by two painters (canvas 2D, and a three.js compositor for 2.5D), one motion module, one stroke primitive; eight templates in nine shapes (counter, bars, steps alone or with a connector or a tree, quote, callout, ring, keyword, lower third), and a screen recording as a 2.5D card; a dim; sound on the beats; the graphic style; the Director's third pass with its validator; the hand spike | 30.5, was 14.5 (phases 0-3 and the spike, §6; +6 for phase 4's hand build only if the spike passes its gate); 29 before the beta since 2026-11-14, the spike and phase 4 after it (§16.74) | 2 for placement (degrades to the style's third without it) | a spoken number becomes a counter that lands on the word, a clip that says no number still gets graphics, and nothing unsaid is ever drawn |
 | **4** | Best clips in the URL tile: windows, signals, the model's pick, three cards, Clip it from a card | 3.5 (M0 took 7.5 of its 11) | M0; 1–3 (each optional at run time) | a link becomes three clip cards and a 9:16 clip with captions |
-| **5** | B-roll: the Pexels key, the sources, the social quote card, credits, the person rule | 14 | 3 (cards are templates) | pictures arrive licensed, credited, and only by click |
-| **6** | retrieved-fact cards (Wikipedia, page, answer-with-sources over fetched text); the 3D templates `timeline`, `before-after` and `versus` on step 3's draw list | 5, was 7 (the 3D half 4 → 2: the 2.5D counter and ring moved to step 3's phase 3, §16.55) | 3, 5 | facts from outside, with their sources; three.js graphics |
+| **5** | B-roll: the Pexels key, the sources, the social quote card, credits, the person rule | 14; after the beta since 2026-11-14 (§16.75) | 3 (cards are templates) | pictures arrive licensed, credited, and only by click |
+| **6** | retrieved-fact cards (Wikipedia, page, answer-with-sources over fetched text); the 3D templates `timeline`, `before-after` and `versus` on step 3's draw list | 5, was 7 (the 3D half 4 → 2: the 2.5D counter and ring moved to step 3's phase 3, §16.55); 2 before the beta since 2026-11-14, the 3D templates, and the cards' 3 after it with step 5 (§16.75, the session's reading) | 3, 5 (the 3D templates need only 3) | facts from outside, with their sources; three.js graphics |
 | **7** | creator styles and saved templates | 4.5 | 3; **`MARKET.md` Stage 0** (below) | toward `MARKET.md` Stage 1 |
 
 **About 89.5 working days in the steps, 90.75 with the 1.25 outside them
@@ -498,6 +505,12 @@ with P. P was held at `BETA.md` R4's 5–10 until it was planned in full on
 2026-10-14, §3a; the plan and its two reviews put it at 9.5–13, with two
 open-ended risks left uncounted. §6.20's day became 1.25 on 2026-10-27,
 with §16.66's answer, below.)
+
+**Before the beta, since 2026-11-14 (§16.74, §16.75): about 71 working
+days in the steps, 72.25 with the 1.25 outside them, plus Step P's
+9.5–13: about 81.75–85.25 days, sixteen to seventeen weeks.** The total
+above was the whole plan before the beta; it is now the whole plan, of
+which 18.5 days come after the beta (24.5 if phase 4 is built), below.
 
 The arithmetic, so it can be checked. **The first draft's total was 76.5**,
 with what the review added: step 0 +0.5 (the graph in a file, §3.7); step 1
@@ -538,11 +551,24 @@ slack rather than being moved.
 |---|---|---|
 | outside the steps +0.25 | 1 → 1.25 | §16.66 (a): the caption route for shaped scripts, in §6.20's D10 half (0.5 → 0.75) in place of the libass `\fn` tags it made unneeded |
 
+**Your decisions of 2026-11-14 (§16.74, §16.75) then moved, out of the
+days before the beta and into the plan after it** (nothing re-estimated;
+each figure is its section's):
+
+| delta | from → to, before the beta | why |
+|---|---|---|
+| step 3 −1.5 | 30.5 → 29 | §16.74: the hand spike (§6.17's 1.5) after the beta |
+| phase 4 | +6, gated → after the beta | §16.74: the hand build (§6.18) after the beta; it was in no total, so no total falls by it |
+| step 5 −14 | 14 → 0 | §16.75: B-roll (§8) after the beta |
+| step 6 −3 | 5 → 2 | §16.75, the session's reading: the retrieved-fact cards (§9's 3) after the beta with step 5; the three 3D templates (2) stay |
+
 | step | 0 | M0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | **total** |
 |---|---|---|---|---|---|---|---|---|---|---|
 | before the answers | 4.5 | (2, inside 4) | 16 | 2.5 | 14.5 | 11 | 15.5 | 8 | 4.5 | **76.5** |
 | after | 4.5 | 7.5 | 17.5 | 2.5 | 14.5 | 3.5 | 14 | 7 | 4.5 | **75.5** |
 | after 2026-10-21 | 4.5 | 7.5 | 17.5 | 2.5 | 30.5 | 3.5 | 14 | 5 | 4.5 | **89.5** |
+| before the beta, after 2026-11-14 | 4.5 | 7.5 | 17.5 | 2.5 | 29 | 3.5 | 0 | 2 | 4.5 | **71** |
+| after the beta, from 2026-11-14 | — | — | — | — | 1.5 (+6 gated) | — | 14 | 3 | — | **18.5** (24.5) |
 
 76.5 + (7.5 − 7.5) + 2 − 0.5 − 2 + 0.5 − 1 = 75.5. With Step P's 9.5–13
 (§3a's table, 2026-10-14), 85–88.5 days.
@@ -551,7 +577,10 @@ Then, 2026-10-21: 75.5 + (30.5 − 14.5) − (7 − 5) = 89.5; plus §6.20's 1 =
 90.5. With Step P's 9.5–13, 100–103.5; with phase 4, if the spike's gate
 passes, 106–109.5. Then, 2026-10-27: §6.20's 1 + 0.25 = 1.25, so 89.5 +
 1.25 = 90.75; with Step P's 9.5–13, 100.25–103.75; with phase 4,
-106.25–109.75.
+106.25–109.75. Then, 2026-11-14, before the beta: 89.5 − 1.5 − 14 − 3 =
+71; plus §6.20's 1.25 = 72.25; with Step P's 9.5–13, 81.75–85.25 (it was
+100.25–103.75). After the beta: 1.5 + 14 + 3 = 18.5, and 24.5 if phase 4
+is built; 71 + 18.5 = 89.5, the whole plan unchanged.
 
 **These dates are conditional on "your part" below**: step 1a cannot run
 until its clips and marks exist. With MediaPipe decided, 1a needs the ten
@@ -590,17 +619,22 @@ built:
   answers) or wherever you choose it in the dock (§6.16).
   Without P: over a link's caption track only; no `callout` and no dim
   around the speaker (both need a face box). Pointing, if phase 4 is built,
-  needs P too.
+  needs P too. (2026-11-14, §16.74: M2 before the beta is ~29, the spike
+  and phase 4 after it.)
 - **M3, step 4 (~3.5):** Best clips from a link: three cards, each clipped
   through M0's path. Without P: YouTube's captions, centred crops, captions,
   graphics.
 - **M4, step 5 (~14):** B-roll and the social quote card. No Python needed;
   without the helper, the face check that clears a picture of people cannot
-  run, so every candidate that might show one asks (§8.6).
-- **M5, steps 1g, 6 and 7 (~12.5: 3 + 5 + 4.5).**
+  run, so every candidate that might show one asks (§8.6). (2026-11-14,
+  §16.75: after the beta.)
+- **M5, steps 1g, 6 and 7 (~12.5: 3 + 5 + 4.5).** (2026-11-14, §16.75:
+  ~9.5 before the beta, 3 + 2 + 4.5, step 6's three 3D templates; its
+  retrieved-fact cards after the beta with M4, the session's reading.)
 
 4.5 + 7.5 + 17 + 30.5 + 3.5 + 14 + 12.5 = 89.5 (2026-10-21; it was 75.5
-with step 3 at 14.5 and step 6 at 7). Florence-2 (1g) can slip behind M3
+with step 3 at 14.5 and step 6 at 7). Before the beta since 2026-11-14:
+4.5 + 7.5 + 17 + 29 + 3.5 + 9.5 = 71. Florence-2 (1g) can slip behind M3
 without blocking anything, because the salient box (1d) covers the no-face
 shot until then.
 
@@ -628,6 +662,17 @@ this and will get back to the beta". **This plan comes first**, then
   while Step P is built, and shipped only with P → M2 → M3 → M4 → M5 →
   `BETA.md` R1–R12 → R13 → R14 (beta.2). Steps 5–7 (about 23.5 days now) are no longer after the
   beta: they come before it with the rest.
+- **The order, since 2026-11-14** (§16.74, §16.75; §16.76 on 2026-11-15):
+  before the beta, phase 2's exit (yours, §6.12) → phase 3 (5) → M3, step
+  4 (3.5) → M5 without the fact cards: 1g (3, gated, and free to slip
+  behind M3 as above), step 6's three 3D templates (2), step 7 (4.5: the
+  creator style 2, the saved template 2.5 waiting on `MARKET.md` Stage 0,
+  §16.28) → `BETA.md` R1–R12 → R13 → R14. After the beta, from this plan:
+  the hand spike (1.5) and, only if its gate passes, phase 4 (6); M4, step
+  5 (14); step 6's retrieved-fact cards (3). Also after the beta, not a
+  step of this plan: captions as items on the timeline (§16.76). Of steps
+  5–7, only step 6's 3D templates and step 7 (6.5 days) now come before
+  the beta.
 - **Step 7 is gated on `MARKET.md` Stage 0** (`MARKET.md:94-103`): Phase C
   measured and finished (it is paused), and a music library with
   redistribution rights or the `filler-supplies` policy alone for paid
@@ -675,7 +720,9 @@ Brave's Terms §3 (30 min), Brave's sign-up (10 of the 20 min) and the X
 capture measurement (1 h) are gone, −2.2 h; pyautoflip's run and rating
 (~1 h) and M0's ten links (1 h, which M0's new exit bar needs) are added,
 +2 h. The first six rows are needed before step 1 can finish; M1's date
-moves with them.
+moves with them. (2026-11-14, §16.74, §16.75: the spike's two rows, 5–7
+h and 2 h, and the two Pexels rows, 30 and 10 min, wait for after the
+beta with their work.)
 
 Every step ends the same way: typecheck green; the full suite green (output
 written to a file, `$?` checked; `CLAUDE.md`); the render check's output in
@@ -4736,7 +4783,8 @@ captions a chip sets the start and end fields instead
   caption file at `captionPath` rather than landing a clip without its
   words. `MediaAsset.credit` and the `AssetCredit` type (§8.3) arrive here,
   with source `'link'` only; step 5 adds the rest. Until step 5's Credits
-  block, the credit shows in the pool tile's tooltip (`MediaPool.tsx:219`).
+  block, the credit shows in the pool tile's tooltip (`MediaPool.tsx:219`)
+  (2026-11-14, §16.75: step 5 comes after the beta, so through the beta).
 - **Where it lands**: as today's ingest places a clip, in this project, the
   aspect unchanged. The new-project question of §7.5 step 0 comes with step
   4's cards, three separate shorts, where it is needed (§16.29).
@@ -7967,7 +8015,7 @@ routes pass the render check in CI.
 
 ---
 
-## 6. Step 3 — The graphics engine and the Director's third pass · 30.5 days
+## 6. Step 3 — The graphics engine and the Director's third pass · 30.5 days (29 before the beta: the hand spike's 1.5 after it, §16.74)
 
 > **Revised 2026-10-21.**
 >
@@ -8011,6 +8059,16 @@ routes pass the render check in CI.
 >    and §6.4's had drifted since 2026-10-05 (the research's §7.1 found it).
 >    Every `file:line` in this section was read at that commit; references
 >    into this file are by section number.
+>
+> **Revised 2026-11-14 (§16.74).** You moved the hand spike (§6.17) and
+> phase 4 (§6.18) to after the beta: "what im thinking to drop inn the
+> beta is media pipe hand gestures, we will once how the beta goes, if it
+> workouts with the graphics later we will add the hand gestture and
+> e3xptend the graphics to the full video editing in the future, for now
+> we will drop that". Step 3 before the beta is phases 0-3, 29 days; the
+> spike's 1.5, counted in the 30.5 by §16.56, and phase 4's gated 6 come
+> after it. Where this section and §6.19 say the spike runs during phase
+> 2, read it as after the beta. Nothing else in step 3 moves.
 
 **What it is.** A library of **typed parametric templates** (counter,
 comparison bars, step list, quote card, callout, percentage ring, and since
@@ -8044,7 +8102,8 @@ speaker (§6.3, §6.9). The library's own **sounds on a graphic's beats**,
 under that graphic's own Clear (§6.14). **2.5D** variants of the counter and
 the ring, and a screen recording shown as a 2.5D card (§6.16). And, behind a
 measured gate, **the presenter's pointing finger**: a 1.5-day spike during
-phase 2, a 6-day build only if the gate passes (§6.17, §6.18).
+phase 2, a 6-day build only if the gate passes (§6.17, §6.18); both after
+the beta since 2026-11-14 (§16.74).
 
 **The phases.** Each phase's exit is §6.12; the build order is §6.19.
 
@@ -8053,10 +8112,10 @@ phase 2, a 6-day build only if the gate passes (§6.17, §6.18).
 | 0 | measure the forks: M1-M5, M6's Indic and colour parts, M22, and M21 before phase 2's counter (§6.15; M7, the glow, opens phase 3; 2026-11-11: the counter was built ahead of M21 on 2026-11-07, and M21 now bears on T2's validator and prompt, §6.19's gate paragraph) | 2 | 0.5 is §6.3's own measurement as written; 1.5 new | every number in `EFFECTS.md` §61 with its command; the bake region, pool depth, Indic animation unit and blur-rise chosen; M22's verdict on the canvas painter's Indic shaping |
 | 1 | the engine and the motion module: the §16.8 rename, `SELF_DRAWN_FIELDS` and every guard, the draw list, the canvas painter, the stroke, the dim, `motion.ts`, the canvas, bake and export (§6.1, §6.3-§6.5, §6.13, §6.11) | 7.5 | about 5 of §6 as written; 2.5 new | the primitives' preview = export ≤ 1/255; the Indic render check; the render check frame-exact on both builds |
 | 2 | the templates in nine shapes, the third pass, the validator, beats, placement and the budget, sound, the baseline and the eval (§6.2, §6.5-§6.10, §6.14, §6.11) | 14.5 | about 9 of §6; 5.5 new | the exit as written for nine shapes, plus the Indic check per template, the sound Clear test and the tree |
-| spike | the hand spike, run during phase 2 (§6.17; §16.56) | 1.5 | new; mostly your runs | H1-H10, H12, H13 in `EFFECTS.md` §62; the gate passed or failed |
+| spike | the hand spike, run during phase 2 (§6.17; §16.56); after the beta since 2026-11-14 (§16.74) | 1.5 | new; mostly your runs | H1-H10, H12, H13 in `EFFECTS.md` §62; the gate passed or failed |
 | 3 | the three.js compositor and 2.5D (§6.16; §16.55) | 5 | 2 moved from step 6's 3D templates; 3 new | M7's glow route chosen first; flat colour ≤ 2/255; Indic on a texture at 0.000; preview = export; WebGL missing tested |
-| **step 3** | | **30.5** | §6's 14.5 + 2 from step 6 + 14 new | |
-| 4 | the hand build, only if the spike passes its gate (§6.18) | 6 | new; in no total | the gate's figures on held-out clips; the line's tip on the marked fingertip |
+| **step 3** | | **30.5** | §6's 14.5 + 2 from step 6 + 14 new; 29 before the beta since 2026-11-14, the spike's 1.5 after it (§16.74) | |
+| 4 | the hand build, only if the spike passes its gate (§6.18); after the beta since 2026-11-14 (§16.74) | 6 | new; in no total | the gate's figures on held-out clips; the line's tip on the marked fingertip |
 | outside step 3 | the captions' per-word fallback (§16.61), the two Indic fonts (§16.63) and the caption route for shaped scripts (§16.66 (a), 2026-10-27), §6.20 | 1.25 | 0.75 new; 0.5 is `BETA.md` R14's own, pulled forward | counted in §2 beside the steps |
 
 The split of §6's 14.5 days into "about 5" and "about 9" is the research's
@@ -20507,6 +20566,18 @@ unavailable; the recording's frames missing).
 
 ### 6.17 The hand spike and its gate
 
+> **Moved to after the beta, 2026-11-14 (§16.74).** Your words: "what im
+> thinking to drop inn the beta is media pipe hand gestures, we will once
+> how the beta goes, if it workouts with the graphics later we will add
+> the hand gestture and e3xptend the graphics to the full video editing in
+> the future, for now we will drop that". The line below, "run during
+> phase 2's weeks", and §16.56's "during phase 2" are superseded: the
+> spike is no longer in step 3's unconditional days before the beta,
+> which fall by its 1.5, from 30.5 to 29 (§2, §6's head). What stays true for when it runs: this section as written, the
+> gate (§6.12) deciding phase 4, pointing only, off per clip by default,
+> every pointed graphic a proposal you keep. Its footage and runs (§2's
+> "Your part") wait with it.
+
 **1.5 days, unconditional, run during phase 2's weeks; mostly your runs.**
 §16.56 (D3), answered as recommended on 2026-10-21: "Yes, during phase 2,
 1.5 days counted in the unconditional 30.5 (it is mostly the user's run, on
@@ -20645,6 +20716,17 @@ The gate's result and the outcome are recorded here, dated, as a Built note.
 | **the spike** | **1.5** |
 
 ### 6.18 Phase 4 — The hand build, only if the gate passes
+
+> **Moved to after the beta, 2026-11-14 (§16.74),** with the spike
+> (§6.17). Your words: "what im thinking to drop inn the beta is media
+> pipe hand gestures, we will once how the beta goes, if it workouts with
+> the graphics later we will add the hand gestture and e3xptend the
+> graphics to the full video editing in the future, for now we will drop
+> that". What stays true: built only on the gate's pass, or on a partial
+> with your yes (§6.12); pointing only; off per clip by default; every
+> pointed graphic a proposal you keep. Its 6 days were in no total and
+> are in none before the beta; step 3's unconditional days fall by the
+> spike's 1.5 only.
 
 **6 days, built only on the gate's pass, or on a partial with your yes
 (§6.12); in no total until then.** D3 (§16.56): pointing only; off per clip
@@ -21021,9 +21103,9 @@ piece table does (§6.3's, §6.16's, §6.17's, §6.18's).
 | 2 | T3 | `beats.ts` with `graphicBeats` (§6.8); `place.ts` (with `freeSpace.ts`'s `samplesOver`) and `budget.ts` with `graphicPlace`, `graphicBudget` (§6.9); `sound.ts` (`GRAPHIC_SOUND_FILES`), `graphics/apply.ts` (`applyGraphics`, `lowerThirdFor`, `clearGraphics`), `director/apply.ts`'s constants, sweep and return, the store's follow-on edits (`removeClip`, `moveClip`, `moveSelectionTo`, `pasteClipboard`), `setGraphicSounds` and the switch, with `graphicSound` and `graphicStore`'s phase-2 cases (§6.14) (built 2026-11-11, each piece read by two critics before the next: `c27b9a4`, `4699660`; `216065e`, `37d0e69`, `518a62f`; `1a14bd4`, `ac79a1e`; `5c52691`, `21d316d`; `0f3f7a4`, `3d070ab`; `e8f2a1f`, `69e677c`; and `8db943a`, the census row read on screen; beyond the row, `resoundAfterClear`, the follower functions and the Delete, Cut and nudge arms; pushed as `77ac70a`, green on both runners; §6.8's, §6.9's, §6.6's and §6.14's Built notes; `place.auto`'s recompute not built, handed to T2b; nothing in the app calls `applyGraphics` until T2b) | 0.5 + 1 + 1.5 | T1's values |
 | 2 | T4 | the baseline and the eval block, the fixtures read, M14's and the look rating's runs (§6.10); the harness's `templates`, `curves`, `look` and per-template Indic options, `graphic.int`'s phase-2 cases, the property test's wiring (§6.11's half) (built 2026-11-11 and 14, each piece read by two critics before the next: `c594dda`, `530c3b6`; `477918a`, `a3327d9`; `0b2c763`, `49df60f`; `fba3632`, `67fb97c`; `4f2b025`, `73c6f69`; and `f10ed89`, a doc comment; beyond the row, `runGraphicsPass` with Find and Direct on it, and two fixes to earlier lanes' files, `tree.ts`'s ordinal rule and `validateGraphics.ts`' unsure words over a whole number; pushed with the T2b record as `ae3a670`, green on both runners; then `4450e3d`, the Indic check's rule, read by two critics, pushed alone, green on both runners; §6.10's T4 Built note; M14's and the look rating's runs not run, yours, their options built) | 1.5 + 0.5 | T1-T3 |
 | 2 | try-out 1 (2026-11-15, after the lanes) | not a lane of the plan: six pieces from your first real recording put through Find graphics with no model, each read by critics before its fixer (two for pieces 1-5, three for piece 6), in order: piece 1, numbers joined at transcription, `dd60e4d`, `287201d`; piece 2, the what-if rule and the tightened baseline keyword, `7abe9bb`, `e619bf5`; piece 3, room by rank, decided once by the budget, `d3daf1e`, `187de3e`; piece 4, Add on every dropped graphic, `660f550`, `a210e79`; piece 5, Add graphic from these words, `a94f2fc`, `63cd155`; piece 6, the Library's Graphics drawer, `e9f7923`, `05c2c0e`; and the session's three, `c29a5dd` and `8b1f2a8` (piece 5) and `81db7ca` (piece 6); pushed once as `81db7ca`, green on both runners (run 43747804256); §6.12's "Try-out 1, 2026-11-15" | outside the days | T4 |
-| spike | H | §6.17's pieces: the worker's `hands` mode, `hands/types.ts`, `events.ts`, `oneEuro.ts`, `anchor.ts`'s `tipOnFrame`, the cases §6.17 lists; your runs | 1.5 | your footage; runs during phase 2 (nothing of phases 1-2 is needed: `sourceToFrame` through the reframe exists) |
+| spike | H | §6.17's pieces: the worker's `hands` mode, `hands/types.ts`, `events.ts`, `oneEuro.ts`, `anchor.ts`'s `tipOnFrame`, the cases §6.17 lists; your runs | 1.5 | your footage; runs during phase 2 (nothing of phases 1-2 is needed: `sourceToFrame` through the reframe exists); after the beta since 2026-11-14 (§16.74) |
 | 3 | depth | §6.16, split as its day table writes; M7 first, on the glow seam | 5 | phase 2's exit; M6's phase-0 parts |
-| 4 | depth | §6.18, only if the gate passed | 6 | the gate (§6.12) |
+| 4 | depth | §6.18, only if the gate passed | 6 | the gate (§6.12); after the beta since 2026-11-14 (§16.74) |
 
 The sums: phase 1, 1.25 + 2 + 2 + 1.5 + 0.75 = 7.5; phase 2, 4.5 + 3 + 2 +
 3 + 2 = 14.5. (Revised 2026-10-21 by the review: the first table put
@@ -21078,7 +21160,8 @@ a build item of the validator's (§6.12's "Phase 2's state, lane T4,
 and 11 wait on the eval's first run, which waits on your ten
 `eval-*.json`.) (2026-11-15: try-out 1, the row above, changed no gate: phase 3
 still waits on phase 2's exit, whose items §6.12 lists with try-out 1's
-added.)
+added.) (2026-11-14, §16.74: the table's spike row and phase 4's move to
+after the beta; phase 3 is step 3's last phase before it.)
 
 **Where §6.20 falls.** Outside step 3's days, inside phase 1's run:
 
@@ -21109,6 +21192,8 @@ screen card's 1.25 in phase 3; §6.20's D10 half, 0.75 since §16.66's
 route joined it, which may run to 1 with the `.gitignore` change, the
 pack-root listing, the catalogue's version, the CI check and the
 renderer's font sites.
+(2026-11-14, §16.74: before the beta, step 3 is 29, phases 0-3; the
+spike's 1.5 and phase 4's gated 6 come after it, 7.5 with phase 4.)
 
 ### 6.20 Outside step 3's days: the captions' per-word fallback (D8) and the Indic fonts (D10)
 
@@ -22085,7 +22170,7 @@ stays here:
 | windows (§7.3) | 0.5 |
 | signals and the prefilter (§7.4) | 0.5 |
 | the model's comparative pick: schema, prompt, validate, `run.ts` shared with the eval (§7.4) | 1 |
-| three cards, and Clip it from a card through M0's path, with §7.5's project question; steps 3–5 are already on that path (each attached in its own step: 1f, step 2, §6.6), step 6 arrives with §8.7 | 0.5 |
+| three cards, and Clip it from a card through M0's path, with §7.5's project question; steps 3–5 are already on that path (each attached in its own step: 1f, step 2, §6.6), step 6 arrives with §8.7 (after the beta since 2026-11-14, §16.75: until then Clip it ends at step 5) | 0.5 |
 | tests, the harness's cards half, census, the ten-links eval (§7.7, §7.8) | 1 |
 | **step 4** | **3.5** |
 
@@ -22310,6 +22395,8 @@ M0's, built there), with step 0's question in front and steps 3–6 after it:
    is listed with Drop; one whose number came from a YouTube track waits for
    Keep (§6.6). Its own undo step, with Clear graphics.
 6. **B-roll suggestions** (after step 5, §8.7), listed, never downloaded.
+   (2026-11-14, §16.75: step 5 comes after the beta, so through the beta
+   Clip it from a card runs steps 0-5 and this step waits for §8.7.)
 
 The panel lists what ran and what was skipped, and why.
 
@@ -22426,7 +22513,15 @@ rows.
 
 ---
 
-## 8. Step 5 — B-roll · 14 days (the X capture window's 2 out, the social quote card's 0.5 in)
+## 8. Step 5 — B-roll · 14 days (the X capture window's 2 out, the social quote card's 0.5 in; after the beta, §16.75)
+
+> **Moved to after the beta, 2026-11-14 (§16.75).** Your words: "how
+> about we move the b-roll after beta too because, if we automate that
+> there is no point people buy for v1?". This section stays as the plan
+> for after the beta, unchanged; its 14 days leave the days before it
+> (§2). The session's reading, which you have not contradicted (not your
+> words): step 6's retrieved-fact cards (§9), which rest on this step's
+> fetcher (§8.2) and credits (§8.5), move with it.
 
 **What it is.** For a moment in the transcript, the model picks a **kind**,
 the app fetches **candidates**, the user **clicks** one, and it lands
@@ -22904,7 +22999,7 @@ Census rows: every label above, plus the Settings rows and the switch.
 
 ---
 
-## 9. Step 6 — Retrieved-fact cards and the 3D templates · 5 days (Brave's 1 out; the 2.5D counter and ring moved to step 3, §16.55)
+## 9. Step 6 — Retrieved-fact cards and the 3D templates · 5 days (Brave's 1 out; the 2.5D counter and ring moved to step 3, §16.55; the cards' 3 after the beta, §16.75)
 
 > **Revised 2026-10-21 (D2, §16.55).** The 3D half falls from 4 days to 2.
 > Step 3's phase 3 (§6.16) builds the compositor (painter B on the shared
@@ -22912,6 +23007,18 @@ Census rows: every label above, plus the Settings rows and the switch.
 > measurements (M6), and the 2.5D `counter` and `ring`. What stays here is
 > three templates on that same draw list. The retrieved-fact cards below are
 > unchanged.
+>
+> **Revised 2026-11-14 (§16.75).** Step 5, B-roll, moved to after the
+> beta by your words: "how about we move the b-roll after beta too
+> because, if we automate that there is no point people buy for v1?".
+> **The session's reading, which you have not contradicted (not your
+> words):** the retrieved-fact cards below (3 days) rest on step 5's
+> fetcher (§8.2) and credit rules (§8.5), so they move with it, after the
+> beta. **The three 3D templates** (`timeline`, `before-after`,
+> `versus`; 2 days) stay before the beta, since they need only phase 3
+> (§6.16): they are built after phase 3 and step 4, with 1g and step 7
+> (§2's 2026-11-14 order). Before the beta this step is 2 days; the
+> section stays whole as the plan, its cards for after the beta.
 
 **Retrieved-fact cards** (3 days) are the `source` template with `sources[]`:
 
@@ -23987,7 +24094,9 @@ what is needed, where the answer waits on something not yet in hand.
     **Answer (2026-10-05):** this plan before the beta — "will finish this
     and will get back to the beta". §3.3 → M0 → the rest of step 0 → M1
     (shipped only with Step P) → M2 → M3 → M4 → M5 → `BETA.md` R1–R12 →
-    R13 → R14 (§2).
+    R13 → R14 (§2). (2026-11-14, §16.74 and §16.75: M4, step 5, and from
+    M5 step 6's retrieved-fact cards now come after R14, with the hand
+    spike and phase 4 out of M2; §2's 2026-11-14 note has the order.)
 28. **Step 7's saved templates** wait for `MARKET.md` Stage 0, or move to
     §17; the creator style may come forward with step 3's styles.
 
@@ -24549,7 +24658,10 @@ what is needed, where the answer waits on something not yet in hand.
 
     **Answer (2026-10-21):** as recommended ("ive read you 12 recomondations
     as well wil go with it"). The spike is §6.17, its gate §6.12, the build
-    §6.18; the footage is in §2's "Your part".
+    §6.18; the footage is in §2's "Your part". **Superseded 2026-11-14 by
+    §16.74** in its timing: the spike and phase 4 come after the beta, and
+    the spike's 1.5 days leave step 3's unconditional days before it;
+    the rest of this answer stands for when they are built.
 57. **The click-zoom family for screen recordings** (D4): in scope?
 
     **Recommended: not in step 3.** "A screen recording gets the 2.5D card,
@@ -24798,6 +24910,60 @@ you; no source gave a recommendation for any of them, so none is given.
 
     **Answer (2026-11-15): OPEN.** Yours.
 
+**Added 2026-11-14 and 2026-11-15, from your words in chat; each
+answered when it was raised.** None was put to you as a question with a
+recommendation: you decided each, and the plan records it. Nothing is
+deleted: the moved sections stay as the plan for after the beta, each
+with a dated block at its top.
+
+74. **The hand spike and phase 4: before the beta, or after it?**
+
+    **Answer (2026-11-14): after the beta.** Your words: "what im
+    thinking to drop inn the beta is media pipe hand gestures, we will
+    once how the beta goes, if it workouts with the graphics later we will
+    add the hand gestture and e3xptend the graphics to the full video
+    editing in the future, for now we will drop that". **Supersedes
+    §16.56's timing**: the spike is no longer "during phase 2, 1.5 days
+    counted in the unconditional 30.5"; it and phase 4 (§6.17, §6.18)
+    come after the beta, so step 3's unconditional days before the beta
+    are 29 (§2's 2026-11-14 note, §6's head). What §16.56 settled stays
+    for when they are built: pointing only; the 6-day build only if the
+    gate passes (§6.12); off per clip by default; every pointed graphic a
+    proposal you keep. The footage and runs of §2's "Your part" for the
+    spike wait with it.
+75. **Step 5, B-roll: before the beta, or after it?**
+
+    **Answer (2026-11-14): after the beta.** Your words: "how about we
+    move the b-roll after beta too because, if we automate that there is
+    no point people buy for v1?". **The session's reading, which you have
+    not contradicted (not your words):** step 6's retrieved-fact cards (3
+    days, §9) rest on step 5's fetcher and credit rules (§8.2, §8.5) and
+    move with it; step 6's three 3D templates (2 days) stay before the
+    beta, since they need only phase 3 (§6.16). **It touches:** §16.27's
+    answer (the order: M4, step 5, and step 6's cards out of M5 now come
+    after `BETA.md` R1–R14, §2's 2026-11-14 note); step 4's Clip it, whose
+    sixth step, the B-roll suggestions (§7.5), waits for step 5 (§7's
+    note). §16.55's answer is not touched: its "Step 4 (Best clips) moves
+    5 days later" is phase 3's, and phase 3 stays before step 4. §16.15,
+    §16.17-22 (step 5's and step 6's sources, cards, credits, thumbnails
+    and fetchers) stand as answered, for the work after the beta;
+    §16.23's address, OPEN, is no longer needed before it.
+76. **Captions as items on the timeline: before the beta, or after it?**
+    You asked (try-out 1, 2026-11-15) whether the captions could sit on
+    the timeline, so that one caption or one word can be changed or
+    removed there.
+
+    **Answer (2026-11-15): after the beta.** The record of that day
+    (the try-out's facts file) gives the decision as "captions as timeline
+    items come AFTER THE BETA" and quotes no words of yours for it. What
+    exists today for one word (`WHERE-THINGS-ARE.md`, the Transcript
+    tile): **Edit** turns the clip's words into something to click and
+    correct; Enter keeps it, Esc leaves it, an empty word is taken out,
+    and the captions follow at once; **Transcribe again with these
+    words** replaces any corrections. Not designed and not estimated
+    here; listed in `BETA.md` §3, "After the beta". It is not a step of
+    this plan.
+
 ---
 
 ## 17. Out of this plan, on purpose
@@ -24867,7 +25033,12 @@ you; no source gave a recommendation for any of them, so none is given.
   and §3.2–3.4 are fixed here in step 0, so they are done when the beta
   resumes.
 - **Then the beta**: `BETA.md` R1–R12, R13 and R14 follow this plan (§2,
-  §16.27).
+  §16.27). (2026-11-14, §16.74 and §16.75: they follow the part of it
+  before the beta. The hand spike's gate and phase 4, the real B-roll
+  session with its social quote card, §0's licence-and-credit bar, step
+  5's exit and the fact cards' half of step 6's, with the rows of §14 and
+  §15 and `LLM.md`'s `broll@1` record that belong to them, come after
+  the beta.)
 - Every row of §14 has a rendered output in `tests/output/` and a test.
 - Every "dated" row of §13 has become "in CI" on the Windows build.
 - Every regression test above has had its bug put back and failed.
