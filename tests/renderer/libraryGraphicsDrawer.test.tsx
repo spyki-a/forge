@@ -69,6 +69,26 @@ afterEach(() => {
 })
 
 describe('the Graphics drawer', () => {
+  /*
+   * Read on the harness page, 2026-11-15: an installer's library is empty, so
+   * the pack list opens itself, and above the tiles it pushed every graphic
+   * below the fold. No pack holds a graphic: on this drawer the tiles come
+   * first; on every other drawer the offer still comes before the dead end.
+   */
+  it('puts its tiles above the pack list an empty library opens, and leaves the packs first on Stickers', () => {
+    // Only the pack list draws this (PackList.tsx); "Asset packs" is also the package button's title.
+    const PACKS = 'Check for newer packs'
+    const onGraphics = render(catalogOf([]), 'graphic')
+    expect(onGraphics.split(PACKS).length - 1).toBe(1)
+    const firstTile = onGraphics.indexOf('data-library-graphic=')
+    const lastTile = onGraphics.lastIndexOf('data-library-graphic=')
+    expect(firstTile).toBeGreaterThan(-1)
+    expect(onGraphics.indexOf(PACKS)).toBeGreaterThan(lastTile)
+    const onStickers = render(catalogOf([]), 'sticker')
+    expect(onStickers.split(PACKS).length - 1).toBe(1)
+    expect(onStickers.indexOf(PACKS)).toBeLessThan(onStickers.indexOf('Nothing here.'))
+  })
+
   const cases: [string, AssetCatalog | null, { loading?: boolean; error?: string | null }][] = [
     ['no catalogue, none loading', null, {}],
     ['no catalogue, still loading', null, { loading: true }],

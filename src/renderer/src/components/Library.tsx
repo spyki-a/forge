@@ -4,7 +4,7 @@ import type React from 'react'
 import type { AssetKind, CatalogEntry, FontMeta, TitleMeta } from '@shared/assets/catalog'
 import { isClipSticker, libraryIsEmpty, searchEntries, stickerCategoryLabel } from '@shared/assets/catalog'
 import { assetPath } from '@shared/assetPath'
-import { LIBRARY_GRAPHICS, libraryDragPayload, librarySampleList, searchLibraryGraphics, type LibraryGraphic } from '@shared/graphics/library'
+import { LIBRARY_GRAPHICS, TILE_FRAME, libraryDragPayload, librarySampleFace, searchLibraryGraphics, tileFit, type LibraryGraphic } from '@shared/graphics/library'
 import { paintDrawList2d } from '@shared/graphics/paint'
 import { graphicStyleOf, type GraphicStyle } from '@shared/graphics/style'
 import { useCatalog } from '../catalog'
@@ -284,7 +284,7 @@ export function Library({ initialKind = 'sticker' }: { initialKind?: LibraryDraw
           saw was the empty message. Reported from the Surface as "there was no
           download option, it was empty".
         */}
-        {showPacks && (
+        {showPacks && !graphicsDrawer && (
           <div className={`-mx-2 ${empty ? '' : 'mb-2 border-b border-ink-800 pb-1'}`}>
             <PackList />
           </div>
@@ -300,6 +300,19 @@ export function Library({ initialKind = 'sticker' }: { initialKind?: LibraryDraw
             {graphicMatches.map((entry) => (
               <GraphicTile key={entry.id} entry={entry} style={look} onPlace={(id) => placeLibraryGraphic(id)} />
             ))}
+          </div>
+        )}
+
+        {/*
+          On the Graphics drawer the packs come AFTER the tiles. No pack holds a
+          graphic, so here the offer is not the way out of a dead end: above the
+          tiles it pushed them below the fold of an installer's empty library,
+          where the pack list opens itself (read on the harness page,
+          2026-11-15). It stays reachable, under what the drawer is for.
+        */}
+        {showPacks && graphicsDrawer && (
+          <div className="-mx-2 mt-2 border-t border-ink-800 pt-1">
+            <PackList />
           </div>
         )}
 
@@ -564,9 +577,10 @@ export function GraphicTile({
 }
 
 /**
- * A tile's face: `librarySampleList` (the entry's placeholder words at its
- * settled frame, the engine's own draw list) painted by `paintDrawList2d` on
- * a canvas, redrawn when the look changes (its preset, accent or text style:
+ * A tile's face: `librarySampleFace` (the entry's placeholder words at its
+ * settled frame, the engine's own draw list, laid out at `TILE_FRAME`)
+ * painted by `paintDrawList2d` and shown scaled into the tile (`tileFit`),
+ * redrawn when the look changes (its preset, accent or text style:
  * all in `style`) or a face loads, as OUTPUT's sample is (OutputStrip.tsx
  * `GraphicSample`).
  */
@@ -593,7 +607,19 @@ function GraphicFace({ entry, style }: { entry: LibraryGraphic; style: GraphicSt
     if (!ctx) return
     ctx.clearRect(0, 0, w, h)
     try {
-      paintDrawList2d(ctx, librarySampleList(entry, JSON.parse(key) as GraphicStyle, { width: w, height: h }, graphicMeasure()))
+      // Laid out and painted at a real frame's size, then shown scaled down: the templates do not lay out at a tile's
+      // few pixels (shared/graphics/library.ts `TILE_FRAME`).
+      const face = librarySampleFace(entry, JSON.parse(key) as GraphicStyle, graphicMeasure())
+      if (!face.bounds) return
+      const frame = document.createElement('canvas')
+      frame.width = TILE_FRAME.width
+      frame.height = TILE_FRAME.height
+      const paint = frame.getContext('2d')
+      if (!paint) return
+      paintDrawList2d(paint, face.list)
+      const at = tileFit(face.bounds, { width: w, height: h })
+      ctx.imageSmoothingQuality = 'high'
+      ctx.drawImage(frame, face.bounds.x, face.bounds.y, face.bounds.width, face.bounds.height, at.x, at.y, at.width, at.height)
     } catch {
       // A face that cannot draw must not take the drawer down.
     }

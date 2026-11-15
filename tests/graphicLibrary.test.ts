@@ -6,7 +6,7 @@ import { CLIPS_GRAPHIC_RULE, LIBRARY_GRAPHIC_RULE, applyGraphics, clearGraphics,
 import { LEAD_S, BEAT_GAP_S, graphicSeconds } from '@shared/graphics/beats'
 import { ON_SCREEN_REASON, tooCloseReason, zoomPunchReason } from '@shared/graphics/budget'
 import { drawListAt, drawnTemplates, graphicFits } from '@shared/graphics/drawList'
-import type { TextMeasure } from '@shared/graphics/items'
+import type { DrawItem, TextMeasure } from '@shared/graphics/items'
 import { thirdPreference } from '@shared/graphics/place'
 import { GRAPHIC_STYLES, CLEAN_GRAPHIC_STYLE } from '@shared/graphics/style'
 import { graphicTargetsAt } from '@shared/graphics/targets'
@@ -23,7 +23,11 @@ import {
   libraryGraphic,
   libraryGraphicAt,
   libraryGraphicSpec,
+  librarySampleFace,
   librarySampleList,
+  tileFit,
+  TILE_FRAME,
+  TILE_PAD,
   searchLibraryGraphics
 } from '@shared/graphics/library'
 import { acceptsKind, canvasDropChip, canvasDropRoute, trackDropRoute, type DragPayload } from '@shared/dragPayload'
@@ -187,11 +191,66 @@ describe('each entry makes a whole spec', () => {
     expect(misses).toEqual([])
   })
 
-  it('draws every tile’s face in every look at a tile’s size', () => {
+  /*
+   * Read on the harness page, 2026-11-15: laid out at the tile's own size (95
+   * by 53 px) the Bars face drew NO item and the other faces set their lines
+   * on top of each other, while this test asked at 320 by 180, a size no tile
+   * ever used, and passed. The face has ONE size now (`TILE_FRAME`, a real
+   * frame) and the tile shows it scaled down, so what is checked here is what
+   * the tile paints.
+   */
+  it('draws every tile’s face in every look at the one frame the tile lays out at, with something to show', () => {
+    expect(TILE_FRAME.width / TILE_FRAME.height).toBeCloseTo(16 / 9, 6)
+    // A real frame, not a thumbnail: the smallest side a template is fit-tested at is 1080; half of that is the floor here.
+    expect(Math.min(TILE_FRAME.width, TILE_FRAME.height)).toBeGreaterThanOrEqual(540)
     for (const e of LIBRARY_GRAPHICS) {
       for (const style of GRAPHIC_STYLES) {
-        expect(librarySampleList(e, style, { width: 320, height: 180 }, MEASURE).items.length, `${e.id} ${style.id}`).toBeGreaterThan(0)
+        const at = `${e.id} ${style.id}`
+        const face = librarySampleFace(e, style, MEASURE)
+        expect(face.list.items.length, at).toBeGreaterThan(0)
+        expect(face.list.width, at).toBe(TILE_FRAME.width)
+        expect(face.list.height, at).toBe(TILE_FRAME.height)
+        expect(librarySampleList(e, style, MEASURE).items.length, at).toBe(face.list.items.length)
+        const b = face.bounds
+        expect(b, at).not.toBeNull()
+        // Inside the frame, and large enough to be a picture once scaled into a tile.
+        expect(b!.x, at).toBeGreaterThanOrEqual(0)
+        expect(b!.y, at).toBeGreaterThanOrEqual(0)
+        expect(b!.x + b!.width, at).toBeLessThanOrEqual(TILE_FRAME.width)
+        expect(b!.y + b!.height, at).toBeLessThanOrEqual(TILE_FRAME.height)
+        expect(b!.width, at).toBeGreaterThan(TILE_FRAME.width * 0.1)
+        expect(b!.height, at).toBeGreaterThan(TILE_FRAME.height * 0.08)
       }
+    }
+  })
+
+  it('every row of bars and steps is on the face: one label per row', () => {
+    for (const id of ['bars', 'steps'] as const) {
+      const e = libraryGraphic(id)!
+      const rows = (e.data as { items: { label: string }[] }).items.map((i) => i.label)
+      const texts = (items: readonly DrawItem[]): string[] => items.flatMap((i) => (i.kind === 'text' ? [i.text] : i.kind === 'group' ? texts(i.children) : []))
+      const drawn = texts(librarySampleFace(e, CLEAN_GRAPHIC_STYLE, MEASURE).list.items)
+      for (const label of rows) expect(drawn.some((t) => t.includes(label)), `${id}: ${label} in ${JSON.stringify(drawn)}`).toBe(true)
+    }
+  })
+
+  it('tileFit keeps the face’s shape, leaves the pad clear and centres it, for a wide face and a tall one', () => {
+    const tile = { width: 95, height: 53 }
+    for (const bounds of [
+      { x: 119, y: 258, width: 942, height: 205 },
+      { x: 518, y: 235, width: 244, height: 259 }
+    ]) {
+      const at = tileFit(bounds, tile)
+      expect(at.width / at.height).toBeCloseTo(bounds.width / bounds.height, 6)
+      expect(at.x).toBeGreaterThanOrEqual(tile.width * TILE_PAD - 1e-9)
+      expect(at.y).toBeGreaterThanOrEqual(tile.height * TILE_PAD - 1e-9)
+      expect(at.x + at.width).toBeLessThanOrEqual(tile.width * (1 - TILE_PAD) + 1e-9)
+      expect(at.y + at.height).toBeLessThanOrEqual(tile.height * (1 - TILE_PAD) + 1e-9)
+      expect(at.x + at.width / 2).toBeCloseTo(tile.width / 2, 6)
+      expect(at.y + at.height / 2).toBeCloseTo(tile.height / 2, 6)
+      // As large as fits: one side reaches the pad.
+      const touches = Math.abs(at.width - tile.width * (1 - 2 * TILE_PAD)) < 1e-6 || Math.abs(at.height - tile.height * (1 - 2 * TILE_PAD)) < 1e-6
+      expect(touches).toBe(true)
     }
   })
 })

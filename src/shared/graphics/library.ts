@@ -31,7 +31,7 @@ import { LEAD_S, graphicSeconds, spreadBeats } from './beats'
 import { byHandRefusal } from './budget'
 import { drawListAt, drawnTemplates } from './drawList'
 import { graphicMovingFrames } from './frame'
-import type { DrawList, TextMeasure } from './items'
+import { itemBounds, unionRect, type DrawList, type Rect, type TextMeasure } from './items'
 import { NO_FREE_THIRD_NOTE, placeGraphic, thirdPreference } from './place'
 import { footageOf } from './sound'
 import type { GraphicStyle } from './style'
@@ -197,17 +197,61 @@ const TILE_PLACE: GraphicSpec['place'] = Object.freeze({ auto: false as const, b
 const TILE_FPS = 30
 
 /**
- * A tile's face: the entry's spec (its placeholder words) drawn by the
+ * The frame a tile's face is laid out at: a real 16:9 frame, never the tile's
+ * own few pixels. The templates lay out for a video frame; asked to lay out
+ * at a tile's size (95 by 53 px on the harness page, 2026-11-15) bars drew
+ * NO item and every other face set its lines on top of each other. So the
+ * face is drawn here, at a size the fit tests cover, and the tile shows that
+ * drawing scaled down (`librarySampleFace`, `tileFit`).
+ */
+export const TILE_FRAME: Readonly<{ width: number; height: number }> = Object.freeze({ width: 1280, height: 720 })
+
+/** The share of the tile left clear around a face, each side. */
+export const TILE_PAD = 0.08
+
+/**
+ * A tile's draw list: the entry's spec (its placeholder words) drawn by the
  * engine's own draw list at its settled frame, the last moving one
  * (`graphicMovingFrames` − 1, what the Preview holds past it), in `style`
- * (the project's look), at `size`. What the tile paints with
- * `paintDrawList2d`, as OUTPUT's sample does.
+ * (the project's look), at `TILE_FRAME`.
  */
-export function librarySampleList(entry: LibraryGraphic, style: GraphicStyle, size: { width: number; height: number }, measure: TextMeasure): DrawList {
+export function librarySampleList(entry: LibraryGraphic, style: GraphicStyle, measure: TextMeasure): DrawList {
   const spec = libraryGraphicSpec(entry, { place: TILE_PLACE })
   const total = Math.max(1, Math.round(spec.seconds * TILE_FPS))
   const settled = Math.max(0, graphicMovingFrames(spec, style, TILE_FPS, total) - 1)
-  return drawListAt(spec, style, settled, TILE_FPS, size, measure)
+  return drawListAt(spec, style, settled, TILE_FPS, TILE_FRAME, measure)
+}
+
+/**
+ * A tile's face: `librarySampleList` and the rectangle of `TILE_FRAME` its
+ * items can ink (the union of `itemBounds`, held inside the frame), which is
+ * the part the tile shows. `bounds` is null when nothing is drawn: the tile
+ * then stays blank rather than showing a wrong picture.
+ */
+export function librarySampleFace(entry: LibraryGraphic, style: GraphicStyle, measure: TextMeasure): { list: DrawList; bounds: Rect | null } {
+  const list = librarySampleList(entry, style, measure)
+  let all: Rect | null = null
+  for (const item of list.items) all = unionRect(all, itemBounds(item, TILE_FRAME, measure))
+  if (!all) return { list, bounds: null }
+  const x = Math.max(0, all.x)
+  const y = Math.max(0, all.y)
+  const width = Math.min(TILE_FRAME.width, all.x + all.width) - x
+  const height = Math.min(TILE_FRAME.height, all.y + all.height) - y
+  return { list, bounds: width > 0 && height > 0 ? { x, y, width, height } : null }
+}
+
+/**
+ * Where a face's `bounds` go in a tile `tile` pixels large: scaled by one
+ * factor (its shape kept), as large as fits with `TILE_PAD` clear on each
+ * side, centred. The tile draws `bounds` of the laid-out frame into the
+ * rectangle this returns.
+ */
+export function tileFit(bounds: Rect, tile: { width: number; height: number }): Rect {
+  const room = { width: tile.width * (1 - 2 * TILE_PAD), height: tile.height * (1 - 2 * TILE_PAD) }
+  const scale = Math.min(room.width / bounds.width, room.height / bounds.height)
+  const width = bounds.width * scale
+  const height = bounds.height * scale
+  return { x: (tile.width - width) / 2, y: (tile.height - height) / 2, width, height }
 }
 
 /** A tile asked for that the Library does not offer (a stale drag). Not the plan's words. */
