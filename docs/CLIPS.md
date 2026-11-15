@@ -223,24 +223,31 @@
 > 43575295452, green on both runners, no annotation). The suite at
 > `4450e3d` on the Mac: 346 files passed and 5 skipped (351), 5446
 > tests passed and 66 skipped (5512). **Every lane of §6.19's phase 2 is
-> built and pushed: phase 2 is closed on the build side**; what is left
-> of its exit bar is yours, item by item in §6.12's "Phase 2 state, lane
-> T4, 2026-11-14". What the app does now that it did not: **with no
-> model set up, or for a window whose answer is rejected, the baseline's
+> built and pushed: phase 2 is closed on the build side** in that sense;
+> one item of its exit bar, the property test's, is still not met and is
+> a build item of the validator's, not yours (§6.12); the rest of the
+> bar is yours, item by item in §6.12's "Phase 2's state, lane T4,
+> 2026-11-14". What the app does now that it did not: **with no model
+> set up, or for a window whose answer is rejected, the baseline's
 > graphics land** (§6.10's `baselineGraphics`: a ring for a percentage, a
 > counter for a currency amount, steps for sentences counted off by
 > ordinals, a keyword on a short English line; validated and spaced as a
-> model's are; with a Speaker, the lower third as before; changed
-> 2026-11-15, try-out 1: see the note that follows), and the note
+> model's are (changed 2026-11-15, try-out 1: see the note that
+> follows); with a Speaker, the lower third as before), and the note
 > says "the baseline's graphics are used for <window>: <why>"; "No
 > model’s answer was used in this run" still shows when no window's
 > answer was used. **No real model has been asked by any test**: every
 > ask in the suite is injected; the eval block is built and has never
-> run (no `eval-*.json` exists), so the pass has never run against Gemma
-> or any model; the first real run is the eval's or yours.
+> run on a model or on your fixtures (no `eval-*.json` exists), so the
+> pass has never run against Gemma or any model; the first real run is
+> the eval's or yours.
 > Of phase 2's lanes nothing is left to build. Next by §6.19: phase 3,
-> after phase 2's exit (§6.12's list); the hand spike (§6.17), which
-> §6.19 runs during phase 2, is not built.
+> after phase 2's exit (§6.12's list). Decided by you on 2026-11-14, not
+> yet carried into §2, §6.17-§6.19, §8, §9, §16, §17 or BETA.md (the
+> record's next pass): the hand spike (§6.17) and phase 4 (§6.18), which
+> §6.19 placed during and after phase 2, move to after the beta; so does
+> step 5, B-roll (§8), and with it, by the session's reading, step 6's
+> retrieved-fact cards.
 > Still yours from these lanes: the list in §6.12's "Phase 2's state,
 > 2026-11-11", with T2a's, T3's, T2b's and T4's items added below it.
 > (Until T4 was recorded this line read: "Not built: the rest of phase
@@ -14709,7 +14716,8 @@ The sets:
 **The blind curve rating (M14)** is run in phase 2, on your clips, in the
 development app's console (`await window.__forgeGraphicCheck({ curves: {
 names: [...], clipId: '<a graphic clip of the open project>' } })`, §6.11,
-§6.15):
+§6.15) (as built 2026-11-14: run it as `const r = await …`; a bare
+`await` echoes the result, key included; §6.10's T4 Built note (d)):
 
 1. **The renders.** The named graphic clip, landing on its word, is
    rendered under each of the six curves at 30 fps; you run it once on each
@@ -14737,7 +14745,8 @@ time.
 ratings", and M14 picks curves only). Run in phase 2 after M14's winner is
 set, on your clips, in the development app's console (`await
 window.__forgeGraphicCheck({ look: { clipIds: [...] } })`, §6.11), as M14's
-is run:
+is run (as built 2026-11-14: run it as `const r = await …`; a bare
+`await` echoes the result, keys included; §6.10's T4 Built note (d)):
 
 1. **The renders.** For each named graphic clip (at least six, covering
    the eight templates, on three of your clips), the clip rendered under
@@ -14781,7 +14790,7 @@ the fixtures' wiring, and M14's and the look rating's runs.
 > 2026-11-14 as `ae3a670` (run 43573261749) and `4450e3d` (run
 > 43575295452), both green on `windows-latest` and `macos-15`. The tests
 > and their mutations are §6.11's T4 paragraph; the bar, item by item,
-> §6.12's "Phase 2 state, lane T4".
+> §6.12's "Phase 2's state, lane T4, 2026-11-14".
 >
 > **(a) `baselineGraphics(transcript, menu): GraphicCandidate[]`**
 > (`src/shared/director/baselineGraphics.ts`, new, 310 lines), the plan's
@@ -14900,7 +14909,11 @@ the fixtures' wiring, and M14's and the look rating's runs.
 >   `openaiRequestBody` or `ollamaRequestBody` of the app's own prompt,
 >   schema and token cap, `think: false` as `askStructured` sets it; ids
 >   `<fixture>.graphics.<first sentence>`; written to
->   `tests/output/eval/<run>/requests.json`. **`STEP=score`** first reads
+>   `tests/output/eval/<run>/requests.json`. The nested set is prepared
+>   and scored with the eval set, and nothing at all is prepared when no
+>   `eval-*.json` is present, so a nested-only run (the Hindi or Telugu
+>   `nested-*.json` without the ten) is not possible (a builder's choice,
+>   `477918a`). **`STEP=score`** first reads
 >   `requests.json` and refuses, before writing anything, a run never
 >   prepared, a run whose requests hold no graphics request (a spine or
 >   look run's name reused) or one with no answer saved for any graphics
@@ -15044,15 +15057,15 @@ the fixtures' wiring, and M14's and the look rating's runs.
 > - **`indic: true` with `templates`**: phase 1's reader
 >   (`readIndicItem`, shared with phase 1's clusters) over every Hindi and
 >   Telugu fixture of the named templates (`indicTemplateCases`, pure and
->   tested since `67fb97c`, which found Telugu droppable with the suite
->   green): each Devanagari or Telugu text item of the settled frame,
->   drawn alone at its own x, look and size, through `paintDrawList2d`
->   against `drawTextOnto` (equal), whole against per code point (an item
->   with a mark must differ), each conjunct measured alone narrower than
->   its letters (`4450e3d`, the fix §6.11's Indic note records), the
->   i-matra first; a row per item, a verdict per fixture; the
->   whole-drawn sheet as `result.indic.templates.sheet`, to be saved as
->   `tests/output/graphic/indic-paint/templates.png`. It runs inside
+>   tested since `67fb97c`, after its critics found Telugu droppable with
+>   the suite green): each Devanagari or Telugu text item of the settled
+>   frame, drawn alone at its own x, look and size, through
+>   `paintDrawList2d` against `drawTextOnto` (equal), whole against per
+>   code point (an item with a mark must differ), each conjunct measured
+>   alone narrower than its letters (`4450e3d`, the fix §6.11's Indic note
+>   records), the i-matra first; a row per item, a verdict per fixture;
+>   the whole-drawn sheet as `result.indic.templates.sheet`, to be saved
+>   as `tests/output/graphic/indic-paint/templates.png`. It runs inside
 >   `indic`'s block after phase 1's half, only when templates are named,
 >   and the templates check runs too.
 > - **`curves: { names, clipId }`** (M14) and **`look: { clipIds }`** (the
@@ -15341,13 +15354,18 @@ of this section is built.**
   is no true talk. Mutations, each failing: V1 (a baseline keyword
   allowed to lift a negated phrase: "179 failing" in the validated-alone
   case; **through the full settle it survives**, its onset Infinity and
-  the per-20 s cap hiding it, hence that case); V2 (a label from the next
-  sentence: "68 failing", "410 failing", and the shipped case only through
-  its floor, "ring: 75 baseline graphics kept: expected 75 to be greater
-  than or equal to 150"); V3 (the validator bypassed on the baseline
-  route: 325, 521, 311 and 180 failing); eval talks counted true. The
-  steps on this route are read only over the three nested fixtures: the
-  generator writes no ordinal runs.
+  the per-20 s cap hiding it, hence that case (changed 2026-11-15,
+  try-out 1: see the note that follows); V1 was made in
+  `validateGraphics.ts`, the 'said negated' problems filtered for source
+  'baseline', not in `baselineGraphics.ts`: unmutated, the baseline itself
+  proposes keywords inside negated clauses, 'Never skip this.' giving raw
+  'skip this', and leaves them for the validator to drop); V2 (a label
+  from the next sentence: "68 failing", "410 failing", and the shipped
+  case only through its floor, "ring: 75 baseline graphics kept: expected
+  75 to be greater than or equal to 150"); V3 (the validator bypassed on
+  the baseline route: 325, 521, 311 and 180 failing); eval talks counted
+  true. The steps on this route are read only over the three nested
+  fixtures: the generator writes no ordinal runs.
 - **`tests/graphicTree.test.ts`'s reader cases** (`530c3b6`, `0b2c763`;
   27): `treeParents` over every nested fixture as piece 2's reader gives
   them, each English one equal to its parent list, a Hindi or Telugu one
@@ -15375,7 +15393,9 @@ of this section is built.**
   `.key`, the constant's `'key'`, which typecheck also refuses, TS2322),
   I1-I3 (Telugu dropped, `noIndic` emptied, no language filter), T1
   (`tallyBy` last case wins), N1 (the NaN guard), own3, own3b and own4
-  (a key in the summary, in a note, from a fresh lettering), G1, U1;
+  (a key in the summary, in a note, from a fresh lettering), G1 (a
+  language filter inside `checkIndicTemplates`' glue, a source-read case)
+  and U1 (the unknown-id FAIL line in `byTemplate` removed);
   `4450e3d`'s builder M1-M6 and fixer A-J (below, the Indic check). Not
   guarded: `checkLook` rendering every letter under `clean` (browser
   glue, no pure seam).
@@ -17067,7 +17087,8 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
       decision for T4; `run.ts`, `validateGraphics.ts`; `44024d9`,
       `db4b46d` declined) (2026-11-14, T4, `477918a`: the eval counts what
       settle keeps, before `graphicTiming`; whether settle should drop
-      such words is still open);
+      such words is still open) (changed 2026-11-15, try-out 1: see the
+      note that follows);
     - the decision record's op holds `GraphicCandidate`s, so in a run over
       several clips a sentence id does not say which clip a graphic sits
       on (only `drops` carry `clipId`): whether ops should hold
@@ -17163,7 +17184,8 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
   rather than `pairSettled`'s joined string, `SettledGraphics.drops` and
   `graphicDropsOf` (built by T4, `477918a`: `parts` and `settled.drops`;
   `graphicDropsOf`, the landing's drops, is not read, since the eval
-  counts what settle keeps); `NO_MODEL_LINE` and the `'baseline'` record model are
+  counts what settle keeps (changed 2026-11-15, try-out 1: see the note
+  that follows)); `NO_MODEL_LINE` and the `'baseline'` record model are
   worded to stay true once the seam is filled (held, unchanged, by T4,
   `c594dda`); the harness options (built by T4, `fba3632`, `67fb97c`), a
   Find-made graphic state for the census and the warnings, and a "no
@@ -17204,18 +17226,21 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
   [the eight] }` 55 of 55 template rows and 18 of 18 fixtures PASS
   after `4450e3d` (41 of 55 and 8 of 18 before it, every failure the
   rule's; §6.11's T4 notes). **Every lane of §6.19's phase 2 is built:
-  phase 2 is closed on the build side.** What the app does now that it
-  did not: with no model set up, or for a window whose answer is
-  rejected, the baseline's graphics land (the status block). **No real
-  model has been asked by any test**, and the eval has never run: no
-  `eval-*.json` exists.
+  phase 2 is closed on the build side** in that sense; the bar's
+  property item is still a build item of the validator's (below). What
+  the app does now that it did not: with no model set up, or for a
+  window whose answer is rejected, the baseline's graphics land (the
+  status block). **No real model has been asked by any test**, and the
+  eval has never run on a model or on your fixtures: no `eval-*.json`
+  exists.
   **The bar above, item by item, 2026-11-14:**
   - "the property test green and mutation-checked … zero ungrounded,
     mispaired or de-negated graphics can ship": **not met**. T4 carried
     the property onto the baseline route (`0b2c763`, `49df60f`: every
     graphic the baseline ships grounds, the negated talks ship none,
     V1-V3 killed, V1 only by the validated-alone case since the per-20 s
-    cap hides it in the shipped one), but the T2a paragraph's other two
+    cap hides it in the shipped one (changed 2026-11-15, try-out 1: see
+    the note that follows)), but the T2a paragraph's other two
     reasons stand untouched by T4: two named T2a mutations fail the
     property only through its floors, and §6.7's T2a list holds false
     graphics the validator keeps. A build item (the validator's), not
@@ -17316,6 +17341,10 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
       couples want it, some not.' gives 'some not'; 'We will never.'
       gives 'will never'; '$1,200 for the whole wedding party' is
       labelled 'whole' (`49df60f`, `a3327d9` declined);
+    - in 'First, a.', 'Second, b.' … 'Fifth, e.' the opener whose label
+      is only a function word is no item: s00 becomes keyword 'First a'
+      and the steps run starts at s01 (plan-silent; a critic's probe at
+      `c594dda`, neither taken nor declined);
     - a run of more than three ordinal sentences drops the fourth on with
       no note (a note would be new text on screen; `530c3b6` declined);
       the steps title is always 'Step by step', so the nested set reads
@@ -17358,6 +17387,10 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
       declined: `ask.ts`' own tests);
     - the eval builds no decision record (`a3327d9` declined).
   - The harness check (`src/renderer/src/harness/`):
+    - the curves and look JSDoc carry no separate "`const r =`" warning
+      (`saveKeyLine` says it on the page and in the summary; `67fb97c`
+      declined), and §6.10's own M14 and look calls are written without
+      `const`, which echoes the result, key included (dated beside each);
     - whether `copy()` saves a key in `npm run dev`: the printed route
       (`saveKeyLine`, `67fb97c`) names DevTools' `copy()`, which your
       earlier runs found undefined or not reaching the clipboard (§6.10's
@@ -17390,6 +17423,14 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
       where `graphicTree` only scores one (M16 is a reading bar; kept);
       no mutation lengthens `drawnStrings` for the nested M16 case
       (`49df60f` declined);
+    - `baselineGraphics.test`: mutation B3 (an ordinal run across a
+      one-sentence gap) is killed by a crash in `treeParents` (null.split),
+      not by its assertion; the second gap input a critic asked for was
+      not added (`530c3b6` declined);
+    - `graphic.int`'s tick case uses `peakSeconds: 0`, so the sign of
+      `cue.frame - peakFrames` (`sound.ts`) is not exercised there;
+      `tests/graphicSound.test.ts` covers a non-zero `peakSeconds`
+      (`73c6f69` declined);
     - `graphic.int`'s README case asserts nothing, its centre-in-third
       check follows from the four edges, and `4f2b025`'s message reads
       "counter.s" and "steps." for counter's and steps' (`73c6f69`
@@ -20284,10 +20325,12 @@ both unmeasured.) (2026-11-11: T2b is built and pushed with the T3 record
 as `c6e4278`, green on both runners (run 43144819099), so T4's gate in
 the table, T1-T3, is met: every lane before it is built and pushed. Next
 by §6.19: T4, the last lane of phase 2. M17, M18 and M21 are still
-unmeasured, and §15 rows 10 and 11 wait on T4's eval.) (2026-11-14: T4 is built and pushed as `ae3a670`, its Indic rule's fix
-as `4450e3d`, both green on both runners: **every lane of phase 2 is
-built**, and phase 2 is closed on the build side. Phase 3 waits on phase
-2's exit, whose open items are yours (§6.12's "Phase 2's state, lane T4,
+unmeasured, and §15 rows 10 and 11 wait on T4's eval.) (2026-11-14: T4
+is built and pushed as `ae3a670`, its Indic rule's fix as `4450e3d`,
+both green on both runners: **every lane of phase 2 is built**, and
+phase 2 is closed on the build side in that sense. Phase 3 waits on
+phase 2's exit, whose open items are yours but one, the property test's,
+a build item of the validator's (§6.12's "Phase 2's state, lane T4,
 2026-11-14"). M17, M18 and M21 are still unmeasured, and §15 rows 10
 and 11 wait on the eval's first run, which waits on your ten
 `eval-*.json`.)

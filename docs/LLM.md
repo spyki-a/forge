@@ -317,7 +317,7 @@ app's: the validator, the beats, placement, the budget, the sounds.
 
 | file | what |
 |---|---|
-| `src/shared/director/run.ts` | `graphicsMenuFor` (the clip's shown sentences, capped at 30 words or 15 s, in windows of 24; the templates offered, `callout` only with a subject track; where the words came from); `settleGraphics`, one call per window, the code the app runs and the eval (T4) is to call; `pairSettled` joins a run's windows; `decisionForGraphics` |
+| `src/shared/director/run.ts` | `graphicsMenuFor` (the clip's shown sentences, capped at 30 words or 15 s, in windows of 24; the templates offered, `callout` only with a subject track; where the words came from); `settleGraphics`, one call per window, the code the app runs and the eval (T4) is to call (2026-11-14, T4: `runGraphicsPass` here is now the loop Find, Direct and the eval run, with the baseline of `src/shared/director/baselineGraphics.ts`); `pairSettled` joins a run's windows; `decisionForGraphics` |
 | `src/shared/director/promptGraphics.ts` | one constant playbook; the user prompt is the SENTENCES table, the offered TEMPLATES, and the language line last (the spine's measured line for Telugu and Hindi) |
 | `src/shared/director/schemaGraphics.ts` | `graphicsSchema(menu, { constrained })`, flat, `reasoning` first, at most four graphics; constrained for the decoder (the menu's ids as enums, decoded lengths), unconstrained for the validator's shape check; 1817–1943 chars constrained, 1559 not; `maxTokensForGraphics` 850 |
 | `src/shared/director/ask.ts` | the retry's fix: on the OpenAI shape, where `think` is never sent, the retry adds "Answer with the JSON object only." |
@@ -357,9 +357,9 @@ with them when the asset has a Speaker; the record still names `{ id:
 eval block (`FORGE_EVAL_GRAPHICS`, `tests/eval/graphicsEval.ts`, the
 report's "## Graphics runs", `eval:rate`'s blind template fit) runs the
 same loop over saved answers, the model against the baseline. **It has
-never run**: no `eval-*.json` exists, so row 10, the token cap and every
-figure of the bar wait on its first run. **Still no real model has been
-asked by a test.**
+never run on a model or on your fixtures**: no `eval-*.json` exists, so
+row 10, the token cap and every figure of the bar wait on its first run.
+**Still no real model has been asked by a test.**
 
 ---
 

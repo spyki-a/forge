@@ -9718,7 +9718,10 @@ beside it with the mark count and `dottedCircleWidth`. `differs` keeps the
 plan's per-code-point frame, because the plan's mutation (an `Array.from`
 split in the painter) needs that frame; its caveat is in the row's type
 and the note. Not adopted: a split frame carried on a no-break space,
-since a pre-base matra reorders before it.
+since a pre-base matra reorders before it. (2026-11-14, `4450e3d`: the
+reading is now per conjunct, `describeConjuncts`, and శ్రీ's figure is its
+conjunct's without the vowel sign; this section's T4 subsection, "Phase
+2, lane T4".)
 
 **The CSP.** The harness page has none, so its M2 cannot answer the app's
 worker question. The result now records the page's CSP meta (null there),
@@ -11367,9 +11370,10 @@ guessed:
   against 74.7; 49.6 against 60.4; 24.7 against 43.4; 42.9 against 50.6;
   …). `4450e3d` reads each conjunct alone (`conjunctsOf`): 55 of 55 rows
   and 18 of 18 fixtures PASS; phase 1's ten clusters read as before, and
-  శ్రీ now measures శ్ర, 68.4 against 145.6, as phase 0's whole-cluster line
-  does. The builder had expected 18 PASS without running a browser. **A
-  reading proved on single clusters is not a reading of text.**
+  శ్రీ now measures its conjunct without the vowel sign, 68.4 against
+  145.6, as phase 0's whole-cluster line does. The builder had expected
+  18 PASS without running a browser. **A reading proved on single
+  clusters is not a reading of text.**
 - **The bake is not always pixel-equal to the preview at a soft edge, and
   which case shows it moves.** `{ templates: [the eight] }`, two runs: every
   case inside `TEMPLATES_BAR`'s mean of 1 level over the ink (largest mean
@@ -11466,4 +11470,8 @@ guessed:
   running it. And two tests certified bugs: `fba3632`'s save line printed
   `copy(r.look.key)`, a field `LookResult` does not have (its keys are
   `keys`), and a test asserted that text; `67fb97c` builds the line from
-  `BLIND_KEY_FIELD`, held to the result types by a typed guard.
+  `BLIND_KEY_FIELD`, held to the result types by a typed guard. And
+  `c594dda`'s `baselineGraphics.test` pinned nested-en-1's false tree
+  (parents [-1,0,0], 'shoot itself' and 'edit' drawn as the plan's two
+  parts) as expected; `530c3b6` fixed it in `tree.ts` and re-pinned it
+  flat.
