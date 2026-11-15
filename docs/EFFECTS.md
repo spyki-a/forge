@@ -8525,7 +8525,7 @@ suite and CI are the orchestrator's.
   and the preview's recompute on a long followed clip while editing.
 - **Burned-in text** (§5.3): after 1g.
 
-## 61. Graphics: the forks measured (phase 0 of step 3, then phase 1's first) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22), and on the Surface the libass run and the development app (2026-10-27); in node, phase 1's M9 (2026-10-27) and the stroke's flattening (2026-10-28); and D10's three readings, the Noto fonts' provenance, the Mac's libass against the fontsdir, and `document.fonts.check` (2026-10-29); and under painter A, Chrome 152's canvas (negative radii, a 0-side canvas, `globalAlpha`) and, in node, the draw list's mixed faces and bounds and the frames' edges (2026-10-30/31); and lane C's worker encoder and measureText in the pane's Chrome 152 (2026-11-01) and, in node, the box route under crop, mask, matte and transitions (2026-11-02); and lane D's three, geq's w − 2 clamp on the box route, a stroke's chroma through `yuva420p` (M19 in part) and `flattenPath` against `SVGPathElement` (M8 in part) (2026-11-03); and phase 2's lanes T3-first and T1, in node and on the harness census (2026-11-06 to 11); and lane T2a's validator against the false graphics its critics wrote, in node (2026-11-11); and lane T3's beats, placement, budget and graphic sounds against their critics' inputs, in node and on the harness census (2026-11-11); and lane T2b's menu, settle, store actions and two panels against their critics' inputs, in node and on the harness census (2026-11-11); and lane T4's baseline, eval and harness options against their critics' inputs in node, the templates and Indic checks on the harness page, and `graphic.int`'s phase-2 render on both CI runners (2026-11-14)
+## 61. Graphics: the forks measured (phase 0 of step 3, then phase 1's first) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22), and on the Surface the libass run and the development app (2026-10-27); in node, phase 1's M9 (2026-10-27) and the stroke's flattening (2026-10-28); and D10's three readings, the Noto fonts' provenance, the Mac's libass against the fontsdir, and `document.fonts.check` (2026-10-29); and under painter A, Chrome 152's canvas (negative radii, a 0-side canvas, `globalAlpha`) and, in node, the draw list's mixed faces and bounds and the frames' edges (2026-10-30/31); and lane C's worker encoder and measureText in the pane's Chrome 152 (2026-11-01) and, in node, the box route under crop, mask, matte and transitions (2026-11-02); and lane D's three, geq's w − 2 clamp on the box route, a stroke's chroma through `yuva420p` (M19 in part) and `flattenPath` against `SVGPathElement` (M8 in part) (2026-11-03); and phase 2's lanes T3-first and T1, in node and on the harness census (2026-11-06 to 11); and lane T2a's validator against the false graphics its critics wrote, in node (2026-11-11); and lane T3's beats, placement, budget and graphic sounds against their critics' inputs, in node and on the harness census (2026-11-11); and lane T2b's menu, settle, store actions and two panels against their critics' inputs, in node and on the harness census (2026-11-11); and lane T4's baseline, eval and harness options against their critics' inputs in node, the templates and Indic checks on the harness page, and `graphic.int`'s phase-2 render on both CI runners (2026-11-14); and try-out 1, the owner's first real recording through Find graphics with no model, and its six pieces, in node and on the harness page (2026-11-15)
 
 For `docs/CLIPS.md` §6.15 (step 3's phase 0, "Measure before relying"):
 pieces 0.1–0.3 were built on the evening of 2026-10-21 in seven commits,
@@ -11244,7 +11244,9 @@ is injected. Only what cost time or would not be guessed:
   On every YouTube clip every number is a proposal, so true keywords,
   quotes and steps near a number vanished, and pressing Drop on the
   number left nothing. `db4b46d`: a proposal is neither spaced nor
-  spacing; Keep places it through the budget.
+  spacing; Keep places it through the budget. (Since 2026-11-15, try-out
+  1, `d3daf1e`, settle spaces nothing at all; the try-out subsection
+  below.)
 - **A run that asked nothing named a model.** `pairSettled([])` gave
   `baseline: false`, so `decisionForGraphics` wrote the caller's model
   into a record of a run with no windows (a critic's scratch test); the
@@ -11475,3 +11477,53 @@ guessed:
   (parents [-1,0,0], 'shoot itself' and 'edit' drawn as the plan's two
   parts) as expected; `530c3b6` fixed it in `tree.ts` and re-pinned it
   flat.
+
+### Try-out 1, 2026-11-15
+
+`CLIPS.md` §6.12's "Try-out 1, 2026-11-15", with dated notes in §6.6,
+§6.7, §6.9 and §6.10, and `SIDECAR.md`'s ASR. The owner's recording
+(77.93 s, English) through Find graphics with no model; read by the
+session from the project's autosave and a scratch run, then the fifteen
+commits `dd60e4d` … `81db7ca`, the two build journals (`wf_9abb2c69-452`,
+`wf_3067a2e8-88f`) and the session's reads on the harness page. Only what
+cost time or would not be guessed:
+
+- **faster-whisper splits a grouped number and a percent sign into words
+  of their own.** small, int8, on the owner's English: "$2" + ",500.",
+  "$1" + ",200", "$10" + ",000,", "40" + "%", "18" + "%". The validator's
+  reader closes a number at the comma, so "$2" ",500." read as $2 and a
+  bare 500: the baseline's counter would have drawn "$2 · cost", and the
+  captions drew "$2 ,500." and "40 %". The join (`joinSplitNumbers`, in
+  main before the segments) takes a tail only when the joined word reads
+  as ONE number to that same reader, so "2019" ",000" and "$2," "500"
+  stay apart; 175 words became 165. Saved transcripts keep the split.
+- **A window's spacing cannot see what will hold room when the graphics
+  land.** Settle spaced each 24-sentence window alone, "the earlier one
+  stays": the ring at 10.04 s lost to the keyword "watching" at 5.4 s and
+  the counter at 21.3 s to "calendar" at 18.0 s; at landing the budget,
+  which sees the lower third, dropped "watching" for it. The ring had lost
+  its room to a graphic that never landed. A window cannot see the lower
+  third, the placed graphics, the other windows, cards or zoom punches,
+  so no rule inside settle could have been right; `d3daf1e` leaves room
+  to the budget alone, a keyword yielding to any other template.
+- **The templates do not lay out at a tile's few pixels.** The Library's
+  tile faces were first laid out at the tile's own size, 95 by 53 px on
+  the harness page: the Bars face drew NO item and every other face set
+  its lines on top of each other, because the templates lay out for a
+  video frame. The one test of the face asked at 320 by 180, a size no
+  tile used, and passed. `81db7ca` lays every face out at 1280 by 720 and
+  scales the inked part into the tile; on the page all seven ink.
+- **A store rule and the tile read "listed" two ways.** Pressing **Add
+  graphic from these words** on a refused sentence lists its row; Add
+  places it; Undo takes the clip away and the tile shows the row again,
+  since it lists a row whose added clip is gone. The store's "already
+  listed" check read `addedAs === undefined` alone, so a second press on
+  the same sentence listed a SECOND row for the same refusal. Seen on the
+  harness page, not in the suite; `c29a5dd` reads it the tile's way.
+- **The census found a second control under one title.** The full census
+  at `c29a5dd` reported the row "Transcribe this clip first — graphics
+  are found in its words" ambiguous, 2 on screen where it counted 1: the
+  new button is greyed with Find's title on a clip with no transcript.
+  `8b1f2a8` sets the row's count to 2; read again, missing [], 912
+  checked, 8 skipped.
+

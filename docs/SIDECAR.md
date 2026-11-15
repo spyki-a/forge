@@ -133,6 +133,27 @@ limit. Nothing in the editor may depend on the sidecar being alive.
 timeline frames — a transcript belongs to an asset, and storing frames would corrupt every
 transcript the moment the project frame rate changed.
 
+**The words as main keeps them** (since 2026-11-15, `docs/CLIPS.md` §6.12's "Try-out 1";
+`dd60e4d`, `287201d`). faster-whisper (small, int8) gives a grouped number as two words and a
+percent sign as a word of its own: on the try-out's recording "$2" ",500.", "$1" ",200", "$10"
+",000," and "40" "%". The validator's number reader then closed "$2" at the comma, so a counter
+drew "$2", and the captions showed "$2 ,500.". The `asr:transcribe` handler (`src/main/ipc.ts`)
+now passes the helper's words through `joinSplitNumbers` (`src/shared/transcript.ts`) before
+`segmentIntoSentences`, so the stored words, the segments, the captions and the graphics all
+read one word. Joined: a word opening with a comma and digits onto a word ending in a digit,
+exactly when the joined word reads as ONE number to the validator's own reader (`numberSpans`
+over `claimTokens`: western threes, and "₹1,50,000" from two words); and a word that is only
+`%` (with closing punctuation or none) onto a word ending in a digit. A run joins whole in one
+pass ("$1" ",000" ",000"); joining twice changes nothing. The joined word keeps the first word's
+start, the later end and the lower confidence (null when either is null), and the words are
+renumbered 0..n-1. Left apart, each pinned by a test: "$2," "500" (the comma closes the first
+word), a decimal split "2" ".5", a lakh number split three ways ("₹1" ",50" ",000"), a tail
+onto a leftover tail ("1" ",2" ",000"), "%" after a word that is not a number. On the
+try-out's transcript 175 words became 165. **Transcripts already saved are not migrated**:
+their word indices ground existing graphics, so an old recording shows "$2 ,500." until it is
+transcribed again. A YouTube track does not pass through it (`src/shared/ingest/captions.ts`:
+its `glue()` already attaches a lone "%", and a split ",500" there is unmeasured).
+
 Whisper is the universal tier: it covers Indic languages, which Parakeet does not. Parakeet-TDT
 is the better European option (native transducer timestamps, ±20-40ms vs Whisper's
 ±100-300ms DTW) and slots in beside this as a second tier — see `STACK.md` §2.

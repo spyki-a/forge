@@ -274,11 +274,13 @@ Settings (sheet 28).
 
 The shipped assets (`Library.tsx`). Search across the top, with the count, the
 **package** button and **Rescan**. Under it the drawers, each with its count:
-**Fonts, Props, Stickers, Transitions, Titles, SFX**. It opens on Stickers;
+**Fonts, Props, Stickers, Transitions, Titles, SFX** (and, since 2026-11-15,
+**Graphics** after SFX, below). It opens on Stickers;
 once more than one sticker category is installed, a row of category chips
 appears above the grid.
 
-Drag anything onto the timeline, or onto the picture. Transitions are dropped
+Drag anything onto the timeline, or onto the picture (a graphic tile only onto
+a video track, since 2026-11-15). Transitions are dropped
 on a clip's incoming edge. A title template lands as a clip whose words are
 edited in the dock (Title text). The font drawer is a specimen book: fonts are
 chosen in the font pickers, and a font tile cannot be dragged.
@@ -296,6 +298,33 @@ here." or those two tiles is where most people start and the
 offer has to be in it. An empty drawer in a library that is not empty offers
 **Get stickers →** (or whichever drawer it is). See `docs/ASSETS.md`. Nothing
 in the editor needs a pack; they add choices.
+
+**Graphics** (since 2026-11-15, try-out 1's piece 6; `docs/CLIPS.md` §6.6's
+try-out note, `graphics/library.ts`) is the last chip, after SFX, with its
+count: the graphics engine's templates as seven tiles in two columns,
+**Counter, Bars, Steps, Quote, Ring, Keyword, Lower third**, each a face drawn
+in the project's look (OUTPUT's Graphics section) with its name under it; a
+look or accent change redraws them, and the search filters them by name. A
+tile's tooltip is its name and "— click to add at the playhead, or drag onto
+the timeline". **Click** a tile: it lands at the playhead on the top
+unlocked video track. **Drag** it onto the picture: the same, with no Fill
+or Fit chip. **Drag** it onto a video track: on that track, at the dropped
+frame; an audio track refuses it with "That belongs on a video track". Each
+lands as one undo step, selected, with the dock open on its **Graphic**
+panel, in placeholder words to type over ("100" and "Your label here",
+"Compared", "Step by step", "Your quote here", "75%", "Your words here",
+"Speaker name" and "Their role"; a lower third over a file with a Speaker
+takes that name). It is refused, with a notice, where another graphic or a
+Director card is on screen ("another graphic is on screen then"), over a
+zoom punch, where no third is free of the captions, and where every video
+track is busy then ("No free video track at that time"). It is yours: Clear
+graphics, Find again and Direct's Clear leave it, and its sounds follow
+**Graphic sounds**. The drawer needs no pack and no catalogue: its tiles
+show while the library loads, when it failed and when there is none, it
+offers no "Get … →", and on an installer's empty library the asset packs
+come after the tiles. The callout is not offered: placed by hand it has no
+face to point at, and it would draw nothing over footage with no subject
+found or over no footage.
 
 ### Transitions
 
@@ -378,7 +407,8 @@ run's notes follow, each dropped graphic with its reason, led by "No
 model’s answer was used in this run" when none was in any window; if the
 clip is removed while its run is out, "The clip was removed while its
 graphics were being found — nothing was placed"; a notice sums the run
-up ("Graphics: N placed, M to check — K notes"). **Clear graphics**
+up ("Graphics: N placed, M to check — K notes"). (2026-11-15, try-out 1:
+the dropped graphics are no longer notes; see below.) **Clear graphics**
 (shown while any Find graphics graphic is placed or a number of one waits; tooltip: "Removes every graphic
 Find graphics placed, in every clip, with its sounds and the numbers
 waiting to be checked") takes them, with "Direct's graphics stay;
@@ -395,6 +425,32 @@ model set up, or for a window whose answer is rejected, Find graphics
 lands the baseline's graphics, rings, counters, steps and short English
 keywords, beside that lower third, and the note reads "the baseline's
 graphics are used for sentences …: <why>".)
+
+Since 2026-11-15 (try-out 1, pieces 4 and 5; `docs/CLIPS.md` §6.6's try-out
+note): under **Find graphics in this clip**, **Add graphic from these
+words** makes a graphic from the rows' pick, the one **Cut to these words**
+uses. Click a row for its sentence, read as Find reads it (steps, a ring,
+a counter, else a keyword of its last words); or drag Start and End inside
+a row for a keyword of exactly those words. It is greyed with the tooltip
+"Click a row above for its sentence, or drag Start and End inside it for a
+keyword" while nothing is picked, "Transcribe this clip first — graphics
+are found in its words" with no transcript, and "Graphics are still being
+found — wait for that run to finish" while a run is out; once something is
+picked its tooltip is "A graphic for the picked sentence, read as Find
+reads it, or a keyword of exactly the picked words". No model is asked.
+After the graphics and the numbers to check, each graphic a run (or that
+button) dropped is a row of its own: its kind, its words, **Add**, and its
+reason under it; Add places it anyway, past the 6 s gap and the count, and
+the row leaves the list while that graphic stands (Undo or Drop brings it
+back). Where it still cannot be drawn (another graphic on screen, a zoom
+punch, the clip's end…) the reason shows on the row in the accent colour
+and as a notice. A row the button listed carries "Not added, for the
+reason above — press Add to place it anyway" (or "Not added, for the
+reason above" when it cannot be drawn), with the notice "Graphic not
+added: <reason> — it is listed under Graphics"; when there is nothing to
+draw: "Nothing here to make a graphic of — pick words inside the sentence
+for a keyword". The rows last for the session and are not saved; Clear
+graphics leaves them.
 
 ### Director
 
@@ -645,7 +701,10 @@ not say gets an amber warning under the field ("'45' is not said in
 s00") and is saved anyway; a graphic whose transcript is gone says "Its
 transcript is not in the project, so these words are not checked", one
 tied to nothing said "It is not tied to anything said, so these words
-are not checked". Steps have
+are not checked" (since 2026-11-15, every graphic placed from the
+Library's Graphics drawer shows this; a Library lower third over a file
+with no Speaker reads "Speaker name", and the first Speaker typed here
+replaces it). Steps have
 **Connector** (None, Line, Tree), a callout **Shape** (Arrow, Circle).
 **Seconds**, within the kind's range shown beside it, warns (never
 blocks) when too short to read ("It needs … s for its beats and to be
@@ -837,6 +896,10 @@ library installed, on places nothing and says so. One undo step either
 way. Nothing in the app places a graphic yet, by hand or from speech
 (only the test harness makes one), so today the switch changes nothing
 you can hear; it records the setting (docs/CLIPS.md §6.5, §6.14).
+(Wrong since 2026-11-11, when Find graphics and Direct began placing
+graphics from speech, and since 2026-11-15 the Library's Graphics drawer
+places them by hand: the switch takes and puts back the sounds of all of
+them.)
 
 ## EXPORT — making the file
 
@@ -965,7 +1028,9 @@ picture**, or a **Blurred background** — which is sent underneath everything,
 since a blurred copy drawn on top hides the shot it was meant to sit behind.
 **Fill the frame** goes back. Each choice writes ordinary transform and mask
 values, so none of them is a mode and the result stays draggable. A sound
-dropped here is refused: it has no appearance.
+dropped here is refused: it has no appearance. (Since 2026-11-15 a tile
+from the Library's Graphics drawer lands as a graphic at the playhead, with
+no fill and no chip.)
 
 An empty project says what to do on the picture itself — drop pictures or a
 clip here, or open Director and press Direct.

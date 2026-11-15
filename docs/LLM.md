@@ -361,6 +361,20 @@ never run on a model or on your fixtures**: no `eval-*.json` exists, so
 row 10, the token cap and every figure of the bar wait on its first run.
 **Still no real model has been asked by a test.**
 
+**15 November 2026, try-out 1** (the owner's first real recording through
+Find graphics with no model; `dd60e4d` … `81db7ca`, CLIPS §6.12's
+"Try-out 1, 2026-11-15"). What changed for the pass: the validator drops
+an English number said as a what-if ("'$10,000' is said as a what-if in
+s18"), for a model's graphic and the baseline's alike (CLIPS §6.7's
+try-out note); the baseline keyword is tightened, a sentence mark, at
+least three words, no courtesy phrase, not all fillers, each a proposal
+(§6.10's); and rule 10 is no longer applied in `settleGraphics`: the
+budget alone decides room, a keyword yielding to any other template, so
+the record's `op.graphics` now lists every graphic the validator passed,
+and the eval lands each run as Find does and counts only what lands
+(§6.7's, `187de3e`). The prompt, the schema and the ask are unchanged.
+Still no real model has been asked.
+
 ---
 
 ## Built — `spine@2`, 24–25 September 2026

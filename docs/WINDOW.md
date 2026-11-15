@@ -222,6 +222,13 @@ is lost by it); *coming-soon* = shown, disabled, labelled.
 | PackList: Install / Cancel / Remove | `PackList.tsx:139` | Shelf tile Library | move | |
 | PackList: progress bar | `PackList.tsx:159` | Shelf tile Library | move | |
 
+(2026-11-15, after the 14 steps: the Library tile has a seventh drawer,
+**Graphics**, after SFX, the graphics engine's seven templates as tiles
+placed by a click or a drag, from try-out 1's piece 6, `e9f7923`,
+`05c2c0e`, `81db7ca`; `docs/CLIPS.md` §6.6's try-out note and
+`WHERE-THINGS-ARE.md`'s Library. It still opens on Stickers, Decision 9 as
+answered in §7.6.)
+
 ### 3.7 Transcript tile
 
 | control | today | new home | how | note |
