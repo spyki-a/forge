@@ -3,7 +3,7 @@ import { emptyProject, DEFAULT_COLOR, DEFAULT_TRANSFORM, MAX_TRACKS, type Clip, 
 import { CHECK_THE_NUMBER, CLEAR_GRAPHICS_NOTE, CLIPS_GRAPHIC_RULE, WRONG_ASSET_NOTE, applyGraphics, clearGraphics, fpsMismatchNote, lowerThirdFor, resoundAfterClear } from '@shared/graphics/apply'
 import { GRAPHIC_RULE, SOUND_RULE, clearDirector } from '@shared/director/apply'
 import { RETIMED_NOTE } from '@shared/graphics/beats'
-import { TOO_CLOSE_REASON } from '@shared/graphics/budget'
+import { tooCloseReason } from '@shared/graphics/budget'
 import { NO_LANE_NOTE, NO_SUBJECT_NOTE } from '@shared/graphics/place'
 import { GRAPHIC_SOUND_LANE_NAME, NO_SOUND_LIBRARY_NOTE } from '@shared/graphics/sound'
 import { SUBJECT_TRACK_VERSION, type SubjectTrack, type UnitRect } from '@shared/reframe/types'
@@ -275,8 +275,9 @@ describe.each([
 
   it('a budget drop is a problem with the budget’s reason; a callout with no subject is dropped with rule 9’s note', () => {
     const out = run([keptOn('c', 'a', COUNTER), keptOn('c', 'a', RING_TOO_CLOSE), keptOn('c', 'a', CALLOUT)], [])
-    // The ring's onset, 11.5 s, is 0.5 s after the counter's: the earlier stays.
-    expect(out.problems.map((p) => [p.path, p.message])).toContainEqual(['$.kept[1]', `graphic dropped: the ring "40%" — ${TOO_CLOSE_REASON}`])
+    // The ring's onset, 11.5 s, is 0.5 s after the counter's: one rank, so the earlier stays, and the reason names it.
+    expect(out.problems.map((p) => [p.path, p.message])).toContainEqual(['$.kept[1]', 'graphic dropped: the ring "40%" — within 6 s of the counter at 11.0 s, the earlier one stays'])
+    expect(tooCloseReason({ template: 'counter', onset: 11, placed: false }, 'earlier')).toBe('within 6 s of the counter at 11.0 s, the earlier one stays')
     // The callout passes the budget (29 s) and has no subject track to point at.
     expect(out.problems.map((p) => [p.path, p.message])).toContainEqual(['$.kept[2]', `graphic dropped: the callout "look" — ${NO_SUBJECT_NOTE}`])
     expect(out.clipIds).toHaveLength(1)

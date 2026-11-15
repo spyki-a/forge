@@ -1416,37 +1416,30 @@ describe('the stretch: the cited sentence and one either side, over capped segme
   })
 })
 
-describe('settleGraphics: the validation half (rule 10 and the baseline seam)', () => {
+describe('settleGraphics: the validation half (no spacing since try-out 1, and the baseline seam)', () => {
   // 400 ms a word; each 'N% of clients' sentence is where a ring may sit.
   const lines = (n: number): string[] => Array.from({ length: n }, (_, k) => `In week ${k} we signed ${k + 1}% of clients today.`)
 
-  it('graphics closer than 6 s: the earlier one stays, whatever order the answer lists them', () => {
+  it('graphics closer than 6 s are all kept, in onset order whatever order the answer lists them: room is the budget’s (try-out 1)', () => {
     expect(GRAPHIC_SPACING).toEqual({ minGapS: 6, perS: 20 })
-    // Each sentence is 9 words = 3.6 s, so s00's number and s01's are 3.6 s apart, s00's and s02's 7.2 s;
-    // twelve sentences are 43.15 s of clip, room for two.
+    // Each sentence is 9 words = 3.6 s, so s00's number and s01's are 3.6 s apart. Settle no longer spaces
+    // (applyBudget decides room at apply time, with the lower third and the placed graphics in view).
     const t = talk(lines(12))
     const ring = (k: number): AnswerGraphic => g({ sentence: `s0${k}`, template: 'ring', value: `${k + 1}%`, label: 'clients' })
     const s = settleGraphics({ value: answer(ring(1), ring(0), ring(2)), truncated: false }, menuOf(t), t)
     expect(s.baseline).toBe(false)
     expect(s.rejected).toBeNull()
-    expect(s.kept.map((k) => k.sentence)).toEqual(['s00', 's02'])
-    expect(s.dropped).toEqual([
-      { path: '$.graphics', message: 'graphic dropped: the ring on s01 is within 6 s of the one before — the earlier one stays' }
-    ])
+    expect(s.kept.map((k) => k.sentence)).toEqual(['s00', 's01', 's02'])
+    expect(s.dropped).toEqual([])
+    expect(s.drops).toEqual([])
   })
 
-  it('at most one graphic per 20 s of clip', () => {
-    // Eight sentences of 3.6 s: 28.75 s of clip, so one graphic; twelve: 43.15 s, so two.
+  it('no count cap in settle either: three rings on a 28.75 s clip are all kept (the budget caps them)', () => {
     const short = talk(lines(8))
     const ring = (k: number): AnswerGraphic => g({ sentence: `s${String(k).padStart(2, '0')}`, template: 'ring', value: `${k + 1}%`, label: 'clients' })
-    const s = settleGraphics({ value: answer(ring(0), ring(3), ring(6)), truncated: false }, menuOf(short), short)
-    expect(s.kept.map((k) => k.sentence)).toEqual(['s00'])
-    expect(s.dropped.map((p) => p.message)).toEqual([
-      'graphic dropped: the ring on s03 — at most one graphic per 20 s of clip, the earlier ones stay',
-      'graphic dropped: the ring on s06 — at most one graphic per 20 s of clip, the earlier ones stay'
-    ])
-    const long = talk(lines(12))
-    expect(settleGraphics({ value: answer(ring(0), ring(3), ring(6)), truncated: false }, menuOf(long), long).kept.map((k) => k.sentence)).toEqual(['s00', 's03'])
+    const s = settleGraphics({ value: answer(ring(6), ring(0), ring(3)), truncated: false }, menuOf(short), short)
+    expect(s.kept.map((k) => k.sentence)).toEqual(['s00', 's03', 's06'])
+    expect(s.dropped).toEqual([])
   })
 
   it('a rejected answer settles to the baseline, validated the same way, and says why', () => {

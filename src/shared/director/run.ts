@@ -17,7 +17,7 @@ import { SEGMENT_MAX_MS, SEGMENT_MAX_WORDS } from '../ingest/captions'
 import { captionWindowMs } from '../captions/placement'
 import { subjectTrackOf } from '../reframe/frameMap'
 import { MAX_CANDIDATES } from './menu'
-import { GRAPHIC_SPACING, type GraphicCandidate, type GraphicDrop, type GraphicTemplateId, type KeptGraphic } from '../graphics/template'
+import { type GraphicCandidate, type GraphicDrop, type GraphicTemplateId, type KeptGraphic } from '../graphics/template'
 import { validateBaseline, validateGraphics, type AnswerGraphic } from './validateGraphics'
 import { drawnStrings, quoteSpeakerOf } from '../graphics/apply'
 import { GRAPHICS_PASS, graphicsSchema, maxTokensForGraphics } from './schemaGraphics'
@@ -356,9 +356,9 @@ export function graphicsMenuFor(project: Project, clip: Clip, transcript: Transc
 
 /** One graphics answer, settled (docs/CLIPS.md §6.6, §6.7): `settle2`'s twin. One per menu (one window). */
 export interface SettledGraphics {
-  /** Validated and spaced (§6.7 rules 1-10), in onset order. */
+  /** Validated (§6.7 rules 1-9), in onset order. Not spaced: rule 10 is the budget's (`applyBudget`, §6.9), at apply time. */
   kept: GraphicCandidate[]
-  /** Every note: each graphic dropped with its reason, each repair, each spacing drop, a rejection's. */
+  /** Every note: each graphic dropped with its reason, each repair, a rejection's. */
   dropped: Problem[]
   /**
    * The model's answer was not used (no model, or the pass rejected), so the
@@ -369,8 +369,9 @@ export interface SettledGraphics {
   /** Why the model's answer could not be used, when it could not. */
   rejected: string | null
   /**
-   * Beyond §6.6's words: each graphic dropped (by the validator or the
-   * spacing; never a repair, never the rejection itself), structured: the
+   * Beyond §6.6's words: each graphic dropped by the validator (never a
+   * repair, never the rejection itself; the budget's drops are
+   * `applyGraphics`', read by `graphicDropsOf`), structured: the
    * menu's clip, the template, the first string it would draw, the reason.
    */
   drops: GraphicDrop[]
@@ -389,61 +390,36 @@ export function baselineFailedNote(why: string): string {
   return `the baseline could not find graphics: ${why}`
 }
 
-/** The "graphic dropped: " head the validator's and the spacing's messages carry, taken off a structured drop's reason. */
+/** The "graphic dropped: " head the validator's messages carry, taken off a structured drop's reason. */
 const DROPPED_HEAD = 'graphic dropped: '
 
 /**
- * Rule 10 within one answer (§6.7): onsets at least `GRAPHIC_SPACING.minGapS`
- * apart, and at most max(1, ⌊clip seconds ÷ `GRAPHIC_SPACING.perS`⌋)
- * graphics, the earlier winning. A proposal (§6.6, "What is placed without
- * review") is not spaced and spaces nothing: `applyGraphics` sets proposals
- * aside before the budget (§6.6's landing order), so they are not what the
- * app would place, and a number that may never be kept must not drop a
- * trusted graphic; Keep places one through the budget (§6.9). A graphic's onset is its first beat word's
- * start (the lead before it is the same for every graphic); the clip's seconds
- * are those its menu's sentences span. A menu window (24 sentences, §6.6) is
- * spaced alone; `applyBudget` spaces across the project (§6.9).
+ * A window's kept graphics in onset order (equal onsets in the order given):
+ * a graphic's onset is its first beat word's start, else its first bound
+ * word's (the lead before it is the same for every graphic).
+ *
+ * Rule 10's spacing is NOT applied here any more (try-out 1, 2026-11-15). A
+ * window cannot see what will hold room when the graphics land: the lower
+ * third `applyGraphics` puts on the clip's first shown word, the graphics
+ * already on the timeline, the clip's other windows, a card or a zoom punch.
+ * So a ring here lost its room to a keyword that `applyBudget` then dropped
+ * for the lower third, and the ring never landed. `applyBudget` (§6.9) is
+ * the one place room is decided, with all of that in view, and its drops
+ * reach the decision record and the dock through `graphicDropsOf`. A
+ * proposal was never spaced and still is not: `applyGraphics` sets it aside
+ * before the budget, and Keep places it through the budget.
  */
-function spaceGraphics(
-  kept: readonly GraphicCandidate[],
-  menu: GraphicsMenu,
-  transcript: Transcript
-): { kept: GraphicCandidate[]; dropped: Problem[]; drops: GraphicDrop[] } {
+function inOnsetOrder(kept: readonly GraphicCandidate[], transcript: Transcript): GraphicCandidate[] {
   const byIndex = new Map(transcript.words.map((w) => [w.index, w]))
   const onsetMs = (c: GraphicCandidate): number => {
     const words = c.beatWords.length > 0 ? c.beatWords : c.bound
     const starts = words.map((i) => byIndex.get(i)?.startMs).filter((v): v is number => v !== undefined)
     return starts.length > 0 ? Math.min(...starts) : Infinity
   }
-  const first = menu.sentences.length > 0 ? byIndex.get(Math.min(...menu.sentences.map((s) => s.wordStart))) : undefined
-  const last = menu.sentences.length > 0 ? byIndex.get(Math.max(...menu.sentences.map((s) => s.wordEnd))) : undefined
-  const clipS = first && last ? Math.max(0, last.endMs - first.startMs) / 1000 : 0
-  const cap = Math.max(1, Math.floor(clipS / GRAPHIC_SPACING.perS))
-  const ordered = kept.map((c, i) => ({ c, i, at: onsetMs(c) })).sort((a, b) => a.at - b.at || a.i - b.i)
-  const out: GraphicCandidate[] = []
-  const dropped: Problem[] = []
-  const drops: GraphicDrop[] = []
-  let previous = -Infinity
-  let spaced = 0
-  const drop = (c: GraphicCandidate, reason: string): void => {
-    dropped.push({ path: '$.graphics', message: `${DROPPED_HEAD}${reason}` })
-    drops.push({ clipId: menu.clipId, template: c.data.template, text: firstDrawn(drawnStrings(c.data)), reason })
-  }
-  for (const { c, at } of ordered) {
-    const name = `the ${c.data.template} on ${c.sentence}`
-    if (c.proposal) {
-      out.push(c)
-    } else if (spaced >= cap) {
-      drop(c, `${name} — at most one graphic per ${GRAPHIC_SPACING.perS} s of clip, the earlier ones stay`)
-    } else if (at - previous < GRAPHIC_SPACING.minGapS * 1000) {
-      drop(c, `${name} is within ${GRAPHIC_SPACING.minGapS} s of the one before — the earlier one stays`)
-    } else {
-      out.push(c)
-      spaced += 1
-      previous = at
-    }
-  }
-  return { kept: out, dropped, drops }
+  return kept
+    .map((c, i) => ({ c, i, at: onsetMs(c) }))
+    .sort((a, b) => a.at - b.at || a.i - b.i)
+    .map(({ c }) => c)
 }
 
 function firstDrawn(strings: readonly string[]): string {
@@ -522,10 +498,14 @@ export function quoteSpeakerFor(asset: Pick<MediaAsset, 'speaker' | 'credit'> | 
 
 /**
  * A graphics answer as what the app would place (docs/CLIPS.md §6.6, §6.7):
- * validated one graphic at a time and spaced (rule 10), or, when the answer is
- * rejected (cut off, the wrong shape, or no answer at all), the baseline's
+ * validated one graphic at a time and put in onset order, or, when the answer
+ * is rejected (cut off, the wrong shape, or no answer at all), the baseline's
  * candidates validated the same way, with the reason. Never throws. The app and
- * the eval both settle here, so what the eval scores is what the user gets.
+ * the eval both settle here, so what the eval scores is what the validator
+ * lets through. Room (rule 10's spacing and count, §6.9's other rules) is
+ * not decided here but by `applyBudget` when `applyGraphics` lands the run
+ * (try-out 1, 2026-11-15; `inOnsetOrder` says why), so the eval does not see
+ * the budget's drops.
  *
  * One call per menu, so one window's answer: a window cut off or the wrong
  * shape rejects that window's pass only, and its note names the window
@@ -554,9 +534,8 @@ export function settleGraphics(
     'error' in answer ? { rejected: answer.error } : validateGraphics(answer.value, menu, transcript, { truncated: answer.truncated, speaker })
   if (!('rejected' in verdict)) {
     const graphics = (answer as { value: { graphics: AnswerGraphic[] } }).value.graphics
-    const spaced = spaceGraphics(verdict.kept, menu, transcript)
     const drops = dropsOf(verdict.dropped, '$.graphics', (i) => (graphics[i] ? { template: graphics[i].template, strings: answerDrawn(graphics[i]) } : undefined), menu.clipId)
-    return { kept: spaced.kept, dropped: [...verdict.dropped, ...spaced.dropped], baseline: false, rejected: null, drops: [...drops, ...spaced.drops] }
+    return { kept: inOnsetOrder(verdict.kept, transcript), dropped: [...verdict.dropped], baseline: false, rejected: null, drops }
   }
   const window = graphicsWindowName(menu)
   // The baseline never fails the settle (lane T4): a throw inside it is no candidates, with its own note.
@@ -570,20 +549,18 @@ export function settleGraphics(
     }
   }
   const standard = validateBaseline(candidates, menu, transcript, { speaker })
-  const spaced = spaceGraphics(standard.kept, menu, transcript)
   const head = options.baseline && failed === null ? `the baseline's graphics are used for ${window}` : `no graphics for ${window}`
   const drops = dropsOf(standard.dropped, '$.baseline', (i) => (candidates[i] ? { template: candidates[i].data.template, strings: drawnStrings(candidates[i].data) } : undefined), menu.clipId)
   return {
-    kept: spaced.kept,
+    kept: inOnsetOrder(standard.kept, transcript),
     dropped: [
       { path: '$', message: `${head}: ${verdict.rejected}` },
       ...(failed === null ? [] : [{ path: '$', message: baselineFailedNote(failed) }]),
-      ...standard.dropped,
-      ...spaced.dropped
+      ...standard.dropped
     ],
     baseline: true,
     rejected: verdict.rejected,
-    drops: [...drops, ...spaced.drops]
+    drops
   }
 }
 

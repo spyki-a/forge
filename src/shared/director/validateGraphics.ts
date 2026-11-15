@@ -5,7 +5,8 @@
  * differently. Rules 1-8's normaliser, claims and binding are `claims.ts`';
  * this file holds the stretch, rule 8's `fixed`, `speaker` and `index` modes,
  * rule 9's template rules over the bound result, and the per-graphic repairs.
- * Rule 10's spacing is `settleGraphics`' (`run.ts`), over the kept list. Rule
+ * Rule 10's spacing is the budget's (`graphics/budget.ts` `applyBudget`), at
+ * apply time, with the lower third and the placed graphics in view. Rule
  * 11 (a callout's `anchor`, phase 4, §6.18) is not checked here: no graphic
  * this file keeps carries an `anchor`, and the seam is `GraphicSpec.anchor`.
  *

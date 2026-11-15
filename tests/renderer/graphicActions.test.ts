@@ -8,7 +8,7 @@ import type { AnswerGraphic } from '@shared/director/schemaGraphics'
 import { GRAPHIC_RULE } from '@shared/director/apply'
 import { GRAPHICS_PASS } from '@shared/director/schemaGraphics'
 import { CLEAR_GRAPHICS_NOTE, CLIPS_GRAPHIC_RULE } from '@shared/graphics/apply'
-import { ON_SCREEN_REASON, TOO_CLOSE_REASON } from '@shared/graphics/budget'
+import { ON_SCREEN_REASON } from '@shared/graphics/budget'
 import { GRAPHICS_BUSY_NOTE, GRAPHICS_CLIP_GONE_NOTE, GRAPHICS_NO_SPEECH_NOTE, useEditor } from '../../src/renderer/src/store'
 import { baselineFailedNote } from '@shared/director/run'
 import { useCatalog } from '../../src/renderer/src/catalog'
@@ -371,8 +371,8 @@ describe('findGraphics: the run’s edges', () => {
    * currency amount ("40 clients" has no unit, rule 4), none opens with an ordinal, and every one is at most
    * eight words, not a question, ending on a content word, so each gives a keyword of its last word: "year"
    * (s00, word 5, 2.0 s), "day" (s01, word 11, 4.4 s; s02, word 17, 6.8 s, …), "honest" (s03, word 22, 8.8 s).
-   * Rule 10 over the window (its words span 0 to 49.75 s, so at most ⌊49.75 ÷ 20⌋ = 2, onsets 6 s apart):
-   * "year" stays, the next two "day"s are within 6 s of it, "honest" (6.8 s after) stays, and the cap drops the rest.
+   * Settle no longer spaces (try-out 1): the budget alone decides room over the 70 s shot (⌊70 ÷ 20⌋ = 3, the
+   * lower third outside the count, the Direct keyword at 50.5 s on the timeline counted), keywords in onset order.
    */
   it('with no model it still completes, the lower third placed from the Speaker and the baseline’s graphics, the record naming no model', async () => {
     start({ speaker: 'Ana' })
@@ -381,11 +381,15 @@ describe('findGraphics: the run’s edges', () => {
     }
     const before = project()
     await state().findGraphics('shot')
-    // The lower third from 0 s holds the screen when "year" lands at 2.0 s (the budget, §6.9): "honest" is placed.
-    expect(graphicsOver('shot').map((c) => c.graphic!.data)).toEqual([
-      { template: 'lower-third', name: 'Ana', role: '' },
-      { template: 'keyword', words: 'honest', lit: 0 }
+    // The lower third from 0 s takes the room of "year" (2.0 s) and the "day"s before 6 s; "honest" (8.8 s) and
+    // s07's "day" (16.0 s) are placed, and the Direct keyword on the timeline takes the third place. Before try-out 1
+    // the window's own cap of 2 went to "year", which the budget then dropped, so only "honest" landed.
+    expect(graphicsOver('shot').map((c) => [c.graphic!.data, c.graphic!.grounding!.sentence])).toEqual([
+      [{ template: 'lower-third', name: 'Ana', role: '' }, 's00'],
+      [{ template: 'keyword', words: 'honest', lit: 0 }, 's03'],
+      [{ template: 'keyword', words: 'day', lit: 0 }, 's07']
     ])
+    expect(state().lastGraphics!.notes).toContain('graphic dropped: the keyword "year" — within 6 s of the lower third at 0.0 s; a keyword yields to any other graphic')
     expect(state().decisions.map((d) => d.model)).toEqual([{ id: 'baseline', runtime: 'none' }])
     expect(state().lastGraphics!.notes).toContain("the baseline's graphics are used for sentences s00 to s20: No model is set up")
     expect(state().lastGraphics!.model).toBe('baseline')
@@ -403,11 +407,14 @@ describe('findGraphics: the run’s edges', () => {
       [{ template: 'keyword', words: 'year', lit: 0 }, 's00'],
       [{ template: 'keyword', words: 'honest', lit: 0 }, 's03']
     ])
+    // No lower third, so the count is "year", "honest" and the Direct keyword on the timeline: 3 of 3.
     expect(project().graphicProposals ?? []).toEqual([])
     expect(state().decisions.map((d) => [d.pass, d.model])).toEqual([[GRAPHICS_PASS, { id: 'baseline', runtime: 'none' }]])
     const op = state().decisions[0].ops[0] as { baseline: boolean; graphics: { source: string }[] }
     expect(op.baseline).toBe(true)
-    expect(op.graphics.map((c) => c.source)).toEqual(['baseline', 'baseline'])
+    // The record's graphics are what the validator passed (settle no longer spaces); every one is the baseline's.
+    expect(op.graphics.length).toBeGreaterThanOrEqual(3)
+    expect(new Set(op.graphics.map((c) => c.source))).toEqual(new Set(['baseline']))
     expect(state().lastGraphics!.notes).toContain("the baseline's graphics are used for sentences s00 to s20: No model is set up")
     expect(state().findingGraphics).toBeNull()
     expect(state().past).toHaveLength(1)
@@ -419,7 +426,7 @@ describe('findGraphics: the run’s edges', () => {
    * s_k starts at word 6k. The 70 s shot shows s00 to s23 (window 1) and s24 to s29, of s29 only its first word
    * "The" (word 174 at 69.6 s), so window 2 is s24 to s29. The model answers window 1 with the counter and is cut
    * off on window 2. By hand, window 2's baseline: each filler's keyword "day" (s24's word 149 at 59.6 s, then
-   * every 2.4 s), s29's "The" none; rule 10 over the window (57.6 to 69.95 s, so ⌊12.35 ÷ 20⌋ → 1): s24's alone.
+   * every 2.4 s), s29's "The" none; the budget keeps s24's (the later ones within 6 s of it, or past the shot's end).
    */
   const THIRTY = ['We signed 40 clients this year.', ...Array.from({ length: 29 }, () => FILLER)]
   const cutOffOnWindow2 = (cutAll = false) => async (r: CompletionRequest): Promise<CompletionResult> => ({
@@ -442,7 +449,10 @@ describe('findGraphics: the run’s edges', () => {
     expect(state().decisions.map((d) => d.model)).toEqual([{ id: 'fake-model', runtime: 'openai' }])
     const op = state().decisions[0].ops[0] as { baseline: boolean; graphics: { source: string; sentence: string }[] }
     expect(op.baseline).toBe(false)
-    expect(op.graphics.map((c) => [c.source, c.sentence])).toEqual([['model', 's00'], ['baseline', 's24']])
+    // What the validator passed: the model's counter, then window 2's baseline keywords (settle no longer spaces).
+    expect(op.graphics[0]).toMatchObject({ source: 'model', sentence: 's00' })
+    expect(op.graphics.slice(1).map((c) => c.source).every((x) => x === 'baseline')).toBe(true)
+    expect(op.graphics.map((c) => c.sentence)).toContain('s24')
     expect(state().past).toHaveLength(1)
     undoesTo(before)
   })
@@ -497,7 +507,7 @@ describe('findGraphics: the run’s edges', () => {
     // The window's note, and one spacing note for each of the other 18 keywords (21 sentences, less the counter and the two placed).
     expect(notices()).toEqual(['Graphics: 2 placed, 1 to check — 19 notes'])
     // Keep is refused while s01's keyword is 3.2 s from the counter's "$1,200" (1.2 s); dropped, Keep places it in ONE step.
-    expect(state().keepGraphic(proposals[0].id)).toBe(TOO_CLOSE_REASON)
+    expect(state().keepGraphic(proposals[0].id)).toBe('within 6 s of the keyword at 4.4 s, which is on the timeline already')
     state().dropGraphic(graphicsOver('shot')[0].id)
     const before = project()
     expect(state().keepGraphic(proposals[0].id)).toBeNull()

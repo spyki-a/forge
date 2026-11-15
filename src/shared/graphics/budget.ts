@@ -1,9 +1,14 @@
 /**
  * The graphics budget (docs/CLIPS.md §6.9, "The budget"): which of a run's
- * timed graphics the project has room for. Four rules, the earlier graphic
- * winning: the spacing (D12, §16.65), one on screen, none over a zoom punch,
- * and the per-minute cap (null until M17). The screen card (§6.16) is outside
- * all four.
+ * timed graphics the project has room for. Four rules, weighed by rank and
+ * then time (`roomRank`: a keyword yields to any other template, and inside a
+ * rank the earlier wins; try-out 1, 2026-11-15, changing D12's "the earlier
+ * one wins"): the spacing (D12, §16.65), one on screen, none over a zoom
+ * punch, and the per-minute cap (null until M17). The screen card (§6.16) is
+ * outside all four. This is the one place room is decided: `settleGraphics`
+ * no longer spaces a window, so nothing loses room to a graphic the budget
+ * itself refuses. (One the budget keeps and placement or the lane then drops
+ * still held its room, as §6.6's landing order has it.)
  *
  * It runs in `applyGraphics`' landing order after the beats and the seconds
  * and before placement (§6.6), so a candidate is a graphic with its timeline
@@ -17,7 +22,7 @@ import { COPY_RULE, ENDING_RULE, GRAPHIC_RULE } from '../director/apply'
 import { normaliseKeys } from '../render/keyframes'
 import { clipEnd, framesToSeconds, projectDuration, type Clip, type Project } from '../timeline'
 import { NO_CLIP_NOTE } from './place'
-import { GRAPHIC_SPACING, type GraphicSpec, type GraphicTemplateId } from './template'
+import { GRAPHIC_SPACING, roomRank, type GraphicSpec, type GraphicTemplateId } from './template'
 
 /**
  * Rule 4's cap: no 60 s window of the timeline holds more graphics than this
@@ -41,12 +46,35 @@ export function zoomPunchReason(seconds: number): string {
   return `over a zoom punch at ${seconds.toFixed(1)} s`
 }
 
-/** Rule 1's gap drop (not §6.9's words; the plan is silent). */
-export const TOO_CLOSE_REASON = `within ${GRAPHIC_SPACING.minGapS} s of another graphic, the earlier one stays`
+/** How a reason names a template: its id with the dash read as a space ("lower third"). */
+function templateName(template: string): string {
+  return template.replace(/-/gu, ' ')
+}
 
-/** Rule 1's count drop (not §6.9's words; the plan is silent): per footage clip for Clip it and the tile, per ad for Direct. */
-export function perClipReason(scope: 'clip' | 'ad'): string {
-  return `at most one graphic per ${GRAPHIC_SPACING.perS} s of ${scope === 'ad' ? 'the ad' : 'clip'}, the earlier ones stay`
+/**
+ * Rule 1's gap drop (not §6.9's words; the plan is silent): it names the
+ * graphic the candidate lost to, its template and onset in timeline seconds
+ * (to 0.1 s), and why that one holds: it is on the timeline already, it
+ * outranks a keyword (`roomRank`), or it is the earlier of one rank. As
+ * `applyGraphics` shows it: "graphic dropped: the keyword "money" — within
+ * 6 s of the counter at 21.3 s; a keyword yields to any other graphic".
+ */
+export function tooCloseReason(other: { template: string; onset: number; placed: boolean }, why: 'placed' | 'outranked' | 'earlier'): string {
+  const head = `within ${GRAPHIC_SPACING.minGapS} s of the ${templateName(other.template)} at ${other.onset.toFixed(1)} s`
+  if (why === 'placed') return `${head}, which is on the timeline already`
+  if (why === 'outranked') return `${head}; a keyword yields to any other graphic`
+  return `${head}, the earlier one stays`
+}
+
+/**
+ * Rule 1's count drop (not §6.9's words; the plan is silent): per footage clip
+ * for Clip it and the tile, per ad for Direct. The places go to the graphics
+ * on the timeline already, then to every other template in onset order, then
+ * to keywords in onset order (`roomRank`), so a keyword's reason says so.
+ */
+export function perClipReason(scope: 'clip' | 'ad', template: string): string {
+  const head = `at most one graphic per ${GRAPHIC_SPACING.perS} s of ${scope === 'ad' ? 'the ad' : 'clip'}`
+  return roomRank(template) === 1 ? `${head}; a keyword yields to any other graphic, and the ones on the timeline already and the earlier keywords stay` : `${head}, the ones on the timeline already and the earlier ones stay`
 }
 
 /** Rule 4's drop (not §6.9's words; the plan is silent). */
@@ -76,22 +104,23 @@ export interface BudgetCandidate {
 /**
  * A graphic's onset in timeline seconds: its first beat (`start`'s time plus
  * the least of `beats`), or `start`'s time when it has none (a graphic added
- * by hand). The validator's spacing (`director/run.ts` `spaceGraphics`) takes
- * a graphic's onset as its first beat word's start; `graphicBeats` carries
- * that start to the timeline and `spreadBeats` moves only later beats, so the
- * two agree.
+ * by hand). `settleGraphics` orders a window's graphics by the same onset, its
+ * first beat word's start (`director/run.ts`); `graphicBeats` carries that
+ * start to the timeline and `spreadBeats` moves only later beats, so the two
+ * agree.
  */
 export function onsetSeconds(start: number, beats: readonly number[], fps: number): number {
   const finite = beats.filter((b) => Number.isFinite(b))
   return framesToSeconds(start, fps) + (finite.length > 0 ? Math.min(...finite) : 0)
 }
 
-/** A graphic that holds its place: one already on the timeline, or a candidate kept before. */
+/** A graphic that holds its place: one already on the timeline (`placed`), or a candidate kept before. */
 interface Held {
   onset: number
   from: number
   to: number
   template: GraphicTemplateId
+  placed: boolean
 }
 
 /** 1e-6 s: onsets are sums of a frame's seconds and a beat, so 6 s apart may come out 5.9999999999. */
@@ -99,9 +128,12 @@ const EPS = 1e-6
 
 /**
  * The budget (docs/CLIPS.md §6.9): every graphic already on the timeline
- * (any rule) is held first, as placed; then `candidates`, in onset order
- * (equal onsets in the order given), each kept only when every rule holds
- * against everything held so far, so the earlier wins:
+ * (any rule) is held first, as placed; then `candidates`, by `roomRank` and
+ * then onset (every template but a keyword in onset order, then the keywords
+ * in onset order; equal onsets in the order given), each kept only when every
+ * rule holds against everything held so far. So a keyword yields to any other
+ * graphic, and inside a rank the earlier wins (try-out 1, 2026-11-15; D12
+ * said "the earlier one wins" for all):
  *
  * 1. **Spacing** (D12): its onset at least `GRAPHIC_SPACING.minGapS` from
  *    every held graphic's onset, a lower third's included; and, unless it is
@@ -128,7 +160,9 @@ const EPS = 1e-6
  * a screen card's included. A `'screen-card'` is otherwise outside the
  * budget (§6.9, §6.16): kept with no rule read, and neither held for the
  * others nor counted. `kept` is in onset
- * order; `dropped` carries each spec as given with its reason. A graphic
+ * order (equal onsets in the order given), whatever order they were weighed
+ * in; `dropped` carries each spec as given with its reason, in the order
+ * weighed. A graphic
  * already on the timeline always holds, even where a candidate's onset is
  * earlier: it is placed.
  */
@@ -143,24 +177,25 @@ export function applyBudget<C extends BudgetCandidate>(
   for (const c of project.clips) {
     const spec = c.graphic
     if (!spec || spec.data.template === 'screen-card') continue
-    held.push({ onset: onsetSeconds(c.start, spec.beats, fps), from: c.start, to: clipEnd(c), template: spec.data.template })
+    held.push({ onset: onsetSeconds(c.start, spec.beats, fps), from: c.start, to: clipEnd(c), template: spec.data.template, placed: true })
   }
   const cards = project.clips.filter((c) => c.generatedBy?.rule === COPY_RULE || c.generatedBy?.rule === ENDING_RULE)
   const punches = project.clips.filter((c) => c.moment?.kind === 'zoom-punch')
 
+  // Weighed by rank, then onset: a keyword yields to any other template (roomRank).
   const ordered = candidates
-    .map((c, i) => ({ c, i, onset: onsetSeconds(c.start, c.spec.beats, fps) }))
-    .sort((a, b) => a.onset - b.onset || a.i - b.i)
-  const kept: C[] = []
+    .map((c, i) => ({ c, i, onset: onsetSeconds(c.start, c.spec.beats, fps), rank: roomRank(c.spec.data.template) }))
+    .sort((a, b) => a.rank - b.rank || a.onset - b.onset || a.i - b.i)
+  const kept: { c: C; i: number; onset: number }[] = []
   const dropped: { spec: C['spec']; reason: string }[] = []
-  for (const { c, onset } of ordered) {
+  for (const { c, i, onset } of ordered) {
     const template = c.spec.data.template
     if (!project.clips.some((x) => x.id === c.clipId)) {
       dropped.push({ spec: c.spec, reason: NO_CLIP_NOTE })
       continue
     }
     if (template === 'screen-card') {
-      kept.push(c)
+      kept.push({ c, i, onset })
       continue
     }
     const reason = refusal(project, c, onset, held, cards, punches, cap)
@@ -168,10 +203,12 @@ export function applyBudget<C extends BudgetCandidate>(
       dropped.push({ spec: c.spec, reason })
       continue
     }
-    kept.push(c)
-    held.push({ onset, from: c.start, to: c.start + c.duration, template })
+    kept.push({ c, i, onset })
+    held.push({ onset, from: c.start, to: c.start + c.duration, template, placed: false })
   }
-  return { kept, dropped }
+  // Out in onset order, as placement and the seeds expect, whatever the rank weighed first.
+  kept.sort((a, b) => a.onset - b.onset || a.i - b.i)
+  return { kept: kept.map((k) => k.c), dropped }
 }
 
 /** The first rule a candidate breaks, as its reason; null when it is kept. */
@@ -191,8 +228,15 @@ function refusal(
   const to = c.start + c.duration
   const overlaps = (a: number, b: number): boolean => from < b && a < to
 
-  // Rule 1, the gap: every held graphic, a lower third's included.
-  if (held.some((h) => Math.abs(onset - h.onset) < GRAPHIC_SPACING.minGapS - EPS)) return TOO_CLOSE_REASON
+  // Rule 1, the gap: every held graphic, a lower third's included; the reason names the nearest.
+  const near = held
+    .filter((h) => Math.abs(onset - h.onset) < GRAPHIC_SPACING.minGapS - EPS)
+    .sort((a, b) => Math.abs(onset - a.onset) - Math.abs(onset - b.onset))[0]
+  if (near) {
+    const template = c.spec.data.template
+    const why = near.placed ? 'placed' : roomRank(near.template) < roomRank(template) ? 'outranked' : 'earlier'
+    return tooCloseReason(near, why)
+  }
 
   // Rule 2: one piece of designed type at a time.
   if (held.some((h) => overlaps(h.from, h.to)) || cards.some((k) => overlaps(k.start, clipEnd(k)))) return ON_SCREEN_REASON
@@ -222,7 +266,7 @@ function refusal(
     const lo = framesToSeconds(span.from, fps) - EPS
     const hi = framesToSeconds(span.to, fps) - EPS
     const over = held.filter((h) => h.template !== 'lower-third' && h.onset >= lo && h.onset < hi).length
-    if (over >= most) return perClipReason(scope)
+    if (over >= most) return perClipReason(scope, c.spec.data.template)
   }
 
   // Rule 4, when M17 has set the cap: every 60 s window that holds this onset.

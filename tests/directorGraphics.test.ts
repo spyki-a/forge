@@ -520,15 +520,22 @@ describe('settleGraphics: an out-of-range lit and a wrong-template field are rep
   })
 })
 
-describe('settleGraphics: spacing (rule 10) and the structured drops', () => {
-  it('two counters 3.2 s apart: the earlier stays, the later is a note and a drop', () => {
+describe('settleGraphics: no spacing since try-out 1 (room is the budget’s), and the structured drops', () => {
+  it('two counters 3.2 s apart: settle keeps both in onset order; applyGraphics drops the later, naming the earlier', () => {
     const t = talk(padded(weeks(2)))
     const [menu] = menusOf(t)
     const s = settleGraphics(answered(counterOn(1), counterOn(0)), menu, t)
-    expect(s.kept.map((k) => k.sentence)).toEqual(['s00'])
-    const reason = 'the counter on s01 is within 6 s of the one before — the earlier one stays'
-    expect(s.dropped).toEqual([{ path: '$.graphics', message: `graphic dropped: ${reason}` }])
-    expect(s.drops).toEqual([{ clipId: 'c', template: 'counter', text: '11', reason }])
+    expect(s.kept.map((k) => k.sentence)).toEqual(['s00', 's01'])
+    expect(s.dropped).toEqual([])
+    expect(s.drops).toEqual([])
+    const { project, clip } = fixture(t)
+    const run = pairSettled([{ menu: graphicsMenuFor(project, clip, t)[0], settled: s }])
+    let n = 0
+    const out = applyGraphics(project, run.kept, [clip.id], CLIPS_GRAPHIC_RULE, { fps: FPS, newId: (p) => `${p}-${++n}` })
+    expect(out.project.clips.filter((c) => c.graphic).map((c) => c.graphic!.grounding!.sentence)).toEqual(['s00'])
+    const dropped = out.problems.filter((p) => p.message.startsWith('graphic dropped: '))
+    expect(dropped).toHaveLength(1)
+    expect(dropped[0].message).toMatch(/^graphic dropped: the counter "11" — within 6 s of the counter at \d+\.\d s, the earlier one stays$/u)
   })
 
   it('a graphic dropped for two fields is one drop, its reasons joined', () => {
@@ -722,7 +729,7 @@ describe("graphicDropsOf: applyGraphics' drops, structured from its problems", (
 
 /* ------------------------------------------------- piece 2, the fixer's cases */
 
-describe('settleGraphics: a proposal is not spaced and spaces nothing (rule 10 counts what the app would place)', () => {
+describe('settleGraphics and the budget: a proposal is not spaced and spaces nothing', () => {
   // s00 a number, s01 2.4 s later, s04 9.6 s in; over 50 s of clip, so rule 10 allows two graphics.
   const said = padded(['We signed 40 clients this year.', 'Keep it simple always today.', FILLER, FILLER, 'The garden was quiet that evening.'])
   const counter = g({ sentence: 's00', template: 'counter', value: '40', label: 'clients' })
@@ -748,12 +755,20 @@ describe('settleGraphics: a proposal is not spaced and spaces nothing (rule 10 c
     expect(out.project.graphicProposals?.map((p) => p.spec.data.template)).toEqual(['counter'])
   })
 
-  it('the same answer from Whisper: the number is trusted and spaces the keyword 2.4 s after it out', () => {
+  it('the same answer from Whisper: the number is trusted, and the budget spaces the keyword 2.4 s after it out', () => {
     const t = talk(said)
     const [menu] = menusOf(t)
     const s = settleGraphics(answered(counter, simple, quiet), menu, t)
-    expect(s.kept.map((k) => k.sentence)).toEqual(['s00', 's04'])
-    expect(s.drops.map((d) => d.text)).toEqual(['simple'])
+    expect(s.kept.map((k) => k.sentence)).toEqual(['s00', 's01', 's04'])
+    expect(s.drops).toEqual([])
+    const { project, clip } = fixture(t)
+    const run = pairSettled([{ menu: graphicsMenuFor(project, clip, t)[0], settled: s }])
+    let n = 0
+    const out = applyGraphics(project, run.kept, [clip.id], CLIPS_GRAPHIC_RULE, { fps: FPS, newId: (p) => `${p}-${++n}` })
+    expect(out.project.clips.filter((c) => c.graphic).map((c) => c.graphic!.grounding!.sentence)).toEqual(['s00', 's04'])
+    const dropped = out.problems.filter((p) => p.message.startsWith('graphic dropped: '))
+    expect(dropped.map((p) => p.message)).toHaveLength(1)
+    expect(dropped[0].message).toMatch(/^graphic dropped: the keyword "simple" — within 6 s of the counter at \d+\.\d s; a keyword yields to any other graphic$/u)
   })
 })
 

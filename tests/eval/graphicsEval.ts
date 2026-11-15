@@ -290,16 +290,17 @@ export const BASELINE_ONLY = 'no model: the baseline only'
 // The figures of "Recorded per run".
 
 /**
- * A drop's reason, classed from the validator's and the spacing's message
- * texts as they are in code (validateGraphics.ts `reasonText`, `check`,
- * `overLength`, `offered`, `settleOne`; run.ts `spaceGraphics`). A drop whose
+ * A drop's reason, classed from the validator's message texts as they are in
+ * code (validateGraphics.ts `reasonText`, `check`, `overLength`, `offered`,
+ * `settleOne`). Settle no longer spaces (try-out 1, 2026-11-15: room is the
+ * budget's, `applyBudget`, at apply time, which the eval does not run), so
+ * there is no 'spacing' class any more. A drop whose
  * reason joins several (`dropsOf` joins them with '; ') takes the first class
  * here that matches, in this order; none is 'other'. The order matters only
  * where two patterns could both match: 'order' and 'not-a-percentage' before
  * 'not-said'.
  */
 export const DROP_REASONS: readonly (readonly [string, RegExp])[] = Object.freeze([
-  ['spacing', /at most one graphic per [\d.]+ s of clip|is within [\d.]+ s of the one before/u],
   ['not-offered', /' is not offered(?:;|$)/u],
   ['not-on-menu', /is not a sentence on the menu|is not a sentence of the transcript|has no sentence to ground it/u],
   ['too-long', /is \d+ characters, at most \d+ are drawn/u],
@@ -400,7 +401,7 @@ export interface GraphicsFigures {
   dropped: number
   /** Dropped over proposed; null with nothing proposed. */
   droppedShare: number | null
-  /** Dropped by the validator: every drop but the spacing's (rule 10, run.ts `spaceGraphics`), and its share of proposed. */
+  /** Dropped by the validator: since settle stopped spacing (try-out 1, 2026-11-15), every drop the side's settle made, and its share of proposed. */
   droppedByValidator: number
   validatorShare: number | null
   droppedByReason: Record<string, number>
@@ -543,7 +544,7 @@ export function graphicsFigures(results: readonly GraphicsFixtureResult[], side:
         const why = dropReasonOf(d.reason)
         bump(f.droppedByReason, why)
         f.dropped += 1
-        if (why !== 'spacing') f.droppedByValidator += 1
+        f.droppedByValidator += 1
         if (isHallucination(d.reason)) f.hallucinations += 1
       }
       f.litRepairs += w.dropped.filter((p) => p.message.startsWith(LIT_REPAIR_HEAD)).length

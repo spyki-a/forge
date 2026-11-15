@@ -231,7 +231,10 @@ function heardOf(kept: KeptGraphic, transcript: Pick<Transcript, 'words'>): stri
  *    placeholder until Keep places it (§6.9 at that moment), the template's
  *    first third. A lower third is never one.
  * 5. **The budget** (§6.9): `applyBudget` over the project's graphics and the
- *    rest; each drop a problem with the budget's reason.
+ *    rest, the lower third among them; each drop a problem with the budget's
+ *    reason. This is the one place room is decided (`roomRank`: a keyword
+ *    yields to any other template, then the earlier wins): `settleGraphics`
+ *    no longer spaces, so no graphic loses room to one the budget refuses.
  * 6. **Placement and the subject at onset** (§6.9), in the budget's onset
  *    order: `placeGraphic` on the output frame (`project.settings`' width and
  *    height, the canvas the store's bake and `rebakeGraphic` use), null
@@ -309,7 +312,7 @@ export function applyGraphics(
     } else toPlace.push(t)
   }
 
-  // 5. The budget, over the project's graphics and the run's, the earlier winning.
+  // 5. The budget, over the project's graphics and the run's: a keyword yields to any other template, then the earlier wins (roomRank).
   const budget = applyBudget(project, toPlace)
   for (const d of budget.dropped) {
     const t = toPlace.find((x) => x.spec === d.spec)!

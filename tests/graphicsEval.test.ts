@@ -19,6 +19,7 @@ import {
 } from './eval/graphicsFixtures'
 import {
   BASELINE_ONLY,
+  DROP_REASONS,
   HALLUCINATION_REASONS,
   credentialsIn,
   dropReasonOf,
@@ -351,8 +352,8 @@ describe('the figures of "Recorded per run" (§6.10)', () => {
     expect([f.errorsByStatus, f.firstError]).toEqual([{}, null])
   })
 
-  it('counts a truth once however many kept graphics sit near it, and a spacing drop as dropped but not by the validator', async () => {
-    // 53 words at 1.2 s: a 63.6 s clip, so at most three graphics (one per 20 s); the fourth is the spacing's.
+  it('counts a truth once however many kept graphics sit near it; settle no longer spaces, so nothing is dropped for room (try-out 1)', async () => {
+    // 53 words at 1.2 s: a 63.6 s clip. The budget would allow three graphics (one per 20 s); the eval does not run it.
     const C = talk(
       [
         'We signed 40 clients over the whole of this year.',
@@ -378,14 +379,15 @@ describe('the figures of "Recorded per run" (§6.10)', () => {
     expect(r.model[0].kept.map((k) => [k.sentence, k.template])).toEqual([
       ['s00', 'counter'],
       ['s02', 'counter'],
+      ['s03', 'keyword'],
       ['s03', 'keyword']
     ])
     const f = graphicsFigures([r], 'model')
     // The truth on s01 has both counters within one sentence: one truth, one hit.
     expect([f.truths, f.truthHits, f.truthHitRate, f.fixturesHit]).toEqual([1, 1, 1, 1])
-    // The 'honest' keyword is dropped by the spacing (rule 10), not by the validator.
-    expect([f.proposed, f.kept, f.dropped, f.droppedByValidator, f.validatorShare, f.hallucinations]).toEqual([4, 3, 1, 0, 0, 0])
-    expect(f.droppedByReason).toEqual({ spacing: 1 })
+    // The 'honest' keyword is kept: room is the budget's, at apply time.
+    expect([f.proposed, f.kept, f.dropped, f.droppedByValidator, f.validatorShare, f.hallucinations]).toEqual([4, 4, 0, 0, 0, 0])
+    expect(f.droppedByReason).toEqual({})
   })
 
   it('counts an answer that was an HTTP error by its status, with the first one’s text (§15 row 10: a schema the server refuses)', async () => {
@@ -483,7 +485,9 @@ describe('the figures of "Recorded per run" (§6.10)', () => {
     expect(reasonOf(g({ sentence: 's00', template: 'counter', value: '90', label: 'flowers' }))).toEqual(['not-said'])
     // Said, out of the order the list draws: 'order', which the not-said pattern would also match.
     expect(reasonOf(g({ sentence: 's02', template: 'steps', title: 'Step by step', items: [{ label: 'lens', value: '' }, { label: 'light', value: '' }, { label: 'frame', value: '' }] }))).toEqual(['order'])
-    expect(reasonOf(g({ sentence: 's00', template: 'keyword', words: 'flowers' }), g({ sentence: 's00', template: 'keyword', words: 'hall' }))).toEqual(['spacing'])
+    // Two keywords on one sentence: settle drops neither for room any more (try-out 1), so there is no 'spacing' class.
+    expect(reasonOf(g({ sentence: 's00', template: 'keyword', words: 'flowers' }), g({ sentence: 's00', template: 'keyword', words: 'hall' }))).toEqual([])
+    expect(DROP_REASONS.map(([name]) => name)).not.toContain('spacing')
     expect(dropReasonOf('something new')).toBe('other')
     expect([...HALLUCINATION_REASONS]).toEqual(['not-said', 'ungrounded', 'other-unit'])
   })

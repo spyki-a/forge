@@ -232,12 +232,36 @@ export const GRAPHIC_TEMPLATES: Partial<Record<GraphicTemplateId, TemplateDef>> 
 /**
  * Rule 10's spacing (docs/CLIPS.md §6.7; D12, §16.65), kept for every graphic:
  * onsets at least `minGapS` apart, and at most one graphic per `perS` seconds of
- * clip, the earlier winning. `settleGraphics` applies it within one answer
- * (`director/run.ts`); `applyBudget` (`graphics/budget.ts`, §6.9) applies it
- * again across the project. Here, beside the templates, so both read it and
- * neither owns it.
+ * clip, weighed by `roomRank` (a keyword yields to any other template; inside
+ * a rank the earlier wins). `applyBudget` (`graphics/budget.ts`, §6.9) is the
+ * one place that decides room, across the project, with the lower third and
+ * the graphics already placed in view; `settleGraphics` no longer spaces
+ * within one answer (try-out 1, 2026-11-15: a window cannot see what will
+ * hold room at apply time, so a ring lost its room there to a keyword the
+ * budget then dropped). Here, beside the templates, so it stays the
+ * templates' fact and not the budget's.
  */
 export const GRAPHIC_SPACING: Readonly<{ minGapS: number; perS: number }> = Object.freeze({ minGapS: 6, perS: 20 })
+
+/**
+ * The templates that yield room (try-out 1, 2026-11-15; it changes D12's
+ * tie-break, "the earlier one wins", §16.65): when graphics compete for the
+ * 6 s gap or the per-20 s count, one of these loses to any template not
+ * listed, whatever their order in time. A keyword only repeats words the
+ * caption already shows; a number, a list or a name card says something the
+ * caption cannot draw.
+ */
+export const ROOM_YIELDING_TEMPLATES: readonly GraphicTemplateId[] = Object.freeze(['keyword'] as GraphicTemplateId[])
+
+/**
+ * A template's rank for room (`applyBudget`): 0 for every template, 1 for one
+ * in `ROOM_YIELDING_TEMPLATES`. Rank 0 is weighed first, in onset order, then
+ * rank 1, in onset order; a graphic already on the timeline holds whatever
+ * its rank (it is placed). A template id this build does not know ranks 0.
+ */
+export function roomRank(template: string): 0 | 1 {
+  return (ROOM_YIELDING_TEMPLATES as readonly string[]).includes(template) ? 1 : 0
+}
 
 /** Object.freeze all the way down, so no caller can edit a field mode in place. */
 function deepFreeze<T>(value: T): T {
