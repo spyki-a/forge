@@ -397,7 +397,7 @@ and never inventing a fact.
 | **captions never cover a face** | the free-space render check (§5.5), plus the same ten clips | zero sampled caption lines intersect a face box, on both caption routes (libass and the canvas bake) |
 | **no graphic says what was not said** | the validator, by construction (a property test with adversarial generators, §6.11), plus the graphics eval (§6.10) | **zero** shipped graphics with a number or name that is not in the transcript stretch they cite, with a label paired to a value it was not said with, or with a negation the speaker said and the graphic dropped. The property test checks what the painter DRAWS at the settled frame, not only the spec. A number grounded on a YouTube caption track or an unsure Whisper word is never placed without the user's Keep (§6.6). The truth-hit rate and the drop rate are recorded per configuration. **What this bar cannot promise:** the validator proves a graphic matches the transcript, not that the transcript heard the speaker right |
 | **Best clips are worth posting** | ten real links chosen by the user | on ≥ 7 of 10, at least one of the three cards is one the user would post. Recorded separately with the model and with the signal fallback |
-| **every outside picture is licensed and credited** | the licence gate's tests, plus the credits render check (§8.10) | every B-roll asset carries a credit, and every **required** credit reaches the export's Done line until the user copies it. Nothing outside PD / CC0 / CC BY by default; BY-SA only with the switch on, and each BY-SA file says so at its own click. **No picture that may show a person is placed without the user's confirmation**: the dialog shows unless the file is shown NOT to depict people (§8.6) |
+| **every outside picture is licensed and credited** | the licence gate's tests, plus the credits render check (§8.10); (2026-11-14, §16.75: after the beta, with step 5) | every B-roll asset carries a credit, and every **required** credit reaches the export's Done line until the user copies it. Nothing outside PD / CC0 / CC BY by default; BY-SA only with the switch on, and each BY-SA file says so at its own click. **No picture that may show a person is placed without the user's confirmation**: the dialog shows unless the file is shown NOT to depict people (§8.6) |
 | **it fits the floor machine** | Clip it end to end on the Surface (the 8 GB-class floor machine, `FIX.md:1060`), with the helper's peak RSS recorded (§12.1) | no swapping during the run, on a 10-minute 1080p source |
 | **it never falls over** | every degraded mode in §14 rendered | each one produces a playable file and says what it left out |
 
@@ -640,7 +640,8 @@ shot until then.
 
 **Step 3's re-plan moves step 4.** Best clips starts 16 days later than the
 old order had it, 5 of them the three.js compositor that §16.55 put directly
-after phase 2.
+after phase 2. (2026-11-14, §16.74: the spike's 1.5 in those 16 is no
+longer part of step 3's run before the beta.)
 
 **Where this sits against the beta.** You decided (2026-10-05): "will finish
 this and will get back to the beta". **This plan comes first**, then
@@ -660,8 +661,10 @@ this and will get back to the beta". **This plan comes first**, then
   inside this plan.
 - **The order, outright:** §3.3 → M0 → the rest of step 0 → M1, built
   while Step P is built, and shipped only with P → M2 → M3 → M4 → M5 →
-  `BETA.md` R1–R12 → R13 → R14 (beta.2). Steps 5–7 (about 23.5 days now) are no longer after the
-  beta: they come before it with the rest.
+  `BETA.md` R1–R12 → R13 → R14 (beta.2). Steps 5–7 (about 23.5 days now)
+  are no longer after the beta: they come before it with the rest.
+  (2026-11-14, §16.74-75: no longer so for step 5 and step 6's cards;
+  the next bullet.)
 - **The order, since 2026-11-14** (§16.74, §16.75; §16.76 on 2026-11-15):
   before the beta, phase 2's exit (yours, §6.12) → phase 3 (5) → M3, step
   4 (3.5) → M5 without the fact cards: 1g (3, gated, and free to slip
@@ -20573,8 +20576,9 @@ unavailable; the recording's frames missing).
 > the future, for now we will drop that". The line below, "run during
 > phase 2's weeks", and §16.56's "during phase 2" are superseded: the
 > spike is no longer in step 3's unconditional days before the beta,
-> which fall by its 1.5, from 30.5 to 29 (§2, §6's head). What stays true for when it runs: this section as written, the
-> gate (§6.12) deciding phase 4, pointing only, off per clip by default,
+> which fall by its 1.5, from 30.5 to 29 (§2, §6's head). What stays
+> true for when it runs: this section as written, the gate (§6.12)
+> deciding phase 4, pointing only, off per clip by default,
 > every pointed graphic a proposal you keep. Its footage and runs (§2's
 > "Your part") wait with it.
 
@@ -23152,7 +23156,9 @@ sooner; the saved template waits for Stage 0, or moves to §17.
   emptied into slots) saved as `MARKET.md`'s Stage 1 local template, with no
   network. **Rights:** B-roll with a credit and the author's own footage are
   stripped on save, like slot media (`MARKET.md:181-190`). No third-party
-  marks; no likenesses. 2.5 days.
+  marks; no likenesses. 2.5 days. (2026-11-14, §16.75: before the beta
+  there are no B-roll shapes to save; they join it when step 5 lands
+  after the beta.)
 - Stage 2 onward (sharing, the store) is `MARKET.md`'s, not this plan's.
 
 ---
@@ -24060,6 +24066,8 @@ what is needed, where the answer waits on something not yet in hand.
 
     **Answer (2026-10-05): OPEN.** Needed: the address (an email, or a page
     on 3dit.meme) to put in the User-Agent; §8.2's fetcher waits for it.
+    (2026-11-14, §16.75: §8.2 comes after the beta, so this waits with
+    it.)
 24. **The old parallax bakes** in `~/.cache/forge/parallax` (264 MB):
     migrate into `userData/cache`, delete on first run, or leave them.
 
