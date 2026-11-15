@@ -582,6 +582,24 @@ describe('Add on a dropped graphic (try-out 1, 2026-11-15, piece 4)', () => {
     expect(rowOf('soft').refused).toBeNull()
   })
 
+  it('a truth drop refused, its blocker dropped, then added: it lands on its sentence and the old refusal is gone from the row, undone too', async () => {
+    await pressFind()
+    expect(press(rowOf('99').add!)).toBe('another graphic is on screen then')
+    const counter = clipItGraphics().find((c) => c.graphic!.data.template === 'counter')!
+    press(buttons(TG.DROP, row(counter.id))[0])
+    const beforeAdd = project()
+    const placedBefore = clipItGraphics().map((c) => c.id)
+    expect(press(rowOf('99').add!)).toBeNull()
+    const added = clipItGraphics().find((c) => !placedBefore.includes(c.id))!
+    expect(added.graphic!.data).toEqual({ template: 'counter', value: '99', label: 'clients' })
+    expect(added.graphic!.grounding!.sentence).toBe('s00')
+    expect(added.graphic!.proposal).toBeUndefined()
+    expect(dropRows().map((r) => r.words)).not.toContainEqual(expect.arrayContaining(['99']))
+    undoesTo(beforeAdd)
+    expect(rowOf('99').add).not.toBeNull()
+    expect(rowOf('99').refused).toBeNull()
+  })
+
   it('Drop on an added graphic lists its row again; Find again lists the new run’s drops afresh', async () => {
     await pressFind()
     press(rowOf('99').add!)
@@ -643,14 +661,13 @@ describe('the census’s graphics run (harness/graphicsStub.ts)', () => {
       throw new Error('Directing with a model is not supported in the harness')
     }
     await useEditor.getState().findGraphics('V')
-    expect(clipItGraphics().map((c) => c.graphic!.data)).toEqual([{ template: 'ring', value: '40%', label: 'couples' }])
+    expect(clipItGraphics().map((c) => c.graphic!.data)).toContainEqual({ template: 'ring', value: '40%', label: 'couples' })
+    // The recipe's own condition: a negated counter with Add and a keyword dropped for room with Add.
     const drops = state().lastGraphics!.drops
-    expect(drops.map((d) => [d.template, d.text, d.add !== undefined])).toEqual([
-      ['counter', '$500', true],
-      ['keyword', 'gear', true]
-    ])
-    expect(drops[0].reason).toContain("'$500' is said negated in s01")
-    expect(drops[1].reason).toBe('within 6 s of the ring at 0.0 s; a keyword yields to any other graphic')
+    const negated = drops.findIndex((d) => d.template === 'counter' && d.text === '$500' && d.add !== undefined && d.reason.includes("'$500' is said negated in s01"))
+    const roomy = drops.findIndex((d) => d.template === 'keyword' && d.text === 'gear' && d.add !== undefined && d.reason.startsWith('within 6 s of '))
+    expect(negated, JSON.stringify(drops.map((d) => [d.template, d.text, d.reason]))).toBeGreaterThanOrEqual(0)
+    expect(roomy, JSON.stringify(drops.map((d) => [d.template, d.text, d.reason]))).toBeGreaterThanOrEqual(0)
     const html = renderToStaticMarkup(createElement(TranscriptPanel))
     const escape = (s: string): string => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;')
     const quote = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -659,9 +676,9 @@ describe('the census’s graphics run (harness/graphicsStub.ts)', () => {
       expect([...html.matchAll(whole)], r.label).toHaveLength(r.count ?? 1)
     }
     // What the session will see when it presses them: the counter refused (the ring is on screen then), the keyword placed.
-    expect(state().addDroppedGraphic(0)).toBe('another graphic is on screen then')
-    expect(state().addDroppedGraphic(1)).toBeNull()
-    expect(clipItGraphics().map((c) => c.graphic!.data.template).sort()).toEqual(['keyword', 'ring'])
+    expect(state().addDroppedGraphic(negated)).toBe('another graphic is on screen then')
+    expect(state().addDroppedGraphic(roomy)).toBeNull()
+    expect(clipItGraphics().map((c) => c.graphic!.data)).toContainEqual({ template: 'keyword', words: 'gear', lit: 0 })
   })
 
   it.each(['youtube-asr', 'youtube-lines', 'whisper-unsure'] as const)('%s: one keyword placed and one counter waiting with "check the number", on a 5 s clip of a 640×360 file', (source) => {

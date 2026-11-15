@@ -959,23 +959,44 @@ export function keepProposal(
       source: 'model'
     }
   }
-  const one = timeOne(project, '$', kept, proposal.rule)
+  const placed = placeOne(project, kept, proposal.rule, ctx, true)
+  if (placed.refused !== null) return refuse(placed.refused)
+  const next: Project = {
+    ...placed.project,
+    graphicProposals: (placed.project.graphicProposals ?? []).filter((g) => g.id !== proposalId)
+  }
+  return { ...placed, project: next }
+}
+
+/**
+ * The steps Keep and Add both place one graphic by, written once so a fix
+ * to one reaches the other: `timeOne`'s beats and seconds on its footage
+ * clip as it is now, the budget (`room`: false for Add, the room rules not
+ * read), `landKept`'s placement, then its sounds (`soundsFor`, which reads
+ * "Graphic sounds"). Refused, `refused` is the reason and the project comes
+ * back as the same object.
+ */
+function placeOne(
+  project: Project,
+  kept: KeptGraphic,
+  rule: string,
+  ctx: GraphicsApplyContext,
+  room: boolean
+): { project: Project; problems: Problem[]; clipIds: string[]; refused: string | null } {
+  const refuse = (reason: string): { project: Project; problems: Problem[]; clipIds: string[]; refused: string } => ({ project, problems: [], clipIds: [], refused: reason })
+  const one = timeOne(project, '$', kept, rule)
   if ('retimed' in one) return refuse(RETIMED_NOTE)
   if ('reason' in one) return refuse(one.reason)
-  const budget = applyBudget(project, [one.timed])
+  const budget = applyBudget(project, [one.timed], { room })
   if (budget.dropped.length > 0) return refuse(budget.dropped[0].reason)
   let refusal: string | null = null
   const newId = ctx.newId ?? defaultId
-  const landed = landKept(project, budget.kept, proposal.rule, newId, (_t, reason) => {
+  const landed = landKept(project, budget.kept, rule, newId, (_t, reason) => {
     refusal = reason
   })
   if (refusal !== null || landed.clipIds.length === 0) return refuse(refusal ?? NO_CLIP_NOTE)
-  const sounded = soundsFor(landed.project, landed.clipIds, proposal.rule, ctx.sounds ?? [], newId)
-  const next: Project = {
-    ...sounded.project,
-    graphicProposals: (sounded.project.graphicProposals ?? []).filter((g) => g.id !== proposalId)
-  }
-  return { project: next, problems: sounded.notes.map((message) => ({ path: '$.sounds', message })), clipIds: landed.clipIds, refused: null }
+  const sounded = soundsFor(landed.project, landed.clipIds, rule, ctx.sounds ?? [], newId)
+  return { project: sounded.project, problems: sounded.notes.map((message) => ({ path: '$.sounds', message })), clipIds: landed.clipIds, refused: null }
 }
 
 /** Add on a dropped row that carries nothing to place (not §6's words; the tile shows no Add then, so only a stale press reaches it). */
@@ -1016,19 +1037,7 @@ export function addDropped(
   const { proposal: _proposal, ...candidate } = drop.add.candidate
   const kept: KeptGraphic = { ...drop.add, candidate }
   if (!project.clips.some((c) => c.id === kept.clipId)) return refuse(NO_CLIP_NOTE)
-  const one = timeOne(project, '$', kept, rule)
-  if ('retimed' in one) return refuse(RETIMED_NOTE)
-  if ('reason' in one) return refuse(one.reason)
-  const budget = applyBudget(project, [one.timed], { room: false })
-  if (budget.dropped.length > 0) return refuse(budget.dropped[0].reason)
-  let refusal: string | null = null
-  const newId = ctx.newId ?? defaultId
-  const landed = landKept(project, budget.kept, rule, newId, (_t, reason) => {
-    refusal = reason
-  })
-  if (refusal !== null || landed.clipIds.length === 0) return refuse(refusal ?? NO_CLIP_NOTE)
-  const sounded = soundsFor(landed.project, landed.clipIds, rule, ctx.sounds ?? [], newId)
-  return { project: sounded.project, problems: sounded.notes.map((message) => ({ path: '$.sounds', message })), clipIds: landed.clipIds, refused: null }
+  return placeOne(project, kept, rule, ctx, false)
 }
 
 /**

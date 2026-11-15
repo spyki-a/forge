@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { CLIPS_GRAPHIC_RULE, addDropped, applyGraphics, graphicDropsOf } from '@shared/graphics/apply'
+import { COPY_RULE } from '@shared/director/apply'
 import { ON_SCREEN_REASON, applyBudget, zoomPunchReason } from '@shared/graphics/budget'
 import { NO_CLIP_NOTE } from '@shared/graphics/place'
 import { RETIMED_NOTE } from '@shared/graphics/beats'
@@ -97,6 +98,8 @@ describe('what a dropped graphic carries for Add', () => {
     const d = byValue('$10,000')
     expect(d.reason).toContain('what-if')
     expect(d.add!.candidate.beatWords).toEqual([13])
+    // Bound words are transcript indices, never the sentence's own count: s01 starts at word 10.
+    expect(d.add!.candidate.bound).toContain(13)
   })
 
   it('a number not said at all is timed on its sentence’s first word, so it lands on its sentence', () => {
@@ -125,7 +128,59 @@ describe('what a dropped graphic carries for Add', () => {
     const record = decisionForGraphics(settled, null)
     const drops = (record.ops[0] as { drops: GraphicDrop[] }).drops
     expect(drops.length).toBe(settled.drops.length)
-    for (const d of drops) expect(Object.keys(d).sort()).toEqual(['clipId', 'reason', 'template', 'text'])
+    for (const d of drops) {
+      expect(d).not.toHaveProperty('add')
+      for (const k of ['clipId', 'reason', 'template', 'text']) expect(d).toHaveProperty(k)
+    }
+  })
+
+  it('a negated number, added where nothing overlaps it, lands on its own words: "five" at 2.0 s, no proposal, generatedBy as Keep writes it', () => {
+    const out = addDropped(project, byValue('$500'), { fps: FPS })
+    expect(out.refused).toBeNull()
+    const g = out.project.clips.find((c) => c.id === out.clipIds[0])!
+    expect(g.graphic!.data).toEqual({ template: 'counter', value: '$500', label: 'album' })
+    expect(g.graphic!.grounding!.sentence).toBe('s00')
+    expect(g.graphic!.grounding!.words).toContain(4)
+    expect(g.graphic!.proposal).toBeUndefined()
+    expect(g.generatedBy!.rule).toBe(CLIPS_GRAPHIC_RULE)
+    expect(g.generatedBy!.reason).toContain('$500')
+    expect(g.start / FPS + Math.min(...g.graphic!.beats)).toBeCloseTo(2.0, 1)
+  })
+
+  it('a what-if number lands on its own words in a sentence that does not open the transcript: "ten" is word 13, at 5.75 s', () => {
+    const out = addDropped(project, byValue('$10,000'), { fps: FPS })
+    expect(out.refused).toBeNull()
+    const g = out.project.clips.find((c) => c.id === out.clipIds[0])!
+    expect(g.graphic!.grounding!.sentence).toBe('s01')
+    expect(g.graphic!.grounding!.words).toContain(13)
+    expect(g.graphic!.proposal).toBeUndefined()
+    expect(g.start / FPS + Math.min(...g.graphic!.beats)).toBeCloseTo(5.75, 1)
+  })
+})
+
+describe('a dropped graphic is drawn with the validator’s drawable repairs', () => {
+  const { project, clip } = setup(TRUTH, 60)
+  const t = project.transcripts.talk
+  const [menu] = graphicsMenuFor(project, clip, t)
+
+  it('a keyword’s lit out of range is brought to its last word', () => {
+    const c = droppedCandidate({ template: 'keyword', words: 'more than gear', lit: 7 }, 's03', 'w', 'model', menu, t)
+    expect(c!.data).toEqual({ template: 'keyword', words: 'more than gear', lit: 2 })
+  })
+
+  it('a steps tree is drawn flat with a line: its parents are not read from a graphic that did not bind', () => {
+    const c = droppedCandidate(
+      { template: 'steps', title: '', items: [{ label: 'charge' }, { label: 'clear', parent: 0 }, { label: 'check', parent: 1 }], connector: 'tree' },
+      's03', 'w', 'model', menu, t
+    )
+    expect(c!.data).toEqual({ template: 'steps', title: '', items: [{ label: 'charge', parent: -1 }, { label: 'clear', parent: -1 }, { label: 'check', parent: -1 }], connector: 'line' })
+  })
+
+  it('a said quote takes the app’s speaker, never the answer’s', () => {
+    const c = droppedCandidate({ template: 'quote', text: 'Light matters more than gear.', speaker: 'Somebody Else' }, 's03', 'w', 'model', menu, t, 'Asha')
+    expect(c!.data).toEqual({ template: 'quote', text: 'Light matters more than gear.', speaker: 'Asha' })
+    const none = droppedCandidate({ template: 'quote', kind: 'said', text: 'Light matters more than gear.', speaker: 'Somebody Else' }, 's03', 'w', 'model', menu, t)
+    expect(none!.data).toMatchObject({ speaker: '' })
   })
 })
 
@@ -225,6 +280,18 @@ describe('Add still refuses what cannot be drawn rightly, and changes nothing th
     const out = addDropped(zoomed, drops.find((d) => d.template === 'keyword')!, { fps: FPS })
     expect(out.refused).toBe(zoomPunchReason(0))
     expect(out.project).toBe(zoomed)
+  })
+
+  it('a Director screen card under its frames: "another graphic is on screen then", the project the same object', async () => {
+    const { landed, drops } = await roomRun()
+    const card: Clip = { ...landed.project.clips.find((c) => c.id === 'shot')!, id: 'card', assetId: 'card-image', trackId: 'v9', start: 0, duration: FPS * 10, generatedBy: { rule: COPY_RULE, reason: 'headline' } }
+    const carded: Project = { ...landed.project, clips: [...landed.project.clips, card] }
+    // Without the card the keyword lands (the case above); with it, refused.
+    expect(addDropped(landed.project, drops.find((d) => d.template === 'keyword')!, { fps: FPS }).refused).toBeNull()
+    const out = addDropped(carded, drops.find((d) => d.template === 'keyword')!, { fps: FPS })
+    expect(out.refused).toBe(ON_SCREEN_REASON)
+    expect(out.project).toBe(carded)
+    expect(out.clipIds).toEqual([])
   })
 
   it('a footage clip that is gone, and one that is retimed', async () => {

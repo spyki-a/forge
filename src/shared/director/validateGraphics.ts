@@ -735,7 +735,8 @@ export function droppedCandidate(
     // A value field that is not one number cannot bind: no words of its own.
     if (claims.length > 0 && claims.every((c) => c.kind !== 'number' || c.value !== undefined)) {
       const r = bind(claims, stretch, transcript.language)
-      const at = r.ok ? r.at : r.at
+      // Bind's judged assignment, read whether it passed or not: a refused one (negated, what-if, order) still says which words.
+      const at = r.at
       if (at && at.length === claims.length) {
         bound = [...at]
         beatWords = beatWordsOf(data, claims, at, stretch)
