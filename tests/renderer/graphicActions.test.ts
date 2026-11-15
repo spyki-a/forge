@@ -413,7 +413,8 @@ describe('findGraphics: the run’s edges', () => {
     const op = state().decisions[0].ops[0] as { baseline: boolean; graphics: { source: string }[] }
     expect(op.baseline).toBe(true)
     // The record's graphics are what the validator passed (settle no longer spaces); every one is the baseline's.
-    expect(op.graphics.length).toBeGreaterThanOrEqual(3)
+    // One per sentence of the 21: the record holds exactly what the validator passed, no more (the budget's drops are in its drops).
+    expect((op.graphics as unknown as { sentence: string }[]).map((g) => g.sentence)).toEqual(Array.from({ length: 21 }, (_, i) => `s${String(i).padStart(2, '0')}`))
     expect(new Set(op.graphics.map((c) => c.source))).toEqual(new Set(['baseline']))
     expect(state().lastGraphics!.notes).toContain("the baseline's graphics are used for sentences s00 to s20: No model is set up")
     expect(state().findingGraphics).toBeNull()

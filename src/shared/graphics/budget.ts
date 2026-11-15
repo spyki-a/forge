@@ -70,11 +70,26 @@ export function tooCloseReason(other: { template: string; onset: number; placed:
  * Rule 1's count drop (not §6.9's words; the plan is silent): per footage clip
  * for Clip it and the tile, per ad for Direct. The places go to the graphics
  * on the timeline already, then to every other template in onset order, then
- * to keywords in onset order (`roomRank`), so a keyword's reason says so.
+ * to keywords in onset order (`roomRank`). `filledBy` says what holds the
+ * places in its span, so the reason names only what is there: graphics on the
+ * timeline already (`placed`), graphics of a higher rank kept in this run
+ * (`outranking`, which only a keyword can lose to) and earlier ones of its own
+ * rank kept in this run (`earlier`). Left out, all three, the full text.
  */
-export function perClipReason(scope: 'clip' | 'ad', template: string): string {
+export function perClipReason(
+  scope: 'clip' | 'ad',
+  template: string,
+  filledBy: { placed: boolean; outranking: boolean; earlier: boolean } = { placed: true, outranking: true, earlier: true }
+): string {
   const head = `at most one graphic per ${GRAPHIC_SPACING.perS} s of ${scope === 'ad' ? 'the ad' : 'clip'}`
-  return roomRank(template) === 1 ? `${head}; a keyword yields to any other graphic, and the ones on the timeline already and the earlier keywords stay` : `${head}, the ones on the timeline already and the earlier ones stay`
+  const keyword = roomRank(template) === 1
+  const stay = [
+    ...(filledBy.placed ? ['the ones on the timeline already'] : []),
+    ...(filledBy.earlier ? [keyword ? 'the earlier keywords' : 'the earlier ones'] : [])
+  ]
+  const stays = stay.length > 0 ? `${stay.join(' and ')} stay` : ''
+  if (keyword && filledBy.outranking) return `${head}; a keyword yields to any other graphic${stays ? `, and ${stays}` : ''}`
+  return stays ? `${head}, ${stays}` : head
 }
 
 /** Rule 4's drop (not §6.9's words; the plan is silent). */
@@ -161,8 +176,8 @@ const EPS = 1e-6
  * budget (§6.9, §6.16): kept with no rule read, and neither held for the
  * others nor counted. `kept` is in onset
  * order (equal onsets in the order given), whatever order they were weighed
- * in; `dropped` carries each spec as given with its reason, in the order
- * weighed. A graphic
+ * in; `dropped` carries each spec as given with its reason, in onset order
+ * too (equal onsets in the order given). A graphic
  * already on the timeline always holds, even where a candidate's onset is
  * earlier: it is placed.
  */
@@ -187,11 +202,11 @@ export function applyBudget<C extends BudgetCandidate>(
     .map((c, i) => ({ c, i, onset: onsetSeconds(c.start, c.spec.beats, fps), rank: roomRank(c.spec.data.template) }))
     .sort((a, b) => a.rank - b.rank || a.onset - b.onset || a.i - b.i)
   const kept: { c: C; i: number; onset: number }[] = []
-  const dropped: { spec: C['spec']; reason: string }[] = []
+  const dropped: { spec: C['spec']; reason: string; i: number; onset: number }[] = []
   for (const { c, i, onset } of ordered) {
     const template = c.spec.data.template
     if (!project.clips.some((x) => x.id === c.clipId)) {
-      dropped.push({ spec: c.spec, reason: NO_CLIP_NOTE })
+      dropped.push({ spec: c.spec, reason: NO_CLIP_NOTE, i, onset })
       continue
     }
     if (template === 'screen-card') {
@@ -200,15 +215,16 @@ export function applyBudget<C extends BudgetCandidate>(
     }
     const reason = refusal(project, c, onset, held, cards, punches, cap)
     if (reason !== null) {
-      dropped.push({ spec: c.spec, reason })
+      dropped.push({ spec: c.spec, reason, i, onset })
       continue
     }
     kept.push({ c, i, onset })
     held.push({ onset, from: c.start, to: c.start + c.duration, template, placed: false })
   }
-  // Out in onset order, as placement and the seeds expect, whatever the rank weighed first.
+  // Out in onset order, as placement and the seeds expect, whatever the rank weighed first; the drops too, so the dock reads in time order.
   kept.sort((a, b) => a.onset - b.onset || a.i - b.i)
-  return { kept: kept.map((k) => k.c), dropped }
+  dropped.sort((a, b) => a.onset - b.onset || a.i - b.i)
+  return { kept: kept.map((k) => k.c), dropped: dropped.map(({ spec, reason }) => ({ spec, reason })) }
 }
 
 /** The first rule a candidate breaks, as its reason; null when it is kept. */
@@ -265,8 +281,15 @@ function refusal(
     const most = Math.max(1, Math.floor(seconds / GRAPHIC_SPACING.perS + 1e-9))
     const lo = framesToSeconds(span.from, fps) - EPS
     const hi = framesToSeconds(span.to, fps) - EPS
-    const over = held.filter((h) => h.template !== 'lower-third' && h.onset >= lo && h.onset < hi).length
-    if (over >= most) return perClipReason(scope, c.spec.data.template)
+    const over = held.filter((h) => h.template !== 'lower-third' && h.onset >= lo && h.onset < hi)
+    if (over.length >= most) {
+      const rank = roomRank(c.spec.data.template)
+      return perClipReason(scope, c.spec.data.template, {
+        placed: over.some((h) => h.placed),
+        outranking: over.some((h) => !h.placed && roomRank(h.template) < rank),
+        earlier: over.some((h) => !h.placed && roomRank(h.template) === rank)
+      })
+    }
   }
 
   // Rule 4, when M17 has set the cap: every 60 s window that holds this onset.

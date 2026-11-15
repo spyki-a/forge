@@ -144,7 +144,7 @@ export interface KeptGraphic {
  * the drops otherwise come back only as `Problem` text): the footage clip it
  * was for, its template as named, the first string it would draw ('' when it
  * draws none) and why, without the "graphic dropped: " head. Built by
- * `settleGraphics` (the validator's and the spacing's drops) and
+ * `settleGraphics` (the validator's drops) and
  * `graphicDropsOf` (applyGraphics'), for the decision record, the panel's
  * notes and the eval.
  */

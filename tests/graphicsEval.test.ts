@@ -352,8 +352,8 @@ describe('the figures of "Recorded per run" (§6.10)', () => {
     expect([f.errorsByStatus, f.firstError]).toEqual([{}, null])
   })
 
-  it('counts a truth once however many kept graphics sit near it; settle no longer spaces, so nothing is dropped for room (try-out 1)', async () => {
-    // 53 words at 1.2 s: a 63.6 s clip. The budget would allow three graphics (one per 20 s); the eval does not run it.
+  it('counts a truth once however many kept graphics sit near it, and counts only what lands: room is the budget\'s, at landing (try-out 1)', async () => {
+    // 53 words at 1.2 s: a 63.6 s clip. The budget allows three graphics (one per 20 s), and the eval lands the run as Find does.
     const C = talk(
       [
         'We signed 40 clients over the whole of this year.',
@@ -385,9 +385,36 @@ describe('the figures of "Recorded per run" (§6.10)', () => {
     const f = graphicsFigures([r], 'model')
     // The truth on s01 has both counters within one sentence: one truth, one hit.
     expect([f.truths, f.truthHits, f.truthHitRate, f.fixturesHit]).toEqual([1, 1, 1, 1])
-    // The 'honest' keyword is kept: room is the budget's, at apply time.
-    expect([f.proposed, f.kept, f.dropped, f.droppedByValidator, f.validatorShare, f.hallucinations]).toEqual([4, 4, 0, 0, 0, 0])
-    expect(f.droppedByReason).toEqual({})
+    // The validator keeps all four; landing drops the 'honest' keyword, within 6 s of 'portrait' on the same sentence.
+    expect(r.model[0].kept.map((k) => [k.sentence, k.landed])).toEqual([
+      ['s00', true],
+      ['s02', true],
+      ['s03', true],
+      ['s03', false]
+    ])
+    expect(r.model[0].kept[3].lost).toMatch(/^within 6 s of the keyword at [\d.]+ s, the earlier one stays$/u)
+    expect([f.proposed, f.kept, f.dropped, f.droppedByValidator, f.droppedAtLanding, f.hallucinations]).toEqual([4, 3, 1, 0, 1, 0])
+    expect(f.keptByTemplate).toEqual({ counter: 2, keyword: 1 })
+    expect(f.droppedByReason).toEqual({ room: 1 })
+  })
+
+  it('a truth or a trap on a graphic that does not land is not counted: the eval scores what the app would place (try-out 1)', async () => {
+    // 19 words at 1.2 s: a clip under 40 s, so room for one. The counter (onset 2.4 s) takes it; the keyword (16.8 s) yields.
+    const D = talk(['We signed 40 clients over the whole of this year.', 'Good light makes every portrait look calm and warm.'], { assetId: 'D' })
+    const answer = {
+      reasoning: '',
+      graphics: [g({ sentence: 's00', template: 'counter', value: '40', label: 'clients' }), g({ sentence: 's01', template: 'keyword', words: 'portrait' })]
+    }
+    const r = (
+      await scoreGraphicsFixture({ set: 'eval', id: 'eval-d', language: 'en', transcript: D, truth: [{ sentence: 's01', template: 'keyword' }], traps: ['s01'] }, CONFIG, from({ 'eval-d.graphics.s00': saved('eval-d.graphics.s00', JSON.stringify(answer)) }))
+    ).result
+    expect(r.model[0].kept.map((k) => [k.template, k.landed, k.lost])).toEqual([
+      ['counter', true, null],
+      ['keyword', false, 'at most one graphic per 20 s of clip; a keyword yields to any other graphic']
+    ])
+    const f = graphicsFigures([r], 'model')
+    expect([f.truths, f.truthHits, f.fixturesHit, f.trapsKept]).toEqual([1, 0, 0, 0])
+    expect([f.kept, f.dropped, f.droppedAtLanding, f.droppedByValidator]).toEqual([1, 1, 1, 0])
   })
 
   it('counts an answer that was an HTTP error by its status, with the first one’s text (§15 row 10: a schema the server refuses)', async () => {
@@ -443,7 +470,8 @@ describe('the figures of "Recorded per run" (§6.10)', () => {
   })
 
   it('scores the nested set exactly: English passes or fails, a Hindi or Telugu talk is recorded', async () => {
-    const t = talk(['Three steps today: first, the light; second, the lens; third, the frame.'], { assetId: 'N' })
+    // 0.5 s a word, so the items are said inside the steps card's 8 s and it lands (the eval scores what lands).
+    const t = talk(['Three steps today: first, the light; second, the lens; third, the frame.'], { assetId: 'N', ms: 500 })
     const answer = { reasoning: '', graphics: [g({ sentence: 's00', template: 'steps', title: 'Three steps today', items: [{ label: 'light', value: '' }, { label: 'lens', value: '' }, { label: 'frame', value: '' }] })] }
     const nested = (id: string, language: string, parents: number[]): GraphicsEvalInput => ({ set: 'nested', id, language, transcript: { ...t, language }, title: 'Three steps today.', items: ['Light', 'lens', 'frame'], parents })
     const score = async (input: GraphicsEvalInput): Promise<GraphicsFixtureResult> =>
@@ -457,6 +485,10 @@ describe('the figures of "Recorded per run" (§6.10)', () => {
     ])
     // The baseline finds no steps here (no sentence opens with an ordinal): no match, so English fails.
     expect(graphicsFigures([right], 'baseline').nested.map((n) => [n.steps, n.exact, n.bar])).toEqual([[0, false, 'fail']])
+    // At 1.2 s a word the items take 9.6 s, past the card's 8 s: landing drops the steps, so the nested match sees none.
+    const slow = (await scoreGraphicsFixture({ ...nested('nested-s', 'en', [-1, -1, -1]), transcript: talk(['Three steps today: first, the light; second, the lens; third, the frame.'], { assetId: 'N' }) } as GraphicsEvalInput, CONFIG, from({ 'nested-s.graphics.s00': saved('nested-s.graphics.s00', JSON.stringify(answer)) }))).result
+    expect(slow.model[0].kept.map((k) => k.landed)).toEqual([false])
+    expect(graphicsFigures([slow], 'model').nested.map((n) => [n.steps, n.exact, n.bar])).toEqual([[0, false, 'fail']])
     // Only the bar's reading changes outside English.
     const notEnglish: GraphicsFixtureResult = { ...right, fixtureId: 'nested-c', language: 'te' }
     expect(graphicsFigures([notEnglish], 'model').nested.map((n) => [n.exact, n.bar])).toEqual([[true, 'recorded']])

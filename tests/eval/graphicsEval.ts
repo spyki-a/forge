@@ -6,8 +6,9 @@ import { runGraphicsPass, type GraphicsAsk, type GraphicsMenu, type GraphicsRunP
 import { GRAPHICS_PASS, graphicsSchema } from '@shared/director/schemaGraphics'
 import { baselineGraphics } from '@shared/director/baselineGraphics'
 import { STRETCH_SENTENCES } from '@shared/director/validateGraphics'
-import { drawnStrings } from '@shared/graphics/apply'
-import type { GraphicData, GraphicDrop } from '@shared/graphics/template'
+import { drawnStrings, graphicDropsOf, replaceClipGraphics } from '@shared/graphics/apply'
+import type { GraphicData, GraphicDrop, KeptGraphic } from '@shared/graphics/template'
+import type { Project } from '@shared/timeline'
 import type { Transcript } from '@shared/transcript'
 import type { EvalProvider, EvalRequest, EvalResponse } from './pipeline'
 import { menuSentencesOf, projectForTranscript, type EvalGraphicsFixture, type NestedGraphicsFixture } from './graphicsFixtures'
@@ -28,7 +29,9 @@ import { menuSentencesOf, projectForTranscript, type EvalGraphicsFixture, type N
  * `graphicsPrompt`, `graphicsSchema`, `maxTokensForGraphics`, then
  * `askStructured`'s `think: false`), and an answer is settled by
  * `settleGraphics` with `baselineGraphics` for a window it cannot use, as
- * Find graphics settles it.
+ * Find graphics settles it, and then landed as Find lands it
+ * (`replaceClipGraphics`, the budget's room included), so the figures count
+ * what the app would place (`KeptRecord.landed`).
  */
 
 export interface GraphicsEvalConfig {
@@ -89,6 +92,15 @@ export interface KeptRecord {
   strings: string[]
   source: 'model' | 'baseline'
   proposal: boolean
+  /**
+   * It lands (try-out 1, 2026-11-15): Find's own landing, `replaceClipGraphics`
+   * over the run's kept graphics, the budget's room included, placed it, or
+   * set it aside as a proposal for Keep. False with `lost` its reason when
+   * landing dropped it. Every figure that counts what the app would place
+   * (kept, traps, truths, the nested match) counts only these.
+   */
+  landed: boolean
+  lost: string | null
 }
 
 /** One window of one side, as scored. */
@@ -166,20 +178,54 @@ interface AskInfo {
   notes: string[]
 }
 
-function keptRecords(part: GraphicsRunPart): KeptRecord[] {
+function keptRecords(part: GraphicsRunPart, lost: readonly (string | null)[]): KeptRecord[] {
   const said = new Map(part.menu.sentences.map((s) => [s.id, s.text]))
-  return part.settled.kept.map((c) => ({
+  return part.settled.kept.map((c, i) => ({
     sentence: c.sentence,
     said: said.get(c.sentence) ?? '',
     template: c.data.template,
     data: c.data,
     strings: drawnStrings(c.data),
     source: c.source,
-    proposal: c.proposal !== undefined
+    proposal: c.proposal !== undefined,
+    landed: (lost[i] ?? null) === null,
+    lost: lost[i] ?? null
   }))
 }
 
-function windowRecord(info: AskInfo, part: GraphicsRunPart): GraphicsWindowRecord {
+/** A problem at `$.kept[i]`: applyGraphics' drop of the run's i-th kept graphic. */
+const KEPT_PATH = /^\$\.kept\[(\d+)\]$/u
+
+/**
+ * What Find's landing does with a run (try-out 1, 2026-11-15: room is no
+ * longer decided in settle, so the eval lands the run as Find does to count
+ * what the app would place): `replaceClipGraphics` over the fixture's one
+ * clip with every window's kept graphics (`pair.kept`, the windows' kept in
+ * order), no sounds; per window, each kept graphic's drop reason, null when
+ * it lands or waits as a proposal. The lower third, when the asset has a
+ * Speaker, holds its room as in the app; it is not a window's, so its own
+ * drop is not counted here.
+ */
+function lostByWindow(project: Project, clipId: string, run: { pair: { kept: KeptGraphic[] }; parts: GraphicsRunPart[] }): (string | null)[][] {
+  const landed = replaceClipGraphics(project, clipId, run.pair.kept, { fps: project.settings.fps })
+  const lost: (string | null)[] = run.pair.kept.map(() => null)
+  for (const p of landed.problems) {
+    const m = KEPT_PATH.exec(p.path)
+    if (!m) continue
+    const i = Number(m[1])
+    // The reason as graphicDropsOf reads it (never split on a dash the graphic's own words may hold).
+    const [drop] = graphicDropsOf(landed.cleared, [run.pair.kept[i]], [], [{ path: '$.kept[0]', message: p.message }])
+    if (drop) lost[i] ??= drop.reason
+  }
+  let from = 0
+  return run.parts.map((part) => {
+    const mine = lost.slice(from, from + part.settled.kept.length)
+    from += part.settled.kept.length
+    return mine
+  })
+}
+
+function windowRecord(info: AskInfo, part: GraphicsRunPart, lost: readonly (string | null)[]): GraphicsWindowRecord {
   const ids = part.menu.sentences.map((s) => s.id)
   const wrongShape = info.parsed && !info.truncated && conforms(graphicsSchema(part.menu, { constrained: false }), info.answer).length > 0
   return {
@@ -199,7 +245,7 @@ function windowRecord(info: AskInfo, part: GraphicsRunPart): GraphicsWindowRecor
     baseline: part.settled.baseline,
     rejected: part.settled.rejected,
     answer: info.answer,
-    kept: keptRecords(part),
+    kept: keptRecords(part, lost),
     dropped: part.settled.dropped,
     drops: part.settled.drops,
     notes: info.notes
@@ -261,13 +307,15 @@ export async function scoreGraphicsFixture(
     }
   }
   const modelRun = await runGraphicsPass(project, [clip], ask, { baseline: baselineGraphics })
-  const model = modelRun.parts.map((part, i) => windowRecord(infos[i], part))
+  const modelLost = lostByWindow(project, clip.id, modelRun)
+  const model = modelRun.parts.map((part, i) => windowRecord(infos[i], part, modelLost[i]))
 
   const noModel = (menu: GraphicsMenu): AskInfo => ({ id: graphicsRequestId(fixture.id, menu), answered: false, status: 0, ms: 0, promptTokens: null, outputTokens: null, parsed: false, truncated: false, prose: false, retryPending: false, answer: null, notes: [] })
   const baselineRun = await runGraphicsPass(project, [clip], async () => {
     throw new Error(BASELINE_ONLY)
   }, { baseline: baselineGraphics })
-  const baseline = baselineRun.parts.map((part) => windowRecord(noModel(part.menu), part))
+  const baselineLost = lostByWindow(project, clip.id, baselineRun)
+  const baseline = baselineRun.parts.map((part, i) => windowRecord(noModel(part.menu), part, baselineLost[i]))
 
   const head: Pick<GraphicsFixtureResult, 'fixtureId' | 'set' | 'language' | 'pass' | 'sentences'> = {
     fixtureId: fixture.id,
@@ -290,17 +338,20 @@ export const BASELINE_ONLY = 'no model: the baseline only'
 // The figures of "Recorded per run".
 
 /**
- * A drop's reason, classed from the validator's message texts as they are in
- * code (validateGraphics.ts `reasonText`, `check`, `overLength`, `offered`,
- * `settleOne`). Settle no longer spaces (try-out 1, 2026-11-15: room is the
- * budget's, `applyBudget`, at apply time, which the eval does not run), so
- * there is no 'spacing' class any more. A drop whose
+ * A drop's reason, classed from the message texts as they are in code: the
+ * budget's room rules first ('room': budget.ts `tooCloseReason`,
+ * `perClipReason`, `perMinuteReason`, `ON_SCREEN_REASON`, `zoomPunchReason`;
+ * try-out 1, 2026-11-15: settle no longer spaces, room is decided once at
+ * landing, which the eval runs as Find does), then the validator's
+ * (validateGraphics.ts `reasonText`, `check`, `overLength`, `offered`,
+ * `settleOne`). A drop whose
  * reason joins several (`dropsOf` joins them with '; ') takes the first class
  * here that matches, in this order; none is 'other'. The order matters only
  * where two patterns could both match: 'order' and 'not-a-percentage' before
  * 'not-said'.
  */
 export const DROP_REASONS: readonly (readonly [string, RegExp])[] = Object.freeze([
+  ['room', /^within \d+ s of the |^at most one graphic per |graphics? in a minute$|^another graphic is on screen then$|^over a zoom punch at /u],
   ['not-offered', /' is not offered(?:;|$)/u],
   ['not-on-menu', /is not a sentence on the menu|is not a sentence of the transcript|has no sentence to ground it/u],
   ['too-long', /is \d+ characters, at most \d+ are drawn/u],
@@ -401,8 +452,15 @@ export interface GraphicsFigures {
   dropped: number
   /** Dropped over proposed; null with nothing proposed. */
   droppedShare: number | null
-  /** Dropped by the validator: since settle stopped spacing (try-out 1, 2026-11-15), every drop the side's settle made, and its share of proposed. */
+  /** Dropped by the validator: every drop the side's settle made, and its share of proposed. */
   droppedByValidator: number
+  /**
+   * Kept by the validator and dropped by Find's landing (`KeptRecord.lost`):
+   * the budget's room (try-out 1, 2026-11-15: decided once, at apply time),
+   * or no place, subject or lane. Counted in `dropped`, by its class in
+   * `droppedByReason` ('room' for the budget's rules).
+   */
+  droppedAtLanding: number
   validatorShare: number | null
   droppedByReason: Record<string, number>
   /** Drops whose class is one of `HALLUCINATION_REASONS`, and their share of proposed (the key number). */
@@ -453,7 +511,7 @@ export function nestedKey(text: string): string {
 
 /** The nested set's match for one fixture: its expected title, items and parents against the side's kept steps graphics. */
 export function nestedMatchOf(result: GraphicsFixtureResult, windows: readonly GraphicsWindowRecord[]): NestedMatch {
-  const steps = windows.flatMap((w) => w.kept).flatMap((k) => (k.data.template === 'steps' ? [k.data] : []))
+  const steps = windows.flatMap((w) => w.kept).flatMap((k) => (k.landed && k.data.template === 'steps' ? [k.data] : []))
   const title = (d: (typeof steps)[number]): boolean => nestedKey(d.title) === nestedKey(result.title ?? '')
   const items = (d: (typeof steps)[number]): boolean =>
     d.items.length === (result.items ?? []).length && d.items.every((it, i) => nestedKey(it.label) === nestedKey(result.items![i]))
@@ -498,6 +556,7 @@ export function graphicsFigures(results: readonly GraphicsFixtureResult[], side:
     dropped: 0,
     droppedShare: null,
     droppedByValidator: 0,
+    droppedAtLanding: 0,
     validatorShare: null,
     droppedByReason: {},
     hallucinations: 0,
@@ -532,10 +591,17 @@ export function graphicsFigures(results: readonly GraphicsFixtureResult[], side:
       }
     }
     const windows = sideWindows(r, side)
-    const kept = windows.flatMap((w) => w.kept)
-    for (const k of kept) {
+    const settled = windows.flatMap((w) => w.kept)
+    // What the app would place: the validator's kept that landing (the budget's room included) did not drop.
+    const kept = settled.filter((k) => k.landed)
+    for (const k of settled) {
       bump(f.proposedByTemplate, k.template)
-      bump(f.keptByTemplate, k.template)
+      if (k.landed) bump(f.keptByTemplate, k.template)
+      else {
+        bump(f.droppedByReason, dropReasonOf(k.lost ?? ''))
+        f.dropped += 1
+        f.droppedAtLanding += 1
+      }
     }
     f.kept += kept.length
     for (const w of windows) {

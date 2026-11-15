@@ -1358,7 +1358,7 @@ describe('the adversarial generators: each false graphic is dropped, every case,
 // The baseline route (§6.10, lane T4 piece 3): the same bar over what the
 // baseline makes. A run with no model settles every window through
 // `settleGraphics(..., { baseline: baselineGraphics })`, so what ships is the
-// baseline's candidates after `validateBaseline` and the spacing.
+// baseline's candidates after `validateBaseline`; room is the budget's, at apply time.
 
 /** What the run gets when no model answers: the reason a rejected window carries. */
 const NO_MODEL: { error: string } = { error: 'no model answered' }

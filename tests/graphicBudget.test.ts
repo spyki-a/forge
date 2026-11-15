@@ -113,13 +113,13 @@ describe('applyBudget, rule 1: the spacing (D12)', () => {
     const two = [cand('a', 'counter', 0, 75), cand('b', 'counter', 600, 75)] // onsets 0.5 s and 20.5 s
     const r30 = applyBudget(project([['f', 0, 900]]), two)
     expect(names(r30)).toEqual(['a'])
-    expect(reasons(r30)).toEqual([perClipReason('clip', 'counter')])
+    expect(reasons(r30)).toEqual(['at most one graphic per 20 s of clip, the earlier ones stay'])
     expect(perClipReason('clip', 'counter')).toBe('at most one graphic per 20 s of clip, the ones on the timeline already and the earlier ones stay')
     expect(names(applyBudget(project([['f', 0, 1200]]), two))).toEqual(['a', 'b'])
     const three = [...two, cand('c', 'counter', 1200, 75)] // onset 40.5 s
     const r599 = applyBudget(project([['f', 0, 1797]]), three)
     expect(names(r599)).toEqual(['a', 'b'])
-    expect(reasons(r599)).toEqual([perClipReason('clip', 'counter')])
+    expect(reasons(r599)).toEqual(['at most one graphic per 20 s of clip, the earlier ones stay'])
   })
 
   it("counts over the candidate's own footage clip for Clip it, and over the whole ad for Direct", () => {
@@ -134,7 +134,7 @@ describe('applyBudget, rule 1: the spacing (D12)', () => {
     expect(names(applyBudget(p, on(CLIPS_GRAPHIC_RULE)))).toEqual(['a', 'b', 'c'])
     const direct = applyBudget(p, on(GRAPHIC_RULE))
     expect(names(direct)).toEqual(['a', 'b'])
-    expect(reasons(direct)).toEqual([perClipReason('ad', 'counter')])
+    expect(reasons(direct)).toEqual(['at most one graphic per 20 s of the ad, the earlier ones stay'])
   })
 
   it('a graphic already on the timeline holds first, even against an earlier candidate', () => {
@@ -166,7 +166,7 @@ describe('applyBudget, rule 1: the spacing (D12)', () => {
     const p = project([['f', 0, 900]], [graphicClip('g1', 'counter', 0, 75)])
     expect(names(applyBudget(p, [cand('lower', 'lower-third', 300, 105)]))).toEqual(['lower'])
     // A counter there instead takes no second slot.
-    expect(reasons(applyBudget(p, [cand('counter', 'counter', 300, 75)]))).toEqual([perClipReason('clip', 'counter')])
+    expect(reasons(applyBudget(p, [cand('counter', 'counter', 300, 75)]))).toEqual(['at most one graphic per 20 s of clip, the ones on the timeline already stay'])
   })
 
   it('drops a candidate whose footage clip is gone', () => {
@@ -247,12 +247,47 @@ describe('applyBudget: room by rank, then time (try-out 1, 2026-11-15)', () => {
     const counter = cand('counter', 'counter', 600, 75) // 20.5 s
     const r = applyBudget(p, [keyword, counter])
     expect(names(r)).toEqual(['counter'])
-    expect(reasons(r)).toEqual([perClipReason('clip', 'keyword')])
+    // Only the counter holds the place: the reason names that, and no "earlier keywords" or timeline graphics that are not there.
+    expect(reasons(r)).toEqual(['at most one graphic per 20 s of clip; a keyword yields to any other graphic'])
     expect(perClipReason('clip', 'keyword')).toBe(
       'at most one graphic per 20 s of clip; a keyword yields to any other graphic, and the ones on the timeline already and the earlier keywords stay'
     )
     // With room for two, both: the cap, not the rank, decides.
     expect(names(applyBudget(project([['f', 0, 1200]]), [keyword, counter]))).toEqual(['keyword', 'counter'])
+  })
+
+  it('the count reason names only what holds the places: an earlier keyword, a graphic on the timeline, or an earlier number', () => {
+    // 30 s clips: room for 1. Onsets 0.5 s and 20.5 s.
+    const k1 = cand('k1', 'keyword', 0, 75)
+    const k2 = cand('k2', 'keyword', 600, 75)
+    expect(reasons(applyBudget(project([['f', 0, 900]]), [k2, k1]))).toEqual(['at most one graphic per 20 s of clip, the earlier keywords stay'])
+    const placed = project([['f', 0, 900]], [graphicClip('g', 'counter', 0, 75)])
+    expect(reasons(applyBudget(placed, [k2]))).toEqual(['at most one graphic per 20 s of clip, the ones on the timeline already stay'])
+    expect(reasons(applyBudget(placed, [cand('c', 'counter', 600, 75)]))).toEqual(['at most one graphic per 20 s of clip, the ones on the timeline already stay'])
+    expect(reasons(applyBudget(project([['f', 0, 900]]), [cand('c2', 'counter', 600, 75), cand('c1', 'counter', 0, 75)]))).toEqual([
+      'at most one graphic per 20 s of clip, the earlier ones stay'
+    ])
+  })
+
+  it('the gap reason names the NEAREST held graphic, not the first one held', () => {
+    // A ring at 2.0 s and a counter at 8.5 s are both kept (6.5 s apart); a keyword at 7.5 s is within 6 s of both, nearest the counter.
+    const p = project([['f', 0, 1800]])
+    const ring = cand('ring', 'ring', 45, 75) // 1.5 + 0.5 = 2.0 s
+    const counter = cand('counter', 'counter', 240, 75) // 8.0 + 0.5 = 8.5 s
+    const keyword = cand('keyword', 'keyword', 210, 75) // 7.0 + 0.5 = 7.5 s
+    const r = applyBudget(p, [ring, counter, keyword])
+    expect(names(r)).toEqual(['ring', 'counter'])
+    expect(reasons(r)).toEqual(['within 6 s of the counter at 8.5 s; a keyword yields to any other graphic'])
+  })
+
+  it('the drops come out in onset order too, though the keywords were weighed after the number', () => {
+    const p = project([['f', 0, 1800]])
+    const k = cand('k', 'keyword', 0, 75) // 0.5 s, within 6 s of the ring
+    const ring = cand('ring', 'ring', 90, 75) // 3.5 s
+    const late = cand('late', 'counter', 150, 75) // 5.5 s, within 6 s of the ring
+    const r = applyBudget(p, [late, ring, k])
+    expect(names(r)).toEqual(['ring'])
+    expect(r.dropped.map((d) => d.spec)).toEqual([k.spec, late.spec])
   })
 
   it('what comes out is in onset order, though the counter was weighed first; the lower third is still outside the count', () => {
