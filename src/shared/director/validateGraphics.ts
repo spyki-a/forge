@@ -656,6 +656,113 @@ function settleOne(
 }
 
 /**
+ * A graphic the validator DROPPED, as it would have been drawn, for the
+ * Transcript tile's **Add** (try-out 1, 2026-11-15: "even the ones that did
+ * not trigger, add them too"; `GraphicDrop.add`). The owner's click is the
+ * review, as Keep is for a proposal, so nothing here judges truth; it only
+ * makes the graphic whole enough to place:
+ *
+ * - Null when it cannot be drawn: a template with no row in
+ *   `GRAPHIC_TEMPLATES`, a lower third or screen card (never a model's), a
+ *   sentence that is not the menu's (nothing to time it by), or nothing to
+ *   draw (every drawn string empty).
+ * - The validator's repairs that make it drawable: a keyword's `lit` brought
+ *   into range, a steps list drawn flat with a line (its parents are the
+ *   app's and are not read from a graphic that did not bind), a said quote's
+ *   speaker the app's (`speaker`).
+ * - Its words: `bind` as far as it came. A negated, what-if, out-of-order or
+ *   unpaired graphic carries the assignment `bind` judged (`at`), so its beat
+ *   words are the ones it would have had (`beatWordsOf`), on the words it
+ *   was refused for. One `bind` could not place at all (not said, another
+ *   unit, a field that grounds nothing) has no words of its own: it is timed
+ *   on its sentence's first word on the menu, one beat (a template's later
+ *   beats fall back to its last, templates/layout.ts), so it lands on its
+ *   sentence.
+ * - No `proposal`: the click is the check.
+ *
+ * Pure.
+ */
+export function droppedCandidate(
+  input: GraphicData,
+  sentence: string,
+  why: string,
+  source: GraphicCandidate['source'],
+  menu: GraphicsMenu,
+  transcript: Transcript,
+  speaker = ''
+): GraphicCandidate | null {
+  const def = GRAPHIC_TEMPLATES[input.template]
+  if (!def) return null
+  const onMenu = menu.sentences.find((s) => s.id === sentence)
+  if (!onMenu) return null
+  const data = structuredClone(input) as GraphicData
+  if (data.template === 'keyword') {
+    const n = wordsOf(data.words).length
+    if (n > 0 && (!Number.isInteger(data.lit) || data.lit < 0 || data.lit >= n)) data.lit = n - 1
+  }
+  if (data.template === 'steps') {
+    data.items = data.items.map((it) => ({ label: it.label, parent: -1 }))
+    data.connector = 'line'
+  }
+  if (data.template === 'quote' && data.kind !== 'social') data.speaker = speaker
+  const drawn = (() => {
+    switch (data.template) {
+      case 'counter':
+      case 'ring':
+        return [data.value, data.label]
+      case 'bars':
+        return [data.title, ...data.items.flatMap((i) => [i.label, i.value])]
+      case 'steps':
+        return [data.title, ...data.items.map((i) => i.label)]
+      case 'quote':
+        return [data.text]
+      case 'callout':
+        return [data.label]
+      case 'keyword':
+        return [data.words]
+      default:
+        // A lower third and a screen card are the app's, never a dropped graphic's: no arm, so nothing to draw, so no Add.
+        return []
+    }
+  })()
+  if (drawn.every((s) => s.trim() === '')) return null
+
+  let bound: number[] = []
+  let beatWords: number[] = []
+  const stretch = stretchFor(transcript, sentence)
+  if (stretch) {
+    const claims = claimsOf(data, def)
+    // A value field that is not one number cannot bind: no words of its own.
+    if (claims.length > 0 && claims.every((c) => c.kind !== 'number' || c.value !== undefined)) {
+      const r = bind(claims, stretch, transcript.language)
+      const at = r.ok ? r.at : r.at
+      if (at && at.length === claims.length) {
+        bound = [...at]
+        beatWords = beatWordsOf(data, claims, at, stretch)
+      }
+    }
+  }
+  if (beatWords.length === 0) {
+    bound = []
+    beatWords = [onMenu.wordStart]
+  }
+  return { sentence, data, bound, beatWords, why: cutGraphemes(why, GRAPHIC_KEPT_CHARS.why), source }
+}
+
+/**
+ * One answer graphic's data for `droppedCandidate`, or null when it cannot be
+ * drawn as answered: a template with no row in `GRAPHIC_TEMPLATES`, or a
+ * drawn field over its kept length (§6.6: the painter is sized for those).
+ */
+export function answerDataForAdd(g: AnswerGraphic): GraphicData | null {
+  // A lower third or screen card is refused by `droppedCandidate` itself.
+  const def = GRAPHIC_TEMPLATES[g.template as GraphicTemplateId]
+  if (!def) return null
+  if (overLength(g, def, '$').length > 0) return null
+  return dataOf(g, g.template as GraphicTemplateId)
+}
+
+/**
  * The answer fields one graphic filled that its template does not hold (§6.6:
  * "unused ones left as ''"): a string field not '' after trimming, an `items`
  * row with a label or a value, a steps row's `value`, a `lit` not 0. Each is

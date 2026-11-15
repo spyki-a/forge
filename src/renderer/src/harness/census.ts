@@ -23,7 +23,7 @@ import type { Transcript } from '@shared/transcript'
 import { useEditor, type ShelfToolId, type UrlSourceStatus } from '../store'
 import { HARNESS_HELPER_PACK, HARNESS_LINKS, HARNESS_SPEECH_MODEL_BYTES, harnessHelperStatus } from './bridge'
 import { harnessSubjectTrack } from './reframeStub'
-import { harnessGraphicsRun, type HarnessWordSource } from './graphicsStub'
+import { harnessDropsTranscript, harnessGraphicsRun, type HarnessWordSource } from './graphicsStub'
 import { useCatalog } from '../catalog'
 import { usePacks } from '../packs'
 import { SHELF_TOOLS } from '../components/shelf/tools'
@@ -1741,6 +1741,32 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
   'transcript-graphics-asr': async (env) => graphicsRun(env, 'youtube-asr', true),
   'transcript-graphics-lines': async (env) => graphicsRun(env, 'youtube-lines', false),
   'transcript-graphics-whisper': async (env) => graphicsRun(env, 'whisper-unsure', false),
+  /*
+   * The same section after a REAL Find with no model (try-out 1, 2026-11-15):
+   * the bridge has none, so the baseline's graphics run over
+   * harness/graphicsStub.ts' three English sentences, and the run drops the
+   * counter "$500" for the truth (said negated) and the keyword "gear" for
+   * room (within 6 s of the ring), each listed with its reason and Add. Add on
+   * the counter is refused (the ring is on screen then); Add on the keyword
+   * lands. Left on screen with `__forgeCensus({ needs: ['transcript-graphics-drops'], keep: true })`.
+   */
+  'transcript-graphics-drops': async (env) => {
+    const { m, V } = await videoClip(env)
+    const assetId = m.video.id
+    editor().update((p) => ({ ...p, transcripts: { ...p.transcripts, [assetId]: harnessDropsTranscript(assetId) } }))
+    await editor().findGraphics(V)
+    const drops = editor().lastGraphics?.drops ?? []
+    const addable = drops.filter((d) => d.add !== undefined)
+    const truth = addable.some((d) => d.template === 'counter' && d.reason.includes('said negated'))
+    const room = addable.some((d) => d.template === 'keyword' && d.reason.startsWith('within 6 s of'))
+    if (!truth || !room) {
+      throw new Error(
+        `census: the no-model Find dropped ${drops.map((d) => `${d.template} "${d.text}" (${d.reason}${d.add ? ', Add' : ''})`).join('; ') || 'nothing'}, not a negated counter and a keyword for room, each with Add`
+      )
+    }
+    focus(V, 0)
+    return { ids: { V } }
+  },
   /* Find graphics pressed and its ask still out: the button reads "Finding graphics…" */
   'transcript-finding': async (env) => {
     const built = await RECIPES.transcript(env)

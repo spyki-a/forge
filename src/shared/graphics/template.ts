@@ -153,6 +153,22 @@ export interface GraphicDrop {
   template: string
   text: string
   reason: string
+  /**
+   * What the Transcript tile's **Add** places (try-out 1, 2026-11-15, the
+   * owner's "even the ones that did not trigger, add them too"), absent when
+   * the graphic cannot be drawn at all (no template drawn, nothing to draw, a
+   * sentence that is not the menu's, a field over its kept length).
+   * - A drop of `applyGraphics` (the budget's room rules, placement, the
+   *   lane, a retime: `graphicDropsOf`) carries the validated `KeptGraphic`
+   *   itself: bound words, beat words and all.
+   * - A drop of the validator (`settleGraphics`: not said, negated, a
+   *   what-if, a pairing, …) carries the graphic as it would have been drawn
+   *   (`droppedCandidate` in director/validateGraphics.ts): its beat words
+   *   from the binding as far as `bind` came, else its sentence's first word,
+   *   so it lands on its sentence.
+   * Session state only: `decisionForGraphics` leaves it out of the record.
+   */
+  add?: KeptGraphic
 }
 
 /** Seconds, field modes and the rest for each drawn template (docs/CLIPS.md §6.2's GRAPHIC_TEMPLATES table; the seconds are the nine shapes' table, proposals until M16). Frozen through and through. */

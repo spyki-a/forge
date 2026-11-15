@@ -18,7 +18,15 @@ import { rowStamp } from './tools/TranscriptRows'
  *   starts on the timeline, with **Drop** on each; and each pending proposal of
  *   the clip with **Keep** and **Drop**, and **check the number** beside the
  *   words it heard (the proposal's note, `check the number: heard "…"`);
- * - the notes of the clip's last Find, each drop with its reason;
+ * - the graphics the clip's last Find dropped, each with its reason and, when
+ *   it can be drawn at all, **Add** (`addDroppedGraphic`; try-out 1,
+ *   2026-11-15): a room drop and a truth drop alike, the reason staying
+ *   beside the button so the click is the review; a refused Add shows its
+ *   reason on the row. A row whose graphic Add placed is not listed while
+ *   that graphic is on the timeline. Bounded with a scroll of its own, as the
+ *   graphics list is, so a long list keeps the tile's other blocks in place;
+ * - the other notes of the clip's last Find (a rejection, a repair, a sound
+ *   note);
  * - **Clear graphics**, with its note that Direct's graphics stay;
  * - the **Speaker** field, `MediaAsset.speaker` (§16.31). For a link's asset it
  *   starts empty with the channel (`credit.author`) as its PLACEHOLDER, never
@@ -39,6 +47,8 @@ export const FINDING_GRAPHICS = 'Finding graphics…'
 export const FIND_NEEDS_TRANSCRIPT = 'Transcribe this clip first — graphics are found in its words'
 export const KEEP = 'Keep'
 export const DROP = 'Drop'
+/** Add on a dropped graphic (try-out 1, 2026-11-15, the owner's word: "there is no ADD option at all"). */
+export const ADD = 'Add'
 export const CLEAR_GRAPHICS = 'Clear graphics'
 /** Clear graphics' title (not the plan's words): it is the whole project's, not this clip's. */
 export const CLEAR_GRAPHICS_TITLE = 'Removes every graphic Find graphics placed, in every clip, with its sounds and the numbers waiting to be checked'
@@ -71,6 +81,7 @@ export function TranscriptGraphics({ clip, hasTranscript }: { clip: Clip; hasTra
   const lastGraphics = useEditor((s) => s.lastGraphics)
   const findGraphics = useEditor((s) => s.findGraphics)
   const keepGraphic = useEditor((s) => s.keepGraphic)
+  const addDroppedGraphic = useEditor((s) => s.addDroppedGraphic)
   const dropGraphic = useEditor((s) => s.dropGraphic)
   const clearGraphics = useEditor((s) => s.clearGraphics)
   const setSpeaker = useEditor((s) => s.setSpeaker)
@@ -85,6 +96,10 @@ export function TranscriptGraphics({ clip, hasTranscript }: { clip: Clip; hasTra
     project.clips.some((c) => c.graphic !== undefined && c.generatedBy?.rule === CLIPS_GRAPHIC_RULE) ||
     (project.graphicProposals ?? []).some((g) => g.rule === CLIPS_GRAPHIC_RULE)
   const notes = lastGraphics !== null && lastGraphics.clipId === clip.id ? lastGraphics : null
+  // The last Find's dropped graphics, by their place in the list (Add's index); one Add placed is not listed while its graphic stands.
+  const dropped = (notes?.drops ?? [])
+    .map((d, i) => ({ d, i }))
+    .filter(({ d }) => d.addedAs === undefined || !project.clips.some((c) => c.id === d.addedAs))
   const running = findingGraphics === clip.id
   const busy = findingGraphics !== null
   const asset = project.assets.find((a) => a.id === clip.assetId)
@@ -171,7 +186,37 @@ export function TranscriptGraphics({ clip, hasTranscript }: { clip: Clip; hasTra
         </ul>
       )}
 
-      {notes && (
+      {dropped.length > 0 && (
+        <ul data-graphic-drops="" className="max-h-40 space-y-1 overflow-y-auto">
+          {dropped.map(({ d, i }) => (
+            <li key={i} data-graphic-drop={i} className="space-y-0.5 text-[10.5px] text-ink-400">
+              <div className="flex items-center gap-2">
+                <span className="shrink-0 text-ink-500">{d.template.replace(/-/g, ' ')}</span>
+                <span className="min-w-0 flex-1 truncate">{d.text}</span>
+                {d.add !== undefined && (
+                  <button
+                    type="button"
+                    onClick={() => addDroppedGraphic(i)}
+                    className="shrink-0 rounded bg-ink-800 px-1.5 py-0.5 text-[10px] text-ink-300 hover:bg-ink-700 hover:text-ink-100"
+                  >
+                    {ADD}
+                  </button>
+                )}
+              </div>
+              <p data-drop-reason="" className="text-[10px] leading-snug text-ink-500">
+                {d.reason}
+              </p>
+              {d.refused !== undefined && (
+                <p data-add-refused="" className="text-[10px] leading-snug text-accent-400">
+                  {d.refused}
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {notes && (notes.model === 'baseline' || notes.notes.length > 0) && (
         <ul data-graphic-notes="" className="max-h-24 space-y-0.5 overflow-y-auto text-[10px] leading-snug text-ink-500">
           {notes.model === 'baseline' && <li>{NO_MODEL_LINE}</li>}
           {notes.notes.map((note, i) => (

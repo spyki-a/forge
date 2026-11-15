@@ -8815,6 +8815,17 @@
     "note": "The press beside an empty Speaker on a link's asset (§6.6: \"press to use the channel's\"), written as USE_CHANNEL_NAME; the census's ASR run makes the video a link's asset with a channel. Count reasoned from the code by lane T2b piece 4. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
+    "label": "Add",
+    "match": "text",
+    "home": "transcript",
+    "needs": "transcript-graphics-drops",
+    "count": 2,
+    "file": "src/renderer/src/components/TranscriptGraphics.tsx",
+    "line": 51,
+    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "note": "Add on each graphic the last Find dropped (addDroppedGraphic; try-out 1, 2026-11-15), written as ADD: a real Find with no model over harness/graphicsStub.ts' three sentences drops the counter \"$500\" (said negated) and the keyword \"gear\" (within 6 s of the ring). Count measured in node by tests/renderer/transcriptGraphics.test.tsx over the same transcript on a 6 s clip; not yet read on screen."
+  },
+  {
     "label": "Graphic",
     "match": "text",
     "home": "dock",

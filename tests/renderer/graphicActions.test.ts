@@ -389,7 +389,11 @@ describe('findGraphics: the run’s edges', () => {
       [{ template: 'keyword', words: 'honest', lit: 0 }, 's03'],
       [{ template: 'keyword', words: 'day', lit: 0 }, 's07']
     ])
-    expect(state().lastGraphics!.notes).toContain('graphic dropped: the keyword "year" — within 6 s of the lower third at 0.0 s; a keyword yields to any other graphic')
+    // A dropped graphic is a row of its own with Add (try-out 1, piece 4), not a note.
+    expect(state().lastGraphics!.drops).toContainEqual(
+      expect.objectContaining({ template: 'keyword', text: 'year', reason: 'within 6 s of the lower third at 0.0 s; a keyword yields to any other graphic' })
+    )
+    expect(state().lastGraphics!.notes.some((n) => n.startsWith('graphic dropped: '))).toBe(false)
     expect(state().decisions.map((d) => d.model)).toEqual([{ id: 'baseline', runtime: 'none' }])
     expect(state().lastGraphics!.notes).toContain("the baseline's graphics are used for sentences s00 to s20: No model is set up")
     expect(state().lastGraphics!.model).toBe('baseline')

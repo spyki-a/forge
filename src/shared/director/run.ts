@@ -18,7 +18,7 @@ import { captionWindowMs } from '../captions/placement'
 import { subjectTrackOf } from '../reframe/frameMap'
 import { MAX_CANDIDATES } from './menu'
 import { type GraphicCandidate, type GraphicDrop, type GraphicTemplateId, type KeptGraphic } from '../graphics/template'
-import { validateBaseline, validateGraphics, type AnswerGraphic } from './validateGraphics'
+import { answerDataForAdd, droppedCandidate, validateBaseline, validateGraphics, type AnswerGraphic } from './validateGraphics'
 import { drawnStrings, quoteSpeakerOf } from '../graphics/apply'
 import { GRAPHICS_PASS, graphicsSchema, maxTokensForGraphics } from './schemaGraphics'
 import { graphicsPrompt } from './promptGraphics'
@@ -458,9 +458,10 @@ function answerDrawn(g: AnswerGraphic): string[] {
 function dropsOf(
   problems: readonly Problem[],
   root: '$.graphics' | '$.baseline',
-  drawn: (i: number) => { template: string; strings: string[] } | undefined,
-  clipId: string
+  drawn: (i: number) => { template: string; strings: string[]; add: () => GraphicCandidate | null } | undefined,
+  menu: Pick<GraphicsMenu, 'clipId' | 'assetId'>
 ): GraphicDrop[] {
+  const clipId = menu.clipId
   const at = new Map<number, string[]>()
   const pattern = root === '$.graphics' ? /^\$\.graphics\[(\d+)\]/u : /^\$\.baseline\[(\d+)\]/u
   for (const p of problems) {
@@ -473,7 +474,16 @@ function dropsOf(
     .sort((a, b) => a[0] - b[0])
     .flatMap(([i, reasons]) => {
       const d = drawn(i)
-      return d ? [{ clipId, template: d.template, text: firstDrawn(d.strings), reason: reasons.join('; ') }] : []
+      if (!d) return []
+      // The settle never throws (settleGraphics): an Add that cannot be built is no Add.
+      let candidate: GraphicCandidate | null = null
+      try {
+        candidate = d.add()
+      } catch {
+        candidate = null
+      }
+      const drop: GraphicDrop = { clipId, template: d.template, text: firstDrawn(d.strings), reason: reasons.join('; ') }
+      return [candidate ? { ...drop, add: { clipId, assetId: menu.assetId, candidate } } : drop]
     })
 }
 
@@ -534,7 +544,20 @@ export function settleGraphics(
     'error' in answer ? { rejected: answer.error } : validateGraphics(answer.value, menu, transcript, { truncated: answer.truncated, speaker })
   if (!('rejected' in verdict)) {
     const graphics = (answer as { value: { graphics: AnswerGraphic[] } }).value.graphics
-    const drops = dropsOf(verdict.dropped, '$.graphics', (i) => (graphics[i] ? { template: graphics[i].template, strings: answerDrawn(graphics[i]) } : undefined), menu.clipId)
+    const drops = dropsOf(
+      verdict.dropped,
+      '$.graphics',
+      (i) => {
+        const g = graphics[i]
+        if (!g) return undefined
+        const add = (): GraphicCandidate | null => {
+          const data = answerDataForAdd(g)
+          return data ? droppedCandidate(data, g.sentence, g.why, 'model', menu, transcript, speaker) : null
+        }
+        return { template: g.template, strings: answerDrawn(g), add }
+      },
+      menu
+    )
     return { kept: inOnsetOrder(verdict.kept, transcript), dropped: [...verdict.dropped], baseline: false, rejected: null, drops }
   }
   const window = graphicsWindowName(menu)
@@ -550,7 +573,16 @@ export function settleGraphics(
   }
   const standard = validateBaseline(candidates, menu, transcript, { speaker })
   const head = options.baseline && failed === null ? `the baseline's graphics are used for ${window}` : `no graphics for ${window}`
-  const drops = dropsOf(standard.dropped, '$.baseline', (i) => (candidates[i] ? { template: candidates[i].data.template, strings: drawnStrings(candidates[i].data) } : undefined), menu.clipId)
+  const drops = dropsOf(
+    standard.dropped,
+    '$.baseline',
+    (i) => {
+      const c = candidates[i]
+      if (!c) return undefined
+      return { template: c.data.template, strings: drawnStrings(c.data), add: () => droppedCandidate(c.data, c.sentence, c.why, 'baseline', menu, transcript, speaker) }
+    },
+    menu
+  )
   return {
     kept: inOnsetOrder(standard.kept, transcript),
     dropped: [
@@ -677,7 +709,8 @@ export function decisionForGraphics(
   return {
     id: options.id ?? defaultId('decision'),
     pass: GRAPHICS_PASS,
-    ops: [{ graphics: settled.kept, dropped: settled.dropped, baseline: settled.baseline, drops: settled.drops }],
+    // Each drop without its `add` (the tile's session state, a whole candidate): the record is as it was before Add.
+    ops: [{ graphics: settled.kept, dropped: settled.dropped, baseline: settled.baseline, drops: settled.drops.map(({ add: _add, ...d }) => d) }],
     model: answered ? { id: model.id, runtime: model.runtime } : { id: 'baseline', runtime: 'none' },
     createdAt: (options.now ?? new Date()).toISOString()
   }

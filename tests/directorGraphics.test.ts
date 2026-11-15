@@ -26,7 +26,7 @@ import {
 import { CLIPS_GRAPHIC_RULE, WRONG_ASSET_NOTE, applyGraphics, graphicDropsOf, lowerThirdFor } from '@shared/graphics/apply'
 import { RETIMED_NOTE } from '@shared/graphics/beats'
 import { NO_CLIP_NOTE } from '@shared/graphics/place'
-import type { GraphicCandidate, KeptGraphic } from '@shared/graphics/template'
+import type { GraphicCandidate, GraphicDrop, KeptGraphic } from '@shared/graphics/template'
 import { GRAPHIC_KEPT_CHARS, KEYWORD_MAX_WORDS, validateGraphics } from '@shared/director/validateGraphics'
 import { MAX_CANDIDATES } from '@shared/director/menu'
 import { baselineGraphics } from '@shared/director/baselineGraphics'
@@ -133,6 +133,9 @@ const TALK = talk(['We signed 40 clients this year.', 'Then we grew to 70 percen
 function g(fields: Partial<AnswerGraphic> & Pick<AnswerGraphic, 'sentence' | 'template'>): AnswerGraphic {
   return { title: '', value: '', label: '', items: [], quote: '', words: '', lit: 0, why: 'it helps', ...fields }
 }
+
+/** A structured drop as the record keeps it: without what the tile's Add places (`add`, try-out 1, piece 4), which tests/graphicAdd.test.ts covers. */
+const bare = (drops: readonly GraphicDrop[]): Omit<GraphicDrop, 'add'>[] => drops.map(({ add: _add, ...d }) => d)
 
 describe('graphicsSchema: flat, reasoning first, required in declaration order', () => {
   const [menu] = menusOf(TALK, {}, { track: subjectTrack() })
@@ -703,7 +706,7 @@ describe("graphicDropsOf: applyGraphics' drops, structured from its problems", (
     ]
     const out = applyGraphics(project, kept, [], CLIPS_GRAPHIC_RULE, { fps: FPS, newId: (p) => `${p}-1` })
     expect(out.problems.map((p) => p.message)).toContain(`graphic dropped: the keyword "fast — slow" — ${NO_CLIP_NOTE}`)
-    expect(graphicDropsOf(project, kept, [], out.problems)).toEqual([{ clipId: 'gone', template: 'keyword', text: 'fast — slow', reason: NO_CLIP_NOTE }])
+    expect(bare(graphicDropsOf(project, kept, [], out.problems))).toEqual([{ clipId: 'gone', template: 'keyword', text: 'fast — slow', reason: NO_CLIP_NOTE }])
 
     const fast = { ...project, clips: project.clips.map((c) => ({ ...c, speed: 2 })) }
     const two: KeptGraphic[] = [
@@ -712,7 +715,7 @@ describe("graphicDropsOf: applyGraphics' drops, structured from its problems", (
     ]
     const slow = applyGraphics(fast, two, [], CLIPS_GRAPHIC_RULE, { fps: FPS, newId: (p) => `${p}-1` })
     expect(slow.problems.filter((p) => p.message.includes(RETIMED_NOTE))).toHaveLength(1)
-    expect(graphicDropsOf(fast, two, [], slow.problems)).toEqual([
+    expect(bare(graphicDropsOf(fast, two, [], slow.problems))).toEqual([
       { clipId: clip.id, template: 'counter', text: '40', reason: RETIMED_NOTE },
       { clipId: clip.id, template: 'keyword', text: 'simple always', reason: RETIMED_NOTE }
     ])
@@ -723,7 +726,7 @@ describe("graphicDropsOf: applyGraphics' drops, structured from its problems", (
     const { project, clip } = fixture(t)
     const named = { ...project, assets: project.assets.map((a) => ({ ...a, speaker: 'Ana' })), clips: project.clips.map((c) => ({ ...c, speed: 2 })) }
     const out = applyGraphics(named, [], [clip.id], CLIPS_GRAPHIC_RULE, { fps: FPS, newId: (p) => `${p}-1` })
-    expect(graphicDropsOf(named, [], [clip.id], out.problems)).toEqual([{ clipId: clip.id, template: 'lower-third', text: 'Ana', reason: RETIMED_NOTE }])
+    expect(bare(graphicDropsOf(named, [], [clip.id], out.problems))).toEqual([{ clipId: clip.id, template: 'lower-third', text: 'Ana', reason: RETIMED_NOTE }])
   })
 })
 
@@ -792,7 +795,9 @@ describe('settleGraphics: the baseline route', () => {
   it("a baseline graphic the validator drops is a structured drop", () => {
     const s = settleGraphics({ value: answered().value, truncated: true }, menu, t, { baseline: () => [bad, good] })
     expect(s.kept).toHaveLength(1)
-    expect(s.drops).toEqual([{ clipId: 'c', template: 'ring', text: '45%', reason: "'45%' is not said in s00" }])
+    expect(bare(s.drops)).toEqual([{ clipId: 'c', template: 'ring', text: '45%', reason: "'45%' is not said in s00" }])
+    // What Add would place (try-out 1, piece 4): the ring as it would have been drawn, on its sentence.
+    expect(s.drops[0].add?.candidate.data).toEqual(bad.data)
   })
 
   it("a baseline quote lands with the app's speaker", () => {
@@ -863,7 +868,7 @@ describe('graphicDropsOf: a retimed clip drops only its own graphics, each once'
     ]
     const out = applyGraphics(two, kept, [], CLIPS_GRAPHIC_RULE, { fps: FPS, newId: (p) => `${p}-1` })
     expect(out.project.clips.filter((c) => c.graphic && c.graphic.data.template === 'keyword')).toHaveLength(1)
-    expect(graphicDropsOf(two, kept, [], out.problems)).toEqual([{ clipId: clip.id, template: 'counter', text: '40', reason: RETIMED_NOTE }])
+    expect(bare(graphicDropsOf(two, kept, [], out.problems))).toEqual([{ clipId: clip.id, template: 'counter', text: '40', reason: RETIMED_NOTE }])
   })
 
   for (const order of ['wrong file first', 'wrong file after the retime'] as const) {
@@ -873,7 +878,7 @@ describe('graphicDropsOf: a retimed clip drops only its own graphics, each once'
       const timed: KeptGraphic = { clipId: clip.id, assetId: 'a', candidate: cand({ template: 'keyword', words: 'simple always', lit: 0 }, [20]) }
       const kept = order === 'wrong file first' ? [wrong, timed] : [timed, wrong]
       const out = applyGraphics(project, kept, [], CLIPS_GRAPHIC_RULE, { fps: FPS, newId: (p) => `${p}-1` })
-      const drops = graphicDropsOf(project, kept, [], out.problems)
+      const drops = bare(graphicDropsOf(project, kept, [], out.problems))
       expect(drops).toHaveLength(2)
       expect(drops).toContainEqual({ clipId: clip.id, template: 'counter', text: '40', reason: WRONG_ASSET_NOTE })
       expect(drops).toContainEqual({ clipId: clip.id, template: 'keyword', text: 'simple always', reason: RETIMED_NOTE })

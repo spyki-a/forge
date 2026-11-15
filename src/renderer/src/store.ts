@@ -41,6 +41,7 @@ import {
   applyGraphics,
   clearGraphics as clearGraphicsOf,
   followGraphicMoves,
+  addDropped,
   graphicDropsOf,
   keepProposal,
   placeAgain,
@@ -620,6 +621,17 @@ function holdsSpeech(project: Project, clip: Clip): boolean {
 }
 /** Said when the clip was removed while its graphics were being found (not the plan's words). */
 export const GRAPHICS_CLIP_GONE_NOTE = 'The clip was removed while its graphics were being found — nothing was placed'
+
+/**
+ * A row of the Transcript tile's dropped graphics (try-out 1, 2026-11-15): the
+ * drop as Find recorded it, the reason Add was last refused, and the graphic
+ * clip Add placed (the row is not listed while that clip is on the timeline,
+ * so an undo of the Add, or Drop on the graphic, lists it again).
+ */
+export type ShownDrop = GraphicDrop & { refused?: string; addedAs?: string }
+
+/** The head every dropped graphic's note carries (the validator's and applyGraphics'): such a note is a row, not a note. */
+const DROPPED_GRAPHIC_HEAD = 'graphic dropped: '
 
 /**
  * A Find run's one line (not the plan's words): how many graphics landed, how
@@ -1321,8 +1333,15 @@ interface EditorState {
    * `GRAPHICS_BUSY_NOTE`, never queued.
    */
   findingGraphics: string | null
-  /** What the last Find did, for the Transcript tile's notes: its clip, every note (each drop with its reason), and who answered. */
-  lastGraphics: { clipId: string; notes: string[]; drops: GraphicDrop[]; model: string } | null
+  /**
+   * What the last Find did, for the Transcript tile: its clip, its notes (every
+   * note that is not a dropped graphic: a rejection, a repair, a sound note),
+   * its dropped graphics (each with its reason, what Add places, the reason
+   * Add was last refused, and the graphic clip Add placed, while that clip is
+   * on the timeline the row is not listed), and who answered. Session state,
+   * not saved in the project.
+   */
+  lastGraphics: { clipId: string; notes: string[]; drops: ShownDrop[]; model: string } | null
   /**
    * Find graphics in this clip (§6.6): the graphics pass over the clip's
    * menus, each window asked once through the spine's route, settled,
@@ -1336,6 +1355,13 @@ interface EditorState {
   findGraphics: (clipId: string) => Promise<void>
   /** Keep a proposal (§6.6): placed through the budget and §6.9 now; refused, the reason is shown and returned, and it stays listed. One undo. */
   keepGraphic: (proposalId: string) => string | null
+  /**
+   * Add a graphic the last Find dropped (try-out 1, 2026-11-15): the row
+   * `index` of `lastGraphics.drops` placed on its own time through Keep's steps
+   * (`addDropped`), the room rules not read. Refused, the reason is shown,
+   * set on the row and returned, and the row stays. One undo.
+   */
+  addDroppedGraphic: (index: number) => string | null
   /** Drop a graphic (its drawn asset when unused, its sounds) or a proposal (§6.6, §6.14). One undo. */
   dropGraphic: (id: string) => void
   /** Clear graphics (§6.6): every `'clips.graphic'` graphic, sound, file and proposal; Direct's stay, and the note says so. One undo. */
@@ -5521,14 +5547,16 @@ export const useEditor = create<EditorState>((set, get) => ({
       if (!done) return
       const drops = [...run.pair.settled.drops, ...graphicDropsOf(done.cleared, run.pair.kept, [clipId], done.problems)]
       const record = decisionForGraphics({ ...run.pair.settled, drops }, run.model)
-      const notes = [...run.notes, ...run.pair.settled.dropped.map((p) => p.message), ...done.problems.map((p) => p.message)]
+      const all = [...run.notes, ...run.pair.settled.dropped.map((p) => p.message), ...done.problems.map((p) => p.message)]
+      // A dropped graphic is its own row (with Add), not a note as well: the rows are `drops`, each with its reason.
+      const notes = all.filter((m) => !m.startsWith(DROPPED_GRAPHIC_HEAD))
       set((s) => ({
         decisions: [...s.decisions, record],
         lastGraphics: { clipId, notes, drops, model: record.model?.id ?? 'baseline' }
       }))
       for (const id of done.clipIds) void get().rebakeGraphic(id)
       const waiting = (done.project.graphicProposals ?? []).filter((g) => g.clipId === clipId && g.rule === CLIPS_GRAPHIC_RULE).length
-      notify(graphicsRunNote(done.clipIds.length, waiting, notes.length), 'info')
+      notify(graphicsRunNote(done.clipIds.length, waiting, all.length), 'info')
     } catch (err) {
       notify(err instanceof Error ? err.message : String(err))
     } finally {
@@ -5550,6 +5578,40 @@ export const useEditor = create<EditorState>((set, get) => ({
       get().notify(out.refused, 'info')
       return out.refused
     }
+    for (const id of out.clipIds) void get().rebakeGraphic(id)
+    return null
+  },
+
+  addDroppedGraphic: (index) => {
+    const last = get().lastGraphics
+    const drop = last?.drops[index]
+    if (!last || !drop) return null
+    const { catalog, root } = useCatalog.getState()
+    const sounds = soundPackFor(catalog, root)
+    let added: ReturnType<typeof addDropped> | null = null
+    get().update((p) => {
+      added = addDropped(p, drop, { fps: p.settings.fps, sounds })
+      return added.project
+    })
+    const out = added as ReturnType<typeof addDropped> | null
+    if (!out) return null
+    const mark = (patch: Partial<ShownDrop>): void =>
+      set((s) =>
+        s.lastGraphics === last
+          ? { lastGraphics: { ...last, drops: last.drops.map((d, i) => (i === index ? { ...d, ...patch } : d)) } }
+          : {}
+      )
+    if (out.refused !== null) {
+      mark({ refused: out.refused })
+      get().notify(out.refused, 'info')
+      return out.refused
+    }
+    const { refused: _gone, ...rest } = drop
+    set((s) =>
+      s.lastGraphics === last
+        ? { lastGraphics: { ...last, drops: last.drops.map((d, i) => (i === index ? { ...rest, addedAs: out.clipIds[0] } : d)) } }
+        : {}
+    )
     for (const id of out.clipIds) void get().rebakeGraphic(id)
     return null
   },

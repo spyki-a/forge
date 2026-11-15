@@ -98,3 +98,43 @@ export function harnessGraphicsRun(project: Project, clipId: string, source: Har
   }
   return { project: landed.project, placed: landed.clipIds }
 }
+
+/*
+ * The census's dropped graphics (try-out 1, 2026-11-15: Add on a dropped
+ * graphic). No stubbed answer this time: the harness bridge has no model
+ * (`directorComplete` is unsupported), so the census presses the REAL Find
+ * and the baseline's graphics (§6.10) go through the validator, the budget
+ * and the landing as they would on the owner's machine. The transcript is
+ * built so that run drops one graphic for the truth and one for room, each
+ * with Add, and so one Add lands and one is refused:
+ *
+ * - s00 "40% of couples book early." — the ring "40%" on its first word, 0 s:
+ *   placed, on screen to about 2 s;
+ * - s01 "I do not charge $500." — the counter "$500" at 2.25 s: refused by
+ *   the validator as said negated (a truth drop). Add would start it at
+ *   1.75 s, under the ring's frames: refused, "another graphic is on screen
+ *   then";
+ * - s02 "Light matters more than gear." — the keyword "gear" at 3.5 s: within
+ *   6 s of the ring, and a keyword yields (a room drop). Add starts it at
+ *   3 s, after the ring: it lands.
+ *
+ * One word every 250 ms from 0, so the last ends at 3.7 s, inside the
+ * bridge's 6 s recording (bridge.ts `sampleVideo(6, …)`).
+ */
+const DROP_SENTENCES = ['40% of couples book early.', 'I do not charge $500.', 'Light matters more than gear.']
+
+/** The dropped-graphics census transcript for `assetId`: English, sure Whisper words, one every 250 ms. */
+export function harnessDropsTranscript(assetId: string): Transcript {
+  const words: Word[] = []
+  const segments: Segment[] = []
+  let index = 0
+  DROP_SENTENCES.forEach((text, k) => {
+    const start = index
+    for (const w of text.split(/\s+/u).filter(Boolean)) {
+      words.push({ index, text: w, startMs: index * 250, endMs: index * 250 + 200, confidence: 0.95 })
+      index += 1
+    }
+    segments.push({ id: `s${String(k).padStart(2, '0')}`, startMs: start * 250, endMs: (index - 1) * 250 + 200, text, wordStart: start, wordEnd: index - 1 })
+  })
+  return { assetId, language: 'en', model: 'whisper-small', durationMs: index * 250, words, segments }
+}

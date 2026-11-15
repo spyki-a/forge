@@ -184,10 +184,18 @@ const EPS = 1e-6
 export function applyBudget<C extends BudgetCandidate>(
   project: Project,
   candidates: readonly C[],
-  options: { perMinute?: number | null } = {}
+  options: { perMinute?: number | null; room?: boolean } = {}
 ): { kept: C[]; dropped: { spec: C['spec']; reason: string }[] } {
   const fps = project.settings.fps
   const cap = options.perMinute === undefined ? GRAPHICS_PER_MINUTE : options.perMinute
+  /*
+   * `room: false` (the tile's Add on a dropped graphic, try-out 1,
+   * 2026-11-15): the rules of taste are not read, rule 1's gap and count and
+   * rule 4's per-minute cap, for the owner's click decides room. What cannot
+   * be drawn rightly still refuses: rule 2 (one on screen, a card) and rule
+   * 3 (a zoom punch), and a footage clip that is gone.
+   */
+  const room = options.room !== false
   const held: Held[] = []
   for (const c of project.clips) {
     const spec = c.graphic
@@ -213,7 +221,7 @@ export function applyBudget<C extends BudgetCandidate>(
       kept.push({ c, i, onset })
       continue
     }
-    const reason = refusal(project, c, onset, held, cards, punches, cap)
+    const reason = refusal(project, c, onset, held, cards, punches, cap, room)
     if (reason !== null) {
       dropped.push({ spec: c.spec, reason, i, onset })
       continue
@@ -235,7 +243,8 @@ function refusal(
   held: readonly Held[],
   cards: readonly Clip[],
   punches: readonly Clip[],
-  cap: number | null
+  cap: number | null,
+  room = true
 ): string | null {
   const fps = project.settings.fps
   const footage = project.clips.find((x) => x.id === c.clipId)
@@ -248,7 +257,7 @@ function refusal(
   const near = held
     .filter((h) => Math.abs(onset - h.onset) < GRAPHIC_SPACING.minGapS - EPS)
     .sort((a, b) => Math.abs(onset - a.onset) - Math.abs(onset - b.onset))[0]
-  if (near) {
+  if (room && near) {
     const template = c.spec.data.template
     const why = near.placed ? 'placed' : roomRank(near.template) < roomRank(template) ? 'outranked' : 'earlier'
     return tooCloseReason(near, why)
@@ -273,7 +282,7 @@ function refusal(
   if (under.length > 0) return zoomPunchReason(framesToSeconds(Math.min(...under), fps))
 
   // Rule 1, the count: the lower third is outside it (§6.9, a reading of D12 recorded 2026-10-21).
-  if (c.spec.data.template !== 'lower-third') {
+  if (room && c.spec.data.template !== 'lower-third') {
     const scope = c.rule === GRAPHIC_RULE ? 'ad' : 'clip'
     const span = scope === 'ad' ? { from: 0, to: projectDuration(project) } : { from: footage.start, to: clipEnd(footage) }
     const seconds = framesToSeconds(span.to - span.from, fps)
@@ -293,7 +302,7 @@ function refusal(
   }
 
   // Rule 4, when M17 has set the cap: every 60 s window that holds this onset.
-  if (cap !== null) {
+  if (room && cap !== null) {
     const onsets = [...held.map((h) => h.onset), onset]
     for (const w of onsets) {
       if (w > onset + EPS || w <= onset - PER_MINUTE_WINDOW_S + EPS) continue

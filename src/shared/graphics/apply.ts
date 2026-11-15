@@ -460,11 +460,13 @@ export function graphicDropsOf(
     if (lower) run.set(`$.covered[${j}]`, lower)
   })
   kept.forEach((k, i) => run.set(`$.kept[${i}]`, k))
+  // Each carries the validated graphic itself, for the tile's Add (GraphicDrop.add).
   const dropOf = (k: KeptGraphic, reason: string): GraphicDrop => ({
     clipId: k.clipId,
     template: k.candidate.data.template,
     text: drawnStrings(k.candidate.data).find((t) => t.trim() !== '') ?? '',
-    reason
+    reason,
+    add: k
   })
   // A graphic dropped for its own reason is not dropped again for its clip's
   // retime, wherever in the problems either note stands.
@@ -974,6 +976,59 @@ export function keepProposal(
     graphicProposals: (sounded.project.graphicProposals ?? []).filter((g) => g.id !== proposalId)
   }
   return { project: next, problems: sounded.notes.map((message) => ({ path: '$.sounds', message })), clipIds: landed.clipIds, refused: null }
+}
+
+/** Add on a dropped row that carries nothing to place (not §6's words; the tile shows no Add then, so only a stale press reaches it). */
+export const NOT_ADDABLE_NOTE = 'that graphic cannot be drawn'
+
+/**
+ * Add on a dropped graphic (try-out 1, 2026-11-15, the owner's request: an
+ * Add beside every dropped graphic, "even the ones that did not trigger"):
+ * `drop.add` placed on its own time by the SAME steps Keep places a proposal
+ * with (`timeOne`'s beats and seconds on its footage clip as it is now, the
+ * budget, `landKept`'s placement, subject at onset, lane and drawn asset,
+ * then its sounds as `soundsFor` places them, which reads "Graphic sounds"),
+ * under `rule` (the Find's, `CLIPS_GRAPHIC_RULE`, so Find again and Clear
+ * graphics take it as they take the run's).
+ *
+ * The budget runs with `room: false`: the gap, the count and the per-minute
+ * cap are taste, and the owner's click overrides them. What cannot be drawn
+ * rightly still refuses, with the reason Keep would show: another graphic's
+ * frames (`ON_SCREEN_REASON`), a card, a zoom punch, the footage clip gone,
+ * a retimed clip, no free third, no subject for a callout, the lane limit,
+ * a card that would run past the clip's end.
+ *
+ * The placed graphic carries no `proposal` (the click is the check) and no
+ * other mark: a truth drop the owner adds is drawn as any graphic, its
+ * `generatedBy` reason the template, what it draws and the graphic's own why,
+ * as Keep writes it. Refused, the project comes back as the same object.
+ */
+export function addDropped(
+  project: Project,
+  drop: Pick<GraphicDrop, 'add'>,
+  ctx: GraphicsApplyContext,
+  rule: string = CLIPS_GRAPHIC_RULE
+): { project: Project; problems: Problem[]; clipIds: string[]; refused: string | null } {
+  const refuse = (reason: string): { project: Project; problems: Problem[]; clipIds: string[]; refused: string } => ({ project, problems: [], clipIds: [], refused: reason })
+  const fps = project.settings.fps
+  if (ctx.fps !== fps) return refuse(fpsMismatchNote(ctx.fps, fps))
+  if (!drop.add) return refuse(NOT_ADDABLE_NOTE)
+  const { proposal: _proposal, ...candidate } = drop.add.candidate
+  const kept: KeptGraphic = { ...drop.add, candidate }
+  if (!project.clips.some((c) => c.id === kept.clipId)) return refuse(NO_CLIP_NOTE)
+  const one = timeOne(project, '$', kept, rule)
+  if ('retimed' in one) return refuse(RETIMED_NOTE)
+  if ('reason' in one) return refuse(one.reason)
+  const budget = applyBudget(project, [one.timed], { room: false })
+  if (budget.dropped.length > 0) return refuse(budget.dropped[0].reason)
+  let refusal: string | null = null
+  const newId = ctx.newId ?? defaultId
+  const landed = landKept(project, budget.kept, rule, newId, (_t, reason) => {
+    refusal = reason
+  })
+  if (refusal !== null || landed.clipIds.length === 0) return refuse(refusal ?? NO_CLIP_NOTE)
+  const sounded = soundsFor(landed.project, landed.clipIds, rule, ctx.sounds ?? [], newId)
+  return { project: sounded.project, problems: sounded.notes.map((message) => ({ path: '$.sounds', message })), clipIds: landed.clipIds, refused: null }
 }
 
 /**

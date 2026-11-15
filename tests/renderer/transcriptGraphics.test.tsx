@@ -49,7 +49,7 @@ const TG = await import('../../src/renderer/src/components/TranscriptGraphics')
 const { TranscriptGraphics } = TG
 const { TranscriptPanel } = await import('../../src/renderer/src/components/TranscriptPanel')
 const { shelfToolById } = await import('../../src/renderer/src/components/shelf/tools')
-const { harnessGraphicsRun } = await import('../../src/renderer/src/harness/graphicsStub')
+const { harnessDropsTranscript, harnessGraphicsRun } = await import('../../src/renderer/src/harness/graphicsStub')
 
 const FPS = 30
 const FILLER = 'The light was soft that day.'
@@ -221,6 +221,29 @@ function typeSpeaker(value: string): void {
 /** Leave the Speaker field without typing: what it shows is its value. */
 function leaveSpeaker(): void {
   typeSpeaker((speakerField().props.defaultValue as string) ?? '')
+}
+/** The dropped graphics' rows, in order: each row's index (Add's), its words, its reason, its refusal, its Add button. */
+function dropRows(clipId = 'shot'): { index: number; words: string[]; reason: string; refused: string | null; add: Host | null }[] {
+  const all = section(clipId)
+  const lists = all.filter((h) => h.props['data-graphic-drops'] !== undefined)
+  expect(lists.length).toBeLessThanOrEqual(1)
+  if (lists.length === 0) return []
+  return all
+    .filter((h) => h.type === 'li' && typeof h.props['data-graphic-drop'] === 'number')
+    .map((li) => {
+      const inner = hosts(li.props.children as ReactNode)
+      const reason = inner.find((h) => h.props['data-drop-reason'] !== undefined)
+      const refused = inner.find((h) => h.props['data-add-refused'] !== undefined)
+      const adds = inner.filter((h) => h.type === 'button' && text(h) === TG.ADD)
+      expect(adds.length).toBeLessThanOrEqual(1)
+      return {
+        index: li.props['data-graphic-drop'] as number,
+        words: inner.map((h) => text(h)),
+        reason: reason ? text(reason) : '',
+        refused: refused ? text(refused) : null,
+        add: adds[0] ?? null
+      }
+    })
 }
 async function pressFind(): Promise<void> {
   press(buttons(TG.FIND_GRAPHICS)[0])
@@ -434,14 +457,16 @@ describe('the Transcript tile’s Graphics section (§6.6, "By hand")', () => {
     // Another clip shows none of this clip's notes.
     expect(section('shot2').some((h) => h.props['data-graphic-notes'] !== undefined)).toBe(false)
 
-    // A model answering, one graphic dropped by the validator: the note with its reason, no "no model" line.
+    // A model answering, one graphic dropped by the validator: its row with its reason, no "no model" line.
     answer = answering(COUNTER, g({ sentence: 's00', template: 'counter', value: '99', label: 'clients' }))
     await pressFind()
-    const after = hosts(section().find((h) => h.props['data-graphic-notes'] !== undefined)!.props.children as ReactNode)
-      .filter((h) => h.type === 'li')
-      .map((h) => text(h))
+    // The notes list shows only when it holds a line: here it holds none.
+    const list = section().find((h) => h.props['data-graphic-notes'] !== undefined)
+    const after = list ? hosts(list.props.children as ReactNode).filter((h) => h.type === 'li').map((h) => text(h)) : []
     expect(after).not.toContain(TG.NO_MODEL_LINE)
-    expect(after).toContain("graphic dropped: '99' is not said in s00")
+    // A dropped graphic is its own row, its reason beside Add (try-out 1, piece 4), and no longer a note as well.
+    expect(after.some((line) => line.startsWith('graphic dropped: '))).toBe(false)
+    expect(dropRows().map((r) => r.reason)).toContain("'99' is not said in s00")
   })
 
   it('Drop on a "check the number" proposal takes the proposal and places nothing, in ONE undo step', async () => {
@@ -495,6 +520,86 @@ describe('the Transcript tile’s Graphics section (§6.6, "By hand")', () => {
   })
 })
 
+describe('Add on a dropped graphic (try-out 1, 2026-11-15, piece 4)', () => {
+  /* The counter "40 clients" lands at 0.8 s; "99 clients" is not said (a truth drop); "soft" at 3.6 s is within 6 s of the counter (a room drop); a ring on s99 cannot be drawn. */
+  const NOT_SAID = g({ sentence: 's00', template: 'counter', value: '99', label: 'clients' })
+  const SOFT = g({ sentence: 's01', template: 'keyword', words: 'soft', lit: 0 })
+  const OFF_MENU = g({ sentence: 's99', template: 'ring', value: '70%', label: 'clients' })
+  beforeEach(() => {
+    answer = answering(COUNTER, NOT_SAID, SOFT, OFF_MENU)
+  })
+  const rowOf = (word: string) => {
+    const r = dropRows().find((x) => x.words.includes(word))
+    if (!r) throw new Error(`no dropped row for ${word}: ${JSON.stringify(dropRows().map((x) => x.words))}`)
+    return r
+  }
+
+  it('lists every dropped graphic with its reason, and Add on each one that can be drawn, in a list that scrolls on its own', async () => {
+    await pressFind()
+    const rows = dropRows()
+    expect(rows).toHaveLength(3)
+    expect(rowOf('99').reason).toBe("'99' is not said in s00")
+    expect(rowOf('99').add).not.toBeNull()
+    expect(rowOf('soft').reason).toBe('within 6 s of the counter at 0.8 s; a keyword yields to any other graphic')
+    expect(rowOf('soft').add).not.toBeNull()
+    expect(rowOf('70%').reason).toBe("'s99' is not a sentence on the menu")
+    expect(rowOf('70%').add).toBeNull()
+    for (const r of rows) expect(r.refused).toBeNull()
+    const list = section().find((h) => h.props['data-graphic-drops'] !== undefined)!
+    expect(String(list.props.className).split(' ')).toEqual(expect.arrayContaining(['overflow-y-auto', 'max-h-40']))
+  })
+
+  it('Add places a room drop on its own word in ONE undo step: listed with Drop, sounded, its row gone; undone, the row is back', async () => {
+    await pressFind()
+    const before = project()
+    const placedBefore = clipItGraphics().map((c) => c.id)
+    expect(press(rowOf('soft').add!)).toBeNull()
+    const added = clipItGraphics().find((c) => !placedBefore.includes(c.id))!
+    expect(added.graphic!.data).toEqual({ template: 'keyword', words: 'soft', lit: 0 })
+    expect(added.graphic!.grounding!.words).toEqual([9])
+    expect(listed()).toContain(added.id)
+    expect(buttons(TG.DROP, row(added.id))).toHaveLength(1)
+    expect(soundsOf(added.id).length).toBeGreaterThan(0)
+    expect(bake.asks).toContain(added.id)
+    expect(dropRows().map((r) => r.words)).not.toContainEqual(expect.arrayContaining(['soft']))
+    expect(dropRows()).toHaveLength(2)
+    undoesTo(before)
+    expect(rowOf('soft').add).not.toBeNull()
+  })
+
+  it('a refused Add changes nothing, shows its reason on the row and as a notice, and the row stays', async () => {
+    await pressFind()
+    const before = project()
+    const past = state().past.length
+    const refused = press(rowOf('99').add!)
+    // Timed on s00's first word, under the counter's frames.
+    expect(refused).toBe('another graphic is on screen then')
+    expect(project()).toBe(before)
+    expect(state().past.length).toBe(past)
+    expect(rowOf('99').refused).toBe('another graphic is on screen then')
+    expect(rowOf('99').reason).toBe("'99' is not said in s00")
+    expect(state().notices.map((n) => n.text)).toContain('another graphic is on screen then')
+    expect(rowOf('soft').refused).toBeNull()
+  })
+
+  it('Drop on an added graphic lists its row again; Find again lists the new run’s drops afresh', async () => {
+    await pressFind()
+    press(rowOf('99').add!)
+    press(rowOf('soft').add!)
+    const added = clipItGraphics().find((c) => c.graphic!.data.template === 'keyword')!
+    press(buttons(TG.DROP, row(added.id))[0])
+    expect(rowOf('soft').add).not.toBeNull()
+    await pressFind()
+    expect(dropRows()).toHaveLength(3)
+    for (const r of dropRows()) expect(r.refused).toBeNull()
+  })
+
+  it('the rows are the clip’s own: another clip shows none of them', async () => {
+    await pressFind()
+    expect(dropRows('shot2')).toEqual([])
+  })
+})
+
 describe('the census’s graphics run (harness/graphicsStub.ts)', () => {
   it.each([
     ['youtube-asr', 'transcript-graphics-asr', true],
@@ -517,6 +622,46 @@ describe('the census’s graphics run (harness/graphicsStub.ts)', () => {
       const whole = new RegExp(`(?:>|-->)${quote(escape(r.label))}(?:<)`, 'g')
       expect([...html.matchAll(whole)], r.label).toHaveLength(r.count ?? 1)
     }
+  })
+
+  it('transcript-graphics-drops: a real Find with no model over the stub transcript drops a negated counter and a keyword for room, each with Add; every text row counts what the fixture says; one Add is refused, one lands', async () => {
+    const census = (await import('../fixtures/ui-census.json')).default as Array<{ label: string; match: string; needs?: string; count?: number }>
+    const rows = census.filter((r) => r.needs === 'transcript-graphics-drops' && r.match === 'text')
+    expect(rows.map((r) => r.label)).toContain(TG.ADD)
+    // The bridge's video: 6 s (harness/bridge.ts sampleVideo(6, …)); the bridge has no model, as here.
+    const base = emptyProject('census')
+    const clip: Clip = { ...shotOf('V', 'vid', 0), duration: FPS * 6 }
+    const p: Project = {
+      ...base,
+      settings: { ...base.settings, fps: FPS },
+      assets: [footage('vid', { width: 640, height: 360, durationFrames: FPS * 6 })],
+      clips: [clip],
+      transcripts: { vid: harnessDropsTranscript('vid') }
+    }
+    useEditor.setState({ project: p, selectedClipId: 'V', selectedClipIds: ['V'], lastGraphics: null })
+    answer = async () => {
+      throw new Error('Directing with a model is not supported in the harness')
+    }
+    await useEditor.getState().findGraphics('V')
+    expect(clipItGraphics().map((c) => c.graphic!.data)).toEqual([{ template: 'ring', value: '40%', label: 'couples' }])
+    const drops = state().lastGraphics!.drops
+    expect(drops.map((d) => [d.template, d.text, d.add !== undefined])).toEqual([
+      ['counter', '$500', true],
+      ['keyword', 'gear', true]
+    ])
+    expect(drops[0].reason).toContain("'$500' is said negated in s01")
+    expect(drops[1].reason).toBe('within 6 s of the ring at 0.0 s; a keyword yields to any other graphic')
+    const html = renderToStaticMarkup(createElement(TranscriptPanel))
+    const escape = (s: string): string => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;')
+    const quote = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    for (const r of rows) {
+      const whole = new RegExp(`(?:>|-->)${quote(escape(r.label))}(?:<)`, 'g')
+      expect([...html.matchAll(whole)], r.label).toHaveLength(r.count ?? 1)
+    }
+    // What the session will see when it presses them: the counter refused (the ring is on screen then), the keyword placed.
+    expect(state().addDroppedGraphic(0)).toBe('another graphic is on screen then')
+    expect(state().addDroppedGraphic(1)).toBeNull()
+    expect(clipItGraphics().map((c) => c.graphic!.data.template).sort()).toEqual(['keyword', 'ring'])
   })
 
   it.each(['youtube-asr', 'youtube-lines', 'whisper-unsure'] as const)('%s: one keyword placed and one counter waiting with "check the number", on a 5 s clip of a 640×360 file', (source) => {
