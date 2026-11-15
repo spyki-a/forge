@@ -257,7 +257,8 @@
 > the counter would have read "$2" and the captions drew "$2 ,500.";
 > F3, what-ifs: "If I charge $10 ,000, nobody would book." passed the
 > validator, and only the count cap dropped it;
-> F4, keywords: the baseline keyword fired on 20 of 33 sentences;
+> F4, keywords: the baseline keyword fired on 18 of 33 sentences (the
+> facts file says 20; the session's baseline run lists 18);
 > F5, the speech step (not graphics, not fixed): clean, menu, printer, 18,
 > here and Apple heard for clear, venue, prints, eighty, gear and "A
 > full".
@@ -13159,8 +13160,9 @@ channel name", read on screen at `d33d5b4`; the Built note below, part
 >   beat words from `bind`'s judged assignment when `bind` got that far,
 >   else its sentence's first menu word, with three drawable repairs (a
 >   keyword's `lit` clamped, steps drawn flat with connector `'line'`, a
->   said quote the app's speaker). No `add` when the template has no
->   row, for a lower third or a screen card, a sentence off the menu,
+>   said quote the app's speaker). A validator drop has no `add` when
+>   the template has no row, for a lower third or a screen card, a
+>   sentence off the menu,
 >   nothing to draw, or a model's field over `GRAPHIC_KEPT_CHARS`.
 >   `decisionForGraphics` strips `add`, so the saved record holds what it
 >   held. **`addDropped(project, drop, ctx)`** (`graphics/apply.ts`) runs
@@ -13206,7 +13208,8 @@ channel name", read on screen at `d33d5b4`; the Built note below, part
 >   `FROM_WORDS_NEEDS_PICK` "Click a row above for its sentence, or drag
 >   Start and End inside it for a keyword" while nothing is picked (or the
 >   pick was made over other words than the clip plays now), and
->   `GRAPHICS_BUSY_NOTE` while any Find runs; otherwise titled
+>   `GRAPHICS_BUSY_NOTE` while any Find runs, in that order (busy shows
+>   only once something is picked); otherwise titled
 >   `FROM_WORDS_TITLE` "A graphic for the picked sentence, read as Find
 >   reads it, or a keyword of exactly the picked words". **Whole rows**
 >   (or a pick crossing a row's edge) choose the menu sentence of the
@@ -13272,7 +13275,8 @@ channel name", read on screen at `d33d5b4`; the Built note below, part
 >   video track at that time" (`05c2c0e`, in `addGraphicClip` too).
 >   **Whose it is**: `LIBRARY_GRAPHIC_RULE` = `'library.graphic'`
 >   (`graphics/apply.ts`), reason `LIBRARY_GRAPHIC_REASON` "placed from
->   the Library". Clear graphics, Find again and Direct's Clear leave it
+>   the Library" (`store.ts`). Clear graphics, Find again and Direct's
+>   Clear leave it
 >   (it is neither `CLIPS_GRAPHIC_RULE` nor one of `DIRECTOR_RULES`);
 >   `applyBudget` holds its room as any placed graphic's; being a rule,
 >   its sounds follow the "Graphic sounds" switch and a Clear's re-placing
@@ -14546,7 +14550,7 @@ holds:
    beside `GRAPHIC_TEMPLATES`, built by lane T2a (`bd0fcf3`) for
    `settleGraphics`' rule 10 ahead of T3's `budget.ts`, which will read
    it from there; §6.7's Built note. It does, since `1a14bd4`; the Built
-   note below.)
+   note below. Settle no longer reads it since `d3daf1e`, try-out 1.)
 2. **One on screen.** Its span overlaps no kept graphic's span. A Director
    card (`COPY_RULE`, `ENDING_RULE`) counts as one: one piece of designed
    type at a time.
@@ -14964,8 +14968,9 @@ applied by `graphicSounds` (§6.14), not here.
 >   already", "; a keyword yields to any other graphic" or ", the earlier
 >   one stays", naming the NEAREST held graphic in the gap;
 >   `perClipReason(scope, template, filledBy)` names only what fills the
->   places in its span (the try-out's dropped keywords read "at most one
->   graphic per 20 s of clip; a keyword yields to any other graphic").
+>   places in its span (the three keywords the try-out's count dropped
+>   read "at most one graphic per 20 s of clip; a keyword yields to any
+>   other graphic").
 >   `TOO_CLOSE_REASON` is gone. What still holds room though it does not
 >   land, as `budget.ts`' header says and the plan's landing order
 >   allows: a graphic the budget keeps and placement or the lane then
@@ -15490,7 +15495,7 @@ the fixtures' wiring, and M14's and the look rating's runs.
 > **What try-out 1 changed here, 2026-11-15** (§6.12's "Try-out 1,
 > 2026-11-15"; the code at `81db7ca`):
 > - **The baseline keyword, tightened** (`7abe9bb`, fix `e619bf5`;
->   finding F4: it fired on 20 of 33 sentences of your recording, "up",
+>   finding F4: it fired on 18 of 33 sentences of your recording, "up",
 >   "get", "Okay", "here", "again", "Thank you" among them). On top of
 >   (a)'s rule (English, at most `BASELINE_KEYWORD_MAX_WORDS` 8 words, not
 >   a question, the fewest of the last one to three words that hold a
@@ -15516,10 +15521,16 @@ the fixtures' wiring, and M14's and the look rating's runs.
 >   money back.' and 'Get the light right.' give none. The sentence is
 >   read inside one menu window (`before` is that window's sentences), so
 >   a pause-cut segment at a window's start is counted alone (a critic's
->   note, left to this record). The code's doc comment and `7abe9bb` say
->   "18 of 33"; 20 is the count read from the try-out's own run.
+>   note, left to this record). 18 of 33 is the session's baseline run
+>   over your transcript (18 keyword lines, s1 to s33), `7abe9bb`'s list
+>   and the code's doc comment; the facts file says 20. 'Love is all you
+>   have.' and 'The answer is 42.', (a)'s two examples above, still give
+>   'all you have' and 'answer is 42' when each is its own segment: each
+>   ends on a mark, holds 3 to 8 words, no courtesy phrase, and a content
+>   word that is not a filler.
 > - **`sentenceGraphic` and `tailKeyword`** (`a94f2fc`): the baseline's
->   reading of one sentence, exported for **Add graphic from these words**
+>   reading of one sentence, `sentenceGraphic` exported and `tailKeyword`
+>   a private helper, for **Add graphic from these words**
 >   (§6.6's try-out note); `tailKeyword(read, fillers)` without the filler
 >   rule when the sentence was chosen; `baselineGraphics` and
 >   `keywordGraphic` behave as before.
@@ -15593,7 +15604,7 @@ render check and the census.
 | 4 | `tests/renderer/pointingToggle.test.tsx` (added 2026-10-21 by §6.18) | §6.18 |
 | 0-4 | `tests/integration/graphic.int.test.ts`, the render check (phase 2's cases built 2026-11-14 by lane T4, `4f2b025` and `73c6f69`: 18 passed and 1 skipped) | below |
 | 0-2 | the Indic render check, in the app's renderer (phase 2's half built 2026-11-14 by lane T4, `fba3632`, `67fb97c`, `4450e3d`) | below |
-| 2 | try-out 1's, 2026-11-15, none named by this index before it was written: `tests/joinSplitNumbers.test.ts` (`dd60e4d`, `287201d`), `tests/graphicRoomTryout.test.ts` (`d3daf1e`), `tests/graphicAdd.test.ts` (`660f550`, `a210e79`), `tests/graphicFromWords.test.ts` (`a94f2fc`), `tests/graphicLibrary.test.ts` (`e9f7923`, `05c2c0e`, `81db7ca`), `tests/renderer/libraryGraphicsDrawer.test.tsx` (`e9f7923`, `81db7ca`), `tests/renderer/libraryGraphicsStore.test.ts` (`e9f7923`, `05c2c0e`), `tests/renderer/dropHandlers.test.ts` (`05c2c0e`); new cases in `claims`, `baselineGraphics`, `graphicsEval`, `graphicBudget`, `directorGraphics`, `graphicActions`, `transcriptGraphics` and `graphic.int` | §6.6's, §6.7's, §6.9's and §6.10's try-out notes; §6.11's try-out paragraph |
+| 2 | try-out 1's, 2026-11-15, none named by this index before it was written: `tests/joinSplitNumbers.test.ts` (`dd60e4d`, `287201d`), `tests/graphicRoomTryout.test.ts` (`d3daf1e`), `tests/graphicAdd.test.ts` (`660f550`, `a210e79`), `tests/graphicFromWords.test.ts` (`a94f2fc`), `tests/graphicLibrary.test.ts` (`e9f7923`, `05c2c0e`, `81db7ca`), `tests/renderer/libraryGraphicsDrawer.test.tsx` (`e9f7923`, `81db7ca`), `tests/renderer/libraryGraphicsStore.test.ts` (`e9f7923`, `05c2c0e`), `tests/renderer/dropHandlers.test.ts` (`05c2c0e`); new cases in `claims`, `baselineGraphics`, `graphicsEval`, `graphicBudget`, `directorGraphics`, `graphicActions`, `transcriptGraphics` and `graphic.int`; changed also: `tests/graphicApply.test.ts` (`d3daf1e`), `tests/graphicsValidator.test.ts` (`187de3e`), `tests/renderer/directGraphics.test.ts` (`7abe9bb`), `tests/shelf.test.ts` (`e9f7923`) and the `tests/eval/graphicsEval.ts` harness (`7abe9bb`, `d3daf1e`, `187de3e`) | §6.6's, §6.7's, §6.9's and §6.10's try-out notes; §6.11's try-out paragraph |
 
 **Phase 2's half of this index, 2026-11-11.** Built by lanes "T3, first"
 and T1 (§6.19), pushed as `51e2f23`, green on both runners at `e06e1c3`:
@@ -17986,8 +17997,9 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
   - **F3, what-ifs**: "If I charge $10 ,000, nobody would book." and "If
     40 % of you come back, …" passed the validator; only the count cap
     dropped them;
-  - **F4, keywords**: the baseline keyword fired on 20 of 33 sentences
-    (up, get, Okay, here, again, "Thank you", …);
+  - **F4, keywords**: the baseline keyword fired on 18 of 33 sentences
+    (up, get, Okay, here, again, "Thank you", …; the session's baseline
+    run and `7abe9bb` count 18, the facts file says 20);
   - **F5, the speech step** (not graphics, not fixed): clean, menu,
     printer, 18, here and Apple heard for clear, venue, prints, eighty,
     gear and "A full".
@@ -18152,7 +18164,16 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
     - the census recipe's guard runs only on the harness page; no
       per-minute case goes through `addDropped` (`GRAPHICS_PER_MINUTE` is
       null) (`harness/census.ts`, `tests/graphicAdd.test.ts`; `a210e79`
-      declined).
+      declined);
+    - the census recipe assumes the harness bridge's video is 6 s long
+      (`harness/bridge.ts`); under about 4.5 s, Add on "gear" would be
+      refused with the clip-end note instead of landing. The on-screen
+      census at `8b1f2a8` (912 checked) read it landing
+      (`src/renderer/src/harness/census.ts`, `harness/bridge.ts`);
+    - the tile tests keep exact row counts on a fixed answer
+      (`toHaveLength(3)`, `toHaveLength(2)`), snapshot-shaped though
+      membership is asserted too
+      (`tests/renderer/transcriptGraphics.test.tsx`; `a210e79` declined).
   - Add graphic from these words (piece 5):
     - a Hindi or Telugu sentence with no number and no picked words gets
       the nothing note: a tail keyword there needs a function-word list
@@ -18195,7 +18216,7 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
     - no test of `placeGraphic` returning null for a tile
       (`graphics/library.ts`); the drawer tests pin Tailwind class
       strings (`tests/renderer/libraryGraphicsDrawer.test.tsx`; declined);
-      the census tile-title row counts 7, so a ninth listed template
+      the census tile-title row counts 7, so an eighth listed template
       needs a fixture edit (`tests/fixtures/ui-census.json`);
     - a graphic with no `generatedBy` (only the harness makes one) on a
       footage clip with a Library graphic is re-sounded under
@@ -24732,7 +24753,7 @@ you; no source gave a recommendation for any of them, so none is given.
     callout should yield too, or the lower third outrank the rest, is
     your look call (piece 3's builder).
 
-    **Answer: OPEN**, yours, with your look rating.
+    **Answer (2026-11-15): OPEN.** Yours, with your look rating.
 68. **The what-if rule's width.** It reads wide, in the dropping
     direction (§6.7's try-out note): a discourse 'if' ('If you ask me,
     40% of couples book a year ahead.'), 'as if', an 'if' meaning
@@ -24741,7 +24762,7 @@ you; no source gave a recommendation for any of them, so none is given.
     the fixer did not take it, since it is a new rule that needs your
     view.
 
-    **Answer: OPEN**, yours.
+    **Answer (2026-11-15): OPEN.** Yours.
 69. **The courtesy rule's width, and the filler tail.** A sentence that
     holds any of `COURTESY_PHRASES_EN` gives no baseline keyword, wider
     than the brief's "a sentence that only greets, thanks or signs off";
@@ -24749,33 +24770,33 @@ you; no source gave a recommendation for any of them, so none is given.
     lengthened ('Get your money back.' gives none) (§6.10's try-out
     note).
 
-    **Answer: OPEN**, yours, with your look rating.
+    **Answer (2026-11-15): OPEN.** Yours, with your look rating.
 70. **The Hindi and Telugu word lists.** The what-if openers, the
     courtesy phrases and the fillers are English only, and a Hindi or
     Telugu sentence has no tail keyword, from Find's baseline or from
     **Add graphic from these words** with no words picked, for want of a
     function-word list. Each needs your words.
 
-    **Answer: OPEN**, yours: the words.
+    **Answer (2026-11-15): OPEN.** Yours: the words.
 71. **Whether Clear graphics clears the dropped list.** It does not:
     Clear never touched `lastGraphics`, so Add still works after a Clear
     (piece 4's builder; the session told you it was left as it is).
 
-    **Answer: OPEN**, yours.
+    **Answer (2026-11-15): OPEN.** Yours.
 72. **Room held by a graphic that does not land.** A graphic the budget
     keeps and placement or the lane then drops (no free third, a callout
     with no subject, the lane at the track limit) still held its room,
     as §6.6's landing order has it; closing that would run the budget
     again after placement drops (piece 3's builder and fixer).
 
-    **Answer: OPEN**, yours.
+    **Answer (2026-11-15): OPEN.** Yours.
 73. **A Library graphic dropped onto an empty track under full-frame
     footage.** It lands there and exports hidden, as a sticker or a title
     does, since the person chose the track; it could instead be refused
     with a notice or lifted above the footage (a critic of piece 6; the
     fixer left it to you).
 
-    **Answer: OPEN**, yours.
+    **Answer (2026-11-15): OPEN.** Yours.
 
 ---
 

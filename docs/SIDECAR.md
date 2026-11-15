@@ -136,8 +136,9 @@ transcript the moment the project frame rate changed.
 **The words as main keeps them** (since 2026-11-15, `docs/CLIPS.md` §6.12's "Try-out 1";
 `dd60e4d`, `287201d`). faster-whisper (small, int8) gives a grouped number as two words and a
 percent sign as a word of its own: on the try-out's recording "$2" ",500.", "$1" ",200", "$10"
-",000," and "40" "%". The validator's number reader then closed "$2" at the comma, so a counter
-drew "$2", and the captions showed "$2 ,500.". The `asr:transcribe` handler (`src/main/ipc.ts`)
+",000," and "40" "%". The validator's number reader then closed "$2" at the comma, so the counter would have drawn
+"$2" ("$2 · cost"; spacing dropped it before it landed), and the captions showed "$2 ,500.".
+The `asr:transcribe` handler (`src/main/ipc.ts`)
 now passes the helper's words through `joinSplitNumbers` (`src/shared/transcript.ts`) before
 `segmentIntoSentences`, so the stored words, the segments, the captions and the graphics all
 read one word. Joined: a word opening with a comma and digits onto a word ending in a digit,

@@ -279,8 +279,8 @@ The shipped assets (`Library.tsx`). Search across the top, with the count, the
 once more than one sticker category is installed, a row of category chips
 appears above the grid.
 
-Drag anything onto the timeline, or onto the picture (a graphic tile only onto
-a video track, since 2026-11-15). Transitions are dropped
+Drag anything onto the timeline, or onto the picture (on the timeline a graphic
+tile goes only onto a video track, since 2026-11-15). Transitions are dropped
 on a clip's incoming edge. A title template lands as a clip whose words are
 edited in the dock (Title text). The font drawer is a specimen book: fonts are
 chosen in the font pickers, and a font tile cannot be dragged.
@@ -320,8 +320,10 @@ zoom punch, where no third is free of the captions, and where every video
 track is busy then ("No free video track at that time"). It is yours: Clear
 graphics, Find again and Direct's Clear leave it, and its sounds follow
 **Graphic sounds**. The drawer needs no pack and no catalogue: its tiles
-show while the library loads, when it failed and when there is none, it
-offers no "Get … →", and on an installer's empty library the asset packs
+show while the library loads, when it failed and when there is none (the
+catalogue's error, "Scanning…" and "No library loaded" are not shown
+there), a search that empties it says only "Nothing here." and it offers
+no "Get … →", and on an installer's empty library the asset packs
 come after the tiles. The callout is not offered: placed by hand it has no
 face to point at, and it would draw nothing over footage with no subject
 found or over no footage.
@@ -430,18 +432,19 @@ Since 2026-11-15 (try-out 1, pieces 4 and 5; `docs/CLIPS.md` §6.6's try-out
 note): under **Find graphics in this clip**, **Add graphic from these
 words** makes a graphic from the rows' pick, the one **Cut to these words**
 uses. Click a row for its sentence, read as Find reads it (steps, a ring,
-a counter, else a keyword of its last words); or drag Start and End inside
-a row for a keyword of exactly those words. It is greyed with the tooltip
-"Click a row above for its sentence, or drag Start and End inside it for a
-keyword" while nothing is picked, "Transcribe this clip first — graphics
-are found in its words" with no transcript, and "Graphics are still being
-found — wait for that run to finish" while a run is out; once something is
+a counter, else, in English only, a keyword of its last words); or drag
+Start and End inside a row for a keyword of exactly those words. It is greyed with the tooltip
+"Transcribe this clip first — graphics are found in its words" with no
+transcript, else "Click a row above for its sentence, or drag Start and End
+inside it for a keyword" while nothing is picked, else "Graphics are still
+being found — wait for that run to finish" while a run is out; once something is
 picked its tooltip is "A graphic for the picked sentence, read as Find
 reads it, or a keyword of exactly the picked words". No model is asked.
 After the graphics and the numbers to check, each graphic a run (or that
-button) dropped is a row of its own: its kind, its words, **Add**, and its
-reason under it; Add places it anyway, past the 6 s gap and the count, and
-the row leaves the list while that graphic stands (Undo or Drop brings it
+button) dropped is a row of its own: its kind, its words, **Add** when the
+drop can be drawn (a sentence off the menu or nothing to draw has none),
+and its reason under it; Add places it anyway, past the 6 s gap and the
+count, and the row leaves the list while that graphic stands (Undo or Drop brings it
 back). Where it still cannot be drawn (another graphic on screen, a zoom
 punch, the clip's end…) the reason shows on the row in the accent colour
 and as a notice. A row the button listed carries "Not added, for the
