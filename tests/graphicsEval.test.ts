@@ -495,6 +495,12 @@ describe('the figures of "Recorded per run" (§6.10)', () => {
     expect(dropReasonOf(`${negated}; ${notSaid}`)).toBe('negated')
     expect([isHallucination(`${negated}; ${notSaid}`), isHallucination(negated), isHallucination(notSaid)]).toEqual([true, false, true])
   })
+
+  it("classes a what-if drop as 'what-if', no hallucination (try-out 1)", () => {
+    const whatIf = "'$10,000' is said as a what-if in s18"
+    expect(dropReasonOf(whatIf)).toBe('what-if')
+    expect(isHallucination(whatIf)).toBe(false)
+  })
 })
 
 describe('the report and the blind rating with a graphics run (§6.10)', () => {

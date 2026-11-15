@@ -14,7 +14,12 @@
  * - an English sentence of at most `BASELINE_KEYWORD_MAX_WORDS` words, not a
  *   question, whose last one to three words hold a content word → `keyword`
  *   of those words, `lit` the last. Hindi and Telugu get no baseline keyword
- *   in v1.
+ *   in v1. Tightened after try-out 1 (2026-11-15), where it fired on 18 of 33
+ *   sentences: the segment must end on a sentence mark; the sentence (that
+ *   segment and the pause-cut segments directly before it) holds
+ *   `BASELINE_KEYWORD_MIN_WORDS` to `BASELINE_KEYWORD_MAX_WORDS` words and no
+ *   `COURTESY_PHRASES_EN`; the keyword's content words are not all
+ *   `KEYWORD_FILLERS_EN` (see `keywordGraphic`).
  *
  * Each is validated the same way as a model's graphic (§6.7):
  * `settleGraphics` puts these candidates through `validateBaseline`, so a
@@ -44,6 +49,37 @@ import type { GraphicsMenu } from './run'
 
 /** The longest sentence that gives a baseline keyword (§6.10: "at most 8 words", a proposal). */
 export const BASELINE_KEYWORD_MAX_WORDS = 8
+
+/**
+ * The shortest sentence that gives a baseline keyword: 'Okay.', 'Quick
+ * correction.' and 'Thank you.' give none (try-out 1). A proposal: the look
+ * rating is the owner's.
+ */
+export const BASELINE_KEYWORD_MIN_WORDS = 3
+
+/**
+ * The phrases of a sentence that greets, thanks or signs off, as `claimTokens`
+ * writes them: a sentence holding one gives no keyword ('First of all, thank
+ * you for watching.', 'That is all for today.', 'Thank you.'). Read wide, so a
+ * sentence that thanks and says something else ('Thanks to good light, ...')
+ * loses its keyword too. A proposal: the look rating is the owner's.
+ */
+export const COURTESY_PHRASES_EN: readonly (readonly string[])[] = Object.freeze([
+  ['thank'], ['thanks'], ['hello'], ['hi'], ['hey'], ['welcome'], ['bye'], ['goodbye'], ['cheers'],
+  ['see', 'you'], ['that', 'is', 'all'], ["that's", 'all'], ['thats', 'all'], ['that', 'is', 'it'], ["that's", 'it'],
+  ['until', 'next', 'time']
+])
+
+/**
+ * Fillers and bare particles: a keyword whose content words are all among
+ * these is none ('Okay', 'up', 'here', 'again', 'today', 'something'). As
+ * `claimTokens` writes them. A proposal: the look rating is the owner's.
+ */
+export const KEYWORD_FILLERS_EN: readonly string[] = Object.freeze([
+  'okay', 'ok', 'yes', 'yeah', 'well', 'right', 'alright', 'sure', 'again', 'here', 'there', 'today',
+  'now', 'then', 'up', 'out', 'back', 'something', 'anything', 'thing', 'things', 'stuff', 'really', 'actually',
+  'get', 'got'
+])
 
 /** How many of a sentence's last words a baseline keyword may take (§6.10: "its last one to three words"). */
 export const BASELINE_KEYWORD_TAIL = 3
@@ -231,15 +267,55 @@ function stepItem(read: Read): string | null {
   return kept.length > 0 ? kept.join(' ') : null
 }
 
-/** A keyword of the sentence's last one to three words, the fewest that hold a content word; null when §6.10's keyword rule does not apply. */
-function keywordGraphic(read: Read, language: string): GraphicCandidate | null {
+/** A word that ends a sentence: its own '.', '!', '?' or '…', closing quotes and brackets after it allowed. */
+const ENDS_SENTENCE = /[.!?…]["'”’)\]]*$/u
+
+/** Whether the spoken tokens hold `seq` anywhere. */
+function holds(tokens: readonly string[], seq: readonly string[]): boolean {
+  for (let k = 0; k + seq.length <= tokens.length; k += 1) if (seq.every((t, j) => tokens[k + j] === t)) return true
+  return false
+}
+
+/**
+ * A keyword of the sentence's last one to three words, the fewest that hold a
+ * content word; null when §6.10's keyword rule, as tightened after try-out 1,
+ * does not apply. `before` are the menu sentences directly before this one,
+ * nearest last. Each rule, one line:
+ * - English only (the transcript's tag);
+ * - the segment ends on a sentence mark: one a pause cut mid-sentence ends
+ *   nothing ('Last year I shot' gives no "shot");
+ * - its sentence is the segment and the pause-cut segments directly before it
+ *   (each not ending on a sentence mark), and holds
+ *   `BASELINE_KEYWORD_MIN_WORDS` to `BASELINE_KEYWORD_MAX_WORDS` words
+ *   ('Last year I shot' + '40 weddings.' is six words: "weddings");
+ * - not a question;
+ * - the sentence holds none of `COURTESY_PHRASES_EN`;
+ * - the keyword's content words are not all `KEYWORD_FILLERS_EN`, and a
+ *   filler tail is not lengthened past ('People mix those up.' gives none,
+ *   never "mix those up").
+ */
+function keywordGraphic(read: Read, before: readonly Read[], language: string): GraphicCandidate | null {
   if (!isEnglish(language)) return null
   const words = read.words.map((w) => w.text)
-  if (words.length === 0 || words.length > BASELINE_KEYWORD_MAX_WORDS) return null
-  if (/\?["'”’)\]]*$/u.test(words[words.length - 1])) return null
+  if (words.length === 0) return null
+  const last = words[words.length - 1]
+  if (!ENDS_SENTENCE.test(last)) return null
+  if (/\?["'”’)\]]*$/u.test(last)) return null
+  const sentence: Read[] = [read]
+  for (let j = before.length - 1; j >= 0; j -= 1) {
+    const w = before[j].words
+    if (w.length === 0 || ENDS_SENTENCE.test(w[w.length - 1].text)) break
+    sentence.unshift(before[j])
+  }
+  const count = sentence.reduce((n, r) => n + r.words.length, 0)
+  if (count < BASELINE_KEYWORD_MIN_WORDS || count > BASELINE_KEYWORD_MAX_WORDS) return null
+  const spoken = sentence.flatMap((r) => r.tokens).filter((t) => t !== CLAUSE_BREAK)
+  if (COURTESY_PHRASES_EN.some((p) => holds(spoken, p))) return null
   for (let n = 1; n <= Math.min(BASELINE_KEYWORD_TAIL, words.length); n += 1) {
     const tail = words.slice(words.length - n)
-    if (!tail.some((w) => claimTokens(w).some(isContent))) continue
+    const content = tail.flatMap((w) => claimTokens(w)).filter(isContent)
+    if (content.length === 0) continue
+    if (content.every((t) => KEYWORD_FILLERS_EN.includes(t))) return null
     const drawn = tail.map(bare).filter((w) => w !== '')
     if (drawn.length === 0) return null
     return candidate(read.id, { template: 'keyword', words: drawn.join(' '), lit: drawn.length - 1 }, BASELINE_WHY.keyword)
@@ -301,7 +377,7 @@ export function baselineGraphics(transcript: Transcript, menu: GraphicsMenu): Gr
     const number = numberGraphic(read, offered, isEnglish(menu.language))
     if (number) out.push(number)
     else {
-      const keyword = offered('keyword') ? keywordGraphic(read, menu.language) : null
+      const keyword = offered('keyword') ? keywordGraphic(read, reads.slice(0, k), menu.language) : null
       if (keyword) out.push(keyword)
     }
     k += 1

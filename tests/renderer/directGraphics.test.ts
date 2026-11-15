@@ -173,12 +173,12 @@ describe('Direct runs the graphics pass (§6.6, "Where it runs")', () => {
     }
     /*
      * A graphic lands only between the headline card (to 58, 1.93 s) and the ending (from 174, 5.8 s). By hand:
-     * "And so it is." ends on three function words (no keyword); "Our sales grew today." gives "today" (word 7,
+     * "And so it is." ends on three function words (no keyword); "Our sales grew fast." gives "fast" (word 7,
      * 2.8 s), the window's one (its cap is 1); the third sentence, ten words, none.
      */
     const words: Word[] = []
     const segments: Segment[] = []
-    for (const [k, text] of ['And so it is.', 'Our sales grew today.', 'The light was soft and warm all that long day.'].entries()) {
+    for (const [k, text] of ['And so it is.', 'Our sales grew fast.', 'The light was soft and warm all that long day.'].entries()) {
       const start = words.length
       for (const w of text.split(' ')) words.push({ index: words.length, text: w, startMs: words.length * 400, endMs: words.length * 400 + 350, confidence: null })
       segments.push({ id: `s${String(k).padStart(2, '0')}`, startMs: start * 400, endMs: (words.length - 1) * 400 + 350, text, wordStart: start, wordEnd: words.length - 1 })
@@ -191,7 +191,7 @@ describe('Direct runs the graphics pass (§6.6, "Where it runs")', () => {
     expect(graphicsAsks).toHaveLength(1)
     const placed = s.project.clips.filter((c) => c.graphic)
     expect(placed.map((c) => [c.graphic!.data, c.graphic!.grounding!.sentence, c.generatedBy?.rule])).toEqual([
-      [{ template: 'keyword', words: 'today', lit: 0 }, 's01', GRAPHIC_RULE]
+      [{ template: 'keyword', words: 'fast', lit: 0 }, 's01', GRAPHIC_RULE]
     ])
     expect(bake.asks).toEqual([placed[0].id])
     // Direct's notes are `describeProblem`'s: the window's note has the path '$', so it reads ': …'.

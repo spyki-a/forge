@@ -1737,3 +1737,73 @@ describe("a sentence's own end mark is no drawn mark: the danda (piece 5's criti
     expect(marksOf('जोड़े»', 'words')).toEqual(['»'])
   })
 })
+
+describe('a number said as a what-if is no fact (try-out 1, 2026-11-15)', () => {
+  /*
+   * The try-out's "If I charge $10,000, nobody would book." gave a counter and "If 40% of you come back, …" a
+   * ring, and the validator passed both. Every sentence here is English written for the test.
+   */
+  const whatIf = (value: string, sentence = 's00'): string => `graphic dropped: '${value}' is said as a what-if in ${sentence}`
+
+  it("a counter: 'If I charged ten thousand dollars, nobody would book.' → dropped, the reason naming the value and the sentence", () => {
+    const counter = g({ sentence: 's00', template: 'counter', value: '$10,000', label: 'charged' })
+    const v = one1(['If I charged ten thousand dollars, nobody would book.'], counter)
+    expect(kept(v)).toEqual([])
+    expect(droppedOf(v)).toEqual([{ path: '$.graphics[0].value', message: whatIf('$10,000') }])
+    // Said as a fact, the same counter lands.
+    expect(kept(one1(['I charged ten thousand dollars last year.'], counter))).toHaveLength(1)
+  })
+
+  it("a ring: 'If 40% of couples book early, we rest.' → dropped; said as a fact it lands", () => {
+    const ring = g({ sentence: 's01', template: 'ring', value: '40%', label: 'couples' })
+    const v = one1(['First of all, thank you for watching.', 'If 40% of couples book early, we rest.'], ring)
+    expect(kept(v)).toEqual([])
+    expect(droppedOf(v).map((p) => p.message)).toContain(whatIf('40%', 's01'))
+    expect(kept(one1(['First of all, thank you for watching.', 'Forty percent of my couples book me a year ahead.'], g({ sentence: 's01', template: 'ring', value: '40%', label: 'couples' })))).toHaveLength(1)
+  })
+
+  it("a bars item: 'If we had 3 weddings in May and 5 in June, we would rest.' → dropped on both values", () => {
+    const bars = g({ sentence: 's00', template: 'bars', title: 'Compared', items: [{ label: 'May', value: '3' }, { label: 'June', value: '5' }] })
+    const v = one1(['If we had 3 weddings in May and 5 in June, we would rest.'], bars)
+    expect(kept(v)).toEqual([])
+    expect(droppedOf(v)).toEqual([
+      { path: '$.graphics[0].items[0].value', message: whatIf('3') },
+      { path: '$.graphics[0].items[1].value', message: whatIf('5') }
+    ])
+    expect(kept(one1(['We had 3 weddings in May and 5 in June.'], bars))).toHaveLength(1)
+  })
+
+  it('each opener opens a what-if; "say" and "imagine" only where they open the clause', () => {
+    const ring = g({ sentence: 's00', template: 'ring', value: '40%', label: 'couples' })
+    const openers = ['If', 'Unless', 'Suppose', 'Supposing', 'Assuming', 'In case', 'What if', 'Even if', 'Say', 'Imagine', "Let's say", 'Lets say', 'And say', 'So imagine']
+    for (const opener of openers) {
+      const said = `${opener} 40% of couples book early, we rest.`
+      expect(droppedOf(one1([said], ring)).map((p) => p.message), said).toContain(whatIf('40%'))
+    }
+    // Mid-clause, "say" and "imagine" report or think: the number stands.
+    for (const said of ['I say 40% of couples book early.', 'I imagine 40% of couples book early.']) {
+      expect(kept(one1([said], ring)), said).toHaveLength(1)
+    }
+  })
+
+  it('a conditional after the number, in its clause or a later one, does not reach back; the clause before it does', () => {
+    const counter = g({ sentence: 's00', template: 'counter', value: '$500', label: 'charge' })
+    for (const said of ['I charge $500, if you book early.', 'I charge $500 if you book early.']) {
+      expect(kept(one1([said], counter)), said).toHaveLength(1)
+    }
+    // The clause directly before the number's, in its sentence, is judged with it, as rule 7 judges a negation.
+    expect(droppedOf(one1(['If you book early, I charge $500.'], counter)).map((p) => p.message)).toContain(whatIf('$500'))
+    // Another sentence's conditional reaches nothing.
+    expect(kept(one1(['If you book early.', 'I charge $500 for it.'], g({ sentence: 's01', template: 'counter', value: '$500', label: 'charge' })))).toHaveLength(1)
+  })
+
+  it('English only: a transcript tagged "es" or "und" is not read by the rule', () => {
+    const ring = g({ sentence: 's00', template: 'ring', value: '40%', label: 'couples' })
+    const said = ['If 40% of couples book early, we rest.']
+    for (const language of ['es', 'und']) {
+      const t = talk(said, { language })
+      expect(kept(one1(said, ring, {}, t)), language).toHaveLength(1)
+    }
+    expect(kept(one1(said, ring, {}, talk(said, { language: 'en-GB' })))).toEqual([])
+  })
+})

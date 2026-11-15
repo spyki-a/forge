@@ -557,6 +557,52 @@ export function isNegator(t: string): boolean {
     NEGATOR_SPELLINGS.includes(t) || NEAR_NEGATORS.includes(t) || /n['’]t$/u.test(t)
 }
 
+/**
+ * English words that open a what-if wherever they stand in a clause: a number
+ * said after one, up to the clause's end, is a supposition, not a fact ('If I
+ * charge $10,000, nobody would book'; 'Nobody books unless you pay $500').
+ * Each entry is a run of tokens as `claimTokens` writes them. 'what if' and
+ * 'even if' are covered by 'if'. Beyond §6.7's rules (try-out 1, 2026-11-15),
+ * each only drops more. English only: Hindi and Telugu need the owner's words.
+ */
+export const CONDITIONALS_EN: readonly (readonly string[])[] = [
+  ['if'], ['unless'], ['suppose'], ['supposing'], ['assuming'], ['in', 'case']
+]
+
+/**
+ * English words that open a what-if only when they open the clause
+ * ('Say you charge $500', 'Imagine 40% of them cancel', 'Let's say $500'),
+ * after any of `CONDITIONAL_LEADS_EN`: mid-clause they report or think ('I
+ * say 40% is fine', 'I imagine 40% will come') and the rule leaves them.
+ */
+export const CLAUSE_START_CONDITIONALS_EN: readonly (readonly string[])[] = [
+  ['say'], ['imagine'], ["let's", 'say'], ['let’s', 'say'], ['lets', 'say'], ['let', 'us', 'say']
+]
+
+/** The words that may stand before a clause-opening conditional and still leave it opening the clause ('And say you charge $500'). */
+export const CONDITIONAL_LEADS_EN: readonly string[] = ['and', 'but', 'so', 'now', 'then', 'or', 'just', 'okay', 'ok', 'well']
+
+/** Whether `seq` stands in `ts` at `k`. */
+function seqAt(ts: readonly string[], k: number, seq: readonly string[]): boolean {
+  return seq.every((t, j) => ts[k + j] === t)
+}
+
+/**
+ * Whether a clause's spoken tokens (`ts`, in order) open a what-if before
+ * position `before` (an index into `ts`; the clause's length for the whole
+ * clause): one of `CONDITIONALS_EN` starting anywhere before it, or one of
+ * `CLAUSE_START_CONDITIONALS_EN` at the clause's start past any of
+ * `CONDITIONAL_LEADS_EN`, starting before it.
+ */
+export function opensWhatIf(ts: readonly string[], before: number): boolean {
+  for (let k = 0; k < Math.min(before, ts.length); k++) {
+    if (CONDITIONALS_EN.some((seq) => seqAt(ts, k, seq))) return true
+  }
+  let s = 0
+  while (s < ts.length && CONDITIONAL_LEADS_EN.includes(ts[s])) s++
+  return s < before && CLAUSE_START_CONDITIONALS_EN.some((seq) => seqAt(ts, s, seq))
+}
+
 /** Rule 8's exemption: an English function word, and never a negator, a direction word or a comparative. */
 function exempt(t: string): boolean {
   return FUNCTION_WORDS_EN.includes(t)
@@ -862,7 +908,7 @@ export type BindResult =
   | {
       ok: false
       missing: Claim[]
-      reason: 'absent' | 'unpaired' | 'order' | 'negated' | 'unit'
+      reason: 'absent' | 'unpaired' | 'order' | 'negated' | 'whatif' | 'unit'
       at?: number[]
     }
 
@@ -898,6 +944,13 @@ const BIND_BUDGET = 200_000
  * clause directly before the claim's, in the same sentence, is judged with
  * it: a negated clause governs the one after its mark ('It is not true, 90%
  * of startups fail'; 'I would never say this: quit your job').
+ * Then, in English only, a `number` claim may not be said as a what-if: no
+ * conditional (`opensWhatIf`) opens its clause before it, nor opens the clause
+ * directly before it in the same sentence (the two clauses rule 7 reads): else
+ * 'whatif' ('If I charge $10,000, nobody would book'; 'If you book early, I
+ * charge $500' too, the safe direction). A conditional AFTER the number in its
+ * clause, or in a later clause, does not reach back ('I charge $500 if you
+ * book early' and 'I charge $500, if you book early' keep $500).
  *
  * `at` holds one word index per claim, in claim order: a number's first digit
  * or number word, a token's word, a run's first word. Negators of every
@@ -997,7 +1050,7 @@ function bindOnce(claims: readonly Claim[], stretch: ClaimStretch, lang: string)
   const chosen: Occurrence[] = new Array<Occurrence>(claims.length)
   const used = new Set<number>()
   let tried = 0
-  let best: { stage: number; reason: 'order' | 'unpaired' | 'negated'; missing: Claim[]; at: number[] } | null = null
+  let best: { stage: number; reason: 'order' | 'unpaired' | 'negated' | 'whatif'; missing: Claim[]; at: number[] } | null = null
 
   const fits = (i: number, o: Occurrence): boolean => {
     if (o.tokens.some((t) => used.has(t))) return false
@@ -1047,7 +1100,35 @@ function bindOnce(claims: readonly Claim[], stretch: ClaimStretch, lang: string)
       if (!best || best.stage < 3) best = { stage: 3, reason: 'negated', missing: negated, at }
       return false
     }
+    // A number said as a what-if (English): judged over the same clauses as rule 7's.
+    const whatIf = english ? claims.filter((c, i) => c.kind === 'number' && saidAsWhatIf(chosen[i].tokens[0])) : []
+    if (whatIf.length > 0) {
+      if (!best || best.stage < 4) best = { stage: 4, reason: 'whatif', missing: whatIf, at }
+      return false
+    }
     return true
+  }
+
+  // A clause's spoken tokens, in order, and where in them the stretch token `upTo` falls (its length when not in it).
+  const clauseTokens = (clause: number, upTo: number): { ts: string[]; before: number } => {
+    const ts: string[] = []
+    let before = -1
+    toks.forEach((x, i) => {
+      if (x.clause !== clause || x.np < 0) return
+      if (i === upTo) before = ts.length
+      ts.push(x.t)
+    })
+    return { ts, before: before < 0 ? ts.length : before }
+  }
+  // The number whose first token is `first` is said as a what-if: a conditional opens its own clause
+  // before it, or opens the clause directly before it in the same sentence (rule 7's two clauses).
+  const saidAsWhatIf = (first: number): boolean => {
+    const clause = toks[first].clause
+    const own = clauseTokens(clause, first)
+    if (opensWhatIf(own.ts, own.before)) return true
+    if (clauseSent.get(clause - 1) !== clauseSent.get(clause)) return false
+    const prev = clauseTokens(clause - 1, -1)
+    return opensWhatIf(prev.ts, prev.ts.length)
   }
 
   const strayNearer = (): Claim[] => {
@@ -1091,7 +1172,7 @@ function bindOnce(claims: readonly Claim[], stretch: ClaimStretch, lang: string)
     }
   }
   if (best) {
-    const b: { reason: 'order' | 'unpaired' | 'negated'; missing: Claim[]; at: number[] } = best
+    const b: { reason: 'order' | 'unpaired' | 'negated' | 'whatif'; missing: Claim[]; at: number[] } = best
     return { ok: false, missing: b.missing, reason: b.reason, at: b.at }
   }
   return { ok: false, missing: [...claims], reason: 'unpaired' }

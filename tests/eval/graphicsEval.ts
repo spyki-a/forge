@@ -304,6 +304,7 @@ export const DROP_REASONS: readonly (readonly [string, RegExp])[] = Object.freez
   ['not-on-menu', /is not a sentence on the menu|is not a sentence of the transcript|has no sentence to ground it/u],
   ['too-long', /is \d+ characters, at most \d+ are drawn/u],
   ['negated', /is said negated in /u],
+  ['what-if', /is said as a what-if in /u],
   ['unpaired', /is not said with what it is paired with/u],
   ['order', /is not said in the order /u],
   ['other-unit', /is said in \S+ in another unit/u],
@@ -332,7 +333,7 @@ export function dropReasonOf(reason: string): DropReason {
  * keyword said nowhere in the stretch, or a '?' or '!' not said), 'ungrounded'
  * (a field with words that ground to nothing, or a drawn mark the transcript
  * cannot ground) and 'other-unit' (a number said in another unit). Not
- * counted: a mispairing, a negation, an order, a template rule, a length, the
+ * counted: a mispairing, a negation, a what-if, an order, a template rule, a length, the
  * spacing or a sentence off the menu.
  */
 export const HALLUCINATION_REASONS: readonly DropReason[] = Object.freeze(['not-said', 'ungrounded', 'other-unit'])

@@ -3,7 +3,10 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   BASELINE_KEYWORD_MAX_WORDS,
+  BASELINE_KEYWORD_MIN_WORDS,
   BASELINE_WHY,
+  COURTESY_PHRASES_EN,
+  KEYWORD_FILLERS_EN,
   baselineGraphics
 } from '@shared/director/baselineGraphics'
 import { runGraphicsPass, settleGraphics, type GraphicsMenu } from '@shared/director/run'
@@ -156,10 +159,9 @@ describe('the four rules (§6.10)', () => {
   })
 
   it('"First of all" counts nothing off: no step "all"', () => {
-    // s00 is no item, so s01's ordinal stands alone: no steps. Each sentence gives its keyword instead
-    // ("you" is a function word, so the fewest last words holding a content word are "thank you").
-    expect(shapes(run(['First of all, thank you.', 'Second, check the schedule.']))).toEqual([
-      ['s00', { template: 'keyword', words: 'thank you', lit: 1 }],
+    // s00 is no item, so s01's ordinal stands alone: no steps. Each sentence gives its keyword instead.
+    expect(shapes(run(['First of all, check the light.', 'Second, check the schedule.']))).toEqual([
+      ['s00', { template: 'keyword', words: 'light', lit: 0 }],
       ['s01', { template: 'keyword', words: 'schedule', lit: 0 }]
     ])
   })
@@ -177,7 +179,7 @@ describe('the four rules (§6.10)', () => {
   })
 
   it('a short English sentence ending on a content word gives a keyword of its last words, lit the last', () => {
-    expect(shapes(run(['Keep it simple always today.']))).toEqual([['s00', { template: 'keyword', words: 'today', lit: 0 }]])
+    expect(shapes(run(['Keep it simple and honest.']))).toEqual([['s00', { template: 'keyword', words: 'honest', lit: 0 }]])
     // The last word is a function word, so is the one before: the fewest last words that hold a content word, three.
     expect(shapes(run(['Love is all you have.']))).toEqual([['s00', { template: 'keyword', words: 'all you have', lit: 2 }]])
     // Exactly eight words still gives one.
@@ -195,9 +197,9 @@ describe('the four rules (§6.10)', () => {
   })
 
   it('the keyword is English only by its tag: "und" and "es" give none, "en-GB" and "en_US" do', () => {
-    expect(run(['Keep it simple always today.'], 'und')).toEqual([])
-    expect(run(['Keep it simple always today.'], 'es')).toEqual([])
-    for (const tag of ['en-GB', 'en_US']) expect(shapes(run(['Keep it simple always today.'], tag)), tag).toEqual([['s00', { template: 'keyword', words: 'today', lit: 0 }]])
+    expect(run(['Keep it simple and honest.'], 'und')).toEqual([])
+    expect(run(['Keep it simple and honest.'], 'es')).toEqual([])
+    for (const tag of ['en-GB', 'en_US']) expect(shapes(run(['Keep it simple and honest.'], tag)), tag).toEqual([['s00', { template: 'keyword', words: 'honest', lit: 0 }]])
   })
 
   it('Hindi and Telugu get no baseline keyword (the drawing fixtures’ quotes, six and seven words)', () => {
@@ -215,7 +217,7 @@ describe('what the baseline never makes', () => {
     'First, pack the bags.',
     'Second, check the schedule.',
     'The light was soft and warm all through that long day.',
-    'Keep it simple always today.'
+    'Keep it simple and honest.'
   ]
 
   it('never a lower-third, a callout or a quote, whatever the menu offers', () => {
@@ -233,7 +235,7 @@ describe('what the baseline never makes', () => {
       ['s02', { template: 'keyword', words: 'album', lit: 0 }],
       ['s04', { template: 'keyword', words: 'bags', lit: 0 }],
       ['s05', { template: 'keyword', words: 'schedule', lit: 0 }],
-      ['s07', { template: 'keyword', words: 'today', lit: 0 }]
+      ['s07', { template: 'keyword', words: 'honest', lit: 0 }]
     ])
   })
 
@@ -258,7 +260,7 @@ describe('validated the same way (§6.7)', () => {
     'First, the plan, in two parts.',
     'Second, the budget.',
     'Third, the timeline.',
-    'Keep it simple always today.',
+    'Keep it simple and honest.',
     'Love is all you have.'
   ]
 
@@ -437,5 +439,88 @@ describe('the proposal bar on the baseline route (§6.6, §6.12): every number h
     const ring = sure.clips.find((c) => c.graphic?.data.template === 'ring')!
     const waiting = (await find(heardOver(SPREAD, 'whisper-small', false, (w) => w === '%'))).graphicProposals![0]
     expect(waiting.spec.seed).toBe(Number((BigInt(ring.start + 1) * 2654435761n + 40503n) % 2n ** 32n))
+  })
+})
+
+describe('the keyword rule, tightened after try-out 1 (2026-11-15)', () => {
+  /*
+   * The try-out's baseline drew a keyword from 18 of 33 sentences ("watching", "up", "Okay", "here", …). Each
+   * case below is killed by ONE of the new rules alone: the others would let it through. Every sentence is
+   * English written for the test, most from the session's own script.
+   */
+  const keywords = (sentences: string[]): [string, string][] =>
+    run(sentences).flatMap((c) => (c.data.template === 'keyword' ? [[c.sentence, c.data.words] as [string, string]] : []))
+
+  it('a segment a pause cut before its sentence mark gives no keyword', () => {
+    // Six words, a content word last, no courtesy, no filler: only the missing mark stops it.
+    expect(keywords(['We plan every single wedding calendar'])).toEqual([])
+    expect(keywords(['We plan every single wedding calendar.'])).toEqual([['s00', 'calendar']])
+  })
+
+  it(`a sentence of fewer than ${BASELINE_KEYWORD_MIN_WORDS} words gives none`, () => {
+    expect(BASELINE_KEYWORD_MIN_WORDS).toBe(3)
+    expect(keywords(['Quick correction.'])).toEqual([])
+    expect(keywords(['A quick correction.'])).toEqual([['s00', 'correction']])
+  })
+
+  it('a sentence that greets, thanks or signs off gives none', () => {
+    for (const phrase of [['thank'], ['thanks'], ['see', 'you'], ['that', 'is', 'all']]) expect(COURTESY_PHRASES_EN, phrase.join(' ')).toContainEqual(phrase)
+    expect(keywords(['Thanks for the beautiful photos.'])).toEqual([])
+    expect(keywords(['First of all, thank you for watching.'])).toEqual([])
+    expect(keywords(['See you in the next video.'])).toEqual([])
+    expect(keywords(['We love the beautiful photos.'])).toEqual([['s00', 'photos']])
+  })
+
+  it('a keyword whose content words are all fillers is none, and a filler tail is not lengthened past', () => {
+    for (const w of ['okay', 'yeah', 'again', 'here', 'today', 'up', 'something']) expect(KEYWORD_FILLERS_EN, w).toContain(w)
+    expect(keywords(['Light matters more than here.'])).toEqual([])
+    // "up" is a filler: never "mix those up", the three last words that would hold "mix".
+    expect(keywords(['People mix those up.'])).toEqual([])
+    expect(keywords(['Light matters more than gear.'])).toEqual([['s00', 'gear']])
+  })
+
+  it('the sentence counts the pause-cut segments before it: over eight words gives none, a two-word ending gives one', () => {
+    // Five words with a mark; the unfinished segment before it makes the sentence ten.
+    expect(keywords(['We drove home after the', 'long and quiet wedding night.'])).toEqual([])
+    expect(keywords(['We drove home.', 'Long and quiet wedding night.'])).toEqual([['s00', 'home'], ['s01', 'night']])
+    // Two words alone are too few; with "Last year I shot" (no mark) the sentence is six.
+    expect(keywords(['Last year I shot', 'forty weddings.'])).toEqual([['s01', 'weddings']])
+  })
+
+  it("the try-out's shapes: the topic words survive, the fillers, courtesies and pause cuts do not", () => {
+    const said = [
+      'First of all, thank you for watching.',
+      'Today, I want to talk about wedding photography.',
+      'That changes how I plan my calendar.',
+      'Let me talk money.',
+      'People mix those up.',
+      'So I keep them separate.',
+      'Last year I shot',
+      'forty weddings.',
+      'Let me ask you something.',
+      'Quick correction.',
+      'Okay.',
+      'How do I get',
+      'ready before a wedding?',
+      "I'll save a few of those again.",
+      'Light matters more than here.',
+      'That is all for today.',
+      'Thank you.'
+    ]
+    const got = keywords(said).map(([, w]) => w)
+    for (const w of ['photography', 'calendar', 'money', 'separate', 'weddings']) expect(got, w).toContain(w)
+    for (const w of ['watching', 'up', 'shot', 'something', 'correction', 'Okay', 'get', 'again', 'here', 'today', 'Thank you']) {
+      expect(got, w).not.toContain(w)
+    }
+  })
+
+  it('a what-if amount is made by the baseline and dropped by the validator, with its reason', () => {
+    const t = talk(['If I charged ten thousand dollars, nobody would book.'])
+    const m = menuOf(t)
+    const out = baselineGraphics(t, m)
+    expect(out.map((c) => c.data.template)).toEqual(['counter'])
+    const v = validateBaseline(out, m, t)
+    expect(v.kept).toEqual([])
+    expect(v.dropped.map((p) => p.message)).toContain(`graphic dropped: '${(out[0].data as { value: string }).value}' is said as a what-if in s00`)
   })
 })

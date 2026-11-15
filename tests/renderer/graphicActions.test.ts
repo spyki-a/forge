@@ -69,16 +69,16 @@ function talk(assetId: string, sentences: string[], model = 'whisper-small'): Tr
 
 /*
  * s00 "We signed 40 clients this year." (words 0-5; "40" is word 2, 0.8 s), two fillers, s03 "Keep it simple
- * always today." (words 18-22; "simple" is word 20, 8.0 s), then fillers: 125 words, 50 s.
+ * and honest." (words 18-22; "simple" is word 20, 8.0 s), then fillers: 125 words, 50 s.
  */
-const SAID = ['We signed 40 clients this year.', FILLER, FILLER, 'Keep it simple always today.', ...Array.from({ length: 17 }, () => FILLER)]
+const SAID = ['We signed 40 clients this year.', FILLER, FILLER, 'Keep it simple and honest.', ...Array.from({ length: 17 }, () => FILLER)]
 
 const g = (fields: Partial<AnswerGraphic> & Pick<AnswerGraphic, 'sentence' | 'template'>): AnswerGraphic => ({
   title: '', value: '', label: '', items: [], quote: '', words: '', lit: 0, why: 'it helps', ...fields
 })
 const COUNTER = g({ sentence: 's00', template: 'counter', value: '40', label: 'clients' })
 const KEYWORD = g({ sentence: 's03', template: 'keyword', words: 'simple', lit: 0 })
-const QUOTE = g({ sentence: 's03', template: 'quote', quote: 'Keep it simple always today.' })
+const QUOTE = g({ sentence: 's03', template: 'quote', quote: 'Keep it simple and honest.' })
 
 const footage = (id: string, speaker?: string): MediaAsset => ({
   id, path: `/media/${id}.mp4`, name: id, kind: 'video', durationFrames: FPS * 140, width: 1080, height: 1920, fps: FPS, hasVideo: true, hasAudio: true, size: 1,
@@ -370,9 +370,9 @@ describe('findGraphics: the run’s edges', () => {
    * With no model the baseline runs (§6.10, lane T4). By hand, over SAID: no sentence holds a percent or a
    * currency amount ("40 clients" has no unit, rule 4), none opens with an ordinal, and every one is at most
    * eight words, not a question, ending on a content word, so each gives a keyword of its last word: "year"
-   * (s00, word 5, 2.0 s), "day" (s01, word 11, 4.4 s; s02, word 17, 6.8 s, …), "today" (s03, word 22, 8.8 s).
+   * (s00, word 5, 2.0 s), "day" (s01, word 11, 4.4 s; s02, word 17, 6.8 s, …), "honest" (s03, word 22, 8.8 s).
    * Rule 10 over the window (its words span 0 to 49.75 s, so at most ⌊49.75 ÷ 20⌋ = 2, onsets 6 s apart):
-   * "year" stays, the next two "day"s are within 6 s of it, "today" (6.8 s after) stays, and the cap drops the rest.
+   * "year" stays, the next two "day"s are within 6 s of it, "honest" (6.8 s after) stays, and the cap drops the rest.
    */
   it('with no model it still completes, the lower third placed from the Speaker and the baseline’s graphics, the record naming no model', async () => {
     start({ speaker: 'Ana' })
@@ -381,10 +381,10 @@ describe('findGraphics: the run’s edges', () => {
     }
     const before = project()
     await state().findGraphics('shot')
-    // The lower third from 0 s holds the screen when "year" lands at 2.0 s (the budget, §6.9): "today" is placed.
+    // The lower third from 0 s holds the screen when "year" lands at 2.0 s (the budget, §6.9): "honest" is placed.
     expect(graphicsOver('shot').map((c) => c.graphic!.data)).toEqual([
       { template: 'lower-third', name: 'Ana', role: '' },
-      { template: 'keyword', words: 'today', lit: 0 }
+      { template: 'keyword', words: 'honest', lit: 0 }
     ])
     expect(state().decisions.map((d) => d.model)).toEqual([{ id: 'baseline', runtime: 'none' }])
     expect(state().lastGraphics!.notes).toContain("the baseline's graphics are used for sentences s00 to s20: No model is set up")
@@ -401,7 +401,7 @@ describe('findGraphics: the run’s edges', () => {
     await state().findGraphics('shot')
     expect(graphicsOver('shot').map((c) => [c.graphic!.data, c.graphic!.grounding!.sentence])).toEqual([
       [{ template: 'keyword', words: 'year', lit: 0 }, 's00'],
-      [{ template: 'keyword', words: 'today', lit: 0 }, 's03']
+      [{ template: 'keyword', words: 'honest', lit: 0 }, 's03']
     ])
     expect(project().graphicProposals ?? []).toEqual([])
     expect(state().decisions.map((d) => [d.pass, d.model])).toEqual([[GRAPHICS_PASS, { id: 'baseline', runtime: 'none' }]])
@@ -484,7 +484,7 @@ describe('findGraphics: the run’s edges', () => {
     }
     await state().findGraphics('shot')
     // The counter is the baseline's, and it waits (a proposal is not spaced, §6.7 rule 10); the keywords hold no
-    // number and are placed. By hand: s01's "day" (word 11, 4.4 s); s02's (on s01's "day") and s03's "today"
+    // number and are placed. By hand: s01's "day" (word 11, 4.4 s); s02's (on s01's "day") and s03's "honest"
     // (8.8 s) within 6 s of it; s04's "day" (s03 holds none, so its own word 28, 11.2 s); s05 on past the cap of 2.
     expect(graphicsOver('shot').map((c) => [c.graphic!.data.template, c.graphic!.grounding!.sentence])).toEqual([
       ['keyword', 's01'],

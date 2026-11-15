@@ -209,7 +209,7 @@ interface Checked {
   stretch: ClaimStretch | null
 }
 
-function reasonText(reason: 'absent' | 'unpaired' | 'order' | 'negated' | 'unit', text: string, sentence: string): string {
+function reasonText(reason: 'absent' | 'unpaired' | 'order' | 'negated' | 'whatif' | 'unit', text: string, sentence: string): string {
   switch (reason) {
     case 'absent':
       return `'${text}' is not said in ${sentence}`
@@ -221,6 +221,8 @@ function reasonText(reason: 'absent' | 'unpaired' | 'order' | 'negated' | 'unit'
       return `'${text}' is not said in the order of its value in ${sentence}`
     case 'negated':
       return `'${text}' is said negated in ${sentence}`
+    case 'whatif':
+      return `'${text}' is said as a what-if in ${sentence}`
   }
 }
 
