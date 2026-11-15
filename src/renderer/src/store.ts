@@ -481,6 +481,19 @@ export const LIBRARY_GRAPHIC_TRACK_NOTE = 'A graphic goes on a video track'
 export const LIBRARY_GRAPHIC_REASON = 'placed from the Library'
 
 /**
+ * Refused when every video track is busy at that time and the track ceiling
+ * is reached: stackOverlay would then slide the graphic later, to frames its
+ * third and the on-screen rule (byHandRefusal) were never read for, where it
+ * could draw over another graphic (try-out 1 piece 6's fixes).
+ */
+export const GRAPHIC_NO_TRACK_NOTE = 'No free video track at that time'
+
+/** True when stackOverlay would land a clip later than asked rather than at its frame (at the track ceiling). */
+function overlaySlides(project: Project, trackId: string, startFrame: number, duration: number): boolean {
+  return stackOverlay(project, trackId, startFrame, duration).start !== Math.max(0, startFrame)
+}
+
+/**
  * Room for an overlay at a moment, found by going UP rather than along.
  *
  * Two clips on one track are a sequence — that is what a track IS — so
@@ -3806,6 +3819,11 @@ export const useEditor = create<EditorState>((set, get) => ({
     const duration = Math.max(1, Math.round(spec.seconds * fps))
     // The one asset shape (graphics/frame.ts), long enough for a trim to lengthen the clip, as the paper asset
     // is; applyGraphics (graphics/apply.ts) makes its assets through the same call.
+    // A graphic's third, beats and room were read for THIS frame: one slid later is refused, not landed elsewhere.
+    if (overlaySlides(project, trackId, startFrame, duration)) {
+      notify(GRAPHIC_NO_TRACK_NOTE, 'info')
+      return null
+    }
     const asset = graphicClipAsset(clipId, spec.data.template, duration, project.settings)
 
     /*
@@ -3867,6 +3885,10 @@ export const useEditor = create<EditorState>((set, get) => ({
     if ('refused' in ready) {
       notify(ready.refused, 'info')
       return ready.refused
+    }
+    if (overlaySlides(project, lane.id, at, ready.duration)) {
+      notify(GRAPHIC_NO_TRACK_NOTE, 'info')
+      return GRAPHIC_NO_TRACK_NOTE
     }
     void get().addGraphicClip(lane.id, at, ready.spec, {
       generatedBy: { rule: LIBRARY_GRAPHIC_RULE, reason: LIBRARY_GRAPHIC_REASON },

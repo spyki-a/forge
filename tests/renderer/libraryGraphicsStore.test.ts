@@ -46,7 +46,7 @@ vi.mock('../../src/renderer/src/graphicCanvas', () => ({
   graphicMeasure: () => () => ({ width: 0, ascent: 0, descent: 0 })
 }))
 
-const { useEditor, LIBRARY_GRAPHIC_TRACK_NOTE } = await import('../../src/renderer/src/store')
+const { useEditor, LIBRARY_GRAPHIC_TRACK_NOTE, GRAPHIC_NO_TRACK_NOTE } = await import('../../src/renderer/src/store')
 const { useCatalog } = await import('../../src/renderer/src/catalog')
 const { TranscriptGraphics, DROP } = await import('../../src/renderer/src/components/TranscriptGraphics')
 
@@ -240,5 +240,40 @@ describe('whose it is', () => {
     state().dropGraphic(lib.id)
     expect(graphics()).toEqual([])
     expect(soundsOf(lib.id)).toEqual([])
+  })
+})
+
+describe('at the track ceiling (the fixes of piece 6)', () => {
+  /** Twelve video tracks (MAX_TRACKS), each busy over [0, 900): no track is free at frame 60 and none can be added. */
+  function full(): void {
+    const tracks = Array.from({ length: 12 }, (_, i) => ({ id: `v${i + 1}`, kind: 'video' as const, name: `V${i + 1}`, muted: false, hidden: false, locked: false }))
+    const clips = tracks.map((t, i) => ({ ...shotOf(i === 0 ? 'shot' : `s${i}`, 'talk', 0), trackId: t.id }))
+    start({ tracks, clips })
+  }
+
+  it('refuses a tile with a notice rather than sliding it to frames nobody read it for', () => {
+    full()
+    const before = project()
+    expect(state().placeLibraryGraphic('counter', 'v1', 60)).toBe(GRAPHIC_NO_TRACK_NOTE)
+    expect(state().placeLibraryGraphic('counter')).toBe(GRAPHIC_NO_TRACK_NOTE)
+    expect(project()).toBe(before)
+    expect(graphics()).toEqual([])
+    expect(notices()).toEqual([GRAPHIC_NO_TRACK_NOTE, GRAPHIC_NO_TRACK_NOTE])
+  })
+
+  it('addGraphicClip itself refuses the slide, so no caller lands a graphic later than asked', async () => {
+    full()
+    const want = libraryGraphicAt(project(), 'counter', 60)
+    if (!('spec' in want)) throw new Error('the counter was refused')
+    expect(await state().addGraphicClip('v1', 60, want.spec)).toBeNull()
+    expect(graphics()).toEqual([])
+    expect(notices()).toEqual([GRAPHIC_NO_TRACK_NOTE])
+  })
+
+  it('still lands at its frame where a track is free there', () => {
+    full()
+    // Frame 950: after every busy clip, so V1 is free and nothing slides.
+    expect(state().placeLibraryGraphic('counter', 'v12', 950)).toBeNull()
+    expect(graphics().map((g) => g.start)).toEqual([950])
   })
 })

@@ -4,7 +4,7 @@ import { COPY_RULE, GRAPHIC_RULE, clearDirector } from '@shared/director/apply'
 import type { Segment, Transcript, Word } from '@shared/transcript'
 import { CLIPS_GRAPHIC_RULE, LIBRARY_GRAPHIC_RULE, applyGraphics, clearGraphics, clearClipGraphics, drawnText, withSpeaker } from '@shared/graphics/apply'
 import { LEAD_S, BEAT_GAP_S, graphicSeconds } from '@shared/graphics/beats'
-import { ON_SCREEN_REASON, tooCloseReason } from '@shared/graphics/budget'
+import { ON_SCREEN_REASON, tooCloseReason, zoomPunchReason } from '@shared/graphics/budget'
 import { drawListAt, drawnTemplates, graphicFits } from '@shared/graphics/drawList'
 import type { TextMeasure } from '@shared/graphics/items'
 import { thirdPreference } from '@shared/graphics/place'
@@ -101,7 +101,8 @@ describe('the list is derived from what is drawn', () => {
     expect(LIBRARY_LEFT_OUT['screen-card']).toBe(SCREEN_CARD_LEFT_OUT)
     const byId = Object.fromEntries(LIBRARY_GRAPHICS.map((e) => [e.id, e.name]))
     expect(byId).toMatchObject({ counter: 'Counter', bars: 'Bars', steps: 'Steps', quote: 'Quote', ring: 'Ring', keyword: 'Keyword', 'lower-third': 'Lower third' })
-    expect(LIBRARY_GRAPHICS).toHaveLength(7)
+    // Exactly the weighed templates not left out, in the drawers' order: no pinned count to break when a ninth is rightly listed.
+    expect(LIBRARY_GRAPHICS.map((e) => e.id)).toEqual(libraryCandidates().filter((id) => LIBRARY_LEFT_OUT[id] === undefined))
     // Every entry draws: it has a drawer and a template row.
     for (const e of LIBRARY_GRAPHICS) {
       expect(drawnTemplates(), e.id).toContain(e.id)
@@ -243,6 +244,25 @@ describe('where a tile lands (libraryGraphicAt)', () => {
     const card: Clip = { ...shot('card', 'card-asset', 50, 30), trackId: 'v2', generatedBy: { rule: COPY_RULE, reason: 'r' } }
     const withCard = libraryGraphicAt(project({ clips: [shot('shot', 'talk', 0), card] }), 'counter', 40)
     expect(withCard).toEqual({ refused: ON_SCREEN_REASON })
+  })
+
+  it('refuses over a zoom move on the footage beneath, with the punch’s time; lands where the zoom only holds', () => {
+    // The footage's zoom goes 1 → 1.2 over its frames [330, 360): 11 s to 12 s. A counter (3 s) at frame 300 covers [300, 390).
+    const zoomed: Clip = { ...shot('shot', 'talk', 0), keyframes: { zoom: [{ frame: 0, value: 1 }, { frame: 330, value: 1 }, { frame: 360, value: 1.2 }, { frame: 900, value: 1.2 }] } }
+    const p = project({ clips: [zoomed] })
+    expect(libraryGraphicAt(p, 'counter', 300)).toEqual({ refused: zoomPunchReason(11) })
+    expect(zoomPunchReason(11)).toBe('over a zoom punch at 11.0 s')
+    expect('spec' in libraryGraphicAt(p, 'counter', 450)).toBe(true) // [450, 540): held at 1.2
+  })
+
+  it('refuses over a zoom-punch moment, with its time; another moment kind does not count', () => {
+    const momentClip = (id: string, kind: 'zoom-punch' | 'whip-blur'): Clip => ({
+      ...shot(id, `m-${id}`, 345, 12), trackId: 'v2',
+      moment: { kind, to: { clipId: 'shot' }, seconds: 0.4, intensity: 0.5, seed: 1, version: 1 },
+      generatedBy: { rule: 'director.moment', reason: 'test' }
+    })
+    expect(libraryGraphicAt(project({ clips: [shot('shot', 'talk', 0), momentClip('z', 'zoom-punch')] }), 'counter', 300)).toEqual({ refused: zoomPunchReason(11.5) })
+    expect('spec' in libraryGraphicAt(project({ clips: [shot('shot', 'talk', 0), momentClip('w', 'whip-blur')] }), 'counter', 300)).toBe(true)
   })
 
   it('reads no rule of taste: lands 3 s after another graphic’s end, well inside the 6 s gap', () => {

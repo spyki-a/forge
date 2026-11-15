@@ -64,7 +64,8 @@ import { captionRoute } from '@shared/graphics/fromTimeline'
 import { textClipFaceKey } from '@shared/render/textPaint'
 import { LIVE_DRAWN_FIELDS } from '@shared/edit/recipes'
 import { useCatalog } from '../catalog'
-import { canvasDropChip, canvasDropRoute, isAssetDrag, readDragPayload, type DragPayload } from '../dragPayload'
+import { isAssetDrag, readDragPayload, type DragPayload } from '../dragPayload'
+import { dropOnCanvas } from '../dropHandlers'
 import { DROP_CHOICES, type DropIntent } from '@shared/render/dropIntent'
 
 export interface ViewTransform {
@@ -1058,63 +1059,20 @@ export function Preview(): ReactNode {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playing])
 
-  /**
-   * Something dropped on the picture.
-   *
-   * It lands on the top video track at the playhead — "here, over this" is what
-   * the gesture means — filling the frame, because a clip has to look like
-   * something the instant it arrives. The chip then offers the other two.
-   *
-   * Audio is refused rather than quietly placed: a sound has no appearance, so
-   * there is nothing for the canvas to say about it and nothing for the chip to
-   * offer. The timeline is where a sound goes.
-   */
+  /** Something dropped on the picture: dropOnCanvas (../dropHandlers.ts) says what lands where, and when the chip is offered. */
   const onCanvasDrop = useCallback(
-    async (payload: DragPayload | null): Promise<void> => {
-      if (!payload) return
-      const route = canvasDropRoute(payload)
-      if (route === 'refuse-sound') {
-        notify('Sounds go on an audio track, not on the picture', 'info')
-        return
-      }
-      if (route === 'refuse-transition') {
-        notify('A transition goes on a cut in the timeline', 'info')
-        return
-      }
-      /*
-       * A graphic from the Library's Graphics drawer: the store lands it on the
-       * top unlocked video track at the playhead, selected (the dock opens on
-       * its Graphic panel). No fill and no chip: a graphic draws itself in its
-       * own third over the whole frame, and the chip's fill or fit would scale
-       * that frame and send the clip to the back or the front, which is not a
-       * choice a graphic has (canvasDropChip).
-       */
-      if (route === 'graphic') {
-        if (payload.template) placeLibraryGraphic(payload.template)
-        return
-      }
-
-      const tracks = useEditor.getState().project.tracks.filter((t) => t.kind === 'video' && !t.locked)
-      const top = tracks[tracks.length - 1]
-      if (!top) return
-      const before = new Set(useEditor.getState().project.clips.map((c) => c.id))
-
-      if (route === 'pool' && payload.assetId) {
-        placePoolAsset(payload.assetId, top.id, playhead)
-      } else if (route === 'title') {
-        await placeTitle(payload.file, payload.name, top.id, playhead)
-      } else {
-        await placeLibraryAsset(payload.file, payload.name, top.id, playhead)
-      }
-
-      // Whichever clip is new is the one the chip belongs to. Asked after the
-      // fact rather than threaded back, because each of those three places a
-      // clip its own way and only one of them returns an id.
-      const made = useEditor.getState().project.clips.find((c) => !before.has(c.id))
-      if (!made || !canvasDropChip(route)) return
-      applyDropIntent(made.id, 'fill')
-      setDropChip({ clipId: made.id, intent: 'fill' })
-    },
+    (payload: DragPayload | null): Promise<void> =>
+      dropOnCanvas(payload, {
+        project: () => useEditor.getState().project,
+        playhead,
+        notify,
+        placePoolAsset,
+        placeTitle,
+        placeLibraryGraphic,
+        placeLibraryAsset,
+        applyDropIntent,
+        setDropChip
+      }),
     [notify, placePoolAsset, placeTitle, placeLibraryAsset, placeLibraryGraphic, applyDropIntent, playhead]
   )
 

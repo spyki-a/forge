@@ -17,6 +17,7 @@ import type { GraphicSpec, KeptGraphic } from '@shared/graphics/template'
 import { contentRect } from '@shared/graphics/templates/layout'
 import { CLIPS_GRAPHIC_RULE, LIBRARY_GRAPHIC_RULE, applyGraphics } from '@shared/graphics/apply'
 import { LIBRARY_GRAPHICS, LIBRARY_LEFT_OUT, libraryGraphicAt } from '@shared/graphics/library'
+import { thirdPreference } from '@shared/graphics/place'
 import { GRAPHIC_SOUND_LANE_NAME } from '@shared/graphics/sound'
 import type { SoundPack } from '@shared/director/soundRoles'
 import type { Third } from '@shared/reframe/freeSpace'
@@ -2010,7 +2011,7 @@ describe('try-out 1 piece 6: each Library graphic, made by the list’s own func
     for (const entry of LIBRARY_GRAPHICS) {
       for (const shape of P1_SHAPE_NAMES) {
         const r = runs[entry.id][shape]
-        expect(r.spec.place, `${entry.id} ${shape}`).toEqual({ auto: true, third: entry.id === 'lower-third' ? 'bottom' : 'middle' })
+        expect(r.spec.place, `${entry.id} ${shape}`).toEqual({ auto: true, third: thirdPreference(entry.id)[0] })
         expect(r.notes, `${entry.id} ${shape}: the export's onError`).toEqual([])
         expect(r.asks.map((a) => a.box !== null), `${entry.id} ${shape}: baked by the box route`).toEqual([true])
         expect(r.luma.length, `${entry.id} ${shape}: frames exported`).toBe(LIB_SHOT_FRAMES)

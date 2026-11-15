@@ -20,7 +20,8 @@ import { useCatalog } from '../catalog'
 import { VolumeEnvelope } from './VolumeEnvelope'
 import { ClipWaveform } from './ClipWaveform'
 import { FadeHandles } from './FadeHandles'
-import { isAssetDrag, readDragPayload, trackDropRoute, type DragPayload } from '../dragPayload'
+import { isAssetDrag, readDragPayload, type DragPayload } from '../dragPayload'
+import { dropOnTrack } from '../dropHandlers'
 
 type DragMode = 'move' | 'trim-start' | 'trim-end'
 
@@ -137,74 +138,19 @@ export function Timeline(): ReactNode {
     []
   )
 
-  /**
-   * A transition attaches to a cut, everything else becomes a clip.
-   *
-   * Dropping a transition onto a clip applies it to that clip's incoming edge,
-   * which is the only place a transition can live — so it is rejected anywhere
-   * else rather than silently doing nothing.
-   */
+  /** A drop on a track: dropOnTrack (../dropHandlers.ts) — a transition attaches to a cut, everything else becomes a clip. */
   const handleDrop = useCallback(
-    async (
-      payload: DragPayload,
-      trackId: string,
-      trackKind: 'video' | 'audio',
-      frame: number
-    ): Promise<void> => {
-      const route = trackDropRoute(payload, trackKind)
-      if (route === 'refuse') {
-        notify(
-          payload.kind === 'sfx'
-            ? 'Sounds go on an audio track'
-            : 'That belongs on a video track',
-          'info'
-        )
-        return
-      }
-
-      if (route === 'transition') {
-        // Snap to the nearest cut within half a second of the drop.
-        const tolerance = Math.round(useEditor.getState().project.settings.fps / 2)
-        const result = nearestTransitionTarget(
-          useEditor.getState().project,
-          trackId,
-          frame,
-          tolerance
-        )
-        if (!result.clip) {
-          // Previously this failed silently, which looked exactly like the drop
-          // not registering at all.
-          notify(result.reason, 'info')
-          return
-        }
-        if (!payload.transitionId) return
-        setTransition(result.clip.id, payload.transitionId)
-        select(result.clip.id)
-        notify(`${payload.name} applied`, 'info')
-        return
-      }
-
-      // Already imported: reuse the asset rather than reading the file again,
-      // which would put a second copy of the same photograph in the pool.
-      if (route === 'pool' && payload.assetId) {
-        placePoolAsset(payload.assetId, trackId, frame)
-        return
-      }
-
-      // Titles are generated from a template rather than placed as a file.
-      if (route === 'title') {
-        await placeTitle(payload.file, payload.name, trackId, frame)
-        return
-      }
-
-      // A graphic from the Library's Graphics drawer: drawn by the engine, at the dropped frame (graphics/library.ts).
-      if (route === 'graphic') {
-        if (payload.template) placeLibraryGraphic(payload.template, trackId, frame)
-        return
-      }
-
-      await placeLibraryAsset(payload.file, payload.name, trackId, frame)
-    },
+    (payload: DragPayload, trackId: string, trackKind: 'video' | 'audio', frame: number): Promise<void> =>
+      dropOnTrack(payload, trackId, trackKind, frame, {
+        project: () => useEditor.getState().project,
+        notify,
+        setTransition,
+        select,
+        placePoolAsset,
+        placeTitle,
+        placeLibraryGraphic,
+        placeLibraryAsset
+      }),
     [notify, placeLibraryAsset, placeLibraryGraphic, placePoolAsset, placeTitle, setTransition, select]
   )
 
