@@ -76,7 +76,11 @@ const PERCENT_ONLY = /^%[.,;:!?…"')\]]*$/u
  *   threes ("$2,500.") and Indian lakh grouping ("1,50,000"), never "2,50"
  *   or "2019,000". "$2, 500 people", where the comma closes the first word,
  *   is left: the first word does not end in a digit. A run split three ways
- *   ("$1" ",000" ",000") joins whole, each piece onto what came before;
+ *   ("$1" ",000" ",000") joins whole when each step reads as one number
+ *   ("$1,000", then "$1,000,000"); a lakh number split three ways ("₹1" ",50"
+ *   ",000") does not ("₹1,50" alone is not one number) and is left as it is.
+ *   A tail never joins onto a word that is itself a leftover tail, so "1"
+ *   ",2" ",000" stays three words rather than fusing ",2,000";
  * - a word that is only `%` (with or without closing punctuation) after a
  *   word that ends in a digit: "40" "%" is "40%".
  *
@@ -91,7 +95,8 @@ export function joinSplitNumbers(words: readonly Word[]): Word[] {
   const out: Word[] = []
   for (const word of words) {
     const prev = out[out.length - 1]
-    if (prev && ENDS_IN_DIGIT.test(prev.text) && (PERCENT_ONLY.test(word.text) || (GROUP_TAIL.test(word.text) && readsAsOneNumber(prev.text + word.text)))) {
+    const tailOntoHead = GROUP_TAIL.test(word.text) && !GROUP_TAIL.test(prev?.text ?? '') && readsAsOneNumber((prev?.text ?? '') + word.text)
+    if (prev && ENDS_IN_DIGIT.test(prev.text) && (PERCENT_ONLY.test(word.text) || tailOntoHead)) {
       out[out.length - 1] = {
         ...prev,
         text: prev.text + word.text,

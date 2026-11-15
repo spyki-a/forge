@@ -52,6 +52,22 @@ describe('joinSplitNumbers', () => {
     expect(texts(joinSplitNumbers(words(['in', '2019', ',000', 'people'])))).toEqual(['in', '2019', ',000', 'people'])
   })
 
+  it('never joins two plain neighbouring numbers, or a decimal split as "2" ".5"', () => {
+    // Only a word that opens with a comma and digits is a group tail.
+    expect(texts(joinSplitNumbers(words(['in', '2019', '500', 'people'])))).toEqual(['in', '2019', '500', 'people'])
+    expect(texts(joinSplitNumbers(words(['about', '$2', '500', 'people'])))).toEqual(['about', '$2', '500', 'people'])
+    expect(texts(joinSplitNumbers(words(['1', '2'])))).toEqual(['1', '2'])
+    expect(texts(joinSplitNumbers(words(['2', '.5', 'stops'])))).toEqual(['2', '.5', 'stops'])
+  })
+
+  it('never joins a tail onto a leftover tail, and leaves a list', () => {
+    expect(texts(joinSplitNumbers(words(['1', ',2', ',3'])))).toEqual(['1', ',2', ',3'])
+    expect(texts(joinSplitNumbers(words(['1', ',2', ',000'])))).toEqual(['1', ',2', ',000'])
+    expect(texts(joinSplitNumbers(words(['in', '2019', ',000', ',000'])))).toEqual(['in', '2019', ',000', ',000'])
+    // A lakh number split three ways is not joined: "₹1,50" alone is not one number.
+    expect(texts(joinSplitNumbers(words(['₹1', ',50', ',000'])))).toEqual(['₹1', ',50', ',000'])
+  })
+
   it('keeps the first start, the last end, the lower confidence, and renumbers 0..n-1', () => {
     const input = words(['A', 'full', 'wedding', 'cost', ['$2', 0.8053], [',500.', 0.9925], 'and', ['40', 0.9435], ['%', 0.9098]])
     const out = joinSplitNumbers(input)
@@ -76,6 +92,9 @@ describe('joinSplitNumbers', () => {
     expect(texts(joinSplitNumbers(words(['forty', '%', 'of'])))).toEqual(['forty', '%', 'of'])
     expect(texts(joinSplitNumbers(words(['%', 'first'])))).toEqual(['%', 'first'])
     expect(texts(joinSplitNumbers(words(['40.', '%'])))).toEqual(['40.', '%'])
+    expect(texts(joinSplitNumbers(words(['40,', '%'])))).toEqual(['40,', '%'])
+    // Only a percent sign with closing punctuation after it is a percent word.
+    expect(texts(joinSplitNumbers(words(['40', '%off'])))).toEqual(['40', '%off'])
   })
 
   it('an empty list is an empty list', () => {
@@ -132,10 +151,15 @@ describe("the AI helper's transcript joins split numbers before it is segmented"
     const start = src.indexOf("ipcMain.handle('asr:transcribe'")
     expect(start).toBeGreaterThan(-1)
     expect(src.indexOf("ipcMain.handle('asr:transcribe'", start + 1)).toBe(-1)
-    const handler = src.slice(start, src.indexOf("ipcMain.handle('asr:cancel'", start))
+    // Comments stripped, so a join left only in a comment is not counted.
+    const handler = src
+      .slice(start, src.indexOf("ipcMain.handle('asr:cancel'", start))
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/.*$/gm, '')
     expect([...handler.matchAll(/joinSplitNumbers\(result\.words\)/g)]).toHaveLength(1)
-    expect([...handler.matchAll(/segmentIntoSentences\(([^)]*)\)/g)].map((m) => m[1])).toEqual(['words'])
-    expect(handler).toMatch(/const words = joinSplitNumbers\(result\.words\)[\s\S]*\n\s*words,\n\s*segments: segmentIntoSentences\(words\)/)
+    // What is segmented and stored is not the raw words; the names it goes by are free.
+    expect(handler).toMatch(/segmentIntoSentences\(/)
+    expect(handler).not.toMatch(/segmentIntoSentences\(result\.words\)/)
     expect(handler).not.toMatch(/words: result\.words/)
   })
 })
