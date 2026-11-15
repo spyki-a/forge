@@ -8525,7 +8525,7 @@ suite and CI are the orchestrator's.
   and the preview's recompute on a long followed clip while editing.
 - **Burned-in text** (§5.3): after 1g.
 
-## 61. Graphics: the forks measured (phase 0 of step 3, then phase 1's first) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22), and on the Surface the libass run and the development app (2026-10-27); in node, phase 1's M9 (2026-10-27) and the stroke's flattening (2026-10-28); and D10's three readings, the Noto fonts' provenance, the Mac's libass against the fontsdir, and `document.fonts.check` (2026-10-29); and under painter A, Chrome 152's canvas (negative radii, a 0-side canvas, `globalAlpha`) and, in node, the draw list's mixed faces and bounds and the frames' edges (2026-10-30/31); and lane C's worker encoder and measureText in the pane's Chrome 152 (2026-11-01) and, in node, the box route under crop, mask, matte and transitions (2026-11-02); and lane D's three, geq's w − 2 clamp on the box route, a stroke's chroma through `yuva420p` (M19 in part) and `flattenPath` against `SVGPathElement` (M8 in part) (2026-11-03); and phase 2's lanes T3-first and T1, in node and on the harness census (2026-11-06 to 11); and lane T2a's validator against the false graphics its critics wrote, in node (2026-11-11); and lane T3's beats, placement, budget and graphic sounds against their critics' inputs, in node and on the harness census (2026-11-11); and lane T2b's menu, settle, store actions and two panels against their critics' inputs, in node and on the harness census (2026-11-11)
+## 61. Graphics: the forks measured (phase 0 of step 3, then phase 1's first) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22), and on the Surface the libass run and the development app (2026-10-27); in node, phase 1's M9 (2026-10-27) and the stroke's flattening (2026-10-28); and D10's three readings, the Noto fonts' provenance, the Mac's libass against the fontsdir, and `document.fonts.check` (2026-10-29); and under painter A, Chrome 152's canvas (negative radii, a 0-side canvas, `globalAlpha`) and, in node, the draw list's mixed faces and bounds and the frames' edges (2026-10-30/31); and lane C's worker encoder and measureText in the pane's Chrome 152 (2026-11-01) and, in node, the box route under crop, mask, matte and transitions (2026-11-02); and lane D's three, geq's w − 2 clamp on the box route, a stroke's chroma through `yuva420p` (M19 in part) and `flattenPath` against `SVGPathElement` (M8 in part) (2026-11-03); and phase 2's lanes T3-first and T1, in node and on the harness census (2026-11-06 to 11); and lane T2a's validator against the false graphics its critics wrote, in node (2026-11-11); and lane T3's beats, placement, budget and graphic sounds against their critics' inputs, in node and on the harness census (2026-11-11); and lane T2b's menu, settle, store actions and two panels against their critics' inputs, in node and on the harness census (2026-11-11); and lane T4's baseline, eval and harness options against their critics' inputs in node, the templates and Indic checks on the harness page, and `graphic.int`'s phase-2 render on both CI runners (2026-11-14)
 
 For `docs/CLIPS.md` §6.15 (step 3's phase 0, "Measure before relying"):
 pieces 0.1–0.3 were built on the evening of 2026-10-21 in seven commits,
@@ -11338,3 +11338,132 @@ is injected. Only what cost time or would not be guessed:
   its landed graphics could be removed with the suite green, since the
   bake was mocked as `async () => null` with no recorder. Each is pinned
   now.
+
+### Phase 2, lane T4, 2026-11-14
+
+`CLIPS.md` §6.10's T4 Built note, with dated notes in §6.6-§6.9, §6.11,
+§6.12 and §6.14. Read from the ten commits (`c594dda` … `73c6f69`) and
+`4450e3d`, the two build journals (`wf_04f9108a-9cf`: five builders, ten
+critics, five fixers; `wf_ff59b393-4fe`: the Indic rule's builder, two
+critics, fixer) and the session's reads on the Mac and on the harness page
+(Chrome 156 in the Browser pane, the harness's empty font catalogue). The
+node figures are vitest, each input a critic's or a builder's on the commit
+named; **no real model was asked**. Only what cost time or would not be
+guessed:
+
+- **Phase 1's "narrower" reading, taken to a phrase, failed 10 of 18
+  fixtures with the drawing right.** `fba3632`'s `readIndicItem` reused
+  phase 1's one-cluster reading (any virama a conjunct; the whole string's
+  advance against its non-mark code points') over a template's whole
+  text item. On the page, `{ indic: true, templates: [the eight] }`: 55
+  rows, 41 PASS and 14 FAIL; by fixture 8 PASS and 10 FAIL, every failing
+  row on "NOT narrower" alone, while on all 55 the painter equalled
+  `drawTextOnto` (max 0) and the whole drawing differed from the per code
+  point one (means 43-65 over the ink). A phrase's spacing vowel signs
+  carry advance, so it is rightly wider than its bare letters, and a
+  word-final virama (three Telugu fixture words) is no conjunct. Measured
+  per conjunct in the same page (a plain canvas, 48 px, the fallback): 22
+  of the 55 items hold one, and in all 22 every conjunct is narrower (37.2
+  against 74.7; 49.6 against 60.4; 24.7 against 43.4; 42.9 against 50.6;
+  …). `4450e3d` reads each conjunct alone (`conjunctsOf`): 55 of 55 rows
+  and 18 of 18 fixtures PASS; phase 1's ten clusters read as before, and
+  శ్రీ now measures శ్ర, 68.4 against 145.6, as phase 0's whole-cluster line
+  does. The builder had expected 18 PASS without running a browser. **A
+  reading proved on single clusters is not a reading of text.**
+- **The bake is not always pixel-equal to the preview at a soft edge, and
+  which case shows it moves.** `{ templates: [the eight] }`, two runs: every
+  case inside `TEMPLATES_BAR`'s mean of 1 level over the ink (largest mean
+  0.162), but maxima above 0. Stable: steps-te and steps-connected-te on
+  the box route only, max 19 and 20, then 17 and 19 (means 0.10 and 0.16),
+  the canvas route 0; probed alone (steps-te frame 15), 10,320 differing
+  pixels, all in x 239-559, y 194-263 (the Telugu title's row), the
+  largest alpha gap 11 and premultiplied gap 11, 5,606 of them at alpha ≤
+  32: the class of phase 1's Mac box-route residue (text-indic p = 0.5
+  max 26, above). Moving: run 1 had bars-en max 60 on both routes (mean
+  0.098; 6,345 and 15,300 pixels at frames 15 and 102), and a fresh bake
+  of bars-en frame 15 probed alone read 0 differing pixels on both
+  routes; run 2 had bars-en 0, quote-hi 18 on both routes (mean 0.028)
+  and steps-connected-en 64 on the box route (mean 0.000); counter-hi 1
+  and callout-hi 2 on the box route in both. Not explained further; a
+  maximum bar would fail at random here.
+- **The tick's onset holds in the AAC, pre-echo and all, on both builds.**
+  `graphic.int`'s stand-in tick (a 20 ms 1 kHz tone, peak at its onset)
+  read twice, in the plan's own `[aout]` before the encoder and in the
+  exported AAC, the onset the first sample past 0.1 of the read's own peak
+  after 0.1 s below it. On the Mac at `4f2b025`: 1.00002 s and 7.00002 s,
+  0.021 ms (one sample) late, in both reads; in the 10 ms before each
+  onset `loudnorm` rings up to 0.0017 of the peak in the plan's audio and
+  the AAC's pre-echo reaches 0.0095, a tenth of the threshold. The 2018
+  Windows build's AAC was the one reading not seen before the push: run
+  43573261749 is green on `windows-latest`. A threshold relative to the
+  read's own peak is what makes the reading blind to `GRAPHIC_SOUND_DB`
+  and `loudnorm`'s gain; levels are M18's.
+- **The plan's two placement cases could not kill the plan's own
+  placement mutation.** "Placement ignoring the caption's third"
+  (`excluded = new Set()` in `placeGraphic`) passes both §6.11 cases,
+  the face in the middle with the captions at the bottom and no track,
+  because in each the third it would choose is free of the captions
+  anyway. `4f2b025` added the face in the middle with the captions at
+  the TOP (expected: bottom), the only case that fails under it (3
+  cases). Likewise both footage clips had their in-point at their start,
+  so a `graphicBeats` that dropped the in-point offset passed
+  `graphic.int`; `73c6f69` moved clip b's in-point to 165.
+- **A number said over several words slipped past Keep when only one of
+  its words was unsure.** `proposalOf` read the one word `bind` records
+  for a number claim, its value token. A critic's input: 'We raised 1.2
+  million dollars for the charity.' with 'million' at confidence 0.3,
+  found with no model, landed counter `$1200000` with no proposal; 'Only
+  40 % of couples came back.' with '%' at 0.3 landed ring 40%. `49df60f`
+  reads every word of the number's span (`numberWordsAt`), T2a's file
+  fixed in T4 because §6.12's bar forbids the hole. The property case had
+  marked only tokens with a digit as unsure.
+- **`credentialsIn` read words, and a wedding says "bearer".** `477918a`
+  matched `/\bbearer\s+…{12,}/` and `"headers"\s*:` over the file's text,
+  and the eval asserts it on `requests.json` and `results-graphics.json`,
+  both holding the transcript: `credentialsIn` of 'The ring bearer
+  responsibilities were clear.' returned `['a bearer token']`, which would
+  fail STEP=prepare on an ordinary wedding fixture, and an answer's
+  `headers: 'x'` string gave 'a headers field'. `a3327d9` parses the JSON
+  and flags fields; a bearer token only as a whole string value of 16 or
+  more token characters with a digit.
+- **The baseline's flat list came back a tree, and the fix had to be in
+  `tree.ts`.** On nested-en-1 ("First, the plan, which has two parts: …
+  Second, the shoot itself. Third, the edit.") `c594dda` gave plan, shoot
+  itself, edit with parents [-1,0,0]: `treeParents`' rule 2 read "two
+  parts" after the plan and nested the next two items, which the speaker
+  had counted off as "Second" and "Third". Making the baseline's parents
+  flat changed nothing, because `validateBaseline` throws a steps
+  graphic's parents away and recomputes them with `treeParents`; a model
+  answer listing the same three items got the same false tree. `530c3b6`:
+  a count whose next items include one opened by an ordinal (within 3
+  tokens) nests nothing. Since then the baseline matches none of the
+  three English nested fixtures, as found: nested-en-1 and 2 give three
+  flat items each, their children said inside a parent's sentence where
+  no ordinal opens them, and nested-en-3 none, its sentences opening with
+  "The".
+- **The baseline route did not check a value's drawn length.**
+  `c594dda`'s counter for 'We raised 1.2 million dollars for the charity.'
+  was '1.2 million dollars', 19 characters: `validateBaseline` kept it and
+  it landed, while the same graphic as a model answer was dropped, "is 19
+  characters, at most 16 are drawn". `530c3b6` falls back to rule 4's
+  digits, '$1200000', and to no graphic past that. A sign said apart, '40
+  %', was dropped as "not one number" until the same commit joined it.
+- **Assertions that would have failed when the owner's files land, and a
+  count that could not fail.** `477918a`'s reader case pinned the repo's
+  folder as holding no `eval-*.json`, `0b2c763` marked every eval
+  transcript a true talk (§6.10 puts traps in it) and floored every
+  transcript fixture at one baseline candidate (the baseline gives a
+  Hindi or Telugu nested talk none: a scratch one built from
+  `specs.json`'s steps-hi printed 0): each red on the day the owner adds
+  a file, fixed in `a3327d9` and `49df60f`. And `graphicBudget`'s "cases ≥
+  files" could not fail under its own mutation, since `specs.json` alone
+  gives 20 cases against 4 files; `49df60f` counts per kind ("transcript
+  cases: expected 0 to be greater than or equal to 6").
+- **The bar constant's anchor matched twice.** `TEMPLATES_BAR` and
+  `PRIMITIVES_BAR` hold the same text, so a mutation anchored on `{
+  bakeMeanLevels: 1, heldMean: 0, outsideAlpha: 0 } as const` matched
+  both; a critic re-anchored on `export const TEMPLATES_BAR = {` before
+  running it. And two tests certified bugs: `fba3632`'s save line printed
+  `copy(r.look.key)`, a field `LookResult` does not have (its keys are
+  `keys`), and a test asserted that text; `67fb97c` builds the line from
+  `BLIND_KEY_FIELD`, held to the result types by a typed guard.

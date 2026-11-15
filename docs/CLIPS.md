@@ -121,8 +121,8 @@
 > prompt, the ask and `decisionForGraphics` are T2b's, `applyGraphics`
 > is still the stub (until T3, below), and `settleGraphics` has no
 > baseline until T4's `baselineGraphics` (a rejected answer settles to no
-> graphics, with its reason). So still nothing in the app makes a
-> graphic clip (until T2b, below).
+> graphics, with its reason; until T4, below). So still nothing in the
+> app makes a graphic clip (until T2b, below).
 > Then **lane T3** (§6.8, §6.9, §6.6's real body, §6.14), built
 > 2026-11-11 in six pieces, each read by two critics before its fixer and
 > the next piece: piece 1 (beats), `c27b9a4`, fix `4699660`; piece 2
@@ -194,19 +194,58 @@
 > one `setGraphic` (a Speaker field's is `setSpeaker`), and every
 > grounded, verbatim or index field is checked again after each edit,
 > with a warning that never blocks. An aspect change or a reframe places
-> `place.auto` graphics again. What it cannot do yet: **with no model, or
-> every window's answer rejected, only the lower third lands** (with a
-> Speaker), and the tile says "No model’s answer was used in this run";
-> a rejected window among answered ones loses only its own graphics:
-> `settleGraphics`' baseline seam is empty until T4's `baselineGraphics`.
-> **No real model has been asked by any test**: every ask in the suite is
-> injected, so the pass has never run against Gemma or any model; the
-> first real run is the eval's or yours.
-> Not built: the rest of phase 2, which is next: T4, the last lane (the
-> baseline, the eval, the harness's options, `graphic.int`'s phase-2
-> cases; §6.19).
+> `place.auto` graphics again. (Until T4, below, this went on: "What it
+> cannot do yet: with no model, or every window's answer rejected, only
+> the lower third lands (with a Speaker), and the tile says "No model’s
+> answer was used in this run"; a rejected window among answered ones
+> loses only its own graphics: `settleGraphics`' baseline seam is empty
+> until T4's `baselineGraphics`.")
+> Then **lane T4** (§6.10: the baseline, `runGraphicsPass`, the eval
+> block; §6.11: the property tests over the fixtures, the harness's
+> `templates`, `curves`, `look` and per-template Indic options,
+> `graphic.int`'s phase-2 cases), phase 2's last lane, built 2026-11-11
+> and 2026-11-14 in five pieces, each read by two critics before its
+> fixer and the next piece: piece 1 (the baseline and its way into the
+> app), `c594dda`, fix `530c3b6` (2026-11-11); piece 2 (the eval block),
+> `477918a` (2026-11-11), fix `a3327d9` (2026-11-14: you held the work on
+> 2026-11-11 at 23:40, three commits in, before piece 2's critics, and it
+> resumed 2026-11-14); piece 3 (the property tests over the fixtures),
+> `0b2c763`, fix `49df60f`; piece 4 (the harness options), `fba3632`, fix
+> `67fb97c`; piece 5 (`graphic.int`'s phase-2 cases), `4f2b025`, fix
+> `73c6f69`; then `f10ed89`, a doc comment (§6.6's T2b record's
+> follow-up). Pushed 2026-11-14 with the T2b record as `ae3a670` (run
+> 43573261749: `windows-latest` and `macos-15` green, no annotation; the
+> installer job skipped): **the lane is green on both runners at
+> `ae3a670`**, `graphic.int`'s phase-2 cases on the 2018 Windows ffmpeg
+> among them. The session's run of the harness page then failed the
+> Indic template check on its own rule, and `4450e3d` (2026-11-14, read
+> by two critics before its fixer) fixed the rule: pushed alone (run
+> 43575295452, green on both runners, no annotation). The suite at
+> `4450e3d` on the Mac: 346 files passed and 5 skipped (351), 5446
+> tests passed and 66 skipped (5512). **Every lane of §6.19's phase 2 is
+> built and pushed: phase 2 is closed on the build side**; what is left
+> of its exit bar is yours, item by item in §6.12's "Phase 2 state, lane
+> T4, 2026-11-14". What the app does now that it did not: **with no
+> model set up, or for a window whose answer is rejected, the baseline's
+> graphics land** (§6.10's `baselineGraphics`: a ring for a percentage, a
+> counter for a currency amount, steps for sentences counted off by
+> ordinals, a keyword on a short English line; validated and spaced as a
+> model's are; with a Speaker, the lower third as before; changed
+> 2026-11-15, try-out 1: see the note that follows), and the note
+> says "the baseline's graphics are used for <window>: <why>"; "No
+> model’s answer was used in this run" still shows when no window's
+> answer was used. **No real model has been asked by any test**: every
+> ask in the suite is injected; the eval block is built and has never
+> run (no `eval-*.json` exists), so the pass has never run against Gemma
+> or any model; the first real run is the eval's or yours.
+> Of phase 2's lanes nothing is left to build. Next by §6.19: phase 3,
+> after phase 2's exit (§6.12's list); the hand spike (§6.17), which
+> §6.19 runs during phase 2, is not built.
 > Still yours from these lanes: the list in §6.12's "Phase 2's state,
-> 2026-11-11", with T2a's, T3's and T2b's items added below it. (Until
+> 2026-11-11", with T2a's, T3's, T2b's and T4's items added below it.
+> (Until T4 was recorded this line read: "Not built: the rest of phase
+> 2, which is next: T4, the last lane (the baseline, the eval, the
+> harness's options, `graphic.int`'s phase-2 cases; §6.19)"; until
 > T2b was recorded this line read: "Not built: the rest of phase 2, which
 > is next: T2b, then T4 (§6.19)"; until T3 was
 > recorded this line read: "Not built: the rest of phase 2, which is
@@ -8805,7 +8844,9 @@ fixtures' wiring and the three tests above.
 >   `tests/graphicDrawList.test.ts`'s "`DRAWERS` is a frozen, empty record
 >   in phase 1" became membership (`4e6004e`). **No render check is this
 >   lane's**: the drawers are seen only through vitest and OUTPUT's sample
->   tile; the render checks are T4's (§6.11).
+>   tile; the render checks are T4's (§6.11). (2026-11-14: built by
+>   lane T4, the harness's `templates` and per-template Indic options and
+>   `graphic.int`'s phase-2 cases; §6.11's T4 paragraph.)
 > - **Reading holds, M16** (`1871004`): `LEAD_S` 0.5, `TAIL_S` 0.8 and
 >   `graphicSeconds(def, beats, drawn)` in `beats.ts` (the largest of the
 >   three, null over `seconds.max`, not rounded), ahead of T3's
@@ -12028,7 +12069,10 @@ type the app defined.
   lands only the lower third (with a Speaker), and the tile says "No
   model’s answer was used in this run", shown only when the record names
   no model, which `pairSettled` makes so only when every window went
-  unused.)
+  unused.) (2026-11-14, lane T4, `c594dda`: the seam is filled; Find and
+  Direct pass `baselineGraphics`, so such a window's baseline graphics
+  land, its note "the baseline's graphics are used for <window>: <why>";
+  the dated note after the T2b Built note below.)
 - **A `lower-third`** is the app's in every run: placed on the speaker's
   first word the clip shows, at most once per clip, when the asset has a
   Speaker (§6.8, §6.9). It is made by `lowerThirdFor(project, clip):
@@ -12065,7 +12109,7 @@ become a confident counter. So (§16.30):
 
 | missing | what happens |
 |---|---|
-| a model, or a pass rejected | the baseline, validated the same way, with a note (2026-11-11, lane T2b: the seam is empty until T4, so only the lower third, with a Speaker) |
+| a model, or a pass rejected | the baseline, validated the same way, with a note (2026-11-11, lane T2b: the seam is empty until T4, so only the lower third, with a Speaker) (2026-11-14, lane T4, `c594dda`: the baseline's graphics, and the lower third with a Speaker) |
 | a subject track | `callout` not offered; a dim drawn with no hole; placement takes the no-track default (§6.9) |
 | captions | no third is excluded |
 | a Speaker on the asset | no lower third; a quote's speaker is '' (or a link's channel, §16.31) |
@@ -12521,6 +12565,9 @@ channel name", read on screen at `d33d5b4`; the Built note below, part
 >   `options.baseline` is given. **The seam is still a seam**: no caller
 >   passes `options.baseline` (T4's `baselineGraphics`), so the first note
 >   is the one shown today, and it stays true once T4 fills the seam.
+>   (2026-11-14, lane T4, `c594dda`: filled; Find and Direct pass it, so
+>   the second note is the one shown, and a baseline that throws gives
+>   the first with `baselineFailedNote`, the dated note below.)
 >   `options.speaker`, trimmed (`db4b46d`; spaces are no speaker), goes to
 >   `validateGraphics` and `validateBaseline` as `options.speaker`:
 >   `settleOne` sets a said quote's `speaker` to it (a reported name still
@@ -12974,6 +13021,52 @@ channel name", read on screen at `d33d5b4`; the Built note below, part
 >   the lane's diff goes out through `window.forge.directorComplete`
 >   wrapped by `askStructured`; no added line in `src/` names a key, a
 >   header or an authorization.
+
+> **What lane T4 changed here, 2026-11-11 and 14** (`c594dda`, fix `530c3b6`;
+> §6.10's Built note (b) has the loop). **Find and Direct go through
+> `runGraphicsPass`** (`director/run.ts`): the store's module-private
+> `askGraphicsPass` is now one call of it, its ask `askStructured` over
+> `window.forge.directorComplete` (the same route; the key stays in the
+> main process) and `{ baseline: baselineGraphics }` for both. **What
+> lands with no model** (or for a window whose answer is rejected, and
+> only that window): `baselineGraphics`' candidates, through
+> `validateBaseline` and rule 10 (changed 2026-11-15, try-out 1: see the
+> note that follows), then `applyGraphics` as a model's, the
+> lower third first when the asset has a Speaker; a number from a YouTube
+> track or an unsure Whisper word still waits for Keep (pinned on this
+> route, §6.11's T4 paragraph). **The note** is settle's existing second
+> wording, "the baseline's graphics are used for <window>: <why>" (it was
+> "no graphics for <window>: <why>"); `NO_MODEL_LINE` and the record's
+> `{ id: 'baseline', runtime: 'none' }` are unchanged and still true
+> (the record names no model only when every window went unused; in a
+> mixed run it names the model, and only the ops' per-graphic `source`
+> shows the baseline). A baseline that throws never fails Find or Direct:
+> `settleGraphics` catches it, that window settles to no graphics, its
+> notes "no graphics for <window>: <why>" and `baselineFailedNote(why)`,
+> "the baseline could not find graphics: <why>" (beyond the words).
+> **Tests that changed their expectation**: `graphicActions`' two no-model
+> cases asserted that nothing was placed, which is no longer the app's
+> behaviour; they now assert the baseline's graphics worked out by hand
+> (keywords "year" on s00 and "today" on s03 under rule 10; with the
+> Speaker, the lower third and "today"), the note, the record
+> `'baseline'` and one undo. `transcriptGraphics`' no-model note line is
+> the baseline's wording, the only text change on screen; no census row
+> names it. New cases: two windows with only the second rejected (the
+> model's counter and the baseline's keyword, the record naming the
+> model, op sources model and baseline, one undo); every window rejected
+> with a model set up (record `'baseline'`); a YouTube track on the
+> baseline route (the counter waits; Keep refused by `TOO_CLOSE_REASON`,
+> then placed after a Drop); a baseline that throws, in Find and in
+> Direct; the ask's retry note (`notJsonRetryNote`) in Find's
+> `lastGraphics.notes` and Direct's `lastDirection.problems` (`530c3b6`;
+> Direct's first answer is broken JSON, since the spine's own prose
+> leaves a retry note too). `530c3b6` relaxed the every-window-rejected
+> case to s00's membership: the whole list pinned a keyword binding a
+> sentence early (§6.12's T4 list). `graphicActions` 24 tests,
+> `directGraphics` 10, `directorGraphics` 53 (two `runGraphicsPass`
+> cases), `transcriptGraphics` 19. **`f10ed89`** (2026-11-14, a comment
+> only): `lowerThirdFor`'s doc says the name is drawn trimmed, as the line
+> below it does, the follow-up the T2b record could not make.
 
 **Days: 2** (phase 2): the menu, prompt and schema; the ask's fix;
 `settleGraphics` and `decisionForGraphics`; Direct's and the tile's wiring
@@ -13558,6 +13651,9 @@ validation half, and both tests.
 >   `options.baseline`, the seam for T4's `baselineGraphics`, which is no
 >   candidates until then (a rejected answer settles to no graphics, with
 >   "the baseline's graphics are used: <reason>" first). Never throws.
+>   (2026-11-14, lane T4: the seam is filled by Find and Direct,
+>   `c594dda`; a baseline that throws is caught there too, §6.6's T4
+>   note.)
 >   **Rule 10** (private `spaceGraphics`): onsets ≥ 6 s apart and at most
 >   max(1, ⌊clip s ÷ 20⌋) graphics, the earlier winning whatever order the
 >   answer lists them; the onset is the first beat word's `startMs`, the
@@ -13734,6 +13830,44 @@ validation half, and both tests.
 >   `claims.test` case, failing without the fix and again with only '।'
 >   added. `claims.test` holds 218 at `d33d5b4`, `graphicsValidator` 26,
 >   all green.
+
+> **What lane T4 changed in T2a's and T1's files, 2026-11-11/14** (the
+> code at `4450e3d`):
+> - **`validateGraphics.ts`** (`49df60f`, 2026-11-14): **a number said
+>   over several words waits for Keep when any of its words is unsure.**
+>   `proposalOf` read only the word `bind` records for a number claim
+>   (its value token), so a scale word or a sign heard unsure was never
+>   read: measured before the fix, 'We raised 1.2 million dollars for the
+>   charity.' with 'million' at confidence 0.3 landed counter `$1200000`
+>   with no proposal, and 'Only 40 % of couples came back.' with '%' at
+>   0.3 landed ring 40%. Now a module-private `numberWordsAt(stretch, at)`
+>   gives every word of the number span (tokenised as `bind` tokenises:
+>   `claimTokens` per word, `numberSpans`; `[at]` when none is found), and
+>   `proposalOf` reads them all: each case waits as a whisper-unsure
+>   proposal. The fix had to land in this lane: the brief forbade a red
+>   test, and §6.12's bar ("every number heard from … an unsure Whisper
+>   word waits for Keep") rules out leaving the hole; it is the lane's only
+>   change to a T2a file's logic. Mutation: `proposalOf` reading the value
+>   word alone fails "%: expected [ 'ring', 'counter' ] to deeply equal [
+>   'counter' ]".
+> - **`claims.ts`** (`c594dda`): `numberSpans` exported, no logic changed,
+>   so `baselineGraphics` reads its numbers with the validator's reader.
+> - **`tree.ts`** (`530c3b6`, T1's file): **a sub-count never nests an
+>   item counted off by an ordinal.** Rule 2 now skips a count whose next
+>   items include one opened by `ORDINAL_OPENERS` (first to sixth) or
+>   "step" and one of `STEP_COUNT_WORDS`, within `OPENER_REACH` 3 tokens
+>   before the item's run (both lists exported here, the baseline's
+>   `BASELINE_ORDINALS` and `BASELINE_STEP_COUNTS` are they). Why here and
+>   not in the baseline: `validateBaseline` throws away a steps graphic's
+>   parents and recomputes them with `treeParents`, so a flat list the
+>   baseline made came back as `tree`, [-1,0,0], and a model answer listing
+>   nested-en-1's plan / shoot itself / edit got the same false tree. The
+>   three nested fixtures with their own item lists keep their parents,
+>   and the 500-seed property stays green. Mutation: the skip removed (3
+>   fail).
+> - **`ask.ts`** (`530c3b6`): `notJsonRetryNote(error, openai)` exported
+>   and used by `askStructured`, the same two strings, so the tests read
+>   the retry note from one function.
 
 ### 6.8 Beats — the words land the animation
 
@@ -13925,6 +14059,25 @@ late.
 >   `7a35dfd`: `keepProposal` times a proposal through `timeOne`, lifted
 >   out of `applyGraphics` with `landKept`, the same code; §6.6's T2b
 >   Built note, part (g).)
+
+> **Through the export, 2026-11-14** (lane T4, piece 5: `4f2b025`, fix
+> `73c6f69`; §6.11's render-check T4 note). `graphic.int`'s phase-2 cases
+> land a counter (one beat) and a steps tree (three beats) through
+> `applyGraphics` and export them at 9:16 and 16:9: each beat word's
+> frame is white and the frame before is not (on the Mac at `4f2b025`,
+> beat frames 30, 210, 225 and 240: each within 0 levels of white over
+> the rect less 16 px, the frame before with no white pixel), and the
+> spans and beats equal the hand-derived ones. `73c6f69` moved the second
+> footage clip's in-point off its timeline start (start 180, in-point
+> 165), so the export reads `graphicBeats`' in-point offset end to end:
+> since then the steps' beat frames are 225, 240 and 255, and the spans
+> (`P2_TIMING`) counter 15 + 60, beats 0.5, steps 210 + 90, beats 0.5,
+> 1.0, 1.5. Mutations, each failing there: beats one frame late (4 cases,
+> "frame 30 … expected 190 to be less than 6"),
+> the in-point offset dropped (`const offsetMs = 0`, 4 cases, "expected {
+> start: 195, duration: 90 } to deeply equal { start: 210, duration: 90 }";
+> before `73c6f69` it passed `graphic.int`). Green on both runners at
+> `ae3a670` (run 43573261749) and `4450e3d`.
 
 ### 6.9 Placement and the budget — `src/shared/graphics/place.ts`, `budget.ts`
 
@@ -14138,7 +14291,9 @@ applied by `graphicSounds` (§6.14), not here.
   after the Built note);
   the budget's property runs over `specs.json` at seeded starts, and over
   every eval fixture's settled graphics only once T4 feeds it. Phase 4's
-  hand case is §6.18's.)
+  hand case is §6.18's.) (2026-11-14, lane T4, `0b2c763` and `49df60f`:
+  `fixtureCases()` is fed, every transcript fixture through the baseline;
+  the eval fixtures join when you add them; §6.11's T4 paragraph.)
 
 **Days: 1** (phase 2).
 
@@ -14356,7 +14511,9 @@ applied by `graphicSounds` (§6.14), not here.
 >   than 400 dropped; a first beat of 0 in about 30 % since `ac79a1e`),
 >   and **`fixtureCases()`**, the hook T4 feeds: today the 27 specs of
 >   `specs.json` at seeded starts on a 120 s clip with a punch, in five
->   layouts. **Mutations**, all failing: the later graphic winning;
+>   layouts. (2026-11-14: fed by lane T4, `0b2c763` and `49df60f`, every
+>   transcript fixture through the baseline as well; §6.11's T4
+>   paragraph.) **Mutations**, all failing: the later graphic winning;
 >   rule 2 removed; cards ignored; punch moments ignored; zoom keys
 >   ignored; a held zoom a punch; the lower-third candidate counted; held
 >   lower thirds counted; the cap ignored; a screen card budgeted; Direct
@@ -14436,6 +14593,30 @@ applied by `graphicSounds` (§6.14), not here.
 > reframe's `moved` forced false (it had left four files, 72 tests,
 > green before `f52e11f`'s case). Back to auto in the dock is the same
 > `placeGraphic` (§6.6's part (j)).
+
+> **Through the export, 2026-11-14** (lane T4, piece 5: `4f2b025`, fix
+> `73c6f69`; §6.11's render-check T4 note). `graphic.int` places the
+> counter and the steps with Pop captions on (not burnt) and a hand-made
+> subject track, at both shapes, and reads each box's four edges in luma
+> within 1 px of the third's content rect worked out by hand from §6.9
+> steps 1-3 and §6.2 (not from `place.ts`), its centre row in that third,
+> and no white pixel 16 px clear of it. Three cases: the face in the
+> middle and the captions at the bottom, placed in the top (the plan's);
+> no track, placed in the middle (§6.9 step 3's no-track default); and,
+> beyond the plan's words, the face in the middle and the captions at
+> the TOP, placed in the bottom, added because the plan's two cannot
+> kill its own mutation "placement ignoring the caption's third" (in
+> both, the third that mutation would choose is free of the captions
+> anyway; EFFECTS §61's T4 subsection). Measured on the Mac at
+> `4f2b025`, on the counter's beat frame: every edge 0 px from the rect,
+> all three cases at both shapes; centres 122 and 68.5 (top, 9:16 and
+> 16:9), 319.5 and 179.5 (middle), 517 and 290.5 (bottom). The mutation
+> (`excluded = new Set()` in `placeGraphic`) fails 3 cases, only through
+> the added one; ignoring the face and a top-first preference each fail
+> 3 (a critic's two; the second only through the no-track case). Two
+> footage clips cut from one source, since the budget
+> holds one graphic per 20 s of a footage clip and onsets 6 s apart
+> (rule 1). Green on both runners at `ae3a670` and `4450e3d`.
 
 ### 6.10 The baseline and the eval
 
@@ -14586,6 +14767,339 @@ the look rating; about 8.5 hours in all.
 **Days: 1.5** (phase 2): the baseline, the eval block, the report's filter,
 the fixtures' wiring, and M14's and the look rating's runs.
 
+> **Built 2026-11-11 to 14 (lane T4, §6.19), in five pieces, each read by
+> two critics before its fixer and the next piece** (the build workflow
+> `wf_04f9108a-9cf`, 20 agents, every verdict "accept-after-fixes" but
+> piece 5's two "accept"; you held it on 2026-11-11 at 23:40 after
+> `477918a`, before piece 2's critics, and it resumed from its cache on
+> 2026-11-14), then the Indic rule's fix (`wf_ff59b393-4fe`: a builder,
+> two critics, a fixer). The code below is read at `4450e3d`. The
+> commits, piece by piece (e): piece 1, `c594dda`, fix `530c3b6`; piece
+> 2, `477918a`, fix `a3327d9`; piece 3, `0b2c763`, fix `49df60f`; piece
+> 4, `fba3632`, fix `67fb97c`, and `4450e3d`; piece 5, `4f2b025`, fix
+> `73c6f69`; and `f10ed89`, a comment (§6.6's T4 note). Pushed
+> 2026-11-14 as `ae3a670` (run 43573261749) and `4450e3d` (run
+> 43575295452), both green on `windows-latest` and `macos-15`. The tests
+> and their mutations are §6.11's T4 paragraph; the bar, item by item,
+> §6.12's "Phase 2 state, lane T4".
+>
+> **(a) `baselineGraphics(transcript, menu): GraphicCandidate[]`**
+> (`src/shared/director/baselineGraphics.ts`, new, 310 lines), the plan's
+> signature, which is the seam's (`GraphicsBaseline`), fitted unchanged.
+> Pure and deterministic, read in the menu's sentence order. The rules as
+> built:
+> - **ring**: a sentence holding a percent (rule 4's `%`, "percent", "per
+>   cent"); **counter**: a currency amount (rule 4's other unit). A "unit"
+>   is rule 4's (`CanonNumber.unit`: `%` or a currency), so "40 clients"
+>   gives no counter, and the counter rule in practice means a currency
+>   amount. The numbers are `claims.ts`' `numberSpans` (exported for it):
+>   one number reader. The ring is tried first, then the counter; only a
+>   template the menu offers (`530c3b6`: with the ring not offered, 'We
+>   kept 40% of the $40 fee.' gives the counter '$40' / 'fee', where it
+>   gave nothing).
+> - **The label** (beyond the words): in English, the first content word
+>   after the number in its clause, else the last content word before it
+>   in its clause (`530c3b6` pinned that it never crosses the clause:
+>   'Last year it was only 40%, but couples returned happily.' gives
+>   'only'); a content word holds a letter, is not in `FUNCTION_WORDS_EN`
+>   (rule 8's list) and is no negator; no new word list. Outside English
+>   (no function-word list, §6.10; `530c3b6`): the clause's words after
+>   the number, else before it, cut to whole words within
+>   `GRAPHIC_KEPT_CHARS.label` (40), nearest the number kept, as
+>   `specs.json` writes counter-hi, ring-hi and ring-te (each gives its
+>   fixture's own value and label). No label: no graphic.
+> - **The value** (beyond the words): the number's words as said when
+>   they hold a digit ('40%', '$1,200', '500 rupees', 'Prices rose 40
+>   percent.' gives '40 percent'), a sign said apart joined to its digits
+>   ('40 %' to '40%', '$ 40' to '$40', `530c3b6`, since the validator
+>   reads a value as one number and dropped '40 %'); else, or when the
+>   words as said are longer than `GRAPHIC_KEPT_CHARS.value` (16), rule
+>   4's value in digits with its sign ('forty percent' gives '40%', '1.2
+>   million dollars' gives '$1200000', `530c3b6`: the said form was kept
+>   by `validateBaseline` though a model's identical answer was dropped
+>   for its length); too long again, no graphic.
+> - **steps**: two or more consecutive menu sentences whose first word is
+>   an ordinal (`BASELINE_ORDINALS`, first to sixth) or "step" and a count
+>   (`BASELINE_STEP_COUNTS`, one to six and 1 to 6), both tree.ts'
+>   `ORDINAL_OPENERS` and `STEP_COUNT_WORDS` since `530c3b6`. "Opening
+>   with" is the first word: "The first way …" is no opening (so
+>   nested-en-3 gives no steps). An ordinal followed by "of all" opens
+>   nothing (`530c3b6`: 'First of all, thank you.' then 'Second, check the
+>   schedule.' gave a step 'all'; now keywords 'thank you' and
+>   'schedule'). An item is the words after the opener up to the first
+>   clause or sentence mark, its leading function words left off ("the
+>   plan" is "plan"), cut to whole words within
+>   `GRAPHIC_KEPT_CHARS.itemLabel` (32). A run takes at most 2 ×
+>   `STRETCH_SENTENCES` + 1 (3) sentences and cites the second, so every
+>   item is in the stretch the validator reads; a longer run's later
+>   sentences give nothing at all (pinned: four ordinals give one steps of
+>   three and nothing for the fourth). The title is the template's fixed
+>   'Step by step', so no repair note. Parents are `treeParents`' and the
+>   connector `connectorFor`'s; since `530c3b6`'s `tree.ts` rule (§6.7's
+>   T4 note) an item counted off by an ordinal is never a child, so the
+>   baseline's steps are flat.
+> - **keyword**: an English sentence (the tag `en`, `en-GB`, `en_US`, as
+>   `validateGraphics` reads it, case-blind; 'und', 'auto' and any other
+>   tag give none) of at most `BASELINE_KEYWORD_MAX_WORDS` (8) words, its
+>   last word not ending in '?', gives a keyword of the fewest of its last
+>   one to `BASELINE_KEYWORD_TAIL` (3) words that hold a content word,
+>   `lit` the last. So a keyword can be lit on a function word or a
+>   number ('Love is all you have.' gives 'all you have' lit 'have'; 'The
+>   answer is 42.' gives 'answer is 42' lit '42'), as "lit the last"
+>   reads. (Changed 2026-11-15, try-out 1: see the note that follows.)
+> - **One graphic a sentence** (beyond the words): a steps run claims its
+>   sentences first; any other sentence gives a ring, else a counter,
+>   else a keyword; a sentence whose ring or counter the menu does not
+>   offer gives its keyword.
+> - **Never** a `lower-third` (the app's), a `callout` or a `quote`, nor
+>   a Hindi or Telugu keyword. Each candidate's `why` is `BASELINE_WHY`'s
+>   ('a percentage is said', 'an amount is said', 'the steps are counted
+>   off', 'a short line ends on these words'); its `bound` and
+>   `beatWords` are left empty, since `validateBaseline` recomputes both.
+>   No validator rule is copied: a negated percent is made and dropped by
+>   `validateBaseline` ("graphic dropped: '40%' is said negated in s00").
+>
+> **(b) The loop, `runGraphicsPass(project, clips, ask, { baseline })`**
+> (`director/run.ts`, `c594dda`), the exported pure loop T2b's critics
+> asked for: for each clip whose asset has a transcript, its menus
+> (`graphicsMenuFor`); each window's request built from `graphicsPrompt`,
+> `graphicsSchema` and `maxTokensForGraphics`; asked once through the
+> `ask` argument (`GraphicsAsk`: the request and the menu in; the answer,
+> the model or null, and notes out), a throw becoming `{ error }`; settled
+> by `settleGraphics` with the quote's speaker and `options.baseline`,
+> which runs only for a window whose answer is rejected; then
+> `pairSettled`. It returns `{ pair, model, notes, parts }`: `model` the
+> last model that answered (a later window's null keeps an earlier one),
+> `notes` the ask's (the retry note among them), `parts` per window
+> (`GraphicsRunPart`: menu, transcript, settled) for the eval. Never
+> throws for a failed ask or a failed baseline: `settleGraphics` now
+> catches a baseline's throw (that window settles to no graphics, notes
+> "no graphics for <window>: <why>" and `baselineFailedNote`). The store's
+> `askGraphicsPass` is a thin call of it for Find and Direct, with
+> `askStructured` over `window.forge.directorComplete` and `{ baseline:
+> baselineGraphics }` (§6.6's T4 note). The decision record names `{ id:
+> 'baseline', runtime: 'none' }` only when every window's answer went
+> unused; a mixed run names the model, and the ops' per-graphic `source`
+> says which graphic is the baseline's. When the baseline returns no
+> candidates the note still reads "the baseline's graphics are used for
+> <window>: …" (unchanged; §6.12's T4 list).
+>
+> **(c) The eval block** (`477918a`, fix `a3327d9`). **It has never run on
+> a model**: no `eval-*.json` exists, so `FORGE_EVAL_GRAPHICS` prints its
+> one line and writes nothing; the builder ran it for real with no
+> network over a temporary folder (one English eval fixture written for
+> the check, nested-en-1, two hand-written answers, one prose) and
+> deleted every output after.
+> - **`FORGE_EVAL_GRAPHICS=<folder>`** in `tests/eval/director.eval.test.ts`,
+>   after the look block, registered only when `FORGE_EVAL` and it are both
+>   set (a plain `if`, not `describe.skipIf`, so the normal suite's count
+>   for the file stays "2 skipped"; a static test counts the guard's
+>   unique anchor); selected with `-t "the graphics pass"`.
+>   **`STEP=prepare`** runs `runGraphicsPass` with `askStructured` over a
+>   `complete` that records each request and stops, so each body is
+>   `openaiRequestBody` or `ollamaRequestBody` of the app's own prompt,
+>   schema and token cap, `think: false` as `askStructured` sets it; ids
+>   `<fixture>.graphics.<first sentence>`; written to
+>   `tests/output/eval/<run>/requests.json`. **`STEP=score`** first reads
+>   `requests.json` and refuses, before writing anything, a run never
+>   prepared, a run whose requests hold no graphics request (a spine or
+>   look run's name reused) or one with no answer saved for any graphics
+>   request (`graphicsScoreRefusal`, `a3327d9`: before, it recorded every
+>   window as fallen to the baseline, a model run nobody measured); it
+>   scores only fixtures with a request, each through `runGraphicsPass`
+>   with the saved answers as its ask and `baselineGraphics`, as Find
+>   settles (`scoreGraphicsFixture`), then the same windows with an ask
+>   that always throws (`BASELINE_ONLY`) for "model against baseline"; it
+>   writes
+>   `results-graphics.json` in the run's folder and the record
+>   `eval/runs/<run>.json` (pass `graphics@1`, the figures of both sides,
+>   the results; an earlier record's `eval:rate` ratings carried over,
+>   `withRatingsOf`). A prose first answer's retry (askStructured's second
+>   ask, `<id>.retry`) is appended to `requests.json` with one line saying
+>   so: relay again, score again. `STEP=all` asks from node, two rounds at
+>   most. `FORGE_EVAL_THINK` is not read. Every written file is read back
+>   and asserted clean by `credentialsIn`, and `FORGE_EVAL_SERVER` too.
+> - **The fixtures' readers** (`tests/eval/graphicsFixtures.ts`):
+>   `readEvalFixture` and `readNestedFixture`, §6.10's two shapes; a wrong
+>   field throws one error naming the file by its basename and every field
+>   wrong; `language` must equal `transcript.language`; truth and trap ids
+>   must be sentences `graphicsMenuFor` offers, the capped ids (a sentence
+>   over 15 s or 30 words is `s07.1`, `s07.2`; a plain `s07` is refused by
+>   name); a truth's template one of `GRAPHIC_TEMPLATES_ALWAYS` (counter,
+>   bars, steps, quote, ring, keyword); a `callout` truth refused with
+>   `CALLOUT_TRUTH_LINE` (`a3327d9`: the eval's project, `projectForTranscript`,
+>   has no subject track, so neither side could hit it); extra fields (a
+>   note) allowed. `loadGraphicsFixtures(dir)` reads `eval-*` and
+>   `nested-*` and returns empty lists with no file or no folder. A
+>   malformed file throws where it is read, so in the suite (below) the
+>   whole test file errors at collection, naming the file and field.
+> - **The figures** (`graphicsFigures(results, side)` in
+>   `tests/eval/graphicsEval.ts`, pure): the model side's windows answered,
+>   parsed, cut off, the wrong shape (parsed, not cut off, and not
+>   conforming to the unconstrained schema, the validator's check; since
+>   `a3327d9` a cut-off answer is counted cut off, not wrong shape), prose
+>   (a second ask was made), retries not yet asked, settled by the
+>   baseline instead, and HTTP errors by status with the first one's text
+>   (`a3327d9`, so §15 row 10's 400 can be read); for each side, proposed
+>   (kept plus dropped, a drop counted once however many reasons it
+>   joins) and kept, each by template, `keyword` included; dropped and its
+>   share; dropped by the validator (every drop but the spacing's) and its
+>   share; drops by reason (`DROP_REASONS`, classes matched against the
+>   messages as the code writes them, first match wins, 'order' and
+>   'not-a-percentage' ahead of 'not-said', else 'other'); hallucinations
+>   and their rate, the key number (a drop with ANY '; '-joined reason in
+>   `HALLUCINATION_REASONS`: not-said, ungrounded, other-unit; `a3327d9`);
+>   Hindi and Telugu numbers said as a word (an upper bound: a model
+>   counter, ring or bars whose value is dropped as not said or not one
+>   number, its stretch holding no digit of any script); Telugu traps kept
+>   (an upper bound for row 11's negative endings: kept graphics on a
+>   Telugu fixture's trap sentence) and traps kept; `lit` repairs; truth
+>   hits at ±1 sentence in the transcript's sentence order
+>   (`menuSentencesOf`), of the truth's template, each truth once (`a3327d9` pinned
+>   it), and the eval fixtures with at least one hit (beside the rate,
+>   since the bar says "on ≥ 6 of 10 fixtures": which reading is the
+>   bar's is yours); the nested set's exact match (`nestedMatchOf`: title,
+>   items and parents of one kept steps graphic, case-folded, spaces
+>   collapsed, an end mark off; English 'pass' or 'fail', Hindi and Telugu
+>   'recorded'). The eval counts what settle keeps, before
+>   `graphicTiming` and `applyGraphics` (T2b's open item, answered by the
+>   build; changed 2026-11-15, try-out 1: see the note that follows). It
+>   builds no `DecisionRecord`: a record is the app's (`a3327d9` declined
+>   `decisionForGraphics` there).
+> - **`credentialsIn`** reads a file's JSON by field since `a3327d9`: an
+>   authorization or api-key field, a `headers` field holding an object,
+>   a bearer token only as a whole string value of 16 or more token
+>   characters with a digit, an `sk-` key, a URL with a user and password.
+>   `477918a` matched words, so "The ring bearer responsibilities were
+>   clear." failed prepare (EFFECTS §61).
+> - **The report** (`scripts/eval-report.mjs`): `summarise(run, { pass })`
+>   keeps that pass's results, by default every one but `graphics@1`'s, so
+>   a graphics run is no broken spine row; `buildReport` keeps graphics
+>   runs out of the spine table and appends "## Graphics runs" (one table
+>   per run, model against baseline, every figure above) only when one
+>   exists (the four existing runs' report is byte-identical, 38,793
+>   characters). The template-fit row counts the eval set only:
+>   "template fit, blind 1–5 (eval set)", "(≥ 3 on N of M eval fixtures;
+>   K rated)" (`a3327d9`).
+> - **The blind template fit** (`scripts/eval-rate.mjs`): a graphics run
+>   rates its eval set only (`graphicsToRate`), per fixture, the model's
+>   kept graphics and the baseline's as A and B in `modelIsA`'s fixed
+>   order (each graphic's sentence id, the sentence said, its template and
+>   drawn strings), "template fit 1–5" each; stored as `{ fit,
+>   baselineFit }`.
+> - **Your first run, as piece 2's builder checked it against the
+>   code**: (1) the ten files in `tests/fixtures/graphics/` as
+>   `eval-<name>.json`, each `{ language, transcript, truth: [{ sentence,
+>   template }], traps: [sentence ids] }`, `language` equal to
+>   `transcript.language`, the capped menu ids; the Hindi and Telugu
+>   `nested-*.json` in the same folder as `{ language, transcript, title,
+>   items, parents }`. (2) `npm run harness` (for Ollama started with
+>   `FORGE_EVAL_SERVER=http://127.0.0.1:11434`; LM Studio is the
+>   default), the page at http://localhost:5199. (3) `FORGE_EVAL=openai
+>   FORGE_EVAL_MODEL=<the LM Studio model id>
+>   FORGE_EVAL_RUN=graphics-<date> FORGE_EVAL_STEP=prepare
+>   FORGE_EVAL_GRAPHICS=tests/fixtures/graphics npm run eval -- -t "the
+>   graphics pass"`: `tests/output/eval/graphics-<date>/requests.json`.
+>   (4) In the harness page's console, `await
+>   window.__forgeEvalRelay('graphics-<date>')`: `responses/<id>.json`.
+>   (5) The same command with `FORGE_EVAL_STEP=score`:
+>   `results-graphics.json` and `eval/runs/graphics-<date>.json`; if it
+>   says answers came back as prose, relay again and score again. (6)
+>   `npm run eval:rate graphics-<date>` (name the run: with none it takes
+>   the alphabetically last, a `graphics-*` run whenever one exists). (7)
+>   `npm run eval:report`: `docs/EVAL.md` gains "## Graphics runs".
+> - **What the first run answers**: §15 row 10 (LM Studio's strict
+>   `json_schema` with `minItems: 0`, whether Gemma 4 E2B answers prose
+>   under it) in the rows "prose came back", "wrong shape" and "answers
+>   that were HTTP errors, by status"; row 11 in "Telugu traps kept",
+>   which needs your Telugu fixtures; the truth-hit and drop-rate bars;
+>   and, with `eval:rate`, the template-fit bar.
+>
+> **(d) The harness check's phase-2 options** (`fba3632`, fix `67fb97c`,
+> and `4450e3d`; `src/renderer/src/harness/graphicCheck.ts` with the pure
+> parts in `graphicMeasure.ts`; harness code, no production code changed;
+> `npm run build` 0, and no file under `out/` holds `__forgeGraphicCheck`
+> or the blind panel's id). `GRAPHIC_CHECK_OPTIONS` ends `'strokes',
+> 'templates', 'curves', 'look'`, each run under its own `if (options.X)`.
+> - **`templates: GraphicTemplateId[]`**: every `specs.json` fixture of
+>   each named template (read on the page through Vite's `?raw`, as the
+>   census reads its fixture) through its own drawer under `clean` at
+>   1080×1920 and 30 fps, by one reader shared with `primitives`
+>   (`readGraphicCase`): frame 0, the earliest beat's frame, the last
+>   moving frame and the held end; frame 0 differing from the beat's frame
+>   and from the last moving frame; the last moving frame equal to the
+>   held end (mean 0; a clip that moves on every frame fails, nothing to
+>   read); alpha 0 outside the box on every frame; the same spec drawn
+>   twice identical and baked twice byte-equal; the live Preview; the box
+>   even and the bake's; the bakes writing exactly the moving frames; the
+>   bake against the preview by both routes. **The bar is
+>   `TEMPLATES_BAR`, a MEAN of at most 1 level over the two pictures' ink**
+>   (`diffOverInk`, phase 1's convention, the same numbers as
+>   `PRIMITIVES_BAR` and its own constant beside it), not a maximum. A
+>   part with nothing read passes nothing. Verdicts per case, per shape
+>   (nine) and per template (eight) by `tallyBy` (a key passes only when
+>   every case of it passed); an id no drawer draws and a template with no
+>   fixture are named and FAIL, never skipped. A callout's subject is its
+>   unit box over the whole frame (`fixtureTargets`).
+> - **`indic: true` with `templates`**: phase 1's reader
+>   (`readIndicItem`, shared with phase 1's clusters) over every Hindi and
+>   Telugu fixture of the named templates (`indicTemplateCases`, pure and
+>   tested since `67fb97c`, which found Telugu droppable with the suite
+>   green): each Devanagari or Telugu text item of the settled frame,
+>   drawn alone at its own x, look and size, through `paintDrawList2d`
+>   against `drawTextOnto` (equal), whole against per code point (an item
+>   with a mark must differ), each conjunct measured alone narrower than
+>   its letters (`4450e3d`, the fix §6.11's Indic note records), the
+>   i-matra first; a row per item, a verdict per fixture; the
+>   whole-drawn sheet as `result.indic.templates.sheet`, to be saved as
+>   `tests/output/graphic/indic-paint/templates.png`. It runs inside
+>   `indic`'s block after phase 1's half, only when templates are named,
+>   and the templates check runs too.
+> - **`curves: { names, clipId }`** (M14) and **`look: { clipIds }`** (the
+>   look rating): the clip read from the open project's store (a missing
+>   or non-graphic clip refused with a line, nothing drawn); `curves`
+>   takes `MotionEase` names, not `CurveName` (M14's six include
+>   `spring1`, which `CurveName` leaves out: `M14_CURVES` 'expo-out',
+>   'out-cubic', 'spring1', 'linear', 'decelerate', 'carbon-expressive'),
+>   the clip's own style with only its ease replaced; `look` renders
+>   `clean`, `bold`, `editorial`, `energetic` and `clean` with dim
+>   (`LOOK_VARIANTS`, the presets as they stand), with a note under six
+>   clips (`LOOK_MIN_CLIPS`). Letters by `letterBlind` (a Fisher-Yates
+>   shuffle from `Math.random`, a non-finite draw counted as 0); each
+>   render loops on the page at 30 fps through the Preview's canvas in a
+>   200 px cell over a checkerboard, its exit fade not drawn, beside its
+>   letter, with `CURVE_QUESTIONS` or `LOOK_QUESTIONS` (this piece's
+>   wording, from §6.10 step 2). **The key** is only in
+>   `result.curves.key` or `result.look.keys`, never in the summary, the
+>   notes, the frames or the page (source-read cases since `67fb97c`).
+>   **How a key is saved unseen**: run it as `const r = await
+>   window.__forgeGraphicCheck({ … })` (a `const` echoes nothing), then
+>   "save the key with DevTools' copy(r.curves.key)" (or `r.look.keys`;
+>   `saveKeyLine` builds it from `BLIND_KEY_FIELD`, which a typed guard
+>   holds to the result types since `67fb97c`: `fba3632` printed
+>   `r.look.key`, a field that does not exist, and a test asserted it),
+>   into `keyPath`'s `tests/output/graphic/<curves or look>/key-<date>.json`.
+>   **Whether `copy()` exists there is not settled**: `fba3632` said the
+>   development app's console has none and routed to the clipboard;
+>   `67fb97c` dropped that as unmeasured and points to `copy()`, as step
+>   1 above says; but §6.11's harness Built note records your run of
+>   2026-11-06/07, "In Electron's console `copy()` is not defined", and
+>   §6.15's Indic run (2026-10-27) records that on the Mac `copy()` did
+>   not reach the clipboard and on the Surface it returned undefined. So
+>   the printed route may fail in `npm run dev`, and a `console.log` of
+>   the key would show it (§6.12's T4 list).
+> - **The console calls**: on the harness page, `await
+>   window.__forgeGraphicCheck({ templates: ['counter', 'bars', 'steps',
+>   'quote', 'callout', 'ring', 'keyword', 'lower-third'] })`, and after a
+>   reload `{ indic: true, templates: [the same eight] }`; in the
+>   development app, the same two, then `const r = await
+>   window.__forgeGraphicCheck({ curves: { names: [the six], clipId: '<a
+>   counter, then a keyword, then a callout>' } })` and `const r = await
+>   window.__forgeGraphicCheck({ look: { clipIds: [six or more graphic
+>   clips covering the eight templates] } })`. The session's readings of
+>   the first two on the harness page are §6.11's T4 notes; the rest are
+>   yours.
+
 ### 6.11 Tests, harness check, render checks, mutations — by phase
 
 **1 day**: 0.5 in phase 1 (the harness check's `pathLength` and `strokes`
@@ -14624,17 +15138,18 @@ render check and the census.
 | 1-3 | `tests/graphicFrame.test.ts` (phase 1's 28 cases built 2026-10-31, `4196d43` and `0c8911f`; phase 2's built 2026-11-07/10, `f64a879`, `9e7a89e`, `712246e` and `85b59e3`, 60 cases at `e06e1c3`, §6.2's Built note) | phase 1 §6.3, phase 2 §6.2, the screen card §6.16 |
 | 1-2 | `tests/graphicStyle.test.ts`, with `tests/renderer/graphicStyleStore.test.ts` for the store's two actions (phase 1's half of both built 2026-10-28, `b965cda` and `0d603a8`; phase 2's 2026-11-10/11, `d680132`, `1a681c7` and `62f3c83`, 21 and 7 cases), and `tests/renderer/graphicsSection.test.tsx` (new, `1a681c7` and `62f3c83`, 8 cases; not named here before it was written; the switch's case by lane T3, `e8f2a1f`, 9) | §6.5 (the second half's Built note) |
 | 1-3 | `tests/renderer/graphicStore.test.ts` (phase 1's 21 cases built 2026-11-02, `a273729` and `fa4ddc3`; phase 2's built 2026-11-11 by lane T3, `518a62f`, `e8f2a1f` and `69e677c`, 31 tests) | phase 1 §6.3, the sounds that follow a graphic §6.14, the screen card §6.16 |
-| 2 | `tests/claims.test.ts`, `tests/graphicsValidator.test.ts` (the property test) (both built 2026-11-11 by lane T2a: `claims.test` from `a29e8fa` to `3b887d0`, 217 tests at `3b887d0`; `graphicsValidator` `e027bd3` and `3b887d0`, 26; the last fixer's run) | §6.7 (its Built note) |
-| 2 | `tests/directorGraphics.test.ts`, `tests/renderer/transcriptGraphics.test.tsx`, `tests/renderer/graphicPanel.test.tsx` (built 2026-11-11 by lane T2b: `directorGraphics` `226cdb0` … `db4b46d`, 51 tests; `transcriptGraphics` `ffc5391`, `64adaed`, 19; `graphicPanel` `becf32e`, `d33d5b4`, 20; and, not named here before they were written, `tests/renderer/graphicActions.test.ts` (`7a35dfd`, `f52e11f`, 19) and `tests/renderer/directGraphics.test.ts` (`7a35dfd`, `f52e11f`, 7); counts read at `d33d5b4`); and `tests/graphicApply.test.ts`, the stub's (built 2026-11-06/07, `41a3db0` and `ddd1ede`, 2 cases), over the real body since lane T3 (2026-11-11, `0f3f7a4` and `3d070ab`, 45 tests) | §6.6 (the stub's, the real body's and T2b's Built notes) |
-| 2 | `tests/graphicHolds.test.ts` (M16) (built 2026-11-10, `1871004`, 4 cases), `tests/graphicTree.test.ts` (built 2026-11-07, `35dd847` and `528986c`, 22 cases at `e06e1c3`); and, not named here before they were written, `tests/graphicTemplates.test.ts` (`cb394b5`, `528986c`, 9 cases), `tests/graphicNumbers.test.ts` (`cb394b5`, 15) and `tests/graphicSpecs.test.ts` (`8f18cc8`, `528986c`, 11) | §6.2 (its Built note) |
+| 2 | `tests/claims.test.ts`, `tests/graphicsValidator.test.ts` (the property test) (both built 2026-11-11 by lane T2a: `claims.test` from `a29e8fa` to `3b887d0`, 217 tests at `3b887d0`; `graphicsValidator` `e027bd3` and `3b887d0`, 26; the last fixer's run; the baseline route by lane T4, `0b2c763` and `49df60f`, 34 at `ae3a670`) | §6.7 (its Built note); the baseline route §6.11's T4 paragraph |
+| 2 | `tests/baselineGraphics.test.ts` (built 2026-11-11/14 by lane T4, `c594dda` … `49df60f`, 27 tests), `tests/graphicsEval.test.ts` (`477918a`, `a3327d9`, 30 and 1 skipped by name), `tests/renderer/graphicCheckTemplates.test.ts` (`fba3632`, `67fb97c`, 55; `4450e3d`, 71): none was named by this index before it was written | §6.10's T4 Built note; §6.11's T4 paragraph |
+| 2 | `tests/directorGraphics.test.ts`, `tests/renderer/transcriptGraphics.test.tsx`, `tests/renderer/graphicPanel.test.tsx` (built 2026-11-11 by lane T2b: `directorGraphics` `226cdb0` … `db4b46d`, 51 tests (53 since lane T4's two `runGraphicsPass` cases, `530c3b6`); `transcriptGraphics` `ffc5391`, `64adaed`, 19; `graphicPanel` `becf32e`, `d33d5b4`, 20; and, not named here before they were written, `tests/renderer/graphicActions.test.ts` (`7a35dfd`, `f52e11f`, 19; 24 since lane T4, `c594dda`, `530c3b6`) and `tests/renderer/directGraphics.test.ts` (`7a35dfd`, `f52e11f`, 7; 10 since lane T4); counts read at `d33d5b4`); and `tests/graphicApply.test.ts`, the stub's (built 2026-11-06/07, `41a3db0` and `ddd1ede`, 2 cases), over the real body since lane T3 (2026-11-11, `0f3f7a4` and `3d070ab`, 45 tests) | §6.6 (the stub's, the real body's and T2b's Built notes) |
+| 2 | `tests/graphicHolds.test.ts` (M16) (built 2026-11-10, `1871004`, 4 cases; its nested case by lane T4, `0b2c763`, 5), `tests/graphicTree.test.ts` (built 2026-11-07, `35dd847` and `528986c`, 22 cases at `e06e1c3`; lane T4's ordinal case, `530c3b6`, and reader cases, `0b2c763`, 27 at `ae3a670`); and, not named here before they were written, `tests/graphicTemplates.test.ts` (`cb394b5`, `528986c`, 9 cases), `tests/graphicNumbers.test.ts` (`cb394b5`, 15) and `tests/graphicSpecs.test.ts` (`8f18cc8`, `528986c`, 11) | §6.2 (its Built note) |
 | 2 | `tests/graphicBeats.test.ts` (built 2026-11-11 by lane T3, `c27b9a4` and `4699660`, 35 tests) | §6.8 (its Built note) |
-| 2-4 | `tests/graphicPlace.test.ts`, `tests/graphicBudget.test.ts` (phase 2's built 2026-11-11 by lane T3: `graphicPlace` `37d0e69`, `518a62f`, `0f3f7a4` (its Direct lane case moved to `GRAPHIC_RULE`), 22 tests, without the `place.auto` recompute case, T2b's; `graphicBudget` `1a14bd4`, `ac79a1e`, 26, its property over `specs.json` with `fixtureCases()` for T4); and, not named here before it was written, `tests/freeSpace.test.ts`'s `samplesOver` cases (`216065e`, `518a62f`, 18 tests in the file) | §6.9 (its Built note; phase 3's hero case in `graphicBudget`, §6.16; phase 4's hand case in `graphicPlace`, §6.18) |
+| 2-4 | `tests/graphicPlace.test.ts`, `tests/graphicBudget.test.ts` (phase 2's built 2026-11-11 by lane T3: `graphicPlace` `37d0e69`, `518a62f`, `0f3f7a4` (its Direct lane case moved to `GRAPHIC_RULE`), 22 tests, without the `place.auto` recompute case, T2b's; `graphicBudget` `1a14bd4`, `ac79a1e`, 26, its property over `specs.json` with `fixtureCases()` for T4; `fixtureCases()` fed by lane T4, `0b2c763` and `49df60f`, 27 passed and 1 skipped by name); and, not named here before it was written, `tests/freeSpace.test.ts`'s `samplesOver` cases (`216065e`, `518a62f`, 18 tests in the file) | §6.9 (its Built note; phase 3's hero case in `graphicBudget`, §6.16; phase 4's hand case in `graphicPlace`, §6.18) |
 | 2 | `tests/graphicSound.test.ts` (the sound Clear test) (built 2026-11-11 by lane T3, `5c52691` … `69e677c`, 49 tests, cases (1)-(7)) | §6.14 (its Built note) |
 | 3 | `tests/graphicCompositor.test.ts` | §6.16 |
 | spike, 4 | `tests/handsEvents.test.ts`, `tests/handsSmooth.test.ts`, `tests/handsAnchor.test.ts`, `tests/sidecar/test_hands.py`, `tests/integration/hands.int.test.ts` | §6.18 (their first versions, §6.17) |
 | 4 | `tests/renderer/pointingToggle.test.tsx` (added 2026-10-21 by §6.18) | §6.18 |
-| 0-4 | `tests/integration/graphic.int.test.ts`, the render check | below |
-| 0-2 | the Indic render check, in the app's renderer | below |
+| 0-4 | `tests/integration/graphic.int.test.ts`, the render check (phase 2's cases built 2026-11-14 by lane T4, `4f2b025` and `73c6f69`: 18 passed and 1 skipped) | below |
+| 0-2 | the Indic render check, in the app's renderer (phase 2's half built 2026-11-14 by lane T4, `fba3632`, `67fb97c`, `4450e3d`) | below |
 
 **Phase 2's half of this index, 2026-11-11.** Built by lanes "T3, first"
 and T1 (§6.19), pushed as `51e2f23`, green on both runners at `e06e1c3`:
@@ -14693,9 +15208,10 @@ punches or zoom keys, the lower third counted), §6.14's table and the
 store's two arms. **Not built**: §6.9's "a dragged box recomputed" with
 its case (`place.auto` is not recomputed; T2b); the budget property over
 every fixture's settled graphics (`fixtureCases()` feeds `specs.json` at
-seeded starts until T4 wires the fixtures); `directorGraphics`,
+seeded starts until T4 wires the fixtures; wired 2026-11-14 by T4,
+`0b2c763` and `49df60f`); `directorGraphics`,
 `transcriptGraphics`, `graphicPanel` (T2b); the harness, `graphic.int`
-and render-check halves (T4). Survivors recorded, not worked round: three
+and render-check halves (T4; built 2026-11-14, §6.11's T4 paragraph). Survivors recorded, not worked round: three
 of `clearGraphics`' guards are equivalent mutants today (§6.14's Built
 note); the graphic clip's `seed` is unpinned (`seed: 0` survives, §6.6's
 Built note). (The two paragraphs above list `graphicBeats`,
@@ -14734,6 +15250,154 @@ greyed for no free third; the pre-filled Role reaching the panel through
 `findGraphics`; a `directorAsk` case with no `maxTokens`. (The three
 paragraphs above list `directorGraphics`, `transcriptGraphics` and
 `graphicPanel` as not built; that was their date's state.)
+
+**Phase 2's half, lane T4, 2026-11-14.** Built 2026-11-11 and 14 (§6.10's
+T4 Built note), pushed as `ae3a670` and `4450e3d`, green on both runners
+(runs 43573261749 and 43575295452). Counts at `ae3a670` by the session's
+json reporter, `graphicCheckTemplates` at `4450e3d`: **every phase-2 item
+of this section is built.**
+- **`tests/baselineGraphics.test.ts`** (new, 27): each rule on hand-written
+  English talks with hand-written candidates; the clean talk's candidates
+  through `validateBaseline` with no note and as a model answer through
+  `validateGraphics` (four at once, `MAX_GRAPHICS` 4, the fifth as its
+  own answer); the negated percent made and dropped; the nested-en
+  fixtures as found; the label's clause; the steps cap; the language tags;
+  and the proposal bar on the baseline route (a percent and a currency 42
+  s apart, Find with no model: from `youtube-lines`, `youtube-asr` and an
+  unsure Whisper word neither lands, both wait with their `wordSource`;
+  with sure words both land; a number over several words waits when any
+  word is unsure, `49df60f`, the waiting ring's seed pinned by hand in
+  BigInt, 2654476264). Mutations, each failing: `c594dda`'s B1-B8 (the
+  percent rule reading any number, the unit check removed, an ordinal run
+  across a gap, the 8-word limit at 9, a question allowed, Hindi allowed a
+  keyword, `lit` not the last, a lower third added) and S1-S4 (the
+  baseline not passed, run for every window, the record naming the model,
+  its throw not caught); `530c3b6`'s M1-M13 (the tree.ts skip, "of all",
+  the split sign, the length guard, the non-English label, the offered
+  check, the stretch cap, the ask's notes not forwarded, a null model
+  resetting the model, `parts: []`, `isEnglish` as "not hi or te",
+  negators as content, a thrown ask rethrown); `0b2c763`'s P1 (the
+  baseline route skipping the proposal rule); `49df60f`'s value-word-only
+  proposal, the proposal seed 0 and the label crossing its clause.
+- **`tests/graphicsEval.test.ts`** (new, 30 and 1 skipped by name while
+  no `eval-*.json` exists, "the ten eval transcripts are the owner's
+  recordings, not yet added"): the readers, the requests the app's own,
+  the figures counted by hand, the report and the rater. Mutations, each
+  failing: `477918a`'s M1-M18 (a truth hit at ±2, a trap as a truth, a
+  drop counted per reason, prose undetected, the baseline scored with the
+  model's answers, 'negated' a hallucination, the number-as-word digit
+  check, `lit` repairs, the retry from the first request, `credentialsIn`
+  blind, a truth id or the language unchecked, `summarise` unfiltered,
+  graphics runs as spine rows, the rater's sides, the block registered
+  without its variables, the heading with no graphics run); `a3327d9`'s
+  M1-M14 (the loose bearer pattern, `headers` on any value, a truth
+  counted per graphic, the spacing as the validator's, the 'order' class
+  deleted or moved, the fit bar's 3 as > 3, the nested ratings counted,
+  `eval:rate` rating the nested set, a callout truth accepted, each of the
+  three refusals, ratings not carried or carried from a spine record, HTTP
+  errors uncounted, hallucination by the first class, a cut-off answer
+  judged for shape, the block registered without `FORGE_EVAL_GRAPHICS`).
+  The eval block itself runs only behind `FORGE_EVAL` and
+  `FORGE_EVAL_GRAPHICS`; its wiring is untested in node, its helpers are.
+- **`tests/graphicBudget.test.ts`, `fixtureCases()`** (`0b2c763`,
+  `49df60f`; 27 passed and 1 skipped by name): every transcript fixture
+  (nested-en-1 to 3 today, every `eval-*.json` when added) at two cut
+  lengths (whole; 2 s off the head and, since `49df60f`, a second of
+  speech off the tail), each again with a zoom move under its first
+  candidate, and all back to back with a Speaker; candidates from a
+  no-model `runGraphicsPass` with `baselineGraphics`, timed by
+  `graphicBeats` and `graphicTiming`; `specs.json`'s 27 at seeded starts
+  as before. Printed at `0b2c763`: "32 cases over 4 files … 134 kept;
+  no eval-*.json yet".
+  Counts per kind (transcript cases ≥ 2 × transcript files, every file ≥
+  2 cases of its own, `49df60f`); a candidate floor for English transcript
+  fixtures only (the baseline gives a Hindi or Telugu talk none: a
+  scratch Hindi nested fixture built from `specs.json`'s steps-hi printed
+  0 candidates); spacing and zoom floors, one over the transcripts alone.
+  New: `applyGraphics` over every transcript case holds the property by
+  `assertLandedHolds`, independent of `budget.ts`, and each landed seed is
+  `momentSeed(start, landing index)` by hand in BigInt (15, 0 →
+  3816307015): **T3's "seed: 0 survives" is closed**. Mutations, each
+  failing: the spacing rule, the zoom-punch rule, the fixture list
+  emptied and the reader's nested list emptied (since `49df60f` on the
+  count assertion, "transcript cases: expected 0 to be greater than or
+  equal to 6"; before, only on set membership), the landed seed 0,
+  `momentSeed(t.start, 0)`, the zoom moves off every clip (the transcript
+  floor only).
+- **The validator property on the baseline route**
+  (`tests/graphicsValidator.test.ts`, `0b2c763`, `49df60f`; 34): the
+  1260 generated true talks, the same 1260 with a negator in the fact's
+  bound clause, and every fixture with a transcript (a nested one a true
+  talk, an eval one not, since §6.10 puts traps in it, `49df60f`): every
+  window settles on the baseline path; every graphic that ships grounds
+  by the independent matcher as data and as drawn, with floors per
+  template (measured at `0b2c763`: kept keyword 818, ring 182, counter
+  30, steps 1);
+  each baseline candidate validated alone (no cap) ships only if it
+  grounds; over the negated talks the baseline proposes graphics the
+  matcher refuses (≥ 150) and none ships; on a true English talk it
+  proposes nothing the matcher refuses; in every language a number's
+  value and label are said in the sentence it cites; an eval transcript
+  is no true talk. Mutations, each failing: V1 (a baseline keyword
+  allowed to lift a negated phrase: "179 failing" in the validated-alone
+  case; **through the full settle it survives**, its onset Infinity and
+  the per-20 s cap hiding it, hence that case); V2 (a label from the next
+  sentence: "68 failing", "410 failing", and the shipped case only through
+  its floor, "ring: 75 baseline graphics kept: expected 75 to be greater
+  than or equal to 150"); V3 (the validator bypassed on the baseline
+  route: 325, 521, 311 and 180 failing); eval talks counted true. The
+  steps on this route are read only over the three nested fixtures: the
+  generator writes no ordinal runs.
+- **`tests/graphicTree.test.ts`'s reader cases** (`530c3b6`, `0b2c763`;
+  27): `treeParents` over every nested fixture as piece 2's reader gives
+  them, each English one equal to its parent list, a Hindi or Telugu one
+  scored and printed (none yet: it says so); an ordinal-opened item never
+  a child. Mutations: T1 (a forward parent allowed) and T2 (`treeParents`
+  writing one: eleven cases, "nested-en-1.json: expected [ 1, 2, -1, -1,
+  -1 ] to deeply equal [ -1, +0, +0, -1, -1 ]"), the tree.ts skip removed.
+- **`tests/graphicHolds.test.ts`'s nested case** (`0b2c763`; 5): every
+  nested fixture drawn as the steps its title and items make is read
+  inside steps' seconds (4.65, 5.75 and 5.25 s of 8). It asserts M16 on a
+  Hindi or Telugu nested fixture too, where `graphicTree` only scores one
+  (M16 is a reading bar, not the English parser). Mutation: the reading
+  rate 20 → 12 graphemes a second ("nested-en-2: …").
+- **`tests/renderer/graphicCheckTemplates.test.ts`** (new: `fba3632` 41,
+  `67fb97c` 55, `4450e3d` 71) and `graphicCheckPrimitives`' owner map
+  (50): the harness options' pure parts in node, and their glue read as
+  source with each anchor counted by `matchAll`. Mutations, each
+  failing: `fba3632`'s M1-M15 (the held bar at 1, alpha outside ignored, a
+  part with nothing read passing, the key in the page's rows, the shuffle
+  removed, an unknown id or a template with no fixture skipped silently,
+  moves left out, no held end passing, a shaped Indic item not required
+  to differ, the Indic templates half before phase 1's, `curveStyle`
+  changing the exit, the beat as the first listed, groups not flattened,
+  the non-graphic refusal lost); `67fb97c`'s K1-K3 (the save line's
+  `.key`, the constant's `'key'`, which typecheck also refuses, TS2322),
+  I1-I3 (Telugu dropped, `noIndic` emptied, no language filter), T1
+  (`tallyBy` last case wins), N1 (the NaN guard), own3, own3b and own4
+  (a key in the summary, in a note, from a fresh lettering), G1, U1;
+  `4450e3d`'s builder M1-M6 and fixer A-J (below, the Indic check). Not
+  guarded: `checkLook` rendering every letter under `clean` (browser
+  glue, no pure seam).
+- **`graphic.int`'s phase-2 cases**: the render-check T4 note below.
+- **The harness check's options**, row by row (the table below; §6.10's
+  T4 Built note (d)): `templates` built and read on the harness page;
+  `indic` with `templates` built and read there, after `4450e3d`;
+  `curves` and `look` built, never run (they need a project's graphic
+  clips, in the development app; yours).
+- **Existing tests whose expectation changed**: `graphicActions`' two
+  no-model cases and `transcriptGraphics`' note line (§6.6's T4 note);
+  `graphicsEval`'s repo-folder case no longer pins the eval list empty
+  (`a3327d9`: it would have gone red the day you add your files).
+- **Not built**: a harness "no model" Find state (possible now; the stub
+  `harness/graphicsStub.ts` keeps its own synchronous settle), and a
+  Find-made graphic state for the census. The suite at `4450e3d` on the
+  Mac: 346 files passed and 5 skipped (351), 5446 tests passed and 66
+  skipped (5512); against `d33d5b4`'s 343 files and 5290 tests passed, the
+  lane added 3 test files and 156 passed tests, and 2 skips, each named.
+  (The four paragraphs above list the harness, `graphic.int`, the
+  render-check halves, `fixtureCases()`'s wiring and the eval block as
+  not built; that was their date's state.)
 
 #### Phase 0's cases
 
@@ -14832,7 +15496,10 @@ paragraphs above list `directorGraphics`, `transcriptGraphics` and
   pin of `onExport`'s dependencies relaxed to membership. §6.20's second
   Built note.)
 - `tests/eval/director.eval.test.ts`: the `FORGE_EVAL_GRAPHICS` block,
-  copied from the look block (`:173-237`) (§6.10).
+  copied from the look block (`:173-237`) (§6.10). (Done 2026-11-11/14 by
+  lane T4, `477918a` and `a3327d9`, after the look block, registered only
+  with both variables, so the file's normal count stays "2 skipped";
+  §6.10's T4 Built note (c).)
 - `tests/uiCensus.test.ts` with `tests/fixtures/ui-census.json`: the census
   rows below. (OUTPUT's Graphics rows done 2026-11-11, `1a681c7`,
   `62f3c83` and `51e2f23`, read on screen by the harness census; §6.5's
@@ -14891,13 +15558,13 @@ every run is yours.
 | `blur: { words, px }` | 0 | a ten-word blur-rise line at 1080×1920 | M5 |
 | `parity: true` | 0 (Indic and colour, raw three.js), 3 (whole, through `paintDrawList3d`, and each 2.5D variant's settled frame against its flat twin) | painter output through a `CanvasTexture` against the canvas | M6 |
 | `glow: ['unreal', 'quad', 'pmndrs']` | 3, first, through the compositor's glow seam with both routes built behind it (`'unreal'` and `'quad'`; `'pmndrs'` only from a scratch branch, §6.15); moved from phase 0 on 2026-10-21 | alpha outside a glowing shape | M7 |
-| `indic: true` | 0 (bare `drawTextOnto`), 1 (through a text item and `paintDrawList2d`, and through a text clip's and a caption's own bake in a Latin face, so the `INDIC_FONTS` loading at those sites, §6.20, is seen in the frames), 2 (with `templates`) | the Indic render check below (phase 1's half built 2026-11-02, `6592a38` and `69c2340`; the Built notes below) | M22; phases 1 and 2's Indic bars |
+| `indic: true` | 0 (bare `drawTextOnto`), 1 (through a text item and `paintDrawList2d`, and through a text clip's and a caption's own bake in a Latin face, so the `INDIC_FONTS` loading at those sites, §6.20, is seen in the frames), 2 (with `templates`) | the Indic render check below (phase 1's half built 2026-11-02, `6592a38` and `69c2340`; phase 2's half 2026-11-14, `fba3632`, `67fb97c`, `4450e3d`, read on the harness page, 55 of 55 rows and 18 of 18 fixtures after `4450e3d`; the Built notes below) | M22; phases 1 and 2's Indic bars |
 | `primitives: true` | 1 | `PRIMITIVES_SPEC` through the drawer seam (§6.3), its drawer returning hand-built lists (a cubic stroke with an end head at `to` 0, 0.5 and 1; a text entrance in Latin and in the EFFECTS §51 clusters at progress 0, 0.5 and 1; a dim with a hard and a 24 px feathered hole; a rotated, scaled group) through the preview path and through `encodeFrames`, each PNG decoded (`createImageBitmap` with `premultiplyAlpha` and `colorSpaceConversion` `'none'`): per case the mean and largest difference against the preview canvas, the last moving frame against the held end, alpha outside `graphicBox`, the same list drawn twice, and 1080×1920 draw and encode times (built 2026-11-02, `6592a38` and `69c2340`, with a canvas-route bake beside the box route's two and the live Preview's canvas read too; the Built note below) | phase 1's exit; M13's first half |
 | `pathLength: true` | 1 | `SVGPathElement` length and points against `flattenPath` (built 2026-11-03, `0954b3d` and `2bb706d`: 23 paths at five tolerances, read with and without the circles under r = 40; the Built note below) | M8 |
 | `strokes: { widths: [1, 2, 3] }` | 1 | stroke PNGs through the app's bake, for M19's overlay (built 2026-11-03, `0954b3d` and `2bb706d`: the canvas route, widths up to 20 px, the folder printed for `graphic.int`'s gated read; the Built note below) | M19 |
-| `templates: GraphicTemplateId[]` | 2 (and step 6, §9) | per shape, from `specs.json`: frames 0, a beat, the last moving frame and the end differ as they should; the last moving frame equals the held end (mean 0); alpha 0 outside the box; the same spec twice identical; preview against baked PNG ≤ 1/255; draw and encode timed | phase 2's exit |
-| `curves: { names: CurveName[]; clipId: string }` | 2 | the named graphic clip of the open project (a counter, then a keyword and a callout, §6.10) under each named curve, lettered and shown blind; the key in the result | M14 |
-| `look: { clipIds: string[] }` | 2 | each named graphic clip under four presets and `clean` with the dim, lettered and shown blind; the key in the result (§6.10) | the look rating |
+| `templates: GraphicTemplateId[]` | 2 (and step 6, §9) | per shape, from `specs.json`: frames 0, a beat, the last moving frame and the end differ as they should; the last moving frame equals the held end (mean 0); alpha 0 outside the box; the same spec twice identical; preview against baked PNG ≤ 1/255; draw and encode timed (built 2026-11-14, `fba3632` and `67fb97c`: "≤ 1/255" read as `TEMPLATES_BAR`, a mean of at most 1 level over the ink, by both routes; also the live Preview, the box and the frame counts; per shape and per template; read on the harness page, 27 of 27; §6.10's T4 Built note (d), §6.11's T4 notes) | phase 2's exit |
+| `curves: { names: CurveName[]; clipId: string }` | 2 | the named graphic clip of the open project (a counter, then a keyword and a callout, §6.10) under each named curve, lettered and shown blind; the key in the result (built 2026-11-14, `fba3632` and `67fb97c`: `MotionEase` names, not `CurveName`; the key in `result.curves.key`; not run) | M14 |
+| `look: { clipIds: string[] }` | 2 | each named graphic clip under four presets and `clean` with the dim, lettered and shown blind; the key in the result (§6.10) (built 2026-11-14, `fba3632` and `67fb97c`: the keys in `result.look.keys`; not run) | the look rating |
 | `strokes: ['freehand']` | 2, from a scratch branch with perfect-freehand added there and never merged, imported by a DEV-only dynamic `import()` (§6.15) | perfect-freehand's draw-on, both ways; the `rough` half is not run in step 3 (§16.60) | M10 |
 | `readback: […], frames` | 3 | the three readbacks timed | M12 |
 | `screenCard: '<path>'` | 3 | Tilt in and Pull back at 9:16, at rest and moving; the bake cost of the moving frames and of the one-loop edge sweep; the hand-off (§6.16) | M20 |
@@ -15100,6 +15767,49 @@ every run is yours.
 >   either way the check read every PNG on both machines (a reading of
 >   the 46 of 46 byte-equal bakes, not a line of the runs).
 
+> **Built 2026-11-14 (lane T4's harness half: `templates`, `curves`,
+> `look`, and `indic` with `templates`).** `fba3632`, then `67fb97c` after
+> two critics, then `4450e3d` (the Indic rule, the note below); what each
+> option runs and judges is §6.10's T4 Built note (d). Pushed as
+> `ae3a670` and `4450e3d`; no CI runner opens the harness page (the node
+> files run there). **Read by the session on the harness page**
+> (`npm run harness`, port 5199, in the Browser pane's Chrome 156, the
+> harness's empty font catalogue, visible and not throttled, rAF 16.7 ms;
+> not Electron 44), 2026-11-14:
+> - **`{ templates: [the eight] }`**: 27 of 27 cases PASS; "templates by
+>   shape" nine of nine PASS (counter, bars, steps, steps-connected,
+>   quote, callout, ring, keyword, lower-third); "templates by template"
+>   eight of eight PASS; `unknown` [] and `noSpec` [], no NOT READ note;
+>   23.2 s. Every case: drawn twice max 0, baked twice every PNG
+>   byte-equal, the live Preview max 0, alpha outside the box max 0, the
+>   last moving frame equal to the held end.
+> - **The bake against the preview, over the ink**: every case inside
+>   `TEMPLATES_BAR`, **a mean of at most 1 level** (the largest mean
+>   0.162). **The maxima are not all 0**, and the bar does not read them:
+>   steps-te and steps-connected-te on the box route only, in both runs,
+>   max 19 and 20 (run 1), 17 and 19 (run 2), means 0.10 and 0.16, the
+>   canvas route max 0; probed alone (steps-te frame 15), 10,320 differing
+>   pixels, all in x 239-559, y 194-263 (the Telugu title's row), the
+>   largest alpha gap 11, the largest premultiplied gap 11, 5,606 of them
+>   at alpha ≤ 32, the class of phase 1's Mac box-route residue (text-indic
+>   p = 0.5 max 26, above). Others move between runs: run 1 had bars-en
+>   max 60 on both routes (mean 0.098; 6,345 and 15,300 pixels at frames
+>   15 and 102), and a fresh bake of bars-en frame 15 probed alone read 0
+>   differing pixels on both routes; run 2 had bars-en 0, quote-hi 18 on
+>   both routes (mean 0.028) and steps-connected-en 64 on the box route
+>   (mean 0.000); counter-hi 1 and callout-hi 2 on the box route in both.
+>   So on this page the preview and the bake are not always pixel-equal
+>   at a soft edge, far under the mean bar, and which case shows it
+>   changes from run to run; not explained further. Your run in the
+>   development app on the Mac and the Surface is the exit's reading
+>   (§6.12).
+> - **`{ indic: true, templates: [the eight] }`**, after a reload: the
+>   templates half again 27 of 27; the Indic template rows the note below.
+> - **`curves` and `look`** were not run: they need a project's graphic
+>   clips, which the harness page has none of; yours, in the development
+>   app (§6.10's T4 Built note (d), with the open question of `copy()`
+>   there).
+
 #### The Indic render check
 
 Run in the app's own renderer on the Mac and the Surface; CI cannot run it,
@@ -15123,6 +15833,11 @@ directly: one function, one spec), after §6.20's fonts are in (§16.63).
   `graphic.int`'s libass sheets (`tests/output/graphic/indic-libass/`) and
   judged by your eye: a loose virama or an i-matra after its consonant is a
   fail. The font each cluster resolved to is recorded (§6.15, M22).
+  (2026-11-14: as built since `4450e3d` the reading follows these words,
+  each conjunct measured alone against its letters, the code points that
+  are neither a mark nor a joiner, as phase 1's sum left the marks out;
+  `fba3632` read a whole item's advance against its letters and failed
+  phrases for it; phase 2's Built note below.)
 - **Tolerance**: the numeric parts exact as stated; the eye check pass or
   fail.
 - **Mutation**, run once by you on the Mac: the painter made to draw per
@@ -15224,6 +15939,104 @@ directly: one function, one spec), after §6.20's fonts are in (§16.63).
 >   Windows through the canvas path (§16.66). The per-code-point painter
 >   mutation in the app on the Mac was not run (optional; it was run in
 >   the pane above).
+
+> **Built 2026-11-14 (phase 2's half, lane T4).** `fba3632`, `67fb97c`
+> (the selection made pure, `indicTemplateCases`, since dropping 'te' left
+> the suite green), then `4450e3d`, the reading's rule. `{ indic: true,
+> templates }` runs, inside `indic`'s block after phase 1's half,
+> `readIndicItem` over every Hindi and Telugu fixture of the named
+> templates (18 of `specs.json`'s 27): each Devanagari or Telugu text item
+> of the template's settled frame, drawn alone at its own x, look and size
+> on a band 60 px taller and deeper than it, through `paintDrawList2d`
+> against one `drawTextOnto` call (equal), whole against per code point
+> (an item with a mark, `shapedText`, must differ; plain letters may
+> rightly draw the same), narrower, and the i-matra first (the item
+> without its i-matra in the same box); a row per item, a verdict per
+> fixture (`tallyBy`), the face and its state per row, the sheet as
+> `result.indic.templates.sheet` (`INDIC_TEMPLATES_SHEET`,
+> `tests/output/graphic/indic-paint/templates.png`).
+> - **Read by the session on the harness page, before the fix** (the
+>   Browser pane's Chrome 156, the empty catalogue, so every face failed,
+>   "not in the catalog", and drew in the system's fallback): 55 rows, 41
+>   PASS and 14 FAIL; by fixture 8 PASS and 10 FAIL (bars-te, steps-hi,
+>   steps-te, steps-connected-hi, steps-connected-te, callout-hi,
+>   callout-te, ring-te, lower-third-hi, lower-third-te). Every failing
+>   row failed on "NOT narrower" alone: on all 55 the painter equalled
+>   `drawTextOnto` (max 0) and the whole drawing differed from the per
+>   code point one (means 43-65 over the ink); the two i-matra rows read
+>   the i-matra first (shifts 14 and 11 px). The builder had expected 18
+>   PASS and had run no browser. **The cause was the check's rule, not the
+>   drawing**: `readIndicItem` took phase 1's reading of one cluster (any
+>   virama a conjunct, the whole advance against its non-mark code
+>   points') to a whole phrase, where spacing vowel signs rightly widen
+>   the whole past its bare letters, and a word-final virama is no
+>   conjunct. Measured per conjunct in the same page (a plain canvas,
+>   48 px, the fallback): 22 of the 55 items hold a conjunct, and in all
+>   22 every conjunct was narrower than its letters (37.2 against 74.7;
+>   49.6 against 60.4; 24.7 against 43.4; 42.9 against 50.6; …); 33 hold
+>   none.
+> - **The fix** (`4450e3d`, in `graphicMeasure.ts` and
+>   `graphicCheck.ts`): `conjunctsOf(text)`, per script, Devanagari and
+>   Telugu each spelled out: a consonant with its nukta, then one or more
+>   of a virama, an optional ZWJ and a consonant with its nukta; a virama
+>   with no consonant after it (word-final, an explicit halant) makes
+>   none; a virama followed by ZWNJ makes none (an explicit halant asked
+>   for; the consonant after may start its own), followed by ZWJ joins
+>   (the half form, still joined; the ZWJ part of the conjunct, not a
+>   letter); a vowel sign after it is not part of it; a virama of the
+>   other script joins nothing; the eyelash-ra order (consonant, ZWJ,
+>   virama) is not handled. `conjunctLetters` (its code points that are
+>   neither a mark, virama and nukta included, nor a joiner);
+>   `conjunctsNarrower` (null with no conjunct, true when every conjunct
+>   is under its letters' sum, equal not narrower); `describeConjuncts`
+>   (each named with its width against its letters', NOT narrower beside
+>   a failing one); and a `conjuncts` field on the row. `readIndicItem`
+>   measures each conjunct alone with the item's own measure and look;
+>   `conjunct` on the row now means "holds a conjunct"; `wholeWidth` and
+>   `baseWidth` stay on the row, measured as before, for EFFECTS' tables,
+>   and no summary line prints them. Phase 0's reading is untouched.
+>   Phase 1's ten clusters read as before: क्ष, त्र, ज्ञ, श्र, క్ష, త్ర, స్త are
+>   each exactly one conjunct whose letters are the old `baseWidth`'s, कि
+>   and కి none; the one Telugu cluster with a vowel sign, శ్రీ, now measures
+>   its conjunct without the sign against the same letters. Phase 1's note
+>   on the page says it reads per conjunct. The joiners are written as
+>   escapes.
+> - **Read again by the session, after the fix** (Chrome 156.0.8078.75,
+>   the empty catalogue, 24.3 s): **55 of 55 template rows PASS; "Indic
+>   templates by fixture" 18 of 18 PASS**; 22 rows hold a conjunct and all
+>   22 read narrower (counter-te's label 32.8 px against its letters' 71.9,
+>   twice, and 39.9 against 71.4; bars-te's title 45.6 against 59.7;
+>   lower-third-hi's role 23.0 against 39.4); 33 hold none (narrower not
+>   read), among them the three with a word-final virama, whose lines
+>   print no conjunct part; every row equal to `drawTextOnto` (max 0); no
+>   note; the templates half 27 of 27 again. Phase 1's ten paint lines in
+>   that run: क्ष 94.1 against 167.6, त्र 71.5 against 123.7, ज्ञ 88.6
+>   against 183.5, श्र 88.2 against 145.9, the Telugu ones 66.4 against
+>   162.1, 97.8 against 175.0, 96.2 against 194.0, and శ్రీ's conjunct 68.4
+>   against 145.6 (phase 0's line for the whole cluster reads the same 68.4
+>   against 145.6); the two i-matra clusters no conjunct, the i-matra first
+>   (35 px). All narrower, as before the fix.
+> - **Tests and mutations** (`tests/renderer/graphicCheckTemplates.test.ts`,
+>   55 to 71, inputs only `INDIC_CLUSTERS` and `specs.json` by fixture id
+>   and field, cut by code point, with single code point escapes): the
+>   builder's M1 (a word-final virama counted), M2 (the verdict over the
+>   whole item again), M3 (every to some), M4 (a conjunct across ZWNJ), M5
+>   (the old conjunct flag), M6 (the summary lines printing the whole item
+>   again, both sites); the fixer's A-C (the nukta after the virama, in
+>   both scripts, and Telugu's leading nukta), D and E (Telugu across ZWNJ,
+>   Telugu's ZWJ not joined), F (a virama of the other script joining), G
+>   (`describeConjuncts` at equality), H (`checkIndicTemplates`' pass not
+>   reading `row.narrower`), I and J (the width measured on the whole
+>   text, the letters as `Array.from`): each fails, on a counted single
+>   anchor, restored with `cmp`. Declined: the new imports' alphabetical
+>   order.
+> - **Open, yours**: the run in the development app on the Mac and the
+>   Surface after a reload, where the catalogue serves the Noto faces (on
+>   the harness page every face failed and drew in the fallback); the eye
+>   check of the templates sheet beside the libass sheets after a
+>   `graphic.int` run; the per-code-point painter mutation once; and the
+>   Hindi and Telugu strings of `specs.json` this reads, still to be
+>   checked by you.
 
 #### The render check — `tests/integration/graphic.int.test.ts`
 
@@ -15469,6 +16282,49 @@ is absent (only §6.20's two Noto faces and their licences are tracked under
 >   PNGs is yours. (Read 2026-11-06/07 on both, the figures in the CI
 >   line's note above: no width within the bar on either build.)
 
+> **Built 2026-11-14 (phase 2, lane T4's piece 5).** `4f2b025`, then
+> `73c6f69` after two critics (both "accept", no must-fix). Only the test
+> file changed; no production code. `tests/integration/graphic.int.test.ts`
+> (1,865 lines) has 19 cases: 18 passed and 1 skipped (M19's gated read,
+> as before), 22.8 s alone on the Mac where it took 9.36 s before (six
+> 300-frame exports and their decodes). `placeRect` reads `place.auto` as
+> §6.2's content rect of the chosen third, each edge rounded, so phase
+> 1's fake `Bakers.graphic` and its box route serve phase 2 unchanged.
+> - **The fixture**: a red 360×640 source, 10 s, as two footage clips on
+>   V1, [0, 180) from in-point 0 and [180, 300) from in-point 165 (since
+>   `73c6f69`), because the budget holds one graphic per 20 s of a footage
+>   clip and onsets 6 s apart; words on whole frames; Pop captions on, not
+>   burnt; `clean`, sounds on; a counter on clip a ("forty", beat frame
+>   30) and a steps tree on clip b (three beats, frames 225, 240, 255),
+>   hand-built `KeptGraphic`s through `applyGraphics` (no model, no
+>   settle). Every expected value (`P2_EXPECTED`, `P2_RECT_PX`,
+>   `P2_TIMING`, `P2_BEAT_FRAMES`, `P2_TICK_S`) is worked out by hand in
+>   the file.
+> - **The four cases and the README**, each at 9:16 and 16:9 and over
+>   the three placement cases: (1) both land, spans and beats as derived,
+>   place `{ auto: true, third }`, one sound clip each on "Graphic
+>   sounds", both baked by the box route; (2) each beat word's frame white
+>   16 px inside the rect, the frame before with no white; (3) the box's
+>   edges within 1 px, its centre row in the third, no white pixel 16 px
+>   clear of it; (4) the tick's onset within 1 ms, read in the plan's
+>   audio and in the AAC; `tests/output/graphic/phase2/README.txt` holds
+>   the figures every run. §6.8's, §6.9's and §6.14's T4 notes have the
+>   figures and the mutations of each; phase 1's four and phase 0's two
+>   mutations are still killed. No `SHAPES` row added: the graph has two
+>   graphic overlays (`GRAPHIC`), `adelay=<n>S` and `amix=…,volume=2`
+>   (`SHAPES[2]`) and `loudnorm`, all scanned already.
+> - **CI**: run 43573261749 on `ae3a670`, `windows-latest` (job
+>   132381964654) and `macos-15` (job 132381964935) green, no annotation,
+>   so the phase-2 cases hold on the 2018 Windows ffmpeg, the AAC onset
+>   among them, the one reading piece 5 had not seen there; again green
+>   at `4450e3d` (run 43575295452). The job logs need a sign-in, so the
+>   runners' own figures are not read.
+> - **Declined by `73c6f69`**: the README case as an `afterAll` (phase
+>   1's pattern in the same file; it guards nothing either way), dropping
+>   the centre-in-third check (it follows from the four edges, kept as the
+>   plan's own words), and the typos of `4f2b025`'s message ("counter.s",
+>   "steps." for counter's and steps').
+
 #### Census rows
 
 The Transcript tile's "Graphics", "Find graphics in this clip", "Keep",
@@ -15504,7 +16360,9 @@ states) and home `dock` ("Graphic", "Role"), reasoned from the code by
 (`64adaed`, `becf32e`), and read on screen by the session at `d33d5b4`:
 `missing: []`, 907 rows checked, 8 skipped, 57.0 s, every count held;
 `71db0a7` the notes. §6.6's T2b Built note, part (k). Phase 3's and
-phase 4's rows wait on their phases.)
+phase 4's rows wait on their phases.) (2026-11-14, lane T4: no control
+of the app changed and no row names the one changed text, the no-model
+note's wording, so no row was added and the census was not read again.)
 
 ### 6.12 Exit — by phase
 
@@ -15957,7 +16815,8 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
   note); `graphicBudget`'s property, which exists, is green and is
   mutation-checked, but runs over `specs.json`'s 27 specs at seeded
   starts, not "every fixture's" settled graphics, so that item is **not
-  met** until T4 feeds `fixtureCases()`; and the code M17 and M18 will
+  met** until T4 feeds `fixtureCases()` (fed 2026-11-14 by T4, `0b2c763`
+  and `49df60f`; the item as read then, §6.12's T4 state); and the code M17 and M18 will
   set: `GRAPHICS_PER_MINUTE` is null and injectable, `GRAPHIC_SOUND_CAP`
   3 and `GRAPHIC_SOUND_DB` (−24, −26) are proposals, neither measurement
   is recorded, so neither item is met. Everything else above is still
@@ -16068,7 +16927,9 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
       from a sound the drag cut (`apply.ts`, `followGraphicMoves`).
   - Tests:
     - the graphic clip's `seed` (`momentSeed(start, landing index)`) is
-      unpinned: `seed: 0` survives (`tests/graphicApply.test.ts`);
+      unpinned: `seed: 0` survives (`tests/graphicApply.test.ts`)
+      (closed by T4, `0b2c763`: pinned by hand in BigInt in
+      `tests/graphicBudget.test.ts`, and the proposal's seed by `49df60f`);
     - three of `clearGraphics`' guards are equivalent mutants today, the
       `forGraphic` clause, the "Graphic sounds" name check and the
       `!t.director` check: second guards, unguarded by any test; nor
@@ -16129,8 +16990,10 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
   **For T4, not yours**: `fixtureCases()` in
   `tests/graphicBudget.test.ts` is the hook for the eval fixtures (each
   fixture's project and settled graphics, through `graphicBeats` and
-  `graphicTiming`, into `assertBudgetHolds`); the eval will want drops
-  structured too (2026-11-11: they are, by T2b; T4's list below).
+  `graphicTiming`, into `assertBudgetHolds`) (built by T4, `0b2c763`,
+  `49df60f`: every transcript fixture through the baseline); the eval will want drops
+  structured too (2026-11-11: they are, by T2b; T4's list below) (the
+  eval reads each window's `settled.drops`, built by T4, `477918a`).
 
 - **Phase 2's state, lane T2b, 2026-11-11.** Built and pushed: lane T2b
   (§6.6's T2b Built note, with dated notes in §6.1, §6.4, §6.7, §6.9 and
@@ -16152,7 +17015,8 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
   up (the status block): Find graphics in the Transcript tile and
   Direct's graphics pass. With no model, or every window's answer
   rejected, only the lower third lands (with a Speaker) until T4's
-  baseline fills `settleGraphics`' seam; a rejected window among answered
+  baseline fills `settleGraphics`' seam (filled 2026-11-14, `c594dda`:
+  the T4 state below); a rejected window among answered
   ones loses only its own graphics. **No real model has been asked by any test.**
   Not built: T4. **Of the bar above**, the lane carries one item: "every
   number heard from a YouTube track or an unsure Whisper word waits for
@@ -16201,7 +17065,9 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
       the eval counts before or after timing, or `settleGraphics` drops
       bound words outside the menu's `wordStart`..`wordEnd`, is open (a
       decision for T4; `run.ts`, `validateGraphics.ts`; `44024d9`,
-      `db4b46d` declined);
+      `db4b46d` declined) (2026-11-14, T4, `477918a`: the eval counts what
+      settle keeps, before `graphicTiming`; whether settle should drop
+      such words is still open);
     - the decision record's op holds `GraphicCandidate`s, so in a run over
       several clips a sentence id does not say which clip a graphic sits
       on (only `drops` carry `clipId`): whether ops should hold
@@ -16289,17 +17155,294 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
 
   **For T4, not yours**: `baselineGraphics` as `options.baseline`,
   threaded through the store's `askGraphicsPass` (module-private, shared
-  by `findGraphics` and Direct; neither passes a baseline today); an
+  by `findGraphics` and Direct; neither passes a baseline today) (built
+  by T4, `c594dda`); an
   exported pure loop (menus, ask, settle, pair) taking the ask, for the
-  eval and the harness; the eval reading the per-window settled parts
+  eval and the harness (built by T4, `c594dda`: `runGraphicsPass`; the
+  harness stub does not use it); the eval reading the per-window settled parts
   rather than `pairSettled`'s joined string, `SettledGraphics.drops` and
-  `graphicDropsOf`; `NO_MODEL_LINE` and the `'baseline'` record model are
-  worded to stay true once the seam is filled; the harness options, a
+  `graphicDropsOf` (built by T4, `477918a`: `parts` and `settled.drops`;
+  `graphicDropsOf`, the landing's drops, is not read, since the eval
+  counts what settle keeps); `NO_MODEL_LINE` and the `'baseline'` record model are
+  worded to stay true once the seam is filled (held, unchanged, by T4,
+  `c594dda`); the harness options (built by T4, `fba3632`, `67fb97c`), a
   Find-made graphic state for the census and the warnings, and a "no
-  model" Find state once a baseline exists; `graphic.int`'s phase-2
-  cases; the budget property over the fixtures; when `options.baseline`
+  model" Find state once a baseline exists (not built by T4; §6.12's T4
+  list); `graphic.int`'s phase-2
+  cases (built by T4, `4f2b025`, `73c6f69`); the budget property over the
+  fixtures (built by T4, `0b2c763`, `49df60f`); when `options.baseline`
   returns no candidates, the note still reads "the baseline's graphics
-  are used for <window>: …" (`run.ts`, a critic of piece 1).
+  are used for <window>: …" (`run.ts`, a critic of piece 1) (unchanged by
+  T4; §6.12's T4 list).
+
+- **Phase 2's state, lane T4, 2026-11-14.** Built and pushed: lane T4,
+  phase 2's last (§6.10's T4 Built note, with dated notes in §6.6, §6.7,
+  §6.8, §6.9, §6.11 and §6.14), ten commits by the build workflow
+  `wf_04f9108a-9cf` in five pieces, each read by two critics before its
+  fixer (`c594dda` … `73c6f69`; built 2026-11-11 and 2026-11-14: you held
+  it on 2026-11-11 at 23:40, three commits in, and it resumed from its
+  cache on 2026-11-14), `f10ed89` (a doc comment), pushed with the T2b
+  record as `ae3a670`, green on both runners (run 43573261749: job
+  132381964654 `windows-latest` and job 132381964935 `macos-15` success,
+  no annotation; the installer job skipped); then `4450e3d`, the Indic
+  check's rule (`wf_ff59b393-4fe`, a builder, two critics, a fixer),
+  pushed alone, green on both runners (run 43575295452: job 132388104591
+  `macos-15` and job 132388104764 `windows-latest` success, no
+  annotation). The job logs need a sign-in, so the runners' own test
+  totals are not known. The suite on the Mac, read by the session to a
+  file with `$?` read: at `73c6f69`, typecheck 0, 346 files passed and 5
+  skipped (351), 5430 tests passed and 66 skipped (5496), 208.54 s, 0
+  FAIL lines; at `4450e3d`, typecheck 0, 346 and 5 (351), 5446 and 66
+  (5512), 229.91 s, 0 FAIL lines; `npm run build` 0 by pieces 4 and 5.
+  Against `d33d5b4`'s 343 files and 5290 tests passed, the lane added 3
+  test files, 156 passed tests and 2 skips, each named. No control or
+  text of the app changed but the no-model note's wording, which no
+  census row names, so the census was not read again (907 checked at
+  `d33d5b4`). The harness page (Chrome 156 in the Browser pane, the
+  harness's empty font catalogue): `{ templates: [the eight] }` 27 of
+  27, nine shapes and eight templates PASS; `{ indic: true, templates:
+  [the eight] }` 55 of 55 template rows and 18 of 18 fixtures PASS
+  after `4450e3d` (41 of 55 and 8 of 18 before it, every failure the
+  rule's; §6.11's T4 notes). **Every lane of §6.19's phase 2 is built:
+  phase 2 is closed on the build side.** What the app does now that it
+  did not: with no model set up, or for a window whose answer is
+  rejected, the baseline's graphics land (the status block). **No real
+  model has been asked by any test**, and the eval has never run: no
+  `eval-*.json` exists.
+  **The bar above, item by item, 2026-11-14:**
+  - "the property test green and mutation-checked … zero ungrounded,
+    mispaired or de-negated graphics can ship": **not met**. T4 carried
+    the property onto the baseline route (`0b2c763`, `49df60f`: every
+    graphic the baseline ships grounds, the negated talks ship none,
+    V1-V3 killed, V1 only by the validated-alone case since the per-20 s
+    cap hides it in the shipped one), but the T2a paragraph's other two
+    reasons stand untouched by T4: two named T2a mutations fail the
+    property only through its floors, and §6.7's T2a list holds false
+    graphics the validator keeps. A build item (the validator's), not
+    yours.
+  - "every number heard from a YouTube track or an unsure Whisper word
+    waits for Keep (census rows present)": **met as its words read**, as
+    the T2b paragraph says, and now on the baseline route too
+    (`baselineGraphics.test`'s proposal cases); `49df60f` closed the hole
+    a critic found, a number said over several words landing without
+    Keep when only its scale word or its sign was unsure. No real
+    model's answer has gone through it.
+  - "a truth hit (±1 sentence) on ≥ 6 of 10 fixtures; the drop rate
+    recorded; template fit ≥ 3/5 on ≥ 8 of 10, blind": **not met,
+    yours**. The eval block, its figures, the report's rows and the
+    blind rater are built (`477918a`, `a3327d9`) and have never run;
+    they wait on your ten `eval-*.json`. Whether "on ≥ 6 of 10 fixtures"
+    is read as fixtures with a hit (`fixturesHit`, printed beside the
+    rate) or as the rate is yours.
+  - "the render check frame-exact at both shapes, on both builds (CI)":
+    **met** as §6.11's render check words it: `graphic.int`'s phase-2
+    cases (a counter and a steps tree landed through `applyGraphics`, at
+    9:16 and 16:9, each beat word's frame white and the frame before
+    not, the box in its third in three placement cases, the tick's onset
+    within 1 ms in the plan's audio and in the AAC) are green on
+    `windows-latest` (the 2018 ffmpeg) and `macos-15` at `ae3a670` and
+    `4450e3d`.
+  - "the harness's preview = export ≤ 1/255 for all nine shapes (yours,
+    Mac and Surface)": **built, read on the harness page, not met:
+    yours.** `templates` reads "≤ 1/255" as `TEMPLATES_BAR`, **a MEAN of
+    at most 1 level over the ink** (phase 1's convention,
+    `PRIMITIVES_BAR`), not a maximum. Every case is inside it (largest
+    mean 0.162), and the maxima above 1 that were read are: steps-te
+    and steps-connected-te on the box route, 19 and 20, then 17 and 19,
+    in both runs (the Telugu title's soft edge, alpha gap 11, phase 1's
+    class); bars-en 60 on both routes in one run and 0 in a fresh probe;
+    quote-hi 18 on both routes and steps-connected-en 64 on the box
+    route in the other run; counter-hi 1 and callout-hi 2 on the box
+    route in both. Your run in the development app on the Mac and the
+    Surface is the exit's reading.
+  - "M14 run on your clips and its winner made each template's default
+    curve": **not run, yours**; the `curves` option is built (`fba3632`,
+    `67fb97c`).
+  - "the blind look rating run …, its medians and answers in EFFECTS
+    §61, and the presets, `DURATIONS` and the restrained presets' `dim`
+    revised": **not run, yours**; the `look` option is built.
+  - "M18's levels recorded, with speech intelligible to you under every
+    graphic sound": **not run, yours**; `GRAPHIC_SOUND_DB` (−24, −26) is
+    still a proposal.
+  - "`graphicBudget`'s no-overlap property green over every fixture …,
+    mutation-checked": **met on the build side** over every fixture in
+    the folder today (`specs.json` and nested-en-1 to 3, through the
+    baseline, and the landed timeline through `applyGraphics`; spacing,
+    zoom, fixture-list and seed mutations killed); "every fixture" is
+    read again when your `eval-*.json` and Hindi and Telugu
+    `nested-*.json` land, which the cases pick up by themselves. The
+    graphics read are the baseline's: no model's answer is in it.
+  - "M16's reading holds met by every template's longest fixture label":
+    **met as the rule stands** (T1 over `specs.json`, and since `0b2c763`
+    over the nested fixtures, 4.65, 5.75 and 5.25 s of 8); the 0.6 s
+    figure is printed, not enforced, and yours (T1).
+  - The Indic render check "over every template's Hindi and Telugu
+    fixture, on the Mac and the Surface, mutation-checked the same way":
+    **built, read on the harness page, not met: yours.** 18 of 18
+    fixtures after `4450e3d`, but in the system's fallback face (the
+    harness has no catalogue); the run in the development app on the Mac
+    and the Surface with the Noto faces, the eye check of the templates
+    sheet beside the libass sheets, and the per-code-point painter
+    mutation are yours.
+  - The sound Clear test: **met** (T3; untouched by T4).
+  - The tree on the three English nested fixtures: **met in the suite**
+    (T1, and `530c3b6`'s ordinal rule kept the three lists); it counts as
+    met once you have checked the three lists (T1's paragraph).
+  - "Also before phase 2 is called done": §15 rows 10 and 11 unmeasured
+    (the eval's first run); M15 and M17 not recorded, and
+    `GRAPHICS_PER_MINUTE` null; `LLM.md` §Built records `graphics@1`
+    (2026-11-11, with T4's dated paragraph in this record).
+  **Still yours, from lane T4** (each from a commit's "Open", a builder's
+  open list, a fixer's declined list or the session's readings; every
+  other "beyond the plan's words" choice is in §6.10's T4 Built note and
+  §6.7's T4 note, each yours to keep or overrule):
+  - The baseline (`src/shared/director/baselineGraphics.ts`):
+    - it matches none of the three English nested fixtures: nested-en-1
+      and 2 give three flat items each (the children are said inside a
+      parent's sentence, where no ordinal opens them), nested-en-3 none
+      (its sentences open with "The"); `baselineGraphics.test` pins them
+      as found;
+    - a percent rise is drawn as a share: 'We had 40% more couples …'
+      gives ring 40% labelled 'more'; §6.10 says a % gives a ring
+      (`530c3b6` declined, the plan's call);
+    - a question is drawn as a fact: 'Did 40% of you come back?' lands a
+      ring; §6.10's "not a question" is the keyword's only, and §6.7 has
+      no question rule (`49df60f`'s Open);
+    - labels and keywords as the rules word them, for the look rating:
+      'We charged $1,200 and 40% came back.' gives ring label 'came' (and
+      the counter is lost, one graphic a sentence); 'We grew 40% and
+      charged $50 more.' gives label 'charged' (no clause mark at "and");
+      'This is what we came for.' gives 'came for' lit 'for'; 'Some
+      couples want it, some not.' gives 'some not'; 'We will never.'
+      gives 'will never'; '$1,200 for the whole wedding party' is
+      labelled 'whole' (`49df60f`, `a3327d9` declined);
+    - a run of more than three ordinal sentences drops the fourth on with
+      no note (a note would be new text on screen; `530c3b6` declined);
+      the steps title is always 'Step by step', so the nested set reads
+      the baseline 'fail' on every English talk (`a3327d9` declined the
+      column's rename);
+    - 'We charged $1,200 for the album and $300 for prints.' gives a
+      counter the validator drops as not said with what it is paired
+      with: a drop note on ordinary price talk, unpinned (`530c3b6`
+      declined, the validator's own tests hold it).
+  - The validator and settle (`validateGraphics.ts`, `claims.ts`,
+    `run.ts`):
+    - a keyword's words bind to their first occurrence in the stretch,
+      so a keyword on a word the sentence before also ends on lands a
+      sentence early (`graphicActions`' every-window-rejected case pins
+      only s00's membership, `530c3b6`);
+    - 'without' is read as a negator: 'We shot 300 last year without any
+      help at all.' drops a counter as said negated (`a3327d9` declined,
+      T2a's);
+    - a kept candidate with no bound words reaches `spaceGraphics` with
+      its onset Infinity, so the per-20 s cap hides it rather than
+      refusing it (only under mutation V1; whether settle refuses it is
+      yours, `0b2c763`'s Open) (changed 2026-11-15, try-out 1: see the
+      note that follows);
+    - when the baseline returns no candidates, the note still reads "the
+      baseline's graphics are used for <window>: …" (unchanged by T4);
+    - Direct's notes go through `describeProblem`, so a window note reads
+      ": the baseline's graphics are used for …" with a leading ": "
+      (T2b's behaviour; Find shows the message alone; `store.ts`).
+  - The eval (`tests/eval/`, `scripts/`):
+    - a malformed `eval-*.json` throws where it is read, at collection,
+      so `graphicsValidator`, `graphicBudget` and `graphicTree` each error
+      whole, the message naming the file and field (`49df60f`'s Open);
+    - `npm run eval:rate` with no run named takes the alphabetically last
+      run, a `graphics-*` one whenever one exists, and STEP=prepare with
+      a `FORGE_EVAL_RUN` reused from a spine run overwrites that run's
+      `requests.json` (score refuses such a run; `a3327d9`);
+    - the block's own wiring in `director.eval.test.ts` (the refusal
+      call, the fixture filter, the ratings carried) is untested in node,
+      its helpers are; prose on the Ollama shape has no case (`a3327d9`
+      declined: `ask.ts`' own tests);
+    - the eval builds no decision record (`a3327d9` declined).
+  - The harness check (`src/renderer/src/harness/`):
+    - whether `copy()` saves a key in `npm run dev`: the printed route
+      (`saveKeyLine`, `67fb97c`) names DevTools' `copy()`, which your
+      earlier runs found undefined or not reaching the clipboard (§6.10's
+      T4 Built note (d)); read on the first `curves` or `look` run, before
+      you watch;
+    - unmeasured in a browser: the blind panel's playback, and the `?raw`
+      import of `specs.json` in the development app; `primitives` was not
+      run again after `readGraphicCase` was refactored out of it (its
+      node cases pass);
+    - `checkLook` rendering every letter under `clean` is unguarded
+      (browser glue, no pure seam; `67fb97c` declined); `'__proto__'` as
+      a template id is named in the notes but cannot be a `byTemplate`
+      key (`67fb97c` declined);
+    - the bake against the preview on the harness page is not always
+      pixel-equal at a soft edge, and which case shows it moves from run
+      to run (the maxima above); not explained further;
+    - the Indic conjunct rule does not handle the eyelash-ra order
+      (consonant, ZWJ, virama) (`4450e3d`, a decision of its builder);
+      `graphicCheck.ts`' new imports are out of alphabetical order
+      (`4450e3d` declined);
+    - a harness "no model" Find state is possible now and not built;
+      `harness/graphicsStub.ts` keeps its own synchronous settle
+      (`c594dda`'s Open), and no Find-made graphic state exists for the
+      census.
+  - Tests:
+    - `graphicsValidator`'s steps on the baseline route are read only
+      over the three nested fixtures: the generator writes no ordinal
+      runs (`49df60f` declined);
+    - `graphicHolds` asserts M16 on a Hindi or Telugu nested fixture too,
+      where `graphicTree` only scores one (M16 is a reading bar; kept);
+      no mutation lengthens `drawnStrings` for the nested M16 case
+      (`49df60f` declined);
+    - `graphic.int`'s README case asserts nothing, its centre-in-third
+      check follows from the four edges, and `4f2b025`'s message reads
+      "counter.s" and "steps." for counter's and steps' (`73c6f69`
+      declined all three);
+    - `tests/sidecarClient.test.ts` failed once under full-suite load in
+      piece 1 ("idle() waits for the work in flight …") and once in piece
+      3 ("a hello that times out kills its child before it rejects"),
+      each passing alone and on the rerun.
+  **Yours, in order** (piece 5's builder's list, checked against the
+  code):
+  1. Record and write the ten eval transcripts as
+     `tests/fixtures/graphics/eval-<name>.json` (`{ language, transcript,
+     truth: [{ sentence, template }], traps: [ids] }`, the capped menu
+     ids, `language` equal to `transcript.language`, no callout truth)
+     and the Hindi and Telugu `nested-*.json` (`{ language, transcript,
+     title, items, parents }`); check `specs.json`'s Hindi and Telugu
+     strings and the three English nested lists.
+  2. `npm test` again: `graphicBudget`, `graphicsValidator`,
+     `graphicTree`, `graphicHolds` and `graphicsEval` read the new files
+     (the two named skips then run).
+  3. The eval, with LM Studio serving the model: `npm run harness`, the
+     page at http://localhost:5199; then `FORGE_EVAL=openai
+     FORGE_EVAL_MODEL=<the model id> FORGE_EVAL_RUN=graphics-<date>
+     FORGE_EVAL_STEP=prepare FORGE_EVAL_GRAPHICS=tests/fixtures/graphics
+     npm run eval -- -t "the graphics pass"`; in the page's console
+     `await window.__forgeEvalRelay('graphics-<date>')`; the same command
+     with `FORGE_EVAL_STEP=score` (relay and score again if it says
+     answers came back as prose); `npm run eval:rate graphics-<date>`
+     (the run named as its argument); `npm run eval:report`. That reads
+     the truth hit, the drop rate, the template fit and §15 rows 10 and
+     11.
+  4. On the Mac, then the Surface, in `npm run dev` after a reload:
+     `await window.__forgeGraphicCheck({ templates: ['counter', 'bars',
+     'steps', 'quote', 'callout', 'ring', 'keyword', 'lower-third'] })`,
+     and after another reload `{ indic: true, templates: [the same eight]
+     }`; save the sheet as `tests/output/graphic/indic-paint/templates.png`
+     and set it beside the libass sheets after a `graphic.int` run; the
+     per-code-point painter mutation once.
+  5. M14, three rounds (a counter, a keyword, a callout clip): `const r =
+     await window.__forgeGraphicCheck({ curves: { names: ['expo-out',
+     'out-cubic', 'spring1', 'linear', 'decelerate', 'carbon-expressive'],
+     clipId: '<id>' } })`, the key saved before you watch
+     (`r.curves.key`, into `tests/output/graphic/curves/key-<date>.json`);
+     then each template's default curve.
+  6. The look rating: `const r = await window.__forgeGraphicCheck({ look:
+     { clipIds: [six or more graphic clips covering the eight templates]
+     } })`, the keys (`r.look.keys`) saved first; then the presets,
+     `DURATIONS` and the dim, recorded in EFFECTS §61.
+  7. M18's levels, speech intelligible under every graphic sound.
+  8. M15 and M17, then `GRAPHICS_PER_MINUTE` set or left null with the
+     reason.
+  9. M21 (the gated `asr.int`, spoken Hindi numbers).
+  Then phase 2 exits, and phase 3 is next (§6.19).
 
 **The spike's gate** (§16.56; the spike is §6.17). Read from `EFFECTS.md`
 §62, which holds H1-H10, H12 and H13 with their commands, machines and
@@ -17201,6 +18344,34 @@ sweep, the store's follow-on edits, the switch and the tests.
 > that call is recorded. Still not resounded: `removeClip` and Delete
 > on a graphic, a trim, ripple delete and close gap (T3's items, §6.12).
 
+> **The tick through the export, 2026-11-14** (lane T4, piece 5:
+> `4f2b025`, fix `73c6f69`; §6.11's render-check T4 note). `graphic.int`
+> hands `applyGraphics` a one-entry pack, `{ id, name: 'clock_tick.wav',
+> file: <a 20 ms 1 kHz tone the test writes as a 48 kHz 16-bit WAV>,
+> role: 'tick', seconds: 0.02, peakSeconds: 0, peakDb: −10 }`, so the
+> tone's peak is its onset; `clean` ticks the counter's arrival and the
+> steps' first item, one sound clip each on "Graphic sounds", and the
+> list is compared as one string (`${start} for ${forGraphic}`, since
+> `73c6f69`, so a failure prints every frame). The onset, read twice,
+> in the plan's own `[aout]` before the encoder and in the exported AAC,
+> is the first sample past 0.1 of the read's own peak after 0.1 s below
+> it (`P2_ONSET_SHARE`, relative, so neither `GRAPHIC_SOUND_DB` nor
+> `loudnorm`'s gain moves it); the bar is 1 ms. Measured on the Mac at
+> `4f2b025` (the 4.4 build): 1.00002 s and 7.00002 s, 0.021 ms (one
+> sample) late, in both reads, all three cases; ahead of the tone the
+> master's `loudnorm` rings up to 0.0017 of the peak in the plan's audio
+> and the AAC's pre-echo reaches 0.0095; a tenth of the peak is ten times
+> the larger. Since `73c6f69` the steps' tick is at 7.5 s (its first
+> item's word on clip b, in-point 165); that onset's figure is not
+> recorded, its read passes the 1 ms bar. Mutations, each failing: the
+> tick at the clip's start (`add('tick', 0, …)`: 2 cases, "-499.979 ms
+> off"), beats one frame late ("33.354 ms off"), the steps' tick on its
+> last item (2), the audio delay 72 samples late (a critic's: "1.521 ms
+> off"). **On the 2018 Windows build** the AAC read was the one reading
+> piece 5 had not seen: run 43573261749 on `ae3a670` is green on
+> `windows-latest`, so it holds within 1 ms there too (the job's own
+> figures need a sign-in and are not read).
+
 ### 6.15 Phase 0 — Measure before relying: M1-M22 and H1-H13
 
 **2 days**, mostly your runs. Its pieces, built in this order (§6.19):
@@ -17379,7 +18550,7 @@ ends.
 | M11 | raw RGBA | `ffmpeg -f rawvideo -pix_fmt rgba -s 1080x1920 -r 30 -i pipe:0 -i base.mp4 -filter_complex "[1][0]overlay=alpha=premultiplied"` against the PNG path; `-f framemd5` of both; IPC throughput at 8.3 MB a frame | Mac, Surface | only if M1-M2 fall short |
 | M12 | readback | `await window.__forgeGraphicCheck({ readback: ['drawImage', 'readPixels', 'readRenderTargetPixelsAsync'], frames: 120 })`: `drawImage(gl)` with `toBlob`, `readPixels` into a `Uint8Array`, and `readRenderTargetPixelsAsync`; ms at p50 and p95 | Mac, Surface | phase 3's bake |
 | M13 | determinism | the same template baked twice through the app, then `"$FFMPEG" -start_number 0 -i <clipId>.seq/%05d.png -f framemd5 -` on each bake (equal), and the Mac's frames against the Surface's by mean difference | Mac, Surface | the golden tolerance |
-| M14 | curves, blind | `await window.__forgeGraphicCheck({ curves: ['expo-out', 'out-cubic', 'spring1', 'linear', 'decelerate', 'carbon-expressive'] })` renders one counter landing on its word under each, on the user's clips at 30 fps; shown blind to the user, who picks | the user | the default curve per template |
+| M14 | curves, blind | `await window.__forgeGraphicCheck({ curves: ['expo-out', 'out-cubic', 'spring1', 'linear', 'decelerate', 'carbon-expressive'] })` renders one counter landing on its word under each, on the user's clips at 30 fps; shown blind to the user, who picks (2026-11-14, as built by lane T4, `fba3632`, `67fb97c`: the call is `const r = await window.__forgeGraphicCheck({ curves: { names: [the six], clipId } })`, one graphic clip of the open project per run, `MotionEase` names, the key in `r.curves.key`; not run, §6.10's T4 Built note (d)) | the user | the default curve per template |
 | M15 | onset error | the user marks the audible onset frame of 30 words in 3dit's timeline on their own footage; a node script subtracts the transcript's `startMs` for each, in frames | the user's clips | whether beats need an onset refinement |
 | M16 | reading holds | `npx vitest run tests/graphicHolds.test.ts`: each template's longest label at 20 characters a second [33] and twice at 200 words a minute [34], in English, Hindi and Telugu, against its seconds (§6.2) | node | the templates' seconds |
 | M17 | density | graphics, zooms and sounds per minute, counted frame by frame by the user in five clips they call pro and five from a clipper | the user | the overall cap |
@@ -19065,7 +20236,7 @@ piece table does (§6.3's, §6.16's, §6.17's, §6.18's).
 | 2 | T2a | `claims.ts`, then `validateGraphics.ts` with `checkGraphicData`, `claims` and the property test (§6.7) (built 2026-11-11, each piece read by two critics before the next: `a29e8fa`, `1469cc5`; `bac73ac`, `0c88a89`; `cbbd25d`, `bd0fcf3`, `f4b283b`; `e027bd3`, `3b887d0`; with `settleGraphics`' validation half, `GraphicsMenu` and `SettledGraphics` in `run.ts` and `GRAPHIC_SPACING` in `template.ts`; pushed as `3b887d0`, green on both runners; §6.7's Built note; nothing in the app calls it until T2b) | 3 | T1's values |
 | 2 | T2b | `schemaGraphics.ts`, `promptGraphics.ts`, the ask's fix with `directorAsk`, `run.ts`'s `graphicsMenuFor`, `settleGraphics` (its validation half built by T2a, 2026-11-11; the baseline seam is T4's) and `decisionForGraphics`, Direct's and the tile's wiring (Clip it's is step 4's), `TranscriptGraphics.tsx`, `GraphicPanel.tsx`, the store's actions but `setGraphicSounds`, with `directorGraphics`, `transcriptGraphics`, `graphicPanel` (§6.6) (built 2026-11-11, each piece read by two critics before the next: `226cdb0`, `44024d9`; `c4a4395`, `0f28dfa`, `db4b46d`; `7a35dfd`, `f52e11f`; `ffc5391`, `64adaed`; `becf32e`, `d33d5b4`; and `71db0a7`, the census rows read on screen; beyond the row, `pairSettled`, the structured drops, `graphicActions` and `directGraphics`, and the `place.auto` recompute T3 handed over; pushed with the T3 record as `c6e4278`, green on both runners; §6.6's T2b Built note; the baseline seam still empty, T4's) | 2 | T2a's validator; T3's stub |
 | 2 | T3 | `beats.ts` with `graphicBeats` (§6.8); `place.ts` (with `freeSpace.ts`'s `samplesOver`) and `budget.ts` with `graphicPlace`, `graphicBudget` (§6.9); `sound.ts` (`GRAPHIC_SOUND_FILES`), `graphics/apply.ts` (`applyGraphics`, `lowerThirdFor`, `clearGraphics`), `director/apply.ts`'s constants, sweep and return, the store's follow-on edits (`removeClip`, `moveClip`, `moveSelectionTo`, `pasteClipboard`), `setGraphicSounds` and the switch, with `graphicSound` and `graphicStore`'s phase-2 cases (§6.14) (built 2026-11-11, each piece read by two critics before the next: `c27b9a4`, `4699660`; `216065e`, `37d0e69`, `518a62f`; `1a14bd4`, `ac79a1e`; `5c52691`, `21d316d`; `0f3f7a4`, `3d070ab`; `e8f2a1f`, `69e677c`; and `8db943a`, the census row read on screen; beyond the row, `resoundAfterClear`, the follower functions and the Delete, Cut and nudge arms; pushed as `77ac70a`, green on both runners; §6.8's, §6.9's, §6.6's and §6.14's Built notes; `place.auto`'s recompute not built, handed to T2b; nothing in the app calls `applyGraphics` until T2b) | 0.5 + 1 + 1.5 | T1's values |
-| 2 | T4 | the baseline and the eval block, the fixtures read, M14's and the look rating's runs (§6.10); the harness's `templates`, `curves`, `look` and per-template Indic options, `graphic.int`'s phase-2 cases, the property test's wiring (§6.11's half) | 1.5 + 0.5 | T1-T3 |
+| 2 | T4 | the baseline and the eval block, the fixtures read, M14's and the look rating's runs (§6.10); the harness's `templates`, `curves`, `look` and per-template Indic options, `graphic.int`'s phase-2 cases, the property test's wiring (§6.11's half) (built 2026-11-11 and 14, each piece read by two critics before the next: `c594dda`, `530c3b6`; `477918a`, `a3327d9`; `0b2c763`, `49df60f`; `fba3632`, `67fb97c`; `4f2b025`, `73c6f69`; and `f10ed89`, a doc comment; beyond the row, `runGraphicsPass` with Find and Direct on it, and two fixes to earlier lanes' files, `tree.ts`'s ordinal rule and `validateGraphics.ts`' unsure words over a whole number; pushed with the T2b record as `ae3a670`, green on both runners; then `4450e3d`, the Indic check's rule, read by two critics, pushed alone, green on both runners; §6.10's T4 Built note; M14's and the look rating's runs not run, yours, their options built) | 1.5 + 0.5 | T1-T3 |
 | spike | H | §6.17's pieces: the worker's `hands` mode, `hands/types.ts`, `events.ts`, `oneEuro.ts`, `anchor.ts`'s `tipOnFrame`, the cases §6.17 lists; your runs | 1.5 | your footage; runs during phase 2 (nothing of phases 1-2 is needed: `sourceToFrame` through the reframe exists) |
 | 3 | depth | §6.16, split as its day table writes; M7 first, on the glow seam | 5 | phase 2's exit; M6's phase-0 parts |
 | 4 | depth | §6.18, only if the gate passed | 6 | the gate (§6.12) |
@@ -19113,7 +20284,13 @@ both unmeasured.) (2026-11-11: T2b is built and pushed with the T3 record
 as `c6e4278`, green on both runners (run 43144819099), so T4's gate in
 the table, T1-T3, is met: every lane before it is built and pushed. Next
 by §6.19: T4, the last lane of phase 2. M17, M18 and M21 are still
-unmeasured, and §15 rows 10 and 11 wait on T4's eval.)
+unmeasured, and §15 rows 10 and 11 wait on T4's eval.) (2026-11-14: T4 is built and pushed as `ae3a670`, its Indic rule's fix
+as `4450e3d`, both green on both runners: **every lane of phase 2 is
+built**, and phase 2 is closed on the build side. Phase 3 waits on phase
+2's exit, whose open items are yours (§6.12's "Phase 2's state, lane T4,
+2026-11-14"). M17, M18 and M21 are still unmeasured, and §15 rows 10
+and 11 wait on the eval's first run, which waits on your ten
+`eval-*.json`.)
 
 **Where §6.20 falls.** Outside step 3's days, inside phase 1's run:
 
@@ -21272,7 +22449,7 @@ with a window, so `-ss` and `-t` are scanned too. So have 1f's shapes since
 | no shots found (a single take) | one shot; the path still pans | path test |
 | a rotated file whose size disagrees | the track is refused; centred crop; "the file's orientation changed — reframe again" | `faces.int` rotated case |
 | a retimed clip | the followed crop is recompiled from the track at read time, so its cuts move with the speed; graphics refuse with a note | `reframeKeys` after `withClipSpeed`, a ramp, `convertFrameRate`, a trim, a split; graphics test |
-| no model | graphics from the baseline (2026-11-11, lane T2b: until T4's `baselineGraphics` fills `settleGraphics`' seam, only the lower third lands (with no model, or every window rejected; a rejected window among answered ones loses only its own), with a Speaker, the note "no graphics for <window>: <why>" and the tile's "No model’s answer was used in this run"); Best clips from signals; no B-roll suggestions | each pass's settle test with the fake provider refusing (graphics: `directorGraphics`' seam and record cases, `graphicActions`' two no-model cases, built by T2b) |
+| no model | graphics from the baseline (2026-11-11, lane T2b: until T4's `baselineGraphics` fills `settleGraphics`' seam, only the lower third lands (with no model, or every window rejected; a rejected window among answered ones loses only its own), with a Speaker, the note "no graphics for <window>: <why>" and the tile's "No model’s answer was used in this run"; 2026-11-14, lane T4, `c594dda`: the baseline's graphics land, with the lower third with a Speaker and the note "the baseline's graphics are used for <window>: <why>", §6.10's T4 Built note); Best clips from signals; no B-roll suggestions | each pass's settle test with the fake provider refusing (graphics: `directorGraphics`' seam and record cases, `graphicActions`' two no-model cases, built by T2b) |
 | a prose or truncated answer | that pass only falls back; the clip stands | settle tests |
 | a graphic that cannot be baked | dropped from the export with a note; the export succeeds (a dropped screen card also strikes its two opacity keys from the recording, §6.16) | `graphic.int` |
 | no subject track (no AI helper, Follow the subject not run, or a track of another version) | `callout` not offered (and dropped with rule 9's note, "no subject found to point at", if an answer names one); placement takes the style's third (§6.9) (2026-11-11, corrected by lane T3's build, `37d0e69`, `518a62f`: §6.9 step 3's no-track default, the middle, or the top when the captions use the middle, and for a lower third the bottom, or the top when the captions use the bottom); a graphic's dim is drawn with no hole (§6.2, §6.9) | `graphicPlace.test.ts`; `graphic.int`'s no-track case |

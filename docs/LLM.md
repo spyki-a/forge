@@ -343,6 +343,24 @@ this schema's `minItems: 0` is the eval's first run (CLIPS §15 row 10);
 recalibrates (CLIPS §6.6). The detail, every choice and every
 open item: CLIPS §6.6's T2b Built note, §6.7, §6.12.
 
+**14 November 2026, lane T4: the baseline and the eval are built**
+(`c594dda` … `73c6f69`, CLIPS §6.10's T4 Built note). `baselineGraphics`
+(`src/shared/director/baselineGraphics.ts`) fills the seam: a ring for a
+percentage, a counter for a currency amount, steps for two or more
+sentences opening with an ordinal, a keyword on an English sentence of at
+most eight words, one graphic a sentence, validated as a model's are. Find
+and Direct run every window through `runGraphicsPass` (`run.ts`, the loop
+with the ask taken as an argument), so with no model, or for a window
+whose answer is rejected, the baseline's graphics land, the lower third
+with them when the asset has a Speaker; the record still names `{ id:
+'baseline', runtime: 'none' }` only when no window's answer was used. The
+eval block (`FORGE_EVAL_GRAPHICS`, `tests/eval/graphicsEval.ts`, the
+report's "## Graphics runs", `eval:rate`'s blind template fit) runs the
+same loop over saved answers, the model against the baseline. **It has
+never run**: no `eval-*.json` exists, so row 10, the token cap and every
+figure of the bar wait on its first run. **Still no real model has been
+asked by a test.**
+
 ---
 
 ## Built — `spine@2`, 24–25 September 2026

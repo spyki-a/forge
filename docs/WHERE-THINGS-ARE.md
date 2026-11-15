@@ -390,7 +390,11 @@ drew the old name. For a file from a link the channel shows greyed as the
 placeholder, and **Use the channel name** (tooltip: "A lower third shows
 the Speaker; a channel may be a brand rather than the person speaking")
 fills it. Without a model, only that lower third lands until the
-baseline is built (§6.10).
+baseline is built (§6.10). (2026-11-14: it is built, lane T4. With no
+model set up, or for a window whose answer is rejected, Find graphics
+lands the baseline's graphics, rings, counters, steps and short English
+keywords, beside that lower third, and the note reads "the baseline's
+graphics are used for sentences …: <why>".)
 
 ### Director
 
