@@ -311,11 +311,23 @@ function keywordGraphic(read: Read, before: readonly Read[], language: string): 
   if (count < BASELINE_KEYWORD_MIN_WORDS || count > BASELINE_KEYWORD_MAX_WORDS) return null
   const spoken = sentence.flatMap((r) => r.tokens).filter((t) => t !== CLAUSE_BREAK)
   if (COURTESY_PHRASES_EN.some((p) => holds(spoken, p))) return null
+  return tailKeyword(read, true)
+}
+
+/**
+ * The keyword of a sentence's last one to three words, the fewest that hold a
+ * content word, `lit` the last; null when none of them holds one. With
+ * `fillers`, a tail whose content words are all `KEYWORD_FILLERS_EN` is none,
+ * and is not lengthened past (Find's taste); without, the owner chose the
+ * sentence and the tail is taken as it is.
+ */
+function tailKeyword(read: Read, fillers: boolean): GraphicCandidate | null {
+  const words = read.words.map((w) => w.text)
   for (let n = 1; n <= Math.min(BASELINE_KEYWORD_TAIL, words.length); n += 1) {
     const tail = words.slice(words.length - n)
     const content = tail.flatMap((w) => claimTokens(w)).filter(isContent)
     if (content.length === 0) continue
-    if (content.every((t) => KEYWORD_FILLERS_EN.includes(t))) return null
+    if (fillers && content.every((t) => KEYWORD_FILLERS_EN.includes(t))) return null
     const drawn = tail.map(bare).filter((w) => w !== '')
     if (drawn.length === 0) return null
     return candidate(read.id, { template: 'keyword', words: drawn.join(' '), lit: drawn.length - 1 }, BASELINE_WHY.keyword)
@@ -326,6 +338,38 @@ function keywordGraphic(read: Read, before: readonly Read[], language: string): 
 /** `bound` and `beatWords` are left empty: `validateBaseline` recomputes both from the transcript and never reads a candidate's. */
 function candidate(sentence: string, data: GraphicData, why: string): GraphicCandidate {
   return { sentence, data, bound: [], beatWords: [], why, source: 'baseline' }
+}
+
+/**
+ * The steps a run of ordinal sentences starting at `k` gives (§6.10), and how
+ * many sentences the run holds; null when fewer than two sentences from `k`
+ * open with an ordinal. Its first `2 × STRETCH_SENTENCES + 1` items (the
+ * stretch of the sentence it cites, the run's second), at most the template's
+ * `maxItems`; parents from `treeParents` over the run's words.
+ */
+function stepsAt(reads: readonly Read[], items: readonly (string | null)[], k: number): { candidate: GraphicCandidate; run: number } | null {
+  let run = 0
+  while (k + run < reads.length && items[k + run] !== null) run += 1
+  if (run < 2) return null
+  const steps = GRAPHIC_TEMPLATES.steps!
+  const taken = Math.min(run, 2 * STRETCH_SENTENCES + 1, steps.maxItems ?? run)
+  const labels = items.slice(k, k + taken) as string[]
+  const words = reads.slice(k, k + taken).flatMap((r) => r.words)
+  const title = steps.fixedTitles![0]
+  const parents = treeParents(
+    labels.map((label) => ({ label })),
+    title,
+    words
+  )
+  const cited = reads[k + Math.min(1, taken - 1)].id
+  return {
+    candidate: candidate(
+      cited,
+      { template: 'steps', title, items: labels.map((label, j) => ({ label, parent: parents[j] })), connector: connectorFor(parents) },
+      BASELINE_WHY.steps
+    ),
+    run
+  }
 }
 
 /**
@@ -346,31 +390,12 @@ export function baselineGraphics(transcript: Transcript, menu: GraphicsMenu): Gr
   const offered = (t: GraphicData['template']): boolean => menu.templates.includes(t)
   const out: GraphicCandidate[] = []
   const items = reads.map(stepItem)
-  const most = 2 * STRETCH_SENTENCES + 1
-  const steps = GRAPHIC_TEMPLATES.steps!
   let k = 0
   while (k < reads.length) {
-    let run = 0
-    while (k + run < reads.length && items[k + run] !== null) run += 1
-    if (run >= 2 && offered('steps')) {
-      const taken = Math.min(run, most, steps.maxItems ?? run)
-      const labels = items.slice(k, k + taken) as string[]
-      const words = reads.slice(k, k + taken).flatMap((r) => r.words)
-      const title = steps.fixedTitles![0]
-      const parents = treeParents(
-        labels.map((label) => ({ label })),
-        title,
-        words
-      )
-      const cited = reads[k + Math.min(1, taken - 1)].id
-      out.push(
-        candidate(
-          cited,
-          { template: 'steps', title, items: labels.map((label, j) => ({ label, parent: parents[j] })), connector: connectorFor(parents) },
-          BASELINE_WHY.steps
-        )
-      )
-      k += run
+    const steps = offered('steps') ? stepsAt(reads, items, k) : null
+    if (steps) {
+      out.push(steps.candidate)
+      k += steps.run
       continue
     }
     const read = reads[k]
@@ -383,4 +408,64 @@ export function baselineGraphics(transcript: Transcript, menu: GraphicsMenu): Gr
     k += 1
   }
   return out
+}
+
+/** A by-hand keyword's `why` (the decision record's and its `generatedBy` reason): the owner picked its words. */
+export const PICKED_WORDS_WHY = 'the words picked in the transcript'
+
+/**
+ * ONE sentence of a menu window read as the baseline reads it, for the
+ * Transcript tile's **Add graphic from these words** (try-out 1, 2026-11-15,
+ * piece 5: the owner's "or if the user wants to add from the transcript").
+ * The owner chose the sentence, so this is the owner's by-hand add: no model
+ * is asked for it (the baseline's reading is instant and offline, and a
+ * single sentence is no window for a pass), and Find's taste limits do not
+ * apply.
+ *
+ * - `picked` (word indices, inclusive), when the owner picked words INSIDE
+ *   the sentence: a `keyword` of exactly those words as the transcript writes
+ *   them, their edge punctuation off, `lit` the last, in any language (the
+ *   words are the transcript's, so the app writes none). Null when they hold
+ *   nothing to draw.
+ * - Else, as `baselineGraphics` reads a sentence: a run of two or more
+ *   ordinal sentences STARTING at this one gives `steps` (citing the run's
+ *   second, as the baseline does); else its first percent a `ring`; else its
+ *   first currency amount a `counter`; else, in English, a `keyword` of its
+ *   last one to three words holding a content word, WITHOUT the keyword
+ *   rule's taste limits (the sentence mark, its length, a question,
+ *   `COURTESY_PHRASES_EN`, `KEYWORD_FILLERS_EN`). Outside English there is no
+ *   function-word list to find a tail by, so no keyword unless words are
+ *   picked.
+ *
+ * Only templates the menu offers. Null when the sentence is not the menu's or
+ * gives nothing. The candidate still goes through `validateBaseline`, as
+ * every graphic does. Pure.
+ */
+export function sentenceGraphic(
+  transcript: Transcript,
+  menu: GraphicsMenu,
+  sentenceId: string,
+  picked: readonly [number, number] | null = null
+): GraphicCandidate | null {
+  const k = menu.sentences.findIndex((s) => s.id === sentenceId)
+  if (k < 0) return null
+  const byIndex = new Map(transcript.words.map((w) => [w.index, w]))
+  const reads = menu.sentences.map((s) => readSentence(s, byIndex))
+  const offered = (t: GraphicData['template']): boolean => menu.templates.includes(t)
+  const read = reads[k]
+  if (picked !== null) {
+    if (!offered('keyword')) return null
+    const [from, to] = picked[0] <= picked[1] ? picked : [picked[1], picked[0]]
+    const drawn = read.words
+      .filter((w) => w.index >= from && w.index <= to)
+      .map((w) => bare(w.text))
+      .filter((w) => w !== '')
+    if (drawn.length === 0) return null
+    return candidate(read.id, { template: 'keyword', words: drawn.join(' '), lit: drawn.length - 1 }, PICKED_WORDS_WHY)
+  }
+  const steps = offered('steps') ? stepsAt(reads, reads.map(stepItem), k) : null
+  if (steps) return steps.candidate
+  const number = numberGraphic(read, offered, isEnglish(menu.language))
+  if (number) return number
+  return offered('keyword') && isEnglish(menu.language) ? tailKeyword(read, false) : null
 }

@@ -597,6 +597,47 @@ export function settleGraphics(
 }
 
 /**
+ * One graphic the owner asked for by hand (the Transcript tile's **Add graphic
+ * from these words**; try-out 1, 2026-11-15, piece 5), validated as the
+ * baseline's are (`validateBaseline`, §6.7: the owner's click overrides
+ * Find's taste, never the truth). Kept: the `KeptGraphic` to place, paired
+ * with the menu's clip and asset. Refused: the drop as a Find's dropped row
+ * would hold it (`dropsOf`, the same code), its reasons joined, carrying
+ * `add` (`droppedCandidate`, piece 4's Add) when it can be drawn. `notes` are
+ * the validator's repairs (a kept graphic's) or its drop messages. Pure.
+ */
+export function settleByHand(
+  candidate: GraphicCandidate,
+  menu: GraphicsMenu,
+  transcript: Transcript,
+  speaker = ''
+): { kept: KeptGraphic | null; drop: GraphicDrop | null; notes: Problem[] } {
+  const who = speaker.trim()
+  const verdict = validateBaseline([candidate], menu, transcript, { speaker: who })
+  if (verdict.kept.length > 0) {
+    return { kept: { clipId: menu.clipId, assetId: menu.assetId, candidate: verdict.kept[0] }, drop: null, notes: verdict.dropped }
+  }
+  const drawn = drawnStrings(candidate.data)
+  const [drop] = dropsOf(
+    verdict.dropped,
+    '$.baseline',
+    (i) =>
+      i === 0
+        ? { template: candidate.data.template, strings: drawn, add: () => droppedCandidate(candidate.data, candidate.sentence, candidate.why, candidate.source, menu, transcript, who) }
+        : undefined,
+    menu
+  )
+  // A refusal with no "graphic dropped" message cannot happen today; were it to, the row still says why.
+  const fallback: GraphicDrop = {
+    clipId: menu.clipId,
+    template: candidate.data.template,
+    text: firstDrawn(drawn),
+    reason: verdict.dropped.map((p) => p.message).join('; ')
+  }
+  return { kept: null, drop: drop ?? fallback, notes: verdict.dropped }
+}
+
+/**
  * A run's settled windows, joined (beyond §6.6's words; the store's Find and
  * Direct and lane T4's eval join them here, so they cannot pair differently):
  *

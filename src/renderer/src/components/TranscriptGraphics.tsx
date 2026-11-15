@@ -3,7 +3,7 @@ import { timelineFrameAt, type Clip, type GraphicProposal, type MediaAsset } fro
 import { CHECK_THE_NUMBER, CLEAR_GRAPHICS_NOTE, CLIPS_GRAPHIC_RULE, drawnStrings } from '@shared/graphics/apply'
 import { footageOf } from '@shared/graphics/sound'
 import type { GraphicData } from '@shared/graphics/template'
-import { GRAPHICS_BUSY_NOTE, useEditor } from '../store'
+import { GRAPHICS_BUSY_NOTE, useEditor, wordsPickOf } from '../store'
 import { rowStamp } from './tools/TranscriptRows'
 
 /**
@@ -13,6 +13,13 @@ import { rowStamp } from './tools/TranscriptRows'
  * - **Find graphics in this clip** (`findGraphics`), greyed with its reason
  *   when the clip has no transcript, and reading "Finding graphics…" while the
  *   ask is out, as Transcribe reads "Transcribing…";
+ * - **Add graphic from these words** (`addGraphicFromWords`; try-out 1,
+ *   2026-11-15, piece 5), acting on the rows' pick as Cut to these words
+ *   does: a row clicked is its sentence, read as Find's baseline reads it
+ *   (no model, Find's keyword taste not applied); words picked inside a row
+ *   are a keyword of exactly those words. Greyed until something is picked,
+ *   and while a Find runs. Refused by the validator, it joins the dropped
+ *   graphics below with its reason, Add, and a note saying so;
  * - every graphic over the clip, WHICHEVER rule made it (Find's, Direct's,
  *   your own): its template, the words it draws (`drawnStrings`) and where it
  *   starts on the timeline, with **Drop** on each; and each pending proposal of
@@ -49,6 +56,12 @@ export const KEEP = 'Keep'
 export const DROP = 'Drop'
 /** Add on a dropped graphic (try-out 1, 2026-11-15, the owner's word: "there is no ADD option at all"). */
 export const ADD = 'Add'
+/** The by-hand add from the transcript's pick (try-out 1, 2026-11-15, piece 5; "Cut to these words"' pattern). */
+export const FROM_WORDS = 'Add graphic from these words'
+/** Its title while nothing is picked (not the plan's words). */
+export const FROM_WORDS_NEEDS_PICK = 'Click a row above for its sentence, or pick words inside it for a keyword'
+/** Its title once something is picked (not the plan's words). */
+export const FROM_WORDS_TITLE = 'A graphic for the picked sentence, read as Find reads it, or a keyword of exactly the picked words'
 export const CLEAR_GRAPHICS = 'Clear graphics'
 /** Clear graphics' title (not the plan's words): it is the whole project's, not this clip's. */
 export const CLEAR_GRAPHICS_TITLE = 'Removes every graphic Find graphics placed, in every clip, with its sounds and the numbers waiting to be checked'
@@ -82,6 +95,8 @@ export function TranscriptGraphics({ clip, hasTranscript }: { clip: Clip; hasTra
   const findGraphics = useEditor((s) => s.findGraphics)
   const keepGraphic = useEditor((s) => s.keepGraphic)
   const addDroppedGraphic = useEditor((s) => s.addDroppedGraphic)
+  const addGraphicFromWords = useEditor((s) => s.addGraphicFromWords)
+  const clipRun = useEditor((s) => s.clipRun)
   const dropGraphic = useEditor((s) => s.dropGraphic)
   const clearGraphics = useEditor((s) => s.clearGraphics)
   const setSpeaker = useEditor((s) => s.setSpeaker)
@@ -102,6 +117,7 @@ export function TranscriptGraphics({ clip, hasTranscript }: { clip: Clip; hasTra
     .filter(({ d }) => d.addedAs === undefined || !project.clips.some((c) => c.id === d.addedAs))
   const running = findingGraphics === clip.id
   const busy = findingGraphics !== null
+  const picked = wordsPickOf(project, clipRun, clip.id) !== null
   const asset = project.assets.find((a) => a.id === clip.assetId)
   const speaker = asset?.speaker ?? ''
   const channel = channelOf(asset)
@@ -130,6 +146,17 @@ export function TranscriptGraphics({ clip, hasTranscript }: { clip: Clip; hasTra
         className="w-full rounded bg-ink-800 px-2 py-1 text-[10px] text-ink-300 transition-colors hover:bg-ink-700 hover:text-ink-100 disabled:opacity-40"
       >
         {running ? FINDING_GRAPHICS : FIND_GRAPHICS}
+      </button>
+
+      <button
+        type="button"
+        data-graphic-from-words=""
+        onClick={() => addGraphicFromWords(clip.id)}
+        disabled={!hasTranscript || !picked || busy}
+        title={!hasTranscript ? FIND_NEEDS_TRANSCRIPT : !picked ? FROM_WORDS_NEEDS_PICK : busy ? GRAPHICS_BUSY_NOTE : FROM_WORDS_TITLE}
+        className="w-full rounded bg-ink-800 px-2 py-1 text-[10px] text-ink-300 transition-colors hover:bg-ink-700 hover:text-ink-100 disabled:opacity-40"
+      >
+        {FROM_WORDS}
       </button>
 
       {(graphics.length > 0 || proposals.length > 0) && (

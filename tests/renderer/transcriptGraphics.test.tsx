@@ -50,6 +50,9 @@ const { TranscriptGraphics } = TG
 const { TranscriptPanel } = await import('../../src/renderer/src/components/TranscriptPanel')
 const { shelfToolById } = await import('../../src/renderer/src/components/shelf/tools')
 const { harnessDropsTranscript, harnessGraphicsRun } = await import('../../src/renderer/src/harness/graphicsStub')
+const { FROM_WORDS_LISTED_NOTE, NOTHING_TO_DRAW_NOTE } = await import('@shared/director/fromWords')
+const { clipWords: clipWordsOf, clipSourceWindow: clipSourceWindowOf } = await import('@shared/edit/clipIt')
+const { runFromRows: runFromRowsOf } = await import('@shared/ingest/wordRun')
 
 const FPS = 30
 const FILLER = 'The light was soft that day.'
@@ -618,6 +621,90 @@ describe('Add on a dropped graphic (try-out 1, 2026-11-15, piece 4)', () => {
   })
 })
 
+describe('Add graphic from these words (try-out 1, 2026-11-15, piece 5)', () => {
+  /* The session's own script lines, one word every 400 ms: s00 a ring (0 s), s01 negated, s02 a keyword's line, then fillers. */
+  const LINES = ['Forty percent of my couples book me a year ahead.', 'I do not charge five hundred dollars for an album.', 'Light matters — more than gear.', ...Array.from({ length: 6 }, () => FILLER)]
+  beforeEach(() => {
+    start()
+    useEditor.setState({ project: { ...project(), transcripts: { ...project().transcripts, talk: talk('talk', LINES) } } })
+  })
+  /** The rows' own words for the clip, as ClipWords shows them. */
+  const rowWords = () => clipWordsOf(project().transcripts.talk, clipSourceWindowOf(clipById('shot')!, FPS))!
+  /** Pick as the tile does: a row clicked, or a run of positions in the rows' words. */
+  const pickRow = (r: number): void => state().setClipRun('shot', rowWords().transcript, runFromRowsOf(rowWords().transcript, r, r), r)
+  const pickWords = (from: number, to: number): void => state().setClipRun('shot', rowWords().transcript, { from, to }, null)
+  const fromWords = (): Host => {
+    const b = buttons(TG.FROM_WORDS)
+    expect(b).toHaveLength(1)
+    return b[0]
+  }
+
+  it('sits under Find, greyed with its reason until something is picked; picked, it says what it does', () => {
+    const all = section()
+    const find = all.findIndex((h) => h.type === 'button' && text(h) === TG.FIND_GRAPHICS)
+    const mine = all.findIndex((h) => h.type === 'button' && text(h) === TG.FROM_WORDS)
+    expect(mine).toBe(find + 1)
+    expect(fromWords().props.disabled).toBe(true)
+    expect(fromWords().props.title).toBe(TG.FROM_WORDS_NEEDS_PICK)
+    pickRow(0)
+    expect(fromWords().props.disabled).toBe(false)
+    expect(fromWords().props.title).toBe(TG.FROM_WORDS_TITLE)
+    // A pick on another clip is not this clip's.
+    state().setClipRun('shot2', rowWords().transcript, { from: 0, to: 1 }, null)
+    expect(fromWords().props.disabled).toBe(true)
+  })
+
+  it('a row picked: its sentence’s ring lands in ONE undo step, listed with Drop, under Find’s rule', () => {
+    pickRow(0)
+    const before = project()
+    expect(press(fromWords())).toBeNull()
+    const [ring] = clipItGraphics()
+    expect(ring.graphic!.data).toEqual({ template: 'ring', value: '40%', label: 'couples' })
+    expect(listed()).toContain(ring.id)
+    expect(bake.asks).toContain(ring.id)
+    undoesTo(before)
+  })
+
+  it('words picked inside a row: a keyword of exactly those words, landing within 6 s of the ring', () => {
+    pickRow(0)
+    press(fromWords())
+    // s02 starts at word 20: "more than gear." are positions 23..25.
+    pickWords(23, 25)
+    expect(press(fromWords())).toBeNull()
+    expect(clipItGraphics().map((c) => c.graphic!.data)).toContainEqual({ template: 'keyword', words: 'more than gear', lit: 2 })
+  })
+
+  it('a truth refusal is not lost: nothing placed, the row listed with its reason, Add and the note, and a notice; its Add then lands', () => {
+    pickRow(1)
+    const before = project()
+    const past = state().past.length
+    expect(press(fromWords())).toBe(FROM_WORDS_LISTED_NOTE)
+    expect(project()).toBe(before)
+    expect(state().past.length).toBe(past)
+    const rows = dropRows()
+    expect(rows).toHaveLength(1)
+    expect(rows[0].reason).toContain('said negated')
+    expect(rows[0].refused).toBe(FROM_WORDS_LISTED_NOTE)
+    expect(rows[0].add).not.toBeNull()
+    expect(state().notices.map((n) => n.text)).toContainEqual(expect.stringContaining('it is listed under Graphics'))
+    // No Find ran: the notes do not say a run used no model.
+    expect(section().some((h) => text(h) === TG.NO_MODEL_LINE)).toBe(false)
+    expect(press(rows[0].add!)).toBeNull()
+    expect(clipItGraphics().map((c) => c.graphic!.data)).toContainEqual({ template: 'counter', value: '$500', label: 'album' })
+    expect(dropRows()).toEqual([])
+  })
+
+  it('nothing to draw says so in a note and changes nothing', () => {
+    // "—" alone (s02's third word, position 22).
+    pickWords(22, 22)
+    const before = project()
+    expect(press(fromWords())).toBe(NOTHING_TO_DRAW_NOTE)
+    expect(project()).toBe(before)
+    expect(state().notices.map((n) => n.text)).toContain(NOTHING_TO_DRAW_NOTE)
+    expect(dropRows()).toEqual([])
+  })
+})
+
 describe('the census’s graphics run (harness/graphicsStub.ts)', () => {
   it.each([
     ['youtube-asr', 'transcript-graphics-asr', true],
@@ -679,6 +766,45 @@ describe('the census’s graphics run (harness/graphicsStub.ts)', () => {
     expect(state().addDroppedGraphic(negated)).toBe('another graphic is on screen then')
     expect(state().addDroppedGraphic(roomy)).toBeNull()
     expect(clipItGraphics().map((c) => c.graphic!.data)).toContainEqual({ template: 'keyword', words: 'gear', lit: 0 })
+  })
+
+  it('transcript-graphics-words: Add graphic from these words on the stub transcript’s negated row lists it with its note; every text and title row counts what the fixture says', async () => {
+    const census = (await import('../fixtures/ui-census.json')).default as Array<{ label: string; match: string; needs?: string; count?: number }>
+    const rows = census.filter((r) => r.needs === 'transcript-graphics-words')
+    expect(rows.map((r) => r.label)).toEqual(expect.arrayContaining([FROM_WORDS_LISTED_NOTE, TG.FROM_WORDS_TITLE]))
+    const base = emptyProject('census')
+    const clip: Clip = { ...shotOf('V', 'vid', 0), duration: FPS * 6 }
+    const p: Project = {
+      ...base,
+      settings: { ...base.settings, fps: FPS },
+      assets: [footage('vid', { width: 640, height: 360, durationFrames: FPS * 6 })],
+      clips: [clip],
+      transcripts: { vid: harnessDropsTranscript('vid') }
+    }
+    useEditor.setState({ project: p, selectedClipId: 'V', selectedClipIds: ['V'], lastGraphics: null, clipRun: null })
+    // The recipe's own steps (harness/census.ts 'transcript-graphics-words').
+    const words = clipWordsOf(p.transcripts.vid, clipSourceWindowOf(clip, FPS))!
+    state().setClipRun('V', words.transcript, runFromRowsOf(words.transcript, 1, 1), 1)
+    expect(state().addGraphicFromWords('V')).toBe(FROM_WORDS_LISTED_NOTE)
+    const drops = state().lastGraphics!.drops
+    expect(drops.some((d) => d.template === 'counter' && d.add !== undefined && d.reason.includes('said negated') && d.refused === FROM_WORDS_LISTED_NOTE)).toBe(true)
+    const html = renderToStaticMarkup(createElement(TranscriptPanel))
+    const escape = (s: string): string => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;')
+    const quote = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    for (const r of rows) {
+      const whole = r.match === 'title' ? new RegExp(`title="${quote(escape(r.label))}"`, 'g') : new RegExp(`(?:>|-->)${quote(escape(r.label))}(?:<)`, 'g')
+      expect([...html.matchAll(whole)], r.label).toHaveLength(r.count ?? 1)
+    }
+    // What the session will see when it presses: s00's ring lands; the "$500" row's Add is then refused (the ring is on screen); "gear" alone lands.
+    state().setClipRun('V', words.transcript, runFromRowsOf(words.transcript, 0, 0), 0)
+    expect(state().addGraphicFromWords('V')).toBeNull()
+    expect(state().addDroppedGraphic(drops.length - 1)).toBe('another graphic is on screen then')
+    const gear = words.transcript.words.length - 1
+    state().setClipRun('V', words.transcript, { from: gear, to: gear }, null)
+    expect(state().addGraphicFromWords('V')).toBeNull()
+    expect(clipItGraphics().map((c) => c.graphic!.data)).toEqual(
+      expect.arrayContaining([{ template: 'ring', value: '40%', label: 'couples' }, { template: 'keyword', words: 'gear', lit: 0 }])
+    )
   })
 
   it.each(['youtube-asr', 'youtube-lines', 'whisper-unsure'] as const)('%s: one keyword placed and one counter waiting with "check the number", on a 5 s clip of a 640×360 file', (source) => {

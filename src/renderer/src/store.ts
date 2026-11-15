@@ -6,7 +6,7 @@ import { offsetIntoDownload, trimToRequestedRange, type Range } from '@shared/in
 import { captionKeys, type IngestRequest, type IngestWant, type AudioFormat, type LinkMeta } from '@shared/ingest/args'
 import { shiftTranscript, transcriptFromTracks, type WordRun } from '@shared/ingest/captions'
 import { clampRun, runRange } from '@shared/ingest/wordRun'
-import { clipSourceWindow, clipToRange, outsideWindow } from '@shared/edit/clipIt'
+import { clipSourceWindow, clipToRange, clipWords, outsideWindow } from '@shared/edit/clipIt'
 import {
   languageOfKeys,
   linkCredit,
@@ -230,6 +230,7 @@ import {
   settle2
 } from '@shared/director/run'
 import { baselineGraphics } from '@shared/director/baselineGraphics'
+import { FROM_WORDS_LISTED_NOTE, FROM_WORDS_NOT_ADDED_NOTE, fromWordsListedToast, graphicFromWords, pickForGraphic, type WordsPick } from '@shared/director/fromWords'
 import { maxTokensFor2, spine2Prompt } from '@shared/director/prompt2'
 import { spine2Schema } from '@shared/director/schema2'
 import { recipeById, type RecipeId } from '@shared/director/recipes'
@@ -624,11 +625,37 @@ export const GRAPHICS_CLIP_GONE_NOTE = 'The clip was removed while its graphics 
 
 /**
  * A row of the Transcript tile's dropped graphics (try-out 1, 2026-11-15): the
- * drop as Find recorded it, the reason Add was last refused, and the graphic
+ * drop as Find recorded it (or as Add graphic from these words listed it,
+ * piece 5), the reason Add was last refused (for a by-hand row, first the
+ * note that it was not added: `FROM_WORDS_LISTED_NOTE`), and the graphic
  * clip Add placed (the row is not listed while that clip is on the timeline,
  * so an undo of the Add, or Drop on the graphic, lists it again).
  */
 export type ShownDrop = GraphicDrop & { refused?: string; addedAs?: string }
+
+/**
+ * The `lastGraphics.model` of a list started by **Add graphic from these
+ * words** on a clip with no Find of its own listed (not a model's id, and not
+ * 'baseline', so the tile does not say that no model's answer was used in a
+ * run that never ran).
+ */
+export const BY_HAND_MODEL = 'by-hand'
+
+/**
+ * The Transcript tile's pick as **Add graphic from these words** reads it
+ * (`pickForGraphic`), or null: no pick on `clipId`, a pick made over other
+ * words than the clip plays now (the rows do not show it either), a hold or
+ * a lifted sound (no rows), no transcript.
+ */
+export function wordsPickOf(project: Project, clipRun: ClipRun | null, clipId: string): WordsPick | null {
+  if (!clipRun || clipRun.clipId !== clipId || !clipRun.run) return null
+  const clip = project.clips.find((c) => c.id === clipId)
+  const transcript = clip ? project.transcripts[clip.assetId] : undefined
+  if (!clip || !transcript || clip.hold || clip.audioDetached || clip.graphic !== undefined) return null
+  const words = clipWords(transcript, clipSourceWindow(clip, project.settings.fps))
+  if (!words || words.transcript !== clipRun.words) return null
+  return pickForGraphic(transcript, words, clipRun.run)
+}
 
 /** The head every dropped graphic's note carries (the validator's and applyGraphics'): such a note is a row, not a note. */
 const DROPPED_GRAPHIC_HEAD = 'graphic dropped: '
@@ -1362,6 +1389,17 @@ interface EditorState {
    * set on the row and returned, and the row stays. One undo.
    */
   addDroppedGraphic: (index: number) => string | null
+  /**
+   * **Add graphic from these words** (try-out 1, 2026-11-15, piece 5): the
+   * Transcript tile's pick on `clipId` (`wordsPickOf`) read as the baseline
+   * reads one sentence, or the picked words as a keyword (`graphicFromWords`;
+   * no model is asked), validated, and landed through Add's path. One undo.
+   * Refused by the validator, it is listed among the Graphics section's
+   * dropped rows (with Add when it can be drawn) and its row and a note say
+   * so; refused at placement, or nothing to draw, a note says why. Returns
+   * the note, null when it landed or nothing was picked.
+   */
+  addGraphicFromWords: (clipId: string) => string | null
   /** Drop a graphic (its drawn asset when unused, its sounds) or a proposal (§6.6, §6.14). One undo. */
   dropGraphic: (id: string) => void
   /** Clear graphics (§6.6): every `'clips.graphic'` graphic, sound, file and proposal; Direct's stay, and the note says so. One undo. */
@@ -5614,6 +5652,37 @@ export const useEditor = create<EditorState>((set, get) => ({
     )
     for (const id of out.clipIds) void get().rebakeGraphic(id)
     return null
+  },
+
+  addGraphicFromWords: (clipId) => {
+    const pick = wordsPickOf(get().project, get().clipRun, clipId)
+    if (!pick) return null
+    const { catalog, root } = useCatalog.getState()
+    const sounds = soundPackFor(catalog, root)
+    let result: ReturnType<typeof graphicFromWords> | null = null
+    get().update((p) => {
+      result = graphicFromWords(p, clipId, pick, { fps: p.settings.fps, sounds })
+      return result.outcome === 'added' ? result.project : p
+    })
+    const out = result as ReturnType<typeof graphicFromWords> | null
+    if (!out) return null
+    if (out.outcome === 'added') {
+      for (const id of out.clipIds) void get().rebakeGraphic(id)
+      return null
+    }
+    if (out.outcome === 'listed') {
+      const note = out.drop.add ? FROM_WORDS_LISTED_NOTE : FROM_WORDS_NOT_ADDED_NOTE
+      const row: ShownDrop = { ...out.drop, refused: note }
+      set((s) => {
+        const last = s.lastGraphics !== null && s.lastGraphics.clipId === clipId ? s.lastGraphics : { clipId, notes: [], drops: [], model: BY_HAND_MODEL }
+        return { lastGraphics: { ...last, drops: [...last.drops, row] } }
+      })
+      get().notify(fromWordsListedToast(out.drop.reason), 'info')
+      return note
+    }
+    const note = out.outcome === 'refused' ? out.reason : out.note
+    get().notify(note, 'info')
+    return note
   },
 
   dropGraphic: (id) => {

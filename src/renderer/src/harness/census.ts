@@ -21,6 +21,7 @@ import { runFromRows } from '@shared/ingest/wordRun'
 import { clipSourceWindow, clipWords } from '@shared/edit/clipIt'
 import type { Transcript } from '@shared/transcript'
 import { useEditor, type ShelfToolId, type UrlSourceStatus } from '../store'
+import { FROM_WORDS_LISTED_NOTE } from '@shared/director/fromWords'
 import { HARNESS_HELPER_PACK, HARNESS_LINKS, HARNESS_SPEECH_MODEL_BYTES, harnessHelperStatus } from './bridge'
 import { harnessSubjectTrack } from './reframeStub'
 import { harnessDropsTranscript, harnessGraphicsRun, type HarnessWordSource } from './graphicsStub'
@@ -1763,6 +1764,36 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
       throw new Error(
         `census: the no-model Find dropped ${drops.map((d) => `${d.template} "${d.text}" (${d.reason}${d.add ? ', Add' : ''})`).join('; ') || 'nothing'}, not a negated counter and a keyword for room, each with Add`
       )
+    }
+    focus(V, 0)
+    return { ids: { V } }
+  },
+  /*
+   * Add graphic from these words (try-out 1, 2026-11-15, piece 5) pressed on
+   * the same three sentences, no Find run: the row "I do not charge $500." is
+   * picked and pressed, the validator refuses the counter (said negated), and
+   * it is listed among the dropped graphics with its reason, Add and the note
+   * that it was not added. The pick stays, so the button is pressable. Left
+   * on screen with `__forgeCensus({ needs: ['transcript-graphics-words'], keep: true })`:
+   * click the row "40% of couples book early." and press the button (the
+   * ring lands at 0:00); press Add on the "$500" row (refused: the ring is
+   * on screen then); pick "gear" alone (drag Start onto it) and press the
+   * button (the keyword lands, within 6 s of the ring).
+   */
+  'transcript-graphics-words': async (env) => {
+    const { m, V } = await videoClip(env)
+    const assetId = m.video.id
+    editor().update((p) => ({ ...p, transcripts: { ...p.transcripts, [assetId]: harnessDropsTranscript(assetId) } }))
+    const clip = clipById(V)
+    const transcript = editor().project.transcripts[assetId]
+    const words = transcript ? clipWords(transcript, clipSourceWindow(clip, editor().project.settings.fps)) : null
+    if (!words) throw new Error('census: the clip plays none of the stub transcript’s words')
+    editor().setClipRun(V, words.transcript, runFromRows(words.transcript, 1, 1), 1)
+    const note = editor().addGraphicFromWords(V)
+    const drops = editor().lastGraphics?.drops ?? []
+    const listed = drops.some((d) => d.template === 'counter' && d.add !== undefined && d.reason.includes('said negated') && d.refused === FROM_WORDS_LISTED_NOTE)
+    if (note !== FROM_WORDS_LISTED_NOTE || !listed) {
+      throw new Error(`census: Add graphic from these words on "I do not charge $500." gave ${JSON.stringify(note)} and listed ${drops.map((d) => `${d.template} "${d.text}" (${d.reason})`).join('; ') || 'nothing'}`)
     }
     focus(V, 0)
     return { ids: { V } }
