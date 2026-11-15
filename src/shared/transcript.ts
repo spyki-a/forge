@@ -7,6 +7,8 @@
  * Conversion to frames happens where a transcript meets the timeline.
  */
 
+import { claimTokens, numberSpans } from './director/claims'
+
 export interface Word {
   /** Position in the transcript. Stable, and what emphasis ops reference. */
   index: number
@@ -47,6 +49,65 @@ export interface Transcript {
    * (`shared/ingest/captions.ts`). Absent means word-timed.
    */
   approximate?: boolean
+}
+
+/* ------------------------------------------------------- split numbers */
+
+/** A word that ends in a digit: nothing after it, so no closing punctuation either. */
+const ENDS_IN_DIGIT = /\p{Nd}$/u
+/** A word that opens with a group separator and digits: ",500." ",200" ",000,". */
+const GROUP_TAIL = /^,\p{Nd}/u
+/** A word that is only a percent sign, with or without closing punctuation: "%", "%.", "%,". */
+const PERCENT_ONLY = /^%[.,;:!?…"')\]]*$/u
+
+/**
+ * Join the number words the transcriber split (try-out 1, 2026-11-15).
+ *
+ * faster-whisper gives a grouped number as two words and a percent sign as a
+ * word of its own: "$2" ",500." and "40" "%". Read as two words, "$2" ",500."
+ * is $2 and a bare 500 (`claimTokens` closes the first word's number at the
+ * comma), so a counter drew "$2"; and a caption shows "$2 ,500." with a space.
+ *
+ * Joined, each into one word:
+ * - a word opening with a comma and digits, after a word that ends in a digit
+ *   (and so carries no closing punctuation of its own), when the joined word
+ *   reads as ONE number by the validator's own reader (`numberSpans` over
+ *   `claimTokens`), so exactly the groupings it accepts are joined: western
+ *   threes ("$2,500.") and Indian lakh grouping ("1,50,000"), never "2,50"
+ *   or "2019,000". "$2, 500 people", where the comma closes the first word,
+ *   is left: the first word does not end in a digit. A run split three ways
+ *   ("$1" ",000" ",000") joins whole, each piece onto what came before;
+ * - a word that is only `%` (with or without closing punctuation) after a
+ *   word that ends in a digit: "40" "%" is "40%".
+ *
+ * A joined word keeps the first word's start, the last word's end, and the
+ * lower confidence of the two, or null when either is null: null is
+ * "unknown" (a corrected word, an uploader's track), and the lower of a
+ * known and an unknown is not known. Words come out indexed 0..n-1 in order.
+ * Pure; joining twice changes nothing. A decimal split as "2" ".5" was not
+ * seen and is left as it is.
+ */
+export function joinSplitNumbers(words: readonly Word[]): Word[] {
+  const out: Word[] = []
+  for (const word of words) {
+    const prev = out[out.length - 1]
+    if (prev && ENDS_IN_DIGIT.test(prev.text) && (PERCENT_ONLY.test(word.text) || (GROUP_TAIL.test(word.text) && readsAsOneNumber(prev.text + word.text)))) {
+      out[out.length - 1] = {
+        ...prev,
+        text: prev.text + word.text,
+        endMs: Math.max(prev.endMs, word.endMs),
+        confidence: prev.confidence === null || word.confidence === null ? null : Math.min(prev.confidence, word.confidence)
+      }
+      continue
+    }
+    out.push({ ...word })
+  }
+  return out.map((w, index) => (w.index === index ? w : { ...w, index }))
+}
+
+/** One word reads as exactly one number by the validator's reader (`director/claims.ts`). */
+function readsAsOneNumber(text: string): boolean {
+  return numberSpans(claimTokens(text)).length === 1
 }
 
 /** A pause at least this long ends a segment even without punctuation. */

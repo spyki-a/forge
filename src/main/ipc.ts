@@ -19,7 +19,7 @@ import { createHelperPackJobs, unbuiltWorkers, type HelperPackJobs, type HelperP
 import { HELPER_CHANNELS, helperInstallRequest, helperRemoveRequest } from '@shared/sidecar/install'
 import { SIDECAR_METHODS, type ModelStatus } from '@shared/sidecar/protocol'
 import { SPEECH_MODEL_CHANNELS, speechModelRequest, type SpeechModelProgress } from '@shared/asr/speechModel'
-import { VOCABULARY_MAX_CHARS, segmentIntoSentences, type Transcript, type Word } from '@shared/transcript'
+import { VOCABULARY_MAX_CHARS, joinSplitNumbers, segmentIntoSentences, type Transcript, type Word } from '@shared/transcript'
 import { JobQueue } from './queue'
 import { releasesTemporaries, startRender, sweepTemporaries, type RenderOptions } from './render/renderJob'
 import { probeEncoders } from './render/encoders'
@@ -1026,14 +1026,17 @@ export function registerIpc(getWindow: () => BrowserWindow | null, options: IpcO
       )
 
       // Segmentation happens here rather than in Python: it is pure, shared with
-      // the renderer, and unit-tested without a model in the loop.
+      // the renderer, and unit-tested without a model in the loop. The number
+      // words the transcriber split ("$2" ",500.", "40" "%") are joined first,
+      // so the segments, the captions and the graphics all read one word.
+      const words = joinSplitNumbers(result.words)
       const transcript: Transcript = {
         assetId,
         language: result.language,
         model: result.model,
         durationMs: result.durationMs,
-        words: result.words,
-        segments: segmentIntoSentences(result.words)
+        words,
+        segments: segmentIntoSentences(words)
       }
       return transcript
     } finally {
