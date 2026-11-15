@@ -196,14 +196,7 @@ export function applyBudget<C extends BudgetCandidate>(
    * 3 (a zoom punch), and a footage clip that is gone.
    */
   const room = options.room !== false
-  const held: Held[] = []
-  for (const c of project.clips) {
-    const spec = c.graphic
-    if (!spec || spec.data.template === 'screen-card') continue
-    held.push({ onset: onsetSeconds(c.start, spec.beats, fps), from: c.start, to: clipEnd(c), template: spec.data.template, placed: true })
-  }
-  const cards = project.clips.filter((c) => c.generatedBy?.rule === COPY_RULE || c.generatedBy?.rule === ENDING_RULE)
-  const punches = project.clips.filter((c) => c.moment?.kind === 'zoom-punch')
+  const { held, cards, punches } = standing(project)
 
   // Weighed by rank, then onset: a keyword yields to any other template (roomRank).
   const ordered = candidates
@@ -235,6 +228,72 @@ export function applyBudget<C extends BudgetCandidate>(
   return { kept: kept.map((k) => k.c), dropped: dropped.map(({ spec, reason }) => ({ spec, reason })) }
 }
 
+/** What stands on the timeline for the budget: every graphic placed (held, a screen card's left out), the Director's cards, the zoom punches. */
+function standing(project: Project): { held: Held[]; cards: Clip[]; punches: Clip[] } {
+  const fps = project.settings.fps
+  const held: Held[] = []
+  for (const c of project.clips) {
+    const spec = c.graphic
+    if (!spec || spec.data.template === 'screen-card') continue
+    held.push({ onset: onsetSeconds(c.start, spec.beats, fps), from: c.start, to: clipEnd(c), template: spec.data.template, placed: true })
+  }
+  const cards = project.clips.filter((c) => c.generatedBy?.rule === COPY_RULE || c.generatedBy?.rule === ENDING_RULE)
+  const punches = project.clips.filter((c) => c.moment?.kind === 'zoom-punch')
+  return { held, cards, punches }
+}
+
+/**
+ * Rules 2 and 3 for the frames [from, to): another graphic held or a
+ * Director card over them (`ON_SCREEN_REASON`), else the earliest zoom punch
+ * under them, a moment's or a zoom move's on `footage` (none when the
+ * graphic sits over no footage clip); null when neither. `refusal` and
+ * `byHandRefusal` both read this one body.
+ */
+function drawRefusal(
+  project: Project,
+  from: number,
+  to: number,
+  footage: Clip | null,
+  held: readonly Held[],
+  cards: readonly Clip[],
+  punches: readonly Clip[]
+): string | null {
+  const overlaps = (a: number, b: number): boolean => from < b && a < to
+  // Rule 2: one piece of designed type at a time.
+  if (held.some((h) => overlaps(h.from, h.to)) || cards.some((k) => overlaps(k.start, clipEnd(k)))) return ON_SCREEN_REASON
+
+  // Rule 3: the earliest punch under its frames, a moment's or a zoom move's on the footage beneath.
+  const under: number[] = punches.filter((p) => overlaps(p.start, clipEnd(p))).map((p) => p.start)
+  const keys = footage ? normaliseKeys(footage.keyframes?.zoom ?? [], footage.duration) : []
+  for (let i = 0; footage && i + 1 < keys.length; i++) {
+    if (keys[i].value === keys[i + 1].value) continue
+    // A hold steps on the next key's frame: the punch is that one frame.
+    const a = footage.start + (keys[i].ease === 'hold' ? keys[i + 1].frame : keys[i].frame)
+    const b = footage.start + keys[i + 1].frame + (keys[i].ease === 'hold' ? 1 : 0)
+    // Only the frames the footage clip is on screen: a head trim rebases keys before its start (timeline.ts rebaseAnimation).
+    const lo = Math.max(a, footage.start)
+    const hi = Math.min(b, clipEnd(footage))
+    if (lo < hi && overlaps(lo, hi)) under.push(lo)
+  }
+  if (under.length > 0) return zoomPunchReason(framesToSeconds(Math.min(...under), project.settings.fps))
+  return null
+}
+
+/**
+ * A graphic placed by hand (the Library's, try-out 1 piece 6, 2026-11-15):
+ * the budget's rules 2 and 3 for its frames [start, start + duration), read
+ * by the same body `applyBudget` reads them with, over the footage clip
+ * `footageId` (null: over none). The rules of taste (rule 1's gap and count,
+ * rule 4's cap) are not read, as for the Transcript tile's Add (`room:
+ * false`): the owner placed it. `ON_SCREEN_REASON`, a zoom punch's reason,
+ * or null.
+ */
+export function byHandRefusal(project: Project, footageId: string | null, start: number, duration: number): string | null {
+  const { held, cards, punches } = standing(project)
+  const footage = footageId === null ? null : (project.clips.find((c) => c.id === footageId) ?? null)
+  return drawRefusal(project, start, start + duration, footage, held, cards, punches)
+}
+
 /** The first rule a candidate breaks, as its reason; null when it is kept. */
 function refusal(
   project: Project,
@@ -251,7 +310,6 @@ function refusal(
   if (!footage) return NO_CLIP_NOTE // applyBudget has dropped it already; kept for the type
   const from = c.start
   const to = c.start + c.duration
-  const overlaps = (a: number, b: number): boolean => from < b && a < to
 
   // Rule 1, the gap: every held graphic, a lower third's included; the reason names the nearest.
   const near = held
@@ -263,23 +321,9 @@ function refusal(
     return tooCloseReason(near, why)
   }
 
-  // Rule 2: one piece of designed type at a time.
-  if (held.some((h) => overlaps(h.from, h.to)) || cards.some((k) => overlaps(k.start, clipEnd(k)))) return ON_SCREEN_REASON
-
-  // Rule 3: the earliest punch under its frames, a moment's or a zoom move's on the footage beneath.
-  const under: number[] = punches.filter((p) => overlaps(p.start, clipEnd(p))).map((p) => p.start)
-  const keys = normaliseKeys(footage.keyframes?.zoom ?? [], footage.duration)
-  for (let i = 0; i + 1 < keys.length; i++) {
-    if (keys[i].value === keys[i + 1].value) continue
-    // A hold steps on the next key's frame: the punch is that one frame.
-    const a = footage.start + (keys[i].ease === 'hold' ? keys[i + 1].frame : keys[i].frame)
-    const b = footage.start + keys[i + 1].frame + (keys[i].ease === 'hold' ? 1 : 0)
-    // Only the frames the footage clip is on screen: a head trim rebases keys before its start (timeline.ts rebaseAnimation).
-    const lo = Math.max(a, footage.start)
-    const hi = Math.min(b, clipEnd(footage))
-    if (lo < hi && overlaps(lo, hi)) under.push(lo)
-  }
-  if (under.length > 0) return zoomPunchReason(framesToSeconds(Math.min(...under), fps))
+  // Rules 2 and 3: another graphic or a card on screen then; a zoom punch under it.
+  const drawn = drawRefusal(project, from, to, footage, held, cards, punches)
+  if (drawn !== null) return drawn
 
   // Rule 1, the count: the lower third is outside it (§6.9, a reading of D12 recorded 2026-10-21).
   if (room && c.spec.data.template !== 'lower-third') {

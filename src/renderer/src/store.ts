@@ -52,9 +52,11 @@ import {
   silenceGraphics,
   soundAllGraphics,
   withSpeaker,
-  withoutGraphic
+  withoutGraphic,
+  LIBRARY_GRAPHIC_RULE
 } from '@shared/graphics/apply'
 import { footageOf } from '@shared/graphics/sound'
+import { libraryGraphicAt } from '@shared/graphics/library'
 import { graphicTargetsAt } from '@shared/graphics/targets'
 import { captionSourceClip } from '@shared/captions/timeline'
 import { withMotion, withoutMotionForZoom } from '@shared/edit/camera'
@@ -471,6 +473,12 @@ const pendingText = new Map<
 export function solveCrop(asset: MediaAsset, aspect: AspectKey): CropRect | undefined {
   return solveCropFor(asset, ASPECTS[aspect])
 }
+
+/** A graphic asked for on no track, a locked one or an audio one (the store's `addGraphicClip`, the Library's tiles). */
+export const LIBRARY_GRAPHIC_TRACK_NOTE = 'A graphic goes on a video track'
+
+/** The `generatedBy` reason of a graphic placed from the Library's Graphics drawer (`LIBRARY_GRAPHIC_RULE`). */
+export const LIBRARY_GRAPHIC_REASON = 'placed from the Library'
 
 /**
  * Room for an overlay at a moment, found by going UP rather than along.
@@ -1120,7 +1128,23 @@ interface EditorState {
    * is minted here (§6.1), never taken from a model or a transcript. The
    * Director's graphics are built by §6.6's pure apply, not through this.
    */
-  addGraphicClip: (trackId: string, startFrame: number, spec: GraphicSpec) => Promise<string | null>
+  addGraphicClip: (
+    trackId: string,
+    startFrame: number,
+    spec: GraphicSpec,
+    how?: { generatedBy?: { rule: string; reason: string }; sounds?: boolean }
+  ) => Promise<string | null>
+  /**
+   * A tile of the Library's Graphics drawer placed (try-out 1 piece 6,
+   * graphics/library.ts): `libraryGraphicAt` decides its spec, third and
+   * refusal at `frame` (the playhead when left out), and `addGraphicClip`
+   * lands it on `trackId` (the top unlocked video track when left out) as ONE
+   * undo step, selected, so the dock opens on its Graphic panel; under
+   * `LIBRARY_GRAPHIC_RULE`, with its sounds when "Graphic sounds" is on and
+   * the library holds them. A refusal is a notice and is returned; null when
+   * it landed.
+   */
+  placeLibraryGraphic: (templateId: string, trackId?: string, frame?: number) => string | null
   /** Change a graphic's spec: `update()`, then a rebake. A new `seconds` moves the clip's length and its exit fade with it. */
   setGraphic: (clipId: string, patch: Partial<Omit<GraphicSpec, 'version'>>) => Promise<void>
   /** Write a graphic's moving frames to disk, at the project's canvas. Nothing waits on it; the preview is live. */
@@ -3759,11 +3783,11 @@ export const useEditor = create<EditorState>((set, get) => ({
     }
   },
 
-  addGraphicClip: async (trackId, startFrame, spec) => {
+  addGraphicClip: async (trackId, startFrame, spec, how) => {
     const { project, notify } = get()
     const track = project.tracks.find((t) => t.id === trackId)
     if (!track || track.locked || track.kind !== 'video') {
-      notify('A graphic goes on a video track', 'info')
+      notify(LIBRARY_GRAPHIC_TRACK_NOTE, 'info')
       return null
     }
     // A length that is not a positive number (a cleared field reads NaN) would make a clip of duration NaN.
@@ -3792,7 +3816,7 @@ export const useEditor = create<EditorState>((set, get) => ({
     get().update((p) => {
       // A graphic goes OVER footage, so this climbs a track rather than queueing after what is there.
       const slot = stackOverlay(p, trackId, startFrame, duration)
-      return {
+      const landed: Project = {
         ...slot.project,
         assets: [...slot.project.assets, asset],
         clips: [
@@ -3809,14 +3833,46 @@ export const useEditor = create<EditorState>((set, get) => ({
             color: { brightness: 0, contrast: 1, saturation: 1 },
             // The exit is opacity keys over the clip's last 0.3 s (graphics/frame.ts): held frames are never baked to fade.
             keyframes: graphicExitKeys(duration, fps),
-            graphic: spec
+            graphic: spec,
+            ...(how?.generatedBy ? { generatedBy: { ...how.generatedBy } } : {})
           }
         ]
       }
+      if (!how?.sounds) return landed
+      /*
+       * Its sounds on its beats, in the same update so the same undo step, as
+       * Keep and Add place them (resoundGraphic, under the graphic's own rule;
+       * nothing with "Graphic sounds" off, nothing and no note shown with no
+       * library, as Add shows none).
+       */
+      const { catalog, root } = useCatalog.getState()
+      return resoundGraphic(landed, clipId, soundPackFor(catalog, root)).project
     })
     get().revealClip(clipId)
     void get().rebakeGraphic(clipId)
     return clipId
+  },
+
+  placeLibraryGraphic: (templateId, trackId, frame) => {
+    const { project, playhead, notify } = get()
+    const video = project.tracks.filter((t) => t.kind === 'video' && !t.locked)
+    // The top unlocked video track, as the Shelf's one-click tools and a drop on the picture use (shelf/panels.tsx).
+    const lane = project.tracks.find((t) => t.id === (trackId ?? video[video.length - 1]?.id))
+    if (!lane || lane.locked || lane.kind !== 'video') {
+      notify(LIBRARY_GRAPHIC_TRACK_NOTE, 'info')
+      return LIBRARY_GRAPHIC_TRACK_NOTE
+    }
+    const at = Math.max(0, Math.round(frame ?? playhead))
+    const ready = libraryGraphicAt(project, templateId, at)
+    if ('refused' in ready) {
+      notify(ready.refused, 'info')
+      return ready.refused
+    }
+    void get().addGraphicClip(lane.id, at, ready.spec, {
+      generatedBy: { rule: LIBRARY_GRAPHIC_RULE, reason: LIBRARY_GRAPHIC_REASON },
+      sounds: true
+    })
+    return null
   },
 
   setGraphic: async (clipId, patch) => {

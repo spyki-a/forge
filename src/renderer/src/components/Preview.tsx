@@ -64,7 +64,7 @@ import { captionRoute } from '@shared/graphics/fromTimeline'
 import { textClipFaceKey } from '@shared/render/textPaint'
 import { LIVE_DRAWN_FIELDS } from '@shared/edit/recipes'
 import { useCatalog } from '../catalog'
-import { isAssetDrag, readDragPayload, type DragPayload } from '../dragPayload'
+import { canvasDropChip, canvasDropRoute, isAssetDrag, readDragPayload, type DragPayload } from '../dragPayload'
 import { DROP_CHOICES, type DropIntent } from '@shared/render/dropIntent'
 
 export interface ViewTransform {
@@ -347,6 +347,7 @@ export function Preview(): ReactNode {
   const placePoolAsset = useEditor((s) => s.placePoolAsset)
   const placeTitle = useEditor((s) => s.placeTitle)
   const placeLibraryAsset = useEditor((s) => s.placeLibraryAsset)
+  const placeLibraryGraphic = useEditor((s) => s.placeLibraryGraphic)
   const applyDropIntent = useEditor((s) => s.applyDropIntent)
   const setPlaying = useEditor((s) => s.setPlaying)
   const loop = useEditor((s) => s.loop)
@@ -1071,12 +1072,25 @@ export function Preview(): ReactNode {
   const onCanvasDrop = useCallback(
     async (payload: DragPayload | null): Promise<void> => {
       if (!payload) return
-      if (payload.mediaKind === 'audio' || payload.kind === 'sfx') {
+      const route = canvasDropRoute(payload)
+      if (route === 'refuse-sound') {
         notify('Sounds go on an audio track, not on the picture', 'info')
         return
       }
-      if (payload.kind === 'transition') {
+      if (route === 'refuse-transition') {
         notify('A transition goes on a cut in the timeline', 'info')
+        return
+      }
+      /*
+       * A graphic from the Library's Graphics drawer: the store lands it on the
+       * top unlocked video track at the playhead, selected (the dock opens on
+       * its Graphic panel). No fill and no chip: a graphic draws itself in its
+       * own third over the whole frame, and the chip's fill or fit would scale
+       * that frame and send the clip to the back or the front, which is not a
+       * choice a graphic has (canvasDropChip).
+       */
+      if (route === 'graphic') {
+        if (payload.template) placeLibraryGraphic(payload.template)
         return
       }
 
@@ -1085,9 +1099,9 @@ export function Preview(): ReactNode {
       if (!top) return
       const before = new Set(useEditor.getState().project.clips.map((c) => c.id))
 
-      if (payload.kind === 'media' && payload.assetId) {
+      if (route === 'pool' && payload.assetId) {
         placePoolAsset(payload.assetId, top.id, playhead)
-      } else if (payload.kind === 'title') {
+      } else if (route === 'title') {
         await placeTitle(payload.file, payload.name, top.id, playhead)
       } else {
         await placeLibraryAsset(payload.file, payload.name, top.id, playhead)
@@ -1097,11 +1111,11 @@ export function Preview(): ReactNode {
       // fact rather than threaded back, because each of those three places a
       // clip its own way and only one of them returns an id.
       const made = useEditor.getState().project.clips.find((c) => !before.has(c.id))
-      if (!made) return
+      if (!made || !canvasDropChip(route)) return
       applyDropIntent(made.id, 'fill')
       setDropChip({ clipId: made.id, intent: 'fill' })
     },
-    [notify, placePoolAsset, placeTitle, placeLibraryAsset, applyDropIntent, playhead]
+    [notify, placePoolAsset, placeTitle, placeLibraryAsset, placeLibraryGraphic, applyDropIntent, playhead]
   )
 
   // A chip for a clip that has since been deleted has nothing to act on.

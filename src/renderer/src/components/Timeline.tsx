@@ -20,7 +20,7 @@ import { useCatalog } from '../catalog'
 import { VolumeEnvelope } from './VolumeEnvelope'
 import { ClipWaveform } from './ClipWaveform'
 import { FadeHandles } from './FadeHandles'
-import { acceptsKind, isAssetDrag, readDragPayload, type DragPayload } from '../dragPayload'
+import { isAssetDrag, readDragPayload, trackDropRoute, type DragPayload } from '../dragPayload'
 
 type DragMode = 'move' | 'trim-start' | 'trim-end'
 
@@ -77,6 +77,7 @@ export function Timeline(): ReactNode {
   const toggleTrackHidden = useEditor((s) => s.toggleTrackHidden)
   const placeLibraryAsset = useEditor((s) => s.placeLibraryAsset)
   const placeTitle = useEditor((s) => s.placeTitle)
+  const placeLibraryGraphic = useEditor((s) => s.placeLibraryGraphic)
   const setTransition = useEditor((s) => s.setTransition)
   const notify = useEditor((s) => s.notify)
   const clearTransition = useEditor((s) => s.clearTransition)
@@ -150,7 +151,8 @@ export function Timeline(): ReactNode {
       trackKind: 'video' | 'audio',
       frame: number
     ): Promise<void> => {
-      if (!acceptsKind(payload, trackKind)) {
+      const route = trackDropRoute(payload, trackKind)
+      if (route === 'refuse') {
         notify(
           payload.kind === 'sfx'
             ? 'Sounds go on an audio track'
@@ -160,7 +162,7 @@ export function Timeline(): ReactNode {
         return
       }
 
-      if (payload.kind === 'transition') {
+      if (route === 'transition') {
         // Snap to the nearest cut within half a second of the drop.
         const tolerance = Math.round(useEditor.getState().project.settings.fps / 2)
         const result = nearestTransitionTarget(
@@ -184,20 +186,26 @@ export function Timeline(): ReactNode {
 
       // Already imported: reuse the asset rather than reading the file again,
       // which would put a second copy of the same photograph in the pool.
-      if (payload.kind === 'media' && payload.assetId) {
+      if (route === 'pool' && payload.assetId) {
         placePoolAsset(payload.assetId, trackId, frame)
         return
       }
 
       // Titles are generated from a template rather than placed as a file.
-      if (payload.kind === 'title') {
+      if (route === 'title') {
         await placeTitle(payload.file, payload.name, trackId, frame)
+        return
+      }
+
+      // A graphic from the Library's Graphics drawer: drawn by the engine, at the dropped frame (graphics/library.ts).
+      if (route === 'graphic') {
+        if (payload.template) placeLibraryGraphic(payload.template, trackId, frame)
         return
       }
 
       await placeLibraryAsset(payload.file, payload.name, trackId, frame)
     },
-    [notify, placeLibraryAsset, placePoolAsset, placeTitle, setTransition, select]
+    [notify, placeLibraryAsset, placeLibraryGraphic, placePoolAsset, placeTitle, setTransition, select]
   )
 
   const snapTargets = useSnapTargets()

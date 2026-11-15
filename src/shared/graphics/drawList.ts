@@ -13,7 +13,7 @@
 
 import { DRAWERS } from './templates/index'
 import { itemBounds, unionRect, type DrawItem, type DrawList, type Drawer, type GraphicTargets, type Rect, type TextMeasure } from './items'
-import type { GraphicSpec } from './template'
+import type { GraphicSpec, GraphicTemplateId } from './template'
 import type { GraphicStyle } from './style'
 
 /**
@@ -40,6 +40,16 @@ export function drawListAt(
   if (out.camera) list.camera = { ...out.camera }
   if (out.glow) list.glow = [...out.glow]
   return list
+}
+
+/**
+ * Every template id that has a drawer, in `DRAWERS`' own order: what can be
+ * drawn at all. The Library's list of graphics (graphics/library.ts) is
+ * derived from this, so it cannot drift from what is drawn; this file stays
+ * `templates/index.ts`' only importer.
+ */
+export function drawnTemplates(): GraphicTemplateId[] {
+  return Object.keys(DRAWERS) as GraphicTemplateId[]
 }
 
 /**

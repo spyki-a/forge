@@ -2,7 +2,7 @@ import type { DragEvent } from 'react'
 import { DRAG_MIME, type DragPayload } from '@shared/dragPayload'
 
 // Re-exported so components have one import for drag handling.
-export { DRAG_MIME, acceptsKind, type DragPayload } from '@shared/dragPayload'
+export { DRAG_MIME, acceptsKind, canvasDropChip, canvasDropRoute, trackDropRoute, type DragPayload } from '@shared/dragPayload'
 
 export function setDragPayload(event: DragEvent, payload: DragPayload): void {
   event.dataTransfer.setData(DRAG_MIME, JSON.stringify(payload))

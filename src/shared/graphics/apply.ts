@@ -25,7 +25,7 @@ import { graphicClipAsset, graphicExitKeys } from './frame'
 import { NO_CLIP_NOTE, NO_FREE_THIRD_NOTE, graphicLane, placeGraphic, subjectAtOnset, thirdPreference } from './place'
 import { GRAPHIC_SOUND_LANE_NAME, NO_SOUND_LIBRARY_NOTE, footageOf, graphicSoundFiles, graphicSounds } from './sound'
 import { CLEAN_GRAPHIC_STYLE } from './style'
-import { GRAPHIC_TEMPLATES, type GraphicData, type GraphicDrop, type GraphicSpec, type KeptGraphic } from './template'
+import { GRAPHIC_TEMPLATES, SPEAKER_PLACEHOLDER, type GraphicData, type GraphicDrop, type GraphicSpec, type KeptGraphic } from './template'
 import type { GraphicProposal } from '../timeline'
 
 /**
@@ -34,6 +34,21 @@ import type { GraphicProposal } from '../timeline'
  * outside the Director, so the Director's rules and Clear never see it.
  */
 export const CLIPS_GRAPHIC_RULE = 'clips.graphic'
+
+/**
+ * A graphic the owner placed from the Library's Graphics drawer (try-out 1
+ * piece 6, 2026-11-15; graphics/library.ts): the `generatedBy` rule of the
+ * graphic clip and of its sounds (and `broughtBy` of a sound file it
+ * brings). It is the owner's by hand: neither `CLIPS_GRAPHIC_RULE` (so Clear
+ * graphics and Find again leave it, and its sounds) nor one of the
+ * Director's `DIRECTOR_RULES` (so Direct's Clear and Direct again leave it).
+ * It is a rule all the same, not a graphic with no `generatedBy`, so its
+ * sounds follow the "Graphic sounds" switch and a Clear's re-placing
+ * (`soundAllGraphics`, `resoundAfterClear`, `resoundGraphic` read a graphic
+ * of a rule) as a kept or an added graphic's do. The budget holds it as it
+ * holds every placed graphic.
+ */
+export const LIBRARY_GRAPHIC_RULE = 'library.graphic'
 
 /**
  * Clear graphics' note (docs/CLIPS.md §6.6), the plan's words exactly, with
@@ -1143,6 +1158,10 @@ export function withSpeaker(project: Project, assetId: string, name: string): { 
     const d = spec.data
     let data: GraphicData | null = null
     if (d.template === 'lower-third' && speaker !== undefined && oldLower !== undefined && d.name === oldLower) data = { ...d, name: speaker }
+    // A lower third from the Library over footage with no Speaker drew the placeholder (library.ts): the first Speaker typed replaces it.
+    if (d.template === 'lower-third' && speaker !== undefined && oldLower === undefined && spec.grounding === undefined && d.name === SPEAKER_PLACEHOLDER) {
+      data = { ...d, name: speaker }
+    }
     if (d.template === 'quote' && d.kind !== 'social' && d.speaker === oldQuote && oldQuote !== newQuote) data = { ...d, speaker: newQuote }
     if (!data) return c
     changed.push(c.id)

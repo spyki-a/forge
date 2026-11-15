@@ -9,12 +9,14 @@ import { bakeForExport, exportKey, type Bakers } from '@shared/render/exportBake
 import { DEFAULT_CAPTION_STYLE } from '@shared/captions/style'
 import { REFERENCE_HEIGHT, toAssTime } from '@shared/captions/ass'
 import { EXIT_S, beatFrame, drawnGraphicAsset, graphicExitKeys, graphicMovingFrames } from '@shared/graphics/frame'
-import { graphicBox } from '@shared/graphics/drawList'
+import { drawListAt, graphicBox } from '@shared/graphics/drawList'
+import { itemBounds } from '@shared/graphics/items'
 import { CLEAN_GRAPHIC_STYLE } from '@shared/graphics/style'
 import type { Drawer, Rect, TextMeasure } from '@shared/graphics/items'
 import type { GraphicSpec, KeptGraphic } from '@shared/graphics/template'
 import { contentRect } from '@shared/graphics/templates/layout'
-import { CLIPS_GRAPHIC_RULE, applyGraphics } from '@shared/graphics/apply'
+import { CLIPS_GRAPHIC_RULE, LIBRARY_GRAPHIC_RULE, applyGraphics } from '@shared/graphics/apply'
+import { LIBRARY_GRAPHICS, LIBRARY_LEFT_OUT, libraryGraphicAt } from '@shared/graphics/library'
 import { GRAPHIC_SOUND_LANE_NAME } from '@shared/graphics/sound'
 import type { SoundPack } from '@shared/director/soundRoles'
 import type { Third } from '@shared/reframe/freeSpace'
@@ -1858,6 +1860,204 @@ describe('phase 2: graphics landed by applyGraphics on their words, placed and s
       'Cases: a face in the middle third with the captions at the bottom (graphics: top), no subject track (middle), the face with the captions at the top (bottom).',
       '',
       '<case>-<shape>/  export.mp4, graph.txt, the PNG sequences, frames/fNNN.png (each beat word\'s frame and the frame before it, taken at (f − 0.25)/fps)',
+      '',
+      ...lines
+    ])
+  })
+})
+
+/* ------------------------------------------------- try-out 1 piece 6: the Library's graphics */
+
+/*
+ * The Library's Graphics drawer (try-out 1, 2026-11-15, piece 6;
+ * graphics/library.ts): every tile it offers, its spec made by the list's own
+ * `libraryGraphicAt` over a red footage clip (no Speaker: the lower third
+ * draws its placeholder name), landed as the store lands one (the drawn
+ * asset, the exit's keys, `LIBRARY_GRAPHIC_RULE`), then exported as phase 1
+ * exports: `bakeForExport`, `buildRenderPlan`, the bundled ffmpeg. The fake
+ * `Bakers.graphic` here paints what the TEMPLATE draws, not a place rect:
+ * each item of the real drawer's list at that frame (`drawListAt` with
+ * node's 0.55 em measure) as a white box of its `itemBounds`, and its box
+ * route crops to `graphicBox` of the real drawer. So an entry whose drawer
+ * drew nothing at its settled frame would export an empty frame and fail.
+ * The callout is not offered (`LIBRARY_LEFT_OUT`, measured in
+ * tests/graphicLibrary.test.ts: it draws nothing by hand with no subject),
+ * so it has no case here. No new filter: the graph is phase 1's.
+ */
+
+const LIB_SHOT_FRAMES = 210
+const LIB_START = 15
+const LIB_MEASURE: TextMeasure = (text, look) => ({ width: text.length * look.px * 0.55, ascent: look.px * 0.8, descent: look.px * 0.2 })
+/** Luma at or above this is the fake's white; the red shot reads about 81. */
+const LIB_WHITE = 200
+
+function libBakers(dir: string, asks: P1Ask[]): Bakers {
+  const none = (what: string) => async (): Promise<never> => {
+    throw new Error(`the Library project has no ${what}`)
+  }
+  return {
+    moment: none('moment'),
+    text: none('text'),
+    textSequence: async () => null,
+    solid: none('colour card'),
+    title: none('title'),
+    paper: none('paper'),
+    carousel: none('carousel'),
+    graphic: async (spec, style, key, width, height, frames, fps, targetsAt, boxAllowed) => {
+      const ask: P1Ask = { key, width, height, frames, fps, boxAllowed, box: null, seq: '' }
+      asks.push(ask)
+      const size = { width, height }
+      const moving = graphicMovingFrames(spec, style, fps, frames)
+      const box = boxAllowed ? graphicBox(spec, style, fps, frames, size, LIB_MEASURE, targetsAt) : null
+      if (boxAllowed && !box) return null
+      const region = box ?? { x: 0, y: 0, width, height }
+      const seq = join(dir, `${key}.seq`)
+      await mkdir(seq, { recursive: true })
+      for (let i = 0; i < moving; i++) {
+        const rgba = Buffer.alloc(region.width * region.height * 4)
+        for (const item of drawListAt(spec, style, i, fps, size, LIB_MEASURE, targetsAt(i)).items) {
+          if (!(item.opacity > 0)) continue
+          const r = itemBounds(item, size, LIB_MEASURE)
+          if (!r) continue
+          for (let y = Math.max(Math.floor(r.y), region.y); y < Math.min(Math.ceil(r.y + r.height), region.y + region.height); y++) {
+            for (let x = Math.max(Math.floor(r.x), region.x); x < Math.min(Math.ceil(r.x + r.width), region.x + region.width); x++) {
+              const at = ((y - region.y) * region.width + (x - region.x)) * 4
+              rgba.fill(255, at, at + 4)
+            }
+          }
+        }
+        await writeFile(join(seq, `${String(i).padStart(5, '0')}.png`), rgbaPng(region.width, region.height, rgba))
+      }
+      ask.box = box
+      ask.seq = seq
+      const pattern = join(seq, '%05d.png')
+      return box ? { pattern, frames: moving, box } : { pattern, frames: moving }
+    }
+  }
+}
+
+/** The red footage on V1 at `shape`, captions off, the clean look, and the entry landed at LIB_START as the store lands it. */
+function libProject(shot: string, shape: P1Shape, templateId: string): { project: Project; spec: GraphicSpec; duration: number } {
+  const empty = emptyProject('graphic-library')
+  const red: MediaAsset = {
+    id: 'red', path: shot, name: 'red.mp4', kind: 'video', durationFrames: LIB_SHOT_FRAMES, ...P1_SHOT, fps: FPS, hasVideo: true, hasAudio: false, size: 1
+  }
+  const base: Project = {
+    ...empty,
+    settings: { ...empty.settings, ...P1_SHAPES[shape], fps: FPS },
+    captions: { enabled: false, styleId: empty.captions.styleId },
+    graphics: { styleId: CLEAN_GRAPHIC_STYLE.id, sound: true },
+    assets: [red],
+    clips: [{ id: 'red', assetId: 'red', trackId: 'v1', start: 0, duration: LIB_SHOT_FRAMES, inPoint: 0, volume: 1, transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 }, color: { brightness: 0, contrast: 1, saturation: 1 } }]
+  }
+  const ready = libraryGraphicAt(base, templateId, LIB_START)
+  if ('refused' in ready) throw new Error(`${templateId}: refused, ${ready.refused}`)
+  const drawn = drawnGraphicAsset('g', P1_SHAPES[shape].width, P1_SHAPES[shape].height, Math.max(ready.duration, FPS * 10), `${templateId} — graphic`)
+  const clip: Clip = {
+    id: 'g', assetId: drawn.id, trackId: 'v2', start: LIB_START, duration: ready.duration, inPoint: 0, volume: 1,
+    transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 }, color: { brightness: 0, contrast: 1, saturation: 1 },
+    keyframes: graphicExitKeys(ready.duration, FPS), graphic: ready.spec, generatedBy: { rule: LIBRARY_GRAPHIC_RULE, reason: 'placed from the Library' }
+  }
+  return { project: { ...base, assets: [...base.assets, drawn], clips: [...base.clips, clip] }, spec: ready.spec, duration: ready.duration }
+}
+
+interface LibRun {
+  spec: GraphicSpec
+  duration: number
+  /** The frame read: a held frame, after the last moving one and before the exit. */
+  held: number
+  luma: Buffer[]
+  asks: P1Ask[]
+  notes: string[]
+}
+
+describe('try-out 1 piece 6: each Library graphic, made by the list’s own function, through the export (graphics/library.ts)', () => {
+  let dir = ''
+  const runs = {} as Record<string, Record<P1Shape, LibRun>>
+  const lines: string[] = []
+
+  beforeAll(async () => {
+    dir = join(root, 'library')
+    await mkdir(dir, { recursive: true })
+    const shot = await makeColour(join(dir, 'red.mp4'), 'red', P1_SHOT, LIB_SHOT_FRAMES / FPS, FPS)
+    for (const entry of LIBRARY_GRAPHICS) {
+      runs[entry.id] = {} as Record<P1Shape, LibRun>
+      for (const shape of P1_SHAPE_NAMES) {
+        const { project, spec, duration } = libProject(shot, shape, entry.id)
+        const out = join(dir, `${entry.id}-${shape}`)
+        await mkdir(out, { recursive: true })
+        const asks: P1Ask[] = []
+        const notes: string[] = []
+        const canvas = P1_SHAPES[shape]
+        const baked = await bakeForExport(project, canvas, libBakers(out, asks), (clip, err) => {
+          notes.push(`${clip.id}: ${err instanceof Error ? err.message : String(err)}`)
+        })
+        const file = join(out, 'export.mp4')
+        const plan = buildRenderPlan({ project: baked, outputPath: file, canvas })
+        await writeFile(join(out, 'graph.txt'), plan.args.join(' ').replace(/;/g, ';\n'), 'utf8')
+        await run(FFMPEG, plan.args, { maxBuffer: 64 * 1024 * 1024 })
+        const moving = graphicMovingFrames(spec, CLEAN_GRAPHIC_STYLE, FPS, duration)
+        const exit = duration - Math.round(EXIT_S * FPS)
+        const held = LIB_START + Math.min(moving + 2, exit - 1)
+        runs[entry.id][shape] = { spec, duration, held, luma: await lumaFrames(file, canvas, 'gray'), asks, notes }
+        await saveFrame(file, (held - 0.25) / FPS, join(out, `held-f${String(held).padStart(3, '0')}.png`))
+      }
+    }
+  }, 600_000)
+
+  it('offers every drawn template but the left-out ones, and each lands over the footage in the third placement gives', () => {
+    expect(Object.keys(LIBRARY_LEFT_OUT)).toContain('callout')
+    for (const entry of LIBRARY_GRAPHICS) {
+      for (const shape of P1_SHAPE_NAMES) {
+        const r = runs[entry.id][shape]
+        expect(r.spec.place, `${entry.id} ${shape}`).toEqual({ auto: true, third: entry.id === 'lower-third' ? 'bottom' : 'middle' })
+        expect(r.notes, `${entry.id} ${shape}: the export's onError`).toEqual([])
+        expect(r.asks.map((a) => a.box !== null), `${entry.id} ${shape}: baked by the box route`).toEqual([true])
+        expect(r.luma.length, `${entry.id} ${shape}: frames exported`).toBe(LIB_SHOT_FRAMES)
+      }
+    }
+  })
+
+  it('draws on its held frame inside its third’s content rect, nothing outside it, and nothing before it starts', () => {
+    for (const entry of LIBRARY_GRAPHICS) {
+      for (const shape of P1_SHAPE_NAMES) {
+        const r = runs[entry.id][shape]
+        const size = P1_SHAPES[shape]
+        const rect = placeRect(r.spec, size)
+        const frame = r.luma[r.held]
+        const before = r.luma[LIB_START - 1]
+        let inside = 0
+        let stray = 0
+        let early = 0
+        for (let y = 0; y < size.height; y++) {
+          for (let x = 0; x < size.width; x++) {
+            const k = y * size.width + x
+            if (frame[k] >= LIB_WHITE) {
+              if (deepIn(rect, x, y, 0)) inside++
+              else if (clearOf(rect, x, y, P1_MARGIN)) stray++
+            }
+            if (before[k] >= LIB_WHITE) early++
+          }
+        }
+        const at = `${entry.id} ${shape}, frame ${r.held}`
+        expect(inside, `${at}: white pixels inside the ${r.spec.place.auto ? r.spec.place.third : 'box'} third's content rect`).toBeGreaterThan(200)
+        expect(stray, `${at}: white pixels ${P1_MARGIN} px clear of that rect`).toBe(0)
+        expect(early, `${entry.id} ${shape}, frame ${LIB_START - 1} (before it starts): white pixels`).toBe(0)
+        lines.push(`- ${at}: ${inside} white pixels inside its rect ${JSON.stringify(rect)}, ${stray} stray; ${early} on frame ${LIB_START - 1}`)
+      }
+    }
+  })
+
+  it('writes the README', async () => {
+    await writeNote(dir, [
+      '# graphic, try-out 1 piece 6: the Library\'s graphics through the export',
+      '',
+      `A red ${P1_SHOT.width}×${P1_SHOT.height} source (red.mp4, ${LIB_SHOT_FRAMES} frames at ${FPS} fps) on V1, captions off, the clean look.`,
+      `Each Library tile (${LIBRARY_GRAPHICS.map((e) => e.id).join(', ')}) made by libraryGraphicAt at frame ${LIB_START} and landed on V2 as the store lands it;`,
+      'the fake Bakers.graphic paints each item of the real drawer\'s list as a white box of its bounds (node\'s 0.55 em measure). Left out of the Library:',
+      ...Object.entries(LIBRARY_LEFT_OUT).map(([id, why]) => `  ${id}: ${why}`),
+      '',
+      '<template>-<shape>/  export.mp4, graph.txt, the PNG sequence, held-fNNN.png (the frame read, taken at (f − 0.25)/fps)',
       '',
       ...lines
     ])

@@ -22,6 +22,9 @@ import { clipSourceWindow, clipWords } from '@shared/edit/clipIt'
 import type { Transcript } from '@shared/transcript'
 import { useEditor, type ShelfToolId, type UrlSourceStatus } from '../store'
 import { FROM_WORDS_LISTED_NOTE } from '@shared/director/fromWords'
+import { LIBRARY_GRAPHIC_RULE } from '@shared/graphics/apply'
+import { ON_SCREEN_REASON } from '@shared/graphics/budget'
+import { LIBRARY_GRAPHICS } from '@shared/graphics/library'
 import { HARNESS_HELPER_PACK, HARNESS_LINKS, HARNESS_SPEECH_MODEL_BYTES, harnessHelperStatus } from './bridge'
 import { harnessSubjectTrack } from './reframeStub'
 import { harnessDropsTranscript, harnessGraphicsRun, type HarnessWordSource } from './graphicsStub'
@@ -1114,6 +1117,19 @@ function catalogWith(entries: CatalogEntry[]): void {
   })
 }
 
+/** The Library's Graphics chip pressed, found inside the Library (its text is "Graphics" and the count: OUTPUT and the Transcript tile say "Graphics" too). */
+async function graphicsDrawer(): Promise<void> {
+  const chip = homeRoots('library')
+    .flatMap((root) => [...root.querySelectorAll<HTMLButtonElement>('button')])
+    .find((b) => (b.firstChild?.nodeValue ?? '').trim() === 'Graphics')
+  if (!chip) throw new Error('census: the Library shows no Graphics chip')
+  await click(chip)
+  if (!document.querySelector('[data-library-graphic]')) throw new Error('census: the Graphics drawer opened with no tile')
+  if (document.querySelectorAll('[data-library-graphic]').length !== LIBRARY_GRAPHICS.length) {
+    throw new Error(`census: the Graphics drawer shows ${document.querySelectorAll('[data-library-graphic]').length} tiles, not ${LIBRARY_GRAPHICS.length}`)
+  }
+}
+
 function stickers(n: number): CatalogEntry[] {
   return Array.from({ length: n }, (_, i) => ({
     id: `census-sticker-${i}`,
@@ -2082,6 +2098,53 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
   'library-transitions': async () => {
     catalogWith(transitions(1))
     return {}
+  },
+  /*
+   * The Library on its Graphics drawer (try-out 1 piece 6): one tile per
+   * template the Library offers, drawn in the project's look, with a
+   * catalogue (three sounds) and with none (still loading). The drawer needs
+   * no catalogue: its tiles show where "No library loaded" would.
+   */
+  'library-graphics': async () => {
+    catalogWith(sfx(3))
+    return { show: graphicsDrawer }
+  },
+  'library-graphics-loading': async () => {
+    useCatalog.setState({ catalog: null, loading: true, error: null })
+    return { show: graphicsDrawer }
+  },
+  /*
+   * A Graphics tile clicked over the census video, at the playhead: the
+   * counter lands on the top video track, selected, and the dock shows its
+   * Graphic panel with the note that no words tie it. A second click at the
+   * same playhead is refused with the Add path's notice ("another graphic is
+   * on screen then"), which stays in the notices: THROWS when either does
+   * not come out so. On screen with
+   * `__forgeCensus({ needs: ['library-graphic-placed'], keep: true })`.
+   */
+  'library-graphic-placed': async (env) => {
+    await videoClip(env)
+    await openHome('library')
+    await graphicsDrawer()
+    const tile = (): HTMLElement => {
+      const found = homeRoots('library')
+        .map((root) => root.querySelector<HTMLElement>('[data-library-graphic="counter"]'))
+        .find((el) => el !== null)
+      if (!found) throw new Error('census: the Graphics drawer shows no Counter tile')
+      return found
+    }
+    await click(tile())
+    const placed = editor().project.clips.filter((c) => c.graphic?.data.template === 'counter' && c.generatedBy?.rule === LIBRARY_GRAPHIC_RULE)
+    if (placed.length !== 1 || editor().selectedClipId !== placed[0].id) {
+      throw new Error(`census: a click on the Counter tile placed ${placed.length} counters, selected ${JSON.stringify(editor().selectedClipId)}`)
+    }
+    await click(tile())
+    const again = editor().project.clips.filter((c) => c.graphic?.data.template === 'counter').length
+    const last = editor().notices[editor().notices.length - 1]?.text
+    if (again !== 1 || last !== ON_SCREEN_REASON) {
+      throw new Error(`census: a second click at the same playhead left ${again} counters and the notice ${JSON.stringify(last)}`)
+    }
+    return { ids: { G: placed[0].id } }
   },
   /* one pack in each state the list can show a button for */
   'packs-states': async () => {

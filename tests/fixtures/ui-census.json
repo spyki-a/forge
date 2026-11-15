@@ -8885,5 +8885,129 @@
     "line": 50,
     "newHome": "trimmer dock (the graphic panel, docs/CLIPS.md §6.6)",
     "note": "A lower third's Role (a user field, never checked), written as ROLE; its label, the one text node \"Role\". Count reasoned from the code by lane T2b piece 5. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
+  },
+  {
+    "label": "Graphics",
+    "match": "text",
+    "home": "library",
+    "needs": "none",
+    "file": "src/renderer/src/components/Library.tsx",
+    "line": 35,
+    "newHome": "Shelf tile Library (the Graphics drawer, try-out 1 piece 6)",
+    "note": "The Graphics drawer's chip, written as GRAPHICS_DRAWER_LABEL, after the six catalogue drawers; its count is its own text node. The only 'Graphics' text in the Library (OUTPUT's section heading and the Transcript tile's are other homes). Count reasoned from the code by try-out 1 piece 6, 2026-11-15."
+  },
+  {
+    "label": "Counter",
+    "match": "text",
+    "home": "library",
+    "needs": "library-graphics",
+    "file": "src/shared/graphics/library.ts",
+    "line": 76,
+    "newHome": "Shelf tile Library (the Graphics drawer, try-out 1 piece 6)",
+    "note": "A Graphics tile's name under its face (graphics/library.ts SAMPLES). The only text node of these words in the Library on that drawer. Count reasoned from the code by try-out 1 piece 6, 2026-11-15."
+  },
+  {
+    "label": "Bars",
+    "match": "text",
+    "home": "library",
+    "needs": "library-graphics",
+    "file": "src/shared/graphics/library.ts",
+    "line": 78,
+    "newHome": "Shelf tile Library (the Graphics drawer, try-out 1 piece 6)",
+    "note": "A Graphics tile's name under its face (graphics/library.ts SAMPLES). The only text node of these words in the Library on that drawer. Count reasoned from the code by try-out 1 piece 6, 2026-11-15."
+  },
+  {
+    "label": "Steps",
+    "match": "text",
+    "home": "library",
+    "needs": "library-graphics",
+    "file": "src/shared/graphics/library.ts",
+    "line": 90,
+    "newHome": "Shelf tile Library (the Graphics drawer, try-out 1 piece 6)",
+    "note": "A Graphics tile's name under its face (graphics/library.ts SAMPLES). The only text node of these words in the Library on that drawer. Count reasoned from the code by try-out 1 piece 6, 2026-11-15."
+  },
+  {
+    "label": "Quote",
+    "match": "text",
+    "home": "library",
+    "needs": "library-graphics",
+    "file": "src/shared/graphics/library.ts",
+    "line": 93,
+    "newHome": "Shelf tile Library (the Graphics drawer, try-out 1 piece 6)",
+    "note": "A Graphics tile's name under its face (graphics/library.ts SAMPLES). The only text node of these words in the Library on that drawer. Count reasoned from the code by try-out 1 piece 6, 2026-11-15."
+  },
+  {
+    "label": "Ring",
+    "match": "text",
+    "home": "library",
+    "needs": "library-graphics",
+    "file": "src/shared/graphics/library.ts",
+    "line": 94,
+    "newHome": "Shelf tile Library (the Graphics drawer, try-out 1 piece 6)",
+    "note": "A Graphics tile's name under its face (graphics/library.ts SAMPLES). The only text node of these words in the Library on that drawer. Count reasoned from the code by try-out 1 piece 6, 2026-11-15."
+  },
+  {
+    "label": "Keyword",
+    "match": "text",
+    "home": "library",
+    "needs": "library-graphics",
+    "file": "src/shared/graphics/library.ts",
+    "line": 95,
+    "newHome": "Shelf tile Library (the Graphics drawer, try-out 1 piece 6)",
+    "note": "A Graphics tile's name under its face (graphics/library.ts SAMPLES). The only text node of these words in the Library on that drawer. Count reasoned from the code by try-out 1 piece 6, 2026-11-15."
+  },
+  {
+    "label": "Lower third",
+    "match": "text",
+    "home": "library",
+    "needs": "library-graphics",
+    "file": "src/shared/graphics/library.ts",
+    "line": 96,
+    "newHome": "Shelf tile Library (the Graphics drawer, try-out 1 piece 6)",
+    "note": "A Graphics tile's name under its face (graphics/library.ts SAMPLES). The only text node of these words in the Library on that drawer. Count reasoned from the code by try-out 1 piece 6, 2026-11-15."
+  },
+  {
+    "label": "— click to add at the playhead, or drag onto the timeline",
+    "match": "title",
+    "home": "library",
+    "needs": "library-graphics",
+    "part": true,
+    "count": 7,
+    "file": "src/renderer/src/components/Library.tsx",
+    "line": 38,
+    "newHome": "Shelf tile Library (the Graphics drawer, try-out 1 piece 6)",
+    "note": "Count 7: one per Graphics tile (LIBRARY_GRAPHICS: the eight drawn templates less the callout), with a catalogue of three sounds. Written as GRAPHIC_TILE_TITLE after the tile's name. Count reasoned from the code by try-out 1 piece 6, 2026-11-15."
+  },
+  {
+    "label": "— click to add at the playhead, or drag onto the timeline",
+    "match": "title",
+    "home": "library",
+    "needs": "library-graphics-loading",
+    "part": true,
+    "count": 7,
+    "file": "src/renderer/src/components/Library.tsx",
+    "line": 38,
+    "newHome": "Shelf tile Library (the Graphics drawer, try-out 1 piece 6)",
+    "note": "Count 7: one per Graphics tile (LIBRARY_GRAPHICS: the eight drawn templates less the callout), with no catalogue, still loading: the tiles show where \"Scanning the asset library…\" would. Written as GRAPHIC_TILE_TITLE after the tile's name. Count reasoned from the code by try-out 1 piece 6, 2026-11-15."
+  },
+  {
+    "label": "Graphic",
+    "match": "text",
+    "home": "dock",
+    "needs": "library-graphic-placed",
+    "file": "src/renderer/src/components/GraphicPanel.tsx",
+    "line": 51,
+    "newHome": "trimmer dock (the graphic panel, docs/CLIPS.md §6.6)",
+    "note": "The dock's Graphic panel on a counter placed by a click on its Library tile (try-out 1 piece 6): the click selects the clip, so the dock opens on it. The recipe throws unless the click placed one counter, selected, and a second click was refused with \"another graphic is on screen then\". Count reasoned from the code by try-out 1 piece 6, 2026-11-15."
+  },
+  {
+    "label": "It is not tied to anything said, so these words are not checked",
+    "match": "text",
+    "home": "dock",
+    "needs": "library-graphic-placed",
+    "file": "src/renderer/src/components/GraphicPanel.tsx",
+    "line": 64,
+    "newHome": "trimmer dock (the graphic panel, docs/CLIPS.md §6.6)",
+    "note": "NO_GROUNDING_NOTE: a graphic from the Library is tied to no words, and the counter's fields are grounded ones, so the panel says so once. Count reasoned from the code by try-out 1 piece 6, 2026-11-15."
   }
 ]

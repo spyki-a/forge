@@ -4,10 +4,14 @@ import type React from 'react'
 import type { AssetKind, CatalogEntry, FontMeta, TitleMeta } from '@shared/assets/catalog'
 import { isClipSticker, libraryIsEmpty, searchEntries, stickerCategoryLabel } from '@shared/assets/catalog'
 import { assetPath } from '@shared/assetPath'
+import { LIBRARY_GRAPHICS, libraryDragPayload, librarySampleList, searchLibraryGraphics, type LibraryGraphic } from '@shared/graphics/library'
+import { paintDrawList2d } from '@shared/graphics/paint'
+import { graphicStyleOf, type GraphicStyle } from '@shared/graphics/style'
 import { useCatalog } from '../catalog'
 import { useEditor } from '../store'
 import { assetUrl } from '../media'
 import { setDragPayload } from '../dragPayload'
+import { graphicMeasure } from '../graphicCanvas'
 import { PackList } from './PackList'
 
 const KINDS: { id: AssetKind; label: string }[] = [
@@ -19,12 +23,30 @@ const KINDS: { id: AssetKind; label: string }[] = [
   { id: 'sfx', label: 'SFX' }
 ]
 
+/**
+ * A drawer: a kind of file in the disk catalogue, or the graphics engine's
+ * templates (try-out 1 piece 6, 2026-11-15), which are no file: no scanner,
+ * no pack and no search of the catalogue reach them, so the widening is the
+ * renderer's alone and `AssetKind` stays the catalogue's.
+ */
+export type LibraryDrawer = AssetKind | 'graphic'
+
+/** The Graphics drawer's chip, after the catalogue's six (graphics/library.ts). */
+export const GRAPHICS_DRAWER_LABEL = 'Graphics'
+
+/** A Graphics tile's tooltip, after its name. */
+export const GRAPHIC_TILE_TITLE = '— click to add at the playhead, or drag onto the timeline'
+
+const DRAWERS: { id: LibraryDrawer; label: string }[] = [...KINDS, { id: 'graphic', label: GRAPHICS_DRAWER_LABEL }]
+
 /** Rendered at once; more load as the grid is scrolled. */
 const PAGE = 120
 
 /**
  * The asset library: fonts, props, stickers, transitions, titles and sounds,
- * and the packs that bring more.
+ * and the packs that bring more; and, last, the Graphics drawer, the graphics
+ * engine's templates drawn in the project's look (graphics/library.ts), which
+ * needs no catalogue and offers no pack.
  *
  * It opens on Stickers (the user, WINDOW.md §7.6): it used to open on Fonts,
  * the one drawer where nothing can be clicked or dragged, which as a Shelf
@@ -32,7 +54,7 @@ const PAGE = 120
  * Transitions tile opens it on Transitions (shelf/panels.tsx). Read once, on
  * mount: the chips own the drawer after that.
  */
-export function Library({ initialKind = 'sticker' }: { initialKind?: AssetKind } = {}): ReactNode {
+export function Library({ initialKind = 'sticker' }: { initialKind?: LibraryDrawer } = {}): ReactNode {
   const catalog = useCatalog((s) => s.catalog)
   const root = useCatalog((s) => s.root)
   const loading = useCatalog((s) => s.loading)
@@ -44,7 +66,10 @@ export function Library({ initialKind = 'sticker' }: { initialKind?: AssetKind }
 
   const audition = useEditor((s) => s.audition)
   const setAudition = useEditor((s) => s.setAudition)
-  const [kind, setKind] = useState<AssetKind>(initialKind)
+  const placeLibraryGraphic = useEditor((s) => s.placeLibraryGraphic)
+  const graphicsLook = useEditor((s) => s.project.graphics)
+  const [kind, setKind] = useState<LibraryDrawer>(initialKind)
+  const graphicsDrawer = kind === 'graphic'
   const [query, setQuery] = useState('')
   const [limit, setLimit] = useState(PAGE)
   const [category, setCategory] = useState<string | null>(null)
@@ -96,7 +121,7 @@ export function Library({ initialKind = 'sticker' }: { initialKind?: AssetKind }
   }
 
   const counts = useMemo(() => {
-    const totals: Partial<Record<AssetKind, number>> = {}
+    const totals: Partial<Record<LibraryDrawer, number>> = { graphic: LIBRARY_GRAPHICS.length }
     for (const entry of catalog?.entries ?? []) {
       totals[entry.kind] = (totals[entry.kind] ?? 0) + 1
     }
@@ -104,9 +129,13 @@ export function Library({ initialKind = 'sticker' }: { initialKind?: AssetKind }
   }, [catalog])
 
   const kindMatches = useMemo(
-    () => searchEntries(catalog, query, kind),
+    () => (kind === 'graphic' ? [] : searchEntries(catalog, query, kind)),
     [catalog, query, kind]
   )
+  // The Graphics drawer's tiles, searched by name: they need no catalogue (graphics/library.ts).
+  const graphicMatches = useMemo(() => (kind === 'graphic' ? searchLibraryGraphics(query) : []), [kind, query])
+  // The project's look, overrides included, as OUTPUT's sample draws it: a tile redraws when it changes.
+  const look = useMemo(() => graphicStyleOf({ graphics: graphicsLook }, {}), [graphicsLook])
 
   /*
    * Sheet ⑨'s "Categories: Telugu, Hindi, trending …etc".
@@ -171,7 +200,7 @@ export function Library({ initialKind = 'sticker' }: { initialKind?: AssetKind }
           className="min-w-0 flex-1 bg-transparent text-[11.5px] text-ink-200 outline-none placeholder:text-ink-600"
         />
         <span className="shrink-0 font-mono text-[10px] tabular-nums text-ink-600">
-          {matches.length}
+          {graphicsDrawer ? graphicMatches.length : matches.length}
         </span>
         <button
           onClick={() => setShowPacks((open) => !open)}
@@ -192,7 +221,7 @@ export function Library({ initialKind = 'sticker' }: { initialKind?: AssetKind }
       </div>
 
       <div className="flex flex-wrap gap-1 border-b border-ink-800 px-2 py-1.5">
-        {KINDS.map((entry) => (
+        {DRAWERS.map((entry) => (
           <button
             key={entry.id}
             onClick={() => setKind(entry.id)}
@@ -238,10 +267,11 @@ export function Library({ initialKind = 'sticker' }: { initialKind?: AssetKind }
       )}
 
       <div ref={scrollerRef} className="flex-1 overflow-y-auto p-2">
-        {error && (
+        {/* The Graphics drawer needs no catalogue: its tiles show while one loads, when it failed, and when there is none. */}
+        {error && !graphicsDrawer && (
           <div className="px-2 py-4 text-center text-[11px] text-red-800">{error}</div>
         )}
-        {!error && !catalog && (
+        {!error && !catalog && !graphicsDrawer && (
           <div className="px-2 py-6 text-center text-[11px] text-ink-600">
             {loading ? 'Scanning the asset library…' : 'No library loaded'}
           </div>
@@ -260,7 +290,20 @@ export function Library({ initialKind = 'sticker' }: { initialKind?: AssetKind }
           </div>
         )}
 
-        {catalog && matches.length === 0 && (
+        {/* No pack holds a graphic, so its drawer offers none: a search that empties it says only that. */}
+        {graphicsDrawer && graphicMatches.length === 0 && (
+          <div className="px-2 py-6 text-center text-[11px] leading-relaxed text-ink-600">Nothing here.</div>
+        )}
+
+        {graphicsDrawer && graphicMatches.length > 0 && (
+          <div className="grid grid-cols-2 gap-1.5">
+            {graphicMatches.map((entry) => (
+              <GraphicTile key={entry.id} entry={entry} style={look} onPlace={(id) => placeLibraryGraphic(id)} />
+            ))}
+          </div>
+        )}
+
+        {catalog && !graphicsDrawer && matches.length === 0 && (
           <div className="px-2 py-6 text-center text-[11px] leading-relaxed text-ink-600">
             Nothing here.
             <br />
@@ -483,6 +526,82 @@ function Tile({
           {entry.name}
         </span>
       )}
+    </div>
+  )
+}
+
+/**
+ * A tile of the Graphics drawer (try-out 1 piece 6): the template drawn by
+ * the engine in the project's look, its name under it. A click places it at
+ * the playhead on the top video track, as the Shelf's one-click tools place
+ * theirs, and the dock opens on it; a drag places it where it is dropped
+ * (the timeline's video tracks, or the picture). No hook of its own, so a
+ * test can call it as a function and press it; the face is `GraphicFace`'s.
+ */
+export function GraphicTile({
+  entry,
+  style,
+  onPlace
+}: {
+  entry: LibraryGraphic
+  style: GraphicStyle
+  onPlace: (templateId: string) => void
+}): ReactNode {
+  return (
+    <button
+      type="button"
+      draggable
+      data-library-graphic={entry.id}
+      onDragStart={(e: React.DragEvent) => setDragPayload(e, libraryDragPayload(entry))}
+      onClick={() => onPlace(entry.id)}
+      title={`${entry.name} ${GRAPHIC_TILE_TITLE}`}
+      className="group flex cursor-grab flex-col gap-1 overflow-hidden rounded-md border border-ink-700 bg-ink-850 p-1 text-left shadow-sm transition-colors hover:border-accent-500 active:cursor-grabbing"
+    >
+      <GraphicFace entry={entry} style={style} />
+      <span className="w-full truncate px-0.5 text-center text-[10px] leading-tight text-ink-300">{entry.name}</span>
+    </button>
+  )
+}
+
+/**
+ * A tile's face: `librarySampleList` (the entry's placeholder words at its
+ * settled frame, the engine's own draw list) painted by `paintDrawList2d` on
+ * a canvas, redrawn when the look changes (its preset, accent or text style:
+ * all in `style`) or a face loads, as OUTPUT's sample is (OutputStrip.tsx
+ * `GraphicSample`).
+ */
+function GraphicFace({ entry, style }: { entry: LibraryGraphic; style: GraphicStyle }): ReactNode {
+  const ref = useRef<HTMLCanvasElement | null>(null)
+  const ensureFont = useCatalog((s) => s.ensureFont)
+  const loadedFonts = useCatalog((s) => s.loadedFonts)
+  const key = JSON.stringify(style)
+
+  useEffect(() => {
+    void ensureFont(style.font)
+  }, [style.font, ensureFont])
+
+  useEffect(() => {
+    const canvas = ref.current
+    if (!canvas) return
+    const dpr = Math.min(2, window.devicePixelRatio || 1)
+    const w = Math.round(canvas.clientWidth * dpr)
+    const h = Math.round(canvas.clientHeight * dpr)
+    if (w < 8 || h < 8) return
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.clearRect(0, 0, w, h)
+    try {
+      paintDrawList2d(ctx, librarySampleList(entry, JSON.parse(key) as GraphicStyle, { width: w, height: h }, graphicMeasure()))
+    } catch {
+      // A face that cannot draw must not take the drawer down.
+    }
+  }, [entry, key, loadedFonts])
+
+  return (
+    <div className="relative aspect-video w-full overflow-hidden rounded-sm bg-stage">
+      <canvas ref={ref} className="pointer-events-none absolute inset-0 size-full" />
     </div>
   )
 }

@@ -246,6 +246,16 @@ export const GRAPHIC_TEMPLATES: Partial<Record<GraphicTemplateId, TemplateDef>> 
 } satisfies Partial<Record<GraphicTemplateId, TemplateDef>>)
 
 /**
+ * The name a lower third placed by hand from the Library draws when the
+ * footage under it has no Speaker (try-out 1 piece 6, 2026-11-15): words
+ * that read as a placeholder, never a name the app made up. Typing the
+ * Speaker in the dock's panel then draws the Speaker instead (`withSpeaker`).
+ * Here, beside the templates, so graphics/apply.ts and graphics/library.ts
+ * share it without importing each other.
+ */
+export const SPEAKER_PLACEHOLDER = 'Speaker name'
+
+/**
  * Rule 10's spacing (docs/CLIPS.md §6.7; D12, §16.65), kept for every graphic:
  * onsets at least `minGapS` apart, and at most one graphic per `perS` seconds of
  * clip, weighed by `roomRank` (a keyword yields to any other template; inside

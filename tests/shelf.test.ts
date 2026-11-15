@@ -282,9 +282,10 @@ describe('the Shelf', () => {
     // The user (WINDOW.md §7.6): not on Fonts, the one drawer where nothing can
     // be clicked or dragged. The Library reads its first drawer from a prop.
     const library = source('src/renderer/src/components/Library.tsx')
-    expect([...library.matchAll(/^export function Library\(\{ initialKind = 'sticker' \}: \{ initialKind\?: AssetKind \} = \{\}\): ReactNode \{$/gm)]).toHaveLength(1)
-    expect([...library.matchAll(/useState<AssetKind>\(/g)]).toHaveLength(1)
-    expect([...library.matchAll(/useState<AssetKind>\(initialKind\)/g)]).toHaveLength(1)
+    // The drawer's type is AssetKind or, since try-out 1 piece 6, LibraryDrawer (AssetKind and the Graphics drawer): either holds the default.
+    expect([...library.matchAll(/^export function Library\(\{ initialKind = 'sticker' \}: \{ initialKind\?: (?:AssetKind|LibraryDrawer) \} = \{\}\): ReactNode \{$/gm)]).toHaveLength(1)
+    expect([...library.matchAll(/useState<(?:AssetKind|LibraryDrawer)>\(/g)]).toHaveLength(1)
+    expect([...library.matchAll(/useState<(?:AssetKind|LibraryDrawer)>\(initialKind\)/g)]).toHaveLength(1)
     const panels = parse('src/renderer/src/components/shelf/panels.tsx')
     const opened = Object.fromEntries(
       mounts(panels, 'Library').map((mount) => [functionOf(mount)?.name?.text, attr(mount, 'initialKind', panels)])
