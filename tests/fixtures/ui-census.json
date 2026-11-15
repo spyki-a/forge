@@ -8718,10 +8718,11 @@
     "match": "title",
     "home": "transcript",
     "needs": "video-clip",
+    "count": 2,
     "file": "src/renderer/src/components/TranscriptGraphics.tsx",
-    "line": 39,
+    "line": 54,
     "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
-    "note": "Find greyed on a clip with no transcript, its title saying why (FIND_NEEDS_TRANSCRIPT). Count reasoned from the code by lane T2b piece 4. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
+    "note": "Count 2 since try-out 1's piece 5 (2026-11-15): on a clip with no transcript both Find and \"Add graphic from these words\" are greyed with this one title (FIND_NEEDS_TRANSCRIPT). It was count 1 (Find alone), read on screen 2026-11-11 at d33d5b4; the harness census at c29a5dd reported this row ambiguous (2 on screen), which is how the second control was found."
   },
   {
     "label": "Speaker",
