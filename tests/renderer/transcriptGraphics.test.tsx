@@ -741,6 +741,21 @@ describe('Add graphic from these words (try-out 1, 2026-11-15, piece 5)', () => 
     expect(rows[0].refused).toBe(FROM_WORDS_LISTED_NOTE)
   })
 
+  it('added, undone, then pressed again on the same refused sentence: still one row (the row the undo brought back is the one marked)', () => {
+    pickRow(1)
+    press(fromWords())
+    expect(press(dropRows()[0].add!)).toBeNull()
+    expect(dropRows()).toEqual([])
+    state().undo()
+    // The undo took the counter away, so the tile shows its row again: that row is the listed one.
+    expect(dropRows()).toHaveLength(1)
+    expect(press(fromWords())).toBe(FROM_WORDS_LISTED_NOTE)
+    const rows = dropRows()
+    expect(rows.map((r) => r.reason)).toHaveLength(1)
+    expect(rows[0].refused).toBe(FROM_WORDS_LISTED_NOTE)
+    expect(state().lastGraphics!.drops).toHaveLength(1)
+  })
+
   it('a placement refusal (another graphic on screen) is a notice only: nothing placed, nothing listed, no undo step', () => {
     pickRow(0)
     expect(press(fromWords())).toBeNull()

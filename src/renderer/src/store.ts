@@ -5678,8 +5678,13 @@ export const useEditor = create<EditorState>((set, get) => ({
       set((s) => {
         const last = s.lastGraphics !== null && s.lastGraphics.clipId === clipId ? s.lastGraphics : { clipId, notes: [], drops: [], model: BY_HAND_MODEL }
         // Pressed again on the same refused words: the row already listed (and not placed) is marked again, not listed twice.
+        // "Not placed" as the tile reads it (TranscriptGraphics.tsx): never added, or added and its clip since gone (an
+        // undo, a Drop), which is the row the tile shows again. Read as `addedAs === undefined` alone, Add, Undo and a
+        // second press listed the same refusal twice (seen on the harness page, 2026-11-15).
+        const clips = s.project.clips
+        const listed = (d: ShownDrop): boolean => d.addedAs === undefined || !clips.some((c) => c.id === d.addedAs)
         const same = last.drops.findIndex(
-          (d) => d.addedAs === undefined && d.clipId === row.clipId && d.template === row.template && d.text === row.text && d.reason === row.reason
+          (d) => listed(d) && d.clipId === row.clipId && d.template === row.template && d.text === row.text && d.reason === row.reason
         )
         const drops = same >= 0 ? last.drops.map((d, i) => (i === same ? { ...d, refused: note } : d)) : [...last.drops, row]
         return { lastGraphics: { ...last, drops } }
