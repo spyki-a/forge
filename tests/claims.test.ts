@@ -1775,7 +1775,7 @@ describe('a number said as a what-if is no fact (try-out 1, 2026-11-15)', () => 
 
   it('each opener opens a what-if; "say" and "imagine" only where they open the clause', () => {
     const ring = g({ sentence: 's00', template: 'ring', value: '40%', label: 'couples' })
-    const openers = ['If', 'Unless', 'Suppose', 'Supposing', 'Assuming', 'In case', 'What if', 'Even if', 'Say', 'Imagine', "Let's say", 'Lets say', 'And say', 'So imagine']
+    const openers = ['If', 'Unless', 'Suppose', 'Supposing', 'Assuming', 'In case', 'What if', 'Even if', 'Say', 'Imagine', "Let's say", 'Lets say', 'And say', 'So imagine', 'Let’s say', 'Let us say']
     for (const opener of openers) {
       const said = `${opener} 40% of couples book early, we rest.`
       expect(droppedOf(one1([said], ring)).map((p) => p.message), said).toContain(whatIf('40%'))
@@ -1793,14 +1793,36 @@ describe('a number said as a what-if is no fact (try-out 1, 2026-11-15)', () => 
     }
     // The clause directly before the number's, in its sentence, is judged with it, as rule 7 judges a negation.
     expect(droppedOf(one1(['If you book early, I charge $500.'], counter)).map((p) => p.message)).toContain(whatIf('$500'))
-    // Another sentence's conditional reaches nothing.
-    expect(kept(one1(['If you book early.', 'I charge $500 for it.'], g({ sentence: 's01', template: 'counter', value: '$500', label: 'charge' })))).toHaveLength(1)
+    // Another transcript segment's conditional reaches nothing, whether it ends on a full stop or a pause cut it
+    // with no mark: the reach is rule 7's, which reads clauses within one segment (the validator's sentence).
+    const s01 = (): AnswerGraphic => g({ sentence: 's01', template: 'counter', value: '$500', label: 'charge' })
+    expect(kept(one1(['If you book early.', 'I charge $500 for it.'], s01()))).toHaveLength(1)
+    expect(kept(one1(['If you book early', 'I charge $500 for it.'], s01()))).toHaveLength(1)
+    // Inside ONE segment a full stop is only a clause break, so a conditional just before it still reaches the
+    // number (the safe direction, and rule 7's reach for a negation).
+    expect(droppedOf(one1(['If you book early. I charge $500 for it.'], counter)).map((p) => p.message)).toContain(whatIf('$500'))
   })
 
-  it('English only: a transcript tagged "es" or "und" is not read by the rule', () => {
+  it("an 'if' that opens no supposition still drops, by choice: 'as if', a discourse 'if', a quoted 'if'", () => {
+    const ring = g({ sentence: 's00', template: 'ring', value: '40%', label: 'couples' })
+    for (const said of [
+      'It feels as if 40% of couples book a year ahead.',
+      'If you ask me, 40% of couples book a year ahead.',
+      'He said "if it rains we move", and 40% of couples book a year ahead.'
+    ]) {
+      expect(droppedOf(one1([said], ring)).map((p) => p.message), said).toContain(whatIf('40%'))
+    }
+  })
+
+  it('a value said once as a what-if and once as a fact binds to the fact', () => {
+    const ring = g({ sentence: 's00', template: 'ring', value: '40%', label: 'couples' })
+    expect(kept(one1(['If 40% leave, we lose. 40% of couples book early.'], ring))).toHaveLength(1)
+  })
+
+  it('English only: a transcript tagged "es", "und", "hi" or "te" is not read by the rule', () => {
     const ring = g({ sentence: 's00', template: 'ring', value: '40%', label: 'couples' })
     const said = ['If 40% of couples book early, we rest.']
-    for (const language of ['es', 'und']) {
+    for (const language of ['es', 'und', 'hi', 'te']) {
       const t = talk(said, { language })
       expect(kept(one1(said, ring, {}, t)), language).toHaveLength(1)
     }

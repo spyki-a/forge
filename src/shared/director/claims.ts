@@ -564,6 +564,16 @@ export function isNegator(t: string): boolean {
  * Each entry is a run of tokens as `claimTokens` writes them. 'what if' and
  * 'even if' are covered by 'if'. Beyond §6.7's rules (try-out 1, 2026-11-15),
  * each only drops more. English only: Hindi and Telugu need the owner's words.
+ *
+ * Read wide, by choice, and always in the dropping direction: an 'if' that
+ * opens no supposition still counts in the number's clause or the clause
+ * before it: a discourse 'if' ('If you ask me, 40% book early'), 'as if', an
+ * 'if' meaning 'whether' ('I asked if 40% book early') and an 'if' inside a
+ * quotation. The reach is rule 7's, within one transcript segment (the
+ * validator's sentence): a full stop inside a segment is only a clause break,
+ * so 'What if it rains? 40% book early.' as one segment drops the 40%, while
+ * a conditional in the segment before never reaches, whether that segment
+ * ends on a mark or a pause cut it.
  */
 export const CONDITIONALS_EN: readonly (readonly string[])[] = [
   ['if'], ['unless'], ['suppose'], ['supposing'], ['assuming'], ['in', 'case']

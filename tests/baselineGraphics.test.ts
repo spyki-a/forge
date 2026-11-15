@@ -189,7 +189,9 @@ describe('the four rules (§6.10)', () => {
 
   it('a nine-word sentence, a question and a sentence ending on function words give no keyword', () => {
     expect(run(['We drove home very slowly after the long wedding.'])).toEqual([])
-    expect(run(['Is the light good today?'])).toEqual([])
+    // No new rule (filler, courtesy, length, mark) touches this one: only the question rule stops it.
+    expect(run(['Is the light good enough?'])).toEqual([])
+    expect(run(['Should we hire a second shooter?'])).toEqual([])
     expect(run(['This is it.'])).toEqual([])
     expect(run(['It is so for you.'])).toEqual([])
     // A negator is no content word: it never becomes the keyword.
@@ -458,9 +460,17 @@ describe('the keyword rule, tightened after try-out 1 (2026-11-15)', () => {
   })
 
   it(`a sentence of fewer than ${BASELINE_KEYWORD_MIN_WORDS} words gives none`, () => {
-    expect(BASELINE_KEYWORD_MIN_WORDS).toBe(3)
-    expect(keywords(['Quick correction.'])).toEqual([])
-    expect(keywords(['A quick correction.'])).toEqual([['s00', 'correction']])
+    // Built from the constant, a proposal the owner may re-rate: one word short gives none, the floor gives one.
+    const short = ['wedding', 'calendar', 'planning', 'photography', 'portraits', 'lighting', 'albums', 'correction']
+    const floor = short.slice(-BASELINE_KEYWORD_MIN_WORDS).join(' ') + '.'
+    const under = short.slice(-(BASELINE_KEYWORD_MIN_WORDS - 1)).join(' ') + '.'
+    expect(keywords([under])).toEqual([])
+    expect(keywords([floor])).toEqual([['s00', 'correction']])
+  })
+
+  it('a comma or no mark ends no sentence; a full stop or an ellipsis does', () => {
+    expect(keywords(['We plan the light,'])).toEqual([])
+    expect(keywords(['We plan the light…'])).toEqual([['s00', 'light']])
   })
 
   it('a sentence that greets, thanks or signs off gives none', () => {
@@ -468,6 +478,9 @@ describe('the keyword rule, tightened after try-out 1 (2026-11-15)', () => {
     expect(keywords(['Thanks for the beautiful photos.'])).toEqual([])
     expect(keywords(['First of all, thank you for watching.'])).toEqual([])
     expect(keywords(['See you in the next video.'])).toEqual([])
+    // A courtesy in the pause-cut segment before the keyword's segment counts too: it is one sentence.
+    expect(keywords(['Thank you for', 'watching our film.'])).toEqual([])
+    expect(keywords(['We made this for', 'watching our film.'])).toEqual([['s01', 'film']])
     expect(keywords(['We love the beautiful photos.'])).toEqual([['s00', 'photos']])
   })
 
@@ -499,6 +512,11 @@ describe('the keyword rule, tightened after try-out 1 (2026-11-15)', () => {
       'forty weddings.',
       'Let me ask you something.',
       'Quick correction.',
+      'Fifty percent of the days',
+      'portraits.',
+      'If I charge ten thousand dollars,',
+      'nobody would',
+      'book.',
       'Okay.',
       'How do I get',
       'ready before a wedding?',
@@ -508,8 +526,8 @@ describe('the keyword rule, tightened after try-out 1 (2026-11-15)', () => {
       'Thank you.'
     ]
     const got = keywords(said).map(([, w]) => w)
-    for (const w of ['photography', 'calendar', 'money', 'separate', 'weddings']) expect(got, w).toContain(w)
-    for (const w of ['watching', 'up', 'shot', 'something', 'correction', 'Okay', 'get', 'again', 'here', 'today', 'Thank you']) {
+    for (const w of ['photography', 'calendar', 'money', 'separate', 'weddings', 'portraits']) expect(got, w).toContain(w)
+    for (const w of ['watching', 'up', 'shot', 'book', 'something', 'correction', 'Okay', 'get', 'again', 'here', 'today', 'Thank you']) {
       expect(got, w).not.toContain(w)
     }
   })
