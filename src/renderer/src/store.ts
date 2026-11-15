@@ -637,7 +637,9 @@ export type ShownDrop = GraphicDrop & { refused?: string; addedAs?: string }
  * The `lastGraphics.model` of a list started by **Add graphic from these
  * words** on a clip with no Find of its own listed (not a model's id, and not
  * 'baseline', so the tile does not say that no model's answer was used in a
- * run that never ran).
+ * run that never ran). On a clip whose Find is listed, a by-hand row joins
+ * that list. Either way a later Find on the clip replaces the list, by-hand
+ * rows included (the button is greyed while a Find runs, so only on purpose).
  */
 export const BY_HAND_MODEL = 'by-hand'
 
@@ -5675,7 +5677,12 @@ export const useEditor = create<EditorState>((set, get) => ({
       const row: ShownDrop = { ...out.drop, refused: note }
       set((s) => {
         const last = s.lastGraphics !== null && s.lastGraphics.clipId === clipId ? s.lastGraphics : { clipId, notes: [], drops: [], model: BY_HAND_MODEL }
-        return { lastGraphics: { ...last, drops: [...last.drops, row] } }
+        // Pressed again on the same refused words: the row already listed (and not placed) is marked again, not listed twice.
+        const same = last.drops.findIndex(
+          (d) => d.addedAs === undefined && d.clipId === row.clipId && d.template === row.template && d.text === row.text && d.reason === row.reason
+        )
+        const drops = same >= 0 ? last.drops.map((d, i) => (i === same ? { ...d, refused: note } : d)) : [...last.drops, row]
+        return { lastGraphics: { ...last, drops } }
       })
       get().notify(fromWordsListedToast(out.drop.reason), 'info')
       return note

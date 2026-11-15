@@ -1777,8 +1777,10 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
    * on screen with `__forgeCensus({ needs: ['transcript-graphics-words'], keep: true })`:
    * click the row "40% of couples book early." and press the button (the
    * ring lands at 0:00); press Add on the "$500" row (refused: the ring is
-   * on screen then); pick "gear" alone (drag Start onto it) and press the
-   * button (the keyword lands, within 6 s of the ring).
+   * on screen then); click the row "Light matters more than gear.", drag
+   * its Start down onto "gear" (Start cannot pass End, so pick the row
+   * first) and press the button (the keyword "gear" lands, within 6 s of
+   * the ring).
    */
   'transcript-graphics-words': async (env) => {
     const { m, V } = await videoClip(env)

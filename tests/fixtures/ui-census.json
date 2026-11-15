@@ -8836,7 +8836,7 @@
     "note": "The by-hand add from the transcript (addGraphicFromWords; try-out 1, 2026-11-15, piece 5), written as FROM_WORDS, under Find graphics; acts on the rows' pick as Cut to these words does. Greyed here: nothing is picked. Measured in node by tests/renderer/transcriptGraphics.test.tsx; not yet read on screen."
   },
   {
-    "label": "Click a row above for its sentence, or pick words inside it for a keyword",
+    "label": "Click a row above for its sentence, or drag Start and End inside it for a keyword",
     "match": "title",
     "home": "transcript",
     "needs": "transcript",

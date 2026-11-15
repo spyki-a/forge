@@ -7,6 +7,7 @@ import type { Segment, Transcript, Word } from '@shared/transcript'
 import type { AnswerGraphic } from '@shared/director/schemaGraphics'
 import { GRAPHIC_RULE } from '@shared/director/apply'
 import { CHECK_THE_NUMBER, CLEAR_GRAPHICS_NOTE, CLIPS_GRAPHIC_RULE } from '@shared/graphics/apply'
+import { ON_SCREEN_REASON } from '@shared/graphics/budget'
 
 /*
  * Lane T2b, piece 4 (docs/CLIPS.md §6.6, "By hand"; the test §6.6 names
@@ -692,6 +693,76 @@ describe('Add graphic from these words (try-out 1, 2026-11-15, piece 5)', () => 
     expect(press(rows[0].add!)).toBeNull()
     expect(clipItGraphics().map((c) => c.graphic!.data)).toContainEqual({ template: 'counter', value: '$500', label: 'album' })
     expect(dropRows()).toEqual([])
+  })
+
+  it('greyed while any Find runs, on this clip or another, with the busy title', () => {
+    pickRow(0)
+    for (const running of ['shot', 'shot2']) {
+      useEditor.setState({ findingGraphics: running })
+      expect(fromWords().props.disabled, running).toBe(true)
+      expect(fromWords().props.title, running).toBe(GRAPHICS_BUSY_NOTE)
+    }
+    useEditor.setState({ findingGraphics: null })
+    expect(fromWords().props.disabled).toBe(false)
+  })
+
+  it('a by-hand refusal joins the clip’s Find list: Find’s rows, notes and model stay at their indices, and Add on an old row places its own graphic', async () => {
+    answer = answering(
+      g({ sentence: 's00', template: 'counter', value: '99', label: 'couples' }),
+      g({ sentence: 's99', template: 'ring', value: '70%', label: 'couples' })
+    )
+    await pressFind()
+    const found = state().lastGraphics!
+    expect(found.clipId).toBe('shot')
+    expect(found.drops.length).toBeGreaterThanOrEqual(2)
+    const nine = found.drops.findIndex((d) => d.text === '99' && d.add !== undefined)
+    expect(nine).toBeGreaterThanOrEqual(0)
+    pickRow(1)
+    expect(press(fromWords())).toBe(FROM_WORDS_LISTED_NOTE)
+    const after = state().lastGraphics!
+    expect(after.model).toBe(found.model)
+    expect(after.notes).toEqual(found.notes)
+    expect(after.drops.slice(0, found.drops.length)).toEqual(found.drops)
+    expect(after.drops).toHaveLength(found.drops.length + 1)
+    expect(after.drops[found.drops.length]).toMatchObject({ template: 'counter', text: '$500', refused: FROM_WORDS_LISTED_NOTE })
+    expect(dropRows().map((r) => r.index)).toEqual(expect.arrayContaining([nine, found.drops.length]))
+    // Add on Find's own row still places Find's graphic, not the by-hand one.
+    expect(press(dropRows().find((r) => r.index === nine)!.add!)).toBeNull()
+    expect(clipItGraphics().map((c) => c.graphic!.data)).toEqual([{ template: 'counter', value: '99', label: 'couples' }])
+    expect(dropRows().map((r) => r.index)).toContain(found.drops.length)
+  })
+
+  it('pressed again on the same refused sentence: one row, marked again, not two', () => {
+    pickRow(1)
+    press(fromWords())
+    press(fromWords())
+    const rows = dropRows()
+    expect(rows).toHaveLength(1)
+    expect(rows[0].refused).toBe(FROM_WORDS_LISTED_NOTE)
+  })
+
+  it('a placement refusal (another graphic on screen) is a notice only: nothing placed, nothing listed, no undo step', () => {
+    pickRow(0)
+    expect(press(fromWords())).toBeNull()
+    // "couples" alone (row 0's fifth word, position 4), under the ring.
+    pickWords(4, 4)
+    const before = project()
+    const past = state().past.length
+    expect(press(fromWords())).toBe(ON_SCREEN_REASON)
+    expect(project()).toBe(before)
+    expect(state().past.length).toBe(past)
+    expect(state().notices.map((n) => n.text)).toContain(ON_SCREEN_REASON)
+    expect(dropRows()).toEqual([])
+  })
+
+  it('a pick made over other words than the clip plays now (the clip trimmed) greys the button and adds nothing', () => {
+    pickRow(0)
+    expect(fromWords().props.disabled).toBe(false)
+    useEditor.setState({ project: { ...project(), clips: project().clips.map((c) => (c.id === 'shot' ? { ...c, inPoint: FPS * 2, duration: c.duration - FPS * 2 } : c)) } })
+    expect(fromWords().props.disabled).toBe(true)
+    const before = project()
+    expect(state().addGraphicFromWords('shot')).toBeNull()
+    expect(project()).toBe(before)
   })
 
   it('nothing to draw says so in a note and changes nothing', () => {

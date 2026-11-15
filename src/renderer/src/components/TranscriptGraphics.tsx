@@ -59,7 +59,7 @@ export const ADD = 'Add'
 /** The by-hand add from the transcript's pick (try-out 1, 2026-11-15, piece 5; "Cut to these words"' pattern). */
 export const FROM_WORDS = 'Add graphic from these words'
 /** Its title while nothing is picked (not the plan's words). */
-export const FROM_WORDS_NEEDS_PICK = 'Click a row above for its sentence, or pick words inside it for a keyword'
+export const FROM_WORDS_NEEDS_PICK = 'Click a row above for its sentence, or drag Start and End inside it for a keyword'
 /** Its title once something is picked (not the plan's words). */
 export const FROM_WORDS_TITLE = 'A graphic for the picked sentence, read as Find reads it, or a keyword of exactly the picked words'
 export const CLEAR_GRAPHICS = 'Clear graphics'
