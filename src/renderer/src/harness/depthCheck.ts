@@ -8,7 +8,7 @@
  *
  * For specs.json's English `counter` and `ring` (counter-en, ring-en), under
  * `clean`, each of the four depths, and the hero (`depth: 'tilt'`, `hero`)
- * under `neon`, at 540×960 and 30 fps, every moving frame of the entrance
+ * under `neon` and under `energetic`, at 540×960 and 30 fps, every moving frame of the entrance
  * through `paintDrawList3d` (one compositor for the option), against the flat
  * twin (the same spec with no depth and no hero, the same style) by painter A:
  *
@@ -22,8 +22,11 @@
  *   ink (0, M7's bar) and that the glow is there (the frame with it against
  *   the frame without).
  *
- * A contact sheet per case: eight frames of the entrance over a dark grey,
- * a third of the size, frame numbers in its caption.
+ * A contact sheet per case over a dark grey, at half the size, frame numbers
+ * in its caption: the frames `depthSheetFrames` picks, every frame from the
+ * first with ink while the move shows, the last off flat and the first at
+ * rest. The summary also prints the milliseconds per frame `paintDrawList3d`
+ * took over the case's moving frames (the GPU's cost; no bar).
  */
 
 import type { DrawList } from '@shared/graphics/items'
@@ -40,7 +43,7 @@ import { createCompositor, paintDrawList3d, resetCompositorSession, type Composi
 import { graphicMeasure } from '../graphicCanvas'
 import { diffChannels, type ChannelDiff } from './compositorMeasure'
 import { glowAlpha } from './glowMeasure'
-import { depthVerdict, type DepthCaseReading } from './depthMeasure'
+import { depthSheetFrames, depthVerdict, type DepthCaseReading } from './depthMeasure'
 
 export interface DepthResult {
   size: { width: number; height: number }
@@ -54,12 +57,11 @@ const H = 960
 const FPS = 30
 /** The fixtures read: specs.json's English counter and ring. */
 export const DEPTH_CHECK_FIXTURES: readonly string[] = Object.freeze(['counter-en', 'ring-en'])
-/** The style the four depths are read under, and the glowing one the hero is. */
+/** The style the four depths are read under, and the glowing ones the hero is read under: neon (expo-out) and energetic (out-back, whose camera overshoots past flat before it lands). */
 export const DEPTH_CHECK_STYLE = 'clean'
-export const DEPTH_CHECK_HERO_STYLE = 'neon'
-/** Frames per contact sheet. */
-const SHEET_FRAMES = 8
-const SHEET_SCALE = 1 / 3
+export const DEPTH_CHECK_HERO_STYLES: readonly string[] = Object.freeze(['neon', 'energetic'])
+/** Half the size: a third made the move a pixel or less on every frame after the first few (the critics' reading). */
+const SHEET_SCALE = 1 / 2
 const SHEET_BACKGROUND = '#2a2a2a'
 
 function canvas2d(width = W, height = H): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } {
@@ -92,14 +94,7 @@ const hasInk = (data: Uint8ClampedArray): boolean => {
   return false
 }
 
-/** Up to `SHEET_FRAMES` frames of `0..moving−1`, evenly, the first and the last moving one always among them. */
-function sheetFrames(moving: number): number[] {
-  const last = Math.max(0, moving - 1)
-  const n = Math.min(SHEET_FRAMES, moving)
-  return [...new Set(Array.from({ length: n }, (_, i) => Math.round((i * last) / Math.max(1, n - 1))))]
-}
-
-/** The frames side by side, a third of the size, over a dark grey so light ink shows. */
+/** The frames side by side, at `SHEET_SCALE`, over a dark grey so light ink shows. */
 function contactSheet(pictures: readonly HTMLCanvasElement[]): HTMLCanvasElement {
   const w = Math.round(W * SHEET_SCALE)
   const h = Math.round(H * SHEET_SCALE)
@@ -161,7 +156,11 @@ async function readCase(
     frames.canvas(`depth: ${fixture} hero under ${style.id}, settled, with its glow (over grey)`, contactSheet([withGlow]))
   }
 
-  const shown = sheetFrames(moving)
+  const began = performance.now()
+  for (const l of lists) paintDrawList3d(l, compositor, { layer: freshLayer })
+  const msPerFrame = (performance.now() - began) / Math.max(1, lists.length)
+
+  const shown = depthSheetFrames(firstFrame, lists.map((l) => !cameraIsFlat(l.camera)))
   frames.canvas(`depth: ${fixture} ${variant} under ${style.id}, frames ${shown.join(', ')} of ${moving}`, contactSheet(shown.map((f) => painterB(lists[f], compositor))))
 
   const reading: DepthCaseReading = {
@@ -179,7 +178,7 @@ async function readCase(
   }
   summary.push(
     `depth ${fixture} ${variant} under ${style.id}: ${moving} moving frames, ${movingCamera} off flat; last camera ${JSON.stringify(lastCamera)}; ` +
-      `settled against the flat twin ${line(settled)}${variant === 'hero' ? ' (the glow left out)' : ''}; frame ${firstFrame} against the twin ${line(first)}` +
+      `${msPerFrame.toFixed(1)} ms a frame through paintDrawList3d; settled against the flat twin ${line(settled)}${variant === 'hero' ? ' (the glow left out)' : ''}; frame ${firstFrame} against the twin ${line(first)}` +
       (glow ? `; glow radius ${glow.radius.toFixed(1)} px, alpha beyond its ${glow.reach} px reach ${glow.outsideReach} over ${glow.outsidePixels} pixels, with against without ${line(glow.present)}` : '')
   )
   return reading
@@ -192,7 +191,7 @@ export async function checkDepth(
   notes: string[]
 ): Promise<DepthResult> {
   const plain = resolveGraphicStyle(DEPTH_CHECK_STYLE)
-  const glowing = resolveGraphicStyle(DEPTH_CHECK_HERO_STYLE)
+  const glowing = DEPTH_CHECK_HERO_STYLES.map((id) => resolveGraphicStyle(id))
   const chosen = DEPTH_CHECK_FIXTURES.map((id) => {
     const f = fixtures.find((x) => x.id === id)
     if (!f) throw new Error(`depth check: specs.json has no fixture ${id}`)
@@ -201,9 +200,9 @@ export async function checkDepth(
   // Every face the lists draw, loaded before either painter paints.
   const { ensureFont } = useCatalog.getState()
   const measure = graphicMeasure()
-  const faces = new Set<string>([plain.font, glowing.font])
+  const faces = new Set<string>([plain.font, ...glowing.map((st) => st.font)])
   for (const f of chosen) {
-    for (const st of [plain, glowing]) {
+    for (const st of [plain, ...glowing]) {
       for (const item of drawListAt(f.spec, st, 60, FPS, { width: W, height: H }, measure, {}).items) if (item.kind === 'text') for (const face of facesFor(item.look.font, item.text)) faces.add(face)
     }
   }
@@ -216,7 +215,7 @@ export async function checkDepth(
   try {
     for (const f of chosen) {
       for (const move of DEPTH_MOVES) cases.push(await readCase(f.id, f.spec, move, plain, compositor, frames, summary))
-      cases.push(await readCase(f.id, f.spec, 'hero', glowing, compositor, frames, summary))
+      for (const st of glowing) cases.push(await readCase(f.id, f.spec, 'hero', st, compositor, frames, summary))
     }
   } finally {
     compositor.dispose()

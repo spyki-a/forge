@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ChannelDiff } from '../../src/renderer/src/harness/compositorMeasure'
-import { DEPTH_BAR, depthVerdict, type DepthCaseReading } from '../../src/renderer/src/harness/depthMeasure'
+import { DEPTH_BAR, DEPTH_SHEET_FRAMES, depthSheetFrames, depthVerdict, type DepthCaseReading } from '../../src/renderer/src/harness/depthMeasure'
 
 /*
  * The harness's `depth` option's verdict (docs/CLIPS.md §6.11's `parity` row,
@@ -69,5 +69,26 @@ describe('depthVerdict', () => {
     expect(failing((r) => (r[9].glow!.present = diff(0, 0)))).toEqual([expect.stringContaining('no glow')])
     expect(failing((r) => delete r[9].glow)).toEqual([expect.stringContaining('the glow was not read')])
     expect(failing((r) => r.splice(7, 1))).toEqual(['ring dolly was not read'])
+  })
+})
+
+describe('depthSheetFrames: the contact sheet shows the move', () => {
+  it('every frame from the first with ink while the move shows (frames 1 to 3 under expo-out), the last off flat and the first at rest; never more than the sheet holds', () => {
+    // counter-en at 30 fps: 31 moving frames, the tilt off flat on 0..10, ink from frame 1.
+    const tilt = Array.from({ length: 31 }, (_, f) => f <= 10)
+    const shown = depthSheetFrames(1, tilt)
+    for (const f of [1, 2, 3]) expect(shown).toContain(f)
+    expect(shown).toContain(10)
+    expect(shown).toContain(11)
+    expect(shown).not.toContain(0)
+    expect(shown.length).toBeLessThanOrEqual(DEPTH_SHEET_FRAMES)
+    expect(shown).toEqual([...shown].sort((a, b) => a - b))
+    // The focus blur runs to the beat: its last frame off flat is 14.
+    const focus = depthSheetFrames(1, Array.from({ length: 31 }, (_, f) => f <= 14))
+    for (const f of [1, 2, 3, 14, 15]) expect(focus).toContain(f)
+    // Short and degenerate cases stay inside the frames there are.
+    expect(depthSheetFrames(-1, [true, false])).toEqual([0, 1])
+    expect(depthSheetFrames(0, [false, false, false])).toEqual([0])
+    expect(depthSheetFrames(0, [])).toEqual([])
   })
 })

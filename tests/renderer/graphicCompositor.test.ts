@@ -930,8 +930,12 @@ describe('graphicCanvas: the compositor seam', () => {
 
   it('the preview keeps at most PREVIEW_COMPOSITOR_CAP compositors, the least recently drawn disposed first, each exactly once', async () => {
     expect(G.PREVIEW_COMPOSITOR_CAP).toBe(3)
+    // Each clip drawn a hold apart: the ones before it are off screen.
+    let now = 1_000_000
+    const clock = vi.spyOn(Date, 'now').mockImplementation(() => now)
     const ids = ['c1', 'c2', 'c3', 'c4', 'c5']
     for (const id of ids) {
+      now += G.PREVIEW_COMPOSITOR_HOLD_MS
       preview(id, 1)
       await settle()
       preview(id, 2)
@@ -939,12 +943,49 @@ describe('graphicCanvas: the compositor seam', () => {
     }
     expect(alive()).toBe(3)
     // c1 and c2 went first; c3, c4 and c5 are kept. Drawing c3 makes it the most recent, so c6 evicts c4.
+    now += G.PREVIEW_COMPOSITOR_HOLD_MS
     preview('c3', 3)
     preview('c6', 1)
     await settle()
     const geometries = made.filter((m) => m.kind === 'geometry')
     expect(geometries.map((g) => g.disposed)).toEqual([1, 1, 0, 1, 0, 0])
     for (const id of [...ids, 'c6']) G.forgetGraphicPreview(id)
+    expect(made.map((m) => m.disposed)).toEqual(made.map(() => 1))
+    clock.mockRestore()
+  })
+
+  it('four clips needing one on the same frame: three draw through WebGL every pass, the fourth flat with no compositor made, and the repaints stop; it takes a slot once one is off screen', async () => {
+    let now = 2_000_000
+    const clock = vi.spyOn(Date, 'now').mockImplementation(() => now)
+    const ids = ['d1', 'd2', 'd3', 'd4']
+    try {
+      const ready = vi.fn()
+      const perPass: number[] = []
+      // Playback: each pass is the next frame of the tilt (frames 1..6 all move), every clip drawn on it.
+      for (let pass = 0; pass < 6; pass++) {
+        const before = frameRenders().length
+        for (const id of ids) preview(id, pass + 1, ready)
+        perPass.push(frameRenders().length - before)
+        await settle()
+        // Six passes span more than the hold: a slot is kept by being drawn, not by when it was made.
+        now += 100
+      }
+      // Pass 0 waits for the landings; every pass after draws three through WebGL.
+      expect(perPass).toEqual([0, 3, 3, 3, 3, 3])
+      expect(made.filter((m) => m.kind === 'geometry')).toHaveLength(3)
+      expect(ready).toHaveBeenCalledTimes(3)
+      // d4's flat frame is not kept: drawn again on the SAME frame once the others have been off screen for the hold, it asks again and takes the least recently drawn's slot (d1's).
+      now += G.PREVIEW_COMPOSITOR_HOLD_MS
+      preview('d4', 6, ready)
+      await settle()
+      expect(made.filter((m) => m.kind === 'geometry').map((g) => g.disposed)).toEqual([1, 0, 0, 0])
+      const before = frameRenders().length
+      preview('d4', 7, ready)
+      expect(frameRenders().length - before).toBe(1)
+    } finally {
+      for (const id of ids) G.forgetGraphicPreview(id)
+      clock.mockRestore()
+    }
     expect(made.map((m) => m.disposed)).toEqual(made.map(() => 1))
   })
 

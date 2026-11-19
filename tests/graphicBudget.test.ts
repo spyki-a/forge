@@ -913,6 +913,29 @@ describe('applyGraphics, phase 3: the hero of each footage clip (§6.16)', () =>
     }
   })
 
+  it('withHeroes takes only a counter or ring over a footage clip: never a graphic over no footage, never a screen card (threeD, but not a hero template) landed ahead of a counter', () => {
+    const { p, kept } = twoClips()
+    let n = 0
+    const once = applyGraphics(p, kept.filter((k) => k.clipId === 'fa' && k.candidate.data.template === 'counter'), [], CLIPS_GRAPHIC_RULE, { fps: FPS, newId: (prefix) => `${prefix}-${++n}` }).project
+    const landed = once.clips.find((c) => c.graphic?.data.template === 'counter')!
+    const { hero: _hero, depth: _depth, ...plainSpec } = landed.graphic!
+    const fb = p.clips.find((c) => c.id === 'fb')!
+    const end = Math.max(...p.clips.map((c) => c.start + c.duration))
+    // A counter past every footage clip: footageOf is null.
+    const orphan: Clip = { ...landed, id: 'orphan', start: end + 30, graphic: plainSpec }
+    // On fb: a screen card first, then a counter.
+    const card: Clip = { ...landed, id: 'card', start: fb.start + 10, graphic: { ...plainSpec, data: { template: 'screen-card', clipId: 'fb', move: 'tilt-in' } } }
+    const later: Clip = { ...landed, id: 'later', start: fb.start + 40, graphic: plainSpec }
+    const q: Project = { ...once, clips: [...once.clips, orphan, card, later] }
+    const out = withHeroes(q, ['orphan', 'card', 'later'])
+    const spec = (id: string): GraphicSpec => out.clips.find((c) => c.id === id)!.graphic!
+    expect(spec('orphan').hero).toBeUndefined()
+    expect(spec('orphan').depth).toBeUndefined()
+    expect(spec('card').hero).toBeUndefined()
+    expect(spec('card').depth).toBeUndefined()
+    expect([spec('later').hero, spec('later').depth]).toEqual([true, 'tilt'])
+  })
+
   it('HERO_RULE is on, the one line that turns the rule off; a footage clip with no counter or ring has no hero', () => {
     expect(HERO_RULE).toBe(true)
     const { p, kept } = twoClips()

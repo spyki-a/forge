@@ -99,3 +99,29 @@ export function depthVerdict(readings: readonly DepthCaseReading[]): { pass: boo
   }
   return { pass: failures.length === 0, failures }
 }
+
+/** Frames per contact sheet (the depth option's). */
+export const DEPTH_SHEET_FRAMES = 8
+
+/**
+ * The frames a case's contact sheet shows: where the move can be seen. The
+ * camera shares the entrance's curve, so under the expo-out styles nearly
+ * all of the move is over in the first three or four frames with ink (frame
+ * 0 has none: the entrance's opacity is 0), and frames spread evenly over the
+ * moving ones would show it only on a frame with no ink and then at rest.
+ * So: every frame from the first with ink, consecutively, as many as the
+ * sheet holds less two; then the last frame off flat; then the first flat
+ * one after it (the settle). `offFlat[f]` is frame f's camera off flat (a
+ * blur above 0 counts); `firstInk` is −1 when the twin never has ink.
+ */
+export function depthSheetFrames(firstInk: number, offFlat: readonly boolean[], count = DEPTH_SHEET_FRAMES): number[] {
+  if (offFlat.length === 0) return []
+  const start = Math.min(Math.max(0, firstInk), offFlat.length - 1)
+  const lastOff = offFlat.lastIndexOf(true)
+  const frames = new Set<number>()
+  const end = Math.max(start, Math.min(lastOff, start + Math.max(1, count - 2) - 1))
+  for (let f = start; f <= end && frames.size < Math.max(1, count - 2); f++) frames.add(f)
+  if (lastOff >= start) frames.add(lastOff)
+  if (lastOff + 1 < offFlat.length && lastOff + 1 >= start) frames.add(lastOff + 1)
+  return [...frames].sort((a, b) => a - b).slice(0, count)
+}

@@ -21,7 +21,7 @@ import {
 } from '@shared/graphics/items'
 import { drawListAt, graphicBox, needsCompositor, onsetTargetsAt } from '@shared/graphics/drawList'
 import { MAX_GLOW_BATCHES, MAX_PLANES, cameraIsFlat, compositorRoute, flatItems, focusRadius, glowBatches, glowItemsOf, isFlat } from '@shared/graphics/compositor'
-import { DEPTH_FOCUS_BLUR_PX, DEPTH_MOVES, DEPTH_PLANES, depthOf } from '@shared/graphics/templates/depth'
+import { DEPTH_DOLLY_FROM, DEPTH_FOCUS_BLUR_PX, DEPTH_MOVES, DEPTH_PARALLAX_YAW_FROM, DEPTH_PLANES, DEPTH_TILT_FROM, depthOf } from '@shared/graphics/templates/depth'
 import { DRAWERS } from '@shared/graphics/templates/index'
 import { DURATIONS, entrance, progress } from '@shared/graphics/motion'
 import { graphicMovingFrames } from '@shared/graphics/frame'
@@ -523,7 +523,7 @@ describe('graphicDrawList: needsCompositor', () => {
  * its template is in `MAY_ASK` (or `ALWAYS_ASK`): empty in piece 1; piece 3
  * added `counter` and `ring` (their 2.5D variants and the hero's glow).
  */
-describe('graphicDrawList: no drawer asks for the compositor yet', () => {
+describe('graphicDrawList: which drawers ask for the compositor (MAY_ASK, ALWAYS_ASK, MAY_GLOW)', () => {
   /** The templates whose depth variants or hero glow may ask for the compositor: piece 3 adds 'counter' and 'ring'. */
   const MAY_ASK = new Set<GraphicTemplateId>(['counter', 'ring'])
   /** The templates whose plain specs ask too, their motion being a camera or a glow of its own: piece 4 adds 'screen-card'. */
@@ -710,6 +710,72 @@ describe('graphicDrawList: the 2.5D variants of counter and ring (§6.16)', () =
     }
     // The label goes behind (it is on a farther plane than the value, and for the ring's focus than the track and arc); nothing else moves.
     expect([...swapped].sort()).toEqual(['counter: value / label', 'ring: arc / label', 'ring: track / label', 'ring: value / label'])
+  })
+
+  it('each move goes the plan’s way, whatever its figure: tilt starts positive (the top away, tests/graphicCompositor.test.ts), parallax’s yaw negative, dolly negative (further away), each returning to 0 without changing sign under a curve that does not overshoot; and the planes stand in the table’s order on every moving frame', () => {
+    const z = (items: readonly DrawItem[], field: string): number[] => items.filter((i) => i.id.replace(/-\d+$/u, '') === field).map((i) => i.z ?? 0)
+    const one = (items: readonly DrawItem[], field: string, where: string): number => {
+      const zs = [...new Set(z(items, field))]
+      expect(zs, `${where} ${field}`).toHaveLength(1)
+      return zs[0]
+    }
+    for (const f of fixtures) {
+      const template = f.spec.data.template as 'counter' | 'ring'
+      for (const st of GRAPHIC_STYLES) {
+        const flatSpec = plain(f.spec)
+        const sign = { tilt: 1, parallax: -1, dolly: -1 } as const
+        for (const depth of ['tilt', 'parallax', 'dolly'] as const) {
+          const field = depth === 'tilt' ? 'tilt' : depth === 'parallax' ? 'yaw' : 'dolly'
+          const at0 = drawListAt({ ...flatSpec, depth }, st, 0, FPS, SIZE, fake).camera!
+          expect(Math.sign(at0[field]), `${f.id} ${depth} ${st.id} @0`).toBe(sign[depth])
+          if (st.motion.ease !== 'out-back') {
+            for (const frame of framesOf(flatSpec)) {
+              const c = drawListAt({ ...flatSpec, depth }, st, frame, FPS, SIZE, fake).camera!
+              expect(Math.sign(c[field]), `${f.id} ${depth} ${st.id} @${frame}`).not.toBe(-sign[depth])
+            }
+          }
+        }
+        for (const depth of ['parallax', 'dolly', 'focus'] as const) {
+          for (const frame of framesOf(flatSpec)) {
+            const list = drawListAt({ ...flatSpec, depth }, st, frame, FPS, SIZE, fake)
+            if (cameraIsFlat(list.camera!)) continue
+            const where = `${f.id} ${depth} ${st.id} @${frame}`
+            // Every field on its table's plane: the mapping from an item's id (a wrapped line's `label-1` too) to the table.
+            for (const item of list.items) if (item.kind !== 'dim') expect(item.z, `${where} ${item.id}`).toBe(DEPTH_PLANES[template][depth][item.id.replace(/-\d+$/u, '')] ?? 0)
+            const value = one(list.items, 'value', where)
+            const label = one(list.items, 'label', where)
+            if (template === 'counter') {
+              const panel = one(list.items, 'panel', where)
+              if (depth === 'parallax') {
+                expect(value, where).toBeGreaterThan(label)
+                expect(label, where).toBeGreaterThan(panel)
+              }
+              if (depth === 'dolly') expect([value > 0, label, panel], where).toEqual([true, 0, 0])
+              if (depth === 'focus') expect([label < 0, value], where).toEqual([true, 0])
+            } else {
+              const arc = one(list.items, 'arc', where)
+              const track = one(list.items, 'track', where)
+              if (depth === 'parallax') {
+                expect(value, where).toBeGreaterThan(arc)
+                expect(arc, where).toBeGreaterThan(track)
+              }
+              if (depth === 'dolly') expect([value > 0, arc, track], where).toEqual([true, 0, 0])
+              if (depth === 'focus') expect([label < 0, value, arc, track], where).toEqual([true, 0, 0, 0])
+            }
+          }
+        }
+      }
+    }
+  })
+
+  it('the figures are §6.16’s proposals (one line each to change at the look rating)', () => {
+    expect([DEPTH_TILT_FROM, DEPTH_PARALLAX_YAW_FROM, DEPTH_DOLLY_FROM, DEPTH_FOCUS_BLUR_PX]).toEqual([24, -8, -0.12, 10])
+    expect(DEPTH_PLANES.counter.parallax).toEqual({ panel: 0, label: 0.02, value: 0.05 })
+    expect(DEPTH_PLANES.ring.parallax).toMatchObject({ track: 0, arc: 0.03, value: 0.05 })
+    expect(DEPTH_PLANES.counter.dolly.value).toBe(0.05)
+    expect(DEPTH_PLANES.ring.dolly.value).toBe(0.05)
+    expect(DEPTH_PLANES.counter.focus.label).toBe(-0.02)
+    expect(DEPTH_PLANES.ring.focus.label).toBe(-0.02)
   })
 
   it('the focus variant: the label plane at −0.02 reads DEPTH_FOCUS_BLUR_PX at the start and exactly 0 on the beat; the value’s plane is in focus', () => {

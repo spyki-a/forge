@@ -198,7 +198,7 @@ export interface GraphicCheckOptions {
   focus?: boolean
   /**
    * Phase 3's piece 3 (§6.16; §6.11's `parity` row, phase 3's half): specs.json's
-   * English counter and ring under each depth (and as a hero under neon) through
+   * English counter and ring under each depth (and as a hero under neon and energetic) through
    * `paintDrawList3d`, against the flat twin: the settled frame (0 by route
    * one), the last moving frame's camera (all 0), the first inked frame (not
    * the twin's), the hero's glow (0 beyond its reach, and present), with a

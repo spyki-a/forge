@@ -297,6 +297,8 @@ interface DeepSlot {
   pending: boolean
   compositor: Compositor | null
   onReady?: () => void
+  /** When its clip last drew through it (`Date.now()`): a slot drawn within `PREVIEW_COMPOSITOR_HOLD_MS` is never evicted. */
+  drawnAt: number
 }
 
 /**
@@ -307,7 +309,13 @@ interface DeepSlot {
  * frame with no glow, `compositorRoute` 'flat', which painter A draws with
  * no WebGL call) gives its compositor back at once, so a hero at rest holds
  * none; and at most `PREVIEW_COMPOSITOR_CAP` are kept, the least recently
- * drawn disposed when another is made. Each holds a frame-sized canvas and
+ * drawn disposed when another is made, but never one drawn within
+ * `PREVIEW_COMPOSITOR_HOLD_MS`: those are on screen now, in this paint pass
+ * or the last. With every kept slot that fresh, the clip asking is drawn flat
+ * with no compositor made, not cached, and asks again on its next draw. An
+ * eviction of a fresh slot would loop: four clips needing one on the same
+ * frame evicted each other in turn, each landing's `onReady` repainted, the
+ * repaint evicted again, and no clip was ever drawn through WebGL. Each holds a frame-sized canvas and
  * texture per layer (up to `MAX_PLANES` planes, a base, the 1:1 layer, and
  * the glow's targets), so a session that scrubbed past many heroes would
  * otherwise keep them all.
@@ -323,25 +331,41 @@ const compositors = new Map<string, DeepSlot>()
  */
 export const PREVIEW_COMPOSITOR_CAP = 3
 
+/**
+ * A kept compositor drawn this recently is on screen and is not evicted for
+ * another clip (proposal): longer than one paint pass of every clip and
+ * than a frame at the slowest rate, short enough that a hero scrolled away
+ * gives its slot up within a quarter second.
+ */
+export const PREVIEW_COMPOSITOR_HOLD_MS = 250
+
 /** Give back a clip's preview compositor; one still on its way is disposed on landing (the slot is no longer the clip's). */
 function releaseDeepSlot(clipId: string): void {
   compositors.get(clipId)?.compositor?.dispose()
   compositors.delete(clipId)
 }
 
-function deepSlotOf(clipId: string, width: number, height: number, onReady?: () => void): DeepSlot {
+/** The clip's slot, made when there is room; null when the cap is full of slots drawn within the hold (the clip is drawn flat, `compositors`). */
+function deepSlotOf(clipId: string, width: number, height: number, onReady?: () => void): DeepSlot | null {
   const size = `${width}x${height}`
+  const now = Date.now()
   const existing = compositors.get(clipId)
   if (existing && existing.size === size) {
     existing.onReady = onReady
+    existing.drawnAt = now
     // The most recently drawn, last.
     compositors.delete(clipId)
     compositors.set(clipId, existing)
     return existing
   }
   releaseDeepSlot(clipId)
-  while (compositors.size >= PREVIEW_COMPOSITOR_CAP) releaseDeepSlot(compositors.keys().next().value as string)
-  const slot: DeepSlot = { size, pending: true, compositor: null, onReady }
+  while (compositors.size >= PREVIEW_COMPOSITOR_CAP) {
+    // The least recently drawn is first: if it is still on screen, every other one is too.
+    const [oldest, kept] = compositors.entries().next().value as [string, DeepSlot]
+    if (now - kept.drawnAt < PREVIEW_COMPOSITOR_HOLD_MS) return null
+    releaseDeepSlot(oldest)
+  }
+  const slot: DeepSlot = { size, pending: true, compositor: null, onReady, drawnAt: now }
   compositors.set(clipId, slot)
   void createCompositor(width, height).then((compositor) => {
     if (compositors.get(clipId) !== slot) {
@@ -440,8 +464,9 @@ export function graphicPreviewCanvas(
    * clip's is given back (`compositors`).
    */
   const asks = needsCompositor(list)
-  const deep = asks && compositorRoute(list) !== 'flat' ? deepSlotOf(clipId, width, height, onReady) : null
-  if (asks && !deep) releaseDeepSlot(clipId)
+  const wants = asks && compositorRoute(list) !== 'flat'
+  const deep = wants ? deepSlotOf(clipId, width, height, onReady) : null
+  if (asks && !wants) releaseDeepSlot(clipId)
   if (asks && (webglMissing() || (deep && !deep.pending && !deep.compositor))) markDrawnFlat(clipId)
   paintFrame(list, ctx, { layer: previewLayerOf(clipId), images: bitmaps }, deep?.compositor)
 
@@ -483,8 +508,8 @@ export function graphicPreviewCanvas(
     return canvas
   }
 
-  // Drawn flat while the compositor is on its way: not kept, so the frame is drawn again once it has landed.
-  previews.set(clipId, { canvas, signature: deep?.pending ? '' : signature })
+  // Drawn flat while the compositor is on its way, or for want of a free one: not kept, so the frame is drawn again.
+  previews.set(clipId, { canvas, signature: deep?.pending || (wants && !deep) ? '' : signature })
   return canvas
 }
 
