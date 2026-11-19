@@ -21,13 +21,27 @@ import { resetBakeGuard } from '@shared/bakeGuard'
 /* ------------------------------------------------------- the stand-in three */
 
 interface Counted {
-  kind: 'geometry' | 'texture' | 'material' | 'target'
+  kind: 'geometry' | 'texture' | 'material' | 'target' | 'pass'
   disposed: number
 }
 
 const made: Counted[] = []
-/** Each render: the scene, the camera, and the shared canvas's size at that moment (what three would draw into). */
-const renders: { scene: FakeScene; camera: FakeCamera; size: string }[] = []
+/**
+ * Each render: the scene, the camera, the shared canvas's size at that moment
+ * (what three would draw into), the render target (null: the canvas), and,
+ * for a one-mesh pass scene, its material and a copy of its uniforms' values
+ * then. A bloom's render is recorded with `bloom` set.
+ */
+interface Render {
+  scene: FakeScene
+  camera: FakeCamera
+  size: string
+  target: unknown
+  material?: FakeMaterial
+  uniforms?: Record<string, unknown>
+  bloom?: FakeBloom
+}
+const renders: Render[] = []
 /** What `sharedRenderer` does next: hand the renderer back, throw, or hand back one whose context is lost. */
 const webgl = { mode: 'ok' as 'ok' | 'throw' | 'lost', calls: 0 }
 
@@ -77,6 +91,7 @@ class FakeMaterial extends Disposable {
 }
 
 class FakeMesh {
+  material: FakeMaterial
   matrix = new FakeMatrix()
   matrixAutoUpdate = true
   matrixWorldNeedsUpdate = false
@@ -85,9 +100,50 @@ class FakeMesh {
   frustumCulled = true
   constructor(
     readonly geometry: Disposable,
-    readonly material: FakeMaterial
-  ) {}
+    material: FakeMaterial
+  ) {
+    this.material = material
+  }
 }
+
+class FakeTargetTexture {
+  readonly isRenderTargetTexture = true
+}
+
+class FakeTarget extends Disposable {
+  texture = new FakeTargetTexture()
+  constructor(
+    readonly width: number,
+    readonly height: number,
+    readonly options: Record<string, unknown>
+  ) {
+    super('target')
+  }
+}
+
+class FakeColor {
+  constructor(public hex = 0) {}
+}
+
+/** UnrealBloomPass's stand-in: the fields the compositor reads and writes, its render recorded, its dispose counted. */
+class FakeBloom extends Disposable {
+  strength = 1
+  radius = 0
+  threshold = 1
+  materialHighPassFilter = new FakeMaterial({})
+  renderTargetsHorizontal = [{ texture: new FakeTargetTexture() }]
+  constructor(
+    readonly resolution: { x: number; y: number },
+    strength: number
+  ) {
+    super('pass')
+    this.strength = strength
+  }
+  render(_renderer: unknown, _write: unknown, read: unknown): void {
+    renders.push({ scene: new FakeScene(), camera: new FakeCamera(), size: `${glCanvas.width}x${glCanvas.height}`, target: read, bloom: this })
+  }
+}
+const bloomLoads = { calls: 0 }
 
 class FakeScene {
   children: FakeMesh[] = []
@@ -117,6 +173,15 @@ const fakeThree = {
   Mesh: FakeMesh,
   Scene: FakeScene,
   PerspectiveCamera: FakeCamera,
+  WebGLRenderTarget: FakeTarget,
+  Vector2: class {
+    constructor(
+      readonly x: number,
+      readonly y: number
+    ) {}
+  },
+  Color: FakeColor,
+  NoBlending: 0,
   NoColorSpace: 'none',
   LinearFilter: 1,
   ClampToEdgeWrapping: 2,
@@ -127,22 +192,46 @@ const fakeThree = {
 }
 
 const glCanvas = { width: 0, height: 0, gl: true }
+/** The renderer's state the compositor must put back: what a moment's draw left it with. */
+const rendererState = { target: null as unknown, autoClear: true, clearColor: new FakeColor(0), clearAlpha: 0, clears: [] as unknown[] }
 const fakeRenderer = {
   domElement: glCanvas,
+  get autoClear(): boolean {
+    return rendererState.autoClear
+  },
+  set autoClear(v: boolean) {
+    rendererState.autoClear = v
+  },
   setSize: (w: number, h: number) => {
     glCanvas.width = w
     glCanvas.height = h
+  },
+  getRenderTarget: () => rendererState.target,
+  setRenderTarget: (target: unknown) => {
+    rendererState.target = target
+  },
+  clear: () => rendererState.clears.push(rendererState.target),
+  getClearColor: (target: FakeColor) => {
+    target.hex = rendererState.clearColor.hex
+    return target
+  },
+  getClearAlpha: () => rendererState.clearAlpha,
+  setClearColor: (color: number | FakeColor, alpha: number) => {
+    rendererState.clearColor = typeof color === 'number' ? new FakeColor(color) : color
+    rendererState.clearAlpha = alpha
   },
   render: (scene: FakeScene, camera: FakeCamera) => {
     // What three would upload on this render: every texture flagged since the last.
     for (const mesh of scene.children) {
       const texture = mesh.material.uniforms.uTex?.value as FakeTexture | undefined
-      if (mesh.visible && texture?.needsUpdate) {
+      if (mesh.visible && texture instanceof FakeTexture && texture.needsUpdate) {
         texture.uploads++
         texture.needsUpdate = false
       }
     }
-    renders.push({ scene, camera, size: `${glCanvas.width}x${glCanvas.height}` })
+    const pass = scene.children.length === 1 && !(scene.children[0].material.uniforms.uTex?.value instanceof FakeTexture) ? scene.children[0].material : undefined
+    const uniforms = pass ? Object.fromEntries(Object.entries(pass.uniforms).map(([k, u]) => [k, Array.isArray(u.value) ? [...u.value] : u.value])) : undefined
+    renders.push({ scene, camera, size: `${glCanvas.width}x${glCanvas.height}`, target: rendererState.target, material: pass, uniforms })
   },
   getContext: () => ({ isContextLost: () => webgl.mode === 'lost' })
 }
@@ -156,6 +245,13 @@ vi.mock('../../src/renderer/src/threeShared', () => ({
   },
   sharedRendererSync: () => null,
   loadThree: async () => fakeThree
+}))
+
+vi.mock('../../src/renderer/src/graphicGlowUnreal', () => ({
+  loadUnrealBloom: async () => {
+    bloomLoads.calls++
+    return FakeBloom
+  }
 }))
 
 /* ------------------------------------------------------- the stand-in document */
@@ -254,6 +350,8 @@ beforeEach(async () => {
   canvases.length = 0
   webgl.mode = 'ok'
   webgl.calls = 0
+  bloomLoads.calls = 0
+  Object.assign(rendererState, { target: null, autoClear: true, clearColor: new FakeColor(0), clearAlpha: 0, clears: [] })
   vi.stubGlobal('document', { createElement: () => fakeCanvas(), fonts: { check: () => true } })
   C = await import('../../src/renderer/src/graphicCompositor')
   G = await import('../../src/renderer/src/graphicCanvas')
@@ -266,7 +364,9 @@ afterEach(() => {
 })
 
 const texturesOf = (): Counted[] => made.filter((m) => m.kind === 'texture')
-const sceneOf = (): FakeScene => renders[renders.length - 1].scene
+/** The frame's own renders: to the canvas, of the layers' scene (not a glow pass's one quad, not a bloom). */
+const frameRenders = (): Render[] => renders.filter((r) => r.target === null && !r.material && !r.bloom)
+const sceneOf = (): FakeScene => frameRenders()[frameRenders().length - 1].scene
 const layerCanvas = (mesh: FakeMesh): FakeCanvas => (mesh.material.uniforms.uTex.value as FakeTexture).image
 const perspective = (mesh: FakeMesh): boolean => mesh.material.vertexShader.includes('projectionMatrix')
 
@@ -328,9 +428,10 @@ describe('graphicCompositor: paintDrawList3d', () => {
     const visible = sceneOf().children.filter((m) => m.visible)
     expect(visible).toHaveLength(1)
     expect(perspective(visible[0])).toBe(false)
-    expect(texturesOf()).toHaveLength(1)
-    expect((texturesOf()[0] as FakeTexture).uploads).toBe(1)
-    expect(renders).toHaveLength(2)
+    // The 1:1 layer's texture, and the glow layer's (piece 2); the 1:1 one uploaded once.
+    expect(texturesOf()).toHaveLength(2)
+    expect((visible[0].material.uniforms.uTex.value as FakeTexture).uploads).toBe(1)
+    expect(frameRenders()).toHaveLength(2)
   })
 
   it('route three: the dims on an identity base layer, one perspective layer per plane far to near, each uploaded once while only the camera moves', async () => {
@@ -379,7 +480,9 @@ describe('graphicCompositor: the shared renderer, the layers and the camera', ()
     C.paintDrawList3d(glowing, c)
     fakeRenderer.setSize(720, 1280)
     C.paintDrawList3d(tilted, c)
-    expect(renders.map((r) => r.size)).toEqual([`${SIZE.width}x${SIZE.height}`, `${SIZE.width}x${SIZE.height}`])
+    expect(frameRenders().map((r) => r.size)).toEqual([`${SIZE.width}x${SIZE.height}`, `${SIZE.width}x${SIZE.height}`])
+    // The glow's passes too: every render of both frames at the compositor's size.
+    expect(new Set(renders.map((r) => r.size))).toEqual(new Set([`${SIZE.width}x${SIZE.height}`]))
   })
 
   it('uploads every layer premultiplied and writes the texel as it is: filtering straight texels darkens every edge of a tilted plane', async () => {
@@ -387,12 +490,15 @@ describe('graphicCompositor: the shared renderer, the layers and the camera', ()
     C.paintDrawList3d(list([shape('a', '#1')], { glow: [{ item: 'a', radius: 4, strength: 1 }] }), c)
     C.paintDrawList3d(list([dim(), shape('b', '#2'), shape('c', '#3', 0.05)], { camera: TILTED }), c, { layer: layerFactory })
     const textures = texturesOf() as FakeTexture[]
-    expect(textures).toHaveLength(4)
+    // The 1:1 layer, the glow layer of its request, the dims' base and two planes.
+    expect(textures).toHaveLength(5)
     for (const t of textures) expect(t.premultiplyAlpha).toBe(true)
     const shaders = [...new Set(sceneOf().children.map((m) => m.material.fragmentShader))]
     expect(shaders).toHaveLength(1)
-    const writes = [...shaders[0].matchAll(/gl_FragColor\s*=\s*([^;]+);/g)].map((m) => m[1].replace(/\s+/g, ''))
-    expect(writes).toEqual(['texture2D(uTex,vec2(vUv.x,1.0-vUv.y))'])
+    // At rest (a focus radius of 0) the texel itself, written as it is; the blur's average only above 0 (piece 2).
+    const source = shaders[0].replace(/\s+/g, '')
+    expect(source).toContain('vec2at=vec2(vUv.x,1.0-vUv.y);')
+    expect(source).toContain('if(uBlur<=0.0){gl_FragColor=texture2D(uTex,at);return;}')
   })
 
   it('shows only the route’s own layers: the 1:1 layer is hidden under the planes, and the planes under the 1:1 layer', async () => {
@@ -445,10 +551,194 @@ describe('graphicCompositor: disposal', () => {
     const c = (await C.createCompositor(SIZE.width, SIZE.height))!
     C.paintDrawList3d(list([shape('a', '#1')], { glow: [{ item: 'a', radius: 4, strength: 1 }] }), c)
     C.paintDrawList3d(list([dim(), shape('b', '#2'), shape('c', '#3', 0.02), shape('d', '#4', 0.05)], { camera: TILTED }), c, { layer: layerFactory })
-    expect(made.map((m) => m.kind).sort()).toEqual(['geometry', ...Array(5).fill('material'), ...Array(5).fill('texture')].sort())
+    // The 1:1 layer, its glow layer, the dims' base, three planes; the glow's blur and add; its input and two pass targets.
+    expect(made.map((m) => m.kind).sort()).toEqual(['geometry', ...Array(8).fill('material'), ...Array(3).fill('target'), ...Array(6).fill('texture')].sort())
     c.dispose()
     c.dispose()
     expect(made.map((m) => m.disposed)).toEqual(made.map(() => 1))
+  })
+
+  it('the quad route: every render target and glow material on the list, each disposed once', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    C.paintDrawList3d(list([shape('a', '#1'), shape('b', '#2', 0.05)], { camera: TILTED, glow: [{ item: 'a', radius: 4, strength: 1 }, { item: 'b', radius: 9, strength: 0.5 }] }), c)
+    const targets = made.filter((m) => m.kind === 'target')
+    // Two batches, each its input, its horizontal and its vertical target.
+    expect(targets).toHaveLength(6)
+    c.dispose()
+    for (const m of made) expect(m.disposed, m.kind).toBe(1)
+  })
+
+  it('the unreal route: its pass and the high-pass material its own dispose() leaves out, each disposed once', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height, { glow: 'unreal' }))!
+    C.paintDrawList3d(list([shape('a', '#1')], { glow: [{ item: 'a', radius: 8, strength: 1 }] }), c)
+    const bloom = made.find((m) => m.kind === 'pass') as FakeBloom
+    expect(bloom).toBeDefined()
+    expect(made).toContain(bloom.materialHighPassFilter)
+    c.dispose()
+    for (const m of made) expect(m.disposed, m.kind).toBe(1)
+  })
+})
+
+/* ------------------------------------------------------- the glow and the focus */
+
+describe('graphicCompositor: the glow (piece 2)', () => {
+  const glowing = (extra: Partial<DrawList> = {}): DrawList =>
+    list([shape('panel', '#111111'), shape('value', '#222222'), shape('label', '#333333')], { glow: [{ item: 'value', radius: 8, strength: 0.75 }], ...extra })
+  const glowLayers = (): FakeMesh[] => {
+    const input = renders.find((r) => r.target instanceof FakeTarget && !r.material)
+    return input ? input.scene.children.filter((m) => m.visible) : []
+  }
+
+  it('takes GLOW_ROUTE, the quad route, unless made with another, and loads UnrealBloomPass only for the unreal route', async () => {
+    expect(C.GLOW_ROUTE).toBe('quad')
+    await C.createCompositor(SIZE.width, SIZE.height)
+    expect(bloomLoads.calls).toBe(0)
+    await C.createCompositor(SIZE.width, SIZE.height, { glow: 'unreal' })
+    expect(bloomLoads.calls).toBe(1)
+  })
+
+  it('the glow canvas holds the requested items alone', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    C.paintDrawList3d(glowing(), c)
+    const layers = glowLayers()
+    expect(layers).toHaveLength(1)
+    expect(layerCanvas(layers[0]).ops.filter((o) => o.op === 'fill').map((o) => o.fill)).toEqual(['#222222'])
+  })
+
+  it('a request with a colour paints its items in that colour (source-in over a scratch canvas), drawn onto the glow canvas', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    C.paintDrawList3d(glowing({ glow: [{ item: 'value', radius: 8, strength: 1, color: '#2563eb' }] }), c)
+    const ops = layerCanvas(glowLayers()[0]).ops
+    expect(ops.filter((o) => o.op === 'fill')).toEqual([])
+    const tint = ops.find((o) => o.op === 'drawImage')?.image as FakeCanvas
+    expect(tint).toBeDefined()
+    expect(tint.ops.filter((o) => o.op === 'fill' || o.op === 'fillRect').map((o) => o.fill)).toEqual(['#222222', '#2563eb'])
+  })
+
+  it('route three: a plane’s glow layer under the plane’s own model and focus radius, through the same camera', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    const camera: Camera = { ...TILTED, focus: { z: 0, px: 200 } }
+    C.paintDrawList3d(list([shape('panel', '#111111'), shape('value', '#222222', 0.05)], { camera, glow: [{ item: 'value', radius: 8, strength: 1 }] }), c)
+    const layers = glowLayers()
+    expect(layers).toHaveLength(1)
+    expect(perspective(layers[0])).toBe(true)
+    const plane = sceneOf().children.filter((m) => m.visible && perspective(m))[1]
+    expect(layers[0].matrix.elements).toEqual(plane.matrix.elements)
+    expect(layers[0].material.uniforms.uBlur.value).toBeCloseTo(10, 9)
+    const input = renders.find((r) => r.target instanceof FakeTarget && !r.material)!
+    expect(input.camera).toBe(renders[renders.length - 1].camera)
+  })
+
+  it('a compositor moving from route two to route three draws the plane’s glow with the perspective shader, and back with the identity one', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    C.paintDrawList3d(glowing(), c)
+    expect(glowLayers().map(perspective)).toEqual([false])
+    renders.length = 0
+    C.paintDrawList3d(glowing({ camera: TILTED }), c)
+    expect(glowLayers().map(perspective)).toEqual([true])
+    renders.length = 0
+    C.paintDrawList3d(glowing(), c)
+    expect(glowLayers().map(perspective)).toEqual([false])
+  })
+
+  it('the quad route: the glow layers into a target, a horizontal then a vertical pass, the layers on the canvas, then the glow added', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    C.paintDrawList3d(glowing(), c)
+    const kinds = renders.map((r) => (r.target === null ? (r.material ? 'add' : 'frame') : r.material ? 'blur' : 'input'))
+    expect(kinds).toEqual(['input', 'blur', 'blur', 'frame', 'add'])
+    const [, h, v, , add] = renders
+    expect(h.uniforms!.uStep).toEqual([1 / SIZE.width, 0])
+    expect(v.uniforms!.uStep).toEqual([0, 1 / SIZE.height])
+    // Each pass reads the one before: the input's texture, then the horizontal's.
+    expect(h.uniforms!.uTex).toBe((renders[0].target as FakeTarget).texture)
+    expect(v.uniforms!.uTex).toBe((h.target as FakeTarget).texture)
+    expect(add.uniforms!.uTex).toBe((v.target as FakeTarget).texture)
+    // The kernel: glowKernel's, padded; the strength and the cap the quad route's.
+    const { offsets, weights } = C.glowKernel(8)
+    expect((h.uniforms!.uOffsets as number[]).slice(0, offsets.length)).toEqual(offsets)
+    expect((h.uniforms!.uWeights as number[]).slice(0, weights.length)).toEqual(weights)
+    expect(h.uniforms!.uCount).toBe(offsets.length - 1)
+    expect(add.uniforms!.uStrength).toBe(0.75)
+    expect(add.uniforms!.uMaxAlpha).toBe(C.GLOW_MAX_ALPHA)
+    // Added, never "over": colour ONE + ONE, alpha ONE + ONE_MINUS_SRC_ALPHA.
+    const m = add.material as unknown as Record<string, number>
+    expect([m.blendSrc, m.blendDst, m.blendSrcAlpha, m.blendDstAlpha]).toEqual([fakeThree.OneFactor, fakeThree.OneFactor, fakeThree.OneFactor, fakeThree.OneMinusSrcAlphaFactor])
+  })
+
+  it('the unreal route: the bloom reads the glow layers’ target, and its own composite, the bloom alone, is added at strength 1 with no cap', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height, { glow: 'unreal' }))!
+    C.paintDrawList3d(glowing(), c)
+    const bloomRender = renders.find((r) => r.bloom)!
+    const input = renders.find((r) => r.target instanceof FakeTarget && !r.material)!
+    expect(bloomRender.target).toBe(input.target)
+    const bloom = bloomRender.bloom!
+    expect([bloom.strength, bloom.radius, bloom.threshold]).toEqual([0.75, 8 / C.UNREAL_RADIUS_PX, 0])
+    expect(bloom.resolution).toEqual({ x: SIZE.width, y: SIZE.height })
+    const add = renders[renders.length - 1]
+    expect(add.uniforms!.uTex).toBe(bloom.renderTargetsHorizontal[0].texture)
+    expect([add.uniforms!.uStrength, add.uniforms!.uMaxAlpha]).toEqual([1, 1])
+    expect(renders.some((r) => r.material && r.target !== null)).toBe(false)
+  })
+
+  it('puts the shared renderer’s render target, auto-clear and clear colour back as a moment left them', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    const momentTarget = { moment: true }
+    const momentColour = new FakeColor(0x123456)
+    Object.assign(rendererState, { target: momentTarget, autoClear: true, clearColor: momentColour, clearAlpha: 1 })
+    C.paintDrawList3d(glowing(), c)
+    expect(rendererState.target).toBe(momentTarget)
+    expect(rendererState.autoClear).toBe(true)
+    expect(rendererState.clearColor.hex).toBe(0x123456)
+    expect(rendererState.clearAlpha).toBe(1)
+    // While it drew, every target and the canvas were cleared to transparent black.
+    expect(renders.map((r) => r.target).filter((t) => t !== null)).toHaveLength(3)
+  })
+
+  it('no glow is drawn under the probe’s glow: false (the harness’s base under the glow), nor for a request of radius 0', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    C.paintDrawList3d(glowing(), c, {}, { glow: false })
+    C.paintDrawList3d(glowing({ glow: [{ item: 'value', radius: 0, strength: 1 }] }), c)
+    expect(renders.map((r) => r.target)).toEqual([null, null])
+    expect(made.filter((m) => m.kind === 'target')).toEqual([])
+  })
+
+  it('refuses more than MAX_GLOW_BATCHES batches', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    const glow = [1, 2, 3].map((radius) => ({ item: 'value', radius, strength: 1 }))
+    expect(() => C.paintDrawList3d(glowing({ glow }), c)).toThrow(/3 glow batches, at most 2/)
+  })
+})
+
+describe('graphicCompositor: the focus blur (piece 2)', () => {
+  it('each plane’s uBlur is focusRadius: 0 on the depth in focus, px × distance elsewhere; the base and the 1:1 layer 0', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    const camera: Camera = { ...FLAT, focus: { z: 0, px: 500 } }
+    C.paintDrawList3d(list([dim(), shape('label', '#1', -0.02), shape('panel', '#2'), shape('value', '#3', 0.05)], { camera }), c, { layer: layerFactory })
+    const visible = sceneOf().children.filter((m) => m.visible).sort((a, b) => a.renderOrder - b.renderOrder)
+    expect(visible.map((m) => m.material.uniforms.uBlur.value)).toEqual([0, 10, 0, 25])
+    expect(visible[2].material.uniforms.uBlur.value).toBe(0)
+  })
+
+  it('the probe’s focus: false draws route three with every radius 0 (the harness’s route three at rest)', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    C.paintDrawList3d(list([shape('panel', '#2'), shape('value', '#3', 0.05)], { camera: { ...FLAT, focus: { z: 0, px: 500 } } }), c, {}, { focus: false })
+    expect(sceneOf().children.filter((m) => m.visible).map((m) => m.material.uniforms.uBlur.value)).toEqual([0, 0])
+  })
+
+  it('a focus of 0 px is route one: painter A, no render', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    C.paintDrawList3d(list([shape('panel', '#2'), shape('value', '#3', 0.05)], { camera: { ...FLAT, focus: { z: -0.02, px: 0 } } }), c)
+    expect(renders).toEqual([])
+  })
+
+  it('the shader’s disc is focusDisc, FOCUS_TAPS of them, in the frame’s texels', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    C.paintDrawList3d(list([shape('value', '#3', 0.05)], { camera: TILTED }), c)
+    const material = sceneOf().children[0].material as FakeMaterial & { defines: Record<string, number> }
+    expect(material.defines.FOCUS_TAPS).toBe(13)
+    expect(material.uniforms.uDisc.value).toEqual(C.focusDisc().flatMap(([x, y]) => [x, y]))
+    expect(material.uniforms.uTexel.value).toEqual([1 / SIZE.width, 1 / SIZE.height])
+    expect(material.fragmentShader).toMatch(/for \(int i = 0; i < FOCUS_TAPS; i\+\+\) sum \+= texture2D\(uTex, at \+ uDisc\[i\] \* uBlur \* uTexel\);\s*gl_FragColor = sum \/ float\(FOCUS_TAPS\);/)
   })
 })
 

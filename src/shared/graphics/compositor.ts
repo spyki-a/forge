@@ -14,7 +14,7 @@
  * Pure: no clock, no random, no DOM, no `node:path`.
  */
 
-import type { Camera, DimItem, DrawItem, DrawList } from './items'
+import type { Camera, DimItem, DrawItem, DrawList, GlowRequest } from './items'
 
 /** At most this many distinct `z` values in one list (§6.16, proposal); a draw function never emits more. */
 export const MAX_PLANES = 4
@@ -173,5 +173,131 @@ export function compensation(z: number, height: number, distance: number): numbe
 export function planeModel(z: number, size: { width: number; height: number }, distance: number): Mat4 {
   const s = compensation(z, size.height, distance)
   return mat4Multiply(translation(0, 0, z * size.height), scaling((size.width / 2) * s, (size.height / 2) * s, 1))
+}
+
+/* --------------------------------------------------------------- the focus */
+
+/**
+ * The focus blur's taps (§6.16, "Shaders": "a fixed disc of taps (13,
+ * proposal)"): the texel itself, four at half the radius on the diagonals,
+ * and eight at the radius every 45°, each weighted equally (1/13). In units
+ * of the plane's radius; the shader scales them by it.
+ */
+export const FOCUS_TAPS = 13
+
+const HALF = Math.SQRT1_2 / 2
+const FOCUS_DISC: readonly (readonly [number, number])[] = Object.freeze(
+  [
+    [0, 0],
+    [HALF, HALF],
+    [-HALF, HALF],
+    [-HALF, -HALF],
+    [HALF, -HALF],
+    ...Array.from({ length: 8 }, (_, i): [number, number] => [Math.cos((i * Math.PI) / 4), Math.sin((i * Math.PI) / 4)])
+  ].map((p) => Object.freeze(p) as readonly [number, number])
+)
+
+/** The disc's offsets, `FOCUS_TAPS` of them, the first the texel itself, in units of the radius. */
+export function focusDisc(): readonly (readonly [number, number])[] {
+  return FOCUS_DISC
+}
+
+/**
+ * A plane's focus blur radius in frame pixels (§6.16, "The camera":
+ * `Camera.focus` is "the depth in focus and the blur in frame pixels per frame
+ * height of distance from it"): `px × |z − focus.z|`, with `z` in frame
+ * heights. Exactly 0 on the depth in focus, and with no camera, no focus or a
+ * focus of 0 px: the shader then returns the texel itself, so a settled plane
+ * is exact.
+ */
+export function focusRadius(camera: Camera | undefined, z: number): number {
+  const focus = camera?.focus
+  if (!focus || !(focus.px > 0)) return 0
+  const distance = Math.abs(z - focus.z)
+  return distance === 0 ? 0 : focus.px * distance
+}
+
+/* ---------------------------------------------------------------- the glow */
+
+/**
+ * The glow's two routes behind one seam (§6.16, "Glow"): `'quad'`, the
+ * planned route (the requested items alone, blurred in two separable passes,
+ * added over the planes), and `'unreal'`, three r186's own `UnrealBloomPass`.
+ * M7 (§6.15) runs both on the owner's two machines and the route not taken
+ * is removed: a deletion of its branch, its module and its name here.
+ */
+export type GlowRoute = 'quad' | 'unreal'
+export const GLOW_ROUTES: readonly GlowRoute[] = Object.freeze(['quad', 'unreal'] as GlowRoute[])
+
+/** The route every compositor takes unless it is made with another (the harness's M7 does). The planned one until M7 decides. */
+export const GLOW_ROUTE: GlowRoute = 'quad'
+
+/** At most this many taps each side of the centre in one blur pass; a wider radius spaces them out (proposal). */
+export const GLOW_MAX_HALF_TAPS = 32
+
+/** The kernel's sigma as a fraction of the radius: the kernel stops at the radius, three sigmas out (proposal). */
+export const GLOW_SIGMA_OF_RADIUS = 1 / 3
+
+/** The quad route's cap on the glow's alpha, so the glow is below 1 wherever the shape is not (proposal). */
+export const GLOW_MAX_ALPHA = 0.85
+
+/** The `'unreal'` route's mapping of a request's radius in pixels onto `UnrealBloomPass.radius`, 0..1: this many pixels is 1 (proposal; M7's alternative only). */
+export const UNREAL_RADIUS_PX = 64
+
+/** At most this many distinct (radius, strength) pairs of glow in one list: a drawer never emits more (the hero's and the edge sweep's; proposal). */
+export const MAX_GLOW_BATCHES = 2
+
+/**
+ * One blur pass's kernel for a glow of `radius` frame pixels: the offsets
+ * and weights of the taps from the centre out (`offsets[0]` is 0, the
+ * centre; each other tap is sampled on both sides), Gaussian with sigma
+ * `radius × GLOW_SIGMA_OF_RADIUS`, cut at the radius, normalised so the
+ * centre plus twice every other weight is exactly 1 (a flat field stays
+ * flat). The offsets are whole pixels, so every sample lands on a texel
+ * centre and nothing beyond the radius is read: the glow's alpha is 0
+ * beyond its reach. A radius of 0 or below is the texel itself.
+ */
+export function glowKernel(radius: number): { offsets: number[]; weights: number[] } {
+  const reach = Math.round(radius)
+  if (!(reach > 0)) return { offsets: [0], weights: [1] }
+  const n = Math.min(reach, GLOW_MAX_HALF_TAPS)
+  const offsets = Array.from({ length: n + 1 }, (_, i) => Math.round((i * reach) / n))
+  const sigma = reach * GLOW_SIGMA_OF_RADIUS
+  const raw = offsets.map((o) => Math.exp(-0.5 * (o / sigma) ** 2))
+  const total = raw[0] + 2 * raw.slice(1).reduce((a, b) => a + b, 0)
+  return { offsets, weights: raw.map((w) => w / total) }
+}
+
+/**
+ * Whether an item is the one a request names: its id, or a piece of it
+ * (`textItems` names a field's pieces `<field>-<n>`, items.ts). Top-level
+ * items only: a group is taken whole by its own id.
+ */
+export function glowMatches(id: string, request: GlowRequest): boolean {
+  return id === request.item || id.startsWith(`${request.item}-`)
+}
+
+/** The requested items alone, in list order: what a glow canvas holds (§6.16: "the requested items are painted alone"). Never a dim. */
+export function glowItemsOf(items: readonly DrawItem[], requests: readonly GlowRequest[]): DrawItem[] {
+  return items.filter((item) => item.kind !== 'dim' && requests.some((r) => glowMatches(item.id, r)))
+}
+
+/** Requests of one radius and strength: blurred and added once. */
+export interface GlowBatch {
+  radius: number
+  strength: number
+  requests: GlowRequest[]
+}
+
+/** The list's glow requests grouped by radius and strength, in first-seen order; a request of radius or strength 0 or below glows nowhere and is left out. */
+export function glowBatches(list: DrawList): GlowBatch[] {
+  const batches: GlowBatch[] = []
+  for (const request of list.glow ?? []) {
+    if (!(request.radius > 0) || !(request.strength > 0)) continue
+    const batch = batches.find((b) => b.radius === request.radius && b.strength === request.strength)
+    if (batch) batch.requests.push(request)
+    else batches.push({ radius: request.radius, strength: request.strength, requests: [request] })
+  }
+  return batches
 }
 

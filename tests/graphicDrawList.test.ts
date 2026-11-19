@@ -562,6 +562,29 @@ describe('graphicDrawList: no drawer asks for the compositor yet', () => {
     }
   })
 
+  /**
+   * Phase 3's piece 2 built the glow (graphicCompositor.ts) with no template
+   * asking for one: production behaviour unchanged. The templates whose lists
+   * may carry a `GlowRequest`: piece 3 adds 'counter' and 'ring' (the hero's
+   * glow under a glowing style), piece 5 'screen-card' (its edge sweep).
+   */
+  const MAY_GLOW = new Set<GraphicTemplateId>([])
+
+  it('no drawer emits a glow request, plain, with a depth or as a hero, under any style, unless its template is in MAY_GLOW (none in piece 2)', () => {
+    for (const f of fixtures) {
+      if (MAY_GLOW.has(f.spec.data.template)) continue
+      const { depth: _depth, hero: _hero, ...plain } = f.spec
+      for (const variant of [{}, { hero: true as const }, ...(['tilt', 'parallax', 'dolly', 'focus'] as const).map((depth) => ({ depth }))]) {
+        const s: GraphicSpec = { ...plain, ...variant }
+        const glowing: string[] = []
+        for (const st of GRAPHIC_STYLES) {
+          for (const frame of framesOf(s, st)) if ((drawListAt(s, st, frame, FPS, SIZE, fake, targetsOf(s)).glow ?? []).length > 0) glowing.push(`${st.id}@${frame}`)
+        }
+        expect(glowing, `${f.id} ${JSON.stringify(variant)}`).toEqual([])
+      }
+    }
+  })
+
   it('a depth or a hero asks only on a template in MAY_ASK (none in piece 1)', () => {
     for (const f of fixtures) {
       if (MAY_ASK.has(f.spec.data.template) || ALWAYS_ASK.has(f.spec.data.template)) continue

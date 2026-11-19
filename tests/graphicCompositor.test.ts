@@ -2,7 +2,16 @@ import { describe, expect, it } from 'vitest'
 import type { Camera, DrawItem, DrawList, ShapeItem } from '@shared/graphics/items'
 import {
   DEFAULT_FOV,
+  FOCUS_TAPS,
+  GLOW_MAX_HALF_TAPS,
+  GLOW_ROUTE,
+  GLOW_ROUTES,
   MAX_PLANES,
+  focusDisc,
+  focusRadius,
+  glowBatches,
+  glowItemsOf,
+  glowKernel,
   cameraFor,
   compensation,
   compositorRoute,
@@ -177,3 +186,107 @@ describe('graphicCompositor: cameraFor and the compensation', () => {
   })
 })
 
+
+/* ------------------------------------------------------ the glow and the focus */
+
+describe('graphicCompositor: the glow’s pure parts (piece 2)', () => {
+  it('the route is a named constant, quad until M7 decides, one of the two routes', () => {
+    expect(GLOW_ROUTE).toBe('quad')
+    expect(GLOW_ROUTES).toContain('quad')
+    expect(GLOW_ROUTES).toContain('unreal')
+    expect(GLOW_ROUTES).toContain(GLOW_ROUTE)
+  })
+
+  it('glowKernel: whole-pixel offsets from 0 out to the radius, weights falling, the centre plus twice the rest exactly 1', () => {
+    for (const radius of [1, 2, 5, 8, 21.6, 32, 33, 64, 200]) {
+      const { offsets, weights } = glowKernel(radius)
+      const reach = Math.round(radius)
+      expect(offsets[0], `${radius}`).toBe(0)
+      expect(offsets[offsets.length - 1], `${radius}`).toBe(reach)
+      expect(offsets.length, `${radius}`).toBe(Math.min(reach, GLOW_MAX_HALF_TAPS) + 1)
+      for (let i = 1; i < offsets.length; i++) {
+        expect(Number.isInteger(offsets[i]), `${radius} offset ${i}`).toBe(true)
+        expect(offsets[i], `${radius} offset ${i}`).toBeGreaterThan(offsets[i - 1])
+        expect(weights[i], `${radius} weight ${i}`).toBeLessThan(weights[i - 1])
+        expect(weights[i], `${radius} weight ${i}`).toBeGreaterThan(0)
+      }
+      const sum = weights[0] + 2 * weights.slice(1).reduce((x, y) => x + y, 0)
+      expect(Math.abs(sum - 1), `${radius}: the weights sum to ${sum}`).toBeLessThan(1e-12)
+    }
+  })
+
+  it('glowKernel of 0 or below is the texel itself', () => {
+    for (const radius of [0, -3, 0.4]) expect(glowKernel(radius)).toEqual({ offsets: [0], weights: [1] })
+  })
+
+  it('glowItemsOf: the requested items and their pieces alone, in list order, never a dim', () => {
+    const items: DrawItem[] = [dim(), shape('panel', '#1'), shape('value-1', '#2'), shape('valueX', '#3'), shape('value', '#4'), shape('label', '#5'), shape('value-0', '#6')]
+    const glowing = glowItemsOf(items, [{ item: 'value', radius: 8, strength: 1 }])
+    expect(glowing.map((i) => i.id)).toEqual(['value-1', 'value', 'value-0'])
+    expect(glowItemsOf(items, [{ item: 'dim', radius: 8, strength: 1 }])).toEqual([])
+    expect(glowItemsOf(items, [])).toEqual([])
+  })
+
+  it('glowBatches groups the requests by radius and strength, first seen first, leaving out a radius or strength of 0', () => {
+    const batches = glowBatches(
+      list([], {
+        glow: [
+          { item: 'a', radius: 8, strength: 1 },
+          { item: 'b', radius: 4, strength: 1 },
+          { item: 'c', radius: 8, strength: 1, color: '#fff' },
+          { item: 'd', radius: 0, strength: 1 },
+          { item: 'e', radius: 8, strength: 0 }
+        ]
+      })
+    )
+    expect(batches.map((b) => [b.radius, b.strength, b.requests.map((r) => r.item)])).toEqual([
+      [8, 1, ['a', 'c']],
+      [4, 1, ['b']]
+    ])
+    expect(glowBatches(list([]))).toEqual([])
+  })
+})
+
+describe('graphicCompositor: the focus blur’s pure parts (piece 2)', () => {
+  it('focusDisc is FOCUS_TAPS (13) taps in the unit disc, the texel itself first, centred', () => {
+    const disc = focusDisc()
+    expect(FOCUS_TAPS).toBe(13)
+    expect(disc).toHaveLength(FOCUS_TAPS)
+    expect(disc[0]).toEqual([0, 0])
+    for (const [x, y] of disc) expect(Math.hypot(x, y)).toBeLessThanOrEqual(1 + 1e-12)
+    expect(Math.abs(disc.reduce((s, [x]) => s + x, 0))).toBeLessThan(1e-12)
+    expect(Math.abs(disc.reduce((s, [, y]) => s + y, 0))).toBeLessThan(1e-12)
+    expect(new Set(disc.map((p) => p.join())).size).toBe(FOCUS_TAPS)
+  })
+
+  it('focusRadius is exactly 0 on the depth in focus, with no camera, no focus, or a focus of 0 px', () => {
+    const focused: Camera = { ...FLAT, focus: { z: -0.02, px: 500 } }
+    expect(focusRadius(focused, -0.02)).toBe(0)
+    expect(focusRadius(undefined, 0.05)).toBe(0)
+    expect(focusRadius(FLAT, 0.05)).toBe(0)
+    expect(focusRadius(TILTED, 0.05)).toBe(0)
+    expect(focusRadius({ ...FLAT, focus: { z: 0, px: 0 } }, 0.05)).toBe(0)
+  })
+
+  it('focusRadius is px per frame height of distance from the depth in focus, either side', () => {
+    const focused: Camera = { ...FLAT, focus: { z: 0, px: 500 } }
+    expect(focusRadius(focused, 0.05)).toBeCloseTo(25, 12)
+    expect(focusRadius(focused, -0.02)).toBeCloseTo(10, 12)
+  })
+
+  it('a list whose every plane is at the depth in focus still takes route three (the focus is not 0), drawn exact there; a focus of 0 is route one', () => {
+    const items = [shape('a', '#1', 0.05)]
+    expect(compositorRoute(list(items, { camera: { ...FLAT, focus: { z: 0.05, px: 10 } } }))).toBe('perspective')
+    expect(focusRadius({ ...FLAT, focus: { z: 0.05, px: 10 } }, 0.05)).toBe(0)
+    expect(isFlat(list(items, { camera: { ...FLAT, focus: { z: 0.05, px: 0 } } }))).toBe(true)
+    expect(compositorRoute(list(items, { camera: { ...FLAT, focus: { z: -0.02, px: 0 } } }))).toBe('flat')
+  })
+
+  it('a glow is never route one: route two under a flat camera, route three under a moving one', () => {
+    const glow = [{ item: 'a', radius: 8, strength: 1 }]
+    expect(isFlat(list([shape('a', '#1')], { glow }))).toBe(false)
+    expect(compositorRoute(list([shape('a', '#1')], { camera: FLAT, glow }))).toBe('glow')
+    expect(compositorRoute(list([shape('a', '#1')], { camera: { ...FLAT, focus: { z: 0, px: 0 } }, glow }))).toBe('glow')
+    expect(compositorRoute(list([shape('a', '#1')], { camera: TILTED, glow }))).toBe('perspective')
+  })
+})

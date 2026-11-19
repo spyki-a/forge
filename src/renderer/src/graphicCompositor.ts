@@ -1,32 +1,63 @@
 import type { DrawItem, DrawList } from '@shared/graphics/items'
 import { paintDrawList2d, type PaintOptions } from '@shared/graphics/paint'
+import type { GlowRequest } from '@shared/graphics/items'
 import {
+  FOCUS_TAPS,
+  GLOW_MAX_ALPHA,
+  GLOW_MAX_HALF_TAPS,
+  GLOW_ROUTE,
+  MAX_GLOW_BATCHES,
   MAX_PLANES,
+  UNREAL_RADIUS_PX,
   cameraFor,
   compositorRoute,
   flatItems,
+  focusDisc,
+  focusRadius,
+  glowBatches,
+  glowItemsOf,
+  glowKernel,
+  glowMatches,
   planeModel,
   planesOf,
   screenItemsOf,
+  type GlowBatch,
+  type GlowRoute,
   type Plane
 } from '@shared/graphics/compositor'
 import { sharedRenderer, type Three } from './threeShared'
 import { VERTEX as IDENTITY_VERTEX, textureOf } from './momentCanvas'
+import { loadUnrealBloom, type UnrealBloom } from './graphicGlowUnreal'
 
 export {
   DEFAULT_FOV,
+  FOCUS_TAPS,
+  GLOW_MAX_ALPHA,
+  GLOW_MAX_HALF_TAPS,
+  GLOW_ROUTE,
+  GLOW_ROUTES,
+  GLOW_SIGMA_OF_RADIUS,
+  MAX_GLOW_BATCHES,
   MAX_PLANES,
+  UNREAL_RADIUS_PX,
   cameraFor,
   cameraIsFlat,
   compensation,
   compositorRoute,
   flatDistance,
   flatItems,
+  focusDisc,
+  focusRadius,
+  glowBatches,
+  glowItemsOf,
+  glowKernel,
   isFlat,
   planeModel,
   planesOf,
   screenItemsOf,
   type CompositorRoute,
+  type GlowBatch,
+  type GlowRoute,
   type Plane
 } from '@shared/graphics/compositor'
 
@@ -50,7 +81,17 @@ export {
  * - **perspective** (a camera off flat, or a focus blur): the dims on a base
  *   layer by the identity quad, then one quad per plane (`planesOf`) under
  *   the perspective camera (`cameraFor`), each scaled by the parallax
- *   compensation (`planeModel`), then the glow pass.
+ *   compensation (`planeModel`), each plane blurred by its focus radius
+ *   (`focusRadius`), then the glow pass.
+ *
+ * The glow (§6.16, "Glow"; phase 3's piece 2), on routes two and three: the
+ * requested items alone (`glowItemsOf`) painted per plane onto glow layers,
+ * rendered through the same camera into a render target, spread by the
+ * compositor's glow route, and added over the frame. Two routes behind one
+ * seam (`spreadGlow`) until M7 decides (§6.15): `'quad'`, two separable
+ * Gaussian passes (`glowKernel`), and `'unreal'`, three r186's
+ * `UnrealBloomPass` (`graphicGlowUnreal.ts`). `GLOW_ROUTE` is the default;
+ * `createCompositor`'s `glow` option picks one (the harness's M7 does).
  *
  * The pure half (routes, planes, camera) is `src/shared/graphics/compositor.ts`,
  * re-exported here, so node's tests read it without three.js.
@@ -89,17 +130,77 @@ void main() {
  * premultiplied texels is coverage-weighted, so the fringe is gone, and at
  * 1:1 the upload is the 2D canvas's own premultiplied bytes (no
  * un-premultiply round trip). Rows as the canvas has them (uploaded
- * unflipped). `uBlur` is the plane's focus blur in frame pixels: phase 3's
- * piece 2 averages a disc of taps above 0 (an average of premultiplied taps
- * is right as it is); at 0, and in piece 1 always, the texel itself.
+ * unflipped).
+ *
+ * The focus blur (§6.16, "Shaders"): `uBlur` is the plane's radius in frame
+ * pixels (`focusRadius`). At 0 the texel itself, and nothing else is read, so
+ * a settled plane is exact; above 0 the average of `FOCUS_TAPS` taps on
+ * `focusDisc` scaled by it (an average of premultiplied taps is right as it
+ * is). The edges are clamped (`textureOf`), so a plane that fills the frame
+ * keeps its alpha at the frame's edge.
  */
 const FRAGMENT = /* glsl */ `
 precision highp float;
 varying vec2 vUv;
 uniform sampler2D uTex;
 uniform float uBlur;
+uniform vec2 uTexel;
+uniform vec2 uDisc[FOCUS_TAPS];
 void main() {
-  gl_FragColor = texture2D(uTex, vec2(vUv.x, 1.0 - vUv.y));
+  vec2 at = vec2(vUv.x, 1.0 - vUv.y);
+  if (uBlur <= 0.0) {
+    gl_FragColor = texture2D(uTex, at);
+    return;
+  }
+  vec4 sum = vec4(0.0);
+  for (int i = 0; i < FOCUS_TAPS; i++) sum += texture2D(uTex, at + uDisc[i] * uBlur * uTexel);
+  gl_FragColor = sum / float(FOCUS_TAPS);
+}`
+
+/** The disc's offsets, flat, as the shader's `uDisc` reads them. */
+const DISC = focusDisc().flatMap(([x, y]) => [x, y])
+
+/**
+ * One separable pass of the quad route's blur, over a render target (rows
+ * bottom up, so `vUv` as it is): the centre's weight, then each other tap on
+ * both sides, `uStep` the pass's direction times one texel, every offset a
+ * whole texel (`glowKernel`), so a sample never reads past the radius.
+ */
+const BLUR_FRAGMENT = /* glsl */ `
+precision highp float;
+varying vec2 vUv;
+uniform sampler2D uTex;
+uniform vec2 uStep;
+uniform float uOffsets[GLOW_TAPS];
+uniform float uWeights[GLOW_TAPS];
+uniform int uCount;
+void main() {
+  vec4 sum = texture2D(uTex, vUv) * uWeights[0];
+  for (int i = 1; i < GLOW_TAPS; i++) {
+    if (i > uCount) break;
+    vec2 o = uStep * uOffsets[i];
+    sum += (texture2D(uTex, vUv + o) + texture2D(uTex, vUv - o)) * uWeights[i];
+  }
+  gl_FragColor = sum;
+}`
+
+/**
+ * The glow added over the frame: premultiplied, scaled by the strength, its
+ * alpha held at `uMaxAlpha` (the quad route's `GLOW_MAX_ALPHA`; 1 on the
+ * unreal route, whose own alpha M7 reads). Blended colour ONE + ONE (a glow
+ * adds light) and alpha ONE + ONE_MINUS_SRC_ALPHA (alpha "over", never
+ * above 1): beyond the glow's reach the texel is 0 and nothing changes.
+ */
+const ADD_FRAGMENT = /* glsl */ `
+precision highp float;
+varying vec2 vUv;
+uniform sampler2D uTex;
+uniform float uStrength;
+uniform float uMaxAlpha;
+void main() {
+  vec4 glow = texture2D(uTex, vUv) * uStrength;
+  if (glow.a > uMaxAlpha) glow *= uMaxAlpha / glow.a;
+  gl_FragColor = glow;
 }`
 
 /* ------------------------------------------------------------- internals */
@@ -131,8 +232,50 @@ interface Internals {
   base: Layer | null
   /** Route three's planes, far to near, made as a list first needs them. */
   planes: Layer[]
+  /** The glow's route, fixed when the compositor is made. */
+  glowRoute: GlowRoute
+  /** `UnrealBloomPass`, loaded when the route is `'unreal'`. */
+  bloomClass: UnrealBloom | null
+  /** The glow's scene, targets and passes, made when a list first asks for a glow. */
+  glow: Glow | null
+  /** A scratch canvas for a request with its own colour. */
+  tint: { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } | null
   disposables: { dispose: () => void }[]
   disposed: boolean
+}
+
+type Target = import('three').WebGLRenderTarget
+
+/** One glow batch's slot (`glowBatches`): its glow layers per plane, and its targets or its bloom. */
+interface GlowSlot {
+  /** Index 0: route two's whole frame at 1:1; index 1 + i: route three's plane i. */
+  layers: Layer[]
+  /** The glow layers rendered through the camera. */
+  input: Target
+  /** The quad route's horizontal pass, then its vertical one: the glow. */
+  across: Target | null
+  out: Target | null
+  /** The unreal route's pass. */
+  bloom: InstanceType<UnrealBloom> | null
+}
+
+interface Glow {
+  /** The glow layers of every slot; only the slot being drawn is visible. */
+  scene: import('three').Scene
+  /** One identity quad, its material swapped between the blur and the add. */
+  passScene: import('three').Scene
+  pass: import('three').Mesh
+  blur: import('three').ShaderMaterial | null
+  add: import('three').ShaderMaterial
+  slots: GlowSlot[]
+}
+
+/** The harness's way past the glow and the focus blur (`paintDrawList3d`'s `probe`): the base under the glow, and route three at rest without its blur. */
+export interface CompositorProbe {
+  /** False: no glow is drawn, the frame is the planes alone. */
+  glow?: boolean
+  /** False: every plane's focus radius is 0. */
+  focus?: boolean
 }
 
 const internals = new WeakMap<Compositor, Internals>()
@@ -177,8 +320,11 @@ function canvas2d(width: number, height: number): { canvas: HTMLCanvasElement; c
  * the renderer threw, or its context came back lost, remembered for the
  * session. Never throws for that: the caller paints with painter A instead.
  */
-export async function createCompositor(width: number, height: number): Promise<Compositor | null> {
+export async function createCompositor(width: number, height: number, options: { glow?: GlowRoute } = {}): Promise<Compositor | null> {
   if (webgl === 'missing') return null
+  const glowRoute = options.glow ?? GLOW_ROUTE
+  // Loaded before the renderer, so a compositor on the unreal route draws its first glow synchronously.
+  const bloomClass = glowRoute === 'unreal' ? await loadUnrealBloom() : null
   let shared: Awaited<ReturnType<typeof sharedRenderer>>
   try {
     shared = await sharedRenderer(width, height)
@@ -209,6 +355,10 @@ export async function createCompositor(width: number, height: number): Promise<C
     whole: null,
     base: null,
     planes: [],
+    glowRoute,
+    bloomClass,
+    glow: null,
+    tint: null,
     disposables,
     disposed: false
   }
@@ -218,16 +368,23 @@ export async function createCompositor(width: number, height: number): Promise<C
       state.disposed = true
       for (const d of state.disposables) d.dispose()
       // The layers' frame-sized 2D canvases are given back now, not at the next collection.
-      for (const layer of [state.whole, state.base, ...state.planes]) if (layer) layer.canvas.width = layer.canvas.height = 0
-      if (state.flat) state.flat.canvas.width = state.flat.canvas.height = 0
+      for (const layer of allLayers(state)) layer.canvas.width = layer.canvas.height = 0
+      for (const scratch of [state.flat, state.tint]) if (scratch) scratch.canvas.width = scratch.canvas.height = 0
     }
   }
   internals.set(compositor, state)
   return compositor
 }
 
-/** A layer: its canvas, texture, material and mesh; the texture and the material on the disposables list. */
-function makeLayer(state: Internals, vertexShader: string, order: number): Layer {
+/** Every layer the compositor made: the 1:1 one, the dims' base, the planes, and every glow slot's. */
+function allLayers(state: Internals): Layer[] {
+  const layers = [state.whole, state.base, ...state.planes].filter((l): l is Layer => l !== null)
+  for (const slot of state.glow?.slots ?? []) layers.push(...slot.layers.filter(Boolean))
+  return layers
+}
+
+/** A layer: its canvas, texture, material and mesh, in `scene` (the frame's, or the glow's); the texture and the material on the disposables list. */
+function makeLayer(state: Internals, vertexShader: string, order: number, scene = state.scene): Layer {
   const { three } = state
   const { canvas, ctx } = canvas2d(state.width, state.height)
   const texture = textureOf(three, canvas)
@@ -237,7 +394,8 @@ function makeLayer(state: Internals, vertexShader: string, order: number): Layer
   const material = new three.ShaderMaterial({
     vertexShader,
     fragmentShader: FRAGMENT,
-    uniforms: { uTex: { value: texture }, uBlur: { value: 0 } },
+    defines: { FOCUS_TAPS },
+    uniforms: { uTex: { value: texture }, uBlur: { value: 0 }, uTexel: { value: [1 / state.width, 1 / state.height] }, uDisc: { value: DISC } },
     depthTest: false,
     depthWrite: false,
     transparent: true
@@ -256,7 +414,7 @@ function makeLayer(state: Internals, vertexShader: string, order: number): Layer
   mesh.matrixAutoUpdate = false
   mesh.renderOrder = order
   mesh.visible = false
-  state.scene.add(mesh)
+  scene.add(mesh)
   return { canvas, ctx, texture, material, mesh, key: '' }
 }
 
@@ -289,14 +447,178 @@ function paintLayer(layer: Layer, list: DrawList, items: DrawItem[], options: Pa
   layer.texture.needsUpdate = true
 }
 
+/* ------------------------------------------------------------- the glow */
+
+/** A render target the frame's size: no depth, no mipmaps, linear filters (three's defaults). On the disposables list. */
+function makeTarget(state: Internals): Target {
+  const target = new state.three.WebGLRenderTarget(state.width, state.height, { depthBuffer: false })
+  state.disposables.push(target)
+  return target
+}
+
+/** The glow's scene and passes, made when a list first asks for a glow: the add material always, the blur on the quad route. */
+function glowOf(state: Internals): Glow {
+  if (state.glow) return state.glow
+  const { three } = state
+  const material = (fragmentShader: string, uniforms: Record<string, { value: unknown }>, defines: Record<string, number> = {}): import('three').ShaderMaterial => {
+    const m = new three.ShaderMaterial({ vertexShader: IDENTITY_VERTEX, fragmentShader, uniforms, defines, depthTest: false, depthWrite: false, transparent: true })
+    state.disposables.push(m)
+    return m
+  }
+  const blur =
+    state.glowRoute === 'quad'
+      ? material(
+          BLUR_FRAGMENT,
+          { uTex: { value: null }, uStep: { value: [0, 0] }, uOffsets: { value: new Array<number>(GLOW_MAX_HALF_TAPS + 1).fill(0) }, uWeights: { value: new Array<number>(GLOW_MAX_HALF_TAPS + 1).fill(0) }, uCount: { value: 0 } },
+          { GLOW_TAPS: GLOW_MAX_HALF_TAPS + 1 }
+        )
+      : null
+  if (blur) blur.blending = three.NoBlending
+  const add = material(ADD_FRAGMENT, { uTex: { value: null }, uStrength: { value: 1 }, uMaxAlpha: { value: 1 } })
+  add.blending = three.CustomBlending
+  add.blendEquation = three.AddEquation
+  add.blendSrc = three.OneFactor
+  add.blendDst = three.OneFactor
+  add.blendSrcAlpha = three.OneFactor
+  add.blendDstAlpha = three.OneMinusSrcAlphaFactor
+  const passScene = new three.Scene()
+  const pass = new three.Mesh(state.quad, add)
+  pass.frustumCulled = false
+  pass.matrixAutoUpdate = false
+  passScene.add(pass)
+  state.glow = { scene: new three.Scene(), passScene, pass, blur, add, slots: [] }
+  return state.glow
+}
+
+/** Batch `b`'s slot, made on first use: its input target, and the quad route's two targets or the unreal route's pass. */
+function slotOf(state: Internals, glow: Glow, b: number): GlowSlot {
+  while (glow.slots.length <= b) {
+    const input = makeTarget(state)
+    let bloom: InstanceType<UnrealBloom> | null = null
+    if (state.glowRoute === 'unreal') {
+      if (!state.bloomClass) throw new Error('paintDrawList3d: the unreal glow route was not loaded')
+      bloom = new state.bloomClass(new state.three.Vector2(state.width, state.height), 1, 0, 0)
+      // Its dispose() leaves the high-pass material out (UnrealBloomPass.js, r186): ours does both.
+      state.disposables.push(bloom, bloom.materialHighPassFilter)
+    }
+    const quad = state.glowRoute === 'quad'
+    glow.slots.push({ layers: [], input, across: quad ? makeTarget(state) : null, out: quad ? makeTarget(state) : null, bloom })
+  }
+  return glow.slots[b]
+}
+
 /**
- * The glow pass (§6.16, "Glow"): phase 3's piece 2 fills it, with both
- * routes (the two separable passes, and three's `UnrealBloomPass`) behind
- * this one seam until M7 decides. In piece 1 a no-op: the planes are drawn
- * and nothing is added over them.
+ * A glow layer's canvas: the requested items alone (`glowItemsOf`), each
+ * request's items in its own `color` when it names one (painted, then
+ * filled `source-in`), re-uploaded only when they change.
  */
-function glowPass(_state: Internals, _list: DrawList): void {
-  // Piece 2.
+function paintGlowLayer(state: Internals, layer: Layer, list: DrawList, items: DrawItem[], requests: GlowRequest[], options: PaintOptions, extra: string): void {
+  const glowing = glowItemsOf(items, requests)
+  const key = keyOf(glowing, options, `${extra}|${JSON.stringify(requests.map((r) => [r.item, r.color ?? '']))}`)
+  if (key === layer.key) return
+  layer.key = key
+  layer.ctx.clearRect(0, 0, layer.canvas.width, layer.canvas.height)
+  const paint = (ctx: CanvasRenderingContext2D, its: DrawItem[]): void =>
+    paintDrawList2d(ctx, { width: list.width, height: list.height, items: its }, { layer: options.layer, images: options.images })
+  for (const request of requests) {
+    // An item two requests name is the first one's.
+    const its = glowing.filter((item) => requests.find((r) => glowMatches(item.id, r)) === request)
+    if (its.length === 0) continue
+    if (!request.color) {
+      paint(layer.ctx, its)
+      continue
+    }
+    state.tint ??= canvas2d(state.width, state.height)
+    const { canvas, ctx } = state.tint
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    paint(ctx, its)
+    ctx.save()
+    ctx.globalCompositeOperation = 'source-in'
+    ctx.fillStyle = request.color
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.restore()
+    layer.ctx.drawImage(canvas, 0, 0)
+  }
+  layer.texture.needsUpdate = true
+}
+
+/** Where the glow layers sit: route two's whole frame at 1:1, or route three's planes with their models and focus radii. */
+interface GlowPlane {
+  items: DrawItem[]
+  /** Null: the identity quad (route two). */
+  model: number[] | null
+  z: number
+  blur: number
+}
+
+/**
+ * One batch's glow, spread by the compositor's route (the seam M7 decides):
+ * the batch's glow layers rendered through the camera into the slot's input,
+ * then the quad route's two separable passes (horizontal, then vertical) or
+ * the unreal route's bloom. Returns the texture holding the glow alone,
+ * premultiplied.
+ */
+function spreadGlow(state: Internals, glow: Glow, b: number, batch: GlowBatch, planes: GlowPlane[], list: DrawList, options: PaintOptions): import('three').Texture {
+  const { renderer } = state
+  const slot = slotOf(state, glow, b)
+  for (const s of glow.slots) for (const layer of s.layers) if (layer) layer.mesh.visible = false
+  planes.forEach((plane, i) => {
+    if (glowItemsOf(plane.items, batch.requests).length === 0) return
+    // Slot 0 is route two's identity layer, slots 1.. route three's planes: a compositor that moves between the routes never draws a plane with the other's vertex shader.
+    const at = plane.model ? 1 + i : 0
+    slot.layers[at] ??= makeLayer(state, plane.model ? PERSPECTIVE_VERTEX : IDENTITY_VERTEX, at, glow.scene)
+    const layer = slot.layers[at]
+    paintGlowLayer(state, layer, list, plane.items, batch.requests, options, `${plane.model ? 'plane' : 'whole'}|${plane.z}`)
+    if (plane.model) {
+      layer.mesh.matrix.fromArray(plane.model)
+      layer.mesh.matrixWorldNeedsUpdate = true
+    }
+    layer.material.uniforms.uBlur.value = plane.blur
+    layer.mesh.visible = true
+  })
+  renderer.setRenderTarget(slot.input)
+  renderer.clear()
+  renderer.render(glow.scene, state.camera)
+
+  if (state.glowRoute === 'unreal') {
+    const bloom = slot.bloom!
+    bloom.strength = batch.strength
+    bloom.radius = Math.min(1, batch.radius / UNREAL_RADIUS_PX)
+    bloom.threshold = 0
+    bloom.render(renderer, null as unknown as Target, slot.input, 0, false)
+    // The bloom alone, before the pass adds it over its input (graphicGlowUnreal.ts).
+    return bloom.renderTargetsHorizontal[0].texture
+  }
+
+  const blur = glow.blur!
+  const { offsets, weights } = glowKernel(batch.radius)
+  const pad = (a: number[]): number[] => [...a, ...new Array<number>(GLOW_MAX_HALF_TAPS + 1 - a.length).fill(0)]
+  blur.uniforms.uOffsets.value = pad(offsets)
+  blur.uniforms.uWeights.value = pad(weights)
+  blur.uniforms.uCount.value = offsets.length - 1
+  glow.pass.material = blur
+  for (const [from, to, step] of [
+    [slot.input, slot.across!, [1 / state.width, 0]],
+    [slot.across!, slot.out!, [0, 1 / state.height]]
+  ] as const) {
+    blur.uniforms.uTex.value = from.texture
+    blur.uniforms.uStep.value = step
+    renderer.setRenderTarget(to)
+    renderer.clear()
+    renderer.render(glow.passScene, state.camera)
+  }
+  return slot.out!.texture
+}
+
+/** A batch's glow added over the frame on the canvas (`ADD_FRAGMENT`): the strength and the alpha cap the quad route's, the bloom's own on the unreal route. */
+function addGlow(state: Internals, glow: Glow, texture: import('three').Texture, batch: GlowBatch): void {
+  const quad = state.glowRoute === 'quad'
+  glow.add.uniforms.uTex.value = texture
+  glow.add.uniforms.uStrength.value = quad ? batch.strength : 1
+  glow.add.uniforms.uMaxAlpha.value = quad ? GLOW_MAX_ALPHA : 1
+  glow.pass.material = glow.add
+  state.renderer.setRenderTarget(null)
+  state.renderer.render(glow.passScene, state.camera)
 }
 
 /** The one renderer is shared, and another drawer may have resized it between two of our frames (momentCanvas.ts `sized`). */
@@ -305,9 +627,32 @@ function sized(state: Internals): void {
   if (renderer.domElement.width !== width || renderer.domElement.height !== height) renderer.setSize(width, height, false)
 }
 
-function render(state: Internals): void {
+/**
+ * The frame (§6.16): every glow batch spread into its own target first, then
+ * the layers on the canvas, then each batch's glow added over them. The one
+ * renderer is shared, so its render target, auto-clear and clear colour are
+ * put back as they were (the moments draw with theirs); its size is not,
+ * since resizing the canvas would blank the frame before the caller copies
+ * it, and every drawer sizes it before its own render (`sized`).
+ */
+function render(state: Internals, list: DrawList, batches: GlowBatch[], planes: GlowPlane[], options: PaintOptions): void {
+  const { renderer, three } = state
   sized(state)
-  state.renderer.render(state.scene, state.camera)
+  const saved = { target: renderer.getRenderTarget(), autoClear: renderer.autoClear, color: renderer.getClearColor(new three.Color()), alpha: renderer.getClearAlpha() }
+  try {
+    renderer.autoClear = false
+    renderer.setClearColor(0x000000, 0)
+    const glow = batches.length > 0 ? glowOf(state) : null
+    const textures = glow ? batches.map((batch, b) => spreadGlow(state, glow, b, batch, planes, list, options)) : []
+    renderer.setRenderTarget(null)
+    renderer.clear()
+    renderer.render(state.scene, state.camera)
+    textures.forEach((texture, b) => addGlow(state, glow!, texture, batches[b]))
+  } finally {
+    renderer.setRenderTarget(saved.target)
+    renderer.autoClear = saved.autoClear
+    renderer.setClearColor(saved.color, saved.alpha)
+  }
 }
 
 /**
@@ -320,9 +665,11 @@ function render(state: Internals): void {
  * read, the compositor drawing the whole frame. A list of another size than
  * the compositor's is refused, as is one with more than `MAX_PLANES` planes
  * (a drawer never emits more: a drawer's bug, thrown as `graphicBox` throws
- * on a non-finite bound).
+ * on a non-finite bound), and one with more than `MAX_GLOW_BATCHES` glow
+ * batches. `probe` is the harness's alone (`CompositorProbe`): nothing that
+ * draws for the app passes it.
  */
-export function paintDrawList3d(list: DrawList, compositor: Compositor, options: PaintOptions = {}): HTMLCanvasElement {
+export function paintDrawList3d(list: DrawList, compositor: Compositor, options: PaintOptions = {}, probe: CompositorProbe = {}): HTMLCanvasElement {
   const state = internals.get(compositor)
   if (!state) throw new Error('paintDrawList3d: not a compositor')
   if (state.disposed) throw new Error('paintDrawList3d: the compositor was disposed')
@@ -330,6 +677,9 @@ export function paintDrawList3d(list: DrawList, compositor: Compositor, options:
     throw new Error(`paintDrawList3d: a ${list.width}×${list.height} list on a ${state.width}×${state.height} compositor`)
   }
   const route = compositorRoute(list)
+  const batches = probe.glow === false ? [] : glowBatches(list)
+  if (batches.length > MAX_GLOW_BATCHES) throw new Error(`paintDrawList3d: ${batches.length} glow batches, at most ${MAX_GLOW_BATCHES}`)
+  const radius = (z: number): number => (probe.focus === false ? 0 : focusRadius(list.camera, z))
 
   if (route === 'flat') {
     // Route one: painter A alone, in plane order; nothing reaches WebGL.
@@ -341,12 +691,15 @@ export function paintDrawList3d(list: DrawList, compositor: Compositor, options:
   }
 
   for (const layer of [state.whole, state.base, ...state.planes]) if (layer) layer.mesh.visible = false
+  let glowPlanes: GlowPlane[]
 
   if (route === 'glow') {
     // Route two: painter A's flat canvas at 1:1 under the identity quad; the glow over it.
     state.whole ??= makeLayer(state, IDENTITY_VERTEX, 0)
-    paintLayer(state.whole, list, flatItems(list), options)
+    const items = flatItems(list)
+    paintLayer(state.whole, list, items, options)
     state.whole.mesh.visible = true
+    glowPlanes = [{ items, model: null, z: 0, blur: 0 }]
   } else {
     const planes: Plane[] = planesOf(list)
     if (planes.length > MAX_PLANES) throw new Error(`paintDrawList3d: ${planes.length} planes, at most ${MAX_PLANES}`)
@@ -366,19 +719,22 @@ export function paintDrawList3d(list: DrawList, compositor: Compositor, options:
     // Three r186 renders with projectionMatrix and matrixWorldInverse as set here: it skips updateMatrixWorld (matrixWorldAutoUpdate
     // false, no parent), and calls updateProjectionMatrix only with a reversed depth buffer, which threeShared.ts does not ask for;
     // turning that on would reset this projection to the camera's default fov and aspect.
+    glowPlanes = []
     planes.forEach((plane, i) => {
       while (state.planes.length <= i) state.planes.push(makeLayer(state, PERSPECTIVE_VERTEX, 1 + state.planes.length))
       const layer = state.planes[i]
       // Keyed on the plane's z too: slot i holds another plane when the set of planes changes.
       paintLayer(layer, list, plane.items, options, String(plane.z))
-      layer.mesh.matrix.fromArray(planeModel(plane.z, list, distance))
+      const model = planeModel(plane.z, list, distance)
+      layer.mesh.matrix.fromArray(model)
       layer.mesh.matrixWorldNeedsUpdate = true
+      layer.material.uniforms.uBlur.value = radius(plane.z)
       layer.mesh.visible = true
+      glowPlanes.push({ items: plane.items, model, z: plane.z, blur: radius(plane.z) })
     })
   }
 
-  glowPass(state, list)
-  render(state)
+  render(state, list, batches, glowPlanes, options)
   return state.renderer.domElement
 }
 
@@ -390,5 +746,5 @@ export function paintDrawList3d(list: DrawList, compositor: Compositor, options:
 export function forgetPlanes(compositor: Compositor): void {
   const state = internals.get(compositor)
   if (!state) return
-  for (const layer of [state.whole, state.base, ...state.planes]) if (layer) layer.key = ''
+  for (const layer of allLayers(state)) layer.key = ''
 }

@@ -8,10 +8,12 @@
  *   arc, a stroke, a Latin line and EFFECTS §51's clusters) painted by
  *   painter A onto a 2D canvas, and by `paintDrawList3d` through each route:
  *   `flat` (a flat camera: painter A, no WebGL), `glow` (a glow request
- *   under a flat camera: the 1:1 identity quad, the glow pass a no-op until
- *   piece 2) and `perspective` (a flat camera with a focus blur, which
- *   piece 1 draws as the texel itself: one compensated plane per z under the
- *   perspective camera). Each route's frame is copied out as the seam copies
+ *   under a flat camera: the 1:1 identity quad, read with the glow left out,
+ *   `CompositorProbe`'s `glow: false`, so the reading is the base under the
+ *   glow; the glow itself is the `glow` option's, M7) and `perspective` (a
+ *   flat camera with a focus blur, read with every radius 0, the probe's
+ *   `focus: false`: one compensated plane per z under the perspective camera;
+ *   the blur itself is the `focus` option's). Each route's frame is copied out as the seam copies
  *   it (`drawImage` into a 2D canvas) and read per channel against painter
  *   A's. The 1 px line at 10, 50 and 90 % alpha is read composited over black
  *   and over white. A settled 2.5D list (planes at z 0, 0.02 and 0.05, the
@@ -46,7 +48,7 @@ import type { GraphicSpec } from '@shared/graphics/template'
 import { facesFor } from '@shared/render/textPaint'
 import { useCatalog } from '../catalog'
 import { sharedRenderer } from '../threeShared'
-import { WEBGL_MISSING_NOTE, createCompositor, paintDrawList3d, resetCompositorSession, type Compositor } from '../graphicCompositor'
+import { WEBGL_MISSING_NOTE, createCompositor, paintDrawList3d, resetCompositorSession, type Compositor, type CompositorProbe } from '../graphicCompositor'
 import { forgetGraphicPreview, graphicDrawnFlat, graphicFrameCanvases, graphicMeasure, graphicPreviewCanvas, takeGraphicBakeNotes } from '../graphicCanvas'
 import { COMPOSITOR_BAR, compositorVerdict, diffChannels, edgeColour, type ChannelDiff, type CompositorReadings, type EdgeReading, type RouteReading } from './compositorMeasure'
 import { inkBox, padRect } from './graphicMeasure'
@@ -65,7 +67,7 @@ const CREAM = '#f6f2ea'
 const NEAR_BLACK = '#100e0b'
 const STYLE = resolveGraphicStyle('clean')
 const FLAT: Camera = { tilt: 0, yaw: 0, dolly: 0, fov: 30 }
-/** A focus blur above 0 with a flat camera: the perspective route at rest, its shader the texel itself in piece 1. */
+/** A focus blur above 0 with a flat camera: the perspective route at rest, read with the probe's `focus: false` (`BASE`) so each plane is the texel itself. */
 const FOCUSED: Camera = { ...FLAT, focus: { z: 0, px: 1 } }
 const SPEC: GraphicSpec = { data: { template: 'counter', value: '40', label: 'forty' }, seconds: 1, beats: [0.5], place: { auto: true, third: 'middle' }, seed: 1, version: 0 }
 
@@ -123,10 +125,18 @@ function painterA(l: DrawList): HTMLCanvasElement {
   return canvas
 }
 
+/**
+ * The probe the routes are read with (piece 2): the glow left out and every
+ * focus radius 0, so routes two and three are the 1:1 texture and the
+ * compensated planes against painter A, as piece 1 read them. The glow is
+ * M7's (`glow` option), the blur the `focus` option's.
+ */
+const BASE: CompositorProbe = { glow: false, focus: false }
+
 /** Painter B, copied out at once as the seam copies it (graphicCanvas.ts `paintFrame`). */
-function painterB(l: DrawList, compositor: Compositor): HTMLCanvasElement {
+function painterB(l: DrawList, compositor: Compositor, probe: CompositorProbe = BASE): HTMLCanvasElement {
   const { canvas, ctx } = canvas2d()
-  ctx.drawImage(paintDrawList3d(l, compositor, { layer: freshLayer }), 0, 0)
+  ctx.drawImage(paintDrawList3d(l, compositor, { layer: freshLayer }, probe), 0, 0)
   return canvas
 }
 
