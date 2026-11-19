@@ -934,6 +934,46 @@ describe('the screen card’s frames', () => {
     expect(decoded.every((d) => (d.bitmap as unknown as { closed: boolean }).closed)).toBe(true)
   })
 
+  it('the preview draws every frame of the move from the pull’s own decoded frames, held with the pull, on the first play and every replay: never a frame painted without its picture (the critics’ fix: the memo of 16 missed them all)', async () => {
+    settledCatalogue()
+    forgetGraphicPreview('card-m')
+    let n = 0
+    const bitmaps: { id: number; closed: boolean }[] = []
+    vi.stubGlobal('createImageBitmap', async () => {
+      const bitmap = { id: n++, width: 1920, height: 1080, closed: false, close() { this.closed = true } }
+      bitmaps.push(bitmap)
+      return bitmap
+    })
+    let ready = 0
+    expect(screenPreviewTargets('card-m', footage, boxOnly(), 0, () => (ready += 1))).toBeNull()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(ready).toBe(1)
+    // The pull is ready only with every frame decoded.
+    expect(bitmaps).toHaveLength(L + 1)
+    const fetchedBefore = fetched.length
+    let canvas: FakeCanvas | undefined
+    for (const play of [1, 2]) {
+      const seen = new Set<number>()
+      for (let f = 0; f <= L; f++) {
+        const targets = screenPreviewTargets('card-m', footage, boxOnly(), f)!
+        expect(targets.screen?.file, `play ${play} @${f}`).toBe(files[f])
+        const c = graphicPreviewCanvas('card-m', card(), clean(), SIZE.width, SIZE.height, { frame: f, total: 600, fps: FPS }, targets)!
+        canvas ??= made.find((m) => (m as unknown) === (c as unknown))
+        const last = canvas!.ops.filter((o) => o.op === 'drawImage' && (o.image as { id?: number }).id !== undefined).at(-1)
+        expect(last, `play ${play} @${f}: drawn with its picture`).toBeDefined()
+        seen.add((last!.image as { id: number }).id)
+        // Nothing to wait for: the frame is cached, not owed a repaint.
+        expect(ready, `play ${play} @${f}`).toBe(1)
+      }
+      expect(seen.size, `play ${play}`).toBe(L + 1)
+    }
+    expect(fetched.length, 'no frame fetched again while playing').toBe(fetchedBefore)
+    expect(bitmaps.some((b) => b.closed), 'none closed while the pull holds them').toBe(false)
+    // Let go with the pull: forgetting the card closes them all.
+    forgetGraphicPreview('card-m')
+    expect(bitmaps.every((b) => b.closed)).toBe(true)
+  })
+
   it('screenPreviewTargets: null while the pull is on its way and a frame needs a picture, the file once it lands, the hold never waits; a failed pull draws without the picture and is marked', async () => {
     forgetGraphicPreview('card-p')
     let land: (v: { dir: string; files: string[]; width: number; height: number }) => void = () => undefined

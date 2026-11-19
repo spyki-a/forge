@@ -251,6 +251,8 @@ export function pasteClipboard(
 ): PasteResult {
   const ids: string[] = []
   const toBake: { clipId: string; from: Clip }[] = []
+  /** Each source clip's id to its copy's, so a pasted screen card can follow its pasted recording. */
+  const pastedAs = new Map<string, string>()
   let next = project
 
   for (const source of [...clipboard.clips].sort((a, b) => a.start - b.start)) {
@@ -327,6 +329,25 @@ export function pasteClipboard(
       clips: [...next.clips, copy]
     }
     ids.push(id)
+    pastedAs.set(source.id, id)
+  }
+
+  /*
+   * A screen card pasted with its recording frames the pasted recording
+   * (docs/CLIPS.md §6.16): its `clipId` named the source, which keeps its own
+   * card, so the store's realign (one card per recording) would quietly drop
+   * the copy and leave the pasted recording hidden by the card's two keys. A
+   * card pasted without its recording still names the source, and realign
+   * removes it there, the source having its card.
+   */
+  next = {
+    ...next,
+    clips: next.clips.map((c) => {
+      const data = c.graphic?.data
+      if (!ids.includes(c.id) || data?.template !== 'screen-card') return c
+      const to = pastedAs.get(data.clipId)
+      return to ? { ...c, graphic: { ...c.graphic!, data: { ...data, clipId: to } } } : c
+    })
   }
 
   return { project: next, ids, toBake }

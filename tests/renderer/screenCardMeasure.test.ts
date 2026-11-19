@@ -34,7 +34,8 @@ function reading(move: ScreenCardReading['move'], style = 'clean'): ScreenCardRe
     holeOutside: { min: 89, max: 89 },
     dimAlpha: 89,
     early: diff(140, 6),
-    flatScale: move === 'pull-back' ? 1.359 : null
+    flatScale: move === 'pull-back' ? 1.359 : null,
+    flatCentreOff: move === 'pull-back' ? 0 : null
   }
 }
 
@@ -83,6 +84,14 @@ describe('screenCardVerdict', () => {
     expect(failing((r) => (r[1].flatScale = null)).join()).toMatch(/none × the box's height/)
     // Tilt in has no flat scale to read.
     expect(screenCardVerdict(passing().map((r) => (r.move === 'tilt-in' ? { ...r, flatScale: null } : r))).pass).toBe(true)
+  })
+
+  it('wants Pull back scaled about the card’s own centre: drawn flat on a box below the frame’s centre, its ink centred within a pixel of that box’s middle (the critics’ fix)', () => {
+    expect(SCREEN_CARD_BAR.flatCentreOff).toBe(1)
+    expect(screenCardVerdict(passing().map((r) => (r.move === 'pull-back' ? { ...r, flatCentreOff: 1 } : r))).pass).toBe(true)
+    // About the frame's centre instead, the box 240 px low: its middle (720) lands at 480 + 240 × 1.35, 84 px off.
+    expect(failing((r) => (r[1].flatCentreOff = 84)).join()).toMatch(/centred 84.0 px from the box's/)
+    expect(failing((r) => (r[3].flatCentreOff = null)).join()).toMatch(/centred nowhere/)
   })
 
   it('needs both moves read', () => {

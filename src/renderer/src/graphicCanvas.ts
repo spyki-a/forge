@@ -357,15 +357,38 @@ function filledScreenTargets(files: readonly string[], footage: Pick<FootageRequ
   }
 }
 
-/** The preview's pulls, by card clip: the request asked for, and what came back. */
+/**
+ * The preview's pulls, by card clip: the request asked for, what came back,
+ * and its frames decoded (`bitmaps`), held with the pull and closed with it
+ * (a new request, `forgetGraphicPreview`): the move's frames are a picture
+ * each, 31 at 30 fps, and the memo of `BITMAP_MEMO` evicts its oldest, so
+ * each play of the move would miss every frame and draw the card's box empty
+ * until its decode landed, over a recording its hold key hides (the critics'
+ * fix to piece 4). The pull is ready only once they are decoded.
+ */
 interface ScreenPull {
   key: string
   state: 'pending' | 'ready' | 'failed'
   fill?: (frame: number) => GraphicTargets
   files: string[]
+  bitmaps: Map<string, ImageBitmap>
   onReady?: () => void
 }
 const screenPulls = new Map<string, ScreenPull>()
+
+/** A card's pull let go: its decoded frames closed. */
+function dropScreenPull(clipId: string): void {
+  const pull = screenPulls.get(clipId)
+  if (pull) closeAll(pull.bitmaps)
+  screenPulls.delete(clipId)
+}
+
+/** The bitmap a preview frame's card picture is drawn from: the card's own pull's, held for the pull's life. */
+function pulledBitmap(clipId: string, targets: GraphicTargets): { src: string; bitmap: ImageBitmap } | null {
+  const src = targets.screen?.file
+  const bitmap = src ? screenPulls.get(clipId)?.bitmaps.get(src) : undefined
+  return src && bitmap ? { src, bitmap } : null
+}
 
 /**
  * Cards whose recording's frames could not be pulled for the preview (the
@@ -412,15 +435,23 @@ export function screenPreviewTargets(
   const key = JSON.stringify(footage)
   let pull = screenPulls.get(clipId)
   if (!pull || pull.key !== key) {
-    const started: ScreenPull = { key, state: 'pending', files: [], onReady }
+    dropScreenPull(clipId)
+    const started: ScreenPull = { key, state: 'pending', files: [], bitmaps: new Map(), onReady }
     pull = started
     screenPulls.set(clipId, started)
     markScreenFailed(clipId, false)
     void window.forge.momentFrames(footage).then(
-      (pulled) => {
+      async (pulled) => {
         if (screenPulls.get(clipId) !== started) return
         if (pulled.files.length === 0) started.state = 'failed'
         else {
+          // Every frame of the move decoded before the pull is ready, held with it (`ScreenPull`).
+          const bitmaps = await decodeAll(pulled.files)
+          if (screenPulls.get(clipId) !== started) {
+            closeAll(bitmaps)
+            return
+          }
+          started.bitmaps = bitmaps
           started.state = 'ready'
           started.files = pulled.files
         }
@@ -639,10 +670,13 @@ export function graphicPreviewCanvas(
   const deep = wants ? deepSlotOf(clipId, width, height, onReady) : null
   if (asks && !wants) releaseDeepSlot(clipId)
   if (asks && (webglMissing() || (deep && !deep.pending && !deep.compositor))) markDrawnFlat(clipId)
-  paintFrame(list, ctx, { layer: previewLayerOf(clipId), images: bitmaps }, deep?.compositor)
+  // A screen card's frame from its own pull's bitmaps (`ScreenPull`), the memo's for every other image.
+  const pulled = pulledBitmap(clipId, targets)
+  const images: ReadonlyMap<string, ImageBitmap> = pulled ? new Map(bitmaps).set(pulled.src, pulled.bitmap) : bitmaps
+  paintFrame(list, ctx, { layer: previewLayerOf(clipId), images }, deep?.compositor)
 
   const faces = facesOf([list], style)
-  const imageReady = (src: string): boolean => bitmaps.has(src) || undecodable.has(src)
+  const imageReady = (src: string): boolean => images.has(src) || undecodable.has(src)
   const waiting = [...faces.filter((face) => !faceSettled(face)), ...imagesOf([list]).filter((src) => !imageReady(src))]
   // A layer painted in the fallback face would be kept by its key once the face lands.
   if (waiting.length > 0 && deep?.compositor) forgetPlanes(deep.compositor)
@@ -687,7 +721,7 @@ export function graphicPreviewCanvas(
 /** Drop a graphic clip's preview canvas: the clip was removed (Preview's sweep). */
 export function forgetGraphicPreview(clipId: string): void {
   previews.delete(clipId)
-  screenPulls.delete(clipId)
+  dropScreenPull(clipId)
   markScreenFailed(clipId, false)
   previewLayers.delete(clipId)
   warming.delete(clipId)

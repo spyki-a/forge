@@ -9133,12 +9133,22 @@
     "note": "SCREEN_CARD_REASONS.turned: a rotation, or zoom or rotation keys. Count reasoned from the code by step 3 phase 3 piece 4 (2026-11-19): the recipe adds one text node of it to the dock; not yet read on screen."
   },
   {
+    "label": "Not on a clip with a motion path or a camera move",
+    "match": "text",
+    "home": "dock",
+    "needs": "video-path",
+    "file": "src/shared/graphics/screenCard.ts",
+    "line": 56,
+    "newHome": "trimmer dock (beside the reframe, video clips; docs/CLIPS.md §6.16, \"Its trigger\")",
+    "note": "SCREEN_CARD_REASONS.moving: a motion path (clip.path) or a camera move (clip.motion), which sourceToFrame does not model. Added by the critics' fixes to step 3 phase 3 piece 4 (2026-11-19); count reasoned from the code: the recipe adds one text node of it to the dock; not yet read on screen."
+  },
+  {
     "label": "Not on a clip with opacity keys of its own",
     "match": "text",
     "home": "dock",
     "needs": "video-opacity-keys",
     "file": "src/shared/graphics/screenCard.ts",
-    "line": 56,
+    "line": 58,
     "newHome": "trimmer dock (beside the reframe, video clips; docs/CLIPS.md §6.16, \"Its trigger\")",
     "note": "SCREEN_CARD_REASONS.opacityKeys. Count reasoned from the code by step 3 phase 3 piece 4 (2026-11-19): the recipe adds one text node of it to the dock; not yet read on screen."
   },
@@ -9148,7 +9158,7 @@
     "home": "dock",
     "needs": "video-look",
     "file": "src/shared/graphics/screenCard.ts",
-    "line": 58,
+    "line": 60,
     "newHome": "trimmer dock (beside the reframe, video clips; docs/CLIPS.md §6.16, \"Its trigger\")",
     "note": "SCREEN_CARD_REASONS.colour: the clip's own grade or look (video-look sets both). Count reasoned from the code by step 3 phase 3 piece 4 (2026-11-19): the recipe adds one text node of it to the dock; not yet read on screen."
   },
@@ -9158,19 +9168,19 @@
     "home": "dock",
     "needs": "video-under-look",
     "file": "src/shared/graphics/screenCard.ts",
-    "line": 60,
+    "line": 62,
     "newHome": "trimmer dock (beside the reframe, video clips; docs/CLIPS.md §6.16, \"Its trigger\")",
     "note": "SCREEN_CARD_REASONS.underLook: an adjustment clip with a grade on a track above it. Count reasoned from the code by step 3 phase 3 piece 4 (2026-11-19): the recipe adds one text node of it to the dock; not yet read on screen."
   },
   {
-    "label": "Only on a clip longer than a second",
+    "label": "Too short for the card's move",
     "match": "text",
     "home": "dock",
     "needs": "video-short",
     "file": "src/shared/graphics/screenCard.ts",
-    "line": 62,
+    "line": 64,
     "newHome": "trimmer dock (beside the reframe, video clips; docs/CLIPS.md §6.16, \"Its trigger\")",
-    "note": "SCREEN_CARD_REASONS.short: under the landing and the frame after it (32 frames at 30 fps). Count reasoned from the code by step 3 phase 3 piece 4 (2026-11-19): the recipe adds one text node of it to the dock; not yet read on screen."
+    "note": "SCREEN_CARD_REASONS.short (reworded by the critics’ fixes, 2026-11-19: \"longer than a second\" did not match the threshold): under the landing and the frame after it (32 frames at 30 fps). Count reasoned from the code by step 3 phase 3 piece 4 (2026-11-19): the recipe adds one text node of it to the dock; not yet read on screen."
   },
   {
     "label": "It has a screen card already",

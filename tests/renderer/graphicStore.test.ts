@@ -662,6 +662,8 @@ describe('the screen card (§6.16)', () => {
       ['turned', { clips: [shotWith({ transform: { ...shot.transform, rotation: 90 } })] }, R.turned],
       ['keyed zoom', { clips: [shotWith({ keyframes: { zoom: [{ frame: 0, value: 1 }, { frame: 30, value: 1.2 }] } })] }, R.turned],
       ['keyed turn', { clips: [shotWith({ keyframes: { rotation: [{ frame: 0, value: 0 }] } })] }, R.turned],
+      ['a motion path', { clips: [shotWith({ path: [{ frame: 0, x: 0, y: 0 }, { frame: 30, x: 0.1, y: 0 }] })] }, R.moving],
+      ['a camera move', { clips: [shotWith({ motion: { kind: 'kenburns', direction: 'in', amount: 0.1 } })] }, R.moving],
       ['opacity keys', { clips: [shotWith({ keyframes: { opacity: [{ frame: 0, value: 1 }] } })] }, R.opacityKeys],
       ['a colour change', { clips: [shotWith({ color: { brightness: 0.1, contrast: 1, saturation: 1 } })] }, R.colour],
       ['a LUT', { clips: [shotWith({ color: { brightness: 0, contrast: 1, saturation: 1, lut: { file: '/l.cube', name: 'l', intensity: 1 } } })] }, R.colour],
@@ -769,6 +771,96 @@ describe('the screen card (§6.16)', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it('a realigned card stays alone on a lane above its recording: one that would land over another clip on its track, or under its recording, climbs to a free lane (a new one at the top if need be) (the critics’ fix)', async () => {
+    const other: Clip = { ...shot, id: 'other', assetId: 'still', trackId: 'v2', start: 700, duration: 90 }
+    start({ assets: [footage, { ...footage, id: 'still', kind: 'image', path: '/s.png' }], clips: [shot, other] })
+    const id = (await state().addScreenCard('shot', 'tilt-in'))!
+    await settle()
+    expect(clipOf(id).trackId).toBe('v2')
+    const order = (trackId: string): number => project().tracks.findIndex((t) => t.id === trackId)
+    const alone = (): void => {
+      const card = clipOf(id)
+      const rec = clipOf('shot')
+      expect([card.start, card.duration]).toEqual([rec.start, rec.duration])
+      expect(project().tracks.find((t) => t.id === card.trackId)?.kind).toBe('video')
+      expect(order(card.trackId)).toBeGreaterThan(order(rec.trackId))
+      const over = project().clips.filter((c) => c.id !== id && c.trackId === card.trackId && c.start < card.start + card.duration && c.start + c.duration > card.start)
+      expect(over.map((c) => c.id)).toEqual([])
+    }
+    // Moved under the other clip's frames: v2 is busy there, so the card climbs to a new top lane, in the move's own step.
+    const steps = history()
+    state().moveClip('shot', 650)
+    expect(clipOf('shot').start).toBe(650)
+    alone()
+    expect(clipOf(id).trackId).not.toBe('v2')
+    expect(clipOf('other').trackId).toBe('v2')
+    expect(history()).toBe(steps + 1)
+    state().undo()
+    expect(clipOf(id).trackId).toBe('v2')
+    // The recording moved onto a lane above its card: the card climbs over it again.
+    state().addTrack('video')
+    const top = project().tracks.filter((t) => t.kind === 'video').at(-1)!.id
+    state().moveClip('shot', 0, top)
+    expect(clipOf('shot').trackId).toBe(top)
+    alone()
+  })
+
+  it('an edit of either of the card’s two keys does not stand: the pair is rewritten whole, never two keys on one frame, and Drop then leaves none (the critics’ fix)', async () => {
+    for (const [frame, value] of [[0, 0.3], [31, 0.7]] as const) {
+      start()
+      const id = (await state().addScreenCard('shot', 'tilt-in'))!
+      await settle()
+      state().setKeyframe('shot', 'opacity', frame, value)
+      expect(opacity('shot'), `${frame}`).toEqual([{ frame: 0, value: 0, ease: 'hold' }, { frame: 31, value: 1 }])
+      state().dropGraphic(id)
+      expect(clipOf('shot').keyframes, `${frame}`).toBeUndefined()
+    }
+  })
+
+  it('a copy of a recording carries no copy of its card’s keys unless its card came with it: duplicate, paste alone, and paste with the card (the critics’ fix)', async () => {
+    const id = (await state().addScreenCard('shot', 'tilt-in'))!
+    await settle()
+    const copies = (): Clip[] => project().clips.filter((c) => c.assetId === 'talk' && c.id !== 'shot')
+    // Duplicate: the copy lands at the recording's end, on its track.
+    useEditor.setState({ selectedClipIds: ['shot'], selectedClipId: 'shot' })
+    await state().duplicateSelection()
+    expect(copies()).toHaveLength(1)
+    expect(copies()[0].start).toBe(600)
+    expect(copies()[0].keyframes?.opacity).toBeUndefined()
+    expect(opacity('shot')).toEqual([{ frame: 0, value: 0, ease: 'hold' }, { frame: 31, value: 1 }])
+    state().undo()
+    // Paste alone, elsewhere.
+    useEditor.setState({ clipboard: copySelection(project(), ['shot']), playhead: 2000 })
+    await state().pasteClipboard()
+    expect(copies()).toHaveLength(1)
+    expect(copies()[0].keyframes?.opacity).toBeUndefined()
+    expect(project().clips.filter((c) => c.graphic)).toHaveLength(1)
+    state().undo()
+    // Paste with its card: the pasted card frames the pasted recording, which keeps its two keys.
+    useEditor.setState({ clipboard: copySelection(project(), ['shot', id]), playhead: 2000 })
+    await state().pasteClipboard()
+    await settle()
+    const copy = copies()[0]
+    const cards = project().clips.filter((c) => c.graphic?.data.template === 'screen-card')
+    expect(cards).toHaveLength(2)
+    const pasted = cardOn(copy.id)!
+    expect(pasted).toBeDefined()
+    expect([pasted.start, pasted.duration]).toEqual([copy.start, copy.duration])
+    expect(copy.keyframes?.opacity).toEqual(screenCardKeys(pasted, copy, FPS))
+    expect(cardOn('shot')!.id).toBe(id)
+    expect(opacity('shot')).toEqual([{ frame: 0, value: 0, ease: 'hold' }, { frame: 31, value: 1 }])
+  })
+
+  it('a card pasted on its own, onto a recording that has its card, is removed: one card per recording (the critics’ fix)', async () => {
+    const id = (await state().addScreenCard('shot', 'tilt-in'))!
+    await settle()
+    useEditor.setState({ clipboard: copySelection(project(), [id]), playhead: 0 })
+    await state().pasteClipboard()
+    await settle()
+    expect(project().clips.filter((c) => c.graphic).map((c) => c.id)).toEqual([id])
+    expect(opacity('shot')).toEqual([{ frame: 0, value: 0, ease: 'hold' }, { frame: 31, value: 1 }])
   })
 
   it('deleting the recording deletes its card', async () => {

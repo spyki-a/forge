@@ -31,7 +31,7 @@
  * Pure: no clock, no random, no DOM, no `node:path`.
  */
 
-import { clipEnd, isNeutralGrade, type Clip, type Project } from '../timeline'
+import { addTrack, clipEnd, isNeutralGrade, overlapsOn, trackLimitReached, type Clip, type Project } from '../timeline'
 import type { Keyframe } from '../render/keyframes'
 import { footageWindow, type FootageRequest } from '../render/moment'
 import { footageRequest } from '../render/momentTextures'
@@ -52,14 +52,16 @@ export const SCREEN_CARD_REASONS = Object.freeze({
   steadied: 'Not on a steadied clip: turn Steady off first',
   /** `sourceToFrame` models neither a turn nor a keyed zoom or turn (frameMap.ts). */
   turned: 'Not on a turned or zooming clip',
+  /** Nor an animated position (a motion path) or a camera move (frameMap.ts): the card's box is read once, at its first frame. */
+  moving: 'Not on a clip with a motion path or a camera move',
   /** The hand-off writes the clip's opacity keys. */
   opacityKeys: 'Not on a clip with opacity keys of its own',
   /** The card's moving frames are above the look, ungraded (§16.7): the landing would show the grade arrive. */
   colour: 'Not on a clip with a colour change',
   /** The same, for an adjustment clip's grade over it. */
   underLook: 'Not under a look',
-  /** Shorter than the move: the hand-off would land past its end. */
-  short: 'Only on a clip longer than a second'
+  /** Shorter than the move's landing and the frame after it (`landingFrame` + 2): the hand-off would land past its end. */
+  short: "Too short for the card's move"
 })
 
 /** Whether a clip is a screen card. */
@@ -96,8 +98,8 @@ function underALook(project: Pick<Project, 'clips' | 'tracks'>, clip: Clip): boo
  * Why the clip `clipId` cannot be framed as a screen card (§6.16, "Refused,
  * with the reason in the dock"), or null when it can. In this order: not a
  * video clip (an image clip, a drawn clip, a clip that is gone); a card on it
- * already; steadied; turned, or with keyed zoom or turn; with opacity keys of
- * its own; with a colour change; under an adjustment clip's look; shorter
+ * already; steadied; turned, or with keyed zoom or turn; with a motion path
+ * or a camera move (`clip.path`, `clip.motion`); with opacity keys of its own; with a colour change; under an adjustment clip's look; shorter
  * than the move's landing and the frame after it.
  */
 export function screenCardRefusal(project: Pick<Project, 'clips' | 'assets' | 'tracks' | 'settings'>, clipId: string): string | null {
@@ -108,6 +110,7 @@ export function screenCardRefusal(project: Pick<Project, 'clips' | 'assets' | 't
   if (clip.steady) return SCREEN_CARD_REASONS.steadied
   const keys = clip.keyframes ?? {}
   if (Math.abs(clip.transform?.rotation ?? 0) > TINY || (keys.zoom?.length ?? 0) > 0 || (keys.rotation?.length ?? 0) > 0) return SCREEN_CARD_REASONS.turned
+  if (clip.motion || (clip.path?.length ?? 0) > 0) return SCREEN_CARD_REASONS.moving
   if ((keys.opacity?.length ?? 0) > 0) return SCREEN_CARD_REASONS.opacityKeys
   if (!isNeutralGrade(clip.color)) return SCREEN_CARD_REASONS.colour
   if (underALook(project, clip)) return SCREEN_CARD_REASONS.underLook
@@ -251,6 +254,43 @@ export function strikeScreenCardKeys(project: Project, cards: readonly Clip[]): 
 
 /* -------------------------------------------------------------- realign */
 
+/** The recording's track position in the compositing order (`project.tracks`, index 0 the bottom). */
+const trackIndex = (project: Pick<Project, 'tracks'>, trackId: string): number => project.tracks.findIndex((t) => t.id === trackId)
+
+/**
+ * The lane a realigned card goes on (§6.16, "The store"; the critics' fix to
+ * piece 4): its own track while that is a video track ABOVE its recording's and
+ * nothing else stands there over the card's span; else the first unlocked
+ * video track above the recording's that is free over the span, as
+ * `stackOverlay` climbs for an overlay; else a new video track at the top
+ * (`addTrack`, whose id is random, as `stackOverlay`'s new lane's is); null at
+ * the track ceiling, where the card cannot stand anywhere.
+ */
+function laneFor(project: Project, card: Clip, recording: Clip): { project: Project; trackId: string } | null {
+  const floor = trackIndex(project, recording.trackId)
+  const above = (trackId: string): boolean => {
+    const track = project.tracks.find((t) => t.id === trackId)
+    return !!track && track.kind === 'video' && trackIndex(project, trackId) > floor
+  }
+  const free = (trackId: string): boolean => overlapsOn(project, trackId, card.start, card.duration, card.id).length === 0
+  if (above(card.trackId) && free(card.trackId)) return { project, trackId: card.trackId }
+  const lane = project.tracks.find((t, i) => i > floor && t.kind === 'video' && !t.locked && free(t.id))
+  if (lane) return { project, trackId: lane.id }
+  if (trackLimitReached(project)) return null
+  const grown = addTrack(project, 'video')
+  const lanes = grown.tracks.filter((t) => t.kind === 'video')
+  const added = lanes[lanes.length - 1]
+  return added && !project.tracks.some((t) => t.id === added.id) ? { project: grown, trackId: added.id } : null
+}
+
+/** The recording with the card's pair (exactly `want`, or as an edit left it) taken off, and any other key on the pair's two frames with it. */
+function withoutPair(recording: Clip, want: readonly Keyframe[]): Clip {
+  const track = recording.keyframes?.opacity ?? []
+  const pair = cardPairIn(track)
+  const cleared = withoutExactly(recording, want) ?? (pair ? (withoutExactly(recording, pair) ?? recording) : recording)
+  return cleared
+}
+
 /**
  * Every screen card realigned after an edit (§6.16, "The store"): `before` is
  * the project the edit started from (always aligned, since every edit ends
@@ -262,18 +302,30 @@ export function strikeScreenCardKeys(project: Project, cards: readonly Clip[]): 
  * - Every other card spans its recording exactly: its start and length the
  *   recording's, its seconds `duration / fps`, its one beat the landing, no
  *   keys of its own (no exit fade), its version bumped when any of that moved.
+ * - It stands on a video track above its recording's, alone over its span
+ *   (`laneFor`): a moved, lengthened or retimed recording that would bring it
+ *   over another clip on its track, or a recording moved above it, sends it to
+ *   the first free lane above, a new one at the top if need be; at the track
+ *   ceiling the card is removed and its two keys with it.
  * - Its recording carries exactly `screenCardKeys`: the card's pair as the
  *   edit left it (moved by a head trim, converted by a frame-rate change) is
- *   replaced; a key of the user's own stays.
+ *   replaced, and so is any key the edit put on either of the pair's two
+ *   frames (an edit of one of them from the keyframes: the pair is the card's,
+ *   so the edit does not stand); a key of the user's own elsewhere stays.
  * - A recording whose card the edit removed (Drop, Delete) loses exactly the
  *   card's two keys.
  * - A split's right half (a new clip on the recording's track and asset,
  *   starting where the recording now ends) loses the copies of the two keys the
  *   split rebased onto it: the card stays with the left half, which keeps the
  *   clip's id, and is not split.
+ * - A copy of a recording (a paste or a duplicate: a new clip of the same
+ *   asset) that no card frames loses the copies of the two keys it carried
+ *   over, or it would play hidden for the move's length with no card; a card
+ *   pasted with its recording frames the pasted recording (`pasteClipboard`
+ *   points it there).
  *
  * `after` itself comes back when nothing needed to change, and when neither
- * project holds a card.
+ * project holds a card. Pure but for a new lane's id (`addTrack`'s).
  */
 export function realignScreenCards(before: Project, after: Project): Project {
   const hadCards = before.clips.some(isScreenCard)
@@ -284,10 +336,13 @@ export function realignScreenCards(before: Project, after: Project): Project {
   const byId = new Map(after.clips.map((c) => [c.id, c]))
   const gone = new Set<string>()
   const replace = new Map<string, Clip>()
+  let tracks = after.tracks
   const current = (id: string): Clip | undefined => (gone.has(id) ? undefined : replace.get(id) ?? byId.get(id))
+  const made = (): Project => ({ ...after, tracks, clips: after.clips.filter((c) => !gone.has(c.id)).map((c) => replace.get(c.id) ?? c) })
 
-  // A card the edit removed: its recording loses the two keys; a split's right half, the copies of them.
+  // A card the edit removed: its recording loses the two keys; a split's right half, the copies of them; a copy, the copies too.
   const beforeIds = new Set(before.clips.map((c) => c.id))
+  const framedAfter = new Set(after.clips.map(recordingIdOf).filter((id): id is string => id !== null))
   for (const was of before.clips) {
     const recordingId = recordingIdOf(was)
     if (recordingId === null) continue
@@ -299,16 +354,19 @@ export function realignScreenCards(before: Project, after: Project): Project {
       const struck = withoutExactly(recording, keysBefore) ?? (cardPairIn(recording.keyframes?.opacity ?? []) ? withoutCardKeys(recording, was, fps) : null)
       if (struck) replace.set(recording.id, struck)
     }
-    if (!recording) continue
-    for (const right of after.clips) {
-      if (beforeIds.has(right.id) || right.assetId !== recording.assetId || right.trackId !== recording.trackId || right.start !== clipEnd(recording)) continue
-      const shift = right.start - recordingBefore.start
-      const copied = withoutExactly(current(right.id) ?? right, keysBefore.map((k) => ({ ...k, frame: k.frame - shift })))
-      if (copied) replace.set(right.id, copied)
+    for (const fresh of after.clips) {
+      if (beforeIds.has(fresh.id) || fresh.assetId !== recordingBefore.assetId || framedAfter.has(fresh.id)) continue
+      const right = recording && fresh.trackId === recording.trackId && fresh.start === clipEnd(recording)
+      // A split's right half carries the keys rebased by the split; a copy, the keys as they were.
+      const shift = right ? fresh.start - recordingBefore.start : 0
+      const at = current(fresh.id) ?? fresh
+      const copied =
+        withoutExactly(at, keysBefore.map((k) => ({ ...k, frame: k.frame - shift }))) ?? (shift !== 0 ? withoutExactly(at, keysBefore) : null)
+      if (copied) replace.set(fresh.id, copied)
     }
   }
 
-  // Every card spans its recording, which carries exactly its two keys.
+  // Every card spans its recording on a free lane above it, and the recording carries exactly its two keys.
   const framed = new Set<string>()
   for (const card of after.clips) {
     const recordingId = recordingIdOf(card)
@@ -328,7 +386,7 @@ export function realignScreenCards(before: Project, after: Project): Project {
       spec.seconds === seconds &&
       spec.beats.length === 1 &&
       spec.beats[0] === SCREEN_CARD_MOVE_S
-    const next: Clip = aligned
+    let next: Clip = aligned
       ? card
       : (() => {
           const moved: Clip = {
@@ -340,16 +398,27 @@ export function realignScreenCards(before: Project, after: Project): Project {
           delete moved.keyframes
           return moved
         })()
+    // Alone on a lane above its recording; the lanes as the cards before it left them.
+    const lane = laneFor(made(), next, recording)
+    if (!lane) {
+      gone.add(card.id)
+      replace.set(recording.id, withoutPair(recording, screenCardKeys(next, recording, fps)))
+      continue
+    }
+    tracks = lane.project.tracks
+    if (lane.trackId !== next.trackId) next = { ...next, trackId: lane.trackId }
     if (next !== card) replace.set(card.id, next)
 
     const want = screenCardKeys(next, recording, fps)
     const track = recording.keyframes?.opacity ?? []
-    if (want.every((k) => track.some((t) => sameKey(t, k)))) continue
-    const pair = cardPairIn(track)
-    const cleared = pair ? (withoutExactly(recording, pair) ?? recording) : recording
-    replace.set(recording.id, withOpacity(cleared, [...(cleared.keyframes?.opacity ?? []), ...want]))
+    const exact = want.every((k) => track.filter((t) => t.frame === k.frame).length === 1 && track.some((t) => sameKey(t, k)))
+    if (exact) continue
+    // The pair as the edit left it off, then whatever else stands on its two frames (an edit of either key), then the pair as it must be.
+    const cleared = withoutPair(recording, want)
+    const rest = (cleared.keyframes?.opacity ?? []).filter((k) => !want.some((w) => w.frame === k.frame))
+    replace.set(recording.id, withOpacity(cleared, [...rest, ...want]))
   }
 
-  if (gone.size === 0 && replace.size === 0) return after
-  return { ...after, clips: after.clips.filter((c) => !gone.has(c.id)).map((c) => replace.get(c.id) ?? c) }
+  if (gone.size === 0 && replace.size === 0 && tracks === after.tracks) return after
+  return made()
 }

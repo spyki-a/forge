@@ -30,6 +30,11 @@ import type { ChannelDiff, Region } from './compositorMeasure'
  * - `flatScaleOff`: Pull back drawn flat (WebGL missing, painter A) at frame
  *   0: its ink's height over the box's within this of 1.35, the bezel's
  *   width scaled with it included.
+ * - `flatCentreOff`: the same, on a box moved off the frame's centre
+ *   (`SCREEN_CARD_LOW_BOX_PX` down): its ink's middle row within this many
+ *   pixels of the box's own middle, so a scale about the frame's centre rather
+ *   than the card's cannot pass (the critics' fix to piece 4; the stand-in's
+ *   box is centred, where the two agree).
  */
 export const SCREEN_CARD_BAR = Object.freeze({
   handoffMean: 2,
@@ -37,8 +42,12 @@ export const SCREEN_CARD_BAR = Object.freeze({
   dimOff: 1,
   tiltFirstOpacityMax: 0.001,
   moveMinMax: 8,
-  flatScaleOff: 0.03
+  flatScaleOff: 0.03,
+  flatCentreOff: 1
 })
+
+/** How far below the frame's centre the off-centre box of the `flatCentreOff` reading sits, in frame pixels (540 × 960). */
+export const SCREEN_CARD_LOW_BOX_PX = 240
 
 export interface ScreenCardReading {
   move: 'tilt-in' | 'pull-back'
@@ -63,6 +72,8 @@ export interface ScreenCardReading {
   early: ChannelDiff
   /** Pull back only: frame 0 by painter A (WebGL missing), its ink's height over the box's. Null for Tilt in. */
   flatScale: number | null
+  /** Pull back only: frame 0 by painter A on the off-centre box, how far its ink's middle row is from the box's middle, in pixels. Null for Tilt in. */
+  flatCentreOff: number | null
 }
 
 /** The early frame read against the landing: one where the move is plainly under way under every style's curve. */
@@ -90,6 +101,7 @@ export function screenCardVerdict(readings: readonly ScreenCardReading[]): { pas
     if (!(r.early.maxAll >= B.moveMinMax)) failures.push(`${name}: frame ${SCREEN_CARD_MOVE_FRAME} differs from the landing by at most ${r.early.maxAll} < ${B.moveMinMax} (a dead move)`)
     if (r.move === 'pull-back') {
       if (r.flatScale === null || !(Math.abs(r.flatScale - 1.35) <= B.flatScaleOff)) failures.push(`${name}: drawn flat, frame 0's ink is ${r.flatScale?.toFixed(3) ?? 'none'} × the box's height, not 1.35`)
+      if (r.flatCentreOff === null || !(r.flatCentreOff <= B.flatCentreOff)) failures.push(`${name}: drawn flat on a box off the frame's centre, frame 0's ink is centred ${r.flatCentreOff?.toFixed(1) ?? 'nowhere'} px from the box's, not about the card's own centre`)
     }
   }
   for (const move of ['tilt-in', 'pull-back'] as const) if (!readings.some((r) => r.move === move)) failures.push(`${move} was not read`)

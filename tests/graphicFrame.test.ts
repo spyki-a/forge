@@ -14,7 +14,7 @@ import {
 import { graphicTargetsAt } from '@shared/graphics/targets'
 import { drawListAt, graphicFits } from '@shared/graphics/drawList'
 import { DRAWERS } from '@shared/graphics/templates/index'
-import { bezelPath, bezelWidth, landingFrame } from '@shared/graphics/templates/screenCard'
+import { SCREEN_CARD_PULL_BACK, SCREEN_CARD_TILT_IN, bezelPath, bezelWidth, landingFrame } from '@shared/graphics/templates/screenCard'
 import { screenCardFootage, screenCardKeys } from '@shared/graphics/screenCard'
 import { itemBounds, type DrawItem, type DrawList, type Drawer, type ShapeItem, type StrokeItem, type TextItem, type TextMeasure } from '@shared/graphics/items'
 import { numberOf } from '@shared/graphics/numbers'
@@ -1633,6 +1633,35 @@ describe('the screen card (§6.16)', () => {
     expect(k).toBeCloseTo(1.35, 4)
     expectRect(first, { x: 540 - k * 540, y: 960 - k * 303.75, width: k * 1080, height: k * 607.5 })
     expectRect(itemBounds(image(L), SIZE), BOX)
+  })
+
+  it('Pull back scales about the card’s own centre, not the frame’s: on a box off the frame’s centre the image and the bezel at frame 0 are that box scaled about its middle (the critics’ fix)', () => {
+    const OFF = { x: 120, y: 1100, width: 600, height: 337.5 }
+    const middle = { x: OFF.x + OFF.width / 2, y: OFF.y + OFF.height / 2 }
+    const items = drawListAt(card('pull-back'), clean(), 0, FPS, SIZE, fake, { screen: { box: OFF, file: fileAt(0) } }).items
+    const image = items.find((i) => i.kind === 'image')!
+    const k = image.transform!.scale
+    expect(k).toBeCloseTo(SCREEN_CARD_PULL_BACK.scale, 4)
+    expectRect(itemBounds(image, SIZE), { x: middle.x - (k * OFF.width) / 2, y: middle.y - (k * OFF.height) / 2, width: k * OFF.width, height: k * OFF.height })
+    // The bezel turns about the same middle: its bounds (half its width a side, ten on its miter join) centred there.
+    const rim = itemBounds(items.find((i) => i.kind === 'stroke')!, SIZE)!
+    expect(rim.x + rim.width / 2).toBeCloseTo(middle.x, 6)
+    expect(rim.y + rim.height / 2).toBeCloseTo(middle.y, 6)
+    expect(rim.height).toBeGreaterThan(k * OFF.height)
+  })
+
+  it('Tilt in fades the card in over its first SCREEN_CARD_TILT_IN.fadeS (0.25 s): below 1 on the frame before, 1 from ceil(0.25 × fps) on, at every rate and style (the critics’ fix)', () => {
+    expect(SCREEN_CARD_TILT_IN.fadeS).toBe(0.25)
+    for (const fps of RATES) {
+      const full = Math.ceil(SCREEN_CARD_TILT_IN.fadeS * fps - 1e-9)
+      for (const st of styles()) {
+        const cardOpacity = (frame: number): number[] => listAt('tilt-in', st, frame, fps).items.filter((i) => i.kind !== 'dim').map((i) => i.opacity)
+        const where = `${st.id} at ${fps}`
+        for (const o of cardOpacity(full - 1)) expect(o, `${where} @${full - 1}`).toBeLessThan(1)
+        for (const o of cardOpacity(full - 1)) expect(o, `${where} @${full - 1}`).toBeGreaterThan(0)
+        for (const frame of [full, full + 1, landingFrame(fps)]) for (const o of cardOpacity(frame)) expect(o, `${where} @${frame}`).toBe(1)
+      }
+    }
   })
 
   it('the bezel: one square-joined stroke round the box in the style’s panel colour, max(M19’s minimum, round(0.004 × the short side)) wide, on every frame', () => {

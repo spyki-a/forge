@@ -20,7 +20,9 @@
  *   field exactly 0, and none after;
  * - an early frame against `L` (the move is there);
  * - Pull back drawn flat by painter A, as without WebGL: frame 0's ink 1.35 ×
- *   the box's height (its scale is a transform painter A honours).
+ *   the box's height (its scale is a transform painter A honours), and on a
+ *   box `SCREEN_CARD_LOW_BOX_PX` below the centre, its ink centred on that
+ *   box's own middle (the scale is about the card's centre, not the frame's).
  *
  * Contact sheets at a third of the size over a dark grey: each case's frames
  * (`screenCardSheetFrames`), and, per move, the landing beside the plain
@@ -44,6 +46,7 @@ import { createCompositor, paintDrawList3d, resetCompositorSession, type Composi
 import { graphicMeasure } from '../graphicCanvas'
 import { diffChannels } from './compositorMeasure'
 import {
+  SCREEN_CARD_LOW_BOX_PX,
   SCREEN_CARD_MOVE_FRAME,
   alphaMaxIn,
   alphaOutside,
@@ -178,10 +181,15 @@ export async function checkScreenCard(
         const outside = alphaOutside(afterPixels, W, H, around) ?? { min: -1, max: -1 }
         const early = diffChannels(pixelsOf(painterB(lists[SCREEN_CARD_MOVE_FRAME])), pixelsOf(landing))
         let flatScale: number | null = null
+        let flatCentreOff: number | null = null
         if (move === 'pull-back') {
           const flat = painterA(lists[0])
           const ink = inkRows(pixelsOf(flat), W, H)
           flatScale = ink ? ink.height / box.height : null
+          // The same frame on a box moved down: the scale must stay about the card's own centre, not the frame's.
+          const low: Rect = { ...box, y: box.y + SCREEN_CARD_LOW_BOX_PX }
+          const lowInk = inkRows(pixelsOf(painterA(drawListAt(spec, style, 0, FPS, size, measure, { screen: { box: low, file: srcOf(0) } }))), W, H)
+          flatCentreOff = lowInk ? Math.abs(lowInk.top + lowInk.height / 2 - (low.y + low.height / 2)) : null
           if (styleId === 'clean') flatSheet.push(flat, painterA(lists[Math.round(L / 2)]))
         } else if (styleId === 'clean') flatSheet.push(painterA(lists[2]), painterA(lists[Math.round(L / 2)]))
 
@@ -203,7 +211,8 @@ export async function checkScreenCard(
           holeOutside: outside,
           dimAlpha: Math.round(style.palette.dimOpacity * 255),
           early,
-          flatScale
+          flatScale,
+          flatCentreOff
         }
         cases.push(reading)
         const shown = screenCardSheetFrames(L, moving)
@@ -214,6 +223,7 @@ export async function checkScreenCard(
             `frame 0 card opacity ${reading.firstOpacity.toFixed(4)}; landing against a plain drawImage mean ${handoff.meanAll.toFixed(3)}, max ${handoff.maxAll} over ${handoff.pixels} pixels; ` +
             `L + 1 alpha inside the hole ${reading.holeInside}, outside ${outside.min}..${outside.max} (the dim ${reading.dimAlpha}); frame ${SCREEN_CARD_MOVE_FRAME} against L max ${early.maxAll}` +
             (flatScale !== null ? `; drawn flat, frame 0 is ${flatScale.toFixed(3)} × the box` : '') +
+            (flatCentreOff !== null ? `, its ink ${flatCentreOff.toFixed(1)} px off the centre of a box ${SCREEN_CARD_LOW_BOX_PX} px low` : '') +
             `; ${msPerFrame.toFixed(1)} ms a frame through paintDrawList3d`
         )
       }
