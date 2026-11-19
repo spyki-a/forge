@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Camera, DrawItem, DrawList, Drawer, GraphicTargets, ShapeItem } from '@shared/graphics/items'
-import { compensation, flatDistance } from '@shared/graphics/compositor'
+import { cameraFor, compensation, flatDistance } from '@shared/graphics/compositor'
 import { needsCompositor } from '@shared/graphics/drawList'
 import { paintDrawList2d } from '@shared/graphics/paint'
 import { resolveGraphicStyle } from '@shared/graphics/style'
@@ -26,7 +26,8 @@ interface Counted {
 }
 
 const made: Counted[] = []
-const renders: { scene: FakeScene }[] = []
+/** Each render: the scene, the camera, and the shared canvas's size at that moment (what three would draw into). */
+const renders: { scene: FakeScene; camera: FakeCamera; size: string }[] = []
 /** What `sharedRenderer` does next: hand the renderer back, throw, or hand back one whose context is lost. */
 const webgl = { mode: 'ok' as 'ok' | 'throw' | 'lost', calls: 0 }
 
@@ -59,6 +60,7 @@ class FakeTexture extends Disposable {
   needsUpdate = false
   uploads = 0
   colorSpace = ''
+  premultiplyAlpha = false
   constructor(readonly image: FakeCanvas) {
     super('texture')
   }
@@ -66,6 +68,7 @@ class FakeTexture extends Disposable {
 
 class FakeMaterial extends Disposable {
   vertexShader = ''
+  fragmentShader = ''
   uniforms: Record<string, { value: unknown }> = {}
   constructor(params: Record<string, unknown>) {
     super('material')
@@ -130,7 +133,7 @@ const fakeRenderer = {
     glCanvas.width = w
     glCanvas.height = h
   },
-  render: (scene: FakeScene) => {
+  render: (scene: FakeScene, camera: FakeCamera) => {
     // What three would upload on this render: every texture flagged since the last.
     for (const mesh of scene.children) {
       const texture = mesh.material.uniforms.uTex?.value as FakeTexture | undefined
@@ -139,7 +142,7 @@ const fakeRenderer = {
         texture.needsUpdate = false
       }
     }
-    renders.push({ scene })
+    renders.push({ scene, camera, size: `${glCanvas.width}x${glCanvas.height}` })
   },
   getContext: () => ({ isContextLost: () => webgl.mode === 'lost' })
 }
@@ -366,6 +369,77 @@ describe('graphicCompositor: paintDrawList3d', () => {
   })
 })
 
+describe('graphicCompositor: the shared renderer, the layers and the camera', () => {
+  it('sizes the shared renderer to its own frame before every render: another drawer may have resized it between two frames', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    const glowing = list([shape('value', '#222222')], { glow: [{ item: 'value', radius: 8, strength: 1 }] })
+    const tilted = list([shape('panel', '#111111'), shape('value', '#222222', 0.05)], { camera: TILTED })
+    // A moment's preview, or a graphic at another size, takes the one renderer between our frames.
+    fakeRenderer.setSize(540, 960)
+    C.paintDrawList3d(glowing, c)
+    fakeRenderer.setSize(720, 1280)
+    C.paintDrawList3d(tilted, c)
+    expect(renders.map((r) => r.size)).toEqual([`${SIZE.width}x${SIZE.height}`, `${SIZE.width}x${SIZE.height}`])
+  })
+
+  it('uploads every layer premultiplied and writes the texel as it is: filtering straight texels darkens every edge of a tilted plane', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    C.paintDrawList3d(list([shape('a', '#1')], { glow: [{ item: 'a', radius: 4, strength: 1 }] }), c)
+    C.paintDrawList3d(list([dim(), shape('b', '#2'), shape('c', '#3', 0.05)], { camera: TILTED }), c, { layer: layerFactory })
+    const textures = texturesOf() as FakeTexture[]
+    expect(textures).toHaveLength(4)
+    for (const t of textures) expect(t.premultiplyAlpha).toBe(true)
+    const shaders = [...new Set(sceneOf().children.map((m) => m.material.fragmentShader))]
+    expect(shaders).toHaveLength(1)
+    const writes = [...shaders[0].matchAll(/gl_FragColor\s*=\s*([^;]+);/g)].map((m) => m[1].replace(/\s+/g, ''))
+    expect(writes).toEqual(['texture2D(uTex,vec2(vUv.x,1.0-vUv.y))'])
+  })
+
+  it('shows only the route’s own layers: the 1:1 layer is hidden under the planes, and the planes under the 1:1 layer', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    const glowing = list([shape('a', '#1')], { glow: [{ item: 'a', radius: 4, strength: 1 }] })
+    const tilted = list([shape('b', '#2'), shape('c', '#3', 0.05)], { camera: TILTED })
+    const visible = (): boolean[] => sceneOf().children.map((m) => m.visible)
+    C.paintDrawList3d(glowing, c)
+    expect(visible()).toEqual([true])
+    C.paintDrawList3d(tilted, c)
+    expect(visible()).toEqual([false, true, true])
+    C.paintDrawList3d(glowing, c)
+    expect(visible()).toEqual([true, false, false])
+  })
+
+  it('draws the dims’ base layer under every plane, though it was made after them', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    C.paintDrawList3d(list([shape('b', '#2'), shape('c', '#3', 0.05)], { camera: TILTED }), c)
+    C.paintDrawList3d(list([dim(), shape('b', '#2'), shape('c', '#3', 0.05)], { camera: TILTED }), c, { layer: layerFactory })
+    const meshes = sceneOf().children.filter((m) => m.visible)
+    const base = meshes.filter((m) => !perspective(m))
+    const planes = meshes.filter(perspective)
+    expect(base).toHaveLength(1)
+    expect(planes).toHaveLength(2)
+    for (const plane of planes) expect(base[0].renderOrder).toBeLessThan(plane.renderOrder)
+    expect(planes[0].renderOrder).toBeLessThan(planes[1].renderOrder)
+  })
+
+  it('renders through cameraFor’s projection and view', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    const camera: Camera = { tilt: 24, yaw: -8, dolly: -0.12, fov: 30 }
+    C.paintDrawList3d(list([shape('b', '#2'), shape('c', '#3', 0.05)], { camera }), c)
+    const { projection, view } = cameraFor(camera, SIZE)
+    const used = renders[renders.length - 1].camera
+    expect(used.projectionMatrix.elements).toEqual(projection)
+    expect(used.matrixWorldInverse.elements).toEqual(view)
+  })
+
+  it('route two paints the 1:1 layer in route one’s order (dims, then far to near), whatever the list’s order', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    C.paintDrawList3d(list([shape('value', '#222222', 0.05), shape('panel', '#111111', 0)], { glow: [{ item: 'value', radius: 8, strength: 1 }] }), c)
+    const whole = sceneOf().children.filter((m) => m.visible)
+    expect(whole).toHaveLength(1)
+    expect(layerCanvas(whole[0]).ops.filter((o) => o.op === 'fill').map((o) => o.fill)).toEqual(['#111111', '#222222'])
+  })
+})
+
 describe('graphicCompositor: disposal', () => {
   it('holds every texture, material and geometry a build makes, each disposed exactly once, however often dispose is called', async () => {
     const c = (await C.createCompositor(SIZE.width, SIZE.height))!
@@ -490,6 +564,13 @@ describe('graphicCanvas: the compositor seam', () => {
     expect(G.takeGraphicBakeNotes()).toEqual([])
   })
 
+  it('the harness frames (graphicFrameCanvases) keep one compositor and dispose it in their finally', async () => {
+    const frames = await G.graphicFrameCanvases(SPEC, STYLE, SIZE.width, SIZE.height, 30, 30, [0, 5, 29], NO_TARGETS, tilting)
+    expect(frames).toHaveLength(3)
+    expect(made.filter((m) => m.kind === 'geometry')).toHaveLength(1)
+    expect(made.map((m) => m.disposed)).toEqual(made.map(() => 1))
+  })
+
   it('a flat drawer still takes the box route: only a list that needs the compositor forces the canvas', async () => {
     const flat: Drawer = () => ({ items: [shape('panel', '#111111')] })
     const run = await G.bakeGraphicSequence(SPEC, STYLE, 'g4', SIZE.width, SIZE.height, 30, 30, NO_TARGETS, true, flat)
@@ -508,6 +589,15 @@ describe('graphicCanvas: the compositor seam', () => {
     expect(made).toEqual([])
     expect(G.takeGraphicBakeNotes()).toEqual([C.WEBGL_MISSING_NOTE])
     expect(G.takeGraphicBakeNotes()).toEqual([])
+
+    // Painter A paints such a list in route one's order, whatever order its drawer emitted: the picture route one draws at rest.
+    const backwards: Drawer = (spec, style, clock, size, measure, targets) => {
+      const at = tilting(spec, style, clock, size, measure, targets)
+      return { ...at, items: [...at.items].reverse() }
+    }
+    const [frame] = (await G.graphicFrameCanvases(SPEC, STYLE, SIZE.width, SIZE.height, 30, 30, [29], NO_TARGETS, backwards)) as unknown as FakeCanvas[]
+    expect(frame.ops.filter((o) => o.op === 'fill').map((o) => o.fill)).toEqual(['#111111', '#222222'])
+    G.takeGraphicBakeNotes()
 
     expect(G.graphicDrawnFlat('g7')).toBe(false)
     preview('g7', 0)

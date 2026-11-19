@@ -75,11 +75,23 @@ void main() {
 }`
 
 /**
- * The straight texel in, premultiplied colour out, as the moments' depth
- * push writes (momentCanvas.ts DEPTH_PUSH); the layers blend premultiplied
- * "over". Rows as the canvas has them (uploaded unflipped). `uBlur` is the
- * plane's focus blur in frame pixels: phase 3's piece 2 averages a disc of
- * taps above 0; at 0, and in piece 1 always, the texel itself.
+ * The layers are uploaded PREMULTIPLIED (each layer's texture set so after
+ * `textureOf`, in `makeLayer`), so the texel is already premultiplied
+ * colour and the shader writes it as it is; the layers blend premultiplied
+ * "over". This departs from §6.16's "samples the straight texel and writes
+ * premultiplied colour" (the moments' DEPTH_PUSH) on purpose: the moments'
+ * pictures are opaque or clear (momentCanvas.ts COMMON: "a sample is
+ * straight colour with alpha 0 or 1"), but a graphic's layer has
+ * anti-aliased text, 1 px lines and half-opaque shapes, and a bilinear
+ * sample between an ink texel (c, 1) and a clear one (0, 0) at weight t is
+ * (t·c, t) straight, which premultiplied AFTER the filter is (t²·c, t): a
+ * dark fringe on every edge of a tilted or dollied plane. Filtering
+ * premultiplied texels is coverage-weighted, so the fringe is gone, and at
+ * 1:1 the upload is the 2D canvas's own premultiplied bytes (no
+ * un-premultiply round trip). Rows as the canvas has them (uploaded
+ * unflipped). `uBlur` is the plane's focus blur in frame pixels: phase 3's
+ * piece 2 averages a disc of taps above 0 (an average of premultiplied taps
+ * is right as it is); at 0, and in piece 1 always, the texel itself.
  */
 const FRAGMENT = /* glsl */ `
 precision highp float;
@@ -87,8 +99,7 @@ varying vec2 vUv;
 uniform sampler2D uTex;
 uniform float uBlur;
 void main() {
-  vec4 s = texture2D(uTex, vec2(vUv.x, 1.0 - vUv.y));
-  gl_FragColor = vec4(s.rgb * s.a, s.a);
+  gl_FragColor = texture2D(uTex, vec2(vUv.x, 1.0 - vUv.y));
 }`
 
 /* ------------------------------------------------------------- internals */
@@ -206,6 +217,9 @@ export async function createCompositor(width: number, height: number): Promise<C
       if (state.disposed) return
       state.disposed = true
       for (const d of state.disposables) d.dispose()
+      // The layers' frame-sized 2D canvases are given back now, not at the next collection.
+      for (const layer of [state.whole, state.base, ...state.planes]) if (layer) layer.canvas.width = layer.canvas.height = 0
+      if (state.flat) state.flat.canvas.width = state.flat.canvas.height = 0
     }
   }
   internals.set(compositor, state)
@@ -217,6 +231,8 @@ function makeLayer(state: Internals, vertexShader: string, order: number): Layer
   const { three } = state
   const { canvas, ctx } = canvas2d(state.width, state.height)
   const texture = textureOf(three, canvas)
+  // The moments' settings, but premultiplied: FRAGMENT writes the texel as it is (see there).
+  texture.premultiplyAlpha = true
   state.disposables.push(texture)
   const material = new three.ShaderMaterial({
     vertexShader,
@@ -347,6 +363,9 @@ export function paintDrawList3d(list: DrawList, compositor: Compositor, options:
     camera.matrixWorldInverse.fromArray(view)
     camera.matrixWorld.copy(camera.matrixWorldInverse).invert()
     camera.matrix.copy(camera.matrixWorld)
+    // Three r186 renders with projectionMatrix and matrixWorldInverse as set here: it skips updateMatrixWorld (matrixWorldAutoUpdate
+    // false, no parent), and calls updateProjectionMatrix only with a reversed depth buffer, which threeShared.ts does not ask for;
+    // turning that on would reset this projection to the camera's default fov and aspect.
     planes.forEach((plane, i) => {
       while (state.planes.length <= i) state.planes.push(makeLayer(state, PERSPECTIVE_VERTEX, 1 + state.planes.length))
       const layer = state.planes[i]

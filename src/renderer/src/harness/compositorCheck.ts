@@ -15,7 +15,15 @@
  *   it (`drawImage` into a 2D canvas) and read per channel against painter
  *   A's. The 1 px line at 10, 50 and 90 % alpha is read composited over black
  *   and over white. A settled 2.5D list (planes at z 0, 0.02 and 0.05, the
- *   camera flat) is read against its flat twin.
+ *   camera flat) is read against its flat twin. EFFECTS §51's clusters are
+ *   read again on their own ink box (painter A's clusters alone, `inkBox`,
+ *   `padRect` by 2, as phase 0's parity reads them) in the glow and
+ *   perspective frames: §6.12's M6 at 0.000 on the clusters themselves, not
+ *   diluted by the whole frame.
+ * - **Edges.** One cream rounded panel and ring on the z 0 plane, tilted 24°
+ *   and dollied back 0.12: where a pixel is at least `edgeMinAlpha` opaque,
+ *   its straight colour must be the fill's (`edgeColour`); a layer filtered
+ *   straight and premultiplied after would read a dark fringe there.
  * - **Memory.** The shared renderer's `info.memory` geometries and textures
  *   before the compositor is made, after the WebGL routes have drawn, and
  *   after `dispose`.
@@ -40,7 +48,8 @@ import { useCatalog } from '../catalog'
 import { sharedRenderer } from '../threeShared'
 import { WEBGL_MISSING_NOTE, createCompositor, paintDrawList3d, resetCompositorSession, type Compositor } from '../graphicCompositor'
 import { forgetGraphicPreview, graphicDrawnFlat, graphicFrameCanvases, graphicMeasure, graphicPreviewCanvas, takeGraphicBakeNotes } from '../graphicCanvas'
-import { compositorVerdict, diffChannels, type ChannelDiff, type CompositorReadings, type RouteReading } from './compositorMeasure'
+import { COMPOSITOR_BAR, compositorVerdict, diffChannels, edgeColour, type ChannelDiff, type CompositorReadings, type EdgeReading, type RouteReading } from './compositorMeasure'
+import { inkBox, padRect } from './graphicMeasure'
 
 export interface CompositorResult extends CompositorReadings {
   size: { width: number; height: number }
@@ -154,6 +163,7 @@ export async function checkCompositor(
   if (!compositor) throw new Error('compositor check: createCompositor gave null on this page: WebGL did not start')
 
   const routes: RouteReading[] = []
+  const edges: EdgeReading[] = []
   let built = before
   let settled: ChannelDiff
   try {
@@ -165,11 +175,21 @@ export async function checkCompositor(
       { route: 'glow', l: list(coloursNow, { glow: [{ item: 'blue', radius: 8, strength: 1 }] }) },
       { route: 'perspective', l: list(onPlanes(coloursNow), { camera: FOCUSED }) }
     ]
+    // The clusters' own ink box, from painter A's clusters alone, grown by 2 (phase 0's parity: inkBox, padRect).
+    const clustersInk = inkBox(pixelsOf(painterA(list(coloursNow.filter((item) => item.id.startsWith('clusters'))))), W, H)
+    if (!clustersInk) throw new Error('compositor check: the clusters drew no ink (their face did not load?)')
+    const clustersArea = { width: W, rect: padRect(clustersInk, 2, W, H) }
     for (const { route, l } of cases) {
       const picture = painterB(l, compositor)
-      const diff = diffChannels(referencePixels, pixelsOf(picture))
+      const picturePixels = pixelsOf(picture)
+      const diff = diffChannels(referencePixels, picturePixels)
       routes.push({ list: 'colours', route, over: 'clear', diff })
       summary.push(`compositor colours by route ${route}: ${line(diff)}`)
+      if (route !== 'flat') {
+        const clusters = diffChannels(referencePixels, picturePixels, clustersArea)
+        routes.push({ list: 'clusters', route, over: 'clear', diff: clusters })
+        summary.push(`compositor clusters (ink box ${JSON.stringify(clustersArea.rect)}) by route ${route}: ${line(clusters)}`)
+      }
       frames.canvas(`compositor: colours by route ${route}`, picture)
     }
 
@@ -198,6 +218,23 @@ export async function checkCompositor(
     // For the eye: a 24° tilt and a dolly back, the planes sliding.
     frames.canvas('compositor: tilt 24° (top away), planes at z 0 / 0.02 / 0.05', painterB(list(planed, { camera: { ...FLAT, tilt: 24 } }), compositor))
     frames.canvas('compositor: dolly −0.12, yaw −8°', painterB(list(planed, { camera: { ...FLAT, dolly: -0.12, yaw: -8 } }), compositor))
+
+    // A moving plane's edges: one colour, so every pixel's straight colour is the fill's wherever it is opaque enough to read.
+    const cream: readonly [number, number, number] = [0xf6, 0xf2, 0xea]
+    const edgeItems: DrawItem[] = [
+      { kind: 'shape', id: 'edge-panel', opacity: 1, shape: 'rounded', box: rect(60, 200, 420, 260), radius: 40, fill: CREAM, z: 0 },
+      { kind: 'shape', id: 'edge-ring', opacity: 1, shape: 'ring', box: rect(150, 520, 240, 240), sweep: 0.8, start: -Math.PI / 2, stroke: { color: CREAM, width: 9 }, z: 0 }
+    ]
+    for (const [camera, view] of [
+      ['tilt 24°', { ...FLAT, tilt: 24 }],
+      ['dolly −0.12', { ...FLAT, dolly: -0.12 }]
+    ] as const) {
+      const picture = painterB(list(edgeItems, { camera: view }), compositor)
+      const reading: EdgeReading = { camera, ...edgeColour(pixelsOf(picture), cream, COMPOSITOR_BAR.edgeMinAlpha) }
+      edges.push(reading)
+      summary.push(`compositor edges at ${camera}: straight colour off the fill by at most ${reading.max} over ${reading.pixels} pixels at alpha ${COMPOSITOR_BAR.edgeMinAlpha}+ (${reading.edgePixels} of them edge pixels)`)
+      frames.canvas(`compositor: edges at ${camera} (one cream colour: no dark rim)`, over(picture, '#ffffff'))
+    }
     built = memoryNow()
   } finally {
     compositor.dispose()
@@ -231,7 +268,7 @@ export async function checkCompositor(
   }
   summary.push(`compositor with WebGL pretended missing: createCompositor ${missing.compositor}, notes ${JSON.stringify(missing.notes)}, the frame against the flat twin ${line(missing.diff)}, the preview marked drawn flat: ${previewDrawnFlat}`)
 
-  const readings: CompositorReadings = { routes, settled, memory: { before, built, after }, missing }
+  const readings: CompositorReadings = { routes, settled, memory: { before, built, after }, missing, edges }
   const verdict = compositorVerdict(readings, WEBGL_MISSING_NOTE)
   if (!previewDrawnFlat) verdict.failures.push('with WebGL missing, the Preview did not mark its clip drawn flat (the dock would show no note)')
   verdict.pass = verdict.failures.length === 0

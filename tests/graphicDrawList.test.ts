@@ -512,15 +512,20 @@ describe('graphicDrawList: needsCompositor', () => {
  * No production graphic reaches §6.16's compositor before phase 3's piece 3:
  * every template's drawer, over every fixture of specs.json, under every
  * style, on every third frame and the last moving one, emits no camera, no
- * glow and no z. Two halves. A spec with no `depth` and no `hero` never asks
- * for it, in any phase (§6.3: a drawer emits them only for those). A spec
- * WITH a depth or marked hero may ask only where its template is in
- * `MAY_ASK`: empty in piece 1, so today nothing asks at all; piece 3 adds
- * `counter` and `ring` to the set (membership), not by deleting the case.
+ * glow and no z. Two halves, each with its own membership set, so the
+ * piece that rightly makes a template ask adds it to a set and deletes no
+ * case. A spec with no `depth` and no `hero` asks only where its template is
+ * in `ALWAYS_ASK`: empty until piece 4, which adds `screen-card` (its move,
+ * 'tilt-in' or 'pull-back', is a camera with neither field, and its edge
+ * sweep a glow, §6.16). A spec WITH a depth or marked hero may ask only where
+ * its template is in `MAY_ASK` (or `ALWAYS_ASK`): empty in piece 1, so today
+ * nothing asks at all; piece 3 adds `counter` and `ring`.
  */
 describe('graphicDrawList: no drawer asks for the compositor yet', () => {
   /** The templates whose depth variants or hero glow may ask for the compositor: piece 3 adds 'counter' and 'ring'. */
   const MAY_ASK = new Set<GraphicTemplateId>([])
+  /** The templates whose plain specs ask too, their motion being a camera or a glow of its own: piece 4 adds 'screen-card'. */
+  const ALWAYS_ASK = new Set<GraphicTemplateId>([])
   const fixtures = (
     JSON.parse(readFileSync(new URL('./fixtures/graphics/specs.json', import.meta.url), 'utf8')) as { specs: { id: string; spec: GraphicSpec }[] }
   ).specs.filter((f) => DRAWERS[f.spec.data.template] !== undefined)
@@ -549,8 +554,9 @@ describe('graphicDrawList: no drawer asks for the compositor yet', () => {
     expect(new Set(fixtures.map((f) => f.spec.data.template))).toEqual(new Set(Object.keys(DRAWERS)))
   })
 
-  it('a spec with no depth and no hero never asks, whatever its template', () => {
+  it('a spec with no depth and no hero never asks, unless its template is in ALWAYS_ASK (none in piece 1)', () => {
     for (const f of fixtures) {
+      if (ALWAYS_ASK.has(f.spec.data.template)) continue
       const { depth: _depth, hero: _hero, ...plain } = f.spec
       expect(asking(plain), f.id).toEqual([])
     }
@@ -558,7 +564,7 @@ describe('graphicDrawList: no drawer asks for the compositor yet', () => {
 
   it('a depth or a hero asks only on a template in MAY_ASK (none in piece 1)', () => {
     for (const f of fixtures) {
-      if (MAY_ASK.has(f.spec.data.template)) continue
+      if (MAY_ASK.has(f.spec.data.template) || ALWAYS_ASK.has(f.spec.data.template)) continue
       for (const variant of [{ hero: true as const }, ...(['tilt', 'parallax', 'dolly', 'focus'] as const).map((depth) => ({ depth }))]) {
         expect(asking({ ...f.spec, ...variant }), `${f.id} ${JSON.stringify(variant)}`).toEqual([])
       }

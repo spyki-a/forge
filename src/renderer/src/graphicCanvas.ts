@@ -23,6 +23,7 @@ import type { DrawItem, DrawList, Drawer, GraphicTargets, Rect, TextMeasure } fr
 import { textSpecOf } from '@shared/graphics/items'
 import { drawListAt, graphicBox, needsCompositor, onsetTargetsAt } from '@shared/graphics/drawList'
 import { paintDrawList2d, type PaintOptions } from '@shared/graphics/paint'
+import { flatItems } from '@shared/graphics/compositor'
 import { graphicMovingFrames } from '@shared/graphics/frame'
 import { facesFor, textSpecFont } from '@shared/render/textPaint'
 import { ASCENT, LINE_HEIGHT } from '@shared/render/textLayout'
@@ -205,7 +206,10 @@ function freshLayer(width: number, height: number): CanvasRenderingContext2D {
  * compositor, painter B draws the whole frame (`paintDrawList3d`) and it is
  * copied into the caller's canvas with `drawImage`, as the moments copy
  * theirs; with none (WebGL missing, or not landed yet), painter A, which
- * ignores `camera`, `glow` and `z`, so the graphic draws flat. No template
+ * ignores `camera`, `glow` and `z`, so the graphic draws flat, its items
+ * in route one's order (`flatItems`: the dims, then the planes far to near),
+ * so a list drawn without WebGL is the picture route one draws at rest
+ * whatever order its drawer emitted. No template
  * emits a list that asks for it before phase 3's piece 3 (pinned in
  * tests/graphicDrawList.test.ts).
  */
@@ -215,7 +219,7 @@ function paintFrame(list: DrawList, ctx: CanvasRenderingContext2D, options: Pain
     ctx.drawImage(frame, options.offset?.x ?? 0, options.offset?.y ?? 0)
     return
   }
-  paintDrawList2d(ctx, list, options)
+  paintDrawList2d(ctx, needsCompositor(list) ? { ...list, items: flatItems(list) } : list, options)
 }
 
 /* ------------------------------------------------------- WebGL missing */
