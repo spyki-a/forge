@@ -10,8 +10,9 @@ import { graphicTargetsAt } from '@shared/graphics/targets'
 import { copySelection } from '@shared/edit/recipes'
 import { GRAPHIC_TRIM_REBAKE_MS, useEditor } from '../../src/renderer/src/store'
 import { useCatalog } from '../../src/renderer/src/catalog'
-import { CLIPS_GRAPHIC_RULE } from '@shared/graphics/apply'
+import { CLIPS_GRAPHIC_RULE, placeAgain } from '@shared/graphics/apply'
 import { NO_SOUND_LIBRARY_NOTE } from '@shared/graphics/sound'
+import { SCREEN_CARD_REASONS, screenCardKeys, screenCardRefusal } from '@shared/graphics/screenCard'
 
 /*
  * The store's graphic actions (docs/CLIPS.md §6.3, "The store"; §6.4's three
@@ -27,7 +28,8 @@ const bake = vi.hoisted(() => ({
   asks: [] as { clipId: string; width: number; height: number; frames: number; fps: number; boxAllowed: boolean; styleId: string; accent: string; subject: GraphicTargets['subject'] }[],
   /** The next answer; null is a superseded or empty bake. */
   answer: null as { pattern: string; frames: number } | null,
-  forgotten: [] as string[]
+  forgotten: [] as string[],
+  pulls: [] as { path: string; first: number; count: number }[]
 }))
 
 vi.mock('../../src/renderer/src/graphicCanvas', () => ({
@@ -46,7 +48,12 @@ vi.mock('../../src/renderer/src/graphicCanvas', () => ({
     return bake.answer ? { pattern: bake.answer.pattern.replace('<clip>', clipId), frames: bake.answer.frames } : null
   },
   forgetGraphicPreview: (clipId: string) => bake.forgotten.push(clipId),
-  graphicPreviewCanvas: () => null
+  graphicPreviewCanvas: () => null,
+  // A screen card's pull (§6.16): recorded, and the targets handed back as they came (the files are graphicCanvas.test's).
+  screenTargetsAt: async (footage: { path: string; first: number; count: number }, targetsAt: (frame: number) => GraphicTargets) => {
+    bake.pulls.push({ path: footage.path, first: footage.first, count: footage.count })
+    return targetsAt
+  }
 }))
 
 const FPS = 30
@@ -103,6 +110,7 @@ beforeEach(() => {
   bake.asks = []
   bake.answer = { pattern: '/cache/<clip>.seq/%05d.png', frames: 46 }
   bake.forgotten = []
+  bake.pulls = []
   start()
 })
 
@@ -604,5 +612,186 @@ describe('phase 2: a graphic’s sounds follow it (§6.14)', () => {
     // g2 is on the same shot, so its tick is re-placed with it (the cap and the index are the shot's): still on 318.
     expect(project().clips.filter((c) => c.forGraphic === 'g2').map((c) => [c.start, c.assetId])).toEqual([[318, 'tick-file']])
     undoesTo(before, 0)
+  })
+})
+
+/*
+ * Phase 3's piece 4 (docs/CLIPS.md §6.16, "The store" and "Refused"): the
+ * dock's Screen card through the store. `addScreenCard` lands the card
+ * spanning its recording and the recording's two keys in one step; Drop and
+ * Delete take exactly those keys; neither Clear takes the card; a moved,
+ * trimmed, retimed or re-rated recording realigns card and keys; a split
+ * keeps the card with the left half; each refusal says its reason.
+ */
+describe('the screen card (§6.16)', () => {
+  const opacity = (id: string) => clipOf(id).keyframes?.opacity
+  const cardOn = (id: string): Clip | undefined => project().clips.find((c) => c.graphic?.data.template === 'screen-card' && c.graphic.data.clipId === id)
+
+  it('addScreenCard lands the card spanning the clip exactly, no exit fade, no rule, and writes exactly screenCardKeys’ two keys, in one undo step', async () => {
+    const id = await state().addScreenCard('shot', 'tilt-in')
+    expect(id).not.toBeNull()
+    await settle()
+    const card = clipOf(id!)
+    expect(card).toMatchObject({ start: 0, duration: 600 })
+    expect(card.trackId).not.toBe('v1')
+    expect(card.keyframes).toBeUndefined()
+    expect(card.generatedBy).toBeUndefined()
+    expect(card.graphic).toMatchObject({ data: { template: 'screen-card', clipId: 'shot', move: 'tilt-in' }, seconds: 20, beats: [1] })
+    // Its place is held (the whole frame, never read): §6.9's recompute never looks for a third for it.
+    expect(card.graphic!.place).toEqual({ auto: false, box: { x: 0, y: 0, width: 1, height: 1 } })
+    expect(placeAgain(project(), id!)).toEqual({ project: project(), note: null })
+    expect(opacity('shot')).toEqual(screenCardKeys(card, clipOf('shot'), FPS))
+    expect(opacity('shot')).toEqual([
+      { frame: 0, value: 0, ease: 'hold' },
+      { frame: 31, value: 1 }
+    ])
+    expect(history()).toBe(1)
+    // Its bake asked for the recording's moving frames, L + 1 of them from the clip's first.
+    expect(bake.pulls).toEqual([{ path: '/media/talk.mp4', first: 0, count: 31 }])
+    state().undo()
+    expect(project().clips.map((c) => c.id)).toEqual(['shot'])
+    expect(clipOf('shot').keyframes).toBeUndefined()
+  })
+
+  it('refuses, with its reason and nothing changed: steadied, turned, keyed zoom or turn, opacity keys of its own, a colour change, under a look, too short, an image clip, a card on it already', async () => {
+    const R = SCREEN_CARD_REASONS
+    const shotWith = (over: Partial<Clip>): Clip => ({ ...shot, ...over })
+    const look: Clip = { ...shot, id: 'adj', assetId: 'card', trackId: 'v2', adjustment: true, color: { brightness: 0.2, contrast: 1, saturation: 1 } }
+    const cases: [string, Partial<Project>, string][] = [
+      ['steadied', { clips: [shotWith({ steady: true })] }, R.steadied],
+      ['turned', { clips: [shotWith({ transform: { ...shot.transform, rotation: 90 } })] }, R.turned],
+      ['keyed zoom', { clips: [shotWith({ keyframes: { zoom: [{ frame: 0, value: 1 }, { frame: 30, value: 1.2 }] } })] }, R.turned],
+      ['keyed turn', { clips: [shotWith({ keyframes: { rotation: [{ frame: 0, value: 0 }] } })] }, R.turned],
+      ['opacity keys', { clips: [shotWith({ keyframes: { opacity: [{ frame: 0, value: 1 }] } })] }, R.opacityKeys],
+      ['a colour change', { clips: [shotWith({ color: { brightness: 0.1, contrast: 1, saturation: 1 } })] }, R.colour],
+      ['a LUT', { clips: [shotWith({ color: { brightness: 0, contrast: 1, saturation: 1, lut: { file: '/l.cube', name: 'l', intensity: 1 } } })] }, R.colour],
+      ['under a look', { assets: [footage, { ...footage, id: 'card', kind: 'image', path: '/c.png' }], clips: [shot, look] }, R.underLook],
+      ['too short', { clips: [shotWith({ duration: 31 })] }, R.short],
+      ['an image clip', { assets: [{ ...footage, kind: 'image', path: '/p.jpg' }], clips: [shot] }, R.notVideo]
+    ]
+    for (const [name, over, reason] of cases) {
+      start(over)
+      const before = project()
+      expect(await state().addScreenCard('shot', 'pull-back'), name).toBeNull()
+      expect(notices(), name).toEqual([reason])
+      expect(project(), name).toBe(before)
+      expect(history(), name).toBe(0)
+      // The dock's words come from the same function.
+      expect(screenCardRefusal(project(), 'shot'), name).toBe(reason)
+    }
+    // A look on a track BELOW the clip does not grade it: not refused.
+    start({ assets: [footage, { ...footage, id: 'card', kind: 'image', path: '/c.png' }], clips: [{ ...shot, trackId: 'v2' }, { ...look, trackId: 'v1' }] })
+    expect(screenCardRefusal(project(), 'shot')).toBeNull()
+    // One card per recording clip.
+    start()
+    expect(await state().addScreenCard('shot', 'tilt-in')).not.toBeNull()
+    await settle()
+    state().notices.length = 0
+    expect(await state().addScreenCard('shot', 'pull-back')).toBeNull()
+    expect(notices()).toEqual([R.hasCard])
+    expect(project().clips.filter((c) => c.graphic)).toHaveLength(1)
+    expect(screenCardRefusal(project(), 'nope')).toBe(R.notVideo)
+    expect(screenCardRefusal(project(), cardOn('shot')!.id)).toBe(R.notVideo)
+  })
+
+  it('Drop removes the card and exactly its two keys; a key of your own on the clip stays; Delete of the card does the same', async () => {
+    for (const remove of [(id: string) => state().dropGraphic(id), (id: string) => state().removeClip(id)]) {
+      start()
+      const id = (await state().addScreenCard('shot', 'tilt-in'))!
+      await settle()
+      state().setKeyframe('shot', 'opacity', 300, 0.5)
+      expect(opacity('shot')).toEqual([{ frame: 0, value: 0, ease: 'hold' }, { frame: 31, value: 1 }, { frame: 300, value: 0.5 }])
+      remove(id)
+      expect(project().clips.some((c) => c.id === id)).toBe(false)
+      expect(opacity('shot')).toEqual([{ frame: 300, value: 0.5 }])
+      // Without a key of your own, the track and the keys are gone whole.
+      start()
+      const again = (await state().addScreenCard('shot', 'tilt-in'))!
+      await settle()
+      remove(again)
+      expect(clipOf('shot').keyframes).toBeUndefined()
+    }
+  })
+
+  it('neither Clear graphics nor Direct’s Clear takes the card or its keys', async () => {
+    const id = (await state().addScreenCard('shot', 'pull-back'))!
+    await settle()
+    const keys = opacity('shot')
+    state().clearGraphics()
+    expect(clipOf(id).graphic?.data.template).toBe('screen-card')
+    expect(opacity('shot')).toEqual(keys)
+    state().clearDirectorOutput()
+    expect(clipOf(id).graphic?.data.template).toBe('screen-card')
+    expect(opacity('shot')).toEqual(keys)
+  })
+
+  it('a moved, trimmed, retimed or re-rated recording realigns the card and its two keys, in the edit’s own step', async () => {
+    vi.useFakeTimers()
+    try {
+      const id = (await state().addScreenCard('shot', 'tilt-in'))!
+      await settle()
+      const steps = history()
+      const aligned = (): void => {
+        const card = clipOf(id)
+        const rec = clipOf('shot')
+        expect([card.start, card.duration]).toEqual([rec.start, rec.duration])
+        expect(card.graphic!.seconds).toBeCloseTo(rec.duration / project().settings.fps, 9)
+        expect(card.keyframes).toBeUndefined()
+        expect(opacity('shot')).toEqual(screenCardKeys(card, rec, project().settings.fps))
+      }
+      state().moveClip('shot', 120)
+      expect(clipOf('shot').start).toBe(120)
+      aligned()
+      expect(history()).toBe(steps + 1)
+      state().trimClipStart('shot', 180)
+      expect(clipOf('shot').start).toBe(180)
+      aligned()
+      // The head trim rebased every key of the clip by −60; the card's are rewritten on its own first frame.
+      expect(opacity('shot')).toEqual([{ frame: 0, value: 0, ease: 'hold' }, { frame: 31, value: 1 }])
+      state().trimClipEnd('shot', 500)
+      expect(clipOf('shot').duration).toBe(320)
+      aligned()
+      state().setClipSpeed('shot', 2)
+      aligned()
+      expect(history()).toBe(steps + 4)
+      const versions = clipOf(id).graphic!.version
+      // The realigned card is drawn again once the edit rests.
+      bake.asks = []
+      await rested()
+      expect(bake.asks.map((a) => a.clipId)).toContain(id)
+      state().setFrameRate(25)
+      aligned()
+      expect(opacity('shot')).toEqual([{ frame: 0, value: 0, ease: 'hold' }, { frame: 26, value: 1 }])
+      expect(clipOf(id).graphic!.version).toBeGreaterThan(versions)
+      // An undo puts card and keys back together.
+      state().undo()
+      aligned()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('deleting the recording deletes its card', async () => {
+    const id = (await state().addScreenCard('shot', 'tilt-in'))!
+    await settle()
+    state().removeClip('shot')
+    expect(project().clips.some((c) => c.id === id)).toBe(false)
+    expect(project().clips).toEqual([])
+  })
+
+  it('a split keeps the card with the left half, which keeps the id, and the right half carries no copy of its keys (a key of yours rides on)', async () => {
+    const id = (await state().addScreenCard('shot', 'tilt-in'))!
+    await settle()
+    state().setKeyframe('shot', 'opacity', 400, 0.5)
+    useEditor.setState({ playhead: 300, selectedClipId: 'shot' })
+    state().splitAtPlayhead()
+    const halves = project().clips.filter((c) => c.assetId === 'talk')
+    expect(halves).toHaveLength(2)
+    const right = halves.find((c) => c.id !== 'shot')!
+    expect(clipOf('shot')).toMatchObject({ start: 0, duration: 300 })
+    expect(clipOf(id)).toMatchObject({ start: 0, duration: 300 })
+    expect(project().clips.filter((c) => c.graphic)).toHaveLength(1)
+    expect(opacity('shot')).toEqual([{ frame: 0, value: 0, ease: 'hold' }, { frame: 31, value: 1 }, { frame: 400, value: 0.5 }])
+    expect(right.keyframes?.opacity).toEqual([{ frame: 100, value: 0.5 }])
   })
 })

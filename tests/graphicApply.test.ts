@@ -284,6 +284,19 @@ describe.each([
     expect(out.project.clips.find((c) => c.id === out.clipIds[0])!.graphic!.data.template).toBe('counter')
   })
 
+  it('phase 3 piece 4 (§6.16, §6.9): over a screen recording framed by a card, rule 9 still drops the callout (no face to point at), and the card holds no room: the counter lands over it', () => {
+    const card = clipOf('k', 'kg', 'v2', 30, 1200, {
+      graphic: { data: { template: 'screen-card', clipId: 'c', move: 'tilt-in' }, seconds: 40, beats: [1], place: { auto: true, third: 'middle' }, seed: 1, version: 1 }
+    })
+    const project = setup({ extra: [card], assets: [{ ...assetOf('kg'), kind: 'image', path: '' }] })
+    const out = run([keptOn('c', 'a', COUNTER), keptOn('c', 'a', CALLOUT)], [], project)
+    expect(out.problems.map((p) => [p.path, p.message])).toContainEqual(['$.kept[1]', `graphic dropped: the callout "look" — ${NO_SUBJECT_NOTE}`])
+    expect(out.clipIds).toHaveLength(1)
+    expect(out.project.clips.find((c) => c.id === out.clipIds[0])!.graphic!.data.template).toBe('counter')
+    // The card itself untouched.
+    expect(out.project.clips.find((c) => c.id === 'k')).toEqual(card)
+  })
+
   it('a retimed clip is refused once, its lower third and its graphics with it', () => {
     const extra = [clipOf('r', 'b', 'v1', 1300, 600, { speed: 2 })]
     const project = setup({ extra, assets: [assetOf('b', 'Ravi')] })

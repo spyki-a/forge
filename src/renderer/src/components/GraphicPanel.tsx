@@ -91,6 +91,11 @@ export const NO_FOOTAGE_TITLE = 'No footage is under it to place it over'
 /** The graphic's preview is drawn flat because WebGL did not start (§6.16, "WebGL missing"; the note's words are the plan's). */
 export const DRAWN_FLAT_NOTE = `This graphic is ${WEBGL_MISSING_NOTE}`
 
+/** A screen card's panel (§6.16): it has no fields; it follows its recording (graphics/screenCard.ts `realignScreenCards`). Not the plan's words. */
+export const SCREEN_CARD_FOLLOWS_NOTE = 'It follows its recording: move or trim the recording to change it'
+/** A screen card whose recording's frames could not be pulled: §14's row, the export leaves it out and the recording plays whole. Not the plan's words. */
+export const SCREEN_CARD_FRAMES_NOTE = "Its recording's frames could not be read, so the export leaves this card out"
+
 /** Under Seconds, never a block: shorter than §6.2's reading hold, its last beat plus TAIL_S and the time to read it (not the plan's words). */
 export function tooShortNote(need: number | null, max: number): string {
   return need === null
@@ -217,6 +222,8 @@ export function GraphicPanel({ clip }: { clip: Clip }): ReactNode {
   const setSpeaker = useEditor((s) => s.setSpeaker)
   // The preview's answer as state: the note shows when the preview learns WebGL is missing (§6.16).
   const drawnFlat = graphicCanvas.useGraphicDrawnFlat((s) => s.ids.has(clip.id))
+  // A screen card's preview could not pull its recording's frames (§6.16, §14).
+  const framesFailed = graphicCanvas.useScreenCardFailed((s) => s.ids.has(clip.id))
   const spec = clip.graphic
   if (!spec) return null
   const data = spec.data
@@ -229,6 +236,21 @@ export function GraphicPanel({ clip }: { clip: Clip }): ReactNode {
     </div>
   )
   if (!def) return <div className="space-y-2 border-t border-ink-850 pt-2">{heading}</div>
+  /*
+   * A screen card (§6.16) has no field, no Depth (its move is its own), no
+   * Seconds and no Place: it spans its recording and lands on the recording's
+   * own box, so each edit is the recording's. Its notes only.
+   */
+  if (data.template === 'screen-card') {
+    return (
+      <div data-graphic-panel="" data-screen-card="" className="space-y-2 border-t border-ink-850 pt-2">
+        {heading}
+        <p className="text-[10px] leading-snug text-ink-500">{SCREEN_CARD_FOLLOWS_NOTE}</p>
+        {drawnFlat && <p className="text-[10px] leading-snug text-ink-500">{DRAWN_FLAT_NOTE}</p>}
+        {framesFailed && <p className="text-[10px] leading-snug text-amber-400">{SCREEN_CARD_FRAMES_NOTE}</p>}
+      </div>
+    )
+  }
 
   const fields = fieldsOf(data, def)
   const owner = ownerOf(project, clip, spec)

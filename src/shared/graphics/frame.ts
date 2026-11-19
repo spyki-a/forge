@@ -90,7 +90,12 @@ export function beatFrame(beat: number, fps: number): number {
  *   most 3 s;
  * - a screen card under a style with `glow` (§6.16): `min(total, L + 1 +
  *   round(EDGE_SWEEP_S × fps))`, the landing plus one loop of its edge sweep,
- *   never the card's whole hold (211 frames at 30 fps).
+ *   never the card's whole hold (211 frames at 30 fps). NOT YET: phase 3's
+ *   piece 4 drew the card without its sweep, so a card under every style is
+ *   `min(total, L + 1 + round(SETTLE_S × fps))`, the landing (`L` =
+ *   round(SCREEN_CARD_MOVE_S × fps), the card's own frames), the frame after
+ *   it where the dim's hole opens, and the settle (46 at 30 fps); piece 5
+ *   brings the sweep's branch back with the sweep.
  *
  * 0 for a clip of no frames or a frame rate that is not positive.
  */
@@ -99,9 +104,12 @@ export function graphicMovingFrames(spec: GraphicSpec, style: GraphicStyle, fps:
   const { data } = spec
   if (data.template === 'steps' && data.connector === 'line' && style.energy === 'energetic') return total
   if (data.template === 'callout' && spec.anchor !== undefined) return total
-  if (data.template === 'screen-card' && style.glow !== undefined) {
+  if (data.template === 'screen-card') {
+    // Counted from the card's own first frame, whatever its beats say: the landing L, the frame after it (the
+    // hole's), and the settle. Piece 5's edge sweep adds its glowing branch here, `min(total, L + 1 +
+    // round(EDGE_SWEEP_S × fps))` under a style with `glow` (§6.16); until then every style settles so.
     const landing = Math.round(SCREEN_CARD_MOVE_S * fps)
-    return Math.min(total, landing + 1 + Math.round(EDGE_SWEEP_S * fps))
+    return Math.min(total, landing + 1 + Math.round(SETTLE_S * fps))
   }
   let last = 0
   for (const beat of spec.beats) if (Number.isFinite(beat) && beat > last) last = beat

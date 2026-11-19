@@ -31,6 +31,8 @@ import type { GraphicTargets, Rect } from '../graphics/items'
 import { graphicStyleOf } from '../graphics/style'
 import { graphicTargetsAt } from '../graphics/targets'
 import { momentTextures, type MomentTextures } from './momentTextures'
+import type { FootageRequest } from './moment'
+import { isScreenCard, screenCardFootage, screenCardPulledFrames, strikeScreenCardKeys } from '../graphics/screenCard'
 import { followCanvas, identityPlaced } from './plan'
 
 type Size = { width: number; height: number }
@@ -76,8 +78,12 @@ export interface Bakers {
    * graphicCanvas.ts `bakeGraphicSequence`), returning as it does: the
    * pattern with the count, the box when `boxAllowed` and the bake took the
    * box route, null when nothing could be drawn. `targetsAt(f)` is the
-   * targets for frame `f` of the clip. Phase 3's screen card adds its
-   * `footage` here (§6.16).
+   * targets for frame `f` of the clip. `footage`, a screen card's only
+   * (§6.16, phase 3's piece 4), is the pre-pass request for its moving
+   * frames (graphics/screenCard.ts `screenCardFootage` on the export's
+   * project): the renderer pulls it (`screenTargetsAt`) and fills each
+   * frame's `screen.file` before it bakes; a pull that fails throws, and the
+   * card is dropped with its keys struck.
    */
   graphic: (
     spec: GraphicSpec,
@@ -88,7 +94,8 @@ export interface Bakers {
     frames: number,
     fps: number,
     targetsAt: (frame: number) => GraphicTargets,
-    boxAllowed: boolean
+    boxAllowed: boolean,
+    footage?: FootageRequest
   ) => Promise<GraphicSequence>
 }
 
@@ -187,12 +194,23 @@ export async function bakeForExport(
         // `sourceToFrame` (reframe/frameMap.ts) follows the canvas it is handed itself, so this is the moment's shape, not a difference a case can tell.
         const followed = followCanvas(project, exportCanvas)
         const targetsAt = (f: number): GraphicTargets => graphicTargetsAt(followed, clip, spec, clip.start + f, stills)
-        const run = await bakers.graphic(spec, graphicStyleOf(project, spec), key, stills.width, stills.height, clip.duration, fps, targetsAt, identityPlaced(clip))
+        /*
+         * A screen card's frames come from the moments' pre-pass (§6.16),
+         * asked for on the export's project as a moment's shots are. A card
+         * whose request cannot be built (its recording gone, steadied, not
+         * footage) is not drawable: dropped below with its keys struck.
+         */
+        const card = spec.data.template === 'screen-card'
+        const footage = card ? screenCardFootage(followed, spec, clip.start, screenCardPulledFrames(fps), fps) : undefined
+        const run =
+          footage === null
+            ? null
+            : await bakers.graphic(spec, graphicStyleOf(project, spec), key, stills.width, stills.height, clip.duration, fps, targetsAt, identityPlaced(clip), footage)
         if (run) repointed.set(asset.id, sequenceAsset(asset, run, run.box ? { width: run.box.width, height: run.box.height } : stills, run.box))
         else {
           // Never the edit's asset: empty until the store's bake lands (`-i ''` fails the whole export), or the frames of another spec.
           dropped.add(clip.id)
-          onError(clip, new Error('the graphic could not be drawn'))
+          onError(clip, new Error(footage === null ? "the screen card's recording cannot be read" : 'the graphic could not be drawn'))
         }
       } else if (clip.text) {
         const path = await bakers.text(clip.text, key, stills.width, stills.height)
@@ -223,10 +241,16 @@ export async function bakeForExport(
   }
 
   if (repointed.size === 0 && dropped.size === 0) return project
+  /*
+   * A dropped screen card's two keys are struck from the export's copy of its
+   * recording in the same step (§6.16, "The export"), or the recording would
+   * play hidden for the move's length; a key of the user's own stays.
+   */
+  const struck = strikeScreenCardKeys(project, project.clips.filter((c) => dropped.has(c.id) && isScreenCard(c)))
   return {
-    ...project,
+    ...struck,
     assets: project.assets.map((a) => repointed.get(a.id) ?? a),
-    clips: dropped.size > 0 ? project.clips.filter((c) => !dropped.has(c.id)) : project.clips
+    clips: dropped.size > 0 ? struck.clips.filter((c) => !dropped.has(c.id)) : struck.clips
   }
 }
 

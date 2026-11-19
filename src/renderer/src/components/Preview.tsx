@@ -51,7 +51,8 @@ import { forgetTextPreview, textPreviewCanvas } from '../textCanvas'
 import { paperPreviewCanvas } from '../paperCanvas'
 import { carouselPreviewCanvas } from '../carouselCanvas'
 import { forgetMomentPreview, momentPreviewCanvas } from '../momentCanvas'
-import { forgetGraphicPreview, graphicPreviewCanvas } from '../graphicCanvas'
+import { forgetGraphicPreview, graphicPreviewCanvas, screenPreviewTargets } from '../graphicCanvas'
+import { screenCardFootage, screenCardPulledFrames } from '@shared/graphics/screenCard'
 import { graphicStyleOf } from '@shared/graphics/style'
 import { graphicTargetsAt } from '@shared/graphics/targets'
 import { momentTextures } from '@shared/render/momentTextures'
@@ -1299,14 +1300,32 @@ export function Preview(): ReactNode {
          * targets read the frame's own. Nothing rather than the baked file:
          * its frames may be of a spec, a canvas or a subject no longer there.
          */
+        const graphicSize = { width: ASPECTS[aspect].width, height: ASPECTS[aspect].height }
+        const given = graphicTargetsAt(project, layer.clip, layer.clip.graphic, playhead, graphicSize)
+        /*
+         * A screen card (docs/CLIPS.md §6.16) draws the recording's own frames
+         * up to its landing, pulled by the moments' pre-pass: nothing while
+         * the pull is on its way, as a moment still loading draws nothing.
+         */
+        const targets =
+          layer.clip.graphic.data.template === 'screen-card'
+            ? screenPreviewTargets(
+                layer.clip.id,
+                screenCardFootage(project, layer.clip.graphic, layer.clip.start, screenCardPulledFrames(fps), fps),
+                given,
+                playhead - layer.clip.start,
+                repaint
+              )
+            : given
+        if (!targets) return nothing()
         const live = graphicPreviewCanvas(
           layer.clip.id,
           layer.clip.graphic,
           graphicStyleOf(project, layer.clip.graphic),
-          ASPECTS[aspect].width,
-          ASPECTS[aspect].height,
+          graphicSize.width,
+          graphicSize.height,
           { frame: playhead - layer.clip.start, total: layer.clip.duration, fps },
-          graphicTargetsAt(project, layer.clip, layer.clip.graphic, playhead, { width: ASPECTS[aspect].width, height: ASPECTS[aspect].height }),
+          targets,
           repaint
         )
         return live ?? nothing()

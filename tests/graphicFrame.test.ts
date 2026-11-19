@@ -14,6 +14,8 @@ import {
 import { graphicTargetsAt } from '@shared/graphics/targets'
 import { drawListAt, graphicFits } from '@shared/graphics/drawList'
 import { DRAWERS } from '@shared/graphics/templates/index'
+import { bezelPath, bezelWidth, landingFrame } from '@shared/graphics/templates/screenCard'
+import { screenCardFootage, screenCardKeys } from '@shared/graphics/screenCard'
 import { itemBounds, type DrawItem, type DrawList, type Drawer, type ShapeItem, type StrokeItem, type TextItem, type TextMeasure } from '@shared/graphics/items'
 import { numberOf } from '@shared/graphics/numbers'
 import { STROKE_TOLERANCE, flattenPath, strokeShape } from '@shared/graphics/stroke'
@@ -37,7 +39,7 @@ import { DEFAULT_COLOR, DEFAULT_TRANSFORM, emptyProject, type Clip, type MediaAs
  * asset; and `graphicTargetsAt`'s subject, fixed at onset. Phase 2's cases
  * (§6.2) are at the foot, for the templates drawn so far (counter, ring, bars,
  * keyword, lower-third) over their fixtures; phase 3's (the screen card,
- * §6.16) are not here.
+ * §6.16, piece 4) at the very foot.
  */
 
 const RATES = [24, 25, 30, 60]
@@ -206,18 +208,18 @@ describe('graphicMovingFrames', () => {
     expect(graphicMovingFrames(spec({ template: 'counter', anchor: true }), clean(), 30, 90)).toBe(46)
   })
 
-  it('runs past the settle for a screen card under a style with glow: the landing plus one loop of the edge sweep, never the whole hold', () => {
+  it('a screen card settles from its landing under every style, a glowing one too: L + 1 plus the settle, never the whole hold (piece 5 brings back the sweep’s loop)', () => {
     expect(SCREEN_CARD_MOVE_S).toBe(1.0)
     expect(EDGE_SWEEP_S).toBe(6)
     const card = spec({ template: 'screen-card', beats: [SCREEN_CARD_MOVE_S] })
-    // 60 s cards: 211 at 30 fps (§6.16), and L + 1 + round(6 × fps) elsewhere.
-    expect(graphicMovingFrames(card, glowing(), 30, 1800)).toBe(211)
-    expect(graphicMovingFrames(card, glowing(), 24, 1440)).toBe(169)
-    expect(graphicMovingFrames(card, glowing(), 25, 1500)).toBe(176)
-    expect(graphicMovingFrames(card, glowing(), 60, 3600)).toBe(421)
+    // Phase 3's piece 4 draws no edge sweep, so no style runs one loop of it: 30 + 1 + 15 = 46 at 30 fps for a 60 s card.
+    // Piece 5 restores §6.16's glowing branch, min(total, L + 1 + round(EDGE_SWEEP_S × fps)), 211 at 30 fps, with the sweep.
+    expect(graphicMovingFrames(card, glowing(), 30, 1800)).toBe(46)
+    expect(graphicMovingFrames(card, glowing(), 24, 1440)).toBe(37)
+    expect(graphicMovingFrames(card, glowing(), 25, 1500)).toBe(39)
+    expect(graphicMovingFrames(card, glowing(), 60, 3600)).toBe(91)
     // Capped at a short card.
-    expect(graphicMovingFrames(card, glowing(), 30, 100)).toBe(100)
-    // Without glow the card settles as every graphic does: L + 1 plus the settle.
+    expect(graphicMovingFrames(card, glowing(), 30, 40)).toBe(40)
     expect(graphicMovingFrames(card, clean(), 30, 1800)).toBe(46)
     expect(clean().glow).toBeUndefined()
   })
@@ -1516,5 +1518,221 @@ describe('graphicFrame, phase 2: steps, quote and callout, over their twelve fix
         }
       }
     }
+  })
+})
+
+/* ----------------------------------------------------------- the screen card */
+
+/*
+ * Phase 3's piece 4 (docs/CLIPS.md §6.16, "The screen card", its Tests list):
+ * the card's image item present up to the landing L and absent after; its dim
+ * drawn whatever the style's `dim`, its hole only after L; its moving frames
+ * L + 1 plus the settle, never `total`, for a 60 s card (the edge sweep's
+ * glowing branch is piece 5's); `screenCardKeys` for a card whose start is not
+ * the recording's; the card's box from the recording's mapping; and the dim
+ * that is the only dim while a card is on screen.
+ */
+describe('the screen card (§6.16)', () => {
+  const fake: TextMeasure = (t, look) => ({ width: t.length * look.px * 0.55, ascent: look.px * 0.8, descent: look.px * 0.2 })
+  const BOX = { x: 0, y: 656.25, width: 1080, height: 607.5 }
+  const card = (move: 'tilt-in' | 'pull-back', seconds = 60): GraphicSpec => ({
+    data: { template: 'screen-card', clipId: 'c', move },
+    seconds,
+    beats: [SCREEN_CARD_MOVE_S],
+    place: { auto: true, third: 'middle' },
+    seed: 1,
+    version: 1
+  })
+  const fileAt = (frame: number): string => `/pulled/${String(frame).padStart(5, '0')}.png`
+  const targetsAt = (fps: number) => (frame: number) => ({ screen: { box: BOX, file: frame <= landingFrame(fps) ? fileAt(frame) : null } })
+  const styles = (): GraphicStyle[] => [clean(), ...['neon', 'energetic', 'editorial'].map((id) => resolveGraphicStyle(id)), { ...clean(), dim: false }, { ...clean(), dim: true }]
+  const listAt = (move: 'tilt-in' | 'pull-back', st: GraphicStyle, frame: number, fps = FPS): DrawList => drawListAt(card(move), st, frame, fps, SIZE, fake, targetsAt(fps)(frame))
+
+  it('the landing L is round(SCREEN_CARD_MOVE_S × fps), the card’s own frames', () => {
+    expect(SCREEN_CARD_MOVE_S).toBe(1.0)
+    expect(RATES.map(landingFrame)).toEqual([24, 25, 30, 60])
+    expect(landingFrame(29.97)).toBe(30)
+    expect(landingFrame(0)).toBe(0)
+  })
+
+  it('draws its image item, the recording’s frame on the card’s box, on every frame up to L and on none after; the image is that frame’s own file', () => {
+    for (const fps of RATES) {
+      const L = landingFrame(fps)
+      for (const move of ['tilt-in', 'pull-back'] as const) {
+        for (const st of styles()) {
+          for (const frame of [0, 1, Math.floor(L / 2), L - 1, L, L + 1, L + 2, L + 30, 60 * fps - 1]) {
+            const images = listAt(move, st, frame, fps).items.filter((i) => i.kind === 'image')
+            const where = `${move} ${st.id} @${frame} of L ${L} at ${fps}`
+            if (frame <= L) {
+              expect(images, where).toHaveLength(1)
+              expect(images[0], where).toMatchObject({ src: fileAt(frame), box: BOX })
+            } else expect(images, where).toEqual([])
+          }
+        }
+      }
+    }
+  })
+
+  it('draws its dim whatever the style’s dim says, at the style’s dimOpacity; full-frame with no hole up to L, its hole exactly on the card’s box (radius 0) after', () => {
+    const L = landingFrame(FPS)
+    for (const move of ['tilt-in', 'pull-back'] as const) {
+      for (const st of styles()) {
+        for (const frame of [0, 5, L - 1, L, L + 1, L + 2, 1799]) {
+          const dims = listAt(move, st, frame).items.filter((i): i is Extract<DrawItem, { kind: 'dim' }> => i.kind === 'dim')
+          const where = `${move} ${st.id} (dim ${st.dim}) @${frame}`
+          expect(dims, where).toHaveLength(1)
+          expect(dims[0].alpha, where).toBe(st.palette.dimOpacity)
+          expect(dims[0].color, where).toBe(st.palette.dim)
+          if (frame <= L) expect(dims[0].hole, where).toBeUndefined()
+          else expect(dims[0].hole, where).toEqual({ box: BOX, radius: 0, feather: 0 })
+        }
+        // It fades in with the move: nothing at frame 0 (but `progress`' 1e-6 s allowance), all of it at L and after.
+        expect(listAt(move, st, 0).items[0].opacity).toBeCloseTo(0, 4)
+        expect(listAt(move, st, L).items[0].opacity).toBe(1)
+        expect(listAt(move, st, L + 1).items[0].opacity).toBe(1)
+      }
+    }
+  })
+
+  it('lands flat on the card’s box at L: the camera exactly 0 there (and absent after), the card at opacity 1 with no transform; both moves start off flat, Tilt in at opacity 0, Pull back scaled 1.35 about the box’s centre', () => {
+    const L = landingFrame(FPS)
+    for (const st of styles()) {
+      for (const move of ['tilt-in', 'pull-back'] as const) {
+        const at = listAt(move, st, L)
+        expect(at.camera, `${move} ${st.id}`).toEqual({ tilt: 0, yaw: 0, dolly: 0, fov: 30 })
+        for (const field of ['tilt', 'yaw', 'dolly'] as const) expect(Object.is(at.camera![field], 0), `${move} ${field}`).toBe(true)
+        for (const item of at.items.filter((i) => i.kind !== 'dim')) {
+          expect(item.opacity, `${move} ${item.id}`).toBe(1)
+          expect(item.transform, `${move} ${item.id}`).toBeUndefined()
+        }
+        expect(listAt(move, st, L + 1).camera, move).toBeUndefined()
+        expect(listAt(move, st, 1799).camera, move).toBeUndefined()
+      }
+      // Frame 0, within `progress`' 1e-6 s allowance of each start; the signs are the moves' (the top away, the left edge toward).
+      const tilt = listAt('tilt-in', st, 0)
+      expect(tilt.camera!.tilt).toBeCloseTo(22, 3)
+      expect(tilt.camera!.yaw).toBeCloseTo(-10, 3)
+      expect(tilt.camera!.dolly).toBeCloseTo(-0.15, 5)
+      for (const item of tilt.items.filter((i) => i.kind !== 'dim')) expect(item.opacity).toBeLessThan(0.001)
+      const pull = listAt('pull-back', st, 0)
+      expect(pull.camera!.tilt).toBeCloseTo(6, 3)
+      expect([pull.camera!.yaw, pull.camera!.dolly]).toEqual([0, 0])
+      for (const item of pull.items.filter((i) => i.kind !== 'dim')) {
+        expect(item.opacity).toBe(1)
+        expect(item.transform!.scale).toBeCloseTo(1.35, 4)
+        expect([item.transform!.x, item.transform!.y, item.transform!.rotate]).toEqual([0, 0, 0])
+      }
+    }
+  })
+
+  it('Pull back’s scale is a transform painter A honours: the image’s bounds are 1.35 × the box about its centre at frame 0, the box itself at L', () => {
+    const L = landingFrame(FPS)
+    const image = (frame: number): DrawItem => listAt('pull-back', clean(), frame).items.find((i) => i.kind === 'image')!
+    const first = itemBounds(image(0), SIZE)!
+    const k = image(0).transform!.scale
+    expect(k).toBeCloseTo(1.35, 4)
+    expectRect(first, { x: 540 - k * 540, y: 960 - k * 303.75, width: k * 1080, height: k * 607.5 })
+    expectRect(itemBounds(image(L), SIZE), BOX)
+  })
+
+  it('the bezel: one square-joined stroke round the box in the style’s panel colour, max(M19’s minimum, round(0.004 × the short side)) wide, on every frame', () => {
+    expect(bezelWidth({ width: 1080, height: 1920 })).toBe(4)
+    expect(bezelWidth({ width: 540, height: 960 })).toBe(2)
+    expect(bezelWidth({ width: 2160, height: 3840 })).toBe(9)
+    // M19's minimum where the rounding gives less: 2 px of a 1080 side, scaled.
+    expect(bezelWidth({ width: 100, height: 100 })).toBeCloseTo((2 * 100) / 1080, 9)
+    for (const st of styles()) {
+      for (const frame of [0, 30, 31, 1799]) {
+        const strokes = listAt('tilt-in', st, frame).items.filter((i): i is StrokeItem => i.kind === 'stroke')
+        expect(strokes, `${st.id} @${frame}`).toHaveLength(1)
+        expect(strokes[0]).toMatchObject({ id: 'bezel', d: bezelPath(BOX), from: 0, to: 1, width: 4, color: st.palette.panel, join: 'miter' })
+      }
+    }
+  })
+
+  it('draws nothing without its screen target, and the move without the picture when a frame has no file', () => {
+    expect(drawListAt(card('tilt-in'), clean(), 5, FPS, SIZE, fake, {}).items).toEqual([])
+    expect(drawListAt(card('tilt-in'), clean(), 5, FPS, SIZE, fake, { screen: null }).items).toEqual([])
+    const blind = drawListAt(card('tilt-in'), clean(), 5, FPS, SIZE, fake, { screen: { box: BOX, file: null } })
+    expect(blind.items.map((i) => i.kind)).toEqual(['dim', 'stroke'])
+    expect(blind.camera).toBeDefined()
+  })
+
+  it('its moving frames are L + 1 plus the settle under every style, a glowing one too, never total for a 60 s card (piece 5 adds the sweep’s loop)', () => {
+    for (const fps of RATES) {
+      const L = landingFrame(fps)
+      const want = L + 1 + Math.round(SETTLE_S * fps)
+      for (const st of [...styles(), glowing()]) {
+        const got = graphicMovingFrames(card('tilt-in'), st, fps, 60 * fps)
+        expect(got, `${st.id} at ${fps}`).toBe(want)
+        expect(got, `${st.id} at ${fps}`).toBeLessThan(60 * fps)
+        // The frame after the landing, where the hole opens, is baked: tpad holds the card's own settled picture.
+        expect(got).toBeGreaterThanOrEqual(L + 2)
+      }
+    }
+    expect(graphicMovingFrames(card('pull-back'), clean(), 30, 1800)).toBe(46)
+    // Capped at a short card.
+    expect(graphicMovingFrames(card('pull-back'), clean(), 30, 40)).toBe(40)
+  })
+
+  it('screenCardKeys: 0 held at the card’s start within the recording, 1 at that plus L + 1, both in the recording’s own frames', () => {
+    for (const fps of RATES) {
+      const L = landingFrame(fps)
+      // The card spans its recording today: its first key on the recording's frame 0.
+      expect(screenCardKeys({ start: 300 }, { start: 300 }, fps)).toEqual([
+        { frame: 0, value: 0, ease: 'hold' },
+        { frame: L + 1, value: 1 }
+      ])
+      // A card whose start is not the recording's: cardStart − clip.start, then + L + 1. Never the timeline frame.
+      const keys = screenCardKeys({ start: 450 }, { start: 300 }, fps)
+      expect(keys).toEqual([
+        { frame: 150, value: 0, ease: 'hold' },
+        { frame: 150 + L + 1, value: 1 }
+      ])
+      expect(keys[1].frame).toBeGreaterThan(keys[0].frame)
+    }
+  })
+
+  it('screenCardFootage asks the pre-pass for the card’s frames 0..L as the recording plays them: from the card’s start within the clip, never the timeline frame; null when the recording is gone, steadied or not footage', () => {
+    const { project, footage } = setup({ width: 1920, height: 1080, frames: 1800, canvas: { width: 1080, height: 1920 } })
+    // The recording on the timeline from frame 30 (setup's), 60 frames into its file, at half speed.
+    const rec: Clip = { ...footage, inPoint: 60, speed: 0.5, crop: { x: 100, y: 0, width: 1600, height: 1080 } }
+    const p: Project = { ...project, clips: [rec] }
+    const want = screenCardFootage(p, card('tilt-in'), rec.start, landingFrame(FPS) + 1, FPS)
+    expect(want).toMatchObject({ path: '/media/talk.mp4', inPoint: 60, duration: rec.duration, speed: 0.5, first: 0, count: 31, fps: FPS, crop: rec.crop, size: { width: 1920, height: 1080 }, maxEdge: 2160 })
+    // A card starting 45 frames into its recording pulls from the clip's frame 45.
+    expect(screenCardFootage(p, card('tilt-in'), rec.start + 45, 31, FPS)).toMatchObject({ first: 45, count: 31 })
+    expect(screenCardFootage({ ...p, clips: [] }, card('tilt-in'), 30, 31, FPS)).toBeNull()
+    expect(screenCardFootage({ ...p, clips: [{ ...rec, steady: true }] }, card('tilt-in'), 30, 31, FPS)).toBeNull()
+    expect(screenCardFootage({ ...p, assets: p.assets.map((a) => ({ ...a, kind: 'image' as const })) }, card('tilt-in'), 30, 31, FPS)).toBeNull()
+    expect(screenCardFootage(p, spec(), 30, 31, FPS)).toBeNull()
+  })
+
+  it('graphicTargetsAt gives the card its box, the whole recording through its mapping (a 16:9 recording contained in a 9:16 frame), file null; and another graphic under it underCard', () => {
+    const { project, footage } = setup({ width: 1920, height: 1080, frames: 1800, canvas: { width: 1080, height: 1920 } })
+    const cardClip: Clip = { ...footage, id: 'k', assetId: 'g', trackId: 'v2', graphic: card('tilt-in') }
+    const counter: Clip = { ...footage, id: 'n', assetId: 'g', trackId: 'v2', start: 300, duration: 90, graphic: spec() }
+    const p: Project = { ...project, clips: [...project.clips, cardClip, counter] }
+    const got = graphicTargetsAt(p, cardClip, cardClip.graphic!, cardClip.start + 45, SIZE)
+    expect(got.screen?.file).toBeNull()
+    expectRect(got.screen?.box, BOX)
+    expect(got.underCard).toBeUndefined()
+    // The box is the card's first frame's, on every frame.
+    expect(graphicTargetsAt(p, cardClip, cardClip.graphic!, cardClip.start + 900, SIZE)).toEqual(got)
+    // Scaled with the size asked for.
+    expectRect(graphicTargetsAt(p, cardClip, cardClip.graphic!, 30, { width: 540, height: 960 }).screen?.box, { x: 0, y: 328.125, width: 540, height: 303.75 })
+    // The recording gone: no box.
+    expect(graphicTargetsAt({ ...p, clips: [cardClip] }, cardClip, cardClip.graphic!, 30, SIZE).screen).toBeNull()
+    // A counter under the card: underCard, so it draws no dim of its own (§6.9: the card's is the only dim).
+    const under = graphicTargetsAt(p, counter, counter.graphic!, counter.start, SIZE)
+    expect(under.underCard).toBe(true)
+    const dimming = resolveGraphicStyle('energetic')
+    expect(dimming.dim).toBe(true)
+    const kinds = (t: typeof under) => drawListAt(counter.graphic!, dimming, 60, FPS, SIZE, fake, t).items.map((i) => i.kind)
+    expect(kinds(under)).not.toContain('dim')
+    expect(kinds({ ...under, underCard: undefined })).toContain('dim')
+    // Off the card's span: not under it.
+    const after: Clip = { ...counter, id: 'm', start: 1830 }
+    expect(graphicTargetsAt({ ...p, clips: [...p.clips, after] }, after, after.graphic!, after.start, SIZE).underCard).toBeUndefined()
   })
 })

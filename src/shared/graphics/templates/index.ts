@@ -20,6 +20,7 @@ import { drawKeyword } from './keyword'
 import { drawLowerThird } from './lowerThird'
 import { drawQuote } from './quote'
 import { drawRing } from './ring'
+import { drawScreenCard } from './screenCard'
 import { drawSteps } from './steps'
 
 export const DRAWERS: Partial<Record<GraphicTemplateId, Drawer>> = Object.freeze({
@@ -30,5 +31,7 @@ export const DRAWERS: Partial<Record<GraphicTemplateId, Drawer>> = Object.freeze
   callout: drawCallout,
   ring: drawRing,
   keyword: drawKeyword,
-  'lower-third': drawLowerThird
+  'lower-third': drawLowerThird,
+  // Phase 3's piece 4 (§6.16): drawn only with its `targets.screen`, which the app gives a card made by the dock's Screen card.
+  'screen-card': drawScreenCard
 })

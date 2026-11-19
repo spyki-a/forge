@@ -58,6 +58,9 @@ import {
 import { footageOf } from '@shared/graphics/sound'
 import { libraryGraphicAt } from '@shared/graphics/library'
 import { graphicTargetsAt } from '@shared/graphics/targets'
+import type { GraphicTargets } from '@shared/graphics/items'
+import { isScreenCard, realignScreenCards, screenCardFootage, screenCardPulledFrames, screenCardRefusal, screenCardSpec } from '@shared/graphics/screenCard'
+import type { ScreenCardMove } from '@shared/graphics/templates/screenCard'
 import { captionSourceClip } from '@shared/captions/timeline'
 import { withMotion, withoutMotionForZoom } from '@shared/edit/camera'
 import {
@@ -195,7 +198,7 @@ import { bakeText, bakeTextSequence } from './textCanvas'
 import { bakePaperSequence, paperDuration } from './paperCanvas'
 import { bakeCarouselSequence } from './carouselCanvas'
 import { bakeMomentSequence } from './momentCanvas'
-import { bakeGraphicSequence } from './graphicCanvas'
+import { bakeGraphicSequence, screenTargetsAt } from './graphicCanvas'
 import { momentTextures } from '@shared/render/momentTextures'
 import type { TexturePlan } from '@shared/render/moment'
 import {
@@ -1148,6 +1151,17 @@ interface EditorState {
     how?: { generatedBy?: { rule: string; reason: string }; sounds?: boolean }
   ) => Promise<string | null>
   /**
+   * The dock's Screen card (docs/CLIPS.md §6.16, phase 3's piece 4): the
+   * video clip `clipId` framed as a screen card with `move`, through
+   * `addGraphicClip` spanning the clip exactly, no exit fade, no
+   * `generatedBy` (the card is your edit); its two opacity keys on the clip
+   * (`screenCardKeys`) are written by the same update's realign
+   * (`realignScreenCards`), so card and keys are one undo step. Refused, with
+   * the reason as a note and nothing changed, when `screenCardRefusal` gives
+   * one. The card's id, or null.
+   */
+  addScreenCard: (clipId: string, move: ScreenCardMove) => Promise<string | null>
+  /**
    * A tile of the Library's Graphics drawer placed (try-out 1 piece 6,
    * graphics/library.ts): `libraryGraphicAt` decides its spec, third and
    * refusal at `frame` (the playhead when left out), and `addGraphicClip`
@@ -2097,8 +2111,22 @@ export const useEditor = create<EditorState>((set, get) => ({
 
   update: (recipe) => {
     const before = get().project
-    const after = recipe(before)
-    if (after === before) return
+    const made = recipe(before)
+    if (made === before) return
+    /*
+     * Every screen card spans its recording, which carries exactly its two
+     * keys, after every edit (docs/CLIPS.md §6.16, graphics/screenCard.ts
+     * `realignScreenCards`): a move, a trim, a retime, a frame-rate change, a
+     * delete, a split, a Drop. In the edit's own history step. The same
+     * project back when no card is involved.
+     */
+    const after = realignScreenCards(before, made)
+    // A card realigned (its version moved) draws its moving frames again once the edit rests.
+    for (const c of after.clips) {
+      if (!isScreenCard(c)) continue
+      const was = before.clips.find((b) => b.id === c.id)
+      if (was && was !== c && was.graphic?.version !== c.graphic?.version) rebakeWhenTrimRests(c.id, () => get().rebakeGraphic(c.id))
+    }
 
     // Outside a transaction every change is its own history entry.
     if (pendingSnapshot === null) {
@@ -2510,7 +2538,9 @@ export const useEditor = create<EditorState>((set, get) => ({
 
         if (clip.graphic) {
           // §6.9's `place.auto` recompute is setAspect's (in its own update), not this arm's: setFrameRate calls
-          // here too, and a rate change moves no third. §6.16's screen-card realign is phase 3's.
+          // here too, and a rate change moves no third. §6.16's screen-card realign is every update's
+          // (`realignScreenCards` in `update`): setFrameRate's own update realigned the card and its keys
+          // before this runs, so this arm only draws the card again at the new rate.
           // At the new canvas, through the one bake (docs/CLIPS.md §6.4's arm).
           await get().rebakeGraphic(clip.id)
           continue
@@ -3850,7 +3880,8 @@ export const useEditor = create<EditorState>((set, get) => ({
             transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
             color: { brightness: 0, contrast: 1, saturation: 1 },
             // The exit is opacity keys over the clip's last 0.3 s (graphics/frame.ts): held frames are never baked to fade.
-            keyframes: graphicExitKeys(duration, fps),
+            // A screen card has none: it ends as its recording ends (§6.16).
+            keyframes: spec.data.template === 'screen-card' ? undefined : graphicExitKeys(duration, fps),
             graphic: spec,
             ...(how?.generatedBy ? { generatedBy: { ...how.generatedBy } } : {})
           }
@@ -3869,6 +3900,18 @@ export const useEditor = create<EditorState>((set, get) => ({
     get().revealClip(clipId)
     void get().rebakeGraphic(clipId)
     return clipId
+  },
+
+  addScreenCard: async (clipId, move) => {
+    const { project, notify } = get()
+    const refused = screenCardRefusal(project, clipId)
+    if (refused !== null) {
+      notify(refused, 'info')
+      return null
+    }
+    const recording = project.clips.find((c) => c.id === clipId)!
+    // From the recording's own track, climbing to the first free lane above it (stackOverlay), so the card sits over it.
+    return get().addGraphicClip(recording.trackId, recording.start, screenCardSpec(recording, move, project.settings.fps))
   },
 
   placeLibraryGraphic: (templateId, trackId, frame) => {
@@ -3943,6 +3986,14 @@ export const useEditor = create<EditorState>((set, get) => ({
        * first frame (graphics/targets.ts); phases 3 and 4's per-frame targets
        * read project frame `clip.start + f`.
        */
+      const targetsAt = (f: number): GraphicTargets => graphicTargetsAt(project, clip, spec, clip.start + f, { width, height })
+      /*
+       * A screen card's frames are pulled first through the moments' pre-pass
+       * (docs/CLIPS.md §6.16, `screenTargetsAt`); a card whose request cannot
+       * be built (its recording gone or steadied) keeps the frames it had.
+       */
+      const footage = spec.data.template === 'screen-card' ? screenCardFootage(project, spec, clip.start, screenCardPulledFrames(fps), fps) : undefined
+      if (footage === null) return
       const baked = await bakeGraphicSequence(
         spec,
         graphicStyleOf(project, spec),
@@ -3951,7 +4002,7 @@ export const useEditor = create<EditorState>((set, get) => ({
         height,
         clip.duration,
         fps,
-        (f) => graphicTargetsAt(project, clip, spec, clip.start + f, { width, height }),
+        footage ? await screenTargetsAt(footage, targetsAt) : targetsAt,
         false
       )
       // Superseded, or nothing drawn: the newer bake's frames, or the old ones, stay.

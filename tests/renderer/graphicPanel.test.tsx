@@ -32,7 +32,7 @@ vi.mock('../../src/renderer/src/store', async (importOriginal) => {
   return { ...real, useEditor }
 })
 
-const bake = vi.hoisted(() => ({ asks: [] as string[], flat: new Set<string>() }))
+const bake = vi.hoisted(() => ({ asks: [] as string[], flat: new Set<string>(), framesFailed: new Set<string>() }))
 vi.mock('../../src/renderer/src/graphicCanvas', () => ({
   bakeGraphicSequence: async (_spec: unknown, _style: unknown, clipId: string) => {
     bake.asks.push(clipId)
@@ -42,13 +42,18 @@ vi.mock('../../src/renderer/src/graphicCanvas', () => ({
   graphicPreviewCanvas: () => null,
   // The preview's answer, stood in for: which clips it drew flat for want of WebGL (§6.16), as the hook the panel reads.
   graphicDrawnFlat: (clipId: string) => bake.flat.has(clipId),
-  useGraphicDrawnFlat: (select: (s: { ids: ReadonlySet<string> }) => unknown) => select({ ids: bake.flat })
+  useGraphicDrawnFlat: (select: (s: { ids: ReadonlySet<string> }) => unknown) => select({ ids: bake.flat }),
+  // A screen card whose recording's frames the preview could not pull (§6.16, phase 3's piece 4), as the hook the panel reads.
+  useScreenCardFailed: (select: (s: { ids: ReadonlySet<string> }) => unknown) => select({ ids: bake.framesFailed }),
+  // The card's pull: its targets handed back as they came (graphicCanvas.test reads the files).
+  screenTargetsAt: async (_footage: unknown, targetsAt: unknown) => targetsAt
 }))
 
 const { useEditor } = await import('../../src/renderer/src/store')
 const { useCatalog } = await import('../../src/renderer/src/catalog')
 const GP = await import('../../src/renderer/src/components/GraphicPanel')
 const { TrimmerDock } = await import('../../src/renderer/src/components/TrimmerDock')
+const SC = await import('../../src/renderer/src/components/tools/ScreenCardButton')
 const census = JSON.parse(readFileSync(resolve(__dirname, '../fixtures/ui-census.json'), 'utf8')) as { label: string; match: string; home: string; needs: string; count?: number }[]
 const { GraphicPanel } = GP
 
@@ -660,5 +665,72 @@ describe('the dock’s graphic panel (§6.6)', () => {
     ;(buttonsOf('s', 'None')[0].props.onClick as () => void)()
     expect(project()).toBe(at)
     expect(state().past.length).toBe(past)
+  })
+})
+
+/*
+ * Phase 3's piece 4 (docs/CLIPS.md §6.16, "Its trigger" and "Refused, with
+ * the reason in the dock"): the dock's Screen card on a selected video clip,
+ * and a card's own panel.
+ */
+describe('the dock’s Screen card (§6.16)', () => {
+  const tool = (id: string): Host[] => hosts(SC.ScreenCardButton({ clipId: id }))
+  const moves = (id: string): Host[] => tool(id).filter((h) => h.type === 'button')
+  const reason = (id: string): string[] => tool(id).filter((h) => h.props['data-screen-card-reason'] !== undefined).map(text)
+
+  it('is mounted once in the Inspector, beside the reframe section, on a video clip that is not a graphic', () => {
+    const inspector = readFileSync(resolve(__dirname, '../../src/renderer/src/components/Inspector.tsx'), 'utf8')
+    expect([...inspector.matchAll(/<ScreenCardButton /g)]).toHaveLength(1)
+    const reframe = "{asset?.kind === 'video' && <ReframePanel clipId={clip.id} />}"
+    const mount = "{asset?.kind === 'video' && !clip.graphic && <ScreenCardButton clipId={clip.id} />}"
+    expect([...inspector.matchAll(/<ReframePanel /g)]).toHaveLength(1)
+    expect(inspector.split(mount)).toHaveLength(2)
+    expect(inspector.indexOf(reframe)).toBeGreaterThan(-1)
+    expect(inspector.indexOf(mount)).toBeGreaterThan(inspector.indexOf(reframe))
+  })
+
+  it('shows Screen card with Tilt in and Pull back; a press frames the clip, card and keys in one undo step, and then says it has a card', async () => {
+    start([])
+    expect(tool('shot').filter((h) => h.type === 'span').map(text)).toContain(SC.SCREEN_CARD)
+    expect(moves('shot').map(text)).toEqual(['Tilt in', 'Pull back'])
+    expect(moves('shot').every((b) => b.props.disabled === false)).toBe(true)
+    expect(reason('shot')).toEqual([])
+    const before = project()
+    ;(moves('shot')[1].props.onClick as () => void)()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    const card = project().clips.find((c) => c.graphic?.data.template === 'screen-card')!
+    expect(card.graphic!.data).toEqual({ template: 'screen-card', clipId: 'shot', move: 'pull-back' })
+    expect(clipById('shot').keyframes?.opacity).toEqual([{ frame: 0, value: 0, ease: 'hold' }, { frame: 31, value: 1 }])
+    expect(state().past).toHaveLength(1)
+    expect(reason('shot')).toEqual(['It has a screen card already'])
+    expect(moves('shot').every((b) => b.props.disabled === true)).toBe(true)
+    undoesTo(before)
+  })
+
+  it('greys both moves and says the reason on a clip that cannot be one', () => {
+    start([])
+    useEditor.setState({ project: { ...project(), clips: project().clips.map((c) => (c.id === 'shot' ? { ...c, steady: true } : c)) } })
+    expect(moves('shot').every((b) => b.props.disabled === true)).toBe(true)
+    expect(reason('shot')).toEqual(['Not on a steadied clip: turn Steady off first'])
+  })
+
+  it('a card’s own panel: its notes only, no field, no Depth, no Seconds, no Place; the frames note when its preview could not pull them', () => {
+    const card: Clip = {
+      ...base('k', 'drawn-k', 'v2', 0, FPS * 70),
+      graphic: { data: { template: 'screen-card', clipId: 'shot', move: 'tilt-in' }, seconds: 70, beats: [1], place: { auto: true, third: 'middle' }, seed: 1, version: 1 }
+    }
+    start([card])
+    const shown = panel('k')
+    const words = shown.map(text)
+    expect(words).toContain(GP.GRAPHIC_PANEL_HEADING)
+    expect(words).toContain(GP.SCREEN_CARD_FOLLOWS_NOTE)
+    for (const absent of [GP.DEPTH, GP.SECONDS, GP.PLACE, GP.SCREEN_CARD_FRAMES_NOTE]) expect(words, absent).not.toContain(absent)
+    expect(shown.filter((h) => h.type === 'button' || h.type === 'input')).toEqual([])
+    bake.framesFailed.add('k')
+    try {
+      expect(panel('k').map(text)).toContain(GP.SCREEN_CARD_FRAMES_NOTE)
+    } finally {
+      bake.framesFailed.delete('k')
+    }
   })
 })

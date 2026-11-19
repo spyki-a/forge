@@ -188,6 +188,13 @@ export interface GraphicTargets {
   subject?: Rect | null
   tip?: Point | null
   screen?: { box: Rect; file: string | null } | null
+  /**
+   * Phase 3 (§6.9, §6.16): a screen card is on screen at this graphic's first
+   * frame, so this graphic draws no dim of its own (`dimFor`): "while a card
+   * is on screen its dim is the only dim". Read at onset, as `subject` is.
+   * Never set on the card itself.
+   */
+  underCard?: boolean
 }
 
 /** What a template's draw function returns (§6.2): its items, and from phase 3 its camera and glow (§6.16). In phases 1 and 2, `items` alone. */

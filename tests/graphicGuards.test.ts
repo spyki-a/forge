@@ -12,6 +12,7 @@ import { isKeyable } from '@shared/render/chromaKey'
 import { canSteady } from '@shared/render/steady'
 import { COPY_RULE, DIRECTOR_RULES, SPINE_RULE, clearDirector } from '@shared/director/apply'
 import { bakeForExport, type Bakers } from '@shared/render/exportBake'
+import { screenCardKeys } from '@shared/graphics/screenCard'
 
 /*
  * Every guard a self-drawn kind joins reads one constant (docs/CLIPS.md §6.4,
@@ -300,8 +301,9 @@ describe('lane C’s wiring: every per-kind arm has its graphic arm', () => {
 
   it('the export’s bakers hand a graphic to the store’s own bake, its arguments in order, and the export drops a failed one on a line of its own', () => {
     const bakers = SOURCES.get('src/renderer/src/exportBakers.ts')!
+    // Phase 3's piece 4 (§6.16): a screen card's `footage` is pulled first and its filled targets handed on in targetsAt's place.
     expect(bakers).toMatch(
-      /graphic: \(spec, style, key, width, height, frames, fps, targetsAt, boxAllowed\) =>\s*bakeGraphicSequence\(spec, style, key, width, height, frames, fps, targetsAt, boxAllowed\)/
+      /graphic: async \(spec, style, key, width, height, frames, fps, targetsAt, boxAllowed, footage\) =>\s*bakeGraphicSequence\(spec, style, key, width, height, frames, fps, footage \? await screenTargetsAt\(footage, targetsAt\) : targetsAt, boxAllowed\)/
     )
     const exportBake = SOURCES.get('src/shared/render/exportBake.ts')!
     // The catch's two lines, each its own (§6.4's regex refuses `clip.moment || clip.graphic`).
@@ -339,5 +341,60 @@ describe('lane C’s export: a graphic that will not draw is dropped, and said',
     const drawn = await bakeForExport(edit(), { width: 1080, height: 1920 }, bakers(async () => ({ pattern: '/cache/g-export.seq/%05d.png', frames: 12 })))
     expect(drawn.clips.map((c) => c.id)).toEqual(['shot', 'g'])
     expect(drawn.assets.find((a) => a.id === 'g')!.frames).toEqual({ pattern: '/cache/g-export.seq/%05d.png', count: 12 })
+  })
+
+  /*
+   * Phase 3's piece 4 (§6.16, "The export"): a screen card whose bake fails
+   * or returns null is dropped with its note, and its two keys are struck
+   * from the export's copy of the recording clip in the same step, or the
+   * recording would play hidden for the move's length. A key of the user's
+   * own stays; the edit is not touched.
+   */
+  const cardEdit = (shot: Partial<Clip> = {}): Project => {
+    const recording = clip({ id: 'shot', assetId: 'f', duration: 300, ...shot })
+    const card: Clip = {
+      ...clip({ id: 'k', assetId: 'g', trackId: 'v2', duration: 300 }),
+      graphic: { data: { template: 'screen-card', clipId: 'shot', move: 'tilt-in' }, seconds: 10, beats: [1], place: { auto: true, third: 'middle' }, seed: 1, version: 1 }
+    }
+    const keys = [...screenCardKeys(card, recording, 30), { frame: 200, value: 0.5 }]
+    return {
+      ...emptyProject('guards'),
+      assets: [asset('f'), asset('g', { kind: 'image', path: '', fps: null, size: 0 })],
+      clips: [{ ...recording, keyframes: { opacity: keys, volume: [{ frame: 0, value: 1 }] } }, card]
+    }
+  }
+
+  it('a screen card that will not draw is dropped AND its two keys are struck from the export’s recording; your key and other tracks stay; the edit untouched', async () => {
+    for (const graphic of [async () => null, async () => { throw new Error('the pull failed') }] as Bakers['graphic'][]) {
+      const project = cardEdit()
+      const before = JSON.stringify(project)
+      const errors: string[] = []
+      const out = await bakeForExport(project, { width: 1080, height: 1920 }, bakers(graphic), (c, err) => errors.push(`${c.id}: ${String(err)}`))
+      expect(out.clips.map((c) => c.id)).toEqual(['shot'])
+      expect(out.clips[0].keyframes).toEqual({ opacity: [{ frame: 200, value: 0.5 }], volume: [{ frame: 0, value: 1 }] })
+      expect(errors).toHaveLength(1)
+      expect(JSON.stringify(project)).toBe(before)
+    }
+  })
+
+  it('a screen card whose recording cannot be pulled (steadied) is dropped with its note and its keys struck, never asked of the baker', async () => {
+    const asked: string[] = []
+    const errors: string[] = []
+    const out = await bakeForExport(cardEdit({ steady: true }), { width: 1080, height: 1920 }, bakers(async (spec) => { asked.push(spec.data.template); return null }), (c, err) => errors.push(`${c.id}: ${String(err)}`))
+    expect(asked).toEqual([])
+    expect(errors).toEqual(["k: Error: the screen card's recording cannot be read"])
+    expect(out.clips.map((c) => c.id)).toEqual(['shot'])
+    expect(out.clips[0].keyframes?.opacity).toEqual([{ frame: 200, value: 0.5 }])
+  })
+
+  it('a screen card that draws keeps its keys, and its baker is handed the pull of its L + 1 moving frames from the recording', async () => {
+    const asked: { first: number; count: number; path: string }[] = []
+    const out = await bakeForExport(cardEdit(), { width: 1080, height: 1920 }, bakers(async (_s, _st, _k, _w, _h, _f, _fps, _t, _box, footage) => {
+      if (footage) asked.push({ first: footage.first, count: footage.count, path: footage.path })
+      return { pattern: '/cache/k-export.seq/%05d.png', frames: 46 }
+    }))
+    expect(asked).toEqual([{ first: 0, count: 31, path: '/media/f.mp4' }])
+    expect(out.clips.map((c) => c.id)).toEqual(['shot', 'k'])
+    expect(out.clips[0].keyframes?.opacity).toEqual(cardEdit().clips[0].keyframes?.opacity)
   })
 })

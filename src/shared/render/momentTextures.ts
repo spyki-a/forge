@@ -1,6 +1,6 @@
-import type { Clip, MomentSpec, Project } from '../timeline'
+import type { Clip, MediaAsset, MomentSpec, Project } from '../timeline'
 import { previewAt, transitionById } from '../transitions/registry'
-import { bridgesCut, footageWindow, momentSpan, texturePlanFor, type TexturePlan } from './moment'
+import { bridgesCut, footageWindow, momentSpan, texturePlanFor, type FootageRequest, type TexturePlan } from './moment'
 import { FOOTAGE_MAX_EDGE, followedFootage } from './momentFrames'
 
 /**
@@ -54,34 +54,7 @@ export function momentTextures(
     // A bridge follows each shot's own move so its ends match the shots; a depth push is the move.
     const base = texturePlanFor(clip, asset, momentStart, planes, bridge, inset)
     if (asset.kind !== 'video') return base
-    const window = footageWindow(base.at, total, base.frames)
-    return {
-      ...base,
-      footage: {
-        path: asset.path,
-        inPoint: clip.inPoint,
-        duration: clip.duration,
-        ...(clip.speed !== undefined ? { speed: clip.speed } : {}),
-        ...(clip.ramp ? { ramp: { from: clip.ramp.from, to: clip.ramp.to } } : {}),
-        ...(clip.smoothSlow ? { smoothSlow: true } : {}),
-        ...(clip.hold ? { hold: true } : {}),
-        first: window.first,
-        count: window.count,
-        fps,
-        /*
-         * The crop as the RENDER cuts this clip: its stored crop, or — for a
-         * clip that follows its subject — the followed crop's size and the
-         * keys it moves by, both halves' on a stacked two-up (docs/CLIPS.md
-         * §4.7), so the pulled frames are the render's own frames beneath.
-         * The stored crop alone would pull the clip's first-frame crop for
-         * every moment over it. `followKeys` reads only the assets, the
-         * subjects and the settings, which this Pick carries.
-         */
-        ...followedFootage(project as Project, clip, fps),
-        size: { width: asset.width ?? 0, height: asset.height ?? 0 },
-        maxEdge: FOOTAGE_MAX_EDGE
-      }
-    }
+    return { ...base, footage: footageRequest(project, clip, asset, footageWindow(base.at, total, base.frames), fps) }
   }
   // The outgoing shot is the clip under the frame just before the cut, the incoming the one under the moment's
   // last frame: the two frames the hand-offs are judged on, whatever a split did to the ids.
@@ -89,6 +62,47 @@ export function momentTextures(
   const to = plan(spec.to.clipId, momentStart + total - 1)
   if (!to) return null
   return { from: spec.from ? plan(spec.from.clipId, momentStart + Math.max(0, before - 1)) : null, to }
+}
+
+/**
+ * What the pre-pass is asked for, for `window` of a footage clip's frames
+ * (`footageWindow`): the clip's file, its retime and its crop exactly as the
+ * render plays them. The one builder of a `FootageRequest`: a moment's shots
+ * (`momentTextures`) and phase 3's screen card (graphics/screenCard.ts
+ * `screenCardFootage`, docs/CLIPS.md §6.16) both ask through it, so the frames
+ * a card pulls are the frames a bridge over the same clip pulls.
+ */
+export function footageRequest(
+  project: Pick<Project, 'clips' | 'assets' | 'parallax' | 'settings' | 'subjects'>,
+  clip: Clip,
+  asset: Pick<MediaAsset, 'path' | 'width' | 'height'>,
+  window: { first: number; count: number },
+  fps: number
+): FootageRequest {
+  return {
+    path: asset.path,
+    inPoint: clip.inPoint,
+    duration: clip.duration,
+    ...(clip.speed !== undefined ? { speed: clip.speed } : {}),
+    ...(clip.ramp ? { ramp: { from: clip.ramp.from, to: clip.ramp.to } } : {}),
+    ...(clip.smoothSlow ? { smoothSlow: true } : {}),
+    ...(clip.hold ? { hold: true } : {}),
+    first: window.first,
+    count: window.count,
+    fps,
+    /*
+     * The crop as the RENDER cuts this clip: its stored crop, or — for a
+     * clip that follows its subject — the followed crop's size and the
+     * keys it moves by, both halves' on a stacked two-up (docs/CLIPS.md
+     * §4.7), so the pulled frames are the render's own frames beneath.
+     * The stored crop alone would pull the clip's first-frame crop for
+     * every moment over it. `followKeys` reads only the assets, the
+     * subjects and the settings, which this Pick carries.
+     */
+    ...followedFootage(project as Project, clip, fps),
+    size: { width: asset.width ?? 0, height: asset.height ?? 0 },
+    maxEdge: FOOTAGE_MAX_EDGE
+  }
 }
 
 /**

@@ -1384,6 +1384,9 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
   'canvas-drawn': async () => {
     throw new Error('this text is painted on the preview canvas, where no DOM query can read it')
   },
+  'screen-card-frames-failed': async () => {
+    throw new Error('the frames note needs the preview’s pull of a recording to fail, and here the bridge refuses every pull, so whether it shows depends on when the Preview first draws the card; read it in the development app')
+  },
   'graphic-drawn-flat': async () => {
     throw new Error('the drawn-flat note needs WebGL missing, and the harness’s WebGL starts; the compositor option pretends it missing and reads it')
   },
@@ -1622,6 +1625,49 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     if (!look) throw new Error('census: the bridge offers no built-in looks')
     editor().setColor(V, { brightness: 0.2, lut: { file: look.file, name: look.name, intensity: 0.8 } })
     return { ids: { V } }
+  },
+  /*
+   * The dock's Screen card (docs/CLIPS.md §6.16, phase 3's piece 4): its
+   * refusals, each said under the greyed moves (graphics/screenCard.ts
+   * `screenCardRefusal`); 'video-steady' and 'video-look' above give two of
+   * them, these the rest. Then a card made, with its recording selected (one
+   * card per recording) and with the card itself selected (its panel).
+   */
+  'video-turned': async (env) => {
+    const { V } = await videoClip(env)
+    editor().setTransform(V, { rotation: 90 })
+    return { ids: { V } }
+  },
+  'video-opacity-keys': async (env) => {
+    const { V } = await videoClip(env)
+    editor().setKeyframe(V, 'opacity', 0, 1)
+    return { ids: { V } }
+  },
+  'video-under-look': async (env) => {
+    const { V } = await videoClip(env)
+    // From the top track up: an adjustment clip is a grade on what is below it.
+    const A = await made(editor().addAdjustmentLayer(topVideoTrack(), 0), 'addAdjustmentLayer')
+    editor().setColor(A, { brightness: 0.2 })
+    focus(V, 0)
+    return { ids: { V, A } }
+  },
+  'video-short': async (env) => {
+    const { V } = await videoClip(env)
+    editor().trimClipEnd(V, clipById(V).start + 20)
+    focus(V, 0)
+    return { ids: { V } }
+  },
+  'screen-card-recording': async (env) => {
+    const { V } = await videoClip(env)
+    const K = await made(editor().addScreenCard(V, 'tilt-in'), 'addScreenCard')
+    focus(V, 0)
+    return { ids: { V, K } }
+  },
+  'screen-card-selected': async (env) => {
+    const { V } = await videoClip(env)
+    const K = await made(editor().addScreenCard(V, 'pull-back'), 'addScreenCard')
+    focus(K, 40)
+    return { ids: { V, K } }
   },
   'video-envelope': async (env) => {
     const { V } = await videoClip(env)

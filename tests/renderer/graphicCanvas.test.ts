@@ -18,7 +18,10 @@ import {
   forgetGraphicPreview,
   graphicFrameCanvases,
   graphicMeasure,
-  graphicPreviewCanvas
+  graphicPreviewCanvas,
+  screenPreviewTargets,
+  screenTargetsAt,
+  useScreenCardFailed
 } from '../../src/renderer/src/graphicCanvas'
 
 /*
@@ -841,5 +844,129 @@ describe('graphicFrameCanvases', () => {
     expect(x(fakes[3])).toBeCloseTo(100 + 200 * ((TOTAL - 1) / FPS), 6)
     // The lists were built after the face landed: the label is boxed at 0.9 em and drawn at its size, not shrunk into a 0.55 em box.
     for (const c of fakes) for (const fill of labelFill(c)) expect(fill.font).toMatch(/^700 60px /)
+  })
+})
+
+/* ---------------------------------------------------------- the screen card */
+
+/*
+ * Phase 3's piece 4 (docs/CLIPS.md §6.16, "The recording's frames"):
+ * `screenTargetsAt` fills each frame's file from the moments' pre-pass,
+ * `screenPreviewTargets` does it for the Preview, and the bake decodes every
+ * pulled frame (31 at 30 fps, past the preview memo's 16) raw, as ffmpeg reads
+ * them, before it paints.
+ */
+describe('the screen card’s frames', () => {
+  const BOX = { x: 0, y: 656.25, width: 1080, height: 607.5 }
+  const L = 30
+  const footage = { path: '/media/rec.mp4', inPoint: 0, duration: 600, first: 0, count: L + 1, fps: FPS, size: { width: 1920, height: 1080 }, maxEdge: 2160 }
+  const files = Array.from({ length: L + 1 }, (_, i) => `/cache/pulled/${String(i).padStart(5, '0')}.png`)
+  const card = (move: 'tilt-in' | 'pull-back' = 'tilt-in'): GraphicSpec => ({
+    data: { template: 'screen-card', clipId: 'rec', move },
+    seconds: 20,
+    beats: [1],
+    place: { auto: true, third: 'middle' },
+    seed: 1,
+    version: 1
+  })
+  const boxOnly = (): GraphicTargets => ({ screen: { box: BOX, file: null } })
+  const settledCatalogue = (): void => useCatalog.setState({ loadedFonts: new Set(['Montserrat', ...INDIC_FONTS]) })
+  let pulls: unknown[] = []
+  let answer: () => Promise<{ dir: string; files: string[]; width: number; height: number }>
+
+  beforeEach(() => {
+    pulls = []
+    answer = async () => ({ dir: '/cache/pulled', files, width: 1920, height: 1080 })
+    const forge = (window as unknown as { forge: Record<string, unknown> }).forge
+    forge.momentFrames = (request: unknown) => {
+      pulls.push(request)
+      return answer()
+    }
+  })
+
+  it('screenTargetsAt: frame f up to L gets the pulled file footageFrameIndex names, every frame after L none, the box kept; the hold’s targets read once', async () => {
+    let reads = 0
+    const at = await screenTargetsAt(footage, () => {
+      reads += 1
+      return boxOnly()
+    })
+    expect(pulls).toEqual([footage])
+    for (const f of [0, 1, 15, L]) expect(at(f)).toEqual({ screen: { box: BOX, file: files[f] } })
+    expect(at(L + 1)).toEqual({ screen: { box: BOX, file: null } })
+    const before = reads
+    for (let f = L + 1; f < 18000; f++) at(f)
+    expect(reads - before).toBe(0)
+    // A card starting into its recording reads from the pull's own first frame on.
+    const into = await screenTargetsAt({ ...footage, first: 90 }, boxOnly)
+    expect(into(0).screen?.file).toBe(files[0])
+    expect(into(7).screen?.file).toBe(files[7])
+  })
+
+  it('screenTargetsAt rejects when the pull fails or comes back empty', async () => {
+    answer = async () => {
+      throw new Error('no such file')
+    }
+    await expect(screenTargetsAt(footage, boxOnly)).rejects.toThrow('no such file')
+    answer = async () => ({ dir: '/x', files: [], width: 0, height: 0 })
+    await expect(screenTargetsAt(footage, boxOnly)).rejects.toThrow(/no frames/)
+  })
+
+  it('the bake decodes every pulled frame into its own map, raw, and draws frame f’s on frame f up to L and none after', async () => {
+    settledCatalogue()
+    const decoded: { options: unknown; bitmap: { id: number; width: number; height: number; close: () => void } }[] = []
+    let n = 0
+    vi.stubGlobal('createImageBitmap', async (_blob: Blob, options: unknown) => {
+      const bitmap = { id: n++, width: 1920, height: 1080, closed: false, close() { this.closed = true } }
+      decoded.push({ options, bitmap })
+      return bitmap
+    })
+    const at = await screenTargetsAt(footage, boxOnly)
+    const result = await bakeGraphicSequence(card(), clean(), 'card-a', SIZE.width, SIZE.height, 600, FPS, at, false)
+    expect(result?.frames).toBe(graphicMovingFrames(card(), clean(), FPS, 600))
+    expect(new Set(fetched)).toEqual(new Set(files.map((f) => mediaUrl(f))))
+    expect(decoded).toHaveLength(L + 1)
+    for (const d of decoded) expect(d.options).toEqual({ imageOrientation: 'none', colorSpaceConversion: 'none', premultiplyAlpha: 'none' })
+    // One image a frame up to L, each a distinct bitmap: none was closed by a memo before it was painted.
+    const drawn = pictures().flatMap((c) => c.ops.filter((o) => o.op === 'drawImage' && (o.image as { id?: number }).id !== undefined))
+    expect(drawn).toHaveLength(L + 1)
+    expect(new Set(drawn.map((o) => (o.image as { id: number }).id)).size).toBe(L + 1)
+    // Every bitmap the bake decoded is closed when it ends.
+    expect(decoded.every((d) => (d.bitmap as unknown as { closed: boolean }).closed)).toBe(true)
+  })
+
+  it('screenPreviewTargets: null while the pull is on its way and a frame needs a picture, the file once it lands, the hold never waits; a failed pull draws without the picture and is marked', async () => {
+    forgetGraphicPreview('card-p')
+    let land: (v: { dir: string; files: string[]; width: number; height: number }) => void = () => undefined
+    answer = () => new Promise((resolve) => (land = resolve))
+    let ready = 0
+    expect(screenPreviewTargets('card-p', footage, boxOnly(), 5, () => (ready += 1))).toBeNull()
+    expect(screenPreviewTargets('card-p', footage, boxOnly(), L + 1, () => (ready += 1))).toEqual(boxOnly())
+    expect(pulls).toHaveLength(1)
+    land({ dir: '/cache/pulled', files, width: 1920, height: 1080 })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(ready).toBe(1)
+    expect(screenPreviewTargets('card-p', footage, boxOnly(), 5)).toEqual({ screen: { box: BOX, file: files[5] } })
+    expect(screenPreviewTargets('card-p', footage, boxOnly(), L)).toEqual({ screen: { box: BOX, file: files[L] } })
+    // The same request is not pulled again.
+    expect(pulls).toHaveLength(1)
+    expect(useScreenCardFailed.getState().ids.has('card-p')).toBe(false)
+
+    forgetGraphicPreview('card-f')
+    answer = async () => {
+      throw new Error('gone')
+    }
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    expect(screenPreviewTargets('card-f', footage, boxOnly(), 3)).toBeNull()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(screenPreviewTargets('card-f', footage, boxOnly(), 3)).toEqual(boxOnly())
+    expect(useScreenCardFailed.getState().ids.has('card-f')).toBe(true)
+    forgetGraphicPreview('card-f')
+    expect(useScreenCardFailed.getState().ids.has('card-f')).toBe(false)
+    // No request at all (the recording gone or steadied): drawn without the picture, marked, nothing pulled.
+    expect(screenPreviewTargets('card-n', null, boxOnly(), 3)).toEqual(boxOnly())
+    expect(useScreenCardFailed.getState().ids.has('card-n')).toBe(true)
+    // A target that is not a card's passes.
+    expect(screenPreviewTargets('card-x', footage, { subject: null }, 3)).toEqual({ subject: null })
+    warn.mockRestore()
   })
 })

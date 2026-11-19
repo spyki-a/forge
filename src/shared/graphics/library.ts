@@ -54,8 +54,8 @@ export interface LibraryGraphic {
  */
 export const CALLOUT_LEFT_OUT = 'a callout points at a face in the shot, and placed by hand it draws nothing over footage with no subject found or over no footage'
 
-/** Why the screen card is not offered: phase 3's (docs/CLIPS.md §6.16); it frames a clip of yours and has no drawer yet. */
-export const SCREEN_CARD_LEFT_OUT = 'the screen card is phase 3: it frames a clip of yours and is not drawn yet'
+/** Why the screen card is not offered: it frames a clip of yours (docs/CLIPS.md §6.16), so it is made from that clip in the dock, never placed on its own. */
+export const SCREEN_CARD_LEFT_OUT = "the screen card frames a video clip of yours: it is made from that clip's Screen card in the dock, never placed on its own"
 
 /** Why the quote's social kind is not offered: step 5's card (after the beta), every field pasted by the owner. */
 export const SOCIAL_QUOTE_LEFT_OUT = 'the social quote card is step 5, after the beta, and is filled by pasting'

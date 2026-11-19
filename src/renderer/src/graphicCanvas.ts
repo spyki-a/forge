@@ -25,6 +25,8 @@ import { drawListAt, graphicBox, needsCompositor, onsetTargetsAt } from '@shared
 import { paintDrawList2d, type PaintOptions } from '@shared/graphics/paint'
 import { compositorRoute, flatItems } from '@shared/graphics/compositor'
 import { graphicMovingFrames } from '@shared/graphics/frame'
+import { landingFrame } from '@shared/graphics/templates/screenCard'
+import { footageFrameIndex, type FootageRequest } from '@shared/render/moment'
 import { facesFor, textSpecFont } from '@shared/render/textPaint'
 import { ASCENT, LINE_HEIGHT } from '@shared/render/textLayout'
 import { mediaUrl } from '@shared/mediaUrl'
@@ -163,7 +165,7 @@ function decodeImage(src: string): Promise<void> {
     try {
       const response = await fetch(mediaUrl(src))
       if (!response.ok) throw new Error(`${response.status}`)
-      const bitmap = await createImageBitmap(await response.blob())
+      const bitmap = await createImageBitmap(await response.blob(), RAW_DECODE)
       if (bitmaps.size >= BITMAP_MEMO) {
         const oldest = bitmaps.keys().next().value as string
         bitmaps.get(oldest)?.close()
@@ -179,6 +181,46 @@ function decodeImage(src: string): Promise<void> {
   })()
   decoding.set(src, promise)
   return promise
+}
+
+/**
+ * How an `image` item's file is decoded: as ffmpeg reads it, the stored
+ * orientation and the stored colour values (the moments' `pictureFor`,
+ * momentCanvas.ts), so a screen card's frame `L` is the recording's own frame
+ * to the level and its hand-off cannot be seen (§6.16).
+ */
+const RAW_DECODE: ImageBitmapOptions = Object.freeze({ imageOrientation: 'none', colorSpaceConversion: 'none', premultiplyAlpha: 'none' }) as ImageBitmapOptions
+
+/**
+ * Every `src` decoded into a map of its own, for one bake's (or the harness
+ * frames') length, closed by the caller when it is done: a screen card's
+ * moving frames are a picture each (31 at 30 fps), more than the preview's
+ * memo of `BITMAP_MEMO` holds, so a bake decoding them there would close the
+ * first ones before it painted them. A file that will not decode is left out
+ * (its item skipped), as the memo's own decode does.
+ */
+async function decodeAll(srcs: readonly string[]): Promise<Map<string, ImageBitmap>> {
+  const out = new Map<string, ImageBitmap>()
+  await Promise.all(
+    srcs.map(async (src) => {
+      // Remembered with the memo's own: a file that would not decode is not fetched again, bake after bake.
+      if (undecodable.has(src)) return
+      try {
+        const response = await fetch(mediaUrl(src))
+        if (!response.ok) throw new Error(`${response.status}`)
+        out.set(src, await createImageBitmap(await response.blob(), RAW_DECODE))
+      } catch (error) {
+        undecodable.add(src)
+        console.warn('A graphic image will not decode and is left out', src, error instanceof Error ? error.message : String(error))
+      }
+    })
+  )
+  return out
+}
+
+function closeAll(images: Map<string, ImageBitmap>): void {
+  for (const bitmap of images.values()) bitmap.close()
+  images.clear()
 }
 
 /** Every face of `faces` loaded, or failed for good, through the catalogue. */
@@ -272,6 +314,135 @@ async function compositorFor(lists: readonly DrawList[], width: number, height: 
   const compositor = await createCompositor(width, height)
   if (!compositor) bakeNotes.add(WEBGL_MISSING_NOTE)
   return compositor
+}
+
+/* ------------------------------------------------------------ screen card */
+
+/**
+ * A screen card's targets with each frame's file filled from the moments'
+ * footage pre-pass (§6.3, §6.16): `window.forge.momentFrames(footage)`, the
+ * pull a bridge over footage makes, then for card frame `f` up to the landing
+ * `L` (`landingFrame(footage.fps)`) the pulled file `footageFrameIndex` names,
+ * and from `L + 1` on `null`, with the box `targetsAt` gave. Past `L` the
+ * targets are read once and handed back for every frame: the card's box is
+ * fixed at its first frame (graphics/targets.ts), and a 600 s card's hold
+ * would otherwise map the recording's crop once a frame while the bake looks
+ * for the last frame whose targets differ. `footage.first` is where the card
+ * starts in the recording (0: a card spans its recording). Rejects when the
+ * pull fails or comes back empty: the export then drops the card and strikes
+ * its two keys (exportBake.ts), the store's bake keeps the frames it had.
+ * Every other template never reaches here.
+ */
+export async function screenTargetsAt(footage: FootageRequest, targetsAt: (frame: number) => GraphicTargets): Promise<(frame: number) => GraphicTargets> {
+  const pulled = await window.forge.momentFrames(footage)
+  if (pulled.files.length === 0) throw new Error("the screen card's recording gave no frames")
+  return filledScreenTargets(pulled.files, footage, targetsAt)
+}
+
+/** `targetsAt` with each frame's `screen.file` from `files` (the pull's), up to the landing; the hold's targets read once. */
+function filledScreenTargets(files: readonly string[], footage: Pick<FootageRequest, 'first' | 'duration' | 'fps'>, targetsAt: (frame: number) => GraphicTargets): (frame: number) => GraphicTargets {
+  const L = landingFrame(footage.fps)
+  const plan = { pulled: { files: [...files], first: footage.first }, at: footage.first, frames: Math.max(1, footage.duration) }
+  let held: GraphicTargets | undefined
+  return (frame) => {
+    if (frame > L) {
+      if (held === undefined) {
+        const t = targetsAt(L + 1)
+        held = t.screen ? { ...t, screen: { box: t.screen.box, file: null } } : t
+      }
+      return held
+    }
+    const t = targetsAt(frame)
+    return t.screen ? { ...t, screen: { box: t.screen.box, file: files[footageFrameIndex(plan, frame)] ?? null } } : t
+  }
+}
+
+/** The preview's pulls, by card clip: the request asked for, and what came back. */
+interface ScreenPull {
+  key: string
+  state: 'pending' | 'ready' | 'failed'
+  fill?: (frame: number) => GraphicTargets
+  files: string[]
+  onReady?: () => void
+}
+const screenPulls = new Map<string, ScreenPull>()
+
+/**
+ * Cards whose recording's frames could not be pulled for the preview (the
+ * file gone, the pre-pass refusing): the dock's graphic panel says the export
+ * will leave the card out (§14's row: "a pull that fails drops the card from
+ * the export with its note and strikes its two keys").
+ */
+export const useScreenCardFailed = create<{ ids: ReadonlySet<string> }>(() => ({ ids: new Set<string>() }))
+
+function markScreenFailed(clipId: string, failed: boolean): void {
+  const has = useScreenCardFailed.getState().ids.has(clipId)
+  if (has === failed) return
+  const ids = new Set(useScreenCardFailed.getState().ids)
+  if (failed) ids.add(clipId)
+  else ids.delete(clipId)
+  useScreenCardFailed.setState({ ids })
+}
+
+/**
+ * The preview's targets for a screen card at card frame `frame` (§6.16): its
+ * box from `targets` (graphicTargetsAt), and up to the landing the pulled
+ * frame's file, the pull asked for once per request (`footage`, from
+ * `screenCardFootage` on the project as it is) and kept with the clip. Null
+ * while the pull is on its way and the frame needs a picture (the Preview
+ * draws nothing for the card, as for a moment still loading), `onReady`
+ * called once it lands. When the pull fails, or no request can be built, the
+ * card is drawn without its picture and marked (`useScreenCardFailed`). From
+ * `L + 1` the targets as given: the hold needs no frame. Any target that is
+ * not a card's comes back as given.
+ */
+export function screenPreviewTargets(
+  clipId: string,
+  footage: FootageRequest | null,
+  targets: GraphicTargets,
+  frame: number,
+  onReady?: () => void
+): GraphicTargets | null {
+  if (!targets.screen) return targets
+  if (!footage) {
+    markScreenFailed(clipId, true)
+    return targets
+  }
+  if (frame > landingFrame(footage.fps)) return targets
+  const key = JSON.stringify(footage)
+  let pull = screenPulls.get(clipId)
+  if (!pull || pull.key !== key) {
+    const started: ScreenPull = { key, state: 'pending', files: [], onReady }
+    pull = started
+    screenPulls.set(clipId, started)
+    markScreenFailed(clipId, false)
+    void window.forge.momentFrames(footage).then(
+      (pulled) => {
+        if (screenPulls.get(clipId) !== started) return
+        if (pulled.files.length === 0) started.state = 'failed'
+        else {
+          started.state = 'ready'
+          started.files = pulled.files
+        }
+        markScreenFailed(clipId, started.state === 'failed')
+        started.onReady?.()
+      },
+      (error: unknown) => {
+        if (screenPulls.get(clipId) !== started) return
+        console.warn("A screen card's recording frames could not be pulled", error instanceof Error ? error.message : String(error))
+        started.state = 'failed'
+        markScreenFailed(clipId, true)
+        started.onReady?.()
+      }
+    )
+  }
+  pull.onReady = onReady
+  if (pull.state === 'pending') return null
+  if (pull.state === 'failed') return targets
+  pull.fill ??= filledScreenTargets(pull.files, footage, () => targets)
+  // The box is the one given now: the fill was made from these targets, and a moved box is a new request.
+  const filled = pull.fill(frame)
+  return filled.screen ? { ...targets, screen: { box: targets.screen.box, file: filled.screen.file } } : targets
 }
 
 /* ----------------------------------------------------------------- preview */
@@ -516,6 +687,8 @@ export function graphicPreviewCanvas(
 /** Drop a graphic clip's preview canvas: the clip was removed (Preview's sweep). */
 export function forgetGraphicPreview(clipId: string): void {
   previews.delete(clipId)
+  screenPulls.delete(clipId)
+  markScreenFailed(clipId, false)
   previewLayers.delete(clipId)
   warming.delete(clipId)
   releaseDeepSlot(clipId)
@@ -612,12 +785,14 @@ export async function bakeGraphicSequence(
 
   const token = beginBake(clipId)
   let compositor: Compositor | null = null
+  let images = new Map<string, ImageBitmap>()
   try {
     // The faces, then the images, before any canvas: a face that is not loaded
     // yet would bake in the fallback and look exactly like the font picker
-    // doing nothing, permanently, in the export (textCanvas.ts).
+    // doing nothing, permanently, in the export (textCanvas.ts). The images
+    // into the bake's own map (`decodeAll`), closed in the `finally`.
     await ensureFaces(facesOf(probe, style))
-    await Promise.all(imagesOf(probe).map(decodeImage))
+    images = await decodeAll(imagesOf(probe))
     if (isSuperseded(clipId, token)) return null
 
     const lists = listsOf(spec, style, fps, size, measure, at, moving, drawer)
@@ -641,7 +816,7 @@ export async function bakeGraphicSequence(
       width: region.width,
       height: region.height,
       depth: GRAPHIC_POOL_DEPTH,
-      draw: (ctx, index) => paintFrame(lists[index], ctx, { offset, layer, images: bitmaps }, compositor),
+      draw: (ctx, index) => paintFrame(lists[index], ctx, { offset, layer, images }, compositor),
       write: (index, bytes) => window.forge.writeTitleFrame(clipId, index, bytes),
       cancelled: () => isSuperseded(clipId, token)
     })
@@ -650,6 +825,7 @@ export async function bakeGraphicSequence(
   } finally {
     endBake(clipId)
     compositor?.dispose()
+    closeAll(images)
   }
 }
 
@@ -685,7 +861,7 @@ export async function graphicFrameCanvases(
   const listsNow = (): DrawList[] => frames.map((frame) => drawListAt(spec, style, within(frame), fps, { width, height }, measure, at(within(frame)), drawer))
   const probe = listsNow()
   await ensureFaces(facesOf(probe, style))
-  await Promise.all(imagesOf(probe).map(decodeImage))
+  const images = await decodeAll(imagesOf(probe))
   const lists = listsNow()
   const compositor = await compositorFor(lists, width, height)
   try {
@@ -694,10 +870,11 @@ export async function graphicFrameCanvases(
       canvas.width = width
       canvas.height = height
       const ctx = canvas.getContext('2d')
-      if (ctx) paintFrame(list, ctx, { layer: freshLayer, images: bitmaps }, compositor)
+      if (ctx) paintFrame(list, ctx, { layer: freshLayer, images }, compositor)
       return canvas
     })
   } finally {
     compositor?.dispose()
+    closeAll(images)
   }
 }

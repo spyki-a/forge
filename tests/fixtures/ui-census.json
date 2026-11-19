@@ -9081,5 +9081,126 @@
     "line": 80,
     "newHome": "trimmer dock (the graphic panel, docs/CLIPS.md §6.16, \"Who sets depth\")",
     "note": "One of the Depth choice's five buttons (DEPTH_CHOICES). Count reasoned from the code by step 3 phase 3 piece 3 (2026-11-18): the census counter's panel adds one text node of it to the dock; not yet read on screen."
+  },
+  {
+    "label": "Screen card",
+    "match": "text",
+    "home": "dock",
+    "needs": "video-clip",
+    "file": "src/renderer/src/components/tools/ScreenCardButton.tsx",
+    "line": 24,
+    "newHome": "trimmer dock (beside the reframe, video clips; docs/CLIPS.md §6.16, \"Its trigger\")",
+    "note": "The Screen card section's label (SCREEN_CARD), on a selected video clip. Count reasoned from the code by step 3 phase 3 piece 4 (2026-11-19): the recipe adds one text node of it to the dock; not yet read on screen."
+  },
+  {
+    "label": "Tilt in",
+    "match": "text",
+    "home": "dock",
+    "needs": "video-clip",
+    "file": "src/renderer/src/components/tools/ScreenCardButton.tsx",
+    "line": 26,
+    "newHome": "trimmer dock (beside the reframe, video clips; docs/CLIPS.md §6.16, \"Its trigger\")",
+    "note": "The first move (SCREEN_CARD_MOVES_SHOWN): the store's addScreenCard(clip, 'tilt-in'). Count reasoned from the code by step 3 phase 3 piece 4 (2026-11-19): the recipe adds one text node of it to the dock; not yet read on screen."
+  },
+  {
+    "label": "Pull back",
+    "match": "text",
+    "home": "dock",
+    "needs": "video-clip",
+    "file": "src/renderer/src/components/tools/ScreenCardButton.tsx",
+    "line": 27,
+    "newHome": "trimmer dock (beside the reframe, video clips; docs/CLIPS.md §6.16, \"Its trigger\")",
+    "note": "The second move (SCREEN_CARD_MOVES_SHOWN): the store's addScreenCard(clip, 'pull-back'). Count reasoned from the code by step 3 phase 3 piece 4 (2026-11-19): the recipe adds one text node of it to the dock; not yet read on screen."
+  },
+  {
+    "label": "Not on a steadied clip: turn Steady off first",
+    "match": "text",
+    "home": "dock",
+    "needs": "video-steady",
+    "file": "src/shared/graphics/screenCard.ts",
+    "line": 52,
+    "newHome": "trimmer dock (beside the reframe, video clips; docs/CLIPS.md §6.16, \"Its trigger\")",
+    "note": "SCREEN_CARD_REASONS.steadied, under the greyed moves (screenCardRefusal). Count reasoned from the code by step 3 phase 3 piece 4 (2026-11-19): the recipe adds one text node of it to the dock; not yet read on screen."
+  },
+  {
+    "label": "Not on a turned or zooming clip",
+    "match": "text",
+    "home": "dock",
+    "needs": "video-turned",
+    "file": "src/shared/graphics/screenCard.ts",
+    "line": 54,
+    "newHome": "trimmer dock (beside the reframe, video clips; docs/CLIPS.md §6.16, \"Its trigger\")",
+    "note": "SCREEN_CARD_REASONS.turned: a rotation, or zoom or rotation keys. Count reasoned from the code by step 3 phase 3 piece 4 (2026-11-19): the recipe adds one text node of it to the dock; not yet read on screen."
+  },
+  {
+    "label": "Not on a clip with opacity keys of its own",
+    "match": "text",
+    "home": "dock",
+    "needs": "video-opacity-keys",
+    "file": "src/shared/graphics/screenCard.ts",
+    "line": 56,
+    "newHome": "trimmer dock (beside the reframe, video clips; docs/CLIPS.md §6.16, \"Its trigger\")",
+    "note": "SCREEN_CARD_REASONS.opacityKeys. Count reasoned from the code by step 3 phase 3 piece 4 (2026-11-19): the recipe adds one text node of it to the dock; not yet read on screen."
+  },
+  {
+    "label": "Not on a clip with a colour change",
+    "match": "text",
+    "home": "dock",
+    "needs": "video-look",
+    "file": "src/shared/graphics/screenCard.ts",
+    "line": 58,
+    "newHome": "trimmer dock (beside the reframe, video clips; docs/CLIPS.md §6.16, \"Its trigger\")",
+    "note": "SCREEN_CARD_REASONS.colour: the clip's own grade or look (video-look sets both). Count reasoned from the code by step 3 phase 3 piece 4 (2026-11-19): the recipe adds one text node of it to the dock; not yet read on screen."
+  },
+  {
+    "label": "Not under a look",
+    "match": "text",
+    "home": "dock",
+    "needs": "video-under-look",
+    "file": "src/shared/graphics/screenCard.ts",
+    "line": 60,
+    "newHome": "trimmer dock (beside the reframe, video clips; docs/CLIPS.md §6.16, \"Its trigger\")",
+    "note": "SCREEN_CARD_REASONS.underLook: an adjustment clip with a grade on a track above it. Count reasoned from the code by step 3 phase 3 piece 4 (2026-11-19): the recipe adds one text node of it to the dock; not yet read on screen."
+  },
+  {
+    "label": "Only on a clip longer than a second",
+    "match": "text",
+    "home": "dock",
+    "needs": "video-short",
+    "file": "src/shared/graphics/screenCard.ts",
+    "line": 62,
+    "newHome": "trimmer dock (beside the reframe, video clips; docs/CLIPS.md §6.16, \"Its trigger\")",
+    "note": "SCREEN_CARD_REASONS.short: under the landing and the frame after it (32 frames at 30 fps). Count reasoned from the code by step 3 phase 3 piece 4 (2026-11-19): the recipe adds one text node of it to the dock; not yet read on screen."
+  },
+  {
+    "label": "It has a screen card already",
+    "match": "text",
+    "home": "dock",
+    "needs": "screen-card-recording",
+    "file": "src/shared/graphics/screenCard.ts",
+    "line": 50,
+    "newHome": "trimmer dock (beside the reframe, video clips; docs/CLIPS.md §6.16, \"Its trigger\")",
+    "note": "SCREEN_CARD_REASONS.hasCard: one card per recording clip; shown with the recording selected. Count reasoned from the code by step 3 phase 3 piece 4 (2026-11-19): the recipe adds one text node of it to the dock; not yet read on screen."
+  },
+  {
+    "label": "It follows its recording: move or trim the recording to change it",
+    "match": "text",
+    "home": "dock",
+    "needs": "screen-card-selected",
+    "file": "src/renderer/src/components/GraphicPanel.tsx",
+    "line": 95,
+    "newHome": "trimmer dock (the graphic panel of a screen card, docs/CLIPS.md §6.16)",
+    "note": "SCREEN_CARD_FOLLOWS_NOTE: a screen card's panel shows no field, Depth, Seconds or Place. Count reasoned from the code by step 3 phase 3 piece 4 (2026-11-19): the recipe adds one text node of it to the dock; not yet read on screen."
+  },
+  {
+    "label": "Its recording's frames could not be read, so the export leaves this card out",
+    "match": "text",
+    "home": "dock",
+    "needs": "screen-card-frames-failed",
+    "file": "src/renderer/src/components/GraphicPanel.tsx",
+    "line": 97,
+    "newHome": "trimmer dock (the graphic panel of a screen card, docs/CLIPS.md §6.16; §14's row)",
+    "harnessOnly": false,
+    "note": "SCREEN_CARD_FRAMES_NOTE, shown when the preview's pull of the recording's frames failed (useScreenCardFailed). The census does not count it: the harness bridge refuses momentFrames, so whether it shows when a recipe reads the dock depends on when the Preview first draws the card. It shows in the development app when a card's recording file is gone (step 3 phase 3, piece 4, 2026-11-19)."
   }
 ]

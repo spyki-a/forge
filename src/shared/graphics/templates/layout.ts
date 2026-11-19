@@ -251,11 +251,14 @@ export function centreOf(r: Rect): Point {
  * lists"): `palette.dim` at `palette.dimOpacity`, fading in from t = 0 over
  * `DURATIONS.dim` (§6.13), its hole round `targets.subject` (fixed at onset,
  * §6.9) and none when that is null or absent; null when the style does not
- * dim. The fade's ease (`drawOnEase`), the hole's corner (the style's
- * `radius` of `s`) and its hard edge (feather 0) are beyond §6.2's words.
+ * dim, and when a screen card is on screen at the graphic's first frame
+ * (`targets.underCard`, §6.9: the card's dim is then the only dim). The
+ * fade's ease (`drawOnEase`), the hole's corner (the style's `radius` of `s`)
+ * and its hard edge (feather 0) are beyond §6.2's words.
  */
 export function dimFor(style: GraphicStyle, t: number, targets: GraphicTargets, size: { width: number; height: number }): DimItem | null {
-  if (!style.dim) return null
+  // While a screen card is on screen its dim is the only dim (§6.9, §6.16): `targets.underCard`, read at onset.
+  if (!style.dim || targets.underCard === true) return null
   const dim: DimItem = {
     kind: 'dim',
     id: 'dim',

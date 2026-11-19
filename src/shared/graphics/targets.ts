@@ -4,7 +4,8 @@
  * `drawListAt`, so the drawing stays pure. Phase 1 fills `subject`; `tip` is
  * phase 4's branch (§6.18, `tipOnFrame`) and `screen` phase 3's (§6.16, the
  * box here and the file from the renderer's `screenTargetsAt`), both left as
- * the seam `frame` is for.
+ * the seam `frame` is for. Phase 3's piece 4 fills `screen`'s box and
+ * `underCard` (§6.9, §6.16).
  *
  * Pure: reads the project through the export's own readers (`sourceToFrame`,
  * `subjectBoxesAt`, `captionSourceClip`), never a second model of the crop or
@@ -84,25 +85,68 @@ function subjectAt(project: Project, spec: Pick<GraphicSpec, 'subject'>, onset: 
   return all ? toFrame(all, size) : null
 }
 
+/** The whole source, 0..1 of the upright file: what `sourceToFrame` maps to the card's box (§6.16). */
+const WHOLE_SOURCE: UnitRect = Object.freeze({ x: 0, y: 0, width: 1, height: 1 }) as UnitRect
+
+/**
+ * A screen card's box (§6.16, "The card's box"): where the render already
+ * shows the recording, the whole source mapped through `sourceToFrame` on the
+ * recording clip (the fitted picture inside the clip's box; contain pads with
+ * transparent bars, so the card floats over what is beneath), in pixels of
+ * `size`, read at project frame `at`. Null when the recording is gone, not on
+ * a visible video track, not on screen at `at`, or has no size: the card then
+ * draws nothing.
+ */
+export function screenCardBox(project: Project, recordingId: string, at: number, size: { width: number; height: number }): Rect | null {
+  const recording = project.clips.find((c) => c.id === recordingId)
+  if (!recording || !shows(recording, at)) return null
+  const track = project.tracks.find((t) => t.id === recording.trackId)
+  if (!track || track.kind !== 'video' || track.hidden) return null
+  const asset = assetOf(project, recording)
+  if (!asset) return null
+  const u = sourceToFrame(project, recording, asset, size, at, WHOLE_SOURCE)
+  return u ? toFrame(u, size) : null
+}
+
+/** Whether a screen card other than `self` is on screen at project frame `at` (§6.9: its dim is then the only dim). */
+function cardOnScreen(project: Project, self: Pick<Clip, 'start'> & { id?: string }, at: number): boolean {
+  return project.clips.some((c) => c.graphic?.data.template === 'screen-card' && c.id !== self.id && shows(c, at))
+}
+
 /**
  * The targets for the graphic clip `clip` at project frame `frame`, in pixels
  * of `size` (§6.3). `subject` is evaluated once, at the clip's first frame,
  * `clip.start`, for every template, the callout included (§6.9 chose it
  * 2026-10-21), and that value is returned for every `frame` of the clip: so
  * a callout's target, a dim's hole and a connector's target are fixed at
- * onset and add no moving frame, whatever `frame` is. `frame` is read only by
- * the per-frame targets of phases 3 and 4 (`screen`, `tip`), which phase 1
- * does not fill, so it is the seam those branches take; `onsetTargetsAt`
+ * onset and add no moving frame, whatever `frame` is. `onsetTargetsAt`
  * (drawList.ts) holds the same rule on the caller's side.
+ *
+ * Phase 3's two (§6.16; `tip` is phase 4's, §6.18):
+ * - a screen card's `screen`: its box (`screenCardBox`) with `file: null`,
+ *   which the renderer's `screenTargetsAt` fills per frame from the pull. The
+ *   box is read at the card's first frame too, so it is the same on every
+ *   frame (beyond §6.16's words, which give the box and say nothing of when):
+ *   `sourceToFrame` models no animated transform (frameMap.ts), and a followed
+ *   crop keeps its size, so the box does not move under a card the dock
+ *   offers; read once, a 600 s card's hold costs no mapping per frame.
+ * - every other graphic's `underCard`: true when a screen card is on screen
+ *   at its first frame (§6.9), so its dim is not drawn.
  */
 export function graphicTargetsAt(
   project: Project,
-  clip: Pick<Clip, 'start'>,
-  spec: Pick<GraphicSpec, 'subject'>,
+  clip: Pick<Clip, 'start'> & { id?: string },
+  spec: Pick<GraphicSpec, 'subject'> & { data?: GraphicSpec['data'] },
   frame: number,
   size: { width: number; height: number }
 ): GraphicTargets {
-  // §6.18's `tip` and §6.16's `screen` read `frame`; neither is built in phase 1.
+  // §6.18's `tip` reads `frame`; the screen card's box is fixed at onset (above).
   void frame
-  return { subject: subjectAt(project, spec, clip.start, size) }
+  if (spec.data?.template === 'screen-card') {
+    const box = screenCardBox(project, spec.data.clipId, clip.start, size)
+    return { screen: box ? { box, file: null } : null }
+  }
+  const targets: GraphicTargets = { subject: subjectAt(project, spec, clip.start, size) }
+  if (cardOnScreen(project, clip, clip.start)) targets.underCard = true
+  return targets
 }

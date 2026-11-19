@@ -23,6 +23,7 @@ import { drawListAt, graphicBox, needsCompositor, onsetTargetsAt } from '@shared
 import { MAX_GLOW_BATCHES, MAX_PLANES, cameraIsFlat, compositorRoute, flatItems, focusRadius, glowBatches, glowItemsOf, isFlat } from '@shared/graphics/compositor'
 import { DEPTH_DOLLY_FROM, DEPTH_FOCUS_BLUR_PX, DEPTH_MOVES, DEPTH_PARALLAX_YAW_FROM, DEPTH_PLANES, DEPTH_TILT_FROM, depthOf } from '@shared/graphics/templates/depth'
 import { DRAWERS } from '@shared/graphics/templates/index'
+import { drawScreenCard, landingFrame } from '@shared/graphics/templates/screenCard'
 import { DURATIONS, entrance, progress } from '@shared/graphics/motion'
 import { graphicMovingFrames } from '@shared/graphics/frame'
 import { GRAPHIC_STYLES, GRAPHIC_TEXT_STYLES, resolveGraphicStyle, type GraphicStyle } from '@shared/graphics/style'
@@ -152,11 +153,13 @@ const ARABIC = 'مرحبا بالعالم'
 /* -------------------------------------------------------------- the drawers */
 
 describe('graphicDrawList: the drawer seam', () => {
-  it('DRAWERS is a frozen record, each row a function, never a screen card or a step-6 template in phase 2', () => {
+  it('DRAWERS is a frozen record, each row a function, never a step-6 template; the screen card drawn since phase 3 piece 4', () => {
     // Empty in phase 1; phase 2's template commits add rows (§6.2), so membership is asserted, not the whole list.
     expect(Object.isFrozen(DRAWERS)).toBe(true)
     for (const [id, drawer] of Object.entries(DRAWERS)) expect(typeof drawer, id).toBe('function')
-    for (const id of ['screen-card', 'timeline', 'before-after', 'versus', 'source'] as GraphicTemplateId[]) expect(DRAWERS[id], id).toBeUndefined()
+    for (const id of ['timeline', 'before-after', 'versus', 'source'] as GraphicTemplateId[]) expect(DRAWERS[id], id).toBeUndefined()
+    // Phase 3's piece 4 (§6.16): the screen card's row is its own drawer.
+    expect(DRAWERS['screen-card']).toBe(drawScreenCard)
   })
 
   it('with no drawer for the template, the list is empty and flat, for every template id without a row in DRAWERS', () => {
@@ -527,7 +530,7 @@ describe('graphicDrawList: which drawers ask for the compositor (MAY_ASK, ALWAYS
   /** The templates whose depth variants or hero glow may ask for the compositor: piece 3 adds 'counter' and 'ring'. */
   const MAY_ASK = new Set<GraphicTemplateId>(['counter', 'ring'])
   /** The templates whose plain specs ask too, their motion being a camera or a glow of its own: piece 4 adds 'screen-card'. */
-  const ALWAYS_ASK = new Set<GraphicTemplateId>([])
+  const ALWAYS_ASK = new Set<GraphicTemplateId>(['screen-card'])
   const fixtures = (
     JSON.parse(readFileSync(new URL('./fixtures/graphics/specs.json', import.meta.url), 'utf8')) as { specs: { id: string; spec: GraphicSpec }[] }
   ).specs.filter((f) => DRAWERS[f.spec.data.template] !== undefined)
@@ -552,8 +555,35 @@ describe('graphicDrawList: which drawers ask for the compositor (MAY_ASK, ALWAYS
     return found
   }
 
-  it('reads every drawn template, from the fixtures', () => {
-    expect(new Set(fixtures.map((f) => f.spec.data.template))).toEqual(new Set(Object.keys(DRAWERS)))
+  /**
+   * The drawn templates specs.json has no fixture for, each with its reason:
+   * the screen card draws only over a recording's box (`targets.screen`),
+   * which a fixture with no project cannot carry; its own case is below.
+   */
+  const NO_FIXTURE = new Set<GraphicTemplateId>(['screen-card'])
+
+  it('reads every drawn template, from the fixtures, but those in NO_FIXTURE (the screen card, read on its own below)', () => {
+    const read = new Set(fixtures.map((f) => f.spec.data.template))
+    for (const id of Object.keys(DRAWERS) as GraphicTemplateId[]) expect(read.has(id) || NO_FIXTURE.has(id), id).toBe(true)
+    for (const id of NO_FIXTURE) expect(read.has(id), id).toBe(false)
+  })
+
+  it('a plain screen card asks on its moving frames, as ALWAYS_ASK says, and on no frame after its landing', () => {
+    expect(ALWAYS_ASK.has('screen-card')).toBe(true)
+    const box = { x: 0, y: 656, width: 1080, height: 608 }
+    for (const move of ['tilt-in', 'pull-back'] as const) {
+      const card: GraphicSpec = { data: { template: 'screen-card', clipId: 'rec', move }, seconds: 10, beats: [1], place: { auto: true, third: 'middle' }, seed: 1, version: 1 }
+      for (const st of GRAPHIC_STYLES) {
+        const L = landingFrame(FPS)
+        const at = (frame: number): GraphicTargets => ({ screen: { box, file: frame <= L ? `/f/${frame}.png` : null } })
+        const asks = Array.from({ length: 60 }, (_, frame) => needsCompositor(drawListAt(card, st, frame, FPS, SIZE, fake, at(frame))))
+        // Every frame up to the landing carries the move's camera; none after it.
+        expect(asks.slice(0, L + 1).every(Boolean), `${move} ${st.id}`).toBe(true)
+        expect(asks.slice(L + 1).some(Boolean), `${move} ${st.id}`).toBe(false)
+        // No glow before piece 5's edge sweep.
+        expect(drawListAt(card, st, L + 5, FPS, SIZE, fake, at(L + 5)).glow, `${move} ${st.id}`).toBeUndefined()
+      }
+    }
   })
 
   it('a spec with no depth and no hero never asks, unless its template is in ALWAYS_ASK (none in piece 1)', () => {

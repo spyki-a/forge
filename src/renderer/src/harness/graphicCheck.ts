@@ -11,6 +11,7 @@
  *   await window.__forgeGraphicCheck({ glow: ['unreal', 'quad'] })           M7, phase 3 piece 2: the glow's two routes
  *   await window.__forgeGraphicCheck({ focus: true })                  phase 3 piece 2: the focus blur at radius 0 and above
  *   await window.__forgeGraphicCheck({ depth: true })                  phase 3 piece 3: counter and ring in 2.5D against their flat twins, the hero's glow
+ *   await window.__forgeGraphicCheck({ screenCard: true })        phase 3 piece 4: both moves over a stand-in recording, the hand-off's own side
  *   await window.__forgeGraphicCheck({ indic: true })                M22's numeric halves, then phase 1's Indic render check
  *   await window.__forgeGraphicCheck({ primitives: true })                 phase 1's exit (§6.12) and M13's first half
  *   await window.__forgeGraphicCheck({ pathLength: true })                                                     M8
@@ -86,6 +87,7 @@ import specsText from '../../../../tests/fixtures/graphics/specs.json?raw'
 import { checkCompositor, type CompositorResult } from './compositorCheck'
 import { checkFocus, checkGlow, type FocusResult, type GlowResult } from './glowCheck'
 import { checkDepth, type DepthResult } from './depthCheck'
+import { checkScreenCard, type ScreenCardResult } from './screenCardCheck'
 import {
   BLIND_FPS,
   CURVE_QUESTIONS,
@@ -206,6 +208,16 @@ export interface GraphicCheckOptions {
    */
   depth?: boolean
   /**
+   * Phase 3's piece 4 (§6.16, "The screen card"): Tilt in and Pull back under
+   * `clean` and `energetic` through `paintDrawList3d` over a stand-in
+   * recording the harness paints (this page has no preload to pull a file's
+   * frames): the landing frame against a plain `drawImage` into the card's
+   * box, the hole after it, frame 0's opacity, the camera at the landing,
+   * and Pull back drawn flat. `screenCardCheck.ts`. Piece 6 widens it to
+   * take a real recording's path for M20 (§6.11's `screenCard: '<path>'`).
+   */
+  screenCard?: boolean
+  /**
    * M22's numeric halves: each §51 cluster drawn whole and one code point at
    * a time (phase 0, bare `drawTextOnto`); then phase 1's half of the Indic
    * render check (§6.11): a text clip's bake and a caption's bake in a Latin
@@ -257,7 +269,7 @@ export interface GraphicCheckOptions {
 }
 
 /** Every option, in the order `runGraphicCheck` runs them. */
-export const GRAPHIC_CHECK_OPTIONS = ['encode', 'segments', 'blur', 'parity', 'compositor', 'glow', 'focus', 'depth', 'indic', 'primitives', 'pathLength', 'strokes', 'templates', 'curves', 'look'] as const
+export const GRAPHIC_CHECK_OPTIONS = ['encode', 'segments', 'blur', 'parity', 'compositor', 'glow', 'focus', 'depth', 'screenCard', 'indic', 'primitives', 'pathLength', 'strokes', 'templates', 'curves', 'look'] as const
 export type GraphicCheckOption = (typeof GRAPHIC_CHECK_OPTIONS)[number]
 
 /** The options a call asked for, in run order: each one by itself, so an option not passed runs nothing (the file's rule). */
@@ -653,6 +665,7 @@ export interface GraphicCheckResult {
   glow?: GlowResult
   focus?: FocusResult
   depth?: DepthResult
+  screenCard?: ScreenCardResult
   indic?: IndicResult
   primitives?: PrimitivesResult
   pathLength?: PathLengthResult
@@ -3733,6 +3746,7 @@ export async function runGraphicCheck(options: GraphicCheckOptions = {}): Promis
   if (options.glow) result.glow = await checkGlow(options.glow, frames, summary, notes)
   if (options.focus) result.focus = await checkFocus(frames, summary, notes)
   if (options.depth) result.depth = await checkDepth(TEMPLATE_FIXTURES, frames, summary, notes)
+  if (options.screenCard) result.screenCard = await checkScreenCard(frames, summary, notes)
   if (options.indic) {
     // Phase 0's bare drawTextOnto first, as it was measured, before phase 1's half loads the Noto faces.
     result.indic = checkIndic(frames, summary)

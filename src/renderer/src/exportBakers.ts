@@ -3,7 +3,7 @@ import { bakeText, bakeTextSequence } from './textCanvas'
 import { bakePaperSequence } from './paperCanvas'
 import { bakeCarouselSequence } from './carouselCanvas'
 import { bakeMomentSequence } from './momentCanvas'
-import { bakeGraphicSequence } from './graphicCanvas'
+import { bakeGraphicSequence, screenTargetsAt } from './graphicCanvas'
 
 /**
  * The canvas drawing an export's cards go through — the same functions the
@@ -25,6 +25,7 @@ export const liveBakers: Bakers = {
   carousel: (spec, key, photos, width, height, frames, fps) =>
     bakeCarouselSequence(spec, key, photos, width, height, frames, fps),
   // The box route only here, where the export says the clip is placed at the identity (docs/CLIPS.md §6.3).
-  graphic: (spec, style, key, width, height, frames, fps, targetsAt, boxAllowed) =>
-    bakeGraphicSequence(spec, style, key, width, height, frames, fps, targetsAt, boxAllowed)
+  // A screen card's frames are pulled first (§6.16): a pull that fails rejects, and the export drops the card and strikes its keys.
+  graphic: async (spec, style, key, width, height, frames, fps, targetsAt, boxAllowed, footage) =>
+    bakeGraphicSequence(spec, style, key, width, height, frames, fps, footage ? await screenTargetsAt(footage, targetsAt) : targetsAt, boxAllowed)
 }

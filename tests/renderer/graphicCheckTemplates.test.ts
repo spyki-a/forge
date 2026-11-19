@@ -130,9 +130,9 @@ describe('TEMPLATE_FIXTURES, specs.json as the page reads it', () => {
     expect(() => parseTemplateFixtures('{"note": "no list"}')).toThrow(/no specs list/)
   })
 
-  it('DRAWN_TEMPLATES holds the eight drawn templates and no screen card', () => {
-    for (const id of ['counter', 'bars', 'steps', 'quote', 'callout', 'ring', 'keyword', 'lower-third']) expect(DRAWN_TEMPLATES, id).toContain(id)
-    expect(DRAWN_TEMPLATES).not.toContain('screen-card')
+  it('DRAWN_TEMPLATES holds the eight drawn templates, and the screen card since phase 3 piece 4 (it has no specs.json fixture: `templates` names it in noSpec)', () => {
+    for (const id of ['counter', 'bars', 'steps', 'quote', 'callout', 'ring', 'keyword', 'lower-third', 'screen-card']) expect(DRAWN_TEMPLATES, id).toContain(id)
+    expect(templateCasesFor(['screen-card'], TEMPLATE_FIXTURES, DRAWN_TEMPLATES).noSpec).toEqual(['screen-card'])
   })
 })
 
