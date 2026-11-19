@@ -193,7 +193,7 @@ const fakeThree = {
 
 const glCanvas = { width: 0, height: 0, gl: true }
 /** The renderer's state the compositor must put back: what a moment's draw left it with. */
-const rendererState = { target: null as unknown, autoClear: true, clearColor: new FakeColor(0), clearAlpha: 0, clears: [] as unknown[] }
+const rendererState = { target: null as unknown, autoClear: true, clearColor: new FakeColor(0), clearAlpha: 0, clears: [] as unknown[], clearAlphas: [] as number[] }
 const fakeRenderer = {
   domElement: glCanvas,
   get autoClear(): boolean {
@@ -210,7 +210,10 @@ const fakeRenderer = {
   setRenderTarget: (target: unknown) => {
     rendererState.target = target
   },
-  clear: () => rendererState.clears.push(rendererState.target),
+  clear: () => {
+    rendererState.clears.push(rendererState.target)
+    rendererState.clearAlphas.push(rendererState.clearAlpha)
+  },
   getClearColor: (target: FakeColor) => {
     target.hex = rendererState.clearColor.hex
     return target
@@ -260,6 +263,8 @@ interface Op {
   op: string
   fill?: unknown
   image?: unknown
+  /** The canvas's globalCompositeOperation at a fillRect. */
+  composite?: unknown
 }
 
 interface FakeCanvas {
@@ -275,7 +280,7 @@ const canvases: FakeCanvas[] = []
 
 function fakeCanvas(): FakeCanvas {
   const ops: Op[] = []
-  const state: Record<string | symbol, unknown> = { globalAlpha: 1, fillStyle: '#000000' }
+  const state: Record<string | symbol, unknown> = { globalAlpha: 1, fillStyle: '#000000', globalCompositeOperation: 'source-over' }
   const stack: Record<string | symbol, unknown>[] = []
   const canvas: FakeCanvas = {
     width: 0,
@@ -296,7 +301,7 @@ function fakeCanvas(): FakeCanvas {
     },
     clearRect: () => ops.push({ op: 'clearRect' }),
     fill: () => ops.push({ op: 'fill', fill: state.fillStyle }),
-    fillRect: () => ops.push({ op: 'fillRect', fill: state.fillStyle }),
+    fillRect: () => ops.push({ op: 'fillRect', fill: state.fillStyle, composite: state.globalCompositeOperation }),
     drawImage: (image: unknown) => ops.push({ op: 'drawImage', image })
   }
   const ctx = new Proxy(
@@ -351,7 +356,7 @@ beforeEach(async () => {
   webgl.mode = 'ok'
   webgl.calls = 0
   bloomLoads.calls = 0
-  Object.assign(rendererState, { target: null, autoClear: true, clearColor: new FakeColor(0), clearAlpha: 0, clears: [] })
+  Object.assign(rendererState, { target: null, autoClear: true, clearColor: new FakeColor(0), clearAlpha: 0, clears: [], clearAlphas: [] })
   vi.stubGlobal('document', { createElement: () => fakeCanvas(), fonts: { check: () => true } })
   C = await import('../../src/renderer/src/graphicCompositor')
   G = await import('../../src/renderer/src/graphicCanvas')
@@ -613,6 +618,38 @@ describe('graphicCompositor: the glow (piece 2)', () => {
     const tint = ops.find((o) => o.op === 'drawImage')?.image as FakeCanvas
     expect(tint).toBeDefined()
     expect(tint.ops.filter((o) => o.op === 'fill' || o.op === 'fillRect').map((o) => o.fill)).toEqual(['#222222', '#2563eb'])
+    // The colour fills only where the items are: source-in. Source-over would flood the whole glow layer.
+    const colourFills = tint.ops.filter((o) => o.op === 'fillRect' && o.fill === '#2563eb')
+    expect(colourFills).toHaveLength(1)
+    expect(colourFills[0].composite).toBe('source-in')
+  })
+
+  it('a request whose colour changes repaints its glow layer, though its items are the same', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    C.paintDrawList3d(glowing({ glow: [{ item: 'value', radius: 8, strength: 1, color: '#2563eb' }] }), c)
+    const texture = glowLayers()[0].material.uniforms.uTex.value as FakeTexture
+    renders.length = 0
+    C.paintDrawList3d(glowing({ glow: [{ item: 'value', radius: 8, strength: 1, color: '#2563eb' }] }), c)
+    expect(texture.uploads).toBe(1)
+    renders.length = 0
+    C.paintDrawList3d(glowing({ glow: [{ item: 'value', radius: 8, strength: 1, color: '#ff0000' }] }), c)
+    expect(texture.uploads).toBe(2)
+  })
+
+  it('forgetPlanes repaints the glow layers too (a glow drawn while a face loaded), and dispose gives back their canvases', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    C.paintDrawList3d(glowing(), c)
+    const layer = glowLayers()[0]
+    const texture = layer.material.uniforms.uTex.value as FakeTexture
+    C.paintDrawList3d(glowing(), c)
+    expect(texture.uploads).toBe(1)
+    C.forgetPlanes(c)
+    C.paintDrawList3d(glowing(), c)
+    expect(texture.uploads).toBe(2)
+    const canvas = layerCanvas(layer)
+    expect(canvas.width).toBe(SIZE.width)
+    c.dispose()
+    expect([canvas.width, canvas.height]).toEqual([0, 0])
   })
 
   it('route three: a plane’s glow layer under the plane’s own model and focus radius, through the same camera', async () => {
@@ -660,9 +697,53 @@ describe('graphicCompositor: the glow (piece 2)', () => {
     expect(h.uniforms!.uCount).toBe(offsets.length - 1)
     expect(add.uniforms!.uStrength).toBe(0.75)
     expect(add.uniforms!.uMaxAlpha).toBe(C.GLOW_MAX_ALPHA)
-    // Added, never "over": colour ONE + ONE, alpha ONE + ONE_MINUS_SRC_ALPHA.
+    // Added, never "over", on colour and alpha alike (ONE + ONE): alpha "over" (ONE_MINUS_SRC_ALPHA) leaves colour above alpha where the glow lands on a half-opaque item.
     const m = add.material as unknown as Record<string, number>
-    expect([m.blendSrc, m.blendDst, m.blendSrcAlpha, m.blendDstAlpha]).toEqual([fakeThree.OneFactor, fakeThree.OneFactor, fakeThree.OneFactor, fakeThree.OneMinusSrcAlphaFactor])
+    expect([m.blending, m.blendSrc, m.blendDst, m.blendSrcAlpha, m.blendDstAlpha]).toEqual([fakeThree.CustomBlending, fakeThree.OneFactor, fakeThree.OneFactor, fakeThree.OneFactor, fakeThree.OneFactor])
+    // The blur replaces its target, never blends into it.
+    expect((h.material as unknown as Record<string, unknown>).blending).toBe(fakeThree.NoBlending)
+    expect(v.material).toBe(h.material)
+  })
+
+  /*
+   * The quad route's two shaders, read whole (whitespace taken out): the blur's
+   * symmetric pair of taps either side, its sum written as it is, and the add's
+   * strength and alpha cap. Nothing in node can run them; the harness's
+   * glowReference reading checks their pixels.
+   */
+  it('the blur pass: the centre, then each tap at +o and −o with its weight, up to uCount, the sum written as it is', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    C.paintDrawList3d(glowing(), c)
+    const blur = renders.find((r) => r.material && r.target instanceof FakeTarget)!.material!
+    expect(blur.fragmentShader.replace(/\s+/g, '')).toBe(
+      'precisionhighpfloat;varyingvec2vUv;uniformsampler2DuTex;uniformvec2uStep;uniformfloatuOffsets[GLOW_TAPS];uniformfloatuWeights[GLOW_TAPS];uniformintuCount;' +
+        'voidmain(){vec4sum=texture2D(uTex,vUv)*uWeights[0];for(inti=1;i<GLOW_TAPS;i++){if(i>uCount)break;vec2o=uStep*uOffsets[i];' +
+        'sum+=(texture2D(uTex,vUv+o)+texture2D(uTex,vUv-o))*uWeights[i];}gl_FragColor=sum;}'
+    )
+  })
+
+  it('the add pass: the glow times the strength, every channel scaled down so its alpha is at most uMaxAlpha', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    C.paintDrawList3d(glowing(), c)
+    const add = renders[renders.length - 1].material!
+    expect(add.fragmentShader.replace(/\s+/g, '')).toBe(
+      'precisionhighpfloat;varyingvec2vUv;uniformsampler2DuTex;uniformfloatuStrength;uniformfloatuMaxAlpha;' +
+        'voidmain(){vec4glow=texture2D(uTex,vUv)*uStrength;if(glow.a>uMaxAlpha)glow*=uMaxAlpha/glow.a;gl_FragColor=glow;}'
+    )
+  })
+
+  it('two batches: each spread into its own slot, then each added at its own strength from its own slot’s glow, in batch order', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    C.paintDrawList3d(list([shape('a', '#1'), shape('b', '#2')], { glow: [{ item: 'a', radius: 4, strength: 1 }, { item: 'b', radius: 9, strength: 0.5 }] }), c)
+    const kinds = renders.map((r) => (r.target === null ? (r.material ? 'add' : 'frame') : r.material ? 'blur' : 'input'))
+    expect(kinds).toEqual(['input', 'blur', 'blur', 'input', 'blur', 'blur', 'frame', 'add', 'add'])
+    const outs = [renders[2], renders[5]].map((r) => (r.target as FakeTarget).texture)
+    expect(outs[0]).not.toBe(outs[1])
+    const adds = renders.slice(7)
+    expect(adds.map((r) => r.uniforms!.uStrength)).toEqual([1, 0.5])
+    expect(adds.map((r) => r.uniforms!.uTex)).toEqual(outs)
+    // Each batch blurred by its own radius's kernel.
+    expect([renders[1], renders[4]].map((r) => r.uniforms!.uCount)).toEqual([C.glowKernel(4).offsets.length - 1, C.glowKernel(9).offsets.length - 1])
   })
 
   it('the unreal route: the bloom reads the glow layers’ target, and its own composite, the bloom alone, is added at strength 1 with no cap', async () => {
@@ -672,7 +753,8 @@ describe('graphicCompositor: the glow (piece 2)', () => {
     const input = renders.find((r) => r.target instanceof FakeTarget && !r.material)!
     expect(bloomRender.target).toBe(input.target)
     const bloom = bloomRender.bloom!
-    expect([bloom.strength, bloom.radius, bloom.threshold]).toEqual([0.75, 8 / C.UNREAL_RADIUS_PX, 0])
+    // The request's strength with the composite's own gain taken out (UNREAL_GAIN).
+    expect([bloom.strength, bloom.radius, bloom.threshold]).toEqual([0.75 / C.UNREAL_GAIN, 8 / C.UNREAL_RADIUS_PX, 0])
     expect(bloom.resolution).toEqual({ x: SIZE.width, y: SIZE.height })
     const add = renders[renders.length - 1]
     expect(add.uniforms!.uTex).toBe(bloom.renderTargetsHorizontal[0].texture)
@@ -690,15 +772,19 @@ describe('graphicCompositor: the glow (piece 2)', () => {
     expect(rendererState.autoClear).toBe(true)
     expect(rendererState.clearColor.hex).toBe(0x123456)
     expect(rendererState.clearAlpha).toBe(1)
-    // While it drew, every target and the canvas were cleared to transparent black.
+    // While it drew, every target and the canvas were cleared to transparent black (the moment's clear alpha was 1).
     expect(renders.map((r) => r.target).filter((t) => t !== null)).toHaveLength(3)
+    expect(rendererState.clears).toHaveLength(4)
+    expect(rendererState.clearAlphas).toEqual([0, 0, 0, 0])
   })
 
-  it('no glow is drawn under the probe’s glow: false (the harness’s base under the glow), nor for a request of radius 0', async () => {
+  it('no glow is drawn under the probe’s glow: false (the harness’s base under the glow); a request of radius or strength 0 is route one, no render', async () => {
     const c = (await C.createCompositor(SIZE.width, SIZE.height))!
     C.paintDrawList3d(glowing(), c, {}, { glow: false })
+    expect(renders.map((r) => r.target)).toEqual([null])
     C.paintDrawList3d(glowing({ glow: [{ item: 'value', radius: 0, strength: 1 }] }), c)
-    expect(renders.map((r) => r.target)).toEqual([null, null])
+    C.paintDrawList3d(glowing({ glow: [{ item: 'value', radius: 8, strength: 0 }] }), c)
+    expect(renders).toHaveLength(1)
     expect(made.filter((m) => m.kind === 'target')).toEqual([])
   })
 

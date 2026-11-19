@@ -23,17 +23,24 @@
 
 import type { Camera, DrawItem, DrawList, GlowRequest, ShapeItem } from '@shared/graphics/items'
 import { paintDrawList2d } from '@shared/graphics/paint'
-import { focusRadius } from '@shared/graphics/compositor'
+import { UNREAL_GAIN, focusRadius } from '@shared/graphics/compositor'
 import { sharedRenderer } from '../threeShared'
 import { createCompositor, paintDrawList3d, resetCompositorSession, type Compositor, type CompositorProbe } from '../graphicCompositor'
 import { diffChannels } from './compositorMeasure'
 import { inkBox, padRect, percentile } from './graphicMeasure'
 import {
+  GLOW_BAR,
   borderAlphaMin,
   focusVerdict,
   glowAlpha,
+  glowReference,
+  glowReferenceVerdict,
   glowRouteVerdict,
+  premultipliedDiff,
+  premultipliedInvalid,
+  premultiply,
   type FocusReadings,
+  type GlowReferenceReading,
   type GlowRouteName,
   type GlowRouteReading
 } from './glowMeasure'
@@ -46,6 +53,8 @@ const FLAT: Camera = { tilt: 0, yaw: 0, dolly: 0, fov: 30 }
 
 /** M7's request: a 24 px glow at full strength on the panel. */
 export const GLOW_CHECK_REQUEST: GlowRequest = Object.freeze({ item: 'shape', radius: 24, strength: 1 })
+/** The strengths the quad route is read at against its CPU reference (`glowReference`): 1, and 2, where the alpha cap `GLOW_MAX_ALPHA` engages. */
+export const GLOW_REFERENCE_STRENGTHS: readonly number[] = Object.freeze([1, 2])
 /** Glowing frames timed per route. */
 export const GLOW_CHECK_FRAMES = 30
 /** The focus check's blur, px per frame height of distance: 200 × 0.05 = a 10 px radius (§6.16's focus variant starts at 10 px). */
@@ -57,6 +66,8 @@ export interface GlowResult {
   routes: (GlowRouteReading & { verdict: { pass: boolean; failures: string[] } })[]
   /** Routes asked for and not drawn here (`'pmndrs'`: a scratch branch's). */
   skipped: string[]
+  /** The quad route against its CPU reference, at each of `GLOW_REFERENCE_STRENGTHS`; absent when quad was not asked for. */
+  quadReference?: { readings: GlowReferenceReading[]; verdict: { pass: boolean; failures: string[] } }
 }
 
 export interface FocusResult extends FocusReadings {
@@ -116,7 +127,21 @@ function alphaView(picture: HTMLCanvasElement): HTMLCanvasElement {
   return canvas
 }
 
-const panel = (z?: number): ShapeItem => ({ kind: 'shape', id: 'shape', opacity: 1, shape: 'rounded', box: { x: 160, y: 400, width: 220, height: 140 }, radius: 24, fill: BLUE, ...(z === undefined ? {} : { z }) })
+const panel = (z?: number, opacity = 1): ShapeItem => ({ kind: 'shape', id: 'shape', opacity, shape: 'rounded', box: { x: 160, y: 400, width: 220, height: 140 }, radius: 24, fill: BLUE, ...(z === undefined ? {} : { z }) })
+
+/**
+ * The WebGL canvas's own premultiplied bytes for `l`, read with `readPixels`
+ * straight after the draw, before any copy (a 2D canvas's `getImageData`
+ * would un-premultiply and clamp, hiding a colour above its alpha).
+ */
+function webglBytes(l: DrawList, compositor: Compositor, renderer: Awaited<ReturnType<typeof sharedRenderer>>['renderer']): Uint8Array {
+  paintDrawList3d(l, compositor, { layer: freshLayer })
+  renderer.setRenderTarget(null)
+  const gl = renderer.getContext()
+  const bytes = new Uint8Array(W * H * 4)
+  gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, bytes)
+  return bytes
+}
 
 export async function checkGlow(asked: readonly string[] | true, frames: Frames, summary: string[], notes: string[]): Promise<GlowResult> {
   const names = asked === true ? ['unreal', 'quad'] : [...asked]
@@ -143,6 +168,24 @@ export async function checkGlow(asked: readonly string[] | true, frames: Frames,
       const picture = painterB(glowing, compositor)
       const alpha = glowAlpha(reference, pixelsOf(picture), W, H, request.radius)
       const base = diffChannels(reference, pixelsOf(painterB(glowing, compositor, { glow: false })))
+      // A glow over a half-opaque panel: its interior and every anti-aliased edge are where colour could pass alpha.
+      const premultipliedReading = premultipliedInvalid(webglBytes(list([panel(undefined, 0.5)], { glow: [request] }), compositor, renderer))
+      if (route === 'quad') {
+        const layer = premultiply(reference)
+        const readings: GlowReferenceReading[] = GLOW_REFERENCE_STRENGTHS.map((strength) => {
+          const drawn = painterB(list([panel()], { glow: [{ ...request, strength }] }), compositor)
+          const expected = glowReference(layer, layer, W, H, request.radius, strength)
+          if (strength !== 1) frames.canvas(`M7: route quad at strength ${strength} (the alpha cap engaged), over black`, over(drawn, '#000000'))
+          return {
+            strength,
+            ...premultipliedDiff(expected, premultiply(pixelsOf(drawn))),
+            // glowAlpha reads alpha alone, which premultiplying leaves as it is.
+            referenceGlowMax: glowAlpha(reference, expected, W, H, request.radius).glowMax,
+            glowMax: glowAlpha(reference, pixelsOf(drawn), W, H, request.radius).glowMax
+          }
+        })
+        result.quadReference = { readings, verdict: glowReferenceVerdict(readings) }
+      }
       const times: number[] = []
       const { ctx } = canvas2d()
       for (let i = 0; i < GLOW_CHECK_FRAMES; i++) {
@@ -156,7 +199,7 @@ export async function checkGlow(asked: readonly string[] | true, frames: Frames,
       frames.canvas(`M7: route ${route}, the glow over black`, over(picture, '#000000'))
       frames.canvas(`M7: route ${route}, its alpha alone (white is opaque; the reach is ${alpha.reach} px)`, alphaView(picture))
       frames.canvas(`M7: route ${route}, the glow under a 24° tilt, over black`, over(painterB(list([panel(0)], { glow: [request], camera: { ...FLAT, tilt: 24 } }), compositor), '#000000'))
-      reading = { route, alpha, base, msPerFrame: percentile(times, 50), memory: { before, built: memoryNow(), after: before } }
+      reading = { route, alpha, base, premultiplied: premultipliedReading, msPerFrame: percentile(times, 50), memory: { before, built: memoryNow(), after: before } }
     } finally {
       compositor.dispose()
     }
@@ -165,15 +208,30 @@ export async function checkGlow(asked: readonly string[] | true, frames: Frames,
     result.routes.push({ ...reading, verdict })
     const a = reading.alpha
     summary.push(
-      `M7 route ${route}: alpha beyond the reach (${a.reach} px) max ${a.outsideReach} over ${a.outsidePixels} px; the glow outside the shape max ${a.glowMax} over ${a.glowPixels} px; ` +
-        `by distance ${a.bands.map((b) => `(${b.from}, ${b.to === Infinity ? '∞' : b.to}] ${b.maxAlpha}`).join(', ')}; the base against painter A mean ${reading.base.meanAll.toFixed(3)} max ${reading.base.maxAll}; ` +
+      `M7 route ${route}: alpha at the frame's corners max ${a.corners} over ${a.cornerPixels} px; alpha beyond the reach (${a.reach} px${route === 'quad' ? '' : ', information only on this route'}) max ${a.outsideReach} over ${a.outsidePixels} px; the glow outside the shape max ${a.glowMax} over ${a.glowPixels} px; ` +
+        `by distance ${a.bands.map((b) => `(${b.from}, ${b.to === Infinity ? '∞' : b.to}] ${b.maxAlpha}`).join(', ')}; over a half-opaque panel ${reading.premultiplied.invalid} of ${reading.premultiplied.pixels} px with colour above alpha (worst ${reading.premultiplied.worst}); the base against painter A mean ${reading.base.meanAll.toFixed(3)} max ${reading.base.maxAll}; ` +
         `${reading.msPerFrame.toFixed(2)} ms a frame (median of ${GLOW_CHECK_FRAMES}); memory before ${reading.memory.before.geometries} / ${reading.memory.before.textures}, after ${reading.memory.after.geometries} / ${reading.memory.after.textures}; ` +
         `verdict: ${verdict.pass ? 'PASS' : `FAIL: ${verdict.failures.join('; ')}`}`
     )
     if (!verdict.pass) notes.push(...verdict.failures.map((f) => `M7: ${f}`))
   }
+  if (result.quadReference) {
+    const { readings, verdict } = result.quadReference
+    summary.push(
+      `glow: quad against its CPU reference (glowReference, at most ${GLOW_BAR.referenceMax} levels): ` +
+        readings.map((r) => `strength ${r.strength} alpha ${r.alphaMax} colour ${r.colourMax}, the glow outside the shape ${r.glowMax} (reference ${r.referenceGlowMax})`).join('; ') +
+        `; verdict: ${verdict.pass ? 'PASS' : `FAIL: ${verdict.failures.join('; ')}`}`
+    )
+    if (!verdict.pass) notes.push(...verdict.failures.map((f) => `glow: ${f}`))
+  }
   const passed = result.routes.filter((r) => r.verdict.pass).map((r) => r.route)
-  summary.push(`M7 on this machine: ${passed.length ? `${passed.join(' and ')} pass${passed.length === 1 ? 'es' : ''}` : 'no route passes'}. The rule (§6.16): unreal is the route if it passes on both machines; else quad.`)
+  summary.push(
+    `M7 on this machine: ${passed.length ? `${passed.join(' and ')} pass${passed.length === 1 ? 'es' : ''}` : 'no route passes'}. ` +
+      `How it was read (the fixer's reading of §6.15/§6.16, not the plan's words; the owner decides on these lines and the pictures): every route must keep the frame's corners at alpha 0 (the background stays transparent), the glow below 255 outside the shape, the frame premultiplied (colour at or below alpha), the base exact; ` +
+      `quad must also be 0 beyond the request's ${request.radius} px, its construction; unreal has no pixel reach, so its alpha by distance is information only. ` +
+      `The unreal leg reads UnrealBloomPass's composite (renderTargetsHorizontal[0]) added by the compositor's own add, not the pass's own additive blend into its input, its strength divided by UNREAL_GAIN (${UNREAL_GAIN}). ` +
+      `The rule (§6.16): unreal is the route if it passes on both machines; else quad.`
+  )
   return result
 }
 

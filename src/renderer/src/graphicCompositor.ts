@@ -8,6 +8,7 @@ import {
   GLOW_ROUTE,
   MAX_GLOW_BATCHES,
   MAX_PLANES,
+  UNREAL_GAIN,
   UNREAL_RADIUS_PX,
   cameraFor,
   compositorRoute,
@@ -39,6 +40,7 @@ export {
   GLOW_SIGMA_OF_RADIUS,
   MAX_GLOW_BATCHES,
   MAX_PLANES,
+  UNREAL_GAIN,
   UNREAL_RADIUS_PX,
   cameraFor,
   cameraIsFlat,
@@ -187,9 +189,15 @@ void main() {
 /**
  * The glow added over the frame: premultiplied, scaled by the strength, its
  * alpha held at `uMaxAlpha` (the quad route's `GLOW_MAX_ALPHA`; 1 on the
- * unreal route, whose own alpha M7 reads). Blended colour ONE + ONE (a glow
- * adds light) and alpha ONE + ONE_MINUS_SRC_ALPHA (alpha "over", never
- * above 1): beyond the glow's reach the texel is 0 and nothing changes.
+ * unreal route, whose own alpha M7 reads). Blended ONE + ONE on colour and
+ * alpha alike (a glow adds light and coverage; three's own
+ * `AdditiveBlending` with premultiplied alpha), clamped at 1 by the frame:
+ * colour stays at or below alpha, so the frame is still premultiplied where
+ * a glow lands on a half-opaque item or an anti-aliased edge (alpha "over"
+ * left colour above alpha there by up to base × glow alpha, which the
+ * preview kept and the export's un-premultiply clamped: preview ≠ export).
+ * Where the base is clear the result is the glow's own texel; beyond the
+ * glow's reach the texel is 0 and nothing changes.
  */
 const ADD_FRAGMENT = /* glsl */ `
 precision highp float;
@@ -480,7 +488,7 @@ function glowOf(state: Internals): Glow {
   add.blendSrc = three.OneFactor
   add.blendDst = three.OneFactor
   add.blendSrcAlpha = three.OneFactor
-  add.blendDstAlpha = three.OneMinusSrcAlphaFactor
+  add.blendDstAlpha = three.OneFactor
   const passScene = new three.Scene()
   const pass = new three.Mesh(state.quad, add)
   pass.frustumCulled = false
@@ -582,7 +590,8 @@ function spreadGlow(state: Internals, glow: Glow, b: number, batch: GlowBatch, p
 
   if (state.glowRoute === 'unreal') {
     const bloom = slot.bloom!
-    bloom.strength = batch.strength
+    // The composite's own gain taken out (UNREAL_GAIN): strength 1 is the mips' weighted mean.
+    bloom.strength = batch.strength / UNREAL_GAIN
     bloom.radius = Math.min(1, batch.radius / UNREAL_RADIUS_PX)
     bloom.threshold = 0
     bloom.render(renderer, null as unknown as Target, slot.input, 0, false)

@@ -79,7 +79,8 @@ export function cameraIsFlat(camera: Camera | undefined): boolean {
   return camera.tilt === 0 && camera.yaw === 0 && camera.dolly === 0 && !(camera.focus && camera.focus.px > 0)
 }
 
-const glows = (list: DrawList): boolean => (list.glow?.length ?? 0) > 0
+/** Whether the list's glow draws anywhere: a request of radius or strength 0 or below is left out (`glowBatches`), so a glow that has faded to 0 at rest is route one, exact by construction. */
+const glows = (list: DrawList): boolean => glowBatches(list).length > 0
 
 /**
  * §6.16's route one: the camera flat (none, or tilt, yaw and dolly all 0 and
@@ -244,6 +245,17 @@ export const GLOW_MAX_ALPHA = 0.85
 /** The `'unreal'` route's mapping of a request's radius in pixels onto `UnrealBloomPass.radius`, 0..1: this many pixels is 1 (proposal; M7's alternative only). */
 export const UNREAL_RADIUS_PX = 64
 
+/**
+ * The `'unreal'` route's gain: r186's composite multiplies its five mips by
+ * `3.0 * bloomStrength` and by `lerpBloomFactor` of the factors 1.0, 0.8,
+ * 0.6, 0.4, 0.2, which sum to 3.0 at every `bloomRadius` (read in
+ * node_modules, UnrealBloomPass.js), so a white input's bloom is 9 × the
+ * mips' weighted mean. A request's strength is divided by this before it
+ * becomes `bloomStrength`, so strength 1 is the mips' mean on that route as
+ * it is the Gaussian's on the quad route, and M7 compares like with like.
+ */
+export const UNREAL_GAIN = 9
+
 /** At most this many distinct (radius, strength) pairs of glow in one list: a drawer never emits more (the hero's and the edge sweep's; proposal). */
 export const MAX_GLOW_BATCHES = 2
 
@@ -270,11 +282,14 @@ export function glowKernel(radius: number): { offsets: number[]; weights: number
 
 /**
  * Whether an item is the one a request names: its id, or a piece of it
- * (`textItems` names a field's pieces `<field>-<n>`, items.ts). Top-level
- * items only: a group is taken whole by its own id.
+ * (`textItems` names a field's pieces `<field>-<n>`, `n` a whole number,
+ * items.ts), and nothing else: `value-bg` is not a piece of `value`.
+ * Top-level items only: a group is taken whole by its own id.
  */
 export function glowMatches(id: string, request: GlowRequest): boolean {
-  return id === request.item || id.startsWith(`${request.item}-`)
+  if (id === request.item) return true
+  const prefix = `${request.item}-`
+  return id.startsWith(prefix) && /^\d+$/.test(id.slice(prefix.length))
 }
 
 /** The requested items alone, in list order: what a glow canvas holds (§6.16: "the requested items are painted alone"). Never a dim. */

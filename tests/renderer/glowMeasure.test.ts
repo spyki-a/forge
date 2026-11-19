@@ -2,15 +2,23 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import type { ChannelDiff } from '../../src/renderer/src/harness/compositorMeasure'
+import { GLOW_MAX_ALPHA, glowKernel } from '@shared/graphics/compositor'
 import {
+  CORNER_PX,
   FOCUS_BAR,
   GLOW_BAR,
   borderAlphaMin,
   chebyshevDistance,
   focusVerdict,
   glowAlpha,
+  glowReference,
+  glowReferenceVerdict,
   glowRouteVerdict,
+  premultipliedDiff,
+  premultipliedInvalid,
+  premultiply,
   type FocusReadings,
+  type GlowReferenceReading,
   type GlowRouteReading
 } from '../../src/renderer/src/harness/glowMeasure'
 
@@ -79,6 +87,81 @@ describe('glowAlpha', () => {
   it('refuses pictures of different sizes', () => {
     expect(() => glowAlpha(reference, picture(W, W - 1, []), W, W, 4)).toThrow(/sizes/)
   })
+
+  it('reads the CORNER_PX squares at the frame’s four corners, and nothing between them', () => {
+    const S = 2 * CORNER_PX + 8
+    const centre: [number, number, number][] = [[S / 2, S / 2, 255]]
+    const ref = picture(S, S, centre)
+    expect(glowAlpha(ref, picture(S, S, [...centre, [CORNER_PX, 0, 90], [0, CORNER_PX, 80]]), S, S, 2).corners).toBe(0)
+    const r = glowAlpha(ref, picture(S, S, [...centre, [S - 1, S - CORNER_PX, 7], [CORNER_PX, 0, 90]]), S, S, 2)
+    expect(r.corners).toBe(7)
+    expect(r.cornerPixels).toBe(4 * CORNER_PX * CORNER_PX)
+  })
+})
+
+describe('premultipliedInvalid, premultiply and premultipliedDiff', () => {
+  it('counts the pixels whose colour is above their alpha, and the worst excess', () => {
+    const bytes = new Uint8Array([10, 10, 10, 10, 0, 0, 0, 0, 200, 191, 0, 191, 0, 0, 255, 128])
+    expect(premultipliedInvalid(bytes)).toEqual({ pixels: 4, invalid: 2, worst: 127 })
+  })
+
+  it('premultiplies straight colour, rounded; the difference is per channel, alpha apart', () => {
+    expect([...premultiply([255, 128, 0, 128])]).toEqual([128, 64, 0, 128])
+    expect(premultipliedDiff([1, 2, 3, 4], [1, 7, 3, 1])).toEqual({ alphaMax: 3, colourMax: 5 })
+  })
+})
+
+describe('glowReference: the quad route on the CPU', () => {
+  const S = 61
+  const c = 30
+  /** One premultiplied pixel at the centre. */
+  const dot = (value: number): Uint8ClampedArray => {
+    const data = new Uint8ClampedArray(S * S * 4)
+    data.fill(value, (c * S + c) * 4, (c * S + c) * 4 + 4)
+    return data
+  }
+  const at = (data: ArrayLike<number>, x: number, y: number, channel = 3): number => data[(y * S + x) * 4 + channel]
+
+  it('is the kernel horizontally, rounded to 8 bits, then vertically, rounded: a dot over a clear base', () => {
+    const radius = 6
+    const { offsets, weights } = glowKernel(radius)
+    const out = glowReference(dot(200), new Uint8ClampedArray(S * S * 4), S, S, radius, 0.5, 1)
+    for (let i = 0; i < offsets.length; i++) {
+      for (let j = 0; j < offsets.length; j++) {
+        const expected = Math.round(Math.min(1, (Math.round(Math.round(200 * weights[i]) * weights[j]) / 255) * 0.5) * 255)
+        for (const [sx, sy] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) expect(at(out, c + sx * offsets[i], c + sy * offsets[j]), `${i},${j} ${sx},${sy}`).toBe(expected)
+      }
+    }
+  })
+
+  it('is exactly 0 beyond its reach (a chessboard distance)', () => {
+    const out = glowReference(dot(255), new Uint8ClampedArray(S * S * 4), S, S, 6, 4, 1)
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) if (Math.max(Math.abs(x - c), Math.abs(y - c)) > 6) expect(at(out, x, y), `${x},${y}`).toBe(0)
+  })
+
+  it('holds the glow’s alpha at the cap, every channel scaled with it, and adds it ONE + ONE over the base, clamped', () => {
+    // A flat opaque field blurs to itself: at strength 2 its alpha 2 is held at GLOW_MAX_ALPHA, the colour scaled by the same factor.
+    const field = new Uint8ClampedArray(S * S * 4)
+    for (let p = 0; p < S * S * 4; p += 4) field.set([100, 50, 0, 255], p)
+    const clear = new Uint8ClampedArray(S * S * 4)
+    const capped = glowReference(field, clear, S, S, 6, 2)
+    expect([at(capped, c, c, 0), at(capped, c, c, 1), at(capped, c, c, 3)]).toEqual([Math.round(100 * GLOW_MAX_ALPHA), Math.round(50 * GLOW_MAX_ALPHA), Math.round(255 * GLOW_MAX_ALPHA)])
+    // Over a half-opaque base (64 of 128): colour and alpha both add, so colour stays at or below alpha.
+    const base = new Uint8ClampedArray(S * S * 4)
+    for (let p = 0; p < S * S * 4; p += 4) base.set([64, 0, 0, 128], p)
+    const over = glowReference(field, base, S, S, 6, 0.25, 1)
+    expect([at(over, c, c, 0), at(over, c, c, 3)]).toEqual([Math.round(64 + 25), Math.round(128 + 63.75)])
+    expect(premultipliedInvalid(over).invalid).toBe(0)
+  })
+})
+
+describe('glowReferenceVerdict', () => {
+  const reading = (alphaMax: number, colourMax: number): GlowReferenceReading => ({ strength: 2, alphaMax, colourMax, referenceGlowMax: 217, glowMax: 217 })
+  it('passes within GLOW_BAR.referenceMax levels, and fails beyond it or with nothing read', () => {
+    expect(glowReferenceVerdict([reading(GLOW_BAR.referenceMax, 1)])).toEqual({ pass: true, failures: [] })
+    expect(glowReferenceVerdict([reading(1, GLOW_BAR.referenceMax + 1)]).failures).toEqual([`quad at strength 2: ${GLOW_BAR.referenceMax + 1} levels from its CPU reference (alpha 1, colour ${GLOW_BAR.referenceMax + 1}) > ${GLOW_BAR.referenceMax}`])
+    expect(glowReferenceVerdict([]).pass).toBe(false)
+  })
 })
 
 const diff = (maxAll = 0, meanAll = 0): ChannelDiff => ({ mean: [meanAll, meanAll, meanAll, meanAll], max: [maxAll, 0, 0, 0], meanAll, maxAll, pixels: 100 })
@@ -86,8 +169,9 @@ const diff = (maxAll = 0, meanAll = 0): ChannelDiff => ({ mean: [meanAll, meanAl
 function passingGlow(): GlowRouteReading {
   return {
     route: 'quad',
-    alpha: { reach: 24, outsideReach: 0, outsidePixels: 4000, glowMax: 216, glowPixels: 900, bands: [] },
+    alpha: { reach: 24, outsideReach: 0, outsidePixels: 4000, glowMax: 216, glowPixels: 900, bands: [], corners: 0, cornerPixels: 1024 },
     base: diff(1, 0.0001),
+    premultiplied: { pixels: 518400, invalid: 0, worst: 0 },
     msPerFrame: 2,
     memory: { before: { geometries: 3, textures: 2 }, built: { geometries: 4, textures: 9 }, after: { geometries: 3, textures: 2 } }
   }
@@ -96,7 +180,15 @@ function passingGlow(): GlowRouteReading {
 describe('glowRouteVerdict: M7’s bars', () => {
   it('passes a reading at every bar', () => {
     expect(glowRouteVerdict(passingGlow())).toEqual({ pass: true, failures: [] })
-    expect(GLOW_BAR).toEqual({ outsideReachMax: 0, glowAlphaBelow: 255, baseMax: 2, baseMean: 0.0005 })
+    expect(GLOW_BAR).toMatchObject({ outsideReachMax: 0, cornerMax: 0, glowAlphaBelow: 255, premultipliedInvalidMax: 0, baseMax: 2, baseMean: 0.0005 })
+  })
+
+  it('holds the unreal route to the corners, not to the request’s pixel reach: it has none', () => {
+    const r = { ...passingGlow(), route: 'unreal' as const }
+    r.alpha = { ...r.alpha, outsideReach: 60 }
+    expect(glowRouteVerdict(r)).toEqual({ pass: true, failures: [] })
+    r.alpha = { ...r.alpha, corners: 1 }
+    expect(glowRouteVerdict(r).failures).toEqual(["route unreal: alpha 1 at the frame's corners, not 0: the background is not transparent"])
   })
 
   const cases: [string, (r: GlowRouteReading) => void, RegExp][] = [
@@ -104,6 +196,10 @@ describe('glowRouteVerdict: M7’s bars', () => {
     ['nothing read beyond the reach', (r) => (r.alpha.outsidePixels = 0), /no pixel beyond the reach/],
     ['a glow at 255 outside the shape', (r) => (r.alpha.glowMax = 255), /reaches 255 outside the shape, not below 255/],
     ['no glow drawn', (r) => (r.alpha.glowPixels = 0), /no glow was drawn/],
+    ['alpha 1 at the corners', (r) => (r.alpha.corners = 1), /alpha 1 at the frame's corners, not 0/],
+    ['no corner read', (r) => (r.alpha.cornerPixels = 0), /no pixel at the frame's corners/],
+    ['colour above alpha', (r) => (r.premultiplied = { pixels: 518400, invalid: 12, worst: 40 }), /12 pixels with colour above alpha \(by up to 40\)/],
+    ['the WebGL frame not read', (r) => (r.premultiplied = { pixels: 0, invalid: 0, worst: 0 }), /WebGL frame was not read/],
     ['the base off by 3', (r) => (r.base = diff(3, 0.0001)), /the base under the glow differs from painter A by 3 > 2/],
     ['the base’s mean 0.0005', (r) => (r.base = diff(1, 0.0005)), /mean 0\.0005, not 0\.000/],
     ['a target not given back', (r) => (r.memory.after = { geometries: 3, textures: 3 }), /dispose gave back 1 of 1 geometries and 6 of 7 textures/]

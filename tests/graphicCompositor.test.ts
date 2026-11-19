@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import type { Camera, DrawItem, DrawList, ShapeItem } from '@shared/graphics/items'
 import {
@@ -6,7 +8,9 @@ import {
   GLOW_MAX_HALF_TAPS,
   GLOW_ROUTE,
   GLOW_ROUTES,
+  GLOW_SIGMA_OF_RADIUS,
   MAX_PLANES,
+  UNREAL_GAIN,
   focusDisc,
   focusRadius,
   glowBatches,
@@ -215,14 +219,40 @@ describe('graphicCompositor: the glow’s pure parts (piece 2)', () => {
     }
   })
 
+  it('glowKernel is Gaussian with sigma = the radius × GLOW_SIGMA_OF_RADIUS: each weight against the centre’s', () => {
+    for (const radius of [8, 24, 40]) {
+      const { offsets, weights } = glowKernel(radius)
+      const sigma = Math.round(radius) * GLOW_SIGMA_OF_RADIUS
+      for (let i = 1; i < offsets.length; i++) {
+        expect(weights[i] / weights[0], `${radius} tap ${i}`).toBeCloseTo(Math.exp(-0.5 * (offsets[i] / sigma) ** 2), 12)
+      }
+    }
+  })
+
+  it('UNREAL_GAIN is r186’s composite gain: its 3.0 × bloomStrength times its five factors, which sum to 3.0 at any bloomRadius', () => {
+    const source = readFileSync(join(__dirname, '..', 'node_modules', 'three', 'examples', 'jsm', 'postprocessing', 'UnrealBloomPass.js'), 'utf8')
+    expect([...source.matchAll(/3\.0 \* bloomStrength \*/g)]).toHaveLength(1)
+    const declared = [...source.matchAll(/const bloomFactors = \[([^\]]+)\];/g)]
+    expect(declared).toHaveLength(1)
+    const factors = declared[0][1].split(',').map(Number)
+    expect(factors).toHaveLength(5)
+    // lerpBloomFactor: mix(f, 1.2 − f, radius), whose sum over the factors is the same at radius 0 and 1, so at every radius.
+    expect(source).toContain('float mirrorFactor = 1.2 - factor;')
+    const at = (radius: number): number => factors.reduce((sum, f) => sum + f + (1.2 - f - f) * radius, 0)
+    expect(at(0)).toBeCloseTo(3, 12)
+    expect(at(1)).toBeCloseTo(3, 12)
+    expect(UNREAL_GAIN).toBeCloseTo(3 * at(0.5), 12)
+  })
+
   it('glowKernel of 0 or below is the texel itself', () => {
     for (const radius of [0, -3, 0.4]) expect(glowKernel(radius)).toEqual({ offsets: [0], weights: [1] })
   })
 
   it('glowItemsOf: the requested items and their pieces alone, in list order, never a dim', () => {
-    const items: DrawItem[] = [dim(), shape('panel', '#1'), shape('value-1', '#2'), shape('valueX', '#3'), shape('value', '#4'), shape('label', '#5'), shape('value-0', '#6')]
+    const items: DrawItem[] = [dim(), shape('panel', '#1'), shape('value-1', '#2'), shape('valueX', '#3'), shape('value', '#4'), shape('label', '#5'), shape('value-0', '#6'), shape('value-bg', '#7'), shape('value-12', '#8')]
     const glowing = glowItemsOf(items, [{ item: 'value', radius: 8, strength: 1 }])
-    expect(glowing.map((i) => i.id)).toEqual(['value-1', 'value', 'value-0'])
+    // A piece is `<id>-<n>` (textItems), n whole: `value-bg` is another item.
+    expect(glowing.map((i) => i.id)).toEqual(['value-1', 'value', 'value-0', 'value-12'])
     expect(glowItemsOf(items, [{ item: 'dim', radius: 8, strength: 1 }])).toEqual([])
     expect(glowItemsOf(items, [])).toEqual([])
   })
@@ -280,6 +310,14 @@ describe('graphicCompositor: the focus blur’s pure parts (piece 2)', () => {
     expect(focusRadius({ ...FLAT, focus: { z: 0.05, px: 10 } }, 0.05)).toBe(0)
     expect(isFlat(list(items, { camera: { ...FLAT, focus: { z: 0.05, px: 0 } } }))).toBe(true)
     expect(compositorRoute(list(items, { camera: { ...FLAT, focus: { z: -0.02, px: 0 } } }))).toBe('flat')
+  })
+
+  it('a glow that draws nowhere (radius or strength 0, as glowBatches leaves it out) is route one', () => {
+    for (const glow of [[{ item: 'a', radius: 0, strength: 1 }], [{ item: 'a', radius: 8, strength: 0 }]]) {
+      expect(isFlat(list([shape('a', '#1')], { glow })), JSON.stringify(glow)).toBe(true)
+      expect(compositorRoute(list([shape('a', '#1')], { camera: FLAT, glow })), JSON.stringify(glow)).toBe('flat')
+    }
+    expect(isFlat(list([shape('a', '#1')], { glow: [{ item: 'a', radius: 0, strength: 1 }, { item: 'a', radius: 8, strength: 1 }] }))).toBe(false)
   })
 
   it('a glow is never route one: route two under a flat camera, route three under a moving one', () => {
