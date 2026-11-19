@@ -8,6 +8,7 @@
  */
 
 import { COMPOSITOR_BAR, type ChannelDiff } from './compositorMeasure'
+import { chebyshevDistance } from './glowMeasure'
 
 /**
  * The bars. `settledMax` is §6.12's M6 for a 2.5D variant: its settled frame
@@ -15,7 +16,14 @@ import { COMPOSITOR_BAR, type ChannelDiff } from './compositorMeasure'
  * hero under a glowing style is route two at rest (the glow persists), so its
  * base under the glow (the glow left out, `CompositorProbe`) is held to route
  * two's bars, `COMPOSITOR_BAR`'s colour within 2 and the 1:1 texture's mean
- * printing 0.000; its glow's alpha beyond the glow's reach is 0 (M7's bar);
+ * printing 0.000; beyond the glow's reach from the glowing item's own ink the
+ * glow adds no alpha, 0 (M7's bar, read as the frame with the glow against
+ * the frame without it, `glowBeyondReach`: a style that dims fills the whole
+ * frame, so alpha beyond the reach of ALL the ink reads no pixel there), and
+ * the colour there stays within route two's own bar (`outsideColourMax`: the
+ * two frames leave the compositor by different passes, and on the Mac the
+ * rest of the graphic's translucent ink read 1 level apart on colour with
+ * alpha equal, up to 167 px from the item, where no glow of 11 px reaches);
  * and the glow is present, the frame with it differing from the frame
  * without it by at least `glowMinMax` levels somewhere.
  *
@@ -30,6 +38,7 @@ export const DEPTH_BAR = Object.freeze({
   heroBaseMax: COMPOSITOR_BAR.colourMax,
   heroBaseMean: COMPOSITOR_BAR.textureMean,
   outsideReachMax: 0,
+  outsideColourMax: COMPOSITOR_BAR.colourMax,
   glowMinMax: 1,
   firstMinMax: 8
 })
@@ -57,8 +66,9 @@ export interface DepthCaseReading {
     /** The request's radius in frame px, and the reach read (rounded). */
     radius: number
     reach: number
-    /** The largest alpha beyond the reach from the twin's ink, and over how many pixels. */
+    /** Beyond the reach from the glowing item's own ink, with against without (`glowBeyondReach`): the most alpha the glow adds, the largest colour difference, and over how many pixels. */
     outsideReach: number
+    outsideColour: number
     outsidePixels: number
     /** The settled frame with its glow against the same frame with the glow left out. */
     present: ChannelDiff
@@ -87,7 +97,8 @@ export function depthVerdict(readings: readonly DepthCaseReading[]): { pass: boo
       if (!r.glow) failures.push(`${name}: the glow was not read`)
       else {
         if (r.glow.outsidePixels === 0) failures.push(`${name}: no pixel beyond the glow's reach was read`)
-        if (r.glow.outsideReach > B.outsideReachMax) failures.push(`${name}: alpha ${r.glow.outsideReach} beyond the glow's ${r.glow.reach} px reach`)
+        if (r.glow.outsideReach > B.outsideReachMax) failures.push(`${name}: the glow adds alpha ${r.glow.outsideReach} beyond its ${r.glow.reach} px reach`)
+        if (r.glow.outsideColour > B.outsideColourMax) failures.push(`${name}: colour off by ${r.glow.outsideColour} > ${B.outsideColourMax} beyond the glow's ${r.glow.reach} px reach`)
         if (!(r.glow.present.maxAll >= B.glowMinMax)) failures.push(`${name}: no glow: the frame with it equals the frame without it`)
       }
     } else if (r.settled.maxAll > B.settledMax) failures.push(`${name}: the settled frame differs from its flat twin, max ${r.settled.maxAll} (route one must equal it)`)
@@ -98,6 +109,46 @@ export function depthVerdict(readings: readonly DepthCaseReading[]): { pass: boo
     }
   }
   return { pass: failures.length === 0, failures }
+}
+
+/**
+ * The hero's glow against its reach: `ink` is the glowing item painted alone
+ * by painter A (what the glow canvas holds), `withGlow` and `withoutGlow` the
+ * settled frame through the compositor with its glow and with the glow left
+ * out, all straight RGBA of `width` × `height`. Beyond the reach (chessboard
+ * distance from the item's ink above the radius, rounded: the kernel is cut
+ * there) the glow adds nothing: `outsideReach` is the largest difference of
+ * alpha there (M7's bar, 0), `outsideColour` the largest of a colour channel
+ * (the two frames leave by different passes, so the rest of the graphic's
+ * ink may round a level apart), `outsidePixels` how many pixels that is.
+ * Read on the difference, not on alpha itself, because the rest of the
+ * graphic is drawn there too, and under a style that dims, over the whole
+ * frame.
+ */
+export function glowBeyondReach(
+  ink: ArrayLike<number>,
+  withGlow: ArrayLike<number>,
+  withoutGlow: ArrayLike<number>,
+  width: number,
+  height: number,
+  radius: number
+): { reach: number; outsideReach: number; outsideColour: number; outsidePixels: number } {
+  if (ink.length !== width * height * 4 || withGlow.length !== ink.length || withoutGlow.length !== ink.length) throw new Error('glowBeyondReach: pictures of different sizes')
+  const reach = Math.round(radius)
+  const distance = chebyshevDistance(ink, width, height)
+  let outsideReach = 0
+  let outsideColour = 0
+  let outsidePixels = 0
+  for (let p = 0; p < width * height; p++) {
+    if (!(distance[p] > reach)) continue
+    outsidePixels++
+    for (let c = 0; c < 4; c++) {
+      const d = Math.abs(withGlow[p * 4 + c] - withoutGlow[p * 4 + c])
+      if (c === 3) outsideReach = Math.max(outsideReach, d)
+      else outsideColour = Math.max(outsideColour, d)
+    }
+  }
+  return { reach, outsideReach, outsideColour, outsidePixels }
 }
 
 /** Frames per contact sheet (the depth option's). */

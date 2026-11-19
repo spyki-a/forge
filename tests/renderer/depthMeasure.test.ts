@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ChannelDiff } from '../../src/renderer/src/harness/compositorMeasure'
-import { DEPTH_BAR, DEPTH_SHEET_FRAMES, depthSheetFrames, depthVerdict, type DepthCaseReading } from '../../src/renderer/src/harness/depthMeasure'
+import { DEPTH_BAR, DEPTH_SHEET_FRAMES, depthSheetFrames, depthVerdict, glowBeyondReach, type DepthCaseReading } from '../../src/renderer/src/harness/depthMeasure'
 
 /*
  * The harness's `depth` option's verdict (docs/CLIPS.md §6.11's `parity` row,
@@ -22,7 +22,7 @@ function reading(template: 'counter' | 'ring', variant: DepthCaseReading['varian
     settled: variant === 'hero' ? diff(1, 0.0001) : diff(),
     firstFrame: 1,
     first: diff(120, 3),
-    ...(variant === 'hero' ? { glow: { radius: 10.8, reach: 11, outsideReach: 0, outsidePixels: 400000, present: diff(90, 0.5) } } : {})
+    ...(variant === 'hero' ? { glow: { radius: 10.8, reach: 11, outsideReach: 0, outsideColour: 1, outsidePixels: 400000, present: diff(90, 0.5) } } : {})
   }
 }
 
@@ -65,10 +65,66 @@ describe('depthVerdict', () => {
   })
 
   it('fails the hero’s glow beyond its reach, absent, or not read; and a case not read', () => {
-    expect(failing((r) => (r[9].glow!.outsideReach = 1))).toEqual([expect.stringContaining('ring-en hero under neon: alpha 1 beyond the glow')])
+    expect(failing((r) => (r[9].glow!.outsideReach = 1))).toEqual([expect.stringContaining('ring-en hero under neon: the glow adds alpha 1 beyond its 11 px reach')])
+    // Colour there is held to route two's own bar: a level of rounding passes (the passing reading carries 1), more than the bar does not.
+    const atBar = passing()
+    atBar[9].glow!.outsideColour = DEPTH_BAR.outsideColourMax
+    expect(depthVerdict(atBar)).toEqual({ pass: true, failures: [] })
+    expect(failing((r) => (r[9].glow!.outsideColour = DEPTH_BAR.outsideColourMax + 1))).toEqual([expect.stringContaining(`colour off by ${DEPTH_BAR.outsideColourMax + 1}`)])
+    expect(failing((r) => (r[9].glow!.outsidePixels = 0))).toEqual([expect.stringContaining('no pixel beyond the glow')])
     expect(failing((r) => (r[9].glow!.present = diff(0, 0)))).toEqual([expect.stringContaining('no glow')])
     expect(failing((r) => delete r[9].glow)).toEqual([expect.stringContaining('the glow was not read')])
     expect(failing((r) => r.splice(7, 1))).toEqual(['ring dolly was not read'])
+  })
+})
+
+describe('glowBeyondReach: the hero’s glow against the reach from the glowing item’s own ink', () => {
+  const W = 12
+  const H = 5
+  /** A frame of one colour and alpha (a style's dim fills the whole frame). */
+  const frame = (alpha: number): Uint8ClampedArray => {
+    const d = new Uint8ClampedArray(W * H * 4)
+    for (let p = 0; p < W * H; p++) d.set([10, 20, 30, alpha], p * 4)
+    return d
+  }
+  /** The glowing item alone: one pixel of ink at (2, 2). */
+  const ink = (): Uint8ClampedArray => {
+    const d = new Uint8ClampedArray(W * H * 4)
+    d[(2 * W + 2) * 4 + 3] = 255
+    return d
+  }
+  const set = (d: Uint8ClampedArray, x: number, y: number, channel: number, value: number): void => {
+    d[(y * W + x) * 4 + channel] = value
+  }
+
+  it('reads pixels beyond the reach even when the whole frame is drawn on (a dim), and 0 when the glow stays inside it', () => {
+    const without = frame(128)
+    const withGlow = frame(128)
+    // The glow, inside the reach of 2: chessboard distance 2 from (2, 2).
+    set(withGlow, 4, 2, 0, 200)
+    set(withGlow, 2, 4, 3, 255)
+    const r = glowBeyondReach(ink(), withGlow, without, W, H, 2.4)
+    expect(r.reach).toBe(2)
+    // Every pixel outside the 5 × 5 square about (2, 2): 12 × 5 less 25.
+    expect(r.outsidePixels).toBe(W * H - 25)
+    expect(r.outsideReach).toBe(0)
+    expect(r.outsideColour).toBe(0)
+  })
+
+  it('reads what the glow adds one pixel past the reach, on colour and on alpha alike', () => {
+    const without = frame(128)
+    const colour = frame(128)
+    set(colour, 5, 2, 1, 27)
+    expect(glowBeyondReach(ink(), colour, without, W, H, 2)).toMatchObject({ outsideReach: 0, outsideColour: 7 })
+    const alpha = frame(128)
+    set(alpha, 5, 0, 3, 131)
+    expect(glowBeyondReach(ink(), alpha, without, W, H, 2)).toMatchObject({ outsideReach: 3, outsideColour: 0 })
+    // The same pixel is inside a reach of 3.
+    expect(glowBeyondReach(ink(), alpha, without, W, H, 3).outsideReach).toBe(0)
+  })
+
+  it('refuses pictures of different sizes', () => {
+    expect(() => glowBeyondReach(ink(), frame(1).slice(4), frame(1), W, H, 2)).toThrow('different sizes')
   })
 })
 

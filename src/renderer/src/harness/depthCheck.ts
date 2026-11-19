@@ -18,9 +18,11 @@
  * - the last moving frame's camera fields, read off its list: each exactly 0;
  * - the first frame where the twin has ink against the twin's: visibly not 0,
  *   so a dead depth branch cannot pass (`DEPTH_BAR.firstMinMax`);
- * - the hero only: its glow's alpha beyond the glow's reach from the twin's
- *   ink (0, M7's bar) and that the glow is there (the frame with it against
- *   the frame without).
+ * - the hero only: what its glow adds beyond the glow's reach from the
+ *   glowing item's own ink (alpha 0, M7's bar, and colour within route two's
+ *   bar; the frame with the glow against the frame without, so a style that
+ *   dims the whole frame is read too) and that the glow is there (the same
+ *   two frames, anywhere).
  *
  * A contact sheet per case over a dark grey, at half the size, frame numbers
  * in its caption: the frames `depthSheetFrames` picks, every frame from the
@@ -31,7 +33,7 @@
 
 import type { DrawList } from '@shared/graphics/items'
 import { drawListAt } from '@shared/graphics/drawList'
-import { cameraIsFlat } from '@shared/graphics/compositor'
+import { cameraIsFlat, glowItemsOf } from '@shared/graphics/compositor'
 import { graphicMovingFrames } from '@shared/graphics/frame'
 import { paintDrawList2d } from '@shared/graphics/paint'
 import { resolveGraphicStyle, type GraphicStyle } from '@shared/graphics/style'
@@ -42,8 +44,7 @@ import { useCatalog } from '../catalog'
 import { createCompositor, paintDrawList3d, resetCompositorSession, type Compositor, type CompositorProbe } from '../graphicCompositor'
 import { graphicMeasure } from '../graphicCanvas'
 import { diffChannels, type ChannelDiff } from './compositorMeasure'
-import { glowAlpha } from './glowMeasure'
-import { depthSheetFrames, depthVerdict, type DepthCaseReading } from './depthMeasure'
+import { depthSheetFrames, depthVerdict, glowBeyondReach, type DepthCaseReading } from './depthMeasure'
 
 export interface DepthResult {
   size: { width: number; height: number }
@@ -151,8 +152,11 @@ async function readCase(
     const radius = request?.radius ?? 0
     const withGlow = painterB(lists[last], compositor)
     const withPixels = pixelsOf(withGlow)
-    const alpha = glowAlpha(twinSettled, withPixels, W, H, radius)
-    glow = { radius, reach: alpha.reach, outsideReach: alpha.outsideReach, outsidePixels: alpha.outsidePixels, present: diffChannels(pixelsOf(settledPicture), withPixels) }
+    const withoutPixels = pixelsOf(settledPicture)
+    // The glowing item alone, as the glow canvas holds it: the reach is read from its ink, not from the whole graphic's (a dim fills the frame).
+    const ink = pixelsOf(painterA({ ...lists[last], items: glowItemsOf(lists[last].items, lists[last].glow ?? []), glow: undefined }))
+    const beyond = glowBeyondReach(ink, withPixels, withoutPixels, W, H, radius)
+    glow = { radius, reach: beyond.reach, outsideReach: beyond.outsideReach, outsideColour: beyond.outsideColour, outsidePixels: beyond.outsidePixels, present: diffChannels(withoutPixels, withPixels) }
     frames.canvas(`depth: ${fixture} hero under ${style.id}, settled, with its glow (over grey)`, contactSheet([withGlow]))
   }
 
@@ -179,7 +183,7 @@ async function readCase(
   summary.push(
     `depth ${fixture} ${variant} under ${style.id}: ${moving} moving frames, ${movingCamera} off flat; last camera ${JSON.stringify(lastCamera)}; ` +
       `${msPerFrame.toFixed(1)} ms a frame through paintDrawList3d; settled against the flat twin ${line(settled)}${variant === 'hero' ? ' (the glow left out)' : ''}; frame ${firstFrame} against the twin ${line(first)}` +
-      (glow ? `; glow radius ${glow.radius.toFixed(1)} px, alpha beyond its ${glow.reach} px reach ${glow.outsideReach} over ${glow.outsidePixels} pixels, with against without ${line(glow.present)}` : '')
+      (glow ? `; glow radius ${glow.radius.toFixed(1)} px, beyond its ${glow.reach} px reach from the item's ink alpha added ${glow.outsideReach} and colour off by ${glow.outsideColour} over ${glow.outsidePixels} pixels, with against without ${line(glow.present)}` : '')
   )
   return reading
 }
