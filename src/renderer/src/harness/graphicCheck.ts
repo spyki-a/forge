@@ -10,6 +10,7 @@
  *   await window.__forgeGraphicCheck({ compositor: true })      phase 3 piece 1: M6 through paintDrawList3d, disposal, WebGL missing
  *   await window.__forgeGraphicCheck({ glow: ['unreal', 'quad'] })           M7, phase 3 piece 2: the glow's two routes
  *   await window.__forgeGraphicCheck({ focus: true })                  phase 3 piece 2: the focus blur at radius 0 and above
+ *   await window.__forgeGraphicCheck({ depth: true })                  phase 3 piece 3: counter and ring in 2.5D against their flat twins, the hero's glow
  *   await window.__forgeGraphicCheck({ indic: true })                M22's numeric halves, then phase 1's Indic render check
  *   await window.__forgeGraphicCheck({ primitives: true })                 phase 1's exit (§6.12) and M13's first half
  *   await window.__forgeGraphicCheck({ pathLength: true })                                                     M8
@@ -84,6 +85,7 @@ import { useEditor } from '../store'
 import specsText from '../../../../tests/fixtures/graphics/specs.json?raw'
 import { checkCompositor, type CompositorResult } from './compositorCheck'
 import { checkFocus, checkGlow, type FocusResult, type GlowResult } from './glowCheck'
+import { checkDepth, type DepthResult } from './depthCheck'
 import {
   BLIND_FPS,
   CURVE_QUESTIONS,
@@ -195,6 +197,15 @@ export interface GraphicCheckOptions {
   /** Phase 3's piece 2: the focus blur, a plane at radius 0 against painter A and one at 10 px, with the frame's border alpha. `glowCheck.ts`. */
   focus?: boolean
   /**
+   * Phase 3's piece 3 (§6.16; §6.11's `parity` row, phase 3's half): specs.json's
+   * English counter and ring under each depth (and as a hero under neon) through
+   * `paintDrawList3d`, against the flat twin: the settled frame (0 by route
+   * one), the last moving frame's camera (all 0), the first inked frame (not
+   * the twin's), the hero's glow (0 beyond its reach, and present), with a
+   * contact sheet of each entrance. `depthCheck.ts`.
+   */
+  depth?: boolean
+  /**
    * M22's numeric halves: each §51 cluster drawn whole and one code point at
    * a time (phase 0, bare `drawTextOnto`); then phase 1's half of the Indic
    * render check (§6.11): a text clip's bake and a caption's bake in a Latin
@@ -246,7 +257,7 @@ export interface GraphicCheckOptions {
 }
 
 /** Every option, in the order `runGraphicCheck` runs them. */
-export const GRAPHIC_CHECK_OPTIONS = ['encode', 'segments', 'blur', 'parity', 'compositor', 'glow', 'focus', 'indic', 'primitives', 'pathLength', 'strokes', 'templates', 'curves', 'look'] as const
+export const GRAPHIC_CHECK_OPTIONS = ['encode', 'segments', 'blur', 'parity', 'compositor', 'glow', 'focus', 'depth', 'indic', 'primitives', 'pathLength', 'strokes', 'templates', 'curves', 'look'] as const
 export type GraphicCheckOption = (typeof GRAPHIC_CHECK_OPTIONS)[number]
 
 /** The options a call asked for, in run order: each one by itself, so an option not passed runs nothing (the file's rule). */
@@ -641,6 +652,7 @@ export interface GraphicCheckResult {
   compositor?: CompositorResult
   glow?: GlowResult
   focus?: FocusResult
+  depth?: DepthResult
   indic?: IndicResult
   primitives?: PrimitivesResult
   pathLength?: PathLengthResult
@@ -3720,6 +3732,7 @@ export async function runGraphicCheck(options: GraphicCheckOptions = {}): Promis
   if (options.compositor) result.compositor = await checkCompositor(INDIC_CLUSTERS, frames, summary, notes)
   if (options.glow) result.glow = await checkGlow(options.glow, frames, summary, notes)
   if (options.focus) result.focus = await checkFocus(frames, summary, notes)
+  if (options.depth) result.depth = await checkDepth(TEMPLATE_FIXTURES, frames, summary, notes)
   if (options.indic) {
     // Phase 0's bare drawTextOnto first, as it was measured, before phase 1's half loads the Noto faces.
     result.indic = checkIndic(frames, summary)

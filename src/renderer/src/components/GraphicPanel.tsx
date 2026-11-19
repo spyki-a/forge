@@ -40,9 +40,16 @@ import { WEBGL_MISSING_NOTE } from '../graphicCompositor'
  * - the **seconds** within the template's bounds; the **place**, an auto third
  *   or a box you dragged, with a way back to auto.
  *
- * No Depth choice (phase 3's piece 3). When its preview is drawn flat
- * because WebGL did not start (graphicCanvas.ts `graphicDrawnFlat`), one note
- * says so (§6.16). A graphic whose transcript is not in the project
+ * - the **Depth** (phase 3, §6.16's "Who sets `depth`"), only on a template
+ *   whose `threeD` is true: Flat, Tilt, Parallax, Dolly or Focus. Your choice
+ *   wins over the hero rule (graphics/apply.ts `withHeroes`) and clears
+ *   `hero` on that graphic, its glow with it; Flat is kept as `depth:
+ *   'flat'`, so it is remembered as yours, as a dragged box is by `place.auto:
+ *   false`. One `setGraphic`, one undo step.
+ *
+ * When its preview is drawn flat because WebGL did not start, one note says
+ * so (§6.16): read through `useGraphicDrawnFlat` (graphicCanvas.ts), so it
+ * appears the moment the preview learns it. A graphic whose transcript is not in the project
  * shows its fields unchecked with one note; one with no grounding at all, with
  * its own. Under Seconds, a warning (never a block) when the length is under
  * §6.2's reading hold for its beats and what it draws (`graphicSeconds`).
@@ -63,6 +70,15 @@ export const BACK_TO_AUTO = 'Back to auto'
 export const DRAGGED_BOX = 'A box you dragged'
 export const CONNECTOR = 'Connector'
 export const SHAPE = 'Shape'
+/** The Depth choice's label and its five words (§6.16's "Who sets `depth`": "Flat, Tilt, Parallax, Dolly or Focus"). */
+export const DEPTH = 'Depth'
+export const DEPTH_CHOICES: readonly { value: NonNullable<GraphicSpec['depth']>; label: string }[] = Object.freeze([
+  { value: 'flat', label: 'Flat' },
+  { value: 'tilt', label: 'Tilt' },
+  { value: 'parallax', label: 'Parallax' },
+  { value: 'dolly', label: 'Dolly' },
+  { value: 'focus', label: 'Focus' }
+])
 /** The one note for a graphic whose words cannot be checked (not the plan's words). */
 export const UNCHECKED_NOTE = 'Its transcript is not in the project, so these words are not checked'
 /** The one note for a graphic with checked fields and no grounding at all: it is tied to no words (not the plan's words). */
@@ -199,6 +215,8 @@ export function GraphicPanel({ clip }: { clip: Clip }): ReactNode {
   const project = useEditor((s) => s.project)
   const setGraphic = useEditor((s) => s.setGraphic)
   const setSpeaker = useEditor((s) => s.setSpeaker)
+  // The preview's answer as state: the note shows when the preview learns WebGL is missing (§6.16).
+  const drawnFlat = graphicCanvas.useGraphicDrawnFlat((s) => s.ids.has(clip.id))
   const spec = clip.graphic
   if (!spec) return null
   const data = spec.data
@@ -301,6 +319,8 @@ export function GraphicPanel({ clip }: { clip: Clip }): ReactNode {
 
   const choice = GRAPHIC_CHOICES[data.template]
   const chosen = choice ? valueAt(data, choice.field) : null
+  // Absent is drawn flat: Flat shows pressed.
+  const depth = spec.depth ?? 'flat'
   const { min, max } = def.seconds
   // §6.2's reading hold over what is drawn now: a warning under Seconds when shorter, never a block.
   const need = graphicSeconds(def, spec.beats, drawnText(data))
@@ -316,7 +336,7 @@ export function GraphicPanel({ clip }: { clip: Clip }): ReactNode {
       {heading}
       {unchecked && <p className="text-[10px] leading-snug text-ink-500">{UNCHECKED_NOTE}</p>}
       {ungrounded && <p className="text-[10px] leading-snug text-ink-500">{NO_GROUNDING_NOTE}</p>}
-      {graphicCanvas.graphicDrawnFlat(clip.id) && <p className="text-[10px] leading-snug text-ink-500">{DRAWN_FLAT_NOTE}</p>}
+      {drawnFlat && <p className="text-[10px] leading-snug text-ink-500">{DRAWN_FLAT_NOTE}</p>}
       {general.map((w, i) => (
         <p key={i} data-warning-for="" className="text-[10px] leading-snug text-amber-400">
           {w.message}
@@ -337,6 +357,26 @@ export function GraphicPanel({ clip }: { clip: Clip }): ReactNode {
                 if (chosen !== o.value) save(withField(data, choice.field, o.value))
               }}
               className={choiceClass(chosen === o.value)}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {def.threeD && (
+        <div data-graphic-depth="" className="flex flex-wrap items-center gap-1">
+          <span className="w-16 shrink-0 text-[10px] text-ink-500">{DEPTH}</span>
+          {DEPTH_CHOICES.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              aria-pressed={depth === o.value}
+              onClick={() => {
+                // Yours wins over the hero rule and clears hero (and so its glow); the same choice again is no edit.
+                if (depth !== o.value) void setGraphic(clip.id, { depth: o.value, hero: undefined })
+              }}
+              className={choiceClass(depth === o.value)}
             >
               {o.label}
             </button>

@@ -3910,6 +3910,8 @@ export const useEditor = create<EditorState>((set, get) => ({
         clips: p.clips.map((c) => {
           if (c.id !== clipId || !c.graphic) return c
           const graphic: GraphicSpec = { ...c.graphic, ...wanted, version: c.graphic.version + 1 }
+          // A field patched to undefined is taken off, not kept as an undefined key: the Depth choice clears `hero` (§6.16).
+          for (const [key, value] of Object.entries(wanted)) if (value === undefined) delete (graphic as unknown as Record<string, unknown>)[key]
           if (wanted.seconds === undefined || wanted.seconds === c.graphic.seconds) return { ...c, graphic }
           // A new length: the clip follows it, and the exit fade moves to its last 0.3 s.
           const duration = Math.max(1, Math.round(graphic.seconds * fps))

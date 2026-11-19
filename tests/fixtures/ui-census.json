@@ -9021,5 +9021,65 @@
     "newHome": "trimmer dock (the graphic panel, docs/CLIPS.md §6.16, \"WebGL missing\")",
     "harnessOnly": false,
     "note": "WEBGL_MISSING_NOTE, shown as DRAWN_FLAT_NOTE (\"This graphic is drawn flat: …\") in GraphicPanel.tsx when the clip's preview was drawn flat because WebGL did not start. The census cannot build it: no template asks for the compositor before phase 3's piece 3, and the harness's WebGL starts. The harness's compositor option pretends WebGL is missing and reads the flat picture and the note (step 3 phase 3, piece 1, 2026-11-18)."
+  },
+  {
+    "label": "Depth",
+    "match": "text",
+    "home": "dock",
+    "needs": "graphic-counter",
+    "file": "src/renderer/src/components/GraphicPanel.tsx",
+    "line": 74,
+    "newHome": "trimmer dock (the graphic panel, docs/CLIPS.md §6.16, \"Who sets depth\")",
+    "note": "The Depth choice's label (DEPTH), shown only on a template whose threeD is true (counter, ring). Count reasoned from the code by step 3 phase 3 piece 3 (2026-11-18): the census counter's panel adds one text node of it to the dock; not yet read on screen."
+  },
+  {
+    "label": "Flat",
+    "match": "text",
+    "home": "dock",
+    "needs": "graphic-counter",
+    "file": "src/renderer/src/components/GraphicPanel.tsx",
+    "line": 76,
+    "newHome": "trimmer dock (the graphic panel, docs/CLIPS.md §6.16, \"Who sets depth\")",
+    "note": "One of the Depth choice's five buttons (DEPTH_CHOICES). Count reasoned from the code by step 3 phase 3 piece 3 (2026-11-18): the census counter's panel adds one text node of it to the dock; not yet read on screen."
+  },
+  {
+    "label": "Tilt",
+    "match": "text",
+    "home": "dock",
+    "needs": "graphic-counter",
+    "file": "src/renderer/src/components/GraphicPanel.tsx",
+    "line": 77,
+    "newHome": "trimmer dock (the graphic panel, docs/CLIPS.md §6.16, \"Who sets depth\")",
+    "note": "One of the Depth choice's five buttons (DEPTH_CHOICES). Count reasoned from the code by step 3 phase 3 piece 3 (2026-11-18): the census counter's panel adds one text node of it to the dock; not yet read on screen."
+  },
+  {
+    "label": "Parallax",
+    "match": "text",
+    "home": "dock",
+    "needs": "graphic-counter",
+    "file": "src/renderer/src/components/GraphicPanel.tsx",
+    "line": 78,
+    "newHome": "trimmer dock (the graphic panel, docs/CLIPS.md §6.16, \"Who sets depth\")",
+    "note": "One of the Depth choice's five buttons (DEPTH_CHOICES). Count reasoned from the code by step 3 phase 3 piece 3 (2026-11-18): the census counter's panel adds one text node of it to the dock; not yet read on screen."
+  },
+  {
+    "label": "Dolly",
+    "match": "text",
+    "home": "dock",
+    "needs": "graphic-counter",
+    "file": "src/renderer/src/components/GraphicPanel.tsx",
+    "line": 79,
+    "newHome": "trimmer dock (the graphic panel, docs/CLIPS.md §6.16, \"Who sets depth\")",
+    "note": "One of the Depth choice's five buttons (DEPTH_CHOICES). Count reasoned from the code by step 3 phase 3 piece 3 (2026-11-18): the census counter's panel adds one text node of it to the dock; not yet read on screen."
+  },
+  {
+    "label": "Focus",
+    "match": "text",
+    "home": "dock",
+    "needs": "graphic-counter",
+    "file": "src/renderer/src/components/GraphicPanel.tsx",
+    "line": 80,
+    "newHome": "trimmer dock (the graphic panel, docs/CLIPS.md §6.16, \"Who sets depth\")",
+    "note": "One of the Depth choice's five buttons (DEPTH_CHOICES). Count reasoned from the code by step 3 phase 3 piece 3 (2026-11-18): the census counter's panel adds one text node of it to the dock; not yet read on screen."
   }
 ]

@@ -40,8 +40,9 @@ vi.mock('../../src/renderer/src/graphicCanvas', () => ({
   },
   forgetGraphicPreview: () => undefined,
   graphicPreviewCanvas: () => null,
-  // The preview's answer, stood in for: which clips it drew flat for want of WebGL (§6.16).
-  graphicDrawnFlat: (clipId: string) => bake.flat.has(clipId)
+  // The preview's answer, stood in for: which clips it drew flat for want of WebGL (§6.16), as the hook the panel reads.
+  graphicDrawnFlat: (clipId: string) => bake.flat.has(clipId),
+  useGraphicDrawnFlat: (select: (s: { ids: ReadonlySet<string> }) => unknown) => select({ ids: bake.flat })
 }))
 
 const { useEditor } = await import('../../src/renderer/src/store')
@@ -365,6 +366,60 @@ describe('the dock’s graphic panel (§6.6)', () => {
     start([graphicClip('c', FIXTURES.callout)])
     ;(buttonsOf('c', 'Circle')[0].props.onClick as () => void)()
     expect((dataOf('c') as { shape: string }).shape).toBe('circle')
+  })
+
+  /** The Depth row's buttons, by label, in order. */
+  const depthButtons = (id: string): Host[] => {
+    const box = panel(id).find((h) => h.props['data-graphic-depth'] === '')
+    return box ? hosts(box.props.children as ReactNode).filter((h) => h.type === 'button') : []
+  }
+  const pressed = (id: string): string[] => depthButtons(id).filter((b) => b.props['aria-pressed'] === true).map(text)
+  const choose = (id: string, label: string): void => (depthButtons(id).find((b) => text(b) === label)!.props.onClick as () => void)()
+
+  it('the Depth choice: Flat, Tilt, Parallax, Dolly, Focus, only on a template whose threeD is true; Flat pressed when none is set', () => {
+    for (const [template, data] of Object.entries(FIXTURES)) {
+      start([graphicClip('g', data)])
+      const want = GRAPHIC_TEMPLATES[data.template]!.threeD ? ['Flat', 'Tilt', 'Parallax', 'Dolly', 'Focus'] : []
+      expect(depthButtons('g').map(text), template).toEqual(want)
+      expect(panel('g').filter((h) => h.type === 'span' && text(h) === GP.DEPTH).length, template).toBe(want.length > 0 ? 1 : 0)
+      if (want.length > 0) expect(pressed('g'), template).toEqual(['Flat'])
+    }
+    // Exactly counter and ring today (§6.16; the screen card has no panel fields of its own yet).
+    expect(Object.keys(FIXTURES).filter((t) => GRAPHIC_TEMPLATES[t as GraphicData['template']]!.threeD).sort()).toEqual(['counter', 'ring'])
+  })
+
+  it('your Depth wins over the hero rule and clears hero, in one undo step; Flat is a choice too, kept as yours; the same choice again is no edit', () => {
+    start([graphicClip('h', FIXTURES.counter, { depth: 'tilt', hero: true })])
+    expect(pressed('h')).toEqual(['Tilt'])
+    const before = project()
+    const past = state().past.length
+    choose('h', 'Parallax')
+    expect(clipById('h').graphic!.depth).toBe('parallax')
+    expect('hero' in clipById('h').graphic!).toBe(false)
+    expect(clipById('h').graphic!.version).toBe(before.clips.find((c) => c.id === 'h')!.graphic!.version + 1)
+    expect(state().past.length).toBe(past + 1)
+    expect(pressed('h')).toEqual(['Parallax'])
+    undoesTo(before)
+    expect(clipById('h').graphic!.hero).toBe(true)
+    // Flat on the hero: kept as 'flat', so the rule never takes it again (graphics/apply.ts withHeroes).
+    choose('h', 'Flat')
+    expect(clipById('h').graphic!.depth).toBe('flat')
+    expect('hero' in clipById('h').graphic!).toBe(false)
+    expect(pressed('h')).toEqual(['Flat'])
+    // The pressed one again: nothing changes, no history.
+    const now = project()
+    const steps = state().past.length
+    choose('h', 'Flat')
+    expect(project()).toBe(now)
+    expect(state().past.length).toBe(steps)
+    // A plain ring: Flat pressed already (absent draws flat), so pressing it is no edit; Focus, then Flat, are.
+    start([graphicClip('r', FIXTURES.ring)])
+    choose('r', 'Flat')
+    expect('depth' in clipById('r').graphic!).toBe(false)
+    choose('r', 'Focus')
+    expect(clipById('r').graphic!.depth).toBe('focus')
+    choose('r', 'Flat')
+    expect(clipById('r').graphic!.depth).toBe('flat')
   })
 
   it('a Speaker field shows the asset’s Speaker and editing it calls setSpeaker', () => {

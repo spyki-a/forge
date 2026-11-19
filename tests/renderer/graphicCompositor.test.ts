@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Camera, DrawItem, DrawList, Drawer, GraphicTargets, ShapeItem } from '@shared/graphics/items'
-import { cameraFor, compensation, flatDistance } from '@shared/graphics/compositor'
-import { needsCompositor } from '@shared/graphics/drawList'
+import { cameraFor, cameraIsFlat, compensation, flatDistance } from '@shared/graphics/compositor'
+import { drawListAt, needsCompositor } from '@shared/graphics/drawList'
 import { paintDrawList2d } from '@shared/graphics/paint'
 import { resolveGraphicStyle } from '@shared/graphics/style'
 import type { GraphicSpec } from '@shared/graphics/template'
@@ -302,7 +302,14 @@ function fakeCanvas(): FakeCanvas {
     clearRect: () => ops.push({ op: 'clearRect' }),
     fill: () => ops.push({ op: 'fill', fill: state.fillStyle }),
     fillRect: () => ops.push({ op: 'fillRect', fill: state.fillStyle, composite: state.globalCompositeOperation }),
-    drawImage: (image: unknown) => ops.push({ op: 'drawImage', image })
+    drawImage: (image: unknown) => ops.push({ op: 'drawImage', image }),
+    createLinearGradient: () => ({ addColorStop: () => undefined }),
+    createRadialGradient: () => ({ addColorStop: () => undefined }),
+    // The renderer's measure (graphicMeasure) on a scratch canvas: 0.55 em a character, as node's fake measures.
+    measureText: (text: string) => {
+      const px = Number(/(\d+(?:\.\d+)?)px/u.exec(String(state.font ?? ''))?.[1] ?? 10)
+      return { width: String(text).length * px * 0.55, actualBoundingBoxAscent: px * 0.8, actualBoundingBoxDescent: px * 0.2 }
+    }
   }
   const ctx = new Proxy(
     {},
@@ -874,8 +881,7 @@ describe('graphicCanvas: the compositor seam', () => {
   const preview = (clipId: string, frame: number, onReady?: () => void, size = SIZE): HTMLCanvasElement | null =>
     G.graphicPreviewCanvas(clipId, SPEC, STYLE, size.width, size.height, { frame, total: 30, fps: 30 }, {}, onReady, tilting)
 
-  it('no drawer’s list needs it today, so the seam is never reached by a production graphic', () => {
-    // Pinned per template and style in tests/graphicDrawList.test.ts; here, the hand-built drawer does.
+  it('the hand-built drawer’s tilting list needs it (which production drawers ask is pinned per template in tests/graphicDrawList.test.ts: counter and ring since piece 3)', () => {
     expect(needsCompositor({ ...SIZE, ...tilting(SPEC, STYLE, { t: 0, fps: 30 }, SIZE, () => ({ width: 0, ascent: 0, descent: 0 }), {}) })).toBe(true)
   })
 
@@ -919,6 +925,70 @@ describe('graphicCanvas: the compositor seam', () => {
     G.forgetGraphicPreview('g8')
   })
 
+  /** The compositors alive: one quad geometry each, made by createCompositor and disposed with it. */
+  const alive = (): number => made.filter((m) => m.kind === 'geometry' && m.disposed === 0).length
+
+  it('the preview keeps at most PREVIEW_COMPOSITOR_CAP compositors, the least recently drawn disposed first, each exactly once', async () => {
+    expect(G.PREVIEW_COMPOSITOR_CAP).toBe(3)
+    const ids = ['c1', 'c2', 'c3', 'c4', 'c5']
+    for (const id of ids) {
+      preview(id, 1)
+      await settle()
+      preview(id, 2)
+      expect(alive(), id).toBeLessThanOrEqual(G.PREVIEW_COMPOSITOR_CAP)
+    }
+    expect(alive()).toBe(3)
+    // c1 and c2 went first; c3, c4 and c5 are kept. Drawing c3 makes it the most recent, so c6 evicts c4.
+    preview('c3', 3)
+    preview('c6', 1)
+    await settle()
+    const geometries = made.filter((m) => m.kind === 'geometry')
+    expect(geometries.map((g) => g.disposed)).toEqual([1, 1, 0, 1, 0, 0])
+    for (const id of [...ids, 'c6']) G.forgetGraphicPreview(id)
+    expect(made.map((m) => m.disposed)).toEqual(made.map(() => 1))
+  })
+
+  it('a frame that is route one’s (settled, no glow) gives the clip’s compositor back; a moving frame makes one again', async () => {
+    preview('r1', 1)
+    await settle()
+    preview('r1', 2)
+    expect(alive()).toBe(1)
+    // Frame 20: the tilt has settled (0 from t = 0.5 s), the list is route one's.
+    const rest = preview('r1', 20) as unknown as FakeCanvas
+    expect(alive()).toBe(0)
+    expect(made.map((m) => m.disposed)).toEqual(made.map(() => 1))
+    // Painter A's own picture, no copy of a WebGL canvas.
+    expect(rest.ops.slice(rest.ops.map((o) => o.op).lastIndexOf('clearRect')).some((o) => o.image === glCanvas)).toBe(false)
+    preview('r1', 3)
+    await settle()
+    expect(alive()).toBe(1)
+    G.forgetGraphicPreview('r1')
+    expect(alive()).toBe(0)
+  })
+
+  it('WebGL missing: the clip is marked drawn flat the moment its compositor lands null, and the panel’s hook hears it, with no other render', async () => {
+    webgl.mode = 'throw'
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const heard: boolean[] = []
+    const stop = G.useGraphicDrawnFlat.subscribe((state) => heard.push(state.ids.has('w1')))
+    preview('w1', 0)
+    expect(G.graphicDrawnFlat('w1')).toBe(false)
+    await settle()
+    // No second preview call: the landing itself marked it.
+    expect(G.graphicDrawnFlat('w1')).toBe(true)
+    expect(G.useGraphicDrawnFlat.getState().ids.has('w1')).toBe(true)
+    expect(heard).toEqual([true])
+    // A later clip in the same session is marked on its first frame: the session already knows.
+    preview('w2', 0)
+    expect(G.graphicDrawnFlat('w2')).toBe(true)
+    G.forgetGraphicPreview('w1')
+    G.forgetGraphicPreview('w2')
+    expect(G.useGraphicDrawnFlat.getState().ids.size).toBe(0)
+    expect(heard[heard.length - 1]).toBe(false)
+    stop()
+    warn.mockRestore()
+  })
+
   it('a compositor that lands after its entry was superseded is disposed, not kept', async () => {
     preview('g2', 0)
     G.forgetGraphicPreview('g2')
@@ -938,6 +1008,31 @@ describe('graphicCanvas: the compositor seam', () => {
     expect(run!.frames).toBeGreaterThan(15)
     expect(renders.length).toBe(15)
     expect(G.takeGraphicBakeNotes()).toEqual([])
+  })
+
+  it('a real hero counter (DRAWERS, no drawer handed in) bakes the canvas region though the box was allowed, and no more frames than its flat twin; its settled frames are route one’s', async () => {
+    const counter: GraphicSpec = { ...SPEC, seconds: 2 }
+    const clean = resolveGraphicStyle('clean')
+    const neon = resolveGraphicStyle('neon')
+    const flat = await G.bakeGraphicSequence(counter, clean, 'h0', SIZE.width, SIZE.height, 60, 30, NO_TARGETS, true)
+    expect(flat!.box).toBeDefined()
+    expect(made).toEqual([])
+    // The hero under neon: tilted while it enters, glowing throughout. A tilt or a glow inks outside the flat itemBounds.
+    const hero = await G.bakeGraphicSequence({ ...counter, depth: 'tilt', hero: true }, neon, 'h1', SIZE.width, SIZE.height, 60, 30, NO_TARGETS, true)
+    expect(hero!.box).toBeUndefined()
+    expect(hero!.frames).toBe(flat!.frames)
+    // Every frame reaches WebGL (the glow persists at rest, route two).
+    expect(frameRenders().length).toBe(hero!.frames)
+    renders.length = 0
+    // Tilt alone, under clean: only the frames whose camera is off flat render; the rest, the held one among them, are painter A's.
+    const tilt = await G.bakeGraphicSequence({ ...counter, depth: 'tilt' }, clean, 'h2', SIZE.width, SIZE.height, 60, 30, NO_TARGETS, true)
+    expect(tilt!.box).toBeUndefined()
+    expect(tilt!.frames).toBe(flat!.frames)
+    const measure = G.graphicMeasure()
+    const tilted = Array.from({ length: tilt!.frames }, (_, f) => drawListAt({ ...counter, depth: 'tilt' }, clean, f, 30, SIZE, measure)).filter((l) => !cameraIsFlat(l.camera)).length
+    expect(tilted).toBeGreaterThan(0)
+    expect(tilted).toBeLessThan(tilt!.frames)
+    expect(frameRenders().length).toBe(tilted)
   })
 
   it('the harness frames (graphicFrameCanvases) keep one compositor and dispose it in their finally', async () => {

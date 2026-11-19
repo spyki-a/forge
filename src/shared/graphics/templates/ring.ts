@@ -17,11 +17,16 @@
  * on the circle inscribed in their box (paint.ts), so the box is that less
  * one thickness. The value is centred inside; a value wider than the ring's
  * hole is not refused by the too-big rule, which reads the block alone.
+ *
+ * Phase 3 (§6.16): with a `depth`, the same items on their planes with a
+ * camera, and as its clip's hero under a glowing style a glow on `arc`
+ * (templates/depth.ts `depthOut`); a plain spec's list is unchanged.
  */
 
 import type { DrawItem, DrawOut, Drawer, Rect, ShapeItem, TextItem } from '../items'
 import { DURATIONS, entrance, progress } from '../motion'
 import { inBetween, numberOf } from '../numbers'
+import { depthOut } from './depth'
 import {
   LAYOUT_SIZES,
   beatOf,
@@ -128,5 +133,6 @@ export const drawRing: Drawer = (spec, style, clock, size, measure, targets): Dr
 
   const items: DrawItem[] = [track, arc, ...value, ...label]
   const about = { x: cx, y: block.y + block.height / 2 }
-  return { items: withDim(dimFor(style, t, targets, size), items.map((item) => moved(item, move, about, size))) }
+  // Phase 3's depth branch and the hero's glow (§6.16, templates/depth.ts): the same items, on their planes, with a camera.
+  return depthOut('ring', spec, style, t, beat, size, withDim(dimFor(style, t, targets, size), items.map((item) => moved(item, move, about, size))))
 }

@@ -255,7 +255,9 @@ function heardOf(kept: KeptGraphic, transcript: Pick<Transcript, 'words'>): stri
  *    height, the canvas the store's bake and `rebakeGraphic` use), null
  *    dropped as "no free third"; then `subjectAtOnset`, a callout with no
  *    subject dropped with rule 9's note (`NO_SUBJECT_NOTE`) or the zoom's.
- * 7. **The lane** (§6.9): `graphicLane`, dropped at the track limit.
+ * 7. **The lane** (§6.9): `graphicLane`, dropped at the track limit. Then
+ *    phase 3's hero rule (§6.16, `withHeroes`): the first landed counter or
+ *    ring of each footage clip gets `depth: 'tilt'` and `hero`.
  * 8. **The sounds** (§6.14): `graphicSounds` on each landed graphic, under
  *    the run's rule, over `ctx.sounds`; its clips on their lanes, its new
  *    files in the pool, the sounds it re-places taken off first, and a file
@@ -336,7 +338,8 @@ export function applyGraphics(
 
   // 6-7. Placement, the subject at onset and the lane, in onset order; each graphic on the project before the next.
   const landed = landKept(project, budget.kept, rule, newId, (t, reason) => drop(t.path, t.spec.data, reason))
-  let next = landed.project
+  // Phase 3's hero rule (§6.16, "Who sets depth"): the first landed counter or ring of each footage clip.
+  let next = withHeroes(landed.project, landed.clipIds)
   const clipIds = landed.clipIds
 
   // 8. The sounds, on each landed graphic; graphicSounds re-places every graphic sound on its footage clip.
@@ -346,6 +349,63 @@ export function applyGraphics(
 
   if (proposals.length > 0) next = { ...next, graphicProposals: [...(next.graphicProposals ?? []), ...proposals] }
   return { project: next, problems, clipIds }
+}
+
+/**
+ * The hero rule (docs/CLIPS.md §6.16, "Who sets depth"), on as the plan
+ * proposes it. The look rating (§6.10) asks about it with phase 3's renders;
+ * if it is rated down, this line turns it off and the dock's Depth choice
+ * remains.
+ */
+export const HERO_RULE: boolean = true
+
+/** The templates a hero is chosen from (§6.16: "the first kept `counter` or `ring`"). */
+export const HERO_TEMPLATES: readonly string[] = Object.freeze(['counter', 'ring'])
+
+/** The move the rule gives a hero: `tilt`, "the least of the four moves" (§6.16). */
+export const HERO_DEPTH = 'tilt' as const
+
+/**
+ * The hero rule over the graphic clips a run has just landed (`ids`, in
+ * landing order, the budget's onset order): the first counter or ring on each
+ * footage clip (`footageOf`, the clip the sounds and Find again read) becomes
+ * that clip's hero, `depth: 'tilt'` and `hero: true`, under every style (its
+ * glow is the drawer's, under a style with `glow`, templates/depth.ts). One
+ * hero per footage clip, not per project: a clip that already holds a hero
+ * from an earlier run gets none, and a graphic over no footage clip is none.
+ * Never a graphic whose `depth` is already set, which is the user's (the
+ * dock's Depth choice, `'flat'` included); the rule touches no graphic but
+ * the run's own. Only on a template whose `threeD` is true. The project comes
+ * back as the same object when no hero is made, and when `HERO_RULE` is off.
+ */
+export function withHeroes(project: Project, ids: readonly string[]): Project {
+  if (!HERO_RULE) return project
+  const run = new Set(ids)
+  const held = new Set<string>()
+  for (const c of project.clips) {
+    if (run.has(c.id) || c.graphic?.hero !== true) continue
+    const f = footageOf(project, c, c.graphic)
+    if (f !== null) held.add(f)
+  }
+  const heroes = new Set<string>()
+  const landed = ids
+    .map((id, i) => ({ clip: project.clips.find((c) => c.id === id), i }))
+    .filter((x): x is { clip: Clip; i: number } => x.clip !== undefined)
+    .sort((a, b) => a.clip.start - b.clip.start || a.i - b.i)
+  for (const { clip } of landed) {
+    const g = clip.graphic
+    if (!g || !HERO_TEMPLATES.includes(g.data.template) || GRAPHIC_TEMPLATES[g.data.template]?.threeD !== true) continue
+    if (g.depth !== undefined || g.hero === true) continue
+    const f = footageOf(project, clip, g)
+    if (f === null || held.has(f)) continue
+    held.add(f)
+    heroes.add(clip.id)
+  }
+  if (heroes.size === 0) return project
+  return {
+    ...project,
+    clips: project.clips.map((c) => (heroes.has(c.id) && c.graphic ? { ...c, graphic: { ...c.graphic, depth: HERO_DEPTH, hero: true as const } } : c))
+  }
 }
 
 /**

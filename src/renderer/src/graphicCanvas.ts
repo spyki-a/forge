@@ -23,7 +23,7 @@ import type { DrawItem, DrawList, Drawer, GraphicTargets, Rect, TextMeasure } fr
 import { textSpecOf } from '@shared/graphics/items'
 import { drawListAt, graphicBox, needsCompositor, onsetTargetsAt } from '@shared/graphics/drawList'
 import { paintDrawList2d, type PaintOptions } from '@shared/graphics/paint'
-import { flatItems } from '@shared/graphics/compositor'
+import { compositorRoute, flatItems } from '@shared/graphics/compositor'
 import { graphicMovingFrames } from '@shared/graphics/frame'
 import { facesFor, textSpecFont } from '@shared/render/textPaint'
 import { ASCENT, LINE_HEIGHT } from '@shared/render/textLayout'
@@ -31,7 +31,8 @@ import { mediaUrl } from '@shared/mediaUrl'
 import { beginBake, endBake, isSuperseded } from '@shared/bakeGuard'
 import { encodeFrames } from './encodePool'
 import { faceSettled, useCatalog } from './catalog'
-import { WEBGL_MISSING_NOTE, createCompositor, forgetPlanes, paintDrawList3d, type Compositor } from './graphicCompositor'
+import { create } from 'zustand'
+import { WEBGL_MISSING_NOTE, createCompositor, forgetPlanes, paintDrawList3d, webglMissing, type Compositor } from './graphicCompositor'
 
 /* --------------------------------------------------------------- M1 and M2 */
 
@@ -209,9 +210,9 @@ function freshLayer(width: number, height: number): CanvasRenderingContext2D {
  * ignores `camera`, `glow` and `z`, so the graphic draws flat, its items
  * in route one's order (`flatItems`: the dims, then the planes far to near),
  * so a list drawn without WebGL is the picture route one draws at rest
- * whatever order its drawer emitted. No template
- * emits a list that asks for it before phase 3's piece 3 (pinned in
- * tests/graphicDrawList.test.ts).
+ * whatever order its drawer emitted. From phase 3's piece 3 a counter or
+ * ring with a depth, or its clip's hero, asks for it (templates/depth.ts);
+ * no other template does yet (pinned in tests/graphicDrawList.test.ts).
  */
 function paintFrame(list: DrawList, ctx: CanvasRenderingContext2D, options: PaintOptions, compositor?: Compositor | null): void {
   if (compositor && needsCompositor(list)) {
@@ -226,6 +227,26 @@ function paintFrame(list: DrawList, ctx: CanvasRenderingContext2D, options: Pain
 
 /** Preview clips drawn flat because WebGL did not start: the dock's graphic panel says so (§6.16). */
 const drawnFlat = new Set<string>()
+
+/**
+ * The same clips as state a component subscribes to (phase 3's piece 3): the
+ * dock's graphic panel reads it through this hook, so its note appears the
+ * moment the preview learns WebGL is missing (a compositor that lands null),
+ * not on the panel's next render for some other reason. A new set on every
+ * change, so a selector sees it change.
+ */
+export const useGraphicDrawnFlat = create<{ ids: ReadonlySet<string> }>(() => ({ ids: new Set<string>() }))
+
+function markDrawnFlat(clipId: string): void {
+  if (drawnFlat.has(clipId)) return
+  drawnFlat.add(clipId)
+  useGraphicDrawnFlat.setState({ ids: new Set(drawnFlat) })
+}
+
+function unmarkDrawnFlat(clipId: string): void {
+  if (!drawnFlat.delete(clipId)) return
+  useGraphicDrawnFlat.setState({ ids: new Set(drawnFlat) })
+}
 /** The bakes' notes since they were last taken: a set, so the export records each once (§6.16, "WebGL missing"). */
 const bakeNotes = new Set<string>()
 
@@ -278,16 +299,48 @@ interface DeepSlot {
   onReady?: () => void
 }
 
+/**
+ * The preview's compositors, by clip, least recently drawn first (a `Map`
+ * keeps insertion order; a drawn slot is moved to the end). Bounded two ways
+ * (phase 3's piece 3; pieces 1 and 2 kept one per clip that ever asked, never
+ * freed until the clip went): a clip whose frame is route one's (a settled
+ * frame with no glow, `compositorRoute` 'flat', which painter A draws with
+ * no WebGL call) gives its compositor back at once, so a hero at rest holds
+ * none; and at most `PREVIEW_COMPOSITOR_CAP` are kept, the least recently
+ * drawn disposed when another is made. Each holds a frame-sized canvas and
+ * texture per layer (up to `MAX_PLANES` planes, a base, the 1:1 layer, and
+ * the glow's targets), so a session that scrubbed past many heroes would
+ * otherwise keep them all.
+ */
 const compositors = new Map<string, DeepSlot>()
+
+/**
+ * At most this many preview compositors alive at once (proposal): the clips
+ * moving or glowing on screen together. A hero's entrance, a glowing hero
+ * at rest and a graphic of yours with a depth can share a frame; a fourth
+ * evicts the least recently drawn, which is made again (drawn flat while it
+ * lands) if it is drawn again.
+ */
+export const PREVIEW_COMPOSITOR_CAP = 3
+
+/** Give back a clip's preview compositor; one still on its way is disposed on landing (the slot is no longer the clip's). */
+function releaseDeepSlot(clipId: string): void {
+  compositors.get(clipId)?.compositor?.dispose()
+  compositors.delete(clipId)
+}
 
 function deepSlotOf(clipId: string, width: number, height: number, onReady?: () => void): DeepSlot {
   const size = `${width}x${height}`
   const existing = compositors.get(clipId)
   if (existing && existing.size === size) {
     existing.onReady = onReady
+    // The most recently drawn, last.
+    compositors.delete(clipId)
+    compositors.set(clipId, existing)
     return existing
   }
-  existing?.compositor?.dispose()
+  releaseDeepSlot(clipId)
+  while (compositors.size >= PREVIEW_COMPOSITOR_CAP) releaseDeepSlot(compositors.keys().next().value as string)
   const slot: DeepSlot = { size, pending: true, compositor: null, onReady }
   compositors.set(clipId, slot)
   void createCompositor(width, height).then((compositor) => {
@@ -297,6 +350,8 @@ function deepSlotOf(clipId: string, width: number, height: number, onReady?: () 
     }
     slot.pending = false
     slot.compositor = compositor
+    // WebGL missing: marked now, so the dock's note appears with this repaint, not on a later unrelated one.
+    if (!compositor) markDrawnFlat(clipId)
     slot.onReady?.()
   })
   return slot
@@ -378,9 +433,16 @@ export function graphicPreviewCanvas(
   canvas.dataset.forgeRev = String(++paints)
 
   const list = drawListAt(spec, style, drawn, clock.fps, { width, height }, graphicMeasure(), targets, drawer)
-  // §6.16's seam: a list that asks for the compositor gets the clip's; drawn flat until it lands, and for good without WebGL.
-  const deep = needsCompositor(list) ? deepSlotOf(clipId, width, height, onReady) : null
-  if (deep && !deep.pending && !deep.compositor) drawnFlat.add(clipId)
+  /*
+   * §6.16's seam: a list that asks for the compositor gets the clip's; drawn
+   * flat until it lands, and for good without WebGL. A frame that is route
+   * one's (settled, no glow) is painter A's alone, so it needs none and the
+   * clip's is given back (`compositors`).
+   */
+  const asks = needsCompositor(list)
+  const deep = asks && compositorRoute(list) !== 'flat' ? deepSlotOf(clipId, width, height, onReady) : null
+  if (asks && !deep) releaseDeepSlot(clipId)
+  if (asks && (webglMissing() || (deep && !deep.pending && !deep.compositor))) markDrawnFlat(clipId)
   paintFrame(list, ctx, { layer: previewLayerOf(clipId), images: bitmaps }, deep?.compositor)
 
   const faces = facesOf([list], style)
@@ -431,9 +493,8 @@ export function forgetGraphicPreview(clipId: string): void {
   previews.delete(clipId)
   previewLayers.delete(clipId)
   warming.delete(clipId)
-  compositors.get(clipId)?.compositor?.dispose()
-  compositors.delete(clipId)
-  drawnFlat.delete(clipId)
+  releaseDeepSlot(clipId)
+  unmarkDrawnFlat(clipId)
 }
 
 /* -------------------------------------------------------------------- bake */

@@ -1,0 +1,228 @@
+/**
+ * `window.__forgeGraphicCheck({ depth: true })` (docs/CLIPS.md §6.11's options
+ * table, the `parity` row's phase-3 half: "each 2.5D variant's settled frame
+ * against its flat twin"; §6.16, "The 2.5D variants of `counter` and `ring`"
+ * and "What glows"; phase 3's piece 3), on this page's own WebGL. A new key,
+ * not `parity`, so phase 0's parity rig and its recorded output stay as they
+ * were (the compositor option's precedent).
+ *
+ * For specs.json's English `counter` and `ring` (counter-en, ring-en), under
+ * `clean`, each of the four depths, and the hero (`depth: 'tilt'`, `hero`)
+ * under `neon`, at 540×960 and 30 fps, every moving frame of the entrance
+ * through `paintDrawList3d` (one compositor for the option), against the flat
+ * twin (the same spec with no depth and no hero, the same style) by painter A:
+ *
+ * - the settled frame (the last moving one, what `tpad` holds) against the
+ *   twin: 0 by route one (§6.12's M6 whole); the hero's, its glow left out
+ *   (the probe), within route two's bars;
+ * - the last moving frame's camera fields, read off its list: each exactly 0;
+ * - the first frame where the twin has ink against the twin's: visibly not 0,
+ *   so a dead depth branch cannot pass (`DEPTH_BAR.firstMinMax`);
+ * - the hero only: its glow's alpha beyond the glow's reach from the twin's
+ *   ink (0, M7's bar) and that the glow is there (the frame with it against
+ *   the frame without).
+ *
+ * A contact sheet per case: eight frames of the entrance over a dark grey,
+ * a third of the size, frame numbers in its caption.
+ */
+
+import type { DrawList } from '@shared/graphics/items'
+import { drawListAt } from '@shared/graphics/drawList'
+import { cameraIsFlat } from '@shared/graphics/compositor'
+import { graphicMovingFrames } from '@shared/graphics/frame'
+import { paintDrawList2d } from '@shared/graphics/paint'
+import { resolveGraphicStyle, type GraphicStyle } from '@shared/graphics/style'
+import type { GraphicSpec } from '@shared/graphics/template'
+import { DEPTH_MOVES, type DepthMove } from '@shared/graphics/templates/depth'
+import { facesFor } from '@shared/render/textPaint'
+import { useCatalog } from '../catalog'
+import { createCompositor, paintDrawList3d, resetCompositorSession, type Compositor, type CompositorProbe } from '../graphicCompositor'
+import { graphicMeasure } from '../graphicCanvas'
+import { diffChannels, type ChannelDiff } from './compositorMeasure'
+import { glowAlpha } from './glowMeasure'
+import { depthVerdict, type DepthCaseReading } from './depthMeasure'
+
+export interface DepthResult {
+  size: { width: number; height: number }
+  fps: number
+  cases: DepthCaseReading[]
+  verdict: { pass: boolean; failures: string[] }
+}
+
+const W = 540
+const H = 960
+const FPS = 30
+/** The fixtures read: specs.json's English counter and ring. */
+export const DEPTH_CHECK_FIXTURES: readonly string[] = Object.freeze(['counter-en', 'ring-en'])
+/** The style the four depths are read under, and the glowing one the hero is. */
+export const DEPTH_CHECK_STYLE = 'clean'
+export const DEPTH_CHECK_HERO_STYLE = 'neon'
+/** Frames per contact sheet. */
+const SHEET_FRAMES = 8
+const SHEET_SCALE = 1 / 3
+const SHEET_BACKGROUND = '#2a2a2a'
+
+function canvas2d(width = W, height = H): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } {
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('depth check: no 2D context')
+  return { canvas, ctx }
+}
+
+const freshLayer = (width: number, height: number): CanvasRenderingContext2D => canvas2d(width, height).ctx
+const pixelsOf = (canvas: HTMLCanvasElement): Uint8ClampedArray => canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data
+
+function painterA(l: DrawList): HTMLCanvasElement {
+  const { canvas, ctx } = canvas2d()
+  paintDrawList2d(ctx, l, { layer: freshLayer })
+  return canvas
+}
+
+/** Painter B, copied out at once as the seam copies it (graphicCanvas.ts `paintFrame`). */
+function painterB(l: DrawList, compositor: Compositor, probe: CompositorProbe = {}): HTMLCanvasElement {
+  const { canvas, ctx } = canvas2d()
+  ctx.drawImage(paintDrawList3d(l, compositor, { layer: freshLayer }, probe), 0, 0)
+  return canvas
+}
+
+const hasInk = (data: Uint8ClampedArray): boolean => {
+  for (let p = 3; p < data.length; p += 4) if (data[p] > 0) return true
+  return false
+}
+
+/** Up to `SHEET_FRAMES` frames of `0..moving−1`, evenly, the first and the last moving one always among them. */
+function sheetFrames(moving: number): number[] {
+  const last = Math.max(0, moving - 1)
+  const n = Math.min(SHEET_FRAMES, moving)
+  return [...new Set(Array.from({ length: n }, (_, i) => Math.round((i * last) / Math.max(1, n - 1))))]
+}
+
+/** The frames side by side, a third of the size, over a dark grey so light ink shows. */
+function contactSheet(pictures: readonly HTMLCanvasElement[]): HTMLCanvasElement {
+  const w = Math.round(W * SHEET_SCALE)
+  const h = Math.round(H * SHEET_SCALE)
+  const { canvas, ctx } = canvas2d(w * pictures.length, h)
+  ctx.fillStyle = SHEET_BACKGROUND
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  pictures.forEach((p, i) => ctx.drawImage(p, i * w, 0, w, h))
+  return canvas
+}
+
+const line = (d: ChannelDiff): string => `mean ${d.meanAll.toFixed(3)}, max ${d.maxAll}`
+
+async function readCase(
+  fixture: string,
+  base: GraphicSpec,
+  variant: DepthMove | 'hero',
+  style: GraphicStyle,
+  compositor: Compositor,
+  frames: { canvas: (label: string, canvas: HTMLCanvasElement) => void },
+  summary: string[]
+): Promise<DepthCaseReading> {
+  const { depth: _depth, hero: _hero, ...plain } = base
+  const twinSpec: GraphicSpec = plain
+  const spec: GraphicSpec = variant === 'hero' ? { ...plain, depth: 'tilt', hero: true } : { ...plain, depth: variant }
+  const measure = graphicMeasure()
+  const size = { width: W, height: H }
+  const total = Math.max(1, Math.round(spec.seconds * FPS))
+  const moving = graphicMovingFrames(spec, style, FPS, total)
+  const lists = Array.from({ length: moving }, (_, f) => drawListAt(spec, style, f, FPS, size, measure, {}))
+  const twins = Array.from({ length: moving }, (_, f) => drawListAt(twinSpec, style, f, FPS, size, measure, {}))
+  const last = moving - 1
+  const camera = lists[last].camera
+  const lastCamera = camera ? { tilt: camera.tilt, yaw: camera.yaw, dolly: camera.dolly, focusPx: camera.focus?.px ?? 0 } : null
+  const movingCamera = lists.filter((l) => !cameraIsFlat(l.camera)).length
+
+  // The settled frame: for the hero, its base under the glow (the glow left out), as route two's 1:1 is read.
+  const twinSettled = pixelsOf(painterA(twins[last]))
+  const settledPicture = painterB(lists[last], compositor, variant === 'hero' ? { glow: false } : {})
+  const settled = diffChannels(twinSettled, pixelsOf(settledPicture))
+
+  let firstFrame = -1
+  let first: ChannelDiff = diffChannels(twinSettled, twinSettled)
+  for (let f = 0; f < moving; f++) {
+    const twin = pixelsOf(painterA(twins[f]))
+    if (!hasInk(twin)) continue
+    firstFrame = f
+    first = diffChannels(twin, pixelsOf(painterB(lists[f], compositor)))
+    break
+  }
+
+  let glow: DepthCaseReading['glow']
+  if (variant === 'hero') {
+    const request = lists[last].glow?.[0]
+    const radius = request?.radius ?? 0
+    const withGlow = painterB(lists[last], compositor)
+    const withPixels = pixelsOf(withGlow)
+    const alpha = glowAlpha(twinSettled, withPixels, W, H, radius)
+    glow = { radius, reach: alpha.reach, outsideReach: alpha.outsideReach, outsidePixels: alpha.outsidePixels, present: diffChannels(pixelsOf(settledPicture), withPixels) }
+    frames.canvas(`depth: ${fixture} hero under ${style.id}, settled, with its glow (over grey)`, contactSheet([withGlow]))
+  }
+
+  const shown = sheetFrames(moving)
+  frames.canvas(`depth: ${fixture} ${variant} under ${style.id}, frames ${shown.join(', ')} of ${moving}`, contactSheet(shown.map((f) => painterB(lists[f], compositor))))
+
+  const reading: DepthCaseReading = {
+    fixture,
+    template: base.data.template as 'counter' | 'ring',
+    variant,
+    style: style.id,
+    moving,
+    movingCamera,
+    lastCamera,
+    settled,
+    firstFrame,
+    first,
+    ...(glow ? { glow } : {})
+  }
+  summary.push(
+    `depth ${fixture} ${variant} under ${style.id}: ${moving} moving frames, ${movingCamera} off flat; last camera ${JSON.stringify(lastCamera)}; ` +
+      `settled against the flat twin ${line(settled)}${variant === 'hero' ? ' (the glow left out)' : ''}; frame ${firstFrame} against the twin ${line(first)}` +
+      (glow ? `; glow radius ${glow.radius.toFixed(1)} px, alpha beyond its ${glow.reach} px reach ${glow.outsideReach} over ${glow.outsidePixels} pixels, with against without ${line(glow.present)}` : '')
+  )
+  return reading
+}
+
+export async function checkDepth(
+  fixtures: readonly { id: string; spec: GraphicSpec }[],
+  frames: { canvas: (label: string, canvas: HTMLCanvasElement) => void },
+  summary: string[],
+  notes: string[]
+): Promise<DepthResult> {
+  const plain = resolveGraphicStyle(DEPTH_CHECK_STYLE)
+  const glowing = resolveGraphicStyle(DEPTH_CHECK_HERO_STYLE)
+  const chosen = DEPTH_CHECK_FIXTURES.map((id) => {
+    const f = fixtures.find((x) => x.id === id)
+    if (!f) throw new Error(`depth check: specs.json has no fixture ${id}`)
+    return f
+  })
+  // Every face the lists draw, loaded before either painter paints.
+  const { ensureFont } = useCatalog.getState()
+  const measure = graphicMeasure()
+  const faces = new Set<string>([plain.font, glowing.font])
+  for (const f of chosen) {
+    for (const st of [plain, glowing]) {
+      for (const item of drawListAt(f.spec, st, 60, FPS, { width: W, height: H }, measure, {}).items) if (item.kind === 'text') for (const face of facesFor(item.look.font, item.text)) faces.add(face)
+    }
+  }
+  await Promise.all([...faces].map((face) => ensureFont(face)))
+
+  resetCompositorSession()
+  const compositor = await createCompositor(W, H)
+  if (!compositor) throw new Error('depth check: createCompositor gave null on this page: WebGL did not start')
+  const cases: DepthCaseReading[] = []
+  try {
+    for (const f of chosen) {
+      for (const move of DEPTH_MOVES) cases.push(await readCase(f.id, f.spec, move, plain, compositor, frames, summary))
+      cases.push(await readCase(f.id, f.spec, 'hero', glowing, compositor, frames, summary))
+    }
+  } finally {
+    compositor.dispose()
+  }
+  const verdict = depthVerdict(cases)
+  summary.push(`depth verdict: ${verdict.pass ? 'PASS' : `FAIL: ${verdict.failures.join('; ')}`}`)
+  if (!verdict.pass) notes.push(...verdict.failures.map((f) => `depth: ${f}`))
+  return { size: { width: W, height: H }, fps: FPS, cases, verdict }
+}

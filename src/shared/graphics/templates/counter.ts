@@ -11,6 +11,10 @@
  * `data.value` itself. A value with no in-between (`numberOf` null) draws
  * nothing until its beat, then appears whole.
  *
+ * Phase 3 (§6.16): with a `depth`, the same items on their planes with a
+ * camera, and as its clip's hero under a glowing style a glow on `value`
+ * (templates/depth.ts `depthOut`); a plain spec's list is unchanged.
+ *
  * Pure, as every drawer (§6.2): never paints, measures only through
  * `measure`, formats only through `numbers.ts`, curves only from `motion.ts`.
  */
@@ -18,6 +22,7 @@
 import type { DrawItem, DrawOut, Drawer, Rect, TextItem } from '../items'
 import { DURATIONS, entrance, progress } from '../motion'
 import { inBetween, numberOf } from '../numbers'
+import { depthOut } from './depth'
 import {
   LAYOUT_SIZES,
   beatOf,
@@ -93,5 +98,6 @@ export const drawCounter: Drawer = (spec, style, clock, size, measure, targets):
   const panel = panelFor('panel', block, style, size)
   if (panel) items.push(panel)
   items.push(...value, ...label)
-  return { items: withDim(dimFor(style, t, targets, size), items.map((item) => moved(item, move, centre, size))) }
+  // Phase 3's depth branch and the hero's glow (§6.16, templates/depth.ts): the same items, on their planes, with a camera.
+  return depthOut('counter', spec, style, t, beat, size, withDim(dimFor(style, t, targets, size), items.map((item) => moved(item, move, centre, size))))
 }

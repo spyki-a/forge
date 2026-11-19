@@ -198,12 +198,25 @@ describe('graphicsSchema: flat, reasoning first, required in declaration order',
       expect(names).toContain('lit')
       if (constrained) expect(names).toContain('keyword')
       for (const never of [
-        'lower-third', 'screen-card', 'parent', 'connector', 'anchor', 'depth', 'shape', 'speaker', 'name', 'role',
+        'lower-third', 'screen-card', 'parent', 'connector', 'anchor', 'depth', 'hero', 'tilt', 'parallax', 'dolly', 'focus', 'shape', 'speaker', 'name', 'role',
         'curve', 'ease', 'easing', 'motion', 'duration', 'seconds', 'start', 'place', 'third', 'box', 'beat', 'beats', 'sound', 'sounds', 'look', 'style'
       ]) {
         expect(names, `the schema offers '${never}'`).not.toContain(never)
       }
     }
+  })
+
+  it('the model never sets depth or hero (§6.6, §6.16): an answer that writes either is the wrong shape and nothing is kept; a kept candidate carries neither', () => {
+    const counter = g({ sentence: 's00', template: 'counter', value: '40', label: 'clients' })
+    for (const extra of [{ depth: 'tilt' }, { hero: true }, { depth: 'flat', hero: true }]) {
+      const field = Object.keys(extra)[0]
+      expect(validateGraphics({ reasoning: 'r', graphics: [{ ...counter, ...extra }] }, menu, TALK), JSON.stringify(extra)).toEqual({
+        rejected: `The graphics are not the shape asked for — $.graphics[0].${field} is not a field the plan has`
+      })
+    }
+    const kept = validateGraphics({ reasoning: 'r', graphics: [counter] }, menu, TALK)
+    expect('kept' in kept && kept.kept.length).toBe(1)
+    if ('kept' in kept) for (const k of kept.kept) expect(JSON.stringify(k), 'a kept candidate').not.toMatch(/"(depth|hero)"/u)
   })
 
   it('the shape check: a parent written into an item, or a lit of 0.5, is the wrong shape; an id off the menu is not', () => {

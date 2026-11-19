@@ -1385,7 +1385,7 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     throw new Error('this text is painted on the preview canvas, where no DOM query can read it')
   },
   'graphic-drawn-flat': async () => {
-    throw new Error('the drawn-flat note needs WebGL missing and a graphic that asks for 3D, which no template does before phase 3 piece 3; the compositor option reads it')
+    throw new Error('the drawn-flat note needs WebGL missing, and the harness’s WebGL starts; the compositor option pretends it missing and reads it')
   },
 
   /*
@@ -1876,6 +1876,29 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
         seconds: 3.5,
         beats: [0.5],
         place: { auto: true, third: 'bottom' },
+        seed: 1,
+        version: 1
+      }),
+      'addGraphicClip'
+    )
+    focus(G)
+    return { ids: { G } }
+  },
+  /*
+   * A counter over the census video, selected: the dock's graphic panel with
+   * its Depth choice (Flat, Tilt, Parallax, Dolly, Focus), which only a
+   * template whose `threeD` is true shows (components/GraphicPanel.tsx,
+   * CLIPS.md §6.16). Added through the store, not the panel, and no hero:
+   * Flat is pressed.
+   */
+  'graphic-counter': async (env) => {
+    await videoClip(env)
+    const G = await made(
+      editor().addGraphicClip(topVideoTrack(), 0, {
+        data: { template: 'counter', value: '40', label: 'census clients' },
+        seconds: 3,
+        beats: [0.5],
+        place: { auto: true, third: 'middle' },
         seed: 1,
         version: 1
       }),

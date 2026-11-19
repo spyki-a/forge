@@ -12,7 +12,9 @@ import {
   type BudgetCandidate
 } from '@shared/graphics/budget'
 import { NO_CLIP_NOTE } from '@shared/graphics/place'
-import { CLIPS_GRAPHIC_RULE, applyGraphics, drawnText, lowerThirdFor } from '@shared/graphics/apply'
+import { CLIPS_GRAPHIC_RULE, HERO_RULE, applyGraphics, drawnText, lowerThirdFor, withHeroes } from '@shared/graphics/apply'
+import { drawListAt } from '@shared/graphics/drawList'
+import { resolveGraphicStyle } from '@shared/graphics/style'
 import { graphicBeats, graphicTiming } from '@shared/graphics/beats'
 import { baselineGraphics } from '@shared/director/baselineGraphics'
 import { runGraphicsPass } from '@shared/director/run'
@@ -747,5 +749,176 @@ describe('applyBudget, the property (§6.12)', () => {
     expect(seeds).toBe(landed)
     // The seed worked by hand once, so the BigInt rule itself is pinned: frame 15, index 0 → 16 × 2654435761 + 40503 mod 2^32.
     expect(seedByHand(15, 0)).toBe(3816307015)
+  })
+})
+
+/*
+ * Phase 3's hero rule (docs/CLIPS.md §6.16, "Who sets depth"; piece 3):
+ * `applyGraphics` makes the first landed counter or ring of each footage
+ * clip that clip's hero (`depth: 'tilt'`, `hero`), and under `neon` its
+ * drawer asks for a glow on its value or arc. The expectations are worked
+ * here from the landed clips themselves (which footage clip's span holds a
+ * graphic's first frame, the earliest counter or ring on it), apart from
+ * apply.ts's `withHeroes`.
+ */
+describe('applyGraphics, phase 3: the hero of each footage clip (§6.16)', () => {
+  const fake = (t: string, look: { px: number }): { width: number; ascent: number; descent: number } => ({ width: t.length * look.px * 0.55, ascent: look.px * 0.8, descent: look.px * 0.2 })
+  const NEON = resolveGraphicStyle('neon')
+  const SIZE = { width: 1080, height: 1920 }
+  /** The landed graphics over footage clip `f` (its span holds the graphic's first frame), earliest first. */
+  const over = (p: Project, f: Clip): Clip[] =>
+    p.clips.filter((c) => c.graphic && c.start >= f.start && c.start < f.start + f.duration).sort((a, b) => a.start - b.start)
+  const isNumber = (c: Clip): boolean => c.graphic!.data.template === 'counter' || c.graphic!.data.template === 'ring'
+  /** The glow requests a graphic's list carries a frame after its last beat, under neon. */
+  const glowOf = (c: Clip): unknown[] | undefined => drawListAt(c.graphic!, NEON, Math.round((Math.max(...c.graphic!.beats) + 0.6) * FPS), FPS, SIZE, fake).glow
+
+  /** Every graphic of one run's landing against the rule worked by hand; the heroes made. */
+  function assertHeroes(p: Project, name: string): number {
+    let heroes = 0
+    for (const f of p.clips.filter((c) => c.trackId === 'v1')) {
+      const graphics = over(p, f)
+      const first = graphics.find(isNumber)
+      for (const g of graphics) {
+        const where = `${name}: ${g.id} (${g.graphic!.data.template}) over ${f.id}`
+        if (g === first) {
+          heroes++
+          expect(g.graphic!.depth, where).toBe('tilt')
+          expect(g.graphic!.hero, where).toBe(true)
+          expect(glowOf(g), where).toEqual([expect.objectContaining({ item: g.graphic!.data.template === 'counter' ? 'value' : 'arc', color: NEON.palette.accent })])
+        } else {
+          expect(g.graphic!.depth, where).toBeUndefined()
+          expect(g.graphic!.hero, where).toBeUndefined()
+          expect(glowOf(g), where).toBeUndefined()
+        }
+      }
+    }
+    return heroes
+  }
+
+  it('over the transcript fixtures: no graphic but the first kept counter or ring of a footage clip is a hero (the baseline lands none today)', async () => {
+    const cases = (await fixtureCases()).filter((c) => !c.files.includes('specs.json'))
+    let heroes = 0
+    let footageWithTwo = 0
+    for (const c of cases) {
+      let n = 0
+      const out = applyGraphics(c.p, c.kept, c.covered, CLIPS_GRAPHIC_RULE, { fps: FPS, newId: (prefix) => `${prefix}-${++n}` })
+      heroes += assertHeroes(out.project, c.name)
+      for (const f of out.project.clips.filter((x) => x.trackId === 'v1')) if (over(out.project, f).filter(isNumber).length >= 2) footageWithTwo++
+    }
+    // The baseline (no model) lands no counter or ring from today's transcript fixtures (keywords, steps and lower thirds,
+    // measured 2026-11-18), so here the rule is read as "no other graphic is a hero"; the hand-built cases below land
+    // specs.json's counter and ring through applyGraphics and make heroes.
+    expect(heroes).toBe(0)
+    process.stderr.write(`graphicBudget, phase 3's heroes over the transcript fixtures: ${heroes} heroes over ${cases.length} cases; ${footageWithTwo} footage clips with two or more counters or rings\n`)
+  })
+
+  /** specs.json's English counter and ring (counter-en, ring-en): their data, drawn by the fixtures' own words. */
+  const fixtureData = (id: string): GraphicData =>
+    (JSON.parse(readFileSync(join(GRAPHICS_FIXTURE_DIR, 'specs.json'), 'utf8')) as { specs: FixtureSpec[] }).specs.find((f) => f.id === id)!.spec.data
+
+  /**
+   * Two footage clips of one talk that says specs.json's counter-en and
+   * ring-en; on each, those two as kept candidates (a counter at about 2 s of
+   * the clip, a ring at about 11 s), beat on each one's value word. The clip
+   * is over 40 s, so the budget's per-20 s count (§6.9) lets both stand.
+   */
+  function twoClips(extra: Clip[] = []): { p: Project; kept: KeptGraphic[] } {
+    const counter = fixtureData('counter-en') as Extract<GraphicData, { template: 'counter' }>
+    const ring = fixtureData('ring-en') as Extract<GraphicData, { template: 'ring' }>
+    const words: string[] = []
+    const say = (text: string): number => {
+      const at = words.length
+      words.push(...text.split(' '))
+      return at
+    }
+    const filler = (n: number): void => {
+      for (let i = 0; i < n; i++) words.push('and')
+    }
+    filler(4)
+    const counterAt = say(`${counter.value} ${counter.label}`)
+    filler(14)
+    const ringAt = say(`${ring.value} ${ring.label}`)
+    filler(70)
+    const t: Transcript = {
+      assetId: 'talk',
+      language: 'en',
+      model: 'whisper-small',
+      durationMs: words.length * 500,
+      words: words.map((text, index) => ({ index, text, startMs: index * 500, endMs: index * 500 + 400, confidence: null })),
+      segments: [{ id: 's00', startMs: 0, endMs: words.length * 500, text: words.join(' '), wordStart: 0, wordEnd: words.length - 1 }]
+    }
+    const length = words.length * 15
+    const shots: [Transcript, Clip][] = [
+      [t, transcriptClip(t, 'fa', 0, 0, length)],
+      [t, transcriptClip(t, 'fb', length, 0, length)]
+    ]
+    const p = transcriptProject(shots, undefined, extra)
+    const candidate = (data: GraphicData, at: number): KeptGraphic['candidate'] => ({ sentence: 's00', data, bound: [at], beatWords: [at], why: '', source: 'model' })
+    const kept: KeptGraphic[] = ['fa', 'fb'].flatMap((clipId) => [
+      { clipId, assetId: 'talk', candidate: candidate(counter, counterAt) },
+      { clipId, assetId: 'talk', candidate: candidate(ring, ringAt) }
+    ])
+    return { p, kept }
+  }
+
+  it('two footage clips each with a counter and a ring: each clip has its own hero, its counter; the rings are not', () => {
+    const { p, kept } = twoClips()
+    let n = 0
+    const out = applyGraphics(p, kept, [], CLIPS_GRAPHIC_RULE, { fps: FPS, newId: (prefix) => `${prefix}-${++n}` })
+    const landed = out.clipIds.map((id) => out.project.clips.find((c) => c.id === id)!)
+    expect(landed.map((c) => c.graphic!.data.template)).toEqual(['counter', 'ring', 'counter', 'ring'])
+    expect(assertHeroes(out.project, 'two clips')).toBe(2)
+    expect(landed.map((c) => c.graphic!.hero ?? null)).toEqual([true, null, true, null])
+  })
+
+  it('a clip that already holds a hero gets none from a later run, even an earlier counter: one hero per clip, never per project', () => {
+    const { p, kept } = twoClips()
+    let n = 0
+    const newId = (prefix: string): string => `${prefix}-${++n}`
+    const isRing = (k: KeptGraphic): boolean => k.candidate.data.template === 'ring'
+    // First run: fa's ring alone, its hero.
+    const once = applyGraphics(p, kept.filter((k) => k.clipId === 'fa' && isRing(k)), [], CLIPS_GRAPHIC_RULE, { fps: FPS, newId })
+    const ring = once.project.clips.find((c) => c.id === once.clipIds[0])!
+    expect(ring.graphic!.hero).toBe(true)
+    // Second run: fa's counter (earlier than the ring) and fb's counter and ring.
+    const twice = applyGraphics(once.project, kept.filter((k) => !(k.clipId === 'fa' && isRing(k))), [], CLIPS_GRAPHIC_RULE, { fps: FPS, newId })
+    const landed = twice.clipIds.map((id) => twice.project.clips.find((c) => c.id === id)!)
+    expect(landed.map((c) => `${c.graphic!.data.template} ${c.start < p.clips.find((f) => f.id === 'fb')!.start ? 'fa' : 'fb'} ${c.graphic!.hero ?? '-'} ${c.graphic!.depth ?? '-'}`)).toEqual([
+      'counter fa - -',
+      'counter fb true tilt',
+      'ring fb - -'
+    ])
+    expect(twice.project.clips.find((c) => c.id === ring.id)!.graphic).toEqual(ring.graphic)
+  })
+
+  it('a graphic whose depth you set keeps yours and is never the hero; Flat is yours too', () => {
+    const { p, kept } = twoClips()
+    let n = 0
+    const newId = (prefix: string): string => `${prefix}-${++n}`
+    const once = applyGraphics(p, kept.filter((k) => k.clipId === 'fa'), [], CLIPS_GRAPHIC_RULE, { fps: FPS, newId }).project
+    const [counter, ring] = ['counter', 'ring'].map((t) => once.clips.find((c) => c.graphic?.data.template === t)!)
+    expect([counter.graphic!.hero, ring.graphic!.hero]).toEqual([true, undefined])
+    for (const depth of ['parallax', 'flat'] as const) {
+      // You set the hero's depth: the dock clears hero (GraphicPanel's Depth choice).
+      const { hero: _hero, ...rest } = counter.graphic!
+      const yours = { ...once, clips: once.clips.map((c) => (c.id === counter.id ? { ...c, graphic: { ...rest, depth } } : c)) }
+      // Even named as a run's own, yours is never taken.
+      expect(withHeroes(yours, [counter.id]), depth).toBe(yours)
+      // A later run over fb lands its own hero there; fa's counter keeps yours, its ring stays plain.
+      const out = applyGraphics(yours, kept.filter((k) => k.clipId === 'fb'), [], CLIPS_GRAPHIC_RULE, { fps: FPS, newId })
+      const heroes = out.project.clips.filter((c) => c.graphic?.hero).map((c) => out.clipIds.indexOf(c.id))
+      expect(heroes, depth).toEqual([0])
+      expect(out.project.clips.find((c) => c.id === counter.id)!.graphic, depth).toEqual({ ...rest, depth })
+      expect(out.project.clips.find((c) => c.id === ring.id)!.graphic, depth).toEqual(ring.graphic)
+    }
+  })
+
+  it('HERO_RULE is on, the one line that turns the rule off; a footage clip with no counter or ring has no hero', () => {
+    expect(HERO_RULE).toBe(true)
+    const { p, kept } = twoClips()
+    const out = applyGraphics(p, kept.filter((k) => k.candidate.data.template === 'counter' && k.clipId === 'fa'), [], CLIPS_GRAPHIC_RULE, { fps: FPS, newId: (prefix) => `${prefix}-x` })
+    expect(out.project.clips.filter((c) => c.graphic?.hero).map((c) => c.id)).toEqual(['graphic-x'])
+    // Not over fb, which has no graphic at all.
+    expect(withHeroes(p, [])).toBe(p)
   })
 })

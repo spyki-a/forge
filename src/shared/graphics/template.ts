@@ -111,8 +111,15 @@ export interface GraphicSpec {
   seed: number
   /** Bumped on every edit; left out of every cache key. */
   version: number
-  /** Phase 3 (§6.16), only where `TemplateDef.threeD`. */
-  depth?: 'tilt' | 'parallax' | 'dolly' | 'focus'
+  /**
+   * Phase 3 (§6.16), only where `TemplateDef.threeD`. `'flat'` is beyond
+   * §6.1's type: the dock's Flat, the user's choice of no move, kept as a
+   * value so it is remembered as the user's (as `place.auto: false` remembers
+   * a dragged box): a graphic with a `depth` and no `hero` has the user's
+   * depth, and the hero rule never takes it (graphics/apply.ts `withHeroes`).
+   * Absent: never chosen, drawn flat.
+   */
+  depth?: 'flat' | 'tilt' | 'parallax' | 'dolly' | 'focus'
   /** Phase 3 (§6.16): its footage clip's hero graphic; cleared by the user's Depth choice. */
   hero?: true
   /** Phase 4 (§6.18): `event` is a `PointEvent.id`. */
