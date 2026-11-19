@@ -9009,5 +9009,17 @@
     "line": 64,
     "newHome": "trimmer dock (the graphic panel, docs/CLIPS.md §6.6)",
     "note": "NO_GROUNDING_NOTE: a graphic from the Library is tied to no words, and the counter's fields are grounded ones, so the panel says so once. Count reasoned from the code by try-out 1 piece 6, 2026-11-15."
+  },
+  {
+    "label": "drawn flat: 3D needs WebGL, which did not start on this computer",
+    "match": "text",
+    "home": "dock",
+    "needs": "graphic-drawn-flat",
+    "part": true,
+    "file": "src/renderer/src/graphicCompositor.ts",
+    "line": 60,
+    "newHome": "trimmer dock (the graphic panel, docs/CLIPS.md §6.16, \"WebGL missing\")",
+    "harnessOnly": false,
+    "note": "WEBGL_MISSING_NOTE, shown as DRAWN_FLAT_NOTE (\"This graphic is drawn flat: …\") in GraphicPanel.tsx when the clip's preview was drawn flat because WebGL did not start. The census cannot build it: no template asks for the compositor before phase 3's piece 3, and the harness's WebGL starts. The harness's compositor option pretends WebGL is missing and reads the flat picture and the note (step 3 phase 3, piece 1, 2026-11-18)."
   }
 ]

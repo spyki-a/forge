@@ -1,0 +1,539 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Camera, DrawItem, DrawList, Drawer, GraphicTargets, ShapeItem } from '@shared/graphics/items'
+import { compensation, flatDistance } from '@shared/graphics/compositor'
+import { needsCompositor } from '@shared/graphics/drawList'
+import { paintDrawList2d } from '@shared/graphics/paint'
+import { resolveGraphicStyle } from '@shared/graphics/style'
+import type { GraphicSpec } from '@shared/graphics/template'
+import { resetBakeGuard } from '@shared/bakeGuard'
+
+/*
+ * The compositor's renderer half (docs/CLIPS.md §6.16, "The compositor";
+ * phase 3's piece 1): `graphicCompositor.ts` and its seam in
+ * `graphicCanvas.ts`, driven in node on a counting stand-in for three.js
+ * (threeShared mocked) and a document of recording 2D canvases. The pure half
+ * is tests/graphicCompositor.test.ts; WebGL's pixels are the harness's
+ * `compositor` option (§6.11).
+ */
+
+/* ------------------------------------------------------- the stand-in three */
+
+interface Counted {
+  kind: 'geometry' | 'texture' | 'material' | 'target'
+  disposed: number
+}
+
+const made: Counted[] = []
+const renders: { scene: FakeScene }[] = []
+/** What `sharedRenderer` does next: hand the renderer back, throw, or hand back one whose context is lost. */
+const webgl = { mode: 'ok' as 'ok' | 'throw' | 'lost', calls: 0 }
+
+class FakeMatrix {
+  elements: number[] = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
+  fromArray(a: number[]): this {
+    this.elements = [...a]
+    return this
+  }
+  copy(m: FakeMatrix): this {
+    this.elements = [...m.elements]
+    return this
+  }
+  invert(): this {
+    return this
+  }
+}
+
+class Disposable implements Counted {
+  disposed = 0
+  constructor(readonly kind: Counted['kind']) {
+    made.push(this)
+  }
+  dispose(): void {
+    this.disposed++
+  }
+}
+
+class FakeTexture extends Disposable {
+  needsUpdate = false
+  uploads = 0
+  colorSpace = ''
+  constructor(readonly image: FakeCanvas) {
+    super('texture')
+  }
+}
+
+class FakeMaterial extends Disposable {
+  vertexShader = ''
+  uniforms: Record<string, { value: unknown }> = {}
+  constructor(params: Record<string, unknown>) {
+    super('material')
+    Object.assign(this, params)
+  }
+}
+
+class FakeMesh {
+  matrix = new FakeMatrix()
+  matrixAutoUpdate = true
+  matrixWorldNeedsUpdate = false
+  visible = true
+  renderOrder = 0
+  frustumCulled = true
+  constructor(
+    readonly geometry: Disposable,
+    readonly material: FakeMaterial
+  ) {}
+}
+
+class FakeScene {
+  children: FakeMesh[] = []
+  add(mesh: FakeMesh): void {
+    this.children.push(mesh)
+  }
+}
+
+class FakeCamera {
+  projectionMatrix = new FakeMatrix()
+  projectionMatrixInverse = new FakeMatrix()
+  matrixWorld = new FakeMatrix()
+  matrixWorldInverse = new FakeMatrix()
+  matrix = new FakeMatrix()
+  matrixAutoUpdate = true
+  matrixWorldAutoUpdate = true
+}
+
+const fakeThree = {
+  PlaneGeometry: class extends Disposable {
+    constructor() {
+      super('geometry')
+    }
+  },
+  CanvasTexture: FakeTexture,
+  ShaderMaterial: FakeMaterial,
+  Mesh: FakeMesh,
+  Scene: FakeScene,
+  PerspectiveCamera: FakeCamera,
+  NoColorSpace: 'none',
+  LinearFilter: 1,
+  ClampToEdgeWrapping: 2,
+  CustomBlending: 3,
+  AddEquation: 4,
+  OneFactor: 5,
+  OneMinusSrcAlphaFactor: 6
+}
+
+const glCanvas = { width: 0, height: 0, gl: true }
+const fakeRenderer = {
+  domElement: glCanvas,
+  setSize: (w: number, h: number) => {
+    glCanvas.width = w
+    glCanvas.height = h
+  },
+  render: (scene: FakeScene) => {
+    // What three would upload on this render: every texture flagged since the last.
+    for (const mesh of scene.children) {
+      const texture = mesh.material.uniforms.uTex?.value as FakeTexture | undefined
+      if (mesh.visible && texture?.needsUpdate) {
+        texture.uploads++
+        texture.needsUpdate = false
+      }
+    }
+    renders.push({ scene })
+  },
+  getContext: () => ({ isContextLost: () => webgl.mode === 'lost' })
+}
+
+vi.mock('../../src/renderer/src/threeShared', () => ({
+  sharedRenderer: async (width: number, height: number) => {
+    webgl.calls++
+    if (webgl.mode === 'throw') throw new Error('Error creating WebGL context.')
+    fakeRenderer.setSize(width, height)
+    return { three: fakeThree, renderer: fakeRenderer, canvas: glCanvas }
+  },
+  sharedRendererSync: () => null,
+  loadThree: async () => fakeThree
+}))
+
+/* ------------------------------------------------------- the stand-in document */
+
+interface Op {
+  op: string
+  fill?: unknown
+  image?: unknown
+}
+
+interface FakeCanvas {
+  width: number
+  height: number
+  dataset: Record<string, string>
+  ops: Op[]
+  getContext: () => CanvasRenderingContext2D
+  toBlob: (callback: (blob: Blob | null) => void) => void
+}
+
+const canvases: FakeCanvas[] = []
+
+function fakeCanvas(): FakeCanvas {
+  const ops: Op[] = []
+  const state: Record<string | symbol, unknown> = { globalAlpha: 1, fillStyle: '#000000' }
+  const stack: Record<string | symbol, unknown>[] = []
+  const canvas: FakeCanvas = {
+    width: 0,
+    height: 0,
+    dataset: {},
+    ops,
+    getContext: () => ctx,
+    toBlob: (callback) => setTimeout(() => callback(new Blob([new Uint8Array([ops.length & 255])])), 1)
+  }
+  const methods: Record<string, (...args: never[]) => unknown> = {
+    save: () => stack.push({ ...state }),
+    restore: () => {
+      const top = stack.pop()
+      if (top) {
+        for (const key of Object.keys(state)) delete state[key]
+        Object.assign(state, top)
+      }
+    },
+    clearRect: () => ops.push({ op: 'clearRect' }),
+    fill: () => ops.push({ op: 'fill', fill: state.fillStyle }),
+    fillRect: () => ops.push({ op: 'fillRect', fill: state.fillStyle }),
+    drawImage: (image: unknown) => ops.push({ op: 'drawImage', image })
+  }
+  const ctx = new Proxy(
+    {},
+    {
+      get(_target, key) {
+        if (key === 'canvas') return canvas
+        if (typeof key === 'string' && key in methods) return methods[key]
+        if (key in state) return state[key]
+        return () => undefined
+      },
+      set(_target, key, value) {
+        state[key] = value
+        return true
+      }
+    }
+  ) as CanvasRenderingContext2D
+  canvases.push(canvas)
+  return canvas
+}
+
+const layerFactory = (w: number, h: number): CanvasRenderingContext2D => {
+  const c = fakeCanvas()
+  c.width = w
+  c.height = h
+  return c.getContext()
+}
+
+/* ------------------------------------------------------------------ items */
+
+const SIZE = { width: 1080, height: 1920 }
+
+function shape(id: string, fill: string, z?: number): ShapeItem {
+  return { kind: 'shape', id, opacity: 1, shape: 'rect', box: { x: 100, y: 100, width: 200, height: 100 }, fill, ...(z === undefined ? {} : { z }) }
+}
+const dim = (z?: number): DrawItem => ({ kind: 'dim', id: 'dim', opacity: 1, color: '#000000', alpha: 0.5, ...(z === undefined ? {} : { z }) })
+const list = (items: DrawItem[], extra: Partial<DrawList> = {}): DrawList => ({ ...SIZE, items, ...extra })
+const FLAT: Camera = { tilt: 0, yaw: 0, dolly: 0, fov: 30 }
+const TILTED: Camera = { tilt: 24, yaw: 0, dolly: 0, fov: 30 }
+
+/* ------------------------------------------------------- the renderer's half */
+
+type CompositorModule = typeof import('../../src/renderer/src/graphicCompositor')
+type CanvasModule = typeof import('../../src/renderer/src/graphicCanvas')
+let C: CompositorModule
+let G: CanvasModule
+
+beforeEach(async () => {
+  made.length = 0
+  renders.length = 0
+  canvases.length = 0
+  webgl.mode = 'ok'
+  webgl.calls = 0
+  vi.stubGlobal('document', { createElement: () => fakeCanvas(), fonts: { check: () => true } })
+  C = await import('../../src/renderer/src/graphicCompositor')
+  G = await import('../../src/renderer/src/graphicCanvas')
+  C.resetCompositorSession()
+  G.takeGraphicBakeNotes()
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
+
+const texturesOf = (): Counted[] => made.filter((m) => m.kind === 'texture')
+const sceneOf = (): FakeScene => renders[renders.length - 1].scene
+const layerCanvas = (mesh: FakeMesh): FakeCanvas => (mesh.material.uniforms.uTex.value as FakeTexture).image
+const perspective = (mesh: FakeMesh): boolean => mesh.material.vertexShader.includes('projectionMatrix')
+
+describe('graphicCompositor: createCompositor and WebGL missing', () => {
+  it('is a compositor when the shared renderer starts, built once (one quad geometry, no layer yet)', async () => {
+    const c = await C.createCompositor(SIZE.width, SIZE.height)
+    expect(c).not.toBeNull()
+    expect(made.map((m) => m.kind)).toEqual(['geometry'])
+    expect(C.webglMissing()).toBe(false)
+  })
+
+  it('is null, never a throw, when the renderer throws, and remembered for the session: the renderer is not asked again', async () => {
+    webgl.mode = 'throw'
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    await expect(C.createCompositor(SIZE.width, SIZE.height)).resolves.toBeNull()
+    expect(C.webglMissing()).toBe(true)
+    webgl.mode = 'ok'
+    await expect(C.createCompositor(SIZE.width, SIZE.height)).resolves.toBeNull()
+    expect(webgl.calls).toBe(1)
+    expect(made).toEqual([])
+    warn.mockRestore()
+  })
+
+  it('is null when the context comes back lost', async () => {
+    webgl.mode = 'lost'
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    await expect(C.createCompositor(SIZE.width, SIZE.height)).resolves.toBeNull()
+    expect(C.webglMissing()).toBe(true)
+    warn.mockRestore()
+  })
+
+  it('WEBGL_MISSING_NOTE is the plan’s wording', () => {
+    expect(C.WEBGL_MISSING_NOTE).toBe('drawn flat: 3D needs WebGL, which did not start on this computer')
+  })
+})
+
+describe('graphicCompositor: paintDrawList3d', () => {
+  it('route one, at rest: painter A alone in plane order on a 2D canvas, no render, no texture; the same calls painter A makes', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    const items = [dim(), shape('panel', '#111111'), shape('value', '#222222', 0.05)]
+    const settled = list(items, { camera: FLAT })
+    const out = C.paintDrawList3d(settled, c, { layer: layerFactory }) as unknown as FakeCanvas
+    expect(renders).toHaveLength(0)
+    expect(texturesOf()).toHaveLength(0)
+    expect(out).not.toBe(glCanvas)
+    // The flat graphic, by construction: painter A's own calls over the same items.
+    const twin = fakeCanvas()
+    paintDrawList2d(twin.getContext(), list(items), { layer: layerFactory })
+    const shapeOps = (ops: Op[]): Op[] => ops.filter((o) => o.op !== 'drawImage' && o.op !== 'clearRect')
+    expect(shapeOps(out.ops)).toEqual(shapeOps(twin.ops))
+    expect(out.ops.filter((o) => o.op === 'fill').map((o) => o.fill)).toEqual(['#111111', '#222222'])
+  })
+
+  it('route two: one layer at 1:1 under the identity quad, uploaded once while its items hold', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    const glowing = list([shape('value', '#222222')], { glow: [{ item: 'value', radius: 8, strength: 1 }] })
+    expect(C.paintDrawList3d(glowing, c)).toBe(glCanvas)
+    C.paintDrawList3d(glowing, c)
+    const visible = sceneOf().children.filter((m) => m.visible)
+    expect(visible).toHaveLength(1)
+    expect(perspective(visible[0])).toBe(false)
+    expect(texturesOf()).toHaveLength(1)
+    expect((texturesOf()[0] as FakeTexture).uploads).toBe(1)
+    expect(renders).toHaveLength(2)
+  })
+
+  it('route three: the dims on an identity base layer, one perspective layer per plane far to near, each uploaded once while only the camera moves', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    const items = [dim(0.05), shape('panel', '#111111'), shape('value', '#222222', 0.05), shape('label', '#333333', 0.02)]
+    for (const tilt of [24, 12, 0.5]) C.paintDrawList3d(list(items, { camera: { ...TILTED, tilt } }), c, { layer: layerFactory })
+    const visible = sceneOf().children.filter((m) => m.visible).sort((a, b) => a.renderOrder - b.renderOrder)
+    expect(visible.map(perspective)).toEqual([false, true, true, true])
+    // The dim is the base layer's alone (painter A draws a dim by drawImage of its layer); no plane has it.
+    expect(layerCanvas(visible[0]).ops.some((o) => o.op === 'drawImage')).toBe(true)
+    for (const mesh of visible.slice(1)) expect(layerCanvas(mesh).ops.some((o) => o.op === 'drawImage')).toBe(false)
+    expect(visible.slice(1).map((m) => layerCanvas(m).ops.filter((o) => o.op === 'fill').map((o) => o.fill))).toEqual([['#111111'], ['#333333'], ['#222222']])
+    // Each plane's model: the compensation, at z × H.
+    const D = flatDistance(30, SIZE.height)
+    expect(visible.slice(1).map((m) => m.matrix.elements[14])).toEqual([0, 0.02 * SIZE.height, 0.05 * SIZE.height])
+    expect(visible[3].matrix.elements[0]).toBeCloseTo((SIZE.width / 2) * compensation(0.05, SIZE.height, D), 9)
+    expect(texturesOf().map((t) => (t as FakeTexture).uploads)).toEqual([1, 1, 1, 1])
+    expect(renders).toHaveLength(3)
+  })
+
+  it('a plane whose items change is repainted and uploaded again; the others are not', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    const at = (value: string): DrawList => list([shape('panel', '#111111'), shape(value, '#222222', 0.05)], { camera: TILTED })
+    C.paintDrawList3d(at('v1'), c)
+    C.paintDrawList3d(at('v2'), c)
+    expect(texturesOf().map((t) => (t as FakeTexture).uploads)).toEqual([1, 2])
+  })
+
+  it('refuses more than MAX_PLANES planes, a list of another size, and a disposed compositor', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    const five = [0, 0.01, 0.02, 0.03, 0.04].map((z, i) => shape(`s${i}`, '#111111', z))
+    expect(() => C.paintDrawList3d(list(five, { camera: TILTED }), c)).toThrow(/5 planes, at most 4/)
+    expect(() => C.paintDrawList3d({ ...list([]), width: 540 }, c)).toThrow(/540/)
+    c.dispose()
+    expect(() => C.paintDrawList3d(list([]), c)).toThrow(/disposed/)
+  })
+})
+
+describe('graphicCompositor: disposal', () => {
+  it('holds every texture, material and geometry a build makes, each disposed exactly once, however often dispose is called', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    C.paintDrawList3d(list([shape('a', '#1')], { glow: [{ item: 'a', radius: 4, strength: 1 }] }), c)
+    C.paintDrawList3d(list([dim(), shape('b', '#2'), shape('c', '#3', 0.02), shape('d', '#4', 0.05)], { camera: TILTED }), c, { layer: layerFactory })
+    expect(made.map((m) => m.kind).sort()).toEqual(['geometry', ...Array(5).fill('material'), ...Array(5).fill('texture')].sort())
+    c.dispose()
+    c.dispose()
+    expect(made.map((m) => m.disposed)).toEqual(made.map(() => 1))
+  })
+})
+
+/* ----------------------------------------------------------- the seam */
+
+const STYLE = resolveGraphicStyle('clean')
+const SPEC: GraphicSpec = { data: { template: 'counter', value: '40', label: 'forty' }, seconds: 1, beats: [0.5], place: { auto: true, third: 'middle' }, seed: 1, version: 0 }
+const NO_TARGETS = (): GraphicTargets => ({})
+/** A tilt from 24° to 0 over the first half second, the panel at z 0 and the value at 0.05: what piece 3's counter will emit. */
+const tilting: Drawer = (_s, _style, clock) => ({
+  items: [shape('panel', '#111111'), shape('value', '#222222', 0.05)],
+  camera: { ...TILTED, tilt: Math.max(0, 24 * (1 - clock.t / 0.5)) }
+})
+
+describe('graphicCanvas: the compositor seam', () => {
+  let written: number[]
+
+  beforeEach(async () => {
+    written = []
+    resetBakeGuard()
+    const { useCatalog } = await import('../../src/renderer/src/catalog')
+    useCatalog.setState({ ensureFont: async () => true, loadedFonts: new Set([STYLE.font]), failedFonts: new Map() })
+    const { setPoolCanvases } = await import('../../src/renderer/src/encodePool')
+    setPoolCanvases((w, h) => {
+      const c = fakeCanvas()
+      c.width = w
+      c.height = h
+      return c as unknown as HTMLCanvasElement
+    })
+    vi.stubGlobal('window', {
+      forge: {
+        clearTitleFrames: async () => undefined,
+        writeTitleFrame: async (_clipId: string, frame: number) => {
+          written.push(frame)
+          return '/cache/clip.seq/%06d.png'
+        }
+      }
+    })
+  })
+
+  afterEach(async () => {
+    const { setPoolCanvases } = await import('../../src/renderer/src/encodePool')
+    setPoolCanvases(null)
+  })
+
+  const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 5))
+  const preview = (clipId: string, frame: number, onReady?: () => void, size = SIZE): HTMLCanvasElement | null =>
+    G.graphicPreviewCanvas(clipId, SPEC, STYLE, size.width, size.height, { frame, total: 30, fps: 30 }, {}, onReady, tilting)
+
+  it('no drawer’s list needs it today, so the seam is never reached by a production graphic', () => {
+    // Pinned per template and style in tests/graphicDrawList.test.ts; here, the hand-built drawer does.
+    expect(needsCompositor({ ...SIZE, ...tilting(SPEC, STYLE, { t: 0, fps: 30 }, SIZE, () => ({ width: 0, ascent: 0, descent: 0 }), {}) })).toBe(true)
+  })
+
+  it('the preview makes one compositor for the entry, paints flat until it lands, then through it; rebuilt on a new size; disposed on clip removal', async () => {
+    const ready = vi.fn()
+    expect(preview('g1', 0, ready)).not.toBeNull()
+    expect(renders).toHaveLength(0)
+    await settle()
+    expect(ready).toHaveBeenCalledTimes(1)
+    const copy = preview('g1', 1, ready) as unknown as FakeCanvas
+    expect(renders).toHaveLength(1)
+    // The frame is copied from the WebGL canvas into the entry's own.
+    expect(copy.ops.some((o) => o.op === 'drawImage' && o.image === glCanvas)).toBe(true)
+    preview('g1', 2, ready)
+    expect(made.filter((m) => m.kind === 'geometry')).toHaveLength(1)
+
+    // A new size rebuilds: the old compositor's every disposable disposed once.
+    const first = [...made]
+    preview('g1', 3, ready, { width: 540, height: 960 })
+    await settle()
+    expect(first.map((m) => m.disposed)).toEqual(first.map(() => 1))
+    expect(made.filter((m) => m.kind === 'geometry')).toHaveLength(2)
+
+    // Clip removal disposes the second.
+    preview('g1', 4, ready, { width: 540, height: 960 })
+    G.forgetGraphicPreview('g1')
+    expect(made.map((m) => m.disposed)).toEqual(made.map(() => 1))
+  })
+
+  it('a frame drawn while a face loads is uploaded again once it has landed, though its items are the same', async () => {
+    const { useCatalog } = await import('../../src/renderer/src/catalog')
+    preview('g8', 1)
+    await settle()
+    useCatalog.setState({ loadedFonts: new Set() })
+    preview('g8', 1)
+    const uploads = (): number[] => made.filter((m) => m.kind === 'texture').map((t) => (t as FakeTexture).uploads)
+    expect(uploads()).toEqual([1, 1])
+    useCatalog.setState({ loadedFonts: new Set([STYLE.font]) })
+    preview('g8', 1)
+    expect(uploads()).toEqual([2, 2])
+    G.forgetGraphicPreview('g8')
+  })
+
+  it('a compositor that lands after its entry was superseded is disposed, not kept', async () => {
+    preview('g2', 0)
+    G.forgetGraphicPreview('g2')
+    await settle()
+    expect(made.length).toBeGreaterThan(0)
+    expect(made.map((m) => m.disposed)).toEqual(made.map(() => 1))
+  })
+
+  it('the bake keeps one compositor for its length, disposes it in its finally, and bakes the canvas region though the box was allowed', async () => {
+    const run = await G.bakeGraphicSequence(SPEC, STYLE, 'g3', SIZE.width, SIZE.height, 30, 30, NO_TARGETS, true, tilting)
+    expect(run).not.toBeNull()
+    expect(run!.box).toBeUndefined()
+    expect(written.length).toBe(run!.frames)
+    expect(made.filter((m) => m.kind === 'geometry')).toHaveLength(1)
+    expect(made.map((m) => m.disposed)).toEqual(made.map(() => 1))
+    // Frames 0..14 tilt (route three), the rest are flat (route one): only the tilted ones render.
+    expect(run!.frames).toBeGreaterThan(15)
+    expect(renders.length).toBe(15)
+    expect(G.takeGraphicBakeNotes()).toEqual([])
+  })
+
+  it('a flat drawer still takes the box route: only a list that needs the compositor forces the canvas', async () => {
+    const flat: Drawer = () => ({ items: [shape('panel', '#111111')] })
+    const run = await G.bakeGraphicSequence(SPEC, STYLE, 'g4', SIZE.width, SIZE.height, 30, 30, NO_TARGETS, true, flat)
+    expect(run!.box).toEqual({ x: 100, y: 100, width: 202, height: 102 })
+    expect(made).toEqual([])
+  })
+
+  it('WebGL missing: painter A paints every frame (no camera, no z), and WEBGL_MISSING_NOTE is recorded once over two bakes; the preview marks its clip', async () => {
+    webgl.mode = 'throw'
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const a = await G.bakeGraphicSequence(SPEC, STYLE, 'g5', SIZE.width, SIZE.height, 30, 30, NO_TARGETS, true, tilting)
+    const b = await G.bakeGraphicSequence(SPEC, STYLE, 'g6', SIZE.width, SIZE.height, 30, 30, NO_TARGETS, false, tilting)
+    expect(a).not.toBeNull()
+    expect(b).not.toBeNull()
+    expect(renders).toHaveLength(0)
+    expect(made).toEqual([])
+    expect(G.takeGraphicBakeNotes()).toEqual([C.WEBGL_MISSING_NOTE])
+    expect(G.takeGraphicBakeNotes()).toEqual([])
+
+    expect(G.graphicDrawnFlat('g7')).toBe(false)
+    preview('g7', 0)
+    await settle()
+    const drawn = preview('g7', 1) as unknown as FakeCanvas
+    expect(G.graphicDrawnFlat('g7')).toBe(true)
+    // Painter A's own fills, flat: the panel then the value, no copy from a WebGL canvas.
+    // This frame's calls: the canvas is the entry's, kept across frames, and cleared before each.
+    const thisFrame = drawn.ops.slice(drawn.ops.map((o) => o.op).lastIndexOf('clearRect'))
+    expect(thisFrame.filter((o) => o.op === 'fill').map((o) => o.fill)).toEqual(['#111111', '#222222'])
+    expect(drawn.ops.some((o) => o.image === glCanvas)).toBe(false)
+    G.forgetGraphicPreview('g7')
+    expect(G.graphicDrawnFlat('g7')).toBe(false)
+    warn.mockRestore()
+  })
+})
+
+describe('the export takes the graphic bakes’ notes', () => {
+  it('drops a store bake’s before its bake and notifies its own after, each once (ExportStrip.tsx, in that order)', () => {
+    const source = readFileSync(resolve(__dirname, '../../src/renderer/src/components/ExportStrip.tsx'), 'utf8')
+    const takes = [...source.matchAll(/takeGraphicBakeNotes\(\)/g)].map((m) => m.index!)
+    const bakes = [...source.matchAll(/await bakeForExport\(/g)].map((m) => m.index!)
+    expect(takes).toHaveLength(2)
+    expect(bakes).toHaveLength(1)
+    expect(takes[0]).toBeLessThan(bakes[0])
+    expect(takes[1]).toBeGreaterThan(bakes[0])
+    expect(source.slice(takes[1] - 40, takes[1] + 80)).toMatch(/for \(const note of takeGraphicBakeNotes\(\)\) notify\(`A graphic was \$\{note\}`, 'info'\)/)
+  })
+})

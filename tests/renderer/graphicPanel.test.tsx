@@ -32,14 +32,16 @@ vi.mock('../../src/renderer/src/store', async (importOriginal) => {
   return { ...real, useEditor }
 })
 
-const bake = vi.hoisted(() => ({ asks: [] as string[] }))
+const bake = vi.hoisted(() => ({ asks: [] as string[], flat: new Set<string>() }))
 vi.mock('../../src/renderer/src/graphicCanvas', () => ({
   bakeGraphicSequence: async (_spec: unknown, _style: unknown, clipId: string) => {
     bake.asks.push(clipId)
     return null
   },
   forgetGraphicPreview: () => undefined,
-  graphicPreviewCanvas: () => null
+  graphicPreviewCanvas: () => null,
+  // The preview's answer, stood in for: which clips it drew flat for want of WebGL (§6.16).
+  graphicDrawnFlat: (clipId: string) => bake.flat.has(clipId)
 }))
 
 const { useEditor } = await import('../../src/renderer/src/store')
@@ -529,6 +531,20 @@ describe('the dock’s graphic panel (§6.6)', () => {
     // A lower third has nothing to check: no note.
     start([graphicClip('lt', FIXTURES['lower-third'])], { transcript: false })
     expect(panel('lt').filter((h) => h.type === 'p' && text(h) === GP.UNCHECKED_NOTE)).toHaveLength(0)
+  })
+
+  it('a graphic its preview drew flat for want of WebGL says so once, with the plan’s note; another graphic does not', () => {
+    start([graphicClip('g', FIXTURES.counter), graphicClip('h', FIXTURES.counter)])
+    const flatNotes = (id: string): Host[] => panel(id).filter((h) => h.type === 'p' && text(h) === GP.DRAWN_FLAT_NOTE)
+    expect(flatNotes('g')).toHaveLength(0)
+    bake.flat.add('g')
+    try {
+      expect(GP.DRAWN_FLAT_NOTE).toBe('This graphic is drawn flat: 3D needs WebGL, which did not start on this computer')
+      expect(flatNotes('g')).toHaveLength(1)
+      expect(flatNotes('h')).toHaveLength(0)
+    } finally {
+      bake.flat.clear()
+    }
   })
 
   it('a problem that names no shown field is shown under the heading', () => {

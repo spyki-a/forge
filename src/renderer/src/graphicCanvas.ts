@@ -21,7 +21,7 @@ import type { GraphicSpec } from '@shared/graphics/template'
 import type { GraphicStyle } from '@shared/graphics/style'
 import type { DrawItem, DrawList, Drawer, GraphicTargets, Rect, TextMeasure } from '@shared/graphics/items'
 import { textSpecOf } from '@shared/graphics/items'
-import { drawListAt, graphicBox, onsetTargetsAt } from '@shared/graphics/drawList'
+import { drawListAt, graphicBox, needsCompositor, onsetTargetsAt } from '@shared/graphics/drawList'
 import { paintDrawList2d, type PaintOptions } from '@shared/graphics/paint'
 import { graphicMovingFrames } from '@shared/graphics/frame'
 import { facesFor, textSpecFont } from '@shared/render/textPaint'
@@ -30,6 +30,7 @@ import { mediaUrl } from '@shared/mediaUrl'
 import { beginBake, endBake, isSuperseded } from '@shared/bakeGuard'
 import { encodeFrames } from './encodePool'
 import { faceSettled, useCatalog } from './catalog'
+import { WEBGL_MISSING_NOTE, createCompositor, forgetPlanes, paintDrawList3d, type Compositor } from './graphicCompositor'
 
 /* --------------------------------------------------------------- M1 and M2 */
 
@@ -200,13 +201,52 @@ function freshLayer(width: number, height: number): CanvasRenderingContext2D {
  * The one paint the preview, the bake and the harness's frames share
  * (§6.3): painter A over the list, with the caller's offset, its dim layer
  * factory and the decoded bitmaps. A list that asks for the compositor
- * (`needsCompositor`, drawList.ts) is §6.16's seam, phase 3's: painter B
- * into the caller's canvas, and painter A with a note where WebGL is
- * missing. No phase-1 or phase-2 list asks for it (pinned in
- * graphicDrawList), so painter A is the one paint here until then.
+ * (`needsCompositor`, drawList.ts) is §6.16's seam: given the caller's
+ * compositor, painter B draws the whole frame (`paintDrawList3d`) and it is
+ * copied into the caller's canvas with `drawImage`, as the moments copy
+ * theirs; with none (WebGL missing, or not landed yet), painter A, which
+ * ignores `camera`, `glow` and `z`, so the graphic draws flat. No template
+ * emits a list that asks for it before phase 3's piece 3 (pinned in
+ * tests/graphicDrawList.test.ts).
  */
-function paintFrame(list: DrawList, ctx: CanvasRenderingContext2D, options: PaintOptions): void {
+function paintFrame(list: DrawList, ctx: CanvasRenderingContext2D, options: PaintOptions, compositor?: Compositor | null): void {
+  if (compositor && needsCompositor(list)) {
+    const frame = paintDrawList3d(list, compositor, { layer: options.layer, images: options.images })
+    ctx.drawImage(frame, options.offset?.x ?? 0, options.offset?.y ?? 0)
+    return
+  }
   paintDrawList2d(ctx, list, options)
+}
+
+/* ------------------------------------------------------- WebGL missing */
+
+/** Preview clips drawn flat because WebGL did not start: the dock's graphic panel says so (§6.16). */
+const drawnFlat = new Set<string>()
+/** The bakes' notes since they were last taken: a set, so the export records each once (§6.16, "WebGL missing"). */
+const bakeNotes = new Set<string>()
+
+/** Whether this clip's preview is drawn flat for want of WebGL (§6.16): the dock's graphic panel shows `WEBGL_MISSING_NOTE`. */
+export function graphicDrawnFlat(clipId: string): boolean {
+  return drawnFlat.has(clipId)
+}
+
+/**
+ * The notes the graphic bakes recorded since the last call, each once, and
+ * forgotten: the export takes them before its bake (dropping any a store
+ * bake left) and after it, into its notes.
+ */
+export function takeGraphicBakeNotes(): string[] {
+  const notes = [...bakeNotes]
+  bakeNotes.clear()
+  return notes
+}
+
+/** One compositor for a bake's (or the harness frames') length when a list asks for it; null, with the note, when WebGL is missing. */
+async function compositorFor(lists: readonly DrawList[], width: number, height: number): Promise<Compositor | null> {
+  if (!lists.some(needsCompositor)) return null
+  const compositor = await createCompositor(width, height)
+  if (!compositor) bakeNotes.add(WEBGL_MISSING_NOTE)
+  return compositor
 }
 
 /* ----------------------------------------------------------------- preview */
@@ -217,6 +257,47 @@ interface PreviewEntry {
 }
 
 const previews = new Map<string, PreviewEntry>()
+
+/**
+ * Per clip, the compositor its preview keeps once a list has asked for one
+ * (§6.16), made for one size: `pending` while `createCompositor` runs, then
+ * the compositor, or null when WebGL is missing. Rebuilt (the old one
+ * disposed) when the size changes; disposed with the clip
+ * (`forgetGraphicPreview`); one that lands for a slot no longer the clip's
+ * (superseded, or the clip forgotten meanwhile) is disposed on landing, as
+ * the moments dispose theirs (momentCanvas.ts).
+ */
+interface DeepSlot {
+  size: string
+  pending: boolean
+  compositor: Compositor | null
+  onReady?: () => void
+}
+
+const compositors = new Map<string, DeepSlot>()
+
+function deepSlotOf(clipId: string, width: number, height: number, onReady?: () => void): DeepSlot {
+  const size = `${width}x${height}`
+  const existing = compositors.get(clipId)
+  if (existing && existing.size === size) {
+    existing.onReady = onReady
+    return existing
+  }
+  existing?.compositor?.dispose()
+  const slot: DeepSlot = { size, pending: true, compositor: null, onReady }
+  compositors.set(clipId, slot)
+  void createCompositor(width, height).then((compositor) => {
+    if (compositors.get(clipId) !== slot) {
+      compositor?.dispose()
+      return
+    }
+    slot.pending = false
+    slot.compositor = compositor
+    slot.onReady?.()
+  })
+  return slot
+}
+
 /** Per clip, its own dim layer factory: the painter keeps its dim layers per factory, so a clip's go when the clip is forgotten and no clip pays for another's. */
 const previewLayers = new Map<string, (width: number, height: number) => CanvasRenderingContext2D>()
 /**
@@ -293,11 +374,16 @@ export function graphicPreviewCanvas(
   canvas.dataset.forgeRev = String(++paints)
 
   const list = drawListAt(spec, style, drawn, clock.fps, { width, height }, graphicMeasure(), targets, drawer)
-  paintFrame(list, ctx, { layer: previewLayerOf(clipId), images: bitmaps })
+  // §6.16's seam: a list that asks for the compositor gets the clip's; drawn flat until it lands, and for good without WebGL.
+  const deep = needsCompositor(list) ? deepSlotOf(clipId, width, height, onReady) : null
+  if (deep && !deep.pending && !deep.compositor) drawnFlat.add(clipId)
+  paintFrame(list, ctx, { layer: previewLayerOf(clipId), images: bitmaps }, deep?.compositor)
 
   const faces = facesOf([list], style)
   const imageReady = (src: string): boolean => bitmaps.has(src) || undecodable.has(src)
   const waiting = [...faces.filter((face) => !faceSettled(face)), ...imagesOf([list]).filter((src) => !imageReady(src))]
+  // A layer painted in the fallback face would be kept by its key once the face lands.
+  if (waiting.length > 0 && deep?.compositor) forgetPlanes(deep.compositor)
   if (waiting.length > 0) {
     const slot = warming.get(clipId) ?? { owed: new Set<string>() }
     slot.onReady = onReady
@@ -331,7 +417,8 @@ export function graphicPreviewCanvas(
     return canvas
   }
 
-  previews.set(clipId, { canvas, signature })
+  // Drawn flat while the compositor is on its way: not kept, so the frame is drawn again once it has landed.
+  previews.set(clipId, { canvas, signature: deep?.pending ? '' : signature })
   return canvas
 }
 
@@ -340,6 +427,9 @@ export function forgetGraphicPreview(clipId: string): void {
   previews.delete(clipId)
   previewLayers.delete(clipId)
   warming.delete(clipId)
+  compositors.get(clipId)?.compositor?.dispose()
+  compositors.delete(clipId)
+  drawnFlat.delete(clipId)
 }
 
 /* -------------------------------------------------------------------- bake */
@@ -431,6 +521,7 @@ export async function bakeGraphicSequence(
   if (probe.every((list) => list.items.length === 0)) return null
 
   const token = beginBake(clipId)
+  let compositor: Compositor | null = null
   try {
     // The faces, then the images, before any canvas: a face that is not loaded
     // yet would bake in the fallback and look exactly like the font picker
@@ -440,8 +531,14 @@ export async function bakeGraphicSequence(
     if (isSuperseded(clipId, token)) return null
 
     const lists = listsOf(spec, style, fps, size, measure, at, moving, drawer)
-    const box = GRAPHIC_BAKE_REGION === 'box' && boxAllowed ? graphicBox(spec, style, fps, total, size, measure, targetsAt, drawer) : null
-    if (GRAPHIC_BAKE_REGION === 'box' && boxAllowed && !box) return null
+    // A list that asks for the compositor is drawn whole-frame (§6.16): a tilt or a glow inks outside
+    // the flat `itemBounds` that `graphicBox` unions, so the box would crop it. The canvas, then.
+    const deep = lists.some(needsCompositor)
+    const boxRoute = GRAPHIC_BAKE_REGION === 'box' && boxAllowed && !deep
+    const box = boxRoute ? graphicBox(spec, style, fps, total, size, measure, targetsAt, drawer) : null
+    if (boxRoute && !box) return null
+    compositor = await compositorFor(lists, width, height)
+    if (isSuperseded(clipId, token)) return null
     const region = box ?? { x: 0, y: 0, width, height }
 
     await window.forge.clearTitleFrames(clipId)
@@ -454,7 +551,7 @@ export async function bakeGraphicSequence(
       width: region.width,
       height: region.height,
       depth: GRAPHIC_POOL_DEPTH,
-      draw: (ctx, index) => paintFrame(lists[index], ctx, { offset, layer, images: bitmaps }),
+      draw: (ctx, index) => paintFrame(lists[index], ctx, { offset, layer, images: bitmaps }, compositor),
       write: (index, bytes) => window.forge.writeTitleFrame(clipId, index, bytes),
       cancelled: () => isSuperseded(clipId, token)
     })
@@ -462,6 +559,7 @@ export async function bakeGraphicSequence(
     return box ? { pattern, frames: moving, box } : { pattern, frames: moving }
   } finally {
     endBake(clipId)
+    compositor?.dispose()
   }
 }
 
@@ -499,12 +597,17 @@ export async function graphicFrameCanvases(
   await ensureFaces(facesOf(probe, style))
   await Promise.all(imagesOf(probe).map(decodeImage))
   const lists = listsNow()
-  return lists.map((list) => {
-    const canvas = document.createElement('canvas')
-    canvas.width = width
-    canvas.height = height
-    const ctx = canvas.getContext('2d')
-    if (ctx) paintFrame(list, ctx, { layer: freshLayer, images: bitmaps })
-    return canvas
-  })
+  const compositor = await compositorFor(lists, width, height)
+  try {
+    return lists.map((list) => {
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')
+      if (ctx) paintFrame(list, ctx, { layer: freshLayer, images: bitmaps }, compositor)
+      return canvas
+    })
+  } finally {
+    compositor?.dispose()
+  }
 }

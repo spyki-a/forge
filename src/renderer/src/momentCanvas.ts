@@ -186,7 +186,8 @@ class Composed {
 
 /* ------------------------------------------------------------------ GLSL */
 
-const VERTEX = /* glsl */ `
+/** The identity quad's vertex shader; the graphics compositor draws its 1:1 layers with it too (graphicCompositor.ts). */
+export const VERTEX = /* glsl */ `
 varying vec2 vUv;
 void main() {
   vUv = uv;
@@ -318,7 +319,8 @@ void main() {
 
 /* ---------------------------------------------------------------- scene */
 
-function textureOf(three: Three, canvas: HTMLCanvasElement): import('three').CanvasTexture {
+/** A canvas as a texture, uploaded raw: the moments' settings, which the graphics compositor uploads its layers with too (graphicCompositor.ts). */
+export function textureOf(three: Three, canvas: HTMLCanvasElement): import('three').CanvasTexture {
   const texture = new three.CanvasTexture(canvas)
   // Raw bytes in, raw bytes out: the frame at t = 1 has to BE the incoming picture.
   texture.colorSpace = three.NoColorSpace

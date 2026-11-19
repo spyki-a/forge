@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, it, expect } from 'vitest'
 import {
   CLUSTER_SCRIPTS,
@@ -21,7 +22,8 @@ import {
 import { drawListAt, graphicBox, needsCompositor, onsetTargetsAt } from '@shared/graphics/drawList'
 import { DRAWERS } from '@shared/graphics/templates/index'
 import { DURATIONS, entrance, progress } from '@shared/graphics/motion'
-import { GRAPHIC_TEXT_STYLES, resolveGraphicStyle, type GraphicStyle } from '@shared/graphics/style'
+import { graphicMovingFrames } from '@shared/graphics/frame'
+import { GRAPHIC_STYLES, GRAPHIC_TEXT_STYLES, resolveGraphicStyle, type GraphicStyle } from '@shared/graphics/style'
 import type { GraphicData, GraphicSpec, GraphicTemplateId } from '@shared/graphics/template'
 import { seeded } from '@shared/render/moment'
 import { INDIC_FONTS } from '@shared/render/textPaint'
@@ -503,6 +505,64 @@ describe('graphicDrawList: needsCompositor', () => {
     expect(needsCompositor({ ...flat(every), camera: { tilt: 0, yaw: 0, dolly: 0, fov: 40 } })).toBe(true)
     expect(needsCompositor({ ...flat(every), glow: [{ item: 's', radius: 10, strength: 1 }] })).toBe(true)
     expect(needsCompositor(flat([]))).toBe(false)
+  })
+})
+
+/*
+ * No production graphic reaches §6.16's compositor before phase 3's piece 3:
+ * every template's drawer, over every fixture of specs.json, under every
+ * style, on every third frame and the last moving one, emits no camera, no
+ * glow and no z. Two halves. A spec with no `depth` and no `hero` never asks
+ * for it, in any phase (§6.3: a drawer emits them only for those). A spec
+ * WITH a depth or marked hero may ask only where its template is in
+ * `MAY_ASK`: empty in piece 1, so today nothing asks at all; piece 3 adds
+ * `counter` and `ring` to the set (membership), not by deleting the case.
+ */
+describe('graphicDrawList: no drawer asks for the compositor yet', () => {
+  /** The templates whose depth variants or hero glow may ask for the compositor: piece 3 adds 'counter' and 'ring'. */
+  const MAY_ASK = new Set<GraphicTemplateId>([])
+  const fixtures = (
+    JSON.parse(readFileSync(new URL('./fixtures/graphics/specs.json', import.meta.url), 'utf8')) as { specs: { id: string; spec: GraphicSpec }[] }
+  ).specs.filter((f) => DRAWERS[f.spec.data.template] !== undefined)
+  const fake: TextMeasure = (t, look) => ({ width: t.length * look.px * 0.55, ascent: look.px * 0.8, descent: look.px * 0.2 })
+  const targetsOf = (s: GraphicSpec): GraphicTargets =>
+    s.subject ? { subject: { x: s.subject.box.x * SIZE.width, y: s.subject.box.y * SIZE.height, width: s.subject.box.width * SIZE.width, height: s.subject.box.height * SIZE.height } } : {}
+  /** The frames read: every third, and the last moving one (what the export holds). */
+  const framesOf = (s: GraphicSpec, st: GraphicStyle): number[] => {
+    const total = Math.max(1, Math.round(s.seconds * FPS))
+    const moving = Math.max(1, graphicMovingFrames(s, st, FPS, total))
+    const frames = new Set<number>([moving - 1])
+    for (let f = 0; f < total; f += 3) frames.add(f)
+    return [...frames]
+  }
+  const asking = (s: GraphicSpec): string[] => {
+    const found: string[] = []
+    for (const st of GRAPHIC_STYLES) {
+      for (const frame of framesOf(s, st)) {
+        if (needsCompositor(drawListAt(s, st, frame, FPS, SIZE, fake, targetsOf(s)))) found.push(`${st.id}@${frame}`)
+      }
+    }
+    return found
+  }
+
+  it('reads every drawn template, from the fixtures', () => {
+    expect(new Set(fixtures.map((f) => f.spec.data.template))).toEqual(new Set(Object.keys(DRAWERS)))
+  })
+
+  it('a spec with no depth and no hero never asks, whatever its template', () => {
+    for (const f of fixtures) {
+      const { depth: _depth, hero: _hero, ...plain } = f.spec
+      expect(asking(plain), f.id).toEqual([])
+    }
+  })
+
+  it('a depth or a hero asks only on a template in MAY_ASK (none in piece 1)', () => {
+    for (const f of fixtures) {
+      if (MAY_ASK.has(f.spec.data.template)) continue
+      for (const variant of [{ hero: true as const }, ...(['tilt', 'parallax', 'dolly', 'focus'] as const).map((depth) => ({ depth }))]) {
+        expect(asking({ ...f.spec, ...variant }), `${f.id} ${JSON.stringify(variant)}`).toEqual([])
+      }
+    }
   })
 })
 

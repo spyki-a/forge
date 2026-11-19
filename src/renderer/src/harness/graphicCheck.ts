@@ -7,6 +7,7 @@
  *   await window.__forgeGraphicCheck({ segments: true })                                                       M3
  *   await window.__forgeGraphicCheck({ blur: { words: 10, px: 8 } })                                           M5
  *   await window.__forgeGraphicCheck({ parity: true })                                       M6, Indic and colour
+ *   await window.__forgeGraphicCheck({ compositor: true })      phase 3 piece 1: M6 through paintDrawList3d, disposal, WebGL missing
  *   await window.__forgeGraphicCheck({ indic: true })                M22's numeric halves, then phase 1's Indic render check
  *   await window.__forgeGraphicCheck({ primitives: true })                 phase 1's exit (§6.12) and M13's first half
  *   await window.__forgeGraphicCheck({ pathLength: true })                                                     M8
@@ -79,6 +80,7 @@ import { bakeCaptions } from '../captionBake'
 import { faceSettled, useCatalog } from '../catalog'
 import { useEditor } from '../store'
 import specsText from '../../../../tests/fixtures/graphics/specs.json?raw'
+import { checkCompositor, type CompositorResult } from './compositorCheck'
 import {
   BLIND_FPS,
   CURVE_QUESTIONS,
@@ -170,6 +172,15 @@ export interface GraphicCheckOptions {
   /** M6's phase-0 parts: the §51 clusters through a `CanvasTexture`, and colour, with colour management on and off. */
   parity?: boolean
   /**
+   * Phase 3's piece 1 (§6.16): hand-made lists through each of the
+   * compositor's three routes (`paintDrawList3d`) against painter A, per
+   * channel, with §6.12's bars (`COMPOSITOR_BAR`); the shared renderer's
+   * `info.memory` before a build and after `dispose`; and WebGL pretended
+   * missing (the flat picture, `WEBGL_MISSING_NOTE` once, the Preview's mark).
+   * `compositorCheck.ts`.
+   */
+  compositor?: boolean
+  /**
    * M22's numeric halves: each §51 cluster drawn whole and one code point at
    * a time (phase 0, bare `drawTextOnto`); then phase 1's half of the Indic
    * render check (§6.11): a text clip's bake and a caption's bake in a Latin
@@ -221,7 +232,7 @@ export interface GraphicCheckOptions {
 }
 
 /** Every option, in the order `runGraphicCheck` runs them. */
-export const GRAPHIC_CHECK_OPTIONS = ['encode', 'segments', 'blur', 'parity', 'indic', 'primitives', 'pathLength', 'strokes', 'templates', 'curves', 'look'] as const
+export const GRAPHIC_CHECK_OPTIONS = ['encode', 'segments', 'blur', 'parity', 'compositor', 'indic', 'primitives', 'pathLength', 'strokes', 'templates', 'curves', 'look'] as const
 export type GraphicCheckOption = (typeof GRAPHIC_CHECK_OPTIONS)[number]
 
 /** The options a call asked for, in run order: each one by itself, so an option not passed runs nothing (the file's rule). */
@@ -613,6 +624,7 @@ export interface GraphicCheckResult {
   segments?: SegmentsResult
   blur?: BlurResult
   parity?: ParityResult
+  compositor?: CompositorResult
   indic?: IndicResult
   primitives?: PrimitivesResult
   pathLength?: PathLengthResult
@@ -3689,6 +3701,7 @@ export async function runGraphicCheck(options: GraphicCheckOptions = {}): Promis
   if (options.segments) result.segments = checkSegments(frames, summary)
   if (options.blur) result.blur = await checkBlur(options.blur, frames, summary, notes)
   if (options.parity) result.parity = await checkParity(frames, summary)
+  if (options.compositor) result.compositor = await checkCompositor(INDIC_CLUSTERS, frames, summary, notes)
   if (options.indic) {
     // Phase 0's bare drawTextOnto first, as it was measured, before phase 1's half loads the Noto faces.
     result.indic = checkIndic(frames, summary)

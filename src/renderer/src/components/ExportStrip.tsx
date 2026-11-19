@@ -24,6 +24,7 @@ import { exportHeadline } from '@shared/render/exportHeadline'
 import { ExportSettings } from './ExportSettings'
 import { bakeForExport } from '@shared/render/exportBake'
 import { liveBakers } from '../exportBakers'
+import { takeGraphicBakeNotes } from '../graphicCanvas'
 import { offlineAssets } from '@shared/project/relink'
 import { BigButton } from './ui/Tile'
 import { REFRAME_PRESET, reframeJobLabel } from '@shared/reframe/job'
@@ -159,12 +160,15 @@ export function ExportStrip(): ReactNode {
        * undo steps, does not mark the project unsaved, and does not leave a
        * portrait paper run playing in a landscape preview. See exportBake.ts.
        */
+      // A store bake's notes are not this export's: dropped before it, and the graphics' own taken after (each once).
+      takeGraphicBakeNotes()
       const baked = await bakeForExport(useEditor.getState().project, canvas, liveBakers, (clip, err) =>
         notify(
           `A card could not be redrawn, so its last picture is used: ${err instanceof Error ? err.message : String(err)}`,
           'info'
         )
       )
+      for (const note of takeGraphicBakeNotes()) notify(`A graphic was ${note}`, 'info')
 
       /*
        * A preset's loudness and captions, for THIS export only.

@@ -11,6 +11,9 @@ import { placeGraphic } from '@shared/graphics/place'
 import { footageOf } from '@shared/graphics/sound'
 import { GRAPHIC_TEMPLATES, type FieldMode, type GraphicData, type GraphicSpec, type TemplateDef } from '@shared/graphics/template'
 import { useEditor } from '../store'
+// Through the namespace, so tests/renderer/graphicPanel.test.tsx can stand in for the preview's answer.
+import * as graphicCanvas from '../graphicCanvas'
+import { WEBGL_MISSING_NOTE } from '../graphicCompositor'
 
 /**
  * The dock's panel for a clip that draws a graphic (docs/CLIPS.md §6.6, "The
@@ -37,7 +40,9 @@ import { useEditor } from '../store'
  * - the **seconds** within the template's bounds; the **place**, an auto third
  *   or a box you dragged, with a way back to auto.
  *
- * No Depth choice (phase 3). A graphic whose transcript is not in the project
+ * No Depth choice (phase 3's piece 3). When its preview is drawn flat
+ * because WebGL did not start (graphicCanvas.ts `graphicDrawnFlat`), one note
+ * says so (§6.16). A graphic whose transcript is not in the project
  * shows its fields unchecked with one note; one with no grounding at all, with
  * its own. Under Seconds, a warning (never a block) when the length is under
  * §6.2's reading hold for its beats and what it draws (`graphicSeconds`).
@@ -66,6 +71,9 @@ export const NO_GROUNDING_NOTE = 'It is not tied to anything said, so these word
 export const NO_FREE_THIRD_TITLE = 'No third is free of the captions here'
 /** Back to auto, greyed: no footage clip under the graphic to place it over (not the plan's words). */
 export const NO_FOOTAGE_TITLE = 'No footage is under it to place it over'
+
+/** The graphic's preview is drawn flat because WebGL did not start (§6.16, "WebGL missing"; the note's words are the plan's). */
+export const DRAWN_FLAT_NOTE = `This graphic is ${WEBGL_MISSING_NOTE}`
 
 /** Under Seconds, never a block: shorter than §6.2's reading hold, its last beat plus TAIL_S and the time to read it (not the plan's words). */
 export function tooShortNote(need: number | null, max: number): string {
@@ -308,6 +316,7 @@ export function GraphicPanel({ clip }: { clip: Clip }): ReactNode {
       {heading}
       {unchecked && <p className="text-[10px] leading-snug text-ink-500">{UNCHECKED_NOTE}</p>}
       {ungrounded && <p className="text-[10px] leading-snug text-ink-500">{NO_GROUNDING_NOTE}</p>}
+      {graphicCanvas.graphicDrawnFlat(clip.id) && <p className="text-[10px] leading-snug text-ink-500">{DRAWN_FLAT_NOTE}</p>}
       {general.map((w, i) => (
         <p key={i} data-warning-for="" className="text-[10px] leading-snug text-amber-400">
           {w.message}

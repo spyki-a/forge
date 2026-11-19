@@ -1384,6 +1384,9 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
   'canvas-drawn': async () => {
     throw new Error('this text is painted on the preview canvas, where no DOM query can read it')
   },
+  'graphic-drawn-flat': async () => {
+    throw new Error('the drawn-flat note needs WebGL missing and a graphic that asks for 3D, which no template does before phase 3 piece 3; the compositor option reads it')
+  },
 
   /*
    * The settings panel, as the harness has it: the bridge's AI helper has
