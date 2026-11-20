@@ -339,6 +339,27 @@ describe('the presses reach the bridge', () => {
     expect(state().helperUi.removing).toBeNull()
   })
 
+  it('Remove with the box ticked forgets every speech model’s status, so Settings asks again; unticked it forgets none', async () => {
+    const known = (): Partial<ReturnType<typeof state>> => {
+      const speechModels = { small: statusOf('small', true), medium: statusOf('medium', true), 'large-v3': statusOf('large-v3') }
+      return { speechModels, speechChoice: 'medium', speechModel: speechModels.medium }
+    }
+    show(readyPack(), known())
+    await press(button('Remove'), 'Remove')
+    await press(button('Remove it'), 'Remove it')
+    expect(forge.removeHelper.mock.calls.map((c) => c[0])).toEqual([{ models: false }])
+    expect(Object.keys(state().speechModels).sort()).toEqual(['large-v3', 'medium', 'small'])
+    expect(state().speechModel?.model).toBe('medium')
+    show(readyPack(), known())
+    await press(button('Remove'), 'Remove')
+    const box = section().find((h) => h.type === 'input' && h.props.type === 'checkbox')
+    ;(box!.props.onChange as (e: { target: { checked: boolean } }) => void)({ target: { checked: true } })
+    await press(button('Remove it'), 'Remove it')
+    expect(forge.removeHelper.mock.calls.at(-1)?.[0]).toEqual({ models: true })
+    expect(state().speechModels).toEqual({})
+    expect(state().speechModel).toBeNull()
+  })
+
   it('a refused Remove keeps its confirm and says why', async () => {
     forge.removeHelper.mockImplementationOnce(async () => {
       throw new Error(`Error invoking remote method 'helper:remove': Error: ${HELPER_WORKING}`)
@@ -508,6 +529,33 @@ describe('the speech model in the row: a choice of three', () => {
     expect(downloads()).toEqual([{ download: true, model: 'medium' }])
   })
 
+  it('one fetch at a time in the window too: a second press while one runs asks nothing and leaves the running fetch on its line', async () => {
+    three('small')
+    let land: (s: SpeechModelStatus) => void = () => undefined
+    forge.speechModel.mockImplementationOnce(() => new Promise<SpeechModelStatus>((resolve) => (land = resolve)))
+    const pending = state().getSpeechModel('medium')
+    await state().getSpeechModel('large-v3')
+    expect(downloads()).toEqual([{ download: true, model: 'medium' }])
+    expect(forge.onSpeechModelProgress).toHaveBeenCalledTimes(1)
+    expect(state().speechFetch?.model).toBe('medium')
+    expect(wordsOf('medium')).toContain('Getting the speech model…')
+    land(statusOf('medium', true))
+    await pending
+    expect(state().speechFetch).toBeNull()
+    expect(state().notices).toEqual([])
+  })
+
+  it('a press that names no model fetches the CHOSEN one; with nothing known it fetches nothing', async () => {
+    three('large-v3')
+    forge.speechModel.mockImplementationOnce(async () => statusOf('large-v3', true))
+    await state().getSpeechModel()
+    expect(downloads()).toEqual([{ download: true, model: 'large-v3' }])
+    show(readyPack())
+    forge.speechModel.mockClear()
+    await state().getSpeechModel()
+    expect(forge.speechModel).not.toHaveBeenCalled()
+  })
+
   it('a failed fetch leaves the choice, and says so', async () => {
     three('medium')
     forge.speechModel.mockImplementationOnce(async () => statusOf('medium', false))
@@ -529,7 +577,9 @@ describe('the speech model in the row: a choice of three', () => {
     chosen = 'large-v3'
     show(readyPack())
     await state().refreshSpeechModels()
-    expect(forge.speechModel.mock.calls.map((c) => c[0])).toEqual([{}, { model: 'small' }, { model: 'medium' }, { model: 'large-v3' }])
+    const asked = forge.speechModel.mock.calls.map((c) => c[0])
+    expect(asked).toHaveLength(4)
+    for (const ask of [{}, { model: 'small' }, { model: 'medium' }, { model: 'large-v3' }]) expect(asked).toContainEqual(ask)
     expect(downloads()).toEqual([])
     expect(state().speechChoice).toBe('large-v3')
     expect(Object.keys(state().speechModels).sort()).toEqual(['large-v3', 'medium', 'small'])

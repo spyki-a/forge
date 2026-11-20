@@ -62,10 +62,10 @@ describe('the harness stand-in for three speech models', () => {
       () => 'done',
       (err: Error) => err.message
     )
-    await until(() => seen.some((u) => u.progress === 0.375))
+    await until(() => seen.some((u) => u.progress === 0.5))
     await new Promise((r) => setTimeout(r, 20))
-    // Held: no progress past half way, all of it naming large-v3.
-    expect(Math.max(...seen.map((u) => u.progress ?? 0))).toBeLessThanOrEqual(0.5)
+    // Held AT half way (the line reads "… 50%"), no further, all of it naming large-v3.
+    expect(Math.max(...seen.map((u) => u.progress ?? 0))).toBe(0.5)
     expect(new Set(seen.map((u) => u.model))).toEqual(new Set(['large-v3']))
     await expect(bridge.speechModel({ download: true, model: 'medium' })).rejects.toThrow(SPEECH_MODEL_BUSY)
     expect(await bridge.speechModel({ model: 'small' })).toMatchObject({ present: true })
@@ -108,6 +108,15 @@ describe('the harness stand-in for three speech models', () => {
     expect(await bridge.speechModel({ model: 'small' })).toMatchObject({ present: true })
     await bridge.cancelSpeechModel()
     expect(await outcome).toBe('Cancelled')
+  })
+
+  it('speechFail: the next fetch ends half way not on disk, without a throw, and the switch goes off', async () => {
+    stub.speechFail = true
+    expect(await bridge.speechModel({ download: true, model: 'medium' })).toMatchObject({ model: 'medium', present: false })
+    expect(stub.speechOnDisk.medium).toBe(false)
+    expect(stub.speechFail).toBe(false)
+    // The next press fetches as usual.
+    expect(await bridge.speechModel({ download: true, model: 'medium' })).toMatchObject({ model: 'medium', present: true })
   })
 
   it('reset() puts the choice back to small', async () => {

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createElement, isValidElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { clipSourceWindow, clipToRange, clipWords, cutFrames, DETACHED_NOTE, HOLD_NOTE } from '@shared/edit/clipIt'
@@ -113,6 +113,10 @@ function load(patch: Partial<Clip> = {}, transcript: Transcript | null = TALK): 
 
 beforeEach(() => {
   useEditor.setState(useEditor.getInitialState())
+})
+// A window stubbed by one case must not leak into the next.
+afterEach(() => {
+  vi.unstubAllGlobals()
 })
 
 const state = () => useEditor.getState()

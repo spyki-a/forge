@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createElement, isValidElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { emptyProject, type MediaAsset } from '@shared/timeline'
@@ -88,6 +88,10 @@ const render = (): string => renderToStaticMarkup(createElement(MediaPool))
 beforeEach(() => {
   forge.speechModel.mockClear()
   vi.stubGlobal('window', { forge })
+})
+// A window stubbed by one case must not leak into the next.
+afterEach(() => {
+  vi.unstubAllGlobals()
 })
 
 describe('Transcribe in the Media pool', () => {
@@ -312,6 +316,20 @@ describe('Transcribe on the CHOSEN speech model (since 2026-11-20, a choice of t
     const mine = renderToStaticMarkup(createElement(SpeechModelPress))
     expect(mine).toContain('Getting the speech model… 42%')
     expect(mine).toContain(STOP_SPEECH_MODEL)
+  })
+
+  it('a chosen model whose status is not known yet never takes another model’s fetch as its own', () => {
+    // Medium just chosen, its ask not answered (or failed): Large fetched from Settings is not the pool's.
+    show(ready([SIDECAR_METHODS.transcribe]), null)
+    useEditor.setState({ speechChoice: 'medium', speechFetch: { progress: 0.42, model: 'large-v3' } })
+    const other = renderToStaticMarkup(createElement(SpeechModelPress))
+    expect(other).not.toContain('Getting the speech model')
+    expect(other).not.toContain(STOP_SPEECH_MODEL)
+    // Medium's own fetch, its status not yet known: its progress and X.
+    useEditor.setState({ speechFetch: { progress: 0.42, model: 'medium' } })
+    const own = renderToStaticMarkup(createElement(SpeechModelPress))
+    expect(own).toContain('Getting the speech model… 42%')
+    expect(own).toContain(STOP_SPEECH_MODEL)
   })
 
   it('a Transcribe that finds the chosen model gone forgets that model’s status only', async () => {

@@ -114,13 +114,15 @@ export function transcribeWhy(gate: TranscribeGate): string | null {
 export function SpeechModelPress({ inline = false }: { inline?: boolean } = {}): ReactNode {
   const status = useEditor((s) => s.helperStatus)
   const model = useEditor((s) => s.speechModel)
+  const choice = useEditor((s) => s.speechChoice)
   const fetching = useEditor((s) => s.speechFetch)
   const getSpeechModel = useEditor((s) => s.getSpeechModel)
   const cancelSpeechModel = useEditor((s) => s.cancelSpeechModel)
   if (!helperCan(status, SIDECAR_METHODS.transcribe)) return null
   // The CHOSEN model's press. A fetch of another model (pressed in Settings) is not this one: while it runs,
-  // this press waits, its title saying why, and its X stays in Settings with that model's line.
-  const mine = fetching !== null && (model === null || fetching.model === model.model)
+  // this press waits, its title saying why, and its X stays in Settings with that model's line. Compared by the
+  // chosen model's NAME, so a chosen model whose status is not known yet never takes another model's fetch.
+  const mine = fetching !== null && fetching.model === (model?.model ?? choice)
   const waiting = fetching !== null && !mine
   if (!mine && (!model || model.present)) return null
   return (

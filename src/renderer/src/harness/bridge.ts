@@ -586,6 +586,8 @@ export const harnessHelper = {
   },
   /** While true, a speech model's fetch stops half way and waits there until its X (or this going false): "being fetched" held still to be read. */
   speechHold: false,
+  /** While true, the next speech model fetch fails half way (answered not on disk, as main answers a fetch that did not finish); it then goes false. */
+  speechFail: false,
   presses: [] as HarnessHelperPress[],
 
   /**
@@ -622,6 +624,7 @@ export const harnessHelper = {
     harnessHelper.downloaded = {}
     harnessHelper.speechOnDisk = { small: false, medium: false, 'large-v3': false }
     harnessHelper.speechHold = false
+    harnessHelper.speechFail = false
     // The choice back to its default (small), so a later check reads Small's size.
     delete harnessSettings[SPEECH_MODEL_SETTING]
     harnessHelper.presses = []
@@ -867,9 +870,16 @@ async function harnessSpeechModel(payload?: unknown): Promise<SpeechModelStatus>
         try {
           for (let step = 0; step <= 8; step++) {
             await wait(harnessHelper.stepMs)
-            while (step === 4 && harnessHelper.speechHold && !speechFetch.cancelled) await wait(harnessHelper.stepMs)
             if (speechFetch.cancelled) throw new Error('Cancelled')
             for (const listener of speechListeners) listener({ progress: step / 8, message: `fetching ${SPEECH_MODEL_LABEL}`, model })
+            // Held AFTER half way is said, so the line reads "… 50%" while it waits.
+            while (step === 4 && harnessHelper.speechHold && !speechFetch.cancelled) await wait(harnessHelper.stepMs)
+            if (speechFetch.cancelled) throw new Error('Cancelled')
+            // A failed fetch, as main answers one whose files did not all arrive: not on disk, no throw.
+            if (step === 4 && harnessHelper.speechFail) {
+              harnessHelper.speechFail = false
+              return harnessSpeechStatus(model)
+            }
           }
         } finally {
           speechFetch.running = null
