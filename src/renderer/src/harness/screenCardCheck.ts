@@ -97,7 +97,7 @@ const W = 540
 const H = 960
 const FPS = 30
 /** The stand-in recording: a 16:9 screen, as a laptop records one. */
-const REC = { width: 1280, height: 720 } as const
+export const REC = { width: 1280, height: 720 } as const
 /** The styles read: the default, and the one whose out-back curve overshoots before it lands. */
 export const SCREEN_CARD_CHECK_STYLES: readonly string[] = Object.freeze(['clean', 'energetic'])
 const SHEET_SCALE = 1 / 3
@@ -123,8 +123,8 @@ function containedBox(): Rect {
   return { x: (W - width) / 2, y: (H - height) / 2, width, height }
 }
 
-/** The stand-in recording's frame `f`: a window with a title bar, rows of "text", a grid, a colour that walks with the frame, and the frame's number. */
-function standInFrame(f: number): HTMLCanvasElement {
+/** The stand-in recording's frame `f`: a window with a title bar, rows of "text", a grid, a colour that walks with the frame, and the frame's number. The `bake3d` option's stand-in recording too. */
+export function standInFrame(f: number): HTMLCanvasElement {
   const { canvas, ctx } = canvas2d(REC.width, REC.height)
   ctx.fillStyle = `hsl(${(f * 9) % 360} 35% 22%)`
   ctx.fillRect(0, 0, REC.width, REC.height)

@@ -9,6 +9,7 @@
 
 import { COMPOSITOR_BAR, type ChannelDiff } from './compositorMeasure'
 import { chebyshevDistance } from './glowMeasure'
+import type { HeroLandingReading } from './phase3Measure'
 
 /**
  * The bars. `settledMax` is §6.12's M6 for a 2.5D variant: its settled frame
@@ -73,6 +74,13 @@ export interface DepthCaseReading {
     /** The settled frame with its glow against the same frame with the glow left out. */
     present: ChannelDiff
   }
+  /**
+   * The hero only (phase 3's piece 6): its last perspective frame against its
+   * first route-two frame, with and without the glow, and the glow's own
+   * change across the landing (`glowChange`), against `HERO_LANDING_BAR`
+   * (phase3Measure.ts; a proposal, printed, not in this verdict).
+   */
+  landing?: HeroLandingReading
 }
 
 /** The bars, read: every failure named. Every variant of both templates must have been read, and the hero of each. */

@@ -45,6 +45,7 @@ import { createCompositor, paintDrawList3d, resetCompositorSession, type Composi
 import { graphicMeasure } from '../graphicCanvas'
 import { diffChannels, type ChannelDiff } from './compositorMeasure'
 import { depthSheetFrames, depthVerdict, glowBeyondReach, type DepthCaseReading } from './depthMeasure'
+import { HERO_LANDING_BAR, glowChange, heroLandingWithin, type HeroLandingReading } from './phase3Measure'
 
 export interface DepthResult {
   size: { width: number; height: number }
@@ -147,6 +148,7 @@ async function readCase(
   }
 
   let glow: DepthCaseReading['glow']
+  let landing: HeroLandingReading | undefined
   if (variant === 'hero') {
     const request = lists[last].glow?.[0]
     const radius = request?.radius ?? 0
@@ -158,6 +160,15 @@ async function readCase(
     const beyond = glowBeyondReach(ink, withPixels, withoutPixels, W, H, radius)
     glow = { radius, reach: beyond.reach, outsideReach: beyond.outsideReach, outsideColour: beyond.outsideColour, outsidePixels: beyond.outsidePixels, present: diffChannels(withoutPixels, withPixels) }
     frames.canvas(`depth: ${fixture} hero under ${style.id}, settled, with its glow (over grey)`, contactSheet([withGlow]))
+    // The landing (piece 6): the last frame off flat (route three) against the first at rest (route two), with and without the glow.
+    const lastMoving = lists.map((l) => !cameraIsFlat(l.camera)).lastIndexOf(true)
+    const firstFlat = lastMoving + 1
+    if (lastMoving >= 0 && firstFlat < moving) {
+      const a = { with: pixelsOf(painterB(lists[lastMoving], compositor)), without: pixelsOf(painterB(lists[lastMoving], compositor, { glow: false })) }
+      const b = { with: pixelsOf(painterB(lists[firstFlat], compositor)), without: pixelsOf(painterB(lists[firstFlat], compositor, { glow: false })) }
+      const change = glowChange(a.with, a.without, b.with, b.without)
+      landing = { lastMoving, firstFlat, withGlow: diffChannels(a.with, b.with), withoutGlow: diffChannels(a.without, b.without), glowMean: change.mean, glowMax: change.max, glowPixels: change.pixels }
+    }
   }
 
   const began = performance.now()
@@ -178,12 +189,17 @@ async function readCase(
     settled,
     firstFrame,
     first,
-    ...(glow ? { glow } : {})
+    ...(glow ? { glow } : {}),
+    ...(landing ? { landing } : {})
   }
   summary.push(
     `depth ${fixture} ${variant} under ${style.id}: ${moving} moving frames, ${movingCamera} off flat; last camera ${JSON.stringify(lastCamera)}; ` +
       `${msPerFrame.toFixed(1)} ms a frame through paintDrawList3d; settled against the flat twin ${line(settled)}${variant === 'hero' ? ' (the glow left out)' : ''}; frame ${firstFrame} against the twin ${line(first)}` +
-      (glow ? `; glow radius ${glow.radius.toFixed(1)} px, beyond its ${glow.reach} px reach from the item's ink alpha added ${glow.outsideReach} and colour off by ${glow.outsideColour} over ${glow.outsidePixels} pixels, with against without ${line(glow.present)}` : '')
+      (glow ? `; glow radius ${glow.radius.toFixed(1)} px, beyond its ${glow.reach} px reach from the item's ink alpha added ${glow.outsideReach} and colour off by ${glow.outsideColour} over ${glow.outsidePixels} pixels, with against without ${line(glow.present)}` : '') +
+      (landing
+        ? `; the landing, frame ${landing.lastMoving} (route three) against ${landing.firstFlat} (route two): with the glow ${line(landing.withGlow)}, without it ${line(landing.withoutGlow)}, the glow's own change mean ${landing.glowMean.toFixed(3)}, max ${landing.glowMax} ` +
+          `(proposed bar mean ≤ ${HERO_LANDING_BAR.glowMean}, max ≤ ${HERO_LANDING_BAR.glowMax}: ${heroLandingWithin(landing) ? 'within' : 'OVER'}; not in the verdict)`
+        : variant === 'hero' ? '; the landing: no frame off flat followed by one at rest, not read' : '')
   )
   return reading
 }

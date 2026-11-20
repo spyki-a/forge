@@ -798,6 +798,29 @@ describe('graphicCompositor: the glow (piece 2)', () => {
     expect(made.filter((m) => m.kind === 'target')).toEqual([])
   })
 
+  /*
+   * Phase 3's piece 6, M12: the harness's readRenderTargetPixelsAsync needs the
+   * frame in a render target. The probe's `target` takes the canvas's place for
+   * the frame and the glow added over it, and nothing else moves; without it
+   * both are the canvas (null), as every drawer for the app has them.
+   */
+  it('the probe’s target takes the canvas’s place for the frame and the glow added, and only the harness passes it', async () => {
+    const c = (await C.createCompositor(SIZE.width, SIZE.height))!
+    const into = new FakeTarget(SIZE.width, SIZE.height, {})
+    C.paintDrawList3d(glowing(), c, {}, { target: into as unknown as import('three').WebGLRenderTarget })
+    const kinds = renders.map((r) => (r.target === into ? (r.material ? 'add' : 'frame') : r.target === null ? 'canvas' : r.material ? 'blur' : 'input'))
+    expect(kinds).toEqual(['input', 'blur', 'blur', 'frame', 'add'])
+    renders.length = 0
+    C.paintDrawList3d(glowing(), c)
+    expect(renders.filter((r) => r.target === null)).toHaveLength(2)
+    expect(renders.some((r) => r.target === into)).toBe(false)
+    // No drawer for the app passes a probe target: paintFrame hands paintDrawList3d three arguments.
+    const canvasSource = readFileSync(resolve(__dirname, '../../src/renderer/src/graphicCanvas.ts'), 'utf8')
+    const calls = [...canvasSource.matchAll(/paintDrawList3d\(([^)]*)\)/g)]
+    expect(calls.length).toBeGreaterThan(0)
+    for (const call of calls) expect(call[1], call[0]).not.toMatch(/target/)
+  })
+
   it('refuses more than MAX_GLOW_BATCHES batches', async () => {
     const c = (await C.createCompositor(SIZE.width, SIZE.height))!
     const glow = [1, 2, 3].map((radius) => ({ item: 'value', radius, strength: 1 }))

@@ -284,6 +284,13 @@ export interface CompositorProbe {
   glow?: boolean
   /** False: every plane's focus radius is 0. */
   focus?: boolean
+  /**
+   * M12's `readRenderTargetPixelsAsync` (phase 3's piece 6, the harness's
+   * `readback` option): the frame rendered into this render target instead
+   * of the canvas, so it can be read back from a target. Routes two and three
+   * only; route one paints no WebGL frame at all.
+   */
+  target?: import('three').WebGLRenderTarget
 }
 
 const internals = new WeakMap<Compositor, Internals>()
@@ -620,13 +627,13 @@ function spreadGlow(state: Internals, glow: Glow, b: number, batch: GlowBatch, p
 }
 
 /** A batch's glow added over the frame on the canvas (`ADD_FRAGMENT`): the strength and the alpha cap the quad route's, the bloom's own on the unreal route. */
-function addGlow(state: Internals, glow: Glow, texture: import('three').Texture, batch: GlowBatch): void {
+function addGlow(state: Internals, glow: Glow, texture: import('three').Texture, batch: GlowBatch, into: Target | null): void {
   const quad = state.glowRoute === 'quad'
   glow.add.uniforms.uTex.value = texture
   glow.add.uniforms.uStrength.value = quad ? batch.strength : 1
   glow.add.uniforms.uMaxAlpha.value = quad ? GLOW_MAX_ALPHA : 1
   glow.pass.material = glow.add
-  state.renderer.setRenderTarget(null)
+  state.renderer.setRenderTarget(into)
   state.renderer.render(glow.passScene, state.camera)
 }
 
@@ -644,7 +651,7 @@ function sized(state: Internals): void {
  * since resizing the canvas would blank the frame before the caller copies
  * it, and every drawer sizes it before its own render (`sized`).
  */
-function render(state: Internals, list: DrawList, batches: GlowBatch[], planes: GlowPlane[], options: PaintOptions): void {
+function render(state: Internals, list: DrawList, batches: GlowBatch[], planes: GlowPlane[], options: PaintOptions, into: Target | null = null): void {
   const { renderer, three } = state
   sized(state)
   const saved = { target: renderer.getRenderTarget(), autoClear: renderer.autoClear, color: renderer.getClearColor(new three.Color()), alpha: renderer.getClearAlpha() }
@@ -653,10 +660,11 @@ function render(state: Internals, list: DrawList, batches: GlowBatch[], planes: 
     renderer.setClearColor(0x000000, 0)
     const glow = batches.length > 0 ? glowOf(state) : null
     const textures = glow ? batches.map((batch, b) => spreadGlow(state, glow, b, batch, planes, list, options)) : []
-    renderer.setRenderTarget(null)
+    // The canvas, or the harness's target (M12's `CompositorProbe.target`).
+    renderer.setRenderTarget(into)
     renderer.clear()
     renderer.render(state.scene, state.camera)
-    textures.forEach((texture, b) => addGlow(state, glow!, texture, batches[b]))
+    textures.forEach((texture, b) => addGlow(state, glow!, texture, batches[b], into))
   } finally {
     renderer.setRenderTarget(saved.target)
     renderer.autoClear = saved.autoClear
@@ -743,7 +751,7 @@ export function paintDrawList3d(list: DrawList, compositor: Compositor, options:
     })
   }
 
-  render(state, list, batches, glowPlanes, options)
+  render(state, list, batches, glowPlanes, options, probe.target ?? null)
   return state.renderer.domElement
 }
 

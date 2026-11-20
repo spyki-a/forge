@@ -12,6 +12,9 @@
  *   await window.__forgeGraphicCheck({ focus: true })                  phase 3 piece 2: the focus blur at radius 0 and above
  *   await window.__forgeGraphicCheck({ depth: true })                  phase 3 piece 3: counter and ring in 2.5D against their flat twins, the hero's glow
  *   await window.__forgeGraphicCheck({ screenCard: true })        phase 3 pieces 4 and 5: both moves over a stand-in recording, the hand-off's own side, the edge sweep
+ *   await window.__forgeGraphicCheck({ screenCard: '<path>' })      M20, the development app only: a real recording's card, its legibility sheets, bake cost and hand-off
+ *   await window.__forgeGraphicCheck({ readback: ['drawImage', 'readPixels', 'readRenderTargetPixelsAsync'], frames: 120 })   M12
+ *   await window.__forgeGraphicCheck({ bake3d: true })          phase 3 piece 6: preview = export through the app's bake, M13's bakes, disposal
  *   await window.__forgeGraphicCheck({ indic: true })                M22's numeric halves, then phase 1's Indic render check
  *   await window.__forgeGraphicCheck({ primitives: true })                 phase 1's exit (§6.12) and M13's first half
  *   await window.__forgeGraphicCheck({ pathLength: true })                                                     M8
@@ -88,6 +91,9 @@ import { checkCompositor, type CompositorResult } from './compositorCheck'
 import { checkFocus, checkGlow, type FocusResult, type GlowResult } from './glowCheck'
 import { checkDepth, type DepthResult } from './depthCheck'
 import { checkScreenCard, type ScreenCardResult } from './screenCardCheck'
+import { checkScreenCardRecording, type ScreenCardRecordingResult } from './screenCardRecordingCheck'
+import { checkReadback, type ReadbackResult } from './readbackCheck'
+import { checkBake3d, type Bake3dResult } from './bake3dCheck'
 import {
   BLIND_FPS,
   CURVE_QUESTIONS,
@@ -216,10 +222,30 @@ export interface GraphicCheckOptions {
    * and Pull back drawn flat; piece 5 adds the edge sweep under the glowing
    * style read (`energetic`): its frames, the frame after its loop against
    * the held card, its glow beyond its reach, a contact sheet of its loop and
-   * its milliseconds a frame. `screenCardCheck.ts`. Piece 6 widens it to
-   * take a real recording's path for M20 (§6.11's `screenCard: '<path>'`).
+   * its milliseconds a frame. `screenCardCheck.ts`. A path instead (piece 6,
+   * §6.11's `screenCard: '<path>'`, M20): the development app's run over a
+   * real recording (`screenCardRecordingCheck.ts`); the harness page has no
+   * preload to probe or pull a file, and says so.
    */
-  screenCard?: boolean
+  screenCard?: boolean | string
+  /**
+   * M12 (§6.15, §6.11's `readback` row; phase 3's piece 6): the three ways of
+   * getting a compositor frame out, timed over `frames` frames (120 when
+   * absent) on the hero counter at 1080×1920, each route's PNG read against
+   * the frame it read for straight alpha (`readbackCheck.ts`). `true` is all
+   * three. It measures; the bake keeps drawImage.
+   */
+  readback?: ('drawImage' | 'readPixels' | 'readRenderTargetPixelsAsync')[] | true
+  /** The frames `readback` times (§6.15's row: `frames: 120`); read by `readback` alone. */
+  frames?: number
+  /**
+   * Phase 3's piece 6 (§6.12's "Phase 3" exit): preview = export within 1/255
+   * for the 2.5D counter and ring and the screen card, through the Preview's
+   * canvas, the harness's frames and the app's bake; M13's bakes (a 2.5D
+   * counter and the screen card, each baked twice); `info.memory` back after
+   * the bakes and the clips' removal (`bake3dCheck.ts`).
+   */
+  bake3d?: boolean
   /**
    * M22's numeric halves: each §51 cluster drawn whole and one code point at
    * a time (phase 0, bare `drawTextOnto`); then phase 1's half of the Indic
@@ -272,7 +298,7 @@ export interface GraphicCheckOptions {
 }
 
 /** Every option, in the order `runGraphicCheck` runs them. */
-export const GRAPHIC_CHECK_OPTIONS = ['encode', 'segments', 'blur', 'parity', 'compositor', 'glow', 'focus', 'depth', 'screenCard', 'indic', 'primitives', 'pathLength', 'strokes', 'templates', 'curves', 'look'] as const
+export const GRAPHIC_CHECK_OPTIONS = ['encode', 'segments', 'blur', 'parity', 'compositor', 'glow', 'focus', 'depth', 'screenCard', 'readback', 'bake3d', 'indic', 'primitives', 'pathLength', 'strokes', 'templates', 'curves', 'look'] as const
 export type GraphicCheckOption = (typeof GRAPHIC_CHECK_OPTIONS)[number]
 
 /** The options a call asked for, in run order: each one by itself, so an option not passed runs nothing (the file's rule). */
@@ -668,7 +694,10 @@ export interface GraphicCheckResult {
   glow?: GlowResult
   focus?: FocusResult
   depth?: DepthResult
-  screenCard?: ScreenCardResult
+  /** `screenCard: true`'s stand-in reading, or a path's M20 reading. */
+  screenCard?: ScreenCardResult | ScreenCardRecordingResult
+  readback?: ReadbackResult
+  bake3d?: Bake3dResult
   indic?: IndicResult
   primitives?: PrimitivesResult
   pathLength?: PathLengthResult
@@ -3749,7 +3778,9 @@ export async function runGraphicCheck(options: GraphicCheckOptions = {}): Promis
   if (options.glow) result.glow = await checkGlow(options.glow, frames, summary, notes)
   if (options.focus) result.focus = await checkFocus(frames, summary, notes)
   if (options.depth) result.depth = await checkDepth(TEMPLATE_FIXTURES, frames, summary, notes)
-  if (options.screenCard) result.screenCard = await checkScreenCard(frames, summary, notes)
+  if (options.screenCard) result.screenCard = typeof options.screenCard === 'string' ? await checkScreenCardRecording(options.screenCard, frames, summary, notes) : await checkScreenCard(frames, summary, notes)
+  if (options.readback) result.readback = await checkReadback(TEMPLATE_FIXTURES, options.readback, options.frames, frames, summary, notes)
+  if (options.bake3d) result.bake3d = await checkBake3d(TEMPLATE_FIXTURES, frames, summary, notes)
   if (options.indic) {
     // Phase 0's bare drawTextOnto first, as it was measured, before phase 1's half loads the Noto faces.
     result.indic = checkIndic(frames, summary)
