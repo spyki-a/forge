@@ -377,6 +377,14 @@ export interface HeroLandingReading {
   glowPixels: number
   lastGlowPixels: number
   firstGlowPixels: number
+  /**
+   * The last moving frame by both routes: drawn as it is (route three) and
+   * with its camera taken off (route two). The template still moves across
+   * the landing (a count's digits, an arc), so the two neighbouring frames
+   * differ by design; this pair differs only by the route and the camera's
+   * last sliver, and it is what the proposed bar is held against.
+   */
+  same?: { camera: unknown; glowMean: number; glowMax: number; glowPixels: number; lastGlowPixels: number; firstGlowPixels: number }
 }
 
 /**

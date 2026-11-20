@@ -168,6 +168,12 @@ async function readCase(
       const b = { with: pixelsOf(painterB(lists[firstFlat], compositor)), without: pixelsOf(painterB(lists[firstFlat], compositor, { glow: false })) }
       const change = glowChange(a.with, a.without, b.with, b.without)
       landing = { lastMoving, firstFlat, withGlow: diffChannels(a.with, b.with), withoutGlow: diffChannels(a.without, b.without), glowMean: change.mean, glowMax: change.max, glowPixels: change.pixels, lastGlowPixels: change.lastPixels, firstGlowPixels: change.firstPixels }
+      // The same frame by both routes: the template still moves across the landing (a count's digits, an arc), so the routes are read against
+      // each other on ONE frame's content, the last moving frame drawn as it is (route three) and with its camera taken off (route two).
+      const still = { ...lists[lastMoving], camera: undefined }
+      const c = { with: pixelsOf(painterB(still, compositor)), without: pixelsOf(painterB(still, compositor, { glow: false })) }
+      const same = glowChange(a.with, a.without, c.with, c.without)
+      landing.same = { camera: lists[lastMoving].camera, glowMean: same.mean, glowMax: same.max, glowPixels: same.pixels, lastGlowPixels: same.lastPixels, firstGlowPixels: same.firstPixels }
     }
   }
 
@@ -198,7 +204,9 @@ async function readCase(
       (glow ? `; glow radius ${glow.radius.toFixed(1)} px, beyond its ${glow.reach} px reach from the item's ink alpha added ${glow.outsideReach} and colour off by ${glow.outsideColour} over ${glow.outsidePixels} pixels, with against without ${line(glow.present)}` : '') +
       (landing
         ? `; the landing, frame ${landing.lastMoving} (route three) against ${landing.firstFlat} (route two): with the glow ${line(landing.withGlow)}, without it ${line(landing.withoutGlow)}, the glow's own change mean ${landing.glowMean.toFixed(3)} over its ${landing.glowPixels} pixels (glowing ${landing.lastGlowPixels} before, ${landing.firstGlowPixels} after), max ${landing.glowMax} ` +
-          `(proposed bar mean ≤ ${HERO_LANDING_BAR.glowMean}, max ≤ ${HERO_LANDING_BAR.glowMax}: ${heroLandingWithin(landing) ? 'within' : 'OVER'}; not in the verdict)`
+          `; frame ${landing.lastMoving} by both routes (its camera ${JSON.stringify(landing.same?.camera)} taken off for route two), the glow's own change mean ${landing.same?.glowMean.toFixed(3)} ` +
+          `over ${landing.same?.glowPixels} pixels (glowing ${landing.same?.lastGlowPixels} by route three, ${landing.same?.firstGlowPixels} by route two), max ${landing.same?.glowMax} ` +
+          `(proposed bar mean ≤ ${HERO_LANDING_BAR.glowMean}, max ≤ ${HERO_LANDING_BAR.glowMax}: ${landing.same && heroLandingWithin(landing.same) ? 'within' : 'OVER'}; not in the verdict)`
         : variant === 'hero' ? '; the landing: no frame off flat followed by one at rest, not read' : '')
   )
   return reading
