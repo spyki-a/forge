@@ -11,7 +11,7 @@
  *   await window.__forgeGraphicCheck({ glow: ['unreal', 'quad'] })           M7, phase 3 piece 2: the glow's two routes
  *   await window.__forgeGraphicCheck({ focus: true })                  phase 3 piece 2: the focus blur at radius 0 and above
  *   await window.__forgeGraphicCheck({ depth: true })                  phase 3 piece 3: counter and ring in 2.5D against their flat twins, the hero's glow
- *   await window.__forgeGraphicCheck({ screenCard: true })        phase 3 piece 4: both moves over a stand-in recording, the hand-off's own side
+ *   await window.__forgeGraphicCheck({ screenCard: true })        phase 3 pieces 4 and 5: both moves over a stand-in recording, the hand-off's own side, the edge sweep
  *   await window.__forgeGraphicCheck({ indic: true })                M22's numeric halves, then phase 1's Indic render check
  *   await window.__forgeGraphicCheck({ primitives: true })                 phase 1's exit (§6.12) and M13's first half
  *   await window.__forgeGraphicCheck({ pathLength: true })                                                     M8
@@ -213,7 +213,10 @@ export interface GraphicCheckOptions {
    * recording the harness paints (this page has no preload to pull a file's
    * frames): the landing frame against a plain `drawImage` into the card's
    * box, the hole after it, frame 0's opacity, the camera at the landing,
-   * and Pull back drawn flat. `screenCardCheck.ts`. Piece 6 widens it to
+   * and Pull back drawn flat; piece 5 adds the edge sweep under the glowing
+   * style read (`energetic`): its frames, the frame after its loop against
+   * the held card, its glow beyond its reach, a contact sheet of its loop and
+   * its milliseconds a frame. `screenCardCheck.ts`. Piece 6 widens it to
    * take a real recording's path for M20 (§6.11's `screenCard: '<path>'`).
    */
   screenCard?: boolean

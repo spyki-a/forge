@@ -208,18 +208,20 @@ describe('graphicMovingFrames', () => {
     expect(graphicMovingFrames(spec({ template: 'counter', anchor: true }), clean(), 30, 90)).toBe(46)
   })
 
-  it('a screen card settles from its landing under every style, a glowing one too: L + 1 plus the settle, never the whole hold (piece 5 brings back the sweep’s loop)', () => {
+  it('a screen card under a glowing style runs one loop of its edge sweep after the landing, min(total, L + 1 + round(EDGE_SWEEP_S × fps)), never the whole hold; under every other style L + 1 plus the settle', () => {
     expect(SCREEN_CARD_MOVE_S).toBe(1.0)
     expect(EDGE_SWEEP_S).toBe(6)
     const card = spec({ template: 'screen-card', beats: [SCREEN_CARD_MOVE_S] })
-    // Phase 3's piece 4 draws no edge sweep, so no style runs one loop of it: 30 + 1 + 15 = 46 at 30 fps for a 60 s card.
-    // Piece 5 restores §6.16's glowing branch, min(total, L + 1 + round(EDGE_SWEEP_S × fps)), 211 at 30 fps, with the sweep.
-    expect(graphicMovingFrames(card, glowing(), 30, 1800)).toBe(46)
-    expect(graphicMovingFrames(card, glowing(), 24, 1440)).toBe(37)
-    expect(graphicMovingFrames(card, glowing(), 25, 1500)).toBe(39)
-    expect(graphicMovingFrames(card, glowing(), 60, 3600)).toBe(91)
+    // §6.16: 30 + 1 + 180 = 211 at 30 fps for a 60 s card (1,800 frames), not the 1,800 a sweep over the whole hold would bake.
+    expect(graphicMovingFrames(card, glowing(), 30, 1800)).toBe(211)
+    expect(graphicMovingFrames(card, glowing(), 24, 1440)).toBe(169)
+    expect(graphicMovingFrames(card, glowing(), 25, 1500)).toBe(176)
+    expect(graphicMovingFrames(card, glowing(), 60, 3600)).toBe(421)
     // Capped at a short card.
     expect(graphicMovingFrames(card, glowing(), 30, 40)).toBe(40)
+    expect(graphicMovingFrames(card, glowing(), 30, 211)).toBe(211)
+    expect(graphicMovingFrames(card, glowing(), 30, 212)).toBe(211)
+    // No glow, no sweep: 30 + 1 + 15.
     expect(graphicMovingFrames(card, clean(), 30, 1800)).toBe(46)
     expect(clean().glow).toBeUndefined()
   })
@@ -1672,7 +1674,8 @@ describe('the screen card (§6.16)', () => {
     expect(bezelWidth({ width: 100, height: 100 })).toBeCloseTo((2 * 100) / 1080, 9)
     for (const st of styles()) {
       for (const frame of [0, 30, 31, 1799]) {
-        const strokes = listAt('tilt-in', st, frame).items.filter((i): i is StrokeItem => i.kind === 'stroke')
+        // The bezel by its id: under a glowing style frame 31 carries the edge sweep's strokes too (its own case below).
+        const strokes = listAt('tilt-in', st, frame).items.filter((i): i is StrokeItem => i.kind === 'stroke' && i.id === 'bezel')
         expect(strokes, `${st.id} @${frame}`).toHaveLength(1)
         expect(strokes[0]).toMatchObject({ id: 'bezel', d: bezelPath(BOX), from: 0, to: 1, width: 4, color: st.palette.panel, join: 'miter' })
       }
@@ -1687,11 +1690,11 @@ describe('the screen card (§6.16)', () => {
     expect(blind.camera).toBeDefined()
   })
 
-  it('its moving frames are L + 1 plus the settle under every style, a glowing one too, never total for a 60 s card (piece 5 adds the sweep’s loop)', () => {
+  it('its moving frames are L + 1 plus the settle under a style with no glow, L + 1 + round(EDGE_SWEEP_S × fps) under a glowing one (the sweep’s one loop), never total for a 60 s card', () => {
     for (const fps of RATES) {
       const L = landingFrame(fps)
-      const want = L + 1 + Math.round(SETTLE_S * fps)
       for (const st of [...styles(), glowing()]) {
+        const want = st.glow ? L + 1 + Math.round(EDGE_SWEEP_S * fps) : L + 1 + Math.round(SETTLE_S * fps)
         const got = graphicMovingFrames(card('tilt-in'), st, fps, 60 * fps)
         expect(got, `${st.id} at ${fps}`).toBe(want)
         expect(got, `${st.id} at ${fps}`).toBeLessThan(60 * fps)
@@ -1700,6 +1703,8 @@ describe('the screen card (§6.16)', () => {
       }
     }
     expect(graphicMovingFrames(card('pull-back'), clean(), 30, 1800)).toBe(46)
+    expect(graphicMovingFrames(card('pull-back'), resolveGraphicStyle('neon'), 30, 1800)).toBe(211)
+    expect(graphicMovingFrames(card('pull-back'), resolveGraphicStyle('energetic'), 30, 1800)).toBe(211)
     // Capped at a short card.
     expect(graphicMovingFrames(card('pull-back'), clean(), 30, 40)).toBe(40)
   })

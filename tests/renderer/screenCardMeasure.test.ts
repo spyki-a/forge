@@ -1,13 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import type { ChannelDiff } from '../../src/renderer/src/harness/compositorMeasure'
 import {
+  EDGE_SWEEP_BAR,
   SCREEN_CARD_BAR,
   alphaMaxIn,
+  edgeSweepCrossingFrame,
+  edgeSweepSheetFrames,
+  edgeSweepVerdict,
   alphaOutside,
   inkRows,
   screenCardSheetFrames,
   screenCardVerdict,
   wholeRegion,
+  type EdgeSweepReading,
   type ScreenCardReading
 } from '../../src/renderer/src/harness/screenCardMeasure'
 
@@ -30,6 +35,7 @@ function reading(move: ScreenCardReading['move'], style = 'clean'): ScreenCardRe
     cameraAfter: false,
     firstOpacity: move === 'tilt-in' ? 0.00002 : 1,
     handoff: diff(0, 0, 150000),
+    holeFrame: style === 'energetic' ? 210 : 31,
     holeInside: 0,
     holeOutside: { min: 89, max: 89 },
     dimAlpha: 89,
@@ -136,5 +142,82 @@ describe('the readers', () => {
   it('the sheet’s frames: the start, the move, the landing and the frame after it, within the moving frames', () => {
     expect(screenCardSheetFrames(30, 46)).toEqual([0, 1, 2, 4, 6, 10, 15, 29, 30, 31])
     expect(screenCardSheetFrames(30, 31)).toEqual([0, 1, 2, 4, 6, 10, 15, 29, 30])
+  })
+})
+
+/*
+ * The edge sweep's half of the option (docs/CLIPS.md §6.16, "The edge
+ * sweep"; phase 3's piece 5): every bar its reading is held to.
+ */
+function sweepReading(style = 'energetic'): EdgeSweepReading {
+  const glowAt = (frame: number): EdgeSweepReading['glow'][number] => ({ frame, radius: 10.8, reach: 11, outsideReach: 0, outsideColour: 1, outsidePixels: 400000, present: diff(120, 0.4) })
+  return {
+    style,
+    landing: 30,
+    loop: 180,
+    moving: 211,
+    firstFrame: 31,
+    lastFrame: 209,
+    crossing: { frame: 40, pieces: 2 },
+    afterLoop: diff(0, 0, 518400),
+    afterLoopItems: ['dim', 'bezel'],
+    lastSweep: diff(200, 0.2),
+    glow: [glowAt(40), glowAt(120)],
+    msPerFrame: 3.1
+  }
+}
+
+const sweepFailing = (edit: (r: EdgeSweepReading) => void): string => {
+  const r = sweepReading()
+  edit(r)
+  const v = edgeSweepVerdict([r], ['energetic'])
+  expect(v.pass).toBe(false)
+  return v.failures.join('; ')
+}
+
+describe('edgeSweepVerdict', () => {
+  it('passes the readings the plan expects, and needs every glowing style read', () => {
+    expect(edgeSweepVerdict([sweepReading()], ['energetic'])).toEqual({ pass: true, failures: [] })
+    expect(edgeSweepVerdict([], ['energetic']).failures.join()).toMatch(/the edge sweep under energetic was not read/)
+    expect(EDGE_SWEEP_BAR).toMatchObject({ afterLoopMax: 0, outsideReachMax: 0, outsideColourMax: 2, crossingPieces: 2 })
+  })
+
+  it('one loop from L + 1 to L + N − 1, L + 1 + N moving frames: a sweep over the whole hold, one before the landing or one still drawn on L + N fails', () => {
+    expect(sweepFailing((r) => (r.moving = 300))).toMatch(/300 moving frames, not L \+ 1 \+ N = 211/)
+    expect(sweepFailing((r) => (r.firstFrame = 30))).toMatch(/first drawn on frame 30, not L \+ 1 = 31/)
+    expect(sweepFailing((r) => (r.lastFrame = 210))).toMatch(/last drawn on frame 210, not L \+ N − 1 = 209/)
+  })
+
+  it('the frame after the loop is the held card exactly, the dim and the bezel alone; the loop’s last frame is not', () => {
+    expect(sweepFailing((r) => (r.afterLoop = diff(1, 0.001, 518400)))).toMatch(/the frame after the loop differs from the held card, max 1/)
+    expect(sweepFailing((r) => (r.afterLoopItems = ['dim', 'bezel', 'sweep']))).toMatch(/draws dim, bezel, sweep, not the dim and the bezel/)
+    expect(sweepFailing((r) => (r.lastSweep = diff(0, 0)))).toMatch(/the loop's last frame equals the held card/)
+  })
+
+  it('a span crossing the path’s start is two strokes', () => {
+    expect(sweepFailing((r) => (r.crossing = { frame: 40, pieces: 1 }))).toMatch(/1 strokes, not 2/)
+  })
+
+  it('its glow adds no alpha beyond its reach from the sweep’s ink, keeps colour within 2 there, reads pixels there, and is present', () => {
+    expect(sweepFailing((r) => (r.glow[0].outsideReach = 1))).toMatch(/@40: the glow adds alpha 1 beyond its 11 px reach/)
+    expect(sweepFailing((r) => (r.glow[1].outsideColour = 3))).toMatch(/@120: colour off by 3 > 2/)
+    expect(sweepFailing((r) => (r.glow[0].outsidePixels = 0))).toMatch(/no pixel beyond the glow's reach was read/)
+    expect(sweepFailing((r) => (r.glow[0].present = diff(0, 0)))).toMatch(/@40: no glow/)
+    expect(sweepFailing((r) => (r.glow = []))).toMatch(/its glow was not read/)
+  })
+
+  it('the sheet shows the first frame, one crossing the start, the loop in eighths, the last and the held card, all after the landing', () => {
+    const frames = edgeSweepSheetFrames(30, 180, 0.12)
+    expect(frames[0]).toBe(31)
+    expect(frames).toContain(edgeSweepCrossingFrame(30, 180, 0.12))
+    expect(frames).toContain(209)
+    expect(frames[frames.length - 1]).toBe(210)
+    expect(frames.every((f) => f > 30 && f <= 210)).toBe(true)
+    // The crossing frame is within the span's first frames at every rate: (f − L) / N < 0.12.
+    for (const [L, N] of [[24, 144], [25, 150], [30, 180], [60, 360]]) {
+      const f = edgeSweepCrossingFrame(L, N, 0.12)
+      expect(f).toBeGreaterThan(L)
+      expect((f - L) / N).toBeLessThan(0.12)
+    }
   })
 })

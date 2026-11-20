@@ -265,6 +265,8 @@ interface Op {
   image?: unknown
   /** The canvas's globalCompositeOperation at a fillRect. */
   composite?: unknown
+  /** The canvas's strokeStyle at a stroke. */
+  stroke?: unknown
 }
 
 interface FakeCanvas {
@@ -303,6 +305,7 @@ function fakeCanvas(): FakeCanvas {
     fill: () => ops.push({ op: 'fill', fill: state.fillStyle }),
     fillRect: () => ops.push({ op: 'fillRect', fill: state.fillStyle, composite: state.globalCompositeOperation }),
     drawImage: (image: unknown) => ops.push({ op: 'drawImage', image }),
+    stroke: () => ops.push({ op: 'stroke', stroke: state.strokeStyle }),
     createLinearGradient: () => ({ addColorStop: () => undefined }),
     createRadialGradient: () => ({ addColorStop: () => undefined }),
     // The renderer's measure (graphicMeasure) on a scratch canvas: 0.55 em a character, as node's fake measures.
@@ -1124,6 +1127,84 @@ describe('graphicCanvas: the compositor seam', () => {
     G.forgetGraphicPreview('g7')
     expect(G.graphicDrawnFlat('g7')).toBe(false)
     warn.mockRestore()
+  })
+
+  /*
+   * The screen card's edge sweep (docs/CLIPS.md §6.16, phase 3's piece 5): a
+   * real card (DRAWERS), 20 s at 30 fps, L = 30 and N = 180; its frames'
+   * files left out, so nothing is decoded (the sweep needs no picture).
+   */
+  const CARD: GraphicSpec = { data: { template: 'screen-card', clipId: 'rec', move: 'tilt-in' }, seconds: 20, beats: [1], place: { auto: true, third: 'middle' }, seed: 1, version: 1 }
+  const CARD_TARGETS = (): GraphicTargets => ({ screen: { box: { x: 0, y: 656.25, width: 1080, height: 607.5 }, file: null } })
+  const cardPreview = (clipId: string, frame: number, style: ReturnType<typeof resolveGraphicStyle>): HTMLCanvasElement | null =>
+    G.graphicPreviewCanvas(clipId, CARD, style, SIZE.width, SIZE.height, { frame, total: 600, fps: 30 }, CARD_TARGETS())
+
+  it('a glowing screen card’s edge sweep draws through the clip’s compositor for its loop, a scrub into its middle too, and gives it back on L + N, its last baked frame, where the card is route one’s; a card with no glow holds none after its landing', async () => {
+    const neon = resolveGraphicStyle('neon')
+    const clean = resolveGraphicStyle('clean')
+    // A scrub straight into the sweep's middle: drawn flat while the compositor lands, then through it.
+    cardPreview('s1', 120, neon)
+    await settle()
+    let before = frameRenders().length
+    cardPreview('s1', 121, neon)
+    expect(frameRenders().length - before).toBe(1)
+    expect(alive()).toBe(1)
+    // Its last frame, L + N − 1 = 209, still through it.
+    before = frameRenders().length
+    cardPreview('s1', 209, neon)
+    expect(frameRenders().length - before).toBe(1)
+    expect(alive()).toBe(1)
+    // L + N = 210: the plain card, painter A's, and the compositor given back, every disposable once.
+    before = frameRenders().length
+    const rest = cardPreview('s1', 210, neon) as unknown as FakeCanvas
+    expect(frameRenders().length - before).toBe(0)
+    expect(alive()).toBe(0)
+    expect(made.map((m) => m.disposed)).toEqual(made.map(() => 1))
+    expect(rest.ops.slice(rest.ops.map((o) => o.op).lastIndexOf('clearRect')).some((o) => o.image === glCanvas)).toBe(false)
+    // The hold shows that frame and makes none.
+    cardPreview('s1', 400, neon)
+    await settle()
+    expect(alive()).toBe(0)
+    // Under clean the card has no sweep: after its landing it never asks.
+    cardPreview('s2', 31, clean)
+    cardPreview('s2', 120, clean)
+    await settle()
+    expect(made.filter((m) => m.kind === 'geometry')).toHaveLength(1)
+    G.forgetGraphicPreview('s1')
+    G.forgetGraphicPreview('s2')
+  })
+
+  it('WebGL missing: the edge sweep is drawn by painter A without its glow, the bezel and the sweep both stroked, and the card is marked drawn flat', async () => {
+    webgl.mode = 'throw'
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const neon = resolveGraphicStyle('neon')
+    cardPreview('s3', 35, neon)
+    await settle()
+    const drawn = cardPreview('s3', 36, neon) as unknown as FakeCanvas
+    expect(G.graphicDrawnFlat('s3')).toBe(true)
+    const thisFrame = drawn.ops.slice(drawn.ops.map((o) => o.op).lastIndexOf('clearRect'))
+    expect(thisFrame.some((o) => o.image === glCanvas)).toBe(false)
+    // Frame 36 is L + 6: the span still crosses the path's start, so two sweep strokes in the accent, after the bezel in the panel colour.
+    expect(thisFrame.filter((o) => o.op === 'stroke').map((o) => o.stroke)).toEqual([neon.palette.panel, neon.palette.accent, neon.palette.accent])
+    expect(renders).toHaveLength(0)
+    G.forgetGraphicPreview('s3')
+    warn.mockRestore()
+  })
+
+  it('the bake of a glowing card writes L + 1 + N frames (211 at 30 fps) at the canvas region, the move and the sweep through WebGL, the landing and the held card not; under clean 46', async () => {
+    const neon = resolveGraphicStyle('neon')
+    const clean = resolveGraphicStyle('clean')
+    const glowing = await G.bakeGraphicSequence(CARD, neon, 'k1', SIZE.width, SIZE.height, 600, 30, CARD_TARGETS, true)
+    expect(glowing!.frames).toBe(211)
+    expect(written).toHaveLength(211)
+    expect(glowing!.box).toBeUndefined()
+    // Frames 0..29 move (route three); L = 30 lands flat (route one, painter A); 31..209 sweep (route two); 210 is the plain held card (route one).
+    expect(frameRenders().length).toBe(30 + 179)
+    expect(made.map((m) => m.disposed)).toEqual(made.map(() => 1))
+    written = []
+    const plain = await G.bakeGraphicSequence(CARD, clean, 'k2', SIZE.width, SIZE.height, 600, 30, CARD_TARGETS, true)
+    expect(plain!.frames).toBe(46)
+    expect(written).toHaveLength(46)
   })
 })
 

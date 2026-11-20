@@ -38,25 +38,86 @@
  * file is null up to `L` (a pull that failed or is still on its way) it draws
  * the move without the picture.
  *
- * The edge sweep (§6.16, "The edge sweep") is piece 5's: it adds a second
- * stroke on this bezel's rectangle and a `GlowRequest` under a style with
- * `glow`, from `L + 1` for one loop, in `drawScreenCard` below (the hook is
- * marked there), with `graphicMovingFrames`' glowing branch (frame.ts). Until
- * then the bezel is a plain stroke under every style.
+ * **The edge sweep** (§6.16, "The edge sweep"; phase 3's piece 5): under a
+ * style with `glow` (`neon`, `energetic`) and only then, a highlight runs
+ * once round the bezel after the landing. With `N` = `edgeSweepFrames(fps)` =
+ * round(EDGE_SWEEP_S × fps):
+ *
+ * | card frame `f` | the sweep |
+ * |---|---|
+ * | up to `L` | none (the move) |
+ * | `L + 1` .. `L + N − 1` | its head at `edgeSweepHead(f)` = EDGE_SWEEP_START + (f − L) / N of the perimeter (mod 1), its tail `EDGE_SWEEP_SPAN` behind it; one `stroke` on `bezelPath(box)` with `from` = tail and `to` = head, or two (`sweep-1` from 1 − (SPAN − head) to 1, then `sweep-2` from 0 to head) while the span crosses the path's start; and one `GlowRequest` naming `sweep`, which `glowMatches` reads as `sweep` and its `sweep-<n>` pieces and never as the bezel |
+ * | `L + N` on | none, and no glow: the settled card exactly, the bezel and the dim with its hole |
+ *
+ * So the sweep starts on `L + 1` with its head 1/N of the perimeter past the
+ * path's start (the box's top-left corner, `bezelPath`), its tail on the
+ * left edge, the span crossing the start; it runs the path's way, along the
+ * top to the right, down the right edge, back along the bottom and up the
+ * left edge (clockwise on screen); its last frame is `L + N − 1`, the head
+ * 1/N short of where it began; and `L + N` is `graphicMovingFrames`' last
+ * baked frame (`L + 1 + N` frames, frame.ts), the frame `tpad` holds: the
+ * plain held card. Without WebGL painter A draws the strokes and ignores the
+ * glow (§6.16).
  *
  * Every figure is a named export: §6.16's proposals, so the look rating
  * changes one line. Pure: no clock, no random, no DOM, no `node:path`.
  */
 
-import type { Camera, DimItem, DrawItem, DrawOut, Drawer, ImageItem, Rect, StrokeItem } from '../items'
+import type { Camera, DimItem, DrawItem, DrawOut, Drawer, GlowRequest, ImageItem, Rect, StrokeItem } from '../items'
 import { DEFAULT_FOV } from '../compositor'
-import { SCREEN_CARD_MOVE_S } from '../frame'
+import { EDGE_SWEEP_S, SCREEN_CARD_MOVE_S } from '../frame'
 import { progress } from '../motion'
 import { STROKE_MIN_PX } from '../stroke'
 import type { GraphicStyle } from '../style'
 import { drawOnEase, shortSide } from './layout'
 
-export { SCREEN_CARD_MOVE_S } from '../frame'
+export { EDGE_SWEEP_S, SCREEN_CARD_MOVE_S } from '../frame'
+
+/** The edge sweep's span, a fraction of the bezel's perimeter (§6.16, proposal). */
+export const EDGE_SWEEP_SPAN = 0.12
+
+/**
+ * Where the sweep's head is at the landing `L`, a fraction of the perimeter
+ * from `bezelPath`'s start (the box's top-left corner): 0, so the loop starts
+ * and ends at that corner and the span crosses the path's start on its first
+ * frames (this piece's choice; the plan names no place).
+ */
+export const EDGE_SWEEP_START = 0
+
+/** The sweep's item id, and its glow request's: its two pieces are `sweep-1` and `sweep-2` (`glowMatches`' `<id>-<n>`). */
+export const EDGE_SWEEP_ID = 'sweep'
+
+/** The sweep's frames `N` = round(EDGE_SWEEP_S × fps): one loop. 0 for a rate that is not a positive number. */
+export function edgeSweepFrames(fps: number): number {
+  return fps > 0 && Number.isFinite(fps) ? Math.round(EDGE_SWEEP_S * fps) : 0
+}
+
+/**
+ * The sweep's head at card frame `frame`, a fraction of the perimeter in
+ * [0, 1), advancing linearly by 1/N a frame from `EDGE_SWEEP_START` at `L`;
+ * null on a frame it is not drawn: up to `L`, and from `L + N` on.
+ */
+export function edgeSweepHead(frame: number, fps: number): number | null {
+  const L = landingFrame(fps)
+  const N = edgeSweepFrames(fps)
+  if (!(frame > L) || !(frame < L + N)) return null
+  const head = (EDGE_SWEEP_START + (frame - L) / N) % 1
+  return head < 0 ? head + 1 : head
+}
+
+/**
+ * The span behind a head, as `[from, to]` fractions of the path: one span
+ * `[head − SPAN, head]`, or, while it crosses the path's start (the tail
+ * below 0), two: `[1 − (SPAN − head), 1]` then `[0, head]`, whose lengths sum
+ * to `EDGE_SWEEP_SPAN`. A head exactly on the start is the first piece alone.
+ */
+export function edgeSweepSpans(head: number): [number, number][] {
+  const tail = head - EDGE_SWEEP_SPAN
+  if (tail >= 0) return [[tail, head]]
+  const wrapped: [number, number][] = [[1 + tail, 1]]
+  if (head > 0) wrapped.push([0, head])
+  return wrapped
+}
 
 /** The two moves (§6.1's `move`). */
 export type ScreenCardMove = 'tilt-in' | 'pull-back'
@@ -139,7 +200,48 @@ function bezel(box: Rect, style: GraphicStyle, size: { width: number; height: nu
   }
 }
 
-export const drawScreenCard: Drawer = (spec, style, clock, size, _measure, targets): DrawOut => {
+/**
+ * The sweep's strokes at card frame `frame`: none on a frame it is not drawn
+ * (`edgeSweepHead`) or under a style with no `glow`; else one stroke per span
+ * (`edgeSweepSpans`), on the bezel's own path, at the bezel's width and with
+ * its square caps and miter join, so the two pieces meet at the corner where
+ * the path starts as the bezel's own ends do, in the style's `palette.accent`.
+ */
+export function edgeSweepItems(box: Rect, style: GraphicStyle, size: { width: number; height: number }, frame: number, fps: number): StrokeItem[] {
+  if (!style.glow) return []
+  const head = edgeSweepHead(frame, fps)
+  if (head === null) return []
+  const spans = edgeSweepSpans(head)
+  const d = bezelPath(box)
+  const width = bezelWidth(size)
+  return spans.map(([from, to], i) => ({
+    kind: 'stroke',
+    id: spans.length === 1 ? EDGE_SWEEP_ID : `${EDGE_SWEEP_ID}-${i + 1}`,
+    opacity: 1,
+    d,
+    from,
+    to,
+    width,
+    color: style.palette.accent,
+    cap: 'square',
+    join: 'miter'
+  }))
+}
+
+/**
+ * The sweep's glow (§6.16, "What glows": "The screen card's edge sweep is the
+ * only other glow in step 3"): one request naming `EDGE_SWEEP_ID`, at the
+ * style's `glow.strength`, its radius the style's `glow.radius` (a fraction of
+ * the short side) in frame pixels as the hero's glow converts it
+ * (templates/depth.ts `heroGlow`), in `palette.accent`. Undefined under a
+ * style with no `glow`.
+ */
+export function edgeSweepGlow(style: GraphicStyle, size: { width: number; height: number }): GlowRequest[] | undefined {
+  if (!style.glow) return undefined
+  return [{ item: EDGE_SWEEP_ID, radius: style.glow.radius * shortSide(size), strength: style.glow.strength, color: style.palette.accent }]
+}
+
+export const drawScreenCard: Drawer =(spec, style, clock, size, _measure, targets): DrawOut => {
   const data = spec.data
   if (data.template !== 'screen-card') return { items: [] }
   const screen = targets.screen
@@ -152,8 +254,11 @@ export const drawScreenCard: Drawer = (spec, style, clock, size, _measure, targe
 
   if (frame > L) {
     // L + 1 on: the bezel and the dim with its hole on the box; the recording itself shows through.
-    // Piece 5's edge sweep goes here, after the bezel: a second stroke on bezelPath(box) and its GlowRequest, under a style with glow.
-    return { items: [cardDim(style, 1, box), bezel(box, style, size)] }
+    // Under a style with glow, the edge sweep over the bezel for one loop, L + 1 .. L + N − 1, with its glow; then the plain card.
+    const sweep = edgeSweepItems(box, style, size, frame, fps)
+    const held: DrawOut = { items: [cardDim(style, 1, box), bezel(box, style, size), ...sweep] }
+    if (sweep.length > 0) held.glow = edgeSweepGlow(style, size)
+    return held
   }
 
   const landing = L / (fps > 0 ? fps : 1)

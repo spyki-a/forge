@@ -11,7 +11,7 @@
  * recording beneath, is M20 in graphic.int (§6.11, piece 6).
  */
 
-import type { ChannelDiff, Region } from './compositorMeasure'
+import { COMPOSITOR_BAR, type ChannelDiff, type Region } from './compositorMeasure'
 
 /**
  * The bars.
@@ -64,7 +64,14 @@ export interface ScreenCardReading {
   firstOpacity: number
   /** Frame `L` against a plain `drawImage` of the stand-in's frame `L` into the box, inside the box less the bezel. */
   handoff: ChannelDiff
-  /** Frame `L + 1`: the largest alpha inside the box less the bezel; the least and largest outside the box and its bezel; the dim's alpha expected. */
+  /**
+   * The frame the hole is read on: `L + 1` under a style with no glow; under a
+   * glowing one the held frame `L + N` (the last moving one), since on `L + 1`
+   * the edge sweep's glow reaches into the hole and over the dim round it by
+   * design (piece 5), and the held frame is the hole `tpad` shows.
+   */
+  holeFrame: number
+  /** That frame: the largest alpha inside the box less the bezel; the least and largest outside the box and its bezel; the dim's alpha expected. */
   holeInside: number
   holeOutside: { min: number; max: number }
   dimAlpha: number
@@ -171,4 +178,103 @@ export function inkRows(pixels: ArrayLike<number>, width: number, height: number
 export function screenCardSheetFrames(landing: number, moving: number): number[] {
   const wanted = [0, 1, 2, 4, 6, Math.round(landing / 3), Math.round(landing / 2), landing - 1, landing, landing + 1]
   return [...new Set(wanted.filter((f) => f >= 0 && f < moving))].sort((a, b) => a - b)
+}
+
+/* ------------------------------------------------------------ the edge sweep */
+
+/**
+ * The edge sweep's bars (docs/CLIPS.md §6.16, "The edge sweep"; §6.12's phase
+ * 3: the glow's alpha 0 beyond its reach, and the held frame the settled
+ * card's; phase 3's piece 5).
+ * - `afterLoopMax`: the frame after the loop (`L + N`, the last baked one,
+ *   what `tpad` holds) against the card's frame at the end of the hold: 0, the
+ *   plain held card exactly.
+ * - `lastSweepMinMax`: the loop's last frame (`L + N − 1`) against that held
+ *   frame differs by at least this somewhere, so a sweep that is never drawn
+ *   cannot pass the reading above (the fixer's guard).
+ * - `outsideReachMax`, `outsideColourMax`, `glowMinMax`: the hero's reading
+ *   (depthMeasure.ts `glowBeyondReach`, a74576d): the frame with the sweep's
+ *   glow against the same frame with it left out, beyond the glow's reach from
+ *   the sweep's own ink (a dim covers the frame, so a reading from all the
+ *   ink would find no pixel beyond it): no alpha added, colour within route
+ *   two's bar; and the glow there, at least a level somewhere.
+ * - `crossingPieces`: on a frame where the span crosses the path's start, the
+ *   list carries it as two strokes.
+ */
+export const EDGE_SWEEP_BAR = Object.freeze({
+  afterLoopMax: 0,
+  lastSweepMinMax: 1,
+  outsideReachMax: 0,
+  outsideColourMax: COMPOSITOR_BAR.colourMax,
+  glowMinMax: 1,
+  crossingPieces: 2
+})
+
+/** One glowing style's sweep, read on the card's lists and its frames through `paintDrawList3d`. */
+export interface EdgeSweepReading {
+  style: string
+  /** The landing `L`, the loop `N` (`edgeSweepFrames`), the bake's moving frames (`L + 1 + N` expected). */
+  landing: number
+  loop: number
+  moving: number
+  /** The first and last frames whose list carries a sweep stroke, −1 when none does. */
+  firstFrame: number
+  lastFrame: number
+  /** A frame whose span crosses the path's start, and how many sweep strokes its list carries. */
+  crossing: { frame: number; pieces: number }
+  /** The last moving frame against the hold's last frame (`afterLoop`), its items' ids, and the loop's last frame against the hold's (`lastSweep`). */
+  afterLoop: ChannelDiff
+  afterLoopItems: string[]
+  lastSweep: ChannelDiff
+  /** The glow on the frames read: its radius in frame pixels and `glowBeyondReach`'s figures, and with against without. */
+  glow: { frame: number; radius: number; reach: number; outsideReach: number; outsideColour: number; outsidePixels: number; present: ChannelDiff }[]
+  /** Milliseconds a frame through `paintDrawList3d` over the sweep's frames (no bar: the Surface's comparison). */
+  msPerFrame: number
+}
+
+/** The sweep's bars, read: every failure named; every style of `glowing` must have been read. */
+export function edgeSweepVerdict(readings: readonly EdgeSweepReading[], glowing: readonly string[]): { pass: boolean; failures: string[] } {
+  const B = EDGE_SWEEP_BAR
+  const failures: string[] = []
+  for (const r of readings) {
+    const name = `the edge sweep under ${r.style}`
+    if (r.moving !== r.landing + 1 + r.loop) failures.push(`${name}: ${r.moving} moving frames, not L + 1 + N = ${r.landing + 1 + r.loop}`)
+    if (r.firstFrame !== r.landing + 1) failures.push(`${name}: first drawn on frame ${r.firstFrame}, not L + 1 = ${r.landing + 1}`)
+    if (r.lastFrame !== r.landing + r.loop - 1) failures.push(`${name}: last drawn on frame ${r.lastFrame}, not L + N − 1 = ${r.landing + r.loop - 1}`)
+    if (r.crossing.pieces !== B.crossingPieces) failures.push(`${name}: on frame ${r.crossing.frame}, crossing the path's start, ${r.crossing.pieces} strokes, not ${B.crossingPieces}`)
+    if (r.afterLoop.maxAll > B.afterLoopMax) failures.push(`${name}: the frame after the loop differs from the held card, max ${r.afterLoop.maxAll}`)
+    if (r.afterLoop.pixels === 0) failures.push(`${name}: the frame after the loop read no pixel`)
+    if (r.afterLoopItems.join() !== 'dim,bezel') failures.push(`${name}: the frame after the loop draws ${r.afterLoopItems.join(', ')}, not the dim and the bezel`)
+    if (!(r.lastSweep.maxAll >= B.lastSweepMinMax)) failures.push(`${name}: the loop's last frame equals the held card (no sweep drawn)`)
+    if (r.glow.length === 0) failures.push(`${name}: its glow was not read`)
+    for (const g of r.glow) {
+      if (g.outsidePixels === 0) failures.push(`${name} @${g.frame}: no pixel beyond the glow's reach was read`)
+      if (g.outsideReach > B.outsideReachMax) failures.push(`${name} @${g.frame}: the glow adds alpha ${g.outsideReach} beyond its ${g.reach} px reach`)
+      if (g.outsideColour > B.outsideColourMax) failures.push(`${name} @${g.frame}: colour off by ${g.outsideColour} > ${B.outsideColourMax} beyond the glow's ${g.reach} px reach`)
+      if (!(g.present.maxAll >= B.glowMinMax)) failures.push(`${name} @${g.frame}: no glow: the frame with it equals the frame without it`)
+    }
+  }
+  for (const style of glowing) if (!readings.some((r) => r.style === style)) failures.push(`the edge sweep under ${style} was not read`)
+  return { pass: failures.length === 0, failures }
+}
+
+/** Frames per sweep contact sheet's even spacing: eighths of the loop. */
+export const EDGE_SWEEP_SHEET_STEPS = 8
+
+/**
+ * The frames the sweep's contact sheet shows: its first frame `L + 1`, one
+ * where the span crosses the path's start (half the span's frames in, which
+ * at every rate still crosses), the loop in eighths, its last frame
+ * `L + N − 1` and the frame after it, `L + N`, the plain card.
+ */
+export function edgeSweepSheetFrames(landing: number, loop: number, span: number): number[] {
+  const crossing = edgeSweepCrossingFrame(landing, loop, span)
+  const even = Array.from({ length: EDGE_SWEEP_SHEET_STEPS - 1 }, (_, k) => landing + Math.round(((k + 1) * loop) / EDGE_SWEEP_SHEET_STEPS))
+  const wanted = [landing + 1, crossing, ...even, landing + loop - 1, landing + loop]
+  return [...new Set(wanted.filter((f) => f > landing && f <= landing + loop))].sort((a, b) => a - b)
+}
+
+/** The frame read as crossing the path's start: the sheet's second. */
+export function edgeSweepCrossingFrame(landing: number, loop: number, span: number): number {
+  return landing + Math.max(1, Math.floor((span * loop) / 2))
 }

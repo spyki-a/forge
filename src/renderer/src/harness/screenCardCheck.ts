@@ -29,6 +29,25 @@
  * `drawImage` and the frame after it, and the two moves drawn flat. The
  * summary prints the milliseconds per frame through `paintDrawList3d`.
  *
+ * Under a glowing style (`energetic` here) the hole and the dim round it are
+ * read on the held frame `L + N` rather than on `L + 1` (`holeFrame`): on
+ * `L + 1` the edge sweep's glow reaches into the hole by design.
+ *
+ * **The edge sweep** (§6.16, "The edge sweep"; phase 3's piece 5), for each
+ * glowing style read, on Tilt in (the sweep is the same after either move),
+ * held to `EDGE_SWEEP_BAR` (`edgeSweepVerdict`): its first and last frames
+ * from the lists (`L + 1` and `L + N − 1`) and the moving frames `L + 1 + N`;
+ * a frame crossing the path's start carries two strokes; the frame after the
+ * loop, `L + N`, against the card's frame at the end of its hold, max 0, and
+ * the loop's last frame not equal to it; its glow on the crossing frame and
+ * on the half-way frame, against the same frame with the glow left out,
+ * beyond the reach from the sweep's own ink (`glowBeyondReach`, the reading
+ * a74576d gave the hero, over the dim): no alpha added, colour within 2, and
+ * the glow there; a contact sheet of the loop (`edgeSweepSheetFrames`: its
+ * first frame, the crossing one, eighths of the loop, its last and the frame
+ * after it) and one of the glow alone (with against without, over grey); and
+ * the milliseconds a frame through `paintDrawList3d` over the sweep's frames.
+ *
  * The true hand-off, the card's frame `L` against the RENDER's frame of the
  * recording beneath (within 2/255 mean on both machines), is M20, graphic.int's
  * phase-3 case (§6.11), piece 6's.
@@ -36,24 +55,29 @@
 
 import type { DrawItem, DrawList, GraphicTargets, Rect } from '@shared/graphics/items'
 import { drawListAt } from '@shared/graphics/drawList'
-import { cameraIsFlat, flatItems } from '@shared/graphics/compositor'
-import { graphicMovingFrames } from '@shared/graphics/frame'
+import { cameraIsFlat, flatItems, glowItemsOf } from '@shared/graphics/compositor'
+import { SETTLE_S, graphicMovingFrames } from '@shared/graphics/frame'
 import { paintDrawList2d } from '@shared/graphics/paint'
 import { resolveGraphicStyle, type GraphicStyle } from '@shared/graphics/style'
 import type { GraphicSpec } from '@shared/graphics/template'
-import { SCREEN_CARD_MOVES, bezelWidth, landingFrame, type ScreenCardMove } from '@shared/graphics/templates/screenCard'
-import { createCompositor, paintDrawList3d, resetCompositorSession, type Compositor } from '../graphicCompositor'
+import { EDGE_SWEEP_SPAN, SCREEN_CARD_MOVES, bezelWidth, edgeSweepFrames, landingFrame, type ScreenCardMove } from '@shared/graphics/templates/screenCard'
+import { createCompositor, paintDrawList3d, resetCompositorSession, type Compositor, type CompositorProbe } from '../graphicCompositor'
 import { graphicMeasure } from '../graphicCanvas'
 import { diffChannels } from './compositorMeasure'
+import { glowBeyondReach } from './depthMeasure'
 import {
   SCREEN_CARD_LOW_BOX_PX,
   SCREEN_CARD_MOVE_FRAME,
   alphaMaxIn,
   alphaOutside,
+  edgeSweepCrossingFrame,
+  edgeSweepSheetFrames,
+  edgeSweepVerdict,
   inkRows,
   screenCardSheetFrames,
   screenCardVerdict,
   wholeRegion,
+  type EdgeSweepReading,
   type ScreenCardReading
 } from './screenCardMeasure'
 
@@ -64,6 +88,8 @@ export interface ScreenCardResult {
   recording: { width: number; height: number }
   box: Rect
   cases: ScreenCardReading[]
+  /** The edge sweep, one reading per glowing style read (piece 5). */
+  sweeps: EdgeSweepReading[]
   verdict: { pass: boolean; failures: string[] }
 }
 
@@ -150,9 +176,9 @@ export async function checkScreenCard(
   resetCompositorSession()
   const compositor: Compositor | null = await createCompositor(W, H)
   if (!compositor) throw new Error('screen card check: createCompositor gave null on this page: WebGL did not start')
-  const painterB = (list: DrawList): HTMLCanvasElement => {
+  const painterB = (list: DrawList, probe: CompositorProbe = {}): HTMLCanvasElement => {
     const { canvas, ctx } = canvas2d()
-    ctx.drawImage(paintDrawList3d(list, compositor, { layer: freshLayer, images: bitmaps }), 0, 0)
+    ctx.drawImage(paintDrawList3d(list, compositor, { layer: freshLayer, images: bitmaps }, probe), 0, 0)
     return canvas
   }
   const painterA = (list: DrawList): HTMLCanvasElement => {
@@ -161,7 +187,64 @@ export async function checkScreenCard(
     return canvas
   }
 
+  /** The edge sweep under a glowing style (piece 5): `lists` are the card's moving frames, `listAt` any frame of its `total`. */
+  const readSweep = (style: GraphicStyle, lists: readonly DrawList[], total: number, listAt: (f: number) => DrawList): EdgeSweepReading => {
+    const N = edgeSweepFrames(FPS)
+    const sweepIds = (l: DrawList): string[] => l.items.filter((i) => i.kind === 'stroke' && i.id !== 'bezel').map((i) => i.id)
+    const drawn = lists.map((l) => sweepIds(l).length > 0)
+    const crossing = edgeSweepCrossingFrame(L, N, EDGE_SWEEP_SPAN)
+    const held = pixelsOf(painterB(listAt(total - 1)))
+    const afterLoop = diffChannels(pixelsOf(painterB(lists[lists.length - 1])), held)
+    const lastSweep = diffChannels(pixelsOf(painterB(lists[Math.max(0, lists.length - 2)])), held)
+    const glow: EdgeSweepReading['glow'] = []
+    const glowSheet: HTMLCanvasElement[] = []
+    for (const frame of [crossing, L + Math.round(N / 2)]) {
+      const list = lists[frame]
+      const radius = list.glow?.[0]?.radius ?? 0
+      const withGlow = painterB(list)
+      const withoutGlow = painterB(list, { glow: false })
+      const withPixels = pixelsOf(withGlow)
+      const withoutPixels = pixelsOf(withoutGlow)
+      // The sweep's strokes alone, as the glow canvas holds them: the reach is read from their ink, not from the whole card's (the dim covers the frame).
+      const ink = pixelsOf(painterA({ ...list, items: glowItemsOf(list.items, list.glow ?? []), glow: undefined }))
+      const beyond = glowBeyondReach(ink, withPixels, withoutPixels, W, H, radius)
+      glow.push({ frame, radius, reach: beyond.reach, outsideReach: beyond.outsideReach, outsideColour: beyond.outsideColour, outsidePixels: beyond.outsidePixels, present: diffChannels(withoutPixels, withPixels) })
+      glowSheet.push(withGlow, withoutGlow)
+    }
+    const sweepLists = lists.slice(L + 1, L + N)
+    const began = performance.now()
+    for (const l of sweepLists) paintDrawList3d(l, compositor, { layer: freshLayer, images: bitmaps })
+    const msPerFrame = (performance.now() - began) / Math.max(1, sweepLists.length)
+    const shown = edgeSweepSheetFrames(L, N, EDGE_SWEEP_SPAN).filter((f) => f < lists.length)
+    frames.canvas(`edge sweep under ${style.id}, frames ${shown.join(', ')} (L = ${L}, N = ${N}; frame ${crossing} crosses the path's start; ${L + N} is the held card)`, contactSheet(shown.map((f) => painterB(lists[f]))))
+    frames.canvas(`edge sweep under ${style.id}: frames ${crossing} and ${L + Math.round(N / 2)}, each with its glow then with the glow left out`, contactSheet(glowSheet))
+    const reading: EdgeSweepReading = {
+      style: style.id,
+      landing: L,
+      loop: N,
+      moving: lists.length,
+      firstFrame: drawn.indexOf(true),
+      lastFrame: drawn.lastIndexOf(true),
+      crossing: { frame: crossing, pieces: sweepIds(lists[crossing] ?? { items: [], width: W, height: H }).length },
+      afterLoop,
+      afterLoopItems: lists[lists.length - 1].items.map((i) => i.id),
+      lastSweep,
+      glow,
+      msPerFrame
+    }
+    summary.push(
+      `edge sweep under ${style.id}: drawn on frames ${reading.firstFrame}..${reading.lastFrame} of ${reading.moving} moving (L ${L}, N ${N}); frame ${crossing} carries ${reading.crossing.pieces} strokes; ` +
+        `the frame after the loop against the held card max ${afterLoop.maxAll} (${reading.afterLoopItems.join(', ')}), the loop's last against it max ${lastSweep.maxAll}; ` +
+        glow
+          .map((g) => `@${g.frame} glow radius ${g.radius.toFixed(1)} px, beyond its ${g.reach} px reach from the sweep's ink alpha added ${g.outsideReach} and colour off by ${g.outsideColour} over ${g.outsidePixels} pixels, with against without max ${g.present.maxAll}`)
+          .join('; ') +
+        `; ${msPerFrame.toFixed(1)} ms a frame through paintDrawList3d over the sweep's ${sweepLists.length} frames`
+    )
+    return reading
+  }
+
   const cases: ScreenCardReading[] = []
+  const sweeps: EdgeSweepReading[] = []
   const flatSheet: HTMLCanvasElement[] = []
   try {
     for (const styleId of SCREEN_CARD_CHECK_STYLES) {
@@ -176,7 +259,9 @@ export async function checkScreenCard(
         const plain = canvas2d()
         plain.ctx.drawImage(bitmaps.get(srcOf(L))!, box.x, box.y, box.width, box.height)
         const handoff = diffChannels(pixelsOf(landing), pixelsOf(plain.canvas), { width: W, rect: inside })
-        const after = painterB(lists[L + 1])
+        // The hole on L + 1, or under a glowing style on the held frame L + N: the sweep's glow reaches into the hole on L + 1 by design.
+        const holeFrame = style.glow ? moving - 1 : L + 1
+        const after = painterB(lists[holeFrame])
         const afterPixels = pixelsOf(after)
         const outside = alphaOutside(afterPixels, W, H, around) ?? { min: -1, max: -1 }
         const early = diffChannels(pixelsOf(painterB(lists[SCREEN_CARD_MOVE_FRAME])), pixelsOf(landing))
@@ -193,9 +278,11 @@ export async function checkScreenCard(
           if (styleId === 'clean') flatSheet.push(flat, painterA(lists[Math.round(L / 2)]))
         } else if (styleId === 'clean') flatSheet.push(painterA(lists[2]), painterA(lists[Math.round(L / 2)]))
 
+        // Over the move, the landing and the settle (46 frames at 30 fps), as before the sweep: the sweep's frames are timed on their own below.
+        const timed = lists.slice(0, Math.min(lists.length, L + 1 + Math.round(SETTLE_S * FPS)))
         const began = performance.now()
-        for (const l of lists) paintDrawList3d(l, compositor, { layer: freshLayer, images: bitmaps })
-        const msPerFrame = (performance.now() - began) / Math.max(1, lists.length)
+        for (const l of timed) paintDrawList3d(l, compositor, { layer: freshLayer, images: bitmaps })
+        const msPerFrame = (performance.now() - began) / Math.max(1, timed.length)
 
         const reading: ScreenCardReading = {
           move,
@@ -207,6 +294,7 @@ export async function checkScreenCard(
           cameraAfter: lists.slice(L + 1).some((l) => l.camera !== undefined),
           firstOpacity: cardOpacity(lists[0]),
           handoff,
+          holeFrame,
           holeInside: alphaMaxIn(afterPixels, W, inside),
           holeOutside: outside,
           dimAlpha: Math.round(style.palette.dimOpacity * 255),
@@ -221,11 +309,16 @@ export async function checkScreenCard(
         summary.push(
           `screen card ${move} under ${style.id}: L ${L}, ${moving} moving frames, ${reading.movingCamera} off flat; camera at L ${JSON.stringify(reading.cameraAtL)}, after L ${reading.cameraAfter ? 'SOME' : 'none'}; ` +
             `frame 0 card opacity ${reading.firstOpacity.toFixed(4)}; landing against a plain drawImage mean ${handoff.meanAll.toFixed(3)}, max ${handoff.maxAll} over ${handoff.pixels} pixels; ` +
-            `L + 1 alpha inside the hole ${reading.holeInside}, outside ${outside.min}..${outside.max} (the dim ${reading.dimAlpha}); frame ${SCREEN_CARD_MOVE_FRAME} against L max ${early.maxAll}` +
+            `${holeFrame === L + 1 ? 'L + 1' : `the held frame ${holeFrame}`} alpha inside the hole ${reading.holeInside}, outside ${outside.min}..${outside.max} (the dim ${reading.dimAlpha}); frame ${SCREEN_CARD_MOVE_FRAME} against L max ${early.maxAll}` +
             (flatScale !== null ? `; drawn flat, frame 0 is ${flatScale.toFixed(3)} × the box` : '') +
             (flatCentreOff !== null ? `, its ink ${flatCentreOff.toFixed(1)} px off the centre of a box ${SCREEN_CARD_LOW_BOX_PX} px low` : '') +
             `; ${msPerFrame.toFixed(1)} ms a frame through paintDrawList3d`
         )
+
+        if (style.glow && move === 'tilt-in') {
+          const sweep = readSweep(style, lists, total, (f) => drawListAt(spec, style, f, FPS, size, measure, targetsAt(f)))
+          sweeps.push(sweep)
+        }
       }
     }
     frames.canvas('screen card drawn flat (WebGL missing, painter A): Tilt in at frames 2 and 15, Pull back at frames 0 and 15', contactSheet(flatSheet))
@@ -233,9 +326,15 @@ export async function checkScreenCard(
     compositor.dispose()
     for (const bitmap of bitmaps.values()) bitmap.close()
   }
-  const verdict = screenCardVerdict(cases)
-  summary.push(`screen card verdict: ${verdict.pass ? 'PASS' : `FAIL: ${verdict.failures.join('; ')}`}`)
+  const cardVerdict = screenCardVerdict(cases)
+  const sweepVerdict = edgeSweepVerdict(
+    sweeps,
+    SCREEN_CARD_CHECK_STYLES.filter((id) => resolveGraphicStyle(id).glow)
+  )
+  const verdict = { pass: cardVerdict.pass && sweepVerdict.pass, failures: [...cardVerdict.failures, ...sweepVerdict.failures] }
+  summary.push(`screen card verdict: ${cardVerdict.pass ? 'PASS' : `FAIL: ${cardVerdict.failures.join('; ')}`}`)
+  summary.push(`edge sweep verdict: ${sweepVerdict.pass ? 'PASS' : `FAIL: ${sweepVerdict.failures.join('; ')}`} over ${sweeps.length} glowing style${sweeps.length === 1 ? '' : 's'}`)
   if (!verdict.pass) notes.push(...verdict.failures.map((f) => `screen card: ${f}`))
   notes.push('screen card: the true hand-off (the card’s frame L against the render’s frame of the recording) is M20, graphic.int’s phase-3 case (§6.11), not read here.')
-  return { size: { width: W, height: H }, fps: FPS, recording: { ...REC }, box, cases, verdict }
+  return { size: { width: W, height: H }, fps: FPS, recording: { ...REC }, box, cases, sweeps, verdict }
 }

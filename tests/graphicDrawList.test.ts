@@ -14,6 +14,7 @@ import {
   type Drawer,
   type GraphicTargets,
   type Rect,
+  type StrokeItem,
   type TextItem,
   type TextLook,
   type TextMeasure,
@@ -23,7 +24,7 @@ import { drawListAt, graphicBox, needsCompositor, onsetTargetsAt } from '@shared
 import { MAX_GLOW_BATCHES, MAX_PLANES, cameraIsFlat, compositorRoute, flatItems, focusRadius, glowBatches, glowItemsOf, isFlat } from '@shared/graphics/compositor'
 import { DEPTH_DOLLY_FROM, DEPTH_FOCUS_BLUR_PX, DEPTH_MOVES, DEPTH_PARALLAX_YAW_FROM, DEPTH_PLANES, DEPTH_TILT_FROM, depthOf } from '@shared/graphics/templates/depth'
 import { DRAWERS } from '@shared/graphics/templates/index'
-import { drawScreenCard, landingFrame } from '@shared/graphics/templates/screenCard'
+import { EDGE_SWEEP_ID, EDGE_SWEEP_S, EDGE_SWEEP_SPAN, EDGE_SWEEP_START, bezelPath, bezelWidth, drawScreenCard, edgeSweepFrames, landingFrame } from '@shared/graphics/templates/screenCard'
 import { DURATIONS, entrance, progress } from '@shared/graphics/motion'
 import { graphicMovingFrames } from '@shared/graphics/frame'
 import { GRAPHIC_STYLES, GRAPHIC_TEXT_STYLES, resolveGraphicStyle, type GraphicStyle } from '@shared/graphics/style'
@@ -568,22 +569,41 @@ describe('graphicDrawList: which drawers ask for the compositor (MAY_ASK, ALWAYS
     for (const id of NO_FIXTURE) expect(read.has(id), id).toBe(false)
   })
 
-  it('a plain screen card asks on its moving frames, as ALWAYS_ASK says, and on no frame after its landing', () => {
+  it('a plain screen card asks on its moving frames, as ALWAYS_ASK says: under a style with no glow on no frame after its landing; under a glowing one for its edge sweep’s loop, then on no frame', () => {
     expect(ALWAYS_ASK.has('screen-card')).toBe(true)
     const box = { x: 0, y: 656, width: 1080, height: 608 }
+    let glowingRead = 0
     for (const move of ['tilt-in', 'pull-back'] as const) {
       const card: GraphicSpec = { data: { template: 'screen-card', clipId: 'rec', move }, seconds: 10, beats: [1], place: { auto: true, third: 'middle' }, seed: 1, version: 1 }
       for (const st of GRAPHIC_STYLES) {
         const L = landingFrame(FPS)
+        const N = Math.round(6 * FPS)
         const at = (frame: number): GraphicTargets => ({ screen: { box, file: frame <= L ? `/f/${frame}.png` : null } })
-        const asks = Array.from({ length: 60 }, (_, frame) => needsCompositor(drawListAt(card, st, frame, FPS, SIZE, fake, at(frame))))
-        // Every frame up to the landing carries the move's camera; none after it.
-        expect(asks.slice(0, L + 1).every(Boolean), `${move} ${st.id}`).toBe(true)
-        expect(asks.slice(L + 1).some(Boolean), `${move} ${st.id}`).toBe(false)
-        // No glow before piece 5's edge sweep.
-        expect(drawListAt(card, st, L + 5, FPS, SIZE, fake, at(L + 5)).glow, `${move} ${st.id}`).toBeUndefined()
+        const lists = Array.from({ length: 300 }, (_, frame) => drawListAt(card, st, frame, FPS, SIZE, fake, at(frame)))
+        const asks = lists.map(needsCompositor)
+        const where = `${move} ${st.id}`
+        // Every frame up to the landing carries the move's camera.
+        expect(asks.slice(0, L + 1).every(Boolean), where).toBe(true)
+        if (!st.glow) {
+          // No glow: nothing asks after the landing, and no frame carries a glow.
+          expect(asks.slice(L + 1).some(Boolean), where).toBe(false)
+          expect(drawListAt(card, st, L + 5, FPS, SIZE, fake, at(L + 5)).glow, where).toBeUndefined()
+          expect(lists.filter((l) => l.glow !== undefined).length, where).toBe(0)
+        } else {
+          glowingRead++
+          // A glowing style: L + 1 .. L + N − 1 ask for the sweep's glow (route two, no camera), L + N on ask for nothing.
+          expect(asks.slice(L + 1, L + N).every(Boolean), where).toBe(true)
+          expect(asks.slice(L + N).some(Boolean), where).toBe(false)
+          for (const frame of [L + 1, L + 5, L + N - 1]) {
+            expect(lists[frame].camera, `${where} @${frame}`).toBeUndefined()
+            expect(compositorRoute(lists[frame]), `${where} @${frame}`).toBe('glow')
+          }
+          expect(lists[L + 5].glow, where).toEqual([{ item: 'sweep', radius: st.glow.radius * 1080, strength: st.glow.strength, color: st.palette.accent }])
+        }
       }
     }
+    // The glowing half was read: neon and energetic, both moves.
+    expect(glowingRead).toBe(4)
   })
 
   it('a spec with no depth and no hero never asks, unless its template is in ALWAYS_ASK (none in piece 1)', () => {
@@ -598,11 +618,12 @@ describe('graphicDrawList: which drawers ask for the compositor (MAY_ASK, ALWAYS
    * Phase 3's piece 2 built the glow (graphicCompositor.ts) with no template
    * asking for one: production behaviour unchanged. The templates whose lists
    * may carry a `GlowRequest`: piece 3 adds 'counter' and 'ring' (the hero's
-   * glow under a glowing style), piece 5 'screen-card' (its edge sweep).
+   * glow under a glowing style), piece 5 'screen-card' (its edge sweep, which
+   * no fixture carries: its own cases are above and in the sweep's describe).
    */
-  const MAY_GLOW = new Set<GraphicTemplateId>(['counter', 'ring'])
+  const MAY_GLOW = new Set<GraphicTemplateId>(['counter', 'ring', 'screen-card'])
 
-  it('no drawer emits a glow request, plain, with a depth or as a hero, under any style, unless its template is in MAY_GLOW (counter and ring since piece 3)', () => {
+  it('no drawer emits a glow request, plain, with a depth or as a hero, under any style, unless its template is in MAY_GLOW (counter and ring since piece 3; the screen card since piece 5, read on its own above and below)', () => {
     for (const f of fixtures) {
       if (MAY_GLOW.has(f.spec.data.template)) continue
       const { depth: _depth, hero: _hero, ...plain } = f.spec
@@ -858,6 +879,170 @@ describe('graphicDrawList: the 2.5D variants of counter and ring (§6.16)', () =
     for (const frame of [0, 5, 20]) {
       expect(drawListAt({ ...counter, depth: 'flat' }, style(), frame, FPS, SIZE, fake)).toEqual(drawListAt(counter, style(), frame, FPS, SIZE, fake))
     }
+  })
+})
+
+/*
+ * §6.16's edge sweep (phase 3's piece 5): on the screen card only, under a
+ * style with `glow` only, from the landing on, one loop of EDGE_SWEEP_S, a
+ * span of EDGE_SWEEP_SPAN of the bezel's perimeter advancing linearly, split
+ * in two while it crosses the path's start, with one GlowRequest naming it
+ * and nothing else; then gone, so the frame tpad holds is the plain card.
+ */
+describe('graphicDrawList: the screen card’s edge sweep (§6.16)', () => {
+  const fake: TextMeasure = (t, look) => ({ width: t.length * look.px * 0.55, ascent: look.px * 0.8, descent: look.px * 0.2 })
+  const BOX: Rect = { x: 0, y: 656.25, width: 1080, height: 607.5 }
+  const RATES = [24, 25, 30, 60]
+  const card = (move: 'tilt-in' | 'pull-back' = 'tilt-in'): GraphicSpec => ({
+    data: { template: 'screen-card', clipId: 'rec', move },
+    seconds: 60,
+    beats: [1],
+    place: { auto: true, third: 'middle' },
+    seed: 1,
+    version: 1
+  })
+  const targetsAt = (fps: number) => (frame: number): GraphicTargets => ({ screen: { box: BOX, file: frame <= landingFrame(fps) ? `/f/${frame}.png` : null } })
+  const listAt = (st: GraphicStyle, frame: number, fps = FPS, move: 'tilt-in' | 'pull-back' = 'tilt-in'): DrawList =>
+    drawListAt(card(move), st, frame, fps, SIZE, fake, targetsAt(fps)(frame))
+  /** Every stroke that is not the bezel: the sweep's. */
+  const sweepOf = (list: DrawList): StrokeItem[] => list.items.filter((i): i is StrokeItem => i.kind === 'stroke' && i.id !== 'bezel')
+  const GLOWING = GRAPHIC_STYLES.filter((st) => st.glow)
+  const PLAIN = GRAPHIC_STYLES.filter((st) => !st.glow)
+
+  it('its figures: a 6 s loop, a span of 0.12 of the perimeter, from the path’s start; neon and energetic carry glow, and the loop is round(EDGE_SWEEP_S × fps) frames', () => {
+    expect(EDGE_SWEEP_S).toBe(6)
+    expect(EDGE_SWEEP_SPAN).toBe(0.12)
+    expect(EDGE_SWEEP_START).toBe(0)
+    expect(EDGE_SWEEP_ID).toBe('sweep')
+    const glowing = GLOWING.map((st) => st.id)
+    expect(glowing).toContain('neon')
+    expect(glowing).toContain('energetic')
+    expect(PLAIN.map((st) => st.id)).toContain('clean')
+    expect(RATES.map(edgeSweepFrames)).toEqual([144, 150, 180, 360])
+  })
+
+  it('is absent under every style with no glow, on every frame of a 60 s card: the bezel the only stroke, no glow', () => {
+    for (const st of PLAIN) {
+      for (let frame = 0; frame < 60 * FPS; frame++) {
+        const list = listAt(st, frame)
+        expect(sweepOf(list), `${st.id} @${frame}`).toEqual([])
+        expect(list.glow, `${st.id} @${frame}`).toBeUndefined()
+      }
+    }
+  })
+
+  it('under a glowing style: none up to the landing; on L + 1 .. L + N − 1 a span of 0.12 of the perimeter, one stroke or two summing to it, its head (f − L) / N of the way round, on the bezel’s path in the accent; then none, at every rate', () => {
+    for (const fps of RATES) {
+      const L = landingFrame(fps)
+      const N = edgeSweepFrames(fps)
+      for (const st of GLOWING) {
+        for (const move of ['tilt-in', 'pull-back'] as const) {
+          let split = 0
+          for (let frame = 0; frame <= L + N + 2; frame++) {
+            const list = listAt(st, frame, fps, move)
+            const sweep = sweepOf(list)
+            const where = `${st.id} ${move} @${frame} of L ${L}, N ${N} at ${fps}`
+            if (frame <= L || frame >= L + N) {
+              // Never before the landing (the move draws), never on L + N or after (the held card).
+              expect(sweep, where).toEqual([])
+              if (frame > L) expect(list.glow, where).toBeUndefined()
+              continue
+            }
+            expect(sweep.length === 1 || sweep.length === 2, where).toBe(true)
+            for (const s of sweep) {
+              expect(s, where).toMatchObject({ d: bezelPath(BOX), width: bezelWidth(SIZE), color: st.palette.accent, cap: 'square', join: 'miter', opacity: 1 })
+              expect(s.from, where).toBeGreaterThanOrEqual(0)
+              expect(s.to, where).toBeLessThanOrEqual(1)
+              expect(s.to, where).toBeGreaterThan(s.from)
+            }
+            const length = sweep.reduce((sum, s) => sum + (s.to - s.from), 0)
+            expect(length, where).toBeCloseTo(EDGE_SWEEP_SPAN, 12)
+            const head = sweep[sweep.length - 1].to
+            expect(head, where).toBeCloseTo((frame - L) / N, 12)
+            if (sweep.length === 2) {
+              split++
+              // Crossing the path's start: the tail runs to the path's end, the head from its start; no gap, no overlap.
+              expect(sweep.map((s) => s.id), where).toEqual(['sweep-1', 'sweep-2'])
+              expect(sweep[0].to, where).toBe(1)
+              expect(sweep[1].from, where).toBe(0)
+            } else {
+              expect(sweep[0].id, where).toBe('sweep')
+              expect(sweep[0].from, where).toBeCloseTo(head - EDGE_SWEEP_SPAN, 12)
+            }
+            // Split exactly while the tail would be behind the start.
+            expect(sweep.length === 2, where).toBe((frame - L) / N < EDGE_SWEEP_SPAN)
+          }
+          // It crosses the start on its first frames: frame L + 1 is one of them.
+          expect(split, `${st.id} ${move} at ${fps}`).toBeGreaterThan(0)
+          expect(sweepOf(listAt(st, L + 1, fps, move)).length).toBe(2)
+        }
+      }
+    }
+  })
+
+  it('its glow: one request naming the sweep, at the style’s strength and its radius in frame pixels, in the accent; it names the sweep’s strokes, one or both pieces, and nothing else the list carries (never the bezel)', () => {
+    const L = landingFrame(FPS)
+    const N = edgeSweepFrames(FPS)
+    for (const st of GLOWING) {
+      for (let frame = L + 1; frame < L + N; frame++) {
+        const list = listAt(st, frame)
+        const where = `${st.id} @${frame}`
+        expect(list.glow, where).toEqual([{ item: 'sweep', radius: st.glow!.radius * Math.min(SIZE.width, SIZE.height), strength: st.glow!.strength, color: st.palette.accent }])
+        expect(glowItemsOf(list.items, list.glow!).map((i) => i.id), where).toEqual(sweepOf(list).map((s) => s.id))
+        expect(glowItemsOf(list.items, list.glow!).some((i) => i.id === 'bezel'), where).toBe(false)
+        expect(glowBatches(list).length, where).toBe(1)
+        expect(glowBatches(list).length, where).toBeLessThanOrEqual(MAX_GLOW_BATCHES)
+        // Route two: a flat camera (none) with a glow.
+        expect(list.camera, where).toBeUndefined()
+        expect(compositorRoute(list), where).toBe('glow')
+        // Without WebGL painter A draws route one's order, the sweep's strokes among them, its glow ignored.
+        expect(flatItems(list).map((i) => i.id), where).toEqual(list.items.map((i) => i.id))
+      }
+    }
+  })
+
+  it('the last baked frame, L + N (graphicMovingFrames − 1), is the plain held card: exactly the frame the hold shows, the dim with its hole and the bezel, no sweep and no glow, route one', () => {
+    for (const fps of RATES) {
+      const L = landingFrame(fps)
+      const N = edgeSweepFrames(fps)
+      for (const st of GLOWING) {
+        const moving = graphicMovingFrames(card(), st, fps, 60 * fps)
+        expect(moving, `${st.id} at ${fps}`).toBe(L + 1 + N)
+        const last = listAt(st, moving - 1, fps)
+        const where = `${st.id} @${moving - 1} at ${fps}`
+        expect(last.items.map((i) => i.id), where).toEqual(['dim', 'bezel'])
+        expect(last.glow, where).toBeUndefined()
+        expect(isFlat(last), where).toBe(true)
+        expect(needsCompositor(last), where).toBe(false)
+        // The frame tpad holds is every later frame's list exactly.
+        expect(listAt(st, 60 * fps - 1, fps), where).toEqual(last)
+        // And the frame before it still carries the sweep.
+        expect(sweepOf(listAt(st, moving - 2, fps)).length, where).toBeGreaterThan(0)
+      }
+    }
+  })
+
+  it('no other template draws a sweep: counter and ring, plain, with each depth or as a hero, under every style, carry no sweep stroke, and their glow names only the hero’s value or arc', () => {
+    const fixtures = (
+      JSON.parse(readFileSync(new URL('./fixtures/graphics/specs.json', import.meta.url), 'utf8')) as { specs: { id: string; spec: GraphicSpec }[] }
+    ).specs.filter((f) => DRAWERS[f.spec.data.template] !== undefined)
+    let read = 0
+    for (const f of fixtures) {
+      for (const variant of [{}, { hero: true as const }, { depth: 'tilt' as const, hero: true as const }]) {
+        const s: GraphicSpec = { ...f.spec, ...variant }
+        for (const st of GLOWING) {
+          const total = Math.max(1, Math.round(s.seconds * FPS))
+          for (let frame = 0; frame < total; frame += 2) {
+            const list = drawListAt(s, st, frame, FPS, SIZE, fake, {})
+            const where = `${f.id} ${JSON.stringify(variant)} ${st.id} @${frame}`
+            read++
+            expect(list.items.some((i) => i.id === 'sweep' || i.id.startsWith('sweep-')), where).toBe(false)
+            for (const request of list.glow ?? []) expect(['value', 'arc'], where).toContain(request.item)
+          }
+        }
+      }
+    }
+    expect(read).toBeGreaterThan(0)
   })
 })
 

@@ -1009,4 +1009,18 @@ describe('the screen card’s frames', () => {
     expect(screenPreviewTargets('card-x', footage, { subject: null }, 3)).toEqual({ subject: null })
     warn.mockRestore()
   })
+
+  it('the edge sweep’s frames need no picture (docs/CLIPS.md §6.16, piece 5): a card first drawn in its sweep pulls nothing and never waits; a pull made for the move is not made again over the sweep or the hold', async () => {
+    forgetGraphicPreview('card-s')
+    const N = 180
+    // A scrub straight into the sweep, its first and last frames, the held frame and the hold: drawn at once, nothing pulled.
+    for (const frame of [L + 90, L + 1, L + N - 1, L + N, 599]) expect(screenPreviewTargets('card-s', footage, boxOnly(), frame), `@${frame}`).toEqual(boxOnly())
+    expect(pulls).toHaveLength(0)
+    // The move pulls once; the sweep's frames after it never again.
+    expect(screenPreviewTargets('card-s', footage, boxOnly(), 5)).toBeNull()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    for (let frame = L + 1; frame <= L + N; frame++) expect(screenPreviewTargets('card-s', footage, boxOnly(), frame), `@${frame}`).toEqual(boxOnly())
+    expect(pulls).toHaveLength(1)
+    forgetGraphicPreview('card-s')
+  })
 })

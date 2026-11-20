@@ -668,7 +668,9 @@ export function graphicPreviewCanvas(
   const asks = needsCompositor(list)
   const wants = asks && compositorRoute(list) !== 'flat'
   const deep = wants ? deepSlotOf(clipId, width, height, onReady) : null
-  if (asks && !wants) releaseDeepSlot(clipId)
+  // Given back on any frame that does not want one, a list that no longer asks at all included: a screen card
+  // after its landing (and after its edge sweep's loop) carries no camera and no glow (piece 5's fix: it kept its slot).
+  if (!wants) releaseDeepSlot(clipId)
   if (asks && (webglMissing() || (deep && !deep.pending && !deep.compositor))) markDrawnFlat(clipId)
   // A screen card's frame from its own pull's bitmaps (`ScreenPull`), the memo's for every other image.
   const pulled = pulledBitmap(clipId, targets)
