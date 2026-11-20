@@ -289,8 +289,10 @@
 > skipped (359), 5612 tests passed and 66 skipped (5678); the harness
 > census on screen: 924 checked, 0 missing, 8 skipped (912 at `8b1f2a8`).
 > Still yours from it: §6.12's try-out list and §16.67-73.
-> Of phase 2's lanes nothing is left to build. Next by §6.19: phase 3,
-> after phase 2's exit (§6.12's list). **Moved to after the beta by you,
+> Of phase 2's lanes nothing is left to build. (Until 2026-11-20 this
+> line went on: "Next by §6.19: phase 3, after phase 2's exit (§6.12's
+> list)." Phase 3 began before that exit, on your word: the next
+> paragraph.) **Moved to after the beta by you,
 > 2026-11-14 (§16.74):** the hand spike (§6.17) and phase 4 (§6.18),
 > which §6.19 placed during and after phase 2; step 3 before the beta is
 > 29 days. **Moved to after the beta by you, 2026-11-14 (§16.75):** step
@@ -322,6 +324,108 @@
 > now about 100-103.5 days with Step P (100.25-103.75 since §16.66's
 > answer, 2026-10-27; since 2026-11-14, 81.75-85.25 before the beta and
 > 18.5 after it, §16.74-75).
+>
+> **Phase 3 began 2026-11-18** on your word, after try-out 2 (the
+> session's script in English, Hindi and Telugu, recorded by you: "nearly
+> perfect"; what was "nearly" you have not said), with phase 2's exit
+> list (§6.12) still open and yours. **Its six pieces are built and
+> pushed**, fourteen commits `31e83b2..2236a00` (2026-11-18 to 20), in
+> three runs, each piece read by two or three critics before its fixer
+> (§6.16's six Built notes, §6.11, §6.19's phase-3 row): piece 1, the
+> compositor (painter B) and its seam in `graphicCanvas.ts`, `31e83b2`,
+> fix `d415f2c`; piece 2, the glow behind one seam with both routes for
+> M7, and the focus blur, `a199733`, fix `b2d19f4`; piece 3, the 2.5D
+> counter and ring, the hero rule, the hero's glow and the dock's Depth
+> choice, `1d7204c`, fix `c829007`; piece 4, the screen card without its
+> edge sweep, `1eaafc5`, fix `cf5aed2`, then the session's `a74576d` (the
+> `depth` option reads the hero's glow from the glowing item's own ink);
+> piece 5, the edge sweep, `3ee251c`, fix `77c66e3`; piece 6, the
+> remaining harness options (`readback`, `bake3d`, `screenCard:
+> '<path>'`) and `graphic.int`'s phase-3 case, `3d55a47`, fix `61365a4`,
+> then the session's `2236a00` (the hero's landing read on one frame by
+> both routes). CI green on `windows-latest` and `macos-15` at `b2d19f4`
+> and at `a74576d` (run 44473422718), and at `2236a00` (run 44727055616:
+> job 136257020490 `windows-latest` and job 136257020772 `macos-15`
+> success, no annotation; the installer job skipped): **green on both
+> runners at `2236a00`.** The suite at `2236a00` on the Mac: typecheck
+> 0, 361 files passed and 5 skipped (366), 5865 tests passed and 66
+> skipped (5931), build 0; the harness census at `2236a00`: missing [],
+> 942 checked, 10 skipped. **What was read, by the session, on the
+> harness page on the Mac only** (the Browser pane's Chrome, WebGL on;
+> `EFFECTS.md` §61's "Phase 3, 2026-11-18 to 20", §6.15's phase-3
+> note): every option's verdict PASS (`compositor`, `glow` with both
+> routes, `focus`, `depth` over 12 cases, `screenCard` over 4 with "edge
+> sweep verdict: PASS", `bake3d` over 13), and `readback` choosing
+> `drawImage` by its rule; the hero's landing line, outside the verdict,
+> reads one of its four cases over the proposed bar. **Not done**:
+> nothing was read in the development app (M20 with a real recording,
+> run by no one; M13 over real title frames) and nothing on the Surface
+> (M6 whole, M7 and then the losing glow route's removal, M12, M13, M20,
+> and the `depth`, `screenCard` and `bake3d` options); no look is rated
+> by you. **Phase 3's exit (§6.12) is not met**: its items, with what
+> each still needs, are §6.12's "Phase 3's state, 2026-11-20"; the
+> decisions phase 3 left to you are §16.77-85.
+>
+> **The beta deadline is 25 December 2026**, set by you on 2026-11-18.
+> The order you agreed that day (§2's 2026-11-18 note, §16.86): phase 3
+> whole first ("i dont want to interrupt it"); then, before the beta,
+> three items from your recordings that are not steps of this plan: the
+> timeline's scroll, a choice of speech model, and Remove and folders on
+> the uploads. Traditional keyframing (a path drawn on the picture, a
+> bezier graph, a multi-point speed graph) after the beta is **the
+> session's recommendation**: you did not object and have not confirmed
+> it. You keep Florence-2's caption placement (1g) and step 7's saved
+> template before the beta.
+>
+> **The three items are built and pushed, 2026-11-20**; origin = main =
+> `49c836e`.
+> - **The timeline's scroll**, `b38863b` (the session's own): the lanes
+>   are the one scroller both ways and the track headers follow them, both
+>   scrollbars always drawn at 12 px, the header column 172 px wide (was
+>   128) with each track's Remove drawn at 0.6 opacity without a hover.
+>   The suite at `b38863b` on the Mac: typecheck 0, 361 files passed and 5
+>   skipped, 5874 tests passed and 66 skipped, build 0; the census:
+>   missing [], 942 checked, 10 skipped. CI at `b38863b` (run
+>   44729664926: job 136265877718 `windows-latest` and job 136265878124
+>   `macos-15` success; the installer job skipped): green on both
+>   runners. Recorded in `WHERE-THINGS-ARE.md`'s Timeline and
+>   `WINDOW.md` §3.21. Left, yours: the development app and the Surface
+>   (touch, and Windows' classic scrollbars).
+> - **The speech model choice**, `161450a`, `3da8761` (piece 1 and its
+>   critics' fixes), `716a82a`, `80f92a8` (piece 2 and its critics'
+>   fixes), `1b366ef` (the session's): Small, Medium and Large in
+>   Settings, each its own sized press, choosing never downloading. The
+>   suite at `80f92a8` on the Mac: typecheck 0, 364 files passed and 5
+>   skipped, 5925 tests passed and 66 skipped, build 0; the census, after
+>   one row's count fix: missing [], 952 checked, 10 skipped. CI at
+>   `1b366ef` (run 44800769033: job 136512011318 `windows-latest` and job
+>   136512011749 `macos-15` success; the installer job skipped). Recorded
+>   in §3a.4's note of 2026-11-20, `SIDECAR.md`'s `asr.model`,
+>   `WHERE-THINGS-ARE.md`'s Settings and `WINDOW.md` §3.9. Left, yours:
+>   the real Medium (1.4 GB) and Large (2.9 GB) downloads (nothing was
+>   downloaded in the build: your first press is the pins' first real
+>   check), and whether Hindi, Telugu and Hinglish land better with them,
+>   and how fast they run on the Mac and the Surface: none of it measured.
+> - **Remove, the right-click menu and folders on the uploads**,
+>   `bb21eee`, `5b9160a` (piece 1 and its critics' fixes), `a0a16af`,
+>   `49c836e` (piece 2 and its critics' fixes). The suite at `49c836e` on
+>   the Mac: typecheck 0, 369 files passed and 5 skipped (374), 6034 tests
+>   passed and 66 skipped (6100), build 0; the census: missing [], 984
+>   checked, 12 skipped. CI at `49c836e` (run 44819654305: job
+>   136576915337 `windows-latest` and job 136576914726 `macos-15`
+>   success; the installer job skipped): green on both runners. Recorded
+>   in `WHERE-THINGS-ARE.md`'s Upload and "Upload a file", and `WINDOW.md`
+>   §3.3, §3.21 and §3.22. Left, yours: a real folder dropped from Finder
+>   and from Explorer, Show in Finder or Explorer, the development app
+>   and the Surface (its touch screen included). Whether one level of
+>   folders, in the project, with a dropped folder becoming one, is what
+>   you meant is **the session's reading of your words, not confirmed by
+>   you** (§16.87).
+>
+> The decisions the three items left to you are §16.88. What is left of
+> §2's order to the beta: phase 2's and phase 3's exit readings (yours,
+> §6.12), step 4, 1g, step 6's three 3D templates and step 7, then
+> `BETA.md`.
 >
 > **As written, 2026-10-05, when nothing here was built.** This is the plan for the
 > piece agreed with the user on 2026-10-04/05: the reframe engine, caption
@@ -676,6 +780,25 @@ this and will get back to the beta". **This plan comes first**, then
   step of this plan: captions as items on the timeline (§16.76). Of steps
   5–7, only step 6's 3D templates and step 7 (6.5 days) now come before
   the beta.
+- **2026-11-18: the deadline, and three items before the beta** (§16.86).
+  You set the beta's deadline: **25 December 2026**. Phase 3 began that
+  day on your word, before phase 2's exit, and was built whole, 2026-11-18
+  to 20 (the status block at the top). Then, before the beta and after
+  phase 3, the three items you agreed, from your recordings: the
+  timeline's scroll; a choice of speech model; Remove and folders on the
+  uploads. **They are not steps of this plan and have no day figures in
+  it**: the session's rough estimates, said to you on 2026-11-18, were
+  about half a day, about two days, and about one day plus one; they are
+  the session's estimates, not the plan's. All three were built and
+  pushed on 2026-11-20 (`b38863b`; `161450a` to `1b366ef`; `bb21eee` to
+  `49c836e`; the status block). They sit outside this plan's days, so no
+  day figure or total in this section changes for them. Traditional
+  keyframing after the beta is the session's recommendation, not
+  confirmed by you. The rest of the 2026-11-14 order stands unchanged:
+  phase 2's exit (yours, §6.12) and phase 3's (its readings in the
+  development app and on the Surface, yours, §6.12), then step 4, 1g,
+  step 6's three 3D templates, step 7, then `BETA.md` R1–R12 → R13 →
+  R14.
 - **Step 7 is gated on `MARKET.md` Stage 0** (`MARKET.md:94-103`): Phase C
   measured and finished (it is paused), and a music library with
   redistribution rights or the `filler-supplies` policy alone for paid
@@ -18674,25 +18797,99 @@ spike", made exact):
   within 2/255 of painter A; the EFFECTS §51 clusters through a
   `CanvasTexture` at 1:1 at 0.000; a 1 px anti-aliased line at 10, 50 and
   90 % alpha within 2/255 over black and over white (yours, Mac and
-  Surface).
+  Surface). (2026-11-18, read again unchanged 2026-11-19 and 20: the
+  harness's `compositor` option, which reads these three on the harness
+  page, PASS on the Mac: every route against painter A mean 0.000, max
+  0, the edges max 2; `EFFECTS.md` §61's "Phase 3". Not met: the bar is
+  your run in the development app on the Mac and the Surface, and
+  neither is read.)
 - Preview = export within 1/255 for the 2.5D `counter` and `ring` at rest and
   on three moving frames, and for the screen card's moving frames; each
   variant's settled frame equal to its flat twin.
+  (2026-11-20, on the harness page on the Mac: `bake3d` PASS over 13
+  cases, the Preview against the export and the harness's frames against
+  it mean 0.000 max 0 at every frame read (@8, @15, @23, @30 for the
+  counter and ring; @2, @8, @15, @30, @31, @45 for the card under clean;
+  @2, @8, @15, @30, @31, @40, @120, @209, @210 under energetic); and
+  2026-11-19, `depth`, every variant's settled frame against its flat
+  twin max 0. Not marked met: the item names no machine, but the
+  harness's "export" is its bridge's stand-in files, not the
+  development app's, and the Surface is not read.)
 - The same spec baked twice, `framemd5`-equal (M13, on a 2.5D counter and a
   screen card); the Mac against the Surface recorded in §61 as the golden
   tolerance (no CI check compares pixels across machines).
+  (2026-11-20, on the harness page on the Mac: baked twice byte-equal,
+  the counter-en hero under neon 31 of 31 PNGs, the screen card's tilt-in
+  under clean 46 of 46, under energetic 211 of 211. Not met: those are
+  the harness bridge's files, not real title frames; the `framemd5` over
+  real files is the development app's and was not run; the Surface is
+  not read, so no golden tolerance for phase 3 is recorded.)
 - M7 run first, on the compositor's glow seam on both machines: the route
   that passes kept, the other removed; the glow's alpha 0 outside its shape
   on that route; the hero rule's glow and tilt drawn (§6.16).
+  (2026-11-20, on the harness page on the Mac: "M7 on this machine:
+  unreal and quad pass"; `quad`'s alpha beyond its 24 px reach max 0
+  over 468476 px, `unreal`'s 27 (information only on that route); the
+  hero's glow and tilt drawn by `depth`, PASS over 12 cases. Not met:
+  M7 is not read on the Surface, so no route is chosen; `GLOW_ROUTE`
+  is `'quad'` and both routes stay in the tree until it is read there,
+  then the loser is removed (code work after your reading).)
 - Disposal: after a 2.5D bake and the clip's removal, the shared renderer's
   `info.memory` geometries and textures back to their counts before the bake
   (harness; proposal).
+  (2026-11-20, on the harness page on the Mac: `bake3d`'s "bake3d
+  memory: … 0/0 → 0/0" for its three M13 cases, each after its bakes
+  and its Preview entry forgotten, the Preview's own call on a clip's
+  removal, and over the whole option; and 2026-11-18, `compositor`, 0 /
+  0 after `dispose()`. Read as the item words it, on the harness, on
+  the Mac; the bar is a proposal; the Surface's harness reading is
+  yours.)
 - With WebGL missing, the flat graphic drawn with the note
   (`graphicCompositor`).
+  (Met 2026-11-18: `tests/renderer/graphicCompositor.test.ts` in the
+  suite, and on the harness page on the Mac with WebGL pretended missing,
+  `createCompositor` null, the note `"drawn flat: 3D needs WebGL, which
+  did not start on this computer"`, the frame against the flat twin mean
+  0.000 max 0, the preview marked drawn flat. No machine without WebGL
+  was tried.)
 - The screen card legible at 9:16 by your eye; its hand-off within 2/255
   mean on both machines (proposal); its bake cost, the sweep's and the
   readbacks (M20, M12) in §61.
+  (2026-11-20, on the harness page on the Mac: `screenCard` PASS over 4
+  cases with "edge sweep verdict: PASS over 1 glowing style"; 0.1 ms a
+  frame through `paintDrawList3d` over the sweep's 179 frames; M12's
+  three routes in §61, `drawImage` kept by the rule. Not met: M20, the
+  card over a real 1080p recording in the development app, was run by no
+  one, so neither its legibility by your eye, nor its hand-off on either
+  machine, nor its bake cost is read; M12 is not read on the Surface.)
 - `graphic.int`'s phase-3 case on both builds; §9 reads 5 days.
+  (Met 2026-11-20 on both builds: the describe "phase 3: the screen
+  card’s hand-off through the real plan", 8 tests, passed on the Mac's
+  build inside the full suite at `2236a00`, and runs ungated, so CI's
+  green at `2236a00` on `windows-latest` (run 44727055616) is the 2018
+  build's. §9's heading reads "5 days (Brave's 1 out; the 2.5D counter
+  and ring moved to step 3, §16.55; the cards' 3 after the beta,
+  §16.75)": 5, of which 2 before the beta.)
+- **Phase 3's state, 2026-11-20.** Built and pushed: all six pieces of
+  §6.16, `31e83b2..2236a00`, green on both runners at `2236a00` (the
+  status block at the top). The suite at `2236a00` on the Mac: typecheck
+  0, 361 files passed and 5 skipped (366), 5865 tests passed and 66
+  skipped (5931), build 0; the census: missing [], 942 checked, 10
+  skipped. **Of the bar above**, met: WebGL missing, `graphic.int`'s
+  phase-3 case and §9's days; read as the item words it on the harness
+  page on the Mac: disposal. Read on the harness page on the Mac only,
+  not met: M6 whole, preview = export, M13's twice-bakes, M7, the
+  screen card's harness readings and M12. **Yours, which the bar
+  names**, in `npm run dev`'s DevTools console on the Mac and the
+  Surface: `({ compositor: true })` (M6 whole), `({ glow: ['unreal',
+  'quad'] })` (M7; then the losing route is removed), `({ readback:
+  ['drawImage', 'readPixels', 'readRenderTargetPixelsAsync'], frames:
+  120 })` (M12), `({ depth: true })`, `({ screenCard: true })`, `({
+  bake3d: true })`, M13's `framemd5` over real title frames and the Mac
+  against the Surface, and `({ screenCard: '<a 1080p screen
+  recording>' })` (M20, the development app only), with your eye on the
+  card at 9:16 and on every look of the moves (§16.82). Phase 3's exit
+  is not met. The decisions it left to you: §16.77-85.
 
 **Phase 4** (only if the gate passed, or on a partial with your yes).
 
@@ -19728,21 +19925,21 @@ ends.
 | M3 | Indic segmentation and per-segment drawing | `await window.__forgeGraphicCheck({ segments: true })`: in Electron 44's renderer, `new Intl.Segmenter(undefined, { granularity: 'grapheme' })` over स्कूल, क्षत्रिय, स्त्री, తెలుగు, క్ష, స్త్ర and the EFFECTS §51 clusters; count the segments; paint them cumulatively with `fillText` and diff the last frame against the word drawn whole | Mac, Surface | whether any Indic entrance goes below a word |
 | M4 | ffmpeg filters on both builds | `"$FFMPEG" -hide_banner -h filter=tmix`, `-h filter=overlay` (the `alpha` option) and `-h filter=perspective`, as a case in `tests/oldestFfmpeg.test.ts` so both runners print it | CI, both runners | motion blur by `tmix`; the raw RGBA path; the `perspective` screen card. Any filter used stays in `tests/oldestFfmpeg.test.ts` |
 | M5 | canvas blur cost | `await window.__forgeGraphicCheck({ blur: { words: 10, px: 8 } })`: a ten-word blur-rise line with `ctx.filter = 'blur(8px)'` per word per frame, at 1080×1920; ms per frame | Mac, Surface | whether blur-rise is offered |
-| M6 | three.js parity | `await window.__forgeGraphicCheck({ parity: true })`: the EFFECTS §51 clusters painted by `drawTextOnto`, uploaded as a `CanvasTexture` with mipmaps off under an orthographic camera at 1:1, against the canvas drawn flat (expect 0.000); brand hex squares and a 50% blend through three.js with colour management on and off, against canvas 2D (within 2/255); a 1 px anti-aliased line at 10, 50 and 90% alpha through WebGL, `drawImage` and PNG, over black and over white | Mac, Surface | phase 3's exit |
-| M7 | glow with alpha | `await window.__forgeGraphicCheck({ glow: ['unreal', 'quad', 'pmndrs'] })`: a shape with `UnrealBloomPass` (r186) and with our own quad shader over a transparent clear: alpha outside the shape 0, the glow's alpha below 1; then pmndrs Bloom | Mac, Surface | the glow route |
+| M6 | three.js parity | `await window.__forgeGraphicCheck({ parity: true })`: the EFFECTS §51 clusters painted by `drawTextOnto`, uploaded as a `CanvasTexture` with mipmaps off under an orthographic camera at 1:1, against the canvas drawn flat (expect 0.000); brand hex squares and a 50% blend through three.js with colour management on and off, against canvas 2D (within 2/255); a 1 px anti-aliased line at 10, 50 and 90% alpha through WebGL, `drawImage` and PNG, over black and over white | Mac, Surface | phase 3's exit (whole: the harness page on the Mac, 2026-11-18, `compositor` PASS; the development app on the Mac and the Surface not read; the phase-3 note below) |
+| M7 | glow with alpha | `await window.__forgeGraphicCheck({ glow: ['unreal', 'quad', 'pmndrs'] })`: a shape with `UnrealBloomPass` (r186) and with our own quad shader over a transparent clear: alpha outside the shape 0, the glow's alpha below 1; then pmndrs Bloom | Mac, Surface | the glow route (the harness page on the Mac, 2026-11-20: both routes pass; the Surface not read; the phase-3 note below) |
 | M8 | path length | `await window.__forgeGraphicCheck({ pathLength: true })`: an off-DOM `SVGPathElement`'s `getTotalLength()` and `getPointAtLength()` against our own flattening; agreement and ms | Mac | the stroke primitive |
 | M9 | spring | `npx vitest run tests/graphicMotion.test.ts`: the closed form against frame-stepped at 24, 25, 30 and 60 fps; the largest difference and the cost per call, printed (per call since 2026-10-28, as §6.13 and the test have it; it read per frame) | node | the motion module |
 | M10 | stroke libraries | `await window.__forgeGraphicCheck({ strokes: ['rough', 'freehand'] })`: rough.js with one seed, its PNGs from the Mac and the Surface compared by mean difference; perfect-freehand drawn on by truncating its input points and by clipping the finished outline, whether the tapered end changes from frame to frame | Mac, Surface | the marker look |
 | M11 | raw RGBA | `ffmpeg -f rawvideo -pix_fmt rgba -s 1080x1920 -r 30 -i pipe:0 -i base.mp4 -filter_complex "[1][0]overlay=alpha=premultiplied"` against the PNG path; `-f framemd5` of both; IPC throughput at 8.3 MB a frame | Mac, Surface | only if M1-M2 fall short |
-| M12 | readback | `await window.__forgeGraphicCheck({ readback: ['drawImage', 'readPixels', 'readRenderTargetPixelsAsync'], frames: 120 })`: `drawImage(gl)` with `toBlob`, `readPixels` into a `Uint8Array`, and `readRenderTargetPixelsAsync`; ms at p50 and p95 | Mac, Surface | phase 3's bake |
-| M13 | determinism | the same template baked twice through the app, then `"$FFMPEG" -start_number 0 -i <clipId>.seq/%05d.png -f framemd5 -` on each bake (equal), and the Mac's frames against the Surface's by mean difference | Mac, Surface | the golden tolerance |
+| M12 | readback | `await window.__forgeGraphicCheck({ readback: ['drawImage', 'readPixels', 'readRenderTargetPixelsAsync'], frames: 120 })`: `drawImage(gl)` with `toBlob`, `readPixels` into a `Uint8Array`, and `readRenderTargetPixelsAsync`; ms at p50 and p95 | Mac, Surface | phase 3's bake (the harness page on the Mac, 2026-11-20: `drawImage` by the rule; the Surface not read; the phase-3 note below) |
+| M13 | determinism | the same template baked twice through the app, then `"$FFMPEG" -start_number 0 -i <clipId>.seq/%05d.png -f framemd5 -` on each bake (equal), and the Mac's frames against the Surface's by mean difference | Mac, Surface | the golden tolerance (phase 3: baked twice byte-equal on the harness page on the Mac, 2026-11-20, from the harness bridge's files; `framemd5` over real title frames and the Surface not read; the phase-3 note below) |
 | M14 | curves, blind | `await window.__forgeGraphicCheck({ curves: ['expo-out', 'out-cubic', 'spring1', 'linear', 'decelerate', 'carbon-expressive'] })` renders one counter landing on its word under each, on the user's clips at 30 fps; shown blind to the user, who picks (2026-11-14, as built by lane T4, `fba3632`, `67fb97c`: the call is `const r = await window.__forgeGraphicCheck({ curves: { names: [the six], clipId } })`, one graphic clip of the open project per run, `MotionEase` names, the key in `r.curves.key`; not run, §6.10's T4 Built note (d)) | the user | the default curve per template |
 | M15 | onset error | the user marks the audible onset frame of 30 words in 3dit's timeline on their own footage; a node script subtracts the transcript's `startMs` for each, in frames | the user's clips | whether beats need an onset refinement |
 | M16 | reading holds | `npx vitest run tests/graphicHolds.test.ts`: each template's longest label at 20 characters a second [33] and twice at 200 words a minute [34], in English, Hindi and Telugu, against its seconds (§6.2) | node | the templates' seconds |
 | M17 | density | graphics, zooms and sounds per minute, counted frame by frame by the user in five clips they call pro and five from a clipper | the user | the overall cap |
 | M18 | sound levels | `"$FFMPEG" -i mix.wav -af ebur128 -f null -` for a tick, a pop and a whoosh under speech on the user's clips; intelligibility judged by the user's ear | Mac | sound levels |
 | M19 | 4:2:0 fringing | `await window.__forgeGraphicCheck({ strokes: { widths: [1, 2, 3] } })` writes the PNGs; each is overlaid through the plan's `format=yuva420p` overlay, and its chroma bleed is measured against the PNG | Mac | the minimum stroke width |
-| M20 | screen card | `await window.__forgeGraphicCheck({ screenCard: '<a 1080p screen recording>' })`: a tilted 2.5D card at 9:16; legibility at rest judged by the user, and the bake cost of its moving frames | Mac, Surface | the screen card's scope |
+| M20 | screen card | `await window.__forgeGraphicCheck({ screenCard: '<a 1080p screen recording>' })`: a tilted 2.5D card at 9:16; legibility at rest judged by the user, and the bake cost of its moving frames | Mac, Surface | the screen card's scope (run by no one; the option exists since `3d55a47`, the development app only; the phase-3 note below) |
 | M21 | Hindi numbers | `FORGE_MODELS_DIR=<models> npx vitest run tests/integration/asr.int.test.ts`, extended with the user's Hindi clips: how the installed faster-whisper writes numbers said in Hindi (Devanagari digits, ASCII digits or words) | the user's clips | sizes how many Hindi counters survive §16.11's drop of number words in v1; decides the counter's digit format |
 | M22 | Indic shaping in the canvas painter | `await window.__forgeGraphicCheck({ indic: true })`: the EFFECTS §51 clusters (क्ष त्र ज्ञ श्र कि, క్ష త్ర శ్రీ కి స్త) painted by `drawTextOnto` whole, and again one code point at a time (`Array.from`, standing in for libass's `shaping=simple`). Per cluster: the two frames must differ, as `captions.int` requires complex ≠ simple on all 54 frames of each script (EFFECTS.md:4737-4742), and each conjunct's `measureText` advance must be narrower than the sum of its code points'. Then the whole-drawn frames are set beside `captions.int`'s `shaping=complex` and `shaping=simple` frames of the same clusters and judged by eye (two renderers, so no pixel equality is expected), so a loose virama or an i-matra after its consonant is seen. Which fallback font resolved is recorded by comparing each cluster's width against the same cluster drawn in each candidate system font named explicitly | Mac, Surface | whether "text has to be canvas 2D" holds (the research, §4.2); phase 1's and phase 2's Indic exit bars (the research, §7.3); D10 |
 
@@ -19757,21 +19954,21 @@ itself when it shows them wrong.
 | M3 | 41 | 0; you, the development app only | a script enters `CLUSTER_SCRIPTS` only if, on both machines, the cumulative per-cluster paint's last frame equals the whole word's (mean 0 over the word's box, proposal) for every word listed, and the count shows the current rule (स्कूल two clusters, not three); otherwise that script animates per word (§16.61). Empty until then |
 | M4 | 42 | 0; CI, both runners, through `ciNotice` | each filter found on both builds: §13 lists it "probed, not emitted". `tmix` missing on Windows: motion blur by `tmix` is struck (canvas subframes stay the only route). `alpha=premultiplied` missing: the raw RGBA path is struck. `perspective` missing: the screen card's ffmpeg alternative is struck (phase 3 uses painter B anyway). Never worked around |
 | M5 | 43 | 0; you, the development app | `blur-rise` is offered when a ten-word blur-rise frame's p95 draw is no more than M1's p50 encode on the Surface, so blur at most doubles a frame's bake (proposal); otherwise `resolveGraphicStyle` maps it to `rise` (§6.5) |
-| M6 | 44 | 0 for its Indic and colour parts; 3 whole; you, the development app | Indic through a texture at 0.000 and colour within 2/255 under one colour setting: that setting is phase 3's. Neither: phase 3 is flagged at phase 0's exit and re-planned before it starts; phases 1-2 go on. The 1 px line (phase 3): within 2/255 over black and white, or the compositor's alpha settings change until it is; it is phase 3's exit |
-| M7 | 45 | 3, first, on the compositor's glow seam with both routes built behind it (§6.16; moved from phase 0 on 2026-10-21, above); you | `UnrealBloomPass` is the glow route if, on both machines, alpha outside the shape is 0 and the glow's alpha below 1; else the quad shader (§6.16's two passes). The route not taken is removed. The pmndrs leg is optional, run only from a scratch branch with the package added there and never merged; its result is recorded, and it stays out whatever it shows, because its peer range pins three below 0.187 (the research, §4.9) |
+| M6 | 44 | 0 for its Indic and colour parts; 3 whole; you, the development app | Indic through a texture at 0.000 and colour within 2/255 under one colour setting: that setting is phase 3's. Neither: phase 3 is flagged at phase 0's exit and re-planned before it starts; phases 1-2 go on. The 1 px line (phase 3): within 2/255 over black and white, or the compositor's alpha settings change until it is; it is phase 3's exit (Phase 3, 2026-11-18, the harness page on the Mac: `compositor` PASS, every route against painter A mean 0.000 max 0, the edges max 2, the 1 px line read over black and white within its bar; the development app on the Mac and the Surface: not read. Phase 3's note below) |
+| M7 | 45 | 3, first, on the compositor's glow seam with both routes built behind it (§6.16; moved from phase 0 on 2026-10-21, above); you | `UnrealBloomPass` is the glow route if, on both machines, alpha outside the shape is 0 and the glow's alpha below 1; else the quad shader (§6.16's two passes). The route not taken is removed. The pmndrs leg is optional, run only from a scratch branch with the package added there and never merged; its result is recorded, and it stays out whatever it shows, because its peer range pins three below 0.187 (the research, §4.9) (2026-11-20, the harness page on the Mac: `unreal` and `quad` both PASS; the Surface: not read. By this rule nothing is chosen yet: `GLOW_ROUTE` is `'quad'` and both routes stay in the tree until the Surface is read, then the loser is removed. The pmndrs leg was not run. Phase 3's note below) |
 | M8 | 46 | 1; you, the Mac | `STROKE_TOLERANCE` is the coarsest at which total length agrees with `getTotalLength()` within 0.1 % and every sampled point within 0.5 px at 1080 wide (proposal); our flattening stays node-pure either way. (Measured 2026-11-03 in the Browser pane's Chrome 152, not the app, `0954b3d` and `2bb706d`: over all 23 paths the coarsest within the bar is 0.125, 0.25 failing on length alone at the four-cubic circles r = 20, 30 and 38, worst −0.1615 %; without the circles under r = 40, §6.3's open question, 0.25 passes, worst −0.0683 % at r = 40. Both readings print. Read 2026-11-06/07 in the development app on the Mac and the Surface: the same lengths and verdicts on both. The user's decision of 2026-11-03: M8 slides as a doc decision (M8 over r ≥ 40, or 0.125 later); `STROKE_TOLERANCE` unchanged at 0.25. The notes below) |
 | M9 | 47 | 1; node, anywhere. **Measured 2026-10-27** (`f38f971`; §6.13's Built note, `EFFECTS.md` §61) | `graphicMotion.test.ts` asserts the closed form within 1e-4 of the travel against its reference (§6.13) and prints the figures; a larger difference means the closed form is wrong, not the tolerance, only up to about ω = 5 rad/s at 24 fps with the reference as §6.13 specifies it (semi-implicit Euler, 1,000 substeps a frame, first order), whose own error at ω = 10, ζ = 0.5 reads 1.69e-4 at 24 fps. So the bar is asserted at ω = 4 (largest 5.19e-5, at 24 fps), and at ω = 10 the reference's halving with 2,000 substeps (corrected 2026-10-27, when the build measured it) |
 | M10 | 48 | 2, the perfect-freehand half only, from a scratch branch with perfect-freehand added there and never merged (as M7's pmndrs leg; the harness imports it by a DEV-only dynamic `import()`); you, Mac and Surface | only on a pass does a phase-2 commit add perfect-freehand to `main` with the marker painter and `MARKER_READY` (D7's order). `strokeLook: 'marker'` is offered (§16.60) only if one of the two draw-ons keeps the tapered end's shape from frame to frame behind the moving tip (mean 0 outside the last 5 % of length, proposal) and preview = export ≤ 1/255. The rough.js half is not run in step 3 (§16.60: "rough.js not now") |
 | M11 | 49 | only if M1-M2 fall short; you | a raw RGBA path is then planned as its own change, outside step 3's days, using `overlay`'s `alpha=premultiplied` only if M4 found it on Windows |
-| M12 | 50 | 3; you | the fastest readback at p50 on the Surface that keeps straight alpha through to the PNG is phase 3's bake; `drawImage` stays unless another is at least twice as fast (proposal, §6.16) |
-| M13 | 51 | 1 (the primitives' spec), 3 (a 2.5D counter and a screen card); you | two bakes on one machine must be `framemd5`-equal, or the bake is not deterministic and the phase does not exit. The Mac-against-Surface mean difference is recorded as the golden tolerance; no CI check compares pixels across machines. (Phase 1's harness half built 2026-11-02, `6592a38` and `69c2340`: `primitives` bakes each case twice on the box route and prints the patterns through `m13Line`; on the harness page 46 of 46 PNGs byte-equal per case, which is not this row's run. Read 2026-11-06/07 in the development app: the two bakes equal in all six cases on each machine, the Mac by `framemd5` (46 of 46 frames), the Surface by the user's own SHA-256 run per sequence and the harness's 46 of 46 byte-equal PNGs; the Mac against the Surface recorded as the golden tolerance, mean over the box 0.084-2.030 per case, largest premultiplied gap 5-212, at the anti-aliased edges, not the geometry. The notes below) |
+| M12 | 50 | 3; you | the fastest readback at p50 on the Surface that keeps straight alpha through to the PNG is phase 3's bake; `drawImage` stays unless another is at least twice as fast (proposal, §6.16) (2026-11-20, the harness page on the Mac at 1080×1920: p50 to PNG `drawImage` 30.30 ms, `readPixels` 39.90, `readRenderTargetPixelsAsync` 45.10, all three keeping straight alpha; by the rule, `drawImage` on the Mac; the Surface, the machine the rule names: not read, so the choice waits on it. Phase 3's note below) |
+| M13 | 51 | 1 (the primitives' spec), 3 (a 2.5D counter and a screen card); you | two bakes on one machine must be `framemd5`-equal, or the bake is not deterministic and the phase does not exit. The Mac-against-Surface mean difference is recorded as the golden tolerance; no CI check compares pixels across machines. (Phase 1's harness half built 2026-11-02, `6592a38` and `69c2340`: `primitives` bakes each case twice on the box route and prints the patterns through `m13Line`; on the harness page 46 of 46 PNGs byte-equal per case, which is not this row's run. Read 2026-11-06/07 in the development app: the two bakes equal in all six cases on each machine, the Mac by `framemd5` (46 of 46 frames), the Surface by the user's own SHA-256 run per sequence and the harness's 46 of 46 byte-equal PNGs; the Mac against the Surface recorded as the golden tolerance, mean over the box 0.084-2.030 per case, largest premultiplied gap 5-212, at the anti-aliased edges, not the geometry. The notes below) (Phase 3, 2026-11-20, the harness page on the Mac: `bake3d` baked three cases twice byte-equal, 31 of 31, 46 of 46 and 211 of 211 PNGs, from the harness bridge's files, not real title frames; `framemd5` over real files in the development app, and the Surface: not read. Phase 3's note below) |
 | M14 | 52 | 2; you, blind, on your clips, with `curves: { names, clipId }` (§6.10, §6.11; the key returned in the result for you to save) | run on a counter, then a keyword and a callout (§6.10); the overall pick becomes the restrained presets' `motion.ease` in `GRAPHIC_STYLES`, a template's own differing pick its default (§6.13). Until then `expo-out`. The look rating follows it (§6.10) |
 | M15 | 53 | 2; you mark the onset frames into `tests/fixtures/graphics/onsets.json` (`{ assetId; marks: { word: number; frame: number }[] }`, proposal), and `scripts/measure-onsets.mjs` (proposal) reads it against the transcript's `startMs` | median error within one frame at 30 fps: beats as §6.8 writes them. More: an onset refinement is planned as its own change, outside step 3's days (proposal) |
 | M16 | 54 | 2; node. **Measured 2026-11-10** (`1871004`; §6.15's phase-2 note) | a template whose seconds do not hold its longest fixture label gets its seconds raised in §6.2's table or its label capped, decided in phase 2 (every template holds: nothing raised or capped) |
 | M17 | 55 | 2; you count | `GRAPHICS_PER_MINUTE` = the median graphics per minute of the five clips you call pro, rounded down (proposal); null until counted. Zooms and sounds per minute are recorded beside it. (2026-11-11, lane T3, `1a14bd4`: `GRAPHICS_PER_MINUTE` exists in `graphics/budget.ts`, null, and `applyBudget`'s rule 4 reads it, or `options.perMinute`, which the test injects: half-open 60 s windows over onsets, lower thirds counted; unmeasured, still yours) |
 | M18 | 56 | 2; you, the Mac: `mix.wav` is the audio of an export of one of your clips with a graphic's sound on a beat, exported by the app with the sound on (`ffmpeg -i <export> -vn mix.wav`), one per sound | the row's "pop" is `pop_bubble.wav`, a candidate role (§6.14). Each role's level under speech is set where you judge speech intelligible; the integrated loudness and the momentary maximum are recorded; `GRAPHIC_SOUND_DB` and `GRAPHIC_SOUND_CAP` are revised with them. (2026-11-11, lane T3, `5c52691`: both exist in `graphics/sound.ts` at this section's proposals, `GRAPHIC_SOUND_CAP` 3 per footage clip and `GRAPHIC_SOUND_DB` tick −24, whoosh −26, the gain capped at `MAX_SOUND_GAIN`; under `energetic` one bars or steps card fills the cap; unmeasured, still yours) |
 | M19 | 57 | 1; you write the PNGs in the development app, then a node read | `STROKE_MIN_PX` is the smallest of 1, 2 and 3 px at 1080 wide whose centre line keeps U and V within 8 levels of the PNG's after the `format=yuva420p` overlay (proposal); the research's starting value is 2 px. The read is a gated case in `graphic.int` over the folder the bake wrote (`FORGE_GRAPHIC_FRAMES=<folder>`, proposal). (Built and measured in part 2026-11-03, `0954b3d` and `2bb706d`, on the harness page's PNG and the Mac's 4.4 build: no width of the three is within the bar, 1 px U 63, 2 px 54, 3 px 34; the cause measured, the transparent pixels' black chroma averaged in by `format=yuva420p`, the exit geq's round trip up to 7 levels more. Read 2026-11-06/07 over the development app's PNGs: the Mac 1 px U 64 V 36, 2 px U 54 V 31, 3 px U 34 V 19; the Surface's 2018 build U 63 V 35, U 54 V 30, U 34 V 19; no width within the bar on either, background, ink Y and reference 0 on both. The user's decision of 2026-11-03: M19 slides to a contained pre-beta half-day piece (the stroke colour bled into alpha-0 neighbours in the bake's encode path, with a render test); `STROKE_MIN_PX` unchanged at 2. The notes below) |
-| M20 | 58 | 3; you | legible at rest and its moving frames within M1's whole-hold budget: the card ships as §6.16 plans it. Legible but slow: tilt-in only, no pull-back. Not legible: the card is not offered, and a recording gets the dim and graphics only. The run also records the card's hand-off (frame `L` of the card against the export's frame `L` without the card), whose bar is 2/255 mean (proposal, §6.16) |
+| M20 | 58 | 3; you | legible at rest and its moving frames within M1's whole-hold budget: the card ships as §6.16 plans it. Legible but slow: tilt-in only, no pull-back. Not legible: the card is not offered, and a recording gets the dim and graphics only. The run also records the card's hand-off (frame `L` of the card against the export's frame `L` without the card), whose bar is 2/255 mean (proposal, §6.16) (Not run by anyone, 2026-11-20: the option `{ screenCard: '<path>' }` exists since `3d55a47` and throws on the harness page by design, the development app only; the Surface: not read. Phase 3's note below) |
 | M21 | 59 | 0, any time before phase 2's counter (2026-11-07: the counter was built first, so now before T2's validator and prompt); you, with your Hindi clips | the counter's Hindi digits follow what the installed model writes (Devanagari or ASCII); the share written as words, which §16.11 drops in v1, is recorded beside it (since 2026-11-07 it bears on how a value is written into `data.value`, not on how the counter draws it, §6.19's gate paragraph) |
 | M22 | 60 | 0; you, the development app on the Mac and the Surface | **Shaped on both** (every cluster's frames differ, every conjunct narrower, the eye agrees with the libass complex sheet): "text has to be canvas 2D" holds and phase 1 starts; §6.20's fonts still land before phase 1's Indic check, so both machines draw the same letters (§16.63). **A cluster unshaped, and the font that drew it lacks the script** (its width equals a missing-glyph box's, or no candidate font matches): §6.20's fonts move into phase 0, M22 runs again with them named first, and phase 1's text work starts when it passes. **Unshaped with a font that has the script**: the shaper is not running, so the research's choice of painter (its §4.2) reopens as a decision for you (the next free §16 number) before any graphic draws Indic text. While either cause is open, no phase-1 commit that draws text lands; the rename, the guards, the motion module and the stroke may (this sentence is the one statement of it; §6.3 and §6.12 point here). The font each cluster resolved to is found by drawing it in each installed candidate face named explicitly; a candidate counts as installed only if a Latin probe drawn in it differs from the same probe in a family that does not exist |
 
@@ -20479,6 +20676,75 @@ values, dated, as the steps above carry their Built notes (it did,
 >   `GRAPHIC_SOUND_DB` −24 / −26 (`sound.ts`); §6.9's and §6.14's Built
 >   notes. Nothing phase 2 placed has been heard or exported yet (no
 >   caller in the app).
+>
+> **Phase 3's measurements on the harness page, read 2026-11-18 to 20.**
+> Every figure below was read by the session on the harness page
+> (`http://localhost:5199/harness.html`, the Browser pane's Chrome, WebGL
+> on), on the Mac, at a 540×960 frame unless it says 1080×1920; none in
+> the development app, none on the Surface. So none of these is the run
+> its row asks for, and nothing was decided. The commands and the rest
+> of the figures: `EFFECTS.md` §61's "Phase 3, 2026-11-18 to 20".
+>
+> - **M6 whole** (row 44). `await window.__forgeGraphicCheck({ compositor:
+>   true })`, 2026-11-18 at `b2d19f4`, read again unchanged 2026-11-19
+>   and 20: PASS. Every route against painter A mean 0.000, max 0; the
+>   edges max 2 (edge pixels 94470 / 1788 and 89883 / 1059 on a fresh
+>   page); `info.memory` back to 0 / 0 after `dispose()`; with WebGL
+>   pretended missing, `createCompositor` null, the note, the frame
+>   against the flat twin mean 0.000 max 0. **The Surface: not read**;
+>   the development app on the Mac: not read.
+> - **M7** (row 45). `await window.__forgeGraphicCheck({ glow: ['unreal',
+>   'quad'] })`, 2026-11-20. `unreal`: the frame's corners max 0 over 1024
+>   px; alpha beyond the 24 px reach max 27 over 468476 px (information
+>   only on this route); the glow outside the shape max 86 over 19584 px;
+>   over a half-opaque panel 0 of 518400 px; the base against painter A
+>   mean 0.000 max 0; 2.90 ms a frame (median of 30); memory 0 / 0 → 0 /
+>   0; PASS. `quad`: corners max 0 over 1024 px; beyond the reach max 0
+>   over 468476 px; the glow outside the shape max 121 over 16252 px;
+>   panel 0 of 518400; base mean 0.000 max 0; 2.60 ms a frame; memory 0 /
+>   0 → 0 / 0; PASS; against its CPU reference 121 (121) at strength 1
+>   and 217 (217) at 2, PASS. On 2026-11-18 the same call read 4.3 ms
+>   (quad) and 3.1 ms (unreal): the ms figures move from run to run. "M7
+>   on this machine: unreal and quad pass." **Both routes pass on the
+>   Mac.** The row's rule takes `unreal` only if it passes on both
+>   machines, else `quad`: **the Surface: not read**, so no route is
+>   chosen; `GLOW_ROUTE` is `'quad'` and both routes stay in the tree
+>   until it is read there, then the loser is removed (§16.78).
+> - **M12** (row 50). `await window.__forgeGraphicCheck({ readback:
+>   ['drawImage', 'readPixels', 'readRenderTargetPixelsAsync'], frames:
+>   120 })`, 2026-11-20, the counter-en hero under neon at 1080×1920:
+>   `drawImage` to pixels p50 19.40, p95 21.70 ms, to PNG p50 30.30, p95
+>   33.10; `readPixels` 29.20, 34.00; 39.90, 46.30;
+>   `readRenderTargetPixelsAsync` 34.20, 38.70; 45.10, 49.70. Each PNG
+>   against its frame: alpha off by 0, colour by 1 over 157792 pixels,
+>   114789 of them at a partial alpha: keeps straight alpha. "readback
+>   verdict: fastest at p50 that keeps straight alpha drawImage; by the
+>   rule (drawImage unless another is at least twice as fast) drawImage".
+>   **By the rule, `drawImage` stays on the Mac**; the bake is unchanged.
+>   The row names the Surface: **the Surface: not read**, and the choice
+>   waits on it (§16.79).
+> - **M13** (row 51), phase 3's half. `await
+>   window.__forgeGraphicCheck({ bake3d: true })`, 2026-11-20: "bake3d
+>   verdict: PASS over 13 cases"; baked twice byte-equal, the counter-en
+>   hero under neon 31 of 31 PNGs, the screen card's tilt-in under clean
+>   46 of 46, under energetic 211 of 211; "bake3d memory: … 0/0 → 0/0".
+>   **On the harness page the files are the harness bridge's, not real
+>   title frames**: M13's `framemd5` over real files is the development
+>   app's and was not run; **the Surface: not read**, so no phase-3
+>   golden tolerance is recorded.
+> - **M20** (row 58). **Not run by anyone.** Its option, `await
+>   window.__forgeGraphicCheck({ screenCard: '<a 1080p screen recording>'
+>   })`, exists since `3d55a47` (fix `61365a4`); it needs the development
+>   app and a real 1080p screen recording (laid at most `M20_MAX_S` = 20
+>   s, 30 fps), and on the harness page it throws by design. It reads the
+>   card's side of the hand-off only (§16.85). **The Mac and the Surface:
+>   not read.**
+> - **Not phase 3's rows, read with them**: the `depth` (PASS over 12
+>   cases), `screenCard` (PASS over 4, with the edge sweep) and `focus`
+>   options, and the hero's landing line (outside the verdict; one case of
+>   four over the proposed `HERO_LANDING_BAR`, by max: counter-en under
+>   energetic, mean 0.321, max 20); `EFFECTS.md` §61. The Surface: not
+>   read.
 
 ### 6.16 Phase 3 — The three.js compositor and 2.5D
 
@@ -25986,6 +26252,224 @@ with a dated block at its top.
     words** replaces any corrections. Not designed and not estimated
     here; listed in `BETA.md` §3, "After the beta". It is not a step of
     this plan.
+
+**Added 2026-11-20, from phase 3's build (§6.16, 2026-11-18 to 20);
+OPEN.** Each is a named constant, a stated departure or a gap the
+builders, critics, fixers or the session left to you (the facts of the
+session's record, its section 8); the session decided none. A
+recommendation is given only where a builder, a fixer or the session's
+record states one; otherwise the entry says what reading would settle
+it. Everything here was read on the harness page on the Mac, never in
+the development app or on the Surface.
+
+77. **M1's budget for a glowing screen card above about 41 fps.** A
+    glowing card's moving frames are `min(total, L + 1 + round(EDGE_SWEEP_S
+    × fps))`, with `EDGE_SWEEP_S` 6: 169, 176, 211, 351 and 421 at 24, 25,
+    30, 50 and 60 fps. §6.16 names only 30 fps (211, under M1's 300-frame
+    whole-hold budget); every rate above about 41 fps is over it. Also,
+    every edit of a glowing card now rebakes 211 canvas-sized PNGs at 30
+    fps where it was 46. The choices piece 5's builder and fixer named:
+    shorten the loop at high rates; accept it; or time it with M20 at 60
+    fps on the Surface. No recommendation yet; M20 timed at 60 fps on the
+    Surface would settle whether the cost matters.
+
+    **Answer: OPEN.** Yours.
+78. **M7's route, and the loser's removal.** Both routes pass on the Mac's
+    harness page (§6.15's phase-3 note). §6.16's rule stands as the plan's
+    own: `unreal` only if it passes on both machines, else `quad`. What is
+    left is your reading on the Surface in the development app (`({ glow:
+    ['unreal', 'quad'] })`), then the losing route removed from the tree
+    (code work after the reading); until then `GLOW_ROUTE` is `'quad'` and
+    both stay. With it, the readings piece 2's fixer marked as needing
+    your word, as its interpretation of the plan and not its words: M7's
+    corners bar (`CORNER_PX` 16, alpha exactly 0 there), the bar on alpha
+    beyond the reach applying to `quad` alone, and `UNREAL_GAIN` 9
+    (derived from three r186's composite and pinned by a test against the
+    three source).
+
+    **Answer: OPEN.** Yours: the Surface's reading, then the rule decides.
+79. **M12's rule, and the async route's target.** On the Mac `drawImage`
+    is fastest at p50 and keeps straight alpha, so by the rule (`drawImage`
+    unless another is at least twice as fast) it stays; the rule names the
+    Surface, not read. Two things to weigh if another route ever wins
+    there: `readRenderTargetPixelsAsync`'s render target is not
+    antialiased (three r186 invalidates a multisampled target's colour
+    after resolving it), so choosing that route would change the bake's
+    edges, which piece 6's fixer left for you to weigh against the canvas
+    route; and M12's straight-alpha reading for `readPixels` and the async
+    route goes through `straightTopDown` on both sides, so an
+    un-premultiply error there would cancel out on screen (its arithmetic
+    is node-tested). No recommendation; M12 on the Surface settles whether
+    the question arises.
+
+    **Answer: OPEN.** Yours.
+80. **The hero rule's reach, and the preview compositor's cap.** The
+    hero rule runs only in `applyGraphics`: not on Keep, Add, a move or a
+    split, so moving a hero onto a clip that has another, or a split, can
+    leave two heroes on one clip; pressing Tilt on the hero keeps `hero`
+    (and its glow), "the same choice again is no edit" (piece 3's builder,
+    recorded by its fixer, not changed; the plan names `applyGraphics`
+    only). The Preview keeps at most `PREVIEW_COMPOSITOR_CAP` 3
+    compositors, the least recently drawn evicted only once it has not
+    been drawn for `PREVIEW_COMPOSITOR_HOLD_MS` 250 (both proposals): with
+    four or more deep clips on one frame while paused, the fourth stays
+    flat until something repaints. No recommendation; whether the rule
+    should run on those edits is yours, and the cap a reading on the
+    Surface's memory.
+
+    **Answer: OPEN.** Yours.
+81. **The screen card after it exists** (piece 4, run B). Each left by
+    its fixer:
+    - the refusals are not checked again once a card exists (a grade or
+      look added later, `fadeIn`, a transform's opacity, `transitionIn`,
+      a chroma key); each makes the landing pop;
+    - a split inside the move, or a tail trim below L + 2, keeps a card
+      that never lands (realign does not drop it; only the dock refuses
+      such a clip);
+    - the 12-track ceiling of the lane rule removes a card with its keys
+      silently, with no notice and no store test (the fixer: "the owner
+      may want a note on screen");
+    - a card's preview pull holds L + 1 decoded frames while the card is
+      in the preview, about 257 MB for a 1080p recording at 30 fps and
+      twice that at 60, a deliberate trade for a flicker-free move (the
+      fixer suggested decoding at the frame's display size, or capping the
+      held pulls, especially for the Surface);
+    - `GRAPHIC_TEMPLATES`' 600 s row against a card's length
+      (`screenCardSpec`'s seconds = the recording's duration): the fixer
+      named two ways, stating the card's exemption or the dock refusing
+      longer recordings;
+    - ExportStrip's note for a dropped card reads "A card could not be
+      redrawn, so its last picture is used: …", while the export leaves
+      the card out and plays the recording from its first frame (the
+      template predates the piece and reads the same for dropped moments
+      and graphics; a critic suggested "A graphic was left out of the
+      export: <reason>", with a census check);
+    - a project with a card, opened by an older build (`b2d19f4`), shows
+      no card while the two keys still hide the recording for 31 frames;
+    - a user's own key pair shaped like the card's could be taken for it.
+
+    No recommendation beyond the fixer's two suggestions quoted; each is
+    yours to accept or overrule.
+
+    **Answer: OPEN.** Yours.
+82. **The look constants of phase 3**, one rating: the hero's 24° settle;
+    the parallax and dolly figures; the focus blur's 10 px in absolute
+    pixels (the glow radius is a fraction of the short side); tilt
+    pivoting on the frame's centre line; dolly's "value fastest" not
+    visible; the label painted behind the value during a multi-plane move
+    (piece 3's builder: keeping it in front means changing the plan's z
+    table, the label on the value's plane for example); the 13-tap focus
+    blur's steps, seen by the session at 3×; the edge sweep: span
+    `EDGE_SWEEP_SPAN` 0.12, `EDGE_SWEEP_S` 6 s, the start corner
+    (`EDGE_SWEEP_START` 0), white under energetic (the style's accent as
+    painted), thin sides on a full-width box. Every one is a proposal;
+    no look was rated by you. No recommendation; your eye on the sheets in
+    the development app settles them, with the look rating (§6.10).
+
+    **Answer: OPEN.** Yours.
+83. **A WebGL context lost in the middle of a session** (a GPU reset, sleep
+    and resume) is not detected: `paintDrawList3d` would draw into it and
+    return a blank canvas, and the bake would write transparent PNGs with
+    no note. The moments already share the exposure. A critic of piece 1
+    suggested checking `isContextLost()` at the top of `paintDrawList3d`
+    and falling back to painter A with the WebGL-missing note; the fixer
+    declined it for that piece (not caused by the compositor; a fallback
+    mid-bake needs its own note path). No recommendation from a builder
+    or fixer; a sleep-and-resume on the Surface would show whether it
+    happens.
+
+    **Answer: OPEN.** Yours.
+84. **The proposal bars, and run A's departures from §6.16's words.**
+    Each bar is a named constant, a proposal no one has decided:
+    `HERO_LANDING_BAR` (mean ≤ 0.5, max ≤ 16; outside the `depth`
+    verdict; on 2026-11-20 one case of four read over it by max,
+    counter-en under energetic, mean 0.321, max 20, where the style's ease
+    overshoots), `EXPORT_PARITY_BAR` (reusing `TEMPLATES_BAR`'s 1 level),
+    `READBACK_BAR`, `HANDOFF_BAR` (2 levels), `M20_MAX_S` 20,
+    `EDGE_SWEEP_BAR`, `DEPTH_BAR`, `SCREEN_CARD_BAR`. Run A's departures:
+    the layers uploaded premultiplied, where §6.16 has them straight, and
+    the glow's alpha added ONE + ONE; the edge bar, 3 at alpha 160. And
+    `bake3d`, a new harness option §6.11's table as planned did not name
+    (it holds M13's bakes, preview = export and disposal, so `depth` and
+    `screenCard: true` stayed as they were). No recommendation; the bars
+    are settled by your runs on both machines.
+
+    **Answer: OPEN.** Yours.
+85. **M20's render side on a real file.** M20 reads only the card's side
+    of the hand-off on a real recording (the baked frame L against the
+    pulled frame L); §6.15's wording, "frame `L` of the card against the
+    export's frame `L` without the card", is read by no option on a real
+    file. `graphic.int` reads the render side with a stand-in through the
+    real plan, and `EFFECTS.md` §36 covers the pull. Piece 6's fixer left
+    it to "the docs pass, or a later one-frame export reading". No
+    recommendation; this record does not change §6.15's row.
+
+    **Answer: OPEN.** Yours.
+
+**Added 2026-11-20, from your words of 2026-11-18 in chat.**
+
+86. **The order before the beta, and its deadline.** On 2026-11-18 you
+    set the beta's deadline, 25 December 2026, listed five items from your
+    recordings, and agreed an order.
+
+    **Answer (2026-11-18): phase 3 whole first** ("i dont want to
+    interrupt it"), **then, before the beta, the timeline's scroll** (the
+    track-header column and its lanes did not scroll together, with no
+    proper scroll controls), **a choice of speech model in Settings**
+    (only faster-whisper `small` was allowed, and Telugu, Hindi and
+    Hinglish came out wrong) **and Remove and folders on the uploads** (no
+    Remove and no right-click menu; then simple folders). The fifth,
+    traditional keyframing (a path drawn on the picture, a bezier graph,
+    a multi-point speed graph), after the beta, is **the session's
+    recommendation**: you did not object and have not confirmed it. The
+    other item needs nothing (changing one caption word works; smart
+    placement waits for Florence-2). You keep Florence-2's caption
+    placement (1g, 3 days, gated) and step 7's saved template (2.5 days)
+    before the beta. The three items are not steps of this plan (§2's
+    2026-11-18 note). **All three were built and pushed on 2026-11-20**:
+    the status block at the top.
+87. **The folders as built: what you meant?** Your words (2026-11-18):
+    "when we upload we need to make the user folder like option that user
+    has like same day or year photos folder, that matches his docs, and
+    also right click options, ( we have non to remove a file from the
+    upload section )". **The session read them** as: one level of folders
+    that live in the project and never on disk, and a folder dropped from
+    Finder or Explorer becoming a folder of the same name. That is what
+    was built (`a0a16af`, `49c836e`; `WHERE-THINGS-ARE.md`'s Upload): one
+    level, no nesting; in the project, never on disk; a dropped folder
+    becomes one of the same name with every photo, video and sound in it
+    and its subfolders, flattened; no folder picked through the Upload
+    button (on Windows one dialog cannot offer files and folders
+    together); no folders made automatically by date. Your "same day or
+    year photos folder" could also mean folders made by date, or the
+    folders on disk mirrored; the session did not ask.
+
+    **Answer: OPEN.** Yours: whether this is what you meant.
+88. **What the three items left to you** (2026-11-20; the two runs' open
+    lists and the session's record):
+    - whether CI should probe the three speech models' URLs (no step
+      does: `probe-pack-urls.mjs` reads only the pack manifest, so your
+      first press is the pins' first real check);
+    - a free-disk check before a model's press (none; Large needs about
+      2.9 GB plus the partial copy);
+    - the references Remove leaves dangling, as timeline Delete leaves
+      them: another clip's `matte.clipId`, a moment's from and to, a kept
+      graphic's `subject.clipId`, `grounding.assetId` and
+      `anchor.assetId`, and a screen card's `graphic.data.clipId` (it
+      draws without footage); and a subject-track job of a removed file
+      runs on in main (its result is refused);
+    - macOS packages (`.photoslibrary`, `.fcpbundle`, `.app`) dropped on
+      the panel are walked as folders;
+    - the New folder field sits at the end of the list (with many loose
+      files its autofocus scrolls down);
+    - no busy state while a big drop is listed and probed;
+    - keyboard reach: tiles take no focus, focus does not move into the
+      menus, Move to opens only on hover, the chevron has no
+      `aria-expanded`.
+
+    No source gives a recommendation for any of these.
+
+    **Answer: OPEN.** Yours.
 
 ---
 

@@ -26,6 +26,23 @@
 > (18.5 days, 24.5 with phase 4) come after. On 2026-11-15 the user also
 > put captions as items on the timeline after the beta (`CLIPS.md`
 > §16.76; §3 below).
+>
+> **2026-11-18: the deadline, 25 December 2026** (the user's), and three
+> items before the beta, agreed the same day with an order (`CLIPS.md`
+> §16.86, §2's 2026-11-18 note): `CLIPS.md` §6.16's phase 3 whole first,
+> then the timeline's scroll, a choice of speech model, and Remove and
+> folders on the uploads (§2 below, "Three items before the beta"; not
+> R steps and not steps of `CLIPS.md`). Traditional keyframing comes
+> after the beta by the session's recommendation, which the user did not
+> object to and has not confirmed (§3 below). **2026-11-20: phase 3 is
+> built** (`31e83b2..2236a00`, green on both runners at `2236a00`); its
+> exit readings are left, all the user's: the development app on the Mac
+> and everything on the Surface (`CLIPS.md` §6.12's "Phase 3's state,
+> 2026-11-20"; phase 2's exit is still open too). **The three items are
+> done on the build side, 2026-11-20**, pushed through `49c836e`. So what
+> is left of `CLIPS.md` before the beta: phase 2's and phase 3's exit
+> readings, step 4, 1g, step 6's three 3D templates and step 7, then
+> R1–R12, R13 and R14 here.
 
 ## 0. What "beta" means
 
@@ -81,6 +98,68 @@ resumes.
 
 ## 2. The steps
 
+### Three items before the beta, agreed 2026-11-18 — DONE 2026-11-20 on the build side
+
+The user listed them from their recordings on 2026-11-18 and put them
+after `CLIPS.md`'s phase 3 and before the beta (`CLIPS.md` §16.86). They
+are not R steps and not steps of `CLIPS.md`, and no day total here or
+there changes for them (the session's rough estimates, said on
+2026-11-18: about half a day, about two days, about one day plus one).
+Each was built, read on the harness page on the Mac, pushed and green on
+both CI runners on 2026-11-20; nothing of them has been read in the
+development app or on the Surface.
+
+1. **The timeline's scroll — DONE 2026-11-20** (`b38863b`). Was: the
+   track-header column scrolled on its own and the lanes beside it did
+   not, and the scrollbars were drawn only under the pointer. Now
+   (`src/renderer/src/components/Timeline.tsx`): the lanes
+   (`data-timeline-lanes`) are the one scroller, both ways; the header
+   rows (`data-timeline-headers`) follow them up and down by a
+   `translateY` (`syncHeaders`) and never scroll themselves; a wheel over
+   the headers scrolls the lanes; the two scrollbars are always drawn, 12
+   px (`.timeline-scroll`, `styles.css`); `HEADER_WIDTH` is 172 (was 128)
+   and each track's Remove is drawn at 0.6 opacity without a hover.
+   `tests/follow.test.ts`, mutation-checked. CI run 44729664926.
+   **Left, the user's**: the development app, and the Surface (touch, and
+   Windows' classic scrollbars). `WHERE-THINGS-ARE.md`'s Timeline.
+2. **A choice of speech model — DONE 2026-11-20** (`161450a`, `3da8761`,
+   `716a82a`, `80f92a8`, `1b366ef`). Was: only faster-whisper `small`
+   (`src/shared/sidecar/protocol.ts`), and Telugu, Hindi and Hinglish came
+   out wrong. Now: `asr.model` and `asr.transcribe` take `params.model`,
+   one of `SPEECH_MODEL_NAMES` (`'small'`, `'medium'`, `'large-v3'`,
+   `src/shared/asr/speechModel.ts`; omitted, `'small'`), each pinned to one
+   commit; Settings → AI helper (Python) shows "Small · 464 MB · fastest",
+   "Medium · 1.4 GB · more accurate, slower" and "Large · 2.9 GB · most
+   accurate, slowest", each absent model with its own press "Get the
+   speech model · <size>"; choosing never downloads; main reads the
+   choice at each ask and sends it, whatever the window sends; the helper
+   keeps one model loaded at a time. CI run 44800769033. **Left, the
+   user's**: the real Medium and Large downloads (nothing was downloaded
+   in the build), and whether Hindi, Telugu and Hinglish land better with
+   them, and their speed on the Mac and the Surface: not measured.
+   `CLIPS.md` §3a.4's note of 2026-11-20, `SIDECAR.md`.
+3. **Remove, a right-click menu and folders on the uploads — DONE
+   2026-11-20** (`bb21eee`, `5b9160a`, `a0a16af`, `49c836e`). Was: no
+   Remove and no right-click menu on the Upload panel. Now
+   (`src/renderer/src/components/MediaPool.tsx`): a right-click on a tile
+   opens its menu, Add to timeline, Transcribe (a file with sound),
+   Relink… (a missing file), "Show in Finder" / "Show in Explorer" / "Show
+   in folder" by platform, Move to, and last "Remove from project", which
+   never touches the file on disk: an unused file goes at once (one undo
+   step), a used one asks first ("Used by 3 clips on the timeline",
+   "Remove it and its 3 clips", "Keep it"), and it waits while a reel, a
+   grid or Direct is building. Folders, one level, live in the project
+   (`MediaAsset.folder`, `Project.folders`): "New folder" at the MEDIA
+   heading, rename, remove (its files stay), Move to, drag a tile onto a
+   folder; a folder dropped from Finder or Explorer becomes one of the
+   same name (`src/main/dropFolder.ts`). CI run 44819654305. **Left, the
+   user's**: a real folder drop from Finder and Explorer, Show in Finder
+   or Explorer, the development app and the Surface (its touch screen
+   included); and whether one level of folders in the project is what the
+   user meant, the session's reading of their words, not confirmed
+   (`CLIPS.md` §16.87; the items left to decide, §16.88).
+   `WHERE-THINGS-ARE.md`'s Upload.
+
 ### R1 — No beats is not no ad · half a day
 
 **What is wrong.** `analyseBeats` is awaited unguarded in `direct()`
@@ -114,7 +193,10 @@ below), each with a test that fails when the bug is put back:
 3. **Nothing can be removed from the pool or left out of the ad**: one wrong
    import lands in every ad in that project. A "leave out" toggle per pool
    item in the Director panel, persisted on the asset (`MediaAsset.excluded`),
-   honoured by `buildSlots`.
+   honoured by `buildSlots`. *(2026-11-20: a file can now be removed from
+   the project, "Remove from project" on the Upload panel's right-click
+   menu, below; the "leave out" toggle, which keeps a file in the project
+   and out of the ad, is not built.)*
 4. **No model gives a wedding brief the Energy recipe** because the default
    tone is energetic (`src/shared/director/recipes/index.ts:174`): the tone
    table's fallback reads the brief's words (wedding, product, fashion) before
@@ -475,6 +557,11 @@ not designed, not estimated). Today one word is corrected with the
 Transcript tile's **Edit** (`WHERE-THINGS-ARE.md`). The parts of
 `CLIPS.md` moved after the beta on 2026-11-14 are listed in the top
 block.
+
+**Added 2026-11-18:** traditional keyframing (a path drawn on the
+picture, a bezier graph, a multi-point speed graph), by the session's
+recommendation; the user did not object and has not confirmed it
+(`CLIPS.md` §16.86). Not designed, not estimated.
 
 ## 4. Done means
 
