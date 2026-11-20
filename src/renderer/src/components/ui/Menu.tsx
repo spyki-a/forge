@@ -5,7 +5,7 @@ import { ChevronRight, Check } from 'lucide-react'
  * The app's right-click menu, as pieces: the shell that sits at the pointer
  * and closes itself, an item, a submenu and a divider. The clip's menu
  * (ClipMenu.tsx) was the only one and these were its own; the Upload panel's
- * tile menu (PoolMenu.tsx) is the second, so they live here and both use them.
+ * tile menu (PoolMenu in MediaPool.tsx) is the second, so they live here and both use them.
  */
 
 /** A menu's width; a submenu's, opened to its right. */
@@ -142,6 +142,37 @@ export function useMenuDismiss(onClose: () => void): void {
       window.removeEventListener('keydown', key)
     }
   }, [onClose])
+}
+
+/** How long after a menu's item is pressed the second press of a double-click is still swallowed. */
+export const SECOND_CLICK_MS = 1000
+
+/**
+ * A double-click on a menu item must stop at the item. Its first click runs
+ * the item and the menu closes (or turns into a question) at once, so the
+ * second press lands on whatever is now under the pointer: a pool tile, whose
+ * double-click adds a clip, or the question's own "Remove it and its N
+ * clips". Chromium counts that press as the double-click's second (its click
+ * carries `detail` 2, then a `dblclick` follows), so for a moment after an
+ * item is pressed, a window listener in the CAPTURE phase stops exactly those
+ * two before any element sees them. A fresh single click (`detail` 1) passes.
+ */
+export function swallowSecondClick(ms = SECOND_CLICK_MS): void {
+  const stop = (e: Event): void => {
+    if (e.type !== 'dblclick' && ((e as MouseEvent).detail ?? 0) < 2) return
+    e.preventDefault()
+    e.stopImmediatePropagation()
+    e.stopPropagation()
+    if (e.type === 'dblclick') done()
+  }
+  const done = (): void => {
+    clearTimeout(timer)
+    window.removeEventListener('click', stop, true)
+    window.removeEventListener('dblclick', stop, true)
+  }
+  const timer = setTimeout(done, ms)
+  window.addEventListener('click', stop, true)
+  window.addEventListener('dblclick', stop, true)
 }
 
 /**

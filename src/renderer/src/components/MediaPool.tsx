@@ -3,7 +3,7 @@ import { Captions, FileWarning, Film, Image as ImageIcon, Link2, Loader2, Music,
 import type { MediaAsset } from '@shared/timeline'
 import { formatDuration, formatBytes } from '@shared/time'
 import { framesToSeconds } from '@shared/timeline'
-import { useEditor } from '../store'
+import { removeWaits, useEditor, type PoolMenuTarget } from '../store'
 import { mediaUrl } from '../media'
 import { setDragPayload } from '../dragPayload'
 import type { DragPayload } from '@shared/dragPayload'
@@ -12,8 +12,8 @@ import { NEEDS_SPEECH_MODEL, SPEECH_MODEL_BUSY, STOP_SPEECH_MODEL, speechModelLa
 import { SIDECAR_METHODS } from '@shared/sidecar/protocol'
 import { helperCan } from '@shared/sidecar/helperCan'
 import { speechFetchText, transcribeGate, type TranscribeGate } from '@shared/sidecar/row'
-import { assetClipCount } from '@shared/edit/removeAssets'
-import { MENU_WIDTH, MenuDivider, MenuItem, MenuShell, SUBMENU_WIDTH, useMenuDismiss } from './ui/Menu'
+import { assetClipCount, assetClipsGoing } from '@shared/edit/removeAssets'
+import { MENU_WIDTH, MenuDivider, MenuItem, MenuShell, SUBMENU_WIDTH, swallowSecondClick, useMenuDismiss } from './ui/Menu'
 
 const ICON = { video: Film, audio: Music, image: ImageIcon }
 
@@ -158,12 +158,7 @@ export function SpeechModelPress({ inline = false }: { inline?: boolean } = {}):
   )
 }
 
-/** Where a tile's menu was opened, and on which file. */
-export interface PoolMenuTarget {
-  assetId: string
-  x: number
-  y: number
-}
+export type { PoolMenuTarget }
 
 /** The menu's last item. It takes the file out of the PROJECT; the file on disk is never touched. */
 export const REMOVE_FROM_PROJECT = 'Remove from project'
@@ -183,9 +178,11 @@ export function usedByText(n: number): string {
 export function removeWithClipsText(n: number): string {
   return n === 1 ? 'Remove it and its clip' : `Remove it and its ${n} clips`
 }
+/** The question's remove for a photo only card rings show among others: no clip goes, the photo leaves each ring. */
+export const REMOVE_IT = 'Remove it'
 
 // The room the menu keeps inside the window: itself, a submenu beside it, and its tallest face.
-const POOL_MENU_ROOM = { width: MENU_WIDTH + SUBMENU_WIDTH, height: 220 }
+export const POOL_MENU_ROOM = { width: MENU_WIDTH + SUBMENU_WIDTH, height: 220 }
 
 /**
  * The right-click menu on a pool tile: ClipMenu's look and manner, from the
@@ -206,35 +203,45 @@ const POOL_MENU_ROOM = { width: MENU_WIDTH + SUBMENU_WIDTH, height: 220 }
  * - Remove from project, last and apart. A file no clip plays goes at once;
  *   for one that clips play the menu turns into the question, in place:
  *   "Used by 3 clips on the timeline", "Remove it and its 3 clips", "Keep it".
+ *   A card ring that shows the photo among others is one of the clips asked
+ *   about; only the photo leaves it ("Remove it" when no clip goes). Greyed,
+ *   and refused by the store, while a reel, the grid or the Director is being
+ *   built (`removeWaits`): those place clips of the files they read.
  *
  * Rendered by the pool OUTSIDE the tiles, so nothing done in it can start a
- * tile's drag or reach its double-click.
+ * tile's drag. Its state is the store's (`poolMenu`, `closePoolMenu`), so any
+ * close ends the question. Pressing an item swallows the second press of a
+ * double-click (`swallowSecondClick`), which would otherwise land on the tile
+ * or the question now under the pointer.
  */
 export function PoolMenu({
   target,
-  why,
-  onClose
+  why
 }: {
   target: PoolMenuTarget
   /** The pool's own Transcribe gate (`transcribeWhy`): null when it can be pressed, else the greyed button's reason. */
   why: string | null
-  onClose: () => void
 }): ReactNode {
   const project = useEditor((s) => s.project)
   const transcribing = useEditor((s) => s.transcribing)
   const removingAsset = useEditor((s) => s.removingAsset)
-  useMenuDismiss(onClose)
+  const waits = useEditor(removeWaits)
+  // The store's close: it ends the question too, so Escape or a click elsewhere means "Keep it".
+  const close = useEditor((s) => s.closePoolMenu)
+  useMenuDismiss(close)
 
   const asset = project.assets.find((a) => a.id === target.assetId)
   if (!asset) return null
   const store = useEditor.getState
   const run = (fn: () => void) => (): void => {
     fn()
-    onClose()
+    swallowSecondClick()
+    close()
   }
 
   const clips = assetClipCount(project, asset.id)
   if (removingAsset === asset.id && clips > 0) {
+    const going = assetClipsGoing(project, asset.id)
     return (
       <MenuShell x={target.x} y={target.y} room={POOL_MENU_ROOM} data={['pool-menu', asset.id]}>
         <div data-pool-ask="" className="px-3 py-1.5 text-[12px] leading-snug text-ink-200">
@@ -242,8 +249,10 @@ export function PoolMenu({
         </div>
         <MenuDivider />
         <MenuItem
-          label={removeWithClipsText(clips)}
+          label={going > 0 ? removeWithClipsText(going) : REMOVE_IT}
           danger
+          disabled={waits !== null}
+          title={waits ?? undefined}
           data={['pool-menu-item', 'remove-confirm']}
           onClick={run(() => store().confirmRemoveAsset())}
         />
@@ -288,11 +297,14 @@ export function PoolMenu({
       <MenuItem
         label={REMOVE_FROM_PROJECT}
         danger
+        disabled={waits !== null}
+        title={waits ?? undefined}
         data={['pool-menu-item', 'remove']}
         onClick={() => {
           store().removeAsset(asset.id)
+          swallowSecondClick()
           // A file clips play asks first, here in the menu; one nobody plays is gone, and so is the menu.
-          if (store().removingAsset !== asset.id) onClose()
+          if (store().removingAsset !== asset.id) close()
         }}
       />
     </MenuShell>
@@ -321,13 +333,17 @@ export function MediaPool(): ReactNode {
   const notify = useEditor((s) => s.notify)
   const [over, setOver] = useState(false)
   const depth = useRef(0)
-  const [menu, setMenu] = useState<PoolMenuTarget | null>(null)
-  const keepAsset = useEditor((s) => s.keepAsset)
-  // Closing the menu ends its question too: "Keep it" is what walking away means.
-  const closeMenu = useCallback(() => {
-    setMenu(null)
-    keepAsset()
-  }, [keepAsset])
+  // The tile menu is the store's (`poolMenu`), so its close ends its question wherever it comes from.
+  const menu = useEditor((s) => s.poolMenu)
+  const openPoolMenu = useEditor((s) => s.openPoolMenu)
+  const closePoolMenu = useEditor((s) => s.closePoolMenu)
+  // A menu whose file left the project by another route (an undo of its import) closes, so a redo does not bring it back.
+  const menuLost = menu !== null && !project.assets.some((a) => a.id === menu.assetId)
+  useEffect(() => {
+    if (menuLost) closePoolMenu()
+  }, [menuLost, closePoolMenu])
+  // The panel going (another Shelf tool) takes its menu with it.
+  useEffect(() => closePoolMenu, [closePoolMenu])
 
   const onDrop = useCallback(
     (event: DragEvent) => {
@@ -458,7 +474,7 @@ export function MediaPool(): ReactNode {
                   onContextMenu={(e) => {
                     e.preventDefault()
                     e.stopPropagation()
-                    setMenu({ assetId: asset.id, x: e.clientX, y: e.clientY })
+                    openPoolMenu({ assetId: asset.id, x: e.clientX, y: e.clientY })
                   }}
                   // A clip from a link carries its credit (CLIPS.md §3b.4); until step 5's
                   // Credits block, its line is shown here.
@@ -528,7 +544,7 @@ export function MediaPool(): ReactNode {
         )}
       </div>
 
-      {menu && <PoolMenu target={menu} why={why} onClose={closeMenu} />}
+      {menu && <PoolMenu target={menu} why={why} />}
 
       {over && (
         <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-ink-950/85">

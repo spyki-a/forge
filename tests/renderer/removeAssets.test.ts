@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { assetClipCount, removeAssets } from '@shared/edit/removeAssets'
+import { assetClipCount, assetClipsGoing, removeAssets } from '@shared/edit/removeAssets'
 import { removeWithFollowers } from '@shared/graphics/apply'
 import { removeMany } from '@shared/edit/recipes'
-import { poolProject } from './poolFixture'
+import { asset, poolProject } from './poolFixture'
 
 /*
  * Remove from project, the pure half (src/shared/edit/removeAssets.ts): a
@@ -73,7 +73,9 @@ describe('removeAssets', () => {
 
   it('takes a card ring made only of the photo, and takes the photo out of a ring that has others', () => {
     const before = poolProject()
-    expect(assetClipCount(before, 'photo-b')).toBe(1)
+    // Both rings show it; only the ring made of nothing else goes with it.
+    expect(assetClipCount(before, 'photo-b')).toBe(2)
+    expect(assetClipsGoing(before, 'photo-b')).toBe(1)
     const after = removeAssets(before, ['photo-b'])
     expect(ids(after.clips)).not.toContain('ring-only')
     const mixed = after.clips.find((c) => c.id === 'ring-mixed')
@@ -82,13 +84,36 @@ describe('removeAssets', () => {
     expect(after.parallax!['photo-a']).toBe(before.parallax!['photo-a'])
   })
 
-  it('counts the clips that play a file', () => {
+  it('counts the clips that show a file, and those of them that go with it', () => {
     const project = poolProject()
     expect(assetClipCount(project, 'talk')).toBe(3)
     expect(assetClipCount(project, 'keep')).toBe(1)
     expect(assetClipCount(project, 'unused')).toBe(0)
-    // In a ring with another photo it is not the ring's only picture: the ring stays, so it is not counted.
-    expect(assetClipCount(project, 'photo-a')).toBe(1)
+    // Its own clip and the ring it shares with photo-b: both show it, so both are asked about; only its own goes.
+    expect(assetClipCount(project, 'photo-a')).toBe(2)
+    expect(assetClipsGoing(project, 'photo-a')).toBe(1)
+    expect(assetClipsGoing(project, 'talk')).toBe(3)
+  })
+
+  it('counts a photo that only a ring with other photos shows: one clip shows it, none goes, the ring keeps the rest', () => {
+    const base = poolProject()
+    const project = {
+      ...base,
+      assets: [...base.assets, asset('photo-c', { kind: 'image', path: '/media/photo-c.jpg', hasAudio: false, fps: null })],
+      clips: base.clips.map((c) => (c.id === 'ring-mixed' ? { ...c, carousel: { ...c.carousel!, assetIds: ['photo-a', 'photo-c'] } } : c))
+    }
+    expect(assetClipCount(project, 'photo-c')).toBe(1)
+    expect(assetClipsGoing(project, 'photo-c')).toBe(0)
+    const after = removeAssets(project, ['photo-c'])
+    expect(after.clips.find((c) => c.id === 'ring-mixed')?.carousel?.assetIds).toEqual(['photo-a'])
+    expect(ids(after.assets)).toContain('ring-mixed-card')
+  })
+
+  it('takes the drawn asset of a ring that went with the photo, never another ring’s', () => {
+    const before = poolProject()
+    const after = removeAssets(before, ['photo-b'])
+    expect(ids(after.assets)).not.toContain('ring-only-card')
+    expect(ids(after.assets)).toContain('ring-mixed-card')
   })
 
   it('takes an unused file alone, and gives the same project back for a file that is not there', () => {

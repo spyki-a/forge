@@ -31,13 +31,20 @@ vi.mock('../../src/renderer/src/store', async (importOriginal) => {
   })
   return { ...real, useEditor }
 })
+// The close the menu hands its dismissal (Escape, a pointerdown elsewhere), kept so a test can walk away.
+const held = vi.hoisted(() => ({ dismiss: null as null | (() => void) }))
 vi.mock('../../src/renderer/src/components/ui/Menu', async (importOriginal) => {
   const real = await importOriginal<typeof import('../../src/renderer/src/components/ui/Menu')>()
-  return { ...real, useMenuDismiss: () => undefined }
+  return {
+    ...real,
+    useMenuDismiss: (onClose: () => void) => {
+      held.dismiss = onClose
+    }
+  }
 })
 
-const { useEditor } = await import('../../src/renderer/src/store')
-const { MediaPool, PoolMenu, REMOVE_FROM_PROJECT, TRANSCRIBE_NEEDS_HELPER, revealLabel, transcribeWhy } = await import(
+const { useEditor, REMOVE_WAITS } = await import('../../src/renderer/src/store')
+const { MediaPool, POOL_MENU_ROOM, PoolMenu, REMOVE_FROM_PROJECT, REMOVE_IT, TRANSCRIBE_NEEDS_HELPER, revealLabel, transcribeWhy } = await import(
   '../../src/renderer/src/components/MediaPool'
 )
 const { MenuItem, menuPosition } = await import('../../src/renderer/src/components/ui/Menu')
@@ -59,9 +66,13 @@ function open(project: Project = poolProject()): Project {
   return project
 }
 
+/** A window that can be listened on (the menu's swallow of a double-click's second press), with the bridge. */
+let view: EventTarget & { forge: unknown; innerWidth: number; innerHeight: number }
 beforeEach(() => {
   calls = []
-  vi.stubGlobal('window', { forge: bridge, innerWidth: 1280, innerHeight: 800 })
+  held.dismiss = null
+  view = Object.assign(new EventTarget(), { forge: bridge, innerWidth: 1280, innerHeight: 800 })
+  vi.stubGlobal('window', view)
   vi.stubGlobal('navigator', { platform: 'MacIntel' })
 })
 afterEach(() => {
@@ -251,11 +262,13 @@ function items(node: ReactNode): Item[] {
   return [...own, ...kids.flatMap((k) => items(k as ReactNode))]
 }
 
-const menuOf = (assetId: string, why: string | null = null, onClose: () => void = () => undefined): Item[] =>
-  items(PoolMenu({ target: { assetId, x: 40, y: 40 }, why, onClose }) as ReactNode)
+const menuOf = (assetId: string, why: string | null = null): Item[] =>
+  items(PoolMenu({ target: { assetId, x: 40, y: 40 }, why }) as ReactNode)
 const labels = (assetId: string, why: string | null = null): string[] => menuOf(assetId, why).map((i) => i.label)
-const press = (assetId: string, label: string, onClose: () => void = () => undefined): void => {
-  const item = menuOf(assetId, null, onClose).find((i) => i.label === label)
+/** Opens the tile's menu as a right-click does (the store's `poolMenu`), and presses the item. */
+const press = (assetId: string, label: string): void => {
+  if (state().poolMenu?.assetId !== assetId) state().openPoolMenu({ assetId, x: 40, y: 40 })
+  const item = menuOf(assetId, null).find((i) => i.label === label)
   expect(item, label).toBeDefined()
   item!.onClick()
 }
@@ -335,23 +348,21 @@ describe('the right-click menu on a pool tile', () => {
 
   it('adds as the double-click adds, and closes', () => {
     open()
-    let closed = 0
-    press('unused', 'Add to timeline', () => closed++)
+    press('unused', 'Add to timeline')
     expect(state().project.clips.filter((c) => c.assetId === 'unused')).toHaveLength(1)
-    expect(closed).toBe(1)
+    expect(state().poolMenu).toBeNull()
   })
 
   it('removes an unused file at once and closes; for a used one it stays open and asks, with the number', () => {
     open()
-    let closed = 0
-    press('unused', REMOVE_FROM_PROJECT, () => closed++)
+    press('unused', REMOVE_FROM_PROJECT)
     expect(state().project.assets.map((a) => a.id)).not.toContain('unused')
-    expect(closed).toBe(1)
+    expect(state().poolMenu).toBeNull()
 
-    press('talk', REMOVE_FROM_PROJECT, () => closed++)
-    expect(closed).toBe(1)
+    press('talk', REMOVE_FROM_PROJECT)
+    expect(state().poolMenu?.assetId).toBe('talk')
     expect(state().removingAsset).toBe('talk')
-    const html = renderToStaticMarkup(createElement(PoolMenu, { target: { assetId: 'talk', x: 40, y: 40 }, why: null, onClose: () => undefined }))
+    const html = renderToStaticMarkup(createElement(PoolMenu, { target: { assetId: 'talk', x: 40, y: 40 }, why: null }))
     expect(html).toContain('>Used by 3 clips on the timeline<')
     expect(labels('talk')).toEqual(['Remove it and its 3 clips', 'Keep it'])
     expect(html).not.toContain(REMOVE_FROM_PROJECT)
@@ -360,42 +371,162 @@ describe('the right-click menu on a pool tile', () => {
   it('says one clip in the singular', () => {
     open()
     state().removeAsset('keep')
-    const html = renderToStaticMarkup(createElement(PoolMenu, { target: { assetId: 'keep', x: 40, y: 40 }, why: null, onClose: () => undefined }))
+    const html = renderToStaticMarkup(createElement(PoolMenu, { target: { assetId: 'keep', x: 40, y: 40 }, why: null }))
     expect(html).toContain('>Used by 1 clip on the timeline<')
     expect(labels('keep')).toEqual(['Remove it and its clip', 'Keep it'])
   })
 
   it('"Keep it" closes and changes nothing; "Remove it and its 3 clips" removes them in one step and closes', () => {
     const before = open()
-    let closed = 0
+    state().openPoolMenu({ assetId: 'talk', x: 40, y: 40 })
     state().removeAsset('talk')
-    press('talk', 'Keep it', () => closed++)
-    expect(closed).toBe(1)
+    press('talk', 'Keep it')
+    expect(state().poolMenu).toBeNull()
     expect(state().removingAsset).toBeNull()
     expect(state().project).toBe(before)
+    state().openPoolMenu({ assetId: 'talk', x: 40, y: 40 })
     state().removeAsset('talk')
-    press('talk', 'Remove it and its 3 clips', () => closed++)
-    expect(closed).toBe(2)
+    press('talk', 'Remove it and its 3 clips')
+    expect(state().poolMenu).toBeNull()
     expect(state().project.assets.map((a) => a.id)).not.toContain('talk')
     expect(state().past).toHaveLength(1)
   })
 
   it('is drawn by the pool outside its tiles, each tile marked for the harness', () => {
     open()
+    state().openPoolMenu({ assetId: 'talk', x: 40, y: 40 })
     const html = renderToStaticMarkup(createElement(MediaPool))
-    expect(html).toContain('data-pool-tile="talk"')
-    expect(html).not.toContain('data-pool-menu')
+    // The menu is on the page (else the rest proves nothing)...
+    expect(html).toContain('data-pool-menu="talk"')
+    // ...and inside none of the tiles, each cut out of the markup by its own <div>…</div>.
+    const tiles = [...html.matchAll(/<div[^>]*data-pool-tile="([^"]*)"/g)]
+    expect(tiles.map((m) => m[1])).toContain('talk')
+    for (const m of tiles) {
+      let depth = 0
+      let end = m.index!
+      for (const tag of html.slice(m.index!).matchAll(/<div[\s>]|<\/div>/g)) {
+        depth += tag[0] === '</div>' ? -1 : 1
+        if (depth === 0) {
+          end = m.index! + tag.index! + tag[0].length
+          break
+        }
+      }
+      expect(end, `tile ${m[1]} closes`).toBeGreaterThan(m.index!)
+      expect(html.slice(m.index!, end), `tile ${m[1]}`).not.toContain('data-pool-menu')
+    }
   })
 
-  it('stays inside the window, at the pointer when there is room', () => {
-    const room = { width: 406, height: 220 }
-    const view = { width: 1280, height: 800 }
-    expect(menuPosition(40, 50, room, view)).toEqual({ left: 40, top: 50 })
-    const corner = menuPosition(1270, 790, room, view)
-    expect(corner.left + room.width).toBeLessThanOrEqual(view.width)
-    expect(corner.top + room.height).toBeLessThanOrEqual(view.height)
-    expect(menuPosition(-5, -5, room, { width: 300, height: 100 }).left).toBeGreaterThanOrEqual(0)
+  it('keeps its own room inside the window, at the pointer when there is room', () => {
+    open()
+    expect(POOL_MENU_ROOM.width).toBeGreaterThanOrEqual(196 + 210)
+    const at = (x: number, y: number): { left: number; top: number } => {
+      const html = renderToStaticMarkup(createElement(PoolMenu, { target: { assetId: 'talk', x, y }, why: null }))
+      const style = /data-pool-menu="talk"/.test(html) ? /style="left:(-?[\d.]+)px;top:(-?[\d.]+)px/.exec(html) : null
+      expect(style, html.slice(0, 120)).not.toBeNull()
+      return { left: Number(style![1]), top: Number(style![2]) }
+    }
+    expect(at(40, 50)).toEqual({ left: 40, top: 50 })
+    const corner = at(1270, 790)
+    expect(corner.left + POOL_MENU_ROOM.width).toBeLessThanOrEqual(1280)
+    expect(corner.top + POOL_MENU_ROOM.height).toBeLessThanOrEqual(800)
+    expect(menuPosition(-5, -5, POOL_MENU_ROOM, { width: 300, height: 100 }).left).toBeGreaterThanOrEqual(0)
   })
+
+  it('walking away from the question (Escape, a click elsewhere) is "Keep it": the same tile’s menu shows its items again', () => {
+    const before = open()
+    press('talk', REMOVE_FROM_PROJECT)
+    expect(state().removingAsset).toBe('talk')
+    // The close the menu gave its dismissal, as Escape or a pointerdown elsewhere calls it.
+    menuOf('talk')
+    expect(held.dismiss).not.toBeNull()
+    held.dismiss!()
+    expect(state().poolMenu).toBeNull()
+    expect(state().removingAsset).toBeNull()
+    expect(state().project).toBe(before)
+    expect(labels('talk')).toEqual(['Add to timeline', 'Transcribe again', 'Show in Finder', REMOVE_FROM_PROJECT])
+  })
+
+  it('swallows the second press of a double-click on an item, and lets a fresh click through', () => {
+    const reached: string[] = []
+    const watch = (): void => {
+      for (const type of ['click', 'dblclick']) view.addEventListener(type, (e) => reached.push(`${type}:${(e as MouseEvent).detail ?? 0}`))
+    }
+    const fire = (type: string, detail: number): Event => {
+      const e = new Event(type, { cancelable: true })
+      Object.defineProperty(e, 'detail', { value: detail })
+      view.dispatchEvent(e)
+      return e
+    }
+    for (const [file, label] of [['unused', 'Add to timeline'], ['talk', REMOVE_FROM_PROJECT]] as const) {
+      vi.useFakeTimers()
+      try {
+        // A window of its own each time, so only this press's listener is ahead of the watchers.
+        view = Object.assign(new EventTarget(), { forge: bridge, innerWidth: 1280, innerHeight: 800 })
+        vi.stubGlobal('window', view)
+        open()
+        press(file, label)
+        reached.length = 0
+        // Listened on AFTER the press, as the tile under the pointer and the question's items are.
+        watch()
+        expect(fire('click', 2).defaultPrevented, label).toBe(true)
+        expect(fire('dblclick', 2).defaultPrevented, label).toBe(true)
+        expect(reached, label).toEqual([])
+        expect(fire('click', 1).defaultPrevented, label).toBe(false)
+        expect(reached, label).toEqual(['click:1'])
+      } finally {
+        vi.runAllTimers()
+        vi.useRealTimers()
+      }
+    }
+  })
+
+  it('a photo only a ring with other photos shows is asked about: "Remove it", and the ring keeps the rest', () => {
+    const p = open()
+    open({
+      ...p,
+      assets: [...p.assets, { ...p.assets.find((a) => a.id === 'unused')!, id: 'photo-c', name: 'photo-c.jpg', path: '/media/photo-c.jpg' }],
+      clips: p.clips.map((c) => (c.id === 'ring-mixed' ? { ...c, carousel: { ...c.carousel!, assetIds: ['photo-a', 'photo-c'] } } : c))
+    })
+    const before = state().project
+    press('photo-c', REMOVE_FROM_PROJECT)
+    expect(state().removingAsset).toBe('photo-c')
+    expect(state().project).toBe(before)
+    const html = renderToStaticMarkup(createElement(PoolMenu, { target: { assetId: 'photo-c', x: 40, y: 40 }, why: null }))
+    expect(html).toContain('>Used by 1 clip on the timeline<')
+    expect(labels('photo-c')).toEqual([REMOVE_IT, 'Keep it'])
+    press('photo-c', REMOVE_IT)
+    expect(state().project.assets.map((a) => a.id)).not.toContain('photo-c')
+    expect(state().project.clips.find((c) => c.id === 'ring-mixed')?.carousel?.assetIds).toEqual(['photo-a'])
+    expect(state().past).toHaveLength(1)
+  })
+})
+
+describe('Remove from project waits for a build that places pool files', () => {
+  for (const flag of ['reelBuilding', 'gridBuilding', 'directing'] as const) {
+    it(`while ${flag}: Remove is greyed with the reason, and the store refuses it and the question's answer`, () => {
+      const before = open()
+      useEditor.setState({ [flag]: true })
+      const remove = menuOf('unused').find((i) => i.label === REMOVE_FROM_PROJECT)!
+      expect(remove.disabled).toBe(true)
+      expect(remove.title).toBe(REMOVE_WAITS)
+      state().removeAsset('unused')
+      state().removeAsset('talk')
+      expect(state().removingAsset).toBeNull()
+      expect(state().project).toBe(before)
+      expect(state().past).toHaveLength(0)
+      expect(state().notices.map((n) => n.text)).toContain(REMOVE_WAITS)
+      // A question opened before the build began: its answer waits too.
+      useEditor.setState({ [flag]: false })
+      state().removeAsset('talk')
+      expect(state().removingAsset).toBe('talk')
+      useEditor.setState({ [flag]: true })
+      state().confirmRemoveAsset()
+      expect(state().project).toBe(before)
+      expect(state().past).toHaveLength(0)
+      useEditor.setState({ [flag]: false })
+      expect(menuOf('unused').find((i) => i.label === REMOVE_FROM_PROJECT)!.disabled).toBeFalsy()
+    })
+  }
 })
 
 it('an empty project shows no tile and no menu', () => {

@@ -1919,6 +1919,8 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
   'poolmenu-offline': async (env) => poolMenu(env, 'offline'),
   'poolmenu-used-one': async (env) => poolMenu(env, 'used-one'),
   'poolmenu-used-three': async (env) => poolMenu(env, 'used-three'),
+  'poolmenu-ring': async (env) => poolMenu(env, 'ring'),
+  'poolmenu-busy': async (env) => poolMenu(env, 'busy'),
   'clipmenu-open': async (env) => clipMenu(env, false),
   'clipmenu-detached': async (env) => clipMenu(env, true),
 
@@ -2624,7 +2626,7 @@ async function clipMenu(env: Env, detached: boolean): Promise<Built> {
   }
 }
 
-type PoolMenuState = 'photo' | 'video' | 'transcribed' | 'offline' | 'used-one' | 'used-three'
+type PoolMenuState = 'photo' | 'video' | 'transcribed' | 'offline' | 'used-one' | 'used-three' | 'ring' | 'busy'
 
 /**
  * The Upload tool open on the synthetic media, and a tile's menu opened by a
@@ -2632,10 +2634,13 @@ type PoolMenuState = 'photo' | 'video' | 'transcribed' | 'offline' | 'used-one' 
  * tool is opened HERE, before the census notes the fixed elements on screen,
  * so the menu is the one overlay `show` adds. For the question, `show` then
  * presses the menu's own Remove from project (`data-pool-menu-item="remove"`).
+ * `ring`: a card ring of the three photos, and the menu of the first, which
+ * no clip of its own plays (asked about, "Remove it"). `busy`: a reel being
+ * built (the store's flag, no build), so Remove is greyed with its reason.
  */
 async function poolMenu(env: Env, state: PoolMenuState): Promise<Built> {
   const m = await media(env)
-  const target = state === 'photo' || state === 'offline' ? m.photos[0] : m.video
+  const target = state === 'photo' || state === 'offline' || state === 'ring' || state === 'busy' ? m.photos[0] : m.video
   if (state === 'offline') {
     editor().update((p) => ({ ...p, assets: p.assets.map((a) => (a.id === target.id ? { ...a, offline: true } : a)) }))
   }
@@ -2659,6 +2664,8 @@ async function poolMenu(env: Env, state: PoolMenuState): Promise<Built> {
   }
   const uses = state === 'used-one' ? 1 : state === 'used-three' ? 3 : 0
   for (let i = 0; i < uses; i++) place(target.id)
+  if (state === 'ring') await made(editor().addCarouselClip(topVideoTrack(), 0), 'addCarouselClip')
+  if (state === 'busy') useEditor.setState({ reelBuilding: true })
   editor().select(null)
   await shelfShows('upload')
   return {
@@ -2677,7 +2684,7 @@ async function poolMenu(env: Env, state: PoolMenuState): Promise<Built> {
         })
       )
       await frames()
-      if (uses > 0) {
+      if (uses > 0 || state === 'ring') {
         const remove = document.querySelector<HTMLElement>('[data-pool-menu-item="remove"]')
         if (!remove) throw new Error('census: the pool menu has no Remove from project to press')
         await click(remove)

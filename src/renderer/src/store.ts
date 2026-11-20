@@ -638,6 +638,26 @@ function rebakeWhenTrimRests(clipId: string, rebake: () => Promise<void>): void 
 }
 
 /** Said when Find graphics is pressed while a Find is still asking (docs/CLIPS.md §6.6; not the plan's words). */
+/**
+ * Why Remove from project waits: a build is running that read the pool
+ * before it awaited something (the beats, the depth, the model) and will
+ * place clips of the files it read. A file taken out meanwhile would come back
+ * as clips pointing at an asset that is gone, which no export can draw.
+ */
+export const REMOVE_WAITS = 'Wait for the build that is running to finish'
+
+/** REMOVE_WAITS while a build that places pool files runs (a reel, the grid, the Director), else null. */
+export function removeWaits(s: Pick<EditorState, 'reelBuilding' | 'gridBuilding' | 'directing'>): string | null {
+  return s.reelBuilding || s.gridBuilding || s.directing ? REMOVE_WAITS : null
+}
+
+/** Where a pool tile's right-click menu was opened, and on which file (MediaPool.tsx PoolMenu). */
+export interface PoolMenuTarget {
+  assetId: string
+  x: number
+  y: number
+}
+
 export const GRAPHICS_BUSY_NOTE = 'Graphics are still being found — wait for that run to finish'
 /**
  * Said when Find graphics is pressed on a clip with no transcript, or whose
@@ -1015,6 +1035,11 @@ interface EditorState {
    * project as it is drawn (`assetClipCount`), so it cannot go stale.
    */
   removingAsset: string | null
+  /** The Upload panel's open tile menu, or null. Window state, never saved; one menu at a time. */
+  poolMenu: PoolMenuTarget | null
+  openPoolMenu: (target: PoolMenuTarget) => void
+  /** Closes the tile menu by any route, and ends its question: walking away is "Keep it". */
+  closePoolMenu: () => void
   /**
    * Remove from project (shared/edit/removeAssets.ts): a file no clip plays
    * goes at once, with no question; one that clips play opens the question
@@ -2343,10 +2368,22 @@ export const useEditor = create<EditorState>((set, get) => ({
   },
 
   removingAsset: null,
+  poolMenu: null,
+
+  openPoolMenu: (target) => set({ poolMenu: target, removingAsset: null }),
+
+  closePoolMenu: () => {
+    if (get().poolMenu !== null || get().removingAsset !== null) set({ poolMenu: null, removingAsset: null })
+  },
 
   removeAsset: (assetId) => {
     const { project } = get()
     if (!project.assets.some((a) => a.id === assetId)) return
+    const waits = removeWaits(get())
+    if (waits !== null) {
+      get().notify(waits, 'info')
+      return
+    }
     if (assetClipCount(project, assetId) === 0) takeAssetOut(assetId)
     else set({ removingAsset: assetId })
   },
@@ -2354,7 +2391,14 @@ export const useEditor = create<EditorState>((set, get) => ({
   confirmRemoveAsset: () => {
     const assetId = get().removingAsset
     set({ removingAsset: null })
-    if (assetId !== null) takeAssetOut(assetId)
+    if (assetId === null) return
+    // A build that started while the question was open (a keyboard shortcut can start one): it waits too.
+    const waits = removeWaits(get())
+    if (waits !== null) {
+      get().notify(waits, 'info')
+      return
+    }
+    takeAssetOut(assetId)
   },
 
   keepAsset: () => {
@@ -6681,6 +6725,9 @@ export const useEditor = create<EditorState>((set, get) => ({
       rangeIn: null,
       rangeOut: null,
       clipRun: null,
+      // The Upload panel's tile menu and its question name a file of the project being closed.
+      poolMenu: null,
+      removingAsset: null,
       aspect: aspectOf(project.settings),
       past: [],
       future: []
@@ -6702,6 +6749,8 @@ export const useEditor = create<EditorState>((set, get) => ({
       rangeIn: null,
       rangeOut: null,
       clipRun: null,
+      poolMenu: null,
+      removingAsset: null,
       /*
        * The aspect comes back with the project.
        *

@@ -73,8 +73,12 @@ describe('the way out is wired', () => {
       expect(source(file), file).toMatch(/if \(e\.key === 'Escape'\) \{\s*\/\/[^\n]*\n\s*e\.preventDefault\(\)\s*\n\s*onClose\(\)/)
     }
     // And each right-click menu closes through it.
-    for (const file of ['src/renderer/src/components/ClipMenu.tsx', 'src/renderer/src/components/MediaPool.tsx']) {
-      expect(source(file), file).toContain('useMenuDismiss(onClose)')
+    // (The tile menu's close is the store's closePoolMenu, which also ends its question.)
+    for (const [file, call] of [
+      ['src/renderer/src/components/ClipMenu.tsx', 'useMenuDismiss(onClose)'],
+      ['src/renderer/src/components/MediaPool.tsx', 'useMenuDismiss(close)']
+    ]) {
+      expect(source(file), file).toContain(call)
     }
   })
 })

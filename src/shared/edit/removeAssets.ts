@@ -13,7 +13,8 @@ import { removeMany } from './recipes'
  *   (`removeWithFollowers` over `removeMany`), so what follows a removed clip
  *   follows it here: a graphic's sounds, and the files those sounds brought
  *   that nothing else uses. A card ring made of NOTHING but removed photos
- *   plays only them, so it is one of their clips and goes too; a ring with
+ *   plays only them, so it is one of their clips and goes too, with its own
+ *   drawn 'card ring' asset when no clip left uses that; a ring with
  *   other photos keeps them and loses the removed one from its list (its
  *   preview and its export read the list, so the photo leaves the ring at
  *   once; the ring's cached still is redrawn by its next bake).
@@ -41,6 +42,10 @@ export function removeAssets(project: Project, ids: readonly string[]): Project 
   const cut = removeWithFollowers(project, users, removeMany)
   const kept = new Set(cut.clips.map((c) => c.id))
   const goneClips = new Set(project.clips.filter((c) => !kept.has(c.id)).map((c) => c.id))
+  // A ring that went takes its own drawn asset (the 'card ring' tile, never a user's file) when no clip left uses it.
+  for (const c of project.clips) {
+    if (c.carousel !== undefined && goneClips.has(c.id) && !cut.clips.some((k) => k.assetId === c.assetId)) going.add(c.assetId)
+  }
 
   const inRing = (c: Clip): boolean => c.carousel !== undefined && c.carousel.assetIds.some((id) => going.has(id))
   const clips = cut.clips.some(inRing)
@@ -79,8 +84,17 @@ function clipsPlaying(project: Pick<Project, 'clips'>, ids: ReadonlySet<string>)
   )
 }
 
-/** How many clips on the timeline play this asset: what Remove from project asks about before taking them. */
+/**
+ * How many clips on the timeline show this asset: what Remove from project
+ * asks about before it changes any of them. A card ring that shows the photo
+ * among others counts, though only the photo leaves it (`assetClipsGoing`).
+ */
 export function assetClipCount(project: Pick<Project, 'clips'>, assetId: string): number {
+  return project.clips.filter((c) => c.assetId === assetId || (c.carousel?.assetIds.includes(assetId) ?? false)).length
+}
+
+/** How many of those clips Remove from project takes: the question's "Remove it and its N clips". */
+export function assetClipsGoing(project: Pick<Project, 'clips'>, assetId: string): number {
   return clipsPlaying(project, new Set([assetId])).length
 }
 
