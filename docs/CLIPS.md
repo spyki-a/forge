@@ -3537,7 +3537,9 @@ the lock or the pack, with the reason, so no work is lost.
 >   after each, and a new test pins it
 >   (`test_one_models_loaded_copy_at_a_time_and_the_same_model_is_loaded_once`);
 >   two mutations (no eviction; always reload) caught and restored with
->   `cmp`; 25 tests OK on the venv Python and the bare 3.14. Real
+>   `cmp`; 25 tests OK on the venv Python and the bare 3.14; and the
+>   census row's `"count": 3` for "Get" in `speech-model-offered`, in the
+>   same commit. Real
 >   memory with real models is NOT measured. And the row's lines wrap: the
 >   press or the progress goes under its words, at the right (Medium's words
 >   had been squeezed to 110 px and four lines beside a 167 px press; now one

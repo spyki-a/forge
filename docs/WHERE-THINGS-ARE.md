@@ -241,7 +241,7 @@ as the timeline's Delete removes clips, so a graphic's sounds go with their
 graphic; a card ring made only of removed photos, with its own drawn "card
 ring" image when no other clip uses that; the file's transcript, depth
 planes, what the Director saw in it and its subject track; and the graphic
-proposals on its clips or grounded in it. A removed clip that was selected
+proposals on its clips or grounded in or anchored on it. A removed clip that was selected
 is let go (the Trimmer dock closes), and a transcription or a depth bake of
 the file that is running stops. While a reel, the grid or the Director is
 being built, Remove from project and the question's remove are greyed, their
@@ -288,7 +288,8 @@ not media are passed over; a link to a file inside the folder is taken, a
 link leading out of it is not, and a linked folder is never opened. One drop
 reads at most 2000 media files and 20000 entries of each dropped folder. A
 folder of that name already in the panel, in any case, receives the files,
-and a file already in the project is not added again: dropping the same
+and a file already in the project is not added again (one in no folder goes
+into it, one you put in a folder stays): dropping the same
 folder twice adds nothing. Files dropped loose go in no folder, as always.
 For each dropped folder the panel says at most one of the first four, in
 this order, and the fifth beside it ("X" is the folder's name):
@@ -308,11 +309,11 @@ folders inside folders; sorting or searching; folders made by date on their
 own; deleting a file from the disk; folders in the Library drawer; a folder
 dropped on the timeline or the picture (it still fails as a file the probe
 cannot read); files from Finder or Explorer dropped on a folder's header go
-in no folder, not into it. The tiles cannot take keyboard focus, so the menus
-are the pointer's.
+in no folder, not into it; selecting several tiles at once. The tiles cannot
+take keyboard focus, so the tile menu is the pointer's (a folder's "…" is a
+button, so its menu opens from the keyboard too).
 
-**Not yet:** selecting a pool item does nothing, and several cannot be
-selected at once. Trimming a file before it goes
+**Not yet:** selecting a pool item does nothing. Trimming a file before it goes
 on the timeline — the Trimmer as a source monitor, sheet 21 — and the pool
 grouped by kind (sheet 21), image presets (sheet 23) and per-item audio trim
 (sheet 24) are all to come.
@@ -1446,9 +1447,10 @@ chosen line "· used by Transcribe". **Choosing downloads nothing.** It sets
 the one model every Transcribe uses — the Media pool's, the Transcript
 tile's, and every "needs the speech model" follows it — an app-wide setting
 kept in the app's settings file, not in the project; Small until you choose.
-Each model not on this machine has its own press, under its words: **Get the
-speech model · 1.4 GB**, with its own size, tooltip "Fetched once from
-huggingface.co, then kept on this computer: Transcribe needs it when it is
+Each model not on this machine has its own press, at the right, under its
+words when the row is too narrow for both: **Get the speech model ·
+1.4 GB**, with its own size, tooltip "Fetched once from huggingface.co, then
+kept on this computer: Transcribe needs it when it is
 chosen". **One download at a time**: while one runs, its line reads "Getting
 the speech model… N%" with an X ("Stop getting the speech model"), every
 other press is greyed with the tooltip "Another speech model is downloading.
@@ -1472,7 +1474,7 @@ photos — and that the editor works without it.
 ## Two things worth knowing
 
 **Restart after a main-process change.** The renderer hot-reloads; the main
-process and the AI helper (the Python sidecar, `src/main/sidecar/`) do not.
+process and the AI helper (`src/main/sidecar/`) do not.
 
 **`npm run harness`** serves the interface as a web page on port 5199, with the
 app services stubbed. It exists so the UI can be looked at and clicked without
@@ -1486,6 +1488,6 @@ and reports `{ missing, checked, skipped, scenario, ms }` (plus `trace`, every
 row's count, when asked for with `{ trace: true }`). `missing` must be `[]`;
 each entry in it says why — absent, not rendered, or **ambiguous**, meaning
 something else on screen wears the same label, so the control could go
-unnoticed. It takes thirty to forty-five seconds and must run in the fronted tab
+unnoticed. It takes about a minute (64 s at `49c836e`) and must run in the fronted tab
 (`harness/census.ts` says why). A control added anywhere in the window gets a
 row there, or this map and the census drift apart.

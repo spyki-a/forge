@@ -5,11 +5,12 @@ screen, "the AI helper". This is the gate for all of Phase 2 onward.
 
 What it can answer is `capabilities/__init__.py`'s `OPTIONAL`, one row per module, each
 degrading on its own: speech to text (`asr.transcribe`, and since 2026-10-16 `asr.model`, the
-speech model's status and its press; since 2026-11-20 both take one of three models; below), beats (`audio.beats`), parallax layers
-(`depth.layers`), the Director's photo measures (`vision.measure`), stems (`audio.stems`), the
-local voice (`voice.speak`, `voice.voices`), and since 2026-10-13 step 1's two: **the face
-finder** (`vision.faces`, `vision.facesModel`; below) and **the subject finder**
-(`vision.salient`, `vision.salientModel`; below). Beside them, always there: `system.hello`,
+speech model's status and its press; since 2026-11-20 both take one of three models; below),
+beats (`audio.beats`), parallax layers (`depth.layers`), the Director's photo measures
+(`vision.measure`), stems (`audio.stems`), the local voice (`voice.speak`, `voice.voices`), and
+since 2026-10-13 step 1's two: **the face finder** (`vision.faces`, `vision.facesModel`; below)
+and **the subject finder** (`vision.salient`, `vision.salientModel`; below). Beside them,
+always there: `system.hello`,
 `system.ping`, `system.sleep` and, since 2026-10-14, `system.selftest` (Setup, below). The
 installed pack's `expects`, what its check and the Settings row count as "N of 9 helper
 features", is asr's two, beats, depth, measure and the face and subject finders' four
@@ -184,9 +185,10 @@ huggingface.co at every session's first load. Now:
 - The download goes to `huggingface.co`, which answers `model.bin` with a 302 to
   `us.aws.cdn.hf.co`, so the rule above (`huggingface.co` and `*.hf.co`) holds for it too. Measured
   through the installed pack without hf-xet: 486,212,372 B in 14.7 s (`EFFECTS.md` §59).
-- `tests/sidecar/test_asr.py` (16, on a bare interpreter too) holds a transcription with the
-  model on disk to make no request (every hub call replaced by one that raises); `asr.int`
-  needs the model seeded in `FORGE_MODELS_DIR` and a `jfk.flac` for its transcription cases.
+- `tests/sidecar/test_asr.py` (16, on a bare interpreter too; 25 since 2026-11-20, below)
+  holds a transcription with the model on disk to make no request (every hub call replaced by
+  one that raises); `asr.int` needs the model seeded in `FORGE_MODELS_DIR` and a `jfk.flac` for
+  its transcription cases.
 
 **Three speech models, one chosen** (2026-11-20, `161450a`, `3da8761`, `1b366ef`;
 `docs/CLIPS.md` §3a.4's note of that date). `asr.py` `MODELS` holds three pins, each a

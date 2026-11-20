@@ -197,19 +197,20 @@ same name (main's `listDropped`, `src/main/dropFolder.ts`; the notices,
 the project, and that a dropped folder becomes one, is the session's reading
 of the owner's words ("make the user folder like option that user has like
 same day or year photos folder, that matches his docs"), not yet confirmed
-by the owner. **The menus' shared pieces** moved out of `ClipMenu.tsx` into
+by the owner. **The menus' shared pieces** are in
 `src/renderer/src/components/ui/Menu.tsx`, which ClipMenu now uses too:
-`MenuItem`, `MenuDivider`, `Submenu`, `MenuShell`, `menuPosition`,
-`useMenuDismiss`, `submenuPlacement`, `swallowSecondClick`, `MENU_WIDTH` 196,
-`SUBMENU_WIDTH` 210, `SUBMENU_MAX_HEIGHT` 320, `SUBMENU_MIN_BELOW` 160,
-`SECOND_CLICK_MS` 1000. The pool's tiles cannot take keyboard focus, so
+moved out of `ClipMenu.tsx` (`bb21eee`), `MenuItem`, `MenuDivider`,
+`Submenu`, `MenuShell`, `menuPosition`, `useMenuDismiss`, `MENU_WIDTH` 196,
+`SUBMENU_WIDTH` 210; new, `swallowSecondClick` and `SECOND_CLICK_MS` 1000
+(`5b9160a`), `submenuPlacement`, `SUBMENU_MAX_HEIGHT` 320 and
+`SUBMENU_MIN_BELOW` 160 (`49c836e`). The pool's tiles cannot take keyboard focus, so
 the menu is the pointer's. Census: the overlay home `poolmenu` (recipes
 `poolmenu-photo`, `-video`, `-transcribed`, `-offline`, `-used-one`,
 `-used-three`, `-ring`, `-busy`, `-move`, and `foldermenu`) and the upload
 states `pool-folders`, `pool-folded`, `pool-rename`, `pool-new-folder`.
 Tests: `tests/renderer/removeAssets.test.ts`, `poolRemove.test.tsx`,
 `poolFolders.test.tsx`, `tests/folders.test.ts`, `tests/dropFolder.test.ts`;
-the builders' and fixers' mutations, 27 + 15 and 29 + 14 by their reports,
+the builders' and fixers' mutations, 27 + 15 and 30 + 14 by their reports,
 each failed and was restored. The suite at `49c836e` on the Mac: Test Files
 369 passed, 5 skipped; Tests 6034 passed, 66 skipped; `__forgeCensus()` at
 1280×800: missing [], 984 checked, 12 skipped; CI green on both runners
@@ -667,7 +668,9 @@ no undo step), `folderEdit` + `startNewFolder(moving?)`, `startRenameFolder`,
 `setFolderDraft`, `commitFolderEdit`, `cancelFolderEdit`, `folderMenu` +
 `openFolderMenu`, `closeFolderMenu` (one menu at a time with the tile's), and
 `importDropped(paths)`. The folders themselves are project data
-(`Project.folders`, `MediaAsset.folder`), so they are in the undo history.)
+(`Project.folders`, `MediaAsset.folder`, both absent when unused, made sound
+on open by `folders.ts` `repairFolders`, called from `src/shared/project.ts`),
+so they are in the undo history.)
 
 ---
 
