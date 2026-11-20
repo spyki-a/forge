@@ -6,7 +6,7 @@ import { resolve } from 'node:path'
 import { emptyProject, type MediaAsset, type Project } from '@shared/timeline'
 import { DRAG_MIME, canvasDropRoute, trackDropRoute } from '@shared/dragPayload'
 import { FOLDER_NAME_TAKEN } from '@shared/edit/folders'
-import { droppedCappedText, droppedEmptyText, type DroppedMedia } from '@shared/dropped'
+import { droppedCappedText, droppedEmptyText, droppedTooBigText, droppedUnreadableText, type DroppedMedia } from '@shared/dropped'
 
 /*
  * The Upload panel's folders, in the store and on the panel (MediaPool.tsx;
@@ -37,7 +37,7 @@ vi.mock('../../src/renderer/src/components/ui/Menu', async (importOriginal) => {
 
 const { useEditor } = await import('../../src/renderer/src/store')
 const pool = await import('../../src/renderer/src/components/MediaPool')
-const { MediaPool, PoolMenu, FolderMenu, poolPayload, tileDropped } = pool
+const { MediaPool, PoolMenu, FolderMenu, movingTile, poolPayload, tileDropped } = pool
 const { MenuItem } = await import('../../src/renderer/src/components/ui/Menu')
 const { setDragPayload } = await import('../../src/renderer/src/dragPayload')
 
@@ -236,6 +236,37 @@ describe('a folder dropped from Finder or Explorer', () => {
     expect(state().project.folders).toEqual(['Ceremony', 'Empty', 'Whole card'])
   })
 
+  it('dropped again, the same folder adds nothing: no probe, no new file, no undo step', async () => {
+    open({ ...emptyProject('x'), assets: [] })
+    answers.listDropped = (): DroppedMedia => ({
+      loose: ['/disk/loose.jpg'],
+      folders: [{ name: 'Day 1', files: ['/disk/Day 1/x.jpg', '/disk/Day 1/sub/y.jpg'], capped: false }]
+    })
+    answers.probe = probe
+    await state().importDropped(['/disk/loose.jpg', '/disk/Day 1'])
+    const first = state().project
+    expect(first.assets).toHaveLength(3)
+    calls = []
+    await state().importDropped(['/disk/loose.jpg', '/disk/Day 1'])
+    expect(calls.map((c) => c.name)).toEqual(['listDropped'])
+    expect(state().project).toBe(first)
+    expect(state().past).toHaveLength(1)
+    expect(state().project.folders).toEqual(['Day 1'])
+  })
+
+  it('a folder that could not be opened, or was too big to find any media in, is said so and not made', async () => {
+    open({ ...emptyProject('x'), assets: [] })
+    const locked = { name: 'Locked', files: [], capped: false, unreadable: true }
+    const home = { name: 'Home', files: [], capped: true }
+    answers.listDropped = (): DroppedMedia => ({ loose: [], folders: [locked, home] })
+    answers.probe = probe
+    await state().importDropped(['/Locked', '/Home'])
+    expect(state().notices.map((n) => n.text)).toEqual([droppedUnreadableText(locked), droppedTooBigText(home)])
+    expect(state().notices.map((n) => n.text).some((t) => t.includes('no photos'))).toBe(false)
+    expect('folders' in state().project).toBe(false)
+    expect(state().past).toHaveLength(0)
+  })
+
   it('loose files alone are imported as before: the same assets, no folder data', async () => {
     open({ ...emptyProject('x'), assets: [] })
     answers.listDropped = (paths: unknown): DroppedMedia => ({ loose: paths as string[], folders: [] })
@@ -421,5 +452,37 @@ describe('dragging a tile', () => {
     open(p)
     state().moveAssetsToFolder([tileDropped(poolPayload(p.assets[2]), p)!], 'Empty')
     expect(folderOf(state().project).c).toBe('Empty')
+  })
+
+  it('a tile remembered from an earlier drag is not moving under a drag of files: they show "Drop to upload" again', () => {
+    // During the move: the drag carries the app's payload.
+    expect(movingTile('a', [DRAG_MIME, 'text/plain'])).toBe('a')
+    // The tile moved into a folder is drawn again, its dragend never reaches React, and 'a' stays remembered:
+    // a drag of files from Finder or Explorer that follows is files, not a move.
+    expect(movingTile('a', ['Files'])).toBeNull()
+    expect(movingTile('a', [])).toBeNull()
+    expect(movingTile('a', undefined)).toBeNull()
+    expect(movingTile(null, [DRAG_MIME])).toBeNull()
+  })
+
+  it('every way a move can end forgets the tile: the folder drop, the panel’s drop, the tile’s dragend, the window’s', () => {
+    const source = readFileSync(resolve(__dirname, '../../src/renderer/src/components/MediaPool.tsx'), 'utf8')
+    const body = (start: string): string => {
+      const at = source.indexOf(start)
+      expect(at, start).toBeGreaterThan(-1)
+      expect(source.indexOf(start, at + 1), `${start} is unique`).toBe(-1)
+      return source.slice(at, source.indexOf('\n  }', at))
+    }
+    // The folder drop clears it BEFORE the move draws the tile again.
+    const into = body('const dropInto = (folder: string | null) => (e: DragEvent) => {')
+    expect(into.indexOf('moving.current = null')).toBeGreaterThan(-1)
+    expect(into.indexOf('moving.current = null')).toBeLessThan(into.indexOf('moveAssetsToFolder('))
+    expect(body('const onDrop = useCallback(')).toContain('moving.current = null')
+    // The window's dragend (capture) and drop end it too, for a drag that ends where React cannot hear.
+    expect(body('const ended = (): void => {')).toContain('moving.current = null')
+    expect([...source.matchAll(/window\.addEventListener\('dragend', ended, true\)/g)]).toHaveLength(1)
+    // Each drag handler of the panel reads the tile through movingTile, never the bare ref.
+    expect([...source.matchAll(/if \(moving\.current [!=]== null\) return/g)]).toHaveLength(0)
+    expect([...source.matchAll(/tileMoving\(e\)/g)]).toHaveLength(4)
   })
 })

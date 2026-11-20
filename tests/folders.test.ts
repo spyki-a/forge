@@ -205,6 +205,17 @@ describe('a dropped folder', () => {
     const next = addDroppedMedia(emptyProject('x'), [], [{ name: long, files: ['/a.jpg'] }])
     expect(next.folders).toEqual([long.slice(0, FOLDER_NAME_MAX).trim()])
   })
+
+  it('a cut that would fall through an emoji drops the whole emoji, never half of it', () => {
+    // 39 letters, then an emoji (two UTF-16 units): the cut at 40 lands inside it.
+    const name = `${'a'.repeat(39)}💍 rings`
+    const [made] = addDroppedMedia(emptyProject('x'), [], [{ name, files: ['/a.jpg'] }]).folders!
+    expect(made).toBe('a'.repeat(39))
+    expect(made).not.toMatch(/[\uD800-\uDFFF]/)
+    // An emoji that fits whole is kept.
+    const fits = `${'a'.repeat(38)}💍 rings`
+    expect(addDroppedMedia(emptyProject('x'), [], [{ name: fits, files: ['/a.jpg'] }]).folders).toEqual([`${'a'.repeat(38)}💍`])
+  })
 })
 
 /* ------------------------------------------------------------- the file */

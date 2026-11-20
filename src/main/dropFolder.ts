@@ -1,5 +1,6 @@
 import { readdir, realpath, stat } from 'node:fs/promises'
-import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path'
+import * as nodePath from 'node:path'
+import { isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { kindForPath } from '@shared/media'
 import { DROP_ENTRY_LIMIT, DROP_FILE_LIMIT, type DroppedFolder, type DroppedMedia } from '@shared/dropped'
 
@@ -26,6 +27,10 @@ import { DROP_ENTRY_LIMIT, DROP_FILE_LIMIT, type DroppedFolder, type DroppedMedi
  * - Bounded: at most `files` media files and `entries` entries read per
  *   folder (DROP_FILE_LIMIT, DROP_ENTRY_LIMIT); a folder that holds more says
  *   so with `capped`, and the panel tells the user.
+ * - A folder that cannot be read (its permissions, the system's privacy
+ *   protection, a card pulled out) is not an empty one: the dropped folder's
+ *   own failure sets `unreadable`, and each subfolder that fails is counted
+ *   in `unreadFolders`, so the panel can say so rather than "no photos".
  *
  * Reads only; nothing is written, moved or deleted.
  */
@@ -43,9 +48,14 @@ export async function listDropped(
   return { loose, folders }
 }
 
-/** A folder's own name: its last segment ("D:" for a drive's root, where there is none). */
-export function droppedFolderName(path: string): string {
-  return basename(resolve(path)) || path.replace(/[\\/]+$/, '') || path
+/**
+ * A folder's own name: its last segment, with or without a trailing
+ * separator ("D:" for a drive's root, "/" for the disk's, where there is
+ * none). `paths` is the host's path module; a test passes `path.win32` or
+ * `path.posix` to read the other platform's shapes (a drive, a UNC share).
+ */
+export function droppedFolderName(path: string, paths: Pick<typeof nodePath, 'basename' | 'resolve'> = nodePath): string {
+  return paths.basename(paths.resolve(path)) || path.replace(/[\\/]+$/, '') || path
 }
 
 /** `child` is strictly inside `root` (both real paths). */
@@ -61,16 +71,19 @@ async function readFolder(path: string, limits: { files: number; entries: number
   const files: string[] = []
   let entries = 0
   let capped = false
+  let unreadFolders = 0
 
-  const walk = async (dir: string): Promise<void> => {
-    const found = await readdir(dir, { withFileTypes: true }).catch(() => [])
+  /** False when `dir` itself could not be read. */
+  const walk = async (dir: string): Promise<boolean> => {
+    const found = await readdir(dir, { withFileTypes: true }).catch(() => null)
+    if (found === null) return false
     found.sort((a, b) => byName.compare(a.name, b.name))
     const subfolders: string[] = []
     for (const entry of found) {
-      if (capped) return
+      if (capped) return true
       if (++entries > limits.entries) {
         capped = true
-        return
+        return true
       }
       if (entry.name.startsWith('.')) continue
       const full = join(dir, entry.name)
@@ -86,16 +99,23 @@ async function readFolder(path: string, limits: { files: number; entries: number
       if (!file || kindForPath(entry.name) === null) continue
       if (files.length >= limits.files) {
         capped = true
-        return
+        return true
       }
       files.push(full)
     }
     for (const sub of subfolders) {
-      if (capped) return
-      await walk(sub)
+      if (capped) return true
+      if (!(await walk(sub))) unreadFolders++
     }
+    return true
   }
 
-  await walk(path)
-  return { name: droppedFolderName(path), files, capped }
+  const read = await walk(path)
+  return {
+    name: droppedFolderName(path),
+    files,
+    capped,
+    ...(read ? {} : { unreadable: true }),
+    ...(unreadFolders > 0 ? { unreadFolders } : {})
+  }
 }

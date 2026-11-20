@@ -65,7 +65,7 @@ import {
   removeFolder as removeProjectFolder,
   renameFolder as renameProjectFolder
 } from '@shared/edit/folders'
-import { droppedCappedText, droppedEmptyText } from '@shared/dropped'
+import { droppedNotices } from '@shared/dropped'
 import { footageOf } from '@shared/graphics/sound'
 import { libraryGraphicAt } from '@shared/graphics/library'
 import { graphicTargetsAt } from '@shared/graphics/targets'
@@ -2532,10 +2532,8 @@ export const useEditor = create<EditorState>((set, get) => ({
     const { notify } = get()
     try {
       const { loose, folders } = await window.forge.listDropped(paths)
-      for (const folder of folders) {
-        if (folder.files.length === 0) notify(droppedEmptyText(folder), 'info')
-        else if (folder.capped) notify(droppedCappedText(folder), 'info')
-      }
+      for (const folder of folders) for (const text of droppedNotices(folder)) notify(text, 'info')
+      // A folder that could not be read is not made: nothing says it holds what the disk holds.
       const filled = folders.filter((f) => f.files.length > 0)
       const project = get().project
       // A converted still is known by the file the user imported, not by its copy in the cache.

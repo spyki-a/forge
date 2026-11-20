@@ -184,10 +184,14 @@ export const REMOVE_IT = 'Remove it'
 
 /*
  * The room the menu keeps inside the window: itself, a submenu beside it, and
- * its tallest face — "Move to"'s list of folders, which opens beside its row
- * (the fourth at most, about 100 px down) and scrolls past 320 px.
+ * its own tallest face (five items and a divider, about 160 px), so it opens
+ * at the pointer, or with its foot at the window's when the pointer is low.
+ * Not "Move to"'s list: that one is as long as the user's folders, and fits
+ * itself to the room above or below its row when it opens (ui/Menu.tsx
+ * `submenuPlacement`). Kept for it, 430 px put the menu's top 200 px above a
+ * pointer low in a 680 px window.
  */
-export const POOL_MENU_ROOM = { width: MENU_WIDTH + SUBMENU_WIDTH, height: 430 }
+export const POOL_MENU_ROOM = { width: MENU_WIDTH + SUBMENU_WIDTH, height: 220 }
 
 /* The Upload panel's folders (shared/edit/folders.ts): one level, in the project, never on disk. */
 export const NEW_FOLDER = 'New folder'
@@ -464,6 +468,20 @@ function appDrag(e: DragEvent): boolean {
   return Boolean(e.dataTransfer?.types?.includes(DRAG_MIME))
 }
 
+/**
+ * The tile a drag over the panel is moving, from the one remembered at its
+ * dragstart (`current`) and what the drag carries (`types`). A drag that
+ * does not carry the app's own payload is not a tile's, whatever is
+ * remembered: a tile moved into another folder is drawn again under a new
+ * parent, so its own dragend fires on a node no longer in the page and never
+ * reaches React, and the id it leaves behind must not turn the next drag of
+ * files from Finder or Explorer into a "move" (no "Drop to upload", a folder
+ * tinted that the files would not go into).
+ */
+export function movingTile(current: string | null, types: readonly string[] | undefined): string | null {
+  return current !== null && (types ?? []).includes(DRAG_MIME) ? current : null
+}
+
 export function MediaPool(): ReactNode {
   const project = useEditor((s) => s.project)
   const importAssets = useEditor((s) => s.importAssets)
@@ -541,18 +559,38 @@ export function MediaPool(): ReactNode {
    * else (files from the disk, a Library item) bubbles on to the panel's own
    * drop, as before.
    */
+  /** The tile this drag moves, forgetting a stale one (`movingTile`). */
+  const tileMoving = (e: DragEvent): string | null => {
+    moving.current = movingTile(moving.current, e.dataTransfer?.types)
+    return moving.current
+  }
+  // A drag ended anywhere ends the move, even when the tile's own dragend cannot reach React.
+  useEffect(() => {
+    const ended = (): void => {
+      moving.current = null
+      setDropOn(null)
+    }
+    window.addEventListener('dragend', ended, true)
+    window.addEventListener('drop', ended)
+    return () => {
+      window.removeEventListener('dragend', ended, true)
+      window.removeEventListener('drop', ended)
+    }
+  }, [])
   const overInto = (key: string) => (e: DragEvent) => {
-    if (moving.current === null) return
+    if (tileMoving(e) === null) return
     e.preventDefault()
     e.stopPropagation()
     if (dropOn !== key) setDropOn(key)
   }
   const dropInto = (folder: string | null) => (e: DragEvent) => {
-    if (moving.current === null) return
+    if (tileMoving(e) === null) return
     const id = tileDropped(readDragPayload(e), project)
     if (id === null) return
     e.preventDefault()
     e.stopPropagation()
+    // The move draws the tile again under its new parent, so its dragend will not reach React: done here.
+    moving.current = null
     setDropOn(null)
     moveAssetsToFolder([id], folder)
   }
@@ -561,6 +599,7 @@ export function MediaPool(): ReactNode {
     (event: DragEvent) => {
       event.preventDefault()
       depth.current = 0
+      moving.current = null
       setOver(false)
       setDropOn(null)
       // A pool tile let go outside the list (on the Upload button, the heading): nothing to do, and nothing to say.
@@ -711,14 +750,14 @@ export function MediaPool(): ReactNode {
       onDragEnter={(e) => {
         e.preventDefault()
         // "Drop to upload" is for files from the disk; a tile moved between folders is not an upload.
-        if (moving.current !== null) return
+        if (tileMoving(e) !== null) return
         depth.current++
         setOver(true)
       }}
       onDragOver={(e) => e.preventDefault()}
       onDragLeave={(e) => {
         e.preventDefault()
-        if (moving.current !== null) return
+        if (tileMoving(e) !== null) return
         depth.current--
         if (depth.current <= 0) setOver(false)
       }}

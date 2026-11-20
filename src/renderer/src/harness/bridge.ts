@@ -1197,6 +1197,8 @@ const captionList = { text: '' }
 export function installHarnessBridge(): void {
   let sampleCount = 0
 
+  /** The stand-in's dropped folders, by name in lower case: the same files for the same folder. */
+  const droppedFolders = new Map<string, string[]>()
   const bridge = {
     getPathForFile: () => '',
 
@@ -1222,23 +1224,41 @@ export function installHarnessBridge(): void {
     /**
      * Stands in for main's reading of a drop (main/dropFolder.ts): a path
      * like '/harness/Day 1' — starting with '/', its last segment with no
-     * dot — is a dropped FOLDER of that name holding three fresh pictures;
-     * anything else (a blob URL from pickMedia, '/x/a.jpg') is a loose file.
-     * The page has no disk, so the session drops a folder by calling the
-     * store's `importDropped` with such a path.
+     * dot — is a dropped FOLDER of that name holding three pictures, made the
+     * first time that name (any case) is dropped and the SAME three every
+     * time after, as a folder on a disk would be: dropping it again shows the
+     * store adding nothing twice. Anything else (a blob URL from pickMedia,
+     * '/x/a.jpg') is a loose file. The page has no disk, so the session drops
+     * a folder by calling the store's `importDropped` with such a path.
+     * Two names stand for what a disk can refuse: '/harness/Locked' is a
+     * folder that cannot be opened, '/harness/Huge' one so big the bound is
+     * reached before any media (main's `unreadable` and `capped` with none).
      */
     listDropped: async (paths: string[]) => {
       const loose: string[] = []
-      const folders: { name: string; files: string[]; capped: boolean }[] = []
+      const folders: { name: string; files: string[]; capped: boolean; unreadable?: boolean }[] = []
       for (const path of paths) {
         const last = path.split('/').filter(Boolean).pop() ?? ''
         if (!path.startsWith('/') || last === '' || last.includes('.')) {
           loose.push(path)
           continue
         }
-        const files: string[] = []
-        for (let i = 0; i < 3; i++) files.push(await samplePhoto(sampleCount++))
-        folders.push({ name: last, files, capped: false })
+        const key = last.toLowerCase()
+        if (key === 'locked') {
+          folders.push({ name: last, files: [], capped: false, unreadable: true })
+          continue
+        }
+        if (key === 'huge') {
+          folders.push({ name: last, files: [], capped: true })
+          continue
+        }
+        let files = droppedFolders.get(key)
+        if (!files) {
+          files = []
+          for (let i = 0; i < 3; i++) files.push(await samplePhoto(sampleCount++))
+          droppedFolders.set(key, files)
+        }
+        folders.push({ name: last, files: [...files], capped: false })
       }
       return { loose, folders }
     },

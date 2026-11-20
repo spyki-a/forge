@@ -58,12 +58,38 @@ export function MenuDivider(): ReactNode {
   return <div className="my-1 h-px bg-ink-700" />
 }
 
+/** The tallest a submenu's list grows before it scrolls. */
+export const SUBMENU_MAX_HEIGHT = 320
+/** Below its row, a list needs at least this much room before it opens upward instead. */
+export const SUBMENU_MIN_BELOW = 160
+
+/**
+ * Where a submenu's list opens, from its row's top and bottom and the
+ * window's height: downward from the row when there is room enough below
+ * (or no more above), else upward from the row's bottom; and never taller
+ * than the room on its side, so it scrolls rather than leaving the window.
+ * The menu itself keeps room only for its own face (`menuPosition`): a
+ * list as long as the user's folders cannot be known when it opens.
+ */
+export function submenuPlacement(
+  rowTop: number,
+  rowBottom: number,
+  viewHeight: number
+): { side: 'down' | 'up'; maxHeight: number } {
+  // The list sits 4 px past the row's edge (-top-1 / -bottom-1) and keeps 8 px from the window's.
+  const below = viewHeight - (rowTop - 4) - 8
+  const above = rowBottom + 4 - 8
+  const side = below >= SUBMENU_MIN_BELOW || below >= above ? 'down' : 'up'
+  return { side, maxHeight: Math.max(0, Math.min(SUBMENU_MAX_HEIGHT, side === 'down' ? below : above)) }
+}
+
 /**
  * A submenu that opens on hover and stays open while the pointer is inside it.
  *
  * Opened on hover rather than on click because these are lists to browse —
  * speeds, voices, looks — and clicking to open a list you are about to click
- * again is one press too many for something used this often.
+ * again is one press too many for something used this often. Where it opens
+ * is measured from its row when it opens (`submenuPlacement`).
  */
 export function Submenu({
   label,
@@ -77,12 +103,15 @@ export function Submenu({
   data?: [string, string]
   children: ReactNode
 }): ReactNode {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState<{ side: 'down' | 'up'; maxHeight: number } | null>(null)
   return (
     <div
       className="relative"
-      onPointerEnter={() => setOpen(true)}
-      onPointerLeave={() => setOpen(false)}
+      onPointerEnter={(e) => {
+        const row = e.currentTarget.getBoundingClientRect()
+        setOpen(submenuPlacement(row.top, row.bottom, window.innerHeight))
+      }}
+      onPointerLeave={() => setOpen(null)}
     >
       <button
         {...(data ? { [`data-${data[0]}`]: data[1] } : {})}
@@ -96,8 +125,8 @@ export function Submenu({
       </button>
       {open && (
         <div
-          style={{ width: SUBMENU_WIDTH }}
-          className="absolute -top-1 left-full z-10 max-h-[320px] overflow-y-auto rounded-md border border-ink-700 bg-ink-800 py-1 shadow-xl shadow-black/40"
+          style={{ width: SUBMENU_WIDTH, maxHeight: open.maxHeight }}
+          className={`absolute ${open.side === 'down' ? '-top-1' : '-bottom-1'} left-full z-10 overflow-y-auto rounded-md border border-ink-700 bg-ink-800 py-1 shadow-xl shadow-black/40`}
         >
           {children}
         </div>

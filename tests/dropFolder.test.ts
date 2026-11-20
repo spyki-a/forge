@@ -1,9 +1,18 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { basename, join } from 'node:path'
+import { basename, join, posix, win32 } from 'node:path'
 import { droppedFolderName, listDropped } from '../src/main/dropFolder'
-import { DROP_ENTRY_LIMIT, DROP_FILE_LIMIT } from '@shared/dropped'
+import {
+  DROP_ENTRY_LIMIT,
+  DROP_FILE_LIMIT,
+  droppedCappedText,
+  droppedEmptyText,
+  droppedNotices,
+  droppedTooBigText,
+  droppedUnreadFoldersText,
+  droppedUnreadableText
+} from '@shared/dropped'
 
 /*
  * A drop onto the Upload panel, read in main (src/main/dropFolder.ts): a temp
@@ -59,6 +68,9 @@ beforeAll(async () => {
 afterAll(async () => {
   await rm(dir, { recursive: true, force: true }).catch(() => undefined)
 })
+
+/** A folder made unreadable can be tested only where chmod bites: not on Windows, and not as root. */
+const canLock = process.platform !== 'win32' && process.getuid?.() !== 0
 
 const names = (files: string[]): string[] => files.map((f) => basename(f))
 
@@ -117,6 +129,84 @@ describe('a dropped folder', () => {
   })
 })
 
+describe('a dropped folder that cannot be read whole', () => {
+  it('is unreadable, not empty, when the folder itself cannot be read', async () => {
+    if (!canLock) return
+    const locked = join(dir, 'Locked')
+    await mkdir(locked)
+    await touch(join(locked, 'a.jpg'))
+    await chmod(locked, 0o000)
+    try {
+      const { folders } = await listDropped([locked])
+      expect(folders).toEqual([{ name: 'Locked', files: [], capped: false, unreadable: true }])
+      expect(droppedNotices(folders[0])).toEqual([droppedUnreadableText(folders[0])])
+    } finally {
+      await chmod(locked, 0o755)
+    }
+  })
+
+  it('counts each folder inside it that cannot be read, and keeps the rest', async () => {
+    if (!canLock) return
+    const day = join(dir, 'Day 2')
+    await mkdir(join(day, 'Ceremony'), { recursive: true })
+    await mkdir(join(day, 'Party'))
+    await touch(join(day, 'a.jpg'))
+    await touch(join(day, 'Ceremony', 'b.jpg'))
+    await touch(join(day, 'Party', 'c.jpg'))
+    await chmod(join(day, 'Ceremony'), 0o000)
+    try {
+      const { folders } = await listDropped([day])
+      expect(names(folders[0].files)).toEqual(['a.jpg', 'c.jpg'])
+      expect(folders[0].unreadFolders).toBe(1)
+      expect(folders[0].unreadable).toBeUndefined()
+      expect(droppedNotices(folders[0])).toEqual([droppedUnreadFoldersText({ name: 'Day 2', unreadFolders: 1 })])
+    } finally {
+      await chmod(join(day, 'Ceremony'), 0o755)
+    }
+  })
+
+  it('a folder read whole carries neither mark', async () => {
+    const { folders } = await listDropped([shoot])
+    expect('unreadable' in folders[0]).toBe(false)
+    expect('unreadFolders' in folders[0]).toBe(false)
+  })
+
+  it('reaching the entry bound before any media is "too many to read", never "no photos"', async () => {
+    const home = join(dir, 'Home')
+    await mkdir(home)
+    for (let i = 0; i < 5; i++) await touch(join(home, `n${i}.txt`))
+    await touch(join(home, 'zz.jpg'))
+    const { folders } = await listDropped([home], { files: DROP_FILE_LIMIT, entries: 3 })
+    expect(folders[0]).toMatchObject({ name: 'Home', files: [], capped: true })
+    expect(droppedNotices(folders[0])).toEqual([droppedTooBigText(folders[0])])
+    // Read whole, the same folder has its photo.
+    expect(names((await listDropped([home])).folders[0].files)).toEqual(['zz.jpg'])
+  })
+})
+
+describe('what the panel says about a dropped folder', () => {
+  const folder = (patch: Partial<Parameters<typeof droppedNotices>[0]>) => ({ name: 'Day 1', files: [] as string[], capped: false, ...patch })
+  it('one of unreadable, too big, capped or empty, in that order, and unread folders beside it', () => {
+    expect(droppedNotices(folder({ files: ['/a.jpg'] }))).toEqual([])
+    expect(droppedNotices(folder({}))).toEqual([droppedEmptyText({ name: 'Day 1' })])
+    expect(droppedNotices(folder({ capped: true }))).toEqual([droppedTooBigText({ name: 'Day 1' })])
+    expect(droppedNotices(folder({ capped: true, files: ['/a.jpg'] }))).toEqual([droppedCappedText({ name: 'Day 1', files: ['/a.jpg'] })])
+    expect(droppedNotices(folder({ unreadable: true }))).toEqual([droppedUnreadableText({ name: 'Day 1' })])
+    expect(droppedNotices(folder({ files: ['/a.jpg'], unreadFolders: 2 }))).toEqual([droppedUnreadFoldersText({ name: 'Day 1', unreadFolders: 2 })])
+    expect(droppedNotices(folder({ unreadFolders: 1 }))).toEqual([
+      droppedEmptyText({ name: 'Day 1' }),
+      droppedUnreadFoldersText({ name: 'Day 1', unreadFolders: 1 })
+    ])
+  })
+
+  it('in plain words, singular right', () => {
+    expect(droppedTooBigText({ name: 'Home' })).not.toContain('no photos')
+    expect(droppedUnreadableText({ name: 'Locked' })).not.toContain('no photos')
+    expect(droppedUnreadFoldersText({ name: 'D', unreadFolders: 1 })).toBe('1 folder inside “D” could not be opened, so its files were not added')
+    expect(droppedUnreadFoldersText({ name: 'D', unreadFolders: 3 })).toBe('3 folders inside “D” could not be opened, so their files were not added')
+  })
+})
+
 describe('a drop of several things', () => {
   it('hands back what is not a folder unchanged and in order, a folder beside them', async () => {
     const file = join(shoot, 'IMG_2.jpg')
@@ -140,5 +230,25 @@ describe('a folder’s name', () => {
     expect(droppedFolderName(shoot)).toBe(SHOOT)
     expect(droppedFolderName(`${shoot}/`)).toBe(SHOOT)
     expect(droppedFolderName(join(shoot, 'Ceremony'))).toBe('Ceremony')
+  })
+
+  // Every platform's shapes on every runner: the host's own path module never sees the other's.
+  it('Windows shapes: a drive, its root, a trailing backslash, a UNC share and a folder in it', () => {
+    expect(droppedFolderName('D:\\', win32)).toBe('D:')
+    expect(droppedFolderName('D:\\Shoots\\Day 1\\', win32)).toBe('Day 1')
+    expect(droppedFolderName('D:\\Shoots\\Bride 5.30pm', win32)).toBe('Bride 5.30pm')
+    expect(droppedFolderName('\\\\nas\\photos\\', win32)).toBe('photos')
+    expect(droppedFolderName('\\\\nas\\photos\\Day 1', win32)).toBe('Day 1')
+  })
+
+  it('macOS and Linux shapes: the disk’s root, a card, a trailing slash', () => {
+    expect(droppedFolderName('/', posix)).toBe('/')
+    expect(droppedFolderName('/Volumes/EOS_DIGITAL/', posix)).toBe('EOS_DIGITAL')
+    expect(droppedFolderName("/Users/a/Priya's day", posix)).toBe("Priya's day")
+  })
+
+  it('is the folder a path leads to, not its last written segment', () => {
+    expect(droppedFolderName('/Volumes/CARD/DCIM/..', posix)).toBe('CARD')
+    expect(droppedFolderName('D:\\Shoots\\Day 1\\..', win32)).toBe('Shoots')
   })
 })

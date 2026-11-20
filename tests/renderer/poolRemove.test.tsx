@@ -44,10 +44,10 @@ vi.mock('../../src/renderer/src/components/ui/Menu', async (importOriginal) => {
 })
 
 const { useEditor, REMOVE_WAITS } = await import('../../src/renderer/src/store')
-const { MediaPool, NEW_FOLDER_ITEM, POOL_MENU_ROOM, PoolMenu, REMOVE_FROM_PROJECT, REMOVE_IT, TRANSCRIBE_NEEDS_HELPER, revealLabel, transcribeWhy } = await import(
+const { MediaPool, MOVE_TO, POOL_MENU_ROOM, PoolMenu, REMOVE_FROM_PROJECT, REMOVE_IT, TRANSCRIBE_NEEDS_HELPER, revealLabel, transcribeWhy } = await import(
   '../../src/renderer/src/components/MediaPool'
 )
-const { MenuItem, menuPosition } = await import('../../src/renderer/src/components/ui/Menu')
+const { MenuItem, Submenu, menuPosition, submenuPlacement, SUBMENU_MAX_HEIGHT } = await import('../../src/renderer/src/components/ui/Menu')
 const { transcribeGate } = await import('@shared/sidecar/row')
 
 const state = () => useEditor.getState()
@@ -253,10 +253,16 @@ interface Item {
   danger?: boolean
 }
 
-/** The menu's items, in order, as the elements it returns (its MenuItem children). */
+/**
+ * The menu's own items, in order, as the elements it returns (its MenuItem
+ * children). A submenu is one entry, by its label, and its list is not walked:
+ * Move to's folders are piece 2's (tests/renderer/poolFolders.test.tsx), and
+ * these lists are about which of the menu's own items apply.
+ */
 function items(node: ReactNode): Item[] {
   if (!isValidElement(node)) return []
   const props = node.props as Record<string, unknown> & { children?: ReactNode }
+  if (node.type === Submenu) return [{ label: `${String(props.label)} ▸`, onClick: () => undefined }]
   const own = node.type === MenuItem ? [props as unknown as Item] : []
   const kids = Array.isArray(props.children) ? props.children : [props.children]
   return [...own, ...kids.flatMap((k) => items(k as ReactNode))]
@@ -265,6 +271,8 @@ function items(node: ReactNode): Item[] {
 const menuOf = (assetId: string, why: string | null = null): Item[] =>
   items(PoolMenu({ target: { assetId, x: 40, y: 40 }, why }) as ReactNode)
 const labels = (assetId: string, why: string | null = null): string[] => menuOf(assetId, why).map((i) => i.label)
+/** Move to's row (piece 2), on every tile's menu. */
+const MOVE_TO_ROW = `${MOVE_TO} ▸`
 /** Opens the tile's menu as a right-click does (the store's `poolMenu`), and presses the item. */
 const press = (assetId: string, label: string): void => {
   if (state().poolMenu?.assetId !== assetId) state().openPoolMenu({ assetId, x: 40, y: 40 })
@@ -280,18 +288,17 @@ const ready: SidecarStatus = { state: 'ready', hello: hello([SIDECAR_METHODS.tra
 const SPEECH: SpeechModelStatus = { present: true, bytes: 486_539_264, label: SPEECH_MODEL_LABEL, host: 'huggingface.co', model: 'small' }
 
 describe('the right-click menu on a pool tile', () => {
-  // `labels` walks every MenuItem the menu returns, Move to's list among them: with no folder it holds only "New folder…" (piece 2).
   it('offers a photo Add, the platform’s reveal and Remove, last', () => {
     open()
-    expect(labels('photo-a')).toEqual(['Add to timeline', 'Show in Finder', NEW_FOLDER_ITEM, REMOVE_FROM_PROJECT])
+    expect(labels('photo-a')).toEqual(['Add to timeline', 'Show in Finder', MOVE_TO_ROW, REMOVE_FROM_PROJECT])
   })
 
   it('offers a video with sound Transcribe, and Transcribe again once it has a transcript', () => {
     const p = open()
     open({ ...p, transcripts: {} })
-    expect(labels('talk')).toEqual(['Add to timeline', 'Transcribe', 'Show in Finder', NEW_FOLDER_ITEM, REMOVE_FROM_PROJECT])
+    expect(labels('talk')).toEqual(['Add to timeline', 'Transcribe', 'Show in Finder', MOVE_TO_ROW, REMOVE_FROM_PROJECT])
     open()
-    expect(labels('talk')).toEqual(['Add to timeline', 'Transcribe again', 'Show in Finder', NEW_FOLDER_ITEM, REMOVE_FROM_PROJECT])
+    expect(labels('talk')).toEqual(['Add to timeline', 'Transcribe again', 'Show in Finder', MOVE_TO_ROW, REMOVE_FROM_PROJECT])
     // A video with no sound has nothing to transcribe.
     open({ ...p, assets: p.assets.map((a) => (a.id === 'talk' ? { ...a, hasAudio: false } : a)) })
     expect(labels('talk')).not.toContain('Transcribe again')
@@ -328,7 +335,7 @@ describe('the right-click menu on a pool tile', () => {
   it('offers a missing file Relink…, which asks for that one file, and no reveal', async () => {
     const p = open()
     open({ ...p, assets: p.assets.map((a) => (a.id === 'photo-a' ? { ...a, offline: true } : a)) })
-    expect(labels('photo-a')).toEqual(['Add to timeline', 'Relink…', NEW_FOLDER_ITEM, REMOVE_FROM_PROJECT])
+    expect(labels('photo-a')).toEqual(['Add to timeline', 'Relink…', MOVE_TO_ROW, REMOVE_FROM_PROJECT])
     press('photo-a', 'Relink…')
     await Promise.resolve()
     expect(calls.map((c) => c.name)).toEqual(['relinkAssets'])
@@ -433,6 +440,45 @@ describe('the right-click menu on a pool tile', () => {
     expect(menuPosition(-5, -5, POOL_MENU_ROOM, { width: 300, height: 100 }).left).toBeGreaterThanOrEqual(0)
   })
 
+  it('opens beside a pointer low in the smallest window, not a long folder list’s height above it', () => {
+    // The app's smallest window is 680 high (src/main/index.ts). The menu's own face is about 160 px:
+    // its top must stay within that face (and a little) of the pointer, wherever the pointer is.
+    for (const height of [680, 800]) {
+      for (let y = 8; y < height; y += 24) {
+        const { top } = menuPosition(40, y, POOL_MENU_ROOM, { width: 1280, height })
+        expect(y - top, `pointer at ${y} in ${height}`).toBeLessThanOrEqual(240)
+        expect(top + POOL_MENU_ROOM.height).toBeLessThanOrEqual(height)
+      }
+    }
+  })
+
+  it('a submenu’s list (Move to’s folders) opens downward with room below, capped to that room and to its own most', () => {
+    expect(submenuPlacement(100, 128, 800)).toEqual({ side: 'down', maxHeight: SUBMENU_MAX_HEIGHT })
+    // 200 below the row: still downward, no taller than the room.
+    expect(submenuPlacement(604, 632, 800)).toEqual({ side: 'down', maxHeight: 800 - 600 - 8 })
+  })
+
+  it('a submenu’s list opens upward from a row low in the window, never past its top', () => {
+    const low = submenuPlacement(620, 648, 680)
+    expect(low.side).toBe('up')
+    expect(low.maxHeight).toBe(SUBMENU_MAX_HEIGHT)
+    // Its foot is the row's foot plus 4: its top is inside the window.
+    expect(648 + 4 - low.maxHeight).toBeGreaterThanOrEqual(8)
+    const short = submenuPlacement(150, 178, 200)
+    expect(short.side).toBe('up')
+    expect(178 + 4 - short.maxHeight).toBeGreaterThanOrEqual(8)
+  })
+
+  it('a submenu’s list stays inside any window', () => {
+    for (const height of [200, 680, 1000]) {
+      for (let top = 8; top + 28 < height; top += 20) {
+        const { side, maxHeight } = submenuPlacement(top, top + 28, height)
+        if (side === 'down') expect(top - 4 + maxHeight).toBeLessThanOrEqual(height - 8)
+        else expect(top + 28 + 4 - maxHeight).toBeGreaterThanOrEqual(8)
+      }
+    }
+  })
+
   it('walking away from the question (Escape, a click elsewhere) is "Keep it": the same tile’s menu shows its items again', () => {
     const before = open()
     press('talk', REMOVE_FROM_PROJECT)
@@ -444,7 +490,7 @@ describe('the right-click menu on a pool tile', () => {
     expect(state().poolMenu).toBeNull()
     expect(state().removingAsset).toBeNull()
     expect(state().project).toBe(before)
-    expect(labels('talk')).toEqual(['Add to timeline', 'Transcribe again', 'Show in Finder', NEW_FOLDER_ITEM, REMOVE_FROM_PROJECT])
+    expect(labels('talk')).toEqual(['Add to timeline', 'Transcribe again', 'Show in Finder', MOVE_TO_ROW, REMOVE_FROM_PROJECT])
   })
 
   it('swallows the second press of a double-click on an item, and lets a fresh click through', () => {

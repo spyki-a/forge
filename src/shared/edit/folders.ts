@@ -144,7 +144,10 @@ export function removeFolder(project: Project, name: string): Project {
  */
 export function folderNameFrom(raw: unknown): string | null {
   if (typeof raw !== 'string') return null
-  const name = cleanFolderName(cleanFolderName(raw).slice(0, FOLDER_NAME_MAX))
+  let cut = cleanFolderName(raw).slice(0, FOLDER_NAME_MAX)
+  // A cut through an emoji (two UTF-16 units) would leave half of it: the half goes.
+  if (/[\uD800-\uDBFF]$/.test(cut)) cut = cut.slice(0, -1)
+  const name = cleanFolderName(cut)
   return name === '' ? null : name
 }
 
