@@ -38,7 +38,9 @@
  */
 
 import type { GraphicTargets, Rect } from '@shared/graphics/items'
-import { drawListAt } from '@shared/graphics/drawList'
+import { drawListAt, needsCompositor } from '@shared/graphics/drawList'
+import { compositorRoute } from '@shared/graphics/compositor'
+import { screenCardSpec } from '@shared/graphics/screenCard'
 import { graphicMovingFrames } from '@shared/graphics/frame'
 import { resolveGraphicStyle, type GraphicStyle } from '@shared/graphics/style'
 import type { GraphicSpec } from '@shared/graphics/template'
@@ -48,7 +50,17 @@ import { facesFor } from '@shared/render/textPaint'
 import { mediaUrl } from '@shared/mediaUrl'
 import { useCatalog } from '../catalog'
 import { sharedRenderer } from '../threeShared'
-import { bakeGraphicSequence, forgetGraphicPreview, graphicFrameCanvases, graphicMeasure, graphicPreviewCanvas } from '../graphicCanvas'
+import {
+  bakeGraphicSequence,
+  forgetGraphicPreview,
+  graphicDrawnFlat,
+  graphicFrameCanvases,
+  graphicMeasure,
+  graphicPreviewCanvas,
+  graphicPreviewHasCompositor,
+  takeGraphicBakeNotes
+} from '../graphicCanvas'
+import { WEBGL_MISSING_NOTE } from '../graphicCompositor'
 import { diffOverInk, framePath, type PixelDiff } from './graphicMeasure'
 import { edgeSweepCrossingFrame } from './screenCardMeasure'
 import { REC, standInFrame } from './screenCardCheck'
@@ -192,7 +204,8 @@ async function settledPreview(draw: (onReady: () => void) => HTMLCanvasElement |
   return canvas
 }
 
-const sameBytes = (a: ArrayBuffer, b: ArrayBuffer): boolean => {
+/** Two PNGs byte for byte (M13's within-a-machine reading); the M20 option compares its twice-baked cases through it too. */
+export const sameBytes = (a: ArrayBuffer, b: ArrayBuffer): boolean => {
   if (a.byteLength !== b.byteLength) return false
   const x = new Uint8Array(a)
   const y = new Uint8Array(b)
@@ -250,7 +263,8 @@ export async function checkBake3d(
     const N = edgeSweepFrames(FPS)
     cases.push({
       name,
-      spec: { data: { template: 'screen-card', clipId: 'standin', move }, seconds: 10, beats: [1], place: { auto: false, box: { x: 0, y: 0, width: 1, height: 1 } }, seed: 1, version: 1 },
+      // The store's own spec for a 10 s recording, so a change to the card's move follows here.
+      spec: screenCardSpec({ id: 'standin', duration: 10 * FPS }, move, FPS),
       style,
       targetsAt: cardTargets,
       read: (moving) => screenCardParityFrames(L, moving, style.glow ? { crossing: edgeSweepCrossingFrame(L, N, EDGE_SWEEP_SPAN), loop: N } : null),
@@ -274,6 +288,8 @@ export async function checkBake3d(
   const m13: Bake3dResult['m13'] = []
   const memory: Bake3dResult['memory'] = []
   const slug = (s: string): string => s.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase()
+  // Notes a store bake left are not this option's (the export drops them before its bake too); each case's are taken after its bakes.
+  takeGraphicBakeNotes()
   try {
     for (const c of cases) {
       const total = Math.max(1, Math.round(c.spec.seconds * FPS))
@@ -285,14 +301,22 @@ export async function checkBake3d(
       const harness = (await graphicFrameCanvases(c.spec, c.style, W, H, total, FPS, read, c.targetsAt)).map(copied)
       forgetGraphicPreview(liveId)
       const live: (Uint8ClampedArray | null)[] = []
+      const flat: string[] = []
       for (const frame of read) {
         const canvas = await settledPreview((onReady) => graphicPreviewCanvas(liveId, c.spec, c.style, W, H, { frame, total, fps: FPS }, c.targetsAt(frame), onReady))
         live.push(canvas ? copied(canvas) : null)
+        // A frame that wants the compositor and was drawn without one: WebGL missing (the dock's mark), or the Preview's cap full.
+        const list = drawListAt(c.spec, c.style, Math.min(frame, moving - 1), FPS, size, measure, c.targetsAt(frame))
+        if (needsCompositor(list) && compositorRoute(list) !== 'flat' && !graphicPreviewHasCompositor(liveId)) {
+          flat.push(`the Preview @${frame} had no compositor (${graphicDrawnFlat(liveId) ? 'WebGL did not start' : 'none landed: the Preview\'s cap of 3 full, or still on its way'})`)
+        }
       }
       forgetGraphicPreview(liveId)
 
       const first = await bakeRecorded(c.spec, c.style, `graphic-check-bake3d-${run}-${slug(c.name)}-a`, size, total, FPS, c.targetsAt)
       const second = c.twice ? await bakeRecorded(c.spec, c.style, `graphic-check-bake3d-${run}-${slug(c.name)}-b`, size, total, FPS, c.targetsAt) : null
+      // Taken, so none is left for the user's next export; the WebGL note means the bake drew this 2.5D case flat.
+      if (takeGraphicBakeNotes().includes(WEBGL_MISSING_NOTE)) flat.push(`the bake recorded "${WEBGL_MISSING_NOTE}"`)
       const region = first.value.box ?? { x: 0, y: 0, width: W, height: H }
       if (first.value.box) notes.push(`bake3d ${c.name}: the bake took the box route (${JSON.stringify(first.value.box)}); a list that needs the compositor must bake the canvas (§6.16)`)
       const liveDiffs: (PixelDiff | null)[] = []
@@ -320,7 +344,7 @@ export async function checkBake3d(
         const after = memoryNow()
         memory.push({ name: c.name, before, after, back: memoryBack(before, after) })
       }
-      const reading: ExportParityReading = { name: c.name, frames: read, live: liveDiffs, harness: harnessDiffs, baked: first.value.frames, moving, twice }
+      const reading: ExportParityReading = { name: c.name, frames: read, live: liveDiffs, harness: harnessDiffs, baked: first.value.frames, moving, twice, flat }
       readings.push(reading)
       // The sheet: the Preview (top) over the bake (bottom), at a sixth of the size, over grey.
       const cell = { width: W / 6, height: H / 6 }
@@ -336,6 +360,7 @@ export async function checkBake3d(
       summary.push(
         `bake3d ${c.name}: ${moving} moving frames, baked ${reading.baked}; over the ink, the Preview against the export ${worst(liveDiffs)}; the harness's frames against it ${worst(harnessDiffs)}` +
           (twice ? `; baked twice ${twice.equal} of ${twice.of} PNGs byte-equal` : '') +
+          (flat.length ? `; DRAWN FLAT: ${flat.join('; ')}` : '; drawn in 2.5D (the Preview held a compositor on every frame that asks for one, the bake recorded no WebGL note)') +
           (memory.length && memory[memory.length - 1].name === c.name ? `; info.memory geometries / textures before ${before.geometries} / ${before.textures}, after its bakes and its Preview forgotten ${memory[memory.length - 1].after.geometries} / ${memory[memory.length - 1].after.textures}` : '')
       )
     }

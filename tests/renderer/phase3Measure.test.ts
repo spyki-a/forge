@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import type { ChannelDiff } from '../../src/renderer/src/harness/compositorMeasure'
-import type { PixelDiff } from '../../src/renderer/src/harness/graphicMeasure'
+import { TEMPLATES_BAR, type PixelDiff } from '../../src/renderer/src/harness/graphicMeasure'
 import {
   EXPORT_PARITY_BAR,
   HANDOFF_BAR,
@@ -89,7 +89,15 @@ describe('M12: the readback routes and their reading', () => {
     expect(keepsStraightAlpha(straightAgainst([0, 0, 0, 0], [0, 0, 0, 0]))).toBe(false)
   })
 
-  const keeps = { alphaMax: 0, colourMax: 1, colourPixels: 1000, inkPixels: 2000 }
+  it('straightAgainst counts the partial-alpha pixels read, and a frame with none of them keeps nothing: an opaque pixel reads the same stored straight or premultiplied', () => {
+    expect(straightAgainst([200, 100, 50, 128, 255, 255, 255, 255], [200, 100, 50, 128, 255, 255, 255, 255]).partialPixels).toBe(1)
+    // The critic's case: the only partial pixel (alpha 100) is below minAlpha, so its colour is not read; the opaque one matches either way.
+    const premultipliedPng = straightAgainst([200, 100, 50, 100, 255, 255, 255, 255], [78, 39, 20, 100, 255, 255, 255, 255])
+    expect(premultipliedPng).toMatchObject({ alphaMax: 0, colourMax: 0, colourPixels: 1, partialPixels: 0 })
+    expect(keepsStraightAlpha(premultipliedPng)).toBe(false)
+  })
+
+  const keeps = { alphaMax: 0, colourMax: 1, colourPixels: 1000, inkPixels: 2000, partialPixels: 200 }
   const row = (route: ReadbackRow['route'], p50: number, over: Partial<ReadbackRow> = {}): ReadbackRow => ({ route, error: null, readMs: [p50, p50, p50 * 3], pngMs: [p50 + 30, p50 + 30, p50 + 40], straight: keeps, ...over })
 
   it('readbackVerdict: drawImage stays unless another that keeps straight alpha is at least twice as fast at p50', () => {
@@ -114,6 +122,20 @@ describe('M12: the readback routes and their reading', () => {
     expect(bad.fastest).toBeNull()
     expect(bad.failures).toEqual(['drawImage: its PNG was not read against its frame'])
   })
+
+  it('readbackVerdict: a drawImage that does not keep straight alpha is not preferred; the fastest that keeps is chosen, however little faster', () => {
+    const v = readbackVerdict([row('drawImage', 10, { straight: { ...keeps, colourMax: 90 } }), row('readPixels', 8)])
+    expect(v.fastest).toBe('readPixels')
+    expect(v.chosen).toBe('readPixels')
+    expect(v.failures.some((f) => /^drawImage does not keep straight alpha/.test(f))).toBe(true)
+  })
+
+  it('readbackVerdict: a route that ran and timed no frame is named, and nothing read at all is named', () => {
+    const v = readbackVerdict([row('drawImage', 10), row('readPixels', 5, { readMs: [], pngMs: [] })])
+    expect(v.failures).toEqual(['readPixels ran but timed no frame'])
+    expect(v.chosen).toBe('drawImage')
+    expect(readbackVerdict([]).failures).toEqual(['no route was read'])
+  })
 })
 
 describe('preview = export (the bake3d option)', () => {
@@ -126,6 +148,7 @@ describe('preview = export (the bake3d option)', () => {
     baked: 46,
     moving: 46,
     twice: null,
+    flat: [],
     ...over
   })
 
@@ -145,6 +168,12 @@ describe('preview = export (the bake3d option)', () => {
     // A reading over no pixels (both pictures blank) reads nothing.
     expect(v({ harness: [{ mean: 0, max: 0, differing: 0, pixels: 0 }, d(0), d(0), d(0)] })).toHaveLength(1)
     expect(exportParityVerdict([]).failures).toEqual(['no case was read'])
+  })
+
+  it('fails a case drawn flat, however well its flat Preview agrees with its flat bake', () => {
+    expect(exportParityVerdict([reading({ flat: ['the Preview @22 had no compositor (WebGL did not start)'] })]).failures).toEqual([
+      'counter-en tilt under clean: drawn flat, the Preview @22 had no compositor (WebGL did not start)'
+    ])
   })
 
   it('reads a 2.5D case at three moving frames and at rest; a screen card on its move, the landing, the hand-off, the sweep and the held frame', () => {
@@ -205,7 +234,7 @@ describe('the hero’s landing (the depth option)', () => {
     const firstWithout = [90, 0, 0, 255, 0, 0, 0, 10]
     const lastWith = lastWithout.map((v, i) => v + [5, 5, 5, 0, 3, 3, 3, 3][i])
     const firstWith = firstWithout.map((v, i) => v + [5, 5, 5, 0, 3, 3, 3, 3][i])
-    expect(glowChange(lastWith, lastWithout, firstWith, firstWithout)).toEqual({ mean: 0, max: 0, pixels: 2 })
+    expect(glowChange(lastWith, lastWithout, firstWith, firstWithout)).toEqual({ mean: 0, max: 0, pixels: 2, lastPixels: 2, firstPixels: 2 })
     // A glow twice as strong on the route-two side: the change is the glow's own.
     const brighter = firstWithout.map((v, i) => v + 2 * [5, 5, 5, 0, 3, 3, 3, 3][i])
     const change = glowChange(lastWith, lastWithout, brighter, firstWithout)
@@ -214,12 +243,34 @@ describe('the hero’s landing (the depth option)', () => {
     expect(() => glowChange([0], [0, 0], [0], [0])).toThrow(/different sizes/)
   })
 
+  it('glowChange: the mean is over the glow’s pixels, not the frame (an empty frame does not dilute a mismatch), and a glow missing on a side is counted', () => {
+    // One glowing pixel and 99 empty ones: a mismatch of 4 levels on each colour channel of the one.
+    const empty = new Array(100 * 4).fill(0)
+    const lastWith = [...empty]
+    lastWith[0] = lastWith[1] = lastWith[2] = 10
+    const firstWith = [...empty]
+    firstWith[0] = firstWith[1] = firstWith[2] = 14
+    const change = glowChange(lastWith, empty, firstWith, empty)
+    expect(change.pixels).toBe(1)
+    expect(change.mean).toBe(3)
+    expect(heroLandingWithin({ glowMean: change.mean, glowMax: change.max, glowPixels: change.pixels, lastGlowPixels: change.lastPixels, firstGlowPixels: change.firstPixels })).toBe(false)
+    // No glow on either side: nothing changed, and nothing was read.
+    const none = glowChange(empty, empty, empty, empty)
+    expect(none).toEqual({ mean: 0, max: 0, pixels: 0, lastPixels: 0, firstPixels: 0 })
+    // A glow on one side only.
+    expect(glowChange(lastWith, empty, empty, empty)).toMatchObject({ lastPixels: 1, firstPixels: 0 })
+  })
+
   it('heroLandingWithin holds the proposed bar, mean and max both', () => {
     expect(HERO_LANDING_BAR).toEqual({ glowMean: 0.5, glowMax: 16 })
-    expect(heroLandingWithin({ glowMean: 0.5, glowMax: 16, glowPixels: 10 })).toBe(true)
-    expect(heroLandingWithin({ glowMean: 0.51, glowMax: 1, glowPixels: 10 })).toBe(false)
-    expect(heroLandingWithin({ glowMean: 0, glowMax: 17, glowPixels: 10 })).toBe(false)
-    expect(heroLandingWithin({ glowMean: 0, glowMax: 0, glowPixels: 0 })).toBe(false)
+    const both = { glowPixels: 10, lastGlowPixels: 10, firstGlowPixels: 10 }
+    expect(heroLandingWithin({ glowMean: 0.5, glowMax: 16, ...both })).toBe(true)
+    expect(heroLandingWithin({ glowMean: 0.51, glowMax: 1, ...both })).toBe(false)
+    expect(heroLandingWithin({ glowMean: 0, glowMax: 17, ...both })).toBe(false)
+    expect(heroLandingWithin({ glowMean: 0, glowMax: 0, glowPixels: 0, lastGlowPixels: 0, firstGlowPixels: 0 })).toBe(false)
+    // The glow gone on one side of the landing is not a landing within the bar.
+    expect(heroLandingWithin({ glowMean: 0, glowMax: 0, glowPixels: 10, lastGlowPixels: 10, firstGlowPixels: 0 })).toBe(false)
+    expect(heroLandingWithin({ glowMean: 0, glowMax: 0, glowPixels: 10, lastGlowPixels: 0, firstGlowPixels: 10 })).toBe(false)
   })
 })
 
@@ -247,5 +298,14 @@ describe('the options', () => {
     const readback = [...body.matchAll(/^ {2}if \(options\.readback\) (.*)$/gm)]
     expect(readback).toHaveLength(1)
     expect(readback[0][1]).toContain('checkReadback(TEMPLATE_FIXTURES, options.readback, options.frames,')
+    // An empty path is falsy, so its guard would run nothing: refused before any check, by name.
+    const head = body.slice(0, body.indexOf('const asked = askedOptions(options)'))
+    expect(head).toContain("if (options.screenCard === '') throw new Error(")
+  })
+
+  it('EXPORT_PARITY_BAR is phase 2’s TEMPLATES_BAR, taken from it, not repeated', () => {
+    expect(EXPORT_PARITY_BAR.meanLevels).toBe(TEMPLATES_BAR.bakeMeanLevels)
+    const source = readFileSync(resolve(__dirname, '../../src/renderer/src/harness/phase3Measure.ts'), 'utf8')
+    expect([...source.matchAll(/export const EXPORT_PARITY_BAR = (.*)$/gm)].map((m) => m[1])).toEqual(['Object.freeze({ meanLevels: TEMPLATES_BAR.bakeMeanLevels })'])
   })
 })

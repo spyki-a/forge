@@ -167,7 +167,7 @@ async function readCase(
       const a = { with: pixelsOf(painterB(lists[lastMoving], compositor)), without: pixelsOf(painterB(lists[lastMoving], compositor, { glow: false })) }
       const b = { with: pixelsOf(painterB(lists[firstFlat], compositor)), without: pixelsOf(painterB(lists[firstFlat], compositor, { glow: false })) }
       const change = glowChange(a.with, a.without, b.with, b.without)
-      landing = { lastMoving, firstFlat, withGlow: diffChannels(a.with, b.with), withoutGlow: diffChannels(a.without, b.without), glowMean: change.mean, glowMax: change.max, glowPixels: change.pixels }
+      landing = { lastMoving, firstFlat, withGlow: diffChannels(a.with, b.with), withoutGlow: diffChannels(a.without, b.without), glowMean: change.mean, glowMax: change.max, glowPixels: change.pixels, lastGlowPixels: change.lastPixels, firstGlowPixels: change.firstPixels }
     }
   }
 
@@ -197,7 +197,7 @@ async function readCase(
       `${msPerFrame.toFixed(1)} ms a frame through paintDrawList3d; settled against the flat twin ${line(settled)}${variant === 'hero' ? ' (the glow left out)' : ''}; frame ${firstFrame} against the twin ${line(first)}` +
       (glow ? `; glow radius ${glow.radius.toFixed(1)} px, beyond its ${glow.reach} px reach from the item's ink alpha added ${glow.outsideReach} and colour off by ${glow.outsideColour} over ${glow.outsidePixels} pixels, with against without ${line(glow.present)}` : '') +
       (landing
-        ? `; the landing, frame ${landing.lastMoving} (route three) against ${landing.firstFlat} (route two): with the glow ${line(landing.withGlow)}, without it ${line(landing.withoutGlow)}, the glow's own change mean ${landing.glowMean.toFixed(3)}, max ${landing.glowMax} ` +
+        ? `; the landing, frame ${landing.lastMoving} (route three) against ${landing.firstFlat} (route two): with the glow ${line(landing.withGlow)}, without it ${line(landing.withoutGlow)}, the glow's own change mean ${landing.glowMean.toFixed(3)} over its ${landing.glowPixels} pixels (glowing ${landing.lastGlowPixels} before, ${landing.firstGlowPixels} after), max ${landing.glowMax} ` +
           `(proposed bar mean ≤ ${HERO_LANDING_BAR.glowMean}, max ≤ ${HERO_LANDING_BAR.glowMax}: ${heroLandingWithin(landing) ? 'within' : 'OVER'}; not in the verdict)`
         : variant === 'hero' ? '; the landing: no frame off flat followed by one at rest, not read' : '')
   )

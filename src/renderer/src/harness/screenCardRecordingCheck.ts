@@ -49,11 +49,12 @@ import { graphicTargetsAt } from '@shared/graphics/targets'
 import { screenCardFootage, screenCardPulledFrames, screenCardRefusal, screenCardSpec } from '@shared/graphics/screenCard'
 import { bezelWidth, landingFrame, type ScreenCardMove } from '@shared/graphics/templates/screenCard'
 import { mediaUrl } from '@shared/mediaUrl'
-import { GRAPHIC_POOL_DEPTH, graphicFrameCanvases, screenTargetsAt } from '../graphicCanvas'
+import { GRAPHIC_POOL_DEPTH, graphicFrameCanvases, screenTargetsAt, takeGraphicBakeNotes } from '../graphicCanvas'
+import { WEBGL_MISSING_NOTE } from '../graphicCompositor'
 import { diffChannels, type ChannelDiff } from './compositorMeasure'
 import { perFrameMs, spread } from './graphicMeasure'
 import { wholeRegion } from './screenCardMeasure'
-import { bakeRecorded, decodePng } from './bake3dCheck'
+import { bakeRecorded, decodePng, sameBytes } from './bake3dCheck'
 import { bakeBudget, handoffWithin, m13Phase3Line, type BakeBudget } from './phase3Measure'
 
 const W = 1080
@@ -131,6 +132,8 @@ export async function checkScreenCardRecording(
   notes: string[]
 ): Promise<ScreenCardRecordingResult> {
   const where = "screenCard: '<path>' runs in the development app (npm run dev, its DevTools), where the recording can be probed and its frames pulled; on the harness page run screenCard: true"
+  // The harness page first, plainly: its bridge answers any path as an image, so a probe there would only mislead.
+  if ('forgeMenu' in window) throw new Error("graphic check: this is the harness page, which cannot open a recording: run screenCard: true here, or this call in the development app (npm run dev, its DevTools)")
   if (typeof path !== 'string' || path.trim() === '') throw new Error(`graphic check: screenCard takes true, or the path of a screen recording (§6.11): ${where}`)
   let probed: Awaited<ReturnType<typeof window.forge.probe>>
   try {
@@ -191,6 +194,8 @@ export async function checkScreenCardRecording(
 
   const cases: ScreenCardRecordingCase[] = []
   const failures: string[] = []
+  // A store bake's notes are not this check's; each case's are taken after its bakes, so none reaches the user's next export.
+  takeGraphicBakeNotes()
   const m13: { name: string; patterns: [string, string] }[] = []
   for (const c of M20_CASES) {
     const style = resolveGraphicStyle(c.style)
@@ -217,17 +222,15 @@ export async function checkScreenCardRecording(
     if (c.twice) {
       const second = await bakeRecorded(spec, style, `graphic-check-m20-${run}-${slug}-b`, size, total, FPS, filled)
       let equal = 0
-      if (first.bytes && second.bytes) {
-        for (const [i, b] of first.bytes) {
-          const o = second.bytes.get(i)
-          if (o && o.byteLength === b.byteLength && new Uint8Array(o).every((v, k) => v === new Uint8Array(b)[k])) equal++
-        }
-      }
+      if (first.bytes && second.bytes) for (const [i, b] of first.bytes) if (second.bytes.has(i) && sameBytes(b, second.bytes.get(i)!)) equal++
       twice = { equal, of: first.bytes?.size ?? 0 }
       patterns.push(second.value.pattern)
       m13.push({ name: `screen card ${label}`, patterns: [first.value.pattern, second.value.pattern] })
       if (!(twice.of > 0 && twice.equal === twice.of)) failures.push(`${label}: baked twice, ${twice.equal} of ${twice.of} PNGs byte-equal`)
     }
+    // A bake drawn flat for want of WebGL times flat frames: the budget and M13 would read nothing of 2.5D.
+    const drawnFlat = takeGraphicBakeNotes().includes(WEBGL_MISSING_NOTE)
+    if (drawnFlat) failures.push(`${label}: drawn flat, the bake recorded "${WEBGL_MISSING_NOTE}"`)
     if (!budget.withinFrames) failures.push(`${label}: ${budget.frames} moving frames, over the whole-hold budget's 300`)
     if (!budget.withinRate) failures.push(`${label}: ${budget.msPerFrame.toFixed(1)} ms a frame, 300 frames in ${(budget.projectedMs / 1000).toFixed(2)} s, over the budget's 10 s`)
     if (!handoffWithin(handoff)) failures.push(`${label}: the hand-off on the card's side ${handoff ? `mean ${handoff.meanAll.toFixed(3)}` : 'not read'} (bar 2/255)`)
@@ -235,7 +238,8 @@ export async function checkScreenCardRecording(
     summary.push(
       `M20 ${label}: ${moving} moving frames of ${total}; bake ${budget.frames} frames, ${budget.msPerFrame.toFixed(1)} ms a frame at p50${timed ? ` (p95 ${timed.p95.toFixed(1)})` : ' (by its wall)'}, wall ${(budget.totalMs / 1000).toFixed(2)} s, 300 frames at this rate ${(budget.projectedMs / 1000).toFixed(2)} s against the budget's 10 s (${budget.withinFrames && budget.withinRate ? 'within' : 'OVER'})` +
         `; the hand-off on the card's side (its baked frame ${L} against the pulled frame ${L} by drawImage, inside the box less the bezel) ${handoff ? `mean ${handoff.meanAll.toFixed(3)}, max ${handoff.maxAll}` : 'not read'}` +
-        (twice ? `; baked twice ${twice.equal} of ${twice.of} PNGs byte-equal` : '')
+        (twice ? `; baked twice ${twice.equal} of ${twice.of} PNGs byte-equal` : '') +
+        (drawnFlat ? '; DRAWN FLAT: WebGL did not start' : '')
     )
   }
   const line = m13Phase3Line(m13)

@@ -9,7 +9,7 @@
  * option's (`depthCheck.ts`).
  */
 
-import { percentile, type PixelDiff } from './graphicMeasure'
+import { TEMPLATES_BAR, percentile, type PixelDiff } from './graphicMeasure'
 import type { ChannelDiff } from './compositorMeasure'
 
 /* ------------------------------------------------------------- M12: readback */
@@ -86,6 +86,13 @@ export interface StraightReading {
   /** Pixels whose colour was read (the reference's alpha at least `minAlpha`), and pixels with any alpha. */
   colourPixels: number
   inkPixels: number
+  /**
+   * Pixels whose colour was read at a partial alpha (`minAlpha` to 254): the
+   * only ones that tell a PNG kept straight from one stored premultiplied
+   * (an opaque pixel reads the same either way), so a reading with none of
+   * them keeps nothing.
+   */
+  partialPixels: number
 }
 
 export function straightAgainst(reference: ArrayLike<number>, picture: ArrayLike<number>, minAlpha = READBACK_BAR.minAlpha): StraightReading {
@@ -94,19 +101,21 @@ export function straightAgainst(reference: ArrayLike<number>, picture: ArrayLike
   let colourMax = 0
   let colourPixels = 0
   let inkPixels = 0
+  let partialPixels = 0
   for (let p = 0; p < reference.length; p += 4) {
     alphaMax = Math.max(alphaMax, Math.abs(reference[p + 3] - picture[p + 3]))
     if (reference[p + 3] > 0 || picture[p + 3] > 0) inkPixels++
     if (reference[p + 3] < minAlpha) continue
     colourPixels++
+    if (reference[p + 3] < 255) partialPixels++
     for (let c = 0; c < 3; c++) colourMax = Math.max(colourMax, Math.abs(reference[p + c] - picture[p + c]))
   }
-  return { alphaMax, colourMax, colourPixels, inkPixels }
+  return { alphaMax, colourMax, colourPixels, inkPixels, partialPixels }
 }
 
-/** Whether a route keeps straight alpha through to the PNG (`READBACK_BAR`); a reading with no ink read keeps nothing. */
+/** Whether a route keeps straight alpha through to the PNG (`READBACK_BAR`); a reading with no ink read, or no partial alpha read, keeps nothing. */
 export function keepsStraightAlpha(r: StraightReading): boolean {
-  return r.inkPixels > 0 && r.colourPixels > 0 && r.alphaMax <= READBACK_BAR.alphaMax && r.colourMax <= READBACK_BAR.colourMax
+  return r.inkPixels > 0 && r.colourPixels > 0 && r.partialPixels > 0 && r.alphaMax <= READBACK_BAR.alphaMax && r.colourMax <= READBACK_BAR.colourMax
 }
 
 /** One route's timings, ms a frame. */
@@ -127,7 +136,7 @@ export interface ReadbackVerdict {
   rows: { route: ReadbackRoute; p50: number; p95: number; pngP50: number; pngP95: number; keeps: boolean }[]
   /** The fastest at p50 that keeps straight alpha. */
   fastest: ReadbackRoute | null
-  /** Phase 3's bake by the rule: drawImage unless `fastest` is at least `READBACK_BAR.faster` times as fast at p50 (when drawImage was not timed, the fastest that keeps). */
+  /** Phase 3's bake by the rule: drawImage unless `fastest` is at least `READBACK_BAR.faster` times as fast at p50 (when drawImage was not timed, or does not keep straight alpha, the fastest that keeps). */
   chosen: ReadbackRoute | null
   failures: string[]
 }
@@ -142,7 +151,9 @@ export interface ReadbackVerdict {
 export function readbackVerdict(rows: readonly ReadbackRow[]): ReadbackVerdict {
   const failures: string[] = []
   const ran = rows.filter((r) => r.error === null && r.readMs.length > 0)
+  if (rows.length === 0) failures.push('no route was read')
   for (const r of rows) if (r.error !== null) failures.push(`${r.route} did not run: ${r.error}`)
+  for (const r of rows) if (r.error === null && r.readMs.length === 0) failures.push(`${r.route} ran but timed no frame`)
   const out: ReadbackVerdict['rows'] = ran.map((r) => {
     const keeps = r.straight !== null && keepsStraightAlpha(r.straight)
     if (!keeps) {
@@ -156,7 +167,8 @@ export function readbackVerdict(rows: readonly ReadbackRow[]): ReadbackVerdict {
   })
   const keeping = out.filter((r) => r.keeps).sort((a, b) => a.p50 - b.p50)
   const fastest = keeping[0]?.route ?? null
-  const drawImage = out.find((r) => r.route === 'drawImage')
+  // drawImage is preferred only while it keeps straight alpha itself: the rule's first condition is the bar.
+  const drawImage = out.find((r) => r.route === 'drawImage' && r.keeps)
   let chosen: ReadbackRoute | null = fastest
   if (drawImage && fastest && fastest !== 'drawImage') {
     const best = keeping[0]
@@ -179,7 +191,7 @@ export function readbackVerdict(rows: readonly ReadbackRow[]): ReadbackVerdict {
  * (M13's first half, as the page can read it), and each bake writing exactly
  * the moving frames.
  */
-export const EXPORT_PARITY_BAR = Object.freeze({ meanLevels: 1 })
+export const EXPORT_PARITY_BAR = Object.freeze({ meanLevels: TEMPLATES_BAR.bakeMeanLevels })
 
 export interface ExportParityReading {
   /** The case's name: `counter-en tilt under clean`, `screen card tilt-in under energetic`. */
@@ -195,6 +207,14 @@ export interface ExportParityReading {
   moving: number
   /** The second bake against the first, PNG by PNG, where it was baked twice (M13's cases); null when baked once. */
   twice: { equal: number; of: number } | null
+  /**
+   * What was drawn flat where the case asks for 2.5D: a bake that recorded
+   * `WEBGL_MISSING_NOTE`, a Preview frame that wanted a compositor and had
+   * none (WebGL missing, or the Preview's cap full). A flat Preview agrees
+   * with a flat bake, so without this the option could pass with no 2.5D
+   * drawn at all.
+   */
+  flat: string[]
 }
 
 export function exportParityVerdict(readings: readonly ExportParityReading[]): { pass: boolean; failures: string[] } {
@@ -209,6 +229,7 @@ export function exportParityVerdict(readings: readonly ExportParityReading[]): {
     })
     if (r.baked !== r.moving) failures.push(`${r.name}: baked ${r.baked} frames of ${r.moving} moving`)
     if (r.twice && !(r.twice.of > 0 && r.twice.equal === r.twice.of)) failures.push(`${r.name}: baked twice, ${r.twice.equal} of ${r.twice.of} PNGs byte-equal`)
+    for (const f of r.flat) failures.push(`${r.name}: drawn flat, ${f}`)
   }
   return { pass: failures.length === 0, failures }
 }
@@ -332,12 +353,13 @@ export function handoffWithin(d: ChannelDiff | null): boolean {
  *
  * The bar is a proposal, not in the depth verdict until read on both
  * machines: the glow's own change across the landing at most `glowMean`
- * levels mean over the frame and `glowMax` at its largest. Why: the glow is a
+ * levels mean over the glow's pixels and `glowMax` at its largest, and a glow
+ * present on both sides. Why: the glow is a
  * blur of the item, so where the item moves a pixel the glow moves by less
  * than a pixel's worth of its own gradient, a level or two at a radius of
  * tens of pixels; a mismatch of the two paths (a model, a premultiply, a
  * strength, a cap) changes the glow over its whole reach, by levels on every
- * pixel of it, which a mean over the frame still shows.
+ * pixel of it, which a mean over the glow's own pixels shows.
  */
 export const HERO_LANDING_BAR = Object.freeze({ glowMean: 0.5, glowMax: 16 })
 
@@ -348,31 +370,57 @@ export interface HeroLandingReading {
   /** The two frames with their glow, against each other; and without it. */
   withGlow: ChannelDiff
   withoutGlow: ChannelDiff
-  /** The glow alone (with less without, signed per channel) on one side against the other's: mean and largest, in levels. */
+  /** The glow alone (with less without, signed per channel) on one side against the other's: mean over the glow's pixels and largest, in levels. */
   glowMean: number
   glowMax: number
+  /** The pixels where either side's glow is not zero (the mean's pixels), and each side's own. */
   glowPixels: number
+  lastGlowPixels: number
+  firstGlowPixels: number
 }
 
-/** The glow alone on each side of the landing, against the other: |(a1 − a0) − (b1 − b0)| per channel. */
+/**
+ * The glow alone on each side of the landing, against the other:
+ * |(a1 − a0) − (b1 − b0)| per channel, its mean over the pixels where either
+ * side's glow is not zero (a mean over the whole frame, most of it empty,
+ * would dilute a mismatch confined to the glow's reach: a74576d's trap), and
+ * each side's own glow pixels, so a landing whose glow is missing on both
+ * sides reads as missing, not as equal.
+ */
 export function glowChange(
   lastWith: ArrayLike<number>,
   lastWithout: ArrayLike<number>,
   firstWith: ArrayLike<number>,
   firstWithout: ArrayLike<number>
-): { mean: number; max: number; pixels: number } {
+): { mean: number; max: number; pixels: number; lastPixels: number; firstPixels: number } {
   const n = lastWith.length
-  if ([lastWithout, firstWith, firstWithout].some((p) => p.length !== n)) throw new Error('glowChange: pictures of different sizes')
+  if (n % 4 !== 0 || [lastWithout, firstWith, firstWithout].some((p) => p.length !== n)) throw new Error('glowChange: pictures of different sizes')
   let sum = 0
   let max = 0
-  for (let i = 0; i < n; i++) {
-    const d = Math.abs(lastWith[i] - lastWithout[i] - (firstWith[i] - firstWithout[i]))
-    sum += d
-    if (d > max) max = d
+  let pixels = 0
+  let lastPixels = 0
+  let firstPixels = 0
+  for (let p = 0; p < n; p += 4) {
+    let onLast = false
+    let onFirst = false
+    for (let c = 0; c < 4; c++) {
+      if (lastWith[p + c] !== lastWithout[p + c]) onLast = true
+      if (firstWith[p + c] !== firstWithout[p + c]) onFirst = true
+    }
+    if (onLast) lastPixels++
+    if (onFirst) firstPixels++
+    if (!onLast && !onFirst) continue
+    pixels++
+    for (let c = 0; c < 4; c++) {
+      const i = p + c
+      const d = Math.abs(lastWith[i] - lastWithout[i] - (firstWith[i] - firstWithout[i]))
+      sum += d
+      if (d > max) max = d
+    }
   }
-  return { mean: n > 0 ? sum / n : 0, max, pixels: n / 4 }
+  return { mean: pixels > 0 ? sum / (pixels * 4) : 0, max, pixels, lastPixels, firstPixels }
 }
 
-export function heroLandingWithin(r: Pick<HeroLandingReading, 'glowMean' | 'glowMax' | 'glowPixels'>): boolean {
-  return r.glowPixels > 0 && r.glowMean <= HERO_LANDING_BAR.glowMean && r.glowMax <= HERO_LANDING_BAR.glowMax
+export function heroLandingWithin(r: Pick<HeroLandingReading, 'glowMean' | 'glowMax' | 'glowPixels' | 'lastGlowPixels' | 'firstGlowPixels'>): boolean {
+  return r.glowPixels > 0 && r.lastGlowPixels > 0 && r.firstGlowPixels > 0 && r.glowMean <= HERO_LANDING_BAR.glowMean && r.glowMax <= HERO_LANDING_BAR.glowMax
 }

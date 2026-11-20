@@ -13,8 +13,12 @@
  *   await window.__forgeGraphicCheck({ depth: true })                  phase 3 piece 3: counter and ring in 2.5D against their flat twins, the hero's glow
  *   await window.__forgeGraphicCheck({ screenCard: true })        phase 3 pieces 4 and 5: both moves over a stand-in recording, the hand-off's own side, the edge sweep
  *   await window.__forgeGraphicCheck({ screenCard: '<path>' })      M20, the development app only: a real recording's card, its legibility sheets, bake cost and hand-off
+ *       (a Windows path as String.raw`C:\Users\me\Videos\rec.mp4`, or with every backslash doubled: a plain '...' string eats them)
  *   await window.__forgeGraphicCheck({ readback: ['drawImage', 'readPixels', 'readRenderTargetPixelsAsync'], frames: 120 })   M12
  *   await window.__forgeGraphicCheck({ bake3d: true })          phase 3 piece 6: preview = export through the app's bake, M13's bakes, disposal
+ *       (readback and bake3d each run for minutes, longer than a console tool waits: start one unawaited,
+ *        window.__r = undefined; window.__forgeGraphicCheck({ bake3d: true }).then(r => window.__r = r, e => window.__r = String(e)),
+ *        then read window.__r?.summary until it is there)
  *   await window.__forgeGraphicCheck({ indic: true })                M22's numeric halves, then phase 1's Indic render check
  *   await window.__forgeGraphicCheck({ primitives: true })                 phase 1's exit (§6.12) and M13's first half
  *   await window.__forgeGraphicCheck({ pathLength: true })                                                     M8
@@ -3757,6 +3761,8 @@ function showSheet(result: GraphicCheckResult): void {
 /* ------------------------------------------------------------- the check */
 
 export async function runGraphicCheck(options: GraphicCheckOptions = {}): Promise<GraphicCheckResult> {
+  // An empty path is falsy, so its guard would run nothing and say nothing: refused here, plainly.
+  if (options.screenCard === '') throw new Error("graphic check: screenCard: '' names no recording: pass true for the stand-in, or a recording's path in the development app")
   const frames = new Frames()
   const summary: string[] = []
   const notes: string[] = []

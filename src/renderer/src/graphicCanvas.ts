@@ -541,6 +541,16 @@ export const PREVIEW_COMPOSITOR_CAP = 3
  */
 export const PREVIEW_COMPOSITOR_HOLD_MS = 250
 
+/**
+ * Whether the clip's Preview holds a compositor that has landed (not on its
+ * way, not null for want of WebGL). The harness's `bake3d` option reads it so
+ * a Preview frame drawn flat (WebGL missing, or the cap full) is named, not
+ * compared with a flat bake and passed. No production caller.
+ */
+export function graphicPreviewHasCompositor(clipId: string): boolean {
+  return Boolean(compositors.get(clipId)?.compositor)
+}
+
 /** Give back a clip's preview compositor; one still on its way is disposed on landing (the slot is no longer the clip's). */
 function releaseDeepSlot(clipId: string): void {
   compositors.get(clipId)?.compositor?.dispose()

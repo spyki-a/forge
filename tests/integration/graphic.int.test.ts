@@ -2098,6 +2098,19 @@ describe('try-out 1 piece 6: each Library graphic, made by the list’s own func
 const P3_CANVAS = { width: 360, height: 640 } as const
 const P3_REC = { width: 640, height: 360 } as const
 const P3_FRAMES = 90
+/**
+ * The recording sits at timeline frame `P3_REC_START` with `P3_REC_IN` frames
+ * trimmed from its head, the card at the recording's start: so the timeline
+ * frame, the frame within the clip and the source frame are three different
+ * numbers, and a key or a pull counted from the wrong base is seen through
+ * the real plan (a card and a recording both at frame 0 with no trim would
+ * make the three the same, and pass either way).
+ */
+const P3_REC_START = 12
+const P3_REC_IN = 7
+/** The recording clip's length (the file less its trimmed head), the card's too; and the timeline's, the red track's. */
+const P3_CLIP = P3_FRAMES - P3_REC_IN
+const P3_TIMELINE = P3_REC_START + P3_CLIP
 const P3_PERIOD = 20
 const p3Grey = (i: number): number => 50 + 10 * (i % P3_PERIOD)
 /** Hand-derived: `landingFrame(30)` = round(1.0 × 30); the card's moving frames under clean, L + 1 + round(SETTLE_S × 30). */
@@ -2189,7 +2202,7 @@ function p3Paint(list: { items: DrawItem[] }, size: { width: number; height: num
 /** What the export asked the stand-in for, the pictures it painted (by card frame), and where it wrote them. */
 interface P3Ask {
   frames: number
-  footage: { first: number; count: number; path: string } | null
+  footage: { first: number; count: number; path: string; inPoint: number } | null
   seq: string
   pngs: number
   /** Per moving frame, the stand-in's pixel at the box's centre and in the band above the box. */
@@ -2212,7 +2225,7 @@ function p3Bakers(dir: string, asks: P3Ask[], route: 'draw' | 'null'): Bakers {
     paper: none('paper'),
     carousel: none('carousel'),
     graphic: async (spec, style, key, width, height, frames, fps, targetsAt, _boxAllowed, footage) => {
-      const ask: P3Ask = { frames, footage: footage ? { first: footage.first, count: footage.count, path: footage.path } : null, seq: '', pngs: 0, inBox: [], above: [], ids: [] }
+      const ask: P3Ask = { frames, footage: footage ? { first: footage.first, count: footage.count, path: footage.path, inPoint: footage.inPoint } : null, seq: '', pngs: 0, inBox: [], above: [], ids: [] }
       asks.push(ask)
       if (route === 'null') return null
       const size = { width, height }
@@ -2267,14 +2280,14 @@ async function p3Recording(dir: string): Promise<string> {
 /** The red track, the recording on V2 with the card's two keys, and the card on V3, as the store leaves them. */
 function p3Project(red: string, recordingFile: string): { project: Project; recording: Clip; card: Clip } {
   const empty = emptyProject('graphic-phase-3')
-  const redAsset: MediaAsset = { id: 'red', path: red, name: 'red.mp4', kind: 'video', durationFrames: P3_FRAMES, ...P3_CANVAS, fps: FPS, hasVideo: true, hasAudio: false, size: 1 }
+  const redAsset: MediaAsset = { id: 'red', path: red, name: 'red.mp4', kind: 'video', durationFrames: P3_TIMELINE, ...P3_CANVAS, fps: FPS, hasVideo: true, hasAudio: false, size: 1 }
   const recAsset: MediaAsset = { id: 'rec', path: recordingFile, name: 'recording.mp4', kind: 'video', durationFrames: P3_FRAMES, ...P3_REC, fps: FPS, hasVideo: true, hasAudio: false, size: 1 }
-  const drawn = drawnGraphicAsset('card', P3_CANVAS.width, P3_CANVAS.height, P3_FRAMES, 'screen card — graphic')
+  const drawn = drawnGraphicAsset('card', P3_CANVAS.width, P3_CANVAS.height, P3_CLIP, 'screen card — graphic')
   const clip = (over: Partial<Clip> & Pick<Clip, 'id' | 'assetId' | 'trackId' | 'start' | 'duration'>): Clip => ({
     inPoint: 0, volume: 1, transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 }, color: { brightness: 0, contrast: 1, saturation: 1 }, ...over
   })
-  const bare = clip({ id: 'rec', assetId: 'rec', trackId: 'v2', start: 0, duration: P3_FRAMES })
-  const card = clip({ id: 'card', assetId: drawn.id, trackId: 'v3', start: 0, duration: P3_FRAMES, graphic: screenCardSpec(bare, 'tilt-in', FPS) })
+  const bare = clip({ id: 'rec', assetId: 'rec', trackId: 'v2', start: P3_REC_START, duration: P3_CLIP, inPoint: P3_REC_IN })
+  const card = clip({ id: 'card', assetId: drawn.id, trackId: 'v3', start: P3_REC_START, duration: P3_CLIP, graphic: screenCardSpec(bare, 'tilt-in', FPS) })
   const recording: Clip = { ...bare, keyframes: { opacity: screenCardKeys(card, bare, FPS) } }
   const v3 = { id: 'v3', kind: 'video' as const, name: 'V3', muted: false, hidden: false, locked: false }
   const tracks = [...empty.tracks.filter((t) => t.kind === 'video'), v3, ...empty.tracks.filter((t) => t.kind !== 'video')]
@@ -2284,7 +2297,7 @@ function p3Project(red: string, recordingFile: string): { project: Project; reco
     settings: { ...empty.settings, ...P3_CANVAS, fps: FPS },
     captions: { enabled: false, styleId: empty.captions.styleId },
     assets: [redAsset, recAsset, drawn],
-    clips: [clip({ id: 'red', assetId: 'red', trackId: 'v1', start: 0, duration: P3_FRAMES }), recording, card]
+    clips: [clip({ id: 'red', assetId: 'red', trackId: 'v1', start: 0, duration: P3_TIMELINE }), recording, card]
   }
   return { project, recording, card }
 }
@@ -2308,7 +2321,10 @@ async function p3Export(dir: string, name: string, project: Project, route: 'dra
   const plan = buildRenderPlan({ project: baked, outputPath: file, canvas: P3_CANVAS })
   await writeFile(join(out, 'graph.txt'), plan.args.join(' ').replace(/;/g, ';\n'), 'utf8')
   await run(FFMPEG, plan.args, { maxBuffer: 64 * 1024 * 1024 })
-  for (const f of [0, P3_L - 1, P3_L, P3_L + 1, P3_L + 2, P3_MOVING + 5]) await saveFrame(file, (f - 0.25) / FPS, join(out, `f${String(f).padStart(3, '0')}.png`))
+  // Export (timeline) frames: before the card, and around the card's landing. Never a negative seek (the 2018 build's first).
+  for (const f of [0, P3_REC_START + P3_L - 1, P3_REC_START + P3_L, P3_REC_START + P3_L + 1, P3_REC_START + P3_L + 2, P3_REC_START + P3_MOVING + 5]) {
+    await saveFrame(file, Math.max(0, (f - 0.25) / FPS), join(out, `f${String(f).padStart(3, '0')}.png`))
+  }
   return { rgb: await lumaFrames(file, P3_CANVAS, 'rgb24'), asks, notes, baked }
 }
 
@@ -2349,10 +2365,11 @@ describe('phase 3: the screen card’s hand-off through the real plan (docs/CLIP
   beforeAll(async () => {
     dir = join(root, 'phase3')
     await mkdir(dir, { recursive: true })
-    const red = await makeColour(join(dir, 'red.mp4'), 'red', P3_CANVAS, P3_FRAMES / FPS, FPS)
+    const red = await makeColour(join(dir, 'red.mp4'), 'red', P3_CANVAS, P3_TIMELINE / FPS, FPS)
     const recording = await p3Recording(dir)
     parts = p3Project(red, recording)
     box = graphicTargetsAt(parts.project, parts.card, parts.card.graphic!, 0, P3_CANVAS).screen!.box
+    expect(box.width, 'the card found its box').toBeGreaterThan(0)
     inside = { x: Math.ceil(box.x) + P3_MARGIN, y: Math.ceil(box.y) + P3_MARGIN, width: Math.floor(box.width) - 2 * P3_MARGIN, height: Math.floor(box.height) - 2 * P3_MARGIN }
     above = { x: P3_MARGIN, y: P3_MARGIN, width: P3_CANVAS.width - 2 * P3_MARGIN, height: Math.floor(box.y) - 2 * P3_MARGIN }
     drawnRun = await p3Export(dir, 'card', parts.project, 'draw')
@@ -2361,7 +2378,10 @@ describe('phase 3: the screen card’s hand-off through the real plan (docs/CLIP
 
   it('is the store’s card: its spec, its two keys on the recording (0 held at 0, 1 at L + 1), aligned as realign leaves it; L and the moving frames hand-derived', () => {
     expect(landingFrame(FPS)).toBe(P3_L)
-    expect(graphicMovingFrames(parts.card.graphic!, CLEAN_GRAPHIC_STYLE, FPS, P3_FRAMES)).toBe(P3_MOVING)
+    expect(graphicMovingFrames(parts.card.graphic!, CLEAN_GRAPHIC_STYLE, FPS, P3_CLIP)).toBe(P3_MOVING)
+    // A key counts from the recording's own start (the card is at it): 0 and L + 1, never the timeline's 12 and 43.
+    expect(parts.recording.start).toBe(P3_REC_START)
+    expect(parts.recording.inPoint).toBe(P3_REC_IN)
     expect(parts.recording.keyframes?.opacity).toEqual([{ frame: 0, value: 0, ease: 'hold' }, { frame: P3_L + 1, value: 1 }])
     expect(realignScreenCards(parts.project, parts.project)).toBe(parts.project)
     // The card's box is the recording contained in the 9:16 frame: the whole width, a band in the middle.
@@ -2376,33 +2396,46 @@ describe('phase 3: the screen card’s hand-off through the real plan (docs/CLIP
     expect(drawnRun.notes).toEqual([])
     expect(drawnRun.asks).toHaveLength(1)
     const ask = drawnRun.asks[0]
-    expect(ask.frames).toBe(P3_FRAMES)
+    expect(ask.frames).toBe(P3_CLIP)
     expect(ask.pngs).toBe(P3_MOVING)
-    expect(ask.footage).toEqual({ first: 0, count: P3_L + 1, path: parts.project.assets.find((a) => a.id === 'rec')!.path })
+    // The pull from the card's first frame within the clip (0, not the timeline's 12), the trim handed on for the pre-pass to apply.
+    expect(ask.footage).toEqual({ first: 0, count: P3_L + 1, path: parts.project.assets.find((a) => a.id === 'rec')!.path, inPoint: P3_REC_IN })
     ask.ids.forEach((ids, f) => expect(ids.includes('screen'), `frame ${f}: the image`).toBe(f <= P3_L))
-    expect(drawnRun.rgb).toHaveLength(P3_FRAMES)
+    expect(drawnRun.rgb).toHaveLength(P3_TIMELINE)
+  })
+
+  it('before the recording and its card start, the export is the red track alone', () => {
+    for (let t = 0; t < P3_REC_START; t++) {
+      expect(p3Dist(p3Mean(drawnRun.rgb[t], inside), RED), `frame ${t}: the box is red`).toBeLessThanOrEqual(P3_LEVELS)
+      expect(p3Dist(p3Mean(drawnRun.rgb[t], above), RED), `frame ${t}: above the box is red`).toBeLessThanOrEqual(P3_LEVELS)
+    }
   })
 
   it('up to L the box shows the card over the red beneath, never the recording (the hold key hides it), and at L the card’s frame', () => {
     const ask = drawnRun.asks[0]
     for (let f = 0; f <= P3_L; f++) {
+      const t = P3_REC_START + f
+      const source = P3_REC_IN + f
       const card = ask.inBox[f]
       const hidden = overRgb(card.rgb, card.alpha, RED)
-      const showing = overRgb(card.rgb, card.alpha, [p3Grey(f), p3Grey(f), p3Grey(f)])
+      const showing = overRgb(card.rgb, card.alpha, [p3Grey(source), p3Grey(source), p3Grey(source)])
       // The check can tell the two apart on this frame, or it reads nothing.
-      expect(p3Dist(hidden, showing), `frame ${f}: hidden and showing apart`).toBeGreaterThan(P3_APART)
-      const mean = p3Mean(drawnRun.rgb[f], inside)
-      lines.push(`frame ${f}: the box ${mean.map((c) => c.toFixed(1)).join(',')}, the card over red ${hidden.join(',')}, over the recording ${showing.join(',')}`)
-      expect(p3Dist(mean, hidden), `frame ${f}: the box is the card over red`).toBeLessThanOrEqual(P3_LEVELS)
+      expect(p3Dist(hidden, showing), `card frame ${f}: hidden and showing apart`).toBeGreaterThan(P3_APART)
+      const mean = p3Mean(drawnRun.rgb[t], inside)
+      lines.push(`export frame ${t} (card frame ${f}): the box ${mean.map((c) => c.toFixed(1)).join(',')}, the card over red ${hidden.join(',')}, over the recording ${showing.join(',')}`)
+      expect(p3Dist(mean, hidden), `export frame ${t} (card frame ${f}): the box is the card over red`).toBeLessThanOrEqual(P3_LEVELS)
     }
   })
 
   it('from L + 1 the box shows the recording’s own frame through the hole: the right source frame, none repeated, none skipped', () => {
-    for (let f = P3_L + 1; f < P3_FRAMES; f++) {
-      const read = p3Nearest(p3Mean(drawnRun.rgb[f], inside))
-      lines.push(`frame ${f}: the box reads grey index ${read.index} (want ${f % P3_PERIOD}), ${read.off.toFixed(1)} off`)
-      expect(read.index, `frame ${f}: the recording's frame`).toBe(f % P3_PERIOD)
-      expect(read.off, `frame ${f}: the recording's grey`).toBeLessThanOrEqual(P3_LEVELS)
+    for (let f = P3_L + 1; f < P3_CLIP; f++) {
+      const t = P3_REC_START + f
+      // The source frame under card frame f: the trim's 7 on from the clip's own frame.
+      const want = (P3_REC_IN + f) % P3_PERIOD
+      const read = p3Nearest(p3Mean(drawnRun.rgb[t], inside))
+      lines.push(`export frame ${t} (card frame ${f}): the box reads grey index ${read.index} (want ${want}), ${read.off.toFixed(1)} off`)
+      expect(read.index, `export frame ${t} (card frame ${f}): the recording's frame`).toBe(want)
+      expect(read.off, `export frame ${t} (card frame ${f}): the recording's grey`).toBeLessThanOrEqual(P3_LEVELS)
     }
   })
 
@@ -2411,11 +2444,18 @@ describe('phase 3: the screen card’s hand-off through the real plan (docs/CLIP
     const held = ask.above[ask.above.length - 1]
     const dimmed = overRgb(held.rgb, held.alpha, RED)
     expect(p3Dist(dimmed, RED), 'the dim is there').toBeGreaterThan(P3_APART)
-    for (let f = 0; f < P3_FRAMES; f++) {
+    // It fades in: none on the card's first frame, part-way at half the landing, whole at L, the held dim's.
+    const half = Math.round(P3_L / 2)
+    expect(ask.above[0].alpha, 'no dim on frame 0').toBe(0)
+    expect(ask.above[half].alpha, 'the dim rising by half the landing').toBeGreaterThan(0)
+    expect(ask.above[half].alpha, 'the dim not whole by half the landing').toBeLessThan(ask.above[P3_L].alpha)
+    expect(ask.above[P3_L], 'the dim whole at L').toEqual(held)
+    for (let f = 0; f < P3_CLIP; f++) {
+      const t = P3_REC_START + f
       const stand = ask.above[Math.min(f, ask.above.length - 1)]
       const want = overRgb(stand.rgb, stand.alpha, RED)
-      expect(p3Dist(p3Mean(drawnRun.rgb[f], above), want), `frame ${f}: above the box`).toBeLessThanOrEqual(P3_LEVELS)
-      if (f > P3_L) expect(want, `frame ${f}: the held dim`).toEqual(dimmed)
+      expect(p3Dist(p3Mean(drawnRun.rgb[t], above), want), `export frame ${t} (card frame ${f}): above the box`).toBeLessThanOrEqual(P3_LEVELS)
+      if (f > P3_L) expect(want, `card frame ${f}: the held dim`).toEqual(dimmed)
     }
   })
 
@@ -2423,11 +2463,12 @@ describe('phase 3: the screen card’s hand-off through the real plan (docs/CLIP
     expect(nullRun.notes).toEqual(['card: the graphic could not be drawn'])
     expect(nullRun.baked.clips.map((c) => c.id)).toEqual(['red', 'rec'])
     // The picture first, so a strike skipped fails on the frames themselves, not only on the copy's keys.
-    for (let f = 0; f < P3_FRAMES; f++) {
-      const read = p3Nearest(p3Mean(nullRun.rgb[f], inside))
-      expect(read.index, `frame ${f}: the recording's frame`).toBe(f % P3_PERIOD)
-      expect(read.off, `frame ${f}: the recording's grey`).toBeLessThanOrEqual(P3_LEVELS)
-      expect(p3Dist(p3Mean(nullRun.rgb[f], above), RED), `frame ${f}: no dim`).toBeLessThanOrEqual(P3_LEVELS)
+    for (let f = 0; f < P3_CLIP; f++) {
+      const t = P3_REC_START + f
+      const read = p3Nearest(p3Mean(nullRun.rgb[t], inside))
+      expect(read.index, `export frame ${t} (clip frame ${f}): the recording's frame`).toBe((P3_REC_IN + f) % P3_PERIOD)
+      expect(read.off, `export frame ${t} (clip frame ${f}): the recording's grey`).toBeLessThanOrEqual(P3_LEVELS)
+      expect(p3Dist(p3Mean(nullRun.rgb[t], above), RED), `export frame ${t}: no dim`).toBeLessThanOrEqual(P3_LEVELS)
     }
     expect(nullRun.baked.clips.find((c) => c.id === 'rec')!.keyframes?.opacity ?? []).toEqual([])
   })
@@ -2436,13 +2477,14 @@ describe('phase 3: the screen card’s hand-off through the real plan (docs/CLIP
     await writeNote(dir, [
       "# graphic, phase 3: the screen card's hand-off through the real plan (docs/CLIPS.md §6.11, §6.16)",
       '',
-      `A red ${P3_CANVAS.width}×${P3_CANVAS.height} track (red.mp4) on V1; a ${P3_REC.width}×${P3_REC.height} recording (recording.mp4, ${P3_FRAMES} frames at ${FPS} fps, frame i a flat grey 50 + 10·(i mod ${P3_PERIOD})) on V2,`,
+      `A red ${P3_CANVAS.width}×${P3_CANVAS.height} track (red.mp4, ${P3_TIMELINE} frames) on V1; a ${P3_REC.width}×${P3_REC.height} recording (recording.mp4, ${P3_FRAMES} frames at ${FPS} fps, frame i a flat grey 50 + 10·(i mod ${P3_PERIOD})) on V2,`,
+      `at timeline frame ${P3_REC_START} with its first ${P3_REC_IN} frames trimmed (so card frame f is export frame ${P3_REC_START} + f and source frame ${P3_REC_IN} + f),`,
       `contained in the 9:16 frame (the card's box ${JSON.stringify(box)}); a Tilt in screen card on V3 spanning it (screenCardSpec), the recording carrying screenCardKeys' two keys (0 held at 0, 1 at L + 1 = ${P3_L + 1}).`,
       `Exported through bakeForExport, buildRenderPlan and the bundled ffmpeg, with a stand-in Bakers.graphic that paints the real drawer's list of each of the ${P3_MOVING} moving frames:`,
       `a dim as itself (its hole clear), the image item as a card of rgb(${P3_CARD.join(',')}) at ${P3_CARD_ALPHA} × its opacity over its box (half-transparent, so a recording left showing under it is seen), the bezel as a ring; camera and transforms ignored.`,
       `Readings: means over the box less ${P3_MARGIN} px and over the band above it, within ${P3_LEVELS} levels per channel.`,
       '',
-      'card/       export.mp4, graph.txt, card-export.seq/ (the stand-in PNGs), fNNN.png (frame NNN, taken at (f − 0.25)/fps)',
+      'card/       export.mp4, graph.txt, card-export.seq/ (the stand-in PNGs), fNNN.png (export frame NNN, taken at (f − 0.25)/fps, at least 0)',
       "card-null/  the card's bake answering null: dropped with its note, its keys struck, the plain recording from frame 0",
       '',
       ...lines

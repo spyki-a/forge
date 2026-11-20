@@ -201,7 +201,8 @@ export async function checkReadback(
     const s = row.straight
     summary.push(
       `readback ${r.route}: to pixels p50 ${ms(r.p50)}, p95 ${ms(r.p95)} ms; to PNG p50 ${ms(r.pngP50)}, p95 ${ms(r.pngP95)} ms, over ${row.readMs.length} frames at ${W}x${H}; ` +
-        `its PNG against its frame alpha off by ${s ? s.alphaMax : 'n/a'}, colour by ${s ? s.colourMax : 'n/a'} over ${s ? s.colourPixels : 0} pixels (keeps straight alpha: ${r.keeps ? 'yes' : 'NO'})`
+        `its PNG against its frame alpha off by ${s ? s.alphaMax : 'n/a'}, colour by ${s ? s.colourMax : 'n/a'} over ${s ? s.colourPixels : 0} pixels, ${s ? s.partialPixels : 0} of them at a partial alpha (keeps straight alpha: ${r.keeps ? 'yes' : 'NO'}); one untimed warm-up frame first (the straight-alpha frame)` +
+        (r.route === 'readRenderTargetPixelsAsync' ? '; its fence is polled by setTimeout, so a hidden window slows it: keep the window visible' : '')
     )
   }
   for (const r of rows) if (r.error !== null) summary.push(`readback ${r.route}: not run, ${r.error}`)
