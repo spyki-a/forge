@@ -241,7 +241,7 @@ export function edgeSweepGlow(style: GraphicStyle, size: { width: number; height
   return [{ item: EDGE_SWEEP_ID, radius: style.glow.radius * shortSide(size), strength: style.glow.strength, color: style.palette.accent }]
 }
 
-export const drawScreenCard: Drawer =(spec, style, clock, size, _measure, targets): DrawOut => {
+export const drawScreenCard: Drawer = (spec, style, clock, size, _measure, targets): DrawOut => {
   const data = spec.data
   if (data.template !== 'screen-card') return { items: [] }
   const screen = targets.screen

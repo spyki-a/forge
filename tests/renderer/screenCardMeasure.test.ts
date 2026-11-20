@@ -150,7 +150,7 @@ describe('the readers', () => {
  * sweep"; phase 3's piece 5): every bar its reading is held to.
  */
 function sweepReading(style = 'energetic'): EdgeSweepReading {
-  const glowAt = (frame: number): EdgeSweepReading['glow'][number] => ({ frame, radius: 10.8, reach: 11, outsideReach: 0, outsideColour: 1, outsidePixels: 400000, present: diff(120, 0.4) })
+  const glowAt = (frame: number): EdgeSweepReading['glow'][number] => ({ frame, radius: 10.8, reach: 11, outsideReach: 0, outsideColour: 1, outsidePixels: 400000, present: diff(120, 0.4), base: diff(1, 0.0001, 518400), holeAlpha: 35 })
   return {
     style,
     landing: 30,
@@ -204,6 +204,16 @@ describe('edgeSweepVerdict', () => {
     expect(sweepFailing((r) => (r.glow[0].outsidePixels = 0))).toMatch(/no pixel beyond the glow's reach was read/)
     expect(sweepFailing((r) => (r.glow[0].present = diff(0, 0)))).toMatch(/@40: no glow/)
     expect(sweepFailing((r) => (r.glow = []))).toMatch(/its glow was not read/)
+  })
+
+  it('route two’s base under the dim and its hole, the glow left out, against painter A: within 2 levels and a mean of 0.000, over pixels read; the hole’s alpha has no bar', () => {
+    expect(EDGE_SWEEP_BAR).toMatchObject({ baseMax: 2, baseMean: 0.0005 })
+    expect(sweepFailing((r) => (r.glow[1].base = diff(3, 0.0001, 518400)))).toMatch(/@120: route two's base \(the glow left out\) against painter A, max 3 > 2/)
+    expect(sweepFailing((r) => (r.glow[0].base = diff(2, 0.01, 518400)))).toMatch(/@40: route two's base \(the glow left out\) against painter A, mean 0.0100/)
+    expect(sweepFailing((r) => (r.glow[0].base = diff(0, 0, 0)))).toMatch(/@40: route two's base against painter A read no pixel/)
+    const r = sweepReading()
+    r.glow[0].holeAlpha = 255
+    expect(edgeSweepVerdict([r], ['energetic']).pass).toBe(true)
   })
 
   it('the sheet shows the first frame, one crossing the start, the loop in eighths, the last and the held card, all after the landing', () => {

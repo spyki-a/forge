@@ -208,7 +208,19 @@ export async function checkScreenCard(
       // The sweep's strokes alone, as the glow canvas holds them: the reach is read from their ink, not from the whole card's (the dim covers the frame).
       const ink = pixelsOf(painterA({ ...list, items: glowItemsOf(list.items, list.glow ?? []), glow: undefined }))
       const beyond = glowBeyondReach(ink, withPixels, withoutPixels, W, H, radius)
-      glow.push({ frame, radius, reach: beyond.reach, outsideReach: beyond.outsideReach, outsideColour: beyond.outsideColour, outsidePixels: beyond.outsidePixels, present: diffChannels(withoutPixels, withPixels) })
+      // Route two's base under the dim and its hole, against painter A drawing the same list: the reading above is route two against route two.
+      const base = diffChannels(withoutPixels, pixelsOf(painterA(list)))
+      glow.push({
+        frame,
+        radius,
+        reach: beyond.reach,
+        outsideReach: beyond.outsideReach,
+        outsideColour: beyond.outsideColour,
+        outsidePixels: beyond.outsidePixels,
+        present: diffChannels(withoutPixels, withPixels),
+        base,
+        holeAlpha: alphaMaxIn(withPixels, W, inside)
+      })
       glowSheet.push(withGlow, withoutGlow)
     }
     const sweepLists = lists.slice(L + 1, L + N)
@@ -236,7 +248,7 @@ export async function checkScreenCard(
       `edge sweep under ${style.id}: drawn on frames ${reading.firstFrame}..${reading.lastFrame} of ${reading.moving} moving (L ${L}, N ${N}); frame ${crossing} carries ${reading.crossing.pieces} strokes; ` +
         `the frame after the loop against the held card max ${afterLoop.maxAll} (${reading.afterLoopItems.join(', ')}), the loop's last against it max ${lastSweep.maxAll}; ` +
         glow
-          .map((g) => `@${g.frame} glow radius ${g.radius.toFixed(1)} px, beyond its ${g.reach} px reach from the sweep's ink alpha added ${g.outsideReach} and colour off by ${g.outsideColour} over ${g.outsidePixels} pixels, with against without max ${g.present.maxAll}`)
+          .map((g) => `@${g.frame} glow radius ${g.radius.toFixed(1)} px, beyond its ${g.reach} px reach from the sweep's ink alpha added ${g.outsideReach} and colour off by ${g.outsideColour} over ${g.outsidePixels} pixels, with against without max ${g.present.maxAll}, the glow left out against painter A max ${g.base.maxAll} mean ${g.base.meanAll.toFixed(4)}, alpha inside the hole ${g.holeAlpha} (no bar)`)
           .join('; ') +
         `; ${msPerFrame.toFixed(1)} ms a frame through paintDrawList3d over the sweep's ${sweepLists.length} frames`
     )

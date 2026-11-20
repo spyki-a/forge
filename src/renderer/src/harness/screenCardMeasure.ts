@@ -200,6 +200,14 @@ export function screenCardSheetFrames(landing: number, moving: number): number[]
  *   two's bar; and the glow there, at least a level somewhere.
  * - `crossingPieces`: on a frame where the span crosses the path's start, the
  *   list carries it as two strokes.
+ * - `baseMax`, `baseMean`: on the same frames, route two with the glow left
+ *   out against painter A drawing the same list: route two's 1:1 (§6.12, the
+ *   compositor's own bar) read on a list with a dim and a hole, which the
+ *   compositor option's cases do not carry; the reading above compares route
+ *   two with route two, so a fault in its base would cancel out there (the
+ *   fixer's guard). The alpha inside the hole on those frames, the glow's tint
+ *   over the recording, is recorded (`holeAlpha`) with no bar: the plan does
+ *   not bound it, and the owner reads it.
  */
 export const EDGE_SWEEP_BAR = Object.freeze({
   afterLoopMax: 0,
@@ -207,7 +215,9 @@ export const EDGE_SWEEP_BAR = Object.freeze({
   outsideReachMax: 0,
   outsideColourMax: COMPOSITOR_BAR.colourMax,
   glowMinMax: 1,
-  crossingPieces: 2
+  crossingPieces: 2,
+  baseMax: COMPOSITOR_BAR.colourMax,
+  baseMean: COMPOSITOR_BAR.textureMean
 })
 
 /** One glowing style's sweep, read on the card's lists and its frames through `paintDrawList3d`. */
@@ -227,7 +237,7 @@ export interface EdgeSweepReading {
   afterLoopItems: string[]
   lastSweep: ChannelDiff
   /** The glow on the frames read: its radius in frame pixels and `glowBeyondReach`'s figures, and with against without. */
-  glow: { frame: number; radius: number; reach: number; outsideReach: number; outsideColour: number; outsidePixels: number; present: ChannelDiff }[]
+  glow: { frame: number; radius: number; reach: number; outsideReach: number; outsideColour: number; outsidePixels: number; present: ChannelDiff; base: ChannelDiff; holeAlpha: number }[]
   /** Milliseconds a frame through `paintDrawList3d` over the sweep's frames (no bar: the Surface's comparison). */
   msPerFrame: number
 }
@@ -252,6 +262,9 @@ export function edgeSweepVerdict(readings: readonly EdgeSweepReading[], glowing:
       if (g.outsideReach > B.outsideReachMax) failures.push(`${name} @${g.frame}: the glow adds alpha ${g.outsideReach} beyond its ${g.reach} px reach`)
       if (g.outsideColour > B.outsideColourMax) failures.push(`${name} @${g.frame}: colour off by ${g.outsideColour} > ${B.outsideColourMax} beyond the glow's ${g.reach} px reach`)
       if (!(g.present.maxAll >= B.glowMinMax)) failures.push(`${name} @${g.frame}: no glow: the frame with it equals the frame without it`)
+      if (g.base.pixels === 0) failures.push(`${name} @${g.frame}: route two's base against painter A read no pixel`)
+      if (g.base.maxAll > B.baseMax) failures.push(`${name} @${g.frame}: route two's base (the glow left out) against painter A, max ${g.base.maxAll} > ${B.baseMax}`)
+      if (!(g.base.meanAll < B.baseMean)) failures.push(`${name} @${g.frame}: route two's base (the glow left out) against painter A, mean ${g.base.meanAll.toFixed(4)}, not 0.000`)
     }
   }
   for (const style of glowing) if (!readings.some((r) => r.style === style)) failures.push(`the edge sweep under ${style} was not read`)

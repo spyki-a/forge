@@ -1001,6 +1001,28 @@ describe('graphicDrawList: the screen card’s edge sweep (§6.16)', () => {
     }
   })
 
+  it('on a landscape frame its glow’s radius and its strokes’ width follow the SHORT side (the height), not the width', () => {
+    // 1920 × 1080: the short side is the height, so a radius or width read off the width would be 16/9 too large.
+    const LAND = { width: 1920, height: 1080 }
+    const box: Rect = { x: 420, y: 90, width: 1080, height: 900 }
+    const L = landingFrame(FPS)
+    const N = edgeSweepFrames(FPS)
+    expect(bezelWidth(LAND)).toBe(4)
+    for (const st of GLOWING) {
+      for (const frame of [L + 1, L + Math.round(N / 2), L + N - 1]) {
+        const list = drawListAt(card(), st, frame, FPS, LAND, fake, { screen: { box, file: null } })
+        const where = `${st.id} @${frame} on 1920×1080`
+        expect(list.glow, where).toEqual([{ item: 'sweep', radius: st.glow!.radius * 1080, strength: st.glow!.strength, color: st.palette.accent }])
+        const sweep = sweepOf(list)
+        expect(sweep.length, where).toBeGreaterThan(0)
+        for (const s of sweep) {
+          expect(s.width, where).toBe(4)
+          expect(s.d, where).toBe(bezelPath(box))
+        }
+      }
+    }
+  })
+
   it('the last baked frame, L + N (graphicMovingFrames − 1), is the plain held card: exactly the frame the hold shows, the dim with its hole and the bezel, no sweep and no glow, route one', () => {
     for (const fps of RATES) {
       const L = landingFrame(fps)
