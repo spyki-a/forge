@@ -8525,7 +8525,7 @@ suite and CI are the orchestrator's.
   and the preview's recompute on a long followed clip while editing.
 - **Burned-in text** (§5.3): after 1g.
 
-## 61. Graphics: the forks measured (phase 0 of step 3, then phase 1's first) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22), and on the Surface the libass run and the development app (2026-10-27); in node, phase 1's M9 (2026-10-27) and the stroke's flattening (2026-10-28); and D10's three readings, the Noto fonts' provenance, the Mac's libass against the fontsdir, and `document.fonts.check` (2026-10-29); and under painter A, Chrome 152's canvas (negative radii, a 0-side canvas, `globalAlpha`) and, in node, the draw list's mixed faces and bounds and the frames' edges (2026-10-30/31); and lane C's worker encoder and measureText in the pane's Chrome 152 (2026-11-01) and, in node, the box route under crop, mask, matte and transitions (2026-11-02); and lane D's three, geq's w − 2 clamp on the box route, a stroke's chroma through `yuva420p` (M19 in part) and `flattenPath` against `SVGPathElement` (M8 in part) (2026-11-03); and phase 2's lanes T3-first and T1, in node and on the harness census (2026-11-06 to 11); and lane T2a's validator against the false graphics its critics wrote, in node (2026-11-11); and lane T3's beats, placement, budget and graphic sounds against their critics' inputs, in node and on the harness census (2026-11-11); and lane T2b's menu, settle, store actions and two panels against their critics' inputs, in node and on the harness census (2026-11-11); and lane T4's baseline, eval and harness options against their critics' inputs in node, the templates and Indic checks on the harness page, and `graphic.int`'s phase-2 render on both CI runners (2026-11-14); and try-out 1, the owner's first real recording through Find graphics with no model, and its six pieces, in node and on the harness page (2026-11-15)
+## 61. Graphics: the forks measured (phase 0 of step 3, then phase 1's first) — M4 on both builds, the libass Indic reference on both runners, and M1, M2, M3, M5, M6 and M22 in the harness browser and in the development app on the Mac (2026-10-21/22), and on the Surface the libass run and the development app (2026-10-27); in node, phase 1's M9 (2026-10-27) and the stroke's flattening (2026-10-28); and D10's three readings, the Noto fonts' provenance, the Mac's libass against the fontsdir, and `document.fonts.check` (2026-10-29); and under painter A, Chrome 152's canvas (negative radii, a 0-side canvas, `globalAlpha`) and, in node, the draw list's mixed faces and bounds and the frames' edges (2026-10-30/31); and lane C's worker encoder and measureText in the pane's Chrome 152 (2026-11-01) and, in node, the box route under crop, mask, matte and transitions (2026-11-02); and lane D's three, geq's w − 2 clamp on the box route, a stroke's chroma through `yuva420p` (M19 in part) and `flattenPath` against `SVGPathElement` (M8 in part) (2026-11-03); and phase 2's lanes T3-first and T1, in node and on the harness census (2026-11-06 to 11); and lane T2a's validator against the false graphics its critics wrote, in node (2026-11-11); and lane T3's beats, placement, budget and graphic sounds against their critics' inputs, in node and on the harness census (2026-11-11); and lane T2b's menu, settle, store actions and two panels against their critics' inputs, in node and on the harness census (2026-11-11); and lane T4's baseline, eval and harness options against their critics' inputs in node, the templates and Indic checks on the harness page, and `graphic.int`'s phase-2 render on both CI runners (2026-11-14); and try-out 1, the owner's first real recording through Find graphics with no model, and its six pieces, in node and on the harness page (2026-11-15); and phase 3, the three.js compositor and 2.5D, its options on the harness page on the Mac (M7's two routes, the focus blur, the 2.5D counter and ring, the screen card and its edge sweep, M12's three readbacks, preview = export and M13's twice-bakes), and the census's console error traced (2026-11-18 to 20)
 
 For `docs/CLIPS.md` §6.15 (step 3's phase 0, "Measure before relying"):
 pieces 0.1–0.3 were built on the evening of 2026-10-21 in seven commits,
@@ -11527,3 +11527,202 @@ cost time or would not be guessed:
   `8b1f2a8` sets the row's count to 2; read again, missing [], 912
   checked, 8 skipped.
 
+### Phase 3, 2026-11-18 to 20
+
+`CLIPS.md` §6.16's six piece notes and §6.11's phase-3 notes. The
+fourteen commits `31e83b2` … `2236a00`, the three build runs' reports
+and the session's own reads. **What was NOT read**: nothing below was
+read in the development app (Electron) and nothing on the Surface; M20
+(`{ screenCard: '<path>' }`, a real 1080p recording, the development app
+only) was run by no one; M13's framemd5 over real title frames is the
+development app's and was not read. **Every figure below was read by the
+session on the harness page** (`http://localhost:5199/harness.html`, the
+Browser pane's Chrome, WebGL on), **on the Mac**, at a 540×960 frame
+unless it says 1080×1920. So no reading here meets phase 3's exit
+(§6.12), and M7's route is not chosen. The suite around them, on the Mac,
+each written to a file with its exit code read first: at `b2d19f4`
+typecheck 0, 358 files and 5733 tests passed, build 0; at `a74576d` 360
+files passed and 5 skipped, 5815 tests passed and 66 skipped; at
+`61365a4` and at `2236a00` 361 files passed and 5 skipped (366), 5865
+tests passed and 66 skipped (5931). CI green on `windows-latest` and
+`macos-15` at `b2d19f4`, at `a74576d` (run 44473422718) and at `2236a00`
+(run 44727055616, jobs 136257020490 and 136257020772, no annotation).
+
+- **`await window.__forgeGraphicCheck({ compositor: true })`**, the
+  harness page, the Mac, 2026-11-18 at `b2d19f4`, read again unchanged on
+  2026-11-19 and 20: PASS. Every route against painter A mean 0.000, max
+  0; the edges max 2, edge pixels 94470 and 1788, and 89883 and 1059, on
+  a fresh page (one long session once read 94412 for the first: the bars
+  pass both ways; not reproduced, cause unknown). `info.memory`
+  geometries / textures back to 0 / 0 after `dispose()`. With WebGL
+  pretended missing: `createCompositor` null, notes `["drawn flat: 3D
+  needs WebGL, which did not start on this computer"]`, the frame against
+  the flat twin mean 0.000 max 0, the preview marked drawn flat: true.
+- **`await window.__forgeGraphicCheck({ glow: ['unreal', 'quad'] })`**
+  (M7), the harness page, the Mac, read 2026-11-20:
+  - route `unreal`: alpha at the frame's corners max 0 over 1024 px; alpha
+    beyond the reach (24 px; information only on this route) max 27 over
+    468476 px; the glow outside the shape max 86 over 19584 px; by
+    distance (0, 24] 86, (24, 48] 27, (48, 96] 16, (96, ∞] 7; over a
+    half-opaque panel 0 of 518400 px with colour above alpha; the base
+    against painter A mean 0.000 max 0; 2.90 ms a frame (median of 30);
+    memory 0 / 0 → 0 / 0; PASS.
+  - route `quad`: corners max 0 over 1024 px; alpha beyond the reach (24
+    px) max 0 over 468476 px; the glow outside the shape max 121 over
+    16252 px; by distance (0, 24] 121 and 0 beyond; panel 0 of 518400;
+    base mean 0.000 max 0; 2.60 ms a frame (median of 30); memory 0 / 0 →
+    0 / 0; PASS.
+  - quad against its CPU reference (`glowReference`, at most 3 levels):
+    strength 1, alpha 0 colour 0, the glow outside the shape 121
+    (reference 121); strength 2, 217 (reference 217); PASS.
+  - The same call on 2026-11-18 read 4.3 ms (quad) and 3.1 ms (unreal):
+    the ms figures move from run to run; both dates' are recorded, neither
+    is the truth.
+  - "M7 on this machine: unreal and quad pass." §6.16's rule takes
+    `unreal` only if it passes on BOTH machines, else `quad`; the Surface
+    is not read, so `GLOW_ROUTE` stays `'quad'` and both routes stay in
+    the tree until M7 is read there, then the loser is removed.
+- **`await window.__forgeGraphicCheck({ focus: true })`**, the harness
+  page, the Mac, at `b2d19f4`: radius 0 against painter A mean 0.000 max
+  0; radius 10 px over the stripes ({x 138, y 368, width 246, height
+  224}) max 145 mean 25.497; the frame's border alpha at least 255; PASS.
+  By the session's eye at 3× zoom the 13-tap blur shows steps, a look item
+  for the owner.
+- **The census at `b2d19f4`** (`await window.__forgeCensus()`, the
+  harness page, the Mac): missing [], 924 checked, 9 skipped.
+- **`await window.__forgeGraphicCheck({ depth: true })`**, the harness
+  page, the Mac, 2026-11-19 at `a74576d`: "depth verdict: PASS" over 12
+  cases. The plain variants (counter-en and ring-en under `clean` ×
+  tilt, parallax, dolly, focus): settled against the flat twin max 0; 31
+  moving frames; 11 off flat for tilt, parallax and dolly and 15 for
+  focus; the last camera exactly {tilt 0, yaw 0, dolly 0, focusPx 0}. The
+  heroes (counter-en and ring-en under neon and under energetic): the
+  base against the flat twin mean 0.000 max 0 (the glow left out); glow
+  radius 10.8 px; beyond its 11 px reach from the glowing item's ink,
+  alpha added 0, colour off by 1 (over 473582, 484029, 510110 and 510110
+  pixels, as read 2026-11-20). 0.1 to 0.6 ms a frame through
+  `paintDrawList3d` (CPU submission only).
+- **How the depth option came to read the glow that way** (the session's
+  `a74576d`, a finding that cost time). At `cf5aed2` the option FAILED on
+  screen under energetic, "no pixel beyond the glow's reach was read": it
+  measured the reach from ALL of the flat twin's ink, and energetic's dim
+  fills the frame, so nothing lay beyond it. Read from the glowing item's
+  own ink it failed again, "the glow adds 1 beyond its 11 px reach": every
+  differing pixel sat on base ink, alpha identical, colour off by 1, up
+  to 167 px from the item, where no 11 px glow reaches: rounding between
+  the with-glow and without-glow passes, which leave the compositor by
+  different routes, not the glow. So `glowBeyondReach` (`depthMeasure.ts`)
+  reads alpha (bar 0, M7's) and colour (`DEPTH_BAR.outsideColourMax` =
+  `COMPOSITOR_BAR.colourMax` = 2, route two's own) apart, and fails when
+  no pixel beyond the reach was read. `tests/renderer/depthMeasure.test.ts`,
+  9 tests; eight mutations, all killed.
+- **`await window.__forgeGraphicCheck({ screenCard: true })`**, the
+  harness page, the Mac, 2026-11-19 at `a74576d`: "screen card verdict:
+  PASS" over 4 cases (Tilt in and Pull back, under `clean` and
+  `energetic`): `L` 30, 46 moving frames, 30 off flat; the camera at `L`
+  all 0 and none after; frame 0's card opacity 0.0000 (Tilt in) and
+  1.0000 (Pull back); the landing against a plain `drawImage` mean 0.000
+  max 0 over 159728 pixels; at `L + 1` alpha inside the hole 0; the dim
+  outside 89 under `clean` and 128 under `energetic`; frame 3 against `L`
+  max 226; Pull back drawn flat: frame 0 is 1.363 × the box, its ink 0.0
+  px off the centre of a box 240 px low. compositor, glow and focus
+  PASS with the figures above. The census: missing [], 942 checked, 10
+  skipped.
+- **The session's eye on the sheets**, 2026-11-19 (no rating; the look is
+  the owner's): the moves are subtle and fast; focus shows the label soft
+  then sharp; the hero's halo sits on the counter's value and the ring's
+  arc; Tilt in fades in tilted and lands flat with the hole at `L + 1`;
+  Pull back starts at 1.35× and shrinks onto the box.
+- **`await window.__forgeGraphicCheck({ screenCard: true })` with the
+  edge sweep**, the harness page, the Mac, 2026-11-20 at `61365a4`, then
+  `2236a00`: "screen card verdict: PASS" and "edge sweep verdict: PASS
+  over 1 glowing style". The four cases as above, except under
+  energetic: 211 moving frames (was 46), and the hole and the dim read on
+  the held frame 210 (alpha inside the hole 0, outside 128..128), because
+  on `L + 1` the sweep's glow reaches into the hole by design; ms a frame
+  through `paintDrawList3d` 0.1 (three cases) and 0.9 (Tilt in under
+  energetic, the first glowing case) over the first 46 frames. "edge
+  sweep under energetic: drawn on frames 31..209 of 211 moving (L 30, N
+  180); frame 40 carries 2 strokes; the frame after the loop against the
+  held card max 0 (dim, bezel), the loop's last against it max 255; @40
+  glow radius 10.8 px, beyond its 11 px reach from the sweep's ink alpha
+  added 0 and colour off by 0 over 514454 pixels, with against without
+  max 255, the glow left out against painter A max 0 mean 0.0000, alpha
+  inside the hole 66 (no bar); @120 … over 515676 pixels … max 0 mean
+  0.0000, alpha inside the hole 57 (no bar); 0.1 ms a frame through
+  paintDrawList3d over the sweep's 179 frames". The sheet, frames 31, 40,
+  53, 75, 98, 120, 143, 165, 188, 209, 210, by the session's eye: a short
+  highlight, split across the top-left corner on 31 and 40, running
+  clockwise, at the bottom-right corner on 120, gone on 210; under
+  energetic it is WHITE (255, 255, 255: the style's accent as painted); at
+  a third of the size the glow's halo is barely visible; no seam was seen
+  at the corner. The look is the owner's to rate.
+- **The hero's landing**, a line of `{ depth: true }` beside its verdict,
+  the harness page, the Mac, 2026-11-20. As piece 6 built it (`61365a4`),
+  frame 10 (route three) against frame 11 (route two), "the glow's own
+  change": counter-en under neon mean 10.342 over 34647 pixels, max 255;
+  counter-en under energetic 10.949 over 24585, max 157; ring-en under
+  neon 0.495 over 6369, max 255; ring-en under energetic 0.667 over 6379,
+  max 71. Against the proposed `HERO_LANDING_BAR` (mean ≤ 0.5, max ≤ 16)
+  all four read OVER, with NO pop on screen: a counter's digits and a
+  ring's arc still change between the two frames, so neighbouring frames
+  differ by design, and the first reading misleads. The session's
+  `2236a00` draws the last moving frame twice, as it is (route three) and
+  with its camera taken off (route two), and holds the bar against that
+  pair (`HeroLandingReading.same`): counter-en under neon, camera tilt
+  0.00029574805690568695°, mean 0.000 over 34575 pixels, max 0, within;
+  ring-en under neon, the same camera, 0.000 over 6348, max 0, within;
+  counter-en under energetic, camera tilt −0.08559196216977583° (the
+  style's ease overshoots), mean 0.321 over 24485 pixels, max 20, OVER
+  (by max); ring-en under energetic, the same camera, mean 0.432 over 6359
+  pixels (6355 by route three, 6354 by route two), max 16, within. The
+  line stays out of the depth verdict; the bar is a proposal.
+- **`await window.__forgeGraphicCheck({ readback: ['drawImage',
+  'readPixels', 'readRenderTargetPixelsAsync'], frames: 120 })`** (M12),
+  the harness page, the Mac, 2026-11-20, counter-en as the hero under
+  neon at 1080×1920: `drawImage` to pixels p50 19.40, p95 21.70 ms, to
+  PNG p50 30.30, p95 33.10 ms; `readPixels` to pixels p50 29.20, p95
+  34.00, to PNG p50 39.90, p95 46.30; `readRenderTargetPixelsAsync` to
+  pixels p50 34.20, p95 38.70, to PNG p50 45.10, p95 49.70. Each: its PNG
+  against its frame alpha off by 0, colour by 1, over 157792 pixels,
+  114789 of them at a partial alpha: keeps straight alpha: yes. "readback
+  verdict: fastest at p50 that keeps straight alpha drawImage; by the
+  rule (drawImage unless another is at least twice as fast) drawImage".
+  The bake is unchanged; the Surface is not read.
+- **`await window.__forgeGraphicCheck({ bake3d: true })`** (preview =
+  export, M13's twice-bakes, disposal), the harness page, the Mac,
+  2026-11-20, under a minute: "bake3d verdict: PASS over 13 cases". Every
+  case baked = moving (31 for the counter and ring cases, 46 for the card
+  under `clean`, 211 under `energetic`); the Preview against the export,
+  and the harness's frames against it, mean 0.000 max 0 at EVERY frame
+  read (@8, @15, @23, @30 for the counter and ring; @2, @8, @15, @30,
+  @31, @45 for the card under `clean`; @2, @8, @15, @30, @31, @40, @120,
+  @209, @210 under `energetic`); each "drawn in 2.5D (the Preview held a
+  compositor on every frame that asks for one, the bake recorded no WebGL
+  note)". Baked twice byte-equal: counter-en hero under neon 31 of 31
+  PNGs; the screen card Tilt in under `clean` 46 of 46; under `energetic`
+  211 of 211. "bake3d memory: … 0/0 → 0/0" for the three M13 cases and
+  the whole option. On the harness page the "files" are the harness
+  bridge's, not real title frames: M13's framemd5 over real files is the
+  development app's, not read.
+- **The census at `2236a00`**: missing [], 942 checked, 10 skipped, 59840
+  ms. compositor, glow and focus PASS with the figures above.
+- **The census's console error, traced 2026-11-20** (read for in vain
+  by run C's builders and critics, settled only on screen). After a census on the
+  harness page the console showed `Access to image at
+  'forge-media://local/' … blocked by CORS policy`, `net::ERR_FAILED` and
+  `ERR_UNKNOWN_URL_SCHEME`, not seen at `b2d19f4`; the builders and
+  critics of run C could not settle it by reading. The session overrode
+  `HTMLImageElement.prototype.src` (and `setAttribute`) before
+  `__forgeCensus()`: the only `forge-media:` image asked for in the whole
+  census is
+  `forge-media://local/?p=harness%3A%2F%2Fgraphic-<id>.seq%2F00000.png`,
+  set twice, from `Preview.tsx`'s image loader for a graphic clip's baked
+  asset (`crossOrigin` `'anonymous'` the first time): the harness
+  bridge's stand-in path for a baked sequence (`harness://…`) wrapped by
+  `mediaUrl`. Chrome's message drops the `?p=` query, so it READS as an
+  empty path. It appears since the census gained a baked graphic recipe.
+  Harness-only: in the app the path is a real file and `forge-media` is a
+  registered scheme. No app fix was made and none is owed. The leads the
+  agents listed, `Preview.tsx`'s `planeFor` and `threeShared.ts`'s
+  `textureFor` with an empty path, were NOT what fired.

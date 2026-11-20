@@ -9388,7 +9388,9 @@ non-empty `glow`; painter A ignores all three.
 >   preview and the bake and no commit of lane B wrote (at `0c8911f`
 >   nothing under `src/` names `textSpecFont`; the draw list's cases run on
 >   the node fake, 0.55 em a grapheme). (Lane C wrote it, 2026-11-01,
->   `b610c91`; the `graphicCanvas.ts` Built note.)
+>   `b610c91`; the `graphicCanvas.ts` Built note.) (2026-11-18/19: the
+>   depth cases built with the counter and ring variants, `1d7204c`,
+>   `c829007`; §6.16's piece 3.)
 
 #### The stroke primitive — `src/shared/graphics/stroke.ts`
 
@@ -10179,8 +10181,10 @@ the caller and passed into `drawListAt`, so the drawing stays pure:
 >   (`:59-60`): `graphicMovingFrames` needs them in phase 1 for its third
 >   case and the plan names no file for them; phase 3's `screenCard.ts`
 >   can import them from here, so the drawer and the bake cannot disagree
->   on where the loop ends. `graphicTargetsAt` takes `Pick<Clip, 'start'>`
->   and `Pick<GraphicSpec, 'subject'>`, the narrowest it reads, where this
+>   on where the loop ends (2026-11-19: it does, `templates/screenCard.ts`
+>   re-exports both, §6.16's piece 4). `graphicTargetsAt` takes
+>   `Pick<Clip, 'start'>` and `Pick<GraphicSpec, 'subject'>`, the
+>   narrowest it reads, where this
 >   section writes `(project, clip, spec, frame, size)`. The subject with
 >   `spec.subject` is null when the onset is not on the named clip (the
 >   box is not on screen then), and on a track the export skips: this
@@ -10203,7 +10207,8 @@ the caller and passed into `drawListAt`, so the drawing stays pure:
 >   and `screenCardKeys` (§6.16); `tip` and `screen` in `targets.ts`
 >   (§6.18, §6.16); the allowance-window decision (yours); lane C's wiring
 >   (`graphicCanvas.ts`, the export, the store, the preview) and lane D's
->   harness.
+>   harness. (2026-11-19/20: the screen-card cases, `screenCardKeys` and
+>   `screen` in `targets.ts` built, §6.16's pieces 4 and 5.)
 
 #### `graphicCanvas.ts` — preview, bake, frames
 
@@ -10526,7 +10531,9 @@ the caller and passed into `drawListAt`, so the drawing stays pure:
 >   `paintFrame`'s compositor branch: `paintFrame` (`:208`) is painter A
 >   alone, its comment (`:199-207`) naming the seam as §6.16's, and
 >   `needsCompositor` is false for every phase-1 list (pinned in lane B's
->   `graphicDrawList` cases).
+>   `graphicDrawList` cases). (2026-11-18/19: both built, `paintFrame`'s
+>   compositor branch in piece 1, `31e83b2`, `screenTargetsAt` in piece 4,
+>   `1eaafc5`; §6.16's notes.)
 
 #### The bake region (M1) and the box route
 
@@ -11495,7 +11502,9 @@ assertions beside them (`if (drawsItself(c)) return { ...c, crop: undefined
 >   (`:2134`): the graphic arm before the text arm (`:2229-2234`), `await
 >   get().rebakeGraphic(clip.id)`, its comment noting that §6.9's
 >   `place.auto` recompute (phase 2) and §6.16's screen-card realign
->   (phase 3) go before it. `placeCopies` (`:5520`): `else if
+>   (phase 3) go before it (2026-11-19: the realign is built in the
+>   store's `update`, on every edit, so this arm only redraws; §6.16's
+>   piece 4). `placeCopies` (`:5520`): `else if
 >   (from.graphic) await get().rebakeGraphic(clipId)` (`:5535`), so a
 >   pasted graphic bakes its own asset and never shows the source's
 >   frames. `rebakeFollowed` (`:2316`): a graphic is rebaked when the clip
@@ -11586,7 +11595,9 @@ assertions beside them (`if (drawsItself(c)) return { ...c, crop: undefined
 >   `graphicGuards` (mutation: the mount removed, the mount and census
 >   cases fail). `place.auto` is recomputed in `setAspect`'s own update
 >   and in `rebakeFollowed`, not in `rebakeGenerated`'s arm, §6.9's dated
->   note. Phase 3's realign is still left.)
+>   note. Phase 3's realign is still left.) (2026-11-19: built, not in this
+>   arm: `realignScreenCards` runs in the store's `update` after every
+>   edit, `1eaafc5`, `cf5aed2`; §6.16's piece 4.)
 
 ### 6.5 The graphic style — `src/shared/graphics/style.ts`
 
@@ -11920,7 +11931,10 @@ dropped from `graphicEligible` (the synthetic style passes).
 >   on `neon` and `energetic` is `{ radius: 0.02, strength: 0.65 }`**, a
 >   proposal (radius a fraction of the short side, strength neon-green's
 >   own glow opacity; this section names a glow and no numbers), read
->   before phase 3 only for its presence by `graphicMovingFrames`; and
+>   before phase 3 only for its presence by `graphicMovingFrames` (since
+>   2026-11-18/20 its figures too, by the hero's `heroGlow` and the
+>   sweep's `edgeSweepGlow`: radius × the short side, 21.6 px at 1080;
+>   §6.16's pieces 3 and 5); and
 >   `muted` #6B7078, the dim's #000000, `radius` 0.02, `stroke` 0.006 and
 >   `shadow` 0.35 are clean's proposals in all six. `MARKER_READY` stays
 >   false (M10 has not passed): no marker painter, no dependency.
@@ -12501,7 +12515,9 @@ Each edit is `setGraphic` (§6.3).
 `speakers` (T2a's), which the panel passes; a Speaker field's edit is
 `setSpeaker`, not `setGraphic`; the Role is pre-filled at creation by
 `lastRoleOf`; a warning under Seconds below §6.2's reading hold. The Built
-note below, part (j).)
+note below, part (j).) (2026-11-18: the Depth choice and the drawn-flat
+note built, §6.16's pieces 1 and 3; a screen card's panel shows its notes
+only, piece 4.)
 
 **Store actions** (`src/renderer/src/store.ts`): `findGraphics(clipId)`,
 `keepGraphic(proposalId)`, `dropGraphic(clipId)`, `clearGraphics()`,
@@ -12977,7 +12993,8 @@ channel name", read on screen at `d33d5b4`; the Built note below, part
 >   its transcript is gone, and since `d33d5b4` `NO_GROUNDING_NOTE` "It is
 >   not tied to anything said, so these words are not checked" for checked
 >   fields with no grounding (before, `UNCHECKED_NOTE` said that, untrue).
->   No Depth choice (phase 3). On-screen texts not the plan's: everything
+>   No Depth choice (phase 3; built 2026-11-18, §6.16's piece 3). On-screen
+>   texts not the plan's: everything
 >   above but "Role" and "Speaker".
 > - **(k) The census** (`tests/fixtures/ui-census.json`, 15 rows). Home
 >   `transcript`: "Graphics" 1, "Find graphics in this clip" 1, "Speaker" 1
@@ -13314,7 +13331,8 @@ channel name", read on screen at `d33d5b4`; the Built note below, part
 >   exported reason in `LIBRARY_LEFT_OUT`: the callout
 >   (`CALLOUT_LEFT_OUT`, measured: placed by hand it has no subject, and
 >   it draws no item over footage with no subject track or over no
->   footage) and the screen card (`SCREEN_CARD_LEFT_OUT`, phase 3); the
+>   footage) and the screen card (`SCREEN_CARD_LEFT_OUT`, phase 3; reworded
+>   2026-11-19 once the card was drawn, §6.16's piece 4); the
 >   quote's social kind has its own, `SOCIAL_QUOTE_LEFT_OUT` (step 5). A
 >   test fails until a new template is listed or left out.
 >   `libraryGraphicSpec`: beats `LEAD_S` then `spreadBeats`' 160 ms, one
@@ -15651,17 +15669,17 @@ render check and the census.
 | 1 | `tests/graphicStroke.test.ts` (built 2026-10-28, `69d2d6e` and `2074f08`), `tests/graphicDrawList.test.ts` (built 2026-10-30, `4b68c45`, 25 cases), `tests/graphicPaint.test.ts` (built 2026-10-30/31, `a82cd43` and `d822c56`, 29 cases) | §6.3 (two depth cases in `graphicDrawList`, §6.16; §6.3's three Built notes) |
 | 1 | `tests/renderer/graphicCanvas.test.ts` (built 2026-10-31/11-01, `b610c91` and `1ea9a96`, 26 cases), `tests/renderer/encodePool.test.ts`'s worker cases (the same commits, 9 cases in all), `tests/graphicBoxRoute.test.ts` (built 2026-11-02, `a273729` and `fa4ddc3`, 7 cases), `tests/exportBake.test.ts`'s graphic cases (the same commits, 4, 13 in all); none was named by this index before it was written | §6.3 (lane C's three Built notes) |
 | 1 | `tests/renderer/graphicCheckPrimitives.test.ts` (built 2026-11-02, `6592a38`, 37 cases; `69c2340`, 50) and `tests/renderer/graphicCheckStrokes.test.ts` (built 2026-11-03, `0954b3d`, 20 cases; `2bb706d`, 25): the harness check's pure parts, node; `tests/graphicDrawList.test.ts`'s far-side case (`683a6f0`, 26 cases); none was named by this index before it was written | below (lane D's harness Built note); §6.3's "The box" |
-| 1-3 | `tests/graphicFrame.test.ts` (phase 1's 28 cases built 2026-10-31, `4196d43` and `0c8911f`; phase 2's built 2026-11-07/10, `f64a879`, `9e7a89e`, `712246e` and `85b59e3`, 60 cases at `e06e1c3`, §6.2's Built note) | phase 1 §6.3, phase 2 §6.2, the screen card §6.16 |
+| 1-3 | `tests/graphicFrame.test.ts` (phase 1's 28 cases built 2026-10-31, `4196d43` and `0c8911f`; phase 2's built 2026-11-07/10, `f64a879`, `9e7a89e`, `712246e` and `85b59e3`, 60 cases at `e06e1c3`, §6.2's Built note; phase 3's screen-card cases built 2026-11-19/20, `1eaafc5`, `cf5aed2`, `3ee251c`, §6.16's pieces 4 and 5) | phase 1 §6.3, phase 2 §6.2, the screen card §6.16 |
 | 1-2 | `tests/graphicStyle.test.ts`, with `tests/renderer/graphicStyleStore.test.ts` for the store's two actions (phase 1's half of both built 2026-10-28, `b965cda` and `0d603a8`; phase 2's 2026-11-10/11, `d680132`, `1a681c7` and `62f3c83`, 21 and 7 cases), and `tests/renderer/graphicsSection.test.tsx` (new, `1a681c7` and `62f3c83`, 8 cases; not named here before it was written; the switch's case by lane T3, `e8f2a1f`, 9) | §6.5 (the second half's Built note) |
-| 1-3 | `tests/renderer/graphicStore.test.ts` (phase 1's 21 cases built 2026-11-02, `a273729` and `fa4ddc3`; phase 2's built 2026-11-11 by lane T3, `518a62f`, `e8f2a1f` and `69e677c`, 31 tests) | phase 1 §6.3, the sounds that follow a graphic §6.14, the screen card §6.16 |
+| 1-3 | `tests/renderer/graphicStore.test.ts` (phase 1's 21 cases built 2026-11-02, `a273729` and `fa4ddc3`; phase 2's built 2026-11-11 by lane T3, `518a62f`, `e8f2a1f` and `69e677c`, 31 tests; phase 3's screen-card cases built 2026-11-19, `1eaafc5`, `cf5aed2`, §6.16's piece 4) | phase 1 §6.3, the sounds that follow a graphic §6.14, the screen card §6.16 |
 | 2 | `tests/claims.test.ts`, `tests/graphicsValidator.test.ts` (the property test) (both built 2026-11-11 by lane T2a: `claims.test` from `a29e8fa` to `3b887d0`, 217 tests at `3b887d0`; `graphicsValidator` `e027bd3` and `3b887d0`, 26; the last fixer's run; the baseline route by lane T4, `0b2c763` and `49df60f`, 34 at `ae3a670`) | §6.7 (its Built note); the baseline route §6.11's T4 paragraph |
 | 2 | `tests/baselineGraphics.test.ts` (built 2026-11-11/14 by lane T4, `c594dda` … `49df60f`, 27 tests), `tests/graphicsEval.test.ts` (`477918a`, `a3327d9`, 30 and 1 skipped by name), `tests/renderer/graphicCheckTemplates.test.ts` (`fba3632`, `67fb97c`, 55; `4450e3d`, 71): none was named by this index before it was written | §6.10's T4 Built note; §6.11's T4 paragraph |
 | 2 | `tests/directorGraphics.test.ts`, `tests/renderer/transcriptGraphics.test.tsx`, `tests/renderer/graphicPanel.test.tsx` (built 2026-11-11 by lane T2b: `directorGraphics` `226cdb0` … `db4b46d`, 51 tests (53 since lane T4's two `runGraphicsPass` cases, `530c3b6`); `transcriptGraphics` `ffc5391`, `64adaed`, 19; `graphicPanel` `becf32e`, `d33d5b4`, 20; and, not named here before they were written, `tests/renderer/graphicActions.test.ts` (`7a35dfd`, `f52e11f`, 19; 24 since lane T4, `c594dda`, `530c3b6`) and `tests/renderer/directGraphics.test.ts` (`7a35dfd`, `f52e11f`, 7; 10 since lane T4); counts read at `d33d5b4`); and `tests/graphicApply.test.ts`, the stub's (built 2026-11-06/07, `41a3db0` and `ddd1ede`, 2 cases), over the real body since lane T3 (2026-11-11, `0f3f7a4` and `3d070ab`, 45 tests) | §6.6 (the stub's, the real body's and T2b's Built notes) |
 | 2 | `tests/graphicHolds.test.ts` (M16) (built 2026-11-10, `1871004`, 4 cases; its nested case by lane T4, `0b2c763`, 5), `tests/graphicTree.test.ts` (built 2026-11-07, `35dd847` and `528986c`, 22 cases at `e06e1c3`; lane T4's ordinal case, `530c3b6`, and reader cases, `0b2c763`, 27 at `ae3a670`); and, not named here before they were written, `tests/graphicTemplates.test.ts` (`cb394b5`, `528986c`, 9 cases), `tests/graphicNumbers.test.ts` (`cb394b5`, 15) and `tests/graphicSpecs.test.ts` (`8f18cc8`, `528986c`, 11) | §6.2 (its Built note) |
 | 2 | `tests/graphicBeats.test.ts` (built 2026-11-11 by lane T3, `c27b9a4` and `4699660`, 35 tests) | §6.8 (its Built note) |
-| 2-4 | `tests/graphicPlace.test.ts`, `tests/graphicBudget.test.ts` (phase 2's built 2026-11-11 by lane T3: `graphicPlace` `37d0e69`, `518a62f`, `0f3f7a4` (its Direct lane case moved to `GRAPHIC_RULE`), 22 tests, without the `place.auto` recompute case, T2b's; `graphicBudget` `1a14bd4`, `ac79a1e`, 26, its property over `specs.json` with `fixtureCases()` for T4; `fixtureCases()` fed by lane T4, `0b2c763` and `49df60f`, 27 passed and 1 skipped by name); and, not named here before it was written, `tests/freeSpace.test.ts`'s `samplesOver` cases (`216065e`, `518a62f`, 18 tests in the file) | §6.9 (its Built note; phase 3's hero case in `graphicBudget`, §6.16; phase 4's hand case in `graphicPlace`, §6.18) |
+| 2-4 | `tests/graphicPlace.test.ts`, `tests/graphicBudget.test.ts` (phase 2's built 2026-11-11 by lane T3: `graphicPlace` `37d0e69`, `518a62f`, `0f3f7a4` (its Direct lane case moved to `GRAPHIC_RULE`), 22 tests, without the `place.auto` recompute case, T2b's; `graphicBudget` `1a14bd4`, `ac79a1e`, 26, its property over `specs.json` with `fixtureCases()` for T4; `fixtureCases()` fed by lane T4, `0b2c763` and `49df60f`, 27 passed and 1 skipped by name); and, not named here before it was written, `tests/freeSpace.test.ts`'s `samplesOver` cases (`216065e`, `518a62f`, 18 tests in the file) | §6.9 (its Built note; phase 3's hero case in `graphicBudget`, §6.16, built 2026-11-18/19, `1d7204c`, `c829007`; phase 4's hand case in `graphicPlace`, §6.18) |
 | 2 | `tests/graphicSound.test.ts` (the sound Clear test) (built 2026-11-11 by lane T3, `5c52691` … `69e677c`, 49 tests, cases (1)-(7)) | §6.14 (its Built note) |
-| 3 | `tests/graphicCompositor.test.ts` | §6.16 |
+| 3 | `tests/graphicCompositor.test.ts` (built 2026-11-18, `31e83b2`, `a199733`, `b2d19f4`; 26 tests at `2236a00`); and, not named here before they were written, `tests/renderer/graphicCompositor.test.ts` (the counting stand-in for three and the seam: `31e83b2`, `d415f2c`, `a199733`, `b2d19f4`, `1d7204c`, `c829007`, `3ee251c`, `3d55a47`; 55 tests), `tests/renderer/compositorMeasure.test.ts` (`31e83b2`, `d415f2c`; 10), `tests/renderer/glowMeasure.test.ts` (`a199733`, `b2d19f4`; 20), `tests/renderer/depthMeasure.test.ts` (`1d7204c`, `c829007`, `a74576d`; 9), `tests/renderer/screenCardMeasure.test.ts` (`1eaafc5`, `cf5aed2`, `3ee251c`, `77c66e3`; 18) and `tests/renderer/phase3Measure.test.ts` (`3d55a47`, `61365a4`; 23): the harness options' pure verdicts; phase-3 cases added to `graphicDrawList` (`MAY_ASK`, `ALWAYS_ASK`, `MAY_GLOW`, the depth and sweep cases), `graphicFrame`, `graphicStore`, `graphicBudget`, `graphicGuards`, `graphicApply`, `directorGraphics`, `graphicCanvas`, `graphicPanel` and `graphicCheckTemplates` (the rows above; the piece notes of §6.16 name each case); test counts are `it` cases in the source at `2236a00` | §6.16 (its six piece notes) |
 | spike, 4 | `tests/handsEvents.test.ts`, `tests/handsSmooth.test.ts`, `tests/handsAnchor.test.ts`, `tests/sidecar/test_hands.py`, `tests/integration/hands.int.test.ts` | §6.18 (their first versions, §6.17) |
 | 4 | `tests/renderer/pointingToggle.test.tsx` (added 2026-10-21 by §6.18) | §6.18 |
 | 0-4 | `tests/integration/graphic.int.test.ts`, the render check (phase 2's cases built 2026-11-14 by lane T4, `4f2b025` and `73c6f69`: 18 passed and 1 skipped) | below |
@@ -16121,8 +16139,8 @@ every run is yours.
 | `encode: { frames, region, pool }` and `encode: { frames, workers }` | 0 | §6.15's synthetic graphic, 120 frames, encoded per region and pool depth through `encodeFrames`, and in 1, 2 and 4 module workers | M1, M2 |
 | `segments: true` | 0 | segments and paints the Indic words cluster by cluster | M3 |
 | `blur: { words, px }` | 0 | a ten-word blur-rise line at 1080×1920 | M5 |
-| `parity: true` | 0 (Indic and colour, raw three.js), 3 (whole, through `paintDrawList3d`, and each 2.5D variant's settled frame against its flat twin) | painter output through a `CanvasTexture` against the canvas | M6 |
-| `glow: ['unreal', 'quad', 'pmndrs']` | 3, first, through the compositor's glow seam with both routes built behind it (`'unreal'` and `'quad'`; `'pmndrs'` only from a scratch branch, §6.15); moved from phase 0 on 2026-10-21 | alpha outside a glowing shape | M7 |
+| `parity: true` | 0 (Indic and colour, raw three.js), 3 (whole, through `paintDrawList3d`, and each 2.5D variant's settled frame against its flat twin) | painter output through a `CanvasTexture` against the canvas (2026-11-18 to 20: phase 3's half built as the new `compositor` and `depth` options, the rows below; `parity` is phase 0's rig, unchanged) | M6 |
+| `glow: ['unreal', 'quad', 'pmndrs']` | 3, first, through the compositor's glow seam with both routes built behind it (`'unreal'` and `'quad'`; `'pmndrs'` only from a scratch branch, §6.15); moved from phase 0 on 2026-10-21 | alpha outside a glowing shape (built 2026-11-18, `a199733`, `b2d19f4`; `'pmndrs'` only noted; read on the Mac's harness page; the phase-3 Built note below) | M7 |
 | `indic: true` | 0 (bare `drawTextOnto`), 1 (through a text item and `paintDrawList2d`, and through a text clip's and a caption's own bake in a Latin face, so the `INDIC_FONTS` loading at those sites, §6.20, is seen in the frames), 2 (with `templates`) | the Indic render check below (phase 1's half built 2026-11-02, `6592a38` and `69c2340`; phase 2's half 2026-11-14, `fba3632`, `67fb97c`, `4450e3d`, read on the harness page, 55 of 55 rows and 18 of 18 fixtures after `4450e3d`; the Built notes below) | M22; phases 1 and 2's Indic bars |
 | `primitives: true` | 1 | `PRIMITIVES_SPEC` through the drawer seam (§6.3), its drawer returning hand-built lists (a cubic stroke with an end head at `to` 0, 0.5 and 1; a text entrance in Latin and in the EFFECTS §51 clusters at progress 0, 0.5 and 1; a dim with a hard and a 24 px feathered hole; a rotated, scaled group) through the preview path and through `encodeFrames`, each PNG decoded (`createImageBitmap` with `premultiplyAlpha` and `colorSpaceConversion` `'none'`): per case the mean and largest difference against the preview canvas, the last moving frame against the held end, alpha outside `graphicBox`, the same list drawn twice, and 1080×1920 draw and encode times (built 2026-11-02, `6592a38` and `69c2340`, with a canvas-route bake beside the box route's two and the live Preview's canvas read too; the Built note below) | phase 1's exit; M13's first half |
 | `pathLength: true` | 1 | `SVGPathElement` length and points against `flattenPath` (built 2026-11-03, `0954b3d` and `2bb706d`: 23 paths at five tolerances, read with and without the circles under r = 40; the Built note below) | M8 |
@@ -16131,8 +16149,13 @@ every run is yours.
 | `curves: { names: CurveName[]; clipId: string }` | 2 | the named graphic clip of the open project (a counter, then a keyword and a callout, §6.10) under each named curve, lettered and shown blind; the key in the result (built 2026-11-14, `fba3632` and `67fb97c`: `MotionEase` names, not `CurveName`; the key in `result.curves.key`; not run) | M14 |
 | `look: { clipIds: string[] }` | 2 | each named graphic clip under four presets and `clean` with the dim, lettered and shown blind; the key in the result (§6.10) (built 2026-11-14, `fba3632` and `67fb97c`: the keys in `result.look.keys`; not run) | the look rating |
 | `strokes: ['freehand']` | 2, from a scratch branch with perfect-freehand added there and never merged, imported by a DEV-only dynamic `import()` (§6.15) | perfect-freehand's draw-on, both ways; the `rough` half is not run in step 3 (§16.60) | M10 |
-| `readback: […], frames` | 3 | the three readbacks timed | M12 |
-| `screenCard: '<path>'` | 3 | Tilt in and Pull back at 9:16, at rest and moving; the bake cost of the moving frames and of the one-loop edge sweep; the hand-off (§6.16) | M20 |
+| `readback: […], frames` | 3 | the three readbacks timed (built 2026-11-20, `3d55a47`, `61365a4`; read on the Mac's harness page; the phase-3 Built note below) | M12 |
+| `screenCard: '<path>'` | 3 | Tilt in and Pull back at 9:16, at rest and moving; the bake cost of the moving frames and of the one-loop edge sweep; the hand-off (§6.16) (built 2026-11-20, `3d55a47`, `61365a4`, the development app only; not run by anyone; the phase-3 Built note below) | M20 |
+| `compositor: true` | 3 (not named here before it was written; built 2026-11-18, `31e83b2`, `d415f2c`) | each route against painter A, the EFFECTS §51 clusters, a moving plane's edges, disposal, WebGL pretended missing | M6 through `paintDrawList3d` |
+| `focus: true` | 3 (likewise; built 2026-11-18, `a199733`, `b2d19f4`) | the focus blur at radius 0 and at 10 px | §6.16's shaders |
+| `depth: true` | 3 (likewise; built 2026-11-18/19, `1d7204c`, `c829007`, `a74576d`, the landing line `3d55a47`, `61365a4`, `2236a00`) | counter and ring under each depth against their flat twins; the hero's glow and landing | M6's 2.5D half |
+| `screenCard: true` | 3 (likewise; built 2026-11-19/20, `1eaafc5`, `cf5aed2`, `3ee251c`, `77c66e3`) | both moves over a stand-in recording, the hand-off's own side, the edge sweep | §6.16's screen card |
+| `bake3d: true` | 3 (new, not in the plan; built 2026-11-20, `3d55a47`, `61365a4`) | preview = export through the app's bake, M13's twice-bakes, disposal | phase 3's exit lines, M13 |
 
 > **Built 2026-11-02/03 (lane D's harness half: `primitives`, phase 1's
 > `indic`, `pathLength`, `strokes`).** `6592a38`, then `69c2340` after
@@ -16374,6 +16397,120 @@ every run is yours.
 >   clips, which the harness page has none of; yours, in the development
 >   app (§6.10's T4 Built note (d), with the open question of `copy()`
 >   there).
+
+> **Built 2026-11-18 to 20 (phase 3's harness half: `compositor`, `glow`,
+> `focus`, `depth`, `screenCard: true`, `screenCard: '<path>'`,
+> `readback` with `frames`, and `bake3d`).** With §6.16's six pieces
+> (their notes name the commits); `GRAPHIC_CHECK_OPTIONS` lists them after
+> `parity`, in that order but `screenCard`'s one key. Five of the eight
+> are not named by the plan's table: `compositor`, `focus`, `depth` and
+> `screenCard: true` because `parity` stayed phase 0's raw-three rig, and
+> `bake3d`, new, which holds M13's bakes, preview = export and disposal so
+> that `depth` and `screenCard: true` stayed as they were. Each prints a
+> verdict, its figures, contact sheets and `info.memory`; the bars are
+> named constants in the `*Measure.ts` files, each value below as in the
+> code. **Read by the session on the harness page only** (port 5199, the
+> Browser pane's Chrome, WebGL on, the Mac), 2026-11-18 to 20, figures in
+> EFFECTS §61; nothing in the development app or on the Surface, and
+> `screenCard: '<path>'` by no one.
+> - **`compositor: true`** (`compositorCheck.ts`, `compositorMeasure.ts`):
+>   each route against painter A per channel; EFFECTS §51's clusters on
+>   their own ink box (`inkBox`, `padRect` 2) by route two and by route
+>   three at rest; a 1 px line at 10, 50 and 90 % alpha over black and
+>   over white; a cream panel and ring at tilt 24 and dolly −0.12, their
+>   straight colour against the fill where alpha ≥ 160; a settled 2.5D
+>   list against its flat twin; `info.memory` before, built and after
+>   `dispose()`; WebGL pretended missing (`createCompositor` null, the note
+>   once, the frame against the flat twin). Routes two and three are read
+>   through the probe `{ glow: false, focus: false }`. `COMPOSITOR_BAR`
+>   `{ colourMax: 2, textureMean: 0.0005, lineMax: 2, settledMax: 0,
+>   missingMax: 0, edgeMax: 3, edgeMinAlpha: 160 }` (the 1:1 texture and
+>   the clusters a mean below 0.0005, printed 0.000; the edge pair the
+>   fixer's proposal, the rest §6.12's).
+> - **`glow: ['unreal', 'quad']`** (`glowCheck.ts`, `glowMeasure.ts`; M7):
+>   `GLOW_CHECK_REQUEST` `{ item: 'shape', radius: 24, strength: 1 }` on a
+>   220 × 140 rounded panel; per route alpha in the `CORNER_PX` (16)
+>   squares at the corners, alpha beyond the reach (by chessboard distance,
+>   `chebyshevDistance`), the glow's alpha outside the shape by distance
+>   band, a glow over a half-opaque panel counted for colour above alpha
+>   (`premultipliedInvalid`), the base against painter A, ms a frame over
+>   `GLOW_CHECK_FRAMES` 30 (median), memory; and the quad route against
+>   `glowReference`, its CPU model, at `GLOW_REFERENCE_STRENGTHS` [1, 2].
+>   `GLOW_BAR` `{ outsideReachMax: 0, cornerMax: 0, glowAlphaBelow: 255,
+>   premultipliedInvalidMax: 0, baseMax: 2, baseMean: 0.0005,
+>   referenceMax: 3 }`, the reach bar quad's alone (§6.16's piece 2 note).
+> - **`focus: true`**: radius 0 against painter A, a 10 px blur
+>   (`FOCUS_CHECK_PX` 200 per frame height at 0.05 away) over stripes, the
+>   frame's border alpha. `FOCUS_BAR` `{ sharpMax: 2, sharpMean: 0.0005,
+>   blurredMinMax: 24, edgeAlpha: 255 }`.
+> - **`depth: true`** (`depthCheck.ts`, `depthMeasure.ts`): counter-en and
+>   ring-en (`DEPTH_CHECK_FIXTURES`) under `clean` with each depth, and
+>   each as the hero under neon and energetic
+>   (`DEPTH_CHECK_HERO_STYLES`): the settled frame against the flat twin,
+>   the last camera exactly 0, a frame with ink at least 8 levels off its
+>   twin, the hero's base at rest under the glow, the glow beyond its reach
+>   from the glowing item's own ink (`glowBeyondReach`, `a74576d`), ms a
+>   frame through `paintDrawList3d`, contact sheets by `depthSheetFrames`
+>   (`DEPTH_SHEET_FRAMES` 8). `DEPTH_BAR` `{ settledMax: 0, heroBaseMax: 2,
+>   heroBaseMean: 0.0005, outsideReachMax: 0, outsideColourMax: 2,
+>   glowMinMax: 1, firstMinMax: 8 }`. Beside the verdict, not in it, the
+>   hero's landing line (`2236a00`): the last moving frame by route three
+>   and by route two, the glow's own change against `HERO_LANDING_BAR`
+>   `{ glowMean: 0.5, glowMax: 16 }`, a proposal.
+> - **`screenCard: true`** (`screenCardCheck.ts`, `screenCardMeasure.ts`):
+>   a stand-in 1280 × 720 recording numbered by its frame (`REC`); Tilt in
+>   and Pull back under `clean` and `energetic`
+>   (`SCREEN_CARD_CHECK_STYLES`): the landing's camera exactly 0 and none
+>   after, frame 0's card opacity (0 for Tilt in, 1 for Pull back), an
+>   early frame against `L`, the landing against a plain `drawImage` of
+>   the frame into the box, alpha inside the hole and the dim outside it
+>   (on the held frame under a glowing style), Pull back drawn flat (its
+>   ink 1.35 × the box, and its middle on a box `SCREEN_CARD_LOW_BOX_PX`
+>   240 below the centre). `SCREEN_CARD_BAR` `{ handoffMean: 2,
+>   holeInsideMax: 0, dimOff: 1, tiltFirstOpacityMax: 0.001, moveMinMax:
+>   8, flatScaleOff: 0.03, flatCentreOff: 1 }`. Since piece 5 the edge
+>   sweep under each glowing style read: its first and last frames, a
+>   crossing frame's two strokes, the frame after the loop against the held
+>   card, the loop's last against it, its glow beyond its reach from the
+>   sweep's own ink at two frames, route two's base there against painter
+>   A, the alpha inside the hole with the glow (no bar), ms a frame over
+>   the loop. `EDGE_SWEEP_BAR` `{ afterLoopMax: 0, lastSweepMinMax: 1,
+>   outsideReachMax: 0, outsideColourMax: 2, glowMinMax: 1,
+>   crossingPieces: 2, baseMax: 2, baseMean: 0.0005 }`.
+> - **`screenCard: '<path>'`** (`screenCardRecordingCheck.ts`; M20, the
+>   development app only): a real recording on a 1080 × 1920 project at 30
+>   fps, at most `M20_MAX_S` 20 s, pulled once through the pre-pass;
+>   `M20_CASES` Tilt in and Pull back under `clean` and Tilt in under
+>   `energetic`: legibility sheets at rest and moving (yours, by eye), the
+>   bake's cost against `WHOLE_HOLD_BUDGET` `{ frames: 300, ms: 10_000 }`
+>   (`bakeBudget`), the card's side of the hand-off against `HANDOFF_BAR`
+>   `{ meanLevels: 2 }`, and M13's two bakes of Tilt in, byte-compared and
+>   named for framemd5.
+> - **`readback: […], frames`** (`readbackCheck.ts`; M12): counter-en as
+>   the hero under neon at 1080 × 1920 (`READBACK_FIXTURE`,
+>   `READBACK_STYLE`), `frames` timed (`READBACK_FRAMES` 120 by default;
+>   one untimed warm-up), per route p50 and p95 to straight pixels in the
+>   bake's 2D canvas and to PNG, and each route's PNG against the very GL
+>   frame it read back, made straight (`straightTopDown`). `READBACK_BAR`
+>   `{ faster: 2, alphaMax: 1, colourMax: 2, minAlpha: 128 }`: keeps
+>   straight alpha with alpha within 1 and colour within 2 where alpha ≥
+>   128, partial-alpha pixels required; the verdict names the fastest that
+>   keeps it and the rule's choice; the bake is not changed by it.
+> - **`bake3d: true`** (`bake3dCheck.ts`, new): through the app's own
+>   `graphicPreviewCanvas`, `graphicFrameCanvases` and
+>   `bakeGraphicSequence`, counter-en and ring-en under `clean` with each
+>   depth and each as a hero (`BAKE3D_HERO_STYLE`: the counter under neon,
+>   the ring under energetic), and the screen card (Tilt in and Pull back
+>   under `clean`, Tilt in under `energetic`) over the stand-in recording
+>   as `blob:` URLs: the Preview and the harness's frames each against the
+>   bake's PNG over their ink at `exportParityFrames` or
+>   `screenCardParityFrames`, `EXPORT_PARITY_BAR` `{ meanLevels:
+>   TEMPLATES_BAR.bakeMeanLevels }` (1 level); the baked count against
+>   `graphicMovingFrames`; `BAKE3D_M13`'s three cases baked twice and
+>   byte-compared; `info.memory` around each M13 case and the whole
+>   option (`memoryBack`); a case fails on `WEBGL_MISSING_NOTE`, and a
+>   Preview frame that wants a compositor and holds none is named drawn
+>   flat (`61365a4`).
 
 #### The Indic render check
 
@@ -16675,7 +16812,8 @@ is absent (only §6.20's two Noto faces and their licences are tracked under
   frame. Mutations: the hold baked frame by frame (the PNG count, and the
   box's grey frozen at `L`); the opacity key one frame late (frame `L + 1`'s
   box shows red); the keys left on a dropped card (the box red for the
-  move).
+  move). (2026-11-20: built, the phase-3 Built note
+  below.)
 - **Phase 4, the hand render check** (§6.18): a 640×360 source with a white
   6×6 "fingertip" moved along a known path (an `overlay` of a `color` source
   at x and y expressions of `t`), a `Project.hands` `HandTrack` written by
@@ -16890,6 +17028,57 @@ is absent (only §6.20's two Noto faces and their licences are tracked under
 >   plan's own words), and the typos of `4f2b025`'s message ("counter.s",
 >   "steps." for counter's and steps').
 
+> **Built 2026-11-20 (phase 3, §6.16's piece 6).** `3d55a47`, then
+> `61365a4` after three critics; CI green on both runners at `2236a00`
+> (run 44727055616), so the case holds on the 2018 Windows ffmpeg too.
+> No production code changed for it. `graphic.int`'s describe "phase 3:
+> the screen card's hand-off through the real plan" has **8 tests**,
+> passed on the Mac inside the full suite (`-t "phase 3"` alone: 7 at
+> `3d55a47`, 8 at `61365a4`).
+> - **The fixture**: a 640 × 360 recording of 90 frames at 30 fps made in
+>   node (PNGs through `image2` and libx264, test-side), each frame its own
+>   grey, 50 + 10·(i mod 20); contained in a 360 × 640 frame over a red
+>   track; since `61365a4` **at timeline frame 12 with 7 frames trimmed**
+>   (`P3_REC_START`, `P3_REC_IN`), the card at its start, so card frame f
+>   is export frame 12 + f and source frame 7 + f; a Tilt in card made by
+>   `screenCardSpec` with `screenCardKeys` on the recording, `L` 30 and 46
+>   moving frames under `clean`; exported through `bakeForExport`,
+>   `buildRenderPlan` and the bundled ffmpeg.
+> - **The stand-in baker paints the real drawer's list**, frame by frame:
+>   the dim at opacity × alpha with its hole, the image as a card of
+>   (40, 40, 200) at 0.4 alpha over its box (half-transparent, so a
+>   recording left showing is seen up to and including `L`), the bezel as a
+>   ring; camera and transforms ignored. The node side fills the files up
+>   to `L` as `screenTargetsAt` does.
+> - **Read**: the card's spec and its two keys `[0 held, L + 1]` counted
+>   from the recording, never the timeline's 12 and 43; the PNG count the
+>   moving frames, the pull from the card's first frame within the clip
+>   with the trim handed on; frames 0 .. 11 red alone; up to `L` the card
+>   over red (the hold key hides the recording); from `L + 1` the
+>   recording's own source frame through the hole, none repeated or
+>   skipped; outside the box the dim over red, rising through the landing
+>   (alpha 0 on card frame 0, between at `L`/2, whole at `L`) and the same
+>   after; a null bake drops the card with its note AND strikes its keys,
+>   so the export is the plain recording from its first frame. Box means
+>   within 5 levels (`P3_LEVELS`; 3 measured on the Mac); the figures go
+>   to `tests/output/graphic/phase3/README.txt` (gitignored output).
+> - **Mutations**, each failing, restored and compared equal: `3d55a47`'s
+>   the second key at `L` ("frame 30: the box is the card over red:
+>   expected 57 to be less than or equal to 5"; the plan's "one frame
+>   late" run the other way), the first key not a hold, the strike skipped
+>   when the bake fails (the plan's "keys left on a dropped card"), the
+>   image left in on the held frame ("frame 31: the image: expected true to
+>   be false"); `61365a4`'s a key counted from the timeline (`const at =
+>   card.start`, "export frame 43 (card frame 31): the recording's frame:
+>   expected 8 to be 18") and a pull counted from the timeline
+>   (`footageWindow(cardStart, …`), both of which had passed before the
+>   offset, and the dim not rising (`0 * progress(`), which had passed
+>   too; every seek clamped to at least 0. The plan's "hold baked frame by
+>   frame" is asserted by the PNG count and was not run as a mutation.
+> - **Not read by it**: the card's side of the hand-off on a real
+>   recording is M20's (`screenCard: '<path>'`, not run); the render side
+>   on a real file is read by no option.
+
 #### Census rows
 
 The Transcript tile's "Graphics", "Find graphics in this clip", "Keep",
@@ -16928,6 +17117,15 @@ states) and home `dock` ("Graphic", "Role"), reasoned from the code by
 phase 4's rows wait on their phases.) (2026-11-14, lane T4: no control
 of the app changed and no row names the one changed text, the no-model
 note's wording, so no row was added and the census was not read again.)
+(2026-11-18 to 20, phase 3: in, 20 rows, all home `dock`: the drawn-flat note
+(piece 1, `harnessOnly` false, its recipe throws on the harness page,
+where WebGL starts); "Depth", "Flat", "Tilt", "Parallax", "Dolly",
+"Focus" (piece 3, recipe `graphic-counter`); "Screen card", "Tilt in",
+"Pull back", eight of the nine `SCREEN_CARD_REASONS` (all but "Only a
+video clip can be a screen card"), and the card panel's two notes (piece
+4, `1eaafc5`, `cf5aed2`). Read on the harness page by the session:
+missing [], 924 checked, 9 skipped at `b2d19f4`; 942 checked, 10 skipped
+at `a74576d` and at `2236a00`; §6.16's piece notes.)
 
 ### 6.12 Exit — by phase
 
@@ -20207,7 +20405,9 @@ false, `premultiplyAlpha` false, no mipmaps, linear filters, clamped edges.
 unchanged, so the two drawers upload one way. A plane is repainted and
 re-uploaded only when its items change, keyed as `Composed.at` keys its
 rectangles (`momentCanvas.ts:163-170`): a tilt that changes only the camera
-uploads each plane once.
+uploads each plane once. (2026-11-18, `d415f2c`: the layers are uploaded
+with `premultiplyAlpha` true, set after `textureOf`, which keeps the
+moments' settings; piece 1's note below.)
 
 **`dim` items are screen space.** They are painted on a base layer under
 every plane by the identity route and never placed under the camera: a dim is
@@ -20220,7 +20420,9 @@ premultiplied colour, as the depth push does (`momentCanvas.ts:309-317`);
 planes blend premultiplied "over" (`momentCanvas.ts:377-384`). With a focus
 blur above 0 it averages a fixed disc of taps (13, proposal) at the plane's
 radius; at radius 0 it returns the texel itself, so a settled plane is
-exact.
+exact. (2026-11-18: built with the texel uploaded premultiplied and written
+as it is, `d415f2c`; the 13 taps are `focusDisc`'s, `a199733`; pieces 1
+and 2's notes below.)
 
 **The camera.** `Camera` = `{ tilt, yaw, dolly, fov, focus? }` in degrees
 (§6.3). A `PerspectiveCamera` at `fov` (30° when the list gives none,
@@ -20246,7 +20448,10 @@ own, alpha fixed 2025-12-09, the research's §4.2) keeps alpha 0 outside the
 shape and below 1 in the glow on both machines, it is the route; else the
 two passes are. The route not taken is removed. pmndrs `postprocessing`
 stays out whatever M7's scratch-branch leg records, because its peer range
-pins three below 0.187.
+pins three below 0.187. (2026-11-18: both routes built behind
+`spreadGlow`, the glow's alpha added ONE + ONE rather than "over",
+`b2d19f4`; M7 is read on the Mac's harness page only, so `GLOW_ROUTE` is
+`'quad'` and both routes stay; piece 2's note below, EFFECTS §61.)
 
 **What glows** (named 2026-10-21 by the review; the research's phase 3 has
 "glow by M7's winner" on the hero graphic). A drawer emits a
@@ -20292,6 +20497,203 @@ frame, and a spec whose lists need it bakes the canvas region even if M1
 chose the box (§6.3): a tilt or a glow puts ink outside the flat
 `itemBounds` that `graphicBox` unions, so a box would crop it.
 
+> **Built 2026-11-18 (piece 1: the compositor, its seam in
+> `graphicCanvas.ts`, the harness's `compositor` option).** `31e83b2`,
+> then `d415f2c` after three critics (build run A, an Opus 5.5 builder,
+> critics and fixer per piece, 10 agents for pieces 1 and 2); pushed with
+> piece 2, CI green on both runners at `b2d19f4`. Phase 3 began that day
+> on your word, phase 2's exit (§6.12) still open. Described from the
+> code at `2236a00`; where `d415f2c` changed `31e83b2`, the fix is the
+> state.
+> - **`src/shared/graphics/compositor.ts`** (new, pure, so node reads it
+>   without three): `planesOf` (the dims left out; `z ?? 0` ascending,
+>   list order kept; a group's children ride the group's plane),
+>   `screenItemsOf` (the dims), `flatItems` (the dims, then the planes far
+>   to near: route one's order), `cameraIsFlat` (tilt, yaw and dolly 0,
+>   and no focus blur above 0), `isFlat`, `compositorRoute`
+>   (`'flat' | 'glow' | 'perspective'`), `cameraFor` (D =
+>   (H/2)/tan(fov/2); view T(0,0,−D(1−dolly))·Rx(−tilt)·Ry(yaw), so a
+>   positive tilt takes the top away and a positive yaw the right edge; near 0.01·D, far 100·D,
+>   three's column-major layout), `flatDistance`, `compensation`,
+>   `planeModel` ((D − zH)/D at z·H), `mat4Multiply`; `MAX_PLANES` 4 and
+>   `DEFAULT_FOV` 30, the plan's proposals.
+> - **`src/renderer/src/graphicCompositor.ts`** (new):
+>   `createCompositor(width, height, options = {})` awaits
+>   `sharedRenderer` and builds the scene, the camera and the quad; null,
+>   never a throw, when the renderer throws or its context comes back
+>   lost, remembered for the session (`webglMissing()`,
+>   `resetCompositorSession()` for the tests). `paintDrawList3d(list,
+>   compositor, options = {}, probe = {})`: route one is painter A alone
+>   with no WebGL call, repainted every frame; route two painter A's whole
+>   list (dims included) as one layer at 1:1 under the moments' identity
+>   quad (`momentCanvas.ts`' `VERTEX` and `textureOf`, now exported,
+>   bodies unchanged), then the glow seam; route three the dims on an
+>   identity base layer, `renderOrder` under every plane, and one
+>   compensated plane per `z` under a `PerspectiveCamera` whose matrices
+>   are `cameraFor`'s (`matrixAutoUpdate` and `matrixWorldAutoUpdate`
+>   false; a comment records that three r186 keeps them because
+>   `updateProjectionMatrix` runs only with a reversed depth buffer, which
+>   `threeShared.ts` does not ask for). Each layer is made when a list
+>   first needs it, and repainted and uploaded only when its key changes
+>   (the items' JSON, each image's bitmap in hand, the plane's `z`);
+>   `forgetPlanes(compositor)` makes the next frame repaint (a face that
+>   landed). `sized()` before every render. It throws on more than
+>   `MAX_PLANES` planes, on a list of another size and on a disposed
+>   compositor. `dispose()` disposes the list once each and gives back the
+>   layers' 2D canvases (0 × 0). `WEBGL_MISSING_NOTE` "drawn flat: 3D
+>   needs WebGL, which did not start on this computer"; the pure half is
+>   re-exported.
+> - **The seam, `graphicCanvas.ts`**: `paintFrame` takes the caller's
+>   compositor; the preview keeps one per clip (frames drawn flat and not
+>   cached until it lands, `onReady` called even on a null landing;
+>   rebuilt on a new size, disposed on supersede and clip removal); the
+>   bake and `graphicFrameCanvases` keep one for their length, disposed in
+>   the `finally`; a spec whose lists need it bakes the canvas region, with
+>   or without WebGL. WebGL missing: painter A over `flatItems`, so route
+>   one's picture whatever order a drawer emits (`d415f2c`), the note kept
+>   once (`takeGraphicBakeNotes()`) and the clip marked
+>   (`graphicDrawnFlat(clipId)`). `ExportStrip.tsx` takes the notes before
+>   and after its bake and says each once, "A graphic was drawn flat: …";
+>   `GraphicPanel.tsx`'s `DRAWN_FLAT_NOTE` is `This graphic is
+>   ${WEBGL_MISSING_NOTE}`; one census row (that note, home `dock`,
+>   `harnessOnly` false, recipe `graphic-drawn-flat`, which throws: the
+>   harness's WebGL starts).
+> - **The harness**: `{ compositor: true }` (`compositorCheck.ts`, its
+>   verdict in `compositorMeasure.ts`), §6.11's phase-3 note.
+> - **Tests**: `tests/graphicCompositor.test.ts` (the pure half),
+>   `tests/renderer/graphicCompositor.test.ts` (a counting stand-in for
+>   three: the routes, disposal on every path, WebGL missing, the seam,
+>   ExportStrip's two calls as ordered source),
+>   `tests/renderer/compositorMeasure.test.ts`, a case in
+>   `graphicPanel` and the `MAY_ASK` describe in `graphicDrawList` (empty
+>   until piece 3; `d415f2c` gave the plain half its own set,
+>   `ALWAYS_ASK`, for the screen card). Twenty mutations by `31e83b2` and
+>   sixteen by `d415f2c`, each failing and restored by `cmp`; among
+>   `d415f2c`'s, `sized()` removed ("expected [ '540x960', '720x1280' ]
+>   to deeply equal [ '1080x1920', '1080x1920' ]"), the premultiplied
+>   upload removed, the per-frame visibility reset removed, `renderOrder`
+>   0, either camera matrix dropped, route two in list order, and the
+>   frames' `finally` dispose dropped. Suite 5653, then 5664 tests passed,
+>   66 skipped.
+> - **Departures from the plan's words**: (1) the layers are uploaded
+>   **premultiplied** (`texture.premultiplyAlpha = true` after `textureOf`,
+>   which keeps the moments' settings) and the fragment shader writes the
+>   texel as it is, not "samples the straight texel and writes
+>   premultiplied colour" (`d415f2c`): a straight upload filtered
+>   bilinearly and premultiplied after the filter gives (t²c, t) between
+>   an ink texel and a clear one, a dark fringe on every anti-aliased edge
+>   of a moved plane (three r186, `WebGLTextures.js:927` and `:1427`); at
+>   1:1 the upload is the canvas's own premultiplied bytes; yours to keep;
+>   (2) exports beyond §6.16's list: `screenItemsOf`, `flatItems`,
+>   `cameraIsFlat`, `compositorRoute`, `flatDistance`, `compensation`,
+>   `planeModel`, `mat4Multiply`, `forgetPlanes`, `webglMissing`,
+>   `resetCompositorSession`, and `VERTEX`; (3) the layers are made
+>   lazily, not "once" at creation; (4) a `focus` with `px` above 0 takes
+>   route three at a flat camera; (5) the harness reading is a new option,
+>   `compositor`, and `parity` stays phase 0's rig; (6) the screen card
+>   asks for the compositor with neither `depth` nor `hero` (its move is
+>   its own camera), against §6.3's "only when `spec.depth` is set or the
+>   spec is its clip's hero", hence `ALWAYS_ASK`; (7) the preview kept a
+>   compositor once made, against thrash (given back on a route-one frame
+>   since piece 3, on any frame that does not want one since piece 5).
+> - **Left open**: a WebGL context lost in the middle of a session is
+>   not detected (checked only at creation; the moments share it;
+>   declined by `d415f2c`); ExportStrip's two `takeGraphicBakeNotes` calls
+>   are pinned only by an ordered source test, not by driving the strip;
+>   `COMPOSITOR_BAR.edgeMax` 3 at `edgeMinAlpha` 160 is the fixer's
+>   proposal. (Closed by piece 3: the cap on preview compositors and the
+>   drawn-flat note shown the moment the preview learns it.)
+
+> **Built 2026-11-18 (piece 2: the glow behind one seam with both
+> routes, the focus blur, the harness's `glow` and `focus` options).**
+> `a199733`, then `b2d19f4` after three critics (run A); pushed, CI green
+> on both runners at `b2d19f4`.
+> - **`compositor.ts`** gains the focus: `FOCUS_TAPS` 13, `focusDisc()`
+>   (the texel, four taps at half the radius on the diagonals, eight at
+>   the radius every 45°, equal weights), `focusRadius(camera, z)` = `px ×
+>   |z − focus.z|`; and the glow: `GlowRoute` (`'quad' | 'unreal'`),
+>   `GLOW_ROUTES`, `GLOW_ROUTE` `'quad'`, `GLOW_MAX_HALF_TAPS` 32,
+>   `GLOW_SIGMA_OF_RADIUS` 1/3, `GLOW_MAX_ALPHA` 0.85, `UNREAL_RADIUS_PX`
+>   64, `UNREAL_GAIN` 9, `MAX_GLOW_BATCHES` 2, `glowKernel(radius)` (a
+>   Gaussian of sigma radius/3 cut at round(radius), whole-pixel taps,
+>   normalised, so alpha is exactly 0 beyond the reach), `glowMatches`
+>   (the id, or `<id>-<n>` with n a whole number, so `value-bg` does not
+>   glow with `value`), `glowItemsOf`, `glowBatches` (by radius and
+>   strength; a glow of radius or strength 0 makes none, so `isFlat` and
+>   `compositorRoute` send it to route one, `b2d19f4`).
+> - **`graphicCompositor.ts`**: the requested items painted per plane on
+>   glow layers (slot 0 route two's identity layer, slots 1..n route
+>   three's planes), tinted by the request's colour (filled `source-in`),
+>   rendered through the same camera into a target, spread by the route
+>   (`'quad'`: two separable passes under `NoBlending`, the alpha capped
+>   at `GLOW_MAX_ALPHA`; `'unreal'`: three r186's `UnrealBloomPass`,
+>   loaded only for that route by `graphicGlowUnreal.ts`'s
+>   `loadUnrealBloom()`, strength ÷ `UNREAL_GAIN`, radius min(1, r /
+>   `UNREAL_RADIUS_PX`), threshold 0, its composite
+>   `renderTargetsHorizontal[0]` read alone, uncapped), then added over
+>   the frame **ONE + ONE on colour and on alpha** (`b2d19f4`). Every
+>   target, glow material, glow layer, the bloom pass and the high-pass
+>   material its own `dispose()` leaves out are on the disposal list; the
+>   renderer's target, auto-clear and clear colour are restored after the
+>   passes, and every clear is at alpha 0. Each plane's `uBlur` is
+>   `focusRadius`; at 0 the shader returns the texel. `createCompositor`'s
+>   `options.glow` picks the route; `paintDrawList3d`'s `probe` is
+>   `CompositorProbe` `{ glow?, focus? }`, false leaving the glow or the
+>   blur out, the harness's way to the base and to route three at rest.
+> - **The harness**: `{ glow: ['unreal', 'quad'] }` and `{ focus: true }`
+>   (`glowCheck.ts`, its verdicts in `glowMeasure.ts`, with
+>   `glowReference`, a CPU model of the quad route, `b2d19f4`); §6.11's
+>   phase-3 note.
+> - **Tests**: both `graphicCompositor` files, `graphicDrawList`'s
+>   `MAY_GLOW` (empty until piece 3) and
+>   `tests/renderer/glowMeasure.test.ts` (new). The thirteen mutations
+>   `a199733`'s message names (the weights not normalised, a focus radius left at rest, a
+>   target off the disposal list, the glow canvas painted with every item,
+>   the renderer's target not restored, the at-rest branch removed, a
+>   counter emitting a glow, the probe's default dropped, the chamfer's
+>   backward pass removed, the unreal route capped, the glow added under
+>   the planes, the slots shared between routes, a focus of 0 sent off
+>   route one) and `b2d19f4`'s 23 (among them the old alpha factor put
+>   back, the cap line deleted, the sum × 0.5, `vUv - o` as `vUv + o`,
+>   `NoBlending` removed, the fill as `source-over`, the second batch given
+>   the first's strength, `UNREAL_GAIN` against the three source, sigma =
+>   reach), each failing. Suite 5713, then 5733 passed, 66 skipped.
+> - **Departures from the plan's words**: (1) the glow's alpha is added
+>   ONE + ONE, not "over": with colour ONE + ONE and alpha "over", a glow
+>   over a half-opaque item left colour above alpha, which the preview
+>   kept and the export's un-premultiply clamped, so preview and export
+>   differed (`b2d19f4`; the old test asserted the broken factor);
+>   (2) the quad route caps the glow's alpha at 0.85, so "below 1" holds
+>   by construction; (3) M7's bars as built are the fixer's reading of
+>   §6.15 and §6.16, not their words: every route held to alpha exactly 0
+>   in the `CORNER_PX` (16) squares at the frame's corners, the glow below
+>   255, the frame validly premultiplied, the base exact and the memory
+>   back; the bar "alpha 0 beyond the request's reach" is quad's alone,
+>   since `UnrealBloomPass` has no pixel reach (five mips, the last at
+>   1/32), its distance bands printed as information; `UNREAL_GAIN` 9 is
+>   read from r186's composite (3.0 × factors summing to 3.0) and pinned by
+>   a test that reads the three source; (4) the unreal leg is added
+>   through the compositor's own add, not the pass's own additive blend
+>   into its input; (5) the renderer's size is not restored after the
+>   passes (resizing would blank the frame before the caller copies it;
+>   every drawer calls `sized()` first); (6) batches by radius and
+>   strength, the colour tint, the probe and the route option are beyond
+>   the words; `'pmndrs'` is only noted, not built.
+> - **Left open**: M7 on the Surface, then the losing route removed (the
+>   deletion: `graphicGlowUnreal.ts`, the `'unreal'` branches,
+>   `GlowRoute`'s member, `UNREAL_RADIUS_PX`, the fake bloom's tests);
+>   `createCompositor` throws if the unreal route's import fails (only the
+>   harness asks for it; declined by `b2d19f4`); for the look: whole-texel
+>   taps above 32 px can glow a thin stroke in stripes, the RGBA8 targets
+>   can band a faint glow, about 25 MB of GPU memory per batch per
+>   compositor at 1080 × 1920, and the 13-tap disc can show ghost copies at
+>   10 px, which `FOCUS_BAR.blurredMinMax` 24 would pass; the proposals
+>   `GLOW_MAX_ALPHA`, `GLOW_SIGMA_OF_RADIUS`, `GLOW_MAX_HALF_TAPS`,
+>   `MAX_GLOW_BATCHES`, `UNREAL_RADIUS_PX`, `FOCUS_TAPS`' disc,
+>   `GLOW_BAR.referenceMax` 3, `GLOW_REFERENCE_STRENGTHS` [1, 2],
+>   `CORNER_PX` 16, `UNREAL_GAIN` 9, `FOCUS_BAR.blurredMinMax` 24 and
+>   `FOCUS_CHECK_PX` 200. (Closed by piece 3: the focus figure, px 500.)
+
 #### The 2.5D variants of `counter` and `ring`
 
 `GraphicSpec.depth?: 'tilt' | 'parallax' | 'dolly' | 'focus'` (§6.1),
@@ -20313,7 +20715,10 @@ Each variant arrives with its flat twin: the number reaches its value, the
 arc its sweep, on the same beat frame. Because the last moving frame is flat,
 the frame `tpad` holds is the flat graphic's own (route one above). Text is
 resampled while a plane is tilted, so it softens in motion; at rest it is
-painter A's.
+painter A's. (2026-11-18: `Camera.focus.px` is per frame height of
+distance from the focus, so the drawer emits `px` = 10 ÷ 0.02 = 500 for
+the label's 10 px; `GraphicSpec.depth` also takes `'flat'`, the dock's
+Flat; piece 3's note below.)
 
 **Who sets `depth`** (revised 2026-10-21 by the review). The first draft of
 this re-plan had you only, through the dock; then phase 3's three.js work
@@ -20332,11 +20737,129 @@ and not one of your twelve answers:
 - **You**, through the **Depth** choice in the dock's graphic panel (§6.6),
   on templates whose `threeD` is true: Flat, Tilt, Parallax, Dolly or
   Focus. Your choice wins over the rule and clears `hero` on that graphic.
+  (As built, 2026-11-18: pressing the choice already pressed is no edit,
+  so Tilt pressed on the hero keeps `hero` and its glow; piece 3's note.)
 - **Never the model** (§6.6), and never the style alone: D5 (§16.58) keeps
   the default restrained, which a 24° settle on one graphic a clip is
   meant to respect. The look rating (§6.10) asks about it with phase 3's
   renders once phase 3 lands; if you rate it down, the rule is turned off
   by a one-line change and the dock remains.
+
+> **Built 2026-11-18/19 (piece 3: the 2.5D counter and ring, the hero
+> rule, the hero's glow, the dock's Depth choice).** `1d7204c`, then
+> `c829007` after three critics (build run B, 10 agents for pieces 3 and
+> 4), then the session's `a74576d` (the depth option's glow reading, read
+> on screen first); pushed, CI green on both runners at `a74576d` (run
+> 44473422718). From here a counter or ring with a depth, or its clip's
+> hero, asks for the compositor; nothing new reaches ffmpeg.
+> - **`src/shared/graphics/templates/depth.ts`** (new), one depth branch
+>   that `counter.ts` and `ring.ts` both call (`depthOut`), built from
+>   the flat items: `DepthMove`, `DEPTH_MOVES`, `DEPTH_TILT_FROM` 24,
+>   `DEPTH_PARALLAX_YAW_FROM` −8, `DEPTH_DOLLY_FROM` −0.12,
+>   `DEPTH_FOCUS_BLUR_PX` 10, `DEPTH_FOCUS_Z` 0, `DEPTH_FOV` (=
+>   `DEFAULT_FOV`), `DEPTH_PLANES`, `HERO_GLOW_ITEM` (`{ counter: 'value',
+>   ring: 'arc' }`), `depthOf`, `depthCamera`, `onPlanes`, `heroGlow`,
+>   `depthOut`. The camera moves over `DURATIONS.entrance` (0.35 s),
+>   ending no later than the first beat, on `style.motion.ease` (so
+>   energetic's `out-back` overshoots past flat and lands on 0); the focus
+>   blur over the count on `drawOnEase`, `px` = 10 × (1 − p) / 0.02, 500
+>   at the start, exactly 0 on the beat; −0 is made 0. `DEPTH_PLANES`:
+>   the counter's parallax panel 0, label 0.02, value 0.05; dolly panel
+>   0, label 0, value 0.05; focus panel −0.02, label −0.02, value 0; the
+>   ring's parallax track 0, arc 0.03, value 0.05, label 0; dolly track,
+>   arc and label 0, value 0.05; focus track, arc and value 0, label
+>   −0.02. At most three distinct `z`. `heroGlow`: one request on the
+>   value or the arc, radius `style.glow.radius` × the short side (21.6
+>   px at 1080, 10.8 at 540), the style's strength, `palette.accent`, on
+>   every frame while the spec is the hero under a style with `glow`, at
+>   rest too (route two).
+> - **`template.ts`**: `GraphicSpec.depth` is `'flat' | 'tilt' |
+>   'parallax' | 'dolly' | 'focus'`. **`apply.ts`**: `HERO_RULE` true (the
+>   one line that turns it off), `HERO_TEMPLATES` `['counter', 'ring']`,
+>   `HERO_DEPTH` `'tilt'`, `withHeroes(project, ids)` after `landKept` in
+>   `applyGraphics`: over the graphics a run has just landed, by start,
+>   the first counter or ring on each footage clip (`footageOf`) gets
+>   `depth: 'tilt'` and `hero: true`; a clip already holding a hero gets
+>   none; a graphic with a depth set (yours, `'flat'` included) or over no
+>   footage clip is never taken. In the app today only Direct lands
+>   graphics through `applyGraphics` (the store's one call); Find's Keep
+>   and Add place through `placeOne`, so they make no hero.
+> - **The dock** (`GraphicPanel.tsx`): `DEPTH` "Depth" and `DEPTH_CHOICES`
+>   (Flat, Tilt, Parallax, Dolly, Focus), only where `threeD`; a press is
+>   one `setGraphic(clip.id, { depth, hero: undefined })`, and `setGraphic`
+>   now deletes a key patched to `undefined` (`store.ts`); an unset depth
+>   shows Flat pressed. The drawn-flat note is read through
+>   `useGraphicDrawnFlat` (a small zustand store in `graphicCanvas.ts`),
+>   so it shows the moment the preview learns WebGL is missing. Census:
+>   recipe `graphic-counter`, six rows (Depth and the five words).
+> - **The preview** (`graphicCanvas.ts`): a clip's compositor is given
+>   back on a route-one frame, at most `PREVIEW_COMPOSITOR_CAP` 3 are kept,
+>   the least recently drawn evicted only once it has not been drawn for
+>   `PREVIEW_COMPOSITOR_HOLD_MS` 250 (`c829007`: four clips on one frame
+>   evicted each other in turn and no clip ever drew through WebGL); else
+>   the clip draws flat that frame with no compositor made and the frame
+>   is not cached.
+> - **The harness**: `{ depth: true }` (`depthCheck.ts`, its verdict and
+>   `depthSheetFrames` in `depthMeasure.ts`; the hero read under neon and
+>   energetic since `c829007`); `a74576d`'s `glowBeyondReach`; §6.11's
+>   phase-3 note.
+> - **Tests**: `graphicDrawList` (every frame's text items the flat
+>   variant's, every camera field and the blur exactly 0 from the last
+>   beat, at most `MAX_PLANES`; since `c829007` each move's sign, every
+>   item on its `DEPTH_PLANES` plane on every moving frame, the planes'
+>   order, and the figures pinned to §6.16's one line each; `MAY_ASK` and
+>   `MAY_GLOW` gain counter and ring), `graphicBudget` (the hero cases
+>   through `applyGraphics`; a counter over no footage and a screen card
+>   landed ahead are never heroes), `directorGraphics` (the model never
+>   sets depth or hero), the renderer's `graphicCompositor` (the cap, the
+>   hold, the release, the drawn-flat landing, a real hero's canvas-region
+>   bake), `graphicPanel` (Depth) and `tests/renderer/depthMeasure.test.ts`
+>   (new; 9 tests at `a74576d`). Each mutation-checked: `c829007`'s
+>   include no hold check, the refused frame cached, `drawnAt` not
+>   refreshed, tilt −24, yaw +8, dolly +0.12, the counter's label and
+>   value swapped, a parallax label or arc on 0, dolly's label at 0.05,
+>   tilt 24 → 12; `a74576d`'s eight
+>   (the reach's edge, alpha and colour swapped or dropped, the difference
+>   replaced by the frame's own alpha, the distance read from the wrong
+>   picture, each of the three verdict lines). Suite 5757, then 5762
+>   passed, 66 skipped.
+> - **Departures from the plan's words**: (1) `'flat'` is a depth value
+>   (§6.1's type has four), kept so your Flat is remembered as yours, as
+>   `place.auto: false` is; (2) `Camera.focus` is read literally, so the
+>   drawer emits `px` 500 for the table's 10 px; (3) the items carry `z`
+>   only while the camera is off flat or the blur above 0: a settled frame
+>   is the flat variant's own list in its own order, because the table
+>   puts the value in front of the label, which the flat variant paints
+>   the other way, and their halos overlap by 35 to 95 px at 1080 × 1920 in
+>   node; (4) the names in `depth.ts`, and the plane choices the table
+>   leaves open: the ring's "panel" is its track and its label rides the
+>   track's plane, dolly's other fields stay on 0, focus puts the counter's
+>   panel on the label's plane (a panel on 0 would cover the label behind
+>   it); (5) the hero glows at rest too, and a hero with no depth still
+>   glows; (6) the rule runs only in `applyGraphics`, and a footage clip
+>   already holding a hero from an earlier run gets none; (7) the same
+>   Depth choice pressed again is no edit, so Tilt on the hero keeps
+>   `hero`; (8) the preview's cap and hold reverse piece 1's "keep it once
+>   made"; (9) the harness reading is a new option, `depth`, not
+>   `parity`'s phase-3 half; `DEPTH_BAR.firstMinMax` 8 and `glowMinMax` 1
+>   are proposals; (10) `glowBeyondReach` (`a74576d`, EFFECTS §61): the
+>   hero's glow is read from the glowing item's own ink, alpha (bar 0)
+>   and colour (`DEPTH_BAR.outsideColourMax`, route two's 2) apart.
+> - **Left open**: the hero rule does not run on Keep, Add, a move or a
+>   split, so a moved hero or a split can leave two on one clip;
+>   `graphicBudget`'s fixture-wide case pins heroes = 0 (today's
+>   fixtures land no counter or ring), to relax to a count when eval
+>   fixtures land counters; with four or more deep clips on a paused
+>   frame the fourth stays flat until something repaints, and the preview
+>   has no off-screen signal; for the look (each a named constant): the
+>   24° settle, the visible move about half its figure (frame 0 carries
+>   the whole move at opacity 0), the tilt pivoting on the frame's centre
+>   line, dolly's "value fastest" not visible, a small parallax, little or
+>   no tilt before an early beat with the dock still showing Tilt,
+>   `DEPTH_FOCUS_BLUR_PX` in absolute pixels where the glow is a fraction
+>   of the short side, the label painted behind the value while a
+>   multi-plane variant moves (painter A without WebGL too), the counter's
+>   panel blurred with the label under focus.
 
 #### The screen card — `src/shared/graphics/templates/screenCard.ts`
 
@@ -20431,6 +20954,9 @@ the card ends as the recording ends) and writes the two keys in the same
 history step. `rebakeGenerated` (`store.ts:2050-2223`) realigns a card whose
 recording was moved, trimmed, retimed or changed frame rate: the card's
 start and length follow the recording's, and its two keys are rewritten.
+(2026-11-19: built as `realignScreenCards` in the store's `update`, on
+every edit, not in `rebakeGenerated`, with a lane rule and a rule for an
+edited key, `1eaafc5`, `cf5aed2`; piece 4's note below.)
 **The card is your edit, not a run's**: it is made by your dock action, so
 it carries no `generatedBy` rule. Drop removes the card and exactly the two
 keys `screenCardKeys` gives (a key of your own is kept); neither Clear
@@ -20453,7 +20979,9 @@ rotated, or with keyed zoom or rotation (`sourceToFrame` models neither,
 adjustment, or under a look (the card's moving frames are above the look,
 ungraded, §16.7, so the landing would show the grade arrive; §16.7 is not
 reopened, this is why the dock greys it); an image clip. One card per
-recording clip.
+recording clip. (2026-11-19: built with two refusals beyond this list, a
+motion path or a camera move, `cf5aed2`, and a recording shorter than `L`
++ 2 frames; the words are `SCREEN_CARD_REASONS`', piece 4's note below.)
 
 **The budget.** The screen card is outside §6.9's budget, and its dim is the
 only dim while it is on screen (§6.9). A `callout` over a recording has no
@@ -20461,6 +20989,142 @@ face to point at, so rule 9 drops it, as it would without the card.
 
 **Without WebGL** the camera is ignored: Tilt in is the card fading in on
 its box, Pull back its flat scale; the hand-off is unchanged.
+
+> **Built 2026-11-19 (piece 4: the screen card without its edge sweep,
+> its hand-off keys, the store's realign, the export's strike, the dock's
+> Screen card, the harness's `screenCard` option).** `1eaafc5`, then
+> `cf5aed2` after three critics (run B); pushed, CI green on both runners
+> at `a74576d`. Nothing new reaches ffmpeg: the card's frames come
+> through the moments' footage pre-pass, the hand-off through keyed
+> opacity.
+> - **`src/shared/graphics/templates/screenCard.ts`** (new):
+>   `drawScreenCard`, `ScreenCardMove`, `SCREEN_CARD_MOVES`,
+>   `SCREEN_CARD_TILT_IN` (tilt 22, yaw −10, dolly −0.15, `fadeS` 0.25),
+>   `SCREEN_CARD_PULL_BACK` (scale 1.35, tilt 6),
+>   `SCREEN_CARD_BEZEL` 0.004, `SCREEN_CARD_FOV` (= `DEFAULT_FOV`),
+>   `SCREEN_CARD_HOLE_RADIUS` 0, `landingFrame(fps)` (round(1.0 × fps)),
+>   `bezelWidth` (max(`STROKE_MIN_PX` × s/1080, round(0.004 × s)): 4 px at
+>   1080, 2 at 540), `bezelPath` (`M x y H … V … H x Z`, cap `square` so
+>   the start corner is filled, join `miter`), `screenCardCamera`; it
+>   re-exports `EDGE_SWEEP_S` and `SCREEN_CARD_MOVE_S` from `frame.ts`. The
+>   move runs over `L` / fps, so progress reads its exact 1 on `L` at every
+>   rate; Tilt in's fade on `drawOnEase` over 0.25 s; the dim fades in on
+>   `drawOnEase` (it never overshoots); the camera and Pull back's scale on
+>   the style's curve (energetic overshoots). The camera is carried
+>   through `L`, flat there, and absent from `L + 1`; no item carries `z`.
+>   The image is `fit: 'cover'` on the box.
+> - **`src/shared/graphics/screenCard.ts`** (new): `SCREEN_CARD_REASONS`,
+>   `isScreenCard`, `recordingIdOf`, `screenCardOf`, `screenCardRefusal`,
+>   `screenCardSpec` (seconds the recording's length, one beat at
+>   `SCREEN_CARD_MOVE_S`, place `{ auto: false }` over the whole frame,
+>   seed 1, no `generatedBy`), `screenCardKeys` (`[{ frame: at, value: 0,
+>   ease: 'hold' }, { frame: at + L + 1, value: 1 }]`, `at` = card.start −
+>   recording.start), `screenCardPulledFrames` (`L` + 1),
+>   `screenCardFootage` (through `footageRequest`, factored out of
+>   `momentTextures.ts` unchanged, so a card and a bridge pull through one
+>   builder), `withoutCardKeys`, `strikeScreenCardKeys`,
+>   `realignScreenCards`. **`targets.ts`**: the box is the whole source
+>   through `sourceToFrame`, read once at the card's first frame; another
+>   graphic under a card gets `underCard`, and `dimFor` draws no dim for it.
+>   **`frame.ts`**: a card's moving frames are `L` + 1 + the settle under
+>   every style (46 at 30 fps; piece 5 gave a glowing style its sweep's).
+> - **The renderer** (`graphicCanvas.ts`): `screenTargetsAt` (pulls, fills
+>   each frame's file up to `L`, rejects on a failed or empty pull),
+>   `screenPreviewTargets` and `useScreenCardFailed`; every image item is
+>   decoded raw (`imageOrientation`, `colorSpaceConversion` and
+>   `premultiplyAlpha` `'none'`, as the moments decode); a bake decodes
+>   into its own map, closed at its end (31 card frames overflowed the
+>   16-entry memo); since `cf5aed2` a preview pull decodes its frames into
+>   its own map before it is ready, holds them for its life and closes them
+>   on a new request or `forgetGraphicPreview`.
+> - **The store**: `addScreenCard(clipId, move)` (refused: the reason as a
+>   notice and `null`) adds `screenCardSpec` through `addGraphicClip` from
+>   the recording's track; `update` runs `realignScreenCards(before,
+>   made)` after every edit, so the keys, a moved, trimmed, retimed or
+>   re-rated recording, Drop, Delete, a split and a deleted recording each
+>   realign in the edit's own step, a realigned card rebaked once the trim
+>   rests; `rebakeGraphic` pulls a card's frames; `rebakeGenerated`'s
+>   graphic arm only redraws. `pasteClipboard` (`recipes.ts`, `cf5aed2`)
+>   points a card pasted with its recording at the pasted recording.
+>   **The export** (`exportBake.ts`): a card's footage goes to
+>   `bakers.graphic`; a card that will not draw is dropped with its note
+>   and `strikeScreenCardKeys` strikes its two keys from the export's
+>   recording in the same step (a key of yours stays).
+> - **The dock**: `tools/ScreenCardButton.tsx` (`SCREEN_CARD` "Screen
+>   card", `SCREEN_CARD_MOVES_SHOWN` Tilt in and Pull back), mounted in
+>   `Inspector.tsx` under Follow the subject for a video clip that is not
+>   itself a graphic, both greyed with the reason under them; a card's
+>   `GraphicPanel` shows the heading and its notes only:
+>   `SCREEN_CARD_FOLLOWS_NOTE` "It follows its recording: move or trim the
+>   recording to change it", `DRAWN_FLAT_NOTE`, and
+>   `SCREEN_CARD_FRAMES_NOTE` "Its recording's frames could not be read,
+>   so the export leaves this card out". `library.ts`'
+>   `SCREEN_CARD_LEFT_OUT` reworded (the card is drawn now; not on screen).
+>   Census: 12 rows and 7 recipes (one row harness-only), and since
+>   `cf5aed2` the `moving` reason on the existing `video-path` recipe.
+> - **The harness**: `{ screenCard: true }` (`screenCardCheck.ts`, its
+>   verdict in `screenCardMeasure.ts`); §6.11's phase-3 note.
+> - **Tests**: `graphicFrame` (the image up to `L` only, the dim whatever
+>   `style.dim` with its hole after `L`, the moving frames, `screenCardKeys`
+>   off the recording's start, the box, `underCard`, the footage; since
+>   `cf5aed2` Tilt in's fade below 1 before ceil(0.25 × fps) and 1 from it
+>   at 24, 25, 30 and 60 fps under every style, and Pull back's scale about
+>   the card's own centre on an off-centre box), `graphicDrawList`
+>   (`ALWAYS_ASK` gains screen-card), `graphicStore` (the keys, Drop, both
+>   Clears, realign on move, trim, retime and rate, delete, split, every
+>   refusal; since `cf5aed2` the lanes, an edited key, duplicate, paste
+>   alone, paste with the card, a card pasted alone, the two new
+>   refusals), `graphicGuards` (the export's strike), `graphicApply`
+>   (rule 9 over a card), `graphicCanvas` (since `cf5aed2` the move drawn
+>   from the pull on the first play and a replay), `graphicPanel`,
+>   `graphicCheckTemplates` and `tests/renderer/screenCardMeasure.test.ts`
+>   (new). Every new case mutation-checked; `cf5aed2`'s twelve all killed
+>   (among them the lane ignored, the copy strike off, the duplicate
+>   fallback off, the paste remap off, the preview painting from the memo,
+>   the pull never closed, the fade run over the whole landing). Suite
+>   5804, then 5812 passed, 66 skipped.
+> - **Departures from the plan's words**: (1) the realign runs on every
+>   store update, not in `rebakeGenerated` (which runs only on aspect and
+>   rate changes); (2) **the lane rule** (`cf5aed2`): a realigned card
+>   stays alone on a video lane above its recording, moving to the first
+>   free unlocked lane above, or a new top lane, and at the 12-track
+>   ceiling is removed with its two keys; (3) **the edited-key rule**
+>   (`cf5aed2`): the pair is the card's, so an edit of either key does not
+>   stand, the pair rewritten whole; the pair is found exactly, or by its
+>   shape after a head trim or a rate change; (4) **the copies' strike**:
+>   a duplicate or paste of a recording that no card frames loses the
+>   copied keys, and a split's right half the rebased ones; (5) two
+>   refusals beyond the list, `moving` "Not on a clip with a motion path or
+>   a camera move" (`cf5aed2`) and `short` "Too short for the card's move"
+>   (under `L` + 2 frames), with `hasCard` "It has a screen card already"
+>   and `notVideo`, never on screen since the button mounts on video clips
+>   only; (6) the card's place is held over the whole frame, so §6.9 never
+>   looks for a third for it; (7) the box and the hold's targets are read
+>   once, at the card's first frame; (8) in the preview, a frame up to `L`
+>   draws nothing while the pull is on its way, a failed pull draws the
+>   move and bezel without the picture with the panel's note, and the keys
+>   are not struck (the recording stays hidden for 31 frames in the
+>   preview only); (9) the move runs over `L` / fps; (10) the screen card
+>   asks for the compositor with neither depth nor hero (`ALWAYS_ASK`).
+> - **Left open**: refusals are not checked again once a card exists (a
+>   grade or look added later, your opacity key inside 0..`L`, a move to a
+>   hidden track), and never at all for a `fadeIn` longer than `L` + 1, a
+>   transform's opacity below 1, a `transitionIn`, a chroma key or mask,
+>   each of which makes the landing pop; a split inside the move or a tail
+>   trim below `L` + 2 keeps a card that never lands; the track ceiling
+>   removes a card silently, with no store test; a preview pull holds `L`
+>   + 1 decoded frames (about 257 MB for 1080p at 30 fps, twice at 60),
+>   and the export's bake decodes every frame at once; the template row's
+>   600 s maximum against a card's length; ExportStrip's note for a dropped
+>   card says "its last picture is used"; a project with a card opened by
+>   an older build (`b2d19f4`) shows no card while the two keys hide the
+>   recording for 31 frames; a key pair of yours shaped like the card's
+>   (a value-0 hold then a plain value-1) could be taken for it; a
+>   recording scaled off the canvas or a stacked two-up is not modelled;
+>   the first play after adding a card can show about a second of what is
+>   beneath while the pull lands; for the look, `SCREEN_CARD_TILT_IN`,
+>   `SCREEN_CARD_PULL_BACK`, `SCREEN_CARD_BEZEL`, and the camera pivoting
+>   on the frame's centre line, not the card's.
 
 #### The edge sweep
 
@@ -20482,6 +21146,9 @@ true by construction.
   L + 1 + round(EDGE_SWEEP_S × fps))` for a glowing card, 211 frames at 30
   fps with the default move, under M1's 300-frame whole-hold budget; after
   the loop the settled bezel holds through `tpad`. M20 times it.
+  (2026-11-20, as built: 169, 176, 351 and 421 at 24, 25, 50 and 60 fps,
+  so above about 41 fps a glowing card is over that budget; yours,
+  piece 5's note below.)
 - **On the screen card's bezel, not a graphic's panel.** The research puts
   the sweep round "a card's rounded rectangle", the hero graphic's. In step
   3 the hero's highlight is its glow (above), and the sweep stays on the
@@ -20489,6 +21156,70 @@ true by construction.
   panel waits for the look rating (§6.10).
 
 Without WebGL the sweep draws without its glow, through painter A.
+
+> **Built 2026-11-20 (piece 5: the screen card's edge sweep).** `3ee251c`,
+> then `77c66e3` after two critics (build run C, 9 agents for pieces 5
+> and 6); pushed with piece 6, CI green on both runners at `2236a00` (run
+> 44727055616).
+> - **`templates/screenCard.ts`**: `EDGE_SWEEP_SPAN` 0.12,
+>   `EDGE_SWEEP_START` 0, `EDGE_SWEEP_ID` `'sweep'`, `edgeSweepFrames(fps)`
+>   (N = round(`EDGE_SWEEP_S` × fps), 180 at 30), `edgeSweepHead(frame,
+>   fps)` (null up to `L` and from `L + N`; else (`EDGE_SWEEP_START` +
+>   (frame − L)/N) mod 1), `edgeSweepSpans(head)` (one span, or two while
+>   the tail is below 0), `edgeSweepItems` (under a style with `glow`
+>   only: one stroke per span on `bezelPath(box)`, the bezel's width, its
+>   square caps and miter join, `palette.accent`, opacity 1; ids `sweep`,
+>   or `sweep-1` then `sweep-2`), `edgeSweepGlow` (one request on
+>   `'sweep'`, radius `style.glow.radius` × the short side, the style's
+>   strength, `palette.accent`; `glowMatches` takes the two pieces and
+>   never `bezel`). Drawn on `L + 1` .. `L + N − 1`, its head 1/N past the
+>   box's top-left corner on `L + 1`, running the path's way, clockwise on
+>   screen; `L + N` is the plain card, the frame `tpad` holds.
+> - **`frame.ts`**: `graphicMovingFrames` gives a card under a glowing
+>   style `min(total, L + 1 + round(EDGE_SWEEP_S × fps))`, 211 at 30 fps;
+>   `L` + 1 + the settle otherwise.
+> - **`graphicCanvas.ts`**: the preview gives a clip's compositor back on
+>   any frame that does not want one (it was `asks && !wants`, so a card
+>   after its landing, which no longer asks at all, kept its slot until an
+>   eviction or its removal).
+> - **The harness**: `screenCard: true` reads the sweep under energetic,
+>   and reads the hole on the held frame `L + N` under a glowing style
+>   (§6.11's phase-3 note; `77c66e3`: route two's base under the dim and
+>   its hole against painter A).
+> - **Tests**: `graphicDrawList` (the sweep's frames, spans, ids, glow and
+>   last baked frame at 24, 25, 30 and 60 fps; `77c66e3` a 1920 × 1080
+>   case, radius = `glow.radius` × 1080 and the strokes 4 px wide on the
+>   bezel's path), `graphicFrame` (211 back, 169 at 24), `graphicCanvas`,
+>   the renderer's `graphicCompositor` (the slot given back; a `stroke` op
+>   on its fake canvas), `screenCardMeasure` (the sweep's verdict;
+>   `77c66e3` the base bars). `3ee251c`'s twelve mutations, each failing:
+>   the plan's own (the sweep looping over the whole hold: "expected 1800
+>   to be 211"), the drawer looping, a sweep under a style with no glow, a
+>   sweep on a counter or ring, the glow naming the bezel, the span not
+>   wrapping (two ways), the sweep before the landing, the loop's last
+>   frame on the held frame, the slot release put back to `asks &&
+>   !wants`, the preview pulling after the landing, the after-loop bar
+>   dropped; `77c66e3`'s four (the radius on `size.width`, which had passed
+>   the whole suite, and the three base bars). Suite 5831, then 5833
+>   passed, 66 skipped.
+> - **Departures from the plan's words**: (1) where it starts and which
+>   way it runs, the plan names neither: the top-left corner, clockwise;
+>   (2) the ids `sweep`, `sweep-1`, `sweep-2`; (3) square caps add half a
+>   stroke width at each free end (1 px at 540, 2 at 1080); (4) the
+>   preview's slot given back on `!wants`; (5) the hole read on the held
+>   frame under a glowing style, since on `L + 1` the sweep's glow reaches
+>   into it by design.
+> - **Left open**: **M1's budget above about 41 fps**: 169, 176, 211, 351
+>   and 421 moving frames at 24, 25, 30, 50 and 60 fps; §6.16 names 30 fps
+>   only; and every edit of a glowing card rebakes 211 canvas-sized PNGs
+>   where it was 46: shorten the loop at high rates, accept it, or time it
+>   with M20 at 60 fps on the Surface, yours; the slot is not kept through
+>   the flat landing frame, so the sweep's first one or two preview frames
+>   can draw without glow until `onReady` repaints (declined); the sweep's
+>   ms a frame times CPU submission only; for the look, `EDGE_SWEEP_SPAN`
+>   0.12, `EDGE_SWEEP_S` 6, the start corner, the sweep white under
+>   energetic (its accent as painted), and a full-width box's sides, half
+>   off the canvas, thinner than its top and bottom.
 
 #### The harness
 
@@ -20501,7 +21232,91 @@ phase opens with M7, `'unreal'` and `'quad'` on the compositor's glow seam
 against its flat twin, 0 by route one), plus M12's readbacks and M20's
 screen card with its hand-off and its one-loop sweep, all through §6.11's
 options table; M13 runs on a 2.5D `counter` and a screen card. Every result goes to EFFECTS §61 with its
-command, machine and date.
+command, machine and date. (2026-11-18 to 20: built as eight options, five
+more than the table named, §6.11's phase-3 note; every reading so far was
+taken by the session on the Mac's harness page, none in the development
+app or on the Surface, EFFECTS §61.)
+
+> **Built 2026-11-20 (piece 6: the remaining harness options, the hero's
+> landing reading, `graphic.int`'s phase-3 case).** `3d55a47`, then
+> `61365a4` after three critics (run C), then the session's `2236a00`
+> (the landing read on one frame by both routes, after reading it on
+> screen); pushed, CI green on both runners at `2236a00` (run
+> 44727055616). Nothing new reaches ffmpeg in the app: the test's
+> recording is made with `image2` and libx264 only.
+> - **The harness** (§6.11's phase-3 note has what each reads and its
+>   bars): `{ readback: [...], frames }` (`readbackCheck.ts`, M12),
+>   `{ bake3d: true }` (`bake3dCheck.ts`, new), `{ screenCard: '<path>' }`
+>   (`screenCardRecordingCheck.ts`, M20, the development app only; it
+>   refuses the harness page first, and `screenCard: ''` is refused by
+>   name), the hero's landing line in `depthCheck.ts`; their pure numbers
+>   and bars in `phase3Measure.ts` (`READBACK_ROUTES`, `READBACK_FRAMES`
+>   120, `READBACK_BAR`, `readbackRoutes`, `readbackFrames`,
+>   `straightTopDown`, `straightAgainst`, `keepsStraightAlpha`,
+>   `readbackVerdict`, `EXPORT_PARITY_BAR`, `exportParityVerdict`,
+>   `exportParityFrames`, `screenCardParityFrames`, `memoryBack`,
+>   `m13Phase3Line`, `WHOLE_HOLD_BUDGET`, `bakeBudget`, `HANDOFF_BAR`,
+>   `handoffWithin`, `HERO_LANDING_BAR`, `glowChange`,
+>   `heroLandingWithin`). `graphicCheck.ts`' header shows how to write a
+>   Windows path (`String.raw`, or every backslash doubled) and how to
+>   start the long options unawaited.
+> - **Two seams in the app's code, harness-only**: `CompositorProbe.target`
+>   (`graphicCompositor.ts`), the frame rendered into a render target for
+>   the async readback (pinned; no app drawer passes it), and
+>   `graphicPreviewHasCompositor(clipId)` (`graphicCanvas.ts`, `61365a4`),
+>   which names a Preview frame that wants a compositor and holds none.
+> - **`graphic.int`'s phase-3 describe**, §6.11's render-check note.
+> - **Tests**: `tests/renderer/phase3Measure.test.ts` (new: 17 tests by
+>   `3d55a47`, 6 more by `61365a4`), a probe-seam case in the renderer's
+>   `graphicCompositor`, and `graphic.int`'s phase-3 describe (7, then 8).
+>   Mutations, each failing: `3d55a47`'s readback rule dropped,
+>   `straightTopDown` not flipping rows, `drawImage` kept by definition,
+>   the Preview side ignored in the parity verdict, the budget's frame
+>   bound dropped, `glowChange` as a plain difference, the probe's two
+>   render targets as the canvas, the `screenCard` dispatch calling the
+>   stand-in only; `61365a4`'s M12 rule put back, the untimed and unread
+>   routes, the partial-alpha count, the drawn-flat loop, the whole-frame
+>   mean, the one-sided glow, `EXPORT_PARITY_BAR`, `screenCard: ''`. Suite
+>   5858, then 5865 passed, 66 skipped (`2236a00` the same).
+> - **Departures from the plan's words**: (1) **`bake3d` is a new
+>   option** the plan's table does not name: preview = export, M13's
+>   twice-bakes and the disposal, so `depth` and `screenCard: true` stayed
+>   as they were; (2) `frames` is a top-level key of the call, as §6.15's
+>   M12 row writes it, and `readback: true` means all three routes;
+>   (3) the async readback's render target is **not antialiased** (three
+>   r186 invalidates a multisampled target's colour after resolving it,
+>   `WebGLTextures.js` `updateMultisampleRenderTarget`, so the glow's add
+>   cannot land on one), so "keeps straight alpha" is read per route
+>   against the very GL frame it read back, not against `drawImage`'s PNG;
+>   (4) M12's rule as built (`61365a4`): `drawImage` is preferred only
+>   while it keeps straight alpha itself, else the fastest that keeps it;
+>   "keeps" needs pixels at a partial alpha (128 .. 254) read; a route
+>   that timed no frame, and a reading of no route, fail; (5) M20 reads
+>   only the card's side of the hand-off (the baked frame `L` against the
+>   pulled frame `L` by `drawImage`, inside the box less the bezel), at 30
+>   fps only, on at most `M20_MAX_S` 20 s of the recording; (6) bake3d and
+>   M20 drain the bake notes and fail on `WEBGL_MISSING_NOTE` (`61365a4`:
+>   a flat Preview agreed with a flat bake); (7) **the hero's landing is
+>   read on one frame by both routes** (`2236a00`): the last moving frame
+>   drawn as it is (route three) and with its camera taken off (route two),
+>   `HeroLandingReading.same`, because the last moving frame against the
+>   first at rest differ by the count's digits and the arc by design (all
+>   four cases read OVER there with no pop on screen); the glow's change
+>   is a mean over the glow's own pixels with both sides' glow counted
+>   (`61365a4`); the line is printed beside the depth verdict, not in it;
+>   (8) `graphic.int`'s stand-in baker paints the real drawer's list with
+>   the image at 0.4 alpha, so a recording left showing is seen.
+> - **Left open**: choosing the async route would change the bake's edges
+>   (its target is not antialiased); M12's straight-alpha reading for
+>   `readPixels` and the async route goes through `straightTopDown` on
+>   both sides, so an un-premultiply error there would cancel out (its
+>   arithmetic is node-tested); the render side of the hand-off on a real
+>   recording is read by no option (`graphic.int` reads it with a stand-in
+>   through the real plan); M20 at 60 fps (M1's budget, piece 5);
+>   `screenCard: '<path>'` has not been run by anyone; M13's framemd5 over
+>   real files is the development app's; the proposals `HERO_LANDING_BAR`,
+>   `EXPORT_PARITY_BAR`, `READBACK_BAR`, `HANDOFF_BAR`, `M20_MAX_S`, and
+>   counter-en under energetic reads OVER it by max (20, EFFECTS §61).
 
 #### Tests (each mutation-checked; §6.11 indexes them)
 
@@ -20551,6 +21366,11 @@ command, machine and date.
   `CLIPS_GRAPHIC_RULE` (Clear graphics takes it).
 - `graphic.int`'s phase-3 case, the hand-off through the real plan, is
   §6.11's.
+
+(2026-11-20: `3d55a47`'s builder went through this list bullet by bullet
+and found every case and named mutation written by the six pieces, the
+files and lines in its report; the piece notes above name what each piece
+added beyond it.)
 
 The exit is §6.12's phase 3. §14 carries the degraded rows (WebGL
 unavailable; the recording's frames missing).
@@ -21107,8 +21927,9 @@ piece table does (§6.3's, §6.16's, §6.17's, §6.18's).
 | 2 | T3 | `beats.ts` with `graphicBeats` (§6.8); `place.ts` (with `freeSpace.ts`'s `samplesOver`) and `budget.ts` with `graphicPlace`, `graphicBudget` (§6.9); `sound.ts` (`GRAPHIC_SOUND_FILES`), `graphics/apply.ts` (`applyGraphics`, `lowerThirdFor`, `clearGraphics`), `director/apply.ts`'s constants, sweep and return, the store's follow-on edits (`removeClip`, `moveClip`, `moveSelectionTo`, `pasteClipboard`), `setGraphicSounds` and the switch, with `graphicSound` and `graphicStore`'s phase-2 cases (§6.14) (built 2026-11-11, each piece read by two critics before the next: `c27b9a4`, `4699660`; `216065e`, `37d0e69`, `518a62f`; `1a14bd4`, `ac79a1e`; `5c52691`, `21d316d`; `0f3f7a4`, `3d070ab`; `e8f2a1f`, `69e677c`; and `8db943a`, the census row read on screen; beyond the row, `resoundAfterClear`, the follower functions and the Delete, Cut and nudge arms; pushed as `77ac70a`, green on both runners; §6.8's, §6.9's, §6.6's and §6.14's Built notes; `place.auto`'s recompute not built, handed to T2b; nothing in the app calls `applyGraphics` until T2b) | 0.5 + 1 + 1.5 | T1's values |
 | 2 | T4 | the baseline and the eval block, the fixtures read, M14's and the look rating's runs (§6.10); the harness's `templates`, `curves`, `look` and per-template Indic options, `graphic.int`'s phase-2 cases, the property test's wiring (§6.11's half) (built 2026-11-11 and 14, each piece read by two critics before the next: `c594dda`, `530c3b6`; `477918a`, `a3327d9`; `0b2c763`, `49df60f`; `fba3632`, `67fb97c`; `4f2b025`, `73c6f69`; and `f10ed89`, a doc comment; beyond the row, `runGraphicsPass` with Find and Direct on it, and two fixes to earlier lanes' files, `tree.ts`'s ordinal rule and `validateGraphics.ts`' unsure words over a whole number; pushed with the T2b record as `ae3a670`, green on both runners; then `4450e3d`, the Indic check's rule, read by two critics, pushed alone, green on both runners; §6.10's T4 Built note; M14's and the look rating's runs not run, yours, their options built) | 1.5 + 0.5 | T1-T3 |
 | 2 | try-out 1 (2026-11-15, after the lanes) | not a lane of the plan: six pieces from your first real recording put through Find graphics with no model, each read by critics before its fixer (two for pieces 1-5, three for piece 6), in order: piece 1, numbers joined at transcription, `dd60e4d`, `287201d`; piece 2, the what-if rule and the tightened baseline keyword, `7abe9bb`, `e619bf5`; piece 3, room by rank, decided once by the budget, `d3daf1e`, `187de3e`; piece 4, Add on every dropped graphic, `660f550`, `a210e79`; piece 5, Add graphic from these words, `a94f2fc`, `63cd155`; piece 6, the Library's Graphics drawer, `e9f7923`, `05c2c0e`; and the session's three, `c29a5dd` and `8b1f2a8` (piece 5) and `81db7ca` (piece 6); pushed once as `81db7ca`, green on both runners (run 43747804256); §6.12's "Try-out 1, 2026-11-15" | outside the days | T4 |
+| 3 | depth, in six pieces (2026-11-18 to 20) | piece 1, the compositor (routes, planes, camera and compensation, upload, disposal, WebGL missing) and its seam in `graphicCanvas.ts`; piece 2, the glow behind one seam with both routes for M7, and the focus blur; piece 3, the 2.5D `counter` and `ring`, the hero rule in `applyGraphics`, the hero's glow and the dock's Depth choice; piece 4, the screen card without its sweep (pull, `screenTargetsAt` and the bitmaps, draw, keys, the store's realign, the export's strike, refusals, the dock's Screen card); piece 5, the edge sweep, one loop; piece 6, the harness's remaining options and `graphic.int`'s phase-3 case (§6.16, its six piece notes; §6.11's phase-3 notes) (built 2026-11-18 to 20, each piece read by two or three critics before its fixer: `31e83b2`, `d415f2c`; `a199733`, `b2d19f4`; `1d7204c`, `c829007`; `1eaafc5`, `cf5aed2`; `3ee251c`, `77c66e3`; `3d55a47`, `61365a4`; and the session's `a74576d` (piece 3's depth option) and `2236a00` (piece 6's landing line); beyond the row, the `compositor`, `focus`, `depth`, `screenCard: true` and new `bake3d` options; CI green on both runners at `b2d19f4`, `a74576d` and `2236a00`; the options read by the session on the Mac's harness page only. Left: M6, M7, M12, M13, M20 and the depth, screen card and `bake3d` options read in the development app on the Mac and on the Surface, M7's losing route removed, and the look; §6.12's phase 3) | 1.5 + 0.5 + 1 + 1.25 + 0.25 + 0.5 | your word of 2026-11-18, phase 2's exit still open (§6.12); M6's phase-0 parts |
 | spike | H | §6.17's pieces: the worker's `hands` mode, `hands/types.ts`, `events.ts`, `oneEuro.ts`, `anchor.ts`'s `tipOnFrame`, the cases §6.17 lists; your runs | 1.5 | your footage; runs during phase 2 (nothing of phases 1-2 is needed: `sourceToFrame` through the reframe exists); after the beta since 2026-11-14 (§16.74) |
-| 3 | depth | §6.16, split as its day table writes; M7 first, on the glow seam | 5 | phase 2's exit; M6's phase-0 parts |
+| 3 | depth | §6.16, split as its day table writes; M7 first, on the glow seam (built 2026-11-18 to 20: the phase-3 row above) | 5 | phase 2's exit; M6's phase-0 parts |
 | 4 | depth | §6.18, only if the gate passed | 6 | the gate (§6.12); after the beta since 2026-11-14 (§16.74) |
 
 The sums: phase 1, 1.25 + 2 + 2 + 1.5 + 0.75 = 7.5; phase 2, 4.5 + 3 + 2 +
@@ -21165,7 +21986,11 @@ and 11 wait on the eval's first run, which waits on your ten
 `eval-*.json`.) (2026-11-15: try-out 1, the row above, changed no gate: phase 3
 still waits on phase 2's exit, whose items §6.12 lists with try-out 1's
 added.) (2026-11-14, §16.74: the table's spike row and phase 4's move to
-after the beta; phase 3 is step 3's last phase before it.)
+after the beta; phase 3 is step 3's last phase before it.) (2026-11-18 to
+20: phase 3 was built on your word of 2026-11-18, phase 2's exit still
+open, in six pieces, the table's phase-3 row; M7 is read on the Mac's
+harness page only, so it still decides which glow route stays,
+`GLOW_ROUTE` `'quad'` until then.)
 
 **Where §6.20 falls.** Outside step 3's days, inside phase 1's run:
 

@@ -674,6 +674,33 @@ notice says why: "Following the subject needs the AI helper", "The face
 finder is not downloaded yet", or "This file is not the size it was when it
 was imported: import it again".
 
+**Screen card** (video clips, under Follow the subject;
+`tools/ScreenCardButton.tsx`, `docs/CLIPS.md` §6.16, built 2026-11-19/20)
+— frames a screen recording as a card that moves in and lands flat exactly
+where the clip already shows, then hands over to the clip itself. Two
+buttons beside the words **Screen card**: **Tilt in** (the card fades in
+tilted and turned away, and settles flat over a second) and **Pull back**
+(it starts larger than its place, 1.35 times, with a slight tilt, and
+shrinks onto it). Either press is one undo step: a graphic clip on a free
+lane above, spanning the recording, and two opacity keys on the recording
+that hide it until the card has landed. Around the card the picture dims,
+with a hole where the recording shows once it lands; under the Neon and
+Energetic graphic styles a short highlight runs once round the card's
+edge after the landing, six seconds, then stops. Both buttons are greyed,
+with the reason under them, on a clip that cannot take one: "It has a
+screen card already", "Not on a steadied clip: turn Steady off first",
+"Not on a turned or zooming clip", "Not on a clip with a motion path or a
+camera move", "Not on a clip with opacity keys of its own", "Not on a clip
+with a colour change", "Not under a look", "Too short for the card's
+move". The card follows its recording: move, trim or retime the
+recording and the card and its keys follow in the same step; deleting the
+recording deletes the card; deleting the card takes its two keys with
+it. Selecting the card shows only the **Graphic** heading and "It follows
+its recording: move or trim the recording to change it", and, when the
+recording's frames could not be read, "Its recording's frames could not be
+read, so the export leaves this card out" (the export then plays the
+recording whole).
+
 **Camera** (photos) — a move across the still: **Move** is a push in, a pull
 out or a pan, chosen from the In / Out / Pan rows, with **Amount**; **Shake** is
 a hit that settles, with **Rate** and **Settle** (and **Hold** subject-still
@@ -717,6 +744,16 @@ of the captions ("No third is free of the captions here") or no footage
 is under it ("No footage is under it to place it over"). After an aspect
 change or a reframe, an auto graphic with no free third left keeps its
 place, with the notice "<graphic> keeps its old place — no free third".
+On a counter or a ring, **Depth** (built 2026-11-18, §6.16): **Flat**,
+**Tilt**, **Parallax**, **Dolly**, **Focus**, the move it arrives with,
+settling flat on its beat (Flat pressed when none is set). One press, one
+undo step; the choice is kept as yours. The first counter or ring Direct
+lands on a footage clip is that clip's hero: it shows Tilt pressed and,
+under the Neon or Energetic graphic style, its value or its arc glows;
+any other choice, Flat included, takes the hero and its glow away, while
+pressing Tilt again changes nothing. When the computer's WebGL did not
+start, the panel says "This graphic is drawn flat: 3D needs WebGL, which
+did not start on this computer", and the export says so too.
 
 **Sound** (anything with sound) — **Mute**, and a **Level** fader in dB up to
 +6. When a volume line is drawn on the clip, a note says the line sets the
