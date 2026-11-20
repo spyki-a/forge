@@ -55,6 +55,7 @@ import {
   withoutGraphic,
   LIBRARY_GRAPHIC_RULE
 } from '@shared/graphics/apply'
+import { assetClipCount, removeAssets } from '@shared/edit/removeAssets'
 import { footageOf } from '@shared/graphics/sound'
 import { libraryGraphicAt } from '@shared/graphics/library'
 import { graphicTargetsAt } from '@shared/graphics/targets'
@@ -1007,6 +1008,23 @@ interface EditorState {
 
   importAssets: (paths: string[]) => Promise<void>
   addAssetToTimeline: (assetId: string) => void
+  /**
+   * The Upload panel's "Remove from project" question (MediaPool.tsx): the
+   * file whose clips it is asking about, or null. Asked in place, in the
+   * tile's menu, never in a system dialog; the number is read from the
+   * project as it is drawn (`assetClipCount`), so it cannot go stale.
+   */
+  removingAsset: string | null
+  /**
+   * Remove from project (shared/edit/removeAssets.ts): a file no clip plays
+   * goes at once, with no question; one that clips play opens the question
+   * (`removingAsset`). Never touches a file on disk.
+   */
+  removeAsset: (assetId: string) => void
+  /** The question's "Remove it and its N clips": the file, its clips and their followers, in one undo step. */
+  confirmRemoveAsset: () => void
+  /** The question's "Keep it", and the menu closing: nothing changes. */
+  keepAsset: () => void
   /**
    * An asset not yet on the timeline, placed as `addAssetToTimeline` places it
    * and cut to `[startMs, endMs)` of its source (§3b.6) — in one begin/commit,
@@ -2324,6 +2342,25 @@ export const useEditor = create<EditorState>((set, get) => ({
     return placed?.id ?? null
   },
 
+  removingAsset: null,
+
+  removeAsset: (assetId) => {
+    const { project } = get()
+    if (!project.assets.some((a) => a.id === assetId)) return
+    if (assetClipCount(project, assetId) === 0) takeAssetOut(assetId)
+    else set({ removingAsset: assetId })
+  },
+
+  confirmRemoveAsset: () => {
+    const assetId = get().removingAsset
+    set({ removingAsset: null })
+    if (assetId !== null) takeAssetOut(assetId)
+  },
+
+  keepAsset: () => {
+    if (get().removingAsset !== null) set({ removingAsset: null })
+  },
+
   removeClip: (clipId) => {
     // A graphic's sounds go with it, with their brought files when unused (§6.14), in the same undo step.
     get().update((p) => removeWithFollowers(p, [clipId]))
@@ -2922,7 +2959,8 @@ export const useEditor = create<EditorState>((set, get) => ({
     const notes: string[] = []
     const remember = (assetId: string, key: string, patch: Parameters<typeof withVision>[3]): void =>
       // A cache, not an edit: no undo step, but the project is changed and saves with it.
-      set((s) => ({ project: withVision(s.project, assetId, key, patch), dirty: true }))
+      // Not for a file removed from the project while it was looked at (Remove from project).
+      set((s) => (s.project.assets.some((a) => a.id === assetId) ? { project: withVision(s.project, assetId, key, patch), dirty: true } : s))
 
     const stills = slots
       .filter((s) => s.kind === 'image')
@@ -6515,6 +6553,8 @@ export const useEditor = create<EditorState>((set, get) => ({
     set((s) => ({ baking: { ...s.baking, [assetId]: { progress: null } } }))
     try {
       const bake = await window.forge.bakeParallax({ assetId, path: asset.path })
+      // Removed from the project while it baked: no record for a file that is not there.
+      if (!get().project.assets.some((a) => a.id === assetId)) return null
       get().update((p) => ({
         ...p,
         parallax: { ...(p.parallax ?? {}), [assetId]: bake }
@@ -6565,6 +6605,8 @@ export const useEditor = create<EditorState>((set, get) => ({
         // The couple's names, the venue, a product — spelled for the model.
         initialPrompt: vocabularyPrompt(project.vocabulary)
       })
+      // Removed from the project while it ran (its cancel arriving too late): no record for a file that is not there.
+      if (!get().project.assets.some((a) => a.id === assetId)) return
       get().update((p) => ({
         ...p,
         transcripts: { ...p.transcripts, [assetId]: transcript }
@@ -6882,6 +6924,30 @@ async function startReframe(assetId: string, clipIds: string[], phrase?: string)
   } finally {
     reframeStarting.delete(assetId)
   }
+}
+
+/**
+ * Remove from project's body (`removeAsset`, `confirmRemoveAsset`): ONE
+ * `update()`, so one undo step brings the file, its clips, their followers
+ * and its records back exactly, and redo takes them again. A transcription
+ * or a depth bake of the file in flight is cancelled (each lander also
+ * refuses a file no longer in the project, should it finish first), and the
+ * selection — and with it the Trimmer dock — lets go of every clip that went.
+ * No bridge call reads or writes the file: nothing on disk changes.
+ */
+function takeAssetOut(assetId: string): void {
+  const state = editor()
+  if (state.transcribing[assetId]) state.cancelTranscribe(assetId)
+  if (state.baking[assetId]) state.cancelBake(assetId)
+  state.update((p) => removeAssets(p, [assetId]))
+  const left = new Set(editor().project.clips.map((c) => c.id))
+  useEditor.setState((s) => {
+    const selectedClipIds = s.selectedClipIds.filter((id) => left.has(id))
+    const selectedClipId = s.selectedClipId !== null && left.has(s.selectedClipId) ? s.selectedClipId : null
+    return selectedClipIds.length === s.selectedClipIds.length && selectedClipId === s.selectedClipId
+      ? s
+      : { selectedClipIds, selectedClipId }
+  })
 }
 
 /**

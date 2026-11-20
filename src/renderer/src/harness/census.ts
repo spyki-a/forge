@@ -188,9 +188,11 @@ const FIXED_HOMES = ['header', 'canvasbar', 'preview', 'toolbox', 'dock', 'rail'
 /**
  * Overlays: counted only inside the one element that appeared when the scenario
  * opened it. `settings` is the panel under the header's gear (step 6), opened
- * through the store as the gear opens it.
+ * through the store as the gear opens it. `poolmenu` is the right-click menu on
+ * a tile of the Upload panel (MediaPool.tsx PoolMenu), opened by a contextmenu
+ * on the tile as `clipmenu` is on a clip.
  */
-const OVERLAY_HOMES = ['clipmenu', 'newproject', 'shortcuts', 'settings'] as const
+const OVERLAY_HOMES = ['clipmenu', 'poolmenu', 'newproject', 'shortcuts', 'settings'] as const
 
 type Home = ToolHome | typeof SHELF_HOME | (typeof FIXED_HOMES)[number] | (typeof OVERLAY_HOMES)[number]
 /** Every home a row may name. Exported for tests/renderer/censusHomes.test.ts. */
@@ -1903,6 +1905,20 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     useEditor.setState({ findingGraphics: V })
     return built
   },
+  /*
+   * The right-click menu on a pool tile (MediaPool.tsx PoolMenu), in each of
+   * its states: a photo; the video with no transcript (its Transcribe greyed
+   * as the page's helper leaves the tile's); the video transcribed, the
+   * helper ready and the speech model on disk (Transcribe again); a missing
+   * photo (Relink…, no reveal); and Remove from project pressed on the video
+   * played by one clip and by three (the question, in the menu).
+   */
+  'poolmenu-photo': async (env) => poolMenu(env, 'photo'),
+  'poolmenu-video': async (env) => poolMenu(env, 'video'),
+  'poolmenu-transcribed': async (env) => poolMenu(env, 'transcribed'),
+  'poolmenu-offline': async (env) => poolMenu(env, 'offline'),
+  'poolmenu-used-one': async (env) => poolMenu(env, 'used-one'),
+  'poolmenu-used-three': async (env) => poolMenu(env, 'used-three'),
   'clipmenu-open': async (env) => clipMenu(env, false),
   'clipmenu-detached': async (env) => clipMenu(env, true),
 
@@ -2603,6 +2619,69 @@ async function clipMenu(env: Env, detached: boolean): Promise<Built> {
         })
       )
       await frames()
+    },
+    close: escape
+  }
+}
+
+type PoolMenuState = 'photo' | 'video' | 'transcribed' | 'offline' | 'used-one' | 'used-three'
+
+/**
+ * The Upload tool open on the synthetic media, and a tile's menu opened by a
+ * contextmenu on the tile (`data-pool-tile`), as a right-click opens it. The
+ * tool is opened HERE, before the census notes the fixed elements on screen,
+ * so the menu is the one overlay `show` adds. For the question, `show` then
+ * presses the menu's own Remove from project (`data-pool-menu-item="remove"`).
+ */
+async function poolMenu(env: Env, state: PoolMenuState): Promise<Built> {
+  const m = await media(env)
+  const target = state === 'photo' || state === 'offline' ? m.photos[0] : m.video
+  if (state === 'offline') {
+    editor().update((p) => ({ ...p, assets: p.assets.map((a) => (a.id === target.id ? { ...a, offline: true } : a)) }))
+  }
+  if (state === 'transcribed') {
+    editor().setHelperStatus(harnessReadyHelper())
+    speechModelIs(true)
+    editor().update((p) => ({
+      ...p,
+      transcripts: {
+        ...p.transcripts,
+        [target.id]: {
+          assetId: target.id,
+          language: 'en',
+          model: 'census',
+          durationMs: 2000,
+          words: [{ index: 0, text: 'hello', startMs: 0, endMs: 500, confidence: 0.9 }],
+          segments: [{ id: 's0', startMs: 0, endMs: 500, text: 'hello', wordStart: 0, wordEnd: 0 }]
+        }
+      }
+    }))
+  }
+  const uses = state === 'used-one' ? 1 : state === 'used-three' ? 3 : 0
+  for (let i = 0; i < uses; i++) place(target.id)
+  editor().select(null)
+  await shelfShows('upload')
+  return {
+    ids: { A: target.id },
+    show: async () => {
+      const tile = document.querySelector<HTMLElement>(`[data-pool-tile="${CSS.escape(target.id)}"]`)
+      if (!tile) throw new Error(`census: no pool tile for ${target.id} to right-click`)
+      const box = tile.getBoundingClientRect()
+      tile.dispatchEvent(
+        new MouseEvent('contextmenu', {
+          bubbles: true,
+          cancelable: true,
+          button: 2,
+          clientX: box.left + box.width / 2,
+          clientY: box.top + box.height / 2
+        })
+      )
+      await frames()
+      if (uses > 0) {
+        const remove = document.querySelector<HTMLElement>('[data-pool-menu-item="remove"]')
+        if (!remove) throw new Error('census: the pool menu has no Remove from project to press')
+        await click(remove)
+      }
     },
     close: escape
   }

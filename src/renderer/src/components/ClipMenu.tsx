@@ -1,8 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { ChevronRight, Check } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { SPEED_PRESETS, clipSpeed, formatSpeed } from '@shared/render/speed'
 import { VOICES } from '@shared/render/voice'
 import { useEditor } from '../store'
+import { MENU_WIDTH, MenuDivider, MenuItem as Item, MenuShell, SUBMENU_WIDTH, Submenu, useMenuDismiss } from './ui/Menu'
 
 /**
  * The right-click menu on a clip.
@@ -25,81 +26,8 @@ export interface ClipMenuTarget {
   y: number
 }
 
-const WIDTH = 196
-const SUB_WIDTH = 210
-
-function Item({
-  label,
-  keys,
-  onClick,
-  danger,
-  ticked
-}: {
-  label: string
-  keys?: string
-  onClick: () => void
-  danger?: boolean
-  ticked?: boolean
-}): ReactNode {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex w-full items-center justify-between gap-6 px-3 py-1.5 text-left text-[12px] transition-colors hover:bg-ink-700 ${
-        danger ? 'text-red-800 hover:text-red-900' : 'text-ink-200'
-      }`}
-    >
-      <span className="flex items-center gap-1.5">
-        {ticked !== undefined && (
-          <Check size={11} className={ticked ? 'text-accent-400' : 'opacity-0'} />
-        )}
-        {label}
-      </span>
-      {keys && <span className="text-[10px] tabular-nums text-ink-500">{keys}</span>}
-    </button>
-  )
-}
-
-/**
- * A submenu that opens on hover and stays open while the pointer is inside it.
- *
- * Opened on hover rather than on click because these are lists to browse —
- * speeds, voices, looks — and clicking to open a list you are about to click
- * again is one press too many for something used this often.
- */
-function Submenu({
-  label,
-  detail,
-  children
-}: {
-  label: string
-  detail?: string
-  children: ReactNode
-}): ReactNode {
-  const [open, setOpen] = useState(false)
-  return (
-    <div
-      className="relative"
-      onPointerEnter={() => setOpen(true)}
-      onPointerLeave={() => setOpen(false)}
-    >
-      <button className="flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left text-[12px] text-ink-200 transition-colors hover:bg-ink-700">
-        <span>{label}</span>
-        <span className="flex items-center gap-1 text-[10px] text-ink-500">
-          {detail}
-          <ChevronRight size={12} />
-        </span>
-      </button>
-      {open && (
-        <div
-          style={{ width: SUB_WIDTH }}
-          className="absolute -top-1 left-full z-10 max-h-[320px] overflow-y-auto rounded-md border border-ink-700 bg-ink-800 py-1 shadow-xl shadow-black/40"
-        >
-          {children}
-        </div>
-      )}
-    </div>
-  )
-}
+// The room the menu keeps inside the window: itself and a submenu beside it, and its tallest face.
+const ROOM = { width: MENU_WIDTH + SUBMENU_WIDTH, height: 330 }
 
 export function ClipMenu({
   target,
@@ -124,24 +52,8 @@ export function ClipMenu({
       .catch(() => setLooks([]))
   }, [])
 
-  useEffect(() => {
-    // Any click elsewhere, or Escape, closes it. On `pointerdown` rather than
-    // `click` so the menu is gone before the thing underneath reacts.
-    const away = (): void => onClose()
-    const key = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') {
-        // Handled: closing the menu must not also leave full screen.
-        e.preventDefault()
-        onClose()
-      }
-    }
-    window.addEventListener('pointerdown', away)
-    window.addEventListener('keydown', key)
-    return () => {
-      window.removeEventListener('pointerdown', away)
-      window.removeEventListener('keydown', key)
-    }
-  }, [onClose])
+  // Any click elsewhere, or Escape, closes it.
+  useMenuDismiss(onClose)
 
   const clip = project.clips.find((c) => c.id === target.clipId)
   const asset = clip ? project.assets.find((a) => a.id === clip.assetId) : undefined
@@ -166,17 +78,8 @@ export function ClipMenu({
     onClose()
   }
 
-  const left = Math.min(target.x, window.innerWidth - WIDTH - SUB_WIDTH - 12)
-  const top = Math.min(target.y, Math.max(8, window.innerHeight - 330))
-
   return (
-    <div
-      style={{ left, top, width: WIDTH }}
-      // Its own pointerdown must not reach the window listener above, or the
-      // menu would close before any item could be chosen.
-      onPointerDown={(e) => e.stopPropagation()}
-      className="fixed z-50 rounded-md border border-ink-700 bg-ink-800 py-1 shadow-xl shadow-black/40"
-    >
+    <MenuShell x={target.x} y={target.y} room={ROOM}>
       <Item label="Cut" keys={`${mod}X`} onClick={run(() => store.getState().cutSelection())} />
       <Item label="Copy" keys={`${mod}C`} onClick={run(() => store.getState().copySelection())} />
       <Item
@@ -190,7 +93,7 @@ export function ClipMenu({
         onClick={run(() => void store.getState().pasteClipboard())}
       />
 
-      <div className="my-1 h-px bg-ink-700" />
+      <MenuDivider />
 
       {hasRate && (
         <Submenu label="Speed" detail={formatSpeed(speed)}>
@@ -210,7 +113,7 @@ export function ClipMenu({
           */}
           {speed < 1 && (
             <>
-              <div className="my-1 h-px bg-ink-700" />
+              <MenuDivider />
               <Item
                 label="Smooth slow motion"
                 ticked={Boolean(clip.smoothSlow)}
@@ -233,7 +136,7 @@ export function ClipMenu({
             ticked={!clip.voice}
             onClick={run(() => store.getState().setVoice(target.clipId, null))}
           />
-          <div className="my-1 h-px bg-ink-700" />
+          <MenuDivider />
           {VOICES.map((voice) => (
             <button
               key={voice.id}
@@ -260,7 +163,7 @@ export function ClipMenu({
             ticked={!clip.color.lut}
             onClick={run(() => store.getState().setColor(target.clipId, { lut: undefined }))}
           />
-          <div className="my-1 h-px bg-ink-700" />
+          <MenuDivider />
           {looks.map((look) => (
             <Item
               key={look.id}
@@ -278,7 +181,7 @@ export function ClipMenu({
         </Submenu>
       )}
 
-      <div className="my-1 h-px bg-ink-700" />
+      <MenuDivider />
 
       <Item label="Split here" keys="S" onClick={run(() => store.getState().splitAtPlayhead())} />
       {/*
@@ -300,7 +203,7 @@ export function ClipMenu({
       )}
       <Item label="Select all" keys={`${mod}A`} onClick={run(() => store.getState().selectAll())} />
 
-      <div className="my-1 h-px bg-ink-700" />
+      <MenuDivider />
 
       <Item label="Delete" keys="⌫" danger onClick={run(() => store.getState().deleteSelection())} />
       <Item
@@ -309,6 +212,6 @@ export function ClipMenu({
         danger
         onClick={run(() => store.getState().rippleDeleteSelection())}
       />
-    </div>
+    </MenuShell>
   )
 }

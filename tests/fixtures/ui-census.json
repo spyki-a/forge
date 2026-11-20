@@ -9312,5 +9312,161 @@
     "newHome": "trimmer dock (the graphic panel of a screen card, docs/CLIPS.md §6.16; §14's row)",
     "harnessOnly": false,
     "note": "SCREEN_CARD_FRAMES_NOTE, shown when the preview's pull of the recording's frames failed (useScreenCardFailed). The census does not count it: the harness bridge refuses momentFrames, so whether it shows when a recipe reads the dock depends on when the Preview first draws the card. It shows in the development app when a card's recording file is gone (step 3 phase 3, piece 4, 2026-11-19)."
+  },
+  {
+    "label": "Add to timeline",
+    "match": "text",
+    "home": "poolmenu",
+    "needs": "poolmenu-photo",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 260,
+    "newHome": "Shelf tile Upload, the right-click menu on a tile",
+    "note": "The tile’s double-click, as a menu item. Count 1: the menu holds one; the overlay is the only place counted."
+  },
+  {
+    "label": "Show in Finder",
+    "match": "text",
+    "home": "poolmenu",
+    "needs": "poolmenu-photo",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 174,
+    "newHome": "Shelf tile Upload, the right-click menu on a tile",
+    "note": "The reveal (bridge revealPath) as macOS names it; the harness runs on the Mac. On Windows the same item reads \"Show in Explorer\", elsewhere \"Show in folder\" (their own rows, harnessOnly: false). Count 1."
+  },
+  {
+    "label": "Show in Explorer",
+    "match": "text",
+    "home": "poolmenu",
+    "needs": "poolmenu-photo",
+    "harnessOnly": false,
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 175,
+    "newHome": "Shelf tile Upload, the right-click menu on a tile",
+    "note": "The reveal as Windows names it (revealLabel, by navigator.platform). The harness page runs on the Mac, where the item reads \"Show in Finder\", so this one cannot be shown there."
+  },
+  {
+    "label": "Show in folder",
+    "match": "text",
+    "home": "poolmenu",
+    "needs": "poolmenu-photo",
+    "harnessOnly": false,
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 176,
+    "newHome": "Shelf tile Upload, the right-click menu on a tile",
+    "note": "The reveal on a platform that is neither macOS nor Windows (revealLabel). The harness page runs on the Mac, where the item reads \"Show in Finder\"."
+  },
+  {
+    "label": "Remove from project",
+    "match": "text",
+    "home": "poolmenu",
+    "needs": "poolmenu-photo",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 169,
+    "newHome": "Shelf tile Upload, the right-click menu on a tile",
+    "note": "Last, apart from the rest. Takes the file out of the project, never off the disk. Count 1."
+  },
+  {
+    "label": "Transcribe",
+    "match": "text",
+    "home": "poolmenu",
+    "needs": "poolmenu-video",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 266,
+    "newHome": "Shelf tile Upload, the right-click menu on a tile",
+    "note": "The tile’s Transcribe, for a file with sound and no transcript. Count 1."
+  },
+  {
+    "label": "needs the AI helper — install it in Settings",
+    "match": "title",
+    "home": "poolmenu",
+    "needs": "poolmenu-video",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 92,
+    "newHome": "Shelf tile Upload, the right-click menu on a tile",
+    "note": "The menu’s Transcribe greyed with the tile’s own reason (the page’s helper cannot transcribe). Count 1: on the one item."
+  },
+  {
+    "label": "Transcribe again",
+    "match": "text",
+    "home": "poolmenu",
+    "needs": "poolmenu-transcribed",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 266,
+    "newHome": "Shelf tile Upload, the right-click menu on a tile",
+    "note": "Transcribe for a file that has a transcript (the tile’s \"Transcribed — click to redo\"). Count 1."
+  },
+  {
+    "label": "Relink…",
+    "match": "text",
+    "home": "poolmenu",
+    "needs": "poolmenu-offline",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 275,
+    "newHome": "Shelf tile Upload, the right-click menu on a tile",
+    "note": "For a missing file: relinkMedia with its id, which asks for that one file. Count 1 in the menu (the bar’s own Relink… is in the panel, not the overlay)."
+  },
+  {
+    "label": "Used by",
+    "match": "text",
+    "home": "poolmenu",
+    "needs": "poolmenu-used-one",
+    "part": true,
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 181,
+    "newHome": "Shelf tile Upload, the right-click menu on a tile",
+    "note": "The question’s line, \"Used by 1 clip on the timeline\": one text node. Count 1."
+  },
+  {
+    "label": "Remove it and its",
+    "match": "text",
+    "home": "poolmenu",
+    "needs": "poolmenu-used-one",
+    "part": true,
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 184,
+    "newHome": "Shelf tile Upload, the right-click menu on a tile",
+    "note": "The question’s remove, \"Remove it and its clip\". Count 1."
+  },
+  {
+    "label": "Keep it",
+    "match": "text",
+    "home": "poolmenu",
+    "needs": "poolmenu-used-one",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 250,
+    "newHome": "Shelf tile Upload, the right-click menu on a tile",
+    "note": "The question’s other answer. Count 1."
+  },
+  {
+    "label": "Used by",
+    "match": "text",
+    "home": "poolmenu",
+    "needs": "poolmenu-used-three",
+    "part": true,
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 181,
+    "newHome": "Shelf tile Upload, the right-click menu on a tile",
+    "note": "The question’s line, \"Used by 3 clips on the timeline\": one text node. Count 1."
+  },
+  {
+    "label": "Remove it and its",
+    "match": "text",
+    "home": "poolmenu",
+    "needs": "poolmenu-used-three",
+    "part": true,
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 184,
+    "newHome": "Shelf tile Upload, the right-click menu on a tile",
+    "note": "The question’s remove, \"Remove it and its 3 clips\". Count 1."
+  },
+  {
+    "label": "Keep it",
+    "match": "text",
+    "home": "poolmenu",
+    "needs": "poolmenu-used-three",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 250,
+    "newHome": "Shelf tile Upload, the right-click menu on a tile",
+    "note": "The question’s other answer. Count 1."
   }
 ]

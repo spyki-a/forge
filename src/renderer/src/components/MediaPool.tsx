@@ -12,6 +12,8 @@ import { NEEDS_SPEECH_MODEL, SPEECH_MODEL_BUSY, STOP_SPEECH_MODEL, speechModelLa
 import { SIDECAR_METHODS } from '@shared/sidecar/protocol'
 import { helperCan } from '@shared/sidecar/helperCan'
 import { speechFetchText, transcribeGate, type TranscribeGate } from '@shared/sidecar/row'
+import { assetClipCount } from '@shared/edit/removeAssets'
+import { MENU_WIDTH, MenuDivider, MenuItem, MenuShell, SUBMENU_WIDTH, useMenuDismiss } from './ui/Menu'
 
 const ICON = { video: Film, audio: Music, image: ImageIcon }
 
@@ -156,6 +158,147 @@ export function SpeechModelPress({ inline = false }: { inline?: boolean } = {}):
   )
 }
 
+/** Where a tile's menu was opened, and on which file. */
+export interface PoolMenuTarget {
+  assetId: string
+  x: number
+  y: number
+}
+
+/** The menu's last item. It takes the file out of the PROJECT; the file on disk is never touched. */
+export const REMOVE_FROM_PROJECT = 'Remove from project'
+
+/** The platform's own words for showing a file where it sits ('MacIntel', 'Win32', anything else). */
+export function revealLabel(platform: string): string {
+  const name = platform.toLowerCase()
+  if (name.includes('mac')) return 'Show in Finder'
+  if (name.startsWith('win')) return 'Show in Explorer'
+  return 'Show in folder'
+}
+
+/** The question's words, for a file `n` clips play (n ≥ 1). */
+export function usedByText(n: number): string {
+  return n === 1 ? 'Used by 1 clip on the timeline' : `Used by ${n} clips on the timeline`
+}
+export function removeWithClipsText(n: number): string {
+  return n === 1 ? 'Remove it and its clip' : `Remove it and its ${n} clips`
+}
+
+// The room the menu keeps inside the window: itself, a submenu beside it, and its tallest face.
+const POOL_MENU_ROOM = { width: MENU_WIDTH + SUBMENU_WIDTH, height: 220 }
+
+/**
+ * The right-click menu on a pool tile: ClipMenu's look and manner, from the
+ * same pieces (ui/Menu.tsx). Each item is there only when it applies, and
+ * does what an existing control does through the same store action:
+ *
+ * - Add to timeline: the tile's double-click (`addAssetToTimeline`).
+ * - Transcribe, or Transcribe again once there is a transcript, for a file
+ *   with sound: the tile's own Transcribe (`transcribeAsset`), greyed by the
+ *   same gate with the same reason (`why`, computed once by the pool for
+ *   both). Not offered while the file is being transcribed: the tile's own
+ *   button is then its cancel.
+ * - Relink…, for a missing file: `relinkMedia` with the file's id, which
+ *   asks for that one file (the bar over the pool asks for a folder).
+ * - Show in Finder / Explorer / folder, for a file that is there: the bridge's
+ *   `revealPath` (main's `shell.showItemInFolder`), on the file the user
+ *   imported (`source`, when `path` is the app's converted copy).
+ * - Remove from project, last and apart. A file no clip plays goes at once;
+ *   for one that clips play the menu turns into the question, in place:
+ *   "Used by 3 clips on the timeline", "Remove it and its 3 clips", "Keep it".
+ *
+ * Rendered by the pool OUTSIDE the tiles, so nothing done in it can start a
+ * tile's drag or reach its double-click.
+ */
+export function PoolMenu({
+  target,
+  why,
+  onClose
+}: {
+  target: PoolMenuTarget
+  /** The pool's own Transcribe gate (`transcribeWhy`): null when it can be pressed, else the greyed button's reason. */
+  why: string | null
+  onClose: () => void
+}): ReactNode {
+  const project = useEditor((s) => s.project)
+  const transcribing = useEditor((s) => s.transcribing)
+  const removingAsset = useEditor((s) => s.removingAsset)
+  useMenuDismiss(onClose)
+
+  const asset = project.assets.find((a) => a.id === target.assetId)
+  if (!asset) return null
+  const store = useEditor.getState
+  const run = (fn: () => void) => (): void => {
+    fn()
+    onClose()
+  }
+
+  const clips = assetClipCount(project, asset.id)
+  if (removingAsset === asset.id && clips > 0) {
+    return (
+      <MenuShell x={target.x} y={target.y} room={POOL_MENU_ROOM} data={['pool-menu', asset.id]}>
+        <div data-pool-ask="" className="px-3 py-1.5 text-[12px] leading-snug text-ink-200">
+          {usedByText(clips)}
+        </div>
+        <MenuDivider />
+        <MenuItem
+          label={removeWithClipsText(clips)}
+          danger
+          data={['pool-menu-item', 'remove-confirm']}
+          onClick={run(() => store().confirmRemoveAsset())}
+        />
+        <MenuItem label="Keep it" data={['pool-menu-item', 'keep']} onClick={run(() => store().keepAsset())} />
+      </MenuShell>
+    )
+  }
+
+  const file = asset.source ?? asset.path
+  const withSound = asset.kind !== 'image' && asset.hasAudio
+  return (
+    <MenuShell x={target.x} y={target.y} room={POOL_MENU_ROOM} data={['pool-menu', asset.id]}>
+      <MenuItem
+        label="Add to timeline"
+        data={['pool-menu-item', 'add']}
+        onClick={run(() => store().addAssetToTimeline(asset.id))}
+      />
+      {withSound && !transcribing[asset.id] && (
+        <MenuItem
+          label={project.transcripts[asset.id] ? 'Transcribe again' : 'Transcribe'}
+          disabled={why !== null}
+          title={why ?? undefined}
+          data={['pool-menu-item', 'transcribe']}
+          onClick={run(() => void store().transcribeAsset(asset.id))}
+        />
+      )}
+      {asset.offline && (
+        <MenuItem
+          label="Relink…"
+          data={['pool-menu-item', 'relink']}
+          onClick={run(() => void store().relinkMedia(asset.id))}
+        />
+      )}
+      {!asset.offline && file && (
+        <MenuItem
+          label={revealLabel(typeof navigator === 'undefined' ? '' : navigator.platform)}
+          data={['pool-menu-item', 'reveal']}
+          onClick={run(() => void window.forge.revealPath(file))}
+        />
+      )}
+      <MenuDivider />
+      <MenuItem
+        label={REMOVE_FROM_PROJECT}
+        danger
+        data={['pool-menu-item', 'remove']}
+        onClick={() => {
+          store().removeAsset(asset.id)
+          // A file clips play asks first, here in the menu; one nobody plays is gone, and so is the menu.
+          if (store().removingAsset !== asset.id) onClose()
+        }}
+      />
+    </MenuShell>
+  )
+}
+
 export function MediaPool(): ReactNode {
   const project = useEditor((s) => s.project)
   const importAssets = useEditor((s) => s.importAssets)
@@ -178,6 +321,13 @@ export function MediaPool(): ReactNode {
   const notify = useEditor((s) => s.notify)
   const [over, setOver] = useState(false)
   const depth = useRef(0)
+  const [menu, setMenu] = useState<PoolMenuTarget | null>(null)
+  const keepAsset = useEditor((s) => s.keepAsset)
+  // Closing the menu ends its question too: "Keep it" is what walking away means.
+  const closeMenu = useCallback(() => {
+    setMenu(null)
+    keepAsset()
+  }, [keepAsset])
 
   const onDrop = useCallback(
     (event: DragEvent) => {
@@ -301,9 +451,15 @@ export function MediaPool(): ReactNode {
               return (
                 <div
                   key={asset.id}
+                  data-pool-tile={asset.id}
                   draggable
                   onDragStart={(e) => setDragPayload(e, poolPayload(asset))}
                   onDoubleClick={() => addAssetToTimeline(asset.id)}
+                  onContextMenu={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setMenu({ assetId: asset.id, x: e.clientX, y: e.clientY })
+                  }}
                   // A clip from a link carries its credit (CLIPS.md §3b.4); until step 5's
                   // Credits block, its line is shown here.
                   title={`${asset.name}\n${details(asset)}${asset.credit ? `\n${asset.credit.line}` : ''}\n\nDrag onto the timeline, or double-click`}
@@ -371,6 +527,8 @@ export function MediaPool(): ReactNode {
           </div>
         )}
       </div>
+
+      {menu && <PoolMenu target={menu} why={why} onClose={closeMenu} />}
 
       {over && (
         <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center bg-ink-950/85">

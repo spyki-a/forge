@@ -65,11 +65,16 @@ describe('the way out is wired', () => {
   it('the menu, the shortcuts sheet and the settings panel mark the Escape they used as handled', () => {
     // Otherwise closing any of them would also throw the window out of full screen.
     for (const file of [
-      'src/renderer/src/components/ClipMenu.tsx',
+      // The right-click menus' own (ui/Menu.tsx useMenuDismiss), since the Upload panel's tile menu shares it.
+      'src/renderer/src/components/ui/Menu.tsx',
       'src/renderer/src/components/Shortcuts.tsx',
       'src/renderer/src/components/SettingsPanel.tsx'
     ]) {
       expect(source(file), file).toMatch(/if \(e\.key === 'Escape'\) \{\s*\/\/[^\n]*\n\s*e\.preventDefault\(\)\s*\n\s*onClose\(\)/)
+    }
+    // And each right-click menu closes through it.
+    for (const file of ['src/renderer/src/components/ClipMenu.tsx', 'src/renderer/src/components/MediaPool.tsx']) {
+      expect(source(file), file).toContain('useMenuDismiss(onClose)')
     }
   })
 })
