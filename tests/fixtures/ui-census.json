@@ -8470,7 +8470,8 @@
     "file": "src/shared/asr/speechModel.ts",
     "line": 50,
     "newHome": "settings panel (§3.9), the AI helper row",
-    "note": "The speech model's sized press, \"Get the speech model · 464 MB\" on screen: speechModelLabel writes it as `Get ${SPEECH_MODEL_LABEL} · ${size}`, so \"Get\" is its one static piece at a word boundary."
+    "count": 3,
+    "note": "Count 3: one sized press on each of the three models' lines while none is on this machine (Small 464 MB, Medium 1.4 GB, Large 2.9 GB; it was one press before the choice of three, 2026-11-20). \"Get the speech model · 464 MB\" on screen: speechModelLabel writes it as `Get ${SPEECH_MODEL_LABEL} · ${size}`, so \"Get\" is its one static piece at a word boundary."
   },
   {
     "label": "on this machine",

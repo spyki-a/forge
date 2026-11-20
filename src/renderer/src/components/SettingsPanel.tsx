@@ -252,8 +252,9 @@ export function HelperSection(): ReactNode {
         <fieldset data-speech-model="" className="space-y-0.5 text-[10.5px] text-ink-400">
           <legend className="text-ink-300">Speech model</legend>
           {speech.map((line) => (
-            <div key={line.name} data-speech-line={line.name} className="flex items-center justify-between gap-2">
-              <label className="flex min-w-0 items-center gap-1.5">
+            // The words keep the row's width: a press or a fetch's progress that does not fit beside them goes under them, to the right.
+            <div key={line.name} data-speech-line={line.name} className="flex flex-wrap items-center justify-end gap-x-2 gap-y-0.5">
+              <label className="mr-auto flex min-w-0 items-center gap-1.5">
                 <input
                   type="radio"
                   name="forge-speech-model"

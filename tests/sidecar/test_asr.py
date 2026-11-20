@@ -431,12 +431,30 @@ class TheThree(Planted):
         self.plant(entry=MEDIUM)
         self.plant(entry=LARGE)
         small = asr.transcribe({"path": self.audio}, Recorder())
+        self.assertEqual({key[0] for key in asr._models}, {"small"})
         medium = asr.transcribe({"path": self.audio, "model": "medium"}, Recorder())
+        self.assertEqual({key[0] for key in asr._models}, {"medium"})
         large = asr.transcribe({"path": self.audio, "model": "large-v3"}, Recorder())
-        asr.transcribe({"path": self.audio, "model": "medium"}, Recorder())
+        self.assertEqual({key[0] for key in asr._models}, {"large-v3"})
         self.assertEqual([small["model"], medium["model"], large["model"]], ["faster-whisper/small/int8", "faster-whisper/medium/int8", "faster-whisper/large-v3/int8"])
         self.assertEqual([given for given, _ in Whisper.made], [self.snapshot_of(SMALL), self.snapshot_of(MEDIUM), self.snapshot_of(LARGE)])
-        self.assertEqual(sorted(key[0] for key in asr._models), ["large-v3", "medium", "small"])
+
+    def test_one_models_loaded_copy_at_a_time_and_the_same_model_is_loaded_once(self) -> None:
+        # Small, Medium and Large tried in one session must not all stay in memory:
+        # loading another size forgets the one before it. The same size again loads nothing.
+        self.plant()
+        self.plant(entry=LARGE)
+        asr.transcribe({"path": self.audio}, Recorder())
+        asr.transcribe({"path": self.audio}, Recorder())
+        self.assertEqual([given for given, _ in Whisper.made], [self.snapshot_of(SMALL)])
+        asr.transcribe({"path": self.audio, "model": "large-v3"}, Recorder())
+        asr.transcribe({"path": self.audio, "model": "large-v3"}, Recorder())
+        self.assertEqual([given for given, _ in Whisper.made], [self.snapshot_of(SMALL), self.snapshot_of(LARGE)])
+        self.assertEqual([key[0] for key in asr._models], ["large-v3"])
+        # Back to Small: it is read in again, and Large's copy is the one forgotten.
+        asr.transcribe({"path": self.audio}, Recorder())
+        self.assertEqual([given for given, _ in Whisper.made], [self.snapshot_of(SMALL), self.snapshot_of(LARGE), self.snapshot_of(SMALL)])
+        self.assertEqual([key[0] for key in asr._models], ["small"])
 
 
 # ---------------------------------------------------------- registration

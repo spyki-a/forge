@@ -133,8 +133,11 @@ disk: a sentence the window may show as it is, so no method name, and no
 size, which the press writes through formatBytes where ``media._megabytes``
 would say another number."""
 
-# One WhisperModel per (model name, snapshot folder, compute type), loaded on
-# first use: the name in the key, so two sizes never share an entry.
+# The loaded WhisperModel, by (model name, snapshot folder, compute type),
+# loaded on first use: the name in the key, so two sizes never share an entry.
+# ONE model's entries at a time: loading another size forgets the others first,
+# so a session that tries Small, Medium and Large never holds all three in
+# memory at once (large-v3's model.bin alone is 3 GB on disk).
 _model_lock = threading.Lock()
 _models: dict[tuple[str, str, str], Any] = {}
 
@@ -217,7 +220,8 @@ def model(params: dict[str, Any], context: Context) -> dict[str, Any]:
 
 
 def _load_model(name: str, folder: str, compute_type: str) -> Any:
-    """The model in ``folder`` (the snapshot), loaded once per model and compute type.
+    """The model in ``folder`` (the snapshot), loaded once per model and compute type,
+    and only one model's at a time: another size's is forgotten first.
 
     By its path, so ``WhisperModel`` never reaches ``download_model``; and
     ``local_files_only`` besides, so even a path it did not take for a folder
@@ -228,6 +232,9 @@ def _load_model(name: str, folder: str, compute_type: str) -> Any:
     key = (name, folder, compute_type)
     with _model_lock:
         if key not in _models:
+            # Another size's loaded model goes before this one is read in.
+            for other in [k for k in _models if k[0] != name]:
+                del _models[other]
             _models[key] = WhisperModel(
                 folder,
                 device="cpu",
