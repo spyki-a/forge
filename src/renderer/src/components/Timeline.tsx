@@ -11,7 +11,7 @@ import {
 } from '@shared/timeline'
 import { gapAt } from '@shared/edit/recipes'
 import { clipKind, kindsPresent, styleFor } from '@shared/edit/clipKind'
-import { followScroll, zoomToFit } from '@shared/edit/follow'
+import { followScroll, laneIndexAt, zoomToFit } from '@shared/edit/follow'
 import { ClipMenu, type ClipMenuTarget } from './ClipMenu'
 import { Meter } from './Meter'
 import { startVoiceOver, stopVoiceOver } from '../recorder'
@@ -28,7 +28,13 @@ type DragMode = 'move' | 'trim-start' | 'trim-end'
 const TRACK_HEIGHT = 62
 /** The sticky ruler above the lanes, `h-7`. Lane 0 starts below it. */
 const RULER_HEIGHT = 28
-const HEADER_WIDTH = 128
+/*
+ * Wide enough for an audio row, which carries the most: its name, mute, solo,
+ * the voice-over button, VO, the meter and Remove. At 128 the row overflowed
+ * and Remove, the last of them, was pushed out of the column where nobody
+ * could see or press it.
+ */
+const HEADER_WIDTH = 172
 /** Snap threshold in screen pixels — converted to frames using the zoom. */
 const SNAP_PX = 7
 
@@ -130,9 +136,15 @@ export function Timeline(): ReactNode {
 
   const laneAt = useCallback(
     (clientY: number): Track | null => {
-      const box = laneRef.current?.getBoundingClientRect()
-      if (!box) return null
-      const index = Math.floor((clientY - box.top - RULER_HEIGHT) / TRACK_HEIGHT)
+      const lane = laneRef.current
+      if (!lane) return null
+      // The lanes scroll under the pointer once the stack is taller than the view.
+      const index = laneIndexAt({
+        y: clientY - lane.getBoundingClientRect().top,
+        scrollTop: lane.scrollTop,
+        rulerHeight: RULER_HEIGHT,
+        trackHeight: TRACK_HEIGHT
+      })
       return lanesRef.current[index] ?? null
     },
     []
@@ -325,7 +337,9 @@ export function Timeline(): ReactNode {
 
       const lanesTouched = new Set<string>()
       for (const track of lanesRef.current) {
-        const row = laneBoxes.current.get(track.id)
+        // Measured NOW, not when the row was drawn: the lanes scroll, and a
+        // box remembered from the last render is where the row used to be.
+        const row = laneNodes.current.get(track.id)?.getBoundingClientRect()
         if (row && row.top < bottom && row.bottom > top) lanesTouched.add(track.id)
       }
 
@@ -339,8 +353,29 @@ export function Timeline(): ReactNode {
     [frameFromEvent]
   )
 
-  /** Where each lane sits on screen, so a band can be tested against them. */
-  const laneBoxes = useRef(new Map<string, { top: number; bottom: number }>())
+  /** Each lane's row, so a band can be tested against where it is on screen now. */
+  const laneNodes = useRef(new Map<string, HTMLDivElement>())
+
+  /*
+   * One vertical scroll for the whole stack.
+   *
+   * The lanes are the scroller, in both directions. The track headers sit in
+   * their own column so they stay put sideways, and they follow the lanes up
+   * and down by being shifted, not by scrolling themselves: when the column
+   * was its own scroller the V/A names and the clips beside them moved apart
+   * the moment there were more tracks than fit.
+   */
+  const headerRowsRef = useRef<HTMLDivElement | null>(null)
+  const syncHeaders = useCallback(() => {
+    const lane = laneRef.current
+    const rows = headerRowsRef.current
+    if (!lane || !rows) return
+    rows.style.transform = `translateY(${-lane.scrollTop}px)`
+    // The lanes' sideways scrollbar takes room at the bottom that the header column does not have: end the names where the lanes end.
+    if (rows.parentElement) rows.parentElement.style.marginBottom = `${lane.offsetHeight - lane.clientHeight}px`
+  }, [])
+  // After every render too: a removed track can shorten the stack and move the scroll without a scroll event reaching a fresh node.
+  useEffect(syncHeaders)
 
   /*
    * Keep the playhead on screen.
@@ -493,9 +528,21 @@ export function Timeline(): ReactNode {
         </div>
       </div>
       <div className="flex flex-1 overflow-hidden">
-        {/* Track headers stay put while the lane scrolls. */}
-        <div className="w-[128px] shrink-0 overflow-y-auto border-r border-ink-800 bg-ink-850">
-          <div className="flex h-7 items-center justify-between border-b border-ink-800 px-2">
+        {/*
+          Track headers stay put while the lanes scroll sideways, and move with
+          them up and down (syncHeaders): the column never scrolls on its own.
+          A wheel over it scrolls the lanes.
+        */}
+        <div
+          data-timeline-headers
+          className="flex shrink-0 flex-col overflow-hidden border-r border-ink-800 bg-ink-850"
+          style={{ width: HEADER_WIDTH }}
+          onWheel={(e) => {
+            const lane = laneRef.current
+            if (lane) lane.scrollTop += e.deltaY
+          }}
+        >
+          <div className="relative z-10 flex h-7 shrink-0 items-center justify-between border-b border-ink-800 bg-ink-850 px-2">
             <span className="text-[9.5px] uppercase tracking-wide text-ink-600">Tracks</span>
             <div className="flex gap-0.5">
               <button
@@ -517,6 +564,8 @@ export function Timeline(): ReactNode {
             </div>
           </div>
 
+          <div className="min-h-0 flex-1 overflow-hidden">
+          <div ref={headerRowsRef}>
           {lanes.map((track) => {
             const isOnlyVideo =
               track.kind === 'video' && project.tracks.filter((t) => t.kind === 'video').length === 1
@@ -657,16 +706,23 @@ export function Timeline(): ReactNode {
                   onClick={() => removeTrack(track.id)}
                   disabled={isOnlyVideo}
                   title={isOnlyVideo ? 'The last video track cannot be removed' : 'Remove track and its clips'}
-                  className="shrink-0 rounded p-0.5 text-ink-600 opacity-0 transition group-hover:opacity-100 hover:bg-ink-800 hover:text-red-800 disabled:opacity-0"
+                  data-track-remove
+                  /*
+                    Always drawn, quietly: shown only under the pointer it was
+                    invisible on a touch screen, which has no hover.
+                  */
+                  className="shrink-0 rounded p-0.5 text-ink-600 opacity-60 transition group-hover:opacity-100 hover:bg-ink-800 hover:text-red-800 disabled:opacity-0"
                 >
                   <Trash2 size={10} />
                 </button>
               </div>
             )
           })}
+          </div>
+          </div>
         </div>
 
-        <div ref={laneRef} className="relative flex-1 overflow-x-auto overflow-y-hidden">
+        <div ref={laneRef} data-timeline-lanes onScroll={syncHeaders} className="timeline-scroll relative flex-1 overflow-auto">
           {/*
             The rubber band, in viewport coordinates and outside the scrolling
             content: it follows the POINTER, which does not scroll with the
@@ -756,10 +812,8 @@ export function Timeline(): ReactNode {
                   // Measured, not computed from an index: lanes are a fixed
                   // height today and a band that assumed so would silently
                   // select the wrong row the day one of them is not.
-                  if (node) {
-                    const box = node.getBoundingClientRect()
-                    laneBoxes.current.set(track.id, { top: box.top, bottom: box.bottom })
-                  } else laneBoxes.current.delete(track.id)
+                  if (node) laneNodes.current.set(track.id, node)
+                  else laneNodes.current.delete(track.id)
                 }}
                 className={`relative border-b border-ink-800 ${
                   track.hidden || track.muted ? 'opacity-40' : ''
@@ -1098,9 +1152,14 @@ export function Timeline(): ReactNode {
                   width so the POINT is on the frame, not its left edge — an
                   off-by-half-a-head is a playhead that lies about where it is.
                 */
-                className="absolute -top-px h-[15px] w-[13px] cursor-ew-resize bg-accent-500"
+                /*
+                  Sticky, so the head stays on the ruler when the lanes are
+                  scrolled down: the line runs the whole stack, and a head left
+                  at its top would scroll out of reach with the first track.
+                */
+                className="sticky top-0 h-[15px] w-[13px] cursor-ew-resize bg-accent-500"
                 style={{
-                  left: -6,
+                  marginLeft: -6,
                   clipPath: 'polygon(0 0, 100% 0, 100% 62%, 50% 100%, 0 62%)'
                 }}
               />

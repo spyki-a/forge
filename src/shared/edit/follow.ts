@@ -84,3 +84,21 @@ export function zoomToFit(durationFrames: number, viewWidth: number): number {
   const fit = (viewWidth * 0.96) / durationFrames
   return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, fit))
 }
+
+/**
+ * Which lane a pointer is over, counted from the top of the stack, or -1.
+ *
+ * `y` is the pointer's distance below the top of the lane VIEW (what
+ * `getBoundingClientRect().top` gives), `scrollTop` how far the lanes are
+ * scrolled under it. The scroll has to be added: once the stack is taller than
+ * the view and the user scrolls, the lane under the pointer is no longer the
+ * one its screen position alone says, and a clip dragged "onto V3" would land
+ * on V1.
+ *
+ * The ruler stays pinned over the lanes, so a pointer on it is over no lane
+ * whatever is scrolled beneath: -1, as it was before the lanes scrolled.
+ */
+export function laneIndexAt(at: { y: number; scrollTop: number; rulerHeight: number; trackHeight: number }): number {
+  if (!(at.trackHeight > 0) || at.y < at.rulerHeight) return -1
+  return Math.floor((at.y - at.rulerHeight + Math.max(0, at.scrollTop)) / at.trackHeight)
+}

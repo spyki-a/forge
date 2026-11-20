@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import {
   followScroll,
+  laneIndexAt,
   zoomToFit,
   PAGE_MARGIN,
   MIN_ZOOM,
@@ -97,5 +100,90 @@ describe('zoom to fit', () => {
 
   it('refuses to guess with no width', () => {
     expect(zoomToFit(3000, 0)).toBe(MIN_ZOOM)
+  })
+})
+
+describe('laneIndexAt: the lane under the pointer, with the stack scrolled', () => {
+  const at = (y: number, scrollTop = 0): number => laneIndexAt({ y, scrollTop, rulerHeight: 28, trackHeight: 62 })
+
+  it('counts lanes from under the ruler when nothing is scrolled', () => {
+    expect(at(28)).toBe(0)
+    expect(at(28 + 61)).toBe(0)
+    expect(at(28 + 62)).toBe(1)
+    expect(at(28 + 62 * 3 + 5)).toBe(3)
+  })
+
+  it('adds the scroll: the same screen position is a lower lane once the stack has moved up', () => {
+    expect(at(28 + 10, 62 * 2)).toBe(2)
+    expect(at(28 + 10, 62 * 2 - 11)).toBe(1)
+    expect(at(28 + 62 + 30, 100)).toBe(3)
+  })
+
+  it('a pointer on the pinned ruler is over no lane, whatever is scrolled under it', () => {
+    expect(at(27.9)).toBe(-1)
+    expect(at(0, 500)).toBe(-1)
+    expect(at(-40, 500)).toBe(-1)
+  })
+
+  it('never divides by nothing and never counts a negative scroll', () => {
+    expect(laneIndexAt({ y: 100, scrollTop: 0, rulerHeight: 28, trackHeight: 0 })).toBe(-1)
+    expect(at(28 + 10, -30)).toBe(0)
+  })
+})
+
+describe('the timeline scrolls as one stack (Timeline.tsx, by its source)', () => {
+  const source = readFileSync(resolve(__dirname, '..', 'src/renderer/src/components/Timeline.tsx'), 'utf8')
+  const tagOf = (marker: string): string => {
+    const hits = [...source.matchAll(new RegExp(marker, 'g'))]
+    expect(hits, marker).toHaveLength(1)
+    const from = source.lastIndexOf('<div', hits[0].index)
+    return source.slice(from, source.indexOf('>', hits[0].index) + 1)
+  }
+
+  it('the lanes are the one scroller, both ways, and tell the headers when they move', () => {
+    const lanes = tagOf('data-timeline-lanes')
+    expect(lanes).toContain('ref={laneRef}')
+    expect(lanes).toContain('overflow-auto')
+    expect(lanes).not.toMatch(/overflow-y-hidden|overflow-x-auto/)
+    expect(lanes).toContain('onScroll={syncHeaders}')
+    expect(lanes).toContain('timeline-scroll')
+  })
+
+  it('the header column never scrolls on its own', () => {
+    const headers = tagOf('data-timeline-headers')
+    expect(headers).toContain('overflow-hidden')
+    expect(headers).not.toMatch(/overflow-(y-)?(auto|scroll)/)
+    expect(headers).toContain('onWheel')
+    // Nothing else in the file may bring a second vertical scroller back.
+    expect(source).not.toMatch(/overflow-y-(auto|scroll)/)
+  })
+
+  it('the headers follow the lanes\u2019 scrollTop, and the lane under a pointer counts it', () => {
+    expect(source).toMatch(/rows\.style\.transform = `translateY\(\$\{-lane\.scrollTop\}px\)`/)
+    const laneAt = source.slice(source.indexOf('const laneAt = useCallback('), source.indexOf('/** A drop on a track'))
+    expect(laneAt).toContain('scrollTop: lane.scrollTop')
+    expect(laneAt).toContain('laneIndexAt(')
+  })
+
+  it('the header column takes its width from HEADER_WIDTH, and Remove is drawn without a hover', () => {
+    const headers = tagOf('data-timeline-headers')
+    expect(headers).toContain('style={{ width: HEADER_WIDTH }}')
+    expect(headers).not.toMatch(/\bw-\[\d+px\]/)
+    const width = Number(/const HEADER_WIDTH = (\d+)/.exec(source)?.[1])
+    // An audio row: 16 of padding, the name's 28, seven gaps of 4, and mute 15, S 10, the voice-over button 14, VO 17, the meter 18, Remove 14.
+    expect(width).toBeGreaterThanOrEqual(16 + 28 + 7 * 4 + 15 + 10 + 14 + 17 + 18 + 14)
+    const from = source.indexOf('data-track-remove')
+    expect(source.indexOf('data-track-remove', from + 1)).toBe(-1)
+    const remove = source.slice(source.lastIndexOf('<button', from), source.indexOf('<Trash2', from))
+    expect(remove).toContain('shrink-0')
+    // Hidden only when it cannot be pressed; never hidden until hovered.
+    expect(remove.match(/(?<![:\w-])opacity-0\b/g)).toBeNull()
+    expect(remove).toContain('disabled:opacity-0')
+  })
+
+  it('a band is tested against where each row is now, not where it was drawn', () => {
+    const band = source.slice(source.indexOf('const clipsInBand = useCallback('), source.indexOf('/** Each lane’s row') > 0 ? source.indexOf('/** Each lane’s row') : source.indexOf('const laneNodes = useRef'))
+    expect(band).toContain('laneNodes.current.get(track.id)?.getBoundingClientRect()')
+    expect(source).not.toContain('laneBoxes')
   })
 })

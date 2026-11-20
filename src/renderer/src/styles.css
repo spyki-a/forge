@@ -184,6 +184,34 @@ body {
 }
 
 /*
+ * The timeline's scrollbars are controls, not indicators.
+ *
+ * Everywhere else a scrollbar hides until the pointer is near. On the timeline
+ * that left nothing to grab: a project longer or taller than the panel gave no
+ * sign it could be moved, sideways or up and down. Here both bars are always
+ * drawn, wide enough to drag, on a track that shows how far there is to go.
+ */
+.timeline-scroll::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+.timeline-scroll::-webkit-scrollbar-track {
+  background: var(--color-ink-850);
+}
+.timeline-scroll::-webkit-scrollbar-thumb,
+.timeline-scroll:hover::-webkit-scrollbar-thumb {
+  background: var(--color-ink-600);
+  background-clip: content-box;
+}
+.timeline-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent-500) !important;
+  background-clip: content-box !important;
+}
+.timeline-scroll::-webkit-scrollbar-corner {
+  background: var(--color-ink-850);
+}
+
+/*
  * Sliders.
  *
  * A hairline track with a round, slightly raised thumb — the shape macOS uses
