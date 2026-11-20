@@ -625,7 +625,7 @@ const helloWith = (capabilities: string[]): SidecarStatus => ({
   source: { kind: 'env', python: 'C:\\Python312\\python.exe' },
   hello: { protocolVersion: 1, python: '3.12.10', platform: 'Windows-AMD64', capabilities, degraded: {}, executable: 'python.exe', prefix: '.', path: [] }
 })
-const SPEECH = { present: false, bytes: 486_539_264, label: 'the speech model', host: 'huggingface.co' }
+const SPEECH = { present: false, bytes: 486_539_264, label: 'the speech model', host: 'huggingface.co', model: 'small' as const }
 
 describe('a video with no captions', () => {
   it('says so, greys Listen to it with "needs the AI helper", and keeps From and To typed', async () => {
@@ -660,6 +660,13 @@ describe('a video with no captions', () => {
     expect(panel()).not.toContain('needs the speech model')
     expect(panel()).toContain('>soon<')
     expect(started).toHaveLength(0)
+
+    // The CHOSEN model's: Medium chosen and not here, though Small is, says so again.
+    useEditor.setState({ speechModels: { small: { ...SPEECH, present: true } }, speechChoice: 'small' })
+    vi.stubGlobal('window', { ...window, forge: { ...window.forge, setSetting: async () => ({}), speechModel: async () => ({ ...SPEECH, bytes: 1_530_571_735, model: 'medium' }) } })
+    await state().chooseSpeechModel('medium')
+    expect(panel()).toContain('needs the speech model')
+    expect(panel()).not.toContain('>soon<')
   })
 
   it('makes "needs the AI helper" a pointer that opens Settings at the AI helper row, its words unchanged', async () => {

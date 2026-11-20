@@ -24,7 +24,14 @@ import { HELPER_PRESET, HELPER_REPAIRED_ELSEWHERE, helperJobKind, helperJobLabel
 import { packBytes, packHosts, type HelperPackManifest, type PackPlatform } from './pack'
 import { degradedBySelftest, helperFeatureCount, VCRUNTIME_SENTENCE } from './selftest'
 import type { PackOffer, SidecarStatus } from './status'
-import { SPEECH_MODEL_LABEL, speechModelLabel, type SpeechModelProgress } from '../asr/speechModel'
+import {
+  SPEECH_MODELS,
+  SPEECH_MODEL_LABEL,
+  speechModelLabel,
+  type SpeechModelName,
+  type SpeechModelProgress,
+  type SpeechModelStatus
+} from '../asr/speechModel'
 
 export type HelperDot = 'grey' | 'green' | 'red'
 
@@ -416,16 +423,63 @@ export function packFactsFor(manifest: HelperPackManifest, navigatorPlatform: st
 
 /* ------------------------------------------------------- the speech model */
 
-/** The speech model's line in the row's model list: on this machine with its size, being fetched, or the sized press. */
-export type SpeechRow = { text: string; get?: undefined } | { text: string; get: string }
+/** The chosen model's line says so: the one every Transcribe uses. */
+export const USED_BY_TRANSCRIBE = 'used by Transcribe'
+/** A model whose files are all on disk. */
+export const ON_THIS_MACHINE = 'on this machine'
 
-/** "Speech model · 464 MB · on this machine", "Getting the speech model… 42%", or the press "Get the speech model · 464 MB". null while it cannot be asked or has not answered. */
-export function speechModelRow(speech: ModelStatus | null, canTranscribe: boolean, fetching: SpeechModelProgress | null): SpeechRow | null {
+/** "Getting the speech model… 42%": a fetch's words, the percent once the size is known. */
+export function speechFetchText(fetching: Pick<SpeechModelProgress, 'progress'>): string {
+  return `Getting ${SPEECH_MODEL_LABEL}…${typeof fetching.progress === 'number' ? ` ${Math.round(fetching.progress * 100)}%` : ''}`
+}
+
+/**
+ * One speech model's line in the AI helper's row (since 2026-11-20, the
+ * choice of three): its label, its size, its hint, and one of
+ * - `present`: on this machine;
+ * - `absent`: the sized press `get` ("Get the speech model · 1.4 GB"), with
+ *   `busy` while ANOTHER model is being fetched (main fetches one at a time,
+ *   SPEECH_MODEL_BUSY);
+ * - `fetching`: this model's fetch, `progress` its words, with the X;
+ * - `unknown`: main has not answered for it, so no press (its size is said
+ *   only from main's answer on a press).
+ * `chosen` is the one Transcribe uses. Choosing never fetches.
+ */
+export interface SpeechLine {
+  name: SpeechModelName
+  label: string
+  /** formatBytes of main's answer, or of the shared table while main has not answered. */
+  size: string
+  hint: string
+  chosen: boolean
+  state: 'present' | 'absent' | 'fetching' | 'unknown'
+  get?: string
+  busy?: true
+  progress?: string
+}
+
+/** The three lines, in the table's order; null while the helper cannot transcribe (the row says why elsewhere). */
+export function speechModelLines(
+  models: Partial<Record<SpeechModelName, SpeechModelStatus>>,
+  choice: SpeechModelName | null,
+  canTranscribe: boolean,
+  fetching: (SpeechModelProgress & { model: SpeechModelName }) | null
+): SpeechLine[] | null {
   if (!canTranscribe) return null
-  if (fetching) return { text: `Getting ${SPEECH_MODEL_LABEL}…${typeof fetching.progress === 'number' ? ` ${Math.round(fetching.progress * 100)}%` : ''}` }
-  if (!speech) return null
-  if (speech.present) return { text: `Speech model · ${formatBytes(speech.bytes)} · on this machine` }
-  return { text: 'Speech model', get: speechModelLabel(speech) }
+  return SPEECH_MODELS.map((pin): SpeechLine => {
+    const status = models[pin.name]
+    const base = {
+      name: pin.name,
+      label: pin.label,
+      size: formatBytes(status?.bytes ?? pin.bytes),
+      hint: pin.hint,
+      chosen: choice === pin.name
+    }
+    if (fetching?.model === pin.name) return { ...base, state: 'fetching', progress: speechFetchText(fetching) }
+    if (!status) return { ...base, state: 'unknown' }
+    if (status.present) return { ...base, state: 'present' }
+    return fetching ? { ...base, state: 'absent', get: speechModelLabel(status), busy: true } : { ...base, state: 'absent', get: speechModelLabel(status) }
+  })
 }
 
 /* ---------------------------------------------------------- the refusals */

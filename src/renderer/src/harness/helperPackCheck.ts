@@ -452,22 +452,30 @@ export async function runHelperPackCheck(): Promise<HelperPackReport> {
     const speechLabel = speechModelLabel({ bytes: HARNESS_SPEECH_MODEL_BYTES })
     const pressLine = norm(press.querySelector(':scope > span')?.textContent)
     const pressLabel = norm(pressButton.textContent)
-    const speechLine = (): string[] =>
-      [...(document.querySelector('[data-speech-model]')?.children ?? [])].map((el) => norm(el.textContent))
+    // Small's line in Settings' choice of three (reset() leaves Small chosen): its words, its press's words with them.
+    const speechLine = (): string => norm(document.querySelector('[data-speech-line="small"] label')?.textContent)
+    const settingsPress = (): string | null => {
+      const get = document.querySelector('[data-speech-get="small"]')
+      return get ? norm(get.textContent) : null
+    }
+    const settingsPressBefore = settingsPress()
     const settingsBefore = speechLine()
     expect(greyed.length === 1 && greyed[0].disabled && greyed[0].title === NEEDS_SPEECH_MODEL, `Transcribe is ${JSON.stringify(greyed)}, not greyed "${NEEDS_SPEECH_MODEL}"`)
     expect(pressLine === `Transcribe ${NEEDS_SPEECH_MODEL}`, `the press's line reads "${pressLine}"`)
     expect(pressLabel === speechLabel, `the press reads "${pressLabel}", not "${speechLabel}"`)
-    expect(JSON.stringify(settingsBefore) === JSON.stringify(['Speech model', speechLabel]), `Settings' speech model line reads ${JSON.stringify(settingsBefore)}`)
+    const smallBefore = `Small · ${formatBytes(HARNESS_SPEECH_MODEL_BYTES)} · fastest · used by Transcribe`
+    expect(settingsBefore === smallBefore, `Settings' Small line reads ${JSON.stringify(settingsBefore)}, not ${JSON.stringify(smallBefore)}`)
+    expect(settingsPressBefore === speechLabel, `Settings' press for Small reads ${JSON.stringify(settingsPressBefore)}, not ${JSON.stringify(speechLabel)}`)
     pressButton.click()
     await until(() => editor().speechModel?.present === true && document.querySelector('[data-speech-press]') === null, 5000, 'the speech model arriving')
     await frames()
     const after = transcribeButtons().map((b) => ({ title: b.title, disabled: b.disabled }))
     expect(after.length === 1 && !after[0].disabled && after[0].title === 'Transcribe', `after the press, Transcribe is ${JSON.stringify(after)}`)
     const settingsAfter = speechLine()
-    const onDisk = `Speech model · ${formatBytes(HARNESS_SPEECH_MODEL_BYTES)} · on this machine`
-    expect(JSON.stringify(settingsAfter) === JSON.stringify([onDisk]), `after the press Settings' speech model line reads ${JSON.stringify(settingsAfter)}, not ["${onDisk}"]`)
-    expect(harnessHelper.presses.some((p) => p.call === 'speechModel' && JSON.stringify(p.options) === '{"download":true}'), 'the press never asked the bridge with download: true')
+    const onDisk = `Small · ${formatBytes(HARNESS_SPEECH_MODEL_BYTES)} · fastest · on this machine · used by Transcribe`
+    expect(settingsAfter === onDisk, `after the press Settings' Small line reads ${JSON.stringify(settingsAfter)}, not ${JSON.stringify(onDisk)}`)
+    expect(settingsPress() === null, 'after the press Settings still offers Small')
+    expect(harnessHelper.presses.some((p) => p.call === 'speechModel' && JSON.stringify(p.options) === '{"download":true,"model":"small"}'), 'the press never asked the bridge with download: true for Small')
     saw('speech', { transcribeBefore: greyed, pressLine, press: pressLabel, settingsBefore, transcribeAfter: after, settingsAfter })
 
     /* 7. a failed beats group: N−1 of N, the runtime's sentence and link, Check again */

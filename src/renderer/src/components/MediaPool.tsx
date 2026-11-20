@@ -8,10 +8,10 @@ import { mediaUrl } from '../media'
 import { setDragPayload } from '../dragPayload'
 import type { DragPayload } from '@shared/dragPayload'
 import { BigButton } from './ui/Tile'
-import { NEEDS_SPEECH_MODEL, SPEECH_MODEL_LABEL, STOP_SPEECH_MODEL, speechModelLabel } from '@shared/asr/speechModel'
+import { NEEDS_SPEECH_MODEL, SPEECH_MODEL_BUSY, STOP_SPEECH_MODEL, speechModelLabel } from '@shared/asr/speechModel'
 import { SIDECAR_METHODS } from '@shared/sidecar/protocol'
 import { helperCan } from '@shared/sidecar/helperCan'
-import { transcribeGate, type TranscribeGate } from '@shared/sidecar/row'
+import { speechFetchText, transcribeGate, type TranscribeGate } from '@shared/sidecar/row'
 
 const ICON = { video: Film, audio: Music, image: ImageIcon }
 
@@ -118,8 +118,11 @@ export function SpeechModelPress({ inline = false }: { inline?: boolean } = {}):
   const getSpeechModel = useEditor((s) => s.getSpeechModel)
   const cancelSpeechModel = useEditor((s) => s.cancelSpeechModel)
   if (!helperCan(status, SIDECAR_METHODS.transcribe)) return null
-  if (!fetching && (!model || model.present)) return null
-  const percent = fetching && typeof fetching.progress === 'number' ? ` ${Math.round(fetching.progress * 100)}%` : ''
+  // The CHOSEN model's press. A fetch of another model (pressed in Settings) is not this one: while it runs,
+  // this press waits, its title saying why, and its X stays in Settings with that model's line.
+  const mine = fetching !== null && (model === null || fetching.model === model.model)
+  const waiting = fetching !== null && !mine
+  if (!mine && (!model || model.present)) return null
   return (
     <div data-speech-press="" className={`flex items-center gap-2 ${inline ? '' : 'border-b border-ink-800 px-3 py-1.5'}`}>
       <Captions size={12} className="shrink-0 text-ink-500" />
@@ -128,14 +131,14 @@ export function SpeechModelPress({ inline = false }: { inline?: boolean } = {}):
       </span>
       <button
         type="button"
-        onClick={() => void getSpeechModel()}
+        onClick={() => void getSpeechModel(model?.model)}
         disabled={fetching !== null}
-        title={model ? `Fetched once from ${model.host}, then kept on this computer` : undefined}
+        title={waiting ? SPEECH_MODEL_BUSY : model ? `Fetched once from ${model.host}, then kept on this computer` : undefined}
         className="shrink-0 rounded bg-ink-800 px-1.5 py-0.5 text-[10.5px] text-ink-300 hover:bg-ink-700 hover:text-ink-100 disabled:opacity-60"
       >
-        {fetching ? `Getting ${SPEECH_MODEL_LABEL}…${percent}` : model ? speechModelLabel(model) : null}
+        {mine ? speechFetchText(fetching) : model ? speechModelLabel(model) : null}
       </button>
-      {fetching && (
+      {mine && (
         <button
           type="button"
           data-speech-cancel=""

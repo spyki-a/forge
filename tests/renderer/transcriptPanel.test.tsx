@@ -6,8 +6,8 @@ import { emptyProject, timelineFrameAt, type Clip, type MediaAsset, type Project
 import { PAUSE_BOUNDARY_MS, segmentIntoSentences, withWordText, type Transcript, type Word } from '@shared/transcript'
 import { rowsOf, runFromRows } from '@shared/ingest/wordRun'
 import { formatMark } from '@shared/ingest/section'
-import { NEEDS_SPEECH_MODEL, speechModelLabel } from '@shared/asr/speechModel'
-import { SIDECAR_METHODS, type HelloResult, type ModelStatus } from '@shared/sidecar/protocol'
+import { NEEDS_SPEECH_MODEL, speechModelLabel, speechModelPin, type SpeechModelName, type SpeechModelStatus } from '@shared/asr/speechModel'
+import { SIDECAR_METHODS, type HelloResult } from '@shared/sidecar/protocol'
 import type { SidecarStatus } from '@shared/sidecar/status'
 
 /*
@@ -395,11 +395,11 @@ describe('the tile’s own Transcribe', () => {
     path: []
   })
   const ready = (capabilities: string[]): SidecarStatus => ({ state: 'ready', hello: helloWith(capabilities), source: { kind: 'env', python: 'C:\\Python312\\python.exe' } })
-  const SPEECH: ModelStatus = { present: false, bytes: 486_539_264, label: 'the speech model', host: 'huggingface.co' }
+  const SPEECH: SpeechModelStatus = { present: false, bytes: 486_539_264, label: 'the speech model', host: 'huggingface.co', model: 'small' }
 
-  function withHelper(status: SidecarStatus | null, speechModel: ModelStatus | null, transcript: Transcript | null = null): void {
+  function withHelper(status: SidecarStatus | null, speechModel: SpeechModelStatus | null, transcript: Transcript | null = null): void {
     load({}, transcript)
-    useEditor.setState({ helperStatus: status, speechModel })
+    useEditor.setState({ helperStatus: status, speechModel, speechChoice: speechModel?.model ?? null })
   }
 
   /** The tile's Transcribe: the one button whose words are about transcribing. */
@@ -458,5 +458,31 @@ describe('the tile’s own Transcribe', () => {
     expect(again).toContain('>Transcribe again with these words</button>')
     expect(transcribeButton(again)).not.toContain('disabled=""')
     expect(pointers(again)).toBe(0)
+  })
+
+  it('is gated on the CHOSEN model, its "Transcribe again with these words" too, with the chosen model’s sized press', async () => {
+    const statusOf = (model: SpeechModelName, present: boolean): SpeechModelStatus => ({ ...SPEECH, present, bytes: speechModelPin(model).bytes, model })
+    const onDisk: Partial<Record<SpeechModelName, boolean>> = { small: true }
+    vi.stubGlobal('window', {
+      forge: {
+        setSetting: async () => ({}),
+        speechModel: async (request: { model?: SpeechModelName }) => statusOf(request.model ?? 'small', onDisk[request.model ?? 'small'] === true)
+      }
+    })
+    withHelper(ready([SIDECAR_METHODS.transcribe]), statusOf('small', true), TALK)
+    useEditor.setState({ speechModels: { small: statusOf('small', true) } })
+    expect(transcribeButton(panel())).not.toContain('disabled=""')
+    await state().chooseSpeechModel('medium')
+    const html = panel()
+    expect(html).toContain('Transcribe again with these words')
+    expect(transcribeButton(html)).toContain('disabled=""')
+    expect(transcribeButton(html)).toContain(`title="${NEEDS_SPEECH_MODEL}"`)
+    expect(html).toContain(`>${speechModelLabel({ bytes: 1_530_571_735 })}</button>`)
+    onDisk['large-v3'] = true
+    await state().chooseSpeechModel('large-v3')
+    const again = panel()
+    expect(transcribeButton(again)).not.toContain('disabled=""')
+    expect(transcribeButton(again)).toContain('title="Transcribe this clip again with these words — corrections made here are replaced"')
+    expect(again).not.toContain('Get the speech model')
   })
 })

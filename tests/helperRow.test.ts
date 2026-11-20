@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { formatBytes } from '@shared/assets/pack'
-import { speechModelLabel } from '@shared/asr/speechModel'
+import { SPEECH_MODELS, speechModelLabel, speechModelPin, type SpeechModelName, type SpeechModelStatus } from '@shared/asr/speechModel'
 import { HELPER_PACK } from '@shared/sidecar/packManifest'
 import { packBytes, packHosts } from '@shared/sidecar/pack'
 import { HELPER_PYTHON_MISSING, HELPER_RECEIPT_UNREADABLE } from '@shared/sidecar/helperPython'
@@ -22,7 +22,7 @@ import {
   helperRow,
   hostsSentence,
   packFactsFor,
-  speechModelRow,
+  speechModelLines,
   transcribeGate,
   type HelperJob,
   type HelperRow,
@@ -385,12 +385,44 @@ describe('the words', () => {
 describe('the speech model', () => {
   const SPEECH: ModelStatus = { present: false, bytes: 486_539_264, label: 'the speech model', host: 'huggingface.co' }
 
-  it('is on this machine with its size, or the sized press, or its progress; nothing while the helper cannot transcribe', () => {
-    expect(speechModelRow({ ...SPEECH, present: true }, true, null)).toEqual({ text: `Speech model · ${formatBytes(486_539_264)} · on this machine` })
-    expect(speechModelRow(SPEECH, true, null)).toEqual({ text: 'Speech model', get: speechModelLabel(SPEECH) })
-    expect(speechModelRow(SPEECH, true, { progress: 0.42 })).toEqual({ text: 'Getting the speech model… 42%' })
-    expect(speechModelRow(SPEECH, false, null)).toBeNull()
-    expect(speechModelRow(null, true, null)).toBeNull()
+  const of = (model: SpeechModelName, present: boolean): SpeechModelStatus => ({ ...SPEECH, present, bytes: speechModelPin(model).bytes, model })
+  const line = (lines: ReturnType<typeof speechModelLines>, model: SpeechModelName) => lines?.find((l) => l.name === model)
+
+  it('lists the three in order, each with its label, size and hint, and marks the chosen one only', () => {
+    const lines = speechModelLines({ small: of('small', true), medium: of('medium', false), 'large-v3': of('large-v3', false) }, 'medium', true, null)
+    expect(lines?.map((l) => [l.name, l.label, l.hint])).toEqual([
+      ['small', 'Small', 'fastest'],
+      ['medium', 'Medium', 'more accurate, slower'],
+      ['large-v3', 'Large', 'most accurate, slowest']
+    ])
+    expect(lines?.map((l) => l.size)).toEqual([formatBytes(486_212_372), formatBytes(1_530_571_735), formatBytes(3_090_835_702)])
+    expect(lines?.filter((l) => l.chosen).map((l) => l.name)).toEqual(['medium'])
+  })
+
+  it('says each one on this machine, or offers its own sized press, or nothing before main has answered for it', () => {
+    const lines = speechModelLines({ small: of('small', true), 'large-v3': of('large-v3', false) }, 'small', true, null)
+    expect(line(lines, 'small')).toMatchObject({ state: 'present' })
+    expect(line(lines, 'small')?.get).toBeUndefined()
+    // Each press is sized from ITS model's answer: Large's 2.9 GB, never the chosen Small's 464 MB.
+    expect(line(lines, 'large-v3')).toMatchObject({ state: 'absent', get: speechModelLabel({ bytes: 3_090_835_702 }) })
+    expect(line(lines, 'large-v3')?.busy).toBeUndefined()
+    expect(line(lines, 'medium')).toMatchObject({ state: 'unknown', size: formatBytes(speechModelPin('medium').bytes) })
+    expect(line(lines, 'medium')?.get).toBeUndefined()
+  })
+
+  it('puts a fetch on the line of the model being fetched, whatever is chosen, and greys the other presses', () => {
+    const models = { small: of('small', true), medium: of('medium', false), 'large-v3': of('large-v3', false) }
+    const lines = speechModelLines(models, 'small', true, { progress: 0.42, model: 'medium' })
+    expect(line(lines, 'medium')).toMatchObject({ state: 'fetching', progress: 'Getting the speech model… 42%' })
+    expect(line(lines, 'medium')?.get).toBeUndefined()
+    expect(line(lines, 'large-v3')).toMatchObject({ state: 'absent', get: speechModelLabel(models['large-v3']), busy: true })
+    expect(line(lines, 'small')).toMatchObject({ state: 'present', chosen: true })
+    expect(line(speechModelLines(models, 'small', true, { progress: null, model: 'large-v3' }), 'large-v3')?.progress).toBe('Getting the speech model…')
+  })
+
+  it('is nothing while the helper cannot transcribe', () => {
+    expect(speechModelLines({ small: of('small', false) }, 'small', false, null)).toBeNull()
+    expect(SPEECH_MODELS).toHaveLength(3)
   })
 
   it('gates Transcribe by asr.transcribe and the model on disk', () => {

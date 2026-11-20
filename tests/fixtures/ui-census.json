@@ -8456,10 +8456,10 @@
     "match": "text",
     "home": "settings",
     "needs": "speech-model-offered",
-    "file": "src/shared/sidecar/row.ts",
-    "line": 393,
+    "file": "src/renderer/src/components/SettingsPanel.tsx",
+    "line": 253,
     "newHome": "settings panel (§3.9), the AI helper row",
-    "note": "The model list's speech model line while it is not on disk, beside its sized press."
+    "note": "The speech model's choice of three: the legend over its three lines (since 2026-11-20)."
   },
   {
     "label": "Get",
@@ -8473,15 +8473,14 @@
     "note": "The speech model's sized press, \"Get the speech model · 464 MB\" on screen: speechModelLabel writes it as `Get ${SPEECH_MODEL_LABEL} · ${size}`, so \"Get\" is its one static piece at a word boundary."
   },
   {
-    "label": "· on this machine",
+    "label": "on this machine",
     "match": "text",
     "home": "settings",
     "needs": "speech-model-present",
-    "part": true,
     "file": "src/shared/sidecar/row.ts",
-    "line": 392,
+    "line": 429,
     "newHome": "settings panel (§3.9), the AI helper row",
-    "note": "\"Speech model · 464 MB · on this machine\" once it is on disk."
+    "note": "A speech model's line once it is on disk: \"Small · 464 MB · fastest · on this machine\", ON_THIS_MACHINE its own text after the separator."
   },
   {
     "label": "Getting",
@@ -8490,9 +8489,9 @@
     "needs": "speech-model-fetching",
     "part": true,
     "file": "src/shared/sidecar/row.ts",
-    "line": 400,
+    "line": 433,
     "newHome": "settings panel (§3.9), the AI helper row",
-    "note": "The speech model's line while its press fetches it: \"Getting the speech model… 42%\" (speechModelRow), the label and the percent their own pieces."
+    "note": "The line of the model being fetched: \"Getting the speech model… 42%\" (speechFetchText), on that model's line whatever is chosen."
   },
   {
     "label": "Stop getting the speech model",
@@ -8503,6 +8502,106 @@
     "line": 55,
     "newHome": "settings panel (§3.9), the AI helper row",
     "note": "The fetch's X beside it: main aborts the request, the helper stops at its next chunk (asr:modelCancel)."
+  },
+  {
+    "label": "Small",
+    "match": "text",
+    "home": "settings",
+    "needs": "speech-models-choice",
+    "file": "src/shared/asr/speechModel.ts",
+    "line": 54,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "The speech model's line for Small in the choice of three (a radio in its label): its size, its hint, and on this machine or its sized press."
+  },
+  {
+    "label": "Medium",
+    "match": "text",
+    "home": "settings",
+    "needs": "speech-models-choice",
+    "file": "src/shared/asr/speechModel.ts",
+    "line": 67,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "The speech model's line for Medium in the choice of three (a radio in its label): its size, its hint, and on this machine or its sized press."
+  },
+  {
+    "label": "Large",
+    "match": "text",
+    "home": "settings",
+    "needs": "speech-models-choice",
+    "file": "src/shared/asr/speechModel.ts",
+    "line": 80,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "The speech model's line for Large in the choice of three (a radio in its label): its size, its hint, and on this machine or its sized press."
+  },
+  {
+    "label": "fastest",
+    "match": "text",
+    "home": "settings",
+    "needs": "speech-models-choice",
+    "file": "src/shared/asr/speechModel.ts",
+    "line": 55,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "A speech model's one honest hint, after its size; no claim about any one language."
+  },
+  {
+    "label": "more accurate, slower",
+    "match": "text",
+    "home": "settings",
+    "needs": "speech-models-choice",
+    "file": "src/shared/asr/speechModel.ts",
+    "line": 68,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "A speech model's one honest hint, after its size; no claim about any one language."
+  },
+  {
+    "label": "most accurate, slowest",
+    "match": "text",
+    "home": "settings",
+    "needs": "speech-models-choice",
+    "file": "src/shared/asr/speechModel.ts",
+    "line": 81,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "A speech model's one honest hint, after its size; no claim about any one language."
+  },
+  {
+    "label": "used by Transcribe",
+    "match": "text",
+    "home": "settings",
+    "needs": "speech-models-choice",
+    "file": "src/shared/sidecar/row.ts",
+    "line": 427,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "On the chosen speech model's line only (USED_BY_TRANSCRIBE): the one every Transcribe uses. Choosing never downloads."
+  },
+  {
+    "label": "Another speech model is downloading. Stop it first, or wait for it to finish",
+    "match": "text",
+    "home": "settings",
+    "needs": "speech-model-busy",
+    "file": "src/shared/asr/speechModel.ts",
+    "line": 140,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "Under the three lines while one model is fetched and another has a press: main fetches one model at a time (SPEECH_MODEL_BUSY)."
+  },
+  {
+    "label": "Another speech model is downloading. Stop it first, or wait for it to finish",
+    "match": "title",
+    "home": "settings",
+    "needs": "speech-model-busy-press",
+    "file": "src/shared/asr/speechModel.ts",
+    "line": 140,
+    "newHome": "settings panel (§3.9), the AI helper row",
+    "note": "The greyed press of a model not being fetched, while another is."
+  },
+  {
+    "label": "Another speech model is downloading. Stop it first, or wait for it to finish",
+    "match": "title",
+    "home": "upload",
+    "needs": "speech-busy-pool",
+    "file": "src/shared/asr/speechModel.ts",
+    "line": 140,
+    "newHome": "Shelf tile Upload",
+    "note": "The pool's press for the chosen model, greyed while another model is fetched from Settings; that fetch's X stays on its line in Settings."
   },
   {
     "label": "needs the speech model",

@@ -2,7 +2,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createElement, isValidElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { formatBytes } from '@shared/assets/pack'
-import { STOP_SPEECH_MODEL, speechModelLabel } from '@shared/asr/speechModel'
+import {
+  SPEECH_MODEL_BUSY,
+  SPEECH_MODEL_SETTING,
+  STOP_SPEECH_MODEL,
+  speechModelLabel,
+  speechModelPin,
+  type SpeechModelName,
+  type SpeechModelProgress,
+  type SpeechModelStatus
+} from '@shared/asr/speechModel'
 import { HELPER_PYTHON_MISSING } from '@shared/sidecar/helperPython'
 import { HELPER_IN_USE_ELSEWHERE, HELPER_PRESET, HELPER_WORKING } from '@shared/sidecar/install'
 import { packHosts } from '@shared/sidecar/pack'
@@ -123,15 +132,24 @@ const readyPack = (over: Partial<Extract<SidecarStatus, { state: 'ready' }>> = {
 })
 
 const SPEECH: ModelStatus = { present: false, bytes: 486_539_264, label: 'the speech model', host: 'huggingface.co' }
+/** What main answers for a model: its pinned bytes, on disk as `disk` says. */
+const disk: Record<SpeechModelName, boolean> = { small: false, medium: false, 'large-v3': false }
+const statusOf = (model: SpeechModelName, present = disk[model]): SpeechModelStatus => ({ ...SPEECH, present, bytes: speechModelPin(model).bytes, model })
+/** The settings file's choice, as main keeps it. */
+let chosen: SpeechModelName = 'small'
 
 const forge = {
   installHelper: vi.fn(async (_options: { repair?: boolean; update?: boolean }) => ({ id: 'h1', presetId: HELPER_PRESET }) as unknown as Job),
   removeHelper: vi.fn(async (_options: { models: boolean }) => undefined),
   checkHelperAgain: vi.fn(async () => undefined),
   helperModelsBytes: vi.fn(async (): Promise<number | null> => 0),
-  speechModel: vi.fn(async (_request: { download?: boolean }) => ({ ...SPEECH })),
+  speechModel: vi.fn(async (request: { download?: boolean; model?: SpeechModelName }) => statusOf(request.model ?? chosen)),
   cancelSpeechModel: vi.fn(async () => undefined),
-  onSpeechModelProgress: vi.fn((_cb: unknown) => () => undefined)
+  onSpeechModelProgress: vi.fn((_cb: (update: SpeechModelProgress) => void) => () => undefined),
+  setSetting: vi.fn(async (key: string, value: unknown) => {
+    if (key === SPEECH_MODEL_SETTING) chosen = value as SpeechModelName
+    return {}
+  })
 }
 
 function show(status: SidecarStatus | null, over: Partial<ReturnType<typeof state>> = {}): void {
@@ -140,6 +158,8 @@ function show(status: SidecarStatus | null, over: Partial<ReturnType<typeof stat
 
 beforeEach(() => {
   for (const spy of Object.values(forge)) spy.mockClear()
+  Object.assign(disk, { small: false, medium: false, 'large-v3': false })
+  chosen = 'small'
   vi.stubGlobal('window', { forge })
 })
 
@@ -331,35 +351,204 @@ describe('the presses reach the bridge', () => {
   })
 })
 
-describe('the speech model in the row', () => {
-  it('is the sized press while it is not on disk, and the press fetches it', async () => {
-    show(readyPack(), { speechModel: { ...SPEECH } })
-    const get = button(speechModelLabel(SPEECH))
-    expect(get, 'Get the speech model').toBeTruthy()
-    forge.speechModel.mockImplementationOnce(async () => ({ ...SPEECH, present: true }))
-    await press(get, 'Get the speech model')
-    expect(forge.speechModel.mock.calls.map((c) => c[0])).toEqual([{ download: true }])
-    expect(words(markup())).toContain(`Speech model · ${formatBytes(SPEECH.bytes)} · on this machine`)
+describe('the speech model in the row: a choice of three', () => {
+  /** Small on this machine and chosen, Medium and Large not: every model known, as the row shows it once asked. */
+  const three = (choice: SpeechModelName = 'small', fetching: SpeechModelProgress & { model: SpeechModelName } | null = null) => {
+    disk.small = true
+    chosen = choice
+    const speechModels = { small: statusOf('small'), medium: statusOf('medium'), 'large-v3': statusOf('large-v3') }
+    show(readyPack(), { speechModels, speechChoice: choice, speechModel: speechModels[choice], speechFetch: fetching })
+  }
+  const lineOf = (model: SpeechModelName): Host[] => {
+    const all = section()
+    const at = all.findIndex((h) => h.props['data-speech-line'] === model)
+    expect(at, `the ${model} line`).toBeGreaterThanOrEqual(0)
+    const html = renderToStaticMarkup(createElement('div', null, all[at].props.children as ReactNode))
+    return [{ type: 'line', props: { words: words(html) } }, ...hosts(all[at].props.children as ReactNode)]
+  }
+  const wordsOf = (model: SpeechModelName): string => String(lineOf(model)[0].props.words)
+  const getOf = (model: SpeechModelName): Host | undefined => section().find((h) => h.type === 'button' && h.props['data-speech-get'] === model)
+  const radioOf = (model: SpeechModelName): Host | undefined => section().find((h) => h.type === 'input' && h.props.type === 'radio' && h.props.value === model)
+  /** A radio's onChange starts the choice and returns nothing: let its asks land. */
+  const settle = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0))
+  const downloads = (): unknown[] => forge.speechModel.mock.calls.map((c) => c[0]).filter((r) => (r as { download?: boolean }).download === true)
+
+  it('reads, line by line: label, size, hint, on this machine or its own sized press, and which one Transcribe uses', () => {
+    three()
+    expect(wordsOf('small')).toBe(`Small · ${formatBytes(486_212_372)} · fastest · on this machine · used by Transcribe`)
+    expect(wordsOf('medium')).toBe(`Medium · ${formatBytes(1_530_571_735)} · more accurate, slower ${speechModelLabel({ bytes: 1_530_571_735 })}`)
+    expect(wordsOf('large-v3')).toBe(`Large · ${formatBytes(3_090_835_702)} · most accurate, slowest ${speechModelLabel({ bytes: 3_090_835_702 })}`)
+    expect(getOf('small'), 'no press for a model on this machine').toBeUndefined()
+    expect(getOf('medium')?.props.disabled).toBe(false)
+    // Large chosen and not on this machine: marked, with its press; Small still says it is here.
+    three('large-v3')
+    expect(wordsOf('large-v3')).toContain('most accurate, slowest · used by Transcribe')
+    expect(wordsOf('small')).toBe(`Small · ${formatBytes(486_212_372)} · fastest · on this machine`)
+    expect(getOf('large-v3')?.props.disabled).toBe(false)
   })
 
-  it('has an X while it is being fetched, which asks main to cancel; none before or after', async () => {
-    show(readyPack(), { speechModel: { ...SPEECH } })
-    const xOf = (): Host[] => section().filter((h) => h.type === 'button' && h.props.title === STOP_SPEECH_MODEL)
-    expect(xOf()).toEqual([])
-    useEditor.setState({ speechFetch: { progress: 0.42 } })
-    expect(words(markup())).toContain('Getting the speech model… 42%')
-    expect(xOf()).toHaveLength(1)
-    expect(xOf()[0].props['aria-label']).toBe(STOP_SPEECH_MODEL)
-    press(xOf()[0], 'the X')
+  it('is one radio group under the legend "Speech model", each choice in its own label, the chosen one checked', () => {
+    three('medium')
+    const html = markup()
+    expect(html).toMatch(/<fieldset data-speech-model=""[^>]*><legend[^>]*>Speech model<\/legend>/)
+    const radios = section().filter((h) => h.type === 'input' && h.props.type === 'radio')
+    expect(radios.map((r) => r.props.value)).toEqual(['small', 'medium', 'large-v3'])
+    expect(new Set(radios.map((r) => r.props.name)).size).toBe(1)
+    expect(radios.filter((r) => r.props.checked).map((r) => r.props.value)).toEqual(['medium'])
+    for (const model of ['small', 'medium', 'large-v3'] as const) expect(lineOf(model).some((h) => h.type === 'label'), `${model} in a label`).toBe(true)
+  })
+
+  it('choosing writes the setting and asks that model, and NEVER downloads', async () => {
+    three()
+    await (radioOf('medium')!.props.onChange as () => void)()
+    await settle()
+    expect(forge.setSetting.mock.calls).toEqual([[SPEECH_MODEL_SETTING, 'medium']])
+    expect(forge.speechModel.mock.calls.map((c) => c[0])).toEqual([{ model: 'medium' }])
+    expect(downloads()).toEqual([])
+    expect(state().speechChoice).toBe('medium')
+    // Transcribe's gate is the chosen model's: Medium is not here, though Small is.
+    expect(state().speechModel).toMatchObject({ model: 'medium', present: false })
+    expect(wordsOf('medium')).toContain('· used by Transcribe')
+    expect(wordsOf('small')).not.toContain('used by Transcribe')
+    // Large too, then back to Small: never a download.
+    await (radioOf('large-v3')!.props.onChange as () => void)()
+    await settle()
+    await (radioOf('small')!.props.onChange as () => void)()
+    await settle()
+    expect(downloads()).toEqual([])
+    expect(state().speechModel).toMatchObject({ model: 'small', present: true })
+  })
+
+  it('a choice moves Transcribe’s gate at once, to what is known of that model, even when its own ask then fails', async () => {
+    three('small')
+    forge.speechModel.mockImplementationOnce(async () => {
+      throw new Error('The AI helper stopped (code 1)')
+    })
+    await state().chooseSpeechModel('medium')
+    expect(state().speechChoice).toBe('medium')
+    expect(state().speechModel).toMatchObject({ model: 'medium', present: false })
+    // Nothing known of it: no status, so every Transcribe stays greyed and the panels ask again.
+    show(readyPack(), { speechModels: { small: statusOf('small', true) }, speechChoice: 'small', speechModel: statusOf('small', true) })
+    forge.speechModel.mockImplementationOnce(async () => {
+      throw new Error('The AI helper stopped (code 1)')
+    })
+    await state().chooseSpeechModel('large-v3')
+    expect(state().speechModel).toBeNull()
+    expect(downloads()).toEqual([])
+  })
+
+  it('a choice main refuses leaves the choice as it was, and says so', async () => {
+    three()
+    forge.setSetting.mockImplementationOnce(async () => {
+      throw new Error(`Error invoking remote method 'settings:set': Error: There is no speech model "medium"`)
+    })
+    await (radioOf('medium')!.props.onChange as () => void)()
+    await settle()
+    expect(state().speechChoice).toBe('small')
+    expect(state().speechModel?.model).toBe('small')
+    expect(state().notices.map((n) => n.text)).toEqual(['There is no speech model "medium"'])
+    expect(forge.speechModel).not.toHaveBeenCalled()
+  })
+
+  it('a press fetches the model of ITS line, not the chosen one', async () => {
+    three('small')
+    forge.speechModel.mockImplementationOnce(async () => statusOf('large-v3', true))
+    await press(getOf('large-v3'), 'Large’s press')
+    expect(forge.speechModel.mock.calls.map((c) => c[0])).toEqual([{ download: true, model: 'large-v3' }])
+    expect(state().speechModels['large-v3']?.present).toBe(true)
+    // The choice and its gate are untouched: Small stays the one Transcribe uses.
+    expect(state().speechChoice).toBe('small')
+    expect(state().speechModel?.model).toBe('small')
+    expect(wordsOf('large-v3')).toBe(`Large · ${formatBytes(3_090_835_702)} · most accurate, slowest · on this machine`)
+  })
+
+  it('while one model is fetched: its progress and X on its own line, the other presses waiting and the reason said', () => {
+    three('small', { progress: 0.42, model: 'medium' })
+    expect(wordsOf('medium')).toBe(`Medium · ${formatBytes(1_530_571_735)} · more accurate, slower Getting the speech model… 42%`)
+    const xs = section().filter((h) => h.type === 'button' && h.props.title === STOP_SPEECH_MODEL)
+    expect(xs).toHaveLength(1)
+    expect(lineOf('medium').some((h) => h.type === 'button' && h.props.title === STOP_SPEECH_MODEL)).toBe(true)
+    expect(xs[0].props['aria-label']).toBe(STOP_SPEECH_MODEL)
+    press(xs[0], 'the X')
     expect(forge.cancelSpeechModel).toHaveBeenCalledTimes(1)
-    useEditor.setState({ speechFetch: null, speechModel: { ...SPEECH, present: true } })
-    expect(xOf()).toEqual([])
+    const large = getOf('large-v3')
+    expect(large?.props.disabled).toBe(true)
+    expect(large?.props.title).toBe(SPEECH_MODEL_BUSY)
+    expect(words(markup())).toContain(SPEECH_MODEL_BUSY)
+    // No fetch: no reason under the list, no X.
+    three('small')
+    expect(words(markup())).not.toContain(SPEECH_MODEL_BUSY)
+    expect(section().filter((h) => h.type === 'button' && h.props.title === STOP_SPEECH_MODEL)).toEqual([])
+  })
+
+  it('a choice made while another model is fetched: the fetch stays that model’s, and lands on its own line only', async () => {
+    three('small')
+    let land: (s: SpeechModelStatus) => void = () => undefined
+    let progress: (u: SpeechModelProgress) => void = () => undefined
+    forge.onSpeechModelProgress.mockImplementationOnce((cb) => {
+      progress = cb
+      return () => undefined
+    })
+    forge.speechModel.mockImplementationOnce(() => new Promise<SpeechModelStatus>((resolve) => (land = resolve)))
+    const pending = press(getOf('medium'), 'Medium’s press') as Promise<void>
+    await (radioOf('large-v3')!.props.onChange as () => void)()
+    await settle()
+    // Another model's progress (none should come, but main names each) is not this fetch's.
+    progress({ progress: 0.42, model: 'medium' })
+    progress({ progress: 0.9, model: 'large-v3' })
+    expect(state().speechFetch).toEqual({ progress: 0.42, model: 'medium' })
+    expect(wordsOf('medium')).toContain('Getting the speech model… 42%')
+    expect(wordsOf('large-v3')).toContain('· used by Transcribe')
+    expect(getOf('large-v3')?.props.disabled).toBe(true)
+    land(statusOf('medium', true))
+    await pending
+    expect(state().speechModels.medium?.present).toBe(true)
+    expect(state().speechChoice).toBe('large-v3')
+    expect(state().speechModel).toMatchObject({ model: 'large-v3', present: false })
+    expect(downloads()).toEqual([{ download: true, model: 'medium' }])
+  })
+
+  it('a failed fetch leaves the choice, and says so', async () => {
+    three('medium')
+    forge.speechModel.mockImplementationOnce(async () => statusOf('medium', false))
+    await press(getOf('medium'), 'Medium’s press')
+    expect(state().notices.map((n) => n.text)).toEqual(['The speech model could not be downloaded'])
+    expect(state().speechChoice).toBe('medium')
+    expect(state().speechFetch).toBeNull()
+    expect(getOf('medium')?.props.disabled).toBe(false)
+    forge.speechModel.mockImplementationOnce(async () => {
+      throw new Error("Error invoking remote method 'asr:model': SidecarError: huggingface.co could not be reached")
+    })
+    await press(getOf('medium'), 'Medium’s press')
+    expect(state().notices.map((n) => n.text)).toContain('huggingface.co could not be reached')
+    expect(state().speechChoice).toBe('medium')
+    expect(state().speechModel).toMatchObject({ model: 'medium', present: false })
+  })
+
+  it('asks after all three and the choice for the row, never downloading; a choice made meanwhile is not set back', async () => {
+    chosen = 'large-v3'
+    show(readyPack())
+    await state().refreshSpeechModels()
+    expect(forge.speechModel.mock.calls.map((c) => c[0])).toEqual([{}, { model: 'small' }, { model: 'medium' }, { model: 'large-v3' }])
+    expect(downloads()).toEqual([])
+    expect(state().speechChoice).toBe('large-v3')
+    expect(Object.keys(state().speechModels).sort()).toEqual(['large-v3', 'medium', 'small'])
+    expect(state().speechModel?.model).toBe('large-v3')
+    // A status ask of the old choice, answered after a new choice: the new choice stands.
+    let answer: (s: SpeechModelStatus) => void = () => undefined
+    forge.speechModel.mockImplementationOnce(() => new Promise<SpeechModelStatus>((resolve) => (answer = resolve)))
+    const asking = state().refreshSpeechModel()
+    await state().chooseSpeechModel('small')
+    answer(statusOf('large-v3'))
+    await asking
+    expect(state().speechChoice).toBe('small')
+    expect(state().speechModel?.model).toBe('small')
   })
 
   it('says, beside a running helper, what the model presses need from the network; not before there is one (§16.40 (d))', async () => {
     const { MODEL_PRESSES_NETWORK } = await import('@shared/sidecar/row')
     for (const host of ['huggingface.co', '*.hf.co', 'storage.googleapis.com', 'HTTPS_PROXY']) expect(MODEL_PRESSES_NETWORK).toContain(host)
-    show(readyPack(), { speechModel: { ...SPEECH } })
+    show(readyPack(), { speechModel: statusOf('small') })
     expect(words(markup())).toContain(MODEL_PRESSES_NETWORK)
     show({ state: 'ready', hello: hello([]), source: { kind: 'env', python: 'C:\\Python312\\python.exe' } })
     expect(words(markup())).toContain(MODEL_PRESSES_NETWORK)
@@ -370,7 +559,11 @@ describe('the speech model in the row', () => {
   })
 
   it('is not offered while the helper cannot transcribe', () => {
-    show(readyPack({ hello: hello(THIS_PACK.expects.filter((m) => m !== SIDECAR_METHODS.transcribe)) }), { speechModel: { ...SPEECH } })
+    show(readyPack({ hello: hello(THIS_PACK.expects.filter((m) => m !== SIDECAR_METHODS.transcribe)) }), {
+      speechModels: { small: statusOf('small'), medium: statusOf('medium'), 'large-v3': statusOf('large-v3') },
+      speechChoice: 'small'
+    })
     expect(words(markup())).not.toContain('Get the speech model')
+    expect(markup()).not.toContain('data-speech-model')
   })
 })

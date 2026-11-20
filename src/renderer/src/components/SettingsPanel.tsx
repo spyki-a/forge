@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { X } from 'lucide-react'
 import { isLoopback, type LlmProviderChoice } from '@shared/director/provider'
 import { formatBytes } from '@shared/assets/pack'
-import { STOP_SPEECH_MODEL } from '@shared/asr/speechModel'
+import { SPEECH_MODEL_BUSY, SPEECH_MODEL_HOST, SPEECH_MODEL_NAMES, STOP_SPEECH_MODEL } from '@shared/asr/speechModel'
 import { SIDECAR_METHODS } from '@shared/sidecar/protocol'
 import { HELPER_PACK } from '@shared/sidecar/packManifest'
 import { helperCan } from '@shared/sidecar/helperCan'
@@ -10,7 +10,9 @@ import {
   MODEL_PRESSES_NETWORK,
   helperRow,
   packFactsFor,
-  speechModelRow,
+  ON_THIS_MACHINE,
+  USED_BY_TRANSCRIBE,
+  speechModelLines,
   type HelperActionKind,
   type HelperDot,
   type HelperRow,
@@ -167,11 +169,13 @@ export function HelperSection(): ReactNode {
   const setRemoveModels = useEditor((s) => s.setRemoveModels)
   const cancelRemove = useEditor((s) => s.cancelRemove)
   const confirmRemove = useEditor((s) => s.confirmRemove)
-  const speechModel = useEditor((s) => s.speechModel)
+  const speechModels = useEditor((s) => s.speechModels)
+  const speechChoice = useEditor((s) => s.speechChoice)
   const speechFetch = useEditor((s) => s.speechFetch)
   const getSpeechModel = useEditor((s) => s.getSpeechModel)
   const cancelSpeechModel = useEditor((s) => s.cancelSpeechModel)
-  const speech = speechModelRow(speechModel, helperCan(status, SIDECAR_METHODS.transcribe), speechFetch)
+  const chooseSpeechModel = useEditor((s) => s.chooseSpeechModel)
+  const speech = speechModelLines(speechModels, speechChoice, helperCan(status, SIDECAR_METHODS.transcribe), speechFetch)
   const waiting = ui.busy !== null ? ACTION_BUSY[ui.busy] : null
   // A helper job running: every press here waits for it, with its reason (row.ts).
   const jobReason = row.actions.find((a) => a.disabled !== undefined)?.disabled
@@ -239,26 +243,77 @@ export function HelperSection(): ReactNode {
         </div>
       )}
       {ui.error && <p className="text-[10.5px] leading-snug text-red-800">{ui.error}</p>}
+      {/*
+        The speech model: a choice of three (since 2026-11-20). One radio group, so Tab reaches it and the arrows
+        move the choice; choosing NEVER downloads. Each absent model has its own sized press, which fetches the
+        model of its line; one fetch at a time, the other presses waiting for it with the reason said under them.
+      */}
       {speech && (
-        <div data-speech-model="" className="flex items-center justify-between gap-2 text-[10.5px] text-ink-400">
-          <span className="min-w-0">{speech.text}</span>
-          {speech.get !== undefined && (
-            <button
-              type="button"
-              className={small}
-              disabled={jobReason !== undefined}
-              title={jobReason ?? (speechModel ? `Fetched once from ${speechModel.host}, then kept on this computer: Transcribe needs it` : undefined)}
-              onClick={() => void getSpeechModel()}
-            >
-              {speech.get}
-            </button>
+        <fieldset data-speech-model="" className="space-y-0.5 text-[10.5px] text-ink-400">
+          <legend className="text-ink-300">Speech model</legend>
+          {speech.map((line) => (
+            <div key={line.name} data-speech-line={line.name} className="flex items-center justify-between gap-2">
+              <label className="flex min-w-0 items-center gap-1.5">
+                <input
+                  type="radio"
+                  name="forge-speech-model"
+                  value={line.name}
+                  checked={line.chosen}
+                  onChange={() => void chooseSpeechModel(line.name)}
+                />
+                <span className="min-w-0">
+                  <span className={line.chosen ? 'text-ink-200' : undefined}>{line.label}</span>
+                  <span className="text-ink-500">
+                    {' · '}
+                    {line.size}
+                    {' · '}
+                    {line.hint}
+                  </span>
+                  {line.state === 'present' && (
+                    <span>
+                      {' · '}
+                      {ON_THIS_MACHINE}
+                    </span>
+                  )}
+                  {line.chosen && (
+                    <span data-speech-chosen="" className="text-ink-200">
+                      {' · '}
+                      {USED_BY_TRANSCRIBE}
+                    </span>
+                  )}
+                </span>
+              </label>
+              {line.get !== undefined && (
+                <button
+                  type="button"
+                  data-speech-get={line.name}
+                  className={`shrink-0 ${small}`}
+                  disabled={jobReason !== undefined || line.busy === true}
+                  title={
+                    jobReason ??
+                    (line.busy ? SPEECH_MODEL_BUSY : `Fetched once from ${speechModels[line.name]?.host ?? SPEECH_MODEL_HOST}, then kept on this computer: Transcribe needs it when it is chosen`)
+                  }
+                  onClick={() => void getSpeechModel(line.name)}
+                >
+                  {line.get}
+                </button>
+              )}
+              {line.progress !== undefined && (
+                <span className="flex shrink-0 items-center gap-1">
+                  <span>{line.progress}</span>
+                  <button type="button" data-speech-cancel="" className={small} title={STOP_SPEECH_MODEL} aria-label={STOP_SPEECH_MODEL} onClick={cancelSpeechModel}>
+                    <X size={10} />
+                  </button>
+                </span>
+              )}
+            </div>
+          ))}
+          {speech.some((line) => line.busy) && (
+            <p data-speech-busy="" className="leading-snug text-ink-500">
+              {SPEECH_MODEL_BUSY}
+            </p>
           )}
-          {speechFetch && (
-            <button type="button" data-speech-cancel="" className={small} title={STOP_SPEECH_MODEL} aria-label={STOP_SPEECH_MODEL} onClick={cancelSpeechModel}>
-              <X size={10} />
-            </button>
-          )}
-        </div>
+        </fieldset>
       )}
       {/* Model presses go through the helper's own fetchers (§16.40 (d)): said wherever one can be pressed. */}
       {status?.state === 'ready' && (
@@ -307,8 +362,9 @@ function SettingsCard({ onClose }: { onClose: () => void }): ReactNode {
   const focus = useEditor((s) => s.settingsFocus)
   const setFocus = useEditor((s) => s.setSettingsFocus)
   const helperStatus = useEditor((s) => s.helperStatus)
-  const speechModel = useEditor((s) => s.speechModel)
-  const refreshSpeechModel = useEditor((s) => s.refreshSpeechModel)
+  const speechModels = useEditor((s) => s.speechModels)
+  const speechChoice = useEditor((s) => s.speechChoice)
+  const refreshSpeechModels = useEditor((s) => s.refreshSpeechModels)
   const helperBox = useRef<HTMLDivElement>(null)
   const [key, setKey] = useState('')
   const canTranscribe = helperCan(helperStatus, SIDECAR_METHODS.transcribe)
@@ -319,10 +375,11 @@ function SettingsCard({ onClose }: { onClose: () => void }): ReactNode {
     void refresh()
   }, [refresh])
 
-  // The speech model's line: asked once the helper can transcribe and nobody has asked. Never downloads.
+  // The speech models' lines and the choice: asked once the helper can transcribe and one of them is not known. Never downloads.
+  const speechKnown = speechChoice !== null && SPEECH_MODEL_NAMES.every((name) => speechModels[name] !== undefined)
   useEffect(() => {
-    if (canTranscribe && speechModel === null) void refreshSpeechModel()
-  }, [canTranscribe, speechModel, refreshSpeechModel])
+    if (canTranscribe && !speechKnown) void refreshSpeechModels()
+  }, [canTranscribe, speechKnown, refreshSpeechModels])
 
   // A pointer's press ("needs the AI helper"): the row in view, once.
   useEffect(() => {

@@ -25,7 +25,7 @@ import { FROM_WORDS_LISTED_NOTE } from '@shared/director/fromWords'
 import { LIBRARY_GRAPHIC_RULE } from '@shared/graphics/apply'
 import { ON_SCREEN_REASON } from '@shared/graphics/budget'
 import { LIBRARY_GRAPHICS } from '@shared/graphics/library'
-import { HARNESS_HELPER_PACK, HARNESS_LINKS, HARNESS_SPEECH_MODEL_BYTES, harnessHelperStatus } from './bridge'
+import { HARNESS_HELPER_PACK, HARNESS_LINKS, harnessHelperStatus } from './bridge'
 import { harnessSubjectTrack } from './reframeStub'
 import { harnessDropsTranscript, harnessGraphicsRun, type HarnessWordSource } from './graphicsStub'
 import { useCatalog } from '../catalog'
@@ -34,7 +34,7 @@ import { SHELF_TOOLS } from '../components/shelf/tools'
 import type { SidecarStatus } from '@shared/sidecar/status'
 import { HELPER_JOB_INPUT, HELPER_PRESET, INSTALL_STAGES, downloadingText } from '@shared/sidecar/install'
 import { packBytes } from '@shared/sidecar/pack'
-import { SPEECH_MODEL_HOST, SPEECH_MODEL_LABEL } from '@shared/asr/speechModel'
+import { SPEECH_MODEL_HOST, SPEECH_MODEL_LABEL, SPEECH_MODEL_NAMES, speechModelPin, type SpeechModelName, type SpeechModelStatus } from '@shared/asr/speechModel'
 
 /**
  * The UI census: is every control still on screen, in its own place?
@@ -1283,9 +1283,26 @@ function harnessReadyHelper(): SidecarStatus {
   return harnessHelperStatus('ready')
 }
 
-/** The speech model as `asr.model` answers for it, on disk or not (bridge.ts `HARNESS_SPEECH_MODEL_BYTES`). */
-const speechModelIs = (present: boolean): void =>
-  useEditor.setState({ speechModel: { present, bytes: HARNESS_SPEECH_MODEL_BYTES, label: SPEECH_MODEL_LABEL, host: SPEECH_MODEL_HOST } })
+/**
+ * The three speech models as `asr.model` answers for each (on disk or not, each
+ * model's bytes from the shared table, as the bridge's stub has them), and the
+ * choice: every model known, so the Settings card asks nothing over them.
+ */
+const speechModelsAre = (onDisk: Partial<Record<SpeechModelName, boolean>>, choice: SpeechModelName = 'small'): void => {
+  const speechModels = Object.fromEntries(
+    SPEECH_MODEL_NAMES.map((model) => [
+      model,
+      { present: onDisk[model] === true, bytes: speechModelPin(model).bytes, label: SPEECH_MODEL_LABEL, host: SPEECH_MODEL_HOST, model }
+    ])
+  ) as Record<SpeechModelName, SpeechModelStatus>
+  useEditor.setState({ speechModels, speechChoice: choice, speechModel: speechModels[choice] })
+}
+
+/** Small chosen, on disk or not; Medium and Large not on disk. */
+const speechModelIs = (present: boolean): void => speechModelsAre({ small: present })
+
+/** A fetch in flight of `model`, at 42 %. */
+const speechFetching = (model: SpeechModelName): void => useEditor.setState({ speechFetch: { progress: 0.42, model } })
 
 /** The AI helper's install in EXPORT's list as main broadcasts it, presetId 'helper': downloading, with no helper up. */
 function helperInstalling(): Job {
@@ -1452,7 +1469,13 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
   'speech-model-present': async () => helperRowIn(harnessReadyHelper(), true),
   /* the speech model being fetched: "Getting the speech model… 42%" in the row's model list, and its X */
   'speech-model-fetching': async () =>
-    helperRowIn(harnessReadyHelper(), false, () => useEditor.setState({ speechFetch: { progress: 0.42 } })),
+    helperRowIn(harnessReadyHelper(), false, () => speechFetching('small')),
+  /* the choice of three: Small on this machine and chosen, Medium and Large each with its sized press */
+  'speech-models-choice': async () => helperRowIn(harnessReadyHelper(), true),
+  /* Medium being fetched while Small is chosen: Large's press waits, the sentence saying why under the list */
+  'speech-model-busy': async () => helperRowIn(harnessReadyHelper(), true, () => speechFetching('medium')),
+  /* the same state, for the greyed press's title: a row is one label in one home and state, and the sentence and the title are both SPEECH_MODEL_BUSY */
+  'speech-model-busy-press': async (env) => RECIPES['speech-model-busy'](env),
   /* the Media pool with a video in it, the helper up and no speech model: the bar over the pool with its sized press */
   'speech-model-missing': async (env) => poolWithoutSpeechModel(env),
   /* the Media pool before main has answered: Transcribe greyed "the AI helper is starting" */
@@ -1464,7 +1487,14 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
   /* …while the press fetches it: its progress on the button and the X beside it */
   'speech-fetching-pool': async (env) => {
     const built = await poolWithoutSpeechModel(env)
-    useEditor.setState({ speechFetch: { progress: 0.42 } })
+    speechFetching('small')
+    return built
+  },
+  /* Medium chosen and not on disk while Large is fetched from Settings: the pool's press for Medium waits, its title saying why */
+  'speech-busy-pool': async (env) => {
+    const built = await poolWithoutSpeechModel(env)
+    speechModelsAre({ small: true }, 'medium')
+    speechFetching('large-v3')
     return built
   },
   /*

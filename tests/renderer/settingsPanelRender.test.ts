@@ -60,8 +60,12 @@ beforeEach(() => {
     cancelRemove: () => undefined,
     confirmRemove: async () => undefined,
     speechModel: null,
+    speechChoice: null,
+    speechModels: {},
     speechFetch: null,
     refreshSpeechModel: async () => undefined,
+    refreshSpeechModels: async () => undefined,
+    chooseSpeechModel: async () => undefined,
     getSpeechModel: async () => undefined
   }
 })

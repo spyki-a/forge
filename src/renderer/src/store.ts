@@ -277,7 +277,16 @@ import { cropAt } from '@shared/render/crop'
 import { KEYED_PROPERTIES, MASK_PROPERTIES } from '@shared/render/keyframes'
 import type { SidecarStatus } from '@shared/sidecar/status'
 import { helperErrorText, helperJobFrom, type HelperActionKind, type HelperJob } from '@shared/sidecar/row'
-import { SPEECH_MODEL_LABEL, SPEECH_MODEL_NOT_DOWNLOADED, type SpeechModelProgress } from '@shared/asr/speechModel'
+import {
+  SPEECH_MODEL_LABEL,
+  SPEECH_MODEL_NAMES,
+  SPEECH_MODEL_NOT_DOWNLOADED,
+  SPEECH_MODEL_SETTING,
+  speechModelName,
+  type SpeechModelName,
+  type SpeechModelProgress,
+  type SpeechModelStatus
+} from '@shared/asr/speechModel'
 
 /*
  * Re-exported so every existing import keeps working; the table itself moved to
@@ -961,14 +970,26 @@ interface EditorState {
   setRemoveModels: (models: boolean) => void
   cancelRemove: () => void
   confirmRemove: () => Promise<void>
-  /** `speechModel({})`'s answer (docs/CLIPS.md §16.49); null until asked, or when the ask failed. */
-  speechModel: ModelStatus | null
-  /** The speech model's download while its press is fetching it; null otherwise. */
-  speechFetch: SpeechModelProgress | null
-  /** Ask whether the speech model is on disk. Never downloads. */
+  /**
+   * The CHOSEN speech model's status (docs/CLIPS.md §16.49): what every
+   * Transcribe is gated on. null until asked, when the ask failed, or right
+   * after a choice of a model nobody has asked about (the panels then ask).
+   */
+  speechModel: SpeechModelStatus | null
+  /** The app-wide choice as main read it (the settings file's `speechModel`); null until main has answered. */
+  speechChoice: SpeechModelName | null
+  /** Each model's status as main last answered it: the Settings row's three lines. */
+  speechModels: Partial<Record<SpeechModelName, SpeechModelStatus>>
+  /** The one fetch in flight and the model it is OF (the model of the line pressed, whatever is chosen since); null otherwise. */
+  speechFetch: (SpeechModelProgress & { model: SpeechModelName }) | null
+  /** Ask whether the chosen speech model is on disk (and which it is). Never downloads. */
   refreshSpeechModel: () => Promise<void>
-  /** The sized press: fetch the speech model, its progress in `speechFetch`. */
-  getSpeechModel: () => Promise<void>
+  /** Ask after all three models and the choice, for the Settings row. Never downloads. */
+  refreshSpeechModels: () => Promise<void>
+  /** Choose the model Transcribe uses: writes the setting, then asks that model's status. NEVER downloads. */
+  chooseSpeechModel: (name: SpeechModelName) => Promise<void>
+  /** The sized press for one model (the chosen one when none is named): fetch it, its progress in `speechFetch`. */
+  getSpeechModel: (name?: SpeechModelName) => Promise<void>
   /** The press's X while it fetches: main cancels the fetch, and the press ends without a notice. */
   cancelSpeechModel: () => void
 
@@ -1641,6 +1662,21 @@ const collecting = new Set<string>()
 const reported = new Set<string>()
 /** Each Get transcript's turn: an answer that arrives after a newer ask is dropped. */
 let urlFetchSeq = 0
+/** Each choice of speech model's turn: a status ask of the chosen model begun before a choice does not set the choice back. */
+let speechChoiceSeq = 0
+
+/**
+ * One speech model's status as main answered it: its line in the Settings
+ * row, and, when it is of the chosen model, the status every Transcribe is
+ * gated on. The two kept in step here only.
+ */
+function speechStatusIs(set: (fn: (s: EditorState) => Partial<EditorState>) => void, status: SpeechModelStatus): void {
+  const name = speechModelName(status.model)
+  set((s) => ({
+    speechModels: { ...s.speechModels, [name]: status },
+    ...(s.speechChoice === name ? { speechModel: status } : {})
+  }))
+}
 
 /**
  * The transcript a Clip it job's run was picked from.
@@ -2042,7 +2078,7 @@ export const useEditor = create<EditorState>((set, get) => ({
       // `models` exactly as the box was left: off unless it was ticked.
       await window.forge.removeHelper({ models: asked.models === true })
       // The models folder went with it: Transcribe asks again.
-      if (asked.models === true) set({ speechModel: null })
+      if (asked.models === true) set({ speechModel: null, speechModels: {} })
     } catch (err) {
       error = helperErrorText(err)
     }
@@ -2050,24 +2086,69 @@ export const useEditor = create<EditorState>((set, get) => ({
   },
 
   speechModel: null,
+  speechChoice: null,
+  speechModels: {},
   speechFetch: null,
   refreshSpeechModel: async () => {
+    const asked = speechChoiceSeq
     try {
-      const model = await window.forge.speechModel({})
-      set({ speechModel: model })
+      const status = await window.forge.speechModel({})
+      const name = speechModelName(status.model)
+      set((s) => {
+        const speechModels = { ...s.speechModels, [name]: status }
+        // A choice made while this was asked wins: the answer is still that model's status.
+        if (asked !== speechChoiceSeq) return { speechModels }
+        return { speechModels, speechChoice: name, speechModel: status }
+      })
     } catch {
       // Unknown stays unknown: Transcribe stays greyed, and the press is not offered without its size.
     }
   },
-  getSpeechModel: async () => {
-    if (get().speechFetch) return
-    set({ speechFetch: { progress: 0, message: `Getting ${SPEECH_MODEL_LABEL}` } })
-    const stop = window.forge.onSpeechModelProgress((update) => set({ speechFetch: update }))
+  refreshSpeechModels: async () => {
+    await Promise.all([
+      get().refreshSpeechModel(),
+      ...SPEECH_MODEL_NAMES.map(async (name) => {
+        try {
+          speechStatusIs(set, await window.forge.speechModel({ model: name }))
+        } catch {
+          // That line stays unknown: no press without main's size.
+        }
+      })
+    ])
+  },
+  chooseSpeechModel: async (name) => {
     try {
-      // `download: true` only here: the press that showed the size (§16.49).
-      const model = await window.forge.speechModel({ download: true })
-      set({ speechModel: model })
-      if (!model.present) get().notify(`${SPEECH_MODEL_LABEL[0].toUpperCase()}${SPEECH_MODEL_LABEL.slice(1)} could not be downloaded`)
+      await window.forge.setSetting(SPEECH_MODEL_SETTING, name)
+    } catch (err) {
+      // Refused (main names what it refused): the choice stays as it was.
+      get().notify(helperErrorText(err))
+      return
+    }
+    speechChoiceSeq++
+    // The gate moves at once: the known status of the new choice, or none, which the panels ask after.
+    set((s) => ({ speechChoice: name, speechModel: s.speechModels[name] ?? null }))
+    try {
+      // A status ask, never `download`: choosing never fetches (§0's click rule).
+      speechStatusIs(set, await window.forge.speechModel({ model: name }))
+    } catch {
+      // Unknown stays unknown.
+    }
+  },
+  getSpeechModel: async (name) => {
+    // One fetch at a time (main refuses another); the row greys the other presses meanwhile.
+    if (get().speechFetch) return
+    const model = name ?? get().speechChoice ?? get().speechModel?.model ?? null
+    if (model === null) return
+    set({ speechFetch: { progress: 0, message: `Getting ${SPEECH_MODEL_LABEL}`, model } })
+    // Only this fetch's updates: each names its model.
+    const stop = window.forge.onSpeechModelProgress((update) => {
+      if (update.model === undefined || update.model === model) set({ speechFetch: { ...update, model } })
+    })
+    try {
+      // `download: true` only here: the press that showed the size (§16.49), for the model of its own line.
+      const status = await window.forge.speechModel({ download: true, model })
+      speechStatusIs(set, status)
+      if (!status.present) get().notify(`${SPEECH_MODEL_LABEL[0].toUpperCase()}${SPEECH_MODEL_LABEL.slice(1)} could not be downloaded`)
     } catch (err) {
       const message = helperErrorText(err)
       // Its own X: nothing to tell.
@@ -6493,7 +6574,13 @@ export const useEditor = create<EditorState>((set, get) => ({
       const message = err instanceof Error ? err.message : String(err)
       // The model went from disk since it was asked (Remove with its box ticked, a cleaned folder): the helper's own
       // sentence for it (asr.py NOT_DOWNLOADED), so ask again and the press comes back.
-      if (message.includes(SPEECH_MODEL_NOT_DOWNLOADED)) set({ speechModel: null })
+      if (message.includes(SPEECH_MODEL_NOT_DOWNLOADED)) {
+        set((s) => {
+          const speechModels = { ...s.speechModels }
+          if (s.speechChoice) delete speechModels[s.speechChoice]
+          return { speechModel: null, speechModels }
+        })
+      }
       if (!/cancel/i.test(message)) notify(message)
     } finally {
       set((s) => {
