@@ -8657,6 +8657,100 @@
     "note": "The X beside the pool's press while it fetches."
   },
   {
+    "label": "New folder",
+    "match": "text",
+    "home": "upload",
+    "needs": "none",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 193,
+    "newHome": "Shelf tile Upload, its folders",
+    "note": "NEW_FOLDER: the small control beside the MEDIA heading, always there (a folder can be made before any file is in). Count 1: one text node beside its icon."
+  },
+  {
+    "label": "Fold this folder",
+    "match": "title",
+    "home": "upload",
+    "needs": "pool-folders",
+    "count": 3,
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 197,
+    "newHome": "Shelf tile Upload, its folders",
+    "note": "FOLD_FOLDER: the chevron on each folder header while it is open. Count 3: the recipe makes three folders (Ceremony, Reception, Empty), none folded, one chevron each."
+  },
+  {
+    "label": "Rename or remove this folder",
+    "match": "title",
+    "home": "upload",
+    "needs": "pool-folders",
+    "count": 3,
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 199,
+    "newHome": "Shelf tile Upload, its folders",
+    "note": "FOLDER_MENU_TITLE: the \"…\" button on each folder header, which opens the header’s menu. Count 3: one per folder of the three."
+  },
+  {
+    "label": "Drag files here to put them in this folder",
+    "match": "text",
+    "home": "upload",
+    "needs": "pool-folders",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 200,
+    "newHome": "Shelf tile Upload, its folders",
+    "note": "FOLDER_EMPTY: what an open folder with no file in it says instead of a grid. Count 1: only \"Empty\" has nothing in it."
+  },
+  {
+    "label": "Open this folder",
+    "match": "title",
+    "home": "upload",
+    "needs": "pool-folded",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 198,
+    "newHome": "Shelf tile Upload, its folders",
+    "note": "OPEN_FOLDER: the chevron of a folded folder. Count 1: the recipe folds Ceremony only."
+  },
+  {
+    "label": "Fold this folder",
+    "match": "title",
+    "home": "upload",
+    "needs": "pool-folded",
+    "count": 2,
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 197,
+    "newHome": "Shelf tile Upload, its folders",
+    "note": "FOLD_FOLDER on the two folders still open (Reception, Empty). Count 2."
+  },
+  {
+    "label": "Folder name",
+    "match": "placeholder",
+    "home": "upload",
+    "needs": "pool-rename",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 201,
+    "newHome": "Shelf tile Upload, its folders",
+    "note": "FOLDER_NAME_PLACEHOLDER on the field that replaces Reception’s name in its header while it is renamed. Count 1: one field."
+  },
+  {
+    "label": "There is already a folder called",
+    "match": "text",
+    "home": "upload",
+    "needs": "pool-rename",
+    "part": true,
+    "file": "src/shared/edit/folders.ts",
+    "line": 32,
+    "newHome": "Shelf tile Upload, its folders",
+    "note": "FOLDER_NAME_TAKEN: under the rename field, \"There is already a folder called “Ceremony”\" for the draft \"ceremony\" (names are unique without regard to case). One text node. Count 1."
+  },
+  {
+    "label": "Folder name",
+    "match": "placeholder",
+    "home": "upload",
+    "needs": "pool-new-folder",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 201,
+    "newHome": "Shelf tile Upload, its folders",
+    "note": "The field New folder opens under the last folder (here in an empty project, which then shows the list instead of \"Drop your photos and clips here\"). Count 1."
+  },
+  {
     "label": "install it in Settings",
     "match": "title",
     "home": "dock",
@@ -9509,5 +9603,65 @@
     "line": 647,
     "newHome": "Shelf tile Upload, the right-click menu on a tile",
     "note": "REMOVE_WAITS: Remove from project greyed while a reel, the grid or the Director is being built (removeWaits), since that build places clips of the files it read. The recipe sets the store's reelBuilding flag; no build runs. Count 1: the title is on the one Remove item (the question is not open)."
+  },
+  {
+    "label": "Move to",
+    "match": "text",
+    "home": "poolmenu",
+    "needs": "poolmenu-photo",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 194,
+    "newHome": "Shelf tile Upload, the right-click menu on a tile",
+    "note": "MOVE_TO: the submenu of folders, before the divider that sets Remove apart. Count 1; its list opens on hover, so in this state only its own row is on screen."
+  },
+  {
+    "label": "New folder…",
+    "match": "text",
+    "home": "poolmenu",
+    "needs": "poolmenu-move",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 195,
+    "newHome": "Shelf tile Upload, the right-click menu on a tile",
+    "note": "NEW_FOLDER_ITEM in Move to’s list (opened by the recipe’s pointerover): names a folder in place, then makes it with this file in it. Count 1."
+  },
+  {
+    "label": "No folder",
+    "match": "text",
+    "home": "poolmenu",
+    "needs": "poolmenu-move",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 196,
+    "newHome": "Shelf tile Upload, the right-click menu on a tile",
+    "note": "NO_FOLDER in Move to’s list, for a file in a folder (the recipe’s photo is in Ceremony). Count 1."
+  },
+  {
+    "label": "Rename",
+    "match": "text",
+    "home": "poolmenu",
+    "needs": "foldermenu",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 202,
+    "newHome": "Shelf tile Upload, the right-click menu on a folder's header",
+    "note": "RENAME_FOLDER: puts the folder’s name in place for typing. Count 1: the header menu holds one; only the overlay is counted."
+  },
+  {
+    "label": "Remove folder",
+    "match": "text",
+    "home": "poolmenu",
+    "needs": "foldermenu",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 203,
+    "newHome": "Shelf tile Upload, the right-click menu on a folder's header",
+    "note": "REMOVE_FOLDER: the folder goes, its files stay in the project in no folder. Count 1."
+  },
+  {
+    "label": "Its files stay in the project, in no folder",
+    "match": "title",
+    "home": "poolmenu",
+    "needs": "foldermenu",
+    "file": "src/renderer/src/components/MediaPool.tsx",
+    "line": 204,
+    "newHome": "Shelf tile Upload, the right-click menu on a folder's header",
+    "note": "REMOVE_FOLDER_NOTE: the title on Remove folder. Count 1."
   }
 ]

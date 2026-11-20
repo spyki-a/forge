@@ -68,10 +68,13 @@ export function MenuDivider(): ReactNode {
 export function Submenu({
   label,
   detail,
+  data,
   children
 }: {
   label: string
   detail?: string
+  /** A `data-*` attribute on its button, for the harness (name without the prefix, and its value). */
+  data?: [string, string]
   children: ReactNode
 }): ReactNode {
   const [open, setOpen] = useState(false)
@@ -81,7 +84,10 @@ export function Submenu({
       onPointerEnter={() => setOpen(true)}
       onPointerLeave={() => setOpen(false)}
     >
-      <button className="flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left text-[12px] text-ink-200 transition-colors hover:bg-ink-700">
+      <button
+        {...(data ? { [`data-${data[0]}`]: data[1] } : {})}
+        className="flex w-full items-center justify-between gap-3 px-3 py-1.5 text-left text-[12px] text-ink-200 transition-colors hover:bg-ink-700"
+      >
         <span>{label}</span>
         <span className="flex items-center gap-1 text-[10px] text-ink-500">
           {detail}

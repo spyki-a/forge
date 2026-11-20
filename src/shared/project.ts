@@ -2,6 +2,7 @@ import type { Project } from './timeline'
 import { emptyProject, newProjectId } from './timeline'
 import { relativeToProject } from './project/relink'
 import { checkSubjectTrack } from './reframe/reduce'
+import { repairFolders } from './edit/folders'
 
 /**
  * The on-disk project format.
@@ -232,7 +233,13 @@ export function deserializeProject(raw: unknown): ProjectFile {
       ? { name: String(file.app.name ?? 'Forge'), version: String(file.app.version ?? '0.0.0') }
       : { name: 'Forge', version: '0.0.0' },
     savedAt: typeof file.savedAt === 'string' ? file.savedAt : new Date(0).toISOString(),
-    project: merged,
+    /*
+     * The Upload panel's folders (edit/folders.ts): data a hand, a crash or
+     * another build left unsound (a file naming a folder the list lacks, a
+     * name twice, a name that is no string) is repaired rather than refused.
+     * A project with no folder data is the same object, as before folders.
+     */
+    project: repairFolders(merged),
     decisions: Array.isArray(file.decisions) ? (file.decisions as DecisionRecord[]) : []
   }
 }

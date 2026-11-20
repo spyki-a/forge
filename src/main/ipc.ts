@@ -42,6 +42,7 @@ import type { MaskTag } from '@shared/transitions/classify'
 import { entriesOfKind, isClipSticker, type ClipStickerMeta } from '@shared/assets/catalog'
 import { fileKey, toAsset } from './assets'
 import { locateAsset, probeImports, relinkable } from './imports'
+import { listDropped } from './dropFolder'
 import {
   captionsForExport,
   writeCaptionFrame,
@@ -362,6 +363,18 @@ export function registerIpc(getWindow: () => BrowserWindow | null, options: IpcO
 
     // A still ffmpeg cannot read (AVIF, HEIC) is converted first — imports.ts.
     return probeImports(paths as string[], projectFps)
+  })
+
+  /*
+   * A drop onto the Upload panel, read: each dropped folder as its own name
+   * and the media files in it (subfolders' too), the rest handed back as
+   * loose files (dropFolder.ts). Reads only.
+   */
+  ipcMain.handle('media:listDropped', async (_e, paths: unknown) => {
+    if (!Array.isArray(paths) || paths.some((p) => typeof p !== 'string')) {
+      throw new Error('A drop expects a list of paths')
+    }
+    return listDropped(paths as string[])
   })
 
   ipcMain.handle('dialog:pickMedia', async () => {

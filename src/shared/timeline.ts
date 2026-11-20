@@ -175,6 +175,13 @@ export interface MediaAsset {
 
   /** The Transcript tile's Speaker field: a lower third's `name`, a quote's speaker (docs/CLIPS.md §6.1, §6.6; §16.31). */
   speaker?: string
+
+  /**
+   * The Upload panel's folder this file is in, by name (`Project.folders`);
+   * absent for none. Project data only: never a folder on disk, never joined
+   * into a path (shared/edit/folders.ts).
+   */
+  folder?: string
 }
 
 /**
@@ -992,6 +999,14 @@ export interface Project {
   graphics?: GraphicsSettings
   /** Graphics waiting for the user's Keep before they are placed (docs/CLIPS.md §6.1, §6.6). */
   graphicProposals?: GraphicProposal[]
+  /**
+   * The Upload panel's folders, in the order it shows them, so a folder with
+   * no file in it still exists (shared/edit/folders.ts). One level; names
+   * unique without regard to case. Absent when there are none, so every older
+   * project opens unchanged, and a build without folders keeps it as an
+   * unknown field.
+   */
+  folders?: string[]
 }
 
 /** A project's graphics settings (docs/CLIPS.md §6.1); `sound` is §6.14's switch. */

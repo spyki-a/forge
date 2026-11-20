@@ -23,6 +23,8 @@ export function installFallbackBridge(): void {
     getPathForFile: () => '',
     probe: async () => ({ assets: [], failed: [] }),
     pickMedia: async () => [],
+    // A drop reaches this only with a path, which getPathForFile above never gives.
+    listDropped: async (paths: string[]) => ({ loose: paths, folders: [] }),
     startRender: unavailable,
     encoders: async () => [],
     cancelRender: async () => undefined,

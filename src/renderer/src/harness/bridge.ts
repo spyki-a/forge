@@ -1219,6 +1219,30 @@ export function installHarnessBridge(): void {
       return files
     },
 
+    /**
+     * Stands in for main's reading of a drop (main/dropFolder.ts): a path
+     * like '/harness/Day 1' — starting with '/', its last segment with no
+     * dot — is a dropped FOLDER of that name holding three fresh pictures;
+     * anything else (a blob URL from pickMedia, '/x/a.jpg') is a loose file.
+     * The page has no disk, so the session drops a folder by calling the
+     * store's `importDropped` with such a path.
+     */
+    listDropped: async (paths: string[]) => {
+      const loose: string[] = []
+      const folders: { name: string; files: string[]; capped: boolean }[] = []
+      for (const path of paths) {
+        const last = path.split('/').filter(Boolean).pop() ?? ''
+        if (!path.startsWith('/') || last === '' || last.includes('.')) {
+          loose.push(path)
+          continue
+        }
+        const files: string[] = []
+        for (let i = 0; i < 3; i++) files.push(await samplePhoto(sampleCount++))
+        folders.push({ name: last, files, capped: false })
+      }
+      return { loose, folders }
+    },
+
     pickLut: async () => {
       const look = LOOKS[2]
       return blobUrl(cubeFor(look, 9), 'text/plain')

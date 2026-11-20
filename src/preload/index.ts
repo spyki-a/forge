@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { Job } from '@shared/types'
 import type { MediaAsset, ParallaxBake, Project, TextSpec } from '@shared/timeline'
 import type { DecisionRecord } from '@shared/project'
+import type { DroppedMedia } from '@shared/dropped'
 import type { Transcript } from '@shared/transcript'
 import type { ModelStatus } from '@shared/sidecar/protocol'
 import type { SidecarStatus } from '@shared/sidecar/status'
@@ -65,6 +66,8 @@ const api = {
   probe: (paths: string[], fps: number): Promise<ProbeResult> =>
     ipcRenderer.invoke('media:probe', { paths, fps }),
   pickMedia: (): Promise<string[]> => ipcRenderer.invoke('dialog:pickMedia'),
+  /** A drop onto the Upload panel, read in main: each dropped folder's name and media files, the rest as loose files (main/dropFolder.ts). */
+  listDropped: (paths: string[]): Promise<DroppedMedia> => ipcRenderer.invoke('media:listDropped', paths),
   /** Choose a .cube 3D LUT. Null when the dialog was cancelled. */
   pickLut: (): Promise<string | null> => ipcRenderer.invoke('dialog:pickLut'),
   /** Looks that ship with the app — the same .cube files, already written. */

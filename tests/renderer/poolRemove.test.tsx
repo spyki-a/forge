@@ -44,7 +44,7 @@ vi.mock('../../src/renderer/src/components/ui/Menu', async (importOriginal) => {
 })
 
 const { useEditor, REMOVE_WAITS } = await import('../../src/renderer/src/store')
-const { MediaPool, POOL_MENU_ROOM, PoolMenu, REMOVE_FROM_PROJECT, REMOVE_IT, TRANSCRIBE_NEEDS_HELPER, revealLabel, transcribeWhy } = await import(
+const { MediaPool, NEW_FOLDER_ITEM, POOL_MENU_ROOM, PoolMenu, REMOVE_FROM_PROJECT, REMOVE_IT, TRANSCRIBE_NEEDS_HELPER, revealLabel, transcribeWhy } = await import(
   '../../src/renderer/src/components/MediaPool'
 )
 const { MenuItem, menuPosition } = await import('../../src/renderer/src/components/ui/Menu')
@@ -280,17 +280,18 @@ const ready: SidecarStatus = { state: 'ready', hello: hello([SIDECAR_METHODS.tra
 const SPEECH: SpeechModelStatus = { present: true, bytes: 486_539_264, label: SPEECH_MODEL_LABEL, host: 'huggingface.co', model: 'small' }
 
 describe('the right-click menu on a pool tile', () => {
+  // `labels` walks every MenuItem the menu returns, Move to's list among them: with no folder it holds only "New folder…" (piece 2).
   it('offers a photo Add, the platform’s reveal and Remove, last', () => {
     open()
-    expect(labels('photo-a')).toEqual(['Add to timeline', 'Show in Finder', REMOVE_FROM_PROJECT])
+    expect(labels('photo-a')).toEqual(['Add to timeline', 'Show in Finder', NEW_FOLDER_ITEM, REMOVE_FROM_PROJECT])
   })
 
   it('offers a video with sound Transcribe, and Transcribe again once it has a transcript', () => {
     const p = open()
     open({ ...p, transcripts: {} })
-    expect(labels('talk')).toEqual(['Add to timeline', 'Transcribe', 'Show in Finder', REMOVE_FROM_PROJECT])
+    expect(labels('talk')).toEqual(['Add to timeline', 'Transcribe', 'Show in Finder', NEW_FOLDER_ITEM, REMOVE_FROM_PROJECT])
     open()
-    expect(labels('talk')).toEqual(['Add to timeline', 'Transcribe again', 'Show in Finder', REMOVE_FROM_PROJECT])
+    expect(labels('talk')).toEqual(['Add to timeline', 'Transcribe again', 'Show in Finder', NEW_FOLDER_ITEM, REMOVE_FROM_PROJECT])
     // A video with no sound has nothing to transcribe.
     open({ ...p, assets: p.assets.map((a) => (a.id === 'talk' ? { ...a, hasAudio: false } : a)) })
     expect(labels('talk')).not.toContain('Transcribe again')
@@ -327,7 +328,7 @@ describe('the right-click menu on a pool tile', () => {
   it('offers a missing file Relink…, which asks for that one file, and no reveal', async () => {
     const p = open()
     open({ ...p, assets: p.assets.map((a) => (a.id === 'photo-a' ? { ...a, offline: true } : a)) })
-    expect(labels('photo-a')).toEqual(['Add to timeline', 'Relink…', REMOVE_FROM_PROJECT])
+    expect(labels('photo-a')).toEqual(['Add to timeline', 'Relink…', NEW_FOLDER_ITEM, REMOVE_FROM_PROJECT])
     press('photo-a', 'Relink…')
     await Promise.resolve()
     expect(calls.map((c) => c.name)).toEqual(['relinkAssets'])
@@ -443,7 +444,7 @@ describe('the right-click menu on a pool tile', () => {
     expect(state().poolMenu).toBeNull()
     expect(state().removingAsset).toBeNull()
     expect(state().project).toBe(before)
-    expect(labels('talk')).toEqual(['Add to timeline', 'Transcribe again', 'Show in Finder', REMOVE_FROM_PROJECT])
+    expect(labels('talk')).toEqual(['Add to timeline', 'Transcribe again', 'Show in Finder', NEW_FOLDER_ITEM, REMOVE_FROM_PROJECT])
   })
 
   it('swallows the second press of a double-click on an item, and lets a fresh click through', () => {

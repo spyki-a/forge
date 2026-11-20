@@ -56,6 +56,16 @@ import {
   LIBRARY_GRAPHIC_RULE
 } from '@shared/graphics/apply'
 import { assetClipCount, removeAssets } from '@shared/edit/removeAssets'
+import {
+  addDroppedMedia,
+  cleanFolderName,
+  folderList,
+  makeFolder as makeProjectFolder,
+  moveToFolder,
+  removeFolder as removeProjectFolder,
+  renameFolder as renameProjectFolder
+} from '@shared/edit/folders'
+import { droppedCappedText, droppedEmptyText } from '@shared/dropped'
 import { footageOf } from '@shared/graphics/sound'
 import { libraryGraphicAt } from '@shared/graphics/library'
 import { graphicTargetsAt } from '@shared/graphics/targets'
@@ -658,6 +668,25 @@ export interface PoolMenuTarget {
   y: number
 }
 
+/** Where a folder header's menu was opened, and on which folder (MediaPool.tsx FolderMenu). */
+export interface FolderMenuTarget {
+  folder: string
+  x: number
+  y: number
+}
+
+/**
+ * A folder's name being typed in the Upload panel, in place: a new folder
+ * (`from` null; `moving` are the files its making also moves in, from a
+ * tile's "New folder…") or a folder being renamed (`from` its name).
+ * Window state, never saved.
+ */
+export interface FolderEdit {
+  from: string | null
+  draft: string
+  moving?: string[]
+}
+
 export const GRAPHICS_BUSY_NOTE = 'Graphics are still being found — wait for that run to finish'
 /**
  * Said when Find graphics is pressed on a clip with no transcript, or whose
@@ -1050,6 +1079,40 @@ interface EditorState {
   confirmRemoveAsset: () => void
   /** The question's "Keep it", and the menu closing: nothing changes. */
   keepAsset: () => void
+  /**
+   * The Upload panel's folders (shared/edit/folders.ts): one level, in the
+   * project, never on disk. Each act below is ONE undo step, and a no-op is
+   * none. The ones that take a typed name return why it was refused (a plain
+   * sentence) or null.
+   */
+  makeFolder: (name: string, moving?: string[]) => string | null
+  renameFolder: (from: string, to: string) => string | null
+  /** Files into a folder of the project, or out to none (null). */
+  moveAssetsToFolder: (assetIds: string[], folder: string | null) => void
+  /** The folder goes; its files go back to no folder, never out of the project. */
+  removeFolder: (folder: string) => void
+  /** The folders folded shut in the panel, by name. Window state, never saved. */
+  foldedFolders: string[]
+  toggleFolder: (folder: string) => void
+  /** The name being typed in place (a new folder or a rename), or null. */
+  folderEdit: FolderEdit | null
+  startNewFolder: (moving?: string[]) => void
+  startRenameFolder: (folder: string) => void
+  setFolderDraft: (draft: string) => void
+  /** The typed name made or renamed: null when done, else why not (the edit stays open). */
+  commitFolderEdit: () => string | null
+  cancelFolderEdit: () => void
+  /** A folder header's open menu ("Rename", "Remove folder"), or null. One menu at a time with the tile's. */
+  folderMenu: FolderMenuTarget | null
+  openFolderMenu: (target: FolderMenuTarget) => void
+  closeFolderMenu: () => void
+  /**
+   * A drop from Finder or Explorer onto the Upload panel: each dropped folder
+   * becomes a folder of the same name holding the media files found in it
+   * (main reads it: the bridge's `listDropped`), loose files go to no folder
+   * as before, all in one undo step.
+   */
+  importDropped: (paths: string[]) => Promise<void>
   /**
    * An asset not yet on the timeline, placed as `addAssetToTimeline` places it
    * and cut to `[startMs, endMs)` of its source (§3b.6) — in one begin/commit,
@@ -2370,7 +2433,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   removingAsset: null,
   poolMenu: null,
 
-  openPoolMenu: (target) => set({ poolMenu: target, removingAsset: null }),
+  openPoolMenu: (target) => set({ poolMenu: target, removingAsset: null, folderMenu: null }),
 
   closePoolMenu: () => {
     if (get().poolMenu !== null || get().removingAsset !== null) set({ poolMenu: null, removingAsset: null })
@@ -2403,6 +2466,88 @@ export const useEditor = create<EditorState>((set, get) => ({
 
   keepAsset: () => {
     if (get().removingAsset !== null) set({ removingAsset: null })
+  },
+
+  makeFolder: (name, moving = []) => {
+    const made = makeProjectFolder(get().project, name)
+    if (!made.ok) return made.problem
+    // The folder and the files a tile's "New folder…" moves into it: one step.
+    get().update(() => moveToFolder(made.project, moving, made.name))
+    return null
+  },
+
+  renameFolder: (from, to) => {
+    const renamed = renameProjectFolder(get().project, from, to)
+    if (!renamed.ok) return renamed.problem
+    get().update(() => renamed.project)
+    // Folded or not follows the folder to its new name.
+    set((s) => (s.foldedFolders.includes(from) ? { foldedFolders: s.foldedFolders.map((f) => (f === from ? renamed.name : f)) } : s))
+    return null
+  },
+
+  moveAssetsToFolder: (assetIds, folder) => get().update((p) => moveToFolder(p, assetIds, folder)),
+
+  removeFolder: (folder) => {
+    get().update((p) => removeProjectFolder(p, folder))
+    set((s) => ({ folderMenu: null, ...(s.foldedFolders.includes(folder) ? { foldedFolders: s.foldedFolders.filter((f) => f !== folder) } : {}) }))
+  },
+
+  foldedFolders: [],
+  toggleFolder: (folder) =>
+    set((s) => ({
+      foldedFolders: s.foldedFolders.includes(folder) ? s.foldedFolders.filter((f) => f !== folder) : [...s.foldedFolders, folder]
+    })),
+
+  folderEdit: null,
+  startNewFolder: (moving) => set({ folderEdit: { from: null, draft: '', ...(moving && moving.length > 0 ? { moving } : {}) }, poolMenu: null, removingAsset: null, folderMenu: null }),
+  startRenameFolder: (folder) => {
+    if (!folderList(get().project).includes(folder)) return
+    set({ folderEdit: { from: folder, draft: folder }, poolMenu: null, removingAsset: null, folderMenu: null })
+  },
+  setFolderDraft: (draft) => set((s) => (s.folderEdit ? { folderEdit: { ...s.folderEdit, draft } } : s)),
+  commitFolderEdit: () => {
+    const edit = get().folderEdit
+    if (!edit) return null
+    // Nothing typed, or the name unchanged: there is nothing to make.
+    if (cleanFolderName(edit.draft) === '' || (edit.from !== null && cleanFolderName(edit.draft) === edit.from)) {
+      set({ folderEdit: null })
+      return null
+    }
+    const problem = edit.from === null ? get().makeFolder(edit.draft, edit.moving) : get().renameFolder(edit.from, edit.draft)
+    if (problem === null) set({ folderEdit: null })
+    return problem
+  },
+  cancelFolderEdit: () => {
+    if (get().folderEdit !== null) set({ folderEdit: null })
+  },
+
+  folderMenu: null,
+  openFolderMenu: (target) => set({ folderMenu: target, poolMenu: null, removingAsset: null }),
+  closeFolderMenu: () => {
+    if (get().folderMenu !== null) set({ folderMenu: null })
+  },
+
+  importDropped: async (paths) => {
+    if (paths.length === 0) return
+    const { notify } = get()
+    try {
+      const { loose, folders } = await window.forge.listDropped(paths)
+      for (const folder of folders) {
+        if (folder.files.length === 0) notify(droppedEmptyText(folder), 'info')
+        else if (folder.capped) notify(droppedCappedText(folder), 'info')
+      }
+      const filled = folders.filter((f) => f.files.length > 0)
+      const project = get().project
+      // A converted still is known by the file the user imported, not by its copy in the cache.
+      const known = new Set(project.assets.map((a) => a.source ?? a.path))
+      const fresh = [...new Set([...loose, ...filled.flatMap((f) => f.files)])].filter((p) => !known.has(p))
+      const probed = fresh.length > 0 ? await window.forge.probe(fresh, project.settings.fps) : { assets: [], failed: [] }
+      // The new files, their folders and any known loose file a dropped folder holds: one undo step.
+      get().update((p) => addDroppedMedia(p, probed.assets, filled))
+      probed.failed.forEach((f) => notify(`${f.path.split(/[\\/]/).pop()}: ${f.error}`))
+    } catch (err) {
+      notify(err instanceof Error ? err.message : String(err))
+    }
   },
 
   removeClip: (clipId) => {
@@ -6728,6 +6873,10 @@ export const useEditor = create<EditorState>((set, get) => ({
       // The Upload panel's tile menu and its question name a file of the project being closed.
       poolMenu: null,
       removingAsset: null,
+      // Its folder menu, a name being typed and what is folded name folders of that project too.
+      folderMenu: null,
+      folderEdit: null,
+      foldedFolders: [],
       aspect: aspectOf(project.settings),
       past: [],
       future: []
@@ -6751,6 +6900,9 @@ export const useEditor = create<EditorState>((set, get) => ({
       clipRun: null,
       poolMenu: null,
       removingAsset: null,
+      folderMenu: null,
+      folderEdit: null,
+      foldedFolders: [],
       /*
        * The aspect comes back with the project.
        *

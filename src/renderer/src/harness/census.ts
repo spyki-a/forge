@@ -1921,6 +1921,79 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
   'poolmenu-used-three': async (env) => poolMenu(env, 'used-three'),
   'poolmenu-ring': async (env) => poolMenu(env, 'ring'),
   'poolmenu-busy': async (env) => poolMenu(env, 'busy'),
+  /*
+   * The Upload panel's folders (shared/edit/folders.ts). `folderScene` makes
+   * three: "Ceremony" with two photos, "Reception" with the video, "Empty"
+   * with nothing, and leaves the third photo in no folder. The window's own
+   * state (folded, a name being typed) is set in `show`, once the panel is
+   * open: the panel going ends a name being typed, and StrictMode's second
+   * mount would end one set before it.
+   */
+  'pool-folders': async (env) => {
+    await folderScene(env)
+    return {}
+  },
+  'pool-folded': async (env) => {
+    await folderScene(env)
+    return {
+      show: async () => {
+        editor().toggleFolder('Ceremony')
+        await frames()
+      }
+    }
+  },
+  'pool-rename': async (env) => {
+    await folderScene(env)
+    return {
+      show: async () => {
+        editor().startRenameFolder('Reception')
+        editor().setFolderDraft('ceremony')
+        await frames()
+      },
+      close: async () => {
+        editor().cancelFolderEdit()
+        await frames()
+      }
+    }
+  },
+  'pool-new-folder': async () => ({
+    show: async () => {
+      editor().startNewFolder()
+      await frames()
+    },
+    close: async () => {
+      editor().cancelFolderEdit()
+      await frames()
+    }
+  }),
+  'poolmenu-move': async (env) => {
+    const m = await folderScene(env)
+    await shelfShows('upload')
+    return {
+      ids: { A: m.photos[0].id },
+      show: async () => {
+        rightClick(document.querySelector<HTMLElement>(`[data-pool-tile="${CSS.escape(m.photos[0].id)}"]`), 'the Ceremony photo’s tile')
+        await frames()
+        // "Move to" opens on hover (ui/Menu.tsx Submenu, onPointerEnter): React makes that from a pointerover.
+        const move = document.querySelector<HTMLElement>('[data-pool-menu-item="move-to"]')
+        if (!move) throw new Error('census: the pool menu has no Move to')
+        move.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, cancelable: true }))
+        await frames()
+      },
+      close: escape
+    }
+  },
+  foldermenu: async (env) => {
+    await folderScene(env)
+    await shelfShows('upload')
+    return {
+      show: async () => {
+        rightClick(document.querySelector<HTMLElement>('[data-pool-folder="Ceremony"] [data-pool-folder-header]'), 'the Ceremony folder’s header')
+        await frames()
+      },
+      close: escape
+    }
+  },
   'clipmenu-open': async (env) => clipMenu(env, false),
   'clipmenu-detached': async (env) => clipMenu(env, true),
 
@@ -2692,6 +2765,37 @@ async function poolMenu(env: Env, state: PoolMenuState): Promise<Built> {
     },
     close: escape
   }
+}
+
+/** A right-click on `el`, at its middle, as the pool's tiles and folder headers take one. */
+function rightClick(el: HTMLElement | null, what: string): void {
+  if (!el) throw new Error(`census: no ${what} to right-click`)
+  const box = el.getBoundingClientRect()
+  el.dispatchEvent(
+    new MouseEvent('contextmenu', {
+      bubbles: true,
+      cancelable: true,
+      button: 2,
+      clientX: box.left + box.width / 2,
+      clientY: box.top + box.height / 2
+    })
+  )
+}
+
+/**
+ * The synthetic media in three folders, through the store's own actions:
+ * "Ceremony" (the first two photos), "Reception" (the video), "Empty"
+ * (nothing). The third photo stays in no folder, in the top grid.
+ */
+async function folderScene(env: Env): Promise<Media> {
+  const m = await media(env)
+  for (const name of ['Ceremony', 'Reception', 'Empty']) {
+    const problem = editor().makeFolder(name)
+    if (problem !== null) throw new Error(`census: could not make the folder ${name}: ${problem}`)
+  }
+  editor().moveAssetsToFolder([m.photos[0].id, m.photos[1].id], 'Ceremony')
+  editor().moveAssetsToFolder([m.video.id], 'Reception')
+  return m
 }
 
 async function textClip(env: Env, filled: boolean): Promise<Built> {
