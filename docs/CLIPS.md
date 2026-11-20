@@ -3286,7 +3286,9 @@ the lock or the pack, with the reason, so no work is lost.
 >   device='cpu', compute_type, local_files_only=True)`.
 > - **`asr.transcribe` never downloads.** Without the model it answers
 >   Unavailable, "The speech model is not downloaded yet"; a `model` other
->   than `small` is refused (nothing in the app sends one).
+>   than `small` is refused (nothing in the app sends one). (Since
+>   2026-11-20 `medium` and `large-v3` are taken too, and main sends the
+>   chosen one: the note of that date below.)
 > - **`asr.model`** answers `{present, bytes, label, host}` and fetches only
 >   when `download` is exactly `true`, each file through `media.download` at
 >   the pinned revision. `capabilities/__init__.py`'s asr tuple names both
@@ -3304,7 +3306,9 @@ the lock or the pack, with the reason, so no work is lost.
 >   speech model… N%" with an X titled "Stop getting the speech model";
 >   shown only while the helper can `asr.transcribe`. The helper's own
 >   progress messages give sizes in decimal MB ("484 MB"); the window shows
->   the fraction and its own label.
+>   the fraction and its own label. (Since 2026-11-20 the row is a choice of
+>   three, each with its own size, and the pool's press is the chosen
+>   model's: the note of that date below.)
 > - **Row 35's asr half passed** on a copy of pack 1 with hf-xet
 >   uninstalled: `asr.model {download: true}` fetched 486,212,372 B in
 >   14.7 s from huggingface.co and us.aws.cdn.hf.co, and Transcribe gave 22
@@ -3431,6 +3435,134 @@ the lock or the pack, with the reason, so no work is lost.
 > - What a real SRP or AppLocker block reports (libuv's source says
 >   `UNKNOWN`; WDAC's 4551 or a virus block's 225 would read as the policy
 >   sentence too).
+
+> **Built 2026-11-20 — the speech model choice: the one fixed model became
+> a choice of three.** Item 1 of the three the owner agreed before the beta
+> (2026-11-18: "its on direct and only model no option for upgrade, because
+> its a small model some telugu and hindhi hinglish, did not land
+> properly"). Built by workflow `speech-model-choice` (run wf_63f8f672-398,
+> 8 Opus agents), then two changes of the session's; pushed, CI green on both
+> runners at `1b366ef` (run 44800769033).
+>
+> Commits: `161450a` (piece 1: the helper, the protocol, the setting,
+> main), `3da8761` (its critics' fixes), `716a82a` (piece 2: the window),
+> `80f92a8` (its critics' fixes), `1b366ef` (the session's).
+>
+> - **Three pinned models**, `sidecar/forge_sidecar/capabilities/asr.py`
+>   `MODELS` and `src/shared/asr/speechModel.ts` `SPEECH_MODELS`, held equal
+>   by `tests/speechModelTable.test.ts` (it reads asr.py as text): `small`,
+>   `Systran/faster-whisper-small` @ `536b0662742c02347bc0e980a01041f333bce120`,
+>   486,212,372 B, "464 MB"; `medium`, `Systran/faster-whisper-medium` @
+>   `08e178d48790749d25932bbc082711ddcfdfbc4f`, 1,530,571,735 B, "1.4 GB";
+>   `large-v3`, `Systran/faster-whisper-large-v3` @
+>   `edaa852ec7e145841d8ffdb056a99866b5f0a478`, 3,090,835,702 B, "2.9 GB".
+>   medium's and large-v3's pins read from huggingface.co's API on
+>   2026-11-20; all three MIT, public, not gated. large-v3 also fetches
+>   `preprocessor_config.json` (128 mel bins; without it the feature
+>   extractor's 80 would be used) and has `vocabulary.json` for
+>   `vocabulary.txt`, both confirmed in faster-whisper 1.2.1's source in
+>   `sidecar/.venv`. Files smallest first, the bar's spans by bytes.
+> - **The protocol**: `asr.model` and `asr.transcribe` take `params.model`
+>   (omitted: `small`); an unknown name is refused naming the three.
+>   `asr.model`'s answer carries `model` (`SpeechModelStatus`, a
+>   `ModelStatus` with `model`), and every progress update main sends names
+>   its model.
+> - **The setting**: `SPEECH_MODEL_SETTING`, key `speechModel` in the
+>   settings file's window half (never the half with the hosted keys), one
+>   app-wide choice, not in the project; main reads it at each ask
+>   (`chosenSpeechModel`, `src/main/ipc.ts`), anything but the three names
+>   is `small`, and `settings:set` refuses any other value. Main ignores any
+>   model the window sends on `asr:transcribe` and sends the chosen one.
+> - **The click rule**: choosing never downloads; `asr.transcribe` never
+>   downloads; a model is fetched only by its own sized press, "Get the
+>   speech model · <size>". One fetch at a time: main refuses a press for
+>   another model with `SPEECH_MODEL_BUSY`, "Another speech model is
+>   downloading. Stop it first, or wait for it to finish", before the disk is
+>   looked at; the window greys the other presses with it as their title and
+>   says it under the list.
+> - **The window**: the AI helper's row holds a radio group (legend "Speech
+>   model") of "Small · 464 MB · fastest", "Medium · 1.4 GB · more accurate,
+>   slower", "Large · 2.9 GB · most accurate, slowest", with `ON_THIS_MACHINE`
+>   and, on the chosen line, `USED_BY_TRANSCRIBE` (`row.ts`
+>   `speechModelLines`, `speechFetchText`; `speechModelRow` is gone). Settings
+>   asks after all three and the choice when it opens with any unknown. The
+>   Media pool's and the Transcript tile's press (`SpeechModelPress`) and every
+>   Transcribe gate follow the chosen model; while another model fetches,
+>   that press is greyed with the busy title and has no X. Transcribing again
+>   is the two existing ways (the pool tile's "Transcribed — click to redo",
+>   the Transcript tile's "Transcribe again with these words"), both on
+>   main's chosen model; no new control. The choice is not on screen until
+>   the helper can transcribe. The reel's lyrics pass runs on the chosen
+>   model too (slower with Large; not gated, fails soft). Remove with the
+>   models box ticked forgets every status. Store: `speechModel` (the chosen
+>   model's status), `speechChoice`, `speechModels`, `speechFetch` (with its
+>   model), `refreshSpeechModels`, `chooseSpeechModel`,
+>   `getSpeechModel(name?)`. Harness: `__forgeHelperStub.speechOnDisk`,
+>   `speechHold` (holds at 50 %), `speechFail`, `speechModelsIn(states)`;
+>   `reset()` puts the choice back to small. Census: rows for Small, Medium,
+>   Large, the three hints, "used by Transcribe", "on this machine" (now
+>   whole), the busy sentence as text and as title; states
+>   `speech-models-choice`, `speech-model-busy`, `speech-model-busy-press`,
+>   `speech-busy-pool`.
+> - **Tests**: new `tests/speechModelTable.test.ts`,
+>   `tests/renderer/harnessSpeechModels.test.ts`,
+>   `tests/renderer/settingsCardSpeechAsk.test.tsx`; changed
+>   `speechModelIpc`, `tests/sidecar/test_asr.py`, `asr.int`, `helperRow`,
+>   `renderer/settingsPanel`, `renderer/mediaPool`,
+>   `renderer/transcriptPanel`, `renderer/ingestPanel`. Mutations: 20 (piece
+>   1's builder) + 5 (its fixer) + 19 (piece 2's builder) + 8 (its fixer),
+>   each caught, each restored and compared with `cmp`; the critics ran
+>   their own.
+> - **The session's verification** (2026-11-20): at `80f92a8` typecheck 0,
+>   suite 0 (Test Files 364 passed, 5 skipped; Tests 5925 passed, 66
+>   skipped), build 0. Read on the harness page on the Mac: Settings fills
+>   all three lines by itself (status asks only, none with download);
+>   choosing Medium moves "used by Transcribe", writes the setting and
+>   downloads nothing; a held fetch reads "Getting the speech model… 50%"
+>   with its X, the other press greyed with the busy title and the sentence
+>   under the list; changing the choice mid-fetch keeps the fetch on its own
+>   line; the pool's press follows the chosen model; the X cancels with no
+>   notice and the choice stays; a failed fetch (`speechFail`) notifies "The
+>   speech model could not be downloaded", the choice stays and the press
+>   comes back. `__forgeHelperPackCheck()` passes at 1280×800 (at the pane's
+>   own 546×399 it fails on "the AI helper row is not in view": the window is
+>   too short for the check). `__forgeCensus()` first found "Get" in
+>   `speech-model-offered` ambiguous (three sized presses with no model on
+>   disk); `"count": 3` on that row; then missing [], 952 checked, 10
+>   skipped.
+> - **The session's two changes** (`1b366ef`): `asr.py` keeps ONE model's
+>   loaded copy at a time (`_load_model` forgets another size's before
+>   loading), so a session that tries all three never holds all three in
+>   memory. In `test_asr.py` the each-size test asserts one name loaded
+>   after each, and a new test pins it
+>   (`test_one_models_loaded_copy_at_a_time_and_the_same_model_is_loaded_once`);
+>   two mutations (no eviction; always reload) caught and restored with
+>   `cmp`; 25 tests OK on the venv Python and the bare 3.14. Real
+>   memory with real models is NOT measured. And the row's lines wrap: the
+>   press or the progress goes under its words, at the right (Medium's words
+>   had been squeezed to 110 px and four lines beside a 167 px press; now one
+>   line, two when chosen).
+> - **Not built, by the design**: removing one downloaded model from disk
+>   (Remove with its box takes the whole models folder); a model per clip
+>   or per language; hosted transcription; measuring speed or accuracy.
+> - **Left, the owner's**: the real downloads (Medium 1.4 GB, Large
+>   2.9 GB) are the owner's presses in the app; nothing was downloaded in
+>   the build, and no CI step probes the three models' URLs
+>   (`probe-pack-urls.mjs` reads only the pack manifest), so the first press
+>   is the pins' first real check; whether CI should probe them is open.
+>   Whether Hindi, Telugu and Hinglish land better with Medium or Large is
+>   not measured, nor the speed with Large on the Mac and the Surface.
+> - **Left, open**: nothing checks free space before a press (Large needs
+>   about 2.9 GB plus the partial copy); a line whose status ask failed shows
+>   label · size · hint only, no press and no word why (Settings asks again
+>   on its next open); the "Transcribe again" titles do not name the model;
+>   three wordings of an unknown-name refusal exist (the helper,
+>   `speechModelRequest`, `settings:set`), none reaching the screen; a
+>   Transcribe already running when the choice changes keeps the model main
+>   sent at its start, not said on screen; a press arriving just after a
+>   cancel, before the fetch's `.finally` ran, gets the busy refusal
+>   (theoretical, untested); which titles the census counts (the busy title
+>   has a row, the "Fetched once from …" titles none).
 
 **One home: Settings.** `WINDOW.md` §3.9 already homes "AI helper (Python)
 status" in the settings panel, and §3's legend gives each control one home.
@@ -25382,7 +25514,9 @@ what is needed, where the answer waits on something not yet in hand.
     difference: the press forwards its progress and has an X, as the face
     finder's does, and is not a row in EXPORT's list ("through the job
     list" contradicted that precedent). Whether it should also be one is
-    yours.
+    yours. (Since 2026-11-20 the one model is a choice of three in
+    Settings, Small "464 MB" the default, Medium "1.4 GB", Large "2.9 GB",
+    each with its own press: §3a.4's note of that date.)
 50. **One app at a time.** Nothing makes Forge single-instance, so a
     second window shares userData with the first (and the dev app shares
     it with the installed one, which P answers with a dev root of its own,

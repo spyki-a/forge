@@ -5,7 +5,7 @@ screen, "the AI helper". This is the gate for all of Phase 2 onward.
 
 What it can answer is `capabilities/__init__.py`'s `OPTIONAL`, one row per module, each
 degrading on its own: speech to text (`asr.transcribe`, and since 2026-10-16 `asr.model`, the
-speech model's status and its press; below), beats (`audio.beats`), parallax layers
+speech model's status and its press; since 2026-11-20 both take one of three models; below), beats (`audio.beats`), parallax layers
 (`depth.layers`), the Director's photo measures (`vision.measure`), stems (`audio.stems`), the
 local voice (`voice.speak`, `voice.voices`), and since 2026-10-13 step 1's two: **the face
 finder** (`vision.faces`, `vision.facesModel`; below) and **the subject finder**
@@ -170,21 +170,63 @@ huggingface.co at every session's first load. Now:
 
 - `asr.py` pins commit `536b0662742c02347bc0e980a01041f333bce120` and only the four files the
   load reads: `config.json`, `vocabulary.txt`, `tokenizer.json` and `model.bin`, 486,212,372 B
-  ("464 MB" on the press).
+  ("464 MB" on the press). (Since 2026-11-20 that is `small`'s pin, one of three: below.)
 - **`asr.transcribe` never downloads.** With the model not on disk it answers `unavailable`,
   "The speech model is not downloaded yet"; it loads the snapshot folder by path with
   `local_files_only=True`, so a session asks no host (measured: a fresh session with no host
-  allowed transcribed in 1.6 s). Any `model` but `small` is refused.
-- **`asr.model`** answers `{present, bytes, label, host}`, and fetches only with `download:
-  true`, each file through `media.download` at the pinned revision, cancellable at each chunk.
+  allowed transcribed in 1.6 s). Any `model` but `small` was refused (until
+  2026-11-20; now any but the three below).
+- **`asr.model`** answers `{present, bytes, label, host}` (and `model` since 2026-11-20), and
+  fetches only with `download: true`, each file through `media.download` at the pinned
+  revision, cancellable at each chunk.
   The window's press is "Get the speech model · 464 MB" (Settings, the Media pool, the
-  Transcript tile), with its X.
+  Transcript tile), with its X. (Since 2026-11-20 the size is the chosen model's: below.)
 - The download goes to `huggingface.co`, which answers `model.bin` with a 302 to
   `us.aws.cdn.hf.co`, so the rule above (`huggingface.co` and `*.hf.co`) holds for it too. Measured
   through the installed pack without hf-xet: 486,212,372 B in 14.7 s (`EFFECTS.md` §59).
 - `tests/sidecar/test_asr.py` (16, on a bare interpreter too) holds a transcription with the
   model on disk to make no request (every hub call replaced by one that raises); `asr.int`
   needs the model seeded in `FORGE_MODELS_DIR` and a `jfk.flac` for its transcription cases.
+
+**Three speech models, one chosen** (2026-11-20, `161450a`, `3da8761`, `1b366ef`;
+`docs/CLIPS.md` §3a.4's note of that date). `asr.py` `MODELS` holds three pins, each a
+`SpeechModel` (name, repo, revision, files), the same table as `src/shared/asr/speechModel.ts`
+`SPEECH_MODELS` (`tests/speechModelTable.test.ts` reads `MODELS` as text and holds the two
+equal):
+
+| name | repo | revision | bytes | on the press |
+|---|---|---|---|---|
+| `small` | `Systran/faster-whisper-small` | `536b0662742c02347bc0e980a01041f333bce120` | 486,212,372 | 464 MB |
+| `medium` | `Systran/faster-whisper-medium` | `08e178d48790749d25932bbc082711ddcfdfbc4f` | 1,530,571,735 | 1.4 GB |
+| `large-v3` | `Systran/faster-whisper-large-v3` | `edaa852ec7e145841d8ffdb056a99866b5f0a478` | 3,090,835,702 | 2.9 GB |
+
+small and medium fetch `config.json`, `vocabulary.txt`, `tokenizer.json` and `model.bin`;
+large-v3 fetches `preprocessor_config.json` (it takes 128 mel bins; without the file the
+feature extractor's default 80 would be used), `config.json`, `vocabulary.json`,
+`tokenizer.json` and `model.bin`, smallest first, the bar's spans by bytes. medium's and
+large-v3's pins were read from huggingface.co's API on 2026-11-20; all three are MIT, public,
+not gated. No CI step probes their URLs (`probe-pack-urls.mjs` reads only the pack manifest).
+
+- **`asr.model`** takes `params.model`, one of the three names (omitted or empty: `small`;
+  `pinned` decides), and answers `model_status` for it: `{present, bytes, label, host, model}`
+  (`SpeechModelStatus` = `ModelStatus` + `model`, `src/shared/sidecar/protocol.ts`; the
+  `label` is "the speech model" for all three). Main forwards each progress update with the
+  model it is of. Main's `asr:model` asks the model the window names (Settings asks after all
+  three), else the chosen one, and fetches one model at a time: a press for another while one
+  runs is refused, "Another speech model is downloading. Stop it first, or wait for it to
+  finish".
+- **`asr.transcribe`** takes the `model` main sends. Main reads the one app-wide choice at each
+  Transcribe (`chosenSpeechModel`, `src/main/ipc.ts`: the settings file's window half, key
+  `speechModel`, anything but the three names read as `small`); a model the window puts in its
+  payload is ignored. Still never downloads: the model asked for not on disk is
+  `Unavailable`, "The speech model is not downloaded yet", even when another size is there.
+- **An unknown name is refused** before anything runs: "There is no speech model 'x': the
+  speech models are small, medium, large-v3".
+- **One model's loaded copy at a time** (`1b366ef`): `_load_model` keys its cache by (name,
+  snapshot folder, compute type) and, before reading another size in, forgets the others, so a
+  session that tries Small, Medium and Large never holds all three in memory; the same model
+  is loaded once. Real memory with the real models is not measured: none was downloaded.
+- `test_asr.py` ran 25 tests, OK, on the venv Python and on a bare 3.14 at `1b366ef`.
 
 ## Faces — the helper's first child process
 

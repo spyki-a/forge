@@ -177,6 +177,76 @@ is lost by it); *coming-soon* = shown, disabled, labelled.
 | Image presets Warm / B&W / Shades | none (sheet 05) | Shelf tile Upload (image rows) | build | phase 2; nearest today: Looks `Inspector.tsx:1124` |
 | Audio row Speed / Voice change | none (sheet 06) | Shelf tile Upload (audio rows) | build / coming-soon | phase 2; see Decision 4 on Voice |
 
+(2026-11-20, after the 14 steps, item 4 of the three agreed before the beta:
+`bb21eee`, `5b9160a` (Remove and the menu), `a0a16af`, `49c836e` (folders);
+the map of the result is `WHERE-THINGS-ARE.md`'s Upload. **A right-click menu
+on a pool tile** (`MediaPool.tsx` `PoolMenu`): Add to timeline; Transcribe /
+Transcribe again; Relink…; Show in Finder / Explorer / folder
+(`revealLabel`); Move to; and, apart, **Remove from project**, which never
+touches a file on disk and, for a file clips play, asks in the menu's place
+(`usedByText`, `removeWithClipsText`, `REMOVE_IT`, "Keep it"); one undo step
+through `src/shared/edit/removeAssets.ts`; greyed and refused while a reel,
+the grid or the Director builds (`removeWaits`, `REMOVE_WAITS`); walking away
+is Keep it. **Folders**, one level, in the project file and never on disk
+(`MediaAsset.folder`, `Project.folders`, `src/shared/edit/folders.ts`): New
+folder beside MEDIA, a header per folder with its own menu (`FolderMenu`:
+Rename, Remove folder), names typed in place, Move to and dragging a tile
+onto a folder; a folder dropped from Finder or Explorer becomes one of the
+same name (main's `listDropped`, `src/main/dropFolder.ts`; the notices,
+`src/shared/dropped.ts` `droppedNotices`). That folders are one level, in
+the project, and that a dropped folder becomes one, is the session's reading
+of the owner's words ("make the user folder like option that user has like
+same day or year photos folder, that matches his docs"), not yet confirmed
+by the owner. **The menus' shared pieces** moved out of `ClipMenu.tsx` into
+`src/renderer/src/components/ui/Menu.tsx`, which ClipMenu now uses too:
+`MenuItem`, `MenuDivider`, `Submenu`, `MenuShell`, `menuPosition`,
+`useMenuDismiss`, `submenuPlacement`, `swallowSecondClick`, `MENU_WIDTH` 196,
+`SUBMENU_WIDTH` 210, `SUBMENU_MAX_HEIGHT` 320, `SUBMENU_MIN_BELOW` 160,
+`SECOND_CLICK_MS` 1000. The pool's tiles cannot take keyboard focus, so
+the menu is the pointer's. Census: the overlay home `poolmenu` (recipes
+`poolmenu-photo`, `-video`, `-transcribed`, `-offline`, `-used-one`,
+`-used-three`, `-ring`, `-busy`, `-move`, and `foldermenu`) and the upload
+states `pool-folders`, `pool-folded`, `pool-rename`, `pool-new-folder`.
+Tests: `tests/renderer/removeAssets.test.ts`, `poolRemove.test.tsx`,
+`poolFolders.test.tsx`, `tests/folders.test.ts`, `tests/dropFolder.test.ts`;
+the builders' and fixers' mutations, 27 + 15 and 29 + 14 by their reports,
+each failed and was restored. The suite at `49c836e` on the Mac: Test Files
+369 passed, 5 skipped; Tests 6034 passed, 66 skipped; `__forgeCensus()` at
+1280×800: missing [], 984 checked, 12 skipped; CI green on both runners
+(run 44819654305). Read on the harness page on the Mac, by the session: the
+menu and its items, Remove at once and with its question, Keep it, Escape,
+one undo step each way, real double-clicks stopping at the item, the
+folders made, refused, folded, renamed and removed, tile drags, the stand-in
+drops ("Day 1" twice, Locked, Huge), a 20-folder Move to opening upward at
+1280×680, the build gate, a stale menu closing, a ring's photo. **Not built,
+by the design:** picking a folder with the Upload button (on Windows one
+dialog cannot offer files and folders together); selecting several tiles;
+nested folders; sorting or searching; folders made by date; deleting any file
+from disk; folders in the Library drawer; a folder dropped on the timeline or
+the picture (it still fails with the probe's error); files from Finder
+dropped on a folder's header (they import loose). **Open:** the owner's, in
+the real app, Mac then Surface — a real folder drop (subfolders, a name like
+"Bride 5:30pm", a second drop, a protected folder, a drive root "D:\"), Show
+in Finder / Explorer with a converted HEIC, the file still on disk after
+Remove, a real double-click on an item, right-click and long press on the
+Surface's touch screen; whether one level in the project is what the owner
+meant; left dangling after a removal, as timeline Delete leaves them,
+another clip's `matte.clipId`, a moment's from / to, a kept graphic's
+`subject.clipId` / `grounding.assetId` / `anchor.assetId` and a screen card's
+`graphic.data.clipId`; a subject-track job of a removed file keeps running in
+main (its result is refused); Show in Finder is offered for files the app
+drew and shows the cache folder; the menus do not follow the pool's scroll or
+a window resize (ClipMenu the same), and the tile menu can end up to 81 px
+above a pointer near the window's foot; macOS packages (.photoslibrary,
+.fcpbundle, .app) are walked as folders; a whole directory is read and
+sorted before the entry bound applies; two dropped folders whose names match
+(in case, or in their first 40 characters) merge without a word; folding is
+not in the undo history; known files are matched by their exact path string;
+keyboard — focus does not move into the menus, Move to opens only on hover,
+the chevron has no `aria-expanded`; the New folder field is at the end of
+the list; nothing says busy while a big drop is read and probed; ClipMenu's
+items keep the double-click hole `swallowSecondClick` closes for the pool.)
+
 ### 3.4 URL tile
 
 | control | today | new home | how | note |
@@ -273,6 +343,25 @@ answered in §7.6.)
 | AI helper (Python) status | `App.tsx:84` (`sidecarReady`/`sidecarError`) | settings panel | move | since 2026-10-16 the store's `helperStatus` (App.tsx `applyHelperStatus`), drawn by `SettingsPanel.tsx` `HelperSection` from `shared/sidecar/row.ts` with the Install, Repair, Update, Remove and Check again presses (`docs/CLIPS.md` §3a.4) |
 | Hosted voice (base URL, model, voice, key) | settings file only (`src/main/store.ts:25`), no UI | settings panel | coming-soon | phase 3 (Narration): needs a write-only IPC like the Director's |
 | Pexels key | none | settings panel | coming-soon | phase 3 |
+
+(2026-11-20, after the 14 steps, item 1 of the three agreed before the beta:
+`161450a`, `3da8761` (the helper, the protocol, the setting, main),
+`716a82a`, `80f92a8` (the window), `1b366ef` (the session's). **The AI
+helper's row holds a choice of three speech models** where it had one line:
+a radio group (`fieldset`, legend "Speech model") drawn by `HelperSection`
+from `src/shared/sidecar/row.ts` `speechModelLines`, each line "Small · 464
+MB · fastest", "Medium · 1.4 GB · more accurate, slower" or "Large · 2.9 GB ·
+most accurate, slowest" (`src/shared/asr/speechModel.ts` `SPEECH_MODELS`),
+then `ON_THIS_MACHINE` and, on the chosen one, `USED_BY_TRANSCRIBE`; each
+absent model its own sized press, "Get the speech model · <size>"; one fetch
+at a time, the other presses greyed with `SPEECH_MODEL_BUSY`, said under the
+list too. Choosing never downloads: it writes the one app-wide setting
+(`SPEECH_MODEL_SETTING`, `speechModel`, in the settings file's window half),
+which main reads at each Transcribe. Since `1b366ef` a press or a fetch's
+progress goes under its line's words when it does not fit beside them. The
+map is `WHERE-THINGS-ARE.md`'s Settings; the record is `docs/CLIPS.md`
+§3a.4's note of 2026-11-20, which carries what is not built and what is
+open.)
 
 ### 3.10 Beat sync / Cut to words tile
 
@@ -515,6 +604,37 @@ split/detach/select `283`, delete/ripple `305`.
 `tests/clipOverlays.test.ts` pins Timeline.tsx class strings and counts
 `cursor-[we]-resize` = 2: **the Curve tray must not be built inside Timeline.tsx.**
 
+(2026-11-20: no longer unchanged since the layout. **The scroll**, item 3 of
+the three agreed before the beta, `b38863b`, the session's: the track-header
+column had been its own vertical scroller (`overflow-y-auto`) and the lanes
+had none (`overflow-x-auto overflow-y-hidden`), so with more tracks than fit
+the V/A names moved and the clips beside them did not. The lanes
+(`data-timeline-lanes`) are now the one scroller, both ways; the header rows
+(`data-timeline-headers`) are shifted by `translateY(-scrollTop)`
+(`syncHeaders`, on the lanes' scroll and after every render), a wheel over
+them scrolls the lanes, and the column ends where the lanes' sideways
+scrollbar begins. The playhead's head is `sticky top-0`, on the ruler.
+`laneIndexAt` (`src/shared/edit/follow.ts`) counts the scroll and gives -1
+over the ruler; a marquee measures each row where it is now, not where it
+was drawn (`laneNodes`). `.timeline-scroll` (`styles.css`): the timeline's two
+scrollbars always drawn, 12 px, on a track (`--color-ink-850`), the thumb
+`--color-ink-600`, the accent under the pointer; everywhere else they stay
+9 px and hidden until hovered. `HEADER_WIDTH` 172, was 128 (the owner, the
+same day: "give room for the A please the delet is not visible"); Remove,
+`data-track-remove`, at opacity 0.6 without a hover. `tests/follow.test.ts`
+19 tests (13 new), twelve mutations, all failed and restored. Read on the
+harness page on the Mac at 1280×800 with 12 tracks: header and lane rows at
+the same y at scrollTop 0, 150 and the end (566); both bars 12 px; the
+column's bottom at the lanes' view bottom (788 = 788); Remove's right edge at
+163 of 172 on every V and A row; census missing [], 942 checked, 10 skipped.
+CI green on both runners at `b38863b` (run 44729664926). **Not read:** the
+development app, and the Surface (touch, and Windows' classic scrollbars).
+The line numbers above are from `bd58eb5`. **The clip menu's pieces** moved
+to `src/renderer/src/components/ui/Menu.tsx` with item 4 (`bb21eee`; §3.3's
+note): same items, look, position and dismissal, and its submenus (Speed,
+Voice, Look) now open up or down from their row by the room measured when
+they open and scroll inside the window (`submenuPlacement`, `49c836e`).)
+
 ### 3.22 Store state touched by the move
 
 | state | today | becomes | note |
@@ -526,6 +646,28 @@ split/detach/select `283`, delete/ripple `305`.
 | `audition` | `store.ts:435, 1521-1526` | unchanged; also drives the dock | |
 | `exportRequests` | `store.ts:815, 4198` | unchanged | listener moves to ExportStrip |
 | new: `outputOpen`, `exportOpen`, `trayOpen`, `trayTab`, `settingsOpen`, `shelfTool` | — | view state | not reset by newProject/loadProject; no localStorage (none in `src/renderer` today) |
+
+(2026-11-20, the store state the three items before the beta added, by
+`store.ts` at `49c836e`. The timeline's scroll added none. **The speech
+model choice** (§3.9's note): `speechModel` stays, now the CHOSEN model's
+status, which every Transcribe gate reads; new `speechChoice` (the app-wide
+choice as main read it, null until it answers), `speechModels` (each model's
+status, the Settings row's three lines), `speechFetch` now carries the
+`model` it is of; actions `refreshSpeechModels`, `chooseSpeechModel` (writes
+the setting, never downloads) and `getSpeechModel(name?)`, beside
+`refreshSpeechModel` and `cancelSpeechModel`. Remove with the models box
+ticked resets `speechModel` and `speechModels`. **Remove and the tile
+menu** (§3.3's note): `removingAsset`, `poolMenu`, `openPoolMenu`,
+`closePoolMenu`, `removeAsset`, `confirmRemoveAsset`, `keepAsset`, and the
+exported `removeWaits` / `REMOVE_WAITS`; `poolMenu` is window state, never
+saved, and newProject / loadProject clear it. **Folders**: `makeFolder(name,
+moving?)`, `renameFolder(from, to)`, `moveAssetsToFolder(ids, folder or null)`,
+`removeFolder`, `foldedFolders` + `toggleFolder` (window state, never saved,
+no undo step), `folderEdit` + `startNewFolder(moving?)`, `startRenameFolder`,
+`setFolderDraft`, `commitFolderEdit`, `cancelFolderEdit`, `folderMenu` +
+`openFolderMenu`, `closeFolderMenu` (one menu at a time with the tile's), and
+`importDropped(paths)`. The folders themselves are project data
+(`Project.folders`, `MediaAsset.folder`), so they are in the undo history.)
 
 ---
 

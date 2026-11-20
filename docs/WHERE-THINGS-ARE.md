@@ -145,6 +145,11 @@ A "photo" here is a picture you imported. The text cards, colour cards,
 clippings and rings the editor draws are images too, and none of the tools
 count them (`shared/edit/photos.ts`).
 
+Folders in Upload (2026-11-20, below) change none of this: "in Upload" is
+every photo in the project, in a folder or in none, and no tool takes a
+folder as what it uses. A file taken out with Remove from project is no
+longer counted.
+
 **Not yet:** placing a chosen song (Beat sync's **Add music** and Upload a file
 both only import — the song still has to be dragged onto an audio track);
 choosing several photos for the reel or the film strip; leaving a picture out
@@ -164,7 +169,8 @@ thing that identifies a shot and the name is a caption over it. Video shows a
 frame from 0.5 s in, because the first frame of a clip is very often black.
 Each tile has its kind in the top-left corner and, for video and sound, its
 length in the top right. Files dropped from the desktop anywhere on the panel
-are imported ("Drop to upload").
+are imported ("Drop to upload"); a dropped folder becomes a folder of the
+panel (below).
 
 **Drag a tile onto the timeline** to say which track and when; double-click to
 append it to the first track of the right kind. Drag one onto the **picture**
@@ -173,14 +179,19 @@ and a chip offers what it should become — see the preview below.
 On a video or sound tile, a **captions** button in the bottom-right corner
 (shown on hover) transcribes it; it is green once a transcript exists. When it
 cannot, it is greyed and its tooltip says why: "needs the AI helper — install
-it in Settings", "needs the speech model", or "the AI helper is starting".
+it in Settings", "needs the speech model" (the one chosen in Settings, below),
+or "the AI helper is starting".
 While a transcription runs, a percent chip takes its place, and clicking the
 chip cancels it.
 
-When the AI helper can transcribe but the **speech model** is not on this
-computer, and the pool holds a video or a sound, a bar over the grid reads
-**Transcribe needs the speech model** with **Get the speech model · 464 MB**;
-while it downloads, "Getting the speech model… N%" with an X that stops it.
+When the AI helper can transcribe but the **chosen speech model** is not on
+this computer, and the pool holds a video or a sound, a bar over the grid
+reads **Transcribe needs the speech model** with **Get the speech model ·
+464 MB** — that size is Small's, the default; the press names the chosen
+model's (Settings, below, has the three); while it downloads, "Getting the
+speech model… N%" with an X that stops it. While another model, pressed in
+Settings, downloads, the press is greyed with no X, its tooltip "Another
+speech model is downloading. Stop it first, or wait for it to finish".
 
 When files have gone missing, a red bar above the grid says how many, with one
 **Relink…** for all of them. A missing file's tile says Offline.
@@ -192,7 +203,116 @@ relink to a folder, or open it on the other machine and the AVIF is found and
 converted again there. A HEIC from a phone will not convert on this build (no
 HEVC decoder) — save it as JPEG or PNG first, as the message says.
 
-**Not yet:** selecting a pool item does nothing. Trimming a file before it goes
+**Right-click a tile** for its menu (2026-11-20, `bb21eee`, `5b9160a`,
+`a0a16af`, `49c836e`; `MediaPool.tsx` `PoolMenu`, in the clip menu's look,
+from the same pieces, `ui/Menu.tsx`). It opens at the pointer, inside the
+window, over the picture and the Trimmer dock; Escape or a click anywhere
+else closes it. Each item is there only when it applies:
+
+- **Add to timeline** — what a double-click on the tile does.
+- **Transcribe**, or **Transcribe again** once the file has a transcript — a
+  video or sound with sound in it, and not while it is being transcribed
+  (the tile's chip is then its cancel); greyed with the same tooltip as the
+  tile's own button.
+- **Relink…** — a missing file; it asks for that one file (the red bar's
+  Relink… asks for a folder).
+- **Show in Finder** (**Show in Explorer** on Windows, **Show in folder**
+  elsewhere) — a file that is there; it shows the file you imported, so a
+  converted AVIF or HEIC shows its original.
+- **Move to** — opens on hover: every folder, the file's own ticked;
+  **New folder…**; and **No folder** for a file in a folder. The list opens
+  upward or downward from its row, by the room there is, and scrolls when
+  it is longer than that.
+- apart, last: **Remove from project**.
+
+A double-click on an item does the item once: the second press never reaches
+the tile or the question that is now under the pointer.
+
+**Remove from project** takes the file out of the project. It never touches
+the file on disk. A file no clip plays goes at once. For one that clips
+play, the menu turns into a question in its own place: "Used by 3 clips on
+the timeline", then **Remove it and its 3 clips** ("Remove it and its clip"
+for one) and **Keep it**. A photo that a card ring shows among other photos
+is asked about too — "Used by 1 clip on the timeline", **Remove it**, **Keep
+it** — and only the photo leaves the ring. Walking away from the question
+(Escape, a click elsewhere) is Keep it. Remove is one undo step
+(`shared/edit/removeAssets.ts`), and it takes: the file; every clip of it,
+as the timeline's Delete removes clips, so a graphic's sounds go with their
+graphic; a card ring made only of removed photos, with its own drawn "card
+ring" image when no other clip uses that; the file's transcript, depth
+planes, what the Director saw in it and its subject track; and the graphic
+proposals on its clips or grounded in it. A removed clip that was selected
+is let go (the Trimmer dock closes), and a transcription or a depth bake of
+the file that is running stops. While a reel, the grid or the Director is
+being built, Remove from project and the question's remove are greyed, their
+tooltip "Wait for the build that is running to finish", and a Remove asked
+for anyway says that sentence and changes nothing.
+
+**Folders** (2026-11-20, `a0a16af`, `49c836e`; `shared/edit/folders.ts`).
+A folder lives in the **project file**, never on disk: making, renaming or
+removing one changes nothing in Finder or Explorer, and no file moves.
+One level: a file is in one folder or in none, and a folder holds no
+folder. **New folder** sits at the right of the MEDIA heading. The panel
+reads top to bottom: the files in no folder, as the grid it always was; then
+each folder in its order, a header — the chevron (tooltip "Fold this
+folder", or "Open this folder" when folded), its name, how many files are in
+it, and **…** (tooltip "Rename or remove this folder") — over its files, or
+over "Drag files here to put them in this folder" when it has none. Folding
+is not an undo step and is not saved. With no folders the panel looks as it
+did before them.
+
+- **Naming in place.** New folder opens a field under the last folder
+  ("Folder name", 40 characters at most). Enter makes it, Escape leaves it,
+  and clicking away makes it when the name can be used. A name already
+  taken, in any case, keeps the field open and says so under it: "There is
+  already a folder called “Ceremony”". **Rename**: double-click the name, or
+  **…** then Rename; the field holds the old name, and the files follow it.
+- **The header's menu** (right-click the header, or **…**): **Rename**, and
+  **Remove folder**, tooltip "Its files stay in the project, in no folder" —
+  they go back to the top grid.
+- **Moving files.** The tile menu's Move to; its **New folder…** names a
+  folder in place and makes it with the file in it. Or drag a tile onto a
+  folder's header or its files (the folder tints) to put it there, or onto
+  the top grid or the space under the folders to put it in none. "Drop to
+  upload" does not show for the panel's own tiles; a tile still drags onto
+  the timeline and the picture as before.
+- Each make, rename, move and removal is one undo step.
+
+**A folder dropped from Finder or Explorer** onto the panel becomes a folder
+of the same name, holding every photo, video and sound in it and in its
+subfolders, all at one level: the folder's own files first, then each
+subfolder's, each in name order (IMG_2 before IMG_10). Main reads it
+(`src/main/dropFolder.ts`, which only reads). Hidden files (a name starting
+with ".", such as the "._" files a Mac leaves on a card) and anything that is
+not media are passed over; a link to a file inside the folder is taken, a
+link leading out of it is not, and a linked folder is never opened. One drop
+reads at most 2000 media files and 20000 entries of each dropped folder. A
+folder of that name already in the panel, in any case, receives the files,
+and a file already in the project is not added again: dropping the same
+folder twice adds nothing. Files dropped loose go in no folder, as always.
+For each dropped folder the panel says at most one of the first four, in
+this order, and the fifth beside it ("X" is the folder's name):
+
+1. "“X” could not be opened, so nothing in it was added" — no folder is made.
+2. "“X” has too many files to read in one drop: drop the folders inside it
+   one at a time" — the bound came before any media; no folder is made.
+3. "“X” has more files than one drop can add: only the first N were looked
+   at" — the folder is made with those.
+4. "“X” has no photos, videos or sounds in it" — no folder is made.
+5. "1 folder inside “X” could not be opened, so its files were not added"
+   (for more, "N folders inside “X” could not be opened, so their files
+   were not added").
+
+**Not there, by the design:** picking a folder with the Upload button;
+folders inside folders; sorting or searching; folders made by date on their
+own; deleting a file from the disk; folders in the Library drawer; a folder
+dropped on the timeline or the picture (it still fails as a file the probe
+cannot read); files from Finder or Explorer dropped on a folder's header go
+in no folder, not into it. The tiles cannot take keyboard focus, so the menus
+are the pointer's.
+
+**Not yet:** selecting a pool item does nothing, and several cannot be
+selected at once. Trimming a file before it goes
 on the timeline — the Trimmer as a source monitor, sheet 21 — and the pool
 grouped by kind (sheet 21), image presets (sheet 23) and per-item audio trim
 (sheet 24) are all to come.
@@ -255,9 +375,10 @@ Hindi, Telugu, Tamil and Spanish — unless the video has no caption track at
 all, which is said at once instead. A video with no captions says **This video
 has no captions**, its chapter chips set From and To instead, and **Listen to
 it** is greyed. Beside it: **needs the AI helper**, a small underlined button
-that opens Settings at the AI helper's row; or "needs the speech model"; or
+that opens Settings at the AI helper's row; or "needs the speech model"
+(the one chosen in Settings); or
 "the AI helper is starting"; or **soon** when the helper can transcribe and
-the speech model is here — transcribing a link's sound is not built yet. If the fetch fails —
+the chosen speech model is here — transcribing a link's sound is not built yet. If the fetch fails —
 offline, say — **Could not get the transcript.** with the reason, and From
 and To stay typed fields.
 
@@ -383,8 +504,11 @@ names and words (the couple, the venue, a brand) for the transcriber to expect,
 and **Transcribe again with these words** runs it again — which replaces any
 corrections. With no transcript yet, the same button says **Transcribe**. It
 is greyed as the Media pool's is, its tooltip saying why, and under it the
-way on: **needs the AI helper** (the button to Settings' row), the speech
-model's **Get the speech model · 464 MB**, or "the AI helper is starting".
+way on: **needs the AI helper** (the button to Settings' row), the chosen
+speech model's sized press, as over the Media pool (**Get the speech model ·
+464 MB** for Small; Settings has the three), or "the AI helper is starting".
+Transcribing again — this button, or the pool tile's "Transcribed — click
+to redo" — uses the model chosen in Settings at the time.
 
 Between the rows and Listen for, the **Graphics** section
 (`TranscriptGraphics.tsx`; `docs/CLIPS.md` §6.6, built 2026-11-11), for
@@ -1103,8 +1227,24 @@ track, picture and sound, from the preview and the export; the **speaker**
 mutes a track (on a video track only its own sound — the picture still plays);
 **S** solos it. An audio track also has the red **record** button, which
 records a voice-over onto it while the edit plays, and **VO**, which marks it
-as speech so music ducks under it. Then the track's own meter, and on hover a
-bin that removes it (the last video track cannot go).
+as speech so music ducks under it. Then the track's own meter, and last a
+bin that removes it (the last video track cannot go), drawn faint and full
+under the pointer, so a touch screen sees it too. The header column is
+172 px (since 2026-11-20, `b38863b`; 128 before, when an audio row's bin was
+pushed out of sight), and the bin is inside it on every V and A row.
+
+**Scrolling** (2026-11-20, `b38863b`). The track names and the lanes are one
+stack. With more tracks than fit, the lanes scroll up and down and the names
+move with them, row for row: the header column never scrolls on its own, it
+is shifted by the lanes' scroll, and a wheel over the names scrolls the
+lanes. The ruler, and the playhead's head on it, stay at the top. The
+timeline's two scrollbars — along the bottom of the lanes and down their
+right side — are always drawn, not only under the pointer as everywhere else
+in the window, whenever there is more to scroll to: 12 px, a thumb on a
+track, to grab and drag, blue under the pointer. The names end where the
+lanes' sideways scrollbar begins. A clip dragged onto a lane, or a marquee,
+finds the lane where it is now, scrolled or not (`laneIndexAt`,
+`shared/edit/follow.ts`); a pointer on the ruler is over no lane.
 
 **Selecting.** Click a clip; shift-click takes in everything between it and the
 first selected clip on the same track, ⌘-click (Ctrl-click) adds or takes away
@@ -1289,12 +1429,36 @@ sentences under them:
 
 **Remove** asks first: "Remove the AI helper? It frees about 636 MB.", with a
 box, off, **also remove the downloaded models · <size>**, then **Remove it**
-and **Keep it**. A refusal ("the AI helper is working…") shows in red under
-the buttons.
+and **Keep it**. With the box ticked, every downloaded model goes, all the
+speech models among them. A refusal ("the AI helper is working…") shows in
+red under the buttons.
 
-Under a running helper: **Speech model** — "· 464 MB · on this machine", or
-**Get the speech model · 464 MB** (Transcribe needs it), or "Getting the
-speech model… N%" with an X; then a line saying each model downloads on its
+Under a helper that can transcribe: **Speech model**, a choice of three
+(since 2026-11-20, `161450a` … `1b366ef`), one line each, a round button
+before each, in this order:
+
+- **Small** · 464 MB · fastest
+- **Medium** · 1.4 GB · more accurate, slower
+- **Large** · 2.9 GB · most accurate, slowest
+
+A line adds "· on this machine" when its model's files are here, and the
+chosen line "· used by Transcribe". **Choosing downloads nothing.** It sets
+the one model every Transcribe uses — the Media pool's, the Transcript
+tile's, and every "needs the speech model" follows it — an app-wide setting
+kept in the app's settings file, not in the project; Small until you choose.
+Each model not on this machine has its own press, under its words: **Get the
+speech model · 1.4 GB**, with its own size, tooltip "Fetched once from
+huggingface.co, then kept on this computer: Transcribe needs it when it is
+chosen". **One download at a time**: while one runs, its line reads "Getting
+the speech model… N%" with an X ("Stop getting the speech model"), every
+other press is greyed with the tooltip "Another speech model is downloading.
+Stop it first, or wait for it to finish", and the same sentence stands under
+the list. Changing the choice while a model downloads leaves the download on
+its own line. The choice is not shown, and cannot be set, until the AI
+helper can transcribe. One model cannot be removed alone: Remove, with its
+box, takes them all.
+
+Then a line saying each model downloads on its
 own press, from huggingface.co and *.hf.co (storage.googleapis.com for the
 face finder), and needs a direct connection or a proxy in `HTTPS_PROXY`.
 Last, what the helper does on this machine — transcription, beat finding,
