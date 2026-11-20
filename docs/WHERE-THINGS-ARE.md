@@ -744,11 +744,13 @@ of the captions ("No third is free of the captions here") or no footage
 is under it ("No footage is under it to place it over"). After an aspect
 change or a reframe, an auto graphic with no free third left keeps its
 place, with the notice "<graphic> keeps its old place — no free third".
-On a counter or a ring, **Depth** (built 2026-11-18, §6.16): **Flat**,
+On a counter or a ring, **Depth** (built 2026-11-18/19, §6.16): **Flat**,
 **Tilt**, **Parallax**, **Dolly**, **Focus**, the move it arrives with,
 settling flat on its beat (Flat pressed when none is set). One press, one
-undo step; the choice is kept as yours. The first counter or ring Direct
-lands on a footage clip is that clip's hero: it shows Tilt pressed and,
+undo step; the choice is kept as yours. The first counter or ring that
+Direct or Find graphics lands on a footage clip (not one you Keep or Add)
+is that clip's hero, unless that clip already has one or you set its
+Depth: it shows Tilt pressed and,
 under the Neon or Energetic graphic style, its value or its arc glows;
 any other choice, Flat included, takes the hero and its glow away, while
 pressing Tilt again changes nothing. When the computer's WebGL did not

@@ -11583,7 +11583,8 @@ tests passed and 66 skipped (5931). CI green on `windows-latest` and
     is not read, so `GLOW_ROUTE` stays `'quad'` and both routes stay in
     the tree until M7 is read there, then the loser is removed.
 - **`await window.__forgeGraphicCheck({ focus: true })`**, the harness
-  page, the Mac, at `b2d19f4`: radius 0 against painter A mean 0.000 max
+  page, the Mac, at `b2d19f4`, 2026-11-18 (read again unchanged 2026-11-19
+  and 20): radius 0 against painter A mean 0.000 max
   0; radius 10 px over the stripes ({x 138, y 368, width 246, height
   224}) max 145 mean 25.497; the frame's border alpha at least 255; PASS.
   By the session's eye at 3× zoom the 13-tap blur shows steps, a look item
@@ -11707,8 +11708,8 @@ tests passed and 66 skipped (5931). CI green on `windows-latest` and
   development app's, not read.
 - **The census at `2236a00`**: missing [], 942 checked, 10 skipped, 59840
   ms. compositor, glow and focus PASS with the figures above.
-- **The census's console error, traced 2026-11-20** (read for in vain
-  by run C's builders and critics, settled only on screen). After a census on the
+- **The census's console error, traced 2026-11-20**, settled only on
+  screen. After a census on the
   harness page the console showed `Access to image at
   'forge-media://local/' … blocked by CORS policy`, `net::ERR_FAILED` and
   `ERR_UNKNOWN_URL_SCHEME`, not seen at `b2d19f4`; the builders and
