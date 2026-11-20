@@ -25,7 +25,14 @@ from forge_sidecar import capabilities, media
 from forge_sidecar.capabilities import asr
 from forge_sidecar.rpc import Server, Unavailable
 
-FILES = [name for name, _ in asr.MODEL_FILES]
+SMALL = asr.pinned("small")
+MEDIUM = asr.pinned("medium")
+LARGE = asr.pinned("large-v3")
+FILES = [name for name, _ in SMALL.files]
+
+
+def status(entry: "asr.SpeechModel", present: bool) -> dict[str, object]:
+    return {"present": present, "bytes": entry.bytes, "label": "the speech model", "host": "huggingface.co", "model": entry.name}
 
 
 class Recorder:
@@ -103,7 +110,7 @@ class Planted(unittest.TestCase):
     def setUp(self) -> None:
         self.models = tempfile.mkdtemp(prefix="forge-models-")
         self.addCleanup(shutil.rmtree, self.models, True)
-        self.snapshot = os.path.join(self.models, "models--Systran--faster-whisper-small", "snapshots", asr.MODEL_REVISION)
+        self.snapshot = self.snapshot_of(SMALL)
         self.hub = Hub()
         Whisper.made = []
         patches = [
@@ -118,11 +125,16 @@ class Planted(unittest.TestCase):
         with open(self.audio, "wb") as handle:
             handle.write(b"RIFF")
 
-    def plant(self, names: "list[str] | None" = None) -> None:
-        """The model's files at the pinned commit's place in the cache (a byte each: only their names are read here)."""
-        os.makedirs(self.snapshot, exist_ok=True)
-        for name in FILES if names is None else names:
-            with open(os.path.join(self.snapshot, name), "wb") as handle:
+    def snapshot_of(self, entry: "asr.SpeechModel") -> str:
+        return os.path.join(self.models, "models--" + entry.repo.replace("/", "--"), "snapshots", entry.revision)
+
+    def plant(self, names: "list[str] | None" = None, entry: "asr.SpeechModel | None" = None) -> None:
+        """A model's files (small unless named) at its pinned commit's place in the cache (a byte each: only their names are read here)."""
+        entry = entry or SMALL
+        folder = self.snapshot_of(entry)
+        os.makedirs(folder, exist_ok=True)
+        for name in [n for n, _ in entry.files] if names is None else names:
+            with open(os.path.join(folder, name), "wb") as handle:
                 handle.write(b"x")
 
 
@@ -130,14 +142,39 @@ class Planted(unittest.TestCase):
 
 
 class ThePin(unittest.TestCase):
-    def test_the_revision_is_a_commit_and_the_files_are_what_whisper_reads(self) -> None:
-        self.assertRegex(asr.MODEL_REVISION, r"^[0-9a-f]{40}$")
-        self.assertTrue(media.COMMIT.fullmatch(asr.MODEL_REVISION))
+    def test_three_models_each_at_a_commit_with_the_files_whisper_reads(self) -> None:
+        self.assertEqual([m.name for m in asr.MODELS], ["small", "medium", "large-v3"])
+        self.assertEqual(asr.DEFAULT_MODEL, "small")
+        for entry in asr.MODELS:
+            self.assertRegex(entry.revision, r"^[0-9a-f]{40}$", entry.name)
+            self.assertTrue(media.COMMIT.fullmatch(entry.revision), entry.name)
+            self.assertEqual(entry.repo, "Systran/faster-whisper-" + entry.name)
+            names = [n for n, _ in entry.files]
+            # faster-whisper's own allow_patterns, and nothing else: no README.md, no .gitattributes.
+            for name in names:
+                self.assertRegex(name, r"^(config\.json|preprocessor_config\.json|model\.bin|tokenizer\.json|vocabulary\..+)$", entry.name)
+            for needed in ("config.json", "model.bin", "tokenizer.json"):
+                self.assertIn(needed, names, entry.name)
+            # model.bin last, so nearly all of the bar is its own.
+            self.assertEqual(names[-1], "model.bin", entry.name)
         self.assertEqual(sorted(FILES), ["config.json", "model.bin", "tokenizer.json", "vocabulary.txt"])
-        # The sizes read from huggingface.co's API at that commit, summed: what the press names.
-        self.assertEqual(dict(asr.MODEL_FILES)["model.bin"], 483_546_902)
-        self.assertEqual(asr.MODEL_BYTES, 486_212_372)
-        self.assertEqual((asr.MODEL_REPO, asr.MODEL_LABEL, asr.MODEL_HOST), ("Systran/faster-whisper-small", "the speech model", "huggingface.co"))
+        # large-v3: 128 mel bins from its preprocessor_config.json, and its vocabulary is .json.
+        large = [n for n, _ in LARGE.files]
+        self.assertIn("preprocessor_config.json", large)
+        self.assertIn("vocabulary.json", large)
+        self.assertNotIn("preprocessor_config.json", [n for n, _ in MEDIUM.files])
+        # The sizes read from huggingface.co's API at each commit, summed: what each press names.
+        self.assertEqual((SMALL.bytes, MEDIUM.bytes, LARGE.bytes), (486_212_372, 1_530_571_735, 3_090_835_702))
+        self.assertEqual((asr.MODEL_LABEL, asr.MODEL_HOST), ("the speech model", "huggingface.co"))
+
+    def test_omitted_is_small_and_an_unknown_name_is_refused_naming_the_three(self) -> None:
+        self.assertIs(asr.pinned(None), SMALL)
+        self.assertIs(asr.pinned(""), SMALL)
+        for bad in ("tiny", "large", "Small", 3, ["small"]):
+            with self.assertRaises(ValueError) as caught:
+                asr.pinned(bad)
+            for name in ("small", "medium", "large-v3"):
+                self.assertIn(name, str(caught.exception), bad)
 
 
 # ------------------------------------------------------------ the status
@@ -149,7 +186,7 @@ class TheStatus(Planted):
             with mock.patch.object(media, "download", side_effect=AssertionError("fetched without download: true")) as fetch:
                 self.assertEqual(
                     asr.model(asked, Recorder()),
-                    {"present": False, "bytes": 486_212_372, "label": "the speech model", "host": "huggingface.co"},
+                    {"present": False, "bytes": 486_212_372, "label": "the speech model", "host": "huggingface.co", "model": "small"},
                     asked,
                 )
             self.assertEqual(fetch.call_count, 0, asked)
@@ -158,10 +195,10 @@ class TheStatus(Planted):
     def test_present_it_answers_present_from_the_cache_at_the_commit(self) -> None:
         self.plant()
         status = asr.model({}, Recorder())
-        self.assertEqual(status, {"present": True, "bytes": 486_212_372, "label": "the speech model", "host": "huggingface.co"})
+        self.assertEqual(status, {"present": True, "bytes": 486_212_372, "label": "the speech model", "host": "huggingface.co", "model": "small"})
         self.assertEqual(self.hub.requests, [])
         # It asked the cache about every file, at the pinned commit, in FORGE_MODELS_DIR.
-        self.assertEqual(sorted(self.hub.asked), sorted((asr.MODEL_REPO, name, self.models, asr.MODEL_REVISION) for name in FILES))
+        self.assertEqual(sorted(self.hub.asked), sorted((SMALL.repo, name, self.models, SMALL.revision) for name in FILES))
 
     def test_one_file_missing_is_not_the_model(self) -> None:
         for missing in FILES:
@@ -190,7 +227,7 @@ class TheStatus(Planted):
             except ImportError:
                 return
             for name in FILES:
-                found = real.try_to_load_from_cache(asr.MODEL_REPO, name, cache_dir=self.models, revision=asr.MODEL_REVISION)
+                found = real.try_to_load_from_cache(SMALL.repo, name, cache_dir=self.models, revision=SMALL.revision)
                 self.assertEqual(found, os.path.join(self.snapshot, name), name)
 
 
@@ -212,7 +249,7 @@ class ThePress(Planted):
         self.assertTrue(status["present"])
         self.assertEqual([c[1] for c in calls], FILES)
         for repo, _filename, revision, given, label, _span in calls:
-            self.assertEqual((repo, revision, given, label), (asr.MODEL_REPO, asr.MODEL_REVISION, context, "the speech model"))
+            self.assertEqual((repo, revision, given, label), (SMALL.repo, SMALL.revision, context, "the speech model"))
         spans = [c[5] for c in calls]
         # One bar: each span starts where the last ended, from 0 to 1.
         self.assertEqual(spans[0][0], 0.0)
@@ -246,7 +283,7 @@ class ThePress(Planted):
             self.assertTrue(asr.model({"download": True}, Recorder())["present"])
         self.assertEqual(
             fetched,
-            [{"repo": asr.MODEL_REPO, "filename": name, "revision": asr.MODEL_REVISION, "cache_dir": self.models, "progress": True} for name in FILES],
+            [{"repo": SMALL.repo, "filename": name, "revision": SMALL.revision, "cache_dir": self.models, "progress": True} for name in FILES],
         )
 
 
@@ -292,11 +329,93 @@ class TheWork(Planted):
         with self.assertRaises(ValueError) as caught:
             asr.transcribe({"path": self.audio, "model": "tiny"}, Recorder())
         self.assertIn("'tiny'", str(caught.exception))
+        self.assertIn("small, medium, large-v3", str(caught.exception))
         self.assertEqual(Whisper.made, [])
 
     def test_a_missing_file_is_refused_first(self) -> None:
         with self.assertRaises(ValueError):
             asr.transcribe({"path": os.path.join(self.models, "no-such.wav")}, Recorder())
+
+
+# ------------------------------------------------------------ the three
+
+
+class TheThree(Planted):
+    """Each model is its own: its status, its fetch, its load; omitted is small."""
+
+    def test_each_status_is_that_models_own_and_omitted_is_small(self) -> None:
+        self.plant(entry=MEDIUM)
+        with mock.patch.object(media, "download", side_effect=AssertionError("fetched without download: true")):
+            self.assertEqual(asr.model({"model": "medium"}, Recorder()), status(MEDIUM, True))
+            self.assertEqual(asr.model({"model": "large-v3"}, Recorder()), status(LARGE, False))
+            self.assertEqual(asr.model({"model": "small"}, Recorder()), status(SMALL, False))
+            self.assertEqual(asr.model({}, Recorder()), status(SMALL, False))
+        self.assertEqual(self.hub.requests, [])
+        # Medium was asked about at its own repository and commit.
+        self.assertIn((MEDIUM.repo, "model.bin", self.models, MEDIUM.revision), self.hub.asked)
+
+    def test_large_without_its_preprocessor_config_is_not_on_disk(self) -> None:
+        self.plant([n for n, _ in LARGE.files if n != "preprocessor_config.json"], entry=LARGE)
+        self.assertFalse(asr.model({"model": "large-v3"}, Recorder())["present"])
+        self.plant(["preprocessor_config.json"], entry=LARGE)
+        self.assertTrue(asr.model({"model": "large-v3"}, Recorder())["present"])
+
+    def test_download_fetches_only_that_models_files_in_order_at_its_commit_spans_by_bytes(self) -> None:
+        for entry in (MEDIUM, LARGE, SMALL):
+            calls: list[tuple[object, ...]] = []
+
+            def download(repo: str, filename: str, revision: str, context: object, label: str, span: tuple[float, float] = (0.0, 1.0)) -> str:
+                calls.append((repo, filename, revision, label, span))
+                self.plant([filename], entry=entry)
+                return os.path.join(self.snapshot_of(entry), filename)
+
+            with mock.patch.object(media, "download", side_effect=download):
+                self.assertEqual(asr.model({"download": True, "model": entry.name}, Recorder()), status(entry, True))
+            self.assertEqual([c[1] for c in calls], [n for n, _ in entry.files], entry.name)
+            self.assertEqual({(c[0], c[2], c[3]) for c in calls}, {(entry.repo, entry.revision, "the speech model")}, entry.name)
+            done = 0
+            for (_repo, _name, _revision, _label, span), (_n, size) in zip(calls, entry.files):
+                self.assertEqual(span, (done / entry.bytes, (done + size) / entry.bytes), entry.name)
+                done += size
+            self.assertAlmostEqual(calls[-1][4][1], 1.0, places=12)
+        self.assertEqual(self.hub.requests, [])
+
+    def test_an_unknown_name_is_refused_on_both_methods_before_anything_is_asked(self) -> None:
+        self.plant()
+        with mock.patch.object(media, "download", side_effect=AssertionError("fetched an unknown model")) as fetch:
+            for params in ({"model": "tiny", "download": True}, {"model": "large"}, {"model": "LARGE-V3"}):
+                with self.assertRaises(ValueError) as caught:
+                    asr.model(params, Recorder())
+                self.assertIn("small, medium, large-v3", str(caught.exception), params)
+            with self.assertRaises(ValueError) as caught:
+                asr.transcribe({"path": self.audio, "model": "turbo"}, Recorder())
+            self.assertIn("small, medium, large-v3", str(caught.exception))
+        self.assertEqual(fetch.call_count, 0)
+        self.assertEqual(Whisper.made, [])
+        self.assertEqual(self.hub.asked, [])
+
+    def test_transcribe_with_a_model_not_on_disk_is_unavailable_though_another_is(self) -> None:
+        self.plant()  # small is on disk; medium is not
+        with mock.patch.object(media, "download", side_effect=AssertionError("transcribe downloaded")) as fetch:
+            with self.assertRaises(Unavailable) as caught:
+                asr.transcribe({"path": self.audio, "model": "medium"}, Recorder())
+        self.assertEqual(str(caught.exception), "The speech model is not downloaded yet")
+        self.assertEqual(fetch.call_count, 0)
+        self.assertEqual(Whisper.made, [])
+        self.assertEqual(self.hub.requests, [])
+        self.assertFalse(os.path.exists(self.snapshot_of(MEDIUM)))
+
+    def test_each_size_loads_its_own_snapshot_and_never_shares_a_loaded_model(self) -> None:
+        self.plant()
+        self.plant(entry=MEDIUM)
+        self.plant(entry=LARGE)
+        small = asr.transcribe({"path": self.audio}, Recorder())
+        medium = asr.transcribe({"path": self.audio, "model": "medium"}, Recorder())
+        large = asr.transcribe({"path": self.audio, "model": "large-v3"}, Recorder())
+        asr.transcribe({"path": self.audio, "model": "medium"}, Recorder())
+        self.assertEqual([small["model"], medium["model"], large["model"]], ["faster-whisper/small/int8", "faster-whisper/medium/int8", "faster-whisper/large-v3/int8"])
+        self.assertEqual([given for given, _ in Whisper.made], [self.snapshot_of(SMALL), self.snapshot_of(MEDIUM), self.snapshot_of(LARGE)])
+        self.assertEqual(sorted(key[0] for key in asr._models), ["large-v3", "medium", "small"])
 
 
 # ---------------------------------------------------------- registration

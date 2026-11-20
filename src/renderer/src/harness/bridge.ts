@@ -38,7 +38,20 @@ import {
   type HelperJobKind,
   type InstallStage
 } from '@shared/sidecar/install'
-import { SPEECH_MODEL_HOST, SPEECH_MODEL_LABEL, speechModelRequest, type SpeechModelProgress } from '@shared/asr/speechModel'
+import {
+  SPEECH_MODEL_BUSY,
+  SPEECH_MODEL_HOST,
+  SPEECH_MODEL_LABEL,
+  SPEECH_MODEL_NAMES,
+  SPEECH_MODEL_SETTING,
+  isSpeechModelName,
+  speechModelName,
+  speechModelPin,
+  speechModelRequest,
+  type SpeechModelName,
+  type SpeechModelProgress,
+  type SpeechModelStatus
+} from '@shared/asr/speechModel'
 import {
   REFRAME_FAILURES,
   REFRAME_PRESET,
@@ -429,13 +442,14 @@ const HARNESS_PLATFORM: PackPlatform = /^win/i.test(typeof navigator === 'undefi
 export const HARNESS_HELPER_PACK = HELPER_PACK.platforms[HARNESS_PLATFORM]
 
 /**
- * The speech model's pinned files as asr.py fetches them: config.json,
+ * The Small speech model's pinned files as asr.py fetches them: config.json,
  * vocabulary.txt, tokenizer.json and model.bin of Systran/faster-whisper-small
- * at 536b066…, 486,212,372 B in all (measured 2026-10-16, docs/CLIPS.md §3a.4).
- * Data for the stub's status, as FACE_MODEL's bytes are: the press's words
- * come from it through `speechModelLabel`, never from a size written on screen.
+ * at 536b066…, 486,212,372 B in all (measured 2026-10-16, docs/CLIPS.md §3a.4),
+ * from the shared table (SPEECH_MODELS), as every model's bytes in the stub are.
+ * The press's words come from it through `speechModelLabel`, never from a size
+ * written on screen.
  */
-export const HARNESS_SPEECH_MODEL_BYTES = 486_212_372
+export const HARNESS_SPEECH_MODEL_BYTES = speechModelPin('small').bytes
 
 /** The machine the 'unsupported' state stands for: a Mac on macOS 13, worded by the app's own rule. */
 const UNSUPPORTED_MACHINE = packPlatform({ platform: 'darwin', arch: 'arm64', osVersion: '13.6', translated: false }) as PlatformUnsupported
@@ -561,9 +575,39 @@ export const harnessHelper = {
   downloaded: {} as Record<string, number>,
   /** The AI helper's jobs in the list, as main's queue holds them (presetId 'helper'). */
   jobs: [] as Job[],
-  /** Whether the speech model is "on disk". */
-  speechPresent: false,
+  /** Which of the three speech models are "on disk". */
+  speechOnDisk: { small: false, medium: false, 'large-v3': false } as Record<SpeechModelName, boolean>,
+  /** Whether the Small speech model is "on disk": the one model there was before the choice, and what the checks written then read. */
+  get speechPresent(): boolean {
+    return harnessHelper.speechOnDisk.small
+  },
+  set speechPresent(present: boolean) {
+    harnessHelper.speechOnDisk.small = present
+  },
+  /** While true, a speech model's fetch stops half way and waits there until its X (or this going false): "being fetched" held still to be read. */
+  speechHold: false,
   presses: [] as HarnessHelperPress[],
+
+  /**
+   * The three speech models in the states a reading needs, e.g.
+   * `{ small: 'present', medium: 'absent', 'large-v3': 'fetching' }`: a
+   * 'fetching' one is fetched through the bridge's own `speechModel` with
+   * `speechHold` on, so its progress (naming the model) reaches every
+   * listener and stays at 50 % until cancelled or `speechHold` goes false.
+   * At most one 'fetching', as main fetches one model at a time. Answers the
+   * fetch's promise (rejecting "Cancelled" on its X), or null when none.
+   */
+  speechModelsIn(states: Partial<Record<SpeechModelName, 'present' | 'absent' | 'fetching'>>): Promise<SpeechModelStatus> | null {
+    const fetching = SPEECH_MODEL_NAMES.filter((name) => states[name] === 'fetching')
+    if (fetching.length > 1) throw new Error('One speech model is fetched at a time')
+    for (const name of SPEECH_MODEL_NAMES) {
+      if (states[name] === 'present') harnessHelper.speechOnDisk[name] = true
+      if (states[name] === 'absent' || states[name] === 'fetching') harnessHelper.speechOnDisk[name] = false
+    }
+    if (fetching.length === 0) return null
+    harnessHelper.speechHold = true
+    return harnessSpeechModel({ download: true, model: fetching[0] })
+  },
 
   /** Put the stub in a state and broadcast it. */
   set(state: HarnessHelperState): SidecarStatus {
@@ -576,7 +620,8 @@ export const harnessHelper = {
     for (const job of harnessHelper.jobs) if (job.status === 'queued' || job.status === 'running') helperCancels.add(job.id)
     harnessHelper.jobs = []
     harnessHelper.downloaded = {}
-    harnessHelper.speechPresent = false
+    harnessHelper.speechOnDisk = { small: false, medium: false, 'large-v3': false }
+    harnessHelper.speechHold = false
     harnessHelper.presses = []
     harnessHelper.stepMs = HELPER_STEP_MS
     broadcastJobs()
@@ -764,13 +809,13 @@ async function harnessRemoveHelper(options: unknown): Promise<void> {
   if (activeHelperJob()) throw new Error(HELPER_BUSY)
   await wait(harnessHelper.stepMs)
   harnessHelper.downloaded = {}
-  if (models) harnessHelper.speechPresent = false
+  if (models) harnessHelper.speechOnDisk = { small: false, medium: false, 'large-v3': false }
   harnessHelper.set('absent')
 }
 
-/** What the downloaded models take (main's `modelsBytes`): the speech model's pinned files while it is "on disk", else nothing. */
+/** What the downloaded models take (main's `modelsBytes`): each speech model's pinned files while it is "on disk", else nothing. */
 async function harnessModelsBytes(): Promise<number> {
-  return harnessHelper.speechPresent ? HARNESS_SPEECH_MODEL_BYTES : 0
+  return SPEECH_MODEL_NAMES.reduce((sum, name) => sum + (harnessHelper.speechOnDisk[name] ? speechModelPin(name).bytes : 0), 0)
 }
 
 /**
@@ -789,36 +834,56 @@ async function harnessCheckHelperAgain(): Promise<void> {
   publish(harnessHelperStatus('ready', harnessHelper.downloaded))
 }
 
-/** The speech model's fetch in flight, and whether its X was pressed (main's `asr:modelCancel`). */
-const speechFetch = { running: false, cancelled: false }
+/** The speech model's fetch in flight (which model), and whether its X was pressed (main's `asr:modelCancel`). */
+const speechFetch = { running: null as SpeechModelName | null, cancelled: false, done: null as Promise<SpeechModelStatus> | null }
 
 /**
- * The speech model's status, or its fetch on `download: true` exactly
- * (main's `asr:model`): refused with the status's reason while no helper is
- * ready, as `getSidecar()` refuses; progress on `onSpeechModelProgress`; its
- * X ends it at the next step with "Cancelled", the model not on disk.
+ * A speech model's status, or its fetch on `download: true` exactly (main's
+ * `asr:model`): the model the payload names, else the one chosen in this
+ * page's settings (`speechModel`, read as main reads it); refused with the
+ * status's reason while no helper is ready, as `getSidecar()` refuses; a
+ * press for another model while one is fetched is refused as main refuses
+ * it; progress on `onSpeechModelProgress`, naming its model; its X ends it at
+ * the next step with "Cancelled", the model not on disk.
  */
-async function harnessSpeechModel(payload?: unknown): Promise<ModelStatus> {
-  const { download } = speechModelRequest(payload)
-  harnessHelper.presses.push({ call: 'speechModel', options: { download } })
+async function harnessSpeechModel(payload?: unknown): Promise<SpeechModelStatus> {
+  const request = speechModelRequest(payload)
+  const { download } = request
+  harnessHelper.presses.push({ call: 'speechModel', options: request.model === undefined ? { download } : { download, model: request.model } })
+  const model = request.model ?? speechModelName(harnessSettings[SPEECH_MODEL_SETTING])
   const status = harnessHelper.status
   if (status.state !== 'ready') throw new Error(helperStatusReason(status) ?? HELPER_NOT_INSTALLED)
-  if (download && !harnessHelper.speechPresent) {
-    speechFetch.running = true
-    speechFetch.cancelled = false
-    try {
-      for (let step = 0; step <= 8; step++) {
-        await wait(harnessHelper.stepMs)
-        if (speechFetch.cancelled) throw new Error('Cancelled')
-        for (const listener of speechListeners) listener({ progress: step / 8, message: `fetching ${SPEECH_MODEL_LABEL}` })
-      }
-    } finally {
-      speechFetch.running = false
+  if (download && !harnessHelper.speechOnDisk[model]) {
+    if (speechFetch.running !== null && speechFetch.running !== model) throw new Error(SPEECH_MODEL_BUSY)
+    // Two presses for the same model share one fetch, as main's do.
+    if (!speechFetch.done) {
+      speechFetch.running = model
       speechFetch.cancelled = false
+      speechFetch.done = (async (): Promise<SpeechModelStatus> => {
+        try {
+          for (let step = 0; step <= 8; step++) {
+            await wait(harnessHelper.stepMs)
+            while (step === 4 && harnessHelper.speechHold && !speechFetch.cancelled) await wait(harnessHelper.stepMs)
+            if (speechFetch.cancelled) throw new Error('Cancelled')
+            for (const listener of speechListeners) listener({ progress: step / 8, message: `fetching ${SPEECH_MODEL_LABEL}`, model })
+          }
+        } finally {
+          speechFetch.running = null
+          speechFetch.cancelled = false
+          speechFetch.done = null
+        }
+        harnessHelper.speechOnDisk[model] = true
+        return harnessSpeechStatus(model)
+      })()
     }
-    harnessHelper.speechPresent = true
+    return speechFetch.done
   }
-  return { present: harnessHelper.speechPresent, bytes: HARNESS_SPEECH_MODEL_BYTES, label: SPEECH_MODEL_LABEL, host: SPEECH_MODEL_HOST }
+  return harnessSpeechStatus(model)
+}
+
+/** What `asr.model` answers for one model in the stub: its pinned bytes from the shared table, on disk or not. */
+function harnessSpeechStatus(model: SpeechModelName): SpeechModelStatus {
+  return { present: harnessHelper.speechOnDisk[model], bytes: speechModelPin(model).bytes, label: SPEECH_MODEL_LABEL, host: SPEECH_MODEL_HOST, model }
 }
 
 const packCancels = new Set<string>()
@@ -1396,7 +1461,7 @@ export function installHarnessBridge(): void {
     helperModelsBytes: () => harnessModelsBytes(),
     speechModel: (request?: unknown) => harnessSpeechModel(request ?? {}),
     cancelSpeechModel: async () => {
-      if (speechFetch.running) speechFetch.cancelled = true
+      if (speechFetch.running !== null) speechFetch.cancelled = true
     },
     onSpeechModelProgress: (cb: (update: SpeechModelProgress) => void) => {
       speechListeners.add(cb)
@@ -1456,6 +1521,8 @@ export function installHarnessBridge(): void {
      */
     getSettings: async () => ({ ...harnessSettings }),
     setSetting: async (key: string, value: unknown) => {
+      // As main's settings:set: the speech model choice is one of the three names, or refused.
+      if (key === SPEECH_MODEL_SETTING && !isSpeechModelName(value)) throw new Error(`There is no speech model ${JSON.stringify(value)}`)
       harnessSettings[key] = value
       return { ...harnessSettings }
     },

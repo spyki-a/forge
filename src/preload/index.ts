@@ -5,7 +5,7 @@ import type { DecisionRecord } from '@shared/project'
 import type { Transcript } from '@shared/transcript'
 import type { ModelStatus } from '@shared/sidecar/protocol'
 import type { SidecarStatus } from '@shared/sidecar/status'
-import { SPEECH_MODEL_CHANNELS, type SpeechModelProgress } from '@shared/asr/speechModel'
+import { SPEECH_MODEL_CHANNELS, type SpeechModelName, type SpeechModelProgress, type SpeechModelStatus } from '@shared/asr/speechModel'
 import type {
   FaceModelProgress,
   FaceModelRequest,
@@ -489,7 +489,6 @@ const api = {
     assetId: string
     path: string
     language?: string
-    model?: string
     /** Names and words to listen for (transcript.ts vocabularyPrompt). */
     initialPrompt?: string
   }): Promise<Transcript> => ipcRenderer.invoke('asr:transcribe', request),
@@ -512,11 +511,13 @@ const api = {
   helperModelsBytes: (): Promise<number | null> => ipcRenderer.invoke('helper:modelsBytes'),
 
   /**
-   * The speech model's status, or its fetch on `download: true` exactly — only
-   * from the press that showed its size (docs/CLIPS.md §3a.4, §16.49). Progress
-   * comes on `onSpeechModelProgress`. Channels: shared/asr/speechModel.ts.
+   * A speech model's status, or its fetch on `download: true` exactly — only
+   * from the press that showed its size (docs/CLIPS.md §3a.4, §16.49). `model`
+   * names which of the three; omitted, the one chosen in Settings (the
+   * `speechModel` setting, through getSettings/setSetting). Progress comes on
+   * `onSpeechModelProgress`, naming its model. Channels: shared/asr/speechModel.ts.
    */
-  speechModel: (request: { download?: boolean } = {}): Promise<ModelStatus> =>
+  speechModel: (request: { download?: boolean; model?: SpeechModelName } = {}): Promise<SpeechModelStatus> =>
     ipcRenderer.invoke(SPEECH_MODEL_CHANNELS.model, request),
   /** The press's X: cancels the speech model's fetch in flight; resolves at once, the fetch's own call rejects "Cancelled". */
   cancelSpeechModel: (): Promise<void> => ipcRenderer.invoke(SPEECH_MODEL_CHANNELS.cancel),

@@ -1,11 +1,12 @@
 import { it, expect, beforeAll, afterAll } from 'vitest'
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs'
 import { writeFile } from 'node:fs/promises'
-import { join, resolve } from 'node:path'
+import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { SidecarClient } from '../../src/main/sidecar/client'
 import { SIDECAR_METHODS, RPC_ERRORS, type ModelStatus } from '@shared/sidecar/protocol'
-import { SPEECH_MODEL_HOST, SPEECH_MODEL_LABEL, speechModelLabel } from '@shared/asr/speechModel'
+import { SPEECH_MODELS, SPEECH_MODEL_HOST, SPEECH_MODEL_LABEL, speechModelLabel } from '@shared/asr/speechModel'
+import { asrModels } from '../fixtures/asrModels'
 import { segmentIntoSentences, type Word } from '@shared/transcript'
 import { SIDECAR_DIR, VENV_PYTHON, describeWithVenv, launchFor } from './venv'
 import { formCounts, hindiClips, numberLines } from './asrHindi'
@@ -17,18 +18,18 @@ const FIXTURE = join(process.env.TMPDIR ?? tmpdir(), 'asr-check/jfk.flac')
 const HINDI_DIR = process.env.FORGE_ASR_HINDI ?? ''
 
 /*
- * The speech model is the snapshot of ONE pinned commit (asr.py MODEL_REVISION,
- * docs/CLIPS.md §3a.4), fetched only by asr.model's press. Whether it is in
+ * Each speech model is the snapshot of ONE pinned commit (asr.py MODELS,
+ * docs/CLIPS.md §3a.4), fetched only by asr.model's press; the work below
+ * reads small's. Whether it is in
  * MODELS_DIR is read here from the cache's own layout, so a machine without it
  * skips the transcription with the reason rather than fetching 486 MB unasked.
  * Seed it once with the press: asr.model {download: true} with FORGE_MODELS_DIR
  * set (docs/CLIPS.md §3a.8 row 35).
  */
-const ASR_PY = readFileSync(resolve(SIDECAR_DIR, 'forge_sidecar', 'capabilities', 'asr.py'), 'utf8')
-const REVISIONS = [...ASR_PY.matchAll(/^MODEL_REVISION = "([0-9a-f]{40})"$/gm)].map((m) => m[1])
-if (REVISIONS.length !== 1) throw new Error(`asr.py names MODEL_REVISION ${REVISIONS.length} times`)
-const SNAPSHOT = join(MODELS_DIR, 'models--Systran--faster-whisper-small', 'snapshots', REVISIONS[0])
-const MODEL_ON_DISK = ['config.json', 'model.bin', 'tokenizer.json', 'vocabulary.txt'].every((f) => existsSync(join(SNAPSHOT, f)))
+const SMALL = asrModels().find((m) => m.name === 'small')
+if (!SMALL) throw new Error('asr.py MODELS has no small')
+const SNAPSHOT = join(MODELS_DIR, `models--${SMALL.repo.replace('/', '--')}`, 'snapshots', SMALL.revision)
+const MODEL_ON_DISK = SMALL.files.every(([f]) => existsSync(join(SNAPSHOT, f)))
 
 interface TranscribeResult {
   language: string
@@ -65,8 +66,18 @@ describeWithVenv('asr.model: the speech model’s own press', () => {
   it('answers what the press names, with nothing on disk and nothing fetched', async () => {
     await fresh.start()
     const status = await fresh.request<ModelStatus>(SIDECAR_METHODS.asrModel, {})
-    expect(status).toEqual({ present: false, bytes: 486_212_372, label: SPEECH_MODEL_LABEL, host: SPEECH_MODEL_HOST })
+    expect(status).toEqual({ present: false, bytes: 486_212_372, label: SPEECH_MODEL_LABEL, host: SPEECH_MODEL_HOST, model: 'small' })
     expect(speechModelLabel(status)).toBe('Get the speech model · 464 MB')
+    // Each of the three, asked by name, answers its own size and fetches nothing.
+    for (const pin of SPEECH_MODELS) {
+      expect(await fresh.request<ModelStatus>(SIDECAR_METHODS.asrModel, { model: pin.name })).toEqual({
+        present: false,
+        bytes: pin.bytes,
+        label: SPEECH_MODEL_LABEL,
+        host: SPEECH_MODEL_HOST,
+        model: pin.name
+      })
+    }
     expect(readdirSync(empty)).toEqual([])
   }, 120_000)
 
@@ -77,16 +88,29 @@ describeWithVenv('asr.model: the speech model’s own press', () => {
       code: RPC_ERRORS.unavailable,
       message: 'The speech model is not downloaded yet'
     })
+    // Each of the three by name: the same sentence, and nothing fetched.
+    for (const pin of SPEECH_MODELS) {
+      await expect(fresh.request(SIDECAR_METHODS.transcribe, { path: audio, model: pin.name }), pin.name).rejects.toMatchObject({
+        code: RPC_ERRORS.unavailable,
+        message: 'The speech model is not downloaded yet'
+      })
+    }
     expect(readdirSync(empty)).toEqual([])
   }, 120_000)
 
-  it('refuses a size other than the pinned one, rather than fetching it', async () => {
+  it('refuses a size other than the three, naming them, rather than fetching it', async () => {
     await fresh.start()
     const audio = join(SIDECAR_DIR, 'forge_sidecar', '__init__.py')
     await expect(fresh.request(SIDECAR_METHODS.transcribe, { path: audio, model: 'tiny' })).rejects.toMatchObject({
       code: RPC_ERRORS.internalError,
       message: expect.stringContaining("'tiny'")
     })
+    for (const params of [{ model: 'large' }, { model: 'turbo', download: true }]) {
+      await expect(fresh.request(SIDECAR_METHODS.asrModel, params), JSON.stringify(params)).rejects.toMatchObject({
+        code: RPC_ERRORS.internalError,
+        message: expect.stringContaining('small, medium, large-v3')
+      })
+    }
     expect(readdirSync(empty)).toEqual([])
   }, 120_000)
 

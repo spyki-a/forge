@@ -17,8 +17,18 @@ import { probeMany } from './ffmpeg/probe'
 import { getSidecar, helperPackDeps, settleHelperStatus, sidecarStatus } from './sidecar/service'
 import { createHelperPackJobs, unbuiltWorkers, type HelperPackJobs, type HelperPackWorkers } from './sidecar/install'
 import { HELPER_CHANNELS, helperInstallRequest, helperRemoveRequest } from '@shared/sidecar/install'
-import { SIDECAR_METHODS, type ModelStatus } from '@shared/sidecar/protocol'
-import { SPEECH_MODEL_CHANNELS, speechModelRequest, type SpeechModelProgress } from '@shared/asr/speechModel'
+import { SIDECAR_METHODS } from '@shared/sidecar/protocol'
+import {
+  SPEECH_MODEL_BUSY,
+  SPEECH_MODEL_CHANNELS,
+  SPEECH_MODEL_SETTING,
+  isSpeechModelName,
+  speechModelName,
+  speechModelRequest,
+  type SpeechModelName,
+  type SpeechModelProgress,
+  type SpeechModelStatus
+} from '@shared/asr/speechModel'
 import { VOCABULARY_MAX_CHARS, joinSplitNumbers, segmentIntoSentences, type Transcript, type Word } from '@shared/transcript'
 import { JobQueue } from './queue'
 import { releasesTemporaries, startRender, sweepTemporaries, type RenderOptions } from './render/renderJob'
@@ -86,6 +96,16 @@ interface ExportRequest {
  * key and kind (LinkRuns), each with its own AbortController.
  */
 const linkRuns = new LinkRuns()
+
+/**
+ * The app-wide speech model choice (shared/asr/speechModel.ts
+ * SPEECH_MODEL_SETTING), from the settings file's window half: never the
+ * main half, which holds the hosted keys. Read at each ask, so a choice the
+ * window just wrote is the one used; anything not one of the three is 'small'.
+ */
+function chosenSpeechModel(): SpeechModelName {
+  return speechModelName(rendererSettings()[SPEECH_MODEL_SETTING])
+}
 
 /** Abort every link read, for a quit: yt-dlp runs detached and would outlive the app. */
 export function abortLinkRuns(): void {
@@ -984,11 +1004,11 @@ export function registerIpc(getWindow: () => BrowserWindow | null, options: IpcO
   const transcriptions = new Map<string, AbortController>()
 
   ipcMain.handle('asr:transcribe', async (_e, payload: unknown) => {
-    const { assetId, path, language, model, initialPrompt } = (payload ?? {}) as {
+    // No `model` from the window: the model is the app-wide choice, read here (chosenSpeechModel).
+    const { assetId, path, language, initialPrompt } = (payload ?? {}) as {
       assetId?: unknown
       path?: unknown
       language?: unknown
-      model?: unknown
       initialPrompt?: unknown
     }
     if (typeof assetId !== 'string' || typeof path !== 'string') {
@@ -1009,7 +1029,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null, options: IpcO
         {
           path,
           language: typeof language === 'string' ? language : undefined,
-          model: typeof model === 'string' ? model : undefined,
+          model: chosenSpeechModel(),
           // The project's vocabulary, as Whisper's prompt — bounded here too,
           // since this is the edge the renderer's data crosses.
           initialPrompt:
@@ -1050,9 +1070,12 @@ export function registerIpc(getWindow: () => BrowserWindow | null, options: IpcO
   })
 
   /*
-   * The speech model's own press (docs/CLIPS.md §3a.4, §16.49): its status
-   * for the button's label, or its fetch on `download: true` exactly, which
-   * only the press that showed the size sends. 486,212,372 B, so no timeout
+   * The speech model's own press (docs/CLIPS.md §3a.4, §16.49): a model's
+   * status for the button's label, or its fetch on `download: true` exactly,
+   * which only the press that showed the size sends. The model is the one the
+   * payload names (the Settings row asks after all three), else the chosen
+   * one. One fetch at a time, for one model: a press for another while it
+   * runs is refused (SPEECH_MODEL_BUSY). Up to 3 GB, so no timeout
    * of main's on the fetch: huggingface_hub 1.31.0 reads each response with
    * its own HF_HUB_DOWNLOAD_TIMEOUT (10 s), which ends a stalled one. Two
    * presses at once share one fetch. With no helper to ask, getSidecar's
@@ -1061,29 +1084,32 @@ export function registerIpc(getWindow: () => BrowserWindow | null, options: IpcO
    * the helper a cancel, which media.download honours at its next chunk, and
    * every press waiting on it rejects with "Cancelled".
    */
-  let speechFetch: Promise<ModelStatus> | null = null
+  let speechFetch: { model: SpeechModelName; done: Promise<SpeechModelStatus> } | null = null
   let speechCancel: AbortController | null = null
   ipcMain.handle(SPEECH_MODEL_CHANNELS.model, async (_e, payload: unknown) => {
-    const { download } = speechModelRequest(payload)
+    const request = speechModelRequest(payload)
+    const model = request.model ?? chosenSpeechModel()
     const helper = getSidecar()
-    if (!download) return helper.request<ModelStatus>(SIDECAR_METHODS.asrModel, {}, { timeoutMs: 30_000 })
+    if (!request.download) return helper.request<SpeechModelStatus>(SIDECAR_METHODS.asrModel, { model }, { timeoutMs: 30_000 })
+    if (speechFetch && speechFetch.model !== model) throw new Error(SPEECH_MODEL_BUSY)
     if (!speechFetch) {
       const controller = new AbortController()
       speechCancel = controller
-      speechFetch = helper
-        .request<ModelStatus>(SIDECAR_METHODS.asrModel, { download: true }, {
+      const done = helper
+        .request<SpeechModelStatus>(SIDECAR_METHODS.asrModel, { model, download: true }, {
           signal: controller.signal,
           onProgress: (progress, message) => {
-            const update: SpeechModelProgress = { progress, ...(message !== undefined ? { message } : {}) }
+            const update: SpeechModelProgress = { progress, ...(message !== undefined ? { message } : {}), model }
             getWindow()?.webContents.send(SPEECH_MODEL_CHANNELS.progress, update)
           }
         })
         .finally(() => {
-          speechFetch = null
+          if (speechFetch?.done === done) speechFetch = null
           if (speechCancel === controller) speechCancel = null
         })
+      speechFetch = { model, done }
     }
-    return speechFetch
+    return speechFetch.done
   })
   ipcMain.handle(SPEECH_MODEL_CHANNELS.cancel, () => {
     speechCancel?.abort()
@@ -1344,6 +1370,8 @@ export function registerIpc(getWindow: () => BrowserWindow | null, options: IpcO
   ipcMain.handle('settings:set', (_e, payload: unknown) => {
     const { key, value } = (payload ?? {}) as { key?: unknown; value?: unknown }
     if (typeof key !== 'string' || !key) throw new Error('Expected a settings key')
+    // The speech model choice is read by main (chosenSpeechModel): only one of the three names is written.
+    if (key === SPEECH_MODEL_SETTING && !isSpeechModelName(value)) throw new Error(`There is no speech model ${JSON.stringify(value)}`)
     return setRendererSetting(key, value)
   })
 

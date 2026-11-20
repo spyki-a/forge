@@ -17,6 +17,8 @@
 import type { FaceBox, UnitRect } from '../reframe/types'
 // Types only: selftest.ts imports SIDECAR_METHODS from here, so a value import back would be a cycle.
 import type { SelftestGroup, SelftestResult } from './selftest'
+// Types only, for the same reason: speechModel.ts imports ModelStatus from here.
+import type { SpeechModelName } from '../asr/speechModel'
 
 export const PROTOCOL_VERSION = 1
 
@@ -150,13 +152,18 @@ export const SIDECAR_METHODS = {
    * Transcribe audio: { path, language?, model? } -> word-level timestamps.
    * Never downloads: the speech model not on disk is `unavailable` ("The
    * speech model is not downloaded yet"), and `asrModel` is the question and
-   * the fetch. `model`, when sent, must be 'small', the one size pinned.
+   * the fetch. `model`, when sent, must be one of the three pinned
+   * (shared/asr/speechModel.ts SPEECH_MODEL_NAMES: 'small', 'medium',
+   * 'large-v3'); omitted, 'small'. Main always sends the chosen one.
    */
   transcribe: 'asr.transcribe',
   /**
-   * The speech model, Systran/faster-whisper-small at one pinned commit,
-   * 486,212,372 B from Hugging Face: ModelParams -> ModelStatus (docs/CLIPS.md
-   * §3a.4, §16.49). shared/asr/speechModel.ts SPEECH_MODEL_METHOD.
+   * One of the three speech models, Systran/faster-whisper-<small|medium|
+   * large-v3>, each at one pinned commit (486,212,372 B, 1,530,571,735 B,
+   * 3,090,835,702 B) from Hugging Face: ModelParams -> ModelStatus (docs/CLIPS.md
+   * §3a.4, §16.49), `params.model` naming which (omitted: 'small'); the
+   * answer carries `model` too (SpeechModelStatus). shared/asr/speechModel.ts
+   * SPEECH_MODEL_METHOD and SPEECH_MODELS.
    */
   asrModel: 'asr.model',
   /** Beats and musical structure: { path, startMs?, endMs? }. */
@@ -294,6 +301,12 @@ export interface ModelParams {
    * of the Get button that showed `bytes`; without it nothing is downloaded.
    */
   download?: boolean
+  /**
+   * `asr.model` only: which speech model, one of shared/asr/speechModel.ts
+   * SPEECH_MODEL_NAMES ('small', 'medium', 'large-v3'); omitted, 'small'.
+   * Any other value is refused by name. The other models' methods ignore it.
+   */
+  model?: SpeechModelName
 }
 
 export interface ModelStatus {
