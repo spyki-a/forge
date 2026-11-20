@@ -622,6 +622,8 @@ export const harnessHelper = {
     harnessHelper.downloaded = {}
     harnessHelper.speechOnDisk = { small: false, medium: false, 'large-v3': false }
     harnessHelper.speechHold = false
+    // The choice back to its default (small), so a later check reads Small's size.
+    delete harnessSettings[SPEECH_MODEL_SETTING]
     harnessHelper.presses = []
     harnessHelper.stepMs = HELPER_STEP_MS
     broadcastJobs()
@@ -853,8 +855,10 @@ async function harnessSpeechModel(payload?: unknown): Promise<SpeechModelStatus>
   const model = request.model ?? speechModelName(harnessSettings[SPEECH_MODEL_SETTING])
   const status = harnessHelper.status
   if (status.state !== 'ready') throw new Error(helperStatusReason(status) ?? HELPER_NOT_INSTALLED)
+  // As main: a press for another model while one is fetched is refused before
+  // anything is asked, even when that model is already on disk.
+  if (download && speechFetch.running !== null && speechFetch.running !== model) throw new Error(SPEECH_MODEL_BUSY)
   if (download && !harnessHelper.speechOnDisk[model]) {
-    if (speechFetch.running !== null && speechFetch.running !== model) throw new Error(SPEECH_MODEL_BUSY)
     // Two presses for the same model share one fetch, as main's do.
     if (!speechFetch.done) {
       speechFetch.running = model

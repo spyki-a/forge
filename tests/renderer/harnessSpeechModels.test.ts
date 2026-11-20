@@ -87,6 +87,36 @@ describe('the harness stand-in for three speech models', () => {
     expect(stub.speechOnDisk).toEqual({ small: false, medium: false, 'large-v3': false })
   })
 
+  it('a press with no model named fetches the CHOSEN one, and its progress names it', async () => {
+    const seen: SpeechModelProgress[] = []
+    bridge.onSpeechModelProgress((u) => seen.push(u))
+    await bridge.setSetting(SPEECH_MODEL_SETTING, 'medium')
+    expect(await bridge.speechModel({ download: true })).toMatchObject({ model: 'medium', present: true })
+    expect(stub.speechOnDisk).toEqual({ small: false, medium: true, 'large-v3': false })
+    expect(seen.length).toBeGreaterThan(0)
+    expect(new Set(seen.map((u) => u.model))).toEqual(new Set(['medium']))
+  })
+
+  it('as main: while one model is fetched, a press for another is refused even when that one is on disk', async () => {
+    const fetching = stub.speechModelsIn({ small: 'present', 'large-v3': 'fetching' })!
+    const outcome = fetching.then(
+      () => 'done',
+      (err: Error) => err.message
+    )
+    await expect(bridge.speechModel({ download: true, model: 'small' })).rejects.toThrow(SPEECH_MODEL_BUSY)
+    // A status ask is still answered.
+    expect(await bridge.speechModel({ model: 'small' })).toMatchObject({ present: true })
+    await bridge.cancelSpeechModel()
+    expect(await outcome).toBe('Cancelled')
+  })
+
+  it('reset() puts the choice back to small', async () => {
+    await bridge.setSetting(SPEECH_MODEL_SETTING, 'large-v3')
+    stub.reset()
+    stub.set('ready')
+    expect(await bridge.speechModel({})).toMatchObject({ model: 'small', bytes: speechModelPin('small').bytes })
+  })
+
   it('a press with no model names none in what the stub records, as before the choice', async () => {
     await bridge.speechModel({ download: true })
     expect(stub.presses.at(-1)).toEqual({ call: 'speechModel', options: { download: true } })

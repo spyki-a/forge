@@ -373,6 +373,17 @@ describe('the choice of three', () => {
     expect(electron.sent).toEqual([{ channel: SPEECH_MODEL_CHANNELS.progress, payload: { progress: 0.5, message: 'downloading the speech model', model: 'large-v3' } }])
   })
 
+  it('the press with no model named (the window’s only press today) fetches the CHOSEN one, and its progress names it', async () => {
+    settingsFile({ [SPEECH_MODEL_SETTING]: 'medium' })
+    const { asked } = recording({ progress: [[0.25, 'downloading the speech model'], [1, undefined]] })
+    const call = await handler()
+    expect(await call({ download: true })).toEqual({ ...STATUS, present: true, model: 'medium' })
+    expect(asked.map((a) => a.params)).toEqual([{ model: 'medium', download: true }])
+    const progress = electron.sent.filter((s) => s.channel === SPEECH_MODEL_CHANNELS.progress)
+    expect(progress).toHaveLength(2)
+    for (const s of progress) expect(s.payload).toMatchObject({ model: 'medium' })
+  })
+
   it('one fetch at a time: a press for another model while one runs is refused and asks nothing; the same model shares it', async () => {
     const { asked, release } = recording({ gated: true })
     const call = await handler()

@@ -380,6 +380,27 @@ class TheThree(Planted):
             self.assertAlmostEqual(calls[-1][4][1], 1.0, places=12)
         self.assertEqual(self.hub.requests, [])
 
+    def test_a_press_for_medium_fetches_it_while_another_model_is_already_on_disk(self) -> None:
+        # The common case in the field: an install has Small, and Medium is pressed.
+        for already in (SMALL, LARGE):
+            with self.subTest(already=already.name):
+                shutil.rmtree(self.models, True)
+                os.makedirs(self.models)
+                self.plant(entry=already)
+                calls: list[tuple[str, str, str]] = []
+
+                def download(repo: str, filename: str, revision: str, context: object, label: str, span: tuple[float, float] = (0.0, 1.0)) -> str:
+                    calls.append((repo, filename, revision))
+                    self.plant([filename], entry=MEDIUM)
+                    return os.path.join(self.snapshot_of(MEDIUM), filename)
+
+                with mock.patch.object(media, "download", side_effect=download):
+                    self.assertEqual(asr.model({"download": True, "model": "medium"}, Recorder()), status(MEDIUM, True))
+                self.assertEqual(calls, [(MEDIUM.repo, n, MEDIUM.revision) for n, _ in MEDIUM.files])
+                # The model already there is untouched and still answers present.
+                self.assertTrue(asr.model({"model": already.name}, Recorder())["present"])
+        self.assertEqual(self.hub.requests, [])
+
     def test_an_unknown_name_is_refused_on_both_methods_before_anything_is_asked(self) -> None:
         self.plant()
         with mock.patch.object(media, "download", side_effect=AssertionError("fetched an unknown model")) as fetch:
