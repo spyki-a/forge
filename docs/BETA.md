@@ -195,7 +195,7 @@ below), each with a test that fails when the bug is put back:
    item in the Director panel, persisted on the asset (`MediaAsset.excluded`),
    honoured by `buildSlots`. *(2026-11-20: a file can now be removed from
    the project, "Remove from project" on the Upload panel's right-click
-   menu, below; the "leave out" toggle, which keeps a file in the project
+   menu, above (§2's "Three items before the beta"); the "leave out" toggle, which keeps a file in the project
    and out of the ad, is not built.)*
 4. **No model gives a wedding brief the Energy recipe** because the default
    tone is energetic (`src/shared/director/recipes/index.ts:174`): the tone
@@ -294,7 +294,8 @@ helper · 166 MB** on the Mac, **· 201 MB** on Windows (pack 2: hf-xet left
 the lock), 636 / 685 MB on disk; its bar and X in EXPORT; Repair, Update,
 Remove and Check again on the same row; every Python control greyed by its
 own method, each "needs the AI helper" a pointer to that row; the speech
-model its own press ("Get the speech model · 464 MB"); the NSIS uninstaller
+model its own press ("Get the speech model · 464 MB"; since 2026-11-20
+one of three, each with its own sized press: §2's three items); the NSIS uninstaller
 removing the pack. Installed for real on the dev Mac (53–58 s). **What the
 exit still owes** (`CLIPS.md` §3a.9): CI's first run with the pack on both
 runners (the next push); the clean Mac, from a DMG fetched through a

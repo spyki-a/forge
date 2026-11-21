@@ -291,8 +291,8 @@
 > Still yours from it: §6.12's try-out list and §16.67-73.
 > Of phase 2's lanes nothing is left to build. (Until 2026-11-20 this
 > line went on: "Next by §6.19: phase 3, after phase 2's exit (§6.12's
-> list)." Phase 3 began before that exit, on your word: the next
-> paragraph.) **Moved to after the beta by you,
+> list)." Phase 3 began before that exit, on your word: the paragraph
+> "Phase 3 began 2026-11-18" below.) **Moved to after the beta by you,
 > 2026-11-14 (§16.74):** the hand spike (§6.17) and phase 4 (§6.18),
 > which §6.19 placed during and after phase 2; step 3 before the beta is
 > 29 days. **Moved to after the beta by you, 2026-11-14 (§16.75):** step
@@ -301,7 +301,9 @@
 > **Decided by you, 2026-11-15 (§16.76):** captions as items on the
 > timeline come after the beta. The order to the beta is §2's 2026-11-14
 > note: phase 2's exit, phase 3, step 4, 1g, step 6's 3D templates, step
-> 7, then `BETA.md`. (Until this was recorded, 2026-11-15, these lines
+> 7, then `BETA.md`. (Since 2026-11-18 the order is §2's 2026-11-18 note
+> and §16.86: phase 3, built 2026-11-18 to 20, then the three items,
+> built 2026-11-20, then the rest of this order; below.) (Until this was recorded, 2026-11-15, these lines
 > read: "Decided by you on 2026-11-14, not yet carried into §2,
 > §6.17-§6.19, §8, §9, §16, §17 or BETA.md (the record's next pass)".)
 > Still yours from these lanes: the list in §6.12's "Phase 2's state,
@@ -362,7 +364,8 @@
 > run by no one; M13 over real title frames) and nothing on the Surface
 > (M6 whole, M7 and then the losing glow route's removal, M12, M13, M20,
 > and the `depth`, `screenCard` and `bake3d` options); no look is rated
-> by you. **Phase 3's exit (§6.12) is not met**: its items, with what
+> by you; every phase-3 option is also still to be run in the
+> development app on the Mac (§6.12). **Phase 3's exit (§6.12) is not met**: its items, with what
 > each still needs, are §6.12's "Phase 3's state, 2026-11-20"; the
 > decisions phase 3 left to you are §16.77-85.
 >
@@ -18841,9 +18844,9 @@ spike", made exact):
   memory: … 0/0 → 0/0" for its three M13 cases, each after its bakes
   and its Preview entry forgotten, the Preview's own call on a clip's
   removal, and over the whole option; and 2026-11-18, `compositor`, 0 /
-  0 after `dispose()`. Read as the item words it, on the harness, on
-  the Mac; the bar is a proposal; the Surface's harness reading is
-  yours.)
+  0 after `dispose()`. Read on the Mac's harness page; not marked met
+  while the Surface's harness reading is open (yours); the bar is a
+  proposal.)
 - With WebGL missing, the flat graphic drawn with the note
   (`graphicCompositor`).
   (Met 2026-11-18: `tests/renderer/graphicCompositor.test.ts` in the
@@ -18867,7 +18870,7 @@ spike", made exact):
   card’s hand-off through the real plan", 8 tests, passed on the Mac's
   build inside the full suite at `2236a00`, and runs ungated, so CI's
   green at `2236a00` on `windows-latest` (run 44727055616) is the 2018
-  build's. §9's heading reads "5 days (Brave's 1 out; the 2.5D counter
+  build's (inferred: the run's totals cannot be read). §9's heading reads "5 days (Brave's 1 out; the 2.5D counter
   and ring moved to step 3, §16.55; the cards' 3 after the beta,
   §16.75)": 5, of which 2 before the beta.)
 - **Phase 3's state, 2026-11-20.** Built and pushed: all six pieces of
@@ -18876,9 +18879,8 @@ spike", made exact):
   0, 361 files passed and 5 skipped (366), 5865 tests passed and 66
   skipped (5931), build 0; the census: missing [], 942 checked, 10
   skipped. **Of the bar above**, met: WebGL missing, `graphic.int`'s
-  phase-3 case and §9's days; read as the item words it on the harness
-  page on the Mac: disposal. Read on the harness page on the Mac only,
-  not met: M6 whole, preview = export, M13's twice-bakes, M7, the
+  phase-3 case and §9's days. Read on the harness page on the Mac only,
+  not met: disposal (until the Surface's harness reading), M6 whole, preview = export, M13's twice-bakes, M7, the
   screen card's harness readings and M12. **Yours, which the bar
   names**, in `npm run dev`'s DevTools console on the Mac and the
   Surface: `({ compositor: true })` (M6 whole), `({ glow: ['unreal',
@@ -22383,7 +22385,7 @@ piece table does (§6.3's, §6.16's, §6.17's, §6.18's).
 | 2 | try-out 1 (2026-11-15, after the lanes) | not a lane of the plan: six pieces from your first real recording put through Find graphics with no model, each read by critics before its fixer (two for pieces 1-5, three for piece 6), in order: piece 1, numbers joined at transcription, `dd60e4d`, `287201d`; piece 2, the what-if rule and the tightened baseline keyword, `7abe9bb`, `e619bf5`; piece 3, room by rank, decided once by the budget, `d3daf1e`, `187de3e`; piece 4, Add on every dropped graphic, `660f550`, `a210e79`; piece 5, Add graphic from these words, `a94f2fc`, `63cd155`; piece 6, the Library's Graphics drawer, `e9f7923`, `05c2c0e`; and the session's three, `c29a5dd` and `8b1f2a8` (piece 5) and `81db7ca` (piece 6); pushed once as `81db7ca`, green on both runners (run 43747804256); §6.12's "Try-out 1, 2026-11-15" | outside the days | T4 |
 | 3 | depth, in six pieces (2026-11-18 to 20) | piece 1, the compositor (routes, planes, camera and compensation, upload, disposal, WebGL missing) and its seam in `graphicCanvas.ts`; piece 2, the glow behind one seam with both routes for M7, and the focus blur; piece 3, the 2.5D `counter` and `ring`, the hero rule in `applyGraphics`, the hero's glow and the dock's Depth choice; piece 4, the screen card without its sweep (pull, `screenTargetsAt` and the bitmaps, draw, keys, the store's realign, the export's strike, refusals, the dock's Screen card); piece 5, the edge sweep, one loop; piece 6, the harness's remaining options and `graphic.int`'s phase-3 case (§6.16, its six piece notes; §6.11's phase-3 notes) (built 2026-11-18 to 20, each piece read by two or three critics before its fixer: `31e83b2`, `d415f2c`; `a199733`, `b2d19f4`; `1d7204c`, `c829007`; `1eaafc5`, `cf5aed2`; `3ee251c`, `77c66e3`; `3d55a47`, `61365a4`; and the session's `a74576d` (piece 3's depth option) and `2236a00` (piece 6's landing line); beyond the row, the `compositor`, `focus`, `depth`, `screenCard: true` and new `bake3d` options; CI green on both runners at `b2d19f4`, `a74576d` and `2236a00`; the options read by the session on the Mac's harness page only. Left: M6, M7, M12, M13, M20 and the depth, screen card and `bake3d` options read in the development app on the Mac and on the Surface, M7's losing route removed, and the look; §6.12's phase 3) | 1.5 + 0.5 + 1 + 1.25 + 0.25 + 0.5 | your word of 2026-11-18, phase 2's exit still open (§6.12); M6's phase-0 parts |
 | spike | H | §6.17's pieces: the worker's `hands` mode, `hands/types.ts`, `events.ts`, `oneEuro.ts`, `anchor.ts`'s `tipOnFrame`, the cases §6.17 lists; your runs | 1.5 | your footage; runs during phase 2 (nothing of phases 1-2 is needed: `sourceToFrame` through the reframe exists); after the beta since 2026-11-14 (§16.74) |
-| 3 | depth | §6.16, split as its day table writes; M7 first, on the glow seam (built 2026-11-18 to 20: the phase-3 row above) | 5 | phase 2's exit; M6's phase-0 parts |
+| 3 | depth | §6.16, split as its day table writes; M7 first, on the glow seam (built 2026-11-18 to 20: the phase-3 row above) | 5 | phase 2's exit; M6's phase-0 parts (built before that exit on your word of 2026-11-18, §16.86) |
 | 4 | depth | §6.18, only if the gate passed | 6 | the gate (§6.12); after the beta since 2026-11-14 (§16.74) |
 
 The sums: phase 1, 1.25 + 2 + 2 + 1.5 + 0.75 = 7.5; phase 2, 4.5 + 3 + 2 +
@@ -26266,14 +26268,19 @@ the development app or on the Surface.
     glowing card's moving frames are `min(total, L + 1 + round(EDGE_SWEEP_S
     × fps))`, with `EDGE_SWEEP_S` 6: 169, 176, 211, 351 and 421 at 24, 25,
     30, 50 and 60 fps. §6.16 names only 30 fps (211, under M1's 300-frame
-    whole-hold budget); every rate above about 41 fps is over it. Also,
+    whole-hold budget); every rate above about 41 fps is over it (the
+    builder's figure; by the formula, 7 × fps + 1 at `L` = fps, 42 fps
+    gives 295 and 43 gives 302, so the crossing is at 43). Also,
     every edit of a glowing card now rebakes 211 canvas-sized PNGs at 30
     fps where it was 46. The choices piece 5's builder and fixer named:
     shorten the loop at high rates; accept it; or time it with M20 at 60
-    fps on the Surface. No recommendation yet; M20 timed at 60 fps on the
+    fps on the Surface. But M20 as built lays the recording in a 30 fps
+    project only (`const FPS = 30` in `screenCardRecordingCheck.ts`; piece
+    6's fixer: "M20 times 30 fps only"), so a 60 fps timing needs a change
+    to the option first. No recommendation yet; such a timing on the
     Surface would settle whether the cost matters.
 
-    **Answer: OPEN.** Yours.
+    **Answer (2026-11-20): OPEN.** Yours.
 78. **M7's route, and the loser's removal.** Both routes pass on the Mac's
     harness page (§6.15's phase-3 note). §6.16's rule stands as the plan's
     own: `unreal` only if it passes on both machines, else `quad`. What is
@@ -26287,7 +26294,7 @@ the development app or on the Surface.
     (derived from three r186's composite and pinned by a test against the
     three source).
 
-    **Answer: OPEN.** Yours: the Surface's reading, then the rule decides.
+    **Answer (2026-11-20): OPEN.** Yours: the Surface's reading, then the rule decides.
 79. **M12's rule, and the async route's target.** On the Mac `drawImage`
     is fastest at p50 and keeps straight alpha, so by the rule (`drawImage`
     unless another is at least twice as fast) it stays; the rule names the
@@ -26295,21 +26302,23 @@ the development app or on the Surface.
     there: `readRenderTargetPixelsAsync`'s render target is not
     antialiased (three r186 invalidates a multisampled target's colour
     after resolving it), so choosing that route would change the bake's
-    edges, which piece 6's fixer left for you to weigh against the canvas
-    route; and M12's straight-alpha reading for `readPixels` and the async
+    edges, which piece 6's builder left for you to weigh against the canvas
+    route (its fixer recorded only that the edges would change); and M12's straight-alpha reading for `readPixels` and the async
     route goes through `straightTopDown` on both sides, so an
     un-premultiply error there would cancel out on screen (its arithmetic
     is node-tested). No recommendation; M12 on the Surface settles whether
     the question arises.
 
-    **Answer: OPEN.** Yours.
+    **Answer (2026-11-20): OPEN.** Yours.
 80. **The hero rule's reach, and the preview compositor's cap.** The
     hero rule runs only in `applyGraphics`: not on Keep, Add, a move or a
     split, so moving a hero onto a clip that has another, or a split, can
-    leave two heroes on one clip; pressing Tilt on the hero keeps `hero`
-    (and its glow), "the same choice again is no edit" (piece 3's builder,
-    recorded by its fixer, not changed; the plan names `applyGraphics`
-    only). The Preview keeps at most `PREVIEW_COMPOSITOR_CAP` 3
+    leave two heroes on one clip (the plan names `applyGraphics` only, so
+    piece 3's fixer did not extend it). Pressing Tilt on the hero keeps
+    `hero` (and its glow): a departure from §6.16's words, "Your choice
+    wins over the rule and clears `hero` on that graphic"; the builder's
+    reading is "the same choice again is no edit" (a critic flagged it,
+    the fixer recorded it for you, not changed). The Preview keeps at most `PREVIEW_COMPOSITOR_CAP` 3
     compositors, the least recently drawn evicted only once it has not
     been drawn for `PREVIEW_COMPOSITOR_HOLD_MS` 250 (both proposals): with
     four or more deep clips on one frame while paused, the fourth stays
@@ -26317,12 +26326,15 @@ the development app or on the Surface.
     should run on those edits is yours, and the cap a reading on the
     Surface's memory.
 
-    **Answer: OPEN.** Yours.
+    **Answer (2026-11-20): OPEN.** Yours.
 81. **The screen card after it exists** (piece 4, run B). Each left by
     its fixer:
     - the refusals are not checked again once a card exists (a grade or
-      look added later, `fadeIn`, a transform's opacity, `transitionIn`,
-      a chroma key); each makes the landing pop;
+      look added later, your opacity key inside 0..`L`, a move to a hidden
+      track); and a `fadeIn` longer than `L` + 1, a transform's opacity
+      below 1, a `transitionIn`, and a chroma key or mask are never
+      refused at all (`screenCardRefusal` does not check them); each makes
+      the landing pop;
     - a split inside the move, or a tail trim below L + 2, keeps a card
       that never lands (realign does not drop it; only the dock refuses
       such a clip);
@@ -26351,7 +26363,7 @@ the development app or on the Surface.
     No recommendation beyond the fixer's two suggestions quoted; each is
     yours to accept or overrule.
 
-    **Answer: OPEN.** Yours.
+    **Answer (2026-11-20): OPEN.** Yours.
 82. **The look constants of phase 3**, one rating: the hero's 24° settle;
     the parallax and dolly figures; the focus blur's 10 px in absolute
     pixels (the glow radius is a fraction of the short side); tilt
@@ -26366,7 +26378,7 @@ the development app or on the Surface.
     no look was rated by you. No recommendation; your eye on the sheets in
     the development app settles them, with the look rating (§6.10).
 
-    **Answer: OPEN.** Yours.
+    **Answer (2026-11-20): OPEN.** Yours.
 83. **A WebGL context lost in the middle of a session** (a GPU reset, sleep
     and resume) is not detected: `paintDrawList3d` would draw into it and
     return a blank canvas, and the bake would write transparent PNGs with
@@ -26378,7 +26390,7 @@ the development app or on the Surface.
     or fixer; a sleep-and-resume on the Surface would show whether it
     happens.
 
-    **Answer: OPEN.** Yours.
+    **Answer (2026-11-20): OPEN.** Yours.
 84. **The proposal bars, and run A's departures from §6.16's words.**
     Each bar is a named constant, a proposal no one has decided:
     `HERO_LANDING_BAR` (mean ≤ 0.5, max ≤ 16; outside the `depth`
@@ -26394,7 +26406,7 @@ the development app or on the Surface.
     `screenCard: true` stayed as they were). No recommendation; the bars
     are settled by your runs on both machines.
 
-    **Answer: OPEN.** Yours.
+    **Answer (2026-11-20): OPEN.** Yours.
 85. **M20's render side on a real file.** M20 reads only the card's side
     of the hand-off on a real recording (the baked frame L against the
     pulled frame L); §6.15's wording, "frame `L` of the card against the
@@ -26404,7 +26416,7 @@ the development app or on the Surface.
     it to "the docs pass, or a later one-frame export reading". No
     recommendation; this record does not change §6.15's row.
 
-    **Answer: OPEN.** Yours.
+    **Answer (2026-11-20): OPEN.** Yours.
 
 **Added 2026-11-20, from your words of 2026-11-18 in chat.**
 
@@ -26440,11 +26452,10 @@ the development app or on the Surface.
     becomes one of the same name with every photo, video and sound in it
     and its subfolders, flattened; no folder picked through the Upload
     button (on Windows one dialog cannot offer files and folders
-    together); no folders made automatically by date. Your "same day or
-    year photos folder" could also mean folders made by date, or the
-    folders on disk mirrored; the session did not ask.
+    together); no folders made automatically by date. This reading is not
+    yet confirmed by you.
 
-    **Answer: OPEN.** Yours: whether this is what you meant.
+    **Answer (2026-11-20): OPEN.** Yours: whether this is what you meant.
 88. **What the three items left to you** (2026-11-20; the two runs' open
     lists and the session's record):
     - whether CI should probe the three speech models' URLs (no step
@@ -26467,9 +26478,17 @@ the development app or on the Surface.
       menus, Move to opens only on hover, the chevron has no
       `aria-expanded`.
 
-    No source gives a recommendation for any of these.
+    No builder or fixer recommended anything for these. Critics of the
+    Upload panel's run suggested three things, each of which the fixer
+    left as yours: treating a macOS package as loose (the fixer declined
+    "has a dot", since ordinary folders such as '2026.11.20' would fail
+    as loose imports, and named a name-based package check as yours); the
+    New folder field just under the Media heading (the fixer: it changes
+    the design's layout, yours); and cancelling a removed file's
+    subject-track job through `cancelRender(jobId)`, as is done for
+    transcribe and depth ("should at least be considered").
 
-    **Answer: OPEN.** Yours.
+    **Answer (2026-11-20): OPEN.** Yours.
 
 ---
 
