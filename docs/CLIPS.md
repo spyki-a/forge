@@ -21598,7 +21598,8 @@ true by construction.
   fps with the default move, under M1's 300-frame whole-hold budget; after
   the loop the settled bezel holds through `tpad`. M20 times it.
   (2026-11-20, as built: 169, 176, 351 and 421 at 24, 25, 50 and 60 fps,
-  so above about 41 fps a glowing card is over that budget; yours,
+  so from 43 fps a glowing card is over that budget (7 × fps + 1 frames:
+  295 at 42 fps, 302 at 43); yours,
   piece 5's note below.)
 - **On the screen card's bezel, not a graphic's panel.** The research puts
   the sweep round "a card's rounded rectangle", the hero graphic's. In step
@@ -21664,8 +21665,9 @@ Without WebGL the sweep draws without its glow, through painter A.
 > - **Left open**: the sweep was read only on the Mac's harness page, not
 >   in the development app or on the Surface; `EDGE_SWEEP_BAR` is a
 >   proposal, yours; a per-template stroke-count assertion in "no other
->   template draws a sweep", declined by `77c66e3`; **M1's budget above
->   about 41 fps**: 169, 176, 211, 351
+>   template draws a sweep", declined by `77c66e3`; **M1's budget from 43
+>   fps** (the builder said "above about 41"; 7 × fps + 1 gives 295 at 42
+>   and 302 at 43): 169, 176, 211, 351
 >   and 421 moving frames at 24, 25, 30, 50 and 60 fps; §6.16 names 30 fps
 >   only; and every edit of a glowing card rebakes 211 canvas-sized PNGs
 >   where it was 46: shorten the loop at high rates, accept it, or time it
@@ -26264,13 +26266,13 @@ record states one; otherwise the entry says what reading would settle
 it. Everything here was read on the harness page on the Mac, never in
 the development app or on the Surface.
 
-77. **M1's budget for a glowing screen card above about 41 fps.** A
+77. **M1's budget for a glowing screen card from 43 fps.** A
     glowing card's moving frames are `min(total, L + 1 + round(EDGE_SWEEP_S
     × fps))`, with `EDGE_SWEEP_S` 6: 169, 176, 211, 351 and 421 at 24, 25,
     30, 50 and 60 fps. §6.16 names only 30 fps (211, under M1's 300-frame
-    whole-hold budget); every rate above about 41 fps is over it (the
-    builder's figure; by the formula, 7 × fps + 1 at `L` = fps, 42 fps
-    gives 295 and 43 gives 302, so the crossing is at 43). Also,
+    whole-hold budget); every rate from 43 fps is over it (7 × fps + 1 at
+    `L` = fps: 295 at 42 fps, 302 at 43; the builder's "above about 41
+    fps" was a slip). Also,
     every edit of a glowing card now rebakes 211 canvas-sized PNGs at 30
     fps where it was 46. The choices piece 5's builder and fixer named:
     shorten the loop at high rates; accept it; or time it with M20 at 60
