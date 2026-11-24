@@ -361,3 +361,106 @@ if (PROVIDER && GRAPHICS) {
     )
   })
 }
+
+/**
+ * `FORGE_EVAL=openai FORGE_EVAL_MODEL=<model> FORGE_EVAL_BESTCLIPS=on npm run eval -- -t "best clips"`
+ * — Best clips' one comparative call (docs/CLIPS.md §7.4) on the made-up
+ * fixtures built in code (tests/eval/bestClipsFixtures.ts; the owner's ten
+ * real links are run B's), one request a fixture, built by the app's own
+ * `bestClips` (bestclips/run.ts, with `candidatesFor`, `bestClipsPrompt`,
+ * `bestClipsSchema`, `maxTokensForBestClips` and `askStructured`;
+ * tests/eval/bestClipsEval.ts). STEP=prepare writes requests.json in the
+ * run's folder under tests/output/eval/ (ask it with the relay, as the
+ * graphics pass's: `window.__forgeEvalRelay('<run>')` in the harness page);
+ * STEP=score settles each saved answer through `validateBestClips` and the
+ * signals' fill, beside the signals alone, into results-bestclips.json in the
+ * run's folder, and prints the figures. It writes nothing to eval/runs/ (the
+ * report reads those as spine or graphics runs). An answer that came back as
+ * prose adds its retry to requests.json: relay again, score again.
+ * Registered only when both FORGE_EVAL and FORGE_EVAL_BESTCLIPS are set, so
+ * the normal suite's counts for this file do not change.
+ */
+const BESTCLIPS = process.env.FORGE_EVAL_BESTCLIPS
+if (PROVIDER && BESTCLIPS) {
+  describe('best clips on a real model', () => {
+    it(
+      'prepares or scores one request per fixture',
+      async () => {
+        const { readFileSync } = await import('node:fs')
+        const { bestClipsFixtures } = await import('./bestClipsFixtures')
+        const { bestClipsFigures, bestClipsRequestsFor, bestClipsScoreRefusal, scoreBestClipsFixture } = await import('./bestClipsEval')
+        const { credentialsIn } = await import('./graphicsEval')
+        const config = { provider: PROVIDER!, model: process.env.FORGE_EVAL_MODEL ?? '' }
+        expect(config.model, 'FORGE_EVAL_MODEL names the model').not.toBe('')
+        const server =
+          process.env.FORGE_EVAL_SERVER ?? (config.provider === 'openai' ? 'http://127.0.0.1:1234' : 'http://127.0.0.1:11434')
+        expect(credentialsIn(JSON.stringify(server)), 'FORGE_EVAL_SERVER carries no credentials').toEqual([])
+        const runId = process.env.FORGE_EVAL_RUN ?? `bestclips-${stamp()}`
+        const runDir = join(EVAL_ROOT, runId)
+        const only = new Set((process.env.FORGE_EVAL_ONLY ?? '').split(',').map((s) => s.trim()).filter(Boolean))
+        const fixtures = bestClipsFixtures().filter((f) => only.size === 0 || only.has(f.id))
+        const clean = async (path: string): Promise<void> => {
+          const { readFile } = await import('node:fs/promises')
+          expect(credentialsIn(await readFile(path, 'utf8')), `${path} holds no key, header or credentialed URL`).toEqual([])
+        }
+
+        if (STEP === 'prepare' || STEP === 'all') {
+          const requests: EvalRequest[] = []
+          for (const f of fixtures) requests.push(...(await bestClipsRequestsFor(f, config)))
+          await writeJson(join(runDir, 'requests.json'), requests)
+          await clean(join(runDir, 'requests.json'))
+          console.log(`${runId}: ${requests.length} best clips requests for ${fixtures.length} fixtures`)
+        }
+
+        const score = async (): Promise<EvalRequest[]> => {
+          const responseFor = (id: string): EvalResponse | null => {
+            const file = join(runDir, 'responses', `${id}.json`)
+            if (!existsSync(file)) return null
+            return JSON.parse(readFileSync(file, 'utf8')) as EvalResponse
+          }
+          const prepared = await readJson<EvalRequest[]>(join(runDir, 'requests.json'))
+          const refusal = bestClipsScoreRefusal(runId, prepared, (id) => existsSync(join(runDir, 'responses', `${id}.json`)))
+          if (refusal !== null) throw new Error(refusal)
+          const asked = new Set(prepared!.map((r) => r.fixtureId))
+          const results = []
+          const pending: EvalRequest[] = []
+          for (const f of fixtures.filter((x) => asked.has(x.id))) {
+            const scored = await scoreBestClipsFixture(f, config, responseFor)
+            results.push(scored.result)
+            pending.push(...scored.pending)
+          }
+          const figures = bestClipsFigures(results)
+          await writeJson(join(runDir, 'results-bestclips.json'), { run: runId, model: config.model, server, transport: STEP === 'all' ? 'node' : 'relay', figures, results })
+          await clean(join(runDir, 'results-bestclips.json'))
+          if (pending.length > 0) {
+            const requests = prepared ?? []
+            const have = new Set(requests.map((r) => r.id))
+            await writeJson(join(runDir, 'requests.json'), [...requests, ...pending.filter((p) => !have.has(p.id))])
+            await clean(join(runDir, 'requests.json'))
+            console.log(`${runId}: ${pending.length} answers came back as prose; their retries are added to requests.json: run the relay again, then score again`)
+          }
+          const m = figures
+          console.log(
+            `${runId}: ${m.fixtures} fixtures, ${m.answered} answered, ${m.parsed} parsed, ${m.prose} prose, ${m.unusable} unusable, ${m.modelCards} model cards (${m.agreeWithSignals} also the signals'), ${m.filledCards} filled, ${m.titleFallbacks} titles and ${m.whyFallbacks} whys fell back, ${m.droppedPicks} picks dropped`
+          )
+          return pending
+        }
+
+        if (STEP === 'all') {
+          for (let round = 0; round < 2; round += 1) {
+            const requests = (await readJson<EvalRequest[]>(join(runDir, 'requests.json'))) ?? []
+            for (const request of requests) {
+              const file = join(runDir, 'responses', `${request.id}.json`)
+              if (existsSync(file)) continue
+              await writeJson(file, await askNode(request, server))
+            }
+            if ((await score()).length === 0) break
+          }
+        } else if (STEP === 'score') {
+          await score()
+        }
+      },
+      3_600_000
+    )
+  })
+}
