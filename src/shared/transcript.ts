@@ -134,7 +134,8 @@ const ABBREVIATIONS = new Set([
   'vs.', 'etc.', 'e.g.', 'i.e.', 'inc.', 'ltd.', 'co.', 'approx.'
 ])
 
-function endsSentence(text: string): boolean {
+/** Whether a word closes a sentence: the rule segments are cut on, shared with Best clips (`bestclips/windows.ts`). */
+export function endsSentence(text: string): boolean {
   const lower = text.toLowerCase()
   if (ABBREVIATIONS.has(lower)) return false
   // A single capital followed by a dot is an initial ("J." in "J. Smith").
