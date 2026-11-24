@@ -2443,7 +2443,7 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     await linkFetched(HARNESS_LINKS.noCaptions, 'none')
     return {}
   },
-  /* the same, with the AI helper up and the speech model on disk: Listen to it is still not built */
+  /* the same, with the AI helper up and the speech model on disk: Listen to it is still not built, and Best clips says it cannot listen yet */
   'link-no-captions-helper': async () => {
     editor().setHelperStatus(harnessReadyHelper())
     speechModelIs(true)

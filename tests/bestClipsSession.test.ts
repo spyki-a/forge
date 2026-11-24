@@ -12,6 +12,7 @@ import {
   DEFAULT_BEST_CLIPS_MS,
   initialBestClips,
   modelReady,
+  runningHere,
   SCORED_BY_LABEL,
   shownBestClips,
   withLength,
@@ -71,6 +72,15 @@ describe('one Analyse at a time', () => {
     expect(analyseRefusal(idle, { transcript: null })).toBe('no-transcript')
     expect(analyseRefusal(idle, null)).toBe('no-transcript')
     expect(analyseRefusal(idle, { transcript: { ...T, words: [], segments: [] } })).toBe('no-transcript')
+  })
+  it('names the run this panel’s only for the same link and the same captions, at any length', () => {
+    const running = { ...initialBestClips(), running: asked }
+    expect(runningHere(running, { linkKey: 'yt-a', transcript: T })).toBe(true)
+    expect(runningHere({ ...running, targetMs: 120_000 }, { linkKey: 'yt-a', transcript: T })).toBe(true)
+    expect(runningHere(running, { linkKey: 'yt-b', transcript: T })).toBe(false)
+    expect(runningHere(running, { linkKey: 'yt-a', transcript: T_AGAIN })).toBe(false)
+    expect(runningHere(running, null)).toBe(false)
+    expect(runningHere(initialBestClips(), { linkKey: 'yt-a', transcript: T })).toBe(false)
   })
 })
 

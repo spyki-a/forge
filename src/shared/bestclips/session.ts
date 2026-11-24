@@ -56,12 +56,19 @@ export const SCORED_BY_LABEL: Readonly<Record<BestClipCard['scoredBy'], string>>
 
 /** With no caption track and no AI helper to listen (§7.5). */
 export const BEST_CLIPS_NO_CAPTIONS = 'This video has no captions; Best clips needs the AI helper to listen to it.'
-/** With no caption track while the AI helper is there: Listen to it (M0's button) is the route. */
-export const BEST_CLIPS_LISTEN_FIRST = 'This video has no captions; Best clips needs its words from Listen to it, above.'
+/**
+ * With no caption track while the AI helper is there (or starting, or without
+ * its speech model). M0's Listen to it is still greyed ("soon"), so this line
+ * names no button the user cannot press; when Listen to it is built, it can
+ * point there (tests/renderer/bestClipsPanel.test.tsx holds the two together).
+ */
+export const BEST_CLIPS_CANNOT_LISTEN = 'This video has no captions, and Best clips cannot listen to a video yet.'
 /** Before Get transcript has words: Analyse downloads nothing, so it points there. */
 export const BEST_CLIPS_NEEDS_TRANSCRIPT = 'Best clips reads the video’s captions: press Get transcript first.'
-/** Said while the model or the signals are at work. */
+/** Said while the model or the signals are at work on the link on screen. */
 export const BEST_CLIPS_RUNNING = 'Looking for the best stretches…'
+/** Said while an Analyse runs for another link, or for this link's earlier captions: its answer will not be shown here. */
+export const BEST_CLIPS_RUNNING_ELSEWHERE = 'Best clips is still looking at another video.'
 /** A second press while one runs. */
 export const BEST_CLIPS_BUSY = 'Best clips is already looking: one Analyse at a time.'
 /** Analyse failed outside `bestClips` (which never throws for a failed ask). Never an error's text. */
@@ -104,6 +111,11 @@ export function bestClipsBelongs(asked: BestClipsAsked, now: BestClipsNow | null
 export function shownBestClips(state: BestClipsState, source: { linkKey: string; transcript: Transcript | null } | null): BestClipsResult | null {
   if (!state.last || !source) return null
   return bestClipsBelongs(state.last, { ...source, targetMs: state.targetMs }) ? state.last.result : null
+}
+
+/** Whether the Analyse in flight is about this link and its transcript (any length: the lengths are greyed while it runs). */
+export function runningHere(state: BestClipsState, source: { linkKey: string; transcript: Transcript | null } | null): boolean {
+  return state.running !== null && source !== null && state.running.linkKey === source.linkKey && state.running.transcript === source.transcript
 }
 
 /** Why Analyse cannot start now, or null: one already running, or no words to read. */

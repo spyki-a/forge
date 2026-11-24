@@ -3,7 +3,8 @@ import { useEditor, type UrlSource } from '../../src/renderer/src/store'
 import { linkCacheKey, parseLink } from '@shared/ingest/url'
 import type { CompletionRequest, CompletionResult, LlmStatus } from '@shared/director/provider'
 import { MODEL_FAILED_NOTE, MODEL_SLOW_NOTE, NO_MODEL_NOTE } from '@shared/bestclips/run'
-import { BEST_CLIPS_BUSY, BEST_CLIPS_TIMEOUT_MS } from '@shared/bestclips/session'
+import { BEST_CLIPS_BUSY, BEST_CLIPS_FAILED, BEST_CLIPS_TIMEOUT_MS } from '@shared/bestclips/session'
+import { emptyProject } from '@shared/timeline'
 import { PAUSE_BOUNDARY_MS, segmentIntoSentences, type Transcript, type Word } from '@shared/transcript'
 import { CAP_MS, CAP_WORDS } from '@shared/bestclips/windows'
 
@@ -14,6 +15,20 @@ import { CAP_MS, CAP_WORDS } from '@shared/bestclips/windows'
  * timeout frees the next press; an error's text never reaches a notice.
  * window.forge is a stub; every transcript is made up.
  */
+
+/*
+ * bestClips itself, wrapped so one test can make it reject (it never does for
+ * a failed ask): the store's own catch is then the only thing between an
+ * error's text and a notice.
+ */
+const runHooks = vi.hoisted(() => ({ reject: null as Error | null }))
+vi.mock('@shared/bestclips/run', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@shared/bestclips/run')>()
+  return {
+    ...real,
+    bestClips: (...args: Parameters<typeof real.bestClips>) => (runHooks.reject ? Promise.reject(runHooks.reject) : real.bestClips(...args))
+  }
+})
 
 const URL_A = 'https://www.youtube.com/watch?v=MadeUpTalk7'
 const URL_B = 'https://www.youtube.com/watch?v=MadeUpTalk8'
@@ -105,6 +120,7 @@ async function asked(n: number): Promise<void> {
 const noticeTexts = (): string[] => state().notices.map((n) => n.text)
 
 beforeEach(() => {
+  runHooks.reject = null
   status = NONE
   asks = []
   vi.stubGlobal('window', {
@@ -268,6 +284,64 @@ describe('Analyse', () => {
     const seen = JSON.stringify({ notices: state().notices, bestClips: state().bestClips.last!.result })
     expect(seen).not.toContain(SERVER)
     expect(seen).not.toContain(KEY)
+  })
+
+  it('refuses a second press made while the first is still asking whether a model is there: one ask', async () => {
+    status = READY
+    // The first press's status check is held open, so the second press lands before any ask.
+    const look = held<LlmStatus[]>()
+    let looked = 0
+    ;(window as unknown as { forge: { directorStatus: () => Promise<LlmStatus[]> } }).forge.directorStatus = () => {
+      looked++
+      return look.promise
+    }
+    complete = async (r) => answerFor(r)
+    const first = state().analyseBestClips()
+    const second = state().analyseBestClips()
+    for (let i = 0; i < 20; i++) await new Promise<void>((r) => queueMicrotask(r))
+    expect(noticeTexts()).toContain(BEST_CLIPS_BUSY)
+    look.resolve(READY)
+    await Promise.all([first, second])
+    expect(looked).toBe(1)
+    expect(asks).toHaveLength(1)
+    expect(state().bestClips.running).toBeNull()
+  })
+
+  it('a status check that never answers is cut by the same deadline, and sends no ask', async () => {
+    vi.useFakeTimers()
+    status = READY
+    const never = held<LlmStatus[]>()
+    ;(window as unknown as { forge: { directorStatus: () => Promise<LlmStatus[]> } }).forge.directorStatus = () => never.promise
+    complete = async (r) => answerFor(r)
+    void state().analyseBestClips()
+    await vi.advanceTimersByTimeAsync(BEST_CLIPS_TIMEOUT_MS - 1)
+    expect(state().bestClips.running).not.toBeNull()
+    await vi.advanceTimersByTimeAsync(10)
+    expect(state().bestClips.running).toBeNull()
+    expect(state().bestClips.last!.result.modelNote).toBe(MODEL_SLOW_NOTE)
+    expect(asks).toHaveLength(0)
+  })
+
+  it('says only the fixed line when Analyse fails outside bestClips’ own catch, and frees the next press', async () => {
+    const SERVER = 'http://10.9.8.6:4321/v1'
+    const KEY = 'sk-madeupouterkey1234567'
+    runHooks.reject = new Error(`boom at ${SERVER} with ${KEY}`)
+    await state().analyseBestClips()
+    expect(noticeTexts()).toEqual([BEST_CLIPS_FAILED])
+    const seen = JSON.stringify({ notices: state().notices, bestClips: state().bestClips })
+    expect(seen).not.toContain(SERVER)
+    expect(seen).not.toContain(KEY)
+    expect(seen).not.toContain('boom')
+    expect(state().bestClips.running).toBeNull()
+    expect(state().bestClips.last).toBeNull()
+  })
+
+  it('leaves the cards alone on an opened project: they are session state', async () => {
+    await state().analyseBestClips()
+    const last = state().bestClips.last
+    expect(last).not.toBeNull()
+    state().loadProject(emptyProject(), '', [])
+    expect(state().bestClips.last).toBe(last)
   })
 
   it('leaves the cards alone on a new project: they are session state', async () => {

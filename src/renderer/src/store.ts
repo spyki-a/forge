@@ -1992,15 +1992,40 @@ export const useEditor = create<EditorState>((set, get) => ({
        * say so. A status that cannot be read is no reason not to ask: the
        * ask then fails, and bestClips says the model did not answer.
        */
+      /*
+       * One deadline for the whole press: the status check counts against
+       * BEST_CLIPS_TIMEOUT_MS too, so a server that sends its headers and then
+       * stalls cannot hold the panel (and refuse every later Analyse) past it.
+       * A status check that runs out the clock sends no ask at all: the model
+       * took too long (MODEL_SLOW_NOTE), and nothing more queues at a stalled
+       * server.
+       */
+      const deadline = Date.now() + BEST_CLIPS_TIMEOUT_MS
       let ready = true
+      let outOfTime = false
+      let statusTimer: ReturnType<typeof setTimeout> | undefined
       try {
-        const [status, config] = await Promise.all([window.forge.directorStatus(), window.forge.directorSettings()])
+        const [status, config] = await Promise.race([
+          Promise.all([window.forge.directorStatus(), window.forge.directorSettings()]),
+          new Promise<never>((_, reject) => {
+            statusTimer = setTimeout(() => {
+              outOfTime = true
+              reject(new Error('status timed out'))
+            }, BEST_CLIPS_TIMEOUT_MS)
+          })
+        ])
         ready = modelReady(status, config.provider)
       } catch {
         ready = true
+      } finally {
+        clearTimeout(statusTimer)
       }
-      const ask = ready ? bestClipsAskOver((request) => window.forge.directorComplete(request)) : undefined
-      const result = await bestClips(asked.transcript, source.meta, asked.targetMs, ask, { timeoutMs: BEST_CLIPS_TIMEOUT_MS })
+      const ask = outOfTime
+        ? () => new Promise<never>(() => undefined)
+        : ready
+          ? bestClipsAskOver((request) => window.forge.directorComplete(request))
+          : undefined
+      const result = await bestClips(asked.transcript, source.meta, asked.targetMs, ask, { timeoutMs: Math.max(1, deadline - Date.now()) })
       // Kept only while it is still about the store's link, length and words.
       const now = get().urlSource
       if (!bestClipsBelongs(asked, now ? { linkKey: now.linkKey, transcript: now.transcript, targetMs: get().bestClips.targetMs } : null)) return

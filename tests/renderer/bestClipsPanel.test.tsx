@@ -7,10 +7,11 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { linkCacheKey, parseLink } from '@shared/ingest/url'
 import { bestClips, NO_MODEL_NOTE, type BestClipCard, type BestClipsResult } from '@shared/bestclips/run'
 import {
-  BEST_CLIPS_LISTEN_FIRST,
+  BEST_CLIPS_CANNOT_LISTEN,
   BEST_CLIPS_NEEDS_TRANSCRIPT,
   BEST_CLIPS_NO_CAPTIONS,
   BEST_CLIPS_RUNNING,
+  BEST_CLIPS_RUNNING_ELSEWHERE,
   cardRange,
   cardWords,
   SCORED_BY_LABEL
@@ -198,22 +199,62 @@ describe('the Best clips section', () => {
     expect(buttonNamed('Analyse')!.props.disabled).toBe(true)
   })
 
-  it('says the AI helper is needed on a video with no captions and no helper, and points at Listen to it when the helper is there', () => {
+  it('says the AI helper is needed on a video with no captions and no helper, and that it cannot listen yet when the helper is there', () => {
     onLink(null, 'none')
     useEditor.setState({ helperStatus: NO_HELPER })
     expect(markup()).toContain(BEST_CLIPS_NO_CAPTIONS)
-    expect(markup()).not.toContain(BEST_CLIPS_LISTEN_FIRST)
+    expect(markup()).not.toContain(BEST_CLIPS_CANNOT_LISTEN)
     expect(buttonNamed('Analyse')!.props.disabled).toBe(true)
     useEditor.setState({ helperStatus: HELPER })
-    expect(markup()).toContain(BEST_CLIPS_LISTEN_FIRST)
+    expect(markup()).toContain(BEST_CLIPS_CANNOT_LISTEN)
     expect(markup()).not.toContain(BEST_CLIPS_NO_CAPTIONS)
   })
 
-  it('shows a running state while Analyse runs, with Analyse greyed', () => {
+  it('never sends the user to Listen to it while LinkTranscript renders that button greyed for good', () => {
+    // LinkTranscript's Listen to it, parsed: a bare `disabled` means it can never be pressed.
+    const file = resolve(__dirname, '../../src/renderer/src/components/tools/LinkTranscript.tsx')
+    const sf = ts.createSourceFile('LinkTranscript.tsx', readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+    const listen: ts.JsxElement[] = []
+    const visit = (node: ts.Node): void => {
+      if (ts.isJsxElement(node) && node.openingElement.tagName.getText(sf) === 'button' && node.children.some((c) => ts.isJsxText(c) && c.text.trim() === 'Listen to it')) listen.push(node)
+      ts.forEachChild(node, visit)
+    }
+    visit(sf)
+    expect(listen).toHaveLength(1)
+    const disabled = listen[0].openingElement.attributes.properties.find((a) => ts.isJsxAttribute(a) && a.name.getText(sf) === 'disabled')
+    const greyedForGood = disabled !== undefined && ts.isJsxAttribute(disabled) && disabled.initializer === undefined
+    onLink(null, 'none')
+    for (const helperStatus of [HELPER, null]) {
+      useEditor.setState({ helperStatus })
+      const pointer = withAttr('data-best-pointer').map((h) => textOf(h.props.children as ReactNode))
+      expect(pointer).toHaveLength(1)
+      if (greyedForGood) expect(pointer[0]).not.toContain('Listen to it')
+    }
+    // Today it is greyed for good, so the check above is not vacuous.
+    expect(greyedForGood).toBe(true)
+  })
+
+  it('shows a running state while Analyse runs, with Analyse and the lengths greyed', () => {
     onLink(T)
     useEditor.setState((s) => ({ bestClips: { ...s.bestClips, running: { linkKey: LINK_KEY, targetMs: 60_000, transcript: T } } }))
     expect(markup()).toContain(BEST_CLIPS_RUNNING)
+    expect(markup()).not.toContain(BEST_CLIPS_RUNNING_ELSEWHERE)
     expect(buttonNamed('Analyse')!.props.disabled).toBe(true)
+    expect(withAttr('data-best-length').map((h) => h.props.disabled)).toEqual([true, true, true, true])
+  })
+
+  it('says a run is another video’s when it is not this link’s or these captions’, and still points at Get transcript', () => {
+    onLink(T)
+    useEditor.setState((s) => ({ bestClips: { ...s.bestClips, running: { linkKey: 'yt-another', targetMs: 60_000, transcript: T } } }))
+    expect(markup()).toContain(BEST_CLIPS_RUNNING_ELSEWHERE)
+    expect(markup()).not.toContain(BEST_CLIPS_RUNNING)
+    expect(buttonNamed('Analyse')!.props.disabled).toBe(true)
+    // The same link, captions fetched again since: also not this panel's run.
+    useEditor.setState((s) => ({ bestClips: { ...s.bestClips, running: { linkKey: LINK_KEY, targetMs: 60_000, transcript: madeUpTalk(60, 51) } } }))
+    expect(markup()).toContain(BEST_CLIPS_RUNNING_ELSEWHERE)
+    // No words on this link: the pointer still shows while another link's run goes on.
+    onLink(null, 'failed')
+    expect(markup()).toContain(BEST_CLIPS_NEEDS_TRANSCRIPT)
   })
 })
 
@@ -277,9 +318,9 @@ describe('the cards', () => {
 
   it('wrap a title in any script whole: never cut, clamped or truncated', () => {
     onLink(T)
-    // 60 made-up caseless graphemes (Georgian Mkhedruli code points), and a run with combining marks.
+    // 60 made-up graphemes (Georgian Mkhedruli code points, written lower-case here), and a run with combining marks.
     const caseless = Array.from({ length: 60 }, (_, i) => String.fromCharCode(0x10d0 + ((i * 7) % 33))).join('')
-    const marked = Array.from({ length: 20 }, (_, i) => String.fromCharCode(0x61 + (i % 26)) + '́').join('')
+    const marked = Array.from({ length: 20 }, (_, i) => String.fromCharCode(0x61 + (i % 26)) + '\u0301').join('')
     const title = `${caseless} ${marked}`
     const card: BestClipCard = { windowId: 'w2', startMs: 0, endMs: 60_000, words: 140, title, why: 'It is.', scoredBy: 'model' }
     withResult(fakeResult([card]))

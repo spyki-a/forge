@@ -5804,7 +5804,7 @@
     "home": "url",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/tools/BestClips.tsx",
-    "line": 117,
+    "line": 122,
     "newHome": "Shelf tile URL",
     "note": "CLIPS.md §7.5, sheet 27: the section’s heading, under the link’s rows and Clip download, on screen whenever the box holds a link."
   },
@@ -5851,7 +5851,7 @@
     "home": "url",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/tools/BestClips.tsx",
-    "line": 147,
+    "line": 154,
     "newHome": "Shelf tile URL",
     "note": "Reads the transcript Get transcript fetched; downloads nothing. Greyed until there are words, and while one runs."
   },
@@ -5861,7 +5861,7 @@
     "home": "url",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/tools/BestClips.tsx",
-    "line": 50,
+    "line": 52,
     "newHome": "Shelf tile URL"
   },
   {
@@ -5870,7 +5870,7 @@
     "home": "url",
     "needs": "link-failed",
     "file": "src/shared/bestclips/session.ts",
-    "line": 62,
+    "line": 67,
     "newHome": "Shelf tile URL",
     "note": "Before the link has words (here the fetch failed), Analyse is greyed and points at Get transcript."
   },
@@ -5885,14 +5885,14 @@
     "note": "CLIPS.md §7.5: no caption track and the AI helper not there (the harness page’s own helper fails)."
   },
   {
-    "label": "This video has no captions; Best clips needs its words from Listen to it, above.",
+    "label": "This video has no captions, and Best clips cannot listen to a video yet.",
     "match": "text",
     "home": "url",
     "needs": "link-no-captions-helper",
     "file": "src/shared/bestclips/session.ts",
-    "line": 60,
+    "line": 65,
     "newHome": "Shelf tile URL",
-    "note": "No caption track while the AI helper is there: M0’s Listen to it is the route."
+    "note": "No caption track while the AI helper is there: M0’s Listen to it is still greyed, so the line names no button."
   },
   {
     "label": "Looking for the best stretches…",
@@ -5900,7 +5900,7 @@
     "home": "url",
     "needs": "link-best-clips-running",
     "file": "src/shared/bestclips/session.ts",
-    "line": 64,
+    "line": 69,
     "newHome": "Shelf tile URL",
     "note": "An Analyse in flight; the recipe holds it there through the store (the no-model run answers at once)."
   },

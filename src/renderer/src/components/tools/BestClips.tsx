@@ -8,12 +8,14 @@ import type { BestClipCard } from '@shared/bestclips/run'
 import {
   analyseRefusal,
   BEST_CLIPS_LENGTHS,
-  BEST_CLIPS_LISTEN_FIRST,
+  BEST_CLIPS_CANNOT_LISTEN,
   BEST_CLIPS_NEEDS_TRANSCRIPT,
   BEST_CLIPS_NO_CAPTIONS,
   BEST_CLIPS_RUNNING,
+  BEST_CLIPS_RUNNING_ELSEWHERE,
   cardRange,
   cardWords,
+  runningHere,
   SCORED_BY_LABEL,
   shownBestClips
 } from '@shared/bestclips/session'
@@ -52,8 +54,8 @@ export const ANALYSE_TITLE = 'Find the stretches of this video most worth postin
 function Card({ card }: { card: BestClipCard }): ReactNode {
   return (
     <li data-best-card={card.windowId} data-scored-by={card.scoredBy} className="flex gap-2 rounded border border-ink-800 bg-ink-950/60 p-1.5">
-      {/* The tall face: 9:16, the stretch's length on it. */}
-      <div className="flex aspect-[9/16] w-12 shrink-0 flex-col items-center justify-center rounded bg-ink-850 text-ink-400">
+      {/* The tall face: 9:16, the stretch's length on it; self-start, so a tall text column cannot stretch it. */}
+      <div className="flex aspect-[9/16] w-12 shrink-0 self-start flex-col items-center justify-center rounded bg-ink-850 text-ink-400">
         <span data-card-length="" className="text-[10px] tabular-nums">
           {formatMark(card.endMs - card.startMs)}
         </span>
@@ -98,15 +100,18 @@ export function BestClips(): ReactNode {
   if (!parseLink(ingest.url)) return null
   const source = urlSourceFor({ urlSource, ingest })
   const running = state.running !== null
+  const here = runningHere(state, source)
   const refusal = analyseRefusal(state, source)
+  // Whether the link on screen has words, whatever runs elsewhere.
+  const noWords = analyseRefusal({ ...state, running: null }, source) === 'no-transcript'
   const result = shownBestClips(state, source)
   const fetching = source?.status === 'meta' || source?.status === 'captions'
   const pointer =
     source?.status === 'none'
       ? transcribeGate(helperStatus, speechModel) === 'no-helper'
         ? BEST_CLIPS_NO_CAPTIONS
-        : BEST_CLIPS_LISTEN_FIRST
-      : refusal === 'no-transcript' && !fetching
+        : BEST_CLIPS_CANNOT_LISTEN
+      : noWords && !fetching
         ? BEST_CLIPS_NEEDS_TRANSCRIPT
         : null
 
@@ -117,7 +122,7 @@ export function BestClips(): ReactNode {
         Best clips
       </h3>
 
-      <div className="flex flex-wrap items-center gap-1">
+      <div role="group" aria-label="Clip length" className="flex flex-wrap items-center gap-1">
         {BEST_CLIPS_LENGTHS.map((length) => {
           const on = state.targetMs === length.ms
           return (
@@ -126,8 +131,10 @@ export function BestClips(): ReactNode {
               type="button"
               data-best-length={length.ms}
               aria-pressed={on}
+              // Greyed while Analyse runs: a length changed mid-run would drop its answer without a word.
+              disabled={running}
               onClick={() => setLength(length.ms)}
-              className={`rounded px-2 py-1 text-[11px] transition-colors ${
+              className={`rounded px-2 py-1 text-[11px] transition-colors disabled:opacity-60 ${
                 on ? 'bg-ink-700 text-ink-100' : 'bg-ink-850 text-ink-500 hover:text-ink-200'
               }`}
             >
@@ -143,24 +150,24 @@ export function BestClips(): ReactNode {
           title={ANALYSE_TITLE}
           className="ml-auto flex items-center gap-1.5 rounded bg-accent-500 px-2.5 py-1 text-[11px] font-medium text-ink-950 transition-colors hover:bg-accent-400 disabled:opacity-40"
         >
-          {running && <Loader2 size={12} className="animate-spin" aria-hidden />}
+          {here && <Loader2 size={12} className="animate-spin" aria-hidden />}
           Analyse
         </button>
       </div>
 
       {pointer && (
-        <p data-best-pointer="" className="text-[10.5px] leading-snug text-ink-500">
+        <p data-best-pointer="" aria-live="polite" className="text-[10.5px] leading-snug text-ink-500">
           {pointer}
         </p>
       )}
       {running && (
-        <p data-best-running="" className="text-[10.5px] text-ink-500">
-          {BEST_CLIPS_RUNNING}
+        <p data-best-running={here ? 'here' : 'elsewhere'} aria-live="polite" className="text-[10.5px] text-ink-500">
+          {here ? BEST_CLIPS_RUNNING : BEST_CLIPS_RUNNING_ELSEWHERE}
         </p>
       )}
 
       {result && (
-        <>
+        <div aria-live="polite" className="space-y-2">
           {result.cards.length > 0 && (
             <ul data-best-cards="" className="space-y-1.5">
               {result.cards.map((card) => (
@@ -178,7 +185,7 @@ export function BestClips(): ReactNode {
               {result.modelNote}
             </p>
           )}
-        </>
+        </div>
       )}
     </section>
   )
