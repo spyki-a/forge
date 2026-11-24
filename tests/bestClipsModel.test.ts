@@ -509,8 +509,8 @@ describe("the critics' fixes: quantity words, empty text, a caseless window, a w
     // MUTATION (hasContent -> `text !== ''`): fails the titleFallback 'empty' lines for '…' and '— — —' and the emoji run.
     // MUTATION (clean() keeps \p{Cf}): fails "toBe('plim tavek')".
     // MUTATION (run.ts gives TITLE_FALLBACK_NOTE for an empty title too): fails "toBe(`${TITLE_EMPTY_NOTE} ${WHY_EMPTY_NOTE}`)".
-    const family = '\u{1F468}‍\u{1F469}‍\u{1F467}'
-    const empties = ['​', '⁠⁠', '­', '…', '— — —', family.repeat(61)]
+    const family = '\u{1F468}\u200D\u{1F469}\u200D\u{1F467}'
+    const empties = ['\u200B', '\u2060\u2060', '\u00AD', '\u2026', '\u2014 \u2014 \u2014', family.repeat(61)]
     for (let k = 0; k < empties.length; k += 3) {
       const group = empties.slice(k, k + 3)
       const three = EN_C.candidates.slice(0, group.length)
@@ -518,13 +518,13 @@ describe("the critics' fixes: quantity words, empty text, a caseless window, a w
       if ('rejected' in v) throw new Error(v.rejected)
       expect(v.picks.map((p) => [p.title, p.titleFallback, p.why, p.whyFallback])).toEqual(three.map((x) => [x.title, 'empty', x.why, 'empty']))
     }
-    const v = validateBestClips(answerOf([{ id: EN_C.candidates[0].id, title: '​plim­ tavek⁠', why: 'It lands.' }]), EN_C, EN)
+    const v = validateBestClips(answerOf([{ id: EN_C.candidates[0].id, title: '\u200Bplim\u00AD tavek\u2060', why: 'It lands.' }]), EN_C, EN)
     if ('rejected' in v) throw new Error(v.rejected)
     const [x] = EN_C.candidates
     expect(windowText(EN, x.window).split(/[ .,]+/u)).toEqual(expect.arrayContaining(['plim', 'tavek']))
     expect([v.picks[0].title, v.picks[0].titleFrom]).toEqual(['plim tavek', 'model'])
 
-    const r = await bestClips(EN, null, 60_000, answering(answerOf(EN_C.candidates.slice(0, 3).map((c, i) => ({ id: c.id, title: i === 0 ? '…' : 'plim', why: i === 0 ? '​' : 'It lands.' })))))
+    const r = await bestClips(EN, null, 60_000, answering(answerOf(EN_C.candidates.slice(0, 3).map((c, i) => ({ id: c.id, title: i === 0 ? '…' : 'plim', why: i === 0 ? '\u200B' : 'It lands.' })))))
     expect(r.cards.find((c) => c.windowId === x.id)!.note).toBe(`${TITLE_EMPTY_NOTE} ${WHY_EMPTY_NOTE}`)
   })
 
@@ -585,9 +585,9 @@ describe("the critics' fixes: quantity words, empty text, a caseless window, a w
 
   it("run's why is judged as a why: a caseless why of words the window does not say is kept on the card", async () => {
     // MUTATION (validateBestClips grounds the why in 'title' mode): fails "toEqual(made)".
-    const made = 'რტფ ფრ'
+    const made = '\u10E0\u10E2\u10E4 \u10E4\u10E0'
     const three = CL_C.candidates.slice(0, 3)
-    for (const x of three) expect(windowText(CL, x.window)).not.toContain('რტფ')
+    for (const x of three) expect(windowText(CL, x.window)).not.toContain('\u10E0\u10E2\u10E4')
     const r = await bestClips(CL, null, 60_000, answering(answerOf(three.map((x) => ({ id: x.id, title: windowText(CL, x.window).split(' ')[0], why: made })))))
     expect(r.cards.map((c) => c.why)).toEqual(three.map(() => made))
     expect(r.cards.every((c) => c.scoredBy === 'model' && c.note === undefined)).toBe(true)
