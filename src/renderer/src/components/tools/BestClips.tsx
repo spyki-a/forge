@@ -9,7 +9,9 @@ import {
   ADD_KEEPS_SHAPE,
   ADD_PORTRAIT,
   ADD_TO_PROJECT,
+  cardClipGone,
   cardClippable,
+  cardDownloadsIn,
   cardKey,
   CLIP_IT_CARD,
   CLIP_IT_CARD_TITLE,
@@ -21,7 +23,9 @@ import {
   START_NEW_PROJECT,
   START_NEW_SAVED,
   START_NEW_SAVES,
+  START_NEW_WAITS,
   STEP_LABEL,
+  unsavedWork,
   type CardClipRecord
 } from '@shared/bestclips/cardClip'
 import {
@@ -78,10 +82,17 @@ export const ANALYSE_TITLE = 'Find the stretches of this video most worth postin
 /** What a card shows under its text: Clip it, the question, or what Clip it did. */
 interface CardFoot {
   record: CardClipRecord | undefined
+  /** The clips on this timeline: a record whose clip is no longer among them is not shown, and the card can be clipped again. */
+  clips: readonly { id: string }[]
   asking: boolean
   /** Another card's question is open, or a download is being asked for. */
   blocked: boolean
-  dirty: boolean
+  /** A download is being asked for: the question's choices wait for it. */
+  busy: boolean
+  /** Start new would save this project first (`unsavedWork`). */
+  unsaved: boolean
+  /** A card's clip is still downloading into this project: Start new waits for it. */
+  pendingHere: boolean
   portrait: boolean
   clipIt: () => void
   answer: (choice: 'new' | 'add' | null) => void
@@ -101,16 +112,18 @@ function Steps({ record }: { record: CardClipRecord }): ReactNode {
   )
 }
 
-function Question({ dirty, portrait, answer }: Pick<CardFoot, 'dirty' | 'portrait' | 'answer'>): ReactNode {
-  const choice = 'w-full rounded bg-ink-850 px-2 py-1 text-left text-[11px] text-ink-100 transition-colors hover:bg-ink-800'
+function Question({ busy, unsaved, pendingHere, portrait, answer }: Pick<CardFoot, 'busy' | 'unsaved' | 'pendingHere' | 'portrait' | 'answer'>): ReactNode {
+  const choice = 'w-full rounded bg-ink-850 px-2 py-1 text-left text-[11px] text-ink-100 transition-colors hover:bg-ink-800 disabled:opacity-50'
   return (
     <div data-best-question="" role="group" aria-label={QUESTION_HEAD} className="space-y-1 rounded border border-accent-500/40 bg-accent-500/5 p-1.5">
       <p className="text-[10.5px] leading-snug text-ink-300">{QUESTION_HEAD}</p>
-      <button type="button" data-best-choice="new" onClick={() => answer('new')} className={choice}>
+      <button type="button" data-best-choice="new" onClick={() => answer('new')} disabled={busy || pendingHere} className={choice}>
         <span className="block font-medium">{START_NEW_PROJECT}</span>
-        <span className="block text-[10px] leading-snug text-ink-500">{dirty ? START_NEW_SAVES : START_NEW_SAVED}</span>
+        <span className="block text-[10px] leading-snug text-ink-500">
+          {pendingHere ? START_NEW_WAITS : unsaved ? START_NEW_SAVES : START_NEW_SAVED}
+        </span>
       </button>
-      <button type="button" data-best-choice="add" onClick={() => answer('add')} className={choice}>
+      <button type="button" data-best-choice="add" onClick={() => answer('add')} disabled={busy} className={choice}>
         <span className="block font-medium">{ADD_TO_PROJECT}</span>
         <span className="block text-[10px] leading-snug text-ink-500">{portrait ? ADD_PORTRAIT : ADD_KEEPS_SHAPE}</span>
       </button>
@@ -121,12 +134,13 @@ function Question({ dirty, portrait, answer }: Pick<CardFoot, 'dirty' | 'portrai
   )
 }
 
-function Foot({ record, asking, blocked, dirty, portrait, clipIt, answer }: CardFoot): ReactNode {
-  if (asking) return <Question dirty={dirty} portrait={portrait} answer={answer} />
+function Foot({ record, clips, asking, blocked, busy, unsaved, pendingHere, portrait, clipIt, answer }: CardFoot): ReactNode {
+  if (asking) return <Question busy={busy} unsaved={unsaved} pendingHere={pendingHere} portrait={portrait} answer={answer} />
   return (
     <>
-      {record && <Steps record={record} />}
-      {cardClippable(record) && (
+      {/* A clip undone, deleted or in another project: what the record says no longer holds here. */}
+      {record && !cardClipGone(record, clips) && <Steps record={record} />}
+      {cardClippable(record, clips) && (
         <button
           type="button"
           onClick={clipIt}
@@ -196,7 +210,10 @@ export function BestClips(): ReactNode {
   const clipItFromCard = useEditor((s) => s.clipItFromCard)
   const answer = useEditor((s) => s.answerBestClipsQuestion)
   const dirty = useEditor((s) => s.dirty)
+  const projectPath = useEditor((s) => s.projectPath)
   const settings = useEditor((s) => s.project.settings)
+  const clips = useEditor((s) => s.project.clips)
+  const projectId = useEditor((s) => s.project.id ?? null)
 
   // On screen whenever the box holds a link; its words are the link's own, or none yet.
   if (!parseLink(ingest.url)) return null
@@ -295,9 +312,12 @@ export function BestClips(): ReactNode {
                       card={card}
                       foot={{
                         record: clipped[key],
+                        clips,
                         asking: question?.key === key,
                         blocked: question !== null || ingest.busy,
-                        dirty,
+                        busy: ingest.busy,
+                        unsaved: unsavedWork({ dirty, projectPath }),
+                        pendingHere: cardDownloadsIn(clipped, projectId) > 0,
                         portrait: isPortrait(settings),
                         clipIt: () => void clipItFromCard(card),
                         answer: (choice) => void answer(choice)

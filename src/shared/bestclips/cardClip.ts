@@ -1,5 +1,5 @@
 import type { WordRun } from '../ingest/captions'
-import type { Clip, ProjectSettings } from '../timeline'
+import type { Clip, Project, ProjectSettings } from '../timeline'
 import type { Transcript } from '../transcript'
 import { clipSegments, type ClipWindow } from './windows'
 
@@ -24,7 +24,11 @@ import { clipSegments, type ClipWindow } from './windows'
  *     aspect: the clip is added as M0's Clip it adds one.
  *
  * So "Make it vertical" never changes an existing project's aspect without
- * saying so: the only aspect it sets unasked is an empty timeline's.
+ * saying so: the only aspect it sets unasked is an empty timeline's. A
+ * timeline another card's clip is still downloading into is not empty (three
+ * separate shorts), and Start new waits until that clip has landed. Nor does
+ * a card change an existing edit's CAPTIONS: step 4 switches them on only in
+ * a new project or on an empty timeline (`CardClipPlan.captions`).
  *
  * THE RUN (`cardRun`): the card's window as a run of words, by the window's
  * first and last capped segment over the same `clipSegments` the window was
@@ -82,6 +86,13 @@ export type CardClipPlan =
       aspect: '9:16' | null
       /** Follow the subject once the clip lands: the canvas it lands on is portrait. */
       reframe: boolean
+      /**
+       * Step 4 may switch the project's captions on (and to Smart placement):
+       * only when the clip goes into a new project or onto an empty timeline,
+       * where there is no edit of the user's whose captions it would change.
+       * Into an existing edit, the project's captions are left as they are.
+       */
+      captions: boolean
       shape: CardShape
     }
 
@@ -98,22 +109,42 @@ export function isNineBySixteen(settings: Pick<ProjectSettings, 'width' | 'heigh
 /**
  * Step 0 (§7.5). `choice` is the question's answer, or null before it is
  * asked. Any clip on the timeline, sound included, makes the timeline not
- * empty: it is somebody’s edit.
+ * empty: it is somebody’s edit. So does a card's download still on its way
+ * into this project (`pendingHere`, `cardDownloadsIn`): the three cards are
+ * three separate shorts, and a second card pressed while the first downloads
+ * would otherwise land on the same timeline unasked.
  */
 export function cardClipPlan(
   project: { clips: readonly Pick<Clip, 'id'>[]; settings: Pick<ProjectSettings, 'width' | 'height'> },
   vertical: boolean,
-  choice: CardClipChoice | null
+  choice: CardClipChoice | null,
+  pendingHere = 0
 ): CardClipPlan {
   const portrait = isPortrait(project.settings)
-  if (!vertical) return { kind: 'go', newProject: false, aspect: null, reframe: portrait, shape: 'kept-off' }
-  if (project.clips.length === 0) {
+  const noEdit = project.clips.length === 0
+  if (!vertical) return { kind: 'go', newProject: false, aspect: null, reframe: portrait, captions: noEdit, shape: 'kept-off' }
+  if (noEdit && pendingHere === 0) {
     const already = isNineBySixteen(project.settings)
-    return { kind: 'go', newProject: false, aspect: already ? null : '9:16', reframe: true, shape: already ? 'already' : 'set' }
+    return { kind: 'go', newProject: false, aspect: already ? null : '9:16', reframe: true, captions: true, shape: already ? 'already' : 'set' }
   }
-  if (choice === 'new') return { kind: 'go', newProject: true, aspect: null, reframe: true, shape: 'new' }
-  if (choice === 'add') return { kind: 'go', newProject: false, aspect: null, reframe: portrait, shape: 'kept' }
+  if (choice === 'new') return { kind: 'go', newProject: true, aspect: null, reframe: true, captions: true, shape: 'new' }
+  if (choice === 'add') return { kind: 'go', newProject: false, aspect: null, reframe: portrait, captions: noEdit, shape: 'kept' }
   return { kind: 'ask' }
+}
+
+/**
+ * Whether "Start a new 9:16 project" must save this one first: unsaved
+ * changes, or a project that has never been written to a file of its own (one
+ * recovered from autosave opens clean but with no path: newProject would
+ * leave it only in the autosave folder).
+ */
+export function unsavedWork(state: { dirty: boolean; projectPath: string | null }): boolean {
+  return state.dirty || state.projectPath === null
+}
+
+/** Card downloads still on their way into the project `projectId`. */
+export function cardDownloadsIn(records: Readonly<Record<string, CardClipRecord>>, projectId: string | null): number {
+  return Object.values(records).filter((r) => r.projectId === projectId && stepOf(r, 'download')?.state === 'running').length
 }
 
 /* --------------------------------------------- the question's words */
@@ -129,6 +160,8 @@ export const START_NEW_PROJECT = 'Start a new 9:16 project for this clip'
 export const START_NEW_SAVES = 'Saves this project first, then opens a new 9:16 project with just this clip.'
 /** Under Start new, when this project is saved. */
 export const START_NEW_SAVED = 'This project is saved and stays as it is; a new 9:16 project opens with just this clip.'
+/** Under Start new (greyed), while a card's clip is still downloading into this project: it would land nowhere. */
+export const START_NEW_WAITS = 'Waits until the clip downloading now has landed in this project.'
 export const ADD_TO_PROJECT = 'Add it to this project'
 /** Under Add, on a portrait canvas. */
 export const ADD_PORTRAIT = 'Adds it to this timeline and follows faces. The project keeps its shape.'
@@ -137,6 +170,8 @@ export const ADD_KEEPS_SHAPE = 'Adds it to this timeline as it is. The project k
 export const NOT_NOW = 'Not now'
 /** The Save dialog was closed: nothing was dropped and nothing started. */
 export const NOT_SAVED_NOTE = 'This project was not saved, so no new project was started.'
+/** Saving failed (its reason is not shown: Best clips shows fixed lines only). */
+export const SAVE_FAILED_NOTE = 'This project could not be saved, so no new project was started.'
 /** The card no longer belongs to the cards on screen (another link, another length, captions fetched again). */
 export const CARD_GONE_NOTE = 'Those cards are gone: press Analyse again.'
 /** One question at a time. */
@@ -166,8 +201,12 @@ export interface CardClipRecord {
   jobId: string | null
   /** The clip, once it has landed. */
   clipId: string | null
+  /** The project the clip was sent into (`project.id`): which downloads are this project's, for step 0. */
+  projectId: string | null
   /** Step 0's answer: follow the subject after landing. */
   reframe: boolean
+  /** Step 0's answer: step 4 may switch the project's captions on (`CardClipPlan.captions`). */
+  captions: boolean
   /** The reframe's analysis job, while it runs. */
   reframeJobId: string | null
   /** In order: download, shape, reframe, captions, graphics. */
@@ -190,6 +229,7 @@ export const STEP_TEXT = {
   downloadFailed: 'the download did not finish.',
   notLanded: 'skipped: the clip did not land.',
   waiting: 'waits for the one before.',
+  waitingOther: 'waits for other work to finish first.',
   shapeSet: 'this project set to 9:16.',
   shapeAlready: 'already 9:16.',
   shapeNew: 'a new 9:16 project.',
@@ -208,6 +248,8 @@ export const STEP_TEXT = {
   captionsOn: 'on.',
   captionsSmart: 'on, kept off the faces.',
   captionsNoWords: 'skipped: the clip landed without its words.',
+  captionsAlready: 'already on in this project, left as they are.',
+  captionsLeftOff: 'skipped: this project has captions off, and they are left off.',
   graphicsWaiting: 'waits for the faces to be found.',
   graphicsRunning: 'finding graphics…',
   graphicsDone: 'listed in the Transcript tile, each with Drop.',
@@ -233,7 +275,7 @@ export function newCardRecord(
   key: string,
   linkKey: string,
   card: { windowId: string; startMs: number; endMs: number },
-  plan: { reframe: boolean; shape: CardShape }
+  plan: { reframe: boolean; shape: CardShape; captions?: boolean; projectId?: string | null }
 ): CardClipRecord {
   return {
     key,
@@ -243,14 +285,17 @@ export function newCardRecord(
     endMs: card.endMs,
     jobId: null,
     clipId: null,
+    projectId: plan.projectId ?? null,
     reframe: plan.reframe,
+    captions: plan.captions ?? false,
     reframeJobId: null,
     steps: [
       { name: 'download', state: 'running', text: STEP_TEXT.downloading },
       { name: 'shape', state: 'done', text: SHAPE_TEXT[plan.shape] },
       { name: 'reframe', state: 'waiting', text: STEP_TEXT.waiting },
       { name: 'captions', state: 'waiting', text: STEP_TEXT.waiting },
-      { name: 'graphics', state: 'waiting', text: STEP_TEXT.graphicsWaiting }
+      // Not "waits for the faces": no face may ever be looked for (the line changes when the follow starts).
+      { name: 'graphics', state: 'waiting', text: STEP_TEXT.waiting }
     ]
   }
 }
@@ -310,7 +355,40 @@ export function reframeMayStart(world: CardWorld): boolean {
   return !world.graphicsRunning
 }
 
-/** Whether a card's Clip it can be pressed again: never clipped, or its download did not land. */
-export function cardClippable(record: CardClipRecord | undefined): boolean {
-  return record === undefined || stepOf(record, 'download')?.state === 'failed'
+/**
+ * The card's clip landed but is not on this timeline: undone, deleted, or
+ * another project open. What the record says no longer holds here.
+ */
+export function cardClipGone(record: CardClipRecord, clips: readonly Pick<Clip, 'id'>[]): boolean {
+  return stepOf(record, 'download')?.state === 'done' && !clips.some((c) => c.id === record.clipId)
+}
+
+/**
+ * Whether a card's Clip it can be pressed (again): never clipped, its
+ * download did not land, or the clip it landed is no longer on this timeline.
+ */
+export function cardClippable(record: CardClipRecord | undefined, clips: readonly Pick<Clip, 'id'>[]): boolean {
+  return record === undefined || stepOf(record, 'download')?.state === 'failed' || cardClipGone(record, clips)
+}
+
+/**
+ * Step 4's change to the project's captions (§7.5), or none. Into a new
+ * project or onto an empty timeline (`mayChange`), captions go on, with Smart
+ * placement when a subject track exists to keep them off. Into an existing
+ * edit, the project's captions are its own: left exactly as they are, on or
+ * off, placement included.
+ */
+export function captionsStep(
+  mayChange: boolean,
+  captions: Pick<Project['captions'], 'enabled' | 'placement'>,
+  smart: boolean
+): { change: { enabled: true; placement?: 'smart' } | null; state: CardStepState; text: string } {
+  if (!mayChange) {
+    return captions.enabled
+      ? { change: null, state: 'done', text: STEP_TEXT.captionsAlready }
+      : { change: null, state: 'skipped', text: STEP_TEXT.captionsLeftOff }
+  }
+  const text = smart ? STEP_TEXT.captionsSmart : STEP_TEXT.captionsOn
+  if (captions.enabled && (!smart || captions.placement === 'smart')) return { change: null, state: 'done', text }
+  return { change: smart ? { enabled: true, placement: 'smart' } : { enabled: true }, state: 'done', text }
 }

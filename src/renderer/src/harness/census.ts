@@ -2449,16 +2449,25 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
    * A card clipped, its record filled in (CLIPS.md §7.5): landed, the project
    * set to 9:16, the follow skipped for want of the AI helper, captions on,
    * graphics listed. Written through the store: the harness's downloads never
-   * land (bridge.ts `harnessStartIngest`).
+   * land (bridge.ts `harnessStartIngest`). The record's clip is a real clip on
+   * the timeline (the census video placed): a record whose clip is not on the
+   * timeline is not shown, and the card offers Clip it again.
    */
-  'link-best-clips-clipped': async () => {
+  'link-best-clips-clipped': async (env) => {
+    const { video } = await media(env)
+    const clipId = place(video.id)
     await linkWords()
     await editor().analyseBestClips()
     const source = editor().urlSource
     const card = editor().bestClips.last?.result.cards[0]
     if (!source || !card) throw new Error('census: Analyse on the bridge’s talk gave no card to clip')
-    let record = newCardRecord(cardKey(source.linkKey, card), source.linkKey, card, { reframe: true, shape: 'set' })
-    record = { ...withStep(record, 'download', 'done', STEP_TEXT.landed), clipId: 'census-clip' }
+    let record = newCardRecord(cardKey(source.linkKey, card), source.linkKey, card, {
+      reframe: true,
+      shape: 'set',
+      captions: true,
+      projectId: editor().project.id ?? null
+    })
+    record = { ...withStep(record, 'download', 'done', STEP_TEXT.landed), clipId }
     record = withStep(record, 'reframe', 'skipped', STEP_TEXT.reframeNoHelper)
     record = withStep(record, 'captions', 'done', STEP_TEXT.captionsOn)
     record = withStep(record, 'graphics', 'done', STEP_TEXT.graphicsDone)

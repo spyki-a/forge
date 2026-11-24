@@ -34,6 +34,7 @@ import {
   START_NEW_PROJECT,
   START_NEW_SAVED,
   START_NEW_SAVES,
+  START_NEW_WAITS,
   STEP_LABEL,
   STEP_TEXT
 } from '@shared/bestclips/cardClip'
@@ -412,6 +413,7 @@ describe('Clip it on a card (§7.5 steps 0 to 5)', () => {
   it('says a saved project stays as it is, and that Add follows faces on a portrait canvas', () => {
     useEditor.setState((s) => ({
       dirty: false,
+      projectPath: '/projects/a.forge',
       bestClipsQuestion: { key: cardKey(LINK_KEY, A), card: A, linkKey: LINK_KEY, transcript: T },
       project: { ...s.project, settings: { ...s.project.settings, width: 1080, height: 1920 } }
     }))
@@ -419,10 +421,35 @@ describe('Clip it on a card (§7.5 steps 0 to 5)', () => {
     expect(textsIn(footOf(A.windowId))).not.toContain(START_NEW_SAVES)
   })
 
+  it('says a project never saved to a file of its own (recovered from autosave, clean) is saved first', () => {
+    useEditor.setState({ dirty: false, projectPath: null, bestClipsQuestion: { key: cardKey(LINK_KEY, A), card: A, linkKey: LINK_KEY, transcript: T } })
+    expect(textsIn(footOf(A.windowId))).toContain(START_NEW_SAVES)
+    expect(textsIn(footOf(A.windowId))).not.toContain(START_NEW_SAVED)
+  })
+
+  it('greys Start new, saying why, while another card’s clip is still downloading into this project', () => {
+    const going = newCardRecord(cardKey(LINK_KEY, C), LINK_KEY, C, { reframe: true, shape: 'set', projectId: useEditor.getState().project.id ?? null })
+    useEditor.setState({ bestClipsClipped: { [going.key]: going }, bestClipsQuestion: { key: cardKey(LINK_KEY, A), card: A, linkKey: LINK_KEY, transcript: T } })
+    const foot = footOf(A.windowId)
+    expect(textsIn(foot)).toContain(START_NEW_WAITS)
+    expect(foot.find((h) => h.props['data-best-choice'] === 'new')?.props.disabled).toBe(true)
+    expect(foot.find((h) => h.props['data-best-choice'] === 'add')?.props.disabled).toBe(false)
+  })
+
+  it('a clipped card whose clip is no longer on this timeline (undone) hides what no longer holds and offers Clip it again', () => {
+    let record = newCardRecord(cardKey(LINK_KEY, A), LINK_KEY, A, { reframe: true, shape: 'set' })
+    record = { ...record, clipId: 'c-gone', steps: record.steps.map((st) => (st.name === 'download' ? { ...st, state: 'done', text: STEP_TEXT.landed } : st)) }
+    useEditor.setState({ bestClipsClipped: { [record.key]: record } })
+    const foot = footOf(A.windowId)
+    expect(buttonsIn(foot)).toEqual([CLIP_IT_CARD])
+    expect(textsIn(foot)).not.toContain(STEP_TEXT.landed)
+  })
+
   it('lists what ran and what was skipped on a clipped card, in order, with no Clip it; the others keep theirs', () => {
     let record = newCardRecord(cardKey(LINK_KEY, A), LINK_KEY, A, { reframe: true, shape: 'set' })
     record = { ...record, clipId: 'c1', steps: record.steps.map((st) => (st.name === 'download' ? { ...st, state: 'done', text: STEP_TEXT.landed } : st.name === 'reframe' ? { ...st, state: 'skipped', text: STEP_TEXT.reframeNoHelper } : st)) }
-    useEditor.setState({ bestClipsClipped: { [record.key]: record } })
+    // The clip it landed is on this timeline (only its id is read here).
+    useEditor.setState((s) => ({ bestClipsClipped: { [record.key]: record }, project: { ...s.project, clips: [{ ...(s.project.clips[0] ?? {}), id: 'c1' } as (typeof s.project.clips)[number]] } }))
     const foot = footOf(A.windowId)
     expect(buttonsIn(foot)).toEqual([])
     const steps = foot.filter((h) => h.props['data-card-step'] !== undefined)

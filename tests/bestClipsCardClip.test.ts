@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  captionsStep,
+  cardClipGone,
   cardClippable,
+  cardDownloadsIn,
   cardKey,
   cardRun,
   graphicsMayStart,
@@ -9,6 +12,7 @@ import {
   reframeMayStart,
   STEP_TEXT,
   stepOf,
+  unsavedWork,
   withStep,
   type CardClipRecord,
   type CardStepName,
@@ -151,12 +155,72 @@ describe('the per-card record', () => {
     for (const name of ['reframe', 'captions', 'graphics'] as const) expect(stepOf(r, name)).toMatchObject({ state: 'skipped', text: STEP_TEXT.notLanded })
     // The shape line stays what it said: it happened before the download.
     expect(stepOf(r, 'shape')?.state).toBe('done')
-    expect(cardClippable(r)).toBe(true)
+    expect(cardClippable(r, [])).toBe(true)
   })
 
   it('a card sent or landed is not pressable again; one never pressed is', () => {
-    expect(cardClippable(undefined)).toBe(true)
-    expect(cardClippable(newCardRecord('k', 'lk', WINDOW, { reframe: true, shape: 'set' }))).toBe(false)
-    expect(cardClippable(landed('done'))).toBe(false)
+    expect(cardClippable(undefined, [])).toBe(true)
+    expect(cardClippable(newCardRecord('k', 'lk', WINDOW, { reframe: true, shape: 'set' }), [])).toBe(false)
+    expect(cardClippable(landed('done'), [{ id: 'clip-1' }, { id: 'other' }])).toBe(false)
+  })
+
+  it('a landed clip no longer on the timeline (undone, deleted, another project) lets the card be clipped again, and its record no longer holds', () => {
+    const r = landed('done')
+    expect(cardClipGone(r, [{ id: 'clip-1' }])).toBe(false)
+    expect(cardClipGone(r, [{ id: 'other' }])).toBe(true)
+    expect(cardClippable(r, [])).toBe(true)
+    expect(cardClippable(r, [{ id: 'other' }])).toBe(true)
+    // A download still on its way has no clip yet: not gone, not pressable.
+    expect(cardClipGone(newCardRecord('k', 'lk', WINDOW, { reframe: true, shape: 'set' }), [])).toBe(false)
+  })
+
+  it('the graphics line does not promise faces before any follow has started', () => {
+    for (const reframe of [true, false]) {
+      const r = newCardRecord('k', 'lk', WINDOW, { reframe, shape: 'set' })
+      expect(stepOf(r, 'graphics'), String(reframe)).toMatchObject({ state: 'waiting', text: STEP_TEXT.waiting })
+    }
+  })
+
+  it('carries the project it was sent into and whether captions are its to change', () => {
+    const r = newCardRecord('k', 'lk', WINDOW, { reframe: true, shape: 'set', captions: true, projectId: 'p-1' })
+    expect(r).toMatchObject({ projectId: 'p-1', captions: true })
+    // Defaults: no project, and captions left alone.
+    expect(newCardRecord('k', 'lk', WINDOW, { reframe: true, shape: 'set' })).toMatchObject({ projectId: null, captions: false })
+  })
+})
+
+describe('step 4 — captions, never an existing edit’s', () => {
+  it('into an existing edit, the project’s captions are left exactly as they are, on or off, placement included', () => {
+    expect(captionsStep(false, { enabled: false }, true)).toEqual({ change: null, state: 'skipped', text: STEP_TEXT.captionsLeftOff })
+    expect(captionsStep(false, { enabled: false, placement: 'style' }, false)).toMatchObject({ change: null, state: 'skipped' })
+    expect(captionsStep(false, { enabled: true, placement: 'style' }, true)).toEqual({ change: null, state: 'done', text: STEP_TEXT.captionsAlready })
+  })
+
+  it('into a new project or an empty timeline, captions go on, kept off the faces when a subject track exists', () => {
+    expect(captionsStep(true, { enabled: false }, false)).toEqual({ change: { enabled: true }, state: 'done', text: STEP_TEXT.captionsOn })
+    expect(captionsStep(true, { enabled: false }, true)).toEqual({ change: { enabled: true, placement: 'smart' }, state: 'done', text: STEP_TEXT.captionsSmart })
+    expect(captionsStep(true, { enabled: true, placement: 'style' }, true)).toMatchObject({ change: { enabled: true, placement: 'smart' } })
+    // Already so: no change, so no undo step.
+    expect(captionsStep(true, { enabled: true, placement: 'smart' }, true)).toEqual({ change: null, state: 'done', text: STEP_TEXT.captionsSmart })
+    expect(captionsStep(true, { enabled: true }, false)).toEqual({ change: null, state: 'done', text: STEP_TEXT.captionsOn })
+  })
+})
+
+describe('step 0’s helpers', () => {
+  it('unsaved work: changed, or never written to a file of its own (a recovered project opens clean, with no path)', () => {
+    expect(unsavedWork({ dirty: true, projectPath: '/p/a.forge' })).toBe(true)
+    expect(unsavedWork({ dirty: false, projectPath: null })).toBe(true)
+    expect(unsavedWork({ dirty: false, projectPath: '/p/a.forge' })).toBe(false)
+  })
+
+  it('counts the card downloads still on their way into one project, by its id', () => {
+    const going = newCardRecord('a', 'lk', WINDOW, { reframe: true, shape: 'set', projectId: 'p-1' })
+    const elsewhere = newCardRecord('b', 'lk', WINDOW, { reframe: true, shape: 'set', projectId: 'p-2' })
+    const done = { ...withStep(newCardRecord('c', 'lk', WINDOW, { reframe: true, shape: 'set', projectId: 'p-1' }), 'download', 'done', STEP_TEXT.landed), clipId: 'x' }
+    const failed = notLanded(newCardRecord('d', 'lk', WINDOW, { reframe: true, shape: 'set', projectId: 'p-1' }), STEP_TEXT.downloadFailed)
+    const records = { a: going, b: elsewhere, c: done, d: failed }
+    expect(cardDownloadsIn(records, 'p-1')).toBe(1)
+    expect(cardDownloadsIn(records, 'p-2')).toBe(1)
+    expect(cardDownloadsIn(records, 'p-3')).toBe(0)
   })
 })

@@ -370,24 +370,40 @@ describe('Clip it from a card — where the clip goes (§7.5 step 0)', () => {
       // Neither answer sets an aspect on THIS project: "new" makes another one, "add" keeps this one's shape.
       expect(plan.aspect, choice).toBeNull()
     }
-    // Membership over the existing clips: every one keeps its crop; the canvas keeps its size.
+    // Membership over the existing clips: every one keeps its crop; the canvas keeps its size. (cardClipPlan
+    // is given nothing it could change, so these hold by construction here; the guard with teeth is the
+    // store's, tests/renderer/bestClipsClipIt.test.ts, where setAspect called directly re-crops them.)
     for (const { id, crop } of crops) expect(p.clips.find((c) => c.id === id)?.crop, id).toEqual(crop)
     expect(p.settings).toEqual(settings)
   })
 
   it('"Add it to this project" follows faces only on a canvas that is already portrait; "Start a new" always does, in a new project', () => {
     const wide = edit()
-    expect(cardClipPlan(wide, true, 'add')).toMatchObject({ kind: 'go', newProject: false, aspect: null, reframe: false, shape: 'kept' })
+    expect(cardClipPlan(wide, true, 'add')).toMatchObject({ kind: 'go', newProject: false, aspect: null, reframe: false, captions: false, shape: 'kept' })
     const tall = { ...wide, settings: { ...wide.settings, width: 1080, height: 1920 } }
     expect(cardClipPlan(tall, true, 'add')).toMatchObject({ kind: 'go', newProject: false, aspect: null, reframe: true, shape: 'kept' })
-    expect(cardClipPlan(wide, true, 'new')).toMatchObject({ kind: 'go', newProject: true, aspect: null, reframe: true, shape: 'new' })
+    expect(cardClipPlan(wide, true, 'new')).toMatchObject({ kind: 'go', newProject: true, aspect: null, reframe: true, captions: true, shape: 'new' })
   })
 
   it('with nothing on the timeline, uses this project, and sets 9:16 only when it is not already', () => {
     const empty = { ...edit(), clips: [] }
-    expect(cardClipPlan(empty, true, null)).toEqual({ kind: 'go', newProject: false, aspect: '9:16', reframe: true, shape: 'set' })
+    expect(cardClipPlan(empty, true, null)).toEqual({ kind: 'go', newProject: false, aspect: '9:16', reframe: true, captions: true, shape: 'set' })
     const tall = { ...empty, settings: { ...empty.settings, width: 1080, height: 1920 } }
-    expect(cardClipPlan(tall, true, null)).toEqual({ kind: 'go', newProject: false, aspect: null, reframe: true, shape: 'already' })
+    expect(cardClipPlan(tall, true, null)).toEqual({ kind: 'go', newProject: false, aspect: null, reframe: true, captions: true, shape: 'already' })
+  })
+
+  it('an empty timeline with another card’s clip still downloading into it is somebody’s short: it asks (three separate shorts)', () => {
+    const tall = { ...edit(), clips: [], settings: { ...edit().settings, width: 1080, height: 1920 } }
+    expect(cardClipPlan(tall, true, null, 1)).toEqual({ kind: 'ask' })
+    // "Add" there joins that short: followed on its portrait canvas, captions its own (no edit of the user's on it).
+    expect(cardClipPlan(tall, true, 'add', 1)).toMatchObject({ kind: 'go', newProject: false, aspect: null, reframe: true, captions: true })
+  })
+
+  it('captions are step 4’s to switch on only where there is no edit of the user’s: into an existing edit they are left alone', () => {
+    const p = edit()
+    expect(cardClipPlan(p, true, 'add')).toMatchObject({ captions: false })
+    expect(cardClipPlan(p, false, null)).toMatchObject({ captions: false })
+    expect(cardClipPlan({ ...p, clips: [] }, false, null)).toMatchObject({ captions: true })
   })
 
   it('a single clip on the timeline is still somebody’s edit: it asks', () => {

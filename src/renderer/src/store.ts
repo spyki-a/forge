@@ -269,8 +269,10 @@ import { shownBestClips } from '@shared/bestclips/session'
 import type { BestClipCard, BestClipsResult } from '@shared/bestclips/run'
 import {
   CARD_GONE_NOTE,
+  captionsStep,
   cardClipPlan,
   cardClippable,
+  cardDownloadsIn,
   cardKey,
   cardRun,
   graphicsMayStart,
@@ -280,8 +282,11 @@ import {
   notLanded,
   QUESTION_OPEN_NOTE,
   reframeMayStart,
+  SAVE_FAILED_NOTE,
+  START_NEW_WAITS,
   STEP_TEXT,
   stepOf,
+  unsavedWork,
   withStep,
   type CardClipChoice,
   type CardClipPlan,
@@ -458,6 +463,12 @@ export interface BestClipsQuestion {
 /** A download this window started, waiting to be collected. */
 export interface PendingIngest {
   projectPath: string | null
+  /**
+   * The project it was asked in (`project.id`, which newProject renews and a
+   * save keeps). An untitled project's path is null, so two untitled projects
+   * would match by path alone. Absent in a record made before it existed.
+   */
+  projectId?: string | null
   /** Clip it's: where the clip's words come from (main keeps a copy, for a reload). */
   transcriptFrom?: TranscriptFrom
   credit?: AssetCredit | null
@@ -2008,8 +2019,8 @@ export const useEditor = create<EditorState>((set, get) => ({
         pendingIngests: {
           ...s.pendingIngests,
           [job.id]: override
-            ? { projectPath: s.projectPath, transcriptFrom: override.clip.transcriptFrom, credit: override.clip.credit }
-            : { projectPath: s.projectPath }
+            ? { projectPath: s.projectPath, projectId: s.project.id ?? null, transcriptFrom: override.clip.transcriptFrom, credit: override.clip.credit }
+            : { projectPath: s.projectPath, projectId: s.project.id ?? null }
         },
         ingest: { ...s.ingest, url: override ? s.ingest.url : '', busy: false }
       }))
@@ -2107,14 +2118,15 @@ export const useEditor = create<EditorState>((set, get) => ({
       return
     }
     const key = cardKey(source.linkKey, card)
-    // Clipped already: the card shows what it did. The other cards stay pressable (three separate shorts).
-    if (!cardClippable(get().bestClipsClipped[key])) return
+    // Clipped already (and still on this timeline): the card shows what it did. The other cards stay pressable (three separate shorts).
+    if (!cardClippable(get().bestClipsClipped[key], get().project.clips)) return
     if (get().bestClipsQuestion !== null) {
       notify(QUESTION_OPEN_NOTE, 'info')
       return
     }
     if (get().ingest.busy) return
-    const plan = cardClipPlan(get().project, get().bestClipsVertical, null)
+    const pendingHere = cardDownloadsIn(get().bestClipsClipped, get().project.id ?? null)
+    const plan = cardClipPlan(get().project, get().bestClipsVertical, null, pendingHere)
     if (plan.kind === 'ask') {
       set({ bestClipsQuestion: { key, card, linkKey: source.linkKey, transcript: source.transcript } })
       return
@@ -2126,9 +2138,11 @@ export const useEditor = create<EditorState>((set, get) => ({
     const question = get().bestClipsQuestion
     if (!question) return
     if (choice === null) {
-      set({ bestClipsQuestion: null })
+      if (!answeringQuestion) set({ bestClipsQuestion: null })
       return
     }
+    // One answer at a time: a second press while the Save dialog is up would save twice and send the card twice.
+    if (answeringQuestion || get().ingest.busy) return
     const { notify } = get()
     const source = urlSourceFor(get())
     const shown = shownBestClips(get().bestClips, source)
@@ -2137,37 +2151,53 @@ export const useEditor = create<EditorState>((set, get) => ({
       notify(CARD_GONE_NOTE, 'info')
       return
     }
-    const plan = cardClipPlan(get().project, get().bestClipsVertical, choice)
+    const pendingHere = cardDownloadsIn(get().bestClipsClipped, get().project.id ?? null)
+    const plan = cardClipPlan(get().project, get().bestClipsVertical, choice, pendingHere)
     if (plan.kind !== 'go') return
-    if (plan.newProject) {
-      /*
-       * The File > New Project route (App.tsx → newProject), which does not
-       * check for unsaved work itself: so this saves first, the way Save does
-       * (a saved project's own file; an untitled one through the Save dialog).
-       * A closed dialog starts nothing and keeps the question open: the work
-       * is never dropped.
-       */
-      if (get().dirty) {
-        const { project, projectPath, decisions } = get()
-        let path: string | null = null
-        try {
-          path = await window.forge.saveProject(project, projectPath, decisions, false)
-        } catch (err) {
-          notify(err instanceof Error ? err.message : String(err))
+    answeringQuestion = true
+    try {
+      if (plan.newProject) {
+        // A card's clip still downloading into this project would land nowhere once another is open.
+        if (pendingHere > 0) {
+          notify(START_NEW_WAITS, 'info')
           return
         }
-        if (!path) {
-          notify(NOT_SAVED_NOTE, 'info')
-          return
+        /*
+         * The File > New Project route (App.tsx → newProject), which does not
+         * check for unsaved work itself: so this saves first, the way Save does
+         * (a saved project's own file; an untitled one through the Save dialog).
+         * Unsaved means changed OR never written to a file of its own: a
+         * project recovered from autosave opens clean with no path. A closed
+         * dialog starts nothing and keeps the question open: the work is never
+         * dropped.
+         */
+        if (unsavedWork(get())) {
+          const { project, projectPath, decisions } = get()
+          let path: string | null = null
+          try {
+            path = await window.forge.saveProject(project, projectPath, decisions, false)
+          } catch {
+            notify(SAVE_FAILED_NOTE)
+            return
+          }
+          if (!path) {
+            notify(NOT_SAVED_NOTE, 'info')
+            return
+          }
+          get().markSaved(path)
+          window.forge.rememberRecent(path)
+          if (project.id) void window.forge.clearAutosave(project.id).catch(() => undefined)
         }
-        get().markSaved(path)
-        window.forge.rememberRecent(path)
-        if (project.id) void window.forge.clearAutosave(project.id).catch(() => undefined)
+        // The question may have been closed, or the cards changed, while the Save dialog was up.
+        if (get().bestClipsQuestion !== question) return
+        get().newProject({ name: NEW_PROJECT_DEFAULT.name, aspect: '9:16', fps: get().project.settings.fps })
       }
-      get().newProject({ name: NEW_PROJECT_DEFAULT.name, aspect: '9:16', fps: get().project.settings.fps })
+      set({ bestClipsQuestion: null })
+      if (!cardClippable(get().bestClipsClipped[question.key], get().project.clips)) return
+      await sendCard(question.card, source, shown, plan)
+    } finally {
+      answeringQuestion = false
     }
-    set({ bestClipsQuestion: null })
-    await sendCard(question.card, source, shown, plan)
   },
 
   getTranscript: async (language) => {
@@ -6857,7 +6887,11 @@ export const useEditor = create<EditorState>((set, get) => ({
        * move its playhead. The file is on disk and the message says where, so
        * only the automatic placement is lost.
        */
-      if (owner && owner.projectPath !== get().projectPath) {
+      // By the project's id when it was recorded (untitled projects all have a null path), else by path.
+      const elsewhere =
+        owner &&
+        (owner.projectId != null ? owner.projectId !== (get().project.id ?? null) : owner.projectPath !== get().projectPath)
+      if (elsewhere) {
         notify(
           `That download finished under a different project. It is saved at ${result.path}`,
           'info'
@@ -7526,22 +7560,21 @@ type ReframeOutcome = 'landed' | 'failed' | 'elsewhere'
  * Observation only: Reframe does what it did for everyone else.
  */
 const reframeOutcomes = new Map<string, ReframeOutcome>()
-const reframeWaiters = new Map<string, (outcome: ReframeOutcome) => void>()
+// Several waiters per job: two cards' clips of one file share its one job (startReframe's "already running").
+const reframeWaiters = new Map<string, ((outcome: ReframeOutcome) => void)[]>()
 
 function reframeSettledAs(jobId: string, outcome: ReframeOutcome): void {
   if (reframeOutcomes.has(jobId)) return
   reframeOutcomes.set(jobId, outcome)
-  const waiter = reframeWaiters.get(jobId)
-  if (waiter) {
-    reframeWaiters.delete(jobId)
-    waiter(outcome)
-  }
+  const waiters = reframeWaiters.get(jobId) ?? []
+  reframeWaiters.delete(jobId)
+  for (const waiter of waiters) waiter(outcome)
 }
 
 function reframeSettled(jobId: string): Promise<ReframeOutcome> {
   const known = reframeOutcomes.get(jobId)
   if (known) return Promise.resolve(known)
-  return new Promise((resolve) => reframeWaiters.set(jobId, resolve))
+  return new Promise((resolve) => reframeWaiters.set(jobId, [...(reframeWaiters.get(jobId) ?? []), resolve]))
 }
 
 const cardRecord = (key: string): CardClipRecord | undefined => editor().bestClipsClipped[key]
@@ -7550,17 +7583,23 @@ function putCardRecord(record: CardClipRecord): void {
   useEditor.setState((s) => ({ bestClipsClipped: { ...s.bestClipsClipped, [record.key]: record } }))
 }
 
-function markCardStep(key: string, name: CardStepName, state: CardStepState, text: string): void {
-  const record = cardRecord(key)
-  if (record) putCardRecord(withStep(record, name, state, text))
-}
+/** One answer to step 0's question at a time (the Save dialog is awaited inside it). */
+let answeringQuestion = false
+
+/**
+ * Card steps between passing `reframeMayStart` and their job showing in
+ * `reframe.pending`: the face finder asked about, the file keyed, the job
+ * queued — several awaits, during which no graphics may start (§12.1). Counted
+ * as reframes running by `cardWorld`.
+ */
+let cardReframesStarting = 0
 
 function cardWorld(): CardWorld {
   const s = editor()
-  return { reframesRunning: Object.keys(s.reframe.pending).length, graphicsRunning: s.findingGraphics !== null }
+  return { reframesRunning: Object.keys(s.reframe.pending).length + cardReframesStarting, graphicsRunning: s.findingGraphics !== null }
 }
 
-/** Resolves once `test` holds, read again after every store change. */
+/** Resolves once `test` holds, read again after every store change. Re-check after it: another waiter may have gone first. */
 function storeUntil(test: () => boolean): Promise<void> {
   if (test()) return Promise.resolve()
   return new Promise((resolve) => {
@@ -7573,11 +7612,39 @@ function storeUntil(test: () => boolean): Promise<void> {
 }
 
 /**
- * Step 0's answer carried out (§7.5): the card's window as the run, the
- * aspect set only when `cardClipPlan` says (an empty timeline), then M0's
- * path — `startIngest`, exact, with the run's words and the link's credit —
- * and the card's record, which the download's end picks up
- * (`settleCardDownload`).
+ * One card's chain of steps: its record by key, but only while the record is
+ * still the one this chain started for (`jobId`). The same card clipped again
+ * after its clip was undone gets a new record under the same key; the old
+ * chain then writes nothing into it.
+ */
+interface CardChain {
+  key: string
+  jobId: string
+}
+
+const chainRecord = (chain: CardChain): CardClipRecord | undefined => {
+  const record = cardRecord(chain.key)
+  return record && record.jobId === chain.jobId ? record : undefined
+}
+
+function markCardStep(chain: CardChain, name: CardStepName, state: CardStepState, text: string): void {
+  const record = chainRecord(chain)
+  if (record) putCardRecord(withStep(record, name, state, text))
+}
+
+/** A waiting step's line, changed only when it says something else. */
+function waitLine(chain: CardChain, name: CardStepName, text: string): void {
+  const step = chainRecord(chain) && stepOf(chainRecord(chain)!, name)
+  if (step && step.state === 'waiting' && step.text !== text) markCardStep(chain, name, 'waiting', text)
+}
+
+/**
+ * Step 0's answer carried out (§7.5): the card's window as the run, then
+ * M0's path — `startIngest`, exact, with the run's words and the link's
+ * credit — and the card's record, which the download's end picks up
+ * (`settleCardDownload`). The aspect is set only when `cardClipPlan` says (an
+ * empty timeline), and only once the download is queued: a refused download
+ * changes nothing.
  */
 async function sendCard(card: BestClipCard, source: UrlSource, shown: BestClipsResult, plan: Extract<CardClipPlan, { kind: 'go' }>): Promise<void> {
   const t = source.transcript
@@ -7587,8 +7654,6 @@ async function sendCard(card: BestClipCard, source: UrlSource, shown: BestClipsR
     editor().notify(CARD_GONE_NOTE, 'info')
     return
   }
-  // Only ever on an empty timeline (cardClipPlan): there is no clip whose crop it could change.
-  if (plan.aspect !== null && editor().project.clips.length === 0) editor().setAspect(plan.aspect)
   const range = runRange(t, run)
   const transcriptFrom: TranscriptFrom = {
     linkKey: source.linkKey,
@@ -7600,10 +7665,11 @@ async function sendCard(card: BestClipCard, source: UrlSource, shown: BestClipsR
   }
   const credit = linkCredit(source.meta, source.url, source.fetchedAt ?? new Date().toISOString())
   const key = cardKey(source.linkKey, card)
-  putCardRecord(newCardRecord(key, source.linkKey, card, plan))
+  const projectId = editor().project.id ?? null
+  putCardRecord(newCardRecord(key, source.linkKey, card, { ...plan, projectId }))
   const id = await editor().startIngest({ url: source.url, range, exact: CLIP_IT_EXACT, clip: { transcriptFrom, credit } })
   if (!id) {
-    // Refused or failed to queue (startIngest said why): nothing was sent, and the card can be pressed again.
+    // Refused or failed to queue (startIngest said why): nothing was sent, nothing changed, and the card can be pressed again.
     useEditor.setState((s) => {
       const rest = { ...s.bestClipsClipped }
       delete rest[key]
@@ -7613,6 +7679,8 @@ async function sendCard(card: BestClipCard, source: UrlSource, shown: BestClipsR
   }
   const record = cardRecord(key)
   if (record) putCardRecord({ ...record, jobId: id })
+  // Only ever on an empty timeline of the project it was asked in (cardClipPlan): no clip's crop can change.
+  if (plan.aspect !== null && (editor().project.id ?? null) === projectId && editor().project.clips.length === 0) editor().setAspect(plan.aspect)
 }
 
 /**
@@ -7631,30 +7699,30 @@ function settleCardDownload(
     return
   }
   putCardRecord({ ...withStep(record, 'download', 'done', STEP_TEXT.landed), clipId: outcome.clipId })
-  void runCardSteps(record.key)
+  void runCardSteps({ key: record.key, jobId })
 }
 
 /** Steps 3, 4 and 5 in turn (§7.5). Each ends its own line whatever happens, so the next one still runs. */
-async function runCardSteps(key: string): Promise<void> {
+async function runCardSteps(chain: CardChain): Promise<void> {
   try {
-    await cardReframeStep(key)
+    await cardReframeStep(chain)
   } catch {
-    markCardStep(key, 'reframe', 'failed', STEP_TEXT.reframeFailed)
+    markCardStep(chain, 'reframe', 'failed', STEP_TEXT.reframeFailed)
   }
   try {
-    cardCaptionsStep(key)
+    cardCaptionsStep(chain)
   } catch {
-    markCardStep(key, 'captions', 'skipped', STEP_TEXT.clipGone)
+    markCardStep(chain, 'captions', 'skipped', STEP_TEXT.clipGone)
   }
   try {
-    await cardGraphicsStep(key)
+    await cardGraphicsStep(chain)
   } catch {
-    markCardStep(key, 'graphics', 'failed', STEP_TEXT.graphicsFailed)
+    markCardStep(chain, 'graphics', 'failed', STEP_TEXT.graphicsFailed)
   }
 }
 
-function cardClip(key: string): Clip | null {
-  const id = cardRecord(key)?.clipId
+function cardClip(chain: CardChain): Clip | null {
+  const id = chainRecord(chain)?.clipId
   return id ? (editor().project.clips.find((c) => c.id === id) ?? null) : null
 }
 
@@ -7663,79 +7731,108 @@ function cardClip(key: string): Clip | null {
  * there and the face finder is ON DISK — asked of main without fetching it;
  * a missing one is named, never fetched (the Trimmer's Follow the subject is
  * the press that gets it, with its size). Else the crop stays centred, said.
- * Waits while a graphics run is out (§12.1), and until its job has ended.
+ *
+ * The order (§12.1): it waits while a graphics run is out, and it CLAIMS the
+ * reframe in the same synchronous turn as that check (`cardReframesStarting`),
+ * before its first await, so no card's graphics can start between the check
+ * and the job showing in `reframe.pending`. The claim is held until the job
+ * has ended.
  */
-async function cardReframeStep(key: string): Promise<void> {
-  const record = cardRecord(key)
-  const clip = cardClip(key)
+async function cardReframeStep(chain: CardChain): Promise<void> {
+  const record = chainRecord(chain)
+  const clip = cardClip(chain)
   if (!record) return
-  if (!clip) return markCardStep(key, 'reframe', 'skipped', STEP_TEXT.clipGone)
-  if (!record.reframe || !isPortrait(editor().project.settings)) return markCardStep(key, 'reframe', 'skipped', STEP_TEXT.reframeNotPortrait)
-  if (!followCandidates(editor().project).some((c) => c.id === clip.id)) return markCardStep(key, 'reframe', 'skipped', STEP_TEXT.reframeNothing)
+  if (!clip) return markCardStep(chain, 'reframe', 'skipped', STEP_TEXT.clipGone)
+  if (!record.reframe || !isPortrait(editor().project.settings)) return markCardStep(chain, 'reframe', 'skipped', STEP_TEXT.reframeNotPortrait)
+  if (!followCandidates(editor().project).some((c) => c.id === clip.id)) return markCardStep(chain, 'reframe', 'skipped', STEP_TEXT.reframeNothing)
   const helper = editor().reframe.helper
-  if (helper === 'missing') return markCardStep(key, 'reframe', 'skipped', STEP_TEXT.reframeNoHelper)
-  if (helper !== 'ready') return markCardStep(key, 'reframe', 'skipped', STEP_TEXT.reframeStarting)
-  await storeUntil(() => reframeMayStart(cardWorld()))
-  if (!cardClip(key)) return markCardStep(key, 'reframe', 'skipped', STEP_TEXT.clipGone)
-  let model = editor().reframe.model
-  if (!model?.present) {
-    model = await window.forge.faceModel({})
-    editor().setReframeModel(model)
+  if (helper === 'missing') return markCardStep(chain, 'reframe', 'skipped', STEP_TEXT.reframeNoHelper)
+  if (helper !== 'ready') return markCardStep(chain, 'reframe', 'skipped', STEP_TEXT.reframeStarting)
+  while (!reframeMayStart(cardWorld())) {
+    waitLine(chain, 'reframe', STEP_TEXT.waitingOther)
+    await storeUntil(() => reframeMayStart(cardWorld()))
   }
-  if (!model.present) return markCardStep(key, 'reframe', 'skipped', STEP_TEXT.reframeNoModel)
-  markCardStep(key, 'reframe', 'running', STEP_TEXT.reframeRunning)
-  const started = await startReframe(clip.assetId, [clip.id])
-  if (started.kind === 'landed') return markCardStep(key, 'reframe', 'done', STEP_TEXT.reframeDone)
-  if (started.kind === 'refused') return markCardStep(key, 'reframe', 'failed', STEP_TEXT.reframeFailed)
-  const now = cardRecord(key)
-  if (now) putCardRecord({ ...now, reframeJobId: started.jobId })
-  const outcome = await reframeSettled(started.jobId)
-  const after = cardRecord(key)
-  if (after) putCardRecord({ ...after, reframeJobId: null })
-  if (outcome === 'landed') markCardStep(key, 'reframe', 'done', STEP_TEXT.reframeDone)
-  else if (outcome === 'elsewhere') markCardStep(key, 'reframe', 'skipped', STEP_TEXT.reframeElsewhere)
-  else markCardStep(key, 'reframe', 'failed', STEP_TEXT.reframeFailed)
+  // The check passed in this synchronous turn: claim it now, before any await.
+  cardReframesStarting++
+  try {
+    if (!cardClip(chain)) return markCardStep(chain, 'reframe', 'skipped', STEP_TEXT.clipGone)
+    markCardStep(chain, 'reframe', 'running', STEP_TEXT.reframeRunning)
+    waitLine(chain, 'graphics', STEP_TEXT.graphicsWaiting)
+    let model = editor().reframe.model
+    if (!model?.present) {
+      model = await window.forge.faceModel({})
+      editor().setReframeModel(model)
+    }
+    if (!model.present) return markCardStep(chain, 'reframe', 'skipped', STEP_TEXT.reframeNoModel)
+    // A Find graphics the user pressed while that was asked: let it finish first (the claim holds every card's graphics back).
+    while (!reframeMayStart(cardWorld())) await storeUntil(() => reframeMayStart(cardWorld()))
+    const now = cardClip(chain)
+    if (!now) return markCardStep(chain, 'reframe', 'skipped', STEP_TEXT.clipGone)
+    const started = await startReframe(now.assetId, [now.id])
+    const landedText = (): string => (cardClip(chain) ? STEP_TEXT.reframeDone : STEP_TEXT.clipGone)
+    if (started.kind === 'landed') return markCardStep(chain, 'reframe', cardClip(chain) ? 'done' : 'skipped', landedText())
+    if (started.kind === 'refused') return markCardStep(chain, 'reframe', 'failed', STEP_TEXT.reframeFailed)
+    const r = chainRecord(chain)
+    if (r) putCardRecord({ ...r, reframeJobId: started.jobId })
+    const outcome = await reframeSettled(started.jobId)
+    const after = chainRecord(chain)
+    if (after) putCardRecord({ ...after, reframeJobId: null })
+    if (outcome === 'landed') markCardStep(chain, 'reframe', cardClip(chain) ? 'done' : 'skipped', landedText())
+    else if (outcome === 'elsewhere') markCardStep(chain, 'reframe', 'skipped', STEP_TEXT.reframeElsewhere)
+    else markCardStep(chain, 'reframe', 'failed', STEP_TEXT.reframeFailed)
+  } finally {
+    cardReframesStarting--
+  }
 }
 
 /**
- * Step 4: captions on, in ONE update (one undo step), with Smart placement
- * when a clip the captions come from has a subject track to keep them off
- * (§5.4, `captionsHaveSubjects`); already so, no step at all.
+ * Step 4 (`captionsStep`): into a new project or onto an empty timeline,
+ * captions on in ONE update (one undo step), with Smart placement when a clip
+ * the captions come from has a subject track (§5.4, `captionsHaveSubjects`);
+ * already so, no step at all. Into an existing edit, the project's captions
+ * are left exactly as they are.
  */
-function cardCaptionsStep(key: string): void {
-  const clip = cardClip(key)
-  if (!cardRecord(key)) return
-  if (!clip) return markCardStep(key, 'captions', 'skipped', STEP_TEXT.clipGone)
-  if (!editor().project.transcripts[clip.assetId]) return markCardStep(key, 'captions', 'skipped', STEP_TEXT.captionsNoWords)
-  let smart = false
-  editor().update((p) => {
-    const on: Project = { ...p, captions: { ...p.captions, enabled: true } }
-    smart = captionsHaveSubjects(on)
-    if (p.captions.enabled && (!smart || p.captions.placement === 'smart')) return p
-    return smart ? { ...on, captions: { ...on.captions, placement: 'smart' } } : on
-  })
-  markCardStep(key, 'captions', 'done', smart ? STEP_TEXT.captionsSmart : STEP_TEXT.captionsOn)
+function cardCaptionsStep(chain: CardChain): void {
+  const record = chainRecord(chain)
+  const clip = cardClip(chain)
+  if (!record) return
+  if (!clip) return markCardStep(chain, 'captions', 'skipped', STEP_TEXT.clipGone)
+  if (!editor().project.transcripts[clip.assetId]) return markCardStep(chain, 'captions', 'skipped', STEP_TEXT.captionsNoWords)
+  const p = editor().project
+  const step = captionsStep(record.captions, p.captions, captionsHaveSubjects({ ...p, captions: { ...p.captions, enabled: true } }))
+  if (step.change) {
+    const change = step.change
+    editor().update((q) => ({ ...q, captions: { ...q.captions, ...change } }))
+  }
+  markCardStep(chain, 'captions', step.state, step.text)
 }
 
 /**
  * Step 5: Find graphics over the clip (`findGraphics`: the model when one
  * answers, else the baseline; its own undo step), ONLY once this clip's
- * reframe has ended or never started and no reframe analysis runs at all
- * (`graphicsMayStart`, §12.1), and no other graphics run is out.
+ * reframe has ended or never started, no reframe analysis runs or is being
+ * started at all (`graphicsMayStart`, §12.1), and no other graphics run is
+ * out. The rule is read again in the very turn findGraphics is called: every
+ * waiting chain is released by the same store change, and only the first
+ * may go.
  */
-async function cardGraphicsStep(key: string): Promise<void> {
-  await storeUntil(() => {
-    const record = cardRecord(key)
-    return !record || !cardClip(key) || graphicsMayStart(record, cardWorld())
-  })
-  const clip = cardClip(key)
-  if (!cardRecord(key)) return
-  if (!clip) return markCardStep(key, 'graphics', 'skipped', STEP_TEXT.clipGone)
-  if (!holdsSpeech(editor().project, clip)) return markCardStep(key, 'graphics', 'skipped', STEP_TEXT.graphicsNoWords)
-  markCardStep(key, 'graphics', 'running', STEP_TEXT.graphicsRunning)
+async function cardGraphicsStep(chain: CardChain): Promise<void> {
+  const ready = (): boolean => {
+    const record = chainRecord(chain)
+    return !record || !cardClip(chain) || graphicsMayStart(record, cardWorld())
+  }
+  while (!ready()) {
+    waitLine(chain, 'graphics', STEP_TEXT.waitingOther)
+    await storeUntil(ready)
+  }
+  const clip = cardClip(chain)
+  if (!chainRecord(chain)) return
+  if (!clip) return markCardStep(chain, 'graphics', 'skipped', STEP_TEXT.clipGone)
+  if (!holdsSpeech(editor().project, clip)) return markCardStep(chain, 'graphics', 'skipped', STEP_TEXT.graphicsNoWords)
+  markCardStep(chain, 'graphics', 'running', STEP_TEXT.graphicsRunning)
   const before = editor().lastGraphics
   await editor().findGraphics(clip.id)
   const after = editor().lastGraphics
-  if (after !== before && after?.clipId === clip.id) markCardStep(key, 'graphics', 'done', STEP_TEXT.graphicsDone)
-  else markCardStep(key, 'graphics', 'failed', STEP_TEXT.graphicsFailed)
+  if (after !== before && after?.clipId === clip.id) markCardStep(chain, 'graphics', 'done', STEP_TEXT.graphicsDone)
+  else markCardStep(chain, 'graphics', 'failed', STEP_TEXT.graphicsFailed)
 }

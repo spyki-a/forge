@@ -290,7 +290,7 @@ describe('collecting a Clip it', () => {
     const texts = (): string[] => state().notices.map((n) => n.text)
     // The re-read fails, and the job belongs to another project: nothing lands, so nothing landed "without its words".
     const job = await clipLima()
-    useEditor.setState({ urlSource: null, pendingIngests: { [job]: { ...state().pendingIngests[job], projectPath: '/elsewhere.forge' } } })
+    useEditor.setState({ urlSource: null, pendingIngests: { [job]: { ...state().pendingIngests[job], projectPath: '/elsewhere.forge', projectId: 'p-elsewhere' } } })
     reread = () => {
       throw new Error('gone')
     }
