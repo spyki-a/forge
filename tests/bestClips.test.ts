@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   CAP_MS,
   CAP_WORDS,
+  DEFAULT_TOLERANCE,
   clipSegments,
   lengthBand,
   shortfallNote,
@@ -10,6 +11,12 @@ import {
 } from '@shared/bestclips/windows'
 import {
   CONDENSED_MAX_CHARS,
+  FALLBACK_WHY,
+  MOST_REPLAYED,
+  TALKING_THROUGH,
+  bareWord,
+  heatOver,
+  windowText,
   MAX_CANDIDATES,
   MAX_OVERLAP,
   SIGNAL_ORDER,
@@ -61,10 +68,11 @@ interface Spoken {
   gap: number
 }
 
-function transcriptOf(spoken: readonly Spoken[], language = 'xx'): Transcript {
+/** `step` > 1 leaves gaps in `Word.index`, as a hand edit that removed words does. */
+function transcriptOf(spoken: readonly Spoken[], language = 'xx', step = 1): Transcript {
   let at = 0
-  const words: Word[] = spoken.map((s, index) => {
-    const w: Word = { index, text: s.text, startMs: at, endMs: at + s.dur, confidence: null }
+  const words: Word[] = spoken.map((s, i) => {
+    const w: Word = { index: i * step, text: s.text, startMs: at, endMs: at + s.dur, confidence: null }
     at += s.dur + s.gap
     return w
   })
@@ -119,6 +127,8 @@ describe('windowsFor: boundaries, band and stride (§7.3)', () => {
     // fails "expect(w.endMs).toBe(to.endMs)". MUTATION (the `if (length < lo) continue` removed):
     // fails "expect(length).toBeGreaterThanOrEqual(lo - 1e-6)". MUTATION (a start with no end in the
     // band takes its own segment's end): fails "expect(length).toBeGreaterThanOrEqual(lo - 1e-6)".
+    // MUTATION (words counted by index, `wordEnd - wordStart + 1`): fails "expect(w.words).toBe(position.get(...))"
+    // on the seeds with gapped indices. MUTATION (the sentence-start rule removed): fails "toEqual(feasible)".
     let checked = 0
     for (let seed = 1; seed <= 60; seed++) {
       const r = rng(seed)
@@ -129,12 +139,19 @@ describe('windowsFor: boundaries, band and stride (§7.3)', () => {
         const end = punctuated && r() < 1 / 12 ? (r() < 0.8 ? '.' : '?') : ''
         return { text: latin(Math.floor(r() * 50)) + end, dur: 150 + Math.floor(r() * 350), gap: pause }
       })
-      const t = transcriptOf(spoken)
+      // Even seeds leave gaps in Word.index (a hand edit): the word count must still be by position.
+      const t = transcriptOf(spoken, 'xx', seed % 2 === 0 ? 3 : 1)
       const targetMs = [60_000, 120_000, 180_000, 240_000][Math.floor(r() * 4)]
       const tolerance = [0.1, 0.2, 0.3][Math.floor(r() * 3)]
-      const { lo, hi } = lengthBand(targetMs, tolerance)
+      // The band from the numbers themselves, not from lengthBand (the function under test).
+      const lo = targetMs - targetMs * tolerance
+      const hi = targetMs + targetMs * tolerance
       const segs = clipSegments(t)
       const at = new Map(segs.map((s, i) => [s.id, i]))
+      const position = new Map(t.words.map((w, i) => [w.index, i]))
+      // A segment ends a sentence when it ends on the fixture's own marks.
+      const marked = segs.map((s) => /[.?]$/.test(s.text))
+      const sentenceTrack = marked.filter(Boolean).length / segs.length >= 0.2
       const windows = windowsFor(t, targetMs, tolerance)
       windows.forEach((w, k) => {
         expect(w.id).toBe(`w${k + 1}`)
@@ -148,12 +165,15 @@ describe('windowsFor: boundaries, band and stride (§7.3)', () => {
         const length = w.endMs - w.startMs
         expect(length).toBeGreaterThanOrEqual(lo - 1e-6)
         expect(length).toBeLessThanOrEqual(hi + 1e-6)
-        expect(w.words).toBe(to.wordEnd - from.wordStart + 1)
+        expect(w.words).toBe(position.get(to.wordEnd)! - position.get(from.wordStart)! + 1)
         checked++
       })
-      // Stride one segment: a window from exactly every start that has an end in the band, and from no other.
+      // Stride one segment: a window from exactly every start that has an end in the band, and from no other;
+      // in a punctuated track, only from a sentence's first segment.
       const feasible = segs.flatMap((s, i) =>
-        segs.slice(i).some((e) => e.endMs - s.startMs >= lo && e.endMs - s.startMs <= hi) ? [s.id] : []
+        (!sentenceTrack || i === 0 || marked[i - 1]) && segs.slice(i).some((e) => e.endMs - s.startMs >= lo && e.endMs - s.startMs <= hi)
+          ? [s.id]
+          : []
       )
       const starts = windows.map((w) => w.segFrom)
       expect(starts).toEqual(feasible)
@@ -162,7 +182,7 @@ describe('windowsFor: boundaries, band and stride (§7.3)', () => {
   })
 
   it('prefers an end on a full stop to a nearer end without one', () => {
-    // Twelve 10-word unpunctuated lines (pauses split them), every one ~4.2 s; the 9th of 14 ends on a full stop.
+    // Fourteen 10-word unpunctuated lines (pauses split them), every one ~4.2 s; the 9th ends on a full stop.
     // MUTATION (the `punctuated[j] && !bestPunct` preference removed): fails "expect(first.segTo).toBe(dotted.id)".
     const sentences = Array.from({ length: 14 }, (_, i) => Array.from({ length: 10 }, (_, k) => latin(i + k)))
     const spoken = sentences.flatMap((s, i) =>
@@ -187,6 +207,10 @@ describe('windowsFor: boundaries, band and stride (§7.3)', () => {
     const c = candidatesFor(short, 60_000, null)
     expect(c.candidates).toEqual([])
     expect(c.note).toContain('shorter than the 1 min asked for')
+    // In seconds (never "0 min"), and at 1 min no shorter length is offered.
+    expect(c.note).toMatch(/runs about \d+ s, /)
+    expect(c.note).toContain('1 min is the shortest length there is.')
+    expect(c.note).not.toContain('Try a shorter length')
 
     // One word lasting 80 s (capRun never splits a word): over the 72 s upper bound, so nothing starts on it.
     const long = transcriptOf([{ text: 'zor', dur: 80_000, gap: 900 }, ...talk(sentencesOf(20, latin, 4))])
@@ -311,16 +335,16 @@ describe('signals: absent, not zero', () => {
   })
 
   it('the why is the strongest present reason, not the first', () => {
-    // MUTATION (strongestReason returns the first present reason): fails "toBe('opens with a number')".
+    // MUTATION (strongestReason returns the first present reason): fails "toBe('has a number in its first sentence')".
     const signals: Signals = {
       heat: null,
-      density: { value: 0.1, reason: 'slower than most of the video' },
-      ending: { value: 0, reason: 'stops in the middle of a sentence' },
+      density: { value: 0.6, reason: 'dense: more words a minute than most of the video', standout: true },
+      ending: { value: 0, reason: 'stops in the middle of a sentence', standout: false },
       opening: null,
-      hook: { value: 1, reason: 'opens with a number' },
-      quiet: { value: 0.3, reason: 'has long stretches with no talking' }
+      hook: { value: 1, reason: 'has a number in its first sentence', standout: true },
+      quiet: { value: 0.3, reason: 'has long stretches with no talking', standout: false }
     }
-    expect(strongestReason(signals)).toBe('opens with a number')
+    expect(strongestReason(signals)).toBe('has a number in its first sentence')
   })
 })
 
@@ -342,9 +366,9 @@ describe('signals: the scripts', () => {
 
   it('a caseless, unpunctuated transcript: no ending and no opening signal, the number check alone in the hook', () => {
     // MUTATION (the ending signal present whatever the traits): fails "expect(s.signals.ending).toBeNull()".
-    // MUTATION (the number check /[0-9]/ instead of /\p{Nd}/u): fails "toBe('opens with a number')" (a Thai digit).
+    // MUTATION (the number check /[0-9]/ instead of /\p{Nd}/u): fails "toBe('has a number in its first sentence')" (a Thai digit).
     const lines = sentencesOf(80, caseless, 41)
-    lines[10] = ['๓', ...lines[10]] // a digit in another script opens line 11
+    lines[10] = ['\u0e53', ...lines[10]] // a Thai digit three, in another script, opens line 11
     const spoken = lines.flatMap((s) => s.map((text, k): Spoken => ({ text, dur: 280, gap: k === s.length - 1 ? 900 : 60 })))
     const t = transcriptOf(spoken, 'xx')
     const segs = clipSegments(t)
@@ -360,10 +384,10 @@ describe('signals: the scripts', () => {
       expect(s.signals.quiet).not.toBeNull()
     }
     const withDigit = scored.find((s) => s.window.segFrom === segs[10].id)!
-    expect(withDigit.signals.hook?.reason).toBe('opens with a number')
+    expect(withDigit.signals.hook?.reason).toBe('has a number in its first sentence')
     // Not ranked below for its script: the same talk in made-up Latin words, unpunctuated, scores the same.
     const twin = transcriptOf(
-      spoken.map((s, i) => ({ ...s, text: i === spoken.findIndex((x) => x.text === '๓') ? '3' : latin(i) })),
+      spoken.map((s, i) => ({ ...s, text: i === spoken.findIndex((x) => x.text === '\u0e53') ? '3' : latin(i) })),
       'xx'
     )
     const twinScored = scoreWindows(twin, windowsFor(twin, 60_000), null)
@@ -423,12 +447,12 @@ describe('the condensed text and the title', () => {
   it('the title is cut to 40 graphemes, never inside a cluster', () => {
     // MUTATION (cutText counts UTF-16 units: `size = g.length` for graphemes too): fails
     // "expect(graphemes(cut).length).toBe(TITLE_MAX_GRAPHEMES)".
-    // MUTATION (graphemes() as Array.from): fails "expect(cut.endsWith('á…')).toBe(true)".
-    const cluster = 'á' // a and a combining acute: one grapheme, two code points
+    // MUTATION (graphemes() as Array.from): fails "expect(cut.endsWith('a\u0301…')).toBe(true)".
+    const cluster = 'a\u0301' // a and a combining acute: one grapheme, two code points
     const run = cluster.repeat(60) // one 60-grapheme word, no space to cut at
     const cut = titleOf(run)
     expect(graphemes(cut).length).toBe(TITLE_MAX_GRAPHEMES)
-    expect(cut.endsWith('á…')).toBe(true)
+    expect(cut.endsWith('a\u0301…')).toBe(true)
     // With spaces, the cut is at a word: none of the made-up words is broken.
     const sentence = 'zor plim tavek mubo senra kilo drav oppen vestra nim rulo fesh'
     const title = titleOf(sentence)
@@ -457,7 +481,7 @@ describe('signalsPicks: the no-model three', () => {
       expect(p.title).toBe(titleOf(cand.firstSentence))
       expect(graphemes(p.title).length).toBeLessThanOrEqual(TITLE_MAX_GRAPHEMES)
       expect(p.why).toBe(strongestReason(cand.signals))
-      expect(cand.reasons).toContain(p.why)
+      expect([...cand.reasons, FALLBACK_WHY]).toContain(p.why)
     })
   })
 })
@@ -513,6 +537,408 @@ describe('size: a synthetic hour', () => {
     }
     const took = performance.now() - began
     console.log(`bestClips hour: ${t.words.length} words, ${clipSegments(t).length} capped segments, ${windows} windows over four lengths, ${took.toFixed(0)} ms`)
+    expect(took).toBeLessThan(HOUR_BOUND_MS)
+  })
+})
+
+/* ----------------------------------------------- the critics' fixes, pinned */
+
+/** A window by hand over capped segments a..b (for a signal's direction, where windowsFor would not pick it). */
+function hand(t: Transcript, a: number, b: number): ClipWindow {
+  const segs = clipSegments(t)
+  const pos = new Map(t.words.map((w, i) => [w.index, i]))
+  return {
+    id: `h${a}-${b}`,
+    segFrom: segs[a].id,
+    segTo: segs[b].id,
+    startMs: segs[a].startMs,
+    endMs: segs[b].endMs,
+    words: pos.get(segs[b].wordEnd)! - pos.get(segs[a].wordStart)! + 1
+  }
+}
+
+/** Unpunctuated lines of made-up caseless words, each closed by a 900 ms pause (so each is a segment). */
+function caselessLines(lines: readonly (readonly string[])[], wordMs = 280, gapMs = 60): Spoken[] {
+  return lines.flatMap((s) => s.map((text, k): Spoken => ({ text, dur: wordMs, gap: k === s.length - 1 ? 900 : gapMs })))
+}
+
+describe('the band and the ends, on literal numbers', () => {
+  it('±20 % is 48 to 72 s at 1 min, and ends at 47 s and 73 s from a start are not taken', () => {
+    // MUTATION (lengthBand's tolerance × 1.25): fails "expect(band.lo).toBeCloseTo(48_000, 6)" (and the
+    // property's "expect(length).toBeGreaterThanOrEqual(lo - 1e-6)", its band now from the numbers).
+    // MUTATION (DEFAULT_TOLERANCE = 0.25): fails "expect(DEFAULT_TOLERANCE).toBe(0.2)".
+    // MUTATION (ties to the later end): fails "toEqual([[0, 48_000]])".
+    expect(DEFAULT_TOLERANCE).toBe(0.2)
+    const band = lengthBand(60_000)
+    expect(band.lo).toBeCloseTo(48_000, 6)
+    expect(band.hi).toBeCloseTo(72_000, 6)
+    // Two one-word segments, 0..47 s and 47.9..73 s (a 900 ms pause splits them).
+    const out = transcriptOf([
+      { text: 'zor', dur: 47_000, gap: 900 },
+      { text: 'plim', dur: 25_100, gap: 0 }
+    ])
+    expect(clipSegments(out).map((s) => [s.startMs, s.endMs])).toEqual([
+      [0, 47_000],
+      [47_900, 73_000]
+    ])
+    expect(windowsFor(out, 60_000)).toEqual([])
+    expect(candidatesFor(out, 60_000, null).windows).toEqual([])
+    // 48 s and 72 s are inside; equally near the target, the earlier end is taken.
+    const inside = transcriptOf([
+      { text: 'zor', dur: 48_000, gap: 900 },
+      { text: 'plim', dur: 23_100, gap: 0 }
+    ])
+    expect(windowsFor(inside, 60_000).map((w) => [w.startMs, w.endMs])).toEqual([[0, 48_000]])
+  })
+
+  it('of two ends equally near the target, the earlier is taken', () => {
+    // MUTATION (`distance < bestDistance` -> `<=`, ties to the later): fails "expect(w.segTo).toBe(segs[6].id)".
+    const spoken = Array.from({ length: 12 }, (_, i): Spoken => ({ text: latin(i), dur: 3600, gap: PAUSE_BOUNDARY_MS + 100 }))
+    const t = transcriptOf(spoken)
+    const segs = clipSegments(t)
+    expect(segs.length).toBe(12)
+    // Ends at 30.0 s (segment 7) and 34.4 s (segment 8) are both 2.2 s from a 32.2 s target.
+    expect(segs[6].endMs).toBe(30_000)
+    expect(segs[7].endMs).toBe(34_400)
+    const w = windowsFor(t, 32_200)[0]
+    expect(w.segFrom).toBe(segs[0].id)
+    expect(w.segTo).toBe(segs[6].id)
+  })
+
+  it('in a punctuated talk, a window starts only where a sentence starts, not on a piece the cap split off', () => {
+    // MUTATION (the sentence-start `continue` in windowsOver removed): fails
+    // "expect(i === 0 || segs[i - 1].text.endsWith('.')).toBe(true)" (and the property's "toEqual(feasible)").
+    // MUTATION (windowText drops the first word): fails "expect(windowText(t, x.window)).toBe(inside.join(' '))".
+    const long = sentencesOf(60, latin, 81).map((s) => [...s, ...s, ...s, ...s].slice(0, 45)) // 45 words: the cap splits each
+    const t = transcriptOf(talk(long))
+    const segs = clipSegments(t)
+    expect(segs.length).toBeGreaterThan(long.length) // the cap made pieces
+    const at = new Map(segs.map((s, i) => [s.id, i]))
+    const c = candidatesFor(t, 60_000, null)
+    expect(c.windows.length).toBeGreaterThan(20)
+    for (const w of c.windows) {
+      const i = at.get(w.segFrom)!
+      expect(i === 0 || segs[i - 1].text.endsWith('.')).toBe(true)
+    }
+    // So a title opens on a sentence's first word, and the window's whole text is its words.
+    for (const x of c.candidates) {
+      const first = t.words.find((w) => w.startMs === x.window.startMs)!
+      const before = t.words[t.words.indexOf(first) - 1]
+      expect(before === undefined || before.text.endsWith('.')).toBe(true)
+      const inside = t.words.filter((w) => w.startMs >= x.window.startMs && w.endMs <= x.window.endMs).map((w) => w.text)
+      expect(windowText(t, x.window)).toBe(inside.join(' '))
+    }
+  })
+})
+
+describe('shortfall notes, as a card would show them', () => {
+  it('no stretch fits; only one fits; a tiny talk in seconds; a shorter length only when there is one', () => {
+    // MUTATION (the `found === 0` branch -> `found === -1`): fails "toBe('No stretch of about 1 min …')".
+    // MUTATION (the one-stretch line removed: always "Only N stretches"): fails "toBe('Only one stretch …')".
+    // MUTATION (talkLength gives minutes always): fails "toContain('runs about 2 s,')".
+    // MUTATION (the shortest-length line always): fails "toContain('Try a shorter length.')".
+    const gap = transcriptOf([
+      { text: 'zor', dur: 10_000, gap: 70_000 },
+      { text: 'plim', dur: 5_000, gap: 0 }
+    ])
+    const none = candidatesFor(gap, 60_000, null)
+    expect(none.windows).toEqual([])
+    expect(none.note).toBe('No stretch of about 1 min here starts and ends at a break in the talk. Try another length.')
+
+    const one = transcriptOf(talk(sentencesOf(19, latin, 91)))
+    expect(one.durationMs).toBeGreaterThan(62_000)
+    expect(one.durationMs).toBeLessThan(80_000)
+    const c = candidatesFor(one, 60_000, null)
+    expect(c.candidates.length).toBe(1)
+    expect(c.note).toBe('Only one stretch of about 1 min fits here without repeating another.')
+
+    const tiny = transcriptOf([{ text: 'zor', dur: 1_700, gap: 0 }])
+    expect(shortfallNote(tiny, 60_000, 0)).toContain('runs about 2 s,')
+    const short = transcriptOf(talk(sentencesOf(15, latin, 92)))
+    expect(short.durationMs).toBeLessThan(96_000)
+    expect(short.durationMs).toBeGreaterThan(40_000)
+    expect(shortfallNote(short, 120_000, 0)).toContain('shorter than the 2 min asked for. Try a shorter length.')
+  })
+})
+
+describe('the transcript gates (point C): thresholds', () => {
+  it('punctuated from a fifth of the segments; one stray full stop is not punctuation', () => {
+    // MUTATION (segmentsPunctuated: `ended / segs.length >= PUNCTUATED_SHARE` -> `ended > 0`): fails
+    // "expect(traitsWith(1).punctuated).toBe(false)".
+    const traitsWith = (dotted: number): { punctuated: boolean; english: boolean } => {
+      const lines = sentencesOf(100, caseless, 101).map((s, i) => (i < dotted ? [...s.slice(0, -1), s[s.length - 1] + '.'] : s))
+      const t = transcriptOf(caselessLines(lines))
+      expect(clipSegments(t).length).toBe(100)
+      return transcriptTraits(t.words, clipSegments(t))
+    }
+    expect(traitsWith(1).punctuated).toBe(false)
+    expect(traitsWith(19).punctuated).toBe(false)
+    expect(traitsWith(20).punctuated).toBe(true)
+  })
+
+  it('English needs at least three listed words AND a hundredth of the words', () => {
+    // MUTATION (ENGLISH_MIN_COUNT dropped): fails "expect(englishWith(50, 2)).toBe(false)".
+    // MUTATION (ENGLISH_MIN_SHARE dropped): fails "expect(englishWith(1000, 5)).toBe(false)".
+    const englishWith = (n: number, ands: number): boolean => {
+      const words = Array.from({ length: n }, (_, i) => caseless(i))
+      for (let k = 0; k < ands; k++) words[k * 7] = 'and'
+      const t = transcriptOf(words.map((text) => ({ text, dur: 280, gap: 60 })))
+      return transcriptTraits(t.words, clipSegments(t)).english
+    }
+    expect(englishWith(50, 2)).toBe(false)
+    expect(englishWith(50, 3)).toBe(true)
+    expect(englishWith(1000, 5)).toBe(false)
+    expect(englishWith(1000, 10)).toBe(true)
+  })
+})
+
+describe('the hook: what counts, and its gates', () => {
+  it('an unpunctuated, non-English track: a stray "?" is no question and a stray "you" no address', () => {
+    // MUTATION (the question's `p.traits.punctuated &&` dropped): fails "expect(onQ.signals.hook?.value).toBe(0)".
+    // MUTATION (the address's `p.traits.english &&` dropped): fails "expect(onYou.signals.hook?.value).toBe(0)".
+    const lines = sentencesOf(80, caseless, 111)
+    lines[10] = [...lines[10].slice(0, -1), lines[10][lines[10].length - 1] + '?']
+    lines[20] = ['you', ...lines[20]]
+    const t = transcriptOf(caselessLines(lines))
+    const segs = clipSegments(t)
+    expect(transcriptTraits(t.words, segs)).toEqual({ punctuated: false, english: false })
+    const scored = scoreWindows(t, windowsFor(t, 60_000), null)
+    const onQ = scored.find((s) => s.window.segFrom === segs[10].id)!
+    const onYou = scored.find((s) => s.window.segFrom === segs[20].id)!
+    expect(onQ.signals.hook?.value).toBe(0)
+    expect(onYou.signals.hook?.value).toBe(0)
+    expect(onYou.signals.hook?.reason).toBe('no hook in the first sentence')
+  })
+
+  it('in a punctuated talk, a first sentence ending on "?" opens with a question', () => {
+    // MUTATION (`const question = false`): fails "toBe('opens with a question')".
+    const lines = sentencesOf(60, latin, 121)
+    const spoken = talk(lines)
+    // Sentence 12 (0-based 11) ends on a question mark.
+    const end = lines.slice(0, 12).reduce((n, s) => n + s.length, 0) - 1
+    spoken[end] = { ...spoken[end], text: spoken[end].text.replace(/\.$/, '?') }
+    const t = transcriptOf(spoken)
+    const segs = clipSegments(t)
+    expect(segs[11].text.endsWith('?')).toBe(true)
+    const scored = scoreWindows(t, windowsFor(t, 60_000), null)
+    const onQ = scored.find((s) => s.window.segFrom === segs[11].id)!
+    expect(onQ.signals.hook?.reason).toBe('opens with a question')
+    expect(onQ.signals.hook?.value).toBe(1)
+  })
+})
+
+describe('the signals, each in its direction', () => {
+  it('ending: a window ending on a full stop or a question beats one that stops mid-sentence', () => {
+    // MUTATION (ending value `ends ? 0 : 1`): fails "expect(midway.signals.ending?.value).toBe(0)".
+    // MUTATION (ending value always 1): fails the same.
+    // MUTATION (endingReason always 'ends on a full stop'): fails "toBe('ends on a question')".
+    // Sentences of 10 words; every third (k % 3 === 2) has no mark (a pause closes it); sentence 5 (k = 4) ends on '?'.
+    const lines = sentencesOf(30, latin, 131)
+    const spoken = lines.flatMap((s, k) =>
+      s.map((text, i): Spoken => {
+        const last = i === s.length - 1
+        const mark = !last ? '' : k % 3 === 2 ? '' : k === 4 ? '?' : '.'
+        return { text: text + mark, dur: 280, gap: last ? (k % 3 === 2 ? 900 : 300) : 60 }
+      })
+    )
+    const t = transcriptOf(spoken)
+    expect(clipSegments(t).length).toBe(30)
+    expect(transcriptTraits(t.words, clipSegments(t)).punctuated).toBe(true)
+    const [midway, onDot, onQ] = scoreWindows(t, [hand(t, 0, 2), hand(t, 0, 3), hand(t, 0, 4)], null)
+    expect(midway.signals.ending?.value).toBe(0)
+    expect(midway.signals.ending?.reason).toBe('stops in the middle of a sentence')
+    expect(onDot.signals.ending?.value).toBe(1)
+    expect(onDot.signals.ending?.reason).toBe('ends on a full stop')
+    expect(onQ.signals.ending?.reason).toBe('ends on a question')
+    expect(onDot.score).toBeGreaterThan(midway.score)
+  })
+
+  it('quiet: a stretch with long gaps between words scores lower, and says so', () => {
+    // MUTATION (quiet value fixed at 1): fails "expect(still.signals.quiet?.value).toBeLessThan(0.5)".
+    // MUTATION (gaps never counted): fails the same.
+    const before = talk(sentencesOf(40, latin, 141))
+    const gappy = talk(sentencesOf(8, latin, 142), '.', 280, 2200, 300)
+    const after = talk(sentencesOf(40, latin, 143))
+    const t = transcriptOf([...before, ...gappy, ...after])
+    const ms = (s: readonly Spoken[]): number => s.reduce((n, x) => n + x.dur + x.gap, 0)
+    const quietFrom = ms(before)
+    const quietTo = quietFrom + ms(gappy)
+    const scored = scoreWindows(t, windowsFor(t, 60_000), null)
+    const still = scored.find((s) => s.window.startMs >= quietFrom && s.window.endMs <= quietTo)!
+    const busy = scored.find((s) => s.window.endMs <= quietFrom)!
+    expect(still).toBeDefined()
+    expect(still.signals.quiet?.value).toBeLessThan(0.5)
+    expect(still.signals.quiet?.reason).toBe('has long stretches with no talking')
+    expect(busy.signals.quiet?.value).toBe(1)
+    expect(busy.signals.quiet?.reason).toBe(TALKING_THROUGH)
+  })
+
+  it('density: a fast stretch beats the usual pace, which beats a slow one, each with its line', () => {
+    // MUTATION (density value fixed at 0.5): fails "expect(fast.value).toBeGreaterThan(usual.value)".
+    // MUTATION (the dense line from ratio >= 9): fails "toBe('dense: more words a minute than most of the video')".
+    const a = talk(sentencesOf(130, latin, 151))
+    const b = talk(sentencesOf(70, latin, 152), '.', 120, 20, 300)
+    const c = talk(sentencesOf(15, latin, 153), '.', 600, 200, 300)
+    const t = transcriptOf([...a, ...b, ...c])
+    const ms = (s: readonly Spoken[]): number => s.reduce((n, x) => n + x.dur + x.gap, 0)
+    const aEnd = ms(a)
+    const bEnd = aEnd + ms(b)
+    const scored = scoreWindows(t, windowsFor(t, 60_000), null)
+    const pick = (from: number, to: number): NonNullable<Signals['density']> =>
+      scored.find((s) => s.window.startMs >= from && s.window.endMs <= to)!.signals.density!
+    const usual = pick(aEnd / 3, aEnd)
+    const fast = pick(aEnd, bEnd)
+    const slow = pick(bEnd, Infinity)
+    expect(fast.value).toBeGreaterThan(usual.value)
+    expect(usual.value).toBeGreaterThan(slow.value)
+    expect(fast.reason).toBe('dense: more words a minute than most of the video')
+    expect(fast.standout).toBe(true)
+    expect(usual.reason).toBe('talked at the usual pace')
+    expect(slow.reason).toBe('slower than most of the video')
+  })
+
+  it('heat: half cover or more counts, values are clamped, flat says so, and above or below the median', () => {
+    // MUTATION (HEAT_MIN_COVER rule -> `covered > 0`): fails "expect(heatOver(part(40), 0, 100_000)).toBeNull()".
+    // MUTATION (bucket values not clamped): fails "expect(heatOver(...value 2...)).toBe(1)".
+    // MUTATION (flat line removed: flat heat read as most/more/less): fails "toBe('replayed about as much as the rest')".
+    // MUTATION (the more/less lines swapped): fails "expect(s.signals.heat!.reason).toBe('replayed less than other parts')".
+    const part = (seconds: number): LinkHeat[] => [{ start_time: 0, end_time: seconds, value: 0.8 }]
+    expect(heatOver(part(40), 0, 100_000)).toBeNull()
+    expect(heatOver(part(50), 0, 100_000)).toBeCloseTo(0.8, 12)
+    expect(heatOver(part(60), 0, 100_000)).toBeCloseTo(0.8, 12)
+    expect(heatOver([{ start_time: 0, end_time: 100, value: 2 }], 0, 50_000)).toBe(1)
+    expect(heatOver([{ start_time: 0, end_time: 100, value: -1 }], 0, 50_000)).toBe(0)
+
+    const t = transcriptOf(talk(sentencesOf(160, latin, 161)))
+    const seconds = t.durationMs / 1000
+    const windows = windowsFor(t, 60_000)
+    for (const s of scoreWindows(t, windows, flatHeat(seconds, 0.6))) {
+      expect(s.signals.heat!.reason).toBe('replayed about as much as the rest')
+      expect(s.signals.heat!.standout).toBe(false)
+    }
+    const r = rng(162)
+    const varied = flatHeat(seconds).map((b) => ({ ...b, value: r() }))
+    const scored = scoreWindows(t, windows, varied)
+    const values = scored.map((s) => s.signals.heat!.value).sort((x, y) => x - y)
+    const mid = values.length % 2 ? values[values.length >> 1] : (values[values.length / 2 - 1] + values[values.length / 2]) / 2
+    let below = 0
+    for (const s of scored) {
+      if (s.signals.heat!.value > mid) expect([MOST_REPLAYED, 'replayed more than most of the video']).toContain(s.signals.heat!.reason)
+      else {
+        below++
+        expect(s.signals.heat!.reason).toBe('replayed less than other parts')
+      }
+    }
+    expect(below).toBeGreaterThan(5)
+  })
+
+  it('a plateau of top heat gives "the most replayed part" to one window only, the best-scoring', () => {
+    // MUTATION (the plateau pass in scoreWith removed): fails "expect(most.length).toBe(1)".
+    const t = transcriptOf(talk(sentencesOf(160, latin, 171)))
+    const seconds = t.durationMs / 1000
+    const heat = flatHeat(seconds, 0.2).map((b) => (b.start_time >= 200 && b.end_time <= 400 ? { ...b, value: 1 } : b))
+    const scored = scoreWindows(t, windowsFor(t, 60_000), heat)
+    const top = scored.filter((s) => s.signals.heat?.value === 1)
+    expect(top.length).toBeGreaterThan(3)
+    const most = scored.filter((s) => s.signals.heat?.reason === MOST_REPLAYED)
+    expect(most.length).toBe(1)
+    expect(most[0].score).toBe(Math.max(...top.map((s) => s.score)))
+  })
+})
+
+describe('the why: a reason to post, never a neutral or negative line', () => {
+  const NOT_A_WHY = [
+    'replayed less than other parts',
+    'replayed about as much as the rest',
+    'talked at the usual pace',
+    'slower than most of the video',
+    'no hook in the first sentence',
+    'stops in the middle of a sentence',
+    'has long stretches with no talking',
+    'starts at the beginning of a thought'
+  ]
+
+  it('on a continuous talk with no line standing out, the why is the talking line, not "replayed less"', () => {
+    // MUTATION (strongestReason ignores `standout`): fails "expect(NOT_A_WHY).not.toContain(s.why)"
+    // (heat 3 × 0.6 beats quiet's 1.5, so "replayed less than other parts" and the flat line become whys).
+    const t = transcriptOf(caselessLines(sentencesOf(120, caseless, 181)))
+    const seconds = t.durationMs / 1000
+    const windows = windowsFor(t, 60_000)
+    const r = rng(182)
+    const varied = flatHeat(seconds).map((b) => ({ ...b, value: 0.6 + 0.3 * r() }))
+    let fallbacks = 0
+    for (const heat of [varied, flatHeat(seconds, 0.6)]) {
+      for (const s of scoreWindows(t, windows, heat)) {
+        expect(NOT_A_WHY).not.toContain(s.why)
+        if (!SIGNAL_ORDER.some((n) => s.signals[n]?.standout)) {
+          fallbacks++
+          expect(s.why).toBe(TALKING_THROUGH)
+        }
+      }
+    }
+    expect(fallbacks).toBeGreaterThan(10)
+  })
+
+  it('the last resorts, and a tie goes to the earlier signal', () => {
+    // MUTATION (FALLBACK_WHY replaced by quiet's own line): fails "toBe(FALLBACK_WHY)".
+    // MUTATION (strongestReason's `>` -> `>=`, ties to the later): fails "toBe('ends on a full stop')".
+    const base: Signals = {
+      heat: { value: 0.9, reason: 'replayed less than other parts', standout: false },
+      density: { value: 0.5, reason: 'talked at the usual pace', standout: false },
+      ending: null,
+      opening: null,
+      hook: { value: 0, reason: 'no hook in the first sentence', standout: false },
+      quiet: { value: 0.2, reason: 'has long stretches with no talking', standout: false }
+    }
+    expect(strongestReason(base)).toBe(FALLBACK_WHY)
+    expect(strongestReason({ ...base, quiet: { value: 1, reason: TALKING_THROUGH, standout: false } })).toBe(TALKING_THROUGH)
+    expect(
+      strongestReason({
+        ...base,
+        ending: { value: 1, reason: 'ends on a full stop', standout: true },
+        hook: { value: 1, reason: 'opens with a question', standout: true }
+      })
+    ).toBe('ends on a full stop')
+  })
+})
+
+describe('small pins', () => {
+  it('the densest is of the REST, not of all; a curly apostrophe is folded', () => {
+    // MUTATION (condense's densest over slice(0)): fails "toContain(' … ' + s[3].text)".
+    // MUTATION (bareWord's curly-apostrophe fold removed): fails "toBe(\"you're\")".
+    const sentence = (k: number, wordMs: number): { text: string; startMs: number; endMs: number; words: number } => ({
+      text: `${latin(k)} ${latin(k + 1)} ${latin(k + 2)} ${latin(k + 3)}.`,
+      startMs: 0,
+      endMs: 4 * wordMs,
+      words: 4
+    })
+    const s = [sentence(0, 150), sentence(1, 400), sentence(2, 900), sentence(3, 600)]
+    expect(condense(s)).toContain(' … ' + s[3].text)
+    expect(bareWord('You’re,')).toBe("you're")
+  })
+
+  it('an unpunctuated, caseless hour with capped lines, inside the same bound', () => {
+    // 10,800 made-up caseless words in lines of 40..60 (the cap splits them), no punctuation at all.
+    const HOUR_BOUND_MS = 1500
+    const r = rng(191)
+    const lines: string[][] = []
+    let n = 0
+    while (n < 10_800) {
+      const len = Math.min(10_800 - n, 40 + Math.floor(r() * 21))
+      lines.push(Array.from({ length: len }, () => caseless(Math.floor(r() * 400))))
+      n += len
+    }
+    const t = transcriptOf(caselessLines(lines, 260, 40))
+    expect(t.words.length).toBe(10_800)
+    const began = performance.now()
+    let windows = 0
+    for (const target of [60_000, 120_000, 180_000, 240_000]) {
+      const c = candidatesFor(t, target, null)
+      windows += c.windows.length
+      expect(c.candidates.length).toBeGreaterThanOrEqual(3)
+    }
+    const took = performance.now() - began
+    console.log(`bestClips unpunctuated hour: ${clipSegments(t).length} capped segments, ${windows} windows over four lengths, ${took.toFixed(0)} ms`)
     expect(took).toBeLessThan(HOUR_BOUND_MS)
   })
 })

@@ -25,14 +25,20 @@
  *   neither rewarded nor punished. Always present when there are words.
  * - ending: whether the window ends on sentence-final punctuation (`.`, `!`,
  *   `?`, `…`, the danda). Present only when the transcript is punctuated (at
- *   least PUNCTUATED_SHARE of its capped segments end on such a mark);
- *   an unpunctuated ASR track has no full stop to end on, and is not marked
- *   down for it.
+ *   least PUNCTUATED_SHARE of its capped segments end on such a mark, the
+ *   rule `windows.ts` starts windows by); an unpunctuated ASR track has no
+ *   full stop to end on, and is not marked down for it.
  * - opening: a penalty for a window that opens on an English connective
  *   ("and", "so", "but", "or", "because"). Present only when the transcript
- *   has English to look for (ENGLISH_MIN_SHARE of its words are connectives or
- *   "you" words). There is no list for Hindi or Telugu (open: the owner's to
- *   give), so such a transcript has no opening signal rather than a zero.
+ *   has English to look for (ENGLISH_MIN_SHARE of its words, and at least
+ *   ENGLISH_MIN_COUNT, are connectives or "you" words). There is no list for
+ *   Hindi or Telugu (open: the owner's to give), so such a transcript has no
+ *   opening signal rather than a zero. The gate is per TRANSCRIPT: in a
+ *   code-mixed video that clears it, a window in another script never opens
+ *   on a listed word (opening = 1) and never earns the address hook, while an
+ *   English window can do either. A small reward and a small penalty decided
+ *   by script inside one video; YouTube's Hindi ASR writes English words in
+ *   Devanagari, so a Latin stretch inside one is rare (open).
  * - hook: the window's first sentence opens on a question, a number or direct
  *   address. A NUMBER is any decimal digit in any script (`\p{Nd}`: 0-9, the
  *   Devanagari and Telugu digits alike), so it applies everywhere. A QUESTION
@@ -54,6 +60,7 @@ import { endsSentence, type Segment, type Transcript, type Word } from '../trans
 import {
   clipSegments,
   segmentEndsSentence,
+  segmentsPunctuated,
   shortfallNote,
   windowsOver,
   wordPositions,
@@ -62,6 +69,8 @@ import {
 } from './windows'
 
 /* ------------------------------------------------------------ constants */
+
+export { PUNCTUATED_SHARE } from './windows'
 
 export type SignalName = 'heat' | 'density' | 'ending' | 'opening' | 'hook' | 'quiet'
 /** The fixed order: reason lines are listed in it, and a tie for the strongest goes to the earlier. */
@@ -81,8 +90,6 @@ export const SIGNAL_WEIGHTS: Readonly<Record<SignalName, number>> = {
   quiet: 1.5
 }
 
-/** A transcript is "punctuated" when at least this share of its capped segments end on a sentence mark. */
-export const PUNCTUATED_SHARE = 0.2
 /** A transcript "has English" when at least this share of its words (and at least ENGLISH_MIN_COUNT) are connectives or "you" words. */
 export const ENGLISH_MIN_SHARE = 0.01
 export const ENGLISH_MIN_COUNT = 3
@@ -98,6 +105,14 @@ export const QUIET_ZERO_SHARE = 0.5
 export const HEAT_MIN_COVER = 0.5
 /** Heat values this close across all windows are "flat": no window is called the most replayed. */
 export const HEAT_FLAT_SPREAD = 0.05
+
+/** The heat line of the one window (the best-scoring at the top heat) a card may call the most replayed. */
+export const MOST_REPLAYED = 'the most replayed part'
+const REPLAYED_MORE = 'replayed more than most of the video'
+/** Quiet's line for a window with talk nearly all through: the why only when no line stands out. */
+export const TALKING_THROUGH = 'talking nearly all the way through'
+/** The why when no line stands out and the talk has long gaps: the window still ranked among the best. */
+export const FALLBACK_WHY = 'one of the strongest stretches in this video'
 
 /** At most this many windows go to the model (§7.4). */
 export const MAX_CANDIDATES = 24
@@ -125,6 +140,13 @@ export interface Signal {
   value: number
   /** A plain line a card can show. */
   reason: string
+  /**
+   * The line sets the window apart, so it may be a card's why: "the most
+   * replayed part", "opens with a question". False for a neutral or negative
+   * line ("replayed about as much as the rest", "stops in the middle of a
+   * sentence", "talked at the usual pace"): a why is a reason to post.
+   */
+  standout: boolean
 }
 
 export type Signals = Record<SignalName, Signal | null>
@@ -141,7 +163,7 @@ export interface ScoredWindow {
   signals: Signals
   /** The weighted mean of the present signals, 0..1. */
   score: number
-  /** The strongest present signal's reason line (weight × value; ties to the earlier in SIGNAL_ORDER). */
+  /** The card's why: the strongest present line that stands out (see `strongestReason`). */
   why: string
 }
 
@@ -185,14 +207,13 @@ export function bareWord(text: string): string {
 }
 
 export function transcriptTraits(words: readonly Word[], segs: readonly Segment[]): TranscriptTraits {
-  const ended = segs.reduce((n, s) => n + (segmentEndsSentence(s) ? 1 : 0), 0)
   let english = 0
   for (const w of words) {
     const bare = bareWord(w.text)
     if (CONNECTIVES.has(bare) || ADDRESS.has(bare)) english++
   }
   return {
-    punctuated: segs.length > 0 && ended / segs.length >= PUNCTUATED_SHARE,
+    punctuated: segmentsPunctuated(segs),
     english: english >= ENGLISH_MIN_COUNT && english / Math.max(1, words.length) >= ENGLISH_MIN_SHARE
   }
 }
@@ -219,6 +240,21 @@ function windowWords(p: Prepared, w: ClipWindow): Word[] {
   const from = p.position.get(p.segs[p.segAt.get(w.segFrom)!].wordStart)
   const to = p.position.get(p.segs[p.segAt.get(w.segTo)!].wordEnd)
   return from === undefined || to === undefined ? [] : p.t.words.slice(from, to + 1)
+}
+
+/**
+ * A window's whole text, its words joined by a space: what piece 2's validator
+ * checks a model title's numbers and capitalised tokens against (the
+ * condensed text is cut, so it cannot).
+ */
+export function windowText(t: Transcript, w: ClipWindow): string {
+  const p = prepare(t)
+  if (!p.segAt.has(w.segFrom) || !p.segAt.has(w.segTo)) return ''
+  return windowWords(p, w)
+    .map((x) => x.text)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 export interface Sentence {
@@ -293,7 +329,7 @@ const clamp01 = (v: number): number => Math.min(1, Math.max(0, v))
 function endingReason(text: string): string {
   const bare = text.replace(/["')\]]+$/, '')
   if (bare.endsWith('?')) return 'ends on a question'
-  if (bare.endsWith('.') || bare.endsWith('।') || bare.endsWith('॥')) return 'ends on a full stop'
+  if (/[.\u0964\u0965]$/.test(bare)) return 'ends on a full stop'
   return 'ends at the end of a sentence'
 }
 
@@ -320,36 +356,35 @@ function signalsOver(p: Prepared, windows: readonly ClipWindow[], heatmap: reado
     const heat: Signal | null =
       h === null
         ? null
-        : {
-            value: h,
-            reason: flat
-              ? 'replayed about as much as the rest'
-              : h === heatMax
-                ? 'the most replayed part'
-                : h > heatMid
-                  ? 'replayed more than most of the video'
-                  : 'replayed less than other parts'
-          }
+        : flat
+          ? { value: h, reason: 'replayed about as much as the rest', standout: false }
+          : h === heatMax
+            ? { value: h, reason: MOST_REPLAYED, standout: true }
+            : h > heatMid
+              ? { value: h, reason: REPLAYED_MORE, standout: true }
+              : { value: h, reason: 'replayed less than other parts', standout: false }
 
     const ratio = typicalWpm > 0 ? wpm[k] / typicalWpm : 0
     const density: Signal | null =
       typicalWpm > 0
         ? {
             value: clamp01(ratio - 0.5),
-            reason: ratio >= 1.15 ? 'dense: more words a minute than most of the video' : ratio <= 0.85 ? 'slower than most of the video' : 'talked at the usual pace'
+            reason: ratio >= 1.15 ? 'dense: more words a minute than most of the video' : ratio <= 0.85 ? 'slower than most of the video' : 'talked at the usual pace',
+            standout: ratio >= 1.15
           }
         : null
 
     const ends = segmentEndsSentence(lastSeg)
     const ending: Signal | null = p.traits.punctuated
-      ? { value: ends ? 1 : 0, reason: ends ? endingReason(lastSeg.text) : 'stops in the middle of a sentence' }
+      ? { value: ends ? 1 : 0, reason: ends ? endingReason(lastSeg.text) : 'stops in the middle of a sentence', standout: ends }
       : null
 
     const first = words.length ? bareWord(words[0].text) : ''
     const opening: Signal | null = p.traits.english
       ? CONNECTIVES.has(first)
-        ? { value: 0, reason: `starts on "${first}", in the middle of a thought` }
-        : { value: 1, reason: 'starts at the beginning of a thought' }
+        ? { value: 0, reason: `starts on "${first}", in the middle of a thought`, standout: false }
+        : // The norm, not a reason to post: nearly every window starts so.
+          { value: 1, reason: 'starts at the beginning of a thought', standout: false }
       : null
 
     const firstSentence = sentences[0]?.text ?? ''
@@ -357,12 +392,12 @@ function signalsOver(p: Prepared, windows: readonly ClipWindow[], heatmap: reado
     const number = /\p{Nd}/u.test(firstSentence)
     const address = p.traits.english && firstSentence.split(' ').some((x) => ADDRESS.has(bareWord(x)))
     const hook: Signal = question
-      ? { value: 1, reason: 'opens with a question' }
+      ? { value: 1, reason: 'opens with a question', standout: true }
       : number
-        ? { value: 1, reason: 'opens with a number' }
+        ? { value: 1, reason: 'has a number in its first sentence', standout: true }
         : address
-          ? { value: 1, reason: 'speaks straight to the viewer from the start' }
-          : { value: 0, reason: 'no hook in the first sentence' }
+          ? { value: 1, reason: 'speaks straight to the viewer from the start', standout: true }
+          : { value: 0, reason: 'no hook in the first sentence', standout: false }
 
     let quietMs = 0
     for (let i = 1; i < words.length; i++) {
@@ -372,7 +407,8 @@ function signalsOver(p: Prepared, windows: readonly ClipWindow[], heatmap: reado
     const share = w.endMs > w.startMs ? quietMs / (w.endMs - w.startMs) : 0
     const quiet: Signal = {
       value: clamp01(1 - share / QUIET_ZERO_SHARE),
-      reason: share >= 0.15 ? 'has long stretches with no talking' : 'talking nearly all the way through'
+      reason: share >= 0.15 ? 'has long stretches with no talking' : TALKING_THROUGH,
+      standout: false
     }
 
     return { heat, density, ending, opening, hook, quiet }
@@ -392,20 +428,26 @@ export function scoreOf(signals: Signals): number {
   return weight > 0 ? sum / weight : 0
 }
 
-/** The strongest present signal's reason: the largest weight × value, ties to the earlier in SIGNAL_ORDER. */
+/**
+ * A card's why: the strongest present line that STANDS OUT (largest weight ×
+ * value, ties to the earlier in SIGNAL_ORDER), since a why is a reason to post
+ * and "replayed less than other parts" is not one. When no line stands out:
+ * quiet's TALKING_THROUGH if that is its line, else FALLBACK_WHY.
+ */
 export function strongestReason(signals: Signals): string {
   let best: string | null = null
   let bestScore = -Infinity
   for (const name of SIGNAL_ORDER) {
     const s = signals[name]
-    if (!s) continue
+    if (!s || !s.standout || !(s.value > 0)) continue
     const v = SIGNAL_WEIGHTS[name] * s.value
     if (v > bestScore) {
       bestScore = v
       best = s.reason
     }
   }
-  return best ?? ''
+  if (best !== null) return best
+  return signals.quiet?.reason === TALKING_THROUGH ? TALKING_THROUGH : FALLBACK_WHY
 }
 
 /** Score every window of a transcript, in window order. */
@@ -415,12 +457,19 @@ export function scoreWindows(t: Transcript, windows: readonly ClipWindow[], heat
 }
 
 function scoreWith(p: Prepared, windows: readonly ClipWindow[], heatmap: readonly LinkHeat[] | null): ScoredWindow[] {
-  return signalsOver(p, windows, heatmap).map((signals, k) => ({
-    window: windows[k],
-    signals,
-    score: scoreOf(signals),
-    why: strongestReason(signals)
-  }))
+  const all = signalsOver(p, windows, heatmap)
+  const scores = all.map(scoreOf)
+  // A plateau puts several windows at the top heat: only the best-scoring of
+  // them (ties to the earlier) keeps "the most replayed part", so no two cards
+  // say it. The others are "replayed more than most"; no value or score moves.
+  let keep = -1
+  all.forEach((signals, k) => {
+    if (signals.heat?.reason === MOST_REPLAYED && (keep < 0 || scores[k] > scores[keep])) keep = k
+  })
+  all.forEach((signals, k) => {
+    if (k !== keep && signals.heat?.reason === MOST_REPLAYED) signals.heat = { ...signals.heat, reason: REPLAYED_MORE }
+  })
+  return all.map((signals, k) => ({ window: windows[k], signals, score: scores[k], why: strongestReason(signals) }))
 }
 
 /* --------------------------------------------------------- the prefilter */
@@ -454,12 +503,13 @@ export function prefilter<T extends ScoredWindow>(scored: readonly T[], max: num
 type GraphemeSegmenter = { segment: (text: string) => Iterable<{ segment: string }> }
 let segmenter: GraphemeSegmenter | null | undefined
 
-/** Grapheme clusters through `Intl.Segmenter` (as `graphics/items.ts` and `ingest/captions.ts` read them); code points where there is none. */
+/** Grapheme clusters through `Intl.Segmenter` (as `graphics/items.ts` and `ingest/captions.ts` read them, here with a fixed locale); code points where there is none. */
 export function graphemes(text: string): string[] {
   if (segmenter === undefined) {
     const Segmenter = (Intl as { Segmenter?: new (locale?: string, options?: { granularity: string }) => GraphemeSegmenter })
       .Segmenter
-    segmenter = Segmenter ? new Segmenter(undefined, { granularity: 'grapheme' }) : null
+    // A fixed locale ('und'): grapheme rules do not vary by locale, and this keeps it so by construction.
+    segmenter = Segmenter ? new Segmenter('und', { granularity: 'grapheme' }) : null
   }
   if (!segmenter) return Array.from(text)
   const out: string[] = []
@@ -472,7 +522,9 @@ export function graphemes(text: string): string[] {
  * budget), the ellipsis counted inside. The cut is at the last space that
  * fits, so no word is broken; only a first word longer than the whole budget
  * (a script written without spaces, a run-on token) is cut at a grapheme
- * boundary, never inside a cluster.
+ * boundary, never inside a cluster. That one exception is kept for the
+ * condensed text too: dropping the token would leave a spaceless script's
+ * window with no text for the model at all.
  */
 export function cutText(text: string, max: number, unit: 'graphemes' | 'chars'): string {
   const clean = text.replace(/\s+/g, ' ').trim()

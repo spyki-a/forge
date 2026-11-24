@@ -9,8 +9,16 @@
  * - **Boundaries are segment boundaries only**, and the segments are
  *   `capSegments(t, 30, 15000)` (§7.2: every menu and stretch builds from it,
  *   never written back). A window starts at a capped segment's start and ends
- *   at a capped segment's end, so a cut can never land mid-sentence or
- *   mid-word: neither is on the menu.
+ *   at a capped segment's end, so a cut never lands mid-word.
+ * - **A start is a sentence start where the transcript has sentences.** In a
+ *   punctuated transcript (`segmentsPunctuated`: at least PUNCTUATED_SHARE of
+ *   its capped segments end on a sentence mark), a window may start only on
+ *   the first segment or on one whose previous segment ends a sentence: the
+ *   cap splits a long sentence into pieces, and a piece after the first starts
+ *   mid-sentence (its title would be a fragment). An unpunctuated transcript
+ *   has no mark to go by, so every segment start (a pause, an event gap or
+ *   the cap made it) is a start: no script is passed over for lacking a full
+ *   stop. The END is preferred on a mark, not required (below), as §7.3 says.
  * - **Its length** (first segment's start to last segment's end) is within
  *   ±`tolerance` of the target. A start with no end inside that band gives NO
  *   window: the plan says within the tolerance, so the nearest end outside it
@@ -37,6 +45,10 @@ export const CAP_WORDS = 30
 export const CAP_MS = 15_000
 /** ±20 % of the asked length (§7.3). */
 export const DEFAULT_TOLERANCE = 0.2
+/** A transcript is "punctuated" when at least this share of its capped segments end on a sentence mark. */
+export const PUNCTUATED_SHARE = 0.2
+/** The shortest length Best clips offers (1, 2, 3 or 4 minutes): below it, no shorter length is there to try. */
+export const SHORTEST_TARGET_MS = 60_000
 
 export interface ClipWindow {
   /** 'w1', 'w2'… in start order: the id the model picks. */
@@ -60,6 +72,13 @@ export function segmentEndsSentence(segment: Segment): boolean {
   const text = segment.text.trimEnd()
   const last = text.slice(text.lastIndexOf(' ') + 1)
   return last.length > 0 && endsSentence(last)
+}
+
+/** Whether enough of these segments end a sentence for the transcript to count as punctuated. */
+export function segmentsPunctuated(segs: readonly Segment[]): boolean {
+  if (segs.length === 0) return false
+  const ended = segs.reduce((n, s) => n + (segmentEndsSentence(s) ? 1 : 0), 0)
+  return ended / segs.length >= PUNCTUATED_SHARE
 }
 
 /** Positions (not `Word.index`) of each word index, so a word count survives the gaps a hand edit leaves. */
@@ -89,8 +108,11 @@ export function windowsOver(
 ): ClipWindow[] {
   const { lo, hi } = lengthBand(targetMs, tolerance)
   const punctuated = segs.map(segmentEndsSentence)
+  const sentences = segmentsPunctuated(segs)
   const out: ClipWindow[] = []
   for (let i = 0; i < segs.length; i++) {
+    // In a punctuated transcript, only a sentence's first segment starts a window.
+    if (sentences && i > 0 && !punctuated[i - 1]) continue
     const start = segs[i].startMs
     let best = -1
     let bestPunct = false
@@ -128,6 +150,11 @@ function minutes(ms: number): string {
   return `${m} min`
 }
 
+/** A talk's length for a plain line: seconds under a minute (never "0 min"), else half minutes. */
+function talkLength(ms: number): string {
+  return ms < 60_000 ? `${Math.max(1, Math.round(ms / 1000))} s` : minutes(ms)
+}
+
 /**
  * Why there are fewer than three windows, in words a card can show; null when
  * nothing is short. `found` is how many non-overlapping picks there are.
@@ -138,8 +165,11 @@ export function shortfallNote(t: Transcript, targetMs: number, found: number): s
   if (t.words.length === 0 || segs.length === 0) return "This video's transcript has no words to pick a clip from."
   const talkMs = segs[segs.length - 1].endMs - segs[0].startMs
   const { lo } = lengthBand(targetMs)
-  if (talkMs < lo) return `The talk here runs about ${minutes(talkMs)}, shorter than the ${minutes(targetMs)} asked for. Try a shorter length.`
-  if (found === 0) return `No stretch of about ${minutes(targetMs)} here starts and ends between sentences. Try another length.`
+  if (talkMs < lo) {
+    const next = targetMs <= SHORTEST_TARGET_MS ? `${minutes(SHORTEST_TARGET_MS)} is the shortest length there is.` : 'Try a shorter length.'
+    return `The talk here runs about ${talkLength(talkMs)}, shorter than the ${minutes(targetMs)} asked for. ${next}`
+  }
+  if (found === 0) return `No stretch of about ${minutes(targetMs)} here starts and ends at a break in the talk. Try another length.`
   return found === 1
     ? `Only one stretch of about ${minutes(targetMs)} fits here without repeating another.`
     : `Only ${found} stretches of about ${minutes(targetMs)} fit here without repeating each other.`
