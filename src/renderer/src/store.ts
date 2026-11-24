@@ -251,6 +251,20 @@ import { maxTokensFor2, spine2Prompt } from '@shared/director/prompt2'
 import { spine2Schema } from '@shared/director/schema2'
 import { recipeById, type RecipeId } from '@shared/director/recipes'
 import { askStructured } from '@shared/director/ask'
+import { bestClips } from '@shared/bestclips/run'
+import {
+  analyseRefusal,
+  BEST_CLIPS_BUSY,
+  BEST_CLIPS_FAILED,
+  BEST_CLIPS_TIMEOUT_MS,
+  bestClipsAskOver,
+  bestClipsBelongs,
+  initialBestClips,
+  modelReady,
+  withLength,
+  type BestClipsAsked,
+  type BestClipsState
+} from '@shared/bestclips/session'
 import { eyesOf, needsLook, needsMeasure, withVision } from '@shared/director/eyes'
 import { gate, type Measure } from '@shared/director/gate'
 import { LOOK_MAX_TOKENS, lookPrompt, lookSchema, readLook } from '@shared/director/look'
@@ -932,6 +946,23 @@ interface EditorState {
   clipItFromLink: () => Promise<void>
   /** Add another clip: the rows stay, the run is cleared. Starts nothing. */
   addAnotherClip: () => void
+
+  /**
+   * Best clips for the link in the box (docs/CLIPS.md §7.5, sheet 27): the
+   * length picked, the Analyse in flight, the last answer and what it was
+   * asked for. Session state, like `urlSource`: newProject and loadProject
+   * leave it alone. The rules are shared/bestclips/session.ts'.
+   */
+  bestClips: BestClipsState
+  /** Pick a length (1, 2, 3 or 4 min); a different one clears the cards. */
+  setBestClipsLength: (targetMs: number) => void
+  /**
+   * Analyse: the link's transcript, already fetched, through `bestClips` —
+   * the model when one would answer, else the talk's own signals. Downloads
+   * nothing. One at a time; an answer for a link, length or transcript no
+   * longer the store's is dropped.
+   */
+  analyseBestClips: () => Promise<void>
 
   /** The Transcript tile's pick of a clip's words (§3b.6). */
   clipRun: ClipRun | null
@@ -1937,6 +1968,50 @@ export const useEditor = create<EditorState>((set, get) => ({
   },
 
   urlSource: null,
+
+  bestClips: initialBestClips(),
+
+  setBestClipsLength: (targetMs) => set((s) => ({ bestClips: withLength(s.bestClips, targetMs) })),
+
+  analyseBestClips: async () => {
+    const { notify } = get()
+    const source = urlSourceFor(get())
+    const refusal = analyseRefusal(get().bestClips, source)
+    if (refusal === 'running') {
+      notify(BEST_CLIPS_BUSY, 'info')
+      return
+    }
+    // No words yet: the panel says to press Get transcript; nothing is fetched here.
+    if (refusal !== null || !source || !source.transcript) return
+    const asked: BestClipsAsked = { linkKey: source.linkKey, targetMs: get().bestClips.targetMs, transcript: source.transcript }
+    set((s) => ({ bestClips: { ...s.bestClips, running: asked } }))
+    try {
+      /*
+       * The same test main's complete makes (chooseProvider over the status
+       * and the chosen provider): no model, no ask, and the signals' three
+       * say so. A status that cannot be read is no reason not to ask: the
+       * ask then fails, and bestClips says the model did not answer.
+       */
+      let ready = true
+      try {
+        const [status, config] = await Promise.all([window.forge.directorStatus(), window.forge.directorSettings()])
+        ready = modelReady(status, config.provider)
+      } catch {
+        ready = true
+      }
+      const ask = ready ? bestClipsAskOver((request) => window.forge.directorComplete(request)) : undefined
+      const result = await bestClips(asked.transcript, source.meta, asked.targetMs, ask, { timeoutMs: BEST_CLIPS_TIMEOUT_MS })
+      // Kept only while it is still about the store's link, length and words.
+      const now = get().urlSource
+      if (!bestClipsBelongs(asked, now ? { linkKey: now.linkKey, transcript: now.transcript, targetMs: get().bestClips.targetMs } : null)) return
+      set((s) => ({ bestClips: { ...s.bestClips, last: { ...asked, result } } }))
+    } catch {
+      // Never the error's text: it could name a server or carry a key.
+      notify(BEST_CLIPS_FAILED)
+    } finally {
+      set((s) => (s.bestClips.running === asked ? { bestClips: { ...s.bestClips, running: null } } : {}))
+    }
+  },
 
   getTranscript: async (language) => {
     const { ingest, notify } = get()

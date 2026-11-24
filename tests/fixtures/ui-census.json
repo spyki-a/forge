@@ -5799,6 +5799,133 @@
     "newHome": "Shelf tile URL"
   },
   {
+    "label": "Best clips",
+    "match": "text",
+    "home": "url",
+    "needs": "link-transcript",
+    "file": "src/renderer/src/components/tools/BestClips.tsx",
+    "line": 117,
+    "newHome": "Shelf tile URL",
+    "note": "CLIPS.md §7.5, sheet 27: the section’s heading, under the link’s rows and Clip download, on screen whenever the box holds a link."
+  },
+  {
+    "label": "1 min",
+    "match": "text",
+    "home": "url",
+    "needs": "link-transcript",
+    "file": "src/shared/bestclips/session.ts",
+    "line": 34,
+    "newHome": "Shelf tile URL",
+    "note": "The four lengths are one choice (aria-pressed); 1 min is the default."
+  },
+  {
+    "label": "2 min",
+    "match": "text",
+    "home": "url",
+    "needs": "link-transcript",
+    "file": "src/shared/bestclips/session.ts",
+    "line": 35,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "3 min",
+    "match": "text",
+    "home": "url",
+    "needs": "link-transcript",
+    "file": "src/shared/bestclips/session.ts",
+    "line": 36,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "4 min",
+    "match": "text",
+    "home": "url",
+    "needs": "link-transcript",
+    "file": "src/shared/bestclips/session.ts",
+    "line": 37,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "Analyse",
+    "match": "text",
+    "home": "url",
+    "needs": "link-transcript",
+    "file": "src/renderer/src/components/tools/BestClips.tsx",
+    "line": 147,
+    "newHome": "Shelf tile URL",
+    "note": "Reads the transcript Get transcript fetched; downloads nothing. Greyed until there are words, and while one runs."
+  },
+  {
+    "label": "Find the stretches of this video most worth posting, from its captions — nothing is downloaded",
+    "match": "title",
+    "home": "url",
+    "needs": "link-transcript",
+    "file": "src/renderer/src/components/tools/BestClips.tsx",
+    "line": 50,
+    "newHome": "Shelf tile URL"
+  },
+  {
+    "label": "Best clips reads the video’s captions: press Get transcript first.",
+    "match": "text",
+    "home": "url",
+    "needs": "link-failed",
+    "file": "src/shared/bestclips/session.ts",
+    "line": 62,
+    "newHome": "Shelf tile URL",
+    "note": "Before the link has words (here the fetch failed), Analyse is greyed and points at Get transcript."
+  },
+  {
+    "label": "This video has no captions; Best clips needs the AI helper to listen to it.",
+    "match": "text",
+    "home": "url",
+    "needs": "link-no-captions",
+    "file": "src/shared/bestclips/session.ts",
+    "line": 58,
+    "newHome": "Shelf tile URL",
+    "note": "CLIPS.md §7.5: no caption track and the AI helper not there (the harness page’s own helper fails)."
+  },
+  {
+    "label": "This video has no captions; Best clips needs its words from Listen to it, above.",
+    "match": "text",
+    "home": "url",
+    "needs": "link-no-captions-helper",
+    "file": "src/shared/bestclips/session.ts",
+    "line": 60,
+    "newHome": "Shelf tile URL",
+    "note": "No caption track while the AI helper is there: M0’s Listen to it is the route."
+  },
+  {
+    "label": "Looking for the best stretches…",
+    "match": "text",
+    "home": "url",
+    "needs": "link-best-clips-running",
+    "file": "src/shared/bestclips/session.ts",
+    "line": 64,
+    "newHome": "Shelf tile URL",
+    "note": "An Analyse in flight; the recipe holds it there through the store (the no-model run answers at once)."
+  },
+  {
+    "label": "Picked from the talk's own signals",
+    "match": "text",
+    "home": "url",
+    "needs": "link-best-clips",
+    "count": 3,
+    "file": "src/shared/bestclips/session.ts",
+    "line": 54,
+    "newHome": "Shelf tile URL",
+    "note": "Who picked each card (scoredBy ‘signals’). Count 3: Analyse at 1 min on the twelve-row talk with no model (the bridge’s director status has none) gives three cards."
+  },
+  {
+    "label": "Picked without a model, from the talk's own signals.",
+    "match": "text",
+    "home": "url",
+    "needs": "link-best-clips",
+    "file": "src/shared/bestclips/run.ts",
+    "line": 83,
+    "newHome": "Shelf tile URL",
+    "note": "The result’s modelNote with no model configured (NO_MODEL_NOTE), under the cards."
+  },
+  {
     "label": "Click a row to pick its words; shift-click another row, or a word, to extend. Or drag Start and End.",
     "match": "text",
     "home": "url",

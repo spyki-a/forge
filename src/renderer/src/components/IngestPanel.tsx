@@ -6,6 +6,7 @@ import { linkProblem, LINK_PROBLEM_TEXT, parseLink } from '@shared/ingest/url'
 import { formatMark, MIN_RANGE_MS, parseMark } from '@shared/ingest/section'
 import type { IngestWant } from '@shared/ingest/args'
 import { LinkTranscript } from './tools/LinkTranscript'
+import { BestClips } from './tools/BestClips'
 
 /**
  * Sheets ⑥ and ⑫: paste a link, choose what to take, get a clip.
@@ -262,6 +263,9 @@ export function IngestPanel(): ReactNode {
 
       {/* ------------------------------------------------------ transcript */}
       <LinkTranscript />
+
+      {/* ------------------------------------------------------ best clips */}
+      <BestClips />
 
       {/* ----------------------------------------------------------- range */}
       {!words && (

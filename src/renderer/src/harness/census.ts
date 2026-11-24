@@ -2405,6 +2405,27 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     await linkWords()
     return {}
   },
+  /*
+   * Best clips (CLIPS.md §7.5): Analyse at 1 min on the twelve-row talk with
+   * no model (the bridge's director status has none), so the talk's own
+   * signals pick: three cards, each "Picked from the talk's own signals",
+   * and the no-model note under them.
+   */
+  'link-best-clips': async () => {
+    await linkWords()
+    await editor().analyseBestClips()
+    const shown = editor().bestClips.last?.result.cards.length ?? 0
+    if (shown !== 3) throw new Error(`census: Analyse on the bridge's talk gave ${shown} cards, not 3`)
+    return {}
+  },
+  /* an Analyse held in flight through the store: the no-model run answers too fast to look at */
+  'link-best-clips-running': async () => {
+    const transcript = await linkWords()
+    const source = editor().urlSource
+    if (!source) throw new Error('census: the talk has no transcript on screen')
+    useEditor.setState((s) => ({ bestClips: { ...s.bestClips, running: { linkKey: source.linkKey, targetMs: s.bestClips.targetMs, transcript } } }))
+    return {}
+  },
   /* rows 3–6 picked: the run's length, and From and To mirroring it */
   'link-run': async () => {
     editor().setUrlRun(runFromRows(await linkWords(), 2, 5))
