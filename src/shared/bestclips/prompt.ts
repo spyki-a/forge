@@ -25,15 +25,16 @@ import { PICKS, TITLE_KEPT_GRAPHEMES, WHY_KEPT_GRAPHEMES, picksWanted } from './
  * (English). `promptTokensAtMost` counts at the LOW end, 3.0, so it never
  * undercounts English. Twenty-four candidates at `CONDENSED_MAX_CHARS` (240
  * characters, 80 tokens) and their framing are 2,071 tokens; this system text
- * 317; the answer `maxTokensForBestClips(3)` = 950. 3,338 in all (measured
- * 2026-11-23 on 24 rows of 240 characters and the Telugu language line),
+ * 332; the answer `maxTokensForBestClips(3)` = 950. 3,353 in all (measured
+ * 2026-11-23, after the critics' rule lines, on 24 rows of 240 characters and the Telugu language line),
  * inside `PROMPT_BUDGET_TOKENS` (4,096), and with askStructured's thinking
  * retry (`THINKING_EXTRA_TOKENS` more) inside `NUM_CTX` (8,192, provider.ts'
  * `num_ctx`). tests/bestClipsModel.test.ts holds both for 24 candidates of the
  * longest condensed text. Devanagari and Telugu tokenise denser than English
  * and are unmeasured (open); at the worst plausible one character a token the
- * prompts are 7,164 tokens and the answer 950: 8,114, inside 8,192 with 78 to
- * spare, but not the thinking retry's.
+ * prompts are 7,209 tokens and the answer 950: 8,159, inside 8,192 with 33 to
+ * spare, but not the thinking retry's. Every line added to the system text
+ * comes out of those 33 (the test holds it).
  */
 
 /** Ollama's context for every request (provider.ts `ollamaRequestBody`, `num_ctx`). */
@@ -50,15 +51,14 @@ export function promptTokensAtMost(text: string): number {
   return Math.ceil(text.length / CHARS_PER_TOKEN)
 }
 
-export const BEST_CLIPS_SYSTEM = `You pick the best short clips from a long video. You are given CANDIDATES: stretches of the video's talk, each an id and a few of its sentences. You compare them with each other and pick the ones a viewer would most want to watch on their own, as a short post: a clear point, a story, a strong opinion, a surprise, something that makes sense without the rest of the video. You answer with one JSON object and nothing else.
+export const BEST_CLIPS_SYSTEM = `You pick the best short clips from a long video. CANDIDATES are stretches of its talk, each an id and a few of its sentences. Compare them and pick the ones a viewer would most want to watch alone, as a short post: a clear point, a story, a strong opinion, a surprise, something that makes sense without the rest. Answer with one JSON object and nothing else.
 
 RULES
 - Compare the candidates with each other; do not score them one by one.
 - id: one id from CANDIDATES. Never the same id twice.
-- title: a short title for the clip, at most ${TITLE_KEPT_GRAPHEMES} characters, in the language the candidate is spoken in.
-- why: why a viewer would watch this clip on its own, at most ${WHY_KEPT_GRAPHEMES} characters, in the same language.
-- Never write a time, a timestamp or a length.
-- Never write a number or a name that the candidate's words do not say.
+- title: at most ${TITLE_KEPT_GRAPHEMES} characters, in the candidate's language. Write it in sentence case from the candidate's own words: start with a word the candidate says, and capitalise only a name the candidate says.
+- why: why a viewer would watch it alone, at most ${WHY_KEPT_GRAPHEMES} characters, in the same language. In English, start it with "This" or "It".
+- Never write a time, a timestamp or a length, or a number or a name the candidate does not say.
 - reasoning comes first: one or two sentences comparing the candidates.`
 
 /** The line that says how many to pick. */

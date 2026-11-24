@@ -1,4 +1,4 @@
-import { CLAUSE_BREAK, claimTokens, numberSpans, type CanonNumber } from '../director/claims'
+import { CLAUSE_BREAK, FUNCTION_WORDS_EN, claimTokens, isQuantityWord, numberSpans, type CanonNumber } from '../director/claims'
 import { conforms, type Problem } from '../director/conforms'
 import { bestClipsSchema, picksWanted, TITLE_KEPT_GRAPHEMES, WHY_KEPT_GRAPHEMES, type ClipPickAnswer } from './schema'
 import { cutText, overlapShare, windowText, MAX_OVERLAP, type Candidates, type ClipCandidate } from './signals'
@@ -32,14 +32,15 @@ import type { Transcript } from '../transcript'
  * may not say what the window does not (§7.4). It must be GROUNDED in the
  * window's whole text (`windowText`; the condensed text is cut) by
  * `ungroundedIn(title, text, 'title')`, else it is the window's first sentence
- * cut to 40 graphemes (the candidate's no-model title). An empty title falls
- * back the same way.
+ * cut to 40 graphemes (the candidate's no-model title). An empty title (no
+ * letter and no digit once invisible marks are gone: `clean`) falls back the
+ * same way.
  *
  * THE WHY, kept to WHY_KEPT_GRAPHEMES (cut), is the model's reason, shown and
  * never drawn. It is a judgement, not a copy, so its words are not required
- * to be the window's; its NUMBERS are (every one, as the title's), and its
- * capitalised Latin, Greek, Cyrillic or Armenian tokens that do not open a
- * sentence of the why (a name in the middle of a sentence). Else, or empty,
+ * to be the window's; its NUMBERS and quantity words are (as the title's), and
+ * its capitalised Latin, Greek, Cyrillic or Armenian tokens, except a function
+ * word opening one of its sentences ('It', 'This'). Else, or empty,
  * the why is the candidate's signals line. In a script that does not
  * capitalise names a why could name anyone; that is open.
  *
@@ -56,7 +57,10 @@ import type { Transcript } from '../transcript'
 const CAPITALISING = /[\p{Script=Latin}\p{Script=Greek}\p{Script=Cyrillic}\p{Script=Armenian}]/u
 const LETTER = /\p{L}/u
 const UPPER = /\p{Lu}/u
-const DIGIT = /\p{Nd}/u
+/** A digit of any kind: decimal in any script, and roman-numeral and superscript ones ('Ⅻ', '²'), which `numberSpans` does not read. */
+const DIGIT = /[\p{Nd}\p{Nl}\p{No}]/u
+/** A word, title or why with something to read: a letter or a digit. Punctuation, emoji and invisible marks alone are empty. */
+const CONTENT = /[\p{L}\p{N}]/u
 
 /** A word has a letter outside the capitalising scripts: it is checked word for word. */
 function caselessWord(word: string): boolean {
@@ -93,7 +97,8 @@ function tokensOf(text: string): { words: string[]; tokens: string[]; wordOf: nu
 
 /** A word opens a sentence of `words`: the first, or after a word ending on a sentence mark. */
 function opensSentence(words: readonly string[], i: number): boolean {
-  return i === 0 || /[.!?।॥…]["'”’)\]]*$/u.test(words[i - 1])
+  // The danda and double danda as escapes (U+0964, U+0965).
+  return i === 0 || /[.!?\u0964\u0965…]["'”’)\]]*$/u.test(words[i - 1])
 }
 
 /**
@@ -105,25 +110,41 @@ function opensSentence(words: readonly string[], i: number): boolean {
  *   in the window as the same value: the same `n`, and the same unit and
  *   currency unless the text writes the number bare ("2,500" is grounded by
  *   "$2,500"; "40%" is not grounded by "40 clients"). A word with a digit that
- *   is NOT read as one number ('1st', '40-50', '12:30', '4०') must be said in
+ *   is NOT read as one number ('1st', '40-50', '12:30', '4' and a native digit) must be said in
  *   the window token for token, so a time or a range the model wrote is caught
  *   unless the talk says it.
+ * - QUANTITY WORDS (`claims.ts` `isQuantityWord`: an English number word, a
+ *   multiplier, a scale word, a fraction) that are NOT inside a number
+ *   `numberSpans` reads: `numberSpans` drops on purpose a number with a
+ *   qualifier ('about nine'), an unapplied scale ('twenty grand', 'hundreds'),
+ *   a fraction ('two and a half million'), a pair ('nineteen ninety nine') or a
+ *   range ('forty to fifty'), the safe direction for a graphic's claim, but a
+ *   title showing those words claims them. Each such token must be said in the
+ *   window as itself, or as a number of the same value ('nine' grounded by a
+ *   '9' anywhere in the window).
  * - CAPITALS (Latin, Greek, Cyrillic, Armenian): a word with a capital letter
  *   anywhere ('Zorvan', 'NASA', 'iPhone'), THE FIRST WORD INCLUDED for a title
  *   (§7.4: "Modi admits failure" no longer passes on the first-word
  *   exemption), must be said in the window: each of its tokens, compared after
  *   `claimTokens` (so case-blind: "Admits" is grounded by "admits"), a
  *   possessive "'s" allowed. For a why, a word that opens one of the why's
- *   sentences is a capital of grammar and not checked.
+ *   sentences is exempt only when it is an English function word
+ *   (`FUNCTION_WORDS_EN`: 'It', 'This', 'A', 'We'…); any other opening capital
+ *   ('Kesmer admits failure.') is held as a title's first word is.
  * - CASELESS (a title only): a word with any letter outside those scripts
  *   must be said in the window, token for token after `claimTokens` (NFC,
  *   lower case, edge punctuation trimmed, combining marks kept, native digits
  *   as ASCII). In such a script the capital rule would check nothing, so a
  *   title in it is held to words the talk says, reordered as the model likes.
- *   Hinglish gets both, word by word: its Latin words the capital rule, its
- *   Devanagari words this one. A Latin word with no capital is not checked
- *   (the plan's rule): romanised Hindi written in lower case is not held to
- *   the window (open).
+ *   And when the WINDOW has no letter of a capitalising script at all (a
+ *   Telugu, Hindi or Georgian talk), every title word with a letter is held
+ *   the same way, whatever its script: a lower-case Latin title over such a
+ *   talk ('kesmer quits forever') would otherwise be checked for nothing.
+ *   Hinglish (a window with letters of both kinds) gets both, word by word:
+ *   its Latin words the capital rule, its Devanagari words this one. A Latin
+ *   word with no capital in a window that has Latin letters is not checked
+ *   (the plan's rule): romanised Hindi or a name written in lower case is not
+ *   held to the window (open).
  * - Words that are part of a grounded number are not checked again ("Three
  *   reasons" with "3 reasons" said).
  */
@@ -142,15 +163,27 @@ export function ungroundedIn(text: string, said: string, mode: 'title' | 'why'):
       else bad.add(wordOf[k])
     }
   }
+  // Every value the window says, a lone number word's included ('about nine' is no number to
+  // numberSpans, but it says nine): a quantity word of the text is grounded by any of them.
+  const windowValues = new Set(windowNumbers.map((n) => n.n))
+  for (const t of windowSet) for (const s of numberSpans([t])) windowValues.add(s.value.n)
+  const windowCases = [...said].some((ch) => LETTER.test(ch) && CAPITALISING.test(ch))
+
   const saidWord = (w: string): boolean => {
     const ts = wordTokens(w)
     return ts.length > 0 && ts.every((t) => windowSet.has(t) || windowSet.has(withoutPossessive(t)))
   }
+  const quantitySaid = (t: string): boolean => windowSet.has(t) || numberSpans([t]).some((s) => windowValues.has(s.value.n))
+  const functionWord = (w: string): boolean => {
+    const ts = wordTokens(w)
+    return ts.length > 0 && ts.every((t) => FUNCTION_WORDS_EN.includes(t))
+  }
   words.forEach((w, i) => {
     if (covered.has(i) || bad.has(i)) return
+    if (wordTokens(w).some((t) => isQuantityWord(t) && !quantitySaid(t))) return void bad.add(i)
     const digit = DIGIT.test(w)
-    const capital = UPPER.test(w) && !(mode === 'why' && opensSentence(words, i))
-    const caseless = mode === 'title' && caselessWord(w)
+    const capital = UPPER.test(w) && !(mode === 'why' && opensSentence(words, i) && functionWord(w))
+    const caseless = mode === 'title' && (caselessWord(w) || (!windowCases && LETTER.test(w)))
     if ((digit || capital || caseless) && !saidWord(w)) bad.add(i)
   })
   return [...bad].sort((a, b) => a - b).map((i) => words[i])
@@ -166,6 +199,10 @@ export interface ValidPick {
   titleFrom: 'model' | 'first-sentence'
   /** Where the why came from: the model, or the signals' line (the model's was empty or not grounded). */
   whyFrom: 'model' | 'signals'
+  /** Why the title is not the model's: it had nothing to read (`'empty'`), or said what the window does not; null when it is the model's. */
+  titleFallback: 'empty' | 'ungrounded' | null
+  /** Why the why is not the model's, as `titleFallback`. */
+  whyFallback: 'empty' | 'ungrounded' | null
 }
 
 export type BestClipsVerdict = { picks: ValidPick[]; problems: Problem[] } | { rejected: string }
@@ -178,7 +215,19 @@ function problemsLine(problems: readonly Problem[]): string {
     .join('; ')
 }
 
-const clean = (text: string): string => text.replace(/\s+/gu, ' ').trim()
+/**
+ * The model's text as a card would show it: invisible format characters
+ * (`\p{Cf}`: a zero-width space, a word joiner, a soft hyphen, a bidi mark)
+ * removed, except the zero-width joiner and non-joiner (U+200D, U+200C), which
+ * shape Indic conjuncts and emoji; white space collapsed. Text with no letter
+ * and no digit left ('…', '— — —', emoji alone) is EMPTY (`hasContent`).
+ */
+const clean = (text: string): string =>
+  text
+    .replace(/(?![\u200C\u200D])\p{Cf}/gu, '')
+    .replace(/\s+/gu, ' ')
+    .trim()
+const hasContent = (text: string): boolean => CONTENT.test(text)
 
 /**
  * Settle one `bestclips@1` answer against the candidates it was asked about
@@ -208,27 +257,31 @@ export function validateBestClips(answer: unknown, c: Pick<Candidates, 'candidat
     const said = windowText(t, candidate.window)
     let title = cutText(clean(p.title), TITLE_KEPT_GRAPHEMES, 'graphemes')
     let titleFrom: ValidPick['titleFrom'] = 'model'
-    const titleBad = title === '' ? null : ungroundedIn(title, said, 'title')
-    if (title === '' || (titleBad && titleBad.length > 0)) {
+    const titleEmpty = !hasContent(title)
+    const titleBad = titleEmpty ? null : ungroundedIn(title, said, 'title')
+    const titleFallback: ValidPick['titleFallback'] = titleEmpty ? 'empty' : titleBad!.length > 0 ? 'ungrounded' : null
+    if (titleFallback) {
       problems.push({
         path: `${path}.title`,
-        message: title === '' ? 'is empty: the first sentence is used' : `says ${titleBad!.map((w) => `'${w}'`).join(', ')}, which ${p.id} does not: the first sentence is used`
+        message: titleEmpty ? 'is empty: the first sentence is used' : `says ${titleBad!.map((w) => `'${w}'`).join(', ')}, which ${p.id} does not: the first sentence is used`
       })
       title = candidate.title
       titleFrom = 'first-sentence'
     }
     let why = cutText(clean(p.why), WHY_KEPT_GRAPHEMES, 'graphemes')
     let whyFrom: ValidPick['whyFrom'] = 'model'
-    const whyBad = why === '' ? null : ungroundedIn(why, said, 'why')
-    if (why === '' || (whyBad && whyBad.length > 0)) {
+    const whyEmpty = !hasContent(why)
+    const whyBad = whyEmpty ? null : ungroundedIn(why, said, 'why')
+    const whyFallback: ValidPick['whyFallback'] = whyEmpty ? 'empty' : whyBad!.length > 0 ? 'ungrounded' : null
+    if (whyFallback) {
       problems.push({
         path: `${path}.why`,
-        message: why === '' ? "is empty: the signals' reason is used" : `says ${whyBad!.map((w) => `'${w}'`).join(', ')}, which ${p.id} does not: the signals' reason is used`
+        message: whyEmpty ? "is empty: the signals' reason is used" : `says ${whyBad!.map((w) => `'${w}'`).join(', ')}, which ${p.id} does not: the signals' reason is used`
       })
       why = candidate.why
       whyFrom = 'signals'
     }
-    kept.push({ id: p.id, candidate, title, why, titleFrom, whyFrom })
+    kept.push({ id: p.id, candidate, title, why, titleFrom, whyFrom, titleFallback, whyFallback })
   })
   return { picks: kept, problems }
 }

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { conforms, flatViolations, unsupportedKeywords, type ObjectSchema } from '@shared/director/conforms'
 import { ollamaRequestBody, openaiRequestBody } from '@shared/director/provider'
 import { THINKING_EXTRA_TOKENS } from '@shared/director/ask'
-import { UNDETERMINED_LINE } from '@shared/director/promptGraphics'
+import { UNDETERMINED_LINE, graphicsLanguageLine } from '@shared/director/promptGraphics'
 import {
   BEST_CLIPS_DECODE_CHARS,
   PICKS,
@@ -16,6 +16,7 @@ import {
   NUM_CTX,
   PROMPT_BUDGET_TOKENS,
   bestClipsPrompt,
+  pickLine,
   maxTokensForBestClips,
   promptTokensAtMost,
   requestTokensAtMost
@@ -27,7 +28,9 @@ import {
   MODEL_SLOW_NOTE,
   MODEL_UNUSABLE_NOTE,
   NO_MODEL_NOTE,
+  TITLE_EMPTY_NOTE,
   TITLE_FALLBACK_NOTE,
+  WHY_EMPTY_NOTE,
   WHY_FALLBACK_NOTE,
   bestClips,
   bestClipsRequest,
@@ -216,7 +219,7 @@ describe('ungroundedIn: every number and capitalised token in the window; a case
     const words = [caseless(1), caseless(2), caseless(3), caseless(4)]
     const saidCl = `${words.join(' ')} 7`
     expect(ungroundedIn(`${words[2]} ${words[0]}`, saidCl, 'title')).toEqual([])
-    const made = 'რტფ'
+    const made = '\u10E0\u10E2\u10E4'
     expect(saidCl.includes(made)).toBe(false)
     expect(ungroundedIn(`${words[0]} ${made}`, saidCl, 'title')).toEqual([made])
     expect(ungroundedIn(`${words[0]} 7`, saidCl, 'title')).toEqual([])
@@ -232,8 +235,8 @@ describe('ungroundedIn: every number and capitalised token in the window; a case
   })
 
   it('a why: its numbers, and a capital that does not open one of its sentences', () => {
-    // MUTATION (the why's sentence-opening exemption removed): fails "ungroundedIn('Funny and honest. ...')" toEqual([]).
-    expect(ungroundedIn('Funny and honest. A story about Zorvan.', said, 'why')).toEqual([])
+    // MUTATION (the why's sentence-opening exemption removed): fails "ungroundedIn('It is funny and honest. ...')" toEqual([]).
+    expect(ungroundedIn('It is funny and honest. A story about Zorvan.', said, 'why')).toEqual([])
     expect(ungroundedIn('A story about Kesmer and 40 clients.', said, 'why')).toEqual(['Kesmer'])
     expect(ungroundedIn('It has 90 clients.', said, 'why')).toEqual(['90'])
   })
@@ -305,7 +308,7 @@ describe('validateBestClips: the picks, the titles and the whys a card may show'
     // MUTATION (the caseless rule removed): fails "toEqual(['model', 'first-sentence'])".
     const [x, y] = CL_C.candidates
     const xs = windowText(CL, x.window).split(' ')
-    const made = 'რტფრ'
+    const made = '\u10E0\u10E2\u10E4\u10E0'
     expect(windowText(CL, y.window).split(' ')).not.toContain(made)
     const v = validateBestClips(
       answerOf([
@@ -445,6 +448,9 @@ describe('bestClips: three cards, the times the windows\', the fallbacks plain',
     const r = await bestClips(short, null, 60_000, answering(answerOf(c.candidates.map((x) => ({ id: x.id, title: 'plim', why: 'w' }))), seen as never))
     expect(seen.requests[0].schema.properties.picks).toMatchObject({ minItems: c.candidates.length, maxItems: c.candidates.length })
     expect(seen.requests[0].maxTokens).toBe(maxTokensForBestClips(c.candidates.length))
+    // MUTATION (the prompt's pick line for PICKS whatever the candidates, `pickLine(PICKS)`): fails this toContain.
+    expect((seen.requests[0] as unknown as { user: string }).user.split('\n')).toContain(pickLine(c.candidates.length))
+    expect(bestClipsPrompt([{ id: 'w1', condensed: 'plim' }], 'en').user.split('\n')).toContain('Pick the 1 candidate a viewer would most want to watch on its own.')
     expect(r.cards.map((x) => x.scoredBy)).toEqual(c.candidates.map(() => 'model'))
     expect(r.note).toBe(c.note)
     expect(r.note).not.toBeNull()
@@ -464,6 +470,127 @@ describe('bestClips: three cards, the times the windows\', the fallbacks plain',
     const meta = { heatmap: heatOf(EN.durationMs / 1000, (i) => (i % 9) / 10), language: 'en' }
     const value = answerOf(EN_C.candidates.slice(2, 5).map((x) => ({ id: x.id, title: 'plim', why: 'w' })))
     expect(await bestClips(EN, meta, 60_000, answering(value))).toEqual(await bestClips(EN, meta, 60_000, answering(value)))
+  })
+})
+
+/* ------------------------------------------------- the critics' fixes */
+
+describe("the critics' fixes: quantity words, empty text, a caseless window, a why's opening name, the prompt's rules, the language", () => {
+  const said = 'zor plim Zorvan tavek $2,500 mubo 40 clients twelve senra kilo'
+
+  it('a number word numberSpans does not read (a qualifier, an unapplied scale, a fraction, a pair) must still be said, in a title and in a why', () => {
+    // MUTATION (the quantity-word line removed from ungroundedIn's word loop): fails every "toEqual(['nine'])"-style line below.
+    expect(ungroundedIn('zor cost about nine', said, 'title')).toEqual(['nine'])
+    expect(ungroundedIn('twenty grand for plim', said, 'title')).toEqual(['twenty', 'grand'])
+    expect(ungroundedIn('two and a half million paid', said, 'title')).toEqual(['two', 'half', 'million'])
+    expect(ungroundedIn('hundreds of plim', said, 'title')).toEqual(['hundreds'])
+    expect(ungroundedIn('zor paid nineteen ninety nine', said, 'title')).toEqual(['nineteen', 'ninety', 'nine'])
+    expect(ungroundedIn('It drew about nine guests.', said, 'why')).toEqual(['nine'])
+    // Said in the window as the word or as the same value: kept.
+    expect(ungroundedIn('about twelve senra', said, 'title')).toEqual([])
+    expect(ungroundedIn('nearly forty clients', said, 'title')).toEqual([])
+  })
+
+  it("over real windows, 'about nine' in a title or a why falls back on the English and the caseless talk alike", () => {
+    // MUTATION (the quantity-word line removed): fails "toEqual(['first-sentence', ...])" and the whyFrom 'signals' lines.
+    for (const [c, t] of [
+      [EN_C, EN],
+      [CL_C, CL]
+    ] as const) {
+      const three = c.candidates.slice(0, 3)
+      for (const x of three) expect(windowText(t, x.window).split(' ')).not.toContain('nine')
+      const v = validateBestClips(answerOf(three.map((x) => ({ id: x.id, title: 'the hall cost about nine thousand', why: 'It has about nine guests crying.' }))), c, t)
+      if ('rejected' in v) throw new Error(v.rejected)
+      expect(v.picks.map((p) => [p.titleFrom, p.whyFrom, p.titleFallback, p.whyFallback])).toEqual(three.map(() => ['first-sentence', 'signals', 'ungrounded', 'ungrounded']))
+    }
+  })
+
+  it('a title or why with no letter and no digit is empty (zero-width, soft hyphen, word joiner, punctuation, emoji); invisible marks are removed from a kept one', async () => {
+    // MUTATION (hasContent -> `text !== ''`): fails the titleFallback 'empty' lines for '…' and '— — —' and the emoji run.
+    // MUTATION (clean() keeps \p{Cf}): fails "toBe('plim tavek')".
+    // MUTATION (run.ts gives TITLE_FALLBACK_NOTE for an empty title too): fails "toBe(`${TITLE_EMPTY_NOTE} ${WHY_EMPTY_NOTE}`)".
+    const family = '\u{1F468}‍\u{1F469}‍\u{1F467}'
+    const empties = ['​', '⁠⁠', '­', '…', '— — —', family.repeat(61)]
+    for (let k = 0; k < empties.length; k += 3) {
+      const group = empties.slice(k, k + 3)
+      const three = EN_C.candidates.slice(0, group.length)
+      const v = validateBestClips(answerOf(three.map((x, i) => ({ id: x.id, title: group[i], why: group[i] }))), EN_C, EN)
+      if ('rejected' in v) throw new Error(v.rejected)
+      expect(v.picks.map((p) => [p.title, p.titleFallback, p.why, p.whyFallback])).toEqual(three.map((x) => [x.title, 'empty', x.why, 'empty']))
+    }
+    const v = validateBestClips(answerOf([{ id: EN_C.candidates[0].id, title: '​plim­ tavek⁠', why: 'It lands.' }]), EN_C, EN)
+    if ('rejected' in v) throw new Error(v.rejected)
+    const [x] = EN_C.candidates
+    expect(windowText(EN, x.window).split(/[ .,]+/u)).toEqual(expect.arrayContaining(['plim', 'tavek']))
+    expect([v.picks[0].title, v.picks[0].titleFrom]).toEqual(['plim tavek', 'model'])
+
+    const r = await bestClips(EN, null, 60_000, answering(answerOf(EN_C.candidates.slice(0, 3).map((c, i) => ({ id: c.id, title: i === 0 ? '…' : 'plim', why: i === 0 ? '​' : 'It lands.' })))))
+    expect(r.cards.find((c) => c.windowId === x.id)!.note).toBe(`${TITLE_EMPTY_NOTE} ${WHY_EMPTY_NOTE}`)
+  })
+
+  it('over a window with no capitalising-script letter, every title word with a letter is held to the window, a lower-case Latin one included', () => {
+    // MUTATION (the window rule removed: `caseless` is `caselessWord(w)` alone): fails "toEqual(['kesmer', 'quits', 'forever'])" and the 'first-sentence' line.
+    const words = [caseless(1), caseless(2), caseless(3)]
+    const saidCl = words.join(' ')
+    expect(ungroundedIn('kesmer quits forever', saidCl, 'title')).toEqual(['kesmer', 'quits', 'forever'])
+    expect(ungroundedIn(`${words[2]} ${words[0]}`, saidCl, 'title')).toEqual([])
+    // A mixed window (letters of both kinds) keeps the per-word split: a lower-case Latin word is not held there.
+    expect(ungroundedIn(`${words[0]} plimmo`, `zor ${saidCl}`, 'title')).toEqual([])
+    const [y] = CL_C.candidates
+    const v = validateBestClips(answerOf([{ id: y.id, title: 'kesmer quits forever', why: 'It lands.' }]), CL_C, CL)
+    if ('rejected' in v) throw new Error(v.rejected)
+    expect([v.picks[0].titleFrom, v.picks[0].titleFallback]).toEqual(['first-sentence', 'ungrounded'])
+  })
+
+  it("a why opening on a name the window does not say falls back; one opening on a function word or a said name is kept", () => {
+    // MUTATION (the opening exemption for every capital again, `&& functionWord(w)` removed): fails "toEqual(['Kesmer'])" (both).
+    expect(ungroundedIn('Kesmer admits failure.', said, 'why')).toEqual(['Kesmer'])
+    expect(ungroundedIn('A story. Kesmer lied about the plim.', said, 'why')).toEqual(['Kesmer'])
+    expect(ungroundedIn('It is funny. This lands.', said, 'why')).toEqual([])
+    expect(ungroundedIn('Zorvan explains the plim.', said, 'why')).toEqual([])
+  })
+
+  it('digits that are not decimal (roman numerals, superscripts) must be said too', () => {
+    // MUTATION (DIGIT back to \p{Nd}): fails "toEqual(['Ⅻ'])" and the superscript line.
+    expect(ungroundedIn('Ⅻ hours of plim', said, 'title')).toEqual(['Ⅻ'])
+    expect(ungroundedIn('plim² zor', said, 'title')).toEqual(['plim²'])
+  })
+
+  it("the system text tells the model the validator's rules: sentence case from the candidate's words, a why opening on This or It", () => {
+    // MUTATION (the title's sentence-case sentence removed from BEST_CLIPS_SYSTEM): fails the first toContain.
+    // MUTATION (the why's opening sentence removed): fails the second.
+    expect(BEST_CLIPS_SYSTEM).toContain("Write it in sentence case from the candidate's own words: start with a word the candidate says, and capitalise only a name the candidate says.")
+    expect(BEST_CLIPS_SYSTEM).toContain('In English, start it with "This" or "It".')
+  })
+
+  it("the link's language wins over the transcript's; the transcript's is used when the link names none", async () => {
+    // MUTATION (run.ts's lang -> `t.language || ''`): fails the first toBe. MUTATION (lang -> `(meta?.language ?? '') || ''`): fails the second and third.
+    const lastLine = async (t: Transcript, meta: { heatmap: null; language: string } | null): Promise<string> => {
+      const seen = { requests: [] as unknown[] }
+      await bestClips(t, meta, 60_000, answering(answerOf([]), seen))
+      return (seen.requests[0] as { user: string }).user.split('\n').pop()!
+    }
+    expect(await lastLine({ ...EN, language: 'und' }, { heatmap: null, language: 'te' })).toBe(graphicsLanguageLine('te'))
+    expect(await lastLine({ ...EN, language: 'te' }, { heatmap: null, language: '' })).toBe(graphicsLanguageLine('te'))
+    expect(await lastLine({ ...EN, language: 'te' }, null)).toBe(graphicsLanguageLine('te'))
+    expect(graphicsLanguageLine('te')).not.toBe(graphicsLanguageLine('en'))
+  })
+
+  it('a conforming answer with no usable pick reports no model, fills all three and says none could be used', async () => {
+    // MUTATION (`model: used ? asked.model : null` -> `asked.model`): fails "toBeNull()".
+    const r = await bestClips(EN, null, 60_000, answering(answerOf(['w9997', 'w9998', 'w9999'].map((id) => ({ id, title: 'plim', why: 'It lands.' })))))
+    expect(r.model).toBeNull()
+    expect([r.modelNote, r.fallback, r.cards.map((c) => c.scoredBy)]).toEqual([filledNote(0, 3), null, ['signals', 'signals', 'signals']])
+  })
+
+  it("run's why is judged as a why: a caseless why of words the window does not say is kept on the card", async () => {
+    // MUTATION (validateBestClips grounds the why in 'title' mode): fails "toEqual(made)".
+    const made = 'რტფ ფრ'
+    const three = CL_C.candidates.slice(0, 3)
+    for (const x of three) expect(windowText(CL, x.window)).not.toContain('რტფ')
+    const r = await bestClips(CL, null, 60_000, answering(answerOf(three.map((x) => ({ id: x.id, title: windowText(CL, x.window).split(' ')[0], why: made })))))
+    expect(r.cards.map((c) => c.why)).toEqual(three.map(() => made))
+    expect(r.cards.every((c) => c.scoredBy === 'model' && c.note === undefined)).toBe(true)
   })
 })
 

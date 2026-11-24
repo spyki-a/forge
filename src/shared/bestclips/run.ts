@@ -85,8 +85,10 @@ export const MODEL_FAILED_NOTE = "The model did not answer, so these are picked 
 export const MODEL_UNUSABLE_NOTE = "The model's answer could not be used, so these are picked from the talk's own signals."
 export const MODEL_SLOW_NOTE = "The model took too long, so these are picked from the talk's own signals."
 export const FILLED_NOTE = "Picked from the talk's own signals: the model's pick in its place could not be used."
-export const TITLE_FALLBACK_NOTE = "The title is the clip's first sentence: the model's named something the clip does not say."
-export const WHY_FALLBACK_NOTE = "The reason is the talk's own signal: the model's named something the clip does not say."
+export const TITLE_FALLBACK_NOTE = "The title is the clip's first sentence: the model's title said something the clip does not."
+export const WHY_FALLBACK_NOTE = "The reason is the talk's own signal: the model's reason said something the clip does not."
+export const TITLE_EMPTY_NOTE = "The title is the clip's first sentence: the model gave no title."
+export const WHY_EMPTY_NOTE = "The reason is the talk's own signal: the model gave no reason."
 
 /** The model note when `kept` of `wanted` picks were usable and the rest were filled. */
 export function filledNote(kept: number, wanted: number): string {
@@ -110,6 +112,7 @@ function fillFrom(c: Candidates, taken: readonly ClipCandidate[], room: number):
   const out: ClipCandidate[] = []
   for (const x of c.candidates) {
     if (out.length >= room) break
+    // The id check is belt and braces: a candidate shares all its time with itself, so the overlap check drops it too.
     if ([...taken, ...out].some((k) => k.id === x.id || overlapShare(k.window, x.window) > MAX_OVERLAP)) continue
     out.push(x)
   }
@@ -181,7 +184,10 @@ export async function bestClips(
   if ('rejected' in verdict) return signalsOnly('unusable', MODEL_UNUSABLE_NOTE, { askNotes, problems: [{ path: '$', message: verdict.rejected }] })
 
   const modelCards = verdict.picks.map((p: ValidPick) => {
-    const notes = [p.titleFrom === 'first-sentence' ? TITLE_FALLBACK_NOTE : '', p.whyFrom === 'signals' ? WHY_FALLBACK_NOTE : ''].filter(Boolean)
+    const notes = [
+      p.titleFallback === 'empty' ? TITLE_EMPTY_NOTE : p.titleFallback === 'ungrounded' ? TITLE_FALLBACK_NOTE : '',
+      p.whyFallback === 'empty' ? WHY_EMPTY_NOTE : p.whyFallback === 'ungrounded' ? WHY_FALLBACK_NOTE : ''
+    ].filter(Boolean)
     return cardOf(p.candidate, p.title, p.why, 'model', notes.length ? notes.join(' ') : undefined)
   })
   const filled = fillFrom(

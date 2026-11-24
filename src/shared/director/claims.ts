@@ -232,6 +232,23 @@ function isNumberWord(t: string): boolean {
   return SMALL.has(t) || TENS.has(t)
 }
 
+/**
+ * A token that says or scales a quantity in words (`claimToken`'s form): an
+ * English number word ('nine', 'forty', 'forty-two'), a multiplier word
+ * ('thousand', 'lakh'), a scale word `numberSpans` does not apply
+ * ('hundreds', 'dozen', 'grand', and the listed Hindi and Telugu ones), or a
+ * fraction word ('half', 'quarter', 'third'). The short suffixes ('k', 'm',
+ * 'b') are not: standing alone they are letters. For best clips' validator,
+ * which must hold such a word to the window even when `numberSpans` reads no
+ * number around it ('about nine', 'twenty grand', 'two and a half million':
+ * the graphics binding drops those as no claim, the safe direction there; a
+ * title that shows them claims them).
+ */
+export function isQuantityWord(t: string): boolean {
+  if (isNumberWord(t) || hyphenParts(t) !== null || MULTIPLIER_WORDS.includes(t) || FRACTIONS.has(t)) return true
+  return UNREAD_SCALES.has(t) && !SUFFIXES.includes(t)
+}
+
 /** 'forty-two': a ten and a unit (1-9), the only hyphenated number words read ('fifty-fifty' is none). */
 function hyphenParts(t: string): string[] | null {
   const parts = t.split('-')
