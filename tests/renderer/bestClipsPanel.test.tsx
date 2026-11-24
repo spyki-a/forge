@@ -20,6 +20,23 @@ import { SIDECAR_METHODS } from '@shared/sidecar/protocol'
 import type { SidecarStatus } from '@shared/sidecar/status'
 import { PAUSE_BOUNDARY_MS, segmentIntoSentences, type Transcript, type Word } from '@shared/transcript'
 import { CAP_MS, CAP_WORDS } from '@shared/bestclips/windows'
+import {
+  ADD_KEEPS_SHAPE,
+  ADD_PORTRAIT,
+  ADD_TO_PROJECT,
+  cardKey,
+  CLIP_IT_CARD,
+  MAKE_IT_VERTICAL,
+  newCardRecord,
+  notLanded,
+  NOT_NOW,
+  QUESTION_HEAD,
+  START_NEW_PROJECT,
+  START_NEW_SAVED,
+  START_NEW_SAVES,
+  STEP_LABEL,
+  STEP_TEXT
+} from '@shared/bestclips/cardClip'
 
 /*
  * Best clips in the URL tile, rendered (docs/CLIPS.md §7.5's first half):
@@ -348,6 +365,86 @@ function fakeResult(cards: BestClipCard[], note: string | null = null): BestClip
     candidates: { targetMs: 60_000, windows: [], candidates: [], note }
   }
 }
+
+describe('Clip it on a card (§7.5 steps 0 to 5)', () => {
+  const A: BestClipCard = { windowId: 'w1', startMs: 0, endMs: 60_000, words: 150, title: 'zor plim', why: 'It is clear.', scoredBy: 'signals' }
+  const B: BestClipCard = { ...A, windowId: 'w5', startMs: 70_000, endMs: 131_000 }
+  const C: BestClipCard = { ...A, windowId: 'w9', startMs: 140_000, endMs: 199_000 }
+  const footOf = (windowId: string): Host[] => {
+    const all = shown()
+    const at = all.findIndex((h) => h.props['data-best-clip-it'] === windowId)
+    expect(at, windowId).toBeGreaterThan(-1)
+    return hosts(all[at].props.children as ReactNode)
+  }
+  const buttonsIn = (list: Host[]): string[] => list.filter((h) => h.type === 'button').map((h) => textOf(h.props.children as ReactNode).trim())
+  const textsIn = (list: Host[]): string[] => list.filter((h) => typeof h.props.children === 'string').map((h) => h.props.children as string)
+
+  beforeEach(() => {
+    onLink(T)
+    withResult(fakeResult([A, B, C]))
+  })
+
+  it('puts Clip it at the foot of every card, and Make it vertical over them, on by default', () => {
+    for (const card of [A, B, C]) expect(buttonsIn(footOf(card.windowId)), card.windowId).toEqual([CLIP_IT_CARD])
+    const vertical = buttonNamed(MAKE_IT_VERTICAL)
+    expect(vertical?.props['aria-pressed']).toBe(true)
+    ;(vertical!.props.onClick as () => void)()
+    expect(useEditor.getState().bestClipsVertical).toBe(false)
+    expect(buttonNamed(MAKE_IT_VERTICAL)?.props['aria-pressed']).toBe(false)
+  })
+
+  it('asks on the card pressed, in these words, saying what each answer does; the other cards wait', () => {
+    useEditor.setState((s) => ({
+      dirty: true,
+      bestClipsQuestion: { key: cardKey(LINK_KEY, B), card: B, linkKey: LINK_KEY, transcript: T },
+      project: { ...s.project, settings: { ...s.project.settings, width: 1920, height: 1080 } }
+    }))
+    const foot = footOf(B.windowId)
+    expect(buttonsIn(foot)).toEqual([`${START_NEW_PROJECT}${START_NEW_SAVES}`, `${ADD_TO_PROJECT}${ADD_KEEPS_SHAPE}`, NOT_NOW])
+    expect(textsIn(foot)).toEqual(expect.arrayContaining([QUESTION_HEAD, START_NEW_PROJECT, START_NEW_SAVES, ADD_TO_PROJECT, ADD_KEEPS_SHAPE, NOT_NOW]))
+    expect(foot.filter((h) => h.props['data-best-choice'] !== undefined).map((h) => h.props['data-best-choice'])).toEqual(['new', 'add', 'cancel'])
+    for (const other of [A, C]) {
+      const clipIt = footOf(other.windowId).find((h) => h.type === 'button')
+      expect(clipIt?.props.disabled, other.windowId).toBe(true)
+    }
+  })
+
+  it('says a saved project stays as it is, and that Add follows faces on a portrait canvas', () => {
+    useEditor.setState((s) => ({
+      dirty: false,
+      bestClipsQuestion: { key: cardKey(LINK_KEY, A), card: A, linkKey: LINK_KEY, transcript: T },
+      project: { ...s.project, settings: { ...s.project.settings, width: 1080, height: 1920 } }
+    }))
+    expect(textsIn(footOf(A.windowId))).toEqual(expect.arrayContaining([START_NEW_SAVED, ADD_PORTRAIT]))
+    expect(textsIn(footOf(A.windowId))).not.toContain(START_NEW_SAVES)
+  })
+
+  it('lists what ran and what was skipped on a clipped card, in order, with no Clip it; the others keep theirs', () => {
+    let record = newCardRecord(cardKey(LINK_KEY, A), LINK_KEY, A, { reframe: true, shape: 'set' })
+    record = { ...record, clipId: 'c1', steps: record.steps.map((st) => (st.name === 'download' ? { ...st, state: 'done', text: STEP_TEXT.landed } : st.name === 'reframe' ? { ...st, state: 'skipped', text: STEP_TEXT.reframeNoHelper } : st)) }
+    useEditor.setState({ bestClipsClipped: { [record.key]: record } })
+    const foot = footOf(A.windowId)
+    expect(buttonsIn(foot)).toEqual([])
+    const steps = foot.filter((h) => h.props['data-card-step'] !== undefined)
+    expect(steps.map((h) => [h.props['data-card-step'], h.props['data-step-state']])).toEqual([
+      ['download', 'done'],
+      ['shape', 'done'],
+      ['reframe', 'skipped'],
+      ['captions', 'waiting'],
+      ['graphics', 'waiting']
+    ])
+    expect(textsIn(foot)).toEqual(expect.arrayContaining([STEP_LABEL.download, STEP_TEXT.landed, STEP_LABEL.reframe, STEP_TEXT.reframeNoHelper, STEP_TEXT.shapeSet]))
+    for (const other of [B, C]) expect(buttonsIn(footOf(other.windowId)), other.windowId).toEqual([CLIP_IT_CARD])
+  })
+
+  it('offers Clip it again under a download that did not land', () => {
+    const record = notLanded(newCardRecord(cardKey(LINK_KEY, C), LINK_KEY, C, { reframe: true, shape: 'set' }), STEP_TEXT.downloadFailed)
+    useEditor.setState({ bestClipsClipped: { [record.key]: record } })
+    const foot = footOf(C.windowId)
+    expect(buttonsIn(foot)).toEqual([CLIP_IT_CARD])
+    expect(textsIn(foot)).toContain(STEP_TEXT.downloadFailed)
+  })
+})
 
 describe('the source', () => {
   /*

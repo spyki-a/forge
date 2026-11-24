@@ -5926,6 +5926,208 @@
     "note": "The result’s modelNote with no model configured (NO_MODEL_NOTE), under the cards."
   },
   {
+    "label": "Make it vertical",
+    "match": "text",
+    "home": "url",
+    "needs": "link-best-clips",
+    "file": "src/shared/bestclips/cardClip.ts",
+    "line": 121,
+    "newHome": "Shelf tile URL",
+    "note": "§7.5 step 0’s switch over the cards, on by default (aria-pressed): a card’s clip is a 9:16 short; it never changes an edit’s aspect without asking."
+  },
+  {
+    "label": "Clip it makes each card a 9:16 short: on an empty timeline it sets this project to 9:16; with clips already there, it asks first. Off, the clip is added as it is.",
+    "match": "title",
+    "home": "url",
+    "needs": "link-best-clips",
+    "file": "src/shared/bestclips/cardClip.ts",
+    "line": 122,
+    "newHome": "Shelf tile URL",
+    "note": "Make it vertical’s tooltip."
+  },
+  {
+    "label": "Clip it",
+    "match": "text",
+    "home": "url",
+    "needs": "link-best-clips",
+    "count": 3,
+    "file": "src/shared/bestclips/cardClip.ts",
+    "line": 124,
+    "newHome": "Shelf tile URL",
+    "note": "Clip it at the foot of each card (§7.5). Count 3: the three cards of Analyse at 1 min on the twelve-row talk; M0’s button over the rows reads “Clip download”, not this."
+  },
+  {
+    "label": "Download just this stretch and put it on the timeline, with its words and the link’s credit",
+    "match": "title",
+    "home": "url",
+    "needs": "link-best-clips",
+    "count": 3,
+    "file": "src/shared/bestclips/cardClip.ts",
+    "line": 125,
+    "newHome": "Shelf tile URL",
+    "note": "Each card’s Clip it tooltip. Count 3, one a card."
+  },
+  {
+    "label": "This project already has clips on its timeline.",
+    "match": "text",
+    "home": "url",
+    "needs": "link-best-clips-question",
+    "file": "src/shared/bestclips/cardClip.ts",
+    "line": 126,
+    "newHome": "Shelf tile URL",
+    "note": "Step 0’s question, open on the first card; the recipe sets it through the store (bestClipsQuestion) with the fresh 16:9 project marked unsaved."
+  },
+  {
+    "label": "Start a new 9:16 project for this clip",
+    "match": "text",
+    "home": "url",
+    "needs": "link-best-clips-question",
+    "file": "src/shared/bestclips/cardClip.ts",
+    "line": 127,
+    "newHome": "Shelf tile URL",
+    "note": "The question’s first answer (§7.5, §7.7’s census row)."
+  },
+  {
+    "label": "Saves this project first, then opens a new 9:16 project with just this clip.",
+    "match": "text",
+    "home": "url",
+    "needs": "link-best-clips-question",
+    "file": "src/shared/bestclips/cardClip.ts",
+    "line": 129,
+    "newHome": "Shelf tile URL",
+    "note": "Under Start a new, with unsaved changes (the recipe marks the project dirty)."
+  },
+  {
+    "label": "Add it to this project",
+    "match": "text",
+    "home": "url",
+    "needs": "link-best-clips-question",
+    "file": "src/shared/bestclips/cardClip.ts",
+    "line": 132,
+    "newHome": "Shelf tile URL",
+    "note": "The question’s second answer (§7.5, §7.7’s census row)."
+  },
+  {
+    "label": "Adds it to this timeline as it is. The project keeps its shape, so nothing is reframed.",
+    "match": "text",
+    "home": "url",
+    "needs": "link-best-clips-question",
+    "file": "src/shared/bestclips/cardClip.ts",
+    "line": 136,
+    "newHome": "Shelf tile URL",
+    "note": "Under Add, on the fresh project’s 16:9 canvas."
+  },
+  {
+    "label": "Not now",
+    "match": "text",
+    "home": "url",
+    "needs": "link-best-clips-question",
+    "file": "src/shared/bestclips/cardClip.ts",
+    "line": 137,
+    "newHome": "Shelf tile URL",
+    "note": "Closes the question; nothing is sent."
+  },
+  {
+    "label": "Download",
+    "match": "text",
+    "home": "url",
+    "needs": "link-best-clips-clipped",
+    "file": "src/shared/bestclips/cardClip.ts",
+    "line": 179,
+    "newHome": "Shelf tile URL",
+    "note": "The first card’s record, written through the store (the harness’s downloads never land): each step’s name."
+  },
+  {
+    "label": "Shape",
+    "match": "text",
+    "home": "url",
+    "needs": "link-best-clips-clipped",
+    "file": "src/shared/bestclips/cardClip.ts",
+    "line": 180,
+    "newHome": "Shelf tile URL",
+    "note": "The record’s shape line."
+  },
+  {
+    "label": "Follow the subject",
+    "match": "text",
+    "home": "url",
+    "needs": "link-best-clips-clipped",
+    "file": "src/shared/bestclips/cardClip.ts",
+    "line": 181,
+    "newHome": "Shelf tile URL",
+    "note": "The record’s step 3 (the Trimmer’s button of the same name is in the dock, not this home)."
+  },
+  {
+    "label": "Captions",
+    "match": "text",
+    "home": "url",
+    "needs": "link-best-clips-clipped",
+    "file": "src/shared/bestclips/cardClip.ts",
+    "line": 182,
+    "newHome": "Shelf tile URL",
+    "note": "The record’s step 4."
+  },
+  {
+    "label": "Graphics",
+    "match": "text",
+    "home": "url",
+    "needs": "link-best-clips-clipped",
+    "file": "src/shared/bestclips/cardClip.ts",
+    "line": 183,
+    "newHome": "Shelf tile URL",
+    "note": "The record’s step 5."
+  },
+  {
+    "label": "on the timeline.",
+    "match": "text",
+    "home": "url",
+    "needs": "link-best-clips-clipped",
+    "file": "src/shared/bestclips/cardClip.ts",
+    "line": 188,
+    "newHome": "Shelf tile URL",
+    "note": "The download landed."
+  },
+  {
+    "label": "this project set to 9:16.",
+    "match": "text",
+    "home": "url",
+    "needs": "link-best-clips-clipped",
+    "file": "src/shared/bestclips/cardClip.ts",
+    "line": 193,
+    "newHome": "Shelf tile URL",
+    "note": "Step 0 on an empty timeline."
+  },
+  {
+    "label": "skipped: the AI helper is not installed, so the crop is centred.",
+    "match": "text",
+    "home": "url",
+    "needs": "link-best-clips-clipped",
+    "file": "src/shared/bestclips/cardClip.ts",
+    "line": 202,
+    "newHome": "Shelf tile URL",
+    "note": "Step 3 skipped without the AI helper."
+  },
+  {
+    "label": "on.",
+    "match": "text",
+    "home": "url",
+    "needs": "link-best-clips-clipped",
+    "file": "src/shared/bestclips/cardClip.ts",
+    "line": 208,
+    "newHome": "Shelf tile URL",
+    "note": "Step 4: captions on, with no subject track to keep them off."
+  },
+  {
+    "label": "listed in the Transcript tile, each with Drop.",
+    "match": "text",
+    "home": "url",
+    "needs": "link-best-clips-clipped",
+    "file": "src/shared/bestclips/cardClip.ts",
+    "line": 213,
+    "newHome": "Shelf tile URL",
+    "note": "Step 5 ran."
+  },
+  {
     "label": "Click a row to pick its words; shift-click another row, or a word, to extend. Or drag Start and End.",
     "match": "text",
     "home": "url",

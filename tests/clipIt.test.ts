@@ -3,6 +3,7 @@ import { clipEditWords, clipSourceWindow, clipToRange, clipWords, cutFrames, DET
 import { detachAudio } from '@shared/edit/recipes'
 import { clipEnd, emptyProject, sourceFrameFor, type Clip, type MediaAsset, type Project } from '@shared/timeline'
 import { PAUSE_BOUNDARY_MS, segmentIntoSentences, withWordText, type Transcript, type Word } from '@shared/transcript'
+import { cardClipPlan, type CardClipChoice } from '@shared/bestclips/cardClip'
 
 /*
  * A clip already on the timeline cut to a run of its words (docs/CLIPS.md
@@ -338,5 +339,65 @@ describe('clipWords — the words a clip plays', () => {
     const rows = clipWords(TALK, window)
     expect(clipWords(TALK, window, 'overlap')).not.toBe(rows)
     expect(clipWords(TALK, window)).toBe(rows)
+  })
+})
+
+/*
+ * Step 0 of Clip it from a Best clips card (docs/CLIPS.md §7.5, §7.7): where
+ * the clip goes. The first draft's "Make it vertical" called setAspect, which
+ * re-solves every clip's crop: a Clip it into a 16:9 edit would have flipped
+ * and re-cropped the whole edit. The store's half — the same project through
+ * clipItFromCard, its clips' crops read before and after — is
+ * tests/renderer/bestClipsClipIt.test.ts.
+ */
+describe('Clip it from a card — where the clip goes (§7.5 step 0)', () => {
+  /** A 16:9 edit: the two clips of `project()`, each with a crop of its own. */
+  const edit = (): Project => {
+    const p = project()
+    return { ...p, clips: p.clips.map((c, i) => ({ ...c, crop: { x: 10 * (i + 1), y: 0, width: 1600, height: 900 } })) }
+  }
+
+  it('into a project with a 16:9 edit on its timeline, ASKS, and no answer touches the aspect or any clip’s crop', () => {
+    const p = edit()
+    expect(p.settings.width / p.settings.height).toBeCloseTo(16 / 9, 6)
+    const crops = p.clips.map((c) => ({ id: c.id, crop: { ...c.crop! } }))
+    const settings = { ...p.settings }
+
+    expect(cardClipPlan(p, true, null)).toEqual({ kind: 'ask' })
+    for (const choice of ['new', 'add'] as CardClipChoice[]) {
+      const plan = cardClipPlan(p, true, choice)
+      if (plan.kind !== 'go') throw new Error(`${choice}: asked again`)
+      // Neither answer sets an aspect on THIS project: "new" makes another one, "add" keeps this one's shape.
+      expect(plan.aspect, choice).toBeNull()
+    }
+    // Membership over the existing clips: every one keeps its crop; the canvas keeps its size.
+    for (const { id, crop } of crops) expect(p.clips.find((c) => c.id === id)?.crop, id).toEqual(crop)
+    expect(p.settings).toEqual(settings)
+  })
+
+  it('"Add it to this project" follows faces only on a canvas that is already portrait; "Start a new" always does, in a new project', () => {
+    const wide = edit()
+    expect(cardClipPlan(wide, true, 'add')).toMatchObject({ kind: 'go', newProject: false, aspect: null, reframe: false, shape: 'kept' })
+    const tall = { ...wide, settings: { ...wide.settings, width: 1080, height: 1920 } }
+    expect(cardClipPlan(tall, true, 'add')).toMatchObject({ kind: 'go', newProject: false, aspect: null, reframe: true, shape: 'kept' })
+    expect(cardClipPlan(wide, true, 'new')).toMatchObject({ kind: 'go', newProject: true, aspect: null, reframe: true, shape: 'new' })
+  })
+
+  it('with nothing on the timeline, uses this project, and sets 9:16 only when it is not already', () => {
+    const empty = { ...edit(), clips: [] }
+    expect(cardClipPlan(empty, true, null)).toEqual({ kind: 'go', newProject: false, aspect: '9:16', reframe: true, shape: 'set' })
+    const tall = { ...empty, settings: { ...empty.settings, width: 1080, height: 1920 } }
+    expect(cardClipPlan(tall, true, null)).toEqual({ kind: 'go', newProject: false, aspect: null, reframe: true, shape: 'already' })
+  })
+
+  it('a single clip on the timeline is still somebody’s edit: it asks', () => {
+    const p = edit()
+    expect(cardClipPlan({ ...p, clips: [p.clips[0]] }, true, null)).toEqual({ kind: 'ask' })
+  })
+
+  it('with Make it vertical off, never asks and never sets an aspect, edit or none', () => {
+    for (const p of [edit(), { ...edit(), clips: [] }]) {
+      expect(cardClipPlan(p, false, null)).toMatchObject({ kind: 'go', newProject: false, aspect: null, shape: 'kept-off' })
+    }
   })
 })

@@ -1,10 +1,29 @@
 import type { ReactNode } from 'react'
-import { Loader2, Sparkles } from 'lucide-react'
+import { Loader2, Scissors, Smartphone, Sparkles } from 'lucide-react'
 import { useEditor, urlSourceFor } from '../../store'
 import { parseLink } from '@shared/ingest/url'
 import { formatMark } from '@shared/ingest/section'
 import { transcribeGate } from '@shared/sidecar/row'
 import type { BestClipCard } from '@shared/bestclips/run'
+import {
+  ADD_KEEPS_SHAPE,
+  ADD_PORTRAIT,
+  ADD_TO_PROJECT,
+  cardClippable,
+  cardKey,
+  CLIP_IT_CARD,
+  CLIP_IT_CARD_TITLE,
+  isPortrait,
+  MAKE_IT_VERTICAL,
+  MAKE_IT_VERTICAL_TITLE,
+  NOT_NOW,
+  QUESTION_HEAD,
+  START_NEW_PROJECT,
+  START_NEW_SAVED,
+  START_NEW_SAVES,
+  STEP_LABEL,
+  type CardClipRecord
+} from '@shared/bestclips/cardClip'
 import {
   analyseRefusal,
   BEST_CLIPS_LENGTHS,
@@ -43,15 +62,87 @@ import {
  * text. They can quote the model or name a server; only the fixed notes are
  * shown (`note`, `modelNote`, a card's `note`).
  *
- * Clip it on a card is piece 4's (§7.5 step 0 onwards): this piece renders no
- * Clip it control. It goes at the foot of each card's text column.
+ * CLIP IT on a card (§7.5 steps 0 to 5) sits at the foot of its text column.
+ * When the timeline already has clips and Make it vertical is on, the card
+ * asks first, in place: "Start a new 9:16 project for this clip" or "Add it
+ * to this project", each with a line saying what it does. Once pressed, the
+ * card lists what ran and what was skipped, and why (the store's
+ * `bestClipsClipped` record, shared/bestclips/cardClip.ts); the other cards
+ * stay pressable: three separate shorts.
  *
  * No hook but the store's, so a test can call it as a function.
  */
 
 export const ANALYSE_TITLE = 'Find the stretches of this video most worth posting, from its captions — nothing is downloaded'
 
-function Card({ card }: { card: BestClipCard }): ReactNode {
+/** What a card shows under its text: Clip it, the question, or what Clip it did. */
+interface CardFoot {
+  record: CardClipRecord | undefined
+  asking: boolean
+  /** Another card's question is open, or a download is being asked for. */
+  blocked: boolean
+  dirty: boolean
+  portrait: boolean
+  clipIt: () => void
+  answer: (choice: 'new' | 'add' | null) => void
+}
+
+function Steps({ record }: { record: CardClipRecord }): ReactNode {
+  return (
+    <ul data-card-steps="" aria-live="polite" className="space-y-0.5">
+      {record.steps.map((step) => (
+        <li key={step.name} data-card-step={step.name} data-step-state={step.state} className="text-[10px] leading-snug [overflow-wrap:anywhere]">
+          <span className="text-ink-300">{STEP_LABEL[step.name]}</span>
+          {' '}
+          <span className={step.state === 'failed' ? 'text-red-800' : 'text-ink-500'}>{step.text}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function Question({ dirty, portrait, answer }: Pick<CardFoot, 'dirty' | 'portrait' | 'answer'>): ReactNode {
+  const choice = 'w-full rounded bg-ink-850 px-2 py-1 text-left text-[11px] text-ink-100 transition-colors hover:bg-ink-800'
+  return (
+    <div data-best-question="" role="group" aria-label={QUESTION_HEAD} className="space-y-1 rounded border border-accent-500/40 bg-accent-500/5 p-1.5">
+      <p className="text-[10.5px] leading-snug text-ink-300">{QUESTION_HEAD}</p>
+      <button type="button" data-best-choice="new" onClick={() => answer('new')} className={choice}>
+        <span className="block font-medium">{START_NEW_PROJECT}</span>
+        <span className="block text-[10px] leading-snug text-ink-500">{dirty ? START_NEW_SAVES : START_NEW_SAVED}</span>
+      </button>
+      <button type="button" data-best-choice="add" onClick={() => answer('add')} className={choice}>
+        <span className="block font-medium">{ADD_TO_PROJECT}</span>
+        <span className="block text-[10px] leading-snug text-ink-500">{portrait ? ADD_PORTRAIT : ADD_KEEPS_SHAPE}</span>
+      </button>
+      <button type="button" data-best-choice="cancel" onClick={() => answer(null)} className="rounded px-2 py-0.5 text-[10.5px] text-ink-500 hover:text-ink-200">
+        {NOT_NOW}
+      </button>
+    </div>
+  )
+}
+
+function Foot({ record, asking, blocked, dirty, portrait, clipIt, answer }: CardFoot): ReactNode {
+  if (asking) return <Question dirty={dirty} portrait={portrait} answer={answer} />
+  return (
+    <>
+      {record && <Steps record={record} />}
+      {cardClippable(record) && (
+        <button
+          type="button"
+          onClick={clipIt}
+          disabled={blocked}
+          title={CLIP_IT_CARD_TITLE}
+          className="mt-1 flex items-center gap-1.5 rounded bg-accent-500 px-2.5 py-1 text-[11px] font-medium text-ink-950 transition-colors hover:bg-accent-400 disabled:opacity-40"
+        >
+          <Scissors size={12} aria-hidden />
+          {CLIP_IT_CARD}
+        </button>
+      )}
+    </>
+  )
+}
+
+function Card({ card, foot }: { card: BestClipCard; foot: CardFoot }): ReactNode {
   return (
     <li data-best-card={card.windowId} data-scored-by={card.scoredBy} className="flex gap-2 rounded border border-ink-800 bg-ink-950/60 p-1.5">
       {/* The tall face: 9:16, the stretch's length on it; self-start, so a tall text column cannot stretch it. */}
@@ -82,6 +173,9 @@ function Card({ card }: { card: BestClipCard }): ReactNode {
             {card.note}
           </p>
         )}
+        <div data-best-clip-it={card.windowId} className="pt-0.5">
+          <Foot {...foot} />
+        </div>
       </div>
     </li>
   )
@@ -95,6 +189,14 @@ export function BestClips(): ReactNode {
   const analyse = useEditor((s) => s.analyseBestClips)
   const helperStatus = useEditor((s) => s.helperStatus)
   const speechModel = useEditor((s) => s.speechModel)
+  const vertical = useEditor((s) => s.bestClipsVertical)
+  const setVertical = useEditor((s) => s.setBestClipsVertical)
+  const question = useEditor((s) => s.bestClipsQuestion)
+  const clipped = useEditor((s) => s.bestClipsClipped)
+  const clipItFromCard = useEditor((s) => s.clipItFromCard)
+  const answer = useEditor((s) => s.answerBestClipsQuestion)
+  const dirty = useEditor((s) => s.dirty)
+  const settings = useEditor((s) => s.project.settings)
 
   // On screen whenever the box holds a link; its words are the link's own, or none yet.
   if (!parseLink(ingest.url)) return null
@@ -168,12 +270,43 @@ export function BestClips(): ReactNode {
 
       {result && (
         <div aria-live="polite" className="space-y-2">
-          {result.cards.length > 0 && (
-            <ul data-best-cards="" className="space-y-1.5">
-              {result.cards.map((card) => (
-                <Card key={card.windowId} card={card} />
-              ))}
-            </ul>
+          {result.cards.length > 0 && source && (
+            <>
+              {/* §7.5 step 0's switch: on, a card's clip is a 9:16 short; it never changes an edit's aspect without asking. */}
+              <button
+                type="button"
+                data-best-vertical=""
+                aria-pressed={vertical}
+                onClick={() => setVertical(!vertical)}
+                title={MAKE_IT_VERTICAL_TITLE}
+                className={`flex items-center gap-1.5 rounded px-2 py-1 text-[11px] transition-colors ${
+                  vertical ? 'bg-ink-700 text-ink-100' : 'bg-ink-850 text-ink-500 hover:text-ink-200'
+                }`}
+              >
+                <Smartphone size={12} aria-hidden />
+                {MAKE_IT_VERTICAL}
+              </button>
+              <ul data-best-cards="" className="space-y-1.5">
+                {result.cards.map((card) => {
+                  const key = cardKey(source.linkKey, card)
+                  return (
+                    <Card
+                      key={card.windowId}
+                      card={card}
+                      foot={{
+                        record: clipped[key],
+                        asking: question?.key === key,
+                        blocked: question !== null || ingest.busy,
+                        dirty,
+                        portrait: isPortrait(settings),
+                        clipIt: () => void clipItFromCard(card),
+                        answer: (choice) => void answer(choice)
+                      }}
+                    />
+                  )
+                })}
+              </ul>
+            </>
           )}
           {result.note && (
             <p data-best-note="" className="text-[10.5px] leading-snug text-ink-400">

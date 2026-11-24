@@ -18,6 +18,7 @@ import { SPINE_RULE } from '@shared/director/apply'
 import { TRAY_MIN, TRAY_RAIL } from '@shared/curveTray'
 import { linkCacheKey, parseLink } from '@shared/ingest/url'
 import { runFromRows } from '@shared/ingest/wordRun'
+import { cardKey, newCardRecord, STEP_TEXT, withStep } from '@shared/bestclips/cardClip'
 import { clipSourceWindow, clipWords } from '@shared/edit/clipIt'
 import type { Transcript } from '@shared/transcript'
 import { useEditor, type ShelfToolId, type UrlSourceStatus } from '../store'
@@ -2424,6 +2425,44 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     const source = editor().urlSource
     if (!source) throw new Error('census: the talk has no transcript on screen')
     useEditor.setState((s) => ({ bestClips: { ...s.bestClips, running: { linkKey: source.linkKey, targetMs: s.bestClips.targetMs, transcript } } }))
+    return {}
+  },
+  /*
+   * Clip it on a card, step 0's question open (CLIPS.md §7.5): the fresh
+   * project is 16:9, and marked unsaved, so the card reads "Saves this project
+   * first…" and "…nothing is reframed." Set through the store: pressing Clip
+   * it needs clips on the timeline, and what is counted is the question.
+   */
+  'link-best-clips-question': async () => {
+    await linkWords()
+    await editor().analyseBestClips()
+    const source = editor().urlSource
+    const card = editor().bestClips.last?.result.cards[0]
+    if (!source?.transcript || !card) throw new Error('census: Analyse on the bridge’s talk gave no card to ask about')
+    useEditor.setState({
+      dirty: true,
+      bestClipsQuestion: { key: cardKey(source.linkKey, card), card, linkKey: source.linkKey, transcript: source.transcript }
+    })
+    return {}
+  },
+  /*
+   * A card clipped, its record filled in (CLIPS.md §7.5): landed, the project
+   * set to 9:16, the follow skipped for want of the AI helper, captions on,
+   * graphics listed. Written through the store: the harness's downloads never
+   * land (bridge.ts `harnessStartIngest`).
+   */
+  'link-best-clips-clipped': async () => {
+    await linkWords()
+    await editor().analyseBestClips()
+    const source = editor().urlSource
+    const card = editor().bestClips.last?.result.cards[0]
+    if (!source || !card) throw new Error('census: Analyse on the bridge’s talk gave no card to clip')
+    let record = newCardRecord(cardKey(source.linkKey, card), source.linkKey, card, { reframe: true, shape: 'set' })
+    record = { ...withStep(record, 'download', 'done', STEP_TEXT.landed), clipId: 'census-clip' }
+    record = withStep(record, 'reframe', 'skipped', STEP_TEXT.reframeNoHelper)
+    record = withStep(record, 'captions', 'done', STEP_TEXT.captionsOn)
+    record = withStep(record, 'graphics', 'done', STEP_TEXT.graphicsDone)
+    useEditor.setState({ bestClipsClipped: { [record.key]: record } })
     return {}
   },
   /* rows 3–6 picked: the run's length, and From and To mirroring it */
